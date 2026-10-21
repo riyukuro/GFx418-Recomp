@@ -106,6 +106,14 @@ public:
 
     // Case-insensitive compare with this a builtin (its lowercase twin always resolved); exe 0x142935540.
     bool CompareBuiltIn_CaseInsensitive(const ASConstString& str) const;
+    // The same compare in the case mode of the movie (inlined: pointer compare when case sensitive).
+    SF_FORCEINLINE bool CompareBuiltIn_CaseCheck(const ASConstString& str, bool caseSensitive) const
+    {
+        if (caseSensitive)
+            return pNode == str.pNode;
+        str.ResolveLowercase();
+        return pNode->pLower == str.pNode->pLower;
+    }
 };
 
 // Counted string handle.

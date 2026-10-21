@@ -192,6 +192,7 @@ public:
 
     bool IsUndefined() const { return T.Type == UNDEFINED || T.Type == UNSET; }
     bool IsNull() const      { return T.Type == NULLTYPE; }
+    bool IsSet() const       { return T.Type != UNSET; }
     bool IsBoolean() const   { return T.Type == BOOLEAN; }
     bool IsNumber() const    { return T.Type == NUMBER || T.Type == INTEGER; }
     bool IsString() const    { return T.Type == STRING; }

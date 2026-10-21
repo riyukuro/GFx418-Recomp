@@ -37,6 +37,20 @@ public:
 
     ArrayObject(Environment* penv); // exe 0x142918010
 
+    // Elements by index name, "length" from the element count (exe 0x1429530b0).
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+
+    // The index a member name spells (only digits), -1 for any other name.
+    static int ParseIndex(const ASString& name)
+    {
+        const char* p = name.ToCStr();
+        while (*p && *p >= '0' && *p <= '9')
+            p++;
+        if (*p)
+            return -1;
+        return atoi(name.ToCStr());
+    }
+
     int          GetSize() const { return (unsigned)Elements.GetSize(); }
     Value*       GetElementPtr(int i) { return Elements[i]; }
     const Value* GetElementPtr(int i) const { return Elements[i]; }
@@ -118,6 +132,8 @@ public:
 protected:
     // The object and every element (defined in sfr_as2_02).
     template<class Functor> void ForEachChild_GC(Collector* prcc) const;
+
+    virtual void Finalize_GC(); // exe 0x142942b40
 };
 
 // Counts one level of nested toString for the guarded array while alive.

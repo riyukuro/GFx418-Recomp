@@ -16,6 +16,9 @@ public:
     void            SetFilter(Render::Filter* pfilter) { pFilter = pfilter; }
 
     Ptr<Render::Filter> pFilter; // +0x68
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142942cf0
 };
 
 // The prototypes only add clone().

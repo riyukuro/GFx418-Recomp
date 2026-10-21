@@ -31,6 +31,24 @@ public:
     ConstIterator  End() const    { return GetSet().End(); }
 };
 
+class Movie;
+
+// User data an application attaches to a script object (GFx::Value::SetUserData); told when the object dies.
+// vftable { dtor, OnDestroy }.
+class ASUserData : public RefCountBase<ASUserData, Stat_Default_Mem>
+{
+public:
+    void* pLastObjectInterface; // +0x10 weak descriptor of the GFx::Value last set
+    void* pLastData;            // +0x18
+    bool  IsLastDispObj;        // +0x20
+
+    virtual ~ASUserData() {}
+    virtual void OnDestroy(Movie* pmovie, void* pobject) = 0;
+};
+
+// ASUserData::SetLastObjectValue (exe 0x142575f10; GFx::Value is not recovered, so it is bound as a free function).
+void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* pdata, bool isdobj);
+
 namespace AS2 {
 
 // Interface of everything a script can address as an object (script objects at +0x20, characters).
@@ -134,6 +152,24 @@ public:
     inline Sprite* ToSprite();
 };
 
+// The user data of an object and the movie it was set from. 0x10 bytes.
+class ObjectInterface::UserDataHolder : public NewOverrideBase<StatMV_ActionScript_Mem>
+{
+public:
+    Movie*      pMovieView; // +0x00
+    ASUserData* pUserData;  // +0x08
+
+    // Drops the weak reference of the user data and tells it that the object is gone.
+    void NotifyDestroy(ObjectInterface* pthis) const
+    {
+        if (pUserData)
+        {
+            ASUserData_SetLastObjectValue(pUserData, 0, 0, false);
+            pUserData->OnDestroy(pMovieView, pthis);
+        }
+    }
+};
+
 // Script object: GC base at +0, ObjectInterface at +0x20. 0x68 bytes.
 class Object : public ASRefCountBase<Object>, public ObjectInterface
 {
@@ -155,6 +191,8 @@ public:
     virtual InteractiveObject*       GetASCharacter();
     virtual const InteractiveObject* GetASCharacter() const;
     virtual void  CheckAndResetCtorRef(FunctionObject* pfunc);
+
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val); // exe 0x142953280
 
 protected:
     Object(ASRefCountCollector* pcc);

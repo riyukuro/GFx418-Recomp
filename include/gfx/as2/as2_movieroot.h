@@ -25,10 +25,13 @@ enum ASBuiltinType : int
     ASBuiltin_GlowFilter       = 39,
     ASBuiltin_BlurFilter       = 40,
     ASBuiltin_undefined        = 51,
+    ASBuiltin_constructor      = 79,
+    ASBuiltin___constructor__  = 80,
     ASBuiltin_typeFunction_    = 83, // "[type Function]"
     ASBuiltin_objectObject_    = 85, // "[object Object]"
     ASBuiltin_x      = 129,
     ASBuiltin_y      = 130,
+    ASBuiltin_length = 155,
 };
 
 // Builtin strings of a movie plus the manager that makes new ones. 0x4f0 bytes.

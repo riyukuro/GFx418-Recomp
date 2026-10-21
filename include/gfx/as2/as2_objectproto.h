@@ -16,7 +16,12 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class GASPrototypeBase
 {
 protected:
-    typedef ArrayLH<Ptr<Object>, StatMV_ActionScript_Mem> InterfacesArray;
+    // The interfaces are released by the collector: finalizing only frees the buffer.
+    class InterfacesArray : public ArrayLH<Ptr<Object>, StatMV_ActionScript_Mem>
+    {
+    public:
+        void Finalize_GC() { AllocatorType::Free(Data.Data); }
+    };
 
     FunctionRef      Constructor;     // +0x08 the "constructor" member
     FunctionRef      __Constructor__; // +0x20
@@ -24,6 +29,10 @@ protected:
 
 public:
     virtual ~GASPrototypeBase();
+
+    // "constructor" / "__constructor__" of the prototype pthis (exe 0x142953980).
+    bool GetMemberRawConstructor(Object* pthis, ASStringContext* psc, const ASString& name, Value* val,
+                                 bool isConstructor2);
 };
 
 // Prototype object of a built-in class: an instance of BaseClass whose prototype part sits right behind it.
@@ -49,6 +58,21 @@ protected:
             }
         }
     }
+
+public:
+    // constructor and __constructor__ come from the prototype part (defined in sfr_as2_05).
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+
+protected:
+    void Finalize_GC()
+    {
+        if (pInterfaces)
+        {
+            pInterfaces->Finalize_GC();
+            SF_FREE(pInterfaces);
+        }
+        BaseClass::Finalize_GC();
+    }
 };
 
 // The "super" object of a method call: forwards member lookups to the prototype chain above the caller's. 0x98
@@ -72,6 +96,8 @@ protected:
             Functor::Call(prcc, SavedProto);
         Constructor.template ForEachChild_GC<Functor>(prcc);
     }
+
+    virtual void Finalize_GC(); // exe 0x142943020
 };
 
 // The Object class.

@@ -13,6 +13,12 @@ class StringObject : public Object
 {
 public:
     ASString sValue; // +0x68
+
+    // "length" defaults to the length of the string (exe 0x1429538a0).
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142942fc0
 };
 
 // String.prototype methods.

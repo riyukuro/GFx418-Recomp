@@ -8,11 +8,17 @@
 #include "as2_object.h"
 #include "../gfx_asutils.h"
 #include "../gfx_textsnapshot.h"
+#include "../../kernel/sf_stringhash.h"
+
+namespace Scaleform { namespace Render { namespace Text { class IMEStyle; class TextFormat; class ParagraphFormat; } } }
 
 namespace Scaleform { namespace GFx {
 
 // Receiver of the stored data of a shared object (SharedObjectManagerBase::LoadSharedObject). Only Begin, the first
 // slot after the destructor, is declared so far.
+class ImageResource;
+class MovieDef;
+
 class SharedObjectVisitor : public RefCountBaseNTS<SharedObjectVisitor, Stat_Default_Mem>
 {
 public:
@@ -61,12 +67,18 @@ protected:
 class ButtonObject : public Object
 {
 public:
-    void* Data68; // +0x68 not recovered
+    WeakPtr<InteractiveObject> pButton; // +0x68
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142942d20
 };
 class ColorObject : public Object
 {
 public:
-    void* Data68; // +0x68 not recovered
+    WeakPtr<InteractiveObject> pCharacter; // +0x68
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142942d60
 };
 class MovieClipLoader : public Object
 {
@@ -81,14 +93,21 @@ public:
         ProgressDesc(int loaded, int total) : LoadedBytes(loaded), TotalBytes(total) {}
     };
 
-    void* Data68; // +0x68 not recovered
+    StringHashLH<ProgressDesc> ProgressInfo; // +0x68 by URL
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142942dd0
 };
 
 // 0x78 bytes.
 class BitmapData : public Object
 {
 public:
-    void* Data68[2]; // +0x68 not recovered
+    Ptr<ImageResource> pImageRes; // +0x68
+    Ptr<MovieDef>      pMovieDef; // +0x70 keeps the image heap of the movie alive
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142942ca0
 };
 class LoadVarsObject : public Object
 {
@@ -100,12 +119,15 @@ public:
 class MovieClipObject : public Object
 {
 public:
-    void*  Data68;            // +0x68 not recovered
-    UInt16 ButtonEventMask;   // +0x70 button events with a handler set on the clip
-    bool   HasButtonHandlers; // +0x72
+    WeakPtr<Sprite> pSprite;           // +0x68
+    UInt16          ButtonEventMask;   // +0x70 button events with a handler set on the clip
+    bool            HasButtonHandlers; // +0x72
 
     // The clip or the first movie clip prototype handles button events (exe 0x14292e120).
     bool ActsAsButton() const;
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142942df0
 };
 class NumberObject : public Object
 {
@@ -124,13 +146,18 @@ public:
 
 protected:
     void CommonInit(Environment* penv); // exe 0x142934a40
+
+    virtual void Finalize_GC(); // exe 0x142942e30
 };
 class SharedObject : public Object
 {
 public:
     SharedObject(Environment* penv); // exe 0x142920710
 
-    void* Data68[2]; // +0x68 not recovered
+    String Name;      // +0x68
+    String LocalPath; // +0x70
+
+    virtual void Finalize_GC(); // exe 0x142942f10
 };
 
 // The out-of-line Resize / PushBack of the loader's object stack (exe COMDATs the exe calls where cl inlines them).
@@ -153,7 +180,14 @@ private:
 class TextFieldObject : public Object
 {
 public:
-    void* Data68[2]; // +0x68 not recovered
+    WeakPtr<InteractiveObject> pTextField;                  // +0x68
+    Render::Text::IMEStyle*    pIMECompositionStringStyles; // +0x70 owned
+
+    // The IME styles of the field or of the nearest text field prototype that has them (exe 0x14294b030).
+    Render::Text::IMEStyle* GetIMECompositionStringStyles();
+
+protected:
+    virtual void Finalize_GC(); // exe 0x1429430b0
 };
 
 // 0x90 bytes.
@@ -164,6 +198,9 @@ public:
 
     StaticTextSnapshotData& GetData() { return *(StaticTextSnapshotData*)Data68; }
     void SetSelectColor(const Render::Color& color) { GetData().SetSelectColor(color); }
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142943130
 };
 
 // TextSnapshot methods.
@@ -194,21 +231,30 @@ class TextFormatObject : public Object
 public:
     TextFormatObject(Environment* penv); // exe 0x1429226d0
 
-    void* Data68[13]; // +0x68 not recovered
+    void* Data68[13]; // +0x68 Render::Text::TextFormat (0x48 bytes), +0xb0 Render::Text::ParagraphFormat (0x20 bytes)
+
+    Render::Text::TextFormat&      GetTextFormat()      { return *(Render::Text::TextFormat*)Data68; }
+    Render::Text::ParagraphFormat& GetParagraphFormat() { return *(Render::Text::ParagraphFormat*)(Data68 + 9); }
+
+protected:
+    virtual void Finalize_GC(); // exe 0x142943100
 };
 
 // flash.geom.Transform of a character. 0x90 bytes.
 class TransformObject : public Object
 {
 public:
-    void*       Data68[2];       // +0x68 not recovered
-    Ptr<Object> Matrix;          // +0x78 MatrixObject
-    Ptr<Object> pColorTransform; // +0x80 ColorTransformObject
-    Ptr<Object> PixelBounds;     // +0x88 RectangleObject
+    MovieImpl*           pMovieRoot;      // +0x68
+    Ptr<CharacterHandle> TargetHandle;    // +0x70
+    Ptr<Object>          Matrix;          // +0x78 MatrixObject
+    Ptr<Object>          pColorTransform; // +0x80 ColorTransformObject
+    Ptr<Object>          PixelBounds;     // +0x88 RectangleObject
 
     TransformObject(Environment* penv, InteractiveObject* pcharacter = 0); // exe 0x142923350
 
 protected:
+    virtual void Finalize_GC(); // exe 0x142943150
+
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
 };
 
@@ -262,6 +308,8 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937240
 
 protected:
+    virtual void Finalize_GC(); // exe 0x142942f80
+
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
 };
 

@@ -15,6 +15,8 @@ class StaticTextCharacter;
 class StaticTextSnapshotData
 {
 public:
+    ~StaticTextSnapshotData(); // 0x1424aa050
+
     // Appends the glyph runs of one static text field (0x1425e0720).
     void Add(StaticTextCharacter* ptext);
 
