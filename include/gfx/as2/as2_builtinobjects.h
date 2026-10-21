@@ -49,6 +49,8 @@ public:
                                  int firstArgBottomIndex);
     static bool BroadcastMessageWithCallback(Environment* penv, ObjectInterface* pthis, const ASString& eventName,
                                              InvokeCallback* pcallback); // exe 0x142932290
+    // Adds plistener to the _listeners of pthis unless it is there already (exe 0x14292f5b0).
+    static bool AddListener(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener);
 };
 class ExternalInterface : public Object {};
 class KeyObject : public Object {};
@@ -70,6 +72,9 @@ class ButtonObject : public Object
 {
 public:
     WeakPtr<InteractiveObject> pButton; // +0x68
+
+    virtual InteractiveObject*       GetASCharacter();       // exe 0x1429490c0
+    virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949140
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942d20
@@ -97,6 +102,10 @@ public:
 
     StringHashLH<ProgressDesc> ProgressInfo; // +0x68 by URL
 
+    // Byte counts of the movie loading into pch, 0 when it is not tracked (exe 0x14294b170 / 0x142956b40).
+    int GetLoadedBytes(InteractiveObject* pch) const;
+    int GetTotalBytes(InteractiveObject* pch) const;
+
 protected:
     virtual void Finalize_GC(); // exe 0x142942dd0
 };
@@ -105,6 +114,8 @@ protected:
 class BitmapData : public Object
 {
 public:
+    BitmapData(Environment* penv); // exe 0x142918ef0
+
     Ptr<ImageResource> pImageRes; // +0x68
     Ptr<MovieDef>      pMovieDef; // +0x70 keeps the image heap of the movie alive
 
@@ -127,6 +138,30 @@ public:
 
     // The clip or the first movie clip prototype handles button events (exe 0x14292e120).
     bool ActsAsButton() const;
+
+    // ButtonEventMask bits, one per button handler name.
+    enum ButtonEventNameMask
+    {
+        Mask_onPress             = 0x001,
+        Mask_onRelease           = 0x002,
+        Mask_onReleaseOutside    = 0x004,
+        Mask_onRollOver          = 0x008,
+        Mask_onRollOut           = 0x010,
+        Mask_onDragOver          = 0x020,
+        Mask_onDragOut           = 0x040,
+        Mask_onPressAux          = 0x080,
+        Mask_onReleaseAux        = 0x100,
+        Mask_onReleaseOutsideAux = 0x200,
+        Mask_onDragOverAux       = 0x400,
+        Mask_onDragOutAux        = 0x800
+    };
+    // The mask bit of a button handler name, 0 for any other name (exe 0x142949b30).
+    static UInt16 GetButtonEventNameMask(ASStringContext* psc, const ASString& name);
+
+    virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x142938850
+
+    virtual InteractiveObject*       GetASCharacter();       // exe 0x1429491c0
+    virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949240
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942df0
@@ -189,6 +224,9 @@ public:
 
     // The IME styles of the field or of the nearest text field prototype that has them (exe 0x14294b030).
     GFx::Text::IMEStyle* GetIMECompositionStringStyles();
+
+    virtual InteractiveObject*       GetASCharacter();       // exe 0x1429492c0
+    virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949340
 
 protected:
     virtual void Finalize_GC(); // exe 0x1429430b0
@@ -314,6 +352,9 @@ public:
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937240
 
+    // SharedObject() called as a function: a new shared object (exe 0x14295c670).
+    static void GlobalCtor(const FnCall& fn);
+
 protected:
     virtual void Finalize_GC(); // exe 0x142942f80
 
@@ -381,6 +422,31 @@ class StageCtorFunction : public CFunctionObject
 {
 public:
     static void GlobalCtor(const FnCall& fn); // exe 0x14295c6f0
+};
+
+// The flash.display.BitmapData class.
+class BitmapDataCtorFunction : public CFunctionObject
+{
+public:
+    // BitmapData() called as a function: a new empty bitmap (exe 0x142959160).
+    static void GlobalCtor(const FnCall& fn);
+};
+
+// The MovieClipLoader class.
+class MovieClipLoaderCtorFunction : public CFunctionObject
+{
+public:
+    // MovieClipLoader() on a loader instance makes it its own listener and returns it, null otherwise
+    // (exe 0x14295bca0).
+    static void GlobalCtor(const FnCall& fn);
+};
+
+// The AsBroadcaster class.
+class AsBroadcasterCtorFunction : public CFunctionObject
+{
+public:
+    // AsBroadcaster() on a broadcaster instance returns it, null otherwise (exe 0x142958670).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 // The MovieClip class.

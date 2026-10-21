@@ -53,6 +53,9 @@ public:
     }
     // The out-of-line copy of the above (exe 0x142989d20), called where the exe did not inline it.
     void SetProperties_Call(ASStringContext* psc, const Value params[Point_NumProperties]);
+
+    // length is the distance from the origin, the rest are plain members (exe 0x14294f7e0).
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
 };
 
 // Point.prototype methods.

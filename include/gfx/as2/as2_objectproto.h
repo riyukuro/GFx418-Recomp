@@ -27,6 +27,9 @@ protected:
     FunctionRef      __Constructor__; // +0x20
     InterfacesArray* pInterfaces;     // +0x38 implemented interfaces (implements)
 
+    // One of the interfaces is an instance of prototype (exe 0x1429396a0).
+    bool DoesImplement(Environment* penv, const Object* prototype) const;
+
 public:
     virtual ~GASPrototypeBase();
 

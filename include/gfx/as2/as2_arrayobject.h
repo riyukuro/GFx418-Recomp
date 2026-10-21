@@ -63,6 +63,8 @@ public:
     void RemoveElements(int start, int count);    // exe 0x14297d0d0
     void InsertEmpty(int start, int count);       // exe 0x142962010
     void JoinToString(Environment* penv, StringBuffer* pbuffer, const char* pdelimiter) const; // exe 0x142966270
+    // The elements joined with "," (exe 0x1429565d0).
+    virtual const char* GetTextValue(Environment* penv = 0) const;
     void Concat(Environment* penv, const Value& val);                                         // exe 0x142935680
 
     void PopBack()

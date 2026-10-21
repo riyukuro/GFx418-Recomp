@@ -2,7 +2,10 @@
 // script objects and of the built-in prototypes (Finalize_GC: release what the collector does not own).
 // MS2-UNIT: sfr_as2_05
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142938850-0x1429388e0 .text$mn
+// MS2-RANGE: 0x1429396a0-0x142939780 .text$mn
 // MS2-RANGE: 0x142939c20-0x142939c60 .text$mn
+// MS2-RANGE: 0x142939c60-0x142939e30 .text$mn
 // MS2-RANGE: 0x142941d70-0x142942930 .text$mn
 // MS2-RANGE: 0x142942990-0x142942c00 .text$mn
 // MS2-RANGE: 0x142942ca0-0x142942da0 .text$mn
@@ -10,19 +13,29 @@
 // MS2-RANGE: 0x142942f10-0x142942fa0 .text$mn
 // MS2-RANGE: 0x142942fc0-0x142942ff0 .text$mn
 // MS2-RANGE: 0x142943020-0x1429431a0 .text$mn
+// MS2-RANGE: 0x142944a00-0x142944a80 .text$mn
 // MS2-RANGE: 0x142944c60-0x142944cb0 .text$mn
 // MS2-RANGE: 0x142948f10-0x142949070 .text$mn
 // MS2-RANGE: 0x142949080-0x1429490a0 .text$mn
+// MS2-RANGE: 0x1429490c0-0x142949140 .text$mn
+// MS2-RANGE: 0x142949140-0x1429491c0 .text$mn
+// MS2-RANGE: 0x1429491c0-0x142949240 .text$mn
+// MS2-RANGE: 0x142949240-0x1429492c0 .text$mn
+// MS2-RANGE: 0x1429492c0-0x142949340 .text$mn
+// MS2-RANGE: 0x142949340-0x1429493c0 .text$mn
 // MS2-RANGE: 0x1429497f0-0x142949820 .text$mn
 // MS2-RANGE: 0x142949840-0x142949860 .text$mn
+// MS2-RANGE: 0x142949b30-0x142949c00 .text$mn
 // MS2-RANGE: 0x142949f60-0x14294a010 .text$mn
 // MS2-RANGE: 0x14294a580-0x14294a5b0 .text$mn
 // MS2-RANGE: 0x14294afc0-0x14294afe0 .text$mn
 // MS2-RANGE: 0x14294b030-0x14294b080 .text$mn
+// MS2-RANGE: 0x14294b170-0x14294b210 .text$mn
 // MS2-RANGE: 0x14294b210-0x14294b230 .text$mn
 // MS2-RANGE: 0x14294b230-0x14294b250 .text$mn
 // MS2-RANGE: 0x14294c700-0x14294c720 .text$mn
 // MS2-RANGE: 0x14294f7d0-0x14294f7e0 .text$mn
+// MS2-RANGE: 0x14294f7e0-0x14294f880 .text$mn
 // MS2-RANGE: 0x142950b40-0x1429531f0 .text$mn
 // MS2-RANGE: 0x1429531f0-0x142953210 .text$mn
 // MS2-RANGE: 0x1429538a0-0x142953970 .text$mn
@@ -31,17 +44,24 @@
 // MS2-RANGE: 0x142954ba0-0x142954c20 .text$mn
 // MS2-RANGE: 0x1429561c0-0x1429561d0 .text$mn
 // MS2-RANGE: 0x142956230-0x142956270 .text$mn
+// MS2-RANGE: 0x1429565d0-0x142956690 .text$mn
 // MS2-RANGE: 0x1429566d0-0x142956730 .text$mn
 // MS2-RANGE: 0x142956740-0x142956760 .text$mn
+// MS2-RANGE: 0x142956b40-0x142956be0 .text$mn
 // MS2-RANGE: 0x142958370-0x1429583d0 .text$mn
+// MS2-RANGE: 0x1429583d0-0x142958490 .text$mn
 // MS2-RANGE: 0x142958490-0x1429584b0 .text$mn
+// MS2-RANGE: 0x142958670-0x142958720 .text$mn
+// MS2-RANGE: 0x142959160-0x1429591e0 .text$mn
 // MS2-RANGE: 0x14295ae20-0x14295ae40 .text$mn
 // MS2-RANGE: 0x14295afb0-0x14295b020 .text$mn
 // MS2-RANGE: 0x14295bbe0-0x14295bc00 .text$mn
 // MS2-RANGE: 0x14295bc00-0x14295bc20 .text$mn
 // MS2-RANGE: 0x14295bc20-0x14295bc40 .text$mn
 // MS2-RANGE: 0x14295bc40-0x14295bca0 .text$mn
+// MS2-RANGE: 0x14295bca0-0x14295bd30 .text$mn
 // MS2-RANGE: 0x14295c650-0x14295c670 .text$mn
+// MS2-RANGE: 0x14295c670-0x14295c6f0 .text$mn
 // MS2-RANGE: 0x14295c6f0-0x14295c710 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
@@ -530,6 +550,268 @@ void SelectionCtorFunction::GlobalCtor(const FnCall& fn)
 void StageCtorFunction::GlobalCtor(const FnCall& fn)
 {
     fn.Result->SetNull();
+}
+
+// @0x1429490c0
+InteractiveObject* ButtonObject::GetASCharacter()
+{
+    return Ptr<InteractiveObject>(pButton).GetPtr();
+}
+
+// @0x142949140
+const InteractiveObject* ButtonObject::GetASCharacter() const
+{
+    return Ptr<InteractiveObject>(pButton).GetPtr();
+}
+
+// @0x1429491c0
+InteractiveObject* MovieClipObject::GetASCharacter()
+{
+    return Ptr<Sprite>(pSprite).GetPtr();
+}
+
+// @0x142949240
+const InteractiveObject* MovieClipObject::GetASCharacter() const
+{
+    return Ptr<Sprite>(pSprite).GetPtr();
+}
+
+// @0x1429492c0
+InteractiveObject* TextFieldObject::GetASCharacter()
+{
+    return Ptr<InteractiveObject>(pTextField).GetPtr();
+}
+
+// @0x142949340
+const InteractiveObject* TextFieldObject::GetASCharacter() const
+{
+    return Ptr<InteractiveObject>(pTextField).GetPtr();
+}
+
+// @0x142944a00
+Object* ObjectInterface::FindOwner(ASStringContext* psc, const ASString& name)
+{
+    for (ObjectInterface* pobj = this; pobj; pobj = pobj->pProto.GetPtr())
+    {
+        if (pobj->HasMember(psc, name, false))
+            return static_cast<Object*>(pobj);
+    }
+    return 0;
+}
+
+// MS2-FUNCTIONAL the exe AddRefs the copied function in memory (inc / and) and keeps two null returns
+// @0x1429583d0
+FunctionRef ObjectInterface::Get_constructor(ASStringContext* psc)
+{
+    Value ctorVal;
+    if (GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_constructor), &ctorVal) && ctorVal.IsFunction())
+        return ctorVal.ToFunction(0);
+    return FunctionRef();
+}
+
+// @0x142938850
+bool MovieClipObject::DeleteMember(ASStringContext* psc, const ASString& name)
+{
+    // Deleting an existing "on..." button handler drops its bit from the clip's button event mask.
+    if (name.GetSize() > 2 && name[0] == 'o' && name[1] == 'n')
+    {
+        Value val;
+        if (GetMemberRaw(psc, name, &val))
+        {
+            UInt16 mask = GetButtonEventNameMask(psc, name);
+            if (mask)
+                ButtonEventMask &= ~mask;
+        }
+    }
+    return Object::DeleteMember(psc, name);
+}
+
+// @0x142949b30
+SF_NOINLINE UInt16 MovieClipObject::GetButtonEventNameMask(ASStringContext* psc, const ASString& name)
+{
+    if (psc->GetBuiltin(ASBuiltin_onPress).GetNode() == name.GetNode())
+        return Mask_onPress;
+    if (psc->GetBuiltin(ASBuiltin_onRelease).GetNode() == name.GetNode())
+        return Mask_onRelease;
+    if (psc->GetBuiltin(ASBuiltin_onReleaseOutside).GetNode() == name.GetNode())
+        return Mask_onReleaseOutside;
+    if (psc->GetBuiltin(ASBuiltin_onRollOver).GetNode() == name.GetNode())
+        return Mask_onRollOver;
+    if (psc->GetBuiltin(ASBuiltin_onRollOut).GetNode() == name.GetNode())
+        return Mask_onRollOut;
+    if (psc->GetBuiltin(ASBuiltin_onDragOver).GetNode() == name.GetNode())
+        return Mask_onDragOver;
+    if (psc->GetBuiltin(ASBuiltin_onDragOut).GetNode() == name.GetNode())
+        return Mask_onDragOut;
+    if (psc->GetBuiltin(ASBuiltin_onPressAux).GetNode() == name.GetNode())
+        return Mask_onPressAux;
+    if (psc->GetBuiltin(ASBuiltin_onReleaseAux).GetNode() == name.GetNode())
+        return Mask_onReleaseAux;
+    if (psc->GetBuiltin(ASBuiltin_onReleaseOutsideAux).GetNode() == name.GetNode())
+        return Mask_onReleaseOutsideAux;
+    if (psc->GetBuiltin(ASBuiltin_onDragOverAux).GetNode() == name.GetNode())
+        return Mask_onDragOverAux;
+    if (psc->GetBuiltin(ASBuiltin_onDragOutAux).GetNode() == name.GetNode())
+        return Mask_onDragOutAux;
+    return 0;
+}
+
+// @0x142959160
+void BitmapDataCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<BitmapData> pbitmap = *SF_HEAP_NEW(fn.Env->GetHeap()) BitmapData(fn.Env);
+    fn.Result->SetAsObject(pbitmap.GetPtr());
+}
+
+// @0x14295c670
+void SharedObjectCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<SharedObject> pso = *SF_HEAP_NEW(fn.Env->GetHeap()) SharedObject(fn.Env);
+    fn.Result->SetAsObject(pso.GetPtr());
+}
+
+// @0x14295bca0
+void MovieClipLoaderCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == ObjectInterface::Object_MovieClipLoader &&
+        !fn.ThisPtr->IsBuiltinPrototype())
+    {
+        MovieClipLoader* ploader = static_cast<MovieClipLoader*>(fn.ThisPtr);
+        AsBroadcaster::AddListener(fn.Env, ploader, ploader);
+        fn.Result->SetAsObject(ploader);
+    }
+    else
+        fn.Result->SetNull();
+}
+
+// @0x142958670
+void AsBroadcasterCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == ObjectInterface::Object_AsBroadcaster &&
+        !fn.ThisPtr->IsBuiltinPrototype())
+    {
+        Ptr<AsBroadcaster> pbroadcaster = static_cast<AsBroadcaster*>(fn.ThisPtr);
+        fn.Result->SetAsObject(pbroadcaster.GetPtr());
+    }
+    else
+        fn.Result->SetNull();
+}
+
+// @0x14294f7e0
+bool PointObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    if (name.GetNode() == penv->GetBuiltin(ASBuiltin_length).GetNode())
+    {
+        GASPoint pt(GASPoint::NoInit);
+        GetProperties(penv, pt);
+        *val = Value(sqrt(pt.y * pt.y + pt.x * pt.x));
+        return true;
+    }
+    return Object::GetMember(penv, name, val);
+}
+
+// @0x1429565d0
+const char* ArrayObject::GetTextValue(Environment* penv) const
+{
+    RecursionGuard guard(this);
+    if (RecursionLimitReached())
+        return "";
+
+    StringBuffer sbuffer(penv->GetHeap());
+    JoinToString(penv, &sbuffer, ",");
+    static_cast<String&>(StringValue) = sbuffer;
+    return StringValue.ToCStr();
+}
+
+// @0x1429396a0
+bool GASPrototypeBase::DoesImplement(Environment* penv, const Object* prototype) const
+{
+    if (pInterfaces)
+    {
+        for (unsigned i = 0, n = unsigned(pInterfaces->GetSize()); i < n; ++i)
+        {
+            Ptr<Object> pinterface = (*pInterfaces)[i];
+            if (pinterface && pinterface->InstanceOf(penv, prototype))
+                return true;
+        }
+    }
+    return false;
+}
+
+// MS2-FUNCTIONAL cl calls HashSetBase::GetAlt out of line, the exe inlines it around a findIndexAlt call
+// @0x14294b170
+int MovieClipLoader::GetLoadedBytes(InteractiveObject* pch) const
+{
+    String path;
+    pch->GetAbsolutePath(&path);
+    const ProgressDesc* pprogress = static_cast<const StringHashLH<ProgressDesc>::BaseType&>(ProgressInfo).GetAlt(path);
+    if (pprogress)
+        return pprogress->LoadedBytes;
+    return 0;
+}
+
+// MS2-FUNCTIONAL cl calls HashSetBase::GetAlt out of line, the exe inlines it around a findIndexAlt call
+// @0x142956b40
+int MovieClipLoader::GetTotalBytes(InteractiveObject* pch) const
+{
+    String path;
+    pch->GetAbsolutePath(&path);
+    const ProgressDesc* pprogress = static_cast<const StringHashLH<ProgressDesc>::BaseType&>(ProgressInfo).GetAlt(path);
+    if (pprogress)
+        return pprogress->TotalBytes;
+    return 0;
+}
+
+// 1 + the index of the highest set bit of v, 0 for 0 (a fixed comparison tree, no bit scan).
+static inline UByte HighestBitCount(UInt32 v)
+{
+    // Balanced search over the bit thresholds; the int arms narrow once on return.
+    return (v < 0x8000u)
+        ? ((v < 0x80u)
+            ? ((v < 0x8u)
+                ? ((v < 0x2u) ? ((v < 0x1u) ? 0 : 1) : ((v < 0x4u) ? 2 : 3))
+                : ((v < 0x20u) ? ((v < 0x10u) ? 4 : 5) : ((v < 0x40u) ? 6 : 7)))
+            : ((v < 0x800u)
+                ? ((v < 0x200u) ? ((v < 0x100u) ? 8 : 9) : ((v < 0x400u) ? 10 : 11))
+                : ((v < 0x2000u) ? ((v < 0x1000u) ? 12 : 13) : ((v < 0x4000u) ? 14 : 15))))
+        : ((v < 0x800000u)
+            ? ((v < 0x80000u)
+                ? ((v < 0x20000u) ? ((v < 0x10000u) ? 16 : 17) : ((v < 0x40000u) ? 18 : 19))
+                : ((v < 0x200000u) ? ((v < 0x100000u) ? 20 : 21) : ((v < 0x400000u) ? 22 : 23)))
+            : ((v < 0x8000000u)
+                ? ((v < 0x2000000u) ? ((v < 0x1000000u) ? 24 : 25) : ((v < 0x4000000u) ? 26 : 27))
+                : ((v < 0x20000000u) ? ((v < 0x10000000u) ? 28 : 29)
+                    : ((v < 0x40000000u) ? 30 : ((v < 0x80000000u) ? 31 : 32)))));
+}
+
+// @0x142939c60
+ASBuiltinType EventId_GetFunctionNameBuiltinType(const EventId& evt)
+{
+    // Indexed by the bit number of a mouse/key/clip event plus one, then the loader and socket events.
+    static const ASBuiltinType handlerNames[] =
+    {
+        ASBuiltin_INVALID,
+        ASBuiltin_onLoad, ASBuiltin_onEnterFrame, ASBuiltin_onUnload, ASBuiltin_onMouseMove,
+        ASBuiltin_onMouseDown, ASBuiltin_onMouseUp, ASBuiltin_onKeyDown, ASBuiltin_onKeyUp,
+        ASBuiltin_onData, ASBuiltin_ainitializea_,
+        ASBuiltin_onPress, ASBuiltin_onRelease, ASBuiltin_onReleaseOutside, ASBuiltin_onRollOver,
+        ASBuiltin_onRollOut, ASBuiltin_onDragOver, ASBuiltin_onDragOut, ASBuiltin_akeyPressa_,
+        ASBuiltin_onConstruct,
+        ASBuiltin_onPressAux, ASBuiltin_onReleaseAux, ASBuiltin_onReleaseOutsideAux, ASBuiltin_onDragOverAux,
+        ASBuiltin_onDragOutAux,
+        ASBuiltin_onLoadStart, ASBuiltin_onLoadError, ASBuiltin_onLoadProgress, ASBuiltin_onLoadInit,
+        ASBuiltin_onSockClose, ASBuiltin_onSockConnect, ASBuiltin_onSockData, ASBuiltin_onSockXML,
+        ASBuiltin_onXMLLoad, ASBuiltin_onXMLData
+    };
+
+    unsigned idx;
+    if (evt.Id <= EventId::Event_DragOutAux)
+        idx = HighestBitCount(evt.Id);
+    else
+        idx = evt.Id - EventId::Event_LoadStart + 25;
+    if (idx > 0 && idx < sizeof(handlerNames) / sizeof(handlerNames[0]))
+        return handlerNames[idx];
+    return ASBuiltin_unknown_;
 }
 
 // @0x142939c20

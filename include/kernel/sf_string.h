@@ -9,6 +9,8 @@
 
 namespace Scaleform {
 
+class StringBuffer;
+
 // Shared, reference counted UTF-8 text. pData points at a DataDesc whose two low address bits carry the heap type;
 // the top bit of DataDesc::Size flags "length == byte size". The out-of-line members live in the kernel string unit
 // (exe: String() 0x142584ce0, String(const char*) 0x142584b70, String(const wchar_t*) 0x142584ca0,
@@ -61,6 +63,7 @@ public:
 
     void operator=(const char* pstr);
     void operator=(const String& src);
+    void operator=(const StringBuffer& src); // exe 0x1425856c0
     // Empties the string (exe 0x1425866a0); replaces it with size bytes of utf8 (0x142586530) or of a generated
     // text (0x142586430).
     void Clear();

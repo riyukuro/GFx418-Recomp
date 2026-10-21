@@ -150,6 +150,11 @@ public:
     inline InteractiveObject* ToCharacter();
     // The clip of a movie clip object, 0 for anything else (as2_avmsprite.h).
     inline Sprite* ToSprite();
+
+    // The object on the prototype chain that has the member itself, 0 for none (exe 0x142944a00).
+    Object* FindOwner(ASStringContext* psc, const ASString& name);
+    // The function of the constructor member, a null reference without one (exe 0x1429583d0).
+    FunctionRef Get_constructor(ASStringContext* psc);
 };
 
 // The user data of an object and the movie it was set from. 0x10 bytes.
@@ -194,6 +199,7 @@ public:
 
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val); // exe 0x142953280
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);       // exe 0x14294f7d0
+    virtual bool DeleteMember(ASStringContext* psc, const ASString& name);             // exe 0x1429388e0
 
 protected:
     Object(ASRefCountCollector* pcc);
