@@ -36,7 +36,8 @@ struct ActionPriority
     enum Priority
     {
         AP_Highest = 0,
-        AP_Initialize = 0,
+        AP_Initialize = 1,   // onClipEvent(initialize)
+        AP_InitClip,         // the movie's own initclips
         AP_Construct,
         AP_Frame,
         AP_Normal = AP_Frame,

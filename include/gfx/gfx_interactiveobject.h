@@ -137,6 +137,12 @@ public:
     // (instances for Sprite 0x1424d2820, ...).
     template<class T> void ModifyOptimizedPlayListLocal();
     void RemoveFromPlayList();   // 0x1425f8a20
+    void AddToOptimizedPlayList();   // 0x1425f7e30
+    // On the optimized advance list and not about to leave it.
+    bool IsInPlayList() const
+    {
+        return (Flags & Mask_OptAdvList) && !(Flags & Mask_MarkedToRemoveFromOptAdvList);
+    }
 
     bool IsNoAdvanceLocalFlagSet() const  { return (Flags & Mask_NoAdvanceLocal) != 0; }
     bool IsNoAdvanceGlobalFlagSet() const { return (Flags & Mask_NoAdvanceGlobal) != 0; }

@@ -3,7 +3,7 @@
 // the clip, with volume and pan inherited down the clip tree) and the timeline accessors.
 // MS2-UNIT: sfr_gfx_05b
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1425d9760-0x1425dd9e0 .text$mn
+// MS2-RANGE: 0x1425d9760-0x1425dd840 .text$mn
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BEH@@Scaleform@@6B@ 0x14318be28
 // MS2-PIN: ??_7?$RefCountBaseNTS@UActiveSoundItem@Sprite@GFx@Scaleform@@$0BEH@@Scaleform@@6B@ 0x14318be28
 // MS2-PIN: ??_7ActiveSoundItem@Sprite@GFx@Scaleform@@6B@ 0x14318be30
@@ -16,6 +16,7 @@
 #include "../include/gfx/gfx_spritedef.h"
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_loadproc.h"
+#include "../include/gfx/gfx_timelinesnapshot.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -775,6 +776,7 @@ bool Sprite::GotoLabeledFrame(const char* label, int offset)
 
 // Back to frame 0 in the playing state, re-running its init actions and tags.
 // @0x1425dca60
+// MS2-FUNCTIONAL: the exe merges the flag byte in al with one store after the field resets; cl updates it in place
 void Sprite::Restart()
 {
     mDisplayList.MarkAllEntriesForRemoval(this, 0);
@@ -786,6 +788,182 @@ void Sprite::Restart()
         GetAvmSprite()->ExecuteInitActionFrameTags(CurrentFrame);
     ExecuteFrameTags(CurrentFrame);
     mDisplayList.UnloadMarkedObjects(this);
+}
+
+// Hands the no-advance state down to the children and updates their place on the advance list.
+// @0x1425dc3e0
+// MS2-FUNCTIONAL: the exe tests the two play list bits one shift at a time (shr/test), cl folds them into one mask compare
+void Sprite::PropagateNoAdvanceGlobalFlag()
+{
+    bool noAdvance = IsNoAdvanceGlobalFlagSet();
+    for (UPInt i = 0, n = mDisplayList.GetCount(); i < n; i++)
+    {
+        DisplayObjectBase* pch = mDisplayList.GetDisplayObject(i);
+        InteractiveObject* pich = pch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pch) : 0;
+        if (!pich)
+            continue;
+        pich->SetNoAdvanceGlobalFlag(IsNoAdvanceGlobalFlagSet() || noAdvance);
+        pich->PropagateNoAdvanceGlobalFlag();
+        int status = pich->CheckAdvanceStatus(pich->IsInPlayList());
+        if (status == -1)
+            pich->Flags |= Mask_MarkedToRemoveFromOptAdvList;
+        else if (status == 1)
+            pich->AddToOptimizedPlayList();
+    }
+}
+
+// @0x1425dc500
+// MS2-FUNCTIONAL: the exe tests the two play list bits one shift at a time (shr/test), cl folds them into one mask compare
+void Sprite::PropagateNoAdvanceLocalFlag()
+{
+    bool noAdvance = IsNoAdvanceLocalFlagSet();
+    for (UPInt i = 0, n = mDisplayList.GetCount(); i < n; i++)
+    {
+        DisplayObjectBase* pch = mDisplayList.GetDisplayObject(i);
+        InteractiveObject* pich = pch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pch) : 0;
+        if (!pich)
+            continue;
+        pich->SetNoAdvanceLocalFlag(IsNoAdvanceLocalFlagSet() || noAdvance);
+        pich->PropagateNoAdvanceLocalFlag();
+        int status = pich->CheckAdvanceStatus(pich->IsInPlayList());
+        if (status == -1)
+            pich->Flags |= Mask_MarkedToRemoveFromOptAdvList;
+        else if (status == 1)
+            pich->AddToOptimizedPlayList();
+    }
+}
+
+// Hiding a clip stops its advance when the movie has noInvisibleAdvance set.
+// @0x1425dd1a0
+void Sprite::SetVisible(bool visible)
+{
+    SetVisibleFlag(visible);
+    bool noAdvance = !visible && GetMovieImpl()->IsNoInvisibleAdvanceFlagSet();
+    if (noAdvance == IsNoAdvanceGlobalFlagSet())
+        return;
+    SetNoAdvanceGlobalFlag(noAdvance);
+    ModifyOptimizedPlayListLocal<Sprite>();
+    if (pParent && !pParent->IsNoAdvanceGlobalFlagSet())
+        PropagateNoAdvanceGlobalFlag();
+}
+
+// Jumps to a frame (clamped to the loaded ones) and stops there. Going back rebuilds the display list from frame 0;
+// going forward over several frames applies their tags as one snapshot; the target frame's tags then run normally.
+// @0x1425db6b0
+// MS2-FUNCTIONAL: the backward jump gets the heap through the virtual MovieImpl::GetMovieHeap (vftable +0x178, MovieImpl's
+// vtable is not recovered); here both jumps read MovieImpl::pHeap, and the stack frame differs
+void Sprite::GotoFrame(unsigned targetFrameNumber)
+{
+    if (!(DisplayObjectBase::Flags & Mask_MovieClip) || IsUnloading())
+        return;
+    int target = Alg::Min<int>(targetFrameNumber, GetLoadingFrame() - 1);
+    if (target < 0)
+        target = 0;
+    unsigned frame = target;
+    SetStreamingSound(0);
+
+    if (frame < CurrentFrame)
+    {
+        mDisplayList.MarkAllEntriesForRemoval(this, frame ? frame - 1 : 0);
+        if (frame >= 1)
+        {
+            TimelineSnapshot snapshot(TimelineSnapshot::Direction_Backward, GetMovieImpl()->pHeap, this);
+            snapshot.MakeSnapshot(pDef, 0, frame - 1);
+            CurrentFrame = frame;
+            snapshot.ExecuteSnapshot(this);
+        }
+        else
+            CurrentFrame = frame;
+        if (HasAvmObject())
+            GetAvmSprite()->ExecuteInitActionFrameTags(frame);
+        ExecuteFrameTags(frame);
+        mDisplayList.UnloadMarkedObjects(this);
+    }
+    else if (frame > CurrentFrame)
+    {
+        if (frame > 1 && frame > CurrentFrame + 1)
+        {
+            TimelineSnapshot snapshot(TimelineSnapshot::Direction_Forward, GetMovieImpl()->pHeap, this);
+            snapshot.MakeSnapshot(pDef, CurrentFrame + 1, frame - 1);
+            if (HasAvmObject())
+            {
+                for (unsigned f = CurrentFrame + 1; f < frame; f++)
+                    GetAvmSprite()->ExecuteInitActionFrameTags(f);
+            }
+            CurrentFrame = frame;
+            snapshot.ExecuteSnapshot(this);
+        }
+        else
+            CurrentFrame = frame;
+        if (HasAvmObject())
+            GetAvmSprite()->ExecuteInitActionFrameTags(frame);
+        ExecuteFrameTags(frame);
+    }
+    PlayStatePriv = State_Stopped;
+}
+
+// The nodes go back to the pool, which then frees its pages.
+// @0x1425d9b70
+TimelineSnapshot::~TimelineSnapshot()
+{
+    SnapshotElement* pe = SnapshotList.GetFirst();
+    while (!SnapshotList.IsNull(pe))
+    {
+        SnapshotElement* next = SnapshotList.GetNext(pe);
+        SnapshotHeap.Free(pe);
+        pe = next;
+    }
+    SnapshotList.Clear();
+}
+
+// @0x1425dcf10
+TimelineSnapshot::SnapshotElement::~SnapshotElement() {}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Focus and mouse
+
+// A clip that acts as a button gets a rollOver when the keyboard brings the focus to it.
+// @0x1425dbe70
+void Sprite::OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt)
+{
+    if (fmt != GFx_FocusMovedByKeyboard)
+        return;
+    if (HasAvmObject() && GetAvmIntObj()->ActsAsButton() && !GetMovieImpl()->IsDisableFocusRolloverEvent())
+    {
+        EventId evt(EventId::Event_RollOver);
+        evt.ControllerIndex = (SByte)controllerIdx;
+        OnMouseEvent(evt);
+    }
+}
+
+// ... and a rollOut when the keyboard moves the focus away while the focus rectangle is shown.
+// @0x1425dc150
+bool Sprite::OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx, FocusMovedType fmt)
+{
+    if (fmt == GFx_FocusMovedByKeyboard && HasAvmObject() && GetAvmIntObj()->ActsAsButton())
+    {
+        MovieImpl* proot = GetMovieImpl();
+        if (proot->IsFocusRectShown(controllerIdx) && !proot->IsDisableFocusRolloverEvent())
+        {
+            EventId evt(EventId::Event_RollOut);
+            evt.ControllerIndex = (SByte)controllerIdx;
+            OnMouseEvent(evt);
+        }
+    }
+    return true;
+}
+
+// Button events go to the AVM handlers; unhandled ones bubble up to the parent (level movies keep theirs).
+// @0x1425dc210
+bool Sprite::OnMouseEvent(const EventId& evt)
+{
+    if (HasAvmObject() && GetAvmSprite()->IsLevelMovie())
+        return false;
+    if (HasAvmObject() && GetAvmSprite()->OnEvent(evt))
+        return false;
+    if (pParent)
+        return pParent->OnMouseEvent(evt);
+    return false;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -248,6 +248,10 @@ public:
     // Non-virtual members called from the recovered units (bodies in the exe).
     void SetScale9Grid(const RectF& grid);   // 0x1425f5a50
     void SetDirtyFlag();                     // 0x1425f4090, empty in this build (folded with other empty bodies)
+
+protected:
+    // Sets Mask_Visible and updates the render node (0x1425f60e0).
+    void SetVisibleFlag(bool v = true);
 };
 
 // Named reference to a display object that survives the object (it is resolved again by path when the object
