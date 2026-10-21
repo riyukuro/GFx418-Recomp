@@ -69,6 +69,11 @@ class GFxInitImportActions : public ExecuteTag
 public:
     // exe 0x1425cee70
     void ExecuteInContext(DisplayObjContainer* m, MovieDefImpl* pbindDef, bool recursiveCheck = 1);
+
+    // Runs in the binding context of the target sprite's own movie (exe 0x1425ced90).
+    virtual void Execute(DisplayObjContainer* m);
+
+    unsigned ImportIndex; // +8 index into the binding's import source movies
 };
 
 class LoadProcess : public LoaderTask, public LogBase<LoadProcess>

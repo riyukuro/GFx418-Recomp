@@ -50,6 +50,7 @@
 #include "../include/gfx/gfx_sound.h"
 #include "../include/gfx/gfx_assupport.h"
 #include "../include/gfx/gfx_fontlib.h"
+#include "../include/gfx/gfx_displayobjcontainer.h"
 #include "../include/render/render_twips.h"
 #include "../include/kernel/sf_file.h"
 #include "../include/kernel/sf_memory.h"
@@ -1311,6 +1312,30 @@ Movie* MovieDefImpl::CreateInstance(MemoryContext* memContext, bool initFirstFra
 
     // A new movie starts with one reference: the caller's.
     return proot;
+}
+
+// @0x1425ced90
+void GFxInitImportActions::Execute(DisplayObjContainer* m)
+{
+    // The context is the target sprite's own; Sprite::ExecuteImportedInitActions overrides it.
+    ExecuteInContext(m, m->GetResourceMovieDef(), false);
+}
+
+// Imported InitActions run in the binding context of the movie that imported them, otherwise the import indexes of
+// the parent's source movies would be used and recursive imports would loop.
+// @0x1425cee70
+void GFxInitImportActions::ExecuteInContext(DisplayObjContainer* m, MovieDefImpl* pbindDef, bool recursiveCheck)
+{
+    MovieDefImpl* psourceImportMovie = pbindDef->pBindData->GetImportSourceMovie(ImportIndex);
+
+    if (psourceImportMovie && psourceImportMovie->GetDataDef()->HasInitActions())
+    {
+        // A file may import itself or import recursively: the sprite's own movie does not run its actions again.
+        if (recursiveCheck && psourceImportMovie == m->GetResourceMovieDef())
+            return;
+
+        m->ExecuteImportedInitActions(psourceImportMovie);
+    }
 }
 
 // @0x1425cf500
