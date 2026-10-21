@@ -186,6 +186,11 @@ public:
     UByte                      Flags;           // +0x140
     SByte                      FocusEnabled;    // +0x141 Bool3W: 0 undefined, 1 true, 2 false
     SpriteMouseState           MouseStatePriv;  // +0x144
+
+public:
+    // (appended for the sprite stubs, sfr_gfx_05b) the renderer hint the AS2 rendererString member sets; 4.1.18
+    // ignores it (exe 0x1425dcf30)
+    void SetRendererString(ASString str);
 };
 
 // The AVM half of a sprite: slots 24..34 (CloneInternalData overrides the AvmInteractiveObjBase slot).

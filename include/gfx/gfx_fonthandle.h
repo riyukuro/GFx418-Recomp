@@ -26,6 +26,8 @@ inline FontHandle::FontHandle(FontManagerBase* pmgr, Font* pfont, const char* na
 
 namespace Scaleform { namespace GFx {
 
+class MovieDef;
+
 class FontHandle : public Render::Text::FontHandle
 {
 public:
@@ -36,6 +38,10 @@ public:
     }
 
     Ptr<Resource> pSourceMovieDef; // +0x38 a Ptr<MovieDef> (MovieDef derives from Resource first)
+
+    // (appended for the sprites, sfr_gfx_05b) the exe's out-of-line ctor (0x1425b5800), holding the source movie too
+    FontHandle(Render::Text::FontManagerBase* pmgr, Render::Font* pfont, const char* name, unsigned flags,
+               MovieDef* psourceMovieDef);
 };
 
 }} // namespace Scaleform::GFx

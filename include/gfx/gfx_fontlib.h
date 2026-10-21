@@ -24,6 +24,14 @@ public:
 
 private:
     Ptr<Render::Font> pFont; // +0x18
+
+public:
+    // (appended for the sprites, sfr_gfx_05b) the binding the font was bound in; 0x40 bytes in all
+    ResourceBinding* GetBinding() const { return pBinding; }
+
+private:
+    ResourceBinding* pBinding;      // +0x20
+    UByte            Unknown28[0x18]; // +0x28 a RectF and a counter set by the ctor
 };
 
 // Movies registered with AddFontsFrom are searched for fonts by name (vftable 0x143189198, 0x20 bytes).

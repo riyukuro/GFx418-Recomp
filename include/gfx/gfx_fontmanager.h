@@ -5,6 +5,10 @@
 #ifndef MS2_SF_GFX_FONTMANAGER_H
 #define MS2_SF_GFX_FONTMANAGER_H
 
+namespace Scaleform { namespace Render { namespace Text {
+class FontHandle;
+}}} // namespace Scaleform::Render::Text
+
 namespace Scaleform { namespace GFx {
 
 class FontHandle;
@@ -21,6 +25,12 @@ public:
     // (appended for the containers, sfr_gfx_06d) the font manager of one root movie; 0x70 bytes,
     // reference counted (RefCountImpl) (0x14263b350).
     FontManager(MovieImpl* pmovie, MovieDefImpl* pdefImpl, FontManagerStates* pfontStates);
+
+    // (appended for the sprites, sfr_gfx_05b) the first virtuals of its Render::Text::FontManagerBase base (vftable
+    // slots 0 and 1; the search info is a FontManagerBase::FontSearchPathInfo*)
+    virtual ~FontManager();
+    virtual Render::Text::FontHandle* CreateFontHandle(const char* pfontName, unsigned matchFontFlags,
+                                                       bool allowListOfFonts = true, void* psearchInfo = 0);
 };
 
 }} // namespace Scaleform::GFx

@@ -20,6 +20,10 @@
 #include "../include/gfx/gfx_timelinesnapshot.h"
 #include "../include/gfx/gfx_fontmanager.h"
 #include "../include/gfx/gfx_textsnapshot.h"
+#include "../include/kernel/sf_std.h"
+#include "../include/gfx/gfx_fonthandle.h"
+#include "../include/gfx/gfx_fontlib.h"
+#include "../include/gfx/gfx_rendertree.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -450,6 +454,9 @@ void Sprite::SetLoadedSeparately(bool v)
         AssignRootNode();
 }
 
+// @0x1425dcf30
+void Sprite::SetRendererString(ASString) {}
+
 // @0x1425dcf40
 void Sprite::SetRootNodeLoadingStat(unsigned bytesLoaded, unsigned loadingFrame)
 {
@@ -467,11 +474,51 @@ void Sprite::SetIMECandidateListFont(FontHandle* pfont)
         pRootNode->pFontManager->SetIMECandidateFont(pfont);
 }
 
-// Identical code to the rect variant, so the linker folded the two.
+// A font of the candidate list movie (level 9999) becomes the IME candidate font of the clip's movie; an unresolved
+// font is looked up by name in the font manager first.
+// @0x1425dcc20
+void Sprite::SetIMECandidateListFont(FontResource* pfont)
+{
+    if (!GetAvmSprite()->CheckCandidateListLevel(9999))
+        return;
+    if (!pRootNode)
+        return;
+    FontManager* pfontManager = pRootNode->pFontManager;
+    if (!pfontManager)
+        return;
+    ResourceBinding* pbinding = pfont->GetBinding();
+    Ptr<FontHandle>  pfontHandle;
+    if (pfont->GetFont()->IsResolved())
+    {
+        MovieDef* pdef = pbinding ? pbinding->GetOwnerDefImpl() : 0;
+        pfontHandle = *SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap()) FontHandle(0, pfont->GetFont(), "", 0, pdef);
+    }
+    else
+    {
+        Ptr<FontHandle> pfound = *static_cast<FontHandle*>(
+            pfontManager->CreateFontHandle(pfont->GetName(), pfont->GetFont()->GetFontFlags(), false));
+        if (pfound)
+            pfontHandle = *SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap())
+                FontHandle(0, pfound->pFont, "", 0, static_cast<MovieDef*>(pfound->pSourceMovieDef.GetPtr()));
+    }
+    if (pfontHandle)
+        pRootNode->pFontManager->SetIMECandidateFont(pfontHandle);
+}
+
 // @0x1425db2f0
 RectF DisplayObjContainer::GetBounds(const Matrix& t) const
 {
     return mDisplayList.GetRectBounds(t);
+}
+
+// With a drawing API the children live in the second node of the clip's container.
+// @0x1425db310
+Render::TreeContainer* Sprite::GetRenderContainer()
+{
+    Render::TreeContainer* pcont = InteractiveObject::GetRenderContainer();
+    if (pDrawingAPI)
+        return static_cast<Render::TreeContainer*>(pcont->GetAt(1));
+    return pcont;
 }
 
 // The static text fields among the clip's direct children.
@@ -592,6 +639,25 @@ CharacterDef* Sprite::GetCharacterDef() const
 unsigned Sprite::GetCurrentFrame() const
 {
     return CurrentFrame;
+}
+
+// The drawing API draws into a container put under the clip's children; a mask is taken off while the clip's render
+// node becomes a container.
+// @0x1425daec0
+DrawingContext* Sprite::GetDrawingContext()
+{
+    if (!pDrawingAPI)
+    {
+        Ptr<DisplayObject> pmask = GetMask();
+        if (pmask)
+            SetMask(0);
+        pDrawingAPI = *GetMovieImpl()->CreateDrawingContext();
+        Render::TreeContainer* pcont = ConvertToTreeContainer();
+        pcont->Insert(0, pDrawingAPI->GetTreeNode());
+        if (pmask)
+            SetMask(pmask);
+    }
+    return pDrawingAPI;
 }
 
 // @0x1425db110
