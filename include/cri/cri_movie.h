@@ -194,7 +194,19 @@ struct CriMvInputBufferInfo
     CriUint32 reload_threshold;
 };
 
-struct CriMvEventPoint;
+// One cue point of the movie.
+struct CriMvEventPoint                      // 0x38
+{
+    CriChar8*            cue_name;          // 0x00
+    CriUint32            size_name;         // 0x08
+    CriUint64            time;              // 0x10
+    CriUint64            tunit;             // 0x18
+    CriSint32            type;              // 0x20
+    CriChar8*            param_string;      // 0x28
+    CriUint32            size_param;        // 0x30
+    CriUint32            cnt_callback;      // 0x34 times the cue callback fired for it
+};
+
 // One plane of a decoded frame.
 struct CriMvImageBufferInfo                 // 0x18
 {
@@ -229,6 +241,26 @@ struct CriMvFrameInfo                       // 0xc8
     CriUint32            color_conversion_type; // 0xb8
     CriUint32            total_frames_per_data; // 0xbc
     CriUint32            cnt_skipped_frames;    // 0xc0
+};
+
+// A piece of the player core's input buffer (GetInputChunk / PutInputChunk).
+struct CriChunk
+{
+    CriUint8*            data;
+    CriUint32            size;
+};
+
+// One subtitle as the player core hands it out (times in time_unit ticks).
+struct CriMvSubtitleInfo                    // 0x38
+{
+    CriUint8*            dataptr;           // 0x00
+    CriUint32            data_size;         // 0x08
+    CriSint32            channel_no;        // 0x0c
+    CriUint64            time_unit;         // 0x10
+    CriUint64            in_time;           // 0x18
+    CriUint64            duration_time;     // 0x20
+    CriUint32            cnt_concatenated_movie; // 0x28
+    CriUint64            in_time_per_data;  // 0x30
 };
 
 enum CriMvMetaFlag { CRIMV_META_FLAG_NONE = 0, CRIMV_META_FLAG_CUE = 1, CRIMV_META_FLAG_SEEK = 2,
@@ -331,6 +363,7 @@ public:
     CriBool   GetLoopFlag(CriError& err = CriMv::ErrorContainer);                               // 0x140022160
     CriBool   GetHeaderInfo(CriMvStreamingParameters* stmprm, CriError& err = CriMv::ErrorContainer); // 0x140022310
     CriBool   GetMovieInfo(CriMvStreamingParameters& stmprm, CriError& err = CriMv::ErrorContainer); // 0x140022420
+    CriUint32 GetSubtitleOnTime(CriUint8* bufptr, CriUint32 bufsize, CriError& err = CriMv::ErrorContainer); // 0x140022610
     void      SetStreamingParameters(CriMvStreamingParameters* stmprm,
                                      CriError& err = CriMv::ErrorContainer);                    // 0x140022540
     void      SetSubtitleChannel(CriSint32 channel, CriError& err = CriMv::ErrorContainer);     // 0x1400225b0
@@ -350,8 +383,12 @@ public:
     CriSint32 CalcFrameIdFromTime(CriUint64 count, CriUint64 unit, CriError& err = CriMv::ErrorContainer); // 0x140023f70
     CriUint64 CalcTimeFromFrameId(CriSint32 frame_id, CriUint64 unit,
                                   CriError& err = CriMv::ErrorContainer);                       // 0x140024040
+    CriSint32 SearchNextEventPointByTime(CriUint64 count, CriUint64 unit, CriSint32 type, CriMvEventPoint* eventinfo,
+                                         CriError& err = CriMv::ErrorContainer);                // 0x140024120
+    CriSint32 SearchPrevEventPointByTime(CriUint64 count, CriUint64 unit, CriSint32 type, CriMvEventPoint* eventinfo,
+                                         CriError& err = CriMv::ErrorContainer);                // 0x140024360
     CriMvCuePointInfo* GetCuePointInfo(CriError& err = CriMv::ErrorContainer);                  // 0x1400245b0
-    void      SetCuePointCallback(void (*func)(void* usrobj, CriMvEventPoint* eventinfo), void* usrobj,
+    void      SetCuePointCallback(void (*func)(CriMvEasyPlayer* mveasy, CriMvEventPoint* eventinfo, void* usrobj), void* usrobj,
                                   CriError& err = CriMv::ErrorContainer);                       // 0x140024610
     void      SetStopCompleteCallback(void (*func)(CriMvEasyPlayer* mveasy, void* usrobj), void* usrobj,
                                       CriError& err = CriMv::ErrorContainer);                   // 0x140024bf0
@@ -389,7 +426,14 @@ private:
     void      releasePlaybackResources(void);                                                   // 0x140020eb0
     void      calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64 sys_count, CriUint64 sys_unit); // 0x1400211d0
     CriBool   startInputAndDecoding(void);                                                      // 0x140021a30
+    void      updateFileReadStatus(void);                                                       // 0x140022d00
+    void      executeFileReadServer(void);                                                      // 0x140022f20
+    void      executeLoopServer(void);                                                          // 0x1400230a0
+    void      executeFileRequestServer(void);                                                   // 0x1400231d0
     CriBool   isEndReadFile(void);                                                              // 0x140023330
+    void      executeFileCloseServer(void);                                                     // 0x1400233c0
+    void      executeFileOpenServer(void);                                                      // 0x1400235a0
+    void      executeCuePointServer(void);                                                      // 0x140024660
     CriBool   isAvailableCenterVoice(const CriMvStreamingParameters* stmprm);                   // 0x140023940
     CriBool   isAvailableSubAudio(const CriMvStreamingParameters* stmprm);                      // 0x1400239e0
     CriBool   attachCenterVoice(void);                                                          // 0x140023a70
@@ -445,7 +489,7 @@ public:
     CriUint64                  user_time_unit;                  // 0x3d8
     CriSint64                  file_read_pos;                   // 0x3e0
     CriSint64                  file_read_end;                   // 0x3e8
-    CriUint8                   unk3f0[0x400 - 0x3f0];
+    CriChunk                   readck;                          // 0x3f0 input chunk the file reader fills
     CriBool                    file_opened;                     // 0x400
     CriBool                    file_closing;                    // 0x404
     CriBool                    file_reading;                    // 0x408
@@ -462,9 +506,9 @@ public:
     CriUint32                  min_buffer_size;                 // 0x44c
     CriSint32                  read_buffer_size;                // 0x450 (-1: as the header says)
     CriSint32                  subtitle_channel;                // 0x454
-    CriUint8                   unk458[0x38];                    // 0x458 cleared when input starts
-    CriFloat32                 unk490;
-    CriFloat32                 unk494;
+    CriMvSubtitleInfo          subtitle_info;                   // 0x458 subtitle currently shown
+    CriFloat32                 subtitle_start_ms;               // 0x490
+    CriFloat32                 subtitle_end_ms;                 // 0x494
     CriUint8*                  subtitle_buf;                    // 0x498
     CriBool                    unk4a0;                          // 0x4a0
     CriUint8                   unk4a4[4];
@@ -494,7 +538,7 @@ public:
     CriUint8                   unk620[0x630 - 0x620];
     CriSint32                  seek_frame_id;                   // 0x630
     CriUint64                  seek_offset;                     // 0x638
-    void                     (*cuepoint_func)(void* usrobj, CriMvEventPoint* eventinfo);   // 0x640
+    void                     (*cuepoint_func)(CriMvEasyPlayer* mveasy, CriMvEventPoint* eventinfo, void* usrobj); // 0x640
     void*                      cuepoint_usrobj;                 // 0x648
     CriUint32                  unk650;                          // 0x650
     CriUint64                  unk658;                          // 0x658

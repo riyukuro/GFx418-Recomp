@@ -1299,6 +1299,12 @@ void      FUN_140031040(CriMvPly mvply, CriSint32 track);
 void      FUN_140031060(CriMvPly mvply, CriUint32 nframes);
 void      FUN_140034b20(CriMvPly mvply);
 void      FUN_140036450(CriMvPly mvply, CriSint32 channel);
+void      FUN_140034d40(CriMvPly mvply, CriChunk* ck);
+void      FUN_140034e70(CriMvPly mvply, CriChunk* ck, CriUint32 inputsize);
+void      FUN_140035050(CriMvPly mvply);
+void      FUN_1400363b0(CriMvPly mvply, CriUint8* memptr, CriUint32 memsize);
+void      FUN_140036470(CriMvPly mvply, CriUint8* bufptr, CriUint32 bufsize, CriMvSubtitleInfo* info);
+void      FUN_140036590(CriMvPly mvply, CriMvSubtitleInfo* info);
 CriBool   FUN_1400371d0(CriMvPly mvply);
 void      FUN_1400379e0(void* obj);
 CriSint32 FUN_14003a050(void* lock, CriSint32 value);
@@ -1312,13 +1318,6 @@ CriSint32 FUN_14002e9e0(void);
 void      FUN_14002e6b0(void* work, CriUint32 work_size, CriMvWorkAllocator* walloc);
 void*     FUN_14002e6c0(CriMvWorkAllocator* walloc, CriUint32 size, CriUint32 align);
 void      FUN_14002e6bc(CriMvWorkAllocator* walloc);
-void      FUN_1400233c0(CriMvEasyPlayer* mveasy);
-void      FUN_1400235a0(CriMvEasyPlayer* mveasy);
-void      FUN_140024660(CriMvEasyPlayer* mveasy);
-void      FUN_140022d00(CriMvEasyPlayer* mveasy);
-void      FUN_1400230a0(CriMvEasyPlayer* mveasy);
-void      FUN_140022f20(CriMvEasyPlayer* mveasy);
-void      FUN_1400231d0(CriMvEasyPlayer* mveasy);
 void      FUN_14002fb70(CriMvPly mvply);
 void      FUN_14002fbe0(CriMvPly mvply, CriMvStreamingParameters* stmprm);
 void      FUN_140031470(CriMvPly mvply);
@@ -2314,7 +2313,7 @@ void CriMvEasyPlayer::executeUpdate(CriError& err)
             {
                 break;
             }
-            FUN_1400233c0(this);
+            executeFileCloseServer();
             if (detachOutputs() == 1)
             {
                 completeStop(ply_status);
@@ -2324,15 +2323,15 @@ void CriMvEasyPlayer::executeUpdate(CriError& err)
     }
     else
     {
-        FUN_1400235a0(this);
-        FUN_140024660(this);
+        executeFileOpenServer();
+        executeCuePointServer();
         updateStatus(err);
-        FUN_140022d00(this);
-        FUN_1400230a0(this);
+        updateFileReadStatus();
+        executeLoopServer();
         FUN_14002fb70(mvply);
-        FUN_140022f20(this);
-        FUN_1400231d0(this);
-        FUN_1400233c0(this);
+        executeFileReadServer();
+        executeFileRequestServer();
+        executeFileCloseServer();
         ply_status = FUN_1400310b0(mvply);
         if (ply_status == 1)
         {
@@ -3114,9 +3113,9 @@ CriBool CriMvEasyPlayer::startInputAndDecoding(void)
     unk724 = 0;
     user_time_count = 0;
     user_time_unit = 1;
-    memset(unk458, 0, sizeof(unk458));
-    unk490 = 0.0f;
-    unk494 = 0.0f;
+    memset(&subtitle_info, 0, sizeof(subtitle_info));
+    subtitle_start_ms = 0.0f;
+    subtitle_end_ms = 0.0f;
     if (file_request_state == 0 && filereq_func != NULL)
     {
         filereq_func(this, filereq_usrobj);
@@ -3453,6 +3452,279 @@ void CriMvEasyPlayer::SetSubtitleChannel(CriSint32 channel, CriError& err)
     }
 }
 
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, dead jumps after returns)
+// @0x140022610
+CriUint32 CriMvEasyPlayer::GetSubtitleOnTime(CriUint8* bufptr, CriUint32 bufsize, CriError& err)
+{
+    CriUint32 size = 0;
+    if (subtitle_buf == NULL && FUN_1400310b0(mvply) == 5 && stmprm.num_subtitle > 0)
+    {
+        setNormalErrorStatus("E09092901M:Internal subtitle buffer is not allocated. "
+                             "Check if CriMvStreamingParameters::max_subtitle_size is adequate size.");
+    }
+    if (subtitle_buf == NULL)
+    {
+        return 0;
+    }
+    if (GetStatus() != MVEASY_STATUS_PLAYING)
+    {
+        return 0;
+    }
+    if (unk724 == 1)
+    {
+        return 0;
+    }
+    err = CRIERR_OK;
+    if (bufptr != NULL)
+    {
+        memset(bufptr, 0, bufsize);
+    }
+    if (mvply != NULL)
+    {
+        FUN_140036450(mvply, subtitle_channel);
+    }
+    TimerType ttype = GetMasterTimer();
+    CriUint64 count;
+    CriUint64 unit;
+    GetTime(count, unit, err);
+    CriFloat32 now_ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
+    CriMvSubtitleInfo info;
+    if (ttype == MVEASY_TIMER_NONE)
+    {
+        FUN_140036590(mvply, &info);
+        if (info.dataptr != NULL)
+        {
+            FUN_140036470(mvply, subtitle_buf, stmprm.max_subtitle_size, &subtitle_info);
+            subtitle_start_ms = (CriFloat32)info.in_time * 1000.0f / (CriFloat32)info.time_unit;
+            subtitle_end_ms = (CriFloat32)(info.in_time + info.duration_time) * 1000.0f / (CriFloat32)info.time_unit;
+            size = (bufsize < subtitle_info.data_size) ? bufsize : subtitle_info.data_size;
+            memcpy(bufptr, subtitle_buf, size);
+            return size;
+        }
+        else if (subtitle_info.dataptr != NULL && subtitle_info.channel_no == subtitle_channel)
+        {
+            size = (bufsize < subtitle_info.data_size) ? bufsize : subtitle_info.data_size;
+            memcpy(bufptr, subtitle_buf, size);
+            return size;
+        }
+        else
+        {
+            subtitle_info = info;
+            memset(bufptr, 0, bufsize);
+            return 0;
+        }
+    }
+    if (subtitle_info.dataptr != NULL && subtitle_info.channel_no == subtitle_channel
+        && now_ms >= subtitle_start_ms && subtitle_end_ms > now_ms)
+    {
+        size = (bufsize < subtitle_info.data_size) ? bufsize : subtitle_info.data_size;
+        memcpy(bufptr, subtitle_buf, size);
+        return size;
+    }
+    FUN_140036590(mvply, &info);
+    if (info.dataptr == NULL)
+    {
+        subtitle_info = info;
+        memset(bufptr, 0, bufsize);
+        return 0;
+    }
+    CriFloat32 start_ms = (CriFloat32)info.in_time * 1000.0f / (CriFloat32)info.time_unit;
+    CriFloat32 end_ms = (CriFloat32)(info.in_time + info.duration_time) * 1000.0f / (CriFloat32)info.time_unit;
+    if (now_ms >= start_ms)
+    {
+        FUN_140036470(mvply, subtitle_buf, stmprm.max_subtitle_size, &subtitle_info);
+        subtitle_start_ms = start_ms;
+        subtitle_end_ms = end_ms;
+        size = (bufsize < subtitle_info.data_size) ? bufsize : subtitle_info.data_size;
+        memcpy(bufptr, subtitle_buf, size);
+    }
+    else
+    {
+        memset(bufptr, 0, bufsize);
+        size = 0;
+    }
+    return size;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
+// @0x140022d00
+void CriMvEasyPlayer::updateFileReadStatus(void)
+{
+    if (mvply == NULL || freader == NULL)
+    {
+        return;
+    }
+    if (data_type != 1)
+    {
+        return;
+    }
+    if (isEndReadFile() == 1)
+    {
+        return;
+    }
+    if (file_reading == 1)
+    {
+        CriMvFileReaderInterface::AsyncStatus rstat = freader->GetReadStatus();
+        if (rstat == CriMvFileReaderInterface::ASYNC_STATUS_COMPLETE)
+        {
+            CriSint64 rsize = freader->GetReadSize();
+            file_read_pos += rsize;
+            file_reading = 0;
+            FUN_140034e70(mvply, &readck, (CriUint32)rsize);
+            if (isEndReadFile() == 1)
+            {
+                return;
+            }
+        }
+        else if (rstat == CriMvFileReaderInterface::ASYNC_STATUS_ERROR)
+        {
+            file_reading = 0;
+            if (readck.data != NULL)
+            {
+                FUN_140034e70(mvply, &readck, 0);
+                readck.data = NULL;
+            }
+            if (error_flag != 1)
+            {
+                setErrorMessage("E07020601M: File Open Error - ", fname);
+                setNormalErrorStatus(DAT_143b277c0);
+            }
+            notifyErrorB(this, "E07012301M: Read Error", 0);
+            return;
+        }
+        else if (file_opened == 0 && file_closing == 0)
+        {
+            file_reading = 0;
+            FUN_140034e70(mvply, &readck, 0);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
+// @0x140022f20
+void CriMvEasyPlayer::executeFileReadServer(void)
+{
+    if (mvply == NULL || freader == NULL)
+    {
+        return;
+    }
+    if (data_type != 1)
+    {
+        return;
+    }
+    if (isEndReadFile() == 1)
+    {
+        return;
+    }
+    if (file_reading == 1 || error_flag == 1)
+    {
+        return;
+    }
+    if (unk4c0 == 3 && mvply->ibuf_info.data_size <= mvply->ibuf_info.reload_threshold)
+    {
+        FUN_140034d40(mvply, &readck);
+        CriSint64 req_size = readck.size;
+        if (req_size > 0)
+        {
+            CriSint64 remain = file_read_end - file_read_pos;
+            if (req_size > remain)
+            {
+                req_size = remain;
+            }
+            freader->Read(readck.data, req_size);
+            file_reading = 1;
+        }
+        else
+        {
+            FUN_140034e70(mvply, &readck, 0);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
+// @0x1400230a0
+void CriMvEasyPlayer::executeLoopServer(void)
+{
+    if (loop_flag == 0)
+    {
+        return;
+    }
+    if (data_type == 1)
+    {
+        if (file_read_end != -1 && file_read_pos >= file_read_end && freader != NULL)
+        {
+            freader->Seek(file_offset, CriMvFileReaderInterface::SEEK_FROM_BEGIN);
+            file_read_pos = 0;
+            unk5e8 = unk5e8 + 1;
+        }
+    }
+    else
+    {
+        CriBool empty = FUN_1400371d0(mvply);
+        if (empty == 0)
+        {
+            FUN_1400363b0(mvply, data_ptr, data_size);
+            unk5e8 = unk5e8 + 1;
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
+// @0x1400231d0
+void CriMvEasyPlayer::executeFileRequestServer(void)
+{
+    if (data_type == 2)
+    {
+        CriSint32 ply_status = FUN_1400310b0(mvply);
+        switch (ply_status)
+        {
+        case 3:
+        case 4:
+        case 5:
+            break;
+        default:
+            return;
+        }
+    }
+    if (unk4c4 == 1)
+    {
+        return;
+    }
+    if (isEndReadFile() == 0)
+    {
+        return;
+    }
+    if (unk5e4 == 1)
+    {
+        return;
+    }
+    if (filereq_func != NULL)
+    {
+        filereq_func(this, filereq_usrobj);
+    }
+    else if (data_type == 2)
+    {
+        file_request_state = 0;
+    }
+    if (file_request_state == 1)
+    {
+        if (data_type == 2)
+        {
+            FUN_1400363b0(mvply, data_ptr, data_size);
+        }
+        else
+        {
+            unk4c4 = 1;
+            unk4c0 = 4;
+        }
+    }
+    else
+    {
+        FUN_140035050(mvply);
+        unk5e4 = 1;
+    }
+}
+
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023330
 CriBool CriMvEasyPlayer::isEndReadFile(void)
@@ -3470,6 +3742,130 @@ CriBool CriMvEasyPlayer::isEndReadFile(void)
         end = 1;
     }
     return end;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
+// @0x1400233c0
+void CriMvEasyPlayer::executeFileCloseServer(void)
+{
+    if (freader == NULL || data_type == 2)
+    {
+        return;
+    }
+    if (unk4c0 == 4 && freader != NULL)
+    {
+        unk4c0 = 5;
+        freader->Close();
+        file_closing = 1;
+    }
+    if (unk4c0 == 5 && freader != NULL && data_type == 1)
+    {
+        switch (freader->GetCloseStatus())
+        {
+        case CriMvFileReaderInterface::ASYNC_STATUS_COMPLETE:
+            file_closing = 0;
+            file_opened = 0;
+            file_read_pos = 0;
+            file_read_end = -1;
+            if (modules_stopped == 1)
+            {
+                unk4c0 = 0;
+                unk4c4 = 0;
+            }
+            else
+            {
+                unk4c0 = 1;
+            }
+            break;
+        case CriMvFileReaderInterface::ASYNC_STATUS_ERROR:
+            file_closing = 0;
+            file_opened = 0;
+            file_read_pos = 0;
+            file_read_end = -1;
+            notifyErrorB(this, "E07050101M: File Close Error", 0);
+            break;
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
+// @0x1400235a0
+void CriMvEasyPlayer::executeFileOpenServer(void)
+{
+    if (unk4c4 == 0)
+    {
+        return;
+    }
+    if (unk4c0 == 1)
+    {
+        if (data_type == 2)
+        {
+            return;
+        }
+        if (unk4a0 == 1)
+        {
+            freader = freader_file;
+        }
+        else if (unk4a0 == 2)
+        {
+            freader = freader_mem;
+        }
+        if (freader != NULL)
+        {
+            file_opened = 1;
+            unk4c0 = 2;
+            freader->Open(fname);
+        }
+    }
+    if (unk4c0 == 2 && freader != NULL && file_opened == 1)
+    {
+        CriMvFileReaderInterface::AsyncStatus ostat = freader->GetOpenStatus();
+        if (ostat == CriMvFileReaderInterface::ASYNC_STATUS_COMPLETE)
+        {
+            if (file_read_end == -1 && file_closing == 0)
+            {
+                CriSint64 fsize = freader->GetFileSize();
+                if (fsize <= 0)
+                {
+                    setNormalErrorStatus("E10090802M: CriMvFileReaderInterface::GetFileSize gave an invalid value");
+                    return;
+                }
+                if (file_range < 0)
+                {
+                    file_read_end = fsize - file_offset;
+                }
+                else if ((CriSint64)(file_offset + file_range) > fsize)
+                {
+                    setNormalErrorStatus("E10090801M: Given file range overruns the file size. "
+                                         "Check the parameters of SetFileRange() ");
+                    return;
+                }
+                else
+                {
+                    file_read_end = file_range;
+                }
+                freader->Seek(file_offset, CriMvFileReaderInterface::SEEK_FROM_BEGIN);
+            }
+            unk4c0 = 3;
+            unk4c4 = 0;
+            file_request_state = 0;
+        }
+        else if (ostat == CriMvFileReaderInterface::ASYNC_STATUS_ERROR)
+        {
+            unk4c4 = 0;
+            file_request_state = 0;
+            file_closing = 0;
+            file_opened = 0;
+            file_read_pos = 0;
+            file_read_end = -1;
+            unk4c0 = 0;
+            if (error_flag != 1)
+            {
+                setErrorMessage("E07020601M: File Open Error - ", fname);
+                setNormalErrorStatus(DAT_143b277c0);
+            }
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
@@ -3548,6 +3944,38 @@ void CriMvEasyPlayer::detachCenterVoice(void)
 {
     FUN_140030fd0(mvply);
     attached_center_voice_track = -1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
+// @0x140023b10
+void CriMvEasyPlayer::AttachSubAudioInterface(CriMvSoundInterface* subsound, CriError& err)
+{
+    err = CRIERR_OK;
+    switch (FUN_1400310b0(mvply))
+    {
+    case 0:
+    case 1:
+    case 2:
+    case 7:
+        break;
+    default:
+        err = CRIERR_NG;
+        setNormalErrorStatus("E08012501M: AttachSubAudioInterface() was called on invalid movie handle state.");
+        return;
+    }
+    if (subsound == NULL)
+    {
+        subaudio = NULL;
+    }
+    else if (subsound == sound)
+    {
+        err = CRIERR_NG;
+        setNormalErrorStatus("E08012502M: AttachSubAudioInterface(): SubAudio interface is similar to MainAudio interface.");
+    }
+    else
+    {
+        subaudio = subsound;
+    }
 }
 
 // @0x140023bf0
@@ -3697,6 +4125,100 @@ CriUint64 CriMvEasyPlayer::CalcTimeFromFrameId(CriSint32 frame_id, CriUint64 uni
     return count;
 }
 
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
+// @0x140024120
+CriSint32 CriMvEasyPlayer::SearchNextEventPointByTime(CriUint64 count, CriUint64 unit, CriSint32 type,
+                                                      CriMvEventPoint* eventinfo, CriError& err)
+{
+    CriSint32 frame_id = -1;
+    err = CRIERR_OK;
+    memset(eventinfo, 0, sizeof(CriMvEventPoint));
+    eventinfo->tunit = 1;
+    if (unit == 0)
+    {
+        err = CRIERR_NG;
+        return frame_id;
+    }
+    CriMvCuePointInfo* cueinfo = &mvply->cuepoint;
+    if (cueinfo == NULL)
+    {
+        err = CRIERR_NG;
+        return frame_id;
+    }
+    CriFloat32 time_ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
+    CriUint32 i;
+    for (i = 0; i < cueinfo->num_eventpoint; i++)
+    {
+        CriMvEventPoint* ep = &cueinfo->eventtable[i];
+        CriFloat32 ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
+        if (time_ms >= ep_ms)
+        {
+            continue;
+        }
+        if (ep->type != type && type != -1)
+        {
+            continue;
+        }
+        CriMvEventPoint found = *ep;
+        *eventinfo = found;
+        break;
+    }
+    if (i == cueinfo->num_eventpoint)
+    {
+        return frame_id;
+    }
+    frame_id = CalcFrameIdFromTime(eventinfo->time, eventinfo->tunit);
+    return frame_id;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
+// @0x140024360
+CriSint32 CriMvEasyPlayer::SearchPrevEventPointByTime(CriUint64 count, CriUint64 unit, CriSint32 type,
+                                                      CriMvEventPoint* eventinfo, CriError& err)
+{
+    CriSint32 frame_id = -1;
+    err = CRIERR_OK;
+    memset(eventinfo, 0, sizeof(CriMvEventPoint));
+    eventinfo->tunit = 1;
+    if (unit == 0)
+    {
+        err = CRIERR_NG;
+        return frame_id;
+    }
+    CriMvCuePointInfo* cueinfo = &mvply->cuepoint;
+    CriMvEventPoint* prev = NULL;
+    if (cueinfo == NULL)
+    {
+        err = CRIERR_NG;
+        return frame_id;
+    }
+    CriFloat32 time_ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
+    for (CriUint32 i = 0; i < cueinfo->num_eventpoint; i++)
+    {
+        CriMvEventPoint* ep = &cueinfo->eventtable[i];
+        CriFloat32 ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
+        if (time_ms > ep_ms)
+        {
+            if (ep->type == type || type == -1)
+            {
+                prev = ep;
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
+    if (prev == NULL)
+    {
+        return frame_id;
+    }
+    CriMvEventPoint found = *prev;
+    *eventinfo = found;
+    frame_id = CalcFrameIdFromTime(eventinfo->time, eventinfo->tunit);
+    return frame_id;
+}
+
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x1400245b0
 CriMvCuePointInfo* CriMvEasyPlayer::GetCuePointInfo(CriError& err)
@@ -3711,12 +4233,141 @@ CriMvCuePointInfo* CriMvEasyPlayer::GetCuePointInfo(CriError& err)
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024610
-void CriMvEasyPlayer::SetCuePointCallback(void (*func)(void* usrobj, CriMvEventPoint* eventinfo), void* usrobj,
+void CriMvEasyPlayer::SetCuePointCallback(void (*func)(CriMvEasyPlayer* mveasy, CriMvEventPoint* eventinfo, void* usrobj),
+                                          void* usrobj,
                                           CriError& err)
 {
     err = CRIERR_OK;
     cuepoint_func = func;
     cuepoint_usrobj = usrobj;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
+// @0x140024660
+void CriMvEasyPlayer::executeCuePointServer(void)
+{
+    if (mvply->cuepoint.num_eventpoint == 0 || mvply->cuepoint.eventtable == NULL)
+    {
+        return;
+    }
+    if (cuepoint_func == NULL)
+    {
+        return;
+    }
+    if (GetStatus() != MVEASY_STATUS_PLAYING)
+    {
+        return;
+    }
+    CriMvCuePointInfo* cueinfo = &mvply->cuepoint;
+    CriUint64 count;
+    CriUint64 unit;
+    GetTime(count, unit);
+    if (unit == 0)
+    {
+        return;
+    }
+    CriFloat32 now_ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
+    CriUint32 framerate = stmprm.video_prm[0].framerate;
+    if (framerate == 0)
+    {
+        return;
+    }
+    CriFloat32 seek_ms = (CriFloat32)seek_frame_id * 1000.0f / (CriFloat32)framerate * 1000.0f;
+    CriMvEventPoint* ep;
+    CriFloat32 ep_ms;
+    if (loop_flag == 1)
+    {
+        CriUint32 total_frames = stmprm.video_prm[0].total_frames;
+        CriFloat32 movie_ms = (CriFloat32)total_frames * 1000.0f / (CriFloat32)framerate * 1000.0f;
+        CriUint32 loop_cnt = 0;
+        if (0.1f > movie_ms)
+        {
+            return;
+        }
+        CriUint32 first = (CriUint32)(now_ms / movie_ms);
+        if (first > 0)
+        {
+            first = first - 1;
+        }
+        CriUint32 last = first + 3;
+        for (loop_cnt = first; loop_cnt < last; loop_cnt++)
+        {
+            if (movie_ms > now_ms - movie_ms * (CriFloat32)loop_cnt)
+            {
+                break;
+            }
+        }
+        if (loop_cnt == last)
+        {
+            return;
+        }
+        CriFloat32 local_ms = now_ms - movie_ms * (CriFloat32)loop_cnt;
+        CriUint32 i;
+        for (i = 0; i < cueinfo->num_eventpoint; i++)
+        {
+            ep = &cueinfo->eventtable[i];
+            if (ep->cnt_callback < loop_cnt && cuepoint_func != NULL)
+            {
+                cuepoint_func(this, ep, cuepoint_usrobj);
+                ep->cnt_callback = ep->cnt_callback + 1;
+            }
+        }
+        for (i = 0; i < cueinfo->num_eventpoint; i++)
+        {
+            ep = &cueinfo->eventtable[i];
+            if (ep->tunit == 0)
+            {
+                return;
+            }
+            if (ep->cnt_callback > loop_cnt)
+            {
+                continue;
+            }
+            ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
+            if (loop_cnt == 0 && seek_ms > ep_ms)
+            {
+                ep->cnt_callback = ep->cnt_callback + 1;
+                continue;
+            }
+            if (ep_ms > local_ms)
+            {
+                break;
+            }
+            if (cuepoint_func != NULL)
+            {
+                cuepoint_func(this, ep, cuepoint_usrobj);
+                ep->cnt_callback = ep->cnt_callback + 1;
+            }
+        }
+    }
+    else
+    {
+        for (CriUint32 j = 0; j < cueinfo->num_eventpoint; j++)
+        {
+            ep = &cueinfo->eventtable[j];
+            if (ep->tunit == 0)
+            {
+                return;
+            }
+            if (ep->cnt_callback == 0)
+            {
+                ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
+                if (seek_ms > ep_ms)
+                {
+                    continue;
+                }
+                if (ep_ms > now_ms)
+                {
+                    return;
+                }
+                if (cuepoint_func != NULL)
+                {
+                    cuepoint_func(this, ep, cuepoint_usrobj);
+                    ep->cnt_callback = ep->cnt_callback + 1;
+                }
+            }
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
@@ -3881,3 +4532,6 @@ CriSint32 CalcHandleWorkSize(CriError& err)
 // MS2-PIN: ??_7VideoSound@Video@GFx@Scaleform@@6B@ 0x1431b4b80
 // MS2-PIN: ??_7VideoProviderNetStream@AS3@GFx@Scaleform@@6B@ 0x1431b8a90
 // MS2-PIN: ??_7VideoProvider@Video@GFx@Scaleform@@6B@ 0x1431b4f30
+// MS2-PIN: ??_7CriMvEasyPlayer@@6B@ 0x1431b8a40
+// MS2-FUNCTIONAL ??_GCriMvEasyPlayer@@MEAAPEAXI@Z: VS2017 deleting destructors add the flag-4 path to __global_delete (sized deallocation) that VS2008 lacks; with bit 2 clear it runs the same dtor and CriAllocator::operator delete(p, 0x728)
+// MS2-PIN: ??_GCriMvEasyPlayer@@MEAAPEAXI@Z 0x140024f40
