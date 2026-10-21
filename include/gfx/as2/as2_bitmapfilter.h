@@ -20,6 +20,16 @@ public:
     // Alpha of the first filter color, 0..1 (exe 0x1429497f0).
     float GetAlpha() const;
 
+    // The filter itself, cloned first when it is shared (frozen).
+    Render::Filter* writableFilter()
+    {
+        if (pFilter && pFilter->IsFrozen())
+            pFilter = *pFilter->Clone(Memory::GetHeapByAddress(this));
+        return pFilter;
+    }
+    // Shadow angle in radians; the offset follows (exe 0x14297fac0).
+    void SetAngle(float a);
+
 protected:
     // The blur parameters of the filter (exe 0x142995370).
     const Render::BlurFilterParams& readonlyFilterParams() const;

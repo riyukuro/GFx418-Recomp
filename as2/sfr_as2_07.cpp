@@ -2,7 +2,9 @@
 // XML classes: the value setters and conversions, member setters, IME, Sound and XML objects.
 // MS2-UNIT: sfr_as2_07
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14297e640-0x14297e870 .text$mn
 // MS2-RANGE: 0x14297f2c0-0x14297f3d0 .text$mn
+// MS2-RANGE: 0x14297fac0-0x14297fb80 .text$mn
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
 // MS2-RANGE: 0x142980240-0x1429803d0 .text$mn
 // MS2-RANGE: 0x1429804c0-0x142980570 .text$mn
@@ -20,8 +22,7 @@
 // MS2-RANGE: 0x142989390-0x142989480 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
 // MS2-RANGE: 0x14298a260-0x14298a5a0 .text$mn
-// MS2-RANGE: 0x14298b9f0-0x14298ba60 .text$mn
-// MS2-RANGE: 0x14298bb20-0x14298bb90 .text$mn
+// MS2-RANGE: 0x14298b9f0-0x14298bb90 .text$mn
 // MS2-RANGE: 0x14298c9e0-0x14298ca20 .text$mn
 // MS2-RANGE: 0x14298cc30-0x14298cc70 .text$mn
 // MS2-RANGE: 0x14298cc80-0x14298cce0 .text$mn
@@ -60,6 +61,7 @@
 #include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/gfx/gfx_event.h"
@@ -476,6 +478,32 @@ void MovieRoot::SetMovie(MovieImpl* pmovie)
 {
     pMovieImpl     = pmovie;
     pGlobalContext = *SF_HEAP_NEW(pmovie->GetMovieHeap()) GlobalContext(pmovie);
+}
+
+// @0x14297fac0
+void BitmapFilterObject::SetAngle(float a)
+{
+    Render::Filter* f = writableFilter();
+    if (!f || !(f->GetFilterType() >= Render::Filter_Blur && f->GetFilterType() <= Render::Filter_Blur_End))
+        return;
+    Render::BlurFilterImpl* bf = static_cast<Render::BlurFilterImpl*>(f);
+    bf->SetAngleDistance(a, bf->GetDistance());
+}
+
+// @0x14298ba60
+void TransformObject::SetTarget(InteractiveObject* pcharacter)
+{
+    // SetPtr / Clear: the exe has the swap inline (this unit's Ptr::operator= copy is out of line).
+    if (pcharacter)
+    {
+        TargetHandle.SetPtr(pcharacter->GetCharacterHandle());
+        pMovieRoot = pcharacter->GetMovieImpl();
+    }
+    else
+    {
+        pMovieRoot = 0;
+        TargetHandle.Clear();
+    }
 }
 
 // @0x1429804c0
@@ -1481,6 +1509,16 @@ template<> void Render::Matrix4F::Transpose()
             matDest.M[j][i] = M[i][j];
     *this = matDest;
 }
+
+// @0x14297e640
+template void ArrayDataBase<GFx::AS2::ArraySortFunctor, AllocatorGH<GFx::AS2::ArraySortFunctor, 2>,
+                            ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);
+// @0x14297e710
+template void ArrayDataBase<GFx::AS2::Value, AllocatorGH<GFx::AS2::Value, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(
+    const void*, UPInt);
+// @0x14297e7c0
+template void ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>,
+                            ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);
 
 } // namespace Scaleform
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018

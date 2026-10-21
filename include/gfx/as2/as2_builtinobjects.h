@@ -363,6 +363,9 @@ public:
 
     TransformObject(Environment* penv, InteractiveObject* pcharacter = 0); // exe 0x142923350
 
+    // The character the transform reads and writes, 0 for none (exe 0x14298ba60).
+    void SetTarget(InteractiveObject* pcharacter);
+
 protected:
     virtual void Finalize_GC(); // exe 0x142943150
 
