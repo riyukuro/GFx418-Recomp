@@ -86,10 +86,105 @@ public:
     void BringToFront(ValueType* p) { Remove(p); PushFront(p); }
     void SendToBack(ValueType* p)   { Remove(p); PushBack(p); }
 
+    // splice every node of other in front of / behind ours; other ends up empty
+    void PushListToFront(List& other)
+    {
+        if (other.IsEmpty())
+            return;
+        ValueType* head = other.GetFirst();
+        ValueType* tail = other.GetLast();
+        other.Clear();
+        tail->pNext       = Root.pNext;
+        head->pPrev       = (ValueType*)&Root;
+        Root.pNext->pPrev = tail;
+        Root.pNext        = head;
+    }
+    void PushListToBack(List& other)
+    {
+        if (other.IsEmpty())
+            return;
+        ValueType* head = other.GetFirst();
+        ValueType* tail = other.GetLast();
+        other.Clear();
+        tail->pNext       = (ValueType*)&Root;
+        head->pPrev       = Root.pPrev;
+        Root.pPrev->pNext = head;
+        Root.pPrev        = tail;
+    }
+
 private:
     List(const List&);
     const List& operator=(const List&);
     ListNode<B> Root;
+};
+
+// The same list for nodes whose links are reached through an accessor (Acc::GetPrev/GetNext/SetPrev/SetNext), e.g.
+// links that share storage with other fields; the root is a whole T.
+template<class T, class Acc>
+class List2
+{
+public:
+    typedef T ValueType;
+
+    static const ValueType* GetPrev(const ValueType* p) { return Acc::GetPrev(p); }
+    static const ValueType* GetNext(const ValueType* p) { return Acc::GetNext(p); }
+    static ValueType*       GetPrev(ValueType* p)       { return Acc::GetPrev(p); }
+    static ValueType*       GetNext(ValueType* p)       { return Acc::GetNext(p); }
+    static void SetPrev(ValueType* p, ValueType* v)     { Acc::SetPrev(p, v); }
+    static void SetNext(ValueType* p, ValueType* v)     { Acc::SetNext(p, v); }
+
+    List2()      { SetPrev(&Root, &Root); SetNext(&Root, &Root); }
+    void Clear() { SetPrev(&Root, &Root); SetNext(&Root, &Root); }
+
+    const ValueType* GetFirst() const { return GetNext(&Root); }
+    const ValueType* GetLast() const  { return GetPrev(&Root); }
+    ValueType*       GetFirst()       { return GetNext(&Root); }
+    ValueType*       GetLast()        { return GetPrev(&Root); }
+
+    bool IsEmpty() const                   { return GetNext(&Root) == &Root; }
+    bool IsFirst(const ValueType* p) const { return p == GetNext(&Root); }
+    bool IsLast(const ValueType* p) const  { return p == GetPrev(&Root); }
+    bool IsNull(const ValueType* p) const  { return p == &Root; }
+
+    void PushFront(ValueType* p)
+    {
+        SetNext(p, GetNext(&Root));
+        SetPrev(p, &Root);
+        SetPrev(GetNext(&Root), p);
+        SetNext(&Root, p);
+    }
+    void PushBack(ValueType* p)
+    {
+        SetPrev(p, GetPrev(&Root));
+        SetNext(p, &Root);
+        SetNext(GetPrev(&Root), p);
+        SetPrev(&Root, p);
+    }
+    static void Remove(ValueType* p)
+    {
+        SetNext(GetPrev(p), GetNext(p));
+        SetPrev(GetNext(p), GetPrev(p));
+    }
+    void BringToFront(ValueType* p) { Remove(p); PushFront(p); }
+    void SendToBack(ValueType* p)   { Remove(p); PushBack(p); }
+
+    void PushListToFront(List2& other)
+    {
+        if (other.IsEmpty())
+            return;
+        ValueType* head = other.GetFirst();
+        ValueType* tail = other.GetLast();
+        other.Clear();
+        SetNext(tail, GetNext(&Root));
+        SetPrev(head, &Root);
+        SetPrev(GetNext(&Root), tail);
+        SetNext(&Root, head);
+    }
+
+private:
+    List2(const List2&);
+    const List2& operator=(const List2&);
+    ValueType Root;
 };
 
 }  // namespace Scaleform

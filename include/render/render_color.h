@@ -20,6 +20,7 @@ public:
     };
 
     Color() {}   // uninitialized: GetPixelInScanline leaves unknown formats unwritten
+    Color(const Color& c) { SetColor(c); }   // user-declared: Color travels by address (the exe copies it to a temp)
     Color(UInt32 argb) : Raw(argb) {}
     Color(UByte r, UByte g, UByte b, UByte a = 0xFF)
     {
@@ -40,6 +41,9 @@ public:
     {
         Channels.Red = r; Channels.Green = g; Channels.Blue = b; Channels.Alpha = a;
     }
+
+    void SetColor(const Color& c) { Raw = c.Raw; }
+    const Color& operator=(const Color& c) { Raw = c.Raw; return *this; }
 
     bool operator==(const Color& c) const { return Raw == c.Raw; }
     bool operator!=(const Color& c) const { return Raw != c.Raw; }
