@@ -175,7 +175,7 @@ public:
 
     type GetType() const { return (type)T.Type; }
 
-    bool IsUndefined() const { return T.Type == UNDEFINED; }
+    bool IsUndefined() const { return T.Type == UNDEFINED || T.Type == UNSET; }
     bool IsNull() const      { return T.Type == NULLTYPE; }
     bool IsBoolean() const   { return T.Type == BOOLEAN; }
     bool IsNumber() const    { return T.Type == NUMBER || T.Type == INTEGER; }

@@ -110,6 +110,23 @@ public:
         dest->y1 = (y1 > r.y1) ? r.y1 : y1;
         dest->y2 = (y2 > r.y2) ? y2 : r.y2;
     }
+
+    // (appended for the AS2 Rectangle, sfr_as2_01) edges count as inside
+    bool Contains(T x, T y) const         { return x <= x2 && x >= x1 && y <= y2 && y >= y1; }
+    bool Contains(const Point<T>& p) const { return p.x <= x2 && p.x >= x1 && p.y <= y2 && p.y >= y1; }
+    bool Contains(const Rect& r) const     { return x2 >= r.x2 && y2 >= r.y2 && x1 <= r.x1 && y1 <= r.y1; }
+    bool Intersects(const Rect& r) const   { return y2 >= r.y1 && r.y2 >= y1 && r.x2 >= x1 && x2 >= r.x1; }
+    // Overlap of the two into dest; false (dest untouched) when they are apart.
+    bool IntersectRect(Rect* dest, const Rect& r) const
+    {
+        if (!Intersects(r))
+            return false;
+        dest->x1 = (x1 > r.x1) ? x1 : r.x1;
+        dest->x2 = (x2 > r.x2) ? r.x2 : x2;
+        dest->y1 = (y1 > r.y1) ? y1 : r.y1;
+        dest->y2 = (y2 > r.y2) ? r.y2 : y2;
+        return true;
+    }
 };
 
 typedef Point<float>  PointF;

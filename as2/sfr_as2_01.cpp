@@ -3,6 +3,7 @@
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428ef8b0-0x1428ef8d0 .text$mn
+// MS2-RANGE: 0x1428ef8d0-0x1428f1e30 .text$mn
 // MS2-RANGE: 0x1428f1e30-0x1428f1e70 .text$mn
 // MS2-RANGE: 0x1428f2040-0x1428f37a0 .text$mn
 // MS2-RANGE: 0x1428f37a0-0x1428f40d0 .text$mn
@@ -22,6 +23,7 @@
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_pointobject.h"
+#include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_movieimpl.h"
@@ -202,6 +204,399 @@ void MathCtorFunction::Random(const FnCall& fn)
 void MathCtorFunction::Round(const FnCall& fn)
 {
     fn.Result->SetNumber(floor(fn.Arg(0).ToNumber(fn.Env) + 0.5));
+}
+
+// ---- Rectangle ----
+
+// @0x1428ef8d0
+void RectangleProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    RectangleObject*     pthis = (RectangleObject*)fn.ThisPtr;
+    Ptr<RectangleObject> pr    = *SF_HEAP_NEW(fn.Env->GetHeap()) RectangleObject(fn.Env);
+    Value                params[Rectangle_NumProperties];
+    pthis->GetProperties(fn.Env->GetSC(), params);
+    pr.GetPtr()->SetProperties(fn.Env->GetSC(), params);
+    fn.Result->SetAsObject(pr.GetPtr());
+}
+
+// Whether (x, y) lies inside; the right and bottom edges are open, as in the Flash player.
+// @0x1428efa40
+void RectangleProto::Contains(const FnCall& fn)
+{
+    if (fn.NArgs > 1)
+    {
+        Value px = fn.Arg(0);
+        Value py = fn.Arg(1);
+        MS2_AS2_CHECK_THIS(fn, Rectangle);
+        RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+        ASRect           r;
+        pthis->GetProperties(fn.Env, r);
+        Number x = px.ToNumber(fn.Env);
+        Number y = py.ToNumber(fn.Env);
+        if (NumberUtil::IsNaN(x) || NumberUtil::IsNaN(y))
+        {
+            fn.Result->SetBool(false);
+            return;
+        }
+        if (x == r.x2)
+            x += 1.0;
+        if (y == r.y2)
+            y += 1.0;
+        fn.Result->SetBool(r.Contains(x, y));
+    }
+    else
+    {
+        fn.Result->SetBool(false);
+    }
+}
+
+// Like Contains with a point; undefined when the argument is neither a Point nor has x and y.
+// @0x1428efc90
+void RectangleProto::ContainsPoint(const FnCall& fn)
+{
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p)
+        {
+            MS2_AS2_CHECK_THIS(fn, Rectangle);
+            RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+            ASRect           r;
+            Value            ptv[Point_NumProperties];
+            pthis->GetProperties(fn.Env, r);
+            GFxObject_GetPointProperties(fn.Env, p, ptv);
+            if (p->GetObjectType() != ObjectInterface::Object_Point &&
+                (ptv[Point_X].IsUndefined() || ptv[Point_Y].IsUndefined()))
+                return;
+            GASPoint pt(GASPoint::NoInit);
+            ((PointObject*)p)->GetProperties(fn.Env, pt);
+            Number x = pt.x, y = pt.y;
+            if (NumberUtil_IsNaN(x) || NumberUtil_IsNaN(y))
+            {
+                fn.Result->SetBool(false);
+                return;
+            }
+            if (x == r.x2)
+                x += 1.0;
+            if (y == r.y2)
+                y += 1.0;
+            fn.Result->SetBool(r.Contains(x, y));
+        }
+    }
+}
+
+// @0x1428eff60
+void RectangleProto::ContainsRectangle(const FnCall& fn)
+{
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p)
+        {
+            MS2_AS2_CHECK_THIS(fn, Rectangle);
+            RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+            ASRect           r1;
+            Value            r2v[Rectangle_NumProperties];
+            pthis->GetProperties(fn.Env, r1);
+            GFxObject_GetRectangleProperties(fn.Env, p, r2v);
+            if (r2v[Rectangle_X].IsUndefined() || r2v[Rectangle_Y].IsUndefined() ||
+                r2v[Rectangle_Width].IsUndefined() || r2v[Rectangle_Height].IsUndefined())
+                return;
+            ASRect r2(r2v[Rectangle_X].ToNumber(fn.Env), r2v[Rectangle_Y].ToNumber(fn.Env),
+                      Render::Size<Number>(r2v[Rectangle_Width].ToNumber(fn.Env), r2v[Rectangle_Height].ToNumber(fn.Env)));
+            fn.Result->SetBool(r1.Contains(r2));
+        }
+    }
+}
+
+// @0x1428f0220
+void RectangleProto::Equals(const FnCall& fn)
+{
+    bool ret = false;
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p && p->GetObjectType() == ObjectInterface::Object_Rectangle)
+        {
+            MS2_AS2_CHECK_THIS(fn, Rectangle);
+            RectangleObject*     pthis = (RectangleObject*)fn.ThisPtr;
+            Ptr<RectangleObject> pr    = (RectangleObject*)p;
+            ASRect               r1, r2;
+            pthis->GetProperties(fn.Env, r1);
+            pr->GetProperties(fn.Env, r2);
+            // Edge order x1, x2, y1, y2 (the shared Rect::operator== compares y1 second).
+            if (IsRectValid(r1) && IsRectValid(r2))
+                ret = (r1.x1 == r2.x1 && r1.x2 == r2.x2 && r1.y1 == r2.y1 && r1.y2 == r2.y2);
+        }
+    }
+    fn.Result->SetBool(ret);
+}
+
+// Grows every edge outward by (dx, dy).
+// @0x1428f03e0
+void RectangleProto::Inflate(const FnCall& fn)
+{
+    Value dw, dh;
+    if (fn.NArgs > 0)
+    {
+        dw = fn.Arg(0);
+        if (fn.NArgs > 1)
+            dh = fn.Arg(1);
+    }
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+    ASRect           r;
+    pthis->GetProperties(fn.Env, r);
+    r.Expand(dw.ToNumber(fn.Env), dh.ToNumber(fn.Env));
+    pthis->SetProperties(fn.Env, r);
+}
+
+// @0x1428f05f0
+void RectangleProto::InflatePoint(const FnCall& fn)
+{
+    if (fn.NArgs > 0)
+    {
+        MS2_AS2_CHECK_THIS(fn, Rectangle);
+        RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+        Object*          p     = fn.Arg(0).ToObject(fn.Env);
+        if (!p)
+        {
+            pthis->SetProperties(fn.Env->GetSC(), Rectangle_NaNParams);
+            return;
+        }
+        ASRect   r;
+        GASPoint pt(GASPoint::NoInit);
+        pthis->GetProperties(fn.Env, r);
+        GFxObject_GetPointProperties(fn.Env, p, pt);
+        r.Expand(pt.x, pt.y);
+        pthis->SetProperties(fn.Env, r);
+    }
+}
+
+// New rectangle of the overlap; all zero when there is none or it has no area.
+// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
+// @0x1428f0760
+void RectangleProto::Intersection(const FnCall& fn)
+{
+    ASRect ret(0, 0, 0, 0);
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p)
+        {
+            ASRect r1;
+            Value  r2v[Rectangle_NumProperties];
+            pthis->GetProperties(fn.Env, r1);
+            GFxObject_GetRectangleProperties(fn.Env, p, r2v);
+            ASRect r2(r2v[Rectangle_X].ToNumber(fn.Env), r2v[Rectangle_Y].ToNumber(fn.Env),
+                      Render::Size<Number>(r2v[Rectangle_Width].ToNumber(fn.Env), r2v[Rectangle_Height].ToNumber(fn.Env)));
+            if (!IsRectValid(r2))
+            {
+                ret.SetRect(0, 0, 0, 0);
+            }
+            else
+            {
+                r1.IntersectRect(&ret, r2);
+                if (!IsRectValid(ret) || ret.Width() == 0 || ret.Height() == 0)
+                    ret.SetRect(0, 0, 0, 0);
+            }
+        }
+    }
+    Ptr<RectangleObject> pr = *SF_HEAP_NEW(fn.Env->GetHeap()) RectangleObject(fn.Env);
+    pr.GetPtr()->SetProperties(fn.Env, ret);
+    fn.Result->SetAsObject(pr.GetPtr());
+}
+
+// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
+// @0x1428f0b20
+void RectangleProto::Intersects(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    bool             ret   = false;
+    RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p)
+        {
+            ASRect r1;
+            Value  r2v[Rectangle_NumProperties];
+            pthis->GetProperties(fn.Env, r1);
+            GFxObject_GetRectangleProperties(fn.Env, p, r2v);
+            ASRect r2(r2v[Rectangle_X].ToNumber(fn.Env), r2v[Rectangle_Y].ToNumber(fn.Env),
+                      Render::Size<Number>(r2v[Rectangle_Width].ToNumber(fn.Env), r2v[Rectangle_Height].ToNumber(fn.Env)));
+            ASRect r(0, 0, 0, 0);
+            if (!IsRectValid(r1) || !IsRectValid(r2))
+            {
+                ret = false;
+            }
+            else
+            {
+                r1.IntersectRect(&r, r2);
+                ret = true;
+                if (!IsRectValid(r) || r.Width() == 0 || r.Height() == 0)
+                    ret = false;
+            }
+        }
+    }
+    fn.Result->SetBool(ret);
+}
+
+// True when width or height is NaN or zero.
+// @0x1428f0e60
+void RectangleProto::IsEmpty(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    bool             ret   = false;
+    RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+    Value            params[Rectangle_NumProperties];
+    pthis->GetProperties(fn.Env->GetSC(), params);
+    if (NumberUtil::IsNaN(params[Rectangle_Width].ToNumber(fn.Env)) ||
+        NumberUtil::IsNaN(params[Rectangle_Height].ToNumber(fn.Env)))
+    {
+        ret = true;
+    }
+    else
+    {
+        // The exe reads x and y as well but builds the rect from the size alone (origin 0, 0).
+        params[Rectangle_X].ToNumber(fn.Env);
+        params[Rectangle_Y].ToNumber(fn.Env);
+        ASRect r(Render::Size<Number>(params[Rectangle_Width].ToNumber(fn.Env), params[Rectangle_Height].ToNumber(fn.Env)));
+        // No area: edges crossed or touching (the shared Rect::IsEmpty only tests equality).
+        ret = r.x1 >= r.x2 || r.y1 >= r.y2;
+    }
+    fn.Result->SetBool(ret);
+}
+
+// Moves x and y; width and height stay.
+// MS2-FUNCTIONAL the exe keeps dy's type byte in a register and sets the temp's type before the ToNumber calls
+// (unity-build alias knowledge)
+// @0x1428f1040
+void RectangleProto::Offset(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    Value dx, dy;
+    if (fn.NArgs > 0)
+    {
+        dx = fn.Arg(0);
+        if (fn.NArgs > 1)
+            dy = fn.Arg(1);
+    }
+    RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+    Value            params[Rectangle_NumProperties];
+    pthis->GetProperties(fn.Env->GetSC(), params);
+    params[Rectangle_X] = params[Rectangle_X].ToNumber(fn.Env) + dx.ToNumber(fn.Env);
+    params[Rectangle_Y] = params[Rectangle_Y].ToNumber(fn.Env) + dy.ToNumber(fn.Env);
+    pthis->SetProperties(fn.Env->GetSC(), params);
+}
+
+// Offset by a point; x and y become NaN when the argument is not point-like.
+// @0x1428f12e0
+void RectangleProto::OffsetPoint(const FnCall& fn)
+{
+    if (fn.NArgs > 0)
+    {
+        MS2_AS2_CHECK_THIS(fn, Rectangle);
+        RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+        Object*          p     = fn.Arg(0).ToObject(fn.Env);
+        Value            params[Rectangle_NumProperties];
+        if (!p)
+        {
+            pthis->GetProperties(fn.Env->GetSC(), params);
+            params[Rectangle_X] = NumberUtil::NaN();
+            params[Rectangle_Y] = NumberUtil::NaN();
+            pthis->SetProperties(fn.Env->GetSC(), params);
+            return;
+        }
+        Value ptv[Point_NumProperties];
+        GFxObject_GetPointProperties(fn.Env, p, ptv);
+        if (p->GetObjectType() != ObjectInterface::Object_Point &&
+            (ptv[Point_X].IsUndefined() || ptv[Point_Y].IsUndefined()))
+        {
+            pthis->GetProperties(fn.Env->GetSC(), params);
+            params[Rectangle_X] = NumberUtil::NaN();
+            params[Rectangle_Y] = NumberUtil::NaN();
+            pthis->SetProperties(fn.Env->GetSC(), params);
+            return;
+        }
+        pthis->GetProperties(fn.Env->GetSC(), params);
+        params[Rectangle_X] = params[Rectangle_X].ToNumber(fn.Env) + ptv[Point_X].ToNumber(fn.Env);
+        params[Rectangle_Y] = params[Rectangle_Y].ToNumber(fn.Env) + ptv[Point_Y].ToNumber(fn.Env);
+        pthis->SetProperties(fn.Env->GetSC(), params);
+    }
+}
+
+// @0x1428f1710
+void RectangleProto::SetEmpty(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+    pthis->SetProperties(fn.Env, ASRect(0, 0, 0, 0));
+}
+
+// "(x=.., y=.., width=.., height=..)" with six significant digits.
+// MS2-FUNCTIONAL fn and the -1 length swap rsi/rdi and the string manager is loaded before str (register allocation)
+// @0x1428f1780
+void RectangleProto::ToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    Value params[Rectangle_NumProperties];
+    pthis->GetProperties(fn.Env->GetSC(), params);
+    ASString ps[4] = {params[Rectangle_X].ToString(fn.Env, 6), params[Rectangle_Y].ToString(fn.Env, 6),
+                      params[Rectangle_Width].ToString(fn.Env, 6), params[Rectangle_Height].ToString(fn.Env, 6)};
+    String   str;
+    str += "(x=";
+    str += ps[0].ToCStr();
+    str += ", y=";
+    str += ps[1].ToCStr();
+    str += ", width=";
+    str += ps[2].ToCStr();
+    str += ", height=";
+    str += ps[3].ToCStr();
+    str += ")";
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(str.ToCStr(), str.GetSize()));
+}
+
+// New rectangle enclosing both (NaN edges count as 0); NaN without an argument.
+// @0x1428f1a60
+void RectangleProto::Union(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Rectangle);
+    RectangleObject*     pthis = (RectangleObject*)fn.ThisPtr;
+    Ptr<RectangleObject> pr    = *SF_HEAP_NEW(fn.Env->GetHeap()) RectangleObject(fn.Env);
+    fn.Result->SetAsObject(pr.GetPtr());
+    if (fn.NArgs > 0)
+    {
+        ASRect  ret(NumberUtil::NaN(), NumberUtil::NaN(), NumberUtil::NaN(), NumberUtil::NaN());
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p)
+        {
+            ASRect r1;
+            Value  r2v[Rectangle_NumProperties];
+            pthis->GetProperties(fn.Env, r1);
+            GFxObject_GetRectangleProperties(fn.Env, p, r2v);
+            ASRect r2(r2v[Rectangle_X].ToNumber(fn.Env), r2v[Rectangle_Y].ToNumber(fn.Env),
+                      Render::Size<Number>(r2v[Rectangle_Width].ToNumber(fn.Env), r2v[Rectangle_Height].ToNumber(fn.Env)));
+            ValidateRect(&r1);
+            ValidateRect(&r2);
+            r1.UnionRect(&ret, r2);
+            if (NumberUtil::IsNaN(r2v[Rectangle_X].ToNumber(fn.Env)))
+                ret.x1 = NumberUtil::NaN();
+            if (NumberUtil::IsNaN(r2v[Rectangle_Y].ToNumber(fn.Env)))
+                ret.y1 = NumberUtil::NaN();
+        }
+        pr.GetPtr()->SetProperties(fn.Env, ret);
+    }
+    else
+    {
+        pr.GetPtr()->SetProperties(fn.Env->GetSC(), Rectangle_NaNParams);
+    }
 }
 
 // ---- Point ----
