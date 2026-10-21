@@ -4,8 +4,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428ef8b0-0x1428ef8d0 .text$mn
 // MS2-RANGE: 0x1428f1e30-0x1428f1e70 .text$mn
-// MS2-RANGE: 0x1428f37a0-0x1428f3e70 .text$mn
-// MS2-RANGE: 0x1428f40d0-0x1428f4420 .text$mn
+// MS2-RANGE: 0x1428f37a0-0x1428f40d0 .text$mn
+// MS2-RANGE: 0x1428f40d0-0x1428f4610 .text$mn
 // MS2-RANGE: 0x1428f4610-0x1428f4cd0 .text$mn
 // MS2-RANGE: 0x1428f4cd0-0x1428f4e60 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
@@ -309,6 +309,79 @@ void StringProto::StringIndexOf(const FnCall& fn)
             }
         }
     }
+}
+
+// lastIndexOf(text, start): character index of the last match at or before start, -1 when there is none.
+// @0x1428f3e70
+void StringProto::StringLastIndexOf(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+    {
+        fn.Result->SetNumber(-1);
+        return;
+    }
+    ASString str  = pthis->sValue;
+    ASString text = fn.Arg(0).ToString(fn.Env);
+    if (text.GetLength() == 0)
+    {
+        fn.Result->SetNumber(str.GetLength());
+        return;
+    }
+    const char* pstr  = str.ToCStr();
+    const char* ptext = text.ToCStr();
+    int         start = 0x7ffffff;
+    if (fn.NArgs > 1)
+        start = (int)fn.Arg(1).ToNumber(fn.Env);
+    int    last  = -1;
+    UInt32 first = UTF8Util::DecodeNextChar(&ptext);
+    for (int i = 0;; i++)
+    {
+        UInt32 c = UTF8Util::DecodeNextChar(&pstr);
+        if (c == 0)
+            break;
+        if (i <= start && c == first)
+        {
+            const char* p = pstr;
+            const char* q = ptext;
+            UInt32      a, b;
+            do
+            {
+                a = UTF8Util::DecodeNextChar(&p);
+                b = UTF8Util::DecodeNextChar(&q);
+            } while (a && b && a == b);
+            if (b == 0)
+                last = i;
+            if (a == 0)
+                break;
+        }
+    }
+    fn.Result->SetInt(last);
+}
+
+// split(delimiter, limit): the pieces as an Array.
+// @0x1428f4420
+void StringProto::StringSplit(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    ASString      search(fn.Env->GetSC()->GetBuiltin(ASBuiltin_empty_));
+    const char*   psearch = 0;
+    if (fn.NArgs >= 1)
+    {
+        search  = fn.Arg(0).ToString(fn.Env);
+        psearch = search.ToCStr();
+    }
+    int limit = 0x3fffffff;
+    if (fn.NArgs >= 2)
+    {
+        limit = (int)fn.Arg(1).ToNumber(fn.Env);
+        if (limit < 0)
+            limit = 0;
+    }
+    Ptr<ArrayObject> parr = StringSplit(fn.Env, pthis->sValue, psearch, limit);
+    fn.Result->SetAsObject(parr.GetPtr());
 }
 
 // localeCompare(text, ignoreCase): a Scaleform extension, undefined unless the movie enabled them.

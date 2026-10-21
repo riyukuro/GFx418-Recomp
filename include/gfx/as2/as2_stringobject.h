@@ -4,6 +4,7 @@
 #define MS2_SF_GFX_AS2_STRINGOBJECT_H
 
 #include "as2_action.h"
+#include "as2_arrayobject.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -35,6 +36,8 @@ public:
 
     // length characters of str from start (length < 0: to the end) (exe 0x142990960).
     static ASString StringSubstring(const ASString& str, int start, int length);
+    // str cut at each delimiter (0: one element per character), at most limit elements (exe 0x1429902c0).
+    MS2_AS2_SCU static Ptr<ArrayObject> StringSplit(Environment* penv, const ASString& str, const char* delimiters, int limit);
 };
 
 // The String constructor function's own methods.
