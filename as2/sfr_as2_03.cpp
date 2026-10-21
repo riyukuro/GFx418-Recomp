@@ -181,8 +181,9 @@ ArraySortFunctor::~ArraySortFunctor()
 }
 
 // @0x142926100
-Object::Watchpoint::~Watchpoint()
+void Object::Watchpoint::Destruct_Call()
 {
+    this->~Watchpoint();
 }
 
 // @0x142925ae0

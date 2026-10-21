@@ -336,7 +336,7 @@ public:
 
 protected:
     // The function of a FUNCTIONNAME value, looked up by name (exe 0x14297ec30).
-    FunctionRef ResolveFunctionName(const Environment* penv) const;
+    MS2_AS2_SCU FunctionRef ResolveFunctionName(const Environment* penv) const;
 };
 
 // Getter/setter pair of an addProperty member. 0x50 bytes.

@@ -27,13 +27,14 @@
 // MS2-RANGE: 0x142990f20-0x142991050 .text$mn
 // MS2-RANGE: 0x142991080-0x142991140 .text$mn
 // MS2-RANGE: 0x142991190-0x1429912d0 .text$mn
-// MS2-RANGE: 0x142991810-0x142991850 .text$mn
+// MS2-RANGE: 0x142991660-0x142991850 .text$mn
 // MS2-RANGE: 0x142991c60-0x142991cd0 .text$mn
 // MS2-RANGE: 0x142991d00-0x142991d30 .text$mn
 // MS2-RANGE: 0x142991e10-0x142991e70 .text$mn
 // MS2-RANGE: 0x1429923c0-0x142992540 .text$mn
 // MS2-RANGE: 0x142992780-0x142992830 .text$mn
 // MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
+// MS2-RANGE: 0x142994c50-0x142994e00 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -60,6 +61,37 @@ void WatchpointHash_Destruct(ASStringHash_GC<Object::Watchpoint>* phash); // exe
 // GetCaseCheck / RemoveCaseCheck of the watchpoint table (exe 0x142949eb0 / 0x14297cae0).
 const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                                       bool caseSensitive);
+// The watchpoint hash's findIndexAlt (exact / ignoring case) and add, COMDATs the exe calls out of line.
+SPInt WatchpointHash_FindIndex(const ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key); // exe 0x142917220
+SPInt WatchpointHash_FindIndexNoCase(const ASStringHash_GC<Object::Watchpoint>* phash,
+                                     const ASStringNoCaseKey& key); // exe 0x142916e60
+void WatchpointHash_Add(ASStringHash_GC<Object::Watchpoint>* phash, void* pheapAddr,
+                        const ASStringHash_GC<Object::Watchpoint>::NodeType::NodeRef& key, UPInt h); // exe 0x142916110
+
+typedef ASStringHash_GC<Object::Watchpoint>::SetType WatchpointSet;
+
+// Hash::SetCaseCheck of the watchpoint table, inline in the exe around the out-of-line findIndexAlt and add.
+inline void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
+                                        const Object::Watchpoint& value, bool caseSensitive)
+{
+    SPInt index;
+    if (caseSensitive)
+        index = WatchpointHash_FindIndex(phash, key);
+    else
+    {
+        ASStringNoCaseKey ikey(key);
+        index = WatchpointHash_FindIndexNoCase(phash, ikey);
+    }
+    WatchpointSet::Iterator it = index >= 0 ? WatchpointSet::Iterator(reinterpret_cast<WatchpointSet*>(phash), index)
+                                            : WatchpointSet::Iterator(0, 0);
+    if (it != reinterpret_cast<WatchpointSet*>(phash)->End())
+        it->Second = value;
+    else
+    {
+        ASStringHash_GC<Object::Watchpoint>::NodeType::NodeRef e(key, value);
+        WatchpointHash_Add(phash, phash, e, e.GetHash());
+    }
+}
 void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                     bool caseSensitive);
 
@@ -607,6 +639,60 @@ void PointObject::SetProperties(Environment* penv, const GASPoint& pt)
 {
     SetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_x), Value(pt.x));
     SetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_y), Value(pt.y));
+}
+
+
+// @0x142991660
+Object* Value::ToObject(const Environment* penv) const
+{
+    switch (T.Type)
+    {
+    case OBJECT:
+        return V.pObjectValue;
+
+    case FUNCTION:
+        if (!V.FunctionValue.IsNull())
+            return V.FunctionValue.GetObjectPtr();
+        break;
+    case FUNCTIONNAME:
+        {
+            FunctionRef funcRef = ResolveFunctionName(penv);
+            if (!funcRef.IsNull())
+                return funcRef.GetObjectPtr();
+        }
+        break;
+    case PROPERTY:
+        if (IsProperty())
+        {
+            InteractiveObject* ptarget = penv->GetTarget();
+            AvmCharacter*      paschar = ptarget ? AS2::ToAvmCharacter(ptarget) : 0;
+            if (paschar)
+            {
+                Value val;
+                if (GetPropertyValue(const_cast<Environment*>(penv), paschar, &val))
+                    return val.ToObject(penv);
+            }
+        }
+        break;
+    default:;
+    }
+    return 0;
+}
+
+
+// MS2-FUNCTIONAL the exe builds the found / end iterator in one temporary (no cmov) and stores the new table's
+// null pointer as an immediate
+// @0x142994c50
+bool Object::Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback, const Value& userData)
+{
+    Watchpoint wp;
+    wp.Callback = callback;
+    wp.UserData = userData;
+    if (pWatchpoints == 0)
+        pWatchpoints = SF_HEAP_NEW(psc->GetHeap()) ASStringHash_GC<Watchpoint>();
+
+    WatchpointHash_SetCaseCheck(pWatchpoints, prop, wp, psc->IsCaseSensitive());
+    return true;
 }
 
 }}} // namespace Scaleform::GFx::AS2

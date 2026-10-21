@@ -26,6 +26,9 @@ public:
 
     void* pTable;
 
+    void* operator new(UPInt sz, MemoryHeap* heap) { return Memory::AllocInHeap(heap, sz); }
+    void  operator delete(void* p, MemoryHeap*) { SF_FREE(p); }
+
     const SetType& GetSet() const { return *reinterpret_cast<const SetType*>(this); }
     ConstIterator  Begin() const  { return GetSet().Begin(); }
     ConstIterator  End() const    { return GetSet().End(); }
@@ -265,6 +268,8 @@ public:
     // (appended for sfr_as2_07)
     virtual bool SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags); // exe 0x1429889c0
     virtual bool Unwatch(ASStringContext* psc, const ASString& prop);                         // exe 0x142992780
+    virtual bool Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback,
+                       const Value& userData);                                               // exe 0x142994c50
 
 protected:
     Object(ASRefCountCollector* pcc);
@@ -282,8 +287,10 @@ struct Object::Watchpoint
     FunctionRef Callback; // +0x00
     Value       UserData; // +0x18
 
+    Watchpoint() {}
     Watchpoint(const Watchpoint& o); // exe 0x142923fd0
-    ~Watchpoint();                   // exe 0x142926100
+    ~Watchpoint() {}
+    void Destruct_Call(); // exe 0x142926100, the out-of-line copy of the dtor
 
     // Release before collection: only the user data holds counted references.
     void Finalize_GC()
