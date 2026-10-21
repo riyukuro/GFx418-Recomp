@@ -190,8 +190,18 @@ public:
     virtual InteractiveObject*       GetASCharacter();       // exe 0x1429491c0
     virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949240
 
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());      // exe 0x142986790
+    virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
+                              const PropFlags& flags = PropFlags());   // exe 0x142988b60
+
 protected:
     virtual void Finalize_GC(); // exe 0x142942df0
+
+    // Button handler tracking and the renderer hint members, run before a member is set (exe 0x142988690).
+    void SetMemberCommon(ASStringContext* psc, const ASString& name, const Value& val);
+    // Sets (or clears) the mask bit of an on* button handler the clip gains (or loses) (exe 0x142992540).
+    void TrackMemberButtonHandler(ASStringContext* psc, const ASString& name, bool deleteFlag = false);
 };
 class NumberObject : public Object
 {
@@ -226,6 +236,10 @@ public:
     String LocalPath; // +0x70
 
     virtual void Finalize_GC(); // exe 0x142942f10
+
+    // "data" is read-only (exe 0x142987280).
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
 };
 
 // The out-of-line Resize / PushBack of the loader's object stack (exe COMDATs the exe calls where cl inlines them).

@@ -191,6 +191,10 @@ public:
     // (appended for the sprite stubs, sfr_gfx_05b) the renderer hint the AS2 rendererString member sets; 4.1.18
     // ignores it (exe 0x1425dcf30)
     void SetRendererString(ASString str);
+    // (appended for sfr_as2_07) the rendererFloat / rendererMatrix hints, ignored too (exe 0x1425dcf10 / 0x1425dcf20,
+    // folded into other empty functions)
+    void SetRendererFloat(float v);
+    void SetRendererMatrix(float* pdata, unsigned count);
 };
 
 // The AVM half of a sprite: slots 24..34 (CloneInternalData overrides the AvmInteractiveObjBase slot).

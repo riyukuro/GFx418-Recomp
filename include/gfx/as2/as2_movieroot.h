@@ -75,6 +75,9 @@ enum ASBuiltinType : int
     ASBuiltin_x      = 129,
     ASBuiltin_y      = 130,
     ASBuiltin_0      = 143, // "0" .. "7" follow
+    ASBuiltin_rendererString = 151, // movie clip renderer hints
+    ASBuiltin_rendererFloat  = 152,
+    ASBuiltin_rendererMatrix = 153,
     ASBuiltin_length = 155,
 };
 // The last digit with a builtin name.

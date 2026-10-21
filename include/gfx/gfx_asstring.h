@@ -76,6 +76,7 @@ public:
     const char*      GetBuffer() const    { return pNode->pData; }
     unsigned         GetSize() const      { return pNode->Size; }
     unsigned         GetHashFlags() const { return pNode->HashFlags; }
+    bool             IsBuiltin() const    { return (pNode->HashFlags & Flag_Builtin) != 0; }
     // Records the result of a path check on the shared node.
     void             SetPathFlags(unsigned flags) const { pNode->HashFlags |= flags; }
     ASStringNode*    GetNode() const      { return pNode; }
@@ -138,6 +139,7 @@ public:
     ASString operator+(const char* str) const;     // exe 0x1425bfa40
     ASString operator+(const ASString& str) const; // exe 0x1425bfa00
     bool     operator<(const ASString& str) const; // exe 0x1425bfa90
+    bool     operator==(const char* str) const { return strcmp(pNode->pData, str) == 0; }
     // Not equal and not less.
     bool     operator>(const ASString& str) const
     {

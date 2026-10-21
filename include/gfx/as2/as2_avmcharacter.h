@@ -27,6 +27,19 @@ public:
     // AvmDisplayObjBase overrides.
     virtual void OnEventLoad();   // exe 0x14296b820
     virtual void OnEventUnload(); // exe 0x14296bba0
+
+    // AvmCharacter's own slots 23..33 (checked against the exe vftable 0x143215b00).
+    virtual void               Bind(DisplayObject* po);
+    virtual GlobalContext*     GetGC() const;                    // exe 0x14294afb0
+    virtual Object*            GetASObject();                    // slot 26
+    virtual Object*            GetASObject() const;              // slot 25
+    virtual InteractiveObject* GetRelativeTarget(const ASString& name, bool firstCall);
+    virtual bool               ReplaceChildCharacterOnLoad(InteractiveObject* poldChar, InteractiveObject* pnewChar);
+    virtual bool               ReplaceChildCharacter(InteractiveObject* poldChar, InteractiveObject* pnewChar);
+    virtual Environment*       GetASEnvironment();               // slot 31, exe 0x1429493c0 (the parent's)
+    virtual const Environment* GetASEnvironment() const;         // slot 30, exe 0x142949400
+    virtual InteractiveObject* GetTopParent(bool ignoreLockRoot = false) const;     // exe 0x142956b10
+    virtual AvmCharacter*      GetAvmTopParent(bool ignoreLockRoot = false) const;  // exe 0x142949860
 };
 
 // The script side of a character of an AS2 movie.
