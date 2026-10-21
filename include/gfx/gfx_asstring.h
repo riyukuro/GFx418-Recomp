@@ -264,6 +264,7 @@ public:
     {
         return ASString(CreateConstStringNode(pstr, length, stringFlags));
     }
+    ASString CreateString(const char* pstr, UPInt length) { return ASString(CreateStringNode(pstr, length)); }
 
     ASStringNode* GetEmptyStringNode() { return &EmptyStringNode; }
     ASStringNode* GetNullStringNode()  { return &NullStringNode; }

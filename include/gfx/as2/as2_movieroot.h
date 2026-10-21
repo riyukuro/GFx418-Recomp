@@ -16,22 +16,29 @@ enum ASBuiltinType : int
     ASBuiltin_empty_ = 0, // ""
 };
 
-// Builtin strings of a movie plus the manager that makes new ones.
+// Builtin strings of a movie plus the manager that makes new ones. 0x4f0 bytes.
 class StringManager
 {
 public:
-    ASStringManager*   pStringManager; // +0x00
-    ASStringNodeHolder Builtins[1];    // +0x08 one per ASBuiltinType (count not recovered)
+    enum { BuiltinCount = 156 };
+
+    ASStringNodeHolder Builtins[BuiltinCount]; // +0x000 one per ASBuiltinType
+    ASStringManager*   pStringManager;         // +0x4e0
+    const char**       pStaticStrings;         // +0x4e8
 
     const ASString& GetBuiltin(int btype) const { return (const ASString&)Builtins[btype]; }
+    ASString        CreateString(const char* pstr, UPInt length) const
+    {
+        return pStringManager->CreateString(pstr, length);
+    }
 };
 
 // AS2 half of a movie.
 class MovieRoot : public ASMovieRootBase
 {
 public:
-    UByte         Unrecovered_28[0x108]; // +0x28
-    StringManager BuiltinsMgr;           // +0x130
+    UByte         Unrecovered_28[0x110]; // +0x28
+    StringManager BuiltinsMgr;           // +0x138
 
     StringManager* GetStringManager() { return &BuiltinsMgr; }
 };
@@ -39,6 +46,11 @@ public:
 inline const ASString& ASStringContext::GetBuiltin(int btype) const
 {
     return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(btype);
+}
+
+inline ASString ASStringContext::CreateString(const char* pstr, UPInt length) const
+{
+    return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateString(pstr, length);
 }
 
 }}} // namespace Scaleform::GFx::AS2

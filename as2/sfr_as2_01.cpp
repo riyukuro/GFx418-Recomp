@@ -4,8 +4,9 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428ef8b0-0x1428ef8d0 .text$mn
 // MS2-RANGE: 0x1428f1e30-0x1428f1e70 .text$mn
-// MS2-RANGE: 0x1428f37a0-0x1428f3a40 .text$mn
-// MS2-RANGE: 0x1428f4980-0x1428f4bc0 .text$mn
+// MS2-RANGE: 0x1428f37a0-0x1428f3e70 .text$mn
+// MS2-RANGE: 0x1428f40d0-0x1428f4420 .text$mn
+// MS2-RANGE: 0x1428f4610-0x1428f4cd0 .text$mn
 // MS2-RANGE: 0x1428f4cd0-0x1428f4e60 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
@@ -24,6 +25,7 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/kernel/sf_std.h"
+#include "../include/kernel/sf_utf8util.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -231,6 +233,186 @@ void StringProto::StringCharCodeAt(const FnCall& fn)
     fn.Result->SetNumber(NumberUtil::NaN());
 }
 
+// The string followed by every argument converted to a string.
+// @0x1428f3a40
+void StringProto::StringConcat(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    StringBuffer  buf(pthis->sValue.ToCStr(), pthis->sValue.GetSize(), Memory::pGlobalHeap);
+    for (int i = 0; i < fn.NArgs; i++)
+    {
+        ASString arg = fn.Arg(i).ToString(fn.Env);
+        buf.AppendString(arg.ToCStr());
+    }
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(buf.ToCStr(), buf.GetSize()));
+}
+
+// indexOf(text, start): character index of the first match at or after start, -1 when there is none.
+// @0x1428f3be0
+void StringProto::StringIndexOf(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+    {
+        fn.Result->SetNumber(-1);
+        return;
+    }
+    ASString text = fn.Arg(0).ToString(fn.Env);
+    if (text.GetLength() == 0)
+    {
+        fn.Result->SetNumber(0);
+        return;
+    }
+    const char* ptext = text.ToCStr();
+    const char* pstr  = pthis->sValue.ToCStr();
+    int         start = 0;
+    if (fn.NArgs > 1)
+        start = (int)fn.Arg(1).ToNumber(fn.Env);
+    UInt32 first = UTF8Util::DecodeNextChar(&ptext);
+    for (int i = 0;; i++)
+    {
+        UInt32 c = UTF8Util::DecodeNextChar(&pstr);
+        if (c == 0)
+        {
+            fn.Result->SetNumber(-1);
+            return;
+        }
+        if (i >= start && c == first)
+        {
+            const char* p = pstr;
+            const char* q = ptext;
+            UInt32      a, b;
+            do
+            {
+                a = UTF8Util::DecodeNextChar(&p);
+                b = UTF8Util::DecodeNextChar(&q);
+            } while (a && b && a == b);
+            if (b == 0)
+            {
+                Value* presult = fn.Result;
+                if (presult->T.Type >= Value::STRING)
+                    presult->DropRefs();
+                presult->T.Type        = Value::INTEGER;
+                presult->NV.Int32Value = i;
+                return;
+            }
+            if (a == 0)
+            {
+                Value* presult = fn.Result;
+                if (presult->T.Type >= Value::STRING)
+                    presult->DropRefs();
+                presult->T.Type        = Value::INTEGER;
+                presult->NV.Int32Value = -1;
+                return;
+            }
+        }
+    }
+}
+
+// localeCompare(text, ignoreCase): a Scaleform extension, undefined unless the movie enabled them.
+// @0x1428f40d0
+void StringProto::StringLocaleCompare(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (!fn.Env->CheckExtensions())
+        return;
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    ASString text          = fn.Arg(0).ToString(fn.Env);
+    bool     caseSensitive = true;
+    if (fn.NArgs >= 2)
+        caseSensitive = !fn.Arg(1).ToBool(fn.Env);
+    fn.Result->SetNumber(
+        Number(pthis->sValue.LocaleCompare_CaseCheck(text.ToCStr(), text.GetLength(), caseSensitive)));
+}
+
+// slice(start, end): negative bounds count from the end; "" when end comes before start.
+// @0x1428f4240
+void StringProto::StringSlice(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis  = (StringObject*)fn.ThisPtr;
+    int           start  = 0;
+    int           length = -1;
+    if (fn.NArgs >= 1)
+    {
+        start = (int)fn.Arg(0).ToNumber(fn.Env);
+        if (start < 0)
+            start += pthis->sValue.GetLength();
+    }
+    if (fn.NArgs >= 2)
+    {
+        int end = (int)fn.Arg(1).ToNumber(fn.Env);
+        if (end < 0)
+            end += pthis->sValue.GetLength();
+        if (end < start)
+        {
+            fn.Result->SetString(fn.Env->GetSC()->GetBuiltin(ASBuiltin_empty_));
+            return;
+        }
+        length = end - start;
+    }
+    fn.Result->SetString(StringSubstring(pthis->sValue, start, length));
+}
+
+// substr(start, length): a negative start counts from the end, a negative length gives "".
+// @0x1428f4610
+void StringProto::StringSubstr(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    int start  = 0;
+    int length = -1;
+    if (fn.NArgs >= 1)
+    {
+        start = (int)fn.Arg(0).ToNumber(fn.Env);
+        if (start < 0)
+            start += pthis->sValue.GetLength();
+    }
+    if (fn.NArgs >= 2)
+    {
+        length = (int)fn.Arg(1).ToNumber(fn.Env);
+        if (length < 0)
+            length = 0;
+    }
+    fn.Result->SetString(StringSubstring(pthis->sValue, start, length));
+}
+
+// substring(start, end): the bounds are swapped when end < start, negative ones count as 0.
+// @0x1428f47b0
+void StringProto::StringSubstring(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    int start  = 0;
+    int length = -1;
+    if (fn.NArgs >= 1)
+        start = (int)fn.Arg(0).ToNumber(fn.Env);
+    if (fn.NArgs >= 2)
+    {
+        int end = (int)fn.Arg(1).ToNumber(fn.Env);
+        if (end < start)
+        {
+            if (start >= (int)pthis->sValue.GetLength())
+            {
+                fn.Result->SetString(fn.Env->GetSC()->GetBuiltin(ASBuiltin_empty_));
+                return;
+            }
+            int t = start;
+            start = end;
+            end   = t;
+        }
+        if (start < 0)
+            start = 0;
+        length = end - start;
+    }
+    fn.Result->SetString(StringSubstring(pthis->sValue, start, length));
+}
+
 // @0x1428f4980
 void StringProto::StringToLowerCase(const FnCall& fn)
 {
@@ -263,6 +445,16 @@ void StringProto::StringValueOf(const FnCall& fn)
     MS2_AS2_CHECK_THIS(fn, String);
     StringObject* pthis = (StringObject*)fn.ThisPtr;
     fn.Result->SetString(pthis->sValue);
+}
+
+// String.fromCharCode(c0, c1, ...).
+// @0x1428f4bc0
+void StringCtorFunction::StringFromCharCode(const FnCall& fn)
+{
+    StringBuffer buf(Memory::pGlobalHeap);
+    for (int i = 0; i < fn.NArgs; i++)
+        buf.AppendChar((UInt32)fn.Arg(i).ToNumber(fn.Env));
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(buf.ToCStr(), buf.GetSize()));
 }
 
 // Placeholder natives of classes whose methods are not supported: they return undefined.

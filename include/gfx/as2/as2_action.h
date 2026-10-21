@@ -6,11 +6,11 @@
 
 #include "as2_object.h"
 #include "../gfx_log.h"
+#include "../gfx_types.h"
 
 namespace Scaleform { namespace GFx {
 
 template<class T> class ASStringHash;
-class Bool3W;
 
 namespace AS2 {
 
@@ -74,6 +74,8 @@ public:
     Value* Bottom(int offset) { return Stack.Bottom((unsigned)offset); }
 
     ASStringContext* GetSC() { return &StringContext; }
+    // The movie enabled the Scaleform extensions to ActionScript.
+    inline bool CheckExtensions() const;
     InteractiveObject* GetTarget() const { return Target; }
 
     // Script error channel (exe 0x142967e00).
@@ -141,9 +143,16 @@ public:
     Object*            FlashDisplayPackage;    // +0x50
     Object*            FlashFiltersPackage;    // +0x58
     Ptr<Object>        pGlobal;                // +0x60
-    UInt32             GFxExtensions;          // +0x68 Bool3W
+    Bool3W             GFxExtensions;          // +0x68
     void*              StandardMemberMap;      // +0x70 ASStringHash<char>
+
+    bool CheckExtensions() const { return GFxExtensions.IsTrue(); }
 };
+
+inline bool Environment::CheckExtensions() const
+{
+    return StringContext.pContext->CheckExtensions();
+}
 
 }}} // namespace Scaleform::GFx::AS2
 

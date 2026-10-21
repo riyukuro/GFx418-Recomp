@@ -32,6 +32,16 @@ public:
     static void StringToString(const FnCall& fn);
     static void StringToUpperCase(const FnCall& fn);
     static void StringValueOf(const FnCall& fn);
+
+    // length characters of str from start (length < 0: to the end) (exe 0x142990960).
+    static ASString StringSubstring(const ASString& str, int start, int length);
+};
+
+// The String constructor function's own methods.
+class StringCtorFunction
+{
+private:
+    static void StringFromCharCode(const FnCall& fn);
 };
 
 }}} // namespace Scaleform::GFx::AS2
