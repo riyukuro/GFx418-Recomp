@@ -12,8 +12,7 @@
 // MS2-RANGE: 0x142982ba0-0x142982d20 .text$mn
 // MS2-RANGE: 0x142986790-0x142986d60 .text$mn
 // MS2-RANGE: 0x142987280-0x1429872b0 .text$mn
-// MS2-RANGE: 0x142988690-0x142988930 .text$mn
-// MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
+// MS2-RANGE: 0x142988690-0x142988a30 .text$mn
 // MS2-RANGE: 0x142988b60-0x142988f30 .text$mn
 // MS2-RANGE: 0x142989390-0x142989480 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
@@ -24,7 +23,7 @@
 // MS2-RANGE: 0x14298c9e0-0x14298ca20 .text$mn
 // MS2-RANGE: 0x14298cc30-0x14298cc70 .text$mn
 // MS2-RANGE: 0x14298cc80-0x14298cce0 .text$mn
-// MS2-RANGE: 0x14298dc00-0x14298dcb0 .text$mn
+// MS2-RANGE: 0x14298dc00-0x14298dd70 .text$mn
 // MS2-RANGE: 0x14298de30-0x14298dee0 .text$mn
 // MS2-RANGE: 0x14298ee10-0x14298ee70 .text$mn
 // MS2-RANGE: 0x14298fe50-0x14298fe90 .text$mn
@@ -39,11 +38,11 @@
 // MS2-RANGE: 0x142991c60-0x142991d30 .text$mn
 // MS2-RANGE: 0x142991e10-0x142991e70 .text$mn
 // MS2-RANGE: 0x1429923c0-0x1429925f0 .text$mn
-// MS2-RANGE: 0x142992780-0x142992830 .text$mn
+// MS2-RANGE: 0x1429926f0-0x142992830 .text$mn
 // MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
-// MS2-RANGE: 0x1429944d0-0x142994660 .text$mn
+// MS2-RANGE: 0x1429944d0-0x142994710 .text$mn
 // MS2-RANGE: 0x1429947f0-0x142994a00 .text$mn
-// MS2-RANGE: 0x142994c50-0x142994e00 .text$mn
+// MS2-RANGE: 0x142994bb0-0x142994e00 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -207,6 +206,45 @@ bool Object::SetMemberFlags(ASStringContext* psc, const ASString& name, const UB
         return true;
     }
     return false;
+}
+
+// @0x142988930
+bool AvmCharacter::SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags)
+{
+    Ptr<Object> obj = GetASObject();
+    return obj ? obj->SetMemberFlags(psc, name, flags) : false;
+}
+
+// @0x14298dcb0
+void AvmCharacter::Set__proto__(ASStringContext* psc, Object* protoObj)
+{
+    Ptr<Object> obj = GetASObject();
+    if (obj)
+        obj->Set__proto__(psc, protoObj);
+    pProto = protoObj;
+}
+
+// @0x1429926f0
+bool AvmCharacter::Unwatch(ASStringContext* psc, const ASString& prop)
+{
+    Ptr<Object> obj = GetASObject();
+    return obj ? obj->Unwatch(psc, prop) : false;
+}
+
+// @0x142994660
+void AvmCharacter::VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags,
+                                const ObjectInterface*) const
+{
+    Ptr<Object> obj = GetASObject();
+    if (obj)
+        obj->VisitMembers(psc, pvisitor, visitFlags, this);
+}
+
+// @0x142994bb0
+bool AvmCharacter::Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback, const Value& userData)
+{
+    Ptr<Object> obj = GetASObject();
+    return obj ? obj->Watch(psc, prop, callback, userData) : false;
 }
 
 // @0x142986790

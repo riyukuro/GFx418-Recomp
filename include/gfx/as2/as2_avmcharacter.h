@@ -23,6 +23,14 @@ public:
 
     // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
+    // These forward to the clip's AS object.
+    virtual bool SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags); // exe 0x142988930
+    virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
+                              const ObjectInterface* instance = 0) const;                    // exe 0x142994660
+    virtual void Set__proto__(ASStringContext* psc, Object* protoObj);                        // exe 0x14298dcb0
+    virtual bool Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback,
+                       const Value& userData);                                                // exe 0x142994bb0
+    virtual bool Unwatch(ASStringContext* psc, const ASString& prop);                         // exe 0x1429926f0
 
     // AvmDisplayObjBase overrides.
     virtual void OnEventLoad();   // exe 0x14296b820
