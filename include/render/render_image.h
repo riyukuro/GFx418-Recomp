@@ -237,6 +237,10 @@ public:
     ImageFormat       GetFormat() const                     { return Format; }
     ImageFormat       GetFormatNoConv() const { return (ImageFormat)(Format & ~ImageFormat_Convertible); }
     bool              HasSeparateMipmaps() const            { return (Flags & Flag_SeparateMipmaps) != 0; }
+    void              GetMipLevelPlane(unsigned level, unsigned plane, ImagePlane* p) const
+    {
+        GetPlane(level * GetFormatPlaneCount(Format) + plane, p);
+    }
     bool              IsHWSpecific() const   { return GetFormatNoConv() >= Image_Begin_HWSpecific; }
     unsigned          GetBitsPerPixel(unsigned plane = 0) const { return GetFormatBitsPerPixel(Format, plane); }
     UPInt             GetPitch() const                      { return pPlanes[0].Pitch; }
