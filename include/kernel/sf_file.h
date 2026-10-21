@@ -169,6 +169,7 @@ class ZLibFile : public File
 
 public:
     ZLibFile(File* psourceFile = 0);
+    ~ZLibFile();
 
     const char* GetFilePath();
     bool        IsValid();
