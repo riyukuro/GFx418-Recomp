@@ -576,6 +576,9 @@ namespace Instances
         {
         public:
             explicit Object(InstanceTraits::Traits& t);
+        protected:
+            explicit Object(VM& vm);
+        public:
             // @0x142414f60
             virtual const char* GetAS3ObjectType() const { return "Instances::fl::Object"; }
         };
@@ -587,7 +590,8 @@ namespace Instances
     public:
         Namespace(VM& vm, Abc::NamespaceKind kind, const char* uri);
     protected:
-        Namespace(VM& vm, NamespaceInstanceFactory* pfactory, Abc::NamespaceKind kind, const ASString& uri);
+        Namespace(VM& vm, NamespaceInstanceFactory* pfactory, Abc::NamespaceKind kind, const ASString& uri,
+                  const Value& prefix);
 
     public:
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;

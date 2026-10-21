@@ -7,7 +7,6 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423dc110-0x1423dd550 .text$mn
 // MS2-RANGE: 0x1423de620-0x1423df430 .text$mn
-// MS2-RANGE: 0x1423e0260-0x1423f06a0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PIN: ?LogError@?$LogBase@VLoadProcess@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x1423dcd80 ; unique
 // MS2-PIN: ?LogError@?$LogBase@VStream@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x1423dcdf0 ; unique

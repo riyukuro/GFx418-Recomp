@@ -35,6 +35,9 @@ public:
     FileLoader&             GetFileLoader() const       { return Loader; }
     bool                    IsException() const         { return HandleException; }
 
+    // The call stack as text, one frame per line, each line prefixed with line_pref.
+    void GetStackTraceASString(ASString& result, const char* line_pref = "\t");
+
     Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
     Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }
     Instances::Namespace& GetVectorNamespace() const    { return *VectorNamespace; }
