@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/render/render_matrix4x4.h"
+#include "ms2/scaleform/include/render/render_matrix2x4.h"
 #include "ms2/scaleform/include/render/text_core.h"
 
 namespace Scaleform { namespace Render {
@@ -39,6 +40,59 @@ void Matrix3F::MultiplyMatrix(const Matrix3F& a, const Matrix3F& b)
                             _mm_and_ps(transOnly, a1)));
     _mm_storeu_ps(M[2], Add(Add(Add(Mul(Splat<1>(a2), b1), Mul(Splat<0>(a2), b0)), Mul(Splat<2>(a2), b2)),
                             _mm_and_ps(transOnly, a2)));
+}
+
+// The 2D matrix contributes only the x and y lanes; z and t pass through from the 3D side.
+// MS2-FUNCTIONAL: same instructions, the exe schedules the xmm6-8 spills and loads differently
+// @0x142604460
+template<>
+void Matrix3F::MultiplyMatrix(const Matrix3F& a, const Matrix2x4<float>& m)
+{
+    Vector4f a0 = _mm_loadu_ps(a.M[0]);
+    Vector4f a1 = _mm_loadu_ps(a.M[1]);
+    Vector4f a2 = _mm_loadu_ps(a.M[2]);
+    Vector4f m0 = _mm_loadu_ps(m.M[0]);
+    Vector4f m1 = _mm_loadu_ps(m.M[1]);
+
+    // x lanes, then y lanes, then the z / t lanes passed through
+    Vector4f r0 = Mul(Splat<0>(a0), m0);
+    Vector4f r1 = Mul(Splat<0>(a1), m0);
+    Vector4f r2 = Mul(Splat<0>(a2), m0);
+    r0 = MulAdd(Splat<1>(a0), m1, r0);
+    r1 = MulAdd(Splat<1>(a1), m1, r1);
+    r2 = MulAdd(Splat<1>(a2), m1, r2);
+    Vector4f zt = BitMask<0, 0, 0xFFFFFFFF, 0xFFFFFFFF>();
+    r0 = Add(r0, _mm_and_ps(a0, zt));
+    r1 = Add(r1, _mm_and_ps(a1, zt));
+    r2 = Add(r2, _mm_and_ps(a2, zt));
+    _mm_storeu_ps(M[0], r0);
+    _mm_storeu_ps(M[1], r1);
+    _mm_storeu_ps(M[2], r2);
+}
+
+// MS2-FUNCTIONAL: same instructions, the exe schedules the xmm6-8 spills and loads differently
+// @0x142604500
+template<>
+void Matrix3F::MultiplyMatrix(const Matrix2x4<float>& m, const Matrix3F& b)
+{
+    Vector4f m0 = _mm_loadu_ps(m.M[0]);
+    Vector4f m1 = _mm_loadu_ps(m.M[1]);
+    Vector4f b0 = _mm_loadu_ps(b.M[0]);
+    Vector4f b1 = _mm_loadu_ps(b.M[1]);
+    Vector4f b2 = _mm_loadu_ps(b.M[2]);
+
+    Vector4f r0 = Mul(Splat<0>(m0), b0);
+    Vector4f r1 = Mul(Splat<0>(m1), b0);
+    r0 = MulAdd(Splat<1>(m0), b1, r0);
+    r1 = MulAdd(Splat<1>(m1), b1, r1);
+    r0 = MulAdd(Splat<2>(m0), b2, r0);
+    r1 = MulAdd(Splat<2>(m1), b2, r1);
+    Vector4f transOnly = BitMask<0, 0, 0, 0xFFFFFFFF>();
+    r0 = Add(r0, _mm_and_ps(m0, transOnly));
+    r1 = Add(r1, _mm_and_ps(m1, transOnly));
+    _mm_storeu_ps(M[0], r0);
+    _mm_storeu_ps(M[1], r1);
+    _mm_storeu_ps(M[2], b2);
 }
 
 namespace Text {

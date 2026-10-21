@@ -168,6 +168,9 @@ public:
         m.M[2][0] = 0;  m.M[2][1] = 0;  m.M[2][2] = sz; m.M[2][3] = 0;
         return m;
     }
+
+    // (appended for sfr_render_03) this = m * b, the 2D matrix taken with the z row of the identity (0x142604500)
+    void MultiplyMatrix(const Matrix2x4<T>& m, const Matrix3x4& b);
 };
 typedef Matrix3x4<float> Matrix3F;
 
