@@ -1363,6 +1363,94 @@ Resource* MovieDefImpl::GetResource(const char* pexportName) const
     return iexport->Second.GetResource(&pBindData->ResourceBinding);
 }
 
+// @0x1425cfbd0
+// MS2-FUNCTIONAL: register allocation of the style flags and the movie pointer across the font and import loops
+FontResource* MovieDefImpl::GetFontResource(const char* pfontName, unsigned styleFlags, SearchInfo* psearchInfo)
+{
+    MovieDataDef* pdataDef = GetDataDef();
+
+    // Fonts the file defines itself.
+    for (FontDataUseNode* pfont = pdataDef->GetFirstFont(); pfont != 0; pfont = pfont->pNext)
+    {
+        if (!pfont->pFontData->MatchFont(pfontName, styleFlags))
+            continue;
+
+        ResourceBindData rbd;
+        pBindData->ResourceBinding.GetResourceData(&rbd, pfont->BindIndex);
+        if (rbd.pResource)
+        {
+            FontResource* pfontRes = (FontResource*)rbd.pResource.GetPtr();
+            if (psearchInfo)
+            {
+                if (!pfontRes->GetFont()->IsResolved())
+                    psearchInfo->Status = SearchInfo::FoundInResourcesNoGlyphs;
+                else if ((styleFlags & Render::Font::FF_Style_Mask) && !pfontRes->GetFont()->HasVectorOrRasterGlyphs())
+                    psearchInfo->Status = SearchInfo::FoundInResourcesNeedFaux;
+                else
+                    psearchInfo->Status = SearchInfo::FoundInResources;
+            }
+            return pfontRes;
+        }
+    }
+
+    // Imported fonts are found by their import name as well as by the real font name; the search reports
+    // every file it looked in and the one the font came from.
+    for (ImportData* pimport = pdataDef->GetFirstImport(); pimport != 0; pimport = pimport->pNext)
+    {
+        for (unsigned j = 0; j < pimport->Imports.GetSize(); j++)
+        {
+            if (psearchInfo)
+                psearchInfo->ImportSearchUrls.Set(pimport->SourceUrl);
+
+            ResourceHandle rh;
+            if (!pdataDef->pData->GetResourceHandle(&rh, ResourceId(pimport->Imports[j].CharacterId)))
+                continue;
+            Resource* pres = rh.GetResource(&pBindData->ResourceBinding);
+            if (!pres || pres->GetResourceType() != Resource::RT_Font)
+                continue;
+
+            FontResource* pfontRes = (FontResource*)pres;
+            if (!pfontRes->GetFont()->MatchFontFlags(styleFlags))
+                continue;
+            if (String::CompareNoCase(pimport->Imports[j].SymbolName.ToCStr(), pfontName) &&
+                String::CompareNoCase(pfontRes->GetName(), pfontName))
+                continue;
+
+            if (psearchInfo)
+            {
+                static const char fontlibKey[]   = "gfxfontlib.swf";
+                const UPInt       fontlibKeySize = sizeof(fontlibKey) - 1;
+
+                UPInt urlSize = pimport->SourceUrl.GetSize();
+                if (urlSize >= fontlibKeySize &&
+                    !String::CompareNoCase(pimport->SourceUrl.ToCStr() + (urlSize - fontlibKeySize), fontlibKey))
+                    psearchInfo->Status = SearchInfo::FoundInImportsFontLib;
+                else
+                    psearchInfo->Status = SearchInfo::FoundInImports;
+                psearchInfo->ImportFoundUrl = pimport->SourceUrl;
+            }
+            return pfontRes;
+        }
+    }
+
+    // Exported fonts by their export name.
+    Resource* pres = GetResource(pfontName);
+    if (pres && pres->GetResourceType() == Resource::RT_Font)
+    {
+        FontResource* pfontRes = (FontResource*)pres;
+        if (pfontRes->GetFont()->MatchFontFlags(styleFlags))
+        {
+            if (psearchInfo)
+                psearchInfo->Status = SearchInfo::FoundInExports;
+            return pfontRes;
+        }
+    }
+
+    if (psearchInfo)
+        psearchInfo->Status = SearchInfo::NotFound;
+    return 0;
+}
+
 // *** MovieBindProcess
 
 class ImageFileHandlerRegistry;

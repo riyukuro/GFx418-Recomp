@@ -70,9 +70,12 @@ private:
 public:
     // Number of glyph shapes the font carries; 0 for fonts exported without glyphs (+0x90).
     virtual unsigned GetGlyphShapeCount() const { return 0; }
+    // The font carries vector or raster glyphs of its own (+0x98; declared only).
+    virtual bool HasVectorOrRasterGlyphs() const;
 
     unsigned GetFontFlags() const { return Flags; }
     void     SetNotResolvedFlag()  { Flags |= FF_NotResolved; }
+    bool     IsResolved() const    { return (Flags & FF_NotResolved) == 0; }
 
     // A request matches on style always, on the device bit and the code page only when it asks for them.
     static bool SF_STDCALL MatchFontFlags_Static(unsigned fontFlags, unsigned matchFlags)

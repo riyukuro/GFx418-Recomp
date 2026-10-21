@@ -996,6 +996,26 @@ public:
     CharacterCreateInfo GetCharacterCreateInfo(ResourceId rid);
 };
 
+// What a GetFontResource search found and where: the import files it looked through and the one the font came from.
+struct MovieDefImpl::SearchInfo
+{
+    enum SearchStatus
+    {
+        NotFound = 0,
+        FoundInResources,
+        FoundInResourcesNoGlyphs,
+        FoundInResourcesNeedFaux,
+        FoundInImports,
+        FoundInImportsFontLib,
+        FoundInExports
+    };
+    typedef HashSet<String, String::NoCaseHashFunctor> StringSet;
+
+    SearchStatus Status;           // +0
+    StringSet    ImportSearchUrls; // +8
+    String       ImportFoundUrl;   // +0x10
+};
+
 }} // namespace Scaleform::GFx
 
 #endif

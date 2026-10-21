@@ -15,6 +15,12 @@ class FontResource : public Resource
 public:
     // A font bound in pbinding (exe 0x142654400).
     FontResource(Render::Font* pfont, ResourceBinding* pbinding);
+
+    Render::Font* GetFont() const { return pFont; }
+    const char*   GetName() const { return pFont->GetName(); }
+
+private:
+    Ptr<Render::Font> pFont; // +0x18
 };
 
 // Movies registered with AddFontsFrom are searched for fonts by name (vftable 0x143189198, 0x20 bytes).
