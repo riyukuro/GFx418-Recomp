@@ -154,6 +154,15 @@ public:
         T dst[6] = { x1, y1, x2, y1, x2, y2 };
         return SetParlToParl(parl, dst);
     }
+    // (appended for the tessellator, sfr_render_05c) maps the rectangle x1 y1 x2 y2 onto the rectangle dx1 dy1 dx2 dy2
+    Matrix2x4& SetRectToRect(T x1, T y1, T x2, T y2, T dx1, T dy1, T dx2, T dy2)
+    {
+        T src[6];
+        T dst[6];
+        src[0] = x1;  src[1] = y1;  src[2] = x2;  src[3] = y1;  src[4] = x2;  src[5] = y2;
+        dst[0] = dx1; dst[1] = dy1; dst[2] = dx2; dst[3] = dy1; dst[4] = dx2; dst[5] = dy2;
+        return SetParlToParl(src, dst);
+    }
 
     static Matrix2x4 Scaling(T sx, T sy)    { return Matrix2x4(sx, 0, 0, 0, sy, 0); }
 

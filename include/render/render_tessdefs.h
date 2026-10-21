@@ -13,6 +13,21 @@ namespace Scaleform { namespace Render {
 
 typedef float CoordType;
 
+// (appended for the tessellator, sfr_render_05c) coordinate sentinels and the TessVertex::Flags / TessMesh flag bits
+const CoordType MinCoord = -1e30f;
+const CoordType MaxCoord =  1e30f;
+enum TessStyleFlags
+{
+    TessStyleTranslucent = 0x0001,
+    TessStyleOpaque      = 0x0002,
+    TessStyleFactorHalf  = 0x0004,
+    TessStyleFactorOne   = 0x0008,
+    TessStyleMixColors   = 0x0010,
+    TessStyleUseColor2   = 0x0020,
+    TessStyleComplex     = 0x8000
+};
+inline unsigned TessStyleIsComplex(unsigned flags) { return flags & TessStyleComplex; }
+
 // (appended for the stroker, sfr_render_05b) one output mesh of a tessellator (0x1c bytes) and one output vertex
 // (0x14 bytes): the two styles on its sides, the style flags and the mesh it went to
 struct TessMesh

@@ -117,7 +117,7 @@ enum SegmentType
 template<class V1, class V2, class V3>
 inline CoordType CrossProduct(const V1& v1, const V2& v2, const V3& v)
 {
-    return CrossProduct(v1.x, v1.y, v2.x, v2.y, v.x, v.y);
+    return (v.x - v2.x) * (v2.y - v1.y) - (v.y - v2.y) * (v2.x - v1.x);
 }
 inline bool Intersection(CoordType ax, CoordType ay, CoordType bx, CoordType by, CoordType cx, CoordType cy,
                          CoordType dx, CoordType dy, CoordType* x, CoordType* y, CoordType epsilon)
@@ -139,6 +139,62 @@ inline CoordType Distance(CoordType x1, CoordType y1, CoordType x2, CoordType y2
     CoordType dx = x2 - x1;
     CoordType dy = y2 - y1;
     return sqrtf(dx * dx + dy * dy);
+}
+
+// (appended for the tessellator, sfr_render_05c) squared distance; the signed distance of (x, y) from the line
+// p1 p2 (positive on the right, the plain distance to p1 for a degenerate line); a monotonic stand-in for the
+// direction angle of p1 p2, in [-0.5, 0.5); and a monotonic stand-in for the turn angle at v2 (0 straight, -0.5 / 0.5
+// a right angle left / right, -1 going back) given the two segment lengths
+inline CoordType SqDistance(CoordType x1, CoordType y1, CoordType x2, CoordType y2)
+{
+    CoordType dx = x2 - x1;
+    CoordType dy = y2 - y1;
+    return dx * dx + dy * dy;
+}
+inline CoordType LinePointDistance(CoordType x1, CoordType y1, CoordType x2, CoordType y2, CoordType x, CoordType y)
+{
+    CoordType dx  = x2 - x1;
+    CoordType dy  = y2 - y1;
+    CoordType len = sqrtf(dx * dx + dy * dy);
+    if (len == 0)
+        return Distance(x1, y1, x, y);
+    return ((x - x2) * dy - (y - y2) * dx) / len;
+}
+template<class V1, class V2, class V3>
+inline CoordType LinePointDistance(const V1& v1, const V2& v2, const V3& v)
+{
+    return LinePointDistance(v1.x, v1.y, v2.x, v2.y, v.x, v.y);
+}
+inline CoordType SlopeRatio(CoordType x1, CoordType y1, CoordType x2, CoordType y2)
+{
+    CoordType dx  = x2 - x1;
+    CoordType dy  = y2 - y1;
+    CoordType den = (CoordType)(dx * dx + dy * dy) * 2;
+    if (den == 0)
+        return 0;
+    CoordType r = (dx * dx) / den;
+    if (dx < 0)
+        r = -r;
+    if (dy > 0)
+        r = 1 - r;
+    return r - 0.5f;
+}
+template<class V1, class V2>
+inline CoordType SlopeRatio(const V1& v1, const V2& v2)
+{
+    return SlopeRatio(v1.x, v1.y, v2.x, v2.y);
+}
+template<class V1, class V2, class V3>
+inline CoordType TurnRatio(const V1& v1, const V2& v2, const V3& v3, CoordType len1, CoordType len2)
+{
+    CoordType ax = v2.x - v1.x;
+    CoordType ay = v2.y - v1.y;
+    CoordType bx = v3.x - v2.x;
+    CoordType by = v3.y - v2.y;
+    CoordType r  = (ax * bx + ay * by) / (len1 * len2 * 2);
+    if (bx * ay > by * ax)
+        r = 1 - r;
+    return r - 0.5f;
 }
 
 }}} // namespace Scaleform::Render::Math2D

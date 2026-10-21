@@ -180,6 +180,29 @@ void QuickSort(Array& arr, Less less)
     QuickSortSliced(arr, 0, arr.GetSize(), less);
 }
 
+// (appended for the tessellator, sfr_render_05c) insertion sort of arr[start, end): slow in general, but cheap on
+// nearly sorted data and it leaves equal items where they are
+template<class Array, class Less>
+void InsertionSortSliced(Array& arr, UPInt start, UPInt end, Less less)
+{
+    UPInt j = start;
+    for (UPInt i = j + 1; i < end; j = i, i++)
+    {
+        for (; less(arr[j + 1], arr[j]); j--)
+        {
+            Swap(arr[j + 1], arr[j]);
+            if (j <= start)
+                break;
+        }
+    }
+}
+
+template<class Array, class Less>
+void InsertionSort(Array& arr, Less less)
+{
+    InsertionSortSliced(arr, 0, arr.GetSize(), less);
+}
+
 }}  // namespace Scaleform::Alg
 
 #endif

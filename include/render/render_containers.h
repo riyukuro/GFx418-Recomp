@@ -446,6 +446,9 @@ public:
     T&       operator[](UPInt i)       { return Data[i]; }
     const T& operator[](UPInt i) const { return Data[i]; }
 
+    // (appended for the tessellator, sfr_render_05c)
+    void Zero() { memset(Data, 0, sizeof(T) * Size); }
+
 private:
     ArrayUnsafe(const ArrayUnsafe&);
     void operator=(const ArrayUnsafe&);
@@ -453,6 +456,189 @@ private:
     LinearHeap* pHeap;  // +0x00
     UPInt       Size;   // +0x08
     T*          Data;   // +0x10
+};
+
+// (appended for the tessellator, sfr_render_05c) a set of paged arrays on one LinearHeap (one triangle list per
+// mesh). Each array keeps its own page table; Split cuts an array at a page boundary into two.
+template<class T, unsigned PageSh, unsigned PtrPoolInc>
+class ArrayJagged
+{
+    struct ArrayType
+    {
+        UPInt Size;
+        UPInt NumPages;
+        UPInt MaxPages;
+        T**   Pages;
+    };
+
+public:
+    enum
+    {
+        ArrayInc  = 16,
+        PageShift = PageSh,
+        PageSize  = 1 << PageShift,
+        PageMask  = PageSize - 1
+    };
+    typedef T ValueType;
+
+    // one of the arrays seen as a plain indexable array (for the sorts)
+    class ArrayAdaptor
+    {
+    public:
+        typedef T ValueType;
+
+        ArrayAdaptor(UPInt size, T** pages) : Size(size), Pages(pages) {}
+        UPInt    GetSize() const               { return Size; }
+        T&       operator[](UPInt i)           { return Pages[i >> PageShift][i & PageMask]; }
+        const T& operator[](UPInt i) const     { return Pages[i >> PageShift][i & PageMask]; }
+
+    private:
+        UPInt Size;
+        T**   Pages;
+    };
+
+    ArrayJagged(LinearHeap* heap) : pHeap(heap), Arrays(0), NumArrays(0), MaxArrays(0) {}
+
+    void ClearAndRelease()
+    {
+        Arrays    = 0;
+        NumArrays = MaxArrays = 0;
+    }
+
+    void AddArray()
+    {
+        if (NumArrays >= MaxArrays)
+        {
+            if (NumArrays)
+            {
+                ArrayType* arrays = (ArrayType*)pHeap->Alloc(MaxArrays * 2 * sizeof(ArrayType));
+                memcpy(arrays, Arrays, NumArrays * sizeof(ArrayType));
+                Arrays = arrays;
+                MaxArrays *= 2;
+            }
+            else
+                Arrays = (ArrayType*)pHeap->Alloc((MaxArrays = ArrayInc) * sizeof(ArrayType));
+        }
+        memset(&Arrays[NumArrays], 0, sizeof(ArrayType));
+        ++NumArrays;
+    }
+
+    ArrayAdaptor GetArrayAdaptor(UPInt i) { return ArrayAdaptor(Arrays[i].Size, Arrays[i].Pages); }
+    UPInt        GetArrayCount() const    { return NumArrays; }
+    UPInt        GetSize(UPInt i) const   { return Arrays[i].Size; }
+
+    void PushBack(UPInt i, const T& v)
+    {
+        *nextSlot(i) = v;
+        ++Arrays[i].Size;
+    }
+    void PopBack(UPInt i)
+    {
+        if (Arrays[i].Size)
+            --Arrays[i].Size;
+    }
+    void CutAt(UPInt i, UPInt size)
+    {
+        if (size < Arrays[i].Size)
+            Arrays[i].Size = size;
+    }
+
+    T&       At(UPInt i, UPInt j)         { return Arrays[i].Pages[j >> PageShift][j & PageMask]; }
+    const T& At(UPInt i, UPInt j) const   { return Arrays[i].Pages[j >> PageShift][j & PageMask]; }
+    T&       Back(UPInt i)                { return At(i, Arrays[i].Size - 1); }
+    const T& Back(UPInt i) const          { return At(i, Arrays[i].Size - 1); }
+    UPInt    GetPageCount(UPInt i) const  { return Arrays[i].NumPages; }
+    const T* GetPage(UPInt i, UPInt j) const { return Arrays[i].Pages[j]; }
+
+    // moves the items of array i from the page holding item at on into a new array; false when at is past the end
+    bool Split(UPInt i, UPInt at)
+    {
+        if (at >= GetSize(i))
+            return false;
+        UPInt keepSize   = at & ~UPInt(PageMask);
+        UPInt restSize   = GetSize(i) - keepSize;
+        UPInt keepPages  = at >> PageShift;
+        UPInt restPages  = Arrays[i].NumPages - keepPages;
+        UPInt restMax    = Arrays[i].MaxPages - keepPages;
+        T**   restTable  = Arrays[i].Pages + keepPages;
+        AddArray();
+        Arrays[i].NumPages = keepPages;
+        Arrays[i].MaxPages = keepPages;
+        Arrays[i].Size     = keepSize;
+        i                  = NumArrays - 1;
+        Arrays[i].NumPages = restPages;
+        Arrays[i].MaxPages = restMax;
+        Arrays[i].Size     = restSize;
+        Arrays[i].Pages    = restTable;
+        return true;
+    }
+
+private:
+    ArrayJagged(const ArrayJagged&);
+    const ArrayJagged& operator=(const ArrayJagged&);
+
+    void addPage(ArrayType* a, UPInt page)
+    {
+        if (page >= a->MaxPages)
+        {
+            if (a->Pages)
+            {
+                T** table = (T**)pHeap->Alloc(a->MaxPages * 2 * sizeof(T*));
+                memcpy(table, a->Pages, a->NumPages * sizeof(T*));
+                a->Pages = table;
+                a->MaxPages *= 2;
+            }
+            else
+                a->Pages = (T**)pHeap->Alloc((a->MaxPages = PtrPoolInc) * sizeof(T*));
+        }
+        a->Pages[page] = (T*)pHeap->Alloc(PageSize * sizeof(T));
+        a->NumPages++;
+    }
+    T* nextSlot(UPInt i)
+    {
+        ArrayType* a    = &Arrays[i];
+        UPInt      page = a->Size >> PageShift;
+        if (page >= a->NumPages)
+            addPage(a, page);
+        return a->Pages[page] + (a->Size & PageMask);
+    }
+
+    LinearHeap* pHeap;      // +0x00
+    ArrayType*  Arrays;     // +0x08
+    UPInt       NumArrays;  // +0x10
+    UPInt       MaxArrays;  // +0x18
+};
+
+// (appended for the tessellator, sfr_render_05c) a square table on a LinearHeap; Resize drops the old contents and
+// fills the new table with 0xFF bytes
+template<class T>
+class ArrayMatrix
+{
+public:
+    typedef T ValueType;
+
+    ArrayMatrix(LinearHeap* heap) : pHeap(heap), Size(0), Array(0) {}
+
+    void ClearAndRelease()
+    {
+        Size  = 0;
+        Array = 0;
+    }
+    void Resize(UPInt size)
+    {
+        Size  = size;
+        Array = (T*)pHeap->Alloc(size * size * sizeof(T));
+        memset(Array, 0xFF, size * size * sizeof(T));
+    }
+
+    T&       At(UPInt i, UPInt j)       { return Array[i * Size + j]; }
+    const T& At(UPInt i, UPInt j) const { return Array[i * Size + j]; }
+    T        ValueAt(UPInt i, UPInt j) const { return Array[i * Size + j]; }
+
+private:
+    LinearHeap* pHeap;  // +0x00
+    UPInt       Size;   // +0x08
+    T*          Array;  // +0x10
 };
 
 }} // namespace Scaleform::Render
