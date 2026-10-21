@@ -30,6 +30,7 @@ enum ASBuiltinType : int
     ASBuiltin_prototype        = 77,
     ASBuiltin_constructor      = 79,
     ASBuiltin___constructor__  = 80,
+    ASBuiltin__listeners       = 81, // "_listeners"
     ASBuiltin_typeFunction_    = 83, // "[type Function]"
     ASBuiltin_objectObject_    = 85, // "[object Object]"
     ASBuiltin_INVALID          = 90,

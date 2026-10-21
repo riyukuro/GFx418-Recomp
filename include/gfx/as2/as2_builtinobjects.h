@@ -52,6 +52,8 @@ public:
                                              InvokeCallback* pcallback); // exe 0x142932290
     // Adds plistener to the _listeners of pthis unless it is there already (exe 0x14292f5b0).
     static bool AddListener(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener);
+    // Takes plistener out of the _listeners of pthis, false when it is not there (exe 0x14297d1e0).
+    static bool RemoveListener(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener);
 
     // Makes pobj a broadcaster: the prototype methods and a fresh _listeners array (exe 0x142961d40).
     static bool Initialize(ASStringContext* psc, ObjectInterface* pobj);

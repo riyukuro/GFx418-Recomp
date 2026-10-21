@@ -349,6 +349,11 @@ inline MemoryHeap* Environment::GetHeap() const
     return StringContext.pContext->pHeap;
 }
 
+inline MemoryHeap* ASStringContext::GetHeap() const
+{
+    return pContext->pHeap;
+}
+
 inline Object* Environment::GetPrototype(ASBuiltinType type) const
 {
     return StringContext.pContext->GetPrototype(type);

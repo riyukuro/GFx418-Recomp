@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
 // MS2-RANGE: 0x142961d40-0x142961d80 .text$mn
+// MS2-RANGE: 0x142961ef0-0x142961fe0 .text$mn
 // MS2-RANGE: 0x142961fe0-0x142962010 .text$mn
 // MS2-RANGE: 0x142962010-0x1429620d0 .text$mn
 // MS2-RANGE: 0x1429623a0-0x142962410 .text$mn
@@ -43,6 +44,7 @@
 // MS2-RANGE: 0x142973040-0x142973080 .text$mn
 // MS2-RANGE: 0x14297ca70-0x14297cae0 .text$mn
 // MS2-RANGE: 0x14297d0d0-0x14297d1e0 .text$mn
+// MS2-RANGE: 0x14297d1e0-0x14297d330 .text$mn
 // MS2-RANGE: 0x14297d4b0-0x14297d550 .text$mn
 // MS2-RANGE: 0x14297d550-0x14297d5f0 .text$mn
 // MS2-RANGE: 0x14297d5f0-0x14297d690 .text$mn
@@ -192,8 +194,9 @@ void ArrayObject::MakeDeepCopyFrom(MemoryHeap* pheap, const ArrayObject& ao)
     }
 }
 
+// noinline: the exe calls it out of line from AsBroadcaster::RemoveListener.
 // @0x14297d0d0
-void ArrayObject::RemoveElements(int start, int count)
+__declspec(noinline) void ArrayObject::RemoveElements(int start, int count)
 {
     if (Elements.GetSize())
     {
@@ -235,6 +238,47 @@ bool AsBroadcaster::Initialize(ASStringContext* psc, ObjectInterface* pobj)
 {
     InitializeProto(psc, pobj);
     return InitializeInstance(psc, pobj);
+}
+
+// noinline: Initialize tail-calls it.
+// @0x142961ef0
+__declspec(noinline) bool AsBroadcaster::InitializeInstance(ASStringContext* psc, ObjectInterface* pobj)
+{
+    if (!pobj)
+        return false;
+    Ptr<ArrayObject> ao = *SF_HEAP_NEW(psc->GetHeap()) ArrayObject(psc);
+    pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin__listeners), Value(ao), PropFlags::PropFlag_DontEnum);
+    return true;
+}
+
+// The out-of-line copy of Value::ToObjectInterface (exe 0x142991810), which the header inlines.
+ObjectInterface* Value_ToObjectInterface(const Value* pval, const Environment* penv);
+
+// @0x14297d1e0
+bool AsBroadcaster::RemoveListener(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener)
+{
+    if (!pthis || !plistener)
+        return false;
+
+    Value listeners;
+    if (pthis->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin__listeners), &listeners))
+    {
+        Object* pobj = listeners.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object_Array)
+        {
+            Ptr<ArrayObject> parray = static_cast<ArrayObject*>(pobj);
+            for (int i = (int)parray->GetSize() - 1; i >= 0; --i)
+            {
+                Value* pelem = parray->GetElementPtr(i);
+                if (pelem && Value_ToObjectInterface(pelem, penv) == plistener)
+                {
+                    parray->RemoveElements(i, 1);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 // @0x142961fe0

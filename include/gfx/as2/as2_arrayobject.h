@@ -36,6 +36,7 @@ public:
     };
 
     ArrayObject(Environment* penv); // exe 0x142918010
+    ArrayObject(ASStringContext* psc); // exe 0x142917f70
 
     // Elements by index name, "length" from the element count (exe 0x1429530b0).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
