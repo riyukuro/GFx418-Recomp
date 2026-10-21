@@ -242,7 +242,7 @@ public:
         void init() { pCurrentFormat = pPrevFormat = NULL; pCurrentFont = NULL; }
     };
 
-    Allocator* GetAllocator() { return pDocument->GetAllocator(); }
+    SF_INLINE Allocator* GetAllocator() { return pDocument->GetAllocator(); }
 
 protected:
     void ClearReformatReq()           { RTFlags &= ~(RTFlags_ReformatReq | RTFlags_CompleteReformatReq); }
@@ -456,6 +456,13 @@ public:
     EditorKitBase* GetEditorKit()                  { return pEditorKit; }
     const EditorKitBase* GetEditorKit() const      { return pEditorKit; }
     bool HasEditorKit() const                      { return pEditorKit.GetPtr() != NULL; }
+    // text positions as glyph offsets (the editor kit knows where its composition string sits)
+    UPInt TextPos2GlyphOffset(UPInt textPos)
+    {
+        if (HasEditorKit())
+            return GetEditorKit()->TextPos2GlyphOffset(textPos);
+        return textPos;
+    }
 
     unsigned char NewLineChar() const { return pDocument->NewLineChar(); }
     void SetCompressCRLF()            { RTFlags |= RTFlags_CompressCRLF; }

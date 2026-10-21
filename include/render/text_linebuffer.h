@@ -48,6 +48,8 @@ struct __declspec(align(16)) LineBufferGeometry
     bool IsStaticText() const      { return (Flags & Flag_StaticText) != 0; }
     bool HasBatchUnderline() const { return (Flags & Flag_BatchHasUnderline) != 0; }
     bool IsNoClipping() const      { return (Flags & Flag_NoClipping) != 0; }
+    void SetNoClipping()           { Flags |= Flag_NoClipping; }
+    void ClearNoClipping()         { Flags &= ~Flag_NoClipping; }
 };
 
 class LineBuffer
@@ -126,7 +128,7 @@ public:
             }
             else
             {
-                Advance = (UInt16)(-v);
+                Advance = (UInt16)Alg::Abs(v);
                 Flags |= Flags_NegAdvance;
             }
         }
@@ -143,6 +145,20 @@ public:
         bool IsWordWrapSeparator() const { return (Flags & Flags_WordWrapSeparator) != 0; }
         bool IsComposStrGlyph() const    { return (Flags & Flags_ComposStrGlyph) != 0; }
         bool IsSpaceChar() const         { return (Flags & Flags_SpaceChar) != 0; }
+
+        void SetNextFormat()         { Flags |= Flags_NextFormat; }
+        void SetFmtHasFont()         { Flags |= Flags_FmtHasFont; }
+        void SetFmtHasColor()        { Flags |= Flags_FmtHasColor; }
+        void SetFmtHasImage()        { Flags |= Flags_FmtHasImage; }
+        void SetUnderline()          { Flags |= Flags_Underline; }
+        void ClearUnderline()        { Flags &= ~Flags_Underline; }
+        void SetInvisibleChar()      { Flags |= Flags_InvisibleChar; }
+        void SetNewLineChar()        { Flags |= Flags_NewLineChar; }
+        void SetUrl()                { Flags |= Flags_Url; }
+        void ClearUrl()              { Flags &= ~Flags_Url; }
+        void SetWordWrapSeparator()  { Flags |= Flags_WordWrapSeparator; }
+        void SetComposStrGlyph()     { Flags |= Flags_ComposStrGlyph; }
+        void SetSpaceChar()          { Flags |= Flags_SpaceChar; }
     };
 
     // what a glyph with the next-format flag switches to
@@ -220,6 +236,19 @@ public:
 
         static unsigned GetLineStructSize() { return 0x26; }
         GlyphEntry* GetGlyphs() const { return reinterpret_cast<GlyphEntry*>(((UByte*)this) + GetLineStructSize()); }
+
+        void Init()
+        {
+            GlyphsCount = 0;
+            TextPos = 0;
+            BaseLineOffset = 0;
+            Leading = 0;
+            OffsetX = OffsetY = 0;
+            Width = Height = 0;
+            TextLength = 0;
+        }
+        void SetDimensions(int w, int h) { Width = UInt32(w); Height = UInt32(h); }
+        void SetOffset(int x, int y)     { OffsetX = x; OffsetY = y; }
     };
 
     // Header of a short line: 24-bit text position and 8-bit length packed, 16-bit sizes (0x16 bytes used).
@@ -249,6 +278,19 @@ public:
         }
         unsigned GetTextLength() const { return (TextPosAndLength >> Shift_TextLength) & Mask_TextLength; }
         GlyphEntry* GetGlyphs() const { return reinterpret_cast<GlyphEntry*>(((UByte*)this) + GetLineStructSize()); }
+
+        void SetTextPos(unsigned tp)
+        {
+            TextPosAndLength = (TextPosAndLength & ~(unsigned(Mask_TextPos) << Shift_TextPos)) |
+                               ((tp & Mask_TextPos) << Shift_TextPos);
+        }
+        void SetTextLength(unsigned len)
+        {
+            TextPosAndLength = (TextPosAndLength & ~(unsigned(Mask_TextLength) << Shift_TextLength)) |
+                               ((len & Mask_TextLength) << Shift_TextLength);
+        }
+        void SetDimensions(int w, int h) { Width = UInt16(w); Height = UInt16(h); }
+        void SetOffset(int x, int y)     { OffsetX = x; OffsetY = y; }
     };
 
     class Line
@@ -286,8 +328,7 @@ public:
         void SetTextPos(unsigned tp)
         {
             if (IsData8())
-                Data8.TextPosAndLength = (Data8.TextPosAndLength & ~(LineData8::Mask_TextPos << LineData8::Shift_TextPos)) |
-                                         ((tp & LineData8::Mask_TextPos) << LineData8::Shift_TextPos);
+                Data8.SetTextPos(tp);
             else
                 Data32.TextPos = tp;
         }
@@ -319,6 +360,164 @@ public:
             return Begin();
         }
         bool HasNewLine() const;
+
+        // (appended for the paragraph formatter, sfr_render_03b)
+        Line() : MemSize(0) {}
+        void InitLine32()
+        {
+            MemSize &= Mask_MemSize;
+            MemSize |= Flags_Initialized;
+            Data32.Init();
+        }
+        void ClearInitialized() { MemSize &= ~Flags_Initialized; }
+        void SetMemSize(unsigned len)
+        {
+            MemSize = (MemSize & ~(Mask_MemSize << Shift_MemSize)) | ((len & Mask_MemSize) << Shift_MemSize);
+        }
+        unsigned GetMemSize() const { return (MemSize >> Shift_MemSize) & Mask_MemSize; }
+        void SetAlignment(Alignment a)
+        {
+            MemSize = (MemSize & ~(Mask_Alignment << Shift_Alignment)) | ((a & Mask_Alignment) << Shift_Alignment);
+        }
+        void SetNumGlyphs(unsigned n)
+        {
+            if (IsData8())
+                Data8.GlyphsCount = (UInt8)n;
+            else
+                Data32.GlyphsCount = n;
+        }
+        void SetTextLength(unsigned len)
+        {
+            if (IsData8())
+                Data8.SetTextLength(len);
+            else
+                Data32.TextLength = (UInt32)len;
+        }
+        void SetBaseLineOffset(float bl)
+        {
+            if (IsData8())
+                Data8.BaseLineOffset = (UInt16)bl;
+            else
+                Data32.BaseLineOffset = (UInt16)bl;
+        }
+        void SetLeading(int leading)
+        {
+            if (IsData8())
+                Data8.Leading = (SInt8)leading;
+            else
+                Data32.Leading = (SInt16)leading;
+        }
+        void SetDimensions(int w, int h)
+        {
+            if (IsData8())
+                Data8.SetDimensions(w, h);
+            else
+                Data32.SetDimensions(w, h);
+        }
+        void SetOffset(int x, int y)
+        {
+            if (IsData8())
+                Data8.SetOffset(x, y);
+            else
+                Data32.SetOffset(x, y);
+        }
+        void SetOffsetX(int x)
+        {
+            if (IsData8())
+                Data8.OffsetX = x;
+            else
+                Data32.OffsetX = x;
+        }
+        void SetOffsetY(int y)
+        {
+            if (IsData8())
+                Data8.OffsetY = y;
+            else
+                Data32.OffsetY = y;
+        }
+        void SetParagraphId(unsigned id)
+        {
+            if (IsData8())
+                Data8.ParagraphId = id;
+            else
+                Data32.ParagraphId = id;
+        }
+        void SetParagraphModId(UInt16 id)
+        {
+            if (IsData8())
+                Data8.ParagraphModId = id;
+            else
+                Data32.ParagraphModId = id;
+        }
+    };
+
+    // Writes glyphs and their format switches into a line under construction (0x20 bytes).
+    class GlyphInserter
+    {
+        GlyphEntry*      pGlyphs;           // +0x00
+        FormatDataEntry* pNextFormatData;   // +0x08
+        unsigned         GlyphIndex;        // +0x10
+        unsigned         GlyphsCount;       // +0x14
+        unsigned         FormatDataIndex;   // +0x18
+
+    public:
+        GlyphInserter() : pGlyphs(NULL), pNextFormatData(NULL), GlyphIndex(0), GlyphsCount(0), FormatDataIndex(0) {}
+        GlyphInserter(GlyphEntry* pglyphs, unsigned glyphsCount, FormatDataEntry* pfmtData)
+            : pGlyphs(pglyphs), pNextFormatData(pfmtData), GlyphIndex(0), GlyphsCount(glyphsCount), FormatDataIndex(0)
+        {
+        }
+        GlyphInserter(const GlyphInserter& o) { operator=(o); }
+        GlyphInserter& operator=(const GlyphInserter& o)
+        {
+            pGlyphs         = o.pGlyphs;
+            pNextFormatData = o.pNextFormatData;
+            GlyphIndex      = o.GlyphIndex;
+            GlyphsCount     = o.GlyphsCount;
+            FormatDataIndex = o.FormatDataIndex;
+            return *this;
+        }
+
+        void Reset()            { GlyphIndex = FormatDataIndex = 0; }
+        bool IsFinished() const { return !pGlyphs || GlyphIndex >= GlyphsCount; }
+        void operator++()
+        {
+            if (!IsFinished())
+                ++GlyphIndex;
+        }
+        GlyphEntry& GetGlyph()
+        {
+            GlyphEntry& g = pGlyphs[GlyphIndex];
+            g.Init();
+            return g;
+        }
+        void AddFont(FontHandle* pfont)
+        {
+            pGlyphs[GlyphIndex].SetNextFormat();
+            pGlyphs[GlyphIndex].SetFmtHasFont();
+            pNextFormatData[FormatDataIndex++].pFont = pfont;
+            pfont->AddRef();
+        }
+        void AddColor(Color color)
+        {
+            pGlyphs[GlyphIndex].SetNextFormat();
+            pGlyphs[GlyphIndex].SetFmtHasColor();
+            pNextFormatData[FormatDataIndex++].ColorV = color.ToColor32();
+        }
+        void AddImage(ImageDesc* pimage)
+        {
+            pGlyphs[GlyphIndex].SetNextFormat();
+            pGlyphs[GlyphIndex].SetFmtHasImage();
+            pNextFormatData[FormatDataIndex++].pImage = pimage;
+            pimage->AddRef();
+        }
+        unsigned GetFormatDataElementsCount() const { return FormatDataIndex; }
+        unsigned GetGlyphIndex() const              { return GlyphIndex; }
+        void ResetTo(const GlyphInserter& savedPos);   // releases the formats written past savedPos
+        GlyphEntry* GetReadyGlyphs(unsigned* pnumGlyphs)
+        {
+            *pnumGlyphs = GetGlyphIndex();
+            return pGlyphs;
+        }
     };
 
     class ConstIterator;
@@ -380,6 +579,22 @@ public:
         unsigned GetIndex() const { return ((int)CurrentPos >= 0) ? unsigned(CurrentPos) : ~0u; }
         void SetHighlighter(const Highlighter* ph) { pHighlight = ph; }
         const Highlighter* GetHighlighter() const  { return pHighlight; }
+
+        void Remove(unsigned num = 1)
+        {
+            if (!IsFinished())
+                pLineBuffer->RemoveLines(CurrentPos, num);
+        }
+        // the new line goes at the iterator, which then moves past it
+        Line* InsertNewLine(unsigned glyphCount, unsigned formatDataElementsCount, LineType lineType)
+        {
+            unsigned pos = GetIndex();
+            if (pos == ~0u)
+                pos = (unsigned)pLineBuffer->Lines.GetSize();
+            Line* pline = pLineBuffer->InsertNewLine(pos, glyphCount, formatDataElementsCount, lineType);
+            ++CurrentPos;
+            return pline;
+        }
     };
 
     LineBuffer();

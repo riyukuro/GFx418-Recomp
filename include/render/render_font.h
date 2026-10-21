@@ -35,7 +35,8 @@ public:
         FF_DeviceFont      = 0x0010,
         FF_CodePage_Mask   = 0x0300,
         FF_CreateFont_Mask = FF_Style_Mask | FF_CodePage_Mask,
-        FF_NotResolved     = 0x0040 // a placeholder the font manager resolves through the font library / provider
+        FF_NotResolved     = 0x0040, // a placeholder the font manager resolves through the font library / provider
+        FF_PixelAligned    = 0x8000  // glyphs are snapped to pixels (bitmap fonts)
     };
 
     virtual ~Font() {}
@@ -64,6 +65,8 @@ public:
     virtual unsigned GetGlyphShapeCount() const { return 0; }
     // The font carries vector or raster glyphs of its own (+0x98; declared only).
     virtual bool HasVectorOrRasterGlyphs() const;
+    // The character ranges the font covers, as text (+0xa0; declared only).
+    virtual String GetCharRanges() const;
 
     unsigned GetFontFlags() const { return Flags; }
     float    GetAscent() const     { return Ascent; }
@@ -72,6 +75,7 @@ public:
     bool     IsItalic() const      { return (Flags & FF_Italic) != 0; }
     bool     IsBold() const        { return (Flags & FF_Bold) != 0; }
     bool     IsDeviceFont() const  { return (Flags & FF_DeviceFont) != 0; }
+    bool     IsPixelAligned() const { return (Flags & FF_PixelAligned) != 0; }
     void     SetNotResolvedFlag()  { Flags |= FF_NotResolved; }
     bool     IsResolved() const    { return (Flags & FF_NotResolved) == 0; }
 
