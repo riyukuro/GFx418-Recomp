@@ -288,7 +288,6 @@ typedef ThunkFunc0<Instances::fl::RegExp, 7, bool> TFunc_Instances_RegExp_extend
 template struct ThunkFunc0<Instances::fl::RegExp, 7, bool>;
 
 // thunk 0x1423e5470
-// MS2-FUNCTIONAL: register allocation only: the exe loads the VM string manager into rbx, ours through rax (2 bytes)
 typedef ThunkFunc1<Instances::fl::RegExp, 8, SPtr<Instances::fl::Object>, const ASString&> TFunc_Instances_RegExp_AS3exec;
 template struct ThunkFunc1<Instances::fl::RegExp, 8, SPtr<Instances::fl::Object>, const ASString&>;
 

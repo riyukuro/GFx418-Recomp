@@ -1,0 +1,663 @@
+// Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 AS3 native classes. Our own
+// source, written from the exe. The native method thunks are instances of the ThunkFuncN templates of
+// as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
+// MS2-UNIT: sfr_as3_10
+// MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142473760-0x1424789e0 .text$mn
+// MS2-RANGE: 0x142478f10-0x142479130 .text$mn
+// MS2-RANGE: 0x14247a8f0-0x1424832e0 .text$mn
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+
+// THUNKS-BEGIN (work/sfr5/gen_thunks.py)
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// thunk 0x142473af0: Instances::fl_filters::BevelFilter::angleGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 0, Value::Number>;
+// thunk 0x142473b60: Instances::fl_filters::BevelFilter::angleSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 1, const Value, Value::Number>;
+// thunk 0x142473bf0: Instances::fl_filters::BevelFilter::blurXGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 2, Value::Number>;
+// thunk 0x142473c60: Instances::fl_filters::BevelFilter::blurXSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 3, const Value, Value::Number>;
+// thunk 0x142473cf0: Instances::fl_filters::BevelFilter::blurYGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 4, Value::Number>;
+// thunk 0x142473d60: Instances::fl_filters::BevelFilter::blurYSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 5, const Value, Value::Number>;
+// thunk 0x142473df0: Instances::fl_filters::BevelFilter::distanceGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 6, Value::Number>;
+// thunk 0x142473e60: Instances::fl_filters::BevelFilter::distanceSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 7, const Value, Value::Number>;
+// thunk 0x142473ef0: Instances::fl_filters::BevelFilter::highlightAlphaGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 8, Value::Number>;
+// thunk 0x142473f60: Instances::fl_filters::BevelFilter::highlightAlphaSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 9, const Value, Value::Number>;
+// thunk 0x142473ff0: Instances::fl_filters::BevelFilter::highlightColorGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 10, UInt32>;
+// thunk 0x142474050: Instances::fl_filters::BevelFilter::highlightColorSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 11, const Value, UInt32>;
+// thunk 0x1424740c0: Instances::fl_filters::BevelFilter::knockoutGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 12, bool>;
+// thunk 0x142474120: Instances::fl_filters::BevelFilter::knockoutSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 13, const Value, bool>;
+// thunk 0x142474180: Instances::fl_filters::BevelFilter::qualityGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 14, SInt32>;
+// thunk 0x1424741e0: Instances::fl_filters::BevelFilter::qualitySet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 15, const Value, SInt32>;
+// thunk 0x142474250: Instances::fl_filters::BevelFilter::shadowAlphaGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 16, Value::Number>;
+// thunk 0x1424742c0: Instances::fl_filters::BevelFilter::shadowAlphaSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 17, const Value, Value::Number>;
+// thunk 0x142474350: Instances::fl_filters::BevelFilter::shadowColorGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 18, UInt32>;
+// thunk 0x1424743b0: Instances::fl_filters::BevelFilter::shadowColorSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 19, const Value, UInt32>;
+// thunk 0x142474420: Instances::fl_filters::BevelFilter::strengthGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 20, Value::Number>;
+// thunk 0x142474490: Instances::fl_filters::BevelFilter::strengthSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 21, const Value, Value::Number>;
+// thunk 0x142474520: Instances::fl_filters::BevelFilter::typeGet
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 22, ASString>;
+// thunk 0x142474590: Instances::fl_filters::BevelFilter::typeSet
+template struct ThunkFunc1<Instances::fl_filters::BevelFilter, 23, const Value, const ASString&>;
+// thunk 0x142474690: Instances::fl_filters::BevelFilter::clone
+template struct ThunkFunc0<Instances::fl_filters::BevelFilter, 24, SPtr<Instances::fl_filters::BitmapFilter>>;
+// thunk 0x1424748b0: Instances::fl_filters::BitmapFilter::clone
+template struct ThunkFunc0<Instances::fl_filters::BitmapFilter, 0, SPtr<Instances::fl_filters::BitmapFilter>>;
+// thunk 0x142474d50: Instances::fl_filters::DropShadowFilter::alphaGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 0, Value::Number>;
+// thunk 0x142474dc0: Instances::fl_filters::DropShadowFilter::alphaSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 1, const Value, Value::Number>;
+// thunk 0x142474e50: Instances::fl_filters::DropShadowFilter::angleGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 2, Value::Number>;
+// thunk 0x142474ec0: Instances::fl_filters::DropShadowFilter::angleSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 3, const Value, Value::Number>;
+// thunk 0x142475090: Instances::fl_filters::DropShadowFilter::blurXGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 4, Value::Number>;
+// thunk 0x142475100: Instances::fl_filters::DropShadowFilter::blurXSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 5, const Value, Value::Number>;
+// thunk 0x142475190: Instances::fl_filters::BlurFilter::blurXGet
+template struct ThunkFunc0<Instances::fl_filters::BlurFilter, 0, Value::Number>;
+// thunk 0x142475200: Instances::fl_filters::DropShadowFilter::blurYGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 6, Value::Number>;
+// thunk 0x142475270: Instances::fl_filters::BlurFilter::blurXSet
+template struct ThunkFunc1<Instances::fl_filters::BlurFilter, 1, const Value, Value::Number>;
+// thunk 0x142475300: Instances::fl_filters::DropShadowFilter::blurYSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 7, const Value, Value::Number>;
+// thunk 0x142475390: Instances::fl_filters::BlurFilter::blurYGet
+template struct ThunkFunc0<Instances::fl_filters::BlurFilter, 2, Value::Number>;
+// thunk 0x142475400: Instances::fl_filters::DropShadowFilter::colorGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 8, UInt32>;
+// thunk 0x142475460: Instances::fl_filters::BlurFilter::blurYSet
+template struct ThunkFunc1<Instances::fl_filters::BlurFilter, 3, const Value, Value::Number>;
+// thunk 0x1424754f0: Instances::fl_filters::DropShadowFilter::colorSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 9, const Value, UInt32>;
+// thunk 0x142475560: Instances::fl_filters::BlurFilter::qualityGet
+template struct ThunkFunc0<Instances::fl_filters::BlurFilter, 4, SInt32>;
+// thunk 0x1424755c0: Instances::fl_filters::DropShadowFilter::distanceGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 10, Value::Number>;
+// thunk 0x142475630: Instances::fl_filters::BlurFilter::qualitySet
+template struct ThunkFunc1<Instances::fl_filters::BlurFilter, 5, const Value, SInt32>;
+// thunk 0x1424756a0: Instances::fl_filters::DropShadowFilter::distanceSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 11, const Value, Value::Number>;
+// thunk 0x142475730: Instances::fl_filters::BlurFilter::clone
+template struct ThunkFunc0<Instances::fl_filters::BlurFilter, 6, SPtr<Instances::fl_filters::BitmapFilter>>;
+// thunk 0x1424757e0: Instances::fl_filters::DropShadowFilter::hideObjectGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 12, bool>;
+// thunk 0x142475840: Instances::fl_filters::DropShadowFilter::hideObjectSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 13, const Value, bool>;
+// thunk 0x1424758a0: Instances::fl_filters::DropShadowFilter::innerGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 14, bool>;
+// thunk 0x142475900: Instances::fl_filters::DropShadowFilter::innerSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 15, const Value, bool>;
+// thunk 0x142475960: Instances::fl_filters::DropShadowFilter::knockoutGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 16, bool>;
+// thunk 0x1424759c0: Instances::fl_filters::DropShadowFilter::knockoutSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 17, const Value, bool>;
+// thunk 0x142475a20: Instances::fl_filters::DropShadowFilter::qualityGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 18, SInt32>;
+// thunk 0x142475a80: Instances::fl_filters::DropShadowFilter::qualitySet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 19, const Value, SInt32>;
+// thunk 0x142475af0: Instances::fl_filters::DropShadowFilter::strengthGet
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 20, Value::Number>;
+// thunk 0x142475b60: Instances::fl_filters::DropShadowFilter::strengthSet
+template struct ThunkFunc1<Instances::fl_filters::DropShadowFilter, 21, const Value, Value::Number>;
+// thunk 0x142475bf0: Instances::fl_filters::DropShadowFilter::clone
+template struct ThunkFunc0<Instances::fl_filters::DropShadowFilter, 22, SPtr<Instances::fl_filters::BitmapFilter>>;
+// thunk 0x142475f20: Instances::fl_filters::GlowFilter::alphaGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 0, Value::Number>;
+// thunk 0x142475f90: Instances::fl_filters::GlowFilter::alphaSet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 1, const Value, Value::Number>;
+// thunk 0x142476020: Instances::fl_filters::GlowFilter::blurXGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 2, Value::Number>;
+// thunk 0x142476090: Instances::fl_filters::GlowFilter::blurXSet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 3, const Value, Value::Number>;
+// thunk 0x142476120: Instances::fl_filters::GlowFilter::blurYGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 4, Value::Number>;
+// thunk 0x142476190: Instances::fl_filters::GlowFilter::blurYSet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 5, const Value, Value::Number>;
+// thunk 0x142476220: Instances::fl_filters::GlowFilter::colorGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 6, UInt32>;
+// thunk 0x142476280: Instances::fl_filters::GlowFilter::colorSet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 7, const Value, UInt32>;
+// thunk 0x1424762f0: Instances::fl_filters::GlowFilter::innerGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 8, bool>;
+// thunk 0x142476350: Instances::fl_filters::GlowFilter::innerSet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 9, const Value, bool>;
+// thunk 0x1424763b0: Instances::fl_filters::GlowFilter::knockoutGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 10, bool>;
+// thunk 0x142476410: Instances::fl_filters::GlowFilter::knockoutSet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 11, const Value, bool>;
+// thunk 0x142476470: Instances::fl_filters::GlowFilter::qualityGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 12, SInt32>;
+// thunk 0x1424764d0: Instances::fl_filters::GlowFilter::qualitySet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 13, const Value, SInt32>;
+// thunk 0x142476540: Instances::fl_filters::GlowFilter::strengthGet
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 14, Value::Number>;
+// thunk 0x1424765b0: Instances::fl_filters::GlowFilter::strengthSet
+template struct ThunkFunc1<Instances::fl_filters::GlowFilter, 15, const Value, Value::Number>;
+// thunk 0x142476640: Instances::fl_filters::GlowFilter::clone
+template struct ThunkFunc0<Instances::fl_filters::GlowFilter, 16, SPtr<Instances::fl_filters::BitmapFilter>>;
+// thunk 0x142476970: Instances::fl_filters::ColorMatrixFilter::matrixGet
+template struct ThunkFunc0<Instances::fl_filters::ColorMatrixFilter, 0, SPtr<Instances::fl::Array>>;
+// thunk 0x142476a20: Instances::fl_filters::ColorMatrixFilter::matrixSet
+template struct ThunkFunc1<Instances::fl_filters::ColorMatrixFilter, 1, const Value, Instances::fl::Array*>;
+// thunk 0x142476a60: Instances::fl_filters::ColorMatrixFilter::clone
+template struct ThunkFunc0<Instances::fl_filters::ColorMatrixFilter, 2, SPtr<Instances::fl_filters::BitmapFilter>>;
+// thunk 0x14247c430: Instances::fl_geom::Matrix::clone
+template struct ThunkFunc0<Instances::fl_geom::Matrix, 0, SPtr<Instances::fl_geom::Matrix>>;
+// thunk 0x14247c4e0: Instances::fl_geom::Matrix::concat
+template struct ThunkFunc1<Instances::fl_geom::Matrix, 1, const Value, Instances::fl_geom::Matrix*>;
+// Instances::fl_geom::Matrix::createBox argument 2 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix, 2, 2, Value::Number>
+{
+    SF_INLINE static Value::Number Get(StringManager&) { return 0.0; }
+};
+// Instances::fl_geom::Matrix::createBox argument 3 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix, 2, 3, Value::Number>
+{
+    SF_INLINE static Value::Number Get(StringManager&) { return 0.0; }
+};
+// Instances::fl_geom::Matrix::createBox argument 4 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix, 2, 4, Value::Number>
+{
+    SF_INLINE static Value::Number Get(StringManager&) { return 0.0; }
+};
+// thunk 0x14247c520: Instances::fl_geom::Matrix::createBox
+template struct ThunkFunc5<Instances::fl_geom::Matrix, 2, const Value, Value::Number, Value::Number, Value::Number, Value::Number, Value::Number>;
+// Instances::fl_geom::Matrix::createGradientBox argument 2 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix, 3, 2, Value::Number>
+{
+    SF_INLINE static Value::Number Get(StringManager&) { return 0.0; }
+};
+// Instances::fl_geom::Matrix::createGradientBox argument 3 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix, 3, 3, Value::Number>
+{
+    SF_INLINE static Value::Number Get(StringManager&) { return 0.0; }
+};
+// Instances::fl_geom::Matrix::createGradientBox argument 4 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix, 3, 4, Value::Number>
+{
+    SF_INLINE static Value::Number Get(StringManager&) { return 0.0; }
+};
+// thunk 0x14247c6a0: Instances::fl_geom::Matrix::createGradientBox
+template struct ThunkFunc5<Instances::fl_geom::Matrix, 3, const Value, Value::Number, Value::Number, Value::Number, Value::Number, Value::Number>;
+// thunk 0x14247c820: Instances::fl_geom::Matrix::deltaTransformPoint
+template struct ThunkFunc1<Instances::fl_geom::Matrix, 4, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Point*>;
+// thunk 0x14247c910: Instances::fl_geom::Matrix::identity
+template struct ThunkFunc0<Instances::fl_geom::Matrix, 5, const Value>;
+// thunk 0x14247c930: Instances::fl_geom::Matrix::invert
+template struct ThunkFunc0<Instances::fl_geom::Matrix, 6, const Value>;
+// thunk 0x14247c950: Instances::fl_geom::Matrix::rotate
+template struct ThunkFunc1<Instances::fl_geom::Matrix, 7, const Value, Value::Number>;
+// thunk 0x14247c9e0: Instances::fl_geom::Matrix::scale
+template struct ThunkFunc2<Instances::fl_geom::Matrix, 8, const Value, Value::Number, Value::Number>;
+// thunk 0x14247cac0: Instances::fl_geom::Matrix::toString
+template struct ThunkFunc0<Instances::fl_geom::Matrix, 9, ASString>;
+// thunk 0x14247cb30: Instances::fl_geom::Matrix::transformPoint
+template struct ThunkFunc1<Instances::fl_geom::Matrix, 10, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Point*>;
+// thunk 0x14247cc20: Instances::fl_geom::Matrix::translate
+template struct ThunkFunc2<Instances::fl_geom::Matrix, 11, const Value, Value::Number, Value::Number>;
+// thunk 0x14247cf80: Instances::fl_geom::PerspectiveProjection::projectionCenterGet
+template struct ThunkFunc0<Instances::fl_geom::PerspectiveProjection, 0, SPtr<Instances::fl_geom::Point>>;
+// thunk 0x14247d030: Instances::fl_geom::PerspectiveProjection::projectionCenterSet
+template struct ThunkFunc1<Instances::fl_geom::PerspectiveProjection, 1, const Value, Instances::fl_geom::Point*>;
+// thunk 0x14247d070: Instances::fl_geom::PerspectiveProjection::focalLengthGet
+template struct ThunkFunc0<Instances::fl_geom::PerspectiveProjection, 2, Value::Number>;
+// thunk 0x14247d0e0: Instances::fl_geom::PerspectiveProjection::focalLengthSet
+template struct ThunkFunc1<Instances::fl_geom::PerspectiveProjection, 3, const Value, Value::Number>;
+// thunk 0x14247d170: Instances::fl_geom::PerspectiveProjection::fieldOfViewGet
+template struct ThunkFunc0<Instances::fl_geom::PerspectiveProjection, 4, Value::Number>;
+// thunk 0x14247d1e0: Instances::fl_geom::PerspectiveProjection::fieldOfViewSet
+template struct ThunkFunc1<Instances::fl_geom::PerspectiveProjection, 5, const Value, Value::Number>;
+// thunk 0x14247d270: Instances::fl_geom::ColorTransform::colorGet
+template struct ThunkFunc0<Instances::fl_geom::ColorTransform, 0, UInt32>;
+// thunk 0x14247d2d0: Instances::fl_geom::PerspectiveProjection::toMatrix3D
+template struct ThunkFunc0<Instances::fl_geom::PerspectiveProjection, 6, SPtr<Instances::fl_geom::Matrix3D>>;
+// thunk 0x14247d380: Instances::fl_geom::ColorTransform::colorSet
+template struct ThunkFunc1<Instances::fl_geom::ColorTransform, 1, const Value, UInt32>;
+// thunk 0x14247d3f0: Instances::fl_geom::ColorTransform::concat
+template struct ThunkFunc1<Instances::fl_geom::ColorTransform, 2, const Value, Instances::fl_geom::ColorTransform*>;
+// thunk 0x14247d430: Instances::fl_geom::ColorTransform::toString
+template struct ThunkFunc0<Instances::fl_geom::ColorTransform, 3, ASString>;
+// thunk 0x14247d4a0: Instances::fl_geom::Point::lengthGet
+template struct ThunkFunc0<Instances::fl_geom::Point, 0, Value::Number>;
+// thunk 0x14247d510: Instances::fl_geom::Point::add
+template struct ThunkFunc1<Instances::fl_geom::Point, 1, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Point*>;
+// thunk 0x14247d600: Instances::fl_geom::Point::clone
+template struct ThunkFunc0<Instances::fl_geom::Point, 2, SPtr<Instances::fl_geom::Point>>;
+// thunk 0x14247d6b0: Instances::fl_geom::Point::equals
+template struct ThunkFunc1<Instances::fl_geom::Point, 3, bool, Instances::fl_geom::Point*>;
+// thunk 0x14247d750: Instances::fl_geom::Point::normalize
+template struct ThunkFunc1<Instances::fl_geom::Point, 4, const Value, Value::Number>;
+// thunk 0x14247d7e0: Instances::fl_geom::Point::offset
+template struct ThunkFunc2<Instances::fl_geom::Point, 5, const Value, Value::Number, Value::Number>;
+// thunk 0x14247d8c0: Instances::fl_geom::Point::subtract
+template struct ThunkFunc1<Instances::fl_geom::Point, 6, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Point*>;
+// thunk 0x14247d9b0: Instances::fl_geom::Point::toString
+template struct ThunkFunc0<Instances::fl_geom::Point, 7, ASString>;
+// thunk 0x14247da20: Classes::fl_geom::Point::distance
+template struct ThunkFunc2<Classes::fl_geom::Point, 0, Value::Number, Instances::fl_geom::Point*, Instances::fl_geom::Point*>;
+// thunk 0x14247daf0: Classes::fl_geom::Point::interpolate
+template struct ThunkFunc3<Classes::fl_geom::Point, 1, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Point*, Instances::fl_geom::Point*, Value::Number>;
+// thunk 0x14247dc60: Classes::fl_geom::Point::polar
+template struct ThunkFunc2<Classes::fl_geom::Point, 2, SPtr<Instances::fl_geom::Point>, Value::Number, Value::Number>;
+// thunk 0x14247df10: Instances::fl_geom::Vector3D::lengthGet
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 0, Value::Number>;
+// thunk 0x14247df80: Instances::fl_geom::Vector3D::lengthSquaredGet
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 1, Value::Number>;
+// thunk 0x14247dff0: Instances::fl_geom::Vector3D::xSet
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 2, const Value, Value::Number>;
+// thunk 0x14247e080: Instances::fl_geom::Vector3D::xGet
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 3, Value::Number>;
+// thunk 0x14247e0f0: Instances::fl_geom::Vector3D::ySet
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 4, const Value, Value::Number>;
+// thunk 0x14247e180: Instances::fl_geom::Vector3D::yGet
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 5, Value::Number>;
+// thunk 0x14247e1f0: Instances::fl_geom::Vector3D::zSet
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 6, const Value, Value::Number>;
+// thunk 0x14247e280: Instances::fl_geom::Vector3D::zGet
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 7, Value::Number>;
+// thunk 0x14247e2f0: Instances::fl_geom::Vector3D::wSet
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 8, const Value, Value::Number>;
+// thunk 0x14247e380: Instances::fl_geom::Vector3D::wGet
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 9, Value::Number>;
+// thunk 0x14247e3f0: Instances::fl_geom::Vector3D::add
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 10, SPtr<Instances::fl_geom::Vector3D>, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247e620: Instances::fl_geom::Vector3D::clone
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 11, SPtr<Instances::fl_geom::Vector3D>>;
+// thunk 0x14247e6d0: Instances::fl_geom::Vector3D::crossProduct
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 12, SPtr<Instances::fl_geom::Vector3D>, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247e7c0: Instances::fl_geom::Rectangle::bottomGet
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 0, Value::Number>;
+// thunk 0x14247e830: Instances::fl_geom::Vector3D::decrementBy
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 13, const Value, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247e870: Instances::fl_geom::Rectangle::bottomSet
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 1, const Value, Value::Number>;
+// thunk 0x14247e900: Instances::fl_geom::Vector3D::dotProduct
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 14, Value::Number, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247e9b0: Instances::fl_geom::Rectangle::bottomRightGet
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 2, SPtr<Instances::fl_geom::Point>>;
+// thunk 0x14247ea60: Instances::fl_geom::Vector3D::equals
+template struct ThunkFunc2<Instances::fl_geom::Vector3D, 15, bool, Instances::fl_geom::Vector3D*, bool>;
+// thunk 0x14247eb40: Instances::fl_geom::Rectangle::bottomRightSet
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 3, const Value, Instances::fl_geom::Point*>;
+// thunk 0x14247eb80: Instances::fl_geom::Vector3D::incrementBy
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 16, const Value, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247ebc0: Instances::fl_geom::Rectangle::leftGet
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 4, Value::Number>;
+// thunk 0x14247ec30: Instances::fl_geom::Vector3D::nearEquals
+template struct ThunkFunc3<Instances::fl_geom::Vector3D, 17, bool, Instances::fl_geom::Vector3D*, Value::Number, bool>;
+// thunk 0x14247ed60: Instances::fl_geom::Rectangle::leftSet
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 5, const Value, Value::Number>;
+// thunk 0x14247edf0: Instances::fl_geom::Vector3D::negate
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 18, const Value>;
+// thunk 0x14247ee10: Instances::fl_geom::Rectangle::rightGet
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 6, Value::Number>;
+// thunk 0x14247ee80: Instances::fl_geom::Vector3D::normalize
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 19, Value::Number>;
+// thunk 0x14247eef0: Instances::fl_geom::Rectangle::rightSet
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 7, const Value, Value::Number>;
+// thunk 0x14247ef80: Instances::fl_geom::Vector3D::project
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 20, const Value>;
+// thunk 0x14247efa0: Instances::fl_geom::Rectangle::sizeGet
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 8, SPtr<Instances::fl_geom::Point>>;
+// thunk 0x14247f050: Instances::fl_geom::Vector3D::scaleBy
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 21, const Value, Value::Number>;
+// thunk 0x14247f0e0: Instances::fl_geom::Rectangle::sizeSet
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 9, const Value, Instances::fl_geom::Point*>;
+// thunk 0x14247f120: Instances::fl_geom::Vector3D::subtract
+template struct ThunkFunc1<Instances::fl_geom::Vector3D, 22, SPtr<Instances::fl_geom::Vector3D>, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247f210: Instances::fl_geom::Rectangle::topGet
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 10, Value::Number>;
+// thunk 0x14247f280: Instances::fl_geom::Vector3D::toString
+template struct ThunkFunc0<Instances::fl_geom::Vector3D, 23, ASString>;
+// thunk 0x14247f2f0: Instances::fl_geom::Rectangle::topSet
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 11, const Value, Value::Number>;
+// thunk 0x14247f380: Instances::fl_geom::Rectangle::topLeftGet
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 12, SPtr<Instances::fl_geom::Point>>;
+// thunk 0x14247f430: Instances::fl_geom::Rectangle::topLeftSet
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 13, const Value, Instances::fl_geom::Point*>;
+// thunk 0x14247f470: Instances::fl_geom::Rectangle::clone
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 14, SPtr<Instances::fl_geom::Rectangle>>;
+// thunk 0x14247f520: Instances::fl_geom::Rectangle::contains
+template struct ThunkFunc2<Instances::fl_geom::Rectangle, 15, bool, Value::Number, Value::Number>;
+// thunk 0x14247f650: Instances::fl_geom::Rectangle::containsPoint
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 16, bool, Instances::fl_geom::Point*>;
+// thunk 0x14247f6f0: Instances::fl_geom::Rectangle::containsRect
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 17, bool, Instances::fl_geom::Rectangle*>;
+// thunk 0x14247f790: Instances::fl_geom::Rectangle::equals
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 18, bool, Instances::fl_geom::Rectangle*>;
+// thunk 0x14247f830: Instances::fl_geom::Rectangle::inflate
+template struct ThunkFunc2<Instances::fl_geom::Rectangle, 19, const Value, Value::Number, Value::Number>;
+// thunk 0x14247f910: Instances::fl_geom::Rectangle::inflatePoint
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 20, const Value, Instances::fl_geom::Point*>;
+// thunk 0x14247f950: Instances::fl_geom::Rectangle::intersection
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 21, SPtr<Instances::fl_geom::Rectangle>, Instances::fl_geom::Rectangle*>;
+// thunk 0x14247fa40: Classes::fl_geom::Vector3D::angleBetween
+template struct ThunkFunc2<Classes::fl_geom::Vector3D, 0, Value::Number, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247fb10: Instances::fl_geom::Rectangle::intersects
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 22, bool, Instances::fl_geom::Rectangle*>;
+// thunk 0x14247fbb0: Classes::fl_geom::Vector3D::distance
+template struct ThunkFunc2<Classes::fl_geom::Vector3D, 1, Value::Number, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*>;
+// thunk 0x14247fc80: Instances::fl_geom::Rectangle::isEmpty
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 23, bool>;
+// thunk 0x14247fce0: Instances::fl_geom::Rectangle::offset
+template struct ThunkFunc2<Instances::fl_geom::Rectangle, 24, const Value, Value::Number, Value::Number>;
+// thunk 0x14247fdc0: Instances::fl_geom::Rectangle::offsetPoint
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 25, const Value, Instances::fl_geom::Point*>;
+// thunk 0x14247fe00: Instances::fl_geom::Rectangle::setEmpty
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 26, const Value>;
+// thunk 0x14247fe20: Instances::fl_geom::Rectangle::toString
+template struct ThunkFunc0<Instances::fl_geom::Rectangle, 27, ASString>;
+// thunk 0x14247fe90: Instances::fl_geom::Rectangle::union_
+template struct ThunkFunc1<Instances::fl_geom::Rectangle, 28, SPtr<Instances::fl_geom::Rectangle>, Instances::fl_geom::Rectangle*>;
+// thunk 0x1424800c0: Instances::fl_geom::Transform::colorTransformGet
+template struct ThunkFunc0<Instances::fl_geom::Transform, 0, SPtr<Instances::fl_geom::ColorTransform>>;
+// thunk 0x142480170: Instances::fl_geom::Transform::colorTransformSet
+template struct ThunkFunc1<Instances::fl_geom::Transform, 1, const Value, Instances::fl_geom::ColorTransform*>;
+// thunk 0x1424801b0: Instances::fl_geom::Transform::concatenatedColorTransformGet
+template struct ThunkFunc0<Instances::fl_geom::Transform, 2, SPtr<Instances::fl_geom::ColorTransform>>;
+// thunk 0x142480260: Instances::fl_geom::Transform::concatenatedMatrixGet
+template struct ThunkFunc0<Instances::fl_geom::Transform, 3, SPtr<Instances::fl_geom::Matrix>>;
+// thunk 0x142480310: Instances::fl_geom::Transform::matrixGet
+template struct ThunkFunc0<Instances::fl_geom::Transform, 4, SPtr<Instances::fl_geom::Matrix>>;
+// thunk 0x1424803c0: Instances::fl_geom::Transform::matrixSet
+template struct ThunkFunc1<Instances::fl_geom::Transform, 5, const Value, Instances::fl_geom::Matrix*>;
+// thunk 0x142480400: Instances::fl_geom::Transform::matrix3DGet
+template struct ThunkFunc0<Instances::fl_geom::Transform, 6, SPtr<Instances::fl_geom::Matrix3D>>;
+// thunk 0x1424804b0: Instances::fl_geom::Transform::matrix3DSet
+template struct ThunkFunc1<Instances::fl_geom::Transform, 7, const Value, Instances::fl_geom::Matrix3D*>;
+// thunk 0x1424804f0: Instances::fl_geom::Transform::perspectiveProjectionGet
+template struct ThunkFunc0<Instances::fl_geom::Transform, 8, SPtr<Instances::fl_geom::PerspectiveProjection>>;
+// thunk 0x1424805a0: Instances::fl_geom::Transform::perspectiveProjectionSet
+template struct ThunkFunc1<Instances::fl_geom::Transform, 9, const Value, Instances::fl_geom::PerspectiveProjection*>;
+// thunk 0x1424805e0: Instances::fl_geom::Transform::pixelBoundsGet
+template struct ThunkFunc0<Instances::fl_geom::Transform, 10, SPtr<Instances::fl_geom::Rectangle>>;
+// thunk 0x142480690: Instances::fl_geom::Transform::getRelativeMatrix3D
+template struct ThunkFunc1<Instances::fl_geom::Transform, 11, SPtr<Instances::fl_geom::Matrix3D>, Instances::fl_display::DisplayObject*>;
+// thunk 0x142480780: Instances::fl_geom::Matrix3D::determinantGet
+template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 0, Value::Number>;
+// thunk 0x1424807f0: Instances::fl_geom::Matrix3D::positionGet
+template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 1, SPtr<Instances::fl_geom::Vector3D>>;
+// thunk 0x1424808a0: Instances::fl_geom::Matrix3D::positionSet
+template struct ThunkFunc1<Instances::fl_geom::Matrix3D, 2, const Value, Instances::fl_geom::Vector3D*>;
+// thunk 0x1424808e0: Instances::fl_geom::Matrix3D::rawDataGet
+template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 3, SPtr<Instances::fl_vec::Vector_double>>;
+// thunk 0x142480990: Instances::fl_geom::Matrix3D::rawDataSet
+template struct ThunkFunc1<Instances::fl_geom::Matrix3D, 4, const Value, Instances::fl_vec::Vector_double*>;
+// thunk 0x1424809d0: Instances::fl_geom::Matrix3D::append
+template struct ThunkFunc1<Instances::fl_geom::Matrix3D, 5, const Value, Instances::fl_geom::Matrix3D*>;
+// thunk 0x142480b50: Instances::fl_geom::Matrix3D::appendRotation
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 6, const Value, Value::Number, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*>;
+// thunk 0x142480c50: Instances::fl_geom::Matrix3D::appendScale
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 7, const Value, Value::Number, Value::Number, Value::Number>;
+// thunk 0x142480d80: Instances::fl_geom::Matrix3D::appendTranslation
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 8, const Value, Value::Number, Value::Number, Value::Number>;
+// thunk 0x142480eb0: Instances::fl_geom::Matrix3D::clone
+template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 9, SPtr<Instances::fl_geom::Matrix3D>>;
+// Instances::fl_geom::Matrix3D::decompose argument 0 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix3D, 10, 0, const ASString&>
+{
+    SF_INLINE static ASString Get(StringManager& sm) { return sm.CreateConstString("eulerAngles"); }
+};
+// thunk 0x142480f60: Instances::fl_geom::Matrix3D::decompose
+template struct ThunkFunc1<Instances::fl_geom::Matrix3D, 10, SPtr<Instances::fl_vec::Vector_object>, const ASString&>;
+// thunk 0x1424810f0: Instances::fl_geom::Matrix3D::deltaTransformVector
+template struct ThunkFunc1<Instances::fl_geom::Matrix3D, 11, SPtr<Instances::fl_geom::Vector3D>, Instances::fl_geom::Vector3D*>;
+// thunk 0x1424811e0: Instances::fl_geom::Matrix3D::identity
+template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 12, const Value>;
+// thunk 0x142481200: Instances::fl_geom::Matrix3D::interpolate
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 13, SPtr<Instances::fl_geom::Matrix3D>, Instances::fl_geom::Matrix3D*, Instances::fl_geom::Matrix3D*, Value::Number>;
+// thunk 0x142481370: Instances::fl_geom::Matrix3D::interpolateTo
+template struct ThunkFunc2<Instances::fl_geom::Matrix3D, 14, const Value, Instances::fl_geom::Matrix3D*, Value::Number>;
+// thunk 0x142481430: Instances::fl_geom::Matrix3D::invert
+template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 15, bool>;
+// thunk 0x142481490: Instances::fl_geom::Matrix3D::pointAt
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 16, const Value, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*>;
+// thunk 0x142481510: Instances::fl_geom::Matrix3D::prepend
+template struct ThunkFunc1<Instances::fl_geom::Matrix3D, 17, const Value, Instances::fl_geom::Matrix3D*>;
+// thunk 0x142481550: Instances::fl_geom::Matrix3D::prependRotation
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 18, const Value, Value::Number, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*>;
+// thunk 0x142481650: Instances::fl_geom::Matrix3D::prependScale
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 19, const Value, Value::Number, Value::Number, Value::Number>;
+// thunk 0x142481780: Instances::fl_geom::Matrix3D::prependTranslation
+template struct ThunkFunc3<Instances::fl_geom::Matrix3D, 20, const Value, Value::Number, Value::Number, Value::Number>;
+// Instances::fl_geom::Matrix3D::recompose argument 1 default
+template <> struct ThunkMethodDefault<Instances::fl_geom::Matrix3D, 21, 1, const ASString&>
+{
+    SF_INLINE static ASString Get(StringManager& sm) { return sm.CreateConstString("eulerAngles"); }
+};
+// thunk 0x1424818b0: Instances::fl_geom::Matrix3D::recompose
+template struct ThunkFunc2<Instances::fl_geom::Matrix3D, 21, bool, Instances::fl_vec::Vector_object*, const ASString&>;
+// thunk 0x142481a30: Instances::fl_geom::Matrix3D::transformVector
+template struct ThunkFunc1<Instances::fl_geom::Matrix3D, 22, SPtr<Instances::fl_geom::Vector3D>, Instances::fl_geom::Vector3D*>;
+// thunk 0x142481b20: Instances::fl_geom::Matrix3D::transformVectors
+template struct ThunkFunc2<Instances::fl_geom::Matrix3D, 23, const Value, Instances::fl_vec::Vector_double*, Instances::fl_vec::Vector_double*>;
+// thunk 0x142481b70: Instances::fl_geom::Matrix3D::transpose
+template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 24, const Value>;
+
+}}} // namespace Scaleform::GFx::AS3
+// THUNKS-END
+
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473af0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473b60
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$01N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473bf0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473c60
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$03N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473cf0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473d60
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$05N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473df0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473e60
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$07N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473ef0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$08$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473f60
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$09K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473ff0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0L@$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474050
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0M@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424740c0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0N@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474120
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0O@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474180
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0P@$$CBVValue@456@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424741e0
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BA@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474250
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BB@$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424742c0
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BC@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474350
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BD@$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424743b0
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BE@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474420
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BF@$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474490
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BG@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474520
+// MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BH@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474590
+// MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BI@V?$SPtr@VBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474690
+// MS2-PIN: ?Func@?$ThunkFunc0@VBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424748b0
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474d50
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474dc0
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$01N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474e50
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142474ec0
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$03N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475090
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475100
+// MS2-PIN: ?Func@?$ThunkFunc0@VBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475190
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$05N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475200
+// MS2-PIN: ?Func@?$ThunkFunc1@VBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475270
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475300
+// MS2-PIN: ?Func@?$ThunkFunc0@VBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$01N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475390
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$07K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475400
+// MS2-PIN: ?Func@?$ThunkFunc1@VBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475460
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$08$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424754f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$03J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475560
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$09N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424755c0
+// MS2-PIN: ?Func@?$ThunkFunc1@VBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475630
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0L@$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424756a0
+// MS2-PIN: ?Func@?$ThunkFunc0@VBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$05V?$SPtr@VBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475730
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0M@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424757e0
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0N@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475840
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0O@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424758a0
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0P@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475900
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BA@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475960
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BB@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424759c0
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BC@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475a20
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BD@$$CBVValue@456@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475a80
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BE@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475af0
+// MS2-PIN: ?Func@?$ThunkFunc1@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BF@$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475b60
+// MS2-PIN: ?Func@?$ThunkFunc0@VDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BG@V?$SPtr@VBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475bf0
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475f20
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142475f90
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$01N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476020
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476090
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$03N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476120
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476190
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$05K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476220
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476280
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$07_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424762f0
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$08$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476350
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$09_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424763b0
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0L@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476410
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0M@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476470
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0N@$$CBVValue@456@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424764d0
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0O@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476540
+// MS2-PIN: ?Func@?$ThunkFunc1@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0P@$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424765b0
+// MS2-PIN: ?Func@?$ThunkFunc0@VGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0BA@V?$SPtr@VBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476640
+// MS2-PIN: ?Func@?$ThunkFunc0@VColorMatrixFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476970
+// MS2-PIN: ?Func@?$ThunkFunc1@VColorMatrixFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAVArray@fl@3456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476a20
+// MS2-PIN: ?Func@?$ThunkFunc0@VColorMatrixFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142476a60
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c430
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c4e0
+// MS2-PIN: ?Func@?$ThunkFunc5@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@NNNNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c520
+// MS2-PIN: ?Func@?$ThunkFunc5@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@NNNNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c6a0
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$03V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c820
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c910
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$05$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c930
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c950
+// MS2-PIN: ?Func@?$ThunkFunc2@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$07$$CBVValue@456@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247c9e0
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$08VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247cac0
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$09V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247cb30
+// MS2-PIN: ?Func@?$ThunkFunc2@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@$0L@$$CBVValue@456@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247cc20
+// MS2-PIN: ?Func@?$ThunkFunc0@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247cf80
+// MS2-PIN: ?Func@?$ThunkFunc1@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d030
+// MS2-PIN: ?Func@?$ThunkFunc0@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@$01N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d070
+// MS2-PIN: ?Func@?$ThunkFunc1@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d0e0
+// MS2-PIN: ?Func@?$ThunkFunc0@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@$03N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d170
+// MS2-PIN: ?Func@?$ThunkFunc1@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d1e0
+// MS2-PIN: ?Func@?$ThunkFunc0@VColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d270
+// MS2-PIN: ?Func@?$ThunkFunc0@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@$05V?$SPtr@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d2d0
+// MS2-PIN: ?Func@?$ThunkFunc1@VColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d380
+// MS2-PIN: ?Func@?$ThunkFunc1@VColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d3f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d430
+// MS2-PIN: ?Func@?$ThunkFunc0@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d4a0
+// MS2-PIN: ?Func@?$ThunkFunc1@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$00V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d510
+// MS2-PIN: ?Func@?$ThunkFunc0@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d600
+// MS2-PIN: ?Func@?$ThunkFunc1@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$02_NPEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d6b0
+// MS2-PIN: ?Func@?$ThunkFunc1@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$03$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d750
+// MS2-PIN: ?Func@?$ThunkFunc2@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d7e0
+// MS2-PIN: ?Func@?$ThunkFunc1@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$05V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d8c0
+// MS2-PIN: ?Func@?$ThunkFunc0@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@$06VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247d9b0
+// MS2-PIN: ?Func@?$ThunkFunc2@VPoint@fl_geom@Classes@AS3@GFx@Scaleform@@$0A@NPEAV12Instances@456@PEAV127456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247da20
+// MS2-PIN: ?Func@?$ThunkFunc3@VPoint@fl_geom@Classes@AS3@GFx@Scaleform@@$00V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV12Instances@456@PEAV128456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247daf0
+// MS2-PIN: ?Func@?$ThunkFunc2@VPoint@fl_geom@Classes@AS3@GFx@Scaleform@@$01V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247dc60
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247df10
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$00N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247df80
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247dff0
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$02N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e080
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$03$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e0f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$04N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e180
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$05$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e1f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$06N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e280
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$07$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e2f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$08N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e380
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$09V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e3f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0L@V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e620
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0M@V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e6d0
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e7c0
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0N@$$CBVValue@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e830
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e870
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0O@NPEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e900
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247e9b0
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0P@_NPEAV123456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247ea60
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247eb40
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BA@$$CBVValue@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247eb80
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$03N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247ebc0
+// MS2-PIN: ?Func@?$ThunkFunc3@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BB@_NPEAV123456@N_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247ec30
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247ed60
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BC@$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247edf0
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$05N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247ee10
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BD@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247ee80
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247eef0
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BE@$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247ef80
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247efa0
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BF@$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f050
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$08$$CBVValue@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f0e0
+// MS2-PIN: ?Func@?$ThunkFunc1@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BG@V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f120
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$09N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f210
+// MS2-PIN: ?Func@?$ThunkFunc0@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BH@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f280
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0L@$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f2f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0M@V?$SPtr@VPoint@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f380
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0N@$$CBVValue@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f430
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0O@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f470
+// MS2-PIN: ?Func@?$ThunkFunc2@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0P@_NNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f520
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BA@_NPEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f650
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BB@_NPEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f6f0
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BC@_NPEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f790
+// MS2-PIN: ?Func@?$ThunkFunc2@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BD@$$CBVValue@456@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f830
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BE@$$CBVValue@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f910
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BF@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247f950
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector3D@fl_geom@Classes@AS3@GFx@Scaleform@@$0A@NPEAV12Instances@456@PEAV127456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fa40
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BG@_NPEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fb10
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector3D@fl_geom@Classes@AS3@GFx@Scaleform@@$00NPEAV12Instances@456@PEAV127456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fbb0
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BH@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fc80
+// MS2-PIN: ?Func@?$ThunkFunc2@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BI@$$CBVValue@456@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fce0
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BJ@$$CBVValue@456@PEAVPoint@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fdc0
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BK@$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fe00
+// MS2-PIN: ?Func@?$ThunkFunc0@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BL@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fe20
+// MS2-PIN: ?Func@?$ThunkFunc1@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@$0BM@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14247fe90
+// MS2-PIN: ?Func@?$ThunkFunc0@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424800c0
+// MS2-PIN: ?Func@?$ThunkFunc1@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAVColorTransform@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480170
+// MS2-PIN: ?Func@?$ThunkFunc0@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424801b0
+// MS2-PIN: ?Func@?$ThunkFunc0@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$02V?$SPtr@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480260
+// MS2-PIN: ?Func@?$ThunkFunc0@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$03V?$SPtr@VMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480310
+// MS2-PIN: ?Func@?$ThunkFunc1@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@PEAVMatrix@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424803c0
+// MS2-PIN: ?Func@?$ThunkFunc0@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$05V?$SPtr@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480400
+// MS2-PIN: ?Func@?$ThunkFunc1@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@PEAVMatrix3D@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424804b0
+// MS2-PIN: ?Func@?$ThunkFunc0@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424804f0
+// MS2-PIN: ?Func@?$ThunkFunc1@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$08$$CBVValue@456@PEAVPerspectiveProjection@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424805a0
+// MS2-PIN: ?Func@?$ThunkFunc0@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$09V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424805e0
+// MS2-PIN: ?Func@?$ThunkFunc1@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@$0L@V?$SPtr@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAVDisplayObject@fl_display@3456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480690
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480780
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$00V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424807f0
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@PEAVVector3D@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424808a0
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$02V?$SPtr@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424808e0
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$03$$CBVValue@456@PEAVVector_double@fl_vec@3456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480990
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424809d0
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$05$$CBVValue@456@NPEAVVector3D@23456@PEAV823456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480b50
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@NNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480c50
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$07$$CBVValue@456@NNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480d80
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$08V?$SPtr@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480eb0
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$09V?$SPtr@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142480f60
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0L@V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAVVector3D@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424810f0
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0M@$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424811e0
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0N@V?$SPtr@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAV123456@PEAV123456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481200
+// MS2-PIN: ?Func@?$ThunkFunc2@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0O@$$CBVValue@456@PEAV123456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481370
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0P@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481430
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BA@$$CBVValue@456@PEAVVector3D@23456@PEAV823456@PEAV823456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481490
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BB@$$CBVValue@456@PEAV123456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481510
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BC@$$CBVValue@456@NPEAVVector3D@23456@PEAV823456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481550
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BD@$$CBVValue@456@NNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481650
+// MS2-PIN: ?Func@?$ThunkFunc3@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BE@$$CBVValue@456@NNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481780
+// MS2-PIN: ?Func@?$ThunkFunc2@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BF@_NPEAVVector_object@fl_vec@3456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424818b0
+// MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BG@V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAVVector3D@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481a30
+// MS2-PIN: ?Func@?$ThunkFunc2@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BH@$$CBVValue@456@PEAVVector_double@fl_vec@3456@PEAV893456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481b20
+// MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BI@$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481b70
