@@ -111,6 +111,10 @@ public:
     mutable StringLH                            StringValue;          // +0x88
     mutable int                                 RecursionCount;       // +0x90
     bool                                        LengthValueOverriden; // +0x94
+
+protected:
+    // The object and every element (defined in sfr_as2_02).
+    template<class Functor> void ForEachChild_GC(Collector* prcc) const;
 };
 
 // Counts one level of nested toString for the guarded array while alive.

@@ -131,6 +131,10 @@ public:
     int                    FirstArgBottomIndex; // +0x44
     Value                  Callee;              // +0x48
     Value                  Caller;              // +0x68
+
+private:
+    // The variables, the previous frame, callee and caller (defined in sfr_as2_02).
+    template<class Functor> void ForEachChild_GC(Collector* prcc) const;
 };
 
 // Per movie AS2 state: builtin prototypes, registered classes, the _global object. 0x78 bytes.

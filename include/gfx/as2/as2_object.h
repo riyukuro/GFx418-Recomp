@@ -10,12 +10,25 @@
 namespace Scaleform { namespace GFx {
 
 // Member hash of a script object, keyed by interned strings and allocated in the action script heap
-// (one table pointer). Only the layout is recovered so far.
+// (one table pointer). Only the layout and read-only iteration are recovered so far: the table is the kernel
+// hash set of (key, value) nodes with uncached slots { NextInChain, node }.
+struct ASStringHashFunctor;
+
 template<class T>
 class ASStringHash_GC
 {
 public:
+    typedef HashNode<ASString, T, ASStringHashFunctor>                       NodeType;
+    typedef HashsetNodeEntry<NodeType, typename NodeType::NodeHashF>         EntryType;
+    typedef HashSetBase<NodeType, typename NodeType::NodeHashF, typename NodeType::NodeAltHashF,
+                        AllocatorLH<NodeType, StatMV_ASString_Mem>, EntryType> SetType;
+    typedef typename SetType::ConstIterator                                  ConstIterator;
+
     void* pTable;
+
+    const SetType& GetSet() const { return *reinterpret_cast<const SetType*>(this); }
+    ConstIterator  Begin() const  { return GetSet().Begin(); }
+    ConstIterator  End() const    { return GetSet().End(); }
 };
 
 namespace AS2 {
@@ -137,6 +150,22 @@ protected:
 
     virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const;
     virtual void Finalize_GC();
+
+    // Members, the resolve handler, the watchpoints and __proto__ (defined in sfr_as2_02).
+    template<class Functor> void ForEachChild_GC(Collector* prcc) const;
+};
+
+// Watch() callback of one member. 0x38 bytes.
+struct Object::Watchpoint
+{
+    FunctionRef Callback; // +0x00
+    Value       UserData; // +0x18
+
+    template<class Functor> void ForEachChild_GC(Collector* prcc) const
+    {
+        Callback.template ForEachChild_GC<Functor>(prcc);
+        UserData.template ForEachChild_GC<Functor>(prcc);
+    }
 };
 
 // Script-callable function. 0x68 bytes.

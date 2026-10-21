@@ -122,6 +122,79 @@ protected:
     // Frees the object once the count reached zero (out of line, exe 0x1425925f0 for Stat 0x143).
     void ReleaseInternal();
 
+    void     Increment() { ++RefCount; }
+    unsigned GetRefCnt() const { return RefCount & Mask_RefCount; }
+
+    void   SetInList()                { RefCount |= Flag_InList; }
+    bool   IsInList() const           { return (RefCount & Flag_InList) != 0; }
+    void   SetDelayedRelease()        { RefCount |= Flag_DelayedRelease; }
+    bool   IsDelayedRelease() const   { return (RefCount & Flag_DelayedRelease) != 0; }
+    bool   IsBuffered() const         { return (RefCount & Flag_Buffered) != 0; }
+    void   ClearBuffered()
+    {
+        RefCount &= ~Flag_Buffered;
+        if (!IsInList())
+            RootIndex = ~0u;
+    }
+    void   SetState(States c)         { RefCount = (RefCount & ~(Mask_State << Shift_State)) | (((UInt32)c & Mask_State) << Shift_State); }
+    States GetState() const           { return (States)((RefCount >> Shift_State) & Mask_State); }
+    bool   IsInState(States c) const  { return GetState() == c; }
+
+    // The child visitors of the three collector passes (ForEachChild_GC<Functor> of every collectable class; the
+    // collector itself is in as2_refcountcollector.h).
+    struct ReleaseFunctor
+    {
+        SF_FORCEINLINE static void Call(Collector* prcc, RefCountBaseGC* pchild)
+        {
+            if (pchild->Decrement() == 0)
+            {
+                prcc->RemoveFromRoots(pchild);
+                pchild->SetDelayedRelease();
+                prcc->AddToList(pchild);
+            }
+            else
+                pchild->ReleaseInternal();
+        }
+    };
+    struct MarkInCycleFunctor
+    {
+        SF_FORCEINLINE static void Call(Collector* prcc, RefCountBaseGC* pchild)
+        {
+            pchild->Decrement();
+            prcc->AddToList(pchild);
+        }
+    };
+    struct ScanInUseFunctor
+    {
+        SF_FORCEINLINE static void Call(Collector* prcc, RefCountBaseGC* pchild)
+        {
+            pchild->Increment();
+            if (!pchild->IsInState(State_InUse))
+            {
+                pchild->SetState(State_InUse);
+                prcc->ReinsertToList(pchild);
+            }
+        }
+    };
+
+    template<class ClassImpl>
+    void CallForEachChild(Collector* prcc, OperationGC op) const
+    {
+        switch (op)
+        {
+        case Operation_Release:
+            static_cast<const ClassImpl*>(this)->template ForEachChild_GC<ReleaseFunctor>(prcc);
+            break;
+        case Operation_MarkInCycle:
+            static_cast<const ClassImpl*>(this)->template ForEachChild_GC<MarkInCycleFunctor>(prcc);
+            break;
+        case Operation_ScanInUse:
+            static_cast<const ClassImpl*>(this)->template ForEachChild_GC<ScanInUseFunctor>(prcc);
+            break;
+        default:;
+        }
+    }
+
 public:
     RefCountBaseGC(Collector* prcc) : pRCC(prcc), RefCount(1) {}
 

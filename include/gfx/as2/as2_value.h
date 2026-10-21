@@ -12,7 +12,7 @@ class CharacterHandle;
 
 namespace AS2 {
 
-class ValueProperty;
+struct ValueProperty;
 
 // Property attribute bits of an object member (1 byte).
 class PropFlags
@@ -69,6 +69,9 @@ public:
     FunctionObject* operator->() const { return Function; }
     FunctionObject& operator*() const  { return *Function; }
     FunctionObject* GetObjectPtr() const { return Function; }
+
+    // The function and the frame (defined in sfr_as2_02).
+    template<class Functor> void ForEachChild_GC(ASRefCountBaseType::Collector* prcc) const;
 };
 
 class FunctionRef : public FunctionRefBase
@@ -241,6 +244,18 @@ public:
     void Mul_Call(Environment* penv, const Value& v);
 
     Value ToPrimitive(Environment* penv, hint h = NoHint) const; // exe 0x142991850
+
+    // The function reference, object or property held (defined in sfr_as2_02).
+    template<class Functor> void ForEachChild_GC(ASRefCountBaseType::Collector* prcc) const;
+};
+
+// Getter/setter pair of an addProperty member. 0x50 bytes.
+struct ValueProperty : public ASRefCountBase<ValueProperty>
+{
+    FunctionRef GetterMethod; // +0x20
+    FunctionRef SetterMethod; // +0x38
+
+    ValueProperty(ASRefCountCollector* pcc, const FunctionRef& getterMethod, const FunctionRef& setterMethod);
 };
 
 // Object member: the value with its property flags stored in the value's second byte.

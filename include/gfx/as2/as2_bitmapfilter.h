@@ -37,6 +37,13 @@ public:
     static void Clone(const FnCall& fn);
 };
 
+// The instance classes of the filters (0x70 bytes, all state in the render filter).
+class BevelFilterObject : public BitmapFilterObject {};
+class BlurFilterObject : public BitmapFilterObject {};
+class ColorMatrixFilterObject : public BitmapFilterObject {};
+class DropShadowFilterObject : public BitmapFilterObject {};
+class GlowFilterObject : public BitmapFilterObject {};
+
 }}} // namespace Scaleform::GFx::AS2
 
 #endif
