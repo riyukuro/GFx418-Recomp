@@ -4535,3 +4535,35 @@ CriSint32 CalcHandleWorkSize(CriError& err)
 // MS2-PIN: ??_7CriMvEasyPlayer@@6B@ 0x1431b8a40
 // MS2-FUNCTIONAL ??_GCriMvEasyPlayer@@MEAAPEAXI@Z: VS2017 deleting destructors add the flag-4 path to __global_delete (sized deallocation) that VS2008 lacks; with bit 2 clear it runs the same dtor and CriAllocator::operator delete(p, 0x728)
 // MS2-PIN: ??_GCriMvEasyPlayer@@MEAAPEAXI@Z 0x140024f40
+// MS2-FUNCTIONAL ??_GVideo@0GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GVideo@0GFx@Scaleform@@UEAAPEAXI@Z 0x14001c720
+// MS2-FUNCTIONAL ??_GAuxStreamer@SoundRenderer@Sound@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GAuxStreamer@SoundRenderer@Sound@Scaleform@@UEAAPEAXI@Z 0x14001c640
+// MS2-FUNCTIONAL ??_GVideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GVideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@UEAAPEAXI@Z 0x14001c940
+// MS2-FUNCTIONAL ??_GVideoBase@Video@GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GVideoBase@Video@GFx@Scaleform@@UEAAPEAXI@Z 0x14001cb60
+// MS2-FUNCTIONAL ??_GVideoSoundRendererStream@Video@GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GVideoSoundRendererStream@Video@GFx@Scaleform@@UEAAPEAXI@Z 0x14001d0b0
+// MS2-FUNCTIONAL ??_GStreamer@VideoSoundRendererStream@Video@GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GStreamer@VideoSoundRendererStream@Video@GFx@Scaleform@@UEAAPEAXI@Z 0x14001d3d0
+// MS2-FUNCTIONAL ??_GVideoProviderNetStream@AS3@GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GVideoProviderNetStream@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x140026d70
+// MS2-FUNCTIONAL ??_GSoundChannelDelegate@Sound@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
+// MS2-PIN: ??_GSoundChannelDelegate@Sound@Scaleform@@UEAAPEAXI@Z 0x14001cf30
+// MS2-FUNCTIONAL ?Stop@SoundChannelDelegate@Sound@Scaleform@@UEAAXXZ: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?Stop@SoundChannelDelegate@Sound@Scaleform@@UEAAXXZ 0x14001cd80
+// MS2-FUNCTIONAL ?Pause@SoundChannelDelegate@Sound@Scaleform@@UEAAX_N@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?Pause@SoundChannelDelegate@Sound@Scaleform@@UEAAX_N@Z 0x14001cda0
+// MS2-FUNCTIONAL ?SetPosition@SoundChannelDelegate@Sound@Scaleform@@UEAAXM@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?SetPosition@SoundChannelDelegate@Sound@Scaleform@@UEAAXM@Z 0x14001cde0
+// MS2-FUNCTIONAL ?Loop@SoundChannelDelegate@Sound@Scaleform@@UEAAXHMM@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?Loop@SoundChannelDelegate@Sound@Scaleform@@UEAAXHMM@Z 0x14001ce20
+// MS2-FUNCTIONAL ?SetVolume@SoundChannelDelegate@Sound@Scaleform@@UEAAXM@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?SetVolume@SoundChannelDelegate@Sound@Scaleform@@UEAAXM@Z 0x14001ce60
+// MS2-FUNCTIONAL ?SetPan@SoundChannelDelegate@Sound@Scaleform@@UEAAXM@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?SetPan@SoundChannelDelegate@Sound@Scaleform@@UEAAXM@Z 0x14001cea0
+// MS2-FUNCTIONAL ?SetTransforms@SoundChannelDelegate@Sound@Scaleform@@UEAAXAEBV?$Array@UTransform@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?SetTransforms@SoundChannelDelegate@Sound@Scaleform@@UEAAXAEBV?$Array@UTransform@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z 0x14001cec0
+// MS2-FUNCTIONAL ?SetSpatialInfo@SoundChannelDelegate@Sound@Scaleform@@UEAAXQEBV?$Array@UVector@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
+// MS2-PIN: ?SetSpatialInfo@SoundChannelDelegate@Sound@Scaleform@@UEAAXQEBV?$Array@UVector@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z 0x14001cee0
