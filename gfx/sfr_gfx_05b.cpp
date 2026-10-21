@@ -4,9 +4,18 @@
 // MS2-UNIT: sfr_gfx_05b
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425d9760-0x1425dd9e0 .text$mn
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BEH@@Scaleform@@6B@ 0x14318be28
+// MS2-PIN: ??_7?$RefCountBaseNTS@UActiveSoundItem@Sprite@GFx@Scaleform@@$0BEH@@Scaleform@@6B@ 0x14318be28
+// MS2-PIN: ??_7ActiveSoundItem@Sprite@GFx@Scaleform@@6B@ 0x14318be30
+// MS2-PIN: ??_7Sprite@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@2@@ 0x14318be38
+// MS2-PIN: ??_7Sprite@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@12@@ 0x14318c228
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BEH@@Scaleform@@UEAAPEAXI@Z 0x1425d9c00
 
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/gfx_sound.h"
+#include "../include/gfx/gfx_spritedef.h"
+#include "../include/gfx/gfx_movieimpl.h"
+#include "../include/gfx/gfx_loadproc.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -388,6 +397,542 @@ void Sprite::AttachActiveSound(ActiveSoundItem* item)
         pActiveSounds = new ActiveSounds;
     pActiveSounds->Sounds.PushBack(Ptr<ActiveSoundItem>(item));
     ModifyOptimizedPlayListLocal<Sprite>();
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Construction
+
+// A clip loaded by loadMovie (loadedSeparately) or imported from another movie gets its own root node.
+// @0x1425d9760
+// MS2-FUNCTIONAL: member initialisation order and the flag byte merge differ from the exe
+Sprite::Sprite(TimelineDef* pdef, MovieDefImpl* pdefImpl, ASMovieRootBase* pr, InteractiveObject* pparent,
+               ResourceId id, bool loadedSeparately)
+    : DisplayObjContainer(pdefImpl, pr, pparent, id), pDef(pdef), PlayStatePriv(State_Playing), CurrentFrame(0),
+      pActiveSounds(0), pHitAreaHandle(0), pHitAreaHolder(0), Flags(0), FocusEnabled(0), MouseStatePriv(MouseState_Up)
+{
+    pASRoot       = pr;
+    pActiveSounds = 0;
+    if (pdef->GetResourceType() == Resource::RT_SpriteDef)
+    {
+        SetScale9Grid(static_cast<SpriteDef*>(pdef)->GetScale9Grid());
+        Flags |= Flags_SpriteDef;
+    }
+    DisplayObjectBase::Flags |= Mask_Sprite;
+    Flags = UByte((Flags & ~(Flags_HasLoopedPriv | Flags_LockRoot)) | Flags_UpdateFrame);
+    Flags = UByte(loadedSeparately ? (Flags | Flags_LoadedSeparately) : (Flags & ~Flags_LoadedSeparately));
+
+    bool importFlag = pparent && !loadedSeparately && pparent->GetResourceMovieDef() != pdefImpl;
+    if (loadedSeparately || importFlag)
+        AssignRootNode(importFlag);
+}
+
+// @0x1425d9ac0
+Sprite::~Sprite()
+{
+    if (pActiveSounds)
+        delete pActiveSounds;
+    mDisplayList.Clear(this);
+    DisplayObjectBase::SetDirtyFlag();
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Simple state
+
+// @0x1425dcda0
+void Sprite::SetLoadedSeparately(bool v)
+{
+    Flags = UByte(v ? (Flags | Flags_LoadedSeparately) : (Flags & ~Flags_LoadedSeparately));
+    if (v)
+        AssignRootNode();
+}
+
+// @0x1425dcf40
+void Sprite::SetRootNodeLoadingStat(unsigned bytesLoaded, unsigned loadingFrame)
+{
+    MovieDefRootNode* root = pRootNode;
+    if (root)
+    {
+        root->BytesLoaded = bytesLoaded;
+        if (!root->ImportFlag)
+            root->LoadingFrame = loadingFrame;
+    }
+}
+
+// _root, honouring _lockroot of a separately loaded clip.
+// @0x1425db650
+InteractiveObject* Sprite::GetTopParent(bool ignoreLockRoot) const
+{
+    if (!GetParent() || (!ignoreLockRoot && IsLoadedSeparately() && IsLockRoot()))
+        return const_cast<Sprite*>(this);
+    if (IsUnloaded())
+        return GetMovieImpl()->pMainMovie;
+    return GetParent()->GetTopParent(ignoreLockRoot);
+}
+
+// @0x1425dae80
+UInt32 Sprite::GetBytesLoaded() const
+{
+    MovieDefRootNode* root = FindRootNode();
+    if (root)
+        return root->BytesLoaded;
+    return 0;
+}
+
+// Frames loaded so far (background loading).
+// @0x1425db150
+// MS2-FUNCTIONAL: no exe function row (the body sits in the padding of the GetLabeledFrame row)
+unsigned Sprite::GetLoadingFrame() const
+{
+    if (pRootNode && !pRootNode->ImportFlag)
+        return pRootNode->LoadingFrame;
+    // Imported or fully loaded: every frame of the definition.
+    return pDef->GetFrameCount();
+}
+
+// @0x1425daea0
+CharacterDef* Sprite::GetCharacterDef() const
+{
+    return pDef;
+}
+
+// @0x1425daeb0
+unsigned Sprite::GetCurrentFrame() const
+{
+    return CurrentFrame;
+}
+
+// @0x1425db110
+bool Sprite::GetLabeledFrame(const char* label, unsigned* frameNumber, bool translateNumbers)
+{
+    return pDef->GetLabeledFrame(label, frameNumber, translateNumbers);
+}
+
+// @0x1425db6a0
+CharacterDef::CharacterDefType Sprite::GetType() const
+{
+    return CharacterDef::Sprite;
+}
+
+// @0x1425dba00
+bool Sprite::HasLooped() const
+{
+    return (Flags & Flags_HasLoopedPriv) != 0;
+}
+
+// @0x1425db180
+// MS2-FUNCTIONAL: no exe function row (the body sits in the padding of the GetLoadingFrame row)
+PlayState Sprite::GetPlayState() const
+{
+    return (DisplayObjectBase::Flags & Mask_MovieClip) ? PlayStatePriv : State_Stopped;
+}
+
+// @0x1425dceb0
+// MS2-FUNCTIONAL: the exe keeps the new state in edx and reloads PlayStatePriv only after the play list update
+void Sprite::SetPlayState(PlayState s)
+{
+    PlayStatePriv = s;
+    if (!IsUnloading() && !IsUnloaded())
+        ModifyOptimizedPlayListLocal<Sprite>();
+    if (PlayStatePriv == State_Stopped)
+        SetStreamingSound(0);
+}
+
+// Pauses or resumes the clip's channels and every interactive child.
+// @0x1425dcdf0
+void Sprite::SetPause(bool pause)
+{
+    if (pActiveSounds)
+    {
+        for (UPInt i = 0; i < pActiveSounds->Sounds.GetSize(); i++)
+        {
+            ActiveSoundItem* item = pActiveSounds->Sounds[i];
+            if (item->pChannel)
+                item->pChannel->Pause(pause);
+        }
+    }
+    for (unsigned i = 0; i < mDisplayList.GetCount(); i++)
+    {
+        DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
+        if (ch->IsInteractiveObject())
+            static_cast<InteractiveObject*>(ch)->SetPause(pause);
+    }
+}
+
+// @0x1425dcdd0
+void Sprite::SetName(const ASString& name)
+{
+    DisplayObject::SetName(name);
+    mDisplayList.pCachedChar = 0;
+}
+
+// @0x1425db0b0
+Sprite* Sprite::GetHitArea() const
+{
+    if (pHitAreaHandle)
+    {
+        DisplayObject* ch = pHitAreaHandle->ResolveCharacter(GetMovieImpl());
+        if (ch)
+            return ch->IsSprite() ? static_cast<Sprite*>(ch) : 0;
+    }
+    return 0;
+}
+
+// @0x1425db100
+Sprite* Sprite::GetHitAreaHolder() const
+{
+    return pHitAreaHolder;
+}
+
+// @0x1425dcb00
+void Sprite::SetHitArea(Sprite* phitArea)
+{
+    Sprite* old = GetHitArea();
+    if (old)
+        old->pHitAreaHolder = 0;
+    if (phitArea)
+    {
+        pHitAreaHandle           = phitArea->GetCharacterHandle();
+        phitArea->pHitAreaHolder = this;
+    }
+    else
+        pHitAreaHandle = 0;
+    if (HasAvmObject())
+        GetAvmSprite()->SetHitAreaNotify(phitArea);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Timeline
+
+// Runs the tags of a frame; only a movie clip runs anything past frame 0.
+// @0x1425daab0
+void Sprite::ExecuteFrameTags(unsigned frame)
+{
+    if (!(DisplayObjectBase::Flags & Mask_MovieClip) && frame != 0)
+        return;
+    Ptr<Sprite> keepAlive(this);
+    if (frame >= GetLoadingFrame())
+        return;
+    const TimelineDef::Frame playlist = pDef->GetPlaylist(frame);
+    for (unsigned i = 0; i < playlist.GetTagCount(); i++)
+        playlist.GetTag(i)->ExecuteWithPriority(this, ActionPriority::AP_Frame);
+    if (HasAvmObject())
+        GetAvmSprite()->ExecuteFrameTags(frame);
+}
+
+// Steps to the next frame. A clip waiting on the loader stays at the last loaded frame; at the end it wraps to
+// frame 0 (a one-frame clip stops instead).
+// @0x1425dba10
+void Sprite::IncrementFrameAndCheckForLoop()
+{
+    CurrentFrame++;
+    unsigned loadingFrame = GetLoadingFrame();
+    unsigned frameCount   = pDef->GetFrameCount();
+    if (loadingFrame < frameCount && CurrentFrame >= loadingFrame)
+    {
+        CurrentFrame = loadingFrame ? loadingFrame - 1 : 0;
+        return;
+    }
+    if (CurrentFrame < frameCount)
+        return;
+    Flags |= Flags_HasLoopedPriv;
+    CurrentFrame = 0;
+    if (frameCount > 1)
+        mDisplayList.MarkAllEntriesForRemoval(this, 0);
+    else
+        SetPlayState(State_Stopped);
+}
+
+// Removes the sounds that stopped playing (their Sound objects get onSoundComplete) and updates the clip's place on
+// the advance list, which a playing sound keeps it on.
+// @0x1425da3c0
+// MS2-FUNCTIONAL: the exe inlines the play list update (CheckAdvanceStatus included); here it is the out of line
+// ModifyOptimizedPlayListLocal<Sprite> instance
+void Sprite::CheckActiveSounds()
+{
+    if (!pActiveSounds)
+        return;
+    Array<Ptr<ActiveSoundItem> > sounds;
+    for (UPInt i = 0; i < pActiveSounds->Sounds.GetSize(); i++)
+        sounds.PushBack(pActiveSounds->Sounds[i]);
+
+    Array<Ptr<ActiveSoundItem> > finished;
+    for (UPInt i = 0; i < sounds.GetSize();)
+    {
+        Ptr<ActiveSoundItem> item = sounds[i];
+        if (item->pChannel->IsPlaying())
+        {
+            i++;
+            continue;
+        }
+        if (item->pSoundObject)
+            item->pSoundObject->ExecuteOnSoundComplete();
+        finished.PushBack(sounds[i]);
+        sounds.RemoveAt(i);
+        ModifyOptimizedPlayListLocal<Sprite>();
+    }
+
+    for (UPInt i = 0; i < finished.GetSize(); i++)
+    {
+        if (!pActiveSounds)
+            continue;
+        ArrayLH<Ptr<ActiveSoundItem> >& active = pActiveSounds->Sounds;
+        for (UPInt j = 0; j < active.GetSize(); j++)
+        {
+            if (active[j] == finished[i])
+            {
+                active.RemoveAt(j);
+                break;
+            }
+        }
+    }
+}
+
+// 1: put the clip on the advance list, -1: take it off, 0: leave it. A clip advances while it plays, while it has
+// sounds or while it is the movie's keep-advancing character; otherwise only if the AVM needs its frame events.
+// @0x1425da750
+// MS2-FUNCTIONAL: the exe keeps advanceDisabled in a register across the AVM calls and saves one fewer nonvolatile
+int Sprite::CheckAdvanceStatus(bool playingNow)
+{
+    bool advanceDisabled = IsAdvanceDisabled() || (DisplayObjectBase::Flags & Mask_MarkedForRemove);
+    if (!advanceDisabled)
+    {
+        if (GetPlayState() == State_Playing || GetMovieImpl()->pKeepAdvancingChar == this ||
+            (pActiveSounds && pActiveSounds->Sounds.GetSize() != 0))
+            return !playingNow;
+    }
+    if (playingNow)
+    {
+        if (advanceDisabled)
+            return -1;
+        return (HasAvmObject() && GetAvmSprite()->MustBeInPlaylist()) ? 0 : -1;
+    }
+    if (advanceDisabled)
+        return 0;
+    if (HasAvmObject() && GetAvmSprite()->MustBeInPlaylist())
+        return 1;
+    return 0;
+}
+
+// Per-frame advance: the sounds, the streaming sound block of the frame, then the AVM.
+// @0x1425da130
+void Sprite::AdvanceFrame(bool nextFrame, float framePos)
+{
+    if (!(DisplayObjectBase::Flags & Mask_MovieClip) && IsAdvanceDisabled())
+        return;
+    if (IsUnloading())
+        return;
+    Ptr<Sprite> keepAlive(this);
+    if (nextFrame)
+    {
+        CheckActiveSounds();
+        if (PlayStatePriv != State_Stopped)
+        {
+            SoundStreamDef* psoundStream = pDef->GetSoundStream();
+            if (psoundStream && !psoundStream->ProcessSwfFrame(GetMovieImpl(), CurrentFrame, this))
+                pDef->SetSoundStream(0);
+        }
+    }
+    if (HasAvmObject())
+        GetAvmSprite()->AdvanceFrame(nextFrame, framePos);
+}
+
+// The InitActions of a movie imported into this clip's movie, frame by frame.
+// @0x1425dab70
+void Sprite::ExecuteImportedInitActions(MovieDef* psourceMovie)
+{
+    MovieDefImpl* pdefImpl  = static_cast<MovieDefImpl*>(psourceMovie);
+    MovieDataDef* pdataDef  = pdefImpl->GetDataDef();
+    unsigned      frameCount = pdataDef->GetInitActionListSize();
+    for (unsigned f = 0; f < frameCount; f++)
+    {
+        TimelineDef::Frame actions;
+        if (!pdataDef->GetInitActions(&actions, f))
+            continue;
+        for (unsigned i = 0; i < actions.GetTagCount(); i++)
+        {
+            ExecuteTag* ptag = actions.GetTag(i);
+            if (ptag->IsInitImportActionsTag())
+                static_cast<GFxInitImportActions*>(ptag)->ExecuteInContext(this, pdefImpl, true);
+            else
+                ptag->ExecuteWithPriority(this, ActionPriority::AP_Highest);
+        }
+    }
+}
+
+// gotoAndPlay/gotoAndStop with a label (offset frames after it).
+// @0x1425db970
+bool Sprite::GotoLabeledFrame(const char* label, int offset)
+{
+    unsigned targetFrame = ~0u;
+    if (pDef->GetLabeledFrame(label, &targetFrame, false))
+    {
+        GotoFrame(targetFrame + offset);
+        return true;
+    }
+    LogWarning("MovieImpl::GotoLabeledFrame('%s') unknown label", label);
+    return false;
+}
+
+// Back to frame 0 in the playing state, re-running its init actions and tags.
+// @0x1425dca60
+void Sprite::Restart()
+{
+    mDisplayList.MarkAllEntriesForRemoval(this, 0);
+    Flags         = (Flags & ~Flags_HasLoopedPriv) | Flags_UpdateFrame;
+    PlayStatePriv = State_Playing;
+    CurrentFrame  = 0;
+    RollOverCnt   = 0;
+    if (HasAvmObject())
+        GetAvmSprite()->ExecuteInitActionFrameTags(CurrentFrame);
+    ExecuteFrameTags(CurrentFrame);
+    mDisplayList.UnloadMarkedObjects(this);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// AVM forwarding
+
+// @0x1425db120
+int Sprite::GetLevel() const
+{
+    return GetAvmSprite()->GetLevel();
+}
+
+// @0x1425dbb60
+bool Sprite::IsLevelMovie() const
+{
+    return GetAvmSprite()->IsLevelMovie();
+}
+
+// @0x1425dbc60
+bool Sprite::MustBeInPlaylist() const
+{
+    if (HasAvmObject())
+        return GetAvmSprite()->MustBeInPlaylist();
+    return false;
+}
+
+// @0x1425da0c0
+DisplayObjectBase* Sprite::AddDisplayObject(const CharPosInfo& pos, const ASString& name,
+                                            const ArrayLH<SwfEvent*, StatMD_Tags_Mem>* peventHandlers,
+                                            const void* pinitSource, unsigned createFrame, unsigned long addFlags,
+                                            CharacterCreateInfo* pcharCreateOverride, InteractiveObject* origChar)
+{
+    if (HasAvmObject())
+        return GetAvmSprite()->AddDisplayObject(pos, name, peventHandlers, pinitSource, createFrame, addFlags,
+                                                pcharCreateOverride, origChar);
+    return 0;
+}
+
+// A clip replaced by the timeline continues from this clip's frame.
+// @0x1425da8b0
+void Sprite::CreateAndReplaceDisplayObject(const CharPosInfo& pos, const ASString& name, DisplayObjectBase** newChar)
+{
+    if (newChar)
+        *newChar = 0;
+    DisplayObjContainer::CreateAndReplaceDisplayObject(pos, name, newChar);
+    if (newChar && *newChar)
+        (*newChar)->CreateFrame = CurrentFrame;
+}
+
+// @0x1425da860
+void Sprite::CloneInternalData(const InteractiveObject* src)
+{
+    DisplayObjContainer::CloneInternalData(src);
+    if (HasAvmObject())
+        GetAvmSprite()->CloneInternalData(src);
+}
+
+// @0x1425daca0
+void Sprite::ForceShutdown()
+{
+    DisplayObjContainer::ForceShutdown();
+    if (HasAvmObject())
+        GetAvmSprite()->ForceShutdown();
+    RemoveFromPlayList();
+}
+
+// Runs the init actions and the tags of frame 0 once.
+// @0x1425daa30
+void Sprite::ExecuteFrame0Events()
+{
+    if (Flags & Flags_OnEventLoadCalled)
+        return;
+    Flags |= Flags_OnEventLoadCalled;
+    if (HasAvmObject())
+        GetAvmSprite()->ExecuteInitActionFrameTags(0);
+    ExecuteFrameTags(0);
+    if (HasAvmObject())
+        GetAvmSprite()->ExecuteFrame0Events();
+}
+
+// @0x1425da900
+void Sprite::DefaultOnEventLoad()
+{
+    ExecuteFrameTags(0);
+    DisplayObjectBase::Flags |= Mask_JustLoaded;
+}
+
+// @0x1425dbca0
+bool Sprite::OnEvent(const EventId& id)
+{
+    if (HasAvmObject())
+        return GetAvmSprite()->OnEvent(id);
+    return false;
+}
+
+// @0x1425dbe20
+void Sprite::OnEventXmlsocketOnxml()
+{
+    if (HasAvmObject())
+        GetAvmSprite()->OnEvent(EventId(EventId::Event_SockXML));
+}
+
+// @0x1425dbce0
+void Sprite::OnEventIntervalTimer() {}
+
+// @0x1425dbcf0
+void Sprite::OnEventLoadProgress()
+{
+    if (HasAvmObject())
+        GetAvmSprite()->OnEvent(EventId(EventId::Event_LoadProgress));
+}
+
+// @0x1425dbf10
+void Sprite::OnIntervalTimer(void* timer) {}
+
+// @0x1425dbd40
+void Sprite::OnEventUnload()
+{
+    DisplayObjectBase::Flags |= Mask_Unloading;
+    if (pActiveSounds)
+        delete pActiveSounds;
+    pActiveSounds = 0;
+    if (pHitAreaHandle)
+        SetHitArea(0);
+    mDisplayList.Clear(this);
+    DisplayObjContainer::OnEventUnload();
+}
+
+// @0x1425dc2a0
+bool Sprite::OnUnloading()
+{
+    bool mayRemove = mDisplayList.UnloadAll(this);
+    if (HasAvmObject())
+        mayRemove = GetAvmObjImpl()->OnUnloading(mayRemove);
+    return mayRemove;
+}
+
+// Focus by mouse follows the default rules; otherwise focusEnabled decides, undefined asking the AVM.
+// @0x1425dbad0
+bool Sprite::IsFocusEnabled(FocusMovedType fmt) const
+{
+    if (fmt == GFx_FocusMovedByMouse)
+        return InteractiveObject::IsFocusEnabled(fmt);
+    if (FocusEnabled == 0 && HasAvmObject())
+        return GetAvmSprite()->IsFocusEnabled(fmt);
+    if (FocusEnabled == 2)
+        return HasAvmObject() && GetAvmIntObj()->ActsAsButton();
+    return FocusEnabled == 1;
 }
 
 }} // namespace Scaleform::GFx

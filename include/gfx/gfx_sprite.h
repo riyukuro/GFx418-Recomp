@@ -157,6 +157,8 @@ public:
     // Timeline.
     void     ExecuteFrameTags(unsigned frame);
     void     IncrementFrameAndCheckForLoop();
+    // Drops the finished sounds after an advance, running their AS onSoundComplete (exe 0x1425da3c0).
+    void     CheckActiveSounds();
     bool     GotoLabeledFrame(const char* label, int offset);
     void     DefaultOnEventLoad();
     int      GetLevel() const;
@@ -167,6 +169,9 @@ public:
     void     SetHitArea(Sprite* phitArea);
     void     SetIMECandidateListFont(FontResource* pfont);
     void     SetIMECandidateListFont(FontHandle* pfont);
+
+    AvmSpriteBase* GetAvmSprite() const;
+    bool           MustBeInPlaylist() const;
 
     bool IsLoadedSeparately() const { return (Flags & Flags_LoadedSeparately) != 0; }
     bool IsLockRoot() const         { return (Flags & Flags_LockRoot) != 0; }
@@ -179,9 +184,33 @@ public:
     Ptr<CharacterHandle>       pHitAreaHandle;  // +0x130
     Sprite*                    pHitAreaHolder;  // +0x138
     UByte                      Flags;           // +0x140
-    SByte                      FocusEnabled;    // +0x141 Bool3W: 0 undefined, 1 false, 2 true
+    SByte                      FocusEnabled;    // +0x141 Bool3W: 0 undefined, 1 true, 2 false
     SpriteMouseState           MouseStatePriv;  // +0x144
 };
+
+// The AVM half of a sprite: slots 24..34 (CloneInternalData overrides the AvmInteractiveObjBase slot).
+class AvmSpriteBase : public AvmDisplayObjContainerBase
+{
+public:
+    virtual DisplayObjectBase* AddDisplayObject(const CharPosInfo& pos, const ASString& name,
+                                                const ArrayLH<SwfEvent*, StatMD_Tags_Mem>* peventHandlers,
+                                                const void* pinitSource, unsigned createFrame,
+                                                unsigned long addFlags, CharacterCreateInfo* pcharCreateOverride,
+                                                InteractiveObject* origChar) = 0;
+    virtual void AdvanceFrame(bool nextFrame, float framePos) = 0;
+    virtual void CloneInternalData(const InteractiveObject* src) = 0;
+    virtual void ExecuteFrame0Events() = 0;
+    virtual void ExecuteFrameTags(unsigned frame) = 0;
+    virtual void ExecuteInitActionFrameTags(unsigned frame) = 0;
+    virtual void ForceShutdown() = 0;
+    virtual int  GetLevel() const { return -1; }
+    virtual bool IsLevelMovie() const = 0;
+    virtual bool MustBeInPlaylist() const { return 0; }
+    virtual void SetHitAreaNotify(Sprite* phitArea) {}
+    virtual bool CheckCandidateListLevel(int) const { return false; }
+};
+
+inline AvmSpriteBase* Sprite::GetAvmSprite() const { return GetAvmObjImpl()->ToAvmSpriteBase(); }
 
 }} // namespace Scaleform::GFx
 

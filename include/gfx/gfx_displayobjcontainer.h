@@ -46,6 +46,12 @@ public:
 
     // Removes every entry, unloading and releasing the objects (0x1425f9100).
     void Clear(DisplayObjectBase* powner);
+    // Starts unloading every entry; false while some of them still run their onUnload (0x1425fb780).
+    bool UnloadAll(DisplayObjectBase* powner);
+    // Marks the timeline entries for removal (those created on ignoreFrame excepted, 0 for none) before a frame
+    // jump re-places them (0x1425fa360); then unloads the ones still marked (0x1425fba90).
+    void MarkAllEntriesForRemoval(DisplayObjectBase* powner, unsigned ignoreFrame);
+    void UnloadMarkedObjects(DisplayObjectBase* powner);
 };
 
 class DisplayObjContainer : public InteractiveObject
@@ -92,6 +98,13 @@ public:
 
     DisplayList       mDisplayList;  // +0xd8
     MovieDefRootNode* pRootNode;     // +0x108 set on the root of a loaded movie
+};
+
+// The AVM half of a container: slot 23.
+class AvmDisplayObjContainerBase : public AvmInteractiveObjBase
+{
+public:
+    virtual void FillTabableArray(InteractiveObject::FillTabableParams* params) = 0;
 };
 
 }} // namespace Scaleform::GFx

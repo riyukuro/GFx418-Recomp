@@ -9,6 +9,7 @@
 #include "gfx_characterdef.h"
 #include "gfx_resource.h"
 #include "gfx_stream.h"
+#include "gfx_scale9grid.h"
 #include "../kernel/sf_array.h"
 #include "../kernel/sf_memory.h"
 #include "../render/render_constants.h"
@@ -24,12 +25,6 @@ class ButtonSoundDef;
 
 using Render::Cxform;
 using Render::Matrix2F;
-
-// The 9-slice scaling grid of a button or sprite.
-struct Scale9Grid : public NewOverrideBase<Stat_Default_Mem>
-{
-    RectF Rect;
-};
 
 // One character shown by a button in some of its states (0x60 bytes).
 class ButtonRecord

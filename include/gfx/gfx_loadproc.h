@@ -60,6 +60,16 @@ public:
     virtual void Trace(const char*) {}
 };
 
+class MovieDefImpl;
+
+// The InitActions of an imported movie, run in the context of the importing movie's sprite.
+class GFxInitImportActions : public ExecuteTag
+{
+public:
+    // exe 0x1425cee70
+    void ExecuteInContext(DisplayObjContainer* m, MovieDefImpl* pbindDef, bool recursiveCheck = 1);
+};
+
 class LoadProcess : public LoaderTask, public LogBase<LoadProcess>
 {
 public:

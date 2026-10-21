@@ -11,6 +11,7 @@
 #include "gfx_log.h"
 #include "gfx_characterdef.h"
 #include "gfx_asstring.h"
+#include "gfx_eventid.h"
 #include "../render/render_constants.h"
 #include "../render/render_matrix2x4.h"
 #include "../render/render_matrix4x4.h"
@@ -52,6 +53,38 @@ public:
     UByte          AVMVersion; // +0x20
 
     MovieImpl* GetMovieImpl() const { return pMovieImpl; }
+};
+
+class AvmInteractiveObjBase;
+class AvmSpriteBase;
+class AvmButtonBase;
+class AvmTextFieldBase;
+class AvmDisplayObjContainerBase;
+class AvmVideoCharacterBase;
+
+// The AVM (AS2 or AS3) half of a display object, an interface embedded in the AVM-specific subclass
+// (AS2::AvmSprite, AS3::AvmSprite, ...). DisplayObjectBase finds it AvmObjOffset * 4 bytes after its own start.
+// Slot order is the exe's: the To* casts (1..5), the event entry points (6..11), the video cast (12).
+class AvmDisplayObjBase
+{
+public:
+    virtual ~AvmDisplayObjBase() {}
+
+    virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase() = 0;
+    virtual AvmSpriteBase*              ToAvmSpriteBase()         = 0;
+    virtual AvmButtonBase*              ToAvmButttonBase()        = 0;
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase()      = 0;
+    virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase()  = 0;
+
+    virtual const char* GetAbsolutePath(String* ppath) const = 0;
+    virtual bool        HasEventHandler(const EventId& id) const = 0;
+    virtual bool        OnEvent(const EventId& id) = 0;
+    virtual void        OnEventLoad() = 0;
+    // The object left the display list after its load event ran.
+    virtual void        OnEventUnload() = 0;
+    virtual bool        OnUnloading(bool mayRemove) = 0;
+
+    virtual AvmVideoCharacterBase* ToAvmVideoCharacterBase() { return 0; }
 };
 
 // Base of every character on the display list. 0x70 bytes.
@@ -204,9 +237,17 @@ public:
     bool IsSprite() const              { return (Flags & Mask_Sprite) != 0; }
     bool IsUnloaded() const            { return (Flags & Mask_Unloaded) != 0; }
     bool IsVisibleFlagSet() const      { return (Flags & Mask_Visible) != 0; }
+    bool IsUnloading() const           { return (Flags & Mask_Unloading) != 0 || Depth < -1; }
+
+    bool               HasAvmObject() const  { return AvmObjOffset != 0; }
+    AvmDisplayObjBase* GetAvmObjImpl() const
+    {
+        return reinterpret_cast<AvmDisplayObjBase*>(reinterpret_cast<UPInt>(this) + AvmObjOffset * 4);
+    }
 
     // Non-virtual members called from the recovered units (bodies in the exe).
     void SetScale9Grid(const RectF& grid);   // 0x1425f5a50
+    void SetDirtyFlag();                     // 0x1425f4090, empty in this build (folded with other empty bodies)
 };
 
 // Named reference to a display object that survives the object (it is resolved again by path when the object
@@ -273,6 +314,13 @@ public:
 
     void SetName(const ASString& name);   // 0x1425f52f0
 
+    // The handle naming this object, created on first use.
+    CharacterHandle* GetCharacterHandle() const { return pNameHandle ? pNameHandle.GetPtr() : CreateCharacterHandle(); }
+
+protected:
+    CharacterHandle* CreateCharacterHandle() const;   // 0x1425f1910
+
+public:
     mutable Ptr<CharacterHandle> pNameHandle;    // +0x70
     DisplayObject*               pMaskCharacter; // +0x78 the mask, or the masked object when IsUsedAsMask
     ScrollRectInfo*              pScrollRect;    // +0x80

@@ -28,6 +28,8 @@ public:
     // Script warning channel, only with verbose action errors (out of line per Derived, e.g. LogBase<LoadProcess>
     // 0x14265ddd0).
     void LogScriptWarning(const char* pfmt, ...) const;
+    // General warning channel (out of line per Derived, e.g. LogBase<DisplayObjectBase> 0x1425dbc00).
+    void LogWarning(const char* pfmt, ...) const;
 
 protected:
     bool IsLogNotNull() const { return 0; }
@@ -44,6 +46,18 @@ void LogBase<Derived>::LogError(const char* pfmt, ...) const
     Log*     plog = p->GetLog();
     if (p->IsLogNotNull() || plog)
         plog->LogMessageVarg(Log_Error, pfmt, argList);
+    va_end(argList);
+}
+
+template<class Derived>
+void LogBase<Derived>::LogWarning(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    Derived* p    = (Derived*)this;
+    Log*     plog = p->GetLog();
+    if (p->IsLogNotNull() || plog)
+        plog->LogMessageVarg(Log_Warning, pfmt, argList);
     va_end(argList);
 }
 

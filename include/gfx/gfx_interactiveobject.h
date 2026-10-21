@@ -136,6 +136,7 @@ public:
     // Puts the object on (or takes it off) the movie's optimized advance list after its advance needs changed
     // (instances for Sprite 0x1424d2820, ...).
     template<class T> void ModifyOptimizedPlayListLocal();
+    void RemoveFromPlayList();   // 0x1425f8a20
 
     bool IsNoAdvanceLocalFlagSet() const  { return (Flags & Mask_NoAdvanceLocal) != 0; }
     bool IsNoAdvanceGlobalFlagSet() const { return (Flags & Mask_NoAdvanceGlobal) != 0; }
@@ -143,6 +144,31 @@ public:
     bool IsEnabledFlagSet() const         { return (Flags & Mask_Enabled) != 0; }
     void SetNoAdvanceLocalFlag(bool v = true)  { if (v) Flags |= Mask_NoAdvanceLocal; else Flags &= ~Mask_NoAdvanceLocal; }
     void SetNoAdvanceGlobalFlag(bool v = true) { if (v) Flags |= Mask_NoAdvanceGlobal; else Flags &= ~Mask_NoAdvanceGlobal; }
+
+    // Tab order collection (the parameter block is filled by the AVM side).
+    struct FillTabableParams;
+
+    AvmInteractiveObjBase* GetAvmIntObj() const { return GetAvmObjImpl()->ToAvmInteractiveObjBase(); }
+};
+
+// The AVM half of an interactive object: slots 13..22 after the AvmDisplayObjBase ones.
+class AvmInteractiveObjBase : public AvmDisplayObjBase
+{
+public:
+    // The clip has button handlers (onPress, ...) and so takes button events.
+    virtual bool     ActsAsButton() const = 0;
+    virtual unsigned GetCursorType() const = 0;
+    virtual void     CloneInternalData(const InteractiveObject* src) = 0;
+    virtual void     CopyPhysicalProperties(const InteractiveObject* poldChar) = 0;
+    virtual void     OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                             unsigned controllerIdx, FocusMovedType fmt) = 0;
+    virtual void     OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt) = 0;
+    virtual bool     OnKeyEvent(const EventId& id, int* pkeyMask) = 0;
+    // A false return keeps the focus where it is.
+    virtual bool     OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx,
+                                           FocusMovedType fmt = GFx_FocusMovedByKeyboard) = 0;
+    virtual bool     IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const = 0;
+    virtual bool     IsTabable() const = 0;
 };
 
 }} // namespace Scaleform::GFx
