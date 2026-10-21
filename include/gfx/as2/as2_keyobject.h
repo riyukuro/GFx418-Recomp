@@ -22,6 +22,9 @@ protected:
     State      States[16];  // +0x78
     MovieImpl* pMovieRoot;  // +0x138
 
+    // Key() called as a function: null (exe 0x14295bbe0).
+    static void GlobalCtor(const FnCall& fn);
+
 public:
     int GetLastKeyCode(unsigned controllerIdx) const   { return States[controllerIdx].LastKeyCode; }
     int GetLastAsciiCode(unsigned controllerIdx) const { return States[controllerIdx].LastAsciiCode; }

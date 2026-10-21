@@ -17,7 +17,13 @@ public:
 
     Ptr<Render::Filter> pFilter; // +0x68
 
+    // Alpha of the first filter color, 0..1 (exe 0x1429497f0).
+    float GetAlpha() const;
+
 protected:
+    // The blur parameters of the filter (exe 0x142995370).
+    const Render::BlurFilterParams& readonlyFilterParams() const;
+
     virtual void Finalize_GC(); // exe 0x142942cf0
 };
 

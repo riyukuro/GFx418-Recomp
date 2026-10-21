@@ -10,7 +10,9 @@
 #include "../gfx_textsnapshot.h"
 #include "../../kernel/sf_stringhash.h"
 
-namespace Scaleform { namespace Render { namespace Text { class IMEStyle; class TextFormat; class ParagraphFormat; } } }
+namespace Scaleform { namespace Render { namespace Text { class TextFormat; class ParagraphFormat; } } }
+// The IME styles live in GFx::Text in 4.1.18 (exe mangling).
+namespace Scaleform { namespace GFx { namespace Text { struct IMEStyle; } } }
 
 namespace Scaleform { namespace GFx {
 
@@ -144,6 +146,8 @@ public:
         return StringValue.ToCStr();
     }
 
+    virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x1429566d0 decimal text
+
 protected:
     void CommonInit(Environment* penv); // exe 0x142934a40
 
@@ -181,10 +185,10 @@ class TextFieldObject : public Object
 {
 public:
     WeakPtr<InteractiveObject> pTextField;                  // +0x68
-    Render::Text::IMEStyle*    pIMECompositionStringStyles; // +0x70 owned
+    GFx::Text::IMEStyle*    pIMECompositionStringStyles; // +0x70 owned
 
     // The IME styles of the field or of the nearest text field prototype that has them (exe 0x14294b030).
-    Render::Text::IMEStyle* GetIMECompositionStringStyles();
+    GFx::Text::IMEStyle* GetIMECompositionStringStyles();
 
 protected:
     virtual void Finalize_GC(); // exe 0x1429430b0
@@ -278,6 +282,9 @@ public:
     FunctionRef      SetCursorTypeFunc; // +0x90
 
 protected:
+    // Mouse() called as a function: null (exe 0x14295bc20).
+    static void GlobalCtor(const FnCall& fn);
+
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
 
     // Mouse.show / Mouse.hide([mouse]): requests to the user event handler.
@@ -317,6 +324,9 @@ protected:
 class GASLoadVarsLoaderCtorFunction : public CFunctionObject
 {
 public:
+    // LoadVars() on a LoadVars instance returns it, null otherwise (exe 0x14295afb0).
+    static void GlobalCtor(const FnCall& fn);
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e10
 };
 
@@ -344,8 +354,41 @@ public:
 // The AmpMarker class: one static method that puts a named marker into the profiler stats of the movie.
 class AmpMarkerCtorFunction : public CFunctionObject
 {
+public:
+    static void GlobalCtor(const FnCall& fn); // exe 0x142958490 null
+
 private:
     static void AddMarker(const FnCall& fn);
+};
+
+// Classes with nothing to construct: called as a function they return null (ExternalInterface undefined).
+class ExternalInterfaceCtorFunction : public CFunctionObject
+{
+public:
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295ae20 undefined
+};
+class MathCtorFunction : public CFunctionObject
+{
+public:
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295bc00
+};
+class SelectionCtorFunction : public CFunctionObject
+{
+public:
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295c650
+};
+class StageCtorFunction : public CFunctionObject
+{
+public:
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295c6f0
+};
+
+// The MovieClip class.
+class MovieClipCtorFunction : public CFunctionObject
+{
+public:
+    // MovieClip() on a clip object returns it, undefined otherwise (exe 0x14295bc40).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 }}} // namespace Scaleform::GFx::AS2

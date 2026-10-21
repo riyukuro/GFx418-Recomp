@@ -193,6 +193,7 @@ public:
     virtual void  CheckAndResetCtorRef(FunctionObject* pfunc);
 
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val); // exe 0x142953280
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);       // exe 0x14294f7d0
 
 protected:
     Object(ASRefCountCollector* pcc);
@@ -241,6 +242,9 @@ public:
     virtual Object* CreateNewObject(Environment*) const;
     virtual int     GetNumArgs() const;
 
+    // The object of the prototype member, 0 without one (exe 0x142954b40).
+    Object* GetPrototype(ASStringContext* psc);
+
 protected:
     FunctionObject(ASRefCountCollector* pcc);
 };
@@ -262,6 +266,12 @@ class AsFunctionObject : public FunctionObject
 {
 public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936880
+
+    MovieImpl*           pMovieRoot;   // +0x68 0 for a function without a target
+    Ptr<CharacterHandle> TargetHandle; // +0x70
+
+    // The character the function was defined in, 0 once it is gone (exe 0x142956230).
+    InteractiveObject* GetTargetCharacter();
 };
 
 SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)

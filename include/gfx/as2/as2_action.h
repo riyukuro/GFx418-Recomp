@@ -5,6 +5,7 @@
 #define MS2_SF_GFX_AS2_ACTION_H
 
 #include "as2_object.h"
+#include "../gfx_asstringhash.h"
 #include "../gfx_log.h"
 #include "../gfx_types.h"
 
@@ -140,6 +141,12 @@ public:
     // Collector of the target's movie, 0 without a target.
     inline ASRefCountCollector* GetCollector(); // as2_avmcharacter.h
     InteractiveObject* GetTarget() const { return Target; }
+    AvmCharacter*      GetAvmTarget() const; // exe 0x142949840 (0 without a target)
+    Log*               GetLog() const;       // exe 0x14294b210
+    MovieImpl*         GetMovieImpl() const; // exe 0x142953ee0
+    MovieRoot*         GetAS2Root() const;   // exe 0x142949080
+    // The off-th function frame from the innermost one, 0 past the outermost (exe 0x142956740).
+    LocalFrame*        GetTopLocalFrame(int off = 0) const;
 
     // Script error channel (exe 0x142967e00).
     void LogScriptError(const char* pfmt, ...) const;
@@ -185,6 +192,8 @@ public:
     {
     }
 
+    Log* GetLog() const; // exe 0x14294b230
+
     // Argument n (0 = first), read from the environment stack below the first argument.
     Value& Arg(int n) const { return *Env->Bottom(FirstArgBottomIndex - n); }
 
@@ -228,8 +237,8 @@ class GlobalContext : public RefCountBaseNTS<GlobalContext, StatMV_ActionScript_
 public:
     struct ClassRegEntry;
 
-    void*              Prototypes;             // +0x10 HashUncachedLH<ASBuiltinType, Ptr<Object>>
-    void*              RegisteredClasses;      // +0x18 ASStringHash<FunctionRef>
+    HashUncachedLH<ASBuiltinType, Ptr<Object>, FixedSizeHash<ASBuiltinType> > Prototypes; // +0x10 builtin prototypes
+    ASStringHash<FunctionRef> RegisteredClasses; // +0x18 class constructors by name (Object.registerClass)
     void*              BuiltinClassesRegistry; // +0x20 ASStringHash<ClassRegEntry>
     MovieImpl*         pMovieRoot;             // +0x28
     MemoryHeap*        pHeap;                  // +0x30
@@ -246,6 +255,15 @@ public:
 
     // The builtin prototype of the type (exe 0x142954ba0).
     Object* GetPrototype(ASBuiltinType type);
+
+    ASRefCountCollector* GetGC();                     // exe 0x14294afc0 (0 without a movie)
+    StringManager*       GetStringManager() const;    // exe 0x1429561c0
+
+    // Registers the builtin class of the name on first use; its constructor function (exe 0x14297ea30).
+    FunctionObject* ResolveFunctionName(const ASString& functionName);
+
+    // The constructor registered for the class name (exe 0x142944c60).
+    bool FindRegisteredClass(ASStringContext* psc, const ASString& className, FunctionRef* pctorFunction);
 };
 
 enum { StatMD_ASBinaryData_Mem = 0x108 };

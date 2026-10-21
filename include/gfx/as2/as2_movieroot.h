@@ -25,6 +25,7 @@ enum ASBuiltinType : int
     ASBuiltin_GlowFilter       = 39,
     ASBuiltin_BlurFilter       = 40,
     ASBuiltin_undefined        = 51,
+    ASBuiltin_prototype        = 77,
     ASBuiltin_constructor      = 79,
     ASBuiltin___constructor__  = 80,
     ASBuiltin_typeFunction_    = 83, // "[type Function]"
@@ -33,6 +34,13 @@ enum ASBuiltinType : int
     ASBuiltin_y      = 130,
     ASBuiltin_length = 155,
 };
+
+class StringManager;
+
+// The builtin name of the handler method of an event (onPress, onEnterFrame, ...) (exe 0x142939c60).
+ASBuiltinType EventId_GetFunctionNameBuiltinType(const EventId& evt);
+// Its string (exe 0x142939c20).
+ASString EventId_GetFunctionName(StringManager* psm, const EventId& evt);
 
 // Builtin strings of a movie plus the manager that makes new ones. 0x4f0 bytes.
 class StringManager

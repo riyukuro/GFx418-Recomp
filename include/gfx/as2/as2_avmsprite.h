@@ -35,6 +35,12 @@ public:
 
     // ObjectInterface overrides (the AvmSprite vftables are not modeled yet).
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x142938830
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);          // exe 0x14294c700
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);    // exe 0x1429531f0
+
+private:
+    // Both lookups: penv is 0 for GetMemberRaw, psc 0 for GetMember (exe 0x14294bff0).
+    bool GetMember(Environment* penv, ASStringContext* psc, const ASString& name, Value* val);
 };
 
 inline Sprite* ObjectInterface::ToSprite()

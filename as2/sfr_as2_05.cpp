@@ -2,6 +2,7 @@
 // script objects and of the built-in prototypes (Finalize_GC: release what the collector does not own).
 // MS2-UNIT: sfr_as2_05
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142939c20-0x142939c60 .text$mn
 // MS2-RANGE: 0x142941d70-0x142942930 .text$mn
 // MS2-RANGE: 0x142942990-0x142942c00 .text$mn
 // MS2-RANGE: 0x142942ca0-0x142942da0 .text$mn
@@ -9,10 +10,43 @@
 // MS2-RANGE: 0x142942f10-0x142942fa0 .text$mn
 // MS2-RANGE: 0x142942fc0-0x142942ff0 .text$mn
 // MS2-RANGE: 0x142943020-0x1429431a0 .text$mn
+// MS2-RANGE: 0x142944c60-0x142944cb0 .text$mn
+// MS2-RANGE: 0x142948f10-0x142949070 .text$mn
+// MS2-RANGE: 0x142949080-0x1429490a0 .text$mn
+// MS2-RANGE: 0x1429497f0-0x142949820 .text$mn
+// MS2-RANGE: 0x142949840-0x142949860 .text$mn
+// MS2-RANGE: 0x142949f60-0x14294a010 .text$mn
+// MS2-RANGE: 0x14294a580-0x14294a5b0 .text$mn
+// MS2-RANGE: 0x14294afc0-0x14294afe0 .text$mn
+// MS2-RANGE: 0x14294b030-0x14294b080 .text$mn
+// MS2-RANGE: 0x14294b210-0x14294b230 .text$mn
+// MS2-RANGE: 0x14294b230-0x14294b250 .text$mn
+// MS2-RANGE: 0x14294c700-0x14294c720 .text$mn
+// MS2-RANGE: 0x14294f7d0-0x14294f7e0 .text$mn
 // MS2-RANGE: 0x142950b40-0x1429531f0 .text$mn
+// MS2-RANGE: 0x1429531f0-0x142953210 .text$mn
 // MS2-RANGE: 0x1429538a0-0x142953970 .text$mn
+// MS2-RANGE: 0x142953ee0-0x142953ef0 .text$mn
+// MS2-RANGE: 0x142954b40-0x142954ba0 .text$mn
+// MS2-RANGE: 0x142954ba0-0x142954c20 .text$mn
+// MS2-RANGE: 0x1429561c0-0x1429561d0 .text$mn
+// MS2-RANGE: 0x142956230-0x142956270 .text$mn
+// MS2-RANGE: 0x1429566d0-0x142956730 .text$mn
+// MS2-RANGE: 0x142956740-0x142956760 .text$mn
+// MS2-RANGE: 0x142958370-0x1429583d0 .text$mn
+// MS2-RANGE: 0x142958490-0x1429584b0 .text$mn
+// MS2-RANGE: 0x14295ae20-0x14295ae40 .text$mn
+// MS2-RANGE: 0x14295afb0-0x14295b020 .text$mn
+// MS2-RANGE: 0x14295bbe0-0x14295bc00 .text$mn
+// MS2-RANGE: 0x14295bc00-0x14295bc20 .text$mn
+// MS2-RANGE: 0x14295bc20-0x14295bc40 .text$mn
+// MS2-RANGE: 0x14295bc40-0x14295bca0 .text$mn
+// MS2-RANGE: 0x14295c650-0x14295c670 .text$mn
+// MS2-RANGE: 0x14295c6f0-0x14295c710 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_avmsprite.h"
+#include "../include/gfx/as2/as2_keyobject.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_colortransform.h"
@@ -382,5 +416,233 @@ template bool Prototype<TextSnapshotObject>::GetMemberRaw(ASStringContext*, cons
 // @0x142952fb0
 template bool Prototype<TransformObject>::GetMemberRaw(ASStringContext*, const ASString&, Value*);
 
+// The environment's view of its target and movie.
+
+// @0x142949080
+MovieRoot* Environment::GetAS2Root() const
+{
+    return static_cast<MovieRoot*>(Target->GetMovieImpl()->pASMovieRoot);
+}
+
+// @0x142949840
+AvmCharacter* Environment::GetAvmTarget() const
+{
+    if (!Target)
+        return 0;
+    return ToAvmCharacter(Target);
+}
+
+// @0x14294b210
+Log* Environment::GetLog() const
+{
+    return Target->GetLog();
+}
+
+// @0x14294b230
+Log* FnCall::GetLog() const
+{
+    return Env->GetLog();
+}
+
+// @0x142953ee0
+MovieImpl* Environment::GetMovieImpl() const
+{
+    return Target->GetMovieImpl();
+}
+
+// @0x142956740
+LocalFrame* Environment::GetTopLocalFrame(int off) const
+{
+    if (LocalFrames.GetSize() - off > 0)
+        return LocalFrames[LocalFrames.GetSize() - off - 1];
+    return 0;
+}
+
+// @0x14294afc0
+ASRefCountCollector* GlobalContext::GetGC()
+{
+    return pMovieRoot ? static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot)->GetASGC() : 0;
+}
+
+// @0x1429561c0
+StringManager* GlobalContext::GetStringManager() const
+{
+    return static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot)->GetStringManager();
+}
+
+// @0x14294f7d0
+bool Object::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// @0x14294c700
+bool AvmSprite::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    return GetMember(penv, 0, name, val);
+}
+
+// @0x1429531f0
+bool AvmSprite::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
+{
+    return GetMember(0, psc, name, val);
+}
+
+// Classes with nothing to construct, called as a function.
+
+// @0x142958490
+void AmpMarkerCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    fn.Result->SetNull();
+}
+
+// @0x14295ae20
+void ExternalInterfaceCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+}
+
+// @0x14295bbe0
+void KeyCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    fn.Result->SetNull();
+}
+
+// @0x14295bc00
+void MathCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    fn.Result->SetNull();
+}
+
+// @0x14295bc20
+void MouseCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    fn.Result->SetNull();
+}
+
+// @0x14295c650
+void SelectionCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    fn.Result->SetNull();
+}
+
+// @0x14295c6f0
+void StageCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    fn.Result->SetNull();
+}
+
+// @0x142939c20
+ASString EventId_GetFunctionName(StringManager* psm, const EventId& evt)
+{
+    return psm->GetBuiltin(EventId_GetFunctionNameBuiltinType(evt));
+}
+
+// @0x1429497f0
+float BitmapFilterObject::GetAlpha() const
+{
+    UByte alpha = readonlyFilterParams().Colors[0].GetAlpha();
+    if (!alpha)
+        return 0.0f;
+    return alpha / 255.0f;
+}
+
+// @0x14294a580
+const Render::Cxform ColorTransformObject::GetCxform()
+{
+    Render::Cxform cx(mColorTransform);
+    cx.Normalize();
+    return cx;
+}
+
+// The character as an interactive object, 0 for a shape or a static text.
+static inline InteractiveObject* CharToInteractiveObject(DisplayObject* pdob)
+{
+    return pdob->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdob) : 0;
+}
+
+// @0x142956230
+InteractiveObject* AsFunctionObject::GetTargetCharacter()
+{
+    if (!pMovieRoot)
+        return 0;
+    DisplayObject* pdob = TargetHandle->ResolveCharacter(pMovieRoot);
+    return pdob ? CharToInteractiveObject(pdob) : 0;
+}
+
+// @0x14294b030
+GFx::Text::IMEStyle* TextFieldObject::GetIMECompositionStringStyles()
+{
+    if (pIMECompositionStringStyles)
+        return pIMECompositionStringStyles;
+    Object* pproto = pProto;
+    if (pproto && pproto->GetObjectType() == Object_TextFieldASObject)
+        return static_cast<TextFieldObject*>(pproto)->GetIMECompositionStringStyles();
+    return 0;
+}
+
+// @0x142944c60
+bool GlobalContext::FindRegisteredClass(ASStringContext* psc, const ASString& className, FunctionRef* pctorFunction)
+{
+    const FunctionRef* pctor = RegisteredClasses.GetCaseCheck(className, psc->IsCaseSensitive());
+    if (!pctor)
+        return false;
+    if (pctorFunction)
+        *pctorFunction = *pctor;
+    return true;
+}
+
+// @0x142958370
+FunctionRef SuperObject::Get__constructor__(ASStringContext*)
+{
+    return Constructor;
+}
+
+// @0x14295bc40
+void MovieClipCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object_MovieClipObject)
+        fn.Result->SetAsObject(static_cast<MovieClipObject*>(fn.ThisPtr));
+    else
+        fn.Result->SetUndefined();
+}
+
+// @0x142954b40
+Object* FunctionObject::GetPrototype(ASStringContext* psc)
+{
+    Value prototypeVal;
+    if (GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_prototype), &prototypeVal))
+        return prototypeVal.ToObject(0);
+    return 0;
+}
+
+// @0x142954ba0
+Object* GlobalContext::GetPrototype(ASBuiltinType type)
+{
+    Ptr<Object>* presult = Prototypes.Get(type);
+    if (!presult)
+    {
+        ResolveFunctionName(static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type));
+        presult = Prototypes.Get(type);
+    }
+    return presult ? presult->GetPtr() : 0;
+}
+
+// @0x1429566d0
+const char* NumberObject::GetTextValue(Environment*) const
+{
+    return const_cast<NumberObject*>(this)->ToString(10);
+}
+
+// @0x14295afb0
+void GASLoadVarsLoaderCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object_LoadVars && !fn.ThisPtr->IsBuiltinPrototype())
+        fn.Result->SetAsObject(static_cast<LoadVarsObject*>(fn.ThisPtr));
+    else
+        fn.Result->SetNull();
+}
+
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
+// MS2-PIN: ?GetCaseCheck@?$ASStringHashBase@VFunctionRef@AS2@GFx@Scaleform@@V?$HashUncachedLH@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@$0BEE@@4@@GFx@Scaleform@@QEAAPEAVFunctionRef@AS2@23@AEBVASString@23@_N@Z 0x142949f60

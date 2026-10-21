@@ -32,6 +32,9 @@ public:
     Render::Cxform mColorTransform; // +0x70
 
     ColorTransformObject(Environment* penv); // exe 0x14291aee0
+
+    // The transform with the factors clamped (exe 0x14294a580).
+    const Render::Cxform GetCxform();
 };
 
 // The ColorTransform class.

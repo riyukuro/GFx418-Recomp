@@ -76,6 +76,38 @@ public:
     }
 };
 
+// Lookups of a hash keyed by script strings, exact or ignoring case (SWF 6 and older are case-insensitive).
+template<class U, class BaseType>
+class ASStringHashBase : public BaseType
+{
+public:
+    const U* GetCaseInsensitive(const ASString& key) const
+    {
+        ASStringNoCaseKey ikey(key);
+        return BaseType::GetAlt(ikey);
+    }
+    U* GetCaseInsensitive(const ASString& key)
+    {
+        ASStringNoCaseKey ikey(key);
+        return BaseType::GetAlt(ikey);
+    }
+
+    const U* GetCaseCheck(const ASString& key, bool caseSensitive) const
+    {
+        return caseSensitive ? BaseType::Get(key) : GetCaseInsensitive(key);
+    }
+    U* GetCaseCheck(const ASString& key, bool caseSensitive)
+    {
+        return caseSensitive ? BaseType::Get(key) : GetCaseInsensitive(key);
+    }
+};
+
+// Hash by script string in the string heap (one table pointer).
+template<class U>
+class ASStringHash : public ASStringHashBase<U, HashUncachedLH<ASString, U, ASStringHashFunctor, StatMV_ASString_Mem> >
+{
+};
+
 }} // namespace Scaleform::GFx
 
 #endif

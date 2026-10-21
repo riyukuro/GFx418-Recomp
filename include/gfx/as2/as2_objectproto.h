@@ -85,6 +85,8 @@ public:
     ObjectInterface* RealThis;    // +0x78
     FunctionRef      Constructor; // +0x80
 
+    virtual FunctionRef Get__constructor__(ASStringContext* psc); // exe 0x142958370
+
 protected:
     template<class Functor>
     void ForEachChild_GC(Collector* prcc) const
