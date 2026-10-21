@@ -194,6 +194,8 @@ public:
                            const PropFlags& flags = PropFlags());      // exe 0x142986790
     virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
                               const PropFlags& flags = PropFlags());   // exe 0x142988b60
+    // A non-clip prototype with button handlers makes the clip take button events (exe 0x14298dd70).
+    virtual void Set__proto__(ASStringContext* psc, Object* protoObj);
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942df0

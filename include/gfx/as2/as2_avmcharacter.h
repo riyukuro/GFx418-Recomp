@@ -21,6 +21,9 @@ public:
 
     static void CharacterGetDepth(const FnCall& fn);
 
+    // __proto__ becomes the "prototype" member of psrcObj, if it has one (exe 0x14298a480).
+    void SetProtoToPrototypeOf(ObjectInterface* psrcObj);
+
     // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
     // These forward to the clip's AS object.

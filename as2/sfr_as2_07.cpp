@@ -16,15 +16,13 @@
 // MS2-RANGE: 0x142988b60-0x142988f30 .text$mn
 // MS2-RANGE: 0x142989390-0x142989480 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
-// MS2-RANGE: 0x14298a260-0x14298a480 .text$mn
-// MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
+// MS2-RANGE: 0x14298a260-0x14298a5a0 .text$mn
 // MS2-RANGE: 0x14298b9f0-0x14298ba60 .text$mn
 // MS2-RANGE: 0x14298bb20-0x14298bb90 .text$mn
 // MS2-RANGE: 0x14298c9e0-0x14298ca20 .text$mn
 // MS2-RANGE: 0x14298cc30-0x14298cc70 .text$mn
 // MS2-RANGE: 0x14298cc80-0x14298cce0 .text$mn
-// MS2-RANGE: 0x14298dc00-0x14298dd70 .text$mn
-// MS2-RANGE: 0x14298de30-0x14298dee0 .text$mn
+// MS2-RANGE: 0x14298dc00-0x14298dee0 .text$mn
 // MS2-RANGE: 0x14298ee10-0x14298ee70 .text$mn
 // MS2-RANGE: 0x14298fe50-0x14298fe90 .text$mn
 // MS2-RANGE: 0x142990240-0x1429902c0 .text$mn
@@ -40,6 +38,7 @@
 // MS2-RANGE: 0x1429923c0-0x1429925f0 .text$mn
 // MS2-RANGE: 0x1429926f0-0x142992830 .text$mn
 // MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
+// MS2-RANGE: 0x142994160-0x142994190 .text$mn
 // MS2-RANGE: 0x1429944d0-0x142994710 .text$mn
 // MS2-RANGE: 0x1429947f0-0x142994a00 .text$mn
 // MS2-RANGE: 0x142994bb0-0x142994e00 .text$mn
@@ -245,6 +244,44 @@ bool AvmCharacter::Watch(ASStringContext* psc, const ASString& prop, const Funct
 {
     Ptr<Object> obj = GetASObject();
     return obj ? obj->Watch(psc, prop, callback, userData) : false;
+}
+
+// @0x14298a480
+void AvmCharacter::SetProtoToPrototypeOf(ObjectInterface* psrcObj)
+{
+    Value            prototype;
+    ASStringContext* psc = GetASEnvironment()->GetSC();
+    if (psrcObj->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_prototype), &prototype))
+        Set__proto__(psc, prototype.ToObject(NULL));
+}
+
+// @0x14298dd70
+void MovieClipObject::Set__proto__(ASStringContext* psc, Object* protoObj)
+{
+    Object::Set__proto__(psc, protoObj);
+    // The proto is reset to 0 on unload.
+    if (protoObj && protoObj->GetObjectType() != Object_MovieClipObject)
+    {
+        // Any button handler name on the new prototype chain.
+        struct MemberVisitor : ObjectInterface::MemberVisitor
+        {
+            Ptr<MovieClipObject> obj;
+            ASStringContext*     pStringContext;
+
+            MemberVisitor(ASStringContext* psc, MovieClipObject* _obj) : obj(_obj), pStringContext(psc) {}
+
+            // @0x142994160
+            virtual void Visit(const ASString& name, const Value& val, UByte flags)
+            {
+                SF_UNUSED2(val, flags);
+                if (GetButtonEventNameMask(pStringContext, name) != 0)
+                    obj->HasButtonHandlers = true;
+            }
+        } visitor(psc, this);
+        pProto->VisitMembers(psc, &visitor,
+                             ObjectInterface::VisitMember_Prototype | ObjectInterface::VisitMember_DontEnum |
+                                 ObjectInterface::VisitMember_NamesOnly);
+    }
 }
 
 // @0x142986790
@@ -1234,3 +1271,4 @@ template GFx::AS2::Value* GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Top(unsigne
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
