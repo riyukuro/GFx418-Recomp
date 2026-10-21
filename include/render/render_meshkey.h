@@ -12,6 +12,7 @@
 
 #include "ms2/scaleform/kernel/sf_refcount.h"
 #include "ms2/scaleform/kernel/sf_list.h"
+#include "ms2/scaleform/kernel/sf_atomic.h"
 #include "ms2/scaleform/include/render/render_stats.h"
 #include "ms2/scaleform/include/render/render_types2d.h"
 #include "ms2/scaleform/include/render/render_matrix2x4.h"
@@ -55,6 +56,9 @@ public:
     }
 
     void MakeMeshKey(float* keyData) const;
+
+    // (appended for the mesh keys, sfr_render_05d) key floats of a scale9 mesh
+    enum { MeshKeySize = 13 };
 };
 
 // Where a mesh sits in the staging buffer after mesh generation, when it is there at all (StagingBufferSize != 0);
@@ -228,10 +232,7 @@ public:
     ArrayLH<Ptr<Image> >  GradientImages;    // +0x120, keeps gradient textures alive for regeneration
 };
 
-// the keys of one provider; a MeshProvider delegating to it
-class MeshKeySet : public MeshProvider
-{
-};
+class MeshKey;
 
 class MeshKey : public ListNode<MeshKey>
 {
@@ -252,13 +253,19 @@ public:
         KF_Degenerate    = 0x8000    // singular matrix: any key matches
     };
 
+    MeshKey() : pKeySet(0), Size(0), Flags(0), UseCount(1) {}
+
     static unsigned GetKeySize(unsigned flags);
+    // the scale key of m (x scale, y scale, skew); with m2 also the rotation-free matrix of the same scale. False
+    // for a degenerate m.
     static bool     CalcMatrixKey(const Matrix2F& m, float* key, Matrix2F* m2);
+    static bool     CalcMatrixKey_NonOpt(const Matrix2F& m, float* key, Matrix2F* m2);
 
     bool Match(unsigned layer, unsigned flags, const float* keyData, const ToleranceParams& cfg) const;
 
     void AddRef() { ++UseCount; }
     void Release();
+    bool NotInUse() const { return UseCount == 0; }
 
     MeshKeySet* GetKeySet() const { return pKeySet; }
 
@@ -270,14 +277,106 @@ public:
     float         Data[1];
 };
 
+// The keys of one provider (0x38 bytes). It stands in for the provider towards the meshes, forwarding to it while
+// the provider lives (pDelegate is cleared under the manager's lock when it goes away).
+class MeshKeySet : public ListNode<MeshKeySet>, public MeshProvider, public NewOverrideBase<StatRender_Mem>
+{
+    friend class MeshKeyManager;
+public:
+    inline MeshKeySet(MeshKeyManager* manager, MeshProvider_KeySupport* provider);
+    inline ~MeshKeySet();
+
+    MeshKey* CreateKey(const float* keyData, unsigned flags);
+    void     DestroyKey(MeshKey* key);
+    void     DestroyAllKeys();
+
+    virtual void     OnEvict(MeshBase* mesh);
+    virtual bool     GetData(MeshBase* mesh, VertexOutput* out, unsigned meshGenFlags)
+    {
+        return pDelegate->GetData(mesh, out, meshGenFlags);
+    }
+    virtual RectF    GetIdentityBounds() const { return pDelegate->GetIdentityBounds(); }
+    virtual RectF    GetBounds(const Matrix2F& m) const { return pDelegate->GetBounds(m); }
+    virtual RectF    GetCorrectBounds(const Matrix2F& m, float morphRatio, StrokeGenerator* gen,
+                                      const ToleranceParams* tol) const
+    {
+        return pDelegate->GetCorrectBounds(m, morphRatio, gen, tol);
+    }
+    virtual bool     HitTestShape(const Matrix2F& m, float x, float y, float morphRatio, StrokeGenerator* gen,
+                                  const ToleranceParams* tol) const
+    {
+        return pDelegate->HitTestShape(m, x, y, morphRatio, gen, tol);
+    }
+    virtual unsigned GetLayerCount() const { return pDelegate->GetLayerCount(); }
+    virtual unsigned GetFillCount(unsigned layer, unsigned meshGenFlags) const
+    {
+        return pDelegate->GetFillCount(layer, meshGenFlags);
+    }
+    virtual void     GetFillData(FillData* data, unsigned layer, unsigned fillIndex, unsigned meshGenFlags)
+    {
+        pDelegate->GetFillData(data, layer, fillIndex, meshGenFlags);
+    }
+    virtual void     GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned layer, unsigned fillIndex,
+                                   unsigned meshGenFlags)
+    {
+        pDelegate->GetFillMatrix(mesh, matrix, layer, fillIndex, meshGenFlags);
+    }
+    virtual bool     IsValid() const { return pDelegate != 0; }
+
+    bool IsEmpty() const { return Meshes.IsEmpty(); }
+
+private:
+    MeshKey* findMatchingKey(unsigned layer, unsigned flags, const float* keyData, const ToleranceParams& cfg);
+    void     releaseDelegate_RenderThread();
+
+    Ptr<MeshKeyManager>      pManager;    // +0x18
+    MeshProvider_KeySupport* pDelegate;   // +0x20
+    List<MeshKey>            Meshes;      // +0x28
+};
+
+// Owns the key sets of all providers (0x60 bytes). Key sets of providers that went away wait on the kill list
+// until the render thread frees them.
 class MeshKeyManager : public RefCountBase<MeshKeyManager, StatRender_Mem>
 {
+    friend class MeshKeySet;
+    friend class MeshKeySetHandle;
 public:
+    MeshKeyManager(MemoryHeap* renderHeap) : pRenderHeap(renderHeap) {}
+    ~MeshKeyManager() { DestroyAllKeys(); }
+
+    void     ProcessKillList();
+    void     DestroyAllKeys();
     MeshKey* CreateMatchingKey(MeshKeySet* keySet, unsigned layer, unsigned flags, const float* keyData,
                                const ToleranceParams& cfg);
     MeshKey* CreateMatchingKey(MeshProvider_KeySupport* provider, unsigned layer, unsigned flags,
                                const float* keyData, const ToleranceParams& cfg);
+
+private:
+    enum KeySetListType
+    {
+        KeySet_LiveList,
+        KeySet_KillList,
+        KeySet_List_Count
+    };
+
+    Lock* getLock() { return &KeySetLock; }
+    void  providerLost(MeshKeySetHandle& handle);
+    void  destroyKeySet(MeshKeySet* keySet);
+    void  destroyKeySetList_NTS(KeySetListType type);
+
+    Lock             KeySetLock;                   // +0x10
+    List<MeshKeySet> KeySets[KeySet_List_Count];   // +0x38
+    MemoryHeap*      pRenderHeap;                  // +0x58
 };
+
+inline MeshKeySet::MeshKeySet(MeshKeyManager* manager, MeshProvider_KeySupport* provider)
+    : pManager(manager), pDelegate(provider)
+{
+}
+inline MeshKeySet::~MeshKeySet()
+{
+    DestroyAllKeys();
+}
 
 }} // namespace Scaleform::Render
 

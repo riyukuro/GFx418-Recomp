@@ -264,6 +264,14 @@ public:
 
     // (appended for the static text, sfr_gfx_05d) the rotation of the x axis (its COMDAT: 0x1425e1560)
     T GetRotation() const { return atan2f(Shy(), Sx()); }
+    // (appended for the mesh keys, sfr_render_05d) x y through the 2x2 part only (no translation)
+    void Transform2x2(T* x, T* y) const
+    {
+        T tx = *x;
+        T ty = *y;
+        *x   = M[0][0] * tx + M[0][1] * ty;
+        *y   = M[1][0] * tx + M[1][1] * ty;
+    }
 };
 
 typedef Matrix2x4<float> Matrix2F;

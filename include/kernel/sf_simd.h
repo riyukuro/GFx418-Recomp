@@ -37,6 +37,44 @@ inline Vector4f Add(Vector4f a, Vector4f b) { return _mm_add_ps(a, b); }
 inline Vector4f Mul(Vector4f a, Vector4f b) { return _mm_mul_ps(a, b); }
 inline Vector4f MulAdd(Vector4f a, Vector4f b, Vector4f c) { return _mm_add_ps(_mm_mul_ps(a, b), c); }
 
+// (appended for the mesh keys, sfr_render_05d) the same bit pattern read straight from its static, so the compiler
+// may fold it into the instruction or share one load
+template<unsigned a, unsigned b, unsigned c, unsigned d>
+inline Vector4f Constant()
+{
+#if defined(__clang__)
+    static Vector4i bits = { (long long)(a | ((unsigned long long)b << 32)), (long long)(c | ((unsigned long long)d << 32)) };
+#else
+    static Vector4i bits = {
+        (char)(a & 0xFF), (char)((a >> 8) & 0xFF), (char)((a >> 16) & 0xFF), (char)(a >> 24),
+        (char)(b & 0xFF), (char)((b >> 8) & 0xFF), (char)((b >> 16) & 0xFF), (char)(b >> 24),
+        (char)(c & 0xFF), (char)((c >> 8) & 0xFF), (char)((c >> 16) & 0xFF), (char)(c >> 24),
+        (char)(d & 0xFF), (char)((d >> 8) & 0xFF), (char)((d >> 16) & 0xFF), (char)(d >> 24)
+    };
+#endif
+    return *(Vector4f*)&bits;
+}
+
+// (appended for the mesh keys, sfr_render_05d) pulls a whole object into L2, one prefetch per 32 bytes from the
+// last line down (objects up to 256 bytes)
+template<class T>
+inline void PrefetchObj(const T* obj)
+{
+    const char* p = (const char*)obj;
+    switch ((sizeof(T) - 1) / 32)
+    {
+    default:
+    case 7: _mm_prefetch(p + 7 * 32, _MM_HINT_T1);
+    case 6: _mm_prefetch(p + 6 * 32, _MM_HINT_T1);
+    case 5: _mm_prefetch(p + 5 * 32, _MM_HINT_T1);
+    case 4: _mm_prefetch(p + 4 * 32, _MM_HINT_T1);
+    case 3: _mm_prefetch(p + 3 * 32, _MM_HINT_T1);
+    case 2: _mm_prefetch(p + 2 * 32, _MM_HINT_T1);
+    case 1: _mm_prefetch(p + 1 * 32, _MM_HINT_T1);
+    case 0: _mm_prefetch(p, _MM_HINT_T1);
+    }
+}
+
 }} // namespace Scaleform::SIMD
 
 #endif

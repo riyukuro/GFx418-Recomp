@@ -67,6 +67,8 @@ public:
     ~MeshKeySetHandle() { releaseCache(); }
 
     void releaseCache();
+    // (appended for the mesh keys, sfr_render_05d) drops the manager reference without telling it
+    void releaseCache_NoNotify();
 };
 
 // A provider whose meshes are keyed by scale (shapes and their bound copies).
