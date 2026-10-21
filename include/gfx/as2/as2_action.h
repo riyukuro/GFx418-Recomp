@@ -183,6 +183,9 @@ public:
 
     ASStringContext* GetSC() { return &StringContext; }
     unsigned         GetVersion() const { return StringContext.GetVersion(); }
+    bool             IsCaseSensitive() const { return StringContext.IsCaseSensitive(); }
+    // Marks the optimized advance list of the target's movie for a rebuild (as2_avmcharacter.h).
+    inline void      InvalidateOptAdvanceList() const;
     // Ends the unrolling of a throw (exe 0x1429345d0).
     void ClearThrowing();
     // Drops the try blocks pc has left; *plocalTryBlockCount counts those of the running action buffer (exe

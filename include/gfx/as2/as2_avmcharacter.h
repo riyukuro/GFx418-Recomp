@@ -42,6 +42,12 @@ inline ASRefCountCollector* Environment::GetCollector()
     return 0;
 }
 
+inline void Environment::InvalidateOptAdvanceList() const
+{
+    if (Target)
+        Target->GetMovieImpl()->Flags |= MovieImpl::Flag_OptAdvListInvalid;
+}
+
 inline InteractiveObject* ObjectInterface::ToCharacter()
 {
     return IsASCharacter() ? static_cast<AvmCharacter*>(this)->GetDispObj() : 0;

@@ -150,6 +150,8 @@ public:
     UserDataHolder* pUserDataHolder; // +0x08
     Ptr<Object>     pProto;          // +0x10
 
+    Object* Get__proto__() const { return pProto.GetPtr(); }
+
     ObjectInterface();
     virtual ~ObjectInterface();
 
@@ -272,6 +274,10 @@ public:
                        const Value& userData);                                               // exe 0x142994c50
     virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
                               const PropFlags& flags = PropFlags());                         // exe 0x142988bb0
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());                            // exe 0x1429867f0
+    // Runs the watchpoint of prop, the value to store in *resultVal; false without one (exe 0x142964b90).
+    bool InvokeWatchpoint(Environment* penv, const ASString& prop, const Value& newVal, Value* resultVal);
 
 protected:
     Object(ASRefCountCollector* pcc);

@@ -286,6 +286,8 @@ public:
     void Mul_Call(Environment* penv, const Value& v);
     // The value of a PROPERTY: its getter called on pthis; false without a getter (exe 0x142954a50).
     bool GetPropertyValue(Environment* penv, ObjectInterface* pthis, Value* value) const;
+    // Runs the setter of a PROPERTY on pthis (exe 0x14298a260).
+    void SetPropertyValue(Environment* penv, ObjectInterface* pthis, const Value& val);
 
     Value ToPrimitive(Environment* penv, hint h = NoHint) const; // exe 0x142991850
 

@@ -8,10 +8,11 @@
 // MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
 // MS2-RANGE: 0x142981bc0-0x142981bf0 .text$mn
 // MS2-RANGE: 0x142981df0-0x142981f00 .text$mn
+// MS2-RANGE: 0x1429867f0-0x142986d60 .text$mn
 // MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
 // MS2-RANGE: 0x142988bb0-0x142988f30 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
-// MS2-RANGE: 0x14298a3d0-0x14298a480 .text$mn
+// MS2-RANGE: 0x14298a260-0x14298a480 .text$mn
 // MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
 // MS2-RANGE: 0x14298b9f0-0x14298ba60 .text$mn
 // MS2-RANGE: 0x14298c9e0-0x14298ca20 .text$mn
@@ -100,7 +101,7 @@ void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, 
 SPInt MemberHash_FindIndexNoCase(const ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key);
 typedef ASStringHash_GC<Member>::SetType MemberSet;
 
-// Find / FindCaseInsensitive of the member table.
+// Find / FindCaseInsensitive / FindCaseCheck of the member table.
 inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const ASString& key)
 {
     SPInt index = MemberHash_FindIndex(phash, key);
@@ -115,6 +116,11 @@ inline MemberSet::Iterator MemberHash_FindNoCase(ASStringHash_GC<Member>* phash,
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
+}
+inline MemberSet::Iterator MemberHash_FindCaseCheck(ASStringHash_GC<Member>* phash, const ASString& key,
+                                                    bool caseSensitive)
+{
+    return caseSensitive ? MemberHash_Find(phash, key) : MemberHash_FindNoCase(phash, key);
 }
 
 // The value SetMemberRaw stores for __proto__ / __resolve (they live outside the member table); exe 0x143a51b50.
@@ -195,6 +201,118 @@ bool Object::SetMemberFlags(ASStringContext* psc, const ASString& name, const UB
     return false;
 }
 
+// MS2-FUNCTIONAL the exe merges both case lookups into one iterator slot and converts this back from the
+// object pointer with a null test (cmove); the rest differs in register choice only
+// @0x1429867f0
+bool Object::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
+{
+    static const Value notsetVal(Value::UNSET);
+    PropFlags _flags;
+
+    MemberSet::Iterator it = MemberHash_FindCaseCheck(&Members, name, penv->IsCaseSensitive());
+    Member*             pmember;
+    if (it == MemberSet::Iterator(0, 0))
+    {
+        // A property set through the prototype chain runs the prototype's setter.
+        for (Object* pproto = Get__proto__(); pproto != 0; pproto = pproto->Get__proto__())
+        {
+            if (pproto->ArePropertiesSet)
+            {
+                MemberSet::Iterator protoit =
+                    MemberHash_FindCaseCheck(&pproto->Members, name, penv->IsCaseSensitive());
+                if (protoit != MemberSet::Iterator(0, 0))
+                {
+                    if (protoit->Second.mValue.IsProperty())
+                        it = protoit;
+                    break;
+                }
+            }
+        }
+    }
+    if (it != MemberSet::Iterator(0, 0))
+    {
+        pmember = &(*it).Second;
+        _flags  = pmember->GetMemberFlags();
+        if (_flags.GetReadOnly())
+            return false;
+        if (pmember->mValue.IsProperty())
+        {
+            Value propVal = pmember->mValue;
+            // A character's script object passes the character as this.
+            Ptr<InteractiveObject> paschar = GetASCharacter();
+            if (paschar)
+                propVal.SetPropertyValue(penv, AS2::ToAvmCharacter(paschar), val);
+            else
+                propVal.SetPropertyValue(penv, this, val);
+            return true;
+        }
+    }
+    else
+    {
+        _flags  = flags;
+        pmember = 0;
+    }
+
+    Value        newVal;
+    const Value* pval = &val;
+
+    if (penv && pWatchpoints)
+    {
+        if (InvokeWatchpoint(penv, name, val, &newVal))
+            pval = &newVal;
+    }
+
+    if (!pmember)
+        return SetMemberRaw(penv->GetSC(), name, *pval, _flags);
+
+    if (val.IsProperty())
+        ArePropertiesSet = true;
+
+    if (penv->IsCaseSensitive())
+    {
+        if (name == penv->GetBuiltin(ASBuiltin___proto__))
+        {
+            if (val.IsSet())
+            {
+                Set__proto__(penv->GetSC(), val.ToObject(penv));
+                penv->InvalidateOptAdvanceList();
+            }
+            pval = &notsetVal;
+        }
+        else if (name == penv->GetBuiltin(ASBuiltin___resolve))
+        {
+            if (val.IsSet())
+                ResolveHandler = val.ToFunction(penv);
+            pval = &notsetVal;
+        }
+        else if (name == penv->GetBuiltin(ASBuiltin_onEnterFrame))
+            penv->InvalidateOptAdvanceList();
+    }
+    else
+    {
+        name.ResolveLowercase();
+        if (penv->GetBuiltin(ASBuiltin___proto__).GetNode()->pLower == name.GetNode()->pLower)
+        {
+            if (val.IsSet())
+            {
+                Set__proto__(penv->GetSC(), val.ToObject(penv));
+                penv->InvalidateOptAdvanceList();
+            }
+            pval = &notsetVal;
+        }
+        else if (penv->GetBuiltin(ASBuiltin___resolve).GetNode()->pLower == name.GetNode()->pLower)
+        {
+            if (val.IsSet())
+                ResolveHandler = val.ToFunction(penv);
+            pval = &notsetVal;
+        }
+        else if (name == penv->GetBuiltin(ASBuiltin_onEnterFrame))
+            penv->InvalidateOptAdvanceList();
+    }
+    pmember->mValue = *pval;
+    return true;
+}
+
 // @0x142988bb0
 bool Object::SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -265,6 +383,23 @@ bool Object::SetMemberRaw(ASStringContext* psc, const ASString& name, const Valu
     else
         Members.Set(name, Member(*pval, flags));
     return true;
+}
+
+// @0x14298a260
+void Value::SetPropertyValue(Environment* penv, ObjectInterface* pthis, const Value& val)
+{
+    if (T.Type == PROPERTY && penv)
+    {
+        if (V.pProperty->SetterMethod.Function)
+        {
+            Value result;
+            penv->Push(val);
+            V.pProperty->SetterMethod.Invoke(FnCall(&result, pthis, penv, 1, penv->GetTopIndex()));
+            penv->Drop1();
+        }
+        else if (penv->IsVerboseActionErrors())
+            penv->LogScriptError("Setter method is null.");
+    }
 }
 
 // MS2-FUNCTIONAL the exe keeps the constructor function in a register across Set_constructor (unity build)
@@ -803,3 +938,5 @@ template void GFx::ASStringHash_GC<GFx::AS2::Member>::Set(const GFx::ASString&, 
 template GFx::AS2::Value* GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Top(unsigned) const;
 
 } // namespace Scaleform
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
