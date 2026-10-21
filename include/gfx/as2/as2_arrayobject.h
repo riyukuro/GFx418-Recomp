@@ -60,6 +60,9 @@ public:
 
     void Resize(int newSize);                     // exe 0x14297e330
     void SetElement(int i, const Value& val);     // exe 0x1429814c0
+    void SetElementSafe(int i, const Value& val); // exe 0x142981560 (grows the array to i + 1)
+    // The element pointers of ao, shared with it (exe 0x14298ee10).
+    void ShallowCopyFrom(const ArrayObject& ao);
     void PushBack(const Value& val);              // exe 0x142971ba0
     void PushBack();                              // exe 0x142971c50 (an empty hole)
     void PopFront_Call();                         // exe 0x14296f1b0, the out-of-line copy of PopFront

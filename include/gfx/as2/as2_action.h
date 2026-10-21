@@ -128,6 +128,16 @@ public:
         }
         return p;
     }
+    T* Top(unsigned dist) const
+    {
+        T* p = 0;
+        if (dist <= GetTopIndex())
+        {
+            unsigned offset = GetTopIndex() - dist;
+            p = &Pages[offset / PageSize]->Values[offset % PageSize];
+        }
+        return p;
+    }
     // Element at an index counted from the bottom, 0 past the top.
     T* Bottom(unsigned offset)
     {

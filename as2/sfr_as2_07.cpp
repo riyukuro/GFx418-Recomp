@@ -4,10 +4,12 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14297f2c0-0x14297f3d0 .text$mn
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
+// MS2-RANGE: 0x1429814c0-0x142981600 .text$mn
 // MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
 // MS2-RANGE: 0x142981bc0-0x142981bf0 .text$mn
 // MS2-RANGE: 0x142981df0-0x142981f00 .text$mn
 // MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
+// MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
 // MS2-RANGE: 0x14298a3d0-0x14298a480 .text$mn
 // MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
 // MS2-RANGE: 0x14298b9f0-0x14298ba60 .text$mn
@@ -16,9 +18,9 @@
 // MS2-RANGE: 0x14298cc80-0x14298cce0 .text$mn
 // MS2-RANGE: 0x14298dc00-0x14298dcb0 .text$mn
 // MS2-RANGE: 0x14298de30-0x14298dee0 .text$mn
+// MS2-RANGE: 0x14298ee10-0x14298ee70 .text$mn
 // MS2-RANGE: 0x142990240-0x1429902c0 .text$mn
-// MS2-RANGE: 0x142990a10-0x142990b70 .text$mn
-// MS2-RANGE: 0x142990be0-0x142990c30 .text$mn
+// MS2-RANGE: 0x142990960-0x142990c30 .text$mn
 // MS2-RANGE: 0x142990c40-0x142990cc0 .text$mn
 // MS2-RANGE: 0x142990d00-0x142990dd0 .text$mn
 // MS2-RANGE: 0x142990e40-0x142990ea0 .text$mn
@@ -29,8 +31,9 @@
 // MS2-RANGE: 0x142991c60-0x142991cd0 .text$mn
 // MS2-RANGE: 0x142991d00-0x142991d30 .text$mn
 // MS2-RANGE: 0x142991e10-0x142991e70 .text$mn
-// MS2-RANGE: 0x1429923c0-0x142992500 .text$mn
+// MS2-RANGE: 0x1429923c0-0x142992540 .text$mn
 // MS2-RANGE: 0x142992780-0x142992830 .text$mn
+// MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -38,6 +41,8 @@
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_stringobject.h"
+#include "../include/gfx/as2/as2_pointobject.h"
+#include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/kernel/sf_std.h"
@@ -518,11 +523,100 @@ const char* NumberObject::ToString_Call(int radix)
     return ToString(radix);
 }
 
+
+// @0x1429814c0
+void ArrayObject::SetElement(int i, const Value& val)
+{
+    if (i >= 0 && i < GetSize())
+    {
+        LengthValueOverriden = false;
+        if (!Elements[i])
+            Elements[i] = SF_HEAP_AUTO_NEW(this) Value();
+        *Elements[i] = val;
+    }
+}
+
+// @0x142981560
+void ArrayObject::SetElementSafe(int i, const Value& val)
+{
+    LengthValueOverriden = false;
+    if (i >= GetSize())
+        Resize(i + 1);
+    if (!Elements[i])
+        Elements[i] = SF_HEAP_AUTO_NEW(this) Value();
+    *Elements[i] = val;
+}
+
+// @0x14298ee10
+void ArrayObject::ShallowCopyFrom(const ArrayObject& ao)
+{
+    ArrayObjectElements_Resize(&Elements, ao.Elements.GetSize());
+    for (UPInt i = 0, n = Elements.GetSize(); i < n; i++)
+        Elements[i] = ao.Elements[i];
+}
+
+// @0x142990960
+ASString StringProto::StringSubstring(const ASString& self, int start, int length)
+{
+    if (length == 0)
+        return ASString(self.GetManager()->GetEmptyStringNode());
+
+    if (start < 0)
+        start = 0;
+
+    int utf8Len = self.GetLength();
+    if (start >= utf8Len)
+        return ASString(self.GetManager()->GetEmptyStringNode());
+
+    if (length < 0 || start + length > utf8Len)
+        length = utf8Len - start;
+
+    return ASString(self.SubstringNode(start, start + length));
+}
+
+// @0x142990b70
+void Value::Sub_Call(Environment* penv, const Value& v)
+{
+    Number lhs = ToNumber(penv);
+    Number rhs = v.ToNumber(penv);
+    SetNumber(lhs - rhs);
+}
+
+// @0x142992e30
+void ValidateRect(ASRect* r)
+{
+    if (NumberUtil::IsNaN(r->x1))
+        r->x1 = 0;
+    if (NumberUtil::IsNaN(r->x2))
+        r->x2 = 0;
+    if (NumberUtil::IsNaN(r->y1))
+        r->y1 = 0;
+    if (NumberUtil::IsNaN(r->y2))
+        r->y2 = 0;
+}
+
+// @0x142989d20
+void PointObject::SetProperties_Call(ASStringContext* psc, const Value params[Point_NumProperties])
+{
+    SetProperties(psc, params);
+}
+
+// MS2-FUNCTIONAL the exe stores the number of the temporary value before its type
+// @0x142989db0
+void PointObject::SetProperties(Environment* penv, const GASPoint& pt)
+{
+    SetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_x), Value(pt.x));
+    SetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_y), Value(pt.y));
+}
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
 
 // @0x14297f2c0
 template void GFx::ASStringHash_GC<GFx::AS2::Member>::Set(const GFx::ASString&, const GFx::AS2::Member&);
+
+// @0x142992500
+template GFx::AS2::Value* GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Top(unsigned) const;
 
 } // namespace Scaleform
