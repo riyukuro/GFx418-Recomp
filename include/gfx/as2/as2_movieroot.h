@@ -6,6 +6,7 @@
 
 #include "as2_action.h"
 #include "../gfx_displayobject.h"
+#include "../gfx_moviedef.h"
 #include "../gfx_movieimpl.h"
 #include "../gfx_playertasks.h"
 
@@ -45,12 +46,32 @@ public:
     ASString CreateString(const char* pstr) const { return ASString(pStringManager->CreateStringNode(pstr)); }
 };
 
+// Memory of an AS2 movie (heap, string manager, collector); only the collector is read so far.
+class MemoryContextImpl : public MemoryContext
+{
+public:
+    UByte                Unrecovered_10[0x10]; // +0x10
+    ASRefCountCollector* ASGC;                 // +0x20
+};
+
 // AS2 half of a movie.
 class MovieRoot : public ASMovieRootBase
 {
 public:
-    UByte         Unrecovered_28[0x110]; // +0x28
-    StringManager BuiltinsMgr;           // +0x138
+    UByte              Unrecovered_28[0x10];  // +0x28
+    MemoryContextImpl* MemContext;            // +0x38
+    UByte              Unrecovered_40[0xf8];  // +0x40
+    StringManager      BuiltinsMgr;           // +0x138
+
+    ASRefCountCollector* GetASGC() const { return MemContext->ASGC; }
+
+    // A script function the host can call by name (ExternalInterface.addCallback). 0x28 bytes.
+    struct InvokeAliasInfo
+    {
+        Ptr<Object>          ThisObject; // +0x00
+        Ptr<CharacterHandle> ThisChar;   // +0x08
+        FunctionRef          Function;   // +0x10
+    };
 
     StringManager* GetStringManager() { return &BuiltinsMgr; }
 

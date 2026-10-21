@@ -17,9 +17,23 @@ public:
     InteractiveObject* pDispObj; // +0x20
 
     InteractiveObject* GetDispObj() const { return pDispObj; }
+    MovieRoot*         GetAS2Root() const { return ToAS2Root(pDispObj); }
 
     static void CharacterGetDepth(const FnCall& fn);
 };
+
+// The script side of a character of an AS2 movie.
+inline AvmCharacter* ToAvmCharacter(InteractiveObject* pchar)
+{
+    return static_cast<AvmCharacter*>(pchar->GetAvmIntObj());
+}
+
+inline ASRefCountCollector* Environment::GetCollector()
+{
+    if (Target)
+        return ToAvmCharacter(Target)->GetAS2Root()->GetASGC();
+    return 0;
+}
 
 inline InteractiveObject* ObjectInterface::ToCharacter()
 {

@@ -40,6 +40,16 @@ public:
 class MovieClipLoader : public Object
 {
 public:
+    // Byte counts of one movie being loaded (kept per URL).
+    struct ProgressDesc
+    {
+        int LoadedBytes;
+        int TotalBytes;
+
+        ProgressDesc() {}
+        ProgressDesc(int loaded, int total) : LoadedBytes(loaded), TotalBytes(total) {}
+    };
+
     void* Data68; // +0x68 not recovered
 };
 

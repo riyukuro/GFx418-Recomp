@@ -128,6 +128,49 @@ private:
     const ArrayObject* ThisPtr;
 };
 
+// Order of Array.sort: a script compare function or the sort flags. 0x38 bytes.
+class ArraySortFunctor
+{
+public:
+    ArraySortFunctor() {}
+    ArraySortFunctor(ObjectInterface* pthis, int flags, const FunctionRef& func, Environment* penv,
+                     const Log* plog = 0)
+        : This(pthis), Flags(flags), Func(func), Env(penv), LogPtr(plog)
+    {
+    }
+    ArraySortFunctor(const ArraySortFunctor& src); // exe 0x1429181f0
+    ~ArraySortFunctor();                           // exe 0x142925350
+
+    // Negative when a sorts before b (exe 0x142934a80).
+    int  Compare(const Value* a, const Value* b) const;
+    bool operator()(const Value* a, const Value* b) const { return Compare(a, b) < 0; }
+
+private:
+    ObjectInterface* This;   // +0x00
+    int              Flags;  // +0x08
+    FunctionRef      Func;   // +0x10
+    Environment*     Env;    // +0x28
+    const Log*       LogPtr; // +0x30
+};
+
+// Order of Array.sortOn: one ArraySortFunctor per field name, compared in turn. 0x38 bytes.
+class ArraySortOnFunctor
+{
+public:
+    ArraySortOnFunctor(const ArraySortOnFunctor& src); // exe 0x142918270
+
+    // Negative when a sorts before b (exe 0x142934f90).
+    int  Compare(const Value* a, const Value* b) const;
+    bool operator()(const Value* a, const Value* b) const { return Compare(a, b) < 0; }
+
+private:
+    ObjectInterface*                                    This;         // +0x00
+    const void*                                         FieldArray;   // +0x08 ArrayCC<ASString> of the field names
+    Environment*                                        Env;          // +0x10
+    const Log*                                          LogPtr;       // +0x18
+    Array<ArraySortFunctor>                             FunctorArray; // +0x20
+};
+
 }}} // namespace Scaleform::GFx::AS2
 
 #endif

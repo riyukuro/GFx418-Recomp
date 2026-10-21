@@ -101,6 +101,23 @@ public:
     }
     // The button key code (on(keyPress)) of a key down event, 0 when the key has none (0x142603da0).
     int ConvertToButtonKeyCode() const;
+
+    // (appended for the AS2 event handler tables, sfr_as2_02) key press events also compare the key code.
+    bool operator==(const EventId& id) const
+    {
+        return Id == id.Id && (!(Id & Event_KeyPress) || KeyCode == id.KeyCode);
+    }
+};
+
+// Hash of an event id: key press events mix in the key code.
+struct EventIdHashFunctor
+{
+    UPInt operator()(const EventId& data) const
+    {
+        if (data.Id & EventId::Event_KeyPress)
+            return data.Id ^ data.KeyCode;
+        return data.Id;
+    }
 };
 
 }} // namespace Scaleform::GFx

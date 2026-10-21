@@ -210,6 +210,15 @@ protected:
     CFunctionObject(ASRefCountCollector* pcc);
 };
 
+inline void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)
+{
+    Flags    = flags;
+    Function = poriginal;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+}
+
 // Counted copy of the function; the frame keeps the weak flag of the original.
 inline void FunctionRefBase::Init(const FunctionRefBase& orig, UByte flags)
 {
@@ -220,6 +229,20 @@ inline void FunctionRefBase::Init(const FunctionRefBase& orig, UByte flags)
     pLocalFrame = 0;
     if (orig.pLocalFrame)
         SetLocalFrame(orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+inline void FunctionRef::Invoke(const FnCall& fn, const char* pmethodName) const
+{
+    Function->Invoke(fn, pLocalFrame, pmethodName);
+}
+
+inline FunctionRef Value::ToFunction(const Environment* penv) const
+{
+    if (T.Type == FUNCTION)
+        return V.FunctionValue;
+    else if (T.Type == FUNCTIONNAME)
+        return ResolveFunctionName(penv);
+    return FunctionRef();
 }
 
 }}} // namespace Scaleform::GFx::AS2

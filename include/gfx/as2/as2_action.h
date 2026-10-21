@@ -40,6 +40,25 @@ public:
 
     T* Top0() { return pCurrent; }
 
+    // Moves to the first element of the next page: the reserved page or a new one (exe 0x140006a40 for Value).
+    void PushPage();
+    // Back to the top of the previous page; on the bottom page one undefined element is left (exe 0x140006cf0 for
+    // Value).
+    void PopPage();
+
+    void Push(const T& val)
+    {
+        if (++pCurrent >= pPageEnd)
+            PushPage();
+        Construct<T>(pCurrent, val);
+    }
+    void Pop1()
+    {
+        pCurrent->~T();
+        if (--pCurrent < pPageStart)
+            PopPage();
+    }
+
     // Element at an index counted from the bottom, 0 past the top.
     T* Bottom(unsigned offset)
     {
@@ -72,11 +91,21 @@ public:
     ArrayLH<Ptr<LocalFrame>, Stat_Default_Mem> LocalFrames;          // +0x180
 
     Value* Bottom(int offset) { return Stack.Bottom((unsigned)offset); }
+    int    GetTopIndex() const { return (int)Stack.GetTopIndex(); }
+    void   Push(const Value& val) { Stack.Push(val); }
+    // Pops n values.
+    void   Drop(int n)
+    {
+        while (n--)
+            Stack.Pop1();
+    }
 
     ASStringContext* GetSC() { return &StringContext; }
     // The movie enabled the Scaleform extensions to ActionScript.
     inline bool CheckExtensions() const;
     inline MemoryHeap* GetHeap() const;
+    // Collector of the target's movie, 0 without a target.
+    inline ASRefCountCollector* GetCollector(); // as2_avmcharacter.h
     InteractiveObject* GetTarget() const { return Target; }
 
     // Script error channel (exe 0x142967e00).
@@ -103,6 +132,12 @@ public:
     Environment*     Env;                 // +0x30
     int              NArgs;               // +0x38
     int              FirstArgBottomIndex; // +0x3c
+
+    // The arguments are the nargs stack values from firstArgBottomIndex down.
+    FnCall(Value* res, ObjectInterface* pthis, Environment* penv, int nargs, int firstArgBottomIndex)
+        : Result(res), ThisPtr(pthis), Env(penv), NArgs(nargs), FirstArgBottomIndex(firstArgBottomIndex)
+    {
+    }
 
     // Argument n (0 = first), read from the environment stack below the first argument.
     Value& Arg(int n) const { return *Env->Bottom(FirstArgBottomIndex - n); }

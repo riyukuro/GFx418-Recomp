@@ -89,6 +89,13 @@ inline int Date_StartOfYear(int y)
     return 365 * y + ((y + 1) / 4) - ((y + 69) / 100) + ((y + 369) / 400);
 }
 
+// The Date class: the static Date.UTC.
+class DateCtorFunction : public CFunctionObject
+{
+private:
+    static void DateUTC(const FnCall& fn);
+};
+
 }}} // namespace Scaleform::GFx::AS2
 
 #endif

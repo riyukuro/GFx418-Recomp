@@ -146,7 +146,26 @@ private:
     char         Buff[347 + 1]; // +0x48
 };
 
+// String formatter (0x28 bytes): Formatter +0, the text +0x18. Constructors out of line (exe 0x1425af2d0,
+// 0x1425af2a0).
+class StrFormatter : public Formatter
+{
+public:
+    StrFormatter(MsgFormat& f, const char* v);
+    StrFormatter(MsgFormat& f, const StringDataPtr& v);
+
+    virtual void          Parse(const StringDataPtr& str);
+    virtual void          Convert();
+    virtual StringDataPtr GetResult() const;
+    virtual UPInt         GetSize() const;
+
+private:
+    StringDataPtr Value;
+};
+
 template<typename T> struct FmtInfo {};
+template<> struct FmtInfo<const char*> { typedef StrFormatter formatter; };
+template<> struct FmtInfo<StringDataPtr> { typedef StrFormatter formatter; };
 template<> struct FmtInfo<int>    { typedef LongFormatter formatter; };
 template<> struct FmtInfo<float>  { typedef DoubleFormatter formatter; };
 template<> struct FmtInfo<double> { typedef DoubleFormatter formatter; };
@@ -229,6 +248,17 @@ private:
 };
 
 // Formats fmt with "{n}" parameters into result; returns the formatted length.
+template<typename T1, typename T2>
+inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1, const T2& v2)
+{
+    MsgFormat f(result);
+    f.Parse(fmt);
+    f.FormatD1(v1);
+    f.FormatD1(v2);
+    f.FinishFormatD();
+    return f.GetStrSize();
+}
+
 template<typename T1, typename T2, typename T3, typename T4>
 inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1, const T2& v2, const T3& v3,
                     const T4& v4)
@@ -273,6 +303,26 @@ inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1
     f.FormatD1(v6);
     f.FormatD1(v7);
     f.FormatD1(v8);
+    f.FinishFormatD();
+    return f.GetStrSize();
+}
+
+template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8,
+         typename T9>
+inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1, const T2& v2, const T3& v3,
+                    const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9)
+{
+    MsgFormat f(result);
+    f.Parse(fmt);
+    f.FormatD1(v1);
+    f.FormatD1(v2);
+    f.FormatD1(v3);
+    f.FormatD1(v4);
+    f.FormatD1(v5);
+    f.FormatD1(v6);
+    f.FormatD1(v7);
+    f.FormatD1(v8);
+    f.FormatD1(v9);
     f.FinishFormatD();
     return f.GetStrSize();
 }

@@ -59,7 +59,7 @@ public:
 
     bool IsNull() const { return Function == 0; }
 
-    void Init(FunctionObject* poriginal = 0, UByte flags = 0);
+    inline void Init(FunctionObject* poriginal = 0, UByte flags = 0); // as2_object.h
     void Init(FunctionObject& original, UByte flags = 0);
     inline void Init(const FunctionRefBase& orig, UByte flags = 0); // as2_object.h
     inline void DropRefs(); // as2_action.h
@@ -80,7 +80,11 @@ public:
     FunctionRef(FunctionObject* poriginal = 0) { Init(poriginal); }
     FunctionRef(FunctionObject& original) { Init(original); }
     FunctionRef(const FunctionRef& orig) { Init(orig); }
+    FunctionRef(const FunctionRefBase& orig) { Init(orig); }
     ~FunctionRef() { DropRefs(); }
+
+    // Calls the function in its local frame.
+    inline void Invoke(const FnCall& fn, const char* pmethodName = 0) const; // as2_object.h
 
     const FunctionRef& operator=(const FunctionRef& orig)
     {
@@ -159,6 +163,8 @@ public:
     Value(bool val)   { T.Type = BOOLEAN; V.BooleanValue = val; }
     Value(Number val) { T.Type = NUMBER; NV.NumberValue = val; }
     Value(int val)    { T.Type = INTEGER; NV.Int32Value = val; }
+    // A getter/setter property (ValueProperty allocated in pheap).
+    inline Value(const FunctionRef& getter, const FunctionRef& setter, MemoryHeap* pheap, ASRefCountCollector* pcc);
     Value(const ASString& str)
     {
         T.Type        = STRING;
@@ -187,6 +193,7 @@ public:
     bool IsObject() const    { return T.Type == OBJECT; }
     bool IsCharacter() const { return T.Type == CHARACTER; }
     bool IsFunction() const  { return T.Type == FUNCTION; }
+    bool IsFunctionName() const { return T.Type == FUNCTIONNAME; }
     bool IsProperty() const  { return T.Type == PROPERTY; }
 
     Number   ToNumber(Environment* penv) const;                         // exe 0x1429912d0
@@ -256,9 +263,16 @@ public:
     void Mul_Call(Environment* penv, const Value& v);
 
     Value ToPrimitive(Environment* penv, hint h = NoHint) const; // exe 0x142991850
+    // The function held or named (FUNCTIONNAME), else a null reference. Out of line in the exe (0x142991190); the
+    // unity build inlines it at some call sites.
+    inline FunctionRef ToFunction(const Environment* penv) const; // as2_object.h
 
     // The function reference, object or property held (defined in sfr_as2_02).
     template<class Functor> void ForEachChild_GC(ASRefCountBaseType::Collector* prcc) const;
+
+protected:
+    // The function of a FUNCTIONNAME value, looked up by name (exe 0x14297ec30).
+    FunctionRef ResolveFunctionName(const Environment* penv) const;
 };
 
 // Getter/setter pair of an addProperty member. 0x50 bytes.
@@ -268,7 +282,17 @@ struct ValueProperty : public ASRefCountBase<ValueProperty>
     FunctionRef SetterMethod; // +0x38
 
     ValueProperty(ASRefCountCollector* pcc, const FunctionRef& getterMethod, const FunctionRef& setterMethod);
+
+protected:
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const;
+    virtual void Finalize_GC();
 };
+
+inline Value::Value(const FunctionRef& getter, const FunctionRef& setter, MemoryHeap* pheap, ASRefCountCollector* pcc)
+{
+    T.Type      = PROPERTY;
+    V.pProperty = new (pheap) ValueProperty(pcc, getter, setter);
+}
 
 // Object member: the value with its property flags stored in the value's second byte.
 class Member

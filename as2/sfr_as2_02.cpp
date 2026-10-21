@@ -3,27 +3,19 @@
 // scan-in-use passes) and the Stage function stub.
 // MS2-UNIT: sfr_as2_02
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1428fdc00-0x1428fe7e0 .text$mn
-// MS2-RANGE: 0x1428fec90-0x1428fed10 .text$mn
-// MS2-RANGE: 0x1428ff0b0-0x1428ff660 .text$mn
+// MS2-RANGE: 0x1428fdc00-0x1428ff660 .text$mn
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
-// MS2-RANGE: 0x142901ae0-0x142901d20 .text$mn
-// MS2-RANGE: 0x142902200-0x1429023e0 .text$mn
-// MS2-RANGE: 0x1429023e0-0x1429024e0 .text$mn
-// MS2-RANGE: 0x1429027a0-0x142902a00 .text$mn
-// MS2-RANGE: 0x142902a10-0x142902ae0 .text$mn
-// MS2-RANGE: 0x142903350-0x1429033c0 .text$mn
+// MS2-RANGE: 0x142901ae0-0x142902a00 .text$mn
+// MS2-RANGE: 0x142902a10-0x1429033c0 .text$mn
 // MS2-RANGE: 0x1429035a0-0x142903650 .text$mn
 // MS2-RANGE: 0x142903910-0x142903b30 .text$mn
 // MS2-RANGE: 0x142906d80-0x142906de0 .text$mn
 // MS2-RANGE: 0x142908090-0x142908840 .text$mn
 // MS2-RANGE: 0x142908c30-0x142908e90 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
-// MS2-RANGE: 0x142915170-0x1429159d0 .text$mn
-// MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
-// MS2-RANGE: 0x142916110-0x142916a70 .text$mn
-// MS2-RANGE: 0x142916e60-0x142917460 .text$mn
-// MS2-RANGE: 0x142917690-0x142917780 .text$mn
+// MS2-RANGE: 0x142914500-0x142914660 .text$mn
+// MS2-RANGE: 0x142914880-0x142914e60 .text$mn
+// MS2-RANGE: 0x142914e60-0x142917780 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -46,6 +38,9 @@
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_moviedef.h"
+#include "../include/kernel/sf_alg.h"
+#include "../include/kernel/sf_msgformat.h"
+#include "../include/kernel/sf_stringhash.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -55,6 +50,77 @@ typedef ASRefCountBaseType::Collector Collector;
 static const int DateMonthEnds[2][12] = {
     {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
     {31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366}};
+
+static const char* const DateDayNames[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+static const char* const DateMonthNames[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+// Local time as "Thu Jan  1 00:00:00 GMT+0000 1970".
+// @0x1428fe7e0
+void DateProto::DateToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    int         month = 0, date = 0;
+    for (int m = 0; m < 12; m++)
+    {
+        if (pthis->LJDate < DateMonthEnds[Date_IsLeapYear(pthis->LYear)][m])
+        {
+            month = m;
+            date  = pthis->LJDate - (m ? DateMonthEnds[Date_IsLeapYear(pthis->LYear)][m - 1] : 0) + 1;
+            break;
+        }
+    }
+
+    // 1 Jan 1970 was a Thursday; days before it count backwards.
+    const char* dayName;
+    if (pthis->LDate >= 0)
+        dayName = DateDayNames[(pthis->LDate / 86400000 + 4) % 7];
+    else
+    {
+        SInt64 absDate = _abs64(pthis->LDate);
+        dayName        = DateDayNames[((3 - absDate / 86400000) % 7 + 7) % 7];
+    }
+
+    char out[128];
+    Format(StringDataPtr(out, sizeof(out)), "{0} {1} {2:2} {3:02}:{4:02}:{5:02} GMT{6:+03}{7:02} {8}", dayName,
+           DateMonthNames[month], date, pthis->LTime / 3600000, (pthis->LTime % 3600000) / 60000,
+           (pthis->LTime % 60000) / 1000, pthis->LocalOffset / 3600000, (pthis->LocalOffset % 3600000) / 60000,
+           pthis->LYear);
+    fn.Result->SetString(fn.Env->CreateString(out));
+}
+
+// Date.UTC(year, month[, date[, hours[, minutes[, seconds[, ms]]]]]): ms since 1970 of a UTC date; years 0..99 are
+// 1900 based.
+// MS2-FUNCTIONAL the exe keeps the month in r10 across the IsLeapYear call (see DateSetUTCDate)
+// @0x1428fed10
+void DateCtorFunction::DateUTC(const FnCall& fn)
+{
+    if (fn.NArgs >= 2)
+    {
+        int year = (int)fn.Arg(0).ToNumber(fn.Env);
+        if (year >= 0 && year < 100)
+            year += 1900;
+        Number date  = Date_StartOfYear(year);
+        Number time  = 0;
+        int    month = (int)fn.Arg(1).ToNumber(fn.Env);
+        if (month)
+            date += DateMonthEnds[IsLeapYear(year)][month - 1];
+        if (fn.NArgs >= 3)
+            date += (int)fn.Arg(2).ToNumber(fn.Env) - 1;
+        if (fn.NArgs >= 4)
+            time += fn.Arg(3).ToNumber(fn.Env) * 3600000;
+        if (fn.NArgs >= 5)
+            time += fn.Arg(4).ToNumber(fn.Env) * 60000;
+        if (fn.NArgs >= 6)
+            time += fn.Arg(5).ToNumber(fn.Env) * 1000;
+        if (fn.NArgs >= 7)
+            time += fn.Arg(6).ToNumber(fn.Env);
+        fn.Result->SetNumber(date * 86400000 + time);
+    }
+    else
+        fn.Result->SetNumber(0);
+}
 
 void DateProto::DateGetUTCSeconds(const FnCall& fn)
 {
@@ -559,12 +625,153 @@ void ObjectProto::ToString(const FnCall& fn)
         fn.Result->SetString(fn.Env->GetBuiltin(ASBuiltin_objectObject_));
 }
 
+// addProperty(name, getter[, setter]): a member read and written through the functions.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg, Value::ToFunction and the ValueProperty constructor out of line for the
+// setter and the property, ours inlines the first two and calls the constructor
+// @0x142901d20
+void ObjectProto::AddProperty(const FnCall& fn)
+{
+    if (fn.NArgs >= 2)
+    {
+        ASString    propName(fn.Arg(0).ToString(fn.Env));
+        FunctionRef getter = fn.Arg(1).ToFunction(fn.Env);
+        if (!getter.IsNull())
+        {
+            FunctionRef setter;
+            if (fn.NArgs >= 3 && (fn.Arg(2).IsFunction() || fn.Arg(2).IsFunctionName()))
+                setter = fn.Arg(2).ToFunction(fn.Env);
+            Value val(getter, setter, fn.Env->GetHeap(), fn.Env->GetCollector());
+            fn.ThisPtr->SetMemberRaw(fn.Env->GetSC(), propName, val);
+            fn.Result->SetBool(true);
+        }
+        else
+            fn.Result->SetBool(false);
+    }
+    else
+        fn.Result->SetBool(false);
+}
+
+// watch(name, callback[, userData]): the callback sees every assignment of the member.
+// MS2-FUNCTIONAL the exe inlines SetLocalFrame into the function copy of ToFunction
+// @0x1429024e0
+void ObjectProto::Watch_(const FnCall& fn)
+{
+    if (fn.NArgs >= 2)
+    {
+        FunctionRef func = fn.Arg(1).ToFunction(fn.Env);
+        if (!func.IsNull())
+        {
+            Value userData;
+            if (fn.NArgs >= 3)
+                userData = fn.Arg(2);
+            fn.Result->SetBool(fn.ThisPtr->Watch(fn.Env->GetSC(), fn.Arg(0).ToString(fn.Env), func, userData));
+        }
+        else
+            fn.Result->SetBool(false);
+    }
+    else
+        fn.Result->SetBool(false);
+}
+
 void ObjectProto::Unwatch_(const FnCall& fn)
 {
     if (fn.NArgs >= 1)
         fn.Result->SetBool(fn.ThisPtr->Unwatch(fn.Env->GetSC(), fn.Arg(0).ToString(fn.Env)));
     else
         fn.Result->SetBool(false);
+}
+
+// apply(thisObject[, argArray]): call with the arguments taken from an array.
+// MS2-FUNCTIONAL register allocation; ours calls ~FunctionRef of the FnCall temporaries out of line
+// @0x142902ae0
+void FunctionProto::Apply(const FnCall& fn)
+{
+    Ptr<Object>            keepObject; // keeps this alive during the call
+    Ptr<InteractiveObject> keepChar;
+    ObjectInterface*       pthis = 0;
+    int                    nargs = 0;
+
+    fn.Result->SetUndefined();
+    Ptr<ArrayObject> argArray;
+    if (fn.NArgs >= 1)
+    {
+        pthis = fn.Arg(0).ToObjectInterface(fn.Env);
+        if (pthis)
+        {
+            if (pthis->IsASCharacter())
+                keepChar = pthis->ToCharacter();
+            else
+                keepObject = static_cast<Object*>(pthis);
+        }
+    }
+    if (fn.NArgs >= 2)
+    {
+        Object* pobj = fn.Arg(1).ToObject(fn.Env);
+        if (pobj && pobj->GetObjectType() == ObjectInterface::Object_Array)
+        {
+            argArray = static_cast<ArrayObject*>(pobj);
+            nargs    = argArray->GetSize();
+            if (nargs > 0)
+            {
+                for (int i = nargs - 1; i >= 0; i--)
+                    fn.Env->Push(*argArray->GetElementPtr(i));
+            }
+        }
+    }
+
+    Value result;
+    if (!fn.ThisFunctionRef.IsNull())
+        fn.ThisFunctionRef.Invoke(FnCall(&result, pthis, fn.Env, nargs, fn.Env->GetTopIndex()));
+    else
+    {
+        Ptr<FunctionObject> pfunc = static_cast<FunctionObject*>(fn.ThisPtr);
+        pfunc->Invoke(FnCall(&result, pthis, fn.Env, nargs, fn.Env->GetTopIndex()), 0, 0);
+    }
+    if (nargs > 0)
+        fn.Env->Drop(nargs);
+    *fn.Result = result;
+}
+
+// call(thisObject, arg1, ...): the arguments go onto the stack again and the function runs with this set.
+// MS2-FUNCTIONAL register allocation; ours calls ~FunctionRef of the FnCall temporaries out of line
+// @0x142902f40
+void FunctionProto::Call(const FnCall& fn)
+{
+    Ptr<Object>            keepObject; // keeps this alive during the call
+    Ptr<InteractiveObject> keepChar;
+    ObjectInterface*       pthis = 0;
+    int                    nargs = 0;
+
+    fn.Result->SetUndefined();
+    if (fn.NArgs >= 1)
+    {
+        pthis = fn.Arg(0).ToObjectInterface(fn.Env);
+        if (pthis)
+        {
+            if (pthis->IsASCharacter())
+                keepChar = pthis->ToCharacter();
+            else
+                keepObject = static_cast<Object*>(pthis);
+        }
+    }
+    if (fn.NArgs >= 2)
+    {
+        nargs = fn.NArgs - 1;
+        for (int i = nargs; i >= 1; i--)
+            fn.Env->Push(fn.Arg(i));
+    }
+
+    Value result;
+    if (!fn.ThisFunctionRef.IsNull())
+        fn.ThisFunctionRef.Invoke(FnCall(&result, pthis, fn.Env, nargs, fn.Env->GetTopIndex()));
+    else
+    {
+        Ptr<FunctionObject> pfunc = static_cast<FunctionObject*>(fn.ThisPtr);
+        pfunc->Invoke(FnCall(&result, pthis, fn.Env, nargs, fn.Env->GetTopIndex()), 0, 0);
+    }
+    if (nargs > 0)
+        fn.Env->Drop(nargs);
+    *fn.Result = result;
 }
 
 void FunctionProto::ToString(const FnCall& fn)
@@ -803,6 +1010,78 @@ MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::FunctionRef)
 MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::Object::Watchpoint)
 MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::Member)
 
+// The standard member names of the global context (ASStringHash<char>: the allocator is keyed by the string).
+typedef HashNode<GFx::ASString, char, GFx::ASStringHashFunctor> MS2_AS2StandardMemberNode;
+typedef HashLH<GFx::ASString, char, GFx::ASStringHashFunctor, GFx::StatMV_ASString_Mem, MS2_AS2StandardMemberNode,
+               HashsetNodeEntry<MS2_AS2StandardMemberNode, MS2_AS2StandardMemberNode::NodeHashF> >
+    MS2_AS2StandardMemberHash;
+template void decltype(MS2_AS2StandardMemberHash::mHash)::BaseType::add<MS2_AS2StandardMemberNode>(
+    void*, const MS2_AS2StandardMemberNode&, UPInt);
+
+// The ExternalInterface callbacks of a movie (ASStringHash<InvokeAliasInfo>).
+typedef HashNode<GFx::ASString, GFx::AS2::MovieRoot::InvokeAliasInfo, GFx::ASStringHashFunctor> MS2_AS2InvokeAliasNode;
+typedef HashLH<GFx::ASString, GFx::AS2::MovieRoot::InvokeAliasInfo, GFx::ASStringHashFunctor, GFx::StatMV_ASString_Mem,
+               MS2_AS2InvokeAliasNode, HashsetNodeEntry<MS2_AS2InvokeAliasNode, MS2_AS2InvokeAliasNode::NodeHashF> >
+    MS2_AS2InvokeAliasHash;
+template void decltype(MS2_AS2InvokeAliasHash::mHash)::BaseType::add<MS2_AS2InvokeAliasNode>(
+    void*, const MS2_AS2InvokeAliasNode&, UPInt);
+template void decltype(MS2_AS2InvokeAliasHash::mHash)::BaseType::add<MS2_AS2InvokeAliasNode::NodeRef>(
+    void*, const MS2_AS2InvokeAliasNode::NodeRef&, UPInt);
+
+// The load progress of the movies of a MovieClipLoader by URL (StringHashLH<ProgressDesc>).
+typedef StringHashLH<GFx::AS2::MovieClipLoader::ProgressDesc> MS2_AS2ProgressHash;
+typedef StringLH_HashNode<GFx::AS2::MovieClipLoader::ProgressDesc, String::NoCaseHashFunctor> MS2_AS2ProgressNode;
+template void decltype(MS2_AS2ProgressHash::mHash)::BaseType::add<MS2_AS2ProgressNode::NodeRef>(
+    void*, const MS2_AS2ProgressNode::NodeRef&, UPInt);
+
+// The images of a text field's HTML by name (StringHashLH<Ptr<Render::Text::ImageDesc>>).
+namespace Render { namespace Text { struct ImageDesc; } } // render/text_core.h
+typedef StringHashLH<Ptr<Render::Text::ImageDesc> > MS2_AS2TextImageHash;
+template SPInt decltype(MS2_AS2TextImageHash::mHash)::BaseType::findIndexAlt<String>(const String&) const;
+
+// Array.sort / Array.sortOn over the element pointers.
+template bool Alg::QuickSortSafe<Alg::ArrayAdaptor<GFx::AS2::Value*>, GFx::AS2::ArraySortFunctor>(
+    Alg::ArrayAdaptor<GFx::AS2::Value*>&, GFx::AS2::ArraySortFunctor);
+// MS2-FUNCTIONAL the exe inlines ~ArraySortOnFunctor (calling the ArrayDataBase dtor of the functor array), cl
+// calls it out of line; same for QuickSortSlicedSafe<..., ArraySortOnFunctor> (exe 0x142914bd0).
+// @0x1429148e0
+template bool Alg::QuickSortSafe<Alg::ArrayAdaptor<GFx::AS2::Value*>, GFx::AS2::ArraySortOnFunctor>(
+    Alg::ArrayAdaptor<GFx::AS2::Value*>&, GFx::AS2::ArraySortOnFunctor);
+
+// The event handler table of a character (EventId -> handlers).
+typedef HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor,
+               GFx::AS2::StatMV_ActionScript_Mem>
+    MS2_AS2EventHandlerHash;
+template SPInt decltype(MS2_AS2EventHandlerHash::mHash)::BaseType::findIndexAlt<GFx::EventId>(const GFx::EventId&) const;
+typedef decltype(MS2_AS2EventHandlerHash::mHash)::BaseType MS2_AS2EventHandlerSet;
+typedef HashNode<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor>
+    MS2_AS2EventHandlerNode;
+// MS2-FUNCTIONAL the exe inlines CheckExpand and assigns the EventId field by field (pinned below)
+// @0x1429159d0
+template void MS2_AS2EventHandlerSet::add<MS2_AS2EventHandlerNode>(void*, const MS2_AS2EventHandlerNode&, UPInt);
+// MS2-FUNCTIONAL as the node add (pinned below)
+// @0x142916a70
+template void MS2_AS2EventHandlerSet::add<MS2_AS2EventHandlerHash::NodeRef>(void*, const MS2_AS2EventHandlerHash::NodeRef&,
+                                                                          UPInt);
+
+// Object* -> Object* identity map.
+typedef HashNode<GFx::AS2::Object*, GFx::AS2::Object*, IdentityHash<GFx::AS2::Object*> > MS2_AS2ObjectIdentityNode;
+typedef Hash<GFx::AS2::Object*, GFx::AS2::Object*, IdentityHash<GFx::AS2::Object*>, AllocatorGH<GFx::AS2::Object*>,
+             MS2_AS2ObjectIdentityNode, HashsetNodeEntry<MS2_AS2ObjectIdentityNode, MS2_AS2ObjectIdentityNode::NodeHashF> >
+    MS2_AS2ObjectIdentityHash;
+template void decltype(MS2_AS2ObjectIdentityHash::mHash)::BaseType::add<MS2_AS2ObjectIdentityHash::NodeRef>(
+    void*, const MS2_AS2ObjectIdentityHash::NodeRef&, UPInt);
+
+// Copy of a value array (the ArrayLH<Value> data).
+// MS2-FUNCTIONAL the exe calls ResizeNoConstruct out of line (pinned below)
+// @0x1429175f0
+template ArrayData<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, ArrayDefaultPolicy>::ArrayData(
+    const ArrayData<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, ArrayDefaultPolicy>&);
+
+// Two-argument message format (text, then a C string).
+template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const char*, const StringDataPtr&,
+                                                  const char* const&);
+
 } // namespace Scaleform
 
 // MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
@@ -810,3 +1089,13 @@ MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::Member)
 // MS2-PIN: ??$add@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x142915300
 // MS2-PIN: ??$add@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x1429154d0
 // MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x1429164b0
+// MS2-PIN: ??0?$ArrayData@VValue@AS2@GFx@Scaleform@@U?$AllocatorLH@VValue@AS2@GFx@Scaleform@@$0BED@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@AEBU01@@Z 0x1429175f0
+// MS2-PIN: ??$add@U?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VEventId@GFx@Scaleform@@$0BED@@2@V?$HashsetCachedNodeEntry@U?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@1@_K@Z 0x1429159d0
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VEventId@GFx@Scaleform@@$0BED@@2@V?$HashsetCachedNodeEntry@U?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@1@_K@Z 0x142916a70
+// MS2-PIN: ??$Format@VStringDataPtr@Scaleform@@PEBD@Scaleform@@YA_KAEBVSink@MsgFormat@0@PEBDAEBVStringDataPtr@0@AEBQEBD@Z 0x142914500
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@Alg@Scaleform@@VArraySortFunctor@AS2@GFx@3@@Alg@Scaleform@@YA_NAEAV?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@01@VArraySortFunctor@AS2@GFx@1@@Z 0x142914880
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@Alg@Scaleform@@VArraySortOnFunctor@AS2@GFx@3@@Alg@Scaleform@@YA_NAEAV?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@01@VArraySortOnFunctor@AS2@GFx@1@@Z 0x1429148e0
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@Alg@Scaleform@@VArraySortFunctor@AS2@GFx@3@@Alg@Scaleform@@YA_NAEAV?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@01@_K1VArraySortFunctor@AS2@GFx@1@@Z 0x142914940
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@Alg@Scaleform@@VArraySortOnFunctor@AS2@GFx@3@@Alg@Scaleform@@YA_NAEAV?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@01@_K1VArraySortOnFunctor@AS2@GFx@1@@Z 0x142914bd0
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
