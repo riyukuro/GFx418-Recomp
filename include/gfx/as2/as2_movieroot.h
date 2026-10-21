@@ -143,6 +143,8 @@ public:
     // digits; -1 if it is neither (exe 0x14296e790).
     static int ParseLevelName(const char* pname, const char** ptail, bool caseSensitive);
 
+    bool SetLevelMovie(int level, Sprite* psprite); // exe 0x142981d80
+
     // Queues a load of purl into ptarget, an empty url unloads it (exe 0x14292f740).
     void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
                            LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None,

@@ -8,6 +8,8 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+class MovieClipObject;
+
 class AvmSprite : public AvmCharacter, public AvmSpriteBase
 {
 public:
@@ -38,9 +40,15 @@ public:
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);          // exe 0x14294c700
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);    // exe 0x1429531f0
 
+    // The exe's out-of-line copy of SpriteGetTarget (exe 0x14298fe50).
+    static Sprite* SpriteGetTarget_Call(const FnCall& fn);
+    // Mirrors the clip's button handler state into its MovieClipObject (exe 0x142981650).
+    void SetHasButtonHandlers(bool has);
+
 private:
     // Both lookups: penv is 0 for GetMemberRaw, psc 0 for GetMember (exe 0x14294bff0).
     bool GetMember(Environment* penv, ASStringContext* psc, const ASString& name, Value* val);
+    MovieClipObject* GetMovieClipObject(); // exe 0x142953da0
 };
 
 inline Sprite* ObjectInterface::ToSprite()

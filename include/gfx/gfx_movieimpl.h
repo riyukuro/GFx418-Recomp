@@ -30,6 +30,8 @@ namespace GFx {
 class StateBag;
 class FontManagerStates;
 class MovieDefRootNode;
+class FontResource;
+class MovieDef;
 
 // (sfr_gfx_06d) the links of the movie's list of root nodes (List<MovieDefRootNode>): the list root's pNext is the
 // first node, and the root itself passes for a node one base offset before it.
@@ -136,6 +138,7 @@ public:
     void*            RenderContext[1];         // +0x34f0 Render::Context (gfx_rendertree.h: the heap first), rest unrecovered
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
+    bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
 
     // The movie's StateBag base (+0x10).
     StateBag* GetStateBag() const { return (StateBag*)&MovieBase_Unrecovered[2]; }
@@ -212,6 +215,10 @@ public:
     // The whole of pfile as loadVariables text / loadBinary bytes (0x142573bc0 / 0x142573b10).
     static bool SF_STDCALL ReadTextData(String* pdata, File* pfile, int* pfileLen, bool urlEncoded);
     static bool SF_STDCALL ReadBinaryData(ArrayPOD<UByte>* pdata, File* pfile, int* pfileLen);
+
+    // (appended for the font manager, sfr_gfx_07g) a font of the movies registered with RegisterFonts, by name and
+    // style, and the movie it came from (0x14256ed40).
+    FontResource* FindRegisteredFont(const char* pfontName, unsigned fontFlags, MovieDef** ppsrcMovieDef) const;
 };
 
 // The root of one loaded movie's sprite tree; leading members only (the font manager, bytes loaded and so on).

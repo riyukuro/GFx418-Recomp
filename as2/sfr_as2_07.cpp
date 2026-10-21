@@ -5,8 +5,10 @@
 // MS2-RANGE: 0x14297f2c0-0x14297f3d0 .text$mn
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
 // MS2-RANGE: 0x1429814c0-0x142981600 .text$mn
+// MS2-RANGE: 0x142981650-0x142981670 .text$mn
 // MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
 // MS2-RANGE: 0x142981bc0-0x142981bf0 .text$mn
+// MS2-RANGE: 0x142981d80-0x142981da0 .text$mn
 // MS2-RANGE: 0x142981df0-0x142981f00 .text$mn
 // MS2-RANGE: 0x142982ba0-0x142982d20 .text$mn
 // MS2-RANGE: 0x142986790-0x142986d60 .text$mn
@@ -18,12 +20,14 @@
 // MS2-RANGE: 0x14298a260-0x14298a480 .text$mn
 // MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
 // MS2-RANGE: 0x14298b9f0-0x14298ba60 .text$mn
+// MS2-RANGE: 0x14298bb20-0x14298bb90 .text$mn
 // MS2-RANGE: 0x14298c9e0-0x14298ca20 .text$mn
 // MS2-RANGE: 0x14298cc30-0x14298cc70 .text$mn
 // MS2-RANGE: 0x14298cc80-0x14298cce0 .text$mn
 // MS2-RANGE: 0x14298dc00-0x14298dcb0 .text$mn
 // MS2-RANGE: 0x14298de30-0x14298dee0 .text$mn
 // MS2-RANGE: 0x14298ee10-0x14298ee70 .text$mn
+// MS2-RANGE: 0x14298fe50-0x14298fe90 .text$mn
 // MS2-RANGE: 0x142990240-0x1429902c0 .text$mn
 // MS2-RANGE: 0x142990960-0x142990c30 .text$mn
 // MS2-RANGE: 0x142990c40-0x142990cc0 .text$mn
@@ -834,6 +838,21 @@ void Environment::SetInvalidTarget(InteractiveObject* ptarget)
     StringContext.UpdateVersion(ptarget->GetVersion());
 }
 
+// @0x142981650
+void AvmSprite::SetHasButtonHandlers(bool has)
+{
+    MovieClipObject* pobj = GetMovieClipObject();
+    if (pobj)
+        pobj->HasButtonHandlers = has;
+}
+
+// @0x142981d80
+bool MovieRoot::SetLevelMovie(int level, Sprite* psprite)
+{
+    pMovieImpl->SetLevelMovie(level, psprite);
+    return true;
+}
+
 // @0x142981df0
 void Environment::SetLocal(const ASString& varname, const Value& val)
 {
@@ -875,6 +894,19 @@ void Environment::SetTarget(InteractiveObject* ptarget)
     Target          = ptarget;
     IsInvalidTarget = false;
     StringContext.UpdateVersion(ptarget->GetVersion());
+}
+
+// @0x14298bb20
+void Environment::SetTargetOnConstruct(InteractiveObject* ptarget)
+{
+    SetTarget(ptarget);
+    StringContext.pContext = (!ptarget ? 0 : ToAvmCharacter(ptarget))->GetGC();
+}
+
+// @0x14298fe50
+Sprite* AvmSprite::SpriteGetTarget_Call(const FnCall& fn)
+{
+    return SpriteGetTarget(fn);
 }
 
 // @0x14298c9e0

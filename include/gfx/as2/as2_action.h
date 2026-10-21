@@ -199,6 +199,7 @@ public:
     // Sets the local of the innermost function frame, creating it; nothing outside a function (exe 0x142981df0).
     void         SetLocal(const ASString& varname, const Value& val);
     void SetTarget(InteractiveObject* ptarget);        // exe 0x14298ba30
+    void SetTargetOnConstruct(InteractiveObject* ptarget); // exe 0x14298bb20, also binds the string context
     void SetInvalidTarget(InteractiveObject* ptarget); // exe 0x142981bc0 (the target was not found)
     // The movie enabled the Scaleform extensions to ActionScript.
     inline bool CheckExtensions() const;
