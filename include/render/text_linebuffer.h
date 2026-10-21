@@ -110,7 +110,22 @@ public:
             LenAndFontSize = (UInt16)((LenAndFontSize & ~(Mask_FontSize << Shift_FontSize)) |
                                       ((fs & Mask_FontSize) << Shift_FontSize));
         }
-        void  SetFontSize(float fs);   // sizes under 256 px keep 1/16 px steps
+        // sizes under 256 px keep 1/16 px steps
+        void SetFontSize(float fs)
+        {
+            if (fs < 256.f)
+            {
+                unsigned fxpSize = (unsigned)(fs * 16.f);
+                if (fxpSize & 0xF)
+                {
+                    Flags |= Flags_FractionalFontSize;
+                    SetFontSize(fxpSize);
+                    return;
+                }
+            }
+            Flags &= ~Flags_FractionalFontSize;
+            SetFontSize((unsigned)fs);
+        }
         float GetFontSize() const
         {
             unsigned fsz = (LenAndFontSize >> Shift_FontSize) & Mask_FontSize;
@@ -219,6 +234,9 @@ public:
         Color       GetUnderlineColor() const { return Color(UnderlineColor); }
         bool        IsSelected() const    { return SelectionColor != 0; }
         Color       GetSelectionColor() const { return Color(SelectionColor); }
+        // (appended for Text_LineBuffer, sfr_render_04d)
+        bool        IsFauxBold() const    { return pFontHandle ? pFontHandle->IsFauxBold() : false; }
+        bool        IsFauxItalic() const  { return pFontHandle ? pFontHandle->IsFauxItalic() : false; }
     };
 
     // Header of a line with 32-bit fields (0x26 bytes used).
@@ -235,6 +253,9 @@ public:
         SInt16 Leading;           // +0x24
 
         static unsigned GetLineStructSize() { return 0x26; }
+        unsigned GetTextPos() const    { return TextPos; }
+        unsigned GetTextLength() const { return TextLength; }
+        int GetNonNegLeading() const { return Leading > 0 ? int(Leading) : 0; }
         GlyphEntry* GetGlyphs() const { return reinterpret_cast<GlyphEntry*>(((UByte*)this) + GetLineStructSize()); }
 
         void Init()
@@ -271,6 +292,7 @@ public:
         };
 
         static unsigned GetLineStructSize() { return 0x1a; }
+        int GetNonNegLeading() const { return Leading > 0 ? int(Leading) : 0; }
         unsigned GetTextPos() const
         {
             unsigned v = (TextPosAndLength >> Shift_TextPos) & Mask_TextPos;
@@ -291,6 +313,16 @@ public:
         }
         void SetDimensions(int w, int h) { Width = UInt16(w); Height = UInt16(h); }
         void SetOffset(int x, int y)     { OffsetX = x; OffsetY = y; }
+
+        void Init()
+        {
+            GlyphsCount = 0;
+            TextPosAndLength = 0;
+            BaseLineOffset = 0;
+            Leading = 0;
+            OffsetX = OffsetY = 0;
+            Width = Height = 0;
+        }
     };
 
     class Line
@@ -324,7 +356,7 @@ public:
         Alignment GetAlignment() const { return (Alignment)((MemSize >> Shift_Alignment) & Mask_Alignment); }
         bool IsLeftAlignment() const   { return GetAlignment() == Align_Left; }
 
-        unsigned GetTextPos() const    { return IsData8() ? Data8.GetTextPos() : Data32.TextPos; }
+        unsigned GetTextPos() const    { return IsData8() ? Data8.GetTextPos() : Data32.GetTextPos(); }
         void SetTextPos(unsigned tp)
         {
             if (IsData8())
@@ -335,16 +367,12 @@ public:
         unsigned GetNumGlyphs() const  { return IsData8() ? Data8.GlyphsCount : Data32.GlyphsCount; }
         GlyphEntry* GetGlyphs() const  { return IsData8() ? Data8.GetGlyphs() : Data32.GetGlyphs(); }
         FormatDataEntry* GetFormatData() const;
-        unsigned GetTextLength() const { return IsData8() ? Data8.GetTextLength() : Data32.TextLength; }
+        unsigned GetTextLength() const { return IsData8() ? Data8.GetTextLength() : Data32.GetTextLength(); }
         float GetBaseLineOffset() const { return IsData8() ? float(Data8.BaseLineOffset) : float(Data32.BaseLineOffset); }
         float GetAscent() const        { return GetBaseLineOffset(); }
         float GetDescent() const       { return GetHeight() - GetBaseLineOffset(); }
         int   GetLeading() const       { return IsData8() ? int(Data8.Leading) : int(Data32.Leading); }
-        int   GetNonNegLeading() const
-        {
-            return IsData8() ? (Data8.Leading > 0 ? int(Data8.Leading) : 0)
-                             : (Data32.Leading > 0 ? int(Data32.Leading) : 0);
-        }
+        int   GetNonNegLeading() const { return IsData8() ? Data8.GetNonNegLeading() : Data32.GetNonNegLeading(); }
         int  GetWidth() const   { return IsData8() ? int(Data8.Width) : int(Data32.Width); }
         int  GetHeight() const  { return IsData8() ? int(Data8.Height) : int(Data32.Height); }
         int  GetOffsetX() const { return IsData8() ? Data8.OffsetX : Data32.OffsetX; }
@@ -449,6 +477,18 @@ public:
             else
                 Data32.ParagraphModId = id;
         }
+
+        // (appended for Text_LineBuffer, sfr_render_04d)
+        void InitLine8()
+        {
+            MemSize &= Mask_MemSize;
+            MemSize |= Flags_Data8;
+            MemSize |= Flags_Initialized;
+            Data8.Init();
+        }
+        bool IsInitialized() const { return (MemSize & Flags_Initialized) != 0; }
+        // drops the fonts / images the glyphs switch to; the line keeps its memory
+        void Release();
     };
 
     // Writes glyphs and their format switches into a line under construction (0x20 bytes).
@@ -520,7 +560,36 @@ public:
         }
     };
 
-    class ConstIterator;
+    // Read-only position in the line list (same layout as Iterator).
+    class ConstIterator
+    {
+        friend class LineBuffer;
+
+        const LineBuffer*  pLineBuffer;
+        const Highlighter* pHighlight;
+        unsigned           CurrentPos;
+        float              YOffset;
+        bool               StaticText;
+
+        ConstIterator(const LineBuffer& lb)
+            : pLineBuffer(&lb), CurrentPos(0), YOffset(0), StaticText(lb.IsStaticText()) {}
+        ConstIterator(const LineBuffer& lb, unsigned pos, float yoffset = 0)
+            : pLineBuffer(&lb), CurrentPos(pos), YOffset(yoffset), StaticText(lb.IsStaticText()) {}
+
+    public:
+        bool IsFinished() const
+        {
+            return !pLineBuffer || CurrentPos >= pLineBuffer->Lines.GetSize() || (int)CurrentPos < 0;
+        }
+        ConstIterator& operator++()
+        {
+            if (CurrentPos < pLineBuffer->Lines.GetSize())
+                ++CurrentPos;
+            return *this;
+        }
+        const Line& operator*() const  { return (*pLineBuffer)[CurrentPos]; }
+        const Line* operator->() const { return &(*pLineBuffer)[CurrentPos]; }
+    };
 
     // Position in the line list (0x20 bytes); YOffset only matters for the visibility test.
     class Iterator
@@ -648,6 +717,36 @@ public:
     bool IsPartiallyVisible(float yOffset) const;
     void Scale(float scaleFactor);
     int  GetMinLineHeight() const;
+
+    // (appended for Text_LineBuffer, sfr_render_04d)
+    ConstIterator Begin() const                     { return ConstIterator(*this); }
+    ConstIterator BeginVisible(float yoffset) const { return ConstIterator(*this, Geom.FirstVisibleLinePos, yoffset); }
+    const Line*   GetLine(unsigned lineIdx) const;
+    static void   ReleasePartOfLine(GlyphEntry* pglyphs, unsigned n, FormatDataEntry* pnextFormatData);
+
+    // binary search keys: the line holding a text position / a y offset compares as equal
+    struct LineIndexComparator
+    {
+        static int Compare(const Line* pline, int index)
+        {
+            int start = pline->GetTextPos();
+            if (index >= start && index < (int)(start + pline->GetTextLength()))
+                return 0;
+            return start - index;
+        }
+        static int Less(const Line* pline, int index) { return Compare(pline, index) < 0; }
+    };
+    struct LineYOffsetComparator
+    {
+        static int Compare(const Line* pline, float yoffset)
+        {
+            float top = (float)pline->GetOffsetY();
+            if (yoffset >= top && yoffset < top + pline->GetHeight() + pline->GetLeading())
+                return 0;
+            return int(top - yoffset);
+        }
+        static int Less(const Line* pline, float yoffset) { return Compare(pline, yoffset) < 0; }
+    };
 
 public:
     ArrayLH<Line*>     Lines;               // +0x00

@@ -82,6 +82,9 @@ struct ImageDesc : public RefCountBaseNTS<ImageDesc, StatRender_Text_Mem>
     float GetScreenHeight() const { return ScreenHeight; }
     float GetBaseLineX() const    { return BaseLineX; }
     float GetBaseLineY() const    { return BaseLineY; }
+    // (appended for the line buffer, sfr_render_04d)
+    float GetXScale() const       { return Matrix.GetXScale(); }
+    float GetYScale() const       { return Matrix.GetYScale(); }
 };
 
 // The attributes of an HTML <IMG> tag on top of the image descriptor.

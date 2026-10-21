@@ -1194,22 +1194,7 @@ bool DocView::GetExactCharBoundaries(RectF* pCharRect, UPInt indexOfChar)
     return rv;
 }
 
-// @0x142615330
-void LineBuffer::GlyphEntry::SetFontSize(float fs)
-{
-    if (fs < 256.f)
-    {
-        unsigned fxpSize = (unsigned)(fs * 16.f);
-        if (fxpSize & 0xF)
-        {
-            Flags |= Flags_FractionalFontSize;
-            SetFontSize(fxpSize);
-            return;
-        }
-    }
-    Flags &= ~Flags_FractionalFontSize;
-    SetFontSize((unsigned)fs);
-}
+// (GlyphEntry::SetFontSize(float) is inline in text_linebuffer.h; the exe keeps a copy here)
 
 
 // ***** Font lookup

@@ -23,6 +23,9 @@ public:
     void SetPoint(T px, T py) { x = px; y = py; }
     bool operator==(const Point& p) const { return x == p.x && y == p.y; }
     bool operator!=(const Point& p) const { return x != p.x || y != p.y; }
+    // (appended for the line buffer, sfr_render_04d)
+    Point& operator+=(const Point& p) { x += p.x; y += p.y; return *this; }
+    Point& operator-=(const Point& p) { x -= p.x; y -= p.y; return *this; }
 };
 
 template<class T>
@@ -150,6 +153,14 @@ public:
         return *this;
     }
     Rect& Union(const Rect& r) { return Union(r.x1, r.y1, r.x2, r.y2); }
+
+    // (appended for the line buffer, sfr_render_04d) sizes move the right / bottom edge
+    void Clear()           { x1 = 0; y1 = 0; x2 = 0; y2 = 0; }
+    void SetWidth(T w)     { x2 = x1 + w; }
+    void SetHeight(T h)    { y2 = y1 + h; }
+    Rect& Offset(T dx, T dy)              { x1 += dx; x2 += dx; y1 += dy; y2 += dy; return *this; }
+    Rect& operator+=(const Point<T>& p)   { return Offset(p.x, p.y); }
+    Rect& operator-=(const Point<T>& p)   { return Offset(-p.x, -p.y); }
 };
 
 typedef Point<float>  PointF;
