@@ -39,6 +39,9 @@
 // MS2-PIN: ??_GResourceReport@GFx@Scaleform@@UEAAPEAXI@Z 0x1425cd110
 // MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
 // MS2-PIN: ??_7ImagePackVisitor@?4??FinishBinding@MovieBindProcess@GFx@Scaleform@@QEAAXXZ@6B@ 0x14318b960
+// MS2-PIN: ??_7GFxPlaceObjectUnpacked@GFx@Scaleform@@6B@ 0x14318b6b0
+// MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8
+// MS2-PIN: ??_7ImageDelegate@ImageResource@GFx@Scaleform@@6B@ 0x143149b10
 // MS2-PIN: ??$findIndexAlt@UNoCaseKey@String@Scaleform@@@?$HashSetBase@U?$HashNode@VString@Scaleform@@_NUNoCaseHashFunctor@12@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@_N$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VString@Scaleform@@_NUNoCaseHashFunctor@12@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEBA_JAEBUNoCaseKey@String@1@@Z 0x1425ca480
 // MS2-PIN: ??$findIndexAlt@UNoCaseKey@String@Scaleform@@@?$HashSetBase@U?$StringLH_HashNode@VResourceHandle@GFx@Scaleform@@UNoCaseHashFunctor@String@3@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VResourceHandle@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$StringLH_HashNode@VResourceHandle@GFx@Scaleform@@UNoCaseHashFunctor@String@3@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEBA_JAEBUNoCaseKey@String@1@@Z 0x1425ca580
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$StringLH_HashNode@IUNoCaseHashFunctor@String@Scaleform@@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@I$01@2@V?$HashsetCachedNodeEntry@U?$StringLH_HashNode@IUNoCaseHashFunctor@String@Scaleform@@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425d48c0
@@ -51,6 +54,8 @@
 #include "../include/gfx/gfx_assupport.h"
 #include "../include/gfx/gfx_fontlib.h"
 #include "../include/gfx/gfx_displayobjcontainer.h"
+#include "../include/gfx/gfx_imageresource.h"
+#include "../include/gfx/gfx_placeobject.h"
 #include "../include/render/render_twips.h"
 #include "../include/kernel/sf_file.h"
 #include "../include/kernel/sf_memory.h"
@@ -167,6 +172,13 @@ enum
     CharId_EmptyButton,
     CharId_EmptyShape,
     CharId_EmptyVideo
+};
+
+// Ids of the two characters of an image file loaded as a movie.
+enum
+{
+    CharId_ImageMovieDef_ImageResource = 0,
+    CharId_ImageMovieDef_ShapeDef      = 1
 };
 
 // *** DataAllocator
@@ -911,9 +923,17 @@ UPInt MovieDefBindStates::GetHashCode() const
 
 // *** MovieDataDef file key
 
-// Turns image files and sources into images; only held by reference here.
+class ImageCreateInfo;
+struct ImageCreateExportInfo;
+
+// Turns image files and sources into images (vftable 0x143184c60).
 class ImageCreator : public State
 {
+public:
+    virtual Render::Image* LoadProtocolImage(const ImageCreateInfo& info, const String& url);
+    virtual Render::Image* LoadImageFile(const ImageCreateInfo& info, const String& url);
+    virtual Render::Image* LoadExportedImage(const ImageCreateExportInfo& info, const String& url);
+    virtual Render::Image* CreateImage(const ImageCreateInfo& info, Render::ImageSource* source);
 };
 
 // Library key of the data of one file: its name and modification time plus the states the load depends on
@@ -1738,6 +1758,8 @@ class ImageFileHandlerRegistry;
 class ImageCreateInfo
 {
 public:
+    enum { Create_FileImage = 1 };
+
     int                       Type;         // +0
     MemoryHeap*               pHeap;        // +8
     unsigned                  Use;          // +0x10
@@ -1745,6 +1767,7 @@ public:
     Log*                      pLog;         // +0x18
     FileOpenerBase*           pFileOpener;  // +0x20
     ImageFileHandlerRegistry* pIFHRegistry; // +0x28
+    void*                     pMovie;       // +0x30 the movie of an exported image
 };
 
 // An image request for the images a file exports (packed at bind time).
@@ -1752,7 +1775,6 @@ struct ImageCreateExportInfo : public ImageCreateInfo
 {
     enum { Create_ExportImage = 2 };
 
-    void*                             pMovie;        // +0x30
     FileTypeConstants::FileFormatType Format;        // +0x38
     const ExporterInfo*               pExporterInfo; // +0x40
     String                            ExportName;    // +0x48
@@ -1775,6 +1797,96 @@ struct ImageCreateExportInfo : public ImageCreateInfo
         pIFHRegistry = pregistry;
     }
 };
+
+// *** Image files loaded as movies
+
+// The shape that shows the image of an image movie (0x30 bytes).
+class ImageShapeCharacterDef : public CharacterDef
+{
+    UByte Data[0x30 - sizeof(CharacterDef)];
+
+public:
+    ImageShapeCharacterDef(ImageResource* pimage, ImageCreator* imgCreator, bool bilinear); // exe 0x142658f20
+    virtual CharacterDefType GetType() const;
+};
+
+// @0x1425ca910
+__declspec(noinline) GFxPlaceObjectUnpacked::GFxPlaceObjectUnpacked()
+{
+}
+
+// The movie of an image file: one frame that places a shape filled with the image. A decode-only image is first
+// turned into a real one by the image creator.
+// @0x1425d15f0
+bool MovieDataDef::LoadTaskData::InitImageFileMovieDef(unsigned fileLength, ImageResource* pimageResource,
+                                                       ImageCreator* imgCreator, Log* plog, bool bilinear)
+{
+    Header.FileLength = fileLength;
+
+    if (imgCreator && pimageResource->GetImage()->GetImageType() == Render::ImageBase::Type_ImageBase)
+    {
+        ImageCreateInfo icreateInfo;
+        icreateInfo.Type         = ImageCreateInfo::Create_FileImage;
+        icreateInfo.pHeap        = pHeap;
+        icreateInfo.Use          = 1;
+        icreateInfo.RUse         = Resource::Use_Bitmap;
+        icreateInfo.pLog         = 0;
+        icreateInfo.pFileOpener  = 0;
+        icreateInfo.pIFHRegistry = 0;
+        icreateInfo.pMovie       = 0;
+
+        Ptr<Render::Image> img =
+            *imgCreator->CreateImage(icreateInfo, static_cast<Render::ImageSource*>(pimageResource->GetImage()));
+        if (img)
+        {
+            Ptr<ImageResource> pch = *SF_HEAP_NEW(icreateInfo.pHeap) ImageResource(img.GetPtr());
+            AddResource(ResourceId(CharId_ImageMovieDef_ImageResource), pch);
+            pimageResource = pch;
+        }
+        else
+        {
+            pimageResource = 0;
+            if (plog)
+                plog->LogError("Can't create or decode image.");
+        }
+    }
+    else
+        AddResource(ResourceId(CharId_ImageMovieDef_ImageResource), pimageResource);
+
+    if (pimageResource)
+    {
+        Ptr<ImageShapeCharacterDef> shapeDef =
+            *SF_HEAP_NEW(pHeap) ImageShapeCharacterDef(pimageResource, imgCreator, bilinear);
+        AddCharacter(ResourceId(CharId_ImageMovieDef_ShapeDef), shapeDef);
+
+        // One frame, as for an empty movie.
+        Lock::Locker lock(&PlaylistLock);
+        Playlist.Resize(Header.FrameCount);
+        InitActionList.Resize(Header.FrameCount);
+        InitActionsCnt = 0;
+
+        // The frame's tag list and its PlaceObject share one individual block.
+        void* ptagMem = TagMemAllocator.AllocIndividual(sizeof(GFxPlaceObjectUnpacked) + sizeof(ExecuteTag*));
+        if (ptagMem)
+        {
+            ExecuteTag**            pptagArray = (ExecuteTag**)ptagMem;
+            GFxPlaceObjectUnpacked* ptag       = (GFxPlaceObjectUnpacked*)(pptagArray + 1);
+            Construct<GFxPlaceObjectUnpacked>(ptag);
+
+            // Image shapes go to depth 1 (-16383 in Flash).
+            int         depth = 1;
+            CharPosInfo pos(ResourceId(CharId_ImageMovieDef_ShapeDef), depth, 0, Cxform(), 1, Matrix2F());
+            ptag->InitializeToAdd(pos);
+
+            pptagArray[0]           = ptag;
+            Playlist[0].pTagPtrList = pptagArray;
+            Playlist[0].TagCount    = 1;
+        }
+    }
+
+    UpdateLoadState(Header.FrameCount, LS_LoadFinished);
+    return pimageResource != 0;
+}
 
 // Packs the bitmaps of a binding into textures (GFx_ImagePacker; only the slot called here).
 class ImagePacker : public RefCountBaseNTS<ImagePacker, Stat_Default_Mem>
