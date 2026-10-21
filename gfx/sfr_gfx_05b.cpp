@@ -10,6 +10,7 @@
 // MS2-PIN: ??_7Sprite@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@2@@ 0x14318be38
 // MS2-PIN: ??_7Sprite@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@12@@ 0x14318c228
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BEH@@Scaleform@@UEAAPEAXI@Z 0x1425d9c00
+// MS2-PIN: ??_GActiveSounds@Sprite@GFx@Scaleform@@QEAAPEAXI@Z 0x1425d9d10
 
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/gfx_sound.h"
