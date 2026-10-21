@@ -204,6 +204,12 @@ public:
     };
     enum { MaximumCachedResults = 2 };
 
+    // (appended for sfr_render_04h)
+    FilterPrimitive(HAL* hal, FilterSet* filters, bool maskPresent)
+        : pHAL(hal), pFilters(filters), MaskPresent(maskPresent)
+    {
+        SetCacheResults(Cache_Uncached, 0, 0);
+    }
     ~FilterPrimitive();
 
     void Insert(UPInt index, const HMatrix& m);

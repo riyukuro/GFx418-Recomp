@@ -15,6 +15,9 @@
 #include "ms2/scaleform/include/render/render_buffer.h"
 #include "ms2/scaleform/include/render/render_primitive.h"
 #include "ms2/scaleform/include/render/render_events.h"
+#include "ms2/scaleform/include/render/render_viewport.h"
+#include "ms2/scaleform/include/render/render_constants.h"
+#include "ms2/scaleform/include/render/render_cxform.h"
 
 namespace Scaleform { namespace Render {
 
@@ -66,18 +69,20 @@ public:
     virtual void halSlot32() = 0;                                                                 // 32
     virtual void halSlot33() = 0;                                                                 // 33
     virtual void halSlot34() = 0;                                                                 // 34
-    virtual void halSlot35() = 0;                                                                 // 35
+    virtual void applyBlendMode(BlendMode mode, bool sourceAc = false, bool forceAc = false) = 0;  // 35
     virtual void PrepareFilters(FilterPrimitive* primitive) = 0;                                  // 36
-    virtual void halSlot37() = 0;                                                                 // 37
-    virtual void halSlot38() = 0;                                                                 // 38
+    virtual void PushFilters(FilterPrimitive* primitive) = 0;                                     // 37
+    virtual void PopFilters() = 0;                                                                // 38
     virtual void halSlot39() = 0;                                                                 // 39
     virtual void halSlot40() = 0;                                                                 // 40
     virtual unsigned DrawableCommandGetFlags(const DICommand* command) const = 0;                 // 41
-    virtual void halSlot42() = 0;                                                                 // 42
-    virtual void halSlot43() = 0;                                                                 // 43
-    virtual void halSlot44() = 0;                                                                 // 44
-    virtual void halSlot45() = 0;                                                                 // 45
-    virtual void halSlot46() = 0;                                                                 // 46
+    // the DrawableImage operations drawn through the HAL (sources in tex, their texture matrices in texgen)
+    virtual void DrawableCxform(Texture** tex, const Matrix2F* texgen, const Cxform* cx) = 0;       // 42
+    virtual void DrawableCompare(Texture** tex, const Matrix2F* texgen) = 0;                        // 43
+    virtual void DrawableCopyChannel(Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul) = 0;   // 44
+    virtual void DrawableMerge(Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul) = 0;   // 45
+    virtual void DrawableCopyPixels(Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp,
+                                    bool mergeAlpha, bool destAlpha) = 0;                          // 46
     virtual void halSlot47() = 0;                                                                 // 47
     virtual void halSlot48() = 0;                                                                 // 48
     virtual void DrawableCopyback(Texture* tex, const Matrix2F& mvp, const Matrix2F& texgen) = 0;   // 49
@@ -93,6 +98,12 @@ public:
     virtual void MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
                                  const VertexFormat** single, const VertexFormat** batch,
                                  const VertexFormat** instanced, unsigned meshType) = 0;          // 56
+    // (appended for sfr_render_04h)
+    virtual void halSlot57() = 0;                                                                 // 57
+    virtual void halSlot58() = 0;                                                                 // 58
+    virtual void halSlot59() = 0;                                                                 // 59
+    // the y scale of a render target pass (the HALs differ in the direction of y)
+    virtual float GetViewportScaling() const = 0;                                                 // 60
 
     // (appended for sfr_render_04f) the 3D view and projection, with the stacks the queue items push them on
     // (appended for sfr_render_04g) the state bits, and the display bracket around a viewport's drawing
@@ -122,6 +133,11 @@ protected:
 public:
     ArrayLH<Matrix3F, Stat_Default_Mem, ArrayConstPolicy<0, 8, true> > ViewMatrix3DStack;         // +0x468
     ArrayLH<Matrix4F, Stat_Default_Mem, ArrayConstPolicy<0, 8, true> > ProjectionMatrix3DStack;   // +0x480
+    // (appended for sfr_render_04h)
+protected:
+    UByte             Unk_Members4[0x530 - 0x498];
+public:
+    Viewport          VP;                        // +0x530, the viewport of the current display
 
     void PushView3D(const Matrix3F& m)
     {

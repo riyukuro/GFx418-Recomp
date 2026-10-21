@@ -46,6 +46,8 @@ public:
 
     void SetSize(T w, T h) { Width = w; Height = h; }
     bool IsEmpty() const   { return Width == 0 || Height == 0; }
+    // (appended for sfr_render_04h) the same size in another type, each field cast
+    template<class S> operator Size<S>() const { return Size<S>((S)Width, (S)Height); }
     T    Area() const      { return Width * Height; }
 
     bool operator==(const Size& s) const { return Width == s.Width && Height == s.Height; }
@@ -76,6 +78,8 @@ public:
 
     bool operator==(const Rect& r) const { return x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2; }
     bool operator!=(const Rect& r) const { return !(*this == r); }
+    // (appended for sfr_render_04h) the same rectangle in another type, each edge cast
+    template<class S> operator Rect<S>() const { return Rect<S>((S)x1, (S)y1, (S)x2, (S)y2); }
 
     // (appended for the tree nodes, sfr_render_03)
     explicit Rect(T v) : x1(v), y1(v), x2(v), y2(v) {}

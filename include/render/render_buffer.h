@@ -39,6 +39,21 @@ public:
     const ImageSize&     GetBufferSize() const        { return BufferSize; }
 };
 
+// (appended for sfr_render_04h) whether a render target is still needed, or can be reused
+enum RenderTargetUse
+{
+    RTUse_Unused,             // free, nothing worth keeping
+    RTUse_InUse,              // being rendered to or read
+    RTUse_Unused_Cacheable    // free, but the contents may serve as a cached result
+};
+
+enum RenderTargetStatus
+{
+    RTS_Available,
+    RTS_Lost,
+    RTS_Unresolved
+};
+
 class RenderTarget : public RenderBuffer
 {
 protected:
@@ -47,6 +62,12 @@ protected:
 public:
     const Rect<int>& GetRect() const { return ViewRect; }
     const ImageSize  GetSize() const { return ImageSize(ViewRect.Width(), ViewRect.Height()); }
+
+    // (appended for sfr_render_04h) vftable after RenderBuffer's: GetTexture 3, GetStatus 4, SetInUse 5 / 6
+    virtual Texture*           GetTexture() const = 0;
+    virtual RenderTargetStatus GetStatus() const = 0;
+    virtual void               SetInUse(RenderTargetUse use) = 0;   // 6 (cl orders the overloads last first)
+    virtual void               SetInUse(bool inUse) = 0;            // 5
 };
 
 }} // namespace Scaleform::Render

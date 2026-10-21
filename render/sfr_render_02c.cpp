@@ -111,6 +111,11 @@ FilterSet::FilterSet(Filter* filter) : Frozen(false)
         AddFilter(filter);
 }
 
+// @0x1425e7a70
+FilterSet::~FilterSet()
+{
+}
+
 // Drops every occurrence of filter.
 // @0x1425e8380
 void FilterSet::RemoveFilter(Filter* filter)

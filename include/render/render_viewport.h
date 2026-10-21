@@ -52,6 +52,22 @@ public:
         ScissorLeft = ScissorTop = ScissorWidth = ScissorHeight = 0;
     }
 
+    // (appended for sfr_render_04h) a field-by-field copy, the flags taken right after the view rectangle
+    Viewport(const Viewport& o)
+    {
+        BufferWidth   = o.BufferWidth;
+        BufferHeight  = o.BufferHeight;
+        Left          = o.Left;
+        Top           = o.Top;
+        Width         = o.Width;
+        Height        = o.Height;
+        Flags         = o.Flags;
+        ScissorLeft   = o.ScissorLeft;
+        ScissorTop    = o.ScissorTop;
+        ScissorWidth  = o.ScissorWidth;
+        ScissorHeight = o.ScissorHeight;
+    }
+
     bool IsValid() const { return BufferWidth != 0 && BufferHeight != 0; }
 
     // every field, in declaration order

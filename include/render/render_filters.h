@@ -208,7 +208,7 @@ class FilterSet : public RefCountBase<FilterSet, Stat_Default_Mem>
 {
 public:
     FilterSet(Filter* filter = 0);
-    ~FilterSet() {}
+    ~FilterSet();
 
     bool IsFrozen() const { return Frozen; }
 

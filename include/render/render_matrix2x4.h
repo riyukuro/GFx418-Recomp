@@ -244,6 +244,15 @@ public:
         return m;
     }
     Matrix2x4& AppendScaling(T s) { return AppendScaling(s, s); }
+    // (appended for sfr_render_04h) this = Translation(x, y) * this
+    Matrix2x4& AppendTranslation(T x, T y)
+    {
+        M[0][3] += x;
+        M[1][3] += y;
+        return *this;
+    }
+    Matrix2x4& AppendScaling(Size<T> scale) { return AppendScaling(scale.Width, scale.Height); }
+
     // (appended for the static text, sfr_gfx_05d) the rotation of the x axis (its COMDAT: 0x1425e1560)
     T GetRotation() const { return atan2f(Shy(), Sx()); }
 };

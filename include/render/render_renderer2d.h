@@ -25,6 +25,7 @@ class PrimitiveFillManager;
 class MeshKeyManager;
 struct GlyphCacheParams;
 class Renderer2DImpl;
+namespace MatrixPoolImpl { class MatrixPool; }
 
 // a cache whose buffers the renderer unlocks after a frame (Render_Primitive)
 class CacheBase
@@ -154,6 +155,8 @@ public:
     const ToleranceParams& GetToleranceParams() const { return *(const ToleranceParams*)Unk_Tolerances; }
     PrimitiveFillManager&  GetPrimitiveFillManager()  { return *(PrimitiveFillManager*)Unk_FillManager; }
     MeshKeyManager*        GetMeshKeyManager() const  { return pMeshKeyManager; }
+    // (appended for sfr_render_04h) the matrix pool, +0xd40 inside the region above
+    MatrixPoolImpl::MatrixPool& GetMatrixPool() { return *(MatrixPoolImpl::MatrixPool*)(Unk_FillManager + (0xd40 - 0xd18)); }
     GlyphCache* GetGlyphCache() const { return pGlyphCache; }
 
     MeshCacheConfig* GetMeshCacheConfig() const;
