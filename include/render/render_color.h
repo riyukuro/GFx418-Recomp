@@ -47,6 +47,9 @@ public:
 
     bool operator==(const Color& c) const { return Raw == c.Raw; }
     bool operator!=(const Color& c) const { return Raw != c.Raw; }
+
+    // per-channel c1 * (1 - f) + c2 * f (Render_Color, 0x14266a500)
+    static Color SF_STDCALL Blend(Color c1, Color c2, float f);
 };
 
 }} // namespace Scaleform::Render

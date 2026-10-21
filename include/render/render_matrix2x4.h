@@ -127,6 +127,32 @@ public:
 
     void EncloseTransform(Rect<T>* dest, const Rect<T>& src) const;
 
+    void SetMatrix(T sx, T shx, T tx, T shy, T sy, T ty)
+    {
+        M[0][0] = sx;  M[0][1] = shx; M[0][2] = 0; M[0][3] = tx;
+        M[1][0] = shy; M[1][1] = sy;  M[1][2] = 0; M[1][3] = ty;
+    }
+
+    // Maps the parallelogram src (three corners: x0 y0 x1 y1 x2 y2) onto dst.
+    Matrix2x4& SetParlToParl(const T* src, const T* dst)
+    {
+        SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+        Matrix2x4 d(dst[2] - dst[0], dst[4] - dst[0], dst[0], dst[3] - dst[1], dst[5] - dst[1], dst[1]);
+        Invert();
+        Append(d);
+        return *this;
+    }
+    Matrix2x4& SetRectToParl(T x1, T y1, T x2, T y2, const T* parl)
+    {
+        T src[6] = { x1, y1, x2, y1, x2, y2 };
+        return SetParlToParl(src, parl);
+    }
+    Matrix2x4& SetParlToRect(const T* parl, T x1, T y1, T x2, T y2)
+    {
+        T dst[6] = { x1, y1, x2, y1, x2, y2 };
+        return SetParlToParl(parl, dst);
+    }
+
     static Matrix2x4 Scaling(T sx, T sy)    { return Matrix2x4(sx, 0, 0, 0, sy, 0); }
     static Matrix2x4 Translation(T x, T y)  { return Matrix2x4(1, 0, x, 0, 1, y); }
 };
