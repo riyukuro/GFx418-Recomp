@@ -185,6 +185,37 @@ public:
     SF_MEMORY_REDEFINE_NEW(NewOverrideBase, Stat)
 };
 
+// Parameters of MemoryHeap::CreateHeap (0x40 bytes).
+struct HeapDesc
+{
+    enum HeapFlags
+    {
+        Heap_FastTinyBlocks = 0x4,
+        Heap_UserDebug      = 0x1000
+    };
+
+    unsigned Flags;        // +0
+    UPInt    MinAlign;     // +8
+    UPInt    Granularity;  // +0x10
+    UPInt    Reserve;      // +0x18
+    UPInt    Threshold;    // +0x20
+    UPInt    Limit;        // +0x28
+    UPInt    HeapId;       // +0x30
+    UPInt    Arena;        // +0x38
+
+    HeapDesc(unsigned flags = 0, UPInt minAlign = 16, UPInt granularity = 8 * 1024, UPInt reserve = 8 * 1024,
+             UPInt threshold = ~UPInt(0), UPInt limit = 0, UPInt heapId = 0, UPInt arena = 0)
+        : Flags(flags), MinAlign(minAlign), Granularity(granularity), Reserve(reserve), Threshold(threshold),
+          Limit(limit), HeapId(heapId), Arena(arena)
+    {}
+};
+
+// Heap ids passed in HeapDesc::HeapId.
+enum HeapIdValues
+{
+    HeapId_Images = 5
+};
+
 } // namespace Scaleform
 
 #endif

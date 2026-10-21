@@ -128,7 +128,7 @@ struct ArrayDataBase
             if (newSize < (Policy.GetCapacity() >> 1))
                 Reserve(pheapAddr, newSize);
         }
-        else if (newSize > Policy.GetCapacity())
+        else if (newSize >= Policy.GetCapacity())
         {
             Reserve(pheapAddr, newSize + (newSize >> 2));
         }

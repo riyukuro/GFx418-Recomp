@@ -17,7 +17,20 @@ public:
     // Only the values confirmed in the exe so far (4.1.18 numbering differs from later SDKs).
     enum StateType
     {
-        State_None       = 0,
+        State_None         = 0,
+        // The binding states MovieDefBindStates queries (table 0x1431891b8: 9, 10, 11, 15, 16, 23, 27, 28).
+        State_FileOpener               = 9,
+        State_URLBuilder               = 10,
+        State_ImageCreator             = 11,
+        State_ImageFileHandlerRegistry = 12,
+        State_ImportVisitor            = 15,
+        State_FontPackParams           = 16,
+        State_FontLib                  = 17, // GFx::FontLib ctor stores 0x11
+        State_BindState23              = 23, // binding state of 4.1.18 not identified yet
+        State_FontCompactorParams      = 27,
+        State_ImagePackerParams        = 28,
+        State_FontProvider = 18, // GFx::FontProvider ctor stores 0x12
+        State_FontMap      = 19, // GFx::FontMap ctor stores 0x13
         State_XMLSupport = 25, // XML::SupportBase ctor passes 0x19
     };
 

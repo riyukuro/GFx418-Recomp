@@ -644,6 +644,189 @@ public:
     void operator=(const SelfType& o) { BaseType::operator=(o); }
 };
 
+// ---------------------------------------------------------------- key/value maps
+//
+// A Hash<K, V> is a HashSet of nodes. Lookups by key go through NodeAltHashF (hash of the bare key); inserts pass a
+// NodeRef (pointers to key and value) so nothing is copied until the slot is known.
+
+template<class C, class U, class HashF>
+struct HashNode
+{
+    typedef HashNode<C, U, HashF> SelfType;
+    typedef C                     FirstType;
+    typedef U                     SecondType;
+
+    C First;
+    U Second;
+
+    struct NodeRef
+    {
+        const C* pFirst;
+        const U* pSecond;
+
+        NodeRef(const C& f, const U& s) : pFirst(&f), pSecond(&s) {}
+        NodeRef(const NodeRef& src) : pFirst(src.pFirst), pSecond(src.pSecond) {}
+
+        UPInt GetHash() const { return HashF()(*pFirst); }
+        operator const C&() const { return *pFirst; }
+    };
+
+    HashNode(const HashNode& src) : First(src.First), Second(src.Second) {}
+    HashNode(const NodeRef& src) : First(*src.pFirst), Second(*src.pSecond) {}
+    void operator=(const NodeRef& src)
+    {
+        First  = *src.pFirst;
+        Second = *src.pSecond;
+    }
+
+    template<class K>
+    bool operator==(const K& src) const { return (First == src); }
+
+    template<class K>
+    static UPInt CalcHash(const K& data) { return HashF()(data); }
+    UPInt GetHash() const { return HashF()(First); }
+
+    struct NodeHashF
+    {
+        template<class K>
+        UPInt operator()(const K& data) const { return data.GetHash(); }
+    };
+    struct NodeAltHashF
+    {
+        template<class K>
+        UPInt operator()(const K& data) const { return SelfType::CalcHash(data); }
+    };
+};
+
+// Slot of a node set: the node is built from whatever key form (node or NodeRef) the set was given.
+template<class C, class HashF>
+class HashsetCachedNodeEntry
+{
+public:
+    SPInt NextInChain;
+    UPInt HashValue;
+    C     Value;
+
+    HashsetCachedNodeEntry() : NextInChain(-2) {}
+    HashsetCachedNodeEntry(const HashsetCachedNodeEntry& o) : NextInChain(o.NextInChain), HashValue(o.HashValue), Value(o.Value) {}
+    template<class K>
+    HashsetCachedNodeEntry(const K& key, SPInt next) : NextInChain(next), Value(key) {}
+
+    bool IsEmpty() const      { return NextInChain == -2; }
+    bool IsEndOfChain() const { return NextInChain == -1; }
+
+    UPInt GetCachedHash(UPInt) const { return HashValue; }
+    void  SetCachedHash(UPInt h)     { HashValue = h; }
+
+    void Clear()
+    {
+        Value.~C();
+        NextInChain = -2;
+    }
+    void Free() { Clear(); }
+};
+
+template<class C, class U, class HashF = FixedSizeHash<C>, class Allocator = AllocatorGH<C>,
+         class HashNodeT = HashNode<C, U, HashF>,
+         class Entry     = HashsetCachedNodeEntry<HashNodeT, typename HashNodeT::NodeHashF>,
+         class Container = HashSet<HashNodeT, typename HashNodeT::NodeHashF, typename HashNodeT::NodeAltHashF,
+                                   Allocator, Entry> >
+class Hash
+{
+public:
+    SF_MEMORY_REDEFINE_NEW(Hash, Allocator::StatId)
+
+    typedef C                                                         KeyType;
+    typedef U                                                         ValueType;
+    typedef Hash<C, U, HashF, Allocator, HashNodeT, Entry, Container> SelfType;
+    typedef typename HashNodeT::NodeRef                               NodeRef;
+
+    Container mHash;
+
+    Hash() {}
+    Hash(int sizeHint) : mHash(sizeHint) {}
+    Hash(const SelfType& src) : mHash(src.mHash) {}
+    ~Hash() {}
+
+    void operator=(const SelfType& src) { mHash = src.mHash; }
+
+    void Set(const C& key, const U& value)
+    {
+        NodeRef e(key, value);
+        mHash.Set(e);
+    }
+    void Add(const C& key, const U& value)
+    {
+        NodeRef e(key, value);
+        mHash.Add(e);
+    }
+
+    void Remove(const C& key) { mHash.RemoveAlt(key); }
+    template<class K>
+    void RemoveAlt(const K& key) { mHash.RemoveAlt(key); }
+
+    bool Get(const C& key, U* pvalue) const
+    {
+        const HashNodeT* p = mHash.GetAlt(key);
+        if (p == 0)
+            return false;
+        if (pvalue)
+            *pvalue = p->Second;
+        return true;
+    }
+    template<class K>
+    bool GetAlt(const K& key, U* pvalue) const
+    {
+        const HashNodeT* p = mHash.GetAlt(key);
+        if (p == 0)
+            return false;
+        if (pvalue)
+            *pvalue = p->Second;
+        return true;
+    }
+
+    U* Get(const C& key)
+    {
+        HashNodeT* p = mHash.GetAlt(key);
+        return p ? &p->Second : 0;
+    }
+    const U* Get(const C& key) const
+    {
+        const HashNodeT* p = mHash.GetAlt(key);
+        return p ? &p->Second : 0;
+    }
+    template<class K>
+    U* GetAlt(const K& key)
+    {
+        HashNodeT* p = mHash.GetAlt(key);
+        return p ? &p->Second : 0;
+    }
+    template<class K>
+    const U* GetAlt(const K& key) const
+    {
+        const HashNodeT* p = mHash.GetAlt(key);
+        return p ? &p->Second : 0;
+    }
+
+    UPInt GetSize() const { return mHash.GetSize(); }
+    bool  IsEmpty() const { return mHash.IsEmpty(); }
+    void  Clear()         { mHash.Clear(); }
+    void  Resize(UPInt n) { mHash.Resize(n); }
+    void  SetCapacity(UPInt n) { mHash.SetCapacity(n); }
+
+    typedef typename Container::ConstIterator ConstIterator;
+    typedef typename Container::Iterator      Iterator;
+
+    Iterator      Begin()       { return mHash.Begin(); }
+    Iterator      End()         { return mHash.End(); }
+    ConstIterator Begin() const { return mHash.Begin(); }
+    ConstIterator End() const   { return mHash.End(); }
+
+    Iterator Find(const C& key) { return mHash.FindAlt(key); }
+    template<class K>
+    Iterator FindAlt(const K& key) { return mHash.FindAlt(key); }
+};
+
 } // namespace Scaleform
 
 #endif
