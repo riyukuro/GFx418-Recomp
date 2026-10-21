@@ -60,7 +60,7 @@ public:
     {
         Align();
         if ((int)(DataSize - Pos) < 1)
-            PopulateBuffer(1);
+            PopulateBuffer1(); // out of line outside the Stream source
         return pBuffer[Pos++];
     }
     SF_FORCEINLINE UInt16 ReadU16()
@@ -84,6 +84,21 @@ public:
         return val;
     }
     SF_FORCEINLINE SInt32 ReadS32() { return (SInt32)ReadU32(); }
+    SF_FORCEINLINE float  ReadFloat()
+    {
+        Align();
+        if ((int)(DataSize - Pos) < 4)
+            PopulateBuffer(4);
+        union
+        {
+            UInt32 u;
+            float  f;
+        } val;
+        unsigned pos = Pos;
+        val.u = pBuffer[pos] | (pBuffer[pos + 1] << 8) | (pBuffer[pos + 2] << 16) | (pBuffer[pos + 3] << 24);
+        Pos   = pos + 4;
+        return val.f;
+    }
 
     // Variable-length (7 bits per byte) integers of the AS3 byte code. Spelled long: the exe's UInt32/SInt32 are
     // the Win64 long types (mangled K/J), which the include tree's typedefs are not.
@@ -166,7 +181,7 @@ private:
 };
 
 // Bit reader over a memory block, used by the shape and morph parsers (0x20 bytes).
-class StreamContext
+struct StreamContext
 {
 public:
     const UByte* pData;        // +0
@@ -205,6 +220,57 @@ public:
     void ReadMatrix(Render::Matrix2x4<float>* pm);
     void ReadCxformRgb(Render::Cxform* pcxform);
     void ReadCxformRgba(Render::Cxform* pcxform);
+
+    // Byte-aligned little endian readers, as on Stream.
+    UByte ReadU8()
+    {
+        Align();
+        return pData[CurByteIndex++];
+    }
+    UInt16 ReadU16()
+    {
+        Align();
+        UInt16 val = (UInt16)(pData[CurByteIndex] | (pData[CurByteIndex + 1] << 8));
+        CurByteIndex += 2;
+        return val;
+    }
+    UInt32 ReadU32()
+    {
+        Align();
+        UInt32 val = pData[CurByteIndex] | (pData[CurByteIndex + 1] << 8) | (pData[CurByteIndex + 2] << 16) |
+                     (pData[CurByteIndex + 3] << 24);
+        CurByteIndex += 4;
+        return val;
+    }
+    float ReadFloat()
+    {
+        Align();
+        union
+        {
+            UInt32 u;
+            float  f;
+        } val;
+        val.u = pData[CurByteIndex] | (pData[CurByteIndex + 1] << 8) | (pData[CurByteIndex + 2] << 16) |
+                (pData[CurByteIndex + 3] << 24);
+        CurByteIndex += 4;
+        return val.f;
+    }
+    // Need Render::Color complete (render_color.h).
+    template<class C> void ReadRgb(C* pc)
+    {
+        pc->Channels.Red   = ReadU8();
+        pc->Channels.Green = ReadU8();
+        pc->Channels.Blue  = ReadU8();
+        pc->Channels.Alpha = 0xff;
+    }
+    template<class C> SF_FORCEINLINE void ReadRgba(C* pc)
+    {
+        pc->Channels.Red   = ReadU8();
+        pc->Channels.Green = ReadU8();
+        pc->Channels.Blue  = ReadU8();
+        pc->Channels.Alpha = 0xff;
+        pc->Channels.Alpha = ReadU8();
+    }
 };
 
 }} // namespace Scaleform::GFx
