@@ -86,6 +86,21 @@ public:
     const char* ToCStr() const  { return GetData()->Data; }
     UPInt       GetSize() const { return GetData()->GetSize(); }
 
+    bool operator==(const char* str) const { return strcmp(ToCStr(), str) == 0; }
+    bool operator!=(const char* str) const { return !operator==(str); }
+
+    // exe: operator+(const char*) 0x142585c90, AppendString 0x142586130, ToLower 0x142587bf0.
+    String operator+(const char* str) const;
+    void   AppendString(const char* putf8str, SPInt utf8StrSz = -1);
+    void   operator+=(const char* str) { AppendString(str); }
+    String ToLower() const;
+
+    // Path helpers (exe: HasExtension 0x1425a4fb0, GetExtension 0x1425a4d00, StripExtension 0x1425a5180).
+    static bool SF_STDCALL HasExtension(const char* path);
+    bool   HasExtension() const { return HasExtension(ToCStr()); }
+    String GetExtension() const;
+    void   StripExtension();
+
     // djb2 run from the last byte to the first: h = h * 33 ^ c.
     static UPInt SF_STDCALL BernsteinHashFunction(const void* pdata, UPInt size, UPInt seed = 5381);
     static UPInt SF_STDCALL BernsteinHashFunctionCIS(const void* pdata, UPInt size, UPInt seed = 5381);
