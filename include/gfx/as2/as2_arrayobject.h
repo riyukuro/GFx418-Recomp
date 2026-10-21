@@ -136,6 +136,10 @@ protected:
     template<class Functor> void ForEachChild_GC(Collector* prcc) const;
 
     virtual void Finalize_GC(); // exe 0x142942b40
+
+    friend class ArrayCtorFunction;
+    // The elements from the arguments of a constructor call (exe 0x142961720).
+    void InitArray(const FnCall& fn);
 };
 
 // Counts one level of nested toString for the guarded array while alive.
@@ -197,6 +201,10 @@ class ArrayCtorFunction : public CFunctionObject
 {
 public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429367a0
+
+    // new Array(n) / Array(n) has n holes, any other arguments are the elements; a new array when called as
+    // a function (exe 0x1429584b0).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 }}} // namespace Scaleform::GFx::AS2

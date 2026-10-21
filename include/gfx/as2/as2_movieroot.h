@@ -18,6 +18,7 @@ class MovieClipLoader;
 enum ASBuiltinType : int
 {
     ASBuiltin_empty_ = 0, // ""
+    ASBuiltin_Object = 1,
     ASBuiltin_Array  = 2,
     ASBuiltin_Number  = 4,
     ASBuiltin_Boolean = 5,

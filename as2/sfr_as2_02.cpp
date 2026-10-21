@@ -638,7 +638,7 @@ void ObjectProto::AddProperty(const FnCall& fn)
         if (!getter.IsNull())
         {
             FunctionRef setter;
-            if (fn.NArgs >= 3 && (fn.Arg(2).IsFunction() || fn.Arg(2).IsFunctionName()))
+            if (fn.NArgs >= 3 && (fn.Arg(2).IsFunctionObject() || fn.Arg(2).IsFunctionName()))
                 setter = fn.Arg(2).ToFunction(fn.Env);
             Value val(getter, setter, fn.Env->GetHeap(), fn.Env->GetCollector());
             fn.ThisPtr->SetMemberRaw(fn.Env->GetSC(), propName, val);
@@ -804,7 +804,7 @@ MS2_AS2_GC_FOR_EACH_CHILD(FunctionRefBase)
 template<class Functor>
 void Value::ForEachChild_GC(Collector* prcc) const
 {
-    if (IsFunction())
+    if (IsFunctionObject())
         V.FunctionValue.template ForEachChild_GC<Functor>(prcc);
     else if (IsObject() && V.pObjectValue)
         Functor::Call(prcc, V.pObjectValue);

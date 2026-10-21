@@ -186,7 +186,7 @@ public:
     void operator=(const Value& v); // exe 0x1429267a0
 
     // Releases the reference held by a STRING/OBJECT/CHARACTER/FUNCTION/PROPERTY value (exe 0x142939780).
-    inline void DropRefs(); // as2_action.h
+    void DropRefs(); // exe 0x142939780
 
     type GetType() const { return (type)T.Type; }
 
@@ -198,7 +198,8 @@ public:
     bool IsString() const    { return T.Type == STRING; }
     bool IsObject() const    { return T.Type == OBJECT; }
     bool IsCharacter() const { return T.Type == CHARACTER; }
-    bool IsFunction() const  { return T.Type == FUNCTION; }
+    bool IsFunction() const  { return T.Type == FUNCTION || T.Type == FUNCTIONNAME; }
+    bool IsFunctionObject() const { return T.Type == FUNCTION; }
     bool IsFunctionName() const { return T.Type == FUNCTIONNAME; }
     bool IsProperty() const  { return T.Type == PROPERTY; }
 

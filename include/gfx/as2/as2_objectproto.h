@@ -123,6 +123,10 @@ public:
     static void Watch_(const FnCall& fn);
     static void Unwatch_(const FnCall& fn);
     static void ToString(const FnCall& fn);
+
+    // Object(v) wraps a primitive or returns the object; otherwise the instance (a new one when called as a
+    // function) gets its constructor (exe 0x14295bee0).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 // Function.prototype methods (only the natives so far).
@@ -132,6 +136,10 @@ public:
     static void Apply(const FnCall& fn);
     static void Call(const FnCall& fn);
     static void ToString(const FnCall& fn);
+
+    // Function(f) returns the function f (null for anything else), Function() a new empty function object
+    // (exe 0x14295ae40).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 }}} // namespace Scaleform::GFx::AS2

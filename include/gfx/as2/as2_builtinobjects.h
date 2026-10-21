@@ -84,6 +84,10 @@ class ColorObject : public Object
 public:
     WeakPtr<InteractiveObject> pCharacter; // +0x68
 
+    ColorObject(Environment* penv, InteractiveObject* ptarget); // exe 0x14291ad30
+
+    void SetTarget(InteractiveObject* ptarget) { pCharacter = ptarget; }
+
 protected:
     virtual void Finalize_GC(); // exe 0x142942d60
 };
@@ -422,6 +426,30 @@ class StageCtorFunction : public CFunctionObject
 {
 public:
     static void GlobalCtor(const FnCall& fn); // exe 0x14295c6f0
+};
+
+// The Boolean class.
+class BooleanCtorFunction : public CFunctionObject
+{
+public:
+    // new Boolean(v) stores v in the instance, Boolean(v) converts v (exe 0x1429595a0).
+    static void GlobalCtor(const FnCall& fn);
+};
+
+// The Number class.
+class NumberCtorFunction : public CFunctionObject
+{
+public:
+    // new Number(v) stores v in the instance, Number(v) converts v (exe 0x14295bd30).
+    static void GlobalCtor(const FnCall& fn);
+};
+
+// The Color class.
+class ColorCtorFunction : public CFunctionObject
+{
+public:
+    // Color(target) as a constructor retargets the instance, as a function makes a new one (exe 0x142959740).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 // The flash.display.BitmapData class.

@@ -147,6 +147,10 @@ public:
     MovieRoot*         GetAS2Root() const;   // exe 0x142949080
     // The off-th function frame from the innermost one, 0 past the outermost (exe 0x142956740).
     LocalFrame*        GetTopLocalFrame(int off = 0) const;
+    // The character a value names (a character, or a target path string), 0 if none (exe 0x142944f40).
+    InteractiveObject* FindTargetByValue(const Value& val);
+    // The constructor of a builtin class from _global, null if it is not a function (exe 0x14294a0f0).
+    FunctionRef        GetConstructor(ASBuiltinType className);
 
     // Script error channel (exe 0x142967e00).
     void LogScriptError(const char* pfmt, ...) const;

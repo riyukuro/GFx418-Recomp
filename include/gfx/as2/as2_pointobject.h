@@ -77,6 +77,10 @@ class PointCtorFunction : public CFunctionObject
 public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429371b0
 
+    // new Point(x, y) / Point(x, y): the instance (a new one when called as a function) with x and y set
+    // (exe 0x14295c160).
+    static void GlobalCtor(const FnCall& fn);
+
 protected:
     static void Distance(const FnCall& fn);
     static void Interpolate(const FnCall& fn);

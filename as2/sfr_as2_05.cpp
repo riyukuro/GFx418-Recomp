@@ -4,6 +4,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142938850-0x1429388e0 .text$mn
 // MS2-RANGE: 0x1429396a0-0x142939780 .text$mn
+// MS2-RANGE: 0x142939780-0x1429398a0 .text$mn
 // MS2-RANGE: 0x142939c20-0x142939c60 .text$mn
 // MS2-RANGE: 0x142939c60-0x142939e30 .text$mn
 // MS2-RANGE: 0x142941d70-0x142942930 .text$mn
@@ -15,6 +16,7 @@
 // MS2-RANGE: 0x142943020-0x1429431a0 .text$mn
 // MS2-RANGE: 0x142944a00-0x142944a80 .text$mn
 // MS2-RANGE: 0x142944c60-0x142944cb0 .text$mn
+// MS2-RANGE: 0x1429484e0-0x1429485e0 .text$mn
 // MS2-RANGE: 0x142948f10-0x142949070 .text$mn
 // MS2-RANGE: 0x142949080-0x1429490a0 .text$mn
 // MS2-RANGE: 0x1429490c0-0x142949140 .text$mn
@@ -27,6 +29,7 @@
 // MS2-RANGE: 0x142949840-0x142949860 .text$mn
 // MS2-RANGE: 0x142949b30-0x142949c00 .text$mn
 // MS2-RANGE: 0x142949f60-0x14294a010 .text$mn
+// MS2-RANGE: 0x14294a0f0-0x14294a1e0 .text$mn
 // MS2-RANGE: 0x14294a580-0x14294a5b0 .text$mn
 // MS2-RANGE: 0x14294afc0-0x14294afe0 .text$mn
 // MS2-RANGE: 0x14294b030-0x14294b080 .text$mn
@@ -40,6 +43,7 @@
 // MS2-RANGE: 0x1429531f0-0x142953210 .text$mn
 // MS2-RANGE: 0x1429538a0-0x142953970 .text$mn
 // MS2-RANGE: 0x142953ee0-0x142953ef0 .text$mn
+// MS2-RANGE: 0x142954590-0x142954690 .text$mn
 // MS2-RANGE: 0x142954b40-0x142954ba0 .text$mn
 // MS2-RANGE: 0x142954ba0-0x142954c20 .text$mn
 // MS2-RANGE: 0x1429561c0-0x1429561d0 .text$mn
@@ -51,15 +55,23 @@
 // MS2-RANGE: 0x142958370-0x1429583d0 .text$mn
 // MS2-RANGE: 0x1429583d0-0x142958490 .text$mn
 // MS2-RANGE: 0x142958490-0x1429584b0 .text$mn
+// MS2-RANGE: 0x1429584b0-0x142958670 .text$mn
 // MS2-RANGE: 0x142958670-0x142958720 .text$mn
 // MS2-RANGE: 0x142959160-0x1429591e0 .text$mn
+// MS2-RANGE: 0x1429595a0-0x142959730 .text$mn
+// MS2-RANGE: 0x142959740-0x1429598b0 .text$mn
 // MS2-RANGE: 0x14295ae20-0x14295ae40 .text$mn
+// MS2-RANGE: 0x14295ae40-0x14295afb0 .text$mn
 // MS2-RANGE: 0x14295afb0-0x14295b020 .text$mn
 // MS2-RANGE: 0x14295bbe0-0x14295bc00 .text$mn
 // MS2-RANGE: 0x14295bc00-0x14295bc20 .text$mn
 // MS2-RANGE: 0x14295bc20-0x14295bc40 .text$mn
 // MS2-RANGE: 0x14295bc40-0x14295bca0 .text$mn
 // MS2-RANGE: 0x14295bca0-0x14295bd30 .text$mn
+// MS2-RANGE: 0x14295bd30-0x14295bee0 .text$mn
+// MS2-RANGE: 0x14295bee0-0x14295c160 .text$mn
+// MS2-RANGE: 0x14295c160-0x14295c3a0 .text$mn
+// MS2-RANGE: 0x14295c3a0-0x14295c650 .text$mn
 // MS2-RANGE: 0x14295c650-0x14295c670 .text$mn
 // MS2-RANGE: 0x14295c670-0x14295c6f0 .text$mn
 // MS2-RANGE: 0x14295c6f0-0x14295c710 .text$mn
@@ -604,9 +616,19 @@ Object* ObjectInterface::FindOwner(ASStringContext* psc, const ASString& name)
 FunctionRef ObjectInterface::Get_constructor(ASStringContext* psc)
 {
     Value ctorVal;
-    if (GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_constructor), &ctorVal) && ctorVal.IsFunction())
+    if (GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_constructor), &ctorVal) && ctorVal.IsFunctionObject())
         return ctorVal.ToFunction(0);
     return FunctionRef();
+}
+
+// MS2-FUNCTIONAL the exe AddRefs the copied function in memory (inc / and) and indexes the builtin as (id + 0x27) * 8
+// @0x14294a0f0
+FunctionRef Environment::GetConstructor(ASBuiltinType className)
+{
+    Value ctor;
+    if (GetSC()->pContext->pGlobal->GetMemberRaw(GetSC(), GetBuiltin(className), &ctor) && ctor.IsFunction())
+        return ctor.ToFunction(this);
+    return 0;
 }
 
 // @0x142938850
@@ -656,6 +678,177 @@ SF_NOINLINE UInt16 MovieClipObject::GetButtonEventNameMask(ASStringContext* psc,
     return 0;
 }
 
+void BooleanCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Boolean && !fn.ThisPtr->IsBuiltinPrototype())
+    {
+        BooleanObject* pbool = static_cast<BooleanObject*>(fn.ThisPtr);
+        Value      retVal = (fn.NArgs > 0) ? fn.Arg(0) : Value();
+        pbool->SetValue(fn.Env, retVal);
+        *fn.Result = retVal;
+    }
+    else
+    {
+        if (fn.NArgs == 0)
+            fn.Result->SetBool(false);
+        else
+            fn.Result->SetBool(fn.Arg(0).ToBool(fn.Env));
+    }
+}
+
+void NumberCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Number && !fn.ThisPtr->IsBuiltinPrototype())
+    {
+        NumberObject* pnum = static_cast<NumberObject*>(fn.ThisPtr);
+        Value     retVal = (fn.NArgs > 0) ? fn.Arg(0) : Value();
+        pnum->SetValue(fn.Env, retVal);
+        *fn.Result = retVal;
+    }
+    else
+    {
+        if (fn.NArgs == 0)
+            fn.Result->SetNumber(0);
+        else
+            fn.Result->SetNumber(fn.Arg(0).ToNumber(fn.Env));
+    }
+}
+
+// @0x142959740
+// MS2-FUNCTIONAL register allocation (the target and the zero register swap rsi / rbp)
+void ColorCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    InteractiveObject* ptarget = 0;
+    if (fn.NArgs >= 1)
+        ptarget = fn.Env->FindTargetByValue(fn.Arg(0));
+
+    Ptr<ColorObject> pcolor;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Color)
+    {
+        pcolor = static_cast<ColorObject*>(fn.ThisPtr);
+        pcolor->SetTarget(ptarget);
+    }
+    else
+        pcolor = *SF_HEAP_NEW(fn.Env->GetHeap()) ColorObject(fn.Env, ptarget);
+    fn.Result->SetAsObject(pcolor.GetPtr());
+}
+
+void PointCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<PointObject> ppt;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Point && !fn.ThisPtr->IsBuiltinPrototype())
+        ppt = static_cast<PointObject*>(fn.ThisPtr);
+    else
+        ppt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+    fn.Result->SetAsObject(ppt.GetPtr());
+
+    if (fn.NArgs > 0)
+    {
+        Value params[Point_NumProperties];
+        params[Point_X] = fn.Arg(0);
+        if (fn.NArgs > 1)
+            params[Point_Y] = fn.Arg(1);
+        ppt->SetProperties(fn.Env->GetSC(), params);
+    }
+}
+
+void RectangleCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<RectangleObject> prect;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Rectangle && !fn.ThisPtr->IsBuiltinPrototype())
+        prect = static_cast<RectangleObject*>(fn.ThisPtr);
+    else
+        prect = *SF_HEAP_NEW(fn.Env->GetHeap()) RectangleObject(fn.Env);
+    fn.Result->SetAsObject(prect.GetPtr());
+
+    if (fn.NArgs > 0)
+    {
+        Value params[Rectangle_NumProperties];
+        params[Rectangle_X] = fn.Arg(0);
+        if (fn.NArgs > 1)
+        {
+            params[Rectangle_Y] = fn.Arg(1);
+            if (fn.NArgs > 2)
+            {
+                params[Rectangle_Width] = fn.Arg(2);
+                if (fn.NArgs > 3)
+                    params[Rectangle_Height] = fn.Arg(3);
+            }
+        }
+        prect->SetProperties(fn.Env->GetSC(), params);
+    }
+}
+
+void ArrayCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<ArrayObject> parray;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Array && !fn.ThisPtr->IsBuiltinPrototype())
+        parray = static_cast<ArrayObject*>(fn.ThisPtr);
+    else
+        parray = *SF_HEAP_NEW(fn.Env->GetHeap()) ArrayObject(fn.Env);
+
+    parray->SetMember(fn.Env, fn.Env->GetBuiltin(ASBuiltin_length), Value(0), PropFlags::PropFlag_DontEnum);
+    if (fn.NArgs == 0)
+    {
+        // an empty array
+    }
+    else if (fn.NArgs == 1 && fn.Arg(0).IsNumber())
+        parray->Resize(fn.Arg(0).ToInt32(fn.Env));
+    else
+        parray->InitArray(fn);
+    fn.Result->SetAsObject(parray.GetPtr());
+}
+
+// MS2-FUNCTIONAL stack layout (the exe puts the converted value below the temporaries) and block order
+// @0x14295bee0
+void ObjectProto::GlobalCtor(const FnCall& fn)
+{
+    if (fn.NArgs >= 1)
+    {
+        // Object(primitive) is the primitive's wrapper value, Object(object) the object itself.
+        const Value& arg = fn.Arg(0);
+        Value        objVal;
+        if (arg.IsNumber())
+            objVal = Value(arg.ToNumber(fn.Env));
+        else if (arg.IsBoolean())
+            objVal = Value(arg.ToBool(fn.Env));
+        else if (arg.IsString())
+            objVal = Value(arg.ToString(fn.Env));
+        else if (arg.IsObject() || arg.IsCharacter())
+            objVal = arg;
+        if (!objVal.IsUndefined())
+        {
+            *fn.Result = objVal;
+            return;
+        }
+    }
+
+    Ptr<Object> pobj;
+    if (fn.ThisPtr)
+        pobj = static_cast<Object*>(fn.ThisPtr);
+    else
+        pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+    pobj->Set_constructor(fn.Env->GetSC(), fn.Env->GetConstructor(ASBuiltin_Object));
+    fn.Result->SetAsObject(pobj.GetPtr());
+}
+
+void FunctionProto::GlobalCtor(const FnCall& fn)
+{
+    if (fn.NArgs == 1)
+    {
+        // A cast (f = Function(func)): the argument itself.
+        if (fn.Arg(0).IsFunction() || fn.Arg(0).IsFunctionName())
+            fn.Result->SetAsObject(fn.Arg(0).ToObject(fn.Env));
+        else
+            fn.Result->SetNull();
+    }
+    else
+    {
+        Ptr<CFunctionObject> pfunc = *SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env);
+        fn.Result->SetAsObject(pfunc.GetPtr());
+    }
+}
+
 // @0x142959160
 void BitmapDataCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -695,6 +888,24 @@ void AsBroadcasterCtorFunction::GlobalCtor(const FnCall& fn)
     }
     else
         fn.Result->SetNull();
+}
+
+// @0x1429484e0
+// MS2-FUNCTIONAL the exe keeps the object interface in rbx, cl picks rdi (register allocation only)
+SF_NOINLINE void GFxObject_GetPointProperties(Environment* penv, Object* pobj, GASPoint& pt)
+{
+    Value params[Point_NumProperties];
+    GFxObject_GetPointProperties(penv, pobj, params);
+    pt.SetPoint(params[Point_X].ToNumber(penv), params[Point_Y].ToNumber(penv));
+}
+
+// @0x142954590
+// MS2-FUNCTIONAL the exe keeps the object interface in rbx, cl picks rdi (register allocation only)
+SF_NOINLINE void PointObject::GetProperties(Environment* penv, GASPoint& pt)
+{
+    Value params[Point_NumProperties];
+    GetProperties(penv->GetSC(), params);
+    pt.SetPoint(params[Point_X].ToNumber(penv), params[Point_Y].ToNumber(penv));
 }
 
 // @0x14294f7e0
@@ -760,6 +971,45 @@ int MovieClipLoader::GetTotalBytes(InteractiveObject* pch) const
     if (pprogress)
         return pprogress->TotalBytes;
     return 0;
+}
+
+// @0x142939780
+void Value::DropRefs()
+{
+    switch (T.Type)
+    {
+    case STRING:
+    case FUNCTIONNAME:
+        V.pStringNode->Release();
+        break;
+    case FUNCTION:
+    case RESOLVEHANDLER:
+        if (V.FunctionValue.Function)
+            V.FunctionValue.DropRefs();
+        break;
+    case CHARACTER:
+        if (CharacterHandle* phandle = V.pCharHandle)
+        {
+            if (--phandle->RefCount <= 0)
+                delete phandle;
+            V.pCharHandle = 0;
+        }
+        break;
+    case OBJECT:
+        if (V.pObjectValue)
+        {
+            V.pObjectValue->Release();
+            V.pObjectValue = 0;
+        }
+        break;
+    case PROPERTY:
+        if (V.pProperty)
+        {
+            V.pProperty->Release();
+            V.pProperty = 0;
+        }
+        break;
+    }
 }
 
 // 1 + the index of the highest set bit of v, 0 for 0 (a fixed comparison tree, no bit scan).
@@ -928,3 +1178,7 @@ void GASLoadVarsLoaderCtorFunction::GlobalCtor(const FnCall& fn)
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
 // MS2-PIN: ?GetCaseCheck@?$ASStringHashBase@VFunctionRef@AS2@GFx@Scaleform@@V?$HashUncachedLH@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@$0BEE@@4@@GFx@Scaleform@@QEAAPEAVFunctionRef@AS2@23@AEBVASString@23@_N@Z 0x142949f60
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778

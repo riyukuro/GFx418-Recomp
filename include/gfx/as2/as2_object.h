@@ -155,6 +155,8 @@ public:
     Object* FindOwner(ASStringContext* psc, const ASString& name);
     // The function of the constructor member, a null reference without one (exe 0x1429583d0).
     FunctionRef Get_constructor(ASStringContext* psc);
+    // Sets the constructor member (exe 0x14298de30).
+    void        Set_constructor(ASStringContext* psc, const FunctionRef& ctorFunc);
 };
 
 // The user data of an object and the movie it was set from. 0x10 bytes.
@@ -253,6 +255,8 @@ public:
 
 protected:
     FunctionObject(ASRefCountCollector* pcc);
+    // The exe also has an out-of-line copy, 0x14291c0c0.
+    FunctionObject(Environment* penv) : Object(penv) {}
 };
 
 // Native function. 0x70 bytes.
@@ -264,7 +268,11 @@ public:
     virtual ~CFunctionObject();
 
 protected:
+    friend class FunctionProto;
+
     CFunctionObject(ASRefCountCollector* pcc);
+    // A function object without a native (new Function()); the exe also has an out-of-line copy, 0x142919db0.
+    CFunctionObject(Environment* penv) : FunctionObject(penv), pFunction(0) {}
 };
 
 // Function defined in script (the action buffer of a DefineFunction). Its instances are plain objects.

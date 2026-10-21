@@ -71,6 +71,10 @@ class RectangleCtorFunction : public CFunctionObject
 {
 public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429371f0
+
+    // new Rectangle(x, y, w, h) / Rectangle(...): the instance (a new one when called as a function) with the
+    // given properties set (exe 0x14295c3a0).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 }}} // namespace Scaleform::GFx::AS2
