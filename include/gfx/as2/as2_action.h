@@ -101,6 +101,21 @@ public:
         for (; n; n--)
             Pop1();
     }
+    // Pops three; page by page only when that crosses into the previous page (exe 0x14296efd0 for Value).
+    void Pop3()
+    {
+        if (pCurrent - 3 < pPageStart)
+            Pop(3);
+        else
+        {
+            pCurrent->~T();
+            pCurrent--;
+            pCurrent->~T();
+            pCurrent--;
+            pCurrent->~T();
+            pCurrent--;
+        }
+    }
 
     // Element at a distance from the top, 0 past the bottom.
     T* Top(unsigned dist)
@@ -320,6 +335,9 @@ public:
 
     // The constructor registered for the class name (exe 0x142944c60).
     bool FindRegisteredClass(ASStringContext* psc, const ASString& className, FunctionRef* pctorFunction);
+    // Object.registerClass: the constructor of the class name, replacing an earlier one (exe 0x14297c970). Spelled
+    // as the windows.h RegisterClass macro turns it, the name the exe has.
+    bool RegisterClassA(ASStringContext* psc, const ASString& className, const FunctionRef& ctorFunction);
 };
 
 enum { StatMD_ASBinaryData_Mem = 0x108 };

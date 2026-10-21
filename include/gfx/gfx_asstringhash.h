@@ -100,6 +100,26 @@ public:
     {
         return caseSensitive ? BaseType::Get(key) : GetCaseInsensitive(key);
     }
+
+    __forceinline typename BaseType::Iterator FindCaseInsensitive(const ASString& key)
+    {
+        ASStringNoCaseKey ikey(key);
+        return BaseType::FindAlt(ikey);
+    }
+    __forceinline typename BaseType::Iterator FindCaseCheck(const ASString& key, bool caseSensitive)
+    {
+        return caseSensitive ? BaseType::Find(key) : FindCaseInsensitive(key);
+    }
+
+    // Replaces the value of the matching key, else adds the pair.
+    void SetCaseCheck(const ASString& key, const U& value, bool caseSensitive)
+    {
+        typename BaseType::Iterator it = FindCaseCheck(key, caseSensitive);
+        if (it != BaseType::End())
+            it->Second = value;
+        else
+            BaseType::Add(key, value);
+    }
 };
 
 // Hash by script string in the string heap (one table pointer).

@@ -89,6 +89,8 @@ public:
     FunctionRef      Constructor; // +0x80
 
     virtual FunctionRef Get__constructor__(ASStringContext* psc); // exe 0x142958370
+    // Back to the saved prototype after an alternate one was set (exe 0x14297dfb0).
+    void ResetAltProto();
 
 protected:
     template<class Functor>

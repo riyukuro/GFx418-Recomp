@@ -32,6 +32,8 @@
 // MS2-RANGE: 0x142968f90-0x142969000 .text$mn
 // MS2-RANGE: 0x14296b820-0x14296b850 .text$mn
 // MS2-RANGE: 0x14296bba0-0x14296bbb0 .text$mn
+// MS2-RANGE: 0x14296e790-0x14296e870 .text$mn
+// MS2-RANGE: 0x14296efd0-0x14296f070 .text$mn
 // MS2-RANGE: 0x14296f070-0x14296f0c0 .text$mn
 // MS2-RANGE: 0x14296f1b0-0x14296f260 .text$mn
 // MS2-RANGE: 0x14296f2b0-0x14296f390 .text$mn
@@ -44,6 +46,7 @@
 // MS2-RANGE: 0x142972330-0x142972410 .text$mn
 // MS2-RANGE: 0x142972410-0x142972490 .text$mn
 // MS2-RANGE: 0x142973040-0x142973080 .text$mn
+// MS2-RANGE: 0x14297c970-0x14297ca60 .text$mn
 // MS2-RANGE: 0x14297ca70-0x14297cae0 .text$mn
 // MS2-RANGE: 0x14297d0d0-0x14297d1e0 .text$mn
 // MS2-RANGE: 0x14297d1e0-0x14297d330 .text$mn
@@ -59,6 +62,7 @@
 // MS2-RANGE: 0x14297daf0-0x14297db90 .text$mn
 // MS2-RANGE: 0x14297db90-0x14297dc30 .text$mn
 // MS2-RANGE: 0x14297dcd0-0x14297dd70 .text$mn
+// MS2-RANGE: 0x14297dfb0-0x14297e060 .text$mn
 // MS2-RANGE: 0x14297e060-0x14297e0e0 .text$mn
 // MS2-RANGE: 0x14297e0e0-0x14297e1b0 .text$mn
 // MS2-RANGE: 0x14297e230-0x14297e2b0 .text$mn
@@ -531,6 +535,61 @@ Value Environment::PrimitiveToTempObject(const Value& v)
 }
 
 
+// @0x14296e790
+int MovieRoot::ParseLevelName(const char* pname, const char** ptail, bool caseSensitive)
+{
+    if (pname[0] >= '0' && pname[0] <= '9')
+    {
+        char* pend = 0;
+        int   level = (int)strtol(pname, &pend, 10);
+        *ptail    = pend;
+        return level;
+    }
+    if (!pname || pname[0] != '_')
+        return -1;
+
+    if (caseSensitive)
+    {
+        if (pname[1] != 'l' || pname[2] != 'e' || pname[3] != 'v' || pname[4] != 'e' || pname[5] != 'l')
+            return -1;
+    }
+    else
+    {
+        if ((pname[1] != 'l' && pname[1] != 'L') || (pname[2] != 'e' && pname[2] != 'E') ||
+            (pname[3] != 'v' && pname[3] != 'V') || (pname[4] != 'e' && pname[4] != 'E') ||
+            (pname[5] != 'l' && pname[5] != 'L'))
+            return -1;
+    }
+    if (pname[6] < '0' || pname[6] > '9')
+        return -1;
+
+    char* pend  = 0;
+    int   level = (int)strtol(pname + 6, &pend, 10);
+    *ptail    = pend;
+    return level;
+}
+
+
+// @0x14297dfb0
+void SuperObject::ResetAltProto()
+{
+    if (!SavedProto)
+        return;
+    SuperProto = SavedProto;
+    SavedProto = 0;
+    pProto     = SuperProto;
+}
+
+
+// MS2-FUNCTIONAL the exe inlines the hash FindAlt (calling findIndexAlt out of line); ours keeps FindAlt out of line.
+// @0x14297c970
+bool GlobalContext::RegisterClassA(ASStringContext* psc, const ASString& className, const FunctionRef& ctorFunction)
+{
+    RegisteredClasses.SetCaseCheck(className, ctorFunction, psc->IsCaseSensitive());
+    return true;
+}
+
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {
@@ -586,6 +645,8 @@ namespace Scaleform {
 
 // @0x14296f070
 template void GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Pop(unsigned);
+// @0x14296efd0
+template void GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Pop3();
 
 // The page switches of the call stack (those of the value stack are elsewhere in the exe, 0x140006a40 /
 // 0x140006cf0).

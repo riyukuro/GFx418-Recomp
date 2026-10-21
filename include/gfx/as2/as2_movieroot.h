@@ -131,6 +131,10 @@ public:
 
     StringManager* GetStringManager() { return &BuiltinsMgr; }
 
+    // The number of a "<n>" or "_level<n>" name (the word case-insensitive unless asked), *ptail set past the
+    // digits; -1 if it is neither (exe 0x14296e790).
+    static int ParseLevelName(const char* pname, const char** ptail, bool caseSensitive);
+
     // Queues a load of purl into ptarget, an empty url unloads it (exe 0x14292f740).
     void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
                            LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None,
