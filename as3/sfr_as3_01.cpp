@@ -1,10 +1,12 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 AS3, first block. Our own source,
 // written from the exe (the leaked SDK copies were only used to name things and to compare layouts). Original files of
 // this range, in exe order: GFx_AS3Support (the AS3 player factory and the SymbolClass / DoABC tag loaders), the AS3
-// garbage collector (AS3_GC), then AS3_Obj_All template instances (thunks, class/traits factories).
+// garbage collector (AS3_GC; the flash.accessibility classes compiled in between are in sfr_as3_01b.cpp), then
+// AS3_Obj_All template instances (thunks, class/traits factories).
 // MS2-UNIT: sfr_as3_01
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1423dc110-0x1423df850 .text$mn
+// MS2-RANGE: 0x1423dc110-0x1423dd550 .text$mn
+// MS2-RANGE: 0x1423de620-0x1423df430 .text$mn
 // MS2-RANGE: 0x1423e0260-0x1423f06a0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PIN: ?LogError@?$LogBase@VLoadProcess@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x1423dcd80 ; unique

@@ -476,6 +476,10 @@ class Instance : public Object
 public:
     explicit Instance(InstanceTraits::Traits& t);
     virtual ~Instance();
+
+    // Heap new/delete plus placement new into Traits::Alloc() memory.
+    SF_MEMORY_REDEFINE_NEW(Instance, StatType)
+    SF_MEMORY_DEFINE_PLACEMENT_NEW
 protected:
     explicit Instance(VM& vm);
 
