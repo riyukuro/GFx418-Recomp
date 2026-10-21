@@ -1284,6 +1284,2593 @@ void VideoProviderNetStream::Advance()
 }}} // namespace Scaleform::GFx::AS3
 
 
+// ==== CRI Movie easy player ==========================================================================================
+// CriMvEasyPlayer (0x14001d7a0-0x140025090). The CRI objects of this layer were compiled /Od, so the section is built
+// with optimization off; the VS2008 code generator picks other registers for some int stores (those are functional).
+
+// Player handle module (criMvPly, sfr_cri_02), error notification and the update lock.
+extern "C" {
+void      FUN_1400301d0(CriMvPly mvply, void* (*allocfunc)(void* obj, CriUint32 size),
+                        void (*freefunc)(void* obj, void* mem), void* obj, CriMvMetaFlag meta_flag);
+CriSint32 FUN_1400310b0(CriMvPly mvply);
+CriBool   FUN_140030f10(CriMvPly mvply, CriHeap heap, CriSint32 track);
+void      FUN_140030fd0(CriMvPly mvply);
+void      FUN_140031040(CriMvPly mvply, CriSint32 track);
+void      FUN_140031060(CriMvPly mvply, CriUint32 nframes);
+void      FUN_140034b20(CriMvPly mvply);
+void      FUN_140036450(CriMvPly mvply, CriSint32 channel);
+CriBool   FUN_1400371d0(CriMvPly mvply);
+void      FUN_1400379e0(void* obj);
+CriSint32 FUN_14003a050(void* lock, CriSint32 value);
+void      FUN_14003b720(CriMvPly mvply, CriSint32 num_threads, const unsigned long* affinity_masks,
+                        CriSint32* priorities);
+void*     FUN_140038ce4(CriSint32 level, const CriChar8* msg, CriSint32 p1, CriSint32 p2, void* p3);
+void      FUN_140038ddc(CriSint32 level, const CriChar8* msg);
+void      FUN_14002e7d0(void);
+void      FUN_14002e8c0(void);
+CriSint32 FUN_14002e9e0(void);
+void      FUN_14002e6b0(void* work, CriUint32 work_size, CriMvWorkAllocator* walloc);
+void*     FUN_14002e6c0(CriMvWorkAllocator* walloc, CriUint32 size, CriUint32 align);
+void      FUN_14002e6bc(CriMvWorkAllocator* walloc);
+void      FUN_1400233c0(CriMvEasyPlayer* mveasy);
+void      FUN_1400235a0(CriMvEasyPlayer* mveasy);
+void      FUN_140024660(CriMvEasyPlayer* mveasy);
+void      FUN_140022d00(CriMvEasyPlayer* mveasy);
+void      FUN_1400230a0(CriMvEasyPlayer* mveasy);
+void      FUN_140022f20(CriMvEasyPlayer* mveasy);
+void      FUN_1400231d0(CriMvEasyPlayer* mveasy);
+void      FUN_14002fb70(CriMvPly mvply);
+void      FUN_14002fbe0(CriMvPly mvply, CriMvStreamingParameters* stmprm);
+void      FUN_140031470(CriMvPly mvply);
+void      FUN_140037740(CriMvPly mvply, CriSint32 frame_id, CriSint32 start_id);
+void      FUN_140037780(CriMvPly mvply, CriSint32 alpha_id);
+void      FUN_140033700(CriMvPly mvply, void* seektbl, CriUint32 num, CriSint32 frame_id, CriUint64* offset,
+                        CriSint32* found_id);
+CriBool   FUN_140030e50(CriMvPly mvply, void* work, CriSint32 work_size, CriMvStreamingParameters* stmprm);
+CriBool   FUN_140030230(CriMvPly mvply, CriHeap heap, CriMvStreamingParameters* stmprm);
+void      FUN_140030c70(CriMvPly mvply);
+void      FUN_140031100(CriMvPly mvply);
+void      FUN_1400361a0(CriMvPly mvply, CriUint8* data, CriUint32 size);
+CriBool   FUN_140034920(CriMvPly mvply);
+void*     FUN_14003b674(CriUint8* data, CriUint32 size, CriUint32* hdr_size);
+void*     FUN_14003b348(void* heap, void* hdr, CriUint32 hdr_size);
+CriUint32 FUN_14003a85c(void* node, CriSint32 rec, const CriChar8* name);
+void      FUN_14003a108(void* node);
+int       sprintf_s(char* buf, size_t size, const char* fmt, ...);
+void      FUN_140031250(CriMvPly mvply);
+void      FUN_1400313d0(CriMvPly mvply);
+CriHeap   FUN_140027fec(void* work, CriUint32 work_size);
+void*     FUN_140027ed8(CriHeap heap, CriUint32 size, const CriChar8* name, CriUint32 align);
+void      FUN_140027fb4(CriHeap heap, void* mem);
+void      FUN_140028074(CriHeap heap);
+void*     FUN_1400385c8(void* work, CriUint32 work_size);
+void      FUN_140039f00(void* cs);
+void      FUN_140039f50(void* cs);
+void      FUN_140039f8c(void* cs);
+CriMvPly  FUN_14002eb20(void* work, CriUint32 work_size);
+CriMvPly  FUN_14002f1f0(CriHeap heap);
+void      FUN_14002f610(CriMvPly mvply);
+void      FUN_140031020(CriMvPly mvply, CriUint32 value);
+void      FUN_1400372c0(CriMvPly mvply, CriBool float32);
+CriSint32 FUN_140037400(CriMvPly mvply, CriMvStreamingParameters* stmprm);
+CriSint32 FUN_140030ed0(CriMvPly mvply, CriMvAudioParameters* audprm);
+CriBool   FUN_140036140(CriMvPly mvply);
+CriBool   FUN_140036170(CriMvPly mvply);
+CriUint32 FUN_1400360c0(CriMvPly mvply, CriUint32 nch);
+CriUint32 FUN_140036100(CriMvPly mvply, CriUint32 nch);
+CriUint32 FUN_140035f00(CriMvPly mvply, CriUint32 nch, CriSint16* buf[], CriUint32 nsmpl, CriUint64* time);
+CriUint32 FUN_140035f70(CriMvPly mvply, CriUint32 nch, CriFloat32* buf[], CriUint32 nsmpl, CriUint64* time);
+CriUint32 FUN_140035fe0(CriMvPly mvply, CriUint32 nch, CriSint16* buf[], CriUint32 nsmpl, CriUint64* time);
+CriUint32 FUN_140036050(CriMvPly mvply, CriUint32 nch, CriFloat32* buf[], CriUint32 nsmpl, CriUint64* time);
+}
+
+extern const CriChar8* DAT_143b277b8;   // version string of the last created player
+extern CriUint32 DAT_143b278c8;         // live player count
+
+extern CriUint32 DAT_143b278c4;         // CriMv library init count
+extern CriChar8  DAT_143b277c0[0x100];  // last error message
+
+#pragma optimize("", off)
+#pragma function(memset, memcpy, strlen)
+
+static const CriChar8 crimveasy_version_str[] = "\nCRI Movie/PCx64 Ver.3.07.01 Build:Jan 20 2012 18:13:31\n";
+
+// MS2-FUNCTIONAL: the VS2008 build keeps an EH state slot for the placement new (this profile has no EH)
+// @0x14001d7a0
+__declspec(safebuffers) CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUint32 work_size, CriMvFileReaderInterface* freader,
+                                         CriMvSystemTimerInterface* stimer, CriMvSoundInterface* sound,
+                                         CriError& err)
+{
+    CriMvWorkAllocator walloc;
+    CriHeap heap;
+    void* heap_work;
+    CriSint32 ply_work_size;
+    CriMvEasyPlayer* mveasy;
+    CriUint32 heap_work_size;
+    CriMvSoundInterface::PcmFormat fmt;
+
+    DAT_143b277b8 = crimveasy_version_str;
+    err = CRIERR_OK;
+    if (CriMv::IsLibraryInitialized() == 0)
+    {
+        FUN_140038ce4(0, "E09031802M: Need to call CriMv::Initialize() before CriMvEasyPlayer::Create().", 0, 0,
+                      NULL);
+        err = CRIERR_NG;
+        return NULL;
+    }
+    FUN_14002e6b0(work, work_size, &walloc);
+    heap_work_size = 0x818;
+    heap_work = FUN_14002e6c0(&walloc, heap_work_size, 4);
+    heap = FUN_140027fec(heap_work, heap_work_size);
+    mveasy = new(heap, "CriMvEasyPlayer", 4) CriMvEasyPlayer;
+    if (mveasy == NULL)
+    {
+        err = CRIERR_NG;
+        return NULL;
+    }
+    mveasy->heap = NULL;
+    mveasy->freader = freader;
+    mveasy->stimer = stimer;
+    mveasy->sound = sound;
+    mveasy->work_heap = heap;
+    DAT_143b278c8 = DAT_143b278c8 + 1;
+    mveasy->freader_file = freader;
+    mveasy->freader_mem = CriMvEasyFileReaderMem::Create(heap);
+    if (mveasy->freader_mem == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    mveasy->cs_work = FUN_14002e6c0(&walloc, 0x48, 4);
+    if (mveasy->cs_work == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    mveasy->cs = FUN_1400385c8(mveasy->cs_work, 0x48);
+    if (mveasy->cs_work == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    ply_work_size = FUN_14002e9e0();
+    mveasy->mvply_work = FUN_14002e6c0(&walloc, ply_work_size, 4);
+    if (mveasy->mvply_work != NULL)
+    {
+        mveasy->mvply = FUN_14002eb20(mveasy->mvply_work, ply_work_size);
+    }
+    if (mveasy->mvply == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    FUN_140031020(mveasy->mvply, 8000);
+    if (mveasy->sound != NULL)
+    {
+        fmt = mveasy->sound->GetPcmFormat();
+        if (fmt == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
+        {
+            FUN_1400372c0(mveasy->mvply, 1);
+        }
+        else
+        {
+            FUN_1400372c0(mveasy->mvply, 0);
+        }
+    }
+    mveasy->subaudio = NULL;
+    mveasy->resetPlayback();
+    FUN_14002e6bc(&walloc);
+    return mveasy;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001dba0
+__declspec(safebuffers) CriSint32 CriMvEasyPlayer::CalcPlaybackWorkSize(const CriMvStreamingParameters* stmprm, CriError& err)
+{
+    CriSint32 size = 0;
+    CriSint32 subtitle_size;
+    CriSint32 ply_size;
+    CriBool ok;
+    CriSint32 audio_size;
+    CriMvStreamingParameters prm;
+
+    err = CRIERR_OK;
+    if (stmprm == NULL)
+    {
+        ok = GetHeaderInfo(&prm);
+        if (ok == 0)
+        {
+            return -1;
+        }
+    }
+    else
+    {
+        memcpy(&prm, stmprm, sizeof(prm));
+    }
+    subtitle_size = prm.max_subtitle_size + 4;
+    size += subtitle_size;
+    ply_size = FUN_140037400(mvply, &prm) + 4;
+    size += ply_size;
+    if (this->stmprm.track_play_audio != -1 && sound != NULL)
+    {
+        size += (size_t)0x24;
+        if (isAvailableCenterVoice(&prm) == 1)
+        {
+            audio_size = FUN_140030ed0(mvply, &prm.audio_prm[center_voice_track]);
+            size += audio_size + (size_t)0x1a4;
+        }
+        if (subaudio_track != -1 && prm.audio_prm[subaudio_track].num_channel != 0)
+        {
+            audio_size = FUN_140030ed0(mvply, &prm.audio_prm[subaudio_track]);
+            size += audio_size + (size_t)0x1a4;
+        }
+    }
+    return size;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001dd80
+void CriMvEasyPlayer::SetPlaybackWork(void* work, CriUint32 work_size, CriError& err)
+{
+    err = CRIERR_OK;
+    playback_work = work;
+    playback_work_size = work_size;
+}
+
+// MS2-FUNCTIONAL: the VS2008 build keeps an EH state slot for the placement new (this profile has no EH)
+// @0x14001de20
+CriMvEasyPlayer* CriMvEasyPlayer::Create(CriHeap heap, CriMvFileReaderInterface* freader,
+                                         CriMvSystemTimerInterface* stimer, CriMvSoundInterface* sound,
+                                         CriError& err)
+{
+    CriMvEasyPlayer* mveasy;
+    CriMvSoundInterface::PcmFormat fmt;
+
+    DAT_143b277b8 = crimveasy_version_str;
+    err = CRIERR_OK;
+    if (CriMv::IsLibraryInitialized() == 0)
+    {
+        FUN_140038ce4(0, "E09031802M: Need to call CriMv::Initialize() before CriMvEasyPlayer::Create().", 0, 0,
+                      NULL);
+        err = CRIERR_NG;
+        return NULL;
+    }
+    mveasy = new(heap, "CriMvEasyPlayer", 4) CriMvEasyPlayer;
+    if (mveasy == NULL)
+    {
+        err = CRIERR_NG;
+        return NULL;
+    }
+    mveasy->heap = heap;
+    mveasy->freader = freader;
+    mveasy->stimer = stimer;
+    mveasy->sound = sound;
+    DAT_143b278c8 = DAT_143b278c8 + 1;
+    mveasy->cs_work = FUN_140027ed8(heap, 0x48, "CriMvEasyPlayer: CriCsWork", 4);
+    if (mveasy->cs_work == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    mveasy->cs = FUN_1400385c8(mveasy->cs_work, 0x48);
+    if (mveasy->cs_work == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    mveasy->mvply = FUN_14002f1f0(heap);
+    if (mveasy->mvply == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    FUN_140031020(mveasy->mvply, 8000);
+    mveasy->freader_file = freader;
+    mveasy->freader_mem = CriMvEasyFileReaderMem::Create(heap);
+    if (mveasy->freader_mem == NULL)
+    {
+        err = CRIERR_NG;
+        mveasy->Destroy();
+        return NULL;
+    }
+    if (mveasy->sound != NULL)
+    {
+        fmt = mveasy->sound->GetPcmFormat();
+        if (fmt == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
+        {
+            FUN_1400372c0(mveasy->mvply, 1);
+        }
+        else
+        {
+            FUN_1400372c0(mveasy->mvply, 0);
+        }
+    }
+    mveasy->subaudio = NULL;
+    mveasy->resetPlayback();
+    return mveasy;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001ddd0
+void CriMvEasyPlayer::SetMetaDataWorkAllocator(void* (*allocfunc)(void* obj, CriUint32 size),
+                                               void (*freefunc)(void* obj, void* mem), void* obj,
+                                               CriMvMetaFlag meta_flag)
+{
+    FUN_1400301d0(mvply, allocfunc, freefunc, obj, meta_flag);
+}
+
+// @0x14001e160
+void CriMvEasyPlayer::ResetAllParameters(CriError& err)
+{
+    err = CRIERR_OK;
+    Status stat = GetStatus();
+    if (stat != MVEASY_STATUS_STOP && stat != MVEASY_STATUS_PLAYEND)
+    {
+        err = CRIERR_NG;
+        return;
+    }
+    resetPlayback();
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001e1c0
+void CriMvEasyPlayer::resetPlayback(void)
+{
+    timer_type = MVEASY_TIMER_SYSTEM;
+    status_after_stop = MVEASY_STATUS_STOP;
+    stmprm_flag = 0;
+    num_frame_pools = 1;
+    loop_flag = 0;
+    pause_flag = 0;
+    user_time_count = 0;
+    user_time_unit = 1;
+    file_read_pos = 0;
+    file_read_end = -1;
+    unk4a0 = 0;
+    memory_playback_type = 1;
+    data_type = 0;
+    unk4c0 = 0;
+    unk5e4 = 0;
+    modules_stopped = 0;
+    file_request_state = 0;
+    memset(fname, 0, sizeof(fname));
+    file_offset = 0;
+    file_range = -1;
+    data_ptr = NULL;
+    data_size = 0;
+    center_channel = 4;
+    center_voice_track = -1;
+    attached_center_voice_track = -1;
+    subaudio_track = -1;
+    attached_subaudio_track = -1;
+    buffering_time = 0.0f;
+    max_bitrate = 0;
+    max_chunk_size = 0;
+    min_buffer_size = 0;
+    read_buffer_size = -1;
+    subtitle_channel = -1;
+    audio_track = 100;
+    seek_frame_id = 0;
+    seek_offset = 0;
+    SetFileRequestCallback(NULL, NULL);
+    SetCuePointCallback(NULL, NULL);
+    SetStopCompleteCallback(NULL, NULL);
+    playback_work = NULL;
+    playback_work_size = 0;
+    work_heap = NULL;
+    sound_heap = NULL;
+    unk6f0 = 0;
+    if (mvply != NULL)
+    {
+        mvply->reload_threshold = 0.8f;
+        mvply->unked8 = -1;
+        FUN_140031040(mvply, audio_track);
+    }
+    resetHandleParameters();
+    initializeCompareFrameParameters();
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001e500
+void CriMvEasyPlayer::resetHandleParameters(void)
+{
+    req_decode_header = 0;
+    req_prepare = 0;
+    unk724 = 0;
+    unk5e8 = 0;
+    unk4c4 = 0;
+    if (filereq_func != NULL)
+    {
+        file_request_state = 0;
+    }
+    else if (unk4a0 != 0 && data_type != 0)
+    {
+        file_request_state = 1;
+    }
+    num_audio_channel = 0;
+    unk3c8 = 0;
+    time0_count = 0;
+    time0_unit = 1;
+    time1_count = 0;
+    time1_unit = 1;
+    time2_count = 0;
+    time2_unit = 1;
+    unk650 = 0;
+    unk658 = 0;
+    unk660 = 0.0f;
+    unk658 = 0;
+    memset(playback_info, 0, sizeof(playback_info));
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001e680
+void CriMvEasyPlayer::initializeCompareFrameParameters(void)
+{
+    compare_frame_count = 0;
+    SetCompareFrameTimeCallback(compareFrameTimeFluctuation, NULL);
+    compare_frame_prm0 = 1.0f;
+    compare_frame_prm1 = 5.4f;
+    compare_frame_prm2 = 1.0f;
+    compare_frame_prm3 = 1.0f;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001e720
+void CriMvEasyPlayer::Destroy(CriError& err)
+{
+    CriSint32 locked;
+    void* cs_tmp;
+    CriMvPly ply;
+    void* cs_work_tmp;
+    CriMvEasyFileReaderMem* fr;
+
+    err = CRIERR_OK;
+    locked = FUN_14003a050(&destroy_lock, 1);
+    if (locked == 1)
+    {
+        notifyErrorB(this,
+                     "E11021601M: CriMvEasyPlayer::Destroy is called during a call of CriMvEasyPlayer::ExecuteDecode.",
+                     0);
+    }
+    else
+    {
+        FUN_14003a050(&destroy_lock, 0);
+    }
+    if (freader_mem != NULL)
+    {
+        fr = freader_mem;
+        fr->Destroy();
+        freader_mem = NULL;
+    }
+    if (cs != NULL)
+    {
+        FUN_140039f50(cs);
+    }
+    ply = mvply;
+    mvply = NULL;
+    FUN_14002f610(ply);
+    if (work_heap != NULL)
+    {
+        FUN_140028074(work_heap);
+        work_heap = NULL;
+    }
+    if (cs != NULL)
+    {
+        FUN_140039f8c(cs);
+    }
+    cs_tmp = cs;
+    if (cs_tmp != NULL)
+    {
+        cs = NULL;
+        FUN_140039f00(cs_tmp);
+    }
+    cs_work_tmp = cs_work;
+    if (heap != NULL && cs_work_tmp != NULL)
+    {
+        cs_work = NULL;
+        FUN_140027fb4(heap, cs_work_tmp);
+    }
+    DAT_143b278c8 = DAT_143b278c8 - 1;
+    if (heap != NULL)
+    {
+        delete this;
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od lowers the switch with its own jump-table layout
+// @0x14001e940
+CriMvEasyPlayer::Status CriMvEasyPlayer::GetStatus(CriError& err)
+{
+    Status stat;
+    err = CRIERR_OK;
+    CriSint32 plystat = FUN_1400310b0(mvply);
+    if (error_flag == 1)
+    {
+        return MVEASY_STATUS_ERROR;
+    }
+    switch (plystat)
+    {
+    case 1:
+        stat = MVEASY_STATUS_DECHDR;
+        break;
+    case 2:
+        stat = MVEASY_STATUS_WAIT_PREP;
+        break;
+    case 3:
+        stat = MVEASY_STATUS_PREP;
+        break;
+    case 4:
+        stat = MVEASY_STATUS_READY;
+        break;
+    case 5:
+        stat = MVEASY_STATUS_PLAYING;
+        break;
+    case 6:
+        stat = MVEASY_STATUS_PLAYEND;
+        break;
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+        stat = status_after_stop;
+        break;
+    default:
+        stat = MVEASY_STATUS_STOP;
+        break;
+    }
+    return stat;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001ea50
+CriUint32 CriMvEasyPlayer::crimveasy_SupplyPcmDataByFloat32(void* obj, CriUint32 nch, CriFloat32* sample[],
+                                                           CriUint32 nsmpl)
+{
+    CriUint32 n;
+    CriUint32 i;
+    CriMvEasyPlayer* mveasy = (CriMvEasyPlayer*)obj;
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    if (sample == NULL)
+    {
+        mveasy->setNormalErrorStatus("E090040802M: Cannot write sound data into the app's sound buffer.");
+        return 0;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        memset(sample[i], 0, nsmpl * sizeof(CriFloat32));
+    }
+    n = crimveasy_GetWave32(mveasy, nch, sample, nsmpl);
+    if (n == 0)
+    {
+        return 0;
+    }
+    return n;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001eb20
+CriUint32 CriMvEasyPlayer::crimveasy_SupplyPcmDataBySint16(void* obj, CriUint32 nch, CriSint16* sample[],
+                                                          CriUint32 nsmpl)
+{
+    CriUint32 n;
+    CriUint32 i;
+    CriMvEasyPlayer* mveasy = (CriMvEasyPlayer*)obj;
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    if (sample == NULL)
+    {
+        mveasy->setNormalErrorStatus("E090040801M: Cannot write sound data into the app's sound buffer.");
+        return 0;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        memset(sample[i], 0, nsmpl * sizeof(CriSint16));
+    }
+    n = crimveasy_GetWave16(mveasy, nch, sample, nsmpl);
+    if (n == 0)
+    {
+        return 0;
+    }
+    return n;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001ebe0
+CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mveasy)
+{
+    CriUint32 cv_n;
+    CriUint32 n;
+    CriBool cv_end;
+    CriUint32 main_n;
+    CriBool main_end;
+    main_end = 1;
+    cv_end = 1;
+    main_end = FUN_140036140(mveasy->mvply);
+    main_n = FUN_1400360c0(mveasy->mvply, mveasy->num_audio_channel);
+    if (mveasy->attached_center_voice_track == -1)
+    {
+        n = main_n;
+    }
+    else
+    {
+        cv_end = FUN_140036170(mveasy->mvply);
+        cv_n = FUN_140036100(mveasy->mvply, 1);
+        if (main_end == 1)
+        {
+            n = cv_n;
+        }
+        else if (cv_end == 1)
+        {
+            n = main_n;
+        }
+        else
+        {
+            n = (main_n > cv_n) ? cv_n : main_n;
+        }
+    }
+    return n;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001ecc0
+__declspec(safebuffers) CriUint32 CriMvEasyPlayer::crimveasy_GetWave16(CriMvEasyPlayer* mveasy, CriUint32 nch, CriSint16* sample[],
+                                              CriUint32 nsmpl)
+{
+    CriUint32 nsmpl_out = 0;
+    CriUint32 i;
+    CriSint16* buf[8];
+    CriUint32 src;
+    CriBool cv_end = 1;
+    CriUint32 avail;
+    CriUint64 time;
+    CriSint16* cvbuf;
+    CriBool main_end = 1;
+    CriSint32 stat;
+
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->sound == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->stmprm.track_play_audio == -1)
+    {
+        return 0;
+    }
+    stat = FUN_1400310b0(mveasy->mvply);
+    if (stat == 0 || stat == 1 || stat == 2)
+    {
+        return 0;
+    }
+    for (i = 0; i < 8; i++)
+    {
+        buf[i] = NULL;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        src = i;
+        if (mveasy->num_audio_channel != mveasy->unk3c8 && i >= mveasy->center_channel)
+        {
+            src = i + 1;
+            if (src >= nch)
+            {
+                src = i;
+            }
+        }
+        buf[i] = sample[src];
+    }
+    cvbuf = sample[mveasy->center_channel];
+    main_end = FUN_140036140(mveasy->mvply);
+    if (mveasy->attached_center_voice_track != -1)
+    {
+        cv_end = FUN_140036170(mveasy->mvply);
+    }
+    avail = crimveasy_CalcAvailableNumSmpls(mveasy);
+    if (avail == 0)
+    {
+        return 0;
+    }
+    nsmpl = (nsmpl > avail) ? avail : nsmpl;
+    if (main_end == 0)
+    {
+        nsmpl_out = FUN_140035f00(mveasy->mvply, mveasy->num_audio_channel, buf, nsmpl, &time);
+    }
+    else
+    {
+        for (i = 0; i < 8; i++)
+        {
+            if (buf[i] != NULL)
+            {
+                memset(buf[i], 0, nsmpl * sizeof(CriSint16));
+            }
+        }
+    }
+    if (mveasy->attached_center_voice_track != -1)
+    {
+        if (cv_end == 0)
+        {
+            nsmpl_out = FUN_140035fe0(mveasy->mvply, 1, &cvbuf, nsmpl, &time);
+        }
+        else
+        {
+            memset(cvbuf, 0, nsmpl * sizeof(CriFloat32));
+        }
+    }
+    else if (mveasy->num_audio_channel != mveasy->unk3c8)
+    {
+        memset(cvbuf, 0, nsmpl * sizeof(CriSint16));
+    }
+    return nsmpl_out;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001f060
+__declspec(safebuffers) CriUint32 CriMvEasyPlayer::crimveasy_GetWave32(CriMvEasyPlayer* mveasy, CriUint32 nch, CriFloat32* sample[],
+                                              CriUint32 nsmpl)
+{
+    CriUint32 nsmpl_out = 0;
+    CriUint32 i;
+    CriFloat32* buf[8];
+    CriUint32 src;
+    CriBool cv_end = 1;
+    CriUint32 avail;
+    CriUint64 time;
+    CriFloat32* cvbuf;
+    CriBool main_end = 1;
+    CriSint32 stat;
+
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->sound == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->stmprm.track_play_audio == -1)
+    {
+        return 0;
+    }
+    stat = FUN_1400310b0(mveasy->mvply);
+    if (stat == 0 || stat == 1 || stat == 2)
+    {
+        return 0;
+    }
+    for (i = 0; i < 8; i++)
+    {
+        buf[i] = NULL;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        src = i;
+        if (mveasy->num_audio_channel != mveasy->unk3c8 && i >= mveasy->center_channel)
+        {
+            src = i + 1;
+            if (src >= nch)
+            {
+                src = i;
+            }
+        }
+        buf[i] = sample[src];
+    }
+    cvbuf = sample[mveasy->center_channel];
+    main_end = FUN_140036140(mveasy->mvply);
+    if (mveasy->attached_center_voice_track != -1)
+    {
+        cv_end = FUN_140036170(mveasy->mvply);
+    }
+    avail = crimveasy_CalcAvailableNumSmpls(mveasy);
+    if (avail == 0)
+    {
+        return 0;
+    }
+    nsmpl = (nsmpl > avail) ? avail : nsmpl;
+    if (main_end == 0)
+    {
+        nsmpl_out = FUN_140035f70(mveasy->mvply, mveasy->num_audio_channel, buf, nsmpl, &time);
+    }
+    else
+    {
+        for (i = 0; i < 8; i++)
+        {
+            if (buf[i] != NULL)
+            {
+                memset(buf[i], 0, nsmpl * sizeof(CriFloat32));
+            }
+        }
+    }
+    if (mveasy->attached_center_voice_track != -1)
+    {
+        if (cv_end == 0)
+        {
+            nsmpl_out = FUN_140036050(mveasy->mvply, 1, &cvbuf, nsmpl, &time);
+        }
+        else
+        {
+            memset(cvbuf, 0, nsmpl * sizeof(CriFloat32));
+        }
+    }
+    else if (mveasy->num_audio_channel != mveasy->unk3c8)
+    {
+        memset(cvbuf, 0, nsmpl * sizeof(CriFloat32));
+    }
+    return nsmpl_out;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001f400
+CriUint32 CriMvEasyPlayer::crimveasy_SupplySubAudioDataByFloat32(void* obj, CriUint32 nch, CriFloat32* sample[],
+                                                                CriUint32 nsmpl)
+{
+    CriUint32 n;
+    CriUint32 i;
+    CriMvEasyPlayer* mveasy = (CriMvEasyPlayer*)obj;
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        memset(sample[i], 0, nsmpl * sizeof(CriFloat32));
+    }
+    n = crimveasy_GetSubAudioWave32(mveasy, nch, sample, nsmpl);
+    if (n == 0)
+    {
+        return 0;
+    }
+    return n;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001f4b0
+__declspec(safebuffers) CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave32(CriMvEasyPlayer* mveasy, CriUint32 nch, CriFloat32* sample[],
+                                                      CriUint32 nsmpl)
+{
+    CriUint32 nsmpl_out;
+    CriUint32 i;
+    CriFloat32* buf[8];
+    CriUint32 src;
+    CriUint32 avail;
+    CriUint64 time;
+    CriUint32 sub_nch;
+    CriSint32 stat;
+
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->subaudio == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->attached_subaudio_track == -1)
+    {
+        return 0;
+    }
+    stat = FUN_1400310b0(mveasy->mvply);
+    if (stat == 0 || stat == 1 || stat == 2)
+    {
+        return 0;
+    }
+    sub_nch = mveasy->stmprm.audio_prm[mveasy->attached_subaudio_track].num_channel;
+    if (sub_nch == 0)
+    {
+        return 0;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        src = i;
+        buf[i] = sample[src];
+    }
+    avail = FUN_140036100(mveasy->mvply, sub_nch);
+    if (nsmpl > avail)
+    {
+        nsmpl = avail;
+    }
+    if (nsmpl == 0)
+    {
+        return 0;
+    }
+    nsmpl_out = FUN_140036050(mveasy->mvply, sub_nch, buf, nsmpl, &time);
+    return nsmpl_out;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001f660
+CriUint32 CriMvEasyPlayer::crimveasy_SupplySubAudioDataBySint16(void* obj, CriUint32 nch, CriSint16* sample[],
+                                                               CriUint32 nsmpl)
+{
+    CriUint32 n;
+    CriUint32 i;
+    CriMvEasyPlayer* mveasy = (CriMvEasyPlayer*)obj;
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        memset(sample[i], 0, nsmpl * sizeof(CriSint16));
+    }
+    n = crimveasy_GetSubAudioWave16(mveasy, nch, sample, nsmpl);
+    if (n == 0)
+    {
+        return 0;
+    }
+    return n;
+}
+
+// The 16-bit sub audio path tests the main sound and track like the CRI build does.
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001f700
+__declspec(safebuffers) CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave16(CriMvEasyPlayer* mveasy, CriUint32 nch, CriSint16* sample[],
+                                                      CriUint32 nsmpl)
+{
+    CriUint32 nsmpl_out;
+    CriUint32 i;
+    CriSint16* buf[8];
+    CriUint32 src;
+    CriUint32 avail;
+    CriUint64 time;
+    CriUint32 sub_nch;
+    CriSint32 stat;
+
+    if (mveasy == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->sound == NULL)
+    {
+        return 0;
+    }
+    if (mveasy->stmprm.track_play_audio == -1)
+    {
+        return 0;
+    }
+    stat = FUN_1400310b0(mveasy->mvply);
+    if (stat == 0 || stat == 1 || stat == 2)
+    {
+        return 0;
+    }
+    sub_nch = mveasy->stmprm.audio_prm[mveasy->attached_subaudio_track].num_channel;
+    if (sub_nch == 0)
+    {
+        return 0;
+    }
+    for (i = 0; i < nch; i++)
+    {
+        src = i;
+        buf[i] = sample[src];
+    }
+    avail = FUN_140036100(mveasy->mvply, sub_nch);
+    if (nsmpl > avail)
+    {
+        nsmpl = avail;
+    }
+    if (nsmpl == 0)
+    {
+        return 0;
+    }
+    nsmpl_out = FUN_140035fe0(mveasy->mvply, sub_nch, buf, nsmpl, &time);
+    return nsmpl_out;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001f8b0
+void CriMvEasyPlayer::Update(CriError& err)
+{
+    err = CRIERR_OK;
+    CriSint32 locked = FUN_14003a050(&update_lock, 1);
+    if (locked == 1)
+    {
+        return;
+    }
+    executeUpdate(err);
+    FUN_14003a050(&update_lock, 0);
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001f920
+void CriMvEasyPlayer::executeUpdate(CriError& err)
+{
+    CriSint32 ply_status;
+    if (error_flag != 1)
+    {
+        if (mvply->decoder_error == 1)
+        {
+            setNormalErrorStatus("E09031001M: Decoder core error.");
+            error_flag = 1;
+        }
+        if (sound != NULL && stmprm.track_play_audio != -1)
+        {
+            if (sound->GetStatus() == CriMvSoundInterface::STATUS_ERROR)
+            {
+                setNormalErrorStatus("E09031002M: Sound Output module error.");
+                error_flag = 1;
+            }
+        }
+    }
+    if (error_flag == 1)
+    {
+        ply_status = FUN_1400310b0(mvply);
+        switch (ply_status)
+        {
+        case 6:
+        case 9:
+            if (isFileReaderIdle() == 0)
+            {
+                break;
+            }
+            FUN_1400233c0(this);
+            if (detachOutputs() == 1)
+            {
+                completeStop(ply_status);
+            }
+            break;
+        }
+    }
+    else
+    {
+        FUN_1400235a0(this);
+        FUN_140024660(this);
+        updateStatus(err);
+        FUN_140022d00(this);
+        FUN_1400230a0(this);
+        FUN_14002fb70(mvply);
+        FUN_140022f20(this);
+        FUN_1400231d0(this);
+        FUN_1400233c0(this);
+        ply_status = FUN_1400310b0(mvply);
+        if (ply_status == 1)
+        {
+            FUN_140031470(mvply);
+        }
+        status_after_stop = GetStatus();
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001fb00
+void CriMvEasyPlayer::updateStatus(CriError& err)
+{
+    CriSint32 ply_status;
+    TimerType timer;
+    CriFloat32 frame_end;
+    CriUint64 unit;
+    CriUint64 count;
+    CriFloat32 now;
+    CriSint32 track;
+
+    ply_status = FUN_1400310b0(mvply);
+    switch (ply_status)
+    {
+    case 2:
+        if (req_decode_header == 1)
+        {
+            break;
+        }
+        setupPlayback();
+        if (error_flag == 1)
+        {
+            err = CRIERR_NG;
+            break;
+        }
+        setupSeekPosition();
+        FUN_140031100(mvply);
+        break;
+    case 4:
+        if (req_prepare == 1)
+        {
+            break;
+        }
+        unk724 = 1;
+        FUN_140031100(mvply);
+        break;
+    case 6:
+        if (modules_stopped == 0)
+        {
+            timer = GetMasterTimer();
+            if (timer == MVEASY_TIMER_SYSTEM || (timer == MVEASY_TIMER_AUDIO && stimer != NULL))
+            {
+                GetTime(count, unit);
+                frame_end = (CriFloat32)(frame_info.frame_id + 1) / (CriFloat32)frame_info.framerate * 1000.0f *
+                            1000.0f;
+                now = (CriFloat32)(count * 1000) / (CriFloat32)unit;
+                if (frame_end > now)
+                {
+                    unk6f0 = 1;
+                    break;
+                }
+            }
+        }
+    case 9:
+        requestStopModules();
+        if (isFileReaderIdle() == 0)
+        {
+            break;
+        }
+        if (detachOutputs() == 1)
+        {
+            completeStop(ply_status);
+        }
+        break;
+    case 5:
+        if (unk650 == 1 && pause_flag == 0)
+        {
+            *(CriUint64*)playback_info = *(CriUint64*)playback_info + 1;
+        }
+        track = stmprm.track_play_audio;
+        FUN_14002fbe0(mvply, &stmprm);
+        if (mvply->num_audio_out > 0)
+        {
+            stmprm.track_play_audio = track;
+        }
+        break;
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x14001fdc0
+void CriMvEasyPlayer::setupSeekPosition(void)
+{
+    CriUint64 alpha_offset;
+    CriUint64 offset;
+    CriSint32 frame_id;
+    CriSint32 alpha_frame_id;
+
+    if (mvply->seekinfo_flag == 0)
+    {
+        if (mvply->seek_mode == 3)
+        {
+            FUN_140037740(mvply, seek_frame_id, seek_frame_id);
+            FUN_140037780(mvply, seek_frame_id);
+        }
+        else
+        {
+            seek_frame_id = 0;
+            FUN_140037740(mvply, seek_frame_id, 0);
+        }
+    }
+    else if (seek_offset == 0 && seek_frame_id <= 0)
+    {
+        seek_frame_id = 0;
+        FUN_140037740(mvply, seek_frame_id, 0);
+    }
+    else if (seek_frame_id >= mvply->total_frames)
+    {
+        seek_frame_id = 0;
+        seek_offset = 0;
+        FUN_140037740(mvply, seek_frame_id, 0);
+    }
+    else if (seek_offset != 0)
+    {
+        freader->Seek(seek_offset + file_offset, CriMvFileReaderInterface::SEEK_FROM_BEGIN);
+        file_read_pos = seek_offset;
+        FUN_140037740(mvply, seek_frame_id, seek_frame_id);
+    }
+    else
+    {
+        frame_id = 0;
+        offset = 0;
+        alpha_frame_id = 0;
+        alpha_offset = 0;
+        seek_offset = 0;
+        FUN_140033700(mvply, mvply->seektbl, mvply->num_seektbl, seek_frame_id, &offset, &frame_id);
+        seek_offset = offset;
+        if (mvply->seektbl_alpha != NULL)
+        {
+            FUN_140033700(mvply, mvply->seektbl_alpha, mvply->num_seektbl_alpha, seek_frame_id, &alpha_offset,
+                          &alpha_frame_id);
+            if (alpha_offset < offset)
+            {
+                seek_offset = alpha_offset;
+            }
+        }
+        if (frame_id > 0 || alpha_frame_id > 0)
+        {
+            freader->Seek(seek_offset + file_offset, CriMvFileReaderInterface::SEEK_FROM_BEGIN);
+            file_read_pos = seek_offset;
+        }
+        FUN_140037740(mvply, seek_frame_id, frame_id);
+        FUN_140037780(mvply, alpha_frame_id);
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140020140
+__declspec(safebuffers) CriBool CriMvEasyPlayer::setupPlayback(void)
+{
+    void* ply_work;
+    CriMvWorkAllocator walloc;
+    CriSint32 ply_work_size;
+    CriBool use_heap;
+    CriMvSoundInterface::PcmFormat fmt;
+    CriUint32 rate;
+    CriUint32 rest;
+    CriUint32 sub_nch;
+    CriMvSoundInterface::PcmFormat sub_fmt;
+    CriUint32 sub_rate;
+
+    if (stmprm_flag != 1)
+    {
+        GetHeaderInfo(&stmprm);
+    }
+    if (stmprm.is_playable == 0)
+    {
+        setNormalErrorStatus("E08020501M: This movie is not playable on this platform.");
+        return 0;
+    }
+    use_heap = (heap != NULL) ? 1 : 0;
+    memset(&walloc, 0, sizeof(walloc));
+    if (use_heap == 0)
+    {
+        FUN_14002e6b0(playback_work, playback_work_size, &walloc);
+    }
+    stmprm.channel_play_subtitle = subtitle_channel;
+    if (stmprm.max_subtitle_size > 0)
+    {
+        if (use_heap == 1)
+        {
+            subtitle_buf = (CriUint8*)FUN_140027ed8(heap, stmprm.max_subtitle_size, "CriMvEasy: SubtitleBuffer", 4);
+        }
+        else
+        {
+            subtitle_buf = (CriUint8*)FUN_14002e6c0(&walloc, stmprm.max_subtitle_size, 4);
+        }
+        if (subtitle_buf == NULL)
+        {
+            setNormalErrorStatus("E07020101M: Failed allocate subtitle buffer.");
+            return 0;
+        }
+    }
+    if (use_heap == 0)
+    {
+        ply_work_size = FUN_140037400(mvply, &stmprm);
+        ply_work = FUN_14002e6c0(&walloc, ply_work_size, 4);
+        if (FUN_140030e50(mvply, ply_work, ply_work_size, &stmprm) != 1)
+        {
+            setNormalErrorStatus("E10052101M: Failed criMvPly_AllocateWorkBufferWithWork().");
+            return 0;
+        }
+    }
+    else if (FUN_140030230(mvply, heap, &stmprm) != 1)
+    {
+        setNormalErrorStatus("E07020201M: Failed criMvPly_AllocateWorkBuffer().");
+        return 0;
+    }
+    if (stmprm.track_play_audio != -1 && sound != NULL)
+    {
+        if (use_heap == 0)
+        {
+            rest = walloc.size - (CriUint32)(walloc.cur - walloc.top);
+            sound_heap = FUN_140027fec(walloc.cur, rest);
+        }
+        else
+        {
+            sound_heap = heap;
+        }
+        num_audio_channel = stmprm.audio_prm[stmprm.track_play_audio].num_channel;
+        unk3c8 = adjustNumTrackAudioOut();
+        rate = stmprm.audio_prm[stmprm.track_play_audio].sampling_rate;
+        if (sound->CreateOutput(sound_heap, unk3c8, rate) == 0)
+        {
+            setNormalErrorStatus("E07020102M: Failed create SoundOutput.");
+            return 0;
+        }
+        fmt = sound->GetPcmFormat();
+        if (fmt == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
+        {
+            sound->SetCallbackGetFloat32PcmData(crimveasy_SupplyPcmDataByFloat32, this);
+        }
+        else
+        {
+            sound->SetCallbackGetSint16PcmData(crimveasy_SupplyPcmDataBySint16, this);
+        }
+        if (isAvailableCenterVoice(&stmprm) == 1 && attachCenterVoice() != 1)
+        {
+            setNormalErrorStatus("E07020202M: Failed attach Center Voice.");
+            return 0;
+        }
+        if (isAvailableSubAudio(&stmprm) == 1)
+        {
+            if (attachSubAudioHandle(sound_heap) != 1)
+            {
+                setNormalErrorStatus("E08012401M: Failed attach SubAudio handle.");
+                return 0;
+            }
+            sub_nch = stmprm.audio_prm[subaudio_track].num_channel;
+            sub_rate = stmprm.audio_prm[subaudio_track].sampling_rate;
+            if (subaudio->CreateOutput(sound_heap, sub_nch, sub_rate) == 0)
+            {
+                setNormalErrorStatus("E08012402M: Failed create SoundOutput.");
+                return 0;
+            }
+            sub_fmt = subaudio->GetPcmFormat();
+            if (sub_fmt == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
+            {
+                subaudio->SetCallbackGetFloat32PcmData(crimveasy_SupplySubAudioDataByFloat32, this);
+            }
+            else
+            {
+                subaudio->SetCallbackGetSint16PcmData(crimveasy_SupplySubAudioDataBySint16, this);
+            }
+        }
+    }
+    return 1;
+}
+
+// @0x140020790
+CriUint32 CriMvEasyPlayer::adjustNumTrackAudioOut(void)
+{
+    CriUint32 num;
+    if (num_audio_channel == 5)
+    {
+        num = 6;
+    }
+    else if (num_audio_channel == 7)
+    {
+        num = 8;
+    }
+    else
+    {
+        num = num_audio_channel;
+    }
+    return num;
+}
+
+// @0x1400207f0
+void CriMvEasyPlayer::startModules(void)
+{
+    if (stimer != NULL)
+    {
+        stimer->Start();
+    }
+    if (stmprm.num_audio > 0 && stmprm.track_play_audio != -1 && sound != NULL)
+    {
+        sound->Start();
+    }
+    if (stmprm.num_audio > 0 && attached_subaudio_track != -1 && subaudio != NULL)
+    {
+        subaudio->Start();
+    }
+}
+
+// @0x1400208c0
+void CriMvEasyPlayer::requestStopModules(void)
+{
+    if (modules_stopped == 1)
+    {
+        return;
+    }
+    if (stimer != NULL)
+    {
+        stimer->Stop();
+    }
+    if (sound != NULL && stmprm.track_play_audio != -1)
+    {
+        sound->Stop();
+    }
+    if (subaudio != NULL && attached_subaudio_track != -1)
+    {
+        subaudio->Stop();
+    }
+    modules_stopped = 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x1400209a0
+CriBool CriMvEasyPlayer::isFileReaderIdle(void)
+{
+    CriBool idle = 1;
+    CriMvFileReaderInterface::AsyncStatus open_status;
+    CriMvFileReaderInterface::AsyncStatus read_status;
+
+    if (freader != NULL && data_type == 1)
+    {
+        open_status = freader->GetOpenStatus();
+        if (file_opened == 1 && open_status == CriMvFileReaderInterface::ASYNC_STATUS_COMPLETE)
+        {
+            read_status = freader->GetReadStatus();
+            if (file_reading == 0 || read_status == CriMvFileReaderInterface::ASYNC_STATUS_COMPLETE)
+            {
+                if (file_closing != 1)
+                {
+                    unk4c0 = 5;
+                    freader->Close();
+                    file_closing = 1;
+                }
+            }
+            else
+            {
+                idle = 0;
+                unk6f0 = 4;
+            }
+        }
+        else if (unk4c0 == 1)
+        {
+            unk4c0 = 0;
+        }
+    }
+    return idle;
+}
+
+// @0x140020ae0
+CriBool CriMvEasyPlayer::detachOutputs(void)
+{
+    CriMvSoundInterface::Status sound_status;
+    CriMvSoundInterface::Status sub_status;
+    CriMvFileReaderInterface::AsyncStatus close_status;
+
+    if (sound != NULL && stmprm.track_play_audio != -1)
+    {
+        sound_status = sound->GetStatus();
+        if (sound_status == CriMvSoundInterface::STATUS_STOP || sound_status == CriMvSoundInterface::STATUS_ERROR)
+        {
+            sound->SetCallbackGetFloat32PcmData(NULL, NULL);
+            sound->SetCallbackGetSint16PcmData(NULL, NULL);
+        }
+        else
+        {
+            unk6f0 = 2;
+            return 0;
+        }
+    }
+    if (subaudio != NULL && attached_subaudio_track != -1)
+    {
+        sub_status = subaudio->GetStatus();
+        if (sub_status == CriMvSoundInterface::STATUS_STOP || sub_status == CriMvSoundInterface::STATUS_ERROR)
+        {
+            subaudio->SetCallbackGetFloat32PcmData(NULL, NULL);
+            subaudio->SetCallbackGetSint16PcmData(NULL, NULL);
+        }
+        else
+        {
+            unk6f0 = 3;
+            return 0;
+        }
+    }
+    if (freader != NULL && data_type == 1 && (file_opened == 1 || file_closing == 1))
+    {
+        close_status = freader->GetCloseStatus();
+        if (close_status == CriMvFileReaderInterface::ASYNC_STATUS_COMPLETE)
+        {
+            file_closing = 0;
+            file_opened = 0;
+            file_read_pos = 0;
+            file_read_end = -1;
+            if (modules_stopped == 1)
+            {
+                unk4c0 = 0;
+            }
+            else
+            {
+                unk4c0 = 1;
+            }
+        }
+        else if (close_status == CriMvFileReaderInterface::ASYNC_STATUS_ERROR)
+        {
+            file_closing = 0;
+            file_opened = 0;
+            file_read_pos = 0;
+            file_read_end = -1;
+            notifyErrorB(this, "E07012302M: File Close Error", 0);
+        }
+        else
+        {
+            unk6f0 = 5;
+            return 0;
+        }
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140020db0
+void CriMvEasyPlayer::completeStop(CriSint32 ply_status)
+{
+    CriSint32 locked;
+    locked = FUN_14003a050(&destroy_lock, 1);
+    if (locked == 0)
+    {
+        modules_stopped = 0;
+        releasePlaybackResources();
+        if (ply_status == 6)
+        {
+            resetHandleParameters();
+        }
+        pause_flag = 0;
+        FUN_140031100(mvply);
+        if (error_flag == 1)
+        {
+            error_flag = 0;
+        }
+        unk6f0 = 0;
+        if (stopcmpl_func != NULL)
+        {
+            stopcmpl_func(this, stopcmpl_usrobj);
+        }
+        FUN_14003a050(&destroy_lock, 0);
+    }
+    else
+    {
+        unk6f0 = 6;
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140020eb0
+void CriMvEasyPlayer::releasePlaybackResources(void)
+{
+    CriBool use_heap;
+    use_heap = (heap != NULL) ? 1 : 0;
+    if (subtitle_buf != NULL)
+    {
+        if (use_heap == 1)
+        {
+            FUN_140027fb4(heap, subtitle_buf);
+        }
+        subtitle_buf = NULL;
+    }
+    if (sound != NULL)
+    {
+        sound->DestroyOutput();
+    }
+    if (subaudio != NULL)
+    {
+        subaudio->DestroyOutput();
+    }
+    detachCenterVoice();
+    detachSubAudioHandle();
+    if (use_heap == 0 && sound_heap != NULL)
+    {
+        FUN_140028074(sound_heap);
+        sound_heap = NULL;
+    }
+    FUN_140030c70(mvply);
+    num_audio_channel = 0;
+    unk3c8 = 0;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, uint64/float conversion sequence)
+// @0x140021000
+void CriMvEasyPlayer::SyncMasterTimer(CriError& err)
+{
+    CriUint64 count = 0;
+    CriUint64 unit = 1;
+    CriUint64 sys_count = 0;
+    CriUint64 sys_unit = 1;
+    Status status;
+    TimerType timer;
+
+    err = CRIERR_OK;
+    if (unk724 == 1 && pause_flag == 0)
+    {
+        startModules();
+        unk724 = 0;
+    }
+    status = GetStatus();
+    if (status == MVEASY_STATUS_STOP || status == MVEASY_STATUS_PLAYEND || status == MVEASY_STATUS_ERROR ||
+        modules_stopped == 1)
+    {
+        return;
+    }
+    if (stimer != NULL)
+    {
+        stimer->GetTime(sys_count, sys_unit);
+    }
+    timer = GetMasterTimer();
+    switch (timer)
+    {
+    case MVEASY_TIMER_AUDIO:
+        calcAudioTime(&count, &unit, sys_count, sys_unit);
+        user_time_count = count;
+        user_time_unit = unit;
+        break;
+    case MVEASY_TIMER_SYSTEM:
+        user_time_count = sys_count;
+        user_time_unit = sys_unit;
+        break;
+    default:
+        user_time_count = 0;
+        user_time_unit = 1;
+        break;
+    }
+    time0_count = sys_count;
+    time0_unit = sys_unit;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, uint64/float conversion sequence)
+// @0x1400211d0
+void CriMvEasyPlayer::calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64 sys_count, CriUint64 sys_unit)
+{
+    CriBool extrapolate;
+    CriUint64 extra;
+    CriUint64 snd_unit;
+    CriMvSoundInterface::Status status;
+    CriUint64 snd_count;
+    CriFloat32 elapsed;
+
+    snd_count = 0;
+    snd_unit = 1;
+    extrapolate = 0;
+    status = sound->GetStatus();
+    if (status == CriMvSoundInterface::STATUS_STOP)
+    {
+        user_time_count = time2_count;
+        user_time_unit = time2_unit;
+        return;
+    }
+    sound->GetTime(snd_count, snd_unit);
+    extra = 0;
+    if (FUN_1400310b0(mvply) == 5 && FUN_140036140(mvply) == 1)
+    {
+        extrapolate = 1;
+    }
+    else if (FUN_1400310b0(mvply) == 6)
+    {
+        extrapolate = 1;
+    }
+    if (extrapolate != 0 && snd_count == time2_count && stimer != NULL)
+    {
+        if (time1_count == 0)
+        {
+            time1_count = time0_count;
+            time1_unit = time0_unit;
+        }
+        elapsed = (CriFloat32)(sys_count - time1_count) / (CriFloat32)time1_unit;
+        extra = (CriUint64)(elapsed * (CriFloat32)snd_unit);
+    }
+    *count = snd_count + extra;
+    *unit = snd_unit;
+    time2_count = snd_count;
+    time2_unit = snd_unit;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, uint64/float conversion sequence)
+// @0x140021450
+CriBool CriMvEasyPlayer::ExecuteDecode(CriError& err)
+{
+    CriBool result = 1;
+    CriSint32 locked;
+    Status status;
+
+    err = CRIERR_OK;
+    status = GetStatus();
+    if (status == MVEASY_STATUS_STOP || status == MVEASY_STATUS_PLAYEND)
+    {
+        result = 0;
+    }
+    locked = FUN_14003a050(&destroy_lock, 1);
+    if (locked == 1)
+    {
+        return result;
+    }
+    FUN_140039f50(cs);
+    if (mvply != NULL)
+    {
+        FUN_140031250(mvply);
+        FUN_1400313d0(mvply);
+    }
+    FUN_140039f8c(cs);
+    FUN_14003a050(&destroy_lock, 0);
+    return result;
+}
+
+// @0x140021530
+void CriMvEasyPlayer::SetFile(CriChar8* fname, CriError& err)
+{
+    err = CRIERR_OK;
+    SetFileRange(fname, 0, -1);
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
+// @0x140021580
+void CriMvEasyPlayer::SetData(CriUint8* dataptr, CriUint32 datasize, CriError& err)
+{
+    CriUint32 filesize;
+    void* node;
+    void* hdr;
+    CriUint32 hdr_size;
+
+    err = CRIERR_OK;
+    if (*dataptr == 'C' && *(dataptr + 1) == 'R' && *(dataptr + 2) == 'I' && *(dataptr + 3) == 'D')
+    {
+        hdr = FUN_14003b674(dataptr, datasize, &hdr_size);
+        node = FUN_14003b348(mvply->utf_heap, hdr, hdr_size);
+        filesize = FUN_14003a85c(node, 0, "filesize");
+        FUN_14003a108(node);
+        if (datasize > filesize)
+        {
+            datasize = filesize;
+        }
+    }
+    unk4a0 = 2;
+    if (memory_playback_type == 1 || mvply->unkda0 == NULL)
+    {
+        data_type = 1;
+        sprintf_s(fname, 0x100, "MFS:%016X.%016X", dataptr, datasize);
+    }
+    else
+    {
+        data_type = 2;
+        data_ptr = dataptr;
+        data_size = datasize;
+        memset(fname, 0, 0x100);
+    }
+    file_request_state = 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
+// @0x140021720
+void CriMvEasyPlayer::SetFileRange(CriChar8* fname, CriUint64 offset, CriSint64 range, CriError& err)
+{
+    CriSint32 len;
+    err = CRIERR_OK;
+    if (freader != NULL)
+    {
+        unk4a0 = 1;
+        data_type = 1;
+        len = (CriSint32)strlen(fname);
+        if (len > 0x100)
+        {
+            len = 0xff;
+        }
+        memset(this->fname, 0, 0x100);
+        memcpy(this->fname, fname, len);
+        file_offset = offset;
+        file_range = range;
+        file_request_state = 1;
+        data_ptr = NULL;
+        data_size = 0;
+    }
+    else
+    {
+        setErrorMessage("E09031801M: File name could be set to the EasyPlayer without FileReaderInterface.",
+                        this->fname);
+        err = CRIERR_NG;
+    }
+}
+
+// @0x140021850
+void CriMvEasyPlayer::SetPreviousDataAgain(CriError& err)
+{
+    if (data_type == 0)
+    {
+        err = CRIERR_NG;
+        setErrorMessage("E10112201M: Movie data was not set yet.", NULL);
+        setNormalErrorStatus(DAT_143b277c0);
+        return;
+    }
+    err = CRIERR_OK;
+    file_request_state = 1;
+}
+
+// @0x1400218d0
+void CriMvEasyPlayer::DecodeHeader(CriError& err)
+{
+    err = CRIERR_OK;
+    req_decode_header = 1;
+    CriBool ok = startInputAndDecoding();
+    if (ok == 0)
+    {
+        err = CRIERR_NG;
+    }
+}
+
+// @0x140021930
+void CriMvEasyPlayer::Prepare(CriError& err)
+{
+    err = CRIERR_OK;
+    req_prepare = 1;
+    if (req_decode_header == 1)
+    {
+        req_decode_header = 0;
+        return;
+    }
+    CriBool ok = startInputAndDecoding();
+    if (ok == 0)
+    {
+        err = CRIERR_NG;
+    }
+}
+
+// @0x1400219b0
+void CriMvEasyPlayer::Start(CriError& err)
+{
+    err = CRIERR_OK;
+    if (req_prepare == 1 || req_decode_header == 1)
+    {
+        req_decode_header = 0;
+        req_prepare = 0;
+        return;
+    }
+    CriBool ok = startInputAndDecoding();
+    if (ok == 0)
+    {
+        err = CRIERR_NG;
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
+// @0x140021a30
+CriBool CriMvEasyPlayer::startInputAndDecoding(void)
+{
+    CriBool ok;
+    unk5e4 = 0;
+    modules_stopped = 0;
+    unk724 = 0;
+    user_time_count = 0;
+    user_time_unit = 1;
+    memset(unk458, 0, sizeof(unk458));
+    unk490 = 0.0f;
+    unk494 = 0.0f;
+    if (file_request_state == 0 && filereq_func != NULL)
+    {
+        filereq_func(this, filereq_usrobj);
+    }
+    if (file_request_state == 0)
+    {
+        setErrorMessage("E09031805M: Movie data was not set.", " ");
+        setNormalErrorStatus(DAT_143b277c0);
+        return 0;
+    }
+    if (data_type == 2)
+    {
+        FUN_1400361a0(mvply, data_ptr, data_size);
+    }
+    else if (data_type == 1)
+    {
+        unk4c4 = 1;
+        unk4c0 = 1;
+        ok = FUN_140034920(mvply);
+        if (ok == 0)
+        {
+            return 0;
+        }
+    }
+    status_after_stop = GetStatus();
+    return 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140021bf0
+void CriMvEasyPlayer::Stop(CriError& err)
+{
+    err = CRIERR_OK;
+    if (error_flag == 1)
+    {
+        CriSint32 plystat = FUN_1400310b0(mvply);
+        if (plystat == 0 || plystat == 7)
+        {
+            error_flag = 0;
+        }
+    }
+    if (GetStatus() != MVEASY_STATUS_STOP)
+    {
+        requestStopModules();
+        FUN_140034b20(mvply);
+    }
+    resetHandleParameters();
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140021c90
+void CriMvEasyPlayer::Pause(CriBool sw, CriError& err)
+{
+    err = CRIERR_OK;
+    pause_flag = sw;
+    if (stimer != NULL)
+    {
+        stimer->Pause(sw);
+    }
+    if (stmprm.track_play_audio != -1 && sound != NULL)
+    {
+        sound->Pause(sw);
+    }
+    if (subaudio != NULL)
+    {
+        subaudio->Pause(sw);
+    }
+}
+
+// @0x140021d70
+CriBool CriMvEasyPlayer::IsPaused(CriError& err)
+{
+    err = CRIERR_OK;
+    return pause_flag;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140021da0
+void CriMvEasyPlayer::SetMasterTimer(TimerType type, CriError& err)
+{
+    err = CRIERR_OK;
+    timer_type = type;
+}
+
+// @0x140021dd0
+CriMvEasyPlayer::TimerType CriMvEasyPlayer::GetMasterTimer(CriError& err)
+{
+    TimerType type;
+    err = CRIERR_OK;
+    switch (timer_type)
+    {
+    case MVEASY_TIMER_NONE:
+        type = MVEASY_TIMER_NONE;
+        break;
+    case MVEASY_TIMER_AUDIO:
+        if (GetStatus() == MVEASY_STATUS_STOP || GetStatus() == MVEASY_STATUS_DECHDR)
+        {
+            type = MVEASY_TIMER_AUDIO;
+        }
+        else if (stmprm.num_audio > 0 && stmprm.track_play_audio != -1 && sound != NULL)
+        {
+            type = MVEASY_TIMER_AUDIO;
+        }
+        else
+        {
+            type = MVEASY_TIMER_SYSTEM;
+        }
+        break;
+    default:
+        if (stimer != NULL)
+        {
+            type = MVEASY_TIMER_SYSTEM;
+        }
+        else
+        {
+            type = MVEASY_TIMER_NONE;
+        }
+        break;
+    }
+    if (type == MVEASY_TIMER_AUDIO && sound == NULL)
+    {
+        type = MVEASY_TIMER_SYSTEM;
+    }
+    if (type == MVEASY_TIMER_SYSTEM && stimer == NULL)
+    {
+        type = MVEASY_TIMER_NONE;
+    }
+    return type;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140021ef0
+void CriMvEasyPlayer::SetNumberOfFramePools(CriUint32 npools, CriError& err)
+{
+    err = CRIERR_OK;
+    num_frame_pools = npools;
+}
+
+// @0x140021f20
+void CriMvEasyPlayer::SetBufferingTime(CriFloat32 sec, CriError& err)
+{
+    err = CRIERR_OK;
+    buffering_time = sec;
+}
+
+// @0x140021f60
+void CriMvEasyPlayer::SetReloadThresholdTime(CriFloat32 sec, CriError& err)
+{
+    err = CRIERR_OK;
+    mvply->reload_threshold = sec;
+}
+
+// @0x140021fa0
+void CriMvEasyPlayer::GetInputBufferInfo(CriMvInputBufferInfo& ibuf_info, CriError& err)
+{
+    err = CRIERR_OK;
+    ibuf_info.buffer_size = mvply->ibuf_info.buffer_size;
+    ibuf_info.data_size = mvply->ibuf_info.data_size;
+    ibuf_info.reload_threshold = mvply->ibuf_info.reload_threshold;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
+// @0x140022010
+void CriMvEasyPlayer::SetMaxBitrate(CriUint32 max_bitrate, CriError& err)
+{
+    err = CRIERR_OK;
+    this->max_bitrate = max_bitrate;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
+// @0x140022040
+void CriMvEasyPlayer::SetMaxChunkSize(CriUint32 max_chunk_size, CriError& err)
+{
+    err = CRIERR_OK;
+    this->max_chunk_size = max_chunk_size;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
+// @0x140022070
+void CriMvEasyPlayer::SetMinBufferSize(CriUint32 min_buffer_size, CriError& err)
+{
+    err = CRIERR_OK;
+    this->min_buffer_size = min_buffer_size;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
+// @0x1400220a0
+void CriMvEasyPlayer::SetReadBufferSize(CriSint32 size, CriError& err)
+{
+    err = CRIERR_OK;
+    read_buffer_size = size;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x1400220d0
+void CriMvEasyPlayer::SetAudioTrack(CriSint32 track, CriError& err)
+{
+    err = CRIERR_OK;
+    if (sound == NULL)
+    {
+        return;
+    }
+    audio_track = track;
+    FUN_140031040(mvply, track);
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140022130
+void CriMvEasyPlayer::SetLoopFlag(CriBool flag, CriError& err)
+{
+    err = CRIERR_OK;
+    loop_flag = flag;
+}
+
+// @0x140022160
+CriBool CriMvEasyPlayer::GetLoopFlag(CriError& err)
+{
+    err = CRIERR_OK;
+    return loop_flag;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
+// @0x140022190
+void CriMvEasyPlayer::GetTime(CriUint64& count, CriUint64& unit, CriError& err)
+{
+    Status status;
+    CriFloat32 seek_time;
+    TimerType timer;
+    CriUint64 seek_count;
+    CriUint32 framerate;
+    CriFloat32 frame_sec;
+
+    err = CRIERR_OK;
+    count = user_time_count;
+    unit = user_time_unit;
+    status = GetStatus();
+    if (status == MVEASY_STATUS_PLAYING && seek_frame_id > 0)
+    {
+        framerate = stmprm.video_prm[0].framerate;
+        seek_time = (CriFloat32)seek_frame_id * 1000.0f / (CriFloat32)framerate;
+        timer = GetMasterTimer();
+        if (timer == MVEASY_TIMER_AUDIO)
+        {
+            frame_sec = 0.0333667f;
+            seek_time = (seek_time + frame_sec) / frame_sec * frame_sec;
+        }
+        seek_count = (CriUint64)(seek_time * (CriFloat32)unit);
+        count = count + seek_count;
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
+// @0x140022310
+CriBool CriMvEasyPlayer::GetHeaderInfo(CriMvStreamingParameters* stmprm, CriError& err)
+{
+    CriBool ok;
+    ok = GetMovieInfo(*stmprm, err);
+    if (ok == 0)
+    {
+        return ok;
+    }
+    if (max_bitrate > 0 && max_bitrate > stmprm->max_bitrate)
+    {
+        stmprm->max_bitrate = max_bitrate;
+    }
+    if (max_chunk_size > 0 && max_chunk_size > stmprm->max_chunk_size)
+    {
+        stmprm->max_chunk_size = max_chunk_size;
+    }
+    if (min_buffer_size > 0 && min_buffer_size > stmprm->min_buffer_size)
+    {
+        stmprm->min_buffer_size = min_buffer_size;
+    }
+    if (read_buffer_size != -1)
+    {
+        stmprm->read_buffer_size = read_buffer_size;
+    }
+    return ok;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
+// @0x140022420
+CriBool CriMvEasyPlayer::GetMovieInfo(CriMvStreamingParameters& stmprm, CriError& err)
+{
+    CriSint32 ply_status;
+    err = CRIERR_OK;
+    ply_status = FUN_1400310b0(mvply);
+    switch (ply_status)
+    {
+    case 0:
+    case 1:
+    case 10:
+        return 0;
+    }
+    if (mvply->decoder_error == 1)
+    {
+        return 0;
+    }
+    FUN_14002fbe0(mvply, &stmprm);
+    if (buffering_time > 0.0f)
+    {
+        stmprm.buffering_time = buffering_time;
+    }
+    else
+    {
+        stmprm.buffering_time = 1.0f * (CriFloat32)DAT_143b278c8;
+    }
+    stmprm.video_prm[0].num_frame_pools = num_frame_pools;
+    if (sound == NULL)
+    {
+        stmprm.track_play_audio = -1;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140022540
+void CriMvEasyPlayer::SetStreamingParameters(CriMvStreamingParameters* stmprm, CriError& err)
+{
+    err = CRIERR_OK;
+    this->stmprm = *stmprm;
+    stmprm_flag = 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x1400225b0
+void CriMvEasyPlayer::SetSubtitleChannel(CriSint32 channel, CriError& err)
+{
+    err = CRIERR_OK;
+    subtitle_channel = channel;
+    if (channel == -1 && mvply != NULL)
+    {
+        FUN_140036450(mvply, -1);
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023330
+CriBool CriMvEasyPlayer::isEndReadFile(void)
+{
+    CriBool end = 0;
+    if (data_type == 2)
+    {
+        if (FUN_1400371d0(mvply) == 0)
+        {
+            end = 1;
+        }
+    }
+    else if (data_type == 1 && file_read_end != -1 && file_read_pos >= file_read_end)
+    {
+        end = 1;
+    }
+    return end;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x1400238f0
+void CriMvEasyPlayer::ReplaceCenterVoice(CriSint32 track, CriError& err)
+{
+    err = CRIERR_OK;
+    if (sound == NULL)
+    {
+        return;
+    }
+    center_voice_track = track;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023940
+CriBool CriMvEasyPlayer::isAvailableCenterVoice(const CriMvStreamingParameters* stmprm)
+{
+    if (center_voice_track < 0 || center_voice_track >= CRIMV_MAX_AUDIO_NUM)
+    {
+        return 0;
+    }
+    if (center_voice_track == stmprm->track_play_audio)
+    {
+        return 0;
+    }
+    if (stmprm->audio_prm[center_voice_track].num_channel != 1)
+    {
+        return 0;
+    }
+    if (stmprm->audio_prm[stmprm->track_play_audio].num_channel < center_channel + 1)
+    {
+        return 0;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x1400239e0
+CriBool CriMvEasyPlayer::isAvailableSubAudio(const CriMvStreamingParameters* stmprm)
+{
+    if (subaudio == NULL)
+    {
+        return 0;
+    }
+    if (subaudio_track < 0 || subaudio_track >= CRIMV_MAX_AUDIO_NUM)
+    {
+        return 0;
+    }
+    if (stmprm->audio_prm[subaudio_track].num_channel == 0)
+    {
+        return 0;
+    }
+    if (subaudio_track == stmprm->track_play_audio)
+    {
+        return 0;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023a70
+CriBool CriMvEasyPlayer::attachCenterVoice(void)
+{
+    CriBool ok = FUN_140030f10(mvply, heap, center_voice_track);
+    if (ok == 1)
+    {
+        attached_center_voice_track = center_voice_track;
+    }
+    return ok;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023ad0
+void CriMvEasyPlayer::detachCenterVoice(void)
+{
+    FUN_140030fd0(mvply);
+    attached_center_voice_track = -1;
+}
+
+// @0x140023bf0
+void CriMvEasyPlayer::DetachSubAudioInterface(CriError& err)
+{
+    err = CRIERR_OK;
+    subaudio = NULL;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023c20
+void CriMvEasyPlayer::SetSubAudioTrack(CriSint32 track, CriError& err)
+{
+    err = CRIERR_OK;
+    subaudio_track = track;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023c50
+CriSint32 CriMvEasyPlayer::GetSubAudioTrack(CriError& err)
+{
+    CriMvStreamingParameters stmprm;
+    err = CRIERR_OK;
+    if (GetMovieInfo(stmprm) == 0)
+    {
+        return -1;
+    }
+    if (subaudio_track < 0 || subaudio_track >= CRIMV_MAX_AUDIO_NUM)
+    {
+        return -1;
+    }
+    if (stmprm.audio_prm[subaudio_track].num_channel == 0)
+    {
+        return -1;
+    }
+    if (subaudio_track == stmprm.track_play_audio)
+    {
+        return -1;
+    }
+    return subaudio_track;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023d20
+CriBool CriMvEasyPlayer::attachSubAudioHandle(CriHeap heap)
+{
+    CriBool ok = FUN_140030f10(mvply, heap, subaudio_track);
+    if (ok == 1)
+    {
+        attached_subaudio_track = subaudio_track;
+    }
+    return ok;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023d80
+void CriMvEasyPlayer::detachSubAudioHandle(void)
+{
+    FUN_140030fd0(mvply);
+    attached_subaudio_track = -1;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023dc0
+void CriMvEasyPlayer::SetFileRequestCallback(void (*func)(CriMvEasyPlayer* mveasy, void* usrobj),
+                                             void* usrobj, CriError& err)
+{
+    err = CRIERR_OK;
+    filereq_func = func;
+    filereq_usrobj = usrobj;
+}
+
+// @0x140023e10
+void CriMvEasyPlayer::SetSeekPosition(CriSint32 frame_id, CriError& err)
+{
+    SetSeekFrameAndOffset(frame_id, 0, err);
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023e50
+void CriMvEasyPlayer::SetSeekFrameAndOffset(CriSint32 frame_id, CriUint64 offset, CriError& err)
+{
+    err = CRIERR_OK;
+    seek_frame_id = frame_id;
+    seek_offset = offset;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023ea0
+void CriMvEasyPlayer::GetPlaybackInfo(void* info, CriError& err)
+{
+    err = CRIERR_OK;
+    memcpy(info, playback_info, sizeof(playback_info));
+}
+
+// @0x140023ef0
+CriSint32 CriMvEasyPlayer::GetLastFrameResult(CriError& err)
+{
+    err = CRIERR_OK;
+    return last_frame_result;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140023f20
+void CriMvEasyPlayer::SetNumberOfFramesForPrep(CriUint32 nframes, CriError& err)
+{
+    err = CRIERR_OK;
+    if (mvply != NULL)
+    {
+        FUN_140031060(mvply, nframes);
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 converts the unsigned 64-bit operands to float with its own sequence
+// @0x140023f70
+CriSint32 CriMvEasyPlayer::CalcFrameIdFromTime(CriUint64 count, CriUint64 unit, CriError& err)
+{
+    CriUint32 framerate;
+    CriSint32 frame_id = -1;
+    err = CRIERR_OK;
+    if (unit == 0)
+    {
+        return frame_id;
+    }
+    framerate = mvply->framerate;
+    frame_id = (CriSint32)((CriFloat32)count * (CriFloat32)framerate / (CriFloat32)unit / 1000.0f);
+    if (frame_id == 0)
+    {
+        err = CRIERR_NG;
+    }
+    return frame_id;
+}
+
+// MS2-FUNCTIONAL: VS2008 converts the unsigned 64-bit operands to and from float with its own sequence
+// @0x140024040
+CriUint64 CriMvEasyPlayer::CalcTimeFromFrameId(CriSint32 frame_id, CriUint64 unit, CriError& err)
+{
+    CriUint64 count = 0;
+    CriUint32 framerate;
+    err = CRIERR_OK;
+    if (unit == 0 || frame_id < 0)
+    {
+        return count;
+    }
+    framerate = mvply->framerate;
+    count = (CriUint64)((CriFloat32)frame_id * 1000.0f * (CriFloat32)unit / (CriFloat32)framerate);
+    return count;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x1400245b0
+CriMvCuePointInfo* CriMvEasyPlayer::GetCuePointInfo(CriError& err)
+{
+    err = CRIERR_OK;
+    if (mvply->cuepoint.num_eventpoint == 0 || mvply->cuepoint.eventtable == NULL)
+    {
+        return NULL;
+    }
+    return &mvply->cuepoint;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024610
+void CriMvEasyPlayer::SetCuePointCallback(void (*func)(void* usrobj, CriMvEventPoint* eventinfo), void* usrobj,
+                                          CriError& err)
+{
+    err = CRIERR_OK;
+    cuepoint_func = func;
+    cuepoint_usrobj = usrobj;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024bf0
+void CriMvEasyPlayer::SetStopCompleteCallback(void (*func)(CriMvEasyPlayer* mveasy, void* usrobj), void* usrobj,
+                                              CriError& err)
+{
+    err = CRIERR_OK;
+    stopcmpl_func = func;
+    stopcmpl_usrobj = usrobj;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024c40
+void CriMvEasyPlayer::SetUsableProcessors_PC(int num_threads, const unsigned long* affinity_masks, int priority,
+                                             CriError& err)
+{
+    CriMvPly ply = mvply;
+    CriSint32 priorities[128];
+    CriSint32 i;
+    err = CRIERR_OK;
+    if (ply == NULL)
+    {
+        return;
+    }
+    for (i = 0; i < num_threads; i++)
+    {
+        priorities[i] = priority;
+    }
+    FUN_14003b720(ply, num_threads, affinity_masks, priorities);
+}
+
+// @0x140024d00
+void CriMvEasyPlayer::setNormalErrorStatus(const CriChar8* msg)
+{
+    error_flag = 1;
+    requestStopModules();
+    FUN_140038ddc(0, msg);
+}
+
+// @0x140024d40
+void CriMvEasyPlayer::notifyErrorA(void* obj, const CriChar8* msg, CriSint32 p1)
+{
+    FUN_140038ce4(0, msg, p1, 0, obj);
+}
+
+// @0x140024d90
+void CriMvEasyPlayer::notifyErrorB(void* obj, const CriChar8* msg, CriSint32 p1)
+{
+    FUN_140038ce4(0, msg, p1, 0, obj);
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024de0
+void CriMvEasyPlayer::setErrorMessage(const CriChar8* msg, const CriChar8* detail)
+{
+    CriSint32 len = (CriSint32)strlen(msg);
+    memset(DAT_143b277c0, 0, 0x100);
+    strcpy_s(DAT_143b277c0, 0x100, msg);
+    if (detail != NULL)
+    {
+        strncat_s(DAT_143b277c0, 0x100, detail, (CriUint32)(0x100 - len - 1));
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024e80
+CriMvEasyPlayer::CriMvEasyPlayer()
+{
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024ea0
+CriMvEasyPlayer::~CriMvEasyPlayer()
+{
+}
+
+// @0x140024ec0
+static void FUN_140024ec0(void* obj)
+{
+    FUN_1400379e0(obj);
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024ee0
+void CriMvEasyPlayer::SetMemoryPlaybackType(CriSint32 type, CriError& err)
+{
+    err = CRIERR_OK;
+    memory_playback_type = type;
+}
+
+// @0x140024f10
+void CriMvEasyPlayer::DeferFileRequest(CriError& err)
+{
+    err = CRIERR_OK;
+    file_request_state = 2;
+}
+
+namespace CriMv {
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024f80
+void Initialize_Common(void)
+{
+    DAT_143b278c4 = DAT_143b278c4 + 1;
+    if (DAT_143b278c4 == 1)
+    {
+        FUN_14002e7d0();
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024fb0
+void Finalize(CriError& err)
+{
+    err = CRIERR_OK;
+    DAT_143b278c4 = DAT_143b278c4 - 1;
+    if (DAT_143b278c4 == 0)
+    {
+        FUN_14002e8c0();
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140024ff0
+CriBool IsLibraryInitialized(void)
+{
+    if (DAT_143b278c4 >= 1)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140025010
+CriSint32 CalcHandleWorkSize(CriError& err)
+{
+    CriSint32 size = 0;
+    err = CRIERR_OK;
+    size += (size_t)0x24;
+    size += (size_t)0x74e;
+    size += (size_t)0x66;
+    size += 0x40;
+    size += 0x48;
+    size += FUN_14002e9e0() + 4;
+    return size;
+}
+
+} // namespace CriMv
+
+#pragma intrinsic(memset, memcpy, strlen)
+#pragma optimize("", on)
+
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
 // MS2-PIN: ??_7VideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@6B@ 0x1431b80e0
