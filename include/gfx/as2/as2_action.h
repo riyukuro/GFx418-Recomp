@@ -157,6 +157,14 @@ public:
     // Script warning channel (exe 0x142968370).
     void LogScriptWarning(const char* pfmt, ...) const;
 
+    // Local register reg counted from the top of the register array; global register 0 (after an error) when
+    // out of range (exe 0x142967390).
+    Value*          LocalRegisterPtr(unsigned reg);
+    // Takes the innermost try block off (exe 0x14296f390).
+    TryDescr        PopTryBlock();
+    // The name is a target path (has ':', '/' or '.'); the answer is cached in the string (exe 0x142965d10).
+    static bool     IsPath(const ASString& varPath);
+
     // new <className>(args) looked up in the package object (exe 0x14296e520); the other one in _global.
     Object*        OperatorNew(Object* ppackageObj, const ASString& className, int nargs = 0, int argsTopOff = -1);
     inline Object* OperatorNew(const ASString& className, int nargs = 0, int argsTopOff = -1);

@@ -104,7 +104,7 @@ public:
         }
     }
 
-    // toString of an array nested in itself stops here (out of line at exe 0x142973040).
+    // toString of an array nested in itself stops here.
     bool RecursionLimitReached() const
     {
         if (RecursionCount >= 255)
@@ -114,6 +114,7 @@ public:
         }
         return false;
     }
+    bool RecursionLimitReached_Call() const; // exe 0x142973040, the out-of-line copy of RecursionLimitReached
 
     static void ArrayLength(const FnCall& fn);
     static void ArrayConcat(const FnCall& fn);

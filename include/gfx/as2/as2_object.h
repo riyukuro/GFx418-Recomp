@@ -232,6 +232,8 @@ public:
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);       // exe 0x14294f7d0
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name);             // exe 0x1429388e0
     virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes); // exe 0x14295d970
+    // In the prototype chain (or implemented by a link of it) (exe 0x1429623a0).
+    virtual bool InstanceOf(Environment* penv, const Object* prototype, bool inclInterfaces = true) const;
 
 protected:
     Object(ASRefCountCollector* pcc);
@@ -296,6 +298,8 @@ public:
     CFunctionPtr pFunction; // +0x68
 
     virtual ~CFunctionObject();
+    // The same native function (exe 0x142965510).
+    virtual bool IsEqual(const FunctionObject& f) const;
 
 protected:
     friend class FunctionProto;

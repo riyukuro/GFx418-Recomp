@@ -6,12 +6,23 @@
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
 // MS2-RANGE: 0x142962010-0x1429620d0 .text$mn
+// MS2-RANGE: 0x1429623a0-0x142962410 .text$mn
+// MS2-RANGE: 0x142965510-0x142965560 .text$mn
+// MS2-RANGE: 0x142965c80-0x142965ce0 .text$mn
+// MS2-RANGE: 0x142965d10-0x142965da0 .text$mn
+// MS2-RANGE: 0x142965db0-0x142965e50 .text$mn
 // MS2-RANGE: 0x142966270-0x142966370 .text$mn
+// MS2-RANGE: 0x142967390-0x1429673e0 .text$mn
+// MS2-RANGE: 0x142967b90-0x142967bf0 .text$mn
 // MS2-RANGE: 0x1429684d0-0x142968560 .text$mn
 // MS2-RANGE: 0x142968560-0x142968610 .text$mn
+// MS2-RANGE: 0x142968f90-0x142969000 .text$mn
+// MS2-RANGE: 0x14296f070-0x14296f0c0 .text$mn
 // MS2-RANGE: 0x14296f1b0-0x14296f260 .text$mn
+// MS2-RANGE: 0x14296f390-0x14296f3d0 .text$mn
 // MS2-RANGE: 0x142971ba0-0x142971c50 .text$mn
 // MS2-RANGE: 0x142971c50-0x142971cc0 .text$mn
+// MS2-RANGE: 0x142973040-0x142973080 .text$mn
 // MS2-RANGE: 0x14297ca70-0x14297cae0 .text$mn
 // MS2-RANGE: 0x14297d0d0-0x14297d1e0 .text$mn
 // MS2-RANGE: 0x14297d4b0-0x14297d550 .text$mn
@@ -39,6 +50,8 @@
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_rectangleobject.h"
+#include "../include/gfx/as2/as2_date.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -194,9 +207,106 @@ void ArrayObject::PopFront_Call()
     PopFront();
 }
 
+// @0x142973040
+bool ArrayObject::RecursionLimitReached_Call() const
+{
+    return RecursionLimitReached();
+}
+
+// Both operands are converted before the store (the inline Mul converts the right one first).
+// @0x142968f90
+void Value::Mul_Call(Environment* penv, const Value& v)
+{
+    Number lhs = ToNumber(penv);
+    Number rhs = v.ToNumber(penv);
+    SetNumber(lhs * rhs);
+}
+
+// @0x142965c80
+bool IsLeapYear(int y)
+{
+    return 0 == (y % 4) && ((y % 100) || 0 == (y % 400));
+}
+
+// @0x142965db0
+bool IsRectValid(const ASRect& r)
+{
+    return !NumberUtil::IsNaN(r.x1) && !NumberUtil::IsNaN(r.y1) && !NumberUtil::IsNaN(r.x2) &&
+           !NumberUtil::IsNaN(r.y2);
+}
+
+// @0x1429623a0
+bool Object::InstanceOf(Environment* penv, const Object* prototype, bool inclInterfaces) const
+{
+    for (const Object* proto = this; proto != 0; proto = proto->pProto)
+    {
+        if (inclInterfaces)
+        {
+            if (proto->DoesImplement(penv, prototype))
+                return true;
+        }
+        else
+        {
+            if (proto == prototype)
+                return true;
+        }
+    }
+    return false;
+}
+
+// @0x142965510
+bool CFunctionObject::IsEqual(const FunctionObject& f) const
+{
+    return f.IsCFunction() && pFunction == static_cast<const CFunctionObject&>(f).pFunction;
+}
+
+// @0x142965d10
+bool Environment::IsPath(const ASString& varPath)
+{
+    if (varPath.GetHashFlags() & ASString::Flag_PathCheck)
+        return 1;
+    const char* pstr = varPath.ToCStr();
+    if (strchr(pstr, ':') != 0 || strchr(pstr, '/') != 0 || strchr(pstr, '.') != 0)
+    {
+        varPath.SetPathFlags(ASString::Flag_PathCheck | 0);
+        return 1;
+    }
+    else
+    {
+        varPath.SetPathFlags(ASString::Flag_PathCheck | ASString::Flag_IsNotPath);
+        return 0;
+    }
+}
+
+// @0x142967390
+Value* Environment::LocalRegisterPtr(unsigned reg)
+{
+    if (reg >= LocalRegister.GetSize())
+    {
+        LogError("Invalid local register %d, stack only has %d entries", reg, (int)LocalRegister.GetSize());
+        return &GlobalRegister[0];
+    }
+    return &LocalRegister[LocalRegister.GetSize() - reg - 1];
+}
+
+// MS2-FUNCTIONAL instruction scheduling (the exe loads the size before the array address)
+// @0x14296f390
+Environment::TryDescr Environment::PopTryBlock()
+{
+    return TryBlocks.Pop();
+}
+
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
+
+// @0x14296f070
+template void GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Pop(unsigned);
+
+// LogError functional (pinned at the end): Environment::GetLog (exe 0x14294b210) is out of line here, the exe
+// inlines Target->GetLog()
+template void GFx::LogBase<GFx::AS2::Environment>::LogError(const char*, ...) const;
 
 // The out-of-line array growth of the AS2 containers.
 // @0x14297d4b0
@@ -256,3 +366,4 @@ template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS2::
 // MS2-PIN: ?RemoveAt@?$ArrayBase@U?$ArrayData@V?$Ptr@VSprite@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VSprite@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x14297ca70
 // MS2-PIN: ?Resize@?$ArrayData@PEAVValue@AS2@GFx@Scaleform@@U?$AllocatorLH@PEAVValue@AS2@GFx@Scaleform@@$0BED@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x14297e2b0
 // MS2-PIN: ?Resize@?$ArrayData@PEAVObject@AS2@GFx@Scaleform@@U?$AllocatorGH@PEAVObject@AS2@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x14297e230
+// MS2-PIN: ?LogError@?$LogBase@VEnvironment@AS2@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x142967b90

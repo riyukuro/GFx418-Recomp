@@ -76,6 +76,8 @@ public:
     const char*      GetBuffer() const    { return pNode->pData; }
     unsigned         GetSize() const      { return pNode->Size; }
     unsigned         GetHashFlags() const { return pNode->HashFlags; }
+    // Records the result of a path check on the shared node.
+    void             SetPathFlags(unsigned flags) const { pNode->HashFlags |= flags; }
     ASStringNode*    GetNode() const      { return pNode; }
     ASStringManager* GetManager() const   { return pNode->GetManager(); }
 
