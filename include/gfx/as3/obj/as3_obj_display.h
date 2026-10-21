@@ -505,6 +505,16 @@ namespace Instances { namespace fl_display {
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class NativeMenu : public Instances::fl::Object
+    {
+    };
+
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class NativeWindow : public Instances::fl::Object
+    {
+    };
+
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Scene : public Instances::fl::Object
     {
     public:

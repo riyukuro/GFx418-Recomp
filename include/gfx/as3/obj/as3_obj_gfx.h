@@ -36,6 +36,11 @@ namespace Instances { namespace fl_gfx {
         void yvalueSet(const Value& result, Value::Number);
     };
 
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class IMECandidateListStyle : public Instances::fl::Object
+    {
+    };
+
 }}
 
 namespace Classes { namespace fl_gfx {

@@ -28,6 +28,11 @@ namespace Instances { namespace fl_ui {
         void hideBuiltInItems(const Value& result);
     };
 
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class ContextMenuBuiltInItems : public Instances::fl::Object
+    {
+    };
+
 }}
 
 namespace Classes { namespace fl_ui {

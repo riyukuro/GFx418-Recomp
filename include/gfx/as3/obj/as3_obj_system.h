@@ -21,6 +21,16 @@ namespace Instances { namespace fl_system {
         void parentDomainGet(SPtr<Instances::fl_system::ApplicationDomain>& result);
     };
 
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class LoaderContext : public Instances::fl::Object
+    {
+    };
+
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class SecurityDomain : public Instances::fl::Object
+    {
+    };
+
 }}
 
 namespace Classes { namespace fl_system {

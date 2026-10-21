@@ -11,6 +11,11 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_media {
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class ID3Info : public Instances::fl::Object
+    {
+    };
+
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Sound : public Instances::fl_events::EventDispatcher
     {
     public:
@@ -50,6 +55,11 @@ namespace Instances { namespace fl_media {
         void soundTransformSet(const Value& result, Instances::fl_media::SoundTransform*);
         // @0x1424d20d0
         void stop(const Value& result);
+    };
+
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class SoundLoaderContext : public Instances::fl::Object
+    {
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet

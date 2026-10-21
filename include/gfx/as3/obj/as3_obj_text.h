@@ -304,6 +304,11 @@ namespace Instances { namespace fl_text {
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    class TextLineMetrics : public Instances::fl::Object
+    {
+    };
+
+    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class TextSnapshot : public Instances::fl::Object
     {
     public:

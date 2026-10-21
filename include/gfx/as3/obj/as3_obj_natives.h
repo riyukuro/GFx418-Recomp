@@ -5,6 +5,7 @@
 
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_accessibility.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_external.h"
