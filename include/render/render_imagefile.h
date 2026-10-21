@@ -74,6 +74,27 @@ public:
     virtual Image* ReadImage(File* file, const ImageCreateArgs& args = ImageCreateArgs()) const;
 };
 
+// Format handlers derive through these: D::Instance is the format's singleton.
+template<class D, class B = ImageFileReader>
+class ImageFileReader_Mixin : public B
+{
+public:
+    static inline Image* ReadImage(File* file, const ImageCreateArgs& args = ImageCreateArgs())
+    {
+        return D::Instance.Read(file, args);
+    }
+};
+
+template<class D, class B = ImageFileWriter>
+class ImageFileWriter_Mixin : public B
+{
+public:
+    static inline bool WriteImage(File* file, const ImageData& imageData, const ImageWriteArgs* args = 0)
+    {
+        return D::Instance.Write(file, imageData, args);
+    }
+};
+
 }} // namespace Scaleform::Render
 
 #endif

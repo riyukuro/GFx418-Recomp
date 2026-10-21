@@ -2,7 +2,7 @@
 // (Render_Matrix2x4: the SSE Matrix2F products and bounds, Render_CxForm: color transforms).
 // MS2-UNIT: sfr_render_02
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14259dcd0-0x1425a2100 .text$mn
+// MS2-RANGE: 0x14259e560-0x1425a2100 .text$mn
 // MS2-RANGE: 0x1425e5250-0x1425e5970 .text$mn
 // MS2-RANGE: 0x1425e8420-0x1425eeef0 .text$mn
 // MS2-RANGE: 0x1425ef560-0x1425f0690 .text$mn
