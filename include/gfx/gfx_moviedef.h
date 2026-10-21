@@ -156,6 +156,7 @@ public:
         const void*      GetHeaderData() const { return HeaderData; }
 
         MemoryHeap*      GetHeap() const { return pHeap; }
+        unsigned         GetFileAttributes() const { return FileAttributes; }
         void*            AllocTagMemory(UPInt bytes) { return TagMemAllocator.Alloc(bytes); }
         // The exporter info of the header (at +0x30 in it), if the file has one (its format is set).
         const ExporterInfo* GetExporterInfo() const
@@ -176,7 +177,9 @@ public:
         UByte                     Unknown40[8];     // +0x40
         String                    FileURL;          // +0x48
         UByte                     HeaderData[0x78]; // +0x50 MovieHeaderData
-        UByte                     UnknownC8[0x20];  // +0xc8
+        UByte                     UnknownC8[8];     // +0xc8
+        UInt32                    FileAttributes;   // +0xd0 SWF FileAttributes tag flags
+        UByte                     UnknownD4[0x14];  // +0xd4
         UInt32                    LoadingFrame;     // +0xe8 frame being loaded
         UByte                     UnknownEC[4];     // +0xec
         UInt32                    TagCount;         // +0xf0

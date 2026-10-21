@@ -134,6 +134,20 @@ public:
     }
     void AddExecuteTag(ExecuteTag* ptag) { FrameTags[LoadState].PushBack(ptag); }
 
+    // SWF FileAttributes flags of the file.
+    enum FileAttrFlags
+    {
+        FileAttr_UseNetwork        = 0x01,
+        FileAttr_UseActionScript3  = 0x08,
+        FileAttr_HasMetadata       = 0x10
+    };
+    unsigned GetFileAttributes() const { return pLoadData->GetFileAttributes(); }
+
+    // exe 0x1425c8ca0
+    UByte ReadU8()            { return GetStream()->ReadU8(); }
+    int   Tell()              { return GetStream()->Tell(); }
+    void  SetPosition(int pos) { GetStream()->SetPosition(pos); }
+
 private:
     // +0x20 LogBase<LoadProcess>
     unsigned                        ParseFlags;      // +0x28

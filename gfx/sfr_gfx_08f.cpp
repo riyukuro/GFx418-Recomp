@@ -6,6 +6,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142646180-0x142647290 .text$mn
 
+#include "../include/gfx/gfx_buttondef.h"
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_resource.h"
 #include "../include/gfx/gfx_sound.h"
@@ -14,13 +15,6 @@
 #include "../include/sound/sound_sound.h"
 
 namespace Scaleform { namespace GFx {
-
-// A button definition (only its reader of the button tags is called here).
-class ButtonDef : public Resource
-{
-public:
-    void Read(LoadProcess* p, TagType tagType);
-};
 
 // Starts or stops an event sound when its frame is reached (0x50 bytes in the tag memory).
 class StartSoundTag : public ExecuteTag

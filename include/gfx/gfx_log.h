@@ -25,9 +25,14 @@ public:
     void LogParse(const char* pfmt, ...) const;
     // Script error channel (out of line per Derived, e.g. LogBase<LogState> 0x14246a960).
     void LogScriptError(const char* pfmt, ...) const;
+    // Script warning channel, only with verbose action errors (out of line per Derived, e.g. LogBase<LoadProcess>
+    // 0x14265ddd0).
+    void LogScriptWarning(const char* pfmt, ...) const;
 
 protected:
     bool IsLogNotNull() const { return 0; }
+    // Condition of the script channels.
+    bool P_IsVerboseActionErrors() const { return ((Derived*)this)->IsVerboseActionErrors(); }
 };
 
 template<class Derived>
@@ -39,6 +44,23 @@ void LogBase<Derived>::LogError(const char* pfmt, ...) const
     Log*     plog = p->GetLog();
     if (p->IsLogNotNull() || plog)
         plog->LogMessageVarg(Log_Error, pfmt, argList);
+    va_end(argList);
+}
+
+enum { Log_ScriptWarning = LogChannel_Script | LogMessage_Warning };
+
+template<class Derived>
+void LogBase<Derived>::LogScriptWarning(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    Derived* p = (Derived*)this;
+    if (p->P_IsVerboseActionErrors())
+    {
+        Log* plog = p->GetLog();
+        if (p->IsLogNotNull() || plog)
+            plog->LogMessageVarg(Log_ScriptWarning, pfmt, argList);
+    }
     va_end(argList);
 }
 

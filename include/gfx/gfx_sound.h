@@ -26,6 +26,7 @@ class LoadProcess;
 class MovieImpl;
 class Sprite;
 class SoundResource;
+class SoundTagsReader;
 
 // Audio / video synchronization settings of a movie, and its sound renderer.
 class AudioBase : public State
@@ -39,6 +40,7 @@ public:
     };
 
     virtual Sound::SoundRenderer* GetRenderer() const = 0;
+    virtual SoundTagsReader*      GetSoundTagsReader() const = 0;
 
     float         GetMaxTimeDifference() const  { return MaxTimeDifference; }
     unsigned      GetCheckFrameInterval() const { return CheckFrameInterval; }
