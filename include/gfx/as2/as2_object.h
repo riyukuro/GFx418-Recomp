@@ -383,6 +383,10 @@ protected:
     CFunctionObject(ASRefCountCollector* pcc);
     // A function object without a native (new Function()); the exe also has an out-of-line copy, 0x142919db0.
     CFunctionObject(Environment* penv) : FunctionObject(penv), pFunction(0) {}
+
+public:
+    // A native function object (exe 0x142919df0).
+    CFunctionObject(ASStringContext* psc, CFunctionPtr func);
 };
 
 // Function defined in script (the action buffer of a DefineFunction). Its instances are plain objects.

@@ -81,6 +81,17 @@ public:
     static void SetSoundSpatial(const FnCall& fn);          // exe 0x1400085c0
 };
 
+// The NetStream class (constructor function).
+class NetStreamCtorFunction : public CFunctionObject
+{
+public:
+    NetStreamCtorFunction(ASStringContext* psc);   // exe 0x14000ce30
+
+    virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x14000cd30
+
+    static void GlobalCtor(const FnCall& fn);   // exe 0x14000cd70
+};
+
 // What a NetStream plays from: owns the player, its texture and the subtitle buffers, and reports the player's
 // state changes back to the script object.
 class VideoProviderNetStream : public Video::VideoProvider

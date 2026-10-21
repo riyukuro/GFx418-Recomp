@@ -1046,7 +1046,36 @@ FnCall::~FnCall()
 {
 }
 
+// ==== NetStream constructor function ================================================================================
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000cd30
+Object* NetStreamCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) NetStream(penv);
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000cd70
+void NetStreamCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<NetStream> pnetstream;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_NetStream && !fn.ThisPtr->IsBuiltinPrototype())
+        pnetstream = static_cast<NetStream*>(fn.ThisPtr);
+    else
+        pnetstream = *SF_HEAP_NEW(fn.Env->GetHeap()) NetStream(fn.Env);
+    fn.Result->SetAsObject(pnetstream.GetPtr());
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000ce30
+NetStreamCtorFunction::NetStreamCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
 }}} // namespace Scaleform::GFx::AS2
+
 // MS2-PIN: ??_7NetStream@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5030
 // MS2-PIN: ??_7NetStream@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5080
 // MS2-PIN: ??_7VideoProviderNetStream@AS2@GFx@Scaleform@@6B@ 0x1431b5620
@@ -1058,3 +1087,5 @@ FnCall::~FnCall()
 // MS2-PIN: ??$ForEachChild_GC@UScanInUseFunctor@?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@@NetStream@AS2@GFx@Scaleform@@QEBAXPEAV?$RefCountCollector@$0BED@@123@@Z 0x140007f00
 // MS2-PIN: ??_7SwfVideoSyncObject@AS2@GFx@Scaleform@@6B@ 0x1431b4fe8
 // MS2-PIN: ??0?$WeakPtr@VVideoCharacter@Video@GFx@Scaleform@@@Scaleform@@QEAA@PEAVVideoCharacter@Video@GFx@1@@Z 0x140004eb0
+// MS2-PIN: ??_7NetStreamCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b56b0
+// MS2-PIN: ??_7NetStreamCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5740
