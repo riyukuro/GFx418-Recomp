@@ -1,0 +1,139 @@
+// Recovered Scaleform 4.1.18 Render: Matrix2x4<T>, the 2D affine transform (two rows of [sx shx 0 tx]).
+// Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
+//
+// The members without a body here are compiled out of line in the Render_Matrix2x4 unit (sfr_render_02) and bind
+// to the exe until it is recovered: Append 0x1425e5250, EncloseTransform 0x1425e52d0, SetToAppend(3) 0x1425e5340,
+// SetToAppend(2) 0x1425e5430. The inline ones show up as COMDATs wherever they were not inlined.
+#ifndef MS2_SF_RENDER_MATRIX2X4_H
+#define MS2_SF_RENDER_MATRIX2X4_H
+
+#include "ms2/scaleform/include/render/render_types2d.h"
+
+namespace Scaleform { namespace Render {
+
+enum NoInitType { NoInit };
+
+// The element storage sits in a base so the float matrix can be 16-byte aligned for SSE (the exe allocates
+// Matrix2F with 16-byte alignment and treats a local one as a /GS buffer).
+template<class T>
+class Matrix2x4Data
+{
+public:
+    // row 0: Sx Shx 0 Tx, row 1: Shy Sy 0 Ty
+    T M[2][4];
+};
+
+template<>
+class Matrix2x4Data<float>
+{
+public:
+    __declspec(align(16)) float M[2][4];
+};
+
+template<class T>
+class Matrix2x4 : public Matrix2x4Data<T>
+{
+public:
+    using Matrix2x4Data<T>::M;
+
+    Matrix2x4() { SetIdentity(); }
+    Matrix2x4(NoInitType) {}
+    Matrix2x4(const Matrix2x4& m) { *this = m; }
+    Matrix2x4(T sx, T shx, T tx, T shy, T sy, T ty)
+    {
+        M[0][0] = sx;  M[0][1] = shx; M[0][2] = 0; M[0][3] = tx;
+        M[1][0] = shy; M[1][1] = sy;  M[1][2] = 0; M[1][3] = ty;
+    }
+    Matrix2x4(const Matrix2x4& m0, const Matrix2x4& m1) { SetToAppend(m0, m1); }
+
+    Matrix2x4& operator=(const Matrix2x4& m)
+    {
+        M[0][0] = m.M[0][0]; M[0][1] = m.M[0][1]; M[0][2] = m.M[0][2]; M[0][3] = m.M[0][3];
+        M[1][0] = m.M[1][0]; M[1][1] = m.M[1][1]; M[1][2] = m.M[1][2]; M[1][3] = m.M[1][3];
+        return *this;
+    }
+
+    T& Sx()  { return M[0][0]; }
+    T& Shx() { return M[0][1]; }
+    T& Tx()  { return M[0][3]; }
+    T& Shy() { return M[1][0]; }
+    T& Sy()  { return M[1][1]; }
+    T& Ty()  { return M[1][3]; }
+    T  Sx() const  { return M[0][0]; }
+    T  Shx() const { return M[0][1]; }
+    T  Tx() const  { return M[0][3]; }
+    T  Shy() const { return M[1][0]; }
+    T  Sy() const  { return M[1][1]; }
+    T  Ty() const  { return M[1][3]; }
+
+    void SetIdentity()
+    {
+        M[0][0] = 1; M[0][1] = 0; M[0][2] = 0; M[0][3] = 0;
+        M[1][0] = 0; M[1][1] = 1; M[1][2] = 0; M[1][3] = 0;
+    }
+
+    // this = m1 * m0 (m0 applied first)
+    void SetToAppend(const Matrix2x4& m0, const Matrix2x4& m1);
+    void SetToAppend(const Matrix2x4& m0, const Matrix2x4& m1, const Matrix2x4& m2);
+    Matrix2x4& Append(const Matrix2x4& m);
+
+    // this = this * m (m applied first); works on a full copy of this (the exe keeps it on the stack)
+    Matrix2x4& Prepend(const Matrix2x4& m)
+    {
+        Matrix2x4 t(*this);
+        M[0][0] = t.M[0][0] * m.M[0][0] + t.M[0][1] * m.M[1][0];
+        M[1][0] = t.M[1][0] * m.M[0][0] + t.M[1][1] * m.M[1][0];
+        M[0][1] = t.M[0][0] * m.M[0][1] + t.M[0][1] * m.M[1][1];
+        M[1][1] = t.M[1][0] * m.M[0][1] + t.M[1][1] * m.M[1][1];
+        M[0][2] = M[1][2] = 0;
+        M[0][3] = t.M[0][0] * m.M[0][3] + t.M[0][1] * m.M[1][3] + t.M[0][3];
+        M[1][3] = t.M[1][0] * m.M[0][3] + t.M[1][1] * m.M[1][3] + t.M[1][3];
+        return *this;
+    }
+    Matrix2x4& PrependScaling(T sx, T sy) { return Prepend(Scaling(sx, sy)); }
+
+    Matrix2x4& PrependTranslation(T x, T y)
+    {
+        M[0][3] = M[0][0] * x + M[0][1] * y + M[0][3];
+        M[1][3] = M[1][0] * x + M[1][1] * y + M[1][3];
+        return *this;
+    }
+
+    // Inverse of m; a singular m only gets its translation negated.
+    void SetInverse(const Matrix2x4& m)
+    {
+        T det = m.M[0][0] * m.M[1][1] - m.M[0][1] * m.M[1][0];
+        if (det == 0)
+        {
+            SetIdentity();
+            M[0][3] = -m.M[0][3];
+            M[1][3] = -m.M[1][3];
+        }
+        else
+        {
+            T inv = 1 / det;
+            M[0][0] =  m.M[1][1] * inv;
+            M[1][0] = -m.M[1][0] * inv;
+            M[0][1] = -m.M[0][1] * inv;
+            M[1][1] =  m.M[0][0] * inv;
+            M[0][3] = -(M[0][0] * m.M[0][3] + M[0][1] * m.M[1][3]);
+            M[1][3] = -(M[1][0] * m.M[0][3] + M[1][1] * m.M[1][3]);
+        }
+    }
+    Matrix2x4& Invert()
+    {
+        SetInverse(Matrix2x4(*this));
+        return *this;
+    }
+
+    void EncloseTransform(Rect<T>* dest, const Rect<T>& src) const;
+
+    static Matrix2x4 Scaling(T sx, T sy)    { return Matrix2x4(sx, 0, 0, 0, sy, 0); }
+    static Matrix2x4 Translation(T x, T y)  { return Matrix2x4(1, 0, x, 0, 1, y); }
+};
+
+typedef Matrix2x4<float> Matrix2F;
+
+}} // namespace Scaleform::Render
+
+#endif
