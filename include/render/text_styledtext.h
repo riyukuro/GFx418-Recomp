@@ -432,6 +432,14 @@ protected:
         return pTextAllocator;
     }
 
+    // (appended for Text_DocView, sfr_render_03b) the HTML parser (Text_HTMLParser)
+    bool ParseHtml(const char* phtml, UPInt htmlSize, HTMLImageTagInfoArray* pimgInfoArr = NULL, bool multiline = true,
+                   bool condenseWhite = false, const StyleManagerBase* pstyleMgr = NULL,
+                   const TextFormat* txtFmt = NULL, const ParagraphFormat* paraFmt = NULL);
+    bool ParseHtml(const wchar_t* phtml, UPInt htmlSize, HTMLImageTagInfoArray* pimgInfoArr = NULL, bool multiline = true,
+                   bool condenseWhite = false, const StyleManagerBase* pstyleMgr = NULL,
+                   const TextFormat* txtFmt = NULL, const ParagraphFormat* paraFmt = NULL);
+
     void SetMayHaveUrl()    { RTFlags |= RTFlags_MayHaveUrl; }
     void ClearMayHaveUrl()  { RTFlags &= (~(RTFlags_MayHaveUrl)); }
     bool MayHaveUrl() const { return (RTFlags & (RTFlags_MayHaveUrl)) != 0; }

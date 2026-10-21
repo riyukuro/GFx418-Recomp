@@ -48,6 +48,22 @@ public:
     StringLH         FontName;          // +0x20
     float            FontScaleFactor;   // +0x28
     Font*            pFont;             // +0x30 (a counted reference, released by ~FontHandle 0x1425b5e40)
+
+    // (appended for Text_DocView, sfr_render_03b) the forced style bits
+    enum
+    {
+        FF_Italic     = 0x1,    // Font::FF_Italic
+        FF_Bold       = 0x2,    // Font::FF_Bold
+        FF_BoldItalic = 0x3,
+        FF_Style_Mask = 0x3,
+        FF_NoAutoFit  = 0x20
+    };
+    Font*    GetFont() const           { return pFont; }
+    bool     IsFauxBold() const        { return (FontFlags & FF_Bold) != 0; }
+    bool     IsFauxItalic() const      { return (FontFlags & FF_Italic) != 0; }
+    unsigned GetFauxFontStyle() const  { return FontFlags & FF_Style_Mask; }
+    bool     IsAutoFitDisabled() const { return (FontFlags & FF_NoAutoFit) != 0; }
+    float    GetFontScaleFactor() const { return FontScaleFactor; }
 };
 
 // An image placed in text: the image and its placement (baseline in image pixels, screen size in twips).
@@ -570,6 +586,21 @@ public:
     // (appended for Text_Core, sfr_render_03) drop the cached formats nobody else holds; true if any went
     bool FlushTextFormatCache(bool noAllocationsAllowed = false);
     bool FlushParagraphFormatCache(bool noAllocationsAllowed = false);
+};
+
+// (appended for Text_DocView, sfr_render_03b) a value computed once per format pass
+template<typename T>
+struct CachedPrimValue
+{
+    mutable T      Value;
+    mutable UInt16 FormatCounter;
+
+    CachedPrimValue() : FormatCounter(0) {}
+    CachedPrimValue(T v) : Value(v), FormatCounter(0) {}
+
+    void SetValue(T v, UInt16 counter) { Value = v; FormatCounter = counter; }
+    operator T() const { return Value; }
+    bool IsValid(UInt16 fmtCnt) { return FormatCounter == fmtCnt; }
 };
 
 }}} // namespace Scaleform::Render::Text
