@@ -47,6 +47,7 @@ struct __declspec(align(16)) LineBufferGeometry
     void SetStaticText()           { Flags |= Flag_StaticText; }
     bool IsStaticText() const      { return (Flags & Flag_StaticText) != 0; }
     bool HasBatchUnderline() const { return (Flags & Flag_BatchHasUnderline) != 0; }
+    bool IsNoClipping() const      { return (Flags & Flag_NoClipping) != 0; }
 };
 
 class LineBuffer
@@ -102,6 +103,12 @@ public:
             LenAndFontSize = (UInt16)((LenAndFontSize & ~(Mask_Length << Shift_Length)) |
                                       ((len & Mask_Length) << Shift_Length));
         }
+        void SetFontSize(unsigned fs)
+        {
+            LenAndFontSize = (UInt16)((LenAndFontSize & ~(Mask_FontSize << Shift_FontSize)) |
+                                      ((fs & Mask_FontSize) << Shift_FontSize));
+        }
+        void  SetFontSize(float fs);   // sizes under 256 px keep 1/16 px steps
         float GetFontSize() const
         {
             unsigned fsz = (LenAndFontSize >> Shift_FontSize) & Mask_FontSize;
@@ -186,6 +193,7 @@ public:
         bool        IsFinished() const    { return !pGlyphs || pGlyphs >= pEndGlyphs; }
         void        operator++();
         FontHandle* GetFontHandle() const { return pFontHandle; }
+        Font*       GetFont() const       { return pFontHandle ? pFontHandle->GetFont() : NULL; }
         Color       GetColor() const      { return Color(ColorV); }
         GlyphEntry& GetGlyph() const      { return *pGlyphs; }
         ImageDesc*  GetImage() const      { return pImage; }

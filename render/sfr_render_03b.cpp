@@ -542,7 +542,7 @@ void DocView::SetFontScaleFactor(float f)
 }
 
 // @0x142615390
-bool DocView::SetHScrollOffset(unsigned hscroll)
+SF_NOINLINE bool DocView::SetHScrollOffset(unsigned hscroll)
 {
     bool     rv         = false;
     unsigned maxHScroll = GetMaxHScroll();
@@ -953,6 +953,262 @@ UPInt DocView::GetCharIndexAtPoint(float x, float y)
         }
     }
     return SF_MAX_UPINT;
+}
+
+// Rect inequality in this build's member order (x1, x2, y1, y2)
+static inline bool RectDiffers(const RectF& a, const RectF& b)
+{
+    return a.x1 != b.x1 || a.x2 != b.x2 || a.y1 != b.y1 || a.y2 != b.y2;
+}
+
+// some paragraph is not left aligned (inlined into SetViewRect)
+inline bool DocView::ContainsNonLeftAlignment() const
+{
+    for (unsigned i = 0, n = pDocument->GetParagraphsCount(); i < n; ++i)
+    {
+        const Paragraph* ppara = pDocument->GetParagraph(i);
+        if (ppara->GetFormat()->GetAlignment() != ParagraphFormat::Align_Left)
+            return true;
+    }
+    return false;
+}
+
+// @0x1426156d0
+void DocView::SetViewRect(const RectF& rect, UseType ut)
+{
+    if (RectDiffers(rect, ViewRect))
+    {
+        unsigned oldW = (unsigned)ViewRect.Width();
+        unsigned oldH = (unsigned)ViewRect.Height();
+        ViewRect = rect;
+        RectF textRect = ViewRect;
+        textRect.Contract(GFX_TEXT_GUTTER, GFX_TEXT_GUTTER);
+        mLineBuffer.SetVisibleRect(textRect);
+        if (ut == UseExternally)
+        {
+            // a width change reformats only when the layout depends on the width (word wrap, a non-left
+            // alignment, a shrink with clipping off); a height change only under a bottom / center vertical
+            // alignment or a shrink with clipping off; auto size always reformats. Otherwise only the cached
+            // scroll limits are refreshed.
+            unsigned newW = (unsigned)ViewRect.Width();
+            unsigned newH = (unsigned)ViewRect.Height();
+            if (GetTextAutoSize() != TAS_None ||
+                (oldW != newW && (IsWordWrap() || (newW < oldW && mLineBuffer.Geom.IsNoClipping()) ||
+                                  GetAlignment() != Align_Left || ContainsNonLeftAlignment())) ||
+                (oldH != newH && ((GetVAlignment() != VAlign_None && GetVAlignment() != VAlign_Top) ||
+                                  (newH < oldH && mLineBuffer.Geom.IsNoClipping()))))
+            {
+                SetCompleteReformatReq();
+            }
+            else
+            {
+                ++FormatCounter;
+                unsigned maxHScroll = GetMaxHScroll();
+                if (GetHScrollOffsetValue() > maxHScroll)
+                    SetHScrollOffset(maxHScroll);
+                unsigned maxVScroll = GetMaxVScroll();
+                if (GetVScrollOffsetValue() > maxVScroll)
+                    SetVScrollOffset(maxVScroll);
+                mLineBuffer.InvalidateCache();
+            }
+        }
+    }
+}
+
+// @0x142614710
+bool DocView::IsUrlAtPoint(float x, float y, Range* purlPosRange)
+{
+    ForceReformat();
+    x -= mLineBuffer.Geom.VisibleRect.x1 - ViewRect.x1;
+    y -= mLineBuffer.Geom.VisibleRect.y1 - ViewRect.y1;
+    LineBuffer::Iterator it = mLineBuffer.FindLineAtYOffset(y + mLineBuffer.GetVScrollOffsetInFixp());
+    bool rv = false;
+    if (!it.IsFinished())
+    {
+        LineBuffer::Line& line = *it;
+
+        float lineOffX = (float)line.GetOffsetX();
+        if (x >= lineOffX && x <= lineOffX + float(line.GetWidth()))
+        {
+            float xoffInLine = x - lineOffX + mLineBuffer.GetHScrollOffset();
+            int   xoffset    = 0;
+
+            LineBuffer::GlyphIterator git = line.Begin();
+            unsigned i = 0;
+            for (; !git.IsFinished(); ++git)
+            {
+                const LineBuffer::GlyphEntry& ge = git.GetGlyph();
+                unsigned advance = ge.GetAdvance();
+                if (xoffset + advance > xoffInLine)
+                {
+                    rv = ge.IsUrl();
+                    break;
+                }
+                xoffset += advance;
+                i += ge.GetLength();
+            }
+            if (rv && purlPosRange)
+            {
+                // widen to the run of formats that carry the same url around the hit character
+                purlPosRange->Index  = 0;
+                purlPosRange->Length = 0;
+                UPInt posInDoc    = i + line.GetTextPos();
+                UPInt indexInPara = 0;
+                StyledText::ParagraphsIterator paraIter = pDocument->GetParagraphByIndex(posInDoc, &indexInPara);
+                if (!paraIter.IsFinished())
+                {
+                    Paragraph* ppara = *paraIter;
+                    TextFormat formatAtThePoint = ppara->GetTextFormat(indexInPara, indexInPara + 1);
+                    Paragraph::FormatRunIterator fit = ppara->GetIterator();
+                    for (; !fit.IsFinished(); ++fit)
+                    {
+                        UPInt indexInDoc = (UPInt)fit->Index + ppara->GetStartIndex();
+                        if (fit->pFormat->IsUrlSet() && fit->pFormat->GetUrl() == formatAtThePoint.GetUrl())
+                        {
+                            if ((UPInt)purlPosRange->Index + purlPosRange->Length < indexInDoc)
+                            {
+                                if (indexInDoc > posInDoc)
+                                    break;
+                                purlPosRange->Index  = indexInDoc;
+                                purlPosRange->Length = fit->Length;
+                            }
+                            else
+                                purlPosRange->Length += fit->Length;
+                        }
+                        else
+                        {
+                            if (indexInDoc > posInDoc)
+                                break;
+                            purlPosRange->Index  = 0;
+                            purlPosRange->Length = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return rv;
+}
+
+// moves a rectangle by a point (Rect += Point in this build: x1, x2, then y1, y2)
+static inline void OffsetRect(RectF* r, const PointF& pt)
+{
+    r->x1 += pt.x;
+    r->x2 += pt.x;
+    r->y1 += pt.y;
+    r->y2 += pt.y;
+}
+
+// @0x142611ff0
+bool DocView::GetCharBoundaries(RectF* pCharRect, UPInt indexOfChar)
+{
+    if (!pCharRect || indexOfChar >= pDocument->GetLength())
+        return false;
+    ForceReformat();
+
+    LineBuffer::Iterator it = mLineBuffer.FindLineByTextPos(indexOfChar);
+    bool rv = false;
+    if (!it.IsFinished())
+    {
+        LineBuffer::Line& line = *it;
+        UPInt indexInLine = indexOfChar - line.GetTextPos();
+        LineBuffer::GlyphIterator git = line.Begin();
+        int advance = 0;
+        for (unsigned i = 0; !git.IsFinished(); ++git, ++i)
+        {
+            const LineBuffer::GlyphEntry& glyph = git.GetGlyph();
+            if (i == indexInLine)
+            {
+                // a newline has no box here (GetExactCharBoundaries gives one)
+                if (glyph.IsNewLineChar())
+                    break;
+                rv = true;
+
+                pCharRect->SetRect(0, 0, 0, 0);
+                pCharRect->x2 += float(glyph.GetAdvance());
+                pCharRect->y1 = GFX_TEXT_GUTTER;
+                pCharRect->y2 = float(line.GetHeight());
+                OffsetRect(pCharRect, PointF(float(advance) + GFX_TEXT_GUTTER, float(line.GetOffsetY())));
+                break;
+            }
+            advance += glyph.GetAdvance();
+        }
+    }
+    return rv;
+}
+
+// @0x142612740
+// The box of the glyph outline (or the embedded image); a newline gets a third of its glyph width.
+bool DocView::GetExactCharBoundaries(RectF* pCharRect, UPInt indexOfChar)
+{
+    UPInt len = pDocument->GetLength();
+    if (!pCharRect || indexOfChar > len)
+        return false;
+    ForceReformat();
+
+    LineBuffer::Iterator it = mLineBuffer.FindLineByTextPos(indexOfChar);
+    bool rv = false;
+    if (!it.IsFinished())
+    {
+        LineBuffer::Line& line = *it;
+        UPInt indexInLine = indexOfChar - line.GetTextPos();
+        LineBuffer::GlyphIterator git = line.Begin();
+        int advance = 0;
+        for (unsigned i = 0; !git.IsFinished(); ++git, ++i)
+        {
+            const LineBuffer::GlyphEntry& glyph = git.GetGlyph();
+            if (i == indexInLine)
+            {
+                if (!glyph.HasFmtImage())
+                {
+                    rv = true;
+                    Font* pfont = git.GetFont();
+                    float scale = PixelsToFixp(glyph.GetFontSize()) / 1024.0f;   // glyphs are in a 1024 EM square
+
+                    pfont->GetGlyphBounds(glyph.GetIndex(), pCharRect);
+                    if (glyph.IsNewLineChar())
+                        pCharRect->x2 = pCharRect->x1 + pCharRect->Width() / 3;
+
+                    float textHeight = (pfont->GetAscent() + pfont->GetDescent()) * scale;
+                    pCharRect->x1 *= scale;
+                    pCharRect->x2 *= scale;
+                    pCharRect->y1 = line.GetBaseLineOffset() - pfont->GetAscent() * scale + GFX_TEXT_GUTTER;
+                    pCharRect->y2 = pCharRect->y1 + textHeight;
+                    OffsetRect(pCharRect, PointF(float(advance) + GFX_TEXT_GUTTER, float(line.GetOffsetY())));
+                }
+                else
+                {
+                    rv = true;
+                    ImageDesc* pimg = git.GetImage();
+                    pCharRect->x1 = -pimg->GetBaseLineX();
+                    pCharRect->y1 = -pimg->GetBaseLineY();
+                    pCharRect->x2 = pCharRect->x1 + pimg->GetScreenWidth();
+                    pCharRect->y2 = pCharRect->y1 + pimg->GetScreenHeight();
+                    OffsetRect(pCharRect, PointF(float(advance) + GFX_TEXT_GUTTER, line.GetOffsetY() + GFX_TEXT_GUTTER));
+                }
+                break;
+            }
+            advance += glyph.GetAdvance();
+        }
+    }
+    return rv;
+}
+
+// @0x142615330
+void LineBuffer::GlyphEntry::SetFontSize(float fs)
+{
+    if (fs < 256.f)
+    {
+        unsigned fxpSize = (unsigned)(fs * 16.f);
+        if (fxpSize & 0xF)
+        {
+            Flags |= Flags_FractionalFontSize;
+            SetFontSize(fxpSize);
+            return;
+        }
+    }
+    Flags &= ~Flags_FractionalFontSize;
+    SetFontSize((unsigned)fs);
 }
 
 }}} // namespace Scaleform::Render::Text

@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/render/text_filterdesc.h"
 #include "ms2/scaleform/include/render/text_linebuffer.h"
 #include "ms2/scaleform/include/render/text_fontmanager.h"
+#include "ms2/scaleform/include/render/render_font.h"
 
 namespace Scaleform { namespace Render { namespace Text {
 
