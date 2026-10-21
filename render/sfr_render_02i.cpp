@@ -12,23 +12,15 @@
 
 #include "ms2/scaleform/include/render/render_drawableimage.h"
 #include "ms2/scaleform/include/render/render_hal.h"
+#include "ms2/scaleform/include/render/render_treeshape.h"
+#include "ms2/scaleform/include/render/render_shapedatafloatmp.h"
+#include "ms2/scaleform/include/render/render_gradients.h"
 
 // The exe keeps these out of line where our compiler would inline them (GetPixel32 into GetPixel,
 // MapImageSource into mapTextureRT, mapTextureRT into updateStagingTargetRT).
 #define MS2_SF_NOINL __declspec(noinline)
 
 namespace Scaleform { namespace Render {
-
-// Render_TreeNode (sfr_render_*): the filter-expanded bounds of a node.
-class TreeNode
-{
-public:
-    class NodeData
-    {
-    public:
-        static void expandByFilterBounds(const Filter* filter, RectF* bounds);
-    };
-};
 
 // ---------------------------------------------------------------------------------------------------------------
 // Command constructors (out of line or inlined into the operations below)
@@ -102,8 +94,7 @@ void DrawableImage::addCommand(const C& cmd)
 
 // Threshold (linked into the 0x1425eeef0 gap) queues through this instance; its COMDAT is kept in this range.
 template void DrawableImage::addCommand<DICommand_Threshold>(const DICommand_Threshold& cmd);
-// The same for the Draw command; the two Draw bodies (0x1425eb8c0 / 0x1425ebf70) wait for the TreeNode/TreeRoot
-// layouts of Render_TreeNode (sfr_render_03).
+// The same for the Draw command.
 template void DrawableImage::addCommand<DICommand_Draw>(const DICommand_Draw& cmd);
 
 // @0x1425e9810
@@ -359,6 +350,97 @@ void DrawableImage::CopyPixels(DrawableImage* source, const Rect<SInt32>& source
 {
     addCommand(DICommand_CopyPixels(this, source, sourceRect, destPoint, alphaSource, alphaPoint, mergeAlpha));
 }
+
+// The viewport of a Draw root: the clip rectangle (or the whole image) of a render target the image's size.
+static inline void setTargetViewport(TreeRoot* root, const Rect<SInt32>& area, const ImageSize& size)
+{
+    Viewport vp;
+    vp.BufferWidth   = size.Width;
+    vp.BufferHeight  = size.Height;
+    vp.Left          = area.x1;
+    vp.Top           = area.y1;
+    vp.Width         = area.Width();
+    vp.Height        = area.Height();
+    vp.ScissorLeft   = vp.ScissorTop = vp.ScissorWidth = vp.ScissorHeight = 0;
+    vp.Flags         = Viewport::View_IsRenderTexture;
+    root->SetViewport(vp);
+}
+
+// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie and keeps TreeContainer::Add, StartLayer, LineTo and EndPath out of line; the rectangle's closing edge is an explicit test (the exe compares the start and last points)
+// @0x1425eb8c0
+void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
+                         const Rect<SInt32>* clipRect, bool smoothing)
+{
+    SF_UNUSED(smoothing);   // 4.1.18 leaves the fill on its default sampling
+    if (!pContext || !pContext->RContext)
+        return;
+
+    Ptr<TreeRoot> root = *pContext->RContext->CreateEntry<TreeRoot>();
+    if (!root)
+        return;
+    Ptr<TreeShape> shape = *pContext->RContext->CreateEntry<TreeShape>();
+    root->Add(shape);
+
+    // The source becomes the image fill of one rectangle its own size.
+    FillStyleType fill;
+    fill.Color = 0;
+    fill.pFill = *SF_NEW ComplexFill();
+    fill.pFill->pImage    = source;
+    fill.pFill->BindIndex = ~0u;
+
+    Ptr<ShapeDataFloatMP> shapeData = *SF_NEW ShapeDataFloatMP();
+    shapeData->AddFillStyle(fill);
+    shapeData->StartLayer();
+    shapeData->StartPath(1, 0, 0);
+    shapeData->RectanglePath(0, 0, (float)source->GetSize().Width, (float)source->GetSize().Height);
+    shapeData->CountLayers();
+
+    TreeShape::NodeData* data = shape->GetWritableData(Change_Shape);
+    data->pMeshProvider       = shapeData;
+    shape->AddToPropagate();
+
+    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize());
+    root->SetMatrix(matrix);
+    shape->SetMatrix(Matrix2F::Identity);
+    shape->SetCxform(cxform);
+    shape->SetBlendMode(blendMode);
+
+    root->AddRef();
+    if (pContext->GetControlContext())
+        pContext->GetControlContext()->SetDIChangesRequired();
+    pContext->OnCapture();
+    addCommand(DICommand_Draw(this, root, clipRect));
+}
+
+// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie and keeps TreeContainer::Add out of line (our build inlines it)
+// @0x1425ebf70
+void DrawableImage::Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
+                         const Rect<SInt32>* clipRect)
+{
+    if (!pContext || !pContext->RContext)
+        return;
+
+    // A private root in the image context holds a clone of the subtree; the render thread draws it into the texture.
+    Ptr<TreeRoot> root = *pContext->RContext->CreateEntry<TreeRoot>();
+    if (!root)
+        return;
+    Ptr<TreeNode> child = *subtree->Clone(pContext->RContext);
+    root->Add(child);
+
+    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize());
+    root->SetMatrix(matrix);
+    child->SetMatrix(Matrix2F::Identity);
+    child->SetCxform(cxform);
+    child->SetBlendMode(blendMode);
+
+    // The command owns this reference until the render thread is done with the root.
+    root->AddRef();
+    if (pContext->GetControlContext())
+        pContext->GetControlContext()->SetDIChangesRequired();
+    pContext->OnCapture();
+    addCommand(DICommand_Draw(this, root, clipRect));
+}
+
 
 // MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425ec860
@@ -1001,3 +1083,13 @@ void DrawableImageContext::processTreeRootKillList()
 // MS2-PIN: ?ExecuteHWGetImages@?$DICommand_SourceRectImpl@UDICommand_PaletteMap@Render@Scaleform@@@Render@Scaleform@@UEBAXPEAPEAVDrawableImage@23@PEAV?$Size@M@23@@Z 0x1425ec680 ; unique
 // MS2-PIN: ?ExecuteHWGetImages@?$DICommand_SourceRectImpl@UDICommand_Scroll@Render@Scaleform@@@Render@Scaleform@@UEBAXPEAPEAVDrawableImage@23@PEAV?$Size@M@23@@Z 0x1425ec710 ; unique
 // MS2-PINS-END tplpin
+// MS2-PIN: ??_7EntryData@ContextImpl@Render@Scaleform@@6B@ 0x14317b6d0
+// MS2-PIN: ??_7NodeData@TreeNode@Render@Scaleform@@6B@ 0x14317b700
+// MS2-PIN: ??_7?$ContextData_ImplMixin@VNodeData@TreeContainer@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@ 0x143183230
+// MS2-PIN: ??_7NodeData@TreeContainer@Render@Scaleform@@6B@ 0x143183280
+// MS2-PIN: ??_7?$ContextData_ImplMixin@VNodeData@TreeRoot@Render@Scaleform@@V1TreeContainer@34@@ContextImpl@Render@Scaleform@@6B@ 0x1431832d0
+// MS2-PIN: ??_7NodeData@TreeRoot@Render@Scaleform@@6B@ 0x143183320
+// MS2-PIN: ??_7?$RefCountBase@VComplexFill@Render@Scaleform@@$01@Scaleform@@6B@ 0x14317b660
+// MS2-PIN: ??_7ComplexFill@Render@Scaleform@@6B@ 0x14317b668
+// MS2-PIN: ??_7?$ContextData_ImplMixin@VNodeData@TreeShape@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@ 0x14317bbf0
+// MS2-PIN: ??_7NodeData@TreeShape@Render@Scaleform@@6B@ 0x14317bc40
