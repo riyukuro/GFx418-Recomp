@@ -194,6 +194,31 @@ public:
     bool IsFontSame(const TextFormat& fmt) const;
     bool IsHTMLFontTagSame(const TextFormat& fmt) const;
     void InitByDefaultValues();
+
+    // Setters used by the style sheet; the flag ones are out of line (exe 0x142607d90 SetBold, 0x1426082a0 SetItalic,
+    // 0x1426084d0 SetUnderline, 0x142608330 SetKerning).
+    void SetBold(bool bold = true);
+    void SetItalic(bool italic = true);
+    void SetUnderline(bool underline = true);
+    void SetKerning(bool kerning = true);
+    // Sets the RGB part; the alpha is kept.
+    void SetColor32(UInt32 color)
+    {
+        ColorV = (ColorV & 0xFF000000u) | (color & 0xFFFFFFu);
+        PresentMask |= PresentMask_Color;
+    }
+    void SetLetterSpacing(float pixels)
+    {
+        LetterSpacing = (SInt16)PixelsToFixp(pixels);
+        PresentMask |= PresentMask_LetterSpacing;
+    }
+    // Sizes past the 16 bit twips range clamp to 0xFFFF.
+    void SetFontSize(float pixels)
+    {
+        FontSize = (pixels < FixpToPixels(65536.0f)) ? (UInt16)PixelsToFixp(pixels) : (UInt16)0xFFFFu;
+        PresentMask |= PresentMask_FontSize;
+    }
+    void SetFontList(const char* pfontList, UPInt fontListSz = SF_MAX_UPINT); // exe 0x142607f40
 };
 
 // A format pointer as stored in the format caches (hashed and compared by value).
@@ -326,6 +351,23 @@ protected:
     void FreeTabStops();
     bool TabStopsEqual(const unsigned* psrcTabStops) const;
     void CopyTabStops(const unsigned* psrcTabStops);
+
+public:
+    // Setters used by the style sheet.
+    void SetAlignment(AlignType align)
+    {
+        PresentMask = (UInt16)((PresentMask & ~Mask_Align) | ((align << Shift_Align) & Mask_Align));
+        PresentMask |= PresentMask_Alignment;
+    }
+    void SetDisplay(DisplayType display)
+    {
+        PresentMask = (UInt16)((PresentMask & ~Mask_Display) | ((display << Shift_Display) & Mask_Display));
+        PresentMask |= PresentMask_Display;
+    }
+    void SetIndent(int value)           { Indent = (SInt16)value; PresentMask |= PresentMask_Indent; }
+    void SetLeading(int value)          { Leading = (SInt16)value; PresentMask |= PresentMask_Leading; }
+    void SetLeftMargin(unsigned value)  { LeftMargin = (UInt16)value; PresentMask |= PresentMask_LeftMargin; }
+    void SetRightMargin(unsigned value) { RightMargin = (UInt16)value; PresentMask |= PresentMask_RightMargin; }
 };
 typedef TextFormatPtrWrapper<ParagraphFormat> ParagraphFormatPtr;
 
