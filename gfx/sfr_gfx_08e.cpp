@@ -8,39 +8,13 @@
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_resource.h"
+#include "../include/gfx/gfx_sound.h"
 #include "../include/kernel/sf_alg.h"
 #include "../include/kernel/sf_memory.h"
 #include "../include/sound/sound_renderer.h"
 #include "../include/sound/sound_sound.h"
 
 namespace Scaleform { namespace GFx {
-
-// Allocation stat of the sound definitions.
-enum { StatMD_Sounds_Mem = 0x147 };
-
-class InteractiveObject;
-class SoundResource;
-
-// Audio / video synchronization settings of a movie (only the fields read here).
-class AudioBase : public State
-{
-public:
-    enum SyncTypeFlags
-    {
-        NoSync      = 0,
-        VideoMaster = 1, // the sound follows the frames
-        AudioMaster = 2  // the frames follow the sound
-    };
-
-    float         GetMaxTimeDifference() const  { return MaxTimeDifference; }
-    unsigned      GetCheckFrameInterval() const { return CheckFrameInterval; }
-    SyncTypeFlags GetSyncType() const           { return SyncType; }
-
-protected:
-    float         MaxTimeDifference;  // +0x18 seconds
-    unsigned      CheckFrameInterval; // +0x1c frames between checks
-    SyncTypeFlags SyncType;           // +0x20
-};
 
 // The movie (only the fields read here).
 class MovieImpl
@@ -66,100 +40,6 @@ public:
     void                 SetStreamingSound(Sound::SoundChannel* pchan);
 };
 
-// A resource reference of a definition: the resource, or its index in the movie binding.
-template<class C>
-class ResourcePtr
-{
-public:
-    enum PtrType
-    {
-        RP_Resource,
-        RP_Index
-    };
-
-    ResourcePtr() : PType(RP_Resource), pResource(0) {}
-
-protected:
-    PtrType PType; // +0
-    union
-    {
-        C*       pResource; // +8
-        unsigned BindIndex;
-    };
-};
-
-// Volume point of an event sound (8 bytes).
-class SoundEnvelope
-{
-public:
-    UInt32 Mark44; // position in samples at 44 kHz
-    UInt16 Level0; // left volume, 0..32768
-    UInt16 Level1; // right volume
-};
-
-// How an event sound plays (StartSound / button sound records, 0x30 bytes).
-class SoundStyle
-{
-public:
-    bool                 NoMultiple;   // +0 do not start while already playing
-    bool                 StopPlayback; // +1
-    bool                 HasEnvelope;  // +2
-    bool                 HasLoops;     // +3
-    bool                 HasOutPoint;  // +4
-    bool                 HasInPoint;   // +5
-    UInt32               InPoint;      // +8 samples
-    UInt32               OutPoint;     // +0xc
-    UInt16               LoopCount;    // +0x10
-    Array<SoundEnvelope> Envelopes;    // +0x18
-
-    void Read(Stream* in);
-};
-
-// An event sound and its style (0x48 bytes).
-class SoundInfo
-{
-public:
-    ResourcePtr<SoundResource> pSample; // +0
-    SoundStyle                 Style;   // +0x10
-    ResourceId                 SoundId; // +0x40
-
-    SoundInfo();
-
-    void Play(InteractiveObject* pchar);
-};
-
-// Sound of a timeline frame by frame (SoundStreamHead / SoundStreamBlock tags).
-class SoundStreamDef : public RefCountBaseNTS<SoundStreamDef, StatMD_Sounds_Mem>
-{
-public:
-    virtual ~SoundStreamDef() {}
-    virtual bool ProcessSwfFrame(MovieImpl* proot, unsigned frame, Sprite* pchar) = 0;
-};
-
-class SoundStreamDefImpl : public SoundStreamDef
-{
-public:
-    unsigned              PlaybackSoundRate;  // +0x10
-    unsigned              PlaybackSound16bit; // +0x14
-    unsigned              PlaybackStereo;     // +0x18
-    unsigned              SoundCompression;   // +0x1c SWF sound format
-    unsigned              StreamSoundRate;    // +0x20
-    unsigned              StreamSound16bit;   // +0x24
-    unsigned              StreamStereo;       // +0x28
-    unsigned              StreamSampleCount;  // +0x2c per block
-    unsigned              LatencySeek;        // +0x30 MP3 samples to skip
-    unsigned              StartFrame;         // +0x34 first frame with a block
-    unsigned              LastFrame;          // +0x38
-    Ptr<Sound::SoundInfo> pSoundInfo;         // +0x40
-
-    SoundStreamDefImpl();
-    ~SoundStreamDefImpl();
-
-    void         ReadHeadTag(Stream* in);
-    void         ReadBlockTag(LoadProcess* p);
-    virtual bool ProcessSwfFrame(MovieImpl* proot, unsigned frame, Sprite* pchar);
-};
-
 void GFx_AdpcmExpand(void* pdataOut, Stream* in, int codeBits, int sampleCount, bool stereo);
 void s_ReadSoundData(Stream* in, int datasize, UByte* pdata, unsigned sample16bit, unsigned format);
 
@@ -175,6 +55,13 @@ enum SwfSoundFormat
 // @0x1426d2820
 SoundInfo::SoundInfo()
 {
+}
+
+// Plays the sound of a button state transition (exe 0x1426d3550, a thunk outside the coverage list).
+void ButtonSoundDefImpl::Play(InteractiveObject* pchar, int buttonIdx)
+{
+    if (buttonIdx >= 0)
+        ButtonSounds[buttonIdx].Play(pchar);
 }
 
 // @0x1426d2840

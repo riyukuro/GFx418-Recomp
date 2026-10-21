@@ -26,7 +26,12 @@ enum TagType
 {
     Tag_FileAttributes       = 69,
     Tag_ExporterInfo         = 1000,
-    Tag_GFX_TagTableBegin    = 1000
+    Tag_GFX_TagTableBegin    = 1000,
+
+    Tag_ButtonSound          = 17,
+    Tag_SoundStreamHead      = 18,
+    Tag_SoundStreamBlock     = 19,
+    Tag_SoundStreamHead2     = 45
 };
 
 // Where OpenTag found a tag.

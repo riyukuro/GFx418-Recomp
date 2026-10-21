@@ -541,6 +541,86 @@ public:
     }
 };
 
+// A resource of a definition as the loader sees it: the resource itself, or its index in the binding of the movie
+// (16 bytes). Pointer handles hold a reference.
+class ResourceHandle
+{
+public:
+    enum HandleType
+    {
+        RH_Pointer,
+        RH_Index
+    };
+
+protected:
+    HandleType HType; // +0
+    union
+    {
+        Resource* pResource; // +8
+        unsigned  BindIndex;
+    };
+
+    template<class C> friend class ResourcePtr;
+
+public:
+    ResourceHandle() : HType(RH_Pointer), pResource(0) {}
+    ResourceHandle(const ResourceHandle& src)
+    {
+        HType     = src.HType;
+        pResource = src.pResource;
+        if (HType == RH_Pointer && pResource)
+            pResource->AddRef();
+    }
+    ~ResourceHandle()
+    {
+        if (HType == RH_Pointer && pResource)
+            pResource->Release();
+    }
+
+    bool      IsIndex() const        { return HType == RH_Index; }
+    Resource* GetResourcePtr() const { return HType == RH_Pointer ? pResource : 0; }
+};
+
+// A resource reference held by a definition, set from a handle (16 bytes).
+template<class C>
+class ResourcePtr
+{
+public:
+    enum PtrType
+    {
+        RP_Resource,
+        RP_Index
+    };
+
+    ResourcePtr() : PType(RP_Resource), pResource(0) {}
+    ~ResourcePtr()
+    {
+        if (PType == RP_Resource && pResource)
+            GetResource()->Release();
+    }
+
+    // C may be incomplete here; the resources derive from Resource first.
+    Resource* GetResource() const { return (Resource*)pResource; }
+
+    void SetFromHandle(const ResourceHandle& h)
+    {
+        if (h.HType == ResourceHandle::RH_Pointer && h.pResource)
+            h.pResource->AddRef();
+        if (PType == RP_Resource && pResource)
+            GetResource()->Release();
+        PType     = (PtrType)h.HType;
+        pResource = (C*)h.pResource;
+    }
+
+protected:
+    PtrType PType; // +0
+    union
+    {
+        C*       pResource; // +8
+        unsigned BindIndex;
+    };
+};
+
 }} // namespace Scaleform::GFx
 
 #endif

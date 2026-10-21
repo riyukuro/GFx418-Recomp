@@ -8,86 +8,11 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_resource.h"
+#include "../include/gfx/gfx_sound.h"
 #include "../include/kernel/sf_memory.h"
 #include "../include/sound/sound_sound.h"
 
 namespace Scaleform { namespace GFx {
-
-// Allocation stat of the sound key data.
-enum { StatMD_Sounds_Mem = 0x147 };
-
-// File info of an external sound (0x50 bytes, vftable 0x14318ffe0).
-struct SoundFileInfo : public ResourceFileInfo
-{
-    unsigned Use;         // +0x28
-    String   ExportName;  // +0x30
-    unsigned Bits;        // +0x38
-    unsigned Channels;    // +0x3c
-    unsigned SampleRate;  // +0x40
-    unsigned SampleCount; // +0x44
-    unsigned SeekSample;  // +0x48
-
-    SoundFileInfo(const SoundFileInfo& other) : ResourceFileInfo(other)
-    {
-        Use         = other.Use;
-        ExportName  = other.ExportName;
-        Bits        = other.Bits;
-        Channels    = other.Channels;
-        SampleRate  = other.SampleRate;
-        SampleCount = other.SampleCount;
-        SeekSample  = other.SeekSample;
-    }
-};
-
-// A sound sample resource (0x38 bytes).
-class SoundResource : public Resource
-{
-public:
-    SoundResource(Sound::SoundInfoBase* psound, ResourceUse use = Use_SoundSample)
-    {
-        pSoundInfo   = psound;
-        UseType      = use;
-        PlayingCount = 0;
-    }
-    SoundResource(Sound::SoundInfoBase* psound, const ResourceKey& key, ResourceUse use = Use_SoundSample)
-    {
-        pSoundInfo   = psound;
-        Key          = key;
-        UseType      = use;
-        PlayingCount = 0;
-    }
-
-    virtual ResourceKey GetKey();
-    virtual unsigned    GetResourceTypeCode() const { return MakeTypeCode(RT_SoundSample, UseType); }
-
-    static ResourceKey CreateSoundFileKey(SoundFileInfo* pfileInfo, FileOpener* pfileOpener);
-
-protected:
-    Ptr<Sound::SoundInfoBase> pSoundInfo;   // +0x18
-    ResourceKey               Key;          // +0x20
-    ResourceUse               UseType;      // +0x30
-    int                       PlayingCount; // +0x34
-};
-
-// Creates the resource of embedded sound data.
-class SoundResourceCreator : public ResourceData::DataInterface
-{
-    virtual bool CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
-                                MemoryHeap* pheap) const;
-
-public:
-    static ResourceData CreateSoundResourceData(Sound::SoundData* psound);
-};
-
-// Loads an external sound file, shared through the resource library.
-class SoundFileResourceCreator : public ResourceData::DataInterface
-{
-    virtual bool CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
-                                MemoryHeap* pheap) const;
-
-public:
-    static ResourceData CreateSoundFileResourceData(SoundFileInfo* prfi);
-};
 
 // The key handle (0x20 bytes).
 class SoundFileInfoKeyData : public RefCountBase<SoundFileInfoKeyData, StatMD_Sounds_Mem>

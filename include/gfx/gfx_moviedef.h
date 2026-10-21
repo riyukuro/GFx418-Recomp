@@ -3,7 +3,8 @@
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
 // Out-of-line members not recovered yet bind to the exe:
-//   MovieDataDef::LoadTaskData::WaitForLoadFinish 0x1425d3c40, ResourceBinding::GetResourceData_Locked 0x142636720.
+//   MovieDataDef::LoadTaskData::WaitForLoadFinish 0x1425d3c40, ResourceBinding::GetResourceData_Locked 0x142636720,
+//   LoadTaskData GetResourceHandle 0x1425d0f90, GetSoundStream 0x1425d1460, SetSoundStream 0x1425d2ef0.
 #ifndef MS2_SF_GFX_MOVIEDEF_H
 #define MS2_SF_GFX_MOVIEDEF_H
 
@@ -89,6 +90,40 @@ struct FontDataUseNode
     FontDataUseNode* volatile  pNext;      // +0x18
 };
 
+class SoundStreamDef;
+struct ExporterInfo;
+
+// Bump allocator of the tags and frame arrays of a loading movie; the memory lives as long as the movie data
+// (OverflowAlloc 0x1425d1c00 starts a new block).
+class DataAllocator
+{
+    struct Block
+    {
+        Block* pNext;
+    };
+
+    UByte*      pCurrent;     // +0
+    UPInt       BytesLeft;    // +8
+    Block*      pAllocations; // +0x10
+    MemoryHeap* pHeap;        // +0x18
+
+    void* OverflowAlloc(UPInt bytes);
+
+public:
+    void* Alloc(UPInt bytes)
+    {
+        bytes = (bytes + (sizeof(void*) - 1)) & ~(sizeof(void*) - 1);
+        if (bytes <= BytesLeft)
+        {
+            void* pmem = pCurrent;
+            pCurrent += bytes;
+            BytesLeft -= bytes;
+            return pmem;
+        }
+        return OverflowAlloc(bytes);
+    }
+};
+
 // Parsed SWF data shared by every binding of the same file.
 class MovieDataDef : public Resource
 {
@@ -120,8 +155,25 @@ public:
         // The MovieHeaderData of the file (only defined by the units that read it).
         const void*      GetHeaderData() const { return HeaderData; }
 
+        MemoryHeap*      GetHeap() const { return pHeap; }
+        void*            AllocTagMemory(UPInt bytes) { return TagMemAllocator.Alloc(bytes); }
+        // The exporter info of the header (at +0x30 in it), if the file has one (its format is set).
+        const ExporterInfo* GetExporterInfo() const
+        {
+            const ExporterInfo* pinfo = (const ExporterInfo*)(HeaderData + 0x30);
+            return *(const int*)pinfo ? pinfo : 0;
+        }
+
+        bool             GetResourceHandle(ResourceHandle* phandle, ResourceId rid) const;
+        // The streaming sound of the main timeline (exe: GetSoundStream folded with another field getter).
+        SoundStreamDef*  GetSoundStream() const;
+        void             SetSoundStream(SoundStreamDef* psoundStream);
+
     private:
-        UByte                     Unknown10[0x38];  // +0x10
+        DataAllocator             TagMemAllocator;  // +0x10
+        void*                     pPathAllocator;   // +0x30
+        MemoryHeap*               pHeap;            // +0x38
+        UByte                     Unknown40[8];     // +0x40
         String                    FileURL;          // +0x48
         UByte                     HeaderData[0x78]; // +0x50 MovieHeaderData
         UByte                     UnknownC8[0x20];  // +0xc8

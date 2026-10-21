@@ -7,13 +7,17 @@
 #define MS2_SF_GFX_LOADPROC_H
 
 #include "gfx_loaderimpl.h"
+#include "gfx_log.h"
 #include "gfx_moviedef.h"
 #include "gfx_stream.h"
+#include "../kernel/sf_array.h"
 
 namespace Scaleform { namespace GFx {
 
-// The timeline a sprite definition is loaded into. Only its loading frame (vftable slot 18) is used so far; the
-// CharacterDef / TimelineDef slots before it are not named yet.
+class SoundStreamDef;
+
+// The timeline a sprite definition is loaded into. Only its streaming sound and loading frame (vftable slots 16..18)
+// are used so far; the CharacterDef / TimelineDef slots before them are not named yet.
 class TimelineIODef : public Resource
 {
     virtual void Slot04() = 0;
@@ -28,11 +32,44 @@ class TimelineIODef : public Resource
     virtual void Slot13() = 0;
     virtual void Slot14() = 0;
     virtual void Slot15() = 0;
-    virtual void Slot16() = 0;
-    virtual void Slot17() = 0;
 
 public:
-    virtual unsigned GetLoadingFrame() const = 0;
+    // The streaming sound of the timeline (SoundStreamHead / SoundStreamBlock tags of a sprite).
+    virtual SoundStreamDef* GetSoundStream() const               = 0;
+    virtual void            SetSoundStream(SoundStreamDef* pdef) = 0;
+    virtual unsigned        GetLoadingFrame() const              = 0;
+};
+
+class DisplayObjContainer;
+class TimelineSnapshot;
+
+struct ActionPriority
+{
+    enum Priority
+    {
+        AP_Highest = 0,
+        AP_Initialize = 0,
+        AP_Construct,
+        AP_Frame,
+        AP_Normal = AP_Frame,
+        AP_Load,
+        AP_Lowest = AP_Load
+    };
+};
+
+// A tag run when its frame is reached (placed in the loader's tag memory; vftable 0x14313ba68).
+class ExecuteTag
+{
+public:
+    virtual ~ExecuteTag() {}
+
+    virtual void Execute(DisplayObjContainer*) {}
+    virtual void ExecuteWithPriority(DisplayObjContainer* m, ActionPriority::Priority) { Execute(m); }
+    virtual bool IsRemoveTag() const { return false; }
+    virtual bool IsActionTag() const { return false; }
+    virtual bool IsInitImportActionsTag() const { return false; }
+    virtual void AddToTimelineSnapshot(TimelineSnapshot*, unsigned) {}
+    virtual void Trace(const char*) {}
 };
 
 class LoadProcess : public LoaderTask, public LogBase<LoadProcess>
@@ -56,7 +93,46 @@ public:
         return GetLoadingFrame();
     }
 
-    Log* GetLog() const;
+    Log* GetLog() const { return pLoadStates->pLog ? pLoadStates->pLog->GetLog() : 0; }
+
+    LoadStates*          GetLoadStates() const { return pLoadStates; }
+    MemoryHeap*          GetLoadHeap() const   { return pLoadData->GetHeap(); }
+    const ExporterInfo*  GetExporterInfo() const { return pLoadData->GetExporterInfo(); }
+
+    // Byte-aligned readers of the current stream (exe 0x14258ec50, 0x1425c8c20).
+    UInt16 ReadU16() { return GetStream()->ReadU16(); }
+    UInt32 ReadU32() { return GetStream()->ReadU32(); }
+
+    bool GetResourceHandle(ResourceHandle* phandle, ResourceId rid) const
+    {
+        return pLoadData->GetResourceHandle(phandle, rid);
+    }
+
+    // Adds a resource created per binding from resData (exe 0x142637b60).
+    ResourceHandle AddDataResource(ResourceId rid, const ResourceData& resData);
+
+    // The streaming sound of the timeline being loaded.
+    SoundStreamDef* GetSoundStream() const
+    {
+        if (LoadState == LS_LoadingSprite)
+            return pTimelineDef->GetSoundStream();
+        return pLoadData->GetSoundStream();
+    }
+    void SetSoundStream(SoundStreamDef* pdef)
+    {
+        if (LoadState == LS_LoadingSprite)
+            pTimelineDef->SetSoundStream(pdef);
+        else
+            pLoadData->SetSoundStream(pdef);
+    }
+
+    // A tag constructed in the tag memory of the movie.
+    template<class T>
+    T* AllocTag()
+    {
+        return new (pLoadData->AllocTagMemory(sizeof(T))) T;
+    }
+    void AddExecuteTag(ExecuteTag* ptag) { FrameTags[LoadState].PushBack(ptag); }
 
 private:
     // +0x20 LogBase<LoadProcess>
@@ -69,7 +145,10 @@ private:
     UByte                           Unknown2C0[0xf8]; // +0x2c0 rest of the process info, JPEG tables, data lists
     LoadStateType                   LoadState;       // +0x3b8
     TimelineIODef*                  pTimelineDef;    // +0x3c0
-    UByte                           Unknown3C8[0x50]; // +0x3c8 frame / init action tag arrays
+    // Tags of the frame being loaded, of the root timeline [0] and of the sprite being loaded [1].
+    Array<ExecuteTag*, Stat_Default_Mem, ArrayConstPolicy<32, 16, false> > FrameTags[2]; // +0x3c8
+    Array<ExecuteTag*, Stat_Default_Mem, ArrayConstPolicy<32, 16, false> > InitActionTags; // +0x3f8
+    unsigned                        ASInitActionTagsNum; // +0x410
     Stream*                         pAltStream;      // +0x418
 };
 
