@@ -1,17 +1,18 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Render, images (Render_Image).
 // Queue unit sfr_render_01 is split along its original sources: this file is Render_Image, sfr_render_01b holds
-// Render_Context / Renderer2D, sfr_render_01c Text_StyledText. The remaining ranges (Filters, ImageFile, and
-// FontResource::GetName at 0x14259d950) stay here until their own files are written.
+// Render_Context / Renderer2D, sfr_render_01c Text_StyledText. The ImageFile range stays here until its own file is
+// written. The former "Filters" ranges 0x1424789e0-0x142478f10 and 0x142479130-0x14247a8f0 are AS3 fl_filters code (BevelFilter / ColorMatrixFilter
+// class and instance ctors, dtors and setters, mislabeled via ICF-folded names) and go back to sfr_as3_10;
+// 0x1425916c0-0x142591e10 is the head of the GFx_Audio TU (Audio ctor/dtor, AddBuiltinClassRegistry<Sound> and its
+// ClassRegEntry hash helpers), which continues in sfr_gfx_02 up to ~0x142592a10, so it goes there, as does
+// FontResource::GetName at 0x14259d950 (GFx-side headers, directly before sfr_gfx_02's 0x14259d960 range).
 // MS2-UNIT: sfr_render_01
 // MS2-FLAGS: scaleform
 // The Render_Image TU starts at 0x1425792d0 (TextureImage / TextureManager ctors), inside the queue range of
 // sfr_gfx_01, and runs to 0x14257db40; 0x14257db40-0x14257dc30 are the out-of-line SF_RefCount dtors (SF_RefCount
 // starts there, sfr_kernel_01).
 // MS2-RANGE: 0x1425792d0-0x14257db40 .text$mn
-// MS2-RANGE: 0x1424789e0-0x142478f10 .text$mn
-// MS2-RANGE: 0x142479130-0x14247a8f0 .text$mn
-// MS2-RANGE: 0x142591050-0x142591e10 .text$mn
-// MS2-RANGE: 0x14259d950-0x14259d960 .text$mn
+// MS2-RANGE: 0x142591050-0x1425916c0 .text$mn
 
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_drawableimage.h"
@@ -1229,6 +1230,9 @@ void Texture::LoseTextureData()
         ((DrawableImage*)pImage)->unmapTextureRT();
 }
 
+// The in-place inverse is emitted out of line here (one shared COMDAT copy, 0x14257c730).
+template Matrix2x4<float>& Matrix2x4<float>::Invert();
+
 }} // namespace Scaleform::Render
 
 // Vftables of this TU (no RTTI under /GR-, so paired by hand) and the COMDAT deleting destructors they hold.
@@ -1262,3 +1266,4 @@ void Texture::LoseTextureData()
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7RawImage@Render@Scaleform@@6B@ 0x143183a40
 // MS2-PIN: ?BeginScene@TextureManager@Render@Scaleform@@UEAAXXZ 0x14257a0c0
+// MS2-PIN: ?Invert@?$Matrix2x4@M@Render@Scaleform@@QEAAAEAV123@XZ 0x14257c730
