@@ -1,7 +1,7 @@
 // Recovered Scaleform GFx 4.1.18 AS3: the virtual machine object (VM). Shared header of the src/ms2/scaleform units
 // (sfr lane): append, do not reorder members.
 //
-// Layout from VM(FlashUI&, FileLoader&, ASStringManager&, ASRefCountCollector&) 0x1424dae90 (0x2d8 bytes) and the VM
+// Layout from VM(FlashUI&, FileLoader&, StringManager&, ASRefCountCollector&) 0x1424dae90 (0x2d8 bytes) and the VM
 // accessors (GetClassBoolean 0x142507e30, GetInternedNamespace 0x14250aa50, AddVMAbcFileWeak 0x1424eaf00). The 4.1.18
 // VM has no Proxy namespace and no generic-class / alias tables; the execution stacks between +0x48 and +0x180 are kept
 // opaque until recovered code needs their members. The vftable has two slots: the deleting destructor and one that
@@ -23,11 +23,11 @@ namespace InstanceTraits { namespace fl { class GlobalObject; } }
 class VM : public NewOverrideBase<StatMV_VM_VM_Mem>
 {
 public:
-    VM(FlashUI& ui, FileLoader& loader, ASStringManager& string_manager, ASRefCountCollector& gc);
+    VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCountCollector& gc);
     virtual ~VM();                      // slot 0
     virtual void* Unk01() { return 0; } // slot 1 (returns 0)
 
-    ASStringManager&        GetStringManager() const    { return StringManagerRef; }
+    StringManager&          GetStringManager() const    { return StringManagerRef; }
     ASRefCountCollector&    GetGC() const               { return *GC; }
     RefCountCollector<StatMV_ActionScript_Mem>* GetGCPtr() const;
     MemoryHeap*             GetMemoryHeap() const       { return MHeap; }
@@ -35,9 +35,9 @@ public:
     FileLoader&             GetFileLoader() const       { return Loader; }
     bool                    IsException() const         { return HandleException; }
 
-    Instances::fl::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
-    Instances::fl::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }
-    Instances::fl::Namespace& GetVectorNamespace() const    { return *VectorNamespace; }
+    Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
+    Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }
+    Instances::Namespace& GetVectorNamespace() const    { return *VectorNamespace; }
 
     ClassTraits::Traits& GetClassTraitsClassClass() const   { return *TraitsClassClass; }
     ClassTraits::Traits& GetClassTraitsObject() const       { return *TraitsObject; }
@@ -55,7 +55,7 @@ public:
 public:
     bool                                    Initialized;        // +0x008
     bool                                    InDestructor;       // +0x009
-    ASStringManager&                        StringManagerRef;   // +0x010
+    StringManager&                          StringManagerRef;   // +0x010
     ASRefCountCollector*                    GC;                 // +0x018
     FlashUI&                                UI;                 // +0x020
     FileLoader&                             Loader;             // +0x028
@@ -72,10 +72,10 @@ public:
     ArrayLH<SPtr<Instances::fl::GlobalObject> > GlobalObjects;  // +0x1a8
     SPtr<VMAppDomain>                       SystemDomain;       // +0x1c0
     SPtr<VMAppDomain>                       CurrentDomain;      // +0x1c8
-    SPtr<Instances::fl::Namespace>          PublicNamespace;    // +0x1d0
-    SPtr<Instances::fl::Namespace>          AS3Namespace;       // +0x1d8
-    SPtr<Instances::fl::Namespace>          VectorNamespace;    // +0x1e0
-    SPtr<Instances::fl::Namespace>          XMLNamespace;       // +0x1e8
+    SPtr<Instances::Namespace>          PublicNamespace;    // +0x1d0
+    SPtr<Instances::Namespace>          AS3Namespace;       // +0x1d8
+    SPtr<Instances::Namespace>          VectorNamespace;    // +0x1e0
+    SPtr<Instances::Namespace>          XMLNamespace;       // +0x1e8
     SPtr<ClassTraits::Traits>               TraitsClassClass;   // +0x1f0
     SPtr<ClassTraits::Traits>               TraitsObject;       // +0x1f8
     SPtr<ClassTraits::Traits>               TraitsNamespace;    // +0x200
