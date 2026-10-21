@@ -130,11 +130,12 @@ protected:
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
 };
 
-// Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes.
+// Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes, vftable { dtor, Finalize_GC }.
 class SharedObjectPtr : public Ptr<SharedObject>
 {
 public:
     virtual ~SharedObjectPtr() {}
+    virtual void Finalize_GC() {}
 
     template<class Functor>
     void ForEachChild_GC(ASRefCountBaseType::Collector* prcc) const

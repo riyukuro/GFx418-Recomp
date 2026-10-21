@@ -4,6 +4,10 @@
 // MS2-UNIT: sfr_as2_02
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
+// MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
+// MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
+// MS2-RANGE: 0x1429166b0-0x142916a70 .text$mn
+// MS2-RANGE: 0x142916e60-0x142917460 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -19,6 +23,7 @@
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/gfx/as2/as2_stringobject.h"
+#include "../include/gfx/gfx_asstringhash.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -211,3 +216,28 @@ MS2_AS2_GC_PROTOTYPE(ColorTransformObject)
 MS2_AS2_GC_PROTOTYPE(TransformObject)
 
 }}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform {
+
+// The string-keyed hashes of AS2: insertion of a node or a node reference, exact and case-insensitive lookup. The
+// other insertions are not instantiated here yet: the exe calls their entry copy and node assignment out of line.
+#define MS2_AS2_STRING_HASH_ADD(U, K)                                                                            \
+    template void GFx::ASStringHash_GC<U>::SetType::add<K>(void*, const K&, UPInt);
+#define MS2_AS2_STRING_HASH_FIND(U)                                                                              \
+    template SPInt GFx::ASStringHash_GC<U>::SetType::findIndexAlt<GFx::ASString>(const GFx::ASString&) const;   \
+    template SPInt GFx::ASStringHash_GC<U>::SetType::findIndexAlt<GFx::ASStringNoCaseKey>(                      \
+        const GFx::ASStringNoCaseKey&) const;
+
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::SharedObjectPtr, GFx::ASStringHash_GC<GFx::AS2::SharedObjectPtr>::NodeType)
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::Value, GFx::ASStringHash_GC<GFx::AS2::Value>::NodeType)
+MS2_AS2_STRING_HASH_ADD(char, GFx::ASStringHash_GC<char>::NodeType::NodeRef)
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::SharedObjectPtr, GFx::ASStringHash_GC<GFx::AS2::SharedObjectPtr>::NodeType::NodeRef)
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::Value, GFx::ASStringHash_GC<GFx::AS2::Value>::NodeType::NodeRef)
+MS2_AS2_STRING_HASH_FIND(GFx::AS2::Object::Watchpoint)
+MS2_AS2_STRING_HASH_FIND(GFx::AS2::FunctionRef)
+MS2_AS2_STRING_HASH_FIND(GFx::AS2::Member)
+MS2_AS2_STRING_HASH_FIND(GFx::AS2::Value)
+
+} // namespace Scaleform
+
+// MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
