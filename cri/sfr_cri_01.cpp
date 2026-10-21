@@ -1338,10 +1338,6 @@ void      FUN_14003a108(void* node);
 int       sprintf_s(char* buf, size_t size, const char* fmt, ...);
 void      FUN_140031250(CriMvPly mvply);
 void      FUN_1400313d0(CriMvPly mvply);
-CriHeap   FUN_140027fec(void* work, CriUint32 work_size);
-void*     FUN_140027ed8(CriHeap heap, CriUint32 size, const CriChar8* name, CriUint32 align);
-void      FUN_140027fb4(CriHeap heap, void* mem);
-void      FUN_140028074(CriHeap heap);
 void*     FUN_1400385c8(void* work, CriUint32 work_size);
 void      FUN_140039f00(void* cs);
 void      FUN_140039f50(void* cs);
@@ -1400,7 +1396,7 @@ __declspec(safebuffers) CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, Cri
     FUN_14002e6b0(work, work_size, &walloc);
     heap_work_size = 0x818;
     heap_work = FUN_14002e6c0(&walloc, heap_work_size, 4);
-    heap = FUN_140027fec(heap_work, heap_work_size);
+    heap = criHeap_Create(heap_work, heap_work_size);
     mveasy = new(heap, "CriMvEasyPlayer", 4) CriMvEasyPlayer;
     if (mveasy == NULL)
     {
@@ -1549,7 +1545,7 @@ CriMvEasyPlayer* CriMvEasyPlayer::Create(CriHeap heap, CriMvFileReaderInterface*
     mveasy->stimer = stimer;
     mveasy->sound = sound;
     DAT_143b278c8 = DAT_143b278c8 + 1;
-    mveasy->cs_work = FUN_140027ed8(heap, 0x48, "CriMvEasyPlayer: CriCsWork", 4);
+    mveasy->cs_work = criHeap_AllocFix(heap, 0x48, "CriMvEasyPlayer: CriCsWork", 4);
     if (mveasy->cs_work == NULL)
     {
         err = CRIERR_NG;
@@ -1757,7 +1753,7 @@ void CriMvEasyPlayer::Destroy(CriError& err)
     FUN_14002f610(ply);
     if (work_heap != NULL)
     {
-        FUN_140028074(work_heap);
+        criHeap_Destroy(work_heap);
         work_heap = NULL;
     }
     if (cs != NULL)
@@ -1774,7 +1770,7 @@ void CriMvEasyPlayer::Destroy(CriError& err)
     if (heap != NULL && cs_work_tmp != NULL)
     {
         cs_work = NULL;
-        FUN_140027fb4(heap, cs_work_tmp);
+        criHeap_Free(heap, cs_work_tmp);
     }
     DAT_143b278c8 = DAT_143b278c8 - 1;
     if (heap != NULL)
@@ -2523,7 +2519,7 @@ __declspec(safebuffers) CriBool CriMvEasyPlayer::setupPlayback(void)
     {
         if (use_heap == 1)
         {
-            subtitle_buf = (CriUint8*)FUN_140027ed8(heap, stmprm.max_subtitle_size, "CriMvEasy: SubtitleBuffer", 4);
+            subtitle_buf = (CriUint8*)criHeap_AllocFix(heap, stmprm.max_subtitle_size, "CriMvEasy: SubtitleBuffer", 4);
         }
         else
         {
@@ -2555,7 +2551,7 @@ __declspec(safebuffers) CriBool CriMvEasyPlayer::setupPlayback(void)
         if (use_heap == 0)
         {
             rest = walloc.size - (CriUint32)(walloc.cur - walloc.top);
-            sound_heap = FUN_140027fec(walloc.cur, rest);
+            sound_heap = criHeap_Create(walloc.cur, rest);
         }
         else
         {
@@ -2819,7 +2815,7 @@ void CriMvEasyPlayer::releasePlaybackResources(void)
     {
         if (use_heap == 1)
         {
-            FUN_140027fb4(heap, subtitle_buf);
+            criHeap_Free(heap, subtitle_buf);
         }
         subtitle_buf = NULL;
     }
@@ -2835,7 +2831,7 @@ void CriMvEasyPlayer::releasePlaybackResources(void)
     detachSubAudioHandle();
     if (use_heap == 0 && sound_heap != NULL)
     {
-        FUN_140028074(sound_heap);
+        criHeap_Destroy(sound_heap);
         sound_heap = NULL;
     }
     FUN_140030c70(mvply);
@@ -4446,7 +4442,7 @@ CriMvEasyPlayer::~CriMvEasyPlayer()
 }
 
 // @0x140024ec0
-static void FUN_140024ec0(void* obj)
+void FUN_140024ec0(void* obj)
 {
     FUN_1400379e0(obj);
 }
@@ -4519,8 +4515,873 @@ CriSint32 CalcHandleWorkSize(CriError& err)
 
 } // namespace CriMv
 
+// ==== CRI Movie C++ wrappers (0x140026db0-0x140027048) ============================================================
+// Thin CriMv / CriMvEasyPlayer entry points over the player core (criMvPly, sfr_cri_02) and the Mana decoder; same
+// VS2008 /Od objects as the easy player.
+
+extern "C" {
+void      FUN_14003b880(void);
+CriBool   FUN_14003b8b0(CriMvPly mvply, CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize,
+                        CriMvFrameInfo* frameinfo);
+void      FUN_14003bb60(CriMvPly mvply, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize,
+                        const CriMvYuvBuffers* srcbufs, const CriMvFrameInfo* src_vinf,
+                        const CriMvAlphaFrameInfo* src_ainf);
+void*     FUN_14003c060(CriUint32* max_num);
+void*     FUN_1400411e0(CriUint32* max_num);
+CriUint32 FUN_14003bf30(CriUint32 max_num);
+CriBool   FUN_14003bf80(CriUint32 max_num, void* work, CriUint32 work_size);
+void      FUN_14003b6e0(void);
+CriUint32 FUN_14003c030(void);
+}
+
+namespace CriMv {
+
+// @0x140026db0
+void InitializeFrame32bitARGB(void)
+{
+    FUN_14003b880();
+}
+
+} // namespace CriMv
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140026dd0
+CriBool CriMvEasyPlayer::GetFrameOnTimeAs32bitARGB(CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize,
+                                                   CriMvFrameInfo& frameinfo, CriError& err)
+{
+    CriBool ret = 0;
+    err = CRIERR_OK;
+    if (isNextFrameOnTime(0, err) != 1)
+    {
+        return ret;
+    }
+    ret = FUN_14003b8b0(mvply, imagebuf, pitch, bufsize, &frameinfo);
+    return ret;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140026e60
+CriSint32 CriMvEasyPlayer::CopyFrameToBufferARGB32(CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize,
+                                                   const CriMvYuvBuffers* srcbufs, const CriMvFrameInfo* src_vinf,
+                                                   const CriMvAlphaFrameInfo* src_ainf, CriError& err)
+{
+    err = CRIERR_OK;
+    FUN_14003bb60(mvply, dstbuf, dstpitch, dstbufsize, srcbufs, src_vinf, src_ainf);
+    return 0;
+}
+
+namespace CriMv {
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140026ed0
+void Initialize(CriError& err)
+{
+    CriUint32 max_num;
+    void* work = FUN_14003c060(&max_num);
+    if (work == NULL)
+    {
+        work = FUN_1400411e0(&max_num);
+        CriUint32 work_size = FUN_14003bf30(max_num);
+        SetupMovieHandleWork(max_num, work, work_size, err);
+    }
+    InitializeMana(err);
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140026f40
+void AttachSofdecDecoder(CriError& err)
+{
+    err = CRIERR_OK;
+    FUN_14003b6e0();
+}
+
+// @0x140026f70
+void FUN_140026f70(void)
+{
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140026f80
+CriUint32 CalcMovieHandleWork(CriUint32 max_num, CriError& err)
+{
+    err = CRIERR_OK;
+    CriUint32 size = FUN_14003bf30(max_num);
+    return size;
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140026fc0
+void SetupMovieHandleWork(CriUint32 max_num, void* work, CriUint32 work_size, CriError& err)
+{
+    err = CRIERR_OK;
+    CriBool ok = FUN_14003bf80(max_num, work, work_size);
+    if (ok != 1)
+    {
+        err = CRIERR_NG;
+    }
+}
+
+// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
+// @0x140027020
+CriUint32 GetMaxNumberOfHandles(CriError& err)
+{
+    err = CRIERR_OK;
+    CriUint32 num = FUN_14003c030();
+    return num;
+}
+
+} // namespace CriMv
+
 #pragma intrinsic(memset, memcpy, strlen)
 #pragma optimize("", on)
+
+// ==== CRI Heap (0x140027048-0x140028360) ===========================================================================
+// CRI Heap/PCx64 1.21.02: a first-fit block allocator over a caller-supplied buffer, compiled optimized (C). The
+// serialized entry points wrap the plain ones in one global critical section (criCs, sfr_cri_02).
+
+#include <stdarg.h>
+
+extern "C" {
+void*  FUN_140039ea8(void* work, CriSint32 work_size);
+void   FUN_1400411f8(void);
+__declspec(dllimport) int  __stdcall wvsprintfA(char* buf, const char* fmt, va_list args);
+__declspec(dllimport) void __stdcall OutputDebugStringA(const char* str);
+}
+
+extern const CriChar8* DAT_143b278d0;      // version string of the heap library
+extern CriSint32 DAT_143b278d8;            // criHeap_Initialize count
+extern void*     DAT_143b278e0;            // the global critical section
+extern CriUint8  DAT_143b278f0[0x48];      // its work area
+extern const CriHeapVtbl DAT_143a46430;    // serialized entry points
+extern const CriHeapVtbl DAT_143a46450;    // plain entry points
+extern const CriChar8* const DAT_143a46470;     // "(no name)"
+extern const CriChar8* const DAT_143a46478[2];  // block state names: FREE, ALOC
+extern const CriChar8* const DAT_143a46488[4];  // block type names: NONE, FIX, TEMP, ...
+
+#define CRIHEAP_HEADER_SIZE     0x22                        // sizeof(CriHeapBlock)
+#define CRIHEAP_BLOCK_SIZE      (CRIHEAP_HEADER_SIZE + 4)   // with the back-offset dword
+#define CRIHEAP_ALIGN           8
+#define CRIHEAP_ALIGN_UP(p)     (((CriUint64)(p) + (CRIHEAP_ALIGN - 1)) & ~(CriUint64)(CRIHEAP_ALIGN - 1))
+#define CRIHEAP_DEFAULT_ALIGNSPC(b) \
+    ((((CriUint64)(b) + CRIHEAP_BLOCK_SIZE) & 7) ? CRIHEAP_ALIGN - (((CriUint64)(b) + CRIHEAP_BLOCK_SIZE) & 7) : 0)
+
+static const CriChar8* const criheap_version = "\nCRI Heap/PCx64 Ver.1.21.02 Build:Jan 13 2012 19:02:05\n";
+
+// Address of the block's data.
+static CriUint8* criheap_GetDataAddress(CriHeapBlock* blk)
+{
+    return (CriUint8*)blk + CRIHEAP_BLOCK_SIZE + blk->alignspc;
+}
+
+// Stores the data-to-header offset in the dword in front of the data.
+static void criheap_SetBackOffset(CriHeapBlock* blk)
+{
+    ((CriUint32*)criheap_GetDataAddress(blk))[-1] = blk->alignspc + CRIHEAP_BLOCK_SIZE;
+}
+
+// Whole size of a block: header, alignment space, data and trailing gap.
+static CriSint32 criheap_GetBlockSize(CriHeapBlock* blk)
+{
+    return blk->alignspc + blk->gap + blk->memsize + CRIHEAP_BLOCK_SIZE;
+}
+
+// Alignment space that puts the block's data on align (at least 8).
+static CriUint32 criheap_CalcAlignSpace(CriHeapBlock* blk, CriSint32 align)
+{
+    CriSint32 a = (align < CRIHEAP_ALIGN) ? CRIHEAP_ALIGN : align;
+    CriUint32 rem = (CriUint32)(((CriUint64)blk + CRIHEAP_BLOCK_SIZE) % (CriUint64)(CriSint64)a);
+    if (rem != 0)
+    {
+        rem = a - rem;
+    }
+    return rem;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027148
+static CriHeap criheap_InitializeHandle(CriHeap heap, CriSint32 size)
+{
+    CriUint8* top = (CriUint8*)heap + sizeof(struct _criheap_struct);
+    CriHeapBlock* blk;
+    CriSint32 pad;
+
+    heap->totalsize = size;
+    blk = (CriHeapBlock*)CRIHEAP_ALIGN_UP(top);
+    pad = (CriSint32)((CriUint8*)blk - top);
+    memset(blk, 0, CRIHEAP_HEADER_SIZE);
+    blk->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(blk);
+    blk->nextblock = NULL;
+    blk->type = CRIHEAP_TYPE_NONE;
+    blk->gap = 0;
+    blk->memsize = size - (CriUint16)(blk->alignspc + CRIHEAP_BLOCK_SIZE) - pad - (CriSint32)sizeof(struct _criheap_struct);
+    criheap_SetBackOffset(blk);
+    heap->topblock = blk;
+    heap->taleblock = blk;
+    heap->currentsize = pad + (CriSint32)sizeof(struct _criheap_struct);
+    heap->peaksize = pad + (CriSint32)sizeof(struct _criheap_struct);
+    return heap;
+}
+
+// Front-to-back search for a FIX block: a freed block of exactly this size and alignment, or the free area.
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027278
+static CriHeapBlock* criheap_SearchFixBlock(CriHeap heap, CriSint32 size, CriSint32 align)
+{
+    CriHeapBlock* blk;
+    for (blk = heap->topblock; blk != NULL; blk = blk->nextblock)
+    {
+        if (blk->used)
+        {
+            continue;
+        }
+        if (blk->memsize == size && blk->alignspc == criheap_CalcAlignSpace(blk, align))
+        {
+            return blk;
+        }
+        if (blk->type == CRIHEAP_TYPE_NONE)
+        {
+            return blk;
+        }
+    }
+    return NULL;
+}
+
+// Back-to-front search for a TEMPORARY block.
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400272e0
+static CriHeapBlock* criheap_SearchTemporaryBlock(CriHeap heap, CriSint32 size, CriSint32 align)
+{
+    CriHeapBlock* blk;
+    for (blk = heap->taleblock; blk != NULL; blk = blk->prevblock)
+    {
+        if (blk->used)
+        {
+            continue;
+        }
+        if ((CriSint32)(criheap_CalcAlignSpace(blk, align) + size) <= blk->memsize + blk->gap + blk->alignspc
+            && (blk->type == CRIHEAP_TYPE_NONE || blk->type == CRIHEAP_TYPE_TEMPORARY))
+        {
+            return blk;
+        }
+        if (blk->memsize == size && blk->alignspc == criheap_CalcAlignSpace(blk, align)
+            && blk->type == CRIHEAP_TYPE_TEMPORARY)
+        {
+            return blk;
+        }
+    }
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400273b8
+static CriHeapBlock* criheap_SearchBlock(CriHeap heap, CriSint32 type, CriSint32 size, CriSint32 align)
+{
+    CriHeapBlock* blk = NULL;
+    switch (type)
+    {
+    case CRIHEAP_TYPE_FIX:
+        blk = criheap_SearchFixBlock(heap, size, align);
+        break;
+    case CRIHEAP_TYPE_TEMPORARY:
+        blk = criheap_SearchTemporaryBlock(heap, size, align);
+        break;
+    case CRIHEAP_TYPE_DYNAMIC:
+        FUN_140038ddc(0, "E2009030950:Dynamic memory allocation is not supported yet.");
+        break;
+    default:
+        FUN_140038ddc(0, "E2009030951:Specified memory allocation method is invalid.");
+        break;
+    }
+    return blk;
+}
+
+// Cuts a FIX block from the front of a free block; the rest becomes a new free block behind it.
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400274e0
+static CriHeapBlock* criheap_DivideFixBlock(CriHeap heap, CriHeapBlock* blk, CriSint32 size, const CriChar8* name,
+                                            CriSint32 align)
+{
+    CriSint32 blksize = criheap_GetBlockSize(blk);
+    CriUint16 alignspc = (CriUint16)criheap_CalcAlignSpace(blk, align);
+    CriSint32 offset = alignspc + size + CRIHEAP_BLOCK_SIZE;
+    CriSint32 hdrpad = (CRIHEAP_BLOCK_SIZE & 7) ? CRIHEAP_ALIGN - (CRIHEAP_BLOCK_SIZE & 7) : 0;
+    CriHeapBlock* rest;
+    CriUint16 gap;
+
+    if (blksize < hdrpad + offset + CRIHEAP_BLOCK_SIZE)
+    {
+        return NULL;
+    }
+    rest = (CriHeapBlock*)CRIHEAP_ALIGN_UP((CriUint8*)blk + offset);
+    gap = (CriUint16)((CriUint16)(CriUint64)rest - (CriUint16)(CriUint64)((CriUint8*)blk + offset));
+    offset += gap;
+    memset(rest, 0, CRIHEAP_HEADER_SIZE);
+    rest->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(rest);
+    rest->prevblock = blk;
+    rest->memsize = blksize - rest->alignspc - offset - CRIHEAP_BLOCK_SIZE;
+    rest->nextblock = blk->nextblock;
+    blk->alignspc = alignspc;
+    blk->memsize = size;
+    blk->nextblock = rest;
+    blk->nameadr = name;
+    blk->type = CRIHEAP_TYPE_FIX;
+    blk->gap = gap;
+    blk->used = 1;
+    criheap_SetBackOffset(blk);
+    if (rest->nextblock == NULL)
+    {
+        heap->taleblock = rest;
+    }
+    else
+    {
+        rest->nextblock->prevblock = rest;
+    }
+    return blk;
+}
+
+// Cuts a TEMPORARY block from the back of a free block (or takes all of it when no header fits).
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027638
+static CriHeapBlock* criheap_DivideTemporaryBlock(CriHeap heap, CriHeapBlock* blk, CriSint32 size,
+                                                  const CriChar8* name, CriSint32 align)
+{
+    CriUint8* end = (blk->nextblock != NULL) ? (CriUint8*)blk->nextblock : (CriUint8*)heap + heap->totalsize;
+    CriUint8* last = end - (CriUint32)size;
+    CriSint32 a = (align > CRIHEAP_ALIGN) ? align : CRIHEAP_ALIGN;
+    CriUint8* data;
+    CriUint16 gap;
+    CriHeapBlock* tmp;
+
+    if (a % CRIHEAP_ALIGN != 0)
+    {
+        a = (a * CRIHEAP_ALIGN - 0x40) / CRIHEAP_ALIGN;
+    }
+    data = (CriUint8*)(((CriUint64)last / (CriUint64)(CriSint64)a) * (CriUint64)(CriSint64)a);
+    gap = (CriUint16)((CriUint16)(CriUint64)last - (CriUint16)(CriUint64)data);
+    tmp = (CriHeapBlock*)(((CriUint64)data - CRIHEAP_BLOCK_SIZE) & ~(CriUint64)7);
+    if ((CriUint8*)tmp < criheap_GetDataAddress(blk))
+    {
+        if (blk->type == CRIHEAP_TYPE_NONE)
+        {
+            return NULL;
+        }
+        blk->memsize = size;
+        blk->type = CRIHEAP_TYPE_TEMPORARY;
+        blk->gap = gap;
+        blk->nameadr = name;
+        blk->used = 1;
+        blk->alignspc = (CriUint16)((CriUint16)(data - (CriUint8*)blk) - CRIHEAP_BLOCK_SIZE);
+        criheap_SetBackOffset(blk);
+        return blk;
+    }
+    tmp->memsize = size;
+    tmp->type = CRIHEAP_TYPE_TEMPORARY;
+    tmp->alignspc = (CriUint16)((CriUint16)(data - (CriUint8*)tmp) - CRIHEAP_BLOCK_SIZE);
+    tmp->prevblock = blk;
+    tmp->nextblock = blk->nextblock;
+    tmp->gap = gap;
+    tmp->nameadr = name;
+    tmp->used = 1;
+    criheap_SetBackOffset(tmp);
+    blk->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(blk);
+    if (blk->nextblock != NULL)
+    {
+        blk->nextblock->prevblock = tmp;
+    }
+    blk->nextblock = tmp;
+    blk->gap = 0;
+    blk->memsize = (CriSint32)((CriUint8*)tmp - (CriUint8*)blk) - (CriUint16)(blk->alignspc + CRIHEAP_BLOCK_SIZE);
+    if (tmp->nextblock == NULL)
+    {
+        heap->taleblock = tmp;
+    }
+    return tmp;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400277c0
+static void* criheap_Alloc(CriHeap heap, CriSint32 type, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    CriHeapBlock* blk;
+
+    if (size < 0)
+    {
+        return NULL;
+    }
+    blk = criheap_SearchBlock(heap, type, size, align);
+    if (blk == NULL)
+    {
+        return NULL;
+    }
+    if (size == blk->memsize && criheap_CalcAlignSpace(blk, align) == blk->alignspc)
+    {
+        if (blk->type == CRIHEAP_TYPE_NONE)
+        {
+            return NULL;
+        }
+        blk->nameadr = name;
+        blk->type = (CriUint8)type;
+        blk->used = 1;
+        criheap_SetBackOffset(blk);
+    }
+    else
+    {
+        switch (type)
+        {
+        case CRIHEAP_TYPE_FIX:
+            blk = criheap_DivideFixBlock(heap, blk, size, name, align);
+            break;
+        case CRIHEAP_TYPE_TEMPORARY:
+            blk = criheap_DivideTemporaryBlock(heap, blk, size, name, align);
+            break;
+        default:
+            return NULL;
+        }
+        if (blk == NULL)
+        {
+            return NULL;
+        }
+    }
+    heap->currentsize += criheap_GetBlockSize(blk);
+    if (heap->peaksize < heap->currentsize)
+    {
+        heap->peaksize = heap->currentsize;
+    }
+    return criheap_GetDataAddress(blk);
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027974
+void* criheap_AllocFixNoLock(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    return criheap_Alloc(heap, CRIHEAP_TYPE_FIX, size, name, align);
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027994
+void* criheap_AllocTemporaryNoLock(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    return criheap_Alloc(heap, CRIHEAP_TYPE_TEMPORARY, size, name, align);
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400279b4
+void* criheap_AllocDynamicNoLock(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    return criheap_Alloc(heap, CRIHEAP_TYPE_DYNAMIC, size, name, align);
+}
+
+// Releases a block and merges it with free neighbours.
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400279e8
+static void criheap_FreeBlock(CriHeap heap, CriHeapBlock* blk)
+{
+    CriHeapBlock* next;
+    CriHeapBlock* prev;
+    CriHeapBlock* nextnext;
+    CriHeapBlock* cur;
+
+    if (blk->used == 1)
+    {
+        heap->currentsize += -CRIHEAP_BLOCK_SIZE - blk->gap - blk->alignspc - blk->memsize;
+    }
+    next = blk->nextblock;
+    prev = blk->prevblock;
+    nextnext = (next != NULL) ? next->nextblock : NULL;
+    blk->used = 0;
+    cur = blk;
+    if (prev != NULL && !prev->used)
+    {
+        prev->nextblock = next;
+        prev->memsize += criheap_GetBlockSize(blk);
+        if (next != NULL)
+        {
+            next->prevblock = prev;
+        }
+        if (prev->nextblock == NULL)
+        {
+            heap->taleblock = prev;
+        }
+        cur = prev;
+    }
+    if (next != NULL && !next->used)
+    {
+        cur->nextblock = next->nextblock;
+        cur->memsize += criheap_GetBlockSize(next);
+        if (next->nextblock != NULL)
+        {
+            next->nextblock->prevblock = cur;
+        }
+        if (nextnext == NULL)
+        {
+            heap->taleblock = cur;
+        }
+        if (next->type == CRIHEAP_TYPE_NONE)
+        {
+            cur->type = CRIHEAP_TYPE_NONE;
+        }
+        if (next->nameadr == NULL)
+        {
+            cur->nameadr = NULL;
+        }
+        criheap_SetBackOffset(cur);
+    }
+}
+
+// Frees a block; a FIX block in front of the free area is folded into it with the free blocks before it.
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027ae4
+static CriSint32 criheap_Free(CriHeap heap, CriHeapBlock* blk)
+{
+    CriSint32 size = blk->memsize;
+    CriHeapBlock* next;
+
+    if (blk->type == CRIHEAP_TYPE_TEMPORARY)
+    {
+        criheap_FreeBlock(heap, blk);
+        return size;
+    }
+    if (blk->type != CRIHEAP_TYPE_FIX)
+    {
+        return -1;
+    }
+    heap->currentsize += -CRIHEAP_BLOCK_SIZE - blk->gap - blk->alignspc - size;
+    next = blk->nextblock;
+    if (next != NULL && next->type == CRIHEAP_TYPE_NONE)
+    {
+        CriUint8* end = (CriUint8*)next + criheap_GetBlockSize(next);
+        while (blk->prevblock != NULL && blk->prevblock->used != 1)
+        {
+            blk = blk->prevblock;
+        }
+        blk->used = 0;
+        blk->type = CRIHEAP_TYPE_NONE;
+        blk->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(blk);
+        blk->gap = 0;
+        blk->nameadr = NULL;
+        blk->memsize = (CriSint32)(end - (CriUint8*)blk) - (CriUint16)(blk->alignspc + CRIHEAP_BLOCK_SIZE);
+        blk->nextblock = next->nextblock;
+        if (next->nextblock != NULL)
+        {
+            next->nextblock->prevblock = blk;
+        }
+        else
+        {
+            heap->taleblock = blk;
+        }
+        return size;
+    }
+    blk->used = 0;
+    if (next == NULL)
+    {
+        blk->type = CRIHEAP_TYPE_NONE;
+        blk->nameadr = NULL;
+    }
+    return size;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027be4
+static CriSint32 criheap_FreeNoLock(CriHeap heap, void* ptr)
+{
+    if (ptr == NULL)
+    {
+        FUN_140038ddc(0, "E08062600H:Pointer was NULL.");
+        return 0;
+    }
+    if ((CriUint8*)heap <= (CriUint8*)ptr && (CriUint8*)ptr <= (CriUint8*)heap + heap->totalsize)
+    {
+        return criheap_Free(heap, (CriHeapBlock*)((CriUint8*)ptr - ((CriUint32*)ptr)[-1]));
+    }
+    FUN_140038ddc(0, "E08021402H:Bad pointer was appointed.");
+    return 0;
+}
+
+extern "C" {
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027048
+void FUN_140027048(void)
+{
+    if (DAT_143b278e0 != NULL)
+    {
+        FUN_140039f00(DAT_143b278e0);
+        DAT_143b278e0 = NULL;
+    }
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027c2c
+CriSint32 CRIAPI criHeap_EnterCriticalSection(void)
+{
+    if (DAT_143b278e0 == NULL)
+    {
+        FUN_140038ddc(0, "E08052300H:CRI Heap is not initialized.");
+        return -1;
+    }
+    FUN_140039f50(DAT_143b278e0);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027c5c
+CriSint32 CRIAPI criHeap_LeaveCriticalSection(void)
+{
+    if (DAT_143b278e0 == NULL)
+    {
+        FUN_140038ddc(0, "E08052301H:CRI Heap is not initialized.");
+        return -1;
+    }
+    FUN_140039f8c(DAT_143b278e0);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027dd0
+CriSint32 CRIAPI criHeap_DebugGetWorstExtraSize(CriSint32 alignment)
+{
+    if (alignment < CRIHEAP_ALIGN)
+    {
+        alignment = CRIHEAP_ALIGN;
+    }
+    return alignment + CRIHEAP_BLOCK_SIZE + CRIHEAP_ALIGN;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027de0
+void* FUN_140027de0(void* obj, const CriChar8* msg, CriSint32 p1)
+{
+    return FUN_140038ce4(0, msg, p1, 0, obj);
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027df8
+static CriSint32 criheap_DebugPrintf(const CriChar8* format, ...)
+{
+    char buf[0x200];
+    va_list args;
+    va_start(args, format);
+    wvsprintfA(buf, format, args);
+    OutputDebugStringA(buf);
+    va_end(args);
+    return 0;
+}
+
+// The library initialization without the reference count.
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027e5c
+void FUN_140027e5c(void)
+{
+    DAT_143b278d0 = criheap_version;
+    FUN_1400411f8();
+    DAT_143b278e0 = FUN_140039ea8(DAT_143b278f0, sizeof(DAT_143b278f0));
+    if (DAT_143b278e0 == NULL)
+    {
+        FUN_140038ddc(0, "E08021401H:Faild to create critical section.");
+    }
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027ea4
+__declspec(noinline) void CRIAPI criHeap_Finalize(void)
+{
+    if (--DAT_143b278d8 == 0 && DAT_143b278e0 != NULL)
+    {
+        FUN_140039f00(DAT_143b278e0);
+        DAT_143b278e0 = NULL;
+    }
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027ed8
+void* CRIAPI criHeap_AllocFix(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    if (heap->vtbl->AllocFix != NULL)
+    {
+        return heap->vtbl->AllocFix(heap, size, name, align);
+    }
+    FUN_140038ce4(0, "E05063002H", 0, 0, NULL);
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027f0c
+void* CRIAPI criHeap_AllocTemporary(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    if (heap->vtbl->AllocTemporary != NULL)
+    {
+        return heap->vtbl->AllocTemporary(heap, size, name, align);
+    }
+    FUN_140038ce4(0, "E05063003H", 0, 0, NULL);
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027f44
+void* CRIAPI criHeap_AllocDynamic(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    if (heap->vtbl->AllocDynamic != NULL)
+    {
+        return heap->vtbl->AllocDynamic(heap, size, name, align);
+    }
+    FUN_140038ce4(0, "E05063004H", 0, 0, NULL);
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027f7c
+void* CRIAPI criHeap_Alloc(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type)
+{
+    if (type == CRIHEAP_TYPE_FIX)
+    {
+        return criHeap_AllocFix(heap, size, name, align);
+    }
+    if (type == CRIHEAP_TYPE_TEMPORARY)
+    {
+        return criHeap_AllocTemporary(heap, size, name, align);
+    }
+    FUN_140038ddc(0, "E08032601H:Invalid allocation type.");
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027fb4
+CriSint32 CRIAPI criHeap_Free(CriHeap heap, void* ptr)
+{
+    if (heap->vtbl->Free != NULL)
+    {
+        return heap->vtbl->Free(heap, ptr);
+    }
+    FUN_140038ce4(0, "E05063005H", 0, 0, NULL);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140027fec
+CriHeap CRIAPI criHeap_Create(void* ptr, CriSint32 size)
+{
+    CriHeap heap;
+    if (size <= (CriSint32)sizeof(struct _criheap_struct))
+    {
+        return NULL;
+    }
+    memset(ptr, 0, sizeof(struct _criheap_struct));
+    heap = criheap_InitializeHandle((CriHeap)ptr, size);
+    heap->vtbl = &DAT_143a46430;
+    return heap;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140028030
+CriHeap CRIAPI criHeap_CreateNoSerialize(void* ptr, CriSint32 size)
+{
+    CriHeap heap;
+    if (size <= (CriSint32)sizeof(struct _criheap_struct))
+    {
+        return NULL;
+    }
+    memset(ptr, 0, sizeof(struct _criheap_struct));
+    heap = criheap_InitializeHandle((CriHeap)ptr, size);
+    heap->vtbl = &DAT_143a46450;
+    return heap;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140028074
+void CRIAPI criHeap_Destroy(CriHeap heap)
+{
+    CriHeapBlock* blk = heap->topblock;
+    do
+    {
+        CriHeapBlock* next = blk->nextblock;
+        criheap_FreeBlock(heap, blk);
+        blk = next;
+    } while (blk != NULL);
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400280a4
+void* FUN_1400280a4(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    void* mem;
+    criHeap_EnterCriticalSection();
+    mem = criheap_Alloc(heap, CRIHEAP_TYPE_FIX, size, name, align);
+    criHeap_LeaveCriticalSection();
+    return mem;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x140028100
+void* FUN_140028100(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    void* mem;
+    criHeap_EnterCriticalSection();
+    mem = criheap_Alloc(heap, CRIHEAP_TYPE_TEMPORARY, size, name, align);
+    criHeap_LeaveCriticalSection();
+    return mem;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x14002815c
+void* FUN_14002815c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
+{
+    void* mem;
+    criHeap_EnterCriticalSection();
+    mem = criheap_Alloc(heap, CRIHEAP_TYPE_DYNAMIC, size, name, align);
+    criHeap_LeaveCriticalSection();
+    return mem;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400281b8
+CriSint32 FUN_1400281b8(CriHeap heap, void* ptr)
+{
+    CriSint32 size;
+    criHeap_EnterCriticalSection();
+    size = criheap_FreeNoLock(heap, ptr);
+    criHeap_LeaveCriticalSection();
+    return size;
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400281ec
+void CRIAPI criHeap_DebugPrintBlockInformationAll(CriHeap heap)
+{
+    CriHeapBlock* blk = heap->topblock;
+    CriSint32 total = (CriSint32)((CriUint32)(CriUint64)blk - (CriUint32)(CriUint64)heap);
+    CriSint32 no = 0;
+    do
+    {
+        no++;
+        total += criheap_GetBlockSize(blk);
+        criheap_DebugPrintf("%05d: MBLK:%08xH(%08xH) ", no, (CriUint32)(CriUint64)blk,
+                            (CriUint16)(blk->alignspc + CRIHEAP_BLOCK_SIZE));
+        criheap_DebugPrintf("PTR:%08xH(%08xH) ", (CriUint32)(CriUint64)criheap_GetDataAddress(blk), blk->memsize);
+        criheap_DebugPrintf("%s %s ", DAT_143a46488[blk->type], DAT_143a46478[blk->used]);
+        criheap_DebugPrintf("\"%s\"\r\n", (blk->nameadr != NULL) ? blk->nameadr : DAT_143a46470);
+        blk = blk->nextblock;
+    } while (blk != NULL);
+    criheap_DebugPrintf("TotalMemory = %08xH CurrentMemory = %08xH PeakSize = %08xH\r\n\r\n", total,
+                        heap->currentsize, heap->peaksize);
+}
+
+// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// @0x1400282e0
+__declspec(noinline) void CRIAPI criHeap_Initialize(void)
+{
+    if (++DAT_143b278d8 == 1)
+    {
+        DAT_143b278d0 = criheap_version;
+        FUN_1400411f8();
+        DAT_143b278e0 = FUN_140039ea8(DAT_143b278f0, sizeof(DAT_143b278f0));
+        if (DAT_143b278e0 == NULL)
+        {
+            FUN_140038ddc(0, "E08021401H:Faild to create critical section.");
+        }
+    }
+}
+
+} // extern "C"
 
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8

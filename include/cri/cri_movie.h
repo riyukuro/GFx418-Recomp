@@ -31,10 +31,66 @@ typedef enum {
     CRIERR_ENUM_BE_SINT32            = 0x7FFFFFFF
 } CriError;
 
-// Heap module (C interface).
+// Heap module (C interface, CRI Heap/PCx64 1.21.02, 0x140027048-0x140028360). A heap is a header followed by a
+// doubly linked list of blocks inside the caller's work buffer; FIX blocks are cut from the front, TEMPORARY ones
+// from the back. The library was compiled optimized and its structures are byte packed.
+struct _criheap_struct;
+typedef struct _criheap_struct* CriHeap;
+
+typedef enum {
+    CRIHEAP_TYPE_NONE      = 0,
+    CRIHEAP_TYPE_FIX       = 1,
+    CRIHEAP_TYPE_TEMPORARY = 2,
+    CRIHEAP_TYPE_DYNAMIC   = 3,
+    CRIHEAP_TYPE_ENUM_BE_SINT32 = 0x7FFFFFFF
+} CriHeapType;
+
+#pragma pack(push, 1)
+// Block header (0x22 bytes); the data follows after alignspc bytes, preceded by a dword holding its offset back to
+// the header (alignspc + 0x26), and gap bytes of slack trail it.
+typedef struct CriHeapBlockTag {
+    struct CriHeapBlockTag* prevblock;  // 0x00
+    struct CriHeapBlockTag* nextblock;  // 0x08
+    CriSint32       memsize;            // 0x10
+    CriUint8        used;               // 0x14
+    CriUint8        type;               // 0x15 CriHeapType
+    CriUint16       alignspc;           // 0x16
+    CriUint16       gap;                // 0x18
+    const CriChar8* nameadr;            // 0x1a
+} CriHeapBlock;
+
+typedef struct {
+    void*     (*AllocFix)(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align);
+    void*     (*AllocTemporary)(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align);
+    void*     (*AllocDynamic)(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align);
+    CriSint32 (*Free)(CriHeap heap, void* ptr);
+} CriHeapVtbl;
+
+struct _criheap_struct {                // 0x24
+    const CriHeapVtbl* vtbl;            // 0x00 serialized (0x143a46430) or not (0x143a46450)
+    CriSint32     totalsize;            // 0x08
+    CriSint32     peaksize;             // 0x0c
+    CriSint32     currentsize;          // 0x10
+    CriHeapBlock* topblock;             // 0x14
+    CriHeapBlock* taleblock;            // 0x1c
+};
+#pragma pack(pop)
+
 extern "C" {
-void CRIAPI criHeap_Initialize(void);
-void CRIAPI criHeap_Finalize(void);
+void      CRIAPI criHeap_Initialize(void);
+void      CRIAPI criHeap_Finalize(void);
+CriHeap   CRIAPI criHeap_Create(void* ptr, CriSint32 size);
+CriHeap   CRIAPI criHeap_CreateNoSerialize(void* ptr, CriSint32 size);
+void      CRIAPI criHeap_Destroy(CriHeap heap);
+void*     CRIAPI criHeap_AllocFix(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align);
+void*     CRIAPI criHeap_AllocTemporary(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align);
+void*     CRIAPI criHeap_AllocDynamic(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align);
+void*     CRIAPI criHeap_Alloc(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type);
+CriSint32 CRIAPI criHeap_Free(CriHeap heap, void* ptr);
+CriSint32 CRIAPI criHeap_EnterCriticalSection(void);
+CriSint32 CRIAPI criHeap_LeaveCriticalSection(void);
+CriSint32 CRIAPI criHeap_DebugGetWorstExtraSize(CriSint32 alignment);
+void      CRIAPI criHeap_DebugPrintBlockInformationAll(CriHeap heap);
 }
 
 namespace CriMv {
@@ -46,6 +102,9 @@ namespace CriMv {
     CriUint32 CRIAPI CalcMovieHandleWork(CriUint32 max_num, CriError& err = CriMv::ErrorContainer);
     void      CRIAPI SetupMovieHandleWork(CriUint32 max_num, void* work, CriUint32 work_size,
                                           CriError& err = CriMv::ErrorContainer);
+    void      CRIAPI InitializeMana(CriError& err = CriMv::ErrorContainer);       // 0x14003bea0
+    void      CRIAPI AttachSofdecDecoder(CriError& err = CriMv::ErrorContainer);  // 0x140026f40
+    CriUint32 CRIAPI GetMaxNumberOfHandles(CriError& err = CriMv::ErrorContainer); // 0x140027020
     void      CRIAPI Initialize_Common(void);                                   // 0x140024f80
     CriBool   CRIAPI IsLibraryInitialized(void);                                // 0x140024ff0
     CriSint32 CRIAPI CalcHandleWorkSize(CriError& err = CriMv::ErrorContainer); // 0x140025010
@@ -53,9 +112,6 @@ namespace CriMv {
 
 // ---- easy player layer (CriMvEasyPlayer, 0x14001d7a0-0x140025090). The library objects of this layer were built
 // unoptimized (/Od: arguments spilled to their home slots, every member access reloads this).
-
-struct _criheap_struct;
-typedef struct _criheap_struct* CriHeap;
 
 // Bump allocator over a caller-supplied work buffer (0x14002e6b0 init, 0x14002e6c0 alloc, 0x14002e6bc finish).
 struct CriMvWorkAllocator
@@ -313,6 +369,9 @@ struct CriMvPlyObj
 typedef CriMvPlyObj* CriMvPly;
 
 // The "easy player": file/memory input, decoding, sync and sound on top of one player handle. 0x728 bytes.
+struct CriMvYuvBuffers;
+struct CriMvAlphaFrameInfo;
+
 class CriMvEasyPlayer : public CriAllocator
 {
 public:
@@ -403,6 +462,13 @@ public:
                                                             CriUint64 count, CriUint64 unit, void* usrobj),
                                           void* usrobj, CriError& err = CriMv::ErrorContainer); // 0x140039750
 
+    CriBool   GetFrameOnTimeAs32bitARGB(CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize,
+                                        CriMvFrameInfo& frameinfo,
+                                        CriError& err = CriMv::ErrorContainer);                 // 0x140026dd0
+    CriSint32 CopyFrameToBufferARGB32(CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize,
+                                      const CriMvYuvBuffers* srcbufs, const CriMvFrameInfo* src_vinf,
+                                      const CriMvAlphaFrameInfo* src_ainf,
+                                      CriError& err = CriMv::ErrorContainer);                   // 0x140026e60
     void      SyncMasterTimer(CriError& err = CriMv::ErrorContainer);                             // 0x140021000
     CriBool   ExecuteDecode(CriError& err = CriMv::ErrorContainer);                               // 0x140021450
 protected:
@@ -461,6 +527,7 @@ private:
                                                           CriUint32 nsmpl);                     // 0x14001f660
     static CriUint32 crimveasy_GetSubAudioWave16(CriMvEasyPlayer* mveasy, CriUint32 nch, CriSint16* sample[],
                                                  CriUint32 nsmpl);                              // 0x14001f700
+    CriSint32 isNextFrameOnTime(CriSint32 frame_id, CriError& err);                            // 0x140039180
     static CriSint32 compareFrameTimeFluctuation(CriMvEasyPlayer* mveasy, CriMvFrameInfo* frameinfo,
                                                  CriUint64 count, CriUint64 unit, void* usrobj); // 0x1400398a0
 
