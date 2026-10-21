@@ -186,6 +186,201 @@ void ShapeMeshProvider::AttachShape(ShapeDataInterface* shape, ShapeDataInterfac
     }
     acquireShapeData();
 }
+// Re-encodes the two ends of the morph so that they have the same path records. Both ends always have the same
+// number of edges, but a path may end earlier on one side: then the other side's path is split there and the
+// short side continues from where its path started. An edge kind mismatch (line against quad) promotes the line
+// to a quad with its control point at the midpoint. Gradients that differ between the ends are linked for
+// morphing.
+// @0x142630260
+// MS2-FUNCTIONAL: the exe tail-duplicates the final EndPath/EndShape blocks; tag-byte store operand order differs
+void ShapeMeshProvider::createMorphData()
+{
+    ShapeDataInterface* from = pShapeData;
+    ShapeDataInterface* to   = pMorphData->pMorphTo;
+
+    unsigned i;
+    for (i = 0; i < from->GetFillStyleCount(); ++i)
+    {
+        FillStyleType fill1;
+        from->GetFillStyle(i + 1, &fill1);
+        if (fill1.pFill && fill1.pFill->pGradient)
+        {
+            FillStyleType fill2;
+            to->GetFillStyle(i + 1, &fill2);
+            if (!(*fill1.pFill->pGradient == *fill2.pFill->pGradient))
+            {
+                fill1.pFill->pGradient->SetMorphTo(fill2.pFill->pGradient);
+                GradientMorph = true;
+            }
+        }
+    }
+    for (i = 0; i < from->GetStrokeStyleCount(); ++i)
+    {
+        StrokeStyleType stroke1;
+        from->GetStrokeStyle(i + 1, &stroke1);
+        if (stroke1.pFill && stroke1.pFill->pGradient)
+        {
+            StrokeStyleType stroke2;
+            to->GetStrokeStyle(i + 1, &stroke2);
+            if (!(*stroke1.pFill->pGradient == *stroke2.pFill->pGradient))
+            {
+                stroke1.pFill->pGradient->SetMorphTo(stroke2.pFill->pGradient);
+                GradientMorph = true;
+            }
+        }
+    }
+
+    unsigned     startPos1 = from->GetStartingPos();
+    unsigned     startPos2 = to->GetStartingPos();
+    ShapePosInfo pos1(startPos1);
+    ShapePosInfo pos2(startPos2);
+
+    ShapePathType path1, path2;
+    PathEdgeType  edge1, edge2;
+    float         coord1[Edge_MaxCoord];
+    float         coord2[Edge_MaxCoord];
+    float         last1[2];
+    float         last2[2];
+    unsigned      styles1[3];
+    unsigned      styles2[3];
+
+    pMorphData->ShapeData1.Clear();
+    pMorphData->ShapeData2.Clear();
+
+    bool finished = false;
+    bool firstPath = true;
+    while (!finished)
+    {
+        path1 = from->ReadPathInfo(&pos1, coord1, styles1);
+        path2 = to->ReadPathInfo(&pos2, coord2, styles2);
+        if (path1 == Shape_EndShape || path2 == Shape_EndShape)
+        {
+            pMorphData->ShapeData1.EndShape();
+            pMorphData->ShapeData2.EndShape();
+            break;
+        }
+        if (path1 == Shape_NewLayer || firstPath)
+        {
+            pMorphData->ShapeData1.StartLayer();
+            pMorphData->ShapeData2.StartLayer();
+            firstPath = false;
+        }
+        // both ends take the styles of the first one
+        pMorphData->ShapeData1.StartPath(styles1[0], styles1[1], styles1[2]);
+        pMorphData->ShapeData2.StartPath(styles1[0], styles1[1], styles1[2]);
+        pMorphData->ShapeData1.MoveTo(coord1[0], coord1[1]);
+        pMorphData->ShapeData2.MoveTo(coord2[0], coord2[1]);
+        last1[0] = coord1[0];
+        last1[1] = coord1[1];
+        last2[0] = coord2[0];
+        last2[1] = coord2[1];
+
+        for (;;)
+        {
+            ShapePosInfo before1 = pos1;
+            ShapePosInfo before2 = pos2;
+            edge1 = from->ReadEdge(&pos1, coord1);
+            edge2 = to->ReadEdge(&pos2, coord2);
+
+            if (edge1 == Edge_EndPath && edge2 == Edge_EndPath)
+            {
+                pMorphData->ShapeData1.EndPath();
+                pMorphData->ShapeData2.EndPath();
+                break;
+            }
+            else if (edge1 == Edge_EndPath)
+            {
+                // the first end starts a new path here; the second one's edge is read again
+                pos2 = before2;
+                pMorphData->ShapeData1.EndPath();
+                pMorphData->ShapeData2.EndPath();
+                path1 = from->ReadPathInfo(&pos1, coord1, styles1);
+                if (path1 == Shape_EndShape)
+                {
+                    pMorphData->ShapeData1.EndShape();
+                    pMorphData->ShapeData2.EndShape();
+                    finished = true;
+                    break;
+                }
+                pMorphData->ShapeData1.StartPath(styles1[0], styles1[1], styles1[2]);
+                pMorphData->ShapeData2.StartPath(styles1[0], styles1[1], styles1[2]);
+                pMorphData->ShapeData1.MoveTo(coord1[0], coord1[1]);
+                pMorphData->ShapeData2.MoveTo(last2[0], last2[1]);
+                last1[0] = coord1[0];
+                last1[1] = coord1[1];
+            }
+            else if (edge2 == Edge_EndPath)
+            {
+                pos1 = before1;
+                pMorphData->ShapeData1.EndPath();
+                pMorphData->ShapeData2.EndPath();
+                path2 = to->ReadPathInfo(&pos2, coord2, styles2);
+                if (path2 == Shape_EndShape)
+                {
+                    pMorphData->ShapeData1.EndShape();
+                    pMorphData->ShapeData2.EndShape();
+                    finished = true;
+                    break;
+                }
+                pMorphData->ShapeData1.StartPath(styles1[0], styles1[1], styles1[2]);
+                pMorphData->ShapeData2.StartPath(styles1[0], styles1[1], styles1[2]);
+                pMorphData->ShapeData1.MoveTo(last1[0], last1[1]);
+                pMorphData->ShapeData2.MoveTo(coord2[0], coord2[1]);
+                last2[0] = coord2[0];
+                last2[1] = coord2[1];
+            }
+            else
+            {
+                if (edge1 != edge2)
+                {
+                    if (edge1 == Edge_LineTo && edge2 == Edge_QuadTo)
+                    {
+                        coord1[2] = coord1[0];
+                        coord1[3] = coord1[1];
+                        coord1[0] = (last1[0] + coord1[2]) / 2;
+                        coord1[1] = (last1[1] + coord1[3]) / 2;
+                        edge1     = Edge_QuadTo;
+                    }
+                    if (edge1 == Edge_QuadTo && edge2 == Edge_LineTo)
+                    {
+                        coord2[2] = coord2[0];
+                        coord2[3] = coord2[1];
+                        coord2[0] = (last2[0] + coord2[2]) / 2;
+                        coord2[1] = (last2[1] + coord2[3]) / 2;
+                        edge2     = Edge_QuadTo;
+                    }
+                }
+                if (edge1 == Edge_LineTo)
+                {
+                    pMorphData->ShapeData1.LineTo(coord1[0], coord1[1]);
+                    pMorphData->ShapeData2.LineTo(coord2[0], coord2[1]);
+                    last1[0] = coord1[0];
+                    last1[1] = coord1[1];
+                    last2[0] = coord2[0];
+                    last2[1] = coord2[1];
+                }
+                else if (edge1 == Edge_QuadTo)
+                {
+                    pMorphData->ShapeData1.QuadTo(coord1[0], coord1[1], coord1[2], coord1[3]);
+                    pMorphData->ShapeData2.QuadTo(coord2[0], coord2[1], coord2[2], coord2[3]);
+                    last1[0] = coord1[2];
+                    last1[1] = coord1[3];
+                    last2[0] = coord2[2];
+                    last2[1] = coord2[3];
+                }
+                else if (edge1 == Edge_CubicTo)
+                {
+                    pMorphData->ShapeData1.CubicTo(coord1[0], coord1[1], coord1[2], coord1[3], coord1[4], coord1[5]);
+                    pMorphData->ShapeData2.CubicTo(coord2[0], coord2[1], coord2[2], coord2[3], coord2[4], coord2[5]);
+                    last1[0] = coord1[4];
+                    last1[1] = coord1[5];
+                    last2[0] = coord2[4];
+                    last2[1] = coord2[5];
+                }
+            }
+        }
+    }
+}
 
 // @0x14262bb90
 void ShapeMeshProvider::GetFillStyle(unsigned idx, FillStyleType* style, float morphRatio) const

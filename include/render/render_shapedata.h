@@ -268,9 +268,11 @@ public:
         encoder.WriteChar(Tag_MoveTo);
         encoder.WriteFloat(x);
         encoder.WriteFloat(y);
+        StartX = x;
+        StartY = y;
+        LastX  = x;
+        LastY  = y;
         Status = Status_MoveTo;
-        StartX = LastX = x;
-        StartY = LastY = y;
     }
     void LineTo(float x, float y)
     {
@@ -293,6 +295,30 @@ public:
         Status = Status_EdgeTo;
         LastX = ax;
         LastY = ay;
+    }
+    void CubicTo(float c1x, float c1y, float c2x, float c2y, float ax, float ay)
+    {
+        PathDataEncoder<ContainerType> encoder(*Data);
+        encoder.WriteChar(Tag_CubicTo);
+        encoder.WriteFloat(c1x);
+        encoder.WriteFloat(c1y);
+        encoder.WriteFloat(c2x);
+        encoder.WriteFloat(c2y);
+        encoder.WriteFloat(ax);
+        encoder.WriteFloat(ay);
+        Status = Status_EdgeTo;
+        LastX = ax;
+        LastY = ay;
+    }
+    // drops the styles and the recorded path data (the container itself stays)
+    void Clear()
+    {
+        Status = Status_Clean;
+        Fills.Clear();
+        Strokes.Clear();
+        Data->Clear();
+        StartX = StartY = 0;
+        LastX = LastY = 0;
     }
     void EndPath()
     {
