@@ -2326,11 +2326,11 @@ void CriMvEasyPlayer::executeUpdate(CriError& err)
         executeFileOpenServer();
         executeCuePointServer();
         updateStatus(err);
-        updateFileReadStatus();
-        executeLoopServer();
+        supplyDataFromStreamer();
+        reinputDataForLooping();
         FUN_14002fb70(mvply);
         executeFileReadServer();
-        executeFileRequestServer();
+        surveilTerminationInput();
         executeFileCloseServer();
         ply_status = FUN_1400310b0(mvply);
         if (ply_status == 1)
@@ -3548,7 +3548,7 @@ CriUint32 CriMvEasyPlayer::GetSubtitleOnTime(CriUint8* bufptr, CriUint32 bufsize
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x140022d00
-void CriMvEasyPlayer::updateFileReadStatus(void)
+void CriMvEasyPlayer::supplyDataFromStreamer(void)
 {
     if (mvply == NULL || freader == NULL)
     {
@@ -3643,7 +3643,7 @@ void CriMvEasyPlayer::executeFileReadServer(void)
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x1400230a0
-void CriMvEasyPlayer::executeLoopServer(void)
+void CriMvEasyPlayer::reinputDataForLooping(void)
 {
     if (loop_flag == 0)
     {
@@ -3671,7 +3671,7 @@ void CriMvEasyPlayer::executeLoopServer(void)
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x1400231d0
-void CriMvEasyPlayer::executeFileRequestServer(void)
+void CriMvEasyPlayer::surveilTerminationInput(void)
 {
     if (data_type == 2)
     {

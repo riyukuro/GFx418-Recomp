@@ -426,10 +426,10 @@ private:
     void      releasePlaybackResources(void);                                                   // 0x140020eb0
     void      calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64 sys_count, CriUint64 sys_unit); // 0x1400211d0
     CriBool   startInputAndDecoding(void);                                                      // 0x140021a30
-    void      updateFileReadStatus(void);                                                       // 0x140022d00
+    void      supplyDataFromStreamer(void);                                                       // 0x140022d00
     void      executeFileReadServer(void);                                                      // 0x140022f20
-    void      executeLoopServer(void);                                                          // 0x1400230a0
-    void      executeFileRequestServer(void);                                                   // 0x1400231d0
+    void      reinputDataForLooping(void);                                                          // 0x1400230a0
+    void      surveilTerminationInput(void);                                                   // 0x1400231d0
     CriBool   isEndReadFile(void);                                                              // 0x140023330
     void      executeFileCloseServer(void);                                                     // 0x1400233c0
     void      executeFileOpenServer(void);                                                      // 0x1400235a0
