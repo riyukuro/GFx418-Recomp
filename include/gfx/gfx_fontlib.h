@@ -94,6 +94,9 @@ public:
 
     virtual const char* GetName() const;
 
+    // (sfr_gfx_04b) the glyph code table and style flags of a DefineFontInfo / DefineFontInfo2 tag (exe 0x142657290)
+    void ReadFontInfo(Stream* in, TagType tagType);
+
 private:
     UByte Unrecovered[0x88 - sizeof(Render::Font)]; // the glyph / layout tables
 };

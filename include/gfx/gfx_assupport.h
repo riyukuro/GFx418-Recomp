@@ -20,6 +20,10 @@ class MovieImpl;
 class DisplayObjectBase;
 class InteractiveObject;
 struct CharacterCreateInfo;
+class PlaceObject2Tag;
+class PlaceObject3Tag;
+class RemoveObjectTag;
+class RemoveObject2Tag;
 
 class ASSupport : public State
 {
@@ -36,12 +40,18 @@ public:
 private:
     virtual void Slot05() = 0; // DoActions
     virtual void Slot06() = 0; // GetAVMVersion
-    virtual void Slot07() = 0; // AllocPlaceObject2Tag
-    virtual void Slot08() = 0; // AllocPlaceObject3Tag
-    virtual void Slot09() = 0; // AllocRemoveObjectTag
-    virtual void Slot10() = 0; // AllocRemoveObject2Tag
-    virtual void Slot11() = 0; // DoActionLoader
-    virtual void Slot12() = 0; // DoInitActionLoader
+public:
+    // (sfr_gfx_04b) the AVM's own place / remove tags, in the tag memory of p; dataSz counts the event handler
+    // pointer slot (slots 7..10)
+    virtual PlaceObject2Tag*  AllocPlaceObject2Tag(LoadProcess* p, UPInt dataSz, UInt8 swfVer) = 0;
+    virtual PlaceObject3Tag*  AllocPlaceObject3Tag(LoadProcess* p, UPInt dataSz)               = 0;
+    virtual RemoveObjectTag*  AllocRemoveObjectTag(LoadProcess* p)                             = 0;
+    virtual RemoveObject2Tag* AllocRemoveObject2Tag(LoadProcess* p)                            = 0;
+private:
+public:
+    // (sfr_gfx_04b) the DoAction / DoInitAction tags (slots 11, 12)
+    virtual void DoActionLoader(LoadProcess* p, const TagInfo& tagInfo)     = 0;
+    virtual void DoInitActionLoader(LoadProcess* p, const TagInfo& tagInfo) = 0;
 
 public:
     // The action records of DefineButton / the condition actions of DefineButton2 (slots 13, 14).

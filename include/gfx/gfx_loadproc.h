@@ -259,6 +259,28 @@ public:
     void ReadRgbaTag(Render::Color* pc, TagType tagType);
     // The tags of a frame copied into the tag memory.
     TimelineDef::Frame TagArrayToFrame(Array<ExecuteTag*, Stat_Default_Mem, ArrayConstPolicy<32, 16, false> >& tagArray);
+
+    // (appended for the tag loaders, sfr_gfx_04b)
+    LogState*                   GetLogState() const       { return pLoadStates->GetLogState(); }
+    unsigned                    GetVersion() const        { return pLoadData->GetVersion(); }
+    MovieDataDef*               GetDataDef_Unsafe() const { return pDataDef_Unsafe; }
+    MovieDataDef::LoadTaskData* GetLoadTaskData() const   { return pLoadData; }
+    Render::Font*               GetFontData(ResourceId rid) { return pLoadData->GetFontData(rid); }
+    void AddCharacter(ResourceId rid, CharacterDef* c) { pLoadData->AddCharacter(rid, c); }
+    // Labels the frame of the timeline being loaded.
+    void AddFrameName(const String& name, LogState* plog)
+    {
+        if (LoadState == LS_LoadingSprite)
+            pTimelineDef->AddFrameName(name, plog);
+        else
+            pLoadData->AddFrameName(name, plog);
+    }
+    // A tag followed by dataSize bytes of tag data (the tag's own one-byte pData included in the size).
+    template<class T>
+    T* AllocTag(UPInt dataSize)
+    {
+        return new (pLoadData->AllocTagMemory(sizeof(T) + dataSize - 1)) T;
+    }
 };
 
 }} // namespace Scaleform::GFx
