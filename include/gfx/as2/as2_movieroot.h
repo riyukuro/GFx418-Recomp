@@ -84,6 +84,40 @@ public:
     void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
                            LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None,
                            MovieClipLoader* pmovieClipLoader = 0);
+
+    struct ActionEntry;
+
+    // The queued actions per priority (only the members used so far).
+    struct ActionQueueType
+    {
+        void AddToFreeList(ActionEntry* pentry); // exe 0x142930910
+        // Drops every queued action (exe 0x142934390).
+        void Clear();
+    };
+
+    // Walks the queue in priority order; entries handed out go back to the free list.
+    struct ActionQueueIterator
+    {
+        int              ModId;        // +0x00
+        ActionQueueType* pActionQueue; // +0x08
+        ActionEntry*     pLastEntry;   // +0x10
+        int              CurrentPrio;  // +0x18
+
+        ActionQueueIterator(ActionQueueType* pactionQueue)
+        {
+            pActionQueue = pactionQueue;
+            ModId        = 0;
+            CurrentPrio  = 0;
+            pLastEntry   = 0;
+        }
+        ~ActionQueueIterator()
+        {
+            if (pLastEntry)
+                pActionQueue->AddToFreeList(pLastEntry);
+        }
+
+        const ActionEntry* getNext(); // exe 0x142995180
+    };
 };
 
 // The AS2 root of a character of an AS2 movie.

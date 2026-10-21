@@ -9,11 +9,39 @@
 #include "../gfx_asutils.h"
 #include "../gfx_textsnapshot.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
+namespace Scaleform { namespace GFx {
+
+// Receiver of the stored data of a shared object (SharedObjectManagerBase::LoadSharedObject). Only Begin, the first
+// slot after the destructor, is declared so far.
+class SharedObjectVisitor : public RefCountBaseNTS<SharedObjectVisitor, Stat_Default_Mem>
+{
+public:
+    virtual void Begin() = 0;
+};
+
+namespace AS2 {
 
 // 0x68 bytes: nothing besides the object.
 class AmpMarker : public Object {};
-class AsBroadcaster : public Object {};
+// The listener list behind AsBroadcaster.initialize (the _listeners array of the broadcaster).
+class AsBroadcaster : public Object
+{
+public:
+    // Called for each listener that has the broadcast method.
+    class InvokeCallback
+    {
+    public:
+        virtual ~InvokeCallback() {}
+        virtual void Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method) = 0;
+    };
+
+    // Calls eventName on every listener with the nArgs stack arguments below firstArgBottomIndex; false without a
+    // broadcaster (exe 0x142932180).
+    static bool BroadcastMessage(Environment* penv, ObjectInterface* pthis, const ASString& eventName, int nArgs,
+                                 int firstArgBottomIndex);
+    static bool BroadcastMessageWithCallback(Environment* penv, ObjectInterface* pthis, const ASString& eventName,
+                                             InvokeCallback* pcallback); // exe 0x142932290
+};
 class ExternalInterface : public Object {};
 class KeyObject : public Object {};
 class Math : public Object {};
@@ -72,7 +100,12 @@ public:
 class MovieClipObject : public Object
 {
 public:
-    void* Data68[2]; // +0x68 not recovered
+    void*  Data68;            // +0x68 not recovered
+    UInt16 ButtonEventMask;   // +0x70 button events with a handler set on the clip
+    bool   HasButtonHandlers; // +0x72
+
+    // The clip or the first movie clip prototype handles button events (exe 0x14292e120).
+    bool ActsAsButton() const;
 };
 class NumberObject : public Object
 {
@@ -98,6 +131,24 @@ public:
     SharedObject(Environment* penv); // exe 0x142920710
 
     void* Data68[2]; // +0x68 not recovered
+};
+
+// The out-of-line Resize / PushBack of the loader's object stack (exe COMDATs the exe calls where cl inlines them).
+void ObjectPtrArray_Resize(Array<Object*>* parray, UPInt newSize);            // exe 0x14297e230
+void ObjectPtrArray_PushBack(Array<Object*>* parray, Object* const& pobj);     // exe 0x142971a50
+
+// Rebuilds a shared object's data from the visits of the shared object manager. 0x40 bytes.
+class GASSharedObjectLoader : public SharedObjectVisitor
+{
+public:
+    // Starts from the data object alone on the stack (exe 0x142932010).
+    virtual void Begin();
+
+private:
+    Environment*   pEnv;        // +0x10
+    Object*        pData;       // +0x18
+    Array<Object*> ObjectStack; // +0x20
+    bool           bArrayIsTop; // +0x38
 };
 class TextFieldObject : public Object
 {

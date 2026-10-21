@@ -2,14 +2,22 @@
 // and the out-of-line hash table helpers (grow, clear) of the AS2 member, watchpoint and prototype tables.
 // MS2-UNIT: sfr_as2_04
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14292bab0-0x14292bae0 .text$mn
+// MS2-RANGE: 0x14292e120-0x14292e180 .text$mn
+// MS2-RANGE: 0x14292e180-0x14292e650 .text$mn
 // MS2-RANGE: 0x142931710-0x142931870 .text$mn
+// MS2-RANGE: 0x142932010-0x142932040 .text$mn
+// MS2-RANGE: 0x142932180-0x1429321c0 .text$mn
 // MS2-RANGE: 0x1429339a0-0x142933bd0 .text$mn
 // MS2-RANGE: 0x142933d80-0x142933e20 .text$mn
 // MS2-RANGE: 0x142934060-0x142934390 .text$mn
+// MS2-RANGE: 0x142934390-0x1429343e0 .text$mn
 // MS2-RANGE: 0x1429345d0-0x142934610 .text$mn
 // MS2-RANGE: 0x142934a00-0x142934a80 .text$mn
-// MS2-RANGE: 0x142935540-0x142935580 .text$mn
+// MS2-RANGE: 0x142935200-0x142935580 .text$mn
+// MS2-RANGE: 0x142935680-0x142935820 .text$mn
 // MS2-RANGE: 0x142935b50-0x142935c70 .text$mn
+// MS2-RANGE: 0x142936620-0x142936680 .text$mn
 // MS2-RANGE: 0x1429367a0-0x1429367e0 .text$mn
 // MS2-RANGE: 0x142936880-0x1429368c0 .text$mn
 // MS2-RANGE: 0x142936bc0-0x142936c80 .text$mn
@@ -17,7 +25,9 @@
 // MS2-RANGE: 0x142937170-0x142937290 .text$mn
 // MS2-RANGE: 0x142937380-0x1429373c0 .text$mn
 // MS2-RANGE: 0x142937470-0x1429374f0 .text$mn
+// MS2-RANGE: 0x142937e20-0x142937ea0 .text$mn
 // MS2-RANGE: 0x142938180-0x1429381f0 .text$mn
+// MS2-RANGE: 0x142938830-0x142938850 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -27,6 +37,8 @@
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
+#include "../include/gfx/as2/as2_stringobject.h"
+#include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
@@ -68,6 +80,147 @@ void FunctionRefBase::Assign(const FunctionRefBase& orig)
     }
 }
 
+// Value::ToStringVersioned (exe 0x1429923c0), which the exe inlines here.
+static SF_FORCEINLINE ASString Value_ToStringVersioned(const Value& val, Environment* penv, unsigned version)
+{
+    if (val.IsUndefined())
+    {
+        if (version > 0 && version <= 6)
+            return penv->GetBuiltin(ASBuiltin_empty_);
+        else
+            return penv->GetBuiltin(ASBuiltin_undefined);
+    }
+    return val.ToString(penv);
+}
+
+// Value::StringConcat (exe 0x142990240), which the exe inlines in Add: this as a string followed by str.
+static SF_FORCEINLINE void Value_StringConcat(Value* pval, Environment* penv, const ASString& str)
+{
+    ASString tempstr(pval->ToString(penv) + str);
+    pval->DropRefs();
+    pval->T.Type        = Value::STRING;
+    pval->V.pStringNode = tempstr.GetNode();
+    pval->V.pStringNode->AddRef();
+}
+
+// @0x14292e120
+bool MovieClipObject::ActsAsButton() const
+{
+    if ((ButtonEventMask != 0) || HasButtonHandlers)
+        return true;
+    // 4.1.18 asks the type of the first prototype on every step.
+    for (Object* pproto = pProto; pproto != 0; pproto = pproto->pProto)
+    {
+        if (pProto->GetObjectType() == Object_MovieClipObject)
+            return static_cast<MovieClipObject*>(pproto)->ActsAsButton();
+    }
+    return false;
+}
+
+// @0x14292e180
+void Value::Add(Environment* penv, const Value& v)
+{
+    Value pv1, pv2;
+
+    pv1 = ToPrimitive(penv);
+    pv2 = v.ToPrimitive(penv);
+
+    if (pv1.T.Type == STRING || pv2.T.Type == STRING)
+    {
+        unsigned version = penv->GetVersion();
+
+        pv1.ConvertToStringVersioned(penv, version);
+        Value_StringConcat(&pv1, penv, Value_ToStringVersioned(pv2, penv, version));
+        SetString(pv1.ToString(penv));
+    }
+    else
+    {
+        SetNumber(pv1.ToNumber(penv) + pv2.ToNumber(penv));
+    }
+}
+
+// @0x14292e460
+void Value::Add(Environment* penv, int v2)
+{
+    Value pv1;
+
+    pv1 = ToPrimitive(penv);
+
+    if (pv1.T.Type == STRING)
+    {
+        unsigned version = penv->GetVersion();
+
+        pv1.ConvertToStringVersioned(penv, version);
+        Value_StringConcat(&pv1, penv, Value_ToStringVersioned(Value(v2), penv, version));
+        SetString(pv1.ToString(penv));
+    }
+    else
+    {
+        SetNumber(pv1.ToNumber(penv) + (Number)v2);
+    }
+}
+
+// MS2-FUNCTIONAL register allocation of the operand types and the ToNumber call order
+// @0x142935200
+Value Value::Compare(Environment* penv, const Value& v, int action) const
+{
+    if (action == 0)
+        return Value(IsEqual(penv, v));
+
+    // ECMA-262 11.8.5.
+    Value pv1    = ToPrimitive(penv);
+    Value pv2    = v.ToPrimitive(penv);
+    bool  result = false;
+    if (pv1.IsString() && pv2.IsString())
+    {
+        if (action < 0)
+            return (pv1.ToString(penv) < pv2.ToString(penv));
+        else
+            return (pv1.ToString(penv) > pv2.ToString(penv));
+    }
+    if (penv->GetVersion() > 6 && (pv1.IsUndefined() || pv2.IsUndefined()))
+        return Value();
+
+    // Both orders reduce to val1 < val2.
+    Number val1 = pv1.ToNumber(penv);
+    Number val2 = pv2.ToNumber(penv);
+    if (action > 0)
+    {
+        Number t = val1;
+        val1     = val2;
+        val2     = t;
+    }
+
+    if (NumberUtil::IsNaN(val1) || NumberUtil::IsNaN(val2))
+        return Value();
+    if (val1 == val2)
+        result = false;
+    else if (NumberUtil::IsNEGATIVE_ZERO(val1) && NumberUtil::IsPOSITIVE_ZERO(val2))
+        result = false;
+    else if (NumberUtil::IsNEGATIVE_ZERO(val2) && NumberUtil::IsPOSITIVE_ZERO(val1))
+        result = false;
+    else if (NumberUtil::IsPOSITIVE_INFINITY(val1))
+        result = false;
+    else if (NumberUtil::IsPOSITIVE_INFINITY(val2))
+        result = true;
+    else if (NumberUtil::IsNEGATIVE_INFINITY(val2))
+        result = false;
+    else if (NumberUtil::IsNEGATIVE_INFINITY(val1))
+        result = true;
+    else
+        result = (val1 < val2);
+    return Value(result);
+}
+
+// MS2-FUNCTIONAL the exe tail-calls AddToFreeList from the inlined iterator destructor
+// @0x142934390
+void MovieRoot::ActionQueueType::Clear()
+{
+    ActionQueueIterator iter(this);
+    while (iter.getNext())
+        ;
+}
+
 // @0x1429345d0
 void Environment::ClearThrowing()
 {
@@ -95,6 +248,17 @@ void Environment::CheckTryBlocks(int pc, int* plocalTryBlockCount)
     }
 }
 
+// @0x142937e20
+ASString StringProto::CreateStringFromCStr(ASStringContext* psc, const char* start, const char* end)
+{
+    int len = (end == 0) ? (int)strlen(start) : int(end - start);
+    if (len < 0)
+        len = 0;
+    if (len > 0)
+        return psc->CreateString(start, len);
+    return psc->GetBuiltin(ASBuiltin_empty_);
+}
+
 // @0x142938180
 void Environment::DeclareLocal(const ASString& varname)
 {
@@ -104,6 +268,14 @@ void Environment::DeclareLocal(const ASString& varname)
         if (!FindLocal(varname))
             AddLocal(varname, Value());
     }
+}
+
+// @0x142938830
+bool AvmSprite::DeleteMember(ASStringContext* psc, const ASString& name)
+{
+    if (AvmCharacter::DeleteMember(psc, name))
+        return true;
+    return false;
 }
 
 // @0x142935b50
@@ -122,23 +294,10 @@ void Value::ConvertToString(Environment* penv)
     V.pStringNode->AddRef();
 }
 
-// Value::ToStringVersioned (exe 0x1429923c0), which the exe inlines here.
-static SF_FORCEINLINE ASString Value_ToStringVersioned(const Value* pval, Environment* penv, unsigned version)
-{
-    if (pval->IsUndefined())
-    {
-        if (version > 0 && version <= 6)
-            return penv->GetBuiltin(ASBuiltin_empty_);
-        else
-            return penv->GetBuiltin(ASBuiltin_undefined);
-    }
-    return pval->ToString(penv);
-}
-
 // @0x142935be0
 void Value::ConvertToStringVersioned(Environment* penv, unsigned version)
 {
-    ASString str = Value_ToStringVersioned(this, penv, version);
+    ASString str = Value_ToStringVersioned(*this, penv, version);
     DropRefs();
     T.Type        = STRING;
     V.pStringNode = str.GetNode();
@@ -158,6 +317,12 @@ void NumberObject::CommonInit(Environment* penv)
 }
 
 // The instances the constructor functions create for new.
+// @0x142936620
+ActionBufferData* ActionBufferData::CreateNew()
+{
+    return SF_NEW ActionBufferData();
+}
+
 // @0x1429367a0
 Object* ArrayCtorFunction::CreateNewObject(Environment* penv) const
 {
@@ -242,6 +407,61 @@ Object* TransformCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) TransformObject(penv);
 }
 
+// @0x142932010
+void GASSharedObjectLoader::Begin()
+{
+    ObjectPtrArray_Resize(&ObjectStack, 0);
+    ObjectPtrArray_PushBack(&ObjectStack, pData);
+}
+
+// @0x142932180
+bool AsBroadcaster::BroadcastMessage(Environment* penv, ObjectInterface* pthis, const ASString& eventName, int nArgs,
+                                     int firstArgBottomIndex)
+{
+    if (!pthis)
+        return false;
+    class LocalInvokeCallback : public InvokeCallback
+    {
+    public:
+        int NArgs;
+        int FirstArgBottomIndex;
+
+        LocalInvokeCallback(int nargs, int firstArg) : NArgs(nargs), FirstArgBottomIndex(firstArg) {}
+
+        virtual void Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method)
+        {
+            Value result;
+            method.Invoke(FnCall(&result, pthis, penv, NArgs, FirstArgBottomIndex));
+        }
+    } callback(nArgs, firstArgBottomIndex);
+    BroadcastMessageWithCallback(penv, pthis, eventName, &callback);
+    return true;
+}
+
+// @0x142935680
+void ArrayObject::Concat(Environment* penv, const Value& val)
+{
+    RecursionGuard rg(this);
+    if (RecursionLimitReached())
+        return;
+
+    MemoryHeap* pheap = penv->GetHeap();
+    Object*     pobj  = val.ToObject(penv);
+    if (pobj && pobj->GetObjectType() == ObjectInterface::Object_Array)
+    {
+        ArrayObject* parray = (ArrayObject*)pobj;
+        if (parray->Elements.GetSize())
+        {
+            unsigned oldSize = (unsigned)Elements.GetSize();
+            Resize((int)(oldSize + parray->Elements.GetSize()));
+            for (UPInt i = 0; i < parray->Elements.GetSize(); i++)
+                Elements[oldSize + i] = SF_HEAP_NEW(pheap) Value(*parray->Elements[i]);
+        }
+    }
+    else
+        Elements.PushBack(SF_HEAP_NEW(pheap) Value(val));
+}
+
 // @0x142931710
 void ArrayObject::ArrayLength(const FnCall& fn)
 {
@@ -314,3 +534,10 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ?Clear@?$HashsetNodeEntry_GC@U?$HashNode@VASString@GFx@Scaleform@@UWatchpoint@Object@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@GFx@Scaleform@@QEAAXXZ 0x142934320
 // MS2-PIN: ?Clear@?$HashsetNodeEntry_GC@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@GFx@Scaleform@@QEAAXXZ 0x142934350
 // MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
+// MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7LocalInvokeCallback@?1??BroadcastMessage@AsBroadcaster@AS2@GFx@Scaleform@@SA_NPEAVEnvironment@345@PEAVObjectInterface@345@AEBVASString@45@HH@Z@6B@ 0x143221850
+// MS2-PIN: ??_7ActionBufferData@AS2@GFx@Scaleform@@6B@ 0x1432153b8
+// MS2-PIN: ??_7?$RefCountBase@VActionBufferData@AS2@GFx@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018

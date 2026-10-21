@@ -20,6 +20,9 @@ public:
     MovieRoot*         GetAS2Root() const { return ToAS2Root(pDispObj); }
 
     static void CharacterGetDepth(const FnCall& fn);
+
+    // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
+    virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
 };
 
 // The script side of a character of an AS2 movie.

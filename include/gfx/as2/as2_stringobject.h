@@ -38,6 +38,8 @@ public:
     static ASString StringSubstring(const ASString& str, int start, int length);
     // str cut at each delimiter (0: one element per character), at most limit elements (exe 0x1429902c0).
     MS2_AS2_SCU static Ptr<ArrayObject> StringSplit(Environment* penv, const ASString& str, const char* delimiters, int limit);
+    // The string from start to end (0: to the terminator); empty for a negative length (exe 0x142937e20).
+    static ASString CreateStringFromCStr(ASStringContext* psc, const char* start, const char* end = 0);
 };
 
 // The String constructor function's own methods.

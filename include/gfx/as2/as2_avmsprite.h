@@ -32,6 +32,9 @@ public:
     static void SpriteUnloadMovie(const FnCall& fn);
     static void SpriteGetBytesLoaded(const FnCall& fn);
     static void SpriteGetBytesTotal(const FnCall& fn);
+
+    // ObjectInterface overrides (the AvmSprite vftables are not modeled yet).
+    virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x142938830
 };
 
 inline Sprite* ObjectInterface::ToSprite()

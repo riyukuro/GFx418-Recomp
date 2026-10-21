@@ -128,6 +128,13 @@ public:
     ASString operator+(const char* str) const;     // exe 0x1425bfa40
     ASString operator+(const ASString& str) const; // exe 0x1425bfa00
     bool     operator<(const ASString& str) const; // exe 0x1425bfa90
+    // Not equal and not less.
+    bool     operator>(const ASString& str) const
+    {
+        if (pNode == str.pNode)
+            return false;
+        return !(*this < str);
+    }
 
     void AssignNode(ASStringNode* pnode)
     {

@@ -122,6 +122,7 @@ public:
     }
 
     ASStringContext* GetSC() { return &StringContext; }
+    unsigned         GetVersion() const { return StringContext.GetVersion(); }
     // Ends the unrolling of a throw (exe 0x1429345d0).
     void ClearThrowing();
     // Drops the try blocks pc has left; *plocalTryBlockCount counts those of the running action buffer (exe
@@ -245,6 +246,31 @@ public:
 
     // The builtin prototype of the type (exe 0x142954ba0).
     Object* GetPrototype(ASBuiltinType type);
+};
+
+enum { StatMD_ASBinaryData_Mem = 0x108 };
+
+// The bytes of an action block (DoAction, a function body or a clip event), shared by the buffers running it.
+// 0x28 bytes.
+class ActionBufferData : public RefCountBase<ActionBufferData, StatMD_ASBinaryData_Mem>
+{
+protected:
+    ActionBufferData() : pBuffer(0), BufferLen(0), SwdHandle(0), SWFFileOffset(0) {}
+
+public:
+    ~ActionBufferData()
+    {
+        if (pBuffer)
+            SF_FREE(pBuffer);
+    }
+
+    static ActionBufferData* CreateNew(); // exe 0x142936620
+
+protected:
+    UByte*   pBuffer;       // +0x10
+    unsigned BufferLen;     // +0x18
+    UInt32   SwdHandle;     // +0x1c
+    UInt32   SWFFileOffset; // +0x20
 };
 
 SF_FORCEINLINE void FunctionRefBase::DropRefs()

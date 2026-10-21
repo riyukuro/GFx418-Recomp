@@ -99,6 +99,9 @@ public:
 class Value
 {
 public:
+    // Heap allocated values (array elements) come from the Scaleform heaps.
+    SF_MEMORY_REDEFINE_NEW(Value, StatMV_ActionScript_Mem)
+
     enum type
     {
         UNDEFINED,
@@ -269,12 +272,19 @@ public:
 
     // Arithmetic in place (the script operators).
     void Add(Environment* penv, const Value& v); // exe 0x14292e180
+    void Add(Environment* penv, int v2);         // exe 0x14292e460
     void Sub(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) - v.ToNumber(penv)); }
     void Mul(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) * v.ToNumber(penv)); }
     // The out-of-line copy of Mul (exe 0x142968f90): some unity-build call sites call it instead of inlining.
     void Mul_Call(Environment* penv, const Value& v);
 
     Value ToPrimitive(Environment* penv, hint h = NoHint) const; // exe 0x142991850
+
+    // The script == (exe 0x142965570).
+    bool  IsEqual(Environment* penv, const Value& v) const;
+    // The script comparisons: action 0 is ==, -1 <, 1 >; a boolean, or undefined when the operands do not compare
+    // (exe 0x142935200).
+    Value Compare(Environment* penv, const Value& v, int action) const;
     // The function held or named (FUNCTIONNAME), else a null reference. Out of line in the exe (0x142991190); the
     // unity build inlines it at some call sites.
     inline FunctionRef ToFunction(const Environment* penv) const; // as2_object.h
