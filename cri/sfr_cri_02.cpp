@@ -11,6 +11,8 @@
 #include "../include/video/video_video.h"
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
+#include "../include/kernel/sf_file.h"
+#include "../include/gfx/gfx_loaderimpl.h"
 #include <new>
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
@@ -649,9 +651,158 @@ bool VideoPlayer::LoadVideoInfo(const char* url, VideoInfo* pinfo, FileOpenerBas
     return ok;
 }
 
+// ==== VideoReader ====================================================================================================
+
+// The reader's file: a Scaleform File held as a thread-safe reference.
+static inline File* ReaderFile(RefCountImpl* pfile) { return (File*)pfile; }
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002d230
+CriSint64 VideoReader::Seek(CriSint64 size, SeekOrigin offset)
+{
+    switch (offset)
+    {
+    case SEEK_FROM_CURRENT: Position = FilePos;  break;
+    case SEEK_FROM_END:     Position = FileSize; break;
+    default:                Position = 0;        break;
+    }
+    Position += size;
+    return Position;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002d4f0
+void VideoReader::OpenFile(const char* fname)
+{
+    File* pfile = pReaderConfig->pFileOpener->OpenFile(fname, FileConstants::Open_Read | FileConstants::Open_Buffered,
+                                                       FileConstants::Mode_ReadWrite);
+    if (pFile)
+        pFile->Release();
+    pFile = (RefCountImpl*)pfile;
+    if (pfile && pfile->IsValid())
+    {
+        FileSize   = ReaderFile(pFile)->GetLength();
+        OpenStatus = ASYNC_STATUS_COMPLETE;
+    }
+    else
+    {
+        OpenStatus  = ASYNC_STATUS_ERROR;
+        ReadStatus  = ASYNC_STATUS_ERROR;
+        CloseStatus = ASYNC_STATUS_ERROR;
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002d590
+void VideoReader::CloseFile()
+{
+    if (pFile && !ReaderFile(pFile)->Close())
+        CloseStatus = ASYNC_STATUS_ERROR;
+    else
+        CloseStatus = ASYNC_STATUS_COMPLETE;
+    if (pFile)
+        pFile->Release();
+    pFile = NULL;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002d5e0
+void VideoReader::ReadFile(UByte* buffer, SInt64 size)
+{
+    if (pFile && ReaderFile(pFile)->IsValid())
+    {
+        if (!pReaderConfig->IOEnabled)
+        {
+            ReadSize   = 0;
+            ReadStatus = ASYNC_STATUS_COMPLETE;
+            return;
+        }
+        if (FilePos != Position)
+        {
+            if (ReaderFile(pFile)->LSeek(Position, File::Seek_Set) == -1)
+            {
+                ReadStatus = ASYNC_STATUS_ERROR;
+                return;
+            }
+            FilePos = Position;
+        }
+        SInt64 toread = (FilePos + size > FileSize) ? FileSize - FilePos : size;
+        int    nread  = ReaderFile(pFile)->Read(buffer, (int)toread);
+        if (nread != -1)
+        {
+            ReadSize   = nread;
+            ReadStatus = ASYNC_STATUS_COMPLETE;
+            FilePos   += nread;
+            Position   = FilePos;
+            return;
+        }
+    }
+    ReadStatus = ASYNC_STATUS_ERROR;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002d970
+VideoReader::VideoReader(VideoReaderConfig* pconfig)
+    : pReaderConfig(pconfig), pFile(NULL), ReadSize(0)
+{
+    pconfig->AttachReader(this);
+    OpenStatus  = ASYNC_STATUS_STOP;
+    ReadStatus  = ASYNC_STATUS_STOP;
+    CloseStatus = ASYNC_STATUS_STOP;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002d430
+VideoReader::~VideoReader()
+{
+    pReaderConfig->DetachReader(this);
+    if (pFile)
+        pFile->Release();
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002da70
+void VideoReader::Open(CriChar8* fname)
+{
+    FileSize = -1;
+    ReadSize = 0;
+    FilePos  = 0;
+    Position = 0;
+    OpenFile((const char*)fname);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002da90
+void VideoReader::Close(void)
+{
+    CloseFile();
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002dae0
+void VideoReader::Read(CriUint8* buffer, CriSint64 req_size)
+{
+    while (!pReaderConfig->IOEnabled)
+        FUN_14258b240(50);
+    ReadFile(buffer, req_size);
+}
+
+// ==== VideoReaderConfigSmp ===========================================================================================
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002df50
+VideoReader* VideoReaderConfigSmp::CreateReader()
+{
+    void* mem = pHeap->Alloc(sizeof(VideoReader));
+    return mem ? ::new(mem) VideoReader(this) : NULL;
+}
+
 }}} // namespace Scaleform::GFx::Video
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
 // MS2-PIN: ??_7VideoPlayerImpl@Video@GFx@Scaleform@@6B@ 0x1431b9260
 // MS2-PIN: ??_7VideoDecoderSmp@Video@GFx@Scaleform@@6B@ 0x1431b9170
 // MS2-PIN: ??_7VideoDecoderThrd@Video@GFx@Scaleform@@6B@ 0x1431b9200
+// MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6BRefCountImplCore@Scaleform@@@ 0x1431b93b0
+// MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6BCriMvFileReaderInterface@@@ 0x1431b9360
+// MS2-PIN: ??_7VideoReaderConfigSmp@Video@GFx@Scaleform@@6B@ 0x1431b91d8

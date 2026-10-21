@@ -258,6 +258,7 @@ public:
     virtual void         EnableIO(bool enable) { IOEnabled = enable; } // 4
 
 protected:
+    friend class VideoReader;           // reads the opener and IOEnabled
     MemoryHeap*          pHeap;         // +0x10
     Ptr<FileOpenerBase>  pFileOpener;   // +0x18 (layout only)
     Array<VideoReader*>  Readers;       // +0x20

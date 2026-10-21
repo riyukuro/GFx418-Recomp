@@ -33,9 +33,37 @@ public:
     virtual Sound::SoundChannel* GetSoundChannel() = 0;   // 1
 };
 
-// The file reader a player streams from (0x50 bytes; the CRI file reader interface sits at +0x10).
-class VideoReader : public RefCountBaseNTS<VideoReader, Stat_Default_Mem>
+// The file reader a player streams from (0x50 bytes, vftables 0x1431b93b0 / 0x1431b9360 for the CRI file reader
+// interface at +0x10). Opens, reads and seeks synchronously through the reader config's file opener.
+class VideoReader : public RefCountBaseNTS<VideoReader, Stat_Default_Mem>, public CriMvFileReaderInterface
 {
+public:
+    VideoReader(VideoReaderConfig* pconfig);                                         // 0x14002d970
+    virtual ~VideoReader();
+
+    virtual void        Open(CriChar8* fname);
+    virtual void        Close(void);
+    virtual void        Read(CriUint8* buffer, CriSint64 req_size);
+    virtual AsyncStatus GetOpenStatus(void)  { return OpenStatus; }
+    virtual AsyncStatus GetCloseStatus(void) { return CloseStatus; }
+    virtual AsyncStatus GetReadStatus(void)  { return ReadStatus; }
+    virtual CriSint64   GetReadSize(void)    { return ReadSize; }
+    virtual CriSint64   Seek(CriSint64 size, SeekOrigin offset);
+    virtual CriSint64   GetFileSize(void)    { return FileSize; }
+
+    void                OpenFile(const char* fname);
+    void                CloseFile();
+    void                ReadFile(UByte* buffer, SInt64 size);
+
+    Ptr<VideoReaderConfig>   pReaderConfig;         // +0x18
+    RefCountImpl*            pFile;                 // +0x20 Ptr<File>
+    int                      ReadSize;              // +0x28
+    AsyncStatus              OpenStatus;            // +0x2c
+    AsyncStatus              CloseStatus;           // +0x30
+    AsyncStatus              ReadStatus;            // +0x34
+    SInt64                   Position;              // +0x38 where the next read starts
+    SInt64                   FilePos;               // +0x40 where the file is
+    SInt64                   FileSize;              // +0x48
 };
 
 class VideoPlayerImpl : public VideoPlayer
