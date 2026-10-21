@@ -72,6 +72,10 @@ public:
     virtual void halSlot47() = 0;                                                                 // 47
     virtual void halSlot48() = 0;                                                                 // 48
     virtual void DrawableCopyback(Texture* tex, const Matrix2F& mvp, const Matrix2F& texgen) = 0;   // 49
+    // (appended for the shape cache nodes, sfr_render_03f)
+    virtual void halSlot50() = 0;                                                                 // 50
+    virtual void halSlot51() = 0;                                                                 // 51
+    virtual TextureManager* GetTextureManager() = 0;                                              // 52
 };
 
 }} // namespace Scaleform::Render

@@ -20,6 +20,8 @@ class TreeRoot;
 class Viewport;
 class MeshCacheConfig;
 struct ToleranceParams;
+class PrimitiveFillManager;
+class MeshKeyManager;
 struct GlyphCacheParams;
 class Renderer2DImpl;
 
@@ -103,7 +105,11 @@ class Renderer2DImpl : public NewOverrideBase<StatRender_Mem>, public Context::R
 {
     Ptr<HAL>        pHal;                                       // +0x50
     // MeshGen, StrokeGen, Tolerances, FillManager, MPool, pMeshKeyManager: recovered with sfr_render_04
-    UByte           Unk_Members[0xdd0 - 0x58];
+    UByte           Unk_Members[0xcd8 - 0x58];
+    // (split for the shape cache nodes, sfr_render_03f: only their offsets are known so far)
+    UByte           Unk_Tolerances[0xd18 - 0xcd8];              // ToleranceParams +0xcd8
+    UByte           Unk_FillManager[0xdc8 - 0xd18];             // PrimitiveFillManager +0xd18
+    MeshKeyManager* pMeshKeyManager;                            // +0xdc8
     Ptr<GlyphCache> pGlyphCache;                                // +0xdd0
     // mGlyphCacheParam, the complex mesh update list, VP, RenderRoots
     UByte           Unk_Members2[0xe60 - 0xdd8];
@@ -113,6 +119,10 @@ public:
     ~Renderer2DImpl();
 
     HAL*        GetHAL() const        { return pHal; }
+    // (appended for sfr_render_03f)
+    const ToleranceParams& GetToleranceParams() const { return *(const ToleranceParams*)Unk_Tolerances; }
+    PrimitiveFillManager&  GetPrimitiveFillManager()  { return *(PrimitiveFillManager*)Unk_FillManager; }
+    MeshKeyManager*        GetMeshKeyManager() const  { return pMeshKeyManager; }
     GlyphCache* GetGlyphCache() const { return pGlyphCache; }
 
     MeshCacheConfig* GetMeshCacheConfig() const;

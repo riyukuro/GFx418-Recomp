@@ -87,6 +87,10 @@ public:
         EncloseTransform(&d, r);
         return d;
     }
+
+    // (appended for the shape cache nodes, sfr_render_03f)
+    enum NoInitType { NoInit };
+    Matrix3x4(NoInitType) {}
 };
 typedef Matrix3x4<float> Matrix3F;
 
@@ -162,6 +166,16 @@ public:
 
     // (appended for the tree nodes, sfr_render_03c)
     Matrix4x4(const T m[4][4]) { Set(&m[0][0], 16); }
+
+    // (appended for the shape cache nodes, sfr_render_03f)
+    enum NoInitType { NoInit };
+    Matrix4x4(NoInitType) {}
+    Matrix4x4(const Matrix4x4& m1, const Matrix3x4<T>& m2) { MultiplyMatrix(m1, m2); }
+
+    // this = m1 * m2 (0x142678d20)
+    void MultiplyMatrix(const Matrix4x4& m1, const Matrix3x4<T>& m2);
+    // the corners of r projected and scaled to a w x h viewport: x1y1, x2y1, x2y2, x1y2 (0x142679010)
+    void TransformHomogeneousAndScaleCorners(const Rect<T>& r, T w, T h, T* dest) const;
 };
 typedef Matrix4x4<float> Matrix4F;
 

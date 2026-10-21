@@ -6,6 +6,7 @@
 #ifndef MS2_SF_RENDER_MATRIX2X4_H
 #define MS2_SF_RENDER_MATRIX2X4_H
 
+#include <math.h>
 #include "ms2/scaleform/include/render/render_types2d.h"
 
 namespace Scaleform { namespace Render {
@@ -163,6 +164,18 @@ public:
         return *this;
     }
     static Matrix2x4 Translation(T x, T y)  { return Matrix2x4(1, 0, x, 0, 1, y); }
+
+    // (appended for the shape cache nodes, sfr_render_03f)
+    T GetDeterminant() const { return Sx() * Sy() - Shx() * Shy(); }
+    // length of the image of the unit diagonal
+    T GetScale() const
+    {
+        const T d = (T)0.707106781f;
+        T x = Sx() * d + Shx() * d;
+        T y = Shy() * d + Sy() * d;
+        return sqrtf(x * x + y * y);
+    }
+    static Matrix2x4 Scaling(T s) { return Matrix2x4(s, 0, 0, 0, s, 0); }
 };
 
 typedef Matrix2x4<float> Matrix2F;

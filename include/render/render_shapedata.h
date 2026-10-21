@@ -140,6 +140,25 @@ private:
     float                    LastX, LastY;
 };
 
+// (appended for the shape cache nodes, sfr_render_03f) StrokeStyleType::Flags
+enum StrokeStyleFlags
+{
+    StrokeFlag_StrokeHinting = 0x01,
+    StrokeScaling_Normal     = 0x00,
+    StrokeScaling_Horizontal = 0x02,
+    StrokeScaling_Vertical   = 0x04,
+    StrokeScaling_None       = 0x06,
+    StrokeScaling_Mask       = 0x06
+};
+
+// (appended for the shape cache nodes, sfr_render_03f) the counted style parts; only their release is used here
+class ComplexFill : public RefCountBase<ComplexFill, Stat_Default_Mem>
+{
+};
+struct DashArray : public RefCountBase<DashArray, Stat_Default_Mem>
+{
+};
+
 }} // namespace Scaleform::Render
 
 #endif

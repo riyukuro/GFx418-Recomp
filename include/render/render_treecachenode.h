@@ -3,6 +3,9 @@
 // (13 slots, 0x14318ebc8; the TU constructing it emits the deleting destructor).
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
+// The shape cache nodes (sfr_render_03f) add TransformArgs, the cache node helpers they call, TreeCacheMeshBase and
+// the TreeCacheRoot update lists.
+//
 // Render_TreeCacheNode itself is not recovered yet: the out-of-line members are symbols-manual rows
 // (TreeCacheNode ctor 0x142680100, UpdateInsertIntoParent 0x142682de0, ~TreeCacheContainer 0x142680150 and the
 // container's virtuals).
@@ -16,6 +19,9 @@
 #include "ms2/scaleform/include/render/render_constants.h"
 #include "ms2/scaleform/include/render/render_stats.h"
 #include "ms2/scaleform/include/render/render_treenode.h"
+#include "ms2/scaleform/include/render/render_containers.h"
+#include "ms2/scaleform/include/render/render_bundle.h"
+#include "ms2/scaleform/include/render/render_matrixpool.h"
 
 namespace Scaleform { namespace Render {
 
@@ -23,12 +29,78 @@ class TreeCacheRoot;
 class Renderer2DImpl;
 class BundleEntry;
 struct TransformArgs;
+class HAL;
+class MeshBase;
+class PrimitiveFillManager;
 
 enum TransformFlags
 {
     TF_None   = 0,
     TF_Matrix = Change_Matrix,
-    TF_Cxform = Change_CxForm
+    TF_Cxform = Change_CxForm,
+    // (appended for sfr_render_03f)
+    TF_NeedCull     = 0x10,
+    TF_CullCxform   = 0x20,   // only leaf shapes cull on the color transform
+    TF_Has2D        = 0x40,
+    TF_Has3D        = 0x80,
+    TF_ParentFilter = 0x100
+};
+
+// update bits of TreeCacheNode::UpdateFlags beyond the change bits
+enum
+{
+    Update_Pattern = 0x01000000,
+    Update_InList  = 0x80000000
+};
+
+// What UpdateTransform hands down the cache tree: the cull rectangle, the accumulated 2D / 3D matrices and color
+// transform, and the view-projection of the nearest 3D states (computed on first use). 0xe0 bytes.
+struct TransformArgs
+{
+    RectF CullRect;
+
+private:
+    Matrix3F                       Mat3D;        // +0x10
+    const ViewMatrix3DState*       viewState;    // +0x40
+    const ProjectionMatrix3DState* projState;    // +0x48
+    mutable Matrix4F               ViewProj;     // +0x50
+    mutable bool                   bRecomputeViewProj;
+
+public:
+    Matrix2F Mat;    // +0xa0
+    Cxform   Cx;     // +0xc0
+
+    TransformArgs(const TransformArgs& src, const Matrix2F& mat)
+        : CullRect(src.CullRect), Mat3D(Matrix3F::NoInit), ViewProj(Matrix4F::NoInit), Mat(mat), Cx(src.Cx)
+    {
+        copyViewProj(src);
+    }
+
+    void            SetMatrix3D(const Matrix3F& m) { Mat3D = m; }
+    const Matrix3F& GetMat3DDirect() const         { return Mat3D; }
+
+    const Matrix4F& GetViewProj() const
+    {
+        if (bRecomputeViewProj)
+        {
+            if (viewState && projState)
+                ViewProj = Matrix4F(Matrix4F(projState->GetProjectionMatrix3D()->M),
+                                    Matrix3F(viewState->GetViewMatrix3D()->M));
+            else
+                ViewProj.SetIdentity();
+            bRecomputeViewProj = false;
+        }
+        return ViewProj;
+    }
+
+private:
+    void copyViewProj(const TransformArgs& src)
+    {
+        viewState          = src.viewState;
+        projState          = src.projState;
+        bRecomputeViewProj = src.bRecomputeViewProj;
+        ViewProj           = src.ViewProj;
+    }
 };
 
 enum BundleEntryRangeType
@@ -110,6 +182,19 @@ public:
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
     virtual bool IsPatternChainValid() const;
     virtual void forceUpdateImages();
+
+    // (appended for sfr_render_03f)
+    TreeCacheNode*            GetParent() const { return pParent; }
+    void                      SetFlags(unsigned flags) { Flags = (UInt16)flags; }
+    const TreeNode::NodeData* GetNodeData() const { return pNode->GetDisplayData(); }
+
+    HAL*                  GetHAL() const;
+    PrimitiveFillManager& GetPrimitiveFillManager() const;
+    Matrix4F              GetViewProj() const;
+
+    void updateMaskCache(const TreeNode::NodeData* data, UInt16 depth, bool updateSubtree);
+    // culls against cullRect (narrowed by a mask) and sets NF_Culled; 0x142685210
+    void updateCulling(const TreeNode::NodeData* data, const TransformArgs& t, RectF* cullRect, TransformFlags flags);
 };
 
 // 0xa0 bytes
@@ -138,6 +223,81 @@ public:
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
     virtual bool IsPatternChainValid() const;
     virtual void forceUpdateImages();
+};
+
+// (appended for sfr_render_03f)
+
+// The root of a cache tree: the nodes waiting for an update, as one list or bucketed by depth.
+// pHAL is the container's +0x98 slot.
+class TreeCacheRoot : public TreeCacheContainer
+{
+public:
+    RectF                               ViewCullRect;          // +0xa0
+    bool                                ViewValid;             // +0xb0
+    TreeCacheNode*                      pUpdateList;           // +0xb8
+    bool                                DepthUpdatesChained;   // +0xc0
+    DepthUpdateArrayPOD<TreeCacheNode*> DepthUpdates;          // +0xc8
+
+    const TreeRoot::NodeData* GetNodeData() const { return ((TreeRoot*)pNode)->GetDisplayData(); }
+
+    void AddToUpdate(TreeCacheNode* node, unsigned flags)
+    {
+        if (!(node->UpdateFlags & Update_InList))
+        {
+            node->pNextUpdate = pUpdateList;
+            pUpdateList       = node;
+            flags |= Update_InList;
+        }
+        node->UpdateFlags |= flags;
+    }
+
+    // straight into the depth buckets once the updates were chained by depth
+    void AddToDepthUpdate(TreeCacheNode* node, unsigned flags)
+    {
+        if (!(node->UpdateFlags & Update_InList))
+        {
+            if (DepthUpdatesChained)
+                DepthUpdates.Link(node->Depth, &node->pNextUpdate, node);
+            else
+            {
+                node->pNextUpdate = pUpdateList;
+                pUpdateList       = node;
+            }
+            flags |= Update_InList;
+        }
+        node->UpdateFlags |= flags;
+    }
+};
+
+// A leaf drawn through a bundle: its bundle entry and pooled matrix. 0xb8 bytes; ctor 0x142680040, dtor
+// 0x1426801d0, ComputeFinalMatrix 0x142681200, UpdateBundlePattern 0x1426829e0, GetPatternChain 0x142681710.
+class TreeCacheMeshBase : public TreeCacheNode
+{
+protected:
+    virtual void ComputeFinalMatrix(const TransformArgs& t, TransformFlags flags);   // 13
+
+public:
+    BundleEntry SorterShapeNode;   // +0x70
+    HMatrix     M;                 // +0xb0
+
+    TreeCacheMeshBase(TreeNode* node, const SortKey& key, Renderer2DImpl* renderer2D, unsigned flags);
+    ~TreeCacheMeshBase();
+
+    virtual MeshBase* GetMesh()    = 0;   // 14
+    virtual void      RemoveMesh() = 0;   // 15
+
+    // @0x1426340a0
+    virtual void HandleRemoveNode()
+    {
+        TreeCacheNode::HandleRemoveNode();
+        SorterShapeNode.Removed = true;
+    }
+    // a leaf's chain is its own entry
+    // @0x1426340c0
+    virtual bool IsPatternChainValid() const { return true; }
+
+    virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
+    virtual void UpdateBundlePattern(unsigned flags);
 };
 
 }} // namespace Scaleform::Render
