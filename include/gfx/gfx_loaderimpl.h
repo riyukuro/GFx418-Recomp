@@ -198,7 +198,9 @@ public:
         File_LoadImage,
         File_LoadXML,
         File_LoadCSS,
-        File_Sound
+        File_Sound,
+        // (appended for sfr_gfx_07f) loadVariables / loadBinary files use 4, the value named File_LoadImage above
+        File_LoadVars = 4
     };
 
     // A file to open and what it is for (0x18 bytes).

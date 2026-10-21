@@ -3,7 +3,8 @@
 // player tasks and the font manager.
 // MS2-UNIT: sfr_gfx_07e
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142636190-0x14263dfa0 .text$mn
+// MS2-RANGE: 0x142636190-0x1426395f0 .text$mn
+// MS2-RANGE: 0x14263a9d0-0x14263dfa0 .text$mn
 
 // MS2-PIN: ??_7FontResourceCreator@GFx@Scaleform@@6B@ 0x14318f528
 // MS2-PIN: ??_7DataInterface@ResourceData@GFx@Scaleform@@6B@ 0x14318f548

@@ -7,8 +7,12 @@
 #include "../kernel/sf_refcount.h"
 #include "../render/render_types2d.h"
 #include "../render/render_twips.h"
+#include "../kernel/sf_string.h"
+#include "../kernel/sf_array.h"
 
-namespace Scaleform { namespace GFx {
+namespace Scaleform {
+class File;
+namespace GFx {
 
 class ASMovieRootBase;
 class DisplayObjectBase;
@@ -42,7 +46,7 @@ public:
     ASMovieRootBase* pASMovieRoot;             // +0x18 Ptr<ASMovieRootBase>: the AVM specific root
     void*            Unrecovered_20[4];        // +0x20
     MemoryHeap*      pHeap;                    // +0x40 the movie's heap
-    void*            Unrecovered_48;           // +0x48
+    MovieDefImpl*    pMainMovieDef;            // +0x48 Ptr<MovieDefImpl>: the _level0 movie (sfr_gfx_07f)
     InteractiveObject* pMainMovie;             // +0x50 _level0
     struct LevelInfo { int Level; InteractiveObject* pSprite; };   // (sfr_gfx_06)
     LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
@@ -201,6 +205,13 @@ public:
     bool IsMouseSupportEnabled() const { return *(const unsigned*)((const UByte*)this + 0x13a0) > 0; }
     // The 3D hit test mapping (Render::ScreenToWorld, 0x100 bytes) starts at ScreenToWorldSx.
     Render::ScreenToWorld& GetScreenToWorld() { return *reinterpret_cast<Render::ScreenToWorld*>(&ScreenToWorldSx); }
+
+    // (appended for the player tasks, sfr_gfx_07f)
+    // The directory of the main movie's URL (0x14256f730).
+    bool GetMainMoviePath(String* ppath) const;
+    // The whole of pfile as loadVariables text / loadBinary bytes (0x142573bc0 / 0x142573b10).
+    static bool SF_STDCALL ReadTextData(String* pdata, File* pfile, int* pfileLen, bool urlEncoded);
+    static bool SF_STDCALL ReadBinaryData(ArrayPOD<UByte>* pdata, File* pfile, int* pfileLen);
 };
 
 // The root of one loaded movie's sprite tree; leading members only (the font manager, bytes loaded and so on).
