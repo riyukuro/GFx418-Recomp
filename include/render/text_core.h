@@ -1,0 +1,400 @@
+// Recovered Scaleform 4.1.18 Render Text core: the character/paragraph format records shared by every text
+// object (TextFormat 0x48, ParagraphFormat 0x20), their pointer wrapper for the format caches, image descriptors
+// of <IMG> runs, and the per-document Allocator (format caches + paragraph ids; NewParagraphId +0x28, pHeap +0x30).
+// Layouts are those of the exe (StyledText ctor/Allocator::AllocateParagraph). The out-of-line members (Merge,
+// Intersection, the tab-stop helpers, the format caches) belong to Text_Core (unit sfr_render_03).
+// Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
+#ifndef MS2_SF_RENDER_TEXT_CORE_H
+#define MS2_SF_RENDER_TEXT_CORE_H
+
+#include "ms2/scaleform/kernel/sf_types.h"
+#include "ms2/scaleform/kernel/sf_refcount.h"
+#include "ms2/scaleform/kernel/sf_memory.h"
+#include "ms2/scaleform/kernel/sf_array.h"
+#include "ms2/scaleform/kernel/sf_hash.h"
+#include "ms2/scaleform/kernel/sf_string.h"
+#include "ms2/scaleform/kernel/sf_utf8util.h"
+#include "ms2/scaleform/include/kernel/sf_range.h"
+#include "ms2/scaleform/include/render/render_types2d.h"
+#include "ms2/scaleform/include/render/render_matrix2x4.h"
+#include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/include/render/render_image.h"
+#include "ms2/scaleform/include/render/render_stats.h"
+
+namespace Scaleform { namespace Render { namespace Text {
+
+// text geometry is kept in twips (1/20 pixel)
+template<typename T> T FixpToPixels(T x) { return T((x) / T(20.)); }
+template<typename T> T PixelsToFixp(T x) { return T((x) * T(20.)); }
+template<> inline float  FixpToPixels(float x)  { return x * 0.05f; }
+template<> inline double FixpToPixels(double x) { return x * 0.05; }
+
+class Paragraph;
+
+// Outline of a resolved font reference (Text_FontManager, recovered with the font manager).
+class FontHandle : public RefCountBase<FontHandle, StatRender_Text_Mem>
+{
+public:
+    bool operator==(const FontHandle& f) const;
+};
+
+// An image placed in text: the image and its placement (baseline in image pixels, screen size in twips).
+struct ImageDesc : public RefCountBaseNTS<ImageDesc, StatRender_Text_Mem>
+{
+    typedef Matrix2F MatrixType;
+
+    Ptr<Image> pImage;
+    float      BaseLineX, BaseLineY;
+    float      ScreenWidth, ScreenHeight;
+    MatrixType Matrix;
+
+    ImageDesc() : BaseLineX(0), BaseLineY(0), ScreenWidth(0), ScreenHeight(0) {}
+
+    float GetScreenWidth() const  { return ScreenWidth; }
+    float GetScreenHeight() const { return ScreenHeight; }
+    float GetBaseLineX() const    { return BaseLineX; }
+    float GetBaseLineY() const    { return BaseLineY; }
+};
+
+// The attributes of an HTML <IMG> tag on top of the image descriptor.
+struct HTMLImageTagDesc : public ImageDesc
+{
+    StringLH Url;
+    StringLH Id;
+    int      VSpace, HSpace;    // twips
+    unsigned ParaId;
+    enum
+    {
+        Align_BaseLine,
+        Align_Right,
+        Align_Left
+    };
+    UByte Alignment;
+
+    HTMLImageTagDesc() : VSpace(0), HSpace(0), ParaId(~0u), Alignment(Align_BaseLine) {}
+
+    UPInt GetHash() const;
+    bool operator==(const HTMLImageTagDesc& f) const
+    {
+        return Url == f.Url && Id == f.Id && VSpace == f.VSpace && HSpace == f.HSpace && ParaId == f.ParaId &&
+               Alignment == f.Alignment;
+    }
+};
+
+// Character format. Every property has a "present" bit, so a format can be partial and merged over another.
+class TextFormat : public NewOverrideBase<StatRender_Text_Mem>
+{
+public:
+    struct HashFunctor
+    {
+        UPInt operator()(const TextFormat& data) const;
+    };
+    friend struct HashFunctor;
+
+private:
+    mutable unsigned RefCount;                  // +0x00
+
+protected:
+    StringDH               FontList;            // +0x08 comma separated font names
+    StringDH               Url;                 // +0x18
+    Ptr<HTMLImageTagDesc>  pImageDesc;          // +0x28
+    Ptr<FontHandle>        pFontHandle;         // +0x30 when the font is referenced by id
+    UInt32                 ColorV;              // +0x38 AARRGGBB
+    SInt16                 LetterSpacing;       // +0x3c twips
+    UInt16                 FontSize;            // +0x3e twips
+
+    enum
+    {
+        Format_Bold      = 0x1,
+        Format_Italic    = 0x2,
+        Format_Underline = 0x4,
+        Format_Kerning   = 0x8
+    };
+    UInt8 FormatFlags;                          // +0x40
+
+    enum
+    {
+        PresentMask_Color          = 1,
+        PresentMask_LetterSpacing  = 2,
+        PresentMask_FontList       = 4,
+        PresentMask_FontSize       = 8,
+        PresentMask_Bold           = 0x10,
+        PresentMask_Italic         = 0x20,
+        PresentMask_Underline      = 0x40,
+        PresentMask_Kerning        = 0x80,
+        PresentMask_Url            = 0x100,
+        PresentMask_ImageDesc      = 0x200,
+        PresentMask_Alpha          = 0x400,
+        PresentMask_FontHandle     = 0x800,
+        PresentMask_SingleFontName = 0x1000
+    };
+    UInt16 PresentMask;                         // +0x42
+
+public:
+    TextFormat(MemoryHeap* pheap)
+        : RefCount(1), FontList(pheap), Url(pheap), ColorV(0xFF000000u), LetterSpacing(0), FontSize(0),
+          FormatFlags(0), PresentMask(0)
+    {
+    }
+    TextFormat(const TextFormat& src, MemoryHeap* pheap = NULL)
+        : RefCount(1), FontList((pheap) ? pheap : src.GetHeap(), src.FontList),
+          Url((pheap) ? pheap : src.GetHeap(), src.Url), pImageDesc(src.pImageDesc),
+          pFontHandle(src.pFontHandle), ColorV(src.ColorV), LetterSpacing(src.LetterSpacing),
+          FontSize(src.FontSize), FormatFlags(src.FormatFlags), PresentMask(src.PresentMask)
+    {
+    }
+    ~TextFormat() {}
+
+    void     AddRef() const      { ++RefCount; }
+    void     Release() const     { if (--RefCount == 0) delete this; }
+    unsigned GetRefCount() const { return RefCount; }
+
+    MemoryHeap* GetHeap() const { return FontList.GetHeap(); }
+
+    bool IsBold() const      { return (FormatFlags & Format_Bold) != 0; }
+    bool IsItalic() const    { return (FormatFlags & Format_Italic) != 0; }
+    bool IsUnderline() const { return (FormatFlags & Format_Underline) != 0; }
+    bool IsKerning() const   { return (FormatFlags & Format_Kerning) != 0; }
+
+    UInt32 GetColor32() const { return ColorV; }
+    UInt8  GetAlpha() const   { return UInt8((ColorV >> 24) & 0xFF); }
+
+    float    GetLetterSpacing() const   { return FixpToPixels((float)LetterSpacing); }
+    unsigned GetFontSizeInFixp() const  { return FontSize; }
+    float    GetFontSize() const        { return FixpToPixels((float)FontSize); }
+
+    const String& GetFontList() const;
+    FontHandle*   GetFontHandle() const { return (IsFontHandleSet()) ? pFontHandle : NULL; }
+
+    void SetImageDesc(HTMLImageTagDesc* pimage) { pImageDesc = pimage; PresentMask |= PresentMask_ImageDesc; }
+    // the conditional goes through a temporary Ptr (the exe's out-of-line copy AddRefs and Releases)
+    HTMLImageTagDesc* GetImageDesc() const { return (IsImageDescSet()) ? pImageDesc : NULL; }
+    void ClearImageDesc() { pImageDesc = NULL; PresentMask &= ~PresentMask_ImageDesc; }
+
+    const String& GetUrl() const { return Url; }
+
+    bool IsBoldSet() const           { return (PresentMask & PresentMask_Bold) != 0; }
+    bool IsItalicSet() const         { return (PresentMask & PresentMask_Italic) != 0; }
+    bool IsUnderlineSet() const      { return (PresentMask & PresentMask_Underline) != 0; }
+    bool IsKerningSet() const        { return (PresentMask & PresentMask_Kerning) != 0; }
+    bool IsFontSizeSet() const       { return (PresentMask & PresentMask_FontSize) != 0; }
+    bool IsFontListSet() const       { return (PresentMask & PresentMask_FontList) != 0; }
+    bool IsSingleFontNameSet() const { return (PresentMask & PresentMask_SingleFontName) != 0; }
+    bool IsFontHandleSet() const     { return (PresentMask & PresentMask_FontHandle) != 0; }
+    bool IsImageDescSet() const      { return (PresentMask & PresentMask_ImageDesc) != 0; }
+    bool IsColorSet() const          { return (PresentMask & PresentMask_Color) != 0; }
+    bool IsAlphaSet() const          { return (PresentMask & PresentMask_Alpha) != 0; }
+    bool IsLetterSpacingSet() const  { return (PresentMask & PresentMask_LetterSpacing) != 0; }
+    bool IsUrlSet() const            { return (PresentMask & PresentMask_Url) != 0 && Url.GetLength() != 0; }
+    bool IsUrlCleared() const        { return (PresentMask & PresentMask_Url) != 0 && Url.GetLength() == 0; }
+
+    TextFormat Merge(const TextFormat& fmt) const;
+    TextFormat Intersection(const TextFormat& fmt) const;
+
+    bool IsFontSame(const TextFormat& fmt) const;
+    bool IsHTMLFontTagSame(const TextFormat& fmt) const;
+    void InitByDefaultValues();
+};
+
+// A format pointer as stored in the format caches (hashed and compared by value).
+template<class T>
+class TextFormatPtrWrapper
+{
+public:
+    Ptr<T> pFormat;
+
+    TextFormatPtrWrapper() {}
+    TextFormatPtrWrapper(T* ptr) : pFormat(ptr) {}
+    TextFormatPtrWrapper(const TextFormatPtrWrapper& orig) : pFormat(orig.pFormat) {}
+
+    struct HashFunctor
+    {
+        UPInt operator()(const TextFormatPtrWrapper<T>& data) const
+        {
+            typename T::HashFunctor h;
+            return h.operator()(*data.pFormat);
+        }
+    };
+};
+typedef TextFormatPtrWrapper<TextFormat> TextFormatPtr;
+
+// Paragraph format; alignment, display and bullet live in the high bits of PresentMask.
+class ParagraphFormat : public NewOverrideBase<StatRender_Text_Mem>
+{
+public:
+    struct HashFunctor
+    {
+        UPInt operator()(const ParagraphFormat& data) const;
+    };
+    friend struct HashFunctor;
+
+    enum AlignType
+    {
+        Align_Left    = 0,
+        Align_Right   = 1,
+        Align_Justify = 2,
+        Align_Center  = 3
+    };
+    enum DisplayType
+    {
+        Display_Inline = 0,
+        Display_Block  = 1,
+        Display_None   = 2
+    };
+
+private:
+    mutable unsigned RefCount;                  // +0x00
+
+protected:
+    unsigned* pTabStops;                        // +0x08 [count, stops in twips...]
+    UInt16    BlockIndent;                      // +0x10
+    SInt16    Indent;
+    SInt16    Leading;
+    UInt16    LeftMargin;
+    UInt16    RightMargin;                      // +0x18
+
+    enum
+    {
+        PresentMask_Alignment   = 0x01,
+        PresentMask_BlockIndent = 0x02,
+        PresentMask_Indent      = 0x04,
+        PresentMask_Leading     = 0x08,
+        PresentMask_LeftMargin  = 0x10,
+        PresentMask_RightMargin = 0x20,
+        PresentMask_TabStops    = 0x40,
+        PresentMask_Bullet      = 0x80,
+        PresentMask_Display     = 0x100,
+
+        Mask_Align    = 0x600,
+        Shift_Align   = 9,
+        Mask_Display  = 0x1800,
+        Shift_Display = 11,
+        Mask_Bullet   = 0x8000
+    };
+    UInt16 PresentMask;                         // +0x1a
+
+public:
+    ParagraphFormat()
+        : RefCount(1), pTabStops(NULL), BlockIndent(0), Indent(0), Leading(0), LeftMargin(0), RightMargin(0),
+          PresentMask(0)
+    {
+    }
+    ParagraphFormat(const ParagraphFormat& src)
+        : RefCount(1), pTabStops(NULL), BlockIndent(src.BlockIndent), Indent(src.Indent), Leading(src.Leading),
+          LeftMargin(src.LeftMargin), RightMargin(src.RightMargin), PresentMask(src.PresentMask)
+    {
+        CopyTabStops(src.pTabStops);
+    }
+    ~ParagraphFormat() { FreeTabStops(); }
+
+    void     AddRef() const      { ++RefCount; }
+    void     Release() const     { if (--RefCount == 0) delete this; }
+    unsigned GetRefCount() const { return RefCount; }
+
+    bool      IsAlignmentSet() const { return (PresentMask & PresentMask_Alignment) != 0; }
+    AlignType GetAlignment() const   { return (AlignType)((PresentMask & Mask_Align) >> Shift_Align); }
+
+    bool IsBulletSet() const { return (PresentMask & PresentMask_Bullet) != 0; }
+    bool IsBullet() const    { return IsBulletSet() && (PresentMask & Mask_Bullet) != 0; }
+
+    unsigned GetBlockIndent() const   { return BlockIndent; }
+    bool     IsBlockIndentSet() const { return (PresentMask & PresentMask_BlockIndent) != 0; }
+    int      GetIndent() const        { return Indent; }
+    bool     IsIndentSet() const      { return (PresentMask & PresentMask_Indent) != 0; }
+    int      GetLeading() const       { return Leading; }
+    bool     IsLeadingSet() const     { return (PresentMask & PresentMask_Leading) != 0; }
+    unsigned GetLeftMargin() const    { return LeftMargin; }
+    bool     IsLeftMarginSet() const  { return (PresentMask & PresentMask_LeftMargin) != 0; }
+    unsigned GetRightMargin() const   { return RightMargin; }
+    bool     IsRightMarginSet() const { return (PresentMask & PresentMask_RightMargin) != 0; }
+
+    const unsigned* GetTabStops(unsigned* pnum) const;
+    const unsigned* GetTabStops() const { return pTabStops; }
+    bool            IsTabStopsSet() const { return (PresentMask & PresentMask_TabStops) != 0; }
+
+    bool        IsDisplaySet() const { return (PresentMask & PresentMask_Display) != 0; }
+    DisplayType GetDisplay() const   { return (DisplayType)((PresentMask & Mask_Display) >> Shift_Display); }
+
+    ParagraphFormat  Merge(const ParagraphFormat& fmt) const;
+    ParagraphFormat  Intersection(const ParagraphFormat& fmt) const;
+    ParagraphFormat& operator=(const ParagraphFormat& src);
+
+    void InitByDefaultValues();
+
+protected:
+    void AllocTabStops(unsigned num);
+    void FreeTabStops();
+    bool TabStopsEqual(const unsigned* psrcTabStops) const;
+    void CopyTabStops(const unsigned* psrcTabStops);
+};
+typedef TextFormatPtrWrapper<ParagraphFormat> ParagraphFormatPtr;
+
+// Per-document text allocator: interns formats in two caches, allocates paragraphs and their text, hands out
+// paragraph ids.
+class Allocator : public RefCountBaseNTS<Allocator, StatRender_Text_Mem>
+{
+public:
+    enum FlagsEnum
+    {
+        Flags_Global = 0x1      // shared allocator: font handles are not kept
+    };
+
+protected:
+    enum
+    {
+        InitialFormatCacheCap    = 100,
+        FormatCacheCapacityDelta = 10
+    };
+
+    typedef HashSetLH<TextFormatPtr, TextFormatPtr::HashFunctor, TextFormatPtr::HashFunctor, StatRender_Text_Mem>
+        TextFormatStorageType;
+    typedef HashSetLH<ParagraphFormatPtr, ParagraphFormatPtr::HashFunctor, ParagraphFormatPtr::HashFunctor,
+                      StatRender_Text_Mem>
+        ParagraphFormatStorageType;
+
+    TextFormatStorageType      TextFormatStorage;           // +0x10
+    ParagraphFormatStorageType ParagraphFormatStorage;      // +0x18
+    unsigned                   TextFormatStorageCap;        // +0x20
+    unsigned                   ParagraphFormatStorageCap;   // +0x24
+    UInt32                     NewParagraphId;              // +0x28
+    MemoryHeap*                pHeap;                       // +0x30
+    TextFormat                 EntryTextFormat;             // +0x38
+    UInt8                      Flags;
+
+public:
+    Allocator(MemoryHeap* pheap, UInt8 flags = 0)
+        : TextFormatStorageCap(InitialFormatCacheCap), ParagraphFormatStorageCap(InitialFormatCacheCap),
+          NewParagraphId(1), pHeap(pheap), EntryTextFormat(pheap), Flags(flags)
+    {
+    }
+    ~Allocator() {}
+
+    MemoryHeap* GetHeap() const { return pHeap; }
+
+    wchar_t* AllocText(UPInt numChar)
+    {
+        return (wchar_t*)SF_HEAP_ALLOC(pHeap, numChar * sizeof(wchar_t), StatRender_Text_Mem);
+    }
+    wchar_t* ReallocText(wchar_t* pstr, UPInt oldLength, UPInt newLength)
+    {
+        SF_UNUSED(oldLength);
+        if (!pstr)
+            return AllocText(newLength);
+        return (wchar_t*)SF_REALLOC(pstr, newLength * sizeof(wchar_t), StatRender_Text_Mem);
+    }
+    void FreeText(wchar_t* pstr) { SF_HEAP_FREE(pHeap, pstr); }
+
+    TextFormat*      AllocateTextFormat(const TextFormat& srcfmt);
+    TextFormat*      AllocateDefaultTextFormat() { return AllocateTextFormat(EntryTextFormat); }
+    ParagraphFormat* AllocateParagraphFormat(const ParagraphFormat& srcfmt);
+
+    Paragraph* AllocateParagraph();
+    Paragraph* AllocateParagraph(const Paragraph& srcPara);
+
+    UInt32 AllocateParagraphId() { return NewParagraphId++; }
+    UInt32 GetNextParagraphId()  { return NewParagraphId; }
+};
+
+}}} // namespace Scaleform::Render::Text
+
+#endif

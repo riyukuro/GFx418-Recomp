@@ -16,6 +16,9 @@ template<class T> SF_INLINE const T PMin(const T a, const T b) { return (a < b) 
 template<class T> SF_INLINE const T PMax(const T a, const T b) { return (b < a) ? a : b; }
 inline bool IsMax(UPInt v) { return v == SF_MAX_UPINT; }
 template<class T> SF_INLINE const T Abs(const T v) { return (v >= 0) ? v : -v; }
+// round half away from zero
+template<class T> SF_INLINE int IRound(const T a) { return (a > 0.0) ? (int)(a + 0.5) : (int)(a - 0.5); }
+template<class T> SF_INLINE unsigned URound(const T a) { return (unsigned)(a + 0.5); }
 
 // binary search in arr[start, end): the first index whose element is not less than val
 template<class Array, class Value, class Less>
@@ -35,6 +38,13 @@ UPInt LowerBoundSliced(const Array& arr, UPInt start, UPInt end, const Value& va
             count = step;
     }
     return (UPInt)first;
+}
+
+// binary search over the whole array
+template<class Array, class Value, class Less>
+UPInt LowerBound(const Array& arr, const Value& val, Less less)
+{
+    return LowerBoundSliced(arr, 0, arr.GetSize(), val, less);
 }
 
 // index of the highest / lowest set bit of a byte (0 for 0)

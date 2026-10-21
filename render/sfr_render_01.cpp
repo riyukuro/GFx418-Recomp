@@ -1,7 +1,7 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Render, images (Render_Image).
 // Queue unit sfr_render_01 is split along its original sources: this file is Render_Image, sfr_render_01b holds
-// Render_Context / Renderer2D. The remaining ranges (Filters, ImageFile, StyledText) stay here until their own
-// files are written.
+// Render_Context / Renderer2D, sfr_render_01c Text_StyledText. The remaining ranges (Filters, ImageFile, and
+// FontResource::GetName at 0x14259d950) stay here until their own files are written.
 // MS2-UNIT: sfr_render_01
 // MS2-FLAGS: scaleform
 // The Render_Image TU starts at 0x1425792d0 (TextureImage / TextureManager ctors), inside the queue range of
@@ -11,7 +11,7 @@
 // MS2-RANGE: 0x1424789e0-0x142478f10 .text$mn
 // MS2-RANGE: 0x142479130-0x14247a8f0 .text$mn
 // MS2-RANGE: 0x142591050-0x142591e10 .text$mn
-// MS2-RANGE: 0x142593170-0x14259d960 .text$mn
+// MS2-RANGE: 0x14259d950-0x14259d960 .text$mn
 
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_drawableimage.h"
