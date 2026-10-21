@@ -36,6 +36,8 @@
 // MS2-RANGE: 0x14296f1b0-0x14296f260 .text$mn
 // MS2-RANGE: 0x14296f2b0-0x14296f390 .text$mn
 // MS2-RANGE: 0x14296f390-0x14296f3d0 .text$mn
+// MS2-RANGE: 0x14296f640-0x14296f770 .text$mn
+// MS2-RANGE: 0x14296f770-0x14296f870 .text$mn
 // MS2-RANGE: 0x142971a50-0x142971ac0 .text$mn
 // MS2-RANGE: 0x142971ba0-0x142971c50 .text$mn
 // MS2-RANGE: 0x142971c50-0x142971cc0 .text$mn
@@ -473,6 +475,59 @@ void Environment::PushTryBlock(const TryDescr& descr)
 Environment::TryDescr Environment::PopTryBlock()
 {
     return TryBlocks.Pop();
+}
+
+
+// MS2-FUNCTIONAL register choice: the exe keeps the builtin offset in edx and adds the table base to it.
+// @0x14296f770
+Value Environment::PrimitiveToTempObject(int index)
+{
+    ASBuiltinType ctorName;
+
+    const Value& top = Top(index);
+    switch (top.GetType())
+    {
+    case Value::BOOLEAN:
+        ctorName = ASBuiltin_Boolean;
+        break;
+    case Value::STRING:
+        ctorName = ASBuiltin_String;
+        break;
+    default:
+        if (top.IsNumber())
+            ctorName = ASBuiltin_Number;
+        else
+            return Value();
+    }
+
+    Ptr<Object> obj = *OperatorNew(GetBuiltin(ctorName), 1, GetTopIndex() - index);
+    return Value(obj);
+}
+
+// @0x14296f640
+Value Environment::PrimitiveToTempObject(const Value& v)
+{
+    ASBuiltinType ctorName;
+
+    switch (v.GetType())
+    {
+    case Value::BOOLEAN:
+        ctorName = ASBuiltin_Boolean;
+        break;
+    case Value::STRING:
+        ctorName = ASBuiltin_String;
+        break;
+    default:
+        if (v.IsNumber())
+            ctorName = ASBuiltin_Number;
+        else
+            return Value();
+    }
+
+    Push(v);
+    Ptr<Object> obj = *OperatorNew(GetBuiltin(ctorName), 1, GetTopIndex());
+    Drop1();
+    return Value(obj);
 }
 
 

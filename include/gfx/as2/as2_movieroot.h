@@ -20,6 +20,7 @@ enum ASBuiltinType : int
     ASBuiltin_empty_ = 0, // ""
     ASBuiltin_Object = 1,
     ASBuiltin_Array  = 2,
+    ASBuiltin_String = 3,
     ASBuiltin_Number  = 4,
     ASBuiltin_Boolean = 5,
     ASBuiltin_DropShadowFilter = 38,

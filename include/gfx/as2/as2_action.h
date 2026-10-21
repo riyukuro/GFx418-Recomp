@@ -85,7 +85,8 @@ public:
 
     void Push(const T& val)
     {
-        if (++pCurrent >= pPageEnd)
+        pCurrent++;
+        if (pCurrent >= pPageEnd)
             PushPage();
         Construct<T>(pCurrent, val);
     }
@@ -101,6 +102,17 @@ public:
             Pop1();
     }
 
+    // Element at a distance from the top, 0 past the bottom.
+    T* Top(unsigned dist)
+    {
+        T* p = 0;
+        if (dist <= GetTopIndex())
+        {
+            unsigned offset = GetTopIndex() - dist;
+            p = &Pages[offset / PageSize]->Values[offset % PageSize];
+        }
+        return p;
+    }
     // Element at an index counted from the bottom, 0 past the top.
     T* Bottom(unsigned offset)
     {
@@ -132,9 +144,11 @@ public:
     bool                                      IsInvalidTarget : 1;
     ArrayLH<Ptr<LocalFrame>, Stat_Default_Mem> LocalFrames;          // +0x180
 
+    Value& Top(int dist) { return *Stack.Top((unsigned)dist); }
     Value* Bottom(int offset) { return Stack.Bottom((unsigned)offset); }
     int    GetTopIndex() const { return (int)Stack.GetTopIndex(); }
     void   Push(const Value& val) { Stack.Push(val); }
+    void   Drop1() { Stack.Pop1(); }
     // Pops n values.
     void   Drop(int n)
     {
@@ -188,6 +202,10 @@ public:
     TryDescr        PopTryBlock();
     // The name is a target path (has ':', '/' or '.'); the answer is cached in the string (exe 0x142965d10).
     static bool     IsPath(const ASString& varPath);
+    // A Boolean / String / Number object wrapping the primitive at a distance from the top (or the given one),
+    // undefined for other types (exe 0x14296f770 / 0x14296f640).
+    Value           PrimitiveToTempObject(int index);
+    Value           PrimitiveToTempObject(const Value& v);
 
     // new <className>(args) looked up in the package object (exe 0x14296e520); the other one in _global.
     Object*        OperatorNew(Object* ppackageObj, const ASString& className, int nargs = 0, int argsTopOff = -1);
