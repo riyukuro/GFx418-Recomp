@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428fdc00-0x1428fe7e0 .text$mn
 // MS2-RANGE: 0x1428fec90-0x1428fed10 .text$mn
+// MS2-RANGE: 0x1428ff0b0-0x1428ff4a0 .text$mn
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142901d20 .text$mn
 // MS2-RANGE: 0x142902200-0x1429023e0 .text$mn
@@ -13,7 +14,7 @@
 // MS2-RANGE: 0x142902a10-0x142902ae0 .text$mn
 // MS2-RANGE: 0x142903350-0x1429033c0 .text$mn
 // MS2-RANGE: 0x1429035a0-0x142903650 .text$mn
-// MS2-RANGE: 0x142903910-0x142903a20 .text$mn
+// MS2-RANGE: 0x142903910-0x142903b30 .text$mn
 // MS2-RANGE: 0x142906d80-0x142906de0 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
@@ -31,6 +32,7 @@
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_keyobject.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_objectproto.h"
@@ -39,6 +41,7 @@
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
+#include "../include/gfx/gfx_moviedef.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -263,6 +266,67 @@ void AmpMarkerCtorFunction::AddMarker(const FnCall& fn)
     GetAdvanceStats(fn.Env->GetTarget()->GetMovieImpl())->AddMarker(fn.Arg(0).ToString(fn.Env).ToCStr());
 }
 
+// Key.getAscii([controller]): the controller argument is a Scaleform extension.
+void KeyCtorFunction::KeyGetAscii(const FnCall& fn)
+{
+    KeyCtorFunction* ko = (KeyCtorFunction*)fn.ThisPtr;
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 1)
+        controllerIdx = fn.Arg(0).ToUInt32(fn.Env);
+    fn.Result->SetInt(ko->GetLastAsciiCode(controllerIdx));
+}
+
+void KeyCtorFunction::KeyGetCode(const FnCall& fn)
+{
+    KeyCtorFunction* ko = (KeyCtorFunction*)fn.ThisPtr;
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 1)
+        controllerIdx = fn.Arg(0).ToUInt32(fn.Env);
+    fn.Result->SetInt(ko->GetLastKeyCode(controllerIdx));
+}
+
+// MovieImpl::KeyboardStates[4] (+0x13b0, not recovered in gfx_movieimpl.h yet).
+static inline const KeyboardState* GetKeyboardState(MovieImpl* pmovie, unsigned controllerIdx)
+{
+    if (controllerIdx < 4)
+        return (const KeyboardState*)((UByte*)pmovie + 0x13b0 + (UPInt)controllerIdx * 0x688);
+    return 0;
+}
+
+// Key.isDown(code[, controller])
+void KeyCtorFunction::KeyIsDown(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+    {
+        fn.Env->LogScriptError("KeyIsDown needs one Argument (the key code)");
+        return;
+    }
+    int      code          = fn.Arg(0).ToInt32(fn.Env);
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 2)
+        controllerIdx = fn.Arg(1).ToUInt32(fn.Env);
+    KeyCtorFunction*     ko = (KeyCtorFunction*)fn.ThisPtr;
+    const KeyboardState* ks = GetKeyboardState(ko->pMovieRoot, controllerIdx);
+    fn.Result->SetBool(ks ? ks->IsKeyDown(code) : false);
+}
+
+// Key.isToggled(code[, controller]) for the lock keys.
+void KeyCtorFunction::KeyIsToggled(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+    {
+        fn.Env->LogScriptError("KeyIsToggled needs one Argument (the key code)");
+        return;
+    }
+    int      code          = fn.Arg(0).ToInt32(fn.Env);
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 2)
+        controllerIdx = fn.Arg(1).ToUInt32(fn.Env);
+    KeyCtorFunction*     ko = (KeyCtorFunction*)fn.ThisPtr;
+    const KeyboardState* ks = GetKeyboardState(ko->pMovieRoot, controllerIdx);
+    fn.Result->SetBool(ks ? ks->IsKeyToggled(code) : false);
+}
+
 // The depth as scripts see it: timeline depths start at -16384.
 void AvmCharacter::CharacterGetDepth(const FnCall& fn)
 {
@@ -309,6 +373,21 @@ void AvmSprite::SpritePrevFrame(const FnCall& fn)
     if (current > 0)
         psprite->GotoFrame(current - 1);
     psprite->SetPlayState(State_Stopped);
+}
+
+// Bytes of the loaded frames, so that preloaders comparing it with getBytesTotal see the frames as there.
+void AvmSprite::SpriteGetBytesLoaded(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+        fn.Result->SetInt(psprite->GetBytesLoaded());
+}
+
+void AvmSprite::SpriteGetBytesTotal(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+        fn.Result->SetInt(psprite->GetResourceMovieDef()->GetDataDef()->GetFileBytes());
 }
 
 // Unloading is a load of the empty url.

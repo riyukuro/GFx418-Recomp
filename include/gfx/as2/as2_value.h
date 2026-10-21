@@ -191,6 +191,7 @@ public:
 
     Number   ToNumber(Environment* penv) const;                         // exe 0x1429912d0
     SInt32   ToInt32(Environment* penv) const;                          // exe 0x142991210
+    UInt32   ToUInt32(Environment* penv) const;                         // exe 0x142992440
     bool     ToBool(const Environment* penv) const;                     // exe 0x142990f20
     Object*  ToObject(const Environment* penv) const;                   // exe 0x142991660
     AvmCharacter*    ToAvmCharacter(const Environment* penv) const;     // exe 0x142990d60

@@ -30,6 +30,8 @@ public:
     static void SpriteNextFrame(const FnCall& fn);
     static void SpritePrevFrame(const FnCall& fn);
     static void SpriteUnloadMovie(const FnCall& fn);
+    static void SpriteGetBytesLoaded(const FnCall& fn);
+    static void SpriteGetBytesTotal(const FnCall& fn);
 };
 
 inline Sprite* ObjectInterface::ToSprite()
