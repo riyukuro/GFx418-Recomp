@@ -262,6 +262,8 @@ public:
         : Result(res), ThisPtr(pthis), Env(penv), NArgs(nargs), FirstArgBottomIndex(firstArgBottomIndex)
     {
     }
+    // Out of line in the exe (0x140007af0).
+    ~FnCall();
 
     Log* GetLog() const; // exe 0x14294b230
 

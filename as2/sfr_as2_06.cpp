@@ -4,12 +4,14 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14295d700-0x14295d840 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
+// MS2-RANGE: 0x14295e1b0-0x14295e2b0 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
 // MS2-RANGE: 0x142961d40-0x142961d80 .text$mn
 // MS2-RANGE: 0x142961ef0-0x142961fe0 .text$mn
 // MS2-RANGE: 0x142961fe0-0x142962010 .text$mn
 // MS2-RANGE: 0x142962010-0x1429620d0 .text$mn
 // MS2-RANGE: 0x1429623a0-0x142962410 .text$mn
+// MS2-RANGE: 0x142962bb0-0x142962c90 .text$mn
 // MS2-RANGE: 0x142965510-0x142965560 .text$mn
 // MS2-RANGE: 0x142965c80-0x142965ce0 .text$mn
 // MS2-RANGE: 0x142965d10-0x142965da0 .text$mn
@@ -570,8 +572,9 @@ int MovieRoot::ParseLevelName(const char* pname, const char** ptail, bool caseSe
 }
 
 
+// noinline: CFunctionObject::Invoke calls it out of line.
 // @0x14297dfb0
-void SuperObject::ResetAltProto()
+__declspec(noinline) void SuperObject::ResetAltProto()
 {
     if (!SavedProto)
         return;
@@ -587,6 +590,33 @@ bool GlobalContext::RegisterClassA(ASStringContext* psc, const ASString& classNa
 {
     RegisteredClasses.SetCaseCheck(className, ctorFunction, psc->IsCaseSensitive());
     return true;
+}
+
+
+// @0x14295e1b0
+void GASPrototypeBase::Init(Object* pthis, ASStringContext* psc, const FunctionRef& constructor)
+{
+    SetConstructor(pthis, psc, constructor);
+    Constructor->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_prototype), Value(pthis),
+                              PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete);
+}
+
+
+// @0x142962bb0
+void CFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char*)
+{
+    if (!pFunction)
+        return;
+    ObjectInterface* pthis = fn.ThisPtr;
+    if (pthis && pthis->IsSuper())
+    {
+        ObjectInterface* prealThis = static_cast<SuperObject*>(pthis)->RealThis;
+        FnCall           fn2(fn.Result, prealThis, fn.Env, fn.NArgs, fn.FirstArgBottomIndex);
+        pFunction(fn2);
+        static_cast<SuperObject*>(pthis)->ResetAltProto();
+    }
+    else
+        pFunction(fn);
 }
 
 
@@ -778,3 +808,5 @@ template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS2::
 // MS2-PIN: ?Resize@?$ArrayData@PEAVValue@AS2@GFx@Scaleform@@U?$AllocatorLH@PEAVValue@AS2@GFx@Scaleform@@$0BED@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x14297e2b0
 // MS2-PIN: ?Resize@?$ArrayData@PEAVObject@AS2@GFx@Scaleform@@U?$AllocatorGH@PEAVObject@AS2@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x14297e230
 // MS2-PIN: ?LogError@?$LogBase@VEnvironment@AS2@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x142967b90
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018

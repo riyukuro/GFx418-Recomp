@@ -30,6 +30,12 @@ protected:
     // One of the interfaces is an instance of prototype (exe 0x1429396a0).
     bool DoesImplement(Environment* penv, const Object* prototype) const;
 
+    // Sets "constructor" of the prototype pthis (exe 0x14297ffc0).
+    bool SetConstructor(Object* pthis, ASStringContext* psc, const Value& ctor);
+    // Part of the prototype construction: the constructor, and its "prototype" member back to pthis
+    // (exe 0x14295e1b0).
+    void Init(Object* pthis, ASStringContext* psc, const FunctionRef& constructor);
+
 public:
     virtual ~GASPrototypeBase();
 

@@ -300,6 +300,9 @@ public:
     virtual ~CFunctionObject();
     // The same native function (exe 0x142965510).
     virtual bool IsEqual(const FunctionObject& f) const;
+    // Calls the native; through super it runs on the real this, then the super drops its alternate prototype
+    // (exe 0x142962bb0).
+    virtual void Invoke(const FnCall& fn, LocalFrame*, const char* pmethodName);
 
 protected:
     friend class FunctionProto;
@@ -341,6 +344,12 @@ SF_FORCEINLINE void FunctionRefBase::Init(const FunctionRefBase& orig, UByte fla
     pLocalFrame = 0;
     if (orig.pLocalFrame)
         SetLocalFrame(orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+inline Value::Value(const FunctionRef& func)
+{
+    T.Type = FUNCTION;
+    V.FunctionValue.Init(func);
 }
 
 SF_FORCEINLINE void FunctionRef::Invoke(const FnCall& fn, const char* pmethodName) const
