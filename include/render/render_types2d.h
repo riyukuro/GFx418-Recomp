@@ -127,6 +127,18 @@ public:
         dest->y2 = (y2 > r.y2) ? r.y2 : y2;
         return true;
     }
+
+    // (appended for the shape bounds, sfr_render_03d)
+    Rect& ExpandToPoint(T x, T y)
+    {
+        x1 = Alg::Min<T>(x1, x);
+        y1 = Alg::Min<T>(y1, y);
+        x2 = Alg::Max<T>(x2, x);
+        y2 = Alg::Max<T>(y2, y);
+        return *this;
+    }
+    // not inverted (an empty bound box starts out inverted)
+    bool IsNormal() const { return x1 <= x2 && y1 <= y2; }
 };
 
 typedef Point<float>  PointF;

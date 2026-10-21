@@ -16,6 +16,7 @@
 #include "ms2/scaleform/include/render/render_primitive.h"
 #include "ms2/scaleform/include/render/render_gradients.h"
 #include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/include/render/render_boundbox.h"
 #include "ms2/scaleform/kernel/sf_alg.h"
 
 namespace Scaleform { namespace Render {
@@ -599,6 +600,22 @@ void ShapeMeshProvider::createDrawLayers(const TmpPathsArray& paths, UPInt i1, U
     }
 }
 
+// Bounds of fills and strokes under m (strokes as round joined); a morph covers both of its ends.
+// @0x14262aac0
+// MS2-FUNCTIONAL: the exe inlines the two morph-end bound computations (fill loop included); ours calls them
+RectF ShapeMeshProvider::GetBounds(const Matrix2F& m) const
+{
+    if (pMorphData)
+    {
+        RectF b1 = ComputeBoundsFillAndStrokesSimplified(pMorphData->ShapeData1, m);
+        RectF b2 = ComputeBoundsFillAndStrokesSimplified(pMorphData->ShapeData2, m);
+        RectF bounds(RectF::NoInit);
+        b1.UnionRect(&bounds, b2);
+        return bounds;
+    }
+    return ComputeBoundsFillAndStrokesSimplified(*pShapeData, m);
+}
+
 // @0x14262bb90
 void ShapeMeshProvider::GetFillStyle(unsigned idx, FillStyleType* style, float morphRatio) const
 {
@@ -788,3 +805,6 @@ void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fil
 // MS2-PIN: ??_GShapeMeshProvider@Render@Scaleform@@UEAAPEAXI@Z 0x14262a520
 // MS2-PIN: ?ReadEdge@?$ShapeDataFloatTempl@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@UEBA?AW4PathEdgeType@23@PEAUShapePosInfo@23@PEAM@Z 0x14262c3f0
 // MS2-PIN: ?ReadPathInfo@?$ShapeDataFloatTempl@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@UEBA?AW4ShapePathType@23@PEAUShapePosInfo@23@PEAMPEAI@Z 0x14262c730
+// MS2-PIN: ??$ComputeBoundsFillAndStrokesSimplified@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@W4BoundEdges@01@@Z 0x1426267b0
+// MS2-PIN: ??$ExpandBoundsToStrokesSimplified@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YAXAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAV?$Rect@M@01@@Z 0x142628df0
+// MS2-PIN: ??$ComputeBoundsRoundStroke@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAUShapePosInfo@01@PEAMPEAI@Z 0x142626830

@@ -190,6 +190,18 @@ public:
         T y = m.M[1][0] * 1 + m.M[1][1] * 0 + m.M[1][3];
         return T(fabs(x)) > epsilon && T(fabs(y)) > epsilon;
     }
+
+    // (appended for the shape bounds, sfr_render_03d) maps the point in place
+    void Transform(T* x, T* y) const
+    {
+        T tx = *x;
+        T ty = *y;
+        *x   = M[0][0] * tx + M[0][1] * ty + M[0][3];
+        *y   = M[1][0] * tx + M[1][1] * ty + M[1][3];
+    }
+    // lengths of the images of the unit axes
+    T GetXScale() const { return sqrtf(Sx() * Sx() + Shy() * Shy()); }
+    T GetYScale() const { return sqrtf(Shx() * Shx() + Sy() * Sy()); }
 };
 
 typedef Matrix2x4<float> Matrix2F;
