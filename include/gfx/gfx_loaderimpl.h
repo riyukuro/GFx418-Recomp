@@ -198,6 +198,8 @@ public:
         String  ParentPath; // +0x10
 
         LocationInfo(FileUse use, const char* pfilename) : Use(use), FileName(pfilename) {}
+        LocationInfo(FileUse use, const String& filename, const String& path)
+            : Use(use), FileName(filename), ParentPath(path) {}
     };
 
     virtual void BuildURL(String* ppath, const LocationInfo& loc);

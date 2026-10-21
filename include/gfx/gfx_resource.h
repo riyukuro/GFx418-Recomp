@@ -211,7 +211,11 @@ public:
     bool   AddRef_NotZero();
     SInt32 GetRefCount() const;
 
-    Resource() : RefCount(1), pLib(0) {}
+    Resource()
+    {
+        RefCount.Value = 1;
+        pLib           = 0;
+    }
     virtual ~Resource() {}
 
     void PinResource()   { if (pLib) pLib->PinResource(this); }
@@ -466,6 +470,76 @@ inline ResourceLib::ResolveState ResourceLib::BindResourceKey(BindHandle* phandl
 inline void        ResourceLib::GetResourceArray(Array<Ptr<Resource> >* presources) { pWeakLib->GetResourceArray(presources); }
 inline void        ResourceLib::UnpinAll()           { pWeakLib->UnpinAll(); }
 inline MemoryHeap* ResourceLib::GetImageHeap() const { return pWeakLib->GetImageHeap(); }
+
+struct ResourceBindData;
+class LoadStates;
+
+// Load-time data of a resource that is created per binding (an interface plus an opaque handle it reference
+// counts). The exe's out-of-line ctor 0x1425a2b00 and operator= 0x1425a3110 are folded with ResourceKey's.
+class ResourceData
+{
+public:
+    typedef void* DataHandle;
+
+    class DataInterface
+    {
+    public:
+        typedef ResourceData::DataHandle DataHandle;
+
+        virtual ~DataInterface() {}
+        // The handle is a RefCountBase object unless overridden.
+        virtual void AddRef(DataHandle hdata) { ((RefCountImpl*)hdata)->AddRef(); }
+        virtual void Release(DataHandle hdata) { ((RefCountImpl*)hdata)->Release(); }
+        // Creates the resource into pbindData->pResource; false on failure.
+        virtual bool CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
+                                    MemoryHeap* pheap) const = 0;
+    };
+
+protected:
+    DataInterface* pInterface;
+    DataHandle     hData;
+
+public:
+    ResourceData() : pInterface(0), hData(0) {}
+    ResourceData(DataInterface* pdi, DataHandle hdata)
+    {
+        if (pdi)
+            pdi->AddRef(hdata);
+        pInterface = pdi;
+        hData      = hdata;
+    }
+    ResourceData(const ResourceData& src)
+    {
+        if (src.pInterface)
+            src.pInterface->AddRef(src.hData);
+        pInterface = src.pInterface;
+        hData      = src.hData;
+    }
+    ~ResourceData()
+    {
+        if (pInterface)
+            pInterface->Release(hData);
+    }
+    ResourceData& operator=(const ResourceData& src)
+    {
+        if (src.pInterface)
+            src.pInterface->AddRef(src.hData);
+        if (pInterface)
+            pInterface->Release(hData);
+        pInterface = src.pInterface;
+        hData      = src.hData;
+        return *this;
+    }
+
+    bool           IsValid() const          { return pInterface != 0; }
+    DataInterface* GetDataInterface() const { return pInterface; }
+    DataHandle     GetData() const          { return hData; }
+
+    bool CreateResource(ResourceBindData* pbindData, LoadStates* pls, MemoryHeap* pheap) const
+    {
+        return pInterface ? pInterface->CreateResource(hData, pbindData, pls, pheap) : false;
+    }
+};
 
 }} // namespace Scaleform::GFx
 

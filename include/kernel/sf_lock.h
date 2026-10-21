@@ -27,7 +27,7 @@ class AtomicInt
 public:
     volatile T Value;
 
-    AtomicInt() : Value(0) {}
+    AtomicInt() {}
     AtomicInt(T v) : Value(v) {}
 
     operator T() const { return Value; }
