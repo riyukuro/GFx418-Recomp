@@ -522,6 +522,14 @@ public:
     }
     Class* GetParentClass() const { return ParentClass; }
 
+    // native methods
+    // @0x142540ba0
+    void lengthGet(SInt32& result);
+    // @0x142540bb0
+    void prototypeGet(Value& result);
+    // @0x142542a60
+    void toString(ASString& result);
+
 protected:
     SPtr<Class>     ParentClass;    // +0x38
     UInt32          Unk40;          // +0x40 set to 1 by the constructor
@@ -620,6 +628,11 @@ namespace Instances
     {
     protected:
         explicit FunctionBase(InstanceTraits::Traits& t);
+
+    public:
+        // native methods
+        // @0x1424292a0
+        void lengthGet(UInt32& result);
 
     protected:
         SPtr<AS3::Object>   Prototype;      // +0x38

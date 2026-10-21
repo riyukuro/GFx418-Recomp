@@ -7,6 +7,7 @@
 #define MS2_SCALEFORM_GFX_AS3_OBJ_CORE_H
 
 #include "ms2/scaleform/include/gfx/as3/as3_obj.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -94,6 +95,42 @@ namespace Instances { namespace fl
 
     public:
         // native methods
+        // @0x1423f7f50
+        void AS3concat(Value& result, unsigned, const Value*);
+        // @0x1423f8f60
+        void AS3every(bool& result, const Value&, const Value&);
+        // @0x1423f9880
+        void AS3filter(SPtr<Instances::fl::Array>& result, const Value&, const Value&);
+        // @0x1423f9d60
+        void AS3forEach(const Value& result, const Value&, const Value&);
+        // @0x1423fb1a0
+        void AS3indexOf(SInt32& result, const Value&, SInt32);
+        // @0x1423fb450
+        void AS3join(Value& result, unsigned, const Value*);
+        // @0x1423fb4e0
+        void AS3lastIndexOf(SInt32& result, const Value&, SInt32);
+        // @0x1423fbb20
+        void AS3map(SPtr<Instances::fl::Array>& result, const Value&, const Value&);
+        // @0x1423fcd60
+        void AS3pop(Value& result);
+        // @0x1423fd780
+        void AS3push(Value& result, unsigned, const Value*);
+        // @0x1423fdf30
+        void AS3reverse(SPtr<Instances::fl::Array>& result);
+        // @0x1423ff400
+        void AS3shift(Value& result);
+        // @0x1423ff4d0
+        void AS3slice(SPtr<Instances::fl::Array>& result, SInt32, SInt32);
+        // @0x1423ff800
+        void AS3some(bool& result, const Value&, const Value&);
+        // @0x1423ffba0
+        void AS3sort(Value& result, unsigned, const Value*);
+        // @0x142400500
+        void AS3sortOn(SPtr<Instances::fl::Array>& result, const Value&, const Value&);
+        // @0x142400d30
+        void AS3splice(Value& result, unsigned, const Value*);
+        // @0x1424036f0
+        void AS3unshift(Value& result, unsigned, const Value*);
         // @0x142429290
         void lengthGet(UInt32& result);
         // @0x142429480
@@ -124,8 +161,154 @@ namespace Instances { namespace fl
 
     public:
         // native methods
+        // @0x1423fa190
+        void AS3getDate(Value::Number& result);
+        // @0x1423fa200
+        void AS3getDay(Value::Number& result);
+        // @0x1423fa2a0
+        void AS3getFullYear(Value::Number& result);
+        // @0x1423fa310
+        void AS3getHours(Value::Number& result);
+        // @0x1423fa3a0
+        void AS3getMilliseconds(Value::Number& result);
+        // @0x1423fa420
+        void AS3getMinutes(Value::Number& result);
+        // @0x1423fa4b0
+        void AS3getMonth(Value::Number& result);
+        // @0x1423fa520
+        void AS3getSeconds(Value::Number& result);
+        // @0x1423fa5b0
+        void AS3getTime(Value::Number& result);
+        // @0x1423fa5c0
+        void AS3getTimezoneOffset(Value::Number& result);
+        // @0x1423fa620
+        void AS3getUTCDate(Value::Number& result);
+        // @0x1423fa680
+        void AS3getUTCDay(Value::Number& result);
+        // @0x1423fa700
+        void AS3getUTCFullYear(Value::Number& result);
+        // @0x1423fa750
+        void AS3getUTCHours(Value::Number& result);
+        // @0x1423fa7d0
+        void AS3getUTCMilliseconds(Value::Number& result);
+        // @0x1423fa840
+        void AS3getUTCMinutes(Value::Number& result);
+        // @0x1423fa8c0
+        void AS3getUTCMonth(Value::Number& result);
+        // @0x1423fa920
+        void AS3getUTCSeconds(Value::Number& result);
+        // @0x1423fe350
+        void AS3setDate(Value& result, unsigned, const Value*);
+        // @0x1423fe380
+        void AS3setFullYear(Value& result, unsigned, const Value*);
+        // @0x1423fe3b0
+        void AS3setHours(Value& result, unsigned, const Value*);
+        // @0x1423fe590
+        void AS3setMilliseconds(Value& result, unsigned, const Value*);
+        // @0x1423fe5c0
+        void AS3setMinutes(Value& result, unsigned, const Value*);
+        // @0x1423fe5f0
+        void AS3setMonth(Value& result, unsigned, const Value*);
+        // @0x1423fea90
+        void AS3setSeconds(Value& result, unsigned, const Value*);
+        // @0x1423fefc0
+        void AS3setTime(Value::Number& result, Value::Number);
+        // @0x1423ff040
+        void AS3setUTCDate(Value& result, unsigned, const Value*);
+        // @0x1423ff060
+        void AS3setUTCFullYear(Value& result, unsigned, const Value*);
+        // @0x1423ff080
+        void AS3setUTCHours(Value& result, unsigned, const Value*);
+        // @0x1423ff0a0
+        void AS3setUTCMilliseconds(Value& result, unsigned, const Value*);
+        // @0x1423ff0c0
+        void AS3setUTCMinutes(Value& result, unsigned, const Value*);
+        // @0x1423ff0e0
+        void AS3setUTCMonth(Value& result, unsigned, const Value*);
+        // @0x1423ff100
+        void AS3setUTCSeconds(Value& result, unsigned, const Value*);
+        // @0x142401ae0
+        void AS3toDateString(ASString& result);
+        // @0x142401fc0
+        void AS3toLocaleDateString(ASString& result);
+        // @0x142402050
+        void AS3toLocaleString(ASString& result);
+        // @0x142402070
+        void AS3toLocaleTimeString(ASString& result);
+        // @0x1424025b0
+        void AS3toString(ASString& result);
+        // @0x142403050
+        void AS3toTimeString(ASString& result);
+        // @0x142403110
+        void AS3toUTCString(ASString& result);
         // @0x1424037b0
         void AS3valueOf(Value::Number& result);
+        // @0x142427c30
+        void dateGet(Value::Number& result);
+        // @0x142427c40
+        void dateSet(const Value& result, Value::Number);
+        // @0x142427c60
+        void dateUTCGet(Value::Number& result);
+        // @0x142427cc0
+        void dateUTCSet(const Value& result, Value::Number);
+        // @0x142427cd0
+        void dayGet(Value::Number& result);
+        // @0x142427ce0
+        void dayUTCGet(Value::Number& result);
+        // @0x1424289a0
+        void fullYearGet(Value::Number& result);
+        // @0x142428a10
+        void fullYearSet(const Value& result, Value::Number);
+        // @0x142428a20
+        void fullYearUTCGet(Value::Number& result);
+        // @0x142428a70
+        void fullYearUTCSet(const Value& result, Value::Number);
+        // @0x142428dc0
+        void hoursGet(Value::Number& result);
+        // @0x142428dd0
+        void hoursSet(const Value& result, Value::Number);
+        // @0x142428de0
+        void hoursUTCGet(Value::Number& result);
+        // @0x142428df0
+        void hoursUTCSet(const Value& result, Value::Number);
+        // @0x142429630
+        void millisecondsGet(Value::Number& result);
+        // @0x142429640
+        void millisecondsSet(const Value& result, Value::Number);
+        // @0x142429660
+        void millisecondsUTCGet(Value::Number& result);
+        // @0x1424296d0
+        void millisecondsUTCSet(const Value& result, Value::Number);
+        // @0x142429820
+        void minutesGet(Value::Number& result);
+        // @0x142429830
+        void minutesSet(const Value& result, Value::Number);
+        // @0x142429850
+        void minutesUTCGet(Value::Number& result);
+        // @0x142429860
+        void minutesUTCSet(const Value& result, Value::Number);
+        // @0x142429870
+        void monthGet(Value::Number& result);
+        // @0x142429880
+        void monthSet(const Value& result, Value::Number);
+        // @0x1424298a0
+        void monthUTCGet(Value::Number& result);
+        // @0x142429900
+        void monthUTCSet(const Value& result, Value::Number);
+        // @0x14242a070
+        void secondsGet(Value::Number& result);
+        // @0x14242a080
+        void secondsSet(const Value& result, Value::Number);
+        // @0x14242a0a0
+        void secondsUTCGet(Value::Number& result);
+        // @0x14242a0b0
+        void secondsUTCSet(const Value& result, Value::Number);
+        // @0x14242b120
+        void timeGet(Value::Number& result);
+        // @0x14242b130
+        void timeSet(const Value& result, Value::Number);
+        // @0x14242b180
+        void timezoneOffsetGet(Value::Number& result);
     };
 
     // 0x58 bytes.
@@ -180,10 +363,14 @@ namespace Instances { namespace fl
 
     public:
         // native methods
+        // @0x142402910
+        void AS3toString(ASString& result);
         // @0x142403820
         void AS3valueOf(SPtr<Instances::fl::QName>& result);
         // @0x142429490
         void localNameGet(ASString& result);
+        // @0x14242b710
+        void uriGet(Value& result);
     };
 
     // 0x60 bytes.
@@ -210,6 +397,8 @@ namespace Instances { namespace fl
         // native methods
         // @0x1423f9300
         void AS3exec(SPtr<Instances::fl::Object>& result, const ASString&);
+        // @0x142401860
+        void AS3test(bool& result, const ASString&);
         // @0x142428130
         void dotallGet(bool& result);
         // @0x142428490
@@ -262,8 +451,82 @@ namespace Instances { namespace fl
 
     public:
         // native methods
+        // @0x1423f6ca0
+        void AS3addNamespace(SPtr<Instances::fl::XML>& result, const Value&);
+        // @0x1423f6d50
+        void AS3appendChild(SPtr<Instances::fl::XML>& result, const Value&);
+        // @0x1423f6f70
+        void AS3attribute(SPtr<Instances::fl::XMLList>& result, const Value&);
+        // @0x1423f71f0
+        void AS3attributes(SPtr<Instances::fl::XMLList>& result);
+        // @0x1423f7710
+        void AS3child(SPtr<Instances::fl::XMLList>& result, const Value&);
+        // @0x1423f7960
+        void AS3childIndex(SInt32& result);
+        // @0x1423f7ae0
+        void AS3children(SPtr<Instances::fl::XMLList>& result);
+        // @0x1423f7db0
+        void AS3comments(SPtr<Instances::fl::XMLList>& result);
+        // @0x1423f81d0
+        void AS3contains(bool& result, const Value&);
+        // @0x1423f82d0
+        void AS3copy(SPtr<Instances::fl::XMLList>& result);
+        // @0x1423f8840
+        void AS3descendants(Value& result, unsigned, const Value*);
+        // @0x1423f8ce0
+        void AS3elements(Value& result, unsigned, const Value*);
+        // @0x1423fa9c0
+        void AS3hasComplexContent(bool& result);
+        // @0x1423fac80
+        void AS3hasSimpleContent(bool& result);
+        // @0x1423fb130
+        void AS3inScopeNamespaces(SPtr<Instances::fl::Array>& result);
+        // @0x1423fb2f0
+        void AS3insertChildAfter(Value& result, const Value&, const Value&);
+        // @0x1423fb3e0
+        void AS3insertChildBefore(Value& result, const Value&, const Value&);
         // @0x1423fb880
         void AS3length(SInt32& result);
+        // @0x1423fb8d0
+        void AS3localName(ASString& result);
+        // @0x1423fc420
+        void AS3name(SPtr<Instances::fl::QName>& result);
+        // @0x1423fc8f0
+        void AS3namespaceDeclarations(SPtr<Instances::fl::Array>& result);
+        // @0x1423fca10
+        void AS3namespace_(Value& result, unsigned, const Value*);
+        // @0x1423fcb00
+        void AS3nodeKind(ASString& result);
+        // @0x1423fcbe0
+        void AS3normalize(SPtr<Instances::fl::XMLList>& result);
+        // @0x1423fccd0
+        void AS3parent(Value& result);
+        // @0x1423fce50
+        void AS3prependChild(SPtr<Instances::fl::XML>& result, const Value&);
+        // @0x1423fcfc0
+        void AS3processingInstructions(Value& result, unsigned, const Value*);
+        // @0x1423fd650
+        void AS3propertyIsEnumerable(Value& result, unsigned, const Value*);
+        // @0x1423fd880
+        void AS3removeNamespace(SPtr<Instances::fl::XML>& result, const Value&);
+        // @0x1423fdec0
+        void AS3replace(SPtr<Instances::fl::XML>& result, const Value&, const Value&);
+        // @0x1423fe2e0
+        void AS3setChildren(SPtr<Instances::fl::XML>& result, const Value&);
+        // @0x1423fe520
+        void AS3setLocalName(const Value& result, const Value&);
+        // @0x1423fe8c0
+        void AS3setName(const Value& result, const Value&);
+        // @0x1423fea20
+        void AS3setNamespace(const Value& result, const Value&);
+        // @0x1424019b0
+        void AS3text(SPtr<Instances::fl::XMLList>& result);
+        // @0x142402c20
+        void AS3toString(ASString& result);
+        // @0x142403310
+        void AS3toXMLString(ASString& result);
+        // @0x1424039c0
+        void AS3valueOf(SPtr<Instances::fl::XMLList>& result);
         // @0x142429ea0
         void prototypeGet(SPtr<Instances::fl::XMLList>& result);
         // @0x142429fa0
@@ -506,6 +769,12 @@ namespace Classes { namespace fl
         virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
         // @0x14241c400
         virtual Pickable<AS3::Object> MakePrototype() const;
+
+        // native methods
+        // @0x142427200
+        void UTC(Value& result, unsigned, const Value*);
+        // @0x142429a70
+        void parse(Value::Number& result, const Value&);
     };
 
     class Error : public Class
@@ -524,6 +793,8 @@ namespace Classes { namespace fl
         // native methods
         // @0x142428b20
         void getErrorMessage(ASString& result, SInt32);
+        // @0x14242b0d0
+        void throwError(Value& result, unsigned, const Value*);
     };
 
     class Math : public Class
@@ -558,6 +829,10 @@ namespace Classes { namespace fl
         void floor(Value::Number& result, Value::Number);
         // @0x1424294d0
         void log(Value::Number& result, Value::Number);
+        // @0x1424294f0
+        void (max)(Value& result, unsigned, const Value*);
+        // @0x1424296e0
+        void (min)(Value& result, unsigned, const Value*);
         // @0x142429d40
         void pow(Value::Number& result, Value::Number, Value::Number);
         // @0x142429fb0
@@ -657,6 +932,12 @@ namespace Classes { namespace fl
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
         // @0x142418250
         virtual void InitPrototype(AS3::Object& obj) const;
+
+        // native methods
+        // @0x1423fa0b0
+        void AS3fromCharCode(Value& result, unsigned, const Value*);
+        // @0x142428880
+        void fromCharCode(Value& result, unsigned, const Value*);
     };
 
     class XML : public Class
@@ -673,7 +954,17 @@ namespace Classes { namespace fl
         virtual void InitPrototype(AS3::Object& obj) const;
 
         // native methods
+        // @0x1423f8330
+        void AS3defaultSettings(SPtr<Instances::fl::Object>& result);
+        // @0x1423feac0
+        void AS3setSettings(const Value& result, const Value&);
         // @0x1423ff120
+        void AS3settings(SPtr<Instances::fl::Object>& result);
+        // @0x142428100
+        void defaultSettings(SPtr<Instances::fl::Object>& result);
+        // @0x14242ae20
+        void setSettings(const Value& result, const Value&);
+        // @0x14242afb0
         void settings(SPtr<Instances::fl::Object>& result);
 
     public:

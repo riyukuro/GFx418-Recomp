@@ -152,6 +152,39 @@ struct ThunkFunc2
     static const TMethod Method;
 };
 
+template <typename T, size_t N, typename R, typename A0, typename A1, typename A2>
+struct ThunkFunc3
+{
+    typedef void (T::*TMethod)(R&, A0, A1, A2);
+    static void Func(const ThunkInfo& ti, VM& vm, const Value& obj, Value& result, unsigned argc, const Value* argv);
+    static const TMethod Method;
+};
+
+template <typename T, size_t N, typename R, typename A0, typename A1, typename A2, typename A3>
+struct ThunkFunc4
+{
+    typedef void (T::*TMethod)(R&, A0, A1, A2, A3);
+    static void Func(const ThunkInfo& ti, VM& vm, const Value& obj, Value& result, unsigned argc, const Value* argv);
+    static const TMethod Method;
+};
+
+template <typename T, size_t N, typename R, typename A0, typename A1, typename A2, typename A3, typename A4>
+struct ThunkFunc5
+{
+    typedef void (T::*TMethod)(R&, A0, A1, A2, A3, A4);
+    static void Func(const ThunkInfo& ti, VM& vm, const Value& obj, Value& result, unsigned argc, const Value* argv);
+    static const TMethod Method;
+};
+
+template <typename T, size_t N, typename R, typename A0, typename A1, typename A2, typename A3, typename A4,
+          typename A5>
+struct ThunkFunc6
+{
+    typedef void (T::*TMethod)(R&, A0, A1, A2, A3, A4, A5);
+    static void Func(const ThunkInfo& ti, VM& vm, const Value& obj, Value& result, unsigned argc, const Value* argv);
+    static const TMethod Method;
+};
+
 template <typename T, size_t N, typename R>
 void ThunkFunc0<T, N, R>::Func(const ThunkInfo&, VM& vm, const Value& obj, Value& result, unsigned, const Value*)
 {

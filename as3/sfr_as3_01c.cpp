@@ -13,26 +13,24 @@
 #include "GFx/GFx_ASUtils.h"
 #include "Kernel/SF_HeapNew.h"
 
+// The thunks below call through ThunkFuncN<...>::Method, defined (with its dynamic initializer) in the sfr_as3di_*
+// units.
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // thunk 0x1423e02e0
 typedef ThunkFunc1<Classes::fl::Math, 0, Value::Number, Value::Number> TFunc_Classes_Math_abs;
-template <> const TFunc_Classes_Math_abs::TMethod TFunc_Classes_Math_abs::Method = &Classes::fl::Math::abs;
 template struct ThunkFunc1<Classes::fl::Math, 0, Value::Number, Value::Number>;
 
 // thunk 0x1423e03c0
 typedef ThunkFunc1<Classes::fl::Math, 1, Value::Number, Value::Number> TFunc_Classes_Math_acos;
-template <> const TFunc_Classes_Math_acos::TMethod TFunc_Classes_Math_acos::Method = &Classes::fl::Math::acos;
 template struct ThunkFunc1<Classes::fl::Math, 1, Value::Number, Value::Number>;
 
 // thunk 0x1423e04a0
 typedef ThunkFunc1<Classes::fl::Math, 2, Value::Number, Value::Number> TFunc_Classes_Math_asin;
-template <> const TFunc_Classes_Math_asin::TMethod TFunc_Classes_Math_asin::Method = &Classes::fl::Math::asin;
 template struct ThunkFunc1<Classes::fl::Math, 2, Value::Number, Value::Number>;
 
 // thunk 0x1423e0580
 typedef ThunkFunc1<Classes::fl::Math, 3, Value::Number, Value::Number> TFunc_Classes_Math_atan;
-template <> const TFunc_Classes_Math_atan::TMethod TFunc_Classes_Math_atan::Method = &Classes::fl::Math::atan;
 template struct ThunkFunc1<Classes::fl::Math, 3, Value::Number, Value::Number>;
 
 namespace ClassTraits { namespace fl
@@ -46,62 +44,50 @@ namespace ClassTraits { namespace fl
 
 // thunk 0x1423e07e0
 typedef ThunkFunc2<Classes::fl::Math, 4, Value::Number, Value::Number, Value::Number> TFunc_Classes_Math_atan2;
-template <> const TFunc_Classes_Math_atan2::TMethod TFunc_Classes_Math_atan2::Method = &Classes::fl::Math::atan2;
 template struct ThunkFunc2<Classes::fl::Math, 4, Value::Number, Value::Number, Value::Number>;
 
 // thunk 0x1423e0910
 typedef ThunkFunc1<Classes::fl::Math, 5, Value::Number, Value::Number> TFunc_Classes_Math_ceil;
-template <> const TFunc_Classes_Math_ceil::TMethod TFunc_Classes_Math_ceil::Method = &Classes::fl::Math::ceil;
 template struct ThunkFunc1<Classes::fl::Math, 5, Value::Number, Value::Number>;
 
 // thunk 0x1423e09f0
 typedef ThunkFunc1<Classes::fl::Math, 6, Value::Number, Value::Number> TFunc_Classes_Math_cos;
-template <> const TFunc_Classes_Math_cos::TMethod TFunc_Classes_Math_cos::Method = &Classes::fl::Math::cos;
 template struct ThunkFunc1<Classes::fl::Math, 6, Value::Number, Value::Number>;
 
 // thunk 0x1423e0ad0
 typedef ThunkFunc1<Classes::fl::Math, 7, Value::Number, Value::Number> TFunc_Classes_Math_exp;
-template <> const TFunc_Classes_Math_exp::TMethod TFunc_Classes_Math_exp::Method = &Classes::fl::Math::exp;
 template struct ThunkFunc1<Classes::fl::Math, 7, Value::Number, Value::Number>;
 
 // thunk 0x1423e0bb0
 typedef ThunkFunc1<Classes::fl::Math, 8, Value::Number, Value::Number> TFunc_Classes_Math_floor;
-template <> const TFunc_Classes_Math_floor::TMethod TFunc_Classes_Math_floor::Method = &Classes::fl::Math::floor;
 template struct ThunkFunc1<Classes::fl::Math, 8, Value::Number, Value::Number>;
 
 // thunk 0x1423e0c90
 typedef ThunkFunc1<Classes::fl::Math, 9, Value::Number, Value::Number> TFunc_Classes_Math_log;
-template <> const TFunc_Classes_Math_log::TMethod TFunc_Classes_Math_log::Method = &Classes::fl::Math::log;
 template struct ThunkFunc1<Classes::fl::Math, 9, Value::Number, Value::Number>;
 
 // thunk 0x1423e0d70
 typedef ThunkFunc1<Classes::fl::Math, 10, Value::Number, Value::Number> TFunc_Classes_Math_round;
-template <> const TFunc_Classes_Math_round::TMethod TFunc_Classes_Math_round::Method = &Classes::fl::Math::round;
 template struct ThunkFunc1<Classes::fl::Math, 10, Value::Number, Value::Number>;
 
 // thunk 0x1423e0e70
 typedef ThunkFunc1<Classes::fl::Math, 11, Value::Number, Value::Number> TFunc_Classes_Math_sin;
-template <> const TFunc_Classes_Math_sin::TMethod TFunc_Classes_Math_sin::Method = &Classes::fl::Math::sin;
 template struct ThunkFunc1<Classes::fl::Math, 11, Value::Number, Value::Number>;
 
 // thunk 0x1423e0f50
 typedef ThunkFunc1<Classes::fl::Math, 12, Value::Number, Value::Number> TFunc_Classes_Math_sqrt;
-template <> const TFunc_Classes_Math_sqrt::TMethod TFunc_Classes_Math_sqrt::Method = &Classes::fl::Math::sqrt;
 template struct ThunkFunc1<Classes::fl::Math, 12, Value::Number, Value::Number>;
 
 // thunk 0x1423e1030
 typedef ThunkFunc1<Classes::fl::Math, 13, Value::Number, Value::Number> TFunc_Classes_Math_tan;
-template <> const TFunc_Classes_Math_tan::TMethod TFunc_Classes_Math_tan::Method = &Classes::fl::Math::tan;
 template struct ThunkFunc1<Classes::fl::Math, 13, Value::Number, Value::Number>;
 
 // thunk 0x1423e1110
 typedef ThunkFunc2<Classes::fl::Math, 14, Value::Number, Value::Number, Value::Number> TFunc_Classes_Math_pow;
-template <> const TFunc_Classes_Math_pow::TMethod TFunc_Classes_Math_pow::Method = &Classes::fl::Math::pow;
 template struct ThunkFunc2<Classes::fl::Math, 14, Value::Number, Value::Number, Value::Number>;
 
 // thunk 0x1423e1280
 typedef ThunkFunc0<Classes::fl::Math, 17, Value::Number> TFunc_Classes_Math_random;
-template <> const TFunc_Classes_Math_random::TMethod TFunc_Classes_Math_random::Method = &Classes::fl::Math::random;
 template struct ThunkFunc0<Classes::fl::Math, 17, Value::Number>;
 
 namespace ClassTraits { namespace fl
@@ -127,12 +113,10 @@ namespace ClassTraits { namespace fl
 
 // thunk 0x1423e1aa0
 typedef ThunkFunc0<Instances::fl::QName, 0, ASString> TFunc_Instances_QName_localNameGet;
-template <> const TFunc_Instances_QName_localNameGet::TMethod TFunc_Instances_QName_localNameGet::Method = &Instances::fl::QName::localNameGet;
 template struct ThunkFunc0<Instances::fl::QName, 0, ASString>;
 
 // thunk 0x1423e1b30
 typedef ThunkFunc0<Instances::fl::QName, 2, SPtr<Instances::fl::QName>> TFunc_Instances_QName_AS3valueOf;
-template <> const TFunc_Instances_QName_AS3valueOf::TMethod TFunc_Instances_QName_AS3valueOf::Method = &Instances::fl::QName::AS3valueOf;
 template struct ThunkFunc0<Instances::fl::QName, 2, SPtr<Instances::fl::QName>>;
 
 namespace ClassTraits { namespace fl
@@ -152,22 +136,18 @@ namespace ClassTraits { namespace fl
 
 // thunk 0x1423e1fb0
 typedef ThunkFunc0<Instances::fl::Error, 0, SInt32> TFunc_Instances_Error_errorIDGet;
-template <> const TFunc_Instances_Error_errorIDGet::TMethod TFunc_Instances_Error_errorIDGet::Method = &Instances::fl::Error::errorIDGet;
 template struct ThunkFunc0<Instances::fl::Error, 0, SInt32>;
 
 // thunk 0x1423e2010
 typedef ThunkFunc0<Instances::fl::Error, 1, ASString> TFunc_Instances_Error_getStackTrace;
-template <> const TFunc_Instances_Error_getStackTrace::TMethod TFunc_Instances_Error_getStackTrace::Method = &Instances::fl::Error::getStackTrace;
 template struct ThunkFunc0<Instances::fl::Error, 1, ASString>;
 
 // thunk 0x1423e2080
 typedef ThunkFunc0<Instances::fl::Error, 2, ASString> TFunc_Instances_Error_toStringProto;
-template <> const TFunc_Instances_Error_toStringProto::TMethod TFunc_Instances_Error_toStringProto::Method = &Instances::fl::Error::toStringProto;
 template struct ThunkFunc0<Instances::fl::Error, 2, ASString>;
 
 // thunk 0x1423e20f0
 typedef ThunkFunc1<Classes::fl::Error, 0, ASString, SInt32> TFunc_Classes_Error_getErrorMessage;
-template <> const TFunc_Classes_Error_getErrorMessage::TMethod TFunc_Classes_Error_getErrorMessage::Method = &Classes::fl::Error::getErrorMessage;
 template struct ThunkFunc1<Classes::fl::Error, 0, ASString, SInt32>;
 
 namespace ClassTraits { namespace fl
@@ -247,12 +227,10 @@ namespace ClassTraits { namespace fl
 
 // thunk 0x1423e3b30
 typedef ThunkFunc0<Instances::fl::Array, 0, UInt32> TFunc_Instances_Array_lengthGet;
-template <> const TFunc_Instances_Array_lengthGet::TMethod TFunc_Instances_Array_lengthGet::Method = &Instances::fl::Array::lengthGet;
 template struct ThunkFunc0<Instances::fl::Array, 0, UInt32>;
 
 // thunk 0x1423e3b90
 typedef ThunkFunc1<Instances::fl::Array, 1, const Value, UInt32> TFunc_Instances_Array_lengthSet;
-template <> const TFunc_Instances_Array_lengthSet::TMethod TFunc_Instances_Array_lengthSet::Method = &Instances::fl::Array::lengthSet;
 template struct ThunkFunc1<Instances::fl::Array, 1, const Value, UInt32>;
 
 namespace ClassTraits { namespace fl
@@ -266,7 +244,6 @@ namespace ClassTraits { namespace fl
 
 // thunk 0x1423e3ff0
 typedef ThunkFunc0<Instances::fl::Date, 0, Value::Number> TFunc_Instances_Date_AS3valueOf;
-template <> const TFunc_Instances_Date_AS3valueOf::TMethod TFunc_Instances_Date_AS3valueOf::Method = &Instances::fl::Date::AS3valueOf;
 template struct ThunkFunc0<Instances::fl::Date, 0, Value::Number>;
 
 namespace ClassTraits { namespace fl
@@ -280,48 +257,39 @@ namespace ClassTraits { namespace fl
 
 // thunk 0x1423e5150
 typedef ThunkFunc0<Instances::fl::RegExp, 0, ASString> TFunc_Instances_RegExp_sourceGet;
-template <> const TFunc_Instances_RegExp_sourceGet::TMethod TFunc_Instances_RegExp_sourceGet::Method = &Instances::fl::RegExp::sourceGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 0, ASString>;
 
 // thunk 0x1423e51c0
 typedef ThunkFunc0<Instances::fl::RegExp, 1, bool> TFunc_Instances_RegExp_globalGet;
-template <> const TFunc_Instances_RegExp_globalGet::TMethod TFunc_Instances_RegExp_globalGet::Method = &Instances::fl::RegExp::globalGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 1, bool>;
 
 // thunk 0x1423e5220
 typedef ThunkFunc0<Instances::fl::RegExp, 2, bool> TFunc_Instances_RegExp_ignoreCaseGet;
-template <> const TFunc_Instances_RegExp_ignoreCaseGet::TMethod TFunc_Instances_RegExp_ignoreCaseGet::Method = &Instances::fl::RegExp::ignoreCaseGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 2, bool>;
 
 // thunk 0x1423e5280
 typedef ThunkFunc0<Instances::fl::RegExp, 3, bool> TFunc_Instances_RegExp_multilineGet;
-template <> const TFunc_Instances_RegExp_multilineGet::TMethod TFunc_Instances_RegExp_multilineGet::Method = &Instances::fl::RegExp::multilineGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 3, bool>;
 
 // thunk 0x1423e52e0
 typedef ThunkFunc0<Instances::fl::RegExp, 4, SInt32> TFunc_Instances_RegExp_lastIndexGet;
-template <> const TFunc_Instances_RegExp_lastIndexGet::TMethod TFunc_Instances_RegExp_lastIndexGet::Method = &Instances::fl::RegExp::lastIndexGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 4, SInt32>;
 
 // thunk 0x1423e5340
 typedef ThunkFunc1<Instances::fl::RegExp, 5, const Value, SInt32> TFunc_Instances_RegExp_lastIndexSet;
-template <> const TFunc_Instances_RegExp_lastIndexSet::TMethod TFunc_Instances_RegExp_lastIndexSet::Method = &Instances::fl::RegExp::lastIndexSet;
 template struct ThunkFunc1<Instances::fl::RegExp, 5, const Value, SInt32>;
 
 // thunk 0x1423e53b0
 typedef ThunkFunc0<Instances::fl::RegExp, 6, bool> TFunc_Instances_RegExp_dotallGet;
-template <> const TFunc_Instances_RegExp_dotallGet::TMethod TFunc_Instances_RegExp_dotallGet::Method = &Instances::fl::RegExp::dotallGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 6, bool>;
 
 // thunk 0x1423e5410
 typedef ThunkFunc0<Instances::fl::RegExp, 7, bool> TFunc_Instances_RegExp_extendedGet;
-template <> const TFunc_Instances_RegExp_extendedGet::TMethod TFunc_Instances_RegExp_extendedGet::Method = &Instances::fl::RegExp::extendedGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 7, bool>;
 
 // thunk 0x1423e5470
 // MS2-FUNCTIONAL: register allocation only: the exe loads the VM string manager into rbx, ours through rax (2 bytes)
 typedef ThunkFunc1<Instances::fl::RegExp, 8, SPtr<Instances::fl::Object>, const ASString&> TFunc_Instances_RegExp_AS3exec;
-template <> const TFunc_Instances_RegExp_AS3exec::TMethod TFunc_Instances_RegExp_AS3exec::Method = &Instances::fl::RegExp::AS3exec;
 template struct ThunkFunc1<Instances::fl::RegExp, 8, SPtr<Instances::fl::Object>, const ASString&>;
 
 namespace ClassTraits { namespace fl
@@ -352,23 +320,19 @@ namespace ClassTraits { namespace fl
 }}
 
 // thunk 0x1423e7360
-typedef ThunkFunc0<Classes::fl::XML, 0, SPtr<Instances::fl::Object>> TFunc_Classes_XML_settings;
-template <> const TFunc_Classes_XML_settings::TMethod TFunc_Classes_XML_settings::Method = &Classes::fl::XML::settings;
+typedef ThunkFunc0<Classes::fl::XML, 0, SPtr<Instances::fl::Object>> TFunc_Classes_XML_AS3settings;
 template struct ThunkFunc0<Classes::fl::XML, 0, SPtr<Instances::fl::Object>>;
 
 // thunk 0x1423e76f0
 typedef ThunkFunc0<Instances::fl::XMLList, 0, SPtr<Instances::fl::XMLList>> TFunc_Instances_XMLList_prototypeGet;
-template <> const TFunc_Instances_XMLList_prototypeGet::TMethod TFunc_Instances_XMLList_prototypeGet::Method = &Instances::fl::XMLList::prototypeGet;
 template struct ThunkFunc0<Instances::fl::XMLList, 0, SPtr<Instances::fl::XMLList>>;
 
 // thunk 0x1423e7840
 typedef ThunkFunc1<Instances::fl::XMLList, 1, const Value, const Value&> TFunc_Instances_XMLList_prototypeSet;
-template <> const TFunc_Instances_XMLList_prototypeSet::TMethod TFunc_Instances_XMLList_prototypeSet::Method = &Instances::fl::XMLList::prototypeSet;
 template struct ThunkFunc1<Instances::fl::XMLList, 1, const Value, const Value&>;
 
 // thunk 0x1423e7d80
 typedef ThunkFunc0<Instances::fl::XMLList, 2, SInt32> TFunc_Instances_XMLList_AS3length;
-template <> const TFunc_Instances_XMLList_AS3length::TMethod TFunc_Instances_XMLList_AS3length::Method = &Instances::fl::XMLList::AS3length;
 template struct ThunkFunc0<Instances::fl::XMLList, 2, SInt32>;
 
 namespace ClassTraits { namespace fl
@@ -1172,6 +1136,12 @@ namespace InstanceTraits { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // MS2-PINS-BEGIN tplpin
