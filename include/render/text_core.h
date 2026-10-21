@@ -30,12 +30,24 @@ template<> inline float  FixpToPixels(float x)  { return x * 0.05f; }
 template<> inline double FixpToPixels(double x) { return x * 0.05; }
 
 class Paragraph;
+class FontManagerBase;
+
+}  // namespace Text
+class Font;
+namespace Text {
 
 // Outline of a resolved font reference (Text_FontManager, recovered with the font manager).
 class FontHandle : public RefCountBase<FontHandle, StatRender_Text_Mem>
 {
 public:
     bool operator==(const FontHandle& f) const;
+
+    // (appended for Text_Core, sfr_render_03) the fields the format comparisons read
+    FontManagerBase* pFontManager;      // +0x10
+    unsigned         FontFlags;         // +0x18 style bits forced on the face
+    StringLH         FontName;          // +0x20
+    float            FontScaleFactor;   // +0x28
+    Font*            pFont;             // +0x30 (a counted reference, released by ~FontHandle 0x1425b5e40)
 };
 
 // An image placed in text: the image and its placement (baseline in image pixels, screen size in twips).
@@ -219,7 +231,85 @@ public:
         PresentMask |= PresentMask_FontSize;
     }
     void SetFontList(const char* pfontList, UPInt fontListSz = SF_MAX_UPINT); // exe 0x142607f40
+
+    // (appended for Text_Core, sfr_render_03)
+    bool operator==(const TextFormat& f) const;
+
+    void SetFontList(const String& fontList);
+    void SetFontList(const wchar_t* pfontList, UPInt fontListSz = SF_MAX_UPINT);
+    // a single face name (the list setters decide whether it holds one)
+    void SetFontName(const char* pfontName, UPInt fontNameSz = SF_MAX_UPINT);
+    void SetFontName(const wchar_t* pfontName, UPInt fontNameSz = SF_MAX_UPINT);
+    void SetFontHandle(FontHandle* pfontHandle);
+    void ClearFontHandle()
+    {
+        pFontHandle = NULL;
+        PresentMask &= ~PresentMask_FontHandle;
+    }
+
+    // the whole AARRGGBB value (SetColor32 keeps the alpha)
+    void SetColorARGB(UInt32 color)
+    {
+        ColorV = color;
+        PresentMask |= PresentMask_Color;
+    }
+    void SetAlpha(UInt8 alpha)
+    {
+        ColorV = (ColorV & 0xFFFFFFu) | (UInt32(alpha) << 24);
+        PresentMask |= PresentMask_Alpha;
+    }
+    void ClearAlpha()
+    {
+        ColorV |= 0xFF000000u;
+        PresentMask &= ~PresentMask_Alpha;
+    }
+
+    SInt16 GetLetterSpacingInFixp() const { return LetterSpacing; }
+    void   SetLetterSpacingInFixp(SInt16 twips)
+    {
+        LetterSpacing = twips;
+        PresentMask |= PresentMask_LetterSpacing;
+    }
+    void ClearLetterSpacing()
+    {
+        LetterSpacing = 0;
+        PresentMask &= ~PresentMask_LetterSpacing;
+    }
+    void SetFontSizeInFixp(unsigned twips)
+    {
+        FontSize = (UInt16)twips;
+        PresentMask |= PresentMask_FontSize;
+    }
+
+    void SetUrl(const String& url);
+    void SetUrl(const char* purl, UPInt urlSz = SF_MAX_UPINT);
+    void SetUrl(const wchar_t* purl, UPInt urlSz = SF_MAX_UPINT);
+    void ClearUrl()
+    {
+        Url.Clear();
+        PresentMask &= ~PresentMask_Url;
+    }
+
+private:
+    // after the font list changed: whether it names one face
+    void UpdateSingleFontName()
+    {
+        if (!SFstrchr(FontList.ToCStr(), ','))
+            PresentMask |= PresentMask_SingleFontName;
+        else
+            PresentMask &= ~PresentMask_SingleFontName;
+    }
+public:
 };
+
+// (appended for Text_Core, sfr_render_03)
+inline bool FontHandle::operator==(const FontHandle& f) const
+{
+    return pFontManager == f.pFontManager && pFont == f.pFont && FontFlags == f.FontFlags &&
+           FontName == f.FontName && FontScaleFactor == f.FontScaleFactor;
+}
+
+// an unset list reads as the empty string
 
 // A format pointer as stored in the format caches (hashed and compared by value).
 template<class T>
@@ -231,6 +321,8 @@ public:
     TextFormatPtrWrapper() {}
     TextFormatPtrWrapper(T* ptr) : pFormat(ptr) {}
     TextFormatPtrWrapper(const TextFormatPtrWrapper& orig) : pFormat(orig.pFormat) {}
+    // (appended for Text_Core, sfr_render_03) takes the source pointer once, before the release
+    TextFormatPtrWrapper& operator=(const TextFormatPtrWrapper& p) { pFormat = p.pFormat.GetPtr(); return *this; }
 
     struct HashFunctor
     {
@@ -240,6 +332,10 @@ public:
             return h.operator()(*data.pFormat);
         }
     };
+
+    // (appended for Text_Core, sfr_render_03) the caches compare the formats, not the pointers
+    bool operator==(const T* p) const { return *pFormat == *p; }
+    bool operator==(const TextFormatPtrWrapper& p) const { return *pFormat == *p.pFormat; }
 };
 typedef TextFormatPtrWrapper<TextFormat> TextFormatPtr;
 
@@ -368,7 +464,42 @@ public:
     void SetLeading(int value)          { Leading = (SInt16)value; PresentMask |= PresentMask_Leading; }
     void SetLeftMargin(unsigned value)  { LeftMargin = (UInt16)value; PresentMask |= PresentMask_LeftMargin; }
     void SetRightMargin(unsigned value) { RightMargin = (UInt16)value; PresentMask |= PresentMask_RightMargin; }
+
+    // (appended for Text_Core, sfr_render_03)
+    bool operator==(const ParagraphFormat& f) const
+    {
+        return PresentMask == f.PresentMask && BlockIndent == f.BlockIndent && Indent == f.Indent &&
+               Leading == f.Leading && LeftMargin == f.LeftMargin && RightMargin == f.RightMargin &&
+               TabStopsEqual(f.pTabStops);
+    }
+
+    void SetBullet(bool bullet = true)
+    {
+        if (bullet)
+            PresentMask |= Mask_Bullet;
+        else
+            PresentMask &= ~Mask_Bullet;
+        PresentMask |= PresentMask_Bullet;
+    }
+    void ClearBullet()       { PresentMask &= ~(Mask_Bullet | PresentMask_Bullet); }
+    void SetBlockIndent(unsigned value) { BlockIndent = (UInt16)value; PresentMask |= PresentMask_BlockIndent; }
+    void ClearBlockIndent()  { BlockIndent = 0; PresentMask &= ~PresentMask_BlockIndent; }
+    void ClearIndent()       { Indent = 0; PresentMask &= ~PresentMask_Indent; }
+    void ClearLeading()      { Leading = 0; PresentMask &= ~PresentMask_Leading; }
+    void ClearLeftMargin()   { LeftMargin = 0; PresentMask &= ~PresentMask_LeftMargin; }
+    void ClearRightMargin()  { RightMargin = 0; PresentMask &= ~PresentMask_RightMargin; }
+
+    // tab stops in twips; num 0 / an empty array clears them
+    void SetTabStops(unsigned num, ...);
+    void SetTabStops(const unsigned* psrcTabStops);
+    void SetTabStopsElement(unsigned idx, unsigned val);
+    void ClearTabStops()
+    {
+        FreeTabStops();
+        PresentMask &= ~PresentMask_TabStops;
+    }
 };
+
 typedef TextFormatPtrWrapper<ParagraphFormat> ParagraphFormatPtr;
 
 // Per-document text allocator: interns formats in two caches, allocates paragraphs and their text, hands out
@@ -435,6 +566,10 @@ public:
 
     UInt32 AllocateParagraphId() { return NewParagraphId++; }
     UInt32 GetNextParagraphId()  { return NewParagraphId; }
+
+    // (appended for Text_Core, sfr_render_03) drop the cached formats nobody else holds; true if any went
+    bool FlushTextFormatCache(bool noAllocationsAllowed = false);
+    bool FlushParagraphFormatCache(bool noAllocationsAllowed = false);
 };
 
 }}} // namespace Scaleform::Render::Text
