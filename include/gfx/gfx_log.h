@@ -35,6 +35,9 @@ public:
     void LogAction(const char* pfmt, ...) const;
     // Script message channel (only LogBase<AS2::FnCall> in the exe, 0x142967f60, defined with it).
     void LogScriptMessage(const char* pfmt, ...) const;
+    // Parse action trace channel, only with verbose parse actions; Derived supplies IsVerboseParseAction() (only
+    // LogBase<Stream> in the exe, 0x142967c30).
+    void LogParseAction(const char* pfmt, ...) const;
 
 protected:
     bool IsLogNotNull() const { return 0; }
@@ -96,6 +99,23 @@ void LogBase<Derived>::LogAction(const char* pfmt, ...) const
         Log* plog = p->GetLog();
         if (p->IsLogNotNull() || plog)
             plog->LogMessageVarg(Log_Action, pfmt, argList);
+    }
+    va_end(argList);
+}
+
+enum { Log_ParseAction = LogChannel_Parse | 3 };
+
+template<class Derived>
+void LogBase<Derived>::LogParseAction(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    Derived* p = (Derived*)this;
+    if (p->IsVerboseParseAction())
+    {
+        Log* plog = p->GetLog();
+        if (p->IsLogNotNull() || plog)
+            plog->LogMessageVarg(Log_ParseAction, pfmt, argList);
     }
     va_end(argList);
 }

@@ -86,7 +86,27 @@
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/kernel/sf_msgformat.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
+namespace Scaleform { namespace GFx {
+
+class FunctionHandler;
+
+namespace AS2 {
+
+// Function object around a host FunctionHandler (GFx::Value::CreateFunction). Only what this unit needs.
+class UserDefinedFunctionObject : public FunctionObject
+{
+protected:
+    Ptr<FunctionHandler> pContext;  // +0x68
+    void*                pUserData; // +0x70
+
+public:
+    // Through super the handler runs on the real this, then the super drops its alternate prototype
+    // (exe 0x142963aa0).
+    virtual void Invoke(const FnCall& fn, LocalFrame*, const char*);
+
+    // Hands the call to the handler (exe 0x142964390).
+    void InvokeImpl(const FnCall& fn);
+};
 
 // @0x142961720
 void ArrayObject::InitArray(const FnCall& fn)
@@ -620,6 +640,24 @@ void CFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char*)
 }
 
 
+// @0x142963aa0
+void UserDefinedFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char*)
+{
+    if (!pContext)
+        return;
+    ObjectInterface* pthis = fn.ThisPtr;
+    if (pthis && pthis->IsSuper())
+    {
+        ObjectInterface* prealThis = static_cast<SuperObject*>(pthis)->RealThis;
+        FnCall           fn2(fn.Result, prealThis, fn.Env, fn.NArgs, fn.FirstArgBottomIndex);
+        InvokeImpl(fn2);
+        static_cast<SuperObject*>(pthis)->ResetAltProto();
+    }
+    else
+        InvokeImpl(fn);
+}
+
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {
@@ -677,6 +715,8 @@ namespace Scaleform {
 template void GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Pop(unsigned);
 // @0x14296efd0
 template void GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Pop3();
+// @0x142967c30
+template void GFx::LogBase<GFx::Stream>::LogParseAction(const char*, ...) const;
 
 // The page switches of the call stack (those of the value stack are elsewhere in the exe, 0x140006a40 /
 // 0x140006cf0).
