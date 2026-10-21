@@ -23,6 +23,7 @@
 // MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
 // MS2-RANGE: 0x1429166b0-0x142916a70 .text$mn
 // MS2-RANGE: 0x142916e60-0x142917460 .text$mn
+// MS2-RANGE: 0x142917690-0x142917780 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -780,6 +781,17 @@ MS2_AS2_STRING_HASH_FIND(GFx::AS2::FunctionRef)
 MS2_AS2_STRING_HASH_FIND(GFx::AS2::Member)
 MS2_AS2_STRING_HASH_FIND(GFx::AS2::Value)
 
+// Entry copies of the rehash.
+#define MS2_AS2_STRING_HASH_ENTRY_COPY(U)                                                                       \
+    template HashsetNodeEntry<GFx::ASStringHash_GC<U>::NodeType, GFx::ASStringHash_GC<U>::NodeType::NodeHashF>::    \
+        HashsetNodeEntry(const HashsetNodeEntry<GFx::ASStringHash_GC<U>::NodeType,                             \
+                                                GFx::ASStringHash_GC<U>::NodeType::NodeHashF>&);
+
+MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::FunctionRef)
+MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::Object::Watchpoint)
+MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::Member)
+
 } // namespace Scaleform
 
 // MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
+// MS2-PIN: ??0?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@UWatchpoint@Object@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@Scaleform@@QEAA@AEBV01@@Z 0x142917700

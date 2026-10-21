@@ -171,6 +171,8 @@ struct Object::Watchpoint
     FunctionRef Callback; // +0x00
     Value       UserData; // +0x18
 
+    Watchpoint(const Watchpoint& o); // exe 0x142923fd0
+
     template<class Functor> void ForEachChild_GC(Collector* prcc) const
     {
         Callback.template ForEachChild_GC<Functor>(prcc);
@@ -207,6 +209,18 @@ public:
 protected:
     CFunctionObject(ASRefCountCollector* pcc);
 };
+
+// Counted copy of the function; the frame keeps the weak flag of the original.
+inline void FunctionRefBase::Init(const FunctionRefBase& orig, UByte flags)
+{
+    Flags    = flags;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        SetLocalFrame(orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
 
 }}} // namespace Scaleform::GFx::AS2
 

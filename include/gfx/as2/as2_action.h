@@ -164,6 +164,16 @@ public:
     bool CheckExtensions() const { return GFxExtensions.IsTrue(); }
 };
 
+inline void FunctionRefBase::DropRefs()
+{
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->Release();
+    Function = 0;
+    if (!(Flags & FuncRef_Weak) && pLocalFrame)
+        pLocalFrame->Release();
+    pLocalFrame = 0;
+}
+
 inline bool Environment::CheckExtensions() const
 {
     return StringContext.pContext->CheckExtensions();

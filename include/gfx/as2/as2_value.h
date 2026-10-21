@@ -42,15 +42,15 @@ public:
     UByte GetFlags() const       { return Flags; }
 };
 
-// Reference to a function object plus the local frame it closes over (0x18 bytes). Flags: 1 = the function
-// is held without a count (internal), 2 = the frame is held weakly.
+// Reference to a function object plus the local frame it closes over (0x18 bytes). Flags: 1 = the frame is held
+// weakly (SetLocalFrame, exe 0x142981e70), 2 = the function is held without a count (internal).
 class FunctionRefBase
 {
 public:
     enum FuncRef_Flags
     {
-        FuncRef_Internal = 1,
-        FuncRef_Weak     = 2
+        FuncRef_Weak     = 1,
+        FuncRef_Internal = 2
     };
 
     FunctionObject* Function;    // +0x00
@@ -61,8 +61,8 @@ public:
 
     void Init(FunctionObject* poriginal = 0, UByte flags = 0);
     void Init(FunctionObject& original, UByte flags = 0);
-    void Init(const FunctionRefBase& orig, UByte flags = 0);
-    void DropRefs();
+    inline void Init(const FunctionRefBase& orig, UByte flags = 0); // as2_object.h
+    inline void DropRefs(); // as2_action.h
     void SetLocalFrame(LocalFrame* localFrame, bool weakRef = 0);
     void Assign(const FunctionRefBase& orig);
 
@@ -175,7 +175,7 @@ public:
     const Value& operator=(const Value& v); // exe 0x1429267a0
 
     // Releases the reference held by a STRING/OBJECT/CHARACTER/FUNCTION/PROPERTY value (exe 0x142939780).
-    void DropRefs();
+    inline void DropRefs(); // as2_action.h
 
     type GetType() const { return (type)T.Type; }
 
@@ -281,6 +281,8 @@ public:
     {
         mValue.T.PropFlags = flags.Flags;
     }
+    // The value copy leaves the flags out.
+    Member(const Member& m) : mValue(m.mValue) { mValue.T.PropFlags = m.mValue.T.PropFlags; }
 
     const Value& GetMemberValue() const { return mValue; }
     Value&       GetMemberValue()       { return mValue; }
