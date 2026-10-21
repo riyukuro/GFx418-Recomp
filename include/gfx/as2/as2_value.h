@@ -337,13 +337,19 @@ class Member
 public:
     Value mValue;
 
-    Member() {}
+    Member() { mValue.T.PropFlags = 0; }
     Member(const Value& value, const PropFlags flags = PropFlags()) : mValue(value)
     {
         mValue.T.PropFlags = flags.Flags;
     }
     // The value copy leaves the flags out.
     Member(const Member& m) : mValue(m.mValue) { mValue.T.PropFlags = m.mValue.T.PropFlags; }
+    // So does the value assignment.
+    void operator=(const Member& m)
+    {
+        mValue             = m.mValue;
+        mValue.T.PropFlags = m.mValue.T.PropFlags;
+    }
 
     const Value& GetMemberValue() const { return mValue; }
     Value&       GetMemberValue()       { return mValue; }

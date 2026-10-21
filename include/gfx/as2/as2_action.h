@@ -173,6 +173,8 @@ struct Environment::TryDescr
     unsigned     TryBeginPC;    // +0x08
     unsigned     TopStackIndex; // +0x0c
 
+    TryDescr() { TopStackIndex = 0; }
+
     unsigned GetTrySize() const { return pTryBlock[1] | (((UInt16)pTryBlock[2]) << 8); }
 };
 

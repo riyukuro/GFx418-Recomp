@@ -29,6 +29,12 @@ public:
     const SetType& GetSet() const { return *reinterpret_cast<const SetType*>(this); }
     ConstIterator  Begin() const  { return GetSet().Begin(); }
     ConstIterator  End() const    { return GetSet().End(); }
+
+    // The node in slot index of the table (the slots follow the { EntryCount, SizeMask } header).
+    const NodeType& NodeAt(SPInt index) const
+    {
+        return (reinterpret_cast<const EntryType*>(reinterpret_cast<const UPInt*>(pTable) + 2) + index)->Value;
+    }
 };
 
 class Movie;
@@ -50,6 +56,29 @@ public:
 void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* pdata, bool isdobj);
 
 namespace AS2 {
+
+// The findIndexAlt of the member table (exe COMDAT 0x142917340, called where cl inlines it): the slot of key,
+// negative when absent.
+SPInt MemberHash_FindIndex(const ASStringHash_GC<Member>* phash, const ASString& key);
+
+// Hash::Get of the member table: the member of key copied out.
+inline const ASStringHash_GC<Member>::NodeType* MemberHash_GetAlt(const ASStringHash_GC<Member>* phash,
+                                                                   const ASString&                 key)
+{
+    SPInt index = MemberHash_FindIndex(phash, key);
+    if (index >= 0)
+        return &phash->NodeAt(index);
+    return 0;
+}
+inline bool MemberHash_Get(const ASStringHash_GC<Member>* phash, const ASString& key, Member* pmember)
+{
+    const ASStringHash_GC<Member>::NodeType* pnode = MemberHash_GetAlt(phash, key);
+    if (pnode == 0)
+        return false;
+    if (pmember)
+        *pmember = pnode->Second;
+    return true;
+}
 
 // Interface of everything a script can address as an object (script objects at +0x20, characters).
 // vftable slots: 0x00 dtor .. 0xa0 Unwatch.
@@ -202,6 +231,7 @@ public:
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val); // exe 0x142953280
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);       // exe 0x14294f7d0
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name);             // exe 0x1429388e0
+    virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes); // exe 0x14295d970
 
 protected:
     Object(ASRefCountCollector* pcc);

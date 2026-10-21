@@ -987,12 +987,12 @@ MS2_AS2_STRING_HASH_ADD(GFx::AS2::Object::Watchpoint, GFx::ASStringHash_GC<GFx::
 // MS2-FUNCTIONAL the exe inlines CheckExpand here (pinned below)
 // @0x142915300
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::FunctionRef, GFx::ASStringHash_GC<GFx::AS2::FunctionRef>::NodeType)
-// MS2-FUNCTIONAL register allocation (pinned below)
+// (pinned below)
 // @0x1429154d0
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::Member, GFx::ASStringHash_GC<GFx::AS2::Member>::NodeType)
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::Object::Watchpoint, GFx::ASStringHash_GC<GFx::AS2::Object::Watchpoint>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::FunctionRef, GFx::ASStringHash_GC<GFx::AS2::FunctionRef>::NodeType::NodeRef)
-// MS2-FUNCTIONAL register allocation (pinned below)
+// (pinned below)
 // @0x1429164b0
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::Member, GFx::ASStringHash_GC<GFx::AS2::Member>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_FIND(GFx::AS2::Object::Watchpoint)

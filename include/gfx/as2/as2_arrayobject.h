@@ -39,6 +39,8 @@ public:
 
     // Elements by index name, "length" from the element count (exe 0x1429530b0).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+    // An index name is a member when the element is set, not undefined or null (exe 0x14295d700).
+    virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes);
 
     // The index a member name spells (only digits), -1 for any other name.
     static int ParseIndex(const ASString& name)
@@ -66,6 +68,9 @@ public:
     // The elements joined with "," (exe 0x1429565d0).
     virtual const char* GetTextValue(Environment* penv = 0) const;
     void Concat(Environment* penv, const Value& val);                                         // exe 0x142935680
+    // The elements copied to new heap values (exe 0x1429684d0); from another array (exe 0x142968560).
+    void MakeDeepCopy(MemoryHeap* pheap);
+    void MakeDeepCopyFrom(MemoryHeap* pheap, const ArrayObject& ao);
 
     void PopBack()
     {
