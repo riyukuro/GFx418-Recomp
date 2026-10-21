@@ -28,6 +28,7 @@ enum ASBuiltinType : int
     ASBuiltin_Selection     = 21,
     ASBuiltin_Mouse         = 27,
     ASBuiltin_MovieClipLoader = 29,
+    ASBuiltin_BitmapData      = 30,
     ASBuiltin_DropShadowFilter = 38,
     ASBuiltin_GlowFilter       = 39,
     ASBuiltin_BlurFilter       = 40,

@@ -29,10 +29,14 @@ public:
     }
     // Shadow angle in radians; the offset follows (exe 0x14297fac0).
     void SetAngle(float a);
+    // Shadow distance in twips (exe 0x142981320).
+    void SetDistance(float d);
 
 protected:
     // The blur parameters of the filter (exe 0x142995370).
     const Render::BlurFilterParams& readonlyFilterParams() const;
+    // The same after writableFilter; a shared dummy for a non-blur filter (exe 0x142996690).
+    Render::BlurFilterParams& writableFilterParams();
 
     virtual void Finalize_GC(); // exe 0x142942cf0
 };

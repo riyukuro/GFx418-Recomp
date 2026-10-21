@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
 // MS2-RANGE: 0x142980240-0x1429803d0 .text$mn
 // MS2-RANGE: 0x1429804c0-0x142980570 .text$mn
+// MS2-RANGE: 0x142981320-0x1429813e0 .text$mn
 // MS2-RANGE: 0x1429814c0-0x142981600 .text$mn
 // MS2-RANGE: 0x142981650-0x142981670 .text$mn
 // MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
@@ -48,10 +49,10 @@
 // MS2-RANGE: 0x1429944d0-0x142994710 .text$mn
 // MS2-RANGE: 0x1429947f0-0x142994a00 .text$mn
 // MS2-RANGE: 0x142994bb0-0x142994e00 .text$mn
-// MS2-RANGE: 0x142994e10-0x142994e90 .text$mn
+// MS2-RANGE: 0x142994e10-0x142994fd0 .text$mn
 // MS2-RANGE: 0x142994fe0-0x1429950f0 .text$mn
 // MS2-RANGE: 0x142995100-0x142995180 .text$mn
-// MS2-RANGE: 0x142995440-0x142996690 .text$mn
+// MS2-RANGE: 0x142995370-0x1429967b0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -505,6 +506,46 @@ void TransformObject::SetTarget(InteractiveObject* pcharacter)
         pMovieRoot = 0;
         TargetHandle.Clear();
     }
+}
+
+// @0x142981320
+void BitmapFilterObject::SetDistance(float d)
+{
+    Render::Filter* f = writableFilter();
+    if (!f || !(f->GetFilterType() >= Render::Filter_Blur && f->GetFilterType() <= Render::Filter_Blur_End))
+        return;
+    Render::BlurFilterImpl* bf = static_cast<Render::BlurFilterImpl*>(f);
+    bf->SetAngleDistance(bf->GetAngle(), d);
+}
+
+// MS2-FUNCTIONAL cl constant-initializes the static params; the exe builds them under a thread-safe guard
+// @0x142995370
+const Render::BlurFilterParams& BitmapFilterObject::readonlyFilterParams() const
+{
+    static Render::BlurFilterParams unavailableParams;
+    Render::Filter* filter = pFilter;
+    if (!filter || !(filter->GetFilterType() >= Render::Filter_Blur && filter->GetFilterType() <= Render::Filter_Blur_End))
+        return unavailableParams;
+    return static_cast<Render::BlurFilterImpl*>(filter)->GetParams();
+}
+
+// MS2-FUNCTIONAL cl constant-initializes the static params; the exe builds them under a thread-safe guard
+// @0x142996690
+Render::BlurFilterParams& BitmapFilterObject::writableFilterParams()
+{
+    static Render::BlurFilterParams unavailableParams;
+    Render::Filter* filter = writableFilter();
+    if (!filter || !(filter->GetFilterType() >= Render::Filter_Blur && filter->GetFilterType() <= Render::Filter_Blur_End))
+        return unavailableParams;
+    return static_cast<Render::BlurFilterImpl*>(filter)->GetParams();
+}
+
+// @0x142994e90
+void BitmapData::commonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_BitmapData));
+    SetMemberRaw(penv->GetSC(), penv->CreateConstString("width"), Value(Value::UNSET), PropFlags::PropFlag_ReadOnly);
+    SetMemberRaw(penv->GetSC(), penv->CreateConstString("height"), Value(Value::UNSET), PropFlags::PropFlag_ReadOnly);
 }
 
 // @0x1429804c0

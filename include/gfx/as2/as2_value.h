@@ -168,6 +168,8 @@ public:
     Value(bool val)   { T.Type = BOOLEAN; V.BooleanValue = val; }
     Value(Number val) { T.Type = NUMBER; NV.NumberValue = val; }
     Value(int val)    { T.Type = INTEGER; NV.Int32Value = val; }
+    // A value of a type without payload (UNSET, NULLTYPE, ...).
+    explicit Value(type typeVal) { T.Type = (UByte)typeVal; }
     inline Value(const FunctionRef& func); // as2_object.h
     // A getter/setter property (ValueProperty allocated in pheap).
     inline Value(const FunctionRef& getter, const FunctionRef& setter, MemoryHeap* pheap, ASRefCountCollector* pcc);

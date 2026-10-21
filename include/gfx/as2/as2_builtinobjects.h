@@ -167,6 +167,10 @@ public:
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942ca0
+
+private:
+    // Prototype and the read-only width / height members, unset until an image is set (exe 0x142994e90).
+    void commonInit(Environment* penv);
 };
 class LoadVarsObject : public Object
 {
