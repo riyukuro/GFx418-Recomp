@@ -165,6 +165,24 @@ protected:
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
 };
 
+// The AmpMarker class: one static method that puts a named marker into the profiler stats of the movie.
+class AmpMarkerCtorFunction : public CFunctionObject
+{
+private:
+    static void AddMarker(const FnCall& fn);
+};
+
 }}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx { namespace AMP {
+
+// Profiler statistics of one movie view (MovieImpl::AdvanceStats).
+class ViewStats
+{
+public:
+    void AddMarker(const char* name); // exe 0x1426204e0
+};
+
+}}} // namespace Scaleform::GFx::AMP
 
 #endif

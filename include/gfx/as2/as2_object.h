@@ -130,6 +130,8 @@ public:
     bool IsFunction() const { return GetObjectType() == Object_Function; }
     // The display object of a character, 0 for a script object (as2_avmcharacter.h).
     inline InteractiveObject* ToCharacter();
+    // The clip of a movie clip object, 0 for anything else (as2_avmsprite.h).
+    inline Sprite* ToSprite();
 };
 
 // Script object: GC base at +0, ObjectInterface at +0x20. 0x68 bytes.

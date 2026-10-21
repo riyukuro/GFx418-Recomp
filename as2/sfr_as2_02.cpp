@@ -5,11 +5,16 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428fdc00-0x1428fe7e0 .text$mn
 // MS2-RANGE: 0x1428fec90-0x1428fed10 .text$mn
+// MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142901d20 .text$mn
 // MS2-RANGE: 0x142902200-0x1429023e0 .text$mn
 // MS2-RANGE: 0x1429023e0-0x1429024e0 .text$mn
 // MS2-RANGE: 0x1429027a0-0x142902a00 .text$mn
+// MS2-RANGE: 0x142902a10-0x142902ae0 .text$mn
 // MS2-RANGE: 0x142903350-0x1429033c0 .text$mn
+// MS2-RANGE: 0x1429035a0-0x142903650 .text$mn
+// MS2-RANGE: 0x142903910-0x142903a20 .text$mn
+// MS2-RANGE: 0x142906d80-0x142906de0 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
 // MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
@@ -21,6 +26,7 @@
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_colortransform.h"
@@ -240,6 +246,77 @@ void ObjectProto::IsPropertyEnumerable(const FnCall& fn)
     }
     else
         fn.Result->SetBool(false);
+}
+
+// MovieImpl::AdvanceStats (+0x30, not recovered in gfx_movieimpl.h yet).
+static inline AMP::ViewStats* GetAdvanceStats(MovieImpl* pmovie)
+{
+    return *(AMP::ViewStats**)((UByte*)pmovie + 0x30);
+}
+
+// AmpMarker.addMarker(name)
+void AmpMarkerCtorFunction::AddMarker(const FnCall& fn)
+{
+    fn.Result->SetNull();
+    if (!fn.Env || fn.NArgs == 0)
+        return;
+    GetAdvanceStats(fn.Env->GetTarget()->GetMovieImpl())->AddMarker(fn.Arg(0).ToString(fn.Env).ToCStr());
+}
+
+// The depth as scripts see it: timeline depths start at -16384.
+void AvmCharacter::CharacterGetDepth(const FnCall& fn)
+{
+    InteractiveObject* pcharacter = fn.ThisPtr->ToCharacter();
+    if (!pcharacter)
+        pcharacter = fn.Env->GetTarget();
+    int depth = pcharacter->Depth;
+    fn.Result->SetInt(depth - 16384);
+}
+
+void AvmSprite::SpritePlay(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+        psprite->SetPlayState(State_Playing);
+}
+
+void AvmSprite::SpriteStop(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+        psprite->SetPlayState(State_Stopped);
+}
+
+// Steps one frame (as far as loaded) and stops.
+void AvmSprite::SpriteNextFrame(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    int loaded  = psprite->GetLoadingFrame();
+    int current = psprite->GetCurrentFrame();
+    if (current < loaded)
+        psprite->GotoFrame(current + 1);
+    psprite->SetPlayState(State_Stopped);
+}
+
+void AvmSprite::SpritePrevFrame(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    int current = psprite->GetCurrentFrame();
+    if (current > 0)
+        psprite->GotoFrame(current - 1);
+    psprite->SetPlayState(State_Stopped);
+}
+
+// Unloading is a load of the empty url.
+void AvmSprite::SpriteUnloadMovie(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+        ToAS2Root(psprite)->AddLoadQueueEntry(psprite, "");
 }
 
 // this is in the prototype chain of the argument (interfaces not counted).

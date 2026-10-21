@@ -7,8 +7,11 @@
 #include "as2_action.h"
 #include "../gfx_displayobject.h"
 #include "../gfx_movieimpl.h"
+#include "../gfx_playertasks.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
+
+class MovieClipLoader;
 
 // Ids of the strings every AS2 movie creates up front (index into StringManager::Builtins).
 enum ASBuiltinType : int
@@ -50,7 +53,18 @@ public:
     StringManager BuiltinsMgr;           // +0x138
 
     StringManager* GetStringManager() { return &BuiltinsMgr; }
+
+    // Queues a load of purl into ptarget, an empty url unloads it (exe 0x14292f740).
+    void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
+                           LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None,
+                           MovieClipLoader* pmovieClipLoader = 0);
 };
+
+// The AS2 root of a character of an AS2 movie.
+inline MovieRoot* ToAS2Root(DisplayObjectBase* pchar)
+{
+    return static_cast<MovieRoot*>(pchar->GetASMovieRoot());
+}
 
 inline const ASString& ASStringContext::GetBuiltin(int btype) const
 {

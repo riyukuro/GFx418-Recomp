@@ -17,6 +17,8 @@ public:
     InteractiveObject* pDispObj; // +0x20
 
     InteractiveObject* GetDispObj() const { return pDispObj; }
+
+    static void CharacterGetDepth(const FnCall& fn);
 };
 
 inline InteractiveObject* ObjectInterface::ToCharacter()
