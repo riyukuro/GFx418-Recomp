@@ -116,6 +116,7 @@ public:
         const char*      GetFileURL() const   { return FileURL.ToCStr(); }
 
         UInt32           GetTagCount() const  { return TagCount; }
+        unsigned         GetLoadingFrame() const { return LoadingFrame; }
         // The MovieHeaderData of the file (only defined by the units that read it).
         const void*      GetHeaderData() const { return HeaderData; }
 
@@ -123,7 +124,9 @@ public:
         UByte                     Unknown10[0x38];  // +0x10
         String                    FileURL;          // +0x48
         UByte                     HeaderData[0x78]; // +0x50 MovieHeaderData
-        UByte                     UnknownC8[0x28];  // +0xc8
+        UByte                     UnknownC8[0x20];  // +0xc8
+        UInt32                    LoadingFrame;     // +0xe8 frame being loaded
+        UByte                     UnknownEC[4];     // +0xec
         UInt32                    TagCount;         // +0xf0
         UByte                     UnknownF4[0x2c];  // +0xf4
         FontDataUseNode* volatile pFonts;           // +0x120

@@ -4,10 +4,12 @@
 //
 // Out-of-line members bind to the exe until the Sound units are recovered: SoundFile ctor 0x142747cf0,
 // ~SoundInfo 0x142748430, SoundInfo GetRate 0x142748490, GetSoundSample 0x1427484a0, SetSoundData 0x142748580,
-// ReleaseResource 0x142748540.
+// ReleaseResource 0x142748540, SoundData ctor 0x142747c70, AppendableSoundData ctor 0x142747bc0,
+// LockDataForAppend 0x142748230, UnlockData 0x142748420.
 #ifndef MS2_SF_SOUND_SOUND_H
 #define MS2_SF_SOUND_SOUND_H
 
+#include "../kernel/sf_lock.h"
 #include "../kernel/sf_refcount.h"
 #include "sound_renderer.h"
 
@@ -112,6 +114,28 @@ public:
     bool         SetSoundData(SoundDataBase* psound);
     virtual bool IsPlayable() const { return pSound.GetPtr() != 0; }
     virtual void ReleaseResource();
+};
+
+// Samples of a streaming SWF sound, appended frame by frame as the timeline loads (0x68 bytes).
+class AppendableSoundData : public SoundDataBase
+{
+public:
+    AppendableSoundData(unsigned format, unsigned rate);
+    ~AppendableSoundData();
+
+    // Room for length more samples of dsize bytes; the data stays locked until UnlockData.
+    UByte* LockDataForAppend(unsigned length, unsigned dsize);
+    void   UnlockData();
+
+protected:
+    struct DataChunk;
+
+    DataChunk* pFirstChunk; // +0x20
+    DataChunk* pFillChunk;  // +0x28
+    DataChunk* pReadChunk;  // +0x30
+    unsigned   DataSize;    // +0x38
+    unsigned   ReadPos;     // +0x3c
+    Lock       ChunkLock;   // +0x40
 };
 
 }} // namespace Scaleform::Sound
