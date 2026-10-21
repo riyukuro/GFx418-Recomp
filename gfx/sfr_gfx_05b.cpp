@@ -18,6 +18,7 @@
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_timelinesnapshot.h"
 #include "../include/gfx/gfx_fontmanager.h"
+#include "../include/gfx/gfx_textsnapshot.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -470,6 +471,83 @@ void Sprite::SetIMECandidateListFont(FontHandle* pfont)
 RectF DisplayObjContainer::GetBounds(const Matrix& t) const
 {
     return mDisplayList.GetRectBounds(t);
+}
+
+// The static text fields among the clip's direct children.
+// @0x1425db410
+void Sprite::GetTextSnapshot(StaticTextSnapshotData* pdata) const
+{
+    UPInt count = mDisplayList.GetCount();
+    for (UPInt i = 0; i < count; i++)
+    {
+        DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
+        if (ch && ch->GetCharacterDef()->GetResourceType() == Resource::RT_TextDef)
+            pdata->Add(reinterpret_cast<StaticTextCharacter*>(ch));
+    }
+}
+
+// The children's bounds, joined with what the drawing API drew into the clip.
+// MS2-FUNCTIONAL: the exe frame carries a /GS cookie that cl does not add for these locals
+// @0x1425dad90
+RectF Sprite::GetBounds(const Matrix& t) const
+{
+    RectF r = mDisplayList.GetBounds(t);
+    if (pDrawingAPI)
+    {
+        RectF dr(0, 0, 0, 0);
+        pDrawingAPI->ComputeBound(&dr);
+        if (!(dr.x1 >= dr.x2 || dr.y1 >= dr.y2))
+        {
+            RectF tr(RectF::NoInit);
+            t.EncloseTransform(&tr, dr);
+            if (!(r.x1 >= r.x2 || r.y1 >= r.y2))
+            {
+                r.x1 = Alg::Min(tr.x1, r.x1);
+                r.y1 = Alg::Min(tr.y1, r.y1);
+                r.x2 = Alg::Max(r.x2, tr.x2);
+                r.y2 = Alg::Max(r.y2, tr.y2);
+            }
+            else
+                r = tr;
+        }
+    }
+    return r;
+}
+
+// The hit area's focus rect mapped by its matrix, else the clip's own bounds.
+// MS2-FUNCTIONAL: the exe frame carries a /GS cookie that cl does not add for these locals
+// @0x1425daf80
+RectF Sprite::GetFocusRect() const
+{
+    Sprite* phitArea = GetHitArea();
+    Matrix  m;
+    if (phitArea)
+    {
+        m = phitArea->GetMatrix();
+        RectF r = phitArea->GetFocusRect();
+        RectF result(RectF::NoInit);
+        m.EncloseTransform(&result, r);
+        return result;
+    }
+    return GetBounds(Matrix());
+}
+
+// hitTestMask: 1 tests the shapes instead of the bounds, 2 skips invisible clips.
+// MS2-FUNCTIONAL: the exe frame carries a /GS cookie that cl does not add for these locals
+// @0x1425dc2e0
+bool Sprite::PointTestLocal(const PointF& pt, UByte hitTestMask) const
+{
+    if (InteractiveObject::Flags & Mask_HitTestDisable)
+        return false;
+    if (!(DisplayObjectBase::Flags & Mask_Scale9GridExists) && !GetBounds(Matrix()).Contains(pt))
+        return false;
+    if ((hitTestMask & 2) && !GetVisible())
+        return false;
+    if (DisplayObjContainer::PointTestLocal(pt, hitTestMask))
+        return true;
+    if (!pDrawingAPI)
+        return false;
+    return pDrawingAPI->DefPointTestLocal(pt, (hitTestMask & 1) != 0, this);
 }
 
 // _root, honouring _lockroot of a separately loaded clip.

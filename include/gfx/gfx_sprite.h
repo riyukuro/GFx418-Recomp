@@ -16,6 +16,7 @@ class TimelineDef;
 class SpriteDef;
 class FontHandle;
 class FontResource;
+class StaticTextSnapshotData;
 
 // Allocation stat of the movie view objects other than clips.
 enum { StatMV_Other_Mem = 0x147 };
@@ -23,6 +24,11 @@ enum { StatMV_Other_Mem = 0x147 };
 // Drawing API state of a clip (moveTo/lineTo/beginFill). Only the count is recovered so far.
 class DrawingContext : public RefCountBaseNTS<DrawingContext, 322>
 {
+public:
+    // Bounds of everything drawn so far, in the clip's space (0x1425fec60).
+    void ComputeBound(RectF* pRect) const;
+    // Hit test of the drawn shapes, testShape asking for the exact outline instead of the bounds (0x1425ff270).
+    bool DefPointTestLocal(const PointF& pt, bool testShape, const DisplayObjectBase* pinst) const;
 };
 
 // Mouse state of a clip that acts as a button.
@@ -169,6 +175,7 @@ public:
     void     SetHitArea(Sprite* phitArea);
     void     SetIMECandidateListFont(FontResource* pfont);
     void     SetIMECandidateListFont(FontHandle* pfont);
+    void     GetTextSnapshot(StaticTextSnapshotData* pdata) const;
 
     AvmSpriteBase* GetAvmSprite() const;
     bool           MustBeInPlaylist() const;
