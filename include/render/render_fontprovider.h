@@ -47,6 +47,30 @@ public:
     virtual ~Font() {}
     virtual const char* GetName() const = 0;
 
+private:
+    // Glyph metrics, shapes and texture glyphs (slots 2..17): placeholders until a recovered unit calls them. They
+    // are only declared; no recovered unit makes a Font vftable.
+    virtual void Slot02(); // GetGlyphIndex
+    virtual void Slot03(); // GetAdvance
+    virtual void Slot04(); // GetKerningAdjustment
+    virtual void Slot05(); // GetGlyphWidth
+    virtual void Slot06(); // GetGlyphHeight
+    virtual void Slot07(); // GetGlyphBounds
+    virtual void Slot08(); // IsHintedVectorGlyph
+    virtual void Slot09(); // IsHintedRasterGlyph
+    virtual void Slot10(); // GetTextureGlyph
+    virtual void Slot11(); // GetTextureGlyphData
+    virtual void Slot12(); // SetTextureGlyphData
+    virtual void Slot13(); // GetTextureGlyphHeight
+    virtual void Slot14(); // GetPermanentGlyphShape
+    virtual void Slot15(); // GetTemporaryGlyphShape
+    virtual void Slot16(); // GetGlyphRaster
+    virtual void Slot17(); // GetCharValue
+
+public:
+    // Number of glyph shapes the font carries; 0 for fonts exported without glyphs (+0x90).
+    virtual unsigned GetGlyphShapeCount() const { return 0; }
+
     unsigned GetFontFlags() const { return Flags; }
     void     SetNotResolvedFlag()  { Flags |= FF_NotResolved; }
 
@@ -61,6 +85,13 @@ public:
     bool MatchFont(const char* name, unsigned matchFlags) const
     {
         return MatchFontFlags(matchFlags) && !String::CompareNoCase(GetName(), name);
+    }
+    // fd can stand in for this font: same name and the same style / code page.
+    bool MatchSubstituteFont(Font* fd) const
+    {
+        const char* name  = fd->GetName();
+        unsigned    flags = fd->GetFontFlags() & FF_CreateFont_Mask;
+        return MatchFont(name, flags);
     }
 
 protected:

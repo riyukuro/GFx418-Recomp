@@ -32,6 +32,11 @@
 // MS2-PIN: ??_7?$RefCountBase@VGFxMovieDataDefFileKeyData@GFx@Scaleform@@$01@Scaleform@@6B@ 0x14318b8b8
 // MS2-PIN: ??_7GFxMovieDataDefFileKeyData@GFx@Scaleform@@6B@ 0x14318b8c0
 // MS2-PIN: ??_7GFxMovieDataDefFileKeyInterface@GFx@Scaleform@@6B@ 0x14318b278
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x1425cc710
+// MS2-PIN: ??_G?$RefCountBase@VStateBagImpl@GFx@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x1425cc890
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAJ@@Scaleform@@UEAAPEAXI@Z 0x1425cc8f0
+// MS2-PIN: ??_GBindTaskData@MovieDefImpl@GFx@Scaleform@@UEAAPEAXI@Z 0x1425cc950
+// MS2-PIN: ??_GResourceReport@GFx@Scaleform@@UEAAPEAXI@Z 0x1425cd110
 // MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
 // MS2-PIN: ??_7ImagePackVisitor@?4??FinishBinding@MovieBindProcess@GFx@Scaleform@@QEAAXXZ@6B@ 0x14318b960
 
@@ -1502,6 +1507,71 @@ bool MovieDefImpl::BindTaskData::SetResourceBindData(ResourceId rid, ResourceBin
         return true;
     }
     return false;
+}
+
+// Binds the symbols one import takes from pdefImpl, keeps the source movie alive and, for "_glyphs" sources or fonts
+// exported without glyphs, substitutes same-named fonts of the source.
+// @0x1425d2660
+// MS2-FUNCTIONAL: register allocation and block order in the font substitution loops
+void MovieDefImpl::BindTaskData::ResolveImport(ImportData* pimport, MovieDefImpl* pdefImpl, LoadStates* pls,
+                                               bool recursive)
+{
+    for (unsigned i = 0; i < pimport->Imports.GetSize(); i++)
+    {
+        ImportData::Symbol& symbol = pimport->Imports[i];
+        ResourceBindData    bindData;
+
+        if (!pdefImpl->GetExportedResource(&bindData, symbol.SymbolName))
+        {
+            if (pls->pLog)
+                pls->pLog->LogError("Import failed - resource '%s' is not exported from movie '%s'",
+                                    symbol.SymbolName.ToCStr(), pimport->SourceUrl.ToCStr());
+        }
+        else
+            SetResourceBindData(ResourceId(symbol.CharacterId), bindData, symbol.SymbolName.ToCStr());
+    }
+
+    // The source movie is held even without symbols (AS3 files reach exports by class name).
+    if (!recursive)
+    {
+        Lock::Locker lock(&ImportSourceLock);
+        ImportSourceMovies.PushBack(pdefImpl);
+    }
+    if (recursive)
+        return;
+
+    // Fonts imported from a "_glyphs" file always take the glyphs of the same-named font there; the source is
+    // remembered for fonts that are bound later.
+    bool   forceFontSubstitution = false;
+    String lowerURL              = pimport->SourceUrl.ToLower();
+    if (strstr(lowerURL.ToCStr(), "_glyphs") != 0)
+    {
+        forceFontSubstitution = true;
+        pls->SubstituteFontMovieDefs.PushBack(pdefImpl);
+    }
+
+    FontDataUseNode* pfont       = GetDataDef()->GetFirstFont();
+    FontDataUseNode* psourceFont = pdefImpl->GetDataDef()->GetFirstFont();
+    for (; pfont != 0; pfont = pfont->pNext)
+    {
+        Render::Font* pfontData = pfont->pFontData;
+        if (pfontData->GetGlyphShapeCount() == 0 || forceFontSubstitution)
+        {
+            for (FontDataUseNode* psfont = psourceFont; psfont != 0; psfont = psfont->pNext)
+            {
+                Render::Font* psourceFontData = psfont->pFontData;
+                if (psourceFontData->GetGlyphShapeCount() > 0 && pfontData->MatchSubstituteFont(psourceFontData))
+                {
+                    // The source is fully loaded, so its binding can be read directly.
+                    ResourceBindData sourceBindData;
+                    pdefImpl->pBindData->ResourceBinding.GetResourceData(&sourceBindData, psfont->BindIndex);
+                    if (sourceBindData.pResource)
+                        ResourceBinding.SetBindData(pfont->BindIndex, sourceBindData);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 // Font of the movie's own tags; here only made as a by-name placeholder.
