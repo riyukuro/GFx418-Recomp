@@ -107,6 +107,15 @@ public:
     UPInt                   GetButtonActionsCount() const  { return ButtonActions.GetSize(); }
 
     void AddButtonAction(ButtonActionBase* pact);
+
+    // (appended for the buttons, sfr_gfx_05c) the 9-slice grid, the zero rect when the button has none
+    RectF GetScale9Grid() const
+    {
+        if (!pScale9Grid)
+            return RectF(0);
+        const RectF& r = pScale9Grid->Rect;
+        return RectF(r.x1, r.y1, r.x2, r.y2);
+    }
 };
 
 }} // namespace Scaleform::GFx

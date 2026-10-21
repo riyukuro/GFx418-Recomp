@@ -248,6 +248,16 @@ public:
         TreeNode* const* nodes = hasArrayData() ? getArrayData()->pNodes : pNodes;
         return nodes[index];
     }
+
+    // (appended for the buttons, sfr_gfx_05c) the child count as TreeContainer::GetSize inlines it
+    UPInt GetSize() const
+    {
+        if (!pData[0])
+            return 0;
+        if (hasArrayData())
+            return getArrayData()->Size;
+        return pNodes[1] ? 2 : 1;
+    }
 };
 
 // The TreeContainer::NodeData vftable (0x143183280): the constructor below stores it the way the inlined

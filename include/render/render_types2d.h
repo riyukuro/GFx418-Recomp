@@ -161,6 +161,9 @@ public:
     Rect& Offset(T dx, T dy)              { x1 += dx; x2 += dx; y1 += dy; y2 += dy; return *this; }
     Rect& operator+=(const Point<T>& p)   { return Offset(p.x, p.y); }
     Rect& operator-=(const Point<T>& p)   { return Offset(-p.x, -p.y); }
+
+    // (appended for the buttons, sfr_gfx_05c) a point rect (the zero rect included)
+    bool IsNull() const { return x2 == x1 && y2 == y1; }
 };
 
 typedef Point<float>  PointF;

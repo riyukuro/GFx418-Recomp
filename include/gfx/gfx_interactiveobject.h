@@ -215,6 +215,14 @@ public:
         case -1: MarkToRemoveFromOptimizedPlayList(); break;
         }
     }
+
+    // (appended for the buttons, sfr_gfx_05c) trackAsMenu
+    enum
+    {
+        Shift_TrackAsMenu = 14
+    };
+    bool GetTrackAsMenu() const            { return ((Flags >> Shift_TrackAsMenu) & 1) != 0; }
+    void SetTrackAsMenuFlag(bool v = true) { if (v) Flags |= Mask_TrackAsMenu; else Flags &= ~Mask_TrackAsMenu; }
 };
 
 // The AVM half of an interactive object: slots 13..22 after the AvmDisplayObjBase ones.

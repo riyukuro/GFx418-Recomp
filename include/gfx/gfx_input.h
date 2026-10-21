@@ -169,6 +169,15 @@ protected:
     bool MouseInsideEntityLast    : 1;
     bool MouseMoved               : 1;
     bool Activated                : 1;
+
+    // (appended for Button::OnMouseEvent, sfr_gfx_05c)
+public:
+    enum
+    {
+        MouseButton_Left = 1
+    };
+    unsigned GetButtonsState() const     { return CurButtonsState; }
+    unsigned GetPrevButtonsState() const { return PrevButtonsState; }
 };
 
 }} // namespace Scaleform::GFx
