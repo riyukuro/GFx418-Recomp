@@ -23,19 +23,12 @@ public:
 };
 typedef Point3<float> Point3F;
 
-// Element storage in a base so the float matrices are 16-byte aligned for SSE.
+// Element storage in a base (4.1.18 does not align the 3x4 float matrix: tree nodes copy it with movups).
 template<class T>
 class Matrix3x4Data
 {
 public:
     T M[3][4];
-};
-
-template<>
-class Matrix3x4Data<float>
-{
-public:
-    __declspec(align(16)) float M[3][4];
 };
 
 template<class T>
@@ -58,6 +51,42 @@ public:
 
     // this = a * b (b applied first)
     void MultiplyMatrix(const Matrix3x4& a, const Matrix3x4& b);
+
+    // (appended for the tree nodes, sfr_render_03c)
+    static Matrix3x4 Identity;      // Matrix3F: 0x143aee540
+
+    Matrix3x4(const T m[3][4]) { Set(&m[0][0], 12); }
+
+    void Set(const T* p, int count) { memcpy(M, p, count * sizeof(T)); }
+
+    // a 2D point taken as (x, y, 0, 1)
+    Point<T> Transform(const Point<T>& p) const
+    {
+        T z = 1.0f;
+        return Point<T>(M[0][0] * p.x + M[0][1] * p.y + M[0][2] * z + M[0][3],
+                        M[1][0] * p.x + M[1][1] * p.y + M[1][2] * z + M[1][3]);
+    }
+    void Transform(Point<T>* dest, const Point<T>& p) const { *dest = Transform(p); }
+
+    // bounds of the four transformed corners
+    void EncloseTransform(Rect<T>* dest, const Rect<T>& r) const
+    {
+        Point<T> p0, p1, p2, p3;
+        Transform(&p0, r.TopLeft());
+        Transform(&p1, r.TopRight());
+        Transform(&p2, r.BottomRight());
+        Transform(&p3, r.BottomLeft());
+        dest->SetRect(p0, p0);
+        dest->ExpandToPoint(p1);
+        dest->ExpandToPoint(p2);
+        dest->ExpandToPoint(p3);
+    }
+    Rect<T> EncloseTransform(const Rect<T>& r) const
+    {
+        Rect<T> d(Rect<T>::NoInit);
+        EncloseTransform(&d, r);
+        return d;
+    }
 };
 typedef Matrix3x4<float> Matrix3F;
 
@@ -130,6 +159,9 @@ public:
 
     inline Matrix4x4 GetInverse() const;
     void SetInverse(const Matrix4x4& m) { *this = m.GetInverse(); }
+
+    // (appended for the tree nodes, sfr_render_03c)
+    Matrix4x4(const T m[4][4]) { Set(&m[0][0], 16); }
 };
 typedef Matrix4x4<float> Matrix4F;
 

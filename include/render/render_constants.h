@@ -56,6 +56,40 @@ enum BlendMode
     Blend_Count
 };
 
+// (appended for the tree nodes, sfr_render_03c) the per-node change bits handed to Entry::getWritableData
+enum TreeNodeChangeConstants
+{
+    Change_Matrix               = 0x00000001,
+    Change_CxForm               = 0x00000002,
+    Change_Visible              = 0x00000004,
+    Change_AproxBounds          = 0x00000008,
+    Change_MorphRatio           = 0x00000010,
+    Change_EdgeAAMode           = 0x00000020,
+    Change_IsMask               = 0x00000080,
+    Change_ChildInsert          = 0x00000100,
+    Change_ChildRemove          = 0x00000200,
+    Change_Shape                = 0x00000400,
+    Change_Viewport             = 0x00001000,
+    Change_3D                   = 0x00002000,
+
+    Change_State_Scale9             = 0x00010000,
+    Change_State_BlendMode          = 0x00020000,
+    Change_State_MaskNode           = 0x00040000,
+    Change_State_ViewMatrix3D       = 0x00080000,
+    Change_State_ProjectionMatrix3D = 0x00100000,
+    Change_State_Filter             = 0x00200000,
+    Change_State_Mask               = 0x00FF0000
+};
+
+// the NF_EdgeAA_Mask values
+enum EdgeAAMode
+{
+    EdgeAA_Inherit = 0x0000,
+    EdgeAA_On      = 0x0004,
+    EdgeAA_Off     = 0x0008,
+    EdgeAA_Disable = 0x000C
+};
+
 }} // namespace Scaleform::Render
 
 #endif

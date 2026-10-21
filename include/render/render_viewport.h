@@ -1,0 +1,55 @@
+// Recovered Scaleform 4.1.18 Render: the viewport a tree root renders into (buffer size, view rectangle in buffer
+// pixels, optional scissor rectangle), 0x2c bytes.
+// Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
+#ifndef MS2_SF_RENDER_VIEWPORT_H
+#define MS2_SF_RENDER_VIEWPORT_H
+
+namespace Scaleform { namespace Render {
+
+class Viewport
+{
+public:
+    int      BufferWidth, BufferHeight;
+    int      Left, Top;
+    int      Width, Height;
+    int      ScissorLeft, ScissorTop;
+    int      ScissorWidth, ScissorHeight;
+    unsigned Flags;
+
+    enum
+    {
+        View_IsRenderTexture    = 0x01,
+        View_AlphaComposite     = 0x02,
+        View_UseScissorRect     = 0x04,
+        View_NoSetState         = 0x08,
+        View_Orientation_Normal = 0x00,
+        View_Orientation_R90    = 0x10,
+        View_Orientation_180    = 0x20,
+        View_Orientation_L90    = 0x30,
+        View_Orientation_Mask   = 0x30,
+        View_RenderTextureAlpha = View_IsRenderTexture | View_AlphaComposite,
+        View_FirstHalFlag       = 0x100
+    };
+
+    Viewport()
+        : BufferWidth(0), BufferHeight(0), Left(0), Top(0), Width(1), Height(1),
+          ScissorLeft(0), ScissorTop(0), ScissorWidth(0), ScissorHeight(0), Flags(0)
+    {
+    }
+
+    bool IsValid() const { return BufferWidth != 0 && BufferHeight != 0; }
+
+    // every field, in declaration order
+    bool operator==(const Viewport& o) const
+    {
+        return BufferWidth == o.BufferWidth && BufferHeight == o.BufferHeight &&
+               Left == o.Left && Top == o.Top && Width == o.Width && Height == o.Height &&
+               ScissorLeft == o.ScissorLeft && ScissorTop == o.ScissorTop &&
+               ScissorWidth == o.ScissorWidth && ScissorHeight == o.ScissorHeight && Flags == o.Flags;
+    }
+    bool operator!=(const Viewport& o) const { return !(*this == o); }
+};
+
+}} // namespace Scaleform::Render
+
+#endif

@@ -70,6 +70,44 @@ public:
 
     bool operator==(const Rect& r) const { return x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2; }
     bool operator!=(const Rect& r) const { return !(*this == r); }
+
+    // (appended for the tree nodes, sfr_render_03)
+    explicit Rect(T v) : x1(v), y1(v), x2(v), y2(v) {}
+    // assignment reads all four edges first, like the copy constructor
+    Rect& operator=(const Rect& r) { SetRect(r.x1, r.y1, r.x2, r.y2); return *this; }
+    enum NoInitType { NoInit };
+    Rect(NoInitType) {}
+    void SetRect(const Point<T>& tl, const Point<T>& br) { SetRect(tl.x, tl.y, br.x, br.y); }
+
+    Point<T> TopLeft() const     { return Point<T>(x1, y1); }
+    Point<T> TopRight() const    { return Point<T>(x2, y1); }
+    Point<T> BottomLeft() const  { return Point<T>(x1, y2); }
+    Point<T> BottomRight() const { return Point<T>(x2, y2); }
+
+    Rect& Expand(T l, T t, T r, T b) { x1 -= l; x2 += r; y1 -= t; y2 += b; return *this; }
+    Rect& Expand(T h, T v)           { return Expand(h, v, h, v); }
+    Rect& HExpand(T l, T r)          { x1 -= l; x2 += r; return *this; }
+    Rect& VExpand(T t, T b)          { y1 -= t; y2 += b; return *this; }
+    Rect& Contract(T l, T t, T r, T b) { x1 += l; x2 -= r; y1 += t; y2 -= b; return *this; }
+    Rect& Contract(T h, T v)           { return Contract(h, v, h, v); }
+    Rect& HContract(T l, T r)          { x1 += l; x2 -= r; return *this; }
+    Rect& VContract(T t, T b)          { y1 += t; y2 -= b; return *this; }
+
+    Rect& ExpandToPoint(const Point<T>& p)
+    {
+        x1 = Alg::Min<T>(x1, p.x);
+        y1 = Alg::Min<T>(y1, p.y);
+        x2 = Alg::Max<T>(x2, p.x);
+        y2 = Alg::Max<T>(y2, p.y);
+        return *this;
+    }
+    void UnionRect(Rect* dest, const Rect& r) const
+    {
+        dest->x1 = (x1 > r.x1) ? r.x1 : x1;
+        dest->x2 = (x2 > r.x2) ? x2 : r.x2;
+        dest->y1 = (y1 > r.y1) ? r.y1 : y1;
+        dest->y2 = (y2 > r.y2) ? y2 : r.y2;
+    }
 };
 
 typedef Point<float>  PointF;

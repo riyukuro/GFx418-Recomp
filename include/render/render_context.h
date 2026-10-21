@@ -527,8 +527,44 @@ EntryData* EntryRef::GetData() const        { return pPage->pSnapshotPage->pData
 EntryData* EntryRef::GetCleanData() const   { return pPage->pSnapshotPage->GetCleanData(Index); }
 EntryData* EntryRef::GetDisplayData() const { return pPage->pDisplaySnapshotPage->GetCleanData(Index); }
 
+// (appended for the tree nodes, sfr_render_03c)
+// statistics counters of the per-snapshot copies (Render_Context data: 0x143b15f78, 0x143b15f7c, 0x143b15f80)
+extern unsigned ConstructCopyCalls, DestroyCalls, CopyCalls;
+
+// Implements the EntryData copy/destroy slots for the final node data class C on top of its base B.
+template<class C, class B>
+class ContextData_ImplMixin : public B
+{
+public:
+    ContextData_ImplMixin(EntryData::EntryType type = EntryData::ET_Base) : B(type) {}
+    ContextData_ImplMixin(NonlocalCloneArg<ContextData_ImplMixin<C, B> > src) : B(NonlocalCloneArg<B>(*src.pC)) {}
+
+    virtual EntryData* ConstructCopy(LinearHeap& heap) const
+    {
+        ConstructCopyCalls++;
+        return ConstructAlt<C>(heap.Alloc(sizeof(C)), *(const C*)this);
+    }
+    virtual void CopyTo(void* dest) const
+    {
+        *(C*)dest = *(const C*)this;
+        CopyCalls++;
+    }
+    virtual void Destroy()
+    {
+        DestroyCalls++;
+        ((C*)this)->~C();
+    }
+};
+
+// typed accessors of an Entry subclass whose data class is C
+#define SF_RENDER_CONTEXT_ENTRY_INLINES(C)                                                                   \
+    inline C*       GetWritableData(unsigned cb) { return (C*)Entry::getWritableData(cb); }                 \
+    inline const C* GetReadOnlyData() const      { return (const C*)Entry::GetReadOnlyDataBase(); }         \
+    inline const C* GetDisplayData() const       { return (const C*)Entry::GetDisplayDataBase(); }
+
 } // namespace ContextImpl
 
+using ContextImpl::ContextData_ImplMixin;
 using ContextImpl::Context;
 using ContextImpl::ContextCaptureNotify;
 using ContextImpl::DisplayHandle;

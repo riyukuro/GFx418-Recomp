@@ -29,8 +29,7 @@ enum StateType
     State_MaskNode,
     State_ViewMatrix3D,
     State_ProjectionMatrix3D,
-    State_UserData,
-    State_Internal_MaskOwner,   // set on the masked node's mask, points back at the owner
+    State_Internal_MaskOwner,   // set on the masked node's mask, points back at the owner (7: no user data state yet)
     State_Type_Count
 };
 
