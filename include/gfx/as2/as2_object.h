@@ -186,6 +186,17 @@ public:
     FunctionRef Get_constructor(ASStringContext* psc);
     // Sets the constructor member (exe 0x14298de30).
     void        Set_constructor(ASStringContext* psc, const FunctionRef& ctorFunc);
+
+    // (appended for sfr_as2_07)
+    // A script object (any type from Object_ASObject on).
+    bool IsASObject() const
+    {
+        int type = GetObjectType();
+        return type >= Object_ASObject && type <= Object_SharedObject;
+    }
+    // The script object, 0 for a character (exe 0x142990c60 / 0x142990c90).
+    Object*       ToASObject();
+    const Object* ToASObject() const;
 };
 
 // The user data of an object and the movie it was set from. 0x10 bytes.

@@ -266,7 +266,7 @@ public:
         V.pStringNode = str.GetNode();
         V.pStringNode->AddRef();
     }
-    void SetAsObject(Object* pobj); // exe 0x14297fcb0
+    SF_NOINLINE void SetAsObject(Object* pobj); // exe 0x14297fcb0 (the exe calls it, never inlines it)
 
     // Conversion in place to a number / string (the string one of the SWF version: undefined is "" up to 6).
     void ConvertToNumber(Environment* penv);                            // exe 0x142935b50
@@ -307,6 +307,24 @@ public:
         else if (T.Type >= STRING && T.Type != OBJECT && T.Type != PROPERTY)
             DropRefs();
     }
+
+    // (appended for sfr_as2_07)
+    // The character of a CHARACTER value, 0 once it is gone or not interactive (exe 0x1429910b0).
+    InteractiveObject* ToCharacter(const Environment* penv) const;
+    // The handler of a RESOLVEHANDLER value, else a null reference (exe 0x142991c60).
+    FunctionRef ToResolveHandler() const;
+    // The string with the debug spelling of objects (exe 0x142991110).
+    ASString ToDebugString(Environment* penv) const;
+    // undefined is "" up to SWF 6 (exe 0x1429923c0).
+    ASString ToStringVersioned(Environment* penv, unsigned version) const;
+    // Appends str to the string of this value (exe 0x142990240).
+    void StringConcat(Environment* penv, const ASString& str);
+    void Sub(Environment* penv, int v2); // exe 0x142990be0
+    void SetAsCharacterHandle(CharacterHandle* pchar);  // exe 0x14297fc00
+    void SetAsCharacter(InteractiveObject* pchar);      // exe 0x14297fba0
+    void SetAsObjectInterface(ObjectInterface* pobj);   // exe 0x14297fdb0
+    SF_NOINLINE void SetAsFunction(const FunctionRefBase& func); // exe 0x14297fc40
+    void SetAsResolveHandler(const FunctionRefBase& func); // exe 0x14297fe60
 
 protected:
     // The function of a FUNCTIONNAME value, looked up by name (exe 0x14297ec30).
