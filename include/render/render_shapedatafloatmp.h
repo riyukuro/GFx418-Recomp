@@ -3,7 +3,7 @@
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
 // 0x90 bytes: the ShapeMeshProvider part, then pData +0x88 (it takes the tail padding of the 16-aligned base).
-// Constructor 0x142678490 and CountLayers 0x1426786e0 live in Render_ShapeDataFloatMP (no unit yet).
+// Constructor 0x142678490 and CountLayers 0x1426786e0 live in Render_ShapeDataFloatMP (sfr_render_05h).
 #ifndef MS2_SF_RENDER_SHAPEDATAFLOATMP_H
 #define MS2_SF_RENDER_SHAPEDATAFLOATMP_H
 
@@ -11,7 +11,15 @@
 
 namespace Scaleform { namespace Render {
 
-typedef ShapeDataFloatTempl<Array<UByte> > ShapeDataFloat;
+// the float shape data with its own byte container (0x80 bytes, vftable 0x14317bb98; the container at +0x68)
+class ShapeDataFloat : public ShapeDataFloatTempl<Array<UByte> >
+{
+public:
+    ShapeDataFloat() : ShapeDataFloatTempl<Array<UByte> >(&Container, 0) {}
+
+private:
+    Array<UByte> Container;
+};
 
 class ShapeDataFloatMP : public ShapeMeshProvider
 {

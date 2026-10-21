@@ -119,6 +119,8 @@ public:
 
     // (appended for sfr_render_03d, the unit of the bodies)
     ShapeMeshProvider(ShapeDataInterface* shape, ShapeDataInterface* shapeMorph = 0);
+    // (appended for sfr_render_05h) an empty provider; the shape is attached later (ShapeDataFloatMP)
+    ShapeMeshProvider() {}
     ~ShapeMeshProvider() {}
 
     void AttachShape(ShapeDataInterface* shape, ShapeDataInterface* shapeMorph = 0);
