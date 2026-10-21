@@ -151,6 +151,34 @@ bool QuickSortSafe(ArrayT& arr, Less less)
     return QuickSortSlicedSafe(arr, 0, arr.GetSize(), less);
 }
 
+// (appended for the display list, sfr_gfx_06c)
+// First index in [start, end) whose element is not less than val (binary search over a sorted range).
+template<class ArrayT, class Value, class Less>
+UPInt LowerBoundSliced(const ArrayT& arr, UPInt start, UPInt end, const Value& val, Less less)
+{
+    SPInt first = (SPInt)start;
+    SPInt len   = (SPInt)(end - start);
+    while (len > 0)
+    {
+        SPInt half   = len >> 1;
+        SPInt middle = first + half;
+        if (less(arr[middle], val))
+        {
+            first = middle + 1;
+            len   = len - half - 1;
+        }
+        else
+            len = half;
+    }
+    return (UPInt)first;
+}
+
+template<class ArrayT, class Value, class Less>
+UPInt LowerBound(const ArrayT& arr, const Value& val, Less less)
+{
+    return LowerBoundSliced(arr, 0, arr.GetSize(), val, less);
+}
+
 }} // namespace Scaleform::Alg
 
 #endif

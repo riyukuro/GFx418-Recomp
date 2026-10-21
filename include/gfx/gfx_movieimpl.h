@@ -176,6 +176,12 @@ public:
 
     // Takes the keyboard focus off ch in every focus group (0x142574820).
     void ResetFocusForChar(InteractiveObject* ch);
+
+    // (appended for the display list, sfr_gfx_06c)
+    // Keeps a movie def (and so its heap) alive until the render thread let go of its nodes (0x14256be80).
+    void AddMovieDefToKillList(MovieDefImpl* pdefImpl);
+    // Re-parents the transform of an object with an indirect transform; null parent detaches it (0x1425786d0).
+    void UpdateTransformParent(DisplayObjectBase* pch, DisplayObjectBase* pparent);
 };
 
 // The root of one loaded movie's sprite tree; leading members only (the font manager, bytes loaded and so on).

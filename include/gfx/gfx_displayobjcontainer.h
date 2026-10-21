@@ -31,6 +31,41 @@ public:
         DisplayObjectBase* pCharacter;
         unsigned           TreeIndex;
         unsigned           MaskTreeIndex;
+
+        // (appended for the display list, sfr_gfx_06c) the entry holds a reference to its object
+        DisplayEntry() : pCharacter(0), TreeIndex(~0u), MaskTreeIndex(~0u) {}
+        DisplayEntry(const DisplayEntry& e) : pCharacter(0) { *this = e; }
+        ~DisplayEntry()
+        {
+            if (pCharacter)
+                pCharacter->Release();
+        }
+        // Out of line in the exe (0x1425f8da0).
+        void operator=(const DisplayEntry& e);
+
+        void SetDisplayObject(DisplayObjectBase* pch)
+        {
+            if (pCharacter)
+                pCharacter->Release();
+            pCharacter = pch;
+            if (pch)
+                pch->AddRef();
+        }
+        DisplayObjectBase* GetDisplayObject() const { return pCharacter; }
+
+        int  GetDepth() const          { return pCharacter->Depth; }
+        int  GetClipDepth() const      { return pCharacter->ClipDepth; }
+        bool IsMarkedForRemove() const { return (pCharacter->Flags & DisplayObjectBase::Mask_MarkedForRemove) != 0; }
+        void MarkForRemove(bool remove)
+        {
+            if (remove)
+                pCharacter->Flags |= DisplayObjectBase::Mask_MarkedForRemove;
+            else
+                pCharacter->Flags &= ~DisplayObjectBase::Mask_MarkedForRemove;
+        }
+        void ClearMarkForRemove()      { MarkForRemove(false); }
+        bool IsInRenderTree() const    { return TreeIndex != ~0u; }
+        bool IsMaskedTreeNode() const  { return MaskTreeIndex != ~0u; }
     };
     struct DepthToIndexContainer;
 
@@ -67,7 +102,114 @@ private:
     // 0x1425fa860).
     void InsertIntoRenderTree(DisplayObjectBase* powner, UPInt index);
     void RemoveFromRenderTree(DisplayObjectBase* powner, UPInt index);
+
+    // (appended for the display list, sfr_gfx_06c)
+public:
+    enum AddFlags
+    {
+        Flags_ReplaceIfDepthIsOccupied = 0x1,
+        Flags_DeadOnArrival            = 0x2,
+        Flags_PlaceObject              = 0x4
+    };
+    enum
+    {
+        INVALID_DEPTH = -1,
+        THRESHOLD_CNT = 10   // above this many entries a depth map backs the depth lookups
+    };
+    enum
+    {
+        Flags_DepthToIndexInvalid    = 0x1,
+        Flags_MayContainForeignElems = 0x2   // depths may be out of order (AS3), so no plain binary search
+    };
+    struct DepthToIndexMapElem;
+
+    // Named children, visited in order.
+    struct MemberVisitor
+    {
+        virtual ~MemberVisitor() {}
+        virtual void Visit(const ASString& name, InteractiveObject* pch) = 0;
+    };
+
+    ~DisplayList();
+
+    DisplayEntry& GetDisplayEntry(UPInt index) { return DisplayObjectArray[index]; }
+
+    void AddDisplayObject(DisplayObjectBase* powner, const CharPosInfo& pos, DisplayObjectBase* ch,
+                          UInt32 addFlags);                                                    // 0x1425f8df0
+    void AddDisplayObject(DisplayObjectBase* powner, UPInt index, DisplayObjectBase* ch);       // 0x1425f8f70
+    void AddEntryAtIndex(DisplayObjectBase* powner, UPInt index, DisplayObjectBase* ch);        // 0x1425f9040
+    void MoveDisplayObject(DisplayObjectBase* powner, const CharPosInfo& pos);                  // 0x1425fa410
+    void ReplaceDisplayObject(DisplayObjectBase* powner, const CharPosInfo& pos,
+                              DisplayObjectBase* ch);                                           // 0x1425fab10
+    void ReplaceDisplayObjectAtIndex(DisplayObjectBase* powner, UPInt index, DisplayObjectBase* ch); // 0x1425facd0
+    void RemoveDisplayObject(DisplayObjectBase* powner, int depth, ResourceId id);              // 0x1425fa6f0
+    bool RemoveDisplayObject(DisplayObjectBase* powner, const DisplayObjectBase* ch);           // 0x1425fa7c0
+    void RemoveEntryAtIndex(DisplayObjectBase* powner, UPInt index);                            // 0x1425fa820
+    // Starts unloading entry index; true when it was removed right away (0x1425fb940).
+    bool UnloadDisplayObjectAtIndex(DisplayObjectBase* powner, UPInt index);
+
+    void PropagateMouseEvent(const EventId& id);                  // 0x1425fa5e0
+    void PropagateKeyEvent(const EventId& id, int* pkeyMask);     // 0x1425fa540
+
+    // Index of the first entry at depth or deeper (0x1425f9230); the exact match or ~0 (0x1425f97c0).
+    UPInt FindDisplayIndex(int depth) const;
+    UPInt GetDisplayIndex(int depth);
+    bool  SwapDepths(DisplayObjectBase* powner, int depth1, int depth2, unsigned frame);           // 0x1425fb1e0
+    bool  SwapEntriesAtIndexes(DisplayObjectBase* powner, UPInt index1, UPInt index2);            // 0x1425fb480
+    int   GetLargestDepthInUse() const;                                                           // 0x1425f9b70
+
+    DisplayObjectBase* GetDisplayObjectAtDepth(int depth, bool* pisMarkedForRemove = 0);          // 0x1425f9800
+    DisplayObjectBase* GetDisplayObjectAtDepthAndUnmark(DisplayObjectBase* powner, int depth);    // 0x1425f9880
+    DisplayObject*     GetDisplayObjectByName(const ASString& name, bool caseSensitive = true) const; // 0x1425f9920
+    void               VisitMembers(MemberVisitor* pvisitor) const;                                // 0x1425fbb50
+
+private:
+    static int DepthLess(const DisplayEntry& e, int depth)         { return e.GetDepth() < depth; }
+    static int DepthLess1(const DepthToIndexMapElem& e, int depth);
+
+    void CheckAndInvalidateDepthMappings()
+    {
+        if ((Flags & Flags_MayContainForeignElems) != 0)
+            Flags |= Flags_DepthToIndexInvalid;
+    }
+
+    void ReplaceRenderTreeNode(DisplayObjectBase* powner, UPInt index);               // 0x1425fad70
+    bool SwapRenderTreeNodes(DisplayObjectBase* powner, UPInt index1, UPInt index2);  // 0x1425fb590
 };
+
+// (appended for the display list, sfr_gfx_06c) the depth -> index map of a display list with foreign entries
+struct DisplayList::DepthToIndexMapElem
+{
+    int      Depth;
+    unsigned Index;
+
+    DepthToIndexMapElem(int d = DisplayList::INVALID_DEPTH, unsigned i = ~0u) : Depth(d), Index(i) {}
+};
+
+struct DisplayList::DepthToIndexContainer : public NewOverrideBase<322>
+{
+    ArrayLH<DepthToIndexMapElem> Array;
+
+    void SetElement(UPInt index, int depth, unsigned mappedIndex)
+    {
+        if (index < Array.GetSize())
+            Array[index] = DepthToIndexMapElem(depth, mappedIndex);
+        else
+            Array.PushBack(DepthToIndexMapElem(depth, mappedIndex));
+    }
+    void  SetSize(UPInt size) { Array.Resize(size); }
+    UPInt GetSize() const     { return Array.GetSize(); }
+
+    DepthToIndexMapElem&       operator[](UPInt i)       { return Array[i]; }
+    const DepthToIndexMapElem& operator[](UPInt i) const { return Array[i]; }
+};
+
+inline int DisplayList::DepthLess1(const DepthToIndexMapElem& e, int depth) { return e.Depth < depth; }
+
+inline DisplayList::~DisplayList()
+{
+    delete DepthToIndexMap;
+}
 
 class DisplayObjContainer : public InteractiveObject
 {

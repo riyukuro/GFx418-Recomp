@@ -66,7 +66,8 @@ public:
     T       Width() const   { return x2 - x1; }
     T       Height() const  { return y2 - y1; }
     Size<T> GetSize() const { return Size<T>(Width(), Height()); }
-    bool    IsEmpty() const { return x1 == x2 || y1 == y2; }
+    // empty or inverted
+    bool    IsEmpty() const { return x1 >= x2 || y1 >= y2; }
 
     void SetRect(T left, T top, T right, T bottom) { x1 = left; y1 = top; x2 = right; y2 = bottom; }
 
@@ -139,6 +140,16 @@ public:
     }
     // not inverted (an empty bound box starts out inverted)
     bool IsNormal() const { return x1 <= x2 && y1 <= y2; }
+
+    // (appended for the display list, sfr_gfx_06c) grows this to cover the other rect
+    Rect& Union(T left, T top, T right, T bottom)
+    {
+        Rect u;
+        UnionRect(&u, Rect(left, top, right, bottom));
+        SetRect(u.x1, u.y1, u.x2, u.y2);
+        return *this;
+    }
+    Rect& Union(const Rect& r) { return Union(r.x1, r.y1, r.x2, r.y2); }
 };
 
 typedef Point<float>  PointF;
