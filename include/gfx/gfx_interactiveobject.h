@@ -139,7 +139,7 @@ public:
     void RemoveFromPlayList();   // 0x1425f8a20
     void AddToOptimizedPlayList();   // 0x1425f7e30
     // On the optimized advance list and not about to leave it.
-    bool IsInPlayList() const
+    bool IsInOptimizedPlayList() const
     {
         return (Flags & Mask_OptAdvList) && !(Flags & Mask_MarkedToRemoveFromOptAdvList);
     }
@@ -155,6 +155,43 @@ public:
     struct FillTabableParams;
 
     AvmInteractiveObjBase* GetAvmIntObj() const { return GetAvmObjImpl()->ToAvmInteractiveObjBase(); }
+
+    // (appended for the GFx_InteractiveObject unit, sfr_gfx_06b)
+    enum
+    {
+        Shift_OptAdvListMarker = 23
+    };
+    bool IsOptAdvListFlagSet() const          { return (Flags & Mask_OptAdvList) != 0; }
+    bool IsOptAdvListMarkerSet() const        { return ((Flags >> Shift_OptAdvListMarker) & 1) != 0; }
+    void SetOptAdvListMarker(bool v)          { if (v) Flags |= Mask_OptAdvListMarker; else Flags &= ~Mask_OptAdvListMarker; }
+    void ClearMarkToRemoveFromOptimizedPlayList() { Flags &= ~Mask_MarkedToRemoveFromOptAdvList; }
+    bool IsFocusRectFlagDefined() const       { return (Flags & Mask_FocusRect) != 0; }
+    bool IsFocusRectFlagTrue() const          { return (Flags & Mask_FocusRect) == Mask_FocusRect; }
+
+    // On the (unoptimized) advance list: linked, or its only member.
+    bool IsInPlayList() const;                                   // 0x1425f8730
+    // On the optimized list and carrying the list's current marker.
+    bool IsValidOptAdvListMember(MovieImpl* proot) const;        // 0x1425f87a0
+    void AddToPlayList();                                        // 0x1425f7f70
+    void InsertToPlayListAfter(InteractiveObject* pafterCh);     // 0x1425f8580
+    void RemoveFromOptimizedPlayList();                          // 0x1425f89a0
+    // Queued on the movie's unload list.
+    void SetNextUnloaded(InteractiveObject* punloadQueue);       // 0x1425f8b10
+
+    // Takes over the depth, color transform, matrix, geometry and filters of the character it replaces (loadMovie).
+    void CopyPhysicalProperties(const InteractiveObject* poldChar);   // 0x1425f8010
+    // The name handle moves to the replacing character.
+    void MoveNameHandle(InteractiveObject* poldChar);            // 0x1425f87d0
+    // Follows the mouse while this is the dragged character (startDrag).
+    void DoMouseDrag();                                          // 0x1425f81b0
+
+    // The focus groups this object belongs to, inherited from the parent while 0.
+    UInt16 GetFocusGroupMask();                                  // 0x1425f84b0
+    UInt16 GetFocusGroupMask() const;                            // 0x1425f84f0
+
+    ASStringManager* GetStringManager() const;                   // 0x1425f8560
+    // Takes this off its parent's display list.
+    void RemoveDisplayObject();                                  // 0x1425f8950
 };
 
 // The AVM half of an interactive object: slots 13..22 after the AvmDisplayObjBase ones.

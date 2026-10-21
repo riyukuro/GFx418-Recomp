@@ -896,7 +896,7 @@ void Sprite::PropagateNoAdvanceGlobalFlag()
             continue;
         pich->SetNoAdvanceGlobalFlag(IsNoAdvanceGlobalFlagSet() || noAdvance);
         pich->PropagateNoAdvanceGlobalFlag();
-        int status = pich->CheckAdvanceStatus(pich->IsInPlayList());
+        int status = pich->CheckAdvanceStatus(pich->IsInOptimizedPlayList());
         if (status == -1)
             pich->Flags |= Mask_MarkedToRemoveFromOptAdvList;
         else if (status == 1)
@@ -917,7 +917,7 @@ void Sprite::PropagateNoAdvanceLocalFlag()
             continue;
         pich->SetNoAdvanceLocalFlag(IsNoAdvanceLocalFlagSet() || noAdvance);
         pich->PropagateNoAdvanceLocalFlag();
-        int status = pich->CheckAdvanceStatus(pich->IsInPlayList());
+        int status = pich->CheckAdvanceStatus(pich->IsInOptimizedPlayList());
         if (status == -1)
             pich->Flags |= Mask_MarkedToRemoveFromOptAdvList;
         else if (status == 1)

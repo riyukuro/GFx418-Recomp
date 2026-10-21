@@ -113,6 +113,9 @@ public:
 
     DisplayList       mDisplayList;  // +0xd8
     MovieDefRootNode* pRootNode;     // +0x108 set on the root of a loaded movie
+
+    // (appended for the interactive objects, sfr_gfx_06b) removes the child at depth with the given id (0x1425fd560)
+    void RemoveDisplayObject(int depth, ResourceId id);
 };
 
 // The AVM half of a container: slot 23.

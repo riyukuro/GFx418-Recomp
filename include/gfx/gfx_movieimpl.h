@@ -72,7 +72,10 @@ public:
     FocusGroupDescr  FocusGroups[16];          // +0x2e60
     UInt32           Unrecovered_3460;         // +0x3460
     UByte            FocusGroupIndexes[16];    // +0x3464 controller index -> focus group
-    UByte            Unrecovered_3474[0x1c];   // +0x3474
+    UByte            Unrecovered_3474[4];      // +0x3474
+    InteractiveObject* pPlayList;              // +0x3478 the advance list, last added first (sfr_gfx_06b)
+    InteractiveObject* pPlayListOptHead;       // +0x3480 the optimized advance list (sfr_gfx_06b)
+    UByte            Unrecovered_3488[8];      // +0x3488
     UInt32           Flags;                    // +0x3490
 
     enum FlagsType
@@ -110,7 +113,8 @@ public:
     void ClearIntervalTimer(int id);
 
     // (appended for the display objects, sfr_gfx_06)
-    UByte            Unrecovered_3494[0x5c];   // +0x3494
+    UInt32           Flags2;                   // +0x3494 (sfr_gfx_06b)
+    UByte            Unrecovered_3498[0x58];   // +0x3498
     void*            RenderContext[1];         // +0x34f0 Render::Context (gfx_rendertree.h: the heap first), rest unrecovered
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
@@ -154,6 +158,24 @@ public:
     static void MakeViewAndPersp3D(Render::Matrix3x4<float>* matView, Render::Matrix4x4<float>* matPersp,
                                    const Render::RectF& vfrTwips, const Render::PointF& projCenter,
                                    float fieldOfView, float focalLength = 0, bool invertY = false);
+
+    // (appended for the interactive objects, sfr_gfx_06b)
+    enum
+    {
+        Flag_OptAdvListInvalid = 0x80000,      // Flags: the optimized advance list is rebuilt before the next advance
+        Flag2_OptAdvListMarker = 0x8           // Flags2: the marker the current members of the optimized list carry
+    };
+    bool IsOptAdvListInvalid() const  { return (Flags & Flag_OptAdvListInvalid) != 0; }
+    bool GetOptAdvListMarker() const  { return (Flags2 & Flag2_OptAdvListMarker) != 0; }
+    // +0x2de0 is the drag state: the dragged character (pKeepAdvancingChar), then these.
+    bool DragLockCenter() const       { return *((const bool*)this + 0x2de8); }
+    bool DragBound() const            { return *((const bool*)this + 0x2de9); }
+    const Render::PointF& DragBoundLT() const     { return *(const Render::PointF*)((const UByte*)this + 0x2dec); }
+    const Render::PointF& DragBoundRB() const     { return *(const Render::PointF*)((const UByte*)this + 0x2df4); }
+    const Render::PointF& DragCenterDelta() const { return *(const Render::PointF*)((const UByte*)this + 0x2dfc); }
+
+    // Takes the keyboard focus off ch in every focus group (0x142574820).
+    void ResetFocusForChar(InteractiveObject* ch);
 };
 
 // The root of one loaded movie's sprite tree; leading members only (the font manager, bytes loaded and so on).
