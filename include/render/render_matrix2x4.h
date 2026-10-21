@@ -1,9 +1,8 @@
 // Recovered Scaleform 4.1.18 Render: Matrix2x4<T>, the 2D affine transform (two rows of [sx shx 0 tx]).
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
-// The members without a body here are compiled out of line in the Render_Matrix2x4 unit (sfr_render_02) and bind
-// to the exe until it is recovered: Append 0x1425e5250, EncloseTransform 0x1425e52d0, SetToAppend(3) 0x1425e5340,
-// SetToAppend(2) 0x1425e5430. The inline ones show up as COMDATs wherever they were not inlined.
+// The members without a body here are the SSE float versions in the Render_Matrix2x4 unit (sfr_render_02):
+// Append 0x1425e5250, EncloseTransform 0x1425e52d0, SetToAppend(3) 0x1425e5340, SetToAppend(2) 0x1425e5430. The inline ones show up as COMDATs wherever they were not inlined.
 #ifndef MS2_SF_RENDER_MATRIX2X4_H
 #define MS2_SF_RENDER_MATRIX2X4_H
 
