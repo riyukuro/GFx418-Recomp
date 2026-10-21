@@ -78,6 +78,7 @@ public:
     static void SetNumberOfFramePools(const FnCall& fn);    // exe 0x140004920
     static void SetReloadThresholdTime(const FnCall& fn);   // exe 0x1400049c0
     static void SetOpenURLTimeout(const FnCall& fn);        // exe 0x140004a60
+    static void SetSoundSpatial(const FnCall& fn);          // exe 0x1400085c0
 };
 
 // What a NetStream plays from: owns the player, its texture and the subtitle buffers, and reports the player's
@@ -125,8 +126,39 @@ public:
             pVideoPlayer->SetDecodeHeaderTimeout(timeout);
     }
 
+    // The movie clip's frames pace the video (exe 0x1400064f0).
+    void   SetSwfSync(bool flag, Sprite* ptarget);
+    void   SetLoopFlag(bool flag)
+    {
+        LoopFlag = flag;
+        if (pVideoPlayer)
+            pVideoPlayer->SetLoopFlag(flag);
+    }
+    void   SetSubtitleChannel(int channel)
+    {
+        if (pVideoPlayer)
+            pVideoPlayer->SetSubtitleChannel(channel);
+    }
+    void   SetAudioTrack(int track)
+    {
+        if (pVideoPlayer)
+            pVideoPlayer->SetAudioTrack(track);
+    }
+    void   SetSubAudioTrack(int track)
+    {
+        if (pVideoPlayer)
+            pVideoPlayer->SetSubAudioTrack(track);
+    }
+    void   ReplaceCenterVoice(int track)
+    {
+        if (pVideoPlayer)
+            pVideoPlayer->ReplaceCenterVoice(track);
+    }
     void   NotifyNetStreamRemoved() { pNetStream = NULL; }
     Video::VideoPlayer* GetPlayer() { return pVideoPlayer; }
+    const Video::VideoPlayer::VideoInfo& GetVideoInfo() const { return VInfo; }
+    UInt32 GetPosition()        { return pVideoPlayer ? pVideoPlayer->GetPosition() : 0; }
+    int    GetSubtitleChannel() { return pVideoPlayer ? pVideoPlayer->GetSubtitleChannel() : -1; }
 
 private:
     void   InitSoundChannel();   // exe 0x140004bf0

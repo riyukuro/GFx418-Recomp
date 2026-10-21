@@ -171,6 +171,8 @@ public:
     // A value of a type without payload (UNSET, NULLTYPE, ...).
     explicit Value(type typeVal) { T.Type = (UByte)typeVal; }
     inline Value(const FunctionRef& func); // as2_object.h
+    // A native function object for func (exe 0x142923bf0; appended for sfr_video_01).
+    Value(ASStringContext* psc, CFunctionPtr func);
     // A getter/setter property (ValueProperty allocated in pheap).
     inline Value(const FunctionRef& getter, const FunctionRef& setter, MemoryHeap* pheap, ASRefCountCollector* pcc);
     Value(const ASString& str)

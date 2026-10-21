@@ -258,6 +258,149 @@ void NetStream::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) c
 }
 
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x140008250
+bool NetStream::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
+{
+    if (name == "onMetaData")
+    {
+        OnMetaDataCallback = val.ToFunction_Call(penv);
+        return true;
+    }
+    else if (name == "onStatus")
+    {
+        OnStatusCallback = val.ToFunction_Call(penv);
+        return true;
+    }
+    else if (name == "onCuePoint")
+    {
+        OnCuePointCallback = val.ToFunction_Call(penv);
+        return true;
+    }
+    if (penv->CheckExtensions())
+    {
+        if (name == "onSubtitle")
+        {
+            OnSubtitleCallback = val.ToFunction_Call(penv);
+            return true;
+        }
+        else if (name == "subtitleTrack")
+        {
+            if (!OnSubtitleCallback.IsNull())
+                pVideoProvider->SetSubtitleChannel((int)val.ToNumber(penv) - 1);
+            return true;
+        }
+        else if (name == "audioTrack")
+        {
+            pVideoProvider->SetAudioTrack((int)val.ToNumber(penv));
+            return true;
+        }
+        else if (name == "subAudioTrack")
+        {
+            pVideoProvider->SetSubAudioTrack((int)val.ToNumber(penv));
+            return true;
+        }
+        else if (name == "voiceTrack")
+        {
+            pVideoProvider->ReplaceCenterVoice((int)val.ToNumber(penv));
+            return true;
+        }
+        else if (name == "loop")
+        {
+            pVideoProvider->SetLoopFlag(val.ToBool(penv));
+            return true;
+        }
+        else if (name == "swfSync")
+        {
+            AvmCharacter* pavm = penv->GetAvmTarget();
+            if (pavm->GetDispObj()->IsSprite())
+            {
+                Sprite* psprite = (Sprite*)static_cast<const ObjectInterface*>(pavm)->ToSprite();
+                pVideoProvider->SetSwfSync(val.ToBool(penv), psprite);
+            }
+        }
+    }
+    return Object::SetMember(penv, name, val, flags);
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000aab0
+bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    if (penv->CheckExtensions())
+    {
+        if (name == "setReloadThresholdTime")
+        {
+            *val = Value(penv->GetSC(), NetStreamProto::SetReloadThresholdTime);
+            return true;
+        }
+        else if (name == "setNumberOfFramePools")
+        {
+            *val = Value(penv->GetSC(), NetStreamProto::SetNumberOfFramePools);
+            return true;
+        }
+        else if (name == "setOpenTimeout")
+        {
+            *val = Value(penv->GetSC(), NetStreamProto::SetOpenURLTimeout);
+            return true;
+        }
+        else if (name == "setSoundSpatial")
+        {
+            *val = Value(penv->GetSC(), NetStreamProto::SetSoundSpatial);
+            return true;
+        }
+        else if (name == "onSubtitle")
+        {
+            *val = Value(OnSubtitleCallback);
+            return true;
+        }
+        else if (name == "subtitleTrack")
+        {
+            int channel = pVideoProvider->GetSubtitleChannel();
+            if (channel < 0)
+                channel = -1;
+            *val = Value(channel + 1);
+            return true;
+        }
+        else if (name == "currentFrame")
+        {
+            *val = Value((Number)(float)(pVideoProvider->GetPosition() + 1));
+            return true;
+        }
+    }
+    if (name == "time")
+    {
+        UInt32 pos       = pVideoProvider->GetPosition();
+        UInt32 frameRate = pVideoProvider->GetVideoInfo().FrameRate;
+        if (frameRate)
+            *val = Value((Number)((float)pos / ((float)frameRate / 1000.0f)));
+        else
+            *val = Value((Number)0);
+        return true;
+    }
+    else if (name == "onMetaData")
+    {
+        *val = Value(OnMetaDataCallback);
+        return true;
+    }
+    else if (name == "onStatus")
+    {
+        *val = Value(OnStatusCallback);
+        return true;
+    }
+    else if (name == "onCuePoint")
+    {
+        *val = Value(OnCuePointCallback);
+        return true;
+    }
+    else if (name == "currentFps")
+    {
+        *val = Value((Number)((float)pVideoProvider->GetVideoInfo().FrameRate / 1000.0f));
+        return true;
+    }
+    return Object::GetMember(penv, name, val);
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140005720
 void NetStream::Seek(Number pos, Environment* penv)
 {
@@ -421,14 +564,14 @@ void VideoProviderNetStream::NotifyVideoCharacters()
     }
 }
 
-// The environment the NetStream callbacks run on: the target clip's, none when the target is not a sprite.
+// The environment the NetStream callbacks run on: the target character's, none when it is not interactive.
 static inline Environment* GetTargetEnvironment(CharacterHandle* ptarget)
 {
     DisplayObject* pch = ptarget->pCharacter;
-    Sprite* psprite = pch->IsSprite() ? (Sprite*)pch : NULL;
-    if (!psprite)
+    InteractiveObject* pchar = pch->IsInteractiveObject() ? (InteractiveObject*)pch : NULL;
+    if (!pchar)
         return NULL;
-    return ToAvmCharacter(psprite)->GetASEnvironment();
+    return ToAvmCharacter(pchar)->GetASEnvironment();
 }
 
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
