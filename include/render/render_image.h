@@ -729,6 +729,58 @@ public:
     virtual UInt32      GetBaseImageId() const         { return pDelegate->GetBaseImageId(); }
 };
 
+// An image that forwards everything to another image (pImage, +0x28); GetImageType answers for the wrapped image,
+// IsDelegate tells the two apart. Its inline members are emitted with the AS2 units (0x142442..0x142447).
+class ImageDelegate : public Image
+{
+public:
+    Ptr<Image> pImage;  // +0x28
+
+    ImageDelegate() {}
+    ImageDelegate(Image* img) : pImage(img) {}
+
+    virtual ImageType   GetImageType() const   { return pImage->GetImageType(); }
+    virtual ImageFormat GetFormat() const      { return pImage->GetFormat(); }
+    virtual ImageSize   GetSize() const        { return pImage->GetSize(); }
+    virtual ImageRect   GetRect() const        { return pImage->GetRect(); }
+    virtual unsigned    GetMipmapCount() const { return pImage->GetMipmapCount(); }
+
+    virtual void SetMatrix(const Matrix2F& mat, MemoryHeap* heap = 0)        { pImage->SetMatrix(mat, heap); }
+    virtual void GetMatrix(Matrix2F* mat) const                              { pImage->GetMatrix(mat); }
+    virtual void SetMatrixInverse(const Matrix2F& mat, MemoryHeap* heap = 0) { pImage->SetMatrixInverse(mat, heap); }
+    virtual void GetMatrixInverse(Matrix2F* mat) const                       { pImage->GetMatrixInverse(mat); }
+    virtual void GetUVGenMatrix(Matrix2F* mat, TextureManager* manager)      { pImage->GetUVGenMatrix(mat, manager); }
+    virtual void GetUVNormMatrix(Matrix2F* mat, TextureManager* manager)     { pImage->GetUVNormMatrix(mat, manager); }
+
+    virtual bool Decode(ImageData* pdest, CopyScanlineFunc copyScanline = CopyScanlineDefault, void* arg = 0) const
+    {
+        return pImage->Decode(pdest, copyScanline, arg);
+    }
+
+    virtual unsigned GetUse() const { return pImage->GetUse(); }
+    virtual Image*   CreateSubImage(const ImageRect& rect, MemoryHeap* heap = Memory::GetGlobalHeap())
+    {
+        return pImage->CreateSubImage(rect, heap);
+    }
+    virtual bool Map(ImageData* data, unsigned levelIndex = 0, unsigned levelCount = 0)
+    {
+        return pImage->Map(data, levelIndex, levelCount);
+    }
+    virtual bool     Unmap()                               { return pImage->Unmap(); }
+    virtual Texture* GetTexture(TextureManager* manager)   { return pImage->GetTexture(manager); }
+    virtual void     TextureLost(TextureLossReason reason) { pImage->TextureLost(reason); }
+    virtual bool     Update()                              { return pImage->Update(); }
+    virtual bool     Update(ImageUpdate* update)           { return pImage->Update(update); }
+
+    virtual Image*             GetAsImage()       { return pImage; }
+    virtual MemoryBufferImage* GetAsMemoryImage() { return pImage->GetAsMemoryImage(); }
+    virtual bool               IsDelegate() const { return true; }
+
+    virtual UPInt  GetBytes(int* memRegion) const { return pImage->GetBytes(memRegion); }
+    virtual UInt32 GetImageId() const             { return pImage->GetImageId(); }
+    virtual UInt32 GetBaseImageId() const         { return pImage->GetBaseImageId(); }
+};
+
 }} // namespace Scaleform::Render
 
 #endif
