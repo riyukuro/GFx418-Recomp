@@ -32,6 +32,7 @@ class FontManagerStates;
 class MovieDefRootNode;
 class FontResource;
 class MovieDef;
+class StateBagImpl;
 
 // (sfr_gfx_06d) the links of the movie's list of root nodes (List<MovieDefRootNode>): the list root's pNext is the
 // first node, and the root itself passes for a node one base offset before it.
@@ -54,7 +55,7 @@ public:
     LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
     void*            Unrecovered_60[2];        // +0x60
     MovieDefRootNodeLinks RootMovieDefNodes;   // +0x70 the root nodes of the loaded movies (sfr_gfx_06d)
-    void*            Unrecovered_80;           // +0x80
+    StateBagImpl*    pStateBag;                // +0x80 Ptr<StateBagImpl>: the movie's own states (sfr_video_01)
     Render::TreeNode* pRenderRoot;             // +0x88 Ptr<TreeRoot> (sfr_gfx_06)
     void*            Unrecovered_90;           // +0x90
     Render::TreeNode* pTopMostRoot;            // +0x98 Ptr<TreeContainer> (sfr_gfx_06)

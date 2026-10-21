@@ -159,6 +159,8 @@ public:
     static int ParseLevelName(const char* pname, const char** ptail, bool caseSensitive);
 
     bool SetLevelMovie(int level, Sprite* psprite); // exe 0x142981d80
+    // The directory of _level0's URL (exe 0x14294b090).
+    bool GetLevel0Path(String* ppath) const;
 
     // Attaches the movie and gives it a new global context (exe 0x1429891c0).
     virtual void SetMovie(MovieImpl* pmovie);

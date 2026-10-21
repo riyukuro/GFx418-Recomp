@@ -10,6 +10,7 @@
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/gfx_loaderimpl.h"
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -271,6 +272,88 @@ VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
     *width  = VInfo.Width;
     *height = VInfo.Height;
     return pTextureImage;
+}
+
+// The image state; only the texture manager it creates textures with is read here.
+class ImageCreator : public State
+{
+public:
+    Render::TextureManager* GetTextureManager() const { return pTexManager; }
+
+protected:
+    Render::TextureManager* pTexManager;   // +0x18
+};
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling; the movie heap
+// read directly where the exe calls the virtual Movie::GetHeap, the audio target taken from _level0 where the exe
+// asks the AS2 root for the root movie (the same object)
+// @0x14000c4b0
+void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
+{
+    MovieImpl* proot = penv->GetMovieImpl();
+    Ptr<LoadStates> pls = *SF_NEW LoadStates(proot->pMainMovieDef->pLoaderImpl, proot->pStateBag);
+
+    String level0Path;
+    penv->GetAS2Root()->GetLevel0Path(&level0Path);
+    URLBuilder::LocationInfo loc(URLBuilder::File_Regular, String(url), level0Path);
+    String fileName;
+    pls->BuildURL(&fileName, loc);
+
+    FrameTime = 1.0f / 12.0f;
+    SeekPos   = 0.0f;
+    VInfo.CuePoints.Clear();
+    VInfo.AudioTracks.Clear();
+    pTextureImage = NULL;
+    FrameIsReady  = false;
+    if (!pVideoPlayer)
+    {
+        StateBag* pstates = proot->GetStateBag();
+        Ptr<GFx::Video::VideoBase> pvideo = *(GFx::Video::VideoBase*)pstates->GetStateAddRef(State::State_Video);
+        if (pvideo)
+        {
+            pTextureManager = pvideo->GetTextureManager();
+            if (!pTextureManager)
+            {
+                Ptr<ImageCreator> pimgCreator = *(ImageCreator*)pstates->GetStateAddRef(State::State_ImageCreator);
+                pTextureManager = pimgCreator->GetTextureManager();
+            }
+            Ptr<Log>            plog        = pstates->GetLog();
+            Ptr<FileOpenerBase> pfileOpener = *(FileOpenerBase*)pstates->GetStateAddRef(State::State_FileOpener);
+            Ptr<TaskManager>    ptaskMgr    = *(TaskManager*)pstates->GetStateAddRef(State::State_TaskManager);
+            pVideoPlayer = pvideo->CreateVideoPlayer(proot->GetMovieHeap(), ptaskMgr, pfileOpener, plog);
+        }
+        if (pVideoPlayer)
+        {
+            pVideoPlayer->SetSyncObject(pSyncObj);
+            pVideoPlayer->SetBufferTime(BufferTime);
+            pVideoPlayer->SetNumberOfFramePools(PoolsNumber);
+            pVideoPlayer->SetReloadThresholdTime(ReloadThreshHoldTime);
+            pVideoPlayer->SetDecodeHeaderTimeout(OpenURLTimeout);
+            pVideoPlayer->SetSoundSpatialInfo(SpatialInfo);
+        }
+    }
+    if (pVideoPlayer)
+    {
+        pVideoPlayer->Open(fileName.ToCStr());
+        pTarget = penv->GetTarget()->GetCharacterHandle();
+        FUN_14256c520(proot, this);
+        pVideoPlayer->SetLoopFlag(LoopFlag);
+        StartNotificationSent    = false;
+        NotFoundNotificationSent = false;
+        SeekNotificationSent     = true;
+        if (pSubtitleMsgTmp)
+        {
+            SF_FREE(pSubtitleMsgTmp);
+            pSubtitleMsgTmp = NULL;
+        }
+        if (pSubtitleMsg)
+        {
+            SF_FREE(pSubtitleMsg);
+            pSubtitleMsg = NULL;
+        }
+        if (!pAudioTarget)
+            pAudioTarget = ((DisplayObject*)proot->pMainMovie)->GetCharacterHandle();
+    }
 }
 
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501)
