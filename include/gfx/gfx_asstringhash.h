@@ -42,6 +42,40 @@ struct ASStringHashFunctor
     UPInt operator()(const ASStringNoCaseKey& key) const { return key.pStr->GetHashFlags(); }
 };
 
+// Slot of the collected string hashes (ASStringHash_GC): freeing a slot drops the key and finalizes the value
+// instead of destroying it, the collector owns what the value points to.
+template<class C, class HashF>
+class HashsetNodeEntry_GC
+{
+public:
+    SPInt NextInChain;
+    C     Value;
+
+    HashsetNodeEntry_GC() : NextInChain(-2) {}
+    HashsetNodeEntry_GC(const HashsetNodeEntry_GC& o) : NextInChain(o.NextInChain), Value(o.Value) {}
+    template<class K>
+    HashsetNodeEntry_GC(const K& key, SPInt next) : NextInChain(next), Value(key) {}
+
+    bool IsEmpty() const      { return NextInChain == -2; }
+    bool IsEndOfChain() const { return NextInChain == -1; }
+
+    UPInt GetCachedHash(UPInt mask) const { return HashF()(Value) & mask; }
+    void  SetCachedHash(UPInt)            {}
+
+    void Clear()
+    {
+        Value.~C();
+        NextInChain = -2;
+    }
+    void Free()
+    {
+        typedef typename C::FirstType FirstType;
+        Value.First.~FirstType();
+        Value.Second.Finalize_GC();
+        NextInChain = -2;
+    }
+};
+
 }} // namespace Scaleform::GFx
 
 #endif

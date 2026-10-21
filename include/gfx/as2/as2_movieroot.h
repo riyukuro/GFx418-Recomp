@@ -71,6 +71,8 @@ public:
         Ptr<Object>          ThisObject; // +0x00
         Ptr<CharacterHandle> ThisChar;   // +0x08
         FunctionRef          Function;   // +0x10
+
+        ~InvokeAliasInfo(); // exe 0x142925ae0
     };
 
     StringManager* GetStringManager() { return &BuiltinsMgr; }

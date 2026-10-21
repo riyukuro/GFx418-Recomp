@@ -72,6 +72,8 @@ public:
 
     // The function and the frame (defined in sfr_as2_02).
     template<class Functor> void ForEachChild_GC(ASRefCountBaseType::Collector* prcc) const;
+    // Both are collected objects: nothing to release before collection.
+    void Finalize_GC() {}
 };
 
 class FunctionRef : public FunctionRefBase
@@ -178,7 +180,7 @@ public:
             DropRefs();
     }
 
-    const Value& operator=(const Value& v); // exe 0x1429267a0
+    void operator=(const Value& v); // exe 0x1429267a0
 
     // Releases the reference held by a STRING/OBJECT/CHARACTER/FUNCTION/PROPERTY value (exe 0x142939780).
     inline void DropRefs(); // as2_action.h
@@ -269,6 +271,15 @@ public:
 
     // The function reference, object or property held (defined in sfr_as2_02).
     template<class Functor> void ForEachChild_GC(ASRefCountBaseType::Collector* prcc) const;
+    // Release before collection: strings, characters and names drop their references, the collected objects
+    // (objects, functions, properties) are left to the collector.
+    void Finalize_GC()
+    {
+        if (T.Type == FUNCTION)
+            V.FunctionValue.Finalize_GC();
+        else if (T.Type >= STRING && T.Type != OBJECT && T.Type != PROPERTY)
+            DropRefs();
+    }
 
 protected:
     // The function of a FUNCTIONNAME value, looked up by name (exe 0x14297ec30).
@@ -312,6 +323,7 @@ public:
     Value&       GetMemberValue()       { return mValue; }
     PropFlags    GetMemberFlags() const { return PropFlags(mValue.T.PropFlags); }
     void         SetMemberFlags(const PropFlags flags) { mValue.T.PropFlags = flags.Flags; }
+    void         Finalize_GC() { mValue.Finalize_GC(); }
 };
 
 }}} // namespace Scaleform::GFx::AS2

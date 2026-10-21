@@ -173,6 +173,13 @@ struct Object::Watchpoint
 
     Watchpoint(const Watchpoint& o); // exe 0x142923fd0
 
+    // Release before collection: only the user data holds counted references.
+    void Finalize_GC()
+    {
+        Callback.Finalize_GC();
+        UserData.Finalize_GC();
+    }
+
     template<class Functor> void ForEachChild_GC(Collector* prcc) const
     {
         Callback.template ForEachChild_GC<Functor>(prcc);

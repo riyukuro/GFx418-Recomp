@@ -35,6 +35,22 @@ public:
     ArrayLH<Page*, Stat_Default_Mem> Pages; // +0x20
     Page* pReserved;    // +0x38
 
+    // Destroys every element down to the bottom one, then frees the pages (exe 0x142924c60 for Value).
+    ~PagedStack()
+    {
+        Pop(GetTopIndex());
+        pCurrent->~T();
+        Page* plast  = Pages.Back();
+        plast->pNext = pReserved;
+        pReserved    = plast;
+        while (pReserved)
+        {
+            Page* pnext = pReserved->pNext;
+            SF_FREE(pReserved);
+            pReserved = pnext;
+        }
+    }
+
     // Index of the top element counted from the bottom of the stack.
     unsigned GetTopIndex() const { return ((unsigned)Pages.GetSize() - 1) * PageSize + (unsigned)(pCurrent - pPageStart); }
 
@@ -57,6 +73,11 @@ public:
         pCurrent->~T();
         if (--pCurrent < pPageStart)
             PopPage();
+    }
+    void Pop(unsigned n)
+    {
+        for (; n; n--)
+            Pop1();
     }
 
     // Element at an index counted from the bottom, 0 past the top.
