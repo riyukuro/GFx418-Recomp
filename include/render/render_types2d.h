@@ -29,6 +29,8 @@ public:
     T Width, Height;
 
     Size() : Width(0), Height(0) {}
+    enum NoInitType { NoInit };
+    Size(NoInitType) {}
     explicit Size(T s) : Width(s), Height(s) {}
     Size(T w, T h) : Width(w), Height(h) {}
     // user-declared copy: the exe passes Size by address (ImageSize_MipLevelCount takes a pointer to the copy)

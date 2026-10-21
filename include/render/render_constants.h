@@ -30,6 +30,32 @@ enum TreeChangeConstants
     Change_Context_Mask    = Change_Context_NewNode
 };
 
+// blend modes of a tree node / DrawableImage::Draw (the SWF modes first)
+enum BlendMode
+{
+    Blend_None,
+    Blend_Normal,
+    Blend_Layer,
+    Blend_Multiply,
+    Blend_Screen,
+    Blend_Lighten,
+    Blend_Darken,
+    Blend_Difference,
+    Blend_Add,
+    Blend_Subtract,
+    Blend_Invert,
+    Blend_Alpha,
+    Blend_Erase,
+    Blend_Overlay,
+    Blend_HardLight,
+    Blend_Overwrite,
+    Blend_OverwriteAll,
+    Blend_FullAdditive,
+    Blend_FilterBlend,
+    Blend_Ignore,
+    Blend_Count
+};
+
 }} // namespace Scaleform::Render
 
 #endif
