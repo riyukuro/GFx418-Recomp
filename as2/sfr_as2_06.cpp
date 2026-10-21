@@ -16,7 +16,16 @@
 // MS2-RANGE: 0x142966270-0x142966370 .text$mn
 // MS2-RANGE: 0x142967390-0x1429673e0 .text$mn
 // MS2-RANGE: 0x1429673e0-0x142967430 .text$mn
+// MS2-RANGE: 0x142967430-0x1429674a0 .text$mn
 // MS2-RANGE: 0x142967b90-0x142967bf0 .text$mn
+// MS2-RANGE: 0x142967d10-0x142967e00 .text$mn
+// MS2-RANGE: 0x142967e00-0x142967f60 .text$mn
+// MS2-RANGE: 0x142967f60-0x142967fc0 .text$mn
+// MS2-RANGE: 0x142967fc0-0x1429680b0 .text$mn
+// MS2-RANGE: 0x1429680b0-0x142968210 .text$mn
+// MS2-RANGE: 0x142968210-0x142968280 .text$mn
+// MS2-RANGE: 0x142968280-0x142968370 .text$mn
+// MS2-RANGE: 0x142968370-0x1429684d0 .text$mn
 // MS2-RANGE: 0x1429684d0-0x142968560 .text$mn
 // MS2-RANGE: 0x142968560-0x142968610 .text$mn
 // MS2-RANGE: 0x142968f90-0x142969000 .text$mn
@@ -24,10 +33,12 @@
 // MS2-RANGE: 0x14296bba0-0x14296bbb0 .text$mn
 // MS2-RANGE: 0x14296f070-0x14296f0c0 .text$mn
 // MS2-RANGE: 0x14296f1b0-0x14296f260 .text$mn
+// MS2-RANGE: 0x14296f2b0-0x14296f390 .text$mn
 // MS2-RANGE: 0x14296f390-0x14296f3d0 .text$mn
 // MS2-RANGE: 0x142971a50-0x142971ac0 .text$mn
 // MS2-RANGE: 0x142971ba0-0x142971c50 .text$mn
 // MS2-RANGE: 0x142971c50-0x142971cc0 .text$mn
+// MS2-RANGE: 0x142972330-0x142972410 .text$mn
 // MS2-RANGE: 0x142972410-0x142972490 .text$mn
 // MS2-RANGE: 0x142973040-0x142973080 .text$mn
 // MS2-RANGE: 0x14297ca70-0x14297cae0 .text$mn
@@ -63,6 +74,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_date.h"
+#include "../include/kernel/sf_msgformat.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -245,6 +257,85 @@ void AvmCharacter::OnEventUnload()
 {
 }
 
+__forceinline void ActionLogger::LogScriptMessageVarg(LogMessageId messageType, const char* pfmt, va_list argList)
+{
+    if (!pLog)
+        return;
+    if (UseSuffix)
+    {
+        char  fmtBuffer[256];
+        UPInt len = strlen(pfmt);
+        Format(StringDataPtr(fmtBuffer, sizeof(fmtBuffer)), "{0} : {1}\n",
+               StringDataPtr(pfmt, (pfmt[len - 1] == '\n' ? len - 1 : len)), LogSuffix);
+        pLog->LogMessageVarg(messageType, fmtBuffer, argList);
+    }
+    else
+        pLog->LogMessageVarg(messageType, pfmt, argList);
+}
+
+// @0x142967d10
+void ActionLogger::LogScriptError(const char* pfmt, ...)
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    LogScriptMessageVarg(LogChannel_Script | LogMessage_Error, pfmt, argList);
+    va_end(argList);
+}
+
+// @0x142968280
+void ActionLogger::LogScriptWarning(const char* pfmt, ...)
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    LogScriptMessageVarg(LogChannel_Script | LogMessage_Warning, pfmt, argList);
+    va_end(argList);
+}
+
+// @0x142967fc0
+void ActionLogger::LogScriptMessage(const char* pfmt, ...)
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    LogScriptMessageVarg(LogChannel_Script | LogMessage_Text, pfmt, argList);
+    va_end(argList);
+}
+
+// @0x142967e00
+void Environment::LogScriptError(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    if (pASLogger)
+        pASLogger->LogScriptMessageVarg(LogChannel_Script | LogMessage_Error, pfmt, argList);
+    else if (Target->GetLog())
+        Target->GetLog()->LogMessageVarg(LogChannel_Script | LogMessage_Error, pfmt, argList);
+    va_end(argList);
+}
+
+// @0x142968370
+void Environment::LogScriptWarning(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    if (pASLogger)
+        pASLogger->LogScriptMessageVarg(LogChannel_Script | LogMessage_Warning, pfmt, argList);
+    else if (Target->GetLog())
+        Target->GetLog()->LogMessageVarg(LogChannel_Script | LogMessage_Warning, pfmt, argList);
+    va_end(argList);
+}
+
+// @0x1429680b0
+void Environment::LogScriptMessage(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    if (pASLogger)
+        pASLogger->LogScriptMessageVarg(LogChannel_Script | LogMessage_Text, pfmt, argList);
+    else if (Target->GetLog())
+        Target->GetLog()->LogMessageVarg(LogChannel_Script | LogMessage_Text, pfmt, argList);
+    va_end(argList);
+}
+
 // @0x142973040
 bool ArrayObject::RecursionLimitReached_Call() const
 {
@@ -343,10 +434,108 @@ Environment::TryDescr Environment::PopTryBlock()
 
 }}} // namespace Scaleform::GFx::AS2
 
+namespace Scaleform { namespace GFx {
+
+// The function call's script channels read the target's log directly.
+// @0x142967f60
+template<>
+void LogBase<AS2::FnCall>::LogScriptMessage(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    Log* plog = static_cast<const AS2::FnCall*>(this)->Env->Target->GetLog();
+    if (plog)
+        plog->LogMessageVarg(LogChannel_Script | LogMessage_Text, pfmt, argList);
+    va_end(argList);
+}
+
+// The environment's action trace: the movie's verbose-action flag (MovieImpl::Flags bit 2), then the target's log.
+// @0x142967430
+template<>
+void LogBase<AS2::Environment>::LogAction(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    InteractiveObject* ptarget = static_cast<const AS2::Environment*>(this)->Target;
+    if ((UByte)(ptarget->GetMovieImpl()->Flags >> 2) & 1)
+    {
+        Log* plog = ptarget->GetLog();
+        if (plog)
+            plog->LogMessageVarg(Log_Action, pfmt, argList);
+    }
+    va_end(argList);
+}
+
+// @0x142968210
+template<>
+void LogBase<AS2::FnCall>::LogScriptWarning(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    if (P_IsVerboseActionErrors())
+    {
+        Log* plog = static_cast<const AS2::FnCall*>(this)->Env->Target->GetLog();
+        if (plog)
+            plog->LogMessageVarg(Log_ScriptWarning, pfmt, argList);
+    }
+    va_end(argList);
+}
+
+}} // namespace Scaleform::GFx
+
 namespace Scaleform {
 
 // @0x14296f070
 template void GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Pop(unsigned);
+
+// The page switches of the call stack (those of the value stack are elsewhere in the exe, 0x140006a40 /
+// 0x140006cf0).
+// @0x142972330
+template<>
+void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::PushPage()
+{
+    Page* pnewPage;
+    if (pReserved)
+    {
+        pnewPage  = pReserved;
+        pReserved = pReserved->pNext;
+    }
+    else
+        pnewPage = (Page*)SF_HEAP_AUTO_ALLOC(this, sizeof(Page));
+    if (pnewPage)
+    {
+        Pages.PushBack(pnewPage);
+        pPrevPageTop = pPageEnd - 1;
+        pPageEnd     = pnewPage->Values + 32;
+        pPageStart   = pnewPage->Values;
+        pCurrent     = pnewPage->Values;
+    }
+    else
+        pCurrent--;
+}
+
+// @0x14296f2b0
+template<>
+void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::PopPage()
+{
+    if (Pages.GetSize() > 1)
+    {
+        Page* plast  = Pages.Back();
+        plast->pNext = pReserved;
+        pReserved    = plast;
+        Pages.PopBack();
+        Page* ptop   = Pages.Back();
+        pPageStart   = ptop->Values;
+        pPageEnd     = ptop->Values + 32;
+        pCurrent     = pPageEnd - 1;
+        pPrevPageTop = Pages.GetSize() > 1 ? &Pages[Pages.GetSize() - 2]->Values[32 - 1] : pPageStart;
+    }
+    else
+    {
+        pCurrent++;
+        Construct<Ptr<GFx::AS2::FunctionObject> >(pCurrent);
+    }
+}
 
 // @0x1429673e0
 template void GFx::LogBase<GFx::AS2::ActionLogger>::LogAction(const char*, ...) const;

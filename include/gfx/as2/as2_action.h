@@ -30,6 +30,12 @@ public:
     Log*         GetLog() const { return pLog; }
     bool         IsVerboseAction() const { return VerboseAction; }
     virtual bool IsVerboseActionErrors() const { return VerboseActionErrors; }
+
+    // Sends the message to pLog, with " : LogSuffix" appended when UseSuffix is set.
+    void LogScriptMessageVarg(LogMessageId messageType, const char* pfmt, va_list argList);
+    void LogScriptError(const char* pfmt, ...);   // exe 0x142967d10
+    void LogScriptWarning(const char* pfmt, ...); // exe 0x142968280
+    void LogScriptMessage(const char* pfmt, ...); // exe 0x142967fc0
 };
 
 // Stack growing in pages of PageSize elements; elements stay in place when pages are added. 0x40 bytes.
@@ -170,6 +176,8 @@ public:
     void LogScriptError(const char* pfmt, ...) const;
     // Script warning channel (exe 0x142968370).
     void LogScriptWarning(const char* pfmt, ...) const;
+    // Script message channel (exe 0x1429680b0).
+    void LogScriptMessage(const char* pfmt, ...) const;
 
     // Local register reg counted from the top of the register array; global register 0 (after an error) when
     // out of range (exe 0x142967390).

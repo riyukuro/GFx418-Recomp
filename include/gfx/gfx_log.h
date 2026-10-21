@@ -33,6 +33,8 @@ public:
     // Action trace channel, only with verbose actions; Derived supplies IsVerboseAction() (out of line per
     // Derived, e.g. LogBase<AS2::ActionLogger> 0x1429673e0).
     void LogAction(const char* pfmt, ...) const;
+    // Script message channel (only LogBase<AS2::FnCall> in the exe, 0x142967f60, defined with it).
+    void LogScriptMessage(const char* pfmt, ...) const;
 
 protected:
     bool IsLogNotNull() const { return 0; }
