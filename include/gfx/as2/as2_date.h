@@ -12,6 +12,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class DateObject : public Object
 {
 public:
+    DateObject(Environment* penv); // exe 0x14291b510
+
     SInt64 Date;        // +0x68 ms since 1 Jan 1970 UTC
     int    Time;        // +0x70 ms within the UTC day
     int    Year;        // +0x74
@@ -92,6 +94,9 @@ inline int Date_StartOfYear(int y)
 // The Date class: the static Date.UTC.
 class DateCtorFunction : public CFunctionObject
 {
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c40
+
 private:
     static void DateUTC(const FnCall& fn);
 };

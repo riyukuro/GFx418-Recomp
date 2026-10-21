@@ -220,6 +220,11 @@ public:
         DropRefs();
         T.Type = NULLTYPE;
     }
+    void SetUnset()
+    {
+        DropRefs();
+        T.Type = UNSET;
+    }
     void SetNumber(Number val)
     {
         if (T.Type >= STRING)
@@ -256,6 +261,11 @@ public:
         V.pStringNode->AddRef();
     }
     void SetAsObject(Object* pobj); // exe 0x14297fcb0
+
+    // Conversion in place to a number / string (the string one of the SWF version: undefined is "" up to 6).
+    void ConvertToNumber(Environment* penv);                            // exe 0x142935b50
+    void ConvertToString(Environment* penv);                            // exe 0x142935b90
+    void ConvertToStringVersioned(Environment* penv, unsigned version); // exe 0x142935be0
 
     // Arithmetic in place (the script operators).
     void Add(Environment* penv, const Value& v); // exe 0x14292e180

@@ -122,9 +122,20 @@ public:
     }
 
     ASStringContext* GetSC() { return &StringContext; }
+    // Ends the unrolling of a throw (exe 0x1429345d0).
+    void ClearThrowing();
+    // Drops the try blocks pc has left; *plocalTryBlockCount counts those of the running action buffer (exe
+    // 0x142933d80).
+    void CheckTryBlocks(int pc, int* plocalTryBlockCount);
+
+    // Local variables of the innermost function frame.
+    const Value* FindLocal(const ASString& varname) const;      // exe 0x142944690
+    void         AddLocal(const ASString& varname, const Value& val); // exe 0x14292ff50 (it must not exist yet)
+    void         DeclareLocal(const ASString& varname);         // exe 0x142938180 (undefined unless it exists)
     // The movie enabled the Scaleform extensions to ActionScript.
     inline bool CheckExtensions() const;
     inline MemoryHeap* GetHeap() const;
+    inline Object*     GetPrototype(ASBuiltinType type) const;
     // Collector of the target's movie, 0 without a target.
     inline ASRefCountCollector* GetCollector(); // as2_avmcharacter.h
     InteractiveObject* GetTarget() const { return Target; }
@@ -142,6 +153,19 @@ public:
     inline ASString        CreateString(const char* pstr) const; // as2_movieroot.h
     inline ASString        CreateString(const String& str) const; // as2_movieroot.h
 };
+
+// A try block entered by the running code. 0x10 bytes.
+struct Environment::TryDescr
+{
+    const UByte* pTryBlock;     // +0x00 the ActionTry record
+    unsigned     TryBeginPC;    // +0x08
+    unsigned     TopStackIndex; // +0x0c
+
+    unsigned GetTrySize() const { return pTryBlock[1] | (((UInt16)pTryBlock[2]) << 8); }
+};
+
+// The out-of-line Resize of the try block array (exe 0x14297e060, a COMDAT the exe calls where cl inlines it).
+void TryBlocks_Resize(ArrayLH<Environment::TryDescr, Stat_Default_Mem>* ptryBlocks, UPInt newSize);
 
 // Arguments, this and result slot of a native call. 0x40 bytes.
 class FnCall : public LogBase<FnCall>
@@ -218,6 +242,9 @@ public:
     void*              StandardMemberMap;      // +0x70 ASStringHash<char>
 
     bool CheckExtensions() const { return GFxExtensions.IsTrue(); }
+
+    // The builtin prototype of the type (exe 0x142954ba0).
+    Object* GetPrototype(ASBuiltinType type);
 };
 
 SF_FORCEINLINE void FunctionRefBase::DropRefs()
@@ -238,6 +265,11 @@ inline bool Environment::CheckExtensions() const
 inline MemoryHeap* Environment::GetHeap() const
 {
     return StringContext.pContext->pHeap;
+}
+
+inline Object* Environment::GetPrototype(ASBuiltinType type) const
+{
+    return StringContext.pContext->GetPrototype(type);
 }
 
 inline Object* Environment::OperatorNew(const ASString& className, int nargs, int argsTopOff)

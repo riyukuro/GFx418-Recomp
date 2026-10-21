@@ -74,6 +74,13 @@ protected:
     }
 };
 
+// The Object class.
+class ObjectCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937170
+};
+
 // Object.prototype methods (only the natives so far).
 class ObjectProto
 {

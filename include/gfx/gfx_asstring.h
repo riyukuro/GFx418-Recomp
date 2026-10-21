@@ -103,6 +103,9 @@ public:
         if (pNode->pLower == 0)
             pNode->ResolveLowercase_Impl();
     }
+
+    // Case-insensitive compare with this a builtin (its lowercase twin always resolved); exe 0x142935540.
+    bool CompareBuiltIn_CaseInsensitive(const ASConstString& str) const;
 };
 
 // Counted string handle.

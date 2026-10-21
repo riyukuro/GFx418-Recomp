@@ -147,6 +147,7 @@ public:
     bool                         IsListenerSet;    // +0x61
 
     // Primary vftable: 0x00 ExecuteForEachChild_GC, 0x08 Finalize_GC, 0x10 dtor, then these.
+    Object(Environment* penv); // exe 0x14291f810
     virtual ~Object();
     virtual void  SetValue(Environment* penv, const Value&);
     virtual Value GetValue() const;
@@ -199,7 +200,7 @@ public:
     virtual bool    IsEqual(const FunctionObject& f) const;
     virtual bool    IsCFunction() const;
     virtual bool    IsAsFunction() const;
-    virtual Object* CreateNewObject(Environment*);
+    virtual Object* CreateNewObject(Environment*) const;
     virtual int     GetNumArgs() const;
 
 protected:
@@ -216,6 +217,13 @@ public:
 
 protected:
     CFunctionObject(ASRefCountCollector* pcc);
+};
+
+// Function defined in script (the action buffer of a DefineFunction). Its instances are plain objects.
+class AsFunctionObject : public FunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936880
 };
 
 SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)

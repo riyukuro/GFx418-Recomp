@@ -35,6 +35,8 @@ public:
         SortFlags_Locale             = 1024
     };
 
+    ArrayObject(Environment* penv); // exe 0x142918010
+
     int          GetSize() const { return (unsigned)Elements.GetSize(); }
     Value*       GetElementPtr(int i) { return Elements[i]; }
     const Value* GetElementPtr(int i) const { return Elements[i]; }
@@ -92,6 +94,7 @@ public:
         return false;
     }
 
+    static void ArrayLength(const FnCall& fn);
     static void ArrayConcat(const FnCall& fn);
     static void ArrayJoin(const FnCall& fn);
     static void ArrayPop(const FnCall& fn);
@@ -169,6 +172,13 @@ private:
     Environment*                                        Env;          // +0x10
     const Log*                                          LogPtr;       // +0x18
     Array<ArraySortFunctor>                             FunctorArray; // +0x20
+};
+
+// The Array class.
+class ArrayCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429367a0
 };
 
 }}} // namespace Scaleform::GFx::AS2

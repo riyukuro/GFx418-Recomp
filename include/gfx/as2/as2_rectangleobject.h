@@ -66,6 +66,13 @@ public:
     static void Union(const FnCall& fn);
 };
 
+// The flash.geom.Rectangle class.
+class RectangleCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429371f0
+};
+
 }}} // namespace Scaleform::GFx::AS2
 
 #endif

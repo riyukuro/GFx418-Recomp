@@ -40,9 +40,20 @@ public:
 // The instance classes of the filters (0x70 bytes, all state in the render filter).
 class BevelFilterObject : public BitmapFilterObject {};
 class BlurFilterObject : public BitmapFilterObject {};
-class ColorMatrixFilterObject : public BitmapFilterObject {};
+class ColorMatrixFilterObject : public BitmapFilterObject
+{
+public:
+    ColorMatrixFilterObject(Environment* penv); // exe 0x14291ab70
+};
 class DropShadowFilterObject : public BitmapFilterObject {};
 class GlowFilterObject : public BitmapFilterObject {};
+
+// The ColorMatrixFilter class.
+class ColorMatrixFilterCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936bc0
+};
 
 }}} // namespace Scaleform::GFx::AS2
 

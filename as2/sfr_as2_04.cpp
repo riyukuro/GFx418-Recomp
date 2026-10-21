@@ -2,17 +2,46 @@
 // and the out-of-line hash table helpers (grow, clear) of the AS2 member, watchpoint and prototype tables.
 // MS2-UNIT: sfr_as2_04
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142931790-0x142931870 .text$mn
+// MS2-RANGE: 0x142931710-0x142931870 .text$mn
 // MS2-RANGE: 0x1429339a0-0x142933bd0 .text$mn
+// MS2-RANGE: 0x142933d80-0x142933e20 .text$mn
 // MS2-RANGE: 0x142934060-0x142934390 .text$mn
+// MS2-RANGE: 0x1429345d0-0x142934610 .text$mn
+// MS2-RANGE: 0x142934a00-0x142934a80 .text$mn
+// MS2-RANGE: 0x142935540-0x142935580 .text$mn
+// MS2-RANGE: 0x142935b50-0x142935c70 .text$mn
+// MS2-RANGE: 0x1429367a0-0x1429367e0 .text$mn
+// MS2-RANGE: 0x142936880-0x1429368c0 .text$mn
+// MS2-RANGE: 0x142936bc0-0x142936c80 .text$mn
+// MS2-RANGE: 0x142936e10-0x142936e90 .text$mn
+// MS2-RANGE: 0x142937170-0x142937290 .text$mn
+// MS2-RANGE: 0x142937380-0x1429373c0 .text$mn
+// MS2-RANGE: 0x142937470-0x1429374f0 .text$mn
+// MS2-RANGE: 0x142938180-0x1429381f0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_arrayobject.h"
+#include "../include/gfx/as2/as2_bitmapfilter.h"
+#include "../include/gfx/as2/as2_colortransform.h"
+#include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_matrixobject.h"
+#include "../include/gfx/as2/as2_objectproto.h"
+#include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
+namespace Scaleform { namespace GFx {
+
+// @0x142935540
+bool ASConstString::CompareBuiltIn_CaseInsensitive(const ASConstString& str) const
+{
+    str.ResolveLowercase();
+    return pNode->pLower == str.pNode->pLower;
+}
+
+namespace AS2 {
 
 // @0x142931790
 void FunctionRefBase::Assign(const FunctionRefBase& orig)
@@ -37,6 +66,188 @@ void FunctionRefBase::Assign(const FunctionRefBase& orig)
         Flags &= ~FuncRef_Weak;
         pLocalFrame = 0;
     }
+}
+
+// @0x1429345d0
+void Environment::ClearThrowing()
+{
+    ThrowingValue.SetUnset();
+    Unrolling = false;
+}
+
+// @0x142933d80
+void Environment::CheckTryBlocks(int pc, int* plocalTryBlockCount)
+{
+    int localTryBlockCount = *plocalTryBlockCount;
+    if (localTryBlockCount > 0)
+    {
+        for (; TryBlocks.GetSize() > 0 && localTryBlockCount >= 0; --localTryBlockCount)
+        {
+            const TryDescr& tryDescr = TryBlocks[TryBlocks.GetSize() - 1];
+            if ((unsigned)pc < tryDescr.TryBeginPC || (unsigned)pc >= tryDescr.TryBeginPC + tryDescr.GetTrySize())
+            {
+                --(*plocalTryBlockCount);
+                TryBlocks_Resize(&TryBlocks, TryBlocks.GetSize() - 1);
+            }
+            else
+                break;
+        }
+    }
+}
+
+// @0x142938180
+void Environment::DeclareLocal(const ASString& varname)
+{
+    UPInt nframes = LocalFrames.GetSize();
+    if (nframes && LocalFrames[nframes - 1])
+    {
+        if (!FindLocal(varname))
+            AddLocal(varname, Value());
+    }
+}
+
+// @0x142935b50
+void Value::ConvertToNumber(Environment* penv)
+{
+    SetNumber(ToNumber(penv));
+}
+
+// @0x142935b90
+void Value::ConvertToString(Environment* penv)
+{
+    ASString str = ToString(penv);
+    DropRefs();
+    T.Type        = STRING;
+    V.pStringNode = str.GetNode();
+    V.pStringNode->AddRef();
+}
+
+// Value::ToStringVersioned (exe 0x1429923c0), which the exe inlines here.
+static SF_FORCEINLINE ASString Value_ToStringVersioned(const Value* pval, Environment* penv, unsigned version)
+{
+    if (pval->IsUndefined())
+    {
+        if (version > 0 && version <= 6)
+            return penv->GetBuiltin(ASBuiltin_empty_);
+        else
+            return penv->GetBuiltin(ASBuiltin_undefined);
+    }
+    return pval->ToString(penv);
+}
+
+// @0x142935be0
+void Value::ConvertToStringVersioned(Environment* penv, unsigned version)
+{
+    ASString str = Value_ToStringVersioned(this, penv, version);
+    DropRefs();
+    T.Type        = STRING;
+    V.pStringNode = str.GetNode();
+    V.pStringNode->AddRef();
+}
+
+// @0x142934a00
+void BooleanObject::CommonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Boolean));
+}
+
+// @0x142934a40
+void NumberObject::CommonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Number));
+}
+
+// The instances the constructor functions create for new.
+// @0x1429367a0
+Object* ArrayCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) ArrayObject(penv);
+}
+
+// @0x142936880
+Object* AsFunctionObject::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) Object(penv);
+}
+
+// @0x142936bc0
+Object* ColorMatrixFilterCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) ColorMatrixFilterObject(penv);
+}
+
+// @0x142936c00
+Object* ColorTransformCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) ColorTransformObject(penv);
+}
+
+// @0x142936c40
+Object* DateCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) DateObject(penv);
+}
+
+// @0x142936e10
+Object* GASLoadVarsLoaderCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) LoadVarsObject(penv);
+}
+
+// @0x142936e50
+Object* GASMatrixCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) MatrixObject(penv);
+}
+
+// @0x142937170
+Object* ObjectCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) Object(penv);
+}
+
+// @0x1429371b0
+Object* PointCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) PointObject(penv);
+}
+
+// @0x1429371f0
+Object* RectangleCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) RectangleObject(penv);
+}
+
+// @0x142937240
+Object* SharedObjectCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) SharedObject(penv);
+}
+
+// @0x142937380
+Object* StyleSheetCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) StyleSheetObject(penv);
+}
+
+// @0x142937470
+Object* TextFormatCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) TextFormatObject(penv);
+}
+
+// @0x1429374b0
+Object* TransformCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) TransformObject(penv);
+}
+
+// @0x142931710
+void ArrayObject::ArrayLength(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+    fn.Result->SetInt(pthis->GetSize());
 }
 
 }}} // namespace Scaleform::GFx::AS2

@@ -69,8 +69,11 @@ public:
 };
 
 // The Point constructor function's own methods.
-class PointCtorFunction
+class PointCtorFunction : public CFunctionObject
 {
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429371b0
+
 protected:
     static void Distance(const FnCall& fn);
     static void Interpolate(const FnCall& fn);

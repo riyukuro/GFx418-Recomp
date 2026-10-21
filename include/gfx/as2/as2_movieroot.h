@@ -19,9 +19,12 @@ enum ASBuiltinType : int
 {
     ASBuiltin_empty_ = 0, // ""
     ASBuiltin_Array  = 2,
+    ASBuiltin_Number  = 4,
+    ASBuiltin_Boolean = 5,
     ASBuiltin_DropShadowFilter = 38,
     ASBuiltin_GlowFilter       = 39,
     ASBuiltin_BlurFilter       = 40,
+    ASBuiltin_undefined        = 51,
     ASBuiltin_typeFunction_    = 83, // "[type Function]"
     ASBuiltin_objectObject_    = 85, // "[object Object]"
     ASBuiltin_x      = 129,

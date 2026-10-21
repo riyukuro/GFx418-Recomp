@@ -30,6 +30,15 @@ class ColorTransformObject : public Object
 {
 public:
     Render::Cxform mColorTransform; // +0x70
+
+    ColorTransformObject(Environment* penv); // exe 0x14291aee0
+};
+
+// The ColorTransform class.
+class ColorTransformCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c00
 };
 
 // ColorTransform.prototype methods.

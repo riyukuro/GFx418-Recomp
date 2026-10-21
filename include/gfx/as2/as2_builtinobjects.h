@@ -26,6 +26,9 @@ class BooleanObject : public Object
 {
 public:
     bool BValue; // +0x68
+
+protected:
+    void CommonInit(Environment* penv); // exe 0x142934a00
 };
 class ButtonObject : public Object
 {
@@ -62,6 +65,8 @@ public:
 class LoadVarsObject : public Object
 {
 public:
+    LoadVarsObject(Environment* penv); // exe 0x14291dda0
+
     void* Data68[2]; // +0x68 not recovered
 };
 class MovieClipObject : public Object
@@ -83,10 +88,15 @@ public:
         StringValue      = pstr;
         return StringValue.ToCStr();
     }
+
+protected:
+    void CommonInit(Environment* penv); // exe 0x142934a40
 };
 class SharedObject : public Object
 {
 public:
+    SharedObject(Environment* penv); // exe 0x142920710
+
     void* Data68[2]; // +0x68 not recovered
 };
 class TextFieldObject : public Object
@@ -122,6 +132,8 @@ public:
 class StyleSheetObject : public Object
 {
 public:
+    StyleSheetObject(Environment* penv); // exe 0x142921190
+
     void* Data68[6]; // +0x68 not recovered
 };
 
@@ -129,6 +141,8 @@ public:
 class TextFormatObject : public Object
 {
 public:
+    TextFormatObject(Environment* penv); // exe 0x1429226d0
+
     void* Data68[13]; // +0x68 not recovered
 };
 
@@ -140,6 +154,8 @@ public:
     Ptr<Object> Matrix;          // +0x78 MatrixObject
     Ptr<Object> pColorTransform; // +0x80 ColorTransformObject
     Ptr<Object> PixelBounds;     // +0x88 RectangleObject
+
+    TransformObject(Environment* penv, InteractiveObject* pcharacter = 0); // exe 0x142923350
 
 protected:
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
@@ -192,8 +208,38 @@ class SharedObjectCtorFunction : public CFunctionObject
 public:
     ASStringHash_GC<SharedObjectPtr> SharedObjects; // +0x70
 
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937240
+
 protected:
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
+};
+
+// The LoadVars class.
+class GASLoadVarsLoaderCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e10
+};
+
+// The TextField.StyleSheet class.
+class StyleSheetCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937380
+};
+
+// The TextFormat class.
+class TextFormatCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937470
+};
+
+// The flash.geom.Transform class.
+class TransformCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429374b0
 };
 
 // The AmpMarker class: one static method that puts a named marker into the profiler stats of the movie.

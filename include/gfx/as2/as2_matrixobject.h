@@ -44,6 +44,13 @@ public:
     void             SetMatrix(Environment* penv, const Render::Matrix2F& m);          // exe 0x142982370
 };
 
+// The flash.geom.Matrix class.
+class GASMatrixCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e50
+};
+
 // Matrix.prototype methods.
 class MatrixProto
 {
