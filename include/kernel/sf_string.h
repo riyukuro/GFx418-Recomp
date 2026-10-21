@@ -141,6 +141,8 @@ public:
     void operator=(const String& src) { String::operator=(src); }
     void operator=(const char* str)   { String::operator=(str); }
 
+    StringLH(const char* data); // exe 0x1425853a0
+
 private:
     void CopyConstructHelper(const String& src);
 };
@@ -156,6 +158,12 @@ public:
     void operator=(const char* str) { String::operator=(str); }
 
     MemoryHeap* GetHeap() const { return pHeap; }
+
+    StringDH(const StringDH& src) : String(NoConstructor()) { CopyConstructHelper(src, src.GetHeap()); }
+    explicit StringDH(MemoryHeap* heap, const String& src) : String(NoConstructor()) { CopyConstructHelper(src, heap); }
+
+private:
+    void CopyConstructHelper(const String& src, MemoryHeap* heap); // exe 0x1425867f0
 };
 
 // Growable UTF-8 buffer: 0x30 bytes.

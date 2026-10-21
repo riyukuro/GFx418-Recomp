@@ -564,6 +564,12 @@ protected:
 
 public:
     ResourceHandle() : HType(RH_Pointer), pResource(0) {}
+    ResourceHandle(Resource* pres) : HType(RH_Pointer), pResource(pres)
+    {
+        if (pres)
+            pres->AddRef();
+    }
+    ResourceHandle(HandleType type, unsigned bindIndex) : HType(type) { BindIndex = bindIndex; }
     ResourceHandle(const ResourceHandle& src)
     {
         HType     = src.HType;
@@ -575,6 +581,17 @@ public:
     {
         if (HType == RH_Pointer && pResource)
             pResource->Release();
+    }
+
+    ResourceHandle& operator=(const ResourceHandle& src)
+    {
+        if (src.HType == RH_Pointer && src.pResource)
+            src.pResource->AddRef();
+        if (HType == RH_Pointer && pResource)
+            pResource->Release();
+        HType     = src.HType;
+        pResource = src.pResource;
+        return *this;
     }
 
     bool      IsIndex() const        { return HType == RH_Index; }

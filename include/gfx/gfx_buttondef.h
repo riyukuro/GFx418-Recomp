@@ -1,12 +1,12 @@
-// Recovered Scaleform 4.1.18 GFx: character definitions as the loader builds them (the CharacterDef base) and the
-// button definition (its state records, actions and sounds).
+// Recovered Scaleform 4.1.18 GFx: the button definition (its state records, actions and sounds); CharacterDef is in
+// gfx_characterdef.h.
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
-// Bodies: GFx_ButtonDef (sfr_gfx_08g). CharacterDef::Display binds to the exe (0x142645600) until GFx_CharacterDef
-// is recovered.
+// Bodies: GFx_ButtonDef (sfr_gfx_08g).
 #ifndef MS2_SF_GFX_BUTTONDEF_H
 #define MS2_SF_GFX_BUTTONDEF_H
 
+#include "gfx_characterdef.h"
 #include "gfx_resource.h"
 #include "gfx_stream.h"
 #include "../kernel/sf_array.h"
@@ -19,56 +19,11 @@
 
 namespace Scaleform { namespace GFx {
 
-// Allocation stat of the character definitions.
-enum { StatMD_CharDefs_Mem = 0x102 };
-
-class DisplayContext;
-class DisplayObjectBase;
 class LoadProcess;
 class ButtonSoundDef;
 
 using Render::Cxform;
 using Render::Matrix2F;
-using Render::PointF;
-using Render::RectF;
-
-// The template of a timeline element, shared by its instances (vftable slots 4..9 after the Resource ones). The
-// exe has no vftable of its own for it (its vptr stores are dead in every constructor / destructor), hence novtable.
-class __declspec(novtable) CharacterDef : public Resource
-{
-    ResourceId Id; // +0x18
-
-public:
-    enum CharacterDefType
-    {
-        Unknown,
-        Shape,
-        MovieData,
-        Sprite,
-        TextField,
-        StaticText,
-        Button,
-        Video,
-        Bitmap,
-        EmptySprite
-    };
-
-    // Id starts as ResourceId::InvalidId.
-    virtual ~CharacterDef() {}
-
-    virtual CharacterDefType GetType() const = 0;
-    virtual void             Display(DisplayContext& context, DisplayObjectBase* pinstanceInfo);
-    virtual bool             DefPointTestLocal(const PointF&, bool = 0, const DisplayObjectBase* = 0) const
-    {
-        return false;
-    }
-    virtual RectF    GetBoundsLocal(float = 0) const     { return RectF(); }
-    virtual RectF    GetRectBoundsLocal(float = 0) const { return RectF(); }
-    virtual unsigned GetVersion() const                  { return 0; }
-
-    ResourceId GetId() const          { return Id; }
-    void       SetId(ResourceId rid)  { Id = rid; }
-};
 
 // The 9-slice scaling grid of a button or sprite.
 struct Scale9Grid : public NewOverrideBase<Stat_Default_Mem>

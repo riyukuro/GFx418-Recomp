@@ -35,20 +35,6 @@ public:
 
 namespace Render {
 
-// Axis aligned rectangle (only what the header code uses).
-template<class T>
-class Rect
-{
-public:
-    T x1, y1, x2, y2;
-
-    Rect() : x1(0), y1(0), x2(0), y2(0) {}
-
-    T Width() const  { return x2 - x1; }
-    T Height() const { return y2 - y1; }
-};
-typedef Rect<float> RectF;
-
 class ImageUpdateSync;
 class TextureManager;
 
@@ -125,65 +111,6 @@ struct MovieInfo
     }
 };
 
-// What the exporter wrote about a stripped .gfx file (0x20 bytes).
-struct ExporterInfo
-{
-    FileTypeConstants::FileFormatType Format;      // +0
-    const char*                       pPrefix;     // +8
-    const char*                       pSWFName;    // +0x10
-    UInt16                            Version;     // +0x18
-    unsigned                          ExportFlags; // +0x1c
-};
-
-// ExporterInfo plus the strings it points into (0x48 bytes).
-class ExporterInfoImpl
-{
-    ExporterInfo SI;      // +0
-    String       Prefix;  // +0x20
-    String       SWFName; // +0x28
-
-public:
-    Array<UInt32> CodeOffsets; // +0x30
-
-    ExporterInfoImpl()
-    {
-        SI.Format      = FileTypeConstants::File_Unopened;
-        SI.pPrefix     = 0;
-        SI.pSWFName    = 0;
-        SI.Version     = 0;
-        SI.ExportFlags = 0;
-    }
-    ~ExporterInfoImpl();
-
-    void SetData(UInt16 version, FileTypeConstants::FileFormatType format, const char* pname, const char* pprefix,
-                 unsigned flags = 0, const Array<UInt32>* codeOffsets = 0);
-
-    const ExporterInfo* GetExporterInfo() const { return (SI.Format == FileTypeConstants::File_Unopened) ? 0 : &SI; }
-
-    void ReadExporterInfoTag(Stream* pin, TagType tagType);
-};
-
-// SWF/GFX header of a movie.
-struct MovieHeaderData
-{
-    UInt32           FileLength;    // +0
-    int              Version;       // +4
-    UInt32           Unknown8[2];   // +8
-    Render::RectF    FrameRect;     // +0x10
-    float            FPS;           // +0x20
-    unsigned         FrameCount;    // +0x24
-    unsigned         SWFFlags;      // +0x28
-    ExporterInfoImpl mExporterInfo; // +0x30
-
-    // FrameCount starts at 1: image and empty movies rely on it.
-    MovieHeaderData() : FileLength(0), Version(-1), FPS(1.0f), SWFFlags(0)
-    {
-        FrameCount = 1;
-    }
-
-    void GetMovieInfo(MovieInfo* pinfo) const;
-};
-
 // The stream of a movie file positioned after its header (0x310 bytes).
 struct SWFProcessInfo
 {
@@ -191,8 +118,7 @@ struct SWFProcessInfo
     UInt32          FileStartPos;    // +0x270
     UInt32          FileEndPos;      // +0x274
     UInt32          NextActionBlock; // +0x278
-    MovieHeaderData Header;          // +0x280
-    UByte           Unknown2f8[8];   // +0x2f8
+    MovieHeaderData Header;          // +0x280 (0x80 bytes)
     UInt16          FileAttributes;  // +0x300
 
     SWFProcessInfo(MemoryHeap* pheap) : Stream(0, pheap, 0, 0), FileAttributes(0) {}

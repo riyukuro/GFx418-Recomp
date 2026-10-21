@@ -823,8 +823,94 @@ public:
     ConstIterator End() const   { return mHash.End(); }
 
     Iterator Find(const C& key) { return mHash.FindAlt(key); }
+    ConstIterator Find(const C& key) const { return mHash.FindAlt(key); }
     template<class K>
     Iterator FindAlt(const K& key) { return mHash.FindAlt(key); }
+};
+
+// Node slot that keeps no hash: it is recomputed from the node's key whenever the table needs it.
+template<class C, class HashF>
+class HashsetNodeEntry
+{
+public:
+    SPInt NextInChain;
+    C     Value;
+
+    HashsetNodeEntry() : NextInChain(-2) {}
+    HashsetNodeEntry(const HashsetNodeEntry& o) : NextInChain(o.NextInChain), Value(o.Value) {}
+    template<class K>
+    HashsetNodeEntry(const K& key, SPInt next) : NextInChain(next), Value(key) {}
+
+    bool IsEmpty() const      { return NextInChain == -2; }
+    bool IsEndOfChain() const { return NextInChain == -1; }
+
+    UPInt GetCachedHash(UPInt mask) const { return HashF()(Value) & mask; }
+    void  SetCachedHash(UPInt)            {}
+
+    void Clear()
+    {
+        Value.~C();
+        NextInChain = -2;
+    }
+    void Free() { Clear(); }
+};
+
+// Map whose table lives in the heap of its owner.
+template<class C, class U, class HashF = FixedSizeHash<C>, int SID = Stat_Default_Mem,
+         class HashNodeT = HashNode<C, U, HashF>,
+         class Entry     = HashsetCachedNodeEntry<HashNodeT, typename HashNodeT::NodeHashF> >
+class HashLH : public Hash<C, U, HashF, AllocatorLH<C, SID>, HashNodeT, Entry>
+{
+public:
+    typedef HashLH<C, U, HashF, SID, HashNodeT, Entry>               SelfType;
+    typedef Hash<C, U, HashF, AllocatorLH<C, SID>, HashNodeT, Entry> BaseType;
+
+    HashLH() {}
+    HashLH(int sizeHint) : BaseType(sizeHint) {}
+    HashLH(const SelfType& o) : BaseType(o) {}
+    ~HashLH() {}
+
+    void operator=(const SelfType& o) { BaseType::operator=(o); }
+};
+
+// Map without cached hashes.
+template<class C, class U, class HashF = FixedSizeHash<C>, class Allocator = AllocatorGH<C> >
+class HashUncached
+    : public Hash<C, U, HashF, Allocator, HashNode<C, U, HashF>,
+                  HashsetNodeEntry<HashNode<C, U, HashF>, typename HashNode<C, U, HashF>::NodeHashF> >
+{
+public:
+    typedef HashUncached<C, U, HashF, Allocator> SelfType;
+    typedef Hash<C, U, HashF, Allocator, HashNode<C, U, HashF>,
+                 HashsetNodeEntry<HashNode<C, U, HashF>, typename HashNode<C, U, HashF>::NodeHashF> >
+        BaseType;
+
+    HashUncached() {}
+    HashUncached(int sizeHint) : BaseType(sizeHint) {}
+    HashUncached(const SelfType& o) : BaseType(o) {}
+    ~HashUncached() {}
+
+    void operator=(const SelfType& o) { BaseType::operator=(o); }
+};
+
+// Map without cached hashes whose table lives in the heap of its owner.
+template<class C, class U, class HashF = FixedSizeHash<C>, int SID = Stat_Default_Mem>
+class HashUncachedLH
+    : public HashLH<C, U, HashF, SID, HashNode<C, U, HashF>,
+                    HashsetNodeEntry<HashNode<C, U, HashF>, typename HashNode<C, U, HashF>::NodeHashF> >
+{
+public:
+    typedef HashUncachedLH<C, U, HashF, SID> SelfType;
+    typedef HashLH<C, U, HashF, SID, HashNode<C, U, HashF>,
+                   HashsetNodeEntry<HashNode<C, U, HashF>, typename HashNode<C, U, HashF>::NodeHashF> >
+        BaseType;
+
+    HashUncachedLH() {}
+    HashUncachedLH(int sizeHint) : BaseType(sizeHint) {}
+    HashUncachedLH(const SelfType& o) : BaseType(o) {}
+    ~HashUncachedLH() {}
+
+    void operator=(const SelfType& o) { BaseType::operator=(o); }
 };
 
 } // namespace Scaleform

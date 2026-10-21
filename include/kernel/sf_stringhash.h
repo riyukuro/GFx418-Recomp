@@ -111,6 +111,26 @@ public:
         HashNodeT*        p = BaseType::mHash.GetAlt(ikey);
         return p ? &p->Second : 0;
     }
+
+    bool GetCaseInsensitive(const String& key, U* pvalue) const
+    {
+        String::NoCaseKey ikey(key);
+        return BaseType::GetAlt(ikey, pvalue);
+    }
+    typename BaseType::Iterator FindCaseInsensitive(const String& key)
+    {
+        String::NoCaseKey ikey(key);
+        return BaseType::mHash.FindAlt(ikey);
+    }
+    // Replaces the value of a key that matches regardless of case, else adds the key as given.
+    void SetCaseInsensitive(const String& key, const U& value)
+    {
+        typename BaseType::Iterator it = FindCaseInsensitive(key);
+        if (it != BaseType::End())
+            (*it).Second = value;
+        else
+            Add(key, value);
+    }
 };
 
 } // namespace Scaleform

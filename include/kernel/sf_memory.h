@@ -75,6 +75,9 @@ public:
     virtual void        VisitRootSegments(Heap::SegVisitor* visitor) = 0;
     virtual void        VisitHeapSegments(Heap::SegVisitor* visitor) const = 0;
     virtual void        SetTracer(HeapTracer* tracer) = 0;
+
+    // Releases this heap once ptr is freed (exe 0x14257e4a0).
+    void ReleaseOnFree(void* ptr);
 protected:
     virtual void        destroyItself() = 0;
     virtual void        ultimateCheck() = 0;

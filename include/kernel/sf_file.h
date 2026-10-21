@@ -155,6 +155,9 @@ public:
     static bool SF_CDECL GetFileStat(FileStat* pfileStats, const String& path);
 };
 
+// The file name part of a path (SF_File; exe 0x14264d890).
+const char* GetShortFilename(const char* path);
+
 } // namespace Scaleform
 
 struct z_stream_s;

@@ -6,6 +6,7 @@
 #ifndef MS2_SF_GFX_LOADPROC_H
 #define MS2_SF_GFX_LOADPROC_H
 
+#include "gfx_characterdef.h"
 #include "gfx_loaderimpl.h"
 #include "gfx_log.h"
 #include "gfx_moviedef.h"
@@ -16,28 +17,15 @@ namespace Scaleform { namespace GFx {
 
 class SoundStreamDef;
 
-// The timeline a sprite definition is loaded into. Only its streaming sound and loading frame (vftable slots 16..18)
-// are used so far; the CharacterDef / TimelineDef slots before them are not named yet.
-class TimelineIODef : public Resource
-{
-    virtual void Slot04() = 0;
-    virtual void Slot05() = 0;
-    virtual void Slot06() = 0;
-    virtual void Slot07() = 0;
-    virtual void Slot08() = 0;
-    virtual void Slot09() = 0;
-    virtual void Slot10() = 0;
-    virtual void Slot11() = 0;
-    virtual void Slot12() = 0;
-    virtual void Slot13() = 0;
-    virtual void Slot14() = 0;
-    virtual void Slot15() = 0;
+class LogState;
 
+// The timeline a sprite definition is loaded into.
+class TimelineIODef : public TimelineDef
+{
 public:
-    // The streaming sound of the timeline (SoundStreamHead / SoundStreamBlock tags of a sprite).
-    virtual SoundStreamDef* GetSoundStream() const               = 0;
-    virtual void            SetSoundStream(SoundStreamDef* pdef) = 0;
-    virtual unsigned        GetLoadingFrame() const              = 0;
+    // Hands the tags of a loaded frame to the timeline (the tag memory stays the movie data's).
+    virtual void SetLoadingPlaylistFrame(const Frame& frame, LogState* plog) = 0;
+    virtual void AddFrameName(const String& name, LogState* plog)            = 0;
 };
 
 class DisplayObjContainer;
@@ -148,6 +136,14 @@ public:
     int   Tell()              { return GetStream()->Tell(); }
     void  SetPosition(int pos) { GetStream()->SetPosition(pos); }
 
+    // Bytes of the SWF data read so far.
+    unsigned GetBytesLoaded() { return GetStream()->Tell() - FileStartPos; }
+
+    // Hands the tags of the finished frame to the timeline being loaded (exe 0x1426385d0).
+    void           CommitFrameTags();
+    // The bind data of the finished frame, in the tag memory (exe 0x142638690).
+    FrameBindData* CreateFrameBindData();
+
 private:
     // +0x20 LogBase<LoadProcess>
     unsigned                        ParseFlags;      // +0x28
@@ -156,7 +152,8 @@ private:
     MovieDataDef*                   pDataDef_Unsafe; // +0x40
     UByte                           Unknown48[8];    // +0x48
     Stream                          ProcessStream;   // +0x50 first member of the SWF process info
-    UByte                           Unknown2C0[0xf8]; // +0x2c0 rest of the process info, JPEG tables, data lists
+    UInt32                          FileStartPos;    // +0x2c0 process info: offset of the SWF data in the file
+    UByte                           Unknown2C4[0xf4]; // +0x2c4 rest of the process info, JPEG tables, data lists
     LoadStateType                   LoadState;       // +0x3b8
     TimelineIODef*                  pTimelineDef;    // +0x3c0
     // Tags of the frame being loaded, of the root timeline [0] and of the sprite being loaded [1].
