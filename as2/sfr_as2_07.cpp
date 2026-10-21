@@ -2,7 +2,13 @@
 // XML classes: the value setters and conversions, member setters, IME, Sound and XML objects.
 // MS2-UNIT: sfr_as2_07
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14297f2c0-0x14297f3d0 .text$mn
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
+// MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
+// MS2-RANGE: 0x14298a3d0-0x14298a480 .text$mn
+// MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
+// MS2-RANGE: 0x14298dc00-0x14298dcb0 .text$mn
+// MS2-RANGE: 0x14298de30-0x14298dee0 .text$mn
 // MS2-RANGE: 0x142990240-0x1429902c0 .text$mn
 // MS2-RANGE: 0x142990a10-0x142990b70 .text$mn
 // MS2-RANGE: 0x142990be0-0x142990c30 .text$mn
@@ -13,6 +19,7 @@
 // MS2-RANGE: 0x142991210-0x1429912d0 .text$mn
 // MS2-RANGE: 0x142991c60-0x142991cd0 .text$mn
 // MS2-RANGE: 0x1429923c0-0x142992500 .text$mn
+// MS2-RANGE: 0x142992780-0x142992830 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -30,6 +37,14 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The script number of a string: hex "0x..", octal "0..", else decimal; false unless the whole string was used.
 SF_NOINLINE bool StringToNumber(Number* result, const char* str);
+
+// The out-of-line watchpoint table helpers the exe calls (COMDATs of other units).
+void WatchpointHash_Destruct(ASStringHash_GC<Object::Watchpoint>* phash); // exe 0x1429246b0
+// GetCaseCheck / RemoveCaseCheck of the watchpoint table (exe 0x142949eb0 / 0x14297cae0).
+const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
+                                                      bool caseSensitive);
+void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
+                                    bool caseSensitive);
 
 // @0x14297fba0
 void Value::SetAsCharacter(InteractiveObject* pchar)
@@ -91,6 +106,50 @@ void Value::SetAsResolveHandler(const FunctionRefBase& func)
     DropRefs();
     T.Type = RESOLVEHANDLER;
     V.FunctionValue.Init(func);
+}
+
+// @0x1429889c0
+bool Object::SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags)
+{
+    Member member;
+    if (FindMember(psc, name, &member))
+    {
+        member.mValue.T.PropFlags = flags;
+        Members.Set(name, member);
+        return true;
+    }
+    return false;
+}
+
+// MS2-FUNCTIONAL the exe keeps the constructor function in a register across Set_constructor (unity build)
+// @0x14298a3d0
+void FunctionObject::SetProtoAndCtor(ASStringContext* psc, Object* pprototype)
+{
+    Set__proto__(psc, pprototype);
+    FunctionRef ctor = pprototype->Get_constructor(psc);
+    if (!ctor.IsNull())
+        Set_constructor(psc, ctor);
+}
+
+// MS2-FUNCTIONAL register permutation (rbx / rsi / rdi)
+// @0x14298a520
+void FunctionObject::SetPrototype(ASStringContext* psc, Object* pprototype)
+{
+    SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_prototype), Value(pprototype));
+}
+
+// @0x14298dc00
+void ObjectInterface::Set__constructor__(ASStringContext* psc, const FunctionRef& ctorFunc)
+{
+    SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin___constructor__), Value(ctorFunc),
+                 PropFlags(PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum));
+}
+
+// @0x14298de30
+void ObjectInterface::Set_constructor(ASStringContext* psc, const FunctionRef& ctorFunc)
+{
+    SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_constructor), Value(ctorFunc),
+                 PropFlags(PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum));
 }
 
 // @0x142990240
@@ -237,6 +296,28 @@ SInt32 Value::ToInt32(Environment* penv) const
     return (SInt32)uv;
 }
 
+// MS2-FUNCTIONAL the exe keeps the null test of the delete after the size check
+// @0x142992780
+bool Object::Unwatch(ASStringContext* psc, const ASString& prop)
+{
+    if (pWatchpoints && WatchpointHash_GetCaseCheck(pWatchpoints, prop, psc->IsCaseSensitive()))
+    {
+        WatchpointHash_RemoveCaseCheck(pWatchpoints, prop, psc->IsCaseSensitive());
+        ASStringHash_GC<Watchpoint>* pwatchpoints = pWatchpoints;
+        if (pwatchpoints->GetSet().GetSize() == 0)
+        {
+            if (pwatchpoints)
+            {
+                WatchpointHash_Destruct(pwatchpoints);
+                SF_FREE(pwatchpoints);
+            }
+            pWatchpoints = 0;
+        }
+        return true;
+    }
+    return false;
+}
+
 // @0x142991c60
 FunctionRef Value::ToResolveHandler() const
 {
@@ -276,3 +357,10 @@ UInt32 Value::ToUInt32(Environment* penv) const
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform {
+
+// @0x14297f2c0
+template void GFx::ASStringHash_GC<GFx::AS2::Member>::Set(const GFx::ASString&, const GFx::AS2::Member&);
+
+} // namespace Scaleform

@@ -30,6 +30,13 @@ public:
     ConstIterator  Begin() const  { return GetSet().Begin(); }
     ConstIterator  End() const    { return GetSet().End(); }
 
+    // Hash::Set: replaces the node of key, else adds one (the Member instance is out of line in the exe, 0x14297f2c0).
+    SF_NOINLINE void Set(const ASString& key, const T& value)
+    {
+        typename NodeType::NodeRef e(key, value);
+        reinterpret_cast<SetType*>(this)->Set(this, e);
+    }
+
     // The node in slot index of the table (the slots follow the { EntryCount, SizeMask } header).
     const NodeType& NodeAt(SPInt index) const
     {
@@ -185,9 +192,11 @@ public:
     // The function of the constructor member, a null reference without one (exe 0x1429583d0).
     FunctionRef Get_constructor(ASStringContext* psc);
     // Sets the constructor member (exe 0x14298de30).
-    void        Set_constructor(ASStringContext* psc, const FunctionRef& ctorFunc);
+    SF_NOINLINE void Set_constructor(ASStringContext* psc, const FunctionRef& ctorFunc);
 
     // (appended for sfr_as2_07)
+    // Sets the __constructor__ member (exe 0x14298dc00).
+    void Set__constructor__(ASStringContext* psc, const FunctionRef& ctorFunc);
     // A script object (any type from Object_ASObject on).
     bool IsASObject() const
     {
@@ -245,6 +254,9 @@ public:
     virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes); // exe 0x14295d970
     // In the prototype chain (or implemented by a link of it) (exe 0x1429623a0).
     virtual bool InstanceOf(Environment* penv, const Object* prototype, bool inclInterfaces = true) const;
+    // (appended for sfr_as2_07)
+    virtual bool SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags); // exe 0x1429889c0
+    virtual bool Unwatch(ASStringContext* psc, const ASString& prop);                         // exe 0x142992780
 
 protected:
     Object(ASRefCountCollector* pcc);
@@ -295,6 +307,11 @@ public:
 
     // The object of the prototype member, 0 without one (exe 0x142954b40).
     Object* GetPrototype(ASStringContext* psc);
+    // (appended for sfr_as2_07)
+    // The prototype member (exe 0x14298a520).
+    void SetPrototype(ASStringContext* psc, Object* pprototype);
+    // __proto__ and, when the prototype has one, the constructor member (exe 0x14298a3d0).
+    void SetProtoAndCtor(ASStringContext* psc, Object* pprototype);
 
 protected:
     FunctionObject(ASRefCountCollector* pcc);
