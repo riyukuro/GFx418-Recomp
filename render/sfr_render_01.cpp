@@ -1,7 +1,6 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Render, images (Render_Image).
 // Queue unit sfr_render_01 is split along its original sources: this file is Render_Image, sfr_render_01b holds
-// Render_Context / Renderer2D, sfr_render_01c Text_StyledText. The ImageFile range stays here until its own file is
-// written. The former "Filters" ranges 0x1424789e0-0x142478f10 and 0x142479130-0x14247a8f0 are AS3 fl_filters code (BevelFilter / ColorMatrixFilter
+// Render_Context / Renderer2D, sfr_render_01c Text_StyledText, sfr_render_01d Render_ImageFile. The former "Filters" ranges 0x1424789e0-0x142478f10 and 0x142479130-0x14247a8f0 are AS3 fl_filters code (BevelFilter / ColorMatrixFilter
 // class and instance ctors, dtors and setters, mislabeled via ICF-folded names) and go back to sfr_as3_10;
 // 0x1425916c0-0x142591e10 is the head of the GFx_Audio TU (Audio ctor/dtor, AddBuiltinClassRegistry<Sound> and its
 // ClassRegEntry hash helpers), which continues in sfr_gfx_02 up to ~0x142592a10, so it goes there, as does
@@ -12,7 +11,6 @@
 // sfr_gfx_01, and runs to 0x14257db40; 0x14257db40-0x14257dc30 are the out-of-line SF_RefCount dtors (SF_RefCount
 // starts there, sfr_kernel_01).
 // MS2-RANGE: 0x1425792d0-0x14257db40 .text$mn
-// MS2-RANGE: 0x142591050-0x1425916c0 .text$mn
 
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_drawableimage.h"
@@ -1246,6 +1244,9 @@ template Matrix2x4<float>& Matrix2x4<float>::Invert();
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EL@@Scaleform@@UEAAPEAXI@Z 0x1425799a0
 // MS2-PIN: ??_7?$RefCountBase@VTextureManagerLocks@Render@Scaleform@@$0EL@@Scaleform@@6B@ 0x143183920
 // MS2-PIN: ??_G?$RefCountBase@VTextureManagerLocks@Render@Scaleform@@$0EL@@Scaleform@@UEAAPEAXI@Z 0x142579a00
+// RefCountBase<TextureManager, 0x4B> has the same one-slot table and deleting destructor; the linker folded both.
+// MS2-PIN: ??_7?$RefCountBase@VTextureManager@Render@Scaleform@@$0EL@@Scaleform@@6B@ 0x143183920
+// MS2-PIN: ??_G?$RefCountBase@VTextureManager@Render@Scaleform@@$0EL@@Scaleform@@UEAAPEAXI@Z 0x142579a00
 // MS2-PIN: ??_7TextureManagerLocks@Render@Scaleform@@6B@ 0x143183948
 // MS2-PIN: ??_GTextureManagerLocks@Render@Scaleform@@UEAAPEAXI@Z 0x142579ec0
 // MS2-PIN: ??_7?$RefCountBase@VImageUpdate@Render@Scaleform@@$01@Scaleform@@6B@ 0x143183938
