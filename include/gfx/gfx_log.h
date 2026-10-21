@@ -58,4 +58,16 @@ public:
 
 }} // namespace Scaleform::GFx
 
+namespace Scaleform {
+namespace Render { template<class T> class Matrix2x4; class Cxform; class Color; }
+namespace GFx {
+
+// Text of render values for the parse log, written into pbuffer (GFx_Log; exe: Matrix 0x1425b35c0,
+// Color 0x1425b36d0, Cxform 0x1425b37b0). Return pbuffer.
+char* Format(char* pbuffer, UPInt bufferSize, const Render::Matrix2x4<float>& matrix);
+char* Format(char* pbuffer, UPInt bufferSize, const Render::Color& color);
+char* Format(char* pbuffer, UPInt bufferSize, const Render::Cxform& cxform);
+
+}} // namespace Scaleform::GFx
+
 #endif

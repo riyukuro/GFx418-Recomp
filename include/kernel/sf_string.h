@@ -59,6 +59,11 @@ public:
 
     void operator=(const char* pstr);
     void operator=(const String& src);
+    // Empties the string (exe 0x1425866a0); replaces it with size bytes of utf8 (0x142586530) or of a generated
+    // text (0x142586430).
+    void Clear();
+    void AssignString(const char* utf8, UPInt size);
+    void AssignString(const InitStruct& src, UPInt size);
 
     bool operator==(const String& str) const { return strcmp(ToCStr(), str.ToCStr()) == 0; }
 
@@ -131,6 +136,19 @@ public:
 
 private:
     void CopyConstructHelper(const String& src);
+};
+
+// String with an explicit heap (exe: StringDH(MemoryHeap*) 0x142584fc0).
+class StringDH : public String
+{
+    MemoryHeap* pHeap;
+
+public:
+    StringDH(MemoryHeap* heap = Memory::GetGlobalHeap());
+
+    void operator=(const char* str) { String::operator=(str); }
+
+    MemoryHeap* GetHeap() const { return pHeap; }
 };
 
 // Growable UTF-8 buffer: 0x30 bytes.
