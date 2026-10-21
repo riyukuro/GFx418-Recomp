@@ -176,8 +176,8 @@ public:
     bool  SetPixel(SInt32 x, SInt32 y, Color c);
     bool  SetPixel32(SInt32 x, SInt32 y, Color c);
     bool  SetPixels(const Rect<SInt32>& destRect, DIPixelProvider& provider);
-    unsigned Threshold(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
-                       OperationType op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource);
+    void  Threshold(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                    OperationType op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource);
 
     virtual ImageType   GetImageType() const   { return Type_DrawableImage; }
     virtual ImageFormat GetFormat() const      { return Format; }

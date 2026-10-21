@@ -1,7 +1,7 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 GFx_ASUtils (escape/unescape of the
 // AS2 and AS3 builtins, ECMA white space skipping, and the NumberUtil number <-> text conversions). The AS3 entry points
 // share a stack Formatter that buffers 512 bytes before appending to the result string.
-// MS2-UNIT: sfr_gfx_05
+// MS2-UNIT: sfr_gfx_05e
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425e3750-0x1425e38a0 .text$mn
 // MS2-RANGE: 0x1425e38a0-0x1425e4f80 .text$mn
