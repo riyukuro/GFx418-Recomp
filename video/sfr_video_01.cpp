@@ -176,6 +176,92 @@ void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
     }
 }
 
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x140005fc0
+void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
+{
+    Sprite* pold = pAudioTarget ? GetAudioTargetSprite(pAudioTarget) : NULL;
+    if (pold == ptarget)
+        return;
+    if (pold && pVideoPlayer)
+    {
+        Sound::SoundChannel* pchan = pVideoPlayer->GetSoundChannel(VideoPlayer::MainTrack);
+        if (pchan)
+        {
+            Sprite::ActiveSoundItem* pitem = pold->ReleaseActiveSound(pchan);
+            if (pitem)
+            {
+                pitem->pChannel->SetVolume(ptarget->GetRealSoundVolume());
+                ptarget->AttachActiveSound(pitem);
+                pitem->Release();
+            }
+            else
+            {
+                pchan->SetVolume(ptarget->GetRealSoundVolume());
+                ptarget->AddActiveSound(pchan, NULL, NULL);
+            }
+        }
+    }
+    pAudioTarget = ptarget->GetCharacterHandle();
+}
+
+// The clock of a swfSync video: the target clip's frames played since the video started, at the movie's frame rate.
+class SwfVideoSyncObject : public VideoPlayer::SyncObject
+{
+public:
+    SF_NOINLINE SwfVideoSyncObject(Sprite* ptarget);
+    ~SwfVideoSyncObject() {}
+
+    virtual void SetStartFrame(unsigned frame) { StartFrame = frame; }
+    virtual void Start() {}
+    virtual void Stop() {}
+    virtual void Pause(bool) {}
+    virtual void GetTime(UInt64* count, UInt64* unit);
+
+private:
+    WeakPtr<Sprite> pTarget;      // +0x10
+    unsigned        StartFrame;   // +0x18
+    float           FrameTime;    // +0x1c
+};
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x140006120
+SwfVideoSyncObject::SwfVideoSyncObject(Sprite* ptarget)
+    : pTarget(ptarget), StartFrame(ptarget->GetCurrentFrame()), FrameTime(ptarget->GetMovieImpl()->FrameTime)
+{
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x1400063d0
+void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
+{
+    Ptr<Sprite> ptarget = pTarget;
+    if (ptarget)
+    {
+        unsigned frame = ptarget->GetCurrentFrame();
+        if (frame > StartFrame)
+        {
+            *unit  = 1000000;
+            *count = (UInt64)((float)(frame - StartFrame) * FrameTime * (float)*unit);
+            return;
+        }
+    }
+    *count = 0;
+    *unit  = 1000;
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x1400064f0
+void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
+{
+    if (flag)
+        pSyncObj = *SF_NEW SwfVideoSyncObject(ptarget);
+    else
+        pSyncObj = NULL;
+    if (pVideoPlayer)
+        pVideoPlayer->SetSyncObject(pSyncObj);
+}
+
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
 // @0x140004da0
 VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
@@ -493,6 +579,56 @@ void NetStreamProto::SetOpenURLTimeout(const FnCall& fn)
     if (!pnetstream || !fn.Arg(0).IsNumber())
         return;
     pnetstream->SetOpenURLTimeout(fn.Arg(0).ToNumber(fn.Env));
+}
+
+// Reads an array of numbers as (x, y, z) triples.
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x140007080
+static SF_NOINLINE void ReadVectorArray(Environment* penv, const Value& val, Array<Sound::SoundChannel::Vector>& vecs)
+{
+    if (!val.IsObject() || val.ToObject(penv)->GetObjectType() != Object::Object_Array)
+        return;
+    ArrayObject* parr = static_cast<ArrayObject*>(val.ToObject(penv));
+    for (int i = 0, n = parr->GetSize(); i < n; i += 3)
+    {
+        Sound::SoundChannel::Vector v;
+        v.X = (float)parr->GetElementPtr(i)->ToNumber(penv);
+        v.Y = (float)parr->GetElementPtr(i + 1)->ToNumber(penv);
+        v.Z = (float)parr->GetElementPtr(i + 2)->ToNumber(penv);
+        vecs.PushBack(v);
+    }
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x1400085c0
+void NetStreamProto::SetSoundSpatial(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+    {
+        fn.Env->LogScriptError("Error: NetStream.SetSoundSpatial requires at least one argument (position)\n");
+        return;
+    }
+    Environment* penv = fn.Env;
+    NetStream* pnetstream = static_cast<NetStream*>(fn.ThisPtr);
+    if (!pnetstream)
+        return;
+
+    Array<Sound::SoundChannel::Vector> position;
+    ReadVectorArray(penv, fn.Arg(0), position);
+    pnetstream->GetVideoProvider()->SetSpatialInfo(0, position);
+    if (fn.NArgs > 1)
+    {
+        Array<Sound::SoundChannel::Vector> orientation;
+        ReadVectorArray(penv, fn.Arg(1), orientation);
+        pnetstream->GetVideoProvider()->SetSpatialInfo(1, orientation);
+    }
+    if (fn.NArgs > 2)
+    {
+        Array<Sound::SoundChannel::Vector> velocity;
+        ReadVectorArray(penv, fn.Arg(2), velocity);
+        pnetstream->GetVideoProvider()->SetSpatialInfo(2, velocity);
+    }
+    pnetstream->GetVideoProvider()->ApplySpatialInfo();
 }
 
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
@@ -837,3 +973,5 @@ FnCall::~FnCall()
 // MS2-PIN: ??$ForEachChild_GC@UReleaseFunctor@?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@@NetStream@AS2@GFx@Scaleform@@QEBAXPEAV?$RefCountCollector@$0BED@@123@@Z 0x140007e40
 // MS2-PIN: ??$ForEachChild_GC@UMarkInCycleFunctor@?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@@NetStream@AS2@GFx@Scaleform@@QEBAXPEAV?$RefCountCollector@$0BED@@123@@Z 0x140007ea0
 // MS2-PIN: ??$ForEachChild_GC@UScanInUseFunctor@?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@@NetStream@AS2@GFx@Scaleform@@QEBAXPEAV?$RefCountCollector@$0BED@@123@@Z 0x140007f00
+// MS2-PIN: ??_7SwfVideoSyncObject@AS2@GFx@Scaleform@@6B@ 0x1431b4fe8
+// MS2-PIN: ??0?$WeakPtr@VVideoCharacter@Video@GFx@Scaleform@@@Scaleform@@QEAA@PEAVVideoCharacter@Video@GFx@1@@Z 0x140004eb0

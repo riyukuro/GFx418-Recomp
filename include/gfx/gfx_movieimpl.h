@@ -73,7 +73,10 @@ public:
     Ptr<Log>         pCachedLog;               // +0x228 the log state's log, cached (sfr_gfx_06)
     void*            Unrecovered_230[3];       // +0x230
     FontManagerStates* pFontManagerStates;     // +0x248 Ptr: the font states the movies' font managers share (sfr_gfx_06d)
-    void*            Unrecovered_250[0x209];   // +0x250
+    void*            Unrecovered_250[4];       // +0x250
+    UInt32           Unrecovered_270;          // +0x270
+    float            FrameTime;                // +0x274 seconds per frame (sfr_video_01 SetSwfSync)
+    void*            Unrecovered_278[0x204];   // +0x278
     Render::PointF   MouseLastPosition;        // +0x1298 MouseState[0] last position, twips (sfr_gfx_06)
     void*            Unrecovered_12a0[0x368];  // +0x12a0
     // A character the timeline keeps advancing even when stopped (MS2 build; Sprite::CheckAdvanceStatus).

@@ -126,6 +126,8 @@ public:
             pVideoPlayer->SetDecodeHeaderTimeout(timeout);
     }
 
+    // Moves the video's sound to another clip (exe 0x140005fc0).
+    void   SetAudioTarget(Sprite* ptarget);
     // The movie clip's frames pace the video (exe 0x1400064f0).
     void   SetSwfSync(bool flag, Sprite* ptarget);
     void   SetLoopFlag(bool flag)
@@ -155,6 +157,13 @@ public:
             pVideoPlayer->ReplaceCenterVoice(track);
     }
     void   NotifyNetStreamRemoved() { pNetStream = NULL; }
+    // Sound position (0), orientation (1) and velocity (2) for the player's 3D sound.
+    void   SetSpatialInfo(int i, const Array<Sound::SoundChannel::Vector>& info) { SpatialInfo[i] = info; }
+    void   ApplySpatialInfo()
+    {
+        if (pVideoPlayer)
+            pVideoPlayer->SetSoundSpatialInfo(SpatialInfo);
+    }
     Video::VideoPlayer* GetPlayer() { return pVideoPlayer; }
     const Video::VideoPlayer::VideoInfo& GetVideoInfo() const { return VInfo; }
     UInt32 GetPosition()        { return pVideoPlayer ? pVideoPlayer->GetPosition() : 0; }
