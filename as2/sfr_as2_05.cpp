@@ -3,6 +3,7 @@
 // MS2-UNIT: sfr_as2_05
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142938850-0x1429388e0 .text$mn
+// MS2-RANGE: 0x142938ae0-0x142938bd0 .text$mn
 // MS2-RANGE: 0x1429396a0-0x142939780 .text$mn
 // MS2-RANGE: 0x142939780-0x1429398a0 .text$mn
 // MS2-RANGE: 0x142939c20-0x142939c60 .text$mn
@@ -44,6 +45,7 @@
 // MS2-RANGE: 0x1429538a0-0x142953970 .text$mn
 // MS2-RANGE: 0x142953ee0-0x142953ef0 .text$mn
 // MS2-RANGE: 0x142954590-0x142954690 .text$mn
+// MS2-RANGE: 0x142954a50-0x142954b40 .text$mn
 // MS2-RANGE: 0x142954b40-0x142954ba0 .text$mn
 // MS2-RANGE: 0x142954ba0-0x142954c20 .text$mn
 // MS2-RANGE: 0x1429561c0-0x1429561d0 .text$mn
@@ -973,6 +975,47 @@ int MovieClipLoader::GetTotalBytes(InteractiveObject* pch) const
     return 0;
 }
 
+// @0x142954a50
+bool Value::GetPropertyValue(Environment* penv, ObjectInterface* pthis, Value* value) const
+{
+    if (T.Type == PROPERTY && penv)
+    {
+        if (V.pProperty->GetterMethod.Function)
+        {
+            Value result;
+            V.pProperty->GetterMethod.Invoke(FnCall(&result, pthis, penv, 0, 0));
+            *value = result;
+            return true;
+        }
+        if (penv->IsVerboseActionErrors())
+            penv->LogScriptError("Getter method is null.");
+    }
+    return false;
+}
+
+// MS2-FUNCTIONAL stack layout (the exe spills the NaN test bits to the r9 home slot, cl to rcx's)
+// @0x142938ae0
+void Value::Div(Environment* penv, const Value& v)
+{
+    Number lhs = ToNumber(penv);
+    Number rhs = v.ToNumber(penv);
+    Number result;
+    if (NumberUtil::IsNaN(lhs) || NumberUtil::IsNaN(rhs))
+        result = NumberUtil::NaN();
+    else if (rhs == 0)
+    {
+        if (lhs == 0)
+            result = NumberUtil::NaN();
+        else if (lhs >= 0)
+            result = NumberUtil::POSITIVE_INFINITY();
+        else
+            result = NumberUtil::NEGATIVE_INFINITY();
+    }
+    else
+        result = lhs / rhs;
+    SetNumber(result);
+}
+
 // @0x142939780
 void Value::DropRefs()
 {
@@ -1182,3 +1225,5 @@ void GASLoadVarsLoaderCtorFunction::GlobalCtor(const FnCall& fn)
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
 // MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
 // MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018

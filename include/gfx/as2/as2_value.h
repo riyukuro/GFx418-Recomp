@@ -277,8 +277,12 @@ public:
     void Add(Environment* penv, int v2);         // exe 0x14292e460
     void Sub(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) - v.ToNumber(penv)); }
     void Mul(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) * v.ToNumber(penv)); }
+    // Number division, NaN for 0 / 0 and a signed infinity for x / 0 (exe 0x142938ae0).
+    void Div(Environment* penv, const Value& v);
     // The out-of-line copy of Mul (exe 0x142968f90): some unity-build call sites call it instead of inlining.
     void Mul_Call(Environment* penv, const Value& v);
+    // The value of a PROPERTY: its getter called on pthis; false without a getter (exe 0x142954a50).
+    bool GetPropertyValue(Environment* penv, ObjectInterface* pthis, Value* value) const;
 
     Value ToPrimitive(Environment* penv, hint h = NoHint) const; // exe 0x142991850
 
