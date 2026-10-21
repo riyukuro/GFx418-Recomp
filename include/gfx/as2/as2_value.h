@@ -236,6 +236,10 @@ public:
     void Add(Environment* penv, const Value& v); // exe 0x14292e180
     void Sub(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) - v.ToNumber(penv)); }
     void Mul(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) * v.ToNumber(penv)); }
+    // The out-of-line copy of Mul (exe 0x142968f90): some unity-build call sites call it instead of inlining.
+    void Mul_Call(Environment* penv, const Value& v);
+
+    Value ToPrimitive(Environment* penv, hint h = NoHint) const; // exe 0x142991850
 };
 
 // Object member: the value with its property flags stored in the value's second byte.

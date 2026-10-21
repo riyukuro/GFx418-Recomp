@@ -51,6 +51,8 @@ public:
         SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_x), params[Point_X]);
         SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_y), params[Point_Y]);
     }
+    // The out-of-line copy of the above (exe 0x142989d20), called where the exe did not inline it.
+    void SetProperties_Call(ASStringContext* psc, const Value params[Point_NumProperties]);
 };
 
 // Point.prototype methods.

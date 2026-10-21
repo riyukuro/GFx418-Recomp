@@ -2,7 +2,7 @@
 // (Boolean prototype methods, the Math object functions, Date prototype getters/setters).
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1428ef8b0-0x1428ef8d0 .text$mn
+// MS2-RANGE: 0x1428ed580-0x1428ef8d0 .text$mn
 // MS2-RANGE: 0x1428ef8d0-0x1428f1e30 .text$mn
 // MS2-RANGE: 0x1428f1e30-0x1428f1e70 .text$mn
 // MS2-RANGE: 0x1428f2040-0x1428f37a0 .text$mn
@@ -21,6 +21,8 @@
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_matrixobject.h"
+#include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
@@ -204,6 +206,358 @@ void MathCtorFunction::Random(const FnCall& fn)
 void MathCtorFunction::Round(const FnCall& fn)
 {
     fn.Result->SetNumber(floor(fn.Arg(0).ToNumber(fn.Env) + 0.5));
+}
+
+// ---- Matrix ----
+
+// cl's /GS heuristic guards the address-taken Matrix2F locals and temporaries of these natives; the exe frames carry
+// no cookie (only the ones passing the matrix to an out-of-line member do).
+#define MS2_AS2_NOGS __declspec(safebuffers)
+
+// "(a=.., b=.., c=.., d=.., tx=.., ty=..)" with six significant digits.
+// @0x1428ed580
+void MatrixProto::ToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    MatrixObject::GASMatrixArray matrix;
+    pthis->GetMatrixAsValuesArray(fn.Env->GetSC(), &matrix);
+    // The primitives are temporaries, so keep their strings referenced while the text is built.
+    ASString mxs[6] = {matrix[0].ToPrimitive(fn.Env).ToString(fn.Env, 6), matrix[1].ToPrimitive(fn.Env).ToString(fn.Env, 6),
+                       matrix[2].ToPrimitive(fn.Env).ToString(fn.Env, 6), matrix[3].ToPrimitive(fn.Env).ToString(fn.Env, 6),
+                       matrix[4].ToPrimitive(fn.Env).ToString(fn.Env, 6), matrix[5].ToPrimitive(fn.Env).ToString(fn.Env, 6)};
+    String str;
+    str += "(a=";
+    str += mxs[0].ToCStr();
+    str += ", b=";
+    str += mxs[1].ToCStr();
+    str += ", c=";
+    str += mxs[2].ToCStr();
+    str += ", d=";
+    str += mxs[3].ToCStr();
+    str += ", tx=";
+    str += mxs[4].ToCStr();
+    str += ", ty=";
+    str += mxs[5].ToCStr();
+    str += ")";
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(str.ToCStr(), str.GetSize()));
+}
+
+// @0x1428ed9e0
+MS2_AS2_NOGS void MatrixProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    Ptr<MatrixObject> m = *SF_HEAP_NEW(fn.Env->GetHeap()) MatrixObject(fn.Env);
+    m->SetMatrix(fn.Env, pthis->GetMatrix(fn.Env));
+    fn.Result->SetAsObject(m.GetPtr());
+}
+
+// this = this followed by the argument matrix.
+// @0x1428edaf0
+void MatrixProto::Concat(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    if (fn.NArgs > 0)
+    {
+        Object* arg = fn.Arg(0).ToObject(fn.Env);
+        if (arg->GetObjectType() == ObjectInterface::Object_Matrix)
+        {
+            Render::Matrix2F m = pthis->GetMatrix(fn.Env);
+            m.Append(((MatrixObject*)arg)->GetMatrix(fn.Env));
+            pthis->SetMatrix(fn.Env, m);
+        }
+    }
+}
+
+// createBox(scaleX, scaleY, [rotation], [tx], [ty])
+// @0x1428edc40
+void MatrixProto::CreateBox(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    if (fn.NArgs > 1)
+    {
+        Render::Matrix2F m;
+        float sx = (float)fn.Arg(0).ToNumber(fn.Env);
+        float sy = (float)fn.Arg(1).ToNumber(fn.Env);
+        float r  = 0;
+        float tx = 0;
+        float ty = 0;
+        if (fn.NArgs > 2)
+        {
+            r = (float)fn.Arg(2).ToNumber(fn.Env);
+            if (fn.NArgs > 3)
+            {
+                tx = (float)fn.Arg(3).ToNumber(fn.Env);
+                if (fn.NArgs > 4)
+                    ty = (float)fn.Arg(4).ToNumber(fn.Env);
+            }
+        }
+        Matrix2F_AppendRotation(&m, r);
+        m.AppendScaling(sx, sy);
+        Matrix2F_AppendTranslation(m, tx, ty);
+        pthis->SetMatrix(fn.Env, m);
+    }
+}
+
+// createGradientBox(width, height, [rotation], [tx], [ty]): the box is centred on (tx, ty) + size / 2.
+// @0x1428edfc0
+void MatrixProto::CreateGradientBox(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    if (fn.NArgs > 1)
+    {
+        Render::Matrix2F m;
+        float w  = (float)fn.Arg(0).ToNumber(fn.Env);
+        float h  = (float)fn.Arg(1).ToNumber(fn.Env);
+        float r  = 0;
+        float tx = w / 2;
+        float ty = h / 2;
+        if (fn.NArgs > 2)
+        {
+            r = (float)fn.Arg(2).ToNumber(fn.Env);
+            if (fn.NArgs > 3)
+            {
+                tx += (float)fn.Arg(3).ToNumber(fn.Env);
+                if (fn.NArgs > 4)
+                    ty += (float)fn.Arg(4).ToNumber(fn.Env);
+            }
+        }
+        w *= GASGradientBoxMagicNumber;
+        h *= GASGradientBoxMagicNumber;
+        Matrix2F_AppendRotation(&m, r);
+        m.AppendScaling(w, h);
+        Matrix2F_AppendTranslation(m, tx, ty);
+        pthis->SetMatrix(fn.Env, m);
+    }
+}
+
+// The argument point mapped without the translation.
+// @0x1428ee370
+// MS2-FUNCTIONAL the exe keeps both inlined Mul operands live in xmm6/xmm7 across the temp release (unity-build register allocation, as Point.distance)
+MS2_AS2_NOGS void MatrixProto::DeltaTransformPoint(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    Object* arg = 0;
+    if (fn.NArgs > 0 && (arg = fn.Arg(0).ToObject(fn.Env)) != 0 &&
+        arg->GetObjectType() == ObjectInterface::Object_Point)
+    {
+        Render::Matrix2F m = pthis->GetMatrix(fn.Env);
+        Value            ptprop[Point_NumProperties];
+        ((PointObject*)arg)->GetProperties(fn.Env->GetSC(), ptprop);
+        Ptr<PointObject> ppt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+        Value            nptprop[Point_NumProperties];
+        Value            x1 = Value(Number(m.Sx()));
+        x1.Mul(fn.Env, ptprop[Point_X]);
+        nptprop[Point_X] = Value(Number(m.Shx()));
+        nptprop[Point_X].Mul_Call(fn.Env, ptprop[Point_Y]);
+        nptprop[Point_X].Add(fn.Env, x1);
+        x1 = Value(Number(m.Shy()));
+        x1.Mul(fn.Env, ptprop[Point_X]);
+        nptprop[Point_Y] = Value(Number(m.Sy()));
+        nptprop[Point_Y].Mul_Call(fn.Env, ptprop[Point_Y]);
+        nptprop[Point_Y].Add(fn.Env, x1);
+        ppt->SetProperties_Call(fn.Env->GetSC(), nptprop);
+        fn.Result->SetAsObject(ppt.GetPtr());
+    }
+}
+
+// @0x1428ee770
+MS2_AS2_NOGS void MatrixProto::Identity(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    pthis->SetMatrix(fn.Env, Render::Matrix2F());
+}
+
+// @0x1428ee800
+MS2_AS2_NOGS void MatrixProto::Invert(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    pthis->SetMatrix(fn.Env, Matrix2F_Invert(pthis->GetMatrix(fn.Env)));
+}
+
+// @0x1428ee8b0
+void MatrixProto::Rotate(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    if (fn.NArgs > 0)
+    {
+        float            r = (float)fn.Arg(0).ToNumber(fn.Env);
+        Render::Matrix2F m(pthis->GetMatrix(fn.Env));
+        Matrix2F_AppendRotation(&m, r);
+        pthis->SetMatrix(fn.Env, m);
+    }
+}
+
+// @0x1428ee9e0
+MS2_AS2_NOGS void MatrixProto::Scale(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    if (fn.NArgs > 1)
+    {
+        float            sx = (float)fn.Arg(0).ToNumber(fn.Env);
+        float            sy = (float)fn.Arg(1).ToNumber(fn.Env);
+        Render::Matrix2F m(pthis->GetMatrix(fn.Env));
+        m.AppendScaling(sx, sy);
+        pthis->SetMatrix(fn.Env, m);
+    }
+}
+
+// The argument point mapped by the matrix.
+// @0x1428eeb50
+// MS2-FUNCTIONAL the exe keeps both inlined Mul operands live in xmm6/xmm7 across the temp release (unity-build register allocation, as Point.distance)
+MS2_AS2_NOGS void MatrixProto::TransformPoint(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    Object* arg = 0;
+    if (fn.NArgs > 0 && (arg = fn.Arg(0).ToObject(fn.Env)) != 0 &&
+        arg->GetObjectType() == ObjectInterface::Object_Point)
+    {
+        Render::Matrix2F m = pthis->GetMatrix(fn.Env);
+        Value            ptprop[Point_NumProperties];
+        ((PointObject*)arg)->GetProperties(fn.Env->GetSC(), ptprop);
+        Ptr<PointObject> ppt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+        Value            nptprop[Point_NumProperties];
+        Value            x1 = Value(Number(m.Sx()));
+        x1.Mul(fn.Env, ptprop[Point_X]);
+        Value x2 = Value(Number(m.Shx()));
+        x2.Mul(fn.Env, ptprop[Point_Y]);
+        nptprop[Point_X] = Value(Number(m.Tx()));
+        nptprop[Point_X].Add(fn.Env, x1);
+        nptprop[Point_X].Add(fn.Env, x2);
+        x1 = Value(Number(m.Shy()));
+        x1.Mul(fn.Env, ptprop[Point_X]);
+        x2 = Value(Number(m.Sy()));
+        x2.Mul(fn.Env, ptprop[Point_Y]);
+        nptprop[Point_Y] = Value(Number(m.Ty()));
+        nptprop[Point_Y].Add(fn.Env, x1);
+        nptprop[Point_Y].Add(fn.Env, x2);
+        ppt->SetProperties_Call(fn.Env->GetSC(), nptprop);
+        fn.Result->SetAsObject(ppt.GetPtr());
+    }
+}
+
+// @0x1428ef010
+MS2_AS2_NOGS void MatrixProto::Translate(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Matrix);
+    MatrixObject* pthis = (MatrixObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    if (fn.NArgs > 1)
+    {
+        float            tx = (float)fn.Arg(0).ToNumber(fn.Env);
+        float            ty = (float)fn.Arg(1).ToNumber(fn.Env);
+        Render::Matrix2F m(pthis->GetMatrix(fn.Env));
+        Matrix2F_AppendTranslation(m, tx, ty);
+        pthis->SetMatrix(fn.Env, m);
+    }
+}
+
+// ---- ColorTransform ----
+
+// this = argument transform applied first, then this one. Plain objects are read through their members.
+// @0x1428ef180
+void ColorTransformProto::Concat(const FnCall& fn)
+{
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p != 0)
+        {
+            MS2_AS2_CHECK_THIS(fn, ColorTransform);
+            ColorTransformObject* pthis = (ColorTransformObject*)fn.ThisPtr;
+            if (p->GetObjectType() == ObjectInterface::Object_ColorTransform)
+            {
+                ColorTransformObject* pparam = (ColorTransformObject*)p;
+                pthis->mColorTransform.Prepend(pparam->mColorTransform);
+            }
+            else
+            {
+                Value c[GFxColorTransform_NumProperties];
+                GFxObject_GetColorTransformProperties(fn.Env, p, c);
+                Render::Cxform ct;
+                ct.M[0][0] = (float)c[GFxColorTransform_RedMultiplier].ToNumber(fn.Env);
+                ct.M[0][1] = (float)c[GFxColorTransform_GreenMultiplier].ToNumber(fn.Env);
+                ct.M[0][2] = (float)c[GFxColorTransform_BlueMultiplier].ToNumber(fn.Env);
+                ct.M[0][3] = (float)c[GFxColorTransform_AlphaMultiplier].ToNumber(fn.Env);
+                ct.M[1][0] = (float)c[GFxColorTransform_RedOffset].ToNumber(fn.Env);
+                ct.M[1][1] = (float)c[GFxColorTransform_GreenOffset].ToNumber(fn.Env);
+                ct.M[1][2] = (float)c[GFxColorTransform_BlueOffset].ToNumber(fn.Env);
+                ct.M[1][3] = (float)c[GFxColorTransform_AlphaOffset].ToNumber(fn.Env);
+                pthis->mColorTransform.Prepend(ct);
+            }
+        }
+    }
+}
+
+// "(redMultiplier=.., ..., alphaOffset=..)" with six significant digits.
+// @0x1428ef400
+void ColorTransformProto::ToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, ColorTransform);
+    ColorTransformObject*  pthis = (ColorTransformObject*)fn.ThisPtr;
+    const Render::Cxform& ct    = pthis->mColorTransform;
+
+    ASString ps[8] = {Value(Number(ct.M[0][0])).ToString(fn.Env, 6), Value(Number(ct.M[0][1])).ToString(fn.Env, 6),
+                      Value(Number(ct.M[0][2])).ToString(fn.Env, 6), Value(Number(ct.M[0][3])).ToString(fn.Env, 6),
+                      Value(Number(ct.M[1][0])).ToString(fn.Env, 6), Value(Number(ct.M[1][1])).ToString(fn.Env, 6),
+                      Value(Number(ct.M[1][2])).ToString(fn.Env, 6), Value(Number(ct.M[1][3])).ToString(fn.Env, 6)};
+
+    StringBuffer str;
+    str.AppendString("(redMultiplier=");
+    str.AppendString(ps[0].ToCStr());
+    str.AppendString(", greenMultiplier=");
+    str.AppendString(ps[1].ToCStr());
+    str.AppendString(", blueMultiplier=");
+    str.AppendString(ps[2].ToCStr());
+    str.AppendString(", alphaMultiplier=");
+    str.AppendString(ps[3].ToCStr());
+    str.AppendString(", redOffset=");
+    str.AppendString(ps[4].ToCStr());
+    str.AppendString(", greenOffset=");
+    str.AppendString(ps[5].ToCStr());
+    str.AppendString(", blueOffset=");
+    str.AppendString(ps[6].ToCStr());
+    str.AppendString(", alphaOffset=");
+    str.AppendString(ps[7].ToCStr());
+    str.AppendString(")");
+
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(str.ToCStr(), str.GetSize()));
 }
 
 // ---- Rectangle ----
