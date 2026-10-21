@@ -6,25 +6,14 @@
 
 #include "gfx_state.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
+#include "../kernel/sf_keycodes.h"
 
 namespace Scaleform {
 namespace Render { namespace Text { class StyledText; } }
 namespace GFx {
 
-// Modifier keys held down with a key press (one byte of flags).
-class KeyModifiers
-{
-public:
-    enum
-    {
-        Key_ShiftPressed = 0x01,
-        Key_CtrlPressed  = 0x02,
-        Key_AltPressed   = 0x04,
-        Key_CapsToggled  = 0x08     // (appended for GFx_Input, sfr_gfx_06f)
-    };
-
-    UInt8 States;
-};
+// Modifier keys held down with a key press: Scaleform::KeyModifiers (kernel/sf_keycodes.h).
+using Scaleform::KeyModifiers;
 
 // Clipboard shared by the text fields of a loader: plain text plus, optionally, its styled form (state, 0x40 bytes,
 // vftable 0x143184718).
