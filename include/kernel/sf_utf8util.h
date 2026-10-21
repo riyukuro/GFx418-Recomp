@@ -25,6 +25,9 @@ SPInt SF_STDCALL GetLength(const char* putf8str, SPInt length = -1);
 // Decodes into pbuff, which must hold GetLength()+1 characters; returns the character count.
 UPInt SF_STDCALL DecodeString(wchar_t* pbuff, const char* putf8str, SPInt bytesLen = -1);
 
+// Encodes one code point at buffer + *offset and advances *offset (exe 0x1425a7170).
+void SF_STDCALL EncodeChar(char* buffer, SPInt* offset, UInt32 ucsCharacter);
+
 }} // namespace Scaleform::UTF8Util
 
 #endif

@@ -55,6 +55,8 @@ public:
     String(const char* pdata1, const char* pdata2, const char* pdata3);
     String(const wchar_t* pdata);
     String(const String& src);
+    // First size bytes of pdata (exe 0x142584c10).
+    String(const char* pdata, UPInt size);
     ~String() { GetData()->Release(); }
 
     void operator=(const char* pstr);
@@ -101,6 +103,9 @@ public:
     void   AppendString(const char* putf8str, SPInt utf8StrSz = -1);
     void   operator+=(const char* str) { AppendString(str); }
     String ToLower() const;
+    // exe: ToUpper 0x142587e00, AppendString(const wchar_t*, SPInt) 0x142586230.
+    String ToUpper() const;
+    void   AppendString(const wchar_t* pstr, SPInt len = -1);
 
     // Character (not byte) count and character range [start, end) (exe: GetLength 0x142587010, Substring 0x142587b20).
     UPInt  GetLength() const;
@@ -129,10 +134,12 @@ private:
 class StringLH : public String
 {
 public:
+    StringLH(); // exe 0x142585540
     StringLH(const StringLH& src) : String(NoConstructor()) { CopyConstructHelper(src); }
     explicit StringLH(const String& src) : String(NoConstructor()) { CopyConstructHelper(src); }
 
     void operator=(const String& src) { String::operator=(src); }
+    void operator=(const char* str)   { String::operator=(str); }
 
 private:
     void CopyConstructHelper(const String& src);
@@ -192,6 +199,15 @@ public:
     const char* ToCStr() const  { return pStr; }
     UPInt       GetSize() const { return Size; }
     bool        IsEmpty() const { return Size == 0; }
+
+    // The very same view, or a text whose first o.Size bytes are o's.
+    bool operator==(const StringDataPtr& o) const
+    {
+        return (o.pStr == pStr && o.Size == Size) || (pStr && o.pStr && strncmp(pStr, o.pStr, o.Size) == 0);
+    }
+
+    // The view without leading and trailing white space (exe 0x142587110).
+    StringDataPtr GetTruncateWhitespace() const;
 
 protected:
     const char* pStr;

@@ -23,6 +23,8 @@ public:
     void LogError(const char* pfmt, ...) const;
     // Parse channel message (out of line per Derived in the exe, e.g. LogBase<Stream> 0x14258e410).
     void LogParse(const char* pfmt, ...) const;
+    // Script error channel (out of line per Derived, e.g. LogBase<LogState> 0x14246a960).
+    void LogScriptError(const char* pfmt, ...) const;
 
 protected:
     bool IsLogNotNull() const { return 0; }
