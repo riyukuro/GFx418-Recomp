@@ -10,6 +10,8 @@
 // MS2-RANGE: 0x1428f40d0-0x1428f4610 .text$mn
 // MS2-RANGE: 0x1428f4610-0x1428f4cd0 .text$mn
 // MS2-RANGE: 0x1428f4cd0-0x1428f4e60 .text$mn
+// MS2-RANGE: 0x1428f4e60-0x1428f5740 .text$mn
+// MS2-RANGE: 0x1428f65c0-0x1428f6cc0 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
 // MS2-RANGE: 0x1428fb110-0x1428fbb70 .text$mn
@@ -21,6 +23,7 @@
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_movieroot.h"
@@ -206,6 +209,263 @@ void MathCtorFunction::Random(const FnCall& fn)
 void MathCtorFunction::Round(const FnCall& fn)
 {
     fn.Result->SetNumber(floor(fn.Arg(0).ToNumber(fn.Env) + 0.5));
+}
+
+// ---- Array ----
+
+// A new array holding this array's elements followed by the arguments (arrays are flattened one level).
+// @0x1428f4e60
+void ArrayObject::ArrayConcat(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    pthis->LengthValueOverriden = false;
+    Ptr<ArrayObject> ao = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    if (ao)
+    {
+        ao->Concat(fn.Env, pthis);
+        for (int i = 0; i < fn.NArgs; i++)
+            ao->Concat(fn.Env, fn.Arg(i));
+    }
+    fn.Result->SetAsObject(ao.GetPtr());
+}
+
+// The elements as strings joined by the argument (default ",").
+// @0x1428f4fd0
+void ArrayObject::ArrayJoin(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    pthis->LengthValueOverriden = false;
+    StringBuffer sbuffer(fn.Env->GetHeap());
+    if (fn.NArgs == 0)
+    {
+        pthis->JoinToString(fn.Env, &sbuffer, ",");
+    }
+    else
+    {
+        ASString sa0(fn.Arg(0).ToString(fn.Env));
+        pthis->JoinToString(fn.Env, &sbuffer, sa0.ToCStr());
+    }
+    fn.Result->SetString(fn.Env->CreateString(sbuffer.ToCStr(), sbuffer.GetSize()));
+}
+
+// Removes and returns the last element.
+// @0x1428f5170
+void ArrayObject::ArrayPop(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    pthis->LengthValueOverriden = false;
+    if (pthis->GetSize())
+    {
+        Value* pval = pthis->GetElementPtr(pthis->GetSize() - 1);
+        if (pval)
+            *fn.Result = *pval;
+        else
+            fn.Result->SetUndefined();
+        pthis->PopBack();
+    }
+    else
+    {
+        fn.Result->SetUndefined();
+    }
+}
+
+// Appends the arguments; returns the new length.
+// @0x1428f5240
+void ArrayObject::ArrayPush(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    pthis->LengthValueOverriden = false;
+    for (int i = 0; i < fn.NArgs; i++)
+        pthis->PushBack(fn.Arg(i));
+    fn.Result->SetInt(pthis->GetSize());
+}
+
+// Reverses in place and returns this (Flash 8 behaviour; documented as Void).
+// @0x1428f5340
+void ArrayObject::ArrayReverse(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    pthis->LengthValueOverriden = false;
+    pthis->Reverse();
+    fn.Result->SetAsObject(pthis);
+}
+
+// Removes and returns the first element.
+// @0x1428f53e0
+void ArrayObject::ArrayShift(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    if (pthis->GetSize() == 0)
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    pthis->LengthValueOverriden = false;
+    Value* pval = pthis->GetElementPtr(0);
+    if (pval)
+        *fn.Result = *pval;
+    else
+        fn.Result->SetUndefined();
+    pthis->PopFront();
+}
+
+// A new array of the elements [start, end); negative indexes count from the end.
+// @0x1428f5530
+void ArrayObject::ArraySlice(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    pthis->LengthValueOverriden = false;
+    int start = 0;
+    int end   = pthis->GetSize();
+    if (fn.NArgs >= 1)
+    {
+        start = fn.Arg(0).ToInt32(fn.Env);
+        if (start < 0)
+            start += pthis->GetSize();
+        if (start < 0)
+            start = 0;
+        if (start > pthis->GetSize())
+            start = pthis->GetSize();
+    }
+    if (fn.NArgs >= 2)
+    {
+        end = fn.Arg(1).ToInt32(fn.Env);
+        if (end < 0)
+            end += pthis->GetSize();
+        if (end < 0)
+            end = 0;
+        if (end > pthis->GetSize())
+            end = pthis->GetSize();
+    }
+
+    Ptr<ArrayObject> ao = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    if (ao)
+    {
+        for (int i = start; i < end; i++)
+        {
+            if (pthis->GetElementPtr(i) != 0)
+                ao->PushBack(*pthis->GetElementPtr(i));
+            else
+                ao->PushBack();
+        }
+    }
+    fn.Result->SetAsObject(ao.GetPtr());
+}
+
+// splice(start, [deleteCount], [items...]): returns the removed elements as a new array.
+// @0x1428f65c0
+// MS2-FUNCTIONAL same code with rsi/rdi swapped and the r14/r15 saves placed before the loop test (register allocation)
+void ArrayObject::ArraySplice(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    if (fn.NArgs == 0)
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+
+    pthis->LengthValueOverriden = false;
+    int start = fn.Arg(0).ToInt32(fn.Env);
+    if (start < 0)
+        start += pthis->GetSize();
+    if (start < 0)
+        start = 0;
+    if (start > pthis->GetSize())
+        start = pthis->GetSize();
+
+    int count = pthis->GetSize() - start;
+    if (fn.NArgs >= 2)
+    {
+        count = fn.Arg(1).ToInt32(fn.Env);
+        if (count < 0)
+            count = 0;
+        if (start + count >= pthis->GetSize())
+            count = pthis->GetSize() - start;
+    }
+
+    int              i;
+    Ptr<ArrayObject> ao = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    if (ao)
+    {
+        for (i = 0; i < count; i++)
+        {
+            if (pthis->GetElementPtr(start + i) != 0)
+                ao->PushBack(*pthis->GetElementPtr(start + i));
+            else
+                ao->PushBack();
+        }
+        fn.Result->SetAsObject(ao.GetPtr());
+
+        if (count)
+            pthis->RemoveElements(start, count);
+
+        if (fn.NArgs >= 3)
+        {
+            pthis->InsertEmpty(start, fn.NArgs - 2);
+            for (i = 2; i < fn.NArgs; i++)
+                pthis->SetElement(start + i - 2, fn.Arg(i));
+        }
+    }
+}
+
+// valueOf is the same as toString.
+// @0x1428f6880
+void ArrayObject::ArrayValueOf(const FnCall& fn)
+{
+    ArrayToString(fn);
+}
+
+// Inserts the arguments at the front; returns the new length.
+// @0x1428f6a10
+void ArrayObject::ArrayUnshift(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    pthis->LengthValueOverriden = false;
+    if (fn.NArgs > 0)
+    {
+        pthis->InsertEmpty(0, fn.NArgs);
+        for (int i = 0; i < fn.NArgs; i++)
+            pthis->SetElement(i, fn.Arg(i));
+    }
+    fn.Result->SetInt(pthis->GetSize());
+}
+
+// The elements joined by ","; an array nested 256 deep in itself gives "".
+// @0x1428f6b30
+void ArrayObject::ArrayToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+
+    RecursionGuard rg(pthis);
+    if (pthis->RecursionLimitReached())
+    {
+        fn.Result->SetString(fn.Env->GetBuiltin(ASBuiltin_empty_));
+    }
+    else
+    {
+        StringBuffer sbuffer(fn.Env->GetHeap());
+        pthis->JoinToString(fn.Env, &sbuffer, ",");
+        fn.Result->SetString(fn.Env->CreateString(sbuffer.ToCStr(), sbuffer.GetSize()));
+    }
 }
 
 // ---- Matrix ----

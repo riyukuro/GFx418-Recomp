@@ -81,6 +81,12 @@ public:
 
     // Script error channel (exe 0x142967e00).
     void LogScriptError(const char* pfmt, ...) const;
+
+    // new <className>(args) looked up in the package object (exe 0x14296e520); the other one in _global.
+    Object*        OperatorNew(Object* ppackageObj, const ASString& className, int nargs = 0, int argsTopOff = -1);
+    inline Object* OperatorNew(const ASString& className, int nargs = 0, int argsTopOff = -1);
+    inline const ASString& GetBuiltin(int btype) const;
+    inline ASString        CreateString(const char* pstr, UPInt length) const;
 };
 
 // Arguments, this and result slot of a native call. 0x40 bytes.
@@ -158,6 +164,21 @@ inline bool Environment::CheckExtensions() const
 inline MemoryHeap* Environment::GetHeap() const
 {
     return StringContext.pContext->pHeap;
+}
+
+inline Object* Environment::OperatorNew(const ASString& className, int nargs, int argsTopOff)
+{
+    return OperatorNew(StringContext.pContext->pGlobal, className, nargs, argsTopOff);
+}
+
+inline const ASString& Environment::GetBuiltin(int btype) const
+{
+    return StringContext.GetBuiltin(btype);
+}
+
+inline ASString Environment::CreateString(const char* pstr, UPInt length) const
+{
+    return StringContext.CreateString(pstr, length);
 }
 
 }}} // namespace Scaleform::GFx::AS2

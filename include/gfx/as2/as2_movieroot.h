@@ -14,6 +14,7 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 enum ASBuiltinType : int
 {
     ASBuiltin_empty_ = 0, // ""
+    ASBuiltin_Array  = 2,
     ASBuiltin_x      = 129,
     ASBuiltin_y      = 130,
 };
