@@ -93,6 +93,16 @@ public:
         while (ReadEdge(pos, coords) != Edge_EndPath)
             ;
     }
+
+    // (appended for sfr_render_03d) reads the rest of the current path, returning its edge count
+    unsigned CountPathEdges(ShapePosInfo* pos) const
+    {
+        float    coords[Edge_MaxCoord];
+        unsigned count = 0;
+        while (ReadEdge(pos, coords) != Edge_EndPath)
+            ++count;
+        return count;
+    }
 };
 
 // Appends path records to a byte container.

@@ -382,6 +382,223 @@ void ShapeMeshProvider::createMorphData()
     }
 }
 
+// A bit per style index, the first 32 in the object; setting or clearing past the end grows it (at least doubling)
+// in the heap it was given.
+class BitSet
+{
+public:
+    BitSet(MemoryHeap* heap) : NumBits(sizeof(Static) * 8), Static(0), Data(&Static), pHeap(heap) {}
+    ~BitSet()
+    {
+        if (Data != &Static)
+            pHeap->Free(Data);
+    }
+
+    unsigned operator[](unsigned i) const { return (i < NumBits) ? (Data[i >> 5] & (1 << (i & 31))) : 0; }
+
+    void Set(unsigned i)
+    {
+        grow(i);
+        Data[i >> 5] |= 1 << (i & 31);
+    }
+    void Clr(unsigned i)
+    {
+        grow(i);
+        Data[i >> 5] &= ~(1 << (i & 31));
+    }
+
+private:
+    void grow(unsigned i)
+    {
+        if (i >= NumBits)
+        {
+            unsigned words    = (NumBits + 31) >> 5;
+            unsigned newWords = Alg::Max(words * 2, (i + 1 + 31) >> 5);
+            if (newWords > words)
+            {
+                if (Data == &Static)
+                {
+                    Data    = (UInt32*)pHeap->Alloc(newWords * sizeof(UInt32));
+                    Data[0] = Static;
+                }
+                else
+                    Data = (UInt32*)pHeap->Realloc(Data, newWords * sizeof(UInt32));
+                memset(Data + words, 0, (newWords - words) * sizeof(UInt32));
+                NumBits = newWords << 5;
+            }
+        }
+    }
+
+    unsigned    NumBits;
+    UInt32      Static;   // the first 32 bits
+    UInt32*     Data;
+    MemoryHeap* pHeap;
+};
+
+// Collects the shape's paths, drops the empty ones and builds the draw layers of each shape layer from them; a
+// morph shape uses its re-encoded first end.
+// @0x14262d430
+// MS2-FUNCTIONAL: same code, the exe frame is 0x10 larger (path / bounds slot after the reader, 16-aligned)
+void ShapeMeshProvider::acquireShapeData()
+{
+    const ShapeDataInterface* shape = pMorphData ? &pMorphData->ShapeData1 : pShapeData;
+
+    unsigned      startPos = shape->GetStartingPos();
+    ShapePosInfo  pos(startPos);
+    ShapePathType type;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    bool          first      = true;
+    unsigned      shapeLayer = 0;
+
+    TmpPathsArray paths(Memory::GetGlobalHeap());
+    Strokes = false;
+
+    for (;;)
+    {
+        unsigned pathPos = pos.Pos;
+        type             = shape->ReadPathInfo(&pos, coord, styles);
+        if (type == Shape_EndShape)
+            break;
+        if (type == Shape_NewLayer && !first)
+            ++shapeLayer;
+
+        TmpPathInfoType path;
+        path.ShapeLayer = shapeLayer;
+        path.Pos        = pathPos;
+        path.Styles[0]  = styles[0];
+        path.Styles[1]  = styles[1];
+        path.Styles[2]  = styles[2];
+        path.EdgeCount  = shape->CountPathEdges(&pos);
+        paths.PushBack(path);
+        first = false;
+    }
+
+    // keep the paths that have edges and some style
+    UPInt i;
+    UPInt kept = 0;
+    for (i = 0; i < paths.GetSize(); ++i)
+    {
+        const TmpPathInfoType& path = paths[i];
+        if (path.EdgeCount && (path.Styles[0] || path.Styles[1] || path.Styles[2]))
+            paths[kept++] = paths[i];
+    }
+    paths.CutAt(kept);
+
+    DrawLayers.Clear();
+    FillToStyleTable.Clear();
+
+    shapeLayer         = 0;
+    UPInt layerStart   = 0;
+    for (i = 0; i < paths.GetSize(); ++i)
+    {
+        if (paths[i].ShapeLayer != shapeLayer)
+        {
+            createDrawLayers(paths, layerStart, i);
+            layerStart = i;
+            shapeLayer = paths[i].ShapeLayer;
+        }
+    }
+    createDrawLayers(paths, layerStart, paths.GetSize());
+
+    IdentityBounds = GetBounds(Matrix2F());
+
+    if (checkI9gMergedSlice())
+    {
+        DrawLayers.Resize(1);
+        DrawLayers[0].Image9GridType = I9gMergedSlice;
+    }
+    else
+        perceiveImage9GridLayers();
+}
+
+// The fill table entries of a fill layer over paths [i1, i2): each distinct fill style once, in path order, with the
+// solid colour fills sharing entry 0.
+// @0x14262fac0
+void ShapeMeshProvider::countComplexFills(const TmpPathsArray& paths, UPInt i1, UPInt i2, DrawLayerType* layer)
+{
+    BitSet seen(Memory::GetGlobalHeap());
+    layer->StartFill = (unsigned)FillToStyleTable.GetSize();
+    layer->FillCount = 0;
+    for (UPInt i = i1; i < i2; ++i)
+    {
+        if (paths[i].Styles[0] != paths[i].Styles[1])
+        {
+            FillStyleType fill;
+            unsigned      style = paths[i].Styles[0];
+            if (style)
+            {
+                pShapeData->GetFillStyle(style, &fill);
+                unsigned entry = fill.pFill ? style : 0;
+                if (seen[entry] == 0)
+                {
+                    FillToStyleTable.PushBack(entry);
+                    layer->FillCount++;
+                    seen.Set(entry);
+                }
+            }
+            style = paths[i].Styles[1];
+            if (style)
+            {
+                pShapeData->GetFillStyle(style, &fill);
+                unsigned entry = fill.pFill ? style : 0;
+                if (seen[entry] == 0)
+                {
+                    FillToStyleTable.PushBack(entry);
+                    layer->FillCount++;
+                    seen.Set(entry);
+                }
+            }
+        }
+    }
+}
+
+// The draw layers of one shape layer (paths [i1, i2)): one fill layer if any path fills, then one layer per distinct
+// stroke style in order of first use.
+// @0x14262fe10
+void ShapeMeshProvider::createDrawLayers(const TmpPathsArray& paths, UPInt i1, UPInt i2)
+{
+    if (i2 > i1)
+    {
+        DrawLayerType layer;
+        BitSet        styles(Memory::GetGlobalHeap());   // bit 0: the fill layer is in
+        unsigned      startPos = paths[i1].Pos;
+        UPInt         i;
+
+        for (i = i1; i < i2; ++i)
+        {
+            if (paths[i].Styles[0] != paths[i].Styles[1] && styles[0] == 0)
+            {
+                countComplexFills(paths, i1, i2, &layer);
+                layer.StartPos       = startPos;
+                layer.StrokeStyle    = 0;
+                layer.Image9GridType = I9gNone;
+                DrawLayers.PushBack(layer);
+                styles.Set(0);
+            }
+            if (paths[i].Styles[2])
+                styles.Set(paths[i].Styles[2]);
+        }
+
+        for (i = i1; i < i2; ++i)
+        {
+            unsigned style = paths[i].Styles[2];
+            if (style && styles[style])
+            {
+                // a stroke layer has its one fill computed from the stroke style
+                layer.StartPos       = startPos;
+                layer.StartFill      = 0;
+                layer.FillCount      = 1;
+                layer.StrokeStyle    = style;
+                layer.Image9GridType = I9gNone;
+                DrawLayers.PushBack(layer);
+                styles.Clr(style);
+                Strokes = true;
+            }
+        }
+    }
+}
+
 // @0x14262bb90
 void ShapeMeshProvider::GetFillStyle(unsigned idx, FillStyleType* style, float morphRatio) const
 {

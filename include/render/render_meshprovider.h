@@ -8,6 +8,7 @@
 
 #include "../kernel/sf_refcount.h"
 #include "ms2/scaleform/kernel/sf_array.h"
+#include "ms2/scaleform/kernel/sf_arraystaticbuff.h"
 #include "ms2/scaleform/include/render/render_types2d.h"
 #include "ms2/scaleform/include/render/render_matrix2x4.h"
 #include "ms2/scaleform/include/render/render_shapedata.h"
@@ -154,6 +155,19 @@ private:
     RectF        getLayerBounds(unsigned layer) const;
     ComplexFill* getComplexFill(unsigned layer, unsigned fillIndex, unsigned* imgFillStyle) const;
     Matrix2F     getMorphMatrix(unsigned layer, unsigned fillIndex) const;
+
+    // (appended for sfr_render_03d) one non-empty path of the shape while the draw layers are built
+    struct TmpPathInfoType
+    {
+        unsigned ShapeLayer;   // count of the layer starts before it
+        unsigned Pos;          // where its path record starts
+        unsigned Styles[3];    // fill 0, fill 1, stroke
+        unsigned EdgeCount;
+    };
+    typedef ArrayStaticBuffPOD<TmpPathInfoType, 32> TmpPathsArray;
+
+    void countComplexFills(const TmpPathsArray& paths, UPInt i1, UPInt i2, DrawLayerType* layer);
+    void createDrawLayers(const TmpPathsArray& paths, UPInt i1, UPInt i2);
 };
 
 // The two ends of a morph re-encoded with matching path records (built by ShapeMeshProvider::createMorphData).
