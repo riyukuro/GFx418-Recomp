@@ -331,6 +331,18 @@ public:
     UInt16                       Flags;          // +0x88
 };
 
+// (appended for Sprite::GetTopMostMouseEntity, sfr_gfx_05b) the mouse hit search state.
+struct DisplayObjectBase::TopMostDescr
+{
+    InteractiveObject*       pResult;       // +0x00 out: the hit
+    PointF                   LocalPt;       // +0x08 out: the point in the tested object's space (TopMost_Continue)
+    const InteractiveObject* pIgnoreMC;     // +0x10 in: skipped (the clip being dragged)
+    bool                     TestAll;       // +0x18 in: also hit objects without button handlers
+    unsigned                 ControllerIdx; // +0x1c in
+
+    TopMostDescr() : pIgnoreMC(0), TestAll(false), ControllerIdx(0) {}
+};
+
 }} // namespace Scaleform::GFx
 
 #endif
