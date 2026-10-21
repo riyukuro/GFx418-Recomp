@@ -96,8 +96,12 @@ struct HighlightDesc
     HighlightDesc(SPInt startPos, UPInt len)
         : StartPos(startPos), Length(len), Offset(-1), AdjStartPos(0), GlyphNum(0), Id(0) {}
 
-    bool ContainsPos(UPInt pos) const     { return Length > 0 && pos >= StartPos && pos < StartPos + Length; }
-    bool ContainsIndex(UPInt index) const { return GlyphNum > 0 && index >= AdjStartPos && index < AdjStartPos + GlyphNum; }
+    // (the conditional form is what the exe's codegen needs: the result is materialised as a bool)
+    bool ContainsPos(UPInt pos) const { return Length ? (pos >= StartPos && pos < StartPos + Length) : false; }
+    bool ContainsIndex(UPInt index) const
+    {
+        return GlyphNum ? (index >= AdjStartPos && index < AdjStartPos + GlyphNum) : false;
+    }
     bool IsEmpty() const                  { return Length == 0; }
 };
 
