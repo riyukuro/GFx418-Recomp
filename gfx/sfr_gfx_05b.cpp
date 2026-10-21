@@ -1191,6 +1191,44 @@ bool Sprite::OnUnloading()
     return mayRemove;
 }
 
+inline bool MovieImpl::IsFocused(const InteractiveObject* ch, unsigned controllerIdx) const
+{
+    Ptr<InteractiveObject> focused = FocusGroups[FocusGroupIndexes[controllerIdx]].LastFocused;
+    return focused.GetPtr() == ch;
+}
+
+// Key down also fires the on(keyPress) handlers, once per key (pkeyMask bit 0x10000); Enter or Space on the
+// keyboard-focused clip (focus rect shown and enabled) presses and releases it like a mouse click.
+// MS2-FUNCTIONAL: the exe releases the focus Ptr before the compare and keeps the AVM calls in its own order
+// @0x1425dbf20
+bool Sprite::OnKeyEvent(const EventId& id, int* pkeyMask)
+{
+    if (!HasAvmObject())
+        return false;
+    if (id.Id != EventId::Event_KeyDown)
+        return GetAvmSprite()->OnEvent(id);
+
+    bool handled = GetAvmSprite()->OnEvent(id);
+    if (!(*pkeyMask & 0x10000))
+    {
+        int keyCode = id.ConvertToButtonKeyCode();
+        if (keyCode && (handled = GetAvmSprite()->OnEvent(EventId(EventId::Event_KeyPress, short(keyCode), 0))) != 0)
+            *pkeyMask |= 0x10000;
+    }
+
+    MovieImpl* proot = GetMovieImpl();
+    if (proot->IsFocused(this, id.ControllerIndex) && proot->IsFocusRectShown(id.ControllerIndex) &&
+        (id.KeyCode == 13 || id.KeyCode == 32) && (IsFocusRectEnabled() || proot->IsAlwaysEnableKeyboardPress()))
+    {
+        EventId evt(id);
+        evt.Id = EventId::Event_Press;
+        GetAvmSprite()->OnEvent(evt);
+        evt.Id = EventId::Event_Release;
+        GetAvmSprite()->OnEvent(evt);
+    }
+    return handled;
+}
+
 // Focus by mouse follows the default rules; otherwise focusEnabled decides, undefined asking the AVM.
 // @0x1425dbad0
 bool Sprite::IsFocusEnabled(FocusMovedType fmt) const

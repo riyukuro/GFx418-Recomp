@@ -91,6 +91,16 @@ public:
     }
 
     bool IsButtonEvent() const { return (Id & Event_ButtonEventsMask) != 0; }
+
+    // (appended for Sprite::OnKeyEvent, sfr_gfx_05b) a key event of keyboard keyboardIndex
+    EventId(UInt32 id, short keyCode, UByte asciiCode, UInt32 wcharCode = 0, UByte keyboardIndex = 0)
+        : Id(id), WcharCode(wcharCode), KeyCode(keyCode), AsciiCode(asciiCode), RollOverCnt(0), KeysState(0),
+          MouseWheelDelta(0)
+    {
+        KeyboardIndex = keyboardIndex;
+    }
+    // The button key code (on(keyPress)) of a key down event, 0 when the key has none (0x142603da0).
+    int ConvertToButtonKeyCode() const;
 };
 
 }} // namespace Scaleform::GFx
