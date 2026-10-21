@@ -258,6 +258,11 @@ public:
 
     virtual void Finalize_GC(); // exe 0x142942f10
 
+    // The "data" member (exe 0x1429804c0).
+    void SetDataObject(Environment* penv, Object* pobj);
+    // False for names with spaces or any of ~%&\;:"',<>?# (exe 0x142989250).
+    bool SetNameAndLocalPath(const String& name, const String& localPath);
+
     // "data" is read-only (exe 0x142987280).
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags());
@@ -383,7 +388,14 @@ public:
     UInt32           LastClickTime;     // +0x88
     FunctionRef      SetCursorTypeFunc; // +0x90
 
+    // Asks the user event handler for cursor shape cursorType on mouse mouseIndex; false without a handler
+    // (exe 0x142980380).
+    static bool SetCursorType(MovieImpl* proot, unsigned mouseIndex, unsigned cursorType);
+
 protected:
+    // Mouse.setCursorType(shape[, mouse]) (exe 0x142980240).
+    static void SetCursorType(const FnCall& fn);
+
     // Mouse() called as a function: null (exe 0x14295bc20).
     static void GlobalCtor(const FnCall& fn);
 

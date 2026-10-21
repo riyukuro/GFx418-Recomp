@@ -72,6 +72,9 @@ public:
     void operator=(const char* pstr);
     void operator=(const String& src);
     void operator=(const StringBuffer& src); // exe 0x1425856c0
+    // utf8 walk: the character at index i, then the ones after it (0 at the end).
+    UInt32 GetFirstCharAt(UPInt index, const char** offset) const; // exe 0x142586f50
+    UInt32 GetNextChar(const char** offset) const;                 // exe 0x1425870b0
     // Empties the string (exe 0x1425866a0); replaces it with size bytes of utf8 (0x142586530) or of a generated
     // text (0x142586430).
     void Clear();

@@ -112,6 +112,11 @@ public:
         return pStringManager->CreateString(pstr, length);
     }
     ASString CreateString(const char* pstr) const { return ASString(pStringManager->CreateStringNode(pstr)); }
+    // A string over the literal itself (not copied).
+    ASString CreateConstString(const char* pstr) const
+    {
+        return pStringManager->CreateConstString(pstr, strlen(pstr));
+    }
 };
 
 // Memory of an AS2 movie (heap, string manager, collector); only the collector is read so far.
@@ -216,6 +221,11 @@ inline ASString ASStringContext::CreateString(const char* pstr) const
 inline ASString Environment::CreateString(const char* pstr) const
 {
     return StringContext.CreateString(pstr);
+}
+
+inline ASString Environment::CreateConstString(const char* pstr) const
+{
+    return ((MovieRoot*)StringContext.pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateConstString(pstr);
 }
 
 inline ASString ASStringContext::CreateString(const char* pstr, UPInt length) const

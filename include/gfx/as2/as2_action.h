@@ -247,6 +247,7 @@ public:
     inline ASString        CreateString(const char* pstr, UPInt length) const;
     inline ASString        CreateString(const char* pstr) const; // as2_movieroot.h
     inline ASString        CreateString(const String& str) const; // as2_movieroot.h
+    inline ASString        CreateConstString(const char* pstr) const; // as2_movieroot.h
 };
 
 // A try block entered by the running code. 0x10 bytes.

@@ -68,6 +68,9 @@ public:
 
     MouseCursorEvent(EventType eventType, unsigned mouseIndex)
         : Event(eventType), mCursorShape(ARROW), MouseIndex(mouseIndex) {}
+    // A DoSetMouseCursor request.
+    MouseCursorEvent(CursorShapeType cursorShape, unsigned mouseIndex)
+        : Event(DoSetMouseCursor), mCursorShape(cursorShape), MouseIndex(mouseIndex) {}
 };
 
 // Application hook for the requests of the scripts (cursor, ...).

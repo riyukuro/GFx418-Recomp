@@ -4,6 +4,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14297f2c0-0x14297f3d0 .text$mn
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
+// MS2-RANGE: 0x142980240-0x1429803d0 .text$mn
+// MS2-RANGE: 0x1429804c0-0x142980570 .text$mn
 // MS2-RANGE: 0x1429814c0-0x142981600 .text$mn
 // MS2-RANGE: 0x142981650-0x142981670 .text$mn
 // MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
@@ -14,6 +16,7 @@
 // MS2-RANGE: 0x142987280-0x1429872b0 .text$mn
 // MS2-RANGE: 0x142988690-0x142988a30 .text$mn
 // MS2-RANGE: 0x142988b60-0x142988f30 .text$mn
+// MS2-RANGE: 0x142989250-0x142989320 .text$mn
 // MS2-RANGE: 0x142989390-0x142989480 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
 // MS2-RANGE: 0x14298a260-0x14298a5a0 .text$mn
@@ -37,6 +40,8 @@
 // MS2-RANGE: 0x142991e10-0x142991e70 .text$mn
 // MS2-RANGE: 0x1429923c0-0x1429925f0 .text$mn
 // MS2-RANGE: 0x1429926f0-0x142992830 .text$mn
+// MS2-RANGE: 0x142992900-0x142992a20 .text$mn
+// MS2-RANGE: 0x142992b00-0x142992c40 .text$mn
 // MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
 // MS2-RANGE: 0x142994160-0x142994190 .text$mn
 // MS2-RANGE: 0x1429944d0-0x142994710 .text$mn
@@ -57,6 +62,7 @@
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asutils.h"
+#include "../include/gfx/gfx_event.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_msgformat.h"
 #include <math.h>
@@ -300,6 +306,59 @@ void AsBroadcaster::commonInit(Environment* penv)
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_AsBroadcaster));
 }
 
+// MS2-FUNCTIONAL the exe keeps this in r10 across the IsLeapYear call (callee register use known in its TU)
+// @0x142992900
+void DateObject::UpdateGMT()
+{
+    Time  = LTime - LocalOffset;
+    Date  = LDate - LocalOffset;
+    JDate = LJDate;
+    Year  = LYear;
+    if (Time >= 86400000 || Time < 0)
+    {
+        int days = (Time + 864000000) / 86400000 - 10;
+        JDate += days;
+        Time -= days * 86400000;
+        if (JDate >= (Date_IsLeapYear(Year) ? 366 : 365))
+        {
+            JDate -= IsLeapYear(Year) ? 366 : 365;
+            Year++;
+        }
+        else if (JDate < 0)
+        {
+            // The exe adds only the leap day here (not the length of the previous year).
+            Year--;
+            JDate += IsLeapYear(Year);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL the exe keeps this in r10 across the IsLeapYear call (callee register use known in its TU)
+// @0x142992b00
+void DateObject::UpdateLocal()
+{
+    LTime  = Time + LocalOffset;
+    LDate  = Date + LocalOffset;
+    LJDate = JDate;
+    LYear  = Year;
+    if (LTime >= 86400000 || LTime < 0)
+    {
+        int days = (LTime + 864000000) / 86400000 - 10;
+        LJDate += days;
+        LTime -= days * 86400000;
+        if (LJDate >= (Date_IsLeapYear(LYear) ? 366 : 365))
+        {
+            LJDate -= IsLeapYear(LYear) ? 366 : 365;
+            LYear++;
+        }
+        else if (LJDate < 0)
+        {
+            LYear--;
+            LJDate += IsLeapYear(LYear) ? 366 : 365;
+        }
+    }
+}
+
 // @0x142994fe0
 void DateObject::commonInit(Environment* penv)
 {
@@ -358,6 +417,70 @@ bool SharedObject::SetMember(Environment* penv, const ASString& name, const Valu
     if (name == "data")
         return true;
     return Object::SetMember(penv, name, val, flags);
+}
+
+static inline UserEventHandler* GetUserEventHandler(MovieImpl* pmovie)
+{
+    return *(UserEventHandler**)((UByte*)pmovie + 0x230);
+}
+
+// @0x142980240
+void MouseCtorFunction::SetCursorType(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    unsigned   cursorShape = MouseCursorEvent::ARROW;
+    unsigned   mouseIndex  = 0;
+    MovieImpl* proot       = fn.Env->GetTarget()->GetMovieImpl();
+    if (fn.NArgs > 0)
+        cursorShape = (unsigned)fn.Arg(0).ToNumber(fn.Env);
+    if (fn.NArgs >= 2)
+        mouseIndex = (unsigned)fn.Arg(1).ToNumber(fn.Env);
+    if (GetUserEventHandler(proot))
+    {
+        GetUserEventHandler(proot)->HandleEvent(
+            (Movie*)proot, MouseCursorEvent((MouseCursorEvent::CursorShapeType)cursorShape, mouseIndex));
+    }
+    else
+        fn.Env->LogScriptWarning("No user event handler interface is installed; Mouse.setCursorType failed.");
+}
+
+// @0x142980380
+bool MouseCtorFunction::SetCursorType(MovieImpl* proot, unsigned mouseIndex, unsigned cursorType)
+{
+    if (GetUserEventHandler(proot))
+    {
+        MouseCursorEvent evt(Event::DoSetMouseCursor, mouseIndex);
+        evt.mCursorShape = cursorType;
+        GetUserEventHandler(proot)->HandleEvent((Movie*)proot, evt);
+        return true;
+    }
+    return false;
+}
+
+// @0x1429804c0
+void SharedObject::SetDataObject(Environment* penv, Object* pobj)
+{
+    Object::SetMember(penv, penv->CreateConstString("data"), Value(pobj));
+}
+
+// @0x142989250
+bool SharedObject::SetNameAndLocalPath(const String& name, const String& localPath)
+{
+    const char* pstr;
+    for (UInt32 c = name.GetFirstCharAt(0, &pstr); c; c = name.GetNextChar(&pstr))
+    {
+        switch (c)
+        {
+        case '~': case '%': case '&': case '\\': case ';': case ':': case '"': case '\'':
+        case ',': case '<': case '>': case '?': case '#':
+            return false;
+        }
+        if (SFiswspace((wchar_t)c))
+            return false;
+    }
+    Name      = name;
+    LocalPath = localPath;
+    return true;
 }
 
 // @0x142989390
