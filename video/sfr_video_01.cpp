@@ -33,6 +33,8 @@ class VideoCharacter : public RefCountBaseWeakSupport<VideoCharacter, Stat_Defau
 void FUN_14256c520(Scaleform::GFx::MovieImpl* proot, Scaleform::GFx::Video::VideoProvider* pprovider);
 // Wakes a video display object up when its provider has a first frame (sfr_video_02).
 void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo);
+// Points a video display object at a provider, or at none (sfr_video_02).
+void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* pvideo, Scaleform::GFx::Video::VideoProvider* pprovider);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -1072,6 +1074,52 @@ void NetStreamCtorFunction::GlobalCtor(const FnCall& fn)
 NetStreamCtorFunction::NetStreamCtorFunction(ASStringContext* psc)
     : CFunctionObject(psc, GlobalCtor)
 {
+}
+
+// ==== Video ========================================================================================================
+
+// Video.prototype methods.
+class VideoProto
+{
+public:
+    static void AttachVideo(const FnCall& fn);   // exe 0x14000d400
+};
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000d400
+void VideoProto::AttachVideo(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+    {
+        fn.Env->LogScriptError("Error: Video.attachVideo requires one argument (NetStream object)\n");
+        return;
+    }
+    if (!fn.Arg(0).IsObject() || !fn.ThisPtr || fn.ThisPtr->GetObjectType() != Object::Object_Video)
+        return;
+
+    VideoCharacter* pvideo    = (VideoCharacter*)static_cast<AvmCharacter*>(fn.ThisPtr)->GetDispObj();
+    VideoProvider*  pprovider = NULL;
+    if (fn.Arg(0).ToObject(fn.Env)->GetObjectType() == Object::Object_NetStream)
+    {
+        NetStream* pnetstream = static_cast<NetStream*>(fn.Arg(0).ToObject(fn.Env));
+        if (pnetstream)
+            pprovider = pnetstream->GetVideoProvider();
+    }
+    if (pvideo)
+    {
+        FUN_140010b80(pvideo, pprovider);
+        if (pprovider)
+        {
+            // Without extensions a provider feeds one video only: the one it fed before lets go.
+            if (!fn.Env->CheckExtensions())
+            {
+                VideoCharacter* pcurrent = pprovider->RemoveFirstVideoCharacter();
+                if (pcurrent)
+                    FUN_140010b80(pcurrent, NULL);
+            }
+            pprovider->RegisterVideoCharacter(pvideo);
+        }
+    }
 }
 
 }}} // namespace Scaleform::GFx::AS2
