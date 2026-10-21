@@ -34,7 +34,10 @@ enum TagType
     Tag_SoundStreamHead2     = 45,
 
     Tag_ButtonCharacter      = 7,  // DefineButton
-    Tag_ButtonCharacter2     = 34  // DefineButton2
+    Tag_ButtonCharacter2     = 34, // DefineButton2
+
+    Tag_End                  = 0,
+    Tag_EndFrame             = 1   // ShowFrame
 };
 
 // Where OpenTag found a tag.

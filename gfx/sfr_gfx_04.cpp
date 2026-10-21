@@ -428,6 +428,140 @@ bool MovieDataDef::LoadTaskData::FinishLoadingFrame(LoadProcess* plp, bool finis
     return frameOk;
 }
 
+// The AMP profiler server (exe 0x14261e310 returns the instance); only GetNextSwdHandle (slot 51) is called here.
+class AmpServer
+{
+    virtual void Slot00() = 0; virtual void Slot01() = 0; virtual void Slot02() = 0; virtual void Slot03() = 0;
+    virtual void Slot04() = 0; virtual void Slot05() = 0; virtual void Slot06() = 0; virtual void Slot07() = 0;
+    virtual void Slot08() = 0; virtual void Slot09() = 0; virtual void Slot10() = 0; virtual void Slot11() = 0;
+    virtual void Slot12() = 0; virtual void Slot13() = 0; virtual void Slot14() = 0; virtual void Slot15() = 0;
+    virtual void Slot16() = 0; virtual void Slot17() = 0; virtual void Slot18() = 0; virtual void Slot19() = 0;
+    virtual void Slot20() = 0; virtual void Slot21() = 0; virtual void Slot22() = 0; virtual void Slot23() = 0;
+    virtual void Slot24() = 0; virtual void Slot25() = 0; virtual void Slot26() = 0; virtual void Slot27() = 0;
+    virtual void Slot28() = 0; virtual void Slot29() = 0; virtual void Slot30() = 0; virtual void Slot31() = 0;
+    virtual void Slot32() = 0; virtual void Slot33() = 0; virtual void Slot34() = 0; virtual void Slot35() = 0;
+    virtual void Slot36() = 0; virtual void Slot37() = 0; virtual void Slot38() = 0; virtual void Slot39() = 0;
+    virtual void Slot40() = 0; virtual void Slot41() = 0; virtual void Slot42() = 0; virtual void Slot43() = 0;
+    virtual void Slot44() = 0; virtual void Slot45() = 0; virtual void Slot46() = 0; virtual void Slot47() = 0;
+    virtual void Slot48() = 0; virtual void Slot49() = 0; virtual void Slot50() = 0;
+
+public:
+    virtual UInt32 GetNextSwdHandle() const = 0; // 51
+};
+}} // namespace Scaleform::GFx
+
+Scaleform::GFx::AmpServer* FUN_14261e310();
+
+namespace Scaleform { namespace GFx {
+
+// Reads the frames of the SWF: every tag goes to its loader, each ShowFrame publishes the frame (and binds it when a
+// bind process runs along).
+// @0x1425d1d80
+// MS2-FUNCTIONAL: instruction scheduling of the LoadTagUpdate arguments
+void MovieDataDef::LoadTaskData::Read(LoadProcess* plp, MovieBindProcess* pbp)
+{
+    Stream& stream = *plp->GetStream();
+
+    {
+        Lock::Locker lock(&PlaylistLock);
+        Playlist.Resize(Header.FrameCount);
+        InitActionList.Resize(Header.FrameCount);
+    }
+
+    stream.LogParseClass(Header.FrameRect);
+    stream.LogParse("Note: SWF Frame Rate = %f, Frames = %d\n", Header.FPS, Header.FrameCount);
+
+    TagCount = 0;
+
+    plp->SetSwdHandle(FUN_14261e310()->GetNextSwdHandle());
+
+    // The binding thread is woken now and then rather than every frame: about thirty times over the file, and
+    // before a big tag.
+    int  tagLoadedBytes      = 0;
+    bool notifyNeeded        = false;
+    int  loadUpdateIncrement = Header.FileLength / 30;
+    if (loadUpdateIncrement < 1024 * 8)
+        loadUpdateIncrement = 1024 * 8;
+
+    while ((UInt32)stream.Tell() < plp->GetFileEndPos())
+    {
+        if (LoadingCanceled)
+        {
+            // Tags of the unfinished frame are dropped.
+            plp->CleanupFrameTags();
+            if (pbp)
+                pbp->SetBindState(MovieDefImpl::BS_Canceled);
+            UpdateLoadState(LoadingFrame, LS_LoadCanceled);
+            return;
+        }
+
+        TagInfo tagInfo;
+        TagType tagType = stream.OpenTag(&tagInfo);
+
+        tagLoadedBytes += tagInfo.TagLength;
+
+        if (notifyNeeded &&
+            (LoadingFrame == 1 || tagLoadedBytes > loadUpdateIncrement || tagInfo.TagLength > 1024 * 8))
+        {
+            pFrameUpdate->UpdateNotify();
+            notifyNeeded   = false;
+            tagLoadedBytes = 0;
+        }
+
+        plp->ReportProgress(FileURL, tagInfo, false);
+
+        LoaderImpl::LoaderFunction lf = 0;
+        if (tagType == Tag_EndFrame)
+        {
+            // Handled once the tag is closed, so that the bytes loaded are reported right.
+        }
+        else if (LoaderImpl::GetTagLoader(tagType, &lf))
+        {
+            (*lf)(plp, tagInfo);
+        }
+        else
+        {
+            stream.LogParse("*** no tag loader for type %d\n", tagType);
+            stream.LogTagBytes();
+        }
+
+        stream.CloseTag();
+        TagCount++;
+
+        if (tagType == Tag_EndFrame)
+        {
+            if (!FinishLoadingFrame(plp, false))
+                return;     // LS_LoadError is set
+
+            notifyNeeded = true;
+            stream.LogParse("  ShowFrame\n");
+
+            if (pbp)
+                pbp->BindNextFrame();
+        }
+        else if (tagType == Tag_End)
+        {
+            if ((unsigned)stream.Tell() != plp->GetFileEndPos())
+            {
+                // Not reading past the end of the movie.
+                stream.LogWarning("Loader - Stream-end tag hit, but not at the end of the file yet; stopping for safety");
+                break;
+            }
+        }
+    }
+
+    if (plp->FrameTagsAvailable())
+    {
+        FinishLoadingFrame(plp, true);
+        if (pbp)
+            pbp->BindNextFrame();
+    }
+    else
+    {
+        UpdateLoadState(LoadingFrame, LS_LoadFinished);
+    }
+}
+
 // @0x1425d31c0
 void MovieDataDef::LoadTaskData::UpdateLoadState(unsigned loadingFrame, MovieLoadState loadState)
 {

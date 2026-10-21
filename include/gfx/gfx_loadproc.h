@@ -160,6 +160,29 @@ public:
     // The bind data of the finished frame, in the tag memory (exe 0x142638690).
     FrameBindData* CreateFrameBindData();
 
+    // Drops the tags of an unfinished frame when loading is canceled (exe 0x1426381a0).
+    void CleanupFrameTags();
+    // Tags wait for a frame end (the root timeline also counts its InitAction tags).
+    bool FrameTagsAvailable() const
+    {
+        return FrameTags[LoadState].GetSize() > 0 || (LoadState == LS_LoadingRoot && InitActionTags.GetSize() > 0);
+    }
+
+    // End of the SWF data in the file.
+    UInt32 GetFileEndPos() const { return FileEndPos; }
+
+    // Tells the progress handler about the tag just opened.
+    void ReportProgress(const String& fileURL, const TagInfo& tagInfo, bool calledFromDefSprite)
+    {
+        if (ProgressHandler* phandler = pLoadStates->GetProgressHandler())
+            phandler->LoadTagUpdate(ProgressHandler::TagInfo(fileURL, tagInfo.TagType, tagInfo.TagOffset,
+                                                             tagInfo.TagLength, tagInfo.TagDataOffset),
+                                    calledFromDefSprite);
+    }
+
+    // The AMP debug-file handle of the movie.
+    void SetSwdHandle(UInt32 swdHandle) { pLoadData->SetSwdHandle(swdHandle); }
+
 private:
     // +0x20 LogBase<LoadProcess>
     unsigned                        ParseFlags;      // +0x28
@@ -169,7 +192,8 @@ private:
     UByte                           Unknown48[8];    // +0x48
     Stream                          ProcessStream;   // +0x50 first member of the SWF process info
     UInt32                          FileStartPos;    // +0x2c0 process info: offset of the SWF data in the file
-    UByte                           Unknown2C4[0xf4]; // +0x2c4 rest of the process info, JPEG tables, data lists
+    UInt32                          FileEndPos;      // +0x2c4 process info: end of the SWF data
+    UByte                           Unknown2C8[0xf0]; // +0x2c8 rest of the process info, JPEG tables, data lists
     LoadStateType                   LoadState;       // +0x3b8
     TimelineIODef*                  pTimelineDef;    // +0x3c0
     // Tags of the frame being loaded, of the root timeline [0] and of the sprite being loaded [1].
