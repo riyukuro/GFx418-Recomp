@@ -28,6 +28,7 @@ class MovieDefImpl;
 class ResourceBinding;
 class FileOpenerBase;
 class ParseControl;
+class LogState;
 class ZlibSupportBase;
 
 // Something that hands out states by type; MovieDef, Loader and the movie instances are state bags.
@@ -50,6 +51,8 @@ public:
 
     // The log state (exe 0x1425b38b0).
     Ptr<Log> GetLog() const;
+    // exe 0x1425b3910.
+    Ptr<LogState> GetLogState() const;
     // Opens pfilename through the file opener state, logging failures to the bag's log / plog.
     File*    OpenFile(const char* pfilename);
     File*    OpenFileEx(const char* pfilename, Log* plog);

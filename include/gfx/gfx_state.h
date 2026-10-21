@@ -18,6 +18,7 @@ public:
     enum StateType
     {
         State_None         = 0,
+        State_Log          = 2, // StateBag::SetLog / GetLog
         // The binding states MovieDefBindStates queries (table 0x1431891b8: 9, 10, 11, 15, 16, 23, 27, 28).
         State_FileOpener               = 9,
         State_URLBuilder               = 10,

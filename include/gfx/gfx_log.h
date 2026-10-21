@@ -47,7 +47,11 @@ protected:
     Ptr<Log> pLog; // +0x20
 
 public:
-    virtual ~LogState() {}
+    LogState(Log* plog) : State(State_Log), pLog(plog) {}
+    virtual ~LogState(); // exe 0x1425b3490
+
+    // Sends the message to GetLog() (exe 0x1425b3970).
+    virtual void LogMessageVarg(LogMessageId messageId, const char* pfmt, va_list argList);
 
     Log* GetLog() const       { return pLog ? pLog.GetPtr() : Log::GetGlobalLog(); }
     bool IsLogNotNull() const { return 1; }
