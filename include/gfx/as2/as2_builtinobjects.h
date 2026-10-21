@@ -139,6 +139,10 @@ public:
 
 protected:
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
+
+    // Mouse.show / Mouse.hide([mouse]): requests to the user event handler.
+    static void Show(const FnCall& fn);
+    static void Hide(const FnCall& fn);
 };
 
 // Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes, vftable { dtor, Finalize_GC }.

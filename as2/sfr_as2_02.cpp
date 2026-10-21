@@ -5,7 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428fdc00-0x1428fe7e0 .text$mn
 // MS2-RANGE: 0x1428fec90-0x1428fed10 .text$mn
-// MS2-RANGE: 0x1428ff0b0-0x1428ff4a0 .text$mn
+// MS2-RANGE: 0x1428ff0b0-0x1428ff660 .text$mn
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142901d20 .text$mn
 // MS2-RANGE: 0x142902200-0x1429023e0 .text$mn
@@ -41,6 +41,7 @@
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
+#include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_moviedef.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -283,6 +284,42 @@ void KeyCtorFunction::KeyGetCode(const FnCall& fn)
     if (fn.Env->CheckExtensions() && fn.NArgs >= 1)
         controllerIdx = fn.Arg(0).ToUInt32(fn.Env);
     fn.Result->SetInt(ko->GetLastKeyCode(controllerIdx));
+}
+
+// MovieImpl::pUserEventHandler (+0x230, not recovered in gfx_movieimpl.h yet).
+static inline UserEventHandler* GetUserEventHandler(MovieImpl* pmovie)
+{
+    return *(UserEventHandler**)((UByte*)pmovie + 0x230);
+}
+
+void MouseCtorFunction::Show(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    if (GetUserEventHandler(proot))
+    {
+        unsigned mouseIndex = 0;
+        if (fn.NArgs >= 1)
+            mouseIndex = fn.Arg(0).ToUInt32(fn.Env);
+        GetUserEventHandler(proot)->HandleEvent((Movie*)proot, MouseCursorEvent(Event::DoShowMouse, mouseIndex));
+    }
+    else
+        fn.Env->LogScriptWarning("No user event handler interface is installed; Mouse.show failed.");
+}
+
+void MouseCtorFunction::Hide(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    if (GetUserEventHandler(proot))
+    {
+        unsigned mouseIndex = 0;
+        if (fn.NArgs >= 1)
+            mouseIndex = fn.Arg(0).ToUInt32(fn.Env);
+        GetUserEventHandler(proot)->HandleEvent((Movie*)proot, MouseCursorEvent(Event::DoHideMouse, mouseIndex));
+    }
+    else
+        fn.Env->LogScriptWarning("No user event handler interface is installed; Mouse.hide failed.");
 }
 
 // MovieImpl::KeyboardStates[4] (+0x13b0, not recovered in gfx_movieimpl.h yet).

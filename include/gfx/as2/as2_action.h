@@ -81,6 +81,8 @@ public:
 
     // Script error channel (exe 0x142967e00).
     void LogScriptError(const char* pfmt, ...) const;
+    // Script warning channel (exe 0x142968370).
+    void LogScriptWarning(const char* pfmt, ...) const;
 
     // new <className>(args) looked up in the package object (exe 0x14296e520); the other one in _global.
     Object*        OperatorNew(Object* ppackageObj, const ASString& className, int nargs = 0, int argsTopOff = -1);
