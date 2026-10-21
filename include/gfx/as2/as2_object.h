@@ -273,6 +273,7 @@ public:
 
     // Primary vftable: 0x00 ExecuteForEachChild_GC, 0x08 Finalize_GC, 0x10 dtor, then these.
     Object(Environment* penv); // exe 0x14291f810
+    Object(ASStringContext* psc); // exe 0x14291f6f0 (appended for sfr_video_01)
     virtual ~Object();
     virtual void  SetValue(Environment* penv, const Value&);
     virtual Value GetValue() const;

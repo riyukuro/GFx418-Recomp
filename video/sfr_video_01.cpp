@@ -1122,6 +1122,91 @@ void VideoProto::AttachVideo(const FnCall& fn)
     }
 }
 
+// The script object of a Video clip.
+class VideoObject : public Object
+{
+public:
+    VideoObject(ASStringContext* psc, Object* pprototype);              // exe 0x14000de10
+    VideoObject(GlobalContext* gCtxt, InteractiveObject* pcharacter);   // exe 0x14000dee0
+    VideoObject(Environment* penv);                                     // exe 0x14000dfb0
+
+    virtual ObjectType GetObjectType() const { return Object_VideoASObject; }
+
+protected:
+    virtual void Finalize_GC();   // exe 0x14000db80
+
+    WeakPtr<InteractiveObject> pCharacter;   // +0x68
+};
+
+// The Video class (constructor function).
+class VideoCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x14000e0c0
+
+    static void GlobalCtor(const FnCall& fn);   // exe 0x14000e100
+};
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x140007ba0
+void ObjectInterface::Set__proto__(ASStringContext* psc, Object* protoObj)
+{
+    if (!pProto)
+        SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
+                     PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = protoObj;
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000de10
+VideoObject::VideoObject(ASStringContext* psc, Object* pprototype)
+    : Object(psc)
+{
+    Set__proto__(psc, pprototype);
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000dee0
+VideoObject::VideoObject(GlobalContext* gCtxt, InteractiveObject* pcharacter)
+    : Object(gCtxt->GetGC()), pCharacter(pcharacter)
+{
+    Environment* penv = AS2::ToAvmCharacter(pcharacter)->GetASEnvironment();
+    Set__proto__(penv->GetSC(), gCtxt->GetPrototype(ASBuiltin_Video));
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000dfb0
+VideoObject::VideoObject(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Video));
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000db80
+void VideoObject::Finalize_GC()
+{
+    pCharacter.~WeakPtr();
+    Object::Finalize_GC();
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000e0c0
+Object* VideoCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) VideoObject(penv);
+}
+
+// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// @0x14000e100
+void VideoCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Video && !fn.ThisPtr->IsBuiltinPrototype())
+        fn.Result->SetAsObject(static_cast<Object*>(fn.ThisPtr));
+    else
+        fn.Result->SetAsObject(SF_HEAP_NEW(fn.Env->GetHeap()) VideoObject(fn.Env));
+}
+
 }}} // namespace Scaleform::GFx::AS2
 
 // MS2-PIN: ??_7NetStream@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5030
@@ -1137,3 +1222,6 @@ void VideoProto::AttachVideo(const FnCall& fn)
 // MS2-PIN: ??0?$WeakPtr@VVideoCharacter@Video@GFx@Scaleform@@@Scaleform@@QEAA@PEAVVideoCharacter@Video@GFx@1@@Z 0x140004eb0
 // MS2-PIN: ??_7NetStreamCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b56b0
 // MS2-PIN: ??_7NetStreamCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5740
+// MS2-PIN: ??_7VideoObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5af0
+// MS2-PIN: ??_7VideoObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5a40
+// MS2-PIN: ??0?$WeakPtr@VSprite@GFx@Scaleform@@@Scaleform@@QEAA@PEAVSprite@GFx@1@@Z 0x14000d530
