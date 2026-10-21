@@ -11,7 +11,9 @@
 // MS2-RANGE: 0x1428f4610-0x1428f4cd0 .text$mn
 // MS2-RANGE: 0x1428f4cd0-0x1428f4e60 .text$mn
 // MS2-RANGE: 0x1428f4e60-0x1428f5740 .text$mn
-// MS2-RANGE: 0x1428f65c0-0x1428f6cc0 .text$mn
+// MS2-RANGE: 0x1428f65c0-0x1428f6de0 .text$mn
+// MS2-RANGE: 0x1428f7290-0x1428f73b0 .text$mn
+// MS2-RANGE: 0x1428f7c10-0x1428f7d30 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
 // MS2-RANGE: 0x1428fb110-0x1428fbb70 .text$mn
@@ -24,6 +26,7 @@
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
+#include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_movieroot.h"
@@ -466,6 +469,56 @@ void ArrayObject::ArrayToString(const FnCall& fn)
         pthis->JoinToString(fn.Env, &sbuffer, ",");
         fn.Result->SetString(fn.Env->CreateString(sbuffer.ToCStr(), sbuffer.GetSize()));
     }
+}
+
+// ---- Filters ----
+
+// A new DropShadowFilter holding a copy of this one's filter.
+// @0x1428f6cc0
+void DropShadowFilterProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, DropShadowFilter);
+    BitmapFilterObject* pthis = (BitmapFilterObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<Object> pfilter =
+        *fn.Env->OperatorNew(fn.Env->GetSC()->pContext->FlashFiltersPackage, fn.Env->GetBuiltin(ASBuiltin_DropShadowFilter), 0);
+    BitmapFilterObject* pnew = static_cast<BitmapFilterObject*>(pfilter.GetPtr());
+    pnew->SetFilter(pthis->GetFilter()->Clone(Memory::GetHeapByAddress(pthis)));
+    fn.Result->SetAsObject(pfilter);
+}
+
+// A new GlowFilter holding a copy of this one's filter.
+// @0x1428f7290
+void GlowFilterProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, GlowFilter);
+    BitmapFilterObject* pthis = (BitmapFilterObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<Object> pfilter =
+        *fn.Env->OperatorNew(fn.Env->GetSC()->pContext->FlashFiltersPackage, fn.Env->GetBuiltin(ASBuiltin_GlowFilter), 0);
+    BitmapFilterObject* pnew = static_cast<BitmapFilterObject*>(pfilter.GetPtr());
+    pnew->SetFilter(pthis->GetFilter()->Clone(Memory::GetHeapByAddress(pthis)));
+    fn.Result->SetAsObject(pfilter);
+}
+
+// A new BlurFilter holding a copy of this one's filter.
+// @0x1428f7c10
+void BlurFilterProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, BlurFilter);
+    BitmapFilterObject* pthis = (BitmapFilterObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<Object> pfilter =
+        *fn.Env->OperatorNew(fn.Env->GetSC()->pContext->FlashFiltersPackage, fn.Env->GetBuiltin(ASBuiltin_BlurFilter), 0);
+    BitmapFilterObject* pnew = static_cast<BitmapFilterObject*>(pfilter.GetPtr());
+    pnew->SetFilter(pthis->GetFilter()->Clone(Memory::GetHeapByAddress(pthis)));
+    fn.Result->SetAsObject(pfilter);
 }
 
 // ---- Matrix ----
