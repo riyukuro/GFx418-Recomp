@@ -37,7 +37,10 @@ enum TagType
     Tag_ButtonCharacter2     = 34, // DefineButton2
 
     Tag_End                  = 0,
-    Tag_EndFrame             = 1   // ShowFrame
+    Tag_EndFrame             = 1,  // ShowFrame
+
+    Tag_DefineText           = 11,
+    Tag_DefineText2          = 33
 };
 
 // Where OpenTag found a tag.

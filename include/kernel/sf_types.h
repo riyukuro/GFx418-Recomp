@@ -32,4 +32,12 @@ typedef ptrdiff_t           SPInt;
 #define SF_NOINLINE         __declspec(noinline)
 #define SF_FORCEINLINE      __forceinline
 
+// (appended for the static text, sfr_gfx_05d) the names the render text headers (ms2/scaleform/kernel tree) use
+namespace Scaleform {
+typedef signed char   SInt8; // as gfx_input.h repeats it
+typedef unsigned char UInt8;
+} // namespace Scaleform
+#define SF_UNUSED3(a, b, c) ((void)(a), (void)(b), (void)(c))
+#define SF_MAX_UINT         unsigned(0xFFFFFFFFu)
+
 #endif

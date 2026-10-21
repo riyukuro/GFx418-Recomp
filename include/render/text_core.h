@@ -64,6 +64,12 @@ public:
     unsigned GetFauxFontStyle() const  { return FontFlags & FF_Style_Mask; }
     bool     IsAutoFitDisabled() const { return (FontFlags & FF_NoAutoFit) != 0; }
     float    GetFontScaleFactor() const { return FontScaleFactor; }
+
+    // (appended for the static text, sfr_gfx_05d) a handle on pfont; name is kept only when it differs from the
+    // font's own (always inlined, as in the GFx::FontHandle ctor 0x1425b5800; the inline body is in
+    // gfx/gfx_fonthandle.h, where Font is complete)
+    inline FontHandle(FontManagerBase* pmgr, Font* pfont, const char* name = 0, unsigned flags = 0);
+    virtual ~FontHandle(); // 0x1425b5e40
 };
 
 // An image placed in text: the image and its placement (baseline in image pixels, screen size in twips).

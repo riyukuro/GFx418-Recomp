@@ -648,6 +648,12 @@ protected:
         C*       pResource; // +8
         unsigned BindIndex;
     };
+
+public:
+    // (appended for the static text, sfr_gfx_05d)
+    bool      IsIndex() const        { return PType == RP_Index; }
+    unsigned  GetBindIndex() const   { return BindIndex; }
+    Resource* GetResourcePtr() const { return (PType == RP_Resource) ? GetResource() : 0; }
 };
 
 }} // namespace Scaleform::GFx

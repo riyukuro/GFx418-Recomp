@@ -216,6 +216,13 @@ public:
         pTimelineDef = 0;
     }
     const char* GetFileURL() const { return pLoadData->GetFileURL(); }
+
+    // (appended for the static text, sfr_gfx_05d) a root-level definition; sprite-level ones are not kept here
+    void AddResource(ResourceId rid, Resource* pres)
+    {
+        if (LoadState == LS_LoadingRoot)
+            pLoadData->AddResource(rid, pres);
+    }
 };
 
 }} // namespace Scaleform::GFx

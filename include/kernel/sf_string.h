@@ -131,6 +131,11 @@ private:
     DataDesc* GetData() const { return (DataDesc*)((UPInt)pData & ~(UPInt)HeapTypeMask); }
 
     DataDesc* pData; // low bits carry the heap type
+
+public:
+    // (appended for the static text, sfr_gfx_05d) one code point, UTF-8 encoded (exe 0x142585f70; the exe's
+    // UInt32 is unsigned long)
+    void AppendChar(unsigned long ch);
 };
 
 // String whose buffer lives in the heap that owns the StringLH itself (exe: CopyConstructHelper 0x1425868d0).

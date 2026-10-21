@@ -207,6 +207,9 @@ UPInt UpperBound(const ArrayT& arr, const Value& val, Less less)
     return UpperBoundSliced(arr, 0, arr.GetSize(), val, less);
 }
 
+// (appended for the static text, sfr_gfx_05d)
+template<class T> SF_INLINE const T Abs(const T v) { return (v >= 0) ? v : -v; }
+
 }} // namespace Scaleform::Alg
 
 #endif

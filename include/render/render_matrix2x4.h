@@ -244,6 +244,8 @@ public:
         return m;
     }
     Matrix2x4& AppendScaling(T s) { return AppendScaling(s, s); }
+    // (appended for the static text, sfr_gfx_05d) the rotation of the x axis (its COMDAT: 0x1425e1560)
+    T GetRotation() const { return atan2f(Shy(), Sx()); }
 };
 
 typedef Matrix2x4<float> Matrix2F;

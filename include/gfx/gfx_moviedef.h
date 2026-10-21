@@ -768,6 +768,23 @@ public:
     void SetBindData(unsigned index, const ResourceBindData& rdata);
     // No more bindings: readers stop taking the lock.
     void Freeze() { Frozen = true; }
+
+    // (appended for the static text, sfr_gfx_05d) the resource and binding a definition's reference resolves to
+    template<class C>
+    ResourceBindData GetResourceData(const ResourcePtr<C>& ptr)
+    {
+        ResourceBindData rbd;
+        if (ptr.IsIndex())
+        {
+            GetResourceData(&rbd, ptr.GetBindIndex());
+        }
+        else
+        {
+            rbd.pBinding  = this;
+            rbd.pResource = ptr.GetResourcePtr();
+        }
+        return rbd;
+    }
 };
 
 inline Resource* ResourceHandle::GetResource(ResourceBinding* pbinding) const

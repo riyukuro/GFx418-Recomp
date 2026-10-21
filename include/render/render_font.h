@@ -107,6 +107,10 @@ protected:
     float    Descent;  // +0x14
     float    Leading;  // +0x18
     unsigned Flags;    // +0x1c
+
+public:
+    // (appended for the static text, sfr_gfx_05d) the font carries ascent / descent / advances (FF_HasLayout 0x2000)
+    bool HasLayout() const { return ((Flags >> 13) & 1) != 0; }
 };
 
 }} // namespace Scaleform::Render

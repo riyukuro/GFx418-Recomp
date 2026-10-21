@@ -83,6 +83,25 @@ int CheckQuadraticIntersection(int styleCount, float x1, float y1, float x2, flo
 int CheckCubicIntersection(int styleCount, float x1, float y1, float x2, float y2, float x3, float y3, float x4,
                            float y4, float x, float y);
 
+// (appended for the static text, sfr_gfx_05d) the parameter of the projection of p on the segment p1 p2 (0 for a
+// degenerate segment; out of line in GFx_StaticText, 0x1425df980), and the distance of two points
+template<class PointType>
+CoordType PointToSegmentPos(const PointType& p1, const PointType& p2, const PointType& p)
+{
+    CoordType dx = p2.x - p1.x;
+    CoordType dy = p2.y - p1.y;
+    if (dx == 0 && dy == 0)
+        return 0;
+    return (dx * (p.x - p1.x) + dy * (p.y - p1.y)) / (dx * dx + dy * dy);
+}
+template<class PointType>
+CoordType Distance(const PointType& p1, const PointType& p2)
+{
+    CoordType dx = p2.x - p1.x;
+    CoordType dy = p2.y - p1.y;
+    return sqrtf(dx * dx + dy * dy);
+}
+
 }}} // namespace Scaleform::Render::Math2D
 
 #endif

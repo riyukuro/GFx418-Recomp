@@ -27,6 +27,9 @@ struct TextFilter : public RefCountBaseNTS<TextFilter, StatRender_Text_Mem>
     {
         ShadowParams.Offset = BlurFilterParams::CalcOffsetByAngleDistance(ShadowAngle, ShadowDistance);
     }
+
+    // (appended for the static text, sfr_gfx_05d) takes the blur / drop shadow of a display filter (0x14264e2b0)
+    void LoadFilterDesc(const Filter* filter);
 };
 
 }}} // namespace Scaleform::Render::Text

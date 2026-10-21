@@ -39,6 +39,10 @@ double SF_CDECL SFstrtod(const char* string, char** tailptr);
 
 inline int SF_CDECL SFtoupper(int c) { return (c >= 'a' && c <= 'z') ? c - 'a' + 'A' : c; }
 
+// (appended for the static text, sfr_gfx_05d)
+inline const char* SF_CDECL SFstrchr(const char* s, char c) { return strchr(s, c); }
+inline char* SF_CDECL       SFstrchr(char* s, char c)       { return strchr(s, c); }
+
 } // namespace Scaleform
 
 #endif
