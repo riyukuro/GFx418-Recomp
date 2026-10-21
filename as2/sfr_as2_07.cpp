@@ -7,7 +7,7 @@
 // MS2-RANGE: 0x14297fac0-0x14297fb80 .text$mn
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
 // MS2-RANGE: 0x142980240-0x1429803d0 .text$mn
-// MS2-RANGE: 0x1429804c0-0x142980570 .text$mn
+// MS2-RANGE: 0x1429804c0-0x142980790 .text$mn
 // MS2-RANGE: 0x142981320-0x1429813e0 .text$mn
 // MS2-RANGE: 0x1429814c0-0x142981600 .text$mn
 // MS2-RANGE: 0x142981650-0x142981670 .text$mn
@@ -324,6 +324,37 @@ bool GlobalContext::UnregisterClassA(ASStringContext* psc, const ASString& class
     return true;
 }
 
+// MS2-FUNCTIONAL cl folds the 400 year cycle remainder into an add of -146097 * cycles where the exe subtracts
+// @0x142980570
+void DateObject::SetDate(SInt64 val)
+{
+    SInt64 days = val / 86400000;
+    Time = (int)(val % 86400000);
+    // whole 400 year cycles first, then the years one at a time
+    SInt64 cycles = days / 146097;
+    Year = (int)cycles * 400 + 1970;
+    days -= cycles * 146097;
+    if (val >= 0)
+    {
+        while (days >= (Date_IsLeapYear(Year) ? 366 : 365))
+        {
+            days -= Date_IsLeapYear(Year) ? 366 : 365;
+            Year++;
+        }
+    }
+    else
+    {
+        while (Alg::Abs(days) >= (Date_IsLeapYear(Year) ? 366 : 365))
+        {
+            Year--;
+            days += Date_IsLeapYear(Year) ? 366 : 365;
+        }
+    }
+    JDate = (int)days;
+    Date  = val;
+    UpdateLocal();
+}
+
 // MS2-FUNCTIONAL the exe keeps this in r10 across the IsLeapYear call (callee register use known in its TU)
 // @0x142992900
 void DateObject::UpdateGMT()
@@ -353,7 +384,7 @@ void DateObject::UpdateGMT()
 
 // MS2-FUNCTIONAL the exe keeps this in r10 across the IsLeapYear call (callee register use known in its TU)
 // @0x142992b00
-void DateObject::UpdateLocal()
+SF_NOINLINE void DateObject::UpdateLocal()
 {
     LTime  = Time + LocalOffset;
     LDate  = Date + LocalOffset;
