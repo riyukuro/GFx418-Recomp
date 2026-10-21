@@ -190,16 +190,15 @@ public:
     MS2_AS2_SCU ASString ToStringImpl(Environment* penv, int precision, bool debug) const; // exe 0x142991e70
     ASString ToString(Environment* penv, int precision = -1) const { return ToStringImpl(penv, precision, 0); }
 
+    // These two (and SetBool) release unconditionally.
     void SetUndefined()
     {
-        if (T.Type >= STRING)
-            DropRefs();
+        DropRefs();
         T.Type = UNDEFINED;
     }
     void SetNull()
     {
-        if (T.Type >= STRING)
-            DropRefs();
+        DropRefs();
         T.Type = NULLTYPE;
     }
     void SetNumber(Number val)
@@ -226,10 +225,9 @@ public:
     {
         if (T.Type >= STRING)
             DropRefs();
-        ASStringNode* pnode = str.GetNode();
-        T.Type              = STRING;
-        V.pStringNode       = pnode;
-        pnode->AddRef();
+        T.Type        = STRING;
+        V.pStringNode = str.GetNode();
+        V.pStringNode->AddRef();
     }
     void SetAsObject(Object* pobj); // exe 0x14297fcb0
 };

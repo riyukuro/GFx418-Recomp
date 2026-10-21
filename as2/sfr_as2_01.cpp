@@ -2,15 +2,28 @@
 // (Boolean prototype methods, the Math object functions, Date prototype getters/setters).
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1428f4cd0-0x1428f4e40 .text$mn
+// MS2-RANGE: 0x1428ef8b0-0x1428ef8d0 .text$mn
+// MS2-RANGE: 0x1428f1e30-0x1428f1e70 .text$mn
+// MS2-RANGE: 0x1428f37a0-0x1428f3a40 .text$mn
+// MS2-RANGE: 0x1428f4980-0x1428f4bc0 .text$mn
+// MS2-RANGE: 0x1428f4cd0-0x1428f4e60 .text$mn
+// MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
+// MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
 // MS2-RANGE: 0x1428fb110-0x1428fbb70 .text$mn
+// MS2-RANGE: 0x1428fbb80-0x1428fbc40 .text$mn
+// MS2-RANGE: 0x1428fbc50-0x1428fbd10 .text$mn
 // MS2-RANGE: 0x1428fc160-0x1428fdc00 .text$mn
 
 #include <math.h>
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_displayobject.h"
+#include "../include/gfx/gfx_movieimpl.h"
+#include "../include/gfx/gfx_asutils.h"
+#include "../include/kernel/sf_std.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -185,6 +198,169 @@ void MathCtorFunction::Random(const FnCall& fn)
 void MathCtorFunction::Round(const FnCall& fn)
 {
     fn.Result->SetNumber(floor(fn.Arg(0).ToNumber(fn.Env) + 0.5));
+}
+
+// The character at an index as a one character string; "" when out of range.
+// @0x1428f37a0
+void StringProto::StringCharAt(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    const ASString& str    = ((StringObject*)fn.ThisPtr)->sValue;
+    ASString        result = fn.Env->GetSC()->GetBuiltin(ASBuiltin_empty_);
+    int             index  = (int)fn.Arg(0).ToNumber(fn.Env);
+    if (index >= 0 && index < (int)str.GetLength())
+        result = ASString(result.AppendCharNode(str.GetCharAt(index)));
+    fn.Result->SetString(result);
+}
+
+// The character code at an index; NaN when out of range or without an argument.
+// @0x1428f3910
+void StringProto::StringCharCodeAt(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    const ASString& str = ((StringObject*)fn.ThisPtr)->sValue;
+    if (fn.NArgs >= 1)
+    {
+        int index = (int)fn.Arg(0).ToNumber(fn.Env);
+        if (index >= 0 && index < (int)str.GetLength())
+        {
+            fn.Result->SetNumber(Number(str.GetCharAt(index)));
+            return;
+        }
+    }
+    fn.Result->SetNumber(NumberUtil::NaN());
+}
+
+// @0x1428f4980
+void StringProto::StringToLowerCase(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    ASString      result(pthis->sValue.ToLowerNode());
+    fn.Result->SetString(result);
+}
+
+// @0x1428f4a20
+void StringProto::StringToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    fn.Result->SetString(pthis->sValue);
+}
+
+// @0x1428f4aa0
+void StringProto::StringToUpperCase(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    ASString      result(pthis->sValue.ToUpperNode());
+    fn.Result->SetString(result);
+}
+
+// @0x1428f4b40
+void StringProto::StringValueOf(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, String);
+    StringObject* pthis = (StringObject*)fn.ThisPtr;
+    fn.Result->SetString(pthis->sValue);
+}
+
+// Placeholder natives of classes whose methods are not supported: they return undefined.
+// @0x1428ef8b0
+void GFx_KeyFuncStub(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+}
+
+// @0x1428f1e30
+void GFx_BitmapDataFuncStub(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+}
+
+// @0x1428f1e50
+void GFx_FuncStub(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+}
+
+// @0x1428f4e40
+void GFx_MouseFuncStub(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+}
+
+// Global parseFloat(): NaN when the string does not start with a number.
+// @0x1428f73b0
+void GAS_GlobalParseFloat(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    ASString    text  = fn.Arg(0).ToString(fn.Env);
+    const char* pstr  = text.ToCStr();
+    char*       pend  = 0;
+    Number      val   = SFstrtod(pstr, &pend);
+    if (pend == pstr)
+        val = NumberUtil::NaN();
+    fn.Result->SetNumber(val);
+}
+
+// Global isNaN(); true without an argument.
+// @0x1428f7580
+void GAS_GlobalIsNaN(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+    {
+        fn.Result->SetBool(true);
+        return;
+    }
+    fn.Result->SetBool(NumberUtil::IsNaN(fn.Arg(0).ToNumber(fn.Env)));
+}
+
+// Global isFinite(); false without an argument.
+// @0x1428f7650
+void GAS_GlobalIsFinite(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+    {
+        fn.Result->SetBool(false);
+        return;
+    }
+    Number val = fn.Arg(0).ToNumber(fn.Env);
+    if (NumberUtil::IsNaN(val) || NumberUtil::IsNEGATIVE_INFINITY(val) || NumberUtil::IsPOSITIVE_INFINITY(val))
+        fn.Result->SetBool(false);
+    else
+        fn.Result->SetBool(true);
+}
+
+// The global clearInterval()/clearTimeout() functions.
+class IntervalTimer
+{
+public:
+    static void ClearInterval(const FnCall& fn);
+    static void ClearTimeout(const FnCall& fn);
+};
+
+// @0x1428fbb80
+void IntervalTimer::ClearInterval(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    MovieImpl* pmovie = ((DisplayObjectBase*)fn.Env->Target)->GetMovieImpl();
+    Number     id     = fn.Arg(0).ToNumber(fn.Env);
+    if (!NumberUtil::IsNaN(id))
+        pmovie->ClearIntervalTimer(int(id));
+}
+
+// @0x1428fbc50
+void IntervalTimer::ClearTimeout(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    MovieImpl* pmovie = ((DisplayObjectBase*)fn.Env->Target)->GetMovieImpl();
+    Number     id     = fn.Arg(0).ToNumber(fn.Env);
+    if (!NumberUtil::IsNaN(id))
+        pmovie->ClearIntervalTimer(int(id));
 }
 
 // Day of the year at which each month ends, for common and leap years.
