@@ -67,6 +67,7 @@ public:
 
     // little-endian helpers (the PC build needs no byte swapping)
     UByte  ReadUByte()  { UByte v = 0;  Read(&v, 1); return v; }
+    SByte  ReadSByte()  { SByte v = 0;  Read((UByte*)&v, 1); return v; }
     UInt8  ReadUInt8()  { UInt8 v = 0;  Read(&v, 1); return v; }
     UInt16 ReadUInt16() { UInt16 v = 0; Read((UByte*)&v, 2); return v; }
     UInt32 ReadUInt32() { UInt32 v = 0; Read((UByte*)&v, 4); return v; }
@@ -75,6 +76,7 @@ public:
 
     // each write passes the value on once more by value, the copy whose address goes to Write
     void WriteUByte(UByte v)   { PutBytes8(v); }
+    void WriteSByte(SByte v)   { PutBytes8((UInt8)v); }
     void WriteUInt8(UInt8 v)   { PutBytes8(v); }
     void WriteUInt16(UInt16 v) { PutBytes16(v); }
     void WriteUInt32(UInt32 v) { PutBytes32(v); }

@@ -581,6 +581,18 @@ inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1
     return f.GetStrSize();
 }
 
+template<typename T1, typename T2, typename T3>
+inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1, const T2& v2, const T3& v3)
+{
+    MsgFormat f(result);
+    f.Parse(fmt);
+    f.FormatD1(v1);
+    f.FormatD1(v2);
+    f.FormatD1(v3);
+    f.FinishFormatD();
+    return f.GetStrSize();
+}
+
 // leading digits of the next token of str (default when there are none); str moves past them
 int ReadInteger(StringDataPtr& str, int defaultValue, char separator = ':');
 
