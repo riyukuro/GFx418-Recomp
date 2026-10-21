@@ -9,6 +9,7 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 #include "../include/video/video_video.h"
+#include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
 
 namespace Scaleform { namespace GFx {
@@ -176,6 +177,34 @@ class VideoPlayerImpl : public VideoPlayer
 public:
     VideoPlayerImpl(MemoryHeap* pheap);
     bool Init(Video* pvideo, TaskManager* ptaskManager, FileOpenerBase* pfileOpener, Log* plog);
+
+    virtual void        Open(const char* url);
+    virtual Status      GetStatus();
+    virtual void        GetVideoInfo(VideoInfo* info);
+    virtual void        Play();
+    virtual void        Seek(UInt32 pos);
+    virtual void        SetSubtitleChannel(int channel);
+    virtual int         GetSubtitleChannel();
+    virtual UInt32      GetPosition();
+    virtual VideoImage* CreateTexture(Render::TextureManager* ptexman);
+    virtual void        UpdateTexture(VideoImage* pimage, char* subtitle, int subtitleLength);
+    virtual bool        IsTextureReady();
+    virtual void        Decode();
+    virtual void        Stop();
+    virtual void        Pause(bool on);
+    virtual void        SetSyncObject(SyncObject*);
+    virtual void        GetCurrentCuePoints(Array<CuePoint>* cuePoints);
+    virtual void        SetAudioTrack(int trackIndex);
+    virtual void        SetSubAudioTrack(int trackIndex);
+    virtual void        ReplaceCenterVoice(int trackIndex);
+    virtual void        SetLoopFlag(bool flag);
+    virtual void        SetBufferTime(float time);
+    virtual void        SetNumberOfFramePools(unsigned pools);
+    virtual void        SetReloadThresholdTime(float time);
+    virtual void        GetReadBufferInfo(ReadBufferInfo* info);
+    virtual void        SetDecodeHeaderTimeout(float timeout);
+    virtual Sound::SoundChannel* GetSoundChannel(SoundTrack track);
+    virtual void        SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[]);
 };
 
 // ==== Video ==========================================================================================================
@@ -630,6 +659,631 @@ void Video::EnableIO(bool enable)
 
 }}} // namespace Scaleform::GFx::Video
 
+// ==== AS3 VideoProviderNetStream =====================================================================================
+
+namespace Scaleform { namespace GFx {
+
+// ---- display-list pieces touched by the audio target code (the display headers are not shared yet)
+
+class DisplayObject;
+class Sprite;
+
+class CharacterHandle : public NewOverrideBase<Stat_Default_Mem>
+{
+public:
+    ~CharacterHandle();
+    void AddRef()  { ++RefCount; }
+    void Release()
+    {
+        if (--RefCount <= 0)
+            delete this;
+    }
+    DisplayObject* GetCharacter() const { return pCharacter; }
+
+private:
+    int            RefCount;     // +0x00
+    DisplayObject* pCharacter;   // +0x08
+};
+
+class DisplayObject
+{
+public:
+    bool             IsSprite() const          { return ((Flags >> 10) & 1) != 0; }
+    Sprite*          CharToSprite_Unsafe()     { return (Sprite*)this; }
+    DisplayObject*   GetParent() const         { return pParent; }
+    CharacterHandle* GetCharacterHandle() const
+    {
+        CharacterHandle* ph = pNameHandle;
+        if (!ph)
+            ph = CreateCharacterHandle();
+        return ph;
+    }
+
+protected:
+    CharacterHandle* CreateCharacterHandle() const;
+
+private:
+    UByte            Pad0[0x38];
+    DisplayObject*   pParent;       // +0x38
+    UByte            Pad1[0x6a - 0x40];
+    UInt16           Flags;         // +0x6a (bit 10: is a sprite)
+    UByte            Pad2[0x70 - 0x6c];
+    CharacterHandle* pNameHandle;   // +0x70
+};
+
+class ASSoundIntf;
+class SoundResource;
+
+class Sprite : public DisplayObject
+{
+public:
+    struct ActiveSoundItem : public RefCountBaseNTS<ActiveSoundItem, Stat_Default_Mem>
+    {
+        Sound::SoundChannel* pChannel;   // +0x10 (Ptr<> in the real layout; only read here)
+    };
+
+    float            GetRealSoundVolume();
+    float            GetRealSubSoundVolume();
+    void             SetSoundVolume(int volume, int subVolume);
+    void             AddActiveSound(Sound::SoundChannel* pchan, ASSoundIntf* psobj, SoundResource* pres);
+    ActiveSoundItem* ReleaseActiveSound(Sound::SoundChannel* pchan);
+    void             AttachActiveSound(ActiveSoundItem* item);
+};
+
+namespace Video {
+
+// Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
+class VideoImage : public RefCountBaseV<VideoImage, Stat_Default_Mem>
+{
+public:
+    UByte          Pad[0x40 - 0x10];
+    VideoProvider* pVideoProvider;   // +0x40
+};
+
+} // namespace Video
+
+namespace AS3 {
+
+using namespace Video;
+
+// The sprite whose sound settings a provider's audio follows: the audio target itself, or its parent when the target
+// is not a sprite.
+static inline Sprite* GetAudioTargetSprite(CharacterHandle* ph)
+{
+    DisplayObject* pch = ph->GetCharacter();
+    if (!pch)
+        return NULL;
+    if (pch->IsSprite())
+        return pch->CharToSprite_Unsafe();
+    DisplayObject* pparent = pch->GetParent();
+    if (pparent && pparent->IsSprite())
+        return pparent->CharToSprite_Unsafe();
+    return NULL;
+}
+
+// @0x140025090
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+const char* NetStreamInterface::NotificationToString(Notification code)
+{
+    switch (code)
+    {
+    case PlayStart:          return "NetStream.Play.Start";
+    case PlayStop:           return "NetStream.Play.Stop";
+    case SeekNotify:         return "NetStream.Seek.Notify";
+    case PlayStreamNotFound: return "NetStream.Play.StreamNotFound";
+    case SeekInvalidTime:    return "NetStream.Seek.InvalidTime";
+    case PlayInternalError:  return "NetStream.Play.InternalError";
+    default:                 return "NetStream.Unknown";
+    }
+}
+
+// @0x140025100
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::Init()
+{
+    pVideoPlayer = NULL;
+    memset(&VInfo, 0, sizeof(VInfo));
+    FrameTime                = 1.0f / 12;
+    pSubtitleTmp             = NULL;
+    pSubtitle                = NULL;
+    pTextureManager          = NULL;
+    LoopFlag                 = false;
+    PoolsNumber              = 2;
+    BufferTime               = 0.0f;
+    ReloadThreshHoldTime     = 0.8f;
+    OpenURLTimeout           = 5.0f;
+    SeekPos                  = 0.0f;
+    FrameIsReady             = false;
+    StartNotificationSent    = false;
+    StopNotificationSent     = false;
+    SeekNotificationSent     = true;
+    NotFoundNotificationSent = false;
+}
+
+// @0x1400251a0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::Pause(bool pause)
+{
+    if (pVideoPlayer)
+        pVideoPlayer->Pause(pause);
+}
+
+// @0x1400251c0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+bool VideoProviderNetStream::IsActive()
+{
+    if (!pVideoPlayer)
+        return false;
+    VideoPlayer::Status status = pVideoPlayer->GetStatus();
+    return status == VideoPlayer::Opening || status == VideoPlayer::Ready || status == VideoPlayer::Starting ||
+           status == VideoPlayer::Playing || status == VideoPlayer::Seeking || status == VideoPlayer::Stopping;
+}
+
+// @0x140025210
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::AllocSubtitleBuffers()
+{
+    if (!pSubtitle)
+    {
+        pSubtitle = (char*)SF_ALLOC(VInfo.MaxSubtitleLen, Stat_Default_Mem);
+        memset(pSubtitle, 0, VInfo.MaxSubtitleLen);
+    }
+    if (!pSubtitleTmp)
+    {
+        pSubtitleTmp = (char*)SF_ALLOC(VInfo.MaxSubtitleLen, Stat_Default_Mem);
+        memset(pSubtitleTmp, 0, VInfo.MaxSubtitleLen);
+    }
+}
+
+// @0x1400252a0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::ReleaseSubtitleBuffers()
+{
+    if (pSubtitleTmp)
+    {
+        SF_FREE(pSubtitleTmp);
+        pSubtitleTmp = NULL;
+    }
+    if (pSubtitle)
+    {
+        SF_FREE(pSubtitle);
+        pSubtitle = NULL;
+    }
+}
+
+// @0x140025300
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::Stop()
+{
+    if (pVideoPlayer)
+        pVideoPlayer->Stop();
+}
+
+// @0x140025360
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
+UInt32 VideoProviderNetStream::GetPosition()
+{
+    if (!pVideoPlayer)
+        return 0;
+    return pVideoPlayer->GetPosition();
+}
+
+// @0x140025380
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetLoopFlag(bool flag)
+{
+    LoopFlag = flag;
+    if (pVideoPlayer)
+        pVideoPlayer->SetLoopFlag(flag);
+}
+
+// @0x1400253b0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetAudioTrack(int track)
+{
+    if (pVideoPlayer)
+        pVideoPlayer->SetAudioTrack(track);
+}
+
+// @0x1400253d0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetSubAudioTrack(int track)
+{
+    if (pVideoPlayer)
+        pVideoPlayer->SetSubAudioTrack(track);
+}
+
+// @0x1400253f0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::ReplaceCenterVoice(int track)
+{
+    if (pVideoPlayer)
+        pVideoPlayer->ReplaceCenterVoice(track);
+}
+
+// @0x140025410
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetSubtitleChannel(int channel)
+{
+    if (pVideoPlayer)
+        pVideoPlayer->SetSubtitleChannel(channel);
+}
+
+// @0x140025430
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
+int VideoProviderNetStream::GetSubtitleChannel()
+{
+    if (!pVideoPlayer)
+        return -1;
+    return pVideoPlayer->GetSubtitleChannel();
+}
+
+// @0x140025450
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetBufferTime(float time)
+{
+    BufferTime = time;
+    if (pVideoPlayer)
+        pVideoPlayer->SetBufferTime(time);
+}
+
+// @0x140025480
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetNumberOfFramePools(unsigned pools)
+{
+    PoolsNumber = pools;
+    if (pVideoPlayer)
+        pVideoPlayer->SetNumberOfFramePools(pools);
+}
+
+// @0x1400254b0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetReloadThresholdTime(float time)
+{
+    ReloadThreshHoldTime = time;
+    if (pVideoPlayer)
+        pVideoPlayer->SetReloadThresholdTime(time);
+}
+
+// @0x1400254e0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SetOpenURLTimeout(float timeout)
+{
+    OpenURLTimeout = timeout;
+    if (pVideoPlayer)
+        pVideoPlayer->SetDecodeHeaderTimeout(timeout);
+}
+
+// @0x140025510
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+void VideoProviderNetStream::SendMetaData()
+{
+    if (pNetStreamInterface)
+        pNetStreamInterface->ExecuteOnMataData(&VInfo);
+}
+
+// @0x140025580
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
+VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
+{
+    if (!pVideoPlayer || !pTextureImage)
+        return NULL;
+    *width  = VInfo.Width;
+    *height = VInfo.Height;
+    return pTextureImage;
+}
+
+// @0x1400255b0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::Close()
+{
+    if (pTextureImage)
+        pTextureImage->pVideoProvider = NULL;
+    pTextureImage = NULL;
+    if (pVideoPlayer)
+        pVideoPlayer->Destroy();
+    pVideoPlayer = NULL;
+    ReleaseSubtitleBuffers();
+}
+
+// @0x140025650
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::InitSoundChannel()
+{
+    if (pAudioTarget)
+    {
+        Sprite* psprite = GetAudioTargetSprite(pAudioTarget);
+        Sound::SoundChannel* pchan = pVideoPlayer->GetSoundChannel(VideoPlayer::MainTrack);
+        if (psprite && pchan)
+        {
+            pchan->SetVolume(psprite->GetRealSoundVolume());
+            psprite->AddActiveSound(pchan, NULL, NULL);
+        }
+        pchan = pVideoPlayer->GetSoundChannel(VideoPlayer::SubAudio);
+        if (psprite && pchan)
+        {
+            pchan->SetVolume(psprite->GetRealSubSoundVolume());
+            psprite->AddActiveSound(pchan, NULL, NULL);
+        }
+    }
+}
+
+// @0x140025750
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::SetSoundVolume(int volume, int subVolume)
+{
+    if (!pAudioTarget)
+        return;
+    Sprite* psprite = GetAudioTargetSprite(pAudioTarget);
+    if (psprite && pVideoPlayer)
+    {
+        psprite->SetSoundVolume(volume, subVolume);
+        Sound::SoundChannel* pchan = pVideoPlayer->GetSoundChannel(VideoPlayer::MainTrack);
+        if (pchan)
+            pchan->SetVolume(psprite->GetRealSoundVolume());
+        pchan = pVideoPlayer->GetSoundChannel(VideoPlayer::SubAudio);
+        if (pchan)
+            pchan->SetVolume(psprite->GetRealSubSoundVolume());
+    }
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+// MovieImpl member that registers a provider for advancing (unnamed in the exe's symbols).
+void FUN_14256c520(Scaleform::GFx::MovieImpl* proot, Scaleform::GFx::Video::VideoProvider* pprovider);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+using namespace Video;
+
+// @0x140025830
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
+{
+    SeekPos = pos;
+    if (pVideoPlayer)
+    {
+        SeekNotificationSent = false;
+        VideoPlayer::Status status = pVideoPlayer->GetStatus();
+        if (status == VideoPlayer::Ready || status == VideoPlayer::Stopping || status == VideoPlayer::Playing ||
+            status == VideoPlayer::Finished)
+        {
+            pVideoPlayer->Seek((UInt32)((float)VInfo.FrameRate / 1000.0f * SeekPos));
+            if (status == VideoPlayer::Finished && proot)
+                FUN_14256c520(proot, this);
+        }
+        InitSoundChannel();
+    }
+}
+
+// @0x1400258e0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::SendNotification(NetStreamInterface::Notification n, bool error)
+{
+    String code(NetStreamInterface::NotificationToString(n));
+    String level(error ? "error" : "status");
+    if (pNetStreamInterface)
+        pNetStreamInterface->DispatchNetStatus(code, level);
+}
+
+// @0x140025990
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::SendSubtitle()
+{
+    if (strncmp(pSubtitle, pSubtitleTmp, VInfo.MaxSubtitleLen) != 0)
+    {
+        strncpy_s(pSubtitle, VInfo.MaxSubtitleLen, pSubtitleTmp, VInfo.MaxSubtitleLen);
+        if (pNetStreamInterface)
+            pNetStreamInterface->ExecuteOnSubtitle(String(pSubtitle));
+    }
+}
+
+// @0x140025ad0
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
+{
+    Sprite* pold = pAudioTarget ? GetAudioTargetSprite(pAudioTarget) : NULL;
+    if (pold == ptarget)
+        return;
+    if (pold && pVideoPlayer)
+    {
+        Sound::SoundChannel* pchan = pVideoPlayer->GetSoundChannel(VideoPlayer::MainTrack);
+        if (pchan)
+        {
+            Sprite::ActiveSoundItem* pitem = pold->ReleaseActiveSound(pchan);
+            if (pitem)
+            {
+                pitem->pChannel->SetVolume(ptarget->GetRealSoundVolume());
+                ptarget->AttachActiveSound(pitem);
+                pitem->Release();
+            }
+            else
+            {
+                pchan->SetVolume(ptarget->GetRealSoundVolume());
+                ptarget->AddActiveSound(pchan, NULL, NULL);
+            }
+        }
+    }
+    pAudioTarget = ptarget->GetCharacterHandle();
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+namespace Scaleform { namespace GFx { namespace Video {
+
+// The display object a provider's frames are drawn into; only its weak-pointer base is needed here.
+class VideoCharacter : public RefCountBaseWeakSupport<VideoCharacter, Stat_Default_Mem>
+{
+};
+
+}}} // namespace Scaleform::GFx::Video
+
+// VideoCharacter member that (re)creates its texture from the provider (sfr_video units, not recovered yet).
+void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+using namespace Video;
+
+// @0x140026c60
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+VideoProviderNetStream::VideoProviderNetStream(NetStreamInterface* pnsintf)
+    : pNetStreamInterface(pnsintf)
+{
+    Init();
+}
+
+// @0x140026320
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+VideoProviderNetStream::~VideoProviderNetStream()
+{
+    Close();
+}
+
+// @0x140025a30
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::NotifyVideoCharacters()
+{
+    for (UPInt i = 0; i < VideoCharacters.GetSize(); ++i)
+    {
+        Ptr<VideoCharacter> pvideo = VideoCharacters[i];
+        if (pvideo)
+            FUN_140010a70(pvideo);
+    }
+}
+
+// @0x140025f50
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
+{
+    if (!pvideo)
+        return;
+    for (UPInt i = 0; i < VideoCharacters.GetSize(); ++i)
+    {
+        Ptr<VideoCharacter> pchar = VideoCharacters[i];
+        if (pchar == pvideo)
+            return;
+    }
+    VideoCharacters.PushBack(WeakPtr<VideoCharacter>(pvideo));
+}
+
+// @0x140026080
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+VideoCharacter* VideoProviderNetStream::RemoveFirstVideoCharacter()
+{
+    if (VideoCharacters.GetSize() == 0)
+        return NULL;
+    Ptr<VideoCharacter> pvideo = VideoCharacters[0];
+    VideoCharacters.RemoveAt(0);
+    pTextureImage = NULL;
+    return pvideo;
+}
+
+// @0x140026140
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::SendCuePoints()
+{
+    for (UPInt i = 0; i < CuePoints.GetSize(); ++i)
+    {
+        VideoPlayer::CuePoint cuePoint = CuePoints[i];
+        if (pNetStreamInterface)
+            pNetStreamInterface->ExecuteOnCuePoint(&cuePoint);
+    }
+}
+
+// @0x140026450
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+void VideoProviderNetStream::Advance()
+{
+    if (!pVideoPlayer)
+        return;
+
+    FrameIsReady = pVideoPlayer->IsTextureReady();
+    pVideoPlayer->Decode();
+
+    VideoPlayer::Status status = pVideoPlayer->GetStatus();
+    switch (status)
+    {
+    case VideoPlayer::Ready:
+        if (!pTextureImage)
+        {
+            pTextureImage = *pVideoPlayer->CreateTexture(pTextureManager);
+            if (pTextureImage)
+            {
+                pVideoPlayer->GetVideoInfo(&VInfo);
+                float frameTime = 1000.0f / VInfo.FrameRate;
+                FrameTime = frameTime - frameTime * 0.1f;
+            }
+        }
+        if (SeekPos > 0.0f)
+            pVideoPlayer->Seek((UInt32)((float)VInfo.FrameRate / 1000.0f * SeekPos));
+        InitSoundChannel();
+        NotifyVideoCharacters();
+        SendNotification(NetStreamInterface::PlayStart);
+        SendMetaData();
+        pVideoPlayer->Play();
+        break;
+
+    case VideoPlayer::Playing:
+        if (!SeekNotificationSent && FrameIsReady)
+        {
+            SeekNotificationSent = true;
+            SendNotification(NetStreamInterface::SeekNotify);
+        }
+        break;
+
+    case VideoPlayer::Finished:
+    case VideoPlayer::Stopped:
+        if (!SeekNotificationSent)
+        {
+            SeekNotificationSent = true;
+            SendNotification(NetStreamInterface::SeekInvalidTime, true);
+        }
+        SendNotification(NetStreamInterface::PlayStop);
+        break;
+
+    case VideoPlayer::FileNotFound:
+        if (!NotFoundNotificationSent)
+        {
+            NotFoundNotificationSent = true;
+            SendNotification(NetStreamInterface::PlayStreamNotFound, true);
+        }
+        break;
+
+    case VideoPlayer::InternalError:
+        SendNotification(NetStreamInterface::PlayInternalError, true);
+        break;
+
+    default:
+        break;
+    }
+
+    if (status == VideoPlayer::Ready || status == VideoPlayer::Playing)
+    {
+        CuePoints.Clear();
+        pVideoPlayer->GetCurrentCuePoints(&CuePoints);
+        SendCuePoints();
+    }
+
+    if (pNetStreamInterface && VInfo.MaxSubtitleLen > 0)
+    {
+        AllocSubtitleBuffers();
+        if (pVideoPlayer)
+            pVideoPlayer->UpdateTexture(pTextureImage, pSubtitleTmp, VInfo.MaxSubtitleLen);
+        if (pSubtitle && pSubtitleTmp)
+            SendSubtitle();
+    }
+    else
+    {
+        if (pVideoPlayer)
+            pVideoPlayer->UpdateTexture(pTextureImage, NULL, 0);
+    }
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
 // MS2-PIN: ??_7VideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@6B@ 0x1431b80e0
@@ -638,3 +1292,5 @@ void Video::EnableIO(bool enable)
 // MS2-PIN: ??_7VideoSoundRendererStream@Video@GFx@Scaleform@@6B@ 0x1431b81e0
 // MS2-PIN: ??_7Streamer@VideoSoundRendererStream@Video@GFx@Scaleform@@6B@ 0x1431b8238
 // MS2-PIN: ??_7VideoSound@Video@GFx@Scaleform@@6B@ 0x1431b4b80
+// MS2-PIN: ??_7VideoProviderNetStream@AS3@GFx@Scaleform@@6B@ 0x1431b8a90
+// MS2-PIN: ??_7VideoProvider@Video@GFx@Scaleform@@6B@ 0x1431b4f30

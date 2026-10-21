@@ -274,6 +274,88 @@ public:
     }
 };
 
+// Weak-pointer support (same as the kernel unit's sf_refcount.h). The out-of-line members bind to the exe:
+//   RefCountWeakSupportImpl::~RefCountWeakSupportImpl 0x14257db60, RefCountWeakSupportImpl::CreateWeakProxy 0x14257dc50.
+class WeakPtrProxy;
+
+class RefCountWeakSupportImpl : public RefCountNTSImpl
+{
+protected:
+    mutable WeakPtrProxy* pWeakProxy;
+public:
+    RefCountWeakSupportImpl() { pWeakProxy = 0; }
+    virtual ~RefCountWeakSupportImpl();
+    WeakPtrProxy* CreateWeakProxy() const;
+};
+
+template<class C, int Stat>
+class RefCountBaseWeakSupport : public RefCountBaseStatImpl<RefCountWeakSupportImpl, Stat>
+{
+public:
+    enum { StatType = Stat };
+    RefCountBaseWeakSupport() : RefCountBaseStatImpl<RefCountWeakSupportImpl, Stat>() {}
+};
+
+// Shared liveness record between an object with weak support and its WeakPtrs.
+class WeakPtrProxy : public NewOverrideBase<Stat_Default_Mem>
+{
+public:
+    WeakPtrProxy(RefCountWeakSupportImpl* obj) : RefCount(1), pObject(obj) {}
+    bool IsAlive() const          { return pObject != 0; }
+    void NotifyObjectDied()       { pObject = 0; }
+    RefCountWeakSupportImpl* GetObject() const { return pObject; }
+    void AddRef()                 { RefCount++; }
+    void Release()
+    {
+        RefCount--;
+        if (RefCount == 0)
+            delete this;
+    }
+private:
+    WeakPtrProxy(const WeakPtrProxy&);
+    void operator=(const WeakPtrProxy&);
+    int                      RefCount;
+    RefCountWeakSupportImpl* pObject;
+};
+
+template<class C>
+class WeakPtr
+{
+public:
+    WeakPtr() {}
+    WeakPtr(C* p) : pProxy(*(p ? p->CreateWeakProxy() : (WeakPtrProxy*)0)) {}
+    WeakPtr(const Ptr<C>& p) : pProxy(*(p.GetPtr() ? p->CreateWeakProxy() : (WeakPtrProxy*)0)) {}
+    void operator=(C* p)
+    {
+        if (p)
+            pProxy = *p->CreateWeakProxy();
+        else
+            pProxy.Clear();
+    }
+    void operator=(const Ptr<C>& p) { operator=(p.GetPtr()); }
+    operator Ptr<C>() const { return Ptr<C>(GetObjectThroughProxy()); }
+    bool operator==(C* p)            { return GetObjectThroughProxy() == p; }
+    bool operator==(const Ptr<C>& p) { return GetObjectThroughProxy() == p.GetPtr(); }
+private:
+    C* GetObjectThroughProxy() const
+    {
+        C* obj = 0;
+        if (pProxy)
+        {
+            if (pProxy->IsAlive())
+            {
+                obj = (C*)pProxy->GetObject();
+                if (obj->GetRefCount() == 0)
+                    obj = 0;
+            }
+            else
+                pProxy.Clear();
+        }
+        return obj;
+    }
+    mutable Ptr<WeakPtrProxy> pProxy;
+};
+
 } // namespace Scaleform
 
 #endif

@@ -14,6 +14,7 @@
 
 #include "../kernel/sf_array.h"
 #include "../kernel/sf_refcount.h"
+#include "../kernel/sf_string.h"
 #include "../kernel/sf_threads.h"
 #include "../gfx/gfx_state.h"
 #include "../sound/sound_renderer.h"
@@ -71,12 +72,103 @@ public:
     virtual MemoryHeap*      GetHeap() const = 0;                                                     // 9
 };
 
-// One playing movie (implemented by VideoPlayerImpl); only the slots the recovered code calls are named.
+class VideoImage;
+
+// One playing movie (implemented by VideoPlayerImpl). Slot order checked against the AS3 VideoProviderNetStream calls.
 class VideoPlayer : public NewOverrideBase<Stat_Default_Mem>
 {
 public:
     virtual ~VideoPlayer() {}
-    virtual void Destroy() { delete this; }
+
+    enum CuePointType { EventCuePoint, NavigationCuePoint };
+
+    struct CuePointParam
+    {
+        String Name;
+        String Value;
+    };
+    struct CuePoint                                 // 0x38 bytes
+    {
+        CuePointType         Type;
+        String               Name;
+        UInt32               Time;
+        Array<CuePointParam> Params;
+    };
+    struct AudioTrackInfo
+    {
+        int    Index;
+        UInt32 SampleRate;
+        UInt32 ChannelsNumber;
+        UInt32 TotalSamples;
+    };
+    struct VideoInfo                                // 0x50 bytes
+    {
+        int                   Width;                // +0x00
+        int                   Height;               // +0x04
+        UInt32                FrameRate;            // +0x08
+        UInt32                AudioDataRate;        // +0x0c
+        UInt32                TotalFrames;          // +0x10
+        Array<CuePoint>       CuePoints;            // +0x18
+        int                   SubtitleChannelsNumber; // +0x30
+        int                   MaxSubtitleLen;       // +0x34
+        Array<AudioTrackInfo> AudioTracks;          // +0x38
+    };
+
+    enum Status
+    {
+        NotInitialized, Opening, Ready, Starting, Playing, Seeking, Stopping, Finished, Stopped,
+        FileNotFound, InternalError
+    };
+
+    // Lets the player follow an external clock (the SWF timeline when SetSwfSync is on).
+    class SyncObject : public RefCountBaseNTS<SyncObject, Stat_Default_Mem>
+    {
+    public:
+        virtual ~SyncObject() {}
+        virtual void SetStartFrame(unsigned frame) = 0;
+        virtual void Start() = 0;
+        virtual void Stop() = 0;
+        virtual void Pause(bool sw) = 0;
+        virtual void GetTime(UInt64* count, UInt64* unit) = 0;
+    };
+
+    struct ReadBufferInfo
+    {
+        UInt32 BufferSize;
+        UInt32 DataSize;
+        UInt32 ReloadThreshold;
+    };
+
+    enum SoundTrack { MainTrack, SubAudio };
+
+    virtual void        Destroy() { delete this; }                                        // 1
+    virtual void        Open(const char* url) = 0;                                        // 2
+    virtual Status      GetStatus() = 0;                                                  // 3
+    virtual void        GetVideoInfo(VideoInfo* info) = 0;                                // 4
+    virtual void        Play() = 0;                                                       // 5
+    virtual void        Seek(UInt32 pos) = 0;                                             // 6
+    virtual void        SetSubtitleChannel(int channel) = 0;                              // 7
+    virtual int         GetSubtitleChannel() = 0;                                         // 8
+    virtual UInt32      GetPosition() = 0;                                                // 9
+    virtual VideoImage* CreateTexture(Render::TextureManager* ptexman) = 0;               // 10
+    virtual void        UpdateTexture(VideoImage* pimage, char* subtitle, int subtitleLength) = 0; // 11
+    virtual bool        IsTextureReady() = 0;                                             // 12
+    virtual void        Decode() = 0;                                                     // 13
+    virtual void        Stop() = 0;                                                       // 14
+    virtual void        Pause(bool on) = 0;                                               // 15
+    virtual void        SetSyncObject(SyncObject*) = 0;                                   // 16
+    virtual void        GetCurrentCuePoints(Array<CuePoint>* cuePoints) = 0;              // 17
+    virtual void        SetAudioTrack(int trackIndex) = 0;                                // 18
+    virtual void        SetSubAudioTrack(int trackIndex) = 0;                             // 19
+    virtual void        ReplaceCenterVoice(int trackIndex) = 0;                           // 20
+    virtual void        SetLoopFlag(bool flag) = 0;                                       // 21
+    virtual void        SetBufferTime(float time) = 0;                                    // 22
+    virtual void        SetNumberOfFramePools(unsigned pools) = 0;                        // 23
+    virtual void        SetReloadThresholdTime(float time) = 0;                           // 24
+    virtual void        GetReadBufferInfo(ReadBufferInfo* info) = 0;                      // 25
+    virtual void        SetDecodeHeaderTimeout(float timeout) = 0;                        // 26
+    virtual Sound::SoundChannel* GetSoundChannel(SoundTrack track = MainTrack) = 0;      // 27
+    virtual void        SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[]) = 0; // 28
 };
 
 class VideoSound;
