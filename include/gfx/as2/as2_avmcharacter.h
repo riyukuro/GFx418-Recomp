@@ -23,6 +23,10 @@ public:
 
     // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
+
+    // AvmDisplayObjBase overrides.
+    virtual void OnEventLoad();   // exe 0x14296b820
+    virtual void OnEventUnload(); // exe 0x14296bba0
 };
 
 // The script side of a character of an AS2 movie.

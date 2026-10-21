@@ -6,6 +6,7 @@
 #define MS2_SF_GFX_AS2_BUILTINOBJECTS_H
 
 #include "as2_object.h"
+#include "as2_objectproto.h"
 #include "../gfx_asutils.h"
 #include "../gfx_textsnapshot.h"
 #include "../../kernel/sf_stringhash.h"
@@ -51,6 +52,24 @@ public:
                                              InvokeCallback* pcallback); // exe 0x142932290
     // Adds plistener to the _listeners of pthis unless it is there already (exe 0x14292f5b0).
     static bool AddListener(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener);
+
+    // Makes pobj a broadcaster: the prototype methods and a fresh _listeners array (exe 0x142961d40).
+    static bool Initialize(ASStringContext* psc, ObjectInterface* pobj);
+    // Adds addListener / broadcastMessage / removeListener to pobj, false without one (exe 0x142961fe0).
+    static bool InitializeProto(ASStringContext* psc, ObjectInterface* pobj);
+    // Gives pobj its own empty _listeners array (exe 0x142961ef0).
+    static bool InitializeInstance(ASStringContext* psc, ObjectInterface* pobj);
+};
+
+// The AsBroadcaster prototype object.
+class AsBroadcasterProto : public Prototype<AsBroadcaster>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213460
+
+    static void AddListener(const FnCall& fn);      // exe 0x1428fbd10
+    static void BroadcastMessage(const FnCall& fn); // exe 0x1428fbdc0
+    static void RemoveListener(const FnCall& fn);   // exe 0x1428fbea0
 };
 class ExternalInterface : public Object {};
 class KeyObject : public Object {};

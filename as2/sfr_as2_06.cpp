@@ -5,6 +5,8 @@
 // MS2-RANGE: 0x14295d700-0x14295d840 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
+// MS2-RANGE: 0x142961d40-0x142961d80 .text$mn
+// MS2-RANGE: 0x142961fe0-0x142962010 .text$mn
 // MS2-RANGE: 0x142962010-0x1429620d0 .text$mn
 // MS2-RANGE: 0x1429623a0-0x142962410 .text$mn
 // MS2-RANGE: 0x142965510-0x142965560 .text$mn
@@ -13,20 +15,27 @@
 // MS2-RANGE: 0x142965db0-0x142965e50 .text$mn
 // MS2-RANGE: 0x142966270-0x142966370 .text$mn
 // MS2-RANGE: 0x142967390-0x1429673e0 .text$mn
+// MS2-RANGE: 0x1429673e0-0x142967430 .text$mn
 // MS2-RANGE: 0x142967b90-0x142967bf0 .text$mn
 // MS2-RANGE: 0x1429684d0-0x142968560 .text$mn
 // MS2-RANGE: 0x142968560-0x142968610 .text$mn
 // MS2-RANGE: 0x142968f90-0x142969000 .text$mn
+// MS2-RANGE: 0x14296b820-0x14296b850 .text$mn
+// MS2-RANGE: 0x14296bba0-0x14296bbb0 .text$mn
 // MS2-RANGE: 0x14296f070-0x14296f0c0 .text$mn
 // MS2-RANGE: 0x14296f1b0-0x14296f260 .text$mn
 // MS2-RANGE: 0x14296f390-0x14296f3d0 .text$mn
+// MS2-RANGE: 0x142971a50-0x142971ac0 .text$mn
 // MS2-RANGE: 0x142971ba0-0x142971c50 .text$mn
 // MS2-RANGE: 0x142971c50-0x142971cc0 .text$mn
+// MS2-RANGE: 0x142972410-0x142972490 .text$mn
 // MS2-RANGE: 0x142973040-0x142973080 .text$mn
 // MS2-RANGE: 0x14297ca70-0x14297cae0 .text$mn
 // MS2-RANGE: 0x14297d0d0-0x14297d1e0 .text$mn
 // MS2-RANGE: 0x14297d4b0-0x14297d550 .text$mn
+// MS2-RANGE: 0x14297d550-0x14297d5f0 .text$mn
 // MS2-RANGE: 0x14297d5f0-0x14297d690 .text$mn
+// MS2-RANGE: 0x14297d730-0x14297d7d0 .text$mn
 // MS2-RANGE: 0x14297d7d0-0x14297d870 .text$mn
 // MS2-RANGE: 0x14297d870-0x14297d910 .text$mn
 // MS2-RANGE: 0x14297d910-0x14297d9b0 .text$mn
@@ -36,9 +45,11 @@
 // MS2-RANGE: 0x14297db90-0x14297dc30 .text$mn
 // MS2-RANGE: 0x14297dcd0-0x14297dd70 .text$mn
 // MS2-RANGE: 0x14297e060-0x14297e0e0 .text$mn
+// MS2-RANGE: 0x14297e0e0-0x14297e1b0 .text$mn
 // MS2-RANGE: 0x14297e230-0x14297e2b0 .text$mn
 // MS2-RANGE: 0x14297e2b0-0x14297e330 .text$mn
 // MS2-RANGE: 0x14297e330-0x14297e3f0 .text$mn
+// MS2-RANGE: 0x14297e3f0-0x14297e450 .text$mn
 // MS2-RANGE: 0x14297e450-0x14297e500 .text$mn
 // MS2-RANGE: 0x14297e500-0x14297e5a0 .text$mn
 // MS2-RANGE: 0x14297e5a0-0x14297e640 .text$mn
@@ -207,6 +218,33 @@ void ArrayObject::PopFront_Call()
     PopFront();
 }
 
+// @0x142961d40
+bool AsBroadcaster::Initialize(ASStringContext* psc, ObjectInterface* pobj)
+{
+    InitializeProto(psc, pobj);
+    return InitializeInstance(psc, pobj);
+}
+
+// @0x142961fe0
+bool AsBroadcaster::InitializeProto(ASStringContext* psc, ObjectInterface* pobj)
+{
+    if (!pobj)
+        return false;
+    NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    return true;
+}
+
+// @0x14296b820
+void AvmCharacter::OnEventLoad()
+{
+    OnEvent(EventId::Event_Load);
+}
+
+// @0x14296bba0
+void AvmCharacter::OnEventUnload()
+{
+}
+
 // @0x142973040
 bool ArrayObject::RecursionLimitReached_Call() const
 {
@@ -289,6 +327,12 @@ Value* Environment::LocalRegisterPtr(unsigned reg)
     return &LocalRegister[LocalRegister.GetSize() - reg - 1];
 }
 
+// @0x142972410
+void Environment::PushTryBlock(const TryDescr& descr)
+{
+    TryBlocks.PushBack(descr);
+}
+
 // MS2-FUNCTIONAL instruction scheduling (the exe loads the size before the array address)
 // @0x14296f390
 Environment::TryDescr Environment::PopTryBlock()
@@ -303,6 +347,9 @@ namespace Scaleform {
 
 // @0x14296f070
 template void GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Pop(unsigned);
+
+// @0x1429673e0
+template void GFx::LogBase<GFx::AS2::ActionLogger>::LogAction(const char*, ...) const;
 
 // LogError functional (pinned at the end): Environment::GetLog (exe 0x14294b210) is out of line here, the exe
 // inlines Target->GetLog()
@@ -358,6 +405,21 @@ template void ArrayDataBase<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx:
 // RemoveAt functional (pinned at the end): cl inlines the ResizeNoConstruct of Clear, the exe tail-calls it
 template void ArrayBase<ArrayData<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
                                   ArrayDefaultPolicy> >::RemoveAt(UPInt);
+// @0x14297d730
+template void ArrayDataBase<GFx::AS2::Environment::TryDescr, AllocatorLH<GFx::AS2::Environment::TryDescr, Stat_Default_Mem>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x14297e3f0
+template void ArrayDataBase<GFx::AS2::Environment::TryDescr, AllocatorLH<GFx::AS2::Environment::TryDescr, Stat_Default_Mem>,
+                            ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);
+// @0x14297d550
+template void ArrayDataBase<GFx::AS2::Object*, AllocatorGH<GFx::AS2::Object*, 2>, ArrayDefaultPolicy>::Reserve(const void*,
+                                                                                                             UPInt);
+// @0x142971a50
+template void ArrayData<GFx::AS2::Object*, AllocatorGH<GFx::AS2::Object*, 2>, ArrayDefaultPolicy>::PushBack(
+    GFx::AS2::Object* const&);
+// @0x14297e0e0
+template void ArrayBase<ArrayData<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, Stat_Default_Mem>, ArrayDefaultPolicy> >::Resize(
+    UPInt);
 // @0x14297e5a0
 template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS2::StatMV_ActionScript_Mem>,
                             ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);

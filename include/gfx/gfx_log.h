@@ -30,6 +30,9 @@ public:
     void LogScriptWarning(const char* pfmt, ...) const;
     // General warning channel (out of line per Derived, e.g. LogBase<DisplayObjectBase> 0x1425dbc00).
     void LogWarning(const char* pfmt, ...) const;
+    // Action trace channel, only with verbose actions; Derived supplies IsVerboseAction() (out of line per
+    // Derived, e.g. LogBase<AS2::ActionLogger> 0x1429673e0).
+    void LogAction(const char* pfmt, ...) const;
 
 protected:
     bool IsLogNotNull() const { return 0; }
@@ -74,6 +77,23 @@ void LogBase<Derived>::LogScriptWarning(const char* pfmt, ...) const
         Log* plog = p->GetLog();
         if (p->IsLogNotNull() || plog)
             plog->LogMessageVarg(Log_ScriptWarning, pfmt, argList);
+    }
+    va_end(argList);
+}
+
+enum { Log_Action = LogChannel_Action | LogMessage_Text };
+
+template<class Derived>
+void LogBase<Derived>::LogAction(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    Derived* p = (Derived*)this;
+    if (p->IsVerboseAction())
+    {
+        Log* plog = p->GetLog();
+        if (p->IsLogNotNull() || plog)
+            plog->LogMessageVarg(Log_Action, pfmt, argList);
     }
     va_end(argList);
 }

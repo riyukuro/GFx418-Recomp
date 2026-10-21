@@ -15,8 +15,22 @@ template<class T> class ASStringHash;
 
 namespace AS2 {
 
-class ActionLogger;
 enum ASBuiltinType : int;
+
+// The log of the action interpreter with the movie's verbosity switches.
+class ActionLogger : public LogBase<ActionLogger>
+{
+public:
+    Log*        pLog;                // +0x08
+    bool        VerboseAction;       // +0x10
+    bool        VerboseActionErrors; // +0x11
+    bool        UseSuffix;           // +0x12 LogSuffix follows every message
+    const char* LogSuffix;           // +0x18
+
+    Log*         GetLog() const { return pLog; }
+    bool         IsVerboseAction() const { return VerboseAction; }
+    virtual bool IsVerboseActionErrors() const { return VerboseActionErrors; }
+};
 
 // Stack growing in pages of PageSize elements; elements stay in place when pages are added. 0x40 bytes.
 template<class T, int PageSize = 32>
@@ -160,6 +174,8 @@ public:
     // Local register reg counted from the top of the register array; global register 0 (after an error) when
     // out of range (exe 0x142967390).
     Value*          LocalRegisterPtr(unsigned reg);
+    // Enters a try block (exe 0x142972410).
+    void            PushTryBlock(const TryDescr& descr);
     // Takes the innermost try block off (exe 0x14296f390).
     TryDescr        PopTryBlock();
     // The name is a target path (has ':', '/' or '.'); the answer is cached in the string (exe 0x142965d10).
