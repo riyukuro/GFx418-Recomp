@@ -915,6 +915,23 @@ public:
         pos->StartY = pos->LastY = int(y * Multiplier);
         Encoder.WriteSInt30(pos->StartY);
     }
+    // (appended for sfr_render_04o) a closing line back to the start point when the path ends elsewhere
+    void ClosePath(ShapePosInfo* pos)
+    {
+        if (pos->LastX != pos->StartX || pos->LastY != pos->StartY)
+        {
+            int dx = pos->StartX - pos->LastX;
+            int dy = pos->StartY - pos->LastY;
+            if (dy == 0)
+                Encoder.WriteHLine(dx);
+            else if (dx == 0)
+                Encoder.WriteVLine(dy);
+            else
+                Encoder.WriteLine(dx, dy);
+            pos->LastX = pos->StartX;
+            pos->LastY = pos->StartY;
+        }
+    }
 
 private:
     PathDataEncoder<ContainerType> Encoder;      // +0
@@ -1038,6 +1055,12 @@ public:
     {
         ShapeDataPackedEncoder<ContainerType> encoder(pContainer, Multiplier);
         encoder.EndShape();
+    }
+    // (appended for sfr_render_04o)
+    void ClosePath(ShapePosInfo* pos)
+    {
+        ShapeDataPackedEncoder<ContainerType> encoder(pContainer, Multiplier);
+        encoder.ClosePath(pos);
     }
 
     virtual bool     IsEmpty() const             { return !pContainer || pContainer->GetSize() <= StartingPos; }

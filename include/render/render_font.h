@@ -6,6 +6,8 @@
 
 #include "ms2/scaleform/kernel/sf_refcount.h"
 #include "ms2/scaleform/kernel/sf_string.h"
+#include "ms2/scaleform/kernel/sf_atomic.h"
+#include "ms2/scaleform/include/render/render_stats.h"
 
 namespace Scaleform { namespace Render {
 
@@ -15,9 +17,25 @@ class TextureGlyph;
 class ShapeDataInterface;
 class GlyphShape;
 class GlyphRaster;
+class FontCacheHandle;
+class FontCacheHandleManager;
+
+// The font's link to the glyph cache's handle of it (0x10 bytes); dropped with the font. releaseFont lives with the
+// font cache handle unit (0x1426d4b40).
+class FontCacheHandleRef
+{
+    AtomicPtr<FontCacheHandleManager> pManager;     // +0x00
+    FontCacheHandle* volatile         pFontHandle;  // +0x08
+
+    void releaseFont();
+
+public:
+    FontCacheHandleRef() : pFontHandle(0) {}
+    ~FontCacheHandleRef() { releaseFont(); }
+};
 
 // Glyph source of one face: vslot 1 returns the face name, the style/code page/device bits live at +0x1c.
-class Font : public RefCountBase<Font, Stat_Default_Mem>
+class Font : public RefCountBase<Font, StatRender_Font_Mem>
 {
 public:
     enum NativeHintingRange
@@ -39,6 +57,10 @@ public:
         FF_PixelAligned    = 0x8000  // glyphs are snapped to pixels (bitmap fonts)
     };
 
+    Font(unsigned fontFlags = 0)
+        : Ascent(0), Descent(0), Leading(0), Flags(fontFlags), LowerCaseTop(0), UpperCaseTop(0)
+    {
+    }
     virtual ~Font() {}
     virtual const char* GetName() const = 0;
 
@@ -111,6 +133,23 @@ protected:
 public:
     // (appended for the static text, sfr_gfx_05d) the font carries ascent / descent / advances (FF_HasLayout 0x2000)
     bool HasLayout() const { return ((Flags >> 13) & 1) != 0; }
+
+    // (appended for the Win32 font provider, sfr_render_04o) the hinting setup of a system font (0x18 bytes)
+    struct NativeHintingType
+    {
+        String             Typeface;              // +0x00, empty for the default entry
+        NativeHintingRange RasterRange;           // +0x08
+        NativeHintingRange VectorRange;           // +0x0c
+        unsigned           MaxRasterHintedSize;   // +0x10
+        unsigned           MaxVectorHintedSize;   // +0x14
+    };
+    enum { FF_NativeHinting = 0x0020 };
+    // the code is in one of the CJK blocks (hinting of HintCJK fonts; 0x1426d4bf0)
+    bool IsCJK(UInt16 code) const;
+
+protected:
+    SInt16             LowerCaseTop, UpperCaseTop;  // +0x20
+    FontCacheHandleRef hRef;                        // +0x28
 };
 
 }} // namespace Scaleform::Render
