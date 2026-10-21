@@ -269,6 +269,14 @@ public:
         T w = M[3][0] * v.x + M[3][1] * v.y + M[3][2] * v.z + M[3][3];
         return Point3<T>(x / w, y / w, z / w);
     }
+
+    // (appended for the Matrix4x4 TU, sfr_render_05f) the other products (this = m1 * m2; a 2x4 / 3x4 operand
+    // counts as its 4x4 extension) and the bounds of a projected rectangle
+    void MultiplyMatrix(const Matrix4x4& m1, const Matrix4x4& m2);
+    void MultiplyMatrix(const Matrix4x4& m1, const Matrix2x4<T>& m2);
+    void MultiplyMatrix(const Matrix2x4<T>& m1, const Matrix4x4& m2);
+    void MultiplyMatrix(const Matrix3x4<T>& m1, const Matrix4x4& m2);
+    void EncloseTransformHomogeneous(Rect<T>* pr, const Rect<T>& r) const;
 };
 typedef Matrix4x4<float> Matrix4F;
 
