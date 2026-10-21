@@ -9,27 +9,33 @@
 
 #include "video_video.h"
 #include "../cri/cri_movie.h"
+#include "../kernel/sf_lock.h"
 
 namespace Scaleform { namespace GFx { namespace Video {
 
-// The CRI system timer the player syncs to; follows the SWF clock through pSyncObj when one is set.
-class CriMvSystemTimer : public CriMvSystemTimerInterface
+// The CRI system timer the player syncs to (0x20 bytes, vftables 0x1431b8fc8 / 0x1431b8fa0 for the CRI interface at
+// +0x10); follows the SWF clock or the system clock through pSyncObj.
+class CriMvSystemTimer : public RefCountBaseNTS<CriMvSystemTimer, Stat_Default_Mem>, public CriMvSystemTimerInterface
 {
 public:
+    CriMvSystemTimer(VideoPlayer::SyncObject* psync);                                 // 0x140029e40
     void                     SetSyncObject(VideoPlayer::SyncObject* psync);            // 0x1400291c0
     VideoPlayer::SyncObject* GetSyncObject() const { return pSyncObj; }
 
-    UInt64                   StartCount;    // +0x08
-    UInt64                   PauseCount;    // +0x10
     Ptr<VideoPlayer::SyncObject> pSyncObj;  // +0x18
 };
 
-// The player's sound output (VideoSound wrapper); only slot 1 is used by the player.
-class VideoPlayerSound
+// The player's sound output over a VideoSound (CriMvSound, 0x50 bytes, vftable 0x1431b9028; the CRI sound interface
+// sits at +0x10). Only slot 1 is used by the player.
+class VideoPlayerSound : public RefCountBaseNTS<VideoPlayerSound, Stat_Default_Mem>
 {
 public:
-    virtual ~VideoPlayerSound() {}
     virtual Sound::SoundChannel* GetSoundChannel() = 0;   // 1
+};
+
+// The file reader a player streams from (0x50 bytes; the CRI file reader interface sits at +0x10).
+class VideoReader : public RefCountBaseNTS<VideoReader, Stat_Default_Mem>
+{
 };
 
 class VideoPlayerImpl : public VideoPlayer
@@ -66,17 +72,27 @@ public:
     virtual Sound::SoundChannel* GetSoundChannel(SoundTrack track);
     virtual void        SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[]);
 
+    virtual ~VideoPlayerImpl();
+
     void                StopAndWait();                                            // 0x1400293f0
     void                DecodeHeader();                                           // 0x140029510
 
+    static void         CuePointCallback(CriMvEasyPlayer* mveasy, CriMvEventPoint* eventinfo, void* usrobj);
+
     CriMvEasyPlayer*         pPlayer;               // +0x008
     volatile Status          Stat;                  // +0x010
-    CriMvSystemTimer*        pTimer;                // +0x018
-    void*                    pUnk20;                // +0x020
+    CriMvSystemTimer*        pTimer;                // +0x018 (owned reference)
+    VideoReader*             pReader;               // +0x020 (owned reference)
     VideoPlayerSound*        pSound;                // +0x028
     VideoPlayerSound*        pSubSound;             // +0x030
     CriMvStreamingParameters StmPrm;                // +0x038
-    CriMvFrameInfo           FrameInfo;             // +0x2c0
+    struct
+    {
+        CriUint8*            imageptr;
+        CriSint32            frame_id;
+        UByte                Rest[0xa4];
+    }                        FrameInfo;             // +0x2c0 (the player's 0xb0-byte frame info copy)
+    Array<CuePoint>          CurrentCuePoints;      // +0x370 collected by the cue point callback
     UInt32                   Width;                 // +0x388
     UInt32                   Height;                // +0x38c
     bool                     HasAlpha;              // +0x390
@@ -92,22 +108,66 @@ public:
     int                      SubtitleChannel;       // +0x3ac
     UInt64                   OpenTicks;             // +0x3b0
     UInt64                   DecodeHeaderTimeout;   // +0x3b8
-    void*                    pUnk3c0;               // +0x3c0
-    VideoDecoder*            pDecoder;              // +0x3c8
-    void*                    pUnk3d0[2];            // +0x3d0
-    Log*                     pLog;                  // +0x3e0
+    bool                     UseAudioTimer;         // +0x3c0 the sound output is the master timer
+    VideoDecoder*            pDecoder;              // +0x3c8 (owned reference)
+    MemoryHeap*              pHeap;                 // +0x3d0
+    void*                    pCriHeap;              // +0x3d8 CriHeap over pHeap
+    Log*                     pLog;                  // +0x3e0 (owned, thread-safe reference)
 };
 
-// Decodes the players on the calling thread.
+// Decodes the players on the calling thread (0x48 bytes).
 class VideoDecoderSmp : public VideoDecoder
 {
 public:
+    VideoDecoderSmp() : Paused(false) {}
+
+    virtual void StartDecoding(VideoPlayer* pplayer);               // 1
     virtual void StopDecoding(VideoPlayer* pplayer);                // 2
     virtual bool IsDecodingStopped(VideoPlayer* pplayer);           // 3
+    virtual bool ExecuteDecode(VideoPlayer* pplayer);               // 4
+    virtual void GetReadBufferInfo(void* info);                     // 5
     virtual bool IsIORequired() const;                              // 6
+    virtual void PauseDecoding(bool pause);                         // 7
 
-    void*                       pUnk10;     // +0x10
-    ArrayLH<VideoPlayerImpl*>   Players;    // +0x18
+    bool                        Paused;         // +0x10
+    Array<VideoPlayerImpl*>     Players;        // +0x18
+    Array<VideoPlayerImpl*>     PausedPlayers;  // +0x30 players kept paused by PauseDecoding(true)
+};
+
+// Decodes the players on its own thread, started on demand (0x88 bytes).
+class VideoDecoderThrd : public VideoDecoderSmp
+{
+public:
+    VideoDecoderThrd(MemoryHeap* pheap, Thread::ThreadPriority priority);
+    ~VideoDecoderThrd();
+
+    virtual void StartDecoding(VideoPlayer* pplayer);
+    virtual void StopDecoding(VideoPlayer* pplayer);
+    virtual bool IsDecodingStopped(VideoPlayer* pplayer);
+    virtual bool ExecuteDecode(VideoPlayer*) { return false; }
+
+    static int   DecodeFunc(Thread* pthread, void* obj);
+
+    MemoryHeap*                 pHeap;          // +0x48
+    RefCountImpl*               pDecodeThread;  // +0x50 Ptr<Thread>
+    Thread::ThreadPriority      ThreadPriority; // +0x58
+    Lock                        DecodeLock;     // +0x60
+};
+
+// Creates the readers in the calling thread (0x40 bytes, vftable 0x1431b91d8).
+class VideoReaderConfigSmp : public VideoReaderConfig
+{
+public:
+    VideoReaderConfigSmp(MemoryHeap* pheap, FileOpenerBase* pfileOpener);   // 0x14002b150
+    virtual VideoReader* CreateReader();
+};
+
+// Creates the readers serviced by the reader thread (0x110 bytes, vftable 0x1431b9430).
+class VideoReaderConfigThrd : public VideoReaderConfig
+{
+public:
+    VideoReaderConfigThrd(MemoryHeap* pheap, FileOpenerBase* pfileOpener);  // 0x14002e450
+    virtual VideoReader* CreateReader();
 };
 
 }}} // namespace Scaleform::GFx::Video

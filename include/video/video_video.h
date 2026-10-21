@@ -169,6 +169,9 @@ public:
     virtual void        SetDecodeHeaderTimeout(float timeout) = 0;                        // 26
     virtual Sound::SoundChannel* GetSoundChannel(SoundTrack track = MainTrack) = 0;      // 27
     virtual void        SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[]) = 0; // 28
+
+    // Opens url with a temporary player on its own heap and reads its header (0x14002d020).
+    static bool         LoadVideoInfo(const char* url, VideoInfo* pinfo, FileOpenerBase* pfileOpener);
 };
 
 class VideoSound;
@@ -297,6 +300,8 @@ public:
     enum { VIDEO_HANDLE_MAX = 8 };
 
 protected:
+    friend class VideoPlayerImpl;   // Init reads the decoder, reader config and sound system
+
     Ptr<MemoryHeap>              pHeap;                 // +0x18
     Ptr<RefCountImpl>            pTextureManager;       // +0x20 Render::TextureManager (render headers not shared yet)
     Ptr<VideoDecoder>            pDecoder;              // +0x28

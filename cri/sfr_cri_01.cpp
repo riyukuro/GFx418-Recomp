@@ -153,25 +153,7 @@ struct VideoCharacterDef
 
 // ---- other Video classes constructed here (implemented in Video_VideoPlayerImpl / the reader and decoder sources)
 
-class VideoDecoderThrd : public VideoDecoder
-{
-public:
-    VideoDecoderThrd(MemoryHeap* pheap, Thread::ThreadPriority priority);
-    virtual void StartDecoding(VideoPlayer*);
-    virtual void StopDecoding(VideoPlayer*);
-    virtual bool IsDecodingStopped(VideoPlayer*);
-    virtual bool ExecuteDecode(VideoPlayer*);
-    virtual void GetReadBufferInfo(void* info);
-    virtual bool IsIORequired() const;
-    virtual void PauseDecoding(bool);
-};
-
-class VideoReaderConfigThrd : public VideoReaderConfig
-{
-public:
-    VideoReaderConfigThrd(MemoryHeap* pheap, FileOpenerBase* pfileOpener);
-    virtual VideoReader* CreateReader();
-};
+// (VideoDecoderThrd and VideoReaderConfigThrd are declared in video_videoplayerimpl.h.)
 
 // ==== Video ==========================================================================================================
 
