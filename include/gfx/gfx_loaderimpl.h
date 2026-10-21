@@ -139,6 +139,7 @@ public:
         LoadOnThread       = 0x40, // CreateMovie runs on a loader thread: load threaded regardless of the task manager
         LoadImageFiles     = 0x10000,
         LoadDisableSWF     = 0x80000,
+        LoadDisableImports = 0x100000,
         LoadDebugHeap      = 0x10000000
     };
 
@@ -217,6 +218,46 @@ public:
 };
 
 
+class FontPackParams;
+
+// Told about load progress: per bound frame and per tag read (state).
+class ProgressHandler : public State
+{
+public:
+    // Progress of one bound frame.
+    struct Info
+    {
+        String   URL;          // +0
+        UInt32   BytesLoaded;  // +8
+        UInt32   TotalBytes;   // +0xc
+        unsigned FrameLoading; // +0x10
+        unsigned TotalFrames;  // +0x14
+
+        Info(const String& url, UInt32 bytesLoaded, UInt32 totalBytes, unsigned frameLoading, unsigned totalFrames)
+            : URL(url), BytesLoaded(bytesLoaded), TotalBytes(totalBytes), FrameLoading(frameLoading),
+              TotalFrames(totalFrames)
+        {
+        }
+    };
+    // One tag read from the file.
+    struct TagInfo
+    {
+        String FileURL;       // +0
+        int    TagType;       // +8
+        int    TagOffset;     // +0xc
+        int    TagLength;     // +0x10
+        int    TagDataOffset; // +0x14
+
+        TagInfo(const String& url, int tagType, int tagOffset, int tagLength, int tagDataOffset)
+            : FileURL(url), TagType(tagType), TagOffset(tagOffset), TagLength(tagLength), TagDataOffset(tagDataOffset)
+        {
+        }
+    };
+
+    virtual void ProgressUpdate(const Info& info) = 0;                            // +8
+    virtual void LoadTagUpdate(const TagInfo& info, bool calledFromDefSprite) {} // +0x10
+};
+
 // States captured for one load (0xa0 bytes).
 class LoadStates : public RefCountBase<LoadStates, Stat_Default_Mem>
 {
@@ -252,6 +293,16 @@ public:
     File*         OpenFile(const char* pfilename, unsigned loadConstants);
 
     ImageFileHandlerRegistry* GetImageFileHandlerRegistry() const { return pImageFileHandlerRegistry; }
+
+    // The states of a file imported by this one: the bind states are copied, the rest shared (exe 0x1426382f0).
+    LoadStates* CloneForImport() const;
+
+    LogState*        GetLogState() const        { return pLog; }
+    Log*             GetLog() const             { return pLog ? pLog->GetLog() : 0; }
+    ProgressHandler* GetProgressHandler() const { return pProgressHandler; }
+    const String&    GetRelativePath() const    { return RelativePathForImports; }
+    FontPackParams*  GetFontPackParams() const  { return (FontPackParams*)pBindStates->pFontPackParams.GetPtr(); }
+    bool             IsThreadedLoading() const  { return ThreadedLoading || pTaskManager; }
 
     // Hands ptask to the task manager; false when there is none (the caller runs it).
     bool SubmitBackgroundTask(LoaderTask* ptask);

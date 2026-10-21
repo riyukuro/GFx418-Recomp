@@ -16,6 +16,9 @@ public:
     // A font bound in pbinding (exe 0x142654400).
     FontResource(Render::Font* pfont, ResourceBinding* pbinding);
 
+    // Fills the texture glyphs of the font from its loaded image data (exe 0x142657940).
+    void ResolveTextureGlyphs();
+
     Render::Font* GetFont() const { return pFont; }
     const char*   GetName() const { return pFont->GetName(); }
 
@@ -64,6 +67,11 @@ public:
 private:
     FontLibImpl* pImpl; // +0x18
 };
+
+inline Ptr<FontLib> StateBag::GetFontLib() const
+{
+    return *(FontLib*)GetStateAddRef(State::State_FontLib);
+}
 
 }} // namespace Scaleform::GFx
 

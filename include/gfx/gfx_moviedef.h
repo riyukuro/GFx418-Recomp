@@ -41,6 +41,7 @@ struct MemoryParams;
 class ActionControl;
 struct ExporterInfo;
 class FontResource;
+class FontLib;
 
 // Something that hands out states by type; MovieDef, Loader and the movie instances are state bags.
 class StateBag : public FileTypeConstants
@@ -73,6 +74,8 @@ public:
     inline void                SetFileOpener(FileOpenerBase* ptr);
     inline void                SetParseControl(ParseControl* ptr);
     inline void                SetZlibSupport(ZlibSupportBase* ptr);
+    // Defined in gfx_fontlib.h.
+    inline Ptr<FontLib>        GetFontLib() const;
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it

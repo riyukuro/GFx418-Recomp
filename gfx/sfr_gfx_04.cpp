@@ -1730,6 +1730,270 @@ void MovieBindProcess::OnAbandon(bool started)
     }
 }
 
+bool MatchFileNames(const String& path1, const String& path2);
+
+// The ImportVisitor state: the MovieDef::ImportVisitor interface follows the State base.
+class ImportVisitor : public State, public MovieDef::ImportVisitor
+{
+};
+
+class FontPackParams;
+// Rasterizes the glyphs of fonts into packed textures (GFx_FontTextureGlyphs).
+void GFx_GenerateFontBitmaps(FontPackParams* params, const Array<FontResource*>& fonts, ImageCreator* pimageCreator,
+                             Log* plog, ResourceId* ptextureIdGen, MemoryHeap* pheap, bool threadedLoading);
+
+// @0x1425cd920
+// MS2-FUNCTIONAL: register allocation and block order around the import loop and the bind state updates
+MovieBindProcess::BindStateType MovieBindProcess::BindNextFrame()
+{
+    // A cancel can leave us without bind data.
+    if (!pBindData)
+        return MovieDefImpl::BS_Canceled;
+
+    BindStateType startBindStateType = GetBindStateType();
+    if (startBindStateType != MovieDefImpl::BS_InProgress)
+    {
+        if (startBindStateType != MovieDefImpl::BS_NotStarted)
+            return startBindStateType;
+        // Binding only starts once.
+        SetBindState(MovieDefImpl::BS_InProgress | GetBindStateFlags());
+    }
+
+    // The frame list is only appended to under the frame update lock, so it can be read without it until we
+    // run out of frames.
+    FrameBindData* pframeData = GetNextFrameBindData();
+    if (!pframeData)
+    {
+        MovieDataDef::LoadTaskData* ploadData = pDataDef->pData;
+
+        Mutex::Locker lock(&ploadData->pFrameUpdate->GetMutex());
+        pframeData = GetNextFrameBindData();
+        while (!pframeData && ploadData->LoadState == MovieDataDef::LS_LoadingFrames && !pBindData->BindingCanceled)
+        {
+            ploadData->pFrameUpdate->WaitForNotify();
+            pframeData = GetNextFrameBindData();
+        }
+        if (ploadData->LoadState == MovieDataDef::LS_LoadCanceled)
+            pBindData->BindingCanceled = true;
+    }
+
+    if (!pframeData || pBindData->BindingCanceled)
+    {
+        // A load error or a cancel ends the binding; release the bind data so that a load process on this
+        // thread can finish too.
+        FinishBinding();
+        BindStateType bindState = pBindData->BindingCanceled ? MovieDefImpl::BS_Canceled : MovieDefImpl::BS_Error;
+        SetBindState(bindState | GetBindStateFlags());
+        Ptr<LoadUpdateSync> psync = pBindData->GetBindUpdateSync();
+        pBindData = 0;
+        psync->NotifyLoadFinished();
+        return bindState;
+    }
+
+    pFrameBindData = pframeData;
+
+    LoadStates* pls       = pLoadStates;
+    unsigned    loadFlags = pBindData->LoadFlags;
+
+    // 1. Imports of the frame.
+    if (!(loadFlags & Loader::LoadDisableImports))
+    {
+        ImportData* pimportData = pframeData->pImportData;
+
+        Ptr<FontLib>      pfontLib;
+        Ptr<MovieDefImpl> pdefImpl = *pBindData->GetMovieDefImplAddRef();
+        if (pdefImpl)
+            pfontLib = pdefImpl->GetFontLib();
+
+        // The list holds the imports of every frame: only take this frame's.
+        for (unsigned iimport = 0; iimport < pframeData->ImportCount; iimport++, pimportData = pimportData->pNext)
+        {
+            const String& sourceURL = pimportData->SourceUrl;
+
+            // The IME candidate list font and imports of the font library file are substituted from the font
+            // library instead of being loaded.
+            if ((pimportData->Imports.GetSize() > 0 && pimportData->Imports[0].SymbolName == "$IMECandidateListFont") ||
+                (pfontLib && (MatchFileNames(sourceURL, pfontLib->GetSubstitute()) ||
+                              MatchFileNames(sourceURL, String("gfxfontlib.swf")))))
+            {
+                pBindData->ResolveImportThroughFontLib(pimportData);
+                continue;
+            }
+
+            MovieDefImpl* pdef = 0;
+
+            // The import gets its own states; it is loaded to completion before we go on.
+            Ptr<LoadStates> pimportLoadStates = *pls->CloneForImport();
+            unsigned        importLoadFlags   = loadFlags | Loader::LoadWaitCompletion;
+
+            // Chain this movie onto the load stack so that recursive imports are caught.
+            LoaderImpl::LoadStackItem loadStack;
+            loadStack.pDefImpl = pBindData->pDefImpl_Unsafe;
+            loadStack.pNext    = 0;
+            if (!pLoadStack)
+                pLoadStack = &loadStack;
+            else
+            {
+                LoaderImpl::LoadStackItem* ptail = pLoadStack;
+                while (ptail->pNext)
+                    ptail = ptail->pNext;
+                ptail->pNext = &loadStack;
+            }
+
+            // A stripped file imports the stripped (.gfx) versions of its .swf imports when they exist.
+            if (Stripped && sourceURL.GetSize() > 4 &&
+                String::CompareNoCase(sourceURL.ToCStr() + (sourceURL.GetSize() - 4), ".swf") == 0)
+            {
+                URLBuilder::LocationInfo loc(URLBuilder::File_Import, sourceURL, pls->GetRelativePath());
+                loc.FileName.Clear();
+                loc.FileName.AppendString(sourceURL.ToCStr(), sourceURL.GetSize() - 4);
+                loc.FileName.AppendString(".gfx");
+                pdef = LoaderImpl::CreateMovie_LoadState(pimportLoadStates, loc, importLoadFlags, pLoadStack);
+            }
+            if (!pdef)
+            {
+                URLBuilder::LocationInfo loc(URLBuilder::File_Import, sourceURL, pls->GetRelativePath());
+                pdef = LoaderImpl::CreateMovie_LoadState(pimportLoadStates, loc, importLoadFlags, pLoadStack);
+            }
+
+            // Take our item off the stack again.
+            if (pLoadStack == &loadStack)
+                pLoadStack = 0;
+            else
+            {
+                LoaderImpl::LoadStackItem* ptail = pLoadStack;
+                while (ptail->pNext)
+                {
+                    if (ptail->pNext == &loadStack)
+                    {
+                        ptail->pNext = ptail->pNext->pNext;
+                        break;
+                    }
+                    ptail = ptail->pNext;
+                }
+            }
+
+            // Imports must use the ActionScript version of the main file.
+            if (pdef && ((pdef->GetFileAttributes() ^ pDataDef->GetFileAttributes()) & LoadProcess::FileAttr_UseActionScript3))
+            {
+                pdef->Release();
+                pdef = 0;
+                if (pls->GetLogState())
+                    pls->GetLogState()->LogError("ActionScript version mismatched between main and import '%s' files",
+                                                 sourceURL.ToCStr());
+            }
+
+            if (!pdef)
+            {
+                // Stay at the frame that failed.
+                FinishBinding();
+                SetBindState(MovieDefImpl::BS_Error | GetBindStateFlags());
+                return MovieDefImpl::BS_Error;
+            }
+
+            // A file may import itself; the resolve is told so that it does not hold itself.
+            bool recursive = (pdef->pBindData == pBindData);
+            if (recursive && pls->GetLogState())
+                pls->GetLogState()->LogWarning("Self recursive import detected in '%s'", sourceURL.ToCStr());
+
+            pBindData->ResolveImport(pimportData, pdef, pls, recursive);
+
+            ImportVisitor* pimportVisitor = (ImportVisitor*)pls->GetBindStates()->pImportVisitor.GetPtr();
+            if (pimportVisitor)
+            {
+                Ptr<MovieDefImpl> pdefImpl = *pBindData->GetMovieDefImplAddRef();
+                if (pdefImpl)
+                    pimportVisitor->Visit(pdefImpl, pdef, sourceURL.ToCStr());
+            }
+            pdef->Release();
+        }
+    }
+
+    // 2. Resources of the frame, created from their loaded data.
+    ResourceDataNode* presData        = pframeData->pResourceData;
+    ResourceBinding&  resourceBinding = pBindData->ResourceBinding;
+    MemoryHeap*       pheap           = pBindData->GetBindDataHeap();
+
+    for (unsigned ires = 0; ires < pframeData->ResourceCount; ires++, presData = presData->pNext)
+    {
+        // No data: a failed import or an image the file could not decode; the slot stays empty.
+        if (!presData->Data.IsValid())
+            continue;
+
+        ResourceBindData bd;
+        bd.pBinding = &resourceBinding;
+        if (presData->Data.CreateResource(&bd, pls, pheap))
+        {
+            if (pImagePacker && bd.pResource->GetResourceType() == Resource::RT_Image &&
+                bd.pResource->GetResourceUse() == Resource::Use_Bitmap)
+                pImagePacker->AddResource(presData, (ImageResource*)bd.pResource.GetPtr());
+        }
+        else if (pBindData->BindingCanceled)
+        {
+            // Creating the resource failed because of the cancel.
+            FinishBinding();
+            SetBindState(MovieDefImpl::BS_Canceled | GetBindStateFlags());
+            Ptr<LoadUpdateSync> psync = pBindData->GetBindUpdateSync();
+            pBindData = 0;
+            psync->NotifyLoadFinished();
+            return MovieDefImpl::BS_Canceled;
+        }
+        // Set the bind data even when it is empty, so that the slot can be indexed.
+        resourceBinding.SetBindData(presData->BindIndex, bd);
+    }
+
+    // 3. Glyph textures of the fonts of the frame.
+    if (pframeData->FontCount)
+    {
+        Array<FontResource*> fonts;
+
+        FontDataUseNode* pfontData = pframeData->pFontData;
+        for (unsigned ifont = 0; ifont < pframeData->FontCount; ifont++, pfontData = pfontData->pNext)
+        {
+            ResourceBindData rbd;
+            resourceBinding.GetResourceData(&rbd, pfontData->BindIndex);
+            if (rbd.pResource)
+            {
+                FontResource* pfont = (FontResource*)rbd.pResource.GetPtr();
+                pfont->ResolveTextureGlyphs();
+                fonts.PushBack(pfont);
+            }
+        }
+
+        if (fonts.GetSize() && pls->GetFontPackParams())
+            GFx_GenerateFontBitmaps(pls->GetFontPackParams(), fonts,
+                                    (ImageCreator*)pls->GetBindStates()->pImageCreator.GetPtr(), pls->GetLog(),
+                                    &GlyphTextureIdGen, pheap, pls->IsThreadedLoading());
+    }
+
+    // 4. The frame is bound.
+    pBindData->BytesLoaded = pframeData->BytesLoaded;
+    pBindData->BindingFrame++;
+
+    // Clients can wait for frame 1.
+    if (pBindData->BindingFrame == 1)
+        SetBindState(GetBindState() | MovieDefImpl::BSF_Frame1Loaded);
+
+    if (pBindData->BindingFrame == pDataDef->GetFrameCount())
+    {
+        // The end tag is not counted while loading: the whole file is loaded now.
+        pBindData->BytesLoaded = pDataDef->GetFileBytes();
+        FinishBinding();
+        SetBindState(MovieDefImpl::BS_Finished | GetBindStateFlags() | MovieDefImpl::BSF_LastFrameLoaded);
+    }
+
+    ProgressHandler* ph = pls->GetProgressHandler();
+    if (ph)
+    {
+        MovieDataDef* pdataDef = pBindData->GetDataDef();
+        ph->ProgressUpdate(ProgressHandler::Info(pdataDef->pData->FileURL, pBindData->BytesLoaded,
+                                                 pdataDef->GetFileBytes(), pBindData->BindingFrame,
+                                                 pdataDef->GetFrameCount()));
+    }
+
+    return GetBindStateType();
+}
+
 // Packs the bound bitmaps into the image packer's textures, then freezes the binding.
 // @0x1425cf280
 void MovieBindProcess::FinishBinding()
