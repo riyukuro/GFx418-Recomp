@@ -175,6 +175,12 @@ public:
 
     static ResourceKey CreateSoundFileKey(SoundFileInfo* pfileInfo, FileOpener* pfileOpener);
 
+    Sound::SoundInfoBase* GetSoundInfo() const { return pSoundInfo; }
+    // Count of the channels playing this sample; the sample data is released when it drops to zero.
+    void IncPlayingCount()  { PlayingCount++; }
+    void DecPlayingCount()  { PlayingCount--; }
+    bool IsPlaying() const  { return PlayingCount > 0; }
+
 protected:
     Ptr<Sound::SoundInfoBase> pSoundInfo;   // +0x18
     ResourceKey               Key;          // +0x20
@@ -234,6 +240,22 @@ public:
     virtual void ReadDefineExternalStreamSoundTag(LoadProcess* p, const TagInfo& tagInfo);
     virtual void ReadSoundStreamHeadTag(LoadProcess* p, const TagInfo& tagInfo);
     virtual void ReadSoundStreamBlockTag(LoadProcess* p, const TagInfo& tagInfo);
+};
+
+// Script side of a sound (the AS2 Sound object / AS3 SoundChannel) as the clips see it.
+class ASSoundIntf
+{
+public:
+    virtual ~ASSoundIntf() {}
+
+    // The clip the sound was attached to is going away.
+    virtual void  ReleaseTarget()          = 0;
+    virtual void  ExecuteOnSoundComplete() = 0;
+    virtual void* GetOwner()               { return 0; }
+    // A sound with its own transform ignores the clip's volume and pan.
+    virtual bool  HasPrivateOverride()     { return false; }
+    virtual int   PrivateVolume()          { return 100; }
+    virtual int   PrivatePan()             { return 0; }
 };
 
 }} // namespace Scaleform::GFx
