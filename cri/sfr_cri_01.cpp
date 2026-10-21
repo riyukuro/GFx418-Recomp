@@ -11,6 +11,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
+#include "../include/video/video_videoplayerimpl.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -170,41 +171,6 @@ class VideoReaderConfigThrd : public VideoReaderConfig
 public:
     VideoReaderConfigThrd(MemoryHeap* pheap, FileOpenerBase* pfileOpener);
     virtual VideoReader* CreateReader();
-};
-
-class VideoPlayerImpl : public VideoPlayer
-{
-public:
-    VideoPlayerImpl(MemoryHeap* pheap);
-    bool Init(Video* pvideo, TaskManager* ptaskManager, FileOpenerBase* pfileOpener, Log* plog);
-
-    virtual void        Open(const char* url);
-    virtual Status      GetStatus();
-    virtual void        GetVideoInfo(VideoInfo* info);
-    virtual void        Play();
-    virtual void        Seek(UInt32 pos);
-    virtual void        SetSubtitleChannel(int channel);
-    virtual int         GetSubtitleChannel();
-    virtual UInt32      GetPosition();
-    virtual VideoImage* CreateTexture(Render::TextureManager* ptexman);
-    virtual void        UpdateTexture(VideoImage* pimage, char* subtitle, int subtitleLength);
-    virtual bool        IsTextureReady();
-    virtual void        Decode();
-    virtual void        Stop();
-    virtual void        Pause(bool on);
-    virtual void        SetSyncObject(SyncObject*);
-    virtual void        GetCurrentCuePoints(Array<CuePoint>* cuePoints);
-    virtual void        SetAudioTrack(int trackIndex);
-    virtual void        SetSubAudioTrack(int trackIndex);
-    virtual void        ReplaceCenterVoice(int trackIndex);
-    virtual void        SetLoopFlag(bool flag);
-    virtual void        SetBufferTime(float time);
-    virtual void        SetNumberOfFramePools(unsigned pools);
-    virtual void        SetReloadThresholdTime(float time);
-    virtual void        GetReadBufferInfo(ReadBufferInfo* info);
-    virtual void        SetDecodeHeaderTimeout(float timeout);
-    virtual Sound::SoundChannel* GetSoundChannel(SoundTrack track);
-    virtual void        SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[]);
 };
 
 // ==== Video ==========================================================================================================
@@ -5382,6 +5348,383 @@ __declspec(noinline) void CRIAPI criHeap_Initialize(void)
 }
 
 } // extern "C"
+
+// ==== Video player over the CRI easy player (0x140028480-0x14002a0e0) ================================================
+// VideoPlayerImpl drives one CriMvEasyPlayer through the VideoPlayer status machine; the decoder object (pDecoder)
+// starts/stops it. The Status member is re-read at every compare in the exe (volatile).
+
+void     FUN_14258b240(unsigned ms);        // Thread::MSleep
+unsigned __int64 FUN_1425e3590(void);               // Timer::GetTicks
+void     FUN_1423dce40(void* plog, const char* pfmt, ...);   // Log::LogError
+
+namespace Scaleform { namespace GFx { namespace Video {
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400285a0
+void VideoPlayerImpl::Play()
+{
+    if (Stat == Ready)
+    {
+        pPlayer->SetSeekPosition(StartFrame);
+        pPlayer->SetSubtitleChannel(SubtitleChannel);
+        pPlayer->SetLoopFlag(LoopFlag);
+        pPlayer->Start();
+        Stat = Starting;
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028610
+void VideoPlayerImpl::Stop()
+{
+    if (Stat == Opening || Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking)
+    {
+        Stat = Stopping;
+        StatusAfterStop = Stopped;
+        pPlayer->Stop();
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028670
+void VideoPlayerImpl::Pause(bool on)
+{
+    if (PauseLocked)
+    {
+        PausePending = on;
+        return;
+    }
+    if (Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking)
+    {
+        PauseFlag = on;
+        pPlayer->Pause(PauseFlag);
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028700
+void VideoPlayerImpl::SetSubtitleChannel(int channel)
+{
+    if (Stat == Ready || Stat == Starting || Stat == Playing)
+    {
+        if ((int)StmPrm.num_subtitle > channel && SubtitleChannel != channel)
+        {
+            if (channel < 0)
+            {
+                if (SubtitleChannel == -1)
+                    return;
+                channel = -1;
+            }
+            SubtitleChannel = channel;
+            pPlayer->SetSubtitleChannel(channel);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400287d0
+void VideoPlayerImpl::UpdateTexture(VideoImage* pimage, char* subtitle, int subtitleLength)
+{
+    if ((Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking || Stat == Stopping) && pimage)
+    {
+        UpdateTextureCalled = true;
+        FrameOnTime = false;
+        // VideoImage::Update(), slot 23 of the Render::Image vftable
+        typedef void (*UpdateFunc)(VideoImage*);
+        (*reinterpret_cast<UpdateFunc**>(pimage))[23](pimage);
+        if (subtitle && subtitleLength > 0 && StmPrm.num_subtitle > 0 && SubtitleChannel != -1)
+            pPlayer->GetSubtitleOnTime((CriUint8*)subtitle, subtitleLength);
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028870
+void VideoPlayerImpl::SetAudioTrack(int trackIndex)
+{
+    if (Stat == Ready || Stat == Starting || Stat == Playing)
+    {
+        pPlayer->SetAudioTrack(trackIndex);
+        StartFrame = CurrentFrame % StmPrm.video_prm[0].total_frames;
+        if (Stat != Ready)
+        {
+            Stat = Seeking;
+            pPlayer->Stop();
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400288e0
+void VideoPlayerImpl::ReplaceCenterVoice(int trackIndex)
+{
+    if (Stat == Ready)
+        pPlayer->ReplaceCenterVoice(trackIndex);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028910
+void VideoPlayerImpl::SetLoopFlag(bool flag)
+{
+    LoopFlag = flag;
+    if (Stat == Ready || Stat == Starting || Stat == Playing)
+        pPlayer->SetLoopFlag(LoopFlag);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028950
+void VideoPlayerImpl::SetBufferTime(float time)
+{
+    if (pPlayer)
+        pPlayer->SetBufferingTime(time);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028970
+void VideoPlayerImpl::SetNumberOfFramePools(unsigned pools)
+{
+    if (pPlayer)
+        pPlayer->SetNumberOfFramePools(pools);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028990
+void VideoPlayerImpl::SetReloadThresholdTime(float time)
+{
+    if (pPlayer)
+        pPlayer->SetReloadThresholdTime(time);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400289b0
+void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* info)
+{
+    if (pPlayer)
+    {
+        CriMvInputBufferInfo ibuf;
+        pPlayer->GetInputBufferInfo(ibuf);
+        info->BufferSize      = ibuf.buffer_size;
+        info->DataSize        = ibuf.data_size;
+        info->ReloadThreshold = ibuf.reload_threshold;
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400291c0
+void CriMvSystemTimer::SetSyncObject(VideoPlayer::SyncObject* psync)
+{
+    pSyncObj = psync;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400292f0
+void VideoDecoderSmp::StopDecoding(VideoPlayer* pplayer)
+{
+    int idx = -1;
+    for (UPInt i = 0; i < Players.GetSize(); i++)
+    {
+        if (Players[i] == pplayer)
+        {
+            idx = (int)i;
+            break;
+        }
+    }
+    if (idx != -1)
+    {
+        static_cast<VideoPlayerImpl*>(pplayer)->pPlayer->Stop();
+        ExecuteDecode(pplayer);
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028570
+bool VideoDecoderSmp::IsDecodingStopped(VideoPlayer* pplayer)
+{
+    return !ExecuteDecode(pplayer);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140029360
+bool VideoDecoderSmp::IsIORequired() const
+{
+    for (UPInt i = 0; i < Players.GetSize(); i++)
+    {
+        VideoPlayer::ReadBufferInfo info;
+        Players[i]->GetReadBufferInfo(&info);
+        if (info.DataSize <= info.ReloadThreshold)
+            return true;
+    }
+    return false;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400293f0
+void VideoPlayerImpl::StopAndWait()
+{
+    if (Stat == Opening || Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking || Stat == Stopping)
+    {
+        pDecoder->StopDecoding(this);
+        while (!pDecoder->IsDecodingStopped(this))
+        {
+            Decode();
+            FUN_14258b240(1);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140029480
+void VideoPlayerImpl::Seek(UInt32 pos)
+{
+    if (Stat == Ready || Stat == Starting || Stat == Playing)
+    {
+        StartFrame = pos % StmPrm.video_prm[0].total_frames;
+        Stat = Seeking;
+        pPlayer->Stop();
+    }
+    else if (Stat == Finished)
+    {
+        StartFrame = pos % StmPrm.video_prm[0].total_frames;
+        pDecoder->StartDecoding(this);
+        Stat = Ready;
+        Play();
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140029510
+void VideoPlayerImpl::DecodeHeader()
+{
+    pPlayer->Update();
+    pDecoder->ExecuteDecode(this);
+    if (pPlayer->GetMovieInfo(StmPrm))
+    {
+        if (StmPrm.is_playable && StmPrm.num_video > 0)
+        {
+            Width    = StmPrm.video_prm[0].max_width;
+            Height   = StmPrm.video_prm[0].max_height;
+            HasAlpha = StmPrm.num_alpha > 0;
+            Stat     = Ready;
+            return;
+        }
+    }
+    else
+    {
+        if (DecodeHeaderTimeout > 0 && FUN_1425e3590() - OpenTicks > DecodeHeaderTimeout)
+        {
+            Stat            = Stopping;
+            StatusAfterStop = InternalError;
+            pDecoder->StopDecoding(this);
+            if (pLog)
+                FUN_1423dce40(pLog, "Decode USM header timeout. Video file could be broken.\n");
+            return;
+        }
+        if (pPlayer->GetStatus() != CriMvEasyPlayer::MVEASY_STATUS_ERROR)
+            return;
+    }
+    StatusAfterStop = FileNotFound;
+    Stat            = Stopping;
+    pDecoder->StopDecoding(this);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140029640
+void VideoPlayerImpl::Decode()
+{
+    if (!(Stat == Opening || Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking || Stat == Stopping))
+        return;
+    if (Stat == Opening)
+    {
+        DecodeHeader();
+        return;
+    }
+
+    pPlayer->SyncMasterTimer();
+    pPlayer->Update();
+    CriMvEasyPlayer::Status st = pPlayer->GetStatus();
+    if (st == CriMvEasyPlayer::MVEASY_STATUS_PLAYEND || st == CriMvEasyPlayer::MVEASY_STATUS_STOP)
+    {
+        if (pDecoder->IsDecodingStopped(this))
+        {
+            if (Stat == Stopping)
+            {
+                Stat = StatusAfterStop;
+            }
+            else if (Stat == Seeking && StartFrame < StmPrm.video_prm[0].total_frames)
+            {
+                pPlayer->Pause(0);
+                pPlayer->SetSeekPosition(StartFrame);
+                pPlayer->SetLoopFlag(LoopFlag);
+                pPlayer->SetSubtitleChannel(SubtitleChannel);
+                pPlayer->Start();
+                pDecoder->StartDecoding(this);
+                Stat = Starting;
+            }
+            else
+            {
+                Stat = Finished;
+            }
+        }
+        return;
+    }
+    if (st == CriMvEasyPlayer::MVEASY_STATUS_ERROR)
+    {
+        if (StatusAfterStop != FileNotFound)
+            StatusAfterStop = InternalError;
+        Stat = Stopping;
+        pDecoder->StopDecoding(this);
+        if (pDecoder->IsDecodingStopped(this))
+        {
+            Stat = StatusAfterStop;
+            return;
+        }
+    }
+    if (FrameOnTime)
+    {
+        if (Stat == Starting)
+        {
+            CurrentFrame = StartFrame;
+            pPlayer->Pause(PauseFlag);
+            Stat = Playing;
+            if (pTimer->pSyncObj)
+                pTimer->pSyncObj->SetStartFrame(StartFrame);
+        }
+        if (FrameInfo.frame_id >= 0)
+            CurrentFrame = FrameInfo.frame_id;
+    }
+    if (UpdateTextureCalled)
+    {
+        pDecoder->ExecuteDecode(this);
+        UpdateTextureCalled = false;
+    }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140029880
+void VideoPlayerImpl::SetSubAudioTrack(int trackIndex)
+{
+    if (Stat == Ready && pSubSound)
+        pPlayer->SetSubAudioTrack(trackIndex);
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400298e0
+void VideoPlayerImpl::SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[])
+{
+    if (pSound)
+    {
+        Sound::SoundChannel* pchan = pSound->GetSoundChannel();
+        if (pchan)
+            pchan->SetSpatialInfo(spatinfo);
+    }
+    if (pSubSound)
+    {
+        Sound::SoundChannel* pchan = pSubSound->GetSoundChannel();
+        if (pchan)
+            pchan->SetSpatialInfo(spatinfo);
+    }
+}
+
+}}} // namespace Scaleform::GFx::Video
 
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
