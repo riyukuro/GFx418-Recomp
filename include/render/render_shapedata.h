@@ -154,6 +154,16 @@ public:
         Data->PushBack(bytes[3]);
     }
 
+    // (appended for sfr_gfx_06e) the packed path records of ShapeDataPacked; the line and curve writers are in
+    // Render_PathDataPacker (sfr_render_02): WriteHLine 0x1426009c0, WriteLine 0x142600be0, WriteQuad 0x142601200,
+    // WriteVLine 0x142602a00
+    unsigned WriteUInt15(unsigned v);
+    unsigned WriteHLine(int x);
+    unsigned WriteVLine(int y);
+    unsigned WriteLine(int x, int y);
+    unsigned WriteQuad(int cx, int cy, int ax, int ay);
+    unsigned WriteEndPath();
+
 private:
     ContainerType* Data;
 };
@@ -205,8 +215,27 @@ public:
         return v;
     }
 
+    // (appended for sfr_gfx_06e) the packed path records
+    unsigned ReadUInt15(unsigned pos, unsigned* v) const
+    {
+        unsigned lead = UByte(Data->ValueAt(pos));
+        if (!(lead & 1))
+        {
+            *v = lead >> 1;
+            return 1;
+        }
+        *v = (lead >> 1) | (UByte(Data->ValueAt(pos + 1)) << 7);
+        return 2;
+    }
+    unsigned ReadSInt30(unsigned pos, int* v) const;
+    // one edge into data[0] (PathDataPackerTypes::EdgeType) and data[1..4] (the deltas); returns the bytes used
+    unsigned ReadEdge(unsigned pos, int* data) const;
+
+
 private:
     const ContainerType* Data;
+    // the bytes that follow the first one of an edge, by PathDataPackerTypes::RawEdgeType
+    static const UByte Sizes[16];
 };
 
 // Shape built from float coordinates: layers of paths, each a tag byte followed by its data.
@@ -451,6 +480,10 @@ public:
     Matrix2F          ImageMatrix;   // +0x20
     ImageFillMode     FillMode;      // +0x40
     unsigned          BindIndex;     // +0x44
+
+    // (appended for the drawing API, sfr_gfx_06e) no source yet, identity placement, not bound; defined inline
+    // where GradientData is complete (sfr_gfx_06e)
+    inline ComplexFill();
 };
 // dash and gap lengths of a dashed stroke
 struct DashArray : public RefCountBase<DashArray, Stat_Default_Mem>
@@ -459,6 +492,370 @@ struct DashArray : public RefCountBase<DashArray, Stat_Default_Mem>
     float    DashStart;
     unsigned DashCount;
 };
+
+
+// (appended for the drawing API, sfr_gfx_06e) the packed integer path format of ShapeDataPacked.
+// A path is a header (UInt15 path type, the three UInt30 styles, the SInt30 start point) and then edges, each a
+// tag nibble in the low four bits of its first byte with the coordinate deltas packed in the bits that follow.
+struct PathDataPackerTypes
+{
+    // the edge records as stored (the number is the bit width of each delta)
+    enum RawEdgeType
+    {
+        Edge_H12, Edge_H28,                 // horizontal line
+        Edge_V12, Edge_V28,                 // vertical line
+        Edge_L6,  Edge_L10, Edge_L14, Edge_L30,
+        Edge_C5,  Edge_C7,  Edge_C9,  Edge_C11, Edge_C13, Edge_C15, Edge_C31,   // quadratic curve
+        EndPath
+    };
+    // the edges as decoded
+    enum EdgeType
+    {
+        Edge_HLine,
+        Edge_VLine,
+        Edge_Line,
+        Edge_Quad,
+        Edge_EndPath
+    };
+};
+
+// (appended for sfr_gfx_06e) the packed records of PathDataEncoder
+template<class ContainerType>
+unsigned PathDataEncoder<ContainerType>::WriteUInt15(unsigned v)
+{
+    if (v < (1u << 7))
+    {
+        Data->PushBack(UByte(v << 1));
+        return 1;
+    }
+    Data->PushBack(UByte((v << 1) | 1));
+    Data->PushBack(UByte(v >> 7));
+    return 2;
+}
+template<class ContainerType>
+unsigned PathDataEncoder<ContainerType>::WriteEndPath()
+{
+    Data->PushBack(UByte(PathDataPackerTypes::EndPath));
+    return 1;
+}
+
+template<class ContainerType>
+const UByte PathDataDecoder<ContainerType>::Sizes[16] = { 1, 3, 1, 3, 1, 2, 3, 7, 2, 3, 4, 5, 6, 7, 15, 0 };
+
+
+// signed: the top byte is sign extended
+template<class ContainerType>
+unsigned PathDataDecoder<ContainerType>::ReadSInt30(unsigned pos, int* v) const
+{
+    int r = SByte(Data->ValueAt(pos));
+    switch (r & 3)
+    {
+    case 0:
+        *v = r >> 2;
+        return 1;
+    case 1:
+        r  = (r >> 2) & 0x3F;
+        *v = r | (SByte(Data->ValueAt(pos + 1)) << 6);
+        return 2;
+    case 2:
+        r  = (r >> 2) & 0x3F;
+        r  = r | (UByte(Data->ValueAt(pos + 1)) << 6);
+        *v = r | (SByte(Data->ValueAt(pos + 2)) << 14);
+        return 3;
+    }
+    r  = (r >> 2) & 0x3F;
+    r  = r | (UByte(Data->ValueAt(pos + 1)) << 6);
+    r  = r | (UByte(Data->ValueAt(pos + 2)) << 14);
+    *v = r | (SByte(Data->ValueAt(pos + 3)) << 22);
+    return 4;
+}
+
+// Each delta is gathered low bits first; the byte that holds its top bits is read signed so the value comes out
+// sign extended (a byte shared with the next delta is first shifted so that delta's top bit lands in bit 7).
+template<class ContainerType>
+unsigned PathDataDecoder<ContainerType>::ReadEdge(unsigned pos, int* data) const
+{
+    UByte b[16];
+    b[0] = Data->ValueAt(pos++);
+    unsigned extra = Sizes[b[0] & 0xF];
+    UByte* p = b + 1;
+    for (unsigned i = 0; i < extra; i++)
+        *p++ = Data->ValueAt(pos++);
+
+    typedef PathDataPackerTypes T;
+    switch (b[0] & 0xF)
+    {
+    case T::Edge_H12:
+        data[0] = T::Edge_HLine;
+        data[1] = int(b[0] >> 4) | (SByte(b[1]) << 4);
+        break;
+    case T::Edge_H28:
+        data[0] = T::Edge_HLine;
+        data[1] = int(b[0] >> 4) | int(b[1] << 4) | (SByte(b[2]) << 12) | (SByte(b[3]) << 20);
+        break;
+    case T::Edge_V12:
+        data[0] = T::Edge_VLine;
+        data[1] = int(b[0] >> 4) | (SByte(b[1]) << 4);
+        break;
+    case T::Edge_V28:
+        data[0] = T::Edge_VLine;
+        data[1] = int(b[0] >> 4) | int(b[1] << 4) | (SByte(b[2]) << 12) | (SByte(b[3]) << 20);
+        break;
+    case T::Edge_L6:
+        data[0] = T::Edge_Line;
+        data[1] = int(b[0] >> 4) | (SByte(b[1] << 6) >> 2);
+        data[2] = SByte(b[1]) >> 2;
+        break;
+    case T::Edge_L10:
+        data[0] = T::Edge_Line;
+        data[1] = int(b[0] >> 4) | (SByte(b[1] << 2) << 2);
+        data[2] = int(b[1] >> 6) | (SByte(b[2]) << 2);
+        break;
+    case T::Edge_L14:
+        data[0] = T::Edge_Line;
+        data[1] = int(b[0] >> 4) | int(b[1] << 4) | (SByte(b[2] << 6) << 6);
+        data[2] = int(b[2] >> 2) | (SByte(b[3]) << 6);
+        break;
+    case T::Edge_L30:
+        data[0] = T::Edge_Line;
+        data[1] = int(b[0] >> 4) | int(b[1] << 4) | int(b[2] << 12) | int(b[3] << 20) | (SByte(b[4] << 6) << 22);
+        data[2] = int(b[4] >> 2) | int(b[5] << 6) | int(b[6] << 14) | (SByte(b[7]) << 22);
+        break;
+    case T::Edge_C5:
+        data[0] = T::Edge_Quad;
+        data[1] = int(b[0] >> 4) | (SByte(b[1] << 7) >> 3);
+        data[2] = SByte(b[1] << 2) >> 3;
+        data[3] = int(b[1] >> 6) | (SByte(b[2] << 5) >> 3);
+        data[4] = SByte(b[2]) >> 3;
+        break;
+    case T::Edge_C7:
+        data[0] = T::Edge_Quad;
+        data[1] = int(b[0] >> 4) | (SByte(b[1] << 5) >> 1);
+        data[2] = int(b[1] >> 3) | (SByte(b[2] << 6) >> 1);
+        data[3] = int(b[2] >> 2) | (SByte(b[3] << 7) >> 1);
+        data[4] = SByte(b[3]) >> 1;
+        break;
+    case T::Edge_C9:
+        data[0] = T::Edge_Quad;
+        data[1] = int(b[0] >> 4) | (SByte(b[1] << 3) << 1);
+        data[2] = int(b[1] >> 5) | (SByte(b[2] << 2) << 1);
+        data[3] = int(b[2] >> 6) | (SByte(b[3] << 1) << 1);
+        data[4] = int(b[3] >> 7) | (SByte(b[4]) << 1);
+        break;
+    case T::Edge_C11:
+        data[0] = T::Edge_Quad;
+        data[1] = int(b[0] >> 4) | (SByte(b[1] << 1) << 3);
+        data[2] = int(b[1] >> 7) | int(b[2] << 1) | (SByte(b[3] << 6) << 3);
+        data[3] = int(b[3] >> 2) | (SByte(b[4] << 3) << 3);
+        data[4] = int(b[4] >> 5) | (SByte(b[5]) << 3);
+        break;
+    case T::Edge_C13:
+        data[0] = T::Edge_Quad;
+        data[1] = int(b[0] >> 4) | int(b[1] << 4) | (SByte(b[2] << 7) << 5);
+        data[2] = int(b[2] >> 1) | (SByte(b[3] << 2) << 5);
+        data[3] = int(b[3] >> 6) | int(b[4] << 2) | (SByte(b[5] << 5) << 5);
+        data[4] = int(b[5] >> 3) | (SByte(b[6]) << 5);
+        break;
+    case T::Edge_C15:
+        data[0] = T::Edge_Quad;
+        data[1] = int(b[0] >> 4) | int(b[1] << 4) | (SByte(b[2] << 5) << 7);
+        data[2] = int(b[2] >> 3) | int(b[3] << 5) | (SByte(b[4] << 6) << 7);
+        data[3] = int(b[4] >> 2) | int(b[5] << 6) | (SByte(b[6] << 7) << 7);
+        data[4] = int(b[6] >> 1) | (SByte(b[7]) << 7);
+        break;
+    case T::Edge_C31:
+        data[0] = T::Edge_Quad;
+        data[1] = int(b[0] >> 4)  | int(b[1] << 4)  | int(b[2] << 12)  | int(b[3] << 20)  | (SByte(b[4] << 5) << 23);
+        data[2] = int(b[4] >> 3)  | int(b[5] << 5)  | int(b[6] << 13)  | int(b[7] << 21)  | (SByte(b[8] << 6) << 23);
+        data[3] = int(b[8] >> 2)  | int(b[9] << 6)  | int(b[10] << 14) | int(b[11] << 22) | (SByte(b[12] << 7) << 23);
+        data[4] = int(b[12] >> 1) | int(b[13] << 7) | int(b[14] << 15) | (SByte(b[15]) << 23);
+        break;
+    case T::EndPath:
+        data[0] = T::Edge_EndPath;
+        break;
+    }
+    return extra + 1;
+}
+
+// Writes packed path data: coordinates scaled by Multiplier, kept as deltas to the last point (0x10 bytes).
+template<class ContainerType>
+class ShapeDataPackedEncoder
+{
+public:
+    ShapeDataPackedEncoder(ContainerType* c, float multiplier) : Encoder(*c), Multiplier(multiplier) {}
+
+    void LineTo(ShapePosInfo* pos, float x, float y)
+    {
+        int dx = int(x * Multiplier) - pos->LastX;
+        int dy = int(y * Multiplier) - pos->LastY;
+        if (dy == 0)
+            Encoder.WriteHLine(dx);
+        else if (dx == 0)
+            Encoder.WriteVLine(dy);
+        else
+            Encoder.WriteLine(dx, dy);
+        pos->LastX += dx;
+        pos->LastY += dy;
+    }
+    void QuadTo(ShapePosInfo* pos, float cx, float cy, float ax, float ay)
+    {
+        int dcx = int(cx * Multiplier) - pos->LastX;
+        int dcy = int(cy * Multiplier) - pos->LastY;
+        int dax = int(ax * Multiplier) - pos->LastX;
+        int day = int(ay * Multiplier) - pos->LastY;
+        Encoder.WriteQuad(dcx, dcy, dax, day);
+        pos->LastX += dax;
+        pos->LastY += day;
+    }
+    void EndPath()  { Encoder.WriteEndPath(); }
+    void EndShape() { Encoder.WriteUInt15(Shape_EndShape); }
+
+private:
+    PathDataEncoder<ContainerType> Encoder;      // +0
+    float                          Multiplier;   // +8
+};
+
+// Reads packed path data back: the integer reader and the scale back to floats (0x10 bytes).
+template<class ContainerType>
+class ShapeDataPackedDecoder
+{
+public:
+    ShapeDataPackedDecoder(const ContainerType* c, float multiplier) : Reader(*c), OneOverMultiplier(1.0f / multiplier)
+    {
+    }
+
+    ShapePathType ReadPathInfo(ShapePosInfo* pos, float* coord, unsigned* styles) const
+    {
+        unsigned type;
+        pos->Pos += Reader.ReadUInt15(pos->Pos, &type);
+        if (type != Shape_EndShape)
+        {
+            pos->Pos += Reader.ReadUInt30(pos->Pos, &styles[0]);
+            pos->Pos += Reader.ReadUInt30(pos->Pos, &styles[1]);
+            pos->Pos += Reader.ReadUInt30(pos->Pos, &styles[2]);
+            pos->Pos += Reader.ReadSInt30(pos->Pos, &pos->StartX);
+            pos->Pos += Reader.ReadSInt30(pos->Pos, &pos->StartY);
+            pos->LastX = pos->StartX;
+            pos->LastY = pos->StartY;
+            coord[0]   = float(pos->StartX) * OneOverMultiplier;
+            coord[1]   = float(pos->StartY) * OneOverMultiplier;
+        }
+        return ShapePathType(type);
+    }
+
+    // lines come back as Edge_LineTo to the new end point, curves as Edge_QuadTo (control, then anchor)
+    PathEdgeType ReadEdge(ShapePosInfo* pos, float* coord) const
+    {
+        int d[5];
+        pos->Pos += Reader.ReadEdge(pos->Pos, d);
+        switch (d[0])
+        {
+        case PathDataPackerTypes::Edge_HLine:
+            pos->LastX += d[1];
+            coord[0] = float(pos->LastX) * OneOverMultiplier;
+            coord[1] = float(pos->LastY) * OneOverMultiplier;
+            return Edge_LineTo;
+        case PathDataPackerTypes::Edge_VLine:
+            pos->LastY += d[1];
+            coord[0] = float(pos->LastX) * OneOverMultiplier;
+            coord[1] = float(pos->LastY) * OneOverMultiplier;
+            return Edge_LineTo;
+        case PathDataPackerTypes::Edge_Line:
+            pos->LastX += d[1];
+            pos->LastY += d[2];
+            coord[0] = float(pos->LastX) * OneOverMultiplier;
+            coord[1] = float(pos->LastY) * OneOverMultiplier;
+            return Edge_LineTo;
+        case PathDataPackerTypes::Edge_Quad:
+            d[1] += pos->LastX;
+            d[2] += pos->LastY;
+            d[3] += pos->LastX;
+            d[4] += pos->LastY;
+            coord[0]   = float(d[1]) * OneOverMultiplier;
+            coord[1]   = float(d[2]) * OneOverMultiplier;
+            coord[2]   = float(d[3]) * OneOverMultiplier;
+            coord[3]   = float(d[4]) * OneOverMultiplier;
+            pos->LastX = d[3];
+            pos->LastY = d[4];
+            return Edge_QuadTo;
+        }
+        return Edge_EndPath;
+    }
+
+private:
+    PathDataDecoder<ContainerType> Reader;              // +0
+    float                          OneOverMultiplier;   // +8
+};
+
+// Shape data stored as packed integers: coordinates are multiplied by Multiplier and kept as deltas.
+template<class ContainerType>
+class ShapeDataPacked : public ShapeDataInterface
+{
+public:
+    ShapeDataPacked(ContainerType* c, unsigned startingPos, float multiplier)
+        : pContainer(c), Decoder(c, multiplier), StartingPos(startingPos), Multiplier(multiplier)
+    {
+    }
+
+    unsigned AddFillStyle(const FillStyleType& fill)
+    {
+        FillStyles.PushBack(fill);
+        return (unsigned)FillStyles.GetSize();
+    }
+    unsigned AddStrokeStyle(const StrokeStyleType& stroke)
+    {
+        StrokeStyles.PushBack(stroke);
+        return (unsigned)StrokeStyles.GetSize();
+    }
+    void UpdateFillStyle(unsigned idx, const FillStyleType& fill)       { FillStyles[idx - 1] = fill; }
+    void UpdateStrokeStyle(unsigned idx, const StrokeStyleType& stroke) { StrokeStyles[idx - 1] = stroke; }
+
+    // a path header: type, styles and the start point (out of line in sfr_render_02, 0x1426005f0)
+    void StartPath(ShapePosInfo* pos, ShapePathType type, unsigned fill0, unsigned fill1, unsigned stroke,
+                   float x, float y);
+    void LineTo(ShapePosInfo* pos, float x, float y)
+    {
+        ShapeDataPackedEncoder<ContainerType> encoder(pContainer, Multiplier);
+        encoder.LineTo(pos, x, y);
+    }
+    void QuadTo(ShapePosInfo* pos, float cx, float cy, float ax, float ay)
+    {
+        ShapeDataPackedEncoder<ContainerType> encoder(pContainer, Multiplier);
+        encoder.QuadTo(pos, cx, cy, ax, ay);
+    }
+    void EndPath()
+    {
+        ShapeDataPackedEncoder<ContainerType> encoder(pContainer, Multiplier);
+        encoder.EndPath();
+    }
+    void EndShape()
+    {
+        ShapeDataPackedEncoder<ContainerType> encoder(pContainer, Multiplier);
+        encoder.EndShape();
+    }
+
+    virtual bool     IsEmpty() const             { return !pContainer || pContainer->GetSize() <= StartingPos; }
+    virtual unsigned GetFillStyleCount() const   { return (unsigned)FillStyles.GetSize(); }
+    virtual unsigned GetStrokeStyleCount() const { return (unsigned)StrokeStyles.GetSize(); }
+    virtual void     GetFillStyle(unsigned idx, FillStyleType* p) const     { *p = FillStyles[idx - 1]; }
+    virtual void     GetStrokeStyle(unsigned idx, StrokeStyleType* p) const { *p = StrokeStyles[idx - 1]; }
+    virtual unsigned GetStartingPos() const      { return StartingPos; }
+
+    virtual ShapePathType ReadPathInfo(ShapePosInfo* pos, float* coord, unsigned* styles) const
+    {
+        return Decoder.ReadPathInfo(pos, coord, styles);
+    }
+    virtual PathEdgeType ReadEdge(ShapePosInfo* pos, float* coord) const { return Decoder.ReadEdge(pos, coord); }
+
+protected:
+    ContainerType*                        pContainer;     // +0x10
+    ShapeDataPackedDecoder<ContainerType> Decoder;        // +0x18
+    unsigned                              StartingPos;    // +0x28
+    float                                 Multiplier;     // +0x2c
+    ArrayLH<FillStyleType>                FillStyles;     // +0x30
+    ArrayLH<StrokeStyleType>              StrokeStyles;   // +0x48
+};
+
 
 }} // namespace Scaleform::Render
 

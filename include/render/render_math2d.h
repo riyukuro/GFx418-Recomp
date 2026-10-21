@@ -72,6 +72,17 @@ inline void CubicCurveExtremum(CoordType x1, CoordType x2, CoordType x3, CoordTy
         *t1 = -c / (2 * b);   // the derivative degenerates to a line
 }
 
+// (appended for the fill hit test, sfr_gfx_06e) which side of the line (x1 y1) (x2 y2) the point (x y) is on, and
+// the ray crossings of a curve (Render_Math2D, out of line): styleCount toggled per crossing
+inline CoordType CrossProduct(CoordType x1, CoordType y1, CoordType x2, CoordType y2, CoordType x, CoordType y)
+{
+    return (x - x2) * (y2 - y1) - (y - y2) * (x2 - x1);
+}
+int CheckQuadraticIntersection(int styleCount, float x1, float y1, float x2, float y2, float x3, float y3, float x,
+                               float y);
+int CheckCubicIntersection(int styleCount, float x1, float y1, float x2, float y2, float x3, float y3, float x4,
+                           float y4, float x, float y);
+
 }}} // namespace Scaleform::Render::Math2D
 
 #endif

@@ -275,6 +275,23 @@ public:
     UPInt     GetSize() const;   // the AS2 units' out-of-line copy, 0x14250dbc0
 };
 
+// (appended for the drawing API, sfr_gfx_06e) a leaf node drawing one shape
+class ShapeMeshProvider;
+
+class TreeShape : public TreeNode
+{
+public:
+    class NodeData : public TreeNode::NodeData
+    {
+    public:
+        ShapeMeshProvider* pMeshProvider;   // +0x90 (a Ptr in the exe)
+        float              MorphRatio;      // +0x98
+    };
+
+    const NodeData*    GetReadOnlyData() const { return (const NodeData*)Entry::GetReadOnlyDataBase(); }
+    ShapeMeshProvider* GetShape() const        { return GetReadOnlyData()->pMeshProvider; }
+};
+
 }} // namespace Scaleform::Render
 
 #endif

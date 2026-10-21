@@ -235,6 +235,15 @@ public:
         m.Invert();
         return Point<T>(m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3], m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3]);
     }
+
+    // (appended for the bitmap fills, sfr_gfx_06e)
+    Matrix2x4 GetInverse() const
+    {
+        Matrix2x4 m;
+        m.SetInverse(*this);
+        return m;
+    }
+    Matrix2x4& AppendScaling(T s) { return AppendScaling(s, s); }
 };
 
 typedef Matrix2x4<float> Matrix2F;
