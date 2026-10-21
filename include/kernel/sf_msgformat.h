@@ -153,6 +153,8 @@ class StrFormatter : public Formatter
 public:
     StrFormatter(MsgFormat& f, const char* v);
     StrFormatter(MsgFormat& f, const StringDataPtr& v);
+    // (appended for the font manager, sfr_gfx_07g) exe 0x1425af260
+    StrFormatter(MsgFormat& f, const String& v);
 
     virtual void          Parse(const StringDataPtr& str);
     virtual void          Convert();
@@ -169,6 +171,7 @@ template<> struct FmtInfo<StringDataPtr> { typedef StrFormatter formatter; };
 template<> struct FmtInfo<int>    { typedef LongFormatter formatter; };
 template<> struct FmtInfo<float>  { typedef DoubleFormatter formatter; };
 template<> struct FmtInfo<double> { typedef DoubleFormatter formatter; };
+template<> struct FmtInfo<String> { typedef StrFormatter formatter; }; // (sfr_gfx_07g)
 
 // The "{n}" message formatter (0x3f0 bytes). Out of line in the kernel MsgFormat unit (exe: ctor 0x1425af0a0,
 // dtor 0x1425af530, Parse 0x1425b2210, FinishFormatD 0x1425b0bd0, NextFormatter 0x1425b1960, Bind 0x1425afab0).
@@ -323,6 +326,29 @@ inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1
     f.FormatD1(v7);
     f.FormatD1(v8);
     f.FormatD1(v9);
+    f.FinishFormatD();
+    return f.GetStrSize();
+}
+
+// (appended for the font manager, sfr_gfx_07g) one and three parameters
+template<typename T1>
+inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1)
+{
+    MsgFormat f(result);
+    f.Parse(fmt);
+    f.FormatD1(v1);
+    f.FinishFormatD();
+    return f.GetStrSize();
+}
+
+template<typename T1, typename T2, typename T3>
+inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1, const T2& v2, const T3& v3)
+{
+    MsgFormat f(result);
+    f.Parse(fmt);
+    f.FormatD1(v1);
+    f.FormatD1(v2);
+    f.FormatD1(v3);
     f.FinishFormatD();
     return f.GetStrSize();
 }

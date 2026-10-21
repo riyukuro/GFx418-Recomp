@@ -22,6 +22,25 @@ inline FontHandle::FontHandle(FontManagerBase* pmgr, Font* pfont, const char* na
         FontName = name;
 }
 
+// (sfr_gfx_07g)
+inline const char* FontHandle::GetFontName() const
+{
+    return FontName.GetSize() == 0 ? pFont->GetName() : FontName.ToCStr();
+}
+
+inline unsigned FontHandle::GetFontFlags() const { return pFont->GetFontFlags() | FontFlags; }
+
+inline unsigned FontHandle::GetFontStyle() const { return (pFont->GetFontFlags() | GetFauxFontStyle()) & FF_Style_Mask; }
+
+inline FontHandle::FontHandle(const FontHandle& src)
+    : pFontManager(src.pFontManager), FontFlags(src.FontFlags), FontName(src.FontName),
+      FontScaleFactor(src.FontScaleFactor)
+{
+    if (src.pFont)
+        src.pFont->AddRef();
+    pFont = src.pFont;
+}
+
 }}} // namespace Scaleform::Render::Text
 
 namespace Scaleform { namespace GFx {

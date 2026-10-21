@@ -45,6 +45,8 @@ public:
         State_ProgressHandler = 14,
         State_Audio           = 29,
         State_Video           = 30,
+        // (appended for the font manager states, sfr_gfx_07g)
+        State_Translator = 1,
     };
 
 protected:

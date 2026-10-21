@@ -535,6 +535,9 @@ public:
     BindTaskData* GetBindData() const { return pBindData; }
 };
 
+// (appended for the font manager, sfr_gfx_07g)
+inline ResourceWeakLib* MovieDefImpl::GetWeakLib() const { return pLoaderImpl->pWeakResourceLib; }
+
 }} // namespace Scaleform::GFx
 
 #endif

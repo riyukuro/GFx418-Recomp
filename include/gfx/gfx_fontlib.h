@@ -9,6 +9,8 @@ namespace Scaleform { namespace GFx {
 
 class FontLibImpl;
 
+class FontProvider;
+
 // Font resource of a bound movie (only its Resource base is needed so far).
 class FontResource : public Resource
 {
@@ -32,6 +34,12 @@ public:
 private:
     ResourceBinding* pBinding;      // +0x20
     UByte            Unknown28[0x18]; // +0x28 a RectF and a counter set by the ctor
+
+public:
+    // (appended for the font manager, sfr_gfx_07g) a resource for the system font pfontName of pfontProvider,
+    // registered in plib; null when the provider has no such font (exe 0x142655240).
+    static FontResource* SF_STDCALL CreateFontResource(const char* pfontName, unsigned fontFlags,
+                                                       FontProvider* pfontProvider, ResourceWeakLib* plib);
 };
 
 // Movies registered with AddFontsFrom are searched for fonts by name (vftable 0x143189198, 0x20 bytes).
@@ -74,6 +82,20 @@ public:
 
 private:
     FontLibImpl* pImpl; // +0x18
+};
+
+// (appended for the font manager, sfr_gfx_07g) font defined in a movie (0x88 bytes, StatRender_Font_Mem); a fresh one has no glyphs (exe ctor 0x1426541a0).
+class FontData : public Render::Font
+{
+public:
+    FontData();
+    // (sfr_gfx_04) a by-name placeholder, not resolved yet (exe 0x1426540b0)
+    FontData(const char* name, unsigned fontFlags);
+
+    virtual const char* GetName() const;
+
+private:
+    UByte Unrecovered[0x88 - sizeof(Render::Font)]; // the glyph / layout tables
 };
 
 inline Ptr<FontLib> StateBag::GetFontLib() const

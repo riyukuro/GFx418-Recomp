@@ -14,9 +14,19 @@ class FontMapImpl;
 class FontMap : public State
 {
 public:
+    // Style the mapped font is used with: its own (Normal / Bold / Italic), faked from the plain face (Faux*), or the
+    // style asked for (Original).
     enum MapFontFlags
     {
-        MFF_Original = 0
+        MFF_Normal         = 0,
+        MFF_Italic         = 0x1,
+        MFF_Bold           = 0x2,
+        MFF_BoldItalic     = 0x3,
+        MFF_FauxBold       = 0x4,
+        MFF_FauxItalic     = 0x8,
+        MFF_FauxBoldItalic = 0xC,
+        MFF_Original       = 0x10,
+        MFF_NoAutoFit      = 0x20
     };
 
     // One substitution (0x10 bytes).
@@ -31,6 +41,20 @@ public:
         MapEntry(const String& name, MapFontFlags flags, float scaleFactor)
             : Name(name), ScaleFactor(scaleFactor), Flags(flags)
         {
+        }
+
+        // (appended for the font manager, sfr_gfx_07g) the font flags to look the mapped font up with: the asked
+        // ones for MFF_Original, else the entry's style with the asked non-style bits.
+        unsigned UpdateFontFlags(unsigned matchFontFlags) const
+        {
+            if (Flags == MFF_Original)
+                return matchFontFlags;
+            return (Flags & ~MFF_FauxBoldItalic) | (matchFontFlags & ~MFF_BoldItalic);
+        }
+        // The style bits the handle has to fake, plus MFF_NoAutoFit.
+        unsigned GetOverridenFlags() const
+        {
+            return ((Flags & MFF_FauxBoldItalic) ? (Flags >> 2) : 0) & MFF_BoldItalic | (Flags & MFF_NoAutoFit);
         }
     };
 

@@ -1021,6 +1021,9 @@ public:
     ResourceId    GetExportedResourceIdByName(const String& name) const;
     Ptr<ASSupport> GetASSupport() const;
     CharacterCreateInfo GetCharacterCreateInfo(ResourceId rid);
+
+    // (appended for the font manager, sfr_gfx_07g) the loader's weak resource library; defined in gfx_loaderimpl.h
+    inline ResourceWeakLib* GetWeakLib() const;
 };
 
 // What a GetFontResource search found and where: the import files it looked through and the one the font came from.

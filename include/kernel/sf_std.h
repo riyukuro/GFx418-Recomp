@@ -50,6 +50,9 @@ inline int SF_CDECL SFiswalnum(wchar_t ch) { return UnicodeCharIs(UnicodeAlnumBi
 
 int SF_CDECL SFtowupper(wchar_t ch);
 
+// (appended for GFx FontManager, sfr_gfx_07g)
+inline UPInt SF_CDECL SFstrlen(const char* str) { return strlen(str); }
+
 } // namespace Scaleform
 
 #endif

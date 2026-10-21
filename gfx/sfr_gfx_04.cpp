@@ -2056,18 +2056,9 @@ void MovieDefImpl::BindTaskData::ResolveImport(ImportData* pimport, MovieDefImpl
     }
 }
 
-// Font of the movie's own tags; here only made as a by-name placeholder.
-class FontData : public Render::Font
-{
-public:
-    FontData(const char* name, unsigned fontFlags); // exe 0x1426540b0
-    virtual const char* GetName() const;
-};
-
 // The import file was not found: bind each imported symbol to a not-resolved font of that name, which the font
 // manager then looks up through the font library and the font provider.
 // @0x1425d2a50
-// MS2-FUNCTIONAL: register allocation of the loop counter and the bind data temporaries
 bool MovieDefImpl::BindTaskData::ResolveImportThroughFontLib(ImportData* pimport)
 {
     for (unsigned i = 0; i < pimport->Imports.GetSize(); i++)

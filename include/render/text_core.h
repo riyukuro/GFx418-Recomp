@@ -70,6 +70,15 @@ public:
     // gfx/gfx_fonthandle.h, where Font is complete)
     inline FontHandle(FontManagerBase* pmgr, Font* pfont, const char* name = 0, unsigned flags = 0);
     virtual ~FontHandle(); // 0x1425b5e40
+
+    // (appended for the font manager, sfr_gfx_07g) the name the handle was asked for (the font's own when none was
+    // kept), the font's flags with the forced style bits, and the member-wise copy (the font referenced once more);
+    // the inline bodies are in gfx/gfx_fonthandle.h
+    inline const char* GetFontName() const;
+    inline unsigned    GetFontFlags() const;
+    inline FontHandle(const FontHandle& src);
+    // the style bits of the font and the forced ones
+    inline unsigned GetFontStyle() const;
 };
 
 // An image placed in text: the image and its placement (baseline in image pixels, screen size in twips).

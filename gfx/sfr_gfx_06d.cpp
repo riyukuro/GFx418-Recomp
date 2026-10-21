@@ -139,7 +139,7 @@ void DisplayObjContainer::AssignRootNode(bool importFlag)
             // The fonts of the movie's sprites resolve against this def's bindings.
             void*        pmem = pheap->Alloc(0x70);
             FontManager* pfontManager =
-                pmem ? new (pmem) FontManager(GetMovieImpl(), pDefImpl, GetMovieImpl()->pFontManagerStates) : 0;
+                pmem ? ::new (pmem) FontManager(GetMovieImpl(), pDefImpl, GetMovieImpl()->pFontManagerStates) : 0;
             MovieDefRootNode* proot = pRootNode;
             if (proot->pFontManager)
                 reinterpret_cast<RefCountImpl*>(proot->pFontManager)->Release();

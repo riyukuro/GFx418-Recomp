@@ -39,7 +39,15 @@ public:
         void  AddRef()        { _InterlockedExchangeAdd((volatile long*)&RefCount, 1); }
         void  Release()
         {
-            if ((_InterlockedExchangeAdd((volatile long*)&RefCount, -1) - 1) == 0)
+            // the value goes through a union as the kernel's AtomicOps does (this decides the compare form)
+            union
+            {
+                SInt32 c;
+                long   t;
+            } u;
+            u.c = -1;
+            u.t = _InterlockedExchangeAdd((volatile long*)&RefCount, u.t);
+            if ((u.c - 1) == 0)
                 Memory::Free(this);
         }
     };
@@ -136,6 +144,9 @@ public:
     // (appended for the static text, sfr_gfx_05d) one code point, UTF-8 encoded (exe 0x142585f70; the exe's
     // UInt32 is unsigned long)
     void AppendChar(unsigned long ch);
+
+    // (appended for the font manager, sfr_gfx_07g) concatenation (exe 0x142585b80)
+    String operator+(const String& src) const;
 };
 
 // String whose buffer lives in the heap that owns the StringLH itself (exe: CopyConstructHelper 0x1425868d0).
