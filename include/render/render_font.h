@@ -67,6 +67,9 @@ public:
     virtual bool HasVectorOrRasterGlyphs() const;
     // The character ranges the font covers, as text (+0xa0; declared only).
     virtual String GetCharRanges() const;
+    // The em square the glyph coordinates are given in (+0xa8 / +0xb0).
+    virtual float GetNominalGlyphWidth() const  { return 512.0f; }
+    virtual float GetNominalGlyphHeight() const { return 1024.0f; }
 
     unsigned GetFontFlags() const { return Flags; }
     float    GetAscent() const     { return Ascent; }

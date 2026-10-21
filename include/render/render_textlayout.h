@@ -124,6 +124,55 @@ struct TextFieldParam
 class TextLayout : public RefCountBase<TextLayout, StatRender_Text_Mem>
 {
 public:
+    // The first byte of every record says what it is; the size of each kind is fixed.
+    enum RecordType
+    {
+        Record_Char,
+        Record_Color,
+        Record_Background,
+        Record_NewLine,
+        Record_Font,
+        Record_Selection,
+        Record_Underline,
+        Record_Cursor,
+        Record_Image,
+        Record_RefCntData
+    };
+
+    enum CharFlags
+    {
+        Flag_Invisible  = 0x01,
+        Flag_FauxBold   = 0x02,
+        Flag_FauxItalic = 0x04
+    };
+
+    struct CharRecord       { UByte Tag; UByte Flags; UInt16 GlyphIndex; float Advance; };                    // 8
+    struct ColorRecord      { UByte Tag; UByte Flags; UInt16 Pad; UInt32 mColor; };                           // 8
+    struct BackgroundRecord { UByte Tag; UByte Flags; UInt16 Pad; UInt32 BackgroundColor; UInt32 BorderColor; }; // 12
+    struct LineRecord       { UByte Tag; UByte Flags; UInt16 Pad; float x, y; };                               // 12
+    struct FontRecord       { UByte Tag; UByte Flags; UInt16 Pad; float mSize; Font* pFont; };                 // 16
+    // selection and cursor boxes are stored as four floats (a union member cannot hold a RectF)
+    struct SelectionRecord  { UByte Tag; UByte Flags; UInt16 Pad; UInt32 mColor; float x1, y1, x2, y2; };      // 24
+    struct UnderlineRecord  { UByte Tag; UByte Flags; UInt16 Style; float x, y, Len; UInt32 mColor; };         // 20
+    struct CursorRecord     { UByte Tag; UByte Flags; UInt16 Pad; UInt32 mColor; float x1, y1, x2, y2; };      // 24
+    struct ImageRecord      { UByte Tag; UByte Flags; UInt16 Pad; Image* pImage;
+                              float ScaleX, ScaleY, BaseLine, Advance; };                                      // 32
+    struct RefCntDataRecord { UByte Tag; UByte Flags; RefCountImpl* pData; };                                  // 16
+
+    union Record
+    {
+        CharRecord       mChar;
+        ColorRecord      mColor;
+        BackgroundRecord mBackground;
+        LineRecord       mLine;
+        FontRecord       mFont;
+        SelectionRecord  mSelection;
+        UnderlineRecord  mUnderline;
+        CursorRecord     mCursor;
+        ImageRecord      mImage;
+        RefCntDataRecord mRefCntData;
+    };
+
     // Collects the records of a layout.
     class Builder
     {
@@ -152,6 +201,8 @@ public:
         Builder(const Builder&);
         void operator=(const Builder&);
 
+        void record(const void* rec);   // appends one record (sized by its tag)
+
         TextFieldParam                                       Param;      // +0x00
         RectF                                                Bounds;     // +0x40
         RectF                                                ClipBox;    // +0x50
@@ -163,6 +214,37 @@ public:
         float                                                LastScale;
         friend class TextLayout;
     };
+
+    TextLayout(const Builder& builder);
+    ~TextLayout();
+
+    void Clear();
+    void Create(const Builder& builder);
+
+    const RectF&          GetBounds() const  { return Bounds; }
+    const RectF&          GetClipBox() const { return ClipBox; }
+    const TextFieldParam& GetParam() const   { return Param; }
+    RecordType GetRecordType(const Record& rec) const { return RecordType(rec.mChar.Tag); }
+
+    // Copies the record at pos into *rec and returns the position of the next one; 0 past the end.
+    UPInt ReadNext(UPInt pos, Record* rec) const;
+
+private:
+    TextLayout(const TextLayout&);
+    void operator=(const TextLayout&);
+
+    TextFieldParam                       Param;        // +0x10
+    RectF                                Bounds;       // +0x50
+    RectF                                ClipBox;      // +0x60
+    // the record bytes, then (pointer aligned) the font, image and ref-counted data tables
+    ArrayLH_POD<UByte, Stat_Default_Mem> Data;         // +0x70
+    UPInt                                DataSize;     // +0x88 bytes of records
+    Font**                               pFonts;       // +0x90
+    UPInt                                FontCount;
+    Image**                              pImages;      // +0xa0
+    UPInt                                ImageCount;
+    RefCountImpl**                       pRefCntData;  // +0xb0
+    UPInt                                RefCntCount;
 };
 
 }} // namespace Scaleform::Render
