@@ -183,6 +183,10 @@ public:
     const Value* FindLocal(const ASString& varname) const;      // exe 0x142944690
     void         AddLocal(const ASString& varname, const Value& val); // exe 0x14292ff50 (it must not exist yet)
     void         DeclareLocal(const ASString& varname);         // exe 0x142938180 (undefined unless it exists)
+    // Sets the local of the innermost function frame, creating it; nothing outside a function (exe 0x142981df0).
+    void         SetLocal(const ASString& varname, const Value& val);
+    void SetTarget(InteractiveObject* ptarget);        // exe 0x14298ba30
+    void SetInvalidTarget(InteractiveObject* ptarget); // exe 0x142981bc0 (the target was not found)
     // The movie enabled the Scaleform extensions to ActionScript.
     inline bool CheckExtensions() const;
     inline MemoryHeap* GetHeap() const;
@@ -276,6 +280,7 @@ public:
     {
         Env->LogScriptError("Error: Null or invalid 'this' is used for a method of %s class.\n", pclassName);
     }
+    void ThisPtrError_Call(const char* pclassName) const; // exe 0x142990c40, the out-of-line copy of ThisPtrError
 };
 
 // Bails out of a native method when this is not of the class.

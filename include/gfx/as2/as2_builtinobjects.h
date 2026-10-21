@@ -86,6 +86,8 @@ class BooleanObject : public Object
 public:
     bool BValue; // +0x68
 
+    virtual void SetValue(Environment* penv, const Value& v); // exe 0x14298cc30
+
 protected:
     void CommonInit(Environment* penv); // exe 0x142934a00
 };
@@ -207,6 +209,8 @@ public:
     }
 
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x1429566d0 decimal text
+    virtual void        SetValue(Environment* penv, const Value& v); // exe 0x14298cc50
+    const char*         ToString_Call(int radix);                    // exe 0x142991e10, the out-of-line copy of ToString
 
 protected:
     void CommonInit(Environment* penv); // exe 0x142934a40

@@ -186,6 +186,14 @@ public:
     inline InteractiveObject* ToCharacter();
     // The clip of a movie clip object, 0 for anything else (as2_avmsprite.h).
     inline Sprite* ToSprite();
+    Sprite*        ToSprite_Call(); // exe 0x142991d00, the out-of-line copy of ToSprite
+    // The script side of a character (sprite, button, text field, video), else 0.
+    AvmCharacter*       ToAvmCharacter();       // exe 0x142990d00
+    const AvmCharacter* ToAvmCharacter() const; // exe 0x142990d30
+    const InteractiveObject* ToCharacter() const; // exe 0x142991080
+    // The script side of a sprite, else 0.
+    AvmSprite*       ToAvmSprite();       // exe 0x142990e70
+    const AvmSprite* ToAvmSprite() const; // exe 0x142990e40
 
     // The object on the prototype chain that has the member itself, 0 for none (exe 0x142944a00).
     Object* FindOwner(ASStringContext* psc, const ASString& name);

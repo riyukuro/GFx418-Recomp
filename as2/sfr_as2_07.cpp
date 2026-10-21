@@ -4,20 +4,31 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14297f2c0-0x14297f3d0 .text$mn
 // MS2-RANGE: 0x14297fba0-0x14297fed0 .text$mn
+// MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
+// MS2-RANGE: 0x142981bc0-0x142981bf0 .text$mn
+// MS2-RANGE: 0x142981df0-0x142981f00 .text$mn
 // MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
 // MS2-RANGE: 0x14298a3d0-0x14298a480 .text$mn
 // MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
+// MS2-RANGE: 0x14298b9f0-0x14298ba60 .text$mn
+// MS2-RANGE: 0x14298c9e0-0x14298ca20 .text$mn
+// MS2-RANGE: 0x14298cc30-0x14298cc70 .text$mn
+// MS2-RANGE: 0x14298cc80-0x14298cce0 .text$mn
 // MS2-RANGE: 0x14298dc00-0x14298dcb0 .text$mn
 // MS2-RANGE: 0x14298de30-0x14298dee0 .text$mn
 // MS2-RANGE: 0x142990240-0x1429902c0 .text$mn
 // MS2-RANGE: 0x142990a10-0x142990b70 .text$mn
 // MS2-RANGE: 0x142990be0-0x142990c30 .text$mn
-// MS2-RANGE: 0x142990c60-0x142990cc0 .text$mn
-// MS2-RANGE: 0x142990d60-0x142990dd0 .text$mn
+// MS2-RANGE: 0x142990c40-0x142990cc0 .text$mn
+// MS2-RANGE: 0x142990d00-0x142990dd0 .text$mn
+// MS2-RANGE: 0x142990e40-0x142990ea0 .text$mn
 // MS2-RANGE: 0x142990f20-0x142991050 .text$mn
-// MS2-RANGE: 0x1429910b0-0x142991140 .text$mn
-// MS2-RANGE: 0x142991210-0x1429912d0 .text$mn
+// MS2-RANGE: 0x142991080-0x142991140 .text$mn
+// MS2-RANGE: 0x142991190-0x1429912d0 .text$mn
+// MS2-RANGE: 0x142991810-0x142991850 .text$mn
 // MS2-RANGE: 0x142991c60-0x142991cd0 .text$mn
+// MS2-RANGE: 0x142991d00-0x142991d30 .text$mn
+// MS2-RANGE: 0x142991e10-0x142991e70 .text$mn
 // MS2-RANGE: 0x1429923c0-0x142992500 .text$mn
 // MS2-RANGE: 0x142992780-0x142992830 .text$mn
 
@@ -26,6 +37,7 @@
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/kernel/sf_std.h"
@@ -354,6 +366,156 @@ UInt32 Value::ToUInt32(Environment* penv) const
     if (v < 0)
         uv = 0u - uv;
     return uv;
+}
+
+
+// @0x142981b70
+void Value::SetInt_Call(int val)
+{
+    SetInt(val);
+}
+
+// @0x142981bc0
+void Environment::SetInvalidTarget(InteractiveObject* ptarget)
+{
+    Target          = ptarget;
+    IsInvalidTarget = true;
+    StringContext.UpdateVersion(ptarget->GetVersion());
+}
+
+// @0x142981df0
+void Environment::SetLocal(const ASString& varname, const Value& val)
+{
+    if (LocalFrames.GetSize() == 0)
+        return;
+    if (!LocalFrames[LocalFrames.GetSize() - 1])
+        return;
+
+    Value* pvalue = const_cast<Value*>(FindLocal(varname));
+    if (!pvalue)
+        AddLocal(varname, val);
+    else
+        *pvalue = val;
+}
+
+// @0x142981e70
+void FunctionRefBase::SetLocalFrame(LocalFrame* localFrame, bool weakRef)
+{
+    if (pLocalFrame && !(Flags & FuncRef_Weak))
+        pLocalFrame->Release();
+    pLocalFrame = localFrame;
+    if (weakRef)
+        Flags |= FuncRef_Weak;
+    else
+        Flags &= ~FuncRef_Weak;
+    if (pLocalFrame && !(Flags & FuncRef_Weak))
+        pLocalFrame->AddRef();
+}
+
+// @0x14298b9f0
+void Value::SetString_Call(const ASString& str)
+{
+    SetString(str);
+}
+
+// @0x14298ba30
+void Environment::SetTarget(InteractiveObject* ptarget)
+{
+    Target          = ptarget;
+    IsInvalidTarget = false;
+    StringContext.UpdateVersion(ptarget->GetVersion());
+}
+
+// @0x14298c9e0
+void Value::SetUInt_Call(unsigned val)
+{
+    SetUInt(val);
+}
+
+// @0x14298cc30
+void BooleanObject::SetValue(Environment* penv, const Value& v)
+{
+    BValue = v.ToBool(penv);
+}
+
+// @0x14298cc50
+void NumberObject::SetValue(Environment* penv, const Value& v)
+{
+    NumberValue = v.ToNumber(penv);
+}
+
+// @0x14298cc80
+void StringObject::SetValue(Environment* penv, const Value& v)
+{
+    ASString s(v.ToString(penv));
+    sValue = s.ToCStr();
+}
+
+// @0x142990c40
+void FnCall::ThisPtrError_Call(const char* pclassName) const
+{
+    ThisPtrError(pclassName);
+}
+
+// @0x142990d00
+AvmCharacter* ObjectInterface::ToAvmCharacter()
+{
+    return IsASCharacter() ? static_cast<AvmCharacter*>(this) : 0;
+}
+
+// @0x142990d30
+const AvmCharacter* ObjectInterface::ToAvmCharacter() const
+{
+    return IsASCharacter() ? static_cast<const AvmCharacter*>(this) : 0;
+}
+
+// @0x142990e40
+const AvmSprite* ObjectInterface::ToAvmSprite() const
+{
+    return GetObjectType() == Object_Sprite ? static_cast<const AvmSprite*>(this) : 0;
+}
+
+// @0x142990e70
+AvmSprite* ObjectInterface::ToAvmSprite()
+{
+    return GetObjectType() == Object_Sprite ? static_cast<AvmSprite*>(this) : 0;
+}
+
+// @0x142991080
+const InteractiveObject* ObjectInterface::ToCharacter() const
+{
+    return IsASCharacter() ? static_cast<const AvmCharacter*>(this)->GetDispObj() : 0;
+}
+
+// @0x142991190
+FunctionRef Value::ToFunction_Call(const Environment* penv) const
+{
+    switch (T.Type)
+    {
+    case FUNCTION:
+        return V.FunctionValue;
+    case FUNCTIONNAME:
+        return ResolveFunctionName(penv);
+    }
+    return FunctionRef();
+}
+
+// @0x142991810
+ObjectInterface* Value::ToObjectInterface_Call(const Environment* penv) const
+{
+    return ToObjectInterface(penv);
+}
+
+// @0x142991d00
+Sprite* ObjectInterface::ToSprite_Call()
+{
+    return ToSprite();
+}
+
+// @0x142991e10
+const char* NumberObject::ToString_Call(int radix)
+{
+    return ToString(radix);
 }
 
 }}} // namespace Scaleform::GFx::AS2

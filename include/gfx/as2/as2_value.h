@@ -207,9 +207,9 @@ public:
     Number   ToNumber(Environment* penv) const;                         // exe 0x1429912d0
     SInt32   ToInt32(Environment* penv) const;                          // exe 0x142991210
     UInt32   ToUInt32(Environment* penv) const;                         // exe 0x142992440
-    bool     ToBool(const Environment* penv) const;                     // exe 0x142990f20
+    SF_NOINLINE bool ToBool(const Environment* penv) const;             // exe 0x142990f20
     Object*  ToObject(const Environment* penv) const;                   // exe 0x142991660
-    AvmCharacter*    ToAvmCharacter(const Environment* penv) const;     // exe 0x142990d60
+    SF_NOINLINE AvmCharacter* ToAvmCharacter(const Environment* penv) const; // exe 0x142990d60
     inline ObjectInterface* ToObjectInterface(const Environment* penv) const; // as2_avmcharacter.h
     inline const ASString&  GetCharacterNamePath(Environment* penv) const;    // as2_avmcharacter.h
     MS2_AS2_SCU ASString ToStringImpl(Environment* penv, int precision, bool debug) const; // exe 0x142991e70
@@ -325,6 +325,12 @@ public:
     void SetAsObjectInterface(ObjectInterface* pobj);   // exe 0x14297fdb0
     SF_NOINLINE void SetAsFunction(const FunctionRefBase& func); // exe 0x14297fc40
     void SetAsResolveHandler(const FunctionRefBase& func); // exe 0x14297fe60
+    // The exe's out-of-line copies of the inline setters and conversions.
+    void             SetString_Call(const ASString& str);                       // exe 0x14298b9f0
+    void             SetInt_Call(int val);                                      // exe 0x142981b70
+    void             SetUInt_Call(unsigned val);                                // exe 0x14298c9e0
+    ObjectInterface* ToObjectInterface_Call(const Environment* penv) const;     // exe 0x142991810
+    FunctionRef      ToFunction_Call(const Environment* penv) const;            // exe 0x142991190
 
 protected:
     // The function of a FUNCTIONNAME value, looked up by name (exe 0x14297ec30).

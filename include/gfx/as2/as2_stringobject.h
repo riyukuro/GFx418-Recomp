@@ -16,6 +16,7 @@ public:
 
     // "length" defaults to the length of the string (exe 0x1429538a0).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+    virtual void SetValue(Environment* penv, const Value& v); // exe 0x14298cc80
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942fc0
