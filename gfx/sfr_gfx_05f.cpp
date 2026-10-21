@@ -7,8 +7,16 @@
 
 #include "ms2/scaleform/include/render/render_drawableimage.h"
 #include "ms2/scaleform/include/render/render_shapedata.h"
+#include "ms2/scaleform/include/render/render_treenode.h"
 
 namespace Scaleform { namespace Render {
+
+// The out-of-line copy of TreeNode::SetCxform the exe calls from the drawable image TU (cl inlines the header body).
+// @0x1425eeef0
+void TreeNode_SetCxform(TreeNode* pnode, const Cxform& cx)
+{
+    pnode->SetCxform(cx);
+}
 
 // Writes c as is (alpha included); x == width / y == height pass the check like the exe's.
 // @0x1425eef20
