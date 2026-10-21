@@ -9,17 +9,16 @@
 #define MS2_SF_KERNEL_MEMORY_H
 
 #include "sf_types.h"
+#include "ms2/scaleform/kernel/sf_stats.h"
 
 namespace Scaleform {
 
-// Allocation statistics ids (Stat_*, StatMV_*): only the values the recovered code uses, named after the exe's
-// template arguments.
-enum StatBasicValues
+// Allocation statistics ids: the kernel ones (StatBasicValues, StatGroup, HeapId) come from the kernel sf_stats.h,
+// shared with the render include tree; the movie ids the recovered code uses are named after the exe's template
+// arguments.
+enum StatMovieValues
 {
-    StatGroup_Default   = 0,
-    Stat_Mem            = 1,
-    Stat_Default_Mem    = 2,
-    StatMV_XML_Mem      = 0x146,
+    StatMV_XML_Mem = 0x146,
 };
 
 class  MemoryHeap;
@@ -208,12 +207,6 @@ struct HeapDesc
         : Flags(flags), MinAlign(minAlign), Granularity(granularity), Reserve(reserve), Threshold(threshold),
           Limit(limit), HeapId(heapId), Arena(arena)
     {}
-};
-
-// Heap ids passed in HeapDesc::HeapId.
-enum HeapIdValues
-{
-    HeapId_Images = 5
 };
 
 } // namespace Scaleform
