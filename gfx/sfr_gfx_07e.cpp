@@ -28,6 +28,7 @@
 #include "../include/gfx/gfx_sound.h"
 #include "../include/gfx/gfx_taskmanager.h"
 #include "../include/gfx/gfx_shape.h"
+#include "../include/gfx/gfx_shapedef.h"
 #include "../include/kernel/sf_allocator.h"
 
 namespace Scaleform { namespace GFx {
@@ -128,6 +129,33 @@ void PathAllocator::Clear()
     pLastPage  = 0;
     FreeBytes  = 0;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// ShapeBaseCharacterDef
+
+// A shape without images uses its own provider; one with image fills uses the provider bound for this movie, made
+// and cached in the movie's bind data on first use.
+// @0x142636410
+Ptr<Render::TreeNode> ShapeBaseCharacterDef::CreateTreeShape(Render::Context& context, MovieDefImpl* defImpl) const
+{
+    Ptr<Render::TreeShape> tshp = *context.CreateEntry<Render::TreeShape>();
+    if (NeedsResolving())
+    {
+        Ptr<Render::ShapeMeshProvider> shMeshProv = defImpl->pBindData->GetShapeMeshProvider(pShapeMeshProvider);
+        if (!shMeshProv)
+        {
+            shMeshProv = BindResourcesInStyles(defImpl->GetResourceBinding());
+            defImpl->pBindData->AddShapeMeshProvider(pShapeMeshProvider, shMeshProv);
+        }
+        tshp->SetShape(shMeshProv);
+    }
+    else
+        tshp->SetShape(pShapeMeshProvider);
+    return tshp.GetPtr();
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// PathAllocator (continued)
 
 // Only the last block of the page can shrink; the freed bytes go back to the page. (4.1.18 reports false either way.)
 // @0x142636580
