@@ -192,6 +192,29 @@ public:
     ASStringManager* GetStringManager() const;                   // 0x1425f8560
     // Takes this off its parent's display list.
     void RemoveDisplayObject();                                  // 0x1425f8950
+
+    // (appended for the containers, sfr_gfx_06d)
+    // _focusrect: true, or false (defined either way).
+    void SetFocusRectFlag(bool v = true)
+    {
+        if (v)
+            Flags |= Mask_FocusRect;
+        else
+        {
+            Flags &= ~0x80u;
+            Flags |= 0x100u;
+        }
+    }
+    void MarkToRemoveFromOptimizedPlayList() { Flags |= Mask_MarkedToRemoveFromOptAdvList; }
+    // Joins or leaves the optimized advance list as CheckAdvanceStatus decides.
+    void ModifyOptimizedPlayList()
+    {
+        switch (CheckAdvanceStatus(IsInOptimizedPlayList()))
+        {
+        case 1:  AddToOptimizedPlayList(); break;
+        case -1: MarkToRemoveFromOptimizedPlayList(); break;
+        }
+    }
 };
 
 // The AVM half of an interactive object: slots 13..22 after the AvmDisplayObjBase ones.

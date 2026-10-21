@@ -8,6 +8,7 @@
 
 #include "gfx_state.h"
 #include "gfx_stream.h"
+#include "gfx_characterdef.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -16,6 +17,9 @@ class LoadProcess;
 class MemoryContext;
 struct MemoryParams;
 class MovieImpl;
+class DisplayObjectBase;
+class InteractiveObject;
+struct CharacterCreateInfo;
 
 class ASSupport : public State
 {
@@ -25,8 +29,11 @@ private:
     virtual void Slot02() = 0; // CreateASIMEManager
 public:
     virtual MemoryContext* CreateMemoryContext(const char* heapName, const MemoryParams& memParams, bool debugHeap) = 0;
+    // A new instance of the character ccinfo describes, bound to ccinfo's movie (slot 4, named for sfr_gfx_06d).
+    virtual DisplayObjectBase* CreateCharacterInstance(MovieImpl* proot, const CharacterCreateInfo& ccinfo,
+                                                       InteractiveObject* pparent, ResourceId rid,
+                                                       CharacterDef::CharacterDefType type = CharacterDef::Unknown) = 0;
 private:
-    virtual void Slot04() = 0; // CreateCharacterInstance
     virtual void Slot05() = 0; // DoActions
     virtual void Slot06() = 0; // GetAVMVersion
     virtual void Slot07() = 0; // AllocPlaceObject2Tag

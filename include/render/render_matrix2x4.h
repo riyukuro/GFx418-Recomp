@@ -227,6 +227,14 @@ public:
         M[0][0] = m.M[0][0]; M[0][1] = m.M[0][1]; M[0][2] = m.M[0][2]; M[0][3] = m.M[0][3];
         M[1][0] = m.M[1][0]; M[1][1] = m.M[1][1]; M[1][2] = m.M[1][2]; M[1][3] = m.M[1][3];
     }
+
+    // (appended for the containers, sfr_gfx_06d) p mapped through the inverse, by value (its COMDAT: 0x142447090)
+    Point<T> TransformByInverse(const Point<T>& p) const
+    {
+        Matrix2x4 m(*this);
+        m.Invert();
+        return Point<T>(m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3], m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3]);
+    }
 };
 
 typedef Matrix2x4<float> Matrix2F;

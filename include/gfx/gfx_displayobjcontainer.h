@@ -258,6 +258,21 @@ public:
 
     // (appended for the interactive objects, sfr_gfx_06b) removes the child at depth with the given id (0x1425fd560)
     void RemoveDisplayObject(int depth, ResourceId id);
+
+    // (appended for the containers, sfr_gfx_06d)
+    AvmDisplayObjContainerBase* GetAvmDispContainer() const { return GetAvmObjImpl()->ToAvmDispContainerBase(); }
+
+    // Per child: 0 where a clip layer (mask) hides pt; left empty when no child is a clip layer (0x1425fbff0).
+    void CalcDisplayListHitTestMaskArray(Array<UByte>* phitTest, const PointF& pt, bool testShape) const;
+
+    void MoveDisplayObject(const CharPosInfo& pos);                                           // 0x1425fcea0
+    void ReplaceDisplayObject(const CharPosInfo& pos, DisplayObjectBase* ch, const ASString& name);   // 0x1425fd5e0
+    DisplayObjectBase* GetChildAt(unsigned index) const;                                      // 0x1425fc530
+    DisplayObjectBase* GetCharacterAtDepth(int depth);                                        // 0x1425fc4f0
+    ResourceId         GetIdAtDepth(int depth);                                               // 0x1425fc590
+    // ch is this container or one of its descendants (0x1425fc270).
+    bool Contains(DisplayObjectBase* ch) const;
+    void FillTabableArray(FillTabableParams* params);                                         // 0x1425fc460
 };
 
 // The AVM half of a container: slot 23.

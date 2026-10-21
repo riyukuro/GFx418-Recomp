@@ -21,9 +21,19 @@ class ASString;
 }
 class MemoryHeap;
 class Log;
-namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; }
+namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld; }
 namespace GFx {
 class StateBag;
+class FontManagerStates;
+class MovieDefRootNode;
+
+// (sfr_gfx_06d) the links of the movie's list of root nodes (List<MovieDefRootNode>): the list root's pNext is the
+// first node, and the root itself passes for a node one base offset before it.
+struct MovieDefRootNodeLinks
+{
+    MovieDefRootNode* pPrev;
+    MovieDefRootNode* pNext;
+};
 
 class MovieImpl
 {
@@ -36,7 +46,9 @@ public:
     InteractiveObject* pMainMovie;             // +0x50 _level0
     struct LevelInfo { int Level; InteractiveObject* pSprite; };   // (sfr_gfx_06)
     LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
-    void*            Unrecovered_60[5];        // +0x60
+    void*            Unrecovered_60[2];        // +0x60
+    MovieDefRootNodeLinks RootMovieDefNodes;   // +0x70 the root nodes of the loaded movies (sfr_gfx_06d)
+    void*            Unrecovered_80;           // +0x80
     Render::TreeNode* pRenderRoot;             // +0x88 Ptr<TreeRoot> (sfr_gfx_06)
     void*            Unrecovered_90;           // +0x90
     Render::TreeNode* pTopMostRoot;            // +0x98 Ptr<TreeContainer> (sfr_gfx_06)
@@ -53,7 +65,9 @@ public:
     float            ScreenToWorldSy;          // +0x134
     void*            Unrecovered_138[0x1e];    // +0x138
     Ptr<Log>         pCachedLog;               // +0x228 the log state's log, cached (sfr_gfx_06)
-    void*            Unrecovered_230[0x20d];   // +0x230
+    void*            Unrecovered_230[3];       // +0x230
+    FontManagerStates* pFontManagerStates;     // +0x248 Ptr: the font states the movies' font managers share (sfr_gfx_06d)
+    void*            Unrecovered_250[0x209];   // +0x250
     Render::PointF   MouseLastPosition;        // +0x1298 MouseState[0] last position, twips (sfr_gfx_06)
     void*            Unrecovered_12a0[0x368];  // +0x12a0
     // A character the timeline keeps advancing even when stopped (MS2 build; Sprite::CheckAdvanceStatus).
@@ -182,16 +196,19 @@ public:
     void AddMovieDefToKillList(MovieDefImpl* pdefImpl);
     // Re-parents the transform of an object with an indirect transform; null parent detaches it (0x1425786d0).
     void UpdateTransformParent(DisplayObjectBase* pch, DisplayObjectBase* pparent);
+
+    // (appended for the containers, sfr_gfx_06d) a mouse is in use (MouseCursorCount, +0x13a0)
+    bool IsMouseSupportEnabled() const { return *(const unsigned*)((const UByte*)this + 0x13a0) > 0; }
+    // The 3D hit test mapping (Render::ScreenToWorld, 0x100 bytes) starts at ScreenToWorldSx.
+    Render::ScreenToWorld& GetScreenToWorld() { return *reinterpret_cast<Render::ScreenToWorld*>(&ScreenToWorldSx); }
 };
 
 // The root of one loaded movie's sprite tree; leading members only (the font manager, bytes loaded and so on).
-class MovieDefRootNode
+class MovieDefRootNode : public MovieDefRootNodeLinks   // pPrev +0x08, pNext +0x10
 {
 public:
     virtual ~MovieDefRootNode();         // vftable +0x00
 
-    MovieDefRootNode* pPrev;             // +0x08 ListNode
-    MovieDefRootNode* pNext;             // +0x10
     unsigned          SpriteRefCount;    // +0x18
     MovieDefImpl*     pDefImpl;          // +0x20
     unsigned          LoadingFrame;      // +0x28
