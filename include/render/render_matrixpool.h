@@ -61,6 +61,10 @@ public:
     UByte        UnitSize;
     UByte        Format;
 
+    // (appended for sfr_render_04f) a block is freed with its last handle reference
+    void   AddRef() { RefCount++; }
+    void   Release();   // 0x1426ba340
+
     UByte* GetDataStart() { return (UByte*)this + Pool_DataUnitSize; }
     void*  GetData(ElementIndex index)
     {
@@ -78,12 +82,41 @@ struct EntryHandle
     Matrix2F* GetMatrixPtr()   { return pHeader->GetMatrixPtr(); }
     Matrix3F* GetMatrix3DPtr() { return pHeader->GetMatrix3DPtr(); }
     unsigned  GetFormatBits() const { return pHeader->Format; }
+
+    void      AddRef()  { pHeader->AddRef(); }
+    void      Release() { pHeader->Release(); }
 };
 
 class HMatrix : public HMatrixConstants
 {
 public:
     EntryHandle* pHandle;
+
+    // (appended for sfr_render_04f) handles are reference counted; the shared null handle (0x143a2fcb0) is not
+    static EntryHandle NullHandle;
+
+    HMatrix() : pHandle(&NullHandle) { }
+    HMatrix(const HMatrix& other) : pHandle(other.pHandle)
+    {
+        if (pHandle != &NullHandle)
+            pHandle->AddRef();
+    }
+    ~HMatrix()
+    {
+        if (pHandle != &NullHandle)
+            pHandle->Release();
+    }
+    void operator=(const HMatrix& other);   // 0x1426b9e00
+
+    void Clear()
+    {
+        if (pHandle != &NullHandle)
+        {
+            pHandle->Release();
+            pHandle = &NullHandle;
+        }
+    }
+    bool IsNull() const { return pHandle == &NullHandle; }
 
     void SetMatrix2D(const Matrix2F& m);
     void SetTextureMatrix(const Matrix2F& m, unsigned index);

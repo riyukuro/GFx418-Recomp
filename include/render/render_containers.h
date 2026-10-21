@@ -1,6 +1,6 @@
 // Recovered Scaleform 4.1.18 Render: small containers of the renderer (Render_Containers). Only the ones the
 // recovered units use so far: LinearHeap (bump allocator over a page pool), PagedItemBuffer (append-only item pages)
-// and DepthUpdateArrayPOD (per-depth singly linked buckets).
+// DepthUpdateArrayPOD (per-depth singly linked buckets) and ArrayReserveLH_Mov (small in-place arrays).
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 #ifndef MS2_SF_RENDER_CONTAINERS_H
 #define MS2_SF_RENDER_CONTAINERS_H
@@ -299,6 +299,42 @@ public:
             pDepth[i] = NullValue;
         DepthUsed = 0;
     }
+};
+
+// An array of movable items that keeps up to InternalSize of them in place and moves to a heap block (sized in
+// steps of four) once it grows past that. Size comes first; the in-place items share their storage with the heap
+// block pointer and its capacity.
+template<class C, int InternalSize = 2>
+class ArrayReserveLH_Mov
+{
+    UPInt Size;
+
+    struct HeapBlock
+    {
+        C*    pData;
+        UPInt Reserve;
+    };
+    union
+    {
+        HeapBlock Block;
+        UByte     Inline[InternalSize * sizeof(C)];
+    };
+
+public:
+    ArrayReserveLH_Mov() : Size(0) { }
+    ~ArrayReserveLH_Mov()
+    {
+        DestructArray<C>(GetBuffer(), Size);
+        if (Size > InternalSize)
+            SF_FREE(Block.pData);
+    }
+
+    UPInt    GetSize() const   { return Size; }
+    C*       GetBuffer()       { return (Size > InternalSize) ? Block.pData : (C*)Inline; }
+    const C* GetBuffer() const { return (Size > InternalSize) ? Block.pData : (const C*)Inline; }
+
+    C&       operator[](UPInt i)       { return GetBuffer()[i]; }
+    const C& operator[](UPInt i) const { return GetBuffer()[i]; }
 };
 
 }} // namespace Scaleform::Render

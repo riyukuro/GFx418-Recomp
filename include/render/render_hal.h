@@ -8,15 +8,22 @@
 #include "ms2/scaleform/kernel/sf_refcount.h"
 #include "ms2/scaleform/include/render/render_types2d.h"
 #include "ms2/scaleform/include/render/render_matrix2x4.h"
+#include "ms2/scaleform/include/render/render_matrix4x4.h"
+#include "ms2/scaleform/kernel/sf_array.h"
 #include "ms2/scaleform/include/render/render_color.h"
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_buffer.h"
+#include "ms2/scaleform/include/render/render_primitive.h"
 
 namespace Scaleform { namespace Render {
 
 class Viewport;
 class RenderBufferManager;
 class DepthStencilBuffer;
+class PrimitiveFill;
+struct PrimitiveFillData;
+class MeshCache;
+class FilterPrimitive;
 
 class HAL : public RefCountBase<HAL, StatRender_Mem>
 {
@@ -44,7 +51,7 @@ public:
     // slots 20-48 are not called from the recovered units yet (placeholders keep the slot numbers)
     virtual void halSlot20() = 0;                                                                 // 20
     virtual void halSlot21() = 0;                                                                 // 21
-    virtual void halSlot22() = 0;                                                                 // 22
+    virtual PrimitiveFill* CreatePrimitiveFill(const PrimitiveFillData& data) = 0;                 // 22
     virtual void halSlot23() = 0;                                                                 // 23
     virtual void halSlot24() = 0;                                                                 // 24
     virtual void halSlot25() = 0;                                                                 // 25
@@ -58,7 +65,7 @@ public:
     virtual void halSlot33() = 0;                                                                 // 33
     virtual void halSlot34() = 0;                                                                 // 34
     virtual void halSlot35() = 0;                                                                 // 35
-    virtual void halSlot36() = 0;                                                                 // 36
+    virtual void PrepareFilters(FilterPrimitive* primitive) = 0;                                  // 36
     virtual void halSlot37() = 0;                                                                 // 37
     virtual void halSlot38() = 0;                                                                 // 38
     virtual void halSlot39() = 0;                                                                 // 39
@@ -76,6 +83,56 @@ public:
     virtual void halSlot50() = 0;                                                                 // 50
     virtual void halSlot51() = 0;                                                                 // 51
     virtual TextureManager* GetTextureManager() = 0;                                              // 52
+    // (appended for sfr_render_04f)
+    virtual MeshCache& GetMeshCache() = 0;                                                        // 53
+    virtual void halSlot54() = 0;                                                                 // 54
+    virtual void halSlot55() = 0;                                                                 // 55
+    // the hardware vertex formats a fill is drawn with: plain, batched and instanced
+    virtual void MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
+                                 const VertexFormat** single, const VertexFormat** batch,
+                                 const VertexFormat** instanced, unsigned meshType) = 0;          // 56
+
+    // (appended for sfr_render_04f) the 3D view and projection, with the stacks the queue items push them on
+protected:
+    UByte             Unk_Members[0x50 - 0x10];
+public:
+    Matrix3F          View3D;                    // +0x50
+    Matrix4F          Proj3D;                    // +0x80
+protected:
+    UByte             Unk_Members2[0x2a0 - 0xc0];
+public:
+    bool              UVPOChanged;               // +0x2a0, the combined matrices need rebuilding
+protected:
+    UByte             Unk_Members3[0x468 - 0x2a1];
+public:
+    ArrayLH<Matrix3F, Stat_Default_Mem, ArrayConstPolicy<0, 8, true> > ViewMatrix3DStack;         // +0x468
+    ArrayLH<Matrix4F, Stat_Default_Mem, ArrayConstPolicy<0, 8, true> > ProjectionMatrix3DStack;   // +0x480
+
+    void PushView3D(const Matrix3F& m)
+    {
+        View3D.Set(&m.M[0][0], 12);
+        UVPOChanged = 1;
+        ViewMatrix3DStack.PushBack(m);
+    }
+    void PopView3D()
+    {
+        ViewMatrix3DStack.PopBack();
+        const Matrix3F& top = ViewMatrix3DStack.GetSize() ? ViewMatrix3DStack.Back() : Matrix3F::Identity;
+        View3D.Set(&top.M[0][0], 12);
+        UVPOChanged = 1;
+    }
+    void PushProj3D(const Matrix4F& m)
+    {
+        Proj3D      = m;
+        UVPOChanged = 1;
+        ProjectionMatrix3DStack.PushBack(m);
+    }
+    void PopProj3D()
+    {
+        ProjectionMatrix3DStack.PopBack();
+        Proj3D      = ProjectionMatrix3DStack.GetSize() ? ProjectionMatrix3DStack.Back() : Matrix4F::Identity;
+        UVPOChanged = 1;
+    }
 };
 
 }} // namespace Scaleform::Render

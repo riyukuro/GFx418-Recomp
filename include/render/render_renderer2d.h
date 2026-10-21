@@ -12,6 +12,7 @@
 #include "ms2/scaleform/include/render/render_color.h"
 #include "ms2/scaleform/include/render/render_context.h"
 #include "ms2/scaleform/include/render/render_stats.h"
+#include "ms2/scaleform/include/render/render_meshkey.h"
 
 namespace Scaleform { namespace Render {
 
@@ -31,6 +32,36 @@ class CacheBase
 public:
     virtual ~CacheBase() {}
     virtual void UnlockBuffers() = 0;
+};
+
+// (appended for sfr_render_04f) mesh cache sizing; only the batching limit is read so far
+struct MeshCacheParams
+{
+    UPInt    MemReserve;
+    UPInt    MemLimit;
+    UPInt    MemGranularity;
+    UPInt    LRUTailSize;
+    UPInt    StagingBufferSize;
+    UPInt    VBLockEvictSizeLimit;
+    unsigned MaxBatchInstances;      // +0x30, meshes one instanced batch may hold
+    unsigned InstancingThreshold;
+    unsigned NoBatchVerticesSizeThreshold;
+    unsigned MaxVerticesSizeInBatch;
+    unsigned MaxIndicesInBatch;
+};
+
+class MeshCacheConfig
+{
+public:
+    virtual ~MeshCacheConfig() {}
+    virtual bool                   SetParams(const MeshCacheParams& params) = 0;
+    virtual const MeshCacheParams& GetParams() const = 0;
+    virtual void                   ClearCache() = 0;
+};
+
+// the HAL's mesh cache (CacheBase at +0, MeshCacheConfig at +8)
+class MeshCache : public CacheBase, public MeshCacheConfig
+{
 };
 
 // the glyph cache's settings interface (Render_GlyphCacheConfig)
@@ -134,6 +165,10 @@ public:
     void Draw(TreeRoot* root);
 
 protected:
+    // (appended for sfr_render_04f) complex meshes with image fills, refreshed when textures change
+    friend class ComplexMesh;
+    void AddComplexMeshToUpdateList(ComplexMesh::UpdateNode& node);   // 0x14263edc0
+
     virtual void EntryDestroy(Context::Entry*);
     virtual void EntryFlush(Context::Entry*);
     virtual void EntryChanges(Context& context, Context::ChangeBuffer&, bool forceUpdateImages = false);

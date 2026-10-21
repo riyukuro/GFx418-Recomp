@@ -12,6 +12,7 @@
 #include "ms2/scaleform/kernel/sf_array.h"
 #include "ms2/scaleform/include/render/render_stats.h"
 #include "ms2/scaleform/include/render/render_image.h"
+#include "ms2/scaleform/include/render/render_primitive.h"
 
 namespace Scaleform { namespace Render {
 
@@ -113,16 +114,6 @@ public:
         pBundle.Clear();
         IndexHint = 0;
     }
-};
-
-// A primitive fill: the textures of a simple (single fill) shape. Only the texture slots are laid out.
-class PrimitiveFill : public RefCountBaseNTS<PrimitiveFill, StatRender_Fill_Mem>
-{
-    UByte    Unk_Data[0x10];     // fill type, vertex format, colors
-public:
-    Texture* Textures[2];        // +0x20
-
-    Texture* GetTexture(unsigned index = 0) const { return Textures[index]; }
 };
 
 // The bundle of simple shapes sharing one fill (Render_PrimitiveBundle); only the primitive's fill pointer is laid
