@@ -6,6 +6,7 @@
 #define MS2_SF_GFX_AS2_BUILTINOBJECTS_H
 
 #include "as2_object.h"
+#include "../gfx_asutils.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -60,7 +61,17 @@ public:
 class NumberObject : public Object
 {
 public:
-    void* Data68[2]; // +0x68 not recovered
+    Number NumberValue; // +0x68
+    String StringValue; // +0x70 text of the last ToString
+
+    // Text of the value in the radix (see NumberUtil::ToString), kept alive in StringValue.
+    const char* ToString(int radix)
+    {
+        char        buf[0x40];
+        const char* pstr = NumberUtil::ToString(NumberValue, buf, sizeof(buf), radix);
+        StringValue      = pstr;
+        return StringValue.ToCStr();
+    }
 };
 class SharedObject : public Object
 {

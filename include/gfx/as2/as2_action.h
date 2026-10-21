@@ -87,6 +87,7 @@ public:
     inline Object* OperatorNew(const ASString& className, int nargs = 0, int argsTopOff = -1);
     inline const ASString& GetBuiltin(int btype) const;
     inline ASString        CreateString(const char* pstr, UPInt length) const;
+    inline ASString        CreateString(const char* pstr) const; // as2_movieroot.h
 };
 
 // Arguments, this and result slot of a native call. 0x40 bytes.

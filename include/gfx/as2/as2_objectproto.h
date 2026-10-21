@@ -74,6 +74,28 @@ protected:
     }
 };
 
+// Object.prototype methods (only the natives so far).
+class ObjectProto
+{
+public:
+    static void AddProperty(const FnCall& fn);
+    static void HasOwnProperty(const FnCall& fn);
+    static void IsPropertyEnumerable(const FnCall& fn);
+    static void IsPrototypeOf(const FnCall& fn);
+    static void Watch_(const FnCall& fn);
+    static void Unwatch_(const FnCall& fn);
+    static void ToString(const FnCall& fn);
+};
+
+// Function.prototype methods (only the natives so far).
+class FunctionProto
+{
+public:
+    static void Apply(const FnCall& fn);
+    static void Call(const FnCall& fn);
+    static void ToString(const FnCall& fn);
+};
+
 }}} // namespace Scaleform::GFx::AS2
 
 #endif

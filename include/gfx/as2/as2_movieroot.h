@@ -18,6 +18,8 @@ enum ASBuiltinType : int
     ASBuiltin_DropShadowFilter = 38,
     ASBuiltin_GlowFilter       = 39,
     ASBuiltin_BlurFilter       = 40,
+    ASBuiltin_typeFunction_    = 83, // "[type Function]"
+    ASBuiltin_objectObject_    = 85, // "[object Object]"
     ASBuiltin_x      = 129,
     ASBuiltin_y      = 130,
 };
@@ -37,6 +39,7 @@ public:
     {
         return pStringManager->CreateString(pstr, length);
     }
+    ASString CreateString(const char* pstr) const { return ASString(pStringManager->CreateStringNode(pstr)); }
 };
 
 // AS2 half of a movie.
@@ -52,6 +55,16 @@ public:
 inline const ASString& ASStringContext::GetBuiltin(int btype) const
 {
     return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(btype);
+}
+
+inline ASString ASStringContext::CreateString(const char* pstr) const
+{
+    return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateString(pstr);
+}
+
+inline ASString Environment::CreateString(const char* pstr) const
+{
+    return StringContext.CreateString(pstr);
 }
 
 inline ASString ASStringContext::CreateString(const char* pstr, UPInt length) const

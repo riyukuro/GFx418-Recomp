@@ -5,6 +5,10 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428fdc00-0x1428fe7e0 .text$mn
 // MS2-RANGE: 0x1428fec90-0x1428fed10 .text$mn
+// MS2-RANGE: 0x142901ae0-0x142901d20 .text$mn
+// MS2-RANGE: 0x142902200-0x1429023e0 .text$mn
+// MS2-RANGE: 0x1429027a0-0x142902880 .text$mn
+// MS2-RANGE: 0x142903350-0x1429033c0 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
 // MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
@@ -20,6 +24,7 @@
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
+#include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
@@ -189,6 +194,63 @@ void DateProto::DateValueOf(const FnCall& fn)
     MS2_AS2_CHECK_THIS(fn, Date);
     DateObject* pthis = (DateObject*)fn.ThisPtr;
     fn.Result->SetNumber(Number(pthis->Date));
+}
+
+// Number.prototype.toString([radix])
+void GAS_NumberToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Number);
+    NumberObject* pthis = (NumberObject*)(Object*)fn.ThisPtr;
+    int radix = 10;
+    if (fn.NArgs > 0)
+        radix = (int)fn.Arg(0).ToNumber(fn.Env);
+    fn.Result->SetString(fn.Env->CreateString(pthis->ToString(radix)));
+}
+
+// Number.prototype.valueOf()
+void GAS_NumberValueOf(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Number);
+    NumberObject* pthis = (NumberObject*)(Object*)fn.ThisPtr;
+    fn.Result->SetNumber(pthis->GetValue().ToNumber(fn.Env));
+}
+
+void ObjectProto::HasOwnProperty(const FnCall& fn)
+{
+    fn.Result->SetBool(fn.ThisPtr->HasMember(fn.Env->GetSC(), fn.Arg(0).ToString(fn.Env), false));
+}
+
+// True for an own member that is not hidden from for..in.
+void ObjectProto::IsPropertyEnumerable(const FnCall& fn)
+{
+    if (fn.NArgs >= 1)
+    {
+        ASString prop(fn.Arg(0).ToString(fn.Env));
+        bool     rv = fn.ThisPtr->HasMember(fn.Env->GetSC(), prop, false);
+        if (rv)
+        {
+            Member m;
+            fn.ThisPtr->FindMember(fn.Env->GetSC(), prop, &m);
+            if (m.GetMemberFlags().GetDontEnum())
+                rv = false;
+        }
+        fn.Result->SetBool(rv);
+    }
+    else
+        fn.Result->SetBool(false);
+}
+
+void ObjectProto::Unwatch_(const FnCall& fn)
+{
+    if (fn.NArgs >= 1)
+        fn.Result->SetBool(fn.ThisPtr->Unwatch(fn.Env->GetSC(), fn.Arg(0).ToString(fn.Env)));
+    else
+        fn.Result->SetBool(false);
+}
+
+void FunctionProto::ToString(const FnCall& fn)
+{
+    fn.Result->SetString(fn.Env->GetBuiltin(ASBuiltin_typeFunction_));
 }
 
 // The Stage methods that do nothing in GFx.
