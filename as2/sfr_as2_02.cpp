@@ -7,7 +7,8 @@
 // MS2-RANGE: 0x1428fec90-0x1428fed10 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142901d20 .text$mn
 // MS2-RANGE: 0x142902200-0x1429023e0 .text$mn
-// MS2-RANGE: 0x1429027a0-0x142902880 .text$mn
+// MS2-RANGE: 0x1429023e0-0x1429024e0 .text$mn
+// MS2-RANGE: 0x1429027a0-0x142902a00 .text$mn
 // MS2-RANGE: 0x142903350-0x1429033c0 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
@@ -19,6 +20,7 @@
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
+#include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_colortransform.h"
@@ -238,6 +240,35 @@ void ObjectProto::IsPropertyEnumerable(const FnCall& fn)
     }
     else
         fn.Result->SetBool(false);
+}
+
+// this is in the prototype chain of the argument (interfaces not counted).
+void ObjectProto::IsPrototypeOf(const FnCall& fn)
+{
+    if (fn.NArgs >= 1 && !fn.ThisPtr->IsASCharacter())
+    {
+        Object*          pthis = (Object*)fn.ThisPtr;
+        ObjectInterface* iobj  = fn.Arg(0).ToObjectInterface(fn.Env);
+        if (iobj)
+        {
+            fn.Result->SetBool(iobj->InstanceOf(fn.Env, pthis, false));
+            return;
+        }
+    }
+    fn.Result->SetBool(false);
+}
+
+// "[type Function]", the target path of a character or "[object Object]".
+// MS2-FUNCTIONAL the exe keeps the character handle of the temporary in a register and drops it unconditionally
+// @0x142902880
+void ObjectProto::ToString(const FnCall& fn)
+{
+    if (fn.ThisPtr->IsFunction())
+        fn.Result->SetString(fn.Env->GetBuiltin(ASBuiltin_typeFunction_));
+    else if (fn.ThisPtr->IsASCharacter())
+        fn.Result->SetString(Value(fn.ThisPtr->ToCharacter()).GetCharacterNamePath(fn.Env));
+    else
+        fn.Result->SetString(fn.Env->GetBuiltin(ASBuiltin_objectObject_));
 }
 
 void ObjectProto::Unwatch_(const FnCall& fn)

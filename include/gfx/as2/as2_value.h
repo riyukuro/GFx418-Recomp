@@ -155,6 +155,7 @@ public:
     Value() { T.Type = UNDEFINED; }
     Value(const Value& v);              // exe 0x1429237f0
     Value(Object* pobj);                // exe 0x142923cb0
+    inline Value(InteractiveObject* pcharacter); // as2_avmcharacter.h
     Value(bool val)   { T.Type = BOOLEAN; V.BooleanValue = val; }
     Value(Number val) { T.Type = NUMBER; NV.NumberValue = val; }
     Value(int val)    { T.Type = INTEGER; NV.Int32Value = val; }
@@ -192,6 +193,9 @@ public:
     SInt32   ToInt32(Environment* penv) const;                          // exe 0x142991210
     bool     ToBool(const Environment* penv) const;                     // exe 0x142990f20
     Object*  ToObject(const Environment* penv) const;                   // exe 0x142991660
+    AvmCharacter*    ToAvmCharacter(const Environment* penv) const;     // exe 0x142990d60
+    inline ObjectInterface* ToObjectInterface(const Environment* penv) const; // as2_avmcharacter.h
+    inline const ASString&  GetCharacterNamePath(Environment* penv) const;    // as2_avmcharacter.h
     MS2_AS2_SCU ASString ToStringImpl(Environment* penv, int precision, bool debug) const; // exe 0x142991e70
     ASString ToString(Environment* penv, int precision = -1) const { return ToStringImpl(penv, precision, 0); }
 

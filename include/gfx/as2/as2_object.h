@@ -121,7 +121,15 @@ public:
                        const Value& userData);
     virtual bool Unwatch(ASStringContext* psc, const ASString& prop);
 
-    bool IsASCharacter() const;
+    // A display object (sprite, button, text field, video) rather than a script object.
+    bool IsASCharacter() const
+    {
+        int type = GetObjectType();
+        return type >= Object_Sprite && type <= Object_Video;
+    }
+    bool IsFunction() const { return GetObjectType() == Object_Function; }
+    // The display object of a character, 0 for a script object (as2_avmcharacter.h).
+    inline InteractiveObject* ToCharacter();
 };
 
 // Script object: GC base at +0, ObjectInterface at +0x20. 0x68 bytes.
