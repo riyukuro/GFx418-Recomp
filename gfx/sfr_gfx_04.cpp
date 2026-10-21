@@ -39,6 +39,10 @@
 // MS2-PIN: ??_GResourceReport@GFx@Scaleform@@UEAAPEAXI@Z 0x1425cd110
 // MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
 // MS2-PIN: ??_7ImagePackVisitor@?4??FinishBinding@MovieBindProcess@GFx@Scaleform@@QEAAXXZ@6B@ 0x14318b960
+// MS2-PIN: ??$findIndexAlt@UNoCaseKey@String@Scaleform@@@?$HashSetBase@U?$HashNode@VString@Scaleform@@_NUNoCaseHashFunctor@12@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@_N$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VString@Scaleform@@_NUNoCaseHashFunctor@12@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEBA_JAEBUNoCaseKey@String@1@@Z 0x1425ca480
+// MS2-PIN: ??$findIndexAlt@UNoCaseKey@String@Scaleform@@@?$HashSetBase@U?$StringLH_HashNode@VResourceHandle@GFx@Scaleform@@UNoCaseHashFunctor@String@3@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VResourceHandle@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$StringLH_HashNode@VResourceHandle@GFx@Scaleform@@UNoCaseHashFunctor@String@3@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEBA_JAEBUNoCaseKey@String@1@@Z 0x1425ca580
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$StringLH_HashNode@IUNoCaseHashFunctor@String@Scaleform@@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@I$01@2@V?$HashsetCachedNodeEntry@U?$StringLH_HashNode@IUNoCaseHashFunctor@String@Scaleform@@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425d48c0
+// MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@UFrameLabelInfo@MovieDataDef@GFx@Scaleform@@U?$AllocatorDH@UFrameLabelInfo@MovieDataDef@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1425d2560
 
 #include "../include/gfx/gfx_buttondef.h"
 #include "../include/gfx/gfx_loadproc.h"
@@ -1197,6 +1201,116 @@ Movie* MovieDefImpl::CreateInstance(const MemoryParams& memParams, bool initFirs
         return movieView;
     }
     return 0;
+}
+
+class AdvanceStats;
+}} // namespace Scaleform::GFx
+
+// Hands the movie definition to the movie's advance statistics (exe 0x1426245c0).
+void FUN_1426245c0(Scaleform::GFx::AdvanceStats* pstats, Scaleform::GFx::MovieDef* pmovieDef);
+
+namespace Scaleform { namespace GFx {
+
+// The movie instance as CreateInstance drives it. Movie / MovieImpl are not recovered yet (gfx_movieimpl.h keeps
+// placeholder words), so the vftable slots and fields used here are spelled out: GetMovieDef (slot 1), Advance
+// (slot 23), the StateBag at +0x10, the AVM root at +0x18, the advance stats at +0x30, the render queue at +0x3610.
+class Movie : public RefCountImpl, public StateBag
+{
+public:
+    virtual MovieDef* GetMovieDef() const = 0; // 1
+private:
+    virtual void Slot02() = 0;
+    virtual void Slot03() = 0;
+    virtual void Slot04() = 0;
+    virtual void Slot05() = 0;
+    virtual void Slot06() = 0;
+    virtual void Slot07() = 0;
+    virtual void Slot08() = 0;
+    virtual void Slot09() = 0;
+    virtual void Slot10() = 0;
+    virtual void Slot11() = 0;
+    virtual void Slot12() = 0;
+    virtual void Slot13() = 0;
+    virtual void Slot14() = 0;
+    virtual void Slot15() = 0;
+    virtual void Slot16() = 0;
+    virtual void Slot17() = 0;
+    virtual void Slot18() = 0;
+    virtual void Slot19() = 0;
+    virtual void Slot20() = 0;
+    virtual void Slot21() = 0;
+    virtual void Slot22() = 0;
+public:
+    virtual float Advance(float deltaT, unsigned frameCatchUpCount = 2, bool capture = true) = 0; // 23
+
+    // exe 0x142573e70.
+    void Release();
+};
+
+class MovieInstanceImpl : public Movie
+{
+public:
+    class ASRoot : public RefCountImpl
+    {
+        virtual void Slot01() = 0;
+        virtual void Slot02() = 0;
+        virtual void Slot03() = 0;
+        virtual void Slot04() = 0;
+        virtual void Slot05() = 0;
+        virtual void Slot06() = 0;
+        virtual void Slot07() = 0;
+        virtual void Slot08() = 0;
+        virtual void Slot09() = 0;
+        virtual void Slot10() = 0;
+        virtual void Slot11() = 0;
+        virtual void Slot12() = 0;
+        virtual void Slot13() = 0;
+        virtual void Slot14() = 0;
+
+    public:
+        virtual bool Init(MovieDefImpl* pmovieDef) = 0; // 15
+    };
+
+    ASRoot*                     pASMovieRoot;     // +0x18
+    void*                       Unrecovered_20[2]; // +0x20
+    AdvanceStats*               pAdvanceStats;    // +0x30
+    UByte                       Unrecovered_38[0x3610 - 0x38];
+    Render::ThreadCommandQueue* pRenderQueue;     // +0x3610
+};
+
+// @0x1425ce8d0
+// MS2-FUNCTIONAL: scheduling of the StateBag vftable load around the inlined AS version test
+Movie* MovieDefImpl::CreateInstance(MemoryContext* memContext, bool initFirstFrame, ActionControl* actionControl,
+                                    Render::ThreadCommandQueue* queue)
+{
+    ASSupport* pASSupport = GetASSupport();
+    if (!pASSupport)
+        return 0;
+
+    MovieInstanceImpl* proot = (MovieInstanceImpl*)pASSupport->CreateMovie(memContext);
+    if (!proot)
+        return 0;
+
+    if (actionControl)
+        proot->SetState(State::State_ActionControl, (State*)actionControl);
+
+    if (!proot->pASMovieRoot->Init(this))
+    {
+        proot->Release();
+        return 0;
+    }
+
+    if (AdvanceStats* pstats = proot->pAdvanceStats)
+        FUN_1426245c0(pstats, proot->GetMovieDef());
+
+    // The render queue is set before the first advance.
+    proot->pRenderQueue = queue;
+
+    if (initFirstFrame)
+        proot->Advance(0.0f, 0);
+
+    // A new movie starts with one reference: the caller's.
+    return proot;
 }
 
 // @0x1425cf500

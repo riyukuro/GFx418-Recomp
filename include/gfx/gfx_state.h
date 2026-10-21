@@ -40,6 +40,7 @@ public:
         State_ZlibSupport   = 26, // Loader::InitLoader sets 0x1a
         State_AS2Support    = 34, // MovieDefImpl::GetASSupport queries 0x22 / 0x23
         State_AS3Support    = 35,
+        State_ActionControl = 3, // MovieDefImpl::CreateInstance sets it on the new movie
     };
 
 protected:
