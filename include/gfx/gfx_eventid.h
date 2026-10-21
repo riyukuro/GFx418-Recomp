@@ -107,6 +107,10 @@ public:
     {
         return Id == id.Id && (!(Id & Event_KeyPress) || KeyCode == id.KeyCode);
     }
+
+    // (appended for GFx_Input, sfr_gfx_06f) the character a US keyboard types for KeyCode under the shift and
+    // caps lock states of KeysState, 0 for none (0x142603d20).
+    UByte ConvertKeyCodeToAscii() const;
 };
 
 // Hash of an event id: key press events mix in the key code.

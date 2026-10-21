@@ -19,7 +19,8 @@ public:
     {
         Key_ShiftPressed = 0x01,
         Key_CtrlPressed  = 0x02,
-        Key_AltPressed   = 0x04
+        Key_AltPressed   = 0x04,
+        Key_CapsToggled  = 0x08     // (appended for GFx_Input, sfr_gfx_06f)
     };
 
     UInt8 States;
