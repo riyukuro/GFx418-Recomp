@@ -3,8 +3,6 @@
 // and the document editing operations (append/insert/remove strings, copy styled text, format queries).
 // Queue unit sfr_render_01 is split along its original sources (sfr_render_01 Render_Image, 01b Render_Context +
 // Renderer2D, 01c Text_StyledText).
-// Not yet recovered: GetHtml(StringBuffer*) and the two MsgFormat::FormatD1 instantiations it pulls in (need the
-// kernel MsgFormat class).
 // MS2-UNIT: sfr_render_01c
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142593170-0x14259d950 .text$mn
@@ -12,6 +10,7 @@
 // MS2-PINS-END tplpin
 #include <string.h>
 #include "ms2/scaleform/kernel/sf_alg.h"
+#include "ms2/scaleform/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/render/text_styledtext.h"
 
 namespace Scaleform { namespace Render { namespace Text {
@@ -1302,6 +1301,177 @@ void StyledText::SetDefaultParagraphFormat(const ParagraphFormat* pdefaultParagr
 
 // ---------------------------------------------------------------------------------------------------------------
 // StyledText: reading the text
+
+// The document as Flash-style HTML: one <TEXTFORMAT><P|LI> block per paragraph (the trailing empty paragraph is
+// left out), a <FONT> tag opened whenever the font attributes change, and the text escaped.
+// @0x142596c80
+StringBuffer& StyledText::GetHtml(StringBuffer* strBuf) const
+{
+    StringBuffer& html = *strBuf;
+    html = "";
+    ParagraphsIterator paraIter = GetParagraphIterator();
+    for (UPInt np = 0, nn = Paragraphs.GetSize(); !paraIter.IsFinished(); ++paraIter, ++np)
+    {
+        Paragraph* ppara = *paraIter;
+        if (np + 1 == nn && ppara->GetLength() == 0)
+            continue;
+
+        html += "<TEXTFORMAT";
+        const ParagraphFormat& paraFmt = *ppara->GetFormat();
+        if (paraFmt.IsIndentSet())
+            Format(html, " INDENT=\"{0}\"", paraFmt.GetIndent());
+        if (paraFmt.IsBlockIndentSet())
+            Format(html, " BLOCKINDENT=\"{0}\"", paraFmt.GetBlockIndent());
+        if (paraFmt.IsLeftMarginSet())
+            Format(html, " LEFTMARGIN=\"{0}\"", paraFmt.GetLeftMargin());
+        if (paraFmt.IsRightMarginSet())
+            Format(html, " RIGHTMARGIN=\"{0}\"", paraFmt.GetRightMargin());
+        if (paraFmt.IsLeadingSet())
+            Format(html, " LEADING=\"{0}\"", paraFmt.GetLeading());
+        if (paraFmt.IsTabStopsSet())
+        {
+            html += " TABSTOPS=\"";
+            unsigned count;
+            const unsigned* ptabs = paraFmt.GetTabStops(&count);
+            for (unsigned i = 0; i < count; ++i)
+                Format(html, "{0:sw:,:}{1}", i > 0, ptabs[i]);
+            html += "\"";
+        }
+        html += "><";
+        if (!paraFmt.IsBullet())
+            html += "P";
+        else
+            html += "LI";
+        html += " ALIGN=\"";
+        switch (paraFmt.GetAlignment())
+        {
+        case ParagraphFormat::Align_Left:    html += "LEFT"; break;
+        case ParagraphFormat::Align_Right:   html += "RIGHT"; break;
+        case ParagraphFormat::Align_Center:  html += "CENTER"; break;
+        case ParagraphFormat::Align_Justify: html += "JUSTIFY"; break;
+        }
+        html += "\">";
+
+        Paragraph::FormatRunIterator it = ppara->GetIterator();
+        Ptr<TextFormat> pprevFmt;
+        bool fontOpen = false;
+        for (; !it.IsFinished(); ++it)
+        {
+            const Paragraph::StyledTextRun& run = *it;
+            bool isImage = false;
+            if (run.pFormat)
+            {
+                Ptr<HTMLImageTagDesc> pimage = run.pFormat->GetImageDesc();
+                if (pimage)
+                {
+                    isImage = true;
+                    if (run.pFormat->IsUrlSet())
+                        Format(html, "<A HREF=\"{0}\">", run.pFormat->GetUrl());
+                    html += "<IMG SRC=\"";
+                    html += pimage->Url;
+                    html += "\"";
+                    if (pimage->ScreenWidth > 0)
+                        Format(html, " WIDTH=\"{0}\"", (int)FixpToPixels(pimage->ScreenWidth));
+                    if (pimage->ScreenHeight > 0)
+                        Format(html, " HEIGHT=\"{0}\"", (int)FixpToPixels(pimage->ScreenHeight));
+                    if (pimage->VSpace != 0)
+                        Format(html, " VSPACE=\"{0}\"", (int)FixpToPixels(pimage->VSpace));
+                    if (pimage->HSpace != 0)
+                        Format(html, " HSPACE=\"{0}\"", (int)FixpToPixels(pimage->HSpace));
+                    if (!pimage->Id.IsEmpty())
+                        Format(html, " ID=\"{0}\"", pimage->Id);
+                    html += " ALIGN=\"";
+                    switch (pimage->Alignment)
+                    {
+                    case HTMLImageTagDesc::Align_Left:     html += "left"; break;
+                    case HTMLImageTagDesc::Align_Right:    html += "right"; break;
+                    case HTMLImageTagDesc::Align_BaseLine: html += "baseline"; break;
+                    default: break;
+                    }
+                    html += "\">";
+                    if (run.pFormat->IsUrlSet())
+                        html += "</A>";
+                }
+                else
+                {
+                    if (fontOpen && pprevFmt && !pprevFmt->IsHTMLFontTagSame(*run.pFormat))
+                    {
+                        html += "</FONT>";
+                        fontOpen = false;
+                    }
+                    if (!fontOpen)
+                    {
+                        html += "<FONT";
+                        if (run.pFormat->IsFontListSet())
+                            Format(html, " FACE=\"{0}\"", run.pFormat->GetFontList());
+                        if (run.pFormat->IsFontSizeSet())
+                            Format(html, " SIZE=\"{0}\"", (unsigned)run.pFormat->GetFontSize());
+                        if (run.pFormat->IsColorSet())
+                            Format(html, " COLOR=\"#{0:X:.6}\"", (run.pFormat->GetColor32() & 0xFFFFFFu));
+                        if (run.pFormat->IsLetterSpacingSet())
+                            Format(html, " LETTERSPACING=\"{0}\"", run.pFormat->GetLetterSpacing());
+                        if (run.pFormat->IsAlphaSet())
+                            Format(html, " ALPHA=\"#{0:X:.2}\"", (run.pFormat->GetAlpha() & 0xFFu));
+                        Format(html, " KERNING=\"{0:sw:1:0}\"", run.pFormat->IsKerning());
+                        html += ">";
+                        fontOpen = true;
+                    }
+                    if (run.pFormat->IsUrlSet())
+                        Format(html, "<A HREF=\"{0}\">", run.pFormat->GetUrl());
+                    if (run.pFormat->IsBold())
+                        html += "<B>";
+                    if (run.pFormat->IsItalic())
+                        html += "<I>";
+                    if (run.pFormat->IsUnderline())
+                        html += "<U>";
+                    pprevFmt = run.pFormat;
+                }
+            }
+            if (!isImage)
+            {
+                for (UPInt i = 0; i < run.Length; ++i)
+                {
+                    // line breaks are implied by the paragraph blocks
+                    if (run.pText[i] == NewLineChar() || run.pText[i] == '\0')
+                        continue;
+                    switch (run.pText[i])
+                    {
+                    case '<':                html += "&lt;"; break;
+                    case '>':                html += "&gt;"; break;
+                    case '&':                html += "&amp;"; break;
+                    case '\"':               html += "&quot;"; break;
+                    case '\'':               html += "&apos;"; break;
+                    case GFX_NBSP_CHAR_CODE: html += "&nbsp;"; break;
+                    default:                 html.AppendChar(run.pText[i]);
+                    }
+                }
+                if (run.pFormat)
+                {
+                    if (run.pFormat->IsUnderline())
+                        html += "</U>";
+                    if (run.pFormat->IsItalic())
+                        html += "</I>";
+                    if (run.pFormat->IsBold())
+                        html += "</B>";
+                    if (run.pFormat->IsUrlSet())
+                        html += "</A>";
+                }
+            }
+        }
+        if (fontOpen)
+        {
+            html += "</FONT>";
+            fontOpen = false;
+        }
+        html += "</";
+        if (!paraFmt.IsBullet())
+            html += "P";
+        else
+            html += "LI";
+        html += "></TEXTFORMAT>";
+    }
+    return *strBuf;
+}
 
 // @0x142596bc0
 String StyledText::GetHtml() const

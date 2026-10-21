@@ -159,7 +159,7 @@ public:
     UInt32 GetColor32() const { return ColorV; }
     UInt8  GetAlpha() const   { return UInt8((ColorV >> 24) & 0xFF); }
 
-    float    GetLetterSpacing() const   { return FixpToPixels((float)LetterSpacing); }
+    float    GetLetterSpacing() const   { return FixpToPixels(LetterSpacing); } // whole pixels (SInt16 math)
     unsigned GetFontSizeInFixp() const  { return FontSize; }
     float    GetFontSize() const        { return FixpToPixels((float)FontSize); }
 
