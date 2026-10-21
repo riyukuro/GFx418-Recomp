@@ -73,11 +73,31 @@ struct BlurFilterParams
         Colors[1] = o.Colors[1];
     }
 
+    // (appended for sfr_render_04l) member-wise as well, both offset coordinates read before either is stored
+    BlurFilterParams& operator=(const BlurFilterParams& o)
+    {
+        Mode      = o.Mode;
+        Passes    = o.Passes;
+        BlurX     = o.BlurX;
+        BlurY     = o.BlurY;
+        Offset    = PointF(o.Offset.x, o.Offset.y);
+        Strength  = o.Strength;
+        Colors[0] = o.Colors[0];
+        Colors[1] = o.Colors[1];
+        return *this;
+    }
+
     bool operator==(const BlurFilterParams& b) const
     {
         return Mode == b.Mode && BlurX == b.BlurX && BlurY == b.BlurY && Passes == b.Passes;
     }
     FilterType GetFilterType() const { return (FilterType)(Mode & Mode_FilterMask); }
+    // (appended for sfr_render_04l) operator== leaves out the offset, strength and colors; this takes them too
+    bool EqualsAll(const BlurFilterParams& b) const
+    {
+        return *this == b && Offset == b.Offset && Strength == b.Strength && Colors[0] == b.Colors[0] &&
+               Colors[1] == b.Colors[1];
+    }
 
     static PointF CalcOffsetByAngleDistance(float angle, float distance)
     {

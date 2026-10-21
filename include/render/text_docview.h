@@ -377,6 +377,14 @@ public:
     bool IsAutoFit() const       { return (Flags & Flags_AutoFit) != 0; }
 
     const TextFilter& GetFilters() const { return Filter; }
+    // (appended for sfr_render_04l) false when nothing changed
+    bool SetFilters(const TextFilter& f)
+    {
+        if (Filter == f)
+            return false;
+        Filter = f;
+        return true;
+    }
     void SetDefaultShadow()              { Filter.SetDefaultShadow(); }
     bool  GetFauxBold() const            { return (FlagsEx & FlagsEx_FauxBold) != 0; }
     bool  GetFauxItalic() const          { return (FlagsEx & FlagsEx_FauxItalic) != 0; }

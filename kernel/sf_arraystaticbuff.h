@@ -14,10 +14,15 @@ class ArrayStaticBuffPOD
 {
 public:
     ArrayStaticBuffPOD(MemoryHeap* heap = 0) : pHeap(heap), Size(0), Reserved(N), Data(Static) {}
-    ~ArrayStaticBuffPOD()
+    // (sfr_render_04l) the destructor empties the array, back on the in-object storage
+    ~ArrayStaticBuffPOD() { Clear(); }
+
+    void Clear()
     {
         if (Data != Static)
             Memory::Free(Data);
+        Data = Static;
+        Size = 0;
     }
 
     UPInt GetSize() const { return Size; }

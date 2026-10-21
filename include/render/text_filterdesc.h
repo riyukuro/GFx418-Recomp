@@ -30,6 +30,14 @@ struct TextFilter : public RefCountBaseNTS<TextFilter, StatRender_Text_Mem>
 
     // (appended for the static text, sfr_gfx_05d) takes the blur / drop shadow of a display filter (0x14264e2b0)
     void LoadFilterDesc(const Filter* filter);
+
+    // (appended for sfr_render_04l) every setting
+    bool operator==(const TextFilter& f) const
+    {
+        return BlurX == f.BlurX && BlurY == f.BlurY && BlurStrength == f.BlurStrength &&
+               ShadowParams.EqualsAll(f.ShadowParams) && ShadowFlags == f.ShadowFlags &&
+               ShadowAlpha == f.ShadowAlpha && ShadowAngle == f.ShadowAngle && ShadowDistance == f.ShadowDistance;
+    }
 };
 
 }}} // namespace Scaleform::Render::Text

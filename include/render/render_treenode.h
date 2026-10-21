@@ -40,6 +40,9 @@ public:
         {
         }
 
+        // (appended for sfr_render_04l) the member-wise copy, out of line in the exe (0x1424e0a70)
+        NodeData& operator=(const NodeData& src);
+
         StateBag States;
         Cxform   Cx;
         RectF    AproxLocalBounds;    // children's bounds in this node's space
