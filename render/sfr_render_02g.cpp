@@ -9,21 +9,11 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
-#include <setjmp.h>
 #include "ms2/scaleform/include/render/render_jpeg.h"
 #include "ms2/scaleform/kernel/sf_memoryfile.h"
+#include "ms2/scaleform/include/render/render_jpegcommon.h"
 
 #pragma warning(disable:4611)   // setjmp and C++ object destruction
-
-// IJG jpeg-6b, linked as C in the exe (lib_jpeg), Windows configuration.
-#include "../third_party/src/jpeg-6b/jconfig.vc"
-#define JCONFIG_INCLUDED
-#if defined(_BASETSD_H_)
-#define XMD_H   // INT16/INT32 come from the Windows headers
-#endif
-extern "C" {
-#include "../third_party/src/jpeg-6b/jpeglib.h"
-}
 
 namespace Scaleform { namespace Render { namespace JPEG {
 
@@ -31,19 +21,6 @@ enum GJPEGUtilConstants
 {
     JPEG_BufferSize = 2048
 };
-
-// jpeglib error manager that longjmps back to the caller instead of exiting (0x178 bytes).
-struct JpegErrorHandler
-{
-    struct jpeg_error_mgr pub;                      // +0x000
-    char                  errorMessage[JMSG_LENGTH_MAX];  // +0x0a8
-    jmp_buf*              psetjmp_buffer;           // +0x170
-
-    JpegErrorHandler();
-    ~JpegErrorHandler();
-};
-
-jpeg_error_mgr* SetupJpegErr(JpegErrorHandler* jerr);
 
 #define SF_JPEG_SET_JMP(pcinfo, pjerr, rv)              \
     do {                                                \
