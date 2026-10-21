@@ -21,6 +21,7 @@ namespace ContextImpl { class Context; }
 namespace Scaleform { namespace GFx {
 
 class DisplayObjectBase;
+namespace AS2 { class AvmSprite; }
 class ImageCreator;
 class ImageResource;
 
@@ -122,6 +123,8 @@ protected:
     float                         Ex, Ey;        // +0xc4 the pen
     float                         StX, StY;      // +0xcc where the fill started
     UByte                         States;        // +0xd4
+
+    friend class AS2::AvmSprite; // (appended for sfr_as2_07) SetNoFill
 };
 
 }} // namespace Scaleform::GFx

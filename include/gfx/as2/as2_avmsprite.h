@@ -40,6 +40,23 @@ public:
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);          // exe 0x14294c700
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);    // exe 0x1429531f0
 
+    Sprite*         GetSprite() const { return static_cast<Sprite*>(pDispObj); }
+    DrawingContext* GetDrawingContext() { return GetSprite()->GetDrawingContext(); }
+    // Ends the open path before a style change (the exe's out-of-line copy is 0x14292dfe0).
+    DrawingContext* AcquirePath(bool newShapeFlag)
+    {
+        DrawingContext* pdc = GetDrawingContext();
+        GetSprite()->SetDirtyFlag();
+        GetSprite()->InvalidateHitResult();
+        pdc->AcquirePath(newShapeFlag);
+        return pdc;
+    }
+    void SetNoFill(); // exe 0x142989390
+    void SetNoLine(); // exe 0x142989400
+    // lineWidth in pixels (exe 0x142981da0).
+    void SetLineStyle(float lineWidth, unsigned rgba, bool hinting, unsigned scaling, unsigned caps, unsigned joins,
+                      float miterLimit);
+
     // The exe's out-of-line copy of SpriteGetTarget (exe 0x14298fe50).
     static Sprite* SpriteGetTarget_Call(const FnCall& fn);
     // Mirrors the clip's button handler state into its MovieClipObject (exe 0x142981650).

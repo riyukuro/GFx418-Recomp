@@ -8,14 +8,14 @@
 // MS2-RANGE: 0x142981650-0x142981670 .text$mn
 // MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
 // MS2-RANGE: 0x142981bc0-0x142981bf0 .text$mn
-// MS2-RANGE: 0x142981d80-0x142981da0 .text$mn
-// MS2-RANGE: 0x142981df0-0x142981f00 .text$mn
+// MS2-RANGE: 0x142981d80-0x142981f00 .text$mn
 // MS2-RANGE: 0x142982ba0-0x142982d20 .text$mn
 // MS2-RANGE: 0x142986790-0x142986d60 .text$mn
 // MS2-RANGE: 0x142987280-0x1429872b0 .text$mn
 // MS2-RANGE: 0x142988690-0x142988930 .text$mn
 // MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
 // MS2-RANGE: 0x142988b60-0x142988f30 .text$mn
+// MS2-RANGE: 0x142989390-0x142989480 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
 // MS2-RANGE: 0x14298a260-0x14298a480 .text$mn
 // MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
@@ -222,6 +222,25 @@ bool SharedObject::SetMember(Environment* penv, const ASString& name, const Valu
     if (name == "data")
         return true;
     return Object::SetMember(penv, name, val, flags);
+}
+
+// @0x142989390
+void AvmSprite::SetNoFill()
+{
+    DrawingContext* pdc = GetDrawingContext();
+    AcquirePath(true);
+    pdc->SetNoFill();
+}
+
+// @0x142989400
+void AvmSprite::SetNoLine()
+{
+    DrawingContext* pdc = GetDrawingContext();
+    if (!pdc->NoLine())
+    {
+        AcquirePath(false);
+        pdc->SetNoLine();
+    }
 }
 
 // @0x142992540
@@ -851,6 +870,14 @@ bool MovieRoot::SetLevelMovie(int level, Sprite* psprite)
 {
     pMovieImpl->SetLevelMovie(level, psprite);
     return true;
+}
+
+// @0x142981da0
+void AvmSprite::SetLineStyle(float lineWidth, unsigned rgba, bool hinting, unsigned scaling, unsigned caps,
+                             unsigned joins, float miterLimit)
+{
+    DrawingContext* pdc = GetDrawingContext();
+    pdc->ChangeLineStyle(Render::PixelsToTwips(lineWidth), rgba, hinting, scaling, caps, joins, miterLimit);
 }
 
 // @0x142981df0
