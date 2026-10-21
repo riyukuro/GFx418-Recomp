@@ -187,6 +187,7 @@ public:
 
     Number   ToNumber(Environment* penv) const;                         // exe 0x1429912d0
     bool     ToBool(const Environment* penv) const;                     // exe 0x142990f20
+    Object*  ToObject(const Environment* penv) const;                   // exe 0x142991660
     MS2_AS2_SCU ASString ToStringImpl(Environment* penv, int precision, bool debug) const; // exe 0x142991e70
     ASString ToString(Environment* penv, int precision = -1) const { return ToStringImpl(penv, precision, 0); }
 
@@ -230,6 +231,11 @@ public:
         V.pStringNode->AddRef();
     }
     void SetAsObject(Object* pobj); // exe 0x14297fcb0
+
+    // Arithmetic in place (the script operators).
+    void Add(Environment* penv, const Value& v); // exe 0x14292e180
+    void Sub(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) - v.ToNumber(penv)); }
+    void Mul(Environment* penv, const Value& v) { SetNumber(ToNumber(penv) * v.ToNumber(penv)); }
 };
 
 // Object member: the value with its property flags stored in the value's second byte.

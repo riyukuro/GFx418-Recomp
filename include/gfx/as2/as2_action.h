@@ -76,6 +76,7 @@ public:
     ASStringContext* GetSC() { return &StringContext; }
     // The movie enabled the Scaleform extensions to ActionScript.
     inline bool CheckExtensions() const;
+    inline MemoryHeap* GetHeap() const;
     InteractiveObject* GetTarget() const { return Target; }
 
     // Script error channel (exe 0x142967e00).
@@ -152,6 +153,11 @@ public:
 inline bool Environment::CheckExtensions() const
 {
     return StringContext.pContext->CheckExtensions();
+}
+
+inline MemoryHeap* Environment::GetHeap() const
+{
+    return StringContext.pContext->pHeap;
 }
 
 }}} // namespace Scaleform::GFx::AS2

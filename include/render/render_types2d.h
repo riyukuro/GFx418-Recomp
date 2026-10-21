@@ -15,6 +15,8 @@ public:
     T x, y;
 
     Point() : x(0), y(0) {}
+    enum NoInitType { NoInit };
+    Point(NoInitType) {}
     Point(T px, T py) : x(px), y(py) {}
     Point(const Point& p) { SetPoint(p.x, p.y); }
 

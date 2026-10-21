@@ -4,6 +4,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428ef8b0-0x1428ef8d0 .text$mn
 // MS2-RANGE: 0x1428f1e30-0x1428f1e70 .text$mn
+// MS2-RANGE: 0x1428f2040-0x1428f37a0 .text$mn
 // MS2-RANGE: 0x1428f37a0-0x1428f40d0 .text$mn
 // MS2-RANGE: 0x1428f40d0-0x1428f4610 .text$mn
 // MS2-RANGE: 0x1428f4610-0x1428f4cd0 .text$mn
@@ -20,6 +21,7 @@
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_movieimpl.h"
@@ -200,6 +202,243 @@ void MathCtorFunction::Random(const FnCall& fn)
 void MathCtorFunction::Round(const FnCall& fn)
 {
     fn.Result->SetNumber(floor(fn.Arg(0).ToNumber(fn.Env) + 0.5));
+}
+
+// ---- Point ----
+
+// Sum of this and another point (any object with x and y); NaN, NaN without an argument.
+// @0x1428f2040
+void PointProto::Add(const FnCall& fn)
+{
+    Ptr<PointObject> retpt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+    bool             set   = false;
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p)
+        {
+            MS2_AS2_CHECK_THIS(fn, Point);
+            PointObject* pthis = (PointObject*)fn.ThisPtr;
+            GASPoint     pt1(GASPoint::NoInit), pt2(GASPoint::NoInit);
+            pthis->GetProperties(fn.Env, pt1);
+            GFxObject_GetPointProperties(fn.Env, p, pt2);
+            pt1.x += pt2.x;
+            pt1.y += pt2.y;
+            retpt->SetProperties(fn.Env, pt1);
+            set = true;
+        }
+    }
+    if (!set)
+        retpt->SetProperties(fn.Env->GetSC(), Point_NanParams);
+    fn.Result->SetAsObject(retpt.GetPtr());
+}
+
+// @0x1428f2250
+void PointProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Point);
+    PointObject*     pthis = (PointObject*)fn.ThisPtr;
+    Ptr<PointObject> ppt   = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+    ASStringContext* psc   = fn.Env->GetSC();
+    Value            params[Point_NumProperties];
+    pthis->GetProperties(psc, params);
+    ppt.GetPtr()->SetProperties(psc, params);
+    fn.Result->SetAsObject(ppt.GetPtr());
+}
+
+// @0x1428f2430
+void PointProto::Equals(const FnCall& fn)
+{
+    bool ret = false;
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p && p->GetObjectType() == ObjectInterface::Object_Point)
+        {
+            MS2_AS2_CHECK_THIS(fn, Point);
+            PointObject* pthis = (PointObject*)fn.ThisPtr;
+            GASPoint     pt1(GASPoint::NoInit), pt2(GASPoint::NoInit);
+            pthis->GetProperties(fn.Env, pt1);
+            GFxObject_GetPointProperties(fn.Env, p, pt2);
+            ret = (pt1 == pt2);
+        }
+    }
+    fn.Result->SetBool(ret);
+}
+
+// Scales this point to the given length.
+// @0x1428f2570
+void PointProto::Normalize(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Point);
+    PointObject* pthis = (PointObject*)fn.ThisPtr;
+    if (fn.NArgs > 0)
+    {
+        Value    p = fn.Arg(0);
+        GASPoint pt1(GASPoint::NoInit);
+        pthis->GetProperties(fn.Env, pt1);
+        Number m = p.ToNumber(fn.Env) / sqrt(pt1.x * pt1.x + pt1.y * pt1.y);
+        pt1.x *= m;
+        pt1.y *= m;
+        pthis->SetProperties(fn.Env, pt1);
+    }
+    else
+    {
+        pthis->SetProperties(fn.Env->GetSC(), Point_NanParams);
+    }
+}
+
+// MS2-FUNCTIONAL the exe keeps dy's type byte in a register across the calls (unity-build alias knowledge)
+// @0x1428f2790
+void PointProto::Offset(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Point);
+    PointObject* pthis = (PointObject*)fn.ThisPtr;
+    Value        dx, dy;
+    if (fn.NArgs > 0)
+    {
+        dx = fn.Arg(0);
+        if (fn.NArgs > 1)
+            dy = fn.Arg(1);
+    }
+    GASPoint pt1(GASPoint::NoInit);
+    pthis->GetProperties(fn.Env, pt1);
+    Number offy = dy.ToNumber(fn.Env); // Point::Offset(dx, dy) arguments, evaluated right to left
+    Number offx = dx.ToNumber(fn.Env);
+    pt1.x += offx;
+    pt1.y += offy;
+    pthis->SetProperties(fn.Env, pt1);
+}
+
+// @0x1428f2970
+void PointProto::Subtract(const FnCall& fn)
+{
+    Ptr<PointObject> retpt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+    bool             set   = false;
+    if (fn.NArgs > 0)
+    {
+        Object* p = fn.Arg(0).ToObject(fn.Env);
+        if (p)
+        {
+            MS2_AS2_CHECK_THIS(fn, Point);
+            PointObject* pthis = (PointObject*)fn.ThisPtr;
+            GASPoint     pt1(GASPoint::NoInit), pt2(GASPoint::NoInit);
+            pthis->GetProperties(fn.Env, pt1);
+            GFxObject_GetPointProperties(fn.Env, p, pt2);
+            pt1.x -= pt2.x;
+            pt1.y -= pt2.y;
+            retpt->SetProperties(fn.Env, pt1);
+            set = true;
+        }
+    }
+    if (!set)
+        retpt->SetProperties(fn.Env->GetSC(), Point_NanParams);
+    fn.Result->SetAsObject(retpt.GetPtr());
+}
+
+// "(x=.., y=..)" with six significant digits.
+// @0x1428f2b90
+void PointProto::ToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Point);
+    PointObject* pthis = (PointObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    Value params[Point_NumProperties];
+    pthis->GetProperties(fn.Env->GetSC(), params);
+    ASString ps[2] = {params[Point_X].ToString(fn.Env, 6), params[Point_Y].ToString(fn.Env, 6)};
+    String   str;
+    str += "(x=";
+    str += ps[Point_X].ToCStr();
+    str += ", y=";
+    str += ps[Point_Y].ToCStr();
+    str += ")";
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(str.ToCStr(), str.GetSize()));
+}
+
+// Distance between two points; undefined when neither argument is a Point.
+// @0x1428f2e40
+// MS2-FUNCTIONAL the exe keeps both Sub operands live across the temp release and saves xmm7 (unity-build register allocation)
+void PointCtorFunction::Distance(const FnCall& fn)
+{
+    fn.Result->SetNumber(NumberUtil::NaN());
+    if (fn.NArgs > 1)
+    {
+        Object* p1 = fn.Arg(0).ToObject(fn.Env);
+        Object* p2 = fn.Arg(1).ToObject(fn.Env);
+        if (p1 && p2)
+        {
+            if (p1->GetObjectType() != ObjectInterface::Object_Point &&
+                p2->GetObjectType() != ObjectInterface::Object_Point)
+            {
+                fn.Result->SetUndefined();
+            }
+            else
+            {
+                Value o1[Point_NumProperties], o2[Point_NumProperties];
+                GFxObject_GetPointProperties(fn.Env, p1, o1);
+                GFxObject_GetPointProperties(fn.Env, p2, o2);
+                Value xd = o2[Point_X];
+                xd.Sub(fn.Env, o1[Point_X]);
+                xd.Mul(fn.Env, xd);
+                Value yd = o2[Point_Y];
+                yd.Sub(fn.Env, o1[Point_Y]);
+                yd.Mul(fn.Env, yd);
+                xd.Add(fn.Env, yd);
+                Number d = Value(Number(sqrt(xd.ToNumber(fn.Env)))).ToNumber(fn.Env);
+                fn.Result->SetNumber(d);
+            }
+        }
+    }
+}
+
+// The point at the given length and angle (radians) from the origin.
+// @0x1428f3530
+void PointCtorFunction::Polar(const FnCall& fn)
+{
+    Ptr<PointObject> ppt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+    bool             set = false;
+    if (fn.NArgs > 1)
+    {
+        Value  length = fn.Arg(0);
+        Value  angle  = fn.Arg(1);
+        Number l      = length.ToNumber(fn.Env);
+        Number a      = angle.ToNumber(fn.Env);
+        Double sa     = sin(a);
+        Double ca     = cos(a);
+        ppt->SetProperties(fn.Env, GASPoint(l * ca, l * sa));
+        set = true;
+    }
+    if (!set)
+        ppt->SetProperties(fn.Env->GetSC(), Point_NanParams);
+    fn.Result->SetAsObject(ppt.GetPtr());
+}
+
+// The point f of the way from the second point to the first.
+// @0x1428f3240
+void PointCtorFunction::Interpolate(const FnCall& fn)
+{
+    Ptr<PointObject> ppt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+    bool             set = false;
+    if (fn.NArgs > 2)
+    {
+        Object* p1 = fn.Arg(0).ToObject(fn.Env);
+        Object* p2 = fn.Arg(1).ToObject(fn.Env);
+        Value   f  = fn.Arg(2);
+        if (p1 && p2)
+        {
+            GASPoint pt1(GASPoint::NoInit), pt2(GASPoint::NoInit);
+            GFxObject_GetPointProperties(fn.Env, p1, pt1);
+            GFxObject_GetPointProperties(fn.Env, p2, pt2);
+            Number   ptf = f.ToNumber(fn.Env);
+            GASPoint ip((pt1.x - pt2.x) * ptf + pt2.x, (pt1.y - pt2.y) * ptf + pt2.y);
+            ppt->SetProperties(fn.Env, ip);
+            set = true;
+        }
+    }
+    if (!set)
+        ppt->SetProperties(fn.Env->GetSC(), Point_NanParams);
+    fn.Result->SetAsObject(ppt.GetPtr());
 }
 
 // The character at an index as a one character string; "" when out of range.

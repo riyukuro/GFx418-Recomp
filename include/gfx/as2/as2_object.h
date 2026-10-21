@@ -134,6 +134,9 @@ public:
 
 protected:
     Object(ASRefCountCollector* pcc);
+
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const;
+    virtual void Finalize_GC();
 };
 
 // Script-callable function. 0x68 bytes.

@@ -14,6 +14,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 enum ASBuiltinType : int
 {
     ASBuiltin_empty_ = 0, // ""
+    ASBuiltin_x      = 129,
+    ASBuiltin_y      = 130,
 };
 
 // Builtin strings of a movie plus the manager that makes new ones. 0x4f0 bytes.
