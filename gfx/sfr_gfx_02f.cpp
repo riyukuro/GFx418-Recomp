@@ -184,27 +184,6 @@ struct MovieHeaderData
     void GetMovieInfo(MovieInfo* pinfo) const;
 };
 
-// Parse options of a loader (state).
-class ParseControl : public State
-{
-public:
-    enum ParseFlagConstants
-    {
-        VerboseParse = 0x01
-    };
-
-    unsigned ParseFlags; // +0x18
-
-    bool IsVerboseParse() const { return (ParseFlags & VerboseParse) != 0; }
-};
-
-// Inflates compressed SWF data (state).
-class ZlibSupportBase : public State
-{
-public:
-    virtual File* CreateZlibFile(File* in) = 0; // +8
-};
-
 // The stream of a movie file positioned after its header (0x310 bytes).
 struct SWFProcessInfo
 {
@@ -254,14 +233,6 @@ public:
     void SetTempBindData(void* ptempdata) { pTempBindData = ptempdata; }
 
     virtual void Execute();
-};
-
-// Opens the files a loader reads (state).
-class FileOpener : public State
-{
-public:
-    virtual File*  OpenFile(const char* purl, int flags = 0x21, int mode = 0666); // +8
-    virtual SInt64 GetFileModifyTime(const char* purl);                          // +0x10
 };
 
 // Word wrapping rules shared by the text engine.

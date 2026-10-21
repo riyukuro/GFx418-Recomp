@@ -100,6 +100,9 @@ public:
     // Character (not byte) count and character range [start, end) (exe: GetLength 0x142587010, Substring 0x142587b20).
     UPInt  GetLength() const;
     String Substring(UPInt start, UPInt end) const;
+    // Code point at character index (exe 0x142586ef0); appends a string (exe 0x142585ce0).
+    UInt32 GetCharAt(UPInt index) const;
+    void   operator+=(const String& src);
 
     // Path helpers (exe: HasExtension 0x1425a4fb0, GetExtension 0x1425a4d00, StripExtension 0x1425a5180).
     static bool SF_STDCALL HasExtension(const char* path);

@@ -79,6 +79,10 @@ public:
     TagType OpenTag();
     TagType OpenTag(TagInfo* ptagInfo);
     void    CloseTag();
+    // Reads up to size bytes past the buffered data (exe 0x1425c3c50); returns the count read.
+    int     ReadToBuffer(UByte* pdest, unsigned size);
+    // The log of the load (exe 0x1425c1f00).
+    Log*    GetLog() const;
 
 private:
     bool PopulateBuffer(int size);

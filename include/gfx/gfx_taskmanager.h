@@ -66,6 +66,28 @@ public:
     virtual void RequestShutdown()        = 0;
 };
 
+class ThreadedTaskManagerImpl;
+
+// The default task manager: runs each task on a thread of its own, or on a worker of the pool added with
+// AddWorkerThreads (0x28 bytes, vftable 0x143184ac8; bodies in sfr_gfx_01e).
+class ThreadedTaskManager : public TaskManager
+{
+public:
+    ThreadedTaskManager(UPInt stackSize = 128 * 1024);
+    ~ThreadedTaskManager();
+
+    virtual bool AddTask(Task* ptask);
+    virtual bool AbandonTask(Task* ptask);
+    virtual void RequestShutdown();
+
+    // Adds count pool threads that run the tasks whose type is in taskMask.
+    bool AddWorkerThreads(unsigned taskMask, unsigned count, UPInt stackSize = 128 * 1024, int processor = -1);
+
+protected:
+    ThreadedTaskManagerImpl* pImpl;           // +0x18
+    UPInt                    ThreadStackSize; // +0x20
+};
+
 }} // namespace Scaleform::GFx
 
 #endif

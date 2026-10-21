@@ -14,6 +14,7 @@
 
 namespace Scaleform {
 class Log;
+class File;
 namespace Render { template<class T> class Rect; }
 namespace GFx {
 
@@ -25,6 +26,9 @@ class TextClipboard;
 class TextKeyMap;
 class MovieDefImpl;
 class ResourceBinding;
+class FileOpenerBase;
+class ParseControl;
+class ZlibSupportBase;
 
 // Something that hands out states by type; MovieDef, Loader and the movie instances are state bags.
 class StateBag : public FileTypeConstants
@@ -43,6 +47,18 @@ public:
     inline void SetImageCreator(ImageCreator* ptr);
     inline void SetTextClipboard(TextClipboard* ptr);
     inline void SetTextKeyMap(TextKeyMap* ptr);
+
+    // The log state (exe 0x1425b38b0).
+    Ptr<Log> GetLog() const;
+    // Opens pfilename through the file opener state, logging failures to the bag's log / plog.
+    File*    OpenFile(const char* pfilename);
+    File*    OpenFileEx(const char* pfilename, Log* plog);
+
+    // Defined in gfx_loaderimpl.h after the state classes.
+    inline Ptr<FileOpenerBase> GetFileOpener() const;
+    inline void                SetFileOpener(FileOpenerBase* ptr);
+    inline void                SetParseControl(ParseControl* ptr);
+    inline void                SetZlibSupport(ZlibSupportBase* ptr);
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18.

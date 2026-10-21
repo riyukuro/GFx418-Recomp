@@ -15,6 +15,7 @@
 #include "gfx_taskmanager.h"
 #include "../render/render_imagefileformat.h"
 #include "../kernel/sf_hash.h"
+#include "../kernel/sf_file.h"
 #include "../../kernel/sf_list.h"
 
 namespace Scaleform {
@@ -33,9 +34,94 @@ class ASSupport;
 class LoaderTask;
 class MovieBindProcess;
 struct MovieInfo;
+class Stream;
+class LoadProcess;
+struct TagInfo;
 
-// Load option bits of Loader::CreateMovie.
-class Loader
+// Parse options of a loader (state; vftable 0x143109480).
+class ParseControl : public State
+{
+public:
+    enum ParseFlagConstants
+    {
+        VerboseParseNone = 0x00,
+        VerboseParse     = 0x01
+    };
+
+    ParseControl(unsigned parseFlags = VerboseParseNone) : State(State_ParseControl), ParseFlags(parseFlags) {}
+
+    bool IsVerboseParse() const { return (ParseFlags & VerboseParse) != 0; }
+
+    unsigned ParseFlags; // +0x18
+};
+
+// Opens the files a loader reads (state; vftable 0x143109430).
+class FileOpenerBase : public State
+{
+public:
+    FileOpenerBase() : State(State_FileOpener) {}
+
+    virtual File*  OpenFile(const char* purl, int flags = FileConstants::Open_Read | FileConstants::Open_Buffered,
+                            int mode = FileConstants::Mode_ReadWrite) = 0;          // +8
+    virtual SInt64 GetFileModifyTime(const char* purl) = 0;                         // +0x10
+    // OpenFile plus the error check; logs to plog and returns 0 on failure.
+    virtual File*  OpenFileEx(const char* purl, Log* plog,
+                              int flags = FileConstants::Open_Read | FileConstants::Open_Buffered,
+                              int mode = FileConstants::Mode_ReadWrite) = 0;        // +0x18
+};
+
+// The default opener: plain system files (vftable 0x143109458).
+class FileOpener : public FileOpenerBase
+{
+public:
+    virtual File*  OpenFile(const char* purl, int flags = FileConstants::Open_Read | FileConstants::Open_Buffered,
+                            int mode = FileConstants::Mode_ReadWrite);
+    virtual SInt64 GetFileModifyTime(const char* purl);
+    virtual File*  OpenFileEx(const char* purl, Log* plog,
+                              int flags = FileConstants::Open_Read | FileConstants::Open_Buffered,
+                              int mode = FileConstants::Mode_ReadWrite);
+};
+
+// Inflates compressed SWF data (state; vftable 0x143109490).
+class ZlibSupportBase : public State
+{
+public:
+    ZlibSupportBase() : State(State_ZlibSupport) {}
+
+    virtual File* CreateZlibFile(File* in) = 0;                                  // +8
+    virtual void  InflateWrapper(Stream* pin, void* buffer, int bufferBytes) = 0; // +0x10
+};
+
+// The zlib implementation linked into the player (vftable 0x1431094b0).
+class ZlibSupport : public ZlibSupportBase
+{
+public:
+    virtual File* CreateZlibFile(File* in);
+    virtual void  InflateWrapper(Stream* pin, void* buffer, int bufferBytes);
+};
+
+// Texture packing options of the image packer states.
+class ImagePackParamsBase : public State
+{
+public:
+    // Size of the textures images are packed into (0x10 bytes).
+    struct TextureConfig
+    {
+        int      TextureWidth;
+        int      TextureHeight;
+        unsigned SizeOptions;
+        bool     SquareOnly;
+    };
+
+    void SetTextureConfig(const TextureConfig& config);
+
+protected:
+    TextureConfig PackTextureConfig; // +0x18
+};
+
+// The public loader: a state bag over a LoaderImpl plus the resource library it keeps alive (0x20 bytes,
+// vftable 0x1431843d8).
+class Loader : public StateBag
 {
 public:
     enum LoadConstants
@@ -48,6 +134,44 @@ public:
         LoadDisableSWF     = 0x80000,
         LoadDebugHeap      = 0x10000000
     };
+
+    // What a loader is made with.
+    struct LoaderConfig
+    {
+        unsigned             DefLoadFlags; // +0
+        Ptr<FileOpenerBase>  pFileOpener;  // +8
+        Ptr<ZlibSupportBase> pZLibSupport; // +0x10
+
+        LoaderConfig(unsigned loadFlags = 0, const Ptr<FileOpenerBase>& pfileOpener = 0,
+                     const Ptr<ZlibSupportBase>& pzlib = 0)
+            : DefLoadFlags(loadFlags), pFileOpener(pfileOpener), pZLibSupport(pzlib)
+        {
+        }
+    };
+
+    Loader(const LoaderConfig& config);
+    Loader(const Ptr<FileOpenerBase>& pfileOpener, const Ptr<ZlibSupportBase>& pzlib);
+    Loader(const Loader& src);
+    virtual ~Loader();
+
+    virtual StateBag* GetStateBagImpl() const;
+    // True if a loader for SWF/GFX tag tagType is installed.
+    virtual bool      CheckTagLoader(int tagType) const;
+
+    void         SetResourceLib(ResourceLib* plib);
+    ResourceLib* GetResourceLib() const;
+    bool         GetMovieInfo(const char* pfilename, MovieInfo* pinfo, bool getTagCount = false,
+                              unsigned loadConstants = 0);
+    MovieDef*    CreateMovie(const char* pfilename, unsigned loadConstants = 0, UPInt memoryArena = 0);
+    void         UnpinAll();
+    void         CancelLoading();
+
+private:
+    void InitLoader(const LoaderConfig& cfg);
+
+    LoaderImpl*  pImpl;              // +8
+    ResourceLib* pStrongResourceLib; // +0x10
+    unsigned     DefLoadFlags;       // +0x18
 };
 
 // Turns movie relative URLs into file paths (state).
@@ -75,6 +199,12 @@ public:
 
         LocationInfo(FileUse use, const char* pfilename) : Use(use), FileName(pfilename) {}
     };
+
+    virtual void BuildURL(String* ppath, const LocationInfo& loc);
+
+    static void SF_STDCALL DefaultBuildURL(String* ppath, const LocationInfo& loc);
+    static bool SF_STDCALL IsPathAbsolute(const char* putf8str);
+    static bool SF_STDCALL ExtractFilePath(String* ppath);
 };
 
 
@@ -213,6 +343,17 @@ public:
                                                          Resource::ResourceUse use, LoadStates* pls, Log* plog,
                                                          MemoryHeap* pimageHeap);
 
+    // The SWF (tags 0..0x5b) and GFX (tags 1000..1009) tag loader tables (exe data 0x143a2efe0, 0x143a2f2c0).
+    typedef void (*LoaderFunction)(LoadProcess* p, const TagInfo& tagInfo);
+    static bool GetTagLoader(unsigned tagType, LoaderFunction* plf);
+    bool        CheckTagLoader(unsigned tagType) const
+    {
+        LoaderFunction lf;
+        return GetTagLoader(tagType, &lf);
+    }
+
+    void SetWeakResourceLib(ResourceWeakLib* plib) { pWeakResourceLib = plib; }
+
     void RegisterLoadProcess(LoaderTask* ptask);
     void UnRegisterLoadProcess(LoaderTask* ptask);
     void CancelLoading();
@@ -247,6 +388,28 @@ public:
     LoaderTask(LoadStates* pls, TaskId id = Id_Unknown);
     ~LoaderTask();
 };
+
+extern LoaderImpl::LoaderFunction SWF_TagLoaderTable[];
+extern LoaderImpl::LoaderFunction GFx_GFX_TagLoaderTable[];
+
+inline bool LoaderImpl::GetTagLoader(unsigned tagType, LoaderFunction* plf)
+{
+    if (tagType < 0x5c)
+        *plf = SWF_TagLoaderTable[tagType];
+    else if (tagType >= 1000 && tagType < 1010)
+        *plf = GFx_GFX_TagLoaderTable[tagType - 1000];
+    else
+        *plf = 0;
+    return *plf ? true : false;
+}
+
+inline Ptr<FileOpenerBase> StateBag::GetFileOpener() const
+{
+    return *(FileOpenerBase*)GetStateAddRef(State::State_FileOpener);
+}
+inline void StateBag::SetFileOpener(FileOpenerBase* ptr)   { SetState(State::State_FileOpener, ptr); }
+inline void StateBag::SetParseControl(ParseControl* ptr)   { SetState(State::State_ParseControl, ptr); }
+inline void StateBag::SetZlibSupport(ZlibSupportBase* ptr) { SetState(State::State_ZlibSupport, ptr); }
 
 }} // namespace Scaleform::GFx
 

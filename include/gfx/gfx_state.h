@@ -35,6 +35,8 @@ public:
         State_TaskManager  = 20, // LoaderImpl::CancelLoading queries 0x14
         State_TextClipboard = 21, // LoaderImpl ctor sets 0x15
         State_TextKeyMap    = 22, // LoaderImpl ctor sets 0x16
+        State_ParseControl  = 13, // Loader::InitLoader sets 0xd
+        State_ZlibSupport   = 26, // Loader::InitLoader sets 0x1a
     };
 
 protected:
