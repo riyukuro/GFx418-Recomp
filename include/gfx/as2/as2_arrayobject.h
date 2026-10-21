@@ -42,6 +42,12 @@ public:
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
     // An index name is a member when the element is set, not undefined or null (exe 0x14295d700).
     virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes);
+    // "length" resizes, an index name sets the element (exe 0x142982ba0).
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
+    // The members, then the elements by index name (exe 0x1429944d0).
+    virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
+                              const ObjectInterface* instance = 0) const;
 
     // The index a member name spells (only digits), -1 for any other name.
     static int ParseIndex(const ASString& name)

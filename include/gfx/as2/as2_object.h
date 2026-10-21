@@ -205,6 +205,8 @@ public:
     // The clip of a movie clip object, 0 for anything else (as2_avmsprite.h).
     inline Sprite* ToSprite();
     Sprite*        ToSprite_Call(); // exe 0x142991d00, the out-of-line copy of ToSprite
+    InteractiveObject* ToCharacter_Call(); // exe 0x142991050, the out-of-line copy of ToCharacter
+    const Sprite*  ToSprite() const;   // exe 0x142991cd0
     // The script side of a character (sprite, button, text field, video), else 0.
     AvmCharacter*       ToAvmCharacter();       // exe 0x142990d00
     const AvmCharacter* ToAvmCharacter() const; // exe 0x142990d30

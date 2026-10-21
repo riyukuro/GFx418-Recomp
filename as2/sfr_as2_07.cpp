@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x142981b70-0x142981bb0 .text$mn
 // MS2-RANGE: 0x142981bc0-0x142981bf0 .text$mn
 // MS2-RANGE: 0x142981df0-0x142981f00 .text$mn
+// MS2-RANGE: 0x142982ba0-0x142982d20 .text$mn
 // MS2-RANGE: 0x1429867f0-0x142986d60 .text$mn
 // MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
 // MS2-RANGE: 0x142988bb0-0x142988f30 .text$mn
@@ -26,16 +27,15 @@
 // MS2-RANGE: 0x142990c40-0x142990cc0 .text$mn
 // MS2-RANGE: 0x142990d00-0x142990dd0 .text$mn
 // MS2-RANGE: 0x142990e40-0x142990ea0 .text$mn
-// MS2-RANGE: 0x142990f20-0x142991050 .text$mn
-// MS2-RANGE: 0x142991080-0x142991140 .text$mn
+// MS2-RANGE: 0x142990f20-0x142991140 .text$mn
 // MS2-RANGE: 0x142991190-0x1429912d0 .text$mn
 // MS2-RANGE: 0x142991660-0x142991850 .text$mn
-// MS2-RANGE: 0x142991c60-0x142991cd0 .text$mn
-// MS2-RANGE: 0x142991d00-0x142991d30 .text$mn
+// MS2-RANGE: 0x142991c60-0x142991d30 .text$mn
 // MS2-RANGE: 0x142991e10-0x142991e70 .text$mn
 // MS2-RANGE: 0x1429923c0-0x142992540 .text$mn
 // MS2-RANGE: 0x142992780-0x142992830 .text$mn
 // MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
+// MS2-RANGE: 0x1429944d0-0x142994660 .text$mn
 // MS2-RANGE: 0x1429947f0-0x142994a00 .text$mn
 // MS2-RANGE: 0x142994c50-0x142994e00 .text$mn
 
@@ -50,6 +50,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/kernel/sf_std.h"
+#include "../include/kernel/sf_msgformat.h"
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -417,6 +418,60 @@ bool Object::SetMemberRaw(ASStringContext* psc, const ASString& name, const Valu
     else
         Members.Set(name, Member(*pval, flags));
     return true;
+}
+
+// @0x142982ba0
+bool ArrayObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
+{
+    int idx;
+    if (penv->GetBuiltin(ASBuiltin_length).CompareBuiltIn_CaseCheck(name, penv->IsCaseSensitive()))
+    {
+        int nlen = val.ToInt32(0);
+        Resize(nlen < 0 ? 0 : nlen);
+        LengthValueOverriden = true;
+        // The length value itself is kept as a member.
+        return Object::SetMember(penv, name, val, flags);
+    }
+    else if ((idx = ParseIndex(name)) >= 0)
+    {
+        LengthValueOverriden = false;
+        if (idx >= (int)Elements.GetSize())
+            Resize(idx + 1);
+        if (Elements[idx] == 0)
+            Elements[idx] = SF_HEAP_NEW(penv->GetHeap()) Value();
+        *Elements[idx] = val;
+        return true;
+    }
+    return Object::SetMember(penv, name, val, flags);
+}
+
+// @0x1429944d0
+void ArrayObject::VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags,
+                               const ObjectInterface* instance) const
+{
+    // The members first: for..in pushes everything and pops it back, so the elements come out first.
+    Object::VisitMembers(psc, pvisitor, visitFlags, instance);
+
+    UPInt i, n = Elements.GetSize();
+    UPInt n1   = (n > ASBuiltinConst_DigitMax_) ? (ASBuiltinConst_DigitMax_ + 1) : n;
+
+    for (i = 0; i < n1; ++i)
+    {
+        if (!Elements[i])
+            continue;
+        pvisitor->Visit(psc->GetBuiltin((ASBuiltinType)(ASBuiltin_0 + i)), *Elements[i], 0);
+    }
+    for (; i < n; ++i)
+    {
+        if (!Elements[i])
+            continue;
+
+        LongFormatter f(i);
+        f.Convert();
+        StringDataPtr result = f.GetResult();
+
+        pvisitor->Visit(psc->CreateString(result.ToCStr(), result.GetSize()), *Elements[i], 0);
+    }
 }
 
 // @0x14298a260
@@ -815,6 +870,20 @@ Sprite* ObjectInterface::ToSprite_Call()
     return ToSprite();
 }
 
+// @0x142991050
+InteractiveObject* ObjectInterface::ToCharacter_Call()
+{
+    return ToCharacter();
+}
+
+// @0x142991cd0
+const Sprite* ObjectInterface::ToSprite() const
+{
+    return GetObjectType() == Object_Sprite
+               ? static_cast<const Sprite*>(static_cast<const AvmCharacter*>(this)->GetDispObj())
+               : 0;
+}
+
 // @0x142991e10
 const char* NumberObject::ToString_Call(int radix)
 {
@@ -974,3 +1043,4 @@ template GFx::AS2::Value* GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Top(unsigne
 } // namespace Scaleform
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358

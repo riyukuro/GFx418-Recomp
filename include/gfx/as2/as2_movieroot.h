@@ -74,8 +74,11 @@ enum ASBuiltinType : int
     ASBuiltin_onDragOutAux     = 125,
     ASBuiltin_x      = 129,
     ASBuiltin_y      = 130,
+    ASBuiltin_0      = 143, // "0" .. "7" follow
     ASBuiltin_length = 155,
 };
+// The last digit with a builtin name.
+enum { ASBuiltinConst_DigitMax_ = 7 };
 
 class StringManager;
 
