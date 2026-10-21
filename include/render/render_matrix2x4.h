@@ -176,6 +176,20 @@ public:
         return sqrtf(x * x + y * y);
     }
     static Matrix2x4 Scaling(T s) { return Matrix2x4(s, 0, 0, 0, s, 0); }
+
+    // (appended for the shape mesh provider, sfr_render_03d)
+    static Matrix2x4 Identity;      // Matrix2F: 0x143aee520
+
+    // the image of (1, 0) leaves both axes: neither a pure scale nor a quarter turn
+    bool IsFreeRotation(T epsilon = 1e-6f) const
+    {
+        Matrix2x4 m(*this);
+        m.M[0][3] = 0;
+        m.M[1][3] = 0;
+        T x = m.M[0][0] * 1 + m.M[0][1] * 0 + m.M[0][3];
+        T y = m.M[1][0] * 1 + m.M[1][1] * 0 + m.M[1][3];
+        return T(fabs(x)) > epsilon && T(fabs(y)) > epsilon;
+    }
 };
 
 typedef Matrix2x4<float> Matrix2F;

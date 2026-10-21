@@ -4,17 +4,22 @@
 //
 // Layouts are the exe's (MapleStory2 KMS2_DEV x64): FillStyleType 0x10, ShapeDataFloatTempl: vftable +0, RefCount +8,
 // Status +0x10, Fills +0x18, Strokes +0x30, Data +0x48 (the path byte stream).
-// Bodies: StartLayer and PathDataEncoder::WriteChar instances in sfr_gfx_05f (linked into the 0x1425eeef0 gap).
+// Bodies: StartLayer and PathDataEncoder::WriteChar instances in sfr_gfx_05f (linked into the 0x1425eeef0 gap); the
+// ArrayLH_POD<UByte> instance (the morph shapes of ShapeMeshProvider) in sfr_render_03d.
 #ifndef MS2_SF_RENDER_SHAPEDATA_H
 #define MS2_SF_RENDER_SHAPEDATA_H
 
 #include "ms2/scaleform/include/kernel/sf_refcount.h"
 #include "ms2/scaleform/include/kernel/sf_array.h"
+#include "ms2/scaleform/include/render/render_matrix2x4.h"
+#include "ms2/scaleform/include/render/render_fillmode.h"
 
 namespace Scaleform { namespace Render {
 
 class ComplexFill;
 struct DashArray;
+class ImageBase;
+class GradientData;
 
 // Reader state while walking the paths of a shape.
 struct ShapePosInfo
@@ -27,6 +32,13 @@ struct ShapePosInfo
     unsigned Fill0, Fill1, Stroke;
     float    Sfactor;
     bool     Initialized;
+
+    // (appended for sfr_render_03d) a reader positioned at pos, nothing decoded yet
+    ShapePosInfo(unsigned pos)
+        : Pos(pos), StartX(0), StartY(0), LastX(0), LastY(0), FillBase(0), StrokeBase(0), NumFillBits(0),
+          NumStrokeBits(0), Fill0(0), Fill1(0), Stroke(0), Sfactor(1.0f), Initialized(false)
+    {
+    }
 };
 
 enum ShapePathType
@@ -92,8 +104,99 @@ public:
 
     void WriteChar(char v) { Data->PushBack(UByte(v)); }
 
+    // (appended for sfr_render_03d)
+    // An unsigned of up to 30 bits: the low two bits of the first byte give the count of bytes that follow,
+    // the value is stored above them, low bits first.
+    unsigned WriteUInt30(unsigned v)
+    {
+        if (v < (1u << 6))
+        {
+            Data->PushBack(UByte(v << 2));
+            return 1;
+        }
+        if (v < (1u << 14))
+        {
+            Data->PushBack(UByte((v << 2) | 1));
+            Data->PushBack(UByte(v >> 6));
+            return 2;
+        }
+        if (v < (1u << 22))
+        {
+            Data->PushBack(UByte((v << 2) | 2));
+            Data->PushBack(UByte(v >> 6));
+            Data->PushBack(UByte(v >> 14));
+            return 3;
+        }
+        Data->PushBack(UByte((v << 2) | 3));
+        Data->PushBack(UByte(v >> 6));
+        Data->PushBack(UByte(v >> 14));
+        Data->PushBack(UByte(v >> 22));
+        return 4;
+    }
+
+    // the four bytes of v in memory order
+    void WriteFloat(float v)
+    {
+        const UByte* bytes = (const UByte*)&v;
+        Data->PushBack(bytes[0]);
+        Data->PushBack(bytes[1]);
+        Data->PushBack(bytes[2]);
+        Data->PushBack(bytes[3]);
+    }
+
 private:
     ContainerType* Data;
+};
+
+// (appended for sfr_render_03d) reads back what PathDataEncoder wrote
+template<class ContainerType>
+class PathDataDecoder
+{
+public:
+    PathDataDecoder(const ContainerType& data) : Data(&data) {}
+
+    char ReadChar(unsigned pos) const { return (char)Data->ValueAt(pos); }
+
+    // returns the number of bytes used
+    unsigned ReadUInt30(unsigned pos, unsigned* v) const
+    {
+        unsigned lead = UByte(Data->ValueAt(pos));
+        unsigned r;
+        switch (lead & 3)
+        {
+        case 0:
+            *v = lead >> 2;
+            return 1;
+        case 1:
+            r  = lead >> 2;
+            *v = r | (Data->ValueAt(pos + 1) << 6);
+            return 2;
+        case 2:
+            r  = lead >> 2;
+            r |= Data->ValueAt(pos + 1) << 6;
+            *v = r | (Data->ValueAt(pos + 2) << 14);
+            return 3;
+        }
+        r  = lead >> 2;
+        r |= Data->ValueAt(pos + 1) << 6;
+        r |= Data->ValueAt(pos + 2) << 14;
+        *v = r | (Data->ValueAt(pos + 3) << 22);
+        return 4;
+    }
+
+    float ReadFloat(unsigned pos) const
+    {
+        float v = 0;
+        UByte* bytes = (UByte*)&v;
+        bytes[0] = Data->ValueAt(pos);
+        bytes[1] = Data->ValueAt(pos + 1);
+        bytes[2] = Data->ValueAt(pos + 2);
+        bytes[3] = Data->ValueAt(pos + 3);
+        return v;
+    }
+
+private:
+    const ContainerType* Data;
 };
 
 // Shape built from float coordinates: layers of paths, each a tag byte followed by its data.
@@ -130,6 +233,151 @@ public:
         Status = Status_StartLayer;
     }
 
+    // (appended for sfr_render_03d: the morph shapes of ShapeMeshProvider, ContainerType ArrayLH_POD<UByte>)
+    ShapeDataFloatTempl(ContainerType* data, unsigned startingPos)
+        : Status(Status_Clean), Data(data), StartingPos(startingPos), StartX(0), StartY(0), LastX(0), LastY(0)
+    {
+    }
+
+    unsigned AddFillStyle(const FillStyleType& fill)
+    {
+        Fills.PushBack(fill);
+        return (unsigned)Fills.GetSize();
+    }
+    unsigned AddStrokeStyle(const StrokeStyleType& stroke)
+    {
+        Strokes.PushBack(stroke);
+        return (unsigned)Strokes.GetSize();
+    }
+
+    // a path record: tag, the three styles, then the MoveTo
+    void StartPath(unsigned fill0, unsigned fill1, unsigned stroke)
+    {
+        PathDataEncoder<ContainerType> encoder(*Data);
+        if (Status == Status_Clean)
+            StartLayer();
+        encoder.WriteChar(Tag_NewPath);
+        encoder.WriteUInt30(fill0);
+        encoder.WriteUInt30(fill1);
+        encoder.WriteUInt30(stroke);
+        Status = Status_StartPath;
+    }
+    void MoveTo(float x, float y)
+    {
+        PathDataEncoder<ContainerType> encoder(*Data);
+        encoder.WriteChar(Tag_MoveTo);
+        encoder.WriteFloat(x);
+        encoder.WriteFloat(y);
+        Status = Status_MoveTo;
+        StartX = LastX = x;
+        StartY = LastY = y;
+    }
+    void LineTo(float x, float y)
+    {
+        PathDataEncoder<ContainerType> encoder(*Data);
+        encoder.WriteChar(Tag_LineTo);
+        encoder.WriteFloat(x);
+        encoder.WriteFloat(y);
+        Status = Status_EdgeTo;
+        LastX = x;
+        LastY = y;
+    }
+    void QuadTo(float cx, float cy, float ax, float ay)
+    {
+        PathDataEncoder<ContainerType> encoder(*Data);
+        encoder.WriteChar(Tag_QuadTo);
+        encoder.WriteFloat(cx);
+        encoder.WriteFloat(cy);
+        encoder.WriteFloat(ax);
+        encoder.WriteFloat(ay);
+        Status = Status_EdgeTo;
+        LastX = ax;
+        LastY = ay;
+    }
+    void EndPath()
+    {
+        PathDataEncoder<ContainerType> encoder(*Data);
+        encoder.WriteChar(Tag_EndPath);
+        Status = Status_EndPath;
+    }
+    // closes the open path and terminates the data (once; an empty shape gets nothing)
+    void EndShape()
+    {
+        if (Status == Status_EndShape || Status == Status_Clean)
+            return;
+        if (Status != Status_EndPath)
+            EndPath();
+        PathDataEncoder<ContainerType> encoder(*Data);
+        encoder.WriteChar(Tag_EndShape);
+        Status = Status_EndShape;
+    }
+
+    virtual unsigned GetFillStyleCount() const   { return (unsigned)Fills.GetSize(); }
+    virtual unsigned GetStrokeStyleCount() const { return (unsigned)Strokes.GetSize(); }
+    virtual void     GetFillStyle(unsigned idx, FillStyleType* p) const     { *p = Fills[idx - 1]; }
+    virtual void     GetStrokeStyle(unsigned idx, StrokeStyleType* p) const { *p = Strokes[idx - 1]; }
+    virtual unsigned GetStartingPos() const      { return StartingPos; }
+
+    virtual ShapePathType ReadPathInfo(ShapePosInfo* pos, float* coord, unsigned* styles) const
+    {
+        if (pos->Pos >= Data->GetSize())
+            return Shape_EndShape;
+
+        PathDataDecoder<ContainerType> reader(*Data);
+        ShapePathType type = Shape_NewPath;
+        char tag = reader.ReadChar(pos->Pos++);
+        if (tag == Tag_EndShape)
+            return Shape_EndShape;
+        if (tag == Tag_NewLayer)
+        {
+            type = Shape_NewLayer;
+            tag  = reader.ReadChar(pos->Pos++);   // the Tag_NewPath that follows
+        }
+        pos->Pos += reader.ReadUInt30(pos->Pos, &styles[0]);
+        pos->Pos += reader.ReadUInt30(pos->Pos, &styles[1]);
+        pos->Pos += reader.ReadUInt30(pos->Pos, &styles[2]);
+        tag = reader.ReadChar(pos->Pos++);        // Tag_MoveTo
+        coord[0] = reader.ReadFloat(pos->Pos);
+        pos->Pos += 4;
+        coord[1] = reader.ReadFloat(pos->Pos);
+        pos->Pos += 4;
+        return type;
+    }
+
+    virtual PathEdgeType ReadEdge(ShapePosInfo* pos, float* coord) const
+    {
+        PathDataDecoder<ContainerType> reader(*Data);
+        char tag = reader.ReadChar(pos->Pos++);
+        if (tag == Tag_EndPath)
+            return Edge_EndPath;
+
+        PathEdgeType type = Edge_LineTo;
+        coord[0] = reader.ReadFloat(pos->Pos);
+        pos->Pos += 4;
+        coord[1] = reader.ReadFloat(pos->Pos);
+        pos->Pos += 4;
+        if (tag == Tag_QuadTo || tag == Tag_CubicTo)
+        {
+            type = Edge_QuadTo;
+            coord[2] = reader.ReadFloat(pos->Pos);
+            pos->Pos += 4;
+            coord[3] = reader.ReadFloat(pos->Pos);
+            pos->Pos += 4;
+            if (tag == Tag_CubicTo)
+            {
+                type = Edge_CubicTo;
+                coord[4] = reader.ReadFloat(pos->Pos);
+                pos->Pos += 4;
+                coord[5] = reader.ReadFloat(pos->Pos);
+                pos->Pos += 4;
+            }
+        }
+        return type;
+    }
+
+    float GetLastX() const { return LastX; }
+    float GetLastY() const { return LastY; }
+
 private:
     DataStatus               Status;        // +0x10
     ArrayLH<FillStyleType>   Fills;         // +0x18
@@ -151,12 +399,23 @@ enum StrokeStyleFlags
     StrokeScaling_Mask       = 0x06
 };
 
-// (appended for the shape cache nodes, sfr_render_03f) the counted style parts; only their release is used here
+// (appended for the shape cache nodes, sfr_render_03f; members from the shape mesh provider, sfr_render_03d)
+// An image or gradient fill: the source, its placement and how it is sampled.
 class ComplexFill : public RefCountBase<ComplexFill, Stat_Default_Mem>
 {
+public:
+    Ptr<ImageBase>    pImage;        // +0x10
+    Ptr<GradientData> pGradient;     // +0x18
+    Matrix2F          ImageMatrix;   // +0x20
+    ImageFillMode     FillMode;      // +0x40
+    unsigned          BindIndex;     // +0x44
 };
+// dash and gap lengths of a dashed stroke
 struct DashArray : public RefCountBase<DashArray, Stat_Default_Mem>
 {
+    float    Dashes[16];
+    float    DashStart;
+    unsigned DashCount;
 };
 
 }} // namespace Scaleform::Render

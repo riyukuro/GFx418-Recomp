@@ -1,0 +1,364 @@
+// Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Render, the shape mesh provider TU
+// (Render_ShapeMeshProvider): ShapeMeshProvider (the draw layers of a shape and the fills / strokes they tessellate
+// to), MorphShapeData and the MorphInterpolator that blends the two ends of a morph shape, the float shape data
+// instance it records them in, and the bound / hit-test templates over ShapeDataInterface.
+// MS2-UNIT: sfr_render_03d
+// MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142620040-0x1426202f0 .text$mn
+// MS2-RANGE: 0x142623c60-0x142624020 .text$mn
+// MS2-RANGE: 0x142626190-0x142633210 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
+
+#include "ms2/scaleform/include/render/render_image.h"
+#include "ms2/scaleform/include/render/render_meshprovider.h"
+#include "ms2/scaleform/include/render/render_meshkey.h"
+#include "ms2/scaleform/include/render/render_primitive.h"
+#include "ms2/scaleform/include/render/render_gradients.h"
+#include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/kernel/sf_alg.h"
+
+namespace Scaleform { namespace Render {
+
+typedef ArrayLH_POD<UByte>                MorphContainer;
+typedef ShapeDataFloatTempl<MorphContainer> MorphShapeFloat;
+
+// ***** MorphInterpolator
+
+// A shape whose styles and coordinates sit between a shape and its morph target. With morph data the paths come
+// from the re-encoded pair (ShapeData1 read through the caller's position, ShapeData2 through Pos2, kept here),
+// without it everything is passed through to the shape. 0x98 bytes, vftable 0x14318f320.
+class MorphInterpolator : public ShapeDataInterface
+{
+public:
+    MorphInterpolator(ShapeDataInterface* shape, MorphShapeData* morph, float ratio, const ShapePosInfo& pos2)
+        : pShapeData(shape), pMorphData(morph), MorphRatio(ratio), Pos2(pos2), Pos2s(pos2)
+    {
+    }
+
+    virtual unsigned      GetFillStyleCount() const { return pShapeData->GetFillStyleCount(); }
+    virtual unsigned      GetStrokeStyleCount() const { return pShapeData->GetStrokeStyleCount(); }
+    virtual void          GetFillStyle(unsigned idx, FillStyleType* p) const;
+    virtual void          GetStrokeStyle(unsigned idx, StrokeStyleType* p) const;
+    virtual unsigned      GetStartingPos() const;
+    virtual void          Rewind() const;
+    virtual ShapePathType ReadPathInfo(ShapePosInfo* pos, float* coord, unsigned* styles) const;
+    virtual PathEdgeType  ReadEdge(ShapePosInfo* pos, float* coord) const;
+    virtual void          SkipPathData(ShapePosInfo* pos) const;
+
+private:
+    Ptr<ShapeDataInterface> pShapeData;   // +0x10
+    Ptr<MorphShapeData>     pMorphData;   // +0x18
+    float                   MorphRatio;   // +0x20
+    mutable ShapePosInfo    Pos2;         // +0x24: reader of ShapeData2
+    ShapePosInfo            Pos2s;        // +0x5c: where Rewind puts it back
+};
+
+// A solid color moves toward the target's; complex fills are left to the fill matrix.
+// @0x14262bae0
+void MorphInterpolator::GetFillStyle(unsigned idx, FillStyleType* p) const
+{
+    pShapeData->GetFillStyle(idx, p);
+    if (!pMorphData || MorphRatio == 0)
+        return;
+
+    FillStyleType target;
+    pMorphData->pMorphTo->GetFillStyle(idx, &target);
+    if (!p->pFill)
+        p->Color = Color::Blend(Color(p->Color), Color(target.Color), MorphRatio).Raw;
+}
+
+// @0x14262be50
+void MorphInterpolator::GetStrokeStyle(unsigned idx, StrokeStyleType* p) const
+{
+    pShapeData->GetStrokeStyle(idx, p);
+    if (!pMorphData || MorphRatio == 0)
+        return;
+
+    StrokeStyleType target;
+    pMorphData->pMorphTo->GetStrokeStyle(idx, &target);
+    p->Width = Alg::Lerp(p->Width, target.Width, MorphRatio);
+    if (!p->pFill)
+        p->Color = Color::Blend(Color(p->Color), Color(target.Color), MorphRatio).Raw;
+}
+
+// @0x14262bd80
+unsigned MorphInterpolator::GetStartingPos() const
+{
+    const ShapeDataInterface* shape =
+        pMorphData ? Ptr<ShapeDataInterface>(&pMorphData->ShapeData1) : pShapeData;
+    return shape->GetStartingPos();
+}
+
+// @0x14262cd60
+void MorphInterpolator::Rewind() const
+{
+    Pos2 = Pos2s;
+}
+
+// @0x14262ca10
+ShapePathType MorphInterpolator::ReadPathInfo(ShapePosInfo* pos, float* coord, unsigned* styles) const
+{
+    if (!pMorphData)
+        return pShapeData->ReadPathInfo(pos, coord, styles);
+
+    float    coord2[Edge_MaxCoord];
+    unsigned styles2[3];
+    ShapePathType type = pMorphData->ShapeData1.ReadPathInfo(pos, coord, styles);
+    pMorphData->ShapeData2.ReadPathInfo(&Pos2, coord2, styles2);
+    if (type != Shape_EndShape)
+    {
+        coord[0] = Alg::Lerp(coord[0], coord2[0], MorphRatio);
+        coord[1] = Alg::Lerp(coord[1], coord2[1], MorphRatio);
+    }
+    return type;
+}
+
+// @0x14262c600
+PathEdgeType MorphInterpolator::ReadEdge(ShapePosInfo* pos, float* coord) const
+{
+    if (!pMorphData)
+        return pShapeData->ReadEdge(pos, coord);
+
+    float coord2[Edge_MaxCoord];
+    PathEdgeType type = pMorphData->ShapeData1.ReadEdge(pos, coord);
+    pMorphData->ShapeData2.ReadEdge(&Pos2, coord2);
+    if (type != Edge_EndPath)
+    {
+        coord[0] = Alg::Lerp(coord[0], coord2[0], MorphRatio);
+        coord[1] = Alg::Lerp(coord[1], coord2[1], MorphRatio);
+        if (type == Edge_QuadTo || type == Edge_CubicTo)
+        {
+            coord[2] = Alg::Lerp(coord[2], coord2[2], MorphRatio);
+            coord[3] = Alg::Lerp(coord[3], coord2[3], MorphRatio);
+        }
+        if (type == Edge_CubicTo)
+        {
+            coord[4] = Alg::Lerp(coord[4], coord2[4], MorphRatio);
+            coord[5] = Alg::Lerp(coord[5], coord2[5], MorphRatio);
+        }
+    }
+    return type;
+}
+
+// @0x14262cfb0
+void MorphInterpolator::SkipPathData(ShapePosInfo* pos) const
+{
+    if (!pMorphData)
+    {
+        pShapeData->SkipPathData(pos);
+        return;
+    }
+    pMorphData->ShapeData1.SkipPathData(pos);
+    pMorphData->ShapeData2.SkipPathData(&Pos2);
+}
+
+// ***** MorphShapeData
+
+// @0x142629e70
+MorphShapeData::MorphShapeData(ShapeDataInterface* morphTo)
+    : pMorphTo(morphTo), ShapeData1(&Container1, 0), ShapeData2(&Container2, 0)
+{
+}
+
+// ***** ShapeMeshProvider
+
+// @0x142629fa0
+ShapeMeshProvider::ShapeMeshProvider(ShapeDataInterface* shape, ShapeDataInterface* shapeMorph)
+    : pShapeData(shape), pMorphData(0), IdentityBounds(), GradientMorph(false), Strokes(false)
+{
+    if (shapeMorph)
+    {
+        pMorphData = *SF_HEAP_AUTO_NEW(this) MorphShapeData(shapeMorph);
+        createMorphData();
+    }
+    acquireShapeData();
+}
+
+// @0x14262a650
+void ShapeMeshProvider::AttachShape(ShapeDataInterface* shape, ShapeDataInterface* shapeMorph)
+{
+    pShapeData = shape;
+    if (shapeMorph)
+    {
+        pMorphData = *SF_HEAP_AUTO_NEW(this) MorphShapeData(shapeMorph);
+        createMorphData();
+    }
+    acquireShapeData();
+}
+
+// @0x14262bb90
+void ShapeMeshProvider::GetFillStyle(unsigned idx, FillStyleType* style, float morphRatio) const
+{
+    pShapeData->GetFillStyle(idx, style);
+    if (!pMorphData || morphRatio == 0)
+        return;
+
+    FillStyleType target;
+    pMorphData->pMorphTo->GetFillStyle(idx, &target);
+    if (!style->pFill)
+        style->Color = Color::Blend(Color(style->Color), Color(target.Color), morphRatio).Raw;
+}
+
+// @0x14262bf30
+void ShapeMeshProvider::GetStrokeStyle(unsigned idx, StrokeStyleType* style, float morphRatio) const
+{
+    pShapeData->GetStrokeStyle(idx, style);
+    if (!pMorphData || morphRatio == 0)
+        return;
+
+    StrokeStyleType target;
+    pMorphData->pMorphTo->GetStrokeStyle(idx, &target);
+    style->Width = Alg::Lerp(style->Width, target.Width, morphRatio);
+    if (!style->pFill)
+        style->Color = Color::Blend(Color(style->Color), Color(target.Color), morphRatio).Raw;
+}
+
+// The scale9 slicing of nine image rectangles (as a slicing tool lays them out): no morph, nine layers over nine
+// image fill styles of one image and no strokes.
+// @0x14262f650
+bool ShapeMeshProvider::checkI9gMergedSlice() const
+{
+    if (pMorphData)
+        return false;
+
+    unsigned imageFills = 0;
+    if (DrawLayers.GetSize() == 9 && GetFillStyleCount() == 9 && GetStrokeStyleCount() == 0)
+    {
+        const ImageBase* image = 0;
+        for (unsigned i = 0; i < 9; ++i)
+        {
+            FillStyleType fill;
+            pShapeData->GetFillStyle(i + 1, &fill);
+            if (!fill.pFill)
+                return false;
+            if (fill.pFill->pImage && (!image || image == fill.pFill->pImage))
+                ++imageFills;
+            image = fill.pFill->pImage;
+        }
+    }
+    if (imageFills != 9)
+        return false;
+    return true;
+}
+
+// A layer qualifies for image scale9 when it is one path filled on one side only with a clamped, axis aligned
+// image and nothing else follows in the layer.
+// @0x14262f4b0
+bool ShapeMeshProvider::checkI9gLayer(const DrawLayerType& layer) const
+{
+    if (pMorphData)
+        return false;
+
+    ShapePosInfo  pos(layer.StartPos);
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    ShapePathType type = pShapeData->ReadPathInfo(&pos, coord, styles);
+    if ((type == Shape_NewPath || type == Shape_NewLayer) && (styles[0] == 0) != (styles[1] == 0) &&
+        styles[2] == 0)
+    {
+        FillStyleType fill;
+        pShapeData->GetFillStyle(styles[0] ? styles[0] : styles[1], &fill);
+        if (fill.pFill && fill.pFill->pImage && !fill.pFill->ImageMatrix.IsFreeRotation() &&
+            fill.pFill->FillMode.GetWrapMode() == Wrap_Clamp)
+        {
+            pShapeData->SkipPathData(&pos);
+            type = pShapeData->ReadPathInfo(&pos, coord, styles);
+            if (type == Shape_EndShape || type == Shape_NewLayer)
+                return true;
+        }
+    }
+    return false;
+}
+
+// @0x142632800
+void ShapeMeshProvider::perceiveImage9GridLayers()
+{
+    for (UPInt i = 0; i < DrawLayers.GetSize(); ++i)
+    {
+        DrawLayerType& layer = DrawLayers[i];
+        if (layer.StrokeStyle == 0 && checkI9gLayer(layer))
+            layer.Image9GridType = I9gNormalSlice;
+    }
+}
+
+// whether fill style `style` (0: none) is an image or gradient
+// @0x142631fe0
+bool fillStyleIsComplex(const ShapeDataInterface* shape, unsigned style)
+{
+    if (style)
+    {
+        FillStyleType fill;
+        shape->GetFillStyle(style, &fill);
+        return fill.pFill != 0;
+    }
+    return false;
+}
+
+// The image / gradient of fill fillIndex of a layer (of its stroke for a stroke layer); imgFillStyle receives the
+// fill style it came from.
+// @0x1426324b0
+__declspec(noinline) ComplexFill* ShapeMeshProvider::getComplexFill(unsigned layer, unsigned fillIndex, unsigned* imgFillStyle) const
+{
+    unsigned     strokeStyle = GetLayerStroke(layer);
+    ComplexFill* fill        = 0;
+    if (strokeStyle == 0)
+    {
+        unsigned fillStyle = GetStyleByFillIdx(layer, fillIndex);
+        if (fillStyle)
+        {
+            FillStyleType style;
+            pShapeData->GetFillStyle(fillStyle, &style);
+            fill = style.pFill;
+            if (imgFillStyle)
+                *imgFillStyle = fillStyle;
+        }
+    }
+    else
+    {
+        StrokeStyleType stroke;
+        pShapeData->GetStrokeStyle(strokeStyle, &stroke);
+        fill = stroke.pFill;
+    }
+    return fill;
+}
+
+// @0x14262b3e0
+void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fillIndex, unsigned meshGenFlags)
+{
+    if (meshGenFlags & Mesh_Mask)
+    {
+        *data = FillData(Fill_Mask);
+        data->pVFormat = &VertexXY16iCF32::Format;
+        return;
+    }
+
+    ComplexFill* fill = getComplexFill(layer, fillIndex, 0);
+    if (fill)
+    {
+        if (fill->pGradient)
+            *data = FillData(fill->pGradient);
+        else
+        {
+            *data = FillData(fill->pImage->GetAsImage(), fill->FillMode);
+            if (DrawLayers[layer].Image9GridType != I9gNone && (meshGenFlags & Mesh_Scale9))
+            {
+                data->PrimFill = PrimFill_UVTexture;
+                data->pVFormat = &Image9GridVertex::Format;
+            }
+        }
+    }
+    else
+        *data = FillData(Fill_VColor);
+}
+
+}} // namespace Scaleform::Render
+
+// MS2-PIN: ??_7MorphInterpolator@Render@Scaleform@@6B@ 0x14318f320
+// MS2-PIN: ??_7MorphShapeData@Render@Scaleform@@6B@ 0x14318f2a0
+// MS2-PIN: ??_7?$ShapeDataFloatTempl@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@6B@ 0x14318f248
+// MS2-PIN: ??_7ShapeMeshProvider@Render@Scaleform@@6B?$RefCountBase@VMeshProvider_RCImpl@Render@Scaleform@@$01@Scaleform@@@ 0x14318f2a8
+// MS2-PIN: ??_7ShapeMeshProvider@Render@Scaleform@@6BMeshProvider@12@@ 0x14318f2b0
+// MS2-PIN: ??_7MeshProvider_KeySupport@Render@Scaleform@@6B?$RefCountBase@VMeshProvider_RCImpl@Render@Scaleform@@$01@Scaleform@@@ 0x14318f1b0
+// MS2-PIN: ??_7MeshProvider_KeySupport@Render@Scaleform@@6BMeshProvider@12@@ 0x14318f1b8
+// MS2-PIN: ??_7MeshProvider@Render@Scaleform@@6B@ 0x14318f0c0
