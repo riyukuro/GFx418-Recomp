@@ -234,6 +234,11 @@ public:
     // The script object, 0 for a character (exe 0x142990c60 / 0x142990c90).
     Object*       ToASObject();
     const Object* ToASObject() const;
+
+    // (appended for sfr_video_01)
+    // SetMemberRaw with a constant string name (exe 0x1400054b0).
+    bool SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val,
+                           const PropFlags& flags = PropFlags());
 };
 
 // The user data of an object and the movie it was set from. 0x10 bytes.
