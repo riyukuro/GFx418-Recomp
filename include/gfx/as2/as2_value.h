@@ -79,16 +79,16 @@ public:
 class FunctionRef : public FunctionRefBase
 {
 public:
-    FunctionRef(FunctionObject* poriginal = 0) { Init(poriginal); }
-    FunctionRef(FunctionObject& original) { Init(original); }
-    FunctionRef(const FunctionRef& orig) { Init(orig); }
-    FunctionRef(const FunctionRefBase& orig) { Init(orig); }
-    ~FunctionRef() { DropRefs(); }
+    SF_FORCEINLINE FunctionRef(FunctionObject* poriginal = 0) { Init(poriginal); }
+    SF_FORCEINLINE FunctionRef(FunctionObject& original) { Init(original); }
+    SF_FORCEINLINE FunctionRef(const FunctionRef& orig) { Init(orig); }
+    SF_FORCEINLINE FunctionRef(const FunctionRefBase& orig) { Init(orig); }
+    SF_FORCEINLINE ~FunctionRef() { DropRefs(); }
 
     // Calls the function in its local frame.
     inline void Invoke(const FnCall& fn, const char* pmethodName = 0) const; // as2_object.h
 
-    const FunctionRef& operator=(const FunctionRef& orig)
+    SF_FORCEINLINE const FunctionRef& operator=(const FunctionRef& orig)
     {
         Assign(orig);
         return *this;

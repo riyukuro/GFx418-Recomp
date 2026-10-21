@@ -220,7 +220,7 @@ public:
     bool CheckExtensions() const { return GFxExtensions.IsTrue(); }
 };
 
-inline void FunctionRefBase::DropRefs()
+SF_FORCEINLINE void FunctionRefBase::DropRefs()
 {
     if (!(Flags & FuncRef_Internal) && Function)
         Function->Release();

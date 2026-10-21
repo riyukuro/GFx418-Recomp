@@ -172,6 +172,7 @@ struct Object::Watchpoint
     Value       UserData; // +0x18
 
     Watchpoint(const Watchpoint& o); // exe 0x142923fd0
+    ~Watchpoint();                   // exe 0x142926100
 
     // Release before collection: only the user data holds counted references.
     void Finalize_GC()
@@ -217,7 +218,7 @@ protected:
     CFunctionObject(ASRefCountCollector* pcc);
 };
 
-inline void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)
+SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)
 {
     Flags    = flags;
     Function = poriginal;
@@ -227,7 +228,7 @@ inline void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)
 }
 
 // Counted copy of the function; the frame keeps the weak flag of the original.
-inline void FunctionRefBase::Init(const FunctionRefBase& orig, UByte flags)
+SF_FORCEINLINE void FunctionRefBase::Init(const FunctionRefBase& orig, UByte flags)
 {
     Flags    = flags;
     Function = orig.Function;
@@ -238,7 +239,7 @@ inline void FunctionRefBase::Init(const FunctionRefBase& orig, UByte flags)
         SetLocalFrame(orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
 }
 
-inline void FunctionRef::Invoke(const FnCall& fn, const char* pmethodName) const
+SF_FORCEINLINE void FunctionRef::Invoke(const FnCall& fn, const char* pmethodName) const
 {
     Function->Invoke(fn, pLocalFrame, pmethodName);
 }

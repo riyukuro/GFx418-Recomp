@@ -12,6 +12,7 @@
 // MS2-RANGE: 0x1429241f0-0x142924490 .text$mn
 // MS2-RANGE: 0x142924520-0x142924d20 .text$mn
 // MS2-RANGE: 0x142925ae0-0x142925be0 .text$mn
+// MS2-RANGE: 0x142926100-0x142926190 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -25,7 +26,6 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL ours calls ~FunctionRef of the ToFunction temporary out of line, the exe inlines it
 // @0x1429237f0
 Value::Value(const Value& v)
 {
@@ -98,7 +98,6 @@ Value::Value(Object* pobj)
     }
 }
 
-// MS2-FUNCTIONAL ours calls ~FunctionRef of the ToFunction temporary out of line, the exe inlines it
 // @0x1429267a0
 void Value::operator=(const Value& v)
 {
@@ -176,13 +175,16 @@ ArraySortFunctor::ArraySortFunctor(const ArraySortFunctor& src)
 {
 }
 
-// MS2-FUNCTIONAL ours calls ~FunctionRef of Func out of line (a tail jump), the exe inlines it
 // @0x142925350
 ArraySortFunctor::~ArraySortFunctor()
 {
 }
 
-// MS2-FUNCTIONAL ours calls ~FunctionRef of Function out of line, the exe inlines it
+// @0x142926100
+Object::Watchpoint::~Watchpoint()
+{
+}
+
 // @0x142925ae0
 MovieRoot::InvokeAliasInfo::~InvokeAliasInfo()
 {
