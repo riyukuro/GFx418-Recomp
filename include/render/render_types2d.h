@@ -16,6 +16,7 @@ public:
 
     Point() : x(0), y(0) {}
     Point(T px, T py) : x(px), y(py) {}
+    Point(const Point& p) { SetPoint(p.x, p.y); }
 
     void SetPoint(T px, T py) { x = px; y = py; }
     bool operator==(const Point& p) const { return x == p.x && y == p.y; }

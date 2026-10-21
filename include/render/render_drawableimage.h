@@ -135,6 +135,8 @@ public:
     bool                  IsTransparent() const { return Transparent; }
     DrawableImageContext* GetContext() const    { return pContext; }
     static bool           MapImageSource(ImageData* data, ImageBase* image, bool rtMap);
+    // MapImageSource's body, force-inlined where the exe inlines it (HitTest against a rectangle)
+    static bool           mapImageSourceInline(ImageData* data, ImageBase* image, bool rtMap);
 
     // The BitmapData operations.
     void ApplyFilter(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,

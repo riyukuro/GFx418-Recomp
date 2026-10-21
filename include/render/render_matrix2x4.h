@@ -154,6 +154,14 @@ public:
     }
 
     static Matrix2x4 Scaling(T sx, T sy)    { return Matrix2x4(sx, 0, 0, 0, sy, 0); }
+
+    // this = Scaling(sx, sy) * this
+    Matrix2x4& AppendScaling(T sx, T sy)
+    {
+        M[0][0] *= sx; M[0][1] *= sx; M[0][2] *= sx; M[0][3] *= sx;
+        M[1][0] *= sy; M[1][1] *= sy; M[1][2] *= sy; M[1][3] *= sy;
+        return *this;
+    }
     static Matrix2x4 Translation(T x, T y)  { return Matrix2x4(1, 0, x, 0, 1, y); }
 };
 

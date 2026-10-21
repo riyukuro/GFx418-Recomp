@@ -41,6 +41,12 @@ public:
 
 class RenderTarget : public RenderBuffer
 {
+protected:
+    Rect<int> ViewRect;   // +0x30: the drawable area inside the buffer
+
+public:
+    const Rect<int>& GetRect() const { return ViewRect; }
+    const ImageSize  GetSize() const { return ImageSize(ViewRect.Width(), ViewRect.Height()); }
 };
 
 }} // namespace Scaleform::Render

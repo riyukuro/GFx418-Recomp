@@ -100,6 +100,12 @@ void DrawableImage::addCommand(const C& cmd)
     pQueue->AddCommand(cmd);
 }
 
+// Threshold (linked into the 0x1425eeef0 gap) queues through this instance; its COMDAT is kept in this range.
+template void DrawableImage::addCommand<DICommand_Threshold>(const DICommand_Threshold& cmd);
+// The same for the Draw command; the two Draw bodies (0x1425eb8c0 / 0x1425ebf70) wait for the TreeNode/TreeRoot
+// layouts of Render_TreeNode (sfr_render_03).
+template void DrawableImage::addCommand<DICommand_Draw>(const DICommand_Draw& cmd);
+
 // @0x1425e9810
 DrawableImage::DrawableImage(ImageFormat format, ImageSize size, bool transparent, Color fillColor,
                              DrawableImageContext* context)
@@ -144,6 +150,24 @@ DrawableImage::~DrawableImage()
     pQueue = 0;
 }
 
+// Reads sourceRect row by row into the provider; false if the rectangle leaves the image.
+// @0x1425ecdf0
+bool DrawableImage::GetPixels(DIPixelProvider& provider, const Rect<SInt32>& sourceRect)
+{
+    Rect<SInt32> bounds(0, 0, ISize.Width, ISize.Height);
+    if (bounds.x2 < sourceRect.x2 || bounds.y2 < sourceRect.y2 || sourceRect.x1 < bounds.x1 || sourceRect.y1 < bounds.y1)
+        return false;
+
+    internalMapAndFlush();
+    for (SInt32 y = sourceRect.y1; y < sourceRect.y2; ++y)
+    {
+        UByte* scanline = MappedData.GetScanline(y);
+        for (SInt32 x = sourceRect.x1; x < sourceRect.x2; ++x)
+            provider.WriteNextPixel(MappedData.GetPixelInScanline(scanline, x).ToColor32());
+    }
+    return true;
+}
+
 // @0x1425ed1a0
 Texture* DrawableImage::GetTexture(TextureManager* manager)
 {
@@ -151,6 +175,85 @@ Texture* DrawableImage::GetTexture(TextureManager* manager)
         pDelegateImage->GetImageType() != Type_Other)
         return ((Image*)pDelegateImage.GetPtr())->GetTexture(manager);
     return pTexture;
+}
+
+static inline Rect<SInt32> sizeRect(const ImageSize& size)
+{
+    return Rect<SInt32>(0, 0, size.Width, size.Height);
+}
+
+// Per-channel population counts over rect (the whole image when null), clipped to the image.
+// MS2-FUNCTIONAL: the exe keeps the GetSize/pixel temporaries in the caller's home area (0x20 smaller frame), shifting registers
+// @0x1425ed440
+void DrawableImage::Histogram(Rect<SInt32>* rect, unsigned colors[4][256])
+{
+    internalMapAndFlush();
+    memset(colors, 0, sizeof(unsigned) * 4 * 256);
+    Rect<SInt32> hrect = rect ? *rect : sizeRect(GetSize());
+    for (SInt32 y = Alg::Max<SInt32>(0, hrect.y1); y < Alg::Min<SInt32>(GetSize().Height, hrect.y2); ++y)
+    {
+        for (SInt32 x = Alg::Max<SInt32>(0, hrect.x1); x < Alg::Min<SInt32>(GetSize().Width, hrect.x2); ++x)
+        {
+            UInt32 c = GetPixel32(x, y).ToColor32();
+            colors[2][(UByte)c]++;
+            c >>= 8;
+            colors[1][(UByte)c]++;
+            c >>= 8;
+            colors[0][(UByte)c]++;
+            colors[3][c >> 8]++;
+        }
+    }
+}
+
+// Alpha test of this image against secondRect placed at firstPoint (this image mapped inline).
+// @0x1425ed5e0
+bool DrawableImage::HitTest(const Point<SInt32>& firstPoint, const Rect<SInt32>& secondRect, unsigned firstThreshold)
+{
+    internalMapAndFlush();
+    ImageData data;
+    if (mapImageSourceInline(&data, this, false))
+    {
+        Size<SInt32> dims(Alg::Min<SInt32>(GetSize().Width, secondRect.Width()),
+                          Alg::Min<SInt32>(GetSize().Height, secondRect.Height()));
+        for (SInt32 y = 0; y < dims.Height; ++y)
+        {
+            for (SInt32 x = 0; x < dims.Width; ++x)
+            {
+                // the row offset is taken from secondRect.x1 as in the exe
+                Color c = data.GetPixel(secondRect.x1 - firstPoint.x + x, secondRect.x1 - firstPoint.y + y);
+                if (c.GetAlpha() >= firstThreshold)
+                    return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Alpha test of this image at firstPoint against secondImage at secondPoint.
+// @0x1425ed800
+bool DrawableImage::HitTest(ImageBase* secondImage, const Point<SInt32>& firstPoint, const Point<SInt32>& secondPoint,
+                            unsigned firstThreshold, unsigned secondThreshold)
+{
+    internalMapAndFlush();
+    ImageData data[2];
+    if (MapImageSource(&data[0], this, false) && MapImageSource(&data[1], secondImage, false))
+    {
+        ImageSize dims(Alg::Min(GetSize().Width - firstPoint.x, secondImage->GetSize().Width - secondPoint.x),
+                       Alg::Min(GetSize().Height - firstPoint.y, secondImage->GetSize().Height - secondPoint.y));
+        for (SInt32 y = 0; y < (SInt32)dims.Height; ++y)
+        {
+            for (SInt32 x = 0; x < (SInt32)dims.Width; ++x)
+            {
+                Color c0 = data[0].GetPixel(secondPoint.x - firstPoint.x + x, secondPoint.y - firstPoint.y + y);
+                if (c0.GetAlpha() < firstThreshold)
+                    continue;
+                Color c1 = data[1].GetPixel(x, y);
+                if (c1.GetAlpha() >= secondThreshold)
+                    return true;
+            }
+        }
+    }
+    return false;
 }
 
 // @0x1425eda30
@@ -167,9 +270,7 @@ bool DrawableImage::Map(ImageData* pdata, unsigned levelIndex, unsigned levelCou
     return true;
 }
 
-// The pixels of a drawable image (mapped first) or of a raw 32-bit image.
-// @0x1425edae0
-MS2_SF_NOINL bool DrawableImage::MapImageSource(ImageData* data, ImageBase* image, bool rtMap)
+__forceinline bool DrawableImage::mapImageSourceInline(ImageData* data, ImageBase* image, bool rtMap)
 {
     if (!data || !image)
         return false;
@@ -203,6 +304,13 @@ MS2_SF_NOINL bool DrawableImage::MapImageSource(ImageData* data, ImageBase* imag
         return true;
     }
     return false;
+}
+
+// The pixels of a drawable image (mapped first) or of a raw 32-bit image.
+// @0x1425edae0
+MS2_SF_NOINL bool DrawableImage::MapImageSource(ImageData* data, ImageBase* image, bool rtMap)
+{
+    return mapImageSourceInline(data, image, rtMap);
 }
 
 // MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
@@ -259,11 +367,39 @@ void DrawableImage::FillRect(const Rect<SInt32>& rect, Color color)
     addCommand(DICommand_FillRect(this, rect, color));
 }
 
-// MS2-FUNCTIONAL: the exe copies the Point member-wise (two dword moves) where our compiler copies it as one qword
 // @0x1425ec9e0
 void DrawableImage::FloodFill(const Point<SInt32>& pt, Color color)
 {
     addCommand(DICommand_FloodFill(this, pt, color));
+}
+
+// Scans the mapped pixels on the calling thread; an opaque image ignores the alpha bits of the mask.
+// MS2-FUNCTIONAL: the exe stores found=false before the first GetSize call and keeps the match test as two branches
+// @0x1425ecb50
+Rect<SInt32> DrawableImage::GetColorBoundsRect(UInt32 mask, UInt32 color, bool findColor)
+{
+    internalMapAndFlush();
+    UInt32 useMask = Transparent ? mask : (mask & 0x00FFFFFF);
+    Rect<SInt32> bounds(GetSize().Width, GetSize().Height, 0, 0);
+    bool found = false;
+    for (unsigned y = 0; y < GetSize().Height; ++y)
+    {
+        for (unsigned x = 0; x < GetSize().Width; ++x)
+        {
+            Color c = GetPixel32(x, y);
+            if (findColor ? ((c.ToColor32() & useMask) == color) : ((c.ToColor32() & useMask) != color))
+            {
+                found = true;
+                bounds.x1 = Alg::Min<SInt32>(bounds.x1, x);
+                bounds.y1 = Alg::Min<SInt32>(bounds.y1, y);
+                bounds.x2 = Alg::Max<SInt32>(bounds.x2, x + 1);
+                bounds.y2 = Alg::Max<SInt32>(bounds.y2, y + 1);
+            }
+        }
+    }
+    if (found)
+        return bounds;
+    return Rect<SInt32>(0, 0, 0, 0);
 }
 
 // @0x1425ecdd0
@@ -275,7 +411,7 @@ Color DrawableImage::GetPixel(SInt32 x, SInt32 y)
 }
 
 // @0x1425ecd50
-MS2_SF_NOINL Color DrawableImage::GetPixel32(SInt32 x, SInt32 y)
+Color DrawableImage::GetPixel32(SInt32 x, SInt32 y)
 {
     if ((unsigned)x >= ISize.Width || (unsigned)y >= ISize.Height)
         return Color(0);
@@ -314,6 +450,83 @@ void DrawableImage::PerlinNoise(float frequencyX, float frequencyY, unsigned num
 {
     addCommand(DICommand_PerlinNoise(this, frequencyX, frequencyY, numOctaves, randomSeed, stitch, fractal,
                                      channelMask, grayScale, offsets, offsetCount));
+}
+
+// Feedback taps of the maximal-length LFSR used by PixelDissolve, indexed by the bit width of the pixel count.
+static const UInt32 PixelDissolveTaps[24] =
+{
+    0x1, 0x3, 0x6, 0xc, 0x14, 0x30, 0x30, 0xb8, 0x110, 0x240, 0x500, 0xe08,
+    0x1c80, 0x3802, 0x6000, 0xb400, 0x9000, 0x20400, 0x72000, 0x90000, 0x140000, 0x300000, 0x420000, 0xe10000
+};
+
+// Visits numPixels pseudo-random pixels of the area (an LFSR sequence continued from randomSeed): fills them with
+// fill when dissolving in place, otherwise copies them from the source rect. Returns the next seed.
+// MS2-FUNCTIONAL: the exe inlines the first MapImageSource (forcing that here outlines DICommand_Map's dtor in
+// MapImageSource itself); register allocation and loop shapes differ too (numPixels counted down in a 64-bit register)
+// @0x1425ee720
+unsigned DrawableImage::PixelDissolve(DrawableImage* source, const Rect<SInt32>& sourceRect,
+                                      const Point<SInt32>& destPoint, unsigned randomSeed, unsigned numPixels,
+                                      Color fill)
+{
+    internalMapAndFlush();
+    ImageData dest;
+    if (!MapImageSource(&dest, this, false))
+        return 0;
+    addToCPUModifiedList();
+
+    if (source == this)
+    {
+        SInt32 width  = dest.GetWidth();
+        SInt32 height = dest.GetHeight();
+        if (height < sourceRect.y1 || sourceRect.y2 < 0 || sourceRect.x2 < 0 || width < sourceRect.x1)
+            return 0;
+        SInt32 w = Alg::Min<SInt32>(sourceRect.x2, width) - Alg::Max<SInt32>(sourceRect.x1, 0);
+        unsigned total = (Alg::Min<SInt32>(sourceRect.y2, height) - Alg::Max<SInt32>(sourceRect.y1, 0)) * w;
+        unsigned bits = 0;
+        while (total > (1u << bits))
+            bits++;
+        SInt32 seed = randomSeed;
+        for (unsigned i = 0; i < numPixels; i++)
+        {
+            do
+                seed = (seed >> 1) ^ (-(seed & 1) & PixelDissolveTaps[bits]);
+            while ((unsigned)seed > total);
+            unsigned index = seed - 1;
+            dest.SetPixelARGB(index % w, index / w, fill.ToColor32());
+        }
+        return seed;
+    }
+
+    // (the exe maps this image again as the copy source)
+    ImageData src;
+    if (!MapImageSource(&src, this, false))
+        return 0;
+    SInt32 w = dest.GetWidth() - destPoint.x - destPoint.x;
+    SInt32 h = dest.GetHeight() - destPoint.y - destPoint.y;
+    if (w <= 0 || h <= 0)
+        return 0;
+    SInt32 srcWidth  = src.GetWidth();
+    SInt32 srcHeight = src.GetHeight();
+    if (sourceRect.y2 < 0 || srcHeight < sourceRect.y1 || srcWidth < sourceRect.x1 || sourceRect.x2 < 0)
+        return 0;
+    w = Alg::Min<SInt32>(w, Alg::Min<SInt32>(sourceRect.x2, srcWidth) - Alg::Max<SInt32>(sourceRect.x1, 0));
+    h = Alg::Min<SInt32>(h, Alg::Min<SInt32>(sourceRect.y2, srcHeight) - Alg::Max<SInt32>(sourceRect.y1, 0));
+    unsigned total = h * w;
+    unsigned bits = 0;
+    while (total > (1u << bits))
+        bits++;
+    SInt32 seed = randomSeed;
+    for (unsigned i = 0; i < numPixels; i++)
+    {
+        do
+            seed = (seed >> 1) ^ (-(seed & 1) & PixelDissolveTaps[bits]);
+        while ((unsigned)seed > total);
+        unsigned index = seed - 1;
+        unsigned x = index % w, y = index / w;
+        Color c = src.GetPixel(sourceRect.x1 + x, sourceRect.y1 + y);
+        dest.SetPixelARGB(destPoint.x + x, destPoint.y + y, c.ToColor32());
+    }
+    return seed;
 }
 
 // MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
@@ -364,6 +577,64 @@ bool DrawableImage::createTextureFromManager(HAL* phal, TextureManager* manager)
     pRT = *phal->CreateRenderTarget(texture, false);
     if (!pRT)
         return false;
+    return true;
+}
+
+// Gives the image a render target: recreated on the existing texture after a device loss, or the delegate image is
+// replaced by a texture of our own, its contents drawn (or decoded) into it.
+// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
+// @0x1425ef770
+bool DrawableImage::ensureRenderableRT()
+{
+    if (pRT)
+        return true;
+
+    Interfaces rifs;
+    pContext->GetRenderInterfacesRT(&rifs);
+
+    ImageSize      imageSize = ISize;
+    Ptr<ImageBase> oldDelegate = pDelegateImage;
+    Texture*       delegateTexture = 0;
+
+    if (pTexture)
+    {
+        pRT = *rifs.pHAL->CreateRenderTarget(pTexture, false);
+        if (!pRT)
+            return false;
+    }
+    else if (pDelegateImage)
+    {
+        if (pDelegateImage->GetImageType() == Type_DrawableImage)
+            mergeQueueWith(pDelegateImage->GetAsImage());
+        imageSize = pDelegateImage->GetSize();
+        delegateTexture = pDelegateImage->GetAsImage()->GetTexture(rifs.pTextureManager);
+        pDelegateImage = 0;
+        initialize(rifs.pTextureManager->GetDrawableImageFormat(), imageSize, pContext);
+    }
+    if (!pRT)
+        return false;
+
+    if (delegateTexture)
+    {
+        ImageSize rtSize = pRT->GetSize();
+        rifs.pHAL->PushRenderTarget(RectF(0, 0, (float)rtSize.Width, (float)rtSize.Height), pRT);
+        Matrix2F mvp = Matrix2F::Scaling(2, -2);
+        mvp.Prepend(Matrix2F::Translation(-0.5f, -0.5f));
+        Matrix2F texgen;
+        texgen.AppendScaling((float)pRT->GetSize().Width / (float)pRT->GetBufferSize().Width,
+                             (float)pRT->GetSize().Height / (float)pRT->GetBufferSize().Height);
+        rifs.pHAL->DrawableCopyback(delegateTexture, mvp, texgen);
+        rifs.pHAL->PopRenderTarget();
+    }
+    else if (oldDelegate)
+    {
+        if (mapTextureRT(false))
+        {
+            oldDelegate->Decode(&MappedData);
+            unmapTextureRT();
+        }
+    }
+    updateStagingTargetRT();
     return true;
 }
 
@@ -697,6 +968,29 @@ void DrawableImageContext::processTreeRootKillList()
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-FUNCTIONAL ??$AddCommand@UDICommand_Map@Render@Scaleform@@@DICommandQueue@Render@Scaleform@@QEAA_NAEBUDICommand_Map@12@@Z: the Ptr<DrawableImage> copy goes through rcx instead of rax and our build reuses the null page pointer as the false result where the exe clears dil on an explicit failure path
+// MS2-PIN: ??$AddCommand@UDICommand_Map@Render@Scaleform@@@DICommandQueue@Render@Scaleform@@QEAA_NAEBUDICommand_Map@12@@Z 0x1425e8420
+// MS2-PIN: ??$addCommand@UDICommand_CopyPixels@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_CopyPixels@12@@Z 0x1425e8960
+// MS2-PIN: ??$addCommand@UDICommand_FillRect@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_FillRect@12@@Z 0x1425e8c20
+// MS2-PIN: ??$addCommand@UDICommand_FloodFill@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_FloodFill@12@@Z 0x1425e8ce0
+// MS2-FUNCTIONAL ??0DICommand_SourceRect@Render@Scaleform@@QEAA@AEBU012@@Z: inlined UpdateClippedRects keeps x2/y2 in swapped registers (r9/r10), see render_drawableimage.h
+// MS2-PIN: ??0DICommand_SourceRect@Render@Scaleform@@QEAA@AEBU012@@Z 0x1425e9620
+// MS2-FUNCTIONAL ??0DICommand_SourceRect@Render@Scaleform@@QEAA@PEAVDrawableImage@12@0AEBV?$Rect@J@12@AEBV?$Point@J@12@@Z: inlined UpdateClippedRects keeps x2/y2 in swapped registers (r9/r10), see render_drawableimage.h
+// MS2-PIN: ??0DICommand_SourceRect@Render@Scaleform@@QEAA@PEAVDrawableImage@12@0AEBV?$Rect@J@12@AEBV?$Point@J@12@@Z 0x1425e9710
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_ApplyFilter@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea280
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_ColorTransform@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea2e0
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_Compare@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea340
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_CopyChannel@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea3a0
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_CopyPixels@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea400
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_Merge@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea460
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_PaletteMap@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea4c0
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_Scroll@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea520
+// MS2-PIN: ??$addCommand@UDICommand_Threshold@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_Threshold@12@@Z 0x1425e9250
+// MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_Threshold@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea580
+// MS2-PIN: ??_GDICommand_Threshold@Render@Scaleform@@UEAAPEAXI@Z 0x1425eac80
+// MS2-PIN: ?ExecuteHWGetImages@?$DICommand_SourceRectImpl@UDICommand_Threshold@Render@Scaleform@@@Render@Scaleform@@UEBAXPEAPEAVDrawableImage@23@PEAV?$Size@M@23@@Z 0x1425ec7a0
+// MS2-PIN: ??_7?$DICommand_SourceRectImpl@UDICommand_Threshold@Render@Scaleform@@@Render@Scaleform@@6B@ 0x14318d910
+// MS2-PIN: ??_7DICommand_Threshold@Render@Scaleform@@6B@ 0x14318d970
 // MS2-PINS-BEGIN tplpin
 // MS2-PIN: ?ExecuteHWGetImages@?$DICommand_SourceRectImpl@UDICommand_ApplyFilter@Render@Scaleform@@@Render@Scaleform@@UEBAXPEAPEAVDrawableImage@23@PEAV?$Size@M@23@@Z 0x1425ec320 ; unique
 // MS2-PIN: ?ExecuteHWGetImages@?$DICommand_SourceRectImpl@UDICommand_ColorTransform@Render@Scaleform@@@Render@Scaleform@@UEBAXPEAPEAVDrawableImage@23@PEAV?$Size@M@23@@Z 0x1425ec3b0 ; unique
