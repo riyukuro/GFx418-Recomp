@@ -145,7 +145,20 @@ public:
     };
 
     class UserDataHolder;
-    class MemberVisitor;
+    // Receives the members VisitMembers enumerates.
+    struct MemberVisitor
+    {
+        virtual ~MemberVisitor() {}
+        virtual void Visit(const ASString& name, const Value& val, UByte flags) = 0;
+    };
+    // VisitMembers flags.
+    enum VisitMemberFlags
+    {
+        VisitMember_Prototype  = 0x01, // the prototype chain too
+        VisitMember_ChildClips = 0x02, // the child characters of a sprite
+        VisitMember_DontEnum   = 0x04, // the DontEnum members too
+        VisitMember_NamesOnly  = 0x08  // unset values are not fetched
+    };
 
     UserDataHolder* pUserDataHolder; // +0x08
     Ptr<Object>     pProto;          // +0x10
@@ -276,6 +289,8 @@ public:
                               const PropFlags& flags = PropFlags());                         // exe 0x142988bb0
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags());                            // exe 0x1429867f0
+    virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
+                              const ObjectInterface* instance = 0) const;                    // exe 0x1429947f0
     // Runs the watchpoint of prop, the value to store in *resultVal; false without one (exe 0x142964b90).
     bool InvokeWatchpoint(Environment* penv, const ASString& prop, const Value& newVal, Value* resultVal);
 

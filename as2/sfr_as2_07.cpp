@@ -36,6 +36,7 @@
 // MS2-RANGE: 0x1429923c0-0x142992540 .text$mn
 // MS2-RANGE: 0x142992780-0x142992830 .text$mn
 // MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
+// MS2-RANGE: 0x1429947f0-0x142994a00 .text$mn
 // MS2-RANGE: 0x142994c50-0x142994e00 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
@@ -311,6 +312,39 @@ bool Object::SetMember(Environment* penv, const ASString& name, const Value& val
     }
     pmember->mValue = *pval;
     return true;
+}
+
+// @0x1429947f0
+void Object::VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags,
+                          const ObjectInterface* instance) const
+{
+    ASStringHash_GC<Member>::ConstIterator it = Members.Begin();
+    while (it != Members.End())
+    {
+        const PropFlags& memberFlags = it->Second.GetMemberFlags();
+        if (!memberFlags.GetDontEnum() || (visitFlags & VisitMember_DontEnum))
+        {
+            const Value& value = it->Second.GetMemberValue();
+            if (value.IsSet())
+                pvisitor->Visit(it->First, value, memberFlags.Flags);
+            else
+            {
+                // An unset value is fetched through the instance the visit started on.
+                Value value;
+                if (!(visitFlags & VisitMember_NamesOnly))
+                {
+                    ObjectInterface* pobj =
+                        const_cast<ObjectInterface*>(instance ? instance : static_cast<const ObjectInterface*>(this));
+                    pobj->GetMemberRaw(psc, it->First, &value);
+                }
+                pvisitor->Visit(it->First, value, memberFlags.Flags);
+            }
+        }
+        ++it;
+    }
+
+    if ((visitFlags & VisitMember_Prototype) && pProto)
+        pProto->VisitMembers(psc, pvisitor, visitFlags, instance ? instance : this);
 }
 
 // @0x142988bb0
