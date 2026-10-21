@@ -695,6 +695,40 @@ public:
     virtual UInt32      GetBaseImageId() const { return pImage ? pImage->GetImageId() : 0; }
 };
 
+
+// An image source that hands out an existing image (0x18 bytes, vftable 0x143185228): everything forwards to
+// pDelegate, and a compatible image is the delegate itself.
+class WrapperImageSource : public ImageSource
+{
+protected:
+    Ptr<Image> pDelegate;   // +0x10
+public:
+    WrapperImageSource(Image* pdelegate) : pDelegate(pdelegate) {}
+
+    virtual ImageType   GetImageType() const   { return pDelegate->GetImageType(); }
+    virtual ImageFormat GetFormat() const      { return pDelegate->GetFormat(); }
+    virtual ImageSize   GetSize() const        { return pDelegate->GetSize(); }
+    virtual unsigned    GetMipmapCount() const { return pDelegate->GetMipmapCount(); }
+    virtual bool        Decode(ImageData* pdest, CopyScanlineFunc copyScanline = CopyScanlineDefault,
+                               void* arg = 0) const
+    {
+        return pDelegate->Decode(pdest, copyScanline, arg);
+    }
+    virtual Image* CreateCompatibleImage(const ImageCreateArgs& args)
+    {
+        if (IsDecodeOnlyImageCompatible(args))
+        {
+            pDelegate->AddRef();
+            return pDelegate;
+        }
+        return ImageSource::CreateCompatibleImage(args);
+    }
+    virtual Image*      GetAsImage()                   { return pDelegate; }
+    virtual UPInt       GetBytes(int* memRegion) const { return pDelegate->GetBytes(memRegion); }
+    virtual UInt32      GetImageId() const             { return pDelegate->GetImageId(); }
+    virtual UInt32      GetBaseImageId() const         { return pDelegate->GetBaseImageId(); }
+};
+
 }} // namespace Scaleform::Render
 
 #endif
