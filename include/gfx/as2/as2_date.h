@@ -27,6 +27,9 @@ public:
     void SetDate(SInt64 val); // exe 0x142980570 (UTC ms since 1970, updates both halves)
     void UpdateGMT();         // exe 0x142992900 (UTC half from the local half)
     void UpdateLocal();       // exe 0x142992b00 (local half from the UTC half)
+
+protected:
+    void commonInit(Environment* penv); // exe 0x142994fe0
 };
 
 // Date.prototype methods.

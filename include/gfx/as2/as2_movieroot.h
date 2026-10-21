@@ -23,6 +23,11 @@ enum ASBuiltinType : int
     ASBuiltin_String = 3,
     ASBuiltin_Number  = 4,
     ASBuiltin_Boolean = 5,
+    ASBuiltin_AsBroadcaster = 19,
+    ASBuiltin_Date          = 20,
+    ASBuiltin_Selection     = 21,
+    ASBuiltin_Mouse         = 27,
+    ASBuiltin_MovieClipLoader = 29,
     ASBuiltin_DropShadowFilter = 38,
     ASBuiltin_GlowFilter       = 39,
     ASBuiltin_BlurFilter       = 40,
@@ -78,6 +83,7 @@ enum ASBuiltinType : int
     ASBuiltin_rendererString = 151, // movie clip renderer hints
     ASBuiltin_rendererFloat  = 152,
     ASBuiltin_rendererMatrix = 153,
+    ASBuiltin_Amp            = 154,
     ASBuiltin_length = 155,
 };
 // The last digit with a builtin name.

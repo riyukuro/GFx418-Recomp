@@ -20,6 +20,7 @@ public:
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942fc0
+    void commonInit(Environment* penv); // exe 0x142995140
 };
 
 // String.prototype methods.

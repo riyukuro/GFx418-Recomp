@@ -42,6 +42,9 @@
 // MS2-RANGE: 0x1429944d0-0x142994710 .text$mn
 // MS2-RANGE: 0x1429947f0-0x142994a00 .text$mn
 // MS2-RANGE: 0x142994bb0-0x142994e00 .text$mn
+// MS2-RANGE: 0x142994e10-0x142994e90 .text$mn
+// MS2-RANGE: 0x142994fe0-0x1429950f0 .text$mn
+// MS2-RANGE: 0x142995100-0x142995180 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -51,6 +54,7 @@
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
+#include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/kernel/sf_std.h"
@@ -282,6 +286,63 @@ void MovieClipObject::Set__proto__(ASStringContext* psc, Object* protoObj)
                              ObjectInterface::VisitMember_Prototype | ObjectInterface::VisitMember_DontEnum |
                                  ObjectInterface::VisitMember_NamesOnly);
     }
+}
+
+// @0x142994e10
+void AmpMarker::commonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Amp));
+}
+
+// @0x142994e50
+void AsBroadcaster::commonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_AsBroadcaster));
+}
+
+// @0x142994fe0
+void DateObject::commonInit(Environment* penv)
+{
+    Date        = 0;
+    Time        = 0;
+    Year        = 0;
+    JDate       = 0;
+    LDate       = 0;
+    LTime       = 0;
+    LYear       = 0;
+    LJDate      = 0;
+    LocalOffset = 0;
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Date));
+}
+
+// @0x142995040
+void MouseObject::commonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Mouse));
+}
+
+// @0x142995080
+void MovieClipLoader::commonInit(Environment* penv)
+{
+    ASStringContext* psc = penv->GetSC();
+    Set__proto__(psc, penv->GetPrototype(ASBuiltin_MovieClipLoader));
+    // AsBroadcaster::Initialize, its InitializeProto inlined.
+    ObjectInterface* pobj = this;
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
+}
+
+// @0x142995100
+void Selection::commonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Selection));
+}
+
+// @0x142995140
+void StringObject::commonInit(Environment* penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_String));
 }
 
 // @0x142986790

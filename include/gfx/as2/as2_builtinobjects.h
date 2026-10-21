@@ -31,7 +31,11 @@ public:
 namespace AS2 {
 
 // 0x68 bytes: nothing besides the object.
-class AmpMarker : public Object {};
+class AmpMarker : public Object
+{
+protected:
+    void commonInit(Environment* penv); // exe 0x142994e10
+};
 // The listener list behind AsBroadcaster.initialize (the _listeners array of the broadcaster).
 class AsBroadcaster : public Object
 {
@@ -61,6 +65,9 @@ public:
     static bool InitializeProto(ASStringContext* psc, ObjectInterface* pobj);
     // Gives pobj its own empty _listeners array (exe 0x142961ef0).
     static bool InitializeInstance(ASStringContext* psc, ObjectInterface* pobj);
+
+protected:
+    void commonInit(Environment* penv); // exe 0x142994e50
 };
 
 // The AsBroadcaster prototype object.
@@ -76,8 +83,16 @@ public:
 class ExternalInterface : public Object {};
 class KeyObject : public Object {};
 class Math : public Object {};
-class MouseObject : public Object {};
-class Selection : public Object {};
+class MouseObject : public Object
+{
+protected:
+    void commonInit(Environment* penv); // exe 0x142995040
+};
+class Selection : public Object
+{
+protected:
+    void commonInit(Environment* penv); // exe 0x142995100
+};
 class StageObject : public Object {};
 
 // 0x70 bytes.
@@ -135,6 +150,10 @@ public:
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942dd0
+
+private:
+    // Prototype, the broadcaster members and an own _listeners array (exe 0x142995080).
+    void commonInit(Environment* penv);
 };
 
 // 0x78 bytes.
