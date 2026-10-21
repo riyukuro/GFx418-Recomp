@@ -128,7 +128,7 @@ void HMatrix::SetMatrix2D(const Matrix2F& m)
     *pHandle->GetMatrixPtr() = m;
 }
 
-// A 2D block only grows a 3D matrix when the new one is not the identity.
+// MS2-FUNCTIONAL: rbx/rdi swap (pHandle / m). A 2D block only grows a 3D matrix when the new one is not the identity.
 void HMatrix::SetMatrix3D(const Matrix3F& m)
 {
     if (!Has3D())
@@ -151,6 +151,7 @@ void HMatrix::SetCxform(const Cxform& cx)
     *pHandle->GetCxformPtr() = cx;
 }
 
+// MS2-FUNCTIONAL: register allocation (mask / format / handle).
 void HMatrix::SetTextureMatrix(const Matrix2F& m, unsigned index)
 {
     ElementIndex e = (ElementIndex)(Element_T0 + index);
@@ -360,6 +361,7 @@ EntryHandle* MatrixPool::allocMatrixData(unsigned formatBits)
 
 // Gives the handle a new block in the new format, carrying over what both formats have (missing elements start
 // as identity / zero) and turning the old block into a hole.
+// MS2-FUNCTIONAL: the exe's 2D->3D temporary is 16-byte aligned (movaps) and r9/r10 swap.
 bool MatrixPool::reallocMatrixData(EntryHandle* handle, unsigned formatBits)
 {
     DataHeader* to = allocData(PayloadBytes(formatBits), handle);
