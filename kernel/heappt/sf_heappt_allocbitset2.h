@@ -3,6 +3,7 @@
 #ifndef MS2_SF_KERNEL_HEAPPT_ALLOCBITSET2_H
 #define MS2_SF_KERNEL_HEAPPT_ALLOCBITSET2_H
 
+#include "ms2/scaleform/kernel/sf_heapbitset2.h"
 #include "ms2/scaleform/kernel/heappt/sf_heappt_freebin.h"
 
 namespace Scaleform { namespace HeapPT {
@@ -15,6 +16,9 @@ public:
     void Reset() { Bin.Reset(); }
 
     static UInt32* GetBitSet(const HeapSegment* seg) { return (UInt32*)(((UByte*)seg) + sizeof(HeapSegment)); }
+
+    UPInt GetBitSetWords(UPInt dataSize) const { return Heap::BitSet2::GetBitSetSize(dataSize, MinAlignShift); }
+    UPInt GetBitSetBytes(UPInt dataSize) const { return GetBitSetWords(dataSize) * sizeof(UInt32); }
 
     void  InitSegment(HeapSegment* seg);
     void  ReleaseSegment(HeapSegment* seg);
