@@ -277,6 +277,9 @@ public:
     void MultiplyMatrix(const Matrix2x4<T>& m1, const Matrix4x4& m2);
     void MultiplyMatrix(const Matrix3x4<T>& m1, const Matrix4x4& m2);
     void EncloseTransformHomogeneous(Rect<T>* pr, const Rect<T>& r) const;
+
+    // (appended for sfr_as2_07) rows become columns (Matrix4F: 0x1429925f0)
+    void Transpose();
 };
 typedef Matrix4x4<float> Matrix4F;
 

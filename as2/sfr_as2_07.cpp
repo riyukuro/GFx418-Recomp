@@ -16,7 +16,7 @@
 // MS2-RANGE: 0x142987280-0x1429872b0 .text$mn
 // MS2-RANGE: 0x142988690-0x142988a30 .text$mn
 // MS2-RANGE: 0x142988b60-0x142988f30 .text$mn
-// MS2-RANGE: 0x142989250-0x142989320 .text$mn
+// MS2-RANGE: 0x1429891c0-0x142989320 .text$mn
 // MS2-RANGE: 0x142989390-0x142989480 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
 // MS2-RANGE: 0x14298a260-0x14298a5a0 .text$mn
@@ -38,8 +38,8 @@
 // MS2-RANGE: 0x142991660-0x142991850 .text$mn
 // MS2-RANGE: 0x142991c60-0x142991d30 .text$mn
 // MS2-RANGE: 0x142991e10-0x142991e70 .text$mn
-// MS2-RANGE: 0x1429923c0-0x1429925f0 .text$mn
-// MS2-RANGE: 0x1429926f0-0x142992830 .text$mn
+// MS2-RANGE: 0x1429923c0-0x142992670 .text$mn
+// MS2-RANGE: 0x142992680-0x142992830 .text$mn
 // MS2-RANGE: 0x142992900-0x142992a20 .text$mn
 // MS2-RANGE: 0x142992b00-0x142992c40 .text$mn
 // MS2-RANGE: 0x142992e30-0x142992ee0 .text$mn
@@ -63,6 +63,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/gfx/gfx_event.h"
+#include "../include/render/render_matrix4x4.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_msgformat.h"
 #include <math.h>
@@ -112,6 +113,10 @@ inline void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* pha
 }
 void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                     bool caseSensitive);
+
+// GetCaseCheck / RemoveCaseCheck of the registered class table (exe 0x142949f60 / 0x14297cd20).
+FunctionRef* ClassHash_GetCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
+void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
 
 // The member table's findIndexAlt ignoring case (exe COMDAT 0x142917040).
 SPInt MemberHash_FindIndexNoCase(const ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key);
@@ -306,6 +311,15 @@ void AsBroadcaster::commonInit(Environment* penv)
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_AsBroadcaster));
 }
 
+// @0x142992680
+bool GlobalContext::UnregisterClassA(ASStringContext* psc, const ASString& className)
+{
+    if (!ClassHash_GetCaseCheck(&RegisteredClasses, className, psc->IsCaseSensitive()))
+        return false;
+    ClassHash_RemoveCaseCheck(&RegisteredClasses, className, psc->IsCaseSensitive());
+    return true;
+}
+
 // MS2-FUNCTIONAL the exe keeps this in r10 across the IsLeapYear call (callee register use known in its TU)
 // @0x142992900
 void DateObject::UpdateGMT()
@@ -455,6 +469,13 @@ bool MouseCtorFunction::SetCursorType(MovieImpl* proot, unsigned mouseIndex, uns
         return true;
     }
     return false;
+}
+
+// @0x1429891c0
+void MovieRoot::SetMovie(MovieImpl* pmovie)
+{
+    pMovieImpl     = pmovie;
+    pGlobalContext = *SF_HEAP_NEW(pmovie->GetMovieHeap()) GlobalContext(pmovie);
 }
 
 // @0x1429804c0
@@ -1451,8 +1472,21 @@ template void GFx::ASStringHash_GC<GFx::AS2::Member>::Set(const GFx::ASString&, 
 // @0x142992500
 template GFx::AS2::Value* GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Top(unsigned) const;
 
+// @0x1429925f0
+template<> void Render::Matrix4F::Transpose()
+{
+    Matrix4F matDest(NoInit);
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++)
+            matDest.M[j][i] = M[i][j];
+    *this = matDest;
+}
+
 } // namespace Scaleform
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
+// MS2-PIN: ??_7GlobalContext@AS2@GFx@Scaleform@@6B@ 0x143215af8
+// MS2-PIN: ??_7?$RefCountBaseNTS@VGlobalContext@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600

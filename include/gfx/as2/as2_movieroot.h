@@ -133,7 +133,9 @@ class MovieRoot : public ASMovieRootBase
 public:
     UByte              Unrecovered_28[0x10];  // +0x28
     MemoryContextImpl* MemContext;            // +0x38
-    UByte              Unrecovered_40[0xf8];  // +0x40
+    UByte              Unrecovered_40[0x10];  // +0x40
+    Ptr<GlobalContext> pGlobalContext;        // +0x50
+    UByte              Unrecovered_58[0xe0];  // +0x58
     StringManager      BuiltinsMgr;           // +0x138
 
     ASRefCountCollector* GetASGC() const { return MemContext->ASGC; }
@@ -155,6 +157,9 @@ public:
     static int ParseLevelName(const char* pname, const char** ptail, bool caseSensitive);
 
     bool SetLevelMovie(int level, Sprite* psprite); // exe 0x142981d80
+
+    // Attaches the movie and gives it a new global context (exe 0x1429891c0).
+    virtual void SetMovie(MovieImpl* pmovie);
 
     // Queues a load of purl into ptarget, an empty url unloads it (exe 0x14292f740).
     void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,

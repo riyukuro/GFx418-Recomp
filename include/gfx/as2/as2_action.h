@@ -344,6 +344,14 @@ public:
     Bool3W             GFxExtensions;          // +0x68
     void*              StandardMemberMap;      // +0x70 ASStringHash<char>
 
+    // The tables start empty; Init fills the prototypes and packages.
+    GlobalContext(MovieImpl* proot)
+        : BuiltinClassesRegistry(0), StandardMemberMap(0)
+    {
+        Init(proot);
+    }
+    void Init(MovieImpl* proot); // exe 0x14295e2b0
+
     bool CheckExtensions() const { return GFxExtensions.IsTrue(); }
 
     // The builtin prototype of the type (exe 0x142954ba0).
@@ -360,6 +368,8 @@ public:
     // Object.registerClass: the constructor of the class name, replacing an earlier one (exe 0x14297c970). Spelled
     // as the windows.h RegisterClass macro turns it, the name the exe has.
     bool RegisterClassA(ASStringContext* psc, const ASString& className, const FunctionRef& ctorFunction);
+    // Object.registerClass(name, null): drops the class name; false if it was not registered (exe 0x142992680).
+    bool UnregisterClassA(ASStringContext* psc, const ASString& className);
 };
 
 enum { StatMD_ASBinaryData_Mem = 0x108 };
