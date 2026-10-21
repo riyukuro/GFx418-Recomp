@@ -51,6 +51,8 @@ public:
 
     String();
     String(const char* pdata);
+    // Concatenation of the three strings.
+    String(const char* pdata1, const char* pdata2, const char* pdata3);
     String(const wchar_t* pdata);
     String(const String& src);
     ~String() { GetData()->Release(); }
@@ -94,6 +96,10 @@ public:
     void   AppendString(const char* putf8str, SPInt utf8StrSz = -1);
     void   operator+=(const char* str) { AppendString(str); }
     String ToLower() const;
+
+    // Character (not byte) count and character range [start, end) (exe: GetLength 0x142587010, Substring 0x142587b20).
+    UPInt  GetLength() const;
+    String Substring(UPInt start, UPInt end) const;
 
     // Path helpers (exe: HasExtension 0x1425a4fb0, GetExtension 0x1425a4d00, StripExtension 0x1425a5180).
     static bool SF_STDCALL HasExtension(const char* path);

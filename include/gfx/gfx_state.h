@@ -32,6 +32,9 @@ public:
         State_FontProvider = 18, // GFx::FontProvider ctor stores 0x12
         State_FontMap      = 19, // GFx::FontMap ctor stores 0x13
         State_XMLSupport = 25, // XML::SupportBase ctor passes 0x19
+        State_TaskManager  = 20, // LoaderImpl::CancelLoading queries 0x14
+        State_TextClipboard = 21, // LoaderImpl ctor sets 0x15
+        State_TextKeyMap    = 22, // LoaderImpl ctor sets 0x16
     };
 
 protected:

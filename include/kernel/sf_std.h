@@ -23,6 +23,17 @@ extern const UInt16 UnicodeSpaceBits[];
 
 inline int SF_CDECL SFiswspace(wchar_t ch) { return UnicodeCharIs(UnicodeSpaceBits, ch); }
 
+inline int SF_CDECL SFtolower(int c) { return (c >= 'A' && c <= 'Z') ? c - 'A' + 'a' : c; }
+
+int SF_CDECL SFtowlower(wchar_t ch);
+
+UPInt SF_CDECL    SFwcslen(const wchar_t* str);
+// Copies at most count characters of src into dest (destsize characters) and terminates it.
+wchar_t* SF_CDECL SFwcsncpy(wchar_t* dest, UPInt destsize, const wchar_t* src, UPInt count);
+
+// Truncating printf into a fixed buffer; returns the length written.
+UPInt SF_CDECL SFsprintf(char* dest, UPInt destsize, const char* format, ...);
+
 } // namespace Scaleform
 
 #endif

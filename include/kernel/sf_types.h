@@ -28,5 +28,8 @@ typedef ptrdiff_t           SPInt;
 #define SF_ASSERT(x)        ((void)0)
 #define SF_UNUSED(a)        ((void)(a))
 #define SF_UNUSED2(a, b)    ((void)(a), (void)(b))
+#define SF_MAX_UPINT        ((UPInt)~(UPInt)0)
+#define SF_NOINLINE         __declspec(noinline)
+#define SF_FORCEINLINE      __forceinline
 
 #endif

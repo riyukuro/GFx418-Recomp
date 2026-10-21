@@ -1,0 +1,61 @@
+// Recovered Scaleform 4.1.18 GFx: printf-style logging mixed into GFx classes, and the log state.
+// Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
+//
+// The Log class itself comes from the recovered kernel tree (src/ms2/scaleform/kernel/sf_log.h).
+#ifndef MS2_SF_GFX_LOG_H
+#define MS2_SF_GFX_LOG_H
+
+#include "gfx_state.h"
+#include "../../kernel/sf_log.h"
+
+namespace Scaleform { namespace GFx {
+
+// Mixin giving Derived the LogError/... helpers. Derived supplies GetLog() and IsLogNotNull()
+// (the latter is a compile-time "GetLog never returns null"). Base vftable 0x143188dd0.
+template<class Derived>
+class LogBase
+{
+public:
+    virtual ~LogBase() {}
+
+    virtual bool IsVerboseActionErrors() const { return true; }
+
+    void LogError(const char* pfmt, ...) const;
+    // Parse channel message (out of line per Derived in the exe, e.g. LogBase<Stream> 0x14258e410).
+    void LogParse(const char* pfmt, ...) const;
+
+protected:
+    bool IsLogNotNull() const { return 0; }
+};
+
+template<class Derived>
+void LogBase<Derived>::LogError(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    Derived* p    = (Derived*)this;
+    Log*     plog = p->GetLog();
+    if (p->IsLogNotNull() || plog)
+        plog->LogMessageVarg(Log_Error, pfmt, argList);
+    va_end(argList);
+}
+
+// The Log of a loader or movie; falls back to the global log.
+class LogState : public State, public LogBase<LogState>
+{
+protected:
+    Ptr<Log> pLog; // +0x20
+
+public:
+    virtual ~LogState() {}
+
+    Log* GetLog() const       { return pLog ? pLog.GetPtr() : Log::GetGlobalLog(); }
+    bool IsLogNotNull() const { return 1; }
+
+    // exe 0x1425b3940
+    void LogMessageByType(LogMessageId messageId, const char* pfmt, ...);
+};
+
+}} // namespace Scaleform::GFx
+
+#endif

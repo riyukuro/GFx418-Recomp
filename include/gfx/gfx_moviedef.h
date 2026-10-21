@@ -12,10 +12,17 @@
 #include "../kernel/sf_lock.h"
 #include "../render/render_fontprovider.h"
 
-namespace Scaleform { namespace GFx {
+namespace Scaleform {
+class Log;
+namespace Render { template<class T> class Rect; }
+namespace GFx {
 
 class StateBagImpl;
 class LoaderImpl;
+class ImageCreator;
+class FileOpener;
+class TextClipboard;
+class TextKeyMap;
 class MovieDefImpl;
 class ResourceBinding;
 
@@ -29,11 +36,29 @@ public:
     virtual State*    GetStateAddRef(State::StateType state) const;
     // Fills pstates[i] with an AddRef'ed state of type pstateTypes[i] (or null) under one lock.
     virtual void      GetStatesAddRef(State** pstates, const State::StateType* pstateTypes, unsigned count) const;
+
+    // Typed setters (exe: SetLog 0x1425b39d0). The inline ones need the state class complete: they are defined
+    // after it (ImageCreator, TextClipboard, TextKeyMap: in the unit that defines the loader constructors).
+    void        SetLog(Log* plog);
+    inline void SetImageCreator(ImageCreator* ptr);
+    inline void SetTextClipboard(TextClipboard* ptr);
+    inline void SetTextKeyMap(TextKeyMap* ptr);
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18.
 class MovieDef : public Resource, public StateBag
 {
+public:
+    // Primary vftable after the Resource slots (MovieDefImpl: 0x14318b588).
+    virtual unsigned            GetVersion() const      = 0; // +0x20
+    virtual unsigned            GetLoadingFrame() const = 0; // +0x28
+    virtual float               GetWidth() const        = 0; // +0x30
+    virtual float               GetHeight() const       = 0; // +0x38
+    virtual unsigned            GetFrameCount() const   = 0; // +0x40
+    virtual float               GetFrameRate() const    = 0; // +0x48
+    virtual Render::Rect<float> GetFrameRect() const    = 0; // +0x50
+    virtual unsigned            GetSWFFlags() const     = 0; // +0x58
+    virtual const char*         GetFileURL() const      = 0; // +0x60
 };
 
 // One font a movie defines, chained in load order.
@@ -49,24 +74,50 @@ struct FontDataUseNode
 class MovieDataDef : public Resource
 {
 public:
+    enum MovieDataType
+    {
+        MT_Empty,
+        MT_Flash,
+        MT_Image
+    };
+
+    MovieDataDef(const ResourceKey& creationKey, MovieDataType mtype, const char* purl, MemoryHeap* pargHeap = 0,
+                 bool debugHeap = false, UPInt memoryArena = 0);
+
+    // Library key of the data of file purl (exe 0x1425ceaa0); 4.1.18 keys on one more binding state than later SDKs.
+    static ResourceKey SF_STDCALL CreateMovieFileKey(const char* purl, SInt64 modifyTime, FileOpener* pfileOpener,
+                                                     ImageCreator* pimageCreator, State* pbindState23);
+
     // Load-time data (frames, fonts, exports); filled by the LoadProcess.
     class LoadTaskData : public RefCountBase<LoadTaskData, Stat_Default_Mem>
     {
     public:
         void             WaitForLoadFinish();
         FontDataUseNode* GetFirstFont() const { return pFonts; }
+        const char*      GetFileURL() const   { return FileURL.ToCStr(); }
+
+        UInt32           GetTagCount() const  { return TagCount; }
+        // The MovieHeaderData of the file (only defined by the units that read it).
+        const void*      GetHeaderData() const { return HeaderData; }
 
     private:
-        UByte                     Unknown10[0x110]; // +0x10
+        UByte                     Unknown10[0x38];  // +0x10
+        String                    FileURL;          // +0x48
+        UByte                     HeaderData[0x78]; // +0x50 MovieHeaderData
+        UByte                     UnknownC8[0x28];  // +0xc8
+        UInt32                    TagCount;         // +0xf0
+        UByte                     UnknownF4[0x2c];  // +0xf4
         FontDataUseNode* volatile pFonts;           // +0x120
     };
 
     void             WaitForLoadFinish() const { pData->WaitForLoadFinish(); }
     FontDataUseNode* GetFirstFont() const      { return pData->GetFirstFont(); }
+    const char*      GetFileURL() const        { return pData->GetFileURL(); }
 
 private:
-    UByte             Unknown18[0x28]; // +0x18
+    UByte             Unknown18[0x20]; // +0x18
 public:
+    MovieDataType     MovieType;       // +0x38
     Ptr<LoadTaskData> pData;           // +0x40
 };
 
@@ -144,6 +195,12 @@ public:
 class MovieDefImpl : public MovieDef
 {
 public:
+    enum BindStateFlags
+    {
+        BSF_Frame1Loaded    = 0x100,
+        BSF_LastFrameLoaded = 0x200
+    };
+
     // Binding produced by the bind process.
     class BindTaskData : public RefCountBase<BindTaskData, Stat_Default_Mem>
     {
@@ -157,6 +214,9 @@ public:
 
     public:
         ~BindTaskData();
+
+        // Blocks until all BindStateFlags bits in flags are set; false if binding failed.
+        bool WaitForBindStateFlags(unsigned flags);
         MovieDataDef* GetDataDef() const { return pDataDef; }
     };
 
@@ -165,7 +225,24 @@ public:
     Ptr<MovieDefBindStates> pBindStates;  // +0x30
     Ptr<BindTaskData>       pBindData;    // +0x38
 
+    MovieDefImpl(MovieDataDef* pdataDef, MovieDefBindStates* pstates, LoaderImpl* ploaderImpl, unsigned loadConstants,
+                 StateBagImpl* pdelegateState = 0, MemoryHeap* pargHeap = 0, bool debugHeap = false,
+                 UPInt memoryArena = 0);
     ~MovieDefImpl();
+
+    // MovieDef overrides (exe: GetFileURL 0x1425cfb50, ...); declared so the class is concrete.
+    virtual unsigned            GetVersion() const;
+    virtual unsigned            GetLoadingFrame() const;
+    virtual float               GetWidth() const;
+    virtual float               GetHeight() const;
+    virtual unsigned            GetFrameCount() const;
+    virtual float               GetFrameRate() const;
+    virtual Render::Rect<float> GetFrameRect() const;
+    virtual unsigned            GetSWFFlags() const;
+    virtual const char*         GetFileURL() const;
+
+    // Library key of the binding of pdataDef under pstates.
+    static ResourceKey SF_STDCALL CreateMovieKey(MovieDataDef* pdataDef, MovieDefBindStates* pstates);
 
     MovieDataDef*    GetDataDef() const         { return pBindData->GetDataDef(); }
     unsigned         GetLoadFlags() const       { return pBindData->LoadFlags; }

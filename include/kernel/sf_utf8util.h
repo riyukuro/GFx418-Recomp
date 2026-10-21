@@ -19,6 +19,12 @@ inline UInt32 DecodeNextChar(const char** putf8Buffer)
     return ch;
 }
 
+// Number of code points in the first length bytes (-1: up to the terminating 0).
+SPInt SF_STDCALL GetLength(const char* putf8str, SPInt length = -1);
+
+// Decodes into pbuff, which must hold GetLength()+1 characters; returns the character count.
+UPInt SF_STDCALL DecodeString(wchar_t* pbuff, const char* putf8str, SPInt bytesLen = -1);
+
 }} // namespace Scaleform::UTF8Util
 
 #endif

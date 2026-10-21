@@ -11,6 +11,7 @@
 
 #include "../include/gfx/gfx_state.h"
 #include "../include/gfx/gfx_resource.h"
+#include "../include/render/render_imagefileformat.h"
 
 namespace Scaleform {
 
@@ -52,12 +53,6 @@ enum ImageFormatSupport
     ImageFormats_DXT = 0x01,
     ImageFormats_PVR = 0x08,
     ImageFormats_ETC = 0x20
-};
-
-enum ImageFileFormat
-{
-    ImageFile_Unopened = 0,
-    ImageFile_Unknown  = 1
 };
 
 class TextureManager : public RefCountBase<TextureManager, Stat_Default_Mem>
