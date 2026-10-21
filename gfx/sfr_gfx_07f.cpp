@@ -17,9 +17,6 @@
 // MS2-PIN: ??_GMoviePreloadTask@GFx@Scaleform@@UEAAPEAXI@Z 0x14263a180
 // MS2-PIN: ??_GLoadVarsTask@GFx@Scaleform@@UEAAPEAXI@Z 0x14263a090
 // MS2-PIN: ??_GLoadBinaryTask@GFx@Scaleform@@UEAAPEAXI@Z 0x142639df0
-// MS2-FUNCTIONAL ??_GMoviePreloadTask@GFx@Scaleform@@UEAAPEAXI@Z: register permutation (rbx / rdi for this and the -1 release constant)
-// MS2-FUNCTIONAL ??_GLoadVarsTask@GFx@Scaleform@@UEAAPEAXI@Z: register permutation (rbx / rdi for this and the -1 release constant)
-// MS2-FUNCTIONAL ??_GLoadBinaryTask@GFx@Scaleform@@UEAAPEAXI@Z: register permutation (rbx / rdi for this and the -1 release constant)
 // MS2-PIN: ?IsPreloadingFinished@LoadQueueEntryMT@GFx@Scaleform@@UEAA_NXZ 0x14263a800
 
 #include "../include/gfx/gfx_playertasks.h"
@@ -106,7 +103,6 @@ MoviePreloadTask::MoviePreloadTask(MovieImpl* pmovieImpl, const String& url, boo
 }
 
 // The ".gfx" name first, then the URL as given.
-// MS2-FUNCTIONAL register permutation (rbx / rdi for this and the -1 release constant)
 // @0x14263a4b0
 void MoviePreloadTask::Execute()
 {
