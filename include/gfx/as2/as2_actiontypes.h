@@ -262,6 +262,8 @@ public:
     inline ASString          CreateString(const String& str) const;
     inline ASRefCountCollector* GetGC();
     inline MovieImpl*        GetMovieImpl();
+    // (appended for sfr_as2_07) Marks the movie's optimized advance list for a rebuild.
+    inline void              InvalidateOptAdvanceList() const;
 };
 
 }}} // namespace Scaleform::GFx::AS2

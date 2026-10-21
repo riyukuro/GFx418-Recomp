@@ -29,9 +29,11 @@ enum ASBuiltinType : int
     ASBuiltin_unknown_         = 46,
     ASBuiltin_undefined        = 51,
     ASBuiltin_prototype        = 77,
+    ASBuiltin___proto__        = 78,
     ASBuiltin_constructor      = 79,
     ASBuiltin___constructor__  = 80,
     ASBuiltin__listeners       = 81, // "_listeners"
+    ASBuiltin___resolve        = 82,
     ASBuiltin_typeFunction_    = 83, // "[type Function]"
     ASBuiltin_objectObject_    = 85, // "[object Object]"
     ASBuiltin_INVALID          = 90,
@@ -184,6 +186,12 @@ inline MovieRoot* ToAS2Root(DisplayObjectBase* pchar)
 inline const ASString& ASStringContext::GetBuiltin(int btype) const
 {
     return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(btype);
+}
+
+inline void ASStringContext::InvalidateOptAdvanceList() const
+{
+    if (pContext)
+        pContext->pMovieRoot->Flags |= MovieImpl::Flag_OptAdvListInvalid;
 }
 
 inline ASString ASStringContext::CreateString(const char* pstr) const

@@ -270,6 +270,8 @@ public:
     virtual bool Unwatch(ASStringContext* psc, const ASString& prop);                         // exe 0x142992780
     virtual bool Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback,
                        const Value& userData);                                               // exe 0x142994c50
+    virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
+                              const PropFlags& flags = PropFlags());                         // exe 0x142988bb0
 
 protected:
     Object(ASRefCountCollector* pcc);

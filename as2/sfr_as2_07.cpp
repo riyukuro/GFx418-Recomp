@@ -9,6 +9,7 @@
 // MS2-RANGE: 0x142981bc0-0x142981bf0 .text$mn
 // MS2-RANGE: 0x142981df0-0x142981f00 .text$mn
 // MS2-RANGE: 0x1429889c0-0x142988a30 .text$mn
+// MS2-RANGE: 0x142988bb0-0x142988f30 .text$mn
 // MS2-RANGE: 0x142989d20-0x142989e90 .text$mn
 // MS2-RANGE: 0x14298a3d0-0x14298a480 .text$mn
 // MS2-RANGE: 0x14298a520-0x14298a5a0 .text$mn
@@ -95,6 +96,30 @@ inline void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* pha
 void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                     bool caseSensitive);
 
+// The member table's findIndexAlt ignoring case (exe COMDAT 0x142917040).
+SPInt MemberHash_FindIndexNoCase(const ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key);
+typedef ASStringHash_GC<Member>::SetType MemberSet;
+
+// Find / FindCaseInsensitive of the member table.
+inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    SPInt index = MemberHash_FindIndex(phash, key);
+    if (index >= 0)
+        return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
+    return MemberSet::Iterator(0, 0);
+}
+inline MemberSet::Iterator MemberHash_FindNoCase(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    ASStringNoCaseKey ikey(key);
+    SPInt index = MemberHash_FindIndexNoCase(phash, ikey);
+    if (index >= 0)
+        return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
+    return MemberSet::Iterator(0, 0);
+}
+
+// The value SetMemberRaw stores for __proto__ / __resolve (they live outside the member table); exe 0x143a51b50.
+extern const Value Object_NotsetVal;
+
 // @0x14297fba0
 void Value::SetAsCharacter(InteractiveObject* pchar)
 {
@@ -168,6 +193,78 @@ bool Object::SetMemberFlags(ASStringContext* psc, const ASString& name, const UB
         return true;
     }
     return false;
+}
+
+// @0x142988bb0
+bool Object::SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val, const PropFlags& flags)
+{
+    const Value*      pval = &val;
+    MemberSet::Iterator it;
+
+    // An array stored as _listeners marks the object for the listener leak check.
+    if (!IsListenerSet && val.IsObject() && name == psc->GetBuiltin(ASBuiltin__listeners))
+    {
+        Object* pobject = val.ToObject(0);
+        if (pobject && pobject->GetObjectType() == Object_Array)
+            IsListenerSet = true;
+    }
+
+    if (psc->IsCaseSensitive())
+    {
+        if (name == psc->GetBuiltin(ASBuiltin___proto__))
+        {
+            if (val.IsSet())
+            {
+                Set__proto__(psc, val.ToObject(0));
+                psc->InvalidateOptAdvanceList();
+            }
+            pval = &Object_NotsetVal;
+        }
+        else if (name == psc->GetBuiltin(ASBuiltin___resolve))
+        {
+            if (val.IsSet())
+                ResolveHandler = val.ToFunction(0);
+            pval = &Object_NotsetVal;
+        }
+        else if (name == psc->GetBuiltin(ASBuiltin_onEnterFrame))
+            psc->InvalidateOptAdvanceList();
+        SPInt index = MemberHash_FindIndex(&Members, name);
+        it = MemberSet::Iterator(index < 0 ? 0 : reinterpret_cast<MemberSet*>(&Members), index < 0 ? 0 : index);
+    }
+    else
+    {
+        name.ResolveLowercase();
+        if (psc->GetBuiltin(ASBuiltin___proto__).GetNode()->pLower == name.GetNode()->pLower)
+        {
+            if (val.IsSet())
+            {
+                Set__proto__(psc, val.ToObject(0));
+                psc->InvalidateOptAdvanceList();
+            }
+            pval = &Object_NotsetVal;
+        }
+        else if (psc->GetBuiltin(ASBuiltin___resolve).GetNode()->pLower == name.GetNode()->pLower)
+        {
+            if (val.IsSet())
+                ResolveHandler = val.ToFunction(0);
+            pval = &Object_NotsetVal;
+        }
+        else if (name == psc->GetBuiltin(ASBuiltin_onEnterFrame))
+            psc->InvalidateOptAdvanceList();
+        ASStringNoCaseKey ikey(name);
+        it = MemberSet::Iterator(reinterpret_cast<MemberSet*>(&Members), MemberHash_FindIndexNoCase(&Members, ikey));
+        if (it.GetIndex() < 0)
+            it = MemberSet::Iterator(0, 0);
+    }
+
+    if (val.IsProperty())
+        ArePropertiesSet = true;
+
+    if (!it.IsEnd())
+        it->Second.mValue = *pval;
+    else
+        Members.Set(name, Member(*pval, flags));
+    return true;
 }
 
 // MS2-FUNCTIONAL the exe keeps the constructor function in a register across Set_constructor (unity build)
