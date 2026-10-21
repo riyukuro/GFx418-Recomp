@@ -4,6 +4,11 @@
 // MS2-UNIT: sfr_gfx_07e
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142636190-0x1426395f0 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PIN: ?AddRef@DataInterface@ResourceData@GFx@Scaleform@@UEAAXPEAX@Z 0x1426369e0 ; unique
+// MS2-PIN: ?Release@DataInterface@ResourceData@GFx@Scaleform@@UEAAXPEAX@Z 0x1426369f0 ; unique
+// MS2-PIN: ??0ImageResource@GFx@Scaleform@@QEAA@PEAVImage@Render@2@W4ResourceUse@Resource@12@@Z 0x142636be0 ; unique
+// MS2-PINS-END tplpin
 
 // MS2-PIN: ??_7FontResourceCreator@GFx@Scaleform@@6B@ 0x14318f528
 // MS2-PIN: ??_7DataInterface@ResourceData@GFx@Scaleform@@6B@ 0x14318f548
@@ -18,6 +23,22 @@
 // MS2-PIN: ??_GFontResourceCreator@GFx@Scaleform@@UEAAPEAXI@Z 0x142636b90
 // MS2-PIN: ??_GImageFileResourceCreator@GFx@Scaleform@@UEAAPEAXI@Z 0x1426378c0
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142637830
+// MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7ImageFileInfo@GFx@Scaleform@@6B@ 0x14318a268
+// MS2-PIN: ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
+// MS2-PIN: ??_7?$RefCountBase@VMovieDefBindStates@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431891a8
+// MS2-PIN: ??_7MovieDefBindStates@GFx@Scaleform@@6B@ 0x1431891b0
+// MS2-PIN: ??_7?$RefCountBase@VLoadStates@GFx@Scaleform@@$01@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+// MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
+// MS2-PIN: ??_7ImageSource@Render@Scaleform@@6B@ 0x1431851a8
+// MS2-PIN: ??_7SubImage@Render@Scaleform@@6B@ 0x143183c10
+// MS2-PIN: ??_7WrapperImageSource@Render@Scaleform@@6B@ 0x143185228
+// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149b10
+// MS2-PIN: ??_7ImageDelegate@ImageResource@GFx@Scaleform@@6B@ 0x143149b10
+// MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8
 
 #include "../include/gfx/gfx_assupport.h"
 #include "../include/gfx/gfx_loaderimpl.h"
@@ -581,7 +602,25 @@ public:
     }
 };
 
-struct ImageCreateExportInfo;
+// An image the exporter extracted from the movie (0x58 bytes).
+struct ImageCreateExportInfo : public ImageCreateInfo
+{
+    enum
+    {
+        Create_ExportImage = 2
+    };
+
+    Render::ImageFileFormat Format;        // +0x38
+    const ExporterInfo*     pExporterInfo; // +0x40
+    String                  ExportName;    // +0x48
+    unsigned                TargetWidth;   // +0x50
+    unsigned                TargetHeight;  // +0x54
+
+    ImageCreateExportInfo(MemoryHeap* pheap, unsigned imageUse, Resource::ResourceUse resourceUse)
+        : ImageCreateInfo((CreateType)Create_ExportImage, pheap, imageUse, resourceUse)
+    {
+    }
+};
 
 // Turns image sources into images (vftable 0x143184c60, 0x20 bytes; the members are sfr_gfx_02e's).
 class ImageCreator : public State
@@ -635,6 +674,93 @@ ResourceData ImageFileResourceCreator::CreateImageFileResourceData(ImageFileInfo
 {
     static ImageFileResourceCreator static_inst;
     return ResourceData(&static_inst, prfi);
+}
+
+// The image file through the image creator of the binding (scaled to the size the movie asks for), shared through
+// the resource library: the first binding loads it, the others wait for it.
+// @0x1426388b0
+bool ImageFileResourceCreator::CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
+                                              MemoryHeap* pheap) const
+{
+    SF_UNUSED(pheap);
+    ImageFileInfo*     prfi           = (ImageFileInfo*)hdata;
+    Ptr<ImageFileInfo> pimageFileInfo = *SF_NEW ImageFileInfo(*prfi);
+    if (pimageFileInfo->Format == FileTypeConstants::File_Original && pimageFileInfo->pExporterInfo)
+        pimageFileInfo->Format = pimageFileInfo->pExporterInfo->Format;
+
+    URLBuilder::LocationInfo loc(URLBuilder::File_ImageImport, prfi->FileName, pls->GetRelativePath());
+    pls->BuildURL(&pimageFileInfo->FileName, loc);
+
+    MemoryHeap* pimageHeap = pls->pWeakResourceLib->GetImageHeap();
+    ResourceKey imageKey   = ImageResource::CreateImageFileKey(
+        pimageFileInfo, (FileOpener*)pls->GetBindStates()->pFileOpener.GetPtr(),
+        (ImageCreator*)pls->GetBindStates()->pImageCreator.GetPtr(), pimageHeap);
+
+    String                  errorMessage;
+    ResourceLib::BindHandle bh;
+    Ptr<ImageResource>      pimageRes;
+
+    if (pls->pWeakResourceLib->BindResourceKey(&bh, imageKey) == ResourceLib::RS_NeedsResolve)
+    {
+        Ptr<Render::Image> pimage;
+        ImageCreator*      pcreator = (ImageCreator*)pls->GetBindStates()->pImageCreator.GetPtr();
+        if (pcreator)
+        {
+            if (prfi->pExporterInfo)
+            {
+                ImageCreateExportInfo cinfo(pimageHeap, 0, (Resource::ResourceUse)prfi->Use);
+                cinfo.SetStates(pls->GetLog(), pls->GetBindStates()->pFileOpener,
+                                pls->GetImageFileHandlerRegistry());
+                cinfo.pExporterInfo = prfi->pExporterInfo;
+                cinfo.Format        = LoaderImpl::FileFormat2RenderImageFile(prfi->Format);
+                cinfo.TargetWidth   = prfi->TargetWidth;
+                cinfo.TargetHeight  = prfi->TargetHeight;
+                cinfo.ExportName    = prfi->ExportName;
+                pimage = *pcreator->LoadExportedImage(cinfo, pimageFileInfo->FileName);
+            }
+            else
+            {
+                ImageCreateInfo cinfo(ImageCreateInfo::Create_FileImage, pimageHeap, 0,
+                                      (Resource::ResourceUse)prfi->Use);
+                cinfo.SetStates(pls->GetLog(), pls->GetBindStates()->pFileOpener,
+                                pls->GetImageFileHandlerRegistry());
+                pimage = *pcreator->LoadImageFile(cinfo, pimageFileInfo->FileName);
+            }
+        }
+
+        if (pimage)
+        {
+            Render::Matrix2F m;
+            Render::ImageSize sz = pimage->GetSize();
+            m.AppendScaling(float(prfi->TargetWidth) / float(sz.Width), float(prfi->TargetHeight) / float(sz.Height));
+            pimage->SetMatrix(m);
+            pimageRes = *SF_HEAP_NEW(pimageHeap) ImageResource(pimage, imageKey, (Resource::ResourceUse)prfi->Use);
+        }
+
+        if (pimageRes)
+            bh.ResolveResource(pimageRes);
+        else
+        {
+            errorMessage = "Failed to load image '";
+            errorMessage += pimageFileInfo->FileName;
+            errorMessage += "'";
+            bh.CancelResolve(errorMessage.ToCStr());
+        }
+    }
+    else
+    {
+        pimageRes = *(ImageResource*)bh.WaitForResolve();
+        if (!pimageRes)
+            errorMessage = bh.GetResolveError();
+    }
+
+    if (!pimageRes)
+    {
+        pls->GetLogState()->LogError("%s", errorMessage.ToCStr());
+        return false;
+    }
+    pbindData->pResource = pimageRes;
+    return true;
 }
 
 // The image of the source through the image creator of the binding, as an ImageResource.

@@ -11,6 +11,9 @@
 
 namespace Scaleform { namespace GFx {
 
+class FileOpener;
+class ImageCreator;
+
 class ImageResource : public Resource
 {
 protected:
@@ -40,6 +43,13 @@ public:
         SetImage(pimage);
         UseType = use;
     }
+    // (sfr_gfx_07e) an image file's image, with its key
+    ImageResource(Render::Image* pimage, const ResourceKey& key, ResourceUse use = Use_Bitmap) : pImage(0)
+    {
+        SetImage(pimage);
+        Key     = key;
+        UseType = use;
+    }
     ~ImageResource()
     {
         if (pImage && pImage != &Delegate)
@@ -65,6 +75,10 @@ public:
         Delegate.pImage = pimage;
         pImage          = &Delegate;
     }
+
+    // (sfr_gfx_07e) the library key of an image file (exe 0x1426be9c0, sfr_gfx_08c)
+    static ResourceKey CreateImageFileKey(ImageFileInfo* pfileInfo, FileOpener* pfileOpener,
+                                          ImageCreator* pimageCreator, MemoryHeap* pimageHeap);
 
     virtual ResourceId GetBaseImageId() { return ResourceId(0); }
 

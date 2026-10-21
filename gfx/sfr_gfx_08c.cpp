@@ -17,11 +17,6 @@ class ImageCreator : public State
     void* pTextureManager; // +0x18
 };
 
-// File info of an image resource; the image dimensions follow the base fields.
-struct ImageFileInfo : public ResourceFileInfo
-{
-};
-
 class ImageResource : public Resource
 {
 public:

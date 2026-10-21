@@ -122,6 +122,23 @@ struct ResourceFileInfo : public RefCountBaseNTS<ResourceFileInfo, Stat_Default_
     UPInt GetHashCode() const;
 };
 
+// (sfr_gfx_07e) File info of an image file the movie refers to (0x38 bytes, vftable 0x14318a268). A copy leaves the
+// export name empty.
+struct ImageFileInfo : public ResourceFileInfo
+{
+    UInt16   TargetWidth;  // +0x28
+    UInt16   TargetHeight; // +0x2a
+    unsigned Use;          // +0x2c Resource::ResourceUse
+    String   ExportName;   // +0x30
+
+    ImageFileInfo(const ImageFileInfo& other) : ResourceFileInfo(other)
+    {
+        TargetWidth  = other.TargetWidth;
+        TargetHeight = other.TargetHeight;
+        Use          = other.Use;
+    }
+};
+
 // Library lookup key: an interface pointer plus an opaque handle the interface reference counts.
 class ResourceKey
 {
