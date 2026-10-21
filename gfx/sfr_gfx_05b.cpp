@@ -17,6 +17,7 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_timelinesnapshot.h"
+#include "../include/gfx/gfx_fontmanager.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -450,13 +451,25 @@ void Sprite::SetLoadedSeparately(bool v)
 // @0x1425dcf40
 void Sprite::SetRootNodeLoadingStat(unsigned bytesLoaded, unsigned loadingFrame)
 {
-    MovieDefRootNode* root = pRootNode;
-    if (root)
+    if (pRootNode)
     {
-        root->BytesLoaded = bytesLoaded;
-        if (!root->ImportFlag)
-            root->LoadingFrame = loadingFrame;
+        pRootNode->BytesLoaded  = bytesLoaded;
+        pRootNode->LoadingFrame = pRootNode->ImportFlag ? 0 : loadingFrame;
     }
+}
+
+// @0x1425dcc00
+void Sprite::SetIMECandidateListFont(FontHandle* pfont)
+{
+    if (pfont)
+        pRootNode->pFontManager->SetIMECandidateFont(pfont);
+}
+
+// Identical code to the rect variant, so the linker folded the two.
+// @0x1425db2f0
+RectF DisplayObjContainer::GetBounds(const Matrix& t) const
+{
+    return mDisplayList.GetRectBounds(t);
 }
 
 // _root, honouring _lockroot of a separately loaded clip.

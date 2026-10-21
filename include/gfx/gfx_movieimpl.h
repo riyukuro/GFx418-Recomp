@@ -10,6 +10,7 @@ class ASMovieRootBase;
 class DisplayObjectBase;
 class InteractiveObject;
 class MovieDefImpl;
+class FontManager;
 }
 class MemoryHeap;
 namespace GFx {
@@ -67,14 +68,16 @@ public:
 class MovieDefRootNode
 {
 public:
-    MovieDefRootNode* pPrev;          // +0x00 ListNode
-    MovieDefRootNode* pNext;          // +0x08
-    unsigned          SpriteRefCount; // +0x10
-    MovieDefImpl*     pDefImpl;       // +0x18
-    void*             pFontManager;   // +0x20 Ptr<FontManager>
-    unsigned          LoadingFrame;   // +0x28
-    unsigned          BytesLoaded;    // +0x2c
-    bool              ImportFlag;     // +0x30 the root of an import: its loading state is the parent's
+    virtual ~MovieDefRootNode();         // vftable +0x00
+
+    MovieDefRootNode* pPrev;             // +0x08 ListNode
+    MovieDefRootNode* pNext;             // +0x10
+    unsigned          SpriteRefCount;    // +0x18
+    MovieDefImpl*     pDefImpl;          // +0x20
+    unsigned          LoadingFrame;      // +0x28
+    unsigned          BytesLoaded;       // +0x2c
+    bool              ImportFlag;        // +0x30 the root of an import: its loading state is the parent's
+    FontManager*      pFontManager;      // +0x38 Ptr<FontManager>
 };
 
 }} // namespace Scaleform::GFx

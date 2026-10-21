@@ -52,6 +52,9 @@ public:
     // jump re-places them (0x1425fa360); then unloads the ones still marked (0x1425fba90).
     void MarkAllEntriesForRemoval(DisplayObjectBase* powner, unsigned ignoreFrame);
     void UnloadMarkedObjects(DisplayObjectBase* powner);
+    // Union of the entries' bounds in the space of t (0x1425f9580), the rect-only variant (0x1425f9ba0).
+    RectF GetBounds(const Render::Matrix2F& t) const;
+    RectF GetRectBounds(const Render::Matrix2F& t) const;
 };
 
 class DisplayObjContainer : public InteractiveObject
