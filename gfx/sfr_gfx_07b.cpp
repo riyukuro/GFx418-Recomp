@@ -3,7 +3,7 @@
 // Second source of queue unit sfr_gfx_07 (the unit spans several original GFx sources).
 // MS2-UNIT: sfr_gfx_07b
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14261a950-0x14261b2b0 .text$mn
+// MS2-RANGE: 0x14261a950-0x14261b310 .text$mn
 // MS2-RANGE: 0x14261ff80-0x14261ffe0 .text$mn
 
 // MS2-PIN: ??_7KeyboardState@GFx@Scaleform@@6B@ 0x14318eb90
@@ -13,6 +13,7 @@
 
 #include "../include/gfx/gfx_keyboardstate.h"
 #include "../include/gfx/gfx_eventid.h"
+#include "../include/gfx/gfx_log.h"
 
 #include <string.h>
 
@@ -203,6 +204,24 @@ void KeyboardState::SetListener(IListener* listener)
 }
 
 }} // namespace Scaleform::GFx
+
+namespace Scaleform {
+
+// A message to the global log, or the default output when there is none.
+// @0x14261b2b0
+void LogDebugMessage(LogMessageId id, const char* fmt, ...)
+{
+    Log*    plog = Log::GetGlobalLog();
+    va_list argList;
+    va_start(argList, fmt);
+    if (plog)
+        plog->LogMessageVarg(id, fmt, argList);
+    else
+        Log::DefaultLogMessageVarg(id, fmt, argList);
+    va_end(argList);
+}
+
+} // namespace Scaleform
 
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
