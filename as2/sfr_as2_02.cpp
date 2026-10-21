@@ -19,9 +19,9 @@
 // MS2-RANGE: 0x142908090-0x142908840 .text$mn
 // MS2-RANGE: 0x142908c30-0x142908e90 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
-// MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
+// MS2-RANGE: 0x142915170-0x1429159d0 .text$mn
 // MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
-// MS2-RANGE: 0x1429166b0-0x142916a70 .text$mn
+// MS2-RANGE: 0x142916110-0x142916a70 .text$mn
 // MS2-RANGE: 0x142916e60-0x142917460 .text$mn
 // MS2-RANGE: 0x142917690-0x142917780 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -762,8 +762,8 @@ MS2_AS2_GC_PROTOTYPE(TransformObject)
 
 namespace Scaleform {
 
-// The string-keyed hashes of AS2: insertion of a node or a node reference, exact and case-insensitive lookup. The
-// other insertions are not instantiated here yet: the exe calls their entry copy and node assignment out of line.
+// The string-keyed hashes of AS2: insertion of a node or a node reference, exact and case-insensitive lookup, and
+// the entry copies the rehash calls out of line.
 #define MS2_AS2_STRING_HASH_ADD(U, K)                                                                            \
     template void GFx::ASStringHash_GC<U>::SetType::add<K>(void*, const K&, UPInt);
 #define MS2_AS2_STRING_HASH_FIND(U)                                                                              \
@@ -776,6 +776,18 @@ MS2_AS2_STRING_HASH_ADD(GFx::AS2::Value, GFx::ASStringHash_GC<GFx::AS2::Value>::
 MS2_AS2_STRING_HASH_ADD(char, GFx::ASStringHash_GC<char>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::SharedObjectPtr, GFx::ASStringHash_GC<GFx::AS2::SharedObjectPtr>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::Value, GFx::ASStringHash_GC<GFx::AS2::Value>::NodeType::NodeRef)
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::Object::Watchpoint, GFx::ASStringHash_GC<GFx::AS2::Object::Watchpoint>::NodeType)
+// MS2-FUNCTIONAL the exe inlines CheckExpand here (pinned below)
+// @0x142915300
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::FunctionRef, GFx::ASStringHash_GC<GFx::AS2::FunctionRef>::NodeType)
+// MS2-FUNCTIONAL register allocation (pinned below)
+// @0x1429154d0
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::Member, GFx::ASStringHash_GC<GFx::AS2::Member>::NodeType)
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::Object::Watchpoint, GFx::ASStringHash_GC<GFx::AS2::Object::Watchpoint>::NodeType::NodeRef)
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::FunctionRef, GFx::ASStringHash_GC<GFx::AS2::FunctionRef>::NodeType::NodeRef)
+// MS2-FUNCTIONAL register allocation (pinned below)
+// @0x1429164b0
+MS2_AS2_STRING_HASH_ADD(GFx::AS2::Member, GFx::ASStringHash_GC<GFx::AS2::Member>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_FIND(GFx::AS2::Object::Watchpoint)
 MS2_AS2_STRING_HASH_FIND(GFx::AS2::FunctionRef)
 MS2_AS2_STRING_HASH_FIND(GFx::AS2::Member)
@@ -795,3 +807,6 @@ MS2_AS2_STRING_HASH_ENTRY_COPY(GFx::AS2::Member)
 
 // MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
 // MS2-PIN: ??0?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@UWatchpoint@Object@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@Scaleform@@QEAA@AEBV01@@Z 0x142917700
+// MS2-PIN: ??$add@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x142915300
+// MS2-PIN: ??$add@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x1429154d0
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@VMember@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x1429164b0
