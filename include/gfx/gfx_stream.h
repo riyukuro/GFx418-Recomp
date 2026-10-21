@@ -189,6 +189,10 @@ private:
     UByte*        pBuffer;                            // +0x60 BuiltinBuffer or the memory block
     unsigned      BufferSize;                         // +0x68
     UByte         BuiltinBuffer[Stream_BufferSize];   // +0x6c
+
+public:
+    // (appended for the place tags, sfr_gfx_05) the heap of the strings read
+    MemoryHeap* GetHeap() const { return FileName.GetHeap(); }
 };
 
 // Bit reader over a memory block, used by the shape and morph parsers (0x20 bytes).
@@ -200,7 +204,7 @@ public:
     UPInt        CurByteIndex; // +0x10
     unsigned     CurBitIndex;  // +0x18
 
-    StreamContext(const UByte* pdata) : pData(pdata), DataSize(~0u), CurByteIndex(0), CurBitIndex(0) {}
+    StreamContext(const UByte* pdata) : pData(pdata), DataSize(~UPInt(0)), CurByteIndex(0), CurBitIndex(0) {}
 
     void Align()
     {
@@ -281,6 +285,13 @@ public:
         pc->Channels.Blue  = ReadU8();
         pc->Channels.Alpha = 0xff;
         pc->Channels.Alpha = ReadU8();
+    }
+
+    // (appended for the place tags, sfr_gfx_05)
+    void Skip(UPInt n)
+    {
+        Align();
+        CurByteIndex += n;
     }
 };
 

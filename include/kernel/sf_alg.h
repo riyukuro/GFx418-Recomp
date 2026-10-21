@@ -179,6 +179,34 @@ UPInt LowerBound(const ArrayT& arr, const Value& val, Less less)
     return LowerBoundSliced(arr, 0, arr.GetSize(), val, less);
 }
 
+// (appended for the timeline snapshot, sfr_gfx_05)
+// First index in [start, end) whose element val is less than (binary search over a sorted range).
+template<class ArrayT, class Value, class Less>
+UPInt UpperBoundSliced(const ArrayT& arr, UPInt start, UPInt end, const Value& val, Less less)
+{
+    SPInt first = (SPInt)start;
+    SPInt len   = (SPInt)(end - start);
+    while (len > 0)
+    {
+        SPInt half   = len >> 1;
+        SPInt middle = first + half;
+        if (less(val, arr[middle]))
+            len = half;
+        else
+        {
+            first = middle + 1;
+            len   = len - half - 1;
+        }
+    }
+    return (UPInt)first;
+}
+
+template<class ArrayT, class Value, class Less>
+UPInt UpperBound(const ArrayT& arr, const Value& val, Less less)
+{
+    return UpperBoundSliced(arr, 0, arr.GetSize(), val, less);
+}
+
 }} // namespace Scaleform::Alg
 
 #endif

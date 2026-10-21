@@ -201,6 +201,21 @@ private:
     Array<ExecuteTag*, Stat_Default_Mem, ArrayConstPolicy<32, 16, false> > InitActionTags; // +0x3f8
     unsigned                        ASInitActionTagsNum; // +0x410
     Stream*                         pAltStream;      // +0x418
+
+public:
+    // (appended for the sprite definitions, sfr_gfx_05) the frame tags go to the sprite between DefineSprite and its
+    // end tag
+    void EnterSpriteDef(TimelineIODef* psprite)
+    {
+        LoadState    = LS_LoadingSprite;
+        pTimelineDef = psprite;
+    }
+    void LeaveSpriteDef()
+    {
+        LoadState    = LS_LoadingRoot;
+        pTimelineDef = 0;
+    }
+    const char* GetFileURL() const { return pLoadData->GetFileURL(); }
 };
 
 }} // namespace Scaleform::GFx

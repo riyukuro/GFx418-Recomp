@@ -39,6 +39,13 @@ struct CharPosInfoFlags
     void SetMatrixFlag()    { Flags |= Flags_HasMatrix; }
     void SetCxFormFlag()    { Flags |= Flags_HasCxform; }
     void SetBlendModeFlag() { Flags |= Flags_HasBlendMode; }
+    // (appended for the place tags, sfr_gfx_05)
+    void SetDepthFlag()       { Flags |= Flags_HasDepth; }
+    void SetCharacterIdFlag() { Flags |= Flags_HasCharacterId; }
+    void SetRatioFlag()       { Flags |= Flags_HasRatio; }
+    void SetFiltersFlag()     { Flags |= Flags_HasFilters; }
+    void SetClipDepthFlag()   { Flags |= Flags_HasClipDepth; }
+    void SetClassNameFlag()   { Flags |= Flags_HasClassName; }
 
     bool HasMatrix() const      { return (Flags & Flags_HasMatrix) != 0; }
     bool HasCxform() const      { return (Flags & Flags_HasCxform) != 0; }
@@ -100,7 +107,9 @@ public:
 class SwfEvent;
 
 // A PlaceObject tag of any SWF version; Unpack gives the placement in one form.
-class GFxPlaceObjectBase : public ExecuteTag
+// No vftable of its own in the exe (the derived constructors overwrite the pointer): novtable keeps it out of the
+// objects.
+class __declspec(novtable) GFxPlaceObjectBase : public ExecuteTag
 {
 public:
     typedef ArrayLH<SwfEvent*, StatMD_Tags_Mem> EventArrayType;
@@ -153,6 +162,162 @@ public:
     virtual void Trace(const char* str);                                       // exe 0x1425d89e0
 
     void InitializeToAdd(const CharPosInfo& posInfo) { Pos = posInfo; }
+};
+
+// (appended for the place tags, sfr_gfx_05) the packed PlaceObject tags: the tag data stays in the SWF layout and
+// Unpack decodes it on use. Bodies: GFx_SpriteDef (sfr_gfx_05).
+
+// SWF 1 PlaceObject (vftable 0x14318bab0).
+class PlaceObjectTag : public GFxPlaceObjectBase
+{
+    PlaceObjectTag(const PlaceObjectTag&);
+    PlaceObjectTag& operator=(const PlaceObjectTag&);
+
+public:
+    bool  HasCxForm; // +8 the color transform is optional
+    UByte pData[1];  // +9 character id, depth, matrix, [cxform]
+
+    PlaceObjectTag();
+    ~PlaceObjectTag();
+
+    static UPInt ComputeDataSize(Stream* pin);
+    void         CheckForCxForm(UPInt dataSz);
+
+    void             Unpack(GFxPlaceObjectBase::UnpackedData& data);
+    CharPosInfoFlags GetFlags() const;
+
+    virtual void Execute(DisplayObjContainer* m);
+    void         AddToTimelineSnapshot(TimelineSnapshot*, unsigned frame);
+    virtual void Trace(const char* str);
+
+protected:
+    UInt16 GetDepth() const;
+};
+
+// PlaceObject2 of SWF 3 and later; when the flags byte has PO2_HasActions, the event handler array pointer follows it.
+class PlaceObject2Tag : public GFxPlaceObjectBase
+{
+    PlaceObject2Tag(const PlaceObject2Tag&);
+    PlaceObject2Tag& operator=(const PlaceObject2Tag&);
+
+public:
+    enum PlaceObject2Flags
+    {
+        PO2_HasActions     = 0x80,
+        PO2_HasClipBracket = 0x40,
+        PO2_HasName        = 0x20,
+        PO2_HasRatio       = 0x10,
+        PO2_HasCxform      = 0x08,
+        PO2_HasMatrix      = 0x04,
+        PO2_HasChar        = 0x02,
+        PO2_FlagMove       = 0x01
+    };
+
+    UByte pData[1]; // +8
+
+    PlaceObject2Tag() {}
+    ~PlaceObject2Tag();
+
+    static bool            HasEventHandlers(Stream* pin);
+    // Moves the flags byte to the front and clears the event handler pointer after it.
+    static void            RestructureForEventHandlers(UByte* pdata);
+    static EventArrayType* GetEventHandlersPtr(const UByte* pdata);
+    static void            SetEventHandlersPtr(UByte* pdata, EventArrayType* peh);
+
+    static UPInt ComputeDataSize(Stream* pin, unsigned movieVersion);
+
+    virtual void     Unpack(GFxPlaceObjectBase::UnpackedData& data) { UnpackBase(data, 6); }
+    EventArrayType*  UnpackEventHandlers();
+    CharPosInfoFlags GetFlags() const;
+
+    virtual void Execute(DisplayObjContainer* m) { ExecuteBase(m, 6); }
+    void         AddToTimelineSnapshot(TimelineSnapshot* snapshot, unsigned frame);
+    virtual void Trace(const char* str) { TraceBase(str, 6); }
+
+protected:
+    UInt16          GetDepth() const;
+    PlaceActionType GetPlaceType() const;
+
+    void ExecuteBase(DisplayObjContainer* m, UByte version);
+    void TraceBase(const char* str, UByte version);
+    void UnpackBase(GFxPlaceObjectBase::UnpackedData& data, UByte version);
+
+    // The AVM tags build the event handler array.
+    virtual void ProcessEventHandlers(UnpackedData& data, StreamContext& sc, const UByte* prawdata, UByte version) {}
+};
+
+// PlaceObject3 of SWF 8: a second flags byte, class name, filters, blend mode.
+class PlaceObject3Tag : public GFxPlaceObjectBase
+{
+    PlaceObject3Tag(const PlaceObject3Tag&);
+    PlaceObject3Tag& operator=(const PlaceObject3Tag&);
+
+public:
+    enum PlaceObject3Flags
+    {
+        PO3_HasImage      = 0x10,
+        PO3_HasClassName  = 0x08,
+        PO3_BitmapCaching = 0x04,
+        PO3_HasBlendMode  = 0x02,
+        PO3_HasFilters    = 0x01
+    };
+
+    UByte pData[1]; // +8
+
+    PlaceObject3Tag() {}
+    ~PlaceObject3Tag();
+
+    static UPInt ComputeDataSize(Stream* pin);
+
+    void             Unpack(GFxPlaceObjectBase::UnpackedData& data);
+    EventArrayType*  UnpackEventHandlers();
+    CharPosInfoFlags GetFlags() const;
+
+    virtual void Execute(DisplayObjContainer* m);
+    void         AddToTimelineSnapshot(TimelineSnapshot*, unsigned frame);
+    virtual void Trace(const char* str);
+
+protected:
+    virtual void ProcessEventHandlers(UnpackedData& data, StreamContext& sc, const UByte* prawdata) {}
+
+    UInt16          GetDepth() const;
+    PlaceActionType GetPlaceType() const;
+};
+
+class RemoveObject2Tag : public ExecuteTag
+{
+public:
+    UInt16 Depth; // +8
+
+    virtual void Read(LoadProcess* p);
+    virtual void Execute(DisplayObjContainer* m);
+    virtual bool IsRemoveTag() const { return true; }
+    virtual void AddToTimelineSnapshot(TimelineSnapshot*, unsigned frame);
+    void         Trace(const char* str);
+
+protected:
+    // pse points at the snapshot element pointer; the AVM tags clear it to keep an element whose clip has an
+    // unload handler.
+    virtual void CheckEventHandlers(void** pse, GFxPlaceObjectBase::EventArrayType* pevts) {}
+};
+
+class RemoveObjectTag : public RemoveObject2Tag
+{
+public:
+    UInt16 Id; // +0x10
+
+    virtual void Read(LoadProcess* p);
+    virtual void Execute(DisplayObjContainer* m);
+    void         Trace(const char* str);
+};
+
+class SetBackgroundColorTag : public ExecuteTag
+{
+public:
+    Render::Color Color; // +8
+
+    void Execute(DisplayObjContainer* m);
+    void Read(LoadProcess* p);
 };
 
 }} // namespace Scaleform::GFx
