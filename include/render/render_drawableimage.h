@@ -208,6 +208,16 @@ protected:
     void addToCPUModifiedList();
     void addToGPUModifiedListRT();
     bool isRenderableRT() const { return pRT != 0; }
+    // (appended for sfr_render_04g) the state read once through an acquire load
+    bool isMapped() const
+    {
+        return (AtomicOps<unsigned>::Load_Acquire(&DrawableImageState) & (DIState_Mapped | DIState_MappedRead)) != 0;
+    }
+    bool isMappedWithEmptyQueue() const
+    {
+        return (AtomicOps<unsigned>::Load_Acquire(&DrawableImageState) & (DIState_Mapped | DIState_CmdPending)) ==
+               DIState_Mapped;
+    }
     bool ensureRenderableRT();
     void initialize(ImageFormat format, const ImageSize& size, DrawableImageContext* context);
 
@@ -267,6 +277,17 @@ struct DICommandContext
     HAL*        pHAL;
 
     DICommandContext() : pR2D(0), pHAL(0) {}
+    // What the render thread reports (left unset without a queue).
+    DICommandContext(ThreadCommandQueue* queue)
+    {
+        Interfaces rifs;
+        if (queue)
+        {
+            queue->GetRenderInterfaces(&rifs);
+            pR2D = rifs.pRenderer2D;
+            pHAL = rifs.pHAL;
+        }
+    }
 };
 
 // The images a command reads from (merged into the destination's queue before it is queued).
@@ -297,6 +318,28 @@ struct DICommand
 
     virtual void ExecuteHW(DICommandContext&) const {}
     virtual void ExecuteSW(DICommandContext&, ImageData&, ImageData** = 0) const {}
+
+    // GetRenderCaps bits
+    enum RenderCaps
+    {
+        RC_CPU          = 0x01,   // has a CPU implementation
+        RC_GPU          = 0x02,   // has a HAL implementation
+        RC_GPUPreference = 0x04,  // run through the HAL even when the CPU could
+        RC_GPU_NoRT     = 0x08    // the HAL implementation does not render into the image's target
+    };
+
+    // Render thread: the CPU path (with the images mapped) or the HAL path, by the command's caps.
+    void ExecuteRT(DICommandContext& context) const;
+    // Whether the command can run on the CPU right now (destination and sources are mapped or readable).
+    bool IsCPUExecutable() const;
+    // A source image the CPU can read: a mapped drawable image or an RGBA raw image.
+    static bool IsImageCPUReadable(Image* image);
+
+protected:
+    bool executeHWHelper(DICommandContext& context, DrawableImage* image) const;
+    bool executeSWHelper(DICommandContext& context, DrawableImage* image, DISourceImages& images,
+                         unsigned imageCount, bool rtMap) const;
+public:
 
 protected:
     Ptr<DrawableImage> pImage;   // +0x08
@@ -761,6 +804,40 @@ enum DICommandSetType
     DICommand_Displaying
 };
 
+// A fixed-size block of queued commands, packed back to back (0x208 bytes).
+struct DIQueuePage : public ListNode<DIQueuePage>, public NewOverrideBase<Stat_Default_Mem>
+{
+    enum { BufferSize = 0x200 - 0x10 };
+
+    UByte    Buffer[BufferSize];   // +0x10
+    unsigned Offset;               // +0x200, bytes in use
+    unsigned CaptureFrameId;       // +0x204
+
+    DIQueuePage() : Offset(0), CaptureFrameId(0) {}
+
+    DICommand* getFirst() { return Offset ? (DICommand*)Buffer : 0; }
+    DICommand* getNext(DICommand* cmd)
+    {
+        UByte* next = (UByte*)cmd + cmd->GetSize();
+        return next < Buffer + Offset ? (DICommand*)next : 0;
+    }
+    DICommand* destroyAndGetNext(DICommand* cmd)
+    {
+        DICommand* next = getNext(cmd);
+        cmd->~DICommand();
+        return next;
+    }
+    bool  HasFreeSize(unsigned size) const { return size <= BufferSize - Offset; }
+    void* AllocSize(unsigned size)
+    {
+        if (size > BufferSize - Offset)
+            return 0;
+        UByte* p = Buffer + Offset;
+        Offset += size;
+        return p;
+    }
+};
+
 // The pages popped off a queue for one execution pass.
 class DICommandSet
 {
@@ -840,6 +917,40 @@ protected:
     void  popCommandSet(DICommandSet* cmdSet, DICommandSetType type);
     bool  isQueueEmpty_NTS() const;
     bool  isCPURenderable_NTS();
+
+public:
+    enum
+    {
+        FreePageLimit  = 3,    // pages kept on the free list
+        AllocPageLimit = 16    // with no free page past this many, the queue is flushed first
+    };
+    enum QueueIndex
+    {
+        DIQueue_Active,        // being filled by the advance thread
+        DIQueue_Captured,      // captured, waiting for the render thread
+        DIQueue_Displaying,    // taken by the render thread's next capture
+        DIQueue_Free,          // spare pages
+        DIQueue_Count
+    };
+
+    void ExecuteNextCapture(ContextImpl::RenderNotify* notify);
+
+protected:
+    DIQueuePage* allocPage();
+    void freePage(DIQueuePage* page)
+    {
+        if (FreePageCount < FreePageLimit)
+        {
+            page->Offset = 0;
+            Queues[DIQueue_Free].PushBack(page);
+            FreePageCount++;
+        }
+        else
+            delete page;
+    }
+    bool isPageListCPURenderable_NTS(List<DIQueuePage>& pages);
+    void updateCPUModifiedImagesRT();
+    void updateGPUModifiedImagesRT();
 
     Mutex                     CommandSetMutex;         // +0x20
     WaitCondition             CommandSetWC;            // +0x48

@@ -4,6 +4,8 @@
 #ifndef MS2_SF_RENDER_VIEWPORT_H
 #define MS2_SF_RENDER_VIEWPORT_H
 
+#include "ms2/scaleform/include/render/render_types2d.h"
+
 namespace Scaleform { namespace Render {
 
 class Viewport
@@ -35,6 +37,19 @@ public:
         : BufferWidth(0), BufferHeight(0), Left(0), Top(0), Width(1), Height(1),
           ScissorLeft(0), ScissorTop(0), ScissorWidth(0), ScissorHeight(0), Flags(0)
     {
+    }
+
+    // (appended for sfr_render_04g) a view rectangle inside a buffer of the given size, no scissor
+    Viewport(const Size<UInt32>& bufferSize, const Rect<int>& view, unsigned flags = 0)
+    {
+        BufferWidth  = (int)bufferSize.Width;
+        BufferHeight = (int)bufferSize.Height;
+        Left         = view.x1;
+        Top          = view.y1;
+        Width        = view.x2 - view.x1;
+        Height       = view.y2 - view.y1;
+        Flags        = flags;
+        ScissorLeft = ScissorTop = ScissorWidth = ScissorHeight = 0;
     }
 
     bool IsValid() const { return BufferWidth != 0 && BufferHeight != 0; }

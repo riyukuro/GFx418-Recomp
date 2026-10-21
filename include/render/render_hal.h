@@ -14,6 +14,7 @@
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_buffer.h"
 #include "ms2/scaleform/include/render/render_primitive.h"
+#include "ms2/scaleform/include/render/render_events.h"
 
 namespace Scaleform { namespace Render {
 
@@ -24,6 +25,7 @@ class PrimitiveFill;
 struct PrimitiveFillData;
 class MeshCache;
 class FilterPrimitive;
+struct DICommand;
 
 class HAL : public RefCountBase<HAL, StatRender_Mem>
 {
@@ -47,7 +49,7 @@ public:
     virtual RenderTarget* CreateTempRenderTarget(const ImageSize& size, bool needsStencil) = 0;    // 16
     virtual bool SetRenderTarget(RenderTarget* target, bool setState = 1) = 0;                     // 17
     virtual void PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags = 0) = 0;  // 18
-    virtual void PopRenderTarget(unsigned flags = 0) = 0;                                          // 19
+    virtual void PopRenderTarget() = 0;                                                            // 19 (no flags in this build)
     // slots 20-48 are not called from the recovered units yet (placeholders keep the slot numbers)
     virtual void halSlot20() = 0;                                                                 // 20
     virtual void halSlot21() = 0;                                                                 // 21
@@ -70,7 +72,7 @@ public:
     virtual void halSlot38() = 0;                                                                 // 38
     virtual void halSlot39() = 0;                                                                 // 39
     virtual void halSlot40() = 0;                                                                 // 40
-    virtual void halSlot41() = 0;                                                                 // 41
+    virtual unsigned DrawableCommandGetFlags(const DICommand* command) const = 0;                 // 41
     virtual void halSlot42() = 0;                                                                 // 42
     virtual void halSlot43() = 0;                                                                 // 43
     virtual void halSlot44() = 0;                                                                 // 44
@@ -81,7 +83,7 @@ public:
     virtual void DrawableCopyback(Texture* tex, const Matrix2F& mvp, const Matrix2F& texgen) = 0;   // 49
     // (appended for the shape cache nodes, sfr_render_03f)
     virtual void halSlot50() = 0;                                                                 // 50
-    virtual void halSlot51() = 0;                                                                 // 51
+    virtual RenderEvent& GetEvent(EventType type) = 0;                                            // 51
     virtual TextureManager* GetTextureManager() = 0;                                              // 52
     // (appended for sfr_render_04f)
     virtual MeshCache& GetMeshCache() = 0;                                                        // 53
@@ -93,8 +95,21 @@ public:
                                  const VertexFormat** instanced, unsigned meshType) = 0;          // 56
 
     // (appended for sfr_render_04f) the 3D view and projection, with the stacks the queue items push them on
+    // (appended for sfr_render_04g) the state bits, and the display bracket around a viewport's drawing
+    enum HALStateFlags
+    {
+        HS_ModeSet   = 0x01,
+        HS_InFrame   = 0x02,   // between BeginFrame and EndFrame
+        HS_InScene   = 0x04,   // between BeginScene and EndScene
+        HS_InDisplay = 0x08
+    };
+    unsigned GetHALState() const { return HALState; }
+    void     BeginDisplay(Color backgroundColor, const Viewport& viewport);
+    void     EndDisplay();
+
+    unsigned          HALState;                  // +0x10
 protected:
-    UByte             Unk_Members[0x50 - 0x10];
+    UByte             Unk_Members[0x50 - 0x14];
 public:
     Matrix3F          View3D;                    // +0x50
     Matrix4F          Proj3D;                    // +0x80
