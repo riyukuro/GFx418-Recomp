@@ -91,6 +91,13 @@ namespace Instances { namespace fl
 
     public:
         SparseArray SA;     // +0x38
+
+    public:
+        // native methods
+        // @0x142429290
+        void lengthGet(UInt32& result);
+        // @0x142429480
+        void lengthSet(const Value& result, UInt32);
     };
     // Instance of the Catch scope of an exception handler. 0x38 bytes.
     class Catch : public Instance
@@ -114,6 +121,11 @@ namespace Instances { namespace fl
     public:
         Value::Number   TimeValue;  // +0x38 ms since 1970-01-01 UTC
         SInt32          LocalTZA;   // +0x40
+
+    public:
+        // native methods
+        // @0x1424037b0
+        void AS3valueOf(Value::Number& result);
     };
 
     // 0x58 bytes.
@@ -132,6 +144,15 @@ namespace Instances { namespace fl
         ASString    name;           // +0x40
         SInt32      ID;             // +0x48
         ASString    StackTrace;     // +0x50
+
+    public:
+        // native methods
+        // @0x1424282e0
+        void errorIDGet(SInt32& result);
+        // @0x142428c80
+        void getStackTrace(ASString& result);
+        // @0x14242b1e0
+        void toStringProto(ASString& result);
     };
 
     // 0x48 bytes.
@@ -156,6 +177,13 @@ namespace Instances { namespace fl
     public:
         ASString                    LocalName;  // +0x38
         SPtr<Instances::Namespace>  Ns;         // +0x40
+
+    public:
+        // native methods
+        // @0x142403820
+        void AS3valueOf(SPtr<Instances::fl::QName>& result);
+        // @0x142429490
+        void localNameGet(ASString& result);
     };
 
     // 0x60 bytes.
@@ -177,6 +205,25 @@ namespace Instances { namespace fl
         SInt32      LastIndex;      // +0x54
         int         OptionFlags;    // +0x58
         bool        HasNamedGroups; // +0x5c
+
+    public:
+        // native methods
+        // @0x142428130
+        void dotallGet(bool& result);
+        // @0x142428490
+        void extendedGet(bool& result);
+        // @0x142428da0
+        void globalGet(bool& result);
+        // @0x142428e00
+        void ignoreCaseGet(bool& result);
+        // @0x1424291b0
+        void lastIndexGet(SInt32& result);
+        // @0x1424291c0
+        void lastIndexSet(const Value& result, SInt32);
+        // @0x142429910
+        void multilineGet(bool& result);
+        // @0x14242b010
+        void sourceGet(ASString& result);
     };
 
     // 0x68 bytes.
@@ -210,6 +257,13 @@ namespace Instances { namespace fl
         SPtr<AS3::Object>                       TargetObject;       // +0x50
         ASStringNode*                           TargetProperty;     // +0x58
         SPtr<Instances::Namespace>              TargetNamespace;    // +0x60
+
+    public:
+        // native methods
+        // @0x1423fb880
+        void AS3length(SInt32& result);
+        // @0x142429ea0
+        void prototypeGet(SPtr<Instances::fl::XMLList>& result);
     };
 }}
 
@@ -462,6 +516,10 @@ namespace Classes { namespace fl
         virtual void InitPrototype(AS3::Object& obj) const;
         // @0x14241c4d0
         virtual Pickable<AS3::Object> MakePrototype() const;
+
+        // native methods
+        // @0x142428b20
+        void getErrorMessage(ASString& result, SInt32);
     };
 
     class Math : public Class
@@ -474,6 +532,40 @@ namespace Classes { namespace fl
         virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
         // @0x1424072f0
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
+
+        // native methods
+        // @0x1424274f0
+        void abs(Value::Number& result, Value::Number);
+        // @0x142427540
+        void acos(Value::Number& result, Value::Number);
+        // @0x142427a60
+        void asin(Value::Number& result, Value::Number);
+        // @0x142427b90
+        void atan(Value::Number& result, Value::Number);
+        // @0x142427a80
+        void atan2(Value::Number& result, Value::Number, Value::Number);
+        // @0x142427bb0
+        void ceil(Value::Number& result, Value::Number);
+        // @0x142427c10
+        void cos(Value::Number& result, Value::Number);
+        // @0x142428470
+        void exp(Value::Number& result, Value::Number);
+        // @0x1424284a0
+        void floor(Value::Number& result, Value::Number);
+        // @0x1424294d0
+        void log(Value::Number& result, Value::Number);
+        // @0x142429d40
+        void pow(Value::Number& result, Value::Number, Value::Number);
+        // @0x142429fb0
+        void random(Value::Number& result);
+        // @0x142429fe0
+        void round(Value::Number& result, Value::Number);
+        // @0x14242afc0
+        void sin(Value::Number& result, Value::Number);
+        // @0x14242b090
+        void sqrt(Value::Number& result, Value::Number);
+        // @0x14242b0b0
+        void tan(Value::Number& result, Value::Number);
 
     public:
         Value::Number LN10;      // +0x50
@@ -575,6 +667,10 @@ namespace Classes { namespace fl
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
         // @0x142418390
         virtual void InitPrototype(AS3::Object& obj) const;
+
+        // native methods
+        // @0x1423ff120
+        void settings(SPtr<Instances::fl::Object>& result);
 
     public:
         bool    ignoreComments;                 // +0x50
