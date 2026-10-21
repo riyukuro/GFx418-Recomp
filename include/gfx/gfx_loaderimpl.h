@@ -140,7 +140,10 @@ public:
         LoadImageFiles     = 0x10000,
         LoadDisableSWF     = 0x80000,
         LoadDisableImports = 0x100000,
-        LoadDebugHeap      = 0x10000000
+        LoadDebugHeap      = 0x10000000,
+        // (appended for sfr_gfx_07e) no load-time image creation; no error log when the file does not open
+        LoadKeepBindData   = 0x80,
+        LoadQuietOpen      = 0x200000
     };
 
     // What a loader is made with.
@@ -306,6 +309,11 @@ public:
 
     // Hands ptask to the task manager; false when there is none (the caller runs it).
     bool SubmitBackgroundTask(LoaderTask* ptask);
+
+    // (appended for sfr_gfx_07e) empty states, filled by CloneForImport (exe 0x142637290); the image creator of the
+    // bind states (exe 0x142639340)
+    LoadStates();
+    ImageCreator* GetImageCreator() const;
 };
 
 // The state bag of a loader or movie: a hash of states by type, falling back to a delegate (0x58 bytes).

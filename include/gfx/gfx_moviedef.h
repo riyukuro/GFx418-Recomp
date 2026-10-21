@@ -853,6 +853,10 @@ public:
                pFontPackParams == other.pFontPackParams && pBindState23 == other.pBindState23 &&
                pFontCompactorParams == other.pFontCompactorParams && pImagePackParams == other.pImagePackParams;
     }
+
+    // (appended for the load states, sfr_gfx_07e) a copy of the states of pother except the image file handler
+    // registry (exe 0x142637330)
+    MovieDefBindStates(MovieDefBindStates* pother);
 };
 
 // What CreateCharacterInstance needs of a character id.

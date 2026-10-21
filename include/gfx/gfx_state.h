@@ -41,6 +41,10 @@ public:
         State_AS2Support    = 34, // MovieDefImpl::GetASSupport queries 0x22 / 0x23
         State_AS3Support    = 35,
         State_ActionControl = 3, // MovieDefImpl::CreateInstance sets it on the new movie
+        // (appended for the load states, sfr_gfx_07e) LoadStates ctor queries 0xe / 0x1d / 0x1e
+        State_ProgressHandler = 14,
+        State_Audio           = 29,
+        State_Video           = 30,
     };
 
 protected:
