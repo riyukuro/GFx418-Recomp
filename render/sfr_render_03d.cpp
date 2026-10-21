@@ -460,16 +460,15 @@ void ExpandBoundsToLayerStrokes(const ShapeDataInterface& shape, ShapePosInfo* p
     {
         if (pathType == Shape_NewLayer && !first)
             break;
-        unsigned stroke = styles[2];
-        if (stroke && !done[stroke])
+        if (styles[2] && !done[styles[2]])
         {
-            RectF b = ComputeBoundsSingleStroke(shape, &start, stroke, trans, gen, param);
+            RectF b = ComputeBoundsSingleStroke(shape, &start, styles[2], trans, gen, param);
             if (b.IsNormal())
             {
                 bounds->ExpandToPoint(b.x1, b.y1);
                 bounds->ExpandToPoint(b.x2, b.y2);
             }
-            done.Set(stroke);
+            done.Set(styles[2]);
         }
         shape.SkipPathData(pos);
         start = *pos;
@@ -507,6 +506,78 @@ RectF ComputeBoundsFillAndStrokes(const ShapeDataInterface& shape, const Transfo
         ExpandBoundsToStrokes(shape, trans, gen, param, &bounds);
     }
     return bounds;
+}
+
+// ***** Hit tests
+
+// in other parts of the renderer (HitTestFill 0x1425fd750) and the stroker part of this unit (0x1426299a0)
+template<class Transformer>
+bool HitTestFill(const ShapeDataInterface& shape, const Transformer& trans, float x, float y);
+template<class Transformer>
+bool HitTestSingleStroke(const ShapeDataInterface& shape, ShapePosInfo* pos, unsigned strokeStyle,
+                         const Transformer& trans, float x, float y, StrokeGenerator* gen,
+                         const ToleranceParams& param);
+
+// Tests the strokes of one shape layer, each stroke style once; on a miss pos ends at the start of the next layer.
+template<class Transformer>
+bool HitTestLayerStrokes(const ShapeDataInterface& shape, ShapePosInfo* pos, const Transformer& trans, float x,
+                         float y, StrokeGenerator* gen, const ToleranceParams& param)
+{
+    BitSet        done(gen->Heap1.GetMemoryHeap());
+    ShapePosInfo  start = *pos;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    bool          first = true;
+    ShapePathType pathType;
+    while ((pathType = shape.ReadPathInfo(pos, coord, styles)) != Shape_EndShape)
+    {
+        if (pathType == Shape_NewLayer && !first)
+            break;
+        if (styles[2] && !done[styles[2]])
+        {
+            if (HitTestSingleStroke(shape, &start, styles[2], trans, x, y, gen, param))
+                return true;
+            done.Set(styles[2]);
+        }
+        shape.SkipPathData(pos);
+        start = *pos;
+        first = false;
+    }
+    *pos = start;
+    return false;
+}
+
+template<class Transformer>
+bool HitTestShapeStrokes(const ShapeDataInterface& shape, const Transformer& trans, float x, float y,
+                         StrokeGenerator* gen, const ToleranceParams& param)
+{
+    ShapePosInfo pos(shape.GetStartingPos());
+    float        coord[Edge_MaxCoord];
+    unsigned     styles[3];
+    for (;;)
+    {
+        ShapePosInfo layerPos = pos;
+        if (shape.ReadPathInfo(&pos, coord, styles) == Shape_EndShape)
+            break;
+        pos = layerPos;
+        if (HitTestLayerStrokes(shape, &pos, trans, x, y, gen, param))
+            return true;
+    }
+    return false;
+}
+
+template<class Transformer>
+bool HitTestFillAndStrokes(const ShapeDataInterface& shape, const Transformer& trans, float x, float y,
+                           StrokeGenerator* gen, const ToleranceParams& param)
+{
+    if (HitTestFill(shape, trans, x, y))
+        return true;
+    if (shape.GetStrokeStyleCount())
+    {
+        shape.Rewind();
+        return HitTestShapeStrokes(shape, trans, x, y, gen, param);
+    }
+    return false;
 }
 
 // Collects the shape's paths, drops the empty ones and builds the draw layers of each shape layer from them; a
@@ -687,6 +758,17 @@ RectF ShapeMeshProvider::GetBounds(const Matrix2F& m) const
         return bounds;
     }
     return ComputeBoundsFillAndStrokesSimplified(*pShapeData, m);
+}
+
+// The point (x, y) against the shape at the given morph ratio; strokes are only tested with a stroke generator.
+// @0x14262c040
+bool ShapeMeshProvider::HitTestShape(const Matrix2F& m, float x, float y, float morphRatio, StrokeGenerator* gen,
+                                     const ToleranceParams* tol) const
+{
+    MorphInterpolator shape(pShapeData, pMorphData, morphRatio, ShapePosInfo(pShapeData->GetStartingPos()));
+    if (gen)
+        return HitTestFillAndStrokes(shape, m, x, y, gen, *tol);
+    return HitTestFill(shape, m, x, y);
 }
 
 // Bounds at the given morph ratio; with a stroke generator the strokes are measured as generated.
@@ -939,3 +1021,6 @@ void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fil
 // MS2-PIN: ??$ExpandBoundsToLayerStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YAXAEBVShapeDataInterface@01@PEAUShapePosInfo@01@AEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@AEBUToleranceParams@01@PEAV?$Rect@M@01@@Z 0x142627c90
 // MS2-PIN: ??$ExpandBoundsToStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YAXAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@AEBUToleranceParams@01@PEAV?$Rect@M@01@@Z 0x142628ca0
 // MS2-PIN: ??$ComputeBoundsFillAndStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@AEBUToleranceParams@01@W4BoundEdges@01@@Z 0x1426265f0
+// MS2-PIN: ??$HitTestLayerStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@PEAUShapePosInfo@01@AEBV?$Matrix2x4@M@01@MMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x1426292d0
+// MS2-PIN: ??$HitTestShapeStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@MMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x142629810
+// MS2-PIN: ??$HitTestFillAndStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@MMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x1426290f0
