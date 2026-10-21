@@ -105,8 +105,7 @@ public:
     ArrayLH_POD<unsigned>      FillToStyleTable;   // +0x40
     Ptr<ShapeDataInterface>    pShapeData;         // +0x58
     Ptr<MorphShapeData>        pMorphData;         // +0x60
-    void*                      pReserved68;
-    RectF                      IdentityBounds;     // +0x70
+    __declspec(align(16)) RectF IdentityBounds;    // +0x70 (16-aligned in 4.1.18: the object is 0x90)
     bool                       GradientMorph;      // +0x80
     bool                       Strokes;            // +0x81
 
@@ -117,6 +116,7 @@ public:
 
     // (appended for sfr_render_03d, the unit of the bodies)
     ShapeMeshProvider(ShapeDataInterface* shape, ShapeDataInterface* shapeMorph = 0);
+    ~ShapeMeshProvider() {}
 
     void AttachShape(ShapeDataInterface* shape, ShapeDataInterface* shapeMorph = 0);
 

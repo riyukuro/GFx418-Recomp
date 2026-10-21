@@ -323,20 +323,23 @@ public:
         if (pos->Pos >= Data->GetSize())
             return Shape_EndShape;
 
-        PathDataDecoder<ContainerType> reader(*Data);
         ShapePathType type = Shape_NewPath;
-        char tag = reader.ReadChar(pos->Pos++);
+        PathDataDecoder<ContainerType> reader(*Data);
+        char tag = reader.ReadChar(pos->Pos);
+        pos->Pos++;
         if (tag == Tag_EndShape)
             return Shape_EndShape;
         if (tag == Tag_NewLayer)
         {
             type = Shape_NewLayer;
-            tag  = reader.ReadChar(pos->Pos++);   // the Tag_NewPath that follows
+            tag  = reader.ReadChar(pos->Pos);   // the Tag_NewPath that follows
+            pos->Pos++;
         }
         pos->Pos += reader.ReadUInt30(pos->Pos, &styles[0]);
         pos->Pos += reader.ReadUInt30(pos->Pos, &styles[1]);
         pos->Pos += reader.ReadUInt30(pos->Pos, &styles[2]);
-        tag = reader.ReadChar(pos->Pos++);        // Tag_MoveTo
+        tag = reader.ReadChar(pos->Pos);        // Tag_MoveTo
+        pos->Pos++;
         coord[0] = reader.ReadFloat(pos->Pos);
         pos->Pos += 4;
         coord[1] = reader.ReadFloat(pos->Pos);
@@ -347,32 +350,35 @@ public:
     virtual PathEdgeType ReadEdge(ShapePosInfo* pos, float* coord) const
     {
         PathDataDecoder<ContainerType> reader(*Data);
-        char tag = reader.ReadChar(pos->Pos++);
-        if (tag == Tag_EndPath)
-            return Edge_EndPath;
-
-        PathEdgeType type = Edge_LineTo;
-        coord[0] = reader.ReadFloat(pos->Pos);
-        pos->Pos += 4;
-        coord[1] = reader.ReadFloat(pos->Pos);
-        pos->Pos += 4;
-        if (tag == Tag_QuadTo || tag == Tag_CubicTo)
+        PathEdgeType edge = Edge_EndPath;
+        char tag = reader.ReadChar(pos->Pos);
+        pos->Pos++;
+        if (tag != Tag_EndPath)
         {
-            type = Edge_QuadTo;
-            coord[2] = reader.ReadFloat(pos->Pos);
+            // the end point, then the control point(s) of a curve
+            edge = Edge_LineTo;
+            coord[0] = reader.ReadFloat(pos->Pos);
             pos->Pos += 4;
-            coord[3] = reader.ReadFloat(pos->Pos);
+            coord[1] = reader.ReadFloat(pos->Pos);
             pos->Pos += 4;
+            if (tag == Tag_QuadTo || tag == Tag_CubicTo)
+            {
+                edge = Edge_QuadTo;
+                coord[2] = reader.ReadFloat(pos->Pos);
+                pos->Pos += 4;
+                coord[3] = reader.ReadFloat(pos->Pos);
+                pos->Pos += 4;
+            }
             if (tag == Tag_CubicTo)
             {
-                type = Edge_CubicTo;
+                edge = Edge_CubicTo;
                 coord[4] = reader.ReadFloat(pos->Pos);
                 pos->Pos += 4;
                 coord[5] = reader.ReadFloat(pos->Pos);
                 pos->Pos += 4;
             }
         }
-        return type;
+        return edge;
     }
 
     float GetLastX() const { return LastX; }
