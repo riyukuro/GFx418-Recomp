@@ -14,11 +14,28 @@
 // MS2-PIN: ??_7LoadTaskData@MovieDataDef@GFx@Scaleform@@6B@ 0x14318b498
 // MS2-PIN: ??_7MovieDataDef@GFx@Scaleform@@6BTimelineDef@12@@ 0x14318b4b8
 // MS2-PIN: ??_7MovieDataDef@GFx@Scaleform@@6BResourceReport@12@@ 0x14318b558
+// MS2-PIN: ??_7?$RefCountBase@VBindTaskData@MovieDefImpl@GFx@Scaleform@@$01@Scaleform@@6B@ 0x14318b578
+// MS2-PIN: ??_7BindTaskData@MovieDefImpl@GFx@Scaleform@@6B@ 0x14318b580
+// MS2-PIN: ??_7MovieDefImpl@GFx@Scaleform@@6BResource@12@@ 0x14318b588
+// MS2-PIN: ??_7MovieDefImpl@GFx@Scaleform@@6BStateBag@12@@ 0x14318b670
+// MS2-PIN: ??_7?$RefCountBase@VGFxMovieDefImplKey@GFx@Scaleform@@$01@Scaleform@@6B@ 0x14318b9e8
+// MS2-PIN: ??_7GFxMovieDefImplKey@GFx@Scaleform@@6B@ 0x14318b9f0
+// MS2-PIN: ??_7GFxMovieDefImplKeyInterface@GFx@Scaleform@@6B@ 0x14318b208
+// MS2-PIN: ??_7KeyInterface@ResourceKey@GFx@Scaleform@@6B@ 0x14318b240
+// MS2-PIN: ??_7StateBag@GFx@Scaleform@@6B@ 0x143183208
+// MS2-PIN: ??_7?$RefCountBase@VStateBagImpl@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431835a8
+// MS2-PIN: ??_7?$LogBase@VStateBagImpl@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431835b0
+// MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6B?$RefCountBase@VStateBagImpl@GFx@Scaleform@@$01@2@@ 0x1431835c0
+// MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6BStateBag@12@@ 0x1431835c8
+// MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6B?$LogBase@VStateBagImpl@GFx@Scaleform@@@12@@ 0x1431835f0
+// MS2-PIN: ??_7MovieBindProcess@GFx@Scaleform@@6B@ 0x14318b698
 
 #include "../include/gfx/gfx_buttondef.h"
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_sound.h"
+#include "../include/gfx/gfx_assupport.h"
+#include "../include/render/render_twips.h"
 #include "../include/kernel/sf_file.h"
 #include "../include/kernel/sf_memory.h"
 #include "../include/kernel/sf_std.h"
@@ -695,6 +712,685 @@ const String* MovieDataDef::TranslateNumberToFrameString(const StringHashLH<unsi
     if (exactFrameNumberForLabel)
         *exactFrameNumberForLabel = labelFrame;
     return plabel;
+}
+
+
+// @0x1425d1550
+// MS2-FUNCTIONAL: UpdateLoadState is inlined here
+void MovieDataDef::LoadTaskData::InitEmptyMovieDef()
+{
+    {
+        // An empty clip has the one frame of the default header.
+        Lock::Locker lock(&PlaylistLock);
+        Playlist.Resize(Header.FrameCount);
+        InitActionList.Resize(Header.FrameCount);
+        InitActionsCnt = 0;
+    }
+    UpdateLoadState(Header.FrameCount, LS_LoadFinished);
+}
+
+// @0x1425d1a90
+void MovieDataDef::LoadTaskData::NotifyFrameUpdated()
+{
+    // Wakes a bind process waiting for the next frame.
+    Mutex::Locker lock(&pFrameUpdate->GetMutex());
+    pFrameUpdate->UpdateNotify();
+}
+
+// *** MovieDefBindStates
+
+// @0x1425d04f0
+UPInt MovieDefBindStates::GetHashCode() const
+{
+    // The image file handler registry does not tell bindings apart.
+    return ((UPInt)pFileOpener.GetPtr() ^ ((UPInt)pFileOpener.GetPtr() >> 7)) ^
+           ((UPInt)pURLBuilder.GetPtr() ^ ((UPInt)pURLBuilder.GetPtr() >> 7)) ^
+           ((UPInt)pImageCreator.GetPtr() ^ ((UPInt)pImageCreator.GetPtr() >> 7)) ^
+           ((UPInt)pImportVisitor.GetPtr() ^ ((UPInt)pImportVisitor.GetPtr() >> 7)) ^
+           ((UPInt)pFontPackParams.GetPtr() ^ ((UPInt)pFontPackParams.GetPtr() >> 7)) ^
+           ((UPInt)pBindState23.GetPtr() ^ ((UPInt)pBindState23.GetPtr() >> 7)) ^
+           ((UPInt)pFontCompactorParams.GetPtr() ^ ((UPInt)pFontCompactorParams.GetPtr() >> 7)) ^
+           ((UPInt)pImagePackParams.GetPtr() ^ ((UPInt)pImagePackParams.GetPtr() >> 7));
+}
+
+// *** MovieDefImpl key
+
+// Library key of a binding: the data and the binding states (0x20 bytes, vftable 0x14318b9f0). The states are kept
+// apart from the data because the load states reference them while the file loads.
+class GFxMovieDefImplKey : public RefCountBase<GFxMovieDefImplKey, Stat_Default_Mem>
+{
+    Ptr<MovieDataDef>       pDataDef;    // +0x10
+    Ptr<MovieDefBindStates> pBindStates; // +0x18
+
+public:
+    GFxMovieDefImplKey(MovieDataDef* pdataDef, MovieDefBindStates* pbindStates)
+        : pDataDef(pdataDef), pBindStates(pbindStates)
+    {
+    }
+
+    UPInt GetHashCode() const
+    {
+        UPInt h = (UPInt)pDataDef.GetPtr();
+        return h ^ (h >> 7) ^ pBindStates->GetHashCode();
+    }
+    bool operator==(GFxMovieDefImplKey& other) const
+    {
+        return pDataDef == other.pDataDef && *pBindStates == *other.pBindStates;
+    }
+};
+
+// Key interface of the bindings (vftable 0x14318b208; the slots live before this unit's range).
+class GFxMovieDefImplKeyInterface : public ResourceKey::KeyInterface
+{
+public:
+    typedef ResourceKey::KeyHandle KeyHandle;
+
+    virtual void AddRef(KeyHandle hdata) { ((GFxMovieDefImplKey*)hdata)->AddRef(); }
+    virtual void Release(KeyHandle hdata) { ((GFxMovieDefImplKey*)hdata)->Release(); }
+    virtual ResourceKey::KeyType GetKeyType(KeyHandle) const { return ResourceKey::Key_Unique; }
+    virtual UPInt GetHashCode(KeyHandle hdata) const { return ((GFxMovieDefImplKey*)hdata)->GetHashCode(); }
+    virtual bool  KeyEquals(KeyHandle hdata, const ResourceKey& other)
+    {
+        if (other.GetKeyInterface() != this)
+            return false;
+        return *(GFxMovieDefImplKey*)hdata == *(GFxMovieDefImplKey*)other.GetKeyData();
+    }
+};
+
+static GFxMovieDefImplKeyInterface GFxMovieDefImplKeyInterface_Instance;
+
+// @0x1425cebe0
+ResourceKey MovieDefImpl::CreateMovieKey(MovieDataDef* pdataDef, MovieDefBindStates* pstates)
+{
+    Ptr<GFxMovieDefImplKey> pkey = *new GFxMovieDefImplKey(pdataDef, pstates);
+    return ResourceKey(&GFxMovieDefImplKeyInterface_Instance, (ResourceKey::KeyHandle)pkey.GetPtr());
+}
+
+// *** MovieDefImpl::BindTaskData
+
+// @0x1425ca750
+MovieDefImpl::BindTaskData::BindTaskData(MemoryHeap* pheap, MovieDataDef* pdataDef, MovieDefImpl* pdefImpl,
+                                         unsigned loadFlags, bool fullyLoaded)
+    : pHeap(pheap), pDataDef(pdataDef), pDefImpl_Unsafe(pdefImpl), ResourceBinding(pheap)
+{
+    // The binding only hands the owner out while the MovieDefImpl lives (cleared in OnMovieDefRelease).
+    ResourceBinding.SetOwnerDefImpl(pdefImpl);
+
+    LoadFlags       = loadFlags;
+    BindingCanceled = false;
+    BindingFrame    = 0;
+    BytesLoaded     = 0;
+    BindState       = BS_NotStarted;
+
+    pBindUpdate = *SF_NEW LoadUpdateSync();
+
+    if (fullyLoaded)
+    {
+        BindingFrame = GetDataDef()->GetLoadingFrame();
+        BytesLoaded  = GetDataDef()->GetFileBytes();
+    }
+}
+
+// @0x1425cbb60
+// MS2-FUNCTIONAL: register allocation around the lock and the member destructors
+MovieDefImpl::BindTaskData::~BindTaskData()
+{
+    // Bound resources go before the import movies: sprite tags still reference the movies they came from. The lock
+    // waits for a reader still in the binding.
+    pBindUpdate->GetMutex().DoLock();
+    ResourceBinding.Destroy();
+    pBindUpdate->GetMutex().Unlock();
+}
+
+// @0x1425d1b60
+void MovieDefImpl::BindTaskData::OnMovieDefRelease()
+{
+    ResourceBinding.SetOwnerDefImpl(0);
+    {
+        Lock::Locker lock(&ImportSourceLock);
+        pDefImpl_Unsafe = 0;
+    }
+
+    if (GetBindStateType() <= BS_InProgress)
+        BindingCanceled = true;
+    // The bind process may be waiting for a frame.
+    pDataDef->pData->NotifyFrameUpdated();
+}
+
+// @0x1425d0b50
+MovieDefImpl* MovieDefImpl::BindTaskData::GetMovieDefImplAddRef()
+{
+    Lock::Locker lock(&ImportSourceLock);
+    if (pDefImpl_Unsafe && pDefImpl_Unsafe->AddRef_NotZero())
+        return pDefImpl_Unsafe;
+    return 0;
+}
+
+// @0x1425d2bf0
+void MovieDefImpl::BindTaskData::SetBindState(unsigned newState)
+{
+    Mutex::Locker lock(&pBindUpdate->GetMutex());
+    BindState = newState;
+    pBindUpdate->UpdateNotify();
+}
+
+// @0x1425d3a90
+bool MovieDefImpl::BindTaskData::WaitForBindStateFlags(unsigned flags)
+{
+    Mutex::Locker lock(&pBindUpdate->GetMutex());
+    while (GetBindStateType() < BS_Canceled && !(GetBindState() & flags))
+        pBindUpdate->WaitForNotify();
+    return (GetBindState() & flags) != 0;
+}
+
+// @0x1425d06b0
+MovieDefImpl* MovieDefImpl::BindTaskData::GetImportSourceMovie(unsigned importIndex)
+{
+    Lock::Locker lock(&ImportSourceLock);
+    if (importIndex >= ImportSourceMovies.GetSize())
+        return 0;
+    return ImportSourceMovies[importIndex];
+}
+
+// @0x1425cd430
+// MS2-FUNCTIONAL: register allocation in the inlined PushBack
+void MovieDefImpl::BindTaskData::AddResourceImportMovie(MovieDefImpl* pdefImpl)
+{
+    ResourceImports.PushBack(pdefImpl);
+}
+
+// *** MovieDefImpl
+
+// @0x1425cb1a0
+// MS2-FUNCTIONAL: HeapDesc member store order and the heap-name String release differ
+MovieDefImpl::MovieDefImpl(MovieDataDef* pdataDef, MovieDefBindStates* pstates, LoaderImpl* ploaderImpl,
+                           unsigned loadConstants, StateBagImpl* pdelegateState, MemoryHeap* pargHeap,
+                           bool fullyLoaded, UPInt memoryArena)
+{
+    MemoryHeap* pheap = pargHeap;
+    if (!pheap)
+    {
+        // The extra space lines the name up with the "MovieData" heaps.
+        String   heapName("MovieDef  \"", GetShortFilename(pdataDef->GetFileURL()), "\"");
+        HeapDesc desc((loadConstants >> 16) & HeapDesc::Heap_UserDebug, 16, 4 * 1024, 4 * 1024, ~UPInt(0), 0,
+                      HeapId_MovieDef, memoryArena);
+        pheap = Memory::GetGlobalHeap()->CreateHeap(heapName.ToCStr(), desc);
+    }
+
+    pBindData = *new (pheap) BindTaskData(pheap, pdataDef, this, loadConstants, fullyLoaded);
+    if (!pargHeap)
+        pheap->ReleaseOnFree(pBindData);
+
+    pLoaderImpl = ploaderImpl;
+    pBindStates = pstates;
+    pStateBag   = *SF_NEW StateBagImpl(pdelegateState);
+}
+
+// @0x1425cc260
+MovieDefImpl::~MovieDefImpl()
+{
+    pBindData->OnMovieDefRelease();
+}
+
+// @0x1425d0880
+ResourceKey MovieDefImpl::GetKey()
+{
+    return CreateMovieKey(GetDataDef(), pBindStates);
+}
+
+// @0x1425d1480
+StateBag* MovieDefImpl::GetStateBagImpl() const
+{
+    return pStateBag.GetPtr();
+}
+
+float MovieDefImpl::GetWidth() const
+{
+    return ceilf(Render::TwipsToPixels(GetDataDef()->GetFrameRectInTwips().Width()));
+}
+
+float MovieDefImpl::GetHeight() const
+{
+    return ceilf(Render::TwipsToPixels(GetDataDef()->GetFrameRectInTwips().Height()));
+}
+
+Render::Rect<float> MovieDefImpl::GetFrameRect() const
+{
+    const RectF& r = GetDataDef()->GetFrameRectInTwips();
+    return Render::Rect<float>(Render::TwipsToPixels(r.x1), Render::TwipsToPixels(r.y1), Render::TwipsToPixels(r.x2),
+                               Render::TwipsToPixels(r.y2));
+}
+
+// @0x1425d3cb0
+void MovieDefImpl::WaitForLoadFinish(bool cancel) const
+{
+    GetDataDef()->WaitForLoadFinish(cancel);
+    // The bind process signals once it let go of the loaded data.
+    pBindData->GetBindUpdateSync()->WaitForLoadFinished();
+}
+
+// @0x1425d3bb0
+void MovieDefImpl::WaitForFrame(unsigned frame) const
+{
+    GetDataDef()->WaitForFrame(frame);
+}
+
+// @0x1425d0af0
+unsigned MovieDefImpl::GetMetadata(char* pbuff, unsigned buffSize) const
+{
+    return GetDataDef()->GetMetadata(pbuff, buffSize);
+}
+
+// @0x1425d0620
+// MS2-FUNCTIONAL: branch layout of the lazy heap creation
+MemoryHeap* MovieDefImpl::GetImageHeap() const
+{
+    return GetDataDef()->GetImageHeap();
+}
+
+// @0x1425cf660
+// MS2-FUNCTIONAL: register allocation in the inlined export hash lookup
+bool MovieDefImpl::GetExportedResource(ResourceBindData* pdata, const String& symbol, MovieDefImpl* ignoreDef)
+{
+    ResourceHandle hres;
+    bool           exportFound;
+    {
+        MovieDataDef::LoadTaskData::ResourceLocker lock(GetDataDef()->pData);
+        exportFound = GetDataDef()->pData->Exports.GetCaseInsensitive(symbol, &hres);
+    }
+
+    if (exportFound)
+    {
+        if (hres.IsIndex())
+        {
+            pBindData->ResourceBinding.GetResourceData(pdata, hres.GetBindIndex());
+        }
+        else
+        {
+            pdata->pBinding  = &pBindData->ResourceBinding;
+            pdata->pResource = hres.GetResource(&pBindData->ResourceBinding);
+        }
+        return pdata->pResource.GetPtr() != 0;
+    }
+
+    // Symbols of the imported movies are visible here too (our own exports come first).
+    Array<Ptr<MovieDefImpl>, StatMD_Other_Mem> importsCopy;
+    {
+        Lock::Locker lock(&pBindData->ImportSourceLock);
+        importsCopy.Reserve(pBindData->ImportSourceMovies.GetSize());
+        for (UPInt i = 0; i < pBindData->ImportSourceMovies.GetSize(); i++)
+        {
+            MovieDefImpl* pdef = pBindData->ImportSourceMovies[i];
+            if (pdef != ignoreDef)
+                importsCopy.PushBack(pdef);
+        }
+    }
+
+    for (unsigned i = 0; i < importsCopy.GetSize(); i++)
+    {
+        MovieDefImpl* pdef = importsCopy[i];
+        if (pdef && pdef->GetExportedResource(pdata, symbol))
+            return true;
+    }
+    return false;
+}
+
+// @0x1425ced10
+bool MovieDefImpl::DoesDirectlyImport(const MovieDefImpl* import)
+{
+    Lock::Locker lock(&pBindData->ImportSourceLock);
+    for (UPInt i = 0; i < pBindData->ImportSourceMovies.GetSize(); i++)
+    {
+        if (pBindData->ImportSourceMovies[i] == import)
+            return true;
+    }
+    return false;
+}
+
+// @0x1425d0ba0
+const String* MovieDefImpl::GetNameOfExportedResource(ResourceId rid) const
+{
+    MovieDataDef::LoadTaskData::ResourceLocker lock(GetDataDef()->pData);
+    return GetDataDef()->pData->InvExports.Get(rid);
+}
+
+// @0x1425cf9b0
+ResourceId MovieDefImpl::GetExportedResourceIdByName(const String& name) const
+{
+    typedef HashLH<ResourceId, StringLH, FixedSizeHash<ResourceId> > InvExportsHash;
+    MovieDataDef::LoadTaskData::ResourceLocker lock(GetDataDef()->pData);
+    InvExportsHash::ConstIterator it = GetDataDef()->pData->InvExports.Begin();
+    for (; it != GetDataDef()->pData->InvExports.End(); ++it)
+    {
+        if (it->Second == name)
+            return it->First;
+    }
+    return ResourceId();
+}
+
+// @0x1425cf470
+// MS2-FUNCTIONAL: branch layout of the AS2/AS3 state selection
+Ptr<ASSupport> MovieDefImpl::GetASSupport() const
+{
+    // AS3 files carry the FileAttributes flag.
+    ASSupport* pASSupport;
+    if (GetFileAttributes() & LoadProcess::FileAttr_UseActionScript3)
+        pASSupport = Ptr<ASSupport>(*(ASSupport*)GetStateAddRef(State::State_AS3Support));
+    else
+        pASSupport = Ptr<ASSupport>(*(ASSupport*)GetStateAddRef(State::State_AS2Support));
+    if (!pASSupport)
+        return 0;
+    return pASSupport;
+}
+
+// @0x1425cf500
+CharacterCreateInfo MovieDefImpl::GetCharacterCreateInfo(ResourceId rid)
+{
+    ResourceHandle      rh;
+    CharacterCreateInfo ccinfo;
+    ccinfo.pCharDef     = 0;
+    ccinfo.pBindDefImpl = 0;
+    ccinfo.pResource    = 0;
+
+    if (GetDataDef()->GetResourceHandle(&rh, rid))
+    {
+        ResourceBinding* pbinding;
+        Resource*        pres = rh.GetResourceAndBinding(&pBindData->ResourceBinding, &pbinding);
+        if (pres)
+        {
+            ccinfo.pResource = pres;
+            if (pres->GetResourceType() & Resource::RT_CharacterDef_Bit)
+            {
+                // The movie the character is bound in (an import source for imported characters).
+                ccinfo.pBindDefImpl = pbinding->GetOwnerDefImpl();
+                ccinfo.pCharDef     = (CharacterDef*)pres;
+            }
+        }
+    }
+    return ccinfo;
+}
+
+// @0x1425d3380
+void MovieDefImpl::VisitImportedMovies(ImportVisitor* visitor)
+{
+    ImportData* pimportData = GetDataDef()->GetFirstImport();
+    if (!pimportData)
+        return;
+
+    // A file imported twice is visited once.
+    StringHash<bool> visited;
+    while (pimportData)
+    {
+        MovieDefImpl* pindexedMovie;
+        {
+            Lock::Locker lock(&pBindData->ImportSourceLock);
+            // Not bound that far yet (another thread is binding, or binding failed).
+            if (pimportData->ImportIndex >= pBindData->ImportSourceMovies.GetSize())
+                break;
+            pindexedMovie = pBindData->ImportSourceMovies[pimportData->ImportIndex];
+        }
+
+        if (visited.FindCaseInsensitive(pimportData->SourceUrl) == visited.End())
+        {
+            if (pindexedMovie)
+                visitor->Visit(this, pindexedMovie, pimportData->SourceUrl.ToCStr());
+            visited.SetCaseInsensitive(pimportData->SourceUrl, true);
+        }
+        pimportData = pimportData->pNext;
+    }
+}
+
+// @0x1425d3600
+// MS2-FUNCTIONAL: register allocation in the inlined resource hash iteration
+void MovieDefImpl::VisitResources(ResourceVisitor* pvisitor, unsigned visitMask)
+{
+    if (visitMask & (ResVisit_AllImages | ResVisit_Fonts | ResVisit_EditTextFields | ResVisit_Sounds |
+                     ResVisit_Sprite))
+    {
+        MovieDataDef::LoadTaskData::ResourceLocker lock(GetDataDef()->pData);
+
+        MovieDataDef::ResourceHash&               resources = GetDataDef()->pData->Resources;
+        MovieDataDef::ResourceHash::ConstIterator ihash     = resources.Begin();
+        for (; ihash != resources.End(); ++ihash)
+        {
+            Resource* pres          = ihash->Second.GetResource(&pBindData->ResourceBinding);
+            bool      resourceMatch = false;
+
+            if (pres)
+            {
+                Resource::ResourceUse use = pres->GetResourceUse();
+                switch (pres->GetResourceType())
+                {
+                case Resource::RT_Image:
+                    if (use == Resource::Use_Bitmap)
+                    {
+                        if (visitMask & ResVisit_Bitmaps)
+                            resourceMatch = true;
+                    }
+                    else if (use == Resource::Use_Gradient)
+                    {
+                        if (visitMask & ResVisit_GradientImages)
+                            resourceMatch = true;
+                    }
+                    break;
+                case Resource::RT_Font:
+                    if (visitMask & ResVisit_Fonts)
+                        resourceMatch = true;
+                    break;
+                case Resource::RT_EditTextDef:
+                    if (visitMask & ResVisit_EditTextFields)
+                        resourceMatch = true;
+                    break;
+                case Resource::RT_SoundSample:
+                    if (visitMask & ResVisit_Sounds)
+                        resourceMatch = true;
+                    break;
+                case Resource::RT_SpriteDef:
+                    if (visitMask & ResVisit_Sprite)
+                        resourceMatch = true;
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if (resourceMatch)
+            {
+                // The export name, if the resource is exported.
+                const char*                            pexportName = 0;
+                StringHashLH<ResourceHandle>&          exports     = GetDataDef()->pData->Exports;
+                StringHashLH<ResourceHandle>::Iterator iexport     = exports.Begin();
+                while (iexport != exports.End())
+                {
+                    if (iexport->Second.Equals(ihash->Second))
+                    {
+                        pexportName = iexport->First.ToCStr();
+                        break;
+                    }
+                    ++iexport;
+                }
+                pvisitor->Visit(this, pres, ihash->First, pexportName);
+            }
+        }
+    }
+
+    if (visitMask & ResVisit_NestedMovies)
+    {
+        Array<Ptr<MovieDefImpl>, StatMD_Other_Mem> importsCopy;
+        {
+            Lock::Locker lock(&pBindData->ImportSourceLock);
+            importsCopy.Reserve(pBindData->ImportSourceMovies.GetSize());
+            for (UPInt i = 0; i < pBindData->ImportSourceMovies.GetSize(); i++)
+                importsCopy.PushBack(pBindData->ImportSourceMovies[i]);
+        }
+        for (UPInt i = 0, n = importsCopy.GetSize(); i < n; ++i)
+        {
+            if (importsCopy[i])
+                importsCopy[i]->VisitResources(pvisitor, visitMask);
+        }
+    }
+}
+
+// @0x1425d0e10
+Resource* MovieDefImpl::GetResource(const char* pexportName) const
+{
+    if (!pexportName)
+        return 0;
+
+    String str(pexportName);
+    MovieDataDef::LoadTaskData::ResourceLocker lock(GetDataDef()->pData);
+
+    StringHashLH<ResourceHandle>&          exports = GetDataDef()->pData->Exports;
+    StringHashLH<ResourceHandle>::Iterator iexport = exports.FindCaseInsensitive(str);
+    if (iexport == exports.End())
+        return 0;
+    return iexport->Second.GetResource(&pBindData->ResourceBinding);
+}
+
+// *** MovieBindProcess
+
+class ImageFileHandlerRegistry;
+
+// What a loader passes along with an image request (layout as in GFx_ImageCreator).
+class ImageCreateInfo
+{
+public:
+    int                       Type;         // +0
+    MemoryHeap*               pHeap;        // +8
+    unsigned                  Use;          // +0x10
+    Resource::ResourceUse     RUse;         // +0x14
+    Log*                      pLog;         // +0x18
+    FileOpenerBase*           pFileOpener;  // +0x20
+    ImageFileHandlerRegistry* pIFHRegistry; // +0x28
+};
+
+// An image request for the images a file exports (packed at bind time).
+struct ImageCreateExportInfo : public ImageCreateInfo
+{
+    enum { Create_ExportImage = 2 };
+
+    void*                             pMovie;        // +0x30
+    FileTypeConstants::FileFormatType Format;        // +0x38
+    const ExporterInfo*               pExporterInfo; // +0x40
+    String                            ExportName;    // +0x48
+
+    ImageCreateExportInfo()
+    {
+        Type         = Create_ExportImage;
+        pHeap        = 0;
+        Use          = 1; // wrap
+        RUse         = Resource::Use_Bitmap;
+        pLog         = 0;
+        pFileOpener  = 0;
+        pIFHRegistry = 0;
+        pMovie       = 0;
+    }
+    void SetStates(Log* plog, FileOpenerBase* pfileOpener, ImageFileHandlerRegistry* pregistry)
+    {
+        pLog         = plog;
+        pFileOpener  = pfileOpener;
+        pIFHRegistry = pregistry;
+    }
+};
+
+// Packs the bitmaps of a binding into textures (GFx_ImagePacker; only the slot called here).
+class ImagePacker : public RefCountBaseNTS<ImagePacker, Stat_Default_Mem>
+{
+public:
+    virtual void SetBindData(MovieDefImpl::BindTaskData* pbindData) = 0;
+};
+
+// Data the shape readers share while one file binds: the fill style images that wrap.
+struct TempBindData : public NewOverrideBase<Stat_Default_Mem>
+{
+    HashSetLH<unsigned> FillStyleImageWrap;
+};
+
+// @0x1425cae20
+// MS2-FUNCTIONAL: frame layout and the inlined Begin/TempBindData allocation scheduling differ
+MovieBindProcess::MovieBindProcess(LoadStates* pls, MovieDefImpl* pdefImpl, LoaderImpl::LoadStackItem* ploadStack)
+    : LoaderTask(pls, Id_MovieBind), pFrameBindData(0), GlyphTextureIdGen(ResourceId::IdType_DynFontImage),
+      pBindData(pdefImpl->pBindData), pLoadStack(ploadStack)
+{
+    pDataDef = pBindData->GetDataDef();
+    Stripped = (pDataDef->GetSWFFlags() & 0x10) != 0; // MovieInfo::SWF_Stripped
+
+    ImagePackParamsBase* pimagePacker = (ImagePackParamsBase*)pls->GetBindStates()->pImagePackParams.GetPtr();
+    if (pimagePacker && !Stripped)
+    {
+        ImageCreateExportInfo icreateInfo;
+        icreateInfo.SetStates(pls->pLog ? pls->pLog->GetLog() : 0,
+                              (FileOpenerBase*)pls->GetBindStates()->pFileOpener.GetPtr(),
+                              pls->GetImageFileHandlerRegistry());
+        icreateInfo.pHeap = pdefImpl->GetBindDataHeap();
+
+        pImagePacker = *pimagePacker->Begin(&GlyphTextureIdGen,
+                                            (ImageCreator*)pls->GetBindStates()->pImageCreator.GetPtr(),
+                                            &icreateInfo);
+        pImagePacker->SetBindData(pBindData);
+
+        pTempBindData = SF_NEW TempBindData;
+    }
+    else
+        pTempBindData = 0;
+}
+
+// @0x1425cc070
+MovieBindProcess::~MovieBindProcess()
+{
+    Ptr<LoadUpdateSync> ploadSync = pBindData ? pBindData->GetBindUpdateSync() : 0;
+
+    if (pBindData)
+    {
+        if (pBindData->GetBindState() == MovieDefImpl::BS_InProgress)
+            pBindData->SetBindState(MovieDefImpl::BS_Canceled);
+        pBindData = 0;
+    }
+
+    if (pTempBindData)
+        delete pTempBindData;
+    pImagePacker = 0;
+
+    // Waiters may go on once this task let go of the loaded data.
+    if (ploadSync)
+        ploadSync->NotifyLoadFinished();
+}
+
+
+// @0x1425d2c50
+void MovieBindProcess::SetBindState(unsigned newState)
+{
+    if (pBindData)
+        pBindData->SetBindState(newState);
+}
+
+// @0x1425d1ad0
+void MovieBindProcess::OnAbandon(bool started)
+{
+    if (pBindData)
+    {
+        if (started)
+            pBindData->BindingCanceled = true;
+        else
+            SetBindState(MovieDefImpl::BS_Canceled);
+    }
+}
+
+// Compares the file names at the end of two paths, ignoring case (the font library import check).
+// @0x1425d1a00
+// MS2-FUNCTIONAL: load scheduling in the compare loop
+bool MatchFileNames(const String& path1, const String& path2)
+{
+    for (SPInt i1 = (int)path1.GetSize() - 1, i2 = (int)path2.GetSize() - 1; i1 >= 0 && i2 >= 0; --i1, --i2)
+    {
+        char c1 = path1.ToCStr()[i1];
+        char c2 = path2.ToCStr()[i2];
+        if ((c1 == '\\' || c1 == '/') && (c2 == '\\' || c2 == '/'))
+            return true;
+        if (SFtolower(c1) != SFtolower(c2))
+            return false;
+    }
+    return true;
 }
 
 }} // namespace Scaleform::GFx

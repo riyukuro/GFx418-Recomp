@@ -38,6 +38,9 @@ class Stream;
 class LoadProcess;
 struct TagInfo;
 
+class ImagePacker;
+class ImageCreateInfo;
+
 // Parse options of a loader (state; vftable 0x143109480).
 class ParseControl : public State
 {
@@ -114,6 +117,10 @@ public:
     };
 
     void SetTextureConfig(const TextureConfig& config);
+
+    // Slot 1 is not called by the recovered units; slot 2 starts packing the images of one binding.
+    virtual void         Slot01() const = 0;
+    virtual ImagePacker* Begin(ResourceId* pidGen, ImageCreator* pic, ImageCreateInfo* pici) const = 0;
 
 protected:
     TextureConfig PackTextureConfig; // +0x18
@@ -412,6 +419,57 @@ inline Ptr<FileOpenerBase> StateBag::GetFileOpener() const
 inline void StateBag::SetFileOpener(FileOpenerBase* ptr)   { SetState(State::State_FileOpener, ptr); }
 inline void StateBag::SetParseControl(ParseControl* ptr)   { SetState(State::State_ParseControl, ptr); }
 inline void StateBag::SetZlibSupport(ZlibSupportBase* ptr) { SetState(State::State_ZlibSupport, ptr); }
+
+class ImagePacker;
+struct TempBindData;
+
+// The loader task that binds a MovieDefImpl frame by frame as its data loads (0x60 bytes, vftable 0x14318b698).
+class MovieBindProcess : public LoaderTask
+{
+    typedef MovieDefImpl::BindTaskData BindTaskData;
+
+    FrameBindData*             pFrameBindData;    // +0x20 last frame bound
+    ResourceId                 GlyphTextureIdGen; // +0x28
+    Ptr<ImagePacker>           pImagePacker;      // +0x30
+    Ptr<BindTaskData>          pBindData;         // +0x38
+    MovieDataDef*              pDataDef;          // +0x40
+    bool                       Stripped;          // +0x48
+    LoaderImpl::LoadStackItem* pLoadStack;        // +0x50
+    TempBindData*              pTempBindData;     // +0x58
+
+public:
+    MovieBindProcess(LoadStates* pls, MovieDefImpl* pdefImpl, LoaderImpl::LoadStackItem* ploadStack = 0);
+    ~MovieBindProcess();
+
+    typedef MovieDefImpl::BindStateType BindStateType;
+
+    // Binds the next loaded frame; BS_InProgress while frames remain.
+    BindStateType BindNextFrame();
+
+    void          SetBindState(unsigned newState);
+    unsigned      GetBindState() const      { return pBindData->GetBindState(); }
+    BindStateType GetBindStateType() const  { return pBindData->GetBindStateType(); }
+    unsigned      GetBindStateFlags() const { return pBindData->GetBindStateFlags(); }
+
+    FrameBindData* GetNextFrameBindData()
+    {
+        if (pFrameBindData)
+            return pFrameBindData->pNextFrame;
+        return pDataDef->pData->GetFirstFrameBindData();
+    }
+
+    void          FinishBinding();
+    void          SetTempBindData(TempBindData* ptempdata) { pTempBindData = ptempdata; }
+    TempBindData* GetTempBindData() const                  { return pTempBindData; }
+
+    virtual void Execute()
+    {
+        while (BindNextFrame() == MovieDefImpl::BS_InProgress)
+        {
+        }
+    }
+    virtual void OnAbandon(bool started);
+};
 
 }} // namespace Scaleform::GFx
 

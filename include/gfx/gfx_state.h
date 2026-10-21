@@ -38,6 +38,8 @@ public:
         State_TextKeyMap    = 22, // LoaderImpl ctor sets 0x16
         State_ParseControl  = 13, // Loader::InitLoader sets 0xd
         State_ZlibSupport   = 26, // Loader::InitLoader sets 0x1a
+        State_AS2Support    = 34, // MovieDefImpl::GetASSupport queries 0x22 / 0x23
+        State_AS3Support    = 35,
     };
 
 protected:

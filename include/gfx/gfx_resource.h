@@ -472,6 +472,7 @@ inline void        ResourceLib::UnpinAll()           { pWeakLib->UnpinAll(); }
 inline MemoryHeap* ResourceLib::GetImageHeap() const { return pWeakLib->GetImageHeap(); }
 
 struct ResourceBindData;
+class ResourceBinding;
 class LoadStates;
 
 // Load-time data of a resource that is created per binding (an interface plus an opaque handle it reference
@@ -596,6 +597,17 @@ public:
 
     bool      IsIndex() const        { return HType == RH_Index; }
     Resource* GetResourcePtr() const { return HType == RH_Pointer ? pResource : 0; }
+
+    unsigned GetBindIndex() const { return BindIndex; }
+    bool     Equals(const ResourceHandle& other) const
+    {
+        return HType == other.HType && pResource == other.pResource;
+    }
+    // The resource, looked up in pbinding for index handles (defined in gfx_moviedef.h after ResourceBinding;
+    // the exe also has an out-of-line copy, 0x14250d840).
+    inline Resource* GetResource(ResourceBinding* pbinding) const;
+    // Same, also returning the binding the resource came from (an imported movie's for imports).
+    inline Resource* GetResourceAndBinding(ResourceBinding* pbinding, ResourceBinding** presBinding) const;
 };
 
 // A resource reference held by a definition, set from a handle (16 bytes).

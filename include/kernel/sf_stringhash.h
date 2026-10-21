@@ -28,6 +28,20 @@ public:
         String::NoCaseKey ikey(key);
         return BaseType::GetAlt(ikey);
     }
+    typename BaseType::Iterator FindCaseInsensitive(const String& key)
+    {
+        String::NoCaseKey ikey(key);
+        return BaseType::FindAlt(ikey);
+    }
+    // Replaces the value of a key that matches regardless of case, else adds the key as given.
+    void SetCaseInsensitive(const String& key, const U& value)
+    {
+        typename BaseType::Iterator it = FindCaseInsensitive(key);
+        if (it != BaseType::End())
+            (*it).Second = value;
+        else
+            BaseType::Add(key, value);
+    }
 };
 
 // Node of a map whose key string lives in the map's own heap.

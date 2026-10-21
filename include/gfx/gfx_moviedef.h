@@ -2,7 +2,7 @@
 // (only the parts used by recovered units so far; layouts from the exe).
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
-// Bodies: MovieDataDef and its LoadTaskData (sfr_gfx_04). Out-of-line members not recovered yet bind to the exe:
+// Bodies: MovieDataDef and its LoadTaskData, MovieDefImpl and its BindTaskData, MovieBindProcess (sfr_gfx_04). Out-of-line members not recovered yet bind to the exe:
 //   ResourceBinding::GetResourceData_Locked 0x142636720, LoadTaskData::GetSoundStream 0x1425d1460.
 #ifndef MS2_SF_GFX_MOVIEDEF_H
 #define MS2_SF_GFX_MOVIEDEF_H
@@ -15,11 +15,12 @@
 #include "../kernel/sf_lock.h"
 #include "../kernel/sf_stringhash.h"
 #include "../render/render_fontprovider.h"
+#include "../render/render_meshprovider.h"
 
 namespace Scaleform {
 class Log;
 class File;
-namespace Render { template<class T> class Rect; }
+namespace Render { template<class T> class Rect; class ThreadCommandQueue; }
 namespace GFx {
 
 class StateBagImpl;
@@ -34,6 +35,12 @@ class FileOpenerBase;
 class ParseControl;
 class LogState;
 class ZlibSupportBase;
+class Movie;
+class MemoryContext;
+struct MemoryParams;
+class ActionControl;
+struct ExporterInfo;
+class FontResource;
 
 // Something that hands out states by type; MovieDef, Loader and the movie instances are state bags.
 class StateBag : public FileTypeConstants
@@ -68,8 +75,9 @@ public:
     inline void                SetZlibSupport(ZlibSupportBase* ptr);
 };
 
-// Loaded movie as seen by the user: Resource at +0, StateBag at +0x18.
-class MovieDef : public Resource, public StateBag
+// Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it
+// (MovieDefImpl's destructor goes straight to the StateBag / Resource ones), hence novtable.
+class __declspec(novtable) MovieDef : public Resource, public StateBag
 {
 public:
     // Primary vftable after the Resource slots (MovieDefImpl: 0x14318b588).
@@ -82,6 +90,52 @@ public:
     virtual Render::Rect<float> GetFrameRect() const    = 0; // +0x50
     virtual unsigned            GetSWFFlags() const     = 0; // +0x58
     virtual const char*         GetFileURL() const      = 0; // +0x60
+
+    virtual void                WaitForLoadFinish(bool cancel = false) const               = 0; // +0x68
+    virtual void                WaitForFrame(unsigned frame) const                         = 0; // +0x70
+    virtual unsigned            GetFileAttributes() const                                  = 0; // +0x78
+    virtual unsigned            GetMetadata(char* pbuff, unsigned buffSize) const          = 0; // +0x80
+    virtual MemoryHeap*         GetLoadDataHeap() const                                    = 0; // +0x88
+    virtual MemoryHeap*         GetBindDataHeap() const                                    = 0; // +0x90
+    virtual MemoryHeap*         GetImageHeap() const                                       = 0; // +0x98
+    virtual Resource*           GetMovieDataResource() const                               = 0; // +0xa0
+    virtual const ExporterInfo* GetExporterInfo() const                                    = 0; // +0xa8
+    virtual MemoryContext*      CreateMemoryContext(const char* heapName, const MemoryParams& memParams,
+                                                    bool debugHeap)                        = 0; // +0xb0
+    // MSVC places the overloads in reverse: the MemoryContext one at +0xb8, this one at +0xc0.
+    virtual Movie*              CreateInstance(const MemoryParams& memParams, bool initFirstFrame,
+                                               ActionControl* actionControl, Render::ThreadCommandQueue* queue) = 0;
+    virtual Movie*              CreateInstance(MemoryContext* memContext, bool initFirstFrame,
+                                               ActionControl* actionControl, Render::ThreadCommandQueue* queue) = 0;
+
+    // Called back for each movie this one imports from.
+    struct ImportVisitor
+    {
+        virtual ~ImportVisitor() {}
+        virtual void Visit(MovieDef* pparentDef, MovieDef* pimportDef, const char* pimportedMovieFilename) = 0;
+    };
+    // Called back for each resource of the kinds a VisitResources mask selects.
+    struct ResourceVisitor : public FileTypeConstants
+    {
+        virtual ~ResourceVisitor() {}
+        virtual void Visit(MovieDef* pmovieDef, Resource* presource, ResourceId rid, const char* pexportName) = 0;
+    };
+    enum VisitResourceMask
+    {
+        ResVisit_NestedMovies   = 0x8000,
+        ResVisit_Fonts          = 0x01,
+        ResVisit_Bitmaps        = 0x02,
+        ResVisit_GradientImages = 0x04,
+        ResVisit_EditTextFields = 0x08,
+        ResVisit_Sounds         = 0x10,
+        ResVisit_Sprite         = 0x20,
+        ResVisit_AllLocalImages = ResVisit_Bitmaps | ResVisit_GradientImages,
+        ResVisit_AllImages      = ResVisit_Bitmaps | ResVisit_GradientImages | ResVisit_NestedMovies
+    };
+
+    virtual void      VisitImportedMovies(ImportVisitor* visitor)                                      = 0; // +0xc8
+    virtual void      VisitResources(ResourceVisitor* pvisitor, unsigned visitMask = ResVisit_AllImages) = 0; // +0xd0
+    virtual Resource* GetResource(const char* pexportName) const                                       = 0; // +0xd8
 };
 
 // One font a movie defines, chained in load order.
@@ -673,7 +727,7 @@ struct ResourceBindData
     }
 };
 
-// Index -> resource table of a MovieDefImpl. Once Frozen it is read without the lock.
+// Index -> resource table of a MovieDefImpl. Once Frozen it is read without the lock (0x50 bytes).
 class ResourceBinding
 {
     MemoryHeap*                pHeap;          // +0
@@ -681,8 +735,15 @@ class ResourceBinding
     ResourceBindData* volatile pResources;     // +0x10
     mutable Lock               ResourceLock;   // +0x18
     volatile bool              Frozen;         // +0x40
+    MovieDefImpl*              pOwnerDefImpl;  // +0x48 not AddRef'ed; cleared when the MovieDefImpl dies
 
 public:
+    ResourceBinding(MemoryHeap* pheap); // exe 0x142636600
+    ~ResourceBinding();                 // exe 0x142636630
+
+    // Releases every bound resource (exe 0x1426366b0).
+    void Destroy();
+
     void GetResourceData_Locked(ResourceBindData* pdata, unsigned index) const;
 
     void GetResourceData(ResourceBindData* pdata, unsigned index) const
@@ -692,7 +753,38 @@ public:
         else
             GetResourceData_Locked(pdata, index);
     }
+
+    void SetOwnerDefImpl(MovieDefImpl* powner)
+    {
+        Lock::Locker lock(&ResourceLock);
+        pOwnerDefImpl = powner;
+    }
+    MovieDefImpl* GetOwnerDefImpl() const { return pOwnerDefImpl; }
 };
+
+inline Resource* ResourceHandle::GetResource(ResourceBinding* pbinding) const
+{
+    if (IsIndex())
+    {
+        ResourceBindData rbd;
+        pbinding->GetResourceData(&rbd, BindIndex);
+        return rbd.pResource;
+    }
+    return pResource;
+}
+
+inline Resource* ResourceHandle::GetResourceAndBinding(ResourceBinding* pbinding, ResourceBinding** presBinding) const
+{
+    if (IsIndex())
+    {
+        ResourceBindData rbd;
+        pbinding->GetResourceData(&rbd, BindIndex);
+        *presBinding = rbd.pBinding;
+        return rbd.pResource;
+    }
+    *presBinding = pbinding;
+    return pResource;
+}
 
 // The states a binding depends on: a movie bound under different values of these is a different MovieDefImpl.
 class MovieDefBindStates : public RefCountBase<MovieDefBindStates, Stat_Default_Mem>
@@ -726,35 +818,103 @@ public:
         pFontCompactorParams = *pstates[6];
         pImagePackParams     = *pstates[7];
     }
+
+    // Hash and equality of the key of a MovieDefImpl (the image file handler registry is not part of it).
+    UPInt GetHashCode() const; // exe 0x1425d04f0
+    bool  operator==(MovieDefBindStates& other) const
+    {
+        return pFileOpener == other.pFileOpener && pURLBuilder == other.pURLBuilder &&
+               pImageCreator == other.pImageCreator && pImportVisitor == other.pImportVisitor &&
+               pFontPackParams == other.pFontPackParams && pBindState23 == other.pBindState23 &&
+               pFontCompactorParams == other.pFontCompactorParams && pImagePackParams == other.pImagePackParams;
+    }
 };
 
-// A MovieDataDef bound under one set of binding states.
+// What CreateCharacterInstance needs of a character id.
+struct CharacterCreateInfo
+{
+    CharacterDef* pCharDef;
+    MovieDefImpl* pBindDefImpl;
+    Resource*     pResource;
+};
+
+// A MovieDataDef bound under one set of binding states (0x40 bytes, vftables 0x14318b588 and StateBag 0x14318b670).
 class MovieDefImpl : public MovieDef
 {
 public:
+    enum BindStateType
+    {
+        BS_NotStarted = 0,
+        BS_InProgress = 1,
+        BS_Finished   = 2,
+        BS_Canceled   = 3,
+        BS_Error      = 4,
+        BS_StateMask  = 0x0F
+    };
     enum BindStateFlags
     {
         BSF_Frame1Loaded    = 0x100,
         BSF_LastFrameLoaded = 0x200
     };
 
-    // Binding produced by the bind process.
+    // Binding produced by the bind process (0x100 bytes, vftable 0x14318b580).
     class BindTaskData : public RefCountBase<BindTaskData, Stat_Default_Mem>
     {
         friend class MovieDefImpl;
+        friend class MovieBindProcess;
 
         MemoryHeap*       pHeap;            // +0x10
         Ptr<MovieDataDef> pDataDef;         // +0x18
-        MovieDefImpl*     pDefImpl_Unsafe;  // +0x20
+        MovieDefImpl*     pDefImpl_Unsafe;  // +0x20 cleared under ImportSourceLock when the MovieDefImpl dies
         unsigned          LoadFlags;        // +0x28
         ResourceBinding   ResourceBinding;  // +0x30
 
+        ArrayLH<Ptr<MovieDefImpl>, StatMD_Other_Mem> ImportSourceMovies; // +0x80 by import index
+        Lock                                         ImportSourceLock;   // +0x98
+        ArrayLH<Ptr<MovieDefImpl>, StatMD_Other_Mem> ResourceImports;    // +0xc0 movies resources came from
+        HashLH<Render::ShapeMeshProvider*, Ptr<Render::ShapeMeshProvider>, FixedSizeHash<Render::ShapeMeshProvider*> >
+                                                     BoundShapeMeshProviders; // +0xd8
+
+        volatile unsigned   BindState;       // +0xe0 BindStateType | BindStateFlags
+        Ptr<LoadUpdateSync> pBindUpdate;     // +0xe8
+        volatile unsigned   BindingFrame;    // +0xf0
+        volatile UInt32     BytesLoaded;     // +0xf4
+        volatile bool       BindingCanceled; // +0xf8
+
     public:
+        BindTaskData(MemoryHeap* pheap, MovieDataDef* pdataDef, MovieDefImpl* pdefImpl, unsigned loadFlags,
+                     bool fullyLoaded);
         ~BindTaskData();
 
+        // The MovieDefImpl is going away: drop the pointers to it and cancel a bind in progress.
+        void          OnMovieDefRelease();
+        MovieDefImpl* GetMovieDefImplAddRef();
+
+        MovieDataDef* GetDataDef() const      { return pDataDef; }
+        MemoryHeap*   GetBindDataHeap() const { return pHeap; }
+
+        unsigned      GetBindState() const      { return BindState; }
+        BindStateType GetBindStateType() const  { return (BindStateType)(BindState & BS_StateMask); }
+        unsigned      GetBindStateFlags() const { return BindState & ~BS_StateMask; }
+        void          SetBindState(unsigned newState);
         // Blocks until all BindStateFlags bits in flags are set; false if binding failed.
-        bool WaitForBindStateFlags(unsigned flags);
-        MovieDataDef* GetDataDef() const { return pDataDef; }
+        bool          WaitForBindStateFlags(unsigned flags);
+        LoadUpdateSync* GetBindUpdateSync() const { return pBindUpdate; }
+
+        unsigned GetLoadingFrame() const { return BindingFrame; }
+        UInt32   GetBytesLoaded() const  { return BytesLoaded; }
+        void     UpdateBindingFrame(unsigned frame, UInt32 bytesLoaded);
+
+        MovieDefImpl* GetImportSourceMovie(unsigned importIndex);
+        void          AddResourceImportMovie(MovieDefImpl* pdefImpl);
+        void          ResolveImport(ImportData* pimport, MovieDefImpl* pdefImpl, LoadStates* pls, bool recursive);
+        bool          ResolveImportThroughFontLib(ImportData* pimport);
+
+        bool SetResourceBindData(ResourceId rid, ResourceBindData& bindData, const char* pimportSymbolName);
+        bool SetResourceBindData(ResourceDataNode* presnode, Resource* pres);
+
+        Ptr<Render::ShapeMeshProvider> GetShapeMeshProvider(Render::ShapeMeshProvider* defMeshProv);
+        void AddShapeMeshProvider(Render::ShapeMeshProvider* defMeshProv, Render::ShapeMeshProvider* meshProv);
     };
 
     Ptr<StateBagImpl>       pStateBag;    // +0x20
@@ -763,20 +923,50 @@ public:
     Ptr<BindTaskData>       pBindData;    // +0x38
 
     MovieDefImpl(MovieDataDef* pdataDef, MovieDefBindStates* pstates, LoaderImpl* ploaderImpl, unsigned loadConstants,
-                 StateBagImpl* pdelegateState = 0, MemoryHeap* pargHeap = 0, bool debugHeap = false,
+                 StateBagImpl* pdelegateState = 0, MemoryHeap* pargHeap = 0, bool fullyLoaded = false,
                  UPInt memoryArena = 0);
     ~MovieDefImpl();
 
-    // MovieDef overrides (exe: GetFileURL 0x1425cfb50, ...); declared so the class is concrete.
-    virtual unsigned            GetVersion() const;
-    virtual unsigned            GetLoadingFrame() const;
+    // Resource
+    virtual ResourceKey     GetKey();
+    virtual unsigned        GetResourceTypeCode() const { return MakeTypeCode(RT_MovieDef); }
+
+    // MovieDef
+    virtual unsigned            GetVersion() const      { return GetDataDef()->GetVersion(); }
+    virtual unsigned            GetLoadingFrame() const { return pBindData->GetLoadingFrame(); }
     virtual float               GetWidth() const;
     virtual float               GetHeight() const;
-    virtual unsigned            GetFrameCount() const;
-    virtual float               GetFrameRate() const;
+    virtual unsigned            GetFrameCount() const   { return GetDataDef()->GetFrameCount(); }
+    virtual float               GetFrameRate() const    { return GetDataDef()->GetFrameRate(); }
     virtual Render::Rect<float> GetFrameRect() const;
-    virtual unsigned            GetSWFFlags() const;
-    virtual const char*         GetFileURL() const;
+    virtual unsigned            GetSWFFlags() const     { return GetDataDef()->GetSWFFlags(); }
+    virtual const char*         GetFileURL() const      { return GetDataDef()->GetFileURL(); }
+
+    virtual void                WaitForLoadFinish(bool cancel = false) const;
+    virtual void                WaitForFrame(unsigned frame) const;
+    virtual unsigned            GetFileAttributes() const { return GetDataDef()->GetFileAttributes(); }
+    virtual unsigned            GetMetadata(char* pbuff, unsigned buffSize) const;
+    virtual MemoryHeap*         GetLoadDataHeap() const { return GetDataDef()->GetHeap(); }
+    virtual MemoryHeap*         GetBindDataHeap() const { return pBindData->GetBindDataHeap(); }
+    virtual MemoryHeap*         GetImageHeap() const;
+    virtual Resource*           GetMovieDataResource() const { return GetDataDef(); }
+    virtual const ExporterInfo* GetExporterInfo() const { return GetDataDef()->GetExporterInfo(); }
+    virtual MemoryContext*      CreateMemoryContext(const char* heapName, const MemoryParams& memParams,
+                                                    bool debugHeap);
+    virtual Movie*              CreateInstance(const MemoryParams& memParams, bool initFirstFrame,
+                                               ActionControl* actionControl, Render::ThreadCommandQueue* queue);
+    virtual Movie*              CreateInstance(MemoryContext* memContext, bool initFirstFrame,
+                                               ActionControl* actionControl, Render::ThreadCommandQueue* queue);
+    virtual void                VisitImportedMovies(ImportVisitor* visitor);
+    virtual void                VisitResources(ResourceVisitor* pvisitor, unsigned visitMask = ResVisit_AllImages);
+    virtual Resource*           GetResource(const char* pexportName) const;
+
+    struct SearchInfo;
+    // A font this movie defines, by name and style (+0xe0).
+    virtual FontResource* GetFontResource(const char* pfontName, unsigned styleFlags, SearchInfo* psearchInfo);
+
+    // StateBag (exe 0x1425d1480)
+    virtual StateBag* GetStateBagImpl() const;
 
     // Library key of the binding of pdataDef under pstates.
     static ResourceKey SF_STDCALL CreateMovieKey(MovieDataDef* pdataDef, MovieDefBindStates* pstates);
@@ -784,6 +974,14 @@ public:
     MovieDataDef*    GetDataDef() const         { return pBindData->GetDataDef(); }
     unsigned         GetLoadFlags() const       { return pBindData->LoadFlags; }
     ResourceBinding& GetResourceBinding() const { return pBindData->ResourceBinding; }
+
+    // The exported resource symbol, searched in this movie, then in the movies it imports (but ignoreDef).
+    bool          GetExportedResource(ResourceBindData* pdata, const String& symbol, MovieDefImpl* ignoreDef = 0);
+    bool          DoesDirectlyImport(const MovieDefImpl* import);
+    const String* GetNameOfExportedResource(ResourceId rid) const;
+    ResourceId    GetExportedResourceIdByName(const String& name) const;
+    Ptr<ASSupport> GetASSupport() const;
+    CharacterCreateInfo GetCharacterCreateInfo(ResourceId rid);
 };
 
 }} // namespace Scaleform::GFx

@@ -127,19 +127,6 @@ struct SWFProcessInfo
     bool Initialize(File* pin, LogState* plog, ZlibSupportBase* zlib, ParseControl* pparseControl, bool parseMsg);
 };
 
-// Binds a MovieDataDef into a MovieDefImpl (0x60 bytes; only construction is used here).
-class MovieBindProcess : public LoaderTask
-{
-    UByte Data20[0x38];
-
-public:
-    void* pTempBindData; // +0x58
-
-    MovieBindProcess(LoadStates* pls, MovieDefImpl* pdefImpl, LoaderImpl::LoadStackItem* ploadStack = 0);
-
-    virtual void Execute();
-};
-
 // Parses one SWF file (0x430 bytes; only what the loader calls is declared here).
 class LoadProcess : public LoaderTask
 {
@@ -810,7 +797,7 @@ MovieDefImpl* LoaderImpl::CreateMovie_LoadState(LoadStates* pls, const URLBuilde
                 plp->SetBindProcess(ploadBind);
 
             if (pbp)
-                plp->SetTempBindData(pbp->pTempBindData);
+                plp->SetTempBindData(pbp->GetTempBindData());
 
             if (loadConstants & Loader::LoadWaitCompletion || !pls->SubmitBackgroundTask(plp))
                 plp->Execute();
@@ -962,7 +949,7 @@ MovieDefImpl* LoaderImpl::CreateMovie_LoadState(LoadStates* pls, const ArrayPOD<
             plp->SetBindProcess(ploadBind);
 
         if (pbp)
-            plp->SetTempBindData(pbp->pTempBindData);
+            plp->SetTempBindData(pbp->GetTempBindData());
 
         if (loadConstants & Loader::LoadWaitCompletion || !pls->SubmitBackgroundTask(plp))
             plp->Execute();
