@@ -16,6 +16,8 @@
 // MS2-RANGE: 0x1429035a0-0x142903650 .text$mn
 // MS2-RANGE: 0x142903910-0x142903b30 .text$mn
 // MS2-RANGE: 0x142906d80-0x142906de0 .text$mn
+// MS2-RANGE: 0x142908090-0x142908840 .text$mn
+// MS2-RANGE: 0x142908c30-0x142908e90 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
 // MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
@@ -362,6 +364,98 @@ void KeyCtorFunction::KeyIsToggled(const FnCall& fn)
     KeyCtorFunction*     ko = (KeyCtorFunction*)fn.ThisPtr;
     const KeyboardState* ks = GetKeyboardState(ko->pMovieRoot, controllerIdx);
     fn.Result->SetBool(ks ? ks->IsKeyToggled(code) : false);
+}
+
+// TextSnapshot.findText(start, text, caseSensitive)
+// MS2-FUNCTIONAL register allocation differs (rbx/rsi/rdi swapped)
+// @0x142908090
+void TextSnapshotProto::FindTextA(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis || fn.NArgs < 3)
+        return;
+    UInt32   start         = fn.Arg(0).ToUInt32(fn.Env);
+    ASString text          = fn.Arg(1).ToString(fn.Env);
+    bool     caseSensitive = fn.Arg(2).ToBool(fn.Env);
+    String   query(text.ToCStr(), text.GetSize());
+    fn.Result->SetInt(pthis->GetData().FindTextA(start, query.ToCStr(), caseSensitive));
+}
+
+void TextSnapshotProto::GetCount(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (pthis)
+        fn.Result->SetUInt((unsigned)pthis->GetData().GetCharCount());
+}
+
+// TextSnapshot.getSelected(start[, end]): any character of the range selected.
+void TextSnapshotProto::GetSelected(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis || fn.NArgs < 1)
+        return;
+    UInt32 start = fn.Arg(0).ToUInt32(fn.Env);
+    UInt32 end   = (fn.NArgs > 1) ? fn.Arg(1).ToUInt32(fn.Env) : UInt32(pthis->GetData().GetCharCount());
+    if (end <= start)
+        end = start + 1;
+    fn.Result->SetBool(pthis->GetData().IsSelected(start, end));
+}
+
+void TextSnapshotProto::GetSelectedText(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+    bool   inclLineEndings = (fn.NArgs > 0) ? fn.Arg(0).ToBool(fn.Env) : false;
+    String text            = pthis->GetData().GetSelectedText(inclLineEndings);
+    fn.Result->SetString(fn.Env->CreateString(text));
+}
+
+// TextSnapshot.getText(start, end[, includeLineEndings])
+void TextSnapshotProto::GetText(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis || fn.NArgs < 2)
+        return;
+    UInt32 start           = fn.Arg(0).ToUInt32(fn.Env);
+    UInt32 end             = fn.Arg(1).ToUInt32(fn.Env);
+    bool   inclLineEndings = (fn.NArgs < 3) ? false : fn.Arg(2).ToBool(fn.Env);
+    if (end <= start)
+        end = start + 1;
+    String text = pthis->GetData().GetSubString(start, end, inclLineEndings);
+    fn.Result->SetString(fn.Env->CreateString(text));
+}
+
+// TextSnapshot.setSelectColor(rgb): always opaque.
+void TextSnapshotProto::SetSelectColor(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis || fn.NArgs < 1)
+        return;
+    Render::Color color(fn.Arg(0).ToUInt32(fn.Env));
+    color.SetAlpha(255);
+    pthis->SetSelectColor(color);
+}
+
+// TextSnapshot.setSelected(start, end, select)
+void TextSnapshotProto::SetSelected(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis || fn.NArgs < 3)
+        return;
+    UInt32 start  = fn.Arg(0).ToUInt32(fn.Env);
+    UInt32 end    = fn.Arg(1).ToUInt32(fn.Env);
+    bool   select = fn.Arg(2).ToBool(fn.Env);
+    if (end <= start)
+        end = start + 1;
+    pthis->GetData().SetSelected(start, end, select);
 }
 
 // The depth as scripts see it: timeline depths start at -16384.

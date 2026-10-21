@@ -7,6 +7,7 @@
 
 #include "as2_object.h"
 #include "../gfx_asutils.h"
+#include "../gfx_textsnapshot.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -88,7 +89,23 @@ public:
 class TextSnapshotObject : public Object
 {
 public:
-    void* Data68[5]; // +0x68 not recovered
+    void* Data68[5]; // +0x68 StaticTextSnapshotData (0x28 bytes, layout not recovered)
+
+    StaticTextSnapshotData& GetData() { return *(StaticTextSnapshotData*)Data68; }
+    void SetSelectColor(const Render::Color& color) { GetData().SetSelectColor(color); }
+};
+
+// TextSnapshot methods.
+class TextSnapshotProto
+{
+public:
+    static void FindTextA(const FnCall& fn);
+    static void GetCount(const FnCall& fn);
+    static void GetSelected(const FnCall& fn);
+    static void GetSelectedText(const FnCall& fn);
+    static void GetText(const FnCall& fn);
+    static void SetSelectColor(const FnCall& fn);
+    static void SetSelected(const FnCall& fn);
 };
 
 // 0x98 bytes.

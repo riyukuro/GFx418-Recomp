@@ -86,6 +86,16 @@ inline ASString ASStringContext::CreateString(const char* pstr, UPInt length) co
     return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateString(pstr, length);
 }
 
+inline ASString ASStringContext::CreateString(const String& str) const
+{
+    return CreateString(str.ToCStr(), str.GetSize());
+}
+
+inline ASString Environment::CreateString(const String& str) const
+{
+    return StringContext.CreateString(str);
+}
+
 }}} // namespace Scaleform::GFx::AS2
 
 #endif

@@ -225,6 +225,13 @@ public:
         T.Type        = INTEGER;
         NV.Int32Value = val;
     }
+    void SetUInt(unsigned val)
+    {
+        if (T.Type >= STRING)
+            DropRefs();
+        T.Type         = INTEGER;
+        NV.UInt32Value = val;
+    }
     void SetBool(bool val)
     {
         DropRefs();
