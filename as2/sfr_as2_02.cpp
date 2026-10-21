@@ -3,6 +3,8 @@
 // scan-in-use passes) and the Stage function stub.
 // MS2-UNIT: sfr_as2_02
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1428fdc00-0x1428fe7e0 .text$mn
+// MS2-RANGE: 0x1428fec90-0x1428fed10 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142915690-0x1429159d0 .text$mn
 // MS2-RANGE: 0x142915d80-0x142915f40 .text$mn
@@ -28,6 +30,166 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 typedef ASRefCountBaseType::Collector Collector;
+
+// Day of the year at which each month ends, for common and leap years.
+static const int DateMonthEnds[2][12] = {
+    {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
+    {31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366}};
+
+void DateProto::DateGetUTCSeconds(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    fn.Result->SetNumber(Number((pthis->Time % 60000) / 1000));
+}
+
+void DateProto::DateGetUTCYear(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    fn.Result->SetNumber(Number(pthis->Year - 1900));
+}
+
+// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
+// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
+// @0x1428fdd50
+void DateProto::DateSetUTCDate(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int day = (int)fn.Arg(0).ToNumber(fn.Env);
+    for (int m = 0; m < 12; m++)
+    {
+        if (pthis->JDate < DateMonthEnds[Date_IsLeapYear(pthis->Year)][m])
+        {
+            int delta = day - (pthis->JDate - (m ? DateMonthEnds[IsLeapYear(pthis->Year)][m - 1] : 0)) - 1;
+            pthis->JDate += delta;
+            pthis->Date += SInt64(delta) * SInt64(86400000);
+            pthis->UpdateLocal();
+            return;
+        }
+    }
+}
+
+// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
+// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
+// @0x1428fdef0
+void DateProto::DateSetUTCFullYear(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int year = (int)fn.Arg(0).ToNumber(fn.Env);
+    if (pthis->JDate >= 60)
+        pthis->JDate += IsLeapYear(year) - IsLeapYear(pthis->Year);
+    pthis->Date = SInt64(pthis->Time) + SInt64(Date_StartOfYear(year) + pthis->JDate) * SInt64(86400000);
+    pthis->Year = year;
+    pthis->UpdateLocal();
+}
+
+void DateProto::DateSetUTCHours(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int hours = (int)fn.Arg(0).ToNumber(fn.Env);
+    int delta = (hours - pthis->Time / 3600000) * 3600000;
+    pthis->Date += delta;
+    pthis->Time += delta;
+    pthis->UpdateLocal();
+}
+
+void DateProto::DateSetUTCMilliseconds(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int ms    = (int)fn.Arg(0).ToNumber(fn.Env);
+    int delta = ms - pthis->Time % 1000;
+    pthis->Date += delta;
+    pthis->Time += delta;
+    pthis->UpdateLocal();
+}
+
+void DateProto::DateSetUTCMinutes(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int minutes = (int)fn.Arg(0).ToNumber(fn.Env);
+    int delta   = (minutes - (pthis->Time % 3600000) / 60000) * 60000;
+    pthis->Date += delta;
+    pthis->Time += delta;
+    pthis->UpdateLocal();
+}
+
+// Moves the date by whole months: the day within the month is not clamped.
+void DateProto::DateSetUTCMonth(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int month = (int)fn.Arg(0).ToNumber(fn.Env);
+    for (int m = 0; m < 12; m++)
+    {
+        if (pthis->JDate < DateMonthEnds[Date_IsLeapYear(pthis->Year)][m])
+        {
+            int delta = DateMonthEnds[Date_IsLeapYear(pthis->Year)][month] -
+                        DateMonthEnds[Date_IsLeapYear(pthis->Year)][m];
+            pthis->JDate += delta;
+            pthis->Date += SInt64(delta) * SInt64(86400000);
+            pthis->UpdateLocal();
+            return;
+        }
+    }
+}
+
+void DateProto::DateSetUTCSeconds(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int seconds = (int)fn.Arg(0).ToNumber(fn.Env);
+    int delta   = (seconds - (pthis->Time % 60000) / 1000) * 1000;
+    pthis->Date += delta;
+    pthis->Time += delta;
+    pthis->UpdateLocal();
+}
+
+// Two digit years count from 1900.
+// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
+// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
+// @0x1428fe670
+void DateProto::DateSetUTCYear(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    if (fn.NArgs < 1)
+        return;
+    int year = (int)fn.Arg(0).ToNumber(fn.Env);
+    if (year < 100 && year >= 0)
+        year += 1900;
+    if (pthis->JDate >= 60)
+        pthis->JDate += IsLeapYear(year) - IsLeapYear(pthis->Year);
+    pthis->Date = SInt64(pthis->Time) + SInt64(Date_StartOfYear(year) + pthis->JDate) * SInt64(86400000);
+    pthis->Year = year;
+    pthis->UpdateLocal();
+}
+
+void DateProto::DateValueOf(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Date);
+    DateObject* pthis = (DateObject*)fn.ThisPtr;
+    fn.Result->SetNumber(Number(pthis->Date));
+}
 
 // The Stage methods that do nothing in GFx.
 void GFx_StageFuncStub(const FnCall& fn)
