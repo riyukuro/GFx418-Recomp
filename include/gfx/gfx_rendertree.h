@@ -76,6 +76,9 @@ protected:
 
     void       destroyHelper();
     EntryData* getWritableData(unsigned changeBits);
+    // (appended for the drawing API, sfr_gfx_06e) queue the entry for the next snapshot unless it is already queued
+    void       addToPropagateImpl();
+    void       AddToPropagate() { if (!PNode[0]) addToPropagateImpl(); }
 
 public:
     inline const EntryData* GetReadOnlyDataBase() const;
@@ -278,18 +281,31 @@ public:
 // (appended for the drawing API, sfr_gfx_06e) a leaf node drawing one shape
 class ShapeMeshProvider;
 
+// The TreeShape::NodeData vftable (0x14317bc40), stored the way the inlined constructor does.
+extern const void* const TreeShapeNodeDataVTable[];
+
 class TreeShape : public TreeNode
 {
 public:
     class NodeData : public TreeNode::NodeData
     {
     public:
+        NodeData() : TreeNode::NodeData(ET_Shape)
+        {
+            pVTable       = TreeShapeNodeDataVTable;
+            pMeshProvider = 0;
+            MorphRatio    = 0;
+        }
+
         ShapeMeshProvider* pMeshProvider;   // +0x90 (a Ptr in the exe)
         float              MorphRatio;      // +0x98
     };
 
+    NodeData*          GetWritableData(unsigned cb) { return (NodeData*)Entry::getWritableData(cb); }
     const NodeData*    GetReadOnlyData() const { return (const NodeData*)Entry::GetReadOnlyDataBase(); }
     ShapeMeshProvider* GetShape() const        { return GetReadOnlyData()->pMeshProvider; }
+    // takes a reference on the provider (defined where ShapeMeshProvider is complete, sfr_gfx_06e)
+    inline void        SetShape(ShapeMeshProvider* pshape);
 };
 
 }} // namespace Scaleform::Render

@@ -4,7 +4,7 @@
 // Scaleform GFx 4.1.18, recovered from the exe; the SDK sources served only as a reference.
 // MS2-UNIT: sfr_gfx_06e
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1425fd750-0x142600340 .text$mn
+// MS2-RANGE: 0x1425fd750-0x142602c20 .text$mn
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BEC@@Scaleform@@6B@ 0x14318e730
 // MS2-PIN: ??_7?$RefCountBaseNTS@VDrawingContext@GFx@Scaleform@@$0BEC@@Scaleform@@6B@ 0x14318e738
 // MS2-PIN: ??_7?$ShapeDataPacked@V?$ArrayDH@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@6B@ 0x14318e750
@@ -31,6 +31,17 @@ void LogDebugMessage(LogMessageId id, const char* fmt, ...);
 namespace Render {
 
 inline ComplexFill::ComplexFill() : BindIndex(~0u) {}
+
+inline void TreeShape::SetShape(ShapeMeshProvider* pshape)
+{
+    NodeData* data = GetWritableData(Change_Shape);
+    if (pshape)
+        pshape->AddRef();
+    if (data->pMeshProvider)
+        data->pMeshProvider->Release();
+    data->pMeshProvider = pshape;
+    AddToPropagate();
+}
 
 // The fill hit test: the even-odd crossings of a ray from (x, y) with the outer paths of the shape (the ones with
 // the empty fill on one side), layer by layer.
@@ -122,6 +133,7 @@ using Render::ShapePosInfo;
 using Render::ShapePathType;
 using Render::TreeContainer;
 using Render::TreeShape;
+using Render::ShapeMeshProvider;
 
 // What an image creator is asked to make (0x38 bytes).
 class ImageCreateInfo
@@ -438,22 +450,22 @@ bool DrawingContext::NoLine() const
     return Shapes->GetStrokeStyleCount() == 0 || StrokeStyle == 0;
 }
 
-// The DrawingContext helpers the exe inlines everywhere.
-unsigned DrawingContext::SetNewFill()
+// The DrawingContext helpers: inlined everywhere, their own copies are never called.
+// @0x1426003e0
+bool DrawingContext::SameLineStyle(float lineWidth, unsigned rgba, bool hinting, unsigned scaling, unsigned caps,
+                                   unsigned joins, float miterLimit) const
 {
-    mFillStyle.Color = 0;
-    mFillStyle.pFill = 0;
-    FillStyle0       = Shapes->AddFillStyle(mFillStyle);
-    FillStyle1       = 0;
-    return FillStyle0;
+    if (!Shapes->GetStrokeStyleCount() || !StrokeStyle)
+        return false;
+    StrokeStyleType ls;
+    Shapes->GetStrokeStyle(StrokeStyle, &ls);
+    if (ls.pFill)
+        return false;
+    return ls.Color == rgba && int(ls.Width * 20) == int(lineWidth * 20) &&
+           ls.Flags == (unsigned(hinting) | scaling | caps | joins) && int(ls.Miter * 20) == int(miterLimit * 20);
 }
 
-void DrawingContext::SetNoLine()
-{
-    StrokeStyle = 0;
-    States &= ~State_FreshLineStyle;
-}
-
+// @0x1426004f0
 void DrawingContext::SetLineStyle(float lineWidth, unsigned rgba, bool hinting, unsigned scaling, unsigned caps,
                                   unsigned joins, float miterLimit)
 {
@@ -466,17 +478,62 @@ void DrawingContext::SetLineStyle(float lineWidth, unsigned rgba, bool hinting, 
     States |= State_FreshLineStyle;
 }
 
-bool DrawingContext::SameLineStyle(float lineWidth, unsigned rgba, bool hinting, unsigned scaling, unsigned caps,
-                                   unsigned joins, float miterLimit) const
+// @0x142600550
+unsigned DrawingContext::SetNewFill()
 {
-    if (!Shapes->GetStrokeStyleCount() || !StrokeStyle)
-        return false;
-    StrokeStyleType ls;
-    Shapes->GetStrokeStyle(StrokeStyle, &ls);
-    if (ls.pFill)
-        return false;
-    return ls.Color == rgba && int(ls.Width * 20) == int(lineWidth * 20) &&
-           ls.Flags == (unsigned(hinting) | scaling | caps | joins) && int(ls.Miter * 20) == int(miterLimit * 20);
+    mFillStyle.Color = 0;
+    mFillStyle.pFill = 0;
+    FillStyle0       = Shapes->AddFillStyle(mFillStyle);
+    FillStyle1       = 0;
+    return FillStyle0;
+}
+
+// @0x1426005b0
+void DrawingContext::SetNoFill()
+{
+    FillStyle0 = FillStyle1 = 0;
+}
+
+// @0x1426005c0
+void DrawingContext::SetNoLine()
+{
+    StrokeStyle = 0;
+    States &= ~State_FreshLineStyle;
+}
+
+// @0x1426006a0
+// MS2-FUNCTIONAL: scheduling (the exe reloads pTreeContainer for Insert and stores the node's pMeshProvider after
+// its vftable; same operations)
+void DrawingContext::UpdateRenderNode() const
+{
+    // Const for the hit tests and bounds; the shape drawn so far moves into a node of its own.
+    DrawingContext* self = const_cast<DrawingContext*>(this);
+    self->States &= ~State_Dirty;
+    if (!IsEmpty())
+    {
+        unsigned stroke = StrokeStyle, fill0 = FillStyle0;
+        self->AcquirePath(true);
+        Shapes->EndShape();
+
+        Ptr<ShapeMeshProvider> meshProv = *SF_HEAP_NEW(pHeap) ShapeMeshProvider(Shapes);
+        Ptr<TreeShape>         tshp     = *RenContext.CreateEntry<TreeShape>();
+        tshp->SetShape(meshProv);
+        pTreeContainer->Add(tshp);
+
+        self->Shapes = *SF_HEAP_NEW(pHeap) PackedShape(pHeap);
+
+        // a fill or line style still open goes on in the new shape
+        if (fill0)
+        {
+            self->FillStyle0 = Shapes->AddFillStyle(mFillStyle);
+            self->BeginFill();
+        }
+        if (stroke)
+        {
+            self->StrokeStyle = Shapes->AddStrokeStyle(mLineStyle);
+            self->States |= State_FreshLineStyle;
+        }
+    }
 }
 
 }} // namespace Scaleform::GFx

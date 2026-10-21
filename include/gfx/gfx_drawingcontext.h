@@ -107,6 +107,8 @@ protected:
                           unsigned joins, float miterLimit);
     bool     SameLineStyle(float lineWidth, unsigned rgba, bool hinting, unsigned scaling, unsigned caps,
                            unsigned joins, float miterLimit) const;
+    // (appended for the drawing API, sfr_gfx_06e) no fill on either side
+    void     SetNoFill();
 
     Render::ContextImpl::Context& RenContext;    // +0x30
     Ptr<ImageCreator>             ImgCreator;    // +0x38

@@ -119,18 +119,18 @@ public:
     // the value is stored above them, low bits first.
     unsigned WriteUInt30(unsigned v)
     {
-        if (v < (1u << 6))
+        if (v <= (1u << 6) - 1)
         {
             Data->PushBack(UByte(v << 2));
             return 1;
         }
-        if (v < (1u << 14))
+        if (v <= (1u << 14) - 1)
         {
             Data->PushBack(UByte((v << 2) | 1));
             Data->PushBack(UByte(v >> 6));
             return 2;
         }
-        if (v < (1u << 22))
+        if (v <= (1u << 22) - 1)
         {
             Data->PushBack(UByte((v << 2) | 2));
             Data->PushBack(UByte(v >> 6));
@@ -154,8 +154,8 @@ public:
         Data->PushBack(bytes[3]);
     }
 
-    // (appended for sfr_gfx_06e) the packed path records of ShapeDataPacked; the line and curve writers are in
-    // Render_PathDataPacker (sfr_render_02): WriteHLine 0x1426009c0, WriteLine 0x142600be0, WriteQuad 0x142601200,
+    // (appended for sfr_gfx_06e) the packed path records of ShapeDataPacked; the ArrayDH<UByte> instances follow
+    // GFx_DrawingContext (sfr_gfx_06e): WriteHLine 0x1426009c0, WriteLine 0x142600be0, WriteQuad 0x142601200,
     // WriteVLine 0x142602a00
     unsigned WriteUInt15(unsigned v);
     unsigned WriteHLine(int x);
@@ -163,6 +163,8 @@ public:
     unsigned WriteLine(int x, int y);
     unsigned WriteQuad(int cx, int cy, int ax, int ay);
     unsigned WriteEndPath();
+    // (appended for the path headers, sfr_gfx_06e) the signed counterpart of WriteUInt30 (0x142602240)
+    unsigned WriteSInt30(int v);
 
 private:
     ContainerType* Data;
@@ -523,7 +525,7 @@ struct PathDataPackerTypes
 template<class ContainerType>
 unsigned PathDataEncoder<ContainerType>::WriteUInt15(unsigned v)
 {
-    if (v < (1u << 7))
+    if (v <= (1u << 7) - 1)
     {
         Data->PushBack(UByte(v << 1));
         return 1;
@@ -537,6 +539,197 @@ unsigned PathDataEncoder<ContainerType>::WriteEndPath()
 {
     Data->PushBack(UByte(PathDataPackerTypes::EndPath));
     return 1;
+}
+
+// (appended for the path records, sfr_gfx_06e; the instances follow GFx_DrawingContext in the exe)
+// A signed of up to 30 bits, stored like WriteUInt30 (two count bits, then the value low bits first).
+template<class ContainerType>
+unsigned PathDataEncoder<ContainerType>::WriteSInt30(int v)
+{
+    if (v >= -(1 << 5) && v < (1 << 5))
+    {
+        Data->PushBack(UByte(v << 2));
+        return 1;
+    }
+    if (v >= -(1 << 13) && v < (1 << 13))
+    {
+        Data->PushBack(UByte((v << 2) | 1));
+        Data->PushBack(UByte(v >> 6));
+        return 2;
+    }
+    if (v >= -(1 << 21) && v < (1 << 21))
+    {
+        Data->PushBack(UByte((v << 2) | 2));
+        Data->PushBack(UByte(v >> 6));
+        Data->PushBack(UByte(v >> 14));
+        return 3;
+    }
+    Data->PushBack(UByte((v << 2) | 3));
+    Data->PushBack(UByte(v >> 6));
+    Data->PushBack(UByte(v >> 14));
+    Data->PushBack(UByte(v >> 22));
+    return 4;
+}
+
+// Edges: the record tag in the low nibble of the first byte, the deltas packed from bit 4 on, each one as narrow
+// as the largest of them allows. The 28-bit line records return 3 although they write four bytes (as in the exe).
+template<class ContainerType>
+unsigned PathDataEncoder<ContainerType>::WriteHLine(int x)
+{
+    typedef PathDataPackerTypes T;
+    if (x >= -(1 << 11) && x < (1 << 11))
+    {
+        Data->PushBack(UByte((x << 4) | T::Edge_H12));
+        Data->PushBack(UByte(x >> 4));
+        return 2;
+    }
+    Data->PushBack(UByte((x << 4) | T::Edge_H28));
+    Data->PushBack(UByte(x >> 4));
+    Data->PushBack(UByte(x >> 12));
+    Data->PushBack(UByte(x >> 20));
+    return 3;
+}
+
+template<class ContainerType>
+unsigned PathDataEncoder<ContainerType>::WriteVLine(int y)
+{
+    typedef PathDataPackerTypes T;
+    if (y >= -(1 << 11) && y < (1 << 11))
+    {
+        Data->PushBack(UByte((y << 4) | T::Edge_V12));
+        Data->PushBack(UByte(y >> 4));
+        return 2;
+    }
+    Data->PushBack(UByte((y << 4) | T::Edge_V28));
+    Data->PushBack(UByte(y >> 4));
+    Data->PushBack(UByte(y >> 12));
+    Data->PushBack(UByte(y >> 20));
+    return 3;
+}
+
+template<class ContainerType>
+unsigned PathDataEncoder<ContainerType>::WriteLine(int x, int y)
+{
+    typedef PathDataPackerTypes T;
+    if (x >= -(1 << 5) && x < (1 << 5) && y >= -(1 << 5) && y < (1 << 5))
+    {
+        Data->PushBack(UByte((x << 4) | T::Edge_L6));
+        Data->PushBack(UByte(((x >> 4) & 0x03) | (y << 2)));
+        return 2;
+    }
+    if (x >= -(1 << 9) && x < (1 << 9) && y >= -(1 << 9) && y < (1 << 9))
+    {
+        Data->PushBack(UByte((x << 4) | T::Edge_L10));
+        Data->PushBack(UByte(((x >> 4) & 0x3F) | (y << 6)));
+        Data->PushBack(UByte(y >> 2));
+        return 3;
+    }
+    if (x >= -(1 << 13) && x < (1 << 13) && y >= -(1 << 13) && y < (1 << 13))
+    {
+        Data->PushBack(UByte((x << 4) | T::Edge_L14));
+        Data->PushBack(UByte(x >> 4));
+        Data->PushBack(UByte(((x >> 12) & 0x03) | (y << 2)));
+        Data->PushBack(UByte(y >> 6));
+        return 4;
+    }
+    Data->PushBack(UByte((x << 4) | T::Edge_L30));
+    Data->PushBack(UByte(x >> 4));
+    Data->PushBack(UByte(x >> 12));
+    Data->PushBack(UByte(x >> 20));
+    Data->PushBack(UByte(((x >> 28) & 0x03) | (y << 2)));
+    Data->PushBack(UByte(y >> 6));
+    Data->PushBack(UByte(y >> 14));
+    Data->PushBack(UByte(y >> 22));
+    return 8;
+}
+
+template<class ContainerType>
+unsigned PathDataEncoder<ContainerType>::WriteQuad(int cx, int cy, int ax, int ay)
+{
+    typedef PathDataPackerTypes T;
+    // the record width comes from the widest of the four deltas
+    int lo = cx, hi = cx;
+    if (cy < lo) lo = cy;
+    if (cy > hi) hi = cy;
+    if (ax < lo) lo = ax;
+    if (ax > hi) hi = ax;
+    if (ay < lo) lo = ay;
+    if (ay > hi) hi = ay;
+
+    if (lo >= -(1 << 4) && hi <= (1 << 4) - 1)
+    {
+        Data->PushBack(UByte((cx << 4) | T::Edge_C5));
+        Data->PushBack(UByte(((cx >> 4) & 0x01) | ((cy << 1) & 0x3F) | (ax << 6)));
+        Data->PushBack(UByte(((ax >> 2) & 0x07) | (ay << 3)));
+        return 3;
+    }
+    if (lo >= -(1 << 6) && hi <= (1 << 6) - 1)
+    {
+        Data->PushBack(UByte((cx << 4) | T::Edge_C7));
+        Data->PushBack(UByte(((cx >> 4) & 0x07) | (cy << 3)));
+        Data->PushBack(UByte(((cy >> 5) & 0x03) | (ax << 2)));
+        Data->PushBack(UByte(((ax >> 6) & 0x01) | (ay << 1)));
+        return 4;
+    }
+    if (lo >= -(1 << 8) && hi <= (1 << 8) - 1)
+    {
+        Data->PushBack(UByte((cx << 4) | T::Edge_C9));
+        Data->PushBack(UByte(((cx >> 4) & 0x1F) | (cy << 5)));
+        Data->PushBack(UByte(((cy >> 3) & 0x3F) | (ax << 6)));
+        Data->PushBack(UByte(((ax >> 2) & 0x7F) | (ay << 7)));
+        Data->PushBack(UByte(ay >> 1));
+        return 5;
+    }
+    if (lo >= -(1 << 10) && hi <= (1 << 10) - 1)
+    {
+        Data->PushBack(UByte((cx << 4) | T::Edge_C11));
+        Data->PushBack(UByte(((cx >> 4) & 0x7F) | (cy << 7)));
+        Data->PushBack(UByte(cy >> 1));
+        Data->PushBack(UByte(((cy >> 9) & 0x03) | (ax << 2)));
+        Data->PushBack(UByte(((ax >> 6) & 0x1F) | (ay << 5)));
+        Data->PushBack(UByte(ay >> 3));
+        return 6;
+    }
+    if (lo >= -(1 << 12) && hi <= (1 << 12) - 1)
+    {
+        Data->PushBack(UByte((cx << 4) | T::Edge_C13));
+        Data->PushBack(UByte(cx >> 4));
+        Data->PushBack(UByte(((cx >> 12) & 0x01) | (cy << 1)));
+        Data->PushBack(UByte(((cy >> 7) & 0x3F) | (ax << 6)));
+        Data->PushBack(UByte(ax >> 2));
+        Data->PushBack(UByte(((ax >> 10) & 0x07) | (ay << 3)));
+        Data->PushBack(UByte(ay >> 5));
+        return 7;
+    }
+    if (lo >= -(1 << 14) && hi <= (1 << 14) - 1)
+    {
+        Data->PushBack(UByte((cx << 4) | T::Edge_C15));
+        Data->PushBack(UByte(cx >> 4));
+        Data->PushBack(UByte(((cx >> 12) & 0x07) | (cy << 3)));
+        Data->PushBack(UByte(cy >> 5));
+        Data->PushBack(UByte(((cy >> 13) & 0x03) | (ax << 2)));
+        Data->PushBack(UByte(ax >> 6));
+        Data->PushBack(UByte(((ax >> 14) & 0x01) | (ay << 1)));
+        Data->PushBack(UByte(ay >> 7));
+        return 8;
+    }
+    Data->PushBack(UByte((cx << 4) | T::Edge_C31));
+    Data->PushBack(UByte(cx >> 4));
+    Data->PushBack(UByte(cx >> 12));
+    Data->PushBack(UByte(cx >> 20));
+    Data->PushBack(UByte(((cx >> 28) & 0x07) | (cy << 3)));
+    Data->PushBack(UByte(cy >> 5));
+    Data->PushBack(UByte(cy >> 13));
+    Data->PushBack(UByte(cy >> 21));
+    Data->PushBack(UByte(((cy >> 29) & 0x03) | (ax << 2)));
+    Data->PushBack(UByte(ax >> 6));
+    Data->PushBack(UByte(ax >> 14));
+    Data->PushBack(UByte(ax >> 22));
+    Data->PushBack(UByte(((ax >> 30) & 0x01) | (ay << 1)));
+    Data->PushBack(UByte(ay >> 7));
+    Data->PushBack(UByte(ay >> 15));
+    Data->PushBack(UByte(ay >> 23));
+    return 16;
 }
 
 template<class ContainerType>
@@ -709,6 +902,19 @@ public:
     }
     void EndPath()  { Encoder.WriteEndPath(); }
     void EndShape() { Encoder.WriteUInt15(Shape_EndShape); }
+    // (appended for the path headers) the path type, its styles and the start point
+    void StartPath(ShapePosInfo* pos, ShapePathType type, unsigned fill0, unsigned fill1, unsigned stroke, float x,
+                   float y)
+    {
+        Encoder.WriteUInt15(type);
+        Encoder.WriteUInt30(fill0);
+        Encoder.WriteUInt30(fill1);
+        Encoder.WriteUInt30(stroke);
+        pos->StartX = pos->LastX = int(x * Multiplier);
+        Encoder.WriteSInt30(pos->StartX);
+        pos->StartY = pos->LastY = int(y * Multiplier);
+        Encoder.WriteSInt30(pos->StartY);
+    }
 
 private:
     PathDataEncoder<ContainerType> Encoder;      // +0
@@ -810,7 +1016,7 @@ public:
     void UpdateFillStyle(unsigned idx, const FillStyleType& fill)       { FillStyles[idx - 1] = fill; }
     void UpdateStrokeStyle(unsigned idx, const StrokeStyleType& stroke) { StrokeStyles[idx - 1] = stroke; }
 
-    // a path header: type, styles and the start point (out of line in sfr_render_02, 0x1426005f0)
+    // a path header: type, styles and the start point (0x1426005f0, sfr_gfx_06e)
     void StartPath(ShapePosInfo* pos, ShapePathType type, unsigned fill0, unsigned fill1, unsigned stroke,
                    float x, float y);
     void LineTo(ShapePosInfo* pos, float x, float y)
@@ -855,6 +1061,14 @@ protected:
     ArrayLH<FillStyleType>                FillStyles;     // +0x30
     ArrayLH<StrokeStyleType>              StrokeStyles;   // +0x48
 };
+
+template<class ContainerType>
+void ShapeDataPacked<ContainerType>::StartPath(ShapePosInfo* pos, ShapePathType type, unsigned fill0, unsigned fill1,
+                                               unsigned stroke, float x, float y)
+{
+    ShapeDataPackedEncoder<ContainerType> encoder(pContainer, Multiplier);
+    encoder.StartPath(pos, type, fill0, fill1, stroke, x, y);
+}
 
 
 }} // namespace Scaleform::Render
