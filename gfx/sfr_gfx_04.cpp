@@ -428,6 +428,12 @@ bool MovieDataDef::LoadTaskData::FinishLoadingFrame(LoadProcess* plp, bool finis
     return frameOk;
 }
 
+// @0x1425d1460
+SoundStreamDef* MovieDataDef::LoadTaskData::GetSoundStream() const
+{
+    return pSoundStream;
+}
+
 // The AMP profiler server (exe 0x14261e310 returns the instance); only GetNextSwdHandle (slot 51) is called here.
 class AmpServer
 {
