@@ -8,9 +8,13 @@
 #define MS2_SF_RENDER_MATRIX4X4_H
 
 #include <string.h>
+#include <math.h>
+#include <float.h>
 #include "ms2/scaleform/include/render/render_types2d.h"
 
 namespace Scaleform { namespace Render {
+
+template<class T> class Matrix2x4;
 
 template<class T>
 class Point3
@@ -91,6 +95,79 @@ public:
     // (appended for the shape cache nodes, sfr_render_03f)
     enum NoInitType { NoInit };
     Matrix3x4(NoInitType) {}
+
+    // (appended for the display objects, sfr_gfx_06) this = a * m (m applied first; 0x142604460)
+    void MultiplyMatrix(const Matrix3x4& a, const Matrix2x4<T>& m);
+    Matrix3x4& Prepend(const Matrix2x4<T>& m)
+    {
+        MultiplyMatrix(Matrix3x4(*this), m);
+        return *this;
+    }
+    Matrix3x4& Prepend(const Matrix3x4& m)
+    {
+        MultiplyMatrix(Matrix3x4(*this), m);
+        return *this;
+    }
+    // the 2D matrix with the z row of the identity
+    Matrix3x4(const Matrix2x4<T>& m)
+    {
+        M[0][0] = m.M[0][0]; M[0][1] = m.M[0][1]; M[0][2] = m.M[0][2]; M[0][3] = m.M[0][3];
+        M[1][0] = m.M[1][0]; M[1][1] = m.M[1][1]; M[1][2] = m.M[1][2]; M[1][3] = m.M[1][3];
+        M[2][0] = 0;         M[2][1] = 0;         M[2][2] = 1;         M[2][3] = 0;
+    }
+    static Matrix3x4 Translation(T x, T y, T z)
+    {
+        Matrix3x4 m(NoInit);
+        m.M[0][0] = 1; m.M[0][1] = 0; m.M[0][2] = 0; m.M[0][3] = x;
+        m.M[1][0] = 0; m.M[1][1] = 1; m.M[1][2] = 0; m.M[1][3] = y;
+        m.M[2][0] = 0; m.M[2][1] = 0; m.M[2][2] = 1; m.M[2][3] = z;
+        return m;
+    }
+    // rotations about one axis (radians)
+    static Matrix3x4 RotationX(T angle)
+    {
+        T c = cosf(angle), s = sinf(angle);
+        Matrix3x4 m(NoInit);
+        m.M[0][0] = 1; m.M[0][1] = 0; m.M[0][2] = 0;  m.M[0][3] = 0;
+        m.M[1][0] = 0; m.M[1][1] = c; m.M[1][2] = -s; m.M[1][3] = 0;
+        m.M[2][0] = 0; m.M[2][1] = s; m.M[2][2] = c;  m.M[2][3] = 0;
+        return m;
+    }
+    static Matrix3x4 RotationY(T angle)
+    {
+        T c = cosf(angle), s = sinf(angle);
+        Matrix3x4 m(NoInit);
+        m.M[0][0] = c;  m.M[0][1] = 0; m.M[0][2] = s; m.M[0][3] = 0;
+        m.M[1][0] = 0;  m.M[1][1] = 1; m.M[1][2] = 0; m.M[1][3] = 0;
+        m.M[2][0] = -s; m.M[2][1] = 0; m.M[2][2] = c; m.M[2][3] = 0;
+        return m;
+    }
+    static Matrix3x4 RotationZ(T angle)
+    {
+        T c = cosf(angle), s = sinf(angle);
+        Matrix3x4 m(NoInit);
+        m.M[0][0] = c; m.M[0][1] = -s; m.M[0][2] = 0; m.M[0][3] = 0;
+        m.M[1][0] = s; m.M[1][1] = c;  m.M[1][2] = 0; m.M[1][3] = 0;
+        m.M[2][0] = 0; m.M[2][1] = 0;  m.M[2][2] = 1; m.M[2][3] = 0;
+        return m;
+    }
+    // every element within the float range
+    bool IsValid() const
+    {
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 4; j++)
+                if (!(M[i][j] >= -FLT_MAX && M[i][j] <= FLT_MAX))
+                    return false;
+        return true;
+    }
+    static Matrix3x4 Scaling(T sx, T sy, T sz)
+    {
+        Matrix3x4 m(NoInit);
+        m.M[0][0] = sx; m.M[0][1] = 0;  m.M[0][2] = 0;  m.M[0][3] = 0;
+        m.M[1][0] = 0;  m.M[1][1] = sy; m.M[1][2] = 0;  m.M[1][3] = 0;
+        m.M[2][0] = 0;  m.M[2][1] = 0;  m.M[2][2] = sz; m.M[2][3] = 0;
+        return m;
+    }
 };
 typedef Matrix3x4<float> Matrix3F;
 
@@ -176,6 +253,16 @@ public:
     void MultiplyMatrix(const Matrix4x4& m1, const Matrix3x4<T>& m2);
     // the corners of r projected and scaled to a w x h viewport: x1y1, x2y1, x2y2, x1y2 (0x142679010)
     void TransformHomogeneousAndScaleCorners(const Rect<T>& r, T w, T h, T* dest) const;
+
+    // (appended for the display objects, sfr_gfx_06) v projected: divided by its w
+    Point3<T> TransformHomogeneous(const Point3<T>& v) const
+    {
+        T x = M[0][0] * v.x + M[0][1] * v.y + M[0][2] * v.z + M[0][3];
+        T y = M[1][0] * v.x + M[1][1] * v.y + M[1][2] * v.z + M[1][3];
+        T z = M[2][0] * v.x + M[2][1] * v.y + M[2][2] * v.z + M[2][3];
+        T w = M[3][0] * v.x + M[3][1] * v.y + M[3][2] * v.z + M[3][3];
+        return Point3<T>(x / w, y / w, z / w);
+    }
 };
 typedef Matrix4x4<float> Matrix4F;
 

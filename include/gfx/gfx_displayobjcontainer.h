@@ -55,6 +55,18 @@ public:
     // Union of the entries' bounds in the space of t (0x1425f9580), the rect-only variant (0x1425f9ba0).
     RectF GetBounds(const Render::Matrix2F& t) const;
     RectF GetRectBounds(const Render::Matrix2F& t) const;
+
+    // (appended for the display objects, sfr_gfx_06)
+    // Index of the entry holding pch, -1 when it is not on this list (0x1425f9200).
+    SPInt FindDisplayIndex(const DisplayObjectBase* pch) const;
+
+private:
+    friend class DisplayObjectBase;
+    friend class DisplayObject;
+    // Puts the render node of entry index into / takes it out of the owner's render container (0x1425f9e70,
+    // 0x1425fa860).
+    void InsertIntoRenderTree(DisplayObjectBase* powner, UPInt index);
+    void RemoveFromRenderTree(DisplayObjectBase* powner, UPInt index);
 };
 
 class DisplayObjContainer : public InteractiveObject

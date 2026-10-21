@@ -31,6 +31,9 @@ public:
     bool operator!=(const Cxform& x) const { return !(x == *this); }
 
     bool RequiresBlend() const { return M[0][3] < 1.0f; }
+
+    // (appended for the display objects, sfr_gfx_06)
+    static const Cxform Identity;   // 0x143a2f3a0
 };
 
 }} // namespace Scaleform::Render

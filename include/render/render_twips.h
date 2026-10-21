@@ -8,6 +8,10 @@ namespace Scaleform { namespace Render {
 inline float TwipsToPixels(float x) { return x * 0.05f; }
 inline float PixelsToTwips(float x) { return x * 20.0f; }
 
+// (appended for the display objects, sfr_gfx_06) the double versions the AS property getters use
+inline double TwipsToPixels(double x) { return x * 0.05; }
+inline double PixelsToTwips(double x) { return x * 20.0; }
+
 }} // namespace Scaleform::Render
 
 #endif

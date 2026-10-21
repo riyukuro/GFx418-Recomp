@@ -5,17 +5,25 @@
 #define MS2_SF_GFX_MOVIEIMPL_H
 
 #include "../kernel/sf_refcount.h"
+#include "../render/render_types2d.h"
+#include "../render/render_twips.h"
 
 namespace Scaleform { namespace GFx {
 
 class ASMovieRootBase;
 class DisplayObjectBase;
 class InteractiveObject;
+class DrawingContext;
+class DisplayObjContainer;
 class MovieDefImpl;
 class FontManager;
+class ASString;
 }
 class MemoryHeap;
+class Log;
+namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; }
 namespace GFx {
+class StateBag;
 
 class MovieImpl
 {
@@ -26,7 +34,28 @@ public:
     MemoryHeap*      pHeap;                    // +0x40 the movie's heap
     void*            Unrecovered_48;           // +0x48
     InteractiveObject* pMainMovie;             // +0x50 _level0
-    void*            Unrecovered_58[0x5b1];    // +0x58
+    struct LevelInfo { int Level; InteractiveObject* pSprite; };   // (sfr_gfx_06)
+    LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
+    void*            Unrecovered_60[5];        // +0x60
+    Render::TreeNode* pRenderRoot;             // +0x88 Ptr<TreeRoot> (sfr_gfx_06)
+    void*            Unrecovered_90;           // +0x90
+    Render::TreeNode* pTopMostRoot;            // +0x98 Ptr<TreeContainer> (sfr_gfx_06)
+    int              ViewportUnrecovered_a0[4]; // +0xa0 mViewport: buffer size, left/top
+    int              ViewportWidth;            // +0xb0 mViewport.Width, pixels (sfr_gfx_06)
+    int              ViewportHeight;           // +0xb4 mViewport.Height
+    UByte            ViewportUnrecovered_b8[0x20]; // +0xb8 mViewport: scissor, flags, scale, aspect
+    float            ViewScaleX, ViewScaleY;   // +0xd8 stage twips per window pixel (sfr_gfx_06)
+    float            ViewOffsetX, ViewOffsetY; // +0xe0 viewport offset in pixels (sfr_gfx_06)
+    void*            Unrecovered_e8;           // +0xe8
+    Render::RectF    VisibleFrameRect;         // +0xf0 the visible stage, twips
+    void*            Unrecovered_100[6];       // +0x100
+    float            ScreenToWorldSx;          // +0x130 ScreenToWorld: the normalized mouse position (y up)
+    float            ScreenToWorldSy;          // +0x134
+    void*            Unrecovered_138[0x1e];    // +0x138
+    Ptr<Log>         pCachedLog;               // +0x228 the log state's log, cached (sfr_gfx_06)
+    void*            Unrecovered_230[0x20d];   // +0x230
+    Render::PointF   MouseLastPosition;        // +0x1298 MouseState[0] last position, twips (sfr_gfx_06)
+    void*            Unrecovered_12a0[0x368];  // +0x12a0
     // A character the timeline keeps advancing even when stopped (MS2 build; Sprite::CheckAdvanceStatus).
     DisplayObjectBase* pKeepAdvancingChar;     // +0x2de0
     void*            Unrecovered_2de8[0xf];    // +0x2de8
@@ -49,6 +78,7 @@ public:
     enum FlagsType
     {
         Flag_NoInvisibleAdvance = 0x800,       // _global.noInvisibleAdvance: hidden clips stop advancing
+        Flag_ContinueAnimation  = 0x2000,      // _global.gfxExtensions continueAnimation (sfr_gfx_06)
         Shift_AlwaysEnableKeyboardPress = 26,  // two bits: 0 undefined, 1 true, 2 false, 3 read as -1
         Shift_DisableFocusRolloverEvent = 28   // two bits, the same encoding
     };
@@ -78,6 +108,52 @@ public:
 
     // Removes the setInterval/setTimeout timer with the given id (exe 0x14256e0d0).
     void ClearIntervalTimer(int id);
+
+    // (appended for the display objects, sfr_gfx_06)
+    UByte            Unrecovered_3494[0x5c];   // +0x3494
+    void*            RenderContext[1];         // +0x34f0 Render::Context (gfx_rendertree.h: the heap first), rest unrecovered
+
+    ASString CreateNewInstanceName();          // exe 0x14256e710
+
+    // The movie's StateBag base (+0x10).
+    StateBag* GetStateBag() const { return (StateBag*)&MovieBase_Unrecovered[2]; }
+    MemoryHeap* GetMovieHeap() const { return pHeap; }
+
+    // The object no longer stays on top of the levels (0x1425742c0).
+    void RemoveTopmostLevelCharacter(DisplayObjectBase* pch);
+
+    // An object drawn under another parent than its display list one (Ptr members: complete types needed where
+    // a pair is destroyed).
+    struct IndirectTransPair
+    {
+        Ptr<Render::TreeNode>      TransformParent;
+        Ptr<DisplayObjectBase>     Obj;
+        Ptr<DisplayObjContainer>   OriginalParent;
+        mutable int                OrigParentDepth;   // -1 when unknown; no inline ctor, so the Ptr dtors stay uninstantiated
+    };
+    // Records obj as drawn under another node than the one of its display list parent (0x14256bc90).
+    void AddIndirectTransformPair(DisplayObjContainer* origParent, Render::TreeNode* origParentNode,
+                                  DisplayObjectBase* obj);
+    // Takes the pair of obj off the movie's list and returns it (0x142574110).
+    IndirectTransPair RemoveIndirectTransformPair(DisplayObjectBase* obj);
+
+    // The mouse position relative to the visible frame, -1..1 with y up, for the 3D screen-to-world mapping.
+    void SetNormalizedScreenCoords(const Render::PointF& mousePos)
+    {
+        float nsx = 2.f * ((mousePos.x - Render::PixelsToTwips(ViewOffsetX)) / VisibleFrameRect.Width()) - 1.0f;
+        float nsy = 2.f * ((mousePos.y - Render::PixelsToTwips(ViewOffsetY)) / VisibleFrameRect.Height()) - 1.0f;
+        ScreenToWorldSx = nsx;
+        ScreenToWorldSy = -nsy;
+    }
+
+    // A new empty drawing (the scrollRect mask shape), referenced once (0x14256e3f0).
+    DrawingContext* CreateDrawingContext();
+
+    // The view and the perspective of a 3D stage: the eye on the axis through projCenter (twips), the visible frame
+    // filling the field of view (degrees); focalLength 0 derives it from the field of view (0x1425718d0).
+    static void MakeViewAndPersp3D(Render::Matrix3x4<float>* matView, Render::Matrix4x4<float>* matPersp,
+                                   const Render::RectF& vfrTwips, const Render::PointF& projCenter,
+                                   float fieldOfView, float focalLength = 0, bool invertY = false);
 };
 
 // The root of one loaded movie's sprite tree; leading members only (the font manager, bytes loaded and so on).

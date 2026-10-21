@@ -12,6 +12,7 @@
 namespace Scaleform { namespace Render {
 
 enum NoInitType { NoInit };
+template<class T> class Matrix3x4;
 
 // The element storage sits in a base so the float matrix can be 16-byte aligned for SSE (the exe allocates
 // Matrix2F with 16-byte alignment and treats a local one as a /GS buffer).
@@ -202,6 +203,30 @@ public:
     // lengths of the images of the unit axes
     T GetXScale() const { return sqrtf(Sx() * Sx() + Shy() * Shy()); }
     T GetYScale() const { return sqrtf(Shx() * Shx() + Sy() * Sy()); }
+
+    // (appended for the display objects, sfr_gfx_06)
+    static Matrix2x4 Rotation(T radians)
+    {
+        T c = cosf(radians);
+        T s = sinf(radians);
+        return Matrix2x4(c, -s, 0, s, c, 0);
+    }
+    // this = Rotation(radians) * this; out of line in GFx_DisplayObject (0x1425f0ec0)
+    Matrix2x4& AppendRotation(T radians) { return Append(Rotation(radians)); }
+    // all six coefficients finite (0x142515710)
+    bool IsValid() const;
+    // the axis scales and the rotation of the x axis, in double precision (the AS properties)
+    double GetXScaleDouble() const   { return sqrt(double(Sx()) * double(Sx()) + double(Shy()) * double(Shy())); }
+    double GetYScaleDouble() const   { return sqrt(double(Shx()) * double(Shx()) + double(Sy()) * double(Sy())); }
+    double GetRotationDouble() const { return atan2(double(Shy()), double(Sx())); }
+    // p mapped through the inverse (out of line, 0x1424471c0)
+    void TransformByInverse(Point<T>* result, const Point<T>& p) const;
+    // the x and y rows of a 3D matrix
+    explicit Matrix2x4(const Matrix3x4<T>& m)
+    {
+        M[0][0] = m.M[0][0]; M[0][1] = m.M[0][1]; M[0][2] = m.M[0][2]; M[0][3] = m.M[0][3];
+        M[1][0] = m.M[1][0]; M[1][1] = m.M[1][1]; M[1][2] = m.M[1][2]; M[1][3] = m.M[1][3];
+    }
 };
 
 typedef Matrix2x4<float> Matrix2F;

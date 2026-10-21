@@ -8,6 +8,7 @@
 #define MS2_SF_GFX_SPRITE_H
 
 #include "gfx_displayobjcontainer.h"
+#include "gfx_drawingcontext.h"
 #include "../sound/sound_renderer.h"
 
 namespace Scaleform { namespace GFx {
@@ -21,15 +22,7 @@ class StaticTextSnapshotData;
 // Allocation stat of the movie view objects other than clips.
 enum { StatMV_Other_Mem = 0x147 };
 
-// Drawing API state of a clip (moveTo/lineTo/beginFill). Only the count is recovered so far.
-class DrawingContext : public RefCountBaseNTS<DrawingContext, 322>
-{
-public:
-    // Bounds of everything drawn so far, in the clip's space (0x1425fec60).
-    void ComputeBound(RectF* pRect) const;
-    // Hit test of the drawn shapes, testShape asking for the exact outline instead of the bounds (0x1425ff270).
-    bool DefPointTestLocal(const PointF& pt, bool testShape, const DisplayObjectBase* pinst) const;
-};
+// DrawingContext, the drawing API state of a clip, is declared in gfx_drawingcontext.h.
 
 // Mouse state of a clip that acts as a button.
 enum SpriteMouseState

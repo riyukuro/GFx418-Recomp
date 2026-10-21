@@ -15,6 +15,7 @@
 #include "../render/render_constants.h"
 #include "../render/render_matrix2x4.h"
 #include "../render/render_matrix4x4.h"
+#include "../render/render_cxform.h"
 
 namespace Scaleform {
 
@@ -25,6 +26,7 @@ class TreeContainer;
 class FilterSet;
 class DrawingContext;
 namespace ContextImpl { class Context; }
+class Cxform;
 }
 
 namespace GFx {
@@ -252,6 +254,76 @@ public:
 protected:
     // Sets Mask_Visible and updates the render node (0x1425f60e0).
     void SetVisibleFlag(bool v = true);
+
+    // (appended for the GFx_DisplayObject unit, sfr_gfx_06)
+public:
+    typedef Render::Cxform Cxform;
+
+    DisplayObjectBase(ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
+    virtual ~DisplayObjectBase();
+
+    // LogBase: overridden in the LogBase part of the vftable only.
+    virtual bool IsVerboseActionErrors() const;
+
+    void BindAvmObj(AvmDisplayObjBase* p);
+
+    Render::ContextImpl::Context& GetRenderContext() const;
+    Render::TreeNode*             GetRenderNode() const;
+
+    const Cxform& GetCxform() const;
+    void          SetCxform(const Cxform& cx);
+    void          ConcatenateCxform(const Cxform& cx);
+    void          ConcatenateMatrix(const Matrix& m);
+
+    void GetWorldMatrix(Matrix* pmat) const;
+    void GetWorldMatrix3D(Matrix3F* pmat) const;
+    void GetLevelMatrix(Matrix* pmat) const;
+    void GetWorldCxform(Cxform* pcxform) const;
+
+    void Clear3D(bool inherit);
+    bool Is3D(bool inherit) const;
+    bool Is3D() const;
+
+    PointF  Local3DToGlobal(const Render::Point3F& pt) const;
+    PointF  GlobalToLocal(const PointF& pt) const;
+    Render::Point3F GlobalToLocal3D(const PointF& pt) const;
+    void    TransformPointToLocal(PointF* p, const PointF& pt, bool ptInParentSpace = true,
+                                  const Matrix2F* mat = 0) const;
+
+    Render::BlendMode GetActiveBlendMode() const;
+    unsigned          GetVersion() const;
+
+    bool CheckLastHitResult(float x, float y) const;
+    void SetLastHitResult(float x, float y, bool result) const;
+    void InvalidateHitResult() const;
+
+    GeomDataType& GetGeomData(GeomDataType& geomData) const;
+    void          SetGeomData(const GeomDataType& gd);
+
+    void   SetAlpha(Double alpha);
+    Double GetAlpha() const;
+
+    MovieImpl* FindMovieImpl() const;
+    bool       IsAncestor(DisplayObjectBase* ch) const;
+    RectF      GetScale9Grid() const;
+
+    InteractiveObject* GetTopMostMouseEntityDef(CharacterDef* pdef, const PointF& pt, bool testAll = false,
+                                                const InteractiveObject* ignoreMC = 0);
+
+    Ptr<Render::TreeNode> SetIndirectTransform(Render::TreeNode* newParent);   // 0x1425f4800
+    void                  RemoveIndirectTransform();                           // 0x1425f3b80
+
+    bool IsTopmostLevelFlagSet() const    { return (Flags & Mask_TopmostLevel) != 0; }
+    bool HasIndirectTransform() const     { return (Flags & Mask_IndirectTransform) != 0; }
+    bool IsScriptableObject() const       { return (Flags & Mask_ScriptableObject) != 0; }
+    void SetUnloaded(bool v = true)       { v ? Flags |= Mask_Unloaded : Flags &= ~Mask_Unloaded; }
+    void SetUnloading(bool v = true)      { v ? Flags |= Mask_Unloading : Flags &= ~Mask_Unloading; }
+    void SetLoaded(bool v = true)         { v ? Flags |= Mask_Loaded : Flags &= ~Mask_Loaded; }
+    int  GetAVMVersion() const            { return pASRoot->AVMVersion; }
+
+protected:
+    Render::TreeContainer* ConvertToTreeContainer();
+    void                   EnsureGeomDataCreated();
 };
 
 // Named reference to a display object that survives the object (it is resolved again by path when the object
@@ -275,6 +347,14 @@ public:
     }
 
     DisplayObject* ResolveCharacter(MovieImpl* proot) const;   // 0x1425f3dc0
+
+    // (appended for the GFx_DisplayObject unit, sfr_gfx_06)
+    CharacterHandle(const ASString& name, DisplayObject* pparent, DisplayObject* pcharacter = 0);
+
+    DisplayObject* ForceResolveCharacter(MovieImpl* proot) const;
+    void           ReleaseCharacter() { pCharacter = 0; }
+    void           ChangeName(const ASString& name, DisplayObject* pparent);
+    void           ResetName(ASStringManager* psm);
 };
 
 // A display object placed on a timeline. 0x88 bytes.
@@ -329,6 +409,33 @@ public:
     DisplayObject*               pMaskCharacter; // +0x78 the mask, or the masked object when IsUsedAsMask
     ScrollRectInfo*              pScrollRect;    // +0x80
     UInt16                       Flags;          // +0x88
+
+    // (appended for the GFx_DisplayObject unit, sfr_gfx_06)
+    DisplayObject(ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
+
+    const char* GetAbsolutePath(String* ppath) const;
+    bool        HasEventHandler(const EventId& id) const;
+
+    ASString GetName() const;
+    ASString GetOriginalName() const;
+    void     SetOriginalName(const ASString& name);
+
+    void           SetMask(DisplayObject* pmaskSprite);
+    DisplayObject* GetMask() const;
+    void           SetMaskOwner(DisplayObject* pmaskOwner);
+    DisplayObject* GetMaskOwner() const;
+
+    void SetScrollRect(const Render::RectD* r);
+
+    bool TransformPointToLocalAndCheckBounds(PointF* p, const PointF& pt, bool ptInParentSpace = true,
+                                             const Matrix2F* mat = 0) const;
+
+    bool IsUsedAsMaskFlagSet() const        { return (Flags & Mask_UsedAsMask) != 0; }
+    bool IsInstanceBasedNameFlagSet() const { return (Flags & Mask_InstanceBasedName) != 0; }
+    bool IsAcceptAnimMovesFlagSet() const   { return (Flags & Mask_AcceptAnimMoves) != 0; }
+
+protected:
+    void ResetClipDepth();
 };
 
 // (appended for Sprite::GetTopMostMouseEntity, sfr_gfx_05b) the mouse hit search state.
@@ -341,6 +448,58 @@ struct DisplayObjectBase::TopMostDescr
     unsigned                 ControllerIdx; // +0x1c in
 
     TopMostDescr() : pIgnoreMC(0), TestAll(false), ControllerIdx(0) {}
+};
+
+// (appended for the GFx_DisplayObject unit, sfr_gfx_06) the lazily allocated transform state of a display object.
+// The 3D matrices are 16-aligned in these structs.
+
+// Position, scale and rotation as the AS properties hold them (twips, percent, degrees). 0x60 bytes.
+struct DisplayObjectBase::GeomDataType : public NewOverrideBase<322>
+{
+    int      X, Y;               // +0x00
+    Double   XScale, YScale;     // +0x08
+    Double   Rotation;           // +0x18
+    Matrix   OrigMatrix;         // +0x20
+    Double   Z;                  // +0x40
+    Double   ZScale;             // +0x48
+    Double   XRotation;          // +0x50
+    Double   YRotation;          // +0x58
+
+    GeomDataType()
+    {
+        X = Y = 0;
+        Rotation = 0;
+        XScale = YScale = 100;
+        Z = XRotation = YRotation = 0;
+        ZScale = 100;
+    }
+};
+
+// The perspective of a 3D object that does not inherit its parent's. 0x50 bytes.
+struct DisplayObjectBase::PerspectiveDataType : public NewOverrideBase<322>
+{
+    Double   FieldOfView;                            // +0x00 degrees
+    Double   FocalLength;                            // +0x08 twips
+    PointF   ProjectionCenter;                       // +0x10 stage twips
+    __declspec(align(16)) Matrix3F ViewMatrix3D;     // +0x20 without the viewport adjustment
+
+    PerspectiveDataType() : FieldOfView(0), FocalLength(0), ProjectionCenter(0, 0) {}
+};
+
+// The transform the tree node would have without the indirect transform. 0x40 bytes.
+struct DisplayObjectBase::IndirectTransformDataType : public NewOverrideBase<322>
+{
+    __declspec(align(16)) Matrix3F OrigTransformMatrix;  // +0x00
+    bool     IsOrig3D;                                   // +0x30
+};
+
+// scrollRect: the clip rectangle, its mask shape and the transform without the scroll. 0x70 bytes.
+struct DisplayObject::ScrollRectInfo : public NewOverrideBase<322>
+{
+    Render::RectD        Rectangle;                         // +0x00
+    Ptr<DrawingContext>  Mask;                              // +0x20
+    __declspec(align(16)) Matrix3F OrigTransformMatrix;     // +0x30
+    bool                 IsOrig3D;                          // +0x60
 };
 
 }} // namespace Scaleform::GFx

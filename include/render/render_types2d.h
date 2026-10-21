@@ -145,6 +145,8 @@ typedef Point<float>  PointF;
 typedef Size<float>   SizeF;
 typedef Rect<float>   RectF;
 typedef Rect<int>     RectI;
+// (appended for the display objects, sfr_gfx_06)
+typedef Rect<double>  RectD;
 
 }} // namespace Scaleform::Render
 
