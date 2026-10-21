@@ -186,14 +186,31 @@ public:
 private:
     // +0x20 LogBase<LoadProcess>
     unsigned                        ParseFlags;      // +0x28
-    void*                           pBindProcess;    // +0x30 Ptr<MovieBindProcess>
+    Ptr<MovieBindProcess>           pBindProcess;    // +0x30
     Ptr<MovieDataDef::LoadTaskData> pLoadData;       // +0x38
     MovieDataDef*                   pDataDef_Unsafe; // +0x40
     UByte                           Unknown48[8];    // +0x48
     Stream                          ProcessStream;   // +0x50 first member of the SWF process info
     UInt32                          FileStartPos;    // +0x2c0 process info: offset of the SWF data in the file
     UInt32                          FileEndPos;      // +0x2c4 process info: end of the SWF data
-    UByte                           Unknown2C8[0xf0]; // +0x2c8 rest of the process info, JPEG tables, data lists
+    UInt32                          NextActionBlock; // +0x2c8 process info
+    MovieHeaderData                 Header;          // +0x2d0 process info: the file header
+    UInt16                          SWFFileAttributes; // +0x350 process info: FileAttributes tag flags
+    UByte                           Unknown352[0xe];   // +0x352 (the process info is 16-byte aligned)
+    Ptr<RefCountImpl>               pJpegTables;     // +0x360 Ptr<Render::JPEG::TablesHeader>
+    unsigned                        LoadFlags;       // +0x368 Loader::LoadConstants
+    unsigned                        ImportIndex;     // +0x36c imports so far
+    void*                           pTempBindData;   // +0x370
+    // The import / resource / font data the frame being loaded adds to the binding (FrameBindData).
+    unsigned                        ImportDataCount;   // +0x378
+    unsigned                        ResourceDataCount; // +0x37c
+    unsigned                        FontDataCount;     // +0x380
+    ImportData*                     pImportDataLast;   // +0x388
+    ImportData*                     pImportData;       // +0x390
+    ResourceDataNode*               pResourceData;     // +0x398
+    ResourceDataNode*               pResourceDataLast; // +0x3a0
+    FontDataUseNode*                pFontData;         // +0x3a8
+    FontDataUseNode*                pFontDataLast;     // +0x3b0
     LoadStateType                   LoadState;       // +0x3b8
     TimelineIODef*                  pTimelineDef;    // +0x3c0
     // Tags of the frame being loaded, of the root timeline [0] and of the sprite being loaded [1].
@@ -201,6 +218,7 @@ private:
     Array<ExecuteTag*, Stat_Default_Mem, ArrayConstPolicy<32, 16, false> > InitActionTags; // +0x3f8
     unsigned                        ASInitActionTagsNum; // +0x410
     Stream*                         pAltStream;      // +0x418
+    Ptr<RefCountImpl>               pUnknown420;     // +0x420 (released before the frame tag arrays; 0x430 bytes)
 
 public:
     // (appended for the sprite definitions, sfr_gfx_05) the frame tags go to the sprite between DefineSprite and its
@@ -223,6 +241,24 @@ public:
         if (LoadState == LS_LoadingRoot)
             pLoadData->AddResource(rid, pres);
     }
+
+    // (appended for sfr_gfx_07e) the load task itself; exe 0x142636cc0 / 0x142637560, vftable 0x14318f5b8
+    LoadProcess(MovieDataDef* pdataDef, LoadStates* pstates, unsigned loadFlags);
+    virtual ~LoadProcess();
+    virtual void Execute();
+    virtual void OnAbandon(bool started);
+
+    // Reads and checks the file header and hands it to the movie data.
+    bool BeginSWFLoading(File* pfile);
+    // An ImportAssets tag, numbered in file order.
+    void AddImportData(ImportData* pimportData);
+    // A font / image of the file, created per binding.
+    ResourceHandle AddFontDataResource(ResourceId rid, Render::Font* pfontData);
+    void           AddImageResource(ResourceId rid, Render::ImageSource* pimage);
+    // RGB before DefineShape3, RGBA from then on.
+    void ReadRgbaTag(Render::Color* pc, TagType tagType);
+    // The tags of a frame copied into the tag memory.
+    TimelineDef::Frame TagArrayToFrame(Array<ExecuteTag*, Stat_Default_Mem, ArrayConstPolicy<32, 16, false> >& tagArray);
 };
 
 }} // namespace Scaleform::GFx

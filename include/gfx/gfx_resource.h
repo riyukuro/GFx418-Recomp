@@ -608,6 +608,9 @@ public:
     inline Resource* GetResource(ResourceBinding* pbinding) const;
     // Same, also returning the binding the resource came from (an imported movie's for imports).
     inline Resource* GetResourceAndBinding(ResourceBinding* pbinding, ResourceBinding** presBinding) const;
+
+    // (appended for sfr_gfx_07e) the handle kind
+    HandleType GetHandleType() const { return HType; }
 };
 
 // A resource reference held by a definition, set from a handle (16 bytes).

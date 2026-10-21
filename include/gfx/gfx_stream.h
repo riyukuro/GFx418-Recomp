@@ -40,7 +40,10 @@ enum TagType
     Tag_EndFrame             = 1,  // ShowFrame
 
     Tag_DefineText           = 11,
-    Tag_DefineText2          = 33
+    Tag_DefineText2          = 33,
+
+    // (appended for sfr_gfx_07e) colours are RGBA from DefineShape3 on
+    Tag_DefineShape2         = 22
 };
 
 // Where OpenTag found a tag.

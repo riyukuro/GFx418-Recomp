@@ -528,6 +528,9 @@ public:
         }
     }
     virtual void OnAbandon(bool started);
+
+    // (appended for sfr_gfx_07e) the binding state the load process cancels
+    BindTaskData* GetBindData() const { return pBindData; }
 };
 
 }} // namespace Scaleform::GFx

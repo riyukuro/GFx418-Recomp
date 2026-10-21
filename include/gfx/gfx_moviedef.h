@@ -148,6 +148,9 @@ struct FontDataUseNode
     Ptr<Render::Font>          pFontData;  // +8
     unsigned                   BindIndex;  // +0x10
     FontDataUseNode* volatile  pNext;      // +0x18
+
+    // (appended for sfr_gfx_07e) the font and the binding index are set by LoadProcess::AddFontDataResource
+    FontDataUseNode() : BindIndex(0), pNext(0) {}
 };
 
 class SoundStreamDef;
