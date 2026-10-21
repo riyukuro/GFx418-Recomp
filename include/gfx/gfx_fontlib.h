@@ -12,6 +12,9 @@ class FontLibImpl;
 // Font resource of a bound movie (only its Resource base is needed so far).
 class FontResource : public Resource
 {
+public:
+    // A font bound in pbinding (exe 0x142654400).
+    FontResource(Render::Font* pfont, ResourceBinding* pbinding);
 };
 
 // Movies registered with AddFontsFrom are searched for fonts by name (vftable 0x143189198, 0x20 bytes).

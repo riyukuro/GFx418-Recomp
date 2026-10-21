@@ -13,12 +13,19 @@ namespace Scaleform { namespace GFx {
 
 class ButtonDef;
 class LoadProcess;
+class MemoryContext;
+struct MemoryParams;
+class MovieImpl;
 
 class ASSupport : public State
 {
-    virtual void Slot01() = 0; // CreateMovie
+public:
+    virtual MovieImpl* CreateMovie(MemoryContext* memContext) = 0;
+private:
     virtual void Slot02() = 0; // CreateASIMEManager
-    virtual void Slot03() = 0; // CreateMemoryContext
+public:
+    virtual MemoryContext* CreateMemoryContext(const char* heapName, const MemoryParams& memParams, bool debugHeap) = 0;
+private:
     virtual void Slot04() = 0; // CreateCharacterInstance
     virtual void Slot05() = 0; // DoActions
     virtual void Slot06() = 0; // GetAVMVersion

@@ -40,13 +40,15 @@ public:
         FF_Style_Mask      = FF_Italic | FF_Bold,
         FF_DeviceFont      = 0x0010,
         FF_CodePage_Mask   = 0x0300,
-        FF_CreateFont_Mask = FF_Style_Mask | FF_CodePage_Mask
+        FF_CreateFont_Mask = FF_Style_Mask | FF_CodePage_Mask,
+        FF_NotResolved     = 0x0040 // a placeholder the font manager resolves through the font library / provider
     };
 
     virtual ~Font() {}
     virtual const char* GetName() const = 0;
 
     unsigned GetFontFlags() const { return Flags; }
+    void     SetNotResolvedFlag()  { Flags |= FF_NotResolved; }
 
     // A request matches on style always, on the device bit and the code page only when it asks for them.
     static bool SF_STDCALL MatchFontFlags_Static(unsigned fontFlags, unsigned matchFlags)

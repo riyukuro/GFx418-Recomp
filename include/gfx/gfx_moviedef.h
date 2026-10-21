@@ -760,6 +760,11 @@ public:
         pOwnerDefImpl = powner;
     }
     MovieDefImpl* GetOwnerDefImpl() const { return pOwnerDefImpl; }
+
+    // Binds index to rdata, growing the table (exe 0x142636820).
+    void SetBindData(unsigned index, const ResourceBindData& rdata);
+    // No more bindings: readers stop taking the lock.
+    void Freeze() { Frozen = true; }
 };
 
 inline Resource* ResourceHandle::GetResource(ResourceBinding* pbinding) const
@@ -836,6 +841,13 @@ struct CharacterCreateInfo
     CharacterDef* pCharDef;
     MovieDefImpl* pBindDefImpl;
     Resource*     pResource;
+};
+
+// The heaps and collectors one movie instance is created in (made by the ActionScript support, owned by the movie).
+class MemoryContext : public RefCountBase<MemoryContext, Stat_Default_Mem>
+{
+public:
+    virtual ~MemoryContext() {}
 };
 
 // A MovieDataDef bound under one set of binding states (0x40 bytes, vftables 0x14318b588 and StateBag 0x14318b670).
