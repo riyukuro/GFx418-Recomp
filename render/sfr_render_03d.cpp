@@ -17,6 +17,7 @@
 #include "ms2/scaleform/include/render/render_gradients.h"
 #include "ms2/scaleform/include/render/render_color.h"
 #include "ms2/scaleform/include/render/render_boundbox.h"
+#include "ms2/scaleform/include/render/render_tessgen.h"
 #include "ms2/scaleform/kernel/sf_alg.h"
 
 namespace Scaleform { namespace Render {
@@ -436,6 +437,78 @@ private:
     MemoryHeap* pHeap;
 };
 
+// ***** Stroke bounds through a stroke generator (joins, caps and miters as they will be drawn)
+
+// out of line in the stroker part of this unit (0x142627650)
+template<class Transformer>
+RectF ComputeBoundsSingleStroke(const ShapeDataInterface& shape, ShapePosInfo* pos, unsigned strokeStyle,
+                                const Transformer& trans, StrokeGenerator* gen, const ToleranceParams& param);
+
+// The strokes of one shape layer, each stroke style once (it is generated over all its paths of the layer);
+// pos ends at the start of the next layer.
+template<class Transformer>
+void ExpandBoundsToLayerStrokes(const ShapeDataInterface& shape, ShapePosInfo* pos, const Transformer& trans,
+                                StrokeGenerator* gen, const ToleranceParams& param, RectF* bounds)
+{
+    BitSet        done(gen->Heap1.GetMemoryHeap());
+    ShapePosInfo  start = *pos;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    bool          first = true;
+    ShapePathType pathType;
+    while ((pathType = shape.ReadPathInfo(pos, coord, styles)) != Shape_EndShape)
+    {
+        if (pathType == Shape_NewLayer && !first)
+            break;
+        unsigned stroke = styles[2];
+        if (stroke && !done[stroke])
+        {
+            RectF b = ComputeBoundsSingleStroke(shape, &start, stroke, trans, gen, param);
+            if (b.IsNormal())
+            {
+                bounds->ExpandToPoint(b.x1, b.y1);
+                bounds->ExpandToPoint(b.x2, b.y2);
+            }
+            done.Set(stroke);
+        }
+        shape.SkipPathData(pos);
+        start = *pos;
+        first = false;
+    }
+    *pos = start;
+}
+
+template<class Transformer>
+void ExpandBoundsToStrokes(const ShapeDataInterface& shape, const Transformer& trans, StrokeGenerator* gen,
+                           const ToleranceParams& param, RectF* bounds)
+{
+    ShapePosInfo pos(shape.GetStartingPos());
+    float        coord[Edge_MaxCoord];
+    unsigned     styles[3];
+    for (;;)
+    {
+        ShapePosInfo layerPos = pos;
+        if (shape.ReadPathInfo(&pos, coord, styles) == Shape_EndShape)
+            break;
+        pos = layerPos;
+        ExpandBoundsToLayerStrokes(shape, &pos, trans, gen, param, bounds);
+    }
+}
+
+template<class Transformer>
+RectF ComputeBoundsFillAndStrokes(const ShapeDataInterface& shape, const Transformer& trans, StrokeGenerator* gen,
+                                  const ToleranceParams& param, BoundEdges edges = Bound_OuterEdges)
+{
+    RectF bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    ExpandBoundsToFill(shape, trans, &bounds, edges);
+    if (shape.GetStrokeStyleCount())
+    {
+        shape.Rewind();
+        ExpandBoundsToStrokes(shape, trans, gen, param, &bounds);
+    }
+    return bounds;
+}
+
 // Collects the shape's paths, drops the empty ones and builds the draw layers of each shape layer from them; a
 // morph shape uses its re-encoded first end.
 // @0x14262d430
@@ -616,6 +689,17 @@ RectF ShapeMeshProvider::GetBounds(const Matrix2F& m) const
     return ComputeBoundsFillAndStrokesSimplified(*pShapeData, m);
 }
 
+// Bounds at the given morph ratio; with a stroke generator the strokes are measured as generated.
+// @0x14262ad40
+RectF ShapeMeshProvider::GetCorrectBounds(const Matrix2F& m, float morphRatio, StrokeGenerator* gen,
+                                          const ToleranceParams* tol) const
+{
+    MorphInterpolator shape(pShapeData, pMorphData, morphRatio, ShapePosInfo(pShapeData->GetStartingPos()));
+    if (gen)
+        return ComputeBoundsFillAndStrokes(shape, m, gen, *tol);
+    return ComputeBoundsFillAndStrokesSimplified(shape, m);
+}
+
 // @0x14262bb90
 void ShapeMeshProvider::GetFillStyle(unsigned idx, FillStyleType* style, float morphRatio) const
 {
@@ -752,6 +836,48 @@ __declspec(noinline) ComplexFill* ShapeMeshProvider::getComplexFill(unsigned lay
     return fill;
 }
 
+// @0x1426325a0
+RectF ShapeMeshProvider::getLayerBounds(unsigned layer) const
+{
+    ShapePosInfo pos(DrawLayers[layer].StartPos);
+    unsigned     styles[3];
+    float        coord[Edge_MaxCoord];
+    RectF        bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    Matrix2F     m;
+    bool         first = true;
+    ShapePathType pathType;
+    while ((pathType = pShapeData->ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
+    {
+        if (!first && pathType == Shape_NewLayer)
+            break;
+        first = false;
+        // paths with only a stroke add nothing to the fill area
+        if (styles[0] == 0 && styles[1] == 0)
+            pShapeData->SkipPathData(&pos);
+        else
+            ExpandBoundsToPath(*pShapeData, m, &pos, coord, &bounds);
+    }
+    return bounds;
+}
+
+// @0x1426326d0
+// MS2-FUNCTIONAL: ours loads the morph-to shape once ahead of the branch; the exe loads it in each branch
+Matrix2F ShapeMeshProvider::getMorphMatrix(unsigned layer, unsigned fillIndex) const
+{
+    unsigned strokeStyle = GetLayerStroke(layer);
+    if (strokeStyle == 0)
+    {
+        FillStyleType style;
+        pMorphData->pMorphTo->GetFillStyle(GetStyleByFillIdx(layer, fillIndex), &style);
+        return style.pFill->ImageMatrix;
+    }
+    StrokeStyleType stroke;
+    pMorphData->pMorphTo->GetStrokeStyle(strokeStyle, &stroke);
+    if (stroke.pFill)
+        return stroke.pFill->ImageMatrix;
+    return Matrix2F();
+}
+
 // @0x14262b3e0
 void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fillIndex, unsigned meshGenFlags)
 {
@@ -808,3 +934,8 @@ void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fil
 // MS2-PIN: ??$ComputeBoundsFillAndStrokesSimplified@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@W4BoundEdges@01@@Z 0x1426267b0
 // MS2-PIN: ??$ExpandBoundsToStrokesSimplified@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YAXAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAV?$Rect@M@01@@Z 0x142628df0
 // MS2-PIN: ??$ComputeBoundsRoundStroke@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAUShapePosInfo@01@PEAMPEAI@Z 0x142626830
+// MS2-PIN: ??_GMorphInterpolator@Render@Scaleform@@UEAAPEAXI@Z 0x14262a3c0
+// MS2-PIN: ?GetStrokeStyleCount@MorphInterpolator@Render@Scaleform@@UEBAIXZ 0x14262c020
+// MS2-PIN: ??$ExpandBoundsToLayerStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YAXAEBVShapeDataInterface@01@PEAUShapePosInfo@01@AEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@AEBUToleranceParams@01@PEAV?$Rect@M@01@@Z 0x142627c90
+// MS2-PIN: ??$ExpandBoundsToStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YAXAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@AEBUToleranceParams@01@PEAV?$Rect@M@01@@Z 0x142628ca0
+// MS2-PIN: ??$ComputeBoundsFillAndStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@AEBUToleranceParams@01@W4BoundEdges@01@@Z 0x1426265f0
