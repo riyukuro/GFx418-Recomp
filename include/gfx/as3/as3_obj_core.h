@@ -208,6 +208,8 @@ namespace Instances { namespace fl
 
     public:
         // native methods
+        // @0x1423f9300
+        void AS3exec(SPtr<Instances::fl::Object>& result, const ASString&);
         // @0x142428130
         void dotallGet(bool& result);
         // @0x142428490
@@ -264,6 +266,8 @@ namespace Instances { namespace fl
         void AS3length(SInt32& result);
         // @0x142429ea0
         void prototypeGet(SPtr<Instances::fl::XMLList>& result);
+        // @0x142429fa0
+        void prototypeSet(const Value& result, const Value&);
     };
 }}
 

@@ -19,9 +19,22 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// The stored type of an argument passed by const reference.
+template <typename T> struct ThunkClean { typedef T type; };
+template <typename T> struct ThunkClean<const T&> { typedef T type; };
+
+// The default of an omitted argument, alive while the arguments are unboxed.
+template <typename T>
+struct ThunkDef
+{
+    ThunkDef(T v) : v(v) {}
+    T       v;
+};
+
 // Default value of a result or an omitted argument.
 template <typename T> struct ThunkDefault { static T Get(VM&) { return T(); } };
 template <> struct ThunkDefault<Value::Number> { static Value::Number Get(VM&) { return NumberUtil::NaN(); } };
+template <> struct ThunkDefault<Value> { static Value Get(VM&) { return Value::GetUndefined(); } };
 template <> struct ThunkDefault<ASString>
 {
     static ASString Get(VM& vm) { return vm.GetStringManager().CreateEmptyString(); }
@@ -31,6 +44,13 @@ template <> struct ThunkDefault<ASString>
 inline void ThunkReadArg(Value::Number& to, const Value& v) { v.Convert2Number(to); }
 inline void ThunkReadArg(SInt32& to, const Value& v) { v.Convert2Int32(to); }
 inline void ThunkReadArg(UInt32& to, const Value& v) { v.Convert2UInt32(to); }
+inline void ThunkReadArg(ASString& to, const Value& v)
+{
+    if (v.IsNull())
+        to.SetNull();
+    else
+        v.Convert2String(to);
+}
 
 // Storing a result.
 inline void ThunkStoreResult(Value& to, Value::Number v) { to.AssignUnsafe(v); }
@@ -67,27 +87,45 @@ struct ThunkArgs0<const Value>
 template <typename R, typename A0>
 struct ThunkArgs1 : public ThunkArgs0<R>
 {
-    ThunkArgs1(VM& vm, Value& result, unsigned argc, const Value* argv, const A0& d0)
-        : ThunkArgs0<R>(vm, result), a0(d0)
+    typedef typename ThunkClean<A0>::type T0;
+
+    ThunkArgs1(VM& vm, Value& result, unsigned argc, const Value* argv, const ThunkDef<T0>& d0)
+        : ThunkArgs0<R>(vm, result), a0(d0.v)
     {
         if (argc > 0)
             ThunkReadArg(a0, argv[0]);
     }
 
-    A0      a0;
+    T0      a0;
+};
+
+template <typename R>
+struct ThunkArgs1<R, const Value&> : public ThunkArgs0<R>
+{
+    typedef Value T0;
+
+    ThunkArgs1(VM& vm, Value& result, unsigned argc, const Value* argv, const ThunkDef<Value>& d0)
+        : ThunkArgs0<R>(vm, result), a0(argc > 0 ? argv[0] : d0.v)
+    {
+    }
+
+    const Value& a0;
 };
 
 template <typename R, typename A0, typename A1>
 struct ThunkArgs2 : public ThunkArgs1<R, A0>
 {
-    ThunkArgs2(VM& vm, Value& result, unsigned argc, const Value* argv, const A0& d0, const A1& d1)
-        : ThunkArgs1<R, A0>(vm, result, argc, argv, d0), a1(d1)
+    typedef typename ThunkClean<A1>::type T1;
+
+    ThunkArgs2(VM& vm, Value& result, unsigned argc, const Value* argv, const ThunkDef<typename ThunkArgs1<R, A0>::T0>& d0,
+               const ThunkDef<T1>& d1)
+        : ThunkArgs1<R, A0>(vm, result, argc, argv, d0), a1(d1.v)
     {
         if (!vm.IsException() && argc > 1)
             ThunkReadArg(a1, argv[1]);
     }
 
-    A1      a1;
+    T1      a1;
 };
 
 template <typename T, size_t N, typename R>
@@ -127,7 +165,8 @@ void ThunkFunc1<T, N, R, A0>::Func(const ThunkInfo&, VM& vm, const Value& obj, V
                                    const Value* argv)
 {
     T& self = static_cast<T&>(*obj.GetObject());
-    ThunkArgs1<R, A0> args(vm, result, argc, argv, ThunkDefault<A0>::Get(vm));
+    typedef ThunkArgs1<R, A0> Args;
+    Args args(vm, result, argc, argv, ThunkDef<typename Args::T0>(ThunkDefault<typename Args::T0>::Get(vm)));
     if (!vm.IsException())
         (self.*Method)(args.r, args.a0);
 }
@@ -137,7 +176,9 @@ void ThunkFunc2<T, N, R, A0, A1>::Func(const ThunkInfo&, VM& vm, const Value& ob
                                        const Value* argv)
 {
     T& self = static_cast<T&>(*obj.GetObject());
-    ThunkArgs2<R, A0, A1> args(vm, result, argc, argv, ThunkDefault<A0>::Get(vm), ThunkDefault<A1>::Get(vm));
+    typedef ThunkArgs2<R, A0, A1> Args;
+    Args args(vm, result, argc, argv, ThunkDef<typename Args::T0>(ThunkDefault<typename Args::T0>::Get(vm)),
+              ThunkDef<typename Args::T1>(ThunkDefault<typename Args::T1>::Get(vm)));
     if (!vm.IsException())
         (self.*Method)(args.r, args.a0, args.a1);
 }

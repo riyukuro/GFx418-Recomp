@@ -318,6 +318,12 @@ typedef ThunkFunc0<Instances::fl::RegExp, 7, bool> TFunc_Instances_RegExp_extend
 template <> const TFunc_Instances_RegExp_extendedGet::TMethod TFunc_Instances_RegExp_extendedGet::Method = &Instances::fl::RegExp::extendedGet;
 template struct ThunkFunc0<Instances::fl::RegExp, 7, bool>;
 
+// thunk 0x1423e5470
+// MS2-FUNCTIONAL: register allocation only: the exe loads the VM string manager into rbx, ours through rax (2 bytes)
+typedef ThunkFunc1<Instances::fl::RegExp, 8, SPtr<Instances::fl::Object>, const ASString&> TFunc_Instances_RegExp_AS3exec;
+template <> const TFunc_Instances_RegExp_AS3exec::TMethod TFunc_Instances_RegExp_AS3exec::Method = &Instances::fl::RegExp::AS3exec;
+template struct ThunkFunc1<Instances::fl::RegExp, 8, SPtr<Instances::fl::Object>, const ASString&>;
+
 namespace ClassTraits { namespace fl
 {
     // @0x1423e5f30
@@ -354,6 +360,11 @@ template struct ThunkFunc0<Classes::fl::XML, 0, SPtr<Instances::fl::Object>>;
 typedef ThunkFunc0<Instances::fl::XMLList, 0, SPtr<Instances::fl::XMLList>> TFunc_Instances_XMLList_prototypeGet;
 template <> const TFunc_Instances_XMLList_prototypeGet::TMethod TFunc_Instances_XMLList_prototypeGet::Method = &Instances::fl::XMLList::prototypeGet;
 template struct ThunkFunc0<Instances::fl::XMLList, 0, SPtr<Instances::fl::XMLList>>;
+
+// thunk 0x1423e7840
+typedef ThunkFunc1<Instances::fl::XMLList, 1, const Value, const Value&> TFunc_Instances_XMLList_prototypeSet;
+template <> const TFunc_Instances_XMLList_prototypeSet::TMethod TFunc_Instances_XMLList_prototypeSet::Method = &Instances::fl::XMLList::prototypeSet;
+template struct ThunkFunc1<Instances::fl::XMLList, 1, const Value, const Value&>;
 
 // thunk 0x1423e7d80
 typedef ThunkFunc0<Instances::fl::XMLList, 2, SInt32> TFunc_Instances_XMLList_AS3length;
@@ -1169,6 +1180,12 @@ namespace InstanceTraits { namespace fl
 // MS2-PINS-END tplpin
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
 // MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
 // MS2-PIN: ??_7Interface@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313f870
@@ -1277,3 +1294,5 @@ namespace InstanceTraits { namespace fl
 // MS2-PIN: ?Func@?$ThunkFunc0@VXML@fl@Classes@AS3@GFx@Scaleform@@$0A@V?$SPtr@VObject@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e7360
 // MS2-PIN: ?Func@?$ThunkFunc0@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VXMLList@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e76f0
 // MS2-PIN: ?Func@?$ThunkFunc0@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$01J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e7d80
+// MS2-PIN: ?Func@?$ThunkFunc1@VRegExp@fl@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VObject@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e5470
+// MS2-PIN: ?Func@?$ThunkFunc1@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e7840
