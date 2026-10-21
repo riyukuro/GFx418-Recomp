@@ -28,6 +28,9 @@ UPInt SF_STDCALL DecodeString(wchar_t* pbuff, const char* putf8str, SPInt bytesL
 // Encodes one code point at buffer + *offset and advances *offset (exe 0x1425a7170).
 void SF_STDCALL EncodeChar(char* buffer, SPInt* offset, UInt32 ucsCharacter);
 
+// Byte offset of code point index in the first length bytes (exe 0x1425a7590).
+SPInt SF_STDCALL GetByteIndex(SPInt index, const char* putf8str, SPInt length = -1);
+
 }} // namespace Scaleform::UTF8Util
 
 #endif

@@ -34,6 +34,11 @@ wchar_t* SF_CDECL SFwcsncpy(wchar_t* dest, UPInt destsize, const wchar_t* src, U
 // Truncating printf into a fixed buffer; returns the length written.
 UPInt SF_CDECL SFsprintf(char* dest, UPInt destsize, const char* format, ...);
 
+// Locale independent strtod (exe 0x1425a4a70).
+double SF_CDECL SFstrtod(const char* string, char** tailptr);
+
+inline int SF_CDECL SFtoupper(int c) { return (c >= 'a' && c <= 'z') ? c - 'a' + 'A' : c; }
+
 } // namespace Scaleform
 
 #endif
