@@ -758,6 +758,16 @@ public:
         void  FreeLine(Line* ptr);
     } LineAllocator;                        // +0x50
     unsigned           LastHScrollOffset;   // +0x54
+
+    // (appended for GFx Text_EditorKit, sfr_gfx_07) a point in buffer space moved into the space of viewRect
+    template<class Pnt, class Rect>
+    Pnt BufferToView(const Rect& viewRect, const Pnt& p) const
+    {
+        Pnt r(p);
+        r.x += Geom.VisibleRect.x1 - viewRect.x1;
+        r.y += Geom.VisibleRect.y1 - viewRect.y1;
+        return r;
+    }
 };
 
 void LoadTextFieldParamFromTextFilter(TextFieldParam& params, const TextFilter& filter);

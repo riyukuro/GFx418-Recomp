@@ -43,6 +43,13 @@ inline int SF_CDECL SFtoupper(int c) { return (c >= 'a' && c <= 'z') ? c - 'a' +
 inline const char* SF_CDECL SFstrchr(const char* s, char c) { return strchr(s, c); }
 inline char* SF_CDECL       SFstrchr(char* s, char c)       { return strchr(s, c); }
 
+// (appended for GFx Text_EditorKit, sfr_gfx_07)
+extern const UInt16 UnicodeAlnumBits[];
+
+inline int SF_CDECL SFiswalnum(wchar_t ch) { return UnicodeCharIs(UnicodeAlnumBits, ch); }
+
+int SF_CDECL SFtowupper(wchar_t ch);
+
 } // namespace Scaleform
 
 #endif

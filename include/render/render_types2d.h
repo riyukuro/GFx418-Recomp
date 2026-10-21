@@ -168,6 +168,11 @@ public:
 
     // (appended for the buttons, sfr_gfx_05c) a point rect (the zero rect included)
     bool IsNull() const { return x2 == x1 && y2 == y1; }
+
+    // (appended for GFx Text_EditorKit, sfr_gfx_07)
+    Rect& Offset(const Point<T>& p)        { return Offset(p.x, p.y); }
+    void  SetTopLeft(const Point<T>& p)     { x1 = p.x; y1 = p.y; }
+    void  SetBottomRight(const Point<T>& p) { x2 = p.x; y2 = p.y; }
 };
 
 typedef Point<float>  PointF;

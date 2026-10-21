@@ -15,6 +15,9 @@ class Timer
 {
 public:
     static UInt64 SF_STDCALL GetProfileTicks();
+
+    // (appended for GFx Text_EditorKit, sfr_gfx_07) microseconds
+    static UInt64 SF_STDCALL GetTicks();
 };
 
 } // namespace Scaleform

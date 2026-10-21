@@ -612,6 +612,28 @@ struct CachedPrimValue
     bool IsValid(UInt16 fmtCnt) { return FormatCounter == fmtCnt; }
 };
 
+// (appended for GFx Text_EditorKit, sfr_gfx_07) a value tagged with the format pass it was computed in; the value is
+// 16-aligned (the editor's cached RectF spans 0x20 bytes)
+template<typename T>
+class CachedValue
+{
+    __declspec(align(16)) T Value;
+    mutable UInt16 FormatCounter;
+
+public:
+    CachedValue() : FormatCounter(0) {}
+    CachedValue(const T& v) : Value(v), FormatCounter(0) {}
+
+    void SetValue(const T& v, UInt16 counter) { Value = v; FormatCounter = counter; }
+    bool IsValid(UInt16 counter) const { return FormatCounter == counter; }
+    void Invalidate() { --FormatCounter; }
+
+    T&       operator*()        { return Value; }
+    const T& operator*() const  { return Value; }
+    T*       operator->()       { return &Value; }
+    const T* operator->() const { return &Value; }
+};
+
 }}} // namespace Scaleform::Render::Text
 
 #endif
