@@ -102,6 +102,45 @@ CoordType Distance(const PointType& p1, const PointType& p2)
     return sqrtf(dx * dx + dy * dy);
 }
 
+// (appended for the stroker, sfr_render_05b) path segment commands, the side of v of the line v1 v2, and where the
+// lines a b and c d cross (false when nearly parallel). Intersection is inline; the exe keeps one out-of-line copy
+// at 0x1426ae0a0 (Render_Hairliner).
+const CoordType Pi = CoordType(3.14159265358979323846);
+enum SegmentType
+{
+    Seg_MoveTo,
+    Seg_LineTo,
+    Seg_QuadTo,
+    Seg_CubicTo,
+    Seg_EndPath
+};
+template<class V1, class V2, class V3>
+inline CoordType CrossProduct(const V1& v1, const V2& v2, const V3& v)
+{
+    return CrossProduct(v1.x, v1.y, v2.x, v2.y, v.x, v.y);
+}
+inline bool Intersection(CoordType ax, CoordType ay, CoordType bx, CoordType by, CoordType cx, CoordType cy,
+                         CoordType dx, CoordType dy, CoordType* x, CoordType* y, CoordType epsilon)
+{
+    // a + u (b - a) on the line c d
+    CoordType num = (ay - cy) * (dx - cx) - (ax - cx) * (dy - cy);
+    CoordType den = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+    if (fabsf(den) < epsilon)
+        return false;
+    CoordType u = num / den;
+    *x          = ax + u * (bx - ax);
+    *y          = ay + u * (by - ay);
+    return true;
+}
+
+// (appended for the stroker, sfr_render_05b) the distance of two points given as coordinates
+inline CoordType Distance(CoordType x1, CoordType y1, CoordType x2, CoordType y2)
+{
+    CoordType dx = x2 - x1;
+    CoordType dy = y2 - y1;
+    return sqrtf(dx * dx + dy * dy);
+}
+
 }}} // namespace Scaleform::Render::Math2D
 
 #endif

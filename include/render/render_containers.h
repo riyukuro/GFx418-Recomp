@@ -337,6 +337,124 @@ public:
     const C& operator[](UPInt i) const { return GetBuffer()[i]; }
 };
 
+// (appended for the stroker, sfr_render_05b) a growable array on a LinearHeap: items in pages of 1 << PageSh, the
+// page table grows by doubling from PtrPoolInc entries. Old tables and pages are never freed (the heap is reset as
+// a whole), so the array cannot be copied.
+template<class T, unsigned PageSh, unsigned PtrPoolInc>
+class ArrayPaged
+{
+public:
+    enum
+    {
+        PageShift = PageSh,
+        PageSize  = 1 << PageShift,
+        PageMask  = PageSize - 1
+    };
+    typedef T ValueType;
+
+    ArrayPaged(LinearHeap* heap) : pHeap(heap), Size(0), NumPages(0), MaxPages(0), Pages(0) {}
+
+    void  Clear()           { Size = 0; }
+    void  ClearAndRelease() { Size = NumPages = MaxPages = 0; Pages = 0; }
+    UPInt GetSize() const   { return Size; }
+
+    void PushBack(const T& v)
+    {
+        *nextSlot() = v;
+        ++Size;
+    }
+    void PopBack()
+    {
+        if (Size)
+            --Size;
+    }
+    void CutAt(UPInt size)
+    {
+        if (size < Size)
+            Size = size;
+    }
+
+    T&       operator[](UPInt i)       { return Pages[i >> PageShift][i & PageMask]; }
+    const T& operator[](UPInt i) const { return Pages[i >> PageShift][i & PageMask]; }
+    T&       Back()                    { return (*this)[Size - 1]; }
+    const T& Back() const              { return (*this)[Size - 1]; }
+
+private:
+    ArrayPaged(const ArrayPaged&);
+    void operator=(const ArrayPaged&);
+
+    T* nextSlot()
+    {
+        UPInt page = Size >> PageShift;
+        if (page >= NumPages)
+            addPage(page);
+        return Pages[page] + (Size & PageMask);
+    }
+    void addPage(UPInt page)
+    {
+        if (page >= MaxPages)
+        {
+            if (Pages)
+            {
+                T** table = (T**)pHeap->Alloc(MaxPages * 2 * sizeof(T*));
+                memcpy(table, Pages, NumPages * sizeof(T*));
+                Pages = table;
+                MaxPages *= 2;
+            }
+            else
+            {
+                MaxPages = PtrPoolInc;
+                Pages    = (T**)pHeap->Alloc(PtrPoolInc * sizeof(T*));
+            }
+        }
+        Pages[page] = (T*)pHeap->Alloc(PageSize * sizeof(T));
+        ++NumPages;
+    }
+
+    LinearHeap* pHeap;      // +0x00
+    UPInt       Size;       // +0x08
+    UPInt       NumPages;   // +0x10
+    UPInt       MaxPages;   // +0x18
+    T**         Pages;      // +0x20
+};
+
+// (appended for the stroker, sfr_render_05b) a plain array on a LinearHeap; growing reallocates, zero-fills and
+// keeps the old items
+template<class T>
+class ArrayUnsafe
+{
+public:
+    typedef T ValueType;
+
+    ArrayUnsafe(LinearHeap* heap) : pHeap(heap), Size(0), Data(0) {}
+
+    void  ClearAndRelease() { Size = 0; Data = 0; }
+    UPInt GetSize() const   { return Size; }
+    void  Resize(UPInt size)
+    {
+        if (size > Size)
+        {
+            T* data = (T*)pHeap->Alloc(size * sizeof(T));
+            memset(data, 0, size * sizeof(T));
+            if (Data && Size)
+                memcpy(data, Data, Size * sizeof(T));
+            Data = data;
+        }
+        Size = size;
+    }
+
+    T&       operator[](UPInt i)       { return Data[i]; }
+    const T& operator[](UPInt i) const { return Data[i]; }
+
+private:
+    ArrayUnsafe(const ArrayUnsafe&);
+    void operator=(const ArrayUnsafe&);
+
+    LinearHeap* pHeap;  // +0x00
+    UPInt       Size;   // +0x08
+    T*          Data;   // +0x10
+};
+
 }} // namespace Scaleform::Render
 
 #endif

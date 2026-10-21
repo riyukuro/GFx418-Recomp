@@ -89,6 +89,97 @@ inline UByte LowerBit(UPInt val)
     }
 }
 
+// (appended for the stroker, sfr_render_05b) sorts arr[start, end) by less: the unchecked counterpart of
+// QuickSortSlicedSafe (include/kernel/sf_alg.h), median of three pivot, explicit range stack, insertion sort for
+// ranges of up to 9 items. less must be a strict weak order.
+template<class Array, class Less>
+void QuickSortSliced(Array& arr, UPInt start, UPInt end, Less less)
+{
+    enum { InsertionSortMax = 9 };
+
+    if (end - start < 2)
+        return;
+
+    SPInt  ranges[80];
+    SPInt* ptop = ranges;
+    SPInt  lo   = (SPInt)start;
+    SPInt  hi   = (SPInt)end;
+
+    for (;;)
+    {
+        SPInt count = hi - lo;
+        SPInt i, j;
+        if (count > InsertionSortMax)
+        {
+            Swap(arr[lo], arr[lo + count / 2]);
+
+            i = lo + 1;
+            j = hi - 1;
+            if (less(arr[j], arr[i]))
+                Swap(arr[j], arr[i]);
+            if (less(arr[lo], arr[i]))
+                Swap(arr[lo], arr[i]);
+            if (less(arr[j], arr[lo]))
+                Swap(arr[j], arr[lo]);
+
+            for (;;)
+            {
+                do
+                    ++i;
+                while (less(arr[i], arr[lo]));
+                do
+                    --j;
+                while (less(arr[lo], arr[j]));
+                if (i > j)
+                    break;
+                Swap(arr[i], arr[j]);
+            }
+            Swap(arr[lo], arr[j]);
+
+            // keep sorting the smaller part, remember the larger one
+            if (j - lo > hi - i)
+            {
+                ptop[0] = lo;
+                ptop[1] = j;
+                lo      = i;
+            }
+            else
+            {
+                ptop[0] = i;
+                ptop[1] = hi;
+                hi      = j;
+            }
+            ptop += 2;
+        }
+        else
+        {
+            for (j = lo, i = lo + 1; i < hi; j = i, ++i)
+            {
+                for (; less(arr[j + 1], arr[j]); --j)
+                {
+                    Swap(arr[j + 1], arr[j]);
+                    if (j == lo)
+                        break;
+                }
+            }
+            if (ptop > ranges)
+            {
+                ptop -= 2;
+                lo = ptop[0];
+                hi = ptop[1];
+            }
+            else
+                break;
+        }
+    }
+}
+
+template<class Array, class Less>
+void QuickSort(Array& arr, Less less)
+{
+    QuickSortSliced(arr, 0, arr.GetSize(), less);
+}
+
 }}  // namespace Scaleform::Alg
 
 #endif
