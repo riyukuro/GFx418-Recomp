@@ -829,6 +829,8 @@ namespace InstanceTraits { namespace fl_events {
         EventDispatcher(VM& vm, const ClassInfo& ci);   // 0x14245f5d0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::EventDispatcher"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b8e0
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246ac60
     };
 }}
 
@@ -843,6 +845,8 @@ namespace InstanceTraits { namespace fl_events {
         AppLifecycleEvent(VM& vm, const ClassInfo& ci);                       // 0x14245e820
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::AppLifecycleEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b690
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246a9e0
     };
 
     // The instance traits of flash.events.AsyncErrorEvent (instances 0x68 bytes).
@@ -854,6 +858,8 @@ namespace InstanceTraits { namespace fl_events {
         AsyncErrorEvent(VM& vm, const ClassInfo& ci);                         // 0x14245ea50
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::AsyncErrorEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b780
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246aad0
     };
 
     // The instance traits of flash.events.ErrorEvent (instances 0x60 bytes).
@@ -865,6 +871,8 @@ namespace InstanceTraits { namespace fl_events {
         ErrorEvent(VM& vm, const ClassInfo& ci);                              // 0x14245ee90
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::ErrorEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b7e0
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246ab50
     };
 
     // The instance traits of flash.events.Event (instances 0x58 bytes).
@@ -876,6 +884,8 @@ namespace InstanceTraits { namespace fl_events {
         Event(VM& vm, const ClassInfo& ci);                                   // 0x14245f420
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Event"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b840
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246abc0
     };
 
     // The instance traits of flash.events.FocusEvent (instances 0x68 bytes).
@@ -887,6 +897,8 @@ namespace InstanceTraits { namespace fl_events {
         FocusEvent(VM& vm, const ClassInfo& ci);                              // 0x14245fa90
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::FocusEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b950
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246ace0
     };
 
     // The instance traits of flash.events.GestureEvent (instances 0x88 bytes).
@@ -898,6 +910,8 @@ namespace InstanceTraits { namespace fl_events {
         GestureEvent(VM& vm, const ClassInfo& ci);                            // 0x14245fdb0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::GestureEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b9f0
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246ad90
     };
 
     // The instance traits of flash.events.IMEEvent (instances 0x60 bytes).
@@ -909,6 +923,8 @@ namespace InstanceTraits { namespace fl_events {
         IMEEvent(VM& vm, const ClassInfo& ci);                                // 0x142460340
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::IMEEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246ba30
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246ade0
     };
 
     // The instance traits of flash.events.IOErrorEvent (instances 0x68 bytes).
@@ -920,6 +936,8 @@ namespace InstanceTraits { namespace fl_events {
         IOErrorEvent(VM& vm, const ClassInfo& ci);                            // 0x1424604e0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::IOErrorEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246ba90
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246ae50
     };
 
     // The instance traits of flash.events.KeyboardEvent (instances 0x70 bytes).
@@ -931,6 +949,8 @@ namespace InstanceTraits { namespace fl_events {
         KeyboardEvent(VM& vm, const ClassInfo& ci);                           // 0x1424606a0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::KeyboardEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bb00
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246aed0
     };
 
     // The instance traits of flash.events.MouseEvent (instances 0x90 bytes).
@@ -942,6 +962,8 @@ namespace InstanceTraits { namespace fl_events {
         MouseEvent(VM& vm, const ClassInfo& ci);                              // 0x142460a30
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::MouseEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bbb0
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246af90
     };
 
     // The instance traits of flash.events.NetStatusEvent (instances 0x68 bytes).
@@ -953,6 +975,8 @@ namespace InstanceTraits { namespace fl_events {
         NetStatusEvent(VM& vm, const ClassInfo& ci);                          // 0x142460c30
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::NetStatusEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bc80
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b070
     };
 
     // The instance traits of flash.events.PressAndTapGestureEvent (instances 0xb0 bytes).
@@ -964,6 +988,8 @@ namespace InstanceTraits { namespace fl_events {
         PressAndTapGestureEvent(VM& vm, const ClassInfo& ci);                 // 0x142460e40
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::PressAndTapGestureEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bd60
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b160
     };
 
     // The instance traits of flash.events.ProgressEvent (instances 0x68 bytes).
@@ -975,6 +1001,8 @@ namespace InstanceTraits { namespace fl_events {
         ProgressEvent(VM& vm, const ClassInfo& ci);                           // 0x142461010
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::ProgressEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bde0
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b1f0
     };
 
     // The instance traits of flash.events.StageOrientationEvent (instances 0x98 bytes).
@@ -986,6 +1014,8 @@ namespace InstanceTraits { namespace fl_events {
         StageOrientationEvent(VM& vm, const ClassInfo& ci);                   // 0x1424614c0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::StageOrientationEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246be80
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b2a0
     };
 
     // The instance traits of flash.events.TextEvent (instances 0x60 bytes).
@@ -997,6 +1027,8 @@ namespace InstanceTraits { namespace fl_events {
         TextEvent(VM& vm, const ClassInfo& ci);                               // 0x1424619d0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bfc0
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b3f0
     };
 
     // The instance traits of flash.events.TimerEvent (instances 0x58 bytes).
@@ -1008,6 +1040,8 @@ namespace InstanceTraits { namespace fl_events {
         TimerEvent(VM& vm, const ClassInfo& ci);                              // 0x142461bd0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TimerEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246c000
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b440
     };
 
     // The instance traits of flash.events.TouchEvent (instances 0xa8 bytes).
@@ -1019,6 +1053,8 @@ namespace InstanceTraits { namespace fl_events {
         TouchEvent(VM& vm, const ClassInfo& ci);                              // 0x142461e40
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TouchEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246c0a0
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b4f0
     };
 
     // The instance traits of flash.events.TransformGestureEvent (instances 0xc8 bytes).
@@ -1030,6 +1066,8 @@ namespace InstanceTraits { namespace fl_events {
         TransformGestureEvent(VM& vm, const ClassInfo& ci);                   // 0x1424620a0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TransformGestureEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246c190
+        // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
+        Pickable<InstanceType> MakeInstance(Traits& t);         // 0x14246b5e0
     };
 
 }}

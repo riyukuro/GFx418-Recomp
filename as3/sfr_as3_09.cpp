@@ -1348,6 +1348,235 @@ namespace Instances { namespace fl_events {
 
 }} // namespace Instances::fl_events
 
+
+// ---- instance makers: a new instance of the traits' class ----------------------------------------------------------
+namespace InstanceTraits { namespace fl_events {
+    // @0x14246a9e0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<AppLifecycleEvent::InstanceType> AppLifecycleEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246aad0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<AsyncErrorEvent::InstanceType> AsyncErrorEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246ab50
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<ErrorEvent::InstanceType> ErrorEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246abc0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<Event::InstanceType> Event::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246ac60
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<EventDispatcher::InstanceType> EventDispatcher::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246ace0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<FocusEvent::InstanceType> FocusEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246ad90
+    Pickable<GestureEvent::InstanceType> GestureEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246ade0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<IMEEvent::InstanceType> IMEEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246ae50
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<IOErrorEvent::InstanceType> IOErrorEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246aed0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<KeyboardEvent::InstanceType> KeyboardEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246af90
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<MouseEvent::InstanceType> MouseEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b070
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<NetStatusEvent::InstanceType> NetStatusEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b160
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<PressAndTapGestureEvent::InstanceType> PressAndTapGestureEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b1f0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<ProgressEvent::InstanceType> ProgressEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b2a0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<StageOrientationEvent::InstanceType> StageOrientationEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b3f0
+    Pickable<TextEvent::InstanceType> TextEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b440
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<TimerEvent::InstanceType> TimerEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b4f0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<TouchEvent::InstanceType> TouchEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b5e0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    Pickable<TransformGestureEvent::InstanceType> TransformGestureEvent::MakeInstance(Traits& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+    // @0x14246b8e0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void EventDispatcher::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246b690
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void AppLifecycleEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246b780
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void AsyncErrorEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246b7e0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void ErrorEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246b840
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void Event::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246b950
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void FocusEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246b9f0
+    void GestureEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246ba30
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void IMEEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246ba90
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void IOErrorEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246bb00
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void KeyboardEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246bbb0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void MouseEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246bc80
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void NetStatusEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246bd60
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void PressAndTapGestureEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246bde0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void ProgressEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246be80
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void StageOrientationEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246bfc0
+    void TextEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246c000
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void TimerEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246c0a0
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void TouchEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+    // @0x14246c190
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
+    void TransformGestureEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
+    }
+}} // namespace InstanceTraits::fl_events
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142472fc0
