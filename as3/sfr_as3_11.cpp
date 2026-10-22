@@ -191,6 +191,37 @@ namespace Scaleform { namespace Render
     }
 }}
 
+// Vector.<Number> element write (Matrix3D rawData/transformVectors); the other element types are in sfr_as3_21.
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // MS2-FUNCTIONAL: written from the SInt32 instance with Resize inlined by hand; register/frame allocation differs
+    // @0x1424864c0
+    template <>
+    __declspec(noinline) CheckResult VectorBase<Value::Number>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
+    {
+        if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+        {
+            VM& vm = VMRef;
+            vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+            return false;
+        }
+        if (ind == (UInt32)V.GetSize())
+        {
+            if (!CheckFixed())
+                return false;
+            UPInt i = V.GetSize();
+            V.Resize(ind + 1);
+            for (; i < ind + 1; ++i)
+                V[i] = 0;
+        }
+        Value r;
+        if (!CheckCoerce(tr, v, r))
+            return false;
+        V[ind] = r.AsNumber();
+        return true;
+    }
+}}}
+
 // result += String: what the String-building natives (Vector3D, Matrix3D) append with. The const char* / ASString
 // operator+ overloads come from the AS3 Abc type header.
 namespace Scaleform { namespace GFx
@@ -296,6 +327,38 @@ namespace Instances { namespace fl_geom
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // AS3: new Matrix3D(v) with v a Vector.<Number> in column-major order (16 Numbers read as they are, no
+    // conversion); the native code also passes the 16 elements row-major as separate arguments.
+    // MS2-FUNCTIONAL: written to the exe's shape; the type-name test and Value temporaries scheduled differently
+    // @0x1424838e0
+    void Matrix3D::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc == 16)
+        {
+            for (int i = 0; i < 16; i++)
+                mat4.Data()[i] = argv[i].AsNumber();
+        }
+        else if (argc == 1)
+        {
+            if (!argv[0].IsObject() || strcmp(argv[0].GetObject()->GetTraits().GetName().ToCStr(), "Vector$double") != 0)
+                return;
+            Instances::fl_vec::Vector_double* v = static_cast<Instances::fl_vec::Vector_double*>(argv[0].GetObject());
+            for (int i = 0; i < 16; i++)
+            {
+                Value e;
+                if ((UInt32)i < (UInt32)v->V.V.GetSize())
+                    e = Value(v->V.V[i]);
+                mat4.Data()[i] = e.AsNumber();
+            }
+            mat4.Transpose();
+            if (pDispObj)
+            {
+                Render::Matrix3F m(mat4);
+                pDispObj->SetMatrix3D(m);
             }
         }
     }
@@ -2149,6 +2212,60 @@ namespace Instances { namespace fl_geom
         }
     }
 
+    // The 16 elements column-major (the transpose of mat4), the translation in pixels.
+    // MS2-FUNCTIONAL: the matrix copy and the loop's Value temporaries scheduled differently
+    // @0x14248da70
+    __declspec(noinline) void Matrix3D::rawDataGet(SPtr<Instances::fl_vec::Vector_double>& result)
+    {
+        Render::Matrix4x4<double> m(mat4);
+        m.Tx() = TwipsToPixels(m.Tx());
+        m.Ty() = TwipsToPixels(m.Ty());
+        m.Tz() = TwipsToPixels(m.Tz());
+        m.Transpose();
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        Value argv(0.0);
+        asvm.ConstructInstance(result, &asvm.GetClassVectorNumber(), 1, &argv);
+        for (int i = 0; i < 16; i++)
+        {
+            if (!result->V.Set(i, Value(m.Data()[i]), result->GetVM().GetClassTraitsNumber()))
+                break;
+        }
+    }
+
+    // @0x14248da50
+    SPtr<Instances::fl_vec::Vector_double> Matrix3D::rawDataGet()
+    {
+        SPtr<Instances::fl_vec::Vector_double> result;
+        rawDataGet(result);
+        return result;
+    }
+
+    // v holds the elements column-major with the translation in pixels; missing elements read as undefined's 0 bits.
+    // MS2-FUNCTIONAL: the element Value temporaries and the Matrix3F conversion scheduled differently
+    // @0x14248dc60
+    void Matrix3D::rawDataSet(const Value& result, Instances::fl_vec::Vector_double* v)
+    {
+        SF_UNUSED(result);
+        if (v == NULL)
+            return GetVM().ThrowTypeError(VM::Error(VM::eNullPointerError, GetVM()));
+        for (int i = 0; i < 16; i++)
+        {
+            Value e;
+            if ((UInt32)i < (UInt32)v->V.V.GetSize())
+                e = Value(v->V.V[i]);
+            mat4.Data()[i] = e.AsNumber();
+        }
+        mat4.Transpose();
+        mat4.Tx() = PixelsToTwips(mat4.Tx());
+        mat4.Ty() = PixelsToTwips(mat4.Ty());
+        mat4.Tz() = PixelsToTwips(mat4.Tz());
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
     // @0x1424907e0
     __declspec(noinline) void Matrix3D::transformVector(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Vector3D* v)
     {
@@ -2169,6 +2286,40 @@ namespace Instances { namespace fl_geom
         SPtr<Instances::fl_geom::Vector3D> result;
         transformVector(result, a0);
         return result;
+    }
+
+    // vout[i..i+2] = mat4 * vin[i..i+2] for each (x, y, z) triple of vin; elements that do not convert read as 0.
+    // MS2-FUNCTIONAL: Value temporaries and the per-element bounds checks scheduled differently
+    // @0x142490960
+    void Matrix3D::transformVectors(const Value& result, Instances::fl_vec::Vector_double* vin, Instances::fl_vec::Vector_double* vout)
+    {
+        SF_UNUSED(result);
+        Value xv, yv, zv;
+        UInt32 len;
+        vin->lengthGet(len);
+        const ClassTraits::Traits& tr = vout->GetVM().GetClassTraitsNumber();
+        for (UInt32 i = 0; (SInt32)i < (SInt32)len; i += 3)
+        {
+            Value::Number x, y, z;
+            if (i < (UInt32)vin->V.V.GetSize())
+                xv.SetNumber(vin->V.V[i]);
+            if (!xv.Convert2Number(x))
+                x = 0;
+            if (i + 1 < (UInt32)vin->V.V.GetSize())
+                yv.SetNumber(vin->V.V[i + 1]);
+            if (!yv.Convert2Number(y))
+                y = 0;
+            if (i + 2 < (UInt32)vin->V.V.GetSize())
+                zv.SetNumber(vin->V.V[i + 2]);
+            if (!zv.Convert2Number(z))
+                z = 0;
+            Value::Number rx = mat4.M[0][0] * x + mat4.M[0][1] * y + mat4.M[0][2] * z + mat4.M[0][3];
+            Value::Number ry = mat4.M[1][0] * x + mat4.M[1][1] * y + mat4.M[1][2] * z + mat4.M[1][3];
+            Value::Number rz = mat4.M[2][0] * x + mat4.M[2][1] * y + mat4.M[2][2] * z + mat4.M[2][3];
+            vout->V.Set(i, Value(rx), tr);
+            vout->V.Set(i + 1, Value(ry), tr);
+            vout->V.Set(i + 2, Value(rz), tr);
+        }
     }
 
     // @0x142490df0
@@ -2966,3 +3117,5 @@ namespace ClassTraits { namespace fl_net
 // MS2-PIN: ??_7Vector3D@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e0c0
 // MS2-PIN: ??_7XMLSocket@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143164860
 // MS2-PIN: ??_7URLLoader@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143163950
+// MS2-PIN: ?Resize@?$ArrayDataDH@NU?$AllocatorDH@N$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z 0x1424861a0
+// MS2-PIN: ?Reserve@?$ArrayDataBase@NU?$AllocatorDH@N$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142486100

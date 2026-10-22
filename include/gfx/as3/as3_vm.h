@@ -155,6 +155,8 @@ public:
     Classes::fl::Number&  GetClassNumber() const;     // 0x142507eb0
     Classes::fl::String&  GetClassString() const;     // 0x142507ef0
     Classes::fl::uint&    GetClassUInt() const;       // 0x142508100
+    // (appended, sfr16) the Vector.<Number> class object (Classes::fl_vec::Vector_double is not recovered)
+    Class& GetClassVectorNumber() const;    // 0x142508230
 
     Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
     Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }
