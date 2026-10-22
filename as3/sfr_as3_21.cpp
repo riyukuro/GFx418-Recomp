@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425584f0-0x142568420 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1831,6 +1832,833 @@ void SoundObject::Stop()
 
 }}} // namespace Scaleform::GFx::AS3
 
+// The exe keeps the pointer tables' Resize (PopBack) out of line; spelled out per element type.
+#define MS2_ABC_RESIZE_NOINLINE(T) \
+    template<> __declspec(noinline) void Scaleform::ArrayData<T, \
+        Scaleform::AllocatorLH_POD<T, Scaleform::GFx::AS3::StatMV_VM_AbcFile_Mem>, Scaleform::ArrayDefaultPolicy>::Resize(UPInt newSize) \
+    { \
+        BaseType::ResizeNoConstruct(this, newSize); \
+    }
+
+MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::ClassInfo*)      // @0x1425683a0
+MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::MethodBodyInfo*) // @0x142568420
+MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::MethodInfo*)     // @0x1425684a0
+MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::ScriptInfo*)     // @0x142568520
+MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::TraitInfo*)      // @0x1425685a0
+
+// ==== Abc::Reader (AS3_Abc_Read) ======================================================================================
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Abc {
+
+// @0x142565a30
+bool Read(const UInt8*& ptr, MethodInfo& obj)
+{
+    bool result = true;
+
+    SInt32 param_count = 0;
+    result = result &&
+        Read(ptr, param_count) &&
+        Read(ptr, obj.RetTypeInd);
+
+    result = result && (obj.RetTypeInd >= 0);
+    if (!result)
+        return result;
+
+    obj.ParamTypes.Reserve(param_count);
+    for (int i = 0; i < param_count; ++i)
+        obj.ParamTypes.PushBack(ReadU30(ptr));
+
+    // The name is not used.
+    SInt32 name_ind;
+    result = result &&
+        Read(ptr, name_ind) &&
+        Read8(ptr, obj.Flags);
+
+    if (!result)
+        return result;
+
+    if (obj.HasOptionalParams())
+    {
+        SInt32 count = 0;
+        result = result && Read(ptr, count);
+
+        obj.OptionalParams.Reserve(count);
+        for (int i = 0; result && (i < count); ++i)
+        {
+            ValueDetail detail;
+
+            result = result && Read(ptr, detail);
+            if (!result)
+                return result;
+
+            obj.OptionalParams.PushBack(detail);
+        }
+    }
+
+    if (obj.HasParamNames())
+    {
+        obj.ParamNames.Reserve(param_count);
+        for (int i = 0; i < param_count; ++i)
+        {
+            SInd ind = 0;
+            result = result && Read(ptr, ind);
+
+            if (result)
+                obj.ParamNames.PushBack(ind);
+            else
+                break;
+        }
+    }
+
+    return result;
+}
+
+// @0x142565c50
+bool Read(const UInt8*& ptr, ValueDetail& obj)
+{
+    bool result = true;
+
+    UInt8 kind = 0;
+    result = result &&
+        Read(ptr, obj.ValueIndex) &&
+        Read8(ptr, kind);
+
+    result = result && (obj.ValueIndex >= 0);
+
+    obj.Kind = static_cast<ValueKind>(kind);
+
+    return result;
+}
+
+// @0x142565c90
+bool Reader::Read(Code& obj)
+{
+    bool result = true;
+
+    obj.code = StringView(CP);
+
+    SInt32 count = 0;
+    result = result && Read(count);
+    CP += count;
+
+    return result;
+}
+
+// @0x142565cc0
+// MS2-FUNCTIONAL: string constants copy through extra stack temporaries (sf_string.h StringDataPtr lacks the SDK copy ctor); frame/register allocation differs
+bool Reader::Read(ConstPool& obj)
+{
+    bool result = true;
+    UInt32 number = 0;
+
+    // int
+    result = result && Read(number);
+    if (result)
+    {
+        obj.ConstInt.Reserve(number);
+        obj.ConstInt.PushBack(0);
+
+        for (UInt32 i = 1; i < number; ++i)
+            obj.ConstInt.PushBack(ReadU30(CP));
+    }
+
+    // uint
+    number = 0;
+    result = result && Read(number);
+    if (result)
+    {
+        obj.ConstUInt.Reserve(number);
+        obj.ConstUInt.PushBack(0);
+
+        for (UInt32 i = 1; i < number; ++i)
+            obj.ConstUInt.PushBack(ReadU30(CP));
+    }
+
+    // double: kept in place
+    obj.DoubleCount = 0;
+    obj.ConstDouble = NULL;
+    result = result && Read(obj.DoubleCount);
+    if (result)
+    {
+        obj.ConstDouble = CP;
+        if (obj.DoubleCount)
+            CP += 8 * (obj.DoubleCount - 1);
+    }
+
+    // string: kept in place
+    number = 0;
+    result = result && Read(number);
+    if (result)
+    {
+        obj.ConstStr.Reserve(number);
+        obj.ConstStr.PushBack(StringView());
+
+        for (UInt32 i = 0; number > 0 && i < number - 1; ++i)
+        {
+            obj.ConstStr.PushBack(StringView(CP));
+            const int size = ReadU30(CP);
+            CP += size;
+        }
+    }
+
+    // namespace
+    number = 0;
+    result = result && Read(number);
+    if (result)
+    {
+        obj.ConstNamespace.Reserve(number);
+        obj.ConstNamespace.PushBack(NamespaceInfo(NS_Public, ""));
+
+        for (UInt32 i = 1; i < number; ++i)
+        {
+            NamespaceInfo info(NS_Public, "");
+
+            result = result && Read(obj, info);
+            obj.ConstNamespace.PushBack(info);
+        }
+    }
+
+    // namespace set
+    number = 0;
+    result = result && Read(number);
+    if (result)
+    {
+        obj.const_ns_set.Reserve(number);
+        obj.const_ns_set.PushBack(NamespaceSetInfo());
+
+        obj.const_ns_set.Back().Data = NULL;
+
+        NamespaceSetInfo info;
+        for (UInt32 i = 1; i < number; ++i)
+        {
+            result = result && Read(info);
+            obj.const_ns_set.PushBack(info);
+        }
+    }
+
+    // multiname
+    number = 0;
+    result = result && Read(number);
+    if (result)
+    {
+        obj.const_multiname.Reserve(number + 1);
+        const Multiname any = {MNF_QName, -1, 0, -1};
+        obj.const_multiname.PushBack(any);
+
+        for (UInt32 i = 1; i < number; ++i)
+        {
+            Multiname info = {MNF_QName, -1, 0, -1};
+
+            result = result && Read(obj, info);
+            obj.const_multiname.PushBack(info);
+        }
+    }
+
+    return result;
+}
+
+// @0x142566460
+bool Reader::Read(MethodBodyInfo::Exception& obj)
+{
+    bool result = true;
+
+    SInt32 count = 0;
+    result = result && Read(count);
+
+    obj.info.Reserve(count);
+    for (int i = 0; result && (i < count); ++i)
+    {
+        MethodBodyInfo::ExceptionInfo info;
+
+        result = result && Read(info);
+        if (!result)
+            break;
+
+        obj.info.PushBack(info);
+    }
+
+    return result;
+}
+
+// @0x142566570
+bool Reader::Read(MethodBodyInfo::ExceptionInfo& obj)
+{
+    bool result = true;
+
+    result = result &&
+        Read(obj.from) &&
+        Read(obj.to) &&
+        Read(obj.target) &&
+        Read(obj.exc_type_ind) &&
+        Read(obj.var_name_ind);
+
+    return result;
+}
+
+// @0x1425667f0
+bool Reader::Read(Instance::Interfaces& obj)
+{
+    bool result = true;
+
+    SInt32 count = 0;
+    result = result && Read(count);
+
+    obj.info.Reserve(count);
+    for (int i = 0; i < count; ++i)
+        obj.info.PushBack(ReadU30(CP));
+
+    return result;
+}
+
+// @0x1425668b0
+bool Reader::Read(MetadataInfo::Item& obj)
+{
+    bool result = true;
+
+    result = result &&
+        Read(obj.KeyInd) &&
+        Read(obj.ValueInd);
+
+    return result;
+}
+
+// @0x1425668f0
+bool Reader::Read(TraitInfo::MetaInfo& obj)
+{
+    bool result = true;
+
+    SInt32 count = 0;
+    result = result && Read(count);
+
+    SInd ind;
+    obj.info.Reserve(count);
+    for (int i = 0; i < count; ++i)
+    {
+        Read(ind);
+        obj.info.PushBack(ind);
+    }
+
+    return result;
+}
+
+// @0x1425669b0
+// MS2-FUNCTIONAL: 1 prologue byte, rbx/item home-slot assignment swapped
+bool Reader::Read(MetadataInfo& obj)
+{
+    // The name is not kept.
+    SInt32 name_ind;
+    Read(name_ind);
+
+    SInt32 count;
+    Read(count);
+
+    obj.Items.Reserve(count);
+    for (int i = 0; i < count; ++i)
+    {
+        MetadataInfo::Item item;
+        Read(item);
+        obj.Items.PushBack(item);
+    }
+
+    return true;
+}
+
+// @0x142566a80
+// MS2-FUNCTIONAL: inlined Read(MetadataInfo) home-slot assignment differs (same as 0x1425669b0)
+bool Reader::Read(MetadataTable& obj)
+{
+    SInt32 count;
+    Read(count);
+
+    obj.Info.Reserve(count);
+    for (int i = 0; i < count; ++i)
+    {
+        obj.Info.PushBack(SF_HEAP_AUTO_NEW(this) MetadataInfo());
+        Read(*obj.Info.Back());
+    }
+
+    return true;
+}
+
+// @0x142566c30
+bool Reader::Read(MethodTable& obj)
+{
+    bool result = true;
+
+    SInt32 count = 0;
+    result = result && Read(count);
+
+    obj.Info.Reserve(count);
+    for (int i = 0; result && (i < count); ++i)
+    {
+        obj.Info.PushBack(SF_HEAP_AUTO_NEW(this) MethodInfo());
+
+        result = result && Read(*obj.Info.Back());
+        if (!result)
+        {
+            delete obj.Info.Back();
+            obj.Info.PopBack();
+            break;
+        }
+    }
+
+    return result;
+}
+
+// @0x142566de0
+bool Reader::Read(NamespaceSetInfo& obj)
+{
+    bool result = true;
+
+    SInt32 entry = 0;
+    UInt32 size = 0;
+
+    obj.Data = CP;
+    result = result && Read(size);
+
+    for (UInt32 i = 0; result && (i < size); ++i)
+    {
+        result = result && Read(entry);
+
+        if (!result || (entry == 0))
+            return false;
+    }
+
+    return result;
+}
+
+// @0x142566e40
+// MS2-FUNCTIONAL: exe lowers the trait-kind switch to a jump table, this build to compare chains
+bool Reader::Read(TraitInfo& obj)
+{
+    bool result = true;
+
+    result = result &&
+        Read(obj.name_ind) &&
+        Read8(obj.kind);
+
+    result = result && (obj.name_ind >= 0);
+    if (!result)
+        return result;
+
+    switch (obj.GetType())
+    {
+    case TraitInfo::tMethod:
+    case TraitInfo::tGetter:
+    case TraitInfo::tSetter:
+    case TraitInfo::tClass:
+    case TraitInfo::tFunction:
+        result = result &&
+            Read(obj.SlotId) &&
+            Read(obj.Ind);
+
+        result = result && (obj.SlotId >= 0) && (obj.Ind >= 0);
+        break;
+    case TraitInfo::tSlot:
+    case TraitInfo::tConst:
+        {
+            SInd vindex = 0;
+
+            result = result &&
+                Read(obj.SlotId) &&
+                Read(obj.Ind) &&
+                Read(vindex);
+
+            if (!result)
+                return result;
+
+            if (vindex)
+            {
+                UInt8 kind = 0;
+                result = result && Read8(kind);
+
+                if (!IsValidValueKind(kind))
+                    result = false;
+
+                obj.default_value = ValueDetail(vindex, static_cast<ValueKind>(kind));
+            }
+        }
+        break;
+    default:
+        result = false;
+        break;
+    }
+
+    if (!result)
+        return result;
+
+    if (TraitInfo::HasMetaData(obj.kind))
+        result = result && Read(obj.meta_info);
+
+    return result;
+}
+
+// @0x142566fe0
+bool Reader::Read(TraitTable& t, ClassTable& obj)
+{
+    bool result = true;
+
+    SInt32 count = 0;
+    int i;
+
+    result = result && Read(count);
+
+    obj.Info.Reserve(count);
+    for (i = 0; result && (i < count); ++i)
+    {
+        obj.Info.PushBack(SF_HEAP_AUTO_NEW(this) ClassInfo());
+
+        Instance& inst_info = obj.Info.Back()->inst_info;
+
+        result = result && Read(t, inst_info);
+        if (!result)
+        {
+            delete obj.Info.Back();
+            obj.Info.PopBack();
+            break;
+        }
+    }
+
+    for (i = 0; result && (i < count); ++i)
+    {
+        StaticInfo& stat_info = obj.Info[i]->stat_info;
+
+        result = result && Read(t, stat_info);
+    }
+
+    return result;
+}
+
+// @0x1425672f0
+bool Reader::Read(TraitTable& t, HasCode& obj)
+{
+    bool result = true;
+
+    result = result &&
+        Read(obj.method_info_ind) &&
+        Read(t, static_cast<HasTraits&>(obj));
+
+    result = result && (obj.method_info_ind >= 0);
+
+    return result;
+}
+
+// @0x142567360
+bool Reader::Read(TraitTable& t, Instance& obj)
+{
+    bool result = true;
+
+    result = result &&
+        Read(obj.name_ind) &&
+        Read(obj.super_name_ind) &&
+        Read8(obj.flags);
+
+    result = result && (obj.name_ind >= 0) && (obj.super_name_ind >= 0);
+
+    if (obj.HasProtectedNamespace())
+        result = result && Read(obj.protected_namespace_ind);
+
+    result = result &&
+        Read(obj.implemented_interfaces) &&
+        Read(t, static_cast<HasCode&>(obj));
+
+    return result;
+}
+
+// @0x1425674b0
+bool Reader::Read(TraitTable& t, MethodBodyInfo& obj)
+{
+    bool result = true;
+
+    result = result &&
+        Read(obj.method_info_ind) &&
+        Read(obj.max_stack) &&
+        Read(obj.local_reg_count) &&
+        Read(obj.init_scope_depth) &&
+        Read(obj.max_scope_depth) &&
+        Read(obj.code) &&
+        Read(obj.exception) &&
+        Read(t, static_cast<HasTraits&>(obj));
+
+    result = result && (obj.method_info_ind >= 0);
+
+    return result;
+}
+
+// @0x142567670
+bool Reader::Read(TraitTable& t, MethodTable& mt, MethodBodyTable& obj)
+{
+    bool result = true;
+
+    SInd count = 0;
+    result = result && Read(count);
+
+    obj.Info.Reserve(count);
+    for (SInd i = 0; i < count; ++i)
+    {
+        obj.Info.PushBack(SF_HEAP_AUTO_NEW(this) MethodBodyInfo());
+        MethodBodyInfo& mbi = *obj.Info.Back();
+
+        result = result && Read(t, mbi);
+        if (result)
+        {
+            // Link the method to its body.
+            mt.Info[mbi.method_info_ind]->MethodBodyInfoInd = i;
+        }
+        else
+        {
+            delete obj.Info.Back();
+            obj.Info.PopBack();
+            break;
+        }
+    }
+
+    return result;
+}
+
+// @0x1425665d0
+bool Reader::Read(File& obj)
+{
+    bool result = true;
+
+    obj.Clear();
+
+    result = result &&
+        Read16(obj.MinorVersion) &&
+        Read16(obj.MajorVersion);
+
+    result = result && (obj.MajorVersion == 46) && (obj.MinorVersion == 16);
+
+    result = result &&
+        Read(obj.Const_Pool) &&
+        Read(obj.Methods) &&
+        Read(obj.Metadata) &&
+        Read(obj.Traits, obj.AS3_Classes) &&
+        Read(obj.Traits, obj.Scripts) &&
+        Read(obj.Traits, obj.Methods, obj.MethodBodies);
+
+    return result;
+}
+
+// @0x1425677f0
+bool Reader::Read(TraitTable& t, ScriptInfo& obj)
+{
+    bool result = true;
+
+    result = Read(t, static_cast<HasCode&>(obj));
+
+    return result;
+}
+
+// @0x142567850
+bool Reader::Read(TraitTable& t, ScriptTable& obj)
+{
+    bool result = true;
+
+    SInt32 count = 0;
+    result = result && Read(count);
+
+    obj.Info.Reserve(count);
+    for (int i = 0; i < count; ++i)
+    {
+        obj.Info.PushBack(SF_HEAP_AUTO_NEW(this) ScriptInfo());
+
+        result = result && Read(t, *obj.Info.Back());
+        if (!result)
+        {
+            delete obj.Info.Back();
+            obj.Info.PopBack();
+            break;
+        }
+    }
+
+    return result;
+}
+
+// @0x1425679e0
+bool Reader::Read(TraitTable& t, StaticInfo& obj)
+{
+    bool result = true;
+
+    result = Read(t, static_cast<HasCode&>(obj));
+
+    return result;
+}
+
+// @0x142567a40
+bool Reader::Read(const ConstPool& cp, Multiname& obj)
+{
+    bool result = true;
+    String any_name("*");
+    UInt8 kind = 0;
+
+    result = result && Read8(kind);
+
+    // Decode the AbcKind into the flag-encoded multiname kind.
+    MultinameFlagKind mnKind;
+    switch (static_cast<AbcKind>(kind))
+    {
+    case AbcKind_Qname:       mnKind = MNF_QName; break;
+    case AbcKind_QnameA:      mnKind = MNF_QNameA; break;
+    case AbcKind_RTQname:     mnKind = MNF_RTQName; break;
+    case AbcKind_RTQnameA:    mnKind = MNF_RTQNameA; break;
+    case AbcKind_RTQnameL:    mnKind = MNF_RTQNameL; break;
+    case AbcKind_RTQnameLA:   mnKind = MNF_RTQNameLA; break;
+    case AbcKind_Multiname:   mnKind = MNF_Multiname; break;
+    case AbcKind_MultinameL:  mnKind = MNF_MultinameL; break;
+    case AbcKind_MultinameA:  mnKind = MNF_MultinameA; break;
+    case AbcKind_MultinameLA: mnKind = MNF_MultinameLA; break;
+    case AbcKind_TypeName:    mnKind = MNF_Typename; break;
+    default:
+        mnKind = MNF_Invalid;
+        result = false;
+        break;
+    }
+    obj.Kind = mnKind;
+
+    switch (mnKind)
+    {
+    case MNF_QName:
+    case MNF_QNameA:
+        result = result &&
+            Read(obj.Ind) &&
+            Read(obj.NameIndex);
+        break;
+    case MNF_RTQName:
+    case MNF_RTQNameA:
+        result = result &&
+            Read(obj.NameIndex);
+        break;
+    case MNF_RTQNameL:
+    case MNF_RTQNameLA:
+        break;
+    case MNF_Multiname:
+    case MNF_MultinameA:
+        result = result &&
+            Read(obj.NameIndex) &&
+            Read(obj.Ind);
+        break;
+    case MNF_MultinameL:
+    case MNF_MultinameLA:
+        result = result &&
+            Read(obj.Ind);
+        break;
+    case MNF_Typename:
+        {
+            SInt32 ind = 0;
+
+            // The type in the constant pool.
+            result = result && Read(ind);
+            if (!result)
+                break;
+
+            obj = cp.GetMultiname(ind);
+
+            result = result && Read(ind);
+            result = result && (ind == 1);
+            if (!result)
+                break;
+
+            result = result && Read(obj.NextIndex);
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (!result)
+        obj.Kind = MNF_Invalid;
+
+    return result;
+}
+
+// @0x142567c60
+// MS2-FUNCTIONAL: uri string view copies through an extra stack temporary (sf_string.h StringDataPtr lacks the SDK copy ctor)
+bool Reader::Read(const ConstPool& cp, NamespaceInfo& obj)
+{
+    bool result = true;
+
+    UInt8 kind = 0;
+
+    result = result &&
+        Read8(kind) &&
+        Read(cp, obj.NameURI, "");
+
+    switch (static_cast<AbcKind>(kind))
+    {
+    case AbcKind_Namespace:
+    case AbcKind_PackageNamespace:
+        obj.Kind = NS_Public;
+        break;
+    case AbcKind_PackageInternalNs:
+        obj.Kind = NS_PackageInternal;
+        break;
+    case AbcKind_ProtectedNamespace:
+        obj.Kind = NS_Protected;
+        break;
+    case AbcKind_ExplicitNamespace:
+        obj.Kind = NS_Explicit;
+        break;
+    case AbcKind_StaticProtectedNs:
+        obj.Kind = NS_StaticProtected;
+        break;
+    case AbcKind_PrivateNs:
+        // Each class has its own private namespace.
+        obj.Kind = NS_Private;
+        break;
+    default:
+        result = false;
+        break;
+    }
+
+    return result;
+}
+
+// @0x142567df0
+// MS2-FUNCTIONAL: the exe copies the converted string view through one more stack temporary (sf_string.h StringDataPtr lacks the SDK's user copy ctor)
+bool Reader::Read(const ConstPool& cp, StringDataPtr& obj, const StringDataPtr& zero_val)
+{
+    UInt32 ind;
+    Read(ind);
+
+    if (ind == 0)
+        obj = zero_val;
+    else
+        obj = cp.GetString(ind);
+
+    return true;
+}
+
+// @0x142567e60
+bool Reader::ReadTraits(TraitTable& t, HasTraits::ObjectTraits& obj_traits)
+{
+    bool result = true;
+
+    SInd count = 0;
+    result = result && Read(count);
+
+    obj_traits.Reserve(count);
+    t.TraitInfos.Reserve(t.TraitInfos.GetSize() + count);
+    for (int i = 0; i < count; ++i)
+    {
+        obj_traits.PushBack(static_cast<SInd>(t.TraitInfos.GetSize()));
+        t.TraitInfos.PushBack(SF_HEAP_AUTO_NEW(this) TraitInfo());
+
+        result = result && Read(*t.TraitInfos.Back());
+        if (!result)
+        {
+            obj_traits.PopBack();
+            delete t.TraitInfos.Back();
+            t.TraitInfos.PopBack();
+            break;
+        }
+    }
+
+    return result;
+}
+
+}}}} // namespace Scaleform::GFx::AS3::Abc
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$04VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c2b0
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BA@V?$SPtr@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c320
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BB@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c3d0
@@ -1934,3 +2762,6 @@ void SoundObject::Stop()
 // MS2-PIN: ??_G?$RefCountBase@VSoundObject@AS3@GFx@Scaleform@@$0BED@@Scaleform@@UEAAPEAXI@Z 0x142564f90
 // MS2-PIN: ??_7ASSoundIntf@GFx@Scaleform@@6B@ 0x143182f18
 // MS2-PIN: ??_7?$RefCountBase@VSoundObject@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143182f48
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UItem@MetadataInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH@UItem@MetadataInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@6@UArrayDefaultPolicy@6@@Scaleform@@QEAAXPEBX_K@Z 0x142568260
+// MS2-PIN: ?Reserve@?$ArrayDataBase@VValueDetail@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH@VValueDetail@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAXPEBX_K@Z 0x142568300
+// MS2-PIN: ?Resize@?$ArrayData@PEAVClassInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVClassInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAX_K@Z 0x1425683a0
