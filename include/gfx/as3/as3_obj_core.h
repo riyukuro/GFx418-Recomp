@@ -695,6 +695,12 @@ namespace InstanceTraits { namespace fl
     public:
         // @0x142403750
         static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e6fe0 (appended, sfr15)
+        static void AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e7050 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e7120 (appended, sfr15)
+        static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class Catch : public CTraits
@@ -736,6 +742,12 @@ namespace InstanceTraits { namespace fl
         // @0x14241c040
         virtual void MakeObject(Value& result, Traits& t);
 
+        static void prefixGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);     // 0x1423e6090
+        static void uriGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);        // 0x1423e6100
+        static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);    // 0x1423e6170
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv); // 0x1423e61e0
+        static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);  // 0x1423e62b0
+
     public:
         Ptr<NamespaceInstanceFactory> InstanceFactory;    // +0xe8
     };
@@ -756,6 +768,20 @@ namespace InstanceTraits { namespace fl
         static void AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1424037c0
         static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402710 (appended, sfr15)
+        static void AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e29b0 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e2a50 (appended, sfr15)
+        static void toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e2af0 (appended, sfr15)
+        static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e2ff0 (appended, sfr15)
+        static void toFixedProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e3180 (appended, sfr15)
+        static void toPrecisionProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e2d40 (appended, sfr15)
+        static void toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class QName : public CTraits
@@ -834,6 +860,20 @@ namespace InstanceTraits { namespace fl
         static void AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142403a20
         static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402d50 (appended, sfr15)
+        static void AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e5750 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e57f0 (appended, sfr15)
+        static void toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e5890 (appended, sfr15)
+        static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e5c10 (appended, sfr15)
+        static void toFixedProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e5da0 (appended, sfr15)
+        static void toPrecisionProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e5960 (appended, sfr15)
+        static void toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class uint : public CTraits
@@ -852,6 +892,20 @@ namespace InstanceTraits { namespace fl
         static void AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142403ac0
         static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402ed0 (appended, sfr15)
+        static void AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e66a0 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e6740 (appended, sfr15)
+        static void toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e67e0 (appended, sfr15)
+        static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e6b60 (appended, sfr15)
+        static void toFixedProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e6cf0 (appended, sfr15)
+        static void toPrecisionProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e68b0 (appended, sfr15)
+        static void toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
 }}

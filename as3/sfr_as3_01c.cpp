@@ -11,6 +11,58 @@
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
 #include "ms2/scaleform/include/gfx/gfx_asutils.h"
+#include "ms2/scaleform/include/kernel/sf_msgformat.h"
+
+// Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+// VM::GetValueTraits.
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+
+// ECMA-262 15.9.1 time arithmetic the Date holders inline (the out-of-line Date:: copies are in sfr_as3_03/04).
+namespace Scaleform { namespace GFx { namespace AS3 {
+    static SF_INLINE Value::Number DateDayOfTime(Value::Number t)
+    {
+        return ::floor(t / 86400000.0);
+    }
+
+    static SF_INLINE Value::Number DateTimeWithinDay(Value::Number t)
+    {
+        Value::Number r = fmod(t, 86400000.0);
+        if (r < 0)
+            r += 86400000.0;
+        return r;
+    }
+
+    static SF_INLINE Value::Number DateDayFromYear(Value::Number y)
+    {
+        return ::floor((y - 1969.0) * 0.25) + (y - 1970.0) * 365.0 - ::floor((y - 1901.0) / 100.0) +
+               ::floor((y - 1601.0) / 400.0);
+    }
+
+    static SF_INLINE Value::Number DateHourFromTime(Value::Number t)
+    {
+        Value::Number r = fmod(::floor(t / 3600000.0), 24.0);
+        if (r < 0)
+            r += 24.0;
+        return r;
+    }
+
+    static SF_INLINE Value::Number DateMinFromTime(Value::Number t)
+    {
+        Value::Number r = fmod(::floor(t / 60000.0), 60.0);
+        if (r < 0)
+            r += 60.0;
+        return r;
+    }
+
+    static SF_INLINE Value::Number DateSecFromTime(Value::Number t)
+    {
+        Value::Number r = fmod(::floor(t / 1000.0), 60.0);
+        if (r < 0)
+            r += 60.0;
+        return r;
+    }
+}}}
 
 // The thunks below call through ThunkFuncN<...>::Method, defined (with its dynamic initializer) in the sfr_as3di_*
 // units.
@@ -516,6 +568,18 @@ namespace Instances { namespace fl
         : Instance(t), TimeValue(0), LocalTZA(0)
     {
     }
+
+    // @0x1423ec400
+    Date::DateHolder::DateHolder(Value::Number time, Value::Number tza)
+        : TZA(tza)
+    {
+        const Value::Number t = time + tza;
+        Entries[Date_Year] = Date::YearFromTime(t);
+        const SInt32 dayWithinYear = static_cast<SInt32>(DateDayOfTime(t) - DateDayFromYear(Entries[Date_Year]));
+        Entries[Date_Month] = Date::MonthFromYearDay(static_cast<SInt32>(Entries[Date_Year]), dayWithinYear);
+        Entries[Date_Day] = static_cast<Value::Number>(Date::DateFromTime(t));
+        TimeInDay = DateTimeWithinDay(t);
+    }
 }}
 
 namespace ClassTraits { namespace fl
@@ -937,6 +1001,22 @@ namespace InstanceTraits { namespace fl
     }
 }}
 
+namespace Instances { namespace fl
+{
+    // @0x1423ef290
+    Date::TimeHolder::TimeHolder(Value::Number time, Value::Number tza)
+        : TZA(tza)
+    {
+        const Value::Number t = time + tza;
+        Entries[Time_Hour] = DateHourFromTime(t);
+        Entries[Time_Minute] = DateMinFromTime(t);
+        Entries[Time_Second] = DateSecFromTime(t);
+        // The exe stores the seconds again here (not the milliseconds).
+        Entries[Time_Ms] = DateSecFromTime(t);
+        Day = DateDayOfTime(t);
+    }
+}}
+
 namespace ClassTraits { namespace fl
 {
     // @0x1423ef0d0
@@ -1132,6 +1212,281 @@ namespace InstanceTraits { namespace fl
     }
 }}
 
+
+namespace InstanceTraits { namespace fl
+{
+    // Prototype methods of the primitive wrapper classes: on the class's own prototype object they return the
+    // default value, otherwise the AS3 method (inlined from its own unit).
+    #define MS2_AS3_ON_PROTOTYPE(getclass) (_this.IsObject() && _this.GetObject() == &vm.getclass().GetPrototype())
+
+    // @0x1423e29b0
+    void Number::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassNumber))
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_zero);
+        else
+            AS3toString(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e2a50
+    void Number::toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        toStringProto(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e2af0
+    void Number::valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassNumber))
+            result.SetNumber(0);
+        else if (!_this.IsNumber())
+            vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        else
+            result = _this;
+    }
+
+    // @0x1423e5750
+    void int_::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassSInt))
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_zero);
+        else
+            AS3toString(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e57f0
+    void int_::toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        toStringProto(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e5890
+    void int_::valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassSInt))
+            result.SetSInt32(0);
+        else
+            AS3valueOf(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e66a0
+    void uint::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassUInt))
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_zero);
+        else
+            AS3toString(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e6740
+    void uint::toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        toStringProto(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e67e0
+    void uint::valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassUInt))
+            result.SetUInt32(0);
+        else
+            AS3valueOf(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e6fe0
+    void Boolean::AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsBool())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result = vm.GetStringManager().GetBuiltin(_this.AsBool() ? AS3Builtin_true : AS3Builtin_false);
+    }
+
+    // @0x1423e7050
+    void Boolean::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassBoolean))
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_false);
+        else
+            AS3toString(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e7120
+    void Boolean::valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (MS2_AS3_ON_PROTOTYPE(GetClassBoolean))
+            result.SetBool(false);
+        else if (!_this.IsBool())
+            vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        else
+            result = _this;
+    }
+
+    #undef MS2_AS3_ON_PROTOTYPE
+
+    // ClassTraits CoerceValue for the primitive classes (defined after the *Proto users, as in the exe's TU order).
+    static bool MS2_AS3_CoerceNumber(const Value& v, Value& result);
+    static bool MS2_AS3_CoerceSInt(const Value& v, Value& result);
+    static bool MS2_AS3_CoerceUInt(const Value& v, Value& result);
+
+    // The *Proto forms of toFixed/toPrecision: coerce this to the class's primitive type, then call the AS3 method.
+    #define MS2_AS3_COERCED_PROTO(cls, method, coerce, traits) \
+        Value coerced_this; \
+        if (!coerce(_this, coerced_this)) \
+            return vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), \
+                vm.traits().GetName().ToCStr())); \
+        cls::method(ti, vm, coerced_this, result, argc, argv)
+
+    // MS2-FUNCTIONAL: stack frame differs (exe keeps the CheckResult/ASString temps in home slots)
+    // @0x1423e2ff0
+    void Number::toFixedProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_COERCED_PROTO(Number, AS3toFixed, MS2_AS3_CoerceNumber, GetClassTraitsNumber);
+    }
+
+    // MS2-FUNCTIONAL: stack frame differs (exe keeps the CheckResult/ASString temps in home slots)
+    // @0x1423e3180
+    void Number::toPrecisionProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_COERCED_PROTO(Number, AS3toPrecision, MS2_AS3_CoerceNumber, GetClassTraitsNumber);
+    }
+
+    // MS2-FUNCTIONAL: stack frame differs (exe keeps the CheckResult/ASString temps in home slots)
+    // @0x1423e5c10
+    void int_::toFixedProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_COERCED_PROTO(int_, AS3toFixed, MS2_AS3_CoerceSInt, GetClassTraitsSInt);
+    }
+
+    // MS2-FUNCTIONAL: stack frame differs (exe keeps the CheckResult/ASString temps in home slots)
+    // @0x1423e5da0
+    void int_::toPrecisionProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_COERCED_PROTO(int_, AS3toPrecision, MS2_AS3_CoerceSInt, GetClassTraitsSInt);
+    }
+
+    // MS2-FUNCTIONAL: stack frame differs (exe keeps the CheckResult/ASString temps in home slots)
+    // @0x1423e6b60
+    void uint::toFixedProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_COERCED_PROTO(uint, AS3toFixed, MS2_AS3_CoerceUInt, GetClassTraitsUInt);
+    }
+
+    // MS2-FUNCTIONAL: stack frame differs (exe keeps the CheckResult/ASString temps in home slots)
+    // @0x1423e6cf0
+    void uint::toPrecisionProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_COERCED_PROTO(uint, AS3toPrecision, MS2_AS3_CoerceUInt, GetClassTraitsUInt);
+    }
+
+    #undef MS2_AS3_COERCED_PROTO
+
+    // toExponential: the exe has no out-of-line AS3toExponential, so the helpers below get inlined into the *Proto form.
+    static void MS2_AS3_NumberToExponential(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+    static void MS2_AS3_SIntToExponential(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+    static void MS2_AS3_UIntToExponential(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+
+    #define MS2_AS3_EXPONENTIAL_PROTO(coerce, traits, method) \
+        Value coerced_this; \
+        if (!coerce(_this, coerced_this)) \
+            return vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), \
+                vm.traits().GetName().ToCStr())); \
+        method(vm, coerced_this, result, argc, argv)
+
+    // @0x1423e2d40
+    void Number::toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceNumber, GetClassTraitsNumber, MS2_AS3_NumberToExponential);
+    }
+
+    // @0x1423e5960
+    void int_::toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceSInt, GetClassTraitsSInt, MS2_AS3_SIntToExponential);
+    }
+
+    // @0x1423e68b0
+    void uint::toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceUInt, GetClassTraitsUInt, MS2_AS3_UIntToExponential);
+    }
+
+    #undef MS2_AS3_EXPONENTIAL_PROTO
+
+    #define MS2_AS3_DEFINE_TOEXPONENTIAL(name, number) \
+        static void name(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv) \
+        { \
+            UInt32 digits = 0; \
+            if (argc > 0 && !argv[0].Convert2UInt32(digits)) \
+                return; \
+            if (digits > 20) \
+                return vm.ThrowRangeError(VM::Error(VM::eInvalidPrecisionError, vm)); \
+            DoubleFormatter f(number); \
+            f.SetType(DoubleFormatter::FmtScientific).SetPrecision(digits).Convert(); \
+            result = vm.GetStringManager().CreateString(f.GetResult().ToCStr(), f.GetSize()); \
+        }
+    MS2_AS3_DEFINE_TOEXPONENTIAL(MS2_AS3_NumberToExponential, _this.AsNumber())
+    MS2_AS3_DEFINE_TOEXPONENTIAL(MS2_AS3_SIntToExponential, _this.AsInt())
+    MS2_AS3_DEFINE_TOEXPONENTIAL(MS2_AS3_UIntToExponential, _this.AsUInt())
+    #undef MS2_AS3_DEFINE_TOEXPONENTIAL
+
+    #define MS2_AS3_DEFINE_COERCE(name, type, convert, set) \
+        static bool name(const Value& v, Value& result) \
+        { \
+            type n; \
+            if (!v.convert(n)) \
+                return false; \
+            result.set(n); \
+            return true; \
+        }
+    MS2_AS3_DEFINE_COERCE(MS2_AS3_CoerceNumber, Value::Number, Convert2Number, SetNumber)
+    MS2_AS3_DEFINE_COERCE(MS2_AS3_CoerceSInt, SInt32, Convert2Int32, SetSInt32)
+    MS2_AS3_DEFINE_COERCE(MS2_AS3_CoerceUInt, UInt32, Convert2UInt32, SetUInt32)
+    #undef MS2_AS3_DEFINE_COERCE
+
+    // @0x1423e6090
+    void Namespace::prefixGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsNamespace())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result = _this.AsNamespace().GetPrefix();
+    }
+
+    // @0x1423e6100
+    void Namespace::uriGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsNamespace())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result = _this.AsNamespace().GetUri();
+    }
+
+    // @0x1423e6170
+    void Namespace::AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsNamespace())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result = _this.AsNamespace().GetUri();
+    }
+
+    // @0x1423e61e0
+    void Namespace::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        const Value::KindType kind = _this.GetKind();
+        if (Value::IsObject(kind) && _this.GetObject() != NULL)
+        {
+            if (_this.GetObject() == &FUN_142508460(&vm.GetClassTraitsNamespace().GetInstanceTraits()).GetPrototype())
+                return result.Assign(vm.GetStringManager().GetBuiltin(AS3Builtin_empty_));
+        }
+        else if (kind == Value::kNamespace)
+            return result.Assign(_this.AsNamespace().GetUri());
+        vm.ThrowTypeError(VM::Error(VM::eUndefinedVarError, vm));
+    }
+
+    // @0x1423e62b0
+    void Namespace::valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        toStringProto(ti, vm, _this, result, argc, argv);
+    }
+}}
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PINS-BEGIN tplpin

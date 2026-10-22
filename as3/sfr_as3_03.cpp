@@ -557,6 +557,9 @@ namespace Classes { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+// SF_ECMA_dtostr: shortest round-trip ECMA-262 decimal form of val into buffer, returns its length.
+Scaleform::UPInt FUN_142525f20(char* buffer, int bufflen, double val);
+
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 
@@ -645,6 +648,69 @@ namespace InstanceTraits { namespace fl
             return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
         result = _this;
     }
+
+    // @0x142402710
+    void Number::AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        UInt32 radix = 10;
+        if (!_this.IsNumber())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        if (argc > 0 && !argv[0].IsUndefined())
+        {
+            if (!argv[0].Convert2UInt32(radix))
+                return;
+            if (radix < 2 || radix > 36)
+                return vm.ThrowRangeError(VM::Error(VM::eInvalidRadixError, vm, radix));
+        }
+        const Value::Number num = _this.AsNumber();
+        if (radix != 10 && !_this.IsNaNOrInfinity())
+        {
+            SInt32 v;
+            if (!_this.Convert2Int32(v))
+                return;
+            LongFormatter f(v);
+            f.SetBase(radix).SetBigLetters(false).Convert();
+            const StringDataPtr s = f.GetResult();
+            result = vm.GetStringManager().CreateString(s.ToCStr(), s.GetSize());
+        }
+        else
+        {
+            char buffer[40];
+            const UPInt len = FUN_142525f20(buffer, sizeof(buffer), num);
+            result = vm.GetStringManager().CreateString(buffer, len);
+        }
+    }
+
+    // Shared body of int/uint toString: the value in the given radix (2..16).
+    #define MS2_AS3_INT_TOSTRING(value) \
+        if (!_this.IsInt() && !_this.IsUInt()) \
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm)); \
+        UInt32 radix = 10; \
+        if (argc > 0 && !argv[0].IsUndefined()) \
+        { \
+            if (!argv[0].Convert2UInt32(radix)) \
+                return; \
+            if (radix < 2 || radix > 16) \
+                return vm.ThrowRangeError(VM::Error(VM::eInvalidRadixError, vm, radix)); \
+        } \
+        LongFormatter f(value); \
+        f.SetBase(radix).SetBigLetters(false).Convert(); \
+        const StringDataPtr s = f.GetResult(); \
+        result = vm.GetStringManager().CreateString(s.ToCStr(), s.GetSize())
+
+    // @0x142402d50
+    void int_::AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_INT_TOSTRING(static_cast<SInt32>(_this.AsInt()));
+    }
+
+    // @0x142402ed0
+    void uint::AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        MS2_AS3_INT_TOSTRING(static_cast<UInt32>(_this.AsUInt()));
+    }
+
+    #undef MS2_AS3_INT_TOSTRING
 
     // Shared body of toFixed/toPrecision: format v with the given type and precision into result.
     #define MS2_AS3_FORMAT_DOUBLE(v, type, prec) \

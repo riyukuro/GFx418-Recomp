@@ -13,6 +13,8 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+namespace Classes { namespace fl { class Array; class Boolean; class int_; class Number; class String; class uint; } }
+
 // The VM's host interface (the movie's AS3 root implements it). Only the slots the recovered code calls.
 class FlashUI
 {
@@ -77,6 +79,9 @@ public:
         eInvalidBitmapData          = 2015,
         eInvalidPrecisionError      = 1002,
         eInvokeOnIncompatibleObjectError = 1004,
+        // (appended, sfr15)
+        eInvalidRadixError          = 1003,
+        eUndefinedVarError          = 1065,
         eCallOfNonFunctionError     = 1006,
         eConstructOfNonFunctionError = 1007,
         eStackOverflowError         = 1023,
@@ -94,6 +99,7 @@ public:
         Error(ErrorID id, VM& vm, const char* arg1, const char* arg2);   // 0x1424d7690
         Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int arg4);   // 0x1424d7bf0
         Error(ErrorID id, VM& vm, int arg1, int arg2);  // 0x1424d74d0
+        Error(ErrorID id, VM& vm, int arg1);            // 0x1424d7330 (appended, sfr15)
 
         ErrorID         GetErrorID() const  { return ID; }
         const ASString& GetMessage() const  { return Message; }
@@ -140,6 +146,14 @@ public:
     CheckResult constructBuiltinObject(SPtr<Object>& pobj, const char* gname, unsigned argc, const Value* argv); // 0x142532130
     // The class object of the global class gname ("flash.geom.Vector3D"); NULL when there is none.
     Class* GetClass(const StringDataPtr& gname);    // 0x142507be0
+
+    // (appended, sfr15) the class objects of the core classes (out of line; built on demand by the traits).
+    Classes::fl::Array&   GetClassArray() const;      // 0x142507df0
+    Classes::fl::Boolean& GetClassBoolean() const;    // 0x142507e30
+    Classes::fl::int_&    GetClassSInt() const;       // 0x142507e70
+    Classes::fl::Number&  GetClassNumber() const;     // 0x142507eb0
+    Classes::fl::String&  GetClassString() const;     // 0x142507ef0
+    Classes::fl::uint&    GetClassUInt() const;       // 0x142508100
 
     Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
     Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }

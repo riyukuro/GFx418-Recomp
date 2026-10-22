@@ -530,6 +530,8 @@ public:
         return GetClassTraits().GetInstanceTraits();
     }
     Class* GetParentClass() const { return ParentClass; }
+    // (appended, sfr15) the prototype object, made on first use (0x14250d4c0).
+    Object& GetPrototype();
 
     // native methods
     // @0x142540ba0
@@ -639,6 +641,7 @@ namespace Instances
 
         Abc::NamespaceKind  GetKind() const     { return (Abc::NamespaceKind)Kind; }
         const ASString&     GetUri() const      { return Uri; }
+        const Value&        GetPrefix() const   { return Prefix; }
         VM&                 GetVM() const       { return VMRef; }
 
     protected:
