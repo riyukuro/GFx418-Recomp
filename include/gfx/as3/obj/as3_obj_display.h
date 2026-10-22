@@ -476,6 +476,13 @@ namespace Instances { namespace fl_display {
         void unload(const Value& result);
         // @0x1424546a0
         void unloadAndStop(const Value& result, bool);
+
+        // Load notifications: dispatch complete / ioError / init / open / progress to the LoaderInfo's listeners.
+        void ExecuteCompleteEvent();                                    // 0x1424421e0
+        void ExecuteErrorEvent(const char* purl);                       // 0x142442410
+        void ExecuteInitEvent(GFx::DisplayObject* pcontent);            // 0x1424425d0
+        void ExecuteOpenEvent();                                        // 0x1424428f0
+        void ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal); // 0x142442a60
     };
 
     // 0x68 bytes.
@@ -492,6 +499,13 @@ namespace Instances { namespace fl_display {
         UInt32                                      BytesTotal;     // +0x54
         SPtr<Instances::fl_display::DisplayObject>  Content;        // +0x58
         SPtr<Instances::fl_display::Loader>         pLoader;        // +0x60
+
+        // Load notifications: dispatch complete / ioError / init / open / progress to the LoaderInfo's listeners.
+        void ExecuteCompleteEvent();                                    // 0x1424422a0
+        void ExecuteErrorEvent(const char* ptext);                      // 0x142442520
+        void ExecuteInitEvent(GFx::DisplayObject* pcontent);            // 0x1424426d0
+        void ExecuteOpenEvent();                                        // 0x1424429b0
+        void ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal); // 0x142442b50
 
         // @0x1424474c0
         void actionScriptVersionGet(UInt32& result);

@@ -1989,6 +1989,158 @@ namespace Instances { namespace fl_display
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ---- Loader / LoaderInfo load notifications ----
+// EventDispatcher::HasEventHandler(type, capture), CreateEventObject(type, bubbles, cancelable), and the IOErrorEvent /
+// ProgressEvent makers, with their hidden return slots spelled out.
+bool FUN_14246a160(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis, const Scaleform::GFx::ASString& type, bool capture);
+void FUN_142466cd0(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis,
+                   Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event>* pret,
+                   const Scaleform::GFx::ASString& type, bool bubbles, bool cancelable);
+void FUN_142467190(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis,
+                   Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event>* pret, const char* ptext);
+void FUN_142467dc0(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis,
+                   Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event>* pret,
+                   const Scaleform::GFx::ASString& type);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_display
+{
+    // The AS3 movie root's builtin event names.
+    enum LoadEventName
+    {
+        LoadEvent_complete = 0x298,
+        LoadEvent_progress = 0x2a0,
+        LoadEvent_open     = 0x2a8,
+        LoadEvent_init     = 0x2b0
+    };
+
+    static ASString GetLoadEventName(VM& vm, LoadEventName name)
+    {
+        return ASString(*reinterpret_cast<ASStringNode**>(reinterpret_cast<UByte*>(GetASRoot(vm)) + name));
+    }
+
+    // Dispatches a plain event of the given name to pthis' listeners, if it has any.
+    static void DispatchLoadEvent(fl_events::EventDispatcher* pthis, LoadEventName name)
+    {
+        ASString type = GetLoadEventName(pthis->GetVM(), name);
+        if (FUN_14246a160(pthis, type, false))
+        {
+            SPtr<fl_events::Event> evt;
+            FUN_142466cd0(pthis, &evt, type, false, false);
+            evt->Target = pthis;
+            pthis->DispatchSingleEvent(evt, false);
+        }
+    }
+
+    // @0x1424421e0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Loader::ExecuteCompleteEvent()
+    {
+        if (pContentLoaderInfo)
+            pContentLoaderInfo->ExecuteCompleteEvent();
+    }
+
+    // @0x1424422a0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void LoaderInfo::ExecuteCompleteEvent()
+    {
+        DispatchLoadEvent(this, LoadEvent_complete);
+    }
+
+    // @0x142442410
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Loader::ExecuteErrorEvent(const char* purl)
+    {
+        if (!pContentLoaderInfo)
+            return;
+        char text[1024];
+        SFsprintf(text, sizeof(text), "Error reading %s", purl);
+        pContentLoaderInfo->ExecuteErrorEvent(text);
+    }
+
+    // @0x142442520
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void LoaderInfo::ExecuteErrorEvent(const char* ptext)
+    {
+        SPtr<fl_events::Event> evt;
+        FUN_142467190(this, &evt, ptext);
+        evt->Target = this;
+        DispatchSingleEvent(evt, false);
+    }
+
+    // @0x1424425d0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Loader::ExecuteInitEvent(GFx::DisplayObject* pcontent)
+    {
+        if (pContentLoaderInfo)
+            pContentLoaderInfo->ExecuteInitEvent(pcontent);
+    }
+
+    // @0x1424426d0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void LoaderInfo::ExecuteInitEvent(GFx::DisplayObject* pcontent)
+    {
+        if (pcontent)
+        {
+            // Make sure the content has its AS3 object (AvmDisplayObj virtual slot 15), then publish it.
+            AvmDisplayObj* pavm = ToAvmDisplayObj(pcontent);
+            typedef void (*CreateASInstanceFn)(AvmDisplayObj*, bool);
+            (*reinterpret_cast<CreateASInstanceFn* const*>(pavm))[15](pavm, true);
+            DisplayObject* pas3 = pavm->pAS3RawPtr;
+            if (!pas3)
+                pas3 = reinterpret_cast<DisplayObject*>(reinterpret_cast<UPInt>(pavm->pAS3CollectiblePtr) & ~(UPInt)1);
+            Content = pas3;
+        }
+        DispatchLoadEvent(this, LoadEvent_init);
+    }
+
+    // @0x1424428f0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Loader::ExecuteOpenEvent()
+    {
+        if (pContentLoaderInfo)
+            pContentLoaderInfo->ExecuteOpenEvent();
+    }
+
+    // @0x1424429b0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void LoaderInfo::ExecuteOpenEvent()
+    {
+        DispatchLoadEvent(this, LoadEvent_open);
+    }
+
+    // @0x142442a60
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Loader::ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal)
+    {
+        if (pContentLoaderInfo)
+            pContentLoaderInfo->ExecuteProgressEvent(bytesLoaded, bytesTotal);
+    }
+
+    // @0x142442b50
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void LoaderInfo::ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal)
+    {
+        ASString type = GetLoadEventName(GetVM(), LoadEvent_progress);
+        if (FUN_14246a160(this, type, false))
+        {
+            SPtr<fl_events::Event> evt;
+            FUN_142467dc0(this, &evt, type);
+            evt->Target = this;
+            BytesLoaded = (UInt32)bytesLoaded;
+            BytesTotal = (UInt32)bytesTotal;
+            // ProgressEvent's bytesLoaded / bytesTotal (+0x58 / +0x60, 64-bit counts).
+            UByte* pevt = reinterpret_cast<UByte*>(evt.GetPtr());
+            *reinterpret_cast<UInt64*>(pevt + 0x58) = bytesLoaded;
+            *reinterpret_cast<UInt64*>(pevt + 0x60) = bytesTotal;
+            DispatchSingleEvent(evt, false);
+        }
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc3@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@$0P@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@KK_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438be0
 // MS2-PIN: ?Func@?$ThunkFunc1@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@$0CL@$$CBVValue@456@PEAVTransform@fl_geom@3456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438d50
 // MS2-PIN: ?Func@?$ThunkFunc0@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$03V?$SPtr@VScene@fl_display@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438d90
