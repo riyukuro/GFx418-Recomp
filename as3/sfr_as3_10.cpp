@@ -1785,6 +1785,370 @@ namespace Instances { namespace fl_filters
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ==== flash.geom: traits and constructors (the natives, AS3 constructors and MakeObject are in sfr_as3_11) ===========
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace fl_geom
+{
+    extern const ClassInfo ColorTransformCI;
+    extern const ClassInfo Matrix3DCI;
+    extern const ClassInfo MatrixCI;
+    extern const ClassInfo PerspectiveProjectionCI;
+    extern const ClassInfo PointCI;
+    extern const ClassInfo RectangleCI;
+    extern const ClassInfo TransformCI;
+    extern const ClassInfo Vector3DCI;
+}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x14247cd00
+    Pickable<Traits> PerspectiveProjection::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) PerspectiveProjection(vm));
+    }
+
+    // @0x14247ce40
+    Pickable<Traits> Matrix3D::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Matrix3D(vm));
+    }
+
+    // @0x14247ddd0
+    Pickable<Traits> Vector3D::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Vector3D(vm));
+    }
+
+    // @0x14247e4e0
+    Pickable<Traits> Rectangle::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Rectangle(vm));
+    }
+
+    // @0x14247ff80
+    Pickable<Traits> Transform::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Transform(vm));
+    }
+
+    // @0x142480a10
+    Pickable<Traits> ColorTransform::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ColorTransform(vm));
+    }
+
+    // @0x142481b90
+    Pickable<Traits> Matrix::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Matrix(vm));
+    }
+
+    // @0x142481cd0
+    Pickable<Traits> Point::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Point(vm));
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x142481e50
+    ColorTransform::ColorTransform(VM& vm)
+        : Traits(vm, AS3::fl_geom::ColorTransformCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::ColorTransform(vm, AS3::fl_geom::ColorTransformCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x142481f50
+    ColorTransform::ColorTransform(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x142481f80
+    ColorTransform::ColorTransform(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+    {
+        alphaMultiplier = blueMultiplier = greenMultiplier = redMultiplier = 1.0;
+        alphaOffset = blueOffset = greenOffset = redOffset = 0.0;
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x142481fd0
+    Matrix3D::Matrix3D(VM& vm)
+        : Traits(vm, AS3::fl_geom::Matrix3DCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::Matrix3D(vm, AS3::fl_geom::Matrix3DCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x1424820d0
+    Matrix3D::Matrix3D(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x142482100
+    Matrix3D::Matrix3D(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , pDispObj(0)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x142482160
+    Matrix::Matrix(VM& vm)
+        : Traits(vm, AS3::fl_geom::MatrixCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::Matrix(vm, AS3::fl_geom::MatrixCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x142482260
+    Matrix::Matrix(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // The AS3 constructor sets the identity; the native object starts zeroed.
+    // @0x142482290
+    Matrix::Matrix(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , a(0), b(0), c(0), d(0), tx(0), ty(0)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x1424822d0
+    PerspectiveProjection::PerspectiveProjection(VM& vm)
+        : Traits(vm, AS3::fl_geom::PerspectiveProjectionCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::PerspectiveProjection(vm, AS3::fl_geom::PerspectiveProjectionCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x1424823d0
+    PerspectiveProjection::PerspectiveProjection(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x142482400
+    PerspectiveProjection::PerspectiveProjection(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , fieldOfView(55), pDispObj(0)
+    {
+        // A 500x500 stage: the centre and the focal length of a 55 degree field of view.
+        projectionCenter.x = 250.f;
+        projectionCenter.y = 250.f;
+        focalLength = 250.0 / tan(SF_DEGTORAD(fieldOfView) / 2);
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x142482470
+    Point::Point(VM& vm)
+        : Traits(vm, AS3::fl_geom::PointCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::Point(vm, AS3::fl_geom::PointCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_geom::Point(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_geom
+{
+    // @0x142482570
+    Point::Point(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x1424825a0
+    Point::Point(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x1424825d0
+    Point::Point(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , x(0), y(0)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x142482600
+    Rectangle::Rectangle(VM& vm)
+        : Traits(vm, AS3::fl_geom::RectangleCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::Rectangle(vm, AS3::fl_geom::RectangleCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x142482700
+    Rectangle::Rectangle(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x142482730
+    Rectangle::Rectangle(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , height(0), width(0), x(0), y(0)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x142482770
+    Transform::Transform(VM& vm)
+        : Traits(vm, AS3::fl_geom::TransformCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::Transform(vm, AS3::fl_geom::TransformCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x142482870
+    Transform::Transform(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x1424828a0
+    Transform::Transform(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , pDispObj(0)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // @0x1424828d0
+    Vector3D::Vector3D(VM& vm)
+        : Traits(vm, AS3::fl_geom::Vector3DCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_geom::Vector3D(vm, AS3::fl_geom::Vector3DCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_geom::Vector3D(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_geom
+{
+    // @0x1424829d0
+    Vector3D::Vector3D(ClassTraits::Traits& t)
+        : Class(t)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        X_AXIS = Pickable<Instances::fl_geom::Vector3D>(new(itr.Alloc()) Instances::fl_geom::Vector3D(itr));
+        Y_AXIS = Pickable<Instances::fl_geom::Vector3D>(new(itr.Alloc()) Instances::fl_geom::Vector3D(itr));
+        Z_AXIS = Pickable<Instances::fl_geom::Vector3D>(new(itr.Alloc()) Instances::fl_geom::Vector3D(itr));
+        X_AXIS->x = 1;
+        Y_AXIS->y = 1;
+        Z_AXIS->z = 1;
+    }
+}}
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // @0x142482b80
+    Vector3D::Vector3D(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x142482bb0
+    Vector3D::Vector3D(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , x(0), y(0), z(0), w(0)
+    {
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473af0
 // MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473b60
 // MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$01N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473bf0
@@ -2056,3 +2420,45 @@ namespace Instances { namespace fl_filters
 // MS2-PIN: ??_GGlowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479190
 // MS2-PIN: ??_GGradientBevelFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424792f0
 // MS2-PIN: ??_GGradientGlowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479380
+// MS2-PIN: ??_7ColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315de18
+// MS2-PIN: ??_7ColorTransform@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315dee8
+// MS2-PIN: ??_7ColorTransform@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315df90
+// MS2-PIN: ??_7Vector3D@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e0c0
+// MS2-PIN: ??_7Vector3D@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315e188
+// MS2-PIN: ??_7Vector3D@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315e238
+// MS2-PIN: ??_7Vector3D@fl_geom@Classes@AS3@GFx@Scaleform@@6B@ 0x14315e2c8
+// MS2-PIN: ??_7Matrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e3d8
+// MS2-PIN: ??_7Matrix3D@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315e4a0
+// MS2-PIN: ??_7Matrix3D@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315e548
+// MS2-PIN: ??_7Matrix@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e6f0
+// MS2-PIN: ??_7Matrix@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315e7b8
+// MS2-PIN: ??_7Matrix@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315e858
+// MS2-PIN: ??_7Point@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e8e8
+// MS2-PIN: ??_7Point@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315e9b0
+// MS2-PIN: ??_7Point@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315ea50
+// MS2-PIN: ??_7Point@fl_geom@Classes@AS3@GFx@Scaleform@@6B@ 0x14315eae0
+// MS2-PIN: ??_7PerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315ebd8
+// MS2-PIN: ??_7PerspectiveProjection@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315ecb0
+// MS2-PIN: ??_7PerspectiveProjection@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315ed60
+// MS2-PIN: ??_7Rectangle@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315ee00
+// MS2-PIN: ??_7Rectangle@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315eec8
+// MS2-PIN: ??_7Rectangle@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315ef70
+// MS2-PIN: ??_7Transform@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315f008
+// MS2-PIN: ??_7Transform@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315f0d0
+// MS2-PIN: ??_7Transform@fl_geom@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315f178
+// MS2-PIN: ??_GColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482ce0
+// MS2-PIN: ??_GColorTransform@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482c80
+// MS2-PIN: ??_GColorTransform@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482bf0
+// MS2-PIN: ??_GMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482e30
+// MS2-PIN: ??_GMatrix3D@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482dd0
+// MS2-PIN: ??_GMatrix3D@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482d40
+// MS2-PIN: ??_GMatrix@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482f80
+// MS2-PIN: ??_GMatrix@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482f20
+// MS2-PIN: ??_GMatrix@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482e90
+// MS2-PIN: ??_GPoint@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483280
+// MS2-PIN: ??_GPoint@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483220
+// MS2-PIN: ??_GPoint@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483130
+// MS2-PIN: ??_GPoint@fl_geom@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424831c0
+// MS2-PIN: ??_GPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424830d0
+// MS2-PIN: ??_GPerspectiveProjection@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483070
+// MS2-PIN: ??_GPerspectiveProjection@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482fe0

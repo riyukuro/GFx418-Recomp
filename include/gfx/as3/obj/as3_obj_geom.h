@@ -5,14 +5,22 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "Render/Render_Matrix4x4.h"
+#include "Render/Render_Types2D.h"
+
+namespace Scaleform { namespace GFx { class DisplayObject; } }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_geom {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class ColorTransform : public Instances::fl::Object
     {
     public:
+        ColorTransform(InstanceTraits::Traits& t);
+        // @0x1424843c0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::ColorTransform"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x1424837b0
+
         // @0x142487c50
         void colorGet(UInt32& result);
         // @0x142487c80
@@ -21,12 +29,26 @@ namespace Instances { namespace fl_geom {
         void concat(const Value& result, Instances::fl_geom::ColorTransform*);
         // @0x14248e760
         void toString(ASString& result);
+
+        // AS3 order: each multiplier (1 by default) followed by its offset (0).
+        Value::Number alphaMultiplier;  // +0x38
+        Value::Number alphaOffset;      // +0x40
+        Value::Number blueMultiplier;   // +0x48
+        Value::Number blueOffset;       // +0x50
+        Value::Number greenMultiplier;  // +0x58
+        Value::Number greenOffset;      // +0x60
+        Value::Number redMultiplier;    // +0x68
+        Value::Number redOffset;        // +0x70
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Matrix : public Instances::fl::Object
     {
     public:
+        Matrix(InstanceTraits::Traits& t);
+        // @0x142484420
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Matrix"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483c90
+
         // @0x142487860
         void clone(SPtr<Instances::fl_geom::Matrix>& result);
         // @0x1424882b0
@@ -51,12 +73,19 @@ namespace Instances { namespace fl_geom {
         void transformPoint(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point*);
         // @0x142490dd0
         void translate(const Value& result, Value::Number, Value::Number);
+
+        Value::Number a, b, c, d;       // +0x38
+        Value::Number tx, ty;           // +0x58
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Matrix3D : public Instances::fl::Object
     {
     public:
+        Matrix3D(InstanceTraits::Traits& t);
+        // @0x1424843f0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Matrix3D"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x1424838e0
+
         // @0x142486b60
         void append(const Value& result, Instances::fl_geom::Matrix3D*);
         // @0x142486dc0
@@ -107,12 +136,19 @@ namespace Instances { namespace fl_geom {
         void transformVectors(const Value& result, Instances::fl_vec::Vector_double*, Instances::fl_vec::Vector_double*);
         // @0x142490df0
         void transpose(const Value& result);
+
+        Render::Matrix4x4<double> mat4; // +0x38, identity
+        GFx::DisplayObject* pDispObj;   // +0xb8
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class PerspectiveProjection : public Instances::fl::Object
     {
     public:
+        PerspectiveProjection(InstanceTraits::Traits& t);
+        // @0x142484450
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::PerspectiveProjection"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483db0
+
         // @0x142489b60
         void fieldOfViewGet(Value::Number& result);
         // @0x142489b70
@@ -127,12 +163,21 @@ namespace Instances { namespace fl_geom {
         void projectionCenterSet(const Value& result, Instances::fl_geom::Point*);
         // @0x14248e490
         void toMatrix3D(SPtr<Instances::fl_geom::Matrix3D>& result);
+
+        Render::PointF projectionCenter;    // +0x38
+        Value::Number focalLength;          // +0x40
+        Value::Number fieldOfView;          // +0x48 (degrees)
+        GFx::DisplayObject* pDispObj;       // +0x50
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Point : public Instances::fl::Object
     {
     public:
+        Point(InstanceTraits::Traits& t);
+        // @0x142484490
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Point"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483ec0
+
         // @0x142486840
         void add(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point*);
         // @0x1424879a0
@@ -149,12 +194,18 @@ namespace Instances { namespace fl_geom {
         void subtract(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point*);
         // @0x14248f9b0
         void toString(ASString& result);
+
+        Value::Number x, y;             // +0x38
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Rectangle : public Instances::fl::Object
     {
     public:
+        Rectangle(InstanceTraits::Traits& t);
+        // @0x1424844c0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Rectangle"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483f20
+
         // @0x142487510
         void bottomGet(Value::Number& result);
         // @0x142487540
@@ -213,12 +264,21 @@ namespace Instances { namespace fl_geom {
         void topSet(const Value& result, Value::Number);
         // @0x142490fb0
         void union_(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_geom::Rectangle*);
+
+        Value::Number height;           // +0x38
+        Value::Number width;            // +0x40
+        Value::Number x;                // +0x48
+        Value::Number y;                // +0x50
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Transform : public Instances::fl::Object
     {
     public:
+        Transform(InstanceTraits::Traits& t);
+        // @0x1424844f0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Transform"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483fc0
+
         // @0x142487d00
         void colorTransformGet(SPtr<Instances::fl_geom::ColorTransform>& result);
         // @0x142488100
@@ -243,12 +303,18 @@ namespace Instances { namespace fl_geom {
         void perspectiveProjectionSet(const Value& result, Instances::fl_geom::PerspectiveProjection*);
         // @0x14248c270
         void pixelBoundsGet(SPtr<Instances::fl_geom::Rectangle>& result);
+
+        GFx::DisplayObject* pDispObj;   // +0x38
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Vector3D : public Instances::fl::Object
     {
     public:
+        Vector3D(InstanceTraits::Traits& t);
+        // @0x142484530
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Vector3D"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483fd0
+
         // @0x142486950
         void add(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Vector3D*);
         // @0x142487b50
@@ -297,15 +363,20 @@ namespace Instances { namespace fl_geom {
         void zGet(Value::Number& result);
         // @0x142491370
         void zSet(const Value& result, Value::Number);
+
+        Value::Number x, y, z, w;       // +0x38
     };
 
 }}
 
 namespace Classes { namespace fl_geom {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Point : public Class
     {
     public:
+        Point(ClassTraits::Traits& t);
+        // @0x142484470
+        virtual const char* GetAS3ObjectType() const { return "Classes::Point"; }
+
         // @0x142489880
         void distance(Value::Number& result, Instances::fl_geom::Point*, Instances::fl_geom::Point*);
         // @0x14248a360
@@ -314,17 +385,92 @@ namespace Classes { namespace fl_geom {
         void polar(SPtr<Instances::fl_geom::Point>& result, Value::Number, Value::Number);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Vector3D : public Class
     {
     public:
+        Vector3D(ClassTraits::Traits& t);
+        // @0x142484510
+        virtual const char* GetAS3ObjectType() const { return "Classes::Vector3D"; }
+
         // @0x142486a70
         void angleBetween(Value::Number& result, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*);
         // @0x1424898c0
         void distance(Value::Number& result, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*);
+
+        // The unit axes, created with the class.
+        SPtr<Instances::fl_geom::Vector3D> X_AXIS;  // +0x50
+        SPtr<Instances::fl_geom::Vector3D> Y_AXIS;  // +0x58
+        SPtr<Instances::fl_geom::Vector3D> Z_AXIS;  // +0x60
     };
 
 }}
+
+#define MS2_SF_GEOM_ITRAITS(Name, TypeName)                                                                             \
+    class Name : public CTraits                                                                                         \
+    {                                                                                                                   \
+    public:                                                                                                             \
+        typedef Instances::fl_geom::Name InstanceType;                                                                  \
+                                                                                                                        \
+        Name(VM& vm, const ClassInfo& ci);                                                                              \
+        virtual const char* GetAS3ObjectType() const { return TypeName; }                                              \
+        virtual void MakeObject(Value& result, Traits& t);                                                              \
+    };
+
+namespace InstanceTraits { namespace fl_geom
+{
+    // One line per class: the tag is the GetAS3ObjectType of the macro. MakeObject is recovered with the natives.
+    // @0x1424843b0
+    MS2_SF_GEOM_ITRAITS(ColorTransform, "InstanceTraits::ColorTransform")      // MakeObject 0x142485930
+    // @0x1424843e0
+    MS2_SF_GEOM_ITRAITS(Matrix3D, "InstanceTraits::Matrix3D")                  // MakeObject 0x1424859c0
+    // @0x142484410
+    MS2_SF_GEOM_ITRAITS(Matrix, "InstanceTraits::Matrix")                      // MakeObject 0x142485a60
+    // @0x142484440
+    MS2_SF_GEOM_ITRAITS(PerspectiveProjection, "InstanceTraits::PerspectiveProjection") // MakeObject 0x142485ae0
+    // @0x142484480
+    MS2_SF_GEOM_ITRAITS(Point, "InstanceTraits::Point")                        // MakeObject 0x142485b80
+    // @0x1424844b0
+    MS2_SF_GEOM_ITRAITS(Rectangle, "InstanceTraits::Rectangle")                // MakeObject 0x142485bf0
+    // @0x1424844e0
+    MS2_SF_GEOM_ITRAITS(Transform, "InstanceTraits::Transform")                // MakeObject 0x142485c60
+    // @0x142484520
+    MS2_SF_GEOM_ITRAITS(Vector3D, "InstanceTraits::fl_geom::Vector3D")         // MakeObject 0x142485cc0
+}}
+
+#undef MS2_SF_GEOM_ITRAITS
+
+#define MS2_SF_GEOM_CTRAITS(Name, TypeName)                                                                             \
+    class Name : public Traits                                                                                          \
+    {                                                                                                                   \
+    public:                                                                                                             \
+        Name(VM& vm);                                                                                                   \
+        virtual const char* GetAS3ObjectType() const { return TypeName; }                                              \
+        static Pickable<Traits> MakeClassTraits(VM& vm);                                                                \
+    };
+
+namespace ClassTraits { namespace fl_geom
+{
+    // One line per class: the tag is the GetAS3ObjectType of the macro.
+    // @0x1424843a0
+    MS2_SF_GEOM_CTRAITS(ColorTransform, "ClassTraits::fl_geom::ColorTransform")
+    // @0x1424843d0
+    MS2_SF_GEOM_CTRAITS(Matrix3D, "ClassTraits::Matrix3D")
+    // @0x142484400
+    MS2_SF_GEOM_CTRAITS(Matrix, "ClassTraits::Matrix")
+    // @0x142484430
+    MS2_SF_GEOM_CTRAITS(PerspectiveProjection, "ClassTraits::PerspectiveProjection")
+    // @0x142484460
+    MS2_SF_GEOM_CTRAITS(Point, "ClassTraits::Point")
+    // @0x1424844a0
+    MS2_SF_GEOM_CTRAITS(Rectangle, "ClassTraits::Rectangle")
+    // @0x1424844d0
+    MS2_SF_GEOM_CTRAITS(Transform, "ClassTraits::Transform")
+    // @0x142484500
+    MS2_SF_GEOM_CTRAITS(Vector3D, "ClassTraits::Vector3D")
+}}
+
+#undef MS2_SF_GEOM_CTRAITS
+
 
 }}} // namespace Scaleform::GFx::AS3
 
