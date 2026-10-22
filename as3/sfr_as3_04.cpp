@@ -907,6 +907,7 @@ namespace Instances { namespace fl
         return TimeClip(MakeDay(year, month, date) * msPerDay + time - tza);
     }
 
+    // MS2-FUNCTIONAL 0x142428e10: the day/month name tables are read through SF_EXE_DATA (RIP-relative; the exe indexes off __ImageBase, which the DLL cannot link to exe data: LNK2016)
     // @0x142428e10
     Date::Parser::StringType Date::Parser::interpretDateString(const char* pstr, SPInt length, int* index)
     {
@@ -928,7 +929,7 @@ namespace Instances { namespace fl
                 return String_UTC;
             for (int i = 0; i < 7; ++i)
             {
-                if (memcmp(pstr, DateWeekDayNames[i], 3) == 0)
+                if (memcmp(pstr, SF_EXE_DATA(DateWeekDayNames)[i], 3) == 0)
                 {
                     *index = i;
                     return String_WeekDay;
@@ -936,7 +937,7 @@ namespace Instances { namespace fl
             }
             for (int i = 0; i < 12; ++i)
             {
-                if (memcmp(pstr, DateMonthNames[i], 3) == 0)
+                if (memcmp(pstr, SF_EXE_DATA(DateMonthNames)[i], 3) == 0)
                 {
                     *index = i;
                     return String_Month;
@@ -968,8 +969,8 @@ namespace Instances { namespace fl
             const int day = static_cast<int>(dh.Entries[Date_Day]);
             MsgFormat f(MsgFormat::Sink(StringDataPtr(buffer, bufferSize)));
             f.Parse("{0} {1} {2} ");
-            f.FormatD1(DateWeekDayNames[weekDay]);
-            f.FormatD1(DateMonthNames[static_cast<int>(dh.Entries[Date_Month])]);
+            f.FormatD1(SF_EXE_DATA(DateWeekDayNames)[weekDay]);
+            f.FormatD1(SF_EXE_DATA(DateMonthNames)[static_cast<int>(dh.Entries[Date_Month])]);
             f.FormatD1(day);
             f.FinishFormatD();
             size = f.GetStrSize();
