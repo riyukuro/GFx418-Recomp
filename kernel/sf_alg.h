@@ -203,6 +203,25 @@ void InsertionSort(Array& arr, Less less)
     InsertionSortSliced(arr, 0, arr.GetSize(), less);
 }
 
+// (appended for the rasterizer, sfr_render_07b) a plain buffer seen as an array by the sort templates
+template<class T>
+class ArrayAdaptor
+{
+public:
+    typedef T ValueType;
+
+    ArrayAdaptor() : Data(0), Size(0) {}
+    ArrayAdaptor(T* ptr, UPInt size) : Data(ptr), Size(size) {}
+
+    UPInt    GetSize() const             { return Size; }
+    const T& operator[](UPInt i) const   { return Data[i]; }
+    T&       operator[](UPInt i)         { return Data[i]; }
+
+private:
+    T*    Data;
+    UPInt Size;
+};
+
 }}  // namespace Scaleform::Alg
 
 #endif
