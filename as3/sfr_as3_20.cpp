@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142542820-0x1425584f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -63,6 +64,115 @@ template struct ThunkFunc0<Instances::fl_vec::Vector_uint, 4, ASString>;
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Abc {
+
+// @0x1425452c0
+double ConstPool::GetDouble(UPInt ind) const
+{
+    if (ind != 0)
+    {
+        const UInt8* p = ConstDouble + (ind - 1) * sizeof(double);
+        return ReadDouble(p);
+    }
+    return 0.0;
+}
+
+// @0x1425452f0
+UPInt NamespaceSetInfo::GetSize() const
+{
+    const UInt8* p = Data;
+    return static_cast<UInt32>(ReadU30(p));
+}
+
+template <typename T>
+UInt8 ReadU8(const T*& p)
+{
+    return *p++;
+}
+
+template <typename T>
+UInt8 ReadU8(const T* data, UPInt& pos)
+{
+    return data[pos++];
+}
+
+// noinline: the exe reads ABC data through out-of-line calls (GetSize, GetDouble and the parser).
+template <typename T>
+SF_NOINLINE int ReadU30(const T*& p)
+{
+    UInt8 b = ReadU8(p);
+    int result = b & 0x7f;
+    for (UInt32 shift = 7; (b & 0x80) && shift < 32; shift += 7)
+    {
+        b = ReadU8(p);
+        result |= (b & 0x7f) << shift;
+    }
+    return result;
+}
+
+template <typename T>
+SF_NOINLINE int ReadU30(const T* data, UPInt& pos)
+{
+    UInt8 b = ReadU8(data, pos);
+    int result = b & 0x7f;
+    for (UInt32 shift = 7; (b & 0x80) && shift < 32; shift += 7)
+    {
+        b = ReadU8(data, pos);
+        result |= (b & 0x7f) << shift;
+    }
+    return result;
+}
+
+template <typename T>
+SF_NOINLINE int ReadS24(const T* data, UPInt& pos)
+{
+    UInt32 b0 = data[pos];
+    UInt32 b1 = data[pos + 1];
+    UInt32 b2 = data[pos + 2];
+    pos += 3;
+    int result = ((b2 << 8 | b1) << 8) | b0;
+    if (b2 & 0x80)
+        result = ~(result ^ 0xffffff);
+    return result;
+}
+
+// Assembled byte by byte: the ABC data is little endian and need not be aligned.
+template <typename T>
+SF_NOINLINE double ReadDouble(const T*& p)
+{
+    union { UInt32 u[2]; double d; } v;
+    v.u[0] = ((((UInt32)p[3] << 8 | p[2]) << 8 | p[1]) << 8) | p[0];
+    v.u[1] = ((((UInt32)p[7] << 8 | p[6]) << 8 | p[5]) << 8) | p[4];
+    p += 8;
+    return v.d;
+}
+
+template <typename T>
+String ReadString(const T*& p, UPInt size)
+{
+    String result(reinterpret_cast<const char*>(p), size);
+    p += size;
+    return result;
+}
+
+template <typename T>
+String ReadString(const T* data, UPInt& pos, UPInt size)
+{
+    String result(reinterpret_cast<const char*>(data + pos), size);
+    pos += size;
+    return result;
+}
+
+// The instances for byte data (pinned below).
+template int    ReadU30<UInt8>(const UInt8*& p);
+template int    ReadU30<UInt8>(const UInt8* data, UPInt& pos);
+template int    ReadS24<UInt8>(const UInt8* data, UPInt& pos);
+template double ReadDouble<UInt8>(const UInt8*& p);
+template String ReadString<UInt8>(const UInt8*& p, UPInt size);
+template String ReadString<UInt8>(const UInt8* data, UPInt& pos, UPInt size);
+
+}}}} // namespace Scaleform::GFx::AS3::Abc
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0A@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546850
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1425468b0
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546920
@@ -88,3 +198,11 @@ template struct ThunkFunc0<Instances::fl_vec::Vector_uint, 4, ASString>;
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142547830
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$02_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142547890
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$03VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1425478f0
+// MS2-PIN: ??$ReadDouble@E@Abc@AS3@GFx@Scaleform@@YANAEAPEBE@Z 0x142545390
+// MS2-PIN: ??$ReadS24@E@Abc@AS3@GFx@Scaleform@@YAHPEBEAEA_K@Z 0x1425454b0
+// MS2-PIN: ??$ReadString@E@Abc@AS3@GFx@Scaleform@@YA?AVString@3@AEAPEBE_K@Z 0x1425454f0
+// MS2-PIN: ??$ReadString@E@Abc@AS3@GFx@Scaleform@@YA?AVString@3@PEBEAEA_K_K@Z 0x142545530
+// MS2-FUNCTIONAL 0x1425455b0: the exe reloads the pointer/position through the reference on every loop pass; ours keeps it in a register
+// MS2-PIN: ??$ReadU30@E@Abc@AS3@GFx@Scaleform@@YAHAEAPEBE@Z 0x1425455b0
+// MS2-FUNCTIONAL 0x142545600: the exe reloads the pointer/position through the reference on every loop pass; ours keeps it in a register
+// MS2-PIN: ??$ReadU30@E@Abc@AS3@GFx@Scaleform@@YAHPEBEAEA_K@Z 0x142545600
