@@ -914,6 +914,131 @@ namespace Classes { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
+{
+    // @0x142408710
+    Value::Number Date::DayFromYear(Value::Number year)
+    {
+        return ::floor((year - 1969.0) * 0.25) + (year - 1970.0) * 365.0 - ::floor((year - 1901.0) / 100.0) +
+               ::floor((year - 1601.0) / 400.0);
+    }
+
+    // @0x1424085c0
+    SInt32 Date::DateFromTime(Value::Number t)
+    {
+        const Value::Number year = YearFromTime(t);
+        SInt32 day = static_cast<SInt32>(::floor(t / 86400000.0) - DayFromYear(year));
+        const SInt32 y = static_cast<SInt32>(year);
+        const bool leap = (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
+        const SInt32 month = MonthFromYearDay(y, day);
+        ++day;
+        if (month > 0)
+            day -= Months[leap ? 1 : 0][month - 1];
+        return day;
+    }
+}}}}}
+
+// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
+const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
+FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // HashDH<UPInt, Value>::Get with the exe's out-of-line GetAlt.
+    static SF_INLINE const Value* SparseHashGet(const HashDH<UPInt, Value>& h, const UPInt& key)
+    {
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&h, &key);
+        return p ? &p->Second : 0;
+    }
+
+    // MS2-FUNCTIONAL: exe keeps the node->value null select as a cmove before the test; ours folds it into the branch
+    // @0x142405480
+    const Value& SparseArray::At(UPInt ind) const
+    {
+        if (ind < ValueA.GetSize())
+            return ValueA[ind];
+        if (ind >= ValueHLowInd && ind <= ValueHHighInd)
+        {
+            const Value* v = SparseHashGet(ValueH, ind);
+            if (v)
+                return *v;
+        }
+        return DefaultValue;
+    }
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // MS2-FUNCTIONAL: exe reads CaseInsensitive before the Desc branch (register/scheduling only)
+    // @0x1424066d0
+    int CompareAsString::Compare(const ASString& a, const ASString& b) const
+    {
+        if (UseLocale)
+        {
+            const bool ci = CaseInsensitive;
+            if (Desc)
+                return b.LocaleCompare_CaseCheck(a.ToCStr(), a.GetLength(), !ci);
+            return a.LocaleCompare_CaseCheck(b.ToCStr(), b.GetLength(), !ci);
+        }
+
+        int r;
+        if (CaseInsensitive)
+            r = String::CompareNoCase(a.ToCStr(), b.ToCStr());
+        else
+            r = strcmp(a.ToCStr(), b.ToCStr());
+        return Desc ? -r : r;
+    }
+
+    namespace InstanceTraits { namespace fl
+    {
+        // MS2-FUNCTIONAL: loop register allocation and shrink-wrapping differ
+        // @0x142407090
+        SInt32 String::Compare(ASString& l, ASString& r)
+        {
+            SInt32 diff = 0;
+            if (l == r)
+                return 0;
+
+            const char* lp = l.ToCStr();
+            const char* rp = r.ToCStr();
+            UInt32 lc = UTF8Util::DecodeNextChar(&lp);
+            UInt32 rc = UTF8Util::DecodeNextChar(&rp);
+            while (lc != 0 && rc != 0)
+            {
+                diff = rc - lc;
+                if (diff != 0)
+                    return diff;
+                lc = UTF8Util::DecodeNextChar(&lp);
+                rc = UTF8Util::DecodeNextChar(&rp);
+            }
+            if (lc != rc)
+                diff = rc == 0 ? -1 : 1;
+            return diff;
+        }
+    }}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
+{
+    // @0x142402910
+    void QName::AS3toString(ASString& result)
+    {
+        if (Ns.GetPtr() == NULL)
+        {
+            const String s = String("*::") + String(LocalName.ToCStr(), LocalName.GetSize());
+            result.AssignNode(result.GetManager()->CreateStringNode(s.ToCStr(), s.GetSize()));
+        }
+        else if (Ns->GetUri().IsEmpty())
+            result = LocalName;
+        else
+        {
+            result = Ns->GetUri();
+            result += "::";
+            result += LocalName;
+        }
+    }
+}}}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0

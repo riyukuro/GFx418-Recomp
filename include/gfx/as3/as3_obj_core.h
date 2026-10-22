@@ -80,6 +80,23 @@ public:
     HashDH<UPInt, Value>    ValueH;         // +0x58
 };
 
+// (appended, sfr15) string ordering used by Array sort; the flags are the sort options. 3 bytes.
+class CompareAsString
+{
+public:
+    CompareAsString(bool desc, bool ci, bool use_locale) : Desc(desc), CaseInsensitive(ci), UseLocale(use_locale) {}
+
+    // exe 0x1424066d0 (body in sfr_as3_03).
+    int Compare(const ASString& a, const ASString& b) const;
+
+private:
+    CompareAsString& operator=(const CompareAsString&);
+
+    const bool Desc;            // +0x00
+    const bool CaseInsensitive; // +0x01
+    const bool UseLocale;       // +0x02
+};
+
 namespace Instances { namespace fl
 {
     // 0xa0 bytes.
@@ -198,6 +215,10 @@ namespace Instances { namespace fl
         static Value::Number MakeDay(Value::Number year, Value::Number month, Value::Number date);
         static Value::Number MakeTime(Value::Number hour, Value::Number min, Value::Number sec, Value::Number ms);
         static Value::Number TimeClip(Value::Number t);
+        // (appended, sfr15) day number of the first day of a year (exe 0x142408710, body in sfr_as3_03).
+        static Value::Number DayFromYear(Value::Number year);
+        // (appended, sfr15) days before the end of each month: common years, then leap years (exe 0x14313e2f0).
+        static const SInt32 Months[2][12];
 
         // (appended, sfr14) per-component date/time editing used by the set* natives.
         enum TimeEntry { Time_Hour, Time_Minute, Time_Second, Time_Ms, Time_Entry_Count };
@@ -773,6 +794,8 @@ namespace InstanceTraits { namespace fl
         static void AS3substr(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1424015b0
         static void AS3substring(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142407090 (appended, sfr15) code point order used by localeCompare.
+        static SInt32 Compare(ASString& l, ASString& r);
     };
 
     class XML : public CTraits
