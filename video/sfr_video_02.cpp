@@ -23,4 +23,32 @@ bool AvmVideoCharacter_OnUnloading(AvmCharacter* pavm)
     return true;
 }
 
+// The two interface adjustors are separate executable entries in this video glue range.
+// @0x14000e510
+void* FUN_14000e510(void* p)
+{
+    return p ? static_cast<void*>(static_cast<unsigned char*>(p) + 0x30) : 0;
+}
+
+// @0x14000e520
+uintptr_t FUN_14000e520(uintptr_t value)
+{
+    return value;
+}
+
+// @0x14000e530
+uintptr_t FUN_14000e530() { return 0; }
+
+// @0x14000e540
+uintptr_t FUN_14000e540() { return 0; }
+
+// @0x14000e550
+uintptr_t FUN_14000e550() { return 0; }
+
+// @0x14000e560
+uintptr_t FUN_14000e560() { return 0; }
+
+// @0x14000e580
+bool FUN_14000e580() { return false; }
+
 }}} // namespace Scaleform::GFx::AS2
