@@ -173,6 +173,132 @@ template double ReadDouble<UInt8>(const UInt8*& p);
 template String ReadString<UInt8>(const UInt8*& p, UPInt size);
 template String ReadString<UInt8>(const UInt8* data, UPInt& pos, UPInt size);
 
+template <typename T>
+SF_NOINLINE int Read16(const T*& p)
+{
+    const int hi = p[1];
+    const int lo = p[0];
+    p += 2;
+    return hi << 8 | lo;
+}
+
+// The bytes of a pool string, without copying them.
+template <typename T>
+SF_NOINLINE StringDataPtr ReadStringPtr(const T*& p, UPInt size)
+{
+    StringDataPtr result(reinterpret_cast<const char*>(p), size);
+    p += size;
+    return result;
+}
+
+template int           Read16<UInt8>(const UInt8*& p);
+template StringDataPtr ReadStringPtr<UInt8>(const UInt8*& p, UPInt size);
+
+// @0x142545310
+StringDataPtr StringView::ToStringDataPtr() const
+{
+    const UInt8* p = Data;
+    const int size = ReadU30(p);
+    return ReadStringPtr(p, size);
+}
+
+// @0x142545670
+MethodBodyInfo::ExceptionInfo::ExceptionInfo()
+    : from(0), to(0), target(0), exc_type_ind(0), var_name_ind(0)
+{
+}
+
+// @0x142545650
+MethodBodyInfo::ExceptionInfo::ExceptionInfo(SInd from, SInd to, SInd target, SInd exc_type_ind, SInd var_name_ind)
+    : from(from), to(to), target(target), exc_type_ind(exc_type_ind), var_name_ind(var_name_ind)
+{
+}
+
+// @0x142545680
+MethodBodyInfo::MethodBodyInfo()
+    : method_info_ind(-1), max_stack(-1), local_reg_count(-1), init_scope_depth(-1), max_scope_depth(-1)
+{
+}
+
+// @0x142545a80
+MethodBodyInfo::~MethodBodyInfo()
+{
+}
+
+// @0x142545ac0
+MethodBodyTable::~MethodBodyTable()
+{
+    const UPInt size = Info.GetSize();
+    for (UPInt i = 0; i < size; ++i)
+        delete Info[i];
+}
+
+// @0x1425456e0
+File::~File()
+{
+}
+
+// @0x142545bc0
+void ConstPool::Clear()
+{
+    ConstInt.Clear();
+    ConstUInt.Clear();
+    ConstStr.Clear();
+    ConstNamespace.Clear();
+    const_ns_set.Clear();
+    const_multiname.Clear();
+}
+
+// @0x142545dd0
+void File::Clear()
+{
+    MinorVersion = 0;
+    MajorVersion = 0;
+    Const_Pool.Clear();
+    Methods.Info.Clear();
+    Metadata.Info.Clear();
+    Traits.TraitInfos.Clear();
+    AS3_Classes.Info.Clear();
+    Scripts.Info.Clear();
+    MethodBodies.Info.Clear();
+}
+
+// @0x142545ff0
+bool MethodBodyInfo::Exception::FindExceptionInfo(UPInt offset, UPInt& from) const
+{
+    const UPInt size = info.GetSize();
+    for (; from < size; ++from)
+    {
+        const ExceptionInfo& e = info[from];
+        if (offset >= static_cast<UInt32>(e.from) && offset <= static_cast<UInt32>(e.to))
+            return true;
+    }
+    return false;
+}
+
+// @0x142546050
+const Multiname& TraitInfo::GetName(const ConstPool& cp) const
+{
+    if (name_ind == 0)
+        return cp.AnyType;
+    return cp.GetMultiname(name_ind);
+}
+
+// @0x142546080
+bool IsValidValueKind(UInt8 vk)
+{
+    // Undefined, Utf8, Int, UInt, PrivateNs, Double, Namespace, False, True, Null and the four namespace kinds.
+    switch (vk)
+    {
+    case 0x00: case 0x01: case 0x03: case 0x04: case 0x05: case 0x06: case 0x08: case 0x0a: case 0x0b: case 0x0c:
+    case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
 }}}} // namespace Scaleform::GFx::AS3::Abc
 
 // ---------------------------------------------------------------- Vector.<T> natives
@@ -1359,3 +1485,8 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec
 // MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@1@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d8b0
 // MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@Scaleform@@U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@1@U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d8e0
 // MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d920
+// MS2-PIN: ??$Read16@E@Abc@AS3@GFx@Scaleform@@YAHAEAPEBE@Z 0x142545350
+// MS2-PIN: ??$ReadStringPtr@E@Abc@AS3@GFx@Scaleform@@YA?AVStringDataPtr@3@AEAPEBE_K@Z 0x142545570
+// MS2-PIN: ??_GCode@Abc@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142545b70
+// MS2-PIN: ??_7Code@Abc@AS3@GFx@Scaleform@@6B@ 0x143181a00
+// MS2-PIN: ??_7File@Abc@AS3@GFx@Scaleform@@6B@ 0x14317b050

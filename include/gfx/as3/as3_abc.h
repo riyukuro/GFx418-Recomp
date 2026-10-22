@@ -136,6 +136,8 @@ public:
 
     // The double at index ind (1-based; 0 is NaN in the spec, 0.0 here as in the exe). 0x1425452c0
     double GetDouble(UPInt ind) const;
+    // Empties the pools (the storage is kept or released by the arrays' resize rules). 0x142545bc0
+    void Clear();
 
     StringDataPtr GetString(UPInt ind) const { return ConstStr[ind]; }
     const Multiname& GetMultiname(SPInt ind) const { return ind == 0 ? AnyType : const_multiname[ind]; }
@@ -194,6 +196,12 @@ public:
 class MethodTable : public NewOverrideBase<StatMV_VM_AbcFile_Mem>
 {
 public:
+    ~MethodTable()
+    {
+        for (UPInt i = 0; i < Info.GetSize(); ++i)
+            delete Info[i];
+    }
+
     ArrayLH_POD<MethodInfo*, StatMV_VM_AbcFile_Mem> Info;
 };
 
@@ -214,6 +222,12 @@ public:
 class MetadataTable : public NewOverrideBase<StatMV_VM_AbcFile_Mem>
 {
 public:
+    ~MetadataTable()
+    {
+        for (UPInt i = 0; i < Info.GetSize(); ++i)
+            delete Info[i];
+    }
+
     ArrayLH_POD<MetadataInfo*, StatMV_VM_AbcFile_Mem> Info;
 };
 
@@ -231,6 +245,9 @@ public:
 
     TraitInfo() : name_ind(-1), SlotId(-1), Ind(-1) {}
 
+    // The trait's name in the pool (0 = any type). 0x142546050
+    const Multiname& GetName(const ConstPool& cp) const;
+
     Type GetType() const                { return static_cast<Type>(kind & 0x0F); }
     static bool HasMetaData(UInt8 kind) { return (kind & aMetadata) != 0; }
 
@@ -245,6 +262,12 @@ public:
 class TraitTable : public NewOverrideBase<StatMV_VM_AbcFile_Mem>
 {
 public:
+    ~TraitTable()
+    {
+        for (UPInt i = 0; i < TraitInfos.GetSize(); ++i)
+            delete TraitInfos[i];
+    }
+
     ArrayLH_POD<TraitInfo*, StatMV_VM_AbcFile_Mem> TraitInfos;
 };
 
@@ -300,6 +323,12 @@ public:
 class ClassTable : public NewOverrideBase<StatMV_VM_AbcFile_Mem>
 {
 public:
+    ~ClassTable()
+    {
+        for (UPInt i = 0; i < Info.GetSize(); ++i)
+            delete Info[i];
+    }
+
     ArrayLH_POD<ClassInfo*, StatMV_VM_AbcFile_Mem> Info;
 };
 
@@ -310,6 +339,12 @@ class ScriptInfo : public HasCode
 class ScriptTable : public NewOverrideBase<StatMV_VM_AbcFile_Mem>
 {
 public:
+    ~ScriptTable()
+    {
+        for (UPInt i = 0; i < Info.GetSize(); ++i)
+            delete Info[i];
+    }
+
     ArrayLH_POD<ScriptInfo*, StatMV_VM_AbcFile_Mem> Info;
 };
 
@@ -317,7 +352,9 @@ public:
 class Code : public NewOverrideBase<StatMV_VM_AbcFile_Mem>
 {
 public:
-    void*      Unrecovered_00;                  // +0x00
+    // vftable 0x143181a00 (the scalar deleting destructor only).
+    virtual ~Code() {}
+
     StringView code;                            // +0x08 u30 length, then the byte code
 };
 
@@ -330,6 +367,7 @@ public:
     {
     public:
         ExceptionInfo();                        // 0x142545670
+        ExceptionInfo(SInd from, SInd to, SInd target, SInd exc_type_ind, SInd var_name_ind); // 0x142545650
 
         SInd from;                              // +0x00
         SInd to;                                // +0x04
@@ -339,6 +377,9 @@ public:
     };
     struct Exception
     {
+        // Advances from to the first handler whose [from, to] covers offset. 0x142545ff0
+        bool FindExceptionInfo(UPInt offset, UPInt& from) const;
+
         ArrayLH_POD<ExceptionInfo, StatMV_VM_AbcFile_Mem> info;
     };
 
@@ -357,6 +398,8 @@ public:
 class MethodBodyTable : public NewOverrideBase<StatMV_VM_AbcFile_Mem>
 {
 public:
+    ~MethodBodyTable();                         // 0x142545ac0
+
     ArrayLH_POD<MethodBodyInfo*, StatMV_VM_AbcFile_Mem> Info;
 };
 
@@ -364,6 +407,7 @@ public:
 class File : public NewOverrideBase<StatMV_VM_AbcFile_Mem>, public RefCountImpl
 {
 public:
+    ~File();                                    // 0x1425456e0 (vftable 0x14317b050)
     void Clear();                               // 0x142545dd0
 
     UInt32          DataSize;                   // +0x10
