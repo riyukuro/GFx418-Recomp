@@ -62,16 +62,21 @@ namespace Instances { namespace fl_display {
         void cacheAsBitmapSet(const Value& result, bool);
         // @0x14244bb80
         void filtersGet(SPtr<Instances::fl::Array>& result);
+        SPtr<Instances::fl::Array> filtersGet();
         // @0x14244bdd0
         void filtersSet(const Value& result, Instances::fl::Array*);
         // @0x14244c910
         void getBounds(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_display::DisplayObject*);
+        SPtr<Instances::fl_geom::Rectangle> getBounds(Instances::fl_display::DisplayObject* a0);
         // @0x14244d760
         void getRect(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_display::DisplayObject*);
+        SPtr<Instances::fl_geom::Rectangle> getRect(Instances::fl_display::DisplayObject* a0);
         // @0x14244df40
         void globalToLocal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point*);
+        SPtr<Instances::fl_geom::Point> globalToLocal(Instances::fl_geom::Point* a0);
         // @0x14244dd20
         void globalToLocal3D(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Point*);
+        SPtr<Instances::fl_geom::Vector3D> globalToLocal3D(Instances::fl_geom::Point* a0);
         // @0x14244e520
         void heightGet(Value::Number& result);
         // @0x14244e630
@@ -82,10 +87,13 @@ namespace Instances { namespace fl_display {
         void hitTestPoint(bool& result, Value::Number, Value::Number, bool);
         // @0x14244ffb0
         void loaderInfoGet(SPtr<Instances::fl_display::LoaderInfo>& result);
+        SPtr<Instances::fl_display::LoaderInfo> loaderInfoGet();
         // @0x1424500e0
         void local3DToGlobal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Vector3D*);
+        SPtr<Instances::fl_geom::Point> local3DToGlobal(Instances::fl_geom::Vector3D* a0);
         // @0x1424502c0
         void localToGlobal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point*);
+        SPtr<Instances::fl_geom::Point> localToGlobal(Instances::fl_geom::Point* a0);
         // @0x1424504a0
         void maskGet(SPtr<Instances::fl_display::DisplayObject>& result);
         // @0x142450540
@@ -104,6 +112,7 @@ namespace Instances { namespace fl_display {
         void opaqueBackgroundSet(const Value& result, const Value&);
         // @0x142451260
         void parentGet(SPtr<Instances::fl_display::DisplayObjectContainer>& result);
+        SPtr<Instances::fl_display::DisplayObjectContainer> parentGet();
         // @0x142452090
         void rootGet(SPtr<Instances::fl_display::DisplayObject>& result);
         // @0x142452150
@@ -124,6 +133,7 @@ namespace Instances { namespace fl_display {
         void rotationZSet(const Value& result, Value::Number);
         // @0x142452290
         void scale9GridGet(SPtr<Instances::fl_geom::Rectangle>& result);
+        SPtr<Instances::fl_geom::Rectangle> scale9GridGet();
         // @0x142452450
         void scale9GridSet(const Value& result, Instances::fl_geom::Rectangle*);
         // @0x142452660
@@ -140,12 +150,15 @@ namespace Instances { namespace fl_display {
         void scaleZSet(const Value& result, Value::Number);
         // @0x142452a80
         void scrollRectGet(SPtr<Instances::fl_geom::Rectangle>& result);
+        SPtr<Instances::fl_geom::Rectangle> scrollRectGet();
         // @0x142452c90
         void scrollRectSet(const Value& result, Instances::fl_geom::Rectangle*);
         // @0x142453490
         void stageGet(SPtr<Instances::fl_display::Stage>& result);
+        SPtr<Instances::fl_display::Stage> stageGet();
         // @0x1424543a0
         void transformGet(SPtr<Instances::fl_geom::Transform>& result);
+        SPtr<Instances::fl_geom::Transform> transformGet();
         // @0x142454470
         void transformSet(const Value& result, Instances::fl_geom::Transform*);
         // @0x142454920
@@ -257,16 +270,20 @@ namespace Instances { namespace fl_display {
         void floodFill(const Value& result, SInt32, SInt32, UInt32);
         // @0x14244c590
         void generateFilterRect(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_geom::Rectangle*, Instances::fl_filters::BitmapFilter*);
+        SPtr<Instances::fl_geom::Rectangle> generateFilterRect(Instances::fl_geom::Rectangle* a0, Instances::fl_filters::BitmapFilter* a1);
         // @0x14244cfe0
         void getColorBoundsRect(SPtr<Instances::fl_geom::Rectangle>& result, UInt32, UInt32, bool);
+        SPtr<Instances::fl_geom::Rectangle> getColorBoundsRect(UInt32 a0, UInt32 a1, bool a2);
         // @0x14244d4d0
         void getPixel(UInt32& result, SInt32, SInt32);
         // @0x14244d460
         void getPixel32(UInt32& result, SInt32, SInt32);
         // @0x14244d560
         void getPixels(SPtr<Instances::fl_utils::ByteArray>& result, Instances::fl_geom::Rectangle*);
+        SPtr<Instances::fl_utils::ByteArray> getPixels(Instances::fl_geom::Rectangle* a0);
         // @0x14244daf0
         void getVector(SPtr<Instances::fl_vec::Vector_uint>& result, Instances::fl_geom::Rectangle*);
+        SPtr<Instances::fl_vec::Vector_uint> getVector(Instances::fl_geom::Rectangle* a0);
         // @0x14244e480
         void heightGet(SInt32& result);
         // @0x14244e670
@@ -287,6 +304,7 @@ namespace Instances { namespace fl_display {
         void pixelDissolve(SInt32& result, Instances::fl_display::BitmapData*, Instances::fl_geom::Rectangle*, Instances::fl_geom::Point*, SInt32, SInt32, UInt32);
         // @0x142451c10
         void rectGet(SPtr<Instances::fl_geom::Rectangle>& result);
+        SPtr<Instances::fl_geom::Rectangle> rectGet();
         // @0x1424529e0
         void scroll(const Value& result, SInt32, SInt32);
         // @0x142452e90
@@ -358,20 +376,25 @@ namespace Instances { namespace fl_display {
     public:
         // @0x1424474f0
         void addChild(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject*);
+        SPtr<Instances::fl_display::DisplayObject> addChild(Instances::fl_display::DisplayObject* a0);
         // @0x142447660
         void addChildAt(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject*, SInt32);
+        SPtr<Instances::fl_display::DisplayObject> addChildAt(Instances::fl_display::DisplayObject* a0, SInt32 a1);
         // @0x142448270
         void areInaccessibleObjectsUnderPoint(bool& result, Instances::fl_geom::Point*);
         // @0x142448eb0
         void contains(bool& result, Instances::fl_display::DisplayObject*);
         // @0x14244cca0
         void getChildAt(SPtr<Instances::fl_display::DisplayObject>& result, SInt32);
+        SPtr<Instances::fl_display::DisplayObject> getChildAt(SInt32 a0);
         // @0x14244cde0
         void getChildByName(SPtr<Instances::fl_display::DisplayObject>& result, const ASString&);
+        SPtr<Instances::fl_display::DisplayObject> getChildByName(const ASString& a0);
         // @0x14244cee0
         void getChildIndex(SInt32& result, Instances::fl_display::DisplayObject*);
         // @0x14244d1e0
         void getObjectsUnderPoint(SPtr<Instances::fl::Array>& result, Instances::fl_geom::Point*);
+        SPtr<Instances::fl::Array> getObjectsUnderPoint(Instances::fl_geom::Point* a0);
         // @0x142450770
         void mouseChildrenGet(bool& result);
         // @0x1424507b0
@@ -382,6 +405,7 @@ namespace Instances { namespace fl_display {
         void removeChild(Value& result, unsigned, const Value*);
         // @0x142451ef0
         void removeChildAt(SPtr<Instances::fl_display::DisplayObject>& result, SInt32);
+        SPtr<Instances::fl_display::DisplayObject> removeChildAt(SInt32 a0);
         // @0x142452d20
         void setChildIndex(const Value& result, Instances::fl_display::DisplayObject*, SInt32);
         // @0x142453890
@@ -394,6 +418,7 @@ namespace Instances { namespace fl_display {
         void tabChildrenSet(const Value& result, bool);
         // @0x142453d10
         void textSnapshotGet(SPtr<Instances::fl_text::TextSnapshot>& result);
+        SPtr<Instances::fl_text::TextSnapshot> textSnapshotGet();
     };
 
     // 0x48 bytes.
@@ -528,6 +553,7 @@ namespace Instances { namespace fl_display {
         void actionScriptVersionGet(UInt32& result);
         // @0x142447e50
         void applicationDomainGet(SPtr<Instances::fl_system::ApplicationDomain>& result);
+        SPtr<Instances::fl_system::ApplicationDomain> applicationDomainGet();
         // @0x142448850
         void bytesGet(SPtr<Instances::fl_utils::ByteArray>& result);
         // @0x142448870
@@ -597,8 +623,10 @@ namespace Instances { namespace fl_display {
         void buttonModeSet(const Value& result, bool);
         // @0x14244b870
         void dropTargetGet(SPtr<Instances::fl_display::DisplayObject>& result);
+        SPtr<Instances::fl_display::DisplayObject> dropTargetGet();
         // @0x14244e3c0
         void graphicsGet(SPtr<Instances::fl_display::Graphics>& result);
+        SPtr<Instances::fl_display::Graphics> graphicsGet();
         // @0x14244ec30
         void hitAreaGet(SPtr<Instances::fl_display::Sprite>& result);
         // @0x14244ecc0
@@ -678,6 +706,7 @@ namespace Instances { namespace fl_display {
         void currentLabelsGet(SPtr<Instances::fl::Array>& result);
         // @0x142449950
         void currentSceneGet(SPtr<Instances::fl_display::Scene>& result);
+        SPtr<Instances::fl_display::Scene> currentSceneGet();
         // @0x14244b970
         void enabledGet(bool& result);
         // @0x14244b9b0
@@ -700,6 +729,7 @@ namespace Instances { namespace fl_display {
         void prevScene(const Value& result);
         // @0x142452770
         void scenesGet(SPtr<Instances::fl::Array>& result);
+        SPtr<Instances::fl::Array> scenesGet();
         // @0x1424537e0
         void stop(const Value& result);
         // @0x1424542b0
@@ -743,6 +773,7 @@ namespace Instances { namespace fl_display {
 
         // @0x14244f5b0
         void labelsGet(SPtr<Instances::fl::Array>& result);
+        SPtr<Instances::fl::Array> labelsGet();
         // @0x142450a00
         void nameGet(ASString& result);
         // @0x142450d60
@@ -766,6 +797,7 @@ namespace Instances { namespace fl_display {
 
         // @0x14244e2e0
         void graphicsGet(SPtr<Instances::fl_display::Graphics>& result);
+        SPtr<Instances::fl_display::Graphics> graphicsGet();
     };
 
     // 0x70 bytes: no members of its own yet.
@@ -781,6 +813,7 @@ namespace Instances { namespace fl_display {
 
         // @0x142449e00
         void downStateGet(SPtr<Instances::fl_display::DisplayObject>& result);
+        SPtr<Instances::fl_display::DisplayObject> downStateGet();
         // @0x142449e80
         void downStateSet(const Value& result, Instances::fl_display::DisplayObject*);
         // @0x14244b990
@@ -789,10 +822,12 @@ namespace Instances { namespace fl_display {
         void enabledSet(const Value& result, bool);
         // @0x14244f4a0
         void hitTestStateGet(SPtr<Instances::fl_display::DisplayObject>& result);
+        SPtr<Instances::fl_display::DisplayObject> hitTestStateGet();
         // @0x14244f520
         void hitTestStateSet(const Value& result, Instances::fl_display::DisplayObject*);
         // @0x142450e50
         void overStateGet(SPtr<Instances::fl_display::DisplayObject>& result);
+        SPtr<Instances::fl_display::DisplayObject> overStateGet();
         // @0x142450ed0
         void overStateSet(const Value& result, Instances::fl_display::DisplayObject*);
         // @0x142453360
@@ -805,6 +840,7 @@ namespace Instances { namespace fl_display {
         void trackAsMenuSet(const Value& result, bool);
         // @0x142454700
         void upStateGet(SPtr<Instances::fl_display::DisplayObject>& result);
+        SPtr<Instances::fl_display::DisplayObject> upStateGet();
         // @0x142454780
         void upStateSet(const Value& result, Instances::fl_display::DisplayObject*);
         // @0x142454880
@@ -845,6 +881,7 @@ namespace Instances { namespace fl_display {
         void displayStateSet(const Value& result, const ASString&);
         // @0x14244c080
         void focusGet(SPtr<Instances::fl_display::InteractiveObject>& result);
+        SPtr<Instances::fl_display::InteractiveObject> focusGet();
         // @0x14244c2b0
         void focusSet(const Value& result, Instances::fl_display::InteractiveObject*);
         // @0x14244c420

@@ -355,6 +355,473 @@ namespace ClassTraits { namespace fl_events
 
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+// ---- flash.display.DisplayObject: simple property getters forwarding to the scripted display object ----
+namespace Instances { namespace fl_display
+{
+    // @0x142447de0
+    void DisplayObject::alphaGet(Value::Number& result)
+    {
+        result = pDispObj->GetAlpha() / 100.0;
+    }
+
+    // @0x14244e520
+    void DisplayObject::heightGet(Value::Number& result)
+    {
+        result = pDispObj->GetHeight();
+    }
+
+    // @0x142450880
+    void DisplayObject::mouseXGet(Value::Number& result)
+    {
+        result = pDispObj->GetMouseX();
+    }
+
+    // @0x1424508a0
+    void DisplayObject::mouseYGet(Value::Number& result)
+    {
+        result = pDispObj->GetMouseY();
+    }
+
+    // @0x142452150
+    void DisplayObject::rotationGet(Value::Number& result)
+    {
+        result = pDispObj->GetRotation();
+    }
+
+    // @0x142452190
+    void DisplayObject::rotationXGet(Value::Number& result)
+    {
+        result = pDispObj->GetXRotation();
+    }
+
+    // @0x1424521d0
+    void DisplayObject::rotationYGet(Value::Number& result)
+    {
+        result = pDispObj->GetYRotation();
+    }
+
+    // @0x142452210
+    void DisplayObject::rotationZGet(Value::Number& result)
+    {
+        result = pDispObj->GetRotation();
+    }
+
+    // @0x142452660
+    void DisplayObject::scaleXGet(Value::Number& result)
+    {
+        result = pDispObj->GetXScale() / 100.0;
+    }
+
+    // @0x1424526b0
+    void DisplayObject::scaleYGet(Value::Number& result)
+    {
+        result = pDispObj->GetYScale() / 100.0;
+    }
+
+    // @0x142452700
+    void DisplayObject::scaleZGet(Value::Number& result)
+    {
+        result = pDispObj->GetZScale() / 100.0;
+    }
+
+    // @0x142454920
+    void DisplayObject::visibleGet(bool& result)
+    {
+        result = pDispObj->GetVisible();
+    }
+
+    // @0x142454a00
+    void DisplayObject::widthGet(Value::Number& result)
+    {
+        result = pDispObj->GetWidth();
+    }
+
+    // @0x142454b60
+    void DisplayObject::xGet(Value::Number& result)
+    {
+        result = pDispObj->GetX();
+    }
+
+    // @0x142454ba0
+    void DisplayObject::yGet(Value::Number& result)
+    {
+        result = pDispObj->GetY();
+    }
+
+    // @0x142454be0
+    void DisplayObject::zGet(Value::Number& result)
+    {
+        result = pDispObj->GetZ() * 0.05;
+    }
+}}
+
+// ---- flash.display.Graphics: drawing API forwarding to the DrawingContext (coordinates converted to twips) ----
+
+namespace Instances { namespace fl_display
+{
+    // @0x142448400
+    void Graphics::beginFill(const Value& result, UInt32 color, Value::Number alpha)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetDirtyFlag();
+        pDispObj->InvalidateHitResult();
+        pDrawing->AcquirePath(true);
+        pDrawing->BeginSolidFill((UInt32(alpha * 255.0) << 24) | color);
+    }
+
+    // @0x1424489d0
+    void Graphics::clear(const Value& result)
+    {
+        SF_UNUSED(result);
+        pDrawing->Clear();
+        pDispObj->InvalidateHitResult();
+        pDispObj->SetDirtyFlag();
+    }
+
+    // @0x142449b70
+    void Graphics::curveTo(const Value& result, Value::Number controlX, Value::Number controlY,
+                           Value::Number anchorX, Value::Number anchorY)
+    {
+        SF_UNUSED(result);
+        pDrawing->CurveTo(float(controlX) * 20.0f, float(controlY) * 20.0f,
+                          float(anchorX) * 20.0f, float(anchorY) * 20.0f);
+        pDispObj->InvalidateHitResult();
+    }
+
+    // @0x14244b9f0
+    void Graphics::endFill(const Value& result)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetDirtyFlag();
+        pDispObj->InvalidateHitResult();
+        pDrawing->AcquirePath(true);
+        pDrawing->EndFill();
+    }
+
+    // @0x14244fdd0
+    void Graphics::lineTo(const Value& result, Value::Number x, Value::Number y)
+    {
+        SF_UNUSED(result);
+        pDrawing->LineTo(float(x * 20.0), float(y * 20.0));
+        pDispObj->InvalidateHitResult();
+    }
+
+    // @0x1424508c0
+    void Graphics::moveTo(const Value& result, Value::Number x, Value::Number y)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetDirtyFlag();
+        pDispObj->InvalidateHitResult();
+        pDrawing->AcquirePath(false);
+        pDrawing->MoveTo(float(x * 20.0), float(y * 20.0));
+        pDispObj->InvalidateHitResult();
+    }
+}}
+
+// ---- flash.display: by-value forms of the SPtr-returning natives (used by the thunk table) ----
+
+namespace Instances { namespace fl_display
+{
+    // @0x1424474d0
+    SPtr<Instances::fl_display::DisplayObject> DisplayObjectContainer::addChild(Instances::fl_display::DisplayObject* a0)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        addChild(result, a0);
+        return result;
+    }
+
+    // @0x142447640
+    SPtr<Instances::fl_display::DisplayObject> DisplayObjectContainer::addChildAt(Instances::fl_display::DisplayObject* a0, SInt32 a1)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        addChildAt(result, a0, a1);
+        return result;
+    }
+
+    // @0x142447e30
+    SPtr<Instances::fl_system::ApplicationDomain> LoaderInfo::applicationDomainGet()
+    {
+        SPtr<Instances::fl_system::ApplicationDomain> result;
+        applicationDomainGet(result);
+        return result;
+    }
+
+    // @0x142449930
+    SPtr<Instances::fl_display::Scene> MovieClip::currentSceneGet()
+    {
+        SPtr<Instances::fl_display::Scene> result;
+        currentSceneGet(result);
+        return result;
+    }
+
+    // @0x142449de0
+    SPtr<Instances::fl_display::DisplayObject> SimpleButton::downStateGet()
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        downStateGet(result);
+        return result;
+    }
+
+    // @0x14244b850
+    SPtr<Instances::fl_display::DisplayObject> Sprite::dropTargetGet()
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        dropTargetGet(result);
+        return result;
+    }
+
+    // @0x14244bb60
+    SPtr<Instances::fl::Array> DisplayObject::filtersGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        filtersGet(result);
+        return result;
+    }
+
+    // @0x14244c060
+    SPtr<Instances::fl_display::InteractiveObject> Stage::focusGet()
+    {
+        SPtr<Instances::fl_display::InteractiveObject> result;
+        focusGet(result);
+        return result;
+    }
+
+    // @0x14244c570
+    SPtr<Instances::fl_geom::Rectangle> BitmapData::generateFilterRect(Instances::fl_geom::Rectangle* a0, Instances::fl_filters::BitmapFilter* a1)
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        generateFilterRect(result, a0, a1);
+        return result;
+    }
+
+    // @0x14244c8f0
+    SPtr<Instances::fl_geom::Rectangle> DisplayObject::getBounds(Instances::fl_display::DisplayObject* a0)
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        getBounds(result, a0);
+        return result;
+    }
+
+    // @0x14244cc80
+    SPtr<Instances::fl_display::DisplayObject> DisplayObjectContainer::getChildAt(SInt32 a0)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        getChildAt(result, a0);
+        return result;
+    }
+
+    // @0x14244cdc0
+    SPtr<Instances::fl_display::DisplayObject> DisplayObjectContainer::getChildByName(const ASString& a0)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        getChildByName(result, a0);
+        return result;
+    }
+
+    // @0x14244cfb0
+    SPtr<Instances::fl_geom::Rectangle> BitmapData::getColorBoundsRect(UInt32 a0, UInt32 a1, bool a2)
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        getColorBoundsRect(result, a0, a1, a2);
+        return result;
+    }
+
+    // @0x14244d1c0
+    SPtr<Instances::fl::Array> DisplayObjectContainer::getObjectsUnderPoint(Instances::fl_geom::Point* a0)
+    {
+        SPtr<Instances::fl::Array> result;
+        getObjectsUnderPoint(result, a0);
+        return result;
+    }
+
+    // @0x14244d540
+    SPtr<Instances::fl_utils::ByteArray> BitmapData::getPixels(Instances::fl_geom::Rectangle* a0)
+    {
+        SPtr<Instances::fl_utils::ByteArray> result;
+        getPixels(result, a0);
+        return result;
+    }
+
+    // @0x14244d740
+    SPtr<Instances::fl_geom::Rectangle> DisplayObject::getRect(Instances::fl_display::DisplayObject* a0)
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        getRect(result, a0);
+        return result;
+    }
+
+    // @0x14244dad0
+    SPtr<Instances::fl_vec::Vector_uint> BitmapData::getVector(Instances::fl_geom::Rectangle* a0)
+    {
+        SPtr<Instances::fl_vec::Vector_uint> result;
+        getVector(result, a0);
+        return result;
+    }
+
+    // @0x14244dd00
+    SPtr<Instances::fl_geom::Vector3D> DisplayObject::globalToLocal3D(Instances::fl_geom::Point* a0)
+    {
+        SPtr<Instances::fl_geom::Vector3D> result;
+        globalToLocal3D(result, a0);
+        return result;
+    }
+
+    // @0x14244df20
+    SPtr<Instances::fl_geom::Point> DisplayObject::globalToLocal(Instances::fl_geom::Point* a0)
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        globalToLocal(result, a0);
+        return result;
+    }
+
+    // @0x14244e2c0
+    SPtr<Instances::fl_display::Graphics> Shape::graphicsGet()
+    {
+        SPtr<Instances::fl_display::Graphics> result;
+        graphicsGet(result);
+        return result;
+    }
+
+    // @0x14244e3a0
+    SPtr<Instances::fl_display::Graphics> Sprite::graphicsGet()
+    {
+        SPtr<Instances::fl_display::Graphics> result;
+        graphicsGet(result);
+        return result;
+    }
+
+    // @0x14244f480
+    SPtr<Instances::fl_display::DisplayObject> SimpleButton::hitTestStateGet()
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        hitTestStateGet(result);
+        return result;
+    }
+
+    // @0x14244f590
+    SPtr<Instances::fl::Array> Scene::labelsGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        labelsGet(result);
+        return result;
+    }
+
+    // @0x14244ff90
+    SPtr<Instances::fl_display::LoaderInfo> DisplayObject::loaderInfoGet()
+    {
+        SPtr<Instances::fl_display::LoaderInfo> result;
+        loaderInfoGet(result);
+        return result;
+    }
+
+    // @0x1424500c0
+    SPtr<Instances::fl_geom::Point> DisplayObject::local3DToGlobal(Instances::fl_geom::Vector3D* a0)
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        local3DToGlobal(result, a0);
+        return result;
+    }
+
+    // @0x1424502a0
+    SPtr<Instances::fl_geom::Point> DisplayObject::localToGlobal(Instances::fl_geom::Point* a0)
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        localToGlobal(result, a0);
+        return result;
+    }
+
+    // @0x142450e30
+    SPtr<Instances::fl_display::DisplayObject> SimpleButton::overStateGet()
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        overStateGet(result);
+        return result;
+    }
+
+    // @0x142451240
+    SPtr<Instances::fl_display::DisplayObjectContainer> DisplayObject::parentGet()
+    {
+        SPtr<Instances::fl_display::DisplayObjectContainer> result;
+        parentGet(result);
+        return result;
+    }
+
+    // @0x142451bf0
+    SPtr<Instances::fl_geom::Rectangle> BitmapData::rectGet()
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        rectGet(result);
+        return result;
+    }
+
+    // @0x142451ed0
+    SPtr<Instances::fl_display::DisplayObject> DisplayObjectContainer::removeChildAt(SInt32 a0)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        removeChildAt(result, a0);
+        return result;
+    }
+
+    // @0x142452270
+    SPtr<Instances::fl_geom::Rectangle> DisplayObject::scale9GridGet()
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        scale9GridGet(result);
+        return result;
+    }
+
+    // @0x142452750
+    SPtr<Instances::fl::Array> MovieClip::scenesGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        scenesGet(result);
+        return result;
+    }
+
+    // @0x142452a60
+    SPtr<Instances::fl_geom::Rectangle> DisplayObject::scrollRectGet()
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        scrollRectGet(result);
+        return result;
+    }
+
+    // @0x142453470
+    SPtr<Instances::fl_display::Stage> DisplayObject::stageGet()
+    {
+        SPtr<Instances::fl_display::Stage> result;
+        stageGet(result);
+        return result;
+    }
+
+    // @0x142453cf0
+    SPtr<Instances::fl_text::TextSnapshot> DisplayObjectContainer::textSnapshotGet()
+    {
+        SPtr<Instances::fl_text::TextSnapshot> result;
+        textSnapshotGet(result);
+        return result;
+    }
+
+    // @0x142454380
+    SPtr<Instances::fl_geom::Transform> DisplayObject::transformGet()
+    {
+        SPtr<Instances::fl_geom::Transform> result;
+        transformGet(result);
+        return result;
+    }
+
+    // @0x1424546e0
+    SPtr<Instances::fl_display::DisplayObject> SimpleButton::upStateGet()
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        upStateGet(result);
+        return result;
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$09K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455e90
 // MS2-PIN: ?Func@?$ThunkFunc1@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$0L@$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455ef0
 // MS2-PIN: ?Func@?$ThunkFunc0@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$0M@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455f60
