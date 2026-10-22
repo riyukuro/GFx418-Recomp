@@ -53,6 +53,12 @@ public:
     {
     }
 
+    // Resize 0x14241fe30, At 0x142405480, Set 0x1424213b0 (defined with the Array bodies).
+    void Resize(UPInt newLength);
+    const Value& At(UPInt ind) const;
+    void Set(UPInt ind, const Value& v);
+    UPInt GetSize() const { return Length; }
+
 public:
     UPInt                   Length;         // +0x00
     UPInt                   ValueHLowInd;   // +0x08
@@ -89,6 +95,12 @@ namespace Instances { namespace fl
         virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;
         // @0x142416520
         virtual void GetNextPropertyValue(Value& value, GlobalSlotIndex ind);
+
+    public:
+        void Resize(UPInt newLength) { SA.Resize(newLength); }
+        const Value& At(UPInt ind) const { return SA.At(ind); }
+        void Set(UPInt ind, const Value& v) { SA.Set(ind, v); }
+        UPInt GetSize() const { return SA.GetSize(); }
 
     public:
         SparseArray SA;     // +0x38

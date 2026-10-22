@@ -3,10 +3,9 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_10
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142473760-0x1424789e0 .text$mn
-// MS2-RANGE: 0x142478f10-0x142479130 .text$mn
-// MS2-RANGE: 0x14247a8f0-0x1424832e0 .text$mn
+// MS2-RANGE: 0x142473760-0x1424832e0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "Render/Render_Filters.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -459,6 +458,1333 @@ template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 24, const Value>;
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Native class descriptors (data of the exe, with the thunk and member tables).
+namespace fl_filters
+{
+    extern const ClassInfo BevelFilterCI;
+    extern const ClassInfo BitmapFilterCI;
+    extern const ClassInfo BitmapFilterQualityCI;
+    extern const ClassInfo BitmapFilterTypeCI;
+    extern const ClassInfo BlurFilterCI;
+    extern const ClassInfo ColorMatrixFilterCI;
+    extern const ClassInfo ConvolutionFilterCI;
+    extern const ClassInfo DisplacementMapFilterCI;
+    extern const ClassInfo DisplacementMapFilterModeCI;
+    extern const ClassInfo DropShadowFilterCI;
+    extern const ClassInfo GlowFilterCI;
+    extern const ClassInfo GradientBevelFilterCI;
+    extern const ClassInfo GradientGlowFilterCI;
+}
+
+// ==== flash.filters: class traits factories ==========================================================================
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x142474740
+    Pickable<Traits> DisplacementMapFilterMode::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplacementMapFilterMode(vm));
+    }
+
+    // @0x142474960
+    Pickable<Traits> BitmapFilterQuality::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapFilterQuality(vm));
+    }
+
+    // @0x142474ab0
+    Pickable<Traits> BitmapFilterType::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapFilterType(vm));
+    }
+
+    // @0x142474c10
+    Pickable<Traits> DropShadowFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) DropShadowFilter(vm));
+    }
+
+    // @0x142474f50
+    Pickable<Traits> BlurFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BlurFilter(vm));
+    }
+
+    // @0x142475ca0
+    Pickable<Traits> ColorMatrixFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ColorMatrixFilter(vm));
+    }
+
+    // @0x142475de0
+    Pickable<Traits> GlowFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GlowFilter(vm));
+    }
+
+    // @0x1424766f0
+    Pickable<Traits> GradientBevelFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GradientBevelFilter(vm));
+    }
+
+    // @0x142476830
+    Pickable<Traits> GradientGlowFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GradientGlowFilter(vm));
+    }
+
+    // @0x142476b10
+    Pickable<Traits> ConvolutionFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ConvolutionFilter(vm));
+    }
+
+    // @0x142476c50
+    Pickable<Traits> DisplacementMapFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplacementMapFilter(vm));
+    }
+
+    // @0x142476d90
+    Pickable<Traits> BitmapFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapFilter(vm));
+    }
+
+    // @0x142476ed0
+    Pickable<Traits> BevelFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BevelFilter(vm));
+    }
+
+// ---- constructors ---------------------------------------------------------------------------------------------------
+
+    // @0x142477010
+    BevelFilter::BevelFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::BevelFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::BevelFilter(vm, AS3::fl_filters::BevelFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_filters
+{
+    // @0x142477110
+    BevelFilter::BevelFilter(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_filters
+{
+    // @0x142477140
+    BevelFilter::BevelFilter(InstanceTraits::Traits& t)
+        : Instances::fl_filters::BitmapFilter(t)
+    {
+        FilterData = *new Render::BevelFilter();
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x1424772a0
+    BitmapFilter::BitmapFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::BitmapFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::BitmapFilter(vm, AS3::fl_filters::BitmapFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_filters
+{
+    // @0x1424773a0
+    BitmapFilter::BitmapFilter(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_filters
+{
+    // @0x1424773d0
+    BitmapFilter::BitmapFilter(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // Constant holders: plain Object instance traits, the class object carries the constants.
+    // @0x142477400
+    BitmapFilterQuality::BitmapFilterQuality(VM& vm)
+        : Traits(vm, AS3::fl_filters::BitmapFilterQualityCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_filters::BitmapFilterQualityCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_filters::BitmapFilterQuality(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_filters
+{
+    // @0x142477500
+    BitmapFilterQuality::BitmapFilterQuality(ClassTraits::Traits& t)
+        : Class(t), HIGH(3), LOW(1), MEDIUM(2)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x142477540
+    BitmapFilterType::BitmapFilterType(VM& vm)
+        : Traits(vm, AS3::fl_filters::BitmapFilterTypeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_filters::BitmapFilterTypeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_filters::BitmapFilterType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_filters
+{
+    // @0x142477640
+    BitmapFilterType::BitmapFilterType(ClassTraits::Traits& t)
+        : Class(t), FULL("full"), INNER("inner"), OUTER("outer")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x142477690
+    BlurFilter::BlurFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::BlurFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::BlurFilter(vm, AS3::fl_filters::BlurFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_filters
+{
+    // @0x142477790
+    BlurFilter::BlurFilter(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_filters
+{
+    // @0x1424777c0
+    BlurFilter::BlurFilter(InstanceTraits::Traits& t)
+        : Instances::fl_filters::BitmapFilter(t)
+    {
+        FilterData = *new Render::BlurFilter();
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x1424778c0
+    ColorMatrixFilter::ColorMatrixFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::ColorMatrixFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::ColorMatrixFilter(vm, AS3::fl_filters::ColorMatrixFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_filters
+{
+    // @0x1424779c0
+    ColorMatrixFilter::ColorMatrixFilter(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_filters
+{
+    // @0x1424779f0
+    ColorMatrixFilter::ColorMatrixFilter(InstanceTraits::Traits& t)
+        : Instances::fl_filters::BitmapFilter(t)
+    {
+        FilterData = *new Render::ColorMatrixFilter();
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // The filters the player does not implement: BitmapFilter instance traits, plain class object.
+    // @0x142477a60
+    ConvolutionFilter::ConvolutionFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::ConvolutionFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::BitmapFilter(vm, AS3::fl_filters::ConvolutionFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142477b60
+    DisplacementMapFilter::DisplacementMapFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::DisplacementMapFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::BitmapFilter(vm, AS3::fl_filters::DisplacementMapFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142477c60
+    DisplacementMapFilterMode::DisplacementMapFilterMode(VM& vm)
+        : Traits(vm, AS3::fl_filters::DisplacementMapFilterModeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_filters::DisplacementMapFilterModeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_filters::DisplacementMapFilterMode(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_filters
+{
+    // @0x142477d70
+    DisplacementMapFilterMode::DisplacementMapFilterMode(ClassTraits::Traits& t)
+        : Class(t), CLAMP("clamp"), COLOR("color"), IGNORE_("ignore"), WRAP("wrap")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x142477dc0
+    DropShadowFilter::DropShadowFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::DropShadowFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::DropShadowFilter(vm, AS3::fl_filters::DropShadowFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_filters
+{
+    // @0x142477ec0
+    DropShadowFilter::DropShadowFilter(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_filters
+{
+    // @0x142477ef0
+    DropShadowFilter::DropShadowFilter(InstanceTraits::Traits& t)
+        : Instances::fl_filters::BitmapFilter(t)
+    {
+        FilterData = *new Render::ShadowFilter();
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x142478040
+    GlowFilter::GlowFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::GlowFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::GlowFilter(vm, AS3::fl_filters::GlowFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_filters
+{
+    // @0x142478140
+    GlowFilter::GlowFilter(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_filters
+{
+    // @0x142478170
+    GlowFilter::GlowFilter(InstanceTraits::Traits& t)
+        : Instances::fl_filters::BitmapFilter(t)
+    {
+        FilterData = *new Render::GlowFilter();
+    }
+}}
+
+namespace ClassTraits { namespace fl_filters
+{
+    // @0x142478280
+    GradientBevelFilter::GradientBevelFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::GradientBevelFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::BitmapFilter(vm, AS3::fl_filters::GradientBevelFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142478380
+    GradientGlowFilter::GradientGlowFilter(VM& vm)
+        : Traits(vm, AS3::fl_filters::GradientGlowFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_filters::BitmapFilter(vm, AS3::fl_filters::GradientGlowFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+// ==== flash.filters: instances =======================================================================================
+
+namespace Instances { namespace fl_filters
+{
+    // Arguments past the given count keep the defaults; a failed conversion (exception) stops the constructor.
+    // @0x142479470
+    void BevelFilter::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Value::Number distance(4), angle(45);
+        UInt32 highlightColor(0xFFFFFF);
+        Value::Number highlightAlpha(1);
+        UInt32 shadowColor(0);
+        Value::Number shadowAlpha(1), blurX(4), blurY(4), strength(1);
+        SInt32 quality(1);
+        ASString type = GetVM().GetStringManager().CreateConstString("inner");
+        bool knockout(false);
+
+        if (argc > 0 && !argv[0].Convert2Number(distance)) return;
+        if (argc > 1 && !argv[1].Convert2Number(angle)) return;
+        if (argc > 2 && !argv[2].Convert2UInt32(highlightColor)) return;
+        if (argc > 3 && !argv[3].Convert2Number(highlightAlpha)) return;
+        if (argc > 4 && !argv[4].Convert2UInt32(shadowColor)) return;
+        if (argc > 5 && !argv[5].Convert2Number(shadowAlpha)) return;
+        if (argc > 6 && !argv[6].Convert2Number(blurX)) return;
+        if (argc > 7 && !argv[7].Convert2Number(blurY)) return;
+        if (argc > 8 && !argv[8].Convert2Number(strength)) return;
+        if (argc > 9 && !argv[9].Convert2Int32(quality)) return;
+        if (argc > 10 && !argv[10].Convert2String(type)) return;
+        if (argc > 11) knockout = argv[11].Convert2Boolean();
+
+        Value result;
+        distanceSet(result, distance);
+        angleSet(result, angle);
+        highlightColorSet(result, highlightColor);
+        highlightAlphaSet(result, highlightAlpha);
+        shadowColorSet(result, shadowColor);
+        shadowAlphaSet(result, shadowAlpha);
+        blurXSet(result, blurX);
+        blurYSet(result, blurY);
+        strengthSet(result, strength);
+        qualitySet(result, quality);
+        typeSet(result, type);
+        knockoutSet(result, knockout);
+    }
+
+    // @0x1424798f0
+    void BlurFilter::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Value result;
+        Value::Number blurX(4), blurY(4);
+        SInt32 quality(1);
+
+        if (argc >= 1 && !argv[0].Convert2Number(blurX)) return;
+        if (argc >= 2 && !argv[1].Convert2Number(blurY)) return;
+        if (argc >= 3 && !argv[2].Convert2Int32(quality)) return;
+
+        blurXSet(result, blurX);
+        blurYSet(result, blurY);
+        qualitySet(result, (SInt16)quality);
+    }
+
+    // @0x142479a10
+    void ColorMatrixFilter::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc > 0 && argv[0].IsObject() && argv[0].GetObject())
+        {
+            Traits& tr = argv[0].GetObject()->GetTraits();
+            if (tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits())
+            {
+                Value result;
+                matrixSet(result, static_cast<Instances::fl::Array*>(argv[0].GetObject()));
+            }
+        }
+    }
+
+    // Arguments 6 and 7 are read twice: as strength/quality and as inner/knockout (hideObject is never read).
+    // @0x142479a90
+    void DropShadowFilter::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Value::Number distance(4), angle(45);
+        UInt32 color(0);
+        Value::Number alpha(1), blurX(4), blurY(4), strength(1);
+        SInt32 quality(1);
+        bool inner(false), knockout(false);
+
+        if (argc >= 1 && !argv[0].Convert2Number(distance)) return;
+        if (argc >= 2 && !argv[1].Convert2Number(angle)) return;
+        if (argc >= 3 && !argv[2].Convert2UInt32(color)) return;
+        if (argc >= 4 && !argv[3].Convert2Number(alpha)) return;
+        if (argc >= 5 && !argv[4].Convert2Number(blurX)) return;
+        if (argc >= 6 && !argv[5].Convert2Number(blurY)) return;
+        if (argc >= 7 && !argv[6].Convert2Number(strength)) return;
+        if (argc >= 8 && !argv[7].Convert2Int32(quality)) return;
+        if (argc >= 7) inner = argv[6].Convert2Boolean();
+        if (argc >= 8) knockout = argv[7].Convert2Boolean();
+
+        Value result;
+        distanceSet(result, distance);
+        angleSet(result, angle);
+        colorSet(result, color);
+        alphaSet(result, alpha);
+        blurXSet(result, blurX);
+        blurYSet(result, blurY);
+        strengthSet(result, strength);
+        qualitySet(result, quality);
+        innerSet(result, inner);
+        knockoutSet(result, knockout);
+    }
+
+    // @0x142479df0
+    void GlowFilter::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        UInt32 color(0xFF0000);
+        Value::Number alpha(1), blurX(6), blurY(6), strength(2);
+        SInt32 quality(1);
+        bool inner(false), knockout(false);
+
+        if (argc >= 1 && !argv[0].Convert2UInt32(color)) return;
+        if (argc >= 2 && !argv[1].Convert2Number(alpha)) return;
+        if (argc >= 3 && !argv[2].Convert2Number(blurX)) return;
+        if (argc >= 4 && !argv[3].Convert2Number(blurY)) return;
+        if (argc >= 5 && !argv[4].Convert2Number(strength)) return;
+        if (argc >= 6 && !argv[5].Convert2Int32(quality)) return;
+        if (argc >= 7) inner = argv[6].Convert2Boolean();
+        if (argc >= 8) knockout = argv[7].Convert2Boolean();
+
+        Value result;
+        colorSet(result, color);
+        alphaSet(result, alpha);
+        blurXSet(result, blurX);
+        blurYSet(result, blurY);
+        strengthSet(result, strength);
+        qualitySet(result, quality);
+        innerSet(result, inner);
+        knockoutSet(result, knockout);
+    }
+}}
+
+// ---- instance factories ---------------------------------------------------------------------------------------------
+
+namespace InstanceTraits { namespace fl_filters
+{
+    // @0x14247a220
+    Pickable<BevelFilter::InstanceType> BevelFilter::MakeInstance(BevelFilter& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14247a3b0
+    Pickable<BitmapFilter::InstanceType> BitmapFilter::MakeInstance(BitmapFilter& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14247a430
+    Pickable<BlurFilter::InstanceType> BlurFilter::MakeInstance(BlurFilter& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14247a550
+    Pickable<ColorMatrixFilter::InstanceType> ColorMatrixFilter::MakeInstance(ColorMatrixFilter& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14247a600
+    Pickable<DropShadowFilter::InstanceType> DropShadowFilter::MakeInstance(DropShadowFilter& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14247a780
+    Pickable<GlowFilter::InstanceType> GlowFilter::MakeInstance(GlowFilter& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14247a8c0
+    void BevelFilter::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<BevelFilter&>(t)));
+    }
+
+    // @0x14247a8f0
+    void BitmapFilter::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<BitmapFilter&>(t)));
+    }
+
+    // @0x14247a950
+    void BlurFilter::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<BlurFilter&>(t)));
+    }
+
+    // @0x14247a980
+    void ColorMatrixFilter::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<ColorMatrixFilter&>(t)));
+    }
+
+    // @0x14247aa20
+    void DropShadowFilter::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<DropShadowFilter&>(t)));
+    }
+
+    // @0x14247aa50
+    void GlowFilter::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<GlowFilter&>(t)));
+    }
+}}
+
+// ---- native methods -------------------------------------------------------------------------------------------------
+
+namespace Instances { namespace fl_filters
+{
+    // @0x14247aa80
+    void DropShadowFilter::alphaGet(Value::Number& result)
+    {
+        result = GetShadowFilterData()->GetParams().Colors[0].GetAlpha() / 255.0;
+    }
+
+    // @0x14247aaa0
+    void GlowFilter::alphaGet(Value::Number& result)
+    {
+        result = GetGlowFilterData()->GetParams().Colors[0].GetAlpha() / 255.0;
+    }
+
+    // @0x14247aac0
+    void DropShadowFilter::alphaSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().Colors[0].SetAlpha((UByte)(value * 255));
+    }
+
+    // @0x14247aae0
+    void GlowFilter::alphaSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetGlowFilterData()->GetParams().Colors[0].SetAlpha((UByte)(value * 255));
+    }
+
+    // @0x14247ab00
+    void BevelFilter::angleGet(Value::Number& result)
+    {
+        result = SF_RADTODEG(GetBevelFilterData()->GetAngle());
+    }
+
+    // @0x14247ab40
+    void DropShadowFilter::angleGet(Value::Number& result)
+    {
+        result = SF_RADTODEG(GetShadowFilterData()->GetAngle());
+    }
+
+    // @0x14247ab70
+    void BevelFilter::angleSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->SetAngleDistance((float)SF_DEGTORAD((float)value), GetBevelFilterData()->GetDistance());
+    }
+
+    // @0x14247ac10
+    void DropShadowFilter::angleSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->SetAngleDistance((float)SF_DEGTORAD((float)value), GetShadowFilterData()->GetDistance());
+    }
+
+    // @0x14247aca0
+    void BevelFilter::blurXGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetBevelFilterData()->GetParams().BlurX);
+    }
+
+    // @0x14247acd0
+    void BlurFilter::blurXGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetBlurFilterData()->GetParams().BlurX);
+    }
+
+    // @0x14247acf0
+    void DropShadowFilter::blurXGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetShadowFilterData()->GetParams().BlurX);
+    }
+
+    // @0x14247ad10
+    void GlowFilter::blurXGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetGlowFilterData()->GetParams().BlurX);
+    }
+
+    // @0x14247ad30
+    void BevelFilter::blurXSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->GetParams().BlurX = PixelsToTwips((float)value);
+    }
+
+    // @0x14247ad60
+    void BlurFilter::blurXSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBlurFilterData()->GetParams().BlurX = PixelsToTwips((float)value);
+    }
+
+    // @0x14247ad80
+    void DropShadowFilter::blurXSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().BlurX = PixelsToTwips((float)value);
+    }
+
+    // @0x14247ada0
+    void GlowFilter::blurXSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetGlowFilterData()->GetParams().BlurX = PixelsToTwips((float)value);
+    }
+
+    // @0x14247adc0
+    void BevelFilter::blurYGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetBevelFilterData()->GetParams().BlurY);
+    }
+
+    // @0x14247adf0
+    void BlurFilter::blurYGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetBlurFilterData()->GetParams().BlurY);
+    }
+
+    // @0x14247ae10
+    void DropShadowFilter::blurYGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetShadowFilterData()->GetParams().BlurY);
+    }
+
+    // @0x14247ae30
+    void GlowFilter::blurYGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetGlowFilterData()->GetParams().BlurY);
+    }
+
+    // @0x14247ae50
+    void BevelFilter::blurYSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->GetParams().BlurY = PixelsToTwips((float)value);
+    }
+
+    // @0x14247ae80
+    void BlurFilter::blurYSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBlurFilterData()->GetParams().BlurY = PixelsToTwips((float)value);
+    }
+
+    // @0x14247aea0
+    void DropShadowFilter::blurYSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().BlurY = PixelsToTwips((float)value);
+    }
+
+    // @0x14247aec0
+    void GlowFilter::blurYSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetGlowFilterData()->GetParams().BlurY = PixelsToTwips((float)value);
+    }
+
+    // @0x14247aee0
+    SPtr<Instances::fl_filters::BitmapFilter> BevelFilter::clone()
+    {
+        SPtr<Instances::fl_filters::BitmapFilter> result;
+        clone(result);
+        return result;
+    }
+
+    // Copies through the accessors: a new instance gets every property of this one.
+    // MS2-FUNCTIONAL: the exe keeps the inlined flag getters as shr/and/shl (not folded to a mask); register allocation differs
+    // @0x14247af00
+    void BevelFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
+    {
+        InstanceTraits::fl_filters::BevelFilter& itr = static_cast<InstanceTraits::fl_filters::BevelFilter&>(GetTraits());
+        Pickable<BevelFilter> r = itr.MakeInstance(itr);
+
+        Value::Number distance, angle, highlightAlpha, shadowAlpha, blurX, blurY, strength;
+        UInt32 highlightColor, shadowColor;
+        SInt32 quality;
+        ASString type = GetVM().GetStringManager().CreateEmptyString();
+        bool knockout;
+        distanceGet(distance);
+        angleGet(angle);
+        highlightColorGet(highlightColor);
+        highlightAlphaGet(highlightAlpha);
+        shadowColorGet(shadowColor);
+        shadowAlphaGet(shadowAlpha);
+        blurXGet(blurX);
+        blurYGet(blurY);
+        strengthGet(strength);
+        qualityGet(quality);
+        typeGet(type);
+        knockoutGet(knockout);
+
+        Value tempResult;
+        r->distanceSet(tempResult, distance);
+        r->angleSet(tempResult, angle);
+        r->highlightColorSet(tempResult, highlightColor);
+        r->highlightAlphaSet(tempResult, highlightAlpha);
+        r->shadowColorSet(tempResult, shadowColor);
+        r->shadowAlphaSet(tempResult, shadowAlpha);
+        r->blurXSet(tempResult, blurX);
+        r->blurYSet(tempResult, blurY);
+        r->strengthSet(tempResult, strength);
+        r->qualitySet(tempResult, quality);
+        r->typeSet(tempResult, type);
+        r->knockoutSet(tempResult, knockout);
+        result = r;
+    }
+
+    // @0x14247b400
+    void BitmapFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::BitmapFilter::clone() is not implemented\n");
+    }
+
+    // @0x14247b420
+    SPtr<Instances::fl_filters::BitmapFilter> BlurFilter::clone()
+    {
+        SPtr<Instances::fl_filters::BitmapFilter> result;
+        clone(result);
+        return result;
+    }
+
+    // @0x14247b440
+    __declspec(noinline) void BlurFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
+    {
+        InstanceTraits::fl_filters::BlurFilter& itr = static_cast<InstanceTraits::fl_filters::BlurFilter&>(GetTraits());
+        Pickable<BlurFilter> r = itr.MakeInstance(itr);
+
+        Value::Number blurX, blurY;
+        SInt32 quality;
+        blurXGet(blurX);
+        blurYGet(blurY);
+        qualityGet(quality);
+
+        Value tempResult;
+        r->blurXSet(tempResult, blurX);
+        r->blurYSet(tempResult, blurY);
+        r->qualitySet(tempResult, quality);
+        result = r;
+    }
+
+    // @0x14247b530
+    SPtr<Instances::fl_filters::BitmapFilter> ColorMatrixFilter::clone()
+    {
+        SPtr<Instances::fl_filters::BitmapFilter> result;
+        clone(result);
+        return result;
+    }
+
+    // Through the AS3 array form of the matrix.
+    // @0x14247b550
+    __declspec(noinline) void ColorMatrixFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
+    {
+        InstanceTraits::fl_filters::ColorMatrixFilter& itr = static_cast<InstanceTraits::fl_filters::ColorMatrixFilter&>(GetTraits());
+        Pickable<ColorMatrixFilter> r = itr.MakeInstance(itr);
+
+        SPtr<Instances::fl::Array> matrix;
+        Value tempResult;
+        matrixGet(matrix);
+        r->matrixSet(tempResult, matrix.GetPtr());
+        result = r;
+    }
+
+    // @0x14247b6a0
+    SPtr<Instances::fl_filters::BitmapFilter> DropShadowFilter::clone()
+    {
+        SPtr<Instances::fl_filters::BitmapFilter> result;
+        clone(result);
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: the exe keeps the inlined flag getters as shr/and/shl (not folded to a mask); register allocation differs
+    // @0x14247b6c0
+    void DropShadowFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
+    {
+        InstanceTraits::fl_filters::DropShadowFilter& itr = static_cast<InstanceTraits::fl_filters::DropShadowFilter&>(GetTraits());
+        Pickable<DropShadowFilter> r = itr.MakeInstance(itr);
+
+        Value::Number distance, angle;
+        UInt32 color;
+        Value::Number alpha, blurX, blurY, strength;
+        SInt32 quality;
+        bool inner, knockout, hideObject;
+        distanceGet(distance);
+        angleGet(angle);
+        colorGet(color);
+        alphaGet(alpha);
+        blurXGet(blurX);
+        blurYGet(blurY);
+        strengthGet(strength);
+        qualityGet(quality);
+        innerGet(inner);
+        knockoutGet(knockout);
+        hideObjectGet(hideObject);
+
+        Value tempResult;
+        r->distanceSet(tempResult, distance);
+        r->angleSet(tempResult, angle);
+        r->colorSet(tempResult, color);
+        r->alphaSet(tempResult, alpha);
+        r->blurXSet(tempResult, blurX);
+        r->blurYSet(tempResult, blurY);
+        r->strengthSet(tempResult, strength);
+        r->qualitySet(tempResult, quality);
+        r->innerSet(tempResult, inner);
+        r->knockoutSet(tempResult, knockout);
+        r->hideObjectSet(tempResult, hideObject);
+        result = r;
+    }
+
+    // @0x14247b960
+    SPtr<Instances::fl_filters::BitmapFilter> GlowFilter::clone()
+    {
+        SPtr<Instances::fl_filters::BitmapFilter> result;
+        clone(result);
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: the exe keeps the inlined flag getters as shr/and/shl (not folded to a mask); register allocation differs
+    // @0x14247b980
+    void GlowFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
+    {
+        InstanceTraits::fl_filters::GlowFilter& itr = static_cast<InstanceTraits::fl_filters::GlowFilter&>(GetTraits());
+        Pickable<GlowFilter> r = itr.MakeInstance(itr);
+
+        UInt32 color;
+        Value::Number alpha, blurX, blurY, strength;
+        SInt32 quality;
+        bool inner, knockout;
+        colorGet(color);
+        alphaGet(alpha);
+        blurXGet(blurX);
+        blurYGet(blurY);
+        strengthGet(strength);
+        qualityGet(quality);
+        innerGet(inner);
+        knockoutGet(knockout);
+
+        Value tempResult;
+        r->colorSet(tempResult, color);
+        r->alphaSet(tempResult, alpha);
+        r->blurXSet(tempResult, blurX);
+        r->blurYSet(tempResult, blurY);
+        r->strengthSet(tempResult, strength);
+        r->qualitySet(tempResult, quality);
+        r->innerSet(tempResult, inner);
+        r->knockoutSet(tempResult, knockout);
+        result = r;
+    }
+
+    // @0x14247baf0
+    void DropShadowFilter::colorGet(UInt32& result)
+    {
+        result = GetShadowFilterData()->GetParams().Colors[0].GetColorRGB().Raw;
+    }
+
+    // @0x14247bb00
+    void GlowFilter::colorGet(UInt32& result)
+    {
+        result = GetGlowFilterData()->GetParams().Colors[0].GetColorRGB().Raw;
+    }
+
+    // @0x14247bb10
+    void DropShadowFilter::colorSet(const Value& result, UInt32 value)
+    {
+        SF_UNUSED(result);
+        Render::Color& c = GetShadowFilterData()->GetParams().Colors[0];
+        c.SetColor(value, c.GetAlpha());
+    }
+
+    // @0x14247bb20
+    void GlowFilter::colorSet(const Value& result, UInt32 value)
+    {
+        SF_UNUSED(result);
+        Render::Color& c = GetGlowFilterData()->GetParams().Colors[0];
+        c.SetColor(value, c.GetAlpha());
+    }
+
+    // @0x14247bb30
+    void BevelFilter::distanceGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetBevelFilterData()->GetDistance());
+    }
+
+    // @0x14247bb60
+    void DropShadowFilter::distanceGet(Value::Number& result)
+    {
+        result = TwipsToPixels(GetShadowFilterData()->GetDistance());
+    }
+
+    // @0x14247bb80
+    void BevelFilter::distanceSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->SetAngleDistance(GetBevelFilterData()->GetAngle(), PixelsToTwips((float)value));
+    }
+
+    // @0x14247bc20
+    void DropShadowFilter::distanceSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->SetAngleDistance(GetShadowFilterData()->GetAngle(), PixelsToTwips((float)value));
+    }
+
+    // @0x14247bca0
+    void DropShadowFilter::hideObjectGet(bool& result)
+    {
+        result = (GetShadowFilterData()->GetParams().Mode >> 6) & 1;
+    }
+
+    // The flag setters only ever set the bit.
+    // @0x14247bcb0
+    void DropShadowFilter::hideObjectSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().Mode |= ((unsigned)value << 6);
+    }
+
+    // @0x14247bcc0
+    void BevelFilter::highlightAlphaGet(Value::Number& result)
+    {
+        result = GetBevelFilterData()->GetParams().Colors[1].GetAlpha() / 255.0;
+    }
+
+    // @0x14247bcf0
+    void BevelFilter::highlightAlphaSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->GetParams().Colors[1].SetAlpha((UByte)(value * 255));
+    }
+
+    // @0x14247bd20
+    void BevelFilter::highlightColorGet(UInt32& result)
+    {
+        result = GetBevelFilterData()->GetParams().Colors[1].GetColorRGB().Raw;
+    }
+
+    // @0x14247bd50
+    void BevelFilter::highlightColorSet(const Value& result, UInt32 value)
+    {
+        SF_UNUSED(result);
+        Render::Color& c = GetBevelFilterData()->GetParams().Colors[1];
+        c.SetColor(value, c.GetAlpha());
+    }
+
+    // @0x14247bd80
+    void DropShadowFilter::innerGet(bool& result)
+    {
+        result = (GetShadowFilterData()->GetParams().Mode >> 5) & 1;
+    }
+
+    // @0x14247bd90
+    void GlowFilter::innerGet(bool& result)
+    {
+        result = (GetGlowFilterData()->GetParams().Mode >> 5) & 1;
+    }
+
+    // @0x14247bda0
+    void DropShadowFilter::innerSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().Mode |= ((unsigned)value << 5);
+    }
+
+    // @0x14247bdb0
+    void GlowFilter::innerSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GetGlowFilterData()->GetParams().Mode |= ((unsigned)value << 5);
+    }
+
+    // @0x14247bdc0
+    void BevelFilter::knockoutGet(bool& result)
+    {
+        result = (GetBevelFilterData()->GetParams().Mode >> 4) & 1;
+    }
+
+    // @0x14247bdf0
+    void DropShadowFilter::knockoutGet(bool& result)
+    {
+        result = (GetShadowFilterData()->GetParams().Mode >> 4) & 1;
+    }
+
+    // @0x14247be00
+    void GlowFilter::knockoutGet(bool& result)
+    {
+        result = (GetGlowFilterData()->GetParams().Mode >> 4) & 1;
+    }
+
+    // @0x14247be10
+    void BevelFilter::knockoutSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->GetParams().Mode |= ((unsigned)value << 4);
+    }
+
+    // @0x14247be40
+    void DropShadowFilter::knockoutSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().Mode |= ((unsigned)value << 4);
+    }
+
+    // @0x14247be50
+    void GlowFilter::knockoutSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GetGlowFilterData()->GetParams().Mode |= ((unsigned)value << 4);
+    }
+
+    // @0x14247be60
+    SPtr<Instances::fl::Array> ColorMatrixFilter::matrixGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        matrixGet(result);
+        return result;
+    }
+
+    // AS3 order: four rows of five (four factors and the offset); the render filter keeps the 4x4 factors first and the
+    // four offsets after them.
+    // @0x14247be80
+    void ColorMatrixFilter::matrixGet(SPtr<Instances::fl::Array>& result)
+    {
+        SPtr<Instances::fl::Array> asArray = GetVM().MakeArray();
+        asArray->Resize(20);
+        const Render::ColorMatrixFilter* filterData = GetColorMatrixFilterData();
+        for (unsigned i = 0; i < 20; i++)
+        {
+            Value v;
+            if (i % 5 == 0 && i != 0)
+                v.SetNumber((Value::Number)(*filterData)[16 + i / 5]);
+            else
+                v.SetNumber((Value::Number)(*filterData)[i / 5 * 4 + i % 5]);
+            asArray->Set(i, v);
+        }
+        result = asArray;
+    }
+
+    // @0x14247c020
+    void ColorMatrixFilter::matrixSet(const Value& result, Instances::fl::Array* value)
+    {
+        if (value == 0)
+            return;
+        SF_UNUSED(result);
+        Render::ColorMatrixFilter* filterData = GetColorMatrixFilterData();
+        for (unsigned i = 0; i < value->GetSize(); ++i)
+        {
+            Value::Number n;
+            if (!value->At(i).Convert2Number(n))
+                return;
+            if (i >= 20)
+                continue;
+            if (i % 5 == 4)
+                (*filterData)[16 + i / 5] = (float)n / 255.0f;
+            else
+                (*filterData)[i / 5 * 4 + i % 5] = (float)n;
+        }
+    }
+
+    // @0x14247c0e0
+    void BevelFilter::qualityGet(SInt32& result)
+    {
+        result = GetBevelFilterData()->GetParams().Passes;
+    }
+
+    // @0x14247c100
+    void BlurFilter::qualityGet(SInt32& result)
+    {
+        result = GetBlurFilterData()->GetParams().Passes;
+    }
+
+    // @0x14247c110
+    void DropShadowFilter::qualityGet(SInt32& result)
+    {
+        result = GetShadowFilterData()->GetParams().Passes;
+    }
+
+    // @0x14247c120
+    void GlowFilter::qualityGet(SInt32& result)
+    {
+        result = GetGlowFilterData()->GetParams().Passes;
+    }
+
+    // @0x14247c130
+    void BevelFilter::qualitySet(const Value& result, SInt32 value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->GetParams().Passes = value;
+    }
+
+    // @0x14247c150
+    void BlurFilter::qualitySet(const Value& result, SInt32 value)
+    {
+        SF_UNUSED(result);
+        GetBlurFilterData()->GetParams().Passes = value;
+    }
+
+    // @0x14247c160
+    void DropShadowFilter::qualitySet(const Value& result, SInt32 value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().Passes = value;
+    }
+
+    // @0x14247c170
+    void GlowFilter::qualitySet(const Value& result, SInt32 value)
+    {
+        SF_UNUSED(result);
+        GetGlowFilterData()->GetParams().Passes = value;
+    }
+
+    // @0x14247c180
+    void BevelFilter::shadowAlphaGet(Value::Number& result)
+    {
+        result = GetBevelFilterData()->GetParams().Colors[0].GetAlpha() / 255.0;
+    }
+
+    // @0x14247c1b0
+    void BevelFilter::shadowAlphaSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->GetParams().Colors[0].SetAlpha((UByte)(value * 255));
+    }
+
+    // @0x14247c1e0
+    void BevelFilter::shadowColorGet(UInt32& result)
+    {
+        result = GetBevelFilterData()->GetParams().Colors[0].GetColorRGB().Raw;
+    }
+
+    // @0x14247c210
+    void BevelFilter::shadowColorSet(const Value& result, UInt32 value)
+    {
+        SF_UNUSED(result);
+        Render::Color& c = GetBevelFilterData()->GetParams().Colors[0];
+        c.SetColor(value, c.GetAlpha());
+    }
+
+    // @0x14247c240
+    void BevelFilter::strengthGet(Value::Number& result)
+    {
+        result = GetBevelFilterData()->GetParams().Strength;
+    }
+
+    // @0x14247c270
+    void DropShadowFilter::strengthGet(Value::Number& result)
+    {
+        result = GetShadowFilterData()->GetParams().Strength;
+    }
+
+    // @0x14247c290
+    void GlowFilter::strengthGet(Value::Number& result)
+    {
+        result = GetGlowFilterData()->GetParams().Strength;
+    }
+
+    // @0x14247c2b0
+    void BevelFilter::strengthSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetBevelFilterData()->GetParams().Strength = (float)value;
+    }
+
+    // @0x14247c2e0
+    void DropShadowFilter::strengthSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetShadowFilterData()->GetParams().Strength = (float)value;
+    }
+
+    // @0x14247c300
+    void GlowFilter::strengthSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        GetGlowFilterData()->GetParams().Strength = (float)value;
+    }
+
+    // @0x14247c320
+    void BevelFilter::typeGet(ASString& result)
+    {
+        result = (GetBevelFilterData()->GetParams().Mode & Render::BlurFilterParams::Mode_Inner) == 0 ? "outer" : "inner";
+    }
+
+    // "full" (inner and outer) is not supported by the render filter: warning only.
+    // @0x14247c360
+    void BevelFilter::typeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        if (value == "inner")
+            GetBevelFilterData()->GetParams().Mode |= Render::BlurFilterParams::Mode_Inner;
+        else if (value == "outer")
+            GetBevelFilterData()->GetParams().Mode &= ~Render::BlurFilterParams::Mode_Inner;
+        else if (value == "full")
+            GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::BevelFilter::typeSet() - full is not implemented\n");
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473af0
 // MS2-PIN: ?Func@?$ThunkFunc1@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473b60
 // MS2-PIN: ?Func@?$ThunkFunc0@VBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@$01N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473bf0
@@ -661,3 +1987,72 @@ template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 24, const Value>;
 // MS2-PIN: ?Func@?$ThunkFunc1@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BG@V?$SPtr@VVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@@456@PEAVVector3D@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481a30
 // MS2-PIN: ?Func@?$ThunkFunc2@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BH@$$CBVValue@456@PEAVVector_double@fl_vec@3456@PEAV893456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481b20
 // MS2-PIN: ?Func@?$ThunkFunc0@VMatrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@$0BI@$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142481b70
+// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7Filter@Render@Scaleform@@6B@ 0x14315ac78
+// MS2-PIN: ??_7BlurFilterImpl@Render@Scaleform@@6B@ 0x14315ac90
+// MS2-PIN: ??_7BlurFilter@Render@Scaleform@@6B@ 0x14315aca8
+// MS2-PIN: ??_7ShadowFilter@Render@Scaleform@@6B@ 0x14315acc0
+// MS2-PIN: ??_7GlowFilter@Render@Scaleform@@6B@ 0x14315acd8
+// MS2-PIN: ??_7BevelFilter@Render@Scaleform@@6B@ 0x14315acf0
+// MS2-PIN: ??_7BitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@6B@ 0x14315ad08
+// MS2-PIN: ??_7BitmapFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315add8
+// MS2-PIN: ??_7BitmapFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315ae80
+// MS2-PIN: ??_7BevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@6B@ 0x14315af18
+// MS2-PIN: ??_7BevelFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315aff0
+// MS2-PIN: ??_7BevelFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315b098
+// MS2-PIN: ??_7BitmapFilterQuality@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315b1c8
+// MS2-PIN: ??_7BitmapFilterQuality@fl_filters@Classes@AS3@GFx@Scaleform@@6B@ 0x14315b268
+// MS2-PIN: ??_7BitmapFilterType@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315b358
+// MS2-PIN: ??_7BitmapFilterType@fl_filters@Classes@AS3@GFx@Scaleform@@6B@ 0x14315b3f0
+// MS2-PIN: ??_7BlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@6B@ 0x14315b4e0
+// MS2-PIN: ??_7BlurFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315b5b0
+// MS2-PIN: ??_7BlurFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315b658
+// MS2-PIN: ??_7ColorMatrixFilter@fl_filters@Instances@AS3@GFx@Scaleform@@6B@ 0x14315b6e8
+// MS2-PIN: ??_7ColorMatrixFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315b7c0
+// MS2-PIN: ??_7ColorMatrixFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315b870
+// MS2-PIN: ??_7ConvolutionFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315b908
+// MS2-PIN: ??_7DisplacementMapFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315b9a0
+// MS2-PIN: ??_7DisplacementMapFilterMode@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315ba40
+// MS2-PIN: ??_7DisplacementMapFilterMode@fl_filters@Classes@AS3@GFx@Scaleform@@6B@ 0x14315bae0
+// MS2-PIN: ??_7DropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@6B@ 0x14315bbe0
+// MS2-PIN: ??_7DropShadowFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315bcb0
+// MS2-PIN: ??_7DropShadowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315bd60
+// MS2-PIN: ??_7GlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@6B@ 0x14315bdf8
+// MS2-PIN: ??_7GlowFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14315bec8
+// MS2-PIN: ??_7GlowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315bf70
+// MS2-PIN: ??_7GradientBevelFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315c000
+// MS2-PIN: ??_7GradientGlowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315c0a0
+// MS2-PIN: ??_GFilter@Render@Scaleform@@UEAAPEAXI@Z 0x1424790d0
+// MS2-PIN: ??_GBlurFilterImpl@Render@Scaleform@@UEAAPEAXI@Z 0x142478ba0
+// MS2-PIN: ??_GBlurFilter@Render@Scaleform@@UEAAPEAXI@Z 0x1424789e0
+// MS2-PIN: ??_GShadowFilter@Render@Scaleform@@UEAAPEAXI@Z 0x142479410
+// MS2-PIN: ??_GGlowFilter@Render@Scaleform@@UEAAPEAXI@Z 0x142479130
+// MS2-PIN: ??_GBevelFilter@Render@Scaleform@@UEAAPEAXI@Z 0x1424784e0
+// MS2-PIN: ??_GBitmapFilter@fl_filters@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478790
+// MS2-PIN: ??_GBitmapFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478730
+// MS2-PIN: ??_GBitmapFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424786a0
+// MS2-PIN: ??_GBevelFilter@fl_filters@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478630
+// MS2-PIN: ??_GBevelFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424785d0
+// MS2-PIN: ??_GBevelFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478540
+// MS2-PIN: ??_GBitmapFilterQuality@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478800
+// MS2-PIN: ??_GBitmapFilterQuality@fl_filters@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478890
+// MS2-PIN: ??_GBitmapFilterType@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424788f0
+// MS2-PIN: ??_GBitmapFilterType@fl_filters@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478980
+// MS2-PIN: ??_GBlurFilter@fl_filters@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478b30
+// MS2-PIN: ??_GBlurFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478ad0
+// MS2-PIN: ??_GBlurFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478a40
+// MS2-PIN: ??_GColorMatrixFilter@fl_filters@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478cf0
+// MS2-PIN: ??_GColorMatrixFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478c90
+// MS2-PIN: ??_GColorMatrixFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478c00
+// MS2-PIN: ??_GConvolutionFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478d60
+// MS2-PIN: ??_GDisplacementMapFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478df0
+// MS2-PIN: ??_GDisplacementMapFilterMode@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478e80
+// MS2-PIN: ??_GDisplacementMapFilterMode@fl_filters@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478f10
+// MS2-PIN: ??_GDropShadowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479060
+// MS2-PIN: ??_GDropShadowFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479000
+// MS2-PIN: ??_GDropShadowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142478f70
+// MS2-PIN: ??_GGlowFilter@fl_filters@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479280
+// MS2-PIN: ??_GGlowFilter@fl_filters@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479220
+// MS2-PIN: ??_GGlowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479190
+// MS2-PIN: ??_GGradientBevelFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424792f0
+// MS2-PIN: ??_GGradientGlowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142479380

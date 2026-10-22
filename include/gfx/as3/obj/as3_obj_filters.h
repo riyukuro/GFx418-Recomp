@@ -1,203 +1,326 @@
-// Recovered Scaleform GFx 4.1.18 AS3 native classes. Generated from the exe's ClassInfo tables and thunk
-// member pointers (work/sfr5/gen_natives.py); our own declarations.
+// Recovered Scaleform GFx 4.1.18 AS3 native classes, flash.filters package. First generated from the exe's ClassInfo
+// tables and thunk member pointers (work/sfr5/gen_natives.py), then completed by hand from the exe (sfr_as3_10): the
+// instance layouts, the instance traits, class objects and class traits. Do not regenerate. Our own declarations.
 #ifndef MS2_SF_GFX_AS3_OBJ_FILTERS_H
 #define MS2_SF_GFX_AS3_OBJ_FILTERS_H
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "Render/Render_Filters.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+namespace InstanceTraits { namespace fl_filters
+{
+    class BitmapFilter;
+    class BevelFilter;
+    class BlurFilter;
+    class ColorMatrixFilter;
+    class DropShadowFilter;
+    class GlowFilter;
+}}
+
+// ==== instances ======================================================================================================
+
 namespace Instances { namespace fl_filters {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x40 bytes. Holds the render filter the display list uses.
     class BitmapFilter : public Instances::fl::Object
     {
+        friend class InstanceTraits::fl_filters::BitmapFilter;
     public:
-        // @0x14247b400
+        BitmapFilter(InstanceTraits::Traits& t);
+        // @0x14247a060
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_filters::BitmapFilter"; }
+
+        Render::Filter* GetFilterData() const { return FilterData; }
+
         void clone(SPtr<Instances::fl_filters::BitmapFilter>& result);
+        SPtr<Instances::fl_filters::BitmapFilter> clone()
+        {
+            SPtr<Instances::fl_filters::BitmapFilter> result;
+            clone(result);
+            return result;
+        }
+
+    protected:
+        Ptr<Render::Filter> FilterData;     // +0x38
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // Render::BevelFilter; the accessors go through the virtual GetBevelFilterData (slot 21).
     class BevelFilter : public Instances::fl_filters::BitmapFilter
     {
+        friend class InstanceTraits::fl_filters::BevelFilter;
     public:
-        // @0x14247ab00
+        BevelFilter(InstanceTraits::Traits& t);
+        // @0x14247a030
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_filters::BevelFilter"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        // @0x14247a1d0
+        virtual Render::BevelFilter* GetBevelFilterData() const { return (Render::BevelFilter*)GetFilterData(); }
+
         void angleGet(Value::Number& result);
-        // @0x14247ab70
-        void angleSet(const Value& result, Value::Number);
-        // @0x14247aca0
+        void angleSet(const Value& result, Value::Number value);
         void blurXGet(Value::Number& result);
-        // @0x14247ad30
-        void blurXSet(const Value& result, Value::Number);
-        // @0x14247adc0
+        void blurXSet(const Value& result, Value::Number value);
         void blurYGet(Value::Number& result);
-        // @0x14247ae50
-        void blurYSet(const Value& result, Value::Number);
-        // @0x14247af00
+        void blurYSet(const Value& result, Value::Number value);
         void clone(SPtr<Instances::fl_filters::BitmapFilter>& result);
-        // @0x14247bb30
         void distanceGet(Value::Number& result);
-        // @0x14247bb80
-        void distanceSet(const Value& result, Value::Number);
-        // @0x14247bcc0
+        void distanceSet(const Value& result, Value::Number value);
         void highlightAlphaGet(Value::Number& result);
-        // @0x14247bcf0
-        void highlightAlphaSet(const Value& result, Value::Number);
-        // @0x14247bd20
+        void highlightAlphaSet(const Value& result, Value::Number value);
         void highlightColorGet(UInt32& result);
-        // @0x14247bd50
-        void highlightColorSet(const Value& result, UInt32);
-        // @0x14247bdc0
+        void highlightColorSet(const Value& result, UInt32 value);
         void knockoutGet(bool& result);
-        // @0x14247be10
-        void knockoutSet(const Value& result, bool);
-        // @0x14247c0e0
+        void knockoutSet(const Value& result, bool value);
         void qualityGet(SInt32& result);
-        // @0x14247c130
-        void qualitySet(const Value& result, SInt32);
-        // @0x14247c180
+        void qualitySet(const Value& result, SInt32 value);
         void shadowAlphaGet(Value::Number& result);
-        // @0x14247c1b0
-        void shadowAlphaSet(const Value& result, Value::Number);
-        // @0x14247c1e0
+        void shadowAlphaSet(const Value& result, Value::Number value);
         void shadowColorGet(UInt32& result);
-        // @0x14247c210
-        void shadowColorSet(const Value& result, UInt32);
-        // @0x14247c240
+        void shadowColorSet(const Value& result, UInt32 value);
         void strengthGet(Value::Number& result);
-        // @0x14247c2b0
-        void strengthSet(const Value& result, Value::Number);
-        // @0x14247c320
+        void strengthSet(const Value& result, Value::Number value);
         void typeGet(ASString& result);
-        // @0x14247c360
-        void typeSet(const Value& result, const ASString&);
+        void typeSet(const Value& result, const ASString& value);
+
+        SPtr<Instances::fl_filters::BitmapFilter> clone();
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // Render::BlurFilter.
     class BlurFilter : public Instances::fl_filters::BitmapFilter
     {
+        friend class InstanceTraits::fl_filters::BlurFilter;
     public:
-        // @0x14247acd0
+        BlurFilter(InstanceTraits::Traits& t);
+        // @0x14247a0d0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_filters::BlurFilter"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        Render::BlurFilter* GetBlurFilterData() const { return (Render::BlurFilter*)GetFilterData(); }
+
         void blurXGet(Value::Number& result);
-        // @0x14247ad60
-        void blurXSet(const Value& result, Value::Number);
-        // @0x14247adf0
+        void blurXSet(const Value& result, Value::Number value);
         void blurYGet(Value::Number& result);
-        // @0x14247ae80
-        void blurYSet(const Value& result, Value::Number);
-        // @0x14247b440
+        void blurYSet(const Value& result, Value::Number value);
         void clone(SPtr<Instances::fl_filters::BitmapFilter>& result);
-        // @0x14247c100
         void qualityGet(SInt32& result);
-        // @0x14247c150
-        void qualitySet(const Value& result, SInt32);
+        void qualitySet(const Value& result, SInt32 value);
+
+        SPtr<Instances::fl_filters::BitmapFilter> clone();
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // Render::ColorMatrixFilter.
     class ColorMatrixFilter : public Instances::fl_filters::BitmapFilter
     {
+        friend class InstanceTraits::fl_filters::ColorMatrixFilter;
     public:
-        // @0x14247b550
+        ColorMatrixFilter(InstanceTraits::Traits& t);
+        // @0x14247a100
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_filters::ColorMatrixFilter"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        Render::ColorMatrixFilter* GetColorMatrixFilterData() const { return (Render::ColorMatrixFilter*)GetFilterData(); }
+
         void clone(SPtr<Instances::fl_filters::BitmapFilter>& result);
-        // @0x14247be80
         void matrixGet(SPtr<Instances::fl::Array>& result);
-        // @0x14247c020
-        void matrixSet(const Value& result, Instances::fl::Array*);
+        void matrixSet(const Value& result, Instances::fl::Array* value);
+
+        SPtr<Instances::fl_filters::BitmapFilter> clone();
+        SPtr<Instances::fl::Array> matrixGet();
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // Render::ShadowFilter.
     class DropShadowFilter : public Instances::fl_filters::BitmapFilter
     {
+        friend class InstanceTraits::fl_filters::DropShadowFilter;
     public:
-        // @0x14247aa80
+        DropShadowFilter(InstanceTraits::Traits& t);
+        // @0x14247a170
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_filters::DropShadowFilter"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        Render::ShadowFilter* GetShadowFilterData() const { return (Render::ShadowFilter*)GetFilterData(); }
+
         void alphaGet(Value::Number& result);
-        // @0x14247aac0
-        void alphaSet(const Value& result, Value::Number);
-        // @0x14247ab40
+        void alphaSet(const Value& result, Value::Number value);
         void angleGet(Value::Number& result);
-        // @0x14247ac10
-        void angleSet(const Value& result, Value::Number);
-        // @0x14247acf0
+        void angleSet(const Value& result, Value::Number value);
         void blurXGet(Value::Number& result);
-        // @0x14247ad80
-        void blurXSet(const Value& result, Value::Number);
-        // @0x14247ae10
+        void blurXSet(const Value& result, Value::Number value);
         void blurYGet(Value::Number& result);
-        // @0x14247aea0
-        void blurYSet(const Value& result, Value::Number);
-        // @0x14247b6c0
+        void blurYSet(const Value& result, Value::Number value);
         void clone(SPtr<Instances::fl_filters::BitmapFilter>& result);
-        // @0x14247baf0
         void colorGet(UInt32& result);
-        // @0x14247bb10
-        void colorSet(const Value& result, UInt32);
-        // @0x14247bb60
+        void colorSet(const Value& result, UInt32 value);
         void distanceGet(Value::Number& result);
-        // @0x14247bc20
-        void distanceSet(const Value& result, Value::Number);
-        // @0x14247bca0
+        void distanceSet(const Value& result, Value::Number value);
         void hideObjectGet(bool& result);
-        // @0x14247bcb0
-        void hideObjectSet(const Value& result, bool);
-        // @0x14247bd80
+        void hideObjectSet(const Value& result, bool value);
         void innerGet(bool& result);
-        // @0x14247bda0
-        void innerSet(const Value& result, bool);
-        // @0x14247bdf0
+        void innerSet(const Value& result, bool value);
         void knockoutGet(bool& result);
-        // @0x14247be40
-        void knockoutSet(const Value& result, bool);
-        // @0x14247c110
+        void knockoutSet(const Value& result, bool value);
         void qualityGet(SInt32& result);
-        // @0x14247c160
-        void qualitySet(const Value& result, SInt32);
-        // @0x14247c270
+        void qualitySet(const Value& result, SInt32 value);
         void strengthGet(Value::Number& result);
-        // @0x14247c2e0
-        void strengthSet(const Value& result, Value::Number);
+        void strengthSet(const Value& result, Value::Number value);
+
+        SPtr<Instances::fl_filters::BitmapFilter> clone();
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // Render::GlowFilter.
     class GlowFilter : public Instances::fl_filters::BitmapFilter
     {
+        friend class InstanceTraits::fl_filters::GlowFilter;
     public:
-        // @0x14247aaa0
+        GlowFilter(InstanceTraits::Traits& t);
+        // @0x14247a1a0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_filters::GlowFilter"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        Render::GlowFilter* GetGlowFilterData() const { return (Render::GlowFilter*)GetFilterData(); }
+
         void alphaGet(Value::Number& result);
-        // @0x14247aae0
-        void alphaSet(const Value& result, Value::Number);
-        // @0x14247ad10
+        void alphaSet(const Value& result, Value::Number value);
         void blurXGet(Value::Number& result);
-        // @0x14247ada0
-        void blurXSet(const Value& result, Value::Number);
-        // @0x14247ae30
+        void blurXSet(const Value& result, Value::Number value);
         void blurYGet(Value::Number& result);
-        // @0x14247aec0
-        void blurYSet(const Value& result, Value::Number);
-        // @0x14247b980
+        void blurYSet(const Value& result, Value::Number value);
         void clone(SPtr<Instances::fl_filters::BitmapFilter>& result);
-        // @0x14247bb00
         void colorGet(UInt32& result);
-        // @0x14247bb20
-        void colorSet(const Value& result, UInt32);
-        // @0x14247bd90
+        void colorSet(const Value& result, UInt32 value);
         void innerGet(bool& result);
-        // @0x14247bdb0
-        void innerSet(const Value& result, bool);
-        // @0x14247be00
+        void innerSet(const Value& result, bool value);
         void knockoutGet(bool& result);
-        // @0x14247be50
-        void knockoutSet(const Value& result, bool);
-        // @0x14247c120
+        void knockoutSet(const Value& result, bool value);
         void qualityGet(SInt32& result);
-        // @0x14247c170
-        void qualitySet(const Value& result, SInt32);
-        // @0x14247c290
+        void qualitySet(const Value& result, SInt32 value);
         void strengthGet(Value::Number& result);
-        // @0x14247c300
-        void strengthSet(const Value& result, Value::Number);
+        void strengthSet(const Value& result, Value::Number value);
+
+        SPtr<Instances::fl_filters::BitmapFilter> clone();
+    };
+}}
+
+// ==== instance traits ================================================================================================
+
+#define MS2_SF_FILTER_ITRAITS(Name)                                                                                     \
+    class Name : public CTraits                                                                                         \
+    {                                                                                                                   \
+    public:                                                                                                             \
+        typedef Instances::fl_filters::Name InstanceType;                                                               \
+                                                                                                                        \
+        Name(VM& vm, const ClassInfo& ci);                                                                              \
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::" #Name; }                              \
+        virtual void MakeObject(Value& result, Traits& t);                                                              \
+                                                                                                                        \
+        Pickable<InstanceType> MakeInstance(Name& t);                                                                   \
     };
 
+namespace InstanceTraits { namespace fl_filters
+{
+    // One line per class: the tag is the GetAS3ObjectType of the macro.
+    // @0x14247a050
+    MS2_SF_FILTER_ITRAITS(BitmapFilter)
+    // @0x14247a020
+    MS2_SF_FILTER_ITRAITS(BevelFilter)
+    // @0x14247a0c0
+    MS2_SF_FILTER_ITRAITS(BlurFilter)
+    // @0x14247a0f0
+    MS2_SF_FILTER_ITRAITS(ColorMatrixFilter)
+    // @0x14247a160
+    MS2_SF_FILTER_ITRAITS(DropShadowFilter)
+    // @0x14247a190
+    MS2_SF_FILTER_ITRAITS(GlowFilter)
 }}
+
+#undef MS2_SF_FILTER_ITRAITS
+
+// ==== classes ========================================================================================================
+
+namespace Classes { namespace fl_filters
+{
+    // 0x60 bytes.
+    class BitmapFilterQuality : public Class
+    {
+    public:
+        BitmapFilterQuality(ClassTraits::Traits& t);
+        // @0x14247a080
+        virtual const char* GetAS3ObjectType() const { return "Classes::BitmapFilterQuality"; }
+
+        const SInt32 HIGH;      // +0x50
+        const SInt32 LOW;       // +0x54
+        const SInt32 MEDIUM;    // +0x58
+    };
+
+    // 0x68 bytes.
+    class BitmapFilterType : public Class
+    {
+    public:
+        BitmapFilterType(ClassTraits::Traits& t);
+        // @0x14247a0a0
+        virtual const char* GetAS3ObjectType() const { return "Classes::BitmapFilterType"; }
+
+        const char* FULL;       // +0x50
+        const char* INNER;      // +0x58
+        const char* OUTER;      // +0x60
+    };
+
+    // 0x70 bytes.
+    class DisplacementMapFilterMode : public Class
+    {
+    public:
+        DisplacementMapFilterMode(ClassTraits::Traits& t);
+        // @0x14247a140
+        virtual const char* GetAS3ObjectType() const { return "Classes::DisplacementMapFilterMode"; }
+
+        const char* CLAMP;      // +0x50
+        const char* COLOR;      // +0x58
+        const char* IGNORE_;    // +0x60 (IGNORE is a Windows macro)
+        const char* WRAP;       // +0x68
+    };
+}}
+
+// ==== class traits ===================================================================================================
+
+#define MS2_SF_FILTER_CTRAITS(Name)                                                                                     \
+    class Name : public Traits                                                                                          \
+    {                                                                                                                   \
+    public:                                                                                                             \
+        Name(VM& vm);                                                                                                   \
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::" #Name; }                                 \
+        static Pickable<Traits> MakeClassTraits(VM& vm);                                                                \
+    };
+
+namespace ClassTraits { namespace fl_filters
+{
+    // One line per class: the tag is the GetAS3ObjectType of the macro.
+    // @0x14247a010
+    MS2_SF_FILTER_CTRAITS(BevelFilter)
+    // @0x14247a040
+    MS2_SF_FILTER_CTRAITS(BitmapFilter)
+    // @0x14247a070
+    MS2_SF_FILTER_CTRAITS(BitmapFilterQuality)
+    // @0x14247a090
+    MS2_SF_FILTER_CTRAITS(BitmapFilterType)
+    // @0x14247a0b0
+    MS2_SF_FILTER_CTRAITS(BlurFilter)
+    // @0x14247a0e0
+    MS2_SF_FILTER_CTRAITS(ColorMatrixFilter)
+    // @0x14247a110
+    MS2_SF_FILTER_CTRAITS(ConvolutionFilter)
+    // @0x14247a120
+    MS2_SF_FILTER_CTRAITS(DisplacementMapFilter)
+    // @0x14247a130
+    MS2_SF_FILTER_CTRAITS(DisplacementMapFilterMode)
+    // @0x14247a150
+    MS2_SF_FILTER_CTRAITS(DropShadowFilter)
+    // @0x14247a180
+    MS2_SF_FILTER_CTRAITS(GlowFilter)
+    // @0x14247a1b0
+    MS2_SF_FILTER_CTRAITS(GradientBevelFilter)
+    // @0x14247a1c0
+    MS2_SF_FILTER_CTRAITS(GradientGlowFilter)
+}}
+
+#undef MS2_SF_FILTER_CTRAITS
 
 }}} // namespace Scaleform::GFx::AS3
 

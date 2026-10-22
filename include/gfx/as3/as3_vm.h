@@ -13,11 +13,25 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-class FlashUI;
+// The VM's host interface (the movie's AS3 root implements it). Only the slots the recovered code calls.
+class FlashUI
+{
+public:
+    enum OutputMessageType
+    {
+        Output_Message,     // 0: trace()
+        Output_Error,       // 1
+        Output_Warning,     // 2: "not implemented" and other VM warnings
+        Output_Action       // 3
+    };
+
+    virtual ~FlashUI() {}                                               // slot 0
+    virtual void Output(OutputMessageType type, const char* msg) = 0;   // slot 1
+};
 class FileLoader;
 class XMLSupport;
 
-namespace Instances { namespace fl { class GlobalObjectCPP; } }
+namespace Instances { namespace fl { class GlobalObjectCPP; class Array; } }
 namespace InstanceTraits { namespace fl { class GlobalObject; } }
 
 class VM : public NewOverrideBase<StatMV_VM_VM_Mem>
@@ -32,6 +46,7 @@ public:
     RefCountCollector<StatMV_ActionScript_Mem>* GetGCPtr() const;
     MemoryHeap*             GetMemoryHeap() const       { return MHeap; }
     FlashUI&                GetUI() const               { return UI; }
+    Pickable<Instances::fl::Array> MakeArray() const;    // 0x142516270
     FileLoader&             GetFileLoader() const       { return Loader; }
     bool                    IsException() const         { return HandleException; }
 
