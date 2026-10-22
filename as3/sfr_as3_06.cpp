@@ -9,6 +9,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
+#undef GetObject   // windows.h
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1730,6 +1731,264 @@ namespace Instances { namespace fl_display
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// ---- Stage objects of the display classes ----
+// Bodies of the exe called here (not recovered yet), by their addresses.
+// AvmDisplayObj::AssignAS3Obj: makes pinst the AS3 object of pavm.
+void FUN_1424edca0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst);
+// The movie whose library an AS3 object's class came from.
+Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
+// VM::IsOfType(v, class name).
+bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
+// MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out.
+Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
+                                                   const Scaleform::GFx::ResourceId* prid);
+// MovieImpl::FindExportedResource.
+bool FUN_14256ec50(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::ResourceBindData* pdata,
+                   const Scaleform::String& symbol);
+// AS3::MovieRoot::FindLibrarySymbolInAllABCs, AddScriptableMovieClip.
+bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase* proot, const Scaleform::GFx::AS3::Instances::fl::Object* pobj,
+                   Scaleform::GFx::CharacterCreateInfo* pinfo);
+void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
+// AvmLoader constructor (returns this).
+Scaleform::GFx::DisplayObject* FUN_1424d6500(void* pmem, Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::MovieDefImpl* pdef,
+                                             Scaleform::GFx::InteractiveObject* pparent, const Scaleform::GFx::ResourceId* prid);
+// AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
+void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
+void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
+// Bitmap's pixel snapping mode of its AS3 name.
+Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
+// AvmButton: set the up / over / down / hit test state character.
+void FUN_14252a4e0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+void FUN_1425287b0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+void FUN_1425272f0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+void FUN_142527490(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+// AvmButton set-up after its creation from AS3.
+void FUN_1425ddd20(Scaleform::GFx::DisplayObject* pbtn);
+// AvmSprite: the AS3 constructor of a sprite created from script.
+void FUN_1424f3320(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_display
+{
+    // ASVM::pMovieRoot: the AS3 movie root, used through its ASMovieRootBase part.
+    static ASMovieRootBase* GetASRoot(VM& vm)
+    {
+        return *reinterpret_cast<ASMovieRootBase**>(reinterpret_cast<UByte*>(&vm) + 0x2d8);
+    }
+
+    static AvmDisplayObj* AvmOf(GFx::DisplayObject* p)
+    {
+        return p ? ToAvmDisplayObj(p) : NULL;
+    }
+
+    // Takes over the reference of a freshly created display object and makes this its AS3 object.
+    static void AttachStageObject(DisplayObject* pthis, GFx::DisplayObject* pdisp)
+    {
+        pthis->pDispObj = Pickable<GFx::DisplayObject>(pdisp);
+        FUN_1424edca0(AvmOf(pdisp), pthis);
+    }
+
+    // The definition (call frame's movie) a stage object created from script binds to.
+    static MovieDefImpl* GetCallerDefImpl(VM& vm)
+    {
+        const UByte* pvm = reinterpret_cast<const UByte*>(&vm);
+        UPInt n = *reinterpret_cast<const UPInt*>(pvm + 0x78) - 1;
+        const UByte* ppage = (*reinterpret_cast<UByte* const* const*>(pvm + 0x90))[n >> 6];
+        const UByte* pframe = ppage + (n & 0x3f) * 0xa8;
+        const UByte* pfile = *reinterpret_cast<UByte* const*>(*reinterpret_cast<UByte* const*>(pframe + 0x28) + 0x28);
+        return *reinterpret_cast<MovieDefImpl* const*>(pfile + 0x188);
+    }
+
+    // Looks the class of pobj, then its ABC base classes, up among the movie's exported symbols. Fills pinfo with a
+    // character definition or another resource; false if no class name is exported.
+    // @0x142442c30
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    bool FindLibrarySymbol(const DisplayObject* pobj, CharacterCreateInfo* pinfo, MovieDefImpl* pdefImpl)
+    {
+        VM& vm = pobj->GetVM();
+        pinfo->pCharDef = NULL;
+        pinfo->pResource = NULL;
+        pinfo->pBindDefImpl = pdefImpl;
+        const Traits* ptraits = &pobj->GetTraits();
+        while (ptraits)
+        {
+            if (!(ptraits->Flags & Traits::IsAbcObjectMask))
+                break;
+            if (pinfo->pCharDef)
+                return true;
+            if (pinfo->pResource)
+                break;
+            ASString name = ptraits->GetQualifiedName(Traits::qnfWithDot);
+            ResourceBindData data;
+            bool found = FUN_14256ec50(GetASRoot(vm)->GetMovieImpl(), pdefImpl, &data,
+                                       String(name.ToCStr()));
+            if (found)
+            {
+                if (data.pResource->GetResourceTypeCode() & (Resource::RT_CharacterDef_Bit << Resource::RT_TypeCode_Shift))
+                    pinfo->pCharDef = static_cast<CharacterDef*>(data.pResource.GetPtr());
+                else
+                    pinfo->pResource = data.pResource;
+                pinfo->pBindDefImpl = *reinterpret_cast<MovieDefImpl**>(reinterpret_cast<UByte*>(data.pBinding) + 0x48);
+            }
+            else
+                ptraits = ptraits->pParent;
+        }
+        if (pinfo->pCharDef)
+            return true;
+        return pinfo->pResource != NULL;
+    }
+
+    // @0x142440910
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Bitmap::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc == 0)
+            return;
+        VM& vm = GetVM();
+        if (FUN_1425145d0(vm, argv[0], "flash.display.BitmapData"))
+        {
+            pBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
+            if (pDispObj)
+                FUN_142528e70(pDispObj, pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
+        }
+        if (argc > 1)
+        {
+            ASString mode = vm.GetStringManager().CreateEmptyString();
+            if (!argv[1].Convert2String(mode))
+                return;
+            PixelSnapping = FUN_142446f30(this, mode.ToCStr());
+            if (argc > 2)
+                Smoothing = argv[2].Convert2Boolean();
+        }
+        if (pDispObj)
+            FUN_142520b20(pDispObj);
+    }
+
+    // The optional up, over, down and hit test state objects.
+    // @0x142440c30
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void SimpleButton::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        VM& vm = GetVM();
+        if (argc > 0 && FUN_1425145d0(vm, argv[0], "flash.display.DisplayObject"))
+            FUN_14252a4e0(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[0].GetObject())->pDispObj);
+        if (argc > 1 && FUN_1425145d0(vm, argv[1], "flash.display.DisplayObject"))
+            FUN_1425287b0(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[1].GetObject())->pDispObj);
+        if (argc > 2 && FUN_1425145d0(vm, argv[2], "flash.display.DisplayObject"))
+            FUN_1425272f0(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[2].GetObject())->pDispObj);
+        if (argc > 3 && FUN_1425145d0(vm, argv[3], "flash.display.DisplayObject"))
+            FUN_142527490(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[3].GetObject())->pDispObj);
+    }
+
+    // @0x142440d70
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Sprite::AS3Constructor(unsigned, const Value*)
+    {
+        FUN_1424f3320(ToAvmDisplayObj(pDispObj));
+    }
+
+    // @0x142441cd0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    GFx::DisplayObject* Loader::CreateStageObject()
+    {
+        if (!pDispObj)
+        {
+            ASMovieRootBase* proot = GetASRoot(GetVM());
+            MovieImpl* pmovie = proot->GetMovieImpl();
+            void* pmem = pmovie->pHeap->Alloc(0x158);
+            GFx::DisplayObject* pdisp = NULL;
+            if (pmem)
+            {
+                ResourceId rid(ResourceId::InvalidId);
+                pdisp = FUN_1424d6500(pmem, proot, pmovie->pMainMovieDef, NULL, &rid);
+            }
+            AttachStageObject(this, pdisp);
+            FUN_1424e9380(proot, pDispObj);
+        }
+        return pDispObj;
+    }
+
+    // @0x142441da0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    GFx::DisplayObject* Shape::CreateStageObject()
+    {
+        if (!pDispObj)
+        {
+            ASMovieRootBase* proot = GetASRoot(GetVM());
+            ResourceId emptyShapeId(0x10004);
+            CharacterCreateInfo ccinfo;
+            FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyShapeId);
+            DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                 ResourceId(0x10001), CharacterDef::Shape);
+            AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
+        }
+        return pDispObj;
+    }
+
+    // @0x142441e60
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    GFx::DisplayObject* SimpleButton::CreateStageObject()
+    {
+        if (pDispObj)
+            return pDispObj;
+        VM& vm = GetVM();
+        ASMovieRootBase* proot = GetASRoot(vm);
+        MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
+        if (!pdefImpl)
+            return pDispObj;
+        CharacterCreateInfo ccinfo;
+        FindLibrarySymbol(this, &ccinfo, pdefImpl);
+        if (!ccinfo.pCharDef)
+        {
+            ResourceId emptyButtonId(0x10003);
+            CharacterCreateInfo def;
+            FUN_1425cf500(pdefImpl, &def, &emptyButtonId);
+            ccinfo.pCharDef = def.pCharDef;
+            ccinfo.pResource = def.pResource;
+            ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
+        }
+        DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                             ResourceId(ResourceId::InvalidId), CharacterDef::Button);
+        AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
+        FUN_1425ddd20(pDispObj);
+        return pDispObj;
+    }
+
+    // @0x142441ff0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    GFx::DisplayObject* Sprite::CreateStageObject()
+    {
+        if (pDispObj)
+            return pDispObj;
+        VM& vm = GetVM();
+        ASMovieRootBase* proot = GetASRoot(vm);
+        MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
+        if (!pdefImpl)
+            return pDispObj;
+        CharacterCreateInfo ccinfo;
+        FindLibrarySymbol(this, &ccinfo, pdefImpl);
+        if (!ccinfo.pCharDef && !FUN_142501a80(proot, this, &ccinfo))
+        {
+            ResourceId emptySpriteId(0x10001);
+            CharacterCreateInfo def;
+            FUN_1425cf500(pdefImpl, &def, &emptySpriteId);
+            ccinfo.pCharDef = def.pCharDef;
+            ccinfo.pResource = def.pResource;
+            ccinfo.pBindDefImpl = pdefImpl;
+            if (*reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&vm) + 0x78) != 0)
+                ccinfo.pBindDefImpl = GetCallerDefImpl(vm);
+        }
+        DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                             ResourceId(ResourceId::InvalidId), CharacterDef::Sprite);
+        AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
+        return pDispObj;
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc3@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@$0P@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@KK_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438be0
 // MS2-PIN: ?Func@?$ThunkFunc1@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@$0CL@$$CBVValue@456@PEAVTransform@fl_geom@3456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438d50
 // MS2-PIN: ?Func@?$ThunkFunc0@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$03V?$SPtr@VScene@fl_display@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438d90
@@ -1910,3 +2169,12 @@ namespace Instances { namespace fl_display
 // MS2-PIN: ??_GStageQuality@fl_display@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424407c0
 // MS2-PIN: ??_GStageScaleMode@fl_display@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142440820
 // MS2-PIN: ??_GStageScaleMode@fl_display@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424408b0
+// tplpin --simulate (accepted by hand):
+// MS2-PIN: ??$LowerBoundSliced@PEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U12345678@P6A_NAEBU12345678@0@Z@Alg@Scaleform@@YA_KAEBQEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@1@_K1AEBU23456781@P6A_N22@Z@Z 0x142438fe0
+// MS2-PIN: ??_G?$RefCountBase@V?$PtrReleaseProxy@$0BEI@@AS3@GFx@Scaleform@@$0BEI@@Scaleform@@UEAAPEAXI@Z 0x14243daf0
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BEI@@Scaleform@@UEAAPEAXI@Z 0x14243db50
+// MS2-PIN: ??0LineScaleMode@fl_display@Classes@AS3@GFx@Scaleform@@QEAA@AEAVTraits@ClassTraits@345@@Z 0x14243b650
+// MS2-PIN: ??0StageScaleMode@fl_display@Classes@AS3@GFx@Scaleform@@QEAA@AEAVTraits@ClassTraits@345@@Z 0x14243cf30
+// MS2-PIN: ??1Stage@fl_display@Instances@AS3@GFx@Scaleform@@UEAA@XZ 0x14243d500
+// MS2-PIN: ??0StageQuality@fl_display@Classes@AS3@GFx@Scaleform@@QEAA@AEAVTraits@ClassTraits@345@@Z 0x14243cdd0
+// MS2-PIN: ??4?$SPtr@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVBitmapData@fl_display@Instances@123@@Z 0x14243d560
