@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424bb1f0-0x1424c91f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
@@ -1588,6 +1589,727 @@ namespace Instances { namespace fl_utils
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ==== flash.gfx: class traits factories, instance traits, class objects and the extended events ===================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The SPtr<InteractiveObject> assignment of the event clones is the exe's out-of-line copy.
+template <>
+SPtr<Instances::fl_display::InteractiveObject>& SPtr<Instances::fl_display::InteractiveObject>::operator=(
+    const SPtr<Instances::fl_display::InteractiveObject>& other);
+
+namespace fl_gfx
+{
+    extern const ClassInfo ExtensionsCI;
+    extern const ClassInfo FocusEventExCI;
+    extern const ClassInfo FocusManagerCI;
+    extern const ClassInfo GamePadCI;
+    extern const ClassInfo GamePadAnalogEventCI;
+    extern const ClassInfo IMECandidateListStyleCI;
+    extern const ClassInfo IMEEventExCI;
+    extern const ClassInfo IMEExCI;
+    extern const ClassInfo InteractiveObjectExCI;
+    extern const ClassInfo KeyboardEventExCI;
+    extern const ClassInfo MouseCursorEventCI;
+    extern const ClassInfo MouseEventExCI;
+    extern const ClassInfo SystemExCI;
+    extern const ClassInfo TextEventExCI;
+    extern const ClassInfo TextFieldExCI;
+}
+
+namespace Instances { namespace fl_gfx
+{
+    // @0x1424c5430
+    FocusEventEx::FocusEventEx(InstanceTraits::Traits& t)
+        : FocusEvent(t)
+        , controllerIdx(0)
+    {
+    }
+
+    // @0x1424c9090
+    AS3::Object* FocusEventEx::GetEventClass() const
+    {
+        return static_cast<ASVM&>(GetVM()).FocusEventExClass;
+    }
+
+    // @0x1424c8ae0
+    SPtr<Instances::fl_events::Event> FocusEventEx::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> r = Event::Clone();
+        FocusEventEx* p = static_cast<FocusEventEx*>(r.GetPtr());
+        p->RelatedObj = RelatedObj;
+        p->ShiftKey = ShiftKey;
+        p->KeyCode = KeyCode;
+        p->controllerIdx = controllerIdx;
+        return r;
+    }
+
+    // @0x1424c6060
+    GamePadAnalogEvent::GamePadAnalogEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+    }
+
+    // @0x1424c8a20
+    void GamePadAnalogEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc > 3)
+        {
+            UInt32 v;
+            argv[3].Convert2UInt32(v);
+            Code = v;
+        }
+        if (argc > 4)
+        {
+            UInt32 v;
+            argv[4].Convert2UInt32(v);
+            ControllerIdx = v;
+        }
+        if (argc > 5)
+        {
+            Value::Number v;
+            argv[5].Convert2Number(v);
+            XValue = v;
+        }
+        if (argc > 6)
+        {
+            Value::Number v;
+            argv[6].Convert2Number(v);
+            YValue = v;
+        }
+    }
+
+    // @0x1424c90a0
+    AS3::Object* GamePadAnalogEvent::GetEventClass() const
+    {
+        return NULL;
+    }
+
+    // @0x1424c8b30
+    SPtr<Instances::fl_events::Event> GamePadAnalogEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> r = Event::Clone();
+        GamePadAnalogEvent* p = static_cast<GamePadAnalogEvent*>(r.GetPtr());
+        p->ControllerIdx = ControllerIdx;
+        p->XValue = XValue;
+        p->YValue = YValue;
+        return r;
+    }
+
+    // @0x1424c61c0
+    IMECandidateListStyle::IMECandidateListStyle(InstanceTraits::Traits& t)
+        : Object(t)
+        , textColor(-1), selectedTextColor(-1), fontSize(-1), backgroundColor(-1), selectedBackgroundColor(-1)
+        , indexBackgroundColor(-1), selectedIndexBackgroundColor(-1), readingWindowTextColor(-1)
+        , readingWindowBackgroundColor(-1), readingWindowFontSize(-1)
+    {
+    }
+
+    // @0x1424c6420
+    IMEEventEx::IMEEventEx(InstanceTraits::Traits& t)
+        : Event(t)
+        , message(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    // @0x1424c67b0
+    KeyboardEventEx::KeyboardEventEx(InstanceTraits::Traits& t)
+        : KeyboardEvent(t)
+        , controllerIdx(0)
+    {
+    }
+
+    // @0x1424c90b0
+    AS3::Object* KeyboardEventEx::GetEventClass() const
+    {
+        return static_cast<ASVM&>(GetVM()).KeyboardEventExClass;
+    }
+
+    // @0x1424c8b70
+    SPtr<Instances::fl_events::Event> KeyboardEventEx::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> r = Event::Clone();
+        KeyboardEventEx* p = static_cast<KeyboardEventEx*>(r.GetPtr());
+        p->EvtId.Id = EvtId.Id;
+        p->EvtId.WcharCode = EvtId.WcharCode;
+        p->EvtId.KeyCode = EvtId.KeyCode;
+        p->EvtId.AsciiCode = EvtId.AsciiCode;
+        p->EvtId.RollOverCnt = EvtId.RollOverCnt;
+        p->EvtId.ControllerIndex = EvtId.ControllerIndex;
+        p->EvtId.KeysState = EvtId.KeysState;
+        p->EvtId.MouseWheelDelta = EvtId.MouseWheelDelta;
+        p->KeyLocation = KeyLocation;
+        p->controllerIdx = controllerIdx;
+        return r;
+    }
+
+    // @0x1424c6950
+    MouseCursorEvent::MouseCursorEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , cursor(GetVM().GetStringManager().CreateEmptyString())
+    {
+        Bubbles = false;
+        Cancelable = true;
+        mouseIdx = 0;
+    }
+
+    // @0x1424c6b20
+    MouseEventEx::MouseEventEx(InstanceTraits::Traits& t)
+        : MouseEvent(t)
+        , mouseIdx(0), buttonIdx(0), nestingIdx(0)
+    {
+    }
+
+    // @0x1424c90c0
+    AS3::Object* MouseEventEx::GetEventClass() const
+    {
+        return static_cast<ASVM&>(GetVM()).MouseEventExClass;
+    }
+
+    // @0x1424c8bf0
+    SPtr<Instances::fl_events::Event> MouseEventEx::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> r = Event::Clone();
+        MouseEventEx* p = static_cast<MouseEventEx*>(r.GetPtr());
+        p->AltKey = AltKey;
+        p->CtrlKey = CtrlKey;
+        p->ShiftKey = ShiftKey;
+        p->Delta = Delta;
+        p->RelatedObj = RelatedObj;
+        p->LocalX = LocalX;
+        p->LocalY = LocalY;
+        p->StageX = StageX;
+        p->StageY = StageY;
+        p->ButtonsMask = ButtonsMask;
+        p->LocalInitialized = LocalInitialized;
+        p->mouseIdx = mouseIdx;
+        return r;
+    }
+
+    // @0x1424c6e10
+    TextEventEx::TextEventEx(InstanceTraits::Traits& t)
+        : TextEvent(t)
+        , controllerIdx(0), buttonIdx(0)
+    {
+    }
+
+    // @0x1424c90d0
+    AS3::Object* TextEventEx::GetEventClass() const
+    {
+        return static_cast<ASVM&>(GetVM()).TextEventExClass;
+    }
+
+    // @0x1424c8ca0
+    SPtr<Instances::fl_events::Event> TextEventEx::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> r = Event::Clone();
+        TextEventEx* p = static_cast<TextEventEx*>(r.GetPtr());
+        p->Text = Text;
+        p->controllerIdx = controllerIdx;
+        p->buttonIdx = buttonIdx;
+        return r;
+    }
+}}
+
+namespace InstanceTraits { namespace fl_gfx
+{
+    // @0x1424c5400
+    FocusEventEx::FocusEventEx(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::FocusEventEx));
+    }
+
+    // @0x1424c6030
+    GamePadAnalogEvent::GamePadAnalogEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::GamePadAnalogEvent));
+    }
+
+    // @0x1424c6190
+    IMECandidateListStyle::IMECandidateListStyle(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::IMECandidateListStyle));
+    }
+
+    // @0x1424c63f0
+    IMEEventEx::IMEEventEx(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::IMEEventEx));
+    }
+
+    // @0x1424c6780
+    KeyboardEventEx::KeyboardEventEx(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::KeyboardEventEx));
+    }
+
+    // @0x1424c6920
+    MouseCursorEvent::MouseCursorEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::MouseCursorEvent));
+    }
+
+    // @0x1424c6af0
+    MouseEventEx::MouseEventEx(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::MouseEventEx));
+    }
+
+    // @0x1424c6de0
+    TextEventEx::TextEventEx(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(Instances::fl_gfx::TextEventEx));
+    }
+}}
+
+namespace Classes { namespace fl_gfx
+{
+    // @0x1424c52c0
+    Extensions::Extensions(ClassTraits::Traits& t)
+        : Class(t)
+        , EDGEAA_INHERIT(0), EDGEAA_ON(1), EDGEAA_OFF(2), EDGEAA_DISABLE(3)
+    {
+    }
+
+    // @0x1424c5540
+    FocusManager::FocusManager(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+
+    // @0x1424c5650
+    GamePad::GamePad(ClassTraits::Traits& t)
+        : Class(t)
+    {
+        // PAD_START keeps its undefined value in the exe.
+        PAD_NONE.SetUInt32(0);
+        PAD_BACK.SetUInt32(0xff00);
+        PAD_A.SetUInt32(0xff02);
+        PAD_B.SetUInt32(0xff03);
+        PAD_X.SetUInt32(0xff04);
+        PAD_Y.SetUInt32(0xff05);
+        PAD_R1.SetUInt32(0xff06);
+        PAD_L1.SetUInt32(0xff07);
+        PAD_R2.SetUInt32(0xff08);
+        PAD_L2.SetUInt32(0xff09);
+        PAD_UP.SetUInt32(0xff0a);
+        PAD_DOWN.SetUInt32(0xff0b);
+        PAD_RIGHT.SetUInt32(0xff0c);
+        PAD_LEFT.SetUInt32(0xff0d);
+        PAD_PLUS.SetUInt32(0xff0e);
+        PAD_MINUS.SetUInt32(0xff0f);
+        PAD_1.SetUInt32(0xff10);
+        PAD_2.SetUInt32(0xff11);
+        PAD_H.SetUInt32(0xff12);
+        PAD_C.SetUInt32(0xff13);
+        PAD_Z.SetUInt32(0xff14);
+        PAD_O.SetUInt32(0xff15);
+        PAD_T.SetUInt32(0xff16);
+        PAD_S.SetUInt32(0xff17);
+        PAD_SELECT.SetUInt32(0xff18);
+        PAD_HOME.SetUInt32(0xff19);
+        PAD_RT.SetUInt32(0xff1a);
+        PAD_LT.SetUInt32(0xff1b);
+    }
+
+    // @0x1424c7230
+    GamePad::~GamePad()
+    {
+    }
+
+    // @0x1424c6540
+    IMEEx::IMEEx(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+
+    // @0x1424c8fb0
+    void IMEEx::GetCompositionString(ASString& result)
+    {
+        MovieImpl* movie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (!movie)
+            return;
+        IMEManagerBase* pime = movie->GetIMEManager().GetPtr();
+        if (pime)
+        {
+            String str(pime->GetCompositionString());
+            result = result.GetManager()->CreateString(str.ToCStr(), str.GetSize());
+        }
+    }
+
+    // @0x1424c9120
+    void IMEEx::GetOSVersion(ASString& result)
+    {
+        MovieImpl* movie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (!movie)
+            return;
+        IMEManagerBase* pime = movie->GetIMEManager().GetPtr();
+        if (pime)
+        {
+            String str = pime->GetWindowsVersion();
+            result = result.GetManager()->CreateString(str.ToCStr(), str.GetSize());
+        }
+    }
+
+    // @0x1424c6650
+    InteractiveObjectEx::InteractiveObjectEx(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+
+    // @0x1424c6c50
+    SystemEx::SystemEx(ClassTraits::Traits& t)
+        : Class(t)
+        , REPORT_SHORT_FILENAMES(1), REPORT_NO_CIRCULAR_REFERENCES(2), REPORT_SUPPRESS_OVERALL_STATS(4)
+        , REPORT_ONLY_ANON_OBJ_ADDRESSES(8)
+    {
+    }
+
+    // @0x1424c6f70
+    TextFieldEx::TextFieldEx(ClassTraits::Traits& t)
+        : Class(t)
+        , VALIGN_NONE("none"), VALIGN_TOP("top"), VALIGN_CENTER("center"), VALIGN_BOTTOM("bottom")
+        , TEXTAUTOSZ_NONE("none"), TEXTAUTOSZ_SHRINK("shrink"), TEXTAUTOSZ_FIT("fit")
+    {
+    }
+
+    // @0x1424c6000
+    GamePadAnalogEvent::GamePadAnalogEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , CHANGE("gamePadAnalogChange")
+    {
+    }
+
+    // @0x1424c6370
+    IMEEventEx::IMEEventEx(ClassTraits::Traits& t)
+        : Class(t)
+        , SET_CURRENT_INPUT_LANGUAGE("SetCurrentInputLanguage")
+        , SET_SUPPORTED_LANGUAGES("SetSupportedLanguages")
+        , SET_SUPPORTED_IMENAMES("SetSupportedIMENames")
+        , SET_IMENAME("SetIMEName")
+        , SET_CURRENT_LANGUAGE("SetCurrentLanguage")
+        , REMOVE_STATUS_WINDOW("RemoveStatusWindow")
+        , DISPLAY_STATUS_WINDOW("DisplayStatusWindow")
+        , SET_CONVERSION_STATUS("SetConversionStatus")
+    {
+    }
+
+    // @0x1424c68f0
+    MouseCursorEvent::MouseCursorEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , CURSOR_CHANGE("mouseCursorChange")
+    {
+    }
+
+    // @0x1424c6ab0
+    MouseEventEx::MouseEventEx(ClassTraits::Traits& t)
+        : Class(t)
+        , LEFT_BUTTON(0), RIGHT_BUTTON(1), MIDDLE_BUTTON(2)
+    {
+    }
+
+    // @0x1424c6da0
+    TextEventEx::TextEventEx(ClassTraits::Traits& t)
+        : Class(t)
+        , LINK_MOUSE_OVER("linkMouseOver"), LINK_MOUSE_OUT("linkMouseOut")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_gfx
+{
+    // @0x1424c51c0
+    Extensions::Extensions(VM& vm)
+        : Traits(vm, AS3::fl_gfx::ExtensionsCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_gfx::ExtensionsCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::Extensions(*this)));
+    }
+
+    // @0x1424c1c40
+    Pickable<Traits> Extensions::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Extensions(vm));
+    }
+
+    // @0x1424c5300
+    FocusEventEx::FocusEventEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::FocusEventExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::FocusEventEx(vm, AS3::fl_gfx::FocusEventExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424c4870
+    Pickable<Traits> FocusEventEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FocusEventEx(vm));
+    }
+
+    // @0x1424c5460
+    FocusManager::FocusManager(VM& vm)
+        : Traits(vm, AS3::fl_gfx::FocusManagerCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_gfx::FocusManagerCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::FocusManager(*this)));
+    }
+
+    // @0x1424c4730
+    Pickable<Traits> FocusManager::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FocusManager(vm));
+    }
+
+    // @0x1424c5570
+    GamePad::GamePad(VM& vm)
+        : Traits(vm, AS3::fl_gfx::GamePadCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_gfx::GamePadCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::GamePad(*this)));
+    }
+
+    // @0x1424c3830
+    Pickable<Traits> GamePad::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GamePad(vm));
+    }
+
+    // @0x1424c5ef0
+    GamePadAnalogEvent::GamePadAnalogEvent(VM& vm)
+        : Traits(vm, AS3::fl_gfx::GamePadAnalogEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::GamePadAnalogEvent(vm, AS3::fl_gfx::GamePadAnalogEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::GamePadAnalogEvent(*this)));
+    }
+
+    // @0x1424c4110
+    Pickable<Traits> GamePadAnalogEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GamePadAnalogEvent(vm));
+    }
+
+    // @0x1424c6090
+    IMECandidateListStyle::IMECandidateListStyle(VM& vm)
+        : Traits(vm, AS3::fl_gfx::IMECandidateListStyleCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::IMECandidateListStyle(vm, AS3::fl_gfx::IMECandidateListStyleCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424c15e0
+    Pickable<Traits> IMECandidateListStyle::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IMECandidateListStyle(vm));
+    }
+
+    // @0x1424c6210
+    IMEEventEx::IMEEventEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::IMEEventExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::IMEEventEx(vm, AS3::fl_gfx::IMEEventExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::IMEEventEx(*this)));
+    }
+
+    // @0x1424c1280
+    Pickable<Traits> IMEEventEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IMEEventEx(vm));
+    }
+
+    // @0x1424c6460
+    IMEEx::IMEEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::IMEExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_gfx::IMEExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::IMEEx(*this)));
+    }
+
+    // @0x1424c1720
+    Pickable<Traits> IMEEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IMEEx(vm));
+    }
+
+    // @0x1424c6570
+    InteractiveObjectEx::InteractiveObjectEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::InteractiveObjectExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_gfx::InteractiveObjectExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::InteractiveObjectEx(*this)));
+    }
+
+    // @0x1424c3350
+    Pickable<Traits> InteractiveObjectEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) InteractiveObjectEx(vm));
+    }
+
+    // @0x1424c6680
+    KeyboardEventEx::KeyboardEventEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::KeyboardEventExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::KeyboardEventEx(vm, AS3::fl_gfx::KeyboardEventExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424c3520
+    Pickable<Traits> KeyboardEventEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) KeyboardEventEx(vm));
+    }
+
+    // @0x1424c67e0
+    MouseCursorEvent::MouseCursorEvent(VM& vm)
+        : Traits(vm, AS3::fl_gfx::MouseCursorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::MouseCursorEvent(vm, AS3::fl_gfx::MouseCursorEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::MouseCursorEvent(*this)));
+    }
+
+    // @0x1424c3090
+    Pickable<Traits> MouseCursorEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MouseCursorEvent(vm));
+    }
+
+    // @0x1424c69a0
+    MouseEventEx::MouseEventEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::MouseEventExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::MouseEventEx(vm, AS3::fl_gfx::MouseEventExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::MouseEventEx(*this)));
+    }
+
+    // @0x1424c2dc0
+    Pickable<Traits> MouseEventEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MouseEventEx(vm));
+    }
+
+    // @0x1424c6b50
+    SystemEx::SystemEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::SystemExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_gfx::SystemExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::SystemEx(*this)));
+    }
+
+    // @0x1424c31f0
+    Pickable<Traits> SystemEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SystemEx(vm));
+    }
+
+    // @0x1424c6c90
+    TextEventEx::TextEventEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::TextEventExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_gfx::TextEventEx(vm, AS3::fl_gfx::TextEventExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::TextEventEx(*this)));
+    }
+
+    // @0x1424c4ad0
+    Pickable<Traits> TextEventEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextEventEx(vm));
+    }
+
+    // @0x1424c6e40
+    TextFieldEx::TextFieldEx(VM& vm)
+        : Traits(vm, AS3::fl_gfx::TextFieldExCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_gfx::TextFieldExCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_gfx::TextFieldEx(*this)));
+    }
+
+    // @0x1424c3950
+    Pickable<Traits> TextFieldEx::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextFieldEx(vm));
+    }
+}}
+
+// The movie's log, for the fl_gfx natives' LogBase helpers.
+Log* ASVM::GetLog() const
+{
+    return GetMovieImpl()->GetLog();
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform {
+
+// The out-of-line array destructors the fl_gfx natives (TextFieldEx image substitutions) instantiate. The render
+// Text headers do not mix with this kernel tree, so the elements are stand-ins with the exe layouts (pinned below):
+// DocView::ImageSubstitutor::Element and StyledText::HTMLImageTagInfo, whose ImageDesc is a RefCountBaseNTS.
+struct MS2_ImageSubstElement                // 0x38 bytes
+{
+    wchar_t              SubString[20];
+    Ptr<RefCountNTSImpl> pImageDesc;        // +0x28
+    UByte                SubStringLen;
+};
+struct MS2_HTMLImageTagInfo                 // 0x40 bytes
+{
+    Ptr<RefCountNTSImpl> pTextImageDesc;
+    StringDH             Url;               // +0x08
+    StringDH             Id;                // +0x18
+    unsigned             Width, Height;
+    int                  VSpace, HSpace;
+    unsigned             ParaId;
+    UByte                Alignment;
+};
+template ArrayDataBase<MS2_ImageSubstElement, AllocatorLH<MS2_ImageSubstElement, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
+template ArrayDataBase<MS2_HTMLImageTagInfo, AllocatorDH<MS2_HTMLImageTagInfo, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
+
+// The VM's SPtr<VMAbcFile> array; VMAbcFile is not recovered yet, so a GC-object stand-in (its SPtr releases through
+// the GC base like any other).
+class MS2_VMAbcFile : public GFx::AS3::GASRefCountBase
+{
+};
+template ArrayDataBase<GFx::AS3::SPtr<MS2_VMAbcFile>, AllocatorGH<GFx::AS3::SPtr<MS2_VMAbcFile>, 2>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+
+} // namespace Scaleform
+
 // MS2-PIN: ??_7Dictionary@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171980
 // MS2-PIN: ??_7Endian@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171a10
 // MS2-PIN: ??_7IDataInput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171b80
@@ -1688,3 +2410,89 @@ namespace Instances { namespace fl_utils
 // MS2-PIN: ?Func@?$ThunkFunc4@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$03V?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@PEAVInteractiveObject@fl_display@Instances@456@_NK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4c90
 // MS2-PIN: ?Func@?$ThunkFunc6@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$04V?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@PEAVDisplayObjectContainer@fl_display@Instances@456@_NPEAVInteractiveObject@fl_display@Instances@456@_NK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4e60
 // MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$05$$CBVValue@456@PEAVInteractiveObject@fl_display@Instances@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4f80
+// MS2-PIN: ??_7FocusEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x1431752e8
+// MS2-PIN: ??_7GamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174fb0
+// MS2-PIN: ??_7IMECandidateListStyle@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175be8
+// MS2-PIN: ??_7IMEEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175830
+// MS2-PIN: ??_7KeyboardEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174c10
+// MS2-PIN: ??_7MouseCursorEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x1431741e8
+// MS2-PIN: ??_7MouseEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174908
+// MS2-PIN: ??_7TextEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175508
+// MS2-PIN: ??_7Extensions@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143174100
+// MS2-PIN: ??_7FocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143173f38
+// MS2-PIN: ??_7GamePad@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143174ec8
+// MS2-PIN: ??_7IMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143175ea0
+// MS2-PIN: ??_7InteractiveObjectEx@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x1431745c0
+// MS2-PIN: ??_7SystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143173db8
+// MS2-PIN: ??_7TextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143174748
+// MS2-PIN: ??_7GamePadAnalogEvent@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x1431751e0
+// MS2-PIN: ??_7IMEEventEx@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143175a48
+// MS2-PIN: ??_7MouseCursorEvent@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143174418
+// MS2-PIN: ??_7MouseEventEx@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143174b28
+// MS2-PIN: ??_7TextEventEx@fl_gfx@Classes@AS3@GFx@Scaleform@@6B@ 0x143175728
+// MS2-PIN: ??_7FocusEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431753c8
+// MS2-PIN: ??_7GamePadAnalogEvent@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143175098
+// MS2-PIN: ??_7IMECandidateListStyle@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143175cc0
+// MS2-PIN: ??_7IMEEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143175910
+// MS2-PIN: ??_7KeyboardEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143174cf8
+// MS2-PIN: ??_7MouseCursorEvent@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431742d0
+// MS2-PIN: ??_7MouseEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431749e8
+// MS2-PIN: ??_7TextEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431755e8
+// MS2-PIN: ??_7Extensions@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143174070
+// MS2-PIN: ??_7FocusEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143175470
+// MS2-PIN: ??_7FocusManager@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143173ea0
+// MS2-PIN: ??_7GamePad@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143174e38
+// MS2-PIN: ??_7GamePadAnalogEvent@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143175148
+// MS2-PIN: ??_7IMECandidateListStyle@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143175d70
+// MS2-PIN: ??_7IMEEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431759b8
+// MS2-PIN: ??_7IMEEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143175e10
+// MS2-PIN: ??_7InteractiveObjectEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143174520
+// MS2-PIN: ??_7KeyboardEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143174da0
+// MS2-PIN: ??_7MouseCursorEvent@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143174380
+// MS2-PIN: ??_7MouseEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143174a90
+// MS2-PIN: ??_7SystemEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143173d28
+// MS2-PIN: ??_7TextEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143175690
+// MS2-PIN: ??_7TextFieldEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431746b0
+// MS2-PIN: ??_GMouseCursorEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8430
+// MS2-PIN: ??_GTextEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c88c0
+// MS2-PIN: ??_GExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7730
+// MS2-PIN: ??_GFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c79a0
+// MS2-PIN: ??_GIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8040
+// MS2-PIN: ??_GInteractiveObjectEx@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8130
+// MS2-PIN: ??_GSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8710
+// MS2-PIN: ??_GGamePadAnalogEvent@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7b80
+// MS2-PIN: ??_GMouseCursorEvent@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8370
+// MS2-PIN: ??_GMouseEventEx@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8530
+// MS2-PIN: ??_GTextEventEx@fl_gfx@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8800
+// MS2-PIN: ??_GFocusEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7820
+// MS2-PIN: ??_GGamePadAnalogEvent@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7be0
+// MS2-PIN: ??_GIMECandidateListStyle@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7d30
+// MS2-PIN: ??_GIMEEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7ee0
+// MS2-PIN: ??_GKeyboardEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8220
+// MS2-PIN: ??_GMouseCursorEvent@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c83d0
+// MS2-PIN: ??_GMouseEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8590
+// MS2-PIN: ??_GTextEventEx@fl_gfx@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8860
+// MS2-PIN: ??_GExtensions@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c76a0
+// MS2-PIN: ??_GFocusEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7790
+// MS2-PIN: ??_GFocusManager@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7910
+// MS2-PIN: ??_GGamePad@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7a00
+// MS2-PIN: ??_GGamePadAnalogEvent@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7af0
+// MS2-PIN: ??_GIMECandidateListStyle@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7ca0
+// MS2-PIN: ??_GIMEEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7df0
+// MS2-PIN: ??_GIMEEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c7fb0
+// MS2-PIN: ??_GInteractiveObjectEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c80a0
+// MS2-PIN: ??_GKeyboardEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8190
+// MS2-PIN: ??_GMouseCursorEvent@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c82e0
+// MS2-PIN: ??_GMouseEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c84a0
+// MS2-PIN: ??_GSystemEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8680
+// MS2-PIN: ??_GTextEventEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8770
+// MS2-PIN: ??_GTextFieldEx@fl_gfx@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424c8930
+// MS2-PIN: ??1?$ArrayDataBase@UMS2_ImageSubstElement@Scaleform@@U?$AllocatorLH@UMS2_ImageSubstElement@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ 0x1424c7090
+// MS2-PIN: ??1?$ArrayDataBase@UMS2_HTMLImageTagInfo@Scaleform@@U?$AllocatorDH@UMS2_HTMLImageTagInfo@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ 0x1424c7100
+// MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VMS2_VMAbcFile@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorGH@V?$SPtr@VMS2_VMAbcFile@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1424c71b0
+// MS2-PIN: ?GetLog@ASVM@AS3@GFx@Scaleform@@QEBAPEAVLog@4@XZ 0x1424c90e0
+// The delayed-release proxy the Dictionary GC builds; its bases' tables only appear in its inline ctors, whose stores
+// the exe drops, so they pair with the proxy's own one-slot table (the folded deleting dtor).
+// MS2-PIN: ??_7PtrReleaseProxy@?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$RefCountBase@UPtrReleaseProxy@?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48

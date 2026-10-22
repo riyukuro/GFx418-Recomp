@@ -52,6 +52,7 @@ class ASVM : public VM
 public:
     MovieImpl* GetMovieImpl() const { return pMovieRoot->GetMovieImpl(); }
     MovieRoot* GetMovieRoot() const { return pMovieRoot; }
+    Log*       GetLog() const;     // 0x1424c90e0
     const ASString& GetBuiltin(BuiltinType btype) const { return pMovieRoot->BuiltinsMgr.GetBuiltin(btype); }
 
     // Constructs an instance of the class object classObj; false when the construction threw.

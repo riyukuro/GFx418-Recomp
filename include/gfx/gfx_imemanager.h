@@ -5,6 +5,7 @@
 #define MS2_SF_GFX_IMEMANAGER_H
 
 #include "gfx_state.h"
+#include "../kernel/sf_string.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -23,6 +24,35 @@ public:
     virtual const char* GetConversionMode();                            // 7
     virtual bool        SetEnabled(bool enable);                        // 8
     virtual bool        GetEnabled();                                   // 9
+private:
+    virtual void Slot10();                                              // GetInputLanguage
+    virtual void Slot11();                                              // BroadcastIMEConversion
+    virtual void Slot12();                                              // BroadcastSwitchLanguage
+    virtual void Slot13();                                              // BroadcastSetSupportedLanguages
+    virtual void Slot14();                                              // BroadcastSetSupportedIMEs
+    virtual void Slot15();                                              // BroadcastSetCurrentInputLanguage
+    virtual void Slot16();                                              // BroadcastSetIMEName
+    virtual void Slot17();                                              // BroadcastSetConversionStatus
+    virtual void Slot18();                                              // BroadcastRemoveStatusWindow
+    virtual void Slot19();                                              // BroadcastDisplayStatusWindow
+    virtual void Slot20();                                              // SendLangBarMessage
+    virtual void Slot21();                                              // SetCompositionString
+public:
+    // (appended for flash.gfx.IMEEx, sfr13)
+    virtual const wchar_t* GetCompositionString();                      // 22
+private:
+    virtual void Slot23();                                              // OnShutdown
+    virtual void Slot24();                                              // OnFinalize
+    virtual void Slot25();                                              // OnCandidateListStyleChanged
+    virtual void Slot26();                                              // OnCandidateListLoaded
+    virtual void Slot27();                                              // OnCandidateListStyleRequest
+    virtual void Slot28();                                              // OnEnableIME
+    virtual void Slot29();                                              // SetActiveMovie
+    virtual void Slot30();                                              // IsMovieActive
+    virtual void Slot31();                                              // GetActiveMovie
+    virtual void Slot32();                                              // ClearActiveMovie
+public:
+    virtual String      GetWindowsVersion();                            // 33
 };
 
 }} // namespace Scaleform::GFx

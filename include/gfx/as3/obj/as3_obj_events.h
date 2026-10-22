@@ -6,14 +6,28 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/kernel/sf_autoptr.h"
+#include "ms2/scaleform/include/gfx/gfx_eventid.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_events {
-    // MS2-FUNCTIONAL: native method declarations and the leading data members only
+    // 0x58 bytes. The constructor, destructor and the virtuals below are bound to the exe; the GC visitor is not
+    // declared (the vftables are pinned to the exe).
     class Event : public Instances::fl::Object
     {
     public:
+        Event(InstanceTraits::Traits& t);                                   // 0x14245f450
+        ~Event();                                                           // 0x142462440
+
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x142469380
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465470
+        // slots 21..23
+        virtual const char* GetEventName() const;                           // 0x14246a0d0
+        // The class object new events of this type are made with (the VM's Event class).
+        virtual AS3::Object* GetEventClass() const;                         // 0x142469fb0
+        // A new event of the same traits with the Event fields copied.
+        virtual SPtr<Instances::fl_events::Event> Clone() const;            // 0x142466520
+
         // @0x14246d0d0
         void bubblesGet(bool& result);
         // @0x14246d1d0
@@ -44,6 +58,12 @@ namespace Instances { namespace fl_events {
         ASString                        Type;           // +0x38
         SPtr<Instances::fl::Object>     CurrentTarget;  // +0x40
         SPtr<Instances::fl::Object>     Target;         // +0x48
+        UInt32                          Phase;          // +0x50
+        bool                            Bubbles : 1;    // +0x54
+        bool                            Cancelable : 1;
+        bool                            DefaultPrevented : 1;
+        bool                            PropagationStopped : 1;
+        bool                            ImmPropagationStopped : 1;
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
@@ -58,10 +78,14 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x60 bytes. The constructor is bound to the exe.
     class TextEvent : public Instances::fl_events::Event
     {
     public:
+        TextEvent(InstanceTraits::Traits& t);                               // 0x142461a00
+
+        ASString Text;      // +0x58
+
         // @0x14246da40
         void clone(SPtr<Instances::fl_events::Event>& result);
         // @0x14246f920
@@ -115,10 +139,18 @@ namespace Instances { namespace fl_events {
         AutoPtr<EventDispatcherImpl>    pImpl;          // +0x40: listener tables, made on the first addEventListener
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x68 bytes. The constructor is bound to the exe.
     class FocusEvent : public Instances::fl_events::Event
     {
     public:
+        FocusEvent(InstanceTraits::Traits& t);                              // 0x14245fac0
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x1424694b0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465540
+
+        bool                                            ShiftKey;   // +0x58
+        UInt32                                          KeyCode;    // +0x5c
+        SPtr<Instances::fl_display::InteractiveObject>  RelatedObj; // +0x60
+
         // @0x14246d3f0
         void clone(SPtr<Instances::fl_events::Event>& result);
         // @0x14246de90
@@ -213,10 +245,14 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes. The constructor is bound to the exe.
     class KeyboardEvent : public Instances::fl_events::Event
     {
     public:
+        KeyboardEvent(InstanceTraits::Traits& t);                           // 0x1424606d0
+
+        EventId     EvtId;          // +0x58: KeysState (+0x6a) bit 0 shift, bit 1 ctrl, bit 2 alt
+        SInt32      KeyLocation;    // +0x6c
         // @0x14246d000
         void altKeyGet(bool& result);
         // @0x14246d040
@@ -257,10 +293,25 @@ namespace Instances { namespace fl_events {
         void updateAfterEvent(const Value& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x90 bytes. The constructor is bound to the exe.
     class MouseEvent : public Instances::fl_events::Event
     {
     public:
+        MouseEvent(InstanceTraits::Traits& t);                              // 0x142460a60
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x1424697a0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424657c0
+
+        bool            AltKey;             // +0x58
+        bool            CtrlKey;            // +0x59
+        bool            ShiftKey;           // +0x5a
+        SInt32          Delta;              // +0x5c
+        SPtr<Instances::fl_display::InteractiveObject> RelatedObj;  // +0x60
+        Value::Number   LocalX;             // +0x68
+        Value::Number   LocalY;             // +0x70
+        Value::Number   StageX;             // +0x78
+        Value::Number   StageY;             // +0x80
+        UInt32          ButtonsMask;        // +0x88: bit 0 left, bit 1 right, bit 2 middle
+        bool            LocalInitialized;   // +0x8c: LocalX/LocalY computed from the stage point
         // @0x14246d010
         void altKeyGet(bool& result);
         // @0x14246d060
