@@ -1,5 +1,5 @@
 // Recovered Scaleform GFx 4.1.18 AS3: argument defaults of native methods whose ThunkMakeDefsN instance is emitted
-// out of line in more than one unit (sfr_as3_01c, sfr_as3_04), so every unit sees the same defaults. Our own
+// out of line in more than one unit (sfr_as3_01c/04, sfr_as3_20/21, sfr_as3_05/06), so every unit sees the same defaults. Our own
 // declarations, from the exe's ThunkMakeDefs2 bodies.
 #ifndef MS2_SF_GFX_AS3_OBJ_THUNKDEFS_H
 #define MS2_SF_GFX_AS3_OBJ_THUNKDEFS_H
@@ -49,6 +49,10 @@ MS2_AS3_THUNK_NULL_DEFAULT(Instances::fl_vec::Vector_uint, 8, 1)
 MS2_AS3_THUNK_NULL_DEFAULT(Instances::fl_vec::Vector_uint, 9, 1)
 MS2_AS3_THUNK_NULL_DEFAULT(Instances::fl_vec::Vector_uint, 11, 1)
 MS2_AS3_THUNK_NULL_DEFAULT(Instances::fl_vec::Vector_uint, 14, 1)
+// Instances::fl_display::MovieClip gotoAndPlay 13 / gotoAndStop 14 (sfr_as3_05, sfr_as3_06): argument 1 (scene)
+// defaults to null.
+MS2_AS3_THUNK_NULL_DEFAULT(Instances::fl_display::MovieClip, 13, 1)
+MS2_AS3_THUNK_NULL_DEFAULT(Instances::fl_display::MovieClip, 14, 1)
 #undef MS2_AS3_THUNK_NULL_DEFAULT
 
 }}} // namespace Scaleform::GFx::AS3

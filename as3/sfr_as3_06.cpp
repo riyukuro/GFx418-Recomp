@@ -10,6 +10,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
 #include "ms2/scaleform/include/gfx/gfx_imageresource.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #undef GetObject   // windows.h
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -2346,6 +2347,10 @@ namespace Classes { namespace fl_display
     }
 }}
 
+// ThunkMakeDefs2 instances for MovieClip::gotoAndPlay @0x142439120 and gotoAndStop @0x142439280 (frame undefined,
+// scene null); the thunks live in sfr_as3_05, which sees the same defaults through as3_obj_thunkdefs.h.
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_display::MovieClip, 13, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_display::MovieClip, 14, const Value&, const Value&>(StringManager&);
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc3@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@$0P@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@KK_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438be0
@@ -2546,3 +2551,5 @@ namespace Classes { namespace fl_display
 // MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
 // MS2-PIN: ??_7ImageDelegate@ImageResource@GFx@Scaleform@@6B@ 0x143149b10
 // MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8
+// MS2-PIN: ??$ThunkMakeDefs2@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$0N@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142439120
+// MS2-PIN: ??$ThunkMakeDefs2@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142439280
