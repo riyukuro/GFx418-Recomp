@@ -112,8 +112,26 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 // THUNKS-END
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_errors.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_movieslots.h"
+#include "ms2/scaleform/include/gfx/gfx_moviedef.h"
+#include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
+#include "ms2/scaleform/include/render/render_color.h"
 
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
+// The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
+// built on the other kernel headers, so the AS3 units see the class opaque.
+namespace Scaleform { namespace Render {
+class DrawableImage
+{
+public:
+    Color GetPixel(SInt32 x, SInt32 y);                 // 0x1425ecdd0
+    Color GetPixel32(SInt32 x, SInt32 y);               // 0x1425ecd50
+    bool  SetPixel(SInt32 x, SInt32 y, Color c);        // 0x1425eef90
+    bool  SetPixel32(SInt32 x, SInt32 y, Color c);      // 0x1425eef20
+};
+}} // namespace Scaleform::Render
+
 Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
 
@@ -1183,6 +1201,299 @@ namespace Instances { namespace fl_display
         }
         else
             result.SetNull();
+    }
+}}
+
+// AS3 part of a display object container: AvmInteractiveObj, with its
+// AvmDisplayObjContainerBase part at +0x40. Opaque; only the members the natives call.
+class AvmDisplayObjContainer
+{
+public:
+    static AvmDisplayObjContainer* FromBase(AvmDisplayObjContainerBase* p)
+    {
+        return p ? reinterpret_cast<AvmDisplayObjContainer*>(reinterpret_cast<UByte*>(p) - 0x40) : NULL;
+    }
+    void SetChildIndex(DisplayObjectBase* ch, unsigned index);  // 0x142526610
+    void SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
+};
+
+namespace Instances { namespace fl_display
+{
+    // AS3 builtin string 45 (4.1.18 numbering)
+    static const BuiltinType BI_mouseCursorChange = static_cast<BuiltinType>(45);
+
+    // The stage's mouseCursorChange listener count (GFx::Stage +0x128; the GFx stage class is not recovered).
+    static inline int& StageCursorListenerCount(GFx::DisplayObject* pstage)
+    {
+        return *reinterpret_cast<int*>(reinterpret_cast<UByte*>(pstage) + 0x128);
+    }
+
+    // @0x142447610
+    SPtr<Instances::fl_display::DisplayObject> Stage::addChild(Instances::fl_display::DisplayObject* a0)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        DisplayObjectContainer::addChild(result, a0);
+        return result;
+    }
+
+    // @0x142447800
+    SPtr<Instances::fl_display::DisplayObject> Stage::addChildAt(Instances::fl_display::DisplayObject* a0, SInt32 a1)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        DisplayObjectContainer::addChildAt(result, a0, a1);
+        return result;
+    }
+
+    // @0x142452010
+    SPtr<Instances::fl_display::DisplayObject> Stage::removeChildAt(SInt32 a0)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        DisplayObjectContainer::removeChildAt(result, a0);
+        return result;
+    }
+
+    // @0x142447830
+    void Stage::addEventListener(const Value& result, const ASString& type, const Value& listener, bool useCapture, SInt32 priority, bool useWeakReference)
+    {
+        EventDispatcher::addEventListener(result, type, listener, useCapture, priority, useWeakReference);
+        if (type == static_cast<ASVM&>(GetVM()).GetBuiltin(BI_mouseCursorChange))
+            ++StageCursorListenerCount(pDispObj);
+    }
+
+    // @0x142452040
+    void Stage::removeEventListener(const Value& result, const ASString& type, const Value& listener, bool useCapture)
+    {
+        EventDispatcher::removeEventListener(result, type, listener, useCapture);
+        if (type == static_cast<ASVM&>(GetVM()).GetBuiltin(BI_mouseCursorChange))
+            --StageCursorListenerCount(pDispObj);
+    }
+
+    // @0x14244c420
+    void Stage::frameRateGet(Value::Number& result)
+    {
+        MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        result = AsMovieSlots(pmovie)->GetMovieDef()->GetFrameRate();
+    }
+
+    // @0x142448f50
+    void Loader::contentGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        if ((unsigned)static_cast<GFx::DisplayObjContainer*>(pDispObj.GetPtr())->mDisplayList.GetCount() > 0)
+            getChildAt(result, 0);
+        else
+            result = NULL;
+    }
+
+    // @0x142448f20
+    SPtr<Instances::fl_display::DisplayObject> Loader::contentGet()
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        contentGet(result);
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<LoaderInfo>::operator= instance (0x14243d800); ours inlines it
+    // @0x142449020
+    void Loader::contentLoaderInfoGet(SPtr<Instances::fl_display::LoaderInfo>& result)
+    {
+        result = pContentLoaderInfo;
+    }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<LoaderInfo>::operator= instance (0x14243d800); ours inlines it
+    // @0x142448ff0
+    SPtr<Instances::fl_display::LoaderInfo> Loader::contentLoaderInfoGet()
+    {
+        SPtr<Instances::fl_display::LoaderInfo> result;
+        contentLoaderInfoGet(result);
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<DisplayObject>::operator= instance (0x14243d5d0); ours inlines it
+    // @0x142448fe0
+    void LoaderInfo::contentGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        result = Content;
+    }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<DisplayObject>::operator= instance (0x14243d5d0); ours inlines it
+    // @0x142448fb0
+    SPtr<Instances::fl_display::DisplayObject> LoaderInfo::contentGet()
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        contentGet(result);
+        return result;
+    }
+
+    // @0x1424498d0
+    void MovieClip::currentLabelsGet(SPtr<Instances::fl::Array>& result)
+    {
+        SPtr<Instances::fl_display::Scene> scene;
+        currentSceneGet(scene);
+        scene->labelsGet(result);
+    }
+
+    // @0x142449870
+    SPtr<Instances::fl::Array> MovieClip::currentLabelsGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        currentLabelsGet(result);
+        return result;
+    }
+    // The AS3 container half of a display object container.
+    static inline AvmDisplayObjContainer* ToAvmDispContainer(GFx::DisplayObject* p)
+    {
+        return p ? AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
+    }
+
+    // @0x142453900
+    void DisplayObjectContainer::swapChildrenAt(const Value& result, SInt32 index1, SInt32 index2)
+    {
+        SF_UNUSED(result);
+        const unsigned i1 = index1 >= 0 ? index1 : 0;
+        const unsigned i2 = index2 >= 0 ? index2 : 0;
+        ToAvmDispContainer(pDispObj)->SwapChildrenAt(i1, i2);
+    }
+
+    // @0x142453960
+    void Stage::swapChildrenAt(const Value& result, SInt32 index1, SInt32 index2)
+    {
+        SF_UNUSED(result);
+        const unsigned i1 = index1 >= 0 ? index1 : 0;
+        const unsigned i2 = index2 >= 0 ? index2 : 0;
+        ToAvmDispContainer(pDispObj)->SwapChildrenAt(i1, i2);
+    }
+
+    // MS2-FUNCTIONAL: exe loads this->pDispObj before the child test; ours after it
+    // @0x142452d20
+    void DisplayObjectContainer::setChildIndex(const Value& result, Instances::fl_display::DisplayObject* child, SInt32 index)
+    {
+        SF_UNUSED(result);
+        if (child->pDispObj)
+        {
+            const unsigned idx = index >= 0 ? index : 0;
+            AvmDisplayObjContainer* pcont = ToAvmDispContainer(pDispObj);
+            pcont->SetChildIndex(child->pDispObj, idx);
+        }
+    }
+
+    // MS2-FUNCTIONAL: exe loads this->pDispObj before the child test; ours after it
+    // @0x142452d90
+    void Stage::setChildIndex(const Value& result, Instances::fl_display::DisplayObject* child, SInt32 index)
+    {
+        SF_UNUSED(result);
+        if (child->pDispObj)
+        {
+            const unsigned idx = index >= 0 ? index : 0;
+            AvmDisplayObjContainer* pcont = ToAvmDispContainer(pDispObj);
+            pcont->SetChildIndex(child->pDispObj, idx);
+        }
+    }
+
+    // @0x142453570
+    void Stage::stageHeightGet(SInt32& result)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        result = (SInt32)asvm.GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect().Height();
+    }
+
+    // @0x1424535f0
+    void Stage::stageWidthGet(SInt32& result)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        result = (SInt32)asvm.GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect().Width();
+    }
+
+    // @0x14244e540
+    void LoaderInfo::heightGet(SInt32& result)
+    {
+        if (Content)
+        {
+            GFx::DisplayObject* pdisp = Ptr<GFx::DisplayObject>(Content->pDispObj);
+            result = (SInt32)pdisp->GetResourceMovieDef()->GetHeight();
+            return;
+        }
+        result = 0;
+    }
+
+    // @0x142454a20
+    void LoaderInfo::widthGet(SInt32& result)
+    {
+        if (Content)
+        {
+            GFx::DisplayObject* pdisp = Ptr<GFx::DisplayObject>(Content->pDispObj);
+            result = (SInt32)pdisp->GetResourceMovieDef()->GetWidth();
+            return;
+        }
+        result = 0;
+    }
+    // @0x14244d460
+    void BitmapData::getPixel32(UInt32& result, SInt32 x, SInt32 y)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        result = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->GetPixel32(x, y).ToColor32();
+    }
+
+    // @0x14244d4d0
+    void BitmapData::getPixel(UInt32& result, SInt32 x, SInt32 y)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        result = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->GetPixel(x, y).ToColor32();
+    }
+
+    // @0x142452e10
+    void BitmapData::setPixel32(const Value& result, SInt32 x, SInt32 y, UInt32 color)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        SF_UNUSED(result);
+        reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->SetPixel32(x, y, Render::Color(color));
+    }
+
+    // @0x142452e90
+    void BitmapData::setPixel(const Value& result, SInt32 x, SInt32 y, UInt32 color)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        SF_UNUSED(result);
+        reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->SetPixel(x, y, Render::Color(color));
+    }
+    // @0x14244fe10
+    void Loader::load(const Value& result, Instances::fl_net::URLRequest* request, Instances::fl_system::LoaderContext* context)
+    {
+        SF_UNUSED2(result, context);
+        MovieRoot* root = static_cast<ASVM&>(GetVM()).GetMovieRoot();
+        // unload the previous content first
+        if (pContentLoaderInfo && pContentLoaderInfo->GetContentDispObj())
+            root->UnloadMovie(this);
+        root->AddNewLoadQueueEntry(request, this);
+    }
+
+    // @0x14244fe80
+    void Loader::loadBytes(const Value& result, Instances::fl_utils::ByteArray* bytes, Instances::fl_system::LoaderContext* context)
+    {
+        SF_UNUSED2(result, context);
+        MovieRoot* root = static_cast<ASVM&>(GetVM()).GetMovieRoot();
+        if (pContentLoaderInfo && pContentLoaderInfo->GetContentDispObj())
+            root->UnloadMovie(this);
+        root->AddNewLoadQueueEntry(bytes, this);
     }
 }}
 

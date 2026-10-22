@@ -11,7 +11,7 @@ class __declspec(novtable) MovieSlots418
 {
 public:
     virtual void Slot00() = 0;
-    virtual void Slot01() = 0;
+    virtual MovieDef* GetMovieDef() const = 0;                                                  // 1 (+0x08)
     virtual void Slot02() = 0;
     virtual void Slot03() = 0;
     virtual void Slot04() = 0;

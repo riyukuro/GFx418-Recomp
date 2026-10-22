@@ -498,8 +498,10 @@ namespace Instances { namespace fl_display {
         void close(const Value& result);
         // @0x142448f50
         void contentGet(SPtr<Instances::fl_display::DisplayObject>& result);
+        SPtr<Instances::fl_display::DisplayObject> contentGet();   // 0x142448f20 (sfr17)
         // @0x142449020
         void contentLoaderInfoGet(SPtr<Instances::fl_display::LoaderInfo>& result);
+        SPtr<Instances::fl_display::LoaderInfo> contentLoaderInfoGet();   // 0x142448ff0 (sfr17)
         // @0x14244fe10
         void load(const Value& result, Instances::fl_net::URLRequest*, Instances::fl_system::LoaderContext*);
         // @0x14244fe80
@@ -570,6 +572,7 @@ namespace Instances { namespace fl_display {
         void childSandboxBridgeSet(const Value& result, const Value&);
         // @0x142448fe0
         void contentGet(SPtr<Instances::fl_display::DisplayObject>& result);
+        SPtr<Instances::fl_display::DisplayObject> contentGet();   // 0x142448fb0 (sfr17)
         // @0x142449030
         void contentTypeGet(ASString& result);
         // @0x14244c3b0
@@ -708,6 +711,7 @@ namespace Instances { namespace fl_display {
         void currentLabelGet(ASString& result);
         // @0x1424498d0
         void currentLabelsGet(SPtr<Instances::fl::Array>& result);
+        SPtr<Instances::fl::Array> currentLabelsGet();   // 0x142449870 (sfr17)
         // @0x142449950
         void currentSceneGet(SPtr<Instances::fl_display::Scene>& result);
         SPtr<Instances::fl_display::Scene> currentSceneGet();
@@ -864,8 +868,10 @@ namespace Instances { namespace fl_display {
 
         // @0x142447630
         void addChild(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject*);
+        SPtr<Instances::fl_display::DisplayObject> addChild(Instances::fl_display::DisplayObject* a0);   // 0x142447610 (sfr17)
         // @0x142447820
         void addChildAt(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject*, SInt32);
+        SPtr<Instances::fl_display::DisplayObject> addChildAt(Instances::fl_display::DisplayObject* a0, SInt32 a1);   // 0x142447800 (sfr17)
         // @0x142447830
         void addEventListener(const Value& result, const ASString&, const Value&, bool, SInt32, bool);
         // @0x142447b90
@@ -928,6 +934,7 @@ namespace Instances { namespace fl_display {
         void qualitySet(const Value& result, const ASString&);
         // @0x142452030
         void removeChildAt(SPtr<Instances::fl_display::DisplayObject>& result, SInt32);
+        SPtr<Instances::fl_display::DisplayObject> removeChildAt(SInt32 a0);   // 0x142452010 (sfr17)
         // @0x142452040
         void removeEventListener(const Value& result, const ASString&, const Value&, bool);
         // @0x142452500

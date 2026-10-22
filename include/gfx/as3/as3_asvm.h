@@ -15,6 +15,7 @@
 #include "ms2/scaleform/include/gfx/gfx_event.h"
 #include "ms2/scaleform/include/gfx/gfx_keyboardstate.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
+#include "ms2/scaleform/include/gfx/gfx_playertasks.h"
 
 // windows.h (through the kernel lock header) maps GetObject to GetObjectA; Value::GetObject keeps its name.
 #ifdef GetObject
@@ -45,6 +46,13 @@ private:
     UByte               Unrecovered78[0x160 - 0x78];
 public:
     StringManager       BuiltinsMgr;                // +0x160: the AS3 builtin strings
+
+    // (appended for the Loader natives, sfr17) the load queue.
+    void UnloadMovie(Instances::fl_display::Loader* ploader, bool stop = false, bool gc = false);   // 0x1425305f0
+    void AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, Instances::fl_display::Loader* loader,
+                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);         // 0x1424e9090
+    void AddNewLoadQueueEntry(Instances::fl_utils::ByteArray* bytes, Instances::fl_display::Loader* loader,
+                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);         // 0x1424e9010
 };
 
 class ASVM : public VM
