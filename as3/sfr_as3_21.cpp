@@ -95,7 +95,7 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_String, 10, Value, unsigned
 // thunk 0x14255d5f0: Instances::fl_vec::Vector_String::AS3slice
 template struct ThunkFunc2<Instances::fl_vec::Vector_String, 18, Value, unsigned, const Value*>;
 // thunk 0x14255d610: Instances::fl_vec::Vector_String::AS3sort
-template struct ThunkFunc1<Instances::fl_vec::Vector_String, 19, SPtr<Instances::fl_vec::Vector_String>, const Value&>;
+template struct ThunkFunc2<Instances::fl_vec::Vector_String, 19, Value, unsigned, const Value*>;
 // thunk 0x14255d630: Instances::fl_vec::Vector_String::AS3splice
 template struct ThunkFunc2<Instances::fl_vec::Vector_String, 20, Value, unsigned, const Value*>;
 // thunk 0x14255d650: Instances::fl_vec::Vector_String::AS3indexOf
@@ -126,7 +126,7 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_double, 10, Value, unsigned
 // thunk 0x14255dfd0: Instances::fl_vec::Vector_double::AS3slice
 template struct ThunkFunc2<Instances::fl_vec::Vector_double, 18, Value, unsigned, const Value*>;
 // thunk 0x14255dff0: Instances::fl_vec::Vector_double::AS3sort
-template struct ThunkFunc1<Instances::fl_vec::Vector_double, 19, SPtr<Instances::fl_vec::Vector_double>, const Value&>;
+template struct ThunkFunc2<Instances::fl_vec::Vector_double, 19, Value, unsigned, const Value*>;
 // thunk 0x14255e010: Instances::fl_vec::Vector_double::AS3splice
 template struct ThunkFunc2<Instances::fl_vec::Vector_double, 20, Value, unsigned, const Value*>;
 // thunk 0x14255e030: Instances::fl_vec::Vector_double::AS3indexOf
@@ -157,7 +157,7 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_int, 10, Value, unsigned, c
 // thunk 0x14255e8b0: Instances::fl_vec::Vector_int::AS3slice
 template struct ThunkFunc2<Instances::fl_vec::Vector_int, 18, Value, unsigned, const Value*>;
 // thunk 0x14255e8d0: Instances::fl_vec::Vector_int::AS3sort
-template struct ThunkFunc1<Instances::fl_vec::Vector_int, 19, SPtr<Instances::fl_vec::Vector_int>, const Value&>;
+template struct ThunkFunc2<Instances::fl_vec::Vector_int, 19, Value, unsigned, const Value*>;
 // thunk 0x14255e8f0: Instances::fl_vec::Vector_int::AS3splice
 template struct ThunkFunc2<Instances::fl_vec::Vector_int, 20, Value, unsigned, const Value*>;
 // thunk 0x14255e910: Instances::fl_vec::Vector_int::AS3indexOf
@@ -188,7 +188,7 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_object, 10, Value, unsigned
 // thunk 0x14255f170: Instances::fl_vec::Vector_object::AS3slice
 template struct ThunkFunc2<Instances::fl_vec::Vector_object, 18, Value, unsigned, const Value*>;
 // thunk 0x14255f190: Instances::fl_vec::Vector_object::AS3sort
-template struct ThunkFunc1<Instances::fl_vec::Vector_object, 19, SPtr<Instances::fl_vec::Vector_object>, const Value&>;
+template struct ThunkFunc2<Instances::fl_vec::Vector_object, 19, Value, unsigned, const Value*>;
 // thunk 0x14255f1b0: Instances::fl_vec::Vector_object::AS3splice
 template struct ThunkFunc2<Instances::fl_vec::Vector_object, 20, Value, unsigned, const Value*>;
 // thunk 0x14255f1d0: Instances::fl_vec::Vector_object::AS3indexOf
@@ -219,7 +219,7 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_uint, 10, Value, unsigned, 
 // thunk 0x14255fb90: Instances::fl_vec::Vector_uint::AS3slice
 template struct ThunkFunc2<Instances::fl_vec::Vector_uint, 18, Value, unsigned, const Value*>;
 // thunk 0x14255fbb0: Instances::fl_vec::Vector_uint::AS3sort
-template struct ThunkFunc1<Instances::fl_vec::Vector_uint, 19, SPtr<Instances::fl_vec::Vector_uint>, const Value&>;
+template struct ThunkFunc2<Instances::fl_vec::Vector_uint, 19, Value, unsigned, const Value*>;
 // thunk 0x14255fbd0: Instances::fl_vec::Vector_uint::AS3splice
 template struct ThunkFunc2<Instances::fl_vec::Vector_uint, 20, Value, unsigned, const Value*>;
 // thunk 0x14255fbf0: Instances::fl_vec::Vector_uint::AS3indexOf
@@ -1480,6 +1480,74 @@ CheckResult Vector_uint::SetProperty(const Multiname& prop_name, const Value& va
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ---------------------------------------------------------------- Vector sort
+
+// The Vector.sort bodies (sfr_as3_20), one per element type: compare function or Array sort option bits.
+void FUN_142550840(Scaleform::GFx::AS3::VectorBase<Scaleform::Ptr<Scaleform::GFx::ASStringNode> >& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& owner);
+void FUN_142551250(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value::Number>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& owner);
+void FUN_142551cb0(Scaleform::GFx::AS3::VectorBase<Scaleform::SInt32>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& owner);
+void FUN_1425526f0(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& owner);
+// Traits::GetConstructor, out of line in the exe.
+const Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* tr);
+void FUN_142553170(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& owner);
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
+
+// TypeError 1034 for a sort argument that is neither callable nor given.
+#define MS2_VEC_SORT(TYPE, SORT)                                                                            \
+void TYPE::AS3sort(Value& result, unsigned argc, const Value* argv)                                         \
+{                                                                                                           \
+    if (argc >= 1 && !argv[0].IsNullOrUndefined() && argv[0].IsCallable())                                 \
+    {                                                                                                       \
+        SORT(V, result, argc, argv, *this);                                                                 \
+        return;                                                                                             \
+    }                                                                                                       \
+    VM& vm = GetVM();                                                                                       \
+    vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm,                                              \
+        argc ? FUN_14250ffc0(vm, argv[0]).GetName().ToCStr() : "undefined",                                 \
+        GetVM().GetClassTraitsString().GetName().ToCStr()));                                               \
+}
+
+// @0x142558cb0
+MS2_VEC_SORT(Vector_String, FUN_142550840)
+// @0x142558de0
+MS2_VEC_SORT(Vector_double, FUN_142551250)
+// @0x142558f10
+MS2_VEC_SORT(Vector_int, FUN_142551cb0)
+// @0x142559040
+// Same as above, but the error names the element class: the Vector.<T> class traits keep T's
+// ClassTraits at +0xc8 (ClassTraits::fl_vec::Vector_object::EnclosedClassTraits).
+void Vector_object::AS3sort(Value& result, unsigned argc, const Value* argv)
+{
+    if (argc >= 1 && !argv[0].IsNullOrUndefined() && argv[0].IsCallable())
+    {
+        FUN_1425526f0(V, result, argc, argv, *this);
+        return;
+    }
+    VM& vm = GetVM();
+    vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm,
+        argc ? FUN_14250ffc0(vm, argv[0]).GetName().ToCStr() : "undefined",
+        (*reinterpret_cast<ClassTraits::Traits* const*>(
+            reinterpret_cast<const char*>(&FUN_142508490(&GetTraits()).GetClassTraits()) + 0xc8))
+            ->GetName().ToCStr()));
+}
+// @0x142559180
+MS2_VEC_SORT(Vector_uint, FUN_142553170)
+
+#undef MS2_VEC_SORT
+
+}}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
+
 // ---------------------------------------------------------------- SoundObject
 
 #include "ms2/scaleform/include/gfx/as3/as3_soundobject.h"
@@ -1708,7 +1776,7 @@ void SoundObject::Stop()
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$08V?$SPtr@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@AEBV8456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d460
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$09VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d5d0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BC@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d5f0
-// MS2-PIN: ?Func@?$ThunkFunc1@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@V?$SPtr@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d610
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d610
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BE@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d630
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BF@JAEBVASString@56@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d650
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BG@JAEBVASString@56@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255d7e0
@@ -1721,7 +1789,7 @@ void SoundObject::Stop()
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$08V?$SPtr@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@AEBV8456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255de40
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$09VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255dfb0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0BC@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255dfd0
-// MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@V?$SPtr@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255dff0
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255dff0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0BE@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e010
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0BF@JNJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e030
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0BG@JNJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e140
@@ -1734,7 +1802,7 @@ void SoundObject::Stop()
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$08V?$SPtr@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@AEBV8456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e720
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$09VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e890
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0BC@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e8b0
-// MS2-PIN: ?Func@?$ThunkFunc1@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@V?$SPtr@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e8d0
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e8d0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0BE@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e8f0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0BF@JJJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255e910
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0BG@JJJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255ea10
@@ -1747,7 +1815,7 @@ void SoundObject::Stop()
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$08V?$SPtr@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@AEBV8456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255efe0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$09VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255f150
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0BC@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255f170
-// MS2-PIN: ?Func@?$ThunkFunc1@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@V?$SPtr@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255f190
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255f190
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0BE@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255f1b0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0BF@JAEBVValue@456@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255f1d0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0BG@JAEBVValue@456@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255f380
@@ -1760,7 +1828,7 @@ void SoundObject::Stop()
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$08V?$SPtr@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@AEBV8456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fa00
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$09VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fb70
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0BC@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fb90
-// MS2-PIN: ?Func@?$ThunkFunc1@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@V?$SPtr@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fbb0
+// MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0BD@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fbb0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0BE@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fbd0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0BF@JKJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fbf0
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0BG@JKJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255fcf0

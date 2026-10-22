@@ -579,7 +579,7 @@ template <> const TFunc_Instances_fl_vec_Vector_String_AS3push::TMethod TFunc_In
 typedef ThunkFunc2<Instances::fl_vec::Vector_String, 18, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_String_AS3slice;
 // @0x14014bd70
 template <> const TFunc_Instances_fl_vec_Vector_String_AS3slice::TMethod TFunc_Instances_fl_vec_Vector_String_AS3slice::Method = &Instances::fl_vec::Vector_String::AS3slice;
-typedef ThunkFunc1<Instances::fl_vec::Vector_String, 19, SPtr<Instances::fl_vec::Vector_String>, const Value&> TFunc_Instances_fl_vec_Vector_String_AS3sort;
+typedef ThunkFunc2<Instances::fl_vec::Vector_String, 19, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_String_AS3sort;
 // @0x14014bda0
 template <> const TFunc_Instances_fl_vec_Vector_String_AS3sort::TMethod TFunc_Instances_fl_vec_Vector_String_AS3sort::Method = &Instances::fl_vec::Vector_String::AS3sort;
 typedef ThunkFunc2<Instances::fl_vec::Vector_String, 20, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_String_AS3splice;
@@ -618,7 +618,7 @@ template <> const TFunc_Instances_fl_vec_Vector_double_AS3push::TMethod TFunc_In
 typedef ThunkFunc2<Instances::fl_vec::Vector_double, 18, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_double_AS3slice;
 // @0x14014bfe0
 template <> const TFunc_Instances_fl_vec_Vector_double_AS3slice::TMethod TFunc_Instances_fl_vec_Vector_double_AS3slice::Method = &Instances::fl_vec::Vector_double::AS3slice;
-typedef ThunkFunc1<Instances::fl_vec::Vector_double, 19, SPtr<Instances::fl_vec::Vector_double>, const Value&> TFunc_Instances_fl_vec_Vector_double_AS3sort;
+typedef ThunkFunc2<Instances::fl_vec::Vector_double, 19, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_double_AS3sort;
 // @0x14014c010
 template <> const TFunc_Instances_fl_vec_Vector_double_AS3sort::TMethod TFunc_Instances_fl_vec_Vector_double_AS3sort::Method = &Instances::fl_vec::Vector_double::AS3sort;
 typedef ThunkFunc2<Instances::fl_vec::Vector_double, 20, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_double_AS3splice;
@@ -657,7 +657,7 @@ template <> const TFunc_Instances_fl_vec_Vector_int_AS3push::TMethod TFunc_Insta
 typedef ThunkFunc2<Instances::fl_vec::Vector_int, 18, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_int_AS3slice;
 // @0x14014c250
 template <> const TFunc_Instances_fl_vec_Vector_int_AS3slice::TMethod TFunc_Instances_fl_vec_Vector_int_AS3slice::Method = &Instances::fl_vec::Vector_int::AS3slice;
-typedef ThunkFunc1<Instances::fl_vec::Vector_int, 19, SPtr<Instances::fl_vec::Vector_int>, const Value&> TFunc_Instances_fl_vec_Vector_int_AS3sort;
+typedef ThunkFunc2<Instances::fl_vec::Vector_int, 19, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_int_AS3sort;
 // @0x14014c280
 template <> const TFunc_Instances_fl_vec_Vector_int_AS3sort::TMethod TFunc_Instances_fl_vec_Vector_int_AS3sort::Method = &Instances::fl_vec::Vector_int::AS3sort;
 typedef ThunkFunc2<Instances::fl_vec::Vector_int, 20, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_int_AS3splice;
@@ -696,7 +696,7 @@ template <> const TFunc_Instances_fl_vec_Vector_object_AS3push::TMethod TFunc_In
 typedef ThunkFunc2<Instances::fl_vec::Vector_object, 18, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_object_AS3slice;
 // @0x14014c4c0
 template <> const TFunc_Instances_fl_vec_Vector_object_AS3slice::TMethod TFunc_Instances_fl_vec_Vector_object_AS3slice::Method = &Instances::fl_vec::Vector_object::AS3slice;
-typedef ThunkFunc1<Instances::fl_vec::Vector_object, 19, SPtr<Instances::fl_vec::Vector_object>, const Value&> TFunc_Instances_fl_vec_Vector_object_AS3sort;
+typedef ThunkFunc2<Instances::fl_vec::Vector_object, 19, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_object_AS3sort;
 // @0x14014c4f0
 template <> const TFunc_Instances_fl_vec_Vector_object_AS3sort::TMethod TFunc_Instances_fl_vec_Vector_object_AS3sort::Method = &Instances::fl_vec::Vector_object::AS3sort;
 typedef ThunkFunc2<Instances::fl_vec::Vector_object, 20, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_object_AS3splice;
@@ -735,7 +735,7 @@ template <> const TFunc_Instances_fl_vec_Vector_uint_AS3push::TMethod TFunc_Inst
 typedef ThunkFunc2<Instances::fl_vec::Vector_uint, 18, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_uint_AS3slice;
 // @0x14014c730
 template <> const TFunc_Instances_fl_vec_Vector_uint_AS3slice::TMethod TFunc_Instances_fl_vec_Vector_uint_AS3slice::Method = &Instances::fl_vec::Vector_uint::AS3slice;
-typedef ThunkFunc1<Instances::fl_vec::Vector_uint, 19, SPtr<Instances::fl_vec::Vector_uint>, const Value&> TFunc_Instances_fl_vec_Vector_uint_AS3sort;
+typedef ThunkFunc2<Instances::fl_vec::Vector_uint, 19, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_uint_AS3sort;
 // @0x14014c760
 template <> const TFunc_Instances_fl_vec_Vector_uint_AS3sort::TMethod TFunc_Instances_fl_vec_Vector_uint_AS3sort::Method = &Instances::fl_vec::Vector_uint::AS3sort;
 typedef ThunkFunc2<Instances::fl_vec::Vector_uint, 20, Value, unsigned, const Value*> TFunc_Instances_fl_vec_Vector_uint_AS3splice;

@@ -43,7 +43,7 @@ namespace Instances { namespace fl_vec {
         // @0x142558bc0
         void AS3some(bool& result, const Value&, const Value&);
         // @0x142558cb0
-        void AS3sort(SPtr<Instances::fl_vec::Vector_String>& result, const Value&);
+        void AS3sort(Value& result, unsigned argc, const Value* argv);
         // @0x1425592b0
         void AS3splice(Value& result, unsigned, const Value*);
         // @0x142559350
@@ -109,7 +109,7 @@ namespace Instances { namespace fl_vec {
         // @0x142558bf0
         void AS3some(bool& result, const Value&, const Value&);
         // @0x142558de0
-        void AS3sort(SPtr<Instances::fl_vec::Vector_double>& result, const Value&);
+        void AS3sort(Value& result, unsigned argc, const Value* argv);
         // @0x1425592d0
         void AS3splice(Value& result, unsigned, const Value*);
         // @0x1425593b0
@@ -175,7 +175,7 @@ namespace Instances { namespace fl_vec {
         // @0x142558c20
         void AS3some(bool& result, const Value&, const Value&);
         // @0x142558f10
-        void AS3sort(SPtr<Instances::fl_vec::Vector_int>& result, const Value&);
+        void AS3sort(Value& result, unsigned argc, const Value* argv);
         // @0x1425592f0
         void AS3splice(Value& result, unsigned, const Value*);
         // @0x142559410
@@ -241,7 +241,7 @@ namespace Instances { namespace fl_vec {
         // @0x142558c50
         void AS3some(bool& result, const Value&, const Value&);
         // @0x142559040
-        void AS3sort(SPtr<Instances::fl_vec::Vector_object>& result, const Value&);
+        void AS3sort(Value& result, unsigned argc, const Value* argv);
         // @0x142559310
         void AS3splice(Value& result, unsigned, const Value*);
         // @0x142559470
@@ -309,7 +309,7 @@ namespace Instances { namespace fl_vec {
         // @0x142558c80
         void AS3some(bool& result, const Value&, const Value&);
         // @0x142559180
-        void AS3sort(SPtr<Instances::fl_vec::Vector_uint>& result, const Value&);
+        void AS3sort(Value& result, unsigned argc, const Value* argv);
         // @0x142559330
         void AS3splice(Value& result, unsigned, const Value*);
         // @0x1425594d0
