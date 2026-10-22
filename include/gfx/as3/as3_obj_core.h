@@ -802,6 +802,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::QName"; }
         // @0x14241c0c0
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x1423e1be0 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class RegExp : public CTraits
@@ -836,6 +840,14 @@ namespace InstanceTraits { namespace fl
         static void lengthGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1423e7490 (appended, sfr15)
         static void AS3indexOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402a90 (appended, sfr15)
+        static void AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142403880 (appended, sfr15)
+        static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e77a0 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e7990 (appended, sfr15)
+        static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class XML : public CTraits

@@ -375,6 +375,18 @@ namespace ClassTraits { namespace fl
 typedef ThunkFunc0<Classes::fl::XML, 0, SPtr<Instances::fl::Object>> TFunc_Classes_XML_AS3settings;
 template struct ThunkFunc0<Classes::fl::XML, 0, SPtr<Instances::fl::Object>>;
 
+// thunk 0x1423e3c20
+typedef ThunkFunc0<Instances::fl::XML, 0, SPtr<Instances::fl::XMLList>> TFunc_Instances_XML_prototypeGet;
+template struct ThunkFunc0<Instances::fl::XML, 0, SPtr<Instances::fl::XMLList>>;
+
+// thunk 0x1423e3cd0
+typedef ThunkFunc1<Instances::fl::XML, 1, const Value, const Value&> TFunc_Instances_XML_prototypeSet;
+template struct ThunkFunc1<Instances::fl::XML, 1, const Value, const Value&>;
+
+// thunk 0x1423e3e20
+typedef ThunkFunc0<Instances::fl::XML, 2, ASString> TFunc_Instances_XML_AS3toString;
+template struct ThunkFunc0<Instances::fl::XML, 2, ASString>;
+
 // thunk 0x1423e76f0
 typedef ThunkFunc0<Instances::fl::XMLList, 0, SPtr<Instances::fl::XMLList>> TFunc_Instances_XMLList_prototypeGet;
 template struct ThunkFunc0<Instances::fl::XMLList, 0, SPtr<Instances::fl::XMLList>>;
@@ -1558,6 +1570,24 @@ namespace InstanceTraits { namespace fl
         result.SetSInt32(-1);
     }
 
+    // @0x1423e1be0
+    void QName::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsQName()).GetPrototype())
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
+        else
+        {
+            const AS3::Traits& tr = FUN_14250ffc0(vm, _this);
+            if (tr.GetTraitsType() != Traits_QName || tr.IsClassTraits())
+                return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+
+            Instances::fl::QName* obj = static_cast<Instances::fl::QName*>(_this.GetObject());
+            ASString str = vm.GetStringManager().CreateEmptyString();
+            obj->AS3toString(str);
+            result = str;
+        }
+    }
+
     // @0x1423e1840
     void XMLList::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -1573,6 +1603,24 @@ namespace InstanceTraits { namespace fl
             obj->AS3toString(str);
             result = str;
         }
+    }
+
+    // @0x1423e77a0
+    void String::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsObject() && _this.GetObject() == &vm.GetClassString().GetPrototype())
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
+        else
+            AS3toString(ti, vm, _this, result, argc, argv);
+    }
+
+    // @0x1423e7990
+    void String::valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsObject() && _this.GetObject() == &vm.GetClassString().GetPrototype())
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
+        else
+            AS3valueOf(ti, vm, _this, result, argc, argv);
     }
 
     // @0x1423e7a30
