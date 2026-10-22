@@ -382,6 +382,12 @@ namespace InstanceTraits
             // @0x142414f50
             virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::Object"; }
             virtual void MakeObject(Value& result, Traits& t);
+
+        public:
+            // @0x1423fa9e0 (appended, sfr15)
+            static void AS3hasOwnProperty(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+            // @0x1423fd170 (appended, sfr15)
+            static void AS3propertyIsEnumerable(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         };
     }
 }

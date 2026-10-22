@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/gfx/gfx_asutils.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
 
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
@@ -1555,6 +1556,71 @@ namespace InstanceTraits { namespace fl
             }
         }
         result.SetSInt32(-1);
+    }
+
+    // @0x1423e1840
+    void XMLList::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXMLList()).GetPrototype())
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
+        else
+        {
+            if (!IsXMLListObject(_this))
+                return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XMLList::toStringProto"));
+
+            Instances::fl::XMLList* obj = static_cast<Instances::fl::XMLList*>(_this.GetObject());
+            ASString str = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
+            obj->AS3toString(str);
+            result = str;
+        }
+    }
+
+    // @0x1423e7a30
+    void XML::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXML()).GetPrototype())
+            result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
+        else
+        {
+            if (!IsXMLObject(_this))
+                return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::toStringProto"));
+
+            Instances::fl::XML* obj = static_cast<Instances::fl::XML*>(_this.GetObject());
+            ASString str = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
+            obj->AS3toString(str);
+            result = str;
+        }
+    }
+
+    // @0x1423e7b30
+    void XML::PropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXML()).GetPrototype())
+            return Object::AS3propertyIsEnumerable(ti, vm, _this, result, argc, argv);
+
+        if (!IsXMLObject(_this))
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::PropertyIsEnumerableProto"));
+
+        static_cast<Instances::fl::XML*>(_this.GetObject())->AS3propertyIsEnumerable(result, argc, argv);
+    }
+
+    // MS2-FUNCTIONAL: exe inlines AS3hasOwnProperty (direct vcall of the XML's HasOwnProperty slot +0xf0)
+    // @0x1423e7c30
+    void XML::HasOwnPropertyProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXML()).GetPrototype())
+            return Object::AS3hasOwnProperty(ti, vm, _this, result, argc, argv);
+
+        if (!IsXMLObject(_this))
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::HasOwnPropertyProto"));
+
+        Instances::fl::XML* obj = static_cast<Instances::fl::XML*>(_this.GetObject());
+        if (argc < 1 || !argv[0].IsString())
+            return vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "XML::HasOwnPropertyProto"));
+
+        bool r;
+        obj->AS3hasOwnProperty(r, argv[0].AsString());
+        result.SetBool(r);
     }
 }}
 

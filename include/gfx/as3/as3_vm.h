@@ -33,7 +33,7 @@ public:
 class FileLoader;
 class XMLSupport;
 
-namespace Instances { namespace fl { class GlobalObjectCPP; class Array; } }
+namespace Instances { namespace fl { class GlobalObjectCPP; class Array; class XML; class XMLList; class QName; } }
 namespace InstanceTraits { namespace fl { class GlobalObject; } }
 
 class VM : public NewOverrideBase<StatMV_VM_VM_Mem>
@@ -44,6 +44,7 @@ public:
     virtual void* Unk01() { return 0; } // slot 1 (returns 0)
 
     StringManager&          GetStringManager() const    { return StringManagerRef; }
+    const XMLSupport&       GetXMLSupport() const       { return *XMLSupport_; }   // (appended, sfr15)
     ASRefCountCollector&    GetGC() const               { return *GC; }
     RefCountCollector<StatMV_ActionScript_Mem>* GetGCPtr() const;
     MemoryHeap*             GetMemoryHeap() const       { return MHeap; }
@@ -220,6 +221,33 @@ public:
     SPtr<Instances::fl::GlobalObjectCPP>    GlobalObject;       // +0x298 (0xd8 bytes)
     Value                                   GlobalObjectValue;  // +0x2a0
     ArrayLH_POD<VMAbcFile*>                 VMAbcFilesWeak;     // +0x2c0
+};
+
+// E4X hooks of the VM (VM+0x40); the XML library's XMLSupportImpl overrides them. vftable 0x14317f9e0 (no RTTI).
+// (appended, sfr15)
+class XMLSupport : public GASRefCountBase
+{
+public:
+    virtual ~XMLSupport();                                                                              // slot 4
+
+    // overloads: MSVC gives the later declaration the earlier slot
+    virtual CheckResult EqualsXML(bool& result, Instances::fl::XML& l, Instances::fl::XML& r) const;    // slot 7
+    virtual CheckResult EqualsXML(bool& stop, bool& result, Instances::fl::XML& l, const Value& r) const;  // slot 6
+    virtual CheckResult EqualsXMLList(bool& result, Instances::fl::XMLList& l, const Value& v) const;   // slot 8
+    virtual CheckResult EqualsQName(bool& result, Instances::fl::QName& l, Instances::fl::QName& r) const; // slot 9
+    virtual bool Add(Value& result, Object& l, Object& r) const;                                        // slot 10
+    virtual CheckResult ToXMLString(VM& vm, Value& v) const;                                            // slot 11
+    virtual void DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, const Value& value) const;      // slot 12
+    virtual CheckResult GetDescendants(Value& v, const Multiname& mn) const;                            // slot 13
+    virtual const ClassTraits::Traits* GetClassTraitsQName() const;                                     // slot 14
+    virtual InstanceTraits::Traits* GetITraitsQName() const;                                            // slot 15
+    virtual const ClassTraits::Traits* GetClassTraitsXML() const;                                       // slot 16
+    virtual InstanceTraits::Traits* GetITraitsXML() const;                                              // slot 17
+    virtual const ClassTraits::Traits* GetClassTraitsXMLList() const;                                   // slot 18
+    virtual InstanceTraits::Traits* GetITraitsXMLList() const;                                          // slot 19
+
+private:
+    XMLSupport();
 };
 
 // The collector every object of this VM registers with.

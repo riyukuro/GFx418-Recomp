@@ -846,6 +846,14 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::XML"; }
         // @0x14241c230
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x1423e7a30 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e7b30 (appended, sfr15)
+        static void PropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e7c30 (appended, sfr15)
+        static void HasOwnPropertyProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class XMLList : public CTraits
@@ -856,6 +864,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::XMLList"; }
         // @0x14241c2b0
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x1423e1840 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class int_ : public CTraits
