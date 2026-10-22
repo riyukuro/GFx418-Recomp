@@ -192,6 +192,8 @@ public:
     // Reads the pixels of sourceRect into the provider / writes the provider's pixels into destRect.
     bool  GetPixels(DIPixelProvider& provider, const Rect<SInt32>& sourceRect);                                   // 0x1425ecdf0
     bool  SetPixels(const Rect<SInt32>& destRect, DIPixelProvider& provider);                                     // 0x1425ef060
+    // The twips area a filter covers when applied to sourceRect (twips).
+    static void CalcFilterRect(RectF* result, const Rect<SInt32>& sourceRect, Filter* filter);                     // 0x1425eb180
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -788,6 +790,46 @@ namespace Instances { namespace fl_display
         return result;
     }
 
+#pragma strict_gs_check(push, on)
+    // The area a filter would cover when applied to sourceRect, as a new Rectangle in whole pixels.
+    // MS2-FUNCTIONAL: frame 0x10 smaller (the exe saves rdi inside its own frame instead of the home area); same code otherwise
+    // @0x14244c590
+    SF_NOINLINE void BitmapData::generateFilterRect(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_geom::Rectangle* sourceRect, Instances::fl_filters::BitmapFilter* filter)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!sourceRect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+        }
+        else if (!filter)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "filter"));
+        }
+        else
+        {
+            RectF bounds(0);
+            RectF src((float)(SInt32)sourceRect->x, (float)(SInt32)sourceRect->y,
+                      (float)(SInt32)(sourceRect->x + sourceRect->width), (float)(SInt32)(sourceRect->y + sourceRect->height));
+            RectF twips(Render::PixelsToTwips(src.x1), Render::PixelsToTwips(src.y1), Render::PixelsToTwips(src.x2), Render::PixelsToTwips(src.y2));
+            Render::DrawableImage::CalcFilterRect(&bounds, Render::Rect<SInt32>((SInt32)twips.x1, (SInt32)twips.y1, (SInt32)twips.x2, (SInt32)twips.y2),
+                                                  filter->GetFilterData());
+            Value args[4];
+            args[0].SetNumber(Alg::IRound(Render::TwipsToPixels(bounds.x1)));
+            args[1].SetNumber(Alg::IRound(Render::TwipsToPixels(bounds.y1)));
+            args[2].SetNumber(Alg::IRound(Render::TwipsToPixels(bounds.Width())));
+            args[3].SetNumber(Alg::IRound(Render::TwipsToPixels(bounds.Height())));
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            asvm.ConstructInstance(result, asvm.RectangleClass, 4, args);
+        }
+    }
+#pragma strict_gs_check(pop)
+
     // @0x14244c8f0
     SPtr<Instances::fl_geom::Rectangle> DisplayObject::getBounds(Instances::fl_display::DisplayObject* a0)
     {
@@ -795,6 +837,35 @@ namespace Instances { namespace fl_display
         getBounds(result, a0);
         return result;
     }
+
+#pragma strict_gs_check(push, on)
+    // The bounds in the target's space (or our own without one) as a new Rectangle in pixels. Like Flash, the
+    // local box is taken first and only then mapped through (our world matrix, then the target's inverse).
+    // @0x14244c910
+    SF_NOINLINE void DisplayObject::getBounds(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_display::DisplayObject* target)
+    {
+        RectF b(0);
+        Matrix2F m;
+        if (target && target != this)
+        {
+            Matrix2F world;
+            target->pDispObj->GetWorldMatrix(&world);
+            m.SetInverse(world);
+            world = Matrix2F();
+            pDispObj->GetWorldMatrix(&world);
+            m.Prepend(world);
+        }
+        m.EncloseTransform(&b, pDispObj->GetBounds(Matrix2F()));
+        b.x1 = Render::TwipsToPixels(b.x1);
+        b.y1 = Render::TwipsToPixels(b.y1);
+        b.x2 = Render::TwipsToPixels(b.x2);
+        b.y2 = Render::TwipsToPixels(b.y2);
+        Value args[] = { Value(b.x1), Value(b.y1), Value(b.Width()), Value(b.Height()) };
+        Value r;
+        static_cast<ASVM&>(GetVM()).RectangleClass->Construct(r, 4, args, true);
+        result = static_cast<Instances::fl_geom::Rectangle*>(r.GetObject());
+    }
+#pragma strict_gs_check(pop)
 
     // @0x14244cc80
     SPtr<Instances::fl_display::DisplayObject> DisplayObjectContainer::getChildAt(SInt32 a0)
@@ -843,6 +914,35 @@ namespace Instances { namespace fl_display
         getRect(result, a0);
         return result;
     }
+
+#pragma strict_gs_check(push, on)
+    // The bounds without strokes in the target's space (or our own without one) as a new Rectangle in pixels. Like Flash, the
+    // local box is taken first and only then mapped through (our world matrix, then the target's inverse).
+    // @0x14244d760
+    SF_NOINLINE void DisplayObject::getRect(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_display::DisplayObject* target)
+    {
+        RectF b(0);
+        Matrix2F m;
+        if (target && target != this)
+        {
+            Matrix2F world;
+            target->pDispObj->GetWorldMatrix(&world);
+            m.SetInverse(world);
+            world = Matrix2F();
+            pDispObj->GetWorldMatrix(&world);
+            m.Prepend(world);
+        }
+        m.EncloseTransform(&b, pDispObj->GetRectBounds(Matrix2F()));
+        b.x1 = Render::TwipsToPixels(b.x1);
+        b.y1 = Render::TwipsToPixels(b.y1);
+        b.x2 = Render::TwipsToPixels(b.x2);
+        b.y2 = Render::TwipsToPixels(b.y2);
+        Value args[] = { Value(b.x1), Value(b.y1), Value(b.Width()), Value(b.Height()) };
+        Value r;
+        static_cast<ASVM&>(GetVM()).RectangleClass->Construct(r, 4, args, true);
+        result = static_cast<Instances::fl_geom::Rectangle*>(r.GetObject());
+    }
+#pragma strict_gs_check(pop)
 
     // @0x14244dad0
     SPtr<Instances::fl_vec::Vector_uint> BitmapData::getVector(Instances::fl_geom::Rectangle* a0)
@@ -2437,9 +2537,16 @@ namespace Instances { namespace fl_display
 
 // AS3 part of a display object container: AvmInteractiveObj, with its
 // AvmDisplayObjContainerBase part at +0x40. Opaque; only the members the natives call.
-class AvmDisplayObjContainer
+class AvmDisplayObjContainer : public AvmInteractiveObj
 {
 public:
+    virtual void        Unrecovered_16();
+    virtual void        Unrecovered_17();
+    virtual void        Unrecovered_18();
+    virtual void        Unrecovered_19();
+    // Appends the display objects under pt (container space, twips), topmost last.
+    virtual void        GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase> >* destArray, const Render::PointF& pt) const;
+
     static AvmDisplayObjContainer* FromBase(AvmDisplayObjContainerBase* p)
     {
         return p ? reinterpret_cast<AvmDisplayObjContainer*>(reinterpret_cast<UByte*>(p) - 0x40) : NULL;
@@ -2851,6 +2958,36 @@ namespace Instances { namespace fl_display
     {
         return p ? AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
     }
+
+#pragma strict_gs_check(push, on)
+    // The scriptable display objects under a stage point (pixels) as a new Array of their AS3 objects, each made
+    // on first use.
+    // MS2-FUNCTIONAL: register allocation (exe keeps this in rsi) and stack slots; the exe re-tests the inlined container / AvmDisplayObj casts for null
+    // @0x14244d1e0
+    SF_NOINLINE void DisplayObjectContainer::getObjectsUnderPoint(SPtr<Instances::fl::Array>& result, Instances::fl_geom::Point* point)
+    {
+        GFx::DisplayObject* pcont = pDispObj;
+        Render::Matrix2F world;
+        pcont->GetWorldMatrix(&world);
+        Render::PointF global((float)Render::PixelsToTwips(point->x), (float)Render::PixelsToTwips(point->y));
+        Render::PointF local = world.TransformByInverse(global);
+        ArrayDH<Ptr<DisplayObjectBase> > objects(GetVM().GetMemoryHeap());
+        ToAvmDispContainer(pcont)->GetObjectsUnderPoint(&objects, local);
+        SPtr<Instances::fl::Array> arr = GetVM().MakeArray();
+        for (UPInt i = 0, n = objects.GetSize(); i < n; ++i)
+        {
+            DisplayObjectBase* pch = objects[i];
+            if (pch->IsScriptableObject())
+            {
+                AvmDisplayObj* pavm = ToAvmDisplayObj(static_cast<GFx::DisplayObject*>(pch));
+                if (!pavm->GetAS3Obj())
+                    pavm->CreateASInstance(true);
+                arr->SA.PushBack(Value(pavm->GetAS3Obj()));
+            }
+        }
+        result = arr;
+    }
+#pragma strict_gs_check(pop)
 
     // MS2-FUNCTIONAL: exe tail-calls SwapChildren for a null container and merges the AS3-part paths; ours
     // duplicates the call tail per path. Same loads and calls.
