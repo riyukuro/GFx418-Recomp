@@ -168,21 +168,296 @@ namespace Instances { namespace fl_media
         }
     }
 
-    // The SoundLoaderContext/SoundTransform ctors are inline in as3_obj_media.h.
+}}
+
+// ---- flash.media: class traits, instance traits, classes and instances ----
+
+namespace fl_media
+{
+    extern const ClassInfo CameraCI;
+    extern const ClassInfo ID3InfoCI;
+    extern const ClassInfo MicrophoneCI;
+    extern const ClassInfo SoundCI;
+    extern const ClassInfo SoundChannelCI;
+    extern const ClassInfo SoundLoaderContextCI;
+    extern const ClassInfo SoundMixerCI;
+    extern const ClassInfo SoundTransformCI;
+}
+
+namespace ClassTraits { namespace fl_media
+{
+    // @0x1424cf2b0
+    Camera::Camera(VM& vm)
+        : Traits(vm, AS3::fl_media::CameraCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_media::CameraCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_media::Camera(*this)));
+    }
+
+    // @0x1424ce240
+    Pickable<Traits> Camera::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Camera(vm));
+    }
+
+    // @0x1424cf3c0
+    ID3Info::ID3Info(VM& vm)
+        : Traits(vm, AS3::fl_media::ID3InfoCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_media::ID3Info(vm, AS3::fl_media::ID3InfoCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424ce380
+    Pickable<Traits> ID3Info::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ID3Info(vm));
+    }
+
+    // @0x1424cf5f0
+    Microphone::Microphone(VM& vm)
+        : Traits(vm, AS3::fl_media::MicrophoneCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_media::MicrophoneCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_media::Microphone(*this)));
+    }
+
+    // @0x1424ce4c0
+    Pickable<Traits> Microphone::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Microphone(vm));
+    }
+
+    // @0x1424cf700
+    Sound::Sound(VM& vm)
+        : Traits(vm, AS3::fl_media::SoundCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_media::Sound(vm, AS3::fl_media::SoundCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424ce740
+    Pickable<Traits> Sound::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Sound(vm));
+    }
+
+    // @0x1424cf880
+    SoundChannel::SoundChannel(VM& vm)
+        : Traits(vm, AS3::fl_media::SoundChannelCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_media::SoundChannel(vm, AS3::fl_media::SoundChannelCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424ce880
+    Pickable<Traits> SoundChannel::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SoundChannel(vm));
+    }
+
+    // @0x1424cf9e0
+    SoundLoaderContext::SoundLoaderContext(VM& vm)
+        : Traits(vm, AS3::fl_media::SoundLoaderContextCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_media::SoundLoaderContext(vm, AS3::fl_media::SoundLoaderContextCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424ce9c0
+    Pickable<Traits> SoundLoaderContext::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SoundLoaderContext(vm));
+    }
+
+    // @0x1424cfb50
+    SoundMixer::SoundMixer(VM& vm)
+        : Traits(vm, AS3::fl_media::SoundMixerCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_media::SoundMixerCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_media::SoundMixer(*this)));
+    }
+
+    // @0x1424cf170
+    Pickable<Traits> SoundMixer::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SoundMixer(vm));
+    }
+
+    // @0x1424cfc60
+    SoundTransform::SoundTransform(VM& vm)
+        : Traits(vm, AS3::fl_media::SoundTransformCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_media::SoundTransform(vm, AS3::fl_media::SoundTransformCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424ce600
+    Pickable<Traits> SoundTransform::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SoundTransform(vm));
+    }
+}}
+
+namespace Classes { namespace fl_media
+{
+    // @0x1424cf390
+    Camera::Camera(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+
+    // @0x1424cf6d0
+    Microphone::Microphone(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+
+    // @0x1424cfc30
+    SoundMixer::SoundMixer(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
 }}
 
 namespace InstanceTraits { namespace fl_media
 {
+    // @0x1424cf4c0
+    ID3Info::ID3Info(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x70);
+    }
+
+    // MS2-FUNCTIONAL: same source; the exe schedules the vftable store and the first empty-string load of the inlined ID3Info ctor differently
+    // @0x1424d15d0
+    void ID3Info::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x1424cf800
+    Sound::Sound(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x78);
+    }
+
+    // @0x1424cf980
+    SoundChannel::SoundChannel(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x58);
+    }
+
+    // @0x1424d1780
+    void SoundChannel::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x1424cfae0
+    SoundLoaderContext::SoundLoaderContext(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x48);
+    }
+
     // @0x1424d17e0
     void SoundLoaderContext::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
+    // @0x1424cfd60
+    SoundTransform::SoundTransform(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x48);
+    }
+
     // @0x1424d1850
     void SoundTransform::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+}}
+
+namespace Instances { namespace fl_media
+{
+    // @0x1424cf4f0
+    ID3Info::ID3Info(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , album(GetVM().GetStringManager().CreateEmptyString())
+        , artist(GetVM().GetStringManager().CreateEmptyString())
+        , comment(GetVM().GetStringManager().CreateEmptyString())
+        , genre(GetVM().GetStringManager().CreateEmptyString())
+        , songName(GetVM().GetStringManager().CreateEmptyString())
+        , track(GetVM().GetStringManager().CreateEmptyString())
+        , year(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    // @0x1424cf9b0
+    SoundChannel::SoundChannel(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+    }
+
+    // @0x1424cfb10
+    SoundLoaderContext::SoundLoaderContext(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , bufferTime(1000)
+        , checkPolicyFile(false)
+    {
+    }
+
+    // @0x1424cfd90
+    SoundTransform::SoundTransform(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , Volume(1.0)
+        , Pan(0.0)
+    {
+    }
+
+    // @0x1424d09a0
+    void SoundTransform::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc > 0)
+        {
+            argv[0].Convert2Number(Volume);
+            if (argc > 1)
+                argv[1].Convert2Number(Pan);
+        }
+    }
+
+    // @0x1424d2140
+    void SoundTransform::volumeGet(Value::Number& result)
+    {
+        result = Volume;
+    }
+
+    // @0x1424d2150
+    void SoundTransform::volumeSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        Volume = value;
     }
 }}
 
@@ -338,3 +613,23 @@ template ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 2>, ArrayDefaul
 // MS2-PIN: ??$add@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@@?$HashSetBase@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@H$01@2@V?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@1@_K@Z 0x1424d2be0
 // MS2-PIN: ??$add@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@1@_K@Z 0x1424d3870
 // MS2-PIN: ??$add@UNodeRef@?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@@?$HashSetBase@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@H$01@2@V?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@1@_K@Z 0x1424d39f0
+// MS2-PIN: ??_7Camera@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431780b0
+// MS2-PIN: ??_7ID3Info@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143178388
+// MS2-PIN: ??_7Microphone@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143178418
+// MS2-PIN: ??_7Sound@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143178908
+// MS2-PIN: ??_7SoundChannel@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143178b10
+// MS2-PIN: ??_7SoundLoaderContext@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143178d28
+// MS2-PIN: ??_7SoundMixer@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143178f30
+// MS2-PIN: ??_7SoundTransform@fl_media@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143178708
+// MS2-PIN: ??_7ID3Info@fl_media@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431782e8
+// MS2-PIN: ??_7Sound@fl_media@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143178868
+// MS2-PIN: ??_7SoundChannel@fl_media@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143178a68
+// MS2-PIN: ??_7SoundLoaderContext@fl_media@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143178c78
+// MS2-PIN: ??_7SoundTransform@fl_media@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143178660
+// MS2-PIN: ??_7Camera@fl_media@Classes@AS3@GFx@Scaleform@@6B@ 0x143178140
+// MS2-PIN: ??_7Microphone@fl_media@Classes@AS3@GFx@Scaleform@@6B@ 0x1431784a8
+// MS2-PIN: ??_7SoundMixer@fl_media@Classes@AS3@GFx@Scaleform@@6B@ 0x143178fc0
+// MS2-PIN: ??_7ID3Info@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178220
+// MS2-PIN: ??_7SoundChannel@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178998
+// MS2-PIN: ??_7SoundLoaderContext@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178ba8
+// MS2-PIN: ??_7SoundTransform@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178590
