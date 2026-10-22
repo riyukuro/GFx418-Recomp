@@ -1713,6 +1713,36 @@ namespace InstanceTraits { namespace fl_events
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+// Out-of-line template code the event dispatch (sfr_as3_09) calls.
+// The display parent chain buffer of EventDispatcher::Dispatch.
+// @0x14245e510
+template Scaleform::ArrayStaticBuff<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject>, 32>
+    ::ArrayStaticBuff(Scaleform::MemoryHeap* heap);
+// @0x1424621c0
+template Scaleform::ArrayStaticBuff<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject>, 32>
+    ::~ArrayStaticBuff();
+// The Event::Clone field copies (target/currentTarget, relatedObject).
+// @0x142462640
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>&
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>::operator=(
+        const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& other);
+// @0x1424625d0
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::InteractiveObject>&
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::InteractiveObject>::operator=(
+        const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::InteractiveObject>& other);
+// The listener table inserts: a copied node (rehash) and a new (key, value) pair.
+// @0x14245e1f0
+template void decltype(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::ListenersHash::BaseType::BaseType::mHash)
+    ::BaseType::add(void* pheapAddr,
+                    const Scaleform::HashNode<Scaleform::GFx::ASString, Scaleform::ArrayLH<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::Listener>*,
+                                               Scaleform::GFx::ASStringHashFunctor>& key,
+                    Scaleform::UPInt h);
+// @0x14245e350
+template void decltype(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::ListenersHash::BaseType::BaseType::mHash)
+    ::BaseType::add(void* pheapAddr,
+                    const Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::ListenersHash::BaseType::NodeRef& key,
+                    Scaleform::UPInt h);
+
 // MS2-PIN: ?Func@?$ThunkFunc5@VEventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@AEBV7456@_NJ_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142458c10
 // MS2-PIN: ?Func@?$ThunkFunc1@VEventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$00_NPEAVEvent@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142458eb0
 // MS2-PIN: ?Func@?$ThunkFunc1@VEventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01_NAEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142458f50
@@ -2045,3 +2075,9 @@ namespace InstanceTraits { namespace fl_events
 // MS2-PIN: ??_GTransformGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424652d0
 // MS2-PIN: ??_GTransformGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465330
 // MS2-PIN: ??_GTransformGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465390
+// MS2-PIN: ??0?$ArrayStaticBuff@V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0CA@$01@Scaleform@@QEAA@PEAVMemoryHeap@1@@Z 0x14245e510
+// MS2-PIN: ??1?$ArrayStaticBuff@V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0CA@$01@Scaleform@@QEAA@XZ 0x1424621c0
+// MS2-PIN: ??4?$SPtr@VObject@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x142462640
+// MS2-PIN: ??4?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424625d0
+// MS2-PIN: ??$add@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@1@_K@Z 0x14245e1f0
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@1@_K@Z 0x14245e350
