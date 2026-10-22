@@ -1068,6 +1068,75 @@ namespace Instances { namespace fl_display
         result = pGraphics;
     }
 
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: exe loads pDispObj before the null test and keeps the twips constant in xmm2 (ours xmm3); same rect
+    // @0x142452c90
+    void DisplayObject::scrollRectSet(const Value& result, Instances::fl_geom::Rectangle* value)
+    {
+        SF_UNUSED(result);
+        Render::RectD r(Render::RectD::NoInit);
+        Render::RectD* pr;
+        if (value)
+        {
+            r.x1 = value->x * 20.0;
+            r.y1 = value->y * 20.0;
+            r.x2 = value->width * 20.0 + r.x1;
+            r.y2 = value->height * 20.0 + r.y1;
+            pr = &r;
+        }
+        else
+            pr = NULL;
+        pDispObj->SetScrollRect(pr);
+    }
+#pragma strict_gs_check(pop)
+
+    // @0x142449030
+    void LoaderInfo::contentTypeGet(ASString& result)
+    {
+        if (Content)
+        {
+            GFx::DisplayObject* pdisp;
+            {
+                Ptr<GFx::DisplayObject> p;
+                p = Content->pDispObj;
+                pdisp = p.GetPtr();
+            }
+            MovieDataDef::MovieDataType type = pdisp->GetResourceMovieDef()->pBindData->GetDataDef()->MovieType;
+            if (type == MovieDataDef::MT_Flash)
+                result = "application/x-shockwave-flash";
+            else
+                result = (type == MovieDataDef::MT_Image) ? "image" : "unknown";
+        }
+        else
+            result = "unknown";
+    }
+
+    // The movie's log as a raw pointer (the Ptr temporary is released before the caller uses it).
+    static SF_FORCEINLINE Log* MovieLogPtr(ASVM& asvm)
+    {
+        Log* plog = asvm.GetMovieImpl()->GetStateBag()->GetLog().GetPtr();
+        return plog;
+    }
+
+    // @0x142447e50
+    SF_NOINLINE void LoaderInfo::applicationDomainGet(SPtr<Instances::fl_system::ApplicationDomain>& result)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        if (MovieLogPtr(asvm))
+            MovieLogPtr(asvm)->LogWarning("LoaderInfo::applicationDomainGet() is not supported.");
+        result = NULL;
+    }
+
+    // @0x1424543a0
+    SF_NOINLINE void DisplayObject::transformGet(SPtr<Instances::fl_geom::Transform>& result)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_geom::Transform> ptransform;
+        if (asvm.ConstructInstance(ptransform, asvm.TransformClass))
+            ptransform->pDispObj = pDispObj;
+        result = ptransform;
+    }
+
     // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
     // @0x1424496d0
     void MovieClip::currentFrameLabelGet(ASString& result)
