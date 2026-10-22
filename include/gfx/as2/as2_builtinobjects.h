@@ -10,6 +10,7 @@
 #include "../gfx_asutils.h"
 #include "../gfx_textsnapshot.h"
 #include "../../kernel/sf_stringhash.h"
+#include "../gfx_sharedobject.h"
 
 namespace Scaleform { namespace Render { namespace Text { class TextFormat; class ParagraphFormat; } } }
 // The IME styles live in GFx::Text in 4.1.18 (exe mangling).
@@ -17,16 +18,8 @@ namespace Scaleform { namespace GFx { namespace Text { struct IMEStyle; } } }
 
 namespace Scaleform { namespace GFx {
 
-// Receiver of the stored data of a shared object (SharedObjectManagerBase::LoadSharedObject). Only Begin, the first
-// slot after the destructor, is declared so far.
 class ImageResource;
 class MovieDef;
-
-class SharedObjectVisitor : public RefCountBaseNTS<SharedObjectVisitor, Stat_Default_Mem>
-{
-public:
-    virtual void Begin() = 0;
-};
 
 namespace AS2 {
 

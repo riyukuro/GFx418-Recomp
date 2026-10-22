@@ -9,6 +9,7 @@
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_sharedobject.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1480,6 +1481,302 @@ namespace InstanceTraits { namespace fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// ==== flash.net: instance helpers, constructors and object factories ===============================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ---- collector visits ---------------------------------------------------------------------------------------------
+
+// The exe passes the owner as a third argument to every GcOp (r8); the shared GcOp typedef has two.
+typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const ASRefCountBaseType** pchild,
+                              const ASRefCountBaseType& owner);
+
+// Visits a counted pointer member.
+template <class T>
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const SPtr<T>& p,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (p.GetPtr())
+        reinterpret_cast<GcOpWithOwner>(op)(prcc,
+            const_cast<const ASRefCountBaseType**>(reinterpret_cast<ASRefCountBaseType**>(p.GetRawPtr())), owner);
+}
+
+namespace Instances { namespace fl_net
+{
+    // @0x142498890
+    void URLRequest::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc >= 1)
+            argv[0].Convert2String(Url);
+    }
+
+    // @0x1424988c0
+    void URLVariables::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc >= 1 && argv[0].Convert2String(Source))
+        {
+            Value result;
+            decode(result, Source);
+        }
+    }
+
+    // @0x1424991f0
+    void URLRequest::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, RequestHeaders, op, *this);
+    }
+
+    // @0x142499480
+    const ASString& URLRequest::GetUrl() const
+    {
+        return Url;
+    }
+
+    // @0x142499490
+    bool URLLoader::IsLoadingBinary() const
+    {
+        return strcmp(DataFormat.ToCStr(), "binary") == 0;
+    }
+
+    // @0x1424994c0
+    bool URLLoader::IsLoadingText() const
+    {
+        return strcmp(DataFormat.ToCStr(), "text") == 0;
+    }
+
+    // @0x1424994f0
+    bool URLLoader::IsLoadingVariables() const
+    {
+        return strcmp(DataFormat.ToCStr(), "variables") == 0;
+    }
+}}
+
+// ---- the shared object loader -------------------------------------------------------------------------------------
+
+// Rebuilds the data object of a shared object from the visits of the shared object manager (SharedObject.getLocal).
+// 0x40 bytes.
+class ASSharedObjectLoader : public SharedObjectVisitor
+{
+public:
+    ASSharedObjectLoader(VM* pvm, Instances::fl::Object* psobj)
+        : pVM(pvm), pData(psobj), bArrayIsTop(false) {}
+
+    virtual void Begin();
+    virtual void PushObject(const String& name);
+    virtual void PushArray(const String& name);
+    virtual void AddProperty(const String& name, const String& value, GFx::Value::ValueType type);
+    virtual void PopObject();
+    virtual void PopArray();
+    virtual void End();
+
+private:
+    VM*                                 pVM;            // +0x10
+    Instances::fl::Object*              pData;          // +0x18
+    ArrayLH<AS3::Object*>               ObjectStack;    // +0x20
+    bool                                bArrayIsTop;    // +0x38
+};
+
+// MS2-FUNCTIONAL: cl inlines the object stack PushBack the exe tail-calls
+// @0x142498cb0
+void ASSharedObjectLoader::Begin()
+{
+    ObjectStack.Resize(0);
+    ObjectStack.PushBack(pData);
+}
+
+// MS2-FUNCTIONAL: register allocation of the name length/data around String::GetLength differs
+// @0x142499e80
+void ASSharedObjectLoader::PushObject(const String& name)
+{
+    AS3::Object* ptop = ObjectStack.Back();
+    SPtr<Instances::fl::Object> pobj = pVM->MakeObject();
+
+    if (bArrayIsTop)
+        static_cast<Instances::fl::Array*>(ptop)->SA.PushBack(Value(pobj));
+    else
+        ptop->SetProperty(Multiname(*pVM, StringDataPtr(name.ToCStr(), name.GetLength())), Value(pobj)).DoNotCheck();
+
+    bArrayIsTop = false;
+    ObjectStack.PushBack(pobj);
+}
+
+// MS2-FUNCTIONAL: register allocation of the name length/data around String::GetLength differs
+// @0x142499c20
+void ASSharedObjectLoader::PushArray(const String& name)
+{
+    AS3::Object* ptop = ObjectStack.Back();
+    SPtr<Instances::fl::Array> parr = pVM->MakeArray();
+
+    if (bArrayIsTop)
+        static_cast<Instances::fl::Array*>(ptop)->SA.PushBack(Value(parr));
+    else
+        ptop->SetProperty(Multiname(*pVM, StringDataPtr(name.ToCStr(), name.GetLength())), Value(parr)).DoNotCheck();
+
+    bArrayIsTop = true;
+    ObjectStack.PushBack(parr);
+}
+
+// @0x142498950
+void ASSharedObjectLoader::AddProperty(const String& name, const String& value, GFx::Value::ValueType type)
+{
+    AS3::Object* ptop = ObjectStack.Back();
+
+    Value v;
+    switch (type)
+    {
+    case GFx::Value::VT_Int:
+        v.SetSInt32(atoi(value.ToCStr()));
+        break;
+    case GFx::Value::VT_UInt:
+        v.SetUInt32(atoi(value.ToCStr()));
+        break;
+    case GFx::Value::VT_Number:
+        v.SetNumber(atof(value.ToCStr()));
+        break;
+    case GFx::Value::VT_String:
+        v.Assign(pVM->GetStringManager().CreateString(value.ToCStr(), value.GetSize()));
+        break;
+    case GFx::Value::VT_Boolean:
+        v.SetBool(!strncmp(value.ToCStr(), "true", 4));
+        break;
+    case GFx::Value::VT_Undefined:
+        v.SetUndefined();
+        break;
+    case GFx::Value::VT_Null:
+        v.SetNull();
+        break;
+    default:
+        break;
+    }
+
+    if (bArrayIsTop)
+        static_cast<Instances::fl::Array*>(ptop)->SA.PushBack(v);
+    else
+        ptop->SetProperty(Multiname(*pVM, StringDataPtr(name.ToCStr(), name.GetLength())), v).DoNotCheck();
+}
+
+// @0x142499bc0
+void ASSharedObjectLoader::PopObject()
+{
+    ObjectStack.PopBack();
+    AS3::Object* ptop = ObjectStack.Back();
+    bArrayIsTop = ptop->GetTraits().GetTraitsType() == Traits_Array && ptop->GetTraits().IsInstanceTraits();
+}
+
+// @0x142499bb0
+void ASSharedObjectLoader::PopArray()
+{
+    PopObject();
+}
+
+// @0x142498d80
+void ASSharedObjectLoader::End()
+{
+}
+
+namespace Classes { namespace fl_net
+{
+    // @0x1424990f0
+    void SharedObject::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Class::ForEachChild_GC(prcc, op);
+        typedef HashUncachedLH<ASString, SPtr<Instances::fl_net::SharedObject>, ASStringHashFunctor, 324> ContainerType;
+        for (ContainerType::ConstIterator it = SharedObjects.Begin(); !it.IsEnd(); ++it)
+            AS3::ForEachChild_GC(prcc, it->Second, op, *this);
+    }
+}}
+
+namespace InstanceTraits { namespace fl_net
+{
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499520
+    Pickable<NetConnection::InstanceType> NetConnection::MakeInstance(NetConnection& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499590
+    Pickable<SharedObject::InstanceType> SharedObject::MakeInstance(SharedObject& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499620
+    Pickable<URLLoader::InstanceType> URLLoader::MakeInstance(URLLoader& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x1424996c0
+    Pickable<URLRequest::InstanceType> URLRequest::MakeInstance(URLRequest& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499750
+    Pickable<URLRequestHeader::InstanceType> URLRequestHeader::MakeInstance(URLRequestHeader& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499800
+    Pickable<URLVariables::InstanceType> URLVariables::MakeInstance(URLVariables& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499890
+    void NetConnection::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<NetConnection&>(t)));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x1424998f0
+    void SharedObject::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<SharedObject&>(t)));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499970
+    void URLLoader::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<URLLoader&>(t)));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499a10
+    void URLRequest::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<URLRequest&>(t)));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499a90
+    void URLRequestHeader::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<URLRequestHeader&>(t)));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // @0x142499b30
+    void URLVariables::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<URLVariables&>(t)));
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c560
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$01_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c5c0
@@ -1794,3 +2091,4 @@ namespace InstanceTraits { namespace fl_text
 // MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510
 // MS2-PIN: ??_GStaticText@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142442e10
 // MS2-FUNCTIONAL 0x1424ad6e0: the exe inlines the TextField constructor (its vftable overrides are not recovered yet); ours calls it
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVObject@AS3@GFx@Scaleform@@U?$AllocatorLH@PEAVObject@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14249a070

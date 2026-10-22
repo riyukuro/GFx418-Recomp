@@ -50,6 +50,7 @@ public:
     MemoryHeap*             GetMemoryHeap() const       { return MHeap; }
     FlashUI&                GetUI() const               { return UI; }
     Pickable<Instances::fl::Array> MakeArray() const;    // 0x142516270
+    Pickable<Instances::fl::Object> MakeObject() const;  // 0x142516600 (appended, sfr15)
     FileLoader&             GetFileLoader() const       { return Loader; }
     bool                    IsException() const         { return HandleException; }
 

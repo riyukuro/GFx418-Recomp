@@ -104,6 +104,11 @@ namespace Instances { namespace fl_net {
         Value       Data;           // +0x58
         ASString    DataFormat;     // +0x78
 
+        // (appended, sfr15) the requested dataFormat
+        bool IsLoadingBinary() const;                               // 0x142499490
+        bool IsLoadingText() const;                                 // 0x1424994c0
+        bool IsLoadingVariables() const;                            // 0x1424994f0
+
         // @0x14249ad90
         void addEventListener(const Value& result, const ASString&, const Value&, bool, SInt32, bool);
         // @0x14249af50
@@ -227,7 +232,7 @@ namespace Classes { namespace fl_net {
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;    // 0x1424990f0
 
         // the shared objects already handed out, by name (allocator stat id 324)
-        HashLH<ASString, SPtr<Instances::fl_net::SharedObject>, ASStringHashFunctor, 324> SharedObjects;  // +0x50
+        HashUncachedLH<ASString, SPtr<Instances::fl_net::SharedObject>, ASStringHashFunctor, 324> SharedObjects;  // +0x50
 
         // @0x14249b710
         void getLocal(SPtr<Instances::fl_net::SharedObject>& result, const ASString&, const ASString&, bool);
@@ -283,6 +288,7 @@ namespace InstanceTraits { namespace fl_net {
 
         NetConnection(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::NetConnection"; }
+        Pickable<InstanceType> MakeInstance(NetConnection& t);                 // 0x142499520
         virtual void MakeObject(Value& result, Traits& t);      // 0x142499890
     };
 
@@ -293,6 +299,7 @@ namespace InstanceTraits { namespace fl_net {
 
         SharedObject(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::SharedObject"; }
+        Pickable<InstanceType> MakeInstance(SharedObject& t);                  // 0x142499590
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424998f0
     };
 
@@ -303,6 +310,7 @@ namespace InstanceTraits { namespace fl_net {
 
         URLLoader(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::URLLoader"; }
+        Pickable<InstanceType> MakeInstance(URLLoader& t);                     // 0x142499620
         virtual void MakeObject(Value& result, Traits& t);      // 0x142499970
     };
 
@@ -313,6 +321,7 @@ namespace InstanceTraits { namespace fl_net {
 
         URLRequest(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::URLRequest"; }
+        Pickable<InstanceType> MakeInstance(URLRequest& t);                    // 0x1424996c0
         virtual void MakeObject(Value& result, Traits& t);      // 0x142499a10
     };
 
@@ -323,6 +332,7 @@ namespace InstanceTraits { namespace fl_net {
 
         URLRequestHeader(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::URLRequestHeader"; }
+        Pickable<InstanceType> MakeInstance(URLRequestHeader& t);              // 0x142499750
         virtual void MakeObject(Value& result, Traits& t);      // 0x142499a90
     };
 
@@ -333,6 +343,7 @@ namespace InstanceTraits { namespace fl_net {
 
         URLVariables(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::URLVariables"; }
+        Pickable<InstanceType> MakeInstance(URLVariables& t);                  // 0x142499800
         virtual void MakeObject(Value& result, Traits& t);      // 0x142499b30
     };
 
