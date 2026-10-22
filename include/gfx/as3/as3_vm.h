@@ -53,6 +53,53 @@ public:
     // The call stack as text, one frame per line, each line prefixed with line_pref.
     void GetStackTraceASString(ASString& result, const char* line_pref = "\t");
 
+    // The string conversion of v (ToString semantics).
+    ASString AsString(const Value& v);              // 0x1424ed770
+
+    // Script errors: the ids the recovered code throws (the Flash Player error numbers).
+    enum ErrorID
+    {
+        eNotImplementedError        = 1001,
+        eConvertNullToObjectError   = 1009,
+        eInvalidRangeError          = 1125
+    };
+
+    // An error being thrown: its id and the formatted message (0x10 bytes).
+    class Error
+    {
+    public:
+        Error(ErrorID id, VM& vm);                      // 0x1424d6b90
+        Error(ErrorID id, VM& vm, const char* arg1);    // 0x1424d7850
+
+        ErrorID         GetErrorID() const  { return ID; }
+        const ASString& GetMessage() const  { return Message; }
+
+    private:
+        ErrorID     ID;         // +0x0
+        ASString    Message;    // +0x8
+    };
+
+    // Raise e as an instance of the named error class.
+    void ThrowError(const Error& e);                // 0x14252eca0
+    void ThrowEvalError(const Error& e);            // 0x14252efc0
+    void ThrowMemoryError(const Error& e);          // 0x14252efd0
+    void ThrowRangeError(const Error& e);           // 0x14252f1a0
+    void ThrowReferenceError(const Error& e);       // 0x14252f1b0
+    void ThrowSecurityError(const Error& e);        // 0x14252f1c0
+    void ThrowSyntaxError(const Error& e);          // 0x14252f1d0
+    void ThrowTypeError(const Error& e);            // 0x14252f1e0
+    void ThrowURIError(const Error& e);             // 0x14252f1f0
+    void ThrowUninitializedError(const Error& e);   // 0x14252f200
+    void ThrowVerifyError(const Error& e);          // 0x14252f210
+
+    // A new instance of the builtin class gname ("flash.geom.Point"), constructed with argv. False on an exception.
+    template <class C>
+    CheckResult ConstructBuiltinObject(SPtr<C>& pobj, const char* gname, unsigned argc = 0, const Value* argv = NULL)
+    {
+        return constructBuiltinObject(reinterpret_cast<SPtr<Object>&>(pobj), gname, argc, argv);
+    }
+    CheckResult constructBuiltinObject(SPtr<Object>& pobj, const char* gname, unsigned argc, const Value* argv); // 0x142532130
+
     Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
     Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }
     Instances::Namespace& GetVectorNamespace() const    { return *VectorNamespace; }

@@ -74,6 +74,14 @@ namespace Instances { namespace fl_geom {
         // @0x142490dd0
         void translate(const Value& result, Value::Number, Value::Number);
 
+        // The 2D matrix as a renderer matrix (a/b/c/d/tx/ty -> Sx/Shy/Shx/Sy/Tx/Ty) and back.
+        Render::Matrix2x4<double> GetMatrix() const;    // 0x1424852c0
+        Render::Matrix2F GetMatrixF() const;            // 0x142485300
+        void SetMatrix(const Render::Matrix2x4<double>& m)
+        {
+            a = m.Sx(); b = m.Shy(); c = m.Shx(); d = m.Sy(); tx = m.Tx(); ty = m.Ty();
+        }
+
         Value::Number a, b, c, d;       // +0x38
         Value::Number tx, ty;           // +0x58
     };
@@ -414,6 +422,8 @@ namespace Classes { namespace fl_geom {
         Name(VM& vm, const ClassInfo& ci);                                                                              \
         virtual const char* GetAS3ObjectType() const { return TypeName; }                                              \
         virtual void MakeObject(Value& result, Traits& t);                                                              \
+                                                                                                                        \
+        Pickable<InstanceType> MakeInstance(Name& t);                                                                   \
     };
 
 namespace InstanceTraits { namespace fl_geom

@@ -3,7 +3,7 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_10
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142473760-0x1424832e0 .text$mn
+// MS2-RANGE: 0x142473760-0x1424837b0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "Render/Render_Filters.h"
 
@@ -2462,3 +2462,13 @@ namespace Instances { namespace fl_geom
 // MS2-PIN: ??_GPerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424830d0
 // MS2-PIN: ??_GPerspectiveProjection@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483070
 // MS2-PIN: ??_GPerspectiveProjection@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142482fe0
+// MS2-PIN: ??_GVector3D@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483750
+// MS2-PIN: ??_GVector3D@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424836f0
+// MS2-PIN: ??_GVector3D@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483580
+// MS2-PIN: ??_GVector3D@fl_geom@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483610
+// MS2-PIN: ??_GRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424833d0
+// MS2-PIN: ??_GRectangle@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483370
+// MS2-PIN: ??_GRectangle@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424832e0
+// MS2-PIN: ??_GTransform@fl_geom@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483520
+// MS2-PIN: ??_GTransform@fl_geom@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424834c0
+// MS2-PIN: ??_GTransform@fl_geom@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142483430
