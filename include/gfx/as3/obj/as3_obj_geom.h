@@ -14,10 +14,16 @@ namespace Scaleform { namespace GFx { class DisplayObject; } }
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_geom {
+    // Tag of sfr_as3_11's local inline copies of the (InstanceTraits::Traits&) constructors, which the exe inlines into the
+    // MakeInstance factories: a distinct signature, so their emitted COMDATs do not collide with sfr_as3_10's out-of-line
+    // definitions in the DLL link (LNK2005, merge 25).
+    struct InlineCtor {};
+
     class ColorTransform : public Instances::fl::Object
     {
     public:
         ColorTransform(InstanceTraits::Traits& t);
+        ColorTransform(InstanceTraits::Traits& t, InlineCtor);
         // @0x1424843c0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::ColorTransform"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x1424837b0
@@ -46,6 +52,7 @@ namespace Instances { namespace fl_geom {
     {
     public:
         Matrix(InstanceTraits::Traits& t);
+        Matrix(InstanceTraits::Traits& t, InlineCtor);
         // @0x142484420
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Matrix"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483c90
@@ -93,6 +100,7 @@ namespace Instances { namespace fl_geom {
     {
     public:
         Matrix3D(InstanceTraits::Traits& t);
+        Matrix3D(InstanceTraits::Traits& t, InlineCtor);
         // @0x1424843f0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Matrix3D"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x1424838e0
@@ -161,6 +169,7 @@ namespace Instances { namespace fl_geom {
     {
     public:
         PerspectiveProjection(InstanceTraits::Traits& t);
+        PerspectiveProjection(InstanceTraits::Traits& t, InlineCtor);
         // @0x142484450
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::PerspectiveProjection"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483db0
@@ -193,6 +202,7 @@ namespace Instances { namespace fl_geom {
     {
     public:
         Point(InstanceTraits::Traits& t);
+        Point(InstanceTraits::Traits& t, InlineCtor);
         // @0x142484490
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Point"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483ec0
@@ -221,6 +231,7 @@ namespace Instances { namespace fl_geom {
     {
     public:
         Rectangle(InstanceTraits::Traits& t);
+        Rectangle(InstanceTraits::Traits& t, InlineCtor);
         // @0x1424844c0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Rectangle"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483f20
@@ -297,6 +308,7 @@ namespace Instances { namespace fl_geom {
     {
     public:
         Transform(InstanceTraits::Traits& t);
+        Transform(InstanceTraits::Traits& t, InlineCtor);
         // @0x1424844f0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Transform"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483fc0
@@ -341,6 +353,7 @@ namespace Instances { namespace fl_geom {
     {
     public:
         Vector3D(InstanceTraits::Traits& t);
+        Vector3D(InstanceTraits::Traits& t, InlineCtor);
         // @0x142484530
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_geom::Vector3D"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);    // 0x142483fd0

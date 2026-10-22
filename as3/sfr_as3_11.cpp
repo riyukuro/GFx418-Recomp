@@ -202,26 +202,26 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // The instance constructors are out of line in sfr_as3_10; the factories below inline them, as the exe does.
 namespace Instances { namespace fl_geom
 {
-    inline ColorTransform::ColorTransform(InstanceTraits::Traits& t)
+    inline ColorTransform::ColorTransform(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
     {
         alphaMultiplier = blueMultiplier = greenMultiplier = redMultiplier = 1.0;
         alphaOffset = blueOffset = greenOffset = redOffset = 0.0;
     }
 
-    inline Matrix3D::Matrix3D(InstanceTraits::Traits& t)
+    inline Matrix3D::Matrix3D(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
         , pDispObj(0)
     {
     }
 
-    inline Matrix::Matrix(InstanceTraits::Traits& t)
+    inline Matrix::Matrix(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
         , a(0), b(0), c(0), d(0), tx(0), ty(0)
     {
     }
 
-    inline PerspectiveProjection::PerspectiveProjection(InstanceTraits::Traits& t)
+    inline PerspectiveProjection::PerspectiveProjection(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
         , fieldOfView(55), pDispObj(0)
     {
@@ -230,25 +230,25 @@ namespace Instances { namespace fl_geom
         focalLength = 250.0 / tan(SF_DEGTORAD(fieldOfView) / 2);
     }
 
-    inline Point::Point(InstanceTraits::Traits& t)
+    inline Point::Point(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
         , x(0), y(0)
     {
     }
 
-    inline Rectangle::Rectangle(InstanceTraits::Traits& t)
+    inline Rectangle::Rectangle(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
         , height(0), width(0), x(0), y(0)
     {
     }
 
-    inline Transform::Transform(InstanceTraits::Traits& t)
+    inline Transform::Transform(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
         , pDispObj(0)
     {
     }
 
-    inline Vector3D::Vector3D(InstanceTraits::Traits& t)
+    inline Vector3D::Vector3D(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
         , x(0), y(0), z(0), w(0)
     {
@@ -420,49 +420,49 @@ namespace InstanceTraits { namespace fl_geom
     // @0x1424854a0
     Pickable<ColorTransform::InstanceType> ColorTransform::MakeInstance(ColorTransform& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x142485540
     Pickable<Matrix3D::InstanceType> Matrix3D::MakeInstance(Matrix3D& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x1424855f0
     Pickable<Matrix::InstanceType> Matrix::MakeInstance(Matrix& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x142485680
     Pickable<PerspectiveProjection::InstanceType> PerspectiveProjection::MakeInstance(PerspectiveProjection& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x142485730
     Pickable<Point::InstanceType> Point::MakeInstance(Point& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x1424857b0
     Pickable<Rectangle::InstanceType> Rectangle::MakeInstance(Rectangle& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x142485830
     Pickable<Transform::InstanceType> Transform::MakeInstance(Transform& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x1424858b0
     Pickable<Vector3D::InstanceType> Vector3D::MakeInstance(Vector3D& t)
     {
-        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl_geom::InlineCtor()));
     }
 
     // @0x142485930
