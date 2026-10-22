@@ -23,6 +23,7 @@ class MeshCacheConfig;
 struct ToleranceParams;
 class PrimitiveFillManager;
 class MeshKeyManager;
+class FontCacheHandle;
 struct GlyphCacheParams;
 class Renderer2DImpl;
 namespace MatrixPoolImpl { class MatrixPool; }
@@ -88,6 +89,10 @@ public:
 // its GlyphCacheConfig (at +0x18).
 class GlyphCache : public RefCountBase<GlyphCache, Stat_Default_Mem>, public CacheBase, public GlyphCacheConfig
 {
+public:
+    // (appended for sfr_render_07k) drops the glyphs of a destroyed font, then merges the freed slots
+    void CleanUpFont(FontCacheHandle* font);   // 0x1426c4f10
+    void MergeCacheSlots();                    // 0x1426c67b0
 };
 
 enum DisplayPass

@@ -28,6 +28,10 @@ class FontCacheHandleRef
     FontCacheHandle* volatile         pFontHandle;  // +0x08
 
     void releaseFont();
+    // (appended for sfr_render_07k) drops the manager without telling it (it is destroying the handle itself)
+    void releaseFont_NoNotify();
+
+    friend class FontCacheHandleManager;
 
 public:
     FontCacheHandleRef() : pFontHandle(0) {}
@@ -37,6 +41,8 @@ public:
 // Glyph source of one face: vslot 1 returns the face name, the style/code page/device bits live at +0x1c.
 class Font : public RefCountBase<Font, StatRender_Font_Mem>
 {
+    friend class FontCacheHandleManager;   // (sfr_render_07k) reaches hRef
+
 public:
     enum NativeHintingRange
     {
