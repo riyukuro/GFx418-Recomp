@@ -119,8 +119,11 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 #include "ms2/scaleform/include/gfx/gfx_sprite.h"
 #include "ms2/scaleform/include/render/render_color.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
+#include "ms2/scaleform/include/render/render_screentoworld.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
+// VM::IsOfType by class name (exe body).
+bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // VM::GetValueTraits (exe body).
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 // AvmButton::GetDownStateObject / GetHitStateObject / GetOverStateObject / GetUpStateObject (exe bodies).
@@ -167,6 +170,13 @@ public:
     Color GetPixel32(SInt32 x, SInt32 y);               // 0x1425ecd50
     bool  SetPixel(SInt32 x, SInt32 y, Color c);        // 0x1425eef90
     bool  SetPixel32(SInt32 x, SInt32 y, Color c);      // 0x1425eef20
+    // Alpha hit tests of the image at firstPoint: against a rect, or against a second image placed at secondPoint.
+    bool  HitTest(const Point<SInt32>& firstPoint, const Rect<SInt32>& secondRect, UInt32 firstAlphaThreshold);   // 0x1425ed5e0
+    bool  HitTest(ImageBase* secondImage, const Point<SInt32>& firstPoint, const Point<SInt32>& secondPoint,
+                  UInt32 firstAlphaThreshold, UInt32 secondAlphaThreshold);                                     // 0x1425ed800
+    // Copies one channel of a rect of the source image into a channel of this image at destPoint.
+    void  CopyChannel(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                      UInt32 sourceChannel, UInt32 destChannel);                                                  // 0x1425eb570
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -619,6 +629,39 @@ namespace Instances { namespace fl_display
         return result;
     }
 
+    // The scene holding the current frame; a sprite that is not a movie gets one scene of itself.
+    // @0x142449950
+    SF_NOINLINE void MovieClip::currentSceneGet(SPtr<Instances::fl_display::Scene>& result)
+    {
+        result = NULL;
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        if (psprite->pDef->GetType() == CharacterDef::MovieData)
+        {
+            unsigned frame = psprite->GetCurrentFrame();
+            UPInt count = 0;
+            const MovieDataDef::SceneInfo* pscenes = psprite->GetResourceMovieDef()->GetDataDef()->GetScenes(&count);
+            for (UPInt i = 0; i < count; ++i)
+            {
+                if (frame >= pscenes[i].Offset && frame < pscenes[i].Offset + pscenes[i].NumFrames)
+                {
+                    asvm.ConstructInstance(result, GetVM().GetClass(StringDataPtr("flash.display.Scene")));
+                    result->SceneInfo = &pscenes[i];
+                    return;
+                }
+            }
+        }
+        else
+        {
+            ASVM& vm = static_cast<ASVM&>(GetVM());
+            Class* cls = vm.GetClass(StringDataPtr("flash.display.Scene"));
+            SPtr<Instances::fl_display::Scene> scene;
+            vm.ConstructInstance(scene, cls);
+            scene->SpriteObj = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+            result = scene;
+        }
+    }
+
     // @0x142449de0
     SPtr<Instances::fl_display::DisplayObject> SimpleButton::downStateGet()
     {
@@ -935,6 +978,37 @@ namespace Instances { namespace fl_display
         SPtr<Instances::fl::Array> result;
         scenesGet(result);
         return result;
+    }
+
+    // One Scene per scene of the movie; a sprite that is not a movie has one scene of itself.
+    // @0x142452770
+    SF_NOINLINE void MovieClip::scenesGet(SPtr<Instances::fl::Array>& result)
+    {
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        result = asvm.MakeArray();
+        if (psprite->pDef->GetType() == CharacterDef::MovieData)
+        {
+            UPInt count = 0;
+            const MovieDataDef::SceneInfo* pscenes = psprite->GetResourceMovieDef()->GetDataDef()->GetScenes(&count);
+            Class* cls = GetVM().GetClass(StringDataPtr("flash.display.Scene"));
+            for (UPInt i = 0; i < count; ++i)
+            {
+                SPtr<Instances::fl_display::Scene> scene;
+                asvm.ConstructInstance(scene, cls);
+                scene->SceneInfo = &pscenes[i];
+                result->SA.PushBack(Value(scene));
+            }
+        }
+        else
+        {
+            ASVM& vm = static_cast<ASVM&>(GetVM());
+            Class* cls = vm.GetClass(StringDataPtr("flash.display.Scene"));
+            SPtr<Instances::fl_display::Scene> scene;
+            vm.ConstructInstance(scene, cls);
+            scene->SpriteObj = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+            result->SA.PushBack(Value(scene));
+        }
     }
 
     // @0x142452a60
@@ -2161,6 +2235,55 @@ namespace Instances { namespace fl_display
     };
 
 #pragma strict_gs_check(push, on)
+    // The point (stage pixels) against the bounds or, with shapeFlag, the shapes; 3D objects map it through the
+    // movie's screen-to-world state first.
+    // MS2-FUNCTIONAL: the exe calls Matrix2F::TransformByInverse out of line (COMDAT 0x142447090); ours inlines it
+    // @0x14244f0f0
+    void DisplayObject::hitTestPoint(bool& result, Value::Number x, Value::Number y, bool shapeFlag)
+    {
+        result = false;
+        RectF bounds = pDispObj->GetBounds(Matrix2F());
+        if (bounds.IsNull())
+            return;
+        Render::PointF pt((float)x * 20.0f, (float)y * 20.0f);
+        MovieImpl* proot = pDispObj->GetMovieImpl();
+        if (proot && pDispObj->Is3D(true))
+        {
+            proot->SetNormalizedScreenCoords(pt);
+            Matrix3F view;
+            Matrix4F proj;
+            Render::ScreenToWorld& stw = proot->GetScreenToWorld();
+            if (pDispObj->GetProjectionMatrix3D(&proj))
+                stw.SetProjection(proj);
+            if (pDispObj->GetViewMatrix3D(&view))
+                stw.SetView(view);
+            Matrix3F world;
+            pDispObj->GetWorldMatrix3D(&world);
+            stw.SetWorld(world);
+            stw.GetWorldPoint(&pt);
+            result = pDispObj->PointTestLocal(pt, shapeFlag);
+        }
+        else
+        {
+            Matrix2F level;
+            pDispObj->GetLevelMatrix(&level);
+            Render::PointF local = level.TransformByInverse(pt);
+            if (!(pDispObj->Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
+            {
+                if (!bounds.Contains(local))
+                    return;
+                if (!shapeFlag)
+                {
+                    result = true;
+                    return;
+                }
+            }
+            result = pDispObj->PointTestLocal(local, shapeFlag);
+        }
+    }
+#pragma strict_gs_check(pop)
+
+#pragma strict_gs_check(push, on)
     // @0x14244ef60
     void DisplayObject::hitTestObject(bool& result, Instances::fl_display::DisplayObject* obj)
     {
@@ -2810,6 +2933,111 @@ namespace Instances { namespace fl_display
         }
         result = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->IsTransparent();
     }
+
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: the exe tests the arguments one by one (pImage kept in r8); ours loads them up front and
+    // lays the error blocks out after the copy
+    // @0x142449220
+    void BitmapData::copyChannel(const Value& result, Instances::fl_display::BitmapData* sourceBitmapData,
+                                 Instances::fl_geom::Rectangle* sourceRect, Instances::fl_geom::Point* destPoint,
+                                 UInt32 sourceChannel, UInt32 destChannel)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!sourceBitmapData)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+        }
+        else if (!sourceRect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+        }
+        else if (!destPoint)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+        }
+        else
+        {
+            Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                      (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
+            pimage->CopyChannel(sourceBitmapData->pImage, rect, dp, sourceChannel, destChannel);
+        }
+    }
+#pragma strict_gs_check(pop)
+
+#pragma strict_gs_check(push, on)
+    // The alpha hit test of this bitmap at firstPoint against a Rectangle, a Point (a 1x1 rect), the image of a
+    // Bitmap or a second BitmapData at secondBitmapDataPoint.
+    // MS2-FUNCTIONAL: register allocation and frame size differ (the exe re-reads pImage after the check)
+    // @0x14244ed10
+    void BitmapData::hitTest(bool& result, Instances::fl_geom::Point* firstPoint, UInt32 firstAlphaThreshold,
+                             const Value& secondObject, Instances::fl_geom::Point* secondBitmapDataPoint,
+                             UInt32 secondAlphaThreshold)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+        Render::Point<SInt32> fp((SInt32)firstPoint->x, (SInt32)firstPoint->y);
+        Render::Rect<SInt32> rect;
+        if (FUN_1425145d0(GetVM(), secondObject, "flash.geom.Rectangle"))
+        {
+            Instances::fl_geom::Rectangle* r = static_cast<Instances::fl_geom::Rectangle*>(secondObject.GetObject());
+            rect = Render::Rect<SInt32>((SInt32)r->x, (SInt32)r->y, (SInt32)(r->x + r->width), (SInt32)(r->y + r->height));
+        }
+        else if (FUN_1425145d0(GetVM(), secondObject, "flash.geom.Point"))
+        {
+            Instances::fl_geom::Point* pt = static_cast<Instances::fl_geom::Point*>(secondObject.GetObject());
+            SInt32 x = (SInt32)pt->x, y = (SInt32)pt->y;
+            rect = Render::Rect<SInt32>(x, y, x + 1, y + 1);
+        }
+        else
+        {
+            Render::ImageBase* psecond = NULL;
+            Render::Point<SInt32> sp(0, 0);
+            if (FUN_1425145d0(GetVM(), secondObject, "flash.display.Bitmap"))
+            {
+                Instances::fl_display::Bitmap* pbitmap = static_cast<Instances::fl_display::Bitmap*>(secondObject.GetObject());
+                if (!pbitmap->pBitmapData)
+                    return;
+                ImageResource* pres = pbitmap->pBitmapData->GetImageResource();
+                if (!pres)
+                    return;
+                psecond = pres->GetImage();
+                if (!psecond)
+                    return;
+            }
+            else if (FUN_1425145d0(GetVM(), secondObject, "flash.display.BitmapData"))
+            {
+                if (secondBitmapDataPoint)
+                    sp = Render::Point<SInt32>((SInt32)secondBitmapDataPoint->x, (SInt32)secondBitmapDataPoint->y);
+                Instances::fl_display::BitmapData* pdata = static_cast<Instances::fl_display::BitmapData*>(secondObject.GetObject());
+                psecond = pdata ? pdata->pImage.GetPtr() : NULL;
+            }
+            else
+            {
+                VM& vm = GetVM();
+                vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "secondObject"));
+                return;
+            }
+            result = pimage->HitTest(psecond, fp, sp, firstAlphaThreshold, secondAlphaThreshold);
+            return;
+        }
+        result = pimage->HitTest(fp, rect, firstAlphaThreshold);
+    }
+#pragma strict_gs_check(pop)
 
     // @0x14244d460
     void BitmapData::getPixel32(UInt32& result, SInt32 x, SInt32 y)
