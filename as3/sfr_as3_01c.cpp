@@ -1486,6 +1486,92 @@ namespace InstanceTraits { namespace fl
     {
         toStringProto(ti, vm, _this, result, argc, argv);
     }
+
+    // @0x1423e7410
+    void String::lengthGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        result.SetSInt32(_this.AsString().GetLength());
+    }
+
+    // ECMA 15.5.4.7; generic: this and the search string are converted to strings first.
+    // MS2-FUNCTIONAL: inliner choice differs (exe inlines the found/not-found SetSInt32 tail, calls it out of line elsewhere)
+    // @0x1423e7490
+    void String::AS3indexOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc == 0)
+        {
+            result.SetSInt32(-1);
+            return;
+        }
+
+        StringManager& sm = vm.GetStringManager();
+        ASString str = sm.CreateEmptyString();
+        if (!_this.Convert2String(str))
+            return;
+
+        ASString search = sm.CreateEmptyString();
+        if (!argv[0].Convert2String(search))
+            return;
+
+        if (search.GetLength() == 0)
+        {
+            result.SetSInt32(0);
+            return;
+        }
+        const char* ps = search.ToCStr();
+        const char* p = str.ToCStr();
+
+        SInt32 start = 0;
+        if (argc > 1 && !argv[1].Convert2Int32(start))
+            return;
+
+        UInt32 ch;
+        const UInt32 first = UTF8Util::DecodeNextChar(&ps);
+        for (int i = 0; (ch = UTF8Util::DecodeNextChar(&p)) != 0; i++)
+        {
+            if (i >= start && ch == first)
+            {
+                const char* s1 = p;
+                const char* s2 = ps;
+                UInt32 c1, c2 = 0;
+                for (;;)
+                {
+                    c1 = UTF8Util::DecodeNextChar(&s1);
+                    c2 = UTF8Util::DecodeNextChar(&s2);
+                    if (c1 == 0 || c2 == 0 || c1 != c2)
+                        break;
+                }
+                if (c2 == 0)
+                {
+                    result.SetSInt32(i);
+                    return;
+                }
+                if (c1 == 0)
+                {
+                    result.SetSInt32(-1);
+                    return;
+                }
+            }
+        }
+        result.SetSInt32(-1);
+    }
+}}
+
+namespace Instances { namespace fl
+{
+    // Array's toString/toLocaleString are not generic: this is assumed to be an Array.
+    // @0x1423e0260
+    void Array::toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        result = static_cast<Array*>(_this.GetObject())->ToLocaleStringInternal();
+    }
+
+    // @0x1423e02a0
+    void Array::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        const ASString& sep = vm.GetStringManager().GetBuiltin(AS3Builtin_comma_);
+        result = static_cast<Array*>(_this.GetObject())->ToStringInternal(sep);
+    }
 }}
 }}} // namespace Scaleform::GFx::AS3
 

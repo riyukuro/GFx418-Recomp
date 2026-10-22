@@ -172,6 +172,16 @@ namespace Instances { namespace fl
         void AS3splice(Value& result, unsigned, const Value*);
         // @0x1424036f0
         void AS3unshift(Value& result, unsigned, const Value*);
+
+    public:
+        // 0x142425540 (appended, sfr15)
+        ASString ToLocaleStringInternal() const;
+        // 0x142425b50 (appended, sfr15)
+        ASString ToStringInternal(const ASString& sep) const;
+        // @0x1423e0260 (appended, sfr15)
+        static void toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e02a0 (appended, sfr15)
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142429290
         void lengthGet(UInt32& result);
         // @0x142429480
@@ -822,6 +832,10 @@ namespace InstanceTraits { namespace fl
         static void AS3substring(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142407090 (appended, sfr15) code point order used by localeCompare.
         static SInt32 Compare(ASString& l, ASString& r);
+        // @0x1423e7410 (appended, sfr15)
+        static void lengthGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423e7490 (appended, sfr15)
+        static void AS3indexOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class XML : public CTraits
