@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142497a90-0x1424a9ed0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "GFx/IME/GFx_IMEManager.h"
+#include "Render/Render_Font.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -854,6 +855,461 @@ namespace InstanceTraits { namespace fl_system
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// ==== flash.text: constant classes =================================================================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace fl_text
+{
+    extern const ClassInfo AntiAliasTypeCI;
+    extern const ClassInfo FontStyleCI;
+    extern const ClassInfo FontTypeCI;
+    extern const ClassInfo GridFitTypeCI;
+    extern const ClassInfo TextColorTypeCI;
+    extern const ClassInfo TextDisplayModeCI;
+    extern const ClassInfo TextFieldAutoSizeCI;
+    extern const ClassInfo TextFieldTypeCI;
+    extern const ClassInfo TextFormatAlignCI;
+    extern const ClassInfo TextRendererCI;
+}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a21c0
+    Pickable<Traits> TextColorType::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextColorType(vm));
+    }
+
+    // @0x1424a24a0
+    Pickable<Traits> TextDisplayMode::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextDisplayMode(vm));
+    }
+
+    // @0x1424a4120
+    Pickable<Traits> TextFieldAutoSize::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextFieldAutoSize(vm));
+    }
+
+    // @0x1424a4290
+    Pickable<Traits> TextFieldType::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextFieldType(vm));
+    }
+
+    // @0x1424a5ef0
+    Pickable<Traits> TextFormatAlign::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextFormatAlign(vm));
+    }
+
+    // @0x1424a6060
+    Pickable<Traits> TextRenderer::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextRenderer(vm));
+    }
+
+    // @0x1424a61a0
+    Pickable<Traits> AntiAliasType::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) AntiAliasType(vm));
+    }
+
+    // @0x1424a72b0
+    Pickable<Traits> FontStyle::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FontStyle(vm));
+    }
+
+    // @0x1424a74e0
+    Pickable<Traits> FontType::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FontType(vm));
+    }
+
+    // @0x1424a7ab0
+    Pickable<Traits> GridFitType::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GridFitType(vm));
+    }
+
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a8360
+    AntiAliasType::AntiAliasType(VM& vm)
+        : Traits(vm, AS3::fl_text::AntiAliasTypeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::AntiAliasTypeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::AntiAliasType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a8460
+    AntiAliasType::AntiAliasType(ClassTraits::Traits& t)
+        : Class(t),
+          ADVANCED("advanced"), NORMAL("normal")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a87f0
+    FontStyle::FontStyle(VM& vm)
+        : Traits(vm, AS3::fl_text::FontStyleCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::FontStyleCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::FontStyle(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a8900
+    FontStyle::FontStyle(ClassTraits::Traits& t)
+        : Class(t),
+          BOLD("bold"), BOLD_ITALIC("boldItalic"), ITALIC("italic"), REGULAR("regular")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a8950
+    FontType::FontType(VM& vm)
+        : Traits(vm, AS3::fl_text::FontTypeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::FontTypeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::FontType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a8a50
+    FontType::FontType(ClassTraits::Traits& t)
+        : Class(t),
+          DEVICE("device"), EMBEDDED("embedded")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a8a90
+    GridFitType::GridFitType(VM& vm)
+        : Traits(vm, AS3::fl_text::GridFitTypeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::GridFitTypeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::GridFitType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a8b90
+    GridFitType::GridFitType(ClassTraits::Traits& t)
+        : Class(t),
+          NONE("none"), PIXEL("pixel"), SUBPIXEL("subpixel")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a8ed0
+    TextColorType::TextColorType(VM& vm)
+        : Traits(vm, AS3::fl_text::TextColorTypeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::TextColorTypeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::TextColorType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a8fd0
+    TextColorType::TextColorType(ClassTraits::Traits& t)
+        : Class(t),
+          DARK_COLOR("dark"), LIGHT_COLOR("light")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9010
+    TextDisplayMode::TextDisplayMode(VM& vm)
+        : Traits(vm, AS3::fl_text::TextDisplayModeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::TextDisplayModeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::TextDisplayMode(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a9110
+    TextDisplayMode::TextDisplayMode(ClassTraits::Traits& t)
+        : Class(t),
+          CRT("crt"), DEFAULT("default"), LCD("lcd")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a92c0
+    TextFieldAutoSize::TextFieldAutoSize(VM& vm)
+        : Traits(vm, AS3::fl_text::TextFieldAutoSizeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::TextFieldAutoSizeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::TextFieldAutoSize(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a93d0
+    TextFieldAutoSize::TextFieldAutoSize(ClassTraits::Traits& t)
+        : Class(t),
+          CENTER("center"), LEFT("left"), NONE("none"), RIGHT("right")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9420
+    TextFieldType::TextFieldType(VM& vm)
+        : Traits(vm, AS3::fl_text::TextFieldTypeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::TextFieldTypeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::TextFieldType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a9520
+    TextFieldType::TextFieldType(ClassTraits::Traits& t)
+        : Class(t),
+          DYNAMIC("dynamic"), INPUT("input")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9990
+    TextFormatAlign::TextFormatAlign(VM& vm)
+        : Traits(vm, AS3::fl_text::TextFormatAlignCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::TextFormatAlignCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::TextFormatAlign(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a9aa0
+    TextFormatAlign::TextFormatAlign(ClassTraits::Traits& t)
+        : Class(t),
+          CENTER("center"), JUSTIFY("justify"), LEFT("left"), RIGHT("right")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9c60
+    TextRenderer::TextRenderer(VM& vm)
+        : Traits(vm, AS3::fl_text::TextRendererCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_text::TextRendererCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::TextRenderer(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a9d40
+    TextRenderer::TextRenderer(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+// ==== flash.text: CSMSettings, Font, TextLineMetrics =================================================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace fl_text
+{
+    extern const ClassInfo CSMSettingsCI;
+    extern const ClassInfo FontCI;
+    extern const ClassInfo TextLineMetricsCI;
+}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a0b60
+    Pickable<Traits> Font::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Font(vm));
+    }
+
+    // @0x1424a2be0
+    Pickable<Traits> CSMSettings::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) CSMSettings(vm));
+    }
+
+    // @0x1424a7040
+    Pickable<Traits> TextLineMetrics::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextLineMetrics(vm));
+    }
+
+    // @0x1424a84a0
+    CSMSettings::CSMSettings(VM& vm)
+        : Traits(vm, AS3::fl_text::CSMSettingsCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::CSMSettings(vm, AS3::fl_text::CSMSettingsCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // @0x1424a85a0
+    CSMSettings::CSMSettings(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424a85d0
+    CSMSettings::CSMSettings(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t), fontSize(0), insideCutoff(0), outsideCutoff(0)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a8600
+    Font::Font(VM& vm)
+        : Traits(vm, AS3::fl_text::FontCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::Font(vm, AS3::fl_text::FontCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_text::Font(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424a8700
+    Font::Font(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // @0x1424a8730
+    Font::Font(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424a8760
+    Font::Font(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , fontName(t.GetVM().GetStringManager().CreateEmptyString())
+        , fontStyle(t.GetVM().GetStringManager().CreateEmptyString())
+        , fontType(t.GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9af0
+    TextLineMetrics::TextLineMetrics(VM& vm)
+        : Traits(vm, AS3::fl_text::TextLineMetricsCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::TextLineMetrics(
+            vm, AS3::fl_text::TextLineMetricsCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // @0x1424a9bf0
+    TextLineMetrics::TextLineMetrics(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424a9c20
+    TextLineMetrics::TextLineMetrics(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t), ascent(0), descent(0), height(0), leading(0), width(0), x(0)
+    {
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c560
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$01_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c5c0
@@ -1083,3 +1539,63 @@ namespace InstanceTraits { namespace fl_system
 // MS2-PIN: ??_GApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f340
 // MS2-PIN: ??_GLoaderContext@fl_system@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f760
 // MS2-PIN: ??_GSecurityDomain@fl_system@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249fa60
+// MS2-PIN: ??_7AntiAliasType@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143169970
+// MS2-PIN: ??_7AntiAliasType@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x143169a08
+// MS2-PIN: ??_7FontStyle@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316a078
+// MS2-PIN: ??_7FontStyle@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316a108
+// MS2-PIN: ??_7FontType@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316a1f0
+// MS2-PIN: ??_7FontType@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316a280
+// MS2-PIN: ??_7GridFitType@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316a368
+// MS2-PIN: ??_7GridFitType@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316a400
+// MS2-PIN: ??_7TextColorType@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316aca8
+// MS2-PIN: ??_7TextColorType@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316ad40
+// MS2-PIN: ??_7TextDisplayMode@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316ae30
+// MS2-PIN: ??_7TextDisplayMode@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316aec8
+// MS2-PIN: ??_7TextFieldAutoSize@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316b640
+// MS2-PIN: ??_7TextFieldAutoSize@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316b6d8
+// MS2-PIN: ??_7TextFieldType@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316b7c8
+// MS2-PIN: ??_7TextFieldType@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316b860
+// MS2-PIN: ??_7TextFormatAlign@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316b948
+// MS2-PIN: ??_7TextFormatAlign@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316b9e0
+// MS2-PIN: ??_7TextRenderer@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316bad0
+// MS2-PIN: ??_7TextRenderer@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x14316bb68
+// MS2-PIN: ??_GAntiAliasType@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa530
+// MS2-PIN: ??_GAntiAliasType@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa5c0
+// MS2-PIN: ??_GFontStyle@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aaa70
+// MS2-PIN: ??_GFontStyle@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aab00
+// MS2-PIN: ??_GFontType@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aab60
+// MS2-PIN: ??_GFontType@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aabf0
+// MS2-PIN: ??_GGridFitType@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aacb0
+// MS2-PIN: ??_GGridFitType@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aad40
+// MS2-PIN: ??_GTextColorType@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab0f0
+// MS2-PIN: ??_GTextColorType@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab180
+// MS2-PIN: ??_GTextDisplayMode@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab1e0
+// MS2-PIN: ??_GTextDisplayMode@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab270
+// MS2-PIN: ??_GTextFieldAutoSize@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab420
+// MS2-PIN: ??_GTextFieldAutoSize@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab4b0
+// MS2-PIN: ??_GTextFieldType@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab510
+// MS2-PIN: ??_GTextFieldType@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab5a0
+// MS2-PIN: ??_GTextFormatAlign@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab750
+// MS2-PIN: ??_GTextFormatAlign@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab7e0
+// MS2-PIN: ??_GTextRenderer@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab990
+// MS2-PIN: ??_GTextRenderer@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aba20
+// MS2-PIN: ??_7CSMSettings@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143169c70
+// MS2-PIN: ??_7CSMSettings@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143169bc8
+// MS2-PIN: ??_7CSMSettings@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x143169b00
+// MS2-PIN: ??_7Font@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143169e88
+// MS2-PIN: ??_7Font@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143169de8
+// MS2-PIN: ??_7Font@fl_text@Classes@AS3@GFx@Scaleform@@6B@ 0x143169f18
+// MS2-PIN: ??_7Font@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x143169d18
+// MS2-PIN: ??_7TextLineMetrics@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316b358
+// MS2-PIN: ??_7TextLineMetrics@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14316b2b0
+// MS2-PIN: ??_7TextLineMetrics@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316b1e0
+// MS2-PIN: ??_GCSMSettings@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa620
+// MS2-PIN: ??_GCSMSettings@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa6b0
+// MS2-PIN: ??_GCSMSettings@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa710
+// MS2-PIN: ??_GFont@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa880
+// MS2-PIN: ??_GFont@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa970
+// MS2-PIN: ??_GFont@fl_text@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa910
+// MS2-PIN: ??_GFont@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aa9d0
+// MS2-PIN: ??_GTextLineMetrics@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab840
+// MS2-PIN: ??_GTextLineMetrics@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab8d0
+// MS2-PIN: ??_GTextLineMetrics@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab930

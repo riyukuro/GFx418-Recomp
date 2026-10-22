@@ -8,13 +8,37 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
 
+namespace Scaleform { namespace Render { class Font; }}
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_text {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x50 bytes: the font settings of TextRenderer.setAdvancedAntiAliasingTable.
+    class CSMSettings : public Instances::fl::Object
+    {
+    public:
+        CSMSettings(InstanceTraits::Traits& t);
+        // @0x1424ac470
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::CSMSettings"; }
+
+        Value::Number   fontSize;       // +0x38
+        Value::Number   insideCutoff;   // +0x40
+        Value::Number   outsideCutoff;  // +0x48
+    };
+
+    // 0x58 bytes.
     class Font : public Instances::fl::Object
     {
     public:
+        Font(InstanceTraits::Traits& t);
+        // @0x1424ac4b0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::Font"; }
+
+        Ptr<Render::Font>   pFont;      // +0x38: the font the instance stands for; NULL for a font class not bound yet
+        ASString            fontName;   // +0x40
+        ASString            fontStyle;  // +0x48
+        ASString            fontType;   // +0x50
+
         // @0x1424b08d0
         void fontNameGet(Value& result);
         // @0x1424b09c0
@@ -303,9 +327,20 @@ namespace Instances { namespace fl_text {
         void urlSet(const Value& result, const ASString&);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x68 bytes.
     class TextLineMetrics : public Instances::fl::Object
     {
+    public:
+        TextLineMetrics(InstanceTraits::Traits& t);
+        // @0x1424ac6a0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::TextLineMetrics"; }
+
+        Value::Number   ascent;     // +0x38
+        Value::Number   descent;    // +0x40
+        Value::Number   height;     // +0x48
+        Value::Number   leading;    // +0x50
+        Value::Number   width;      // +0x58
+        Value::Number   x;          // +0x60
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
@@ -335,14 +370,308 @@ namespace Instances { namespace fl_text {
 }}
 
 namespace Classes { namespace fl_text {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Font : public Class
     {
     public:
+        Font(ClassTraits::Traits& t);
+        // @0x1424ac490
+        virtual const char* GetAS3ObjectType() const { return "Classes::fl_text::Font"; }
+
         // @0x1424b02f0
         void enumerateFonts(SPtr<Instances::fl::Array>& result, bool);
         // @0x1424b3810
         void registerFont(const Value& result, Class*);
+    };
+
+    // 0x60 bytes.
+    class AntiAliasType : public Class
+    {
+    public:
+        AntiAliasType(ClassTraits::Traits& t);
+        // @0x1424ac440
+        virtual const char* GetAS3ObjectType() const { return "Classes::AntiAliasType"; }
+
+        const char* ADVANCED;    // +0x50
+        const char* NORMAL;      // +0x58
+    };
+
+    // 0x70 bytes.
+    class FontStyle : public Class
+    {
+    public:
+        FontStyle(ClassTraits::Traits& t);
+        // @0x1424ac4d0
+        virtual const char* GetAS3ObjectType() const { return "Classes::FontStyle"; }
+
+        const char* BOLD;        // +0x50
+        const char* BOLD_ITALIC; // +0x58
+        const char* ITALIC;      // +0x60
+        const char* REGULAR;     // +0x68
+    };
+
+    // 0x60 bytes.
+    class FontType : public Class
+    {
+    public:
+        FontType(ClassTraits::Traits& t);
+        // @0x1424ac4f0
+        virtual const char* GetAS3ObjectType() const { return "Classes::FontType"; }
+
+        const char* DEVICE;      // +0x50
+        const char* EMBEDDED;    // +0x58
+    };
+
+    // 0x68 bytes.
+    class GridFitType : public Class
+    {
+    public:
+        GridFitType(ClassTraits::Traits& t);
+        // @0x1424ac510
+        virtual const char* GetAS3ObjectType() const { return "Classes::GridFitType"; }
+
+        const char* NONE;        // +0x50
+        const char* PIXEL;       // +0x58
+        const char* SUBPIXEL;    // +0x60
+    };
+
+    // 0x60 bytes.
+    class TextColorType : public Class
+    {
+    public:
+        TextColorType(ClassTraits::Traits& t);
+        // @0x1424ac590
+        virtual const char* GetAS3ObjectType() const { return "Classes::TextColorType"; }
+
+        const char* DARK_COLOR;  // +0x50
+        const char* LIGHT_COLOR; // +0x58
+    };
+
+    // 0x68 bytes.
+    class TextDisplayMode : public Class
+    {
+    public:
+        TextDisplayMode(ClassTraits::Traits& t);
+        // @0x1424ac5b0
+        virtual const char* GetAS3ObjectType() const { return "Classes::TextDisplayMode"; }
+
+        const char* CRT;         // +0x50
+        const char* DEFAULT;     // +0x58
+        const char* LCD;         // +0x60
+    };
+
+    // 0x70 bytes.
+    class TextFieldAutoSize : public Class
+    {
+    public:
+        TextFieldAutoSize(ClassTraits::Traits& t);
+        // @0x1424ac600
+        virtual const char* GetAS3ObjectType() const { return "Classes::TextFieldAutoSize"; }
+
+        const char* CENTER;      // +0x50
+        const char* LEFT;        // +0x58
+        const char* NONE;        // +0x60
+        const char* RIGHT;       // +0x68
+    };
+
+    // 0x60 bytes.
+    class TextFieldType : public Class
+    {
+    public:
+        TextFieldType(ClassTraits::Traits& t);
+        // @0x1424ac620
+        virtual const char* GetAS3ObjectType() const { return "Classes::TextFieldType"; }
+
+        const char* DYNAMIC;     // +0x50
+        const char* INPUT;       // +0x58
+    };
+
+    // 0x70 bytes.
+    class TextFormatAlign : public Class
+    {
+    public:
+        TextFormatAlign(ClassTraits::Traits& t);
+        // @0x1424ac670
+        virtual const char* GetAS3ObjectType() const { return "Classes::TextFormatAlign"; }
+
+        const char* CENTER;      // +0x50
+        const char* JUSTIFY;     // +0x58
+        const char* LEFT;        // +0x60
+        const char* RIGHT;       // +0x68
+    };
+
+
+    class TextRenderer : public Class
+    {
+    public:
+        TextRenderer(ClassTraits::Traits& t);
+        // @0x1424ac6c0
+        virtual const char* GetAS3ObjectType() const { return "Classes::TextRenderer"; }
+    };
+}}
+
+namespace InstanceTraits { namespace fl_text {
+    class CSMSettings : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::CSMSettings InstanceType;
+
+        CSMSettings(VM& vm, const ClassInfo& ci);
+        // @0x1424ac460
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::CSMSettings"; }
+        // @0x1424ad4d0
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
+
+    class Font : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::Font InstanceType;
+
+        Font(VM& vm, const ClassInfo& ci);
+        // @0x1424ac4a0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Font"; }
+        // @0x1424ad540
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
+
+    class TextLineMetrics : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::TextLineMetrics InstanceType;
+
+        TextLineMetrics(VM& vm, const ClassInfo& ci);
+        // @0x1424ac690
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextLineMetrics"; }
+        // @0x1424ad780
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
+}}
+
+namespace ClassTraits { namespace fl_text {
+    class CSMSettings : public Traits
+    {
+    public:
+        CSMSettings(VM& vm);
+        // @0x1424ac450
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::CSMSettings"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Font : public Traits
+    {
+    public:
+        Font(VM& vm);
+        // @0x1424ac480
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Font"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextLineMetrics : public Traits
+    {
+    public:
+        TextLineMetrics(VM& vm);
+        // @0x1424ac680
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextLineMetrics"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class AntiAliasType : public Traits
+    {
+    public:
+        AntiAliasType(VM& vm);
+        // @0x1424ac430
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::AntiAliasType"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class FontStyle : public Traits
+    {
+    public:
+        FontStyle(VM& vm);
+        // @0x1424ac4c0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::FontStyle"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class FontType : public Traits
+    {
+    public:
+        FontType(VM& vm);
+        // @0x1424ac4e0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::FontType"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class GridFitType : public Traits
+    {
+    public:
+        GridFitType(VM& vm);
+        // @0x1424ac500
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::GridFitType"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextColorType : public Traits
+    {
+    public:
+        TextColorType(VM& vm);
+        // @0x1424ac580
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextColorType"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextDisplayMode : public Traits
+    {
+    public:
+        TextDisplayMode(VM& vm);
+        // @0x1424ac5a0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextDisplayMode"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextFieldAutoSize : public Traits
+    {
+    public:
+        TextFieldAutoSize(VM& vm);
+        // @0x1424ac5f0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextFieldAutoSize"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextFieldType : public Traits
+    {
+    public:
+        TextFieldType(VM& vm);
+        // @0x1424ac610
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextFieldType"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextFormatAlign : public Traits
+    {
+    public:
+        TextFormatAlign(VM& vm);
+        // @0x1424ac660
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextFormatAlign"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextRenderer : public Traits
+    {
+    public:
+        TextRenderer(VM& vm);
+        // @0x1424ac6b0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextRenderer"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
     };
 
 }}
