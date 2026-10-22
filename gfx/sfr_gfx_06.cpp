@@ -212,7 +212,7 @@ void DisplayObjectBase::SetCxform(const Cxform& cx)
     GetRenderNode()->SetCxform(cx);
 }
 
-bool DisplayObjectBase::Is3D() const
+inline bool DisplayObjectBase::Is3D() const
 {
     return pRenNode && pRenNode->Is3D();
 }
