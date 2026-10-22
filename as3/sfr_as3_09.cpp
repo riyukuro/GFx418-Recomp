@@ -2448,6 +2448,104 @@ namespace Instances { namespace fl_events {
             RemoveMovieDefListeners(*this, pdef, pImpl->Listeners);
         }
     }
+
+    // The AS3 movie root keeps a 0xe0-byte state per mouse from +0x360; +0x18 of it is the display object the mouse
+    // was over before. Its AS3 object, or NULL.
+    static Instances::fl_display::InteractiveObject* GetLastMouseOverObject(ASVM& vm, int mouseIdx)
+    {
+        if ((unsigned)mouseIdx >= 4)
+            return NULL;
+        const char* state = reinterpret_cast<const char*>(vm.GetMovieRoot()) + 0x360 + mouseIdx * 0xe0;
+        GFx::DisplayObject* dobj = *reinterpret_cast<GFx::DisplayObject* const*>(state + 0x18);
+        if (!dobj)
+            return NULL;
+        const UPInt* avm = reinterpret_cast<const UPInt*>(dobj->GetAvmObjImpl());
+        UPInt raw = avm[2] ? avm[2] : avm[1];
+        return reinterpret_cast<Instances::fl_display::InteractiveObject*>(raw & ~UPInt(1));
+    }
+
+    // @0x142467ec0
+    // MS2-FUNCTIONAL: the exe repeats the create/dispatch/release sequence per case; cl shares it
+    bool EventDispatcher::Dispatch(const EventId& evtId, GFx::DisplayObject* dobj)
+    {
+        enum
+        {
+            BI_mouseMove = 49, BI_mouseWheel = 53, BI_keyDown = 56, BI_keyUp = 57
+        };
+        enum
+        {
+            EV_MouseOver = 0x100000a, EV_MouseOut, EV_Click, EV_DoubleClick, EV_MouseWheel
+        };
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Classes::fl_events::EventDispatcher& cls = GetDispatcherClass(*this);
+        SPtr<Instances::fl_events::Event> evt;
+        switch (evtId.Id)
+        {
+        case EventId::Event_EnterFrame:
+        case EV_Activate:
+        case EV_Deactivate:
+        case EV_Render:
+        case EV_Resize:
+        {
+            // to this dispatcher's listeners only
+            BuiltinType bt = BuiltinType(evtId.Id == EventId::Event_EnterFrame ? BI_enterFrame :
+                                         evtId.Id == EV_Activate ? BI_activate :
+                                         evtId.Id == EV_Deactivate ? BI_deactivate :
+                                         evtId.Id == EV_Render ? BI_render : BI_resize);
+            evt = cls.CreateEventObject(vm.GetBuiltin(bt), false, false);
+            evt->Target = this;
+            if (!DispatchSingleEvent(evt, false) && dobj)
+                dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+            return !evt->DefaultPrevented;
+        }
+        case EventId::Event_KeyDown:
+            evt = cls.CreateKeyboardEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_keyDown)), this);
+            break;
+        case EventId::Event_KeyUp:
+            evt = cls.CreateKeyboardEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_keyUp)), this);
+            break;
+        case EventId::Event_MouseMove:
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseMove)), this);
+            break;
+        case EventId::Event_MouseDown:
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseDown)), this);
+            break;
+        case EventId::Event_MouseUp:
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseUp)), this);
+            break;
+        case EventId::Event_RollOver:
+        case EventId::Event_RollOut:
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(
+                      evtId.Id == EventId::Event_RollOver ? BI_rollOver : BI_rollOut)), this);
+            evt->Bubbles = false;
+            break;
+        case EV_MouseOver:
+        case EV_MouseOut:
+        {
+            SPtr<Instances::fl_events::MouseEvent> mevt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(
+                evtId.Id == EV_MouseOver ? BI_mouseOver : BI_mouseOut)), this);
+            mevt->RelatedObj = GetLastMouseOverObject(vm, evtId.MouseIndex);
+            // the object the mouse leaves is not its own related object
+            if (evtId.Id == EV_MouseOut && mevt->RelatedObj && (void*)mevt->RelatedObj.GetPtr() == (void*)this)
+                mevt->RelatedObj = NULL;
+            evt = mevt.GetPtr();
+            break;
+        }
+        case EV_Click:
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_click)), this);
+            break;
+        case EV_DoubleClick:
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_doubleClick)), this);
+            break;
+        case EV_MouseWheel:
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseWheel)), this);
+            break;
+        default:
+            return true;
+        }
+        Dispatch(evt, dobj);
+        return !evt->DefaultPrevented;
+    }
 }} // namespace Instances::fl_events
 
 // ==== flash.external.ExternalInterface: class traits ==================================================================

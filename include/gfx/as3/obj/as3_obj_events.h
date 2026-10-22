@@ -216,6 +216,9 @@ namespace Instances { namespace fl_events {
         bool WillTrigger(const ASString& type, bool useCapture) const;                       // 0x14246c9a0
         // (appended, sfr_as3_09) drops the listeners whose function comes from the abc code of pdef
         void RemoveListenersForMovieDef(GFx::MovieDefImpl* pdef);                            // 0x14246c700
+        // (appended, sfr_as3_09) the AS3 event of a GFx event id (mouse, key, frame, activation) at this dispatcher;
+        // false if it was prevented, true for ids without an AS3 event
+        bool Dispatch(const EventId& evtId, GFx::DisplayObject* dobj);                      // 0x142467ec0
     };
 
     // One registered listener (0x28 bytes): the function value and the addEventListener options.
