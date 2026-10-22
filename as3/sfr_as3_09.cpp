@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424653f0-0x142473710 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -24,6 +25,913 @@ template struct ThunkFunc2<Classes::fl_external::ExternalInterface, 5, Value, un
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
+
+// Is a value of type `className` (its class looked up by name in the VM; 0x1425145d0).
+bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_events {
+
+    // ---- AS3Constructor: new X(type, bubbles = false, cancelable = false, ...) -------------------------------------------
+
+    // @0x142465470
+    void Event::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc < 1)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "Event::AS3Constructor", 1, 1, argc));
+            return;
+        }
+        argv[0].Convert2String(Type);
+        if (argc >= 2)
+            Bubbles = argv[1].Convert2Boolean();
+        if (argc >= 3)
+            Cancelable = argv[2].Convert2Boolean();
+    }
+
+    // @0x1424653f0
+    void AppLifecycleEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        VM& vm = GetVM();
+        if (argc >= 4)
+        {
+            Status = argv[3];
+            if (!argv[3].IsNull())
+                Status.ToStringValue(vm.GetStringManager());
+        }
+    }
+
+    // @0x142465540
+    void FocusEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc >= 4)
+        {
+            RelatedObj = NULL;
+            if (argv[3].GetObject() && FUN_1425145d0(GetVM(), argv[3], "flash.display.InteractiveObject"))
+                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(argv[3].GetObject());
+        }
+        if (argc >= 5)
+            ShiftKey = argv[4].Convert2Boolean();
+        if (argc >= 6)
+        {
+            UInt32 v;
+            argv[5].Convert2UInt32(v);
+            KeyCode = v;
+        }
+    }
+
+    // @0x142465610
+    // MS2-FUNCTIONAL: the exe zeroes the phaseSet result Value before loading the phase string and saves rbp inside the branch
+    void GestureEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc >= 4)
+            phaseSet(Value(), argv[3].AsString());
+        if (argc >= 5)
+        {
+            Value::Number v;
+            argv[4].Convert2Number(v);
+            LocalInitialized = true;
+            LocalX = Render::PixelsToTwips(v);
+        }
+        if (argc >= 6)
+        {
+            Value::Number v;
+            argv[5].Convert2Number(v);
+            LocalInitialized = true;
+            LocalY = Render::PixelsToTwips(v);
+        }
+        if (argc >= 7)
+            CommandKey = argv[6].Convert2Boolean();
+        if (argc >= 8)
+            AltKey = argv[7].Convert2Boolean();
+        if (argc >= 9)
+            ControlKey = argv[8].Convert2Boolean();
+        if (argc >= 10)
+            CtrlKey = argv[9].Convert2Boolean();
+        if (argc >= 11)
+            ShiftKey = argv[10].Convert2Boolean();
+    }
+
+    // @0x142465770
+    void IOErrorEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc >= 4)
+            argv[3].Convert2String(ErrorText);
+    }
+
+    // @0x1424657c0
+    void MouseEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc >= 4)
+        {
+            Value::Number v;
+            argv[3].Convert2Number(v);
+            LocalInitialized = true;
+            LocalX = Render::PixelsToTwips(v);
+        }
+        if (argc >= 5)
+        {
+            Value::Number v;
+            argv[4].Convert2Number(v);
+            LocalInitialized = true;
+            LocalY = Render::PixelsToTwips(v);
+        }
+        if (argc >= 6)
+        {
+            RelatedObj = NULL;
+            if (argv[5].GetObject() && FUN_1425145d0(GetVM(), argv[5], "flash.display.InteractiveObject"))
+                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(argv[5].GetObject());
+        }
+        if (argc >= 7)
+            CtrlKey = argv[6].Convert2Boolean();
+        if (argc >= 8)
+            AltKey = argv[7].Convert2Boolean();
+        if (argc >= 9)
+            ShiftKey = argv[8].Convert2Boolean();
+        if (argc >= 10)
+        {
+            if (argv[9].Convert2Boolean())
+                ButtonsMask |= 1;
+            else
+                ButtonsMask &= ~1u;
+        }
+        if (argc >= 11)
+            argv[10].Convert2Int32(Delta);
+    }
+
+    // @0x142465950
+    void NetStatusEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc >= 4)
+            argv[3].Convert2String(Code);
+        if (argc >= 5)
+            argv[4].Convert2String(Level);
+    }
+
+    // @0x1424659b0
+    void PressAndTapGestureEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc >= 4)
+            phaseSet(Value(), argv[3].AsString());
+        if (argc >= 5)
+            localXSet(Value(), argv[4].AsNumber());
+        if (argc >= 6)
+            localYSet(Value(), argv[5].AsNumber());
+        if (argc >= 7)
+            tapLocalXSet(Value(), argv[6].AsNumber());
+        if (argc >= 8)
+            tapLocalYSet(Value(), argv[7].AsNumber());
+        if (argc >= 9)
+            CommandKey = argv[8].Convert2Boolean();
+        if (argc >= 10)
+            AltKey = argv[9].Convert2Boolean();
+        if (argc >= 11)
+            ControlKey = argv[10].Convert2Boolean();
+        if (argc >= 12)
+            CtrlKey = argv[11].Convert2Boolean();
+        if (argc >= 13)
+            ShiftKey = argv[12].Convert2Boolean();
+    }
+
+    // @0x142465c10
+    // MS2-FUNCTIONAL: the exe also saves r15 around the first branch (unused); register frame differs
+    void StageOrientationEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        VM& vm = GetVM();
+        if (argc >= 4)
+        {
+            BeforeOrientation = argv[3];
+            if (!argv[3].IsNull())
+                BeforeOrientation.ToStringValue(vm.GetStringManager());
+        }
+        if (argc >= 5)
+        {
+            AfterOrientation = argv[4];
+            // The exe tests argv[3] here.
+            if (!argv[3].IsNull())
+                AfterOrientation.ToStringValue(vm.GetStringManager());
+        }
+    }
+
+    // @0x142465cd0
+    // MS2-FUNCTIONAL: argc/argv land in rbx/rsi in the exe, rsi/rdi here
+    void TouchEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Event::AS3Constructor(argc, argv);
+        if (argc >= 4)
+            argv[3].Convert2Int32(TouchPointID);
+        if (argc >= 5)
+            IsPrimaryTouchPoint = argv[4].Convert2Boolean();
+        if (argc >= 6)
+        {
+            Value::Number v;
+            argv[5].Convert2Number(v);
+            LocalInitialized = true;
+            LocalX = Render::PixelsToTwips(v);
+        }
+        if (argc >= 7)
+        {
+            Value::Number v;
+            argv[6].Convert2Number(v);
+            LocalInitialized = true;
+            LocalY = Render::PixelsToTwips(v);
+        }
+        if (argc >= 8)
+        {
+            Value::Number v;
+            argv[7].Convert2Number(v);
+            LocalInitialized = true;
+            SizeX = Render::PixelsToTwips(v);
+        }
+        if (argc >= 9)
+        {
+            Value::Number v;
+            argv[8].Convert2Number(v);
+            LocalInitialized = true;
+            SizeY = Render::PixelsToTwips(v);
+        }
+        if (argc >= 10)
+        {
+            // pressure: converted and dropped
+            Value::Number v;
+            argv[9].Convert2Number(v);
+        }
+        if (argc >= 11)
+        {
+            RelatedObj = NULL;
+            // The exe takes the object from argv[5] and type-tests argv[10].
+            if (argv[5].GetObject() && FUN_1425145d0(GetVM(), argv[10], "flash.display.InteractiveObject"))
+                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(argv[5].GetObject());
+        }
+        if (argc >= 12)
+            CommandKey = argv[11].Convert2Boolean();
+        if (argc >= 13)
+            AltKey = argv[12].Convert2Boolean();
+        if (argc >= 14)
+            ControlKey = argv[13].Convert2Boolean();
+        if (argc >= 15)
+            CtrlKey = argv[14].Convert2Boolean();
+        if (argc >= 16)
+            ShiftKey = argv[15].Convert2Boolean();
+    }
+
+    // @0x142465f00
+    // MS2-FUNCTIONAL: the inlined GestureEvent::AS3Constructor is scheduled differently
+    void TransformGestureEvent::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        GestureEvent::AS3Constructor(argc, argv);
+        if (argc >= 4)
+            phaseSet(Value(), argv[3].AsString());
+        // The exe stores localX/localY into the gesture point but flags the offset as initialized.
+        if (argc >= 5)
+        {
+            Value::Number v;
+            argv[4].Convert2Number(v);
+            LocalOffsetInitialized = true;
+            LocalX = Render::PixelsToTwips(v);
+        }
+        if (argc >= 6)
+        {
+            Value::Number v;
+            argv[5].Convert2Number(v);
+            LocalOffsetInitialized = true;
+            LocalY = Render::PixelsToTwips(v);
+        }
+        if (argc >= 7)
+            argv[6].Convert2Number(ScaleX);
+        if (argc >= 8)
+            argv[7].Convert2Number(ScaleY);
+        if (argc >= 9)
+            argv[8].Convert2Number(Rotation);
+        if (argc >= 10)
+        {
+            Value::Number v;
+            argv[9].Convert2Number(v);
+            OffsetX = Render::PixelsToTwips(v);
+        }
+        if (argc >= 11)
+        {
+            Value::Number v;
+            argv[10].Convert2Number(v);
+            OffsetY = Render::PixelsToTwips(v);
+        }
+        if (argc >= 12)
+            CommandKey = argv[11].Convert2Boolean();
+        if (argc >= 13)
+            AltKey = argv[12].Convert2Boolean();
+        if (argc >= 14)
+            ControlKey = argv[13].Convert2Boolean();
+        if (argc >= 15)
+            CtrlKey = argv[14].Convert2Boolean();
+        if (argc >= 16)
+            ShiftKey = argv[15].Convert2Boolean();
+    }
+
+    // ---- Clone: a new event of the same class from (type, bubbles, cancelable), with the state copied -----------------
+
+    // @0x142466520
+    // MS2-FUNCTIONAL: the flag bit copies xor the operands in the other order
+    SPtr<Instances::fl_events::Event> Event::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result;
+        Value argv[3] = { Value(Type), Value(Bubbles), Value(Cancelable) };
+        static_cast<ASVM&>(GetVM()).ConstructInstance(result, GetEventClass(), 3, argv);
+        result->CurrentTarget = CurrentTarget;
+        result->Target = Target;
+        result->DefaultPrevented = DefaultPrevented;
+        result->PropagationStopped = PropagationStopped;
+        result->ImmPropagationStopped = ImmPropagationStopped;
+        return result;
+    }
+
+    // @0x1424664e0
+    SPtr<Instances::fl_events::Event> AppLifecycleEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        AppLifecycleEvent* p = static_cast<AppLifecycleEvent*>(result.GetPtr());
+        p->Status = Status;
+        return result;
+    }
+
+    // @0x142466680
+    SPtr<Instances::fl_events::Event> FocusEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        FocusEvent* p = static_cast<FocusEvent*>(result.GetPtr());
+        p->RelatedObj = RelatedObj;
+        p->ShiftKey = ShiftKey;
+        p->KeyCode = KeyCode;
+        return result;
+    }
+
+    // @0x1424666d0
+    SPtr<Instances::fl_events::Event> GestureEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        GestureEvent* p = static_cast<GestureEvent*>(result.GetPtr());
+        p->AltKey = AltKey;
+        p->CommandKey = CommandKey;
+        p->ControlKey = ControlKey;
+        p->CtrlKey = CtrlKey;
+        p->ShiftKey = ShiftKey;
+        p->LocalX = LocalX;
+        p->LocalY = LocalY;
+        p->StageX = StageX;
+        p->StageY = StageY;
+        p->Phase = Phase;
+        p->LocalInitialized = LocalInitialized;
+        return result;
+    }
+
+    // @0x142466760
+    SPtr<Instances::fl_events::Event> IOErrorEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        IOErrorEvent* p = static_cast<IOErrorEvent*>(result.GetPtr());
+        p->ErrorText = ErrorText;
+        return result;
+    }
+
+    // @0x1424667b0
+    SPtr<Instances::fl_events::Event> KeyboardEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        KeyboardEvent* p = static_cast<KeyboardEvent*>(result.GetPtr());
+        p->EvtId.Id = EvtId.Id;
+        p->EvtId.WcharCode = EvtId.WcharCode;
+        p->EvtId.KeyCode = EvtId.KeyCode;
+        p->EvtId.AsciiCode = EvtId.AsciiCode;
+        p->EvtId.RollOverCnt = EvtId.RollOverCnt;
+        p->EvtId.KeyboardIndex = EvtId.KeyboardIndex;
+        p->EvtId.KeysState = EvtId.KeysState;
+        p->EvtId.MouseWheelDelta = EvtId.MouseWheelDelta;
+        p->KeyLocation = KeyLocation;
+        return result;
+    }
+
+    // @0x142466820
+    SPtr<Instances::fl_events::Event> MouseEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        MouseEvent* p = static_cast<MouseEvent*>(result.GetPtr());
+        p->AltKey = AltKey;
+        p->CtrlKey = CtrlKey;
+        p->ShiftKey = ShiftKey;
+        p->Delta = Delta;
+        p->RelatedObj = RelatedObj;
+        p->LocalX = LocalX;
+        p->LocalY = LocalY;
+        p->StageX = StageX;
+        p->StageY = StageY;
+        p->ButtonsMask = ButtonsMask;
+        p->LocalInitialized = LocalInitialized;
+        return result;
+    }
+
+    // @0x1424668c0
+    SPtr<Instances::fl_events::Event> NetStatusEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        NetStatusEvent* p = static_cast<NetStatusEvent*>(result.GetPtr());
+        p->Code = Code;
+        p->Level = Level;
+        return result;
+    }
+
+    // @0x142466930
+    SPtr<Instances::fl_events::Event> PressAndTapGestureEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = GestureEvent::Clone();
+        PressAndTapGestureEvent* p = static_cast<PressAndTapGestureEvent*>(result.GetPtr());
+        p->TapLocalX = TapLocalX;
+        p->TapLocalY = TapLocalY;
+        p->TapStageX = TapStageX;
+        p->TapStageY = TapStageY;
+        p->TapLocalInitialized = TapLocalInitialized;
+        p->Unk_a9 = Unk_a9;
+        return result;
+    }
+
+    // @0x1424669b0
+    SPtr<Instances::fl_events::Event> ProgressEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        ProgressEvent* p = static_cast<ProgressEvent*>(result.GetPtr());
+        p->BytesLoaded = BytesLoaded;
+        p->BytesTotal = BytesTotal;
+        return result;
+    }
+
+    // @0x1424669f0
+    SPtr<Instances::fl_events::Event> StageOrientationEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        StageOrientationEvent* p = static_cast<StageOrientationEvent*>(result.GetPtr());
+        p->BeforeOrientation = BeforeOrientation;
+        p->AfterOrientation = AfterOrientation;
+        return result;
+    }
+
+    // @0x142466a40 (also ErrorEvent, AsyncErrorEvent and IMEEvent's)
+    SPtr<Instances::fl_events::Event> TextEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        TextEvent* p = static_cast<TextEvent*>(result.GetPtr());
+        p->Text = Text;
+        return result;
+    }
+
+    // @0x142466a90
+    SPtr<Instances::fl_events::Event> TouchEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = Event::Clone();
+        TouchEvent* p = static_cast<TouchEvent*>(result.GetPtr());
+        p->AltKey = AltKey;
+        p->CommandKey = CommandKey;
+        p->ControlKey = ControlKey;
+        p->CtrlKey = CtrlKey;
+        p->ShiftKey = ShiftKey;
+        p->Pressure = Pressure;
+        p->RelatedObj = RelatedObj;
+        p->LocalX = LocalX;
+        p->LocalY = LocalY;
+        p->StageX = StageX;
+        p->StageY = StageY;
+        p->SizeX = SizeX;
+        p->SizeY = SizeY;
+        p->TouchPointID = TouchPointID;
+        p->IsPrimaryTouchPoint = IsPrimaryTouchPoint;
+        p->LocalInitialized = LocalInitialized;
+        return result;
+    }
+
+    // @0x142466b70
+    SPtr<Instances::fl_events::Event> TransformGestureEvent::Clone() const
+    {
+        SPtr<Instances::fl_events::Event> result = GestureEvent::Clone();
+        TransformGestureEvent* p = static_cast<TransformGestureEvent*>(result.GetPtr());
+        p->OffsetX = OffsetX;
+        p->OffsetY = OffsetY;
+        p->ScaleX = ScaleX;
+        p->ScaleY = ScaleY;
+        p->Rotation = Rotation;
+        return result;
+    }
+
+    // ---- event classes -----------------------------------------------------------------------------------------------
+
+    // @0x142469fe0
+    AS3::Object* IOErrorEvent::GetEventClass() const
+    {
+        return GetVM().GetClass(StringDataPtr("flash.events.IOErrorEvent"));
+    }
+
+    // @0x14246a030
+    AS3::Object* NetStatusEvent::GetEventClass() const
+    {
+        return GetVM().GetClass(StringDataPtr("flash.events.NetStatusEvent"));
+    }
+
+    // ---- EventDispatcher listener queries ----------------------------------------------------------------------------
+
+    // @0x14246c230
+    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
+    bool EventDispatcher::MayHaveActivateHandler() const
+    {
+        if (pImpl)
+            return pImpl->HasActivate;
+        return false;
+    }
+    // @0x14246c250
+    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
+    bool EventDispatcher::MayHaveDeactivateHandler() const
+    {
+        if (pImpl)
+            return pImpl->HasDeactivate;
+        return false;
+    }
+    // @0x14246c270
+    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
+    bool EventDispatcher::MayHaveEnterFrameHandler() const
+    {
+        if (pImpl)
+            return pImpl->HasEnterFrame;
+        return false;
+    }
+    // @0x14246c290
+    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
+    bool EventDispatcher::MayHaveExitFrameHandler() const
+    {
+        if (pImpl)
+            return pImpl->HasExitFrame;
+        return false;
+    }
+    // @0x14246c2b0
+    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
+    bool EventDispatcher::MayHaveFrameConstructedHandler() const
+    {
+        if (pImpl)
+            return pImpl->HasFrameConstructed;
+        return false;
+    }
+    // @0x14246c2d0
+    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
+    bool EventDispatcher::MayHaveRenderHandler() const
+    {
+        if (pImpl)
+            return pImpl->HasRender;
+        return false;
+    }
+
+    // @0x14246a160
+    // MS2-FUNCTIONAL: cl inlines the listener table lookup (0x1424698c0) that the exe calls
+    bool EventDispatcher::HasEventHandler(const ASString& type, bool useCapture) const
+    {
+        if (pImpl)
+        {
+            const ListenersHash& h = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
+            ArrayLH<Listener>* const* pa = h.Get(type);
+            if (pa && *pa && (*pa)->GetSize() > 0)
+                return true;
+        }
+        return false;
+    }
+
+    // ---- local coordinates -------------------------------------------------------------------------------------------
+    // The stage point of a pointer event mapped into its target's space, computed the first time a local property is
+    // read or written. Without a display object target the local values are 0.
+
+    // @0x14246a1a0
+    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe (3 bytes longer)
+    void GestureEvent::InitLocalCoords()
+    {
+        if (LocalInitialized)
+            return;
+        if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
+        {
+            Render::Matrix2F m;
+            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
+            Render::PointF p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
+            LocalX = p.x;
+            LocalY = p.y;
+        }
+        else
+        {
+            LocalX = 0;
+            LocalY = 0;
+        }
+        LocalInitialized = true;
+    }
+
+    // @0x14246a2f0
+    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe
+    void MouseEvent::InitLocalCoords()
+    {
+        if (LocalInitialized)
+            return;
+        if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
+        {
+            Render::Matrix2F m;
+            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
+            Render::PointF p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
+            LocalX = p.x;
+            LocalY = p.y;
+        }
+        else
+        {
+            LocalX = 0;
+            LocalY = 0;
+        }
+        LocalInitialized = true;
+    }
+
+    // @0x14246a450
+    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe
+    void PressAndTapGestureEvent::InitTapLocalCoords()
+    {
+        if (TapLocalInitialized)
+            return;
+        if (Unk_a9 && Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
+        {
+            Render::Matrix2F m;
+            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
+            Render::PointF p = m.TransformByInverse(Render::PointF(float(TapStageX), float(TapStageY)));
+            TapLocalX = p.x;
+            TapLocalY = p.y;
+        }
+        else
+        {
+            TapLocalX = 0;
+            TapLocalY = 0;
+        }
+        TapLocalInitialized = true;
+    }
+
+    // @0x14246a5c0
+    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe
+    void TouchEvent::InitLocalCoords()
+    {
+        if (LocalInitialized)
+            return;
+        if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
+        {
+            Render::Matrix2F m;
+            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
+            Render::PointF p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
+            LocalX = p.x;
+            LocalY = p.y;
+            Render::PointF s = m.TransformByInverse(Render::PointF(float(SizeX), float(SizeY)));
+            SizeX = s.x;
+            SizeY = s.y;
+        }
+        else
+        {
+            LocalX = 0;
+            LocalY = 0;
+            SizeX = 0;
+            SizeY = 0;
+        }
+        LocalInitialized = true;
+    }
+
+    // @0x14246a780
+    // MS2-FUNCTIONAL: block layout of the parent-matrix path differs from the exe
+    void TransformGestureEvent::InitLocalOffset()
+    {
+        if (LocalOffsetInitialized)
+            return;
+        if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
+        {
+            // the offset is relative to the target's parent
+            Render::Matrix2F m;
+            GFx::InteractiveObject* parent =
+                static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetParent();
+            if (parent)
+            {
+                Render::Matrix2F pm;
+                parent->GetWorldMatrix(&pm);
+                m = pm;
+            }
+            Value::Number x = StageX, y = StageY;
+            Render::PointF p0 = m.TransformByInverse(Render::PointF(float(x), float(y)));
+            Render::PointF p1 = m.TransformByInverse(Render::PointF(float(x + OffsetX), float(y + OffsetY)));
+            LocalOffsetX = p1.x - p0.x;
+            LocalOffsetY = p1.y - p0.y;
+        }
+        else
+        {
+            LocalOffsetX = 0;
+            LocalOffsetY = 0;
+        }
+        LocalOffsetInitialized = true;
+    }
+
+    // ---- pixel properties --------------------------------------------------------------------------------------------
+    // Stored in twips.
+
+    // @0x14246ea30
+    void GestureEvent::localXGet(Value::Number& result)     { InitLocalCoords(); result = Render::TwipsToPixels(LocalX); }
+    // @0x14246eaf0
+    void GestureEvent::localXSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); LocalX = Render::PixelsToTwips(v); }
+    // @0x14246eb80
+    void GestureEvent::localYGet(Value::Number& result)     { InitLocalCoords(); result = Render::TwipsToPixels(LocalY); }
+    // @0x14246ec40
+    void GestureEvent::localYSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); LocalY = Render::PixelsToTwips(v); }
+
+    // @0x14246ea70
+    void MouseEvent::localXGet(Value::Number& result)       { InitLocalCoords(); result = Render::TwipsToPixels(LocalX); }
+    // @0x14246eb20
+    void MouseEvent::localXSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); LocalX = Render::PixelsToTwips(v); }
+    // @0x14246ebc0
+    void MouseEvent::localYGet(Value::Number& result)       { InitLocalCoords(); result = Render::TwipsToPixels(LocalY); }
+    // @0x14246ec70
+    void MouseEvent::localYSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); LocalY = Render::PixelsToTwips(v); }
+
+    // @0x14246eab0
+    void TouchEvent::localXGet(Value::Number& result)       { InitLocalCoords(); result = Render::TwipsToPixels(LocalX); }
+    // @0x14246eb50
+    void TouchEvent::localXSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); LocalX = Render::PixelsToTwips(v); }
+    // @0x14246ec00
+    void TouchEvent::localYGet(Value::Number& result)       { InitLocalCoords(); result = Render::TwipsToPixels(LocalY); }
+    // @0x14246eca0
+    void TouchEvent::localYSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); LocalY = Render::PixelsToTwips(v); }
+    // @0x14246f550
+    void TouchEvent::sizeXGet(Value::Number& result)        { InitLocalCoords(); result = Render::TwipsToPixels(SizeX); }
+    // @0x14246f590
+    void TouchEvent::sizeXSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); SizeX = Render::PixelsToTwips(v); }
+    // @0x14246f5c0
+    void TouchEvent::sizeYGet(Value::Number& result)        { InitLocalCoords(); result = Render::TwipsToPixels(SizeY); }
+    // @0x14246f600
+    void TouchEvent::sizeYSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalCoords(); SizeY = Render::PixelsToTwips(v); }
+
+    // @0x14246ecd0
+    void TransformGestureEvent::offsetXGet(Value::Number& result) { InitLocalOffset(); result = Render::TwipsToPixels(LocalOffsetX); }
+    // @0x14246ed10
+    void TransformGestureEvent::offsetXSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalOffset(); LocalOffsetX = Render::PixelsToTwips(v); }
+    // @0x14246ed50
+    void TransformGestureEvent::offsetYGet(Value::Number& result) { InitLocalOffset(); result = Render::TwipsToPixels(LocalOffsetY); }
+    // @0x14246ed90
+    void TransformGestureEvent::offsetYSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitLocalOffset(); LocalOffsetY = Render::PixelsToTwips(v); }
+
+    // @0x14246f740
+    void PressAndTapGestureEvent::tapLocalXGet(Value::Number& result) { InitTapLocalCoords(); result = Render::TwipsToPixels(TapLocalX); }
+    // @0x14246f780
+    void PressAndTapGestureEvent::tapLocalXSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitTapLocalCoords(); TapLocalX = Render::PixelsToTwips(v); }
+    // @0x14246f7c0
+    void PressAndTapGestureEvent::tapLocalYGet(Value::Number& result) { InitTapLocalCoords(); result = Render::TwipsToPixels(TapLocalY); }
+    // @0x14246f800
+    void PressAndTapGestureEvent::tapLocalYSet(const Value& result, Value::Number v) { SF_UNUSED(result); InitTapLocalCoords(); TapLocalY = Render::PixelsToTwips(v); }
+
+    // ---- related objects ---------------------------------------------------------------------------------------------
+
+    // @0x14246f070
+    void FocusEvent::relatedObjectSet(const Value& result, Instances::fl_display::InteractiveObject* value) { SF_UNUSED(result); RelatedObj = value; }
+    // @0x14246f0e0
+    void MouseEvent::relatedObjectSet(const Value& result, Instances::fl_display::InteractiveObject* value) { SF_UNUSED(result); RelatedObj = value; }
+    // @0x14246f150
+    void TouchEvent::relatedObjectSet(const Value& result, Instances::fl_display::InteractiveObject* value) { SF_UNUSED(result); RelatedObj = value; }
+    // @0x14246efe0
+    void FocusEvent::relatedObjectGet(SPtr<Instances::fl_display::InteractiveObject>& result) { result = RelatedObj; }
+    // @0x14246efb0
+    SPtr<Instances::fl_display::InteractiveObject> FocusEvent::relatedObjectGet()
+    {
+        SPtr<Instances::fl_display::InteractiveObject> result;
+        relatedObjectGet(result);
+        return result;
+    }
+    // @0x14246f020
+    void MouseEvent::relatedObjectGet(SPtr<Instances::fl_display::InteractiveObject>& result) { result = RelatedObj; }
+    // @0x14246eff0
+    SPtr<Instances::fl_display::InteractiveObject> MouseEvent::relatedObjectGet()
+    {
+        SPtr<Instances::fl_display::InteractiveObject> result;
+        relatedObjectGet(result);
+        return result;
+    }
+    // @0x14246f060
+    void TouchEvent::relatedObjectGet(SPtr<Instances::fl_display::InteractiveObject>& result) { result = RelatedObj; }
+    // @0x14246f030
+    SPtr<Instances::fl_display::InteractiveObject> TouchEvent::relatedObjectGet()
+    {
+        SPtr<Instances::fl_display::InteractiveObject> result;
+        relatedObjectGet(result);
+        return result;
+    }
+
+    // ---- orientation -------------------------------------------------------------------------------------------------
+
+    // @0x14246cf90
+    // MS2-FUNCTIONAL: the exe loads the node before the null test and shares one ReleaseNode epilogue
+    void StageOrientationEvent::afterOrientationGet(ASString& result)
+    {
+        ASStringNode* node = AfterOrientation.AsStringNode();
+        if (AfterOrientation.IsNull())
+            node = result.GetManager()->GetNullStringNode();
+        result.AssignNode(node);
+    }
+
+    // @0x14246d080
+    // MS2-FUNCTIONAL: the exe loads the node before the null test and shares one ReleaseNode epilogue
+    void StageOrientationEvent::beforeOrientationGet(ASString& result)
+    {
+        ASStringNode* node = BeforeOrientation.AsStringNode();
+        if (BeforeOrientation.IsNull())
+            node = result.GetManager()->GetNullStringNode();
+        result.AssignNode(node);
+    }
+
+    // ---- clone -------------------------------------------------------------------------------------------------------
+    // The natives hand back a Clone() of the event; the result-returning forms are the call-style wrappers.
+
+    // @0x14246d330
+    // MS2-FUNCTIONAL: the exe re-reads the temporary through its stack slot and adds the reference in two memory steps
+    __declspec(noinline) void Event::clone(SPtr<Instances::fl_events::Event>& result) { result = Clone(); }
+    // @0x14246d240
+    __declspec(noinline) void AppLifecycleEvent::clone(SPtr<Instances::fl_events::Event>& result)        { result = Clone().GetPtr(); }
+    // @0x14246d310
+    void ErrorEvent::clone(SPtr<Instances::fl_events::Event>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method ErrorEvent::clone() is not implemented\n");
+    }
+    // @0x14246d3f0
+    __declspec(noinline) void FocusEvent::clone(SPtr<Instances::fl_events::Event>& result)               { result = Clone().GetPtr(); }
+    // @0x14246d4a0
+    __declspec(noinline) void GestureEvent::clone(SPtr<Instances::fl_events::Event>& result)             { result = Clone().GetPtr(); }
+    // @0x14246d540
+    __declspec(noinline) void IMEEvent::clone(SPtr<Instances::fl_events::Event>& result)                 { SF_UNUSED(result); }
+    // @0x14246d570
+    __declspec(noinline) void IOErrorEvent::clone(SPtr<Instances::fl_events::Event>& result)             { result = Clone().GetPtr(); }
+    // @0x14246d620
+    __declspec(noinline) void KeyboardEvent::clone(SPtr<Instances::fl_events::Event>& result)            { result = Clone().GetPtr(); }
+    // @0x14246d6d0
+    __declspec(noinline) void MouseEvent::clone(SPtr<Instances::fl_events::Event>& result)               { result = Clone().GetPtr(); }
+    // @0x14246d780
+    __declspec(noinline) void NetStatusEvent::clone(SPtr<Instances::fl_events::Event>& result)           { result = Clone().GetPtr(); }
+    // @0x14246d830
+    __declspec(noinline) void PressAndTapGestureEvent::clone(SPtr<Instances::fl_events::Event>& result)  { result = Clone().GetPtr(); }
+    // @0x14246d8e0
+    __declspec(noinline) void ProgressEvent::clone(SPtr<Instances::fl_events::Event>& result)            { result = Clone().GetPtr(); }
+    // @0x14246d990
+    __declspec(noinline) void StageOrientationEvent::clone(SPtr<Instances::fl_events::Event>& result)    { result = Clone().GetPtr(); }
+    // @0x14246da40
+    __declspec(noinline) void TextEvent::clone(SPtr<Instances::fl_events::Event>& result)                { result = Clone().GetPtr(); }
+    // @0x14246daf0
+    void TimerEvent::clone(SPtr<Instances::fl_events::Event>& result)               { Event::clone(result); }
+    // @0x14246db20
+    __declspec(noinline) void TouchEvent::clone(SPtr<Instances::fl_events::Event>& result)               { result = Clone().GetPtr(); }
+    // @0x14246dbd0
+    __declspec(noinline) void TransformGestureEvent::clone(SPtr<Instances::fl_events::Event>& result)    { result = Clone().GetPtr(); }
+
+    // @0x14246d220
+    SPtr<Instances::fl_events::Event> AppLifecycleEvent::clone()        { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d2d0
+    SPtr<Instances::fl_events::Event> ErrorEvent::clone()               { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d3d0
+    SPtr<Instances::fl_events::Event> FocusEvent::clone()               { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d480
+    SPtr<Instances::fl_events::Event> GestureEvent::clone()             { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d550
+    SPtr<Instances::fl_events::Event> IOErrorEvent::clone()             { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d600
+    SPtr<Instances::fl_events::Event> KeyboardEvent::clone()            { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d6b0
+    SPtr<Instances::fl_events::Event> MouseEvent::clone()               { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d760
+    SPtr<Instances::fl_events::Event> NetStatusEvent::clone()           { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d810
+    SPtr<Instances::fl_events::Event> PressAndTapGestureEvent::clone()  { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d8c0
+    SPtr<Instances::fl_events::Event> ProgressEvent::clone()            { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246d970
+    SPtr<Instances::fl_events::Event> StageOrientationEvent::clone()    { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246da20
+    SPtr<Instances::fl_events::Event> TextEvent::clone()                { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246dad0
+    SPtr<Instances::fl_events::Event> TimerEvent::clone()               { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246db00
+    SPtr<Instances::fl_events::Event> TouchEvent::clone()               { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+    // @0x14246dbb0
+    SPtr<Instances::fl_events::Event> TransformGestureEvent::clone()    { SPtr<Instances::fl_events::Event> result; clone(result); return result; }
+
+    // ---- targets -----------------------------------------------------------------------------------------------------
+
+    // @0x14246de10
+    void Event::currentTargetGet(SPtr<Instances::fl::Object>& result)  { result = CurrentTarget.GetPtr(); }
+
+}} // namespace Instances::fl_events
+
+}}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142472fc0
 // MS2-PIN: ?Func@?$ThunkFunc0@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473020

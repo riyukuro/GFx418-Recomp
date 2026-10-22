@@ -1357,8 +1357,8 @@ namespace Instances { namespace fl_events
     StageOrientationEvent::StageOrientationEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
-        AfterOrientation.SetNull();
         BeforeOrientation.SetNull();
+        AfterOrientation.SetNull();
     }
 }}
 
@@ -1562,11 +1562,11 @@ namespace Instances { namespace fl_events
         , RelatedObj(NULL)
     {
         AltKey = CommandKey = ControlKey = CtrlKey = ShiftKey = false;
-        LocalX = LocalY = StageX = StageY = 0;
-        SizeX = SizeY = 0;
+        LocalX = LocalY = SizeX = SizeY = 0;
+        StageX = StageY = 0;
         Pressure = 1.0;
         TouchPointID = 0;
-        IsPrimaryTouchPoint = IsRelatedObjectInaccessible = false;
+        IsPrimaryTouchPoint = LocalInitialized = false;
     }
 }}
 
@@ -1625,9 +1625,9 @@ namespace Instances { namespace fl_events
         : GestureEvent(t)
     {
         ScaleX = ScaleY = 1.0;
-        OffsetX = OffsetY = Rotation = Unk_a0 = 0;
-        Unk_b8 = 0;
-        Unk_c0 = false;
+        OffsetX = OffsetY = LocalOffsetX = LocalOffsetY = 0;
+        Rotation = 0;
+        LocalOffsetInitialized = false;
     }
 }}
 

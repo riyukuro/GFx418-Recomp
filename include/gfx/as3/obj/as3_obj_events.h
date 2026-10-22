@@ -82,6 +82,12 @@ namespace Instances { namespace fl_events {
         void statusGet(SPtr<Instances::fl::Object>& result);
         // @0x14246f9e0
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d220
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424664e0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424653f0
     };
 
     // 0x60 bytes. The constructor is bound to the exe.
@@ -101,6 +107,11 @@ namespace Instances { namespace fl_events {
         void textSet(const Value& result, const ASString&);
         // @0x142471e00
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246da20
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466a40
     };
 
     // 0x60 bytes. The constructor is defined in sfr_as3_08.
@@ -116,6 +127,9 @@ namespace Instances { namespace fl_events {
         void errorIDGet(SInt32& result);
         // @0x14246fc30
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d2d0
+        SPtr<Instances::fl_events::Event> clone();
     };
 
     // 0x50 bytes. The constructor and destructor are defined in sfr_as3_08; the GC visitor is bound to the exe.
@@ -150,6 +164,16 @@ namespace Instances { namespace fl_events {
 
         VM*                             pVM;            // +0x38: the traits' VM
         Scaleform::AutoPtr<EventDispatcherImpl> pImpl;           // +0x40: listener tables, made on the first addEventListener
+
+        // (appended, sfr_as3_09) whether a listener of a frame/activation event may be registered (pImpl's Flags)
+        bool MayHaveActivateHandler() const;            // 0x14246c230
+        bool MayHaveDeactivateHandler() const;          // 0x14246c250
+        bool MayHaveEnterFrameHandler() const;          // 0x14246c270
+        bool MayHaveExitFrameHandler() const;           // 0x14246c290
+        bool MayHaveFrameConstructedHandler() const;    // 0x14246c2b0
+        bool MayHaveRenderHandler() const;              // 0x14246c2d0
+        // (appended, sfr_as3_09) whether this dispatcher has a listener of type in the capture or target/bubble table
+        bool HasEventHandler(const ASString& type, bool useCapture) const;   // 0x14246a160
     };
 
     // One registered listener (0x28 bytes): the function value and the addEventListener options.
@@ -177,6 +201,16 @@ namespace Instances { namespace fl_events {
     {
         ListenersHash   CaptureListeners;   // +0x0: useCapture listeners
         ListenersHash   Listeners;          // +0x8
+        // (appended, sfr_as3_09) which frame/activation events have a listener (+0x10)
+        UInt16          HasEnterFrame : 1;
+        UInt16          HasActivate : 1;
+        UInt16          HasDeactivate : 1;
+        UInt16          HasRender : 1;
+        UInt16          HasResize : 1;
+        UInt16          HasFrameConstructed : 1;
+        UInt16          HasExitFrame : 1;
+        UInt8           CaptureButtonHandlersCnt;   // +0x12
+        UInt8           ButtonHandlersCnt;          // +0x13
     };
 
     // 0x68 bytes. The constructor is bound to the exe.
@@ -212,6 +246,14 @@ namespace Instances { namespace fl_events {
         void shiftKeySet(const Value& result, bool);
         // @0x14246feb0
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d3d0
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) relatedObject returned by value
+        // @0x14246efb0
+        SPtr<Instances::fl_display::InteractiveObject> relatedObjectGet();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466680
     };
 
     // 0x88 bytes. The constructor is defined in sfr_as3_08.
@@ -274,6 +316,15 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
         // @0x142472d60
         void updateAfterEvent(const Value& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d480
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) LocalX/LocalY from the stage point, once
+        // @0x14246a1a0
+        void InitLocalCoords();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424666d0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465610
     };
 
     // 0x60 bytes. The constructor is defined in sfr_as3_08.
@@ -305,6 +356,14 @@ namespace Instances { namespace fl_events {
         void textSet(const Value& result, const ASString&);
         // @0x1424706a0
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d550
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) slot 22: the VM's flash.events.IOErrorEvent class
+        virtual AS3::Object* GetEventClass() const;  // 0x142469fe0
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466760
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465770
     };
 
     // 0x70 bytes. The constructor is bound to the exe.
@@ -354,6 +413,11 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
         // @0x142472d80
         void updateAfterEvent(const Value& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d600
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424667b0
     };
 
     // 0x90 bytes. The constructor is bound to the exe.
@@ -428,6 +492,17 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
         // @0x142472da0
         void updateAfterEvent(const Value& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d6b0
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) LocalX/LocalY from the stage point, once
+        // @0x14246a2f0
+        void InitLocalCoords();
+        // (appended, sfr_as3_09) relatedObject returned by value
+        // @0x14246eff0
+        SPtr<Instances::fl_display::InteractiveObject> relatedObjectGet();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466820
     };
 
     // 0x68 bytes. The constructor is defined in sfr_as3_08.
@@ -447,6 +522,14 @@ namespace Instances { namespace fl_events {
         void infoSet(const Value& result, const Value&);
         // @0x142471140
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d760
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) slot 22: the VM's flash.events.NetStatusEvent class
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a030
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424668c0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465950
     };
 
     // 0xb0 bytes. The constructor is defined in sfr_as3_08.
@@ -478,6 +561,15 @@ namespace Instances { namespace fl_events {
         void tapStageYGet(Value::Number& result);
         // @0x1424713e0
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d810
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) TapLocalX/TapLocalY from the tap stage point, once
+        // @0x14246a450
+        void InitTapLocalCoords();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466930
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424659b0
     };
 
     // 0x68 bytes. The constructor is defined in sfr_as3_08.
@@ -501,6 +593,11 @@ namespace Instances { namespace fl_events {
         void clone(SPtr<Instances::fl_events::Event>& result);
         // @0x1424718a0
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d8c0
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424669b0
     };
 
     // 0x98 bytes. The constructor is defined in sfr_as3_08.
@@ -509,8 +606,8 @@ namespace Instances { namespace fl_events {
     public:
         StageOrientationEvent(InstanceTraits::Traits& t); // 0x1424614f0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_events::StageOrientationEvent"; }
-        Value           AfterOrientation;   // +0x58
-        Value           BeforeOrientation;  // +0x78
+        Value           BeforeOrientation;  // +0x58
+        Value           AfterOrientation;   // +0x78
 
         // @0x14246cf90
         void afterOrientationGet(ASString& result);
@@ -520,6 +617,12 @@ namespace Instances { namespace fl_events {
         void clone(SPtr<Instances::fl_events::Event>& result);
         // @0x142471b70
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246d970
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424669f0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465c10
     };
 
     // 0x58 bytes. The constructor is defined in sfr_as3_08.
@@ -535,6 +638,9 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
         // @0x142472dc0
         void updateAfterEvent(const Value& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246dad0
+        SPtr<Instances::fl_events::Event> clone();
     };
 
     // 0xa8 bytes. The constructor is defined in sfr_as3_08.
@@ -551,14 +657,14 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_display::InteractiveObject> RelatedObj;  // +0x60
         Value::Number   LocalX;             // +0x68
         Value::Number   LocalY;             // +0x70
-        Value::Number   StageX;             // +0x78
-        Value::Number   StageY;             // +0x80
-        Value::Number   SizeX;              // +0x88
-        Value::Number   SizeY;              // +0x90
+        Value::Number   SizeX;              // +0x78: mapped into the target's space with the local point
+        Value::Number   SizeY;              // +0x80
+        Value::Number   StageX;             // +0x88
+        Value::Number   StageY;             // +0x90
         Value::Number   Pressure;           // +0x98: 1.0 at construction
         SInt32          TouchPointID;       // +0xa0
         bool            IsPrimaryTouchPoint; // +0xa4
-        bool            IsRelatedObjectInaccessible; // +0xa5
+        bool            LocalInitialized;   // +0xa5: LocalX/LocalY and SizeX/SizeY mapped into the target's space
 
         // @0x14246d020
         void altKeyGet(bool& result);
@@ -626,6 +732,18 @@ namespace Instances { namespace fl_events {
         void touchPointIDSet(const Value& result, SInt32);
         // @0x142472de0
         void updateAfterEvent(const Value& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246db00
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) LocalX/LocalY and SizeX/SizeY from the stage point and size, once
+        // @0x14246a5c0
+        void InitLocalCoords();
+        // (appended, sfr_as3_09) relatedObject returned by value
+        // @0x14246f030
+        SPtr<Instances::fl_display::InteractiveObject> relatedObjectGet();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466a90
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465cd0
     };
 
     // 0xc8 bytes. The constructor is defined in sfr_as3_08.
@@ -634,14 +752,14 @@ namespace Instances { namespace fl_events {
     public:
         TransformGestureEvent(InstanceTraits::Traits& t); // 0x1424620d0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_events::TransformGestureEvent"; }
-        Value::Number   OffsetX;            // +0x88
+        Value::Number   OffsetX;            // +0x88: the offset in stage space
         Value::Number   OffsetY;            // +0x90
-        Value::Number   Rotation;           // +0x98
-        Value::Number   Unk_a0;             // +0xa0
+        Value::Number   LocalOffsetX;       // +0x98: the offset in the target's parent space (offsetX/offsetY)
+        Value::Number   LocalOffsetY;       // +0xa0
         Value::Number   ScaleX;             // +0xa8: 1.0 at construction
         Value::Number   ScaleY;             // +0xb0: 1.0 at construction
-        Value::Number   Unk_b8;             // +0xb8
-        bool            Unk_c0;             // +0xc0
+        Value::Number   Rotation;           // +0xb8
+        bool            LocalOffsetInitialized; // +0xc0
 
         // @0x14246dbd0
         void clone(SPtr<Instances::fl_events::Event>& result);
@@ -667,6 +785,15 @@ namespace Instances { namespace fl_events {
         void scaleYSet(const Value& result, Value::Number);
         // @0x1424726d0
         void toString(ASString& result);
+        // (appended, sfr_as3_09) clone() returning the new event
+        // @0x14246dbb0
+        SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_09) LocalOffsetX/Y from the stage offset, in the target's parent space, once
+        // @0x14246a780
+        void InitLocalOffset();
+        // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
+        virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466b70
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465f00
     };
 
     // 0x68 bytes. The constructor is defined in sfr_as3_08.
