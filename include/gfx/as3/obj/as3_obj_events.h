@@ -5,6 +5,7 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "Kernel/SF_AutoPtr.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -79,9 +80,16 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x50 bytes. The constructor, destructor and GC visitor are not recovered yet (bound to the exe).
     class EventDispatcher : public Instances::fl::Object
     {
+    public:
+        EventDispatcher(InstanceTraits::Traits& t);     // 0x14245f780
+        ~EventDispatcher();                             // 0x1424624c0
+
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;  // 0x142469440
+
     public:
         // @0x14246caa0
         void addEventListener(const Value& result, const ASString&, const Value&, bool, SInt32, bool);
@@ -93,6 +101,11 @@ namespace Instances { namespace fl_events {
         void removeEventListener(const Value& result, const ASString&, const Value&, bool);
         // @0x142472e00
         void willTrigger(bool& result, const ASString&);
+
+        struct EventDispatcherImpl;
+
+        VM*                             pVM;            // +0x38: the traits' VM
+        AutoPtr<EventDispatcherImpl>    pImpl;          // +0x40: listener tables, made on the first addEventListener
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
