@@ -1581,6 +1581,134 @@ namespace Instances { namespace fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// ---- fl_text: StyleSheet::parseCSS, TextFormat::tabStopsSet, TextSnapshot::getText ----
+bool FUN_14260b7f0(void* pstyles, const char* pcss, unsigned length);   // Text::StyleManager::ParseCSS
+void FUN_1425e1740(void* psnap, void* ptext, unsigned long long start, unsigned long long end, bool includeLineEndings);  // ::GetSubString (builds a String)
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // The style manager lives at +0x50; +0x78 records how the last load went (2 parsed, 3 failed).
+    // @0x1424b32f0
+    void StyleSheet::parseCSS(const Value& result, const ASString& css)
+    {
+        SF_UNUSED(result);
+        if (FUN_14260b7f0((UByte*)this + 0x50, css.ToCStr(), css.GetSize()))
+        {
+            *(UInt32*)((UByte*)this + 0x78) = 2;
+            static_cast<ASVM&>(GetVM()).GetMovieImpl()->Flags |= 0x80000;
+        }
+        else
+            *(UInt32*)((UByte*)this + 0x78) = 3;
+    }
+
+    // @0x1424b4bf0
+    void TextFormat::tabStopsSet(const Value& result, Instances::fl::Array* value)
+    {
+        SF_UNUSED(result);
+        *(SPtr<Instances::fl::Array>*)((UByte*)this + 0x1f8) = value;
+    }
+
+    // An empty or reversed range reads the single character at beginIndex.
+    // @0x1424b29e0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextSnapshot::getText(ASString& result, SInt32 beginIndex, SInt32 endIndex, bool includeLineEndings)
+    {
+        if (endIndex <= beginIndex)
+            endIndex = beginIndex + 1;
+        void* buf;
+        FUN_1425e1740(SnapshotData(this), &buf, (SPInt)beginIndex, (SPInt)endIndex, includeLineEndings);
+        String& text = *reinterpret_cast<String*>(&buf);
+        result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
+        text.~String();
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+// ---- fl_text: TextField::autoSizeSet, typeSet ----
+void* FUN_1425b7840(void* ptf, void** pkit);                // TextField::CreateEditorKit (returns a Ptr in *pkit)
+void  FUN_14257dcb0(void* pkit);                            // drops a reference to the editor kit
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // Document view alignment bits (DocView+0x148, 0 left, 1 right, 2 center) and its reformat request
+    // (DocView+0x14b bit 0).
+    static inline UByte& ViewAlign(void* pdoc)    { return *((UByte*)pdoc + 0x148); }
+    static inline void   RequestReformat(void* pdoc) { *((UByte*)pdoc + 0x14b) |= 1; }
+
+    // An unknown mode turns auto-sizing on and keeps the alignment.
+    // @0x1424afb10
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::autoSizeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        void* pdoc = DocViewOf(ptf);
+        UInt32 oldFlags = FieldFlags(ptf);
+        UByte oldAlign = ViewAlign(pdoc);
+        if (value == "none")
+        {
+            FieldFlags(ptf) &= ~1u;
+            ViewAlign(pdoc) &= ~3;
+            RequestReformat(pdoc);
+        }
+        else
+        {
+            FieldFlags(ptf) |= 1;
+            if (value == "left")
+            {
+                ViewAlign(pdoc) &= ~3;
+                RequestReformat(pdoc);
+            }
+            else if (value == "right")
+            {
+                ViewAlign(pdoc) = (ViewAlign(pdoc) & ~2) | 1;
+                RequestReformat(pdoc);
+            }
+            else if (value == "center")
+            {
+                ViewAlign(pdoc) = (ViewAlign(pdoc) & ~1) | 2;
+                RequestReformat(pdoc);
+            }
+        }
+        if ((oldAlign & 3) != (ViewAlign(DocViewOf(ptf)) & 3) || (oldFlags & 1) != (FieldFlags(ptf) & 1))
+            TextFieldUpdateAutoSize(this);
+        FUN_1425bc060(ptf);
+    }
+
+    // "dynamic" makes an existing editor read-only; "input" creates the editor (unless a style sheet is set) and makes
+    // it writable.
+    // @0x1424b5230
+    void TextField::typeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (value == "dynamic")
+        {
+            void* pkit = *(void**)((UByte*)DocViewOf(ptf) + 0xd8);
+            if (pkit)
+                *(UInt16*)((UByte*)pkit + 0xa0) |= 1;
+        }
+        else if (value == "input" && !FUN_1425b9730(ptf))
+        {
+            void* ptmp;
+            void* pkit = *(void**)FUN_1425b7840(ptf, &ptmp);
+            if (ptmp)
+                FUN_14257dcb0(ptmp);
+            *(UInt16*)((UByte*)pkit + 0xa0) &= ~1;
+        }
+        RequestReformat(DocViewOf(ptf));
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc1@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5730
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$00VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5830
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b58a0
