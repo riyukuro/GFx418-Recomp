@@ -965,6 +965,100 @@ namespace Instances { namespace fl_display
     }
 }}
 
+namespace Instances { namespace fl_display
+{
+    // @0x142448790
+    void DisplayObject::blendModeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        Render::BlendMode mode = Classes::fl_display::BlendMode::GetBlendMode(value);
+        pDispObj->SetBlendMode(mode);
+    }
+
+    // @0x142450540
+    void DisplayObject::maskSet(const Value& result, Instances::fl_display::DisplayObject* value)
+    {
+        SF_UNUSED(result);
+        GFx::DisplayObject* pmask;
+        if (!value)
+            pmask = NULL;
+        else
+        {
+            pmask = value->pDispObj;
+            if (!pmask)
+            {
+                value->CreateStageObject();
+                pmask = value->pDispObj;
+            }
+        }
+        pDispObj->SetMask(pmask);
+    }
+
+    // @0x14244ecc0
+    void Sprite::hitAreaSet(const Value& result, Instances::fl_display::Sprite* value)
+    {
+        SF_UNUSED(result);
+        GFx::DisplayObject* phit;
+        if (value)
+        {
+            phit = value->pDispObj;
+            if (!phit)
+            {
+                value->CreateStageObject();
+                phit = value->pDispObj;
+            }
+        }
+        else
+            phit = NULL;
+        static_cast<GFx::Sprite*>(pDispObj.GetPtr())->SetHitArea(static_cast<GFx::Sprite*>(phit));
+    }
+
+    // @0x14244c480
+    void MovieClip::framesLoadedGet(SInt32& result)
+    {
+        if (!pDispObj)
+        {
+            result = 1;
+            return;
+        }
+        result = static_cast<GFx::Sprite*>(pDispObj.GetPtr())->GetLoadingFrame();
+    }
+
+    // @0x142451a90
+    void MovieClip::prevFrame(const Value& result)
+    {
+        SF_UNUSED(result);
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        int frame = psprite->GetCurrentFrame();
+        if (frame > 0)
+            psprite->GotoFrame(frame - 1);
+        psprite->SetPlayState(State_Stopped);
+    }
+
+    // @0x1424542b0
+    void MovieClip::totalFramesGet(SInt32& result)
+    {
+        result = static_cast<GFx::Sprite*>(pDispObj.GetPtr())->pDef->GetFrameCount();
+    }
+
+    // @0x142450d60
+    void Scene::numFramesGet(SInt32& result)
+    {
+        if (SceneInfo)
+        {
+            result = SceneInfo->NumFrames;
+            return;
+        }
+        result = SpriteObj->pDef->GetFrameCount();
+    }
+
+    // @0x142453420
+    void Stage::stageFocusRectGet(bool& result)
+    {
+        result = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->IsFocusRectEnabled();
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$09K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455e90
