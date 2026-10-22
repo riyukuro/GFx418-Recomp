@@ -3,7 +3,7 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_11
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424837b0-0x142497a90 .text$mn
+// MS2-RANGE: 0x1424837b0-0x142498890 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PIN: ??0?$ThunkArgs2@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@AEBV534@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs2@AEBVASString@GFx@Scaleform@@AEBV123@@123@@Z 0x1424959c0 ; unique
 // MS2-PIN: ??1?$ThunkArgs1@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@@AS3@GFx@Scaleform@@QEAA@XZ 0x142497230 ; unique
@@ -3119,3 +3119,31 @@ namespace ClassTraits { namespace fl_net
 // MS2-PIN: ??_7URLLoader@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143163950
 // MS2-PIN: ?Resize@?$ArrayDataDH@NU?$AllocatorDH@N$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z 0x1424861a0
 // MS2-PIN: ?Reserve@?$ArrayDataBase@NU?$AllocatorDH@N$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142486100
+// fl_net scalar deleting dtors: emitted with the vftables of the fl_net ctors above (exe 0x142497a90-0x142498890)
+// MS2-PIN: ??_GObjectEncoding@fl_net@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497a90
+// MS2-PIN: ??_GResponder@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497af0
+// MS2-PIN: ??_GSharedObject@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497b80
+// MS2-PIN: ??_GSharedObject@fl_net@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497c10
+// MS2-PIN: ??_GSharedObject@fl_net@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497c80
+// MS2-PIN: ??_GSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497ce0
+// MS2-PIN: ??_GSharedObjectFlushStatus@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497dc0
+// MS2-PIN: ??_GSharedObjectFlushStatus@fl_net@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497e50
+// MS2-PIN: ??_GSocket@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497f10
+// MS2-PIN: ??_GURLLoader@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142497fa0
+// MS2-PIN: ??_GURLLoader@fl_net@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498030
+// MS2-PIN: ??_GURLLoader@fl_net@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498090
+// MS2-PIN: ??_GURLLoaderDataFormat@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498130
+// MS2-PIN: ??_GURLLoaderDataFormat@fl_net@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424981c0
+// MS2-PIN: ??_GURLRequest@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498220
+// MS2-PIN: ??_GURLRequest@fl_net@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424982b0
+// MS2-PIN: ??_GURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498310
+// MS2-PIN: ??_GURLRequestHeader@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424983b0
+// MS2-PIN: ??_GURLRequestHeader@fl_net@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498440
+// MS2-PIN: ??_GURLRequestHeader@fl_net@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424984a0
+// MS2-PIN: ??_GURLRequestMethod@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498520
+// MS2-PIN: ??_GURLRequestMethod@fl_net@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424985b0
+// MS2-PIN: ??_GURLStream@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498610
+// MS2-PIN: ??_GURLVariables@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424986a0
+// MS2-PIN: ??_GURLVariables@fl_net@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498730
+// MS2-PIN: ??_GURLVariables@fl_net@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498790
+// MS2-PIN: ??_GXMLSocket@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498800
