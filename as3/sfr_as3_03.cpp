@@ -6,6 +6,9 @@
 // MS2-RANGE: 0x1423ff040-0x1424133c0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include <windows.h>
+#include <sys/timeb.h>
+#undef GetObject
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -874,6 +877,40 @@ namespace InstanceTraits { namespace fl
         result = StringSubstring(sm, str, start, end - start);
     }
 }} // namespace InstanceTraits::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Classes { namespace fl
+{
+    // @0x142405670
+    void Date::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
+    {
+        Value::Number timeValue;
+        SInt32 localTZA;
+        char buffer[128];
+        {
+            // Instances::fl::Date::GetCurrentTimeValue, inlined.
+            __timeb64 tb;
+            TIME_ZONE_INFORMATION tzi;
+            _ftime64(&tb);
+            GetTimeZoneInformation(&tzi);
+            localTZA = tzi.Bias * -60000;
+            timeValue = static_cast<Value::Number>(tb.time) * 1000.0 + tb.millitm;
+        }
+        const UPInt len = Instances::fl::Date::formatDateTimeString(buffer, sizeof(buffer), timeValue, localTZA, true, true, false);
+        result = GetVM().GetStringManager().CreateString(buffer, len);
+    }
+
+    // @0x142405a80
+    void RegExp::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
+    {
+        Construct(result, argc, argv);
+        Instances::fl::RegExp* re = static_cast<Instances::fl::RegExp*>(result.GetObject());
+        result = re->ToString();
+    }
+}} // namespace Classes::fl
 
 }}} // namespace Scaleform::GFx::AS3
 

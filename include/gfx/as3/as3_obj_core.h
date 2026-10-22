@@ -494,6 +494,8 @@ namespace Instances { namespace fl
         void AS3exec(SPtr<Instances::fl::Object>& result, const ASString&);
         // @0x142401860
         void AS3test(bool& result, const ASString&);
+        // "/pattern/flags" (exe 0x142425890, sfr_as3_04)
+        ASString ToString();
         // @0x142428130
         void dotallGet(bool& result);
         // @0x142428490
