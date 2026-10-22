@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/gfx_sprite.h"
 #include "ms2/scaleform/include/render/render_shapedata.h"
+#include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -78,6 +79,96 @@ template struct ThunkFunc0<Class, 1, SInt32>;
 // MS2-FUNCTIONAL: inlining only: the exe inlines the string result store (Value::AssignUnsafe(const ASString&))
 template struct ThunkFunc0<Class, 2, ASString>;
 
+
+namespace Instances { namespace fl_gfx
+{
+    // @0x1424c9d30
+    void GamePadAnalogEvent::clone(SPtr<Instances::fl_events::Event>& result)
+    {
+        result = Clone().GetPtr();
+    }
+}}
+
+namespace Classes { namespace fl_gfx
+{
+    // @0x1424ca900
+    void Extensions::getEdgeAAMode(UInt32& result, Instances::fl_display::DisplayObject* dobj)
+    {
+        switch (dobj->pDispObj->GetRenderNode()->GetEdgeAAMode())
+        {
+        case Render::EdgeAA_On:      result = EDGEAA_ON; break;
+        case Render::EdgeAA_Off:     result = EDGEAA_OFF; break;
+        case Render::EdgeAA_Disable: result = EDGEAA_DISABLE; break;
+        default:                     result = EDGEAA_INHERIT; break;
+        }
+    }
+
+    // @0x1424cb7c0
+    void Extensions::setEdgeAAMode(const Value& result, Instances::fl_display::DisplayObject* dobj, UInt32 mode)
+    {
+        SF_UNUSED(result);
+        Render::EdgeAAMode m = Render::EdgeAA_Inherit;
+        if (mode == EDGEAA_DISABLE)
+            m = Render::EdgeAA_Disable;
+        else if (mode == EDGEAA_ON)
+            m = Render::EdgeAA_On;
+        else if (mode == EDGEAA_OFF)
+            m = Render::EdgeAA_Off;
+        dobj->pDispObj->GetRenderNode()->SetEdgeAAMode(m);
+    }
+}}
+
+namespace InstanceTraits { namespace fl_gfx
+{
+    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // @0x1424c9700
+    void GamePadAnalogEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // @0x1424c9760
+    void IMECandidateListStyle::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // @0x1424c97e0
+    void IMEEventEx::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // @0x1424c9860
+    void KeyboardEventEx::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // @0x1424c98c0
+    void MouseCursorEvent::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // @0x1424c9950
+    void MouseEventEx::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // @0x1424c99c0
+    void TextEventEx::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+}}
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 

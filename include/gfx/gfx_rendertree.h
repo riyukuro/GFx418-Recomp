@@ -187,6 +187,9 @@ public:
     void SetVisible(bool visible);
     bool IsVisible() const { return GetReadOnlyData()->IsVisible(); }
 
+    void       SetEdgeAAMode(EdgeAAMode edgeAA);   // 0x14261d270
+    EdgeAAMode GetEdgeAAMode() const { return (EdgeAAMode)(GetReadOnlyData()->Flags & NF_EdgeAA_Mask); }
+
     const State* GetState(StateType type) const;
     template<class S>
     const S* GetState() const { return static_cast<const S*>(GetState(S::GetType_Static())); }
