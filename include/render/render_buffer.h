@@ -1,5 +1,5 @@
-// Recovered Scaleform 4.1.18 Render: RenderBuffer / RenderTarget, the GPU surfaces a HAL renders into. Only the
-// part the DrawableImage unit needs (layout prefix and the accessors it inlines); the rest lands with the HAL units.
+// Recovered Scaleform 4.1.18 Render: RenderBuffer / RenderTarget / DepthStencilBuffer, the GPU surfaces a HAL renders
+// into, and the RenderBufferManager interface that hands them out (implemented by Render_BufferGeneric, sfr_render_07i).
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 #ifndef MS2_SF_RENDER_BUFFER_H
 #define MS2_SF_RENDER_BUFFER_H
@@ -11,20 +11,28 @@
 namespace Scaleform { namespace Render {
 
 class RenderBufferManager;
+class DepthStencilSurface;
 
-class RenderTargetData;   // per-HAL surfaces attached to a render buffer
-
-enum RenderBufferType
+// per-HAL surfaces attached to a render buffer; the buffer owns it (layout lands with the HAL units)
+class RenderTargetData : public NewOverrideBase<StatRender_TextureManager_Mem>
 {
-    RBuffer_Default,
-    RBuffer_User,
-    RBuffer_Texture,
-    RBuffer_Temporary,
-    RBuffer_DepthStencil
+public:
+    virtual ~RenderTargetData();
 };
 
-// vftable: dtor 0, AddRef 1, Release 2 (RefCountVImpl)
-class RenderBuffer : public RefCountBaseV<RenderBuffer, StatRender_Mem>
+// (values as the exe compares them: temporary 3, depth stencil 5)
+enum RenderBufferType
+{
+    RBuffer_None,
+    RBuffer_Default,
+    RBuffer_User,
+    RBuffer_Temporary,     // CreateTempRenderTarget
+    RBuffer_Texture,       // wraps a user texture
+    RBuffer_DepthStencil   // CreateDepthStencilBuffer
+};
+
+// vftable: dtor 0, AddRef 1, Release 2; the base reference counting does nothing, the managed buffers override it
+class RenderBuffer : public NewOverrideBase<StatRender_TextureManager_Mem>, public RefCountVImpl
 {
 protected:
     RenderBufferType     Type;                // +0x10
@@ -32,7 +40,23 @@ protected:
     RenderTargetData*    pRenderTargetData;   // +0x20
     ImageSize            BufferSize;          // +0x28
 
+    void destroyRenderTargetData()
+    {
+        if (pRenderTargetData)
+        {
+            delete pRenderTargetData;
+            pRenderTargetData = 0;
+        }
+    }
+
 public:
+    RenderBuffer(RenderBufferManager* manager, RenderBufferType type, const ImageSize& bufferSize)
+        : RefCountVImpl(), Type(type), pManager(manager), pRenderTargetData(0), BufferSize(bufferSize) { }
+    virtual ~RenderBuffer() { destroyRenderTargetData(); }
+
+    virtual void AddRef()  { }
+    virtual void Release() { }
+
     RenderBufferType     GetType() const              { return Type; }
     RenderBufferManager* GetManager() const           { return pManager; }
     RenderTargetData*    GetRenderTargetData() const  { return pRenderTargetData; }
@@ -49,9 +73,10 @@ enum RenderTargetUse
 
 enum RenderTargetStatus
 {
-    RTS_Available,
-    RTS_Lost,
-    RTS_Unresolved
+    RTS_InUse,        // holds content this frame renders with
+    RTS_Available,    // allocated, may hold earlier content
+    RTS_Unresolved,   // in video memory, not resolved to a texture
+    RTS_Lost          // evicted; must be recreated
 };
 
 class RenderTarget : public RenderBuffer
@@ -60,14 +85,50 @@ protected:
     Rect<int> ViewRect;   // +0x30: the drawable area inside the buffer
 
 public:
+    RenderTarget(RenderBufferManager* manager, RenderBufferType type, const ImageSize& bufferSize)
+        : RenderBuffer(manager, type, bufferSize), ViewRect(0, 0, bufferSize.Width, bufferSize.Height) { }
+
     const Rect<int>& GetRect() const { return ViewRect; }
     const ImageSize  GetSize() const { return ImageSize(ViewRect.Width(), ViewRect.Height()); }
 
-    // (appended for sfr_render_04h) vftable after RenderBuffer's: GetTexture 3, GetStatus 4, SetInUse 5 / 6
-    virtual Texture*           GetTexture() const = 0;
-    virtual RenderTargetStatus GetStatus() const = 0;
-    virtual void               SetInUse(RenderTargetUse use) = 0;   // 6 (cl orders the overloads last first)
-    virtual void               SetInUse(bool inUse) = 0;            // 5
+    // (appended for sfr_render_04h) vftable after RenderBuffer's: GetTexture 3, GetStatus 4, SetInUse 5 / 6; the
+    // base forms (0x142732110 / 0x1427320f0 / 0x1427359c0 / 0x1427359b0) forward each SetInUse to the other
+    virtual Texture*           GetTexture() const { return 0; }
+    virtual RenderTargetStatus GetStatus() const  { return RTS_Lost; }
+    virtual void               SetInUse(RenderTargetUse use) { SetInUse(use == RTUse_InUse); }   // 6 (cl orders the overloads last first)
+    virtual void               SetInUse(bool inUse) { SetInUse(inUse ? RTUse_InUse : RTUse_Unused); }   // 5
+};
+
+// vftable: RenderBuffer's, GetSurface 3. The exe has none of its own (its vptr store is dead in every constructor and
+// destructor), hence novtable.
+class __declspec(novtable) DepthStencilBuffer : public RenderBuffer
+{
+public:
+    DepthStencilBuffer(RenderBufferManager* manager, const ImageSize& bufferSize)
+        : RenderBuffer(manager, RBuffer_DepthStencil, bufferSize) { }
+
+    virtual DepthStencilSurface* GetSurface() const { return 0; }
+};
+
+class TextureManager;
+
+// Hands out the render targets and depth stencil buffers the HAL renders filters / cached results into.
+// vftable: dtor 0, Initialize 1, Destroy 2, EndFrame 3, Reset 4, CreateRenderTarget 5, CreateTempRenderTarget 6,
+// CreateDepthStencilBuffer 7
+class RenderBufferManager : public RefCountBase<RenderBufferManager, StatRender_TextureManager_Mem>
+{
+public:
+    virtual ~RenderBufferManager() { }
+
+    virtual bool Initialize(TextureManager* manager, ImageFormat format, const ImageSize& screenSize = ImageSize(0)) = 0;
+    virtual void Destroy() = 0;
+    virtual void EndFrame() = 0;
+    virtual void Reset() = 0;
+
+    virtual RenderTarget*       CreateRenderTarget(const ImageSize& size, RenderBufferType type, ImageFormat format,
+                                                   Texture* texture = 0) = 0;
+    virtual RenderTarget*       CreateTempRenderTarget(const ImageSize& size) = 0;
+    virtual DepthStencilBuffer* CreateDepthStencilBuffer(const ImageSize& size) = 0;
 };
 
 }} // namespace Scaleform::Render
