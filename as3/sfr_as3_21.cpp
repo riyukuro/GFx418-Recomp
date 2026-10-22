@@ -1776,3 +1776,8 @@ void SoundObject::Stop()
 // MS2-PIN: ??_7?$VectorBase@N@AS3@GFx@Scaleform@@6B@ 0x143182460
 // MS2-PIN: ??_7SoundObject@AS3@GFx@Scaleform@@6B?$RefCountBase@VSoundObject@AS3@GFx@Scaleform@@$0BED@@3@@ 0x143182f50
 // MS2-PIN: ??_7SoundObject@AS3@GFx@Scaleform@@6BASSoundIntf@23@@ 0x143182f58
+// MS2-PIN: ??_GSoundObject@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142565020
+// MS2-PIN: ??_GASSoundIntf@GFx@Scaleform@@UEAAPEAXI@Z 0x142564ff0
+// MS2-PIN: ??_G?$RefCountBase@VSoundObject@AS3@GFx@Scaleform@@$0BED@@Scaleform@@UEAAPEAXI@Z 0x142564f90
+// MS2-PIN: ??_7ASSoundIntf@GFx@Scaleform@@6B@ 0x143182f18
+// MS2-PIN: ??_7?$RefCountBase@VSoundObject@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143182f48
