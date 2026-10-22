@@ -118,8 +118,16 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
 #include "ms2/scaleform/include/render/render_color.h"
 
+namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
 // VM::GetValueTraits (exe body).
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// AvmButton::GetDownStateObject / GetHitStateObject / GetOverStateObject / GetUpStateObject (exe bodies).
+Scaleform::GFx::DisplayObject* FUN_142509970(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+Scaleform::GFx::DisplayObject* FUN_14250a600(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+Scaleform::GFx::DisplayObject* FUN_14250cbe0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+Scaleform::GFx::DisplayObject* FUN_14250f960(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+// AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
+void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
 
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
@@ -1388,7 +1396,7 @@ namespace Instances { namespace fl_display
     // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; register
     // assignment follows. Same loads and calls.
     // @0x142452090
-    void DisplayObject::rootGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    SF_NOINLINE void DisplayObject::rootGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
         AvmDisplayObj* pavm = ToAvmDisplayObj(ToAvmDisplayObj(pDispObj)->GetRoot());
         pavm->CreateASInstance(true);
@@ -1415,6 +1423,81 @@ namespace Instances { namespace fl_display
             }
         }
         result = NULL;
+    }
+}}
+
+
+namespace Instances { namespace fl_display
+{
+    // A button state character's AS3 object, null when the state has none.
+    static SF_FORCEINLINE void SetButtonStateResult(SPtr<Instances::fl_display::DisplayObject>& result, GFx::DisplayObject* pch)
+    {
+        if (pch)
+        {
+            result = ToAvmDisplayObj(pch)->GetAS3Obj();
+            return;
+        }
+        result = NULL;
+    }
+
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x142449e00
+    SF_NOINLINE void SimpleButton::downStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        SetButtonStateResult(result, FUN_142509970(ToAvmDisplayObj(pDispObj)));
+    }
+
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x14244f4a0
+    SF_NOINLINE void SimpleButton::hitTestStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        SetButtonStateResult(result, FUN_14250a600(ToAvmDisplayObj(pDispObj)));
+    }
+
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x142450e50
+    SF_NOINLINE void SimpleButton::overStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        SetButtonStateResult(result, FUN_14250cbe0(ToAvmDisplayObj(pDispObj)));
+    }
+
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x142454700
+    SF_NOINLINE void SimpleButton::upStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        SetButtonStateResult(result, FUN_14250f960(ToAvmDisplayObj(pDispObj)));
+    }
+
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov, and shrink-wraps differently; same loads and calls
+    // @0x14244ffb0
+    SF_NOINLINE void DisplayObject::loaderInfoGet(SPtr<Instances::fl_display::LoaderInfo>& result)
+    {
+        // A timeline-placed object shares the loader info of its movie's root.
+        DisplayObject* pobj = this;
+        if (pDispObj->Flags & GFx::DisplayObject::Mask_TimelineObject)
+            pobj = ToAvmDisplayObj(ToAvmDisplayObj(pDispObj)->GetRoot())->GetAS3Obj();
+        result = pobj->pLoaderInfo;
+    }
+
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x1424504a0
+    SF_NOINLINE void DisplayObject::maskGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        result = NULL;
+        if (pDispObj && pDispObj->GetMask())
+            result = ToAvmDisplayObj(pDispObj->GetMask())->GetAS3Obj();
+    }
+
+    // MS2-FUNCTIONAL: register allocation of the inlined SPtr<BitmapData> assignment (exe keeps the old pointer in rdx); same loads, stores and calls
+    // @0x142448550
+    void Bitmap::bitmapDataSet(const Value& result, Instances::fl_display::BitmapData* value)
+    {
+        SF_UNUSED(result);
+        pBitmapData = value;
+        if (pDispObj)
+            FUN_142528e70(pDispObj, value ? value->pDefImpl.GetPtr() : NULL);
+        if (pDispObj)
+            FUN_142520b20(pDispObj);
     }
 }}
 
@@ -1499,7 +1582,7 @@ namespace Instances { namespace fl_display
 
     // @0x14244c080
     // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<InteractiveObject>::operator= instance (0x14243d790); ours inlines it
-    void Stage::focusGet(SPtr<Instances::fl_display::InteractiveObject>& result)
+    SF_NOINLINE void Stage::focusGet(SPtr<Instances::fl_display::InteractiveObject>& result)
     {
         Ptr<GFx::InteractiveObject> focused = FocusedCharacter0(static_cast<ASVM&>(GetVM()).GetMovieImpl());
         if (focused)
@@ -1729,7 +1812,7 @@ namespace Instances { namespace fl_display
     // MS2-FUNCTIONAL: exe tail-calls SwapChildren for a null container and merges the AS3-part paths; ours
     // duplicates the call tail per path. Same loads and calls.
     // @0x142453890
-    void DisplayObjectContainer::swapChildren(const Value& result, Instances::fl_display::DisplayObject* child1,
+    SF_NOINLINE void DisplayObjectContainer::swapChildren(const Value& result, Instances::fl_display::DisplayObject* child1,
                                               Instances::fl_display::DisplayObject* child2)
     {
         SF_UNUSED(result);
@@ -1743,7 +1826,7 @@ namespace Instances { namespace fl_display
     // MS2-FUNCTIONAL: exe tail-calls the out-of-line Value::SetUndefined (0x142423b90) and Assign(Object*); ours inlines
     // SetUndefined and shrink-wraps the rdi save. Same checks and calls.
     // @0x142451dc0
-    void DisplayObjectContainer::removeChild(Value& result, unsigned argc, const Value* argv)
+    SF_NOINLINE void DisplayObjectContainer::removeChild(Value& result, unsigned argc, const Value* argv)
     {
         if (argc < 1 || argv[0].IsNullOrUndefined() || !argv[0].IsObject())
         {
