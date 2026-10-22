@@ -6,14 +6,44 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
+#include "ms2/scaleform/include/gfx/gfx_moviedef.h"
+#include "ms2/scaleform/include/gfx/gfx_drawingcontext.h"
+#include "ms2/scaleform/include/gfx/gfx_imageresource.h"
+#include "ms2/scaleform/include/gfx/gfx_sprite.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// Hands a display object over to a running collection (DisplayObject::pReleaseProxy). Same layout as
+// RefCountCollector<Stat>::PtrReleaseProxy, whose delayed-release chain it joins; Data2 is a counted pointer here.
+template <int Stat>
+class PtrReleaseProxy : public RefCountBase<PtrReleaseProxy<Stat>, Stat>
+{
+public:
+    Ptr<RefCountNTSImpl>        Data;   // +0x10
+    SPtr<ASRefCountBaseType>    Data2;  // +0x18
+    Ptr<PtrReleaseProxy>        pNext;  // +0x20
+};
+
 namespace Instances { namespace fl_display {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x68 bytes; implements IBitmapDrawable.
     class DisplayObject : public Instances::fl_events::EventDispatcher
     {
     public:
+        typedef AS3::PtrReleaseProxy<StatMV_VM> ReleaseProxy;
+
+        DisplayObject(InstanceTraits::Traits& t);
+        virtual ~DisplayObject();
+        // @0x142443510
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::DisplayObject"; }
+        virtual GFx::DisplayObject* CreateStageObject();
+        virtual String GetAS3ObjectName() const;
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        SPtr<Instances::fl_display::LoaderInfo> pLoaderInfo;    // +0x50
+        Ptr<GFx::DisplayObject>                 pDispObj;       // +0x58: the display object this instance scripts
+        Ptr<ReleaseProxy>                       pReleaseProxy;  // +0x60: hands pDispObj to the collector when dying in a collection
+
         // @0x142447480
         void accessibilityPropertiesGet(SPtr<Instances::fl_accessibility::AccessibilityProperties>& result);
         // @0x1424474a0
@@ -140,10 +170,32 @@ namespace Instances { namespace fl_display {
         void zSet(const Value& result, Value::Number);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x68 bytes: no members of its own.
+    class AVM1Movie : public Instances::fl_display::DisplayObject
+    {
+    public:
+        AVM1Movie(InstanceTraits::Traits& t);
+        // @0x142443400
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::AVM1Movie"; }
+    };
+
+    // 0x78 bytes.
     class Bitmap : public Instances::fl_display::DisplayObject
     {
     public:
+        Bitmap(InstanceTraits::Traits& t);
+        // @0x142443450
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Bitmap"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        virtual void InitInstance(bool extCall);         // 0x142444600
+        virtual GFx::DisplayObject* CreateStageObject();
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        SPtr<Instances::fl_display::BitmapData> pBitmapData;    // +0x68
+        SInt32                                  PixelSnapping;  // +0x70
+        bool                                    Smoothing;      // +0x74
+
         // @0x1424484e0
         void bitmapDataGet(SPtr<Instances::fl_display::BitmapData>& result);
         // @0x142448550
@@ -158,10 +210,25 @@ namespace Instances { namespace fl_display {
         void smoothingSet(const Value& result, bool);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x60 bytes; implements IBitmapDrawable.
     class BitmapData : public Instances::fl::Object
     {
     public:
+        BitmapData(InstanceTraits::Traits& t);
+        virtual ~BitmapData();
+        // @0x142443480
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::BitmapData"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        virtual void InitInstance(bool extCall);         // 0x142444610
+        Ptr<ImageResource>      pImageResource; // +0x38
+        Ptr<Render::ImageBase>  pImage;         // +0x40
+        Ptr<MovieDefImpl>       pDefImpl;       // +0x48
+        SInt32                  Width;          // +0x50
+        SInt32                  Height;         // +0x54
+        bool                    Transparent;    // +0x58
+        bool                    Unk59;          // +0x59
+        UInt32                  FillColor;      // +0x5c: not set by the constructor
+
         // @0x142447f10
         void applyFilter(const Value& result, Instances::fl_display::BitmapData*, Instances::fl_geom::Rectangle*, Instances::fl_geom::Point*, Instances::fl_filters::BitmapFilter*);
         // @0x142448a00
@@ -234,10 +301,19 @@ namespace Instances { namespace fl_display {
         void widthGet(SInt32& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes.
     class InteractiveObject : public Instances::fl_display::DisplayObject
     {
     public:
+        InteractiveObject(InstanceTraits::Traits& t);
+        virtual ~InteractiveObject();
+        // @0x142443600
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::InteractiveObject"; }
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        SPtr<Instances::fl::Object> pContextMenu;   // +0x68
+
         // @0x1424490d0
         void contextMenuGet(SPtr<Instances::fl::Object>& result);
         // @0x142449140
@@ -264,9 +340,15 @@ namespace Instances { namespace fl_display {
         void tabIndexSet(const Value& result, SInt32);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes: no members of its own; the GC visitor also visits the AS3 objects of the children.
     class DisplayObjectContainer : public Instances::fl_display::InteractiveObject
     {
+    public:
+        DisplayObjectContainer(InstanceTraits::Traits& t);
+        // @0x142443540
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::DisplayObjectContainer"; }
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
     public:
         // @0x1424474f0
         void addChild(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject*);
@@ -308,20 +390,32 @@ namespace Instances { namespace fl_display {
         void textSnapshotGet(SPtr<Instances::fl_text::TextSnapshot>& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x48 bytes.
     class FrameLabel : public Instances::fl::Object
     {
     public:
+        FrameLabel(InstanceTraits::Traits& t);
+        // @0x142443570
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::FrameLabel"; }
+        UInt32      FrameNumber;    // +0x38
+        ASString    FrameName;      // +0x40
+
         // @0x14244c3a0
         void frameGet(SInt32& result);
         // @0x1424509c0
         void nameGet(ASString& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x48 bytes.
     class Graphics : public Instances::fl::Object
     {
     public:
+        Graphics(InstanceTraits::Traits& t);
+        // @0x1424435c0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Graphics"; }
+        Ptr<DrawingContext>     pDrawing;   // +0x38
+        GFx::DisplayObject*     pDispObj;   // +0x40
+
         // @0x1424482e0
         void beginBitmapFill(const Value& result, Instances::fl_display::BitmapData*, Instances::fl_geom::Matrix*, bool, bool);
         // @0x142448400
@@ -354,10 +448,20 @@ namespace Instances { namespace fl_display {
         void moveTo(const Value& result, Value::Number, Value::Number);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x78 bytes.
     class Loader : public Instances::fl_display::DisplayObjectContainer
     {
     public:
+        Loader(InstanceTraits::Traits& t);
+        // @0x142443690
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Loader"; }
+        virtual void InitInstance(bool extCall);         // 0x142444620
+        virtual GFx::DisplayObject* CreateStageObject();
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        SPtr<Instances::fl_display::LoaderInfo> pContentLoaderInfo; // +0x70
+
         // @0x142448b80
         void close(const Value& result);
         // @0x142448f50
@@ -374,10 +478,21 @@ namespace Instances { namespace fl_display {
         void unloadAndStop(const Value& result, bool);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x68 bytes.
     class LoaderInfo : public Instances::fl_events::EventDispatcher
     {
     public:
+        LoaderInfo(InstanceTraits::Traits& t);
+        // @0x1424436d0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::LoaderInfo"; }
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        UInt32                                      BytesLoaded;    // +0x50
+        UInt32                                      BytesTotal;     // +0x54
+        SPtr<Instances::fl_display::DisplayObject>  Content;        // +0x58
+        SPtr<Instances::fl_display::Loader>         pLoader;        // +0x60
+
         // @0x1424474c0
         void actionScriptVersionGet(UInt32& result);
         // @0x142447e50
@@ -426,10 +541,25 @@ namespace Instances { namespace fl_display {
         void widthGet(SInt32& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x78 bytes.
     class Sprite : public Instances::fl_display::DisplayObjectContainer
     {
     public:
+        Sprite(InstanceTraits::Traits& t);
+        virtual ~Sprite();
+        // @0x142443870
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Sprite"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        virtual void InitInstance(bool extCall);         // 0x142444a00
+        virtual GFx::DisplayObject* CreateStageObject();
+        virtual bool HasFrameScript() const;                 // 0x1424445e0
+        virtual bool GetFrameScript(unsigned frame, Value* pv); // 0x142443e10
+        virtual bool IsMovieClip() const;                    // 0x142444bf0
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        SPtr<Instances::fl_display::Graphics>   pGraphics;  // +0x70
+
         // @0x1424487c0
         void buttonModeGet(bool& result);
         // @0x1424487e0
@@ -456,10 +586,52 @@ namespace Instances { namespace fl_display {
         void useHandCursorSet(const Value& result, bool);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x88 bytes.
     class MovieClip : public Instances::fl_display::Sprite
     {
     public:
+        // Frame scripts set by addFrameScript: a bit array of the set frames followed by the descriptors, sorted by
+        // frame.
+        struct FrameScript
+        {
+            // 0x28 bytes.
+            struct Descr
+            {
+                Descr(const Value& method, UInt32 frame) : Method(method), Frame(frame) {}
+                Descr(const Descr& other);
+
+                static bool Less(const Descr& a, const Descr& b) { return a.Frame < b.Frame; }
+
+                Value   Method; // +0x00
+                UInt32  Frame;  // +0x20
+            };
+
+            FrameScript() : pData(0), DescrCnt(0), FrameCnt(0) {}
+            ~FrameScript() { Clear(); }
+
+            void Clear();
+            const Descr* Get(unsigned frame);
+            void ForEachChild_GC(Collector* prcc, GcOp op, const Instances::fl::Object& owner) const;
+
+            bool    IsSet(unsigned frame) const { return (reinterpret_cast<const UByte*>(pData)[frame >> 3] & (1 << (frame & 7))) != 0; }
+            Descr*  GetDescrs() const   { return reinterpret_cast<Descr*>(reinterpret_cast<UInt32*>(pData) + ((FrameCnt + 31) >> 5)); }
+
+            void*   pData;      // +0x00: (FrameCnt + 31) / 32 words of bits, then the values
+            UInt16  DescrCnt;   // +0x08: number of values
+            UInt16  FrameCnt;   // +0x0a
+        };
+
+        MovieClip(InstanceTraits::Traits& t);
+        // @0x142443730
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::MovieClip"; }
+        virtual bool HasFrameScript() const;                 // 0x1424445d0
+        virtual bool GetFrameScript(unsigned frame, Value* pv);
+        virtual bool IsMovieClip() const;                    // 0x142444be0
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        FrameScript frameScript;    // +0x78
+
         // @0x1424478a0
         void addFrameScript(Value& result, unsigned, const Value*);
         // @0x1424496a0
@@ -504,6 +676,15 @@ namespace Instances { namespace fl_display {
         void trackAsMenuSet(const Value& result, bool);
     };
 
+    // 0x68 bytes: no members of its own.
+    class MorphShape : public Instances::fl_display::DisplayObject
+    {
+    public:
+        MorphShape(InstanceTraits::Traits& t);
+        // @0x142443700
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::MorphShape"; }
+    };
+
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class NativeMenu : public Instances::fl::Object
     {
@@ -514,10 +695,16 @@ namespace Instances { namespace fl_display {
     {
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x48 bytes.
     class Scene : public Instances::fl::Object
     {
     public:
+        Scene(InstanceTraits::Traits& t);
+        // @0x1424437a0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Scene"; }
+        const MovieDataDef::SceneInfo*  SceneInfo;  // +0x38
+        Ptr<GFx::Sprite>                SpriteObj;  // +0x40
+
         // @0x14244f5b0
         void labelsGet(SPtr<Instances::fl::Array>& result);
         // @0x142450a00
@@ -526,18 +713,36 @@ namespace Instances { namespace fl_display {
         void numFramesGet(SInt32& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes.
     class Shape : public Instances::fl_display::DisplayObject
     {
     public:
+        Shape(InstanceTraits::Traits& t);
+        virtual ~Shape();
+        // @0x1424437f0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Shape"; }
+        virtual void InitInstance(bool extCall);         // 0x1424447c0
+        virtual GFx::DisplayObject* CreateStageObject();
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+    public:
+        SPtr<Instances::fl_display::Graphics>   pGraphics;  // +0x68
+
         // @0x14244e2e0
         void graphicsGet(SPtr<Instances::fl_display::Graphics>& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes: no members of its own yet.
     class SimpleButton : public Instances::fl_display::InteractiveObject
     {
     public:
+        SimpleButton(InstanceTraits::Traits& t);
+        // @0x142443820
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::SimpleButton"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+        virtual void InitInstance(bool extCall);         // 0x142444890
+        virtual GFx::DisplayObject* CreateStageObject();
+
         // @0x142449e00
         void downStateGet(SPtr<Instances::fl_display::DisplayObject>& result);
         // @0x142449e80
@@ -572,10 +777,14 @@ namespace Instances { namespace fl_display {
         void useHandCursorSet(const Value& result, bool);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes: no members of its own.
     class Stage : public Instances::fl_display::DisplayObjectContainer
     {
     public:
+        Stage(InstanceTraits::Traits& t);
+        // @0x1424438b0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Stage"; }
+
         // @0x142447630
         void addChild(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject*);
         // @0x142447820
@@ -685,20 +894,753 @@ namespace Instances { namespace fl_display {
 }}
 
 namespace Classes { namespace fl_display {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class LoaderInfo : public Class
     {
     public:
+        LoaderInfo(ClassTraits::Traits& t);
+        // @0x1424436b0
+        virtual const char* GetAS3ObjectType() const { return "Classes::LoaderInfo"; }
+
         // @0x14244d1a0
         void getLoaderInfoByDefinition(SPtr<Instances::fl_display::LoaderInfo>& result, const Value&);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Stage : public Class
     {
     public:
+        Stage(ClassTraits::Traits& t);
+        // @0x142443890
+        virtual const char* GetAS3ObjectType() const { return "Classes::Stage"; }
+
         // @0x142453880
         void supportsOrientationChangeGet(bool& result);
+    };
+
+    // 0x58 bytes.
+    class ActionScriptVersion : public Class
+    {
+    public:
+        ActionScriptVersion(ClassTraits::Traits& t);
+        // @0x142443420
+        virtual const char* GetAS3ObjectType() const { return "Classes::ActionScriptVersion"; }
+
+        UInt32 Actionscript2; // +0x50
+        UInt32 Actionscript3; // +0x54
+    };
+
+    // 0x60 bytes.
+    class BitmapDataChannel : public Class
+    {
+    public:
+        BitmapDataChannel(ClassTraits::Traits& t);
+        // @0x1424434a0
+        virtual const char* GetAS3ObjectType() const { return "Classes::BitmapDataChannel"; }
+
+        UInt32 Alpha; // +0x50
+        UInt32 Blue;  // +0x54
+        UInt32 Green; // +0x58
+        UInt32 Red;   // +0x5c
+    };
+
+    // 0xc0 bytes.
+    class BlendMode : public Class
+    {
+    public:
+        BlendMode(ClassTraits::Traits& t);
+        // @0x1424434c0
+        virtual const char* GetAS3ObjectType() const { return "Classes::fl_display::BlendMode"; }
+
+        const char* Add;        // +0x50
+        const char* Alpha;      // +0x58
+        const char* Darken;     // +0x60
+        const char* Difference; // +0x68
+        const char* Erase;      // +0x70
+        const char* Hardlight;  // +0x78
+        const char* Invert;     // +0x80
+        const char* Layer;      // +0x88
+        const char* Lighten;    // +0x90
+        const char* Multiply;   // +0x98
+        const char* Normal;     // +0xa0
+        const char* Overlay;    // +0xa8
+        const char* Screen;     // +0xb0
+        const char* Subtract;   // +0xb8
+    };
+
+    // 0x68 bytes.
+    class CapsStyle : public Class
+    {
+    public:
+        CapsStyle(ClassTraits::Traits& t);
+        // @0x1424434e0
+        virtual const char* GetAS3ObjectType() const { return "Classes::CapsStyle"; }
+
+        const char* None;   // +0x50
+        const char* Round;  // +0x58
+        const char* Square; // +0x60
+    };
+
+    // 0x60 bytes.
+    class GradientType : public Class
+    {
+    public:
+        GradientType(ClassTraits::Traits& t);
+        // @0x142443590
+        virtual const char* GetAS3ObjectType() const { return "Classes::GradientType"; }
+
+        const char* Linear; // +0x50
+        const char* Radial; // +0x58
+    };
+
+    // 0x60 bytes.
+    class InterpolationMethod : public Class
+    {
+    public:
+        InterpolationMethod(ClassTraits::Traits& t);
+        // @0x142443620
+        virtual const char* GetAS3ObjectType() const { return "Classes::InterpolationMethod"; }
+
+        const char* LinearRgb;  // +0x50
+        const char* Rgb;        // +0x58
+    };
+
+    // 0x68 bytes.
+    class JointStyle : public Class
+    {
+    public:
+        JointStyle(ClassTraits::Traits& t);
+        // @0x142443640
+        virtual const char* GetAS3ObjectType() const { return "Classes::JointStyle"; }
+
+        const char* Bevel; // +0x50
+        const char* Miter; // +0x58
+        const char* Round; // +0x60
+    };
+
+    // 0x70 bytes.
+    class LineScaleMode : public Class
+    {
+    public:
+        LineScaleMode(ClassTraits::Traits& t);
+        // @0x142443660
+        virtual const char* GetAS3ObjectType() const { return "Classes::LineScaleMode"; }
+
+        const char* Horizontal; // +0x50
+        const char* None;       // +0x58
+        const char* Normal;     // +0x60
+        const char* Vertical;   // +0x68
+    };
+
+    // 0x68 bytes.
+    class PixelSnapping : public Class
+    {
+    public:
+        PixelSnapping(ClassTraits::Traits& t);
+        // @0x142443750
+        virtual const char* GetAS3ObjectType() const { return "Classes::PixelSnapping"; }
+
+        const char* Always; // +0x50
+        const char* Auto;   // +0x58
+        const char* Never;  // +0x60
+    };
+
+    // 0x78 bytes.
+    class SWFVersion : public Class
+    {
+    public:
+        SWFVersion(ClassTraits::Traits& t);
+        // @0x142443770
+        virtual const char* GetAS3ObjectType() const { return "Classes::SWFVersion"; }
+
+        UInt32 Flash1;  // +0x50
+        UInt32 Flash2;  // +0x54
+        UInt32 Flash3;  // +0x58
+        UInt32 Flash4;  // +0x5c
+        UInt32 Flash5;  // +0x60
+        UInt32 Flash6;  // +0x64
+        UInt32 Flash7;  // +0x68
+        UInt32 Flash8;  // +0x6c
+        UInt32 Flash9;  // +0x70
+        UInt32 Flash10; // +0x74: not set by the constructor
+    };
+
+    // 0x68 bytes.
+    class SpreadMethod : public Class
+    {
+    public:
+        SpreadMethod(ClassTraits::Traits& t);
+        // @0x142443840
+        virtual const char* GetAS3ObjectType() const { return "Classes::SpreadMethod"; }
+
+        const char* Pad;     // +0x50
+        const char* Reflect; // +0x58
+        const char* Repeat;  // +0x60
+    };
+
+    // 0x90 bytes.
+    class StageAlign : public Class
+    {
+    public:
+        StageAlign(ClassTraits::Traits& t);
+        // @0x1424438d0
+        virtual const char* GetAS3ObjectType() const { return "Classes::StageAlign"; }
+
+        const char* Bottom;       // +0x50
+        const char* BottomLeft;   // +0x58
+        const char* BottomRight;  // +0x60
+        const char* Left;         // +0x68
+        const char* Right;        // +0x70
+        const char* Top;          // +0x78
+        const char* TopLeft;      // +0x80
+        const char* TopRight;     // +0x88
+    };
+
+    // 0x68 bytes.
+    class StageDisplayState : public Class
+    {
+    public:
+        StageDisplayState(ClassTraits::Traits& t);
+        // @0x1424438f0
+        virtual const char* GetAS3ObjectType() const { return "Classes::StageDisplayState"; }
+
+        const char* FullScreen;              // +0x50
+        const char* FullScreenInteractive;   // +0x58
+        const char* Normal;                  // +0x60
+    };
+
+    // 0x70 bytes.
+    class StageQuality : public Class
+    {
+    public:
+        StageQuality(ClassTraits::Traits& t);
+        // @0x142443910
+        virtual const char* GetAS3ObjectType() const { return "Classes::StageQuality"; }
+
+        const char* Best;   // +0x50
+        const char* High;   // +0x58
+        const char* Low;    // +0x60
+        const char* Medium; // +0x68
+    };
+
+    // 0x70 bytes.
+    class StageScaleMode : public Class
+    {
+    public:
+        StageScaleMode(ClassTraits::Traits& t);
+        // @0x142443930
+        virtual const char* GetAS3ObjectType() const { return "Classes::StageScaleMode"; }
+
+        const char* ExactFit;  // +0x50
+        const char* NoBorder;  // +0x58
+        const char* NoScale;   // +0x60
+        const char* ShowAll;   // +0x68
+    };
+
+}}
+
+namespace InstanceTraits { namespace fl_display {
+    class AVM1Movie : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::AVM1Movie InstanceType;
+
+        AVM1Movie(VM& vm, const ClassInfo& ci);
+        // @0x1424433f0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::AVM1Movie"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445480
+    };
+
+    class Bitmap : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::Bitmap InstanceType;
+
+        Bitmap(VM& vm, const ClassInfo& ci);
+        // @0x142443440
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Bitmap"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424454e0
+    };
+
+    class BitmapData : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::BitmapData InstanceType;
+
+        BitmapData(VM& vm, const ClassInfo& ci);
+        // @0x142443470
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl_display::BitmapData"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445550
+    };
+
+    class DisplayObject : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::DisplayObject InstanceType;
+
+        DisplayObject(VM& vm, const ClassInfo& ci);
+        // @0x142443500
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::DisplayObject"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424455d0
+    };
+
+    class DisplayObjectContainer : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::DisplayObjectContainer InstanceType;
+
+        DisplayObjectContainer(VM& vm, const ClassInfo& ci);
+        // @0x142443530
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::DisplayObjectContainer"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445610
+    };
+
+    class FrameLabel : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::FrameLabel InstanceType;
+
+        FrameLabel(VM& vm, const ClassInfo& ci);
+        // @0x142443560
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::FrameLabel"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445670
+    };
+
+    class Graphics : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::Graphics InstanceType;
+
+        Graphics(VM& vm, const ClassInfo& ci);
+        // @0x1424435b0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Graphics"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424456f0
+    };
+
+    class InteractiveObject : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::InteractiveObject InstanceType;
+
+        InteractiveObject(VM& vm, const ClassInfo& ci);
+        // @0x1424435f0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::InteractiveObject"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445760
+    };
+
+    class Loader : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::Loader InstanceType;
+
+        Loader(VM& vm, const ClassInfo& ci);
+        // @0x142443680
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Loader"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424457c0
+    };
+
+    class LoaderInfo : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::LoaderInfo InstanceType;
+
+        LoaderInfo(VM& vm, const ClassInfo& ci);
+        // @0x1424436c0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::LoaderInfo"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445830
+    };
+
+    class MorphShape : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::MorphShape InstanceType;
+
+        MorphShape(VM& vm, const ClassInfo& ci);
+        // @0x1424436f0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::MorphShape"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424458a0
+    };
+
+    class MovieClip : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::MovieClip InstanceType;
+
+        MovieClip(VM& vm, const ClassInfo& ci);
+        // @0x142443720
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::MovieClip"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445900
+    };
+
+    class Scene : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::Scene InstanceType;
+
+        Scene(VM& vm, const ClassInfo& ci);
+        // @0x142443790
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Scene"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445970
+    };
+
+    class Shape : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::Shape InstanceType;
+
+        Shape(VM& vm, const ClassInfo& ci);
+        // @0x1424437e0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Shape"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424459e0
+    };
+
+    class SimpleButton : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::SimpleButton InstanceType;
+
+        SimpleButton(VM& vm, const ClassInfo& ci);
+        // @0x142443810
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::SimpleButton"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445a40
+    };
+
+    class Sprite : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::Sprite InstanceType;
+
+        Sprite(VM& vm, const ClassInfo& ci);
+        // @0x142443860
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Sprite"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445aa0
+    };
+
+    class Stage : public CTraits
+    {
+    public:
+        typedef Instances::fl_display::Stage InstanceType;
+
+        Stage(VM& vm, const ClassInfo& ci);
+        // @0x1424438a0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Stage"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x142445b10
+    };
+
+}}
+
+namespace ClassTraits { namespace fl_display {
+    class AVM1Movie : public Traits
+    {
+    public:
+        AVM1Movie(VM& vm);
+        // @0x1424433e0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::AVM1Movie"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class ActionScriptVersion : public Traits
+    {
+    public:
+        ActionScriptVersion(VM& vm);
+        // @0x142443410
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::ActionScriptVersion"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Bitmap : public Traits
+    {
+    public:
+        Bitmap(VM& vm);
+        // @0x142443430
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Bitmap"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class BitmapData : public Traits
+    {
+    public:
+        BitmapData(VM& vm);
+        // @0x142443460
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::BitmapData"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class BitmapDataChannel : public Traits
+    {
+    public:
+        BitmapDataChannel(VM& vm);
+        // @0x142443490
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::BitmapDataChannel"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class BlendMode : public Traits
+    {
+    public:
+        BlendMode(VM& vm);
+        // @0x1424434b0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::BlendMode"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class CapsStyle : public Traits
+    {
+    public:
+        CapsStyle(VM& vm);
+        // @0x1424434d0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::CapsStyle"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class DisplayObject : public Traits
+    {
+    public:
+        DisplayObject(VM& vm);
+        // @0x1424434f0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::DisplayObject"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class DisplayObjectContainer : public Traits
+    {
+    public:
+        DisplayObjectContainer(VM& vm);
+        // @0x142443520
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::DisplayObjectContainer"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class FrameLabel : public Traits
+    {
+    public:
+        FrameLabel(VM& vm);
+        // @0x142443550
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::FrameLabel"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class GradientType : public Traits
+    {
+    public:
+        GradientType(VM& vm);
+        // @0x142443580
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::GradientType"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Graphics : public Traits
+    {
+    public:
+        Graphics(VM& vm);
+        // @0x1424435a0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Graphics"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class IBitmapDrawable : public Traits
+    {
+    public:
+        IBitmapDrawable(VM& vm);
+        // @0x1424435d0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::IBitmapDrawable"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class InteractiveObject : public Traits
+    {
+    public:
+        InteractiveObject(VM& vm);
+        // @0x1424435e0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::InteractiveObject"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class InterpolationMethod : public Traits
+    {
+    public:
+        InterpolationMethod(VM& vm);
+        // @0x142443610
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::InterpolationMethod"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class JointStyle : public Traits
+    {
+    public:
+        JointStyle(VM& vm);
+        // @0x142443630
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::JointStyle"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class LineScaleMode : public Traits
+    {
+    public:
+        LineScaleMode(VM& vm);
+        // @0x142443650
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::LineScaleMode"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Loader : public Traits
+    {
+    public:
+        Loader(VM& vm);
+        // @0x142443670
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Loader"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class LoaderInfo : public Traits
+    {
+    public:
+        LoaderInfo(VM& vm);
+        // @0x1424436a0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::LoaderInfo"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class MorphShape : public Traits
+    {
+    public:
+        MorphShape(VM& vm);
+        // @0x1424436e0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::MorphShape"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class MovieClip : public Traits
+    {
+    public:
+        MovieClip(VM& vm);
+        // @0x142443710
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::MovieClip"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class PixelSnapping : public Traits
+    {
+    public:
+        PixelSnapping(VM& vm);
+        // @0x142443740
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::PixelSnapping"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class SWFVersion : public Traits
+    {
+    public:
+        SWFVersion(VM& vm);
+        // @0x142443760
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::SWFVersion"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Scene : public Traits
+    {
+    public:
+        Scene(VM& vm);
+        // @0x142443780
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Scene"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Shader : public Traits
+    {
+    public:
+        Shader(VM& vm);
+        // @0x1424437b0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Shader"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class ShaderData : public Traits
+    {
+    public:
+        ShaderData(VM& vm);
+        // @0x1424437c0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::ShaderData"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Shape : public Traits
+    {
+    public:
+        Shape(VM& vm);
+        // @0x1424437d0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Shape"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class SimpleButton : public Traits
+    {
+    public:
+        SimpleButton(VM& vm);
+        // @0x142443800
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::SimpleButton"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class SpreadMethod : public Traits
+    {
+    public:
+        SpreadMethod(VM& vm);
+        // @0x142443830
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::SpreadMethod"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Sprite : public Traits
+    {
+    public:
+        Sprite(VM& vm);
+        // @0x142443850
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Sprite"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Stage : public Traits
+    {
+    public:
+        Stage(VM& vm);
+        // @0x142443880
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Stage"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class StageAlign : public Traits
+    {
+    public:
+        StageAlign(VM& vm);
+        // @0x1424438c0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageAlign"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class StageDisplayState : public Traits
+    {
+    public:
+        StageDisplayState(VM& vm);
+        // @0x1424438e0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageDisplayState"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class StageQuality : public Traits
+    {
+    public:
+        StageQuality(VM& vm);
+        // @0x142443900
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageQuality"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class StageScaleMode : public Traits
+    {
+    public:
+        StageScaleMode(VM& vm);
+        // @0x142443920
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageScaleMode"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
     };
 
 }}

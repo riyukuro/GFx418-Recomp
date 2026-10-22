@@ -38,6 +38,8 @@ public:
 
     MovieRoot*  GetAS3Root() const;
     MovieImpl*  GetMovieImpl() const    { return pDispObj->GetMovieImpl(); }
+    // Drops the AS3 object (0x142521eb0).
+    void        ReleaseAS3Obj();
     Ptr<Log>    GetLog() const          { return GetMovieImpl()->GetLog(); }
 };
 
