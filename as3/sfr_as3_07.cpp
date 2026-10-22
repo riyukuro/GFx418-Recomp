@@ -149,6 +149,8 @@ void FUN_1425eed00(Scaleform::Render::ImageBase* pimage, int x, int y);
 void FUN_1425ec9e0(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Point<Scaleform::SInt32>& pt, const Scaleform::Render::Color& color);
 // Fills a rect of a bitmap image with one color (exe body).
 void FUN_1425ec860(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Rect<Scaleform::SInt32>& rect, const Scaleform::Render::Color& color);
+// Applies a color transform to a rect of a bitmap image (exe body).
+void FUN_1425eb200(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Rect<Scaleform::SInt32>& rect, const Scaleform::Render::Cxform& cxform);
 // Fills a bitmap image with random noise (exe body).
 void FUN_1425eddc0(Scaleform::Render::ImageBase* pimage, Scaleform::SInt32 randomSeed, Scaleform::UInt32 low, Scaleform::UInt32 high,
                    Scaleform::UInt32 channelOptions, bool grayScale);
@@ -1010,6 +1012,37 @@ namespace Instances { namespace fl_display
         }
         FUN_1425eed00(pImage, x, y);
     }
+
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: exe keeps pImage and this in registers across the cxform call (push rsi frame); ours reloads pImage after it; same checks and calls
+    // @0x142448ba0
+    void BitmapData::colorTransform(const Value& result, Instances::fl_geom::Rectangle* rect, Instances::fl_geom::ColorTransform* cTransform)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!rect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eIllegalOperationError, vm, "rect"));
+        }
+        else if (!cTransform)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eIllegalOperationError, vm, "colorTransform"));
+        }
+        else
+        {
+            Render::Cxform cxform = ClassTraits::fl_geom::ColorTransform::GetCxformFromColorTransform(cTransform);
+            Render::ImageBase* pimage = this ? pImage.GetPtr() : NULL;
+            Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
+            FUN_1425eb200(pimage, r, cxform);
+        }
+    }
+#pragma strict_gs_check(pop)
 
 #pragma strict_gs_check(push, on)
     // MS2-FUNCTIONAL: exe keeps this in rdx from the entry and picks the image (this-null cmov) before the rect; same loads and calls
