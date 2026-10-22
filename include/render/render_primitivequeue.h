@@ -46,19 +46,14 @@ public:
     void*      GetData() const      { return Data; }
     Interface* GetInterface() const { return pImpl; }
 
+    // (appended for sfr_render_07j)
+    void            Clear() { pImpl = 0; Data = 0; }
+    QIPrepareResult Prepare(RenderQueueProcessor& qp, bool waitForCache) { return pImpl->Prepare(*this, qp, waitForCache); }
+    void            EmitToHAL(RenderQueueProcessor& qp)                  { pImpl->EmitToHAL(*this, qp); }
+
 protected:
     Interface* pImpl;
     void*      Data;
-};
-
-// Walks the render queue for one HAL; only the HAL pointer (its first member) is read so far.
-class RenderQueueProcessor
-{
-public:
-    HAL* GetHAL() const { return pHAL; }
-
-protected:
-    HAL* pHAL;   // +0x00
 };
 
 // The meshes one fill draws, each with its matrix handle, split into batches that share a cache item.

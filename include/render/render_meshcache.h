@@ -41,12 +41,15 @@ class RQCacheInterface
     unsigned   LockFlags;              // +0x10
 
 public:
-    RQCacheInterface() : LockFlags(0) { pCaches[Cache_Mesh] = pCaches[Cache_Glyph] = 0; }
+    RQCacheInterface() : LockFlags(0) { pCaches[Cache_Mesh] = 0; pCaches[Cache_Glyph] = 0; }
 
     void       SetCache(CacheType t, CacheBase* cache) { pCaches[t] = cache; }
     CacheBase* GetCache(CacheType t) const             { return pCaches[t]; }
     void       SetCacheLocked(CacheType t)             { LockFlags |= 1u << t; }
     void       ClearCacheLocked(CacheType t)           { LockFlags &= ~(1u << t); }
+    // (appended for sfr_render_07j) unlocks the buffers of every locked cache, 0x1426e0450
+    void       UnlockCaches();
+    bool       AnyCacheLocked() const                  { return LockFlags != 0; }
 };
 
 // a view of count pointers spaced stride bytes apart
