@@ -113,11 +113,11 @@ private:
 class GlobalSlotIndex
 {
 public:
-    explicit GlobalSlotIndex(UPInt ind) : Index(ind) { }
-    UPInt Get() const       { return Index; }
+    explicit GlobalSlotIndex(UInt32 ind) : Index(ind) { }
+    UInt32 Get() const      { return Index; }
     bool  IsValid() const   { return Index > 0; }
 private:
-    UPInt Index;
+    UInt32 Index;
 };
 
 // ==== slots ==========================================================================================================
@@ -559,6 +559,9 @@ public:
     // From a qualified name "pkg.Name" (0x1424d9040).
     Multiname(VM& vm, const StringDataPtr& qname);
 
+    // True when ns is the namespace, or one of the namespace set, the name is qualified with (0x1424f0b70).
+    bool ContainsNamespace(const Instances::Namespace& ns) const;
+
     Abc::MultinameKind      Kind;   // +0x00
     SPtr<GASRefCountBase>   Obj;    // +0x08 namespace or namespace set
     Value                   Name;   // +0x10
@@ -568,6 +571,11 @@ public:
 class PropRef
 {
 public:
+    // Not found.
+    PropRef() : pValue(0), SlotIndex(0) { }
+    // A dynamic value of obj (the pointer is tagged with bit 0).
+    PropRef(Object* obj, Value* v) : pValue(reinterpret_cast<Value*>(reinterpret_cast<UPInt>(v) | 1)), This(obj) { }
+
     union
     {
         const SlotInfo* pSI;
@@ -577,6 +585,11 @@ public:
     UPInt   SlotIndex;  // +0x08
     Value   This;       // +0x10
 };
+
+// The number a string spells, if it is one (0x14250ee30).
+CheckResult GetStrNumber(ASStringNode* str, Value::Number& result);
+// The array index a name spells, if it is one (0x142507390).
+CheckResult GetArrayInd(const Multiname& prop_name, UInt32& ind);
 
 // ==== instances ======================================================================================================
 

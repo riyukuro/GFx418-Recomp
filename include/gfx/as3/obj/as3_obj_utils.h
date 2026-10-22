@@ -202,7 +202,7 @@ namespace Instances { namespace fl_utils {
         virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;            // 0x1424be630
         virtual PropRef FindDynamicSlot(const Multiname& mn);                              // 0x1424bdd70
 
-        ContainerType::Iterator FindKey(const Multiname& mn) const;                        // 0x1424bde70
+        ContainerType::Iterator FindKey(const Multiname& mn);                              // 0x1424bde70
 
         bool                WeakKeys;   // +0x38
         ContainerType       ValueH;     // +0x40

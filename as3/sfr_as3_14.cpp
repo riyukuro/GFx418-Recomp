@@ -419,6 +419,65 @@ namespace InstanceTraits { namespace fl_utils
     }
 }}
 
+// Visits the collectable a value holds (0x142504530).
+void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                              ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner);
+
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (v.IsGarbageCollectable() && !v.IsWeakRef())
+        ForEachChild_GC_Internal(prcc, v, op, owner);
+}
+
+// Children of a Dictionary hash. With weak keys, the marking pass first drops the entries whose key died; their
+// values are kept alive until the collection ends.
+// MS2-FUNCTIONAL: proxy allocation and the delayed-release chain are written plainly
+// @0x1424bdf90
+void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, bool weakKeys,
+                     Instances::fl_utils::Dictionary::ContainerType& h, ASRefCountBaseType::GcOp op,
+                     const ASRefCountBaseType& owner)
+{
+    typedef Instances::fl_utils::Dictionary::ContainerType ContainerType;
+    typedef RefCountCollector<StatMV_ActionScript_Mem> CollectorType;
+
+    if (weakKeys && op == &CollectorType::MarkInCycleCall)
+    {
+        for (;;)
+        {
+            ContainerType::Iterator it = h.Begin();
+            while (!it.IsEnd() && it->First.IsValidWeakRef())
+                ++it;
+            if (it.IsEnd())
+                break;
+
+            const Value& v = it->Second;
+            const ASRefCountBaseType* obj = 0;
+            const Value::KindType kind = v.GetKind();
+            if (kind >= Value::kThunkClosure)
+                obj = v.GetClosure();
+            else if (kind >= Value::kObject)
+                obj = v.GetObject();
+            if (obj)
+            {
+                Ptr<CollectorType::PtrReleaseProxy> proxy = *SF_HEAP_AUTO_NEW(&h) CollectorType::PtrReleaseProxy();
+                obj->AddRef();
+                proxy->Data2 = obj;
+                proxy->pNext = prcc->HeadDelayedPtrRelease;
+                prcc->HeadDelayedPtrRelease = proxy;
+            }
+            it.RemoveAlt(*it);
+        }
+    }
+
+    for (ContainerType::ConstIterator it = h.Begin(); !it.IsEnd(); ++it)
+    {
+        if (!weakKeys || it->First.IsValidWeakRef())
+            ForEachChild_GC(prcc, it->First, op, owner);
+        ForEachChild_GC(prcc, it->Second, op, owner);
+    }
+}
+
 namespace Instances { namespace fl_utils
 {
     // ---- Dictionary ----
@@ -436,6 +495,170 @@ namespace Instances { namespace fl_utils
     {
         if (argc != 0 && argv[0].Convert2Boolean())
             WeakKeys = true;
+    }
+
+    // @0x1424bcd70
+    Dictionary::~Dictionary()
+    {
+    }
+
+    // Numeric keys are stored as Number, so d[1], d[1.0] and d["1"] are the same entry.
+    // MS2-FUNCTIONAL: exe zeroes the return slot up front and stores each Find result into it; ours keeps the iterator in xmm6
+    // @0x1424bde70
+    Dictionary::ContainerType::Iterator Dictionary::FindKey(const Multiname& mn)
+    {
+        ContainerType::Iterator result;
+        const Value& name = mn.Name;
+        const Value::KindType kind = name.GetKind();
+        if (kind >= Value::kInt)
+        {
+            Value::Number num;
+            if (kind <= Value::kUInt)
+            {
+                if (!name.Convert2Number(num))
+                    return result;
+            }
+            else if (kind != Value::kString || !GetStrNumber(name.GetStringNode(), num))
+            {
+                result = ValueH.Find(name);
+                return result;
+            }
+            result = ValueH.Find(Value(num));
+            return result;
+        }
+        result = ValueH.Find(name);
+        return result;
+    }
+
+    // @0x1424bd650
+    void Dictionary::AddDynamicSlotValuePair(const Value& prop_name, const Value& v, SlotInfo::Attribute)
+    {
+        Value key(prop_name);
+        const Value::KindType kind = key.GetKind();
+        if (kind == Value::kString)
+        {
+            Value::Number num;
+            if (GetStrNumber(key.GetStringNode(), num))
+                key.SetNumber(num);
+        }
+        else if (kind == Value::kInt || kind == Value::kUInt)
+            key.ToNumberValue();
+
+        ContainerType::Iterator it = ValueH.Find(key);
+        if (!it.IsEnd())
+        {
+            if (!WeakKeys || it->First.IsValidWeakRef())
+            {
+                it->Second.Assign(v);
+                return;
+            }
+            // the old key died: its entry goes, a new one is made
+            it.RemoveAlt(*it);
+        }
+        if (WeakKeys)
+            key.MakeWeakRef();
+        ValueH.Add(key, v);
+    }
+
+    // Only public names reach the hash; an entry whose weak key died is dropped on the way.
+    // @0x1424bdd70
+    PropRef Dictionary::FindDynamicSlot(const Multiname& mn)
+    {
+        if (mn.ContainsNamespace(GetVM().GetPublicNamespace()))
+        {
+            ContainerType::Iterator it = FindKey(mn);
+            if (!it.IsEnd())
+            {
+                if (!WeakKeys || it->First.IsValidWeakRef())
+                    return PropRef(this, &it->Second);
+                it.RemoveAlt(*it);
+            }
+        }
+        return PropRef();
+    }
+
+    // @0x1424be850
+    CheckResult Dictionary::GetProperty(const Multiname& prop_name, Value& value)
+    {
+        bool result = false;
+        if (prop_name.ContainsNamespace(GetVM().GetPublicNamespace()))
+        {
+            ContainerType::Iterator it = FindKey(prop_name);
+            if (!it.IsEnd())
+            {
+                if (!WeakKeys || it->First.IsValidWeakRef())
+                {
+                    value.Assign(it->Second);
+                    result = true;
+                }
+                else
+                    it.RemoveAlt(*it);
+            }
+        }
+        return result;
+    }
+
+    // @0x1424bf0b0
+    CheckResult Dictionary::SetProperty(const Multiname& prop_name, const Value& value)
+    {
+        AddDynamicSlotValuePair(prop_name.Name, value);
+        return true;
+    }
+
+    // @0x1424bda80
+    CheckResult Dictionary::DeleteProperty(const Multiname& prop_name)
+    {
+        bool result = false;
+        if (prop_name.ContainsNamespace(GetVM().GetPublicNamespace()))
+        {
+            ContainerType::Iterator it = FindKey(prop_name);
+            if (!it.IsEnd())
+            {
+                it.RemoveAlt(*it);
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    // Enumeration indices are hash slot + 1; 0 ends.
+    // @0x1424be5e0
+    void Dictionary::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+    {
+        ContainerType::ConstIterator it(ValueH.Begin().GetContainer(), (UInt32)ind.Get());
+        value.Assign(it->Second);
+    }
+
+    // @0x1424be710
+    void Dictionary::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+    {
+        if (!ind.IsValid())
+            return;
+        ContainerType::ConstIterator it(ValueH.Begin().GetContainer(), ind.Get() - 1);
+        name.Assign(it->First);
+        if (WeakKeys)
+            name.MakeStrongRef();
+    }
+
+    // @0x1424be630
+    GlobalSlotIndex Dictionary::GetNextDynPropIndex(GlobalSlotIndex ind) const
+    {
+        const ContainerType::ConstIterator b = ValueH.Begin();
+        ContainerType::ConstIterator it(b.GetContainer(), ind.IsValid() ? (SPInt)(ind.Get() - 1) : -1);
+        if (!it.IsEnd())
+        {
+            ++it;
+            if (!it.IsEnd() && (!WeakKeys || it->First.IsValidWeakRef()))
+                return GlobalSlotIndex((UInt32)it.GetIndex() + 1);
+        }
+        return GlobalSlotIndex(0);
+    }
+
+    // @0x1424be3b0
+    void Dictionary::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, WeakKeys, const_cast<ContainerType&>(ValueH), op, *this);
     }
 
     // ---- Timer ----
@@ -544,6 +767,7 @@ namespace Instances { namespace fl_utils
 
     // ---- ByteArray ----
 
+    // MS2-FUNCTIONAL: exe calls the out-of-line constructor getter 0x142508460; ours inlines Traits::GetConstructor
     // @0x1424bc460
     ByteArray::ByteArray(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
@@ -688,8 +912,16 @@ namespace Instances { namespace fl_utils
         Position += sizeof(T);
     }
 
+    // for..in / for each: the bytes as signed ints.
+    // @0x1424be580
+    void ByteArray::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+    {
+        value.SetSInt32((SInt8)Get((UInt32)ind.Get()));
+    }
+
+    // noinline: the exe calls it out of line from GetDynamicProperty.
     // @0x1424be400
-    UInt8 ByteArray::Get(UInt32 ind) const
+    SF_NOINLINE UInt8 ByteArray::Get(UInt32 ind) const
     {
         if (ind < Length)
             return Data[ind];
@@ -712,6 +944,45 @@ namespace Instances { namespace fl_utils
         Position = 0;
         Write(data, (UInt32)size);
         Position = 0;
+    }
+
+    // ba[i] reads byte i as uint; other names are ordinary properties.
+    // @0x1424be790
+    CheckResult ByteArray::GetProperty(const Multiname& prop_name, Value& value)
+    {
+        UInt32 ind;
+        if (GetArrayInd(prop_name, ind))
+        {
+            if (ind < Length)
+            {
+                UInt8 b = Data[ind];
+                value.SetUInt32(b);
+                return true;
+            }
+            return false;
+        }
+        return Object::GetProperty(prop_name, value);
+    }
+
+    // ba[i] = v stores the low byte of uint(v), growing the array up to i.
+    // MS2-FUNCTIONAL: ind and v stack slots are swapped (0x24/0x28)
+    // @0x1424bf000
+    CheckResult ByteArray::SetProperty(const Multiname& prop_name, const Value& value)
+    {
+        UInt32 v;
+        UInt32 ind;
+        if (GetArrayInd(prop_name, ind))
+        {
+            if (!value.Convert2UInt32(v))
+                return false;
+            const UInt32 i = ind;
+            const UInt8 b = (UInt8)v;
+            if (i >= Length)
+                Resize(i + 1);
+            Data[i] = b;
+            return true;
+        }
+        return Object::SetProperty(prop_name, value);
     }
 
     // @0x1424bf580
@@ -1227,3 +1498,7 @@ namespace Instances { namespace fl_utils
 // MS2-PIN: ??_7ByteArray@fl_utils@Classes@AS3@GFx@Scaleform@@6B@ 0x1431715f8
 // MS2-PIN: ??_7Dictionary@fl_utils@Instances@AS3@GFx@Scaleform@@6B@ 0x143171810
 // MS2-PIN: ??_7Timer@fl_utils@Instances@AS3@GFx@Scaleform@@6B@ 0x143171dd0
+// MS2-PIN: ??_GByteArray@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bcdb0
+// MS2-PIN: ??_GByteArray@fl_utils@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bce40
+// MS2-PIN: ??_GByteArray@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bcea0
+// MS2-PIN: ??_GDictionary@fl_utils@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd060
