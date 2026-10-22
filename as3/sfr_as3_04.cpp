@@ -125,6 +125,479 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <sys/timeb.h>
+#include <math.h>
+#include "ms2/scaleform/kernel/sf_random.h"
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ---- Value: reference take-over of the function / namespace kinds ----
+
+// @0x14241dc00
+void Value::Pick(Instances::FunctionBase* v)
+{
+    Release();
+    SetKind(kFunction);
+    value = reinterpret_cast<Instances::Function*>(v);
+}
+
+// @0x14241dc60
+void Value::Pick(Instances::Function* v)
+{
+    Release();
+    SetKind(kFunction);
+    value = v;
+}
+
+// @0x14241dcc0
+void Value::Pick(Instances::Namespace* v)
+{
+    Release();
+    SetKind(kNamespace);
+    value = v;
+}
+
+// @0x14241dd20
+void Value::Pick(Instances::ThunkFunction* v)
+{
+    Release();
+    SetKind(kThunkFunction);
+    value = v;
+}
+
+// @0x14241ddc0
+void Value::PickUnsafe(Instances::Function* v)
+{
+    SetKind(kFunction);
+    value = v;
+}
+
+// @0x14241dde0
+void Value::PickUnsafe(Instances::FunctionBase* v)
+{
+    SetKind(kFunction);
+    value = reinterpret_cast<Instances::Function*>(v);
+}
+
+// @0x14241de00
+void Value::PickUnsafe(Instances::Namespace* v)
+{
+    SetKind(kNamespace);
+    value = v;
+}
+
+// @0x14241de20
+void Value::PickUnsafe(Instances::ThunkFunction* v)
+{
+    SetKind(kThunkFunction);
+    value = v;
+}
+
+namespace Instances { namespace fl
+{
+    // ---- Date: ECMA-262 15.9.1 time arithmetic ----
+
+    static const Value::Number msPerSecond  = 1000.0;
+    static const Value::Number msPerMinute  = 60000.0;
+    static const Value::Number msPerHour    = 3600000.0;
+    static const Value::Number msPerDay     = 86400000.0;
+
+    // Days before the end of each month: common years, then leap years.
+    static const SInt32 MonthEndDay[24] =
+    {
+        31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365,
+        31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366
+    };
+
+    static SF_INLINE bool IsLeapYear(SInt32 y)
+    {
+        return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
+    }
+
+    // Day number of the first day of year y.
+    static SF_INLINE Value::Number DayFromYear(Value::Number y)
+    {
+        return ::floor((y - 1969.0) * 0.25) + (y - 1970.0) * 365.0 - ::floor((y - 1901.0) / 100.0) +
+               ::floor((y - 1601.0) / 400.0);
+    }
+
+    static SF_INLINE Value::Number TimeFromYear(Value::Number y)
+    {
+        return msPerDay * DayFromYear(y);
+    }
+
+    // @0x142415730
+    void Date::GetCurrentTimeValue(Value::Number* pTime, SInt32* pLocalTZA)
+    {
+        __timeb64 tb;
+        TIME_ZONE_INFORMATION tzi;
+        _ftime64(&tb);
+        GetTimeZoneInformation(&tzi);
+        *pLocalTZA = tzi.Bias * -60000;
+        *pTime = static_cast<Value::Number>(tb.time) * 1000.0 + tb.millitm;
+    }
+
+    // @0x142417730
+    Value::Number Date::HourFromTime(Value::Number t)
+    {
+        Value::Number r = fmod(::floor(t / msPerHour), 24.0);
+        if (r < 0)
+            r += 24.0;
+        return r;
+    }
+
+    // @0x14241ccb0
+    Value::Number Date::MinFromTime(Value::Number t)
+    {
+        Value::Number r = fmod(::floor(t / msPerMinute), 60.0);
+        if (r < 0)
+            r += 60.0;
+        return r;
+    }
+
+    // @0x142421230
+    Value::Number Date::SecFromTime(Value::Number t)
+    {
+        Value::Number r = fmod(::floor(t / msPerSecond), 60.0);
+        if (r < 0)
+            r += 60.0;
+        return r;
+    }
+
+    // @0x14241d500
+    Value::Number Date::MsFromTime(Value::Number t)
+    {
+        Value::Number r = fmod(t, msPerSecond);
+        if (r < 0)
+            r += msPerSecond;
+        return r;
+    }
+
+    // @0x142427260
+    SInt32 Date::WeekDay(Value::Number t)
+    {
+        SInt32 r = static_cast<SInt32>(fmod(::floor(t / msPerDay) + 4.0, 7.0));
+        return r < 0 ? r + 7 : r;
+    }
+
+    // MS2-FUNCTIONAL: binary-search register allocation differs
+    // @0x1424272a0
+    Value::Number Date::YearFromTime(Value::Number t)
+    {
+        // The year lies between the estimates for all-leap and all-common years.
+        const SInt32 y1 = static_cast<SInt32>(::floor(t / 31536000000.0)) + 1970;
+        const SInt32 y2 = static_cast<SInt32>(::floor(t / 31622400000.0)) + 1970;
+        SInt32 lo = y2 <= y1 ? y2 : y1;
+        SInt32 hi = y2 <= y1 ? y1 : y2;
+        while (lo < hi)
+        {
+            const SInt32 mid = (lo + hi) / 2;
+            if (TimeFromYear(mid) <= t)
+            {
+                if (t < TimeFromYear(mid + 1))
+                    return mid;
+                lo = mid + 1;
+            }
+            else
+                hi = mid - 1;
+        }
+        return lo;
+    }
+
+    // MS2-FUNCTIONAL: exe unrolls the month-table scan by six; ours is a plain loop
+    // @0x14241cdc0
+    SInt32 Date::MonthFromYearDay(SInt32 year, SInt32 day)
+    {
+        const SInt32* tbl = IsLeapYear(year) ? MonthEndDay + 12 : MonthEndDay;
+        SInt32 m = 0;
+        for (; m < 12; ++m)
+        {
+            if (day < tbl[m])
+                break;
+        }
+        return m;
+    }
+
+    // MS2-FUNCTIONAL: DayFromYear term order/constant loads differ
+    // @0x14241ccf0
+    SInt32 Date::MonthFromTime(Value::Number t)
+    {
+        const Value::Number y = YearFromTime(t);
+        return MonthFromYearDay(static_cast<SInt32>(y), static_cast<SInt32>(::floor(t / msPerDay) - DayFromYear(y)));
+    }
+
+    // MS2-FUNCTIONAL: month/leap index arithmetic schedules differently
+    // @0x14241a230
+    Value::Number Date::MakeDay(Value::Number year, Value::Number month, Value::Number date)
+    {
+        if (NumberUtil::IsNaNOrInfinity(year + month + date))
+            return NumberUtil::NaN();
+
+        const SInt32 m = static_cast<SInt32>(month);
+        const Value::Number ym = static_cast<SInt32>(year) + ::floor(m / 12.0);
+        Value::Number mn = fmod(static_cast<Value::Number>(m), 12.0);
+        if (mn < 0)
+            mn += 12.0;
+        const Value::Number day = ::floor(DayFromYear(ym));
+        const SInt32 leap = IsLeapYear(static_cast<SInt32>(ym)) ? 12 : 0;
+        const SInt32 im = static_cast<SInt32>(mn);
+        const SInt32 monthDay = im != 0 ? MonthEndDay[im - 1 + leap] : 0;
+        return monthDay + day + static_cast<SInt32>(date) - 1.0;
+    }
+
+    static SF_INLINE Value::Number ToInteger(Value::Number v)
+    {
+        return v > 0 ? ::floor(v) : -::floor(-v);
+    }
+
+    // @0x14241c6a0
+    Value::Number Date::MakeTime(Value::Number hour, Value::Number min, Value::Number sec, Value::Number ms)
+    {
+        if (NumberUtil::IsNaNOrInfinity(hour + min + sec + ms))
+            return NumberUtil::NaN();
+        const Value::Number h = ToInteger(hour);
+        const Value::Number m = ToInteger(min);
+        const Value::Number s = ToInteger(sec);
+        const Value::Number milli = ToInteger(ms);
+        return m * msPerMinute + h * msPerHour + s * msPerSecond + milli;
+    }
+
+    // @0x1424254f0
+    Value::Number Date::TimeClip(Value::Number t)
+    {
+        if (NumberUtil::IsNaNOrInfinity(t) || fabs(t) > 8.64e15)
+            return NumberUtil::NaN();
+        return t > 0 ? ::floor(t) : ::ceil(t);
+    }
+
+    // ---- Date property getters (UTC forms read TimeValue, the local ones add LocalTZA) ----
+
+    // @0x142427c60
+    void Date::dateUTCGet(Value::Number& result)
+    {
+        const Value::Number t = TimeValue;
+        result = NumberUtil::IsNaN(t) ? t : DateFromTime(t);
+    }
+
+    // @0x1424289a0
+    void Date::fullYearGet(Value::Number& result)
+    {
+        const Value::Number t = TimeValue;
+        if (NumberUtil::IsNaN(t))
+        {
+            result = t;
+            return;
+        }
+        result = YearFromTime(t + LocalTZA);
+    }
+
+    // @0x142428a20
+    void Date::fullYearUTCGet(Value::Number& result)
+    {
+        const Value::Number t = TimeValue;
+        result = NumberUtil::IsNaN(t) ? t : YearFromTime(t);
+    }
+
+    // @0x142429660
+    void Date::millisecondsUTCGet(Value::Number& result)
+    {
+        const Value::Number t = TimeValue;
+        result = NumberUtil::IsNaN(t) ? t : MsFromTime(t);
+    }
+
+    // MS2-FUNCTIONAL: int->double conversion uses cvtsi2sd instead of movd+cvtdq2pd
+    // @0x1424298a0
+    void Date::monthUTCGet(Value::Number& result)
+    {
+        Value::Number t = TimeValue;
+        if (!NumberUtil::IsNaN(t))
+            t = MonthFromTime(t);
+        result = t;
+    }
+}} // namespace Instances::fl
+
+namespace Classes { namespace fl
+{
+    // ---- Math ----
+
+    // @0x1424274f0
+    void Math::abs(Value::Number& result, Value::Number v)
+    {
+        if (NumberUtil::IsNEGATIVE_ZERO(v))
+        {
+            result = 0.0;
+            return;
+        }
+        result = fabs(v);
+    }
+
+    // @0x142427540
+    void Math::acos(Value::Number& result, Value::Number v)
+    {
+        result = ::acos(v);
+    }
+
+    // @0x142427a60
+    void Math::asin(Value::Number& result, Value::Number v)
+    {
+        result = ::asin(v);
+    }
+
+    // @0x142427b90
+    void Math::atan(Value::Number& result, Value::Number v)
+    {
+        result = ::atan(v);
+    }
+
+    // MS2-FUNCTIONAL: infinity tests compiled as integer bit compares in a different branch order
+    // @0x142427a80
+    void Math::atan2(Value::Number& result, Value::Number y, Value::Number x)
+    {
+        // atan2 of two infinities is the quadrant diagonal.
+        if (NumberUtil::IsPOSITIVE_INFINITY(y))
+        {
+            if (NumberUtil::IsPOSITIVE_INFINITY(x))
+                result = PI * 0.25;
+            else if (NumberUtil::IsNEGATIVE_INFINITY(x))
+                result = PI * 0.75;
+            else
+                result = PI * 0.5;
+            return;
+        }
+        if (NumberUtil::IsNEGATIVE_INFINITY(y))
+        {
+            if (NumberUtil::IsPOSITIVE_INFINITY(x))
+                result = PI * -0.25;
+            else if (NumberUtil::IsNEGATIVE_INFINITY(x))
+                result = PI * -0.75;
+            else
+                result = PI * -0.5;
+            return;
+        }
+        result = ::atan2(y, x);
+    }
+
+    // @0x142427bb0
+    void Math::ceil(Value::Number& result, Value::Number v)
+    {
+        result = ::ceil(v);
+    }
+
+    // @0x142427c10
+    void Math::cos(Value::Number& result, Value::Number v)
+    {
+        result = ::cos(v);
+    }
+
+    // @0x142428470
+    void Math::exp(Value::Number& result, Value::Number v)
+    {
+        result = ::exp(v);
+    }
+
+    // @0x1424284a0
+    void Math::floor(Value::Number& result, Value::Number v)
+    {
+        result = ::floor(v);
+    }
+
+    // @0x1424294d0
+    void Math::log(Value::Number& result, Value::Number v)
+    {
+        result = ::log(v);
+    }
+
+    // MS2-FUNCTIONAL: comparison-loop register allocation differs
+    // @0x1424294f0
+    void Math::max(Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc == 0)
+        {
+            result.SetNumber(NumberUtil::NEGATIVE_INFINITY());
+            return;
+        }
+        result.Assign(argv[0]);
+        for (unsigned i = 1; i < argc; ++i)
+        {
+            Boolean3 cmp;
+            if (!AbstractLessThan(cmp, argv[i], result))
+                return;
+            if (cmp == undefined3)
+            {
+                result.SetNumber(NumberUtil::NaN());
+                return;
+            }
+            if (cmp == false3)
+                result.Assign(argv[i]);
+        }
+        result.ToNumberValue();
+    }
+
+    // MS2-FUNCTIONAL: comparison-loop register allocation differs
+    // @0x1424296e0
+    void Math::min(Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc == 0)
+        {
+            result.SetNumber(NumberUtil::POSITIVE_INFINITY());
+            return;
+        }
+        result.Assign(argv[0]);
+        for (unsigned i = 1; i < argc; ++i)
+        {
+            Boolean3 cmp;
+            if (!AbstractLessThan(cmp, result, argv[i]))
+                return;
+            if (cmp == undefined3)
+            {
+                result.SetNumber(NumberUtil::NaN());
+                return;
+            }
+            if (cmp == false3)
+                result.Assign(argv[i]);
+        }
+        result.ToNumberValue();
+    }
+
+    // @0x142429d40
+    void Math::pow(Value::Number& result, Value::Number x, Value::Number y)
+    {
+        if (y == 0.0)
+        {
+            result = 1.0;
+            return;
+        }
+        if ((x == 1.0 || x == -1.0) && NumberUtil::IsNaNOrInfinity(y))
+        {
+            result = NumberUtil::NaN();
+            return;
+        }
+        result = ::pow(x, y);
+    }
+
+    // @0x142429fb0
+    void Math::random(Value::Number& result)
+    {
+        result = Alg::Random::NextRandom() / 4294967295.0;
+    }
+
+    // @0x142429fe0
+    void Math::round(Value::Number& result, Value::Number v)
+    {
+        if (NumberUtil::IsNaNOrInfinity(v))
+        {
+            result = v;
+            return;
+        }
+        result = ::floor(v + 0.5);
+    }
+}} // namespace Classes::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@JJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424133c0
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$08VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413510
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$09VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413530

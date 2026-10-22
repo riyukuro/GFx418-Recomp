@@ -172,6 +172,22 @@ namespace Instances { namespace fl
         SInt32          LocalTZA;   // +0x40
 
     public:
+        // (appended, sfr14) ECMA-262 15.9.1 time arithmetic (bodies in sfr_as3_04). Times are ms since the epoch.
+        static void   GetCurrentTimeValue(Value::Number* pTime, SInt32* pLocalTZA);
+        static Value::Number HourFromTime(Value::Number t);
+        static Value::Number MinFromTime(Value::Number t);
+        static Value::Number SecFromTime(Value::Number t);
+        static Value::Number MsFromTime(Value::Number t);
+        static SInt32 WeekDay(Value::Number t);
+        static Value::Number YearFromTime(Value::Number t);
+        static SInt32 MonthFromTime(Value::Number t);
+        static SInt32 MonthFromYearDay(SInt32 year, SInt32 day);
+        static SInt32 DateFromTime(Value::Number t);
+        static Value::Number MakeDay(Value::Number year, Value::Number month, Value::Number date);
+        static Value::Number MakeTime(Value::Number hour, Value::Number min, Value::Number sec, Value::Number ms);
+        static Value::Number TimeClip(Value::Number t);
+
+    public:
         // native methods
         // @0x1423fa190
         void AS3getDate(Value::Number& result);
