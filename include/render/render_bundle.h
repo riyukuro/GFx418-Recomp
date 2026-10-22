@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/render/render_stats.h"
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_primitive.h"
+#include "ms2/scaleform/include/render/render_states.h"   // (appended for sfr_render_07h)
 
 namespace Scaleform { namespace Render {
 
@@ -26,7 +27,28 @@ enum SortKeyType
     SortKey_None          = 0,
     SortKey_PrimitiveFill = 1,
     SortKey_MeshProvider  = 2,
-    SortKey_Text          = 3
+    SortKey_Text          = 3,
+    // (appended for sfr_render_07h) the start / end markers of the cache effects
+    SortKey_MaskStart                = 4,
+    SortKey_MaskStartClipped         = 5,
+    SortKey_MaskEnd                  = 6,   // a mask's end and pop entries
+    SortKey_BlendModeStart           = 7,
+    SortKey_BlendModeEnd             = 8,
+    SortKey_FilterStart              = 9,
+    SortKey_FilterEnd                = 10,
+    SortKey_ViewMatrix3DStart        = 11,
+    SortKey_ViewMatrix3DEnd          = 12,
+    SortKey_ProjectionMatrix3DStart  = 13,
+    SortKey_ProjectionMatrix3DEnd    = 14
+};
+
+// (appended for sfr_render_07h) the four mask markers
+enum SortKeyMaskType
+{
+    SortKeyMask_Push,
+    SortKeyMask_PushClipped,
+    SortKeyMask_End,
+    SortKeyMask_Pop
 };
 
 typedef void* SortKeyData;
@@ -59,6 +81,15 @@ public:
 
     SortKeyType GetType() const { return pImpl->Type; }
     SortKeyData GetData() const { return Data; }
+
+    // (appended for sfr_render_07h) the effect keys: 0x1426bc910, 0x1426bca60, 0x1426bca00, 0x1426bc940, 0x1426bc9a0
+    SortKey(SortKeyMaskType maskType);
+    SortKey(SortKeyType blendKeyType, BlendMode mode);
+    SortKey(SortKeyType filterKeyType, const FilterSet* filters);
+    SortKey(SortKeyType viewKeyType, const Matrix3FRef* viewMatrix);
+    SortKey(SortKeyType projKeyType, const Matrix4FRef* projMatrix);
+    // the blend keys carry the mode itself, not a counted object
+    void SetData(SortKeyData data) { Data = data; }
 
     SortKey& operator=(const SortKey& src)
     {
@@ -114,6 +145,26 @@ public:
         pBundle.Clear();
         IndexHint = 0;
     }
+
+    // (appended for sfr_render_07h)
+    BundleEntry(TreeCacheNode* node, const SortKey& key)
+        : pNextPattern(0), pChain(0), ChainHeight(0), IndexHint(0), Key(key)
+    {
+        pSourceNode = node;
+        Removed     = false;
+    }
+    ~BundleEntry()
+    {
+        if (pBundle)
+        {
+            Ptr<Bundle> held = pBundle;
+            held->RemoveEntry(this);
+        }
+    }
+
+    void         SetNextPattern(BundleEntry* next) { pNextPattern = next; }
+    BundleEntry* GetNextPattern() const            { return pNextPattern; }
+    bool         HasNextPattern() const            { return pNextPattern != 0; }
 };
 
 // The bundle of simple shapes sharing one fill (Render_PrimitiveBundle); only the primitive's fill pointer is laid

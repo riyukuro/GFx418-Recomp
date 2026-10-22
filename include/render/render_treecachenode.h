@@ -118,13 +118,54 @@ public:
     UInt32       Length;
 
     BundleEntryRange(BundleEntryRangeType type) : pFirst(0), pLast(0), Length(type) {}
+
+    // (appended for sfr_render_07h)
+    void Init(BundleEntry* first, BundleEntry* last, UInt32 length)
+    {
+        pFirst = first;
+        pLast  = last;
+        Length = length;
+    }
+    BundleEntry* GetFirst() const  { return pFirst; }
+    BundleEntry* GetLast() const   { return pLast; }
+    UInt32       GetLength() const { return Length & ~(UInt32)Range_Invalid; }
 };
 
-// the cache effects of a node (mask, blend, filters): a single chain head here
+// (appended for sfr_render_07h) how a mask clips its content, from TreeCacheNode::calcMaskBounds
+enum MaskEffectState
+{
+    MES_NoMask,
+    MES_Culled,
+    MES_Clipped,
+    MES_Combinable
+};
+
+class CacheEffect;
+
+// The cache effects of a node (filter, mask, blend mode, 3D view / projection; render_cacheeffect.h), a singly
+// linked list in a fixed order. ~CacheEffectChain 0x1426dd330, UpdateEffects 0x1426de4e0, updateBundleChain
+// 0x1426de6c0.
 class CacheEffectChain
 {
 public:
-    void* pEffect;
+    CacheEffect* pEffect;
+
+    CacheEffectChain() : pEffect(0) { }
+    ~CacheEffectChain();
+
+    bool IsEmpty() const { return pEffect == 0; }
+
+    // re-reads the node's states for the changed kinds; true when the parent's pattern must be rebuilt
+    bool UpdateEffects(TreeCacheNode* node, unsigned changeFlags);
+
+    void UpdateBundleChain(BundleEntryRange* chain, BundleEntryRange* maskChain)
+    {
+        if (pEffect)
+            updateBundleChain(pEffect, chain, maskChain);
+    }
+
+private:
+    void updateBundleChain(CacheEffect* effect, BundleEntryRange* chain, BundleEntryRange* maskChain);
 };
 
 // 0x70 bytes, list links at +0x10: the class is 16-aligned (SortParentBounds), so the vftable pointer takes a
@@ -188,6 +229,16 @@ public:
     void updateMaskCache(const TreeNode::NodeData* data, UInt16 depth, bool updateSubtree);
     // culls against cullRect (narrowed by a mask) and sets NF_Culled; 0x142685210
     void updateCulling(const TreeNode::NodeData* data, const TransformArgs& t, RectF* cullRect, TransformFlags flags);
+
+    // (appended for sfr_render_07h)
+    MatrixPoolImpl::MatrixPool& GetMatrixPool() const;                       // 0x1426815d0
+    void CalcViewMatrix(Matrix3F* view, Matrix4F* viewProj) const;          // 0x142680d30
+    bool CalcFilterFlag() const;                                            // 0x142680bd0
+    // the node's bounds and the matrix mapping the unit square onto them
+    MaskEffectState calcMaskBounds(RectF* bounds, Matrix2F* boundAreaMatrix, const Matrix3F& viewMatrix,
+                                   const Matrix4F& viewProj, MaskEffectState oldState, unsigned flags);   // 0x142684500
+    bool calcFilterBounds(RectF* bounds, Matrix2F* boundAreaMatrix, const Matrix3F& viewMatrix,
+                          const Matrix4F& viewProj, RectF* cullRect = 0);                       // 0x142683f80
 };
 
 // 0xa0 bytes
