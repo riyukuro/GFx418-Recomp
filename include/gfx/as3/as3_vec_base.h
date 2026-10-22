@@ -11,7 +11,7 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-namespace Instances { namespace fl { class Object; } }
+namespace Instances { namespace fl { class Object; class Array; } }
 
 // The element-type independent face of a vector: the AS3 code reads elements through it as Values.
 // 0x18 bytes; vftable 0x143181db8.
@@ -46,6 +46,8 @@ public:
     CheckResult CheckCoerce(const ClassTraits::Traits& tr, const Value& v, Value& result) const;
     // TypeError 1034 ("arguments") unless every argv is of type tr. 0x14255b1d0
     CheckResult CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const;
+    // (appended, sfr16) whether every element of arr is of type tr. 0x1425614e0
+    CheckResult OfCorrectType(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const;
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v) = 0;
@@ -64,6 +66,7 @@ public:
     typedef ArrayDH<T> ValuesType;
 
     VectorBase(VM& vm) : ArrayBase(vm), V(vm.GetMemoryHeap()) {}
+    VectorBase(MemoryHeap* heap, VM& vm) : ArrayBase(vm), V(heap) {}
 
     // bodies (one per element type) in sfr_as3_21
     virtual UInt32 GetSize() const;
@@ -80,6 +83,8 @@ public:
     // Element write: v is coerced to the element type tr (throws on failure); ind == size appends unless fixed.
     // SInt32 0x142563720, UInt32 0x142446540, Number 0x1424864c0, String 0x1425638c0, Value 0x142563a00
     CheckResult Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr);
+    // (appended, sfr16) Vector.splice: argv inserted at pos, unchecked. Value 0x142560d70
+    void Insert(UPInt pos, unsigned argc, const Value* argv);
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v);

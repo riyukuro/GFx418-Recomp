@@ -1548,6 +1548,91 @@ MS2_VEC_SORT(Vector_uint, FUN_142553170)
 
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// @0x142560d70
+template <>
+void VectorBase<Value>::Insert(UPInt pos, unsigned argc, const Value* argv)
+{
+    for (UPInt i = 0; i < argc; ++i)
+        V.InsertAt(pos + i, Value(argv[i]));
+}
+
+// @0x1425614e0
+CheckResult ArrayBase::OfCorrectType(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const
+{
+    for (unsigned i = 0; i < arr.GetSize(); ++i)
+    {
+        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, arr.At(i))))
+            return false;
+    }
+    return true;
+}
+
+namespace InstanceTraits { namespace fl_vec {
+
+// @0x142560ef0
+SPtr<Vector_String::InstanceType> Vector_String::MakeInstanceS(Vector_String& t)
+{
+    return MakeInstance(t);
+}
+
+// @0x142560f90
+SPtr<Vector_double::InstanceType> Vector_double::MakeInstanceS(Vector_double& t)
+{
+    return MakeInstance(t);
+}
+
+// @0x142561030
+SPtr<Vector_int::InstanceType> Vector_int::MakeInstanceS(Vector_int& t)
+{
+    return MakeInstance(t);
+}
+
+// @0x1425610d0
+SPtr<Vector_object::InstanceType> Vector_object::MakeInstanceS(Vector_object& t)
+{
+    return MakeInstance(t);
+}
+
+// @0x142561170
+SPtr<Vector_uint::InstanceType> Vector_uint::MakeInstanceS(Vector_uint& t)
+{
+    return MakeInstance(t);
+}
+
+// @0x142561210
+void Vector_String::MakeObject(Value& result, Traits& t)
+{
+    result.Pick(MakeInstance(static_cast<Vector_String&>(t)));
+}
+
+// @0x1425612a0
+void Vector_double::MakeObject(Value& result, Traits& t)
+{
+    result.Pick(MakeInstance(static_cast<Vector_double&>(t)));
+}
+
+// @0x142561330
+void Vector_int::MakeObject(Value& result, Traits& t)
+{
+    result.Pick(MakeInstance(static_cast<Vector_int&>(t)));
+}
+
+// @0x1425613c0
+void Vector_object::MakeObject(Value& result, Traits& t)
+{
+    result.Pick(MakeInstance(static_cast<Vector_object&>(t)));
+}
+
+// @0x142561450
+void Vector_uint::MakeObject(Value& result, Traits& t)
+{
+    result.Pick(MakeInstance(static_cast<Vector_uint&>(t)));
+}
+
+}}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_vec
+
 // ---------------------------------------------------------------- SoundObject
 
 #include "ms2/scaleform/include/gfx/as3/as3_soundobject.h"

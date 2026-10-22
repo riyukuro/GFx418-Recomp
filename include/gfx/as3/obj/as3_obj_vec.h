@@ -74,6 +74,11 @@ namespace Instances { namespace fl_vec {
         virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x142560330
 
         VectorBase<Ptr<ASStringNode> > V;   // +0x38
+
+    public:
+        // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_String::MakeInstanceS
+        explicit Vector_String(InstanceTraits::Traits& t) : Instances::fl::Object(t)
+            , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
     };
 
     // 0x70 bytes; vftable 0x143182488.
@@ -140,6 +145,11 @@ namespace Instances { namespace fl_vec {
         virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x142560390
 
         VectorBase<Value::Number > V;   // +0x38
+
+    public:
+        // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_double::MakeInstanceS
+        explicit Vector_double(InstanceTraits::Traits& t) : Instances::fl::Object(t)
+            , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
     };
 
     // 0x70 bytes; vftable 0x143181e58.
@@ -206,6 +216,11 @@ namespace Instances { namespace fl_vec {
         virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x1425603f0
 
         VectorBase<SInt32 > V;   // +0x38
+
+    public:
+        // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_int::MakeInstanceS
+        explicit Vector_int(InstanceTraits::Traits& t) : Instances::fl::Object(t)
+            , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
     };
 
     // 0x70 bytes; vftable 0x143182a88.
@@ -274,6 +289,11 @@ namespace Instances { namespace fl_vec {
         virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x142560450
 
         VectorBase<Value > V;   // +0x38
+
+    public:
+        // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_object::MakeInstanceS
+        explicit Vector_object(InstanceTraits::Traits& t) : Instances::fl::Object(t)
+            , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
     };
 
     // 0x70 bytes; vftable 0x143182170.
@@ -340,8 +360,86 @@ namespace Instances { namespace fl_vec {
         virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x1425604b0
 
         VectorBase<UInt32 > V;   // +0x38
+
+    public:
+        // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_uint::MakeInstanceS
+        explicit Vector_uint(InstanceTraits::Traits& t) : Instances::fl::Object(t)
+            , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
     };
 
+}}
+
+// (appended, sfr16) the instance traits of Vector.<T>; MakeInstanceS/MakeObject bodies in sfr_as3_21.
+namespace InstanceTraits { namespace fl_vec {
+    class Vector_String : public fl::Object
+    {
+    public:
+        typedef Instances::fl_vec::Vector_String InstanceType;
+
+        Vector_String(VM& vm, const ClassInfo& ci);
+        static Pickable<InstanceType> MakeInstance(Vector_String& t)
+        {
+            return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        }
+        SPtr<InstanceType> MakeInstanceS(Vector_String& t);
+        virtual void MakeObject(Value& result, Traits& t);
+    };
+
+    class Vector_double : public fl::Object
+    {
+    public:
+        typedef Instances::fl_vec::Vector_double InstanceType;
+
+        Vector_double(VM& vm, const ClassInfo& ci);
+        static Pickable<InstanceType> MakeInstance(Vector_double& t)
+        {
+            return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        }
+        SPtr<InstanceType> MakeInstanceS(Vector_double& t);
+        virtual void MakeObject(Value& result, Traits& t);
+    };
+
+    class Vector_int : public fl::Object
+    {
+    public:
+        typedef Instances::fl_vec::Vector_int InstanceType;
+
+        Vector_int(VM& vm, const ClassInfo& ci);
+        static Pickable<InstanceType> MakeInstance(Vector_int& t)
+        {
+            return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        }
+        SPtr<InstanceType> MakeInstanceS(Vector_int& t);
+        virtual void MakeObject(Value& result, Traits& t);
+    };
+
+    class Vector_object : public fl::Object
+    {
+    public:
+        typedef Instances::fl_vec::Vector_object InstanceType;
+
+        Vector_object(VM& vm, const ClassInfo& ci);
+        static Pickable<InstanceType> MakeInstance(Vector_object& t)
+        {
+            return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        }
+        SPtr<InstanceType> MakeInstanceS(Vector_object& t);
+        virtual void MakeObject(Value& result, Traits& t);
+    };
+
+    class Vector_uint : public fl::Object
+    {
+    public:
+        typedef Instances::fl_vec::Vector_uint InstanceType;
+
+        Vector_uint(VM& vm, const ClassInfo& ci);
+        static Pickable<InstanceType> MakeInstance(Vector_uint& t)
+        {
+            return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+        }
+        SPtr<InstanceType> MakeInstanceS(Vector_uint& t);
+        virtual void MakeObject(Value& result, Traits& t);
+    };
 }}
 
 }}} // namespace Scaleform::GFx::AS3
