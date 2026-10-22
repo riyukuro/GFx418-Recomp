@@ -243,6 +243,39 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_uint, 14, SPtr<Instances::f
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+
+// sfr_as3_20: the Vector.slice / Vector.splice bodies, one per element type
+void FUN_14254fe70(Scaleform::GFx::AS3::VectorBase<Scaleform::Ptr<Scaleform::GFx::ASStringNode> >& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& owner);
+void FUN_142553bb0(Scaleform::GFx::AS3::VectorBase<Scaleform::Ptr<Scaleform::GFx::ASStringNode> >& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& owner);
+void FUN_142550070(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value::Number>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& owner);
+void FUN_142553e90(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value::Number>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& owner);
+void FUN_142550290(Scaleform::GFx::AS3::VectorBase<Scaleform::SInt32>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& owner);
+void FUN_142554280(Scaleform::GFx::AS3::VectorBase<Scaleform::SInt32>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& owner);
+void FUN_142550490(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& owner);
+void FUN_142554660(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& owner);
+void FUN_142550640(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& owner);
+void FUN_142554880(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
+    const Scaleform::GFx::AS3::Value* argv,
+    Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& owner);
+
 // ---------------------------------------------------------------- Vector
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -259,6 +292,23 @@ AbsoluteIndex ArrayBase::GetNextArrayIndex(AbsoluteIndex ind) const
     else if ((UPInt)ind.Get() < (UPInt)(SPInt)(size - 1))
         return AbsoluteIndex(ind.Get() + 1);
     return AbsoluteIndex(-1);
+}
+
+// @0x142564220
+ASString ArrayBase::Join(const ASString& sep) const
+{
+    StringBuffer buf(VMRef.GetMemoryHeap());
+    const UInt32 size = GetSize();
+    for (UInt32 i = 0; i < size; ++i)
+    {
+        if (i != 0)
+            buf.AppendString(sep.ToCStr());
+        Value v;
+        GetValue(i, v);
+        if (!v.IsNullOrUndefined() && !v.Convert2String(buf))
+            break;
+    }
+    return VMRef.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
 }
 
 // ---- VectorBase<SInt32>
@@ -962,6 +1012,202 @@ void Vector_uint::lengthSet(const Value& result, UInt32 len)
 {
     SF_UNUSED(result);
     V.Resize(len);
+}
+
+// ---- Vector_String (2)
+
+// @0x142558b20
+void Vector_String::AS3slice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_14254fe70(V, result, argc, argv, *this);
+}
+
+// @0x142558bc0
+void Vector_String::AS3some(bool& result, const Value& callback, const Value& thisObject)
+{
+    result = V.Some(callback, thisObject, this);
+}
+
+// @0x1425592b0
+void Vector_String::AS3splice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142553bb0(V, result, argc, argv, *this);
+}
+
+// @0x142559350
+void Vector_String::AS3toLocaleString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+// @0x142559530
+void Vector_String::AS3toString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+
+// @0x142559710
+void Vector_String::AS3unshift(Value& result, unsigned argc, const Value* argv)
+{
+    V.Unshift(argc, argv, GetVM().GetClassTraitsString());
+    result.SetUInt32((UInt32)V.V.GetSize());
+}
+
+
+// ---- Vector_double (2)
+
+// @0x142558b40
+void Vector_double::AS3slice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142550070(V, result, argc, argv, *this);
+}
+
+// @0x142558bf0
+void Vector_double::AS3some(bool& result, const Value& callback, const Value& thisObject)
+{
+    result = V.Some(callback, thisObject, this);
+}
+
+// @0x1425592d0
+void Vector_double::AS3splice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142553e90(V, result, argc, argv, *this);
+}
+
+// @0x1425593b0
+void Vector_double::AS3toLocaleString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+// @0x142559590
+void Vector_double::AS3toString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+
+// @0x142559790
+void Vector_double::AS3unshift(Value& result, unsigned argc, const Value* argv)
+{
+    V.Unshift(argc, argv, GetVM().GetClassTraitsNumber());
+    result.SetUInt32((UInt32)V.V.GetSize());
+}
+
+
+// ---- Vector_int (2)
+
+// @0x142558b60
+void Vector_int::AS3slice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142550290(V, result, argc, argv, *this);
+}
+
+// @0x142558c20
+void Vector_int::AS3some(bool& result, const Value& callback, const Value& thisObject)
+{
+    result = V.Some(callback, thisObject, this);
+}
+
+// @0x1425592f0
+void Vector_int::AS3splice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142554280(V, result, argc, argv, *this);
+}
+
+// @0x142559410
+void Vector_int::AS3toLocaleString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+// @0x1425595f0
+void Vector_int::AS3toString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+
+// @0x142559810
+void Vector_int::AS3unshift(Value& result, unsigned argc, const Value* argv)
+{
+    V.Unshift(argc, argv, GetVM().GetClassTraitsSInt());
+    result.SetUInt32((UInt32)V.V.GetSize());
+}
+
+
+// ---- Vector_object (2)
+
+// @0x142558b80
+void Vector_object::AS3slice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142550490(V, result, argc, argv, *this);
+}
+
+// @0x142558c50
+void Vector_object::AS3some(bool& result, const Value& callback, const Value& thisObject)
+{
+    result = V.Some(callback, thisObject, this);
+}
+
+// @0x142559310
+void Vector_object::AS3splice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142554660(V, result, argc, argv, *this);
+}
+
+// @0x142559470
+void Vector_object::AS3toLocaleString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+// @0x142559650
+void Vector_object::AS3toString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+
+// ---- Vector_uint (2)
+
+// @0x142558ba0
+void Vector_uint::AS3slice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142550640(V, result, argc, argv, *this);
+}
+
+// @0x142558c80
+void Vector_uint::AS3some(bool& result, const Value& callback, const Value& thisObject)
+{
+    result = V.Some(callback, thisObject, this);
+}
+
+// @0x142559330
+void Vector_uint::AS3splice(Value& result, unsigned argc, const Value* argv)
+{
+    FUN_142554880(V, result, argc, argv, *this);
+}
+
+// @0x1425594d0
+void Vector_uint::AS3toLocaleString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+// @0x1425596b0
+void Vector_uint::AS3toString(ASString& result)
+{
+    result = V.Join(GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_));
+}
+
+
+// @0x142559930
+void Vector_uint::AS3unshift(Value& result, unsigned argc, const Value* argv)
+{
+    V.Unshift(argc, argv, GetVM().GetClassTraitsUInt());
+    result.SetUInt32((UInt32)V.V.GetSize());
 }
 
 }} // namespace Instances::fl_vec

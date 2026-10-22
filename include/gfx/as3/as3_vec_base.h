@@ -11,6 +11,8 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+namespace Instances { namespace fl { class Object; } }
+
 // The element-type independent face of a vector: the AS3 code reads elements through it as Values.
 // 0x18 bytes; vftable 0x143181db8.
 class ArrayBase
@@ -33,6 +35,11 @@ public:
             VMRef.ThrowRangeError(VM::Error(VM::eVectorFixedError, VMRef, "Vector"));
         return !Fixed;
     }
+
+    // The elements converted to strings and joined with sep (null/undefined give ""). 0x142564220
+    ASString Join(const ASString& sep) const;
+    // Vector.some: calls callback(element, index, owner) on thisObject until one returns true. 0x142563ee0
+    bool Some(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const;
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v) = 0;
@@ -61,6 +68,9 @@ public:
     void PushBackUnsafe(const Value& v);
     // The AS3 length setter: new elements get the type's default (0, null).
     CheckResult Resize(UInt32 size);
+    // Vector.unshift: argv (already of the element type tr) are inserted at the front.
+    // SInt32 0x142564390, UInt32 0x1425644f0, Number 0x142564650, String 0x142564860, Value 0x1425649c0
+    void Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr);
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v);

@@ -105,6 +105,7 @@ enum BuiltinType
     AS3Builtin_empty_,      // ""
     AS3Builtin_undefined,
     AS3Builtin_null,
+    AS3Builtin_comma_ = 14, // ","
     AS3Builtin_timer = 37,
     AS3Builtin_timerComplete,
     AS3BuiltinConst_Count_ = 61
