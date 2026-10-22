@@ -1206,6 +1206,8 @@ namespace ClassTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::int_"; }
         // @0x1424062d0
         virtual bool Coerce(const Value& value, Value& result) const;
+        // @0x1424063e0
+        bool CoerceValue(const Value& value, Value& result) const;
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
 
@@ -1237,6 +1239,8 @@ namespace ClassTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Number"; }
         // @0x142406210
         virtual bool Coerce(const Value& value, Value& result) const;
+        // @0x142406360
+        bool CoerceValue(const Value& value, Value& result) const;
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
 
@@ -1331,6 +1335,8 @@ namespace ClassTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::uint"; }
         // @0x1424062e0
         virtual bool Coerce(const Value& value, Value& result) const;
+        // @0x142406460
+        bool CoerceValue(const Value& value, Value& result) const;
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
 

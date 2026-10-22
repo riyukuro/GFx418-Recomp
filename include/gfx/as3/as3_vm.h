@@ -74,7 +74,15 @@ public:
         eVectorFixedError           = 1126,
         // (appended, sfr14)
         eIllegalWriteError          = 1074,
-        eInvalidBitmapData          = 2015
+        eInvalidBitmapData          = 2015,
+        eInvalidPrecisionError      = 1002,
+        eInvokeOnIncompatibleObjectError = 1004,
+        eCallOfNonFunctionError     = 1006,
+        eConstructOfNonFunctionError = 1007,
+        eStackOverflowError         = 1023,
+        eFunctionConstructorError   = 1066,
+        eMathNotFunctionError       = 1075,
+        eMathNotConstructorError    = 1076
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).

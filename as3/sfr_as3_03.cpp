@@ -309,6 +309,327 @@ template struct ThunkFunc2<Instances::fl::Array, 6, Value, unsigned, const Value
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl
+{
+    // @0x1423ff040
+    void Date::AS3setUTCDate(Value& result, unsigned argc, const Value* argv)
+    {
+        applyDateArgs(result, argc, argv, Date_Day, 0.0);
+    }
+
+    // @0x1423ff060
+    void Date::AS3setUTCFullYear(Value& result, unsigned argc, const Value* argv)
+    {
+        applyDateArgs(result, argc, argv, Date_Year, 0.0);
+    }
+
+    // @0x1423ff080
+    void Date::AS3setUTCHours(Value& result, unsigned argc, const Value* argv)
+    {
+        applyTimeArgs(result, argc, argv, Time_Hour, 0.0);
+    }
+
+    // @0x1423ff0a0
+    void Date::AS3setUTCMilliseconds(Value& result, unsigned argc, const Value* argv)
+    {
+        applyTimeArgs(result, argc, argv, Time_Ms, 0.0);
+    }
+
+    // @0x1423ff0c0
+    void Date::AS3setUTCMinutes(Value& result, unsigned argc, const Value* argv)
+    {
+        applyTimeArgs(result, argc, argv, Time_Minute, 0.0);
+    }
+
+    // @0x1423ff0e0
+    void Date::AS3setUTCMonth(Value& result, unsigned argc, const Value* argv)
+    {
+        applyDateArgs(result, argc, argv, Date_Month, 0.0);
+    }
+
+    // @0x1423ff100
+    void Date::AS3setUTCSeconds(Value& result, unsigned argc, const Value* argv)
+    {
+        applyTimeArgs(result, argc, argv, Time_Second, 0.0);
+    }
+
+    // MS2-FUNCTIONAL: the exe tail-calls RefCountBaseGC::ReleaseInternal from the SPtr release
+    // @0x142401860
+    void RegExp::AS3test(bool& result, const ASString& str)
+    {
+        SPtr<Instances::fl::Object> r;
+        AS3exec(r, str);
+        result = r.GetPtr() != NULL;
+    }
+
+    // @0x142401ae0
+    void Date::AS3toDateString(ASString& result)
+    {
+        char buffer[128];
+        const UPInt len = formatDateTimeString(buffer, sizeof(buffer), TimeValue, LocalTZA, true, false);
+        result = GetVM().GetStringManager().CreateString(buffer, len);
+    }
+
+    // @0x142403050
+    void Date::AS3toTimeString(ASString& result)
+    {
+        char buffer[128];
+        const UPInt len = formatDateTimeString(buffer, sizeof(buffer), TimeValue, LocalTZA, false, true);
+        result = GetVM().GetStringManager().CreateString(buffer, len);
+    }
+
+    // @0x142403110
+    void Date::AS3toUTCString(ASString& result)
+    {
+        char buffer[128];
+        const UPInt len = formatDateTimeString(buffer, sizeof(buffer), TimeValue, 0, true, true, true);
+        result = GetVM().GetStringManager().CreateString(buffer, len);
+    }
+
+    // @0x1424036f0
+    void Array::AS3unshift(Value& result, unsigned argc, const Value* argv)
+    {
+        SA.Insert(0, argc, argv);
+        result.SetUInt32(static_cast<UInt32>(SA.GetSize()));
+    }
+
+    // @0x142403820
+    void QName::AS3valueOf(SPtr<Instances::fl::QName>& result)
+    {
+        result = this;
+    }
+
+    // @0x142403960
+    void XML::AS3valueOf(SPtr<Instances::fl::XML>& result)
+    {
+        result = this;
+    }
+
+    // @0x1424039c0
+    void XMLList::AS3valueOf(SPtr<Instances::fl::XMLList>& result)
+    {
+        result = this;
+    }
+}} // namespace Instances::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+// VM::GetValueTraits: the traits of a value (0x14250ffc0).
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Classes { namespace fl
+{
+    // @0x142407120
+    void Boolean::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        if (argc > 0)
+            _this.SetBool(argv[0].Convert2Boolean());
+        else
+            _this.SetBool(false);
+    }
+
+    // @0x1424059b0
+    void Math::Call(const Value& /*_this*/, Value& /*result*/, unsigned /*argc*/, const Value* const /*argv*/)
+    {
+        VM& vm = GetVM();
+        vm.ThrowTypeError(VM::Error(VM::eMathNotFunctionError, vm));
+    }
+
+    // @0x1424072f0
+    void Math::Construct(Value& /*_this*/, unsigned /*argc*/, const Value* /*argv*/, bool /*extCall*/)
+    {
+        VM& vm = GetVM();
+        vm.ThrowTypeError(VM::Error(VM::eMathNotConstructorError, vm));
+    }
+
+    // @0x142407480
+    void Number::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        if (argc == 0)
+        {
+            _this.SetNumber(0.0);
+            return;
+        }
+        if (argc == 1)
+        {
+            Value::Number v;
+            if (argv[0].Convert2Number(v))
+                _this.SetNumber(v);
+        }
+        else
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "Number::Construct", 0, 1, argc));
+        }
+    }
+
+    // @0x1424076a0
+    void QName::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
+    {
+        if (argc == 1)
+        {
+            const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+            if (tr.GetTraitsType() == Traits_QName && tr.IsInstanceTraits())
+            {
+                _this = argv[0];
+                return;
+            }
+        }
+        Class::Construct(_this, argc, argv, extCall);
+    }
+
+    // @0x142407730
+    void String::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        ASString r = GetVM().GetStringManager().CreateEmptyString();
+        if (argc > 0)
+        {
+            if (!argv[0].Convert2String(r))
+                return;
+        }
+        _this = r;
+    }
+
+    // @0x142407bf0
+    void XMLList::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
+    {
+        if (argc == 1)
+        {
+            const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+            if (tr.GetTraitsType() == Traits_XMLList && tr.IsInstanceTraits())
+            {
+                _this = argv[0];
+                return;
+            }
+        }
+        Class::Construct(_this, argc, argv, extCall);
+    }
+
+    // @0x142405b00
+    void XML::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+    {
+        if (argc > 0)
+        {
+            const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+            if (tr.IsInstanceTraits() && tr.GetTraitsType() == Traits_XML)
+            {
+                result = argv[0];
+                return;
+            }
+        }
+        Construct(result, argc, argv);
+    }
+
+    // @0x142407c80
+    void int_::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        if (argc > 0)
+        {
+            SInt32 v;
+            if (argv[0].Convert2Int32(v))
+                _this.SetSInt32(v);
+        }
+        else
+            _this.SetSInt32(0);
+    }
+
+    // @0x142407d30
+    void uint::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        if (argc > 0)
+        {
+            UInt32 v;
+            if (argv[0].Convert2UInt32(v))
+                _this.SetUInt32(v);
+        }
+        else
+            _this.SetUInt32(0);
+    }
+}} // namespace Classes::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+// Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace ClassTraits { namespace fl
+{
+    // @0x1424060c0
+    bool Boolean::Coerce(const Value& value, Value& result) const
+    {
+        result.SetBool(value.Convert2Boolean());
+        return true;
+    }
+
+    // @0x1424061b0
+    bool Namespace::Coerce(const Value& value, Value& result) const
+    {
+        FUN_142508460(&GetInstanceTraits()).Construct(result, 1, &value);
+        return !GetVM().IsException();
+    }
+
+    // @0x142406220
+    bool String::Coerce(const Value& value, Value& result) const
+    {
+        if (value.IsNullOrUndefined())
+        {
+            result.Assign((ASStringNode*)NULL);
+        }
+        else
+        {
+            ASString r = GetVM().GetStringManager().CreateEmptyString();
+            if (!value.Convert2String(r))
+                return false;
+            result = r;
+        }
+        return true;
+    }
+
+    // @0x142406360
+    bool Number::CoerceValue(const Value& value, Value& result) const
+    {
+        Value::Number r;
+        if (value.Convert2Number(r))
+        {
+            result.SetNumber(r);
+            return true;
+        }
+        return false;
+    }
+
+    // @0x1424063e0
+    bool int_::CoerceValue(const Value& value, Value& result) const
+    {
+        SInt32 r;
+        if (value.Convert2Int32(r))
+        {
+            result.SetSInt32(r);
+            return true;
+        }
+        return false;
+    }
+
+    // @0x142406460
+    bool uint::CoerceValue(const Value& value, Value& result) const
+    {
+        UInt32 r;
+        if (value.Convert2UInt32(r))
+        {
+            result.SetUInt32(r);
+            return true;
+        }
+        return false;
+    }
+}} // namespace ClassTraits::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
