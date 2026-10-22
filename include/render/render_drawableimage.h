@@ -21,6 +21,7 @@
 #include "ms2/scaleform/include/render/render_filters.h"
 #include "ms2/scaleform/include/render/render_buffer.h"
 #include "ms2/scaleform/include/render/render_constants.h"
+#include "ms2/scaleform/include/render/render_dipixelprovider.h"
 
 namespace Scaleform { namespace Render {
 
@@ -236,15 +237,7 @@ private:
     Ptr<RenderTarget>           pRT;                  // +0xc0
 };
 
-// Pixel source/sink for GetPixels / SetPixels (ARGB values in scan order).
-class DIPixelProvider
-{
-public:
-    virtual ~DIPixelProvider() {}
-    virtual UPInt  GetLength() const = 0;
-    virtual UInt32 ReadNextPixel() = 0;
-    virtual void   WriteNextPixel(UInt32 v) = 0;
-};
+// DIPixelProvider (the GetPixels / SetPixels source/sink): render_dipixelprovider.h
 
 // ---------------------------------------------------------------------------------------------------------------
 // Commands
