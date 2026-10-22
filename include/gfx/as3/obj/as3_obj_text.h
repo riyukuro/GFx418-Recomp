@@ -39,6 +39,12 @@ namespace Instances { namespace fl_text {
         ASString            fontStyle;  // +0x48
         ASString            fontType;   // +0x50
 
+        // @0x1424aced0
+        virtual void InitInstance(bool extCall = false);
+        // Binds the instance to the library font exported under its class name; returns false on every path.
+        // @0x1424abe80
+        bool AttachLibraryFont();
+
         // @0x1424b08d0
         void fontNameGet(Value& result);
         // @0x1424b09c0
@@ -53,7 +59,7 @@ namespace Instances { namespace fl_text {
     class StaticText : public Instances::fl_display::DisplayObject
     {
     public:
-        StaticText(InstanceTraits::Traits& t);   // 0x1424a8d20
+        StaticText(InstanceTraits::Traits& t) : Instances::fl_display::DisplayObject(t) {}   // 0x1424a8d20
         // @0x1424b4d00
         void textGet(ASString& result);
     };
@@ -345,6 +351,9 @@ namespace Instances { namespace fl_text {
         Value::Number   leading;    // +0x50
         Value::Number   width;      // +0x58
         Value::Number   x;          // +0x60
+
+        // @0x1424abd70
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet

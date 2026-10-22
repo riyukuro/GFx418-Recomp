@@ -3,7 +3,8 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_12
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142497a90-0x1424a9ed0 .text$mn
+// MS2-RANGE: 0x142497a90-0x1424abbe0 .text$mn
+// MS2-RANGE: 0x1424ad4d0-0x1424ad870 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/render/render_font.h"
@@ -1788,3 +1789,8 @@ namespace InstanceTraits { namespace fl_text
 // MS2-PIN: ??_GTextFormat@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab690
 // MS2-PIN: ??_GTextSnapshot@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aba80
 // MS2-PIN: ??_GTextSnapshot@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424abb10
+// MS2-FUNCTIONAL 0x1424ad650: the exe inlines the StyleSheet constructor (its style manager members are not recovered yet); ours calls it
+// MS2-FUNCTIONAL 0x1424ad800: the exe inlines the TextSnapshot constructor (its StaticTextSnapshotData member is not recovered yet); ours calls it
+// MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510
+// MS2-PIN: ??_GStaticText@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142442e10
+// MS2-FUNCTIONAL 0x1424ad6e0: the exe inlines the TextField constructor (its vftable overrides are not recovered yet); ours calls it

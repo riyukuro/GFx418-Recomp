@@ -3,10 +3,13 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_13
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424aa5c0-0x1424ad030 .text$mn
-// MS2-RANGE: 0x1424ad4d0-0x1424bb1f0 .text$mn
+// MS2-RANGE: 0x1424abbe0-0x1424ad030 .text$mn
+// MS2-RANGE: 0x1424ad870-0x1424bb1f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_fontlib.h"
+#include "ms2/scaleform/include/render/render_font.h"
+#include "ms2/scaleform/include/kernel/sf_utf8util.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -921,6 +924,137 @@ namespace Classes { namespace fl_ui
             result = true;
         else
             result = false;
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- fl_text: Font, TextLineMetrics ----
+// Bodies of the exe called here (not recovered yet), by their addresses.
+// The movie whose library an AS3 object's class came from.
+Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
+// MovieImpl::FindExportedResource.
+bool FUN_14256ec50(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::ResourceBindData* pdata,
+                   const Scaleform::String& symbol);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424abe80
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    bool Font::AttachLibraryFont()
+    {
+        if (pFont)
+            return false;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        MovieDefImpl* pobjDef = FUN_14250d8f0(vm, this);
+        if (!pobjDef || !GetTraits().IsAbcObject())
+            return false;
+        ASString name = GetTraits().GetQualifiedName(Traits::qnfWithDot);
+        MovieImpl* pmovie = vm.GetMovieImpl();
+        ResourceBindData data;
+        if (!FUN_14256ec50(pmovie, pobjDef, &data, String(name.ToCStr())))
+        {
+            if (pmovie->GetStateBag()->GetLogState())
+                pmovie->GetStateBag()->GetLogState()->LogScriptWarning("Attaching a font with class '%s' failed", name.ToCStr());
+            return false;
+        }
+        if (data.pResource &&
+            (data.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Font))
+            pFont = static_cast<FontResource*>(data.pResource.GetPtr())->GetFont();
+        return false;
+    }
+
+    // @0x1424aced0
+    void Font::InitInstance(bool extCall)
+    {
+        if (!extCall)
+            AttachLibraryFont();
+    }
+
+    // @0x1424b08d0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Font::fontNameGet(Value& result)
+    {
+        if (pFont)
+            result = GetVM().GetStringManager().CreateString(pFont->GetName());
+        else if (fontName.GetLength())
+            result = fontName;
+        else
+            result.SetNull();
+    }
+
+    // @0x1424b09c0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Font::fontStyleGet(Value& result)
+    {
+        if (!pFont)
+        {
+            if (fontStyle.GetLength())
+                result = fontStyle;
+            else
+                result.SetNull();
+            return;
+        }
+        const char* pstyle;
+        if (pFont->IsBold() && pFont->IsItalic())
+            pstyle = "boldItalic";
+        else if (pFont->IsBold())
+            pstyle = "bold";
+        else if (pFont->IsItalic())
+            pstyle = "italic";
+        else
+            pstyle = "regular";
+        result = GetVM().GetStringManager().CreateConstString(pstyle);
+    }
+
+    // @0x1424b0af0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Font::fontTypeGet(Value& result)
+    {
+        if (!pFont)
+        {
+            if (fontType.GetLength())
+                result = fontType;
+            else
+                result.SetNull();
+            return;
+        }
+        result = GetVM().GetStringManager().CreateConstString(pFont->IsDeviceFont() ? "device" : "embedded");
+    }
+
+    // @0x1424b2e80
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Font::hasGlyphs(bool& result, const ASString& str)
+    {
+        if (!pFont)
+        {
+            result = false;
+            return;
+        }
+        const char* p = str.ToCStr();
+        const char* pend = p + str.GetSize();
+        result = true;
+        while (p < pend)
+        {
+            UInt32 ch = UTF8Util::DecodeNextChar(&p);
+            if (pFont->GetGlyphIndex((UInt16)ch) < 0)
+            {
+                result = false;
+                return;
+            }
+        }
+    }
+
+    // The exe converts the arguments and drops them: the metrics stay zero.
+    // @0x1424abd70
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextLineMetrics::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Value::Number n;
+        for (unsigned i = 0; i < argc && i < 6; ++i)
+            argv[i].Convert2Number(n);
     }
 }}
 
