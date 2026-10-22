@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x1424aa5c0-0x1424ad030 .text$mn
 // MS2-RANGE: 0x1424ad4d0-0x1424bbab0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -782,6 +783,144 @@ namespace InstanceTraits { namespace fl_ui
     void ContextMenuClipboardItems::MakeObject(Value& result, Traits& t)
     {
         result.Pick(MakeInstance(static_cast<ContextMenuClipboardItems&>(t)));
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+// ==== flash.ui natives ================================================================================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_ui
+{
+    // @0x1424b90e0
+    SPtr<Instances::fl_ui::ContextMenuBuiltInItems> ContextMenu::builtInItemsGet()
+    {
+        SPtr<Instances::fl_ui::ContextMenuBuiltInItems> result;
+        builtInItemsGet(result);
+        return result;
+    }
+
+    // @0x1424b9120
+    void ContextMenu::builtInItemsGet(SPtr<Instances::fl_ui::ContextMenuBuiltInItems>& result)
+    {
+        result = NULL;
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::ContextMenu::builtInItemsGet() is not implemented\n");
+    }
+
+    // @0x1424b9270
+    void ContextMenu::customItemsGet(SPtr<Instances::fl::Array>& result)
+    {
+        result = GetVM().MakeArray();
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::ContextMenu::customItemsGet() is not implemented\n");
+    }
+
+    // MS2-FUNCTIONAL: our compiler inlines the native into this wrapper; the exe calls it
+    // @0x1424b9250
+    SPtr<Instances::fl::Array> ContextMenu::customItemsGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        customItemsGet(result);
+        return result;
+    }
+}}
+
+namespace Classes { namespace fl_ui
+{
+    // @0x1424b91b0
+    void Keyboard::capsLockGet(bool& result)
+    {
+        KeyModifiers mods = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetKeyboardState(0)->GetKeyModifiers();
+        result = mods.IsCapsToggled();
+    }
+
+    // @0x1424b95b0
+    void Keyboard::numLockGet(bool& result)
+    {
+        KeyModifiers mods = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetKeyboardState(0)->GetKeyModifiers();
+        result = mods.IsNumToggled();
+    }
+
+    // @0x1424b9320
+    void Mouse::hide(const Value& result)
+    {
+        SF_UNUSED(result);
+        MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (pmovie->pUserEventHandler)
+            pmovie->pUserEventHandler->HandleEvent(pmovie, MouseCursorEvent(Event::DoHideMouse, 0));
+        else if (pmovie->GetLogState())
+            pmovie->GetLogState()->LogScriptWarning("No user event handler interface is installed; Mouse.hide failed.");
+    }
+
+    // The exe logs the Mouse.hide message here too.
+    // @0x1424b95f0
+    void Mouse::show(const Value& result)
+    {
+        SF_UNUSED(result);
+        MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (pmovie->pUserEventHandler)
+            pmovie->pUserEventHandler->HandleEvent(pmovie, MouseCursorEvent(Event::DoShowMouse, 0));
+        else if (pmovie->GetLogState())
+            pmovie->GetLogState()->LogScriptWarning("No user event handler interface is installed; Mouse.hide failed.");
+    }
+
+    // @0x1424b9400
+    void Multitouch::inputModeGet(ASString& result)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        switch (vm.GetMovieImpl()->GetMultitouchInputMode())
+        {
+        case MovieImpl::MTI_TouchPoint:
+            result = vm.GetStringManager().CreateConstString("touchPoint");
+            break;
+        case MovieImpl::MTI_Gesture:
+            result = vm.GetStringManager().CreateConstString("gesture");
+            break;
+        case MovieImpl::MTI_Mixed:
+            result = vm.GetStringManager().CreateConstString("mixed");
+            break;
+        default:
+            result = vm.GetStringManager().CreateConstString("none");
+        }
+    }
+
+    // @0x1424b94c0
+    void Multitouch::inputModeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        MovieImpl::MultitouchInputMode mode = MovieImpl::MTI_None;
+        if (!strcmp(value.ToCStr(), "touchPoint"))
+            mode = MovieImpl::MTI_TouchPoint;
+        else if (!strcmp(value.ToCStr(), "gesture"))
+            mode = MovieImpl::MTI_Gesture;
+        else if (!strcmp(value.ToCStr(), "mixed"))
+            mode = MovieImpl::MTI_Mixed;
+        vm.GetMovieImpl()->SetMultitouchInputMode(mode);
+    }
+
+    // @0x1424b9580
+    void Multitouch::maxTouchPointsGet(SInt32& result)
+    {
+        result = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetMaxTouchPoints();
+    }
+
+    // @0x1424b97d0
+    void Multitouch::supportsGestureEventsGet(bool& result)
+    {
+        result = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetSupportedGesturesMask() != 0;
+    }
+
+    // @0x1424b9800
+    void Multitouch::supportsTouchEventsGet(bool& result)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        if (vm.GetMovieImpl()->GetMaxTouchPoints() > 0 && (vm.GetMovieImpl()->GetMultitouchInputMode() & MovieImpl::MTI_TouchPoint))
+            result = true;
+        else
+            result = false;
     }
 }}
 

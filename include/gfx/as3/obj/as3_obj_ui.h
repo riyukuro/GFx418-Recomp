@@ -20,12 +20,14 @@ namespace Instances { namespace fl_ui {
 
         // @0x1424b9120
         void builtInItemsGet(SPtr<Instances::fl_ui::ContextMenuBuiltInItems>& result);
+        SPtr<Instances::fl_ui::ContextMenuBuiltInItems> builtInItemsGet();
         // @0x1424b9190
         void builtInItemsSet(const Value& result, Instances::fl_ui::ContextMenuBuiltInItems*);
         // @0x1424b91f0
         void clone(SPtr<Instances::fl_display::NativeMenu>& result);
         // @0x1424b9270
         void customItemsGet(SPtr<Instances::fl::Array>& result);
+        SPtr<Instances::fl::Array> customItemsGet();
         // @0x1424b9300
         void customItemsSet(const Value& result, Instances::fl::Array*);
         // @0x1424b93e0
