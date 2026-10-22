@@ -1118,6 +1118,74 @@ namespace Instances { namespace fl_display
     }
 }}
 
+namespace Instances { namespace fl_display
+{
+    // MS2-FUNCTIONAL: exe frame carries a /GS cookie around the GetRect temp; logic identical
+    // @0x142454960
+    void BitmapData::widthGet(SInt32& result)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        result = pImage->GetRect().Width();
+    }
+
+    // MS2-FUNCTIONAL: exe frame carries a /GS cookie around the GetRect temp; logic identical
+    // @0x14244e480
+    void BitmapData::heightGet(SInt32& result)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        result = pImage->GetRect().Height();
+    }
+
+    // @0x142450940
+    void DisplayObject::nameGet(ASString& result)
+    {
+        ASString name = pDispObj->GetName();
+        if (name.IsEmpty() && pDispObj->IsInstanceBasedNameFlagSet())
+            result.SetNull();
+        else
+            result = name;
+    }
+
+    // @0x142450ab0
+    void DisplayObject::nameSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        if (pDispObj->Flags & GFx::DisplayObject::Mask_TimelineObject)
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eIllegalWriteError, vm, "name", "Timeline"));
+            return;
+        }
+        pDispObj->SetName(value);
+        pDispObj->Flags &= ~GFx::DisplayObject::Mask_InstanceBasedName;
+    }
+
+    // MS2-FUNCTIONAL: inline Value::Release kind test scheduled differently (byte compare in exe); logic identical
+    // @0x14244c1b0
+    void InteractiveObject::focusRectGet(Value& result)
+    {
+        // The exe reads the bits focusRectSet clears for undefined.
+        UInt32 bits = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_TabEnabled;
+        if (bits)
+        {
+            const bool enabled = bits == GFx::InteractiveObject::Mask_TabEnabled;
+            result.SetBool(enabled);
+        }
+        else
+            result.SetNull();
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$09K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455e90

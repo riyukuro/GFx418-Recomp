@@ -71,7 +71,10 @@ public:
         eNullPointerError           = 2007,
         // (appended, sfr13)
         eCheckTypeFailedError       = 1034,
-        eVectorFixedError           = 1126
+        eVectorFixedError           = 1126,
+        // (appended, sfr14)
+        eIllegalWriteError          = 1074,
+        eInvalidBitmapData          = 2015
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).
