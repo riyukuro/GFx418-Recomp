@@ -90,6 +90,9 @@ public:
     SPtr<Class>         TextFormatClass;            // +0x388
     SPtr<Class>         EventDispatcherClass;       // +0x390
     SPtr<Class>         Vector3DClass;              // +0x398
+    // (appended, sfr_as3_09) the "Ex" event classes (scaleform.gfx.*EventEx: controller/mouse indices) are made in
+    // place of the flash.events ones
+    bool                ExtensionsEnabled;          // +0x3a0
 };
 
 }}} // namespace Scaleform::GFx::AS3

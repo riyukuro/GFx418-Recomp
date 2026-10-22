@@ -183,6 +183,17 @@ namespace Instances { namespace fl_events {
         // the AS3 objects of dobj's display parents, nearest first
         void GetParentChain(GFx::DisplayObject* dobj,
                             ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain);   // 0x142466270
+        // (appended, sfr_as3_09) new event objects, made by the class object of this dispatcher's traits
+        SPtr<Instances::fl_events::Event> CreateEventObject(const ASString& type, bool bubbles, bool cancelable);  // 0x142466cd0
+        SPtr<Instances::fl_events::FocusEvent> CreateFocusEventObject(const ASString& type, Instances::fl::Object* relatedObj,
+                                                                      unsigned controllerIdx, bool shiftKey,
+                                                                      UInt32 keyCode);        // 0x142466e80
+        SPtr<Instances::fl_events::Event> CreateIOErrorEventObject(const char* errText);      // 0x142467190
+        SPtr<Instances::fl_events::Event> CreateMouseCursorEventObject(const ASString& cursor,
+                                                                       unsigned mouseIdx);    // 0x142467620
+        SPtr<Instances::fl_events::Event> CreateNetStatusEventObject(const ASString& code,
+                                                                     const ASString& level);  // 0x142467b50
+        SPtr<Instances::fl_events::Event> CreateProgressEventObject(const ASString& type);    // 0x142467dc0
     };
 
     // One registered listener (0x28 bytes): the function value and the addEventListener options.
@@ -1194,6 +1205,22 @@ namespace Classes { namespace fl_events {
 
         SPtr<AS3::Object> Unk50;            // +0x50: purpose not recovered (visited by the GC)
         SPtr<AS3::Object> Unk58;            // +0x58
+
+        // (appended, sfr_as3_09) new event objects of the VM's event classes ("Ex" classes when the VM has them on)
+        SPtr<Instances::fl_events::Event> CreateEventObject(const ASString& type, bool bubbles, bool cancelable);  // 0x142466be0
+        SPtr<Instances::fl_events::FocusEvent> CreateFocusEventObject(const ASString& type, Instances::fl::Object* relatedObj,
+                                                                      unsigned controllerIdx, bool shiftKey,
+                                                                      UInt32 keyCode);        // 0x142466d20
+        SPtr<Instances::fl_events::Event> CreateIOErrorEventObject(const char* errText);      // 0x142466ff0
+        SPtr<Instances::fl_events::KeyboardEvent> CreateKeyboardEventObject(const EventId& evtId, const ASString& type,
+                                                                            Instances::fl::Object* target);  // 0x142467340
+        SPtr<Instances::fl_events::Event> CreateMouseCursorEventObject(const ASString& cursor,
+                                                                       unsigned mouseIdx);    // 0x1424674c0
+        SPtr<Instances::fl_events::MouseEvent> CreateMouseEventObject(const EventId& evtId, const ASString& type,
+                                                                      Instances::fl::Object* target);  // 0x142467790
+        SPtr<Instances::fl_events::Event> CreateNetStatusEventObject(const ASString& code,
+                                                                     const ASString& level);  // 0x1424679d0
+        SPtr<Instances::fl_events::Event> CreateProgressEventObject(const ASString& type);    // 0x142467ce0
     };
 
     // 0x60 bytes.

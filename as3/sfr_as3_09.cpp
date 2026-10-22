@@ -6,6 +6,8 @@
 // MS2-RANGE: 0x1424653f0-0x142473710 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_input.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1576,6 +1578,209 @@ namespace InstanceTraits { namespace fl_events {
         result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
     }
 }} // namespace InstanceTraits::fl_events
+
+// ---- event object factories: new events of the VM's event classes ---------------------------------------------------
+namespace Classes { namespace fl_events {
+    namespace
+    {
+        // the builtin string a MouseCursorEvent is made with (MovieRoot builtin 45)
+        enum { BI_mouseCursorChange = 45 };
+        // the event ids a mouse event reports the buttons held before the event for
+        enum { EV_RollOver = 0x2000, EV_RollOut = 0x4000, EV_MouseIdA = 0x100000a, EV_MouseIdB = 0x100000b };
+
+        // MovieImpl keeps one MouseState per mouse (4, 0x50 bytes each) at +0x1260; gfx_movieimpl.h has not
+        // recovered the field. NULL past the last mouse.
+        const MouseState* GetMouseState(MovieImpl* movie, unsigned mouseIdx)
+        {
+            if (mouseIdx >= 4)
+                return 0;
+            return reinterpret_cast<const MouseState*>(reinterpret_cast<const UByte*>(movie) + 0x1260) + mouseIdx;
+        }
+    }
+
+    // @0x142466be0
+    // MS2-FUNCTIONAL: the argument Values are set up in another order
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateEventObject(const ASString& type, bool bubbles, bool cancelable)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::Event> result;
+        Value argv[3] = { Value(type), Value(bubbles), Value(cancelable) };
+        vm.ConstructInstance(result, vm.EventClass, 3, argv);
+        return result;
+    }
+
+    // @0x142466d20
+    SPtr<Instances::fl_events::FocusEvent> EventDispatcher::CreateFocusEventObject(const ASString& type,
+                                                                                   Instances::fl::Object* relatedObj,
+                                                                                   unsigned controllerIdx, bool shiftKey,
+                                                                                   UInt32 keyCode)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::FocusEvent> result;
+        Value argv[6] = { Value(type), Value(true), Value(false), Value(relatedObj), Value(shiftKey), Value(keyCode) };
+        vm.ConstructInstance(result, vm.ExtensionsEnabled ? vm.FocusEventExClass : vm.FocusEventClass, 6, argv);
+        if (vm.ExtensionsEnabled)
+            static_cast<Instances::fl_gfx::FocusEventEx*>(result.GetPtr())->controllerIdx = controllerIdx;
+        return result;
+    }
+
+    // @0x142466ff0
+    // MS2-FUNCTIONAL: the argument Values are set up in another order
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateIOErrorEventObject(const char* errText)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::Event> result;
+        StringManager& sm = vm.GetStringManager();
+        Value argv[4] = { Value(sm.CreateConstString("ioError")), Value(false), Value(false),
+                          Value(sm.CreateString(errText)) };
+        vm.ConstructInstance(result, GetVM().GetClass(StringDataPtr("flash.events.IOErrorEvent")), 4, argv);
+        return result;
+    }
+
+    // @0x142467340
+    // MS2-FUNCTIONAL: the exe copies the EventId byte by byte (skipping the padding); cl copies the whole struct
+    SPtr<Instances::fl_events::KeyboardEvent> EventDispatcher::CreateKeyboardEventObject(const EventId& evtId,
+                                                                                         const ASString& type,
+                                                                                         Instances::fl::Object* target)
+    {
+        SPtr<Instances::fl_events::KeyboardEvent> result;
+        Value argv[1] = { Value(type) };
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        vm.ConstructInstance(result, vm.ExtensionsEnabled ? vm.KeyboardEventExClass : vm.KeyboardEventClass, 1, argv);
+        result->Target = target;
+        result->EvtId = evtId;
+        if (!result->EvtId.AsciiCode)
+            result->EvtId.AsciiCode = result->EvtId.ConvertKeyCodeToAscii();
+        result->Bubbles = true;
+        result->Cancelable = false;
+        if (vm.ExtensionsEnabled)
+            static_cast<Instances::fl_gfx::KeyboardEventEx*>(result.GetPtr())->controllerIdx = evtId.KeyboardIndex;
+        return result;
+    }
+
+    // @0x1424674c0
+    // MS2-FUNCTIONAL: the argument Values are set up in another order
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateMouseCursorEventObject(const ASString& cursor, unsigned mouseIdx)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::Event> result;
+        Value argv[3] = { Value(vm.GetBuiltin(BuiltinType(BI_mouseCursorChange))), Value(false), Value(true) };
+        if (Class* cls = GetVM().GetClass(StringDataPtr("scaleform.gfx.MouseCursorEvent")))
+        {
+            vm.ConstructInstance(result, cls, 3, argv);
+            Instances::fl_gfx::MouseCursorEvent* evt = static_cast<Instances::fl_gfx::MouseCursorEvent*>(result.GetPtr());
+            evt->mouseIdx = mouseIdx;
+            evt->cursor = cursor;
+        }
+        return result;
+    }
+
+    // @0x142467790
+    // MS2-FUNCTIONAL: register allocation and the order of the flag stores differ
+    SPtr<Instances::fl_events::MouseEvent> EventDispatcher::CreateMouseEventObject(const EventId& evtId,
+                                                                                   const ASString& type,
+                                                                                   Instances::fl::Object* target)
+    {
+        SPtr<Instances::fl_events::MouseEvent> result;
+        Value argv[1] = { Value(type) };
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        vm.ConstructInstance(result, vm.ExtensionsEnabled ? vm.MouseEventExClass : vm.MouseEventClass, 1, argv);
+        result->Target = target;
+        // roll over/out do not bubble
+        result->Bubbles = !(evtId.Id == EV_RollOver || evtId.Id == EV_RollOut);
+        result->Cancelable = false;
+        result->AltKey = (evtId.KeysState >> 2) & 1;
+        result->CtrlKey = (evtId.KeysState >> 1) & 1;
+        result->ShiftKey = evtId.KeysState & 1;
+        result->Delta = evtId.MouseWheelDelta;
+        if (vm.ExtensionsEnabled)
+        {
+            Instances::fl_gfx::MouseEventEx* ex = static_cast<Instances::fl_gfx::MouseEventEx*>(result.GetPtr());
+            ex->mouseIdx = evtId.MouseIndex;
+            ex->nestingIdx = evtId.RollOverCnt;
+            ex->buttonIdx = evtId.ButtonId;
+        }
+        const MouseState* ms = GetMouseState(static_cast<ASVM&>(GetVM()).GetMovieImpl(), evtId.MouseIndex);
+        result->StageX = ms->GetLastPosition().x;
+        result->StageY = ms->GetLastPosition().y;
+        UInt32 id = evtId.Id;
+        if (id == EV_RollOver || id == EV_RollOut || id == EV_MouseIdA || id == EV_MouseIdB)
+            result->ButtonsMask = ms->GetPrevButtonsState();
+        else
+            result->ButtonsMask = ms->GetButtonsState();
+        return result;
+    }
+
+    // @0x1424679d0
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateNetStatusEventObject(const ASString& code, const ASString& level)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::Event> result;
+        Class* cls = GetVM().GetClass(StringDataPtr("flash.events.NetStatusEvent"));
+        Value argv[5] = { Value(vm.GetStringManager().CreateConstString("netStatus")), Value(false), Value(false),
+                          Value(code), Value(level) };
+        vm.ConstructInstance(result, cls, 5, argv);
+        return result;
+    }
+
+    // @0x142467ce0
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateProgressEventObject(const ASString& type)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::Event> result;
+        Value argv[3] = { Value(type), Value(false), Value(false) };
+        vm.ConstructInstance(result, vm.ProgressEventClass, 3, argv);
+        return result;
+    }
+}} // namespace Classes::fl_events
+
+namespace Instances { namespace fl_events {
+    // The dispatcher's class object (Classes::fl_events::EventDispatcher or a subclass).
+    static Classes::fl_events::EventDispatcher& GetDispatcherClass(const EventDispatcher& d)
+    {
+        return static_cast<Classes::fl_events::EventDispatcher&>(d.GetTraits().GetConstructor());
+    }
+
+    // @0x142466cd0
+    // MS2-FUNCTIONAL: cl keeps the result pointer in another register
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateEventObject(const ASString& type, bool bubbles, bool cancelable)
+    {
+        return GetDispatcherClass(*this).CreateEventObject(type, bubbles, cancelable);
+    }
+    // @0x142466e80
+    // MS2-FUNCTIONAL: the exe inlines the class object's factory; cl calls it
+    SPtr<Instances::fl_events::FocusEvent> EventDispatcher::CreateFocusEventObject(const ASString& type,
+                                                                                   Instances::fl::Object* relatedObj,
+                                                                                   unsigned controllerIdx, bool shiftKey,
+                                                                                   UInt32 keyCode)
+    {
+        return GetDispatcherClass(*this).CreateFocusEventObject(type, relatedObj, controllerIdx, shiftKey, keyCode);
+    }
+    // @0x142467190
+    // MS2-FUNCTIONAL: the exe inlines the class object's factory; cl calls it
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateIOErrorEventObject(const char* errText)
+    {
+        return GetDispatcherClass(*this).CreateIOErrorEventObject(errText);
+    }
+    // @0x142467620
+    // MS2-FUNCTIONAL: the exe inlines the class object's factory; cl calls it
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateMouseCursorEventObject(const ASString& cursor, unsigned mouseIdx)
+    {
+        return GetDispatcherClass(*this).CreateMouseCursorEventObject(cursor, mouseIdx);
+    }
+    // @0x142467b50
+    // MS2-FUNCTIONAL: the exe inlines the class object's factory; cl calls it
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateNetStatusEventObject(const ASString& code, const ASString& level)
+    {
+        return GetDispatcherClass(*this).CreateNetStatusEventObject(code, level);
+    }
+    // @0x142467dc0
+    // MS2-FUNCTIONAL: the exe inlines the class object's factory; cl calls it
+    SPtr<Instances::fl_events::Event> EventDispatcher::CreateProgressEventObject(const ASString& type)
+    {
+        return GetDispatcherClass(*this).CreateProgressEventObject(type);
+    }
+}} // namespace Instances::fl_events
 
 }}} // namespace Scaleform::GFx::AS3
 

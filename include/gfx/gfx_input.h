@@ -178,6 +178,8 @@ public:
     };
     unsigned GetButtonsState() const     { return CurButtonsState; }
     unsigned GetPrevButtonsState() const { return PrevButtonsState; }
+    // (appended for the AS3 mouse event factory, sfr_as3_09)
+    const Render::PointF& GetLastPosition() const { return LastPosition; }
 };
 
 }} // namespace Scaleform::GFx
