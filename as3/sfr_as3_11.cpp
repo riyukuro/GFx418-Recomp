@@ -103,6 +103,11 @@ template struct ThunkFunc1<Instances::fl_net::SharedObject, 11, ASString, SInt32
 template struct ThunkFunc2<Instances::fl_net::SharedObject, 12, Value, unsigned, const Value*>;
 // thunk 0x142493410: Instances::fl_net::SharedObject::setDirty
 template struct ThunkFunc1<Instances::fl_net::SharedObject, 13, const Value, const ASString&>;
+// Instances::fl_net::SharedObject::setProperty argument 1 default
+template <> struct ThunkMethodDefault<Instances::fl_net::SharedObject, 14, 1, const Value&>
+{
+    SF_INLINE static Value Get(StringManager&) { return Value::GetNull(); }
+};
 // thunk 0x142493510: Instances::fl_net::SharedObject::setProperty
 template struct ThunkFunc2<Instances::fl_net::SharedObject, 14, const Value, const ASString&, const Value&>;
 // Classes::fl_net::SharedObject::getLocal argument 1 default
@@ -2114,6 +2119,633 @@ namespace Instances { namespace fl_geom
     }
 }}
 
+
+// ---- flash.net: class traits, instance traits, classes and instances ----
+
+namespace fl_net
+{
+    extern const ClassInfo FileFilterCI;
+    extern const ClassInfo FileReferenceCI;
+    extern const ClassInfo FileReferenceListCI;
+    extern const ClassInfo IDynamicPropertyOutputCI;
+    extern const ClassInfo IDynamicPropertyWriterCI;
+    extern const ClassInfo LocalConnectionCI;
+    extern const ClassInfo NetConnectionCI;
+    extern const ClassInfo ObjectEncodingCI;
+    extern const ClassInfo ResponderCI;
+    extern const ClassInfo SharedObjectCI;
+    extern const ClassInfo SharedObjectFlushStatusCI;
+    extern const ClassInfo SocketCI;
+    extern const ClassInfo URLLoaderCI;
+    extern const ClassInfo URLLoaderDataFormatCI;
+    extern const ClassInfo URLRequestCI;
+    extern const ClassInfo URLRequestHeaderCI;
+    extern const ClassInfo URLRequestMethodCI;
+    extern const ClassInfo URLStreamCI;
+    extern const ClassInfo URLVariablesCI;
+    extern const ClassInfo XMLSocketCI;
+}
+
+// ---- FileFilter ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142495ae0
+    FileFilter::FileFilter(VM& vm)
+        : Traits(vm, AS3::fl_net::FileFilterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_net::FileFilterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424936f0
+    Pickable<Traits> FileFilter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FileFilter(vm));
+    }
+}}
+
+// ---- FileReference ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142495bc0
+    FileReference::FileReference(VM& vm)
+        : Traits(vm, AS3::fl_net::FileReferenceCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_net::FileReferenceCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142492a80
+    Pickable<Traits> FileReference::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FileReference(vm));
+    }
+}}
+
+// ---- FileReferenceList ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142495ca0
+    FileReferenceList::FileReferenceList(VM& vm)
+        : Traits(vm, AS3::fl_net::FileReferenceListCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_net::FileReferenceListCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142493810
+    Pickable<Traits> FileReferenceList::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FileReferenceList(vm));
+    }
+}}
+
+// ---- IDynamicPropertyOutput ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142495d80
+    IDynamicPropertyOutput::IDynamicPropertyOutput(VM& vm)
+        : Traits(vm, AS3::fl_net::IDynamicPropertyOutputCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_net::IDynamicPropertyOutputCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142493930
+    Pickable<Traits> IDynamicPropertyOutput::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IDynamicPropertyOutput(vm));
+    }
+}}
+
+// ---- IDynamicPropertyWriter ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142495e60
+    IDynamicPropertyWriter::IDynamicPropertyWriter(VM& vm)
+        : Traits(vm, AS3::fl_net::IDynamicPropertyWriterCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_net::IDynamicPropertyWriterCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142493a50
+    Pickable<Traits> IDynamicPropertyWriter::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IDynamicPropertyWriter(vm));
+    }
+}}
+
+// ---- LocalConnection ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142495f40
+    LocalConnection::LocalConnection(VM& vm)
+        : Traits(vm, AS3::fl_net::LocalConnectionCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_net::LocalConnectionCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142493ef0
+    Pickable<Traits> LocalConnection::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) LocalConnection(vm));
+    }
+}}
+
+// ---- NetConnection ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496020
+    NetConnection::NetConnection(VM& vm)
+        : Traits(vm, AS3::fl_net::NetConnectionCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_net::NetConnection(vm, AS3::fl_net::NetConnectionCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142494130
+    Pickable<Traits> NetConnection::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) NetConnection(vm));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_net
+{
+    // @0x142496120
+    NetConnection::NetConnection(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x50);
+    }
+}}
+
+namespace Instances { namespace fl_net
+{
+    // @0x142496150
+    NetConnection::NetConnection(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+    }
+}}
+
+// ---- ObjectEncoding ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496180
+    ObjectEncoding::ObjectEncoding(VM& vm)
+        : Traits(vm, AS3::fl_net::ObjectEncodingCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_net::ObjectEncodingCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_net::ObjectEncoding(*this)));
+    }
+
+    // @0x142494c70
+    Pickable<Traits> ObjectEncoding::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ObjectEncoding(vm));
+    }
+}}
+
+namespace Classes { namespace fl_net
+{
+    // @0x142496280
+    ObjectEncoding::ObjectEncoding(ClassTraits::Traits& t)
+        : Class(t)
+        , AMF0(0)
+        , AMF3(3)
+        , Default(3)
+    {
+    }
+}}
+
+// ---- Responder ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x1424962c0
+    Responder::Responder(VM& vm)
+        : Traits(vm, AS3::fl_net::ResponderCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_net::ResponderCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142494f00
+    Pickable<Traits> Responder::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Responder(vm));
+    }
+}}
+
+// ---- SharedObject ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x1424963a0
+    SharedObject::SharedObject(VM& vm)
+        : Traits(vm, AS3::fl_net::SharedObjectCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_net::SharedObject(vm, AS3::fl_net::SharedObjectCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_net::SharedObject(*this)));
+    }
+
+    // @0x142495020
+    Pickable<Traits> SharedObject::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SharedObject(vm));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_net
+{
+    // @0x1424964e0
+    SharedObject::SharedObject(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Instances { namespace fl_net
+{
+    // @0x142496510
+    SharedObject::SharedObject(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+    }
+}}
+
+namespace Classes { namespace fl_net
+{
+    // @0x1424964b0
+    SharedObject::SharedObject(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+// ---- SharedObjectFlushStatus ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496550
+    SharedObjectFlushStatus::SharedObjectFlushStatus(VM& vm)
+        : Traits(vm, AS3::fl_net::SharedObjectFlushStatusCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_net::SharedObjectFlushStatusCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_net::SharedObjectFlushStatus(*this)));
+    }
+
+    // @0x142492400
+    Pickable<Traits> SharedObjectFlushStatus::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SharedObjectFlushStatus(vm));
+    }
+}}
+
+namespace Classes { namespace fl_net
+{
+    // @0x142496650
+    SharedObjectFlushStatus::SharedObjectFlushStatus(ClassTraits::Traits& t)
+        : Class(t)
+        , Flushed("flushed")
+        , Pending("pending")
+    {
+    }
+}}
+
+// ---- Socket ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496690
+    Socket::Socket(VM& vm)
+        : Traits(vm, AS3::fl_net::SocketCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_net::SocketCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142494010
+    Pickable<Traits> Socket::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Socket(vm));
+    }
+}}
+
+// ---- URLLoader ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496770
+    URLLoader::URLLoader(VM& vm)
+        : Traits(vm, AS3::fl_net::URLLoaderCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_net::URLLoader(vm, AS3::fl_net::URLLoaderCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142494b30
+    Pickable<Traits> URLLoader::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) URLLoader(vm));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_net
+{
+    // @0x142496870
+    URLLoader::URLLoader(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x80);
+    }
+}}
+
+namespace Instances { namespace fl_net
+{
+    // @0x1424968a0
+    URLLoader::URLLoader(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+        , pLoadQueue(NULL)
+        , DataFormat(GetVM().GetStringManager().CreateEmptyString())
+    {
+        DataFormat = "text";
+    }
+}}
+
+// ---- URLLoaderDataFormat ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496900
+    URLLoaderDataFormat::URLLoaderDataFormat(VM& vm)
+        : Traits(vm, AS3::fl_net::URLLoaderDataFormatCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_net::URLLoaderDataFormatCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_net::URLLoaderDataFormat(*this)));
+    }
+
+    // @0x142491380
+    Pickable<Traits> URLLoaderDataFormat::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) URLLoaderDataFormat(vm));
+    }
+}}
+
+namespace Classes { namespace fl_net
+{
+    // @0x142496a00
+    URLLoaderDataFormat::URLLoaderDataFormat(ClassTraits::Traits& t)
+        : Class(t)
+        , Binary("binary")
+        , Text("text")
+        , Variables("variables")
+    {
+    }
+}}
+
+// ---- URLRequest ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496a50
+    URLRequest::URLRequest(VM& vm)
+        : Traits(vm, AS3::fl_net::URLRequestCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_net::URLRequest(vm, AS3::fl_net::URLRequestCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142492ba0
+    Pickable<Traits> URLRequest::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) URLRequest(vm));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_net
+{
+    // @0x142496b50
+    URLRequest::URLRequest(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x48);
+    }
+}}
+
+namespace Instances { namespace fl_net
+{
+    // @0x142496b80
+    URLRequest::URLRequest(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , Url(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+}}
+
+// ---- URLRequestHeader ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496bd0
+    URLRequestHeader::URLRequestHeader(VM& vm)
+        : Traits(vm, AS3::fl_net::URLRequestHeaderCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_net::URLRequestHeader(vm, AS3::fl_net::URLRequestHeaderCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424922c0
+    Pickable<Traits> URLRequestHeader::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) URLRequestHeader(vm));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_net
+{
+    // @0x142496cd0
+    URLRequestHeader::URLRequestHeader(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x48);
+    }
+}}
+
+namespace Instances { namespace fl_net
+{
+    // @0x142496d00
+    URLRequestHeader::URLRequestHeader(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , HeaderName(GetVM().GetStringManager().CreateEmptyString())
+        , HeaderValue(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+}}
+
+// ---- URLRequestMethod ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496d60
+    URLRequestMethod::URLRequestMethod(VM& vm)
+        : Traits(vm, AS3::fl_net::URLRequestMethodCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_net::URLRequestMethodCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_net::URLRequestMethod(*this)));
+    }
+
+    // @0x142492550
+    Pickable<Traits> URLRequestMethod::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) URLRequestMethod(vm));
+    }
+}}
+
+namespace Classes { namespace fl_net
+{
+    // @0x142496e90
+    URLRequestMethod::URLRequestMethod(ClassTraits::Traits& t)
+        : Class(t)
+        , Delete("DELETE")
+        , Get("GET")
+        , Head("HEAD")
+        , Options("OPTIONS")
+        , Post("POST")
+        , Put("PUT")
+    {
+    }
+}}
+
+// ---- URLStream ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496f00
+    URLStream::URLStream(VM& vm)
+        : Traits(vm, AS3::fl_net::URLStreamCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_net::URLStreamCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424926d0
+    Pickable<Traits> URLStream::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) URLStream(vm));
+    }
+}}
+
+// ---- URLVariables ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142496fe0
+    URLVariables::URLVariables(VM& vm)
+        : Traits(vm, AS3::fl_net::URLVariablesCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_net::URLVariables(vm, AS3::fl_net::URLVariablesCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142494dc0
+    Pickable<Traits> URLVariables::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) URLVariables(vm));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_net
+{
+    // @0x1424970e0
+    URLVariables::URLVariables(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x40);
+    }
+}}
+
+namespace Instances { namespace fl_net
+{
+    // @0x142497110
+    URLVariables::URLVariables(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , Source(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+}}
+
+// ---- XMLSocket ----
+
+namespace ClassTraits { namespace fl_net
+{
+    // @0x142497150
+    XMLSocket::XMLSocket(VM& vm)
+        : Traits(vm, AS3::fl_net::XMLSocketCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_net::XMLSocketCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142492960
+    Pickable<Traits> XMLSocket::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) XMLSocket(vm));
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424914e0
@@ -2183,3 +2815,48 @@ namespace Instances { namespace fl_geom
 // MS2-PIN: ?Rotation@?$Matrix4x4@N@Render@Scaleform@@SA?AV123@NAEBV?$Point3@N@23@0@Z 0x142486210
 // MS2-PIN: ?GetInverse@?$Matrix4x4@N@Render@Scaleform@@QEBA?AV123@XZ 0x142484b00
 // MS2-PIN: ?GetMinor@?$Matrix4x4@N@Render@Scaleform@@AEBANAEBV123@_K11111@Z 0x142485360
+// MS2-PIN: ??_7ColorTransform@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315de18
+// MS2-PIN: ??_7FileFilter@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162100
+// MS2-PIN: ??_7FileReference@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162190
+// MS2-PIN: ??_7FileReferenceList@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162428
+// MS2-PIN: ??_7IDynamicPropertyOutput@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431624c0
+// MS2-PIN: ??_7IDynamicPropertyWriter@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162560
+// MS2-PIN: ??_7LocalConnection@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162600
+// MS2-PIN: ??_7Matrix3D@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e3d8
+// MS2-PIN: ??_7Matrix@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e6f0
+// MS2-PIN: ??_7NetConnection@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162810
+// MS2-PIN: ??_7NetConnection@fl_net@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143162768
+// MS2-PIN: ??_7NetConnection@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143162698
+// MS2-PIN: ??_7ObjectEncoding@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162d00
+// MS2-PIN: ??_7ObjectEncoding@fl_net@Classes@AS3@GFx@Scaleform@@6B@ 0x143162d98
+// MS2-PIN: ??_7PerspectiveProjection@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315ebd8
+// MS2-PIN: ??_7Point@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e8e8
+// MS2-PIN: ??_7Rectangle@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315ee00
+// MS2-PIN: ??_7Responder@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162e80
+// MS2-PIN: ??_7SharedObject@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431630d0
+// MS2-PIN: ??_7SharedObject@fl_net@Classes@AS3@GFx@Scaleform@@6B@ 0x143163168
+// MS2-PIN: ??_7SharedObject@fl_net@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143163020
+// MS2-PIN: ??_7SharedObject@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143162f58
+// MS2-PIN: ??_7SharedObjectFlushStatus@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143163250
+// MS2-PIN: ??_7SharedObjectFlushStatus@fl_net@Classes@AS3@GFx@Scaleform@@6B@ 0x1431632f0
+// MS2-PIN: ??_7Socket@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431638c0
+// MS2-PIN: ??_7Transform@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315f008
+// MS2-PIN: ??_7URLLoader@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143163ac0
+// MS2-PIN: ??_7URLLoader@fl_net@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143163a18
+// MS2-PIN: ??_7URLLoaderDataFormat@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143163dc0
+// MS2-PIN: ??_7URLLoaderDataFormat@fl_net@Classes@AS3@GFx@Scaleform@@6B@ 0x143163e60
+// MS2-PIN: ??_7URLRequest@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143162398
+// MS2-PIN: ??_7URLRequest@fl_net@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431622f0
+// MS2-PIN: ??_7URLRequest@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143162228
+// MS2-PIN: ??_7URLRequestHeader@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431645b0
+// MS2-PIN: ??_7URLRequestHeader@fl_net@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143164500
+// MS2-PIN: ??_7URLRequestHeader@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143164430
+// MS2-PIN: ??_7URLRequestMethod@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143164648
+// MS2-PIN: ??_7URLRequestMethod@fl_net@Classes@AS3@GFx@Scaleform@@6B@ 0x1431646e0
+// MS2-PIN: ??_7URLStream@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431647d0
+// MS2-PIN: ??_7URLVariables@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143163cc0
+// MS2-PIN: ??_7URLVariables@fl_net@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143163c18
+// MS2-PIN: ??_7URLVariables@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143163b50
+// MS2-PIN: ??_7Vector3D@fl_geom@Instances@AS3@GFx@Scaleform@@6B@ 0x14315e0c0
+// MS2-PIN: ??_7XMLSocket@fl_net@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143164860
+// MS2-PIN: ??_7URLLoader@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143163950

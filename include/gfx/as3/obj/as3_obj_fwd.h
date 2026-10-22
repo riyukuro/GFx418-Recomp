@@ -165,6 +165,7 @@ namespace Instances { namespace fl_net {
     class SharedObject;
     class URLLoader;
     class URLRequest;
+    class URLRequestHeader;
     class URLVariables;
 }}
 
