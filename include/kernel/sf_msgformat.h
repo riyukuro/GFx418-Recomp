@@ -67,6 +67,7 @@ class NumericBase
 {
 public:
     void SetBigLetters(bool flag = true) { BigLetters = flag; }
+    void SetPrecision(unsigned prec = 1) { Precision = prec; }
 
 protected:
     unsigned Precision:5;
@@ -129,7 +130,14 @@ namespace Scaleform {
 class DoubleFormatter : public Formatter, public NumericBase, public String::InitStruct
 {
 public:
+    enum PresentationType { FmtDecimal, FmtScientific, FmtSignificant };
+
     DoubleFormatter(MsgFormat& f, double v);
+    // (appended for the AS3 Number natives, sfr_as3_03) exe 0x1425aea50
+    DoubleFormatter(double v);
+
+    DoubleFormatter& SetType(PresentationType ptype)    { Type = ptype; return *this; }
+    DoubleFormatter& SetPrecision(unsigned prec = 1)    { NumericBase::SetPrecision(prec); return *this; }
 
     virtual void          Parse(const StringDataPtr& str);
     virtual void          Convert();

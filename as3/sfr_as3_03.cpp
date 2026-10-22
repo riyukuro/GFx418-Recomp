@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423ff040-0x1424133c0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/kernel/sf_msgformat.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -630,6 +631,252 @@ namespace ClassTraits { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace InstanceTraits { namespace fl
+{
+    // @0x142403750
+    void Boolean::AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsBool())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result = _this;
+    }
+
+    // Shared body of toFixed/toPrecision: format v with the given type and precision into result.
+    #define MS2_AS3_FORMAT_DOUBLE(v, type, prec) \
+        DoubleFormatter f(v); \
+        f.SetType(DoubleFormatter::type).SetPrecision(prec).Convert(); \
+        result = vm.GetStringManager().CreateString(f.GetResult().ToCStr(), f.GetSize())
+
+    // @0x142401ba0
+    void Number::AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        UInt32 digits = 0;
+        if (argc > 0 && !argv[0].Convert2UInt32(digits))
+            return;
+        if (digits > 20)
+            return vm.ThrowRangeError(VM::Error(VM::eInvalidPrecisionError, vm));
+        MS2_AS3_FORMAT_DOUBLE(_this.AsNumber(), FmtDecimal, digits);
+    }
+
+    // @0x142402180
+    void Number::AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        UInt32 precision = 0;
+        if (argc > 0 && !argv[0].Convert2UInt32(precision))
+            return;
+        if (precision == 0 || precision > 21)
+            return vm.ThrowRangeError(VM::Error(VM::eInvalidPrecisionError, vm));
+        MS2_AS3_FORMAT_DOUBLE(_this.AsNumber(), FmtSignificant, precision);
+    }
+
+    // @0x1424037c0
+    void Number::AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsNumber())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result = _this;
+    }
+
+    // @0x142401d00
+    void int_::AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        UInt32 digits = 0;
+        if (argc > 0 && !argv[0].Convert2UInt32(digits))
+            return;
+        if (digits > 20)
+            return vm.ThrowRangeError(VM::Error(VM::eInvalidPrecisionError, vm));
+        MS2_AS3_FORMAT_DOUBLE(_this.AsInt(), FmtDecimal, digits);
+    }
+
+    // @0x1424022e0
+    void int_::AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        UInt32 precision = 0;
+        if (argc > 0 && !argv[0].Convert2UInt32(precision))
+            return;
+        if (precision == 0 || precision > 21)
+            return vm.ThrowRangeError(VM::Error(VM::eInvalidPrecisionError, vm));
+        MS2_AS3_FORMAT_DOUBLE(_this.AsInt(), FmtSignificant, precision);
+    }
+
+    // @0x142403a20
+    void int_::AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsInt() && !_this.IsUInt())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result.SetSInt32(_this.AsInt());
+    }
+
+    // @0x142401e60
+    void uint::AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        UInt32 digits = 0;
+        if (argc > 0 && !argv[0].Convert2UInt32(digits))
+            return;
+        if (digits > 20)
+            return vm.ThrowRangeError(VM::Error(VM::eInvalidPrecisionError, vm));
+        MS2_AS3_FORMAT_DOUBLE(_this.AsUInt(), FmtDecimal, digits);
+    }
+
+    // @0x142402440
+    void uint::AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        UInt32 precision = 0;
+        if (argc > 0 && !argv[0].Convert2UInt32(precision))
+            return;
+        if (precision == 0 || precision > 21)
+            return vm.ThrowRangeError(VM::Error(VM::eInvalidPrecisionError, vm));
+        MS2_AS3_FORMAT_DOUBLE(_this.AsUInt(), FmtSignificant, precision);
+    }
+
+    // @0x142403ac0
+    void uint::AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsInt() && !_this.IsUInt())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result.SetUInt32(_this.AsUInt());
+    }
+
+    #undef MS2_AS3_FORMAT_DOUBLE
+}} // namespace InstanceTraits::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace InstanceTraits { namespace fl
+{
+    // The [start, start + length) part of str, clamped to the string; a negative length means "to the end".
+    static SF_INLINE ASString StringSubstring(StringManager& sm, const ASString& str, SInt32 start, SInt32 length)
+    {
+        if (length == 0)
+            return sm.CreateEmptyString();
+        if (start < 0)
+            start = 0;
+        const SInt32 len = (SInt32)str.GetLength();
+        if (start >= len)
+            return sm.CreateEmptyString();
+        if (length < 0 || start + length > len)
+            length = len - start;
+        return ASString(str.SubstringNode(start, start + length));
+    }
+
+    // @0x1423ff660
+    void String::AS3slice(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        StringManager& sm = vm.GetStringManager();
+        ASString str = sm.CreateEmptyString();
+        if (!_this.Convert2String(str))
+            return;
+        if (argc == 0)
+        {
+            result = str;
+            return;
+        }
+
+        const SInt32 len = (SInt32)str.GetLength();
+        SInt32 start = 0;
+        SInt32 end = 0x7fffffff;
+        Value::Number startNum, endNum;
+        if (argc >= 1)
+        {
+            if (!argv[0].Convert2Number(startNum))
+                return;
+            start = (startNum > len) ? len : (SInt32)startNum;
+            if (start < 0)
+                start += len;
+        }
+        if (argc >= 2)
+        {
+            if (!argv[1].Convert2Number(endNum))
+                return;
+            end = (endNum > len) ? len : (SInt32)endNum;
+            if (end < 0)
+                end += len;
+            if (end < start)
+            {
+                result = sm.CreateEmptyString();
+                return;
+            }
+        }
+        result = ASString(str.SubstringNode(start, end));
+    }
+
+    // @0x1424013f0
+    void String::AS3substr(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        StringManager& sm = vm.GetStringManager();
+        ASString str = sm.CreateEmptyString();
+        if (!_this.Convert2String(str))
+            return;
+
+        Value::Number startNum, lengthNum;
+        SInt32 start = 0;
+        SInt32 length = -1;
+        const unsigned len = str.GetLength();
+        if (argc >= 1)
+        {
+            if (!argv[0].Convert2Number(startNum))
+                return;
+            start = (startNum > len) ? (SInt32)len : (SInt32)startNum;
+            if (start < 0)
+                start += len;
+        }
+        if (argc >= 2)
+        {
+            if (!argv[1].Convert2Number(lengthNum))
+                return;
+            length = (lengthNum > len) ? (SInt32)len : (SInt32)lengthNum;
+            // Unlike substring, a negative length gives the empty string.
+            if (length < 0)
+                length = 0;
+        }
+        result = StringSubstring(sm, str, start, length);
+    }
+
+    // @0x1424015b0
+    void String::AS3substring(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        StringManager& sm = vm.GetStringManager();
+        ASString str = sm.CreateEmptyString();
+        if (!_this.Convert2String(str))
+            return;
+
+        const unsigned len = str.GetLength();
+        Value::Number startNum = 0;
+        Value::Number endNum = 0x7fffffff;
+        if (argc >= 1 && !argv[0].Convert2Number(startNum))
+            return;
+        if (argc >= 2 && !argv[1].Convert2Number(endNum))
+            return;
+
+        const Value vs(startNum);
+        if (vs.IsNaN())
+            startNum = NumberUtil::NEGATIVE_INFINITY();
+        const Value ve(endNum);
+        if (ve.IsNaN())
+            endNum = NumberUtil::NEGATIVE_INFINITY();
+
+        if (endNum == startNum)
+        {
+            result = sm.CreateEmptyString();
+            return;
+        }
+
+        SInt32 start = (startNum > len) ? (SInt32)len : (SInt32)startNum;
+        SInt32 end = (endNum > len) ? (SInt32)len : (SInt32)endNum;
+        if (end < start)
+            Alg::Swap(start, end);
+        if (start < 0)
+            start = 0;
+        result = StringSubstring(sm, str, start, end - start);
+    }
+}} // namespace InstanceTraits::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
@@ -778,3 +1025,4 @@ namespace ClassTraits { namespace fl
 // MS2-PIN: ?Func@?$ThunkFunc1@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0M@_NAEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413210
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$03VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413380
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$05VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424133a0
+// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358

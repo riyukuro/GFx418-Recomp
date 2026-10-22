@@ -668,6 +668,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Boolean"; }
         // @0x14241be20
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x142403750
+        static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class Catch : public CTraits
@@ -721,6 +725,14 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Number"; }
         // @0x14241c050
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x142401ba0
+        static void AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402180
+        static void AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1424037c0
+        static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class QName : public CTraits
@@ -751,6 +763,14 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::String"; }
         // @0x14241c1f0
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x1423ff660
+        static void AS3slice(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1424013f0
+        static void AS3substr(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1424015b0
+        static void AS3substring(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class XML : public CTraits
@@ -781,6 +801,14 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::int_"; }
         // @0x14241c330
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x142401d00
+        static void AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1424022e0
+        static void AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142403a20
+        static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class uint : public CTraits
@@ -791,6 +819,14 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::uint"; }
         // @0x14241c340
         virtual void MakeObject(Value& result, Traits& t);
+
+    public:
+        // @0x142401e60
+        static void AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402440
+        static void AS3toPrecision(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142403ac0
+        static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
 }}
