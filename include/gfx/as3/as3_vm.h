@@ -104,6 +104,13 @@ public:
 
     // Raise v itself (an error object made by the caller).
     void Throw(const Value& v)  { HandleException = true; ExceptionObj.Assign(v); }
+    // (sfr_as3_09) calls func on _this with argv; result receives the return value (0x1424fef00)
+    void ExecuteInternalUnsafe(const Value& func, const Value& _this, Value& result, unsigned argc, const Value* argv,
+                               bool discard_result);
+    // (sfr_as3_09) prints the error e with its stack trace through the FlashUI (0x14251bdc0)
+    void OutputError(const Value& e);
+    // (sfr_as3_09) drops the pending exception after printing it
+    void OutputAndIgnoreException();     // 0x14246c440
 
     // A new instance of the global class gname constructed with argv, stored in result; extCall marks a call from
     // C++ rather than from script (0x1424f0750).

@@ -31,6 +31,14 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// @0x14246c440
+void VM::OutputAndIgnoreException()
+{
+    HandleException = false;
+    OutputError(ExceptionObj);
+    ExceptionObj.SetUndefined();
+}
+
 namespace Instances { namespace fl_events {
 
     // ---- AS3Constructor: new X(type, bubbles = false, cancelable = false, ...) -------------------------------------------
@@ -335,6 +343,159 @@ namespace Instances { namespace fl_events {
             CtrlKey = argv[14].Convert2Boolean();
         if (argc >= 16)
             ShiftKey = argv[15].Convert2Boolean();
+    }
+
+    // ---- Dispatch: the listeners of this dispatcher, and the capture/target/bubble walk ---------------------------------
+
+    // @0x142466270
+    // MS2-FUNCTIONAL: the exe reaches the AS3 part through the AvmInteractiveObjBase slot (vslot 1) and the PushBack
+    // growth is laid out inline; the same chain
+    void EventDispatcher::GetParentChain(GFx::DisplayObject* dobj,
+                                         ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain)
+    {
+        for (InteractiveObject* p = dobj->GetParent(); p; p = p->GetParent())
+        {
+            // the AS3 part (AS3::AvmDisplayObj, as3_avm.h) keeps the object raw at +0x10 or as a tagged SPtr at +0x08
+            const UPInt* avm = reinterpret_cast<const UPInt*>(p->GetAvmObjImpl());
+            UPInt raw = avm[2] ? avm[2] : avm[1];
+            Instances::fl_display::DisplayObject* o =
+                reinterpret_cast<Instances::fl_display::DisplayObject*>(raw & ~UPInt(1));
+            SPtr<Instances::fl_display::DisplayObject> s(o);
+            if (s)
+                chain.PushBack(s);
+        }
+    }
+
+    // @0x1424687d0
+    // MS2-FUNCTIONAL: register allocation and the listener copy loop; the same calls and exception handling
+    bool EventDispatcher::DispatchSingleEvent(Instances::fl_events::Event* evt, bool inCapturePhase)
+    {
+        if (!pImpl)
+            return true;
+
+        SPtr<EventDispatcher> self(this);
+        ListenersHash& hash = inCapturePhase ? pImpl->CaptureListeners : pImpl->Listeners;
+        ArrayLH<Listener>** plisteners = hash.Get(evt->Type);
+        bool ok = true;
+        if (plisteners)
+        {
+            evt->CurrentTarget = this;
+            ArrayLH<Listener>& listeners = **plisteners;
+            UPInt n = listeners.GetSize();
+            if (n == 1)
+            {
+                const Listener& l = listeners[0];
+                if (l.Function.IsValidWeakRef())
+                {
+                    Value _this;
+                    Value arg(evt);
+                    Value result;
+                    GetVM().ExecuteInternalUnsafe(l.Function.IsWeakRef() ? Value(l.Function, StrongRefValue) : l.Function,
+                                                  _this, result, 1, &arg, false);
+                    VM& vm = GetVM();
+                    ok = !vm.IsException();
+                    if (!ok)
+                        vm.OutputAndIgnoreException();
+                }
+            }
+            else if (n > 1)
+            {
+                // the listeners may change while they run: call a copy (ten in the frame, more on the heap)
+                UInt64 buf[10 * sizeof(Listener) / sizeof(UInt64)];
+                Listener* copies = n > 10 ? (Listener*)SF_HEAP_AUTO_ALLOC(this, n * sizeof(Listener))
+                                          : reinterpret_cast<Listener*>(buf);
+                for (UPInt i = 0; i < n; ++i)
+                    Scaleform::Construct(&copies[i], listeners[i]);
+
+                UPInt i = 0;
+                for (; i < n; ++i)
+                {
+                    Listener& l = copies[i];
+                    if (l.Function.IsValidWeakRef())
+                    {
+                        Value _this;
+                        Value result;
+                        Value arg(evt);
+                        GetVM().ExecuteInternalUnsafe(l.Function.IsWeakRef() ? Value(l.Function, StrongRefValue)
+                                                                             : l.Function,
+                                                      _this, result, 1, &arg, false);
+                        VM& vm = GetVM();
+                        if (vm.IsException())
+                        {
+                            vm.HandleException = false;
+                            vm.OutputError(vm.ExceptionObj);
+                            vm.ExceptionObj.SetUndefined();
+                            ok = false;
+                        }
+                        if (evt->ImmPropagationStopped || !ok)
+                        {
+                            Destruct(&l);
+                            break;
+                        }
+                    }
+                    Destruct(&l);
+                }
+                for (++i; i < n; ++i)
+                    Destruct(&copies[i]);
+                if (copies != reinterpret_cast<Listener*>(buf))
+                    SF_FREE(copies);
+            }
+        }
+        return ok;
+    }
+
+    // @0x142468fa0
+    // MS2-FUNCTIONAL: block layout of the three phase loops; the same order of dispatches and stop tests
+    void EventDispatcher::Dispatch(Instances::fl_events::Event* evt, GFx::DisplayObject* dobj)
+    {
+        if (!dobj)
+        {
+            DispatchSingleEvent(evt, false);
+            return;
+        }
+
+        SPtr<EventDispatcher> self(this);
+        Ptr<GFx::DisplayObject> pdobj(dobj);
+        ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> chain(GetVM().GetMemoryHeap());
+        GetParentChain(dobj, chain);
+
+        // capture: from the root down to the parent
+        evt->Phase = 1;
+        for (SPInt i = (SPInt)chain.GetSize() - 1; i >= 0; --i)
+        {
+            if (!chain[i]->DispatchSingleEvent(evt, true))
+            {
+                if (chain[i]->pDispObj)
+                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                return;
+            }
+            if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                return;
+        }
+
+        // target
+        evt->Phase = 2;
+        if (!DispatchSingleEvent(evt, false))
+        {
+            dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+            return;
+        }
+        if (evt->PropagationStopped || evt->ImmPropagationStopped || !evt->Bubbles)
+            return;
+
+        // bubble: from the parent up to the root
+        evt->Phase = 3;
+        for (UPInt i = 0; i < chain.GetSize(); ++i)
+        {
+            if (!chain[i]->DispatchSingleEvent(evt, false))
+            {
+                if (chain[i]->pDispObj)
+                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                return;
+            }
+            if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                return;
+        }
     }
 
     // ---- Clone: a new event of the same class from (type, bubbles, cancelable), with the state copied -----------------

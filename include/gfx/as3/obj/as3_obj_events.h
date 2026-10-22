@@ -8,6 +8,9 @@
 #include "ms2/scaleform/include/kernel/sf_autoptr.h"
 #include "ms2/scaleform/include/gfx/gfx_eventid.h"
 #include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
+#include "ms2/scaleform/include/kernel/sf_arraystaticbuff.h"
+
+namespace Scaleform { namespace GFx { class DisplayObject; } }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -174,6 +177,12 @@ namespace Instances { namespace fl_events {
         bool MayHaveRenderHandler() const;              // 0x14246c2d0
         // (appended, sfr_as3_09) whether this dispatcher has a listener of type in the capture or target/bubble table
         bool HasEventHandler(const ASString& type, bool useCapture) const;   // 0x14246a160
+        // (appended, sfr_as3_09) evt through the capture, target and bubble phases along dobj's display parents
+        // (dobj NULL: this dispatcher only)
+        void Dispatch(Instances::fl_events::Event* evt, GFx::DisplayObject* dobj);   // 0x142468fa0
+        // the AS3 objects of dobj's display parents, nearest first
+        void GetParentChain(GFx::DisplayObject* dobj,
+                            ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain);   // 0x142466270
     };
 
     // One registered listener (0x28 bytes): the function value and the addEventListener options.
