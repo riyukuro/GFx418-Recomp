@@ -3,6 +3,7 @@
 #define MS2_SF_KERNEL_STD_H
 
 #include "ms2/scaleform/kernel/sf_types.h"
+#include "ms2/scaleform/kernel/sf_exedata.h"    // SF_EXE_DATA (exe data arrays)
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>

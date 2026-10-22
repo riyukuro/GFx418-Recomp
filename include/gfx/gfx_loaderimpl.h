@@ -13,6 +13,7 @@
 #include "gfx_moviedef.h"
 #include "gfx_log.h"
 #include "gfx_taskmanager.h"
+#include "ms2/scaleform/kernel/sf_exedata.h"
 #include "../render/render_imagefileformat.h"
 #include "../kernel/sf_hash.h"
 #include "../kernel/sf_file.h"
@@ -465,9 +466,9 @@ extern LoaderImpl::LoaderFunction GFx_GFX_TagLoaderTable[];
 inline bool LoaderImpl::GetTagLoader(unsigned tagType, LoaderFunction* plf)
 {
     if (tagType < 0x5c)
-        *plf = SWF_TagLoaderTable[tagType];
+        *plf = SF_EXE_DATA(SWF_TagLoaderTable)[tagType];          // exe data: see SF_EXE_DATA
     else if (tagType >= 1000 && tagType < 1010)
-        *plf = GFx_GFX_TagLoaderTable[tagType - 1000];
+        *plf = SF_EXE_DATA(GFx_GFX_TagLoaderTable)[tagType - 1000];
     else
         *plf = 0;
     return *plf ? true : false;

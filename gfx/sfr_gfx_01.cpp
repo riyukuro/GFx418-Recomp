@@ -238,3 +238,4 @@ void ImagePackParamsBase::SetTextureConfig(const TextureConfig& config)
 // MS2-PIN: ??_7StateBag@GFx@Scaleform@@6B@ 0x143183208
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+// MS2-FUNCTIONAL 0x14258c4d0: the inlined LoaderImpl::GetTagLoader reads the exe tag loader tables through SF_EXE_DATA (RIP-relative; the exe indexes off __ImageBase, which the DLL cannot link to exe data: LNK2016)
