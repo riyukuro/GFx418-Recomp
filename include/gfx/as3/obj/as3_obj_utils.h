@@ -6,14 +6,68 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/kernel/sf_hash.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_utils {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x60 bytes, vftable 0x1431713f8.
     class ByteArray : public Instances::fl::Object
     {
     public:
+        enum EncodingType { encAMF0 = 0, encAMF3 = 3 };
+        enum EndianType { endianBig = 0, endianLittle = 1 };
+
+        ByteArray(InstanceTraits::Traits& t);                   // 0x1424bc460
+        ByteArray(InstanceTraits::Traits& t, EncodingType enc); // 0x1424bc4c0
+        // @0x1424be4b0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_utils::ByteArray"; }
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);   // 0x1424bf000
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);         // 0x1424be790
+        virtual void GetDynamicProperty(AbsoluteIndex ind, Value& value);                  // 0x1424be580
+
+        UInt32 GetLength() const { return Length; }
+        UInt8 Get(UInt32 ind) const;                            // 0x1424be400
+        void Set(UInt32 ind, UInt8 v);                          // 0x1424bef90
+        // Replaces the content with size bytes of data, position back at 0.
+        void Set(const void* data, UPInt size);                 // 0x1424befd0
+
+    protected:
+        // Copies n bytes at the position into dest; on running past the end raises EOFError and returns false.
+        CheckResult Read(void* dest, UInt32 n);                 // 0x1424bec50
+        CheckResult ReadUTFBytes(ASString& result, UInt32 len); // 0x1424bed20
+        // True (and EOFError raised) when no byte is left to read.
+        CheckResult EOFError();                                 // 0x1424bdb30
+        void ThrowEOFError();                                   // 0x1424bf180
+        void ThrowMemoryError();                                // 0x1424bf250
+        void Write(UInt8 v);                                    // 0x1424bf320
+        void Write(const void* src, UInt32 n);                  // 0x1424bf440
+        // Sets the length, growing the storage with zeroes; the position stays inside.
+        void Resize(UInt32 size);                               // 0x1424bef20
+        // Grows the length to cover n more bytes at the position (the storage with zeroes).
+        template <typename T> bool ReadValue(T& v);
+        template <typename T> void WriteValue(T v);
+
+        __forceinline void GrowFor(UInt32 n)
+        {
+            UInt32 newPos = Position + n;
+            if (newPos < Data.GetSize())
+            {
+                if (Length <= newPos)
+                    Length = newPos;
+            }
+            else
+                Resize(newPos);
+        }
+
+    public:
+
+        EncodingType            Encoding : 3;   // +0x38
+        EndianType              Endian : 2;
+        UInt32                  Position;       // +0x3c
+        UInt32                  Length;         // +0x40
+        ArrayLH_POD<UInt8>      Data;           // +0x48
         // @0x1424bf580
         void bytesAvailableGet(UInt32& result);
         // @0x1424bf590
@@ -92,10 +146,15 @@ namespace Instances { namespace fl_utils {
         void writeUnsignedInt(const Value& result, UInt32);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x68 bytes, vftable 0x143171dd0.
     class Timer : public Instances::fl_events::EventDispatcher
     {
     public:
+        Timer(InstanceTraits::Traits& t);                       // 0x1424bcc80
+        // @0x1424be570
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_utils::Timer"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);                     // 0x1424bd590
+
         // @0x1424bf620
         void currentCountGet(SInt32& result);
         // @0x1424bf6b0
@@ -114,15 +173,53 @@ namespace Instances { namespace fl_utils {
         void start(const Value& result);
         // @0x1424c0310
         void stop(const Value& result);
+
+        SInt32                      RepeatCount;    // +0x50
+        SInt32                      CurrentCount;   // +0x54 the core timer's count once it ran
+        Value::Number               Delay;          // +0x58 milliseconds
+        Ptr<ASIntervalTimerIntf>    pCoreTimer;     // +0x60
+    };
+
+    // flash.utils.Dictionary: a hash keyed by value identity. 0x48 bytes, vftable 0x143171810.
+    class Dictionary : public Instances::fl::Object
+    {
+    public:
+        typedef HashLH<Value, Value, Value::HashFunctor, 2> ContainerType;
+
+        Dictionary(InstanceTraits::Traits& t);                  // 0x1424bc660
+        ~Dictionary();                                          // 0x1424bcd70
+        // @0x1424be4e0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_utils::Dictionary"; }
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                      // 0x1424be3b0
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);   // 0x1424bf0b0
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);         // 0x1424be850
+        virtual void GetDynamicProperty(AbsoluteIndex ind, Value& value);                  // 0x1424be5e0
+        virtual CheckResult DeleteProperty(const Multiname& prop_name);                    // 0x1424bda80
+        virtual void AS3Constructor(unsigned argc, const Value* argv);                     // 0x1424bd560
+        virtual void AddDynamicSlotValuePair(const Value& prop_name, const Value& v,
+                                             SlotInfo::Attribute a = SlotInfo::aNone);     // 0x1424bd650
+        virtual void GetNextPropertyName(Value& name, GlobalSlotIndex ind) const;          // 0x1424be710
+        virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;            // 0x1424be630
+        virtual PropRef FindDynamicSlot(const Multiname& mn);                              // 0x1424bdd70
+
+        ContainerType::Iterator FindKey(const Multiname& mn) const;                        // 0x1424bde70
+
+        bool                WeakKeys;   // +0x38
+        ContainerType       ValueH;     // +0x40
     };
 
 }}
 
 namespace Classes { namespace fl_utils {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x58 bytes, vftable 0x1431715f8.
     class ByteArray : public Class
     {
     public:
+        ByteArray(ClassTraits::Traits& t);                      // 0x1424bc300
+        // @0x1424be490
+        virtual const char* GetAS3ObjectType() const { return "Classes::ByteArray"; }
+
+        UInt32 DefaultObjectEncoding;   // +0x50
         // @0x1424bf640
         void defaultObjectEncodingGet(UInt32& result);
         // @0x1424bf650
@@ -146,23 +243,42 @@ namespace Classes { namespace fl_utils {
 }}
 
 namespace InstanceTraits { namespace fl_utils {
+    // Traits of ByteArray instances: array-like, 0x60 bytes per instance; implements IDataInput and IDataOutput.
+    class ByteArray : public CTraits
+    {
+    public:
+        typedef Instances::fl_utils::ByteArray InstanceType;
+
+        ByteArray(VM& vm, const ClassInfo& ci);                 // 0x1424bc330
+        // @0x1424be4a0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::ByteArray"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424beae0
+        Pickable<InstanceType> MakeInstance(ByteArray& t);
+    };
+
     // Traits of Dictionary instances: array-like, 0x48 bytes per instance.
     class Dictionary : public CTraits
     {
     public:
+        typedef Instances::fl_utils::Dictionary InstanceType;
+
         Dictionary(VM& vm, const ClassInfo& ci);
         // @0x1424be4d0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Dictionary"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424beb70
+        Pickable<InstanceType> MakeInstance(Dictionary& t);
     };
 
     class Timer : public CTraits
     {
     public:
+        typedef Instances::fl_utils::Timer InstanceType;
+
         Timer(VM& vm, const ClassInfo& ci);
         // @0x1424be560
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Timer"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424bebe0
+        Pickable<InstanceType> MakeInstance(Timer& t);
     };
 
 }}

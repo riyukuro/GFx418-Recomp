@@ -28,6 +28,7 @@ class Log;
 namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld; }
 namespace GFx {
 class StateBag;
+class ASIntervalTimerIntf;
 class FontManagerStates;
 class MovieDefRootNode;
 class FontResource;
@@ -145,6 +146,8 @@ public:
 
     // Removes the setInterval/setTimeout timer with the given id (exe 0x14256e0d0).
     void ClearIntervalTimer(int id);
+    // Registers a started setInterval/setTimeout/Timer timer and returns its id (exe 0x14256bd60).
+    int AddIntervalTimer(ASIntervalTimerIntf* timer);
 
     // (appended for the display objects, sfr_gfx_06)
     UInt32           Flags2;                   // +0x3494 (sfr_gfx_06b)
@@ -323,6 +326,22 @@ public:
     unsigned          BytesLoaded;       // +0x2c
     bool              ImportFlag;        // +0x30 the root of an import: its loading state is the parent's
     FontManager*      pFontManager;      // +0x38 Ptr<FontManager>
+};
+
+// A timer the movie drives each frame (AS2 setInterval, AS3 flash.utils.Timer). Interface vftable 0x142dc9d48.
+class ASIntervalTimerIntf : public RefCountBase<ASIntervalTimerIntf, 0x143>   // StatMV_ActionScript_Mem
+{
+public:
+    virtual ~ASIntervalTimerIntf() {}
+
+    virtual void   Start(MovieImpl* proot) = 0;
+    virtual bool   Invoke(MovieImpl* proot, float frameTime) = 0;  // frameTime in seconds
+    virtual bool   IsActive() const = 0;
+    virtual void   Clear() = 0;
+    virtual bool   ClearFor(MovieImpl* proot, MovieDefImpl* pdefImpl) = 0;
+    virtual UInt64 GetNextInvokeTime() const = 0;                  // microseconds
+    virtual void   SetId(int id) = 0;
+    virtual int    GetId() const = 0;
 };
 
 }} // namespace Scaleform::GFx

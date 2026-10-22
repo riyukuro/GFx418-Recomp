@@ -352,10 +352,13 @@ namespace InstanceTraits
         virtual ASString GetName() const;
         virtual bool SupportsInterface(const Traits&) const;
 
+    protected:
+        // Adds an interface the C++ class implements (0x142446010).
+        void RegisterImplementedInterface(const Multiname& mn);
+
+    public:
         const ClassInfo&                        CI;                     // +0xc8
-        ArrayLH<Multiname>*                     pImplementsInterfacesUnused; // +0xd0 placeholder (unverified)
-        UPInt                                   Reserved0d8;            // +0xd8 (unverified)
-        UPInt                                   Reserved0e0;            // +0xe0 (unverified)
+        ArrayLH<Multiname>                      ImplementsInterfaces;   // +0xd0
     };
 
     // Traits of an interface implemented in C++. vftable 0x14313f870 (keeps the CTraits type string).
@@ -553,6 +556,8 @@ class Multiname
 public:
     Multiname(Instances::Namespace& ns, const Value& name = Value::GetUndefined());
     Multiname(const Multiname& other);
+    // From a qualified name "pkg.Name" (0x1424d9040).
+    Multiname(VM& vm, const StringDataPtr& qname);
 
     Abc::MultinameKind      Kind;   // +0x00
     SPtr<GASRefCountBase>   Obj;    // +0x08 namespace or namespace set

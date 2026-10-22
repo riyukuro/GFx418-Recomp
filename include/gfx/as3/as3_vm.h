@@ -61,7 +61,13 @@ public:
     {
         eNotImplementedError        = 1001,
         eConvertNullToObjectError   = 1009,
-        eInvalidRangeError          = 1125
+        eInvalidEnumError           = 1058,
+        eWrongArgumentCountError    = 1063,
+        eInvalidRangeError          = 1125,
+        eNullArgumentError          = 1507,
+        eInvalidArgumentError       = 1508,
+        eShellCompressedDataError   = 1509,
+        eParamRangeError            = 2006
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).
@@ -70,6 +76,8 @@ public:
     public:
         Error(ErrorID id, VM& vm);                      // 0x1424d6b90
         Error(ErrorID id, VM& vm, const char* arg1);    // 0x1424d7850
+        Error(ErrorID id, VM& vm, const char* arg1, const char* arg2);   // 0x1424d7690
+        Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int arg4);   // 0x1424d7bf0
 
         ErrorID         GetErrorID() const  { return ID; }
         const ASString& GetMessage() const  { return Message; }
@@ -80,6 +88,7 @@ public:
     };
 
     // Raise e as an instance of the named error class.
+    void ThrowArgumentError(const Error& e);        // 0x14252ec90
     void ThrowError(const Error& e);                // 0x14252eca0
     void ThrowEvalError(const Error& e);            // 0x14252efc0
     void ThrowMemoryError(const Error& e);          // 0x14252efd0
@@ -91,6 +100,13 @@ public:
     void ThrowURIError(const Error& e);             // 0x14252f1f0
     void ThrowUninitializedError(const Error& e);   // 0x14252f200
     void ThrowVerifyError(const Error& e);          // 0x14252f210
+
+    // Raise v itself (an error object made by the caller).
+    void Throw(const Value& v)  { HandleException = true; ExceptionObj.Assign(v); }
+
+    // A new instance of the global class gname constructed with argv, stored in result; extCall marks a call from
+    // C++ rather than from script (0x1424f0750).
+    void Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall);
 
     // A new instance of the builtin class gname ("flash.geom.Point"), constructed with argv. False on an exception.
     template <class C>
