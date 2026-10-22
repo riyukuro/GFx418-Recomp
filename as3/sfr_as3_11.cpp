@@ -9,6 +9,8 @@
 // MS2-PIN: ??1?$ThunkArgs1@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@@AS3@GFx@Scaleform@@QEAA@XZ 0x142497230 ; unique
 // MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "GFx/GFx_DisplayObject.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -167,6 +169,20 @@ template struct ThunkFunc1<Instances::fl_net::URLLoader, 2, const Value, Instanc
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
+
+// Matrix3D::transpose calls the double 4x4 transpose out of line.
+namespace Scaleform { namespace Render
+{
+    // @0x142486790
+    template <> __declspec(noinline) void Matrix4x4<double>::Transpose()
+    {
+        Matrix4x4<double> t(NoInit);
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
+                t.M[j][i] = M[i][j];
+        *this = t;
+    }
+}}
 
 // result += String: what the String-building natives (Vector3D, Matrix3D) append with. The const char* / ASString
 // operator+ overloads come from the AS3 Abc type header.
@@ -766,7 +782,7 @@ namespace Instances { namespace fl_geom
     }
 
     // @0x142487540
-    void Rectangle::bottomRightGet(SPtr<Instances::fl_geom::Point>& result)
+    __declspec(noinline) void Rectangle::bottomRightGet(SPtr<Instances::fl_geom::Point>& result)
     {
         Value args[] = { Value(x + width), Value(y + height) };
         GetVM().ConstructBuiltinObject(result, "flash.geom.Point", 2, args).DoNotCheck();
@@ -984,7 +1000,7 @@ namespace Instances { namespace fl_geom
     }
 
     // @0x14248e120
-    void Rectangle::sizeGet(SPtr<Instances::fl_geom::Point>& result)
+    __declspec(noinline) void Rectangle::sizeGet(SPtr<Instances::fl_geom::Point>& result)
     {
         Value args[] = { Value(width), Value(height) };
         GetVM().ConstructBuiltinObject(result, "flash.geom.Point", 2, args).DoNotCheck();
@@ -1020,7 +1036,7 @@ namespace Instances { namespace fl_geom
     }
 
     // @0x142490500
-    void Rectangle::topLeftGet(SPtr<Instances::fl_geom::Point>& result)
+    __declspec(noinline) void Rectangle::topLeftGet(SPtr<Instances::fl_geom::Point>& result)
     {
         Value args[] = { Value(x), Value(y) };
         GetVM().ConstructBuiltinObject(result, "flash.geom.Point", 2, args).DoNotCheck();
@@ -1255,12 +1271,7 @@ namespace Instances { namespace fl_geom
             return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
         Render::Matrix2x4<double> m2d = GetMatrix();
         m2d.Append(m->GetMatrix());
-
         SetMatrix(m2d);
-
-
-
-
     }
 
     // Rotation, then scaling, then translation, applied to the current matrix.
@@ -1299,7 +1310,7 @@ namespace Instances { namespace fl_geom
 
     // The point transformed without the translation.
     // @0x142489320
-    void Matrix::deltaTransformPoint(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* point)
+    __declspec(noinline) void Matrix::deltaTransformPoint(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* point)
     {
         if (point == NULL)
             return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
@@ -1345,7 +1356,7 @@ namespace Instances { namespace fl_geom
     }
 
     // @0x142490680
-    void Matrix::transformPoint(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* point)
+    __declspec(noinline) void Matrix::transformPoint(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* point)
     {
         if (point == NULL)
             return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
@@ -1374,6 +1385,730 @@ namespace Instances { namespace fl_geom
             + GetVM().AsString(Value(blueOffset))
             + GetVM().GetStringManager().CreateConstString(", ") + GetVM().GetStringManager().CreateConstString("alphaOffset=")
             + GetVM().AsString(Value(alphaOffset)) + GetVM().GetStringManager().CreateConstString(")");
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // @0x142489b70
+    void PerspectiveProjection::fieldOfViewSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        fieldOfView = (float)value;
+        if (pDispObj)
+            pDispObj->SetFOV(fieldOfView);
+    }
+
+    // @0x142489bb0
+    void PerspectiveProjection::focalLengthSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED(result);
+        focalLength = (float)value;
+        if (pDispObj)
+            pDispObj->SetFocalLength(PixelsToTwips(focalLength));
+    }
+
+    // @0x14248d9f0
+    void PerspectiveProjection::projectionCenterSet(const Value& result, Instances::fl_geom::Point* value)
+    {
+        SF_UNUSED(result);
+        projectionCenter.x = (float)value->x;
+        projectionCenter.y = (float)value->y;
+        if (pDispObj)
+            pDispObj->SetProjectionCenter(PixelsToTwips(projectionCenter));
+    }
+}}
+
+// The SPtr-returning forms of the natives, for C++ callers.
+namespace Instances { namespace fl_geom
+{
+    // @0x142487520
+    SPtr<Instances::fl_geom::Point> Rectangle::bottomRightGet()
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        bottomRightGet(result);
+        return result;
+    }
+
+    // @0x142489300
+    SPtr<Instances::fl_geom::Point> Matrix::deltaTransformPoint(Instances::fl_geom::Point* point)
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        deltaTransformPoint(result, point);
+        return result;
+    }
+
+    // @0x14248e100
+    SPtr<Instances::fl_geom::Point> Rectangle::sizeGet()
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        sizeGet(result);
+        return result;
+    }
+
+    // @0x1424904e0
+    SPtr<Instances::fl_geom::Point> Rectangle::topLeftGet()
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        topLeftGet(result);
+        return result;
+    }
+
+    // @0x142490660
+    SPtr<Instances::fl_geom::Point> Matrix::transformPoint(Instances::fl_geom::Point* point)
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        transformPoint(result, point);
+        return result;
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // A new Point each time, made through the movie VM's Point class.
+    // @0x14248d8a0
+    __declspec(noinline) void PerspectiveProjection::projectionCenterGet(SPtr<Instances::fl_geom::Point>& result)
+    {
+        Value args[] = { Value(projectionCenter.x), Value(projectionCenter.y) };
+        Value r;
+        static_cast<ASVM&>(GetVM()).PointClass->Construct(r, 2, args, true);
+        result = static_cast<Instances::fl_geom::Point*>(r.GetObject());
+    }
+
+    // @0x14248d880
+    SPtr<Instances::fl_geom::Point> PerspectiveProjection::projectionCenterGet()
+    {
+        SPtr<Instances::fl_geom::Point> result;
+        projectionCenterGet(result);
+        return result;
+    }
+}}
+
+namespace ClassTraits { namespace fl_geom
+{
+    // The display Cxform of a ColorTransform: multipliers as they are, offsets scaled to 0..1. The identity for null.
+    // @0x142484540
+    Render::Cxform ColorTransform::GetCxformFromColorTransform(Instances::fl_geom::ColorTransform* ct)
+    {
+        Render::Cxform cx;
+        if (ct)
+        {
+            cx.M[0][0] = (float)ct->redMultiplier;
+            cx.M[0][1] = (float)ct->greenMultiplier;
+            cx.M[0][2] = (float)ct->blueMultiplier;
+            cx.M[0][3] = (float)ct->alphaMultiplier;
+            cx.M[1][0] = (float)ct->redOffset;
+            cx.M[1][1] = (float)ct->greenOffset;
+            cx.M[1][2] = (float)ct->blueOffset;
+            cx.M[1][3] = (float)ct->alphaOffset;
+            cx.Normalize();
+        }
+        return cx;
+    }
+}}
+
+// flash.geom.Transform: views onto the transform of the display object it was taken from.
+namespace Instances { namespace fl_geom
+{
+    // @0x142487d00
+    __declspec(noinline) void Transform::colorTransformGet(SPtr<Instances::fl_geom::ColorTransform>& result)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<ColorTransform> ct;
+        Value argv[8];
+        const Render::Cxform& cx = pDispObj->GetCxform();
+        argv[0].SetNumber(cx.M[0][0]);
+        argv[1].SetNumber(cx.M[0][1]);
+        argv[2].SetNumber(cx.M[0][2]);
+        argv[3].SetNumber(cx.M[0][3]);
+        argv[4].SetNumber(cx.M[1][0] * 255);
+        argv[5].SetNumber(cx.M[1][1] * 255);
+        argv[6].SetNumber(cx.M[1][2] * 255);
+        argv[7].SetNumber(cx.M[1][3] * 255);
+        asvm.ConstructInstance(ct, asvm.ColorTransformClass, 8, argv);
+        result = ct;
+    }
+
+    // @0x142487ce0
+    SPtr<Instances::fl_geom::ColorTransform> Transform::colorTransformGet()
+    {
+        SPtr<Instances::fl_geom::ColorTransform> result;
+        colorTransformGet(result);
+        return result;
+    }
+
+    // @0x142488100
+    void Transform::colorTransformSet(const Value& result, Instances::fl_geom::ColorTransform* value)
+    {
+        SF_UNUSED(result);
+        if (pDispObj)
+        {
+            pDispObj->SetCxform(ClassTraits::fl_geom::ColorTransform::GetCxformFromColorTransform(value));
+            pDispObj->SetAcceptAnimMoves(false);
+        }
+    }
+
+    // The color transforms of the object and all its parents, combined.
+    // @0x142488440
+    __declspec(noinline) void Transform::concatenatedColorTransformGet(SPtr<Instances::fl_geom::ColorTransform>& result)
+    {
+        SPtr<ColorTransform> ct;
+        Render::Cxform cx;
+        Value argv[8];
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        for (GFx::DisplayObject* obj = pDispObj; obj != NULL; obj = obj->GetParent())
+            cx.Append(obj->GetCxform());
+        argv[0].SetNumber(cx.M[0][0]);
+        argv[1].SetNumber(cx.M[0][1]);
+        argv[2].SetNumber(cx.M[0][2]);
+        argv[3].SetNumber(cx.M[0][3]);
+        argv[4].SetNumber(cx.M[1][0] * 255);
+        argv[5].SetNumber(cx.M[1][1] * 255);
+        argv[6].SetNumber(cx.M[1][2] * 255);
+        argv[7].SetNumber(cx.M[1][3] * 255);
+        asvm.ConstructInstance(ct, asvm.ColorTransformClass, 8, argv);
+        result = ct;
+    }
+
+    // @0x142488420
+    SPtr<Instances::fl_geom::ColorTransform> Transform::concatenatedColorTransformGet()
+    {
+        SPtr<Instances::fl_geom::ColorTransform> result;
+        concatenatedColorTransformGet(result);
+        return result;
+    }
+
+    // The matrices of the object and all its parents, combined; translation in pixels.
+    // @0x142488880
+    __declspec(noinline) void Transform::concatenatedMatrixGet(SPtr<Instances::fl_geom::Matrix>& result)
+    {
+        SPtr<Matrix> pm;
+        GFx::DisplayObjectBase::Matrix m;
+        Value argv[6];
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        for (GFx::DisplayObject* obj = pDispObj; obj != NULL; obj = obj->GetParent())
+            m.Append(obj->GetMatrix());
+        argv[0].SetNumber(m.Sx());
+        argv[1].SetNumber(m.Shy());
+        argv[2].SetNumber(m.Shx());
+        argv[3].SetNumber(m.Sy());
+        argv[4].SetNumber(TwipsToPixels(m.Tx()));
+        argv[5].SetNumber(TwipsToPixels(m.Ty()));
+        asvm.ConstructInstance(pm, asvm.MatrixClass, 6, argv);
+        result = pm;
+    }
+
+    // @0x142488860
+    SPtr<Instances::fl_geom::Matrix> Transform::concatenatedMatrixGet()
+    {
+        SPtr<Instances::fl_geom::Matrix> result;
+        concatenatedMatrixGet(result);
+        return result;
+    }
+
+    // @0x14248b450
+    __declspec(noinline) void Transform::matrixGet(SPtr<Instances::fl_geom::Matrix>& result)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<Matrix> pm;
+        Value argv[6];
+        GFx::DisplayObjectBase::Matrix m = pDispObj->GetMatrix();
+        argv[0].SetNumber(m.Sx());
+        argv[1].SetNumber(m.Shy());
+        argv[2].SetNumber(m.Shx());
+        argv[3].SetNumber(m.Sy());
+        argv[4].SetNumber(TwipsToPixels(m.Tx()));
+        argv[5].SetNumber(TwipsToPixels(m.Ty()));
+        asvm.ConstructInstance(pm, asvm.MatrixClass, 6, argv);
+        result = pm;
+    }
+
+    // @0x14248b430
+    SPtr<Instances::fl_geom::Matrix> Transform::matrixGet()
+    {
+        SPtr<Instances::fl_geom::Matrix> result;
+        matrixGet(result);
+        return result;
+    }
+
+    // Sets the object's matrix (translation given in pixels) and keeps its x/y/rotation/scale properties in step.
+    // @0x14248b7c0
+    void Transform::matrixSet(const Value& result, Instances::fl_geom::Matrix* value)
+    {
+        SF_UNUSED(result);
+        if (pDispObj)
+        {
+            if (value)
+            {
+                GFx::DisplayObjectBase::Matrix m;
+                const float a = (float)value->a;
+                const float b = (float)value->b;
+                const float c = (float)value->c;
+                const float d = (float)value->d;
+                const float tx = PixelsToTwips((float)value->tx);
+                const float ty = PixelsToTwips((float)value->ty);
+                m.SetMatrix(a, c, tx, b, d, ty);
+                pDispObj->SetMatrix(m);
+
+                GFx::DisplayObjectBase::GeomDataType geom;
+                pDispObj->GetGeomData(geom);
+                geom.X = (int)m.Tx();
+                geom.Y = (int)m.Ty();
+                geom.Rotation = m.GetRotationDouble() * 180 / SF_MATH_PI;
+                geom.XScale = m.GetXScaleDouble() * 100;
+                geom.YScale = m.GetYScaleDouble() * 100;
+                pDispObj->SetGeomData(geom);
+            }
+            pDispObj->SetAcceptAnimMoves(false);
+        }
+    }
+
+    // The bounds in the parent's space, rounded to whole pixels.
+    // @0x14248c270
+    __declspec(noinline) void Transform::pixelBoundsGet(SPtr<Instances::fl_geom::Rectangle>& result)
+    {
+        if (pDispObj)
+        {
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            SPtr<Rectangle> pr;
+            Value argv[4];
+            Render::RectF bounds = pDispObj->GetBounds(pDispObj->GetMatrix());
+            argv[0].SetNumber(Alg::IRound(TwipsToPixels(bounds.TopLeft().x)));
+            argv[1].SetNumber(Alg::IRound(TwipsToPixels(bounds.TopLeft().y)));
+            argv[2].SetNumber(Alg::IRound(TwipsToPixels(bounds.Width())));
+            argv[3].SetNumber(Alg::IRound(TwipsToPixels(bounds.Height())));
+            asvm.ConstructInstance(pr, asvm.RectangleClass, 4, argv);
+            result = pr;
+        }
+    }
+
+    // @0x14248c250
+    SPtr<Instances::fl_geom::Rectangle> Transform::pixelBoundsGet()
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        pixelBoundsGet(result);
+        return result;
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // The focal length that shows a stage stageWidth pixels wide at fieldOfView.
+    // @0x142484350
+    Value::Number PerspectiveProjection::CalculateFocalLength(float stageWidth)
+    {
+        return (stageWidth * 0.5f) / tan(fieldOfView * 0.5 * (SF_MATH_PI / 180));
+    }
+
+    // A PerspectiveProjection bound to the object, when it has perspective data. On the root with no explicit centre,
+    // the centre is the middle of the stage and the focal length follows the stage width.
+    // MS2-FUNCTIONAL: the exe reloads pDispObj for the root test where this build reuses the null-check load (register allocation)
+    // @0x14248bcc0
+    __declspec(noinline) void Transform::perspectiveProjectionGet(SPtr<Instances::fl_geom::PerspectiveProjection>& result)
+    {
+        if (pDispObj && pDispObj->GetPerspectiveDataPtr())
+        {
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            SPtr<PerspectiveProjection> pp;
+            Value argv[4];
+            GFx::DisplayObject* obj = pDispObj;
+            const bool isRoot = (asvm.GetMovieRoot()->GetRootMovie418() == obj);
+            argv[0].SetNumber(obj->GetFOV());
+            argv[1].SetNumber(TwipsToPixels(pDispObj->GetFocalLength()));
+            PointF ctr = pDispObj->GetParent() ? pDispObj->GetParent()->GlobalToLocal(pDispObj->GetProjectionCenter())
+                                               : pDispObj->GetProjectionCenter();
+            if (isRoot && ctr.x == 0 && ctr.y == 0)
+                ctr = asvm.GetMovieImpl()->GetVisibleFrameRectInTwips().Center();
+            argv[2].SetNumber(TwipsToPixels(ctr.x));
+            argv[3].SetNumber(TwipsToPixels(ctr.y));
+            if (asvm.ConstructInstance(pp, asvm.PerspectiveProjectionClass, 4, argv))
+            {
+                pp->pDispObj = pDispObj;
+                if (isRoot)
+                    pp->focalLength = pp->CalculateFocalLength(asvm.GetMovieImpl()->GetVisibleFrameRect().Width());
+            }
+            result = pp;
+        }
+    }
+
+    // @0x14248bca0
+    SPtr<Instances::fl_geom::PerspectiveProjection> Transform::perspectiveProjectionGet()
+    {
+        SPtr<Instances::fl_geom::PerspectiveProjection> result;
+        perspectiveProjectionGet(result);
+        return result;
+    }
+
+    // Binds the projection to the object: focal length from the stage width, then FOV and centre (global twips).
+    // @0x14248c0d0
+    void Transform::perspectiveProjectionSet(const Value& result, Instances::fl_geom::PerspectiveProjection* value)
+    {
+        SF_UNUSED(result);
+        if (value && pDispObj)
+        {
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            value->focalLength = value->CalculateFocalLength(asvm.GetMovieImpl()->GetVisibleFrameRect().Width());
+            value->pDispObj = pDispObj;
+            pDispObj->SetFocalLength((float)(value->focalLength * 20));
+            pDispObj->SetFOV((float)value->fieldOfView);
+            PointF ctr = pDispObj->GetParent() ? pDispObj->GetParent()->LocalToGlobal(PixelsToTwips(value->projectionCenter))
+                                               : PixelsToTwips(value->projectionCenter);
+            pDispObj->SetProjectionCenter(ctr);
+        }
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // The object's 3D matrix as a Matrix3D bound to it (translation in twips, as the display object keeps it).
+    // @0x14248ac20
+    __declspec(noinline) void Transform::matrix3DGet(SPtr<Instances::fl_geom::Matrix3D>& result)
+    {
+        if (pDispObj)
+        {
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            SPtr<Matrix3D> pm;
+            Value argv[16];
+            Render::Matrix3F m3 = pDispObj->GetMatrix3D();
+            Render::Matrix4F m4(m3);
+            for (int i = 0; i < 16; i++)
+                argv[i].SetNumber((Double)m4[i]);
+            if (asvm.ConstructInstance(pm, asvm.Matrix3DClass, 16, argv))
+                pm->pDispObj = pDispObj;
+            result = pm;
+        }
+    }
+
+    // @0x14248ac00
+    SPtr<Instances::fl_geom::Matrix3D> Transform::matrix3DGet()
+    {
+        SPtr<Instances::fl_geom::Matrix3D> result;
+        matrix3DGet(result);
+        return result;
+    }
+
+    // Sets the object's 3D matrix (translation given in pixels) and its x/y/z, rotations and scales. Null drops the 3D
+    // state.
+    // @0x14248af20
+    void Transform::matrix3DSet(const Value& result, Instances::fl_geom::Matrix3D* value)
+    {
+        SF_UNUSED(result);
+        if (pDispObj)
+        {
+            if (value)
+            {
+                Render::Matrix4F m4;
+                for (int i = 0; i < 16; i++)
+                    m4.Data()[i] = (float)value->mat4[i];
+                Render::Matrix3F m(m4);
+                m.Tx() = PixelsToTwips(m.Tx());
+                m.Ty() = PixelsToTwips(m.Ty());
+                m.Tz() = PixelsToTwips(m.Tz());
+                pDispObj->SetMatrix3D(m);
+
+                GFx::DisplayObjectBase::GeomDataType geom;
+                pDispObj->GetGeomData(geom);
+                geom.X = (int)m.Tx();
+                geom.Y = (int)m.Ty();
+                geom.Z = (int)m.Tz();
+                float rx, ry, rz;
+                m.GetRotation(&rx, &ry, &rz);
+                geom.Rotation = SF_RADTODEG(rz);
+                geom.XRotation = SF_RADTODEG(rx);
+                geom.YRotation = SF_RADTODEG(ry);
+                geom.XScale = m.GetXScale() * 100;
+                geom.YScale = m.GetYScale() * 100;
+                geom.ZScale = m.GetZScale() * 100;
+                pDispObj->SetGeomData(geom);
+            }
+            else if (pDispObj->Is3D())
+                pDispObj->Clear3D();
+            pDispObj->SetAcceptAnimMoves(false);
+        }
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // Each native that changes mat4 pushes it to the bound display object as its float 3x4 matrix.
+
+    // this = this * m (m applied after).
+    // @0x142486b60
+    void Matrix3D::append(const Value& result, Instances::fl_geom::Matrix3D* m)
+    {
+        SF_UNUSED(result);
+        if (m == NULL)
+            return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
+        mat4.Append(m->mat4);
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x142486dc0
+    void Matrix3D::appendRotation(const Value& result, Value::Number degrees, Instances::fl_geom::Vector3D* axis, Instances::fl_geom::Vector3D* pivot)
+    {
+        SF_UNUSED(result);
+        Render::Point3<double> ax = axis ? Render::Point3<double>(axis->x, axis->y, axis->z) : Render::Point3<double>(0, 0, 0);
+        Render::Point3<double> pv = pivot ? Render::Point3<double>(pivot->x, pivot->y, pivot->z) : Render::Point3<double>(0, 0, 0);
+        mat4.Append(Render::Matrix4x4<double>::Rotation(SF_DEGTORAD(degrees), ax, pv));
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x142487070
+    void Matrix3D::appendScale(const Value& result, Value::Number sx, Value::Number sy, Value::Number sz)
+    {
+        SF_UNUSED(result);
+        mat4.Append(Render::Matrix4x4<double>::Scaling(sx, sy, sz));
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x1424872c0
+    void Matrix3D::appendTranslation(const Value& result, Value::Number tx, Value::Number ty, Value::Number tz)
+    {
+        SF_UNUSED(result);
+        mat4.Append(Render::Matrix4x4<double>::Translation(tx, ty, tz));
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // A new unbound Matrix3D with the same 16 values.
+    // @0x142487690
+    void Matrix3D::clone(SPtr<Instances::fl_geom::Matrix3D>& result)
+    {
+        Value args[16];
+        for (int i = 0; i < 16; i++)
+            args[i].SetNumber(mat4[i]);
+        GetVM().ConstructBuiltinObject(result, "flash.geom.Matrix3D", 16, args).DoNotCheck();
+    }
+
+    // v through the matrix without its translation.
+    // @0x142489470
+    __declspec(noinline) void Matrix3D::deltaTransformVector(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Vector3D* v)
+    {
+        if (v == NULL)
+            return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
+        Render::Matrix4x4<double> m(mat4);
+        m.Tx() = 0;
+        m.Ty() = 0;
+        m.Tz() = 0;
+        Render::Point3<double> p = m.Transform(Render::Point3<double>(v->x, v->y, v->z));
+        InstanceTraits::fl_geom::Vector3D& itr = static_cast<InstanceTraits::fl_geom::Vector3D&>(v->GetInstanceTraits());
+        Pickable<Instances::fl_geom::Vector3D> r = itr.MakeInstance(itr);
+        r->x = p.x;
+        r->y = p.y;
+        r->z = p.z;
+        result = r;
+    }
+
+    // @0x142489450
+    SPtr<Instances::fl_geom::Vector3D> Matrix3D::deltaTransformVector(Instances::fl_geom::Vector3D* a0)
+    {
+        SPtr<Instances::fl_geom::Vector3D> result;
+        deltaTransformVector(result, a0);
+        return result;
+    }
+
+    // @0x142489690
+    void Matrix3D::determinantGet(Value::Number& result)
+    {
+        result = mat4.GetDeterminant();
+    }
+
+    // @0x142489f90
+    void Matrix3D::identity(const Value& result)
+    {
+        SF_UNUSED(result);
+        mat4.SetIdentity();
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x14248a7a0
+    void Matrix3D::invert(bool& result)
+    {
+        mat4.Invert();
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+        result = true;
+    }
+
+    // The translation in pixels (mat4 keeps it in twips), w = 0.
+    // @0x14248cb80
+    __declspec(noinline) void Matrix3D::positionGet(SPtr<Instances::fl_geom::Vector3D>& result)
+    {
+        Value argv[] = { Value(TwipsToPixels(mat4.Tx())), Value(TwipsToPixels(mat4.Ty())), Value(TwipsToPixels(mat4.Tz())), Value(0.0) };
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        asvm.ConstructInstance(result, asvm.GetClass("flash.geom.Vector3D"), 4, argv);
+    }
+
+    // @0x14248cb60
+    SPtr<Instances::fl_geom::Vector3D> Matrix3D::positionGet()
+    {
+        SPtr<Instances::fl_geom::Vector3D> result;
+        positionGet(result);
+        return result;
+    }
+
+    // @0x14248ccc0
+    void Matrix3D::positionSet(const Value& result, Instances::fl_geom::Vector3D* v)
+    {
+        SF_UNUSED(result);
+        mat4.Tx() = PixelsToTwips(v->x);
+        mat4.Ty() = PixelsToTwips(v->y);
+        mat4.Tz() = PixelsToTwips(v->z);
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // this = m * this (m applied before).
+    // @0x14248ce90
+    void Matrix3D::prepend(const Value& result, Instances::fl_geom::Matrix3D* m)
+    {
+        SF_UNUSED(result);
+        if (m == NULL)
+            return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
+        mat4.Prepend(m->mat4);
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x14248d0f0
+    void Matrix3D::prependRotation(const Value& result, Value::Number degrees, Instances::fl_geom::Vector3D* axis, Instances::fl_geom::Vector3D* pivot)
+    {
+        SF_UNUSED(result);
+        Render::Point3<double> ax = axis ? Render::Point3<double>(axis->x, axis->y, axis->z) : Render::Point3<double>(0, 0, 0);
+        Render::Point3<double> pv = pivot ? Render::Point3<double>(pivot->x, pivot->y, pivot->z) : Render::Point3<double>(0, 0, 0);
+        mat4.Prepend(Render::Matrix4x4<double>::Rotation(SF_DEGTORAD(degrees), ax, pv));
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x14248d3a0
+    void Matrix3D::prependScale(const Value& result, Value::Number sx, Value::Number sy, Value::Number sz)
+    {
+        SF_UNUSED(result);
+        mat4.Prepend(Render::Matrix4x4<double>::Scaling(sx, sy, sz));
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x14248d5f0
+    void Matrix3D::prependTranslation(const Value& result, Value::Number tx, Value::Number ty, Value::Number tz)
+    {
+        SF_UNUSED(result);
+        mat4.Prepend(Render::Matrix4x4<double>::Translation(tx, ty, tz));
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
+    // @0x1424907e0
+    __declspec(noinline) void Matrix3D::transformVector(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Vector3D* v)
+    {
+        if (v == NULL)
+            return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
+        Render::Point3<double> p = mat4.Transform(Render::Point3<double>(v->x, v->y, v->z));
+        InstanceTraits::fl_geom::Vector3D& itr = static_cast<InstanceTraits::fl_geom::Vector3D&>(v->GetInstanceTraits());
+        Pickable<Instances::fl_geom::Vector3D> r = itr.MakeInstance(itr);
+        r->x = p.x;
+        r->y = p.y;
+        r->z = p.z;
+        result = r;
+    }
+
+    // @0x1424907c0
+    SPtr<Instances::fl_geom::Vector3D> Matrix3D::transformVector(Instances::fl_geom::Vector3D* a0)
+    {
+        SPtr<Instances::fl_geom::Vector3D> result;
+        transformVector(result, a0);
+        return result;
+    }
+
+    // @0x142490df0
+    void Matrix3D::transpose(const Value& result)
+    {
+        SF_UNUSED(result);
+        mat4.Transpose();
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+}}
+
+namespace Instances { namespace fl_geom
+{
+    // decompose, interpolate, interpolateTo and recompose are unimplemented in this GFx version: they throw.
+
+    // @0x142489220
+    void Matrix3D::decompose(SPtr<Instances::fl_vec::Vector_object>& result, const ASString& orientationStyle)
+    {
+        SF_UNUSED2(result, orientationStyle);
+        GetVM().ThrowError(VM::Error(VM::eNotImplementedError, GetVM(), "instance::Matrix3D::decompose() is not implemented yet"));
+    }
+
+    // @0x1424891c0
+    SPtr<Instances::fl_vec::Vector_object> Matrix3D::decompose(const ASString& a0)
+    {
+        SPtr<Instances::fl_vec::Vector_object> result;
+        decompose(result, a0);
+        return result;
+    }
+
+    // @0x14248a310
+    void Matrix3D::interpolate(SPtr<Instances::fl_geom::Matrix3D>& result, Instances::fl_geom::Matrix3D* thisMat, Instances::fl_geom::Matrix3D* toMat, Value::Number percent)
+    {
+        SF_UNUSED4(result, thisMat, toMat, percent);
+        GetVM().ThrowError(VM::Error(VM::eNotImplementedError, GetVM(), "instance::Matrix3D::interpolate() is not implemented yet"));
+    }
+
+    // @0x14248a440
+    void Matrix3D::interpolateTo(const Value& result, Instances::fl_geom::Matrix3D* toMat, Value::Number percent)
+    {
+        SF_UNUSED3(result, toMat, percent);
+        GetVM().ThrowError(VM::Error(VM::eNotImplementedError, GetVM(), "instance::Matrix3D::interpolateTo() is not implemented yet"));
+    }
+
+    // @0x14248df60
+    void Matrix3D::recompose(bool& result, Instances::fl_vec::Vector_object* components, const ASString& orientationStyle)
+    {
+        SF_UNUSED3(result, components, orientationStyle);
+        GetVM().ThrowError(VM::Error(VM::eNotImplementedError, GetVM(), "instance::Matrix3D::recompose() is not implemented yet"));
     }
 }}
 
@@ -1442,3 +2177,7 @@ namespace Instances { namespace fl_geom
 // MS2-PIN: ?Func@?$ThunkFunc1@VURLLoader@fl_net@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@PEAVURLRequest@23456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142495430
 // MS2-PIN: ?AppendRotation@?$Matrix2x4@N@Render@Scaleform@@QEAAAEAV123@N@Z 0x142484140
 // MS2-PIN: ?Append_NonOpt@?$Matrix2x4@N@Render@Scaleform@@QEAAAEAV123@AEBV123@@Z 0x142484280
+// MS2-PIN: ?MultiplyMatrix_NonOpt@?$Matrix4x4@N@Render@Scaleform@@QEAAXAEBV123@0@Z 0x142485d30
+// MS2-PIN: ?Rotation@?$Matrix4x4@N@Render@Scaleform@@SA?AV123@NAEBV?$Point3@N@23@0@Z 0x142486210
+// MS2-PIN: ?GetInverse@?$Matrix4x4@N@Render@Scaleform@@QEBA?AV123@XZ 0x142484b00
+// MS2-PIN: ?GetMinor@?$Matrix4x4@N@Render@Scaleform@@AEBANAEBV123@_K11111@Z 0x142485360

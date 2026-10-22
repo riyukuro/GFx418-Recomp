@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "Render/Render_Matrix4x4.h"
 #include "Render/Render_Types2D.h"
+#include "Render/Render_CxForm.h"
 
 namespace Scaleform { namespace GFx { class DisplayObject; } }
 
@@ -59,6 +60,7 @@ namespace Instances { namespace fl_geom {
         void createGradientBox(const Value& result, Value::Number, Value::Number, Value::Number, Value::Number, Value::Number);
         // @0x142489320
         void deltaTransformPoint(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point*);
+        SPtr<Instances::fl_geom::Point> deltaTransformPoint(Instances::fl_geom::Point* a0);
         // @0x14248a170
         void identity(const Value& result);
         // @0x14248a9c0
@@ -71,6 +73,7 @@ namespace Instances { namespace fl_geom {
         void toString(ASString& result);
         // @0x142490680
         void transformPoint(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point*);
+        SPtr<Instances::fl_geom::Point> transformPoint(Instances::fl_geom::Point* a0);
         // @0x142490dd0
         void translate(const Value& result, Value::Number, Value::Number);
 
@@ -106,8 +109,10 @@ namespace Instances { namespace fl_geom {
         void clone(SPtr<Instances::fl_geom::Matrix3D>& result);
         // @0x142489220
         void decompose(SPtr<Instances::fl_vec::Vector_object>& result, const ASString&);
+        SPtr<Instances::fl_vec::Vector_object> decompose(const ASString& a0);
         // @0x142489470
         void deltaTransformVector(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Vector3D*);
+        SPtr<Instances::fl_geom::Vector3D> deltaTransformVector(Instances::fl_geom::Vector3D* a0);
         // @0x142489690
         void determinantGet(Value::Number& result);
         // @0x142489f90
@@ -122,6 +127,7 @@ namespace Instances { namespace fl_geom {
         void pointAt(const Value& result, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*, Instances::fl_geom::Vector3D*);
         // @0x14248cb80
         void positionGet(SPtr<Instances::fl_geom::Vector3D>& result);
+        SPtr<Instances::fl_geom::Vector3D> positionGet();
         // @0x14248ccc0
         void positionSet(const Value& result, Instances::fl_geom::Vector3D*);
         // @0x14248ce90
@@ -134,12 +140,14 @@ namespace Instances { namespace fl_geom {
         void prependTranslation(const Value& result, Value::Number, Value::Number, Value::Number);
         // @0x14248da70
         void rawDataGet(SPtr<Instances::fl_vec::Vector_double>& result);
+        SPtr<Instances::fl_vec::Vector_double> rawDataGet();
         // @0x14248dc60
         void rawDataSet(const Value& result, Instances::fl_vec::Vector_double*);
         // @0x14248df60
         void recompose(bool& result, Instances::fl_vec::Vector_object*, const ASString&);
         // @0x1424907e0
         void transformVector(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Vector3D*);
+        SPtr<Instances::fl_geom::Vector3D> transformVector(Instances::fl_geom::Vector3D* a0);
         // @0x142490960
         void transformVectors(const Value& result, Instances::fl_vec::Vector_double*, Instances::fl_vec::Vector_double*);
         // @0x142490df0
@@ -167,10 +175,13 @@ namespace Instances { namespace fl_geom {
         void focalLengthSet(const Value& result, Value::Number);
         // @0x14248d8a0
         void projectionCenterGet(SPtr<Instances::fl_geom::Point>& result);
+        SPtr<Instances::fl_geom::Point> projectionCenterGet();
         // @0x14248d9f0
         void projectionCenterSet(const Value& result, Instances::fl_geom::Point*);
         // @0x14248e490
         void toMatrix3D(SPtr<Instances::fl_geom::Matrix3D>& result);
+        SPtr<Instances::fl_geom::Matrix3D> toMatrix3D();
+        Value::Number CalculateFocalLength(float stageWidth);    // 0x142484350
 
         Render::PointF projectionCenter;    // +0x38
         Value::Number focalLength;          // +0x40
@@ -218,6 +229,7 @@ namespace Instances { namespace fl_geom {
         void bottomGet(Value::Number& result);
         // @0x142487540
         void bottomRightGet(SPtr<Instances::fl_geom::Point>& result);
+        SPtr<Instances::fl_geom::Point> bottomRightGet();
         // @0x142487600
         void bottomRightSet(const Value& result, Instances::fl_geom::Point*);
         // @0x142487680
@@ -258,6 +270,7 @@ namespace Instances { namespace fl_geom {
         void setEmpty(const Value& result);
         // @0x14248e120
         void sizeGet(SPtr<Instances::fl_geom::Point>& result);
+        SPtr<Instances::fl_geom::Point> sizeGet();
         // @0x14248e1d0
         void sizeSet(const Value& result, Instances::fl_geom::Point*);
         // @0x14248fc30
@@ -266,6 +279,7 @@ namespace Instances { namespace fl_geom {
         void topGet(Value::Number& result);
         // @0x142490500
         void topLeftGet(SPtr<Instances::fl_geom::Point>& result);
+        SPtr<Instances::fl_geom::Point> topLeftGet();
         // @0x1424905b0
         void topLeftSet(const Value& result, Instances::fl_geom::Point*);
         // @0x142490640
@@ -289,28 +303,36 @@ namespace Instances { namespace fl_geom {
 
         // @0x142487d00
         void colorTransformGet(SPtr<Instances::fl_geom::ColorTransform>& result);
+        SPtr<Instances::fl_geom::ColorTransform> colorTransformGet();
         // @0x142488100
         void colorTransformSet(const Value& result, Instances::fl_geom::ColorTransform*);
         // @0x142488440
         void concatenatedColorTransformGet(SPtr<Instances::fl_geom::ColorTransform>& result);
+        SPtr<Instances::fl_geom::ColorTransform> concatenatedColorTransformGet();
         // @0x142488880
         void concatenatedMatrixGet(SPtr<Instances::fl_geom::Matrix>& result);
+        SPtr<Instances::fl_geom::Matrix> concatenatedMatrixGet();
         // @0x142489c00
         void getRelativeMatrix3D(SPtr<Instances::fl_geom::Matrix3D>& result, Instances::fl_display::DisplayObject*);
+        SPtr<Instances::fl_geom::Matrix3D> getRelativeMatrix3D(Instances::fl_display::DisplayObject* a0);
         // @0x14248ac20
         void matrix3DGet(SPtr<Instances::fl_geom::Matrix3D>& result);
+        SPtr<Instances::fl_geom::Matrix3D> matrix3DGet();
         // @0x14248af20
         void matrix3DSet(const Value& result, Instances::fl_geom::Matrix3D*);
         // @0x14248b450
         void matrixGet(SPtr<Instances::fl_geom::Matrix>& result);
+        SPtr<Instances::fl_geom::Matrix> matrixGet();
         // @0x14248b7c0
         void matrixSet(const Value& result, Instances::fl_geom::Matrix*);
         // @0x14248bcc0
         void perspectiveProjectionGet(SPtr<Instances::fl_geom::PerspectiveProjection>& result);
+        SPtr<Instances::fl_geom::PerspectiveProjection> perspectiveProjectionGet();
         // @0x14248c0d0
         void perspectiveProjectionSet(const Value& result, Instances::fl_geom::PerspectiveProjection*);
         // @0x14248c270
         void pixelBoundsGet(SPtr<Instances::fl_geom::Rectangle>& result);
+        SPtr<Instances::fl_geom::Rectangle> pixelBoundsGet();
 
         GFx::DisplayObject* pDispObj;   // +0x38
     };
@@ -449,20 +471,23 @@ namespace InstanceTraits { namespace fl_geom
 
 #undef MS2_SF_GEOM_ITRAITS
 
-#define MS2_SF_GEOM_CTRAITS(Name, TypeName)                                                                             \
+#define MS2_SF_GEOM_CTRAITS(Name, TypeName, ...)                                                                           \
     class Name : public Traits                                                                                          \
     {                                                                                                                   \
     public:                                                                                                             \
         Name(VM& vm);                                                                                                   \
         virtual const char* GetAS3ObjectType() const { return TypeName; }                                              \
         static Pickable<Traits> MakeClassTraits(VM& vm);                                                                \
+        __VA_ARGS__                                                                                                     \
     };
 
 namespace ClassTraits { namespace fl_geom
 {
     // One line per class: the tag is the GetAS3ObjectType of the macro.
     // @0x1424843a0
-    MS2_SF_GEOM_CTRAITS(ColorTransform, "ClassTraits::fl_geom::ColorTransform")
+    MS2_SF_GEOM_CTRAITS(ColorTransform, "ClassTraits::fl_geom::ColorTransform",
+        static Render::Cxform GetCxformFromColorTransform(Instances::fl_geom::ColorTransform* ct);  // 0x142484540
+    )
     // @0x1424843d0
     MS2_SF_GEOM_CTRAITS(Matrix3D, "ClassTraits::Matrix3D")
     // @0x142484400

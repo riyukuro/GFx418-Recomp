@@ -99,6 +99,8 @@ public:
         return constructBuiltinObject(reinterpret_cast<SPtr<Object>&>(pobj), gname, argc, argv);
     }
     CheckResult constructBuiltinObject(SPtr<Object>& pobj, const char* gname, unsigned argc, const Value* argv); // 0x142532130
+    // The class object of the global class gname ("flash.geom.Vector3D"); NULL when there is none.
+    Class* GetClass(const StringDataPtr& gname);    // 0x142507be0
 
     Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
     Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }
