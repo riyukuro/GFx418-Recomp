@@ -17,6 +17,10 @@
 
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+// Out-of-line Traits::GetConstructor, second copy.
+Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* t);
+// Out-of-line Value::SetBool copy (sfr_as3_04 0x142421710) that some natives call instead of inlining it.
+void FUN_142421710(Scaleform::GFx::AS3::Value& v, bool b);
 // VM::GetValueTraits.
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
@@ -1233,6 +1237,38 @@ namespace InstanceTraits { namespace fl
     // default value, otherwise the AS3 method (inlined from its own unit).
     #define MS2_AS3_ON_PROTOTYPE(getclass) (_this.IsObject() && _this.GetObject() == &vm.getclass().GetPrototype())
 
+    // MS2-FUNCTIONAL: register allocation and throw-path tail merging differ (exe does not tail-call SetBool)
+    // @0x1423e4060
+    void Object::AS3isPrototypeOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsNullOrUndefined())
+            return vm.ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, vm));
+        if (argc < 1)
+            return vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "Object::AS3isPrototypeOf", 1, 1, argc));
+
+        bool r = false;
+        if (!argv[0].IsNullOrUndefined())
+        {
+            const AS3::Object* proto = _this.GetObject();
+            for (const AS3::Traits* tr = &FUN_14250ffc0(vm, argv[0]); tr; tr = tr->GetParent())
+            {
+                if (&FUN_142508490(tr).GetPrototype() == proto)
+                {
+                    r = true;
+                    break;
+                }
+            }
+        }
+        FUN_142421710(result, r);
+    }
+
+    // MS2-FUNCTIONAL: inlines AS3isPrototypeOf, same differences
+    // @0x1423e4490
+    void Object::isPrototypeOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        AS3isPrototypeOf(ti, vm, _this, result, argc, argv);
+    }
+
     // @0x1423e29b0
     void Number::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -1394,40 +1430,37 @@ namespace InstanceTraits { namespace fl
 
     #undef MS2_AS3_COERCED_PROTO
 
-    // toExponential: the exe has no out-of-line AS3toExponential, so the helpers below get inlined into the *Proto form.
-    static void MS2_AS3_NumberToExponential(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
-    static void MS2_AS3_SIntToExponential(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
-    static void MS2_AS3_UIntToExponential(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+    // toExponential: AS3toExponential (defined below) is inlined into the *Proto form.
 
     #define MS2_AS3_EXPONENTIAL_PROTO(coerce, traits, method) \
         Value coerced_this; \
         if (!coerce(_this, coerced_this)) \
             return vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), \
                 vm.traits().GetName().ToCStr())); \
-        method(vm, coerced_this, result, argc, argv)
+        method(ti, vm, coerced_this, result, argc, argv)
 
     // @0x1423e2d40
     void Number::toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceNumber, GetClassTraitsNumber, MS2_AS3_NumberToExponential);
+        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceNumber, GetClassTraitsNumber, Number::AS3toExponential);
     }
 
     // @0x1423e5960
     void int_::toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceSInt, GetClassTraitsSInt, MS2_AS3_SIntToExponential);
+        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceSInt, GetClassTraitsSInt, int_::AS3toExponential);
     }
 
     // @0x1423e68b0
     void uint::toExponentialProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceUInt, GetClassTraitsUInt, MS2_AS3_UIntToExponential);
+        MS2_AS3_EXPONENTIAL_PROTO(MS2_AS3_CoerceUInt, GetClassTraitsUInt, uint::AS3toExponential);
     }
 
     #undef MS2_AS3_EXPONENTIAL_PROTO
 
-    #define MS2_AS3_DEFINE_TOEXPONENTIAL(name, number) \
-        static void name(VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv) \
+    #define MS2_AS3_DEFINE_TOEXPONENTIAL(cls, number) \
+        void cls::AS3toExponential(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv) \
         { \
             UInt32 digits = 0; \
             if (argc > 0 && !argv[0].Convert2UInt32(digits)) \
@@ -1438,9 +1471,12 @@ namespace InstanceTraits { namespace fl
             f.SetType(DoubleFormatter::FmtScientific).SetPrecision(digits).Convert(); \
             result = vm.GetStringManager().CreateString(f.GetResult().ToCStr(), f.GetSize()); \
         }
-    MS2_AS3_DEFINE_TOEXPONENTIAL(MS2_AS3_NumberToExponential, _this.AsNumber())
-    MS2_AS3_DEFINE_TOEXPONENTIAL(MS2_AS3_SIntToExponential, _this.AsInt())
-    MS2_AS3_DEFINE_TOEXPONENTIAL(MS2_AS3_UIntToExponential, _this.AsUInt())
+    // @0x1423e2850
+    MS2_AS3_DEFINE_TOEXPONENTIAL(Number, _this.AsNumber())
+    // @0x1423e55f0
+    MS2_AS3_DEFINE_TOEXPONENTIAL(int_, _this.AsInt())
+    // @0x1423e6540
+    MS2_AS3_DEFINE_TOEXPONENTIAL(uint, _this.AsUInt())
     #undef MS2_AS3_DEFINE_TOEXPONENTIAL
 
     #define MS2_AS3_DEFINE_COERCE(name, type, convert, set) \
@@ -1668,7 +1704,7 @@ namespace InstanceTraits { namespace fl
 
         bool r;
         obj->AS3hasOwnProperty(r, argv[0].AsString());
-        result.SetBool(r);
+        FUN_142421710(result, r);
     }
 }}
 

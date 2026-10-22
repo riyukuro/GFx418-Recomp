@@ -388,6 +388,10 @@ namespace InstanceTraits
             static void AS3hasOwnProperty(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
             // @0x1423fd170 (appended, sfr15)
             static void AS3propertyIsEnumerable(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+            // @0x1423e4060 (appended, sfr15)
+            static void AS3isPrototypeOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+            // @0x1423e4490 (appended, sfr15)
+            static void isPrototypeOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         };
     }
 }

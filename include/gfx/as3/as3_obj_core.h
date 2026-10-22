@@ -772,6 +772,8 @@ namespace InstanceTraits { namespace fl
         virtual void MakeObject(Value& result, Traits& t);
 
     public:
+        // @0x1423e2850 (appended, sfr15)
+        static void AS3toExponential(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142401ba0
         static void AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142402180
@@ -892,6 +894,8 @@ namespace InstanceTraits { namespace fl
         virtual void MakeObject(Value& result, Traits& t);
 
     public:
+        // @0x1423e55f0 (appended, sfr15)
+        static void AS3toExponential(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142401d00
         static void AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1424022e0
@@ -924,6 +928,8 @@ namespace InstanceTraits { namespace fl
         virtual void MakeObject(Value& result, Traits& t);
 
     public:
+        // @0x1423e6540 (appended, sfr15)
+        static void AS3toExponential(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142401e60
         static void AS3toFixed(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x142402440
