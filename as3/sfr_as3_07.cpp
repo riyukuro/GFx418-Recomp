@@ -120,6 +120,7 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 #include "ms2/scaleform/include/render/render_color.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/render/render_screentoworld.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display_pixels.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
 // VM::IsOfType by class name (exe body).
@@ -187,6 +188,9 @@ public:
     // Copies a rect of the source image to destPoint, optionally through the alpha of alphaSource at alphaPoint.
     void  CopyPixels(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                      ImageBase* alphaSource, const Point<SInt32>* alphaPoint, bool mergeAlpha);                 // 0x1425eb700
+    // Reads the pixels of sourceRect into the provider / writes the provider's pixels into destRect.
+    bool  GetPixels(DIPixelProvider& provider, const Rect<SInt32>& sourceRect);                                   // 0x1425ecdf0
+    bool  SetPixels(const Rect<SInt32>& destRect, DIPixelProvider& provider);                                     // 0x1425ef060
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -2968,6 +2972,161 @@ namespace Instances { namespace fl_display
         result->pImage = *reinterpret_cast<Render::ImageBase*>(pcopy);
     }
 
+    // @0x142447390
+    void ByteArrayPixelProvider::WriteNextPixel(UInt32 v)
+    {
+        Instances::fl_utils::ByteArray* pbytes = pBytes;
+        pbytes->writeUnsignedInt(Value::GetUndefined(), v);
+    }
+
+    // @0x1424473c0
+    void VectorPixelProvider::WriteNextPixel(UInt32 v)
+    {
+        pVector->V.Set(Index++, Value(v), pVector->GetVM().GetClassTraitsUInt());
+    }
+
+#pragma strict_gs_check(push, on)
+    // The pixels of rect into a new ByteArray (4 bytes each); null for an empty rect.
+    // MS2-FUNCTIONAL: frame size / register allocation (exe shrink-wraps the callee saves)
+// @0x14244d560
+    void BitmapData::getPixels(SPtr<Instances::fl_utils::ByteArray>& result, Instances::fl_geom::Rectangle* rect)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!rect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "rect"));
+        }
+        else
+        {
+            Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            if (r.Width() == 0 || r.Height() == 0)
+                return;
+            if (!GetVM().ConstructBuiltinObject(result, "flash.utils.ByteArray"))
+            {
+                result = NULL;
+                return;
+            }
+            result->lengthSet(Value::GetUndefined(), r.Width() * r.Height() * 4);
+            ByteArrayPixelProvider provider(result);
+            pimage->GetPixels(provider, r);
+        }
+    }
+
+    // The pixels of rect into a new Vector.<uint>; null for an empty rect.
+    // MS2-FUNCTIONAL: frame size / register allocation (exe shrink-wraps the callee saves)
+// @0x14244daf0
+    void BitmapData::getVector(SPtr<Instances::fl_vec::Vector_uint>& result, Instances::fl_geom::Rectangle* rect)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!rect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "rect"));
+        }
+        else
+        {
+            Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            if (r.Width() == 0 || r.Height() == 0)
+                return;
+            if (!GetVM().ConstructBuiltinObject(result, "Vector.<uint>"))
+            {
+                result = NULL;
+                return;
+            }
+            // The length is set to four entries a pixel, as for the ByteArray.
+            result->lengthSet(Value::GetUndefined(), r.Width() * r.Height() * 4);
+            VectorPixelProvider provider(result);
+            pimage->GetPixels(provider, r);
+        }
+    }
+
+    // The pixels of inputByteArray (from its position) into rect; EOFError when it runs out first.
+    // MS2-FUNCTIONAL: stack slot order / register allocation
+// @0x142452f10
+    void BitmapData::setPixels(const Value& result, Instances::fl_geom::Rectangle* rect, Instances::fl_utils::ByteArray* inputByteArray)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!rect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "rect"));
+        }
+        else if (!inputByteArray)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "inputByteArray"));
+        }
+        else
+        {
+            ByteArrayPixelProvider provider(inputByteArray);
+            {
+                Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
+                Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+                if (pimage->SetPixels(r, provider))
+                    return;
+            }
+            if (provider.pBytes->GetLength() <= inputByteArray->GetLength())
+                return;
+            VM& vm = GetVM();
+            vm.ThrowError(VM::Error(VM::eEOFError, vm, "EOF"));
+        }
+    }
+
+    // The pixels of inputVector into rect; RangeError when it is too short.
+    // MS2-FUNCTIONAL: stack slot order / register allocation (this/inputVector in rdi/rbx swapped)
+// @0x1424530a0
+    void BitmapData::setVector(const Value& result, Instances::fl_geom::Rectangle* rect, Instances::fl_vec::Vector_uint* inputVector)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!rect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "rect"));
+        }
+        else if (!inputVector)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "inputVector"));
+        }
+        else
+        {
+            UInt32 have, need;
+            VectorPixelProvider provider(inputVector);
+            {
+                Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
+                Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+                if (pimage->SetPixels(r, provider))
+                    return;
+            }
+            inputVector->lengthGet(have);
+            provider.pVector->lengthGet(need);
+            if (have >= need)
+                return;
+            VM& vm = GetVM();
+            vm.ThrowError(VM::Error(VM::eOutOfRangeError, vm, "inputVector not large enough to read all the pixel data."));
+        }
+    }
+#pragma strict_gs_check(pop)
+
 #pragma strict_gs_check(push, on)
     // The bounds of the pixels matching color under mask, as a new flash.geom.Rectangle.
     // MS2-FUNCTIONAL: register use (the exe keeps the pImage load in rax for the this-cmov)
@@ -3317,3 +3476,6 @@ namespace Instances { namespace fl_display
 // MS2-PIN: ??_GMemoryError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455c70
 // MS2-PIN: ??_GScriptTimeoutError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455d00
 // MS2-PIN: ??_GStackOverflowError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455d90
+// MS2-PIN: ??_7DIPixelProvider@Render@Scaleform@@6B@ 0x143149c28
+// MS2-PIN: ??_7ByteArrayPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a930
+// MS2-PIN: ??_7VectorPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a950

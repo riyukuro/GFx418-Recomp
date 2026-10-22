@@ -96,7 +96,9 @@ public:
         // (appended, sfr19)
         eMustBeChildError           = 2025,
         eAddObjectItselfError       = 2024,
-        eIllegalOperationError      = 2077
+        eIllegalOperationError      = 2077,
+        eEOFError                   = 2030,
+        eOutOfRangeError            = 1506
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).
