@@ -168,6 +168,24 @@ public:
     void BringToFront(ValueType* p) { Remove(p); PushFront(p); }
     void SendToBack(ValueType* p)   { Remove(p); PushBack(p); }
 
+    // link n in right before / right after p
+    static void InsertBefore(ValueType* p, ValueType* n)
+    {
+        ValueType* prev = GetPrev(p);
+        SetNext(n, p);
+        SetPrev(n, prev);
+        SetNext(prev, n);
+        SetPrev(p, n);
+    }
+    static void InsertAfter(ValueType* p, ValueType* n)
+    {
+        ValueType* next = GetNext(p);
+        SetPrev(n, p);
+        SetNext(n, next);
+        SetPrev(next, n);
+        SetNext(p, n);
+    }
+
     void PushListToFront(List2& other)
     {
         if (other.IsEmpty())
