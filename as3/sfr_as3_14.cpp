@@ -1574,3 +1574,6 @@ namespace Instances { namespace fl_utils
 // MS2-PIN: ??_GByteArray@fl_utils@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bce40
 // MS2-PIN: ??_GByteArray@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bcea0
 // MS2-PIN: ??_GDictionary@fl_utils@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd060
+// MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorLH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424bee00
+// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z: the exe calls Alg::UpperBit (0x1422fe440) out of line; ours inlines it
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1424c0010
