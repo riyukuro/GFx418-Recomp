@@ -33,6 +33,17 @@ template struct ThunkFunc2<Instances::fl_display::BitmapData, 16, UInt32, SInt32
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+namespace Scaleform { namespace GFx {
+
+// @0x14243d330
+SF_NOINLINE ImageResource::~ImageResource()
+{
+    if (pImage && pImage != &Delegate)
+        pImage->Release();
+}
+
+}} // namespace Scaleform::GFx
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace fl_display
@@ -2553,3 +2564,4 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_dis
 // MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8
 // MS2-PIN: ??$ThunkMakeDefs2@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$0N@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142439120
 // MS2-PIN: ??$ThunkMakeDefs2@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142439280
+// MS2-PIN: ??_GImageResource@GFx@Scaleform@@UEAAPEAXI@Z 0x14243ede0
