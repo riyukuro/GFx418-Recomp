@@ -2276,6 +2276,232 @@ namespace Instances { namespace fl_display
             DispatchSingleEvent(evt, false);
         }
     }
+
+    // @0x142443d00
+    GFx::DisplayObject* LoaderInfo::GetContentDispObj() const
+    {
+        Ptr<GFx::DisplayObject> p;
+        if (Content)
+            p = Content->pDispObj;
+        return p.GetPtr();
+    }
+
+    // @0x142443e40
+    ImageResource* Bitmap::GetImageResource() const
+    {
+        return pBitmapData ? pBitmapData->GetImageResource() : NULL;
+    }
+
+    // @0x142443e50
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    ImageResource* BitmapData::GetImageResource()
+    {
+        if (!pImageResource && pImage)
+        {
+            Render::ImageBase* pimg = pImage;
+            ImageResource* pres = SF_HEAP_AUTO_NEW(pimg) ImageResource((Render::Image*)NULL);
+            // A plain image goes behind the resource's delegate, any other image source is held directly.
+            if (pimg->GetImageType() == Render::ImageBase::Type_ImageBase)
+                pres->SetImage(static_cast<Render::Image*>(pimg));
+            else
+                pres->SetImageSource(static_cast<Render::ImageSource*>(pimg));
+            pImageResource = Pickable<ImageResource>(pres);
+        }
+        return pImageResource;
+    }
+
+    // @0x142446bd0
+    void Scene::Set(GFx::Sprite* psprite)
+    {
+        SpriteObj = psprite;
+    }
+
+    // @0x1424463f0
+    void Loader::ResetContent()
+    {
+        pContentLoaderInfo->Content = NULL;
+    }
+
+    // An entry of the AS3 movie root's action queue as the loader fills it.
+    struct LoaderActionEntry
+    {
+        void*                       pNext;          // +0x00
+        int                         Type;           // +0x08
+        Ptr<GFx::DisplayObject>     pCharacter;     // +0x10
+        SPtr<Instances::fl::Object> pAS3Obj;        // +0x18
+        UByte                       Pad20[0x18];    // +0x20
+        Value                       Function;       // +0x38
+        void                        (*CFunction)(const LoaderActionEntry& entry); // +0x58
+        Ptr<RefCountImpl>           pRef;           // +0x60
+    };
+    // MovieRoot::ActionQueueType::InsertEntry
+    extern "C" LoaderActionEntry* FUN_142512800(void* pqueue, int prio);
+
+    static LoaderActionEntry* InsertLoaderAction(VM& vm)
+    {
+        return FUN_142512800(reinterpret_cast<UByte*>(GetASRoot(vm)) + 0x88, 6);
+    }
+
+    // @0x142442350
+    static void LoaderCompleteAction(const LoaderActionEntry& entry)
+    {
+        static_cast<Loader*>(entry.pAS3Obj.GetPtr())->ExecuteCompleteEvent();
+    }
+
+    // @0x1424427d0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    static void LoaderInitAction(const LoaderActionEntry& entry)
+    {
+        static_cast<Loader*>(entry.pAS3Obj.GetPtr())->ExecuteInitEvent(entry.pCharacter);
+        // Tell the load queue entry the init event ran (its virtual slot 2).
+        if (RefCountImpl* pref = entry.pRef)
+        {
+            typedef void (*NotifyFn)(RefCountImpl*);
+            (*reinterpret_cast<NotifyFn* const*>(pref))[2](pref);
+        }
+    }
+
+    // @0x142445ca0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Loader::QueueCompleteEvent()
+    {
+        if (!pContentLoaderInfo)
+            return;
+        if (LoaderActionEntry* pentry = InsertLoaderAction(GetVM()))
+        {
+            pentry->Type        = 3;
+            pentry->pCharacter  = pDispObj;
+            pentry->pAS3Obj     = this;
+            pentry->CFunction   = LoaderCompleteAction;
+            pentry->Function.SetUndefined();
+            pentry->pRef        = NULL;
+        }
+    }
+
+    // @0x142445db0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void Loader::QueueInitEvent(GFx::DisplayObject* pcontent, Ptr<RefCountImpl> pref)
+    {
+        if (!pContentLoaderInfo)
+            return;
+        if (LoaderActionEntry* pentry = InsertLoaderAction(GetVM()))
+        {
+            pentry->Type        = 3;
+            pentry->pCharacter  = pDispObj;
+            pentry->pAS3Obj     = this;
+            pentry->CFunction   = LoaderInitAction;
+            pentry->Function.SetUndefined();
+            pentry->pRef        = NULL;
+            pentry->pCharacter  = pcontent;
+            pentry->pRef        = pref;
+        }
+    }
+
+    // @0x1424466b0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void MovieClip::FrameScript::Set(MemoryHeap* pheap, unsigned frameCnt, unsigned descrCnt, const Descr* pdescrs)
+    {
+        unsigned cnt = 0;
+        if (!pData)
+        {
+            if (descrCnt == 0)
+                return;
+            FrameCnt = (UInt16)frameCnt;
+            DescrCnt = (UInt16)(descrCnt < frameCnt ? descrCnt : frameCnt);
+            pData = SF_HEAP_ALLOC(pheap, ((FrameCnt + 31) >> 5) * 4 + DescrCnt * sizeof(Descr), StatMV_ActionScript_Mem);
+            if (!pData)
+                return;
+            memset(pData, 0, (FrameCnt + 7) >> 3);
+            Descr* pdst = GetDescrs();
+            // From the back: the last descriptor of a frame wins; they land at the top of the array.
+            int k = DescrCnt;
+            for (int i = DescrCnt - 1; i >= 0; --i)
+            {
+                unsigned frame = pdescrs[i].Frame;
+                if (frame < FrameCnt && !IsSet(frame))
+                {
+                    new (&pdst[--k]) Descr(pdescrs[i]);
+                    reinterpret_cast<UByte*>(pData)[frame >> 3] |= (UByte)(1 << (frame & 7));
+                    ++cnt;
+                }
+            }
+            if (k != 0)
+                memmove(pdst, pdst + k, cnt * sizeof(Descr));
+        }
+        else
+        {
+            // Frames already set get their method replaced; count the new ones.
+            unsigned added = 0;
+            Descr* pdst = GetDescrs();
+            for (int i = (int)descrCnt - 1; i >= 0; --i)
+            {
+                unsigned frame = pdescrs[i].Frame;
+                if (frame >= FrameCnt)
+                    continue;
+                if (!IsSet(frame))
+                    ++added;
+                else
+                {
+                    UPInt j = Alg::LowerBoundSliced(pdst, 0, DescrCnt, Descr(Value::GetUndefined(), frame), Descr::Less);
+                    pdst[j].Method = pdescrs[i].Method;
+                    pdst[j].Frame  = frame;
+                }
+            }
+            cnt = DescrCnt;
+            if (added)
+            {
+                unsigned total = DescrCnt + added;
+                pData = SF_REALLOC(pData, ((FrameCnt + 31) >> 5) * 4 + total * sizeof(Descr), StatMV_ActionScript_Mem);
+                pdst = GetDescrs();
+                unsigned k = total;
+                for (int i = (int)descrCnt - 1; i >= 0 && k > DescrCnt; --i)
+                {
+                    unsigned frame = pdescrs[i].Frame;
+                    if (frame < FrameCnt && !IsSet(frame))
+                    {
+                        new (&pdst[--k]) Descr(pdescrs[i]);
+                        reinterpret_cast<UByte*>(pData)[frame >> 3] |= (UByte)(1 << (frame & 7));
+                        ++cnt;
+                    }
+                }
+                if (k != DescrCnt)
+                    memmove(pdst + DescrCnt, pdst + k, (cnt - DescrCnt) * sizeof(Descr));
+                DescrCnt = (UInt16)total;
+            }
+        }
+        if (DescrCnt != cnt)
+        {
+            DescrCnt = (UInt16)cnt;
+            pData = SF_REALLOC(pData, ((FrameCnt + 31) >> 5) * 4 + cnt * sizeof(Descr), StatMV_ActionScript_Mem);
+        }
+        Descr* pd = GetDescrs();
+        Alg::QuickSortSlicedSafe(pd, 0, DescrCnt, Descr::Less);
+    }
+}}
+
+namespace Classes { namespace fl_display
+{
+    // @0x1424439d0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    Render::BlendMode BlendMode::GetBlendMode(const ASString& name)
+    {
+        const char* p = name.ToCStr();
+        if (!strcmp(p, "normal"))       return Render::Blend_Normal;
+        if (!strcmp(p, "add"))          return Render::Blend_Add;
+        if (!strcmp(p, "alpha"))        return Render::Blend_Alpha;
+        if (!strcmp(p, "multiply"))     return Render::Blend_Multiply;
+        if (!strcmp(p, "subtract"))     return Render::Blend_Subtract;
+        if (!strcmp(p, "layer"))        return Render::Blend_Layer;
+        if (!strcmp(p, "screen"))       return Render::Blend_Screen;
+        if (!strcmp(p, "lighten"))      return Render::Blend_Lighten;
+        if (!strcmp(p, "darken"))       return Render::Blend_Darken;
+        if (!strcmp(p, "difference"))   return Render::Blend_Difference;
+        if (!strcmp(p, "invert"))       return Render::Blend_Invert;
+        if (!strcmp(p, "erase"))        return Render::Blend_Erase;
+        if (!strcmp(p, "overlay"))      return Render::Blend_Overlay;
+        if (!strcmp(p, "hardlight"))    return Render::Blend_HardLight;
+        return Render::Blend_None;
+    }
 }}
 
 }}} // namespace Scaleform::GFx::AS3
@@ -2469,3 +2695,12 @@ namespace Instances { namespace fl_display
 // MS2-PIN: ??1Stage@fl_display@Instances@AS3@GFx@Scaleform@@UEAA@XZ 0x14243d500
 // MS2-PIN: ??0StageQuality@fl_display@Classes@AS3@GFx@Scaleform@@QEAA@AEAVTraits@ClassTraits@345@@Z 0x14243cdd0
 // MS2-PIN: ??4?$SPtr@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVBitmapData@fl_display@Instances@123@@Z 0x14243d560
+// MS2-PIN: ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
+// MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+// MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
+// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
+// MS2-PIN: ??_7ImageDelegate@ImageResource@GFx@Scaleform@@6B@ 0x143149b10
+// MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8

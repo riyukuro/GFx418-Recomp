@@ -196,6 +196,9 @@ namespace Instances { namespace fl_display {
         SInt32                                  PixelSnapping;  // +0x70
         bool                                    Smoothing;      // +0x74
 
+        // The bitmap data's image resource, NULL without bitmap data (0x142443e40).
+        ImageResource* GetImageResource() const;
+
         // @0x1424484e0
         void bitmapDataGet(SPtr<Instances::fl_display::BitmapData>& result);
         // @0x142448550
@@ -228,6 +231,9 @@ namespace Instances { namespace fl_display {
         bool                    Transparent;    // +0x58
         bool                    Unk59;          // +0x59
         UInt32                  FillColor;      // +0x5c: not set by the constructor
+
+        // The image resource of pImage, created on first use (0x142443e50).
+        ImageResource* GetImageResource();
 
         // @0x142447f10
         void applyFilter(const Value& result, Instances::fl_display::BitmapData*, Instances::fl_geom::Rectangle*, Instances::fl_geom::Point*, Instances::fl_filters::BitmapFilter*);
@@ -483,6 +489,14 @@ namespace Instances { namespace fl_display {
         void ExecuteInitEvent(GFx::DisplayObject* pcontent);            // 0x1424425d0
         void ExecuteOpenEvent();                                        // 0x1424428f0
         void ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal); // 0x142442a60
+
+        Instances::fl_display::LoaderInfo* GetContentLoaderInfo() const { return pContentLoaderInfo; } // 0x142443d90
+        // Drops the LoaderInfo's content object (0x1424463f0).
+        void ResetContent();
+        // Queue the complete / init notification as an action of the movie root (0x142445ca0 / 0x142445db0); the
+        // init action holds pcontent and pref until it runs.
+        void QueueCompleteEvent();
+        void QueueInitEvent(GFx::DisplayObject* pcontent, Ptr<RefCountImpl> pref);
     };
 
     // 0x68 bytes.
@@ -506,6 +520,9 @@ namespace Instances { namespace fl_display {
         void ExecuteInitEvent(GFx::DisplayObject* pcontent);            // 0x1424426d0
         void ExecuteOpenEvent();                                        // 0x1424429b0
         void ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal); // 0x142442b50
+
+        // The display object of the content (0x142443d00).
+        GFx::DisplayObject* GetContentDispObj() const;
 
         // @0x1424474c0
         void actionScriptVersionGet(UInt32& result);
@@ -625,6 +642,9 @@ namespace Instances { namespace fl_display {
 
             void Clear();
             const Descr* Get(unsigned frame);
+            // Adds the descriptors (a later one wins for the same frame; an already set frame gets its method
+            // replaced), keeping the descriptors sorted by frame (0x1424466b0).
+            void Set(MemoryHeap* pheap, unsigned frameCnt, unsigned descrCnt, const Descr* pdescrs);
             void ForEachChild_GC(Collector* prcc, GcOp op, const Instances::fl::Object& owner) const;
 
             bool    IsSet(unsigned frame) const { return (reinterpret_cast<const UByte*>(pData)[frame >> 3] & (1 << (frame & 7))) != 0; }
@@ -718,6 +738,8 @@ namespace Instances { namespace fl_display {
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Scene"; }
         const MovieDataDef::SceneInfo*  SceneInfo;  // +0x38
         Ptr<GFx::Sprite>                SpriteObj;  // +0x40
+
+        void Set(GFx::Sprite* psprite);  // 0x142446bd0
 
         // @0x14244f5b0
         void labelsGet(SPtr<Instances::fl::Array>& result);
@@ -978,6 +1000,9 @@ namespace Classes { namespace fl_display {
         const char* Overlay;    // +0xa8
         const char* Screen;     // +0xb0
         const char* Subtract;   // +0xb8
+
+        // The render blend mode of an AS3 blend mode name; Blend_None for an unknown name (0x1424439d0).
+        static Render::BlendMode GetBlendMode(const ASString& name);
     };
 
     // 0x68 bytes.
