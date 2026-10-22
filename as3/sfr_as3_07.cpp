@@ -147,6 +147,8 @@ void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, 
 void FUN_1425eed00(Scaleform::Render::ImageBase* pimage, int x, int y);
 // Flood fills a bitmap image from a point (exe body).
 void FUN_1425ec9e0(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Point<Scaleform::SInt32>& pt, const Scaleform::Render::Color& color);
+// Fills a rect of a bitmap image with one color (exe body).
+void FUN_1425ec860(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Rect<Scaleform::SInt32>& rect, const Scaleform::Render::Color& color);
 // Fills a bitmap image with random noise (exe body).
 void FUN_1425eddc0(Scaleform::Render::ImageBase* pimage, Scaleform::SInt32 randomSeed, Scaleform::UInt32 low, Scaleform::UInt32 high,
                    Scaleform::UInt32 channelOptions, bool grayScale);
@@ -1009,6 +1011,31 @@ namespace Instances { namespace fl_display
         FUN_1425eed00(pImage, x, y);
     }
 
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: exe keeps this in rdx from the entry and picks the image (this-null cmov) before the rect; same loads and calls
+    // @0x14244ba30
+    void BitmapData::fillRect(const Value& result, Instances::fl_geom::Rectangle* rect, UInt32 color)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!rect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "rect"));
+        }
+        else
+        {
+            Render::ImageBase* pimage = this ? pImage.GetPtr() : NULL;
+            Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
+            FUN_1425ec860(pimage, r, Render::Color(color));
+        }
+    }
+#pragma strict_gs_check(pop)
+
     // @0x14244bfd0
     void BitmapData::floodFill(const Value& result, SInt32 x, SInt32 y, UInt32 color)
     {
@@ -1347,6 +1374,27 @@ namespace Instances { namespace fl_display
         case 1:  pio->AddToOptimizedPlayList(); break;
         case -1: pio->MarkToRemoveFromOptimizedPlayList(); break;
         }
+    }
+
+    // MS2-FUNCTIONAL: exe sets up an rbp frame and zeroes the drag state points one qword at a time; same stores and calls
+    // @0x142453670
+    void Sprite::startDrag(const Value& result, bool lockCenter, Instances::fl_geom::Rectangle* bounds)
+    {
+        SF_UNUSED(result);
+        // no IsDragging check in this build: a new drag replaces the current one
+        MovieImpl::DragState st;
+        if (bounds)
+        {
+            st.Bound = true;
+            st.BoundLT.x = (float)bounds->x * 20.0f;
+            st.BoundLT.y = (float)bounds->y * 20.0f;
+            st.BoundRB.x = (float)((float)bounds->x + bounds->width) * 20.0f;
+            st.BoundRB.y = (float)((float)bounds->y + bounds->height) * 20.0f;
+        }
+        st.pCharacter = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        st.InitCenterDelta(lockCenter);
+        pDispObj->GetMovieImpl()->SetDragState(st);
+        ModifyOptPlayList(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()));
     }
 
     // @0x142453800
@@ -1732,6 +1780,40 @@ static inline AvmDisplayObj* ToAvmDisplayObj(DisplayObject* p)
         return NULL;
     return static_cast<AvmDisplayObj*>(p->GetAvmObjImpl());
 }
+
+// AS3::AvmInteractiveObj as the natives see it: the AvmInteractiveObjBase interface at +0x30.
+class AvmInteractiveObjHead : public AvmDisplayObj
+{
+    UByte   Unrecovered_18[0x18];
+};
+class AvmInteractiveObj : public AvmInteractiveObjHead, public AvmInteractiveObjBase
+{
+};
+
+static inline AvmInteractiveObj* ToAvmInteractiveObj(GFx::InteractiveObject* p)
+{
+    return static_cast<AvmInteractiveObj*>(p->GetAvmIntObj());
+}
+
+namespace Instances { namespace fl_display
+{
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x14244b870
+    SF_NOINLINE void Sprite::dropTargetGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        MovieImpl* proot = pDispObj->GetMovieImpl();
+        Render::PointF mousePos = proot->MouseLastPosition;
+        GFx::InteractiveObject* ptop = proot->GetTopMostEntity(mousePos, 0, true,
+                                                               static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()));
+        if (ptop)
+        {
+            ToAvmInteractiveObj(ptop)->CreateASInstance(true);
+            result = ToAvmInteractiveObj(ptop)->GetAS3Obj();
+        }
+        else
+            result = NULL;
+    }
+}}
 
 namespace Instances { namespace fl_display
 {

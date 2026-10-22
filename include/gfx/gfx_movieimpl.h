@@ -171,6 +171,9 @@ public:
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
     bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
+    // The topmost interactive object under a point (twips), skipping ignoreMC (exe 0x14256fde0).
+    InteractiveObject* GetTopMostEntity(const Render::PointF& mousePos, unsigned controllerIdx, bool testAll,
+                                        const InteractiveObject* ignoreMC = NULL);
 
     // The movie's StateBag base (+0x10).
     StateBag* GetStateBag() const { return (StateBag*)&MovieBase_Unrecovered[2]; }
@@ -220,6 +223,21 @@ public:
     };
     bool IsOptAdvListInvalid() const  { return (Flags & Flag_OptAdvListInvalid) != 0; }
     bool GetOptAdvListMarker() const  { return (Flags2 & Flag2_OptAdvListMarker) != 0; }
+    // The drag state kept at +0x2de0 (0x28 bytes; its first field is pKeepAdvancingChar).
+    struct DragState
+    {
+        InteractiveObject* pCharacter;   // +0x00
+        bool               LockCenter;   // +0x08
+        bool               Bound;        // +0x09
+        Render::PointF     BoundLT;      // +0x0c twips
+        Render::PointF     BoundRB;      // +0x14
+        Render::PointF     CenterDelta;  // +0x1c
+
+        DragState() : pCharacter(0), LockCenter(false), Bound(false) {}
+        // Offset from the mouse to the character, or none when the center is locked (exe 0x142570c80).
+        void InitCenterDelta(bool lockCenter);
+    };
+    void SetDragState(const DragState& st) { *reinterpret_cast<DragState*>(&pKeepAdvancingChar) = st; }
     // +0x2de0 is the drag state: the dragged character (pKeepAdvancingChar), then these.
     bool DragLockCenter() const       { return *((const bool*)this + 0x2de8); }
     bool DragBound() const            { return *((const bool*)this + 0x2de9); }
