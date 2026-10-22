@@ -180,6 +180,8 @@ public:
     // Copies one channel of a rect of the source image into a channel of this image at destPoint.
     void  CopyChannel(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                       UInt32 sourceChannel, UInt32 destChannel);                                                  // 0x1425eb570
+    // The bounds of the pixels whose (pixel & mask) equals color (or differs from it without findColor).
+    Rect<SInt32> GetColorBoundsRect(UInt32 mask, UInt32 color, bool findColor);                                  // 0x1425ecb50
     // Fills this image with the per-pixel difference of image0 and image1.
     void  Compare(ImageBase* image0, ImageBase* image1);                                                            // 0x1425eb390
     // Copies a rect of the source image to destPoint, optionally through the alpha of alphaSource at alphaPoint.
@@ -2965,6 +2967,25 @@ namespace Instances { namespace fl_display
         Render::DrawableImage* pcopy = new(Memory::Alloc(200)) Render::DrawableImage(Transparent, pImage, pcontext);
         result->pImage = *reinterpret_cast<Render::ImageBase*>(pcopy);
     }
+
+#pragma strict_gs_check(push, on)
+    // The bounds of the pixels matching color under mask, as a new flash.geom.Rectangle.
+    // MS2-FUNCTIONAL: register use (the exe keeps the pImage load in rax for the this-cmov)
+    // @0x14244cfe0
+    SF_NOINLINE void BitmapData::getColorBoundsRect(SPtr<Instances::fl_geom::Rectangle>& result, UInt32 mask, UInt32 color, bool findColor)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+        Render::Rect<SInt32> bounds = pimage->GetColorBoundsRect(mask, color, findColor);
+        Value args[4] = { Value(bounds.x1), Value(bounds.y1), Value(bounds.Width()), Value(bounds.Height()) };
+        GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args);
+    }
+#pragma strict_gs_check(pop)
 
     // The difference of two equally sized bitmaps as a new BitmapData; -3 / -4 when the widths / heights differ.
     // MS2-FUNCTIONAL: register assignment (exe keeps this in rdi and result in rsi; ours rsi / rbp)
