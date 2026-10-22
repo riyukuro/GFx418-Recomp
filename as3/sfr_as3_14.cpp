@@ -3,7 +3,7 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_14
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424bbab0-0x1424c2a70 .text$mn
+// MS2-RANGE: 0x1424bb1f0-0x1424c2a70 .text$mn
 // MS2-RANGE: 0x1424c52c0-0x1424c91f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
@@ -74,6 +74,168 @@ template struct ThunkFunc2<Classes::fl_gfx::Extensions, 5, SPtr<Instances::fl_di
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
+
+// ==== flash.utils: class traits factories, instance traits and the Endian class =====================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace fl_utils
+{
+    extern const ClassInfo ByteArrayCI;
+    extern const ClassInfo DictionaryCI;
+    extern const ClassInfo EndianCI;
+    extern const ClassInfo IDataInputCI;
+    extern const ClassInfo IDataOutputCI;
+    extern const ClassInfo IExternalizableCI;
+    extern const ClassInfo ProxyCI;
+    extern const ClassInfo TimerCI;
+}
+
+// The traits constructors below are inlined into their factories in the exe.
+namespace InstanceTraits { namespace fl_utils
+{
+    inline Dictionary::Dictionary(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        Flags |= ArrayLikeMask;
+        TraitsType = Traits_Dictionary;
+        SetMemSize(0x48);
+    }
+
+    inline Timer::Timer(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_utils
+{
+    inline Endian::Endian(ClassTraits::Traits& t)
+        : Class(t)
+        , BIG_ENDIAN("bigEndian")
+        , LITTLE_ENDIAN("littleEndian")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_utils
+{
+    inline Dictionary::Dictionary(VM& vm)
+        : Traits(vm, AS3::fl_utils::DictionaryCI)
+    {
+        TraitsType = Traits_Dictionary;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_utils::Dictionary(vm, AS3::fl_utils::DictionaryCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline Endian::Endian(VM& vm)
+        : Traits(vm, AS3::fl_utils::EndianCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_utils::EndianCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_utils::Endian(*this)));
+    }
+
+    inline IDataInput::IDataInput(VM& vm)
+        : Traits(vm, AS3::fl_utils::IDataInputCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_utils::IDataInputCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline IDataOutput::IDataOutput(VM& vm)
+        : Traits(vm, AS3::fl_utils::IDataOutputCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_utils::IDataOutputCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline IExternalizable::IExternalizable(VM& vm)
+        : Traits(vm, AS3::fl_utils::IExternalizableCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_utils::IExternalizableCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline Proxy::Proxy(VM& vm)
+        : Traits(vm, AS3::fl_utils::ProxyCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_utils::ProxyCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline Timer::Timer(VM& vm)
+        : Traits(vm, AS3::fl_utils::TimerCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_utils::Timer(vm, AS3::fl_utils::TimerCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424bb1f0
+    Pickable<Traits> Dictionary::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Dictionary(vm));
+    }
+
+    // @0x1424bb340
+    Pickable<Traits> Endian::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Endian(vm));
+    }
+
+    // @0x1424bb490
+    Pickable<Traits> IDataInput::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IDataInput(vm));
+    }
+
+    // @0x1424bb5b0
+    Pickable<Traits> IDataOutput::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IDataOutput(vm));
+    }
+
+    // @0x1424bb6d0
+    Pickable<Traits> IExternalizable::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IExternalizable(vm));
+    }
+
+    // @0x1424bb7f0
+    Pickable<Traits> Proxy::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Proxy(vm));
+    }
+
+    // @0x1424bb910
+    Pickable<Traits> ByteArray::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ByteArray(vm));
+    }
+
+    // @0x1424bb970
+    Pickable<Traits> Timer::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Timer(vm));
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 
 // ==== flash.utils ====================================================================================================
 
@@ -1038,3 +1200,30 @@ namespace Instances { namespace fl_utils
 // MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$02_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2730
 // MS2-PIN: ?Func@?$ThunkFunc3@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$03V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@NN_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2790
 // MS2-PIN: ?Func@?$ThunkFunc2@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$04V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@_NK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2920
+// MS2-PIN: ??_7Dictionary@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171980
+// MS2-PIN: ??_7Endian@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171a10
+// MS2-PIN: ??_7IDataInput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171b80
+// MS2-PIN: ??_7IDataOutput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171c10
+// MS2-PIN: ??_7IExternalizable@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171ca8
+// MS2-PIN: ??_7Proxy@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171d40
+// MS2-PIN: ??_7Timer@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171f38
+// MS2-PIN: ??_7Dictionary@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431718d8
+// MS2-PIN: ??_7Timer@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143171e98
+// MS2-PIN: ??_7Endian@fl_utils@Classes@AS3@GFx@Scaleform@@6B@ 0x143171aa0
+// MS2-PIN: ??_GDictionary@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bcf70
+// MS2-PIN: ??_GEndian@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd0d0
+// MS2-PIN: ??_GIDataInput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd1c0
+// MS2-PIN: ??_GIDataOutput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd250
+// MS2-PIN: ??_GIExternalizable@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd2e0
+// MS2-PIN: ??_GProxy@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd370
+// MS2-PIN: ??_GTimer@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd400
+// MS2-PIN: ??_GDictionary@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd000
+// MS2-PIN: ??_GTimer@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd490
+// MS2-PIN: ??_GEndian@fl_utils@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd160
+// MS2-PIN: ??0ByteArray@fl_utils@Instances@AS3@GFx@Scaleform@@QEAA@AEAVTraits@InstanceTraits@345@@Z 0x1424bc460
+// MS2-PIN: ??_7ByteArray@fl_utils@Instances@AS3@GFx@Scaleform@@6B@ 0x1431713f8
+// MS2-PIN: ??_7ByteArray@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431714c0
+// MS2-PIN: ??_7ByteArray@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171568
+// MS2-PIN: ??_7ByteArray@fl_utils@Classes@AS3@GFx@Scaleform@@6B@ 0x1431715f8
+// MS2-PIN: ??_7Dictionary@fl_utils@Instances@AS3@GFx@Scaleform@@6B@ 0x143171810
+// MS2-PIN: ??_7Timer@fl_utils@Instances@AS3@GFx@Scaleform@@6B@ 0x143171dd0
