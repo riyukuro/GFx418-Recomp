@@ -118,6 +118,9 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
 #include "ms2/scaleform/include/render/render_color.h"
 
+// VM::GetValueTraits (exe body).
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
 // built on the other kernel headers, so the AS3 units see the class opaque.
@@ -997,6 +1000,30 @@ namespace Instances { namespace fl_display
         pDispObj->SetBlendMode(mode);
     }
 
+    // @0x1424485e0
+    void DisplayObject::blendModeGet(ASString& result)
+    {
+        switch (pDispObj->GetBlendMode())
+        {
+        case Render::Blend_None:
+        case Render::Blend_Normal:     result = GetVM().GetStringManager().CreateConstString("normal"); break;
+        case Render::Blend_Layer:      result = GetVM().GetStringManager().CreateConstString("layer"); break;
+        case Render::Blend_Multiply:   result = GetVM().GetStringManager().CreateConstString("multiply"); break;
+        case Render::Blend_Screen:     result = GetVM().GetStringManager().CreateConstString("screen"); break;
+        case Render::Blend_Lighten:    result = GetVM().GetStringManager().CreateConstString("lighten"); break;
+        case Render::Blend_Darken:     result = GetVM().GetStringManager().CreateConstString("darken"); break;
+        case Render::Blend_Difference: result = GetVM().GetStringManager().CreateConstString("difference"); break;
+        case Render::Blend_Add:        result = GetVM().GetStringManager().CreateConstString("add"); break;
+        case Render::Blend_Subtract:   result = GetVM().GetStringManager().CreateConstString("subtract"); break;
+        case Render::Blend_Invert:     result = GetVM().GetStringManager().CreateConstString("invert"); break;
+        case Render::Blend_Alpha:      result = GetVM().GetStringManager().CreateConstString("alpha"); break;
+        case Render::Blend_Erase:      result = GetVM().GetStringManager().CreateConstString("erase"); break;
+        case Render::Blend_Overlay:    result = GetVM().GetStringManager().CreateConstString("overlay"); break;
+        case Render::Blend_HardLight:  result = GetVM().GetStringManager().CreateConstString("hardlight"); break;
+        default: break;
+        }
+    }
+
     // @0x142450540
     void DisplayObject::maskSet(const Value& result, Instances::fl_display::DisplayObject* value)
     {
@@ -1081,6 +1108,18 @@ namespace Instances { namespace fl_display
     void MovieClip::totalFramesGet(SInt32& result)
     {
         result = static_cast<GFx::Sprite*>(pDispObj.GetPtr())->pDef->GetFrameCount();
+    }
+
+    // @0x142450a00
+    void Scene::nameGet(ASString& result)
+    {
+        VM& vm = GetVM();
+        if (SceneInfo)
+        {
+            result.AssignNode(result.GetManager()->CreateStringNode(SceneInfo->Name.ToCStr(), SceneInfo->Name.GetSize()));
+            return;
+        }
+        result = vm.GetStringManager().CreateEmptyString();
     }
 
     // @0x142450d60
@@ -1212,6 +1251,20 @@ namespace Instances { namespace fl_display
         result = pContextMenu;
     }
 
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Object>::operator= instance (0x14243d870); ours inlines it
+    // @0x142449140
+    void InteractiveObject::contextMenuSet(const Value& result, const Value& value)
+    {
+        SF_UNUSED(result);
+        if (value.IsObject() && FUN_14250ffc0(GetVM(), value).IsInstanceTraits())
+        {
+            pContextMenu = static_cast<Instances::fl::Object*>(value.GetObject());
+            return;
+        }
+        GetVM().ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, GetVM(), FUN_14250ffc0(GetVM(), value).GetName().ToCStr(),
+            "flash.ui.ContextMenu"));
+    }
+
     // @0x14244ff20
     void LoaderInfo::loaderGet(SPtr<Instances::fl_display::Loader>& result)
     {
@@ -1341,6 +1394,28 @@ namespace Instances { namespace fl_display
         pavm->CreateASInstance(true);
         result = pavm->GetAS3Obj();
     }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Sprite>::operator= instance (0x14243d950) and strips the collectible tag with a branch; ours inlines both
+    // @0x14244ec30
+    void Sprite::hitAreaGet(SPtr<Instances::fl_display::Sprite>& result)
+    {
+        if (pDispObj)
+        {
+            GFx::Sprite* phit = static_cast<GFx::Sprite*>(pDispObj.GetPtr())->GetHitArea();
+            if (phit)
+            {
+                // the AS3 sprite already exists here: no CreateASInstance
+                Instances::fl_display::DisplayObject* ido = ToAvmDisplayObj(phit)->GetAS3Obj();
+                BuiltinTraitsType tt = ido->GetTraits().GetTraitsType();
+                if (tt == Traits_Sprite || tt == Traits_MovieClip)
+                {
+                    result = static_cast<Instances::fl_display::Sprite*>(ido);
+                    return;
+                }
+            }
+        }
+        result = NULL;
+    }
 }}
 
 // AS3 part of a display object container: AvmInteractiveObj, with its
@@ -1355,6 +1430,7 @@ public:
     void SetChildIndex(DisplayObjectBase* ch, unsigned index);  // 0x142526610
     void SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
     void SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);   // 0x14252e590
+    void RemoveChild(DisplayObjectBase* ch);                    // 0x142522570
 };
 
 namespace Instances { namespace fl_display
@@ -1645,7 +1721,7 @@ namespace Instances { namespace fl_display
         return result;
     }
     // The AS3 container half of a display object container.
-    static inline AvmDisplayObjContainer* ToAvmDispContainer(GFx::DisplayObject* p)
+    static SF_FORCEINLINE AvmDisplayObjContainer* ToAvmDispContainer(GFx::DisplayObject* p)
     {
         return p ? AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
     }
@@ -1662,6 +1738,37 @@ namespace Instances { namespace fl_display
             AvmDisplayObjContainer* avmObj = ToAvmDispContainer(pDispObj);
             avmObj->SwapChildren(child1->pDispObj, child2->pDispObj);
         }
+    }
+
+    // MS2-FUNCTIONAL: exe tail-calls the out-of-line Value::SetUndefined (0x142423b90) and Assign(Object*); ours inlines
+    // SetUndefined and shrink-wraps the rdi save. Same checks and calls.
+    // @0x142451dc0
+    void DisplayObjectContainer::removeChild(Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc < 1 || argv[0].IsNullOrUndefined() || !argv[0].IsObject())
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eNullPointerError, vm, "child"));
+            return;
+        }
+        AS3::Object* object = argv[0].GetObject();
+        if (object)
+        {
+            const Traits& tr = object->GetTraits();
+            if (tr.GetTraitsType() >= Traits_DisplayObject_Begin && tr.GetTraitsType() < Traits_DisplayObject_End &&
+                tr.IsInstanceTraits())
+            {
+                Instances::fl_display::DisplayObject* child = static_cast<Instances::fl_display::DisplayObject*>(object);
+                if (child->pDispObj)
+                {
+                    AvmDisplayObjContainer* avmObj = ToAvmDispContainer(pDispObj);
+                    avmObj->RemoveChild(child->pDispObj);
+                }
+                result = child;
+                return;
+            }
+        }
+        result.SetUndefined();
     }
 
     // @0x14244cee0
