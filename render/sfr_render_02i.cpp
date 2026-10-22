@@ -1093,3 +1093,8 @@ void DrawableImageContext::processTreeRootKillList()
 // MS2-PIN: ??_7ComplexFill@Render@Scaleform@@6B@ 0x14317b668
 // MS2-PIN: ??_7?$ContextData_ImplMixin@VNodeData@TreeShape@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@ 0x14317bbf0
 // MS2-PIN: ??_7NodeData@TreeShape@Render@Scaleform@@6B@ 0x14317bc40
+
+namespace Scaleform { namespace Render {
+// render_shapedata.h declares it inline; Draw needs the body here too (also in sfr_gfx_06e), or clang leaves it undefined
+inline ComplexFill::ComplexFill() : BindIndex(~0u) {}
+}} // namespace Scaleform::Render
