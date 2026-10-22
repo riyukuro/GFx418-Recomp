@@ -1275,6 +1275,110 @@ namespace Instances { namespace fl_display
         result = AsMovieSlots(pmovie)->GetMovieDef()->GetFrameRate();
     }
 
+    // @0x142447b90
+    void Stage::alignGet(ASString& result)
+    {
+        MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        const char* palign;
+        switch (AsMovieSlots(pmovie)->GetViewAlignment())
+        {
+        case MovieSlots418::Align_TopCenter:    palign = "T"; break;
+        case MovieSlots418::Align_BottomCenter: palign = "B"; break;
+        case MovieSlots418::Align_CenterLeft:   palign = "L"; break;
+        case MovieSlots418::Align_CenterRight:  palign = "R"; break;
+        case MovieSlots418::Align_TopLeft:      palign = "LT"; break;
+        case MovieSlots418::Align_TopRight:     palign = "TR"; break;
+        case MovieSlots418::Align_BottomLeft:   palign = "LB"; break;
+        case MovieSlots418::Align_BottomRight:  palign = "RB"; break;
+        default:                                palign = ""; break;
+        }
+        result += GetVM().GetStringManager().CreateConstString(palign);
+    }
+
+    // @0x142447cb0
+    void Stage::alignSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        ASString upper(value.ToUpperNode());
+        UInt32 c0 = 0, c1 = 0;
+        const int len = (int)upper.GetLength();
+        if (len > 0)
+        {
+            c0 = upper.GetCharAt(0);
+            if (len > 1)
+                c1 = upper.GetCharAt(1);
+        }
+        // Two-letter codes in either order pick a corner, one letter an edge.
+        MovieSlots418::AlignType a;
+        if ((c0 == 'T' && c1 == 'L') || (c0 == 'L' && c1 == 'T'))
+            a = MovieSlots418::Align_TopLeft;
+        else if ((c0 == 'T' && c1 == 'R') || (c0 == 'R' && c1 == 'T'))
+            a = MovieSlots418::Align_TopRight;
+        else if ((c0 == 'B' && c1 == 'L') || (c0 == 'L' && c1 == 'B'))
+            a = MovieSlots418::Align_BottomLeft;
+        else if ((c0 == 'B' && c1 == 'R') || (c0 == 'R' && c1 == 'B'))
+            a = MovieSlots418::Align_BottomRight;
+        else if (c0 == 'T')
+            a = MovieSlots418::Align_TopCenter;
+        else if (c0 == 'B')
+            a = MovieSlots418::Align_BottomCenter;
+        else if (c0 == 'L')
+            a = MovieSlots418::Align_CenterLeft;
+        else if (c0 == 'R')
+            a = MovieSlots418::Align_CenterRight;
+        else
+            a = MovieSlots418::Align_Center;
+        AsMovieSlots(static_cast<ASVM&>(GetVM()).GetMovieImpl())->SetViewAlignment(a);
+    }
+
+    // @0x142452500
+    void Stage::scaleModeGet(ASString& result)
+    {
+        MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        const char* pmode;
+        switch (AsMovieSlots(pmovie)->GetViewScaleMode())
+        {
+        case MovieSlots418::SM_NoScale:  pmode = "noScale"; break;
+        case MovieSlots418::SM_ExactFit: pmode = "exactFit"; break;
+        case MovieSlots418::SM_NoBorder: pmode = "noBorder"; break;
+        default:                         pmode = "showAll"; break;
+        }
+        result += GetVM().GetStringManager().CreateConstString(pmode);
+    }
+
+    // @0x1424525c0
+    void Stage::scaleModeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        ASString mode(value);
+        MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        MovieSlots418::ScaleModeType sm;
+        if (!String::CompareNoCase(mode.ToCStr(), "noScale"))
+            sm = MovieSlots418::SM_NoScale;
+        else if (!String::CompareNoCase(mode.ToCStr(), "exactFit"))
+            sm = MovieSlots418::SM_ExactFit;
+        else if (!String::CompareNoCase(mode.ToCStr(), "noBorder"))
+            sm = MovieSlots418::SM_NoBorder;
+        else
+            sm = MovieSlots418::SM_ShowAll;
+        if (pmovie)
+            AsMovieSlots(pmovie)->SetViewScaleMode(sm);
+    }
+
+    // @0x14244e5b0
+    void Stage::heightGet(Value::Number& result)
+    {
+        Render::RectF r = pDispObj->GetBounds(pDispObj->GetMatrix());
+        result = TwipsToPixels((Value::Number)r.Height());
+    }
+
+    // @0x142454a90
+    void Stage::widthGet(Value::Number& result)
+    {
+        Render::RectF r = pDispObj->GetBounds(pDispObj->GetMatrix());
+        result = TwipsToPixels((Value::Number)r.Width());
+    }
+
     // @0x142448f50
     void Loader::contentGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
@@ -1425,6 +1529,43 @@ namespace Instances { namespace fl_display
             return;
         }
         result = 0;
+    }
+
+    // @0x14244c3b0
+    void LoaderInfo::frameRateGet(Value::Number& result)
+    {
+        if (Content)
+        {
+            GFx::DisplayObject* pdisp = Ptr<GFx::DisplayObject>(Content->pDispObj);
+            result = pdisp->GetResourceMovieDef()->GetFrameRate();
+            return;
+        }
+        result = 0;
+    }
+
+    // @0x142450020
+    void LoaderInfo::loaderURLGet(ASString& result)
+    {
+        if (pLoader)
+        {
+            MovieDefImpl* pdef = pLoader->pDispObj->GetResourceMovieDef();
+            result = GetVM().GetStringManager().CreateString(pdef->GetFileURL());
+        }
+        else
+            result = GetVM().GetStringManager().CreateEmptyString();
+    }
+
+    // @0x1424547b0
+    void LoaderInfo::urlGet(ASString& result)
+    {
+        if (Content)
+        {
+            GFx::DisplayObject* pdisp = Ptr<GFx::DisplayObject>(Content->pDispObj);
+            MovieDefImpl* pdef = pdisp->GetResourceMovieDef();
+            result = GetVM().GetStringManager().CreateString(pdef->GetFileURL());
+        }
+        else
+            result = GetVM().GetStringManager().CreateEmptyString();
     }
     // @0x14244d460
     void BitmapData::getPixel32(UInt32& result, SInt32 x, SInt32 y)

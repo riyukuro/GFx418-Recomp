@@ -10,6 +10,27 @@ namespace Scaleform { namespace GFx {
 class __declspec(novtable) MovieSlots418
 {
 public:
+    // The stage's view scale mode and alignment (the AS3 Stage.scaleMode / Stage.align values).
+    enum ScaleModeType
+    {
+        SM_NoScale,
+        SM_ShowAll,
+        SM_ExactFit,
+        SM_NoBorder
+    };
+    enum AlignType
+    {
+        Align_Center,
+        Align_TopCenter,
+        Align_BottomCenter,
+        Align_CenterLeft,
+        Align_CenterRight,
+        Align_TopLeft,
+        Align_TopRight,
+        Align_BottomLeft,
+        Align_BottomRight
+    };
+
     virtual void Slot00() = 0;
     virtual MovieDef* GetMovieDef() const = 0;                                                  // 1 (+0x08)
     virtual void Slot02() = 0;
@@ -23,10 +44,10 @@ public:
     virtual void Slot10() = 0;
     virtual void Slot11() = 0;
     virtual void Slot12() = 0;
-    virtual void Slot13() = 0;
-    virtual void Slot14() = 0;
-    virtual void Slot15() = 0;
-    virtual void Slot16() = 0;
+    virtual void SetViewScaleMode(ScaleModeType) = 0;                                           // 13 (+0x68)
+    virtual ScaleModeType GetViewScaleMode() const = 0;                                         // 14 (+0x70)
+    virtual void SetViewAlignment(AlignType) = 0;                                               // 15 (+0x78)
+    virtual AlignType GetViewAlignment() const = 0;                                             // 16 (+0x80)
     virtual void Slot17() = 0;
     virtual void Slot18() = 0;
     virtual void Slot19() = 0;
