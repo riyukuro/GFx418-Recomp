@@ -12,6 +12,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
 #include "ms2/scaleform/include/gfx/gfx_asutils.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
@@ -1573,6 +1574,23 @@ namespace Instances { namespace fl
         result = static_cast<Array*>(_this.GetObject())->ToStringInternal(sep);
     }
 }}
+
+// Argument defaults of the two-Value native methods, emitted out of line here (their ThunkFunc2 thunks are in
+// sfr_as3_04): Array::AS3sortOn @0x1423e8e60, AS3every @0x1423e8fc0, AS3filter @0x1423e88e0, AS3forEach
+// @0x1423e8a40, AS3map @0x1423e8ba0, AS3some @0x1423e8d00 (null thisObject/options), XML::AS3addNamespace..
+// @0x1423e9120/9280/93e0, XMLList @0x1423e9540/96a0/9800 (undefined).
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::Array, 16, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::Array, 17, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::Array, 18, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::Array, 19, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::Array, 12, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::Array, 15, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XML, 20, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XML, 21, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XML, 33, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 28, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 29, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 36, const Value&, const Value&>(StringManager&);
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PINS-BEGIN tplpin
@@ -1705,3 +1723,15 @@ namespace Instances { namespace fl
 // MS2-PIN: ?Func@?$ThunkFunc0@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$01J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e7d80
 // MS2-PIN: ?Func@?$ThunkFunc1@VRegExp@fl@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VObject@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e5470
 // MS2-PIN: ?Func@?$ThunkFunc1@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e7840
+// MS2-PIN: ??$ThunkMakeDefs2@VArray@fl@Instances@AS3@GFx@Scaleform@@$0BA@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e88e0
+// MS2-PIN: ??$ThunkMakeDefs2@VArray@fl@Instances@AS3@GFx@Scaleform@@$0BB@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e8a40
+// MS2-PIN: ??$ThunkMakeDefs2@VArray@fl@Instances@AS3@GFx@Scaleform@@$0BC@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e8ba0
+// MS2-PIN: ??$ThunkMakeDefs2@VArray@fl@Instances@AS3@GFx@Scaleform@@$0BD@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e8d00
+// MS2-PIN: ??$ThunkMakeDefs2@VArray@fl@Instances@AS3@GFx@Scaleform@@$0M@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e8e60
+// MS2-PIN: ??$ThunkMakeDefs2@VArray@fl@Instances@AS3@GFx@Scaleform@@$0P@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e8fc0
+// MS2-PIN: ??$ThunkMakeDefs2@VXML@fl@Instances@AS3@GFx@Scaleform@@$0BE@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e9120
+// MS2-PIN: ??$ThunkMakeDefs2@VXML@fl@Instances@AS3@GFx@Scaleform@@$0BF@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e9280
+// MS2-PIN: ??$ThunkMakeDefs2@VXML@fl@Instances@AS3@GFx@Scaleform@@$0CB@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e93e0
+// MS2-PIN: ??$ThunkMakeDefs2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0BM@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e9540
+// MS2-PIN: ??$ThunkMakeDefs2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0BN@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e96a0
+// MS2-PIN: ??$ThunkMakeDefs2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0CE@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e9800
