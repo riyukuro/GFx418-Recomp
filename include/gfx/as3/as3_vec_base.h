@@ -71,6 +71,9 @@ public:
     // Vector.unshift: argv (already of the element type tr) are inserted at the front.
     // SInt32 0x142564390, UInt32 0x1425644f0, Number 0x142564650, String 0x142564860, Value 0x1425649c0
     void Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr);
+    // Element write: v is coerced to the element type tr (throws on failure); ind == size appends unless fixed.
+    // SInt32 0x142563720, UInt32 0x142446540, Number 0x1424864c0, String 0x1425638c0, Value 0x142563a00
+    CheckResult Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr);
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v);

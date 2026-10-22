@@ -1210,6 +1210,109 @@ void Vector_uint::AS3unshift(Value& result, unsigned argc, const Value* argv)
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
+// ---- DeleteProperty
+
+// @0x14255b7f0
+CheckResult Vector_String::DeleteProperty(const Multiname& prop_name)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::DeleteProperty(prop_name);
+    if (ind >= V.V.GetSize())
+        return false;
+    V.V.RemoveAt(ind);
+    return true;
+}
+
+// @0x14255b890
+// MS2-FUNCTIONAL: RemoveAt's Clear is inlined here, the exe calls it
+CheckResult Vector_double::DeleteProperty(const Multiname& prop_name)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::DeleteProperty(prop_name);
+    if (ind >= V.V.GetSize())
+        return false;
+    V.V.RemoveAt(ind);
+    return true;
+}
+
+// @0x14255b970
+// MS2-FUNCTIONAL: RemoveAt's Clear is inlined here, the exe calls it
+CheckResult Vector_int::DeleteProperty(const Multiname& prop_name)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::DeleteProperty(prop_name);
+    if (ind >= V.V.GetSize())
+        return false;
+    V.V.RemoveAt(ind);
+    return true;
+}
+
+// @0x14255ba50
+CheckResult Vector_object::DeleteProperty(const Multiname& prop_name)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::DeleteProperty(prop_name);
+    if (ind >= V.V.GetSize())
+        return false;
+    V.V.RemoveAt(ind);
+    return true;
+}
+
+// @0x14255baf0
+// MS2-FUNCTIONAL: RemoveAt's Clear is inlined here, the exe calls it
+CheckResult Vector_uint::DeleteProperty(const Multiname& prop_name)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::DeleteProperty(prop_name);
+    if (ind >= V.V.GetSize())
+        return false;
+    V.V.RemoveAt(ind);
+    return true;
+}
+
+// ---- SetProperty
+
+// @0x142563b20
+CheckResult Vector_String::SetProperty(const Multiname& prop_name, const Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::SetProperty(prop_name, value);
+    return V.Set(ind, value, GetVM().GetClassTraitsString());
+}
+
+// @0x142563bb0
+CheckResult Vector_double::SetProperty(const Multiname& prop_name, const Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::SetProperty(prop_name, value);
+    return V.Set(ind, value, GetVM().GetClassTraitsNumber());
+}
+
+// @0x142563c40
+CheckResult Vector_int::SetProperty(const Multiname& prop_name, const Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::SetProperty(prop_name, value);
+    return V.Set(ind, value, GetVM().GetClassTraitsSInt());
+}
+
+// @0x142563db0
+CheckResult Vector_uint::SetProperty(const Multiname& prop_name, const Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::SetProperty(prop_name, value);
+    return V.Set(ind, value, GetVM().GetClassTraitsUInt());
+}
+
 }} // namespace Instances::fl_vec
 
 }}} // namespace Scaleform::GFx::AS3
