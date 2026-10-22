@@ -730,12 +730,42 @@ namespace Instances { namespace fl_display
         return result;
     }
 
+#pragma strict_gs_check(push, on)
+    // A new Vector3D (pixels) through the movie VM's Vector3D class.
+    // MS2-FUNCTIONAL: stack slot order differs (exe puts the input point and the result Value below the returned
+    // Point3F temp); same code otherwise
+    // @0x14244dd20
+    SF_NOINLINE void DisplayObject::globalToLocal3D(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Point* pt)
+    {
+        PointF global((float)Render::PixelsToTwips(pt->x), (float)Render::PixelsToTwips(pt->y));
+        Render::Point3F local;
+        local = pDispObj->GlobalToLocal3D(global);
+        Value args[] = { Value(Render::TwipsToPixels(local.x)), Value(Render::TwipsToPixels(local.y)), Value(Render::TwipsToPixels(local.z)) };
+        Value r;
+        static_cast<ASVM&>(GetVM()).Vector3DClass->Construct(r, 3, args, true);
+        result = static_cast<Instances::fl_geom::Vector3D*>(r.GetObject());
+    }
+#pragma strict_gs_check(pop)
+
     // @0x14244df20
     SPtr<Instances::fl_geom::Point> DisplayObject::globalToLocal(Instances::fl_geom::Point* a0)
     {
         SPtr<Instances::fl_geom::Point> result;
         globalToLocal(result, a0);
         return result;
+    }
+
+    // A new Point (pixels) through the movie VM's Point class.
+    // @0x14244df40
+    SF_NOINLINE void DisplayObject::globalToLocal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* pt)
+    {
+        PointF global((float)Render::PixelsToTwips(pt->x), (float)Render::PixelsToTwips(pt->y));
+        PointF local;
+        local = pDispObj->GlobalToLocal(global);
+        Value args[] = { Value(Render::TwipsToPixels(local.x)), Value(Render::TwipsToPixels(local.y)) };
+        Value r;
+        static_cast<ASVM&>(GetVM()).PointClass->Construct(r, 2, args, true);
+        result = static_cast<Instances::fl_geom::Point*>(r.GetObject());
     }
 
     // @0x14244e2c0
@@ -786,12 +816,35 @@ namespace Instances { namespace fl_display
         return result;
     }
 
+    // A new Point (pixels) through the movie VM's Point class.
+    // @0x1424500e0
+    SF_NOINLINE void DisplayObject::local3DToGlobal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Vector3D* pt)
+    {
+        PointF global = pDispObj->Local3DToGlobal(Render::Point3F((float)Render::PixelsToTwips(pt->x),
+            (float)Render::PixelsToTwips(pt->y), (float)Render::PixelsToTwips(pt->z)));
+        Value args[] = { Value(Render::TwipsToPixels(global.x)), Value(Render::TwipsToPixels(global.y)) };
+        Value r;
+        static_cast<ASVM&>(GetVM()).PointClass->Construct(r, 2, args, true);
+        result = static_cast<Instances::fl_geom::Point*>(r.GetObject());
+    }
+
     // @0x1424502a0
     SPtr<Instances::fl_geom::Point> DisplayObject::localToGlobal(Instances::fl_geom::Point* a0)
     {
         SPtr<Instances::fl_geom::Point> result;
         localToGlobal(result, a0);
         return result;
+    }
+
+    // A new Point (pixels) through the movie VM's Point class.
+    // @0x1424502c0
+    SF_NOINLINE void DisplayObject::localToGlobal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* pt)
+    {
+        PointF global = pDispObj->LocalToGlobal(PointF((float)Render::PixelsToTwips(pt->x), (float)Render::PixelsToTwips(pt->y)));
+        Value args[] = { Value(Render::TwipsToPixels(global.x)), Value(Render::TwipsToPixels(global.y)) };
+        Value r;
+        static_cast<ASVM&>(GetVM()).PointClass->Construct(r, 2, args, true);
+        result = static_cast<Instances::fl_geom::Point*>(r.GetObject());
     }
 
     // @0x142450e30
@@ -833,6 +886,26 @@ namespace Instances { namespace fl_display
         scale9GridGet(result);
         return result;
     }
+
+#pragma strict_gs_check(push, on)
+    // A new Rectangle (pixels) through the movie VM's Rectangle class, or null without a grid.
+    // MS2-FUNCTIONAL: the grid temp sits in a different stack slot (exe: above the result Value); same code otherwise
+    // @0x142452290
+    SF_NOINLINE void DisplayObject::scale9GridGet(SPtr<Instances::fl_geom::Rectangle>& result)
+    {
+        if (!pDispObj->GetScale9Grid().IsEmpty())
+        {
+            RectF grid = pDispObj->GetScale9Grid();
+            Value args[] = { Value(Render::TwipsToPixels(grid.x1)), Value(Render::TwipsToPixels(grid.y1)),
+                             Value(Render::TwipsToPixels(grid.Width())), Value(Render::TwipsToPixels(grid.Height())) };
+            Value r;
+            static_cast<ASVM&>(GetVM()).RectangleClass->Construct(r, 4, args, true);
+            result = static_cast<Instances::fl_geom::Rectangle*>(r.GetObject());
+        }
+        else
+            result = NULL;
+    }
+#pragma strict_gs_check(pop)
 
     // @0x142452750
     SPtr<Instances::fl::Array> MovieClip::scenesGet()
@@ -2015,6 +2088,42 @@ namespace Instances { namespace fl_display
         pavm->CreateASInstance(true);
         result = static_cast<Instances::fl_display::Stage*>(pavm->GetAS3Obj());
     }
+
+    // Uninitialized room for a RectF that a callee fills in
+    struct __declspec(align(16)) RectFStorage
+    {
+        float Edges[4];
+        RectF& Get() { return *reinterpret_cast<RectF*>(Edges); }
+    };
+
+#pragma strict_gs_check(push, on)
+    // @0x14244ef60
+    void DisplayObject::hitTestObject(bool& result, Instances::fl_display::DisplayObject* obj)
+    {
+        result = false;
+        RectF bounds1 = pDispObj->GetBounds(Matrix2F());
+        if (bounds1.IsNull() || !obj)
+            return;
+        RectF bounds2 = obj->pDispObj->GetBounds(Matrix2F());
+        if (bounds2.IsNull())
+            return;
+        // EncloseTransform fills both rects; they are not zeroed first
+        RectFStorage w1, w2;
+        RectF& world1 = w1.Get();
+        RectF& world2 = w2.Get();
+        {
+            Matrix2F m;
+            pDispObj->GetWorldMatrix(&m);
+            m.EncloseTransform(&world1, bounds1);
+        }
+        {
+            Matrix2F m;
+            obj->pDispObj->GetWorldMatrix(&m);
+            m.EncloseTransform(&world2, bounds2);
+        }
+        result = world1.Intersects(world2);
+    }
+#pragma strict_gs_check(pop)
 }}
 
 namespace Instances { namespace fl_display
