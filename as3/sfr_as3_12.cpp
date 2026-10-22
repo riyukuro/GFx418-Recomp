@@ -1484,6 +1484,9 @@ namespace InstanceTraits { namespace fl_text
 
 // ==== flash.net: instance helpers, constructors and object factories ===============================================
 
+// VM::GetValueTraits: the traits of a value (0x14250ffc0).
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // ---- collector visits ---------------------------------------------------------------------------------------------
@@ -1521,11 +1524,82 @@ namespace Instances { namespace fl_net
         }
     }
 
+    // @0x14249b040
+    void URLRequest::dataSet(const Value& /*result*/, const Value& value)
+    {
+        if (value.IsObject() && FUN_14250ffc0(GetVM(), value).IsInstanceTraits())
+            Data = static_cast<Instances::fl::Object*>(value.GetObject());
+    }
+
+    // @0x14249c3e0
+    void URLRequest::urlGet(ASString& result)
+    {
+        result = Url;
+    }
+
+    // @0x14249c420
+    void URLRequest::urlSet(const Value& /*result*/, const ASString& value)
+    {
+        Url = value;
+    }
+
+    // Stores one decoded name=value pair as a dynamic property.
+    static SF_INLINE void SetDecodedVariable(URLVariables* pthis, const StringBuffer& name, const StringBuffer& value)
+    {
+        StringManager& sm = pthis->GetVM().GetStringManager();
+        ASString n = sm.CreateString(name.ToCStr());
+        Value nv(n);
+        ASString v = sm.CreateString(value.ToCStr());
+        Value vv(v);
+        Multiname mn(pthis->GetVM().GetPublicNamespace(), nv);
+        pthis->SetProperty(mn, vv).DoNotCheck();
+    }
+
+    // MS2-FUNCTIONAL: same parse and calls; the exe allocates the loop registers differently (r12/r15 vs r14/rsi)
+    // @0x14249b0a0
+    void URLVariables::decode(const Value& /*result*/, const ASString& source)
+    {
+        StringBuffer name;
+        StringBuffer value;
+        bool inName = true;
+        const char* p;
+        for (UInt32 c = source.GetFirstCharAt(0, &p); c; c = source.GetNextChar(&p))
+        {
+            if (c == '\r')
+                c = '\n';
+            else if (c == '&')
+            {
+                SetDecodedVariable(this, name, value);
+                name.Clear();
+                value.Clear();
+                inName = true;
+                continue;
+            }
+            if (inName)
+            {
+                if (c == '=')
+                    inName = false;
+                else
+                    name.AppendChar(c);
+            }
+            else
+                value.AppendChar(c);
+        }
+        if (name.GetLength() != 0)
+            SetDecodedVariable(this, name, value);
+    }
+
+    // @0x14249c380
+    void URLVariables::toString(ASString& result)
+    {
+        result = Source;
+    }
+
     // @0x1424991f0
     void URLRequest::ForEachChild_GC(Collector* prcc, GcOp op) const
     {
         Object::ForEachChild_GC(prcc, op);
-        AS3::ForEachChild_GC(prcc, RequestHeaders, op, *this);
+        AS3::ForEachChild_GC(prcc, Data, op, *this);
     }
 
     // @0x142499480

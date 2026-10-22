@@ -212,6 +212,7 @@ public:
     operator const char*() const { return pData ? pData : ""; }
     const char* ToCStr() const   { return pData ? pData : ""; }
     UPInt       GetSize() const  { return Size; }
+    UPInt       GetLength() const;  // exe 0x142587070 (UTF-8 character count)
     bool        IsEmpty() const  { return GetSize() == 0; }
 
     void Resize(UPInt size);

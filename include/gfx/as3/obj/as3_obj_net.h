@@ -140,7 +140,7 @@ namespace Instances { namespace fl_net {
         virtual void AS3Constructor(unsigned argc, const Value* argv);   // 0x142498890
 
         ASString                    Url;            // +0x38
-        SPtr<Instances::fl::Array>  RequestHeaders; // +0x40
+        SPtr<Instances::fl::Object> Data;           // +0x40, set by dataSet
 
         const ASString& GetUrl() const;                             // 0x142499480
 
