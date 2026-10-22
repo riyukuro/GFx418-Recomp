@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142542820-0x1425584f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
+#undef GetObject
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -649,6 +650,227 @@ void Vector_String::AS3reverse(SPtr<Vector_String>& result)
 
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
 
+// VectorBase<T>::Concat/Filter/Map<I>: one body per element type, written once below and forced inline into each.
+// VM::GetValueTraits / VM::GetClassTraits(const Value&) / ClassTraits::Traits::IsParentTypeOf
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+Scaleform::GFx::AS3::ClassTraits::Traits& FUN_142507f60(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
+// Append(other) / PushBack(element) of the result instances (sfr_as3_21)
+void FUN_142559c00(Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& other);
+void FUN_142559cd0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& other);
+void FUN_142559dc0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& other);
+void FUN_142559eb0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& other);
+void FUN_142559fc0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& other);
+void FUN_1425621c0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& r, Scaleform::GFx::ASStringNode* v);
+void FUN_142562280(Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& r, Scaleform::GFx::AS3::Value::Number v);
+void FUN_142562340(Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& r, Scaleform::SInt32 v);
+void FUN_1425623f0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& r, const Scaleform::GFx::AS3::Value& v);
+void FUN_142562470(Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& r, Scaleform::UInt32 v);
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
+
+// the element as a callback argument
+static SF_INLINE Value ElementValue(const Ptr<ASStringNode>& e)     { return Value(e.GetPtr()); }
+static SF_INLINE Value ElementValue(Value::Number e)                { return Value(e); }
+static SF_INLINE Value ElementValue(SInt32 e)                       { return Value(e); }
+static SF_INLINE Value ElementValue(const Value& e)                 { return e; }
+static SF_INLINE Value ElementValue(UInt32 e)                       { return Value(e); }
+
+// an element pushed into the result instance
+static SF_INLINE void PushElement(Vector_String& r, const Ptr<ASStringNode>& e)    { FUN_1425621c0(r, e.GetPtr()); }
+static SF_INLINE void PushElement(Vector_double& r, Value::Number e)                { FUN_142562280(r, e); }
+static SF_INLINE void PushElement(Vector_int& r, SInt32 e)                         { FUN_142562340(r, e); }
+static SF_INLINE void PushElement(Vector_object& r, const Value& e)                { FUN_1425623f0(r, e); }
+static SF_INLINE void PushElement(Vector_uint& r, UInt32 e)                        { FUN_142562470(r, e); }
+
+// a coerced Value pushed into the result instance
+static SF_INLINE void PushCoerced(Vector_String& r, const Value& v)    { FUN_1425621c0(r, v.AsStringNode()); }
+static SF_INLINE void PushCoerced(Vector_double& r, const Value& v)    { FUN_142562280(r, v.AsNumber()); }
+static SF_INLINE void PushCoerced(Vector_int& r, const Value& v)       { FUN_142562340(r, v.AsInt()); }
+static SF_INLINE void PushCoerced(Vector_object& r, const Value& v)    { FUN_1425623f0(r, v); }
+static SF_INLINE void PushCoerced(Vector_uint& r, const Value& v)      { FUN_142562470(r, v.AsUInt()); }
+
+// a concat() argument of the element type, appended in place
+static SF_INLINE void ConcatPush(Vector_String& r, const Value& v)
+{
+    const Ptr<ASStringNode> s(v.GetStringNode());
+    if (r.V.CheckFixed())
+        r.V.V.PushBack(s);
+}
+static SF_INLINE void ConcatPush(Vector_double& r, const Value& v)  { if (r.V.CheckFixed()) r.V.V.PushBack(v.AsNumber()); }
+static SF_INLINE void ConcatPush(Vector_int& r, const Value& v)     { if (r.V.CheckFixed()) r.V.V.PushBack(v.AsInt()); }
+static SF_INLINE void ConcatPush(Vector_object& r, const Value& v)  { if (r.V.CheckFixed()) r.V.V.PushBack(v); }
+static SF_INLINE void ConcatPush(Vector_uint& r, const Value& v)    { if (r.V.CheckFixed()) r.V.V.PushBack(v.AsUInt()); }
+
+static SF_INLINE void Append(Vector_String& r, const Vector_String& o)  { FUN_142559c00(r, o); }
+static SF_INLINE void Append(Vector_double& r, const Vector_double& o)  { FUN_142559cd0(r, o); }
+static SF_INLINE void Append(Vector_int& r, const Vector_int& o)        { FUN_142559dc0(r, o); }
+static SF_INLINE void Append(Vector_object& r, const Vector_object& o)  { FUN_142559eb0(r, o); }
+static SF_INLINE void Append(Vector_uint& r, const Vector_uint& o)      { FUN_142559fc0(r, o); }
+
+// the ClassTraits map() coerces the callback results to
+static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_String& o)  { return o.GetVM().GetClassTraitsString(); }
+static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_double& o)  { return o.GetVM().GetClassTraitsNumber(); }
+static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_int& o)     { return o.GetVM().GetClassTraitsSInt(); }
+static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_object& o)  { return GetEnclosedClassTraits(o); }
+static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_uint& o)    { return o.GetVM().GetClassTraitsUInt(); }
+
+template <class I, class TR, typename T>
+static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
+{
+    VM& vm = self.VMRef;
+    const ClassTraits::Traits& currClassTR = owner.GetTraits().GetConstructor().GetClassTraits();
+    Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
+    I& r = *pr.GetPtr();
+    result.Pick(pr);
+    Append(r, owner);
+
+    for (unsigned i = 0; i < argc; ++i)
+    {
+        const Value& value = argv[i];
+        const Traits& argTraits = FUN_14250ffc0(vm, value);
+        const ClassTraits::Traits& argClassTR = FUN_142507f60(vm, value);
+
+        if (argTraits.IsArrayLike())
+        {
+            if (FUN_1425149a0(vm.GetClassTraitsArray(), argClassTR))
+            {
+                self.VMRef.ThrowError(VM::Error(VM::eNotImplementedError, self.VMRef, "Vector::concat() for argument of type Array"));
+                return;
+            }
+            if (&currClassTR != &argClassTR)
+            {
+                self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
+                    currClassTR.GetName().ToCStr(), argClassTR.GetName().ToCStr()));
+                return;
+            }
+            Append(r, static_cast<I&>(*value.GetObject()));
+        }
+        else if (FUN_1425149a0(currClassTR, FUN_142507f60(self.VMRef, value)))
+            ConcatPush(r, value);
+        else
+        {
+            self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
+                currClassTR.GetName().ToCStr(), argClassTR.GetName().ToCStr()));
+            return;
+        }
+    }
+}
+
+template <class I, class TR, typename T>
+static __forceinline void VectorFilter(VectorBase<T>& self, SPtr<I>& result, const Value& callback, const Value& thisObject, I& owner)
+{
+    Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
+    I& r = *pr.GetPtr();
+    result.Pick(pr);
+    if (callback.IsNullOrUndefined() || !self.CheckCallable(callback))
+        return;
+
+    Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+    for (UPInt i = 0; i < (UInt32)self.V.GetSize(); ++i)
+    {
+        const Value argv[3] = {ElementValue(self.V[i]), Value((UInt32)i), Value(&owner)};
+        Value res;
+        self.VMRef.ExecuteInternalUnsafe(callback, _this, res, 3, argv, false);
+        if (self.VMRef.IsException())
+            break;
+        if (!res.IsBool() || !res.AsBool())
+            continue;
+        PushElement(r, self.V[i]);
+    }
+}
+
+template <class I, class TR, typename T>
+static __forceinline void VectorMap(VectorBase<T>& self, SPtr<I>& result, const Value& callback, const Value& thisObject, I& owner)
+{
+    Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
+    I& r = *pr.GetPtr();
+    result.Pick(pr);
+    if (callback.IsNullOrUndefined() || !self.CheckCallable(callback))
+        return;
+
+    Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+    const ClassTraits::Traits& tr = MapClassTraits(owner);
+    for (UPInt i = 0; i < (UInt32)self.V.GetSize(); ++i)
+    {
+        const Value argv[3] = {ElementValue(self.V[i]), Value((UInt32)i), Value(&owner)};
+        Value res;
+        self.VMRef.ExecuteInternalUnsafe(callback, _this, res, 3, argv, false);
+        if (self.VMRef.IsException())
+            break;
+        Value coerced;
+        if (!self.CheckCoerce(tr, res, coerced))
+            return;
+        PushCoerced(r, coerced);
+    }
+}
+
+}}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
+
+using namespace Scaleform;
+using namespace Scaleform::GFx::AS3;
+namespace VI = Scaleform::GFx::AS3::Instances::fl_vec;
+namespace VT = Scaleform::GFx::AS3::InstanceTraits::fl_vec;
+
+// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// @0x142547960
+void FUN_142547960(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
+{ VI::VectorConcat<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// @0x142547c40
+void FUN_142547c40(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
+{ VI::VectorConcat<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// @0x142547f30
+void FUN_142547f30(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
+{ VI::VectorConcat<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// @0x142548280
+void FUN_142548280(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
+{ VI::VectorConcat<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// @0x142548580
+void FUN_142548580(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
+{ VI::VectorConcat<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
+
+// @0x142548bd0
+void FUN_142548bd0(VectorBase<Ptr<GFx::ASStringNode> >& v, SPtr<VI::Vector_String>& result, const Value& callback, const Value& thisObject, VI::Vector_String& owner)
+{ VI::VectorFilter<VI::Vector_String, VT::Vector_String>(v, result, callback, thisObject, owner); }
+// @0x142548f60
+void FUN_142548f60(VectorBase<Value::Number>& v, SPtr<VI::Vector_double>& result, const Value& callback, const Value& thisObject, VI::Vector_double& owner)
+{ VI::VectorFilter<VI::Vector_double, VT::Vector_double>(v, result, callback, thisObject, owner); }
+// @0x142549300
+void FUN_142549300(VectorBase<SInt32>& v, SPtr<VI::Vector_int>& result, const Value& callback, const Value& thisObject, VI::Vector_int& owner)
+{ VI::VectorFilter<VI::Vector_int, VT::Vector_int>(v, result, callback, thisObject, owner); }
+// MS2-FUNCTIONAL: register assignment for thisObject/callback differs from the exe
+// @0x1425496a0
+void FUN_1425496a0(VectorBase<Value>& v, SPtr<VI::Vector_object>& result, const Value& callback, const Value& thisObject, VI::Vector_object& owner)
+{ VI::VectorFilter<VI::Vector_object, VT::Vector_object>(v, result, callback, thisObject, owner); }
+// @0x142549a60
+void FUN_142549a60(VectorBase<UInt32>& v, SPtr<VI::Vector_uint>& result, const Value& callback, const Value& thisObject, VI::Vector_uint& owner)
+{ VI::VectorFilter<VI::Vector_uint, VT::Vector_uint>(v, result, callback, thisObject, owner); }
+
+// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
+// @0x14254c050
+void FUN_14254c050(VectorBase<Ptr<GFx::ASStringNode> >& v, SPtr<VI::Vector_String>& result, const Value& callback, const Value& thisObject, VI::Vector_String& owner)
+{ VI::VectorMap<VI::Vector_String, VT::Vector_String>(v, result, callback, thisObject, owner); }
+// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
+// @0x14254c4e0
+void FUN_14254c4e0(VectorBase<Value::Number>& v, SPtr<VI::Vector_double>& result, const Value& callback, const Value& thisObject, VI::Vector_double& owner)
+{ VI::VectorMap<VI::Vector_double, VT::Vector_double>(v, result, callback, thisObject, owner); }
+// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
+// @0x14254c980
+void FUN_14254c980(VectorBase<SInt32>& v, SPtr<VI::Vector_int>& result, const Value& callback, const Value& thisObject, VI::Vector_int& owner)
+{ VI::VectorMap<VI::Vector_int, VT::Vector_int>(v, result, callback, thisObject, owner); }
+// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce and the result PushBack; ours calls them
+// @0x14254ce20
+void FUN_14254ce20(VectorBase<Value>& v, SPtr<VI::Vector_object>& result, const Value& callback, const Value& thisObject, VI::Vector_object& owner)
+{ VI::VectorMap<VI::Vector_object, VT::Vector_object>(v, result, callback, thisObject, owner); }
+// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
+// @0x14254d380
+void FUN_14254d380(VectorBase<UInt32>& v, SPtr<VI::Vector_uint>& result, const Value& callback, const Value& thisObject, VI::Vector_uint& owner)
+{ VI::VectorMap<VI::Vector_uint, VT::Vector_uint>(v, result, callback, thisObject, owner); }
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0A@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546850
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1425468b0
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546920
@@ -682,3 +904,14 @@ void Vector_String::AS3reverse(SPtr<Vector_String>& result)
 // MS2-PIN: ??$ReadU30@E@Abc@AS3@GFx@Scaleform@@YAHAEAPEBE@Z 0x1425455b0
 // MS2-FUNCTIONAL 0x142545600: the exe reloads the pointer/position through the reference on every loop pass; ours keeps it in a register
 // MS2-PIN: ??$ReadU30@E@Abc@AS3@GFx@Scaleform@@YAHPEBEAEA_K@Z 0x142545600
+// MS2-PIN: ??_7ArrayBase@AS3@GFx@Scaleform@@6B@ 0x143181db8
+// MS2-PIN: ??_7?$VectorBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@AS3@GFx@Scaleform@@6B@ 0x143181e08
+// MS2-PIN: ??_7?$VectorBase@N@AS3@GFx@Scaleform@@6B@ 0x143182460
+// MS2-PIN: ??_7?$VectorBase@J@AS3@GFx@Scaleform@@6B@ 0x143181e30
+// MS2-PIN: ??_7?$VectorBase@VValue@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@6B@ 0x143181de0
+// MS2-PIN: ??_7?$VectorBase@K@AS3@GFx@Scaleform@@6B@ 0x143182148
+// MS2-PIN: ??_7Vector_String@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182788
+// MS2-PIN: ??_7Vector_double@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182488
+// MS2-PIN: ??_7Vector_int@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143181e58
+// MS2-PIN: ??_7Vector_object@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182a88
+// MS2-PIN: ??_7Vector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182170
