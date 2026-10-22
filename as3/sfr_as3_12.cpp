@@ -1551,6 +1551,69 @@ namespace Instances { namespace fl_net
     {
         return strcmp(DataFormat.ToCStr(), "variables") == 0;
     }
+
+    // The AS3 movie root's builtin event names (ASVM::pMovieRoot +0x298 ...).
+    enum URLLoaderEventName
+    {
+        URLLoaderEvent_complete = 0x298,
+        URLLoaderEvent_progress = 0x2a0,
+        URLLoaderEvent_open     = 0x2a8
+    };
+
+    static ASString GetURLLoaderEventName(VM& vm, URLLoaderEventName name)
+    {
+        UByte* proot = *reinterpret_cast<UByte**>(reinterpret_cast<UByte*>(&vm) + 0x2d8);
+        return ASString(*reinterpret_cast<ASStringNode**>(proot + name));
+    }
+
+    // Dispatches a plain event of the given name to pthis' listeners, if it has any.
+    static SF_INLINE void DispatchURLLoaderEvent(URLLoader* pthis, URLLoaderEventName name)
+    {
+        ASString type = GetURLLoaderEventName(pthis->GetVM(), name);
+        if (pthis->HasEventHandler(type, false))
+        {
+            SPtr<fl_events::Event> evt = pthis->CreateEventObject(type, false, false);
+            evt->Target = pthis;
+            pthis->DispatchSingleEvent(evt, false);
+        }
+    }
+
+    // @0x142498d90
+    void URLLoader::ExecuteCompleteEvent()
+    {
+        DispatchURLLoaderEvent(this, URLLoaderEvent_complete);
+    }
+
+    // @0x142498e40
+    void URLLoader::ExecuteErrorEvent(const char* errorStr)
+    {
+        SPtr<fl_events::Event> evt = CreateIOErrorEventObject(errorStr);
+        evt->Target = this;
+        DispatchSingleEvent(evt, false);
+    }
+
+    // @0x142498ef0
+    void URLLoader::ExecuteOpenEvent()
+    {
+        DispatchURLLoaderEvent(this, URLLoaderEvent_open);
+    }
+
+    // @0x142498fa0
+    void URLLoader::ExecuteProgressEvent(UInt32 bytesLoaded, UInt32 bytesTotal)
+    {
+        ASString type = GetURLLoaderEventName(GetVM(), URLLoaderEvent_progress);
+        if (HasEventHandler(type, false))
+        {
+            BytesLoaded = bytesLoaded;
+            BytesTotal = bytesTotal;
+            SPtr<fl_events::Event> evt = CreateProgressEventObject(type);
+            evt->Target = this;
+            // ProgressEvent's bytesLoaded / bytesTotal (+0x58 / +0x60, 64-bit counts).
+            *reinterpret_cast<UInt64*>(reinterpret_cast<UByte*>(evt.GetPtr()) + 0x58) = bytesLoaded;
+            *reinterpret_cast<UInt64*>(reinterpret_cast<UByte*>(evt.GetPtr()) + 0x60) = bytesTotal;
+            DispatchSingleEvent(evt, false);
+        }
+    }
 }}
 
 // ---- the shared object loader -------------------------------------------------------------------------------------

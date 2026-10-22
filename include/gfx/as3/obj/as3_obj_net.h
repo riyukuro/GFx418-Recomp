@@ -100,7 +100,15 @@ namespace Instances { namespace fl_net {
         URLLoader(InstanceTraits::Traits& t);
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_net::URLLoader"; }
 
-        void*       pLoadQueue;     // +0x50, not owned
+        union
+        {
+            void*   pLoadQueue;     // +0x50, cleared by the constructor
+            struct
+            {
+                UInt32  BytesLoaded;    // +0x50, last progress event
+                UInt32  BytesTotal;     // +0x54
+            };
+        };
         Value       Data;           // +0x58
         ASString    DataFormat;     // +0x78
 
@@ -108,6 +116,11 @@ namespace Instances { namespace fl_net {
         bool IsLoadingBinary() const;                               // 0x142499490
         bool IsLoadingText() const;                                 // 0x1424994c0
         bool IsLoadingVariables() const;                            // 0x1424994f0
+        // (appended, sfr15) load notifications
+        void ExecuteCompleteEvent();                                // 0x142498d90
+        void ExecuteErrorEvent(const char* errorStr);               // 0x142498e40
+        void ExecuteOpenEvent();                                    // 0x142498ef0
+        void ExecuteProgressEvent(UInt32 bytesLoaded, UInt32 bytesTotal);  // 0x142498fa0
 
         // @0x14249ad90
         void addEventListener(const Value& result, const ASString&, const Value&, bool, SInt32, bool);
