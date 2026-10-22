@@ -1273,6 +1273,262 @@ namespace Classes { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+bool FUN_1425e4ad0(const char* pstr, unsigned len, Scaleform::String* presult);   // URI decode; false on a malformed escape
+void FUN_1425e3750(const char* pstr, unsigned len, Scaleform::String* presult);   // encodeURI escaping
+void FUN_1425e37c0(const char* pstr, unsigned len, Scaleform::String* presult);   // encodeURIComponent escaping
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl
+{
+    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
+    // @0x142427cf0
+    void GlobalObjectCPP::decodeURI(ASString& result, const ASString& uri)
+    {
+        String out;
+        if (!FUN_1425e4ad0(uri.ToCStr(), uri.GetSize(), &out))
+        {
+            GetVM().ThrowURIError(VM::Error(VM::eInvalidURIError, GetVM(), "decodeURI"));
+            return;
+        }
+        result = GetVM().GetStringManager().CreateString(out);
+    }
+
+    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
+    // @0x142427e00
+    void GlobalObjectCPP::decodeURIComponent(ASString& result, const ASString& uri)
+    {
+        String out;
+        if (!FUN_1425e4ad0(uri.ToCStr(), uri.GetSize(), &out))
+        {
+            GetVM().ThrowURIError(VM::Error(VM::eInvalidURIError, GetVM(), "decodeURI"));
+            return;
+        }
+        result = GetVM().GetStringManager().CreateString(out);
+    }
+
+    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
+    // @0x142428140
+    void GlobalObjectCPP::encodeURI(ASString& result, const ASString& uri)
+    {
+        String out;
+        FUN_1425e3750(uri.ToCStr(), uri.GetSize(), &out);
+        result = GetVM().GetStringManager().CreateString(out);
+    }
+
+    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
+    // @0x142428210
+    void GlobalObjectCPP::encodeURIComponent(ASString& result, const ASString& uri)
+    {
+        String out;
+        FUN_1425e37c0(uri.ToCStr(), uri.GetSize(), &out);
+        result = GetVM().GetStringManager().CreateString(out);
+    }
+
+    // @0x142428a80
+    void GlobalObjectCPP::getDefinitionByName(Value& result, const ASString& name)
+    {
+        Class* c = GetVM().GetClass(StringDataPtr(name.ToCStr()));
+        if (c)
+            result.Assign(c);
+        else
+            result.SetUndefined();
+    }
+
+    // @0x142428b70
+    void GlobalObjectCPP::getQualifiedClassName(ASString& result, const Value& v)
+    {
+        const InstanceTraits::Traits& itr = GetVM().GetInstanceTraits(v);
+        result = itr.GetQualifiedName();
+    }
+
+    // @0x142428be0
+    void GlobalObjectCPP::getQualifiedSuperclassName(Value& result, const Value& v)
+    {
+        const InstanceTraits::Traits& itr = GetVM().GetInstanceTraits(v);
+        if (itr.GetParent())
+            result.Assign(itr.GetParent()->GetQualifiedName());
+        else
+            result.SetNull();
+    }
+}} // namespace Instances::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances
+{
+    // @0x1424291d0
+    void ThunkFunction::length(Value& result, unsigned, const Value*)
+    {
+        const Value f(Function);
+        const ThunkInfo& ti = f.AsThunk();
+        unsigned n = ti.GetMaxArgNum();
+        if (n == 0x3ff)
+            n = ti.GetMinArgNum();
+        result.SetUInt32(n);
+    }
+} // namespace Instances
+
+namespace Classes { namespace fl
+{
+    // @0x142428b20
+    void Error::getErrorMessage(ASString& result, SInt32)
+    {
+        SF_UNUSED(result);
+        VM& vm = GetVM();
+        vm.ThrowError(VM::Error(VM::eNotImplementedError, vm, "class_::Error::getErrorMessage()"));
+    }
+}} // namespace Classes::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+void FUN_1424e6f90(const Scaleform::GFx::AS3::Class* cls, Scaleform::GFx::AS3::Object& obj);  // Class::AddConstructor: obj.constructor = cls
+void FUN_142511ac0(const Scaleform::GFx::AS3::Class* cls, Scaleform::GFx::AS3::Object& obj);  // adds the instance traits' vtable methods to the prototype
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e3a0[7];   // Classes::fl::Object prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e7f0[2];   // Classes::fl::Boolean prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6e8[1];   // Classes::fl::Error prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e690[2];   // Classes::fl::Namespace prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d850[6];   // Classes::fl::Number prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6a0[1];   // Classes::fl::QName prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d128[1];   // Classes::fl::RegExp prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e8e0[3];   // Classes::fl::XML prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d650[2];   // Classes::fl::XMLList prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e5a0[6];   // Classes::fl::int_ prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e700[6];   // Classes::fl::uint prototype methods
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Classes { namespace fl
+{
+    // The prototype methods: name -> thunk, not enumerable.
+    template <unsigned N>
+    static SF_INLINE void AddDynamicFuncs(AS3::Object& obj, const ThunkInfo (&f)[N])
+    {
+        for (unsigned i = 0; i < N; ++i)
+        {
+            const ThunkInfo& ti = f[i];
+            obj.AddDynamicSlotValuePair(obj.GetVM().GetStringManager().CreateConstString(ti.Name), Value(ti),
+                                        SlotInfo::aReadOnly);
+        }
+    }
+
+    // @0x142417f60
+    void Object::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313e3a0);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x142417a30
+    void Boolean::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313e7f0);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x142417b40
+    void Error::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313d6e8);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x142417d40
+    void Namespace::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313e690);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x142417e50
+    void Number::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313d850);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x142418070
+    void QName::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313d6a0);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x142418160
+    void RegExp::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        FUN_142511ac0(this, obj);
+        AddDynamicFuncs(obj, DAT_143a2d128);
+        // (no constructor slot: RegExp's prototype keeps its own)
+    }
+
+    // @0x142418390
+    void XML::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        FUN_142511ac0(this, obj);
+        AddDynamicFuncs(obj, DAT_14313e8e0);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x1424184b0
+    void XMLList::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        FUN_142511ac0(this, obj);
+        AddDynamicFuncs(obj, DAT_14313d650);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x1424185d0
+    void int_::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313e5a0);
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x1424186e0
+    void uint::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        AddDynamicFuncs(obj, DAT_14313e700);
+        FUN_1424e6f90(this, obj);
+    }
+}} // namespace Classes::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The out-of-line copies of the inline Value setters the exe keeps in this range.
+extern void (Value::* const ValueSetBool)(bool);
+void (Value::* const ValueSetBool)(bool) = &Value::SetBool;
+extern void (Value::* const ValueSetNull)();
+void (Value::* const ValueSetNull)() = &Value::SetNull;
+extern void (Value::* const ValueSetSInt32)(SInt32);
+void (Value::* const ValueSetSInt32)(SInt32) = &Value::SetSInt32;
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@JJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424133c0
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$08VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413510
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$09VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413530
@@ -1324,3 +1580,6 @@ namespace Classes { namespace fl
 // MS2-PIN: ?Func@?$ThunkFunc2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0CE@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@AEBV8456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142414910
 // MS2-PIN: ?Func@?$ThunkFunc2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0O@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142414a80
 // MS2-PIN: ?Func@?$ThunkFunc2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0P@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142414aa0
+// MS2-PIN: ?SetBool@Value@AS3@GFx@Scaleform@@QEAAX_N@Z 0x142421710
+// MS2-PIN: ?SetNull@Value@AS3@GFx@Scaleform@@QEAAXXZ 0x142421ed0
+// MS2-PIN: ?SetSInt32@Value@AS3@GFx@Scaleform@@QEAAXJ@Z 0x142423a90

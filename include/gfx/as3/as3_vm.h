@@ -90,7 +90,9 @@ public:
         eFunctionConstructorError   = 1066,
         eMathNotFunctionError       = 1075,
         eWriteSealedError           = 1056,
-        eMathNotConstructorError    = 1076
+        eMathNotConstructorError    = 1076,
+        // (appended, sfr17)
+        eInvalidURIError            = 1052
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).
@@ -149,6 +151,8 @@ public:
     CheckResult constructBuiltinObject(SPtr<Object>& pobj, const char* gname, unsigned argc, const Value* argv); // 0x142532130
     // The class object of the global class gname ("flash.geom.Vector3D"); NULL when there is none.
     Class* GetClass(const StringDataPtr& gname);    // 0x142507be0
+    // (appended, sfr17) the instance traits of v's type (the traits of the boxed class for primitives).
+    const InstanceTraits::Traits& GetInstanceTraits(const Value& v) const;  // 0x14250a900
 
     // (appended, sfr15) the class objects of the core classes (out of line; built on demand by the traits).
     Classes::fl::Array&   GetClassArray() const;      // 0x142507df0
