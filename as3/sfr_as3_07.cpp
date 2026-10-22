@@ -1059,6 +1059,65 @@ namespace Instances { namespace fl_display
     }
 }}
 
+namespace Instances { namespace fl_display
+{
+    // @0x14244c260
+    void InteractiveObject::focusRectSet(const Value& result, const Value& value)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pobj = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        if (!value.IsUndefined())
+            pobj->SetFocusRectFlag(value.Convert2Boolean());
+        else
+            pobj->Flags &= ~GFx::InteractiveObject::Mask_TabEnabled;   // the exe clears these bits, not Mask_FocusRect
+    }
+
+    // @0x142450b60
+    void MovieClip::nextFrame(const Value& result)
+    {
+        SF_UNUSED(result);
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        int loaded = psprite->GetLoadingFrame();
+        int frame = psprite->GetCurrentFrame();
+        if (frame < loaded)
+            psprite->GotoFrame(frame + 1);
+        psprite->SetPlayState(State_Stopped);
+    }
+}}
+
+namespace Instances { namespace fl_display
+{
+    // @0x1424484e0
+    void Bitmap::bitmapDataGet(SPtr<Instances::fl_display::BitmapData>& result)
+    {
+        result = pBitmapData;
+    }
+
+    // @0x1424490d0
+    void InteractiveObject::contextMenuGet(SPtr<Instances::fl::Object>& result)
+    {
+        result = pContextMenu;
+    }
+
+    // @0x14244ff20
+    void LoaderInfo::loaderGet(SPtr<Instances::fl_display::Loader>& result)
+    {
+        result = pLoader;
+    }
+
+    // @0x142448eb0
+    void DisplayObjectContainer::contains(bool& result, Instances::fl_display::DisplayObject* child)
+    {
+        if (!child)
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eNullPointerError, vm, "child"));
+            return;
+        }
+        result = static_cast<GFx::DisplayObjContainer*>(pDispObj.GetPtr())->Contains(child->pDispObj);
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$09K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455e90
