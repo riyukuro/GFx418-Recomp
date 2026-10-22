@@ -10,6 +10,8 @@
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/gfx_sharedobject.h"
+#include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
+#include "ms2/scaleform/include/kernel/sf_msgformat.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1687,6 +1689,173 @@ namespace Instances { namespace fl_net
             *reinterpret_cast<UInt64*>(reinterpret_cast<UByte*>(evt.GetPtr()) + 0x60) = bytesTotal;
             DispatchSingleEvent(evt, false);
         }
+    }
+
+    // Walks a shared object's data tree into a SharedObjectVisitor (SharedObject.flush). Each object is written
+    // once: VisitedObjects stops the walk at objects already seen.
+    struct SharedObjectDataWriter
+    {
+        typedef HashUncached<AS3::Object*, AS3::Object*,
+                             IdentityHash<AS3::Object*> > ObjectSet;
+
+        ObjectSet            VisitedObjects;    // +0x00
+        VM&                  VMRef;             // +0x08
+        SharedObjectVisitor* pWriter;           // +0x10
+
+        SharedObjectDataWriter(VM& vm, SharedObjectVisitor* pwriter) : VMRef(vm), pWriter(pwriter) {}
+
+        static bool IsArray(const AS3::Object* pobj)
+        {
+            const Traits& tr = pobj->GetTraits();
+            return tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits();
+        }
+
+        void VisitMembers(AS3::Object* pobj);
+        void Visit(const String& name, const Value& val);
+    };
+
+    // @0x14249aa50
+    void SharedObjectDataWriter::VisitMembers(AS3::Object* pobj)
+    {
+        if (IsArray(pobj))
+        {
+            const Instances::fl::Array* parr = static_cast<const Instances::fl::Array*>(pobj);
+            const UInt32 size = static_cast<UInt32>(parr->GetSize());
+            for (unsigned i = 0; i < size; ++i)
+            {
+                const Value& v = parr->At(i);
+                String name;
+                Format(name, "{0}", i);
+                Visit(name, v);
+            }
+        }
+        else
+        {
+            const AS3::Object::DynAttrsType* pmembers = pobj->GetDynamicAttrs();
+            if (pmembers)
+            {
+                for (AS3::Object::DynAttrsType::ConstIterator it = pmembers->Begin(); !it.IsEnd(); ++it)
+                {
+                    const ASString& name = it->First.Name;
+                    Visit(String(name.ToCStr(), name.GetLength()), it->Second);
+                }
+            }
+        }
+    }
+
+    // @0x14249a5c0
+    void SharedObjectDataWriter::Visit(const String& name, const Value& val)
+    {
+        switch (val.GetKind())
+        {
+        case Value::kNumber:
+            {
+                DoubleFormatter f(val.AsNumber());
+                f.Convert();
+                const String value(f, f.GetSize());
+                pWriter->AddProperty(name, value, GFx::Value::VT_Number);
+            }
+            break;
+        case Value::kInt:
+            {
+                LongFormatter f(static_cast<long>(val.AsInt()));
+                f.Convert();
+                const String value(f, f.GetSize());
+                pWriter->AddProperty(name, value, GFx::Value::VT_Int);
+            }
+            break;
+        case Value::kUInt:
+            {
+                LongFormatter f(static_cast<long>(val.AsInt()));
+                f.Convert();
+                const String value(f, f.GetSize());
+                pWriter->AddProperty(name, value, GFx::Value::VT_Int);
+            }
+            break;
+        case Value::kString:
+            {
+                const String value(val.AsString().ToCStr());
+                pWriter->AddProperty(name, value, GFx::Value::VT_String);
+            }
+            break;
+        case Value::kUndefined:
+            {
+                const String value("");
+                pWriter->AddProperty(name, value, GFx::Value::VT_Undefined);
+            }
+            break;
+        case Value::kBoolean:
+            {
+                const String value(val.AsBool() ? "true" : "false");
+                pWriter->AddProperty(name, value, GFx::Value::VT_Boolean);
+            }
+            break;
+        case Value::kObject:
+            if (val.IsNull())
+            {
+                const String value("");
+                pWriter->AddProperty(name, value, GFx::Value::VT_Null);
+            }
+            else
+            {
+                AS3::Object* pobj = val.GetObject();
+                if (VisitedObjects.Get(pobj) == NULL)
+                {
+                    VisitedObjects.Add(pobj, pobj);
+                    const Traits& tr = pobj->GetTraits();
+                    if (tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits())
+                    {
+                        pWriter->PushArray(name);
+                        VisitMembers(pobj);
+                        pWriter->PopArray();
+                    }
+                    else
+                    {
+                        pWriter->PushObject(name);
+                        VisitMembers(pobj);
+                        pWriter->PopObject();
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    // @0x142499080
+    bool SharedObject::FlushImpl(SharedObjectVisitor* pwriter)
+    {
+        if (!pwriter)
+            return false;
+        AS3::Object* pdata = Data;
+        SharedObjectDataWriter writer(GetVM(), pwriter);
+        pwriter->Begin();
+        writer.VisitMembers(pdata);
+        pwriter->End();
+        return true;
+    }
+
+    // SharedObject errors (VM error 1501).
+    static const VM::ErrorID SharedObjectError = static_cast<VM::ErrorID>(1501);
+
+    // @0x14249b4f0
+    void SharedObject::flush(ASString& result, SInt32 /*minDiskSpace*/)
+    {
+        VM& vm = GetVM();
+        MovieImpl* proot = static_cast<ASVM&>(vm).GetMovieImpl();
+        Ptr<SharedObjectManagerBase> psomgr =
+            *static_cast<SharedObjectManagerBase*>(proot->GetStateBag()->GetStateAddRef(State::State_SharedObject));
+        if (psomgr)
+        {
+            Ptr<SharedObjectVisitor> pwriter = *psomgr->CreateWriter(Name, LocalPath, proot->GetStateBag()->GetFileOpener());
+            if (FlushImpl(pwriter))
+                result = vm.GetStringManager().CreateConstString("flushed");
+            else
+                vm.ThrowError(VM::Error(SharedObjectError, vm, "Unable to flush shared object data!"));
+        }
+        else
+            vm.ThrowError(VM::Error(SharedObjectError, vm, "SharedObjectManager state is not installed!"));
     }
 }}
 
