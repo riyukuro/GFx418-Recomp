@@ -9,6 +9,15 @@
 #include "ms2/scaleform/include/gfx/gfx_sprite.h"
 #include "ms2/scaleform/include/render/render_shapedata.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
+#include "ms2/scaleform/include/gfx/gfx_movieslots.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
+
+// Bodies of the exe called here (not recovered yet), by their addresses.
+// The movie whose library an AS3 object's class came from.
+Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
+// VM::IsOfType(v, class name).
+bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -84,9 +93,17 @@ template struct ThunkFunc0<Class, 2, ASString>;
 namespace Instances { namespace fl_gfx
 {
     // @0x1424c9d30
-    void GamePadAnalogEvent::clone(SPtr<Instances::fl_events::Event>& result)
+    SF_NOINLINE void GamePadAnalogEvent::clone(SPtr<Instances::fl_events::Event>& result)
     {
         result = Clone().GetPtr();
+    }
+
+    // @0x1424c9d10
+    SPtr<Instances::fl_events::Event> GamePadAnalogEvent::clone()
+    {
+        SPtr<Instances::fl_events::Event> result;
+        clone(result);
+        return result;
     }
 }}
 
@@ -104,6 +121,14 @@ namespace Classes { namespace fl_gfx
         }
     }
 
+    // @0x1424cb680
+    void Extensions::numControllersGet(UInt32& result)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        if (vm.ExtensionsEnabled)
+            result = AsMovieSlots(vm.GetMovieImpl())->GetControllerCount();
+    }
+
     // @0x1424cb7c0
     void Extensions::setEdgeAAMode(const Value& result, Instances::fl_display::DisplayObject* dobj, UInt32 mode)
     {
@@ -119,8 +144,96 @@ namespace Classes { namespace fl_gfx
     }
 }}
 
+namespace Classes { namespace fl_gfx
+{
+    // @0x1424ca860
+    void FocusManager::getControllerFocusGroup(UInt32& result, UInt32 controllerIdx)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        if (vm.ExtensionsEnabled)
+        {
+            result = AsMovieSlots(vm.GetMovieImpl())->GetControllerFocusGroup(controllerIdx);
+            return;
+        }
+        result = 0;
+    }
+
+    // @0x1424ca8b0
+    void FocusManager::getControllerMaskByFocusGroup(UInt32& result, UInt32 focusGroupIdx)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        if (vm.ExtensionsEnabled)
+        {
+            result = vm.GetMovieImpl()->GetControllerMaskByFocusGroup(focusGroupIdx);
+            return;
+        }
+        result = 0;
+    }
+
+    // @0x1424cab30
+    void FocusManager::getFocusGroupMask(UInt32& result, Instances::fl_display::InteractiveObject* obj)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        if (vm.ExtensionsEnabled)
+            result = static_cast<GFx::InteractiveObject*>(obj->pDispObj.GetPtr())->GetFocusGroupMask();
+    }
+
+    // @0x1424cb770
+    void FocusManager::setControllerFocusGroup(bool& result, UInt32 controllerIdx, UInt32 focusGroupIdx)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        if (vm.ExtensionsEnabled)
+        {
+            result = AsMovieSlots(vm.GetMovieImpl())->SetControllerFocusGroup(controllerIdx, focusGroupIdx);
+            return;
+        }
+        result = false;
+    }
+}}
+
 namespace Instances { namespace fl_media
 {
+    // @0x1424d18c0
+    void Sound::bytesLoadedGet(UInt32& result)
+    {
+        result = 0;
+        if (pSoundObject)
+            result = pSoundObject->GetBytesLoaded();
+    }
+
+    // @0x1424d18f0
+    void Sound::bytesTotalGet(SInt32& result)
+    {
+        result = 0;
+        if (pSoundObject)
+            result = pSoundObject->GetBytesTotal();
+    }
+
+    // @0x1424d1920
+    void Sound::close(const Value& result)
+    {
+        SF_UNUSED(result);
+        if (pSoundObject)
+        {
+            pSoundObject->Stop();
+            pSoundObject = NULL;
+        }
+    }
+
+    void Sound::id3Get(SPtr<Instances::fl_media::ID3Info>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Sound::id3Get() is not implemented\n");
+    }
+
+    // @0x1424d1960
+    SPtr<Instances::fl_media::ID3Info> Sound::id3Get()
+    {
+        SPtr<Instances::fl_media::ID3Info> result;
+        id3Get(result);
+        return result;
+    }
+
     // @0x1424d1a80
     void Sound::lengthGet(Value::Number& result)
     {
@@ -503,6 +616,12 @@ namespace InstanceTraits { namespace fl_media
         SetMemSize(0x78);
     }
 
+    // @0x1424d1700
+    void Sound::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
     // @0x1424cf980
     SoundChannel::SoundChannel(VM& vm, const ClassInfo& ci)
         : CTraits(vm, ci)
@@ -556,6 +675,66 @@ namespace Instances { namespace fl_media
         , track(GetVM().GetStringManager().CreateEmptyString())
         , year(GetVM().GetStringManager().CreateEmptyString())
     {
+    }
+
+    // @0x1424cf830
+    Sound::Sound(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+        Streaming = false;
+    }
+
+    // @0x1424d0fa0
+    void Sound::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Instances::fl_events::EventDispatcher::ForEachChild_GC(prcc, op);
+        // the exe's GC ops take the owner as a third argument
+        typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const ASRefCountBaseType** pchild,
+                                      const ASRefCountBaseType& owner);
+        if (pChannel.GetPtr())
+            reinterpret_cast<GcOpWithOwner>(op)(prcc, const_cast<const ASRefCountBaseType**>(
+                                                          reinterpret_cast<ASRefCountBaseType**>(pChannel.GetRawPtr())), *this);
+    }
+
+    // @0x1424d0820
+    void Sound::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        pSoundObject = *SF_HEAP_NEW(AsMovieSlots(vm.GetMovieImpl())->GetHeap()) SoundObject(vm, this);
+        if (pResource)
+            pSoundObject->AttachResource(pResource);
+        if (argc >= 1 && FUN_1425145d0(vm, argv[0], "flash.net.URLRequest"))
+        {
+            Instances::fl_net::URLRequest* stream = static_cast<Instances::fl_net::URLRequest*>(argv[0].GetObject());
+            Instances::fl_media::SoundLoaderContext* context = NULL;
+            if (argc > 1 && FUN_1425145d0(vm, argv[1], "flash.media.SoundLoaderContext"))
+                context = static_cast<Instances::fl_media::SoundLoaderContext*>(argv[1].GetObject());
+            Value result;
+            load(result, stream, context);
+        }
+    }
+
+    // MS2-FUNCTIONAL: same control flow; the exe keeps found inverted and allocates the name/symbol stack slots the other way round
+    // @0x1424d1130
+    void Sound::InitInstance(bool extCall)
+    {
+        if (extCall || pResource)
+            return;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
+        if (!pdefImpl || !GetTraits().IsAbcObject())
+            return;
+        bool found;
+        ASString name = GetTraits().GetQualifiedName(Traits::qnfWithDot);
+        ResourceBindData data;
+        {
+            String symbol(name.ToCStr());
+            found = vm.GetMovieImpl()->FindExportedResource(pdefImpl, &data, symbol);
+        }
+        if (!found)
+            return;
+        if (data.pResource && (data.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_SoundSample)))
+            pResource = static_cast<SoundResource*>(data.pResource.GetPtr());
     }
 
     // @0x1424cf9b0
@@ -774,6 +953,7 @@ template ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 2>, ArrayDefaul
 // MS2-PIN: ??_7Microphone@fl_media@Classes@AS3@GFx@Scaleform@@6B@ 0x1431784a8
 // MS2-PIN: ??_7SoundMixer@fl_media@Classes@AS3@GFx@Scaleform@@6B@ 0x143178fc0
 // MS2-PIN: ??_7ID3Info@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178220
+// MS2-PIN: ??_7Sound@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x1431787a0
 // MS2-PIN: ??_7SoundChannel@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178998
 // MS2-PIN: ??_7SoundLoaderContext@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178ba8
 // MS2-PIN: ??_7SoundTransform@fl_media@Instances@AS3@GFx@Scaleform@@6B@ 0x143178590
@@ -816,3 +996,4 @@ template ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 2>, ArrayDefaul
 // MS2-PIN: ??_GXMLDocument@fl_xml@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424cd6a0
 // MS2-PIN: ??_GXMLNode@fl_xml@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424cd8e0
 // MS2-PIN: ??_GXMLDocument@fl_xml@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424cd700
+// MS2-PIN: ??_GSound@fl_media@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424d0260

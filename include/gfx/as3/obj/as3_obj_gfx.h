@@ -41,6 +41,7 @@ namespace Instances { namespace fl_gfx {
 
         // @0x1424c9d30
         void clone(SPtr<Instances::fl_events::Event>& result);
+        SPtr<Instances::fl_events::Event> clone();   // 0x1424c9d10 (sfr17)
         // @0x1424c9dc0
         void codeGet(UInt32& result);
         // @0x1424c9dd0

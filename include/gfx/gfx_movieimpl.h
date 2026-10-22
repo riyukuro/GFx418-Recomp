@@ -283,6 +283,11 @@ public:
     void                SetMultitouchInputMode(MultitouchInputMode);
     unsigned            GetMaxTouchPoints() const;
     UInt32              GetSupportedGesturesMask() const;
+
+    // (appended for the AS3 FocusManager, sfr17) the controllers of focus group focusGroupIdx, one bit each.
+    UInt32 GetControllerMaskByFocusGroup(unsigned focusGroupIdx);   // exe 0x14256f050
+    // (appended for the AS3 Sound, sfr17) the resource exported from pdefImpl's library as symbol.
+    bool FindExportedResource(MovieDefImpl* pdefImpl, struct ResourceBindData* pdata, const String& symbol);   // exe 0x14256ec50
 };
 
 // The leading Movie vftable slots, for the virtual calls MovieImpl makes on itself (GetVisibleFrameRect).

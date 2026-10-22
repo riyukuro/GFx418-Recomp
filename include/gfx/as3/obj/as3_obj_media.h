@@ -27,12 +27,17 @@ namespace Instances { namespace fl_media {
         ASString    year;       // +0x68
     };
 
-    // MS2-FUNCTIONAL: the +0x58 and +0x70 members are untyped (only their null initialisation is known)
     // Instance of flash.media.Sound. 0x78 bytes, vftable 0x1431787a0.
     class Sound : public Instances::fl_events::EventDispatcher
     {
     public:
-        Sound(InstanceTraits::Traits& t);
+        Sound(InstanceTraits::Traits& t);                                   // 0x1424cf830
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_media::Sound"; }
+        virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424d0820
+        virtual void InitInstance(bool extCall = false);                    // 0x1424d1130
+    protected:
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;       // 0x1424d0fa0
+    public:
         // @0x1424d18c0
         void bytesLoadedGet(UInt32& result);
         // @0x1424d18f0
@@ -41,6 +46,7 @@ namespace Instances { namespace fl_media {
         void close(const Value& result);
         // @0x1424d19a0
         void id3Get(SPtr<Instances::fl_media::ID3Info>& result);
+        SPtr<Instances::fl_media::ID3Info> id3Get();   // 0x1424d1960 (sfr17)
         // @0x1424d19c0
         void isBufferingGet(bool& result);
         // @0x1424d1a80
@@ -53,10 +59,10 @@ namespace Instances { namespace fl_media {
         void urlGet(ASString& result);
 
         Ptr<SoundObject>    pSoundObject;   // +0x50
-        void*               pSoundResource; // +0x58 (Ptr<SoundResource>; not used here)
+        Ptr<SoundResource>  pResource;      // +0x58 the library sound of an exported Sound subclass
         String              SoundURL;       // +0x60
         bool                Streaming;      // +0x68
-        void*               pUnknown70;     // +0x70
+        SPtr<Instances::fl_media::SoundChannel> pChannel;   // +0x70 the channel of the last play()
     };
 
     // Instance of flash.media.SoundChannel.
