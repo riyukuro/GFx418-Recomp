@@ -31,6 +31,27 @@ template struct ThunkFunc2<Classes::fl_external::ExternalInterface, 5, Value, un
 // Is a value of type `className` (its class looked up by name in the VM; 0x1425145d0).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 
+namespace Scaleform { namespace GFx {
+
+// The script error channel of a log state, only with verbose action errors.
+// @0x14246a960
+template<>
+void LogBase<LogState>::LogScriptError(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    LogState* p = (LogState*)this;
+    if (p->P_IsVerboseActionErrors())
+    {
+        Log* plog = p->GetLog();
+        if (p->IsLogNotNull() || plog)
+            plog->LogMessageVarg(LogChannel_Script | LogMessage_Error, pfmt, argList);
+    }
+    va_end(argList);
+}
+
+}} // namespace Scaleform::GFx
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // @0x14246c440
@@ -1779,6 +1800,268 @@ namespace Instances { namespace fl_events {
     SPtr<Instances::fl_events::Event> EventDispatcher::CreateProgressEventObject(const ASString& type)
     {
         return GetDispatcherClass(*this).CreateProgressEventObject(type);
+    }
+}} // namespace Instances::fl_events
+
+// ---- collector visits ---------------------------------------------------------------------------------------------
+
+// Visits the collectable a value holds (0x142504530).
+void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                              ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner);
+
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (v.IsGarbageCollectable() && !v.IsWeakRef())
+        ForEachChild_GC_Internal(prcc, v, op, owner);
+}
+
+// The exe passes the owner as a third argument to every GcOp (r8); the shared GcOp typedef has two.
+typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const ASRefCountBaseType** pchild,
+                              const ASRefCountBaseType& owner);
+SF_INLINE void CallGcOp(ASRefCountBaseType::GcOp op, RefCountCollector<StatMV_ActionScript_Mem>* prcc,
+                        const ASRefCountBaseType** pchild, const ASRefCountBaseType& owner)
+{
+    reinterpret_cast<GcOpWithOwner>(op)(prcc, pchild, owner);
+}
+
+// Visits a counted pointer member.
+template <class T>
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const SPtr<T>& p,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (p.GetPtr())
+        CallGcOp(op, prcc, const_cast<const ASRefCountBaseType**>(reinterpret_cast<ASRefCountBaseType**>(p.GetRawPtr())), owner);
+}
+
+namespace Instances { namespace fl_events {
+
+    // @0x142469380
+    void Event::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        AS3::Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, CurrentTarget, op, *this);
+        AS3::ForEachChild_GC(prcc, Target, op, *this);
+    }
+
+    // @0x142469300
+    void AppLifecycleEvent::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Event::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, Status, op, *this);
+    }
+
+    // @0x1424694b0
+    void FocusEvent::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        AS3::Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, RelatedObj, op, *this);
+    }
+
+    // @0x1424697a0
+    void MouseEvent::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        AS3::Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, RelatedObj, op, *this);
+    }
+
+    // @0x1424697e0
+    void StageOrientationEvent::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Event::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, BeforeOrientation, op, *this);
+        AS3::ForEachChild_GC(prcc, AfterOrientation, op, *this);
+    }
+
+    // @0x142469880
+    void TouchEvent::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        AS3::Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, RelatedObj, op, *this);
+    }
+
+    // The listener functions of one table. Outside the VM's destructor, weak listeners whose function was collected
+    // are dropped here (with the event chain and button count bookkeeping of removeEventListener).
+    // @0x1424694f0
+    // MS2-FUNCTIONAL: register allocation and block layout of the two listener loops
+    static __declspec(noinline) void ForEachListener_GC(EventDispatcher::ListenersHash& hash,
+                                                        RefCountCollector<StatMV_ActionScript_Mem>* prcc,
+                                                        ASRefCountBaseType::GcOp op, const VM& vm,
+                                                        EventDispatcher& owner, bool useCapture)
+    {
+        for (EventDispatcher::ListenersHash::Iterator it = hash.Begin(); it != hash.End(); ++it)
+        {
+            ArrayLH<EventDispatcher::Listener>* listeners = (*it).Second;
+            if (!listeners)
+                continue;
+            UPInt n = listeners->GetSize();
+            if (!vm.InDestructor)
+            {
+                for (UPInt i = 0; i < n; )
+                {
+                    if ((*listeners)[i].Function.IsValidWeakRef())
+                    {
+                        AS3::ForEachChild_GC(prcc, (*listeners)[i].Function, op, owner);
+                        ++i;
+                    }
+                    else
+                    {
+                        listeners->RemoveAt(i);
+                        --n;
+                        OnListenerRemoved(&owner, (*it).First, useCapture, n);
+                    }
+                }
+            }
+            else
+            {
+                for (UPInt i = 0; i < n; ++i)
+                    if ((*listeners)[i].Function.IsValidWeakRef())
+                        AS3::ForEachChild_GC(prcc, (*listeners)[i].Function, op, owner);
+            }
+        }
+    }
+
+    // @0x142469440
+    void EventDispatcher::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        AS3::Object::ForEachChild_GC(prcc, op);
+        if (pImpl)
+        {
+            EventDispatcher& self = const_cast<EventDispatcher&>(*this);
+            ForEachListener_GC(pImpl->CaptureListeners, prcc, op, *pVM, self, true);
+            ForEachListener_GC(pImpl->Listeners, prcc, op, *pVM, self, false);
+        }
+    }
+
+}} // namespace Instances::fl_events
+
+namespace Classes { namespace fl_events {
+    // @0x1424693e0
+    void EventDispatcher::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Class::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, Unk50, op, *this);
+        AS3::ForEachChild_GC(prcc, Unk58, op, *this);
+    }
+}} // namespace Classes::fl_events
+
+namespace Instances { namespace fl_events {
+    // ---- dispatch helpers -------------------------------------------------------------------------------------------
+
+    // @0x142468740
+    bool EventDispatcher::DispatchEventObject(Instances::fl_events::Event* evt, GFx::DisplayObject* dobj)
+    {
+        evt->Target = this;
+        Dispatch(evt, dobj);
+        return !evt->DefaultPrevented;
+    }
+
+    // The log of the VM's movie (0x14246a100).
+    // @0x14246a100
+    static __declspec(noinline) LogState* GetVMLogState(VM& vm)
+    {
+        return static_cast<ASVM&>(vm).GetMovieImpl()->GetStateBag()->GetLogState();
+    }
+
+    // @0x142468e60
+    // MS2-FUNCTIONAL: cl keeps the new event in another register; the same calls and tests
+    bool EventDispatcher::DispatchTypeToTarget(const ASString& type, Instances::fl::Object* target, bool inCapturePhase,
+                                               GFx::DisplayObject* dobj)
+    {
+        if (!pImpl)
+            return true;
+        VM& vm = GetVM();
+        if (vm.HandleException)
+        {
+            if (static_cast<ASVM&>(vm).GetMovieImpl()->GetStateBag()->GetLogState())
+                GetVMLogState(vm)->LogScriptError("Can't dispatch '%s' - exception is not cleared", type.ToCStr());
+            return true;
+        }
+        SPtr<Instances::fl_events::Event> evt = GetDispatcherClass(*this).CreateEventObject(type, false, false);
+        evt->Target = target;
+        evt->CurrentTarget = target;
+        if (!DispatchSingleEvent(evt.GetPtr(), inCapturePhase) && dobj)
+            dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+        return !evt->DefaultPrevented;
+    }
+
+    // @0x1424691d0
+    bool EventDispatcher::ExecuteBubblePhase(Instances::fl_events::Event* evt,
+                                             ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain)
+    {
+        evt->Phase = 3;
+        for (UPInt i = 0, n = chain.GetSize(); i < n; ++i)
+        {
+            if (!chain[i]->DispatchSingleEvent(evt, false))
+            {
+                if (chain[i]->pDispObj)
+                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                return false;
+            }
+            if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                return false;
+        }
+        return true;
+    }
+
+    // @0x142469260
+    bool EventDispatcher::ExecuteCapturePhase(Instances::fl_events::Event* evt,
+                                              ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain)
+    {
+        evt->Phase = 1;
+        for (SPInt i = (SPInt)chain.GetSize() - 1; i >= 0; --i)
+        {
+            if (!chain[i]->DispatchSingleEvent(evt, true))
+            {
+                if (chain[i]->pDispObj)
+                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                return false;
+            }
+            if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                return false;
+        }
+        return true;
+    }
+
+    // ---- simple properties ------------------------------------------------------------------------------------------
+
+    // @0x14246f880
+    // MS2-FUNCTIONAL: the exe's counted pointer assignment releases the old value inline (leaf); cl calls out
+    void Event::targetGet(SPtr<Instances::fl::Object>& result)
+    {
+        result = Target;
+    }
+
+    // @0x142472d20
+    void Event::typeGet(ASString& result)
+    {
+        result = Type;
+    }
+
+    // @0x14246f920
+    void TextEvent::textGet(ASString& result)
+    {
+        result = Text;
+    }
+
+    // @0x14246f9a0
+    void TextEvent::textSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        Text = value;
+    }
+
+    // @0x14246f8e0
+    void IOErrorEvent::textGet(ASString& result)
+    {
+        result = ErrorText;
+    }
+
+    // @0x14246f960
+    void IOErrorEvent::textSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        ErrorText = value;
     }
 }} // namespace Instances::fl_events
 

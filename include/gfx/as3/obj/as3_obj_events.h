@@ -91,6 +91,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424664e0
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424653f0
+        // (appended, sfr_as3_09) the Event children and Status
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x142469300
     };
 
     // 0x60 bytes. The constructor is bound to the exe.
@@ -194,6 +196,18 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_events::Event> CreateNetStatusEventObject(const ASString& code,
                                                                      const ASString& level);  // 0x142467b50
         SPtr<Instances::fl_events::Event> CreateProgressEventObject(const ASString& type);    // 0x142467dc0
+        // (appended, sfr_as3_09) evt with this dispatcher as its target through Dispatch; false if it was prevented
+        bool DispatchEventObject(Instances::fl_events::Event* evt, GFx::DisplayObject* dobj);  // 0x142468740
+        // (appended, sfr_as3_09) a new plain event of type at target, to this dispatcher's listeners only; false if
+        // it was prevented. With an exception pending nothing is dispatched (logged).
+        bool DispatchTypeToTarget(const ASString& type, Instances::fl::Object* target, bool inCapturePhase,
+                                  GFx::DisplayObject* dobj);                                  // 0x142468e60
+        // (appended, sfr_as3_09) the bubble (parent up) and capture (root down) phases over a parent chain; false
+        // when a listener aborted or the propagation was stopped
+        bool ExecuteBubblePhase(Instances::fl_events::Event* evt,
+                                ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain);   // 0x1424691d0
+        bool ExecuteCapturePhase(Instances::fl_events::Event* evt,
+                                 ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain);  // 0x142469260
     };
 
     // One registered listener (0x28 bytes): the function value and the addEventListener options.
@@ -643,6 +657,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424669f0
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465c10
+        // (appended, sfr_as3_09) the Event children and both orientations
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x1424697e0
     };
 
     // 0x58 bytes. The constructor is defined in sfr_as3_08.
@@ -764,6 +780,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466a90
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465cd0
+        // (appended, sfr_as3_09) RelatedObj (the Event children are not visited)
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x142469880
     };
 
     // 0xc8 bytes. The constructor is defined in sfr_as3_08.
