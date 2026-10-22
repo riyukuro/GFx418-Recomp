@@ -5,6 +5,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142497a90-0x1424a9ed0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "GFx/IME/GFx_IMEManager.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -416,6 +418,442 @@ template struct ThunkFunc0<Instances::fl_text::TextField, 14, SInt32>;
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+
+// ==== flash.system: natives of the class objects ====================================================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Classes { namespace fl_system
+{
+    // The IME of the movie: the host installs it as the movie's IMEManager state; NULL without IME support.
+
+    // @0x1424a00b0
+    void IME::conversionModeGet(ASString& result)
+    {
+        Ptr<IMEManagerBase> pime = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetIMEManager();
+        result = "UNKNOWN";
+        if (pime)
+            result = pime->GetConversionMode();
+    }
+
+    // @0x1424a0120
+    void IME::conversionModeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        Ptr<IMEManagerBase> pime = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetIMEManager();
+        if (pime)
+        {
+            const char* mode = value.ToCStr();
+            UInt32 convMode = !strcmp(mode, "ALPHANUMERIC_HALF");
+            if (!strcmp(mode, "JAPANESE_HIRAGANA"))
+                convMode = 4;
+            if (!strcmp(mode, "JAPANESE_KATAKANA_FULL"))
+                convMode = 8;
+            if (!strcmp(mode, "JAPANESE_KATAKANA_HALF"))
+                convMode = 0x16;
+            pime->SetConversionMode(convMode);
+        }
+    }
+
+    // @0x1424a0230
+    void IME::enabledGet(bool& result)
+    {
+        Ptr<IMEManagerBase> pime = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetIMEManager();
+        if (pime)
+            result = pime->GetEnabled();
+    }
+
+    // @0x1424a0290
+    void IME::enabledSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        Ptr<IMEManagerBase> pime = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetIMEManager();
+        if (pime)
+            pime->SetEnabled(value);
+    }
+
+    // @0x1424a0570
+    void Capabilities::hasIMEGet(bool& result)
+    {
+        if (static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetIMEManager())
+            result = true;
+        else
+            result = false;
+    }
+
+    // @0x1424a0730
+    void Capabilities::manufacturerGet(ASString& result)
+    {
+        result = "Scaleform ";
+        ASString os = GetVM().GetStringManager().CreateEmptyString();
+        os = "Windows";     // osGet, inlined
+        result.Append(os);
+    }
+
+    // @0x1424a0820
+    void Capabilities::playerTypeGet(ASString& result)
+    {
+        result = GetVM().GetStringManager().CreateConstString("StandAlone");
+    }
+
+    // @0x1424a0990
+    void System::totalMemoryGet(UInt32& result)
+    {
+        result = static_cast<UInt32>(Memory::pGlobalHeap->GetTotalFootprint());
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+// ==== flash.system: class traits, instance traits, classes and instances ===========================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Native class descriptors (data of the exe, with the thunk and member tables).
+namespace fl_system
+{
+    extern const ClassInfo ApplicationDomainCI;
+    extern const ClassInfo CapabilitiesCI;
+    extern const ClassInfo IMECI;
+    extern const ClassInfo IMEConversionModeCI;
+    extern const ClassInfo LoaderContextCI;
+    extern const ClassInfo SecurityCI;
+    extern const ClassInfo SecurityDomainCI;
+    extern const ClassInfo SecurityPanelCI;
+    extern const ClassInfo SystemCI;
+}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249d0a0
+    Pickable<Traits> Capabilities::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Capabilities(vm));
+    }
+
+    // @0x14249d480
+    Pickable<Traits> IME::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IME(vm));
+    }
+
+    // @0x14249d910
+    Pickable<Traits> IMEConversionMode::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IMEConversionMode(vm));
+    }
+
+    // @0x14249dab0
+    Pickable<Traits> SecurityDomain::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SecurityDomain(vm));
+    }
+
+    // @0x14249dc00
+    Pickable<Traits> LoaderContext::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) LoaderContext(vm));
+    }
+
+    // @0x14249dd40
+    Pickable<Traits> Security::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Security(vm));
+    }
+
+    // @0x14249df60
+    Pickable<Traits> SecurityPanel::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SecurityPanel(vm));
+    }
+
+    // @0x14249e0f0
+    Pickable<Traits> System::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) System(vm));
+    }
+
+    // @0x14249e480
+    Pickable<Traits> ApplicationDomain::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ApplicationDomain(vm));
+    }
+
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249e5c0
+    ApplicationDomain::ApplicationDomain(VM& vm)
+        : Traits(vm, AS3::fl_system::ApplicationDomainCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_system::ApplicationDomain(
+            vm, AS3::fl_system::ApplicationDomainCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_system
+{
+    // @0x14249e6c0
+    ApplicationDomain::ApplicationDomain(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_system
+{
+    // @0x14249e6f0
+    ApplicationDomain::ApplicationDomain(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249e720
+    Capabilities::Capabilities(VM& vm)
+        : Traits(vm, AS3::fl_system::CapabilitiesCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_system::CapabilitiesCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_system::Capabilities(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x14249e800
+    Capabilities::Capabilities(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249e830
+    IME::IME(VM& vm)
+        : Traits(vm, AS3::fl_system::IMECI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_system::IMECI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_system::IME(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x14249e910
+    IME::IME(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249e940
+    IMEConversionMode::IMEConversionMode(VM& vm)
+        : Traits(vm, AS3::fl_system::IMEConversionModeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_system::IMEConversionModeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_system::IMEConversionMode(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x14249ea80
+    IMEConversionMode::IMEConversionMode(ClassTraits::Traits& t)
+        : Class(t),
+          ALPHANUMERIC_FULL("ALPHANUMERIC_FULL"), ALPHANUMERIC_HALF("ALPHANUMERIC_HALF"), CHINESE("CHINESE"),
+          JAPANESE_HIRAGANA("JAPANESE_HIRAGANA"), JAPANESE_KATAKANA_FULL("JAPANESE_KATAKANA_FULL"),
+          JAPANESE_KATAKANA_HALF("JAPANESE_KATAKANA_HALF"), KOREAN("KOREAN"), UNKNOWN("UNKNOWN")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249eb00
+    LoaderContext::LoaderContext(VM& vm)
+        : Traits(vm, AS3::fl_system::LoaderContextCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_system::LoaderContext(
+            vm, AS3::fl_system::LoaderContextCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_system
+{
+    // @0x14249ec00
+    LoaderContext::LoaderContext(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_system
+{
+    // @0x14249ec30
+    LoaderContext::LoaderContext(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , allowLoadBytesCodeExecution(false), checkPolicyFile(false)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249ec70
+    Security::Security(VM& vm)
+        : Traits(vm, AS3::fl_system::SecurityCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_system::SecurityCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_system::Security(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x14249ed90
+    Security::Security(ClassTraits::Traits& t)
+        : Class(t),
+          APPLICATION("application"), LOCAL_TRUSTED("localTrusted"), LOCAL_WITH_FILE("localWithFile"),
+          LOCAL_WITH_NETWORK("localWithNetwork"), REMOTE("remote")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249edf0
+    SecurityDomain::SecurityDomain(VM& vm)
+        : Traits(vm, AS3::fl_system::SecurityDomainCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_system::SecurityDomain(
+            vm, AS3::fl_system::SecurityDomainCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_system::SecurityDomain(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_system
+{
+    // @0x14249ef20
+    SecurityDomain::SecurityDomain(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_system
+{
+    // @0x14249ef50
+    SecurityDomain::SecurityDomain(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+    {
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x14249eef0
+    SecurityDomain::SecurityDomain(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249ef80
+    SecurityPanel::SecurityPanel(VM& vm)
+        : Traits(vm, AS3::fl_system::SecurityPanelCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_system::SecurityPanelCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_system::SecurityPanel(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x14249f0b0
+    SecurityPanel::SecurityPanel(ClassTraits::Traits& t)
+        : Class(t),
+          CAMERA("camera"), DEFAULT("default"), DISPLAY("display"), LOCAL_STORAGE("localStorage"),
+          MICROPHONE("microphone"), PRIVACY("privacy"), SETTINGS_MANAGER("settingsManager")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_system
+{
+    // @0x14249f130
+    System::System(VM& vm)
+        : Traits(vm, AS3::fl_system::SystemCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_system::SystemCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_system::System(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x14249f220
+    System::System(ClassTraits::Traits& t)
+        : Class(t), useCodePage(false)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_system
+{
+    // @0x14249fe00
+    Pickable<ApplicationDomain::InstanceType> ApplicationDomain::MakeInstance(ApplicationDomain& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14249fe70
+    Pickable<LoaderContext::InstanceType> LoaderContext::MakeInstance(LoaderContext& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x14249fef0
+    Pickable<SecurityDomain::InstanceType> SecurityDomain::MakeInstance(SecurityDomain& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c560
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$01_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c5c0
@@ -601,3 +1039,47 @@ template struct ThunkFunc0<Instances::fl_text::TextField, 14, SInt32>;
 // MS2-PIN: ?Func@?$ThunkFunc0@VTextField@fl_text@Instances@AS3@GFx@Scaleform@@$0M@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424a7e00
 // MS2-PIN: ?Func@?$ThunkFunc1@VTextField@fl_text@Instances@AS3@GFx@Scaleform@@$0N@$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424a7e60
 // MS2-PIN: ?Func@?$ThunkFunc0@VTextField@fl_text@Instances@AS3@GFx@Scaleform@@$0O@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424a7ed0
+// MS2-PIN: ??_7ApplicationDomain@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143165aa0
+// MS2-PIN: ??_7Capabilities@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143165c28
+// MS2-PIN: ??_7IME@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143166470
+// MS2-PIN: ??_7IMEConversionMode@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143166668
+// MS2-PIN: ??_7SecurityDomain@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143166968
+// MS2-PIN: ??_7LoaderContext@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143166c60
+// MS2-PIN: ??_7Security@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143166cf8
+// MS2-PIN: ??_7SecurityPanel@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143166f10
+// MS2-PIN: ??_7System@fl_system@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431670d8
+// MS2-PIN: ??_7Capabilities@fl_system@Classes@AS3@GFx@Scaleform@@6B@ 0x143165cc0
+// MS2-PIN: ??_7IME@fl_system@Classes@AS3@GFx@Scaleform@@6B@ 0x143166500
+// MS2-PIN: ??_7IMEConversionMode@fl_system@Classes@AS3@GFx@Scaleform@@6B@ 0x143166700
+// MS2-PIN: ??_7SecurityDomain@fl_system@Classes@AS3@GFx@Scaleform@@6B@ 0x143166a00
+// MS2-PIN: ??_7Security@fl_system@Classes@AS3@GFx@Scaleform@@6B@ 0x143166d88
+// MS2-PIN: ??_7SecurityPanel@fl_system@Classes@AS3@GFx@Scaleform@@6B@ 0x143166fa8
+// MS2-PIN: ??_7System@fl_system@Classes@AS3@GFx@Scaleform@@6B@ 0x143167168
+// MS2-PIN: ??_7ApplicationDomain@fl_system@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431659f0
+// MS2-PIN: ??_7LoaderContext@fl_system@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143166bb8
+// MS2-PIN: ??_7SecurityDomain@fl_system@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431668c0
+// MS2-PIN: ??_7ApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@6B@ 0x143165920
+// MS2-PIN: ??_7LoaderContext@fl_system@Instances@AS3@GFx@Scaleform@@6B@ 0x143166ae8
+// MS2-PIN: ??_7SecurityDomain@fl_system@Instances@AS3@GFx@Scaleform@@6B@ 0x1431667f0
+// MS2-PIN: ??_GApplicationDomain@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f250
+// MS2-PIN: ??_GCapabilities@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f3a0
+// MS2-PIN: ??_GIME@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f490
+// MS2-PIN: ??_GIMEConversionMode@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f580
+// MS2-PIN: ??_GSecurityDomain@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f910
+// MS2-PIN: ??_GLoaderContext@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f670
+// MS2-PIN: ??_GSecurity@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f820
+// MS2-PIN: ??_GSecurityPanel@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249fac0
+// MS2-PIN: ??_GSystem@fl_system@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249fbb0
+// MS2-PIN: ??_GCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f430
+// MS2-PIN: ??_GIME@fl_system@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f520
+// MS2-PIN: ??_GIMEConversionMode@fl_system@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f610
+// MS2-PIN: ??_GSecurityDomain@fl_system@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f9a0
+// MS2-PIN: ??_GSecurity@fl_system@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f8b0
+// MS2-PIN: ??_GSecurityPanel@fl_system@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249fb50
+// MS2-PIN: ??_GSystem@fl_system@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249fc40
+// MS2-PIN: ??_GApplicationDomain@fl_system@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f2e0
+// MS2-PIN: ??_GLoaderContext@fl_system@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f700
+// MS2-PIN: ??_GSecurityDomain@fl_system@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249fa00
+// MS2-PIN: ??_GApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f340
+// MS2-PIN: ??_GLoaderContext@fl_system@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249f760
+// MS2-PIN: ??_GSecurityDomain@fl_system@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14249fa60

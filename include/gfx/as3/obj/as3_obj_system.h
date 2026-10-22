@@ -9,10 +9,14 @@
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_system {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x38 bytes.
     class ApplicationDomain : public Instances::fl::Object
     {
     public:
+        ApplicationDomain(InstanceTraits::Traits& t);
+        // @0x14249fcc0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_system::ApplicationDomain"; }
+
         // @0x1424a04a0
         void getDefinition(Value& result, const ASString&);
         // @0x1424a0530
@@ -21,23 +25,39 @@ namespace Instances { namespace fl_system {
         void parentDomainGet(SPtr<Instances::fl_system::ApplicationDomain>& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
-    class LoaderContext : public Instances::fl::Object
-    {
-    };
-
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x38 bytes.
     class SecurityDomain : public Instances::fl::Object
     {
+    public:
+        SecurityDomain(InstanceTraits::Traits& t);
+        // @0x14249fdb0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_system::SecurityDomain"; }
+    };
+
+    // 0x58 bytes.
+    class LoaderContext : public Instances::fl::Object
+    {
+    public:
+        LoaderContext(InstanceTraits::Traits& t);
+        // @0x14249fd50
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_system::LoaderContext"; }
+
+        bool                                        allowLoadBytesCodeExecution;    // +0x38
+        SPtr<Instances::fl_system::ApplicationDomain> applicationDomain;            // +0x40
+        bool                                        checkPolicyFile;                // +0x48
+        SPtr<Instances::fl_system::SecurityDomain>  securityDomain;                 // +0x50
     };
 
 }}
 
 namespace Classes { namespace fl_system {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class Capabilities : public Class
     {
     public:
+        Capabilities(ClassTraits::Traits& t);
+        // @0x14249fce0
+        virtual const char* GetAS3ObjectType() const { return "Classes::Capabilities"; }
+
         // @0x1424a0090
         void avHardwareDisableGet(bool& result);
         // @0x1424a04d0
@@ -94,10 +114,13 @@ namespace Classes { namespace fl_system {
         void versionGet(ASString& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class IME : public Class
     {
     public:
+        IME(ClassTraits::Traits& t);
+        // @0x14249fd00
+        virtual const char* GetAS3ObjectType() const { return "Classes::IME"; }
+
         // @0x1424a00b0
         void conversionModeGet(ASString& result);
         // @0x1424a0120
@@ -112,18 +135,26 @@ namespace Classes { namespace fl_system {
         void setCompositionString(const Value& result, const ASString&);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class SecurityDomain : public Class
     {
     public:
+        SecurityDomain(ClassTraits::Traits& t);
+        // @0x14249fd90
+        virtual const char* GetAS3ObjectType() const { return "Classes::SecurityDomain"; }
+
         // @0x1424a01f0
         void currentDomainGet(SPtr<Instances::fl_system::SecurityDomain>& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x58 bytes.
     class System : public Class
     {
     public:
+        System(ClassTraits::Traits& t);
+        // @0x14249fdf0
+        virtual const char* GetAS3ObjectType() const { return "Classes::fl_system::System"; }
+        bool useCodePage;   // +0x50
+
         // @0x1424a0460
         void exit(const Value& result, UInt32);
         // @0x1424a0480
@@ -138,6 +169,193 @@ namespace Classes { namespace fl_system {
         void setClipboard(const Value& result, const ASString&);
         // @0x1424a0990
         void totalMemoryGet(UInt32& result);
+    };
+
+    // 0x90 bytes: the constants of flash.system.IMEConversionMode.
+    class IMEConversionMode : public Class
+    {
+    public:
+        IMEConversionMode(ClassTraits::Traits& t);
+        // @0x14249fd20
+        virtual const char* GetAS3ObjectType() const { return "Classes::IMEConversionMode"; }
+
+        const char* ALPHANUMERIC_FULL;      // +0x50
+        const char* ALPHANUMERIC_HALF;      // +0x58
+        const char* CHINESE;                // +0x60
+        const char* JAPANESE_HIRAGANA;      // +0x68
+        const char* JAPANESE_KATAKANA_FULL; // +0x70
+        const char* JAPANESE_KATAKANA_HALF; // +0x78
+        const char* KOREAN;                 // +0x80
+        const char* UNKNOWN;                // +0x88
+    };
+
+    // 0x78 bytes.
+    class Security : public Class
+    {
+    public:
+        Security(ClassTraits::Traits& t);
+        // @0x14249fd70
+        virtual const char* GetAS3ObjectType() const { return "Classes::Security"; }
+
+        const char* APPLICATION;            // +0x50
+        const char* LOCAL_TRUSTED;          // +0x58
+        const char* LOCAL_WITH_FILE;        // +0x60
+        const char* LOCAL_WITH_NETWORK;     // +0x68
+        const char* REMOTE;                 // +0x70
+    };
+
+    // 0x88 bytes.
+    class SecurityPanel : public Class
+    {
+    public:
+        SecurityPanel(ClassTraits::Traits& t);
+        // @0x14249fdd0
+        virtual const char* GetAS3ObjectType() const { return "Classes::SecurityPanel"; }
+
+        const char* CAMERA;                 // +0x50
+        const char* DEFAULT;                // +0x58
+        const char* DISPLAY;                // +0x60
+        const char* LOCAL_STORAGE;          // +0x68
+        const char* MICROPHONE;             // +0x70
+        const char* PRIVACY;                // +0x78
+        const char* SETTINGS_MANAGER;       // +0x80
+    };
+
+}}
+
+namespace InstanceTraits { namespace fl_system {
+    class ApplicationDomain : public CTraits
+    {
+    public:
+        typedef Instances::fl_system::ApplicationDomain InstanceType;
+
+        ApplicationDomain(VM& vm, const ClassInfo& ci);
+        // @0x14249fcb0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::ApplicationDomain"; }
+        // @0x14249ff60
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(MakeInstance(static_cast<ApplicationDomain&>(t)));
+        }
+
+        Pickable<InstanceType> MakeInstance(ApplicationDomain& t);
+    };
+
+    class LoaderContext : public CTraits
+    {
+    public:
+        typedef Instances::fl_system::LoaderContext InstanceType;
+
+        LoaderContext(VM& vm, const ClassInfo& ci);
+        // @0x14249fd40
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::LoaderContext"; }
+        // @0x14249ffc0
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(MakeInstance(static_cast<LoaderContext&>(t)));
+        }
+
+        Pickable<InstanceType> MakeInstance(LoaderContext& t);
+    };
+
+    class SecurityDomain : public CTraits
+    {
+    public:
+        typedef Instances::fl_system::SecurityDomain InstanceType;
+
+        SecurityDomain(VM& vm, const ClassInfo& ci);
+        // @0x14249fda0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::SecurityDomain"; }
+        // @0x1424a0030
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(MakeInstance(static_cast<SecurityDomain&>(t)));
+        }
+
+        Pickable<InstanceType> MakeInstance(SecurityDomain& t);
+    };
+}}
+
+namespace ClassTraits { namespace fl_system {
+    class ApplicationDomain : public Traits
+    {
+    public:
+        ApplicationDomain(VM& vm);
+        // @0x14249fca0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::ApplicationDomain"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Capabilities : public Traits
+    {
+    public:
+        Capabilities(VM& vm);
+        // @0x14249fcd0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Capabilities"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class IME : public Traits
+    {
+    public:
+        IME(VM& vm);
+        // @0x14249fcf0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::IME"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class IMEConversionMode : public Traits
+    {
+    public:
+        IMEConversionMode(VM& vm);
+        // @0x14249fd10
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::IMEConversionMode"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class LoaderContext : public Traits
+    {
+    public:
+        LoaderContext(VM& vm);
+        // @0x14249fd30
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::LoaderContext"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Security : public Traits
+    {
+    public:
+        Security(VM& vm);
+        // @0x14249fd60
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Security"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class SecurityDomain : public Traits
+    {
+    public:
+        SecurityDomain(VM& vm);
+        // @0x14249fd80
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::SecurityDomain"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class SecurityPanel : public Traits
+    {
+    public:
+        SecurityPanel(VM& vm);
+        // @0x14249fdc0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::SecurityPanel"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class System : public Traits
+    {
+    public:
+        System(VM& vm);
+        // @0x14249fde0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::System"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
     };
 
 }}

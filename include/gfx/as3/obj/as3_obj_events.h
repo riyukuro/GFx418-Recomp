@@ -479,6 +479,16 @@ namespace Instances { namespace fl_events {
 
 }}
 
+namespace InstanceTraits { namespace fl_events {
+    // The instance traits of flash.events.EventDispatcher, also used by classes whose instances are plain dispatchers
+    // (flash.system.IME). Only the constructor is declared so far.
+    class EventDispatcher : public CTraits
+    {
+    public:
+        EventDispatcher(VM& vm, const ClassInfo& ci);   // 0x14245f5d0
+    };
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 #endif
