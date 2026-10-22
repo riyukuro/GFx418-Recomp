@@ -111,6 +111,250 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_errors.h"
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ---- flash.errors: class traits (instances are InstanceTraits::fl::Error, class objects plain Class) ----
+
+namespace fl_errors
+{
+    extern const ClassInfo EOFErrorCI;
+    extern const ClassInfo IOErrorCI;
+    extern const ClassInfo IllegalOperationErrorCI;
+    extern const ClassInfo InvalidSWFErrorCI;
+    extern const ClassInfo MemoryErrorCI;
+    extern const ClassInfo ScriptTimeoutErrorCI;
+    extern const ClassInfo StackOverflowErrorCI;
+}
+
+namespace ClassTraits { namespace fl_errors
+{
+    // @0x142455410
+    EOFError::EOFError(VM& vm)
+        : Traits(vm, AS3::fl_errors::EOFErrorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Error(vm, AS3::fl_errors::EOFErrorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142454e70
+    Pickable<Traits> EOFError::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) EOFError(vm));
+    }
+
+    // @0x1424554f0
+    IOError::IOError(VM& vm)
+        : Traits(vm, AS3::fl_errors::IOErrorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Error(vm, AS3::fl_errors::IOErrorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142454d50
+    Pickable<Traits> IOError::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IOError(vm));
+    }
+
+    // @0x1424555d0
+    IllegalOperationError::IllegalOperationError(VM& vm)
+        : Traits(vm, AS3::fl_errors::IllegalOperationErrorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Error(vm, AS3::fl_errors::IllegalOperationErrorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424552f0
+    Pickable<Traits> IllegalOperationError::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IllegalOperationError(vm));
+    }
+
+    // @0x1424556b0
+    InvalidSWFError::InvalidSWFError(VM& vm)
+        : Traits(vm, AS3::fl_errors::InvalidSWFErrorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Error(vm, AS3::fl_errors::InvalidSWFErrorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142454c30
+    Pickable<Traits> InvalidSWFError::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) InvalidSWFError(vm));
+    }
+
+    // @0x142455790
+    MemoryError::MemoryError(VM& vm)
+        : Traits(vm, AS3::fl_errors::MemoryErrorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Error(vm, AS3::fl_errors::MemoryErrorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x142454f90
+    Pickable<Traits> MemoryError::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MemoryError(vm));
+    }
+
+    // @0x142455870
+    ScriptTimeoutError::ScriptTimeoutError(VM& vm)
+        : Traits(vm, AS3::fl_errors::ScriptTimeoutErrorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Error(vm, AS3::fl_errors::ScriptTimeoutErrorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424550b0
+    Pickable<Traits> ScriptTimeoutError::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ScriptTimeoutError(vm));
+    }
+
+    // @0x142455950
+    StackOverflowError::StackOverflowError(VM& vm)
+        : Traits(vm, AS3::fl_errors::StackOverflowErrorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Error(vm, AS3::fl_errors::StackOverflowErrorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424551d0
+    Pickable<Traits> StackOverflowError::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StackOverflowError(vm));
+    }
+}}
+
+// ---- flash.events: class traits factories (the ClassTraits ctors are in sfr_as3_08) ----
+
+namespace ClassTraits { namespace fl_events
+{
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x1424560f0
+    Pickable<Traits> GestureEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GestureEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142456300
+    Pickable<Traits> StageOrientation::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageOrientation(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142456500
+    Pickable<Traits> TransformGestureEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TransformGestureEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x1424568c0
+    Pickable<Traits> PressAndTapGestureEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) PressAndTapGestureEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142456ed0
+    Pickable<Traits> KeyboardEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) KeyboardEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x1424573e0
+    Pickable<Traits> ProgressEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ProgressEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142457560
+    Pickable<Traits> FocusEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FocusEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142457990
+    Pickable<Traits> TextEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142457af0
+    Pickable<Traits> IOErrorEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IOErrorEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142457cc0
+    Pickable<Traits> ErrorEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ErrorEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142457e20
+    Pickable<Traits> NetStatusEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) NetStatusEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x1424582a0
+    Pickable<Traits> SecurityErrorEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SecurityErrorEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142458400
+    Pickable<Traits> AsyncErrorEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) AsyncErrorEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142458560
+    Pickable<Traits> StatusEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StatusEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x1424586c0
+    Pickable<Traits> SyncEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SyncEvent(vm));
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$09K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455e90
 // MS2-PIN: ?Func@?$ThunkFunc1@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$0L@$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455ef0
 // MS2-PIN: ?Func@?$ThunkFunc0@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$0M@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142455f60
@@ -160,3 +404,17 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 // MS2-PIN: ?Func@?$ThunkFunc1@VTextEvent@fl_events@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424589f0
 // MS2-PIN: ?Func@?$ThunkFunc0@VTextEvent@fl_events@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VEvent@fl_events@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142458af0
 // MS2-PIN: ?Func@?$ThunkFunc0@VTextEvent@fl_events@Instances@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142458ba0
+// MS2-PIN: ??_7EOFError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f138
+// MS2-PIN: ??_7IOError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f0a8
+// MS2-PIN: ??_7IllegalOperationError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314ef70
+// MS2-PIN: ??_7InvalidSWFError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f010
+// MS2-PIN: ??_7MemoryError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f1c8
+// MS2-PIN: ??_7ScriptTimeoutError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f260
+// MS2-PIN: ??_7StackOverflowError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f2f8
+// MS2-PIN: ??_GEOFError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455a30
+// MS2-PIN: ??_GIOError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455ac0
+// MS2-PIN: ??_GIllegalOperationError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455b50
+// MS2-PIN: ??_GInvalidSWFError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455be0
+// MS2-PIN: ??_GMemoryError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455c70
+// MS2-PIN: ??_GScriptTimeoutError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455d00
+// MS2-PIN: ??_GStackOverflowError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142455d90
