@@ -1061,6 +1061,526 @@ namespace Instances { namespace fl_text
 }}} // namespace Scaleform::GFx::AS3
 
 
+
+// ---- fl_text: TextField / TextSnapshot natives forwarding to the display side ----
+// Bodies of the exe called here (not recovered yet), by their addresses. The display TextField, its document view
+// (TextField+0xe0) and the static text snapshot data (TextSnapshot+0x38) are opaque here.
+int      FUN_1425b7e70(void* ptf);                      // TextField::GetCaretIndex
+bool     FUN_1425b9b50(void* ptf);                      // TextField::IsSelectable
+int      FUN_1425b7df0(void* ptf);                      // TextField::GetBeginIndex
+int      FUN_1425b8220(void* ptf);                      // TextField::GetEndIndex
+Scaleform::UInt32 FUN_1425b9360(void* ptf);                      // TextField::GetTextColor32
+double   FUN_1425b93d0(void* ptf);                      // TextField::GetTextHeight
+double   FUN_1425b9400(void* ptf);                      // TextField::GetTextWidth
+void     FUN_1425bc060(void* ptf);                      // TextField::SetDirtyFlag
+unsigned FUN_142611f40(void* pdoc);                     // DocView::GetBottomVScroll
+unsigned FUN_1426130f0(void* pdoc);                     // DocView::GetMaxVScroll
+unsigned FUN_142613550(void* pdoc);                     // DocView::GetVScrollOffset
+unsigned FUN_142613000(void* pdoc);                     // DocView::GetLinesCount
+unsigned FUN_142613030(void* pdoc);                     // DocView::GetMaxHScroll (twips)
+unsigned FUN_142612b50(void* pdoc);                     // DocView::GetHScrollOffset (twips)
+bool     FUN_142615390(void* pdoc, unsigned long long twips);  // DocView::SetHScrollOffset
+bool     FUN_142615670(void* pdoc, unsigned line);      // DocView::SetVScrollOffset
+unsigned long long FUN_142613290(void* pdoc, unsigned long long pos);       // DocView::GetParagraphLength
+unsigned long long FUN_142612af0(void* pdoc, unsigned long long pos);       // DocView::GetFirstCharInParagraph
+unsigned FUN_142612c50(void* pdoc, unsigned long long pos);                 // DocView::GetLineIndexOfChar
+unsigned long long FUN_142612cb0(void* pdoc, unsigned line, bool* phasNewLine);  // DocView::GetLineLength
+unsigned long long FUN_142612e80(void* pdoc, unsigned line);                // DocView::GetLineOffset
+unsigned long long FUN_142612240(void* pdoc, float x, float y);             // DocView::GetCharIndexAtPoint
+unsigned FUN_142612bd0(void* pdoc, float x, float y);                       // DocView::GetLineIndexAtPoint
+unsigned long long FUN_142598a50(void* ptext);          // StyledText::GetLength
+unsigned long long FUN_1425e1360(void* psnap);          // StaticTextSnapshotData::GetCharCount
+bool     FUN_1425e1bc0(void* psnap, unsigned long long start, unsigned long long end);  // ::IsSelected
+int      FUN_1425e1840(void* psnap, float x, float y, float closeDist);              // ::HitTestTextNearPos
+void     FUN_1425e2b40(void* psnap, const Scaleform::UInt32* pcolor);                         // ::SetSelectColor
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // Display text field, its document view and that view's styled text.
+    static inline void* DisplayTextField(Instances::fl_display::DisplayObject* p) { return p->pDispObj.GetPtr(); }
+    static inline void* DocViewOf(void* ptf)                { return *(void**)((UByte*)ptf + 0xe0); }
+    static inline void* SnapshotData(Instances::fl::Object* p) { return (UByte*)p + 0x38; }
+    // Pixels <-> twips.
+    static const double TwipsPerPixel = 20.0;
+    static const double PixelsPerTwip = 0.05;
+
+    // @0x1424afe10
+    void TextField::bottomScrollVGet(SInt32& result)
+    {
+        result = (SInt32)FUN_142611f40(DocViewOf(DisplayTextField(this))) + 1;
+    }
+
+    // @0x1424afe60
+    void TextField::caretIndexGet(SInt32& result)
+    {
+        result = FUN_1425b7e70(DisplayTextField(this));
+    }
+
+    // @0x1424b0df0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::getCharIndexAtPoint(SInt32& result, Value::Number x, Value::Number y)
+    {
+        UPInt pos = (UPInt)FUN_142612240(DocViewOf(DisplayTextField(this)), (float)(x * TwipsPerPixel),
+                                         (float)(y * TwipsPerPixel));
+        result = (pos == SF_MAX_UPINT) ? -1 : (SInt32)pos;
+    }
+
+    // @0x1424b0e40
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::getFirstCharInParagraph(SInt32& result, SInt32 charIndex)
+    {
+        if (charIndex < 0)
+        {
+            result = -1;
+            return;
+        }
+        UPInt pos = (UPInt)FUN_142612af0(DocViewOf(DisplayTextField(this)), (unsigned)charIndex);
+        result = (pos == SF_MAX_UPINT) ? -1 : (SInt32)pos;
+    }
+
+    // @0x1424b0ef0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::getLineIndexAtPoint(SInt32& result, Value::Number x, Value::Number y)
+    {
+        unsigned line = FUN_142612bd0(DocViewOf(DisplayTextField(this)), (float)(x * TwipsPerPixel),
+                                      (float)(y * TwipsPerPixel));
+        result = (line == ~0u) ? -1 : (SInt32)line;
+    }
+
+    // @0x1424b0f40
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::getLineIndexOfChar(SInt32& result, SInt32 charIndex)
+    {
+        if (charIndex < 0)
+        {
+            result = -1;
+            return;
+        }
+        unsigned line = FUN_142612c50(DocViewOf(DisplayTextField(this)), (unsigned)charIndex);
+        result = (line == ~0u) ? -1 : (SInt32)line;
+    }
+
+    // @0x1424b0f90
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::getLineLength(SInt32& result, SInt32 lineIndex)
+    {
+        if (lineIndex < 0)
+        {
+            result = -1;
+            return;
+        }
+        UPInt len = (UPInt)FUN_142612cb0(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex, NULL);
+        result = (len == SF_MAX_UPINT) ? -1 : (SInt32)len;
+    }
+
+    // @0x1424b1330
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::getLineOffset(SInt32& result, SInt32 lineIndex)
+    {
+        if (lineIndex < 0)
+        {
+            result = -1;
+            return;
+        }
+        UPInt pos = (UPInt)FUN_142612e80(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex);
+        result = (pos == SF_MAX_UPINT) ? -1 : (SInt32)pos;
+    }
+
+    // @0x1424b14d0
+    void TextField::getParagraphLength(SInt32& result, SInt32 charIndex)
+    {
+        result = (SInt32)FUN_142613290(DocViewOf(DisplayTextField(this)), (SPInt)charIndex);
+    }
+
+    // @0x1424b30e0
+    void TextField::lengthGet(SInt32& result)
+    {
+        result = (SInt32)FUN_142598a50(*(void**)((UByte*)DocViewOf(DisplayTextField(this)) + 0x10));
+    }
+
+    // @0x1424b3190
+    void TextField::maxScrollHGet(SInt32& result)
+    {
+        result = (SInt32)(FUN_142613030(DocViewOf(DisplayTextField(this))) * PixelsPerTwip);
+    }
+
+    // @0x1424b31d0
+    void TextField::maxScrollVGet(SInt32& result)
+    {
+        result = (SInt32)FUN_1426130f0(DocViewOf(DisplayTextField(this))) + 1;
+    }
+
+    // @0x1424b32c0
+    void TextField::numLinesGet(SInt32& result)
+    {
+        result = (SInt32)FUN_142613000(DocViewOf(DisplayTextField(this)));
+    }
+
+    // @0x1424b3f70
+    void TextField::scrollHGet(SInt32& result)
+    {
+        result = (SInt32)(FUN_142612b50(DocViewOf(DisplayTextField(this))) * PixelsPerTwip);
+    }
+
+    // @0x1424b3fb0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::scrollHSet(const Value& result, SInt32 value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        FUN_142615390(DocViewOf(ptf), (unsigned long long)(SInt64)((value < 0 ? 0 : value) * TwipsPerPixel));
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424b4000
+    void TextField::scrollVGet(SInt32& result)
+    {
+        result = (SInt32)FUN_142613550(DocViewOf(DisplayTextField(this))) + 1;
+    }
+
+    // @0x1424b4030
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::scrollVSet(const Value& result, SInt32 value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        FUN_142615670(DocViewOf(ptf), (unsigned)((value < 1 ? 1 : value) - 1));
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424b4070
+    void TextField::selectableGet(bool& result)
+    {
+        result = FUN_1425b9b50(DisplayTextField(this));
+    }
+
+    // @0x1424b40a0
+    void TextField::selectionBeginIndexGet(SInt32& result)
+    {
+        result = FUN_1425b7df0(DisplayTextField(this));
+    }
+
+    // @0x1424b40c0
+    void TextField::selectionEndIndexGet(SInt32& result)
+    {
+        result = FUN_1425b8220(DisplayTextField(this));
+    }
+
+    // @0x1424b4cd0
+    void TextField::textColorGet(UInt32& result)
+    {
+        result = FUN_1425b9360(DisplayTextField(this));
+    }
+
+    // @0x1424b4e80
+    void TextField::textHeightGet(Value::Number& result)
+    {
+        result = FUN_1425b93d0(DisplayTextField(this));
+    }
+
+    // @0x1424b4f00
+    void TextField::textWidthGet(Value::Number& result)
+    {
+        result = FUN_1425b9400(DisplayTextField(this));
+    }
+
+    // @0x1424afe80
+    void TextSnapshot::charCountGet(SInt32& result)
+    {
+        result = (SInt32)FUN_1425e1360(SnapshotData(this));
+    }
+
+    // An empty or reversed range tests the single character at start.
+    // @0x1424b1500
+    void TextSnapshot::getSelected(bool& result, SInt32 start, SInt32 end)
+    {
+        if (end <= start)
+            end = start + 1;
+        result = FUN_1425e1bc0(SnapshotData(this), (SPInt)start, (SPInt)end);
+    }
+
+    // @0x1424b2f20
+    void TextSnapshot::hitTestTextNearPos(Value::Number& result, Value::Number x, Value::Number y, Value::Number closeDist)
+    {
+        result = FUN_1425e1840(SnapshotData(this), (float)(x * TwipsPerPixel), (float)(y * TwipsPerPixel),
+                               (float)(closeDist * TwipsPerPixel));
+    }
+
+    // The selection colour is always opaque.
+    // @0x1424b4330
+    void TextSnapshot::setSelectColor(const Value& result, UInt32 color)
+    {
+        SF_UNUSED(result);
+        UInt32 c = color;
+        ((UByte*)&c)[3] = 0xff;
+        FUN_1425e2b40(SnapshotData(this), &c);
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+// ---- fl_text: TextFormat string properties, TextField text and settings ----
+void* FUN_1425b91e0(void* ptf, void* ptext, bool html);    // TextField::GetText (builds an ASString in *ptext)
+void  FUN_1425bd9a0(void* ptf, const char* ptext, bool html, bool notifyVariable);  // TextField::SetTextValue
+bool  FUN_1425b9b10(void* ptf);                             // TextField::IsReadOnly
+bool  FUN_1425b9730(void* ptf);                             // TextField::HasStyleSheet
+void  FUN_14260df50(void* pdoc, const char* ptext, unsigned long long length);      // DocView::AppendText
+void  FUN_1426150b0(void* pdoc);                            // DocView::SetAutoSizeX
+void  FUN_1426150d0(void* pdoc);                            // DocView::SetAutoSizeY
+void  FUN_142615910(void* pdoc);                            // DocView::SetWordWrap
+void  FUN_14260e350(void* pdoc);                            // DocView::ClearWordWrap
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // TextFormat keeps its properties as Values; a string property reads back null while it is unset.
+    static inline void GetStringProperty(ASString& result, const Instances::fl::Object* pobj, UPInt offset)
+    {
+        const Value& v = *(const Value*)((const UByte*)pobj + offset);
+        if (v.IsNull())
+            result.SetNull();
+        else
+            result = v.AsString();
+    }
+
+    // @0x1424af820
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextFormat::alignGet(ASString& result)
+    {
+        GetStringProperty(result, this, 0x38);
+    }
+
+    // @0x1424b0870
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextFormat::fontGet(ASString& result)
+    {
+        GetStringProperty(result, this, 0xd8);
+    }
+
+    // @0x1424b4c60
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextFormat::targetGet(ASString& result)
+    {
+        GetStringProperty(result, this, 0x200);
+    }
+
+    // @0x1424b5330
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextFormat::urlGet(ASString& result)
+    {
+        GetStringProperty(result, this, 0x240);
+    }
+
+    // The display field's flags (TextField+0xfc) and its document view's format flags (DocView+0x149).
+    static inline UInt32& FieldFlags(void* ptf)  { return *(UInt32*)((UByte*)ptf + 0xfc); }
+    static inline UByte&  ViewFlags(void* pdoc)  { return *((UByte*)pdoc + 0x149); }
+
+    // Re-applies the auto-size mode to the document view after a layout setting changed; horizontal auto-sizing is
+    // off while the text wraps.
+    // @0x1424af5f0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextFieldUpdateAutoSize(TextField* pthis)
+    {
+        void* ptf = DisplayTextField(pthis);
+        bool autoSize = (FieldFlags(ptf) & 1) != 0;
+        void* pdoc = DocViewOf(ptf);
+        if (autoSize && !(ViewFlags(pdoc) & 8))
+            FUN_1426150b0(pdoc);
+        else
+            ViewFlags(pdoc) &= ~1;
+        pdoc = DocViewOf(ptf);
+        if (autoSize)
+            FUN_1426150d0(pdoc);
+        else
+            ViewFlags(pdoc) &= ~2;
+        FieldFlags(ptf) |= 0x2000;
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424af960
+    void TextField::antiAliasTypeSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (value == "normal")
+            ViewFlags(DocViewOf(ptf)) &= ~0x40;
+        else if (value == "advanced")
+            ViewFlags(DocViewOf(ptf)) |= 0x40;
+        FUN_1425bc060(ptf);
+    }
+
+    // A field with a style sheet ignores appended text.
+    // @0x1424af9e0
+    void TextField::appendText(const Value& result, const ASString& newText)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (FUN_1425b9730(ptf))
+            return;
+        FUN_14260df50(DocViewOf(ptf), newText.ToCStr(), SF_MAX_UPINT);
+        FieldFlags(ptf) |= 0x10000;
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424b2f80
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::htmlTextGet(ASString& result)
+    {
+        void* text;
+        FUN_1425b91e0(DisplayTextField(this), &text, true);
+        ASString& s = *reinterpret_cast<ASString*>(&text);
+        result = s;
+        s.~ASString();
+    }
+
+    // @0x1424b3270
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::multilineSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        UByte& flags = ViewFlags(DocViewOf(ptf));
+        if (((flags & 4) != 0) != value)
+        {
+            if (value)
+                flags |= 4;
+            else
+                flags &= ~4;
+            TextFieldUpdateAutoSize(this);
+        }
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424b4e30
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::textGet(ASString& result)
+    {
+        void* text;
+        FUN_1425b91e0(DisplayTextField(this), &text, false);
+        ASString& s = *reinterpret_cast<ASString*>(&text);
+        result = s;
+        s.~ASString();
+    }
+
+    // @0x1424b4ea0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::textSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        FieldFlags(ptf) &= ~2u;
+        ASString text(value);
+        FUN_1425bd9a0(ptf, text.ToCStr(), false, true);
+    }
+
+    // @0x1424b51a0
+    void TextField::typeGet(ASString& result)
+    {
+        result = GetVM().GetStringManager().CreateConstString(FUN_1425b9b10(DisplayTextField(this)) ? "dynamic" : "input");
+    }
+
+    // @0x1424b5440
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::wordWrapSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        void* pdoc = DocViewOf(ptf);
+        if (((ViewFlags(pdoc) & 8) != 0) != value)
+        {
+            if (value)
+                FUN_142615910(pdoc);
+            else
+                FUN_14260e350(pdoc);
+            TextFieldUpdateAutoSize(this);
+        }
+        FUN_1425bc060(ptf);
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+// ---- fl_text: TextField / TextSnapshot string queries ----
+const void* FUN_1425b90a0(void* ptf);                       // TextField::GetRestrict (its first member is the String)
+void FUN_1425e1570(void* psnap, void* ptext);               // StaticTextSnapshotData::GetSelectedText (builds a String)
+int  FUN_1425e1020(void* psnap, unsigned long long start, const char* ptext, bool caseSensitive);  // ::FindText
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424af8d0
+    void TextField::antiAliasTypeGet(ASString& result)
+    {
+        result = GetVM().GetStringManager().CreateConstString(
+            (ViewFlags(DocViewOf(DisplayTextField(this))) & 0x40) ? "advanced" : "normal");
+    }
+
+    // An auto-sized field reports its alignment; an unknown alignment leaves the result alone.
+    // @0x1424afa40
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::autoSizeGet(ASString& result)
+    {
+        void* ptf = DisplayTextField(this);
+        const char* pmode;
+        UPInt length;
+        if (!(FieldFlags(ptf) & 1))
+        {
+            pmode = "none";
+            length = 4;
+        }
+        else
+        {
+            switch (*((UByte*)DocViewOf(ptf) + 0x148) & 3)
+            {
+            case 0: pmode = "left"; length = 4; break;
+            case 1: pmode = "right"; length = 5; break;
+            case 2: pmode = "center"; length = 6; break;
+            default: return;
+            }
+        }
+        result = GetVM().GetStringManager().GetStringManager()->CreateConstString(pmode, length);
+    }
+
+    // @0x1424b3e70
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::restrictGet(ASString& result)
+    {
+        const String* prestrict = (const String*)FUN_1425b90a0(DisplayTextField(this));
+        if (prestrict)
+            result = GetVM().GetStringManager().CreateString(prestrict->ToCStr(), prestrict->GetSize());
+        else
+            result.SetNull();
+    }
+
+    // @0x1424b07e0
+    void TextSnapshot::findText(SInt32& result, SInt32 beginIndex, const ASString& textToFind, bool caseSensitive)
+    {
+        String text(textToFind.ToCStr(), textToFind.GetSize());
+        result = FUN_1425e1020(SnapshotData(this), (SPInt)beginIndex, text.ToCStr(), caseSensitive);
+    }
+
+    // The exe ignores includeLineEndings.
+    // @0x1424b1530
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextSnapshot::getSelectedText(ASString& result, bool includeLineEndings)
+    {
+        SF_UNUSED(includeLineEndings);
+        void* buf;
+        FUN_1425e1570(SnapshotData(this), &buf);
+        String& text = *reinterpret_cast<String*>(&buf);
+        result = GetVM().GetStringManager().CreateString(text.ToCStr(), text.GetSize());
+        text.~String();
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc1@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5730
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$00VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5830
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b58a0
