@@ -163,9 +163,12 @@ void FUN_1425eddc0(Scaleform::Render::ImageBase* pimage, Scaleform::SInt32 rando
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
 // built on the other kernel headers, so the AS3 units see the class opaque.
 namespace Scaleform { namespace Render {
+class DrawableImageContext;
 class DrawableImage
 {
 public:
+    // A drawable copy of delegateImage (the BitmapData clone); 200 bytes in the exe.
+    DrawableImage(bool transparent, ImageBase* delegateImage, DrawableImageContext* context);   // 0x1425e9a00
     Color GetPixel(SInt32 x, SInt32 y);                 // 0x1425ecdd0
     Color GetPixel32(SInt32 x, SInt32 y);               // 0x1425ecd50
     bool  SetPixel(SInt32 x, SInt32 y, Color c);        // 0x1425eef90
@@ -177,6 +180,11 @@ public:
     // Copies one channel of a rect of the source image into a channel of this image at destPoint.
     void  CopyChannel(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                       UInt32 sourceChannel, UInt32 destChannel);                                                  // 0x1425eb570
+    // Fills this image with the per-pixel difference of image0 and image1.
+    void  Compare(ImageBase* image0, ImageBase* image1);                                                            // 0x1425eb390
+    // Copies a rect of the source image to destPoint, optionally through the alpha of alphaSource at alphaPoint.
+    void  CopyPixels(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                     ImageBase* alphaSource, const Point<SInt32>* alphaPoint, bool mergeAlpha);                 // 0x1425eb700
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -186,6 +194,8 @@ public:
 
 Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
+// MovieImpl::GetDrawableImageContext (made on first use).
+void* FUN_14256f220(Scaleform::GFx::MovieImpl* pmovie);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1928,7 +1938,7 @@ namespace Instances { namespace fl_display
 {
     // MS2-FUNCTIONAL: exe frame carries a /GS cookie around the GetRect temp; logic identical
     // @0x142454960
-    void BitmapData::widthGet(SInt32& result)
+    SF_NOINLINE void BitmapData::widthGet(SInt32& result)
     {
         if (!pImage)
         {
@@ -1941,7 +1951,7 @@ namespace Instances { namespace fl_display
 
     // MS2-FUNCTIONAL: exe frame carries a /GS cookie around the GetRect temp; logic identical
     // @0x14244e480
-    void BitmapData::heightGet(SInt32& result)
+    SF_NOINLINE void BitmapData::heightGet(SInt32& result)
     {
         if (!pImage)
         {
@@ -2934,6 +2944,67 @@ namespace Instances { namespace fl_display
         result = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->IsTransparent();
     }
 
+    // MS2-FUNCTIONAL: the exe inlines the BitmapData constructor (0x14243a220, defined with the class in as3_06)
+    // @0x142448a00
+    void BitmapData::clone(SPtr<Instances::fl_display::BitmapData>& result)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        result = Pickable<BitmapData>(new(itr.Alloc()) BitmapData(itr));
+        result->Width = Width;
+        result->Height = Height;
+        result->Transparent = Transparent;
+        result->Unk59 = Unk59;
+        Render::DrawableImageContext* pcontext =
+            (Render::DrawableImageContext*)FUN_14256f220(static_cast<ASVM&>(GetVM()).GetMovieImpl());
+        Render::DrawableImage* pcopy = new(Memory::Alloc(200)) Render::DrawableImage(Transparent, pImage, pcontext);
+        result->pImage = *reinterpret_cast<Render::ImageBase*>(pcopy);
+    }
+
+    // The difference of two equally sized bitmaps as a new BitmapData; -3 / -4 when the widths / heights differ.
+    // MS2-FUNCTIONAL: register assignment (exe keeps this in rdi and result in rsi; ours rsi / rbp)
+    // @0x142448d10
+    void BitmapData::compare(Value& result, Instances::fl_display::BitmapData* otherBitmapData)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!otherBitmapData)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "otherBitmapData"));
+        }
+        else
+        {
+        SInt32 w, h;
+        otherBitmapData->widthGet(w);
+        otherBitmapData->heightGet(h);
+        if ((SInt32)pImage->GetSize().Width != w)
+        {
+            result.SetSInt32(-3);
+            return;
+        }
+        if ((SInt32)pImage->GetSize().Height != h)
+        {
+            result.SetSInt32(-4);
+            return;
+        }
+        Render::ImageBase* pother = otherBitmapData->pImage;
+        SPtr<BitmapData> pdiff;
+        clone(pdiff);
+        Render::DrawableImage* pdst = pdiff ? reinterpret_cast<Render::DrawableImage*>(pdiff->pImage.GetPtr()) : NULL;
+        pdst->Compare(pImage, pother);
+        result = pdiff;
+        }
+    }
+
 #pragma strict_gs_check(push, on)
     // MS2-FUNCTIONAL: the exe tests the arguments one by one (pImage kept in r8); ours loads them up front and
     // lays the error blocks out after the copy
@@ -2970,6 +3041,56 @@ namespace Instances { namespace fl_display
             Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
             pimage->CopyChannel(sourceBitmapData->pImage, rect, dp, sourceChannel, destChannel);
+        }
+    }
+#pragma strict_gs_check(pop)
+
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: stack slot order of the rect/points and the error temporaries differs (register allocation)
+    // @0x142449440
+    void BitmapData::copyPixels(const Value& result, Instances::fl_display::BitmapData* sourceBitmapData,
+                                Instances::fl_geom::Rectangle* sourceRect, Instances::fl_geom::Point* destPoint,
+                                Instances::fl_display::BitmapData* alphaBitmapData, Instances::fl_geom::Point* alphaPoint,
+                                bool mergeAlpha)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!sourceBitmapData)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+        }
+        else if (!sourceRect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+        }
+        else if (!destPoint)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+        }
+        else
+        {
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            Render::ImageBase* palpha = alphaBitmapData ? alphaBitmapData->pImage.GetPtr() : NULL;
+            if (!sourceBitmapData->pImage || !pimage)
+                return;
+            // The alpha point is left unset without an alphaPoint; the image only reads it with an alpha source.
+            Render::Point<SInt32> ap(Render::Point<SInt32>::NoInit);
+            if (alphaPoint)
+            {
+                ap.x = (SInt32)alphaPoint->x;
+                ap.y = (SInt32)alphaPoint->y;
+            }
+            Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
+            Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                      (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
+            pimage->CopyPixels(sourceBitmapData->pImage, rect, dp, palpha, &ap, mergeAlpha);
         }
     }
 #pragma strict_gs_check(pop)
