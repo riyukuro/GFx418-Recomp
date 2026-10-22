@@ -39,6 +39,15 @@ void VM::OutputAndIgnoreException()
     ExceptionObj.SetUndefined();
 }
 
+// The movie root's per-event lists of the display objects with a listener of a frame/activation event (+0x150 of
+// MovieRoot, not in as3_asvm.h yet).
+class EventChains
+{
+public:
+    void AddToChain(EventId::IdCode code, DisplayObject* dobj);
+    void RemoveFromChain(EventId::IdCode code, DisplayObject* dobj);
+};
+
 namespace Instances { namespace fl_events {
 
     // ---- AS3Constructor: new X(type, bubbles = false, cancelable = false, ...) -------------------------------------------
@@ -766,6 +775,253 @@ namespace Instances { namespace fl_events {
                 return true;
         }
         return false;
+    }
+
+    // A dispatcher that is a display object instance (not its class) dispatches along its display parent chain.
+    static inline bool IsDisplayObjectInstance(const Traits& tr)
+    {
+        return (unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
+                   (unsigned)(Traits_DisplayObject_End - Traits_DisplayObject_Begin) &&
+               tr.IsInstanceTraits();
+    }
+
+    // @0x14246ded0
+    // MS2-FUNCTIONAL: register allocation of the display object test
+    void EventDispatcher::dispatchEvent(bool& result, Instances::fl_events::Event* e)
+    {
+        if (!e)
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, vm));
+            return;
+        }
+        e->Target = this;
+        GFx::DisplayObject* dobj = NULL;
+        if (IsDisplayObjectInstance(GetTraits()))
+            dobj = static_cast<Instances::fl_display::DisplayObject*>(this)->pDispObj;
+        Dispatch(e, dobj);
+        result = !e->DefaultPrevented;
+    }
+
+    // @0x14246e490
+    // MS2-FUNCTIONAL: the exe copies the type string around the two inlined lookups
+    void EventDispatcher::hasEventListener(bool& result, const ASString& type)
+    {
+        result = HasEventHandler(type, true);
+        if (!result)
+            result = HasEventHandler(type, false);
+    }
+
+    // @0x142472e00
+    // MS2-FUNCTIONAL: cl lays out the inlined listener lookups differently
+    void EventDispatcher::willTrigger(bool& result, const ASString& type)
+    {
+        result = HasEventHandler(type, true);
+        if (!result)
+            result = HasEventHandler(type, false);
+        if (result || !IsDisplayObjectInstance(GetTraits()))
+            return;
+        ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> chain(GetVM().GetMemoryHeap());
+        GetParentChain(static_cast<Instances::fl_display::DisplayObject*>(this)->pDispObj, chain);
+        for (UPInt i = 0; i < chain.GetSize(); ++i)
+        {
+            result = chain[i]->HasEventHandler(type, true) || chain[i]->HasEventHandler(type, false);
+            if (result)
+                break;
+        }
+    }
+
+    // ---- add/removeEventListener -------------------------------------------------------------------------------------
+    // The frame/activation events keep the display object in the movie root's event chain while it has a listener;
+    // the button events count their listeners.
+
+    namespace
+    {
+        // AS3 builtin strings and event ids of the frame/activation and button events (4.1.18 numbering)
+        enum
+        {
+            BI_activate = 28, BI_deactivate = 33, BI_enterFrame = 34, BI_frameConstructed = 35, BI_exitFrame = 36,
+            BI_render = 43, BI_resize = 44, BI_click = 46, BI_doubleClick = 47, BI_mouseDown = 48, BI_mouseOut = 50,
+            BI_mouseOver = 51, BI_mouseUp = 52, BI_rollOut = 54, BI_rollOver = 55
+        };
+        enum
+        {
+            EV_Activate = 0x1000011, EV_Deactivate, EV_Render, EV_Resize, EV_FrameConstructed, EV_ExitFrame
+        };
+
+        inline EventChains& GetEventChains(ASVM& vm)
+        {
+            return *reinterpret_cast<EventChains*>(reinterpret_cast<UByte*>(vm.GetMovieRoot()) + 0x150);
+        }
+
+        inline bool IsButtonEvent(const StringManager& sm, const ASString& type)
+        {
+            return type == sm.GetBuiltin(BuiltinType(BI_mouseDown)) || type == sm.GetBuiltin(BuiltinType(BI_mouseUp)) ||
+                   type == sm.GetBuiltin(BuiltinType(BI_click)) || type == sm.GetBuiltin(BuiltinType(BI_doubleClick)) ||
+                   type == sm.GetBuiltin(BuiltinType(BI_mouseOver)) || type == sm.GetBuiltin(BuiltinType(BI_mouseOut)) ||
+                   type == sm.GetBuiltin(BuiltinType(BI_rollOver)) || type == sm.GetBuiltin(BuiltinType(BI_rollOut));
+        }
+    }
+
+    // @0x14246caa0
+    // MS2-FUNCTIONAL: cl orders the duplicate scan and the builtin compares differently
+    void EventDispatcher::addEventListener(const Value& result, const ASString& type, const Value& listener,
+                                           bool useCapture, SInt32 priority, bool useWeakReference)
+    {
+        SF_UNUSED(result);
+        VM& vm = GetVM();
+        if (!pImpl)
+            pImpl = SF_HEAP_NEW(vm.GetMemoryHeap()) EventDispatcherImpl();
+        ListenersHash& hash = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
+
+        ArrayLH<Listener>* listeners;
+        ArrayLH<Listener>** pa = hash.Get(type);
+        if (!pa)
+        {
+            listeners = SF_HEAP_NEW(vm.GetMemoryHeap()) ArrayLH<Listener>();
+            hash.Add(type, listeners);
+        }
+        else
+            listeners = *pa;
+
+        // listeners stay sorted by descending priority; the same function is registered only once
+        UPInt i = 0, n = listeners->GetSize();
+        for (; i < n; ++i)
+        {
+            Listener& l = (*listeners)[i];
+            if (l.Function.IsValidWeakRef() && StrictEqual(l.Function, listener))
+                return;
+            if ((*listeners)[i].Priority < priority)
+                break;
+        }
+        for (UPInt j = i; j < listeners->GetSize(); ++j)
+        {
+            Listener& l = (*listeners)[j];
+            if (l.Function.IsValidWeakRef() && StrictEqual(l.Function, listener))
+                return;
+        }
+
+        const StringManager& sm = vm.GetStringManager();
+        EventId::IdCode code;
+        if (type == sm.GetBuiltin(BuiltinType(BI_enterFrame)))
+        {
+            code = EventId::Event_EnterFrame;
+            static_cast<ASVM&>(vm).GetMovieImpl()->Flags |= MovieImpl::Flag_OptAdvListInvalid;
+            pImpl->HasEnterFrame = 1;
+        }
+        else if (type == sm.GetBuiltin(BuiltinType(BI_frameConstructed)))
+        {
+            code = EventId::IdCode(EV_FrameConstructed);
+            pImpl->HasFrameConstructed = 1;
+        }
+        else if (type == sm.GetBuiltin(BuiltinType(BI_exitFrame)))
+        {
+            code = EventId::IdCode(EV_ExitFrame);
+            pImpl->HasExitFrame = 1;
+        }
+        else if (type == sm.GetBuiltin(BuiltinType(BI_activate)))
+        {
+            code = EventId::IdCode(EV_Activate);
+            pImpl->HasActivate = 1;
+        }
+        else if (type == sm.GetBuiltin(BuiltinType(BI_deactivate)))
+        {
+            code = EventId::IdCode(EV_Deactivate);
+            pImpl->HasDeactivate = 1;
+        }
+        else if (type == sm.GetBuiltin(BuiltinType(BI_render)))
+        {
+            code = EventId::IdCode(EV_Render);
+            pImpl->HasRender = 1;
+        }
+        else if (type == sm.GetBuiltin(BuiltinType(BI_resize)))
+        {
+            code = EventId::IdCode(EV_Resize);
+            pImpl->HasResize = 1;
+        }
+        else
+        {
+            code = EventId::Event_Invalid;
+            if (IsButtonEvent(sm, type))
+            {
+                UInt8& cnt = useCapture ? pImpl->CaptureButtonHandlersCnt : pImpl->ButtonHandlersCnt;
+                if (cnt != 0xff)
+                    ++cnt;
+            }
+        }
+        if (code != EventId::Event_Invalid && listeners->GetSize() == 0 && IsDisplayObjectInstance(GetTraits()))
+            GetEventChains(static_cast<ASVM&>(vm))
+                .AddToChain(code, static_cast<Instances::fl_display::DisplayObject*>(this)->pDispObj);
+
+        Listener l;
+        l.Priority = priority;
+        l.Function = listener;
+        listeners->InsertAt(i, l);
+        if (useWeakReference)
+            (*listeners)[i].Function.MakeWeakRef();
+    }
+
+    // The event chain and the button listener count after the last listener of a type was removed (0x14246c2f0).
+    // @0x14246c2f0
+    // MS2-FUNCTIONAL: cl lays out the builtin compares differently
+    static __declspec(noinline) void OnListenerRemoved(EventDispatcher* d, const ASString& type, bool useCapture,
+                                                       UPInt remaining)
+    {
+        ASVM& vm = static_cast<ASVM&>(d->GetVM());
+        if (!vm.GetMovieRoot())
+            return;
+        EventId::IdCode code;
+        if (type == vm.GetBuiltin(BuiltinType(BI_enterFrame)))
+        {
+            code = EventId::Event_EnterFrame;
+            vm.GetMovieImpl()->Flags |= MovieImpl::Flag_OptAdvListInvalid;
+        }
+        else if (type == vm.GetBuiltin(BuiltinType(BI_frameConstructed)))
+            code = EventId::IdCode(EV_FrameConstructed);
+        else if (type == vm.GetBuiltin(BuiltinType(BI_exitFrame)))
+            code = EventId::IdCode(EV_ExitFrame);
+        else if (type == vm.GetBuiltin(BuiltinType(BI_activate)))
+            code = EventId::IdCode(EV_Activate);
+        else if (type == vm.GetBuiltin(BuiltinType(BI_deactivate)))
+            code = EventId::IdCode(EV_Deactivate);
+        else if (type == vm.GetBuiltin(BuiltinType(BI_render)))
+            code = EventId::IdCode(EV_Render);
+        else
+        {
+            if (IsButtonEvent(vm.GetMovieRoot()->BuiltinsMgr, type))
+            {
+                UInt8& cnt = useCapture ? d->pImpl->CaptureButtonHandlersCnt : d->pImpl->ButtonHandlersCnt;
+                if (cnt != 0xff)
+                    --cnt;
+            }
+            return;
+        }
+        if (remaining == 0 && IsDisplayObjectInstance(d->GetTraits()))
+            GetEventChains(vm).RemoveFromChain(code, static_cast<Instances::fl_display::DisplayObject*>(d)->pDispObj);
+    }
+
+    // @0x14246f1c0
+    // MS2-FUNCTIONAL: cl keeps the listener array in a different register and frame
+    void EventDispatcher::removeEventListener(const Value& result, const ASString& type, const Value& listener,
+                                              bool useCapture)
+    {
+        SF_UNUSED(result);
+        if (!pImpl)
+            return;
+        ListenersHash& hash = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
+        ArrayLH<Listener>** pa = hash.Get(type);
+        if (!pa)
+            return;
+        ArrayLH<Listener>* listeners = *pa;
+        for (UPInt i = 0, n = listeners->GetSize(); i < n; ++i)
+        {
+            if ((*listeners)[i].Function.IsValidWeakRef() && StrictEqual((*listeners)[i].Function, listener))
+            {
+                listeners->RemoveAt(i);
+                OnListenerRemoved(this, type, useCapture, listeners->GetSize());
+                return;
+            }
+        }
     }
 
     // ---- local coordinates -------------------------------------------------------------------------------------------
