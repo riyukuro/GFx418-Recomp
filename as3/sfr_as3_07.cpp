@@ -140,6 +140,16 @@ void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level);
 Scaleform::GFx::DisplayObject* FUN_14250edf0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
 // Sprite::GetTextSnapshot (exe body): fills a StaticTextSnapshotData from the sprite's static text fields.
 void FUN_1425db410(Scaleform::GFx::DisplayObject* psprite, void* psnapshotData);
+// Graphics: reads the gradient arguments of beginGradientFill / lineGradientStyle into the complex fill (exe body).
+void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, unsigned argc,
+                   const Scaleform::GFx::AS3::Value* argv, Scaleform::Render::ComplexFill* pfill);
+// Scrolls the pixels of a bitmap image by (x, y) (exe body).
+void FUN_1425eed00(Scaleform::Render::ImageBase* pimage, int x, int y);
+// Flood fills a bitmap image from a point (exe body).
+void FUN_1425ec9e0(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Point<Scaleform::SInt32>& pt, const Scaleform::Render::Color& color);
+// Fills a bitmap image with random noise (exe body).
+void FUN_1425eddc0(Scaleform::Render::ImageBase* pimage, Scaleform::SInt32 randomSeed, Scaleform::UInt32 low, Scaleform::UInt32 high,
+                   Scaleform::UInt32 channelOptions, bool grayScale);
 
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
@@ -962,6 +972,100 @@ namespace Instances { namespace fl_display
         // the snapshot data (TextSnapshot +0x38) is filled from the sprite's static text
         FUN_1425db410(pDispObj, reinterpret_cast<UByte*>(psnapshot.GetPtr()) + 0x38);
         result = psnapshot;
+    }
+
+    // @0x14244f9a0
+    void Graphics::lineGradientStyle(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        FUN_142441010(this, argc, argv, pDrawing->CreateLineComplexFill());
+    }
+
+    // @0x142448460
+    void Graphics::beginGradientFill(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        FUN_142441010(this, argc, argv, pDrawing->CreateNewComplexFill());
+        pDrawing->BeginFill();
+    }
+
+    // @0x142450de0
+    void Stage::orientationGet(ASString& result)
+    {
+        // GFx::Stage +0x120 (the GFx stage class is not recovered)
+        result = *reinterpret_cast<const ASString*>(reinterpret_cast<UByte*>(pDispObj.GetPtr()) + 0x120);
+    }
+
+    // @0x1424529e0
+    void BitmapData::scroll(const Value& result, SInt32 x, SInt32 y)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        FUN_1425eed00(pImage, x, y);
+    }
+
+    // @0x14244bfd0
+    void BitmapData::floodFill(const Value& result, SInt32 x, SInt32 y, UInt32 color)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        // Color is the packed 32-bit value itself
+        FUN_1425ec9e0(pImage, Render::Point<SInt32>(x, y), reinterpret_cast<const Render::Color&>(color));
+    }
+
+    // @0x142450cb0
+    void BitmapData::noise(const Value& result, SInt32 randomSeed, UInt32 low, UInt32 high, UInt32 channelOptions, bool grayScale)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        FUN_1425eddc0(pImage, randomSeed, low, high, channelOptions, grayScale);
+    }
+
+    // The Graphics object of a sprite or shape, made on first use and bound to the display object's drawing.
+    static SF_FORCEINLINE void MakeGraphics(VM& vm, SPtr<Instances::fl_display::Graphics>& pgraphics, GFx::DisplayObject* pdobj)
+    {
+        ASVM& asvm = static_cast<ASVM&>(vm);
+        if (asvm.ConstructInstance(pgraphics, asvm.GraphicsClass))
+        {
+            Instances::fl_display::Graphics* pg = pgraphics;
+            pg->pDrawing = pdobj->GetDrawingContext();
+            pgraphics->pDispObj = pdobj;
+        }
+    }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Graphics>::operator= instance (0x14243d720); ours inlines it
+    // @0x14244e3c0
+    SF_NOINLINE void Sprite::graphicsGet(SPtr<Instances::fl_display::Graphics>& result)
+    {
+        if (!pGraphics)
+            MakeGraphics(GetVM(), pGraphics, pDispObj);
+        result = pGraphics;
+    }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Graphics>::operator= instance (0x14243d720); ours inlines it
+    // @0x14244e2e0
+    SF_NOINLINE void Shape::graphicsGet(SPtr<Instances::fl_display::Graphics>& result)
+    {
+        if (!pDispObj)
+            CreateStageObject();
+        if (!pGraphics)
+            MakeGraphics(GetVM(), pGraphics, pDispObj);
+        result = pGraphics;
     }
 
     // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
