@@ -2596,7 +2596,6 @@ template Scaleform::ArrayLH<Scaleform::GFx::AS3::Instances::fl_events::EventDisp
     Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::ListenersHash::BaseType::BaseType::Get(
         const Scaleform::GFx::ASString& key);
 // @0x14246f310
-// MS2-FUNCTIONAL: cl inlines the rehash Add differently
 template void decltype(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::ListenersHash::BaseType::BaseType::mHash)
     ::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
 

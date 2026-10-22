@@ -1,5 +1,6 @@
 // MultinameHash: {Name, Namespace} -> C map kept by the VM (class traits cache). Recovered from the
-// setRawCapacity instantiation at 0x14242a640 (entry 0x28: NextInChain, HashValue, Key{Name, pNs}, C).
+// setRawCapacity instantiation at 0x14242a640 (entry 0x28: NextInChain, HashValue, Key{Name, pNs}, C;
+// table allocated with AllocAutoHeap on the owner address, so a local-heap map).
 #ifndef MS2_SCALEFORM_GFX_AS3_AS3_MNHASH_H
 #define MS2_SCALEFORM_GFX_AS3_AS3_MNHASH_H
 
@@ -35,10 +36,10 @@ public:
         };
     };
 
-    typedef HashDH<Key, C, typename Key::HashFunctor, SID> TContainer;
+    typedef HashLH<Key, C, typename Key::HashFunctor, SID> TContainer;
     TContainer Entries;
 
-    explicit MultinameHash(void* pheap) : Entries(pheap) {}
+    MultinameHash() {}
 };
 
 typedef MultinameHash<ClassTraits::Traits*, StatMV_VM_VM_Mem> TClassTraitsCache;

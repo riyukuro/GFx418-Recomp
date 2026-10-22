@@ -2342,7 +2342,6 @@ template ArrayDataBase<GFx::AS3::SPtr<MS2_VMAbcFile>, AllocatorGH<GFx::AS3::SPtr
 // MS2-PIN: ??_GByteArray@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bcea0
 // MS2-PIN: ??_GDictionary@fl_utils@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd060
 // MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorLH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424bee00
-// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z: the exe calls Alg::UpperBit (0x1422fe440) out of line; ours inlines it
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1424c0010
 
 // MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$06V?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0d70

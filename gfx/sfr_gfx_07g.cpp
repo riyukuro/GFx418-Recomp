@@ -18,7 +18,6 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // MS2-FUNCTIONAL ??$RemoveAlt@UNodePtr@FontManager@GFx@Scaleform@@@Iterator@?$HashSetBase@UNodePtr@FontManager@GFx@Scaleform@@UNodePtrHashOp@234@U5234@U?$AllocatorLH@UNodePtr@FontManager@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@UNodePtr@FontManager@GFx@Scaleform@@UNodePtrHashOp@234@@4@@Scaleform@@QEAAXAEBUNodePtr@FontManager@GFx@2@@Z: same code as the exe with rbx / rdi swapped for the node and its flags in the hash
-// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@UNodePtr@FontManager@GFx@Scaleform@@UNodePtrHashOp@234@U5234@U?$AllocatorLH@UNodePtr@FontManager@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@UNodePtr@FontManager@GFx@Scaleform@@UNodePtrHashOp@234@@4@@Scaleform@@AEAAXPEAX_K@Z: the exe calls Alg::UpperBit out of line (0x1422fe440), here it is inlined
 
 #include "../include/gfx/gfx_fontmanager.h"
 #include "../include/gfx/gfx_moviedef.h"

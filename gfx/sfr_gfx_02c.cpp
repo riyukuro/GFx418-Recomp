@@ -4,6 +4,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425ac250-0x1425ad1e0 .text$mn
 
+// Alg::UpperBit is inlined into this TU's hash rehash in the exe.
+#define MS2_SF_UPPERBIT_INLINE
 #include "../include/gfx/gfx_fontmap.h"
 
 namespace Scaleform { namespace GFx {

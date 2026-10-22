@@ -14,7 +14,13 @@ template<class T> inline T Max(T a, T b) { return (b < a) ? a : b; }
 extern const UByte UpperBitTable[256];
 
 // Highest set bit of a 64-bit value: split into halves, quarters, then one table lookup.
+// Out of line in the exe (0x1422fe440) and called from most container rehashes; a few TUs (the FontMap and
+// ASString node hashes) have it inlined instead and define MS2_SF_UPPERBIT_INLINE before their includes.
+#ifdef MS2_SF_UPPERBIT_INLINE
 inline UByte UpperBit(UPInt v)
+#else
+SF_NOINLINE inline UByte UpperBit(UPInt v)
+#endif
 {
     if (v & 0xFFFFFFFF00000000)
     {

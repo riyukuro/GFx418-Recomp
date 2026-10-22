@@ -325,6 +325,5 @@ DOMString::DOMString(const DOMString& src)
 // MS2-PIN: ??_7?$RefCountBaseNTS@VObjectManager@XML@GFx@Scaleform@@$0BEG@@Scaleform@@6B@ 0x1432247e8
 // MS2-PIN: ??_7RootNode@XML@GFx@Scaleform@@6B@ 0x1432247f0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@V?$DOMStringNodeHashFunc@PEAUDOMStringNode@XML@GFx@Scaleform@@@234@V5234@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0BEG@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@V?$DOMStringNodeHashFunc@PEAUDOMStringNode@XML@GFx@Scaleform@@@234@@4@@Scaleform@@AEAAXPEAX_K@Z 0x1429a63b0
-// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@V?$DOMStringNodeHashFunc@PEAUDOMStringNode@XML@GFx@Scaleform@@@234@V5234@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0BEG@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@V?$DOMStringNodeHashFunc@PEAUDOMStringNode@XML@GFx@Scaleform@@@234@@4@@Scaleform@@AEAAXPEAX_K@Z: same code as the exe with rsi and rdi swapped in the register allocation
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
