@@ -3,8 +3,7 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_14
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424bb1f0-0x1424c2a70 .text$mn
-// MS2-RANGE: 0x1424c52c0-0x1424c91f0 .text$mn
+// MS2-RANGE: 0x1424bb1f0-0x1424c91f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
@@ -71,6 +70,80 @@ template struct ThunkFunc0<Classes::fl_gfx::Extensions, 3, bool>;
 template struct ThunkFunc3<Classes::fl_gfx::Extensions, 4, SPtr<Instances::fl_display::DisplayObject>, Value::Number, Value::Number, bool>;
 // thunk 0x1424c2920: Classes::fl_gfx::Extensions::getMouseTopMostEntity
 template struct ThunkFunc2<Classes::fl_gfx::Extensions, 5, SPtr<Instances::fl_display::DisplayObject>, bool, UInt32>;
+// thunk 0x1424c2a70: Classes::fl_gfx::Extensions::setMouseCursorType
+template struct ThunkFunc2<Classes::fl_gfx::Extensions, 6, const Value, const ASString&, UInt32>;
+// thunk 0x1424c2bc0: Classes::fl_gfx::Extensions::getMouseCursorType
+template struct ThunkFunc1<Classes::fl_gfx::Extensions, 7, ASString, UInt32>;
+// thunk 0x1424c2c70: Classes::fl_gfx::Extensions::getEdgeAAMode
+template struct ThunkFunc1<Classes::fl_gfx::Extensions, 8, UInt32, Instances::fl_display::DisplayObject*>;
+// thunk 0x1424c2d10: Classes::fl_gfx::Extensions::setEdgeAAMode
+template struct ThunkFunc2<Classes::fl_gfx::Extensions, 9, const Value, Instances::fl_display::DisplayObject*, UInt32>;
+// thunk 0x1424c2f20: Classes::fl_gfx::Extensions::numControllersGet
+template struct ThunkFunc0<Classes::fl_gfx::Extensions, 10, UInt32>;
+// thunk 0x1424c2f80: Classes::fl_gfx::Extensions::visibleRectGet
+template struct ThunkFunc0<Classes::fl_gfx::Extensions, 11, SPtr<Instances::fl_geom::Rectangle>>;
+// thunk 0x1424c3030: Classes::fl_gfx::Extensions::isScaleformGet
+template struct ThunkFunc0<Classes::fl_gfx::Extensions, 12, bool>;
+// thunk 0x1424c3490: Classes::fl_gfx::InteractiveObjectEx::setHitTestDisable
+template struct ThunkFunc2<Classes::fl_gfx::InteractiveObjectEx, 0, const Value, Instances::fl_display::InteractiveObject*, bool>;
+// thunk 0x1424c3660: Classes::fl_gfx::InteractiveObjectEx::getHitTestDisable
+template struct ThunkFunc1<Classes::fl_gfx::InteractiveObjectEx, 1, bool, Instances::fl_display::InteractiveObject*>;
+// thunk 0x1424c3700: Classes::fl_gfx::InteractiveObjectEx::setTopmostLevel
+template struct ThunkFunc2<Classes::fl_gfx::InteractiveObjectEx, 2, const Value, Instances::fl_display::InteractiveObject*, bool>;
+// thunk 0x1424c3790: Classes::fl_gfx::InteractiveObjectEx::getTopmostLevel
+template struct ThunkFunc1<Classes::fl_gfx::InteractiveObjectEx, 3, bool, Instances::fl_display::InteractiveObject*>;
+// thunk 0x1424c3ad0: Classes::fl_gfx::SystemEx::actionVerboseSet
+template struct ThunkFunc1<Classes::fl_gfx::SystemEx, 0, const Value, bool>;
+// thunk 0x1424c3b30: Classes::fl_gfx::SystemEx::actionVerboseGet
+template struct ThunkFunc0<Classes::fl_gfx::SystemEx, 1, bool>;
+// thunk 0x1424c3b90: Classes::fl_gfx::GamePad::supportsAnalogEvents
+template struct ThunkFunc0<Classes::fl_gfx::GamePad, 0, bool>;
+// thunk 0x1424c3bf0: Classes::fl_gfx::SystemEx::setBackgroundAlpha
+template struct ThunkFunc1<Classes::fl_gfx::SystemEx, 2, const Value, Value::Number>;
+// thunk 0x1424c3c80: Classes::fl_gfx::SystemEx::getStackTrace
+template struct ThunkFunc0<Classes::fl_gfx::SystemEx, 3, ASString>;
+// thunk 0x1424c3cf0: Classes::fl_gfx::SystemEx::getCodeFileName
+template struct ThunkFunc0<Classes::fl_gfx::SystemEx, 4, ASString>;
+// thunk 0x1424c3d60: Classes::fl_gfx::SystemEx::getCodeFileNames
+template struct ThunkFunc0<Classes::fl_gfx::SystemEx, 5, SPtr<Instances::fl::Array>>;
+// thunk 0x1424c3e10: Classes::fl_gfx::SystemEx::describeType
+template struct ThunkFunc1<Classes::fl_gfx::SystemEx, 6, ASString, const Value&>;
+// thunk 0x1424c3f90: Classes::fl_gfx::SystemEx::printObjectsReport
+template struct ThunkFunc3<Classes::fl_gfx::SystemEx, 7, const Value, bool, UInt32, const ASString&>;
+// thunk 0x1424c4270: Instances::fl_gfx::GamePadAnalogEvent::codeGet
+template struct ThunkFunc0<Instances::fl_gfx::GamePadAnalogEvent, 0, UInt32>;
+// thunk 0x1424c42d0: Instances::fl_gfx::GamePadAnalogEvent::codeSet
+template struct ThunkFunc1<Instances::fl_gfx::GamePadAnalogEvent, 1, const Value, UInt32>;
+// thunk 0x1424c4340: Instances::fl_gfx::GamePadAnalogEvent::controllerIdxGet
+template struct ThunkFunc0<Instances::fl_gfx::GamePadAnalogEvent, 2, UInt32>;
+// thunk 0x1424c43a0: Instances::fl_gfx::GamePadAnalogEvent::controllerIdxSet
+template struct ThunkFunc1<Instances::fl_gfx::GamePadAnalogEvent, 3, const Value, UInt32>;
+// thunk 0x1424c4410: Instances::fl_gfx::GamePadAnalogEvent::xvalueGet
+template struct ThunkFunc0<Instances::fl_gfx::GamePadAnalogEvent, 4, Value::Number>;
+// thunk 0x1424c4480: Instances::fl_gfx::GamePadAnalogEvent::xvalueSet
+template struct ThunkFunc1<Instances::fl_gfx::GamePadAnalogEvent, 5, const Value, Value::Number>;
+// thunk 0x1424c4510: Instances::fl_gfx::GamePadAnalogEvent::yvalueGet
+template struct ThunkFunc0<Instances::fl_gfx::GamePadAnalogEvent, 6, Value::Number>;
+// thunk 0x1424c4580: Instances::fl_gfx::GamePadAnalogEvent::yvalueSet
+template struct ThunkFunc1<Instances::fl_gfx::GamePadAnalogEvent, 7, const Value, Value::Number>;
+// thunk 0x1424c4610: Instances::fl_gfx::GamePadAnalogEvent::clone
+template struct ThunkFunc0<Instances::fl_gfx::GamePadAnalogEvent, 8, SPtr<Instances::fl_events::Event>>;
+// thunk 0x1424c46c0: Instances::fl_gfx::GamePadAnalogEvent::toString
+template struct ThunkFunc0<Instances::fl_gfx::GamePadAnalogEvent, 9, ASString>;
+// thunk 0x1424c49b0: Classes::fl_gfx::FocusManager::alwaysEnableArrowKeysSet
+template struct ThunkFunc1<Classes::fl_gfx::FocusManager, 0, const Value, bool>;
+// thunk 0x1424c4a10: Classes::fl_gfx::FocusManager::alwaysEnableArrowKeysGet
+template struct ThunkFunc0<Classes::fl_gfx::FocusManager, 1, bool>;
+// thunk 0x1424c4a70: Classes::fl_gfx::FocusManager::disableFocusKeysSet
+template struct ThunkFunc1<Classes::fl_gfx::FocusManager, 2, const Value, bool>;
+// thunk 0x1424c4c30: Classes::fl_gfx::FocusManager::disableFocusKeysGet
+template struct ThunkFunc0<Classes::fl_gfx::FocusManager, 3, bool>;
+// thunk 0x1424c4c90: Classes::fl_gfx::FocusManager::moveFocus
+template struct ThunkFunc4<Classes::fl_gfx::FocusManager, 4, SPtr<Instances::fl_display::InteractiveObject>, const ASString&, Instances::fl_display::InteractiveObject*, bool, UInt32>;
+// thunk 0x1424c4e60: Classes::fl_gfx::FocusManager::findFocus
+template struct ThunkFunc6<Classes::fl_gfx::FocusManager, 5, SPtr<Instances::fl_display::InteractiveObject>, const ASString&, Instances::fl_display::DisplayObjectContainer*, bool, Instances::fl_display::InteractiveObject*, bool, UInt32>;
+// thunk 0x1424c4f80: Classes::fl_gfx::FocusManager::setFocus
+template struct ThunkFunc2<Classes::fl_gfx::FocusManager, 6, const Value, Instances::fl_display::InteractiveObject*, UInt32>;
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
@@ -1515,34 +1588,6 @@ namespace Instances { namespace fl_utils
 
 }}} // namespace Scaleform::GFx::AS3
 
-// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$06V?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0d70
-// MS2-PIN: ?Func@?$ThunkFunc0@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$07K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0e70
-// MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$08$$CBVValue@456@PEAVInteractiveObject@fl_display@Instances@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0ed0
-// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$09KPEAVInteractiveObject@fl_display@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0f80
-// MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0L@_NKK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1020
-// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0M@KK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1120
-// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0N@KK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c11d0
-// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0O@V?$SPtr@VSprite@fl_display@Instances@AS3@GFx@Scaleform@@@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1430
-// MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0P@$$CBVValue@456@PEAVSprite@fl_display@Instances@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1530
-// MS2-PIN: ?Func@?$ThunkFunc0@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@V?$SPtr@VIMECandidateListStyle@fl_gfx@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1860
-// MS2-PIN: ?Func@?$ThunkFunc1@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAVIMECandidateListStyle@2Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1910
-// MS2-PIN: ?Func@?$ThunkFunc3@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@PEAVSprite@fl_display@Instances@456@AEBVASString@56@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1950
-// MS2-PIN: ?Func@?$ThunkFunc0@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1b60
-// MS2-PIN: ?Func@?$ThunkFunc0@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$03VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1bd0
-// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1da0
-// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1ed0
-// MS2-PIN: ?Func@?$ThunkFunc1@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$01VASString@56@PEAVTextField@fl_text@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2000
-// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$02$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c20a0
-// MS2-PIN: ?Func@?$ThunkFunc1@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$03VASString@56@PEAVTextField@fl_text@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c21d0
-// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$04$$CBVValue@456@PEAVTextField@fl_text@Instances@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2270
-// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$05$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2300
-// MS2-PIN: ?Func@?$ThunkFunc3@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$06$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@PEAVBitmapData@fl_display@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2490
-// MS2-PIN: ?Func@?$ThunkFunc1@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2610
-// MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2670
-// MS2-PIN: ?Func@?$ThunkFunc1@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c26d0
-// MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$02_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2730
-// MS2-PIN: ?Func@?$ThunkFunc3@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$03V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@NN_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2790
-// MS2-PIN: ?Func@?$ThunkFunc2@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$04V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@_NK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2920
 // MS2-PIN: ??_7Dictionary@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171980
 // MS2-PIN: ??_7Endian@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171a10
 // MS2-PIN: ??_7IDataInput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171b80
@@ -1577,3 +1622,69 @@ namespace Instances { namespace fl_utils
 // MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorLH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424bee00
 // MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z: the exe calls Alg::UpperBit (0x1422fe440) out of line; ours inlines it
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@VValue@AS3@GFx@Scaleform@@V1234@UHashFunctor@1234@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1424c0010
+
+// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$06V?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0d70
+// MS2-PIN: ?Func@?$ThunkFunc0@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$07K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0e70
+// MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$08$$CBVValue@456@PEAVInteractiveObject@fl_display@Instances@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0ed0
+// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$09KPEAVInteractiveObject@fl_display@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c0f80
+// MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0L@_NKK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1020
+// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0M@KK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1120
+// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0N@KK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c11d0
+// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0O@V?$SPtr@VSprite@fl_display@Instances@AS3@GFx@Scaleform@@@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1430
+// MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0P@$$CBVValue@456@PEAVSprite@fl_display@Instances@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1530
+// MS2-PIN: ?Func@?$ThunkFunc0@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@V?$SPtr@VIMECandidateListStyle@fl_gfx@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1860
+// MS2-PIN: ?Func@?$ThunkFunc1@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAVIMECandidateListStyle@2Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1910
+// MS2-PIN: ?Func@?$ThunkFunc3@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@PEAVSprite@fl_display@Instances@456@AEBVASString@56@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1950
+// MS2-PIN: ?Func@?$ThunkFunc0@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1b60
+// MS2-PIN: ?Func@?$ThunkFunc0@VIMEEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$03VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1bd0
+// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1da0
+// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$00$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c1ed0
+// MS2-PIN: ?Func@?$ThunkFunc1@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$01VASString@56@PEAVTextField@fl_text@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2000
+// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$02$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c20a0
+// MS2-PIN: ?Func@?$ThunkFunc1@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$03VASString@56@PEAVTextField@fl_text@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c21d0
+// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$04$$CBVValue@456@PEAVTextField@fl_text@Instances@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2270
+// MS2-PIN: ?Func@?$ThunkFunc2@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$05$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2300
+// MS2-PIN: ?Func@?$ThunkFunc3@VTextFieldEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$06$$CBVValue@456@PEAVTextField@fl_text@Instances@456@AEBVASString@56@PEAVBitmapData@fl_display@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2490
+// MS2-PIN: ?Func@?$ThunkFunc1@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2610
+// MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2670
+// MS2-PIN: ?Func@?$ThunkFunc1@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c26d0
+// MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$02_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2730
+// MS2-PIN: ?Func@?$ThunkFunc3@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$03V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@NN_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2790
+// MS2-PIN: ?Func@?$ThunkFunc2@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$04V?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@_NK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2920
+// MS2-PIN: ?Func@?$ThunkFunc2@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$05$$CBVValue@456@AEBVASString@56@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2a70
+// MS2-PIN: ?Func@?$ThunkFunc1@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$06VASString@56@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2bc0
+// MS2-PIN: ?Func@?$ThunkFunc1@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$07KPEAVDisplayObject@fl_display@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2c70
+// MS2-PIN: ?Func@?$ThunkFunc2@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$08$$CBVValue@456@PEAVDisplayObject@fl_display@Instances@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2d10
+// MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$09K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2f20
+// MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$0L@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c2f80
+// MS2-PIN: ?Func@?$ThunkFunc0@VExtensions@fl_gfx@Classes@AS3@GFx@Scaleform@@$0M@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3030
+// MS2-PIN: ?Func@?$ThunkFunc2@VInteractiveObjectEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@PEAVInteractiveObject@fl_display@Instances@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3490
+// MS2-PIN: ?Func@?$ThunkFunc1@VInteractiveObjectEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$00_NPEAVInteractiveObject@fl_display@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3660
+// MS2-PIN: ?Func@?$ThunkFunc2@VInteractiveObjectEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@PEAVInteractiveObject@fl_display@Instances@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3700
+// MS2-PIN: ?Func@?$ThunkFunc1@VInteractiveObjectEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$02_NPEAVInteractiveObject@fl_display@Instances@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3790
+// MS2-PIN: ?Func@?$ThunkFunc1@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3ad0
+// MS2-PIN: ?Func@?$ThunkFunc0@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3b30
+// MS2-PIN: ?Func@?$ThunkFunc0@VGamePad@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3b90
+// MS2-PIN: ?Func@?$ThunkFunc1@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3bf0
+// MS2-PIN: ?Func@?$ThunkFunc0@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3c80
+// MS2-PIN: ?Func@?$ThunkFunc0@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$03VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3cf0
+// MS2-PIN: ?Func@?$ThunkFunc0@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3d60
+// MS2-PIN: ?Func@?$ThunkFunc1@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$05VASString@56@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3e10
+// MS2-PIN: ?Func@?$ThunkFunc3@VSystemEx@fl_gfx@Classes@AS3@GFx@Scaleform@@$06$$CBVValue@456@_NKAEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c3f90
+// MS2-PIN: ?Func@?$ThunkFunc0@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$0A@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4270
+// MS2-PIN: ?Func@?$ThunkFunc1@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c42d0
+// MS2-PIN: ?Func@?$ThunkFunc0@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$01K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4340
+// MS2-PIN: ?Func@?$ThunkFunc1@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c43a0
+// MS2-PIN: ?Func@?$ThunkFunc0@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$03N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4410
+// MS2-PIN: ?Func@?$ThunkFunc1@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4480
+// MS2-PIN: ?Func@?$ThunkFunc0@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$05N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4510
+// MS2-PIN: ?Func@?$ThunkFunc1@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4580
+// MS2-PIN: ?Func@?$ThunkFunc0@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VEvent@fl_events@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4610
+// MS2-PIN: ?Func@?$ThunkFunc0@VGamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@$08VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c46c0
+// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c49b0
+// MS2-PIN: ?Func@?$ThunkFunc0@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4a10
+// MS2-PIN: ?Func@?$ThunkFunc1@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4a70
+// MS2-PIN: ?Func@?$ThunkFunc0@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$02_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4c30
+// MS2-PIN: ?Func@?$ThunkFunc4@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$03V?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@PEAVInteractiveObject@fl_display@Instances@456@_NK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4c90
+// MS2-PIN: ?Func@?$ThunkFunc6@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$04V?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@PEAVDisplayObjectContainer@fl_display@Instances@456@_NPEAVInteractiveObject@fl_display@Instances@456@_NK@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4e60
+// MS2-PIN: ?Func@?$ThunkFunc2@VFocusManager@fl_gfx@Classes@AS3@GFx@Scaleform@@$05$$CBVValue@456@PEAVInteractiveObject@fl_display@Instances@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424c4f80
