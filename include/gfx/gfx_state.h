@@ -47,6 +47,8 @@ public:
         State_Video           = 30,
         // (appended for the font manager states, sfr_gfx_07g)
         State_Translator = 1,
+        // (appended for the AS3 natives, sfr12) flash.system.IME queries 0x18
+        State_IMEManager = 24,
     };
 
 protected:

@@ -5,7 +5,7 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
-#include "Kernel/SF_AutoPtr.h"
+#include "ms2/scaleform/include/kernel/sf_autoptr.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

@@ -33,6 +33,12 @@ class MovieDefRootNode;
 class FontResource;
 class MovieDef;
 class StateBagImpl;
+class Movie;
+class UserEventHandler;
+class ExternalInterface;
+class KeyboardState;
+class LogState;
+class IMEManagerBase;
 
 // (sfr_gfx_06d) the links of the movie's list of root nodes (List<MovieDefRootNode>): the list root's pNext is the
 // first node, and the root itself passes for a node one base offset before it.
@@ -72,14 +78,18 @@ public:
     float            ScreenToWorldSy;          // +0x134
     void*            Unrecovered_138[0x1e];    // +0x138
     Ptr<Log>         pCachedLog;               // +0x228 the log state's log, cached (sfr_gfx_06)
-    void*            Unrecovered_230[3];       // +0x230
+    UserEventHandler* pUserEventHandler;       // +0x230 Ptr<UserEventHandler>: cached during advance (sfr12)
+    void*            pFSCommandHandler;        // +0x238 Ptr<FSCommandHandler>
+    ExternalInterface* pExtIntfHandler;        // +0x240 Ptr<ExternalInterface>: the host's ExternalInterface.call hook
     FontManagerStates* pFontManagerStates;     // +0x248 Ptr: the font states the movies' font managers share (sfr_gfx_06d)
     void*            Unrecovered_250[4];       // +0x250
     UInt32           Unrecovered_270;          // +0x270
     float            FrameTime;                // +0x274 seconds per frame (sfr_video_01 SetSwfSync)
     void*            Unrecovered_278[0x204];   // +0x278
     Render::PointF   MouseLastPosition;        // +0x1298 MouseState[0] last position, twips (sfr_gfx_06)
-    void*            Unrecovered_12a0[0x368];  // +0x12a0
+    void*            Unrecovered_12a0[0x22];   // +0x12a0
+    UByte            KeyboardStates[4][0x688]; // +0x13b0 KeyboardState[4] (gfx_keyboardstate.h), one per keyboard
+    void*            Unrecovered_2dd0[2];      // +0x2dd0
     // A character the timeline keeps advancing even when stopped (MS2 build; Sprite::CheckAdvanceStatus).
     DisplayObjectBase* pKeepAdvancingChar;     // +0x2de0
     void*            Unrecovered_2de8[0xf];    // +0x2de8
@@ -140,6 +150,7 @@ public:
     UInt32           Flags2;                   // +0x3494 (sfr_gfx_06b)
     UByte            Unrecovered_3498[0x58];   // +0x3498
     void*            RenderContext[1];         // +0x34f0 Render::Context (gfx_rendertree.h: the heap first), rest unrecovered
+    UByte            Unrecovered_34f8[0x3650 - 0x34f8]; // +0x34f8 rest of the context, the tail of the movie
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
     bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
@@ -223,7 +234,82 @@ public:
     // (appended for the font manager, sfr_gfx_07g) a font of the movies registered with RegisterFonts, by name and
     // style, and the movie it came from (0x14256ed40).
     FontResource* FindRegisteredFont(const char* pfontName, unsigned fontFlags, MovieDef** ppsrcMovieDef) const;
+
+    // (appended for the AS3 support, sfr12) constructed by the AVM's CreateMovie into 0x3650 bytes of the movie heap.
+    MovieImpl(MemoryHeap* pheap);
+    // Movie's operator set (RefCountBase<Movie, StatMV_Other_Mem>): new (heap) allocates in the heap.
+    SF_MEMORY_REDEFINE_NEW(MovieImpl, 0x147)
+    // The log state's log (through the StateBag base).
+    inline Ptr<Log> GetLog() const;     // defined in gfx_movieimplstates.h
+
+    // (appended for the AS3 natives, sfr12)
+    // The Movie interface MovieImpl implements: its base at offset 0 (what the host handlers receive).
+    Movie* AsMovie() const { return (Movie*)this; }
+    // The movie's states (StateBag at +0x10); defined in gfx_movieimplstates.h. Code matching the exe calls
+    // GetStateBag()->GetLogState() instead: the exe reads the returned Ptr through the call's result register.
+    inline Ptr<LogState>       GetLogState() const;
+    inline Ptr<IMEManagerBase> GetIMEManager() const;
+    // Keyboard keyboardIndex (0..3), NULL past the last one.
+    const KeyboardState* GetKeyboardState(unsigned keyboardIndex) const
+    {
+        if (keyboardIndex < 4)
+            return reinterpret_cast<const KeyboardState*>(KeyboardStates[keyboardIndex]);
+        return NULL;
+    }
+    KeyboardState* GetKeyboardState(unsigned keyboardIndex)
+    {
+        if (keyboardIndex < 4)
+            return reinterpret_cast<KeyboardState*>(KeyboardStates[keyboardIndex]);
+        return NULL;
+    }
+    // MovieImpl as its Movie interface, for the virtual calls on itself (callers make the call through this: the
+    // visible stage in pixels is AsMovieInterface()->GetVisibleFrameRect(), slot 17 at +0x88; an inline forwarder would
+    // change how callers read the returned rect).
+    inline const class MovieInterface418* AsMovieInterface() const;
+    const Render::RectF& GetVisibleFrameRectInTwips() const { return VisibleFrameRect; }
+
+    // Multitouch input (exe bodies).
+    enum MultitouchInputMode
+    {
+        MTI_None       = 0,
+        MTI_TouchPoint = 1,
+        MTI_Gesture    = 2,
+        MTI_Mixed      = 3
+    };
+    MultitouchInputMode GetMultitouchInputMode() const;
+    void                SetMultitouchInputMode(MultitouchInputMode);
+    unsigned            GetMaxTouchPoints() const;
+    UInt32              GetSupportedGesturesMask() const;
 };
+
+// The leading Movie vftable slots, for the virtual calls MovieImpl makes on itself (GetVisibleFrameRect).
+class __declspec(novtable) MovieInterface418
+{
+public:
+    virtual void Slot00() = 0;
+    virtual void Slot01() = 0;
+    virtual void Slot02() = 0;
+    virtual void Slot03() = 0;
+    virtual void Slot04() = 0;
+    virtual void Slot05() = 0;
+    virtual void Slot06() = 0;
+    virtual void Slot07() = 0;
+    virtual void Slot08() = 0;
+    virtual void Slot09() = 0;
+    virtual void Slot10() = 0;
+    virtual void Slot11() = 0;
+    virtual void Slot12() = 0;
+    virtual void Slot13() = 0;
+    virtual void Slot14() = 0;
+    virtual void Slot15() = 0;
+    virtual void Slot16() = 0;
+    virtual Render::RectF GetVisibleFrameRect() const = 0; // 17
+};
+
+inline const MovieInterface418* MovieImpl::AsMovieInterface() const
+{
+    return reinterpret_cast<const MovieInterface418*>(this);
+}
 
 // The root of one loaded movie's sprite tree; leading members only (the font manager, bytes loaded and so on).
 class MovieDefRootNode : public MovieDefRootNodeLinks   // pPrev +0x08, pNext +0x10

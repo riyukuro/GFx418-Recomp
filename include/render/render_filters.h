@@ -179,6 +179,18 @@ public:
     {
         SetAngleDistance(angle, PixelsToTwips(dist));
     }
+    // (appended for the AS3 DropShadowFilter, sfr12) the Flash defaults: 45 degrees, 4 px away, 4x4 px blur in
+    // one pass, black.
+    ShadowFilter(float angle = (float)(45.0 * 3.14159265358979323846 / 180.0), float dist = 4.0f,
+                 float blurx = 4.0f, float blury = 4.0f, unsigned passes = 1)
+        : BlurFilterImpl(Filter_Shadow)
+    {
+        Params.BlurX  = PixelsToTwips(blurx);
+        Params.BlurY  = PixelsToTwips(blury);
+        Params.Passes = passes;
+        SetAngleDistance(angle, PixelsToTwips(dist));
+        Params.Colors[0].SetRGBA(0, 0, 0, 0xFF);
+    }
 
     virtual Filter* Clone(MemoryHeap* heap = 0) const;
     virtual bool    IsContributing() const;
@@ -188,6 +200,16 @@ class GlowFilter : public BlurFilterImpl
 {
 public:
     GlowFilter(const BlurFilterParams& params) : BlurFilterImpl(Filter_Glow, params) {}
+    // (appended for the AS3 GlowFilter, sfr12) the Flash defaults: 6x6 px blur in one pass, red, strength 2.
+    GlowFilter(float blurx = 6.0f, float blury = 6.0f, unsigned passes = 1) : BlurFilterImpl(Filter_Glow)
+    {
+        Params.BlurX    = PixelsToTwips(blurx);
+        Params.BlurY    = PixelsToTwips(blury);
+        Params.Passes   = passes;
+        Params.Offset   = PointF(0, 0);
+        Params.Colors[0].SetRGBA(0xFF, 0, 0, 0xFF);
+        Params.Strength = 2.0f;
+    }
 
     virtual Filter* Clone(MemoryHeap* heap = 0) const;
     virtual bool    IsContributing() const;
@@ -200,6 +222,18 @@ public:
     {
         Params.Mode |= BlurFilterParams::Mode_Highlight;
         SetAngleDistance(angle, PixelsToTwips(dist));
+    }
+    // (appended for the AS3 BevelFilter, sfr12) the Flash defaults: 4x4 px blur in one pass, 45 degrees, 4 px, an
+    // inner bevel with a black shadow and a white highlight.
+    BevelFilter(float blurx = 4.0f, float blury = 4.0f, unsigned passes = 1) : BlurFilterImpl(Filter_Bevel)
+    {
+        Params.BlurX  = PixelsToTwips(blurx);
+        Params.BlurY  = PixelsToTwips(blury);
+        Params.Passes = passes;
+        SetAngleDistance((float)(45.0 * 3.14159265358979323846 / 180.0), PixelsToTwips(4.0f));
+        Params.Mode  |= (BlurFilterParams::Mode_Inner | BlurFilterParams::Mode_Highlight);
+        Params.Colors[0].SetRGBA(0, 0, 0, 0xFF);
+        Params.Colors[1].SetRGBA(0xFF, 0xFF, 0xFF, 0xFF);
     }
 
     virtual Filter* Clone(MemoryHeap* heap = 0) const;

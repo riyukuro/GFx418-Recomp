@@ -10,8 +10,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
-#include "GFx/GFx_ASUtils.h"
-#include "Kernel/SF_HeapNew.h"
+#include "ms2/scaleform/include/gfx/gfx_asutils.h"
 
 // The thunks below call through ThunkFuncN<...>::Method, defined (with its dynamic initializer) in the sfr_as3di_*
 // units.

@@ -5,7 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142473760-0x1424837b0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
-#include "Render/Render_Filters.h"
+#include "ms2/scaleform/include/render/render_filters.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -494,7 +494,7 @@ namespace Classes { namespace fl_external
                 root->ASValue2GFxValue(argv[i + 1], Scaleform::Construct<GFx::Value>(&args[i]));
 
             root->ExternalIntfRetVal.SetUndefined();
-            movie->pExtIntfHandler->Callback(movie, methodName.IsEmpty() ? NULL : methodName.ToCStr(), args, nargs);
+            movie->pExtIntfHandler->Callback(movie->AsMovie(), methodName.IsEmpty() ? NULL : methodName.ToCStr(), args, nargs);
             result.Assign(root->ExternalIntfRetVal);
 
             for (unsigned i = 0; i < nargs; i++)
@@ -514,7 +514,7 @@ namespace Classes { namespace fl_external
     void ExternalInterface::marshallExceptionsGet(bool& result)
     {
         result = false;
-        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetLogState())
+        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetStateBag()->GetLogState())
             log->LogWarning("ExternalInterface::marshallExceptions is not supported.");
     }
 
@@ -522,7 +522,7 @@ namespace Classes { namespace fl_external
     void ExternalInterface::marshallExceptionsSet(const Value& result, bool value)
     {
         SF_UNUSED2(result, value);
-        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetLogState())
+        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetStateBag()->GetLogState())
             log->LogWarning("ExternalInterface::marshallExceptions is not supported.");
     }
 
@@ -531,7 +531,7 @@ namespace Classes { namespace fl_external
     void ExternalInterface::objectIDGet(ASString& result)
     {
         result = GetVM().GetStringManager().GetBuiltin(AS3Builtin_null);
-        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetLogState())
+        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetStateBag()->GetLogState())
             log->LogWarning("ExternalInterface::objectID is not supported.");
     }
 }}
@@ -2061,7 +2061,7 @@ namespace Instances { namespace fl_geom
     // @0x142482400
     PerspectiveProjection::PerspectiveProjection(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
-        , fieldOfView(55), pDispObj(0)
+        , projectionCenter(Render::PointF::NoInit), fieldOfView(55), pDispObj(0)
     {
         // A 500x500 stage: the centre and the focal length of a 55 degree field of view.
         projectionCenter.x = 250.f;

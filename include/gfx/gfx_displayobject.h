@@ -280,7 +280,7 @@ public:
     void GetLevelMatrix(Matrix* pmat) const;
     void GetWorldCxform(Cxform* pcxform) const;
 
-    void Clear3D(bool inherit);
+    void Clear3D(bool inherit = false);
     bool Is3D(bool inherit) const;
     bool Is3D() const;
 
@@ -320,6 +320,16 @@ public:
     void SetUnloading(bool v = true)      { v ? Flags |= Mask_Unloading : Flags &= ~Mask_Unloading; }
     void SetLoaded(bool v = true)         { v ? Flags |= Mask_Loaded : Flags &= ~Mask_Loaded; }
     int  GetAVMVersion() const            { return pASRoot->AVMVersion; }
+
+    // (appended for flash.geom, sfr_as3_11)
+    InteractiveObject*         GetParent() const             { return pParent; }
+    const PerspectiveDataType* GetPerspectiveDataPtr() const { return pPerspectiveData; }
+    PointF LocalToGlobal(const PointF& pt) const { return Local3DToGlobal(Render::Point3F(pt.x, pt.y, 0)); }
+
+    // (appended for the AS3 character factory, sfr12) built in place in memory shared with the AVM part; the class
+    // operator new set is redeclared next to the placement one, which would hide it otherwise.
+    SF_MEMORY_DEFINE_PLACEMENT_NEW
+    SF_MEMORY_REDEFINE_NEW(DisplayObjectBase, 322)
 
 protected:
     Render::TreeContainer* ConvertToTreeContainer();
@@ -503,5 +513,17 @@ struct DisplayObject::ScrollRectInfo : public NewOverrideBase<322>
 };
 
 }} // namespace Scaleform::GFx
+
+// (appended, sfr12) DisplayObjectBase::Is3D() is inline over the render node's flags; it needs both gfx_displayobject.h
+// and gfx_rendertree.h, so whichever of the two comes second defines it.
+#if defined(MS2_SF_GFX_DISPLAYOBJECT_H) && defined(MS2_SF_GFX_RENDERTREE_H) && !defined(MS2_SF_GFX_DISPLAYOBJECT_IS3D)
+#define MS2_SF_GFX_DISPLAYOBJECT_IS3D
+namespace Scaleform { namespace GFx {
+inline bool DisplayObjectBase::Is3D() const
+{
+    return pRenNode && pRenNode->Is3D();
+}
+}} // namespace Scaleform::GFx
+#endif
 
 #endif

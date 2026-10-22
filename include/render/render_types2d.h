@@ -21,11 +21,16 @@ public:
     Point(const Point& p) { SetPoint(p.x, p.y); }
 
     void SetPoint(T px, T py) { x = px; y = py; }
+    // user-declared assignment (as the copy): both fields are read before either is stored
+    Point& operator=(const Point& p) { SetPoint(p.x, p.y); return *this; }
     bool operator==(const Point& p) const { return x == p.x && y == p.y; }
     bool operator!=(const Point& p) const { return x != p.x || y != p.y; }
     // (appended for the line buffer, sfr_render_04d)
     Point& operator+=(const Point& p) { x += p.x; y += p.y; return *this; }
     Point& operator-=(const Point& p) { x -= p.x; y -= p.y; return *this; }
+    // (appended for flash.geom, sfr_as3_11) both coordinates set to v; the coordinate-wise product
+    explicit Point(T v) { SetPoint(v, v); }
+    const Point operator*(const Point& p) const { return Point(x * p.x, y * p.y); }
 };
 
 template<class T>
@@ -54,9 +59,14 @@ public:
     bool operator!=(const Size& s) const { return Width != s.Width || Height != s.Height; }
 };
 
+// Alignment of the rect: float rects are 16-aligned (4.1.18 is built with SF_ENABLE_SIMD), through an empty base so
+// the edges stay at +0; the aligned temporaries are what give some callers their stack cookie
+template<class T> class RectAlign { };
+template<> class __declspec(align(16)) RectAlign<float> { };
+
 // Edges are stored (x1, y1, x2, y2); x2/y2 are exclusive for integer rects.
 template<class T>
-class Rect
+class Rect : public RectAlign<T>
 {
 public:
     T x1, y1, x2, y2;
@@ -135,6 +145,11 @@ public:
         dest->y2 = (y2 > r.y2) ? r.y2 : y2;
         return true;
     }
+
+    // (appended for flash.geom, sfr_as3_11) the middle of the rectangle
+    T        HCenter() const { return (x1 + x2) / 2; }
+    T        VCenter() const { return (y1 + y2) / 2; }
+    Point<T> Center() const  { return Point<T>(HCenter(), VCenter()); }
 
     // (appended for the shape bounds, sfr_render_03d)
     Rect& ExpandToPoint(T x, T y)

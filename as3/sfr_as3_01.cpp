@@ -14,14 +14,13 @@
 // MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVExecuteTag@GFx@Scaleform@@U?$AllocatorGH@PEAVExecuteTag@GFx@Scaleform@@$01@3@U?$ArrayConstPolicy@$0CA@$0BA@$0A@@3@@Scaleform@@QEAAXPEBX_K@Z 0x1423dd080 ; unique
 // MS2-PIN: ?SFsprintf@Scaleform@@YA_KPEAD_KPEBDZZ 0x1423dd130 ; unique
 // MS2-PINS-END tplpin
-#define GFX_USE_VIDEO   // the exe is built with video support (GFx_VideoBase)
-#include "GFx/GFx_Sprite.h"
-#include "GFx/GFx_TextField.h"
-#include "GFx/GFx_Button.h"
-#include "ms2/scaleform/include/gfx/gfx_statictext.h"
-#include "GFx/GFx_VideoBase.h"
-#include "GFx/AS3/IME/AS3_IMEManager.h"
-#include "ms2/scaleform/include/gfx/gfx_loadprocess.h"
+#include "ms2/scaleform/include/gfx/gfx_sprite.h"
+#include "ms2/scaleform/include/gfx/gfx_spritedef.h"
+#include "ms2/scaleform/include/gfx/gfx_textfield.h"
+#include "ms2/scaleform/include/gfx/gfx_button.h"
+#include "ms2/scaleform/include/gfx/gfx_statictextcharacter.h"
+#include "ms2/scaleform/include/video/video_statebag.h"
+#include "ms2/scaleform/include/gfx/gfx_loadproc.h"
 #include "ms2/scaleform/include/gfx/as3/as3_support.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 
@@ -78,7 +77,7 @@ DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const C
                                                   proot->pASMovieRoot, pparent, rid) : 0;
         if (AS3::AvmTextField* pavm = (AS3::AvmTextField*)(pm + ((sizeof(TextField) + 3) & ~3)))
             new (pavm) AS3::AvmTextField(ptxt);
-        return ptxt;
+        return AS3::AsDisplayObject(ptxt);
     }
     case CharacterDef::StaticText:
     {
@@ -130,8 +129,8 @@ DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const C
 // @0x1423dc560
 MemoryContext* AS3Support::CreateMemoryContext(const char* heapName, const MemoryParams& memParams, bool debugHeap)
 {
-    MemoryHeap::HeapDesc desc = memParams.Desc;
-    desc.Flags |= ((unsigned)debugHeap << 12) | MemoryHeap::Heap_FastTinyBlocks | MemoryHeap::Heap_ThreadUnsafe;
+    HeapDesc desc = memParams.Desc;
+    desc.Flags |= ((unsigned)debugHeap << 12) | HeapDesc::Heap_FastTinyBlocks | HeapDesc::Heap_ThreadUnsafe;
     desc.HeapId = HeapId_MovieView;
     desc.Limit = 0;
     MemoryHeap* pheap = Memory::GetGlobalHeap()->CreateHeap(heapName, desc);
@@ -181,10 +180,10 @@ void SF_STDCALL DoAbcLoader(LoadProcess* p, const TagInfo& tagInfo)
         Stream_LogBytes(pin, dataSize);
         pin->SetPosition(pin->Tell() - dataSize);
     }
-    if (name.IsEmpty() && p->ASInitActionTagsNum)
+    if (name.IsEmpty() && p->GetASInitActionTagsNum())
     {
         char num[20];
-        SFsprintf(num, sizeof(num), "%d", p->ASInitActionTagsNum);
+        SFsprintf(num, sizeof(num), "%d", p->GetASInitActionTagsNum());
         name = num;
     }
 

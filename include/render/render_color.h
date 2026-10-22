@@ -84,6 +84,10 @@ public:
     void GetHSI(float* h, float* s, float* i) const;
     static void SF_STDCALL ConvertRGBToHSI(double r, double g, double b, double* h, double* s, double* i);
     static void SF_STDCALL ConvertHSIToRGB(double h, double s, double i, double* r, double* g, double* b);
+
+    // (appended for the AS3 filters, sfr12) the RGB part with a zero alpha; a raw ARGB value with its alpha replaced
+    Color GetColorRGB() const              { return Color(Raw & 0x00FFFFFF); }
+    void  SetColor(UInt32 raw, UByte a8)   { Raw = raw; SetAlpha(a8); }
 };
 
 }} // namespace Scaleform::Render

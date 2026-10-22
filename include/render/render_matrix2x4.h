@@ -272,9 +272,37 @@ public:
         *x   = M[0][0] * tx + M[0][1] * ty;
         *y   = M[1][0] * tx + M[1][1] * ty;
     }
+
+    // (appended for flash.geom, sfr_as3_11) the class-scope spelling of the no-init tag
+    typedef Render::NoInitType NoInitType;
+    static const NoInitType NoInit = Render::NoInit;
+    // this = m * this, the portable product (Append is the SSE one for float; Matrix2x4<double>: 0x142484280)
+    Matrix2x4& Append_NonOpt(const Matrix2x4& m)
+    {
+        Matrix2x4 t(*this);
+        M[0][0] = m.M[0][0] * t.M[0][0] + m.M[0][1] * t.M[1][0];
+        M[1][0] = m.M[1][0] * t.M[0][0] + m.M[1][1] * t.M[1][0];
+        M[0][1] = m.M[0][0] * t.M[0][1] + m.M[0][1] * t.M[1][1];
+        M[1][1] = m.M[1][0] * t.M[0][1] + m.M[1][1] * t.M[1][1];
+        M[0][2] = 0;
+        M[1][2] = 0;
+        M[0][3] = m.M[0][0] * t.M[0][3] + m.M[0][1] * t.M[1][3] + m.M[0][3];
+        M[1][3] = m.M[1][0] * t.M[0][3] + m.M[1][1] * t.M[1][3] + m.M[1][3];
+        return *this;
+    }
 };
 
 typedef Matrix2x4<float> Matrix2F;
+
+// The double matrix (flash.geom.Matrix keeps one): Append is the portable product and Rotation uses the double
+// cos / sin.
+template<> inline Matrix2x4<double>& Matrix2x4<double>::Append(const Matrix2x4<double>& m) { return Append_NonOpt(m); }
+template<> inline Matrix2x4<double> Matrix2x4<double>::Rotation(double radians)
+{
+    double c = cos(radians);
+    double s = sin(radians);
+    return Matrix2x4<double>(c, -s, 0.0, s, c, 0.0);
+}
 
 }} // namespace Scaleform::Render
 

@@ -127,16 +127,9 @@ public:
     void* pEffect;
 };
 
-// the 8 bytes between the vftable pointer and the list links (+0x08; neither the constructor nor the destructor
-// touches them)
-struct TreeCacheNodeHead
-{
-    void* pReserved;
-};
-
-// 0x70 bytes, list links at +0x10
-class TreeCacheNode : public NewOverrideBase<StatRender_TreeCache_Mem>, public TreeCacheNodeHead,
-                      public ListNode<TreeCacheNode>
+// 0x70 bytes, list links at +0x10: the class is 16-aligned (SortParentBounds), so the vftable pointer takes a
+// 16-byte slot and +0x08 is padding
+class TreeCacheNode : public NewOverrideBase<StatRender_TreeCache_Mem>, public ListNode<TreeCacheNode>
 {
 public:
     TreeCacheRoot*   pRoot;         // +0x20

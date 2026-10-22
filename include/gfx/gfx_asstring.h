@@ -75,7 +75,9 @@ public:
     const char*      ToCStr() const       { return pNode->pData; }
     const char*      GetBuffer() const    { return pNode->pData; }
     unsigned         GetSize() const      { return pNode->Size; }
+    bool             IsEmpty() const      { return pNode->Size == 0; }   // (appended for the AS3 natives, sfr12)
     unsigned         GetHashFlags() const { return pNode->HashFlags; }
+    unsigned         GetHash() const      { return pNode->HashFlags & Flag_HashMask; }
     bool             IsBuiltin() const    { return (pNode->HashFlags & Flag_Builtin) != 0; }
     // Records the result of a path check on the shared node.
     void             SetPathFlags(unsigned flags) const { pNode->HashFlags |= flags; }
@@ -154,6 +156,11 @@ public:
         pNode->Release();
         pNode = pnode;
     }
+    // Points at the manager's null string.
+    inline void SetNull();
+
+    void operator+=(const char* str) { Append(str, strlen(str)); }
+    void operator+=(const ASString& str) { Append(str); }
 };
 
 // Lookup key of the string set: text, its hash and its byte count.
@@ -286,6 +293,10 @@ public:
     {
         return ASString(CreateConstStringNode(pstr, length, stringFlags));
     }
+    ASString CreateConstString(const char* pstr)
+    {
+        return ASString(CreateConstStringNode(pstr, strlen(pstr), 0));
+    }
     ASString CreateString(const char* pstr, UPInt length) { return ASString(CreateStringNode(pstr, length)); }
 
     ASStringNode* GetEmptyStringNode() { return &EmptyStringNode; }
@@ -295,6 +306,11 @@ public:
     void InitBuiltinArray(ASStringNodeHolder* nodes, const char** strings, unsigned count);
     void ReleaseBuiltinArray(ASStringNodeHolder* nodes, unsigned count);
 };
+
+inline void ASString::SetNull()
+{
+    AssignNode(GetManager()->GetNullStringNode());
+}
 
 }} // namespace Scaleform::GFx
 

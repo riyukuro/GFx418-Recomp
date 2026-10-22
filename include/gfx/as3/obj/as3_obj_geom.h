@@ -5,9 +5,10 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
-#include "Render/Render_Matrix4x4.h"
-#include "Render/Render_Types2D.h"
-#include "Render/Render_CxForm.h"
+#include "ms2/scaleform/include/render/render_matrix2x4.h"
+#include "ms2/scaleform/include/render/render_matrix4x4.h"
+#include "ms2/scaleform/include/render/render_types2d.h"
+#include "ms2/scaleform/include/render/render_cxform.h"
 
 namespace Scaleform { namespace GFx { class DisplayObject; } }
 

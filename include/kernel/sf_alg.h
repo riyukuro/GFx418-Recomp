@@ -210,6 +210,9 @@ UPInt UpperBound(const ArrayT& arr, const Value& val, Less less)
 // (appended for the static text, sfr_gfx_05d)
 template<class T> SF_INLINE const T Abs(const T v) { return (v >= 0) ? v : -v; }
 
+// (appended for the AS3 natives, sfr12) round half away from zero
+template<class T> SF_INLINE int IRound(const T a) { return (a > 0.0) ? (int)(a + 0.5) : (int)(a - 0.5); }
+
 }} // namespace Scaleform::Alg
 
 #endif

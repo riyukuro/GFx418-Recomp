@@ -28,6 +28,13 @@ namespace GFx {
 
 class LoadProcess;
 class TaskManager;
+class MovieImpl;
+class CharacterDef;
+class InteractiveObject;
+class DisplayObjectBase;
+class ResourceId;
+class MovieDefImpl;
+namespace AS3 { class VM; }
 struct TagInfo;
 
 namespace Video {
@@ -42,6 +49,16 @@ struct VideoVMSupport
 {
     AS2VideoSupport* pAS2VSupport;
     AS3VideoSupport* pAS3VSupport;
+};
+
+// The AS3 side of the video module: creates the AS3 Video display objects (vftable: dtor, CreateASCharacter at +0x8,
+// RegisterASClasses).
+class AS3VideoSupport : public RefCountBaseNTS<AS3VideoSupport, Stat_Default_Mem>
+{
+public:
+    virtual DisplayObjectBase* CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef, InteractiveObject* pparent,
+                                                 ResourceId rid, MovieDefImpl* pbindDefImpl) = 0;
+    virtual void               RegisterASClasses(AS3::VM* pvm) = 0;
 };
 
 // Abstract video state stored in the StateBag (State_Video).

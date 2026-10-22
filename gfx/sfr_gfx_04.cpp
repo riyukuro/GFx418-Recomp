@@ -246,7 +246,7 @@ MovieDataDef::MovieDataDef(const ResourceKey& creationKey, MovieDataType mtype, 
     if (!pheap)
     {
         String   heapName("MovieData \"", GetShortFilename(purl), "\"");
-        HeapDesc desc((debugHeap << 12) | HeapDesc::Heap_FastTinyBlocks, 16, 8 * 1024, 0, ~UPInt(0), 0,
+        HeapDesc desc((debugHeap << 12) | HeapDesc::Heap_FixedGranularity, 16, 8 * 1024, 0, ~UPInt(0), 0,
                       HeapId_MovieData, memoryArena);
         pheap = Memory::GetGlobalHeap()->CreateHeap(heapName.ToCStr(), desc);
     }
@@ -382,7 +382,7 @@ MemoryHeap* MovieDataDef::LoadTaskData::GetImageHeap()
 {
     if (!pImageHeap)
     {
-        HeapDesc desc(HeapDesc::Heap_FastTinyBlocks, 32, 4 * 1024, 0, ~UPInt(0), 0, HeapId_Images);
+        HeapDesc desc(HeapDesc::Heap_FixedGranularity, 32, 4 * 1024, 0, ~UPInt(0), 0, HeapId_Images);
         pImageHeap = *pHeap->CreateHeap("_Images", desc);
     }
     return pImageHeap;

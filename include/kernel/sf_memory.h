@@ -87,6 +87,19 @@ protected:
     virtual void        getUserDebugStats(RootStats* stats) const = 0;
 };
 
+// Asked before a heap with a limit grows past it. 4.1.18 carries a counter after the vfptr (+8; the heap code never
+// touches it, the GFx users do).
+class MemoryHeap::LimitHandler
+{
+public:
+    LimitHandler() : AllocCount(0) { }
+    virtual ~LimitHandler() { }
+    virtual bool OnExceedLimit(MemoryHeap* heap, UPInt overLimit) = 0;
+    virtual void OnFreeSegment(MemoryHeap* heap, UPInt freeingSize) = 0;
+
+    int AllocCount;     // +0x08 nonzero while inside an allocation of the heap
+};
+
 // Static front end to the global heap (Memory::pGlobalHeap, exe data).
 class Memory
 {
@@ -172,6 +185,11 @@ typedef MemAddressStub* MemAddressPtr;
     void operator delete(void* p, Scaleform::MemAddressPtr, const char*, int)     { check_delete(class_name, p); SF_FREE(p); } \
     void operator delete(void* p, Scaleform::MemAddressPtr, int, const char*, int){ check_delete(class_name, p); SF_FREE(p); }
 
+// Placement new into memory the class owner provides (no allocation).
+#define SF_MEMORY_DEFINE_PLACEMENT_NEW                                                                               \
+    void* operator new(Scaleform::UPInt n, void* ptr) { SF_UNUSED(n); return ptr; }                                  \
+    void  operator delete(void* ptr, void* ptr2) { SF_UNUSED2(ptr, ptr2); }
+
 #define SF_MEMORY_CHECK_DELETE_NONE(class_name, p)
 #define SF_MEMORY_REDEFINE_NEW(class_name, StatType) \
     SF_MEMORY_REDEFINE_NEW_IMPL(class_name, SF_MEMORY_CHECK_DELETE_NONE, StatType)
@@ -192,8 +210,10 @@ struct HeapDesc
 {
     enum HeapFlags
     {
-        Heap_FastTinyBlocks = 0x4,
-        Heap_UserDebug      = 0x1000
+        Heap_ThreadUnsafe     = 0x1,
+        Heap_FastTinyBlocks   = 0x2,
+        Heap_FixedGranularity = 0x4,
+        Heap_UserDebug        = 0x1000
     };
 
     unsigned Flags;        // +0

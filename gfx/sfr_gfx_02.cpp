@@ -183,7 +183,7 @@ ResourceWeakLib::ResourceWeakLib(ResourceLib* pstrongLib)
 
     // Images get a heap of their own.
     HeapDesc desc((pstrongLib && pstrongLib->DebugFlag) ? HeapDesc::Heap_UserDebug : 0);
-    desc.Flags      |= HeapDesc::Heap_FastTinyBlocks;
+    desc.Flags      |= HeapDesc::Heap_FixedGranularity;
     desc.MinAlign    = 64;
     desc.Granularity = 4 * 1024;
     desc.Reserve     = 0;

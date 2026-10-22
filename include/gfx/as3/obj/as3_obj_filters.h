@@ -6,7 +6,7 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
-#include "Render/Render_Filters.h"
+#include "ms2/scaleform/include/render/render_filters.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

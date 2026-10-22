@@ -212,11 +212,6 @@ void DisplayObjectBase::SetCxform(const Cxform& cx)
     GetRenderNode()->SetCxform(cx);
 }
 
-inline bool DisplayObjectBase::Is3D() const
-{
-    return pRenNode && pRenNode->Is3D();
-}
-
 // @0x1425f1150
 void DisplayObjectBase::ConcatenateCxform(const Cxform& cx)
 {

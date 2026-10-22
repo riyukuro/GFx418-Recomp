@@ -849,9 +849,9 @@ namespace Classes { namespace fl_ui
         SF_UNUSED(result);
         MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
         if (pmovie->pUserEventHandler)
-            pmovie->pUserEventHandler->HandleEvent(pmovie, MouseCursorEvent(Event::DoHideMouse, 0));
-        else if (pmovie->GetLogState())
-            pmovie->GetLogState()->LogScriptWarning("No user event handler interface is installed; Mouse.hide failed.");
+            pmovie->pUserEventHandler->HandleEvent(pmovie->AsMovie(), MouseCursorEvent(Event::DoHideMouse, 0));
+        else if (pmovie->GetStateBag()->GetLogState())
+            pmovie->GetStateBag()->GetLogState()->LogScriptWarning("No user event handler interface is installed; Mouse.hide failed.");
     }
 
     // The exe logs the Mouse.hide message here too.
@@ -861,9 +861,9 @@ namespace Classes { namespace fl_ui
         SF_UNUSED(result);
         MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
         if (pmovie->pUserEventHandler)
-            pmovie->pUserEventHandler->HandleEvent(pmovie, MouseCursorEvent(Event::DoShowMouse, 0));
-        else if (pmovie->GetLogState())
-            pmovie->GetLogState()->LogScriptWarning("No user event handler interface is installed; Mouse.hide failed.");
+            pmovie->pUserEventHandler->HandleEvent(pmovie->AsMovie(), MouseCursorEvent(Event::DoShowMouse, 0));
+        else if (pmovie->GetStateBag()->GetLogState())
+            pmovie->GetStateBag()->GetLogState()->LogScriptWarning("No user event handler interface is installed; Mouse.hide failed.");
     }
 
     // @0x1424b9400

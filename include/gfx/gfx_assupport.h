@@ -9,6 +9,7 @@
 #include "gfx_state.h"
 #include "gfx_stream.h"
 #include "gfx_characterdef.h"
+#include "gfx_asimemanager.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -29,18 +30,16 @@ class ASSupport : public State
 {
 public:
     virtual MovieImpl* CreateMovie(MemoryContext* memContext) = 0;
-private:
-    virtual void Slot02() = 0; // CreateASIMEManager
-public:
+    // (named for sfr_as3_01) slot 2
+    virtual Ptr<ASIMEManager> CreateASIMEManager() = 0;
     virtual MemoryContext* CreateMemoryContext(const char* heapName, const MemoryParams& memParams, bool debugHeap) = 0;
     // A new instance of the character ccinfo describes, bound to ccinfo's movie (slot 4, named for sfr_gfx_06d).
     virtual DisplayObjectBase* CreateCharacterInstance(MovieImpl* proot, const CharacterCreateInfo& ccinfo,
                                                        InteractiveObject* pparent, ResourceId rid,
                                                        CharacterDef::CharacterDefType type = CharacterDef::Unknown) = 0;
-private:
-    virtual void Slot05() = 0; // DoActions
-    virtual void Slot06() = 0; // GetAVMVersion
-public:
+    // (named for sfr_as3_01) slots 5, 6
+    virtual void  DoActions() = 0;
+    virtual UByte GetAVMVersion() const = 0;
     // (sfr_gfx_04b) the AVM's own place / remove tags, in the tag memory of p; dataSz counts the event handler
     // pointer slot (slots 7..10)
     virtual PlaceObject2Tag*  AllocPlaceObject2Tag(LoadProcess* p, UPInt dataSz, UInt8 swfVer) = 0;

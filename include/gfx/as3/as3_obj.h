@@ -17,7 +17,7 @@
 #define MS2_SF_GFX_AS3_OBJ_H
 
 #include "ms2/scaleform/include/gfx/as3/as3_value.h"
-#include "Kernel/SF_AutoPtr.h"
+#include "ms2/scaleform/include/kernel/sf_autoptr.h"
 #include "ms2/scaleform/include/gfx/as3/as3_gc.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {

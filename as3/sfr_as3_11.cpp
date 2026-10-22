@@ -9,7 +9,9 @@
 // MS2-PIN: ??1?$ThunkArgs1@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@@AS3@GFx@Scaleform@@QEAA@XZ 0x142497230 ; unique
 // MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
-#include "GFx/GFx_DisplayObject.h"
+#include "ms2/scaleform/include/gfx/gfx_displayobject.h"
+#include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
+#include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -223,7 +225,7 @@ namespace Instances { namespace fl_geom
 
     inline PerspectiveProjection::PerspectiveProjection(InstanceTraits::Traits& t, InlineCtor)
         : Instances::fl::Object(t)
-        , fieldOfView(55), pDispObj(0)
+        , projectionCenter(Render::PointF::NoInit), fieldOfView(55), pDispObj(0)
     {
         projectionCenter.x = 250.f;
         projectionCenter.y = 250.f;
@@ -1725,7 +1727,7 @@ namespace Instances { namespace fl_geom
             {
                 pp->pDispObj = pDispObj;
                 if (isRoot)
-                    pp->focalLength = pp->CalculateFocalLength(asvm.GetMovieImpl()->GetVisibleFrameRect().Width());
+                    pp->focalLength = pp->CalculateFocalLength(asvm.GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect().Width());
             }
             result = pp;
         }
@@ -1747,7 +1749,7 @@ namespace Instances { namespace fl_geom
         if (value && pDispObj)
         {
             ASVM& asvm = static_cast<ASVM&>(GetVM());
-            value->focalLength = value->CalculateFocalLength(asvm.GetMovieImpl()->GetVisibleFrameRect().Width());
+            value->focalLength = value->CalculateFocalLength(asvm.GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect().Width());
             value->pDispObj = pDispObj;
             pDispObj->SetFocalLength((float)(value->focalLength * 20));
             pDispObj->SetFOV((float)value->fieldOfView);

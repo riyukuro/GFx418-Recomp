@@ -8,9 +8,18 @@
 #ifndef MS2_SF_GFX_AS3_ASVM_H
 #define MS2_SF_GFX_AS3_ASVM_H
 
-#include "GFx/GFx_ASMovieRootBase.h"
-#include "GFx/GFx_PlayerImpl.h"
+#include "ms2/scaleform/include/gfx/gfx_displayobject.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimplstates.h"
+#include "ms2/scaleform/include/gfx/gfx_value.h"
+#include "ms2/scaleform/include/gfx/gfx_event.h"
+#include "ms2/scaleform/include/gfx/gfx_keyboardstate.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
+
+// windows.h (through the kernel lock header) maps GetObject to GetObjectA; Value::GetObject keeps its name.
+#ifdef GetObject
+#undef GetObject
+#endif
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

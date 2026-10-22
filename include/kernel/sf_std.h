@@ -4,6 +4,8 @@
 #define MS2_SF_KERNEL_STD_H
 
 #include "sf_types.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 namespace Scaleform {
 
@@ -31,8 +33,24 @@ UPInt SF_CDECL    SFwcslen(const wchar_t* str);
 // Copies at most count characters of src into dest (destsize characters) and terminates it.
 wchar_t* SF_CDECL SFwcsncpy(wchar_t* dest, UPInt destsize, const wchar_t* src, UPInt count);
 
-// Truncating printf into a fixed buffer; returns the length written.
-UPInt SF_CDECL SFsprintf(char* dest, UPInt destsize, const char* format, ...);
+// Truncating printf into a fixed buffer; returns the length written. Inline: each unit that prints keeps its own
+// copy (as3_01 at 0x1423dd130).
+inline UPInt SF_CDECL SFsprintf(char* dest, UPInt destsize, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    UPInt ret;
+    int rv = _vsnprintf_s(dest, destsize, _TRUNCATE, format, args);
+    if (rv == -1)
+    {
+        dest[destsize - 1] = '\0';
+        ret = destsize - 1;
+    }
+    else
+        ret = (UPInt)rv;
+    va_end(args);
+    return ret;
+}
 
 // Locale independent strtod (exe 0x1425a4a70).
 double SF_CDECL SFstrtod(const char* string, char** tailptr);

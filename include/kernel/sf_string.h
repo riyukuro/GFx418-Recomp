@@ -108,6 +108,7 @@ public:
 
     const char* ToCStr() const  { return GetData()->Data; }
     UPInt       GetSize() const { return GetData()->GetSize(); }
+    bool        IsEmpty() const { return GetSize() == 0; }
 
     bool operator==(const char* str) const { return strcmp(ToCStr(), str) == 0; }
     bool operator!=(const char* str) const { return !operator==(str); }
@@ -230,6 +231,8 @@ public:
     const char* ToCStr() const  { return pStr; }
     UPInt       GetSize() const { return Size; }
     bool        IsEmpty() const { return Size == 0; }
+    // (appended for the AS3 units, sfr12) a C string, its length counted
+    StringDataPtr(const char* p) : pStr(p), Size(p ? strlen(p) : 0) {}
 
     // The very same view, or a text whose first o.Size bytes are o's.
     bool operator==(const StringDataPtr& o) const

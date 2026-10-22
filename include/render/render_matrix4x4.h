@@ -11,10 +11,12 @@
 #include <math.h>
 #include <float.h>
 #include "ms2/scaleform/include/render/render_types2d.h"
+#include "ms2/scaleform/include/kernel/sf_math.h"
 
 namespace Scaleform { namespace Render {
 
 template<class T> class Matrix2x4;
+template<class T> class Matrix4x4;
 
 template<class T>
 class Point3
@@ -24,15 +26,28 @@ public:
 
     Point3() {}
     Point3(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {}
+    // (appended for flash.geom, sfr_as3_11) user-declared, forced-inline copy and assignment, coordinate by
+    // coordinate (never moved as one block)
+    SF_INLINE Point3(const Point3& p) { SetPoint(p.x, p.y, p.z); }
+    SF_INLINE const Point3& operator=(const Point3& p) { SetPoint(p.x, p.y, p.z); return *this; }
+    SF_INLINE void SetPoint(T x_, T y_, T z_) { x = x_; y = y_; z = z_; }
 };
 typedef Point3<float> Point3F;
 
-// Element storage in a base (4.1.18 does not align the 3x4 float matrix: tree nodes copy it with movups).
+// Element storage in a base; the float matrices are 16-aligned (4.1.18 is built with SF_ENABLE_SIMD). Copies through
+// pointers still use movups, stack copies movaps (the flash.geom Matrix3D natives' GetEulerAngles copy).
 template<class T>
 class Matrix3x4Data
 {
 public:
     T M[3][4];
+};
+
+template<>
+class Matrix3x4Data<float>
+{
+public:
+    __declspec(align(16)) float M[3][4];
 };
 
 template<class T>
@@ -62,6 +77,11 @@ public:
     Matrix3x4(const T m[3][4]) { Set(&m[0][0], 12); }
 
     void Set(const T* p, int count) { memcpy(M, p, count * sizeof(T)); }
+    // (appended for flash.geom, sfr_as3_11) user-declared copy and assignment, both through Set (a 48-byte memcpy);
+    // the Matrix3D natives' 4x4-to-3x4 conversions only match with them
+    void Set(const Matrix3x4& m) { Set(&m.M[0][0], 12); }
+    Matrix3x4(const Matrix3x4& m) { *this = m; }
+    const Matrix3x4& operator=(const Matrix3x4& m) { Set(m); return *this; }
 
     // a 2D point taken as (x, y, 0, 1)
     Point<T> Transform(const Point<T>& p) const
@@ -171,6 +191,52 @@ public:
 
     // (appended for sfr_render_03) this = m * b, the 2D matrix taken with the z row of the identity (0x142604500)
     void MultiplyMatrix(const Matrix2x4<T>& m, const Matrix3x4& b);
+
+    // (appended for flash.geom, sfr_as3_11) element access, the axis scales and the Euler angles
+    T*       Data() { return &M[0][0]; }
+    const T* Data() const { return &M[0][0]; }
+    T&       Tx() { return M[0][3]; }
+    T&       Ty() { return M[1][3]; }
+    T&       Tz() { return M[2][3]; }
+    const T& Tx() const { return M[0][3]; }
+    const T& Ty() const { return M[1][3]; }
+    const T& Tz() const { return M[2][3]; }
+    // the rows 0..2 of a 4x4 (its projective row dropped)
+    Matrix3x4(const Matrix4x4<T>& m);
+    // lengths of the column vectors
+    T GetXScale() const { return sqrtf(M[0][0] * M[0][0] + M[1][0] * M[1][0] + M[2][0] * M[2][0]); }
+    T GetYScale() const { return sqrtf(M[0][1] * M[0][1] + M[1][1] * M[1][1] + M[2][1] * M[2][1]); }
+    T GetZScale() const { return sqrtf(M[0][2] * M[0][2] + M[1][2] * M[1][2] + M[2][2] * M[2][2]); }
+    void SetXScale(T s) { s /= GetXScale(); M[0][0] *= s; M[1][0] *= s; M[2][0] *= s; }
+    void SetYScale(T s) { s /= GetYScale(); M[0][1] *= s; M[1][1] *= s; M[2][1] *= s; }
+    void SetZScale(T s) { s /= GetZScale(); M[0][2] *= s; M[1][2] *= s; M[2][2] *= s; }
+    // Rotations about x, y and z (radians) of the unit-scaled matrix; near M[1][0] = +-1 the z angle is a
+    // quarter turn and x is folded into y.
+    void GetEulerAngles(T* ex, T* ey, T* ez) const
+    {
+        Matrix3x4 u(*this);
+        u.SetXScale(1.0f);
+        u.SetYScale(1.0f);
+        u.SetZScale(1.0f);
+        if (u.M[1][0] > 0.998f)
+        {
+            if (ey) *ey = atan2f(u.M[0][2], u.M[2][2]);
+            if (ez) *ez = (T)SF_MATH_PI / 2.f;
+            if (ex) *ex = 0;
+            return;
+        }
+        if (u.M[1][0] < -0.998f)
+        {
+            if (ey) *ey = atan2f(u.M[0][2], u.M[2][2]);
+            if (ez) *ez = (T)-SF_MATH_PI / 2.f;
+            if (ex) *ex = 0;
+            return;
+        }
+        if (ey) *ey = atan2f(-u.M[2][0], u.M[0][0]);
+        if (ex) *ex = atan2f(-u.M[1][2], u.M[1][1]);
+        if (ez) *ez = asinf(u.M[1][0]);
+    }
+    void GetRotation(T* ex, T* ey, T* ez) const { return GetEulerAngles(ex, ey, ez); }
 };
 typedef Matrix3x4<float> Matrix3F;
 
@@ -280,8 +346,134 @@ public:
 
     // (appended for sfr_as2_07) rows become columns (Matrix4F: 0x1429925f0)
     void Transpose();
+
+    // (appended for flash.geom, sfr_as3_11; the Matrix3D natives work on Matrix4x4<double>)
+    T*       Data() { return &M[0][0]; }
+    const T* Data() const { return &M[0][0]; }
+    // element i of the 16, by value (indexing goes through this, not the pointer conversion)
+    T operator[](int i)       { return Data()[i]; }
+    T operator[](int i) const { return Data()[i]; }
+    // element-wise narrowing to the 3D float transform (rows 0..2)
+    operator Matrix3F()
+    {
+        Matrix3F m(Matrix3F::NoInit);
+        m.M[0][0] = (float)M[0][0]; m.M[0][1] = (float)M[0][1]; m.M[0][2] = (float)M[0][2]; m.M[0][3] = (float)M[0][3];
+        m.M[1][0] = (float)M[1][0]; m.M[1][1] = (float)M[1][1]; m.M[1][2] = (float)M[1][2]; m.M[1][3] = (float)M[1][3];
+        m.M[2][0] = (float)M[2][0]; m.M[2][1] = (float)M[2][1]; m.M[2][2] = (float)M[2][2]; m.M[2][3] = (float)M[2][3];
+        return m;
+    }
+    Matrix4x4(const Matrix4x4& m1, const Matrix4x4& m2) { MultiplyMatrix(m1, m2); }
+    // this = m1 * m2, the portable product (Matrix4x4<double>: 0x142485d30)
+    void MultiplyMatrix_NonOpt(const Matrix4x4& m1, const Matrix4x4& m2)
+    {
+        M[0][0] = m1.M[0][0] * m2.M[0][0] + m1.M[0][1] * m2.M[1][0] + m1.M[0][2] * m2.M[2][0] + m1.M[0][3] * m2.M[3][0];
+        M[0][1] = m1.M[0][0] * m2.M[0][1] + m1.M[0][1] * m2.M[1][1] + m1.M[0][2] * m2.M[2][1] + m1.M[0][3] * m2.M[3][1];
+        M[0][2] = m1.M[0][0] * m2.M[0][2] + m1.M[0][1] * m2.M[1][2] + m1.M[0][2] * m2.M[2][2] + m1.M[0][3] * m2.M[3][2];
+        M[0][3] = m1.M[0][0] * m2.M[0][3] + m1.M[0][1] * m2.M[1][3] + m1.M[0][2] * m2.M[2][3] + m1.M[0][3] * m2.M[3][3];
+
+        M[1][0] = m1.M[1][0] * m2.M[0][0] + m1.M[1][1] * m2.M[1][0] + m1.M[1][2] * m2.M[2][0] + m1.M[1][3] * m2.M[3][0];
+        M[1][1] = m1.M[1][0] * m2.M[0][1] + m1.M[1][1] * m2.M[1][1] + m1.M[1][2] * m2.M[2][1] + m1.M[1][3] * m2.M[3][1];
+        M[1][2] = m1.M[1][0] * m2.M[0][2] + m1.M[1][1] * m2.M[1][2] + m1.M[1][2] * m2.M[2][2] + m1.M[1][3] * m2.M[3][2];
+        M[1][3] = m1.M[1][0] * m2.M[0][3] + m1.M[1][1] * m2.M[1][3] + m1.M[1][2] * m2.M[2][3] + m1.M[1][3] * m2.M[3][3];
+
+        M[2][0] = m1.M[2][0] * m2.M[0][0] + m1.M[2][1] * m2.M[1][0] + m1.M[2][2] * m2.M[2][0] + m1.M[2][3] * m2.M[3][0];
+        M[2][1] = m1.M[2][0] * m2.M[0][1] + m1.M[2][1] * m2.M[1][1] + m1.M[2][2] * m2.M[2][1] + m1.M[2][3] * m2.M[3][1];
+        M[2][2] = m1.M[2][0] * m2.M[0][2] + m1.M[2][1] * m2.M[1][2] + m1.M[2][2] * m2.M[2][2] + m1.M[2][3] * m2.M[3][2];
+        M[2][3] = m1.M[2][0] * m2.M[0][3] + m1.M[2][1] * m2.M[1][3] + m1.M[2][2] * m2.M[2][3] + m1.M[2][3] * m2.M[3][3];
+
+        M[3][0] = m1.M[3][0] * m2.M[0][0] + m1.M[3][1] * m2.M[1][0] + m1.M[3][2] * m2.M[2][0] + m1.M[3][3] * m2.M[3][0];
+        M[3][1] = m1.M[3][0] * m2.M[0][1] + m1.M[3][1] * m2.M[1][1] + m1.M[3][2] * m2.M[2][1] + m1.M[3][3] * m2.M[3][1];
+        M[3][2] = m1.M[3][0] * m2.M[0][2] + m1.M[3][1] * m2.M[1][2] + m1.M[3][2] * m2.M[2][2] + m1.M[3][3] * m2.M[3][2];
+        M[3][3] = m1.M[3][0] * m2.M[0][3] + m1.M[3][1] * m2.M[1][3] + m1.M[3][2] * m2.M[2][3] + m1.M[3][3] * m2.M[3][3];
+    }
+    // this = this * m (m applied first) / this = m * this, on a copy of this
+    void Prepend(const Matrix4x4& m)
+    {
+        Matrix4x4 t = *this;
+        MultiplyMatrix(t, m);
+    }
+    void Append(const Matrix4x4& m)
+    {
+        Matrix4x4 t = *this;
+        MultiplyMatrix(m, t);
+    }
+    // rotation by angle (radians, taken in float) about the unit axis: identity with the 3x3 part set
+    static Matrix4x4 Rotation(T angle, const Point3<T>& axis)
+    {
+        Matrix4x4 r;
+        T c  = cosf((float)angle);
+        T s  = sinf((float)angle);
+        T ic = 1.0f - c;
+        T xx = axis.x * axis.x, yy = axis.y * axis.y, zz = axis.z * axis.z;
+        T xy = axis.x * axis.y * ic, xz = axis.x * axis.z * ic, yz = axis.y * axis.z * ic;
+        T xs = axis.x * s, ys = axis.y * s, zs = axis.z * s;
+        r.M[0][0] = xx * ic + c; r.M[0][1] = xy - zs;      r.M[0][2] = xz + ys;
+        r.M[1][0] = xy + zs;     r.M[1][1] = yy * ic + c;  r.M[1][2] = yz - xs;
+        r.M[2][0] = xz - ys;     r.M[2][1] = yz + xs;      r.M[2][2] = zz * ic + c;
+        return r;
+    }
+    // the same about an axis through pivot (Matrix4x4<double>: 0x142486210)
+    static Matrix4x4 Rotation(T angle, const Point3<T>& axis, const Point3<T>& pivot)
+    {
+        return Matrix4x4(Translation(-pivot.x, -pivot.y, -pivot.z),
+                         Matrix4x4(Rotation(angle, axis), Translation(pivot.x, pivot.y, pivot.z)));
+    }
+    static Matrix4x4 Translation(T x, T y, T z)
+    {
+        Matrix4x4 r;
+        r.M[0][3] = x;
+        r.M[1][3] = y;
+        r.M[2][3] = z;
+        return r;
+    }
+    static Matrix4x4 Scaling(T sx, T sy, T sz)
+    {
+        Matrix4x4 r;
+        r.M[0][0] = sx;
+        r.M[1][1] = sy;
+        r.M[2][2] = sz;
+        return r;
+    }
+    // the affine product (row 3 ignored)
+    Point3<T> Transform(const Point3<T>& p) const
+    {
+        return Point3<T>(M[0][0] * p.x + M[0][1] * p.y + M[0][2] * p.z + M[0][3],
+                         M[1][0] * p.x + M[1][1] * p.y + M[1][2] * p.z + M[1][3],
+                         M[2][0] * p.x + M[2][1] * p.y + M[2][2] * p.z + M[2][3]);
+    }
+    // cofactor expansion along row 0
+    T GetDeterminant() const
+    {
+        return M[0][0] * GetMinor(*this, 1, 2, 3, 1, 2, 3) - M[0][1] * GetMinor(*this, 1, 2, 3, 0, 2, 3) +
+               M[0][2] * GetMinor(*this, 1, 2, 3, 0, 1, 3) - M[0][3] * GetMinor(*this, 1, 2, 3, 0, 1, 2);
+    }
+    void Invert() { *this = GetInverse(); }
+
+private:
+    // determinant of the 3x3 of m on rows r0..r2, columns c0..c2 (Matrix4x4<double>: 0x142485360)
+    T GetMinor(const Matrix4x4& m, const size_t r0, const size_t r1, const size_t r2,
+               const size_t c0, const size_t c1, const size_t c2) const
+    {
+        return m.M[r0][c0] * (m.M[r1][c1] * m.M[r2][c2] - m.M[r2][c1] * m.M[r1][c2]) -
+               m.M[r0][c1] * (m.M[r1][c0] * m.M[r2][c2] - m.M[r2][c0] * m.M[r1][c2]) +
+               m.M[r0][c2] * (m.M[r1][c0] * m.M[r2][c1] - m.M[r2][c0] * m.M[r1][c1]);
+    }
 };
 typedef Matrix4x4<float> Matrix4F;
+
+template<class T>
+inline Matrix3x4<T>::Matrix3x4(const Matrix4x4<T>& m)
+{
+    M[0][0] = m.M[0][0]; M[0][1] = m.M[0][1]; M[0][2] = m.M[0][2]; M[0][3] = m.M[0][3];
+    M[1][0] = m.M[1][0]; M[1][1] = m.M[1][1]; M[1][2] = m.M[1][2]; M[1][3] = m.M[1][3];
+    M[2][0] = m.M[2][0]; M[2][1] = m.M[2][1]; M[2][2] = m.M[2][2]; M[2][3] = m.M[2][3];
+}
+
+// The double 4x4 product is the portable one (the float one is the SSE code of sfr_render_05f).
+template<> inline void Matrix4x4<double>::MultiplyMatrix(const Matrix4x4<double>& m1, const Matrix4x4<double>& m2)
+{
+    MultiplyMatrix_NonOpt(m1, m2);
+}
 
 // Inverse through the adjugate: 2x2 sub-determinants of the lower rows, cofactors, then the determinant along
 // row 0. A singular matrix gives the identity with the translation negated.

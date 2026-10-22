@@ -5,8 +5,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142497a90-0x1424a9ed0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
-#include "GFx/IME/GFx_IMEManager.h"
-#include "Render/Render_Font.h"
+#include "ms2/scaleform/include/gfx/gfx_imemanager.h"
+#include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)

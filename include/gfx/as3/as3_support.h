@@ -4,32 +4,69 @@
 #ifndef MS2_SF_GFX_AS3_SUPPORT_H
 #define MS2_SF_GFX_AS3_SUPPORT_H
 
-#include "GFx/GFx_Player.h"
-#include "GFx/GFx_PlayerImpl.h"
-#include "GFx/GFx_ASMovieRootBase.h"
-#include "GFx/GFx_ASString.h"
-#include "GFx/GFx_AS3Support.h"
-#include "Render/Text/Text_Core.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_displayobject.h"
+#include "ms2/scaleform/include/gfx/gfx_asstring.h"
+#include "ms2/scaleform/include/gfx/gfx_assupport.h"
+#include "ms2/scaleform/include/gfx/gfx_asimemanager.h"
+#include "ms2/scaleform/include/gfx/gfx_loadproc.h"
+#include "ms2/scaleform/include/render/text_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_gc.h"
 
-namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Scaleform { namespace GFx {
+
+class PlaceObject2Tag;
+class PlaceObject3Tag;
+class RemoveObjectTag;
+class RemoveObject2Tag;
+
+// The AS3 support state (LoadStates::pAS3Support): creates AS3 movies, their memory contexts and characters.
+class AS3Support : public ASSupport
+{
+public:
+    AS3Support();
+
+    virtual MovieImpl*        CreateMovie(MemoryContext* memContext);
+    virtual Ptr<ASIMEManager> CreateASIMEManager();
+    virtual MemoryContext*    CreateMemoryContext(const char* heapName, const MemoryParams& memParams, bool debugHeap);
+    virtual DisplayObjectBase* CreateCharacterInstance(MovieImpl* proot, const CharacterCreateInfo& ccinfo,
+                                                       InteractiveObject* pparent, ResourceId rid,
+                                                       CharacterDef::CharacterDefType type = CharacterDef::Unknown);
+    virtual void  DoActions();
+    virtual UByte GetAVMVersion() const { return 2; }
+
+    virtual PlaceObject2Tag*  AllocPlaceObject2Tag(LoadProcess* p, UPInt dataSz, UInt8 swfVer);
+    virtual PlaceObject3Tag*  AllocPlaceObject3Tag(LoadProcess* p, UPInt dataSz);
+    virtual RemoveObjectTag*  AllocRemoveObjectTag(LoadProcess* p);
+    virtual RemoveObject2Tag* AllocRemoveObject2Tag(LoadProcess* p);
+
+    // AS3 movies have no DoAction / button action records.
+    virtual void DoActionLoader(LoadProcess*, const TagInfo&) {}
+    virtual void DoInitActionLoader(LoadProcess*, const TagInfo&) {}
+    virtual void ReadButtonActions(LoadProcess*, ButtonDef*, TagType) {}
+    virtual void ReadButton2ActionConditions(LoadProcess*, ButtonDef*, TagType) {}
+};
+
+namespace AS3 {
+
+// The AS3 IME manager (0xe0 bytes). Opaque until the IME units are recovered.
+class IMEManager : public ASIMEManager
+{
+public:
+    IMEManager();
+private:
+    UByte Unrecovered[0xe0 - sizeof(ASIMEManager)];
+};
 
 // Per-movie memory: the movie heap with its string manager and garbage collector. 0x68 bytes; the heap limit
 // handler sits at +0x30.
 class MemoryContextImpl : public MemoryContext
 {
 public:
-    // Heap limit handler: collects garbage before letting the movie heap grow.
-    // The 4.1.18 limit handler base carries one more word than the SDK's MemoryHeap::LimitHandler (it is initialized
-    // before the derived vftable is stored): nonzero while collections must not run from inside the allocator, then
-    // OnExceedLimit only schedules one.
-    struct LimitHandlerBase : public MemoryHeap::LimitHandler
-    {
-        unsigned            DeferCollect;               // +0x08 (+0x38 in the context)
-        LimitHandlerBase() : DeferCollect(0) { }
-    };
-
-    class HeapLimit : public LimitHandlerBase
+    // Heap limit handler: collects garbage before letting the movie heap grow. LimitHandler::AllocCount (+0x08,
+    // +0x38 in the context) is nonzero while collections must not run from inside the allocator; then OnExceedLimit
+    // only schedules one.
+    class HeapLimit : public MemoryHeap::LimitHandler
     {
         friend class MemoryContextImpl;
 

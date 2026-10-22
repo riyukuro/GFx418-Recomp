@@ -13,8 +13,8 @@ typedef unsigned char       UByte;
 typedef signed char         SByte;
 typedef unsigned short      UInt16;
 typedef signed short        SInt16;
-typedef unsigned int        UInt32;
-typedef signed int          SInt32;
+typedef unsigned long       UInt32;     // Win64: long (mangles as K/J), as in the kernel/ tree
+typedef signed long         SInt32;
 typedef unsigned __int64    UInt64;
 typedef signed __int64      SInt64;
 typedef size_t              UPInt;
@@ -22,7 +22,7 @@ typedef ptrdiff_t           SPInt;
 
 } // namespace Scaleform
 
-#define SF_INLINE           inline
+#define SF_INLINE           __forceinline   // release build, as the kernel/ tree
 #define SF_STDCALL
 #define SF_CDECL            __cdecl
 #define SF_ASSERT(x)        ((void)0)
@@ -39,5 +39,16 @@ typedef unsigned char UInt8;
 } // namespace Scaleform
 #define SF_UNUSED3(a, b, c) ((void)(a), (void)(b), (void)(c))
 #define SF_MAX_UINT         unsigned(0xFFFFFFFFu)
+
+// (appended for the AS3 units, sfr12) 32-bit integer limits; skipped when the ms2/scaleform/kernel tree has them.
+#include <limits.h>
+#ifndef SF_MAX_SINT32
+#define SF_MAX_SINT32 Scaleform::SInt32(INT_MAX)
+#define SF_MIN_SINT32 Scaleform::SInt32(INT_MIN)
+#define SF_MAX_UINT32 Scaleform::UInt32(UINT_MAX)
+#endif
+#ifndef SF_UNUSED4
+#define SF_UNUSED4(a, b, c, d) ((void)(a), (void)(b), (void)(c), (void)(d))
+#endif
 
 #endif

@@ -320,4 +320,16 @@ public:
 
 }} // namespace Scaleform::Render
 
+// (appended, sfr12) DisplayObjectBase::Is3D() is inline over the render node's flags; it needs both gfx_displayobject.h
+// and gfx_rendertree.h, so whichever of the two comes second defines it.
+#if defined(MS2_SF_GFX_DISPLAYOBJECT_H) && defined(MS2_SF_GFX_RENDERTREE_H) && !defined(MS2_SF_GFX_DISPLAYOBJECT_IS3D)
+#define MS2_SF_GFX_DISPLAYOBJECT_IS3D
+namespace Scaleform { namespace GFx {
+inline bool DisplayObjectBase::Is3D() const
+{
+    return pRenNode && pRenNode->Is3D();
+}
+}} // namespace Scaleform::GFx
+#endif
+
 #endif

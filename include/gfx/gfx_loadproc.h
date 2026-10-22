@@ -1,6 +1,5 @@
 // Recovered Scaleform 4.1.18 GFx: LoadProcess, the loader task that parses one SWF file into a MovieDataDef, as seen
-// by the tag readers of this include tree (gfx_loadprocess.h is the declaration of the other tree, used by the AS3
-// units). Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
+// by the tag readers and the AS3 tag loaders. Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
 // Layout (0x420 bytes) from the exe's tag readers; only the members the recovered units use are named.
 #ifndef MS2_SF_GFX_LOADPROC_H
@@ -281,6 +280,21 @@ public:
     {
         return new (pLoadData->AllocTagMemory(sizeof(T) + dataSize - 1)) T;
     }
+
+    // (appended for the AS3 tag loaders, sfr_as3_01)
+    bool  IsVerboseParse() const       { return (ParseFlags & ParseControl::VerboseParse) != 0; }
+    void* AllocTagMemory(UPInt bytes)  { return pLoadData->AllocTagMemory(bytes); }
+    void  ExportResource(const String& symbol, ResourceId rid, const ResourceHandle& hres)
+    {
+        pLoadData->ExportResource(symbol, rid, hres);
+    }
+    // An init action of the root timeline (DoInitAction / DoAbc); the AS3 ones are counted.
+    void     AddInitAction(ExecuteTag* ptag)
+    {
+        InitActionTags.PushBack(ptag);
+        ++ASInitActionTagsNum;
+    }
+    unsigned GetASInitActionTagsNum() const { return ASInitActionTagsNum; }
 };
 
 }} // namespace Scaleform::GFx

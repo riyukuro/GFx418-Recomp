@@ -6,8 +6,9 @@
 #ifndef MS2_SF_GFX_AS3_AVM_H
 #define MS2_SF_GFX_AS3_AVM_H
 
-#include "GFx/GFx_DisplayObject.h"
-#include "GFx/GFx_PlayerImpl.h"
+#include "ms2/scaleform/include/gfx/gfx_displayobject.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimplstates.h"
 #include "ms2/scaleform/include/gfx/as3/as3_support.h"
 
 namespace Scaleform { namespace GFx {

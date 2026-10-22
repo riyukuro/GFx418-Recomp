@@ -745,6 +745,8 @@ public:
 
     Hash() {}
     Hash(int sizeHint) : mHash(sizeHint) {}
+    explicit Hash(void* pheap) : mHash(pheap) {}
+    Hash(void* pheap, int sizeHint) : mHash(pheap, sizeHint) {}
     Hash(const SelfType& src) : mHash(src.mHash) {}
     ~Hash() {}
 
@@ -909,6 +911,59 @@ public:
     HashUncachedLH(int sizeHint) : BaseType(sizeHint) {}
     HashUncachedLH(const SelfType& o) : BaseType(o) {}
     ~HashUncachedLH() {}
+
+    void operator=(const SelfType& o) { BaseType::operator=(o); }
+};
+
+// (appended for the AS3 sparse arrays) Set and map whose table lives in a given heap, kept next to the table pointer.
+template<class C, class HashF = FixedSizeHash<C>, class AltHashF = HashF, int SID = Stat_Default_Mem,
+         class Entry = HashsetCachedEntry<C, HashF> >
+class HashSetDH : public HashSetBase<C, HashF, AltHashF, AllocatorDH<C, SID>, Entry>
+{
+    void* pHeap;
+
+public:
+    typedef HashSetDH<C, HashF, AltHashF, SID, Entry>                   SelfType;
+    typedef HashSetBase<C, HashF, AltHashF, AllocatorDH<C, SID>, Entry> BaseType;
+
+    explicit HashSetDH(void* pheap) : pHeap(pheap) {}
+    HashSetDH(void* pheap, int sizeHint) : BaseType(pheap, sizeHint), pHeap(pheap) {}
+    HashSetDH(const SelfType& o) : BaseType(o), pHeap(o.pHeap) {}
+    ~HashSetDH() {}
+
+    void operator=(const SelfType& o)
+    {
+        BaseType::Assign(o.pHeap, o);
+        pHeap = o.pHeap;
+    }
+
+    template<class CRef>
+    void Set(const CRef& key) { BaseType::Set(pHeap, key); }
+    template<class CRef>
+    inline void Add(const CRef& key) { BaseType::Add(pHeap, key); }
+
+    void CheckExpand()          { BaseType::CheckExpand(this); }
+    void Resize(UPInt n)        { BaseType::SetCapacity(pHeap, n); }
+    void SetCapacity(UPInt n)   { BaseType::SetCapacity(pHeap, n); }
+};
+
+template<class C, class U, class HashF = FixedSizeHash<C>, int SID = Stat_Default_Mem,
+         class HashNodeT = HashNode<C, U, HashF>,
+         class Entry     = HashsetCachedNodeEntry<HashNodeT, typename HashNodeT::NodeHashF> >
+class HashDH
+    : public Hash<C, U, HashF, AllocatorDH<C, SID>, HashNodeT, Entry,
+                  HashSetDH<HashNodeT, typename HashNodeT::NodeHashF, typename HashNodeT::NodeAltHashF, SID, Entry> >
+{
+public:
+    typedef HashDH<C, U, HashF, SID, HashNodeT, Entry> SelfType;
+    typedef Hash<C, U, HashF, AllocatorDH<C, SID>, HashNodeT, Entry,
+                 HashSetDH<HashNodeT, typename HashNodeT::NodeHashF, typename HashNodeT::NodeAltHashF, SID, Entry> >
+        BaseType;
+
+    explicit HashDH(void* pheap) : BaseType(pheap) {}
+    HashDH(void* pheap, int sizeHint) : BaseType(pheap, sizeHint) {}
+    HashDH(const SelfType& o) : BaseType(o) {}
+    ~HashDH() {}
 
     void operator=(const SelfType& o) { BaseType::operator=(o); }
 };

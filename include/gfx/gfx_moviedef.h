@@ -38,6 +38,7 @@ class ZlibSupportBase;
 class Movie;
 class MemoryContext;
 struct MemoryParams;
+namespace Video { class VideoBase; }
 class ActionControl;
 struct ExporterInfo;
 class FontResource;
@@ -76,6 +77,8 @@ public:
     inline void                SetZlibSupport(ZlibSupportBase* ptr);
     // Defined in gfx_fontlib.h.
     inline Ptr<FontLib>        GetFontLib() const;
+    // Defined in video/video_statebag.h.
+    inline Ptr<Video::VideoBase> GetVideo() const;
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it
@@ -293,7 +296,19 @@ struct FrameBindData
     }
 };
 
+// Heap and garbage collector settings of a new movie instance (MovieDef::CreateInstance / CreateMemoryContext;
+// 0x50 bytes, AS3Support::CreateMemoryContext reads them).
+struct MemoryParams
+{
+    HeapDesc    Desc;                       // +0x00 the movie heap; Limit is the user level limit
+    float       HeapLimitMultiplier;        // +0x40
+    unsigned    MaxCollectionRoots;         // +0x44
+    unsigned    FramesBetweenCollections;   // +0x48
+    unsigned    InitialDynamicLimit;        // +0x4c
+};
+
 // Allocation stat of the movie data internals.
+enum { StatMD_ASBinaryData_Mem = 0x108 }; // action / ABC byte code (AS2 has its own copy in as2_action.h)
 enum { StatMD_Other_Mem = 0x109 };
 
 // Bump allocator of the tags and frame arrays of a loading movie; the memory lives as long as the movie data

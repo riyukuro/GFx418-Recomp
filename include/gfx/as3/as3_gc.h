@@ -10,11 +10,8 @@
 #ifndef MS2_SF_GFX_AS3_GC_H
 #define MS2_SF_GFX_AS3_GC_H
 
-#include "Kernel/SF_RefCount.h"
-#include "Kernel/SF_ArrayPaged.h"
-#include "Kernel/SF_Hash.h"
-#include "Kernel/SF_String.h"
-#include "GFx/GFx_PlayerStats.h"
+#include "ms2/scaleform/include/gfx/as3/as3_value.h"
+#include "ms2/scaleform/include/kernel/sf_arraypaged.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

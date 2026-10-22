@@ -15,7 +15,7 @@
 #pragma pointers_to_members(full_generality, multiple_inheritance)
 
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
-#include "GFx/GFx_ASUtils.h"
+#include "ms2/scaleform/include/gfx/gfx_asutils.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
