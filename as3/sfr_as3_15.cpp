@@ -5,6 +5,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424c9700-0x1424dc870 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/gfx_sprite.h"
+#include "ms2/scaleform/include/render/render_shapedata.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -78,6 +80,39 @@ template struct ThunkFunc0<Class, 2, ASString>;
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
+
+// ---- Out-of-line template instances (COMDATs the linker placed in this range)
+namespace Scaleform {
+
+namespace GFx {
+// MS2-FUNCTIONAL: cl folds the two flag-bit tests into one mask compare; the exe tests the bits separately
+// @0x1424d2820
+template<>
+void InteractiveObject::ModifyOptimizedPlayListLocal<Sprite>()
+{
+    switch (static_cast<Sprite*>(this)->Sprite::CheckAdvanceStatus(IsInOptimizedPlayList()))
+    {
+    case 1:  AddToOptimizedPlayList(); break;
+    case -1: MarkToRemoveFromOptimizedPlayList(); break;
+    }
+}
+} // namespace GFx
+
+// @0x1424dc260
+template ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyleType, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
+// @0x1424dc350
+template ArrayDataBase<Render::StrokeStyleType, AllocatorLH<Render::StrokeStyleType, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
+// @0x1424dc440
+template ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>,
+                       AllocatorLH<GFx::AS3::SPtr<GFx::ASStringNode>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+// @0x1424dc730
+template ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+// @0x1424dc7a0
+template ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
+
+} // namespace Scaleform
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VSoundTransform@fl_media@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424cdc40
 // MS2-PIN: ?Func@?$ThunkFunc1@VSoundTransform@fl_media@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424cdcb0
