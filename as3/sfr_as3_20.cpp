@@ -667,6 +667,25 @@ void FUN_142562340(Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& r, Scalef
 void FUN_1425623f0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& r, const Scaleform::GFx::AS3::Value& v);
 void FUN_142562470(Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& r, Scaleform::UInt32 v);
 
+namespace Scaleform {
+// A sort key and the index of the element it came from.
+template <typename F, typename S>
+struct Pair
+{
+    Pair(const F& f, const S& s) : First(f), Second(s) {}
+
+    F First;
+    S Second;
+};
+namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec { struct CompareAsStringInd; } } } }
+}
+
+// Vector.sort helpers the exe keeps out of line (sfr_as3_21): CompareAsStringInd::Compare, Impl::CompareFunct
+// (calls the AS3 compare function, its result as an int) and ArrayDH<Pair<ASString,UInt32> >::PushBack.
+Scaleform::SInt32 FUN_14255b4c0(const Scaleform::GFx::AS3::Instances::fl_vec::CompareAsStringInd& cmp, const Scaleform::GFx::ASString& a, const Scaleform::GFx::ASString& b);
+Scaleform::SInt32 FUN_14255b5d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& func, const Scaleform::GFx::AS3::Value& a, const Scaleform::GFx::AS3::Value& b);
+void FUN_1425615f0(Scaleform::ArrayDH<Scaleform::Pair<Scaleform::GFx::ASString, Scaleform::UInt32> >& pairs, const Scaleform::Pair<Scaleform::GFx::ASString, Scaleform::UInt32>& v);
+
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
 
 // the element as a callback argument
@@ -805,6 +824,266 @@ static __forceinline void VectorMap(VectorBase<T>& self, SPtr<I>& result, const 
     }
 }
 
+// ---- sort: the elements are collected (as numbers, strings or element pointers), sorted, then copied back
+
+typedef Pair<Value::Number, UInt32> NumberPair;
+typedef Pair<ASString, UInt32>      StringPair;
+
+// Called once per element; vftables of the int/uint/double/String/Value bases
+// 0x143182e08/0x143182de8/0x143182dc8/0x143182da8/0x143182d88.
+template <typename T>
+struct SortFunc
+{
+    virtual ~SortFunc() {}
+    virtual void operator()(UInt32 ind, const T& v) = 0;
+};
+
+template <typename T>
+static SF_INLINE void ForEachElement(const VectorBase<T>& self, SortFunc<T>& f)
+{
+    const UPInt size = self.V.GetSize();
+    for (UInt32 i = 0; i < size; ++i)
+        f(i, self.V[i]);
+}
+
+static SF_INLINE CheckResult ElementNumber(SInt32 v, Value::Number& n)                    { n = v; return true; }
+static SF_INLINE CheckResult ElementNumber(UInt32 v, Value::Number& n)                    { n = v; return true; }
+static SF_INLINE CheckResult ElementNumber(Value::Number v, Value::Number& n)             { n = v; return true; }
+
+// (number, index) pairs; elements that do not convert are left out
+template <typename T>
+struct Value2NumberCollector : public SortFunc<T>
+{
+    Value2NumberCollector(ArrayDH<NumberPair>& pairs) : Pairs(pairs) {}
+    virtual void operator()(UInt32 ind, const T& v)
+    {
+        Value::Number n;
+        if (ElementNumber(v, n))
+            Pairs.PushBack(NumberPair(n, ind));
+    }
+
+    ArrayDH<NumberPair>& Pairs;
+};
+
+template <>
+void Value2NumberCollector<Value>::operator()(UInt32 ind, const Value& v)
+{
+    Value::Number n;
+    if (v.Convert2Number(n))
+        Pairs.PushBack(NumberPair(n, ind));
+}
+
+template <>
+void Value2NumberCollector<Ptr<ASStringNode> >::operator()(UInt32 ind, const Ptr<ASStringNode>& v)
+{
+    Value::Number n;
+    Value tmp(v.GetPtr());
+    if (tmp.Convert2Number(n))
+        Pairs.PushBack(NumberPair(n, ind));
+}
+
+// (string, index) pairs; elements that do not convert are left out
+template <typename T>
+struct Value2StrCollector : public SortFunc<T>
+{
+    Value2StrCollector(VM& vm, ArrayDH<StringPair>& pairs) : VMRef(vm), Pairs(pairs) {}
+    virtual void operator()(UInt32 ind, const T& v)
+    {
+        ASString str = VMRef.GetStringManager().CreateEmptyString();
+        if (Value(v).Convert2String(str))
+        {
+            const StringPair p(str, ind);
+            FUN_1425615f0(Pairs, p);
+        }
+    }
+
+    VM&                  VMRef;
+    ArrayDH<StringPair>& Pairs;
+};
+
+template <>
+void Value2StrCollector<Value>::operator()(UInt32 ind, const Value& v)
+{
+    ASString str = VMRef.GetStringManager().CreateEmptyString();
+    if (v.Convert2String(str))
+    {
+        const StringPair p(str, ind);
+        FUN_1425615f0(Pairs, p);
+    }
+}
+
+template <>
+void Value2StrCollector<Ptr<ASStringNode> >::operator()(UInt32 ind, const Ptr<ASStringNode>& v)
+{
+    FUN_1425615f0(Pairs, StringPair(ASString(v.GetPtr()), ind));
+}
+
+// pointers to the elements, for a compare function
+template <typename T>
+struct ValuePtrCollector : public SortFunc<T>
+{
+    ValuePtrCollector(ArrayDH<const T*>& ptrs) : Ptrs(ptrs) {}
+    virtual void operator()(UInt32, const T& v) { Ptrs.PushBack(&v); }
+
+    ArrayDH<const T*>& Ptrs;
+};
+
+// Array.CASEINSENSITIVE / DESCENDING / Locale-aware string order of the pairs.
+struct CompareAsStringInd
+{
+    CompareAsStringInd(bool desc, bool ci, bool loc) : Desc(desc), CaseInsensitive(ci), UseLocale(loc) {}
+    bool operator()(const StringPair& a, const StringPair& b) const { return FUN_14255b4c0(*this, a.First, b.First) < 0; }
+
+    bool Desc;
+    bool CaseInsensitive;
+    bool UseLocale;
+};
+
+struct CompareAsNumberInd
+{
+    CompareAsNumberInd(bool desc) : Desc(desc) {}
+    bool operator()(const NumberPair& a, const NumberPair& b) const { return Desc ? a.First > b.First : b.First > a.First; }
+
+    bool Desc;
+};
+
+static SF_INLINE SInt32 CompareElements(VM& vm, const Value& f, const Value& a, const Value& b)  { return FUN_14255b5d0(vm, f, a, b); }
+template <typename T>
+static SF_INLINE SInt32 CompareElements(VM& vm, const Value& f, const T& a, const T& b)          { return FUN_14255b5d0(vm, f, ElementValue(a), ElementValue(b)); }
+
+template <typename T>
+struct CompareValuePtr
+{
+    CompareValuePtr(VM& vm, const Value& f) : VMRef(vm), Func(f) {}
+    bool operator()(const T* a, const T* b) const { return FUN_14255b5d0(VMRef, Func, ElementValue(*a), ElementValue(*b)) < 0; }
+
+    VM&          VMRef;
+    const Value& Func;
+};
+
+template <>
+bool CompareValuePtr<Ptr<ASStringNode> >::operator()(const Ptr<ASStringNode>* a, const Ptr<ASStringNode>* b) const
+{
+    VM& vm = VMRef;
+    return FUN_14255b5d0(vm, Func, Value(a->GetPtr()), Value(b->GetPtr())) < 0;
+}
+
+template <>
+bool CompareValuePtr<Value>::operator()(const Value* a, const Value* b) const { return FUN_14255b5d0(VMRef, Func, *a, *b) < 0; }
+
+template <class I, class TR, typename T>
+static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
+{
+    enum { CaseInsensitive = 1, Descending = 2, UniqueSort = 4, ReturnIndexedArray = 8, Numeric = 16 };
+
+    Value compareFunction;
+    SInt32 flags = 0;
+    if (argc > 0)
+    {
+        if (argv[0].IsCallable())
+            compareFunction.Assign(argv[0]);
+        else if (!argv[0].Convert2Int32(flags))
+        {
+            self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
+                FUN_14250ffc0(self.VMRef, argv[0]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
+            return;
+        }
+    }
+    if (argc > 1 && !argv[1].Convert2Int32(flags))
+    {
+        self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
+            FUN_14250ffc0(self.VMRef, argv[1]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
+        return;
+    }
+
+    VM& vm = self.VMRef;
+    MemoryHeap* heap = vm.GetMemoryHeap();
+    ArrayDH<T> newSA(heap);
+    if (compareFunction.IsNullOrUndefined())
+    {
+        if ((flags & Numeric) == 0)
+        {
+            ArrayDH<StringPair> pairs(heap);
+            Value2StrCollector<T> vc(vm, pairs);
+            ForEachElement(self, vc);
+
+            CompareAsStringInd cmp((flags & Descending) != 0, (flags & CaseInsensitive) != 0, ((flags >> 10) & 1) != 0);
+            Alg::QuickSortSlicedSafe(pairs, 0, pairs.GetSize(), cmp);
+            if (flags & UniqueSort)
+            {
+                for (UInt32 i = 1; i < pairs.GetSize(); ++i)
+                {
+                    if (FUN_14255b4c0(cmp, pairs[i - 1].First, pairs[i].First) == 0)
+                    {
+                        result.SetNull();
+                        return;
+                    }
+                }
+            }
+            for (UPInt i = 0; i < pairs.GetSize(); ++i)
+                newSA.PushBack(self.V[pairs[i].Second]);
+        }
+        else
+        {
+            ArrayDH<NumberPair> pairs(heap);
+            Value2NumberCollector<T> vc(pairs);
+            ForEachElement(self, vc);
+
+            Alg::QuickSortSlicedSafe(pairs, 0, pairs.GetSize(), CompareAsNumberInd((flags & Descending) != 0));
+            if (flags & UniqueSort)
+            {
+                for (UInt32 i = 1; i < pairs.GetSize(); ++i)
+                {
+                    if (pairs[i - 1].First == pairs[i].First)
+                    {
+                        result.SetSInt32(0);
+                        return;
+                    }
+                }
+            }
+            for (UPInt i = 0; i < pairs.GetSize(); ++i)
+                newSA.PushBack(self.V[pairs[i].Second]);
+        }
+    }
+    else
+    {
+        ArrayDH<const T*> ptrs(heap);
+        ValuePtrCollector<T> vc(ptrs);
+        ForEachElement(self, vc);
+
+        Alg::QuickSortSlicedSafe(ptrs, 0, ptrs.GetSize(), CompareValuePtr<T>(vm, compareFunction));
+        if (flags & UniqueSort)
+        {
+            for (UInt32 i = 1; i < ptrs.GetSize(); ++i)
+            {
+                if (CompareElements(vm, compareFunction, *ptrs[i - 1], *ptrs[i]) == 0)
+                {
+                    result.SetNull();
+                    return;
+                }
+            }
+        }
+        for (UPInt i = 0; i < ptrs.GetSize(); ++i)
+            newSA.PushBack(*ptrs[i]);
+    }
+
+    if ((flags & ReturnIndexedArray) == 0)
+    {
+        self.V = newSA;
+        result.Assign(&owner);
+        return;
+    }
+
+    Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
+    I& r = *pr.GetPtr();
+    if (r.V.CheckFixed())
+    {
+        for (UPInt i = 0; i < newSA.GetSize(); ++i)
+            r.V.V.PushBack(newSA[i]);
+    }
+    result.Pick(pr);
+}
+
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
 
 using namespace Scaleform;
@@ -871,6 +1150,27 @@ void FUN_14254ce20(VectorBase<Value>& v, SPtr<VI::Vector_object>& result, const 
 void FUN_14254d380(VectorBase<UInt32>& v, SPtr<VI::Vector_uint>& result, const Value& callback, const Value& thisObject, VI::Vector_uint& owner)
 { VI::VectorMap<VI::Vector_uint, VT::Vector_uint>(v, result, callback, thisObject, owner); }
 
+// MS2-FUNCTIONAL: the exe keeps Value::SetNull and the result-array growth out of line; ours inlines them
+// @0x142550840
+void FUN_142550840(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
+{ VI::VectorSort<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe keeps Value::SetNull and the result-array growth out of line; ours inlines them
+// @0x142551250
+void FUN_142551250(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
+{ VI::VectorSort<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe keeps Value::SetNull and the result-array growth out of line; ours inlines them
+// @0x142551cb0
+void FUN_142551cb0(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
+{ VI::VectorSort<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor and Value::SetNull out of line; ours inlines them
+// @0x1425526f0
+void FUN_1425526f0(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
+{ VI::VectorSort<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: the exe keeps Value::SetNull and the result-array growth out of line; ours inlines them
+// @0x142553170
+void FUN_142553170(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
+{ VI::VectorSort<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0A@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546850
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1425468b0
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546920
@@ -915,3 +1215,73 @@ void FUN_14254d380(VectorBase<UInt32>& v, SPtr<VI::Vector_uint>& result, const V
 // MS2-PIN: ??_7Vector_int@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143181e58
 // MS2-PIN: ??_7Vector_object@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182a88
 // MS2-PIN: ??_7Vector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182170
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d950
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@1@@Z 0x14254df40
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@1@@Z 0x14254e530
+// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z: the exe reads the comparator VM reference before building the two Value temporaries, ours after; other registers and a 0x10 bigger exe frame follow, same calls and order
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254eb40
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@Scaleform@@U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@1@_K1U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f140
+// MS2-PIN: ??_G?$Value2NumberCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425564f0
+// MS2-PIN: ??R?$Value2NumberCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBVValue@345@@Z 0x142555b10
+// MS2-PIN: ??_G?$Value2NumberCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425564c0
+// MS2-PIN: ??R?$Value2NumberCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBV?$Ptr@UASStringNode@GFx@Scaleform@@@5@@Z 0x142555a40
+// MS2-PIN: ??_G?$Value2NumberCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556490
+// MS2-PIN: ??R?$Value2NumberCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBN@Z 0x1425559c0
+// MS2-PIN: ??_G?$Value2NumberCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556460
+// MS2-PIN: ??R?$Value2NumberCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBK@Z 0x142555940
+// MS2-PIN: ??_G?$Value2NumberCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556430
+// MS2-PIN: ??R?$Value2NumberCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBJ@Z 0x1425558c0
+// MS2-PIN: ??_G?$Value2StrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425565e0
+// MS2-FUNCTIONAL ??R?$Value2StrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBVValue@345@@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
+// MS2-PIN: ??R?$Value2StrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBVValue@345@@Z 0x142555eb0
+// MS2-PIN: ??_G?$Value2StrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425565b0
+// MS2-FUNCTIONAL ??R?$Value2StrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBV?$Ptr@UASStringNode@GFx@Scaleform@@@5@@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
+// MS2-PIN: ??R?$Value2StrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBV?$Ptr@UASStringNode@GFx@Scaleform@@@5@@Z 0x142555e50
+// MS2-PIN: ??_G?$Value2StrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556580
+// MS2-FUNCTIONAL ??R?$Value2StrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBN@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
+// MS2-PIN: ??R?$Value2StrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBN@Z 0x142555d70
+// MS2-PIN: ??_G?$Value2StrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556550
+// MS2-FUNCTIONAL ??R?$Value2StrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBK@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
+// MS2-PIN: ??R?$Value2StrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBK@Z 0x142555c90
+// MS2-PIN: ??_G?$Value2StrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556520
+// MS2-FUNCTIONAL ??R?$Value2StrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBJ@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
+// MS2-PIN: ??R?$Value2StrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBJ@Z 0x142555bb0
+// MS2-PIN: ??R?$ValuePtrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBVValue@345@@Z 0x142556110
+// MS2-PIN: ??R?$ValuePtrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBV?$Ptr@UASStringNode@GFx@Scaleform@@@5@@Z 0x1425560a0
+// MS2-PIN: ??R?$ValuePtrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBN@Z 0x142556030
+// MS2-PIN: ??R?$ValuePtrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBK@Z 0x142555fc0
+// MS2-PIN: ??R?$ValuePtrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBJ@Z 0x142555f50
+// MS2-PIN: ??_G?$SortFunc@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556400
+// MS2-PIN: ??_G?$SortFunc@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425563d0
+// MS2-PIN: ??_G?$SortFunc@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425563a0
+// MS2-PIN: ??_G?$SortFunc@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556370
+// MS2-PIN: ??_G?$SortFunc@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556340
+// MS2-PIN: ??_G?$ValuePtrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425566d0
+// MS2-PIN: ??_G?$ValuePtrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556610
+// MS2-PIN: ??_G?$ValuePtrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556640
+// MS2-PIN: ??_G?$ValuePtrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556670
+// MS2-PIN: ??_G?$ValuePtrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425566a0
+// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z: the exe swaps the (number, index) pairs member by member; ours moves the 16-byte pair with movups
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f400
+// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsStringInd@fl_vec@Instances@AS3@GFx@1@@Z: the inlined (string, index) pair swaps and node releases get other registers and frame layout; same calls and order
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsStringInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f740
+// MS2-PIN: ??_7?$SortFunc@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182d88
+// MS2-PIN: ??_7?$SortFunc@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182da8
+// MS2-PIN: ??_7?$SortFunc@N@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182dc8
+// MS2-PIN: ??_7?$SortFunc@K@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182de8
+// MS2-PIN: ??_7?$SortFunc@J@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182e08
+// MS2-PIN: ??_7?$Value2NumberCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182d98
+// MS2-PIN: ??_7?$Value2NumberCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182db8
+// MS2-PIN: ??_7?$Value2NumberCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182dd8
+// MS2-PIN: ??_7?$Value2NumberCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182df8
+// MS2-PIN: ??_7?$Value2NumberCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182e18
+// MS2-PIN: ??_7?$Value2StrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182e28
+// MS2-PIN: ??_7?$Value2StrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182e38
+// MS2-PIN: ??_7?$Value2StrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182e48
+// MS2-PIN: ??_7?$Value2StrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182e58
+// MS2-PIN: ??_7?$Value2StrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182e68
+// MS2-PIN: ??_7?$ValuePtrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182ec8
+// MS2-PIN: ??_7?$ValuePtrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182ed8
+// MS2-PIN: ??_7?$ValuePtrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182ee8
+// MS2-PIN: ??_7?$ValuePtrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182ef8
+// MS2-PIN: ??_7?$ValuePtrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182f08
