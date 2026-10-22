@@ -118,6 +118,7 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
 #include "ms2/scaleform/include/gfx/gfx_sprite.h"
 #include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
 // VM::GetValueTraits (exe body).
@@ -871,6 +872,27 @@ namespace Instances { namespace fl_display
         return result;
     }
 
+#pragma strict_gs_check(push, on)
+    // The bitmap's rect (0, 0, width, height) as a new Rectangle; the size is read unsigned.
+    // @0x142451c10
+    SF_NOINLINE void BitmapData::rectGet(SPtr<Instances::fl_geom::Rectangle>& result)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        Value args[4];
+        args[0].SetNumber(Alg::IRound(0.0));
+        args[1].SetNumber(Alg::IRound(0.0));
+        args[2].SetNumber(Alg::IRound((double)(UInt32)Width));
+        args[3].SetNumber(Alg::IRound((double)(UInt32)Height));
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        asvm.ConstructInstance(result, asvm.RectangleClass, 4, args);
+    }
+#pragma strict_gs_check(pop)
+
     // @0x142451ed0
     SPtr<Instances::fl_display::DisplayObject> DisplayObjectContainer::removeChildAt(SInt32 a0)
     {
@@ -922,6 +944,27 @@ namespace Instances { namespace fl_display
         scrollRectGet(result);
         return result;
     }
+
+#pragma strict_gs_check(push, on)
+    // @0x142452a80
+    SF_NOINLINE void DisplayObject::scrollRectGet(SPtr<Instances::fl_geom::Rectangle>& result)
+    {
+        GFx::DisplayObject::ScrollRectInfo* psr = pDispObj->pScrollRect;
+        if (psr)
+        {
+            const Render::RectD& r = psr->Rectangle;
+            Value args[4];
+            args[0].SetNumber(Alg::IRound(r.x1 * 0.05));
+            args[1].SetNumber(Alg::IRound(r.y1 * 0.05));
+            args[2].SetNumber(Alg::IRound((r.x2 - r.x1) * 0.05));
+            args[3].SetNumber(Alg::IRound((r.y2 - r.y1) * 0.05));
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            asvm.ConstructInstance(result, asvm.RectangleClass, 4, args);
+        }
+        else
+            result = NULL;
+    }
+#pragma strict_gs_check(pop)
 
     // @0x142453470
     SPtr<Instances::fl_display::Stage> DisplayObject::stageGet()
@@ -1269,6 +1312,27 @@ namespace Instances { namespace fl_display
             ptransform->pDispObj = pDispObj;
         result = ptransform;
     }
+
+#pragma strict_gs_check(push, on)
+    // Copies the color transform, the 2D or 3D matrix, and any view / projection matrix from the transform's object.
+    // @0x142454470
+    void DisplayObject::transformSet(const Value& result, Instances::fl_geom::Transform* value)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetCxform(value->pDispObj->GetCxform());
+        if (pDispObj->Is3D())
+            pDispObj->SetMatrix3D(value->pDispObj->GetMatrix3D());
+        else
+            pDispObj->SetMatrix(value->pDispObj->GetMatrix());
+
+        Matrix3F view;
+        if (value->pDispObj->GetViewMatrix3D(&view))
+            pDispObj->SetViewMatrix3D(view);
+        Matrix4F proj;
+        if (value->pDispObj->GetProjectionMatrix3D(&proj))
+            pDispObj->SetProjectionMatrix3D(proj);
+    }
+#pragma strict_gs_check(pop)
 
     // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
     // @0x1424496d0
