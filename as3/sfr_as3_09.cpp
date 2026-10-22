@@ -34,6 +34,10 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 // Object::FindProperty: the slot or dynamic value of this object named mn (0x142502360).
 void FUN_142502360(Scaleform::GFx::AS3::Object* obj, Scaleform::GFx::AS3::PropRef& result,
                    const Scaleform::GFx::AS3::Multiname& mn, int attr);
+// The gesture phase names, by GestureEvent::Phase (0: none).
+extern const char* const DAT_143a2d158[];
+// VM::MakeObject: a new plain Object (0x142516600).
+void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
 
 namespace Scaleform { namespace GFx {
 
@@ -2264,6 +2268,80 @@ namespace Instances { namespace fl_events {
                                              "stageY", "scaleX", "scaleY", "rotation", "offsetX", "offsetY",
                                              "ctrlKey", "altKey", "shiftKey", "commandKey", "controlKey" };
         FormatEventString(*this, result, "TransformGestureEvent", props, 18);
+    }
+
+    // A new Object {code, level}.
+    // @0x14246e560
+    // MS2-FUNCTIONAL: written from behaviour
+    void NetStatusEvent::infoGet(SPtr<Instances::fl::Object>& result)
+    {
+        VM& vm = GetVM();
+        SPtr<Instances::fl::Object> o;
+        FUN_142516600(vm, o);
+        StringManager& sm = vm.GetStringManager();
+        o->AddDynamicSlotValuePair(sm.CreateString("code"), Value(Code));
+        o->AddDynamicSlotValuePair(sm.CreateString("level"), Value(Level));
+        result = o;
+    }
+
+    // Code and level from the object's properties of those names, when it has them.
+    // @0x14246e710
+    // MS2-FUNCTIONAL: written from behaviour
+    void NetStatusEvent::infoSet(const Value& result, const Value& value)
+    {
+        SF_UNUSED(result);
+        AS3::Object* o = value.GetObject();
+        VM& vm = GetVM();
+        StringManager& sm = vm.GetStringManager();
+        Multiname mnCode(vm.GetPublicNamespace(), Value(sm.CreateString("code")));
+        Multiname mnLevel(vm.GetPublicNamespace(), Value(sm.CreateString("level")));
+        Value v;
+        if (o->GetProperty(mnCode, v))
+            v.Convert2String(Code).DoNotCheck();
+        if (o->GetProperty(mnLevel, v))
+            v.Convert2String(Level).DoNotCheck();
+    }
+
+    // @0x14246edd0
+    void GestureEvent::phaseGet(ASString& result)
+    {
+        const char* name = DAT_143a2d158[Phase];
+        if (name)
+            result = GetVM().GetStringManager().CreateConstString(name);
+        else
+            result.SetNull();
+    }
+
+    // @0x14246ee90
+    // MS2-FUNCTIONAL: written from behaviour
+    void GestureEvent::phaseSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        if (value.GetNode() != value.GetManager()->GetNullStringNode())
+        {
+            const char* s = value.ToCStr();
+            if (strcmp(s, "all") == 0)
+            {
+                Phase = 1;
+                return;
+            }
+            if (strcmp(s, "begin") == 0)
+            {
+                Phase = 2;
+                return;
+            }
+            if (strcmp(s, "end") == 0)
+            {
+                Phase = 3;
+                return;
+            }
+            if (strcmp(s, "update") == 0)
+            {
+                Phase = 4;
+                return;
+            }
+        }
+        Phase = 0;
     }
 }} // namespace Instances::fl_events
 

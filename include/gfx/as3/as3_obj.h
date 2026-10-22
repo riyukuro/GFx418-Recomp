@@ -470,6 +470,9 @@ public:
     Traits& GetTraits() const   { return *pTraits; }
     VM&     GetVM() const       { return pTraits->GetVM(); }
 
+    // (appended, sfr13) a dynamic property by string name (0x1424e7f40).
+    void AddDynamicSlotValuePair(const ASString& prop_name, const Value& v, SlotInfo::Attribute a = SlotInfo::aNone);
+
 protected:
     SPtr<Traits>        pTraits;            // +0x20
     DynAttrsType        DynAttrs;           // +0x28
