@@ -116,6 +116,7 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 #include "ms2/scaleform/include/gfx/gfx_movieslots.h"
 #include "ms2/scaleform/include/gfx/gfx_moviedef.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
+#include "ms2/scaleform/include/gfx/gfx_sprite.h"
 #include "ms2/scaleform/include/render/render_color.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
@@ -128,6 +129,13 @@ Scaleform::GFx::DisplayObject* FUN_14250cbe0(Scaleform::GFx::AS3::AvmDisplayObj*
 Scaleform::GFx::DisplayObject* FUN_14250f960(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
 // AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
 void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
+// MovieClip::GetLabeledFrame (exe body): resolves a frame label within a scene, throws if it is not found.
+bool FUN_142444050(Scaleform::GFx::AS3::Instances::fl_display::MovieClip* pthis, Scaleform::GFx::Sprite* psprite,
+                   const Scaleform::GFx::AS3::Value& frame, const Scaleform::GFx::AS3::Value& scene, unsigned* ptargetFrame);
+// MovieRoot::RemoveActionQueueEntriesFor, QueueFrameActions, ExecuteActionQueue.
+void FUN_142522490(Scaleform::GFx::AS3::MovieRoot* proot, int level, Scaleform::GFx::DisplayObject* pdobj);
+void FUN_142520080(Scaleform::GFx::AS3::MovieRoot* proot);
+void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level);
 
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
@@ -879,6 +887,78 @@ namespace Instances { namespace fl_display
             result = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->GetCurrentFrame() + 1;
     }
 
+    // Shared by gotoAndPlay/gotoAndStop: moves to the frame and runs the queued frame actions right away.
+    static SF_FORCEINLINE void GotoFrameAndRun(MovieClip* pthis, const Value& frame, const Value& scene, PlayState state)
+    {
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pthis->pDispObj.GetPtr());
+        unsigned targetFrame;
+        if (frame.IsString())
+        {
+            if (!FUN_142444050(pthis, psprite, frame, scene, &targetFrame))
+                return;
+        }
+        else
+        {
+            UInt32 r;
+            if (!frame.Convert2UInt32(r))
+                return;
+            targetFrame = r - 1;
+        }
+        ASVM& vm = static_cast<ASVM&>(pthis->GetVM());
+        if (targetFrame != psprite->GetCurrentFrame())
+        {
+            // gotoAnd... drops the frame actions already queued for this clip
+            FUN_142522490(vm.GetMovieRoot(), 3, pthis->pDispObj);
+            psprite->GotoFrame(targetFrame);
+        }
+        psprite->SetPlayState(state);
+        FUN_142520080(vm.GetMovieRoot());
+        for (unsigned level = 0; level < 4; ++level)
+            FUN_1424fa320(vm.GetMovieRoot(), level);
+    }
+
+    // @0x14244e0e0
+    void MovieClip::gotoAndPlay(const Value& result, const Value& frame, const Value& scene)
+    {
+        SF_UNUSED(result);
+        GotoFrameAndRun(this, frame, scene, State_Playing);
+    }
+
+    // @0x14244e1d0
+    void MovieClip::gotoAndStop(const Value& result, const Value& frame, const Value& scene)
+    {
+        SF_UNUSED(result);
+        GotoFrameAndRun(this, frame, scene, State_Stopped);
+    }
+
+    // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
+    // @0x1424496d0
+    void MovieClip::currentFrameLabelGet(ASString& result)
+    {
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        VM& vm = GetVM();
+        unsigned frame = psprite->GetCurrentFrame(), labelFrame;
+        const String* plabel = psprite->pDef->GetFrameLabel(frame, &labelFrame);
+        if (plabel && frame == labelFrame)
+            result = vm.GetStringManager().CreateString(plabel->ToCStr());
+        else
+            result.SetNull();
+    }
+
+    // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
+    // @0x1424497a0
+    void MovieClip::currentLabelGet(ASString& result)
+    {
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        VM& vm = GetVM();
+        unsigned frame = psprite->GetCurrentFrame();
+        const String* plabel = psprite->pDef->GetFrameLabel(frame, &frame);
+        if (plabel)
+            result = vm.GetStringManager().CreateString(plabel->ToCStr());
+        else
+            result.SetNull();
+    }
+
     // @0x1424509c0
     void FrameLabel::nameGet(ASString& result)
     {
@@ -1486,6 +1566,26 @@ namespace Instances { namespace fl_display
         result = NULL;
         if (pDispObj && pDispObj->GetMask())
             result = ToAvmDisplayObj(pDispObj->GetMask())->GetAS3Obj();
+    }
+
+    // MS2-FUNCTIONAL: collectible tag strip compiles to cmov; container assignment goes through the out-of-line SPtr operator= in the exe
+    // @0x142451260
+    SF_NOINLINE void DisplayObject::parentGet(SPtr<Instances::fl_display::DisplayObjectContainer>& result)
+    {
+        GFx::InteractiveObject* pparent = pDispObj->GetParent();
+        if (pparent)
+        {
+            // through the interactive part; the AS3 instance is not created here
+            AvmIntObjView* pview = static_cast<AvmIntObjView*>(pparent->GetAvmObjImpl()->ToAvmInteractiveObjBase());
+            Instances::fl_display::DisplayObject* ido =
+                reinterpret_cast<AvmDisplayObj*>(static_cast<AvmIntObjHead*>(pview))->GetAS3Obj();
+            if (ido && ido->GetTraits().GetTraitsType() >= Traits_DisplayObjectContainer)
+            {
+                result = static_cast<Instances::fl_display::DisplayObjectContainer*>(ido);
+                return;
+            }
+        }
+        result = NULL;
     }
 
     // MS2-FUNCTIONAL: register allocation of the inlined SPtr<BitmapData> assignment (exe keeps the old pointer in rdx); same loads, stores and calls
