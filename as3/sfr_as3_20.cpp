@@ -1009,7 +1009,7 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
             ForEachElement(self, vc);
 
             CompareAsStringInd cmp((flags & Descending) != 0, (flags & CaseInsensitive) != 0, ((flags >> 10) & 1) != 0);
-            Alg::QuickSortSlicedSafe(pairs, 0, pairs.GetSize(), cmp);
+            Alg::QuickSortSafe(pairs, cmp);
             if (flags & UniqueSort)
             {
                 for (UInt32 i = 1; i < pairs.GetSize(); ++i)
@@ -1052,7 +1052,7 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
         ValuePtrCollector<T> vc(ptrs);
         ForEachElement(self, vc);
 
-        Alg::QuickSortSlicedSafe(ptrs, 0, ptrs.GetSize(), CompareValuePtr<T>(vm, compareFunction));
+        Alg::QuickSortSafe(ptrs, CompareValuePtr<T>(vm, compareFunction));
         if (flags & UniqueSort)
         {
             for (UInt32 i = 1; i < ptrs.GetSize(); ++i)
@@ -1086,6 +1086,17 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
 }
 
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
+
+// The whole-array sorts VectorSort calls (out of line in the exe).
+namespace Scaleform { namespace Alg {
+typedef GFx::AS3::Value AS3Value;
+template bool QuickSortSafe(ArrayDH<const SInt32*>&, GFx::AS3::Instances::fl_vec::CompareValuePtr<SInt32>);
+template bool QuickSortSafe(ArrayDH<const UInt32*>&, GFx::AS3::Instances::fl_vec::CompareValuePtr<UInt32>);
+template bool QuickSortSafe(ArrayDH<const GFx::AS3::Value::Number*>&, GFx::AS3::Instances::fl_vec::CompareValuePtr<GFx::AS3::Value::Number>);
+template bool QuickSortSafe(ArrayDH<const Ptr<GFx::ASStringNode>*>&, GFx::AS3::Instances::fl_vec::CompareValuePtr<Ptr<GFx::ASStringNode> >);
+template bool QuickSortSafe(ArrayDH<const AS3Value*>&, GFx::AS3::Instances::fl_vec::CompareValuePtr<AS3Value>);
+template bool QuickSortSafe(ArrayDH<Pair<GFx::ASString, UInt32> >&, GFx::AS3::Instances::fl_vec::CompareAsStringInd);
+}} // namespace Scaleform::Alg
 
 using namespace Scaleform;
 using namespace Scaleform::GFx::AS3;
@@ -1342,3 +1353,9 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec
 // MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$08AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254bc30
 // MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0L@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254bd90
 // MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254bef0
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@1@U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d820
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@1@U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d850
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@1@U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d880
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@1@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d8b0
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@Scaleform@@U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@1@U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d8e0
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d920
