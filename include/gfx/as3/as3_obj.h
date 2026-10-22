@@ -161,6 +161,9 @@ public:
     SPtr<VMAbcFile>                         File;       // +0x18
     const Abc::TraitInfo*                   TI;         // +0x20
     Ptr<ASStringNode>                       Name;       // +0x28
+
+    // (appended, sfr13) what a slot value is read for: plain get, or a call.
+    enum ValTarget { valGet, valExecute };
 };
 
 // Hash functor of the slot name set.
@@ -584,6 +587,9 @@ public:
     };
     UPInt   SlotIndex;  // +0x08
     Value   This;       // +0x10
+
+    // (appended, sfr13) the found property's value, getters not run for valGet (0x14250e200).
+    CheckResult GetSlotValueUnsafe(VM& vm, Value& value, SlotInfo::ValTarget vt = SlotInfo::valGet) const;
 };
 
 // The number a string spells, if it is one (0x14250ee30).

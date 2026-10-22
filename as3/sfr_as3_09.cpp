@@ -8,6 +8,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/kernel/sf_std.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -30,6 +31,9 @@ template struct ThunkFunc2<Classes::fl_external::ExternalInterface, 5, Value, un
 
 // Is a value of type `className` (its class looked up by name in the VM; 0x1425145d0).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
+// Object::FindProperty: the slot or dynamic value of this object named mn (0x142502360).
+void FUN_142502360(Scaleform::GFx::AS3::Object* obj, Scaleform::GFx::AS3::PropRef& result,
+                   const Scaleform::GFx::AS3::Multiname& mn, int attr);
 
 namespace Scaleform { namespace GFx {
 
@@ -2062,6 +2066,204 @@ namespace Instances { namespace fl_events {
     {
         SF_UNUSED(result);
         ErrorText = value;
+    }
+
+    // A property lookup that found something: a set This, not the tagged null value or the tagged null object.
+    static inline bool PropRefFound(const PropRef& prop)
+    {
+        const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
+        if (prop.This.GetKind() == Value::kUndefined || bits == 1)
+            return false;
+        return !((bits & 2) != 0 && (bits & ~UPInt(2)) == 0);
+    }
+
+    // "[<argv0> name=value ...]": argv[0] is the class name, the rest are property names of this event, string
+    // values quoted. A missing property throws ReferenceError 1069 and leaves result unset.
+    // @0x14246dfc0
+    // MS2-FUNCTIONAL: written from behaviour
+    void Event::formatToString(Value& result, unsigned argc, const Value* argv)
+    {
+        VM& vm = GetVM();
+        if (argc == 0)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "Event::formatToString", 1, 1, argc));
+            return;
+        }
+        StringBuffer buf(vm.GetMemoryHeap());
+        char tmp[1024];
+        ASString name = static_cast<ASVM&>(vm).GetBuiltin(AS3Builtin_empty_);
+        argv[0].Convert2String(name).DoNotCheck();
+        SFsprintf(tmp, sizeof(tmp), "[%s", name.ToCStr());
+        buf.AppendString(tmp);
+        for (unsigned i = 1; i < argc; ++i)
+        {
+            argv[i].Convert2String(name).DoNotCheck();
+            Multiname mn(vm.GetPublicNamespace(), Value(name));
+            PropRef prop;
+            FUN_142502360(this, prop, mn, 0);
+            if (!PropRefFound(prop))
+            {
+                SFsprintf(tmp, sizeof(tmp),
+                          "Property %s not found on flash.events.Event and there is no default value.", name.ToCStr());
+                vm.ThrowReferenceError(VM::Error(VM::ErrorID(1069), vm, tmp));
+                return;
+            }
+            Value v;
+            if (!prop.GetSlotValueUnsafe(vm, v, SlotInfo::valGet))
+                return;
+            SFsprintf(tmp, sizeof(tmp), " %s=", name.ToCStr());
+            buf.AppendString(tmp);
+            const bool quote = v.GetKind() == Value::kString;
+            v.Convert2String(name).DoNotCheck();
+            if (quote)
+                buf.AppendChar('"');
+            SFsprintf(tmp, sizeof(tmp), "%s", name.ToCStr());
+            buf.AppendString(tmp);
+            if (quote)
+                buf.AppendChar('"');
+        }
+        buf.AppendString("]", 2);
+        result.Assign(vm.GetStringManager().CreateString(buf.ToCStr()));
+    }
+
+    // toString of the event classes: formatToString of the class name and the listed properties.
+    static void FormatEventString(Event& e, ASString& result, const char* className, const char* const* props,
+                                  unsigned count)
+    {
+        StringManager& sm = e.GetVM().GetStringManager();
+        Value argv[20];
+        argv[0].Assign(sm.CreateConstString(className));
+        for (unsigned i = 0; i < count; ++i)
+            argv[i + 1].Assign(sm.CreateConstString(props[i]));
+        Value r;
+        e.formatToString(r, count + 1, argv);
+        r.Convert2String(result).DoNotCheck();
+    }
+
+    // @0x14246fc50
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void Event::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase" };
+        FormatEventString(*this, result, GetEventName(), props, 4);
+    }
+
+    // @0x14246f9e0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void AppLifecycleEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "status" };
+        FormatEventString(*this, result, "AppLifecycleEvent", props, 4);
+    }
+
+    // @0x14246feb0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void FocusEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "relatedObject",
+                                             "shiftKey", "keyCode" };
+        FormatEventString(*this, result, "FocusEvent", props, 7);
+    }
+
+    // @0x1424701d0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void GestureEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "phase", "localX", "localY", "stageX",
+                                             "stageY", "ctrlKey", "altKey", "shiftKey", "commandKey", "controlKey" };
+        FormatEventString(*this, result, "GestureEvent", props, 13);
+    }
+
+    // @0x1424706a0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void IOErrorEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "text" };
+        FormatEventString(*this, result, "IOErrorEvent", props, 3);
+    }
+
+    // @0x142470890
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void KeyboardEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "charCode", "keyCode",
+                                             "keyLocation", "ctrlKey", "altKey", "shiftKey" };
+        FormatEventString(*this, result, "KeyboardEvent", props, 10);
+    }
+
+    // @0x142470c80
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void MouseEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "localX", "localY",
+                                             "stageX", "stageY", "relatedObject", "ctrlKey", "altKey", "shiftKey",
+                                             "delta" };
+        FormatEventString(*this, result, "MouseEvent", props, 13);
+    }
+
+    // @0x142471140
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void NetStatusEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "info", "target" };
+        FormatEventString(*this, result, GetEventName(), props, 5);
+    }
+
+    // @0x1424713e0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void PressAndTapGestureEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "phase", "localX", "localY",
+                                             "tapLocalX", "tapLocalY", "ctrlKey", "altKey", "shiftKey", "commandKey",
+                                             "controlKey" };
+        FormatEventString(*this, result, "PressAndTapGestureEvent", props, 13);
+    }
+
+    // @0x1424718a0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void ProgressEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "bytesLoaded",
+                                             "bytesTotal" };
+        FormatEventString(*this, result, "ProgressEvent", props, 6);
+    }
+
+    // @0x142471b70
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void StageOrientationEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "beforeOrientation",
+                                             "afterOrientation" };
+        FormatEventString(*this, result, "StageOrientationEvent", props, 5);
+    }
+
+    // @0x142471e00
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void TextEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "text" };
+        FormatEventString(*this, result, "TextEvent", props, 5);
+    }
+
+    // @0x1424720a0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void TouchEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "touchPointID",
+                                             "isPrimaryTouchPoint", "localX", "localY", "stageX", "stageY", "sizeX",
+                                             "sizeY", "relatedObject", "ctrlKey", "altKey", "shiftKey", "commandKey",
+                                             "controlKey" };
+        FormatEventString(*this, result, "TouchEvent", props, 18);
+    }
+
+    // @0x1424726d0
+    // MS2-FUNCTIONAL: the exe builds the argument array inline
+    void TransformGestureEvent::toString(ASString& result)
+    {
+        static const char* const props[] = { "type", "bubbles", "cancelable", "phase", "localX", "localY", "stageX",
+                                             "stageY", "scaleX", "scaleY", "rotation", "offsetX", "offsetY",
+                                             "ctrlKey", "altKey", "shiftKey", "commandKey", "controlKey" };
+        FormatEventString(*this, result, "TransformGestureEvent", props, 18);
     }
 }} // namespace Instances::fl_events
 
