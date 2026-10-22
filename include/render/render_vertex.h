@@ -114,6 +114,11 @@ struct VertexXY16i
     static VertexFormat Format;   // 0x143a2fb70
 };
 
+// (appended for the mesh cache, sfr_render_07g) converts count vertices between formats through a stack buffer
+// (0x1426b9730)
+void ConvertVertices_Buffered(const VertexFormat& srcFormat, void* src, const VertexFormat& destFormat, void* dest,
+                              unsigned count, void** convertArgs = 0);
+
 }} // namespace Scaleform::Render
 
 #endif

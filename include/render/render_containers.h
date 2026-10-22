@@ -335,6 +335,109 @@ public:
 
     C&       operator[](UPInt i)       { return GetBuffer()[i]; }
     const C& operator[](UPInt i) const { return GetBuffer()[i]; }
+
+    // (appended for the mesh cache, sfr_render_07g) growth in steps of four once the inline slots are full; removal
+    // moves the items back inline when they fit again
+    bool Add(const C& val)
+    {
+        C* p = insertSpot(Size);
+        if (!p)
+            return false;
+        ConstructAlt<C>(p, val);
+        return true;
+    }
+    bool Add_NoDuplicate(const C& val)
+    {
+        C* buf = GetBuffer();
+        for (UPInt i = 0; i < Size; ++i)
+            if (buf[i] == val)
+                return false;
+        return Add(val);
+    }
+    void RemoveAt(UPInt index)
+    {
+        C* buf = GetBuffer();
+        Destruct<C>(buf + index);
+        memmove(buf + index, buf + index + 1, (Size - index - 1) * sizeof(C));
+        --Size;
+        if (Size == InternalSize)
+        {
+            C* heapData = Block.pData;
+            memcpy(Inline, heapData, Size * sizeof(C));
+            SF_FREE(heapData);
+        }
+    }
+    void Remove(const C& val)
+    {
+        C* buf = GetBuffer();
+        for (UPInt i = 0; i < Size; ++i)
+        {
+            if (buf[i] == val)
+            {
+                RemoveAt(i);
+                break;
+            }
+        }
+    }
+
+private:
+    static UPInt roundReserve(UPInt n) { return (n + 3) & ~UPInt(3); }
+
+    // a new block of reserve items holding the old ones with a hole at index (out of line, e.g. 0x1426dc260)
+    C* allocInsertCopy(UPInt index, C* src, UPInt size, UPInt reserve)
+    {
+        C* data = (C*)SF_HEAP_AUTO_ALLOC(this, reserve * sizeof(C));
+        if (data)
+        {
+            if (index)
+                memcpy(data, src, index * sizeof(C));
+            if (index < size)
+                memcpy(data + index + 1, src + index, (size - index) * sizeof(C));
+        }
+        return data;
+    }
+    static void openGap(UPInt index, C* data, UPInt size)
+    {
+        if (index < size)
+            memmove(data + index + 1, data + index, (size - index) * sizeof(C));
+    }
+    C* insertSpot(UPInt index)
+    {
+        C* slot;
+        if (Size < InternalSize)
+        {
+            openGap(index, (C*)Inline, Size);
+            slot = (C*)Inline + index;
+        }
+        else if (Size == InternalSize)
+        {
+            UPInt reserve = roundReserve(Size + 1);
+            C*    data    = allocInsertCopy(index, (C*)Inline, Size, reserve);
+            if (!data)
+                return 0;
+            slot          = data + index;
+            Block.pData   = data;
+            Block.Reserve = reserve;
+        }
+        else if (Size < Block.Reserve)
+        {
+            openGap(index, Block.pData, Size);
+            slot = Block.pData + index;
+        }
+        else
+        {
+            UPInt reserve = roundReserve(Size + 1);
+            C*    data    = allocInsertCopy(index, Block.pData, Size, reserve);
+            if (!data)
+                return 0;
+            slot = data + index;
+            SF_FREE(Block.pData);
+            Block.pData   = data;
+            Block.Reserve = reserve;
+        }
+        ++Size;
+        return slot;
+    }
 };
 
 // (appended for the stroker, sfr_render_05b) a growable array on a LinearHeap: items in pages of 1 << PageSh, the

@@ -109,6 +109,8 @@ struct MeshCacheItemUseNode : public ListNode<MeshCacheItemUseNode>
 {
     MeshCacheItem* pMeshItem;
 
+    // relinks the node into p's batch list (0x1426dc0c0, sfr_render_07g)
+    void SetMeshItem(MeshCacheItem* p);
     void ClearMeshItem()
     {
         if (pMeshItem)

@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/render/render_meshkey.h"
 #include "ms2/scaleform/include/render/render_renderer2d.h"
 #include "ms2/scaleform/include/render/render_primitivequeue.h"
+#include "ms2/scaleform/include/render/render_meshcache.h"
 #include "ms2/scaleform/include/render/render_threadcommand.h"
 
 namespace Scaleform { namespace Render {

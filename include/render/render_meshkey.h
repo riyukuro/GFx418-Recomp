@@ -81,25 +81,19 @@ struct MeshStagingNode : public ListNode<MeshStagingNode>
     virtual void OnStagingNodeEvict() { StagingBufferSize = 0; }
 };
 
-// how busy the cached copies of a mesh are (fences considered); higher is busier
+// how busy the cached copies of a mesh are (fences considered); higher is busier. MeshCache::GetItemUseStatus maps
+// the cache list an item sits in onto these.
 enum MeshUseStatus
 {
-    MUS_Uncached = 0
+    MUS_Uncached  = 0,
+    MUS_LRUTail   = 1,
+    MUS_PrevFrame = 2,
+    MUS_ThisFrame = 3,
+    MUS_InUse     = 4
 };
 
-class MeshCacheItem
-{
-public:
-    // what a cache item holds
-    enum MeshContentType
-    {
-        Mesh_Regular = 0,
-        Mesh_Complex = 1
-    };
-
-    void          NotifyMeshRelease(MeshBase* mesh);   // 0x1426dbe00
-    MeshUseStatus GetUseStatus() const;                // 0x1426dbce0
-};
+// the mesh cache entries (render_meshcache.h)
+class MeshCacheItem;
 
 // What a provider's GetData writes the tessellated vertices and indices to. Each Fill is one vertex set drawn with
 // one fill style (two merged ones for EdgeAA); BeginOutput gets them all first so the storage can be sized.
@@ -178,6 +172,15 @@ public:
     virtual bool IsEvicted() const { return CacheItems.GetSize() == 0 && !StagingBufferSize; }
 
     MeshUseStatus GetUseStatus() const;
+
+    // (appended for the mesh cache, sfr_render_07g) an item going away; the provider hears of it once the mesh has
+    // no copy left anywhere
+    void RemoveMeshCacheItem(MeshCacheItem* p)
+    {
+        CacheItems.Remove(p);
+        if (CacheItems.GetSize() == 0 && !StagingBufferSize)
+            OnEvictProviderNotify();
+    }
 };
 
 // A mesh of several fills tessellated together into one cache item (0x140 bytes; vftables 0x1431919d8 /
@@ -208,6 +211,13 @@ public:
     ~ComplexMesh();
 
     virtual bool IsEvicted() const { return !pCacheMeshItem && !StagingBufferSize; }
+
+    // (appended for the mesh cache, sfr_render_07g) the one cache item went away
+    void RemoveMeshCacheItem(MeshCacheItem*)
+    {
+        pCacheMeshItem = 0;
+        OnEvictProviderNotify();
+    }
 
     unsigned GetFillCount(unsigned layer, unsigned meshGenFlags) const
     {

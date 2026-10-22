@@ -49,6 +49,17 @@ struct MeshCacheParams
     unsigned NoBatchVerticesSizeThreshold;
     unsigned MaxVerticesSizeInBatch;
     unsigned MaxIndicesInBatch;
+
+    MeshCacheParams() { }
+    // copied field by field, as the exe's MeshCache ctor does
+    MeshCacheParams(const MeshCacheParams& o)
+        : MemReserve(o.MemReserve), MemLimit(o.MemLimit), MemGranularity(o.MemGranularity),
+          LRUTailSize(o.LRUTailSize), StagingBufferSize(o.StagingBufferSize),
+          VBLockEvictSizeLimit(o.VBLockEvictSizeLimit), MaxBatchInstances(o.MaxBatchInstances),
+          InstancingThreshold(o.InstancingThreshold), NoBatchVerticesSizeThreshold(o.NoBatchVerticesSizeThreshold),
+          MaxVerticesSizeInBatch(o.MaxVerticesSizeInBatch), MaxIndicesInBatch(o.MaxIndicesInBatch)
+    {
+    }
 };
 
 class MeshCacheConfig
@@ -60,10 +71,8 @@ public:
     virtual void                   ClearCache() = 0;
 };
 
-// the HAL's mesh cache (CacheBase at +0, MeshCacheConfig at +8)
-class MeshCache : public CacheBase, public MeshCacheConfig
-{
-};
+// the HAL's mesh cache (CacheBase at +0, MeshCacheConfig at +8), recovered in render_meshcache.h
+class MeshCache;
 
 // the glyph cache's settings interface (Render_GlyphCacheConfig)
 class GlyphCacheConfig
