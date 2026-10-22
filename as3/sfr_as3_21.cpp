@@ -278,6 +278,9 @@ void FUN_142554880(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scalef
 
 // ---------------------------------------------------------------- Vector
 
+// VM::GetClassTraits(const Value&) / ClassTraits::Traits::IsParentTypeOf
+Scaleform::GFx::AS3::ClassTraits::Traits& FUN_142507f60(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
 // GetValueTraits (sfr_as3_09)
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
@@ -323,6 +326,46 @@ CheckResult ArrayBase::CheckCallable(const Value& v) const
     VM& vm = VMRef;
     vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, v).GetName().ToCStr(), "callable"));
     return false;
+}
+
+// @0x142563ee0
+// MS2-FUNCTIONAL: Value temporaries/cleanup laid out differently
+bool ArrayBase::Some(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const
+{
+    if (callback.IsNullOrUndefined() || !CheckCallable(callback))
+        return false;
+    Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+    const UInt32 size = GetSize();
+    for (UInt32 i = 0; i < size; ++i)
+    {
+        Value argv[3] = {Value::GetUndefined(), Value(i), Value(owner)};
+        Value result;
+        GetValue(i, argv[0]);
+        VMRef.ExecuteInternalUnsafe(callback, _this, result, 3, argv, false);
+        if (VMRef.IsException())
+            break;
+        if (!result.IsBool())
+            return false;
+        if (result.AsBool())
+            return true;
+    }
+    return false;
+}
+
+// @0x14255b1d0
+// MS2-FUNCTIONAL: error-path register allocation differs
+CheckResult ArrayBase::CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const
+{
+    for (unsigned i = 0; i < argc; ++i)
+    {
+        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, argv[i])))
+        {
+            VM& vm = VMRef;
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, "arguments", tr.GetName().ToCStr()));
+            return false;
+        }
+    }
+    return true;
 }
 
 // @0x14255afd0
@@ -392,7 +435,7 @@ CheckResult VectorBase<SInt32>::Resize(UInt32 size)
 // @0x142563720
 // MS2-FUNCTIONAL: size compares and the inlined Resize scheduled differently
 template <>
-CheckResult VectorBase<SInt32>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
+__declspec(noinline) CheckResult VectorBase<SInt32>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
 {
     if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
     {
@@ -407,6 +450,19 @@ CheckResult VectorBase<SInt32>::Set(UInt32 ind, const Value& v, const ClassTrait
         return false;
     V[ind] = r.AsInt();
     return true;
+}
+
+// @0x142564390
+// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
+template <>
+void VectorBase<SInt32>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed || !CheckArgTypes(argc, argv, tr))
+        return;
+    V.InsertMultipleAt(0, argc);
+    for (unsigned i = 0; i < argc; ++i)
+        V[i] = argv[i].AsInt();
 }
 
 // ---- VectorBase<UInt32>
@@ -459,6 +515,19 @@ CheckResult VectorBase<UInt32>::Resize(UInt32 size)
     return true;
 }
 
+// @0x1425644f0
+// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
+template <>
+void VectorBase<UInt32>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed || !CheckArgTypes(argc, argv, tr))
+        return;
+    V.InsertMultipleAt(0, argc);
+    for (unsigned i = 0; i < argc; ++i)
+        V[i] = argv[i].AsUInt();
+}
+
 // ---- VectorBase<Value::Number>
 
 // @0x142560240
@@ -507,6 +576,19 @@ CheckResult VectorBase<Value::Number>::Resize(UInt32 size)
     for (; i < size; ++i)
         V[i] = 0;
     return true;
+}
+
+// @0x142564650
+// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
+template <>
+void VectorBase<Value::Number>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed || !CheckArgTypes(argc, argv, tr))
+        return;
+    V.InsertMultipleAt(0, argc);
+    for (unsigned i = 0; i < argc; ++i)
+        V[i] = argv[i].AsNumber();
 }
 
 // ---- VectorBase<Ptr<ASStringNode> >
@@ -562,7 +644,7 @@ CheckResult VectorBase<Ptr<ASStringNode> >::Resize(UInt32 size)
 // @0x1425638c0
 // MS2-FUNCTIONAL: size compares scheduled differently
 template <>
-CheckResult VectorBase<Ptr<ASStringNode> >::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
+__declspec(noinline) CheckResult VectorBase<Ptr<ASStringNode> >::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
 {
     if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
     {
@@ -577,6 +659,19 @@ CheckResult VectorBase<Ptr<ASStringNode> >::Set(UInt32 ind, const Value& v, cons
         return false;
     V[ind] = r.GetStringNode();
     return true;
+}
+
+// @0x142564860
+// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
+template <>
+void VectorBase<Ptr<ASStringNode> >::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed || !CheckArgTypes(argc, argv, tr))
+        return;
+    V.InsertMultipleAt(0, argc);
+    for (unsigned i = 0; i < argc; ++i)
+        V[i] = argv[i].GetStringNode();
 }
 
 // ---- VectorBase<Value>

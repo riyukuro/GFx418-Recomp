@@ -44,6 +44,8 @@ public:
     CheckResult CheckCallable(const Value& v) const;
     // v coerced to tr into result; TypeError 1034 when it cannot be. 0x14255afd0
     CheckResult CheckCoerce(const ClassTraits::Traits& tr, const Value& v, Value& result) const;
+    // TypeError 1034 ("arguments") unless every argv is of type tr. 0x14255b1d0
+    CheckResult CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const;
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v) = 0;
