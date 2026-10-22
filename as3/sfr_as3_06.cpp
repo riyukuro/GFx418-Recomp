@@ -87,11 +87,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> AVM1Movie::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) AVM1Movie(vm));
-    }
 }}
 
 namespace InstanceTraits { namespace fl_display
@@ -133,11 +128,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::ActionScriptVersion(*this)));
     }
-
-    inline Pickable<Traits> ActionScriptVersion::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) ActionScriptVersion(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -164,11 +154,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Bitmap(vm, AS3::fl_display::BitmapCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> Bitmap::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Bitmap(vm));
     }
 }}
 
@@ -212,11 +197,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::BitmapData(vm, AS3::fl_display::BitmapDataCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> BitmapData::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapData(vm));
     }
 }}
 
@@ -263,11 +243,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BitmapDataChannel(*this)));
     }
-
-    inline Pickable<Traits> BitmapDataChannel::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapDataChannel(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -295,11 +270,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::BlendModeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BlendMode(*this)));
-    }
-
-    inline Pickable<Traits> BlendMode::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) BlendMode(vm));
     }
 }}
 
@@ -339,11 +309,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::CapsStyle(*this)));
     }
-
-    inline Pickable<Traits> CapsStyle::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) CapsStyle(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -371,11 +336,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::DisplayObject(vm, AS3::fl_display::DisplayObjectCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> DisplayObject::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplayObject(vm));
     }
 }}
 
@@ -421,11 +381,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> DisplayObjectContainer::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplayObjectContainer(vm));
-    }
 }}
 
 namespace InstanceTraits { namespace fl_display
@@ -466,11 +421,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::FrameLabel(vm, AS3::fl_display::FrameLabelCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> FrameLabel::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) FrameLabel(vm));
     }
 }}
 
@@ -514,11 +464,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::GradientType(*this)));
     }
-
-    inline Pickable<Traits> GradientType::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) GradientType(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -544,11 +489,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Graphics(vm, AS3::fl_display::GraphicsCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> Graphics::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Graphics(vm));
     }
 }}
 
@@ -591,11 +531,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> IBitmapDrawable::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) IBitmapDrawable(vm));
-    }
 }}
 
 // ---- InteractiveObject ----
@@ -611,11 +546,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::InteractiveObject(vm, AS3::fl_display::InteractiveObjectCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> InteractiveObject::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) InteractiveObject(vm));
     }
 }}
 
@@ -658,11 +588,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::InterpolationMethod(*this)));
     }
-
-    inline Pickable<Traits> InterpolationMethod::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) InterpolationMethod(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -688,11 +613,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::JointStyleCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::JointStyle(*this)));
-    }
-
-    inline Pickable<Traits> JointStyle::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) JointStyle(vm));
     }
 }}
 
@@ -720,11 +640,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::LineScaleModeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LineScaleMode(*this)));
-    }
-
-    inline Pickable<Traits> LineScaleMode::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) LineScaleMode(vm));
     }
 }}
 
@@ -754,11 +669,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Loader(vm, AS3::fl_display::LoaderCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> Loader::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Loader(vm));
     }
 }}
 
@@ -800,11 +710,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::LoaderInfo(vm, AS3::fl_display::LoaderInfoCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LoaderInfo(*this)));
-    }
-
-    inline Pickable<Traits> LoaderInfo::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) LoaderInfo(vm));
     }
 }}
 
@@ -858,11 +763,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> MorphShape::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) MorphShape(vm));
-    }
 }}
 
 namespace InstanceTraits { namespace fl_display
@@ -905,11 +805,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> MovieClip::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) MovieClip(vm));
-    }
 }}
 
 namespace InstanceTraits { namespace fl_display
@@ -951,11 +846,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::PixelSnapping(*this)));
     }
-
-    inline Pickable<Traits> PixelSnapping::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) PixelSnapping(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -982,11 +872,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::SWFVersionCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SWFVersion(*this)));
-    }
-
-    inline Pickable<Traits> SWFVersion::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SWFVersion(vm));
     }
 }}
 
@@ -1020,11 +905,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Scene(vm, AS3::fl_display::SceneCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> Scene::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Scene(vm));
     }
 }}
 
@@ -1067,11 +947,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> Shader::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shader(vm));
-    }
 }}
 
 // ---- ShaderData ----
@@ -1087,11 +962,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> ShaderData::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) ShaderData(vm));
-    }
 }}
 
 // ---- Shape ----
@@ -1106,11 +976,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Shape(vm, AS3::fl_display::ShapeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> Shape::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shape(vm));
     }
 }}
 
@@ -1153,11 +1018,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
-
-    inline Pickable<Traits> SimpleButton::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SimpleButton(vm));
-    }
 }}
 
 namespace InstanceTraits { namespace fl_display
@@ -1199,11 +1059,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SpreadMethod(*this)));
     }
-
-    inline Pickable<Traits> SpreadMethod::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SpreadMethod(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -1231,11 +1086,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Sprite(vm, AS3::fl_display::SpriteCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
-    }
-
-    inline Pickable<Traits> Sprite::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Sprite(vm));
     }
 }}
 
@@ -1278,11 +1128,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Stage(vm, AS3::fl_display::StageCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::Stage(*this)));
-    }
-
-    inline Pickable<Traits> Stage::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Stage(vm));
     }
 }}
 
@@ -1334,11 +1179,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageAlign(*this)));
     }
-
-    inline Pickable<Traits> StageAlign::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageAlign(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -1371,11 +1211,6 @@ namespace ClassTraits { namespace fl_display
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageDisplayState(*this)));
     }
-
-    inline Pickable<Traits> StageDisplayState::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageDisplayState(vm));
-    }
 }}
 
 namespace Classes { namespace fl_display
@@ -1402,11 +1237,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageQualityCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageQuality(*this)));
-    }
-
-    inline Pickable<Traits> StageQuality::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageQuality(vm));
     }
 }}
 
@@ -1435,11 +1265,6 @@ namespace ClassTraits { namespace fl_display
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageScaleModeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageScaleMode(*this)));
-    }
-
-    inline Pickable<Traits> StageScaleMode::MakeClassTraits(VM& vm)
-    {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageScaleMode(vm));
     }
 }}
 

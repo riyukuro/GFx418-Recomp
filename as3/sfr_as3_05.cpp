@@ -4,7 +4,11 @@
 // MS2-UNIT: sfr_as3_05
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14242a640-0x142438be0 .text$mn
+#include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include <math.h>
+#include <string.h>
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -147,7 +151,12 @@ template <> struct ThunkMethodDefault<Instances::fl_display::Graphics, 0, 2, boo
 };
 // thunk 0x14242e520: Instances::fl_display::Graphics::beginBitmapFill
 template struct ThunkFunc4<Instances::fl_display::Graphics, 0, const Value, Instances::fl_display::BitmapData*, Instances::fl_geom::Matrix*, bool, bool>;
-// thunk 0x14242e640: Instances::fl_display::Graphics::beginFill
+// Instances::fl_display::Graphics::beginFill argument 1 default
+template <> struct ThunkMethodDefault<Instances::fl_display::Graphics, 1, 1, Value::Number>
+{
+    SF_INLINE static Value::Number Get(StringManager&) { return 1.0; }
+};
+// thunk 0x14242e610: Instances::fl_display::Graphics::beginFill
 template struct ThunkFunc2<Instances::fl_display::Graphics, 1, const Value, UInt32, Value::Number>;
 // thunk 0x14242e6c0: Instances::fl_display::Graphics::beginGradientFill
 template struct ThunkFunc2<Instances::fl_display::Graphics, 2, Value, unsigned, const Value*>;
@@ -378,7 +387,7 @@ template struct ThunkFunc0<Instances::fl_display::Stage, 16, bool>;
 template struct ThunkFunc1<Instances::fl_display::Stage, 17, const Value, bool>;
 // thunk 0x142433a70: Instances::fl_display::Stage::numChildrenGet
 template struct ThunkFunc0<Instances::fl_display::Stage, 18, SInt32>;
-// thunk 0x142433bc0: Classes::fl_display::LoaderInfo::getLoaderInfoByDefinition
+// thunk 0x142433ad0: Classes::fl_display::LoaderInfo::getLoaderInfoByDefinition
 template struct ThunkFunc1<Classes::fl_display::LoaderInfo, 0, SPtr<Instances::fl_display::LoaderInfo>, const Value&>;
 // thunk 0x142433c90: Instances::fl_display::Stage::orientationGet
 template struct ThunkFunc0<Instances::fl_display::Stage, 19, ASString>;
@@ -612,6 +621,406 @@ template struct ThunkFunc0<Instances::fl_display::MovieClip, 3, SPtr<Instances::
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ---- fl_display class traits factories ----
+// The exe builds each class traits object here with its constructor (sfr_as3_06) inlined, except for
+// DisplayObject and BitmapData, whose constructors stay out of line.
+
+namespace ClassTraits { namespace fl_display
+{
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242c7d0
+    Pickable<Traits> StageAlign::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageAlign(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242d350
+    Pickable<Traits> StageDisplayState::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageDisplayState(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242d840
+    Pickable<Traits> FrameLabel::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FrameLabel(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242dbf0
+    Pickable<Traits> StageQuality::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageQuality(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242dd60
+    Pickable<Traits> GradientType::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GradientType(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242deb0
+    Pickable<Traits> StageScaleMode::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageScaleMode(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242e020
+    Pickable<Traits> SWFVersion::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SWFVersion(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242e1a0
+    Pickable<Traits> ShaderData::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ShaderData(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242e2c0
+    Pickable<Traits> Graphics::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Graphics(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242e400
+    Pickable<Traits> Shader::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shader(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242eb30
+    Pickable<Traits> PixelSnapping::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) PixelSnapping(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242f3b0
+    Pickable<Traits> Shape::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shape(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242f5a0
+    Pickable<Traits> BitmapDataChannel::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapDataChannel(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242f7f0
+    Pickable<Traits> CapsStyle::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) CapsStyle(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x14242fde0
+    Pickable<Traits> SimpleButton::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SimpleButton(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430340
+    Pickable<Traits> IBitmapDrawable::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IBitmapDrawable(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430460
+    Pickable<Traits> DisplayObjectContainer::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplayObjectContainer(vm));
+    }
+
+    // @0x1424305a0
+    Pickable<Traits> DisplayObject::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplayObject(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430600
+    Pickable<Traits> InterpolationMethod::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) InterpolationMethod(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430750
+    Pickable<Traits> AVM1Movie::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) AVM1Movie(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430890
+    Pickable<Traits> JointStyle::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) JointStyle(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x1424309f0
+    Pickable<Traits> LineScaleMode::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) LineScaleMode(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430b60
+    Pickable<Traits> Loader::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Loader(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430ca0
+    Pickable<Traits> Stage::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Stage(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142430fd0
+    Pickable<Traits> LoaderInfo::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) LoaderInfo(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x1424318e0
+    Pickable<Traits> SpreadMethod::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SpreadMethod(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142431a40
+    Pickable<Traits> ActionScriptVersion::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ActionScriptVersion(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142431b90
+    Pickable<Traits> InteractiveObject::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) InteractiveObject(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142432ad0
+    Pickable<Traits> BlendMode::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BlendMode(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142434400
+    Pickable<Traits> MorphShape::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MorphShape(vm));
+    }
+
+    // @0x1424347d0
+    Pickable<Traits> BitmapData::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapData(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142435180
+    Pickable<Traits> Bitmap::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Bitmap(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x1424354d0
+    Pickable<Traits> Sprite::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Sprite(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142437730
+    Pickable<Traits> MovieClip::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MovieClip(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+    // @0x142438130
+    Pickable<Traits> Scene::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Scene(vm));
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+
+// ---- core natives: Date, Error, QName, RegExp, Math, global functions ----
+
+
+void* FUN_1424d7e50(void* pmem, const Scaleform::GFx::AS3::Value& function, unsigned delay, bool timeout);   // IntervalTimer ctor (setInterval/setTimeout form)
+void  FUN_1425264b0(void* ptimer, unsigned argc, const Scaleform::GFx::AS3::Value* argv);                   // IntervalTimer: copies the extra call arguments
+void  FUN_1425e4ad0(const char* pstr, unsigned len, Scaleform::String* presult);                            // URL-style unescape of a string
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl
+{
+    // @0x14242b130
+    // MS2-FUNCTIONAL: the exe also builds an undefined Value it never uses around the call
+    void Date::timeSet(const Value& result, Value::Number t)
+    {
+        SF_UNUSED(result);
+        Value::Number r;
+        AS3setTime(r, t);
+    }
+
+    // @0x14242b1e0
+    // MS2-FUNCTIONAL: written from behaviour (name, then ": " and the message when there is one)
+    void Error::toStringProto(ASString& result)
+    {
+        result = GetTraits().GetName();
+        if (message.GetSize() != 0)
+        {
+            String msg(message.ToCStr(), message.GetSize());
+            String text = String(": ") + msg;
+            result.Append(text.ToCStr(), strlen(text.ToCStr()));
+        }
+    }
+
+    // @0x14242b710
+    void QName::uriGet(Value& result)
+    {
+        if (Ns)
+            result.Assign(Ns->GetUri());
+        else
+            result.SetNull();
+    }
+
+    // @0x14242b010
+    void RegExp::sourceGet(ASString& result)
+    {
+        result = GetVM().GetStringManager().CreateString(Pattern);
+    }
+
+    // @0x14242ae30
+    // MS2-FUNCTIONAL: written from behaviour (a one-shot interval timer registered with the movie)
+    void GlobalObjectCPP::setTimeout(Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc < 2)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, GetVM(), "GlobalObjectCPP::setTimeout", 2, 1023, argc));
+            return;
+        }
+        UInt32 delay = 0;
+        if (!argv[1].Convert2UInt32(delay))
+            return;
+        void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
+        ASIntervalTimerIntf* ptimer = pmem ? (ASIntervalTimerIntf*)FUN_1424d7e50(pmem, argv[0], delay, true) : NULL;
+        if (argc > 2)
+            FUN_1425264b0(ptimer, argc - 2, argv + 2);
+        MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        int id = proot->AddIntervalTimer(ptimer);
+        result.Assign(Value(UInt32(id)));
+        ptimer->Start(proot);
+        ptimer->Release();
+    }
+
+    // @0x14242b410
+    void GlobalObjectCPP::trace(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        StringBuffer buf;
+        VM& vm = GetVM();
+        for (unsigned i = 0; i < argc; ++i)
+        {
+            if (i != 0)
+                buf.AppendChar(' ');
+            ASString str = GetVM().GetStringManager().CreateEmptyString();
+            if (!argv[i].Convert2String(str))
+                return;
+            buf.AppendString(String(str.ToCStr(), str.GetSize()).ToCStr());
+        }
+        buf.AppendString("\n");
+        vm.GetUI().Output(FlashUI::Output_Message, buf.ToCStr());
+    }
+
+    // @0x14242b590
+    // MS2-FUNCTIONAL: written from behaviour
+    void GlobalObjectCPP::unescape(Value& result, unsigned argc, const Value* argv)
+    {
+        StringManager& sm = GetVM().GetStringManager();
+        if (argc == 0)
+        {
+            result.Assign(sm.GetBuiltin(AS3Builtin_undefined));
+            return;
+        }
+        if (argv[0].IsNullOrUndefined())
+        {
+            result.Assign(sm.GetBuiltin(AS3Builtin_null));
+            return;
+        }
+        ASString str = sm.CreateEmptyString();
+        if (argv[0].Convert2String(str))
+        {
+            String out;
+            FUN_1425e4ad0(str.ToCStr(), str.GetSize(), &out);
+            result.Assign(sm.CreateString(out));
+        }
+    }
+}}
+
+namespace Classes { namespace fl
+{
+    // @0x14242b0d0
+    void Error::throwError(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED3(result, argc, argv);
+        GetVM().ThrowError(VM::Error(VM::eNotImplementedError, GetVM(), "class_::Error::throwError()"));
+    }
+
+    // @0x14242afc0
+    void Math::sin(Value::Number& result, Value::Number v)
+    {
+        result = ::sin(v);
+    }
+
+    // @0x14242b090
+    void Math::sqrt(Value::Number& result, Value::Number v)
+    {
+        result = ::sqrt(v);
+    }
+
+    // @0x14242b0b0
+    void Math::tan(Value::Number& result, Value::Number v)
+    {
+        result = ::tan(v);
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@$0CM@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242b780
 // MS2-PIN: ?Func@?$ThunkFunc0@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$04_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242b7e0
 // MS2-PIN: ?Func@?$ThunkFunc2@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@$0BB@KJJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242b840
@@ -668,7 +1077,7 @@ template struct ThunkFunc0<Instances::fl_display::MovieClip, 3, SPtr<Instances::
 // MS2-PIN: ?Func@?$ThunkFunc0@VFrameLabel@fl_display@Instances@AS3@GFx@Scaleform@@$00VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242db40
 // MS2-PIN: ?Func@?$ThunkFunc1@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@$0CC@$$CBVValue@456@PEAVRectangle@fl_geom@3456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242dbb0
 // MS2-PIN: ?Func@?$ThunkFunc4@VGraphics@fl_display@Instances@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@PEAVBitmapData@23456@PEAVMatrix@fl_geom@3456@_N_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242e520
-// MS2-PIN: ?Func@?$ThunkFunc2@VGraphics@fl_display@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@KN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242e640
+// MS2-PIN: ?Func@?$ThunkFunc2@VGraphics@fl_display@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@KN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242e610
 // MS2-PIN: ?Func@?$ThunkFunc2@VGraphics@fl_display@Instances@AS3@GFx@Scaleform@@$01VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242e6c0
 // MS2-PIN: ?Func@?$ThunkFunc0@VGraphics@fl_display@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242e6e0
 // MS2-PIN: ?Func@?$ThunkFunc4@VGraphics@fl_display@Instances@AS3@GFx@Scaleform@@$03$$CBVValue@456@NNNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242e700
@@ -781,7 +1190,7 @@ template struct ThunkFunc0<Instances::fl_display::MovieClip, 3, SPtr<Instances::
 // MS2-PIN: ?Func@?$ThunkFunc0@VStage@fl_display@Instances@AS3@GFx@Scaleform@@$0BA@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424339b0
 // MS2-PIN: ?Func@?$ThunkFunc1@VStage@fl_display@Instances@AS3@GFx@Scaleform@@$0BB@$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142433a10
 // MS2-PIN: ?Func@?$ThunkFunc0@VStage@fl_display@Instances@AS3@GFx@Scaleform@@$0BC@J@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142433a70
-// MS2-PIN: ?Func@?$ThunkFunc1@VLoaderInfo@fl_display@Classes@AS3@GFx@Scaleform@@$0A@V?$SPtr@VLoaderInfo@fl_display@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142433bc0
+// MS2-PIN: ?Func@?$ThunkFunc1@VLoaderInfo@fl_display@Classes@AS3@GFx@Scaleform@@$0A@V?$SPtr@VLoaderInfo@fl_display@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142433ad0
 // MS2-PIN: ?Func@?$ThunkFunc0@VStage@fl_display@Instances@AS3@GFx@Scaleform@@$0BD@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142433c90
 // MS2-PIN: ?Func@?$ThunkFunc0@VStage@fl_display@Instances@AS3@GFx@Scaleform@@$0BE@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142433d00
 // MS2-PIN: ?Func@?$ThunkFunc0@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VAccessibilityProperties@fl_accessibility@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142433d70
