@@ -131,6 +131,7 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 #include <sys/timeb.h>
 #include <math.h>
 #include "ms2/scaleform/kernel/sf_random.h"
+#include "../include/kernel/sf_msgformat.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -196,6 +197,56 @@ void Value::PickUnsafe(Instances::ThunkFunction* v)
     value = v;
 }
 
+
+// ---- XML 1.0 (5th ed.) name productions ----
+
+// MS2-FUNCTIONAL: range tests are ordered/merged differently by the compiler
+// @0x142419b10
+CheckResult IsNameStartChar(int c)
+{
+    return c == ':' || c == '_' ||
+        (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+        (c >= 0xC0 && c <= 0xD6) || (c >= 0xD8 && c <= 0xF6) || (c >= 0xF8 && c <= 0x2FF) ||
+        (c >= 0x370 && c <= 0x37D) || (c >= 0x37F && c <= 0x1FFF) || (c >= 0x200C && c <= 0x200D) ||
+        (c >= 0x2070 && c <= 0x218F) || (c >= 0x2C00 && c <= 0x2FEF) || (c >= 0x3001 && c <= 0xD7FF) ||
+        (c >= 0xF900 && c <= 0xFDCF) || (c >= 0xFDF0 && c <= 0xFFFD) || (c >= 0x10000 && c <= 0xEFFFF);
+}
+
+// MS2-FUNCTIONAL: the '-', '.', digit range tests compile to a bit test
+// @0x142419aa0
+CheckResult IsNameChar(int c)
+{
+    return IsNameStartChar(c) || (c >= '-' && c <= '.') || (c >= '0' && c <= '9') || c == 0xB7 ||
+        (c >= 0x300 && c <= 0x36F) || (c >= 0x203F && c <= 0x2040);
+}
+
+// @0x142419a50
+CheckResult IsNCNameStartChar(int c)
+{
+    return IsNameStartChar(c) && c != ':';
+}
+
+// MS2-FUNCTIONAL: the inlined '-', '.', digit range tests compile to a bit test
+// @0x1424199d0
+CheckResult IsNCNameChar(int c)
+{
+    return IsNameChar(c) && c != ':';
+}
+
+// MS2-FUNCTIONAL: the inlined IsNameChar range tests compile differently
+// @0x142419bf0
+CheckResult IsValidName(const ASString& name)
+{
+    if (name.GetLength() == 0 || !IsNameStartChar(name[0]))
+        return false;
+    const unsigned len = name.GetLength();
+    for (unsigned i = 1; i < len; ++i)
+    {
+        if (!IsNameChar(name[i]))
+            return false;
+    }
+    return true;
+}
 
 // ---- SparseArray: dense ValueA, then sparse indices [ValueHLowInd, ValueHHighInd] in ValueH ----
 
@@ -718,6 +769,258 @@ namespace Instances { namespace fl
         return t > 0 ? ::floor(t) : ::ceil(t);
     }
 
+    // ---- Date component editing and string helpers ----
+
+    // Three-letter day and month names (exe data), shared with the Date string formatting.
+    extern const char* DateWeekDayNames[7];
+    extern const char* DateMonthNames[12];
+
+    // @0x142419ff0
+    Value::Number Date::DateHolder::MakeDate() const
+    {
+        const Value::Number day = Date::MakeDay(Entries[Date_Year], Entries[Date_Month], Entries[Date_Day]);
+        return Date::TimeClip(day * msPerDay + TimeInDay - TZA);
+    }
+
+    // @0x14241a190
+    Value::Number Date::TimeHolder::MakeDate() const
+    {
+        const Value::Number time = Date::MakeTime(Entries[Time_Hour], Entries[Time_Minute], Entries[Time_Second], Entries[Time_Ms]);
+        return Date::TimeClip(Day * msPerDay + time - TZA);
+    }
+
+    // @0x14241a080
+    Value::Number Date::Parser::MakeDate(int localTZA) const
+    {
+        if (!Valid)
+            return NumberUtil::NaN();
+        if (HasTZA)
+            localTZA = TZA;
+        const Value::Number time = Date::MakeTime(Hour, Minute, Sec, 0);
+        const Value::Number day = Date::MakeDay(Year, Month, Day);
+        return Date::TimeClip(day * msPerDay + time - localTZA);
+    }
+
+    // @0x142427600
+    void Date::applyDateArg(DateEntry arg, Value::Number value, Value::Number tza)
+    {
+        DateHolder h(TimeValue, tza);
+        h.Entries[arg] = value;
+        TimeValue = h.MakeDate();
+    }
+
+    // MS2-FUNCTIONAL: Value::Convert2NumberInline is an out-of-line call in the exe
+    // @0x1424276e0
+    void Date::applyDateArgs(Value& result, unsigned argc, const Value* const argv, DateEntry firstArg, Value::Number tza)
+    {
+        if (argc != 0)
+        {
+            DateHolder h(TimeValue, tza);
+            const unsigned maxArgs = Date_Entry_Count - firstArg;
+            if (argc > maxArgs)
+                argc = maxArgs;
+            for (unsigned i = 0; i < argc; ++i)
+            {
+                if (!argv[i].Convert2NumberInline(h.Entries[firstArg + i]))
+                    return;
+            }
+            TimeValue = h.MakeDate();
+        }
+        result.SetNumber(TimeValue);
+    }
+
+    // MS2-FUNCTIONAL: the exe computes Day * msPerDay after the MakeTime call
+    // @0x142427810
+    void Date::applyTimeArg(TimeEntry arg, Value::Number value, Value::Number tza)
+    {
+        TimeHolder h(TimeValue, tza);
+        h.Entries[arg] = value;
+        TimeValue = h.MakeDate();
+    }
+
+    // MS2-FUNCTIONAL: Value::Convert2NumberInline is an out-of-line call in the exe
+    // @0x142427900
+    void Date::applyTimeArgs(Value& result, unsigned argc, const Value* const argv, TimeEntry firstArg, Value::Number tza)
+    {
+        if (argc != 0)
+        {
+            TimeHolder h(TimeValue, tza);
+            const unsigned maxArgs = Time_Entry_Count - firstArg;
+            if (argc > maxArgs)
+                argc = maxArgs;
+            for (unsigned i = 0; i < argc; ++i)
+            {
+                if (!argv[i].Convert2NumberInline(h.Entries[firstArg + i]))
+                    return;
+            }
+            TimeValue = h.MakeDate();
+        }
+        result.SetNumber(TimeValue);
+    }
+
+    // MS2-FUNCTIONAL: Value::Convert2NumberInline is an out-of-line call in the exe
+    // @0x142427f10
+    Value::Number Date::decodeUTCArgs(unsigned argc, const Value* const argv, Value::Number tza)
+    {
+        // (year, month[, date[, hours[, minutes[, seconds[, ms]]]]]); two-digit years are 19xx.
+        Value::Number year, month;
+        if (!argv[0].Convert2NumberInline(year))
+            return 0;
+        if (static_cast<UInt32>(static_cast<SInt32>(year)) < 100)
+            year += 1900;
+        if (!argv[1].Convert2NumberInline(month))
+            return 0;
+
+        Value::Number date = 1, hours = 0, minutes = 0, seconds = 0, ms = 0;
+        if (argc >= 3 && !argv[2].Convert2NumberInline(date))
+            return 0;
+        if (argc >= 4)
+        {
+            if (!argv[3].Convert2NumberInline(hours))
+                return 0;
+            hours = static_cast<SInt32>(hours);
+        }
+        if (argc >= 5)
+        {
+            if (!argv[4].Convert2NumberInline(minutes))
+                return 0;
+            minutes = static_cast<SInt32>(minutes);
+        }
+        if (argc >= 6)
+        {
+            if (!argv[5].Convert2NumberInline(seconds))
+                return 0;
+            seconds = static_cast<SInt32>(seconds);
+        }
+        if (argc >= 7)
+        {
+            if (!argv[6].Convert2NumberInline(ms))
+                return 0;
+            ms = static_cast<SInt32>(ms);
+        }
+
+        const Value::Number time = MakeTime(hours, minutes, seconds, ms);
+        return TimeClip(MakeDay(year, month, date) * msPerDay + time - tza);
+    }
+
+    // @0x142428e10
+    Date::Parser::StringType Date::Parser::interpretDateString(const char* pstr, SPInt length, int* index)
+    {
+        if (length == 2)
+        {
+            if (pstr[1] == 'M')
+            {
+                if (pstr[0] == 'A')
+                    return String_AM;
+                if (pstr[0] == 'P')
+                    return String_PM;
+            }
+        }
+        else if (length == 3)
+        {
+            if (memcmp(pstr, "GMT", 3) == 0)
+                return String_GMT;
+            if (memcmp(pstr, "UTC", 3) == 0)
+                return String_UTC;
+            for (int i = 0; i < 7; ++i)
+            {
+                if (memcmp(pstr, DateWeekDayNames[i], 3) == 0)
+                {
+                    *index = i;
+                    return String_WeekDay;
+                }
+            }
+            for (int i = 0; i < 12; ++i)
+            {
+                if (memcmp(pstr, DateMonthNames[i], 3) == 0)
+                {
+                    *index = i;
+                    return String_Month;
+                }
+            }
+        }
+        return String_Invalid;
+    }
+
+    // MS2-FUNCTIONAL: MsgFormat::FormatD1 instances are out-of-line calls in the exe
+    // @0x1424284c0
+    UPInt Date::formatDateTimeString(char* buffer, UPInt bufferSize, Value::Number t, int tza,
+                                     bool needDate, bool needTime, bool utc)
+    {
+        if (NumberUtil::IsNaN(t))
+        {
+            memcpy(buffer, "Invalid Date", 13);
+            return 12;
+        }
+
+        const Value::Number local = utc ? t : t + tza;
+        UPInt size = 0;
+        DateHolder dh(local, 0);
+
+        // "Www Mmm d "
+        if (needDate)
+        {
+            const int weekDay = WeekDay(local);
+            const int day = static_cast<int>(dh.Entries[Date_Day]);
+            MsgFormat f(MsgFormat::Sink(StringDataPtr(buffer, bufferSize)));
+            f.Parse("{0} {1} {2} ");
+            f.FormatD1(DateWeekDayNames[weekDay]);
+            f.FormatD1(DateMonthNames[static_cast<int>(dh.Entries[Date_Month])]);
+            f.FormatD1(day);
+            f.FinishFormatD();
+            size = f.GetStrSize();
+        }
+
+        // "hh:mm:ss[ GMT+hhmm]"
+        if (needTime)
+        {
+            TimeHolder th(local, 0);
+            const char* fmt = "{0:02}:{1:02}:{2:02}";
+            const int tzMinutes = tza / 60000;
+            int tzValue = tzMinutes + (tzMinutes / 60) * 40;
+            const char* gmt = "GMT+";
+            if (!utc)
+            {
+                fmt = "{0:02}:{1:02}:{2:02} {3}{4:04}";
+                if (tzValue < 0)
+                {
+                    tzValue = -tzValue;
+                    gmt = "GMT-";
+                }
+            }
+            const int sec = static_cast<int>(th.Entries[Time_Second]);
+            const int min = static_cast<int>(th.Entries[Time_Minute]);
+            const int hour = static_cast<int>(th.Entries[Time_Hour]);
+            MsgFormat f(MsgFormat::Sink(StringDataPtr(buffer + size, bufferSize - size)));
+            f.Parse(fmt);
+            f.FormatD1(hour);
+            f.FormatD1(min);
+            f.FormatD1(sec);
+            f.FormatD1(gmt);
+            f.FormatD1(tzValue);
+            f.FinishFormatD();
+            size += f.GetStrSize();
+        }
+
+        // year
+        if (needDate)
+        {
+            const int year = static_cast<int>(dh.Entries[Date_Year]);
+            MsgFormat f(MsgFormat::Sink(StringDataPtr(buffer + size, bufferSize - size)));
+            f.Parse(needTime ? " {0}" : "{0}");
+            f.FormatD1(year);
+            f.FinishFormatD();
+            size += f.GetStrSize();
+        }
+
+        if (needTime && utc)
+        {
+            memcpy(buffer + size, " UTC", 5);
+            size += 4;
+        }
+        return size;
+    }
+
     // ---- Date property getters (UTC forms read TimeValue, the local ones add LocalTZA) ----
 
     // @0x142427c60
@@ -766,6 +1069,12 @@ namespace Instances { namespace fl
 
 namespace Classes { namespace fl
 {
+    // @0x142427200
+    void Date::UTC(Value& result, unsigned argc, const Value* argv)
+    {
+        result.SetNumber(Instances::fl::Date::decodeUTCArgs(argc, argv, 0));
+    }
+
     // ---- Math ----
 
     // @0x1424274f0

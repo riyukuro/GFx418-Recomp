@@ -199,6 +199,61 @@ namespace Instances { namespace fl
         static Value::Number MakeTime(Value::Number hour, Value::Number min, Value::Number sec, Value::Number ms);
         static Value::Number TimeClip(Value::Number t);
 
+        // (appended, sfr14) per-component date/time editing used by the set* natives.
+        enum TimeEntry { Time_Hour, Time_Minute, Time_Second, Time_Ms, Time_Entry_Count };
+        enum DateEntry { Date_Year, Date_Month, Date_Day, Date_Entry_Count };
+
+        // Broken-down local time of a time value; MakeDate rebuilds it.
+        struct TimeHolder
+        {
+            Value::Number Entries[Time_Entry_Count];    // +0x00
+
+            TimeHolder(Value::Number time, Value::Number tza);
+            Value::Number MakeDate() const;
+        private:
+            Value::Number Day;                          // +0x20
+            Value::Number TZA;                          // +0x28
+        };
+
+        // Broken-down local date of a time value; MakeDate rebuilds it.
+        struct DateHolder
+        {
+            Value::Number Entries[Date_Entry_Count];    // +0x00
+
+            DateHolder(Value::Number time, Value::Number tza);
+            Value::Number MakeDate() const;
+        private:
+            Value::Number TimeInDay;                    // +0x18
+            Value::Number TZA;                          // +0x20
+        };
+
+        // Result of parsing a date string.
+        struct Parser
+        {
+            bool    Valid;                              // +0x00
+            bool    HasYear, HasMonth, HasDay, HasTime, HasTZA;
+            int  Month;                              // +0x08
+            int  Day;                                // +0x0C
+            int  Year;                               // +0x10
+            int  DayOfWeek;                          // +0x14
+            int  TZA;                                // +0x18
+            int  Hour, Minute, Sec;                  // +0x1C
+
+            Value::Number MakeDate(int localTZA) const;
+
+        private:
+            enum StringType { String_Invalid, String_Month, String_WeekDay, String_GMT, String_UTC, String_AM, String_PM };
+            static StringType interpretDateString(const char* pstr, SPInt length, int* index);
+        };
+
+        void applyTimeArgs(Value& result, unsigned argc, const Value* const argv, TimeEntry firstArg, Value::Number tza);
+        void applyDateArgs(Value& result, unsigned argc, const Value* const argv, DateEntry firstArg, Value::Number tza);
+        void applyTimeArg(TimeEntry arg, Value::Number value, Value::Number tza);
+        void applyDateArg(DateEntry arg, Value::Number value, Value::Number tza);
+        static Value::Number decodeUTCArgs(unsigned argc, const Value* const argv, Value::Number tza);
+        static UPInt formatDateTimeString(char* buffer, UPInt bufferSize, Value::Number t, int tza,
+                                          bool needDate, bool needTime, bool utc = false);
+
     public:
         // native methods
         // @0x1423fa190
