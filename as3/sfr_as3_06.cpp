@@ -9,6 +9,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
+#include "ms2/scaleform/include/gfx/gfx_imageresource.h"
 #undef GetObject   // windows.h
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1765,6 +1766,13 @@ void FUN_1425272f0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::Dis
 void FUN_142527490(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 // AvmButton set-up after its creation from AS3.
 void FUN_1425ddd20(Scaleform::GFx::DisplayObject* pbtn);
+// MovieImpl::GetDrawableImageContext (made on first use).
+void* FUN_14256f220(Scaleform::GFx::MovieImpl* pmovie);
+// Render::DrawableImage constructors (format, size, transparent, fill color) and (transparent, delegate image),
+// with the by-address size and color spelled out.
+Scaleform::Render::ImageBase* FUN_1425e9810(void* pmem, Scaleform::UInt32 format, const Scaleform::UInt32* psize, bool transparent,
+                                           const Scaleform::UInt32* pfillColor, void* pcontext);
+Scaleform::Render::ImageBase* FUN_1425e9a00(void* pmem, bool transparent, Scaleform::Render::ImageBase* pdelegate, void* pcontext);
 // AvmSprite: the AS3 constructor of a sprite created from script.
 void FUN_1424f3320(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
 
@@ -1866,6 +1874,55 @@ namespace Instances { namespace fl_display
             FUN_142520b20(pDispObj);
     }
 
+    // BitmapData(width, height, transparent = true, fillColor = 0xFFFFFFFF): a drawable image of that size, or a
+    // drawable copy of the library bitmap the class is bound to.
+    // @0x142440a20
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void BitmapData::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        VM& vm = GetVM();
+        if (argc < 2)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "BitmapData::AS3Constructor", 2, 2, argc));
+            return;
+        }
+        SInt32 w, h;
+        if (!argv[0].Convert2Int32(w))
+            return;
+        Width = w;
+        if (!argv[1].Convert2Int32(h))
+            return;
+        Height = h;
+        UInt32 fillColor = 0xffffffff;
+        if (argc > 2)
+            Transparent = argv[2].Convert2Boolean();
+        if (argc > 3)
+            argv[3].Convert2UInt32(fillColor);
+
+        // The render thread's interfaces (DrawableImageContext::pRTCommandQueue, ThreadCommandQueue::GetRenderInterfaces).
+        void* pcontext = FUN_14256f220(GetASRoot(vm)->GetMovieImpl());
+        void* pqueue = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(pcontext) + 0x40);
+        void* ifs[4] = { NULL, NULL, NULL, NULL };
+        typedef void (*GetRenderInterfacesFn)(void*, void**);
+        (*reinterpret_cast<GetRenderInterfacesFn* const*>(pqueue))[2](pqueue, ifs);
+        void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem);
+        Render::ImageBase* pnew = NULL;
+        if (!pImageResource)
+        {
+            if (pmem)
+            {
+                // TextureManager::GetDrawableImageFormat.
+                typedef UInt32 (*GetFormatFn)(void*);
+                UInt32 format = (*reinterpret_cast<GetFormatFn* const*>(ifs[0]))[12](ifs[0]);
+                UInt32 size[2] = { (UInt32)Width, (UInt32)Height };
+                pnew = FUN_1425e9810(pmem, format, size, Transparent, &fillColor, pcontext);
+            }
+        }
+        else if (pmem)
+            pnew = FUN_1425e9a00(pmem, true, pImageResource->GetImage(), pcontext);
+        pImage = Pickable<Render::ImageBase>(pnew);
+    }
+
     // The optional up, over, down and hit test state objects.
     // @0x142440c30
     // MS2-FUNCTIONAL: written from the exe's control flow
@@ -1887,6 +1944,88 @@ namespace Instances { namespace fl_display
     void Sprite::AS3Constructor(unsigned, const Value*)
     {
         FUN_1424f3320(ToAvmDisplayObj(pDispObj));
+    }
+
+    // Binds a BitmapData to a library bitmap: the given image resource, or else the one exported under the
+    // object's class name from its movie. The exe returns false on every path.
+    // @0x142441730
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    bool BindLibraryBitmap(BitmapData* pthis, Resource* pres, MovieDefImpl* pdefImpl)
+    {
+        if (pthis->pImage)
+            return false;
+        if (pres)
+        {
+            pthis->pImageResource = static_cast<ImageResource*>(pres);
+            pthis->pImage = static_cast<ImageResource*>(pres)->GetImage();
+            pthis->pDefImpl = pdefImpl;
+            return false;
+        }
+        VM& vm = pthis->GetVM();
+        MovieDefImpl* pobjDef = FUN_14250d8f0(vm, pthis);
+        if (!pobjDef || !pthis->GetTraits().IsAbcObject())
+            return false;
+        ASString name = pthis->GetTraits().GetQualifiedName(Traits::qnfWithDot);
+        MovieImpl* pmovie = GetASRoot(vm)->GetMovieImpl();
+        ResourceBindData data;
+        if (!FUN_14256ec50(pmovie, pobjDef, &data, String(name.ToCStr())))
+        {
+            Ptr<Log> plog = pmovie->GetLog();
+            if (plog)
+                plog->LogWarning("Attaching a bitmap with class '%s' failed", name.ToCStr());
+            return false;
+        }
+        if (data.pResource &&
+            (data.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Image))
+        {
+            ImageResource* pimgRes = static_cast<ImageResource*>(data.pResource.GetPtr());
+            pthis->pImageResource = pimgRes;
+            pthis->pImage = pimgRes->GetImage();
+            pthis->pDefImpl = data.pBinding ? data.pBinding->GetOwnerDefImpl() : pobjDef;
+        }
+        return false;
+    }
+
+    // @0x1424419e0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    GFx::DisplayObject* Bitmap::CreateStageObject()
+    {
+        if (pDispObj)
+            return pDispObj;
+        VM& vm = GetVM();
+        ASMovieRootBase* proot = GetASRoot(vm);
+        MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
+        if (!pdefImpl)
+            return pDispObj;
+        CharacterCreateInfo ccinfo;
+        ccinfo.pCharDef = NULL;
+        ccinfo.pBindDefImpl = NULL;
+        ccinfo.pResource = NULL;
+        if (!FindLibrarySymbol(this, &ccinfo, pdefImpl) && !FUN_142501a80(proot, this, &ccinfo))
+        {
+            ccinfo.pCharDef = NULL;
+            ccinfo.pResource = NULL;
+        }
+        DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                             ResourceId(0x40000), CharacterDef::Bitmap);
+        AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
+        if (ccinfo.pResource &&
+            (ccinfo.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Image))
+        {
+            // A library bitmap: give it a BitmapData(0, 0) bound to the image.
+            Value args[2] = { Value(Value::Number(0)), Value(Value::Number(0)) };
+            SPtr<BitmapData> pbd;
+            if (vm.ConstructBuiltinObject(pbd, "flash.display.BitmapData", 2, args) &&
+                BindLibraryBitmap(pbd, ccinfo.pResource, ccinfo.pBindDefImpl))
+            {
+                pBitmapData = pbd;
+                if (pDispObj)
+                    FUN_142528e70(pDispObj, pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
+                if (pDispObj)
+                    FUN_142520b20(pDispObj);
+            }
+        }
+        return pDispObj;
     }
 
     // @0x142441cd0
