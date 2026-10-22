@@ -196,6 +196,351 @@ void Value::PickUnsafe(Instances::ThunkFunction* v)
     value = v;
 }
 
+
+// ---- SparseArray: dense ValueA, then sparse indices [ValueHLowInd, ValueHHighInd] in ValueH ----
+
+// MS2-FUNCTIONAL: the exe inlines the hash lookup with different loop layout
+// @0x142415de0
+UPInt SparseArray::GetLeftEqualInd(UPInt start_from) const
+{
+    SPInt i = static_cast<SPInt>(start_from);
+    for (; i >= 0; --i)
+    {
+        if (ValueH.Get(i))
+            break;
+    }
+    return static_cast<UPInt>(i);
+}
+
+// MS2-FUNCTIONAL: the exe inlines the hash lookup with different loop layout
+// @0x142416eb0
+UPInt SparseArray::GetRightEqualInd(UPInt start_from, UPInt end_ind) const
+{
+    UPInt i = start_from;
+    for (; i <= end_ind; ++i)
+    {
+        if (ValueH.Get(i))
+            break;
+    }
+    return i;
+}
+
+// MS2-FUNCTIONAL: branch order and the inlined hash lookups differ
+// @0x142416000
+SF_NOINLINE AbsoluteIndex SparseArray::GetNextArrayIndex(AbsoluteIndex ind) const
+{
+    const UPInt denseSize = ValueA.GetSize();
+    if (!ind.IsValid())
+    {
+        if (denseSize != 0)
+            return AbsoluteIndex(0);
+        if (ValueH.GetSize() != 0)
+            return AbsoluteIndex(ValueHLowInd);
+    }
+    else
+    {
+        const UPInt i = static_cast<UInt32>(ind.Get());
+        if (static_cast<UPInt>(ind.Get()) < denseSize)
+        {
+            if (i != denseSize - 1)
+                return AbsoluteIndex(ind.Get() + 1);
+            if (ValueH.GetSize() != 0)
+                return AbsoluteIndex(ValueHLowInd);
+        }
+        if (i >= ValueHLowInd && i <= ValueHHighInd)
+        {
+            for (UPInt j = static_cast<UInt32>(i + 1); j <= ValueHHighInd; ++j)
+            {
+                if (ValueH.Get(j))
+                    return AbsoluteIndex(j);
+            }
+        }
+    }
+    return AbsoluteIndex(-1);
+}
+
+// MS2-FUNCTIONAL: the exe inlines the hash lookup with different block layout
+// @0x142427180
+const Value& SparseArray::Top() const
+{
+    const UPInt ind = Length - 1;
+    if (ind < ValueA.GetSize())
+        return ValueA[ind];
+    if (ind >= ValueHLowInd && ind <= ValueHHighInd)
+    {
+        const Value* v = ValueH.Get(ind);
+        if (v)
+            return *v;
+    }
+    return DefaultValue;
+}
+
+// @0x14241e4b0
+void SparseArray::PushBack(const Value& v)
+{
+    if (Length == ValueA.GetSize())
+        ValueA.PushBack(v);
+    else
+    {
+        ValueHHighInd = Length;
+        ValueH.Set(ValueHHighInd, v);
+    }
+    ++Length;
+}
+
+// @0x14241d1b0
+void SparseArray::MoveHashRight(UPInt first_ind, UPInt offset)
+{
+    Value v;
+    for (UPInt i = ValueHHighInd + 1; i > first_ind; --i)
+    {
+        const UPInt ci = i - 1;
+        if (ValueH.Get(ci, &v))
+        {
+            ValueH.Remove(ci);
+            ValueH.Set(ci + offset, v);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: the exe inlines Hash::Get/Remove with different register use
+// @0x14241e9d0
+void SparseArray::RemoveHash(UPInt first_ind, UPInt num)
+{
+    for (UInt32 i = 0; i < num; ++i)
+    {
+        const UPInt ind = i + first_ind;
+        if (ValueH.Get(ind))
+            ValueH.Remove(ind);
+    }
+}
+
+// MS2-FUNCTIONAL: the exe's trim loop of the hash tail reads its key through a null node pointer (it faults when
+// reached); ours drops the hash entries past the new length instead
+// @0x14241fe30
+void SparseArray::Resize(UPInt newLength)
+{
+    if (newLength == 0)
+        ValueA.Clear();
+    else if (newLength <= ValueA.GetSize() && ValueA.GetSize() != 0)
+        ValueA.Resize(newLength);
+    else if (newLength >= ValueHLowInd)
+    {
+        if (newLength < ValueHHighInd)
+        {
+            while (newLength < ValueHHighInd)
+            {
+                ValueH.Remove(ValueHHighInd);
+                --ValueHHighInd;
+            }
+        }
+        Length = newLength;
+        return;
+    }
+    ValueH.Clear();
+    Length = newLength;
+    ValueHLowInd = 0;
+    ValueHHighInd = 0;
+}
+
+// MS2-FUNCTIONAL: the exe inlines ValueA.PushBack inside the dense-merge loop
+// @0x1424213b0
+void SparseArray::Set(UPInt ind, const Value& v)
+{
+    if (ind >= Length)
+        Resize(ind + 1);
+
+    if (ind < ValueA.GetSize())
+        ValueA[ind].Assign(v);
+    else if (ind == ValueA.GetSize())
+    {
+        ValueA.PushBack(v);
+
+        // Pull the hash run that now continues the dense part into ValueA.
+        Value hv;
+        while (ValueA.GetSize() == ValueHLowInd)
+        {
+            const Value* p = ValueH.Get(ValueHLowInd);
+            if (!p)
+                break;
+            hv.Assign(*p);
+            ValueH.Remove(ValueHLowInd);
+            ValueA.PushBack(hv);
+            if (ValueH.IsEmpty())
+            {
+                ValueH.Clear();
+                ValueHHighInd = 0;
+                ValueHLowInd = 0;
+            }
+            else
+                ValueHLowInd = (*ValueH.Begin()).First;
+        }
+    }
+    else
+    {
+        ValueH.Set(ind, v);
+        if (ind < ValueHLowInd || ValueH.GetSize() == 1)
+            ValueHLowInd = ind;
+        if (ind > ValueHHighInd)
+            ValueHHighInd = ind;
+    }
+}
+
+// @0x142418d50
+void SparseArray::Insert(UPInt pos, unsigned argc, const Value* argv)
+{
+    if (pos < ValueA.GetSize())
+    {
+        for (unsigned i = 0; i < argc; ++i)
+            ValueA.InsertAt(pos + i, argv[i]);
+        if (ValueHLowInd != 0)
+        {
+            MoveHashRight(ValueHLowInd, argc);
+            ValueHLowInd += argc;
+            ValueHHighInd += argc;
+        }
+    }
+    else if (pos == ValueA.GetSize())
+    {
+        for (unsigned i = 0; i < argc; ++i)
+            ValueA.PushBack(argv[i]);
+        if (!ValueH.IsEmpty())
+        {
+            MoveHashRight(ValueHLowInd, argc);
+            ValueHLowInd += argc;
+            ValueHHighInd += argc;
+        }
+    }
+    else
+    {
+        if (pos < ValueHLowInd)
+        {
+            MoveHashRight(ValueHLowInd, argc);
+            ValueHHighInd += argc;
+            ValueHLowInd = pos;
+        }
+        else if (pos <= ValueHHighInd)
+        {
+            MoveHashRight(pos, argc);
+            ValueHHighInd += argc;
+        }
+        else
+            ValueHHighInd = pos - 1 + argc;
+
+        for (unsigned i = 0; i < argc; ++i)
+            ValueH.Set(pos + i, argv[i]);
+    }
+    Length += argc;
+}
+
+namespace Instances { namespace fl
+{
+    // ---- Array: indices are the dense/sparse store, everything else goes to Object ----
+
+    // Element ind of the store, DefaultValue for holes.
+    static SF_INLINE const Value& ElementAt(const SparseArray& sa, UPInt ind)
+    {
+        if (ind < sa.ValueA.GetSize())
+            return sa.ValueA[ind];
+        if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
+        {
+            const Value* v = sa.ValueH.Get(ind);
+            if (v)
+                return *v;
+        }
+        return sa.DefaultValue;
+    }
+
+    // @0x142421ff0
+    CheckResult Array::SetProperty(const Multiname& prop_name, const Value& value)
+    {
+        UInt32 ind;
+        if (GetArrayInd(prop_name, ind))
+        {
+            SA.Set(ind, value);
+            return true;
+        }
+        return Object::SetProperty(prop_name, value);
+    }
+
+    // MS2-FUNCTIONAL: the exe tail-calls Value::Assign with the inlined element lookup laid out differently
+    // @0x142416730
+    CheckResult Array::GetProperty(const Multiname& prop_name, Value& value)
+    {
+        UInt32 ind;
+        if (GetArrayInd(prop_name, ind))
+        {
+            value.Assign(ElementAt(SA, ind));
+            return true;
+        }
+        return Object::GetProperty(prop_name, value);
+    }
+
+    // MS2-FUNCTIONAL: the exe reads the index as 32 bits
+    // @0x1424159a0
+    void Array::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+    {
+        value.Assign(ElementAt(SA, ind.Get()));
+    }
+
+    // MS2-FUNCTIONAL: the SetUndefined/SetUInt32 releases inline with different block layout
+    // @0x142416200
+    void Array::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+    {
+        if (!ind.IsValid())
+        {
+            name.SetUndefined();
+            return;
+        }
+        if (ind.Get() <= SA.GetSize())
+            name.SetUInt32(ind.Get() - 1);
+        else
+            Object::GetNextPropertyName(name, GlobalSlotIndex(ind.Get() - static_cast<UInt32>(SA.GetSize())));
+    }
+
+    // MS2-FUNCTIONAL: the exe keeps the slot index in a callee-saved register across the Object call
+    // @0x142416100
+    GlobalSlotIndex Array::GetNextDynPropIndex(GlobalSlotIndex ind) const
+    {
+        if (ind.Get() <= SA.GetSize())
+        {
+            const AbsoluteIndex next = SA.GetNextArrayIndex(AbsoluteIndex(static_cast<UPInt>(ind.Get()) - 1));
+            if (next.IsValid())
+                return GlobalSlotIndex(static_cast<UInt32>(next.Get()) + 1);
+        }
+        UInt32 i = ind.Get();
+        if (i >= static_cast<UInt32>(SA.GetSize()))
+            i -= static_cast<UInt32>(SA.GetSize());
+        GlobalSlotIndex r = Object::GetNextDynPropIndex(GlobalSlotIndex(i));
+        if (!r.IsValid())
+            return r;
+        return GlobalSlotIndex(r.Get() + static_cast<UInt32>(SA.GetSize()));
+    }
+
+    // MS2-FUNCTIONAL: the exe tail-calls Value::Assign from each branch
+    // @0x142416520
+    void Array::GetNextPropertyValue(Value& value, GlobalSlotIndex ind)
+    {
+        if (!ind.IsValid())
+        {
+            value.SetUndefined();
+            return;
+        }
+        if (ind.Get() > SA.GetSize())
+        {
+            Object::GetNextPropertyValue(value, GlobalSlotIndex(ind.Get() - static_cast<UInt32>(SA.GetSize())));
+            return;
+        }
+        value.Assign(ElementAt(SA, ind.Get() - 1));
+    }
+
+    // @0x142429290
+    void Array::lengthGet(UInt32& result)
+    {
+        result = static_cast<UInt32>(SA.GetSize());
+    }
+}} // namespace Instances::fl
+
 namespace Instances { namespace fl
 {
     // ---- Date: ECMA-262 15.9.1 time arithmetic ----

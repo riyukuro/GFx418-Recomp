@@ -59,6 +59,18 @@ public:
     void Set(UPInt ind, const Value& v);
     UPInt GetSize() const { return Length; }
 
+    // (appended, sfr14) bodies in sfr_as3_04.
+    void PushBack(const Value& v);
+    void Insert(UPInt pos, unsigned argc, const Value* argv);
+    const Value& Top() const;
+    AbsoluteIndex GetNextArrayIndex(AbsoluteIndex ind) const;
+
+private:
+    UPInt GetLeftEqualInd(UPInt start_from) const;
+    UPInt GetRightEqualInd(UPInt start_from, UPInt end_ind) const;
+    void MoveHashRight(UPInt first_ind, UPInt offset);
+    void RemoveHash(UPInt first_ind, UPInt num);
+
 public:
     UPInt                   Length;         // +0x00
     UPInt                   ValueHLowInd;   // +0x08
