@@ -10,6 +10,7 @@
 #include "ms2/scaleform/include/gfx/gfx_fontlib.h"
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/kernel/sf_utf8util.h"
+#include "ms2/scaleform/include/render/render_twips.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1088,6 +1089,7 @@ unsigned long long FUN_142612cb0(void* pdoc, unsigned line, bool* phasNewLine); 
 unsigned long long FUN_142612e80(void* pdoc, unsigned line);                // DocView::GetLineOffset
 unsigned long long FUN_142612240(void* pdoc, float x, float y);             // DocView::GetCharIndexAtPoint
 unsigned FUN_142612bd0(void* pdoc, float x, float y);                       // DocView::GetLineIndexAtPoint
+bool     FUN_142611ff0(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetCharBoundaries
 unsigned long long FUN_142598a50(void* ptext);          // StyledText::GetLength
 unsigned long long FUN_1425e1360(void* psnap);          // StaticTextSnapshotData::GetCharCount
 bool     FUN_1425e1bc0(void* psnap, unsigned long long start, unsigned long long end);  // ::IsSelected
@@ -1186,6 +1188,24 @@ namespace Instances { namespace fl_text
         }
         UPInt pos = (UPInt)FUN_142612e80(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex);
         result = (pos == SF_MAX_UPINT) ? -1 : (SInt32)pos;
+    }
+
+    // @0x1424b0c00
+    // MS2-FUNCTIONAL: the exe builds each Number Value through a 16-byte union temp; ours stores it directly
+    void TextField::getCharBoundaries(SPtr<Instances::fl_geom::Rectangle>& result, SInt32 charIndex)
+    {
+        Render::RectF bounds(0, 0, 0, 0);
+        if (FUN_142611ff0(DocViewOf(DisplayTextField(this)), &bounds, (SPInt)charIndex))
+        {
+            Value params[] = {
+                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.x1))),
+                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.y1))),
+                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.Width()))),
+                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.Height())))
+            };
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            asvm.ConstructInstance(result, asvm.RectangleClass, 4, params);
+        }
     }
 
     // @0x1424b14d0
@@ -1327,6 +1347,24 @@ void* FUN_1425b91e0(void* ptf, void* ptext, bool html);    // TextField::GetText
 void  FUN_1425bd9a0(void* ptf, const char* ptext, bool html, bool notifyVariable);  // TextField::SetTextValue
 bool  FUN_1425b9b10(void* ptf);                             // TextField::IsReadOnly
 bool  FUN_1425b9730(void* ptf);                             // TextField::HasStyleSheet
+void  FUN_1424ae6b0(void* pobj, const void* ppara, const void* pfmt);  // fl_text::TextFormat::SetTextFormat (from Render::Text formats)
+void  FUN_1424ac700(void* pobj, void* ppara, void* pfmt);              // fl_text::TextFormat::GetTextFormat (into Render::Text formats)
+void  FUN_142584fc0(void* pstr, void* pheap);                          // StringDH::StringDH(MemoryHeap*)
+void  FUN_1424aa0f0(void* pfmt);                                       // Render::Text::TextFormat destructor
+void  FUN_142606690(void* ppara);                                      // Render::Text::ParagraphFormat destructor (FreeTabStops)
+void* FUN_142607870(const void* pfmt, void* presult, const void* pother);   // Render::Text::TextFormat::Merge
+void* FUN_1426076a0(const void* ppara, void* presult, const void* pother);  // Render::Text::ParagraphFormat::Merge
+void  FUN_14259c250(void* pdoc, const void* pfmt);                     // StyledText::SetDefaultTextFormat
+void  FUN_14259c170(void* pdoc, const void* ppara);                    // StyledText::SetDefaultParagraphFormat
+bool  FUN_142612d50(void* pdoc, unsigned line, void* pmetrics);       // DocView::GetLineMetrics (LineMetrics in twips)
+const wchar_t* FUN_142612f00(void* pdoc, unsigned line, unsigned long long* plen);  // DocView::GetLineText
+void  FUN_1425bbd10(void* ptf, void* pcss);                            // TextField::SetCSSData
+void  FUN_1425b72a0(void* ptf);                                        // TextField: rebuilds the style sheet's url zones
+void  FUN_1425bec30(void* ptf);                                        // TextField::UpdateUrlStyles
+namespace Scaleform { namespace GFx { namespace AS3 {
+// vftable of AvmTextField::CSSHolder (the AS3 side's style sheet holder; deleting destructor exe 0x1424aa770)
+extern void* const AvmTextFieldCSSHolder_vftable[];
+}}}
 void  FUN_14260df50(void* pdoc, const char* ptext, unsigned long long length);      // DocView::AppendText
 void  FUN_1426150b0(void* pdoc);                            // DocView::SetAutoSizeX
 void  FUN_1426150d0(void* pdoc);                            // DocView::SetAutoSizeY
@@ -1378,6 +1416,209 @@ namespace Instances { namespace fl_text
     // The display field's flags (TextField+0xfc) and its document view's format flags (DocView+0x149).
     static inline UInt32& FieldFlags(void* ptf)  { return *(UInt32*)((UByte*)ptf + 0xfc); }
     static inline UByte&  ViewFlags(void* pdoc)  { return *((UByte*)pdoc + 0x149); }
+
+    // The view's styled text (DocView+0x10, opaque here; its default paragraph and text formats at +0x30 / +0x38),
+    // and the movie heap (MovieImpl vftable +0x178).
+    static inline void* DocumentOf(void* ptf)   { return *(void**)((UByte*)DocViewOf(ptf) + 0x10); }
+    static inline void* DefaultParaFormat(void* pdoc) { return *(void**)((UByte*)pdoc + 0x30); }
+    static inline void* DefaultTextFormat(void* pdoc) { return *(void**)((UByte*)pdoc + 0x38); }
+    static inline MemoryHeap* MovieHeapOf(MovieImpl* pmovie)
+    {
+        typedef MemoryHeap* (*GetHeapFn)(MovieImpl*);
+        return ((GetHeapFn)(*(void***)pmovie)[0x178 / 8])(pmovie);
+    }
+
+    // Render::Text::TextFormat (0x48) and ParagraphFormat (0x20) as raw storage: their headers use the render-side
+    // kernel, which does not mix with the AS3 one.
+    struct TextFormatStorage
+    {
+        unsigned RefCount;
+        void*    FontList;
+        void*    FontListHeap;
+        void*    Url;
+        void*    UrlHeap;
+        void*    pImageDesc;
+        void*    pFontHandle;
+        UInt32   ColorV;
+        SInt16   LetterSpacing;
+        UInt16   FontSize;
+        UInt8    FormatFlags;
+        UInt16   PresentMask;
+    };
+    struct ParagraphFormatStorage
+    {
+        unsigned  RefCount;
+        unsigned* pTabStops;
+        UInt16    BlockIndent;
+        SInt16    Indent;
+        SInt16    Leading;
+        UInt16    LeftMargin;
+        UInt16    RightMargin;
+        UInt16    PresentMask;
+    };
+    static inline void InitTextFormat(TextFormatStorage& f, MemoryHeap* pheap)
+    {
+        f.RefCount = 1;
+        FUN_142584fc0(&f.FontList, pheap);
+        FUN_142584fc0(&f.Url, pheap);
+        f.pImageDesc = NULL;
+        f.pFontHandle = NULL;
+        f.ColorV = 0xFF000000u;
+        f.LetterSpacing = 0;
+        f.FontSize = 0;
+        f.FormatFlags = 0;
+        f.PresentMask = 0;
+    }
+    static inline void InitParagraphFormat(ParagraphFormatStorage& p)
+    {
+        p.RefCount = 1;
+        p.pTabStops = NULL;
+        p.BlockIndent = 0;
+        p.Indent = 0;
+        p.Leading = 0;
+        p.LeftMargin = 0;
+        p.RightMargin = 0;
+        p.PresentMask = 0;
+    }
+
+    // @0x1424affb0
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::defaultTextFormatGet(SPtr<Instances::fl_text::TextFormat>& result)
+    {
+        void* pdoc = DocumentOf(DisplayTextField(this));
+        void* ppara = DefaultParaFormat(pdoc);
+        void* pfmt = DefaultTextFormat(pdoc);
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        asvm.ConstructInstance(result, asvm.TextFormatClass, 0, NULL);
+        FUN_1424ae6b0(result.GetPtr(), ppara, pfmt);
+    }
+
+    // @0x1424b0020
+    // MS2-FUNCTIONAL: written from the exe's control flow (format storage opaque; the exe inlines the destructors)
+    void TextField::defaultTextFormatSet(const Value& result, Instances::fl_text::TextFormat* value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (FUN_1425b9730(ptf))
+            return;
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        TextFormatStorage fmt;
+        InitTextFormat(fmt, MovieHeapOf(asvm.GetMovieImpl()));
+        ParagraphFormatStorage para;
+        InitParagraphFormat(para);
+        FUN_1424ac700(value, &para, &fmt);
+
+        TextFormatStorage mergedFmt;
+        FUN_14259c250(DocumentOf(ptf), FUN_142607870(DefaultTextFormat(DocumentOf(ptf)), &mergedFmt, &fmt));
+        FieldFlags(ptf) |= 0x10000;
+        FUN_1424aa0f0(&mergedFmt);
+
+        ParagraphFormatStorage mergedPara;
+        FUN_14259c170(DocumentOf(ptf), FUN_1426076a0(DefaultParaFormat(DocumentOf(ptf)), &mergedPara, &para));
+        FieldFlags(ptf) |= 0x10000;
+        FUN_142606690(&mergedPara);
+        FUN_142606690(&para);
+        FUN_1424aa0f0(&fmt);
+    }
+
+    // DocView::LineMetrics, in twips.
+    struct DocLineMetrics
+    {
+        unsigned Width, Height;
+        unsigned Ascent, Descent;
+        int      FirstCharXOff;
+        int      Leading;
+    };
+    // Whole pixels from twips: the integer division first, then rounded as a double.
+    static inline Value::Number TwipsToWholePixels(unsigned twips) { return (Value::Number)Alg::IRound((double)(twips / 20)); }
+    static inline Value::Number TwipsToWholePixels(int twips)      { return (Value::Number)Alg::IRound((double)(twips / 20)); }
+
+    // @0x1424b1000
+    // MS2-FUNCTIONAL: the exe builds each Number Value through a 16-byte union temp; ours stores it directly
+    void TextField::getLineMetrics(SPtr<Instances::fl_text::TextLineMetrics>& result, SInt32 lineIndex)
+    {
+        DocLineMetrics metrics;
+        if (FUN_142612d50(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex, &metrics))
+        {
+            Value params[] = {
+                Value(TwipsToWholePixels(metrics.Ascent)),
+                Value(TwipsToWholePixels(metrics.Descent)),
+                Value(TwipsToWholePixels(metrics.Height)),
+                Value(TwipsToWholePixels(metrics.Leading)),
+                Value(TwipsToWholePixels(metrics.Width)),
+                Value(TwipsToWholePixels(metrics.FirstCharXOff))
+            };
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            SPtr<Class> cls = asvm.GetClass(StringDataPtr("flash.text.TextLineMetrics"));
+            asvm.ConstructInstance(result, cls, 6, params);
+        }
+    }
+
+    // @0x1424b1380
+    // MS2-FUNCTIONAL: written from the exe's control flow
+    void TextField::getLineText(ASString& result, SInt32 lineIndex)
+    {
+        unsigned long long len = 0;
+        const wchar_t* ptext = FUN_142612f00(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex, &len);
+        if (ptext)
+        {
+            String str;
+            str.AppendString(ptext, (SPInt)len);
+            result = GetVM().GetStringManager().CreateString(str.ToCStr(), str.GetSize());
+        }
+        else
+            result = GetVM().GetStringManager().CreateConstString("");
+    }
+
+    // The display field's style sheet holder (TextField+0x108); the AS3 holder keeps the StyleSheet object at +0x40.
+    struct AvmCSSHolder
+    {
+        void* const*                         vfptr;
+        UByte                                Base[0x38];     // CSSHolderBase: url zones, styles flag
+        SPtr<Instances::fl_text::StyleSheet> pASStyleSheet;  // +0x40
+    };
+    static inline AvmCSSHolder*& CSSDataOf(void* ptf) { return *(AvmCSSHolder**)((UByte*)ptf + 0x108); }
+
+    // @0x1424b49a0
+    // MS2-FUNCTIONAL: the exe reaches the field through its AvmTextField (same object)
+    void TextField::styleSheetGet(SPtr<Instances::fl_text::StyleSheet>& result)
+    {
+        void* ptf = DisplayTextField(this);
+        if (CSSDataOf(ptf) && CSSDataOf(ptf)->pASStyleSheet)
+            result = CSSDataOf(ptf)->pASStyleSheet;
+    }
+
+    // @0x1424b4a50
+    // MS2-FUNCTIONAL: written from the exe's control flow (the exe calls SPtr's assignment out of line)
+    void TextField::styleSheetSet(const Value& result, Instances::fl_text::StyleSheet* value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (value)
+        {
+            if (!CSSDataOf(ptf))
+            {
+                AvmCSSHolder* pcss = (AvmCSSHolder*)Memory::Alloc(sizeof(AvmCSSHolder));
+                if (pcss)
+                {
+                    memset(pcss, 0, sizeof(AvmCSSHolder));
+                    pcss->vfptr = AvmTextFieldCSSHolder_vftable;
+                }
+                FUN_1425bbd10(ptf, pcss);
+            }
+            CSSDataOf(ptf)->pASStyleSheet = value;
+            void* pkit = *(void**)((UByte*)DocViewOf(ptf) + 0xd8);
+            if (pkit)
+                *(UInt16*)((UByte*)pkit + 0xa0) |= 1;
+            FUN_1425bc060(ptf);
+        }
+        else if (CSSDataOf(ptf) && CSSDataOf(ptf)->pASStyleSheet)
+            CSSDataOf(ptf)->pASStyleSheet = NULL;
+        FUN_1425b72a0(ptf);
+        FUN_1425bec30(ptf);
+        FieldFlags(ptf) |= 0x10000;
+    }
+
 
     // Re-applies the auto-size mode to the document view after a layout setting changed; horizontal auto-sizing is
     // off while the text wraps.
@@ -1585,6 +1826,9 @@ namespace Instances { namespace fl_text
 // ---- fl_text: StyleSheet::parseCSS, TextFormat::tabStopsSet, TextSnapshot::getText ----
 bool FUN_14260b7f0(void* pstyles, const char* pcss, unsigned length);   // Text::StyleManager::ParseCSS
 void FUN_1425e1740(void* psnap, void* ptext, unsigned long long start, unsigned long long end, bool includeLineEndings);  // ::GetSubString (builds a String)
+void* FUN_1425e0400(void* psnap);                           // StaticTextSnapshotData::StaticTextSnapshotData (0x28 bytes)
+void  FUN_1425e0720(void* psnap, void* pstatic);            // StaticTextSnapshotData::Add (a StaticTextCharacter)
+void  FUN_1424aa050(void* psnap);                           // StaticTextSnapshotData::~StaticTextSnapshotData
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1623,6 +1867,26 @@ namespace Instances { namespace fl_text
         String& text = *reinterpret_cast<String*>(&buf);
         result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
         text.~String();
+    }
+
+    // @0x1424b4d00
+    // MS2-FUNCTIONAL: written from the exe's control flow (snapshot data opaque)
+    void StaticText::textGet(ASString& result)
+    {
+        void* pdispObj = pDispObj.GetPtr();
+        void* pmem = GetVM().GetMemoryHeap()->Alloc(0x28, (const AllocInfo*)0);
+        void* psnap = pmem ? FUN_1425e0400(pmem) : NULL;
+        FUN_1425e0720(psnap, pdispObj);
+        void* buf;
+        FUN_1425e1740(psnap, &buf, 0, FUN_1425e1360(psnap), true);
+        String& text = *reinterpret_cast<String*>(&buf);
+        result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
+        text.~String();
+        if (psnap)
+        {
+            FUN_1424aa050(psnap);
+            Memory::Free(psnap);
+        }
     }
 }}
 
