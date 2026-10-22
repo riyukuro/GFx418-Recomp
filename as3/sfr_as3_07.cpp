@@ -1171,6 +1171,41 @@ namespace Instances { namespace fl_display
         ToAvmIntObjView(pDispObj)->SetDoubleClickEnabled(value);
     }
 
+    // @0x142453b70
+    void InteractiveObject::tabEnabledSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        UInt32 on = flags | GFx::InteractiveObject::Mask_TabEnabled;   // true
+        UInt32 off = (flags & ~0x20u) | 0x40u;                         // false (defined)
+        pio->Flags = value ? on : off;
+        SPtr<fl_events::Event> e = CreateEventObject(GetVM().GetStringManager().CreateConstString("tabEnabledChange"), true, false);
+        DispatchEventObject(e, pDispObj);
+    }
+
+    // @0x142453a70
+    void DisplayObjectContainer::tabChildrenSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        UInt32 on = flags & ~GFx::InteractiveObject::Mask_TabChildrenDisabled;
+        UInt32 off = flags | GFx::InteractiveObject::Mask_TabChildrenDisabled;
+        pio->Flags = value ? on : off;
+        SPtr<fl_events::Event> e = CreateEventObject(GetVM().GetStringManager().CreateConstString("tabChildrenChange"), true, false);
+        DispatchEventObject(e, pDispObj);
+    }
+
+    // @0x142453c40
+    void InteractiveObject::tabIndexSet(const Value& result, SInt32 value)
+    {
+        SF_UNUSED(result);
+        static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->TabIndex = (SInt16)value;
+        SPtr<fl_events::Event> e = CreateEventObject(GetVM().GetStringManager().CreateConstString("tabIndexChange"), true, false);
+        DispatchEventObject(e, pDispObj);
+    }
+
     // @0x1424490d0
     void InteractiveObject::contextMenuGet(SPtr<Instances::fl::Object>& result)
     {
@@ -1264,6 +1299,50 @@ namespace Instances { namespace fl_display
     }
 }}
 
+// The AS3 part of every display object (as3_avm.h, which this unit cannot include). Only what the natives use:
+// the AS3 object instantiation (slot 15) and the AS3 object pointers.
+class AvmDisplayObj : public AvmDisplayObjBase
+{
+public:
+    virtual void        OnRemoved(bool byTimeline);
+    virtual void        Unrecovered_14();
+    virtual unsigned    CreateASInstance(bool execute);
+
+    // The AS3 object, kept raw or as a tagged collectible pointer.
+    Instances::fl_display::DisplayObject* GetAS3Obj() const
+    {
+        UPInt p = pAS3RawPtr ? reinterpret_cast<UPInt>(pAS3RawPtr) : reinterpret_cast<UPInt>(pAS3CollectiblePtr);
+        if (p & 1)
+            --p;
+        return reinterpret_cast<Instances::fl_display::DisplayObject*>(p);
+    }
+    // The root of the movie this object is in (0x14250d990).
+    DisplayObject* GetRoot();
+
+    Instances::fl_display::DisplayObject*   pAS3CollectiblePtr; // +0x08 SPtr<>
+    Instances::fl_display::DisplayObject*   pAS3RawPtr;         // +0x10
+};
+
+static inline AvmDisplayObj* ToAvmDisplayObj(DisplayObject* p)
+{
+    if (!p)
+        return NULL;
+    return static_cast<AvmDisplayObj*>(p->GetAvmObjImpl());
+}
+
+namespace Instances { namespace fl_display
+{
+    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; register
+    // assignment follows. Same loads and calls.
+    // @0x142452090
+    void DisplayObject::rootGet(SPtr<Instances::fl_display::DisplayObject>& result)
+    {
+        AvmDisplayObj* pavm = ToAvmDisplayObj(ToAvmDisplayObj(pDispObj)->GetRoot());
+        pavm->CreateASInstance(true);
+        result = pavm->GetAS3Obj();
+    }
+}}
+
 // AS3 part of a display object container: AvmInteractiveObj, with its
 // AvmDisplayObjContainerBase part at +0x40. Opaque; only the members the natives call.
 class AvmDisplayObjContainer
@@ -1275,6 +1354,7 @@ public:
     }
     void SetChildIndex(DisplayObjectBase* ch, unsigned index);  // 0x142526610
     void SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
+    void SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);   // 0x14252e590
 };
 
 namespace Instances { namespace fl_display
@@ -1568,6 +1648,39 @@ namespace Instances { namespace fl_display
     static inline AvmDisplayObjContainer* ToAvmDispContainer(GFx::DisplayObject* p)
     {
         return p ? AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
+    }
+
+    // MS2-FUNCTIONAL: exe tail-calls SwapChildren for a null container and merges the AS3-part paths; ours
+    // duplicates the call tail per path. Same loads and calls.
+    // @0x142453890
+    void DisplayObjectContainer::swapChildren(const Value& result, Instances::fl_display::DisplayObject* child1,
+                                              Instances::fl_display::DisplayObject* child2)
+    {
+        SF_UNUSED(result);
+        if (child1->pDispObj && child2->pDispObj)
+        {
+            AvmDisplayObjContainer* avmObj = ToAvmDispContainer(pDispObj);
+            avmObj->SwapChildren(child1->pDispObj, child2->pDispObj);
+        }
+    }
+
+    // @0x14244cee0
+    void DisplayObjectContainer::getChildIndex(SInt32& result, Instances::fl_display::DisplayObject* child)
+    {
+        if (!child)
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eNullPointerError, vm, "child"));
+            return;
+        }
+        SPInt index = static_cast<GFx::DisplayObjContainer*>(pDispObj.GetPtr())->mDisplayList.FindDisplayIndex(child->pDispObj);
+        if (index < 0)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eMustBeChildError, vm, "DisplayObject"));
+            return;
+        }
+        result = (SInt32)index;
     }
 
     // @0x142453900
