@@ -3,7 +3,7 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_09
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142463900-0x142473710 .text$mn
+// MS2-RANGE: 0x1424653f0-0x142473710 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)

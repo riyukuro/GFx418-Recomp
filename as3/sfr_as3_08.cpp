@@ -3,7 +3,7 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_08
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142458c10-0x142463900 .text$mn
+// MS2-RANGE: 0x142458c10-0x1424653f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1985,3 +1985,63 @@ namespace InstanceTraits { namespace fl_events
 // MS2-PIN: ??_GEventDispatcher@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463230
 // MS2-PIN: ??1?$ArrayDataBase@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@U?$AllocatorLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01@7@UArrayDefaultPolicy@7@@Scaleform@@QEAA@XZ 0x142462140
 // MS2-PIN: ??1ListenersHash@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@QEAA@XZ 0x1424624f0
+// MS2-PIN: ??_GGesturePhase@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463900
+// MS2-PIN: ??_GHTTPStatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463960
+// MS2-PIN: ??_GHTTPStatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424639f0
+// MS2-PIN: ??_GIEventDispatcher@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463a50
+// MS2-PIN: ??_GIMEEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463ae0
+// MS2-PIN: ??_GIMEEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463b70
+// MS2-PIN: ??_GIMEEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463bd0
+// MS2-PIN: ??_GIMEEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463c30
+// MS2-PIN: ??_GIOErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463ca0
+// MS2-PIN: ??_GIOErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463d30
+// MS2-PIN: ??_GIOErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463d90
+// MS2-PIN: ??_GIOErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463df0
+// MS2-PIN: ??_GKeyboardEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463e70
+// MS2-PIN: ??_GKeyboardEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463f00
+// MS2-PIN: ??_GKeyboardEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463f60
+// MS2-PIN: ??_GKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463fc0
+// MS2-PIN: ??_GMouseEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464020
+// MS2-PIN: ??_GMouseEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424640b0
+// MS2-PIN: ??_GMouseEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464110
+// MS2-PIN: ??_GMouseEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464170
+// MS2-PIN: ??_GNetStatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464200
+// MS2-PIN: ??_GNetStatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464290
+// MS2-PIN: ??_GNetStatusEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424642f0
+// MS2-PIN: ??_GNetStatusEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464350
+// MS2-PIN: ??_GPressAndTapGestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424643d0
+// MS2-PIN: ??_GPressAndTapGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464460
+// MS2-PIN: ??_GPressAndTapGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424644c0
+// MS2-PIN: ??_GPressAndTapGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464520
+// MS2-PIN: ??_GProgressEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464580
+// MS2-PIN: ??_GProgressEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464610
+// MS2-PIN: ??_GProgressEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464670
+// MS2-PIN: ??_GProgressEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424646d0
+// MS2-PIN: ??_GSecurityErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464730
+// MS2-PIN: ??_GSecurityErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424647c0
+// MS2-PIN: ??_GStageOrientation@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464820
+// MS2-PIN: ??_GStageOrientation@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424648b0
+// MS2-PIN: ??_GStageOrientationEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464910
+// MS2-PIN: ??_GStageOrientationEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424649a0
+// MS2-PIN: ??_GStageOrientationEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464a00
+// MS2-PIN: ??_GStageOrientationEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464a60
+// MS2-PIN: ??_GStatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464b10
+// MS2-PIN: ??_GStatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464ba0
+// MS2-PIN: ??_GSyncEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464c00
+// MS2-PIN: ??_GSyncEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464c90
+// MS2-PIN: ??_GTextEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464cf0
+// MS2-PIN: ??_GTextEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464d80
+// MS2-PIN: ??_GTextEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464de0
+// MS2-PIN: ??_GTextEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464e40
+// MS2-PIN: ??_GTimerEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464eb0
+// MS2-PIN: ??_GTimerEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464f40
+// MS2-PIN: ??_GTimerEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142464fa0
+// MS2-PIN: ??_GTimerEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465000
+// MS2-PIN: ??_GTouchEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465060
+// MS2-PIN: ??_GTouchEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424650f0
+// MS2-PIN: ??_GTouchEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465150
+// MS2-PIN: ??_GTouchEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424651b0
+// MS2-PIN: ??_GTransformGestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465240
+// MS2-PIN: ??_GTransformGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424652d0
+// MS2-PIN: ??_GTransformGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465330
+// MS2-PIN: ??_GTransformGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142465390
