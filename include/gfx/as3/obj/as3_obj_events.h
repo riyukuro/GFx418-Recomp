@@ -94,6 +94,8 @@ namespace Instances { namespace fl_events {
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424653f0
         // (appended, sfr_as3_09) the Event children and Status
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x142469300
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x142469fa0
     };
 
     // 0x60 bytes. The constructor is bound to the exe.
@@ -120,6 +122,8 @@ namespace Instances { namespace fl_events {
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466a40
         // (appended, sfr_as3_09) the text becomes the one character ch
         void SetText(wchar_t ch);                                 // 0x14246c930
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a090
     };
 
     // 0x60 bytes. The constructor is defined in sfr_as3_08.
@@ -299,6 +303,8 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_display::InteractiveObject> relatedObjectGet();
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466680
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x142469fc0
     };
 
     // 0x88 bytes. The constructor is defined in sfr_as3_08.
@@ -370,6 +376,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424666d0
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465610
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x142469fd0
     };
 
     // 0x60 bytes. The constructor is defined in sfr_as3_08.
@@ -465,6 +473,8 @@ namespace Instances { namespace fl_events {
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424667b0
         // (appended, sfr_as3_09) takes the key event; a missing ascii code is derived from the key code
         void SetEventId(const EventId& id);                       // 0x14246c8d0
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a010
     };
 
     // 0x90 bytes. The constructor is bound to the exe.
@@ -550,6 +560,8 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_display::InteractiveObject> relatedObjectGet();
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466820
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a020
     };
 
     // 0x68 bytes. The constructor is defined in sfr_as3_08.
@@ -577,6 +589,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424668c0
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465950
+        // (appended, sfr_as3_08) slot 21: this class's event name; bound to the exe
+        virtual const char* GetEventName() const;  // 0x14246a0e0
     };
 
     // 0xb0 bytes. The constructor is defined in sfr_as3_08.
@@ -617,6 +631,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466930
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424659b0
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a060
     };
 
     // 0x68 bytes. The constructor is defined in sfr_as3_08.
@@ -645,6 +661,8 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_events::Event> clone();
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424669b0
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a070
     };
 
     // 0x98 bytes. The constructor is defined in sfr_as3_08.
@@ -672,6 +690,8 @@ namespace Instances { namespace fl_events {
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465c10
         // (appended, sfr_as3_09) the Event children and both orientations
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x1424697e0
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a080
     };
 
     // 0x58 bytes. The constructor is defined in sfr_as3_08.
@@ -690,6 +710,10 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) clone() returning the new event
         // @0x14246dad0
         SPtr<Instances::fl_events::Event> clone();
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a0a0
+        // (appended, sfr_as3_08) slot 21: this class's event name; bound to the exe
+        virtual const char* GetEventName() const;  // 0x14246a0f0
     };
 
     // 0xa8 bytes. The constructor is defined in sfr_as3_08.
@@ -795,6 +819,8 @@ namespace Instances { namespace fl_events {
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465cd0
         // (appended, sfr_as3_09) RelatedObj (the Event children are not visited)
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x142469880
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a0b0
     };
 
     // 0xc8 bytes. The constructor is defined in sfr_as3_08.
@@ -845,6 +871,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466b70
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465f00
+        // (appended, sfr_as3_08) slot 22: this class's flash.events class; bound to the exe
+        virtual AS3::Object* GetEventClass() const;  // 0x14246a0c0
     };
 
     // 0x68 bytes. The constructor is defined in sfr_as3_08.
