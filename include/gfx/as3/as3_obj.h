@@ -392,6 +392,8 @@ namespace InstanceTraits
             static void AS3isPrototypeOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
             // @0x1423e4490 (appended, sfr15)
             static void isPrototypeOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+            // @0x1423e41c0 (appended, sfr15)
+            static void setPropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         };
     }
 }
@@ -434,6 +436,11 @@ public:
     // Key of a dynamic property: its name and DontEnum-style flags.
     struct DynAttrsKey
     {
+        // (appended, sfr15) lookup key from a bare name; equality is by name only.
+        DynAttrsKey(const ASString& name) : Flags(0), Name(name) {}
+        bool operator==(const DynAttrsKey& other) const { return Name.GetNode() == other.Name.GetNode(); }
+        void SetDoNotEnum(bool v) const { Flags = (Flags & ~1u) | (UInt32(-SInt32(v)) & 1u); }
+
         mutable UInt32  Flags;
         ASString        Name;
     };
@@ -479,6 +486,8 @@ public:
 
     Traits& GetTraits() const   { return *pTraits; }
     VM&     GetVM() const       { return pTraits->GetVM(); }
+    // (appended, sfr15)
+    const DynAttrsType* GetDynamicAttrs() const { return &DynAttrs; }
 
     // (appended, sfr13) a dynamic property by string name (0x1424e7f40).
     void AddDynamicSlotValuePair(const ASString& prop_name, const Value& v, SlotInfo::Attribute a = SlotInfo::aNone);

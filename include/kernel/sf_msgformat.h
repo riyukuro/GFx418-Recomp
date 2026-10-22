@@ -180,6 +180,9 @@ template<> struct FmtInfo<int>    { typedef LongFormatter formatter; };
 template<> struct FmtInfo<float>  { typedef DoubleFormatter formatter; };
 template<> struct FmtInfo<double> { typedef DoubleFormatter formatter; };
 template<> struct FmtInfo<String> { typedef StrFormatter formatter; }; // (sfr_gfx_07g)
+// (appended, sfr15)
+template<> struct FmtInfo<long>          { typedef LongFormatter formatter; };
+template<> struct FmtInfo<unsigned long> { typedef LongFormatter formatter; };
 
 // The "{n}" message formatter (0x3f0 bytes). Out of line in the kernel MsgFormat unit (exe: ctor 0x1425af0a0,
 // dtor 0x1425af530, Parse 0x1425b2210, FinishFormatD 0x1425b0bd0, NextFormatter 0x1425b1960, Bind 0x1425afab0).
@@ -347,6 +350,15 @@ inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1
     f.FormatD1(v1);
     f.FinishFormatD();
     return f.GetStrSize();
+}
+
+// (appended, sfr15) v formatted on its own ("{0}")
+template<typename T>
+inline String AsString(const T& v)
+{
+    String result;
+    Format(result, "{0}", v);
+    return result;
 }
 
 template<typename T1, typename T2, typename T3>

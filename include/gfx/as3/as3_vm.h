@@ -88,6 +88,7 @@ public:
         eStackOverflowError         = 1023,
         eFunctionConstructorError   = 1066,
         eMathNotFunctionError       = 1075,
+        eWriteSealedError           = 1056,
         eMathNotConstructorError    = 1076
     };
 

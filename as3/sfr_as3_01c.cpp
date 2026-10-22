@@ -1269,6 +1269,33 @@ namespace InstanceTraits { namespace fl
         AS3isPrototypeOf(ti, vm, _this, result, argc, argv);
     }
 
+    // @0x1423e41c0
+    void Object::setPropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc < 1)
+            return vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "Object::setPropertyIsEnumerableProto", 1, 1, argc));
+        if (_this.IsObject() && !_this.IsNull())
+        {
+            const Value& name = argv[0];
+            bool isEnum = true;
+            ASString str_name = vm.GetStringManager().CreateEmptyString();
+            if (!name.Convert2String(str_name))
+                return;
+            if (argc > 1)
+                isEnum = argv[1].Convert2Boolean();
+            const AS3::Object::DynAttrsType* da = _this.GetObject()->GetDynamicAttrs();
+            if (da)
+            {
+                AS3::Object::DynAttrsType::ConstIterator it = da->Find(str_name);
+                if (it.IsEnd())
+                    return vm.ThrowReferenceError(VM::Error(VM::eWriteSealedError, vm, str_name.ToCStr(), FUN_14250ffc0(vm, _this).GetName().ToCStr()));
+                it->First.SetDoNotEnum(!isEnum);
+            }
+        }
+        else
+            return vm.ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, vm));
+    }
+
     // @0x1423e29b0
     void Number::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -1743,6 +1770,12 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XM
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 36, const Value&, const Value&>(StringManager&);
 }}} // namespace Scaleform::GFx::AS3
 
+// MsgFormat argument binders the error-message formatting in this file instantiates.
+template void Scaleform::MsgFormat::FormatD1<int>(const int&);
+template void Scaleform::MsgFormat::FormatD1<const char*>(const char* const&);
+template Scaleform::String Scaleform::AsString<long>(const long&);
+template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned long&);
+
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // MS2-PINS-BEGIN tplpin
@@ -1885,3 +1918,7 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XM
 // MS2-PIN: ??$ThunkMakeDefs2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0BM@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e9540
 // MS2-PIN: ??$ThunkMakeDefs2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0BN@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e96a0
 // MS2-PIN: ??$ThunkMakeDefs2@VXMLList@fl@Instances@AS3@GFx@Scaleform@@$0CE@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x1423e9800
+// MS2-PIN: ??$FormatD1@H@MsgFormat@Scaleform@@QEAAXAEBH@Z 0x1423e8500
+// MS2-PIN: ??$FormatD1@PEBD@MsgFormat@Scaleform@@QEAAXAEBQEBD@Z 0x1423e85f0
+// MS2-PIN: ??$AsString@J@Scaleform@@YA?AVString@0@AEBJ@Z 0x1423e8220
+// MS2-PIN: ??$AsString@K@Scaleform@@YA?AVString@0@AEBK@Z 0x1423e8390
