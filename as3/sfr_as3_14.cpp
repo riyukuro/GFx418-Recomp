@@ -267,6 +267,19 @@ extern "C" int inflate(z_stream_s* strm, int flush);
 extern "C" int inflateEnd(z_stream_s* strm);
 extern "C" int inflateInit_(z_stream_s* strm, const char* version, int streamSize);
 
+// An inflate stream, zeroed and initialised.
+struct ZInflateStream : z_stream_s
+{
+    ZInflateStream();
+};
+
+// @0x1424bccb0
+ZInflateStream::ZInflateStream()
+{
+    memset(static_cast<z_stream_s*>(this), 0, sizeof(z_stream_s));
+    inflateInit_(this, "1.2.5", sizeof(z_stream_s));
+}
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace fl_utils
@@ -834,6 +847,15 @@ namespace Instances { namespace fl_utils
         return true;
     }
 
+    // MS2-FUNCTIONAL: the exe keeps this in rcx and the position in edx; ours swaps them
+    // @0x1424becd0
+    UInt16 ByteArray::ReadUInt16()
+    {
+        UInt16 v;
+        ReadValue(v);
+        return v;
+    }
+
     // MS2-FUNCTIONAL: string-node creation call shape differs
     // @0x1424bed20
     CheckResult ByteArray::ReadUTFBytes(ASString& result, UInt32 len)
@@ -869,12 +891,41 @@ namespace Instances { namespace fl_utils
             Position = size;
     }
 
+    // Write(char/UInt8/bool) are unused out of line; writeByte/writeBoolean inline them.
     // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424bf320
+    void ByteArray::Write(char v)
+    {
+        const UInt32 newPos = Position + 1;
+        if (newPos >= Data.GetSize())
+            Resize(newPos);
+        else if (Length <= newPos)
+            Length = newPos;
+        Data[Position++] = (UInt8)v;
+    }
+
+    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
+    // @0x1424bf3b0
     void ByteArray::Write(UInt8 v)
     {
-        GrowFor(1);
+        const UInt32 newPos = Position + 1;
+        if (newPos >= Data.GetSize())
+            Resize(newPos);
+        else if (Length <= newPos)
+            Length = newPos;
         Data[Position++] = v;
+    }
+
+    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
+    // @0x1424bf4f0
+    void ByteArray::Write(bool v)
+    {
+        const UInt32 newPos = Position + 1;
+        if (newPos >= Data.GetSize())
+            Resize(newPos);
+        else if (Length <= newPos)
+            Length = newPos;
+        Data[Position++] = (UInt8)v;
     }
 
     // MS2-FUNCTIONAL: grow + memcpy register allocation differs
@@ -1183,9 +1234,7 @@ namespace Instances { namespace fl_utils
     // @0x1424bfde0
     void ByteArray::readShort(SInt32& result)
     {
-        UInt16 v;
-        ReadValue(v);
-        result = (SInt16)v;
+        result = (SInt16)ReadUInt16();
     }
 
     // A 16-bit length, then that many UTF-8 bytes.
@@ -1193,9 +1242,7 @@ namespace Instances { namespace fl_utils
     // @0x1424bfe40
     void ByteArray::readUTF(ASString& result)
     {
-        UInt16 len;
-        ReadValue(len);
-        ReadUTFBytes(result, len);
+        ReadUTFBytes(result, ReadUInt16());
     }
 
     // @0x1424bfeb0
@@ -1226,9 +1273,7 @@ namespace Instances { namespace fl_utils
     // @0x1424bff40
     void ByteArray::readUnsignedShort(UInt32& result)
     {
-        UInt16 v;
-        ReadValue(v);
-        result = v;
+        result = ReadUInt16();
     }
 
     // The content as text: UTF-16 after a byte order mark, UTF-8 otherwise.
@@ -1269,9 +1314,7 @@ namespace Instances { namespace fl_utils
         if (Position != 0)
             Position = 0;
 
-        z_stream_s zs;
-        memset(&zs, 0, sizeof(zs));
-        inflateInit_(&zs, "1.2.5", sizeof(zs));
+        ZInflateStream zs;
         zs.next_in = src;
         zs.avail_in = len;
         UInt8* out = (UInt8*)SF_HEAP_AUTO_ALLOC(this, 0x2000);
@@ -1294,20 +1337,20 @@ namespace Instances { namespace fl_utils
         inflateEnd(&zs);
     }
 
-    // MS2-FUNCTIONAL: exe inlines Write(UInt8); ours tail-calls it
+    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424c05c0
     void ByteArray::writeBoolean(const Value& result, bool value)
     {
         SF_UNUSED(result);
-        Write((UInt8)value);
+        Write(value);
     }
 
-    // MS2-FUNCTIONAL: exe inlines Write(UInt8); ours tail-calls it
+    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424c0650
     void ByteArray::writeByte(const Value& result, SInt32 value)
     {
         SF_UNUSED(result);
-        Write((UInt8)value);
+        Write((char)value);
     }
 
     // Writes length bytes (all from offset on when 0) of bytes.

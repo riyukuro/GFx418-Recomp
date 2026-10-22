@@ -36,12 +36,16 @@ namespace Instances { namespace fl_utils {
     protected:
         // Copies n bytes at the position into dest; on running past the end raises EOFError and returns false.
         CheckResult Read(void* dest, UInt32 n);                 // 0x1424bec50
+        // A 16-bit value in the array's byte order; undefined after EOFError.
+        UInt16 ReadUInt16();                                    // 0x1424becd0
         CheckResult ReadUTFBytes(ASString& result, UInt32 len); // 0x1424bed20
         // True (and EOFError raised) when no byte is left to read.
         CheckResult EOFError();                                 // 0x1424bdb30
         void ThrowEOFError();                                   // 0x1424bf180
         void ThrowMemoryError();                                // 0x1424bf250
-        void Write(UInt8 v);                                    // 0x1424bf320
+        void Write(char v);                                     // 0x1424bf320
+        void Write(UInt8 v);                                    // 0x1424bf3b0
+        void Write(bool v);                                     // 0x1424bf4f0
         void Write(const void* src, UInt32 n);                  // 0x1424bf440
         // Sets the length, growing the storage with zeroes; the position stays inside.
         void Resize(UInt32 size);                               // 0x1424bef20
