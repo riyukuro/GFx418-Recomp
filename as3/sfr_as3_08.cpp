@@ -273,6 +273,1443 @@ template struct ThunkFunc1<Instances::fl_events::KeyboardEvent, 9, const Value, 
 // thunk 0x14245e180: Instances::fl_events::StageOrientationEvent::toString
 template struct ThunkFunc0<Instances::fl_events::StageOrientationEvent, 3, ASString>;
 
+
+// ---- flash.events: class traits, instance traits, classes and instances ----
+
+namespace fl_events
+{
+    extern const ClassInfo ActivityEventCI;
+    extern const ClassInfo AppLifecycleEventCI;
+    extern const ClassInfo AsyncErrorEventCI;
+    extern const ClassInfo ContextMenuEventCI;
+    extern const ClassInfo DataEventCI;
+    extern const ClassInfo ErrorEventCI;
+    extern const ClassInfo EventCI;
+    extern const ClassInfo EventDispatcherCI;
+    extern const ClassInfo EventPhaseCI;
+    extern const ClassInfo FocusEventCI;
+    extern const ClassInfo FullScreenEventCI;
+    extern const ClassInfo GestureEventCI;
+    extern const ClassInfo GesturePhaseCI;
+    extern const ClassInfo HTTPStatusEventCI;
+    extern const ClassInfo IEventDispatcherCI;
+    extern const ClassInfo IMEEventCI;
+    extern const ClassInfo IOErrorEventCI;
+    extern const ClassInfo KeyboardEventCI;
+    extern const ClassInfo MouseEventCI;
+    extern const ClassInfo NetStatusEventCI;
+    extern const ClassInfo PressAndTapGestureEventCI;
+    extern const ClassInfo ProgressEventCI;
+    extern const ClassInfo SecurityErrorEventCI;
+    extern const ClassInfo StageOrientationCI;
+    extern const ClassInfo StageOrientationEventCI;
+    extern const ClassInfo StatusEventCI;
+    extern const ClassInfo SyncEventCI;
+    extern const ClassInfo TextEventCI;
+    extern const ClassInfo TimerEventCI;
+    extern const ClassInfo TouchEventCI;
+    extern const ClassInfo TransformGestureEventCI;
+}
+
+// ---- ActivityEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245e6a0
+    ActivityEvent::ActivityEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Activity("activity")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245e590
+    ActivityEvent::ActivityEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::ActivityEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::ActivityEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::ActivityEvent(*this)));
+    }
+
+    // @0x14245bd20
+    Pickable<Traits> ActivityEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ActivityEvent(vm));
+    }
+}}
+
+// ---- AppLifecycleEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x14245e850
+    AppLifecycleEvent::AppLifecycleEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+        Status.SetNull();
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x14245e820
+    AppLifecycleEvent::AppLifecycleEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x78);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245e7e0
+    AppLifecycleEvent::AppLifecycleEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , OnPause("onPause")
+        , OnResume("onResume")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245e6d0
+    AppLifecycleEvent::AppLifecycleEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::AppLifecycleEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::AppLifecycleEvent(vm, AS3::fl_events::AppLifecycleEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::AppLifecycleEvent(*this)));
+    }
+
+    // @0x14245d350
+    Pickable<Traits> AppLifecycleEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) AppLifecycleEvent(vm));
+    }
+}}
+
+// ---- AsyncErrorEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x14245ea80
+    AsyncErrorEvent::AsyncErrorEvent(InstanceTraits::Traits& t)
+        : ErrorEvent(t)
+    {
+    }
+
+    // @0x1424623e0
+    AsyncErrorEvent::~AsyncErrorEvent()
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x14245ea50
+    AsyncErrorEvent::AsyncErrorEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245ea20
+    AsyncErrorEvent::AsyncErrorEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , AsyncError("asyncError")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245e910
+    AsyncErrorEvent::AsyncErrorEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::AsyncErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::AsyncErrorEvent(vm, AS3::fl_events::AsyncErrorEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::AsyncErrorEvent(*this)));
+    }
+
+}}
+
+// ---- ContextMenuEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245ebc0
+    ContextMenuEvent::ContextMenuEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , MenuItemSelect("menuItemSelect")
+        , MenuSelect("menuSelect")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245eab0
+    ContextMenuEvent::ContextMenuEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::ContextMenuEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::ContextMenuEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::ContextMenuEvent(*this)));
+    }
+
+}}
+
+// ---- DataEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245ed10
+    DataEvent::DataEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Data("data")
+        , UploadCompleteData("uploadCompleteData")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245ec00
+    DataEvent::DataEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::DataEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::TextEvent(vm, AS3::fl_events::DataEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::DataEvent(*this)));
+    }
+
+    // @0x14245ada0
+    Pickable<Traits> DataEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) DataEvent(vm));
+    }
+}}
+
+// ---- ErrorEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x14245eec0
+    ErrorEvent::ErrorEvent(InstanceTraits::Traits& t)
+        : TextEvent(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x14245ee90
+    ErrorEvent::ErrorEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x60);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245ee60
+    ErrorEvent::ErrorEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Error("error")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245ed50
+    ErrorEvent::ErrorEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::ErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::ErrorEvent(vm, AS3::fl_events::ErrorEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::ErrorEvent(*this)));
+    }
+
+}}
+
+// ---- Event ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x14245f450
+    Event::Event(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , Type(GetVM().GetStringManager().CreateEmptyString())
+        , CurrentTarget(NULL)
+        , Target(NULL)
+        , Phase(2)
+    {
+        Bubbles = false;
+        Cancelable = false;
+        DefaultPrevented = false;
+        PropagationStopped = false;
+        ImmPropagationStopped = false;
+    }
+
+    // @0x142462440
+    // MS2-FUNCTIONAL: the exe's destructor does not store the Event vftable before releasing the members
+    Event::~Event()
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x14245f420
+    Event::Event(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x58);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245f1f0
+    Event::Event(ClassTraits::Traits& t)
+        : Class(t)
+        , Activate("activate")
+        , Added("added")
+        , AddedToStage("addedToStage")
+        , Cancel("cancel")
+        , Change("change")
+        , Close("close")
+        , Closing("closing")
+        , Complete("complete")
+        , Connect("connect")
+        , Deactivate("deactivate")
+        , Displaying("displaying")
+        , EnterFrame("enterFrame")
+        , Exiting("exiting")
+        , ExitFrame("exitFrame")
+        , FrameConstructed("frameConstructed")
+        , FullScreen("fullScreen")
+        , HtmlBoundsChange("htmlBoundsChange")
+        , HtmlDOMInitialize("htmlDOMInitialize")
+        , HtmlRender("htmlRender")
+        , Id3("id3")
+        , Init("init")
+        , LocationChange("locationChange")
+        , MouseLeave("mouseLeave")
+        , NetworkChange("networkChange")
+        , Open("open")
+        , Removed("removed")
+        , RemovedFromStage("removedFromStage")
+        , Render("render")
+        , Resize("resize")
+        , Scroll("scroll")
+        , Select("select")
+        , SoundComplete("soundComplete")
+        , TabChildrenChange("tabChildrenChange")
+        , TabEnabledChange("tabEnabledChange")
+        , TabIndexChange("tabIndexChange")
+        , Unload("unload")
+        , UserIdle("userIdle")
+        , UserPresent("userPresent")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245eef0
+    Event::Event(VM& vm)
+        : Traits(vm, AS3::fl_events::EventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::EventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::Event(*this)));
+    }
+
+    // @0x14245b8b0
+    Pickable<Traits> Event::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Event(vm));
+    }
+}}
+
+// ---- EventDispatcher ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245f5a0
+    EventDispatcher::EventDispatcher(ClassTraits::Traits& t)
+        : Class(t)
+        , Unk50(NULL)
+        , Unk58(NULL)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245f4b0
+    EventDispatcher::EventDispatcher(VM& vm)
+        : Traits(vm, AS3::fl_events::EventDispatcherCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::EventDispatcher(vm, AS3::fl_events::EventDispatcherCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::EventDispatcher(*this)));
+    }
+
+    // @0x142459920
+    Pickable<Traits> EventDispatcher::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) EventDispatcher(vm));
+    }
+}}
+
+// ---- EventPhase ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245f8d0
+    EventPhase::EventPhase(ClassTraits::Traits& t)
+        : Class(t)
+        , AtTarget(2)
+        , BubblingPhase(3)
+        , CapturingPhase(1)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245f7d0
+    EventPhase::EventPhase(VM& vm)
+        : Traits(vm, AS3::fl_events::EventPhaseCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_events::EventPhaseCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::EventPhase(*this)));
+    }
+
+    // @0x14245a120
+    Pickable<Traits> EventPhase::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) EventPhase(vm));
+    }
+}}
+
+// ---- FocusEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x14245fac0
+    FocusEvent::FocusEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , ShiftKey(false)
+        , KeyCode(0)
+        , RelatedObj(NULL)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x14245fa90
+    FocusEvent::FocusEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245fa40
+    FocusEvent::FocusEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , FocusIn("focusIn")
+        , FocusOut("focusOut")
+        , KeyFocusChange("keyFocusChange")
+        , MouseFocusChange("mouseFocusChange")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245f910
+    FocusEvent::FocusEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::FocusEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::FocusEvent(vm, AS3::fl_events::FocusEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::FocusEvent(*this)));
+    }
+
+}}
+
+// ---- FullScreenEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245fc40
+    FullScreenEvent::FullScreenEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , FullScreen("fullScreen")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245fb30
+    FullScreenEvent::FullScreenEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::FullScreenEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::FullScreenEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::FullScreenEvent(*this)));
+    }
+
+    // @0x14245b180
+    Pickable<Traits> FullScreenEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FullScreenEvent(vm));
+    }
+}}
+
+// ---- GestureEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x14245fde0
+    GestureEvent::GestureEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+        AltKey = CommandKey = ControlKey = CtrlKey = ShiftKey = false;
+        LocalX = LocalY = 0;
+        StageX = StageY = 0;
+        Phase = 1;
+        LocalInitialized = false;
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x14245fdb0
+    GestureEvent::GestureEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x88);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245fd80
+    GestureEvent::GestureEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , GestureTwoFingerTap("gestureTwoFingerTap")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245fc70
+    GestureEvent::GestureEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::GestureEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::GestureEvent(vm, AS3::fl_events::GestureEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::GestureEvent(*this)));
+    }
+
+}}
+
+// ---- GesturePhase ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x14245ff80
+    GesturePhase::GesturePhase(ClassTraits::Traits& t)
+        : Class(t)
+        , All("all")
+        , Begin("begin")
+        , End("end")
+        , Update("update")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245fe70
+    GesturePhase::GesturePhase(VM& vm)
+        : Traits(vm, AS3::fl_events::GesturePhaseCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_events::GesturePhaseCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::GesturePhase(*this)));
+    }
+
+    // @0x14245cd30
+    Pickable<Traits> GesturePhase::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GesturePhase(vm));
+    }
+}}
+
+// ---- HTTPStatusEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x1424600e0
+    HTTPStatusEvent::HTTPStatusEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , HttpResponseStatus("httpResponseStatus")
+        , HttpStatus("httpStatus")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x14245ffd0
+    HTTPStatusEvent::HTTPStatusEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::HTTPStatusEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::HTTPStatusEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::HTTPStatusEvent(*this)));
+    }
+
+    // @0x14245b4c0
+    Pickable<Traits> HTTPStatusEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) HTTPStatusEvent(vm));
+    }
+}}
+
+// ---- IEventDispatcher ----
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142460120
+    IEventDispatcher::IEventDispatcher(VM& vm)
+        : Traits(vm, AS3::fl_events::IEventDispatcherCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_events::IEventDispatcherCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x14245cc10
+    Pickable<Traits> IEventDispatcher::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IEventDispatcher(vm));
+    }
+}}
+
+// ---- IMEEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142460370
+    IMEEvent::IMEEvent(InstanceTraits::Traits& t)
+        : TextEvent(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x142460340
+    IMEEvent::IMEEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x60);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142460310
+    IMEEvent::IMEEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , ImeComposition("imeComposition")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142460200
+    IMEEvent::IMEEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::IMEEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::IMEEvent(vm, AS3::fl_events::IMEEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::IMEEvent(*this)));
+    }
+
+    // @0x14245cea0
+    Pickable<Traits> IMEEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IMEEvent(vm));
+    }
+}}
+
+// ---- IOErrorEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142460510
+    IOErrorEvent::IOErrorEvent(InstanceTraits::Traits& t)
+        : ErrorEvent(t)
+        , ErrorText(GetVM().GetStringManager().GetBuiltin(AS3Builtin_empty_))
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x1424604e0
+    IOErrorEvent::IOErrorEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x1424604b0
+    IOErrorEvent::IOErrorEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , IoError("ioError")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x1424603a0
+    IOErrorEvent::IOErrorEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::IOErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::IOErrorEvent(vm, AS3::fl_events::IOErrorEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::IOErrorEvent(*this)));
+    }
+
+}}
+
+// ---- KeyboardEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x1424606d0
+    KeyboardEvent::KeyboardEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , KeyLocation(-1)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x1424606a0
+    KeyboardEvent::KeyboardEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x70);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142460660
+    KeyboardEvent::KeyboardEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , KeyDown("keyDown")
+        , KeyUp("keyUp")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142460550
+    KeyboardEvent::KeyboardEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::KeyboardEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::KeyboardEvent(vm, AS3::fl_events::KeyboardEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::KeyboardEvent(*this)));
+    }
+
+}}
+
+// ---- MouseEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142460a60
+    MouseEvent::MouseEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , RelatedObj(NULL)
+    {
+        AltKey = CtrlKey = ShiftKey = false;
+        Delta = 0;
+        LocalX = LocalY = 0;
+        StageX = StageY = 0;
+        LocalInitialized = false;
+        ButtonsMask = 0;
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x142460a30
+    MouseEvent::MouseEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x90);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142460930
+    MouseEvent::MouseEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Click("click")
+        , ContextMenu("contextMenu")
+        , DoubleClick("doubleClick")
+        , MiddleClick("middleClick")
+        , MiddleMouseDown("middleMouseDown")
+        , MiddleMouseUp("middleMouseUp")
+        , MouseDown("mouseDown")
+        , MouseMove("mouseMove")
+        , MouseOut("mouseOut")
+        , MouseOver("mouseOver")
+        , MouseUp("mouseUp")
+        , MouseWheel("mouseWheel")
+        , RightClick("rightClick")
+        , RightMouseDown("rightMouseDown")
+        , RightMouseUp("rightMouseUp")
+        , RollOut("rollOut")
+        , RollOver("rollOver")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142460750
+    MouseEvent::MouseEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::MouseEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::MouseEvent(vm, AS3::fl_events::MouseEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::MouseEvent(*this)));
+    }
+
+    // @0x14245d120
+    Pickable<Traits> MouseEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MouseEvent(vm));
+    }
+}}
+
+// ---- NetStatusEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142460c60
+    NetStatusEvent::NetStatusEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , Code(GetVM().GetStringManager().CreateEmptyString())
+        , Level(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x142460c30
+    NetStatusEvent::NetStatusEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142460c00
+    NetStatusEvent::NetStatusEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , NetStatus("netStatus")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142460af0
+    NetStatusEvent::NetStatusEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::NetStatusEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::NetStatusEvent(vm, AS3::fl_events::NetStatusEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::NetStatusEvent(*this)));
+    }
+
+}}
+
+// ---- PressAndTapGestureEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142460e70
+    PressAndTapGestureEvent::PressAndTapGestureEvent(InstanceTraits::Traits& t)
+        : GestureEvent(t)
+    {
+        TapLocalX = TapLocalY = 0;
+        TapStageX = TapStageY = 0;
+        TapLocalInitialized = Unk_a9 = false;
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x142460e40
+    PressAndTapGestureEvent::PressAndTapGestureEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0xb0);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142460e10
+    PressAndTapGestureEvent::PressAndTapGestureEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , GesturePressAndTap("gesturePressAndTap")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142460d00
+    PressAndTapGestureEvent::PressAndTapGestureEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::PressAndTapGestureEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::PressAndTapGestureEvent(vm, AS3::fl_events::PressAndTapGestureEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::PressAndTapGestureEvent(*this)));
+    }
+
+}}
+
+// ---- ProgressEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142461040
+    ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , BytesLoaded(0)
+        , BytesTotal(0)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x142461010
+    ProgressEvent::ProgressEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142460fd0
+    ProgressEvent::ProgressEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Progress("progress")
+        , SocketData("socketData")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142460ec0
+    ProgressEvent::ProgressEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::ProgressEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::ProgressEvent(vm, AS3::fl_events::ProgressEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::ProgressEvent(*this)));
+    }
+
+}}
+
+// ---- SecurityErrorEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x1424611c0
+    SecurityErrorEvent::SecurityErrorEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , SecurityError("securityError")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x1424610b0
+    SecurityErrorEvent::SecurityErrorEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::SecurityErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::ErrorEvent(vm, AS3::fl_events::SecurityErrorEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::SecurityErrorEvent(*this)));
+    }
+
+}}
+
+// ---- StageOrientation ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x142461310
+    StageOrientation::StageOrientation(ClassTraits::Traits& t)
+        : Class(t)
+        , Default("default")
+        , RotatedLeft("rotatedLeft")
+        , RotatedRight("rotatedRight")
+        , Unknown("unknown")
+        , UpsideDown("upsideDown")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x1424611f0
+    StageOrientation::StageOrientation(VM& vm)
+        : Traits(vm, AS3::fl_events::StageOrientationCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_events::StageOrientationCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::StageOrientation(*this)));
+    }
+
+}}
+
+// ---- StageOrientationEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x1424614f0
+    StageOrientationEvent::StageOrientationEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+        AfterOrientation.SetNull();
+        BeforeOrientation.SetNull();
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x1424614c0
+    StageOrientationEvent::StageOrientationEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x98);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142461480
+    StageOrientationEvent::StageOrientationEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , OrientationChange("orientationChange")
+        , OrientationChanging("orientationChanging")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142461370
+    StageOrientationEvent::StageOrientationEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::StageOrientationEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::StageOrientationEvent(vm, AS3::fl_events::StageOrientationEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::StageOrientationEvent(*this)));
+    }
+
+    // @0x14245dcb0
+    Pickable<Traits> StageOrientationEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageOrientationEvent(vm));
+    }
+}}
+
+// ---- StatusEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x142461710
+    StatusEvent::StatusEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Status("status")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142461600
+    StatusEvent::StatusEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::StatusEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::StatusEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::StatusEvent(*this)));
+    }
+
+}}
+
+// ---- SyncEvent ----
+
+namespace Classes { namespace fl_events
+{
+    // @0x142461850
+    SyncEvent::SyncEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Sync("sync")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142461740
+    SyncEvent::SyncEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::SyncEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::SyncEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::SyncEvent(*this)));
+    }
+
+}}
+
+// ---- TextEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142461a00
+    TextEvent::TextEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , Text(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x1424619d0
+    TextEvent::TextEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x60);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142461990
+    TextEvent::TextEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Link("link")
+        , TextInput("textInput")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142461880
+    TextEvent::TextEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::TextEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::TextEvent(vm, AS3::fl_events::TextEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::TextEvent(*this)));
+    }
+
+}}
+
+// ---- TimerEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142461c00
+    TimerEvent::TimerEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x142461bd0
+    TimerEvent::TimerEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x58);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142461b90
+    TimerEvent::TimerEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , Timer("timer")
+        , TimerComplete("timerComplete")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142461a80
+    TimerEvent::TimerEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::TimerEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::TimerEvent(vm, AS3::fl_events::TimerEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::TimerEvent(*this)));
+    }
+
+    // @0x1424592a0
+    Pickable<Traits> TimerEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TimerEvent(vm));
+    }
+}}
+
+// ---- TouchEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x142461e70
+    TouchEvent::TouchEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , RelatedObj(NULL)
+    {
+        AltKey = CommandKey = ControlKey = CtrlKey = ShiftKey = false;
+        LocalX = LocalY = StageX = StageY = 0;
+        SizeX = SizeY = 0;
+        Pressure = 1.0;
+        TouchPointID = 0;
+        IsPrimaryTouchPoint = IsRelatedObjectInaccessible = false;
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x142461e40
+    TouchEvent::TouchEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0xa8);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142461dc0
+    TouchEvent::TouchEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , TouchBegin("touchBegin")
+        , TouchEnd("touchEnd")
+        , TouchMove("touchMove")
+        , TouchOut("touchOut")
+        , TouchOver("touchOver")
+        , TouchRollOut("touchRollOut")
+        , TouchRollOver("touchRollOver")
+        , TouchTap("touchTap")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142461c60
+    TouchEvent::TouchEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::TouchEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::TouchEvent(vm, AS3::fl_events::TouchEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::TouchEvent(*this)));
+    }
+
+    // @0x14245da30
+    Pickable<Traits> TouchEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TouchEvent(vm));
+    }
+}}
+
+// ---- TransformGestureEvent ----
+
+namespace Instances { namespace fl_events
+{
+    // @0x1424620d0
+    TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
+        : GestureEvent(t)
+    {
+        ScaleX = ScaleY = 1.0;
+        OffsetX = OffsetY = Rotation = Unk_a0 = 0;
+        Unk_b8 = 0;
+        Unk_c0 = false;
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x1424620a0
+    TransformGestureEvent::TransformGestureEvent(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0xc8);
+    }
+}}
+
+namespace Classes { namespace fl_events
+{
+    // @0x142462050
+    TransformGestureEvent::TransformGestureEvent(ClassTraits::Traits& t)
+        : Class(t)
+        , GesturePan("gesturePan")
+        , GestureRotate("gestureRotate")
+        , GestureSwipe("gestureSwipe")
+        , GestureZoom("gestureZoom")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    // @0x142461f20
+    TransformGestureEvent::TransformGestureEvent(VM& vm)
+        : Traits(vm, AS3::fl_events::TransformGestureEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::TransformGestureEvent(vm, AS3::fl_events::TransformGestureEventCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::TransformGestureEvent(*this)));
+    }
+
+}}
+
+// ---- EventDispatcher (instance) ----
+
+// The listener tables' owner is released out of line; the table destructors (0x1424624f0, 0x142462320, 0x142462140)
+// are instantiated from it.
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform {
+// @0x1424622b0
+template <>
+AutoPtr<GFx::AS3::Instances::fl_events::EventDispatcher::EventDispatcherImpl>::~AutoPtr()
+{
+    Reset();
+}
+}
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_events
+{
+    // @0x14245f780
+    EventDispatcher::EventDispatcher(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , pVM(&t.GetVM())
+        , pImpl()
+    {
+    }
+
+    // @0x1424624c0
+    EventDispatcher::~EventDispatcher()
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    // @0x14245f5d0
+    EventDispatcher::EventDispatcher(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x50);
+        ImplementsInterfaces.PushBack(Multiname(GetVM(), StringDataPtr("flash.events.IEventDispatcher")));
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
@@ -407,3 +1844,144 @@ template struct ThunkFunc0<Instances::fl_events::StageOrientationEvent, 3, ASStr
 // MS2-PIN: ?Func@?$ThunkFunc0@VStageOrientationEvent@fl_events@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VEvent@fl_events@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14245e070
 // MS2-PIN: ?Func@?$ThunkFunc1@VKeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@$08$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14245e120
 // MS2-PIN: ?Func@?$ThunkFunc0@VStageOrientationEvent@fl_events@Instances@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14245e180
+// MS2-PIN: ??_7ActivityEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431536a8
+// MS2-PIN: ??_7ActivityEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143153740
+// MS2-PIN: ??_7AppLifecycleEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431581e0
+// MS2-PIN: ??_7AppLifecycleEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143158278
+// MS2-PIN: ??_7AppLifecycleEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143158130
+// MS2-PIN: ??_7AppLifecycleEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143158048
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143153fd0
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143154068
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153f28
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143153e40
+// MS2-PIN: ??_7ContextMenuEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143154168
+// MS2-PIN: ??_7ContextMenuEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143154200
+// MS2-PIN: ??_7DataEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143154618
+// MS2-PIN: ??_7DataEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431546a8
+// MS2-PIN: ??_7ErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143153cc8
+// MS2-PIN: ??_7ErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143153d58
+// MS2-PIN: ??_7ErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153c20
+// MS2-PIN: ??_7ErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143153b38
+// MS2-PIN: ??_7Event@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143153538
+// MS2-PIN: ??_7Event@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431535c8
+// MS2-PIN: ??_7Event@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153498
+// MS2-PIN: ??_7Event@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431533b8
+// MS2-PIN: ??_7EventDispatcher@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143154500
+// MS2-PIN: ??_7EventPhase@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143156a20
+// MS2-PIN: ??_7EventPhase@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156ab0
+// MS2-PIN: ??_7FocusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431561c0
+// MS2-PIN: ??_7FocusEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156250
+// MS2-PIN: ??_7FocusEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143156118
+// MS2-PIN: ??_7FocusEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143156030
+// MS2-PIN: ??_7FullScreenEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143156c58
+// MS2-PIN: ??_7FullScreenEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156cf0
+// MS2-PIN: ??_7GestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155228
+// MS2-PIN: ??_7GestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431552c0
+// MS2-PIN: ??_7GestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155180
+// MS2-PIN: ??_7GesturePhase@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143157ec8
+// MS2-PIN: ??_7GesturePhase@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143157f60
+// MS2-PIN: ??_7HTTPStatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143156de0
+// MS2-PIN: ??_7HTTPStatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156e78
+// MS2-PIN: ??_7IEventDispatcher@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143156f90
+// MS2-PIN: ??_7IMEEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431571b0
+// MS2-PIN: ??_7IMEEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143157240
+// MS2-PIN: ??_7IMEEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143157108
+// MS2-PIN: ??_7IMEEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143157028
+// MS2-PIN: ??_7IOErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431564c8
+// MS2-PIN: ??_7IOErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156560
+// MS2-PIN: ??_7IOErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143156420
+// MS2-PIN: ??_7IOErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143156338
+// MS2-PIN: ??_7KeyboardEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155ba0
+// MS2-PIN: ??_7KeyboardEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143155c38
+// MS2-PIN: ??_7KeyboardEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155af8
+// MS2-PIN: ??_7KeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143155a10
+// MS2-PIN: ??_7MouseEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143154c18
+// MS2-PIN: ??_7MouseEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143154ca8
+// MS2-PIN: ??_7MouseEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143154b70
+// MS2-PIN: ??_7NetStatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431567d8
+// MS2-PIN: ??_7NetStatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156870
+// MS2-PIN: ??_7NetStatusEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143156730
+// MS2-PIN: ??_7NetStatusEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143156648
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155878
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143155918
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431557c8
+// MS2-PIN: ??_7ProgressEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155eb0
+// MS2-PIN: ??_7ProgressEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143155f48
+// MS2-PIN: ??_7ProgressEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155e08
+// MS2-PIN: ??_7SecurityErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143157520
+// MS2-PIN: ??_7SecurityErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431575b8
+// MS2-PIN: ??_7StageOrientation@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431586e0
+// MS2-PIN: ??_7StageOrientation@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143158778
+// MS2-PIN: ??_7StageOrientationEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143158520
+// MS2-PIN: ??_7StageOrientationEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431585c0
+// MS2-PIN: ??_7StageOrientationEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143158470
+// MS2-PIN: ??_7StageOrientationEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143158380
+// MS2-PIN: ??_7StatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431576b8
+// MS2-PIN: ??_7StatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143157750
+// MS2-PIN: ??_7SyncEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143157838
+// MS2-PIN: ??_7SyncEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431578c8
+// MS2-PIN: ??_7TextEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431539c0
+// MS2-PIN: ??_7TextEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143153a50
+// MS2-PIN: ??_7TextEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153918
+// MS2-PIN: ??_7TextEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143153838
+// MS2-PIN: ??_7TimerEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143157b60
+// MS2-PIN: ??_7TimerEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143157bf0
+// MS2-PIN: ??_7TimerEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143157ab8
+// MS2-PIN: ??_7TimerEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431579d0
+// MS2-PIN: ??_7TouchEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143154f20
+// MS2-PIN: ??_7TouchEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143154fb0
+// MS2-PIN: ??_7TouchEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143154e78
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155548
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431555e8
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155498
+// MS2-PIN: ??_7EventDispatcher@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143154468
+// MS2-PIN: ??_7IEventDispatcher@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143156f90
+// MS2-PIN: ??_7GestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143155098
+// MS2-PIN: ??_7MouseEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143154a88
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431556d8
+// MS2-PIN: ??_7ProgressEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143155d20
+// MS2-PIN: ??_7TouchEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143154d90
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431553a8
+// MS2-PIN: ??_GActivityEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424626c0
+// MS2-PIN: ??_GActivityEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462750
+// MS2-PIN: ??_GAppLifecycleEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424627b0
+// MS2-PIN: ??_GAppLifecycleEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462840
+// MS2-PIN: ??_GAppLifecycleEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424628a0
+// MS2-PIN: ??_GAppLifecycleEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462900
+// MS2-PIN: ??_GAsyncErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462990
+// MS2-PIN: ??_GAsyncErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462a20
+// MS2-PIN: ??_GAsyncErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462a80
+// MS2-PIN: ??_GAsyncErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462ae0
+// MS2-PIN: ??_GContextMenuEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462b90
+// MS2-PIN: ??_GContextMenuEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462c20
+// MS2-PIN: ??_GDataEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462c80
+// MS2-PIN: ??_GDataEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462d10
+// MS2-PIN: ??_GErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462d70
+// MS2-PIN: ??_GErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462e00
+// MS2-PIN: ??_GErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462e60
+// MS2-PIN: ??_GErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462ec0
+// MS2-PIN: ??_GEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462f30
+// MS2-PIN: ??_GEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142462fc0
+// MS2-PIN: ??_GEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463020
+// MS2-PIN: ??_GEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463080
+// MS2-PIN: ??_GEventDispatcher@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463170
+// MS2-PIN: ??_GEventPhase@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463300
+// MS2-PIN: ??_GEventPhase@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463390
+// MS2-PIN: ??_GFocusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424633f0
+// MS2-PIN: ??_GFocusEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463480
+// MS2-PIN: ??_GFocusEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424634e0
+// MS2-PIN: ??_GFocusEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463540
+// MS2-PIN: ??_GFullScreenEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424635d0
+// MS2-PIN: ??_GFullScreenEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463660
+// MS2-PIN: ??_GGestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424636c0
+// MS2-PIN: ??_GGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463750
+// MS2-PIN: ??_GGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424637b0
+// MS2-PIN: ??_GGesturePhase@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463870
+// MS2-PIN: ??_GEventDispatcher@fl_events@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424630e0
+// MS2-PIN: ??_GGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463810
+// MS2-PIN: ??_7EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431542f0
+// MS2-PIN: ??_GEventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463290
+// MS2-PIN: ??_7EventDispatcher@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431543c0
+// MS2-PIN: ??_GEventDispatcher@fl_events@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142463230
+// MS2-PIN: ??1?$ArrayDataBase@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@U?$AllocatorLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01@7@UArrayDefaultPolicy@7@@Scaleform@@QEAA@XZ 0x142462140
+// MS2-PIN: ??1ListenersHash@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@QEAA@XZ 0x1424624f0
