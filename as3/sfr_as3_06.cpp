@@ -73,6 +73,23 @@ namespace fl_display
     extern const ClassInfo StageScaleModeCI;
 }
 
+// The exe never calls a Multiname copy constructor out of line; defined inline here for the PushBack below.
+inline Multiname::Multiname(const Multiname& other)
+    : Kind(other.Kind)
+    , Obj(other.Obj)
+    , Name(other.Name)
+{
+}
+
+namespace InstanceTraits
+{
+    // @0x142446010
+    void CTraits::RegisterImplementedInterface(const Multiname& mn)
+    {
+        ImplementsInterfaces.PushBack(mn);
+    }
+}
+
 // ---- AVM1Movie ----
 
 namespace ClassTraits { namespace fl_display
