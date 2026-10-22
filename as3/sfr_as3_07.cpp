@@ -113,6 +113,10 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_errors.h"
 
+// Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
+Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
+void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // ---- flash.errors: class traits (instances are InstanceTraits::fl::Error, class objects plain Class) ----
@@ -816,6 +820,147 @@ namespace Instances { namespace fl_display
     {
         SPtr<Instances::fl_display::DisplayObject> result;
         upStateGet(result);
+        return result;
+    }
+}}
+
+// ---- flash.display: small natives ----
+
+namespace Instances { namespace fl_display
+{
+    // @0x142449cf0
+    void BitmapData::dispose(const Value& result)
+    {
+        SF_UNUSED(result);
+        pImage = NULL;
+        Width = 0;
+        Height = 0;
+    }
+
+    // @0x1424496a0
+    void MovieClip::currentFrameGet(SInt32& result)
+    {
+        if (!pDispObj)
+            result = 0;
+        else
+            result = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->GetCurrentFrame() + 1;
+    }
+
+    // @0x1424509c0
+    void FrameLabel::nameGet(ASString& result)
+    {
+        result = FrameName;
+    }
+
+    // @0x142451a50
+    void Bitmap::pixelSnappingSet(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        PixelSnapping = FUN_142446f30(this, value.ToCStr());
+        if (pDispObj)
+            FUN_142520b20(pDispObj);
+    }
+}}
+
+// ---- flash.display: getters this build does not implement (warn and return null) ----
+
+namespace Instances { namespace fl_display
+{
+    void DisplayObject::accessibilityPropertiesGet(SPtr<Instances::fl_accessibility::AccessibilityProperties>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::DisplayObject::accessibilityPropertiesGet() is not implemented\n");
+    }
+
+    // @0x142447440
+    SPtr<Instances::fl_accessibility::AccessibilityProperties> DisplayObject::accessibilityPropertiesGet()
+    {
+        SPtr<Instances::fl_accessibility::AccessibilityProperties> result;
+        accessibilityPropertiesGet(result);
+        return result;
+    }
+
+    void LoaderInfo::bytesGet(SPtr<Instances::fl_utils::ByteArray>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::bytesGet() is not implemented\n");
+    }
+
+    // @0x142448810
+    SPtr<Instances::fl_utils::ByteArray> LoaderInfo::bytesGet()
+    {
+        SPtr<Instances::fl_utils::ByteArray> result;
+        bytesGet(result);
+        return result;
+    }
+
+    void Stage::fullScreenSourceRectGet(SPtr<Instances::fl_geom::Rectangle>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::fullScreenSourceRectGet() is not implemented\n");
+    }
+
+    // @0x14244c4d0
+    SPtr<Instances::fl_geom::Rectangle> Stage::fullScreenSourceRectGet()
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        fullScreenSourceRectGet(result);
+        return result;
+    }
+
+    void LoaderInfo::sharedEventsGet(SPtr<Instances::fl_events::EventDispatcher>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::sharedEventsGet() is not implemented\n");
+    }
+
+    // @0x142453250
+    SPtr<Instances::fl_events::EventDispatcher> LoaderInfo::sharedEventsGet()
+    {
+        SPtr<Instances::fl_events::EventDispatcher> result;
+        sharedEventsGet(result);
+        return result;
+    }
+
+    void SimpleButton::soundTransformGet(SPtr<Instances::fl_media::SoundTransform>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SimpleButton::soundTransformGet() is not implemented\n");
+    }
+
+    // @0x142453320
+    SPtr<Instances::fl_media::SoundTransform> SimpleButton::soundTransformGet()
+    {
+        SPtr<Instances::fl_media::SoundTransform> result;
+        soundTransformGet(result);
+        return result;
+    }
+
+    void Sprite::soundTransformGet(SPtr<Instances::fl_media::SoundTransform>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Sprite::soundTransformGet() is not implemented\n");
+    }
+
+    // @0x142453380
+    SPtr<Instances::fl_media::SoundTransform> Sprite::soundTransformGet()
+    {
+        SPtr<Instances::fl_media::SoundTransform> result;
+        soundTransformGet(result);
+        return result;
+    }
+
+    void Stage::textSnapshotGet(SPtr<Instances::fl_text::TextSnapshot>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::textSnapshotGet() is not implemented\n");
+    }
+
+    // @0x142453e50
+    SPtr<Instances::fl_text::TextSnapshot> Stage::textSnapshotGet()
+    {
+        SPtr<Instances::fl_text::TextSnapshot> result;
+        textSnapshotGet(result);
         return result;
     }
 }}

@@ -46,6 +46,7 @@ namespace Instances { namespace fl_display {
 
         // @0x142447480
         void accessibilityPropertiesGet(SPtr<Instances::fl_accessibility::AccessibilityProperties>& result);
+        SPtr<Instances::fl_accessibility::AccessibilityProperties> accessibilityPropertiesGet();
         // @0x1424474a0
         void accessibilityPropertiesSet(const Value& result, Instances::fl_accessibility::AccessibilityProperties*);
         // @0x142447de0
@@ -556,6 +557,7 @@ namespace Instances { namespace fl_display {
         SPtr<Instances::fl_system::ApplicationDomain> applicationDomainGet();
         // @0x142448850
         void bytesGet(SPtr<Instances::fl_utils::ByteArray>& result);
+        SPtr<Instances::fl_utils::ByteArray> bytesGet();
         // @0x142448870
         void bytesLoadedGet(UInt32& result);
         // @0x1424488d0
@@ -590,6 +592,7 @@ namespace Instances { namespace fl_display {
         void sameDomainGet(bool& result);
         // @0x142453290
         void sharedEventsGet(SPtr<Instances::fl_events::EventDispatcher>& result);
+        SPtr<Instances::fl_events::EventDispatcher> sharedEventsGet();
         // @0x1424539c0
         void swfVersionGet(UInt32& result);
         // @0x1424547b0
@@ -633,6 +636,7 @@ namespace Instances { namespace fl_display {
         void hitAreaSet(const Value& result, Instances::fl_display::Sprite*);
         // @0x1424533c0
         void soundTransformGet(SPtr<Instances::fl_media::SoundTransform>& result);
+        SPtr<Instances::fl_media::SoundTransform> soundTransformGet();
         // @0x142453400
         void soundTransformSet(const Value& result, Instances::fl_media::SoundTransform*);
         // @0x142453670
@@ -832,6 +836,7 @@ namespace Instances { namespace fl_display {
         void overStateSet(const Value& result, Instances::fl_display::DisplayObject*);
         // @0x142453360
         void soundTransformGet(SPtr<Instances::fl_media::SoundTransform>& result);
+        SPtr<Instances::fl_media::SoundTransform> soundTransformGet();
         // @0x1424533e0
         void soundTransformSet(const Value& result, Instances::fl_media::SoundTransform*);
         // @0x142454300
@@ -892,6 +897,7 @@ namespace Instances { namespace fl_display {
         void fullScreenHeightGet(UInt32& result);
         // @0x14244c510
         void fullScreenSourceRectGet(SPtr<Instances::fl_geom::Rectangle>& result);
+        SPtr<Instances::fl_geom::Rectangle> fullScreenSourceRectGet();
         // @0x14244c530
         void fullScreenSourceRectSet(const Value& result, Instances::fl_geom::Rectangle*);
         // @0x14244c550
@@ -956,6 +962,7 @@ namespace Instances { namespace fl_display {
         void tabChildrenSet(const Value& result, bool);
         // @0x142453e90
         void textSnapshotGet(SPtr<Instances::fl_text::TextSnapshot>& result);
+        SPtr<Instances::fl_text::TextSnapshot> textSnapshotGet();
         // @0x142454a90
         void widthGet(Value::Number& result);
         // @0x142454b30
