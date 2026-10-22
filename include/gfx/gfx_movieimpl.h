@@ -49,6 +49,18 @@ struct MovieDefRootNodeLinks
     MovieDefRootNode* pNext;
 };
 
+// (also in gfx_interactiveobject.h)
+#ifndef SF_GFX_FOCUSMOVEDTYPE
+#define SF_GFX_FOCUSMOVEDTYPE
+// How the focus got moved.
+enum FocusMovedType
+{
+    GFx_FocusMovedByMouse    = 1,
+    GFx_FocusMovedByKeyboard = 2,
+    GFx_FocusMovedByAS       = 3
+};
+#endif
+
 class MovieImpl
 {
 public:
@@ -153,7 +165,9 @@ public:
     UInt32           Flags2;                   // +0x3494 (sfr_gfx_06b)
     UByte            Unrecovered_3498[0x58];   // +0x3498
     void*            RenderContext[1];         // +0x34f0 Render::Context (gfx_rendertree.h: the heap first), rest unrecovered
-    UByte            Unrecovered_34f8[0x3650 - 0x34f8]; // +0x34f8 rest of the context, the tail of the movie
+    UByte            Unrecovered_34f8[0x3630 - 0x34f8]; // +0x34f8 rest of the context, the tail of the movie
+    int              DeviceOrientation;        // +0x3630 OrientationEvent: 0 default, 1 rotated left, 2 right, 3 upside down (sfr19)
+    UByte            Unrecovered_3634[0x3650 - 0x3634]; // +0x3634
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
     bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
@@ -215,6 +229,8 @@ public:
 
     // Takes the keyboard focus off ch in every focus group (0x142574820).
     void ResetFocusForChar(InteractiveObject* ch);
+    // Moves the keyboard focus of the controller's focus group to ch, null to clear it (0x142575cd0, sfr19).
+    void SetKeyboardFocusTo(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt);
 
     // (appended for the display list, sfr_gfx_06c)
     // Keeps a movie def (and so its heap) alive until the render thread let go of its nodes (0x14256be80).

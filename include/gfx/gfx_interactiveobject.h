@@ -20,6 +20,8 @@ enum PlayState
     State_Stopped
 };
 
+#ifndef SF_GFX_FOCUSMOVEDTYPE
+#define SF_GFX_FOCUSMOVEDTYPE
 // How the focus got moved.
 enum FocusMovedType
 {
@@ -27,6 +29,7 @@ enum FocusMovedType
     GFx_FocusMovedByKeyboard = 2,
     GFx_FocusMovedByAS       = 3
 };
+#endif
 
 class InteractiveObject : public DisplayObject
 {

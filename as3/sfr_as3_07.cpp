@@ -129,6 +129,10 @@ public:
     Color GetPixel32(SInt32 x, SInt32 y);               // 0x1425ecd50
     bool  SetPixel(SInt32 x, SInt32 y, Color c);        // 0x1425eef90
     bool  SetPixel32(SInt32 x, SInt32 y, Color c);      // 0x1425eef20
+    bool  IsTransparent() const { return Transparent; }
+
+    UByte Unrecovered_00[0x48];
+    bool  Transparent;                                  // +0x48 the image has an alpha channel
 };
 }} // namespace Scaleform::Render
 
@@ -1012,6 +1016,26 @@ namespace Instances { namespace fl_display
         pDispObj->SetMask(pmask);
     }
 
+    // InteractiveObject::ModifyOptimizedPlayList as these natives inline it: the play list bits tested one at a time.
+    static inline bool InOptAdvList(const GFx::InteractiveObject* ch) { return ((ch->Flags >> 21) & 1) != 0; }
+    static inline bool MarkedToLeaveAdvList(const GFx::InteractiveObject* ch) { return ((ch->Flags >> 22) & 1) != 0; }
+    static inline void ModifyOptPlayList(GFx::InteractiveObject* pio)
+    {
+        switch (pio->CheckAdvanceStatus(InOptAdvList(pio) && !MarkedToLeaveAdvList(pio)))
+        {
+        case 1:  pio->AddToOptimizedPlayList(); break;
+        case -1: pio->MarkToRemoveFromOptimizedPlayList(); break;
+        }
+    }
+
+    // @0x142453800
+    void Sprite::stopDrag(const Value& result)
+    {
+        SF_UNUSED(result);
+        pDispObj->GetMovieImpl()->pKeepAdvancingChar = NULL;    // StopDrag: the drag state lets go of its character
+        ModifyOptPlayList(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()));
+    }
+
     // @0x14244ecc0
     void Sprite::hitAreaSet(const Value& result, Instances::fl_display::Sprite* value)
     {
@@ -1109,6 +1133,42 @@ namespace Instances { namespace fl_display
     void Bitmap::bitmapDataGet(SPtr<Instances::fl_display::BitmapData>& result)
     {
         result = pBitmapData;
+    }
+
+    // Cast-only view of the AS3 part of an interactive display object (AS3::AvmInteractiveObj): its
+    // AvmInteractiveObjBase interface sits at +0x30, the AS3 flags at +0x39 (bit 1: doubleClickEnabled).
+    struct AvmIntObjHead
+    {
+        virtual ~AvmIntObjHead();
+        UByte   Unrecovered_08[0x28];
+    };
+    struct AvmIntObjView : AvmIntObjHead, AvmInteractiveObjBase
+    {
+        UByte   Unrecovered_38;
+        UByte   AS3Flags;   // +0x39
+
+        bool IsDoubleClickEnabled() const { return (AS3Flags & 2) != 0; }
+        void SetDoubleClickEnabled(bool v) { v ? AS3Flags |= 2 : AS3Flags &= ~2; }
+    };
+    static AvmIntObjView* ToAvmIntObjView(GFx::DisplayObject* pdobj)
+    {
+        GFx::InteractiveObject* pio = pdobj->IsInteractiveObject() ? static_cast<GFx::InteractiveObject*>(pdobj) : NULL;
+        if (!pio)
+            return NULL;
+        return static_cast<AvmIntObjView*>(pio->GetAvmObjImpl()->ToAvmInteractiveObjBase());
+    }
+
+    // @0x142449d20
+    void InteractiveObject::doubleClickEnabledGet(bool& result)
+    {
+        result = ToAvmIntObjView(pDispObj)->IsDoubleClickEnabled();
+    }
+
+    // @0x142449d80
+    void InteractiveObject::doubleClickEnabledSet(const Value& result, bool value)
+    {
+        SF_UNUSED(result);
+        ToAvmIntObjView(pDispObj)->SetDoubleClickEnabled(value);
     }
 
     // @0x1424490d0
@@ -1273,6 +1333,67 @@ namespace Instances { namespace fl_display
     {
         MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
         result = AsMovieSlots(pmovie)->GetMovieDef()->GetFrameRate();
+    }
+
+    // The focused character of controller 0's focus group.
+    static Ptr<GFx::InteractiveObject> FocusedCharacter0(MovieImpl* pmovie)
+    {
+        return pmovie->FocusGroups[pmovie->FocusGroupIndexes[0]].LastFocused;
+    }
+
+    // @0x14244c080
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<InteractiveObject>::operator= instance (0x14243d790); ours inlines it
+    void Stage::focusGet(SPtr<Instances::fl_display::InteractiveObject>& result)
+    {
+        Ptr<GFx::InteractiveObject> focused = FocusedCharacter0(static_cast<ASVM&>(GetVM()).GetMovieImpl());
+        if (focused)
+        {
+            // the AS3 part (AS3::AvmDisplayObj, as3_avm.h) sits 0x30 before its AvmInteractiveObjBase interface and
+            // keeps the object raw at +0x10 or as a tagged SPtr at +0x08
+            AvmInteractiveObjBase* pavm = focused->GetAvmIntObj();
+            const UPInt* pas3 = pavm ? reinterpret_cast<const UPInt*>(reinterpret_cast<UByte*>(pavm) - 0x30) : NULL;
+            UPInt raw = pas3[2];
+            if (!raw)
+                raw = pas3[1];
+            if (raw & 1)
+                raw -= 1;
+            Instances::fl_display::DisplayObject* ido = reinterpret_cast<Instances::fl_display::DisplayObject*>(raw);
+            BuiltinTraitsType tt = ido->GetTraits().GetTraitsType();
+            if (tt == Traits_InteractiveObject || tt >= Traits_DisplayObjectContainer)
+            {
+                result = static_cast<Instances::fl_display::InteractiveObject*>(ido);
+                return;
+            }
+        }
+        result = NULL;
+    }
+
+    // @0x14244c2b0
+    void Stage::focusSet(const Value& result, Instances::fl_display::InteractiveObject* value)
+    {
+        SF_UNUSED(result);
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        Ptr<GFx::InteractiveObject> newfocus;
+        if (value)
+            newfocus = static_cast<GFx::InteractiveObject*>(value->pDispObj.GetPtr());
+        Ptr<GFx::InteractiveObject> focused = FocusedCharacter0(asvm.GetMovieImpl());
+        if (focused != newfocus)
+            asvm.GetMovieImpl()->SetKeyboardFocusTo(newfocus, 0, GFx_FocusMovedByAS);
+    }
+
+    // @0x142449be0
+    void Stage::deviceOrientationGet(ASString& result)
+    {
+        const char* porient;
+        switch (static_cast<ASVM&>(GetVM()).GetMovieImpl()->DeviceOrientation)
+        {
+        case 0:  porient = "default"; break;
+        case 1:  porient = "rotatedLeft"; break;
+        case 2:  porient = "rotatedRight"; break;
+        case 3:  porient = "upsideDown"; break;
+        default: porient = "unknown"; break;
+        }
+        result = GetVM().GetStringManager().CreateConstString(porient);
     }
 
     // @0x142447b90
@@ -1531,6 +1652,28 @@ namespace Instances { namespace fl_display
         result = 0;
     }
 
+    // MovieDefImpl's GetBytesLoaded / GetFileBytes.
+    static inline UInt32 MovieBytesLoaded(MovieDefImpl* pdef) { return pdef->pBindData->GetBytesLoaded(); }
+    static inline UInt32 MovieFileBytes(MovieDefImpl* pdef)   { return pdef->pBindData->GetDataDef()->GetFileBytes(); }
+
+    // @0x142448870
+    void LoaderInfo::bytesLoadedGet(UInt32& result)
+    {
+        if (GetContentDispObj())
+            result = MovieBytesLoaded(GetContentDispObj()->GetResourceMovieDef());
+        else
+            result = BytesLoaded;
+    }
+
+    // @0x1424488d0
+    void LoaderInfo::bytesTotalGet(UInt32& result)
+    {
+        if (GetContentDispObj())
+            result = MovieFileBytes(GetContentDispObj()->GetResourceMovieDef());
+        else
+            result = BytesTotal;
+    }
+
     // @0x14244c3b0
     void LoaderInfo::frameRateGet(Value::Number& result)
     {
@@ -1538,6 +1681,18 @@ namespace Instances { namespace fl_display
         {
             GFx::DisplayObject* pdisp = Ptr<GFx::DisplayObject>(Content->pDispObj);
             result = pdisp->GetResourceMovieDef()->GetFrameRate();
+            return;
+        }
+        result = 0;
+    }
+
+    // @0x1424539c0
+    void LoaderInfo::swfVersionGet(UInt32& result)
+    {
+        if (Content)
+        {
+            GFx::DisplayObject* pdisp = Ptr<GFx::DisplayObject>(Content->pDispObj);
+            result = pdisp->GetResourceMovieDef()->GetVersion();
             return;
         }
         result = 0;
@@ -1567,6 +1722,18 @@ namespace Instances { namespace fl_display
         else
             result = GetVM().GetStringManager().CreateEmptyString();
     }
+    // @0x142454610
+    void BitmapData::transparentGet(bool& result)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        result = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->IsTransparent();
+    }
+
     // @0x14244d460
     void BitmapData::getPixel32(UInt32& result, SInt32 x, SInt32 y)
     {
