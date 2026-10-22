@@ -131,6 +131,117 @@ namespace Classes { namespace fl_utils {
 
 }}
 
+namespace Classes { namespace fl_utils {
+    class Endian : public Class
+    {
+    public:
+        Endian(ClassTraits::Traits& t);
+        // @0x1424be500
+        virtual const char* GetAS3ObjectType() const { return "Classes::Endian"; }
+
+        const char* BIG_ENDIAN;         // +0x50
+        const char* LITTLE_ENDIAN;      // +0x58
+    };
+
+}}
+
+namespace InstanceTraits { namespace fl_utils {
+    // Traits of Dictionary instances: array-like, 0x48 bytes per instance.
+    class Dictionary : public CTraits
+    {
+    public:
+        Dictionary(VM& vm, const ClassInfo& ci);
+        // @0x1424be4d0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Dictionary"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424beb70
+    };
+
+    class Timer : public CTraits
+    {
+    public:
+        Timer(VM& vm, const ClassInfo& ci);
+        // @0x1424be560
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Timer"; }
+        virtual void MakeObject(Value& result, Traits& t);      // 0x1424bebe0
+    };
+
+}}
+
+namespace ClassTraits { namespace fl_utils {
+    class ByteArray : public Traits
+    {
+    public:
+        ByteArray(VM& vm);                                      // 0x1424bc0e0
+        // @0x1424be480
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::ByteArray"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Dictionary : public Traits
+    {
+    public:
+        Dictionary(VM& vm);
+        // @0x1424be4c0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Dictionary"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Endian : public Traits
+    {
+    public:
+        Endian(VM& vm);
+        // @0x1424be4f0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Endian"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class IDataInput : public Traits
+    {
+    public:
+        IDataInput(VM& vm);
+        // @0x1424be510
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::IDataInput"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class IDataOutput : public Traits
+    {
+    public:
+        IDataOutput(VM& vm);
+        // @0x1424be520
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::IDataOutput"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class IExternalizable : public Traits
+    {
+    public:
+        IExternalizable(VM& vm);
+        // @0x1424be530
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::IExternalizable"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Proxy : public Traits
+    {
+    public:
+        Proxy(VM& vm);
+        // @0x1424be540
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Proxy"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class Timer : public Traits
+    {
+    public:
+        Timer(VM& vm);
+        // @0x1424be550
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Timer"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 #endif

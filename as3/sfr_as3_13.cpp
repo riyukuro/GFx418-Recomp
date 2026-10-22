@@ -926,6 +926,168 @@ namespace Classes { namespace fl_ui
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// ==== flash.utils: class traits factories, instance traits and the Endian class =====================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace fl_utils
+{
+    extern const ClassInfo ByteArrayCI;
+    extern const ClassInfo DictionaryCI;
+    extern const ClassInfo EndianCI;
+    extern const ClassInfo IDataInputCI;
+    extern const ClassInfo IDataOutputCI;
+    extern const ClassInfo IExternalizableCI;
+    extern const ClassInfo ProxyCI;
+    extern const ClassInfo TimerCI;
+}
+
+// The traits constructors below are inlined into their factories in the exe.
+namespace InstanceTraits { namespace fl_utils
+{
+    inline Dictionary::Dictionary(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        Flags |= ArrayLikeMask;
+        TraitsType = Traits_Dictionary;
+        SetMemSize(0x48);
+    }
+
+    inline Timer::Timer(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_utils
+{
+    inline Endian::Endian(ClassTraits::Traits& t)
+        : Class(t)
+        , BIG_ENDIAN("bigEndian")
+        , LITTLE_ENDIAN("littleEndian")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_utils
+{
+    inline Dictionary::Dictionary(VM& vm)
+        : Traits(vm, AS3::fl_utils::DictionaryCI)
+    {
+        TraitsType = Traits_Dictionary;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_utils::Dictionary(vm, AS3::fl_utils::DictionaryCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline Endian::Endian(VM& vm)
+        : Traits(vm, AS3::fl_utils::EndianCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_utils::EndianCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_utils::Endian(*this)));
+    }
+
+    inline IDataInput::IDataInput(VM& vm)
+        : Traits(vm, AS3::fl_utils::IDataInputCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_utils::IDataInputCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline IDataOutput::IDataOutput(VM& vm)
+        : Traits(vm, AS3::fl_utils::IDataOutputCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_utils::IDataOutputCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline IExternalizable::IExternalizable(VM& vm)
+        : Traits(vm, AS3::fl_utils::IExternalizableCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_utils::IExternalizableCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline Proxy::Proxy(VM& vm)
+        : Traits(vm, AS3::fl_utils::ProxyCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_utils::ProxyCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    inline Timer::Timer(VM& vm)
+        : Traits(vm, AS3::fl_utils::TimerCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_utils::Timer(vm, AS3::fl_utils::TimerCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
+    // @0x1424bb1f0
+    Pickable<Traits> Dictionary::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Dictionary(vm));
+    }
+
+    // @0x1424bb340
+    Pickable<Traits> Endian::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Endian(vm));
+    }
+
+    // @0x1424bb490
+    Pickable<Traits> IDataInput::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IDataInput(vm));
+    }
+
+    // @0x1424bb5b0
+    Pickable<Traits> IDataOutput::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IDataOutput(vm));
+    }
+
+    // @0x1424bb6d0
+    Pickable<Traits> IExternalizable::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IExternalizable(vm));
+    }
+
+    // @0x1424bb7f0
+    Pickable<Traits> Proxy::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Proxy(vm));
+    }
+
+    // @0x1424bb910
+    Pickable<Traits> ByteArray::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ByteArray(vm));
+    }
+
+    // @0x1424bb970
+    Pickable<Traits> Timer::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Timer(vm));
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc1@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5730
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$00VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5830
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b58a0
@@ -1037,3 +1199,23 @@ namespace Classes { namespace fl_ui
 // MS2-PIN: ??_GMouseCursor@fl_ui@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424b8940
 // MS2-PIN: ??_GMultitouch@fl_ui@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424b8a30
 // MS2-PIN: ??_GMultitouchInputMode@fl_ui@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424b8b20
+// MS2-PIN: ??_7Dictionary@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171980
+// MS2-PIN: ??_7Endian@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171a10
+// MS2-PIN: ??_7IDataInput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171b80
+// MS2-PIN: ??_7IDataOutput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171c10
+// MS2-PIN: ??_7IExternalizable@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171ca8
+// MS2-PIN: ??_7Proxy@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171d40
+// MS2-PIN: ??_7Timer@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171f38
+// MS2-PIN: ??_7Dictionary@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431718d8
+// MS2-PIN: ??_7Timer@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143171e98
+// MS2-PIN: ??_7Endian@fl_utils@Classes@AS3@GFx@Scaleform@@6B@ 0x143171aa0
+// MS2-PIN: ??_GDictionary@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bcf70
+// MS2-PIN: ??_GEndian@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd0d0
+// MS2-PIN: ??_GIDataInput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd1c0
+// MS2-PIN: ??_GIDataOutput@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd250
+// MS2-PIN: ??_GIExternalizable@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd2e0
+// MS2-PIN: ??_GProxy@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd370
+// MS2-PIN: ??_GTimer@fl_utils@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd400
+// MS2-PIN: ??_GDictionary@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd000
+// MS2-PIN: ??_GTimer@fl_utils@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd490
+// MS2-PIN: ??_GEndian@fl_utils@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424bd160
