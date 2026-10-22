@@ -53,6 +53,7 @@ namespace Instances { namespace fl_text {
     class StaticText : public Instances::fl_display::DisplayObject
     {
     public:
+        StaticText(InstanceTraits::Traits& t);   // 0x1424a8d20
         // @0x1424b4d00
         void textGet(ASString& result);
     };
@@ -61,6 +62,7 @@ namespace Instances { namespace fl_text {
     class StyleSheet : public Instances::fl_events::EventDispatcher
     {
     public:
+        StyleSheet(InstanceTraits::Traits& t);   // 0x1424a8e80
         // @0x1424afea0
         void clear(const Value& result);
         // @0x1424b15e0
@@ -79,6 +81,7 @@ namespace Instances { namespace fl_text {
     class TextField : public Instances::fl_display::InteractiveObject
     {
     public:
+        TextField(InstanceTraits::Traits& t);   // 0x1424a9290
         // @0x1424af880
         void alwaysShowSelectionGet(bool& result);
         // @0x1424af8a0
@@ -253,6 +256,7 @@ namespace Instances { namespace fl_text {
     class TextFormat : public Instances::fl::Object
     {
     public:
+        TextFormat(InstanceTraits::Traits& t);   // 0x1424a9690
         // @0x1424af820
         void alignGet(ASString& result);
         // @0x1424af870
@@ -347,6 +351,7 @@ namespace Instances { namespace fl_text {
     class TextSnapshot : public Instances::fl::Object
     {
     public:
+        TextSnapshot(InstanceTraits::Traits& t);   // 0x1424a9ea0
         // @0x1424afe80
         void charCountGet(SInt32& result);
         // @0x1424b07e0
@@ -366,7 +371,6 @@ namespace Instances { namespace fl_text {
         // @0x1424b4360
         void setSelected(const Value& result, SInt32, SInt32, bool);
     };
-
 }}
 
 namespace Classes { namespace fl_text {
@@ -554,6 +558,81 @@ namespace InstanceTraits { namespace fl_text {
             result.Pick(new(t.Alloc()) InstanceType(t));
         }
     };
+
+    class StaticText : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::StaticText InstanceType;
+
+        StaticText(VM& vm, const ClassInfo& ci);
+        // @0x1424ac530
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::StaticText"; }
+        // @0x1424ad5f0
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
+
+    class StyleSheet : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::StyleSheet InstanceType;
+
+        StyleSheet(VM& vm, const ClassInfo& ci);
+        // @0x1424ac560
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::StyleSheet"; }
+        // @0x1424ad650
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
+
+    class TextField : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::TextField InstanceType;
+
+        TextField(VM& vm, const ClassInfo& ci);
+        // @0x1424ac5d0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextField"; }
+        // @0x1424ad6e0
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
+
+    class TextFormat : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::TextFormat InstanceType;
+
+        TextFormat(VM& vm, const ClassInfo& ci);
+        // @0x1424ac640
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextFormat"; }
+        // @0x1424ad740
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
+
+    class TextSnapshot : public CTraits
+    {
+    public:
+        typedef Instances::fl_text::TextSnapshot InstanceType;
+
+        TextSnapshot(VM& vm, const ClassInfo& ci);
+        // @0x1424ac6e0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextSnapshot"; }
+        // @0x1424ad800
+        virtual void MakeObject(Value& result, Traits& t)
+        {
+            result.Pick(new(t.Alloc()) InstanceType(t));
+        }
+    };
 }}
 
 namespace ClassTraits { namespace fl_text {
@@ -674,6 +753,50 @@ namespace ClassTraits { namespace fl_text {
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
 
+    class StaticText : public Traits
+    {
+    public:
+        StaticText(VM& vm);
+        // @0x1424ac520
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::StaticText"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class StyleSheet : public Traits
+    {
+    public:
+        StyleSheet(VM& vm);
+        // @0x1424ac550
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::StyleSheet"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextField : public Traits
+    {
+    public:
+        TextField(VM& vm);
+        // @0x1424ac5c0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextField"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextFormat : public Traits
+    {
+    public:
+        TextFormat(VM& vm);
+        // @0x1424ac630
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextFormat"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
+
+    class TextSnapshot : public Traits
+    {
+    public:
+        TextSnapshot(VM& vm);
+        // @0x1424ac6d0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextSnapshot"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);
+    };
 }}
 
 }}} // namespace Scaleform::GFx::AS3

@@ -1310,6 +1310,175 @@ namespace Instances { namespace fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// ==== flash.text: StaticText, StyleSheet, TextField, TextFormat, TextSnapshot traits =========================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace fl_text
+{
+    extern const ClassInfo StaticTextCI;
+    extern const ClassInfo StyleSheetCI;
+    extern const ClassInfo TextFieldCI;
+    extern const ClassInfo TextFormatCI;
+    extern const ClassInfo TextSnapshotCI;
+}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a0dd0
+    Pickable<Traits> TextFormat::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextFormat(vm));
+    }
+
+    // @0x1424a5d40
+    Pickable<Traits> StaticText::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StaticText(vm));
+    }
+
+    // @0x1424a62f0
+    Pickable<Traits> TextSnapshot::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextSnapshot(vm));
+    }
+
+    // @0x1424a6f00
+    Pickable<Traits> TextField::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextField(vm));
+    }
+
+    // @0x1424a77a0
+    Pickable<Traits> StyleSheet::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StyleSheet(vm));
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a8bf0
+    StaticText::StaticText(VM& vm)
+        : Traits(vm, AS3::fl_text::StaticTextCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::StaticText(vm, AS3::fl_text::StaticTextCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // The instance layout is not recovered yet, so the size is the exe's constant.
+    // @0x1424a8cf0
+    StaticText::StaticText(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a8d50
+    StyleSheet::StyleSheet(VM& vm)
+        : Traits(vm, AS3::fl_text::StyleSheetCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::StyleSheet(vm, AS3::fl_text::StyleSheetCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // The instance layout is not recovered yet, so the size is the exe's constant.
+    // @0x1424a8e50
+    StyleSheet::StyleSheet(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x80);
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9160
+    TextField::TextField(VM& vm)
+        : Traits(vm, AS3::fl_text::TextFieldCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::TextField(vm, AS3::fl_text::TextFieldCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // The instance layout is not recovered yet, so the size is the exe's constant.
+    // @0x1424a9260
+    TextField::TextField(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9560
+    TextFormat::TextFormat(VM& vm)
+        : Traits(vm, AS3::fl_text::TextFormatCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::TextFormat(vm, AS3::fl_text::TextFormatCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // The instance layout is not recovered yet, so the size is the exe's constant.
+    // @0x1424a9660
+    TextFormat::TextFormat(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x260);
+    }
+}}
+
+namespace ClassTraits { namespace fl_text
+{
+    // @0x1424a9d70
+    TextSnapshot::TextSnapshot(VM& vm)
+        : Traits(vm, AS3::fl_text::TextSnapshotCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_text::TextSnapshot(vm, AS3::fl_text::TextSnapshotCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace InstanceTraits { namespace fl_text
+{
+    // The instance layout is not recovered yet, so the size is the exe's constant.
+    // @0x1424a9e70
+    TextSnapshot::TextSnapshot(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x60);
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c560
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$01_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c5c0
@@ -1599,3 +1768,23 @@ namespace Instances { namespace fl_text
 // MS2-PIN: ??_GTextLineMetrics@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab840
 // MS2-PIN: ??_GTextLineMetrics@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab8d0
 // MS2-PIN: ??_GTextLineMetrics@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab930
+// MS2-PIN: ??_7StaticText@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316a688
+// MS2-PIN: ??_7StaticText@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14316a5e0
+// MS2-PIN: ??_7StyleSheet@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316a8c8
+// MS2-PIN: ??_7StyleSheet@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14316a820
+// MS2-PIN: ??_7TextField@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316b150
+// MS2-PIN: ??_7TextField@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14316b0a8
+// MS2-PIN: ??_7TextFormat@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316aac8
+// MS2-PIN: ??_7TextFormat@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14316aa20
+// MS2-PIN: ??_7TextSnapshot@fl_text@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14316bdc8
+// MS2-PIN: ??_7TextSnapshot@fl_text@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14316bd20
+// MS2-PIN: ??_GStaticText@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aadd0
+// MS2-PIN: ??_GStaticText@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aae60
+// MS2-PIN: ??_GStyleSheet@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aaf90
+// MS2-PIN: ??_GStyleSheet@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab020
+// MS2-PIN: ??_GTextField@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab2d0
+// MS2-PIN: ??_GTextField@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab360
+// MS2-PIN: ??_GTextFormat@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab600
+// MS2-PIN: ??_GTextFormat@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ab690
+// MS2-PIN: ??_GTextSnapshot@fl_text@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424aba80
+// MS2-PIN: ??_GTextSnapshot@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424abb10
