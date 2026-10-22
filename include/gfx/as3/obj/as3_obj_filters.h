@@ -33,6 +33,7 @@ namespace Instances { namespace fl_filters {
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_filters::BitmapFilter"; }
 
         Render::Filter* GetFilterData() const { return FilterData; }
+        void SetFilterData(Render::Filter* filter) { FilterData = filter; }
 
         void clone(SPtr<Instances::fl_filters::BitmapFilter>& result);
         SPtr<Instances::fl_filters::BitmapFilter> clone()

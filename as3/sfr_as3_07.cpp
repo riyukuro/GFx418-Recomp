@@ -121,6 +121,7 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/render/render_screentoworld.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display_pixels.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_filters.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
 // VM::IsOfType by class name (exe body).
@@ -694,6 +695,75 @@ namespace Instances { namespace fl_display
         return result;
     }
 
+    // An Array of flash.filters objects, each holding a copy of one of the display object's filters (null for the
+    // filter types AS3 has no class for).
+    // MS2-FUNCTIONAL: register allocation / frame (exe keeps the loop state in r13-r15 under an rbp frame)
+    // @0x14244bb80
+    void DisplayObject::filtersGet(SPtr<Instances::fl::Array>& result)
+    {
+        Pickable<Instances::fl::Array> arr = GetVM().MakeArray();
+        const Render::FilterSet* filters = pDispObj->GetFilters();
+        if (filters && filters->GetFilterCount())
+        {
+            for (unsigned i = 0; i < filters->GetFilterCount(); ++i)
+            {
+                const Render::Filter* filter = filters->GetFilter(i);
+                SPtr<Instances::fl::Object> pobj;
+                const char* name;
+                switch (filter->GetFilterType())
+                {
+                case Render::Filter_Blur:        name = "flash.filters.BlurFilter"; break;
+                case Render::Filter_Shadow:      name = "flash.filters.DropShadowFilter"; break;
+                case Render::Filter_Glow:        name = "flash.filters.GlowFilter"; break;
+                case Render::Filter_Bevel:       name = "flash.filters.BevelFilter"; break;
+                case Render::Filter_ColorMatrix: name = "flash.filters.ColorMatrixFilter"; break;
+                default:
+                    arr->SA.PushBack(Value((ASStringNode*)NULL));
+                    continue;
+                }
+                if (GetVM().ConstructBuiltinObject(pobj, name))
+                {
+                    Ptr<Render::Filter> copy = *filter->Clone();
+                    static_cast<Instances::fl_filters::BitmapFilter*>(pobj.GetPtr())->SetFilterData(copy);
+                    arr->SA.PushBack(Value(pobj));
+                }
+            }
+        }
+        result = arr;
+    }
+
+    // A new filter set from copies of the filters held by the flash.filters objects in filters (other entries are
+    // ignored).
+    // MS2-FUNCTIONAL: register allocation; the exe inlines FilterSet::AddFilter only on the GlowFilter path
+    // @0x14244bdd0
+    void DisplayObject::filtersSet(const Value& result, Instances::fl::Array* filters)
+    {
+        SF_UNUSED(result);
+        Ptr<Render::FilterSet> set = *SF_NEW Render::FilterSet();
+        if (filters)
+        {
+            for (UPInt i = 0; i < filters->SA.GetSize(); ++i)
+            {
+                Instances::fl_filters::BitmapFilter* pfilter =
+                    static_cast<Instances::fl_filters::BitmapFilter*>(filters->SA.At(i).GetObject());
+                ASString name = pfilter->GetTraits().GetName();
+                const char* pname = name.ToCStr();
+                if (!strcmp(pname, "GlowFilter"))
+                {
+                    Ptr<Render::Filter> copy = *pfilter->GetFilterData()->Clone(GetVM().GetMemoryHeap());
+                    set->AddFilter(copy);
+                }
+                else if (!strcmp(pname, "BevelFilter") || !strcmp(pname, "DropShadowFilter") ||
+                         !strcmp(pname, "BlurFilter") || !strcmp(pname, "ColorMatrixFilter"))
+                {
+                    Ptr<Render::Filter> copy = *pfilter->GetFilterData()->Clone(GetVM().GetMemoryHeap());
+                    set->AddFilter(copy);
+                }
+            }
+        }
+        pDispObj->SetFilters(set);
+    }
+
     // @0x14244bb60
     SPtr<Instances::fl::Array> DisplayObject::filtersGet()
     {
@@ -1197,6 +1267,166 @@ namespace Instances { namespace fl_display
         SF_UNUSED(result);
         FUN_142441010(this, argc, argv, pDrawing->CreateNewComplexFill());
         pDrawing->BeginFill();
+    }
+
+    // MS2-FUNCTIONAL: register allocation (exe computes the fill type into rbx before AcquirePath; ours folds it after)
+    // @0x1424482e0
+    void Graphics::beginBitmapFill(const Value& result, Instances::fl_display::BitmapData* bitmap,
+                                   Instances::fl_geom::Matrix* matrix, bool repeat, bool smooth)
+    {
+        SF_UNUSED(result);
+        if (!bitmap)
+            return;
+        ImageResource* pimageRes = bitmap->GetImageResource();
+        if (pimageRes)
+        {
+            Render::Matrix2F mtx;
+            if (matrix)
+                mtx = matrix->GetMatrixF();
+            FillType fillType;
+            if (smooth)
+                fillType = repeat ? Fill_TiledSmoothImage : Fill_ClippedSmoothImage;
+            else
+                fillType = repeat ? Fill_TiledImage : Fill_ClippedImage;
+            pDrawing->AcquirePath(true);
+            pDrawing->BeginBitmapFill(fillType, pimageRes, mtx);
+        }
+    }
+
+    // An ellipse around (cx, cy) as eight quadratic curves (control points on the tangents at
+    // 45 degree steps), in twips.
+    static const float GraphicsTanPi8 = 0.41421356f;  // tan(pi/8)
+    static const float GraphicsSinPi4 = 0.70710677f;  // sin(pi/4)
+    static SF_INLINE void GraphicsDrawEllipse(Ptr<DrawingContext>& pdrawing, float cx, float cy, float rx, float ry)
+    {
+        pdrawing->MoveTo((cx + rx) * 20.0f, cy * 20.0f);
+        pdrawing->CurveTo((cx + rx) * 20.0f, (cy + GraphicsTanPi8 * ry) * 20.0f,
+                          (cx + GraphicsSinPi4 * rx) * 20.0f, (cy + GraphicsSinPi4 * ry) * 20.0f);
+        pdrawing->CurveTo((cx + GraphicsTanPi8 * rx) * 20.0f, (cy + ry) * 20.0f,
+                          cx * 20.0f, (cy + ry) * 20.0f);
+        pdrawing->CurveTo((cx - GraphicsTanPi8 * rx) * 20.0f, (cy + ry) * 20.0f,
+                          (cx - GraphicsSinPi4 * rx) * 20.0f, (cy + GraphicsSinPi4 * ry) * 20.0f);
+        pdrawing->CurveTo((cx - rx) * 20.0f, (cy + GraphicsTanPi8 * ry) * 20.0f,
+                          (cx - rx) * 20.0f, cy * 20.0f);
+        pdrawing->CurveTo((cx - rx) * 20.0f, (cy - GraphicsTanPi8 * ry) * 20.0f,
+                          (cx - GraphicsSinPi4 * rx) * 20.0f, (cy - GraphicsSinPi4 * ry) * 20.0f);
+        pdrawing->CurveTo((cx - GraphicsTanPi8 * rx) * 20.0f, (cy - ry) * 20.0f,
+                          cx * 20.0f, (cy - ry) * 20.0f);
+        pdrawing->CurveTo((cx + GraphicsTanPi8 * rx) * 20.0f, (cy - ry) * 20.0f,
+                          (cx + GraphicsSinPi4 * rx) * 20.0f, (cy - GraphicsSinPi4 * ry) * 20.0f);
+        pdrawing->CurveTo((cx + rx) * 20.0f, (cy - GraphicsTanPi8 * ry) * 20.0f,
+                          (cx + rx) * 20.0f, cy * 20.0f);
+    }
+
+    // MS2-FUNCTIONAL: xmm register allocation of the inlined ellipse expansion
+    // @0x14244a2e0
+    void Graphics::drawCircle(const Value& result, Value::Number x, Value::Number y, Value::Number radius)
+    {
+        SF_UNUSED(result);
+        GraphicsDrawEllipse(pDrawing, float(x), float(y), float(radius), float(radius));
+        pDispObj->InvalidateHitResult();
+    }
+
+    // MS2-FUNCTIONAL: xmm register allocation of the inlined ellipse expansion
+    // @0x14244a5c0
+    void Graphics::drawEllipse(const Value& result, Value::Number x, Value::Number y,
+                               Value::Number width, Value::Number height)
+    {
+        SF_UNUSED(result);
+        float rx = float(width) * 0.5f;
+        float ry = float(height) * 0.5f;
+        GraphicsDrawEllipse(pDrawing, float(x) + rx, float(y) + ry, rx, ry);
+        pDispObj->InvalidateHitResult();
+    }
+
+    // @0x14244a900
+    void Graphics::drawRect(const Value& result, Value::Number x, Value::Number y,
+                            Value::Number width, Value::Number height)
+    {
+        SF_UNUSED(result);
+        if (NumberUtil::IsNaN(width))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "width"));
+            return;
+        }
+        if (NumberUtil::IsNaN(height))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "height"));
+            return;
+        }
+        float x1 = float(x * 20.0);
+        float x2 = float((x + width) * 20.0);
+        float y1 = float(y * 20.0);
+        float y2 = float((y + height) * 20.0);
+        pDrawing->MoveTo(x1, y1);
+        pDrawing->LineTo(x2, y1);
+        pDrawing->LineTo(x2, y2);
+        pDrawing->LineTo(x1, y2);
+        pDrawing->LineTo(x1, y1);
+        pDispObj->InvalidateHitResult();
+    }
+
+    // A rectangle with elliptic corners (radii clamped to half the size), in twips.
+    // MS2-FUNCTIONAL: the exe splits the body into a chained-unwind chunk (shrink-wrapped xmm saves); register allocation
+    // @0x14244aae0
+    void Graphics::drawRoundRect(const Value& result, Value::Number x, Value::Number y,
+                                 Value::Number width, Value::Number height,
+                                 Value::Number ellipseWidth, Value::Number ellipseHeight)
+    {
+        SF_UNUSED(result);
+        if (NumberUtil::IsNaN(width))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "width"));
+            return;
+        }
+        if (NumberUtil::IsNaN(height))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "height"));
+            return;
+        }
+        if (NumberUtil::IsNaN(ellipseWidth))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "ellipseWidth"));
+            return;
+        }
+        if (NumberUtil::IsNaN(ellipseHeight))
+            ellipseHeight = ellipseWidth;
+
+        float left   = float(x);
+        float top    = float(y);
+        float right  = left + float(width);
+        float bottom = top + float(height);
+        float rx = Alg::Min(float(width) * 0.5f, float(ellipseWidth) * 0.5f);
+        float ry = Alg::Min(float(height) * 0.5f, float(ellipseHeight) * 0.5f);
+        float cx0 = right - rx, cy0 = bottom - ry;
+        float cx1 = left + rx,  cy1 = top + ry;
+
+        pDrawing->MoveTo(right * 20.0f, cy0 * 20.0f);
+        pDrawing->CurveTo((cx0 + rx) * 20.0f, (cy0 + GraphicsTanPi8 * ry) * 20.0f,
+                          (cx0 + GraphicsSinPi4 * rx) * 20.0f, (cy0 + GraphicsSinPi4 * ry) * 20.0f);
+        pDrawing->CurveTo((cx0 + GraphicsTanPi8 * rx) * 20.0f, (cy0 + ry) * 20.0f,
+                          cx0 * 20.0f, (cy0 + ry) * 20.0f);
+        pDrawing->LineTo(cx1 * 20.0f, bottom * 20.0f);
+        pDrawing->CurveTo((cx1 - GraphicsTanPi8 * rx) * 20.0f, (cy0 + ry) * 20.0f,
+                          (cx1 - GraphicsSinPi4 * rx) * 20.0f, (cy0 + GraphicsSinPi4 * ry) * 20.0f);
+        pDrawing->CurveTo((cx1 - rx) * 20.0f, (cy0 + GraphicsTanPi8 * ry) * 20.0f,
+                          (cx1 - rx) * 20.0f, cy0 * 20.0f);
+        pDrawing->LineTo(left * 20.0f, cy1 * 20.0f);
+        pDrawing->CurveTo((cx1 - rx) * 20.0f, (cy1 - GraphicsTanPi8 * ry) * 20.0f,
+                          (cx1 - GraphicsSinPi4 * rx) * 20.0f, (cy1 - GraphicsSinPi4 * ry) * 20.0f);
+        pDrawing->CurveTo((cx1 - GraphicsTanPi8 * rx) * 20.0f, (cy1 - ry) * 20.0f,
+                          cx1 * 20.0f, (cy1 - ry) * 20.0f);
+        pDrawing->LineTo(cx0 * 20.0f, top * 20.0f);
+        pDrawing->CurveTo((cx0 + GraphicsTanPi8 * rx) * 20.0f, (cy1 - ry) * 20.0f,
+                          (cx0 + GraphicsSinPi4 * rx) * 20.0f, (cy1 - GraphicsSinPi4 * ry) * 20.0f);
+        pDrawing->CurveTo((cx0 + rx) * 20.0f, (cy1 - GraphicsTanPi8 * ry) * 20.0f,
+                          (cx0 + rx) * 20.0f, cy1 * 20.0f);
+        pDispObj->InvalidateHitResult();
     }
 
     // @0x142450de0
