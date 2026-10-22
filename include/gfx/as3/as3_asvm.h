@@ -41,6 +41,10 @@ private:
     UByte               Unrecovered28[0x58 - sizeof(ASMovieRootBase)];
 public:
     Value               ExternalIntfRetVal;         // +0x58: what the host's ExternalInterface callback returned
+private:
+    UByte               Unrecovered78[0x160 - 0x78];
+public:
+    StringManager       BuiltinsMgr;                // +0x160: the AS3 builtin strings
 };
 
 class ASVM : public VM
@@ -48,6 +52,7 @@ class ASVM : public VM
 public:
     MovieImpl* GetMovieImpl() const { return pMovieRoot->GetMovieImpl(); }
     MovieRoot* GetMovieRoot() const { return pMovieRoot; }
+    const ASString& GetBuiltin(BuiltinType btype) const { return pMovieRoot->BuiltinsMgr.GetBuiltin(btype); }
 
     // Constructs an instance of the class object classObj; false when the construction threw.
     bool _constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned argc, const Value* argv);   // 0x142531f40

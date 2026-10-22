@@ -178,6 +178,12 @@ namespace Instances { namespace fl_utils {
         // @0x1424c0310
         void stop(const Value& result);
 
+        // One core timer tick: dispatches "timer", then "timerComplete" once the repeat count is reached.
+        void ExecuteEvent();                                    // 0x1424bdb60
+    protected:
+        SPtr<Instances::fl_events::TimerEvent> CreateTimerEventObject(const ASString& type);   // 0x1424bd9a0
+
+    public:
         SInt32                      RepeatCount;    // +0x50
         SInt32                      CurrentCount;   // +0x54 the core timer's count once it ran
         Value::Number               Delay;          // +0x58 milliseconds

@@ -10,7 +10,7 @@
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_events {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // MS2-FUNCTIONAL: native method declarations and the leading data members only
     class Event : public Instances::fl::Object
     {
     public:
@@ -40,6 +40,10 @@ namespace Instances { namespace fl_events {
         void toString(ASString& result);
         // @0x142472d20
         void typeGet(ASString& result);
+
+        ASString                        Type;           // +0x38
+        SPtr<Instances::fl::Object>     CurrentTarget;  // +0x40
+        SPtr<Instances::fl::Object>     Target;         // +0x48
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
@@ -101,6 +105,9 @@ namespace Instances { namespace fl_events {
         void removeEventListener(const Value& result, const ASString&, const Value&, bool);
         // @0x142472e00
         void willTrigger(bool& result, const ASString&);
+
+        // Dispatches evt to this dispatcher's listeners only (no capture/bubble chain).
+        bool DispatchSingleEvent(Instances::fl_events::Event* evt, bool inCapturePhase);   // 0x1424687d0
 
         struct EventDispatcherImpl;
 

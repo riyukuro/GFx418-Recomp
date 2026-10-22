@@ -700,6 +700,35 @@ namespace Instances { namespace fl_utils
             argv[1].Convert2Int32(RepeatCount);
     }
 
+    // new TimerEvent(type, bubbles = false, cancelable = false)
+    // @0x1424bd9a0
+    SPtr<Instances::fl_events::TimerEvent> Timer::CreateTimerEventObject(const ASString& type)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::TimerEvent> evt;
+        Value params[] = { Value(type), Value(false), Value(false) };
+        asvm.ConstructInstance(evt, asvm.TimerEventClass, 3, params);
+        return evt;
+    }
+
+    // @0x1424bdb60
+    void Timer::ExecuteEvent()
+    {
+        CurrentCount = (SInt32)static_cast<IntervalTimer*>(pCoreTimer.GetPtr())->GetCurrentCount();
+
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_events::TimerEvent> efe = CreateTimerEventObject(asvm.GetBuiltin(AS3Builtin_timer));
+        efe->Target = this;
+        DispatchSingleEvent(efe, false);
+
+        if (CurrentCount >= RepeatCount)
+        {
+            SPtr<Instances::fl_events::TimerEvent> efc = CreateTimerEventObject(asvm.GetBuiltin(AS3Builtin_timerComplete));
+            efc->Target = this;
+            DispatchSingleEvent(efc, false);
+        }
+    }
+
     // @0x1424bf620
     void Timer::currentCountGet(SInt32& result)
     {
