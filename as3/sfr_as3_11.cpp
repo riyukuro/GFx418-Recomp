@@ -1925,6 +1925,41 @@ namespace Instances { namespace fl_geom
         }
     }
 
+    // A view matrix at pos looking along pos - at: the rows are the right, up and look axes, the translation each
+    // axis's negated dot with pos. at defaults to (0, 1, 0), up to (0, 0, 1).
+    // MS2-FUNCTIONAL: frame 0x140 vs the exe's 0x150 (the exe spills the up axis and pos.x around the view-row stores)
+    // @0x14248c5f0
+    void Matrix3D::pointAt(const Value& result, Instances::fl_geom::Vector3D* pos, Instances::fl_geom::Vector3D* at,
+                           Instances::fl_geom::Vector3D* up)
+    {
+        SF_UNUSED(result);
+        if (pos == NULL)
+            return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
+        Render::Point3<double> p(pos->x, pos->y, pos->z);
+        Render::Point3<double> a = at ? Render::Point3<double>(at->x, at->y, at->z) : Render::Point3<double>(0, 1, 0);
+        Render::Point3<double> u = up ? Render::Point3<double>(up->x, up->y, up->z) : Render::Point3<double>(0, 0, 1);
+        mat4.Clear();
+        Render::Point3<double> z(p.x - a.x, p.y - a.y, p.z - a.z);
+        double len = sqrt(z.y * z.y + z.x * z.x + z.z * z.z);
+        z.SetPoint(z.x / len, z.y / len, z.z / len);
+        Render::Point3<double> x(u.y * z.z - z.y * u.z, u.z * z.x - z.z * u.x, z.y * u.x - z.x * u.y);
+        len = sqrt(x.y * x.y + x.x * x.x + x.z * x.z);
+        x.SetPoint(x.x / len, x.y / len, x.z / len);
+        Render::Point3<double> y(x.z * z.y - x.y * z.z, x.x * z.z - x.z * z.x, x.y * z.x - x.x * z.y);
+        mat4.M[0][0] = x.x; mat4.M[0][1] = x.y; mat4.M[0][2] = x.z;
+        mat4.M[0][3] = -(x.y * p.y + x.x * p.x + x.z * p.z);
+        mat4.M[1][0] = y.x; mat4.M[1][1] = y.y; mat4.M[1][2] = y.z;
+        mat4.M[1][3] = -(y.y * p.y + y.x * p.x + y.z * p.z);
+        mat4.M[2][0] = z.x; mat4.M[2][1] = z.y; mat4.M[2][2] = z.z;
+        mat4.M[2][3] = -(z.y * p.y + z.x * p.x + z.z * p.z);
+        mat4.M[3][3] = 1.0;
+        if (pDispObj)
+        {
+            Render::Matrix3F m(mat4);
+            pDispObj->SetMatrix3D(m);
+        }
+    }
+
     // @0x142486dc0
     void Matrix3D::appendRotation(const Value& result, Value::Number degrees, Instances::fl_geom::Vector3D* axis, Instances::fl_geom::Vector3D* pivot)
     {
