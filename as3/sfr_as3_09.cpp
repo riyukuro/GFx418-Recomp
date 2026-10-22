@@ -38,6 +38,8 @@ void FUN_142502360(Scaleform::GFx::AS3::Object* obj, Scaleform::GFx::AS3::PropRe
 extern const char* const DAT_143a2d158[];
 // VM::MakeObject: a new plain Object (0x142516600).
 void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
+// VM::GetValueTraits: the traits of a value (0x14250ffc0).
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
 namespace Scaleform { namespace GFx {
 
@@ -2343,9 +2345,162 @@ namespace Instances { namespace fl_events {
         }
         Phase = 0;
     }
+
+    // @0x14246c8d0
+    // MS2-FUNCTIONAL: cl orders the field copies differently
+    void KeyboardEvent::SetEventId(const EventId& id)
+    {
+        EvtId.Id              = id.Id;
+        EvtId.WcharCode       = id.WcharCode;
+        EvtId.KeyCode         = id.KeyCode;
+        EvtId.AsciiCode       = id.AsciiCode;
+        EvtId.RollOverCnt     = id.RollOverCnt;
+        EvtId.KeyboardIndex   = id.KeyboardIndex;
+        EvtId.KeysState       = id.KeysState;
+        EvtId.MouseWheelDelta = id.MouseWheelDelta;
+        if (!EvtId.AsciiCode)
+            EvtId.AsciiCode = EvtId.ConvertKeyCodeToAscii();
+    }
+
+    // @0x14246c930
+    // MS2-FUNCTIONAL: the exe builds the string through a temporary (one more reference round trip)
+    void TextEvent::SetText(wchar_t ch)
+    {
+        wchar_t buf[1] = { ch };
+        Text = ASString(GetVM().GetStringManager().GetStringManager()->CreateStringNode(buf, 1));
+    }
+
+    // @0x14246c9a0
+    // MS2-FUNCTIONAL: cl inlines the listener table lookup (0x1424698c0) that the exe calls
+    bool EventDispatcher::WillTrigger(const ASString& type, bool useCapture) const
+    {
+        if (pImpl)
+        {
+            const ListenersHash& h = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
+            ArrayLH<Listener>* const* pa = h.Get(type);
+            if (pa && *pa && (*pa)->GetSize() != 0)
+                return true;
+        }
+        if (!IsDisplayObjectInstance(GetTraits()))
+            return false;
+        GFx::DisplayObject* dobj = static_cast<const Instances::fl_display::DisplayObject*>(this)->pDispObj;
+        if (!dobj)
+            return false;
+        for (InteractiveObject* p = dobj->GetParent(); p; p = p->GetParent())
+        {
+            // the AS3 object of the parent, as in GetParentChain
+            const UPInt* avm = reinterpret_cast<const UPInt*>(p->GetAvmObjImpl());
+            UPInt raw = avm[2] ? avm[2] : avm[1];
+            const EventDispatcher* o = reinterpret_cast<const EventDispatcher*>(raw & ~UPInt(1));
+            if (o && o->HasEventHandler(type, useCapture))
+                return true;
+        }
+        return false;
+    }
+
+    // The abc file a listener function comes from keeps the MovieDefImpl of its movie: VMAbcFile +0x28 is the
+    // file data, which holds the definition at +0x188.
+    static inline GFx::MovieDefImpl* GetFileMovieDef(const VMAbcFile* file)
+    {
+        const char* abc = *reinterpret_cast<const char* const*>(reinterpret_cast<const char*>(file) + 0x28);
+        return *reinterpret_cast<GFx::MovieDefImpl* const*>(abc + 0x188);
+    }
+
+    // Removes from hash the listeners whose function was loaded from pdef.
+    // @0x14246c530
+    // MS2-FUNCTIONAL: cl lays out the table walk differently; the same lookups and removals
+    static void RemoveMovieDefListeners(EventDispatcher& d, GFx::MovieDefImpl* pdef,
+                                        EventDispatcher::ListenersHash& hash)
+    {
+        for (EventDispatcher::ListenersHash::Iterator it = hash.Begin(); it != hash.End(); ++it)
+        {
+            ArrayLH<EventDispatcher::Listener>& a = *(*it).Second;
+            for (UPInt i = 0; i < a.GetSize();)
+            {
+                const Value& f = a[i].Function;
+                if (f.IsValidWeakRef())
+                {
+                    const Traits* tr;
+                    if (f.GetKind() == Value::kVTableInd)
+                        tr = &f.GetTraits();
+                    else if (f.GetKind() == Value::kVTableIndClosure)
+                        tr = &f.GetClosure()->GetTraits();
+                    else
+                        tr = &FUN_14250ffc0(d.GetVM(), f);
+                    VMAbcFile* file = tr->GetFilePtr();
+                    if (file && GetFileMovieDef(file) == pdef)
+                    {
+                        a.RemoveAt(i);
+                        continue;
+                    }
+                }
+                ++i;
+            }
+        }
+    }
+
+    // @0x14246c700
+    void EventDispatcher::RemoveListenersForMovieDef(GFx::MovieDefImpl* pdef)
+    {
+        if (pImpl)
+        {
+            RemoveMovieDefListeners(*this, pdef, pImpl->CaptureListeners);
+            RemoveMovieDefListeners(*this, pdef, pImpl->Listeners);
+        }
+    }
 }} // namespace Instances::fl_events
 
+// ==== flash.external.ExternalInterface: class traits ==================================================================
+
+namespace fl_external
+{
+    extern const ClassInfo ExternalInterfaceCI;
+}
+
+namespace Classes { namespace fl_external
+{
+    // @0x142473570
+    ExternalInterface::ExternalInterface(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_external
+{
+    // @0x142473490
+    ExternalInterface::ExternalInterface(VM& vm)
+        : Traits(vm, AS3::fl_external::ExternalInterfaceCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_external::ExternalInterfaceCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_external::ExternalInterface(*this)));
+    }
+
+    // @0x142473350
+    Pickable<Traits> ExternalInterface::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ExternalInterface(vm));
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
+
+// The general warning channel of a log state.
+// @0x1424736b0
+template void Scaleform::GFx::LogBase<Scaleform::GFx::LogState>::LogWarning(const char* pfmt, ...) const;
+
+// The listener table lookup and growth, out of line in the exe.
+// @0x1424698c0
+// MS2-FUNCTIONAL: register allocation of the probe loop
+template Scaleform::ArrayLH<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::Listener>**
+    Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::ListenersHash::BaseType::BaseType::Get(
+        const Scaleform::GFx::ASString& key);
+// @0x14246f310
+// MS2-FUNCTIONAL: cl inlines the rehash Add differently
+template void decltype(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::ListenersHash::BaseType::BaseType::mHash)
+    ::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142472fc0
 // MS2-PIN: ?Func@?$ThunkFunc0@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473020
@@ -2353,3 +2508,9 @@ namespace Instances { namespace fl_events {
 // MS2-PIN: ?Func@?$ThunkFunc0@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424730e0
 // MS2-PIN: ?Func@?$ThunkFunc2@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$03$$CBVValue@456@AEBVASString@56@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473150
 // MS2-PIN: ?Func@?$ThunkFunc2@VExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@$04VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142473330
+// MS2-PIN: ??_GExternalInterface@fl_external@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424735a0
+// MS2-PIN: ??_GExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142473630
+// MS2-PIN: ??_7ExternalInterface@fl_external@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143158a20
+// MS2-PIN: ??_7ExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@6B@ 0x143158ab8
+// MS2-PIN: ?Get@?$Hash@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@3@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@3@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@3@V?$HashSet@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@3@@Scaleform@@QEAAPEAPEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@2@AEBVASString@GFx@2@@Z 0x1424698c0
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14246f310

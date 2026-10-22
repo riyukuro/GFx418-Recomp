@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/kernel/sf_arraystaticbuff.h"
 
 namespace Scaleform { namespace GFx { class DisplayObject; } }
+namespace Scaleform { namespace GFx { class MovieDefImpl; } }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -117,6 +118,8 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_events::Event> clone();
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x142466a40
+        // (appended, sfr_as3_09) the text becomes the one character ch
+        void SetText(wchar_t ch);                                 // 0x14246c930
     };
 
     // 0x60 bytes. The constructor is defined in sfr_as3_08.
@@ -208,6 +211,11 @@ namespace Instances { namespace fl_events {
                                 ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain);   // 0x1424691d0
         bool ExecuteCapturePhase(Instances::fl_events::Event* evt,
                                  ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain);  // 0x142469260
+        // (appended, sfr_as3_09) whether this dispatcher or one of its display parents has a listener of type in
+        // the one table selected by useCapture
+        bool WillTrigger(const ASString& type, bool useCapture) const;                       // 0x14246c9a0
+        // (appended, sfr_as3_09) drops the listeners whose function comes from the abc code of pdef
+        void RemoveListenersForMovieDef(GFx::MovieDefImpl* pdef);                            // 0x14246c700
     };
 
     // One registered listener (0x28 bytes): the function value and the addEventListener options.
@@ -452,6 +460,8 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_events::Event> clone();
         // (appended, sfr_as3_09) slot 23: Event::Clone plus this class's fields
         virtual SPtr<Instances::fl_events::Event> Clone() const;  // 0x1424667b0
+        // (appended, sfr_as3_09) takes the key event; a missing ascii code is derived from the key code
+        void SetEventId(const EventId& id);                       // 0x14246c8d0
     };
 
     // 0x90 bytes. The constructor is bound to the exe.

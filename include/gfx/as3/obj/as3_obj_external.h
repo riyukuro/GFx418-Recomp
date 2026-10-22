@@ -13,6 +13,8 @@ namespace Classes { namespace fl_external {
     class ExternalInterface : public Class
     {
     public:
+        ExternalInterface(ClassTraits::Traits& t);                          // 0x142473570
+        virtual const char* GetAS3ObjectType() const { return "Classes::ExternalInterface"; }
         // @0x142473710
         void addCallback(const Value& result, const ASString&, const Value&);
         // @0x142473730
@@ -27,6 +29,16 @@ namespace Classes { namespace fl_external {
         void objectIDGet(ASString& result);
     };
 
+}}
+
+namespace ClassTraits { namespace fl_external {
+    class ExternalInterface : public Traits
+    {
+    public:
+        ExternalInterface(VM& vm);                                          // 0x142473490
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::ExternalInterface"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);                    // 0x142473350
+    };
 }}
 
 }}} // namespace Scaleform::GFx::AS3
