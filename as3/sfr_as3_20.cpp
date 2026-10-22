@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142542820-0x1425584f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #undef GetObject
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1171,6 +1172,37 @@ void FUN_1425526f0(VectorBase<Value>& v, Value& result, unsigned argc, const Val
 void FUN_142553170(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
 { VI::VectorSort<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
 
+
+// Argument defaults of the Vector.<T> callback methods, emitted out of line here (their ThunkFunc2 thunks are in
+// sfr_as3_21): every 7, filter 8, forEach 9, some 11, map 14 per element type; callback undefined, thisObject null.
+namespace Scaleform { namespace GFx { namespace AS3 {
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_String, 7, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_String, 8, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_String, 9, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_String, 11, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_String, 14, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_double, 7, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_double, 8, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_double, 9, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_double, 11, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_double, 14, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_int, 7, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_int, 8, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_int, 9, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_int, 11, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_int, 14, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_object, 7, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_object, 8, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_object, 9, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_object, 11, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_object, 14, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_uint, 7, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_uint, 8, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_uint, 9, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_uint, 11, const Value&, const Value&>(StringManager&);
+template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_uint, 14, const Value&, const Value&>(StringManager&);
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0A@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546850
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1425468b0
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546920
@@ -1285,3 +1317,28 @@ void FUN_142553170(VectorBase<UInt32>& v, Value& result, unsigned argc, const Va
 // MS2-PIN: ??_7?$ValuePtrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182ee8
 // MS2-PIN: ??_7?$ValuePtrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182ef8
 // MS2-PIN: ??_7?$ValuePtrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182f08
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$06AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142549df0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$07AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142549f50
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$08AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254a0b0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0L@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254a210
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254a370
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$06AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254a4d0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$07AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254a630
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$08AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254a790
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0L@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254a8f0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254aa50
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$06AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254abb0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$07AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254ad10
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$08AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254ae70
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0L@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254afd0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_int@fl_vec@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254b130
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$06AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254b290
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$07AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254b3f0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$08AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254b550
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0L@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254b6b0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_object@fl_vec@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254b810
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$06AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254b970
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$07AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254bad0
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$08AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254bc30
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0L@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254bd90
+// MS2-PIN: ??$ThunkMakeDefs2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x14254bef0

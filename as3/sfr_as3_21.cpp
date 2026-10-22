@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x1425584f0-0x142568420 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
