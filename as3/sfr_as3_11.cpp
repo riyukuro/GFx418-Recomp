@@ -1489,6 +1489,43 @@ namespace Instances { namespace fl_geom
         projectionCenterGet(result);
         return result;
     }
+
+    // The projection as a Matrix3D: focal length f on the x/y diagonal, z copied into w. Without an explicit focal
+    // length f comes from the field of view over the stage width (500 pixels when not on a stage).
+    // MS2-FUNCTIONAL: the exe assembles the matrix rows in xmm registers (shufps) and copies them; ours stores directly
+    // @0x14248e490
+    __declspec(noinline) void PerspectiveProjection::toMatrix3D(SPtr<Instances::fl_geom::Matrix3D>& result)
+    {
+        float width;
+        if (pDispObj)
+        {
+            const Render::RectF& r = pDispObj->GetMovieImpl()->GetVisibleFrameRectInTwips();
+            width = TwipsToPixels((float)fabs(r.x2 - r.x1));
+        }
+        else
+            width = 500.0f;
+        float f;
+        if (focalLength == 0)
+            f = (width * 0.5f) / tanf((float)SF_DEGTORAD(fieldOfView) * 0.5f);
+        else
+            f = (float)focalLength;
+        Render::Matrix4F m(f, 0, 0, 0,
+                           0, f, 0, 0,
+                           0, 0, 1, 0,
+                           0, 0, 1, 0);
+        Value argv[16];
+        for (int i = 0; i < 16; i++)
+            argv[i].SetNumber((Double)m[i]);
+        GetVM().ConstructBuiltinObject(result, "flash.geom.Matrix3D", 16, argv);
+    }
+
+    // @0x14248e470
+    SPtr<Instances::fl_geom::Matrix3D> PerspectiveProjection::toMatrix3D()
+    {
+        SPtr<Instances::fl_geom::Matrix3D> result;
+        toMatrix3D(result);
+        return result;
+    }
 }}
 
 namespace ClassTraits { namespace fl_geom
@@ -1791,6 +1828,40 @@ namespace Instances { namespace fl_geom
     {
         SPtr<Instances::fl_geom::Matrix3D> result;
         matrix3DGet(result);
+        return result;
+    }
+
+    // The object's world 3D matrix seen from relativeTo's space (relativeTo's inverse world matrix times ours), as a
+    // Matrix3D bound to this object. relativeTo gets its stage object first if it has none.
+    // @0x142489c00
+    __declspec(noinline) void Transform::getRelativeMatrix3D(SPtr<Instances::fl_geom::Matrix3D>& result,
+                                                             Instances::fl_display::DisplayObject* relativeTo)
+    {
+        if (!relativeTo)
+            return GetVM().ThrowTypeError(VM::Error(VM::eNullPointerError, GetVM(), "relativeTo"));
+        if (!relativeTo->pDispObj)
+            relativeTo->CreateStageObject();
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<Matrix3D> pm;
+        Value argv[16];
+        Render::Matrix3F world;
+        pDispObj->GetWorldMatrix3D(&world);
+        Render::Matrix3F relWorld;
+        relativeTo->pDispObj->GetWorldMatrix3D(&relWorld);
+        Render::Matrix3F m3(relWorld.GetInverse(), world);
+        Render::Matrix4F m4(m3);
+        for (int i = 0; i < 16; i++)
+            argv[i].SetNumber((Double)m4[i]);
+        if (asvm.ConstructInstance(pm, asvm.Matrix3DClass, 16, argv))
+            pm->pDispObj = pDispObj;
+        result = pm;
+    }
+
+    // @0x142489be0
+    SPtr<Instances::fl_geom::Matrix3D> Transform::getRelativeMatrix3D(Instances::fl_display::DisplayObject* a0)
+    {
+        SPtr<Instances::fl_geom::Matrix3D> result;
+        getRelativeMatrix3D(result, a0);
         return result;
     }
 

@@ -237,6 +237,9 @@ public:
         if (ez) *ez = asinf(u.M[1][0]);
     }
     void GetRotation(T* ex, T* ey, T* ez) const { return GetEulerAngles(ex, ey, ez); }
+
+    // (appended for flash.geom, sfr_as3_11) the 4x4 inverse with the implicit row (0 0 0 1); 0x1424845e0
+    inline Matrix3x4 GetInverse() const;
 };
 typedef Matrix3x4<float> Matrix3F;
 
@@ -547,6 +550,74 @@ inline Matrix4x4<T> Matrix4x4<T>::GetInverse() const
                         r10, r11, r12, r13,
                         r20, r21, r22, r23,
                         r30, r31, r32, r33);
+}
+
+// The adjugate inverse of Matrix4x4::GetInverse with the projective row taken as (0 0 0 1) (its zero products stay,
+// float math). A singular matrix gives the identity with the translation negated.
+// MS2-FUNCTIONAL: the exe keeps more of the zero products as live mulss against a zeroed register (1298 vs 1191 bytes)
+// @0x1424845e0
+template<class T>
+inline Matrix3x4<T> Matrix3x4<T>::GetInverse() const
+{
+    T a00 = M[0][0], a01 = M[0][1], a02 = M[0][2], a03 = M[0][3];
+    T a10 = M[1][0], a11 = M[1][1], a12 = M[1][2], a13 = M[1][3];
+    T a20 = M[2][0], a21 = M[2][1], a22 = M[2][2], a23 = M[2][3];
+    T a30 = 0, a31 = 0, a32 = 0, a33 = 1;
+
+    T s0 = a20 * a31 - a21 * a30;
+    T s1 = a20 * a32 - a22 * a30;
+    T s2 = a20 * a33 - a23 * a30;
+    T s3 = a21 * a32 - a22 * a31;
+    T s4 = a21 * a33 - a23 * a31;
+    T s5 = a22 * a33 - a23 * a32;
+
+    T c00 = + (s5 * a11 - s4 * a12 + s3 * a13);
+    T c10 = - (s5 * a10 - s2 * a12 + s1 * a13);
+    T c20 = + (s4 * a10 - s2 * a11 + s0 * a13);
+    T c30 = - (s3 * a10 - s1 * a11 + s0 * a12);
+
+    T det = (c00 * a00 + c10 * a01 + c20 * a02 + c30 * a03);
+    Matrix3x4<T> r(NoInit);
+    if (det == 0)
+    {
+        r.SetIdentity();
+        r.Tx() = -Tx();
+        r.Ty() = -Ty();
+        r.Tz() = -Tz();
+        return r;
+    }
+    T inv = 1 / det;
+
+    r.M[0][0] = c00 * inv;
+    r.M[1][0] = c10 * inv;
+    r.M[2][0] = c20 * inv;
+
+    r.M[0][1] = - (s5 * a01 - s4 * a02 + s3 * a03) * inv;
+    r.M[1][1] = + (s5 * a00 - s2 * a02 + s1 * a03) * inv;
+    r.M[2][1] = - (s4 * a00 - s2 * a01 + s0 * a03) * inv;
+
+    s0 = a10 * a31 - a11 * a30;
+    s1 = a10 * a32 - a12 * a30;
+    s2 = a10 * a33 - a13 * a30;
+    s3 = a11 * a32 - a12 * a31;
+    s4 = a11 * a33 - a13 * a31;
+    s5 = a12 * a33 - a13 * a32;
+
+    r.M[0][2] = + (s5 * a01 - s4 * a02 + s3 * a03) * inv;
+    r.M[1][2] = - (s5 * a00 - s2 * a02 + s1 * a03) * inv;
+    r.M[2][2] = + (s4 * a00 - s2 * a01 + s0 * a03) * inv;
+
+    s0 = a21 * a10 - a20 * a11;
+    s1 = a22 * a10 - a20 * a12;
+    s2 = a23 * a10 - a20 * a13;
+    s3 = a22 * a11 - a21 * a12;
+    s4 = a23 * a11 - a21 * a13;
+    s5 = a23 * a12 - a22 * a13;
+
+    r.M[0][3] = - (s5 * a01 - s4 * a02 + s3 * a03) * inv;
+    r.M[1][3] = + (s5 * a00 - s2 * a02 + s1 * a03) * inv;
+    r.M[2][3] = - (s4 * a00 - s2 * a01 + s0 * a03) * inv;
+    return r;
 }
 
 }} // namespace Scaleform::Render
