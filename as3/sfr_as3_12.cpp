@@ -1533,6 +1533,21 @@ namespace Instances { namespace fl_net
             Data = static_cast<Instances::fl::Object*>(value.GetObject());
     }
 
+    // @0x14249be50
+    void URLRequest::requestHeadersGet(SPtr<Instances::fl::Array>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::requestHeadersGet() is not implemented\n");
+    }
+
+    // @0x14249be10
+    SPtr<Instances::fl::Array> URLRequest::requestHeadersGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        requestHeadersGet(result);
+        return result;
+    }
+
     // @0x14249c3e0
     void URLRequest::urlGet(ASString& result)
     {

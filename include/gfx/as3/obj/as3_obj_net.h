@@ -183,6 +183,8 @@ namespace Instances { namespace fl_net {
         void methodSet(const Value& result, const ASString&);
         // @0x14249be50
         void requestHeadersGet(SPtr<Instances::fl::Array>& result);
+        // @0x14249be10 (dead SPtr-return wrapper, sfr15)
+        SPtr<Instances::fl::Array> requestHeadersGet();
         // @0x14249be70
         void requestHeadersSet(const Value& result, Instances::fl::Array*);
         // @0x14249c3e0
