@@ -242,20 +242,20 @@ public:
     virtual void ReadSoundStreamBlockTag(LoadProcess* p, const TagInfo& tagInfo);
 };
 
-// Script side of a sound (the AS2 Sound object / AS3 SoundChannel) as the clips see it.
+// Script side of a sound (the AS2 Sound object / AS3 SoundChannel) as the clips see it. Slot order of the exe's
+// vftable 0x143182f18 (Sprite calls ExecuteOnSoundComplete at +8 and ReleaseTarget at +0x10; 4.1.18 has no GetOwner).
 class ASSoundIntf
 {
 public:
     virtual ~ASSoundIntf() {}
 
+    virtual void ExecuteOnSoundComplete() = 0;
     // The clip the sound was attached to is going away.
-    virtual void  ReleaseTarget()          = 0;
-    virtual void  ExecuteOnSoundComplete() = 0;
-    virtual void* GetOwner()               { return 0; }
+    virtual void ReleaseTarget()          = 0;
     // A sound with its own transform ignores the clip's volume and pan.
-    virtual bool  HasPrivateOverride()     { return false; }
-    virtual int   PrivateVolume()          { return 100; }
-    virtual int   PrivatePan()             { return 0; }
+    virtual bool HasPrivateOverride()     { return false; }
+    virtual int  PrivateVolume()          { return 100; }
+    virtual int  PrivatePan()             { return 0; }
 };
 
 }} // namespace Scaleform::GFx

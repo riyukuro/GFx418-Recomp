@@ -243,6 +243,204 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_uint, 14, SPtr<Instances::f
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+// ---------------------------------------------------------------- SoundObject
+
+#include "ms2/scaleform/include/gfx/as3/as3_soundobject.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_sprite.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace {
+
+// The movie's sound player; the Audio state is only held for the call.
+inline Sound::SoundRenderer* GetSoundRenderer(MovieImpl* pmovie)
+{
+    Ptr<AudioBase> paudio = *(AudioBase*)pmovie->GetStateBag()->GetStateAddRef(State::State_Audio);
+    if (!paudio)
+        return 0;
+    return paudio->GetRenderer();
+}
+
+// The stage's root (the main timeline): MovieRoot +0x158 is the Stage, the Stage's root is at +0x110.
+inline DisplayObjContainer* GetMainTimeline(ASVM& asvm)
+{
+    const UByte* pstage = *(UByte* const*)((const UByte*)asvm.GetMovieRoot() + 0x158);
+    return *(DisplayObjContainer* const*)(pstage + 0x110);
+}
+
+} // namespace
+
+// @0x142564d80
+// MS2-FUNCTIONAL: exe inlines AttachToTarget into the ctor and keeps a smaller EH frame; same fields set, same sprite attach
+SoundObject::SoundObject(ASVM& asvm, Instances::fl_media::Sound* psound) : Volume(100), Pan(0)
+{
+    pMovieRoot = asvm.GetMovieImpl();
+    DisplayObjContainer* pobj = GetMainTimeline(asvm);
+    if (pobj && pobj->IsSprite())
+        AttachToTarget(static_cast<Sprite*>(pobj));
+    pSound = psound;
+}
+
+// @0x142564ea0
+SoundObject::~SoundObject()
+{
+    DetachFromTarget();
+}
+
+// @0x142565140
+void SoundObject::AttachResource(SoundResource* presource)
+{
+    Sound::SoundRenderer* pplayer = GetSoundRenderer(pMovieRoot);
+    if (!pplayer)
+        return;
+    if (presource && presource->GetResourceType() == Resource::RT_SoundSample)
+    {
+        pResource = presource;
+        pSample   = pResource->GetSoundInfo()->GetSoundSample(pplayer);
+    }
+}
+
+// @0x142565230
+void SoundObject::AttachToTarget(Sprite* psprite)
+{
+    pTargetHandle = psprite->GetCharacterHandle();
+    psprite->AttachSoundObject(this);
+}
+
+// @0x1425652c0
+void SoundObject::DetachFromTarget()
+{
+    if (!pTargetHandle)
+        return;
+    Sprite* psprite = GetSprite();
+    if (psprite)
+        psprite->DetachSoundObject(this);
+}
+
+// @0x142565320
+unsigned SoundObject::GetBytesLoaded()
+{
+    if (pSample)
+        return pSample->GetBytesLoaded();
+    return 0;
+}
+
+// @0x142565340
+unsigned SoundObject::GetBytesTotal()
+{
+    if (pSample)
+        return pSample->GetBytesTotal();
+    return 0;
+}
+
+// @0x142565360
+float SoundObject::GetDuration()
+{
+    if (pSample)
+        return pSample->GetDuration() * 1000.f;
+    return 0;
+}
+
+// @0x142565390
+int SoundObject::GetPan()
+{
+    return Pan;
+}
+
+// @0x1425653a0
+float SoundObject::GetPosition()
+{
+    Sprite* psprite = GetSprite();
+    if (psprite)
+        return psprite->GetActiveSoundPosition(this) * 1000.f;
+    return 0;
+}
+
+// @0x142565400
+Sprite* SoundObject::GetSprite()
+{
+    DisplayObject* ptarget = pTargetHandle->ResolveCharacter(pMovieRoot);
+    if (!ptarget)
+        return 0;
+    return ptarget->IsSprite() ? static_cast<Sprite*>(ptarget) : 0;
+}
+
+// @0x142565440
+int SoundObject::GetVolume()
+{
+    return Volume;
+}
+
+// @0x142565720
+void SoundObject::Play(int startTime, int loops)
+{
+    Sprite* psprite = GetSprite();
+    if (!psprite)
+        return;
+    Sound::SoundRenderer* pplayer = GetSoundRenderer(pMovieRoot);
+    if (!pplayer)
+        return;
+
+    if (loops == 0)
+        loops = 1;
+    if (pSample)
+    {
+        Ptr<Sound::SoundChannel> pchan = *pplayer->PlaySample(pSample, true);
+        if (pchan)
+        {
+            if (startTime > 0 || loops > 0)
+                pchan->Loop(loops, startTime / 1000.f);
+            Volume = psprite->GetSoundVolume();
+            pchan->SetVolume(Volume / 100.f);
+            Pan = psprite->GetSoundPan();
+            pchan->SetPan(Pan / 100.f);
+            pchan->Pause(false);
+            psprite->AddActiveSound(pchan, this, pResource);
+        }
+    }
+}
+
+// @0x1425658e0
+void SoundObject::ReleaseTarget()
+{
+    pTargetHandle = 0;
+}
+
+// @0x142565940
+void SoundObject::SetPan(int pan)
+{
+    Pan = pan;
+    Sprite* psprite = GetSprite();
+    if (psprite)
+        psprite->UpdateActiveSoundPan();
+}
+
+// @0x142565980
+void SoundObject::SetVolume(int volume)
+{
+    Volume = volume;
+    Sprite* psprite = GetSprite();
+    if (psprite)
+        psprite->UpdateActiveSoundVolume();
+}
+
+// @0x1425659c0
+void SoundObject::Stop()
+{
+    Sprite* psprite = GetSprite();
+    if (psprite)
+    {
+        if (pResource)
+            psprite->StopActiveSounds(pResource);
+        else
+            psprite->StopActiveSounds(this);
+    }
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$04VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c2b0
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BA@V?$SPtr@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c320
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BB@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c3d0
