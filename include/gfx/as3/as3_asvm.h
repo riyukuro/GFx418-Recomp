@@ -3,7 +3,8 @@
 //
 // ASVM extends VM (as3_vm.h, which ends at +0x2d8) with the movie root and the class objects of the builtins the
 // natives construct directly. MovieRoot is declared only as far as the natives reach (its movie, at +0x10 of the
-// ASMovieRootBase part).
+// ASMovieRootBase part) and
+// the external interface return value.
 #ifndef MS2_SF_GFX_AS3_ASVM_H
 #define MS2_SF_GFX_AS3_ASVM_H
 
@@ -23,6 +24,14 @@ public:
         typedef DisplayObjContainer* (*Fn)(const MovieRoot*, DisplayObject*);
         return (*reinterpret_cast<Fn const* const*>(this))[14](this, dobj);
     }
+
+    // Converts v into a host value for the external interface.
+    void ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const;     // 0x1424e42c0
+
+private:
+    UByte               Unrecovered28[0x58 - sizeof(ASMovieRootBase)];
+public:
+    Value               ExternalIntfRetVal;         // +0x58: what the host's ExternalInterface callback returned
 };
 
 class ASVM : public VM

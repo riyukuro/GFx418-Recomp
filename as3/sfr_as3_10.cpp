@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142473760-0x1424837b0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "Render/Render_Filters.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -457,6 +458,85 @@ template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 24, const Value>;
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
+
+// ==== flash.external.ExternalInterface (statics): the host's ExternalInterface handler of the movie ===============
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Classes { namespace fl_external
+{
+    // ExternalInterface.call(methodName, ...args): hands the arguments, as host values, to the movie's external
+    // interface handler and returns what the handler stored in the movie root.
+    // MS2-FUNCTIONAL: same calls and data flow; the exe keeps the movie in a register (one more saved register, smaller frame) and merges the Convert2String failure exit into the common one
+    // @0x142473760
+    void ExternalInterface::call(Value& result, unsigned argc, const Value* argv)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        MovieRoot* root = asvm.GetMovieRoot();
+        MovieImpl* movie = root->GetMovieImpl();
+        if (movie->pExtIntfHandler)
+        {
+            unsigned nargs = 0;
+            ASString methodName(asvm.GetStringManager().GetBuiltin(AS3Builtin_empty_));
+            if (argc >= 1)
+            {
+                if (!argv[0].Convert2String(methodName))
+                    return;
+                nargs = argc - 1;
+            }
+
+            // Up to 10 arguments are converted on the stack.
+            void* onStack[10 * (sizeof(GFx::Value) / sizeof(void*))];
+            GFx::Value* args = (GFx::Value*)onStack;
+            if (nargs > 10)
+                args = (GFx::Value*)SF_HEAP_AUTO_ALLOC(this, nargs * sizeof(GFx::Value));
+            for (unsigned i = 0; i < nargs; i++)
+                root->ASValue2GFxValue(argv[i + 1], Scaleform::Construct<GFx::Value>(&args[i]));
+
+            root->ExternalIntfRetVal.SetUndefined();
+            movie->pExtIntfHandler->Callback(movie, methodName.IsEmpty() ? NULL : methodName.ToCStr(), args, nargs);
+            result.Assign(root->ExternalIntfRetVal);
+
+            for (unsigned i = 0; i < nargs; i++)
+                args[i].~Value();
+            if (nargs > 10)
+                SF_FREE(args);
+        }
+        else
+        {
+            asvm.GetUI().Output(FlashUI::Output_Warning, "Warning: ExternalInterface.call - handler is not installed.\n");
+            result.SetUndefined();
+        }
+    }
+
+    // marshallExceptions has no meaning here: always false, with a warning.
+    // @0x142473990
+    void ExternalInterface::marshallExceptionsGet(bool& result)
+    {
+        result = false;
+        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetLogState())
+            log->LogWarning("ExternalInterface::marshallExceptions is not supported.");
+    }
+
+    // @0x1424739f0
+    void ExternalInterface::marshallExceptionsSet(const Value& result, bool value)
+    {
+        SF_UNUSED2(result, value);
+        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetLogState())
+            log->LogWarning("ExternalInterface::marshallExceptions is not supported.");
+    }
+
+    // There is no embedding object: null, with a warning.
+    // @0x142473a50
+    void ExternalInterface::objectIDGet(ASString& result)
+    {
+        result = GetVM().GetStringManager().GetBuiltin(AS3Builtin_null);
+        if (LogState* log = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetLogState())
+            log->LogWarning("ExternalInterface::objectID is not supported.");
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
