@@ -132,6 +132,9 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 #include <math.h>
 #include "ms2/scaleform/kernel/sf_random.h"
 #include "../include/kernel/sf_msgformat.h"
+#include "../include/kernel/sf_utf8util.h"
+#include "../include/gfx/gfx_asutils.h"
+#include <string.h>
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1064,6 +1067,22 @@ namespace Instances { namespace fl
         if (!NumberUtil::IsNaN(t))
             t = MonthFromTime(t);
         result = t;
+    }
+
+    // MS2-FUNCTIONAL: same logic; register allocation around the temporary String differs
+    // @0x142429af0
+    void GlobalObjectCPP::parseFloat(Value::Number& result, const ASString& str)
+    {
+        const char* s = str.ToCStr();
+        UInt32 len = str.GetSize();
+        UInt32 pos = (UInt32)UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(String(s)), s, len);
+        s += pos;
+        if (strncmp(s, "0x", 2) == 0 || strncmp(s, "0X", 2) == 0)
+        {
+            result = 0;
+            return;
+        }
+        result = NumberUtil::StringToDouble(s, len - pos, &pos);
     }
 }} // namespace Instances::fl
 
