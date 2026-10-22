@@ -136,6 +136,10 @@ bool FUN_142444050(Scaleform::GFx::AS3::Instances::fl_display::MovieClip* pthis,
 void FUN_142522490(Scaleform::GFx::AS3::MovieRoot* proot, int level, Scaleform::GFx::DisplayObject* pdobj);
 void FUN_142520080(Scaleform::GFx::AS3::MovieRoot* proot);
 void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level);
+// AvmDisplayObj::GetStage (exe body): the stage display object of this object's movie.
+Scaleform::GFx::DisplayObject* FUN_14250edf0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+// Sprite::GetTextSnapshot (exe body): fills a StaticTextSnapshotData from the sprite's static text fields.
+void FUN_1425db410(Scaleform::GFx::DisplayObject* psprite, void* psnapshotData);
 
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
@@ -931,6 +935,35 @@ namespace Instances { namespace fl_display
         GotoFrameAndRun(this, frame, scene, State_Stopped);
     }
 
+    // @0x142452450
+    void DisplayObject::scale9GridSet(const Value& result, Instances::fl_geom::Rectangle* value)
+    {
+        SF_UNUSED(result);
+        if (value)
+        {
+            Render::RectF grid;
+            grid.x1 = Render::PixelsToTwips(float(value->x));
+            grid.y1 = Render::PixelsToTwips(float(value->y));
+            grid.SetWidth(Render::PixelsToTwips(float(value->width)));
+            grid.SetHeight(Render::PixelsToTwips(float(value->height)));
+            pDispObj->SetScale9Grid(grid);
+        }
+        else
+            pDispObj->SetScale9Grid(Render::RectF(0));
+    }
+
+    // @0x142453d10
+    SF_NOINLINE void DisplayObjectContainer::textSnapshotGet(SPtr<Instances::fl_text::TextSnapshot>& result)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        SPtr<Instances::fl_text::TextSnapshot> psnapshot;
+        SPtr<Class> cls = vm.GetClass(StringDataPtr("flash.text.TextSnapshot"));
+        vm.ConstructInstance(psnapshot, cls);
+        // the snapshot data (TextSnapshot +0x38) is filled from the sprite's static text
+        FUN_1425db410(pDispObj, reinterpret_cast<UByte*>(psnapshot.GetPtr()) + 0x38);
+        result = psnapshot;
+    }
+
     // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
     // @0x1424496d0
     void MovieClip::currentFrameLabelGet(ASString& result)
@@ -1459,6 +1492,8 @@ public:
     }
     // The root of the movie this object is in (0x14250d990).
     DisplayObject* GetRoot();
+    // False while the stage is off limits to this object's code (0x142514d20).
+    bool IsStageAccessible() const;
 
     Instances::fl_display::DisplayObject*   pAS3CollectiblePtr; // +0x08 SPtr<>
     Instances::fl_display::DisplayObject*   pAS3RawPtr;         // +0x10
@@ -1618,6 +1653,25 @@ public:
 
 namespace Instances { namespace fl_display
 {
+    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Stage>::operator= instance (0x14243d9c0) and strips the collectible tag with a branch; ours inlines both
+    // @0x142453490
+    SF_NOINLINE void DisplayObject::stageGet(SPtr<Instances::fl_display::Stage>& result)
+    {
+        if (!ToAvmDisplayObj(pDispObj)->IsStageAccessible())
+        {
+            result = NULL;
+            return;
+        }
+        GFx::DisplayObject* pstage = FUN_14250edf0(ToAvmDisplayObj(pDispObj));
+        AvmDisplayObj* pavm = reinterpret_cast<AvmDisplayObj*>(
+            pstage ? AvmDisplayObjContainer::FromBase(pstage->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL);
+        pavm->CreateASInstance(true);
+        result = static_cast<Instances::fl_display::Stage*>(pavm->GetAS3Obj());
+    }
+}}
+
+namespace Instances { namespace fl_display
+{
     // AS3 builtin string 45 (4.1.18 numbering)
     static const BuiltinType BI_mouseCursorChange = static_cast<BuiltinType>(45);
 
@@ -1680,8 +1734,8 @@ namespace Instances { namespace fl_display
         return pmovie->FocusGroups[pmovie->FocusGroupIndexes[0]].LastFocused;
     }
 
-    // @0x14244c080
     // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<InteractiveObject>::operator= instance (0x14243d790); ours inlines it
+    // @0x14244c080
     SF_NOINLINE void Stage::focusGet(SPtr<Instances::fl_display::InteractiveObject>& result)
     {
         Ptr<GFx::InteractiveObject> focused = FocusedCharacter0(static_cast<ASVM&>(GetVM()).GetMovieImpl());
