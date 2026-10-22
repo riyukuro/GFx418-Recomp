@@ -118,6 +118,74 @@ namespace Classes { namespace fl_gfx
     }
 }}
 
+namespace Instances { namespace fl_media
+{
+    // @0x1424d1a80
+    void Sound::lengthGet(Value::Number& result)
+    {
+        float v = 0;
+        if (pSoundObject)
+            v = pSoundObject->GetDuration();
+        result = v;
+    }
+
+    // @0x1424d1ac0
+    void Sound::load(const Value& result, Instances::fl_net::URLRequest* stream, Instances::fl_media::SoundLoaderContext* context)
+    {
+        SF_UNUSED(result);
+        if (!pSoundObject)
+            return;
+        if (stream)
+            SoundURL = stream->GetUrl().ToCStr();
+        if (context)
+            Streaming = context->bufferTime > 0;
+        pSoundObject->LoadFile(SoundURL, Streaming);
+    }
+
+    // @0x1424d20e0
+    void Sound::urlGet(ASString& result)
+    {
+        result.AssignNode(result.GetManager()->CreateStringNode(SoundURL.ToCStr(), SoundURL.GetSize()));
+    }
+
+    // @0x1424d1da0
+    void SoundChannel::positionGet(Value::Number& result)
+    {
+        float v = 0;
+        if (pSoundObject)
+            v = pSoundObject->GetPosition();
+        result = v;
+    }
+
+    // @0x1424d2070
+    void SoundChannel::soundTransformSet(const Value& result, Instances::fl_media::SoundTransform* value)
+    {
+        SF_UNUSED(result);
+        if (pSoundObject)
+        {
+            pSoundObject->SetVolume((int)(value->Volume * 100));
+            pSoundObject->SetPan((int)(value->Pan * 100));
+        }
+    }
+
+    // The SoundLoaderContext/SoundTransform ctors are inline in as3_obj_media.h.
+}}
+
+namespace InstanceTraits { namespace fl_media
+{
+    // @0x1424d17e0
+    void SoundLoaderContext::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x1424d1850
+    void SoundTransform::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+}}
+
 namespace InstanceTraits { namespace fl_gfx
 {
     // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call

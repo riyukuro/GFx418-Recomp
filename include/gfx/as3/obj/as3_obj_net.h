@@ -124,6 +124,8 @@ namespace Instances { namespace fl_net {
         ASString                    Url;            // +0x38
         SPtr<Instances::fl::Array>  RequestHeaders; // +0x40
 
+        const ASString& GetUrl() const;                             // 0x142499480
+
         // @0x14249add0
         void authenticateGet(bool& result);
         // @0x14249adf0
