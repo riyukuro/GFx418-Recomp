@@ -68,7 +68,10 @@ public:
         eInvalidArgumentError       = 1508,
         eShellCompressedDataError   = 1509,
         eParamRangeError            = 2006,
-        eNullPointerError           = 2007
+        eNullPointerError           = 2007,
+        // (appended, sfr13)
+        eCheckTypeFailedError       = 1034,
+        eVectorFixedError           = 1126
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).

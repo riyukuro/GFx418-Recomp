@@ -5,11 +5,12 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_vec {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes; vftable 0x143182788.
     class Vector_String : public Instances::fl::Object
     {
     public:
@@ -59,9 +60,23 @@ namespace Instances { namespace fl_vec {
         void lengthGet(UInt32& result);
         // @0x142564ce0
         void lengthSet(const Value& result, UInt32);
+
+    public:
+        // (appended, sfr13) the vector object; bodies in sfr_as3_21 unless noted
+        // @0x142560110
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_vec::Vector_String"; }
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);   // 0x142563b20
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);         // 0x1425607e0
+        virtual void GetDynamicProperty(AbsoluteIndex ind, Value& value);                   // 0x142560270
+        virtual CheckResult DeleteProperty(const Multiname& prop_name);                     // 0x14255b7f0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);                      // 0x142557110 (sfr_as3_20)
+        virtual void GetNextPropertyName(Value& name, GlobalSlotIndex ind) const;           // 0x142560510
+        virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x142560330
+
+        VectorBase<Ptr<ASStringNode> > V;   // +0x38
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes; vftable 0x143182488.
     class Vector_double : public Instances::fl::Object
     {
     public:
@@ -111,9 +126,23 @@ namespace Instances { namespace fl_vec {
         void lengthGet(UInt32& result);
         // @0x142564d00
         void lengthSet(const Value& result, UInt32);
+
+    public:
+        // (appended, sfr13) the vector object; bodies in sfr_as3_21 unless noted
+        // @0x142560150
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_vec::Vector_double"; }
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);   // 0x142563bb0
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);         // 0x142560870
+        virtual void GetDynamicProperty(AbsoluteIndex ind, Value& value);                   // 0x142560280
+        virtual CheckResult DeleteProperty(const Multiname& prop_name);                     // 0x14255b890
+        virtual void AS3Constructor(unsigned argc, const Value* argv);                      // 0x142557180 (sfr_as3_20)
+        virtual void GetNextPropertyName(Value& name, GlobalSlotIndex ind) const;           // 0x1425605a0
+        virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x142560390
+
+        VectorBase<Value::Number > V;   // +0x38
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes; vftable 0x143181e58.
     class Vector_int : public Instances::fl::Object
     {
     public:
@@ -163,9 +192,23 @@ namespace Instances { namespace fl_vec {
         void lengthGet(UInt32& result);
         // @0x142564d20
         void lengthSet(const Value& result, UInt32);
+
+    public:
+        // (appended, sfr13) the vector object; bodies in sfr_as3_21 unless noted
+        // @0x142560190
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_vec::Vector_int"; }
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);   // 0x142563c40
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);         // 0x142560930
+        virtual void GetDynamicProperty(AbsoluteIndex ind, Value& value);                   // 0x142560290
+        virtual CheckResult DeleteProperty(const Multiname& prop_name);                     // 0x14255b970
+        virtual void AS3Constructor(unsigned argc, const Value* argv);                      // 0x1425571f0 (sfr_as3_20)
+        virtual void GetNextPropertyName(Value& name, GlobalSlotIndex ind) const;           // 0x142560630
+        virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x1425603f0
+
+        VectorBase<SInt32 > V;   // +0x38
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes; vftable 0x143182a88.
     class Vector_object : public Instances::fl::Object
     {
     public:
@@ -215,9 +258,25 @@ namespace Instances { namespace fl_vec {
         void lengthGet(UInt32& result);
         // @0x142564d40
         void lengthSet(const Value& result, UInt32);
+
+    public:
+        // (appended, sfr13) the vector object; bodies in sfr_as3_21 unless noted
+        // @0x14255c220
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+        // @0x1425601d0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_vec::Vector_object"; }
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);   // 0x142563cd0
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);         // 0x1425609f0
+        virtual void GetDynamicProperty(AbsoluteIndex ind, Value& value);                   // 0x1425602a0
+        virtual CheckResult DeleteProperty(const Multiname& prop_name);                     // 0x14255ba50
+        virtual void AS3Constructor(unsigned argc, const Value* argv);                      // 0x1425572c0 (sfr_as3_20)
+        virtual void GetNextPropertyName(Value& name, GlobalSlotIndex ind) const;           // 0x1425606c0
+        virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x142560450
+
+        VectorBase<Value > V;   // +0x38
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes; vftable 0x143182170.
     class Vector_uint : public Instances::fl::Object
     {
     public:
@@ -267,6 +326,20 @@ namespace Instances { namespace fl_vec {
         void lengthGet(UInt32& result);
         // @0x142564d60
         void lengthSet(const Value& result, UInt32);
+
+    public:
+        // (appended, sfr13) the vector object; bodies in sfr_as3_21 unless noted
+        // @0x142560210
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_vec::Vector_uint"; }
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);   // 0x142563db0
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);         // 0x142560a80
+        virtual void GetDynamicProperty(AbsoluteIndex ind, Value& value);                   // 0x1425602b0
+        virtual CheckResult DeleteProperty(const Multiname& prop_name);                     // 0x14255baf0
+        virtual void AS3Constructor(unsigned argc, const Value* argv);                      // 0x142557330 (sfr_as3_20)
+        virtual void GetNextPropertyName(Value& name, GlobalSlotIndex ind) const;           // 0x142560750
+        virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;             // 0x1425604b0
+
+        VectorBase<UInt32 > V;   // +0x38
     };
 
 }}

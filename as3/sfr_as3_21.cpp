@@ -243,6 +243,731 @@ template struct ThunkFunc2<Instances::fl_vec::Vector_uint, 14, SPtr<Instances::f
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+// ---------------------------------------------------------------- Vector
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// @0x1425602c0
+AbsoluteIndex ArrayBase::GetNextArrayIndex(AbsoluteIndex ind) const
+{
+    const SInt32 size = (SInt32)GetSize();
+    if (!ind.IsValid())
+    {
+        if (size != 0)
+            return AbsoluteIndex(0);
+    }
+    else if ((UPInt)ind.Get() < (UPInt)(SPInt)(size - 1))
+        return AbsoluteIndex(ind.Get() + 1);
+    return AbsoluteIndex(-1);
+}
+
+// ---- VectorBase<SInt32>
+
+// @0x142560220
+template <>
+UInt32 VectorBase<SInt32>::GetSize() const
+{
+    return (UInt32)V.GetSize();
+}
+
+// @0x142560b40
+template <>
+void VectorBase<SInt32>::GetValue(UInt32 ind, Value& v) const
+{
+    v.Assign(V[ind]);
+}
+
+// @0x142560ca0
+template <>
+void VectorBase<SInt32>::GetValueUnsafe(UInt32 ind, Value& v) const
+{
+    v.AssignUnsafe(V[ind]);
+}
+
+// @0x142562520
+template <>
+void VectorBase<SInt32>::PushBackUnsafe(const Value& v)
+{
+    V.PushBack(v.AsInt());
+}
+
+// jmp thunk 0x142562750
+template <>
+void VectorBase<SInt32>::PushBackValueUnsafe(const Value& v)
+{
+    PushBackUnsafe(v);
+}
+
+// @0x142562e70
+template <>
+CheckResult VectorBase<SInt32>::Resize(UInt32 size)
+{
+    if (!CheckFixed())
+        return false;
+    UPInt i = V.GetSize();
+    V.Resize(size);
+    for (; i < size; ++i)
+        V[i] = 0;
+    return true;
+}
+
+// ---- VectorBase<UInt32>
+
+// @0x142560230
+template <>
+UInt32 VectorBase<UInt32>::GetSize() const
+{
+    return (UInt32)V.GetSize();
+}
+
+// @0x142560ba0
+template <>
+void VectorBase<UInt32>::GetValue(UInt32 ind, Value& v) const
+{
+    v.Assign(V[ind]);
+}
+
+// @0x142560cd0
+template <>
+void VectorBase<UInt32>::GetValueUnsafe(UInt32 ind, Value& v) const
+{
+    v.AssignUnsafe(V[ind]);
+}
+
+// @0x142562590
+template <>
+void VectorBase<UInt32>::PushBackUnsafe(const Value& v)
+{
+    V.PushBack(v.AsUInt());
+}
+
+// jmp thunk 0x142562760
+template <>
+void VectorBase<UInt32>::PushBackValueUnsafe(const Value& v)
+{
+    PushBackUnsafe(v);
+}
+
+// @0x142562f30
+template <>
+CheckResult VectorBase<UInt32>::Resize(UInt32 size)
+{
+    if (!CheckFixed())
+        return false;
+    UPInt i = V.GetSize();
+    V.Resize(size);
+    for (; i < size; ++i)
+        V[i] = 0;
+    return true;
+}
+
+// ---- VectorBase<Value::Number>
+
+// @0x142560240
+template <>
+UInt32 VectorBase<Value::Number>::GetSize() const
+{
+    return (UInt32)V.GetSize();
+}
+
+// @0x142560c00
+template <>
+void VectorBase<Value::Number>::GetValue(UInt32 ind, Value& v) const
+{
+    v.Assign(V[ind]);
+}
+
+// @0x142560d00
+template <>
+void VectorBase<Value::Number>::GetValueUnsafe(UInt32 ind, Value& v) const
+{
+    v.AssignUnsafe(V[ind]);
+}
+
+// @0x142562600
+template <>
+void VectorBase<Value::Number>::PushBackUnsafe(const Value& v)
+{
+    V.PushBack(v.AsNumber());
+}
+
+// jmp thunk 0x142562770
+template <>
+void VectorBase<Value::Number>::PushBackValueUnsafe(const Value& v)
+{
+    PushBackUnsafe(v);
+}
+
+// @0x142562ff0
+template <>
+CheckResult VectorBase<Value::Number>::Resize(UInt32 size)
+{
+    if (!CheckFixed())
+        return false;
+    UPInt i = V.GetSize();
+    V.Resize(size);
+    for (; i < size; ++i)
+        V[i] = 0;
+    return true;
+}
+
+// ---- VectorBase<Ptr<ASStringNode> >
+
+// @0x142560250
+template <>
+UInt32 VectorBase<Ptr<ASStringNode> >::GetSize() const
+{
+    return (UInt32)V.GetSize();
+}
+
+// @0x142560c60
+template <>
+void VectorBase<Ptr<ASStringNode> >::GetValue(UInt32 ind, Value& v) const
+{
+    v.Assign(V[ind].GetPtr());
+}
+
+// @0x142560d30
+template <>
+void VectorBase<Ptr<ASStringNode> >::GetValueUnsafe(UInt32 ind, Value& v) const
+{
+    v.AssignUnsafe(V[ind].GetPtr());
+}
+
+template <>
+void VectorBase<Ptr<ASStringNode> >::PushBackUnsafe(const Value& v)
+{
+    Ptr<ASStringNode> node(v.GetStringNode());
+    V.PushBack(node);
+}
+
+// @0x142562780
+template <>
+void VectorBase<Ptr<ASStringNode> >::PushBackValueUnsafe(const Value& v)
+{
+    PushBackUnsafe(v);
+}
+
+// @0x1425630f0
+template <>
+CheckResult VectorBase<Ptr<ASStringNode> >::Resize(UInt32 size)
+{
+    if (!CheckFixed())
+        return false;
+    UPInt i = V.GetSize();
+    V.Resize(size);
+    for (; i < size; ++i)
+        V[i] = Ptr<ASStringNode>(VMRef.GetStringManager().GetBuiltin(AS3Builtin_null).GetNode());
+    return true;
+}
+
+// ---- VectorBase<Value>
+
+// @0x142560260
+template <>
+UInt32 VectorBase<Value>::GetSize() const
+{
+    return (UInt32)V.GetSize();
+}
+
+// @0x142560c80
+template <>
+void VectorBase<Value>::GetValue(UInt32 ind, Value& v) const
+{
+    v.Assign(V[ind]);
+}
+
+// @0x142560d50
+template <>
+void VectorBase<Value>::GetValueUnsafe(UInt32 ind, Value& v) const
+{
+    v.AssignUnsafe(V[ind]);
+}
+
+// @0x142562670
+template <>
+void VectorBase<Value>::PushBackUnsafe(const Value& v)
+{
+    Value tmp(v);
+    V.PushBack(tmp);
+}
+
+// jmp thunk 0x1425627e0
+template <>
+void VectorBase<Value>::PushBackValueUnsafe(const Value& v)
+{
+    PushBackUnsafe(v);
+}
+
+// @0x142563240
+template <>
+CheckResult VectorBase<Value>::Resize(UInt32 size)
+{
+    if (!CheckFixed())
+        return false;
+    UPInt i = V.GetSize();
+    V.Resize(size);
+    for (; i < size; ++i)
+        V[i] = Value(Value::GetNull());
+    return true;
+}
+
+template class VectorBase<SInt32>;
+template class VectorBase<UInt32>;
+template class VectorBase<Value::Number>;
+template class VectorBase<Ptr<ASStringNode> >;
+template class VectorBase<Value>;
+
+namespace Instances { namespace fl_vec {
+
+// ---- Vector_String
+
+// @0x142560270
+void Vector_String::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+{
+    static_cast<ArrayBase&>(V).GetValue((UInt32)ind.Get(), value);
+}
+
+// @0x142560510
+// MS2-FUNCTIONAL: Value setter codegen differs
+void Vector_String::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+{
+    if (ind.IsValid())
+        name.SetUInt32(ind.Get() - 1);
+    else
+        name.SetUndefined();
+}
+
+// @0x142560330
+// MS2-FUNCTIONAL: index arithmetic codegen differs
+GlobalSlotIndex Vector_String::GetNextDynPropIndex(GlobalSlotIndex ind) const
+{
+    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
+    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+}
+
+// @0x1425607e0
+// MS2-FUNCTIONAL: element read inlined differently
+CheckResult Vector_String::GetProperty(const Multiname& prop_name, Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::GetProperty(prop_name, value);
+    if (ind < V.V.GetSize())
+    {
+        V.GetValue(ind, value);
+        return true;
+    }
+    return false;
+}
+
+// @0x1425587a0
+// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
+void Vector_String::AS3shift(ASString& result)
+{
+    if (V.CheckFixed() && V.V.GetSize() != 0)
+    {
+        ASStringNode* node = V.V[0];
+        if (!node)
+            node = result.GetManager()->GetNullStringNode();
+        result.AssignNode(node);
+        V.V.RemoveAt(0);
+    }
+}
+
+// @0x142564bf0
+void Vector_String::fixedGet(bool& result)
+{
+    result = V.Fixed;
+}
+
+// @0x142564c40
+void Vector_String::fixedSet(const Value& result, bool f)
+{
+    SF_UNUSED(result);
+    V.Fixed = f;
+}
+
+// @0x142564c90
+void Vector_String::lengthGet(UInt32& result)
+{
+    result = (UInt32)V.V.GetSize();
+}
+
+// @0x142564ce0
+// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
+void Vector_String::lengthSet(const Value& result, UInt32 len)
+{
+    SF_UNUSED(result);
+    V.Resize(len);
+}
+
+// ---- Vector_double
+
+// @0x142560280
+void Vector_double::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+{
+    static_cast<ArrayBase&>(V).GetValue((UInt32)ind.Get(), value);
+}
+
+// @0x1425605a0
+// MS2-FUNCTIONAL: Value setter codegen differs
+void Vector_double::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+{
+    if (ind.IsValid())
+        name.SetUInt32(ind.Get() - 1);
+    else
+        name.SetUndefined();
+}
+
+// @0x142560390
+// MS2-FUNCTIONAL: index arithmetic codegen differs
+GlobalSlotIndex Vector_double::GetNextDynPropIndex(GlobalSlotIndex ind) const
+{
+    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
+    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+}
+
+// @0x142560870
+// MS2-FUNCTIONAL: element read inlined differently
+CheckResult Vector_double::GetProperty(const Multiname& prop_name, Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::GetProperty(prop_name, value);
+    if (ind < V.V.GetSize())
+    {
+        V.GetValue(ind, value);
+        return true;
+    }
+    return false;
+}
+
+// @0x1425584f0
+void Vector_double::AS3reverse(SPtr<Vector_double>& result)
+{
+    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
+    {
+        const Value::Number tmp = V.V[i];
+        V.V[i] = V.V[j];
+        V.V[j] = tmp;
+    }
+    result = this;
+}
+
+// @0x142558850
+// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
+void Vector_double::AS3shift(Value::Number& result)
+{
+    if (V.CheckFixed() && V.V.GetSize() != 0)
+    {
+        result = V.V[0];
+        V.V.RemoveAt(0);
+    }
+}
+
+// @0x142564c00
+void Vector_double::fixedGet(bool& result)
+{
+    result = V.Fixed;
+}
+
+// @0x142564c50
+void Vector_double::fixedSet(const Value& result, bool f)
+{
+    SF_UNUSED(result);
+    V.Fixed = f;
+}
+
+// @0x142564ca0
+void Vector_double::lengthGet(UInt32& result)
+{
+    result = (UInt32)V.V.GetSize();
+}
+
+// @0x142564d00
+// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
+void Vector_double::lengthSet(const Value& result, UInt32 len)
+{
+    SF_UNUSED(result);
+    V.Resize(len);
+}
+
+// ---- Vector_int
+
+// @0x142560290
+void Vector_int::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+{
+    static_cast<ArrayBase&>(V).GetValue((UInt32)ind.Get(), value);
+}
+
+// @0x142560630
+// MS2-FUNCTIONAL: Value setter codegen differs
+void Vector_int::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+{
+    if (ind.IsValid())
+        name.SetUInt32(ind.Get() - 1);
+    else
+        name.SetUndefined();
+}
+
+// @0x1425603f0
+// MS2-FUNCTIONAL: index arithmetic codegen differs
+GlobalSlotIndex Vector_int::GetNextDynPropIndex(GlobalSlotIndex ind) const
+{
+    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
+    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+}
+
+// @0x142560930
+// MS2-FUNCTIONAL: element read inlined differently
+CheckResult Vector_int::GetProperty(const Multiname& prop_name, Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::GetProperty(prop_name, value);
+    if (ind < V.V.GetSize())
+    {
+        V.GetValue(ind, value);
+        return true;
+    }
+    return false;
+}
+
+// @0x142558590
+void Vector_int::AS3reverse(SPtr<Vector_int>& result)
+{
+    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
+    {
+        const SInt32 tmp = V.V[i];
+        V.V[i] = V.V[j];
+        V.V[j] = tmp;
+    }
+    result = this;
+}
+
+// @0x142558910
+// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
+void Vector_int::AS3shift(SInt32& result)
+{
+    if (V.CheckFixed() && V.V.GetSize() != 0)
+    {
+        result = V.V[0];
+        V.V.RemoveAt(0);
+    }
+}
+
+// @0x142564c10
+void Vector_int::fixedGet(bool& result)
+{
+    result = V.Fixed;
+}
+
+// @0x142564c60
+void Vector_int::fixedSet(const Value& result, bool f)
+{
+    SF_UNUSED(result);
+    V.Fixed = f;
+}
+
+// @0x142564cb0
+void Vector_int::lengthGet(UInt32& result)
+{
+    result = (UInt32)V.V.GetSize();
+}
+
+// @0x142564d20
+// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
+void Vector_int::lengthSet(const Value& result, UInt32 len)
+{
+    SF_UNUSED(result);
+    V.Resize(len);
+}
+
+// ---- Vector_object
+
+// @0x1425602a0
+void Vector_object::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+{
+    static_cast<ArrayBase&>(V).GetValue((UInt32)ind.Get(), value);
+}
+
+// @0x1425606c0
+// MS2-FUNCTIONAL: Value setter codegen differs
+void Vector_object::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+{
+    if (ind.IsValid())
+        name.SetUInt32(ind.Get() - 1);
+    else
+        name.SetUndefined();
+}
+
+// @0x142560450
+// MS2-FUNCTIONAL: index arithmetic codegen differs
+GlobalSlotIndex Vector_object::GetNextDynPropIndex(GlobalSlotIndex ind) const
+{
+    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
+    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+}
+
+// @0x1425609f0
+// MS2-FUNCTIONAL: element read inlined differently
+CheckResult Vector_object::GetProperty(const Multiname& prop_name, Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::GetProperty(prop_name, value);
+    if (ind < V.V.GetSize())
+    {
+        V.GetValue(ind, value);
+        return true;
+    }
+    return false;
+}
+
+// @0x142558630
+// MS2-FUNCTIONAL: Value::Swap inlined differently
+void Vector_object::AS3reverse(SPtr<Vector_object>& result)
+{
+    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
+    {
+        V.V[i].Swap(V.V[j]);
+    }
+    result = this;
+}
+
+// @0x1425589d0
+// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
+void Vector_object::AS3shift(Value& result)
+{
+    if (V.CheckFixed() && V.V.GetSize() != 0)
+    {
+        result.Assign(V.V[0]);
+        V.V.RemoveAt(0);
+    }
+}
+
+// @0x142564c20
+void Vector_object::fixedGet(bool& result)
+{
+    result = V.Fixed;
+}
+
+// @0x142564c70
+void Vector_object::fixedSet(const Value& result, bool f)
+{
+    SF_UNUSED(result);
+    V.Fixed = f;
+}
+
+// @0x142564cc0
+void Vector_object::lengthGet(UInt32& result)
+{
+    result = (UInt32)V.V.GetSize();
+}
+
+// @0x142564d40
+void Vector_object::lengthSet(const Value& result, UInt32 len)
+{
+    SF_UNUSED(result);
+    V.Resize(len);
+}
+
+// ---- Vector_uint
+
+// @0x1425602b0
+void Vector_uint::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+{
+    static_cast<ArrayBase&>(V).GetValue((UInt32)ind.Get(), value);
+}
+
+// @0x142560750
+// MS2-FUNCTIONAL: Value setter codegen differs
+void Vector_uint::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+{
+    if (ind.IsValid())
+        name.SetUInt32(ind.Get() - 1);
+    else
+        name.SetUndefined();
+}
+
+// @0x1425604b0
+// MS2-FUNCTIONAL: index arithmetic codegen differs
+GlobalSlotIndex Vector_uint::GetNextDynPropIndex(GlobalSlotIndex ind) const
+{
+    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
+    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+}
+
+// @0x142560a80
+// MS2-FUNCTIONAL: element read inlined differently
+CheckResult Vector_uint::GetProperty(const Multiname& prop_name, Value& value)
+{
+    UInt32 ind;
+    if (!GetVectorInd(prop_name, ind))
+        return Instances::fl::Object::GetProperty(prop_name, value);
+    if (ind < V.V.GetSize())
+    {
+        V.GetValue(ind, value);
+        return true;
+    }
+    return false;
+}
+
+// @0x142558700
+void Vector_uint::AS3reverse(SPtr<Vector_uint>& result)
+{
+    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
+    {
+        const UInt32 tmp = V.V[i];
+        V.V[i] = V.V[j];
+        V.V[j] = tmp;
+    }
+    result = this;
+}
+
+// @0x142558a60
+// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
+void Vector_uint::AS3shift(UInt32& result)
+{
+    if (V.CheckFixed() && V.V.GetSize() != 0)
+    {
+        result = V.V[0];
+        V.V.RemoveAt(0);
+    }
+}
+
+// @0x142564c30
+void Vector_uint::fixedGet(bool& result)
+{
+    result = V.Fixed;
+}
+
+// @0x142564c80
+void Vector_uint::fixedSet(const Value& result, bool f)
+{
+    SF_UNUSED(result);
+    V.Fixed = f;
+}
+
+// @0x142564cd0
+void Vector_uint::lengthGet(UInt32& result)
+{
+    result = (UInt32)V.V.GetSize();
+}
+
+// @0x142564d60
+// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
+void Vector_uint::lengthSet(const Value& result, UInt32 len)
+{
+    SF_UNUSED(result);
+    V.Resize(len);
+}
+
+}} // namespace Instances::fl_vec
+
+}}} // namespace Scaleform::GFx::AS3
+
 // ---------------------------------------------------------------- SoundObject
 
 #include "ms2/scaleform/include/gfx/as3/as3_soundobject.h"
@@ -531,3 +1256,11 @@ void SoundObject::Stop()
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0M@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255ff10
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0N@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255ff30
 // MS2-PIN: ?Func@?$ThunkFunc2@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@$0O@V?$SPtr@VVector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@AEBV8456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255ff50
+// MS2-PIN: ??_7ArrayBase@AS3@GFx@Scaleform@@6B@ 0x143181db8
+// MS2-PIN: ??_7?$VectorBase@VValue@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@6B@ 0x143181de0
+// MS2-PIN: ??_7?$VectorBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@AS3@GFx@Scaleform@@6B@ 0x143181e08
+// MS2-PIN: ??_7?$VectorBase@J@AS3@GFx@Scaleform@@6B@ 0x143181e30
+// MS2-PIN: ??_7?$VectorBase@K@AS3@GFx@Scaleform@@6B@ 0x143182148
+// MS2-PIN: ??_7?$VectorBase@N@AS3@GFx@Scaleform@@6B@ 0x143182460
+// MS2-PIN: ??_7SoundObject@AS3@GFx@Scaleform@@6B?$RefCountBase@VSoundObject@AS3@GFx@Scaleform@@$0BED@@3@@ 0x143182f50
+// MS2-PIN: ??_7SoundObject@AS3@GFx@Scaleform@@6BASSoundIntf@23@@ 0x143182f58
