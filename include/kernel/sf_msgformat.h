@@ -183,6 +183,7 @@ template<> struct FmtInfo<String> { typedef StrFormatter formatter; }; // (sfr_g
 // (appended, sfr15)
 template<> struct FmtInfo<long>          { typedef LongFormatter formatter; };
 template<> struct FmtInfo<unsigned long> { typedef LongFormatter formatter; };
+template<> struct FmtInfo<unsigned int>  { typedef LongFormatter formatter; }; // (sfr15)
 
 // The "{n}" message formatter (0x3f0 bytes). Out of line in the kernel MsgFormat unit (exe: ctor 0x1425af0a0,
 // dtor 0x1425af530, Parse 0x1425b2210, FinishFormatD 0x1425b0bd0, NextFormatter 0x1425b1960, Bind 0x1425afab0).

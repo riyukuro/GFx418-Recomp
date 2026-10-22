@@ -8,7 +8,9 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
 #include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 
-namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Scaleform { namespace GFx {
+class SharedObjectVisitor;
+namespace AS3 {
 
 namespace Instances { namespace fl_net {
     // 0x50 bytes.
@@ -91,6 +93,9 @@ namespace Instances { namespace fl_net {
         void setProperty(const Value& result, const ASString&, const Value&);
         // @0x14249c360
         void sizeGet(UInt32& result);
+
+        // (appended, sfr15) writes Data through pwriter (0x142499080); false without a writer.
+        bool FlushImpl(GFx::SharedObjectVisitor* pwriter);
     };
 
     // 0x80 bytes.

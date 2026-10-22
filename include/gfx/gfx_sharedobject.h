@@ -6,6 +6,7 @@
 
 #include "gfx_value.h"
 #include "../kernel/sf_string.h"
+#include "gfx_state.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -19,6 +20,20 @@ public:
     virtual void PopObject() = 0;                                                       // slot 5
     virtual void PopArray() = 0;                                                        // slot 6
     virtual void End() = 0;                                                             // slot 7
+};
+
+// (appended, sfr15) the SharedObject state: loads a stored shared object and hands out its writer.
+class SharedObjectManagerBase : public State
+{
+public:
+    SharedObjectManagerBase() : State(State_SharedObject) {}
+
+    // Replays the stored data of name into psobj; false if there is none.
+    virtual bool LoadSharedObject(const String& name, const String& localPath, SharedObjectVisitor* psobj,
+                                  FileOpenerBase* pfileOpener) = 0;                    // slot 1
+    // A new visitor that stores what it is given under name (the caller owns the reference).
+    virtual SharedObjectVisitor* CreateWriter(const String& name, const String& localPath,
+                                              FileOpenerBase* pfileOpener) = 0;          // slot 2
 };
 
 }} // namespace Scaleform::GFx

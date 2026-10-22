@@ -67,6 +67,8 @@ public:
     String(const String& src);
     // First size bytes of pdata (exe 0x142584c10).
     String(const char* pdata, UPInt size);
+    // (appended, sfr15) size characters produced by src.InitString (exe 0x1425848c0)
+    String(const InitStruct& src, UPInt size);
     ~String() { GetData()->Release(); }
 
     void operator=(const char* pstr);

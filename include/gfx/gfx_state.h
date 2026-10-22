@@ -49,6 +49,8 @@ public:
         State_Translator = 1,
         // (appended for the AS3 natives, sfr12) flash.system.IME queries 0x18
         State_IMEManager = 24,
+        // (appended, sfr15) flash.net.SharedObject::flush queries 0x20
+        State_SharedObject = 32,
     };
 
 protected:
