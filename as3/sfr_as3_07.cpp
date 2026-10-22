@@ -1405,6 +1405,76 @@ namespace Instances { namespace fl_display
         FUN_142441010(this, argc, argv, pDrawing->CreateLineComplexFill());
     }
 
+    // lineStyle(thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit): no arguments leaves the
+    // line style alone. The stroke flags: scaling "vertical"/"horizontal"/"none" (else normal), caps "none"/"square"
+    // (else round, both ends), joints "miter"/"bevel" (else round).
+    // @0x14244f9e0
+    void Graphics::lineStyle(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        Value::Number num = 0;
+        UInt32 rgb = 0;
+        float alpha = 1.0f;
+        float miterLimit = 3.0f;
+        bool hinting = false;
+        unsigned scaling = 0, caps = 0, joints = 0;
+        if (argc == 0)
+            return;
+        if (!argv[0].Convert2Number(num))
+            return;
+        float thickness = float(num);
+        if (argc > 1 && !argv[1].Convert2UInt32(rgb))
+            return;
+        if (argc > 2)
+        {
+            if (!argv[2].Convert2Number(num))
+                return;
+            alpha = float(num);
+        }
+        if (argc > 3)
+            hinting = argv[3].Convert2Boolean();
+        if (argc > 4)
+        {
+            ASString str = GetVM().GetStringManager().CreateEmptyString();
+            if (!argv[4].Convert2String(str))
+                return;
+            if (!strcmp(str.ToCStr(), "vertical"))
+                scaling = Render::StrokeScaling_Vertical;
+            else if (!strcmp(str.ToCStr(), "horizontal"))
+                scaling = Render::StrokeScaling_Horizontal;
+            else if (!strcmp(str.ToCStr(), "none"))
+                scaling = Render::StrokeScaling_None;
+        }
+        if (argc > 5)
+        {
+            ASString str = GetVM().GetStringManager().CreateEmptyString();
+            if (!argv[5].Convert2String(str))
+                return;
+            if (!strcmp(str.ToCStr(), "none"))
+                caps = 0x140;   // no start / end cap
+            else if (!strcmp(str.ToCStr(), "square"))
+                caps = 0x280;   // square start / end cap
+        }
+        if (argc > 6)
+        {
+            ASString str = GetVM().GetStringManager().CreateEmptyString();
+            if (!argv[6].Convert2String(str))
+                return;
+            if (!strcmp(str.ToCStr(), "miter"))
+                joints = 0x20;
+            else if (!strcmp(str.ToCStr(), "bevel"))
+                joints = 0x10;
+        }
+        if (argc > 7)
+        {
+            if (!argv[7].Convert2Number(num))
+                return;
+            miterLimit = float(num);
+        }
+        pDrawing->ChangeLineStyle(thickness * 20.0f, (UInt32(alpha * 255.0f) << 24) | (rgb & 0xFFFFFF), hinting,
+                                  scaling, caps, joints, miterLimit);
+    }
+
     // @0x142448460
     void Graphics::beginGradientFill(Value& result, unsigned argc, const Value* argv)
     {
