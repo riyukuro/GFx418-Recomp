@@ -278,6 +278,9 @@ void FUN_142554880(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scalef
 
 // ---------------------------------------------------------------- Vector
 
+// GetValueTraits (sfr_as3_09)
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // @0x1425602c0
@@ -309,6 +312,31 @@ ASString ArrayBase::Join(const ASString& sep) const
             break;
     }
     return VMRef.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
+}
+
+// @0x14255af20
+// MS2-FUNCTIONAL: callable kind test laid out as a different range compare
+CheckResult ArrayBase::CheckCallable(const Value& v) const
+{
+    if (v.IsCallable())
+        return true;
+    VM& vm = VMRef;
+    vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, v).GetName().ToCStr(), "callable"));
+    return false;
+}
+
+// @0x14255afd0
+// MS2-FUNCTIONAL: register allocation / frame size (0x50 vs 0x40) differ
+CheckResult ArrayBase::CheckCoerce(const ClassTraits::Traits& tr, const Value& v, Value& result) const
+{
+    if (!tr.Coerce(v, result))
+    {
+        VM& vm = VMRef;
+        const Traits& vtr = FUN_14250ffc0(vm, v);
+        vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vtr.GetName().ToCStr(), tr.GetName().ToCStr()));
+        return false;
+    }
+    return true;
 }
 
 // ---- VectorBase<SInt32>
@@ -358,6 +386,26 @@ CheckResult VectorBase<SInt32>::Resize(UInt32 size)
     V.Resize(size);
     for (; i < size; ++i)
         V[i] = 0;
+    return true;
+}
+
+// @0x142563720
+// MS2-FUNCTIONAL: size compares and the inlined Resize scheduled differently
+template <>
+CheckResult VectorBase<SInt32>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
+{
+    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    {
+        VM& vm = VMRef;
+        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        return false;
+    }
+    if (ind == (UInt32)V.GetSize() && !Resize(ind + 1))
+        return false;
+    Value r;
+    if (!CheckCoerce(tr, v, r))
+        return false;
+    V[ind] = r.AsInt();
     return true;
 }
 
@@ -508,6 +556,26 @@ CheckResult VectorBase<Ptr<ASStringNode> >::Resize(UInt32 size)
     V.Resize(size);
     for (; i < size; ++i)
         V[i] = Ptr<ASStringNode>(VMRef.GetStringManager().GetBuiltin(AS3Builtin_null).GetNode());
+    return true;
+}
+
+// @0x1425638c0
+// MS2-FUNCTIONAL: size compares scheduled differently
+template <>
+CheckResult VectorBase<Ptr<ASStringNode> >::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
+{
+    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    {
+        VM& vm = VMRef;
+        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        return false;
+    }
+    if (ind == (UInt32)V.GetSize() && !Resize(ind + 1))
+        return false;
+    Value r;
+    if (!CheckCoerce(tr, v, r))
+        return false;
+    V[ind] = r.GetStringNode();
     return true;
 }
 

@@ -85,6 +85,7 @@ public:
         Error(ErrorID id, VM& vm, const char* arg1);    // 0x1424d7850
         Error(ErrorID id, VM& vm, const char* arg1, const char* arg2);   // 0x1424d7690
         Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int arg4);   // 0x1424d7bf0
+        Error(ErrorID id, VM& vm, int arg1, int arg2);  // 0x1424d74d0
 
         ErrorID         GetErrorID() const  { return ID; }
         const ASString& GetMessage() const  { return Message; }

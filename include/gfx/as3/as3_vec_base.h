@@ -40,6 +40,10 @@ public:
     ASString Join(const ASString& sep) const;
     // Vector.some: calls callback(element, index, owner) on thisObject until one returns true. 0x142563ee0
     bool Some(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const;
+    // TypeError 1034 unless v is callable. 0x14255af20
+    CheckResult CheckCallable(const Value& v) const;
+    // v coerced to tr into result; TypeError 1034 when it cannot be. 0x14255afd0
+    CheckResult CheckCoerce(const ClassTraits::Traits& tr, const Value& v, Value& result) const;
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v) = 0;
