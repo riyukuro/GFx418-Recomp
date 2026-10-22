@@ -94,7 +94,8 @@ public:
         // (appended, sfr17)
         eInvalidURIError            = 1052,
         // (appended, sfr19)
-        eMustBeChildError           = 2025
+        eMustBeChildError           = 2025,
+        eAddObjectItselfError       = 2024
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).

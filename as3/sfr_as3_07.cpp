@@ -1398,6 +1398,60 @@ namespace Instances { namespace fl_display
         psprite->SetPlayState(State_Stopped);
     }
 
+    // @0x142450bc0
+    void MovieClip::nextScene(const Value& result)
+    {
+        SF_UNUSED(result);
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        if (psprite->pDef->GetType() == CharacterDef::MovieData)
+        {
+            UPInt count = 0;
+            const MovieDataDef::SceneInfo* pscenes = psprite->GetResourceMovieDef()->GetDataDef()->GetScenes(&count);
+            unsigned frame = psprite->GetCurrentFrame();
+            for (UPInt i = 0; i < count; ++i)
+            {
+                if (frame >= pscenes[i].Offset && frame < pscenes[i].Offset + pscenes[i].NumFrames)
+                {
+                    // The next scene, once its first frame is loaded.
+                    if (i + 1 < count)
+                    {
+                        unsigned loaded = psprite->GetLoadingFrame();
+                        if (pscenes[i + 1].Offset < loaded)
+                        {
+                            psprite->GotoFrame(pscenes[i + 1].Offset);
+                            psprite->SetPlayState(State_Playing);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // @0x142451ae0
+    void MovieClip::prevScene(const Value& result)
+    {
+        SF_UNUSED(result);
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        if (psprite->pDef->GetType() == CharacterDef::MovieData)
+        {
+            UPInt count = 0;
+            const MovieDataDef::SceneInfo* pscenes = psprite->GetResourceMovieDef()->GetDataDef()->GetScenes(&count);
+            unsigned frame = psprite->GetCurrentFrame();
+            for (UPInt i = 0; i < count; ++i)
+            {
+                if (frame >= pscenes[i].Offset && frame < pscenes[i].Offset + pscenes[i].NumFrames)
+                {
+                    // The previous scene.
+                    if (i > 0)
+                    {
+                        psprite->GotoFrame(pscenes[i - 1].Offset);
+                        psprite->SetPlayState(State_Playing);
+                    }
+                }
+            }
+        }
+    }
+
     // @0x1424542b0
     void MovieClip::totalFramesGet(SInt32& result)
     {
@@ -1822,6 +1876,11 @@ public:
     void SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
     void SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);   // 0x14252e590
     void RemoveChild(DisplayObjectBase* ch);                    // 0x142522570
+    void RemoveChildAt(unsigned index);                         // 0x1425226a0
+    void AddChild(DisplayObjectBase* ch);                       // 0x1424e6d90
+    void AddChildAt(DisplayObjectBase* ch, unsigned index);     // 0x1424e6e90
+    SPtr<Instances::fl_display::DisplayObject> GetAS3ChildAt(unsigned index);
+    SPtr<Instances::fl_display::DisplayObject> GetAS3ChildByName(const ASString& name);
 };
 
 namespace Instances { namespace fl_display
@@ -2179,6 +2238,106 @@ namespace Instances { namespace fl_display
             }
         }
         result.SetUndefined();
+    }
+
+    // @0x14244cde0
+    SF_NOINLINE void DisplayObjectContainer::getChildByName(SPtr<Instances::fl_display::DisplayObject>& result, const ASString& name)
+    {
+        SPtr<Instances::fl_display::DisplayObject> pchild = ToAvmDispContainer(pDispObj)->GetAS3ChildByName(name);
+        if (!pchild)
+            result = NULL;
+        else
+            result = pchild;
+    }
+
+    // @0x14244cca0
+    SF_NOINLINE void DisplayObjectContainer::getChildAt(SPtr<Instances::fl_display::DisplayObject>& result, SInt32 index)
+    {
+        SPtr<Instances::fl_display::DisplayObject> pchild = ToAvmDispContainer(pDispObj)->GetAS3ChildAt(index);
+        if (!pchild)
+        {
+            VM& vm = GetVM();
+            vm.ThrowRangeError(VM::Error(VM::eParamRangeError, vm));
+        }
+        else
+            result = pchild;
+    }
+
+    // @0x1424474f0
+    SF_NOINLINE void DisplayObjectContainer::addChild(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject* child)
+    {
+        if (!child)
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eNullPointerError, vm, "child"));
+            return;
+        }
+        if (child == this)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eAddObjectItselfError, vm));
+            return;
+        }
+        GFx::DisplayObject* pcont = pDispObj;
+        if (!child->pDispObj)
+            child->CreateStageObject();
+        ToAvmDispContainer(pcont)->AddChild(child->pDispObj);
+        result = child;
+    }
+
+    // @0x142447660
+    SF_NOINLINE void DisplayObjectContainer::addChildAt(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject* child,
+                                                        SInt32 index)
+    {
+        if (!child)
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eNullPointerError, vm, "child"));
+            return;
+        }
+        if (child == this)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eAddObjectItselfError, vm));
+            return;
+        }
+        GFx::DisplayObjContainer* pcont = static_cast<GFx::DisplayObjContainer*>(pDispObj.GetPtr());
+        if (!child->pDispObj)
+            child->CreateStageObject();
+        result = NULL;
+        if (index < 0 || index > (SInt32)pcont->mDisplayList.GetCount())
+        {
+            VM& vm = GetVM();
+            vm.ThrowRangeError(VM::Error(VM::eParamRangeError, vm));
+        }
+        else
+        {
+            ToAvmDispContainer(pcont)->AddChildAt(child->pDispObj, index);
+            result = child;
+        }
+    }
+
+    // MS2-FUNCTIONAL: exe strips the collectible tag of the child's AS3 object with branches; ours with cmov
+    // @0x142451ef0
+    SF_NOINLINE void DisplayObjectContainer::removeChildAt(SPtr<Instances::fl_display::DisplayObject>& result, SInt32 index)
+    {
+        GFx::DisplayObjContainer* pcont = static_cast<GFx::DisplayObjContainer*>(pDispObj.GetPtr());
+        result = NULL;
+        AvmDisplayObjContainer* pavm = ToAvmDispContainer(pcont);
+        GFx::DisplayObjectBase* pchild = pcont->GetChildAt(index);
+        if (pchild)
+        {
+            GFx::DisplayObject* pdisp = static_cast<GFx::DisplayObject*>(pchild);
+            if (ToAvmDisplayObj(pdisp)->GetAS3Obj())
+                result = ToAvmDisplayObj(pdisp)->GetAS3Obj();
+        }
+        else
+        {
+            VM& vm = GetVM();
+            vm.ThrowRangeError(VM::Error(VM::eParamRangeError, vm));
+            return;
+        }
+        pavm->RemoveChildAt(index);
     }
 
     // @0x14244cee0
