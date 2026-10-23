@@ -303,9 +303,6 @@ bool IsValidValueKind(UInt8 vk)
 
 // ---------------------------------------------------------------- Vector.<T> natives
 
-// ArrayBase::Every (sfr_as3_21): callback(element, index, owner) on thisObject while it returns true
-bool FUN_14255bbd0(const Scaleform::GFx::AS3::ArrayBase& v, const Scaleform::GFx::AS3::Value& callback,
-    const Scaleform::GFx::AS3::Value& thisObject, Scaleform::GFx::AS3::Instances::fl::Object* owner);
 // VectorBase<T>::Concat/Filter/Map member templates (this unit, below the natives)
 void FUN_142547960(Scaleform::GFx::AS3::VectorBase<Scaleform::Ptr<Scaleform::GFx::ASStringNode> >& v, Scaleform::GFx::AS3::Value& result,
     unsigned argc, const Scaleform::GFx::AS3::Value* argv, Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& owner);
@@ -473,31 +470,31 @@ void Vector_uint::AS3concat(Value& result, unsigned argc, const Value* argv)
 // @0x1425574a0
 void Vector_String::AS3every(bool& result, const Value& callback, const Value& thisObject)
 {
-    result = FUN_14255bbd0(V, callback, thisObject, this);
+    result = V.Every(callback, thisObject, this);
 }
 
 // @0x1425574d0
 void Vector_double::AS3every(bool& result, const Value& callback, const Value& thisObject)
 {
-    result = FUN_14255bbd0(V, callback, thisObject, this);
+    result = V.Every(callback, thisObject, this);
 }
 
 // @0x142557500
 void Vector_int::AS3every(bool& result, const Value& callback, const Value& thisObject)
 {
-    result = FUN_14255bbd0(V, callback, thisObject, this);
+    result = V.Every(callback, thisObject, this);
 }
 
 // @0x142557530
 void Vector_object::AS3every(bool& result, const Value& callback, const Value& thisObject)
 {
-    result = FUN_14255bbd0(V, callback, thisObject, this);
+    result = V.Every(callback, thisObject, this);
 }
 
 // @0x142557560
 void Vector_uint::AS3every(bool& result, const Value& callback, const Value& thisObject)
 {
-    result = FUN_14255bbd0(V, callback, thisObject, this);
+    result = V.Every(callback, thisObject, this);
 }
 
 // ---- filter
@@ -530,6 +527,38 @@ void Vector_object::AS3filter(SPtr<Vector_object>& result, const Value& callback
 void Vector_uint::AS3filter(SPtr<Vector_uint>& result, const Value& callback, const Value& thisObject)
 {
     FUN_142549a60(V, result, callback, thisObject, *this);
+}
+
+// ---- forEach
+
+// @0x142557630
+void Vector_String::AS3forEach(const Value& result, const Value& callback, const Value& thisObject)
+{
+    V.ForEach(callback, thisObject, this);
+}
+
+// @0x142557650
+void Vector_double::AS3forEach(const Value& result, const Value& callback, const Value& thisObject)
+{
+    V.ForEach(callback, thisObject, this);
+}
+
+// @0x142557670
+void Vector_int::AS3forEach(const Value& result, const Value& callback, const Value& thisObject)
+{
+    V.ForEach(callback, thisObject, this);
+}
+
+// @0x142557690
+void Vector_object::AS3forEach(const Value& result, const Value& callback, const Value& thisObject)
+{
+    V.ForEach(callback, thisObject, this);
+}
+
+// @0x1425576b0
+void Vector_uint::AS3forEach(const Value& result, const Value& callback, const Value& thisObject)
+{
+    V.ForEach(callback, thisObject, this);
 }
 
 // ---- indexOf / lastIndexOf (a negative fromIndex counts from the end)
@@ -787,8 +816,9 @@ namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec { struct 
 
 // Vector.sort helpers the exe keeps out of line (sfr_as3_21): CompareAsStringInd::Compare, Impl::CompareFunct
 // (calls the AS3 compare function, its result as an int) and ArrayDH<Pair<ASString,UInt32> >::PushBack.
-Scaleform::SInt32 FUN_14255b4c0(const Scaleform::GFx::AS3::Instances::fl_vec::CompareAsStringInd& cmp, const Scaleform::GFx::ASString& a, const Scaleform::GFx::ASString& b);
-Scaleform::SInt32 FUN_14255b5d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& func, const Scaleform::GFx::AS3::Value& a, const Scaleform::GFx::AS3::Value& b);
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Impl {
+int CompareFunct(VM& vm, const Value& funct, const Value& a, const Value& b);
+}}}}
 void FUN_1425615f0(Scaleform::ArrayDH<Scaleform::Pair<Scaleform::GFx::ASString, Scaleform::UInt32> >& pairs, const Scaleform::Pair<Scaleform::GFx::ASString, Scaleform::UInt32>& v);
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
@@ -1037,7 +1067,8 @@ struct ValuePtrCollector : public SortFunc<T>
 struct CompareAsStringInd
 {
     CompareAsStringInd(bool desc, bool ci, bool loc) : Desc(desc), CaseInsensitive(ci), UseLocale(loc) {}
-    bool operator()(const StringPair& a, const StringPair& b) const { return FUN_14255b4c0(*this, a.First, b.First) < 0; }
+    bool operator()(const StringPair& a, const StringPair& b) const { return Compare(a.First, b.First) < 0; }
+    SInt32 Compare(const ASString& a, const ASString& b) const;
 
     bool Desc;
     bool CaseInsensitive;
@@ -1052,15 +1083,15 @@ struct CompareAsNumberInd
     bool Desc;
 };
 
-static SF_INLINE SInt32 CompareElements(VM& vm, const Value& f, const Value& a, const Value& b)  { return FUN_14255b5d0(vm, f, a, b); }
+static SF_INLINE SInt32 CompareElements(VM& vm, const Value& f, const Value& a, const Value& b)  { return Impl::CompareFunct(vm, f, a, b); }
 template <typename T>
-static SF_INLINE SInt32 CompareElements(VM& vm, const Value& f, const T& a, const T& b)          { return FUN_14255b5d0(vm, f, ElementValue(a), ElementValue(b)); }
+static SF_INLINE SInt32 CompareElements(VM& vm, const Value& f, const T& a, const T& b)          { return Impl::CompareFunct(vm, f, ElementValue(a), ElementValue(b)); }
 
 template <typename T>
 struct CompareValuePtr
 {
     CompareValuePtr(VM& vm, const Value& f) : VMRef(vm), Func(f) {}
-    bool operator()(const T* a, const T* b) const { return FUN_14255b5d0(VMRef, Func, ElementValue(*a), ElementValue(*b)) < 0; }
+    bool operator()(const T* a, const T* b) const { return Impl::CompareFunct(VMRef, Func, ElementValue(*a), ElementValue(*b)) < 0; }
 
     VM&          VMRef;
     const Value& Func;
@@ -1070,11 +1101,11 @@ template <>
 bool CompareValuePtr<Ptr<ASStringNode> >::operator()(const Ptr<ASStringNode>* a, const Ptr<ASStringNode>* b) const
 {
     VM& vm = VMRef;
-    return FUN_14255b5d0(vm, Func, Value(a->GetPtr()), Value(b->GetPtr())) < 0;
+    return Impl::CompareFunct(vm, Func, Value(a->GetPtr()), Value(b->GetPtr())) < 0;
 }
 
 template <>
-bool CompareValuePtr<Value>::operator()(const Value* a, const Value* b) const { return FUN_14255b5d0(VMRef, Func, *a, *b) < 0; }
+bool CompareValuePtr<Value>::operator()(const Value* a, const Value* b) const { return Impl::CompareFunct(VMRef, Func, *a, *b) < 0; }
 
 template <class I, class TR, typename T>
 static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
@@ -1118,7 +1149,7 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
             {
                 for (UInt32 i = 1; i < pairs.GetSize(); ++i)
                 {
-                    if (FUN_14255b4c0(cmp, pairs[i - 1].First, pairs[i].First) == 0)
+                    if (cmp.Compare(pairs[i - 1].First, pairs[i].First) == 0)
                     {
                         result.SetNull();
                         return;

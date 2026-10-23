@@ -377,6 +377,24 @@ bool ArrayBase::Every(const Value& callback, const Value& thisObject, Instances:
     return i == size;
 }
 
+// @0x14255bf00
+void ArrayBase::ForEach(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const
+{
+    if (callback.IsNullOrUndefined() || !CheckCallable(callback))
+        return;
+    Value _this(!thisObject.IsNullOrUndefined() ? thisObject : callback);
+    const UInt32 size = GetSize();
+    for (UInt32 i = 0; i < size; ++i)
+    {
+        Value argv[3] = {Value::GetUndefined(), Value(i), Value(owner)};
+        Value result;
+        GetValue(i, argv[0]);
+        VMRef.ExecuteInternalUnsafe(callback, _this, result, 3, argv, false);
+        if (VMRef.IsException())
+            break;
+    }
+}
+
 // @0x14255b1d0
 // MS2-FUNCTIONAL: error-path register allocation differs
 CheckResult ArrayBase::CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const
@@ -1610,6 +1628,17 @@ CheckResult ArrayBase::OfCorrectType(const Instances::fl::Array& arr, const Clas
     return true;
 }
 
+// @0x142561570
+CheckResult ArrayBase::OfCorrectType(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const
+{
+    for (unsigned i = 0; i < argc; ++i)
+    {
+        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, argv[i])))
+            return false;
+    }
+    return true;
+}
+
 namespace InstanceTraits { namespace fl_vec {
 
 // @0x142560ef0
@@ -2703,6 +2732,10 @@ bool Reader::ReadTraits(TraitTable& t, HasTraits::ObjectTraits& obj_traits)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// Visits the collectable a value holds (0x142504530).
+void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                              ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner);
+
 // @0x1425649c0
 template <>
 void VectorBase<Value>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
@@ -2764,7 +2797,57 @@ void Vector_object::AS3unshift(Value& result, unsigned argc, const Value* argv)
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
+// @0x14255c220
+void Vector_object::ForEachChild_GC(Collector* prcc, GcOp op) const
+{
+    Object::ForEachChild_GC(prcc, op);
+    for (UPInt i = 0, n = V.V.GetSize(); i < n; ++i)
+    {
+        const Value& v = V.V[i];
+        if (v.IsGarbageCollectable() && !v.IsWeakRef())
+            ForEachChild_GC_Internal(prcc, v, op, *this);
+    }
+}
+
 }} // namespace Instances::fl_vec
+
+// @0x142559b40
+void ArrayBase::Append(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed || !CheckArgTypes(argc, argv, tr))
+        return;
+    for (UPInt i = 0; i < argc; ++i)
+        PushBackValueUnsafe(argv[i]);
+}
+
+// @0x14255b0c0
+// MS2-FUNCTIONAL: error-path temporaries in other stack slots
+CheckResult ArrayBase::CheckArgTypes(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const
+{
+    for (UInt32 i = 0; i < arr.GetSize(); ++i)
+    {
+        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, arr.At(i))))
+        {
+            VM& vm = VMRef;
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, arr.GetTraits().GetName().ToCStr(),
+                                        tr.GetName().ToCStr()));
+            return false;
+        }
+    }
+    return true;
+}
+
+// @0x1425599b0
+// MS2-FUNCTIONAL: type-check loop counter and size registers swapped
+void ArrayBase::Append(const Instances::fl::Array& arr, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed || !CheckArgTypes(arr, tr))
+        return;
+    for (UPInt i = 0; i < arr.GetSize(); ++i)
+        PushBackValueUnsafe(arr.At(i));
+}
 
 }}} // namespace Scaleform::GFx::AS3
 
@@ -3020,6 +3103,114 @@ void Vector_object::ForEachChild_GC(Collector* prcc, GcOp op) const
 }} // namespace ClassTraits::fl_vec
 
 }}} // namespace Scaleform::GFx::AS3
+
+// ---- Vector.sort comparisons (sfr19): the string-key order and the call of an AS3 compare function, which the
+// sorts in sfr_as3_20 keep out of line.
+#include "ms2/scaleform/include/gfx/gfx_asutils.h"
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_vec {
+
+// Same definition as sfr_as3_20 (whose operator() orders the (key, index) pairs by Compare).
+struct CompareAsStringInd
+{
+    CompareAsStringInd(bool desc, bool ci, bool loc) : Desc(desc), CaseInsensitive(ci), UseLocale(loc) {}
+    SInt32 Compare(const ASString& a, const ASString& b) const;
+
+    bool Desc;
+    bool CaseInsensitive;
+    bool UseLocale;
+};
+
+// @0x14255b4c0
+// MS2-FUNCTIONAL: CaseInsensitive is read before the Desc test and the arguments live in other registers
+SInt32 CompareAsStringInd::Compare(const ASString& a, const ASString& b) const
+{
+    if (UseLocale)
+    {
+        if (Desc)
+            return b.LocaleCompare_CaseCheck(a.ToCStr(), a.GetLength(), !CaseInsensitive);
+        return a.LocaleCompare_CaseCheck(b.ToCStr(), b.GetLength(), !CaseInsensitive);
+    }
+    const SInt32 r = CaseInsensitive ? String::CompareNoCase(a.ToCStr(), b.ToCStr()) : strcmp(a.ToCStr(), b.ToCStr());
+    return Desc ? -r : r;
+}
+
+}} // namespace Instances::fl_vec
+
+namespace Impl {
+
+// funct(a, b) as a sign: <0, 0 or >0 (0 also when it threw or did not return a number).
+// @0x14255b5d0
+// MS2-FUNCTIONAL: the result and argument counter swap esi/edi; the sign of a nonzero result is selected in another order
+int CompareFunct(VM& vm, const Value& funct, const Value& a, const Value& b)
+{
+    Value result;
+    Value argv[2] = {a, b};
+    vm.ExecuteInternalUnsafe(funct, Value::GetUndefined(), result, 2, argv, false);
+    int r = 0;
+    if (!vm.IsException())
+    {
+        Value::Number n;
+        if (result.Convert2Number(n))
+        {
+            if (NumberUtil::IsNEGATIVE_INFINITY(n))
+                r = -1;
+            else if (NumberUtil::IsPOSITIVE_INFINITY(n))
+                r = 1;
+            else if (NumberUtil::IsNEGATIVE_ZERO(n))
+                r = -1;
+            else if (NumberUtil::IsPOSITIVE_ZERO(n))
+                r = 1;
+            else if (n != 0)
+                r = n < 0 ? -1 : 1;
+        }
+    }
+    return r;
+}
+
+} // namespace Impl
+
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- Vector.sort array growth (sfr19): the out-of-line Reserve of the arrays the sort collectors fill
+// (sfr_as3_20) and the PushBack of the string sort keys.
+
+namespace Scaleform {
+// A sort key and the index of the element it came from (same definition as sfr_as3_20).
+template <typename F, typename S>
+struct Pair
+{
+    Pair(const F& f, const S& s) : First(f), Second(s) {}
+
+    F First;
+    S Second;
+};
+
+// @0x1425629a0
+template void ArrayDataBase<const SInt32*, AllocatorDH<const SInt32*, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x142562a40
+template void ArrayDataBase<const UInt32*, AllocatorDH<const UInt32*, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x142562ae0
+template void ArrayDataBase<const GFx::AS3::Value::Number*, AllocatorDH<const GFx::AS3::Value::Number*, 2>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x142562b80
+template void ArrayDataBase<const Ptr<GFx::ASStringNode>*, AllocatorDH<const Ptr<GFx::ASStringNode>*, 2>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x142562c20
+template void ArrayDataBase<const GFx::AS3::Value*, AllocatorDH<const GFx::AS3::Value*, 2>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x142562cc0
+template void ArrayDataBase<Pair<GFx::AS3::Value::Number, UInt32>, AllocatorDH<Pair<GFx::AS3::Value::Number, UInt32>, 2>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x142562d60
+template void ArrayDataBase<Pair<GFx::ASString, UInt32>, AllocatorDH<Pair<GFx::ASString, UInt32>, 2>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x1425615f0
+template void ArrayBase<ArrayDataDH<Pair<GFx::ASString, UInt32>, AllocatorDH<Pair<GFx::ASString, UInt32>, 2>,
+                                    ArrayDefaultPolicy> >::PushBack(const Pair<GFx::ASString, UInt32>&);
+} // namespace Scaleform
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$04VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c2b0
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BA@V?$SPtr@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c320

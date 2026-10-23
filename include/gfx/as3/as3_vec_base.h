@@ -46,14 +46,24 @@ public:
     // (appended, sfr19) Vector.every: calls callback(element, index, owner) on thisObject while it returns true.
     // 0x14255bbd0
     bool Every(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const;
+    // (appended, sfr19) Vector.forEach: calls callback(element, index, owner) on thisObject. 0x14255bf00
+    void ForEach(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const;
     // TypeError 1034 unless v is callable. 0x14255af20
     CheckResult CheckCallable(const Value& v) const;
     // v coerced to tr into result; TypeError 1034 when it cannot be. 0x14255afd0
     CheckResult CheckCoerce(const ClassTraits::Traits& tr, const Value& v, Value& result) const;
     // TypeError 1034 ("arguments") unless every argv is of type tr. 0x14255b1d0
     CheckResult CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const;
+    // (appended, sfr19) TypeError 1034 unless every element of arr is of type tr. 0x14255b0c0
+    CheckResult CheckArgTypes(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const;
     // (appended, sfr16) whether every element of arr is of type tr. 0x1425614e0
     CheckResult OfCorrectType(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const;
+    // (appended, sfr19) whether every argv is of type tr. 0x142561570
+    CheckResult OfCorrectType(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const;
+    // (appended, sfr19) argv (TypeError 1034 unless all of type tr) appended, unless fixed. 0x142559b40
+    void Append(unsigned argc, const Value* argv, const ClassTraits::Traits& tr);
+    // (appended, sfr19) the elements of arr (TypeError 1034 unless all of type tr) appended, unless fixed. 0x1425599b0
+    void Append(const Instances::fl::Array& arr, const ClassTraits::Traits& tr);
     // (appended, sfr19) the elements of arr (an Array or a Vector) coerced to tr and appended; TypeError 1034 on
     // the first that cannot be. The Value overload returns false when v is neither (or an exception was thrown).
     void AppendCoerce(const ArrayBase& arr, const ClassTraits::Traits& tr);             // 0x14255a0b0
