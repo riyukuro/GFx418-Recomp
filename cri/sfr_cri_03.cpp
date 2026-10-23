@@ -43,6 +43,7 @@ void FUN_14004602c(void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
+void FUN_140038e24(CriSint32, const char*, CriSint32);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -87,6 +88,22 @@ void FUN_140039f8c(LPCRITICAL_SECTION section)
     if (*depth == 0)
         *(DWORD*)((CriUint8*)section + 0x28) = 0;
     LeaveCriticalSection(section);
+}
+
+// MS2-FUNCTIONAL: preserves CRI's null diagnostic and serializes the old-value/store operation with its shared lock.
+// @0x14003a050
+CriUint32 criAtomic_TestAndSet(CriUint32* target, CriUint32 value)
+{
+    if (!target)
+    {
+        FUN_140038e24(0, "E2008071421", -2);
+        return value;
+    }
+    FUN_140039f50((LPCRITICAL_SECTION)DAT_143b27be8);
+    CriUint32 old = *target;
+    *target = value;
+    FUN_140039f8c((LPCRITICAL_SECTION)DAT_143b27be8);
+    return old;
 }
 
 // @0x140039fc8
