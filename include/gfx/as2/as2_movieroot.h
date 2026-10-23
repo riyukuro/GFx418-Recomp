@@ -57,6 +57,8 @@ enum ASBuiltinType : int
     ASBuiltin_SharedObject     = 44,
     ASBuiltin_unknown_         = 46,
     ASBuiltin_undefined        = 51,
+    ASBuiltin_super            = 62,
+    ASBuiltin_this             = 68,
     ASBuiltin_prototype        = 77,
     ASBuiltin___proto__        = 78,
     ASBuiltin_constructor      = 79,

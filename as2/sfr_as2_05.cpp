@@ -89,6 +89,7 @@
 // MS2-RANGE: 0x142944cb0-0x142945002 .text$mn
 // MS2-RANGE: 0x142945c60-0x142945d69 .text$mn
 // MS2-RANGE: 0x14294a0b0-0x14294a0eb .text$mn
+// MS2-RANGE: 0x142944690-0x142944949 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1563,6 +1564,64 @@ void ASRefCountCollector::ForceEmergencyCollect()
         Roots.ClearAndRelease();
     MaxRootCount  = PresetMaxRootCount;
     PeakRootCount = 0;
+}
+
+// The findIndexAlt of the local variable table, exact and ignoring case (exe COMDATs 0x1429173d0 / 0x142917130).
+SPInt ValueHash_FindIndex(const ASStringHash_GC<Value>* phash, const ASString& key);
+SPInt ValueHash_FindIndexNoCase(const ASStringHash_GC<Value>* phash, const ASStringNoCaseKey& key);
+
+// Hash::Get of the local variable table in the case mode of the movie: the value of key, 0 when absent.
+static SF_FORCEINLINE const Value* ValueHash_GetCaseCheck(const ASStringHash_GC<Value>* phash, const ASString& key,
+                                                          bool caseSensitive)
+{
+    if (caseSensitive)
+    {
+        SPInt index = ValueHash_FindIndex(phash, key);
+        const ASStringHash_GC<Value>::NodeType* pnode = index >= 0 ? &phash->NodeAt(index) : 0;
+        return pnode ? &pnode->Second : 0;
+    }
+    ASStringNoCaseKey ikey(key);
+    SPInt index = ValueHash_FindIndexNoCase(phash, ikey);
+    if (index >= 0)
+    {
+        const ASStringHash_GC<Value>::NodeType* pnode = &phash->NodeAt(index);
+        if (pnode)
+            return &pnode->Second;
+    }
+    return 0;
+}
+
+// The innermost local frame that has varname; "this" (and "super" from version 6) stop the search.
+// MS2-FUNCTIONAL cl merges the found and the this/super exits into one frame release; same code otherwise
+// @0x142944690
+const Value* Environment::FindLocal(const ASString& varname) const
+{
+    UPInt n = LocalFrames.GetSize();
+    Ptr<LocalFrame> pframe = n ? LocalFrames[n - 1].GetPtr() : 0;
+    if (!pframe)
+        return 0;
+    do
+    {
+        const Value* pval = ValueHash_GetCaseCheck(&pframe->Variables, varname, IsCaseSensitive());
+        if (pval)
+            return pval;
+        unsigned version = GetVersion();
+        if (version >= 5 && GetBuiltin(ASBuiltin_this).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
+            return 0;
+        if (version >= 6 && GetBuiltin(ASBuiltin_super).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
+            return 0;
+        pframe = pframe->PrevFrame;
+    } while (pframe);
+    return 0;
+}
+
+// @0x1429448c0
+bool AvmCharacter::FindMember(ASStringContext* psc, const ASString& name, Member* pmember)
+{
+    Ptr<Object> pobj = GetASObject();
+    if (!pobj)
+        return false;
+    return pobj->FindMember(psc, name, pmember);
 }
 
 }}} // namespace Scaleform::GFx::AS2

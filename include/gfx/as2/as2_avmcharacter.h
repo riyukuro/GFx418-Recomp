@@ -31,6 +31,8 @@ public:
 
     // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
+    // The member of the clip's AS object (exe 0x1429448c0).
+    virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember);
     // These forward to the clip's AS object.
     virtual bool SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags); // exe 0x142988930
     virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
