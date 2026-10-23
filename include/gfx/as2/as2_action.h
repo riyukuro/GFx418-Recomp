@@ -12,6 +12,7 @@
 namespace Scaleform { namespace GFx {
 
 template<class T> class ASStringHash;
+class Stream;
 struct StreamContext;
 
 namespace AS2 {
@@ -511,6 +512,9 @@ public:
     // (appended for sfr_as2_06) Copies eventLength bytes from the byte-aligned stream and skips them (exe
     // 0x1429726a0).
     void Read(StreamContext* psc, unsigned eventLength);
+    // Reads length bytes of actions from the stream; with verbose parse-action logging each action is
+    // disassembled (exe 0x142972730).
+    void Read(Stream* pin, unsigned length);
 
 protected:
     UByte*   pBuffer;       // +0x10

@@ -156,6 +156,7 @@
 // MS2-RANGE: 0x142967bf0-0x142967c30 .text$mn
 // MS2-RANGE: 0x14296a450-0x14296a540 .text$mn
 // MS2-RANGE: 0x1429726a0-0x142972730 .text$mn
+// MS2-RANGE: 0x142972730-0x142972830 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1757,7 +1758,11 @@ public:
     Log*         pLog;    // +0x00
     LogMessageId MsgType; // +0x08
 
+    Disasm(Log* plog, LogMessageId msgType) : pLog(plog), MsgType(msgType) {}
+
     void LogF(const char* pfmt, ...);
+    // Logs one action, its opcode and arguments (exe 0x1429674a0).
+    void LogDisasm(const unsigned char* pinstructionData);
 };
 
 // @0x142967bf0
@@ -1769,6 +1774,35 @@ void Disasm::LogF(const char* pfmt, ...)
         va_start(argList, pfmt);
         pLog->LogMessageVarg(MsgType, pfmt, argList);
         va_end(argList);
+    }
+}
+
+// @0x142972730
+void ActionBufferData::Read(Stream* pin, unsigned length)
+{
+    BufferLen = length;
+    pBuffer   = (UByte*)SF_HEAP_AUTO_ALLOC(this, length);
+    pin->ReadToBuffer(pBuffer, BufferLen);
+
+    if (pin->IsVerboseParseAction())
+    {
+        const UByte* pbuf = pBuffer;
+        UPInt pc = 0;
+        UByte actionId;
+        do
+        {
+            actionId = pbuf[pc];
+            UPInt next = pc + 1;
+            if (actionId & 0x80)
+            {
+                UPInt len = pbuf[next] | (UPInt(pbuf[next + 1]) << 8);
+                next += 2 + len;
+            }
+            pin->LogParseAction("%4d\t", (int)pc);
+            Disasm da(pin->GetLog(), Log_ParseAction);
+            da.LogDisasm(pBuffer + pc);
+            pc = next;
+        } while (actionId);
     }
 }
 
