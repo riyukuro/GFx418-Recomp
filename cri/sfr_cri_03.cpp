@@ -54,6 +54,7 @@ CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
+void FUN_140041110(void*, const char*, CriUint32);
 void FUN_140046d50(void*, CriSint32);
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
@@ -643,6 +644,32 @@ const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriS
 CriSint32 criVmpv_CalcMovieHandleWork(CriSint32 count)
 {
     return count * 0x8000 + 0x2084;
+}
+
+// MS2-FUNCTIONAL: install the caller's VMPV work buffer after validating its size and global handle state.
+// @0x14003bf80
+CriBool FUN_14003bf80(CriUint32 count, void* work, CriUint32 workSize)
+{
+    if (DAT_143b27c68 != 0)
+    {
+        FUN_140041110(NULL, "E08102801M: SetupMovieHandleWork is already active.", DAT_143b27c68);
+        return 0;
+    }
+    if (!work)
+    {
+        DAT_143b27c6c = 0;
+        DAT_143b27c70 = 0;
+        return 1;
+    }
+    CriUint32 required = (CriUint32)criVmpv_CalcMovieHandleWork((CriSint32)count);
+    if (workSize < required)
+    {
+        FUN_140041110(NULL, "E08102802M: SetupMovieHandleWork buffer is too small.", workSize);
+        return 0;
+    }
+    DAT_143b27c6c = count;
+    DAT_143b27c70 = (CriUint64)(uintptr_t)work;
+    return 1;
 }
 
 // MS2-FUNCTIONAL: return the configured movie handle limit or the default limit of sixteen.
