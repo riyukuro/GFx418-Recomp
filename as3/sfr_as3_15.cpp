@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/gfx/gfx_imecandidateliststyle.h"
@@ -1959,6 +1960,57 @@ Multiname::Multiname(VMAbcFile& file, const Abc::Multiname& mn)
     else if (nsKind == Abc::MNF_NS_Multi)
         Obj = &file.GetInternedNamespaceSet(mn.Ind);
 }
+
+// The top argCount values of the VM's operand stack, moved (not copied) into the argument slots.
+// MS2-FUNCTIONAL: same code; the exe zeroes the fixed values before the heap array and allocates r14/r9 (scheduling)
+// @0x1424d9530
+ReadArgs::ReadArgs(VM& vm, UInt32 argCount)
+    : VMRef(vm)
+    , OpStack(reinterpret_cast<ValueStack&>(vm.OpStack))
+    , ArgNum(argCount)
+    , CallArgs(vm.MHeap)
+{
+    if (argCount)
+    {
+        Value* dst = FixedArgs;
+        if (argCount > 8)
+        {
+            CallArgs.Resize(argCount);
+            dst = CallArgs.GetDataPtr();
+        }
+        memcpy(dst, OpStack.GetTopPtr() - (UInt16)(argCount - 1), argCount * sizeof(Value));
+        OpStack.Release(argCount);
+    }
+}
+
+// The top argCount values of the tracer state's operand stack, copied into the argument slots and popped.
+namespace TR {
+
+// MS2-FUNCTIONAL: same code; the exe inlines the Value copy's AddRef where our Value header calls it out of line
+// @0x1424d9640
+ReadArgs::ReadArgs(VM& vm, State& s, UInt32 argCount)
+    : VMRef(vm), StateRef(s), ReadNum(0), ArgNum(argCount), CallArgs(VMRef.MHeap)
+{
+    if (argCount)
+    {
+        const UPInt size  = StateRef.GetOpStack().GetSize();
+        const UPInt first = size - argCount;
+        if (argCount <= 8)
+        {
+            for (UPInt i = first, j = 0; i < size; ++i, ++j)
+                FixedArgs[j].Assign(StateRef.GetOpStack()[i]);
+        }
+        else
+        {
+            for (UPInt i = first; i < size; ++i)
+                CallArgs.PushBack(StateRef.GetOpStack()[i]);
+        }
+        StateRef.GetOpStack().Resize(first);
+    }
+    ReadNum += argCount;
+}
+
+} // namespace TR
 
 // Multiname = QName object (the QName's local name and namespace); XML is not modeled yet.
 void FUN_1425273b0(Multiname& mn, const Value& qname);
