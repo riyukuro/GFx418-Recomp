@@ -1494,6 +1494,28 @@ Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, 
     return object;
 }
 
+// MS2-FUNCTIONAL: constructs an Object and installs the environment's builtin prototype type 0x22.
+// @0x140011c90
+Scaleform::GFx::AS2::Object* FUN_140011c90(Scaleform::GFx::AS2::Object* object,
+                                            Scaleform::GFx::AS2::Environment* environment)
+{
+    object->Scaleform::GFx::AS2::Object::Object(environment);
+    Scaleform::GFx::AS2::ObjectInterface* iface = reinterpret_cast<Scaleform::GFx::AS2::ObjectInterface*>(
+        reinterpret_cast<char*>(object) + 0x20);
+    iface->Set__proto__(environment->GetSC(),
+        environment->GetPrototype(static_cast<Scaleform::GFx::AS2::ASBuiltinType>(0x22)));
+    return object;
+}
+
+// MS2-FUNCTIONAL: allocates the observed 0x68-byte prototype object and initializes its environment links.
+// @0x140011d50
+Scaleform::GFx::AS2::Object* FUN_140011d50(void*, Scaleform::GFx::AS2::Environment* environment)
+{
+    void* storage = Scaleform::Memory::Alloc(0x68);
+    if (!storage) return nullptr;
+    return FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), environment);
+}
+
 // MS2-FUNCTIONAL: releases the interface array storage and runs the executable prototype finalizer.
 // @0x140011d90
 void FUN_140011d90(void* object)
