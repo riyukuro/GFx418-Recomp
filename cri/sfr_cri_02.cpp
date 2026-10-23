@@ -66,6 +66,11 @@ void     FUN_140031290(void* player);
 CriBool  FUN_140031410(void* player);
 void     FUN_1400317b0(void* player);
 void     FUN_140034730(void* player);
+void     FUN_1400342b0(void* player);
+void     FUN_1400453c4(void* demux);
+CriBool  FUN_140043d40(void* decoder);
+CriBool  FUN_1400446c0(void* decoder);
+void     FUN_140044ae0(void* decoder);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
@@ -1555,6 +1560,40 @@ void FUN_140031100(void* player)
     FUN_140037880(player);
 }
 
+// MS2-FUNCTIONAL: perform the executable's pending start/stop state transition on the player.
+// @0x140031140
+void FUN_140031140(void* player)
+{
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    CriSint32 status = state->Status;
+    if (status == 2)
+    {
+        if (state->StartReady == 1)
+        {
+            FUN_1400342b0(player);
+            FUN_1400453c4(state->Demux);
+            state->InternalFlags = 0;
+            state->Status = 3;
+        }
+        else
+            FUN_140037950(player, "E05063019M: Can't start movie while not ready.", 0);
+    }
+    else if (status == 4)
+        state->Status = 5;
+    else if (status == 6)
+    {
+        state->LastFrame = -1;
+        state->Status = 7;
+        state->StopState = 0;
+    }
+    else if (status == 9)
+    {
+        state->LastFrame = -1;
+        state->Status = 0;
+        state->StopState = 0;
+    }
+}
+
 // MS2-FUNCTIONAL: run the CRI movie player once under its per-player critical section.
 // @0x140031250
 void FUN_140031250(void* player)
@@ -1562,6 +1601,26 @@ void FUN_140031250(void* player)
     FUN_140037850(player);
     FUN_140031290(player);
     FUN_140037880(player);
+}
+
+// MS2-FUNCTIONAL: invoke each configured decoder's frame-decode callback.
+// @0x140031410
+CriBool FUN_140031410(void* player)
+{
+    if (!player)
+        return 0;
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    CriBool result = FUN_140043d40(decoders->VideoDecoder);
+    if (decoders->AlphaDecoder)
+        FUN_1400446c0(decoders->AlphaDecoder);
+    return result;
+}
+
+// MS2-FUNCTIONAL: ask the primary video decoder to skip its current frame.
+// @0x1400314a0
+void FUN_1400314a0(void* player)
+{
+    FUN_140044ae0(((CriMvDecoderHandleFields*)player)->VideoDecoder);
 }
 
 // MS2-FUNCTIONAL: decode a video frame while holding the global CRI movie-player lock.

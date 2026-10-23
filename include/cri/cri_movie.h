@@ -5,6 +5,8 @@
 #ifndef MS2_CRI_MOVIE_H
 #define MS2_CRI_MOVIE_H
 
+#include <stddef.h>
+
 typedef signed char        CriSint8;
 typedef unsigned char      CriUint8;
 typedef signed short       CriSint16;
@@ -621,6 +623,26 @@ struct CriMvPlyObj
     CriBool           decoder_error;                            // 0xf14
 };
 typedef CriMvPlyObj* CriMvPly;
+
+// CRI Movie's state machine reads these fields directly from the start of CriMvPly.
+struct CriMvPlyStateTransitionFields
+{
+    CriUint8  Reserved0[4];
+    CriSint32 Status;                                             // 0x04
+    CriUint32 InternalFlags;                                      // 0x08
+    CriUint8  Reserved0C[0xad4 - 0x0c];
+    CriSint32 StartReady;                                          // 0xad4
+    CriUint8  ReservedAD8[0xd68 - 0xad8];
+    void*     Demux;                                               // 0xd68
+    CriUint8  ReservedD70[0xe30 - 0xd70];
+    CriSint32 LastFrame;                                           // 0xe30
+    CriUint8  ReservedE34[0xf10 - 0xe34];
+    CriUint8  StopState;                                           // 0xf10
+};
+static_assert(offsetof(CriMvPlyStateTransitionFields, StartReady) == 0xad4, "CriMvPly start-ready offset");
+static_assert(offsetof(CriMvPlyStateTransitionFields, Demux) == 0xd68, "CriMvPly demux offset");
+static_assert(offsetof(CriMvPlyStateTransitionFields, LastFrame) == 0xe30, "CriMvPly frame offset");
+static_assert(offsetof(CriMvPlyStateTransitionFields, StopState) == 0xf10, "CriMvPly stop-state offset");
 
 // The "easy player": file/memory input, decoding, sync and sound on top of one player handle. 0x728 bytes.
 struct CriMvYuvBuffers;
