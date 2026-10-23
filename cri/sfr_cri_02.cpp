@@ -19,6 +19,8 @@
 
 extern "C" {
 extern void* DAT_143b15f60;
+extern CriUint8 DAT_143b27a48[0x20];
+extern CriUint8 DAT_143b27a68[0x20];
 extern CriUint8 DAT_143b27a88[];
 extern void* DAT_143ffd550;
 extern CriSint32 DAT_143ffd500;
@@ -4795,6 +4797,68 @@ void FUN_140033810(void* player)
             if (alphaStatus == 0 || alphaStatus == 1 || FUN_140043eb0(alphaDecoder) < required)
                 return;
         }
+    }
+}
+
+// MS2-FUNCTIONAL: apply the rolling CRI USM mask and its eight-block prefix transform to a chunk.
+// @0x140037a40
+void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player)
+{
+    if (!current || !current->Data || current->Size < 0x40)
+        return;
+    CriUsfStandardHeader header = {};
+    FUN_14003b3fc(current->Data, current->Size, &header);
+    CriSint32 contentSize = 0;
+    const CriUint8* contents = FUN_14003b674(current->Data, current->Size, &contentSize);
+    if (!contents || contentSize <= 0)
+        return;
+
+    CriUint32 headerLength = header.Data[9];
+    CriUint32 carriedLength = (CriUint32)(((CriUint32)header.Data[10] << 8) | header.Data[11]);
+    CriUint32 previousLength = previous ? previous->Size : carriedLength;
+    CriSint32 dataLength = (CriSint32)current->Size - 0x40 - (CriSint32)headerLength - (CriSint32)previousLength;
+    CriSint32 transformLength = (CriSint32)current->Size - 0x40 - (CriSint32)headerLength - (CriSint32)carriedLength;
+    if (transformLength <= 0x1ff || dataLength <= 0)
+        return;
+
+    CriUint8* data = (CriUint8*)contents + 0x40;
+    CriUint8 rolling[0x20];
+    CriUint8 prefixMask[0x20];
+    CriUint8 feedback[0x20];
+    memcpy(rolling, DAT_143b27a68, sizeof(rolling));
+    memcpy(prefixMask, DAT_143b27a48, sizeof(prefixMask));
+    memcpy(feedback, DAT_143b27a68, sizeof(feedback));
+
+    for (CriUint32 offset = 0x100; offset < (CriUint32)transformLength; offset += 0x20)
+    {
+        for (CriUint32 i = 0; i < 0x20 && offset + i < (CriUint32)transformLength; ++i)
+        {
+            CriUint8* byte = data + offset + i;
+            if (previous && offset + i >= (CriUint32)previousLength)
+                byte = (CriUint8*)previous->Data + offset + i - previousLength;
+            *byte ^= rolling[i];
+            rolling[i] = *byte ^ feedback[i];
+        }
+    }
+
+    for (CriUint32 round = 0; round < 8; ++round)
+    {
+        const CriUint8* block = data + 0x100 + round * 0x20;
+        for (CriUint32 i = 0; i < 0x20; ++i)
+            prefixMask[i] ^= block[i];
+        for (CriUint32 i = 0; i < 0x20; ++i)
+            data[round * 0x20 + i] ^= prefixMask[i];
+    }
+
+    if (previous)
+    {
+        CriUint8* buffer = NULL;
+        CriUint32 prefix = 0, copyLength = 0;
+        memcpy(&buffer, (CriUint8*)player + 0xe50, sizeof(buffer));
+        memcpy(&prefix, (CriUint8*)player + 0xe48, sizeof(prefix));
+        memcpy(&copyLength, (CriUint8*)player + 0xe4c, sizeof(copyLength));
+        if (buffer && copyLength)
+            memmove(buffer, buffer + prefix, copyLength);
     }
 }
 
