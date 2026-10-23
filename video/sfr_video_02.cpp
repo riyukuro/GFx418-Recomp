@@ -45,6 +45,8 @@ extern void FUN_142961830(void*, void*, void*, void*, const void*);
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
 extern void FUN_142469440(void*, void*, void*);
 extern void FUN_142504530(void*, void*, void*, void*);
+extern void FUN_1429253d0(void*);
+extern void FUN_1425925f0(void*);
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -1753,6 +1755,29 @@ void FUN_140012e10(void* dispatcher, void* collector, void* operation)
         if ((tag & 0x1f) > 10 && (tag & 0x200) == 0)
             FUN_142504530(collector, fields + offset, operation, dispatcher);
     }
+}
+
+// MS2-FUNCTIONAL: releases the video character's retained AS2 value and then runs its AvmCharacter base destructor.
+// @0x14000e840
+void FUN_14000e840(void* object)
+{
+    char* bytes = static_cast<char*>(object);
+    void* value = *reinterpret_cast<void**>(bytes + 0x48);
+    if (value && (*reinterpret_cast<unsigned*>(static_cast<char*>(value) + 0x18) & 0x03ffffff))
+    {
+        --*reinterpret_cast<unsigned*>(static_cast<char*>(value) + 0x18);
+        FUN_1425925f0(value);
+    }
+    FUN_1429253d0(object);
+}
+
+// MS2-FUNCTIONAL: invokes the video character destructor and frees storage when the deleting flag is set.
+// @0x14000e8a0
+void* FUN_14000e8a0(void* object, unsigned __int64 flags)
+{
+    FUN_14000e840(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
 }
 
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
