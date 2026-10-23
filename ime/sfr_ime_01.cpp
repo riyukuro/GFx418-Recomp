@@ -49,6 +49,7 @@ extern "C" void FUN_1423cc7c0(void*);
 extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
 extern "C" const void* DAT_14313ba60[];
+extern "C" const unsigned char DAT_1431c51e8[];
 
 struct HWND__;
 
@@ -442,6 +443,47 @@ void* FUN_1423dbcb0(unsigned long long* object, unsigned long long flags)
         else Memory::Free(object);
     }
     return object;
+}
+
+// MS2-FUNCTIONAL: performs the executable's interface query, value probe, reset callback, and release sequence.
+// @0x1423db000
+void FUN_1423db000(unsigned long long* object)
+{
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned* key = reinterpret_cast<unsigned*>(bytes + 0x1c);
+    if (*key == 0xffffffff) return;
+    void* source = reinterpret_cast<void*>(object[5]);
+    void* result = 0;
+    auto** sourceVtable = *reinterpret_cast<void***>(source);
+    const int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
+    if (hr >= 0) {
+        auto** resultVtable = *reinterpret_cast<void***>(result);
+        const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
+        if (status == static_cast<int>(0x80004000u))
+            reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+        reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    }
+    *key = 0xffffffff;
+}
+
+// MS2-FUNCTIONAL: same queried interface sequence, with this event record's key at +0x18.
+// @0x1423db060
+void FUN_1423db060(unsigned long long* object)
+{
+    unsigned* key = reinterpret_cast<unsigned*>(object + 3);
+    if (*key == 0xffffffff) return;
+    void* source = reinterpret_cast<void*>(object[5]);
+    void* result = 0;
+    auto** sourceVtable = *reinterpret_cast<void***>(source);
+    const int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
+    if (hr >= 0) {
+        auto** resultVtable = *reinterpret_cast<void***>(result);
+        const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
+        if (status == static_cast<int>(0x80004000u))
+            reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+        reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    }
+    *key = 0xffffffff;
 }
 
 // MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
