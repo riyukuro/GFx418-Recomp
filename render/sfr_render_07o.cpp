@@ -8,6 +8,7 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
+#include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/render/render_textmeshprovider.h"
 #include "ms2/scaleform/include/render/render_renderer2d.h"
 #include "ms2/scaleform/include/render/render_glyphqueue.h"
@@ -129,6 +130,64 @@ void TextMeshProvider::AddToInUseList()
         return;
     SetInUseList(true);
     pCache->GetTextInUse().PushBack(this);
+}
+
+// The layer matrix of a vector glyph (the view matrix with the glyph's origin and size scale prepended), its colour
+// as a cxform (the colour as the add row, appended to the view cxform), and the key flags of its mesh. A cursor
+// layer is keyed as a mask without edge AA.
+// MS2-FUNCTIONAL: register allocation: the exe keeps sizeScale in xmm14 and materialises the zero per branch
+// @0x1426e1d30
+unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMeshEntry& ent, const Matrix2F& scalingMtx,
+                                            float sizeScale, const HMatrix& m, Renderer2DImpl* ren,
+                                            unsigned meshGenFlags, float* keyData)
+{
+    const GlyphVectorEnt& vec = ent.EntryData.VectorData;
+
+    if (m.Has3D())
+    {
+        Matrix2F m2d = Matrix2F::Scaling(sizeScale);
+        m2d.AppendTranslation(vec.x, vec.y);
+        Matrix3F m3d = m.GetMatrix3D();
+        m3d.Prepend(m2d);
+        if (layer.M.IsNull())
+            layer.M = ren->GetMatrixPool().CreateMatrix(m3d);
+        else
+            layer.M.SetMatrix3D(m3d);
+    }
+    else
+    {
+        Matrix2F m2d = m.GetMatrix2D();
+        m2d.PrependTranslation(vec.x, vec.y);
+        m2d.PrependScaling(sizeScale, sizeScale);
+        if (layer.M.IsNull())
+            layer.M = ren->GetMatrixPool().CreateMatrix(m2d);
+        else
+            layer.M.SetMatrix2D(m2d);
+    }
+
+    UInt32 c = ent.mColor;
+    Cxform colorCx(Cxform::NoInit);
+    _mm_store_ps(colorCx.M[0], _mm_setzero_ps());
+    colorCx.M[1][0] = (float)(int)((c >> 16) & 0xff) / 255.0f;
+    colorCx.M[1][1] = (float)(int)((c >> 8) & 0xff) / 255.0f;
+    colorCx.M[1][2] = (float)(int)(c & 0xff) / 255.0f;
+    colorCx.M[1][3] = (float)(int)(c >> 24) / 255.0f;
+    colorCx.Append(!m.pHandle->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform) ? Cxform::Identity
+                                                                                           : *m.pHandle->GetCxformPtr());
+    layer.M.SetCxform(colorCx);
+
+    unsigned flags = MeshKey::KF_Fill;
+    if (layer.Type != TextLayer_Cursor)
+        flags += (meshGenFlags & Mesh_EdgeAA) << 6;
+    else
+        meshGenFlags = ~Mesh_EdgeAA;
+    if (meshGenFlags & Mesh_Mask)
+        flags |= MeshKey::KF_Mask;
+    bool validKey = MeshKey::CalcMatrixKey(scalingMtx, keyData, 0);
+    keyData[MeshKey::GetKeySize(flags) - 1] = 0; // the morph ratio
+    if (!validKey)
+        flags |= MeshKey::KF_Degenerate;
+    return flags;
 }
 
 // @0x1426e21e0
@@ -1454,3 +1513,12 @@ float TextMeshProvider::snapY(const GlyphRunData& data) const
 }
 
 }} // namespace Scaleform::Render
+
+namespace Scaleform {
+// @0x1426e4410
+template void ArrayDataBase<Render::TextMeshEntry, AllocatorDH<Render::TextMeshEntry, 2>, ArrayDefaultPolicy>::Reserve(
+    const void*, UPInt);
+// @0x1426e44b0
+template void ArrayDataBase<Render::TextMeshLayer, AllocatorDH<Render::TextMeshLayer, 2>, ArrayDefaultPolicy>::Reserve(
+    const void*, UPInt);
+} // namespace Scaleform
