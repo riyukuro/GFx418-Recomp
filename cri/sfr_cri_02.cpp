@@ -86,6 +86,9 @@ void*    FUN_14002abd0(void* mem, int format, const void* psize, void* ptexman, 
 void     FUN_140037950(void* player, const char* message, int severity);
 void     FUN_140044fdc(void* inputBuffer);
 CriSint32 FUN_140045ed0(const void* config);
+void*    FUN_140045eec(const void* config, void* work, CriSint32 workSize);
+void*    FUN_140046730(void* heap, CriSint32 size, CriSint32 flags, CriSint32 align, const char* name);
+void*    FUN_140027ed8(void* heap, CriSint32 size, const char* name, CriSint32 align);
 CriSint32 FUN_140044eb0(CriSint32 workCount);
 CriSint32 FUN_140045910(const void* config);
 CriSint32 FUN_140042150(void* player, void* source, void* work, CriUint32 size, CriSint32 flags);
@@ -3933,6 +3936,109 @@ void FUN_140033700(void* player, const void* data, CriUint32 size, CriSint32 tar
     *outputData = selectedData;
     *outputFrame = FUN_14003a894(document, index == 0 ? 0 : index - 1, "ofs_frmid");
     FUN_14003a108(document);
+}
+
+// MS2-FUNCTIONAL: allocate and initialize the metadata stream using either the caller or CRI heap.
+// @0x140031c40
+CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignment)
+{
+    struct MetaConfig
+    {
+        CriUint32 Mode;
+        CriUint32 Size;
+        CriUint32 Reserved8;
+        CriUint32 Alignment;
+        CriUint64 Reserved10;
+    } config = { 1, size, 0, alignment, 0 };
+    struct MetadataView
+    {
+        CriUint8 Reserved0[0xe78];
+        void* Stream;
+        CriUint8 ReservedE80[0x68];
+        void* (*Allocate)(void*, CriSint32);
+        CriUint8 ReservedEF0[8];
+        void* Context;
+        void* Allocation;
+    };
+    MetadataView* state = (MetadataView*)player;
+    if (!heap)
+    {
+        CriSint32 workSize = FUN_140045ed0(&config);
+        void* allocation = state->Allocate(state->Context, workSize);
+        if (!allocation)
+        {
+            FUN_140037950(player, "E10052103M: NULL pointer is passed.", 0);
+            return 0;
+        }
+        state->Stream = FUN_140045eec(&config, allocation, workSize);
+        state->Allocation = allocation;
+        return 1;
+    }
+
+    state->Stream = FUN_140046730(heap, (CriSint32)size, 0, (CriSint32)alignment,
+                                  "CriMvPly::MetaInput");
+    if (!state->Stream)
+    {
+        FUN_140037950(player, "E08120201M: Can't create meta Stream.", 0);
+        return 0;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: allocate the cue-point event table from the selected heap and clear all records.
+// @0x140031da0
+CriBool FUN_140031da0(void* player, void* heap)
+{
+    struct EventConfigView
+    {
+        CriUint8 Reserved0[0x898];
+        CriSint32 Enabled;
+        CriUint8 Reserved89C[0x8ac - 0x89c];
+        CriUint32 Count;
+        CriUint8 Reserved8B0[0xde8 - 0x8b0];
+        void* Heap;
+        CriUint8 ReservedDF0[0xec0 - 0xdf0];
+        void* Table;
+        CriUint8 ReservedEC8[0x40];
+        void* ReleaseTable;
+    };
+    EventConfigView* state = (EventConfigView*)player;
+    if (state->Enabled == 0)
+    {
+        state->Table = NULL;
+        return 1;
+    }
+
+    if (!heap)
+    {
+        struct AllocatorView
+        {
+            CriUint8 Reserved0[0xee8];
+            void* (*Allocate)(void*);
+            CriUint8 ReservedEF0[8];
+            void* Context;
+        };
+        AllocatorView* allocator = (AllocatorView*)player;
+        state->Table = allocator->Allocate(allocator->Context);
+        state->ReleaseTable = state->Table;
+        if (!state->Table)
+        {
+            FUN_140037950(player, "E10052103M: NULL pointer is passed.", 0);
+            return 0;
+        }
+    }
+    else
+    {
+        state->Table = FUN_140027ed8(state->Heap, (CriSint32)(state->Count * 0x38),
+                                     "CriMvPly::EventTable", 4);
+        if (!state->Table)
+        {
+            FUN_140037950(player, "E09011601M: Can't allocate EventTable.", 0);
+            return 0;
+        }
+    }
+    memset(state->Table, 0, (size_t)state->Count * 0x38);
+    return 1;
 }
 
 // MS2-FUNCTIONAL: expose the next decoded file-read record when the movie state permits a read.
