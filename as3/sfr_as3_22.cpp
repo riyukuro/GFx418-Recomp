@@ -1311,6 +1311,30 @@ void WriteTextRecord(const void* record, void* stream, unsigned version)
     }
 }
 
+static void ReadStreamBytes(void* stream, void* data, std::size_t size)
+{
+    auto** vtable = *reinterpret_cast<void***>(stream);
+    reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, data, size);
+}
+
+// MS2-FUNCTIONAL: reads three scalar values and a counted list of 16-byte value/timestamp records.
+// @0x14268e010
+void ReadValueRecord(void* record, void* stream)
+{
+    auto* dst = static_cast<unsigned char*>(record);
+    ReadStreamBytes(stream, dst + 0x10, 4);
+    ReadStreamBytes(stream, dst + 0x14, 4);
+    ReadStreamBytes(stream, dst + 0x18, 4);
+    unsigned count = 0;
+    ReadStreamBytes(stream, &count, 4);
+    ResizeRawArray(reinterpret_cast<void**>(dst + 0x20), dst + 0x20, count, 0x10);
+    auto* entries = static_cast<unsigned char*>(*reinterpret_cast<void**>(dst + 0x20));
+    for (unsigned i = 0; i < count; ++i) {
+        ReadStreamBytes(stream, entries + i * 0x10, 4);
+        ReadStreamBytes(stream, entries + i * 0x10 + 8, 8);
+    }
+}
+
 // MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot.
 // @0x142745630
 void* FindAudioRequestEntry(void** set, const unsigned char* key)
