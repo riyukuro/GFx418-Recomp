@@ -886,6 +886,8 @@ public:
     static void GlobalCtor(const FnCall& fn); // exe 0x14295ae20 undefined
     // "available": an ExternalInterface handler is installed (exe 0x14294f140).
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+    // (appended for sfr_as2_02)
+    static void Call(const FnCall& fn); // exe 0x1428ffa20
 };
 class MathCtorFunction : public CFunctionObject
 {

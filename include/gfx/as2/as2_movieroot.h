@@ -192,7 +192,8 @@ public:
     MemoryContextImpl* MemContext;            // +0x38
     UByte              Unrecovered_40[0x10];  // +0x40
     Ptr<GlobalContext> pGlobalContext;        // +0x50
-    UByte              Unrecovered_58[0xe0];  // +0x58
+    Value              ExternalIntfRetVal;    // +0x58 set by the host handler of ExternalInterface.call
+    UByte              Unrecovered_78[0xc0];  // +0x78
     StringManager      BuiltinsMgr;           // +0x138
 
     ASRefCountCollector* GetASGC() const { return MemContext->ASGC; }
@@ -326,7 +327,7 @@ public:
     };
 
     // The action queue (+0x80, inside the unrecovered block).
-    ActionQueueType& GetActionQueue() { return *reinterpret_cast<ActionQueueType*>(Unrecovered_58 + 0x28); }
+    ActionQueueType& GetActionQueue() { return *reinterpret_cast<ActionQueueType*>(Unrecovered_78 + 0x08); }
     // Runs every queued action (exe 0x142938bd0).
     virtual void DoActions();
     // Runs the queued actions of one session only, the others stay queued (exe 0x142938c40).

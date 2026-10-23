@@ -32,6 +32,7 @@
 // MS2-RANGE: 0x142900fc0-0x14290114c .text$mn
 // MS2-RANGE: 0x142901280-0x142901406 .text$mn
 // MS2-RANGE: 0x142908e90-0x142909300 .text$mn
+// MS2-RANGE: 0x1428ffa20-0x1428ffcca .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -2022,6 +2023,47 @@ void ObjectCtorFunction::RegisterClassA(const FnCall& fn)
     else
         fn.Env->LogScriptError("Second parameter of Object.registerClass(%s, %s) should be function or null",
                                classname.ToCStr(), fn.Arg(1).ToString(fn.Env).ToCStr());
+}
+
+// ExternalInterface.call(methodName, ...args): the arguments, as host values, go to the handler of the movie; the
+// result is what the handler stored in the movie root.
+// @0x1428ffa20
+void ExternalInterfaceCtorFunction::Call(const FnCall& fn)
+{
+    MovieImpl* pmovie = fn.Env->GetTarget()->GetMovieImpl();
+    if (pmovie->pExtIntfHandler)
+    {
+        unsigned nargs = 0;
+        ASString methodName(fn.Env->GetBuiltin(ASBuiltin_empty_));
+        if (fn.NArgs >= 1)
+        {
+            methodName = fn.Arg(0).ToString(fn.Env);
+            nargs      = fn.NArgs - 1;
+        }
+
+        // Up to 10 arguments are converted on the stack; the buffer is freed only past 40 of them (as the exe).
+        void*       onStack[10 * (sizeof(GFx::Value) / sizeof(void*))];
+        GFx::Value* args = (GFx::Value*)onStack;
+        if (nargs > 10)
+            args = (GFx::Value*)SF_HEAP_ALLOC(fn.Env->GetHeap(), nargs * sizeof(GFx::Value), Stat_Default_Mem);
+        for (unsigned i = 0; i < nargs; i++)
+            static_cast<MovieRoot*>(pmovie->pASMovieRoot)
+                ->ASValue2GFxValue(fn.Env, fn.Arg(i + 1), Scaleform::Construct<GFx::Value>(&args[i]));
+
+        static_cast<MovieRoot*>(pmovie->pASMovieRoot)->ExternalIntfRetVal.SetUndefined();
+        pmovie->pExtIntfHandler->Callback(pmovie->AsMovie(), methodName.IsEmpty() ? NULL : methodName.ToCStr(), args, nargs);
+        *fn.Result = static_cast<MovieRoot*>(pmovie->pASMovieRoot)->ExternalIntfRetVal;
+
+        for (unsigned i = 0; i < nargs; i++)
+            args[i].~Value();
+        if (nargs > sizeof(onStack) / sizeof(onStack[0]))
+            SF_FREE(args);
+    }
+    else
+    {
+        fn.LogScriptWarning("ExternalInterface.call - handler is not installed.");
+        fn.Result->SetUndefined();
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 
