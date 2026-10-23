@@ -129,6 +129,7 @@
 // MS2-RANGE: 0x142954380-0x14295451e .text$mn
 // MS2-RANGE: 0x1429469d0-0x142946a76 .text$mn
 // MS2-RANGE: 0x1429494d0-0x142949612 .text$mn
+// MS2-RANGE: 0x1429390a0-0x142939213 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -153,6 +154,10 @@
 
 // MsgFormat::FormatD1<int> is an out-of-line call in the exe (exe 0x1423e8500, defined in sfr_as3_01c).
 template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
+
+// MovieImpl::TransferFocus (exe 0x142577060).
+void FUN_142577060(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::InteractiveObject* pnewFocus,
+                   unsigned controllerIdx, Scaleform::GFx::FocusMovedType fmt);
 
 // MovieImpl::GetModalClip (exe 0x14256f820).
 Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);
@@ -2492,6 +2497,27 @@ const char* AvmCharacter::GetAbsolutePath(String* ppath) const
     else
         ppath->Clear();
     return ppath->ToCStr();
+}
+
+// Value::ToCharacter (exe 0x1429910b0), inlined in DoTransferFocus.
+static SF_FORCEINLINE InteractiveObject* Value_ToCharacterInl(const Value& v, const Environment* penv)
+{
+    if (v.IsCharacter() && penv && v.V.pCharHandle)
+    {
+        DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+        if (pdisp)
+            return pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+    }
+    return 0;
+}
+
+// @0x1429390a0
+void Selection::DoTransferFocus(const FnCall& fn)
+{
+    MovieImpl*     proot         = fn.Env->GetTarget()->GetMovieImpl();
+    FocusMovedType fmt           = (FocusMovedType)(int)fn.Arg(1).ToNumber(fn.Env);
+    unsigned       controllerIdx = fn.Arg(2).ToUInt32(fn.Env);
+    FUN_142577060(proot, Value_ToCharacterInl(fn.Arg(0), fn.Env), controllerIdx, fmt);
 }
 }}} // namespace Scaleform::GFx::AS2
 

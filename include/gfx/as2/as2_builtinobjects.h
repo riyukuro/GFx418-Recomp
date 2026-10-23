@@ -177,6 +177,8 @@ public:
 
 protected:
     void commonInit(Environment* penv); // exe 0x142995100
+    // ASnative focus transfer: (character, FocusMovedType, controller) to MovieImpl::TransferFocus (exe 0x1429390a0).
+    static void DoTransferFocus(const FnCall& fn);
 };
 // The Selection prototype object.
 class SelectionProto : public Prototype<Selection>
