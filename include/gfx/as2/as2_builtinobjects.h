@@ -951,6 +951,12 @@ public:
     // (appended for sfr_as2_02)
     static void Call(const FnCall& fn); // exe 0x1428ffa20
     static void AddCallback(const FnCall& fn); // exe 0x1428ff660
+    // (appended for sfr_as2_06) "available" and the static functions (exe 0x14291bc40).
+    ExternalInterfaceCtorFunction(ASStringContext* psc);
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213d90: addCallback, call
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "ExternalInterface" (exe 0x1429775b0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 class MathCtorFunction : public CFunctionObject
 {
@@ -993,6 +999,10 @@ private:
     static void FindFocus(const FnCall& fn);                     // exe 0x142943ce0
     static void SetModalClip(const FnCall& fn);                  // exe 0x142989060
     static void SetControllerFocusGroup(const FnCall& fn);       // exe 0x142980120
+
+public:
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Selection" (exe 0x142979fe0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 class StageCtorFunction : public CFunctionObject
 {
@@ -1043,6 +1053,18 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429370c0
     // new Number(v) stores v in the instance, Number(v) converts v (exe 0x14295bd30).
     static void GlobalCtor(const FnCall& fn);
+    // (appended for sfr_as2_06) The constants MAX_VALUE, MIN_VALUE, NaN, ... as members (exe 0x14291f2c0).
+    NumberCtorFunction(ASStringContext* psc);
+    // A constant member of Number and the function computing it.
+    struct NameConstFunction
+    {
+        const char* Name;
+        Double      (SF_CDECL *Function)();
+    };
+    static const NameConstFunction ConstTable[]; // exe 0x1432141d0
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Number" (exe 0x142979260).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The Color class.

@@ -236,11 +236,18 @@ public:
 class ArrayCtorFunction : public CFunctionObject
 {
 public:
+    // (appended for sfr_as2_06) The sort flag constants (CASEINSENSITIVE, ...) as members (exe 0x142917d80).
+    ArrayCtorFunction(ASStringContext* psc);
+    static const NameNumber SortFlagTable[]; // exe 0x1432131e0
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429367a0
 
     // new Array(n) / Array(n) has n holes, any other arguments are the elements; a new array when called as
     // a function (exe 0x1429584b0).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Array" (exe 0x142973500).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 }}} // namespace Scaleform::GFx::AS2

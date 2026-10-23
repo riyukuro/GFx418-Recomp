@@ -98,6 +98,10 @@
 // MS2-RANGE: 0x142975f30-0x1429763c0 .text$mn
 // MS2-RANGE: 0x142975740-0x142975c20 .text$mn
 // MS2-RANGE: 0x14295d1c0-0x14295d320 .text$mn
+// MS2-RANGE: 0x142973500-0x142973a80 .text$mn
+// MS2-RANGE: 0x1429775b0-0x142977ad0 .text$mn
+// MS2-RANGE: 0x142979260-0x1429797e0 .text$mn
+// MS2-RANGE: 0x142979fe0-0x14297a4a0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -890,6 +894,35 @@ FunctionRef ColorCtorFunction::Register(GlobalContext* pgc)
 FunctionRef ButtonCtorFunction::Register(GlobalContext* pgc)
 {
     return RegisterBuiltinClass<ButtonCtorFunction, ButtonProto>(pgc, ASBuiltin_Button, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the ArrayCtorFunction and ArrayProto ctors (sfr_as2_03)
+// @0x142973500
+FunctionRef ArrayCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<ArrayCtorFunction, ArrayProto>(pgc, ASBuiltin_Array, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the ExternalInterfaceCtorFunction and ExternalInterfaceProto ctors (sfr_as2_03)
+// @0x1429775b0
+FunctionRef ExternalInterfaceCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<ExternalInterfaceCtorFunction, ExternalInterfaceProto>(pgc, ASBuiltin_ExternalInterface, ASBuiltin_Object,
+                                                                                      pgc->FlashExternalPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the NumberCtorFunction and NumberProto ctors (sfr_as2_03)
+// @0x142979260
+FunctionRef NumberCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<NumberCtorFunction, NumberProto>(pgc, ASBuiltin_Number, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the SelectionCtorFunction ctor (sfr_as2_03)
+// @0x142979fe0
+FunctionRef SelectionCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<SelectionCtorFunction, SelectionProto>(pgc, ASBuiltin_Selection, ASBuiltin_Object, pgc->pGlobal);
 }
 
 // @0x14295d1c0

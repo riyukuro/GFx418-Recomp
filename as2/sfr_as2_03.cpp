@@ -7,6 +7,9 @@
 // MS2-RANGE: 0x142923bf0-0x142923c60 .text$mn
 // MS2-RANGE: 0x142927fa0-0x142928010 .text$mn
 // MS2-RANGE: 0x142919100-0x142919220 .text$mn
+// MS2-RANGE: 0x142917d80-0x142917ed0 .text$mn
+// MS2-RANGE: 0x14291bc40-0x14291bd50 .text$mn
+// MS2-RANGE: 0x14291f2c0-0x14291f430 .text$mn
 // MS2-RANGE: 0x142920830-0x142920950 .text$mn
 // MS2-RANGE: 0x142927950-0x142927990 .text$mn
 // MS2-RANGE: 0x1429285b0-0x142928620 .text$mn
@@ -319,6 +322,35 @@ PointCtorFunction::PointCtorFunction(ASStringContext* psc)
 {
     NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// MS2-FUNCTIONAL this/psc register swap and string-length scheduling in the table loop
+// @0x142917d80
+ArrayCtorFunction::ArrayCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    for (int i = 0; SortFlagTable[i].Name; i++)
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString(SortFlagTable[i].Name), Value(SortFlagTable[i].Number),
+                                                          PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete);
+}
+
+// MS2-FUNCTIONAL the flags temporary is stored before the Value temporary
+// @0x14291bc40
+ExternalInterfaceCtorFunction::ExternalInterfaceCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("available"), Value(Value::UNSET));
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x14291f2c0
+NumberCtorFunction::NumberCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    for (int i = 0; ConstTable[i].Name; i++)
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString(ConstTable[i].Name), Value(ConstTable[i].Function()),
+                                                          PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
 }
 
 // @0x142920540
@@ -1923,3 +1955,9 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_7BitmapFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321eb70
 // MS2-PIN: ??_7TextSnapshotCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e5a8
 // MS2-PIN: ??_7TextSnapshotCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e630
+// MS2-PIN: ??_7ArrayCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b010
+// MS2-PIN: ??_7ArrayCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b098
+// MS2-PIN: ??_7ExternalInterfaceCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d148
+// MS2-PIN: ??_7ExternalInterfaceCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d1d0
+// MS2-PIN: ??_7NumberCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b420
+// MS2-PIN: ??_7NumberCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b4a8
