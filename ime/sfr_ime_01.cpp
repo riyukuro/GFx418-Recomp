@@ -263,6 +263,56 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
+// MS2-FUNCTIONAL: dispatches the executable's IME composition and candidate-list messages by input mode.
+// @0x1423d02d0
+LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long type, LPARAM value)
+{
+    if (!self[1]) return 0;
+    const unsigned mode = static_cast<unsigned>(self[0x13]);
+    const bool firstModes = mode == 0x3000 || mode == 0x60000 || mode == 0xb10000 ||
+        mode == 0xa10000 || mode == 0xd00800 || mode == 0xd00900 || mode == 0xd00a00;
+    const bool secondModes = mode == 0x210000 || mode == 0x110000 || mode == 0x810000 || mode == 0xd10000;
+    auto** vtable = reinterpret_cast<void**>(self[0]);
+    LRESULT result = 0;
+    if (type == 3) {
+        if (firstModes) reinterpret_cast<void(*)(void*, int)>(vtable[0x118 / sizeof(void*)])(self, 0);
+        else if (secondModes) {
+            reinterpret_cast<void(*)(void*, int)>(vtable[0x118 / sizeof(void*)])(self, 0);
+            result = 2;
+        }
+    } else if (type == 4) {
+        const bool removeList = mode == 0x210000 || mode == 0x3000 || mode == 0x60000 || mode == 0xb10000 ||
+            mode == 0xa10000 || mode == 0xd00800 || mode == 0xd00900 || mode == 0x110000 ||
+            mode == 0xd00a00 || mode == 0x810000 || mode == 0xd10000;
+        if (removeList) {
+            FUN_1423d9500(reinterpret_cast<void*>(self[6]));
+            void* movie = reinterpret_cast<void*>(self[0x15]);
+            void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+            if (values) {
+                void* output = nullptr;
+                reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                    (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                        values, "RemoveList", &output, 0, 0);
+            }
+        }
+        return DefWindowProcW(reinterpret_cast<HWND>(self[5]), message, 4, value);
+    } else if (type == 5) {
+        if (firstModes || mode == 0x810000)
+            reinterpret_cast<void(*)(void*, int)>(vtable[0x120 / sizeof(void*)])(self, 0);
+        else if (mode == 0x210000 || mode == 0x110000 || mode == 0xd10000) {
+            reinterpret_cast<void(*)(void*, int)>(vtable[0x120 / sizeof(void*)])(self, 0);
+            result = 2;
+        }
+    } else if (type == 0xe && secondModes) {
+        reinterpret_cast<void(*)(void*, unsigned, unsigned)>(vtable[0x70 / sizeof(void*)])(self, message, 0xe);
+        return 2;
+    }
+    if (type == 3 || type == 5) return result;
+    reinterpret_cast<void(*)(void*, unsigned, unsigned long long, LPARAM)>(
+        vtable[0x70 / sizeof(void*)])(self, message, type, value);
+    return result;
+}
+
 // MS2-FUNCTIONAL: handles the executable's focus, candidate-list, and IME notification messages.
 // @0x1423d41f0
 bool FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long message, unsigned long long value)
