@@ -1640,6 +1640,34 @@ void FUN_14000b8f0(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
+// MS2-FUNCTIONAL: destroys the track records and releases their backing allocation.
+// @0x14000bbf0
+void FUN_14000bbf0(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_14000b530(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+}
+
+// MS2-FUNCTIONAL: destroys the NetStream provider and optionally frees its allocation.
+// @0x14000cbd0
+void* FUN_14000cbd0(Scaleform::GFx::AS2::VideoProviderNetStream* provider, unsigned flags)
+{
+    provider->~VideoProviderNetStream();
+    if (flags & 1) Scaleform::Memory::Free(provider);
+    return provider;
+}
+
+// MS2-FUNCTIONAL: destroys the NetStream constructor function and optionally releases its allocation.
+// @0x14000cee0
+Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFunctionObject* object,
+                                                    unsigned flags)
+{
+    object->~CFunctionObject();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
 // MS2-FUNCTIONAL: resizes storage for 48-byte video-track records with four-slot rounding.
 // @0x14000b940
 void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
