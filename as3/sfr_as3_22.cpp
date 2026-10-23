@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstring>
 #include <new>
+#include <random>
 
 extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
@@ -3783,6 +3784,44 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
 
     LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
     return object;
+}
+
+// MS2-FUNCTIONAL: fills every destination pixel with seeded grayscale or masked-channel noise; the generator sequence is an approximation of GFx's RNG.
+// @0x142677260
+void FUN_142677260(void* command, void*, void* imageData)
+{
+    auto* settings = static_cast<unsigned char*>(command);
+    std::mt19937 random(*reinterpret_cast<unsigned*>(settings + 0x10));
+    std::uniform_int_distribution<unsigned> byteValue(0, 255);
+    auto* planes = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(imageData) + 0x10);
+    const unsigned width = *reinterpret_cast<unsigned*>(planes);
+    const unsigned height = *reinterpret_cast<unsigned*>(planes + 4);
+    const std::int64_t pitch = *reinterpret_cast<std::int64_t*>(planes + 8);
+    const std::int64_t pixels = *reinterpret_cast<std::int64_t*>(planes + 0x18);
+    const unsigned mask = *reinterpret_cast<unsigned*>(settings + 0x1c);
+    const bool gray = *reinterpret_cast<unsigned char*>(settings + 0x20) != 0;
+    auto* image = *reinterpret_cast<unsigned char**>(settings + 8);
+    const bool opaque = image && *reinterpret_cast<unsigned char*>(image + 0x48) == 0;
+    for (unsigned y = 0; y < height; ++y) {
+        for (unsigned x = 0; x < width; ++x) {
+            unsigned pixel = 0;
+            unsigned alpha = 255;
+            if (gray) {
+                const unsigned value = byteValue(random);
+                pixel = value | (value << 8) | (value << 16);
+                if ((mask & 8) != 0)
+                    alpha = byteValue(random);
+            } else {
+                if (mask & 1) pixel |= byteValue(random) << 16;
+                if (mask & 2) pixel |= byteValue(random) << 8;
+                if (mask & 4) pixel |= byteValue(random);
+                if (mask & 8) alpha = byteValue(random);
+            }
+            if (opaque) alpha = 255;
+            pixel |= alpha << 24;
+            FUN_14257d390(imageData, pitch * y + pixels, x, pixel);
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: snapshots accumulated renderer timings, resolves cached labels, logs each duration/count pair, and releases the snapshot.
