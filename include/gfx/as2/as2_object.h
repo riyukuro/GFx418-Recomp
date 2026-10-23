@@ -384,7 +384,6 @@ class CFunctionObject : public FunctionObject
 public:
     CFunctionPtr pFunction; // +0x68
 
-    virtual ~CFunctionObject();
     // The same native function (exe 0x142965510).
     virtual bool IsEqual(const FunctionObject& f) const;
     // Calls the native; through super it runs on the real this, then the super drops its alternate prototype

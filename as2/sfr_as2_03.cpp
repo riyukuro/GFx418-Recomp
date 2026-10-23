@@ -2,6 +2,37 @@
 // assignments of the script values, objects and prototypes (the out-of-line copies the unity build emitted).
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1429275f0-0x142927640 .text$mn
+// MS2-RANGE: 0x142927690-0x1429276e0 .text$mn
+// MS2-RANGE: 0x142927740-0x1429277d0 .text$mn
+// MS2-RANGE: 0x142927860-0x1429278f0 .text$mn
+// MS2-RANGE: 0x1429278f0-0x142927950 .text$mn
+// MS2-RANGE: 0x1429279b0-0x142927a10 .text$mn
+// MS2-RANGE: 0x142927a10-0x142927a70 .text$mn
+// MS2-RANGE: 0x142927a70-0x142927b00 .text$mn
+// MS2-RANGE: 0x142927ba0-0x142927c00 .text$mn
+// MS2-RANGE: 0x142927ca0-0x142927d30 .text$mn
+// MS2-RANGE: 0x142927dc0-0x142927e20 .text$mn
+// MS2-RANGE: 0x142927e20-0x142927eb0 .text$mn
+// MS2-RANGE: 0x142927eb0-0x142927f10 .text$mn
+// MS2-RANGE: 0x142927f10-0x142927fa0 .text$mn
+// MS2-RANGE: 0x142928030-0x1429280c0 .text$mn
+// MS2-RANGE: 0x1429280c0-0x142928150 .text$mn
+// MS2-RANGE: 0x142928150-0x1429281e0 .text$mn
+// MS2-RANGE: 0x142928400-0x142928490 .text$mn
+// MS2-RANGE: 0x142928490-0x142928520 .text$mn
+// MS2-RANGE: 0x142928520-0x1429285b0 .text$mn
+// MS2-RANGE: 0x142928640-0x1429286d0 .text$mn
+// MS2-RANGE: 0x142928a40-0x142928aa0 .text$mn
+// MS2-RANGE: 0x142928b60-0x142928bb0 .text$mn
+// MS2-RANGE: 0x142928e50-0x142928e90 .text$mn
+// MS2-RANGE: 0x142928fe0-0x142929040 .text$mn
+// MS2-RANGE: 0x142929040-0x1429290b0 .text$mn
+// MS2-RANGE: 0x1429290b0-0x142929140 .text$mn
+// MS2-RANGE: 0x1429292a0-0x142929300 .text$mn
+// MS2-RANGE: 0x142929300-0x142929370 .text$mn
+// MS2-RANGE: 0x142929370-0x142929400 .text$mn
+// MS2-RANGE: 0x1429260b0-0x1429260c0 .text$mn
 // MS2-RANGE: 0x142923cb0-0x142923dd0 .text$mn
 // MS2-RANGE: 0x1429254e0-0x142925560 .text$mn
 // MS2-RANGE: 0x142924d20-0x142924d90 .text$mn
@@ -986,17 +1017,17 @@ GlowFilterObject::~GlowFilterObject()
 }
 
 // The out-of-line destructors of the filter prototypes.
-// @0x142924fc0
-template Prototype<BitmapFilterObject, Environment>::~Prototype();
 // @0x142924e00
+template Prototype<BitmapFilterObject, Environment>::~Prototype();
+// @0x142924d20
 template Prototype<BevelFilterObject, Environment>::~Prototype();
 // @0x142924e70
 template Prototype<BlurFilterObject, Environment>::~Prototype();
-// @0x142924d20
+// @0x142924ee0
 template Prototype<ColorMatrixFilterObject, Environment>::~Prototype();
 // @0x142924f50
 template Prototype<DropShadowFilterObject, Environment>::~Prototype();
-// @0x142924ee0
+// @0x142924fc0
 template Prototype<GlowFilterObject, Environment>::~Prototype();
 
 // The out-of-line destructors of the other prototypes.
@@ -1336,3 +1367,34 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_7?$Prototype@VTextFieldObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143218670
 // MS2-PIN: ??_7BitmapData@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219cf0
 // MS2-PIN: ??_7BitmapData@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219d38
+// MS2-PIN: ??1Value@AS2@GFx@Scaleform@@QEAA@XZ 0x1429260b0
+// MS2-PIN: ??_G?$ASRefCountBase@UValueProperty@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429275f0
+// MS2-PIN: ??_G?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927690
+// MS2-PIN: ??_G?$Prototype@VAmpMarker@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927740
+// MS2-PIN: ??_G?$Prototype@VAsBroadcaster@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927860
+// MS2-PIN: ??_G?$Prototype@VBevelFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429278f0
+// MS2-PIN: ??_G?$Prototype@VBitmapFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429279b0
+// MS2-PIN: ??_G?$Prototype@VBlurFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927a10
+// MS2-PIN: ??_G?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927a70
+// MS2-PIN: ??_G?$Prototype@VColorMatrixFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927ba0
+// MS2-PIN: ??_G?$Prototype@VColorTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927ca0
+// MS2-PIN: ??_G?$Prototype@VDropShadowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927dc0
+// MS2-PIN: ??_G?$Prototype@VExternalInterface@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927e20
+// MS2-PIN: ??_G?$Prototype@VGlowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927eb0
+// MS2-PIN: ??_G?$Prototype@VKeyObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927f10
+// MS2-PIN: ??_G?$Prototype@VMath@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928030
+// MS2-PIN: ??_G?$Prototype@VMatrixObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429280c0
+// MS2-PIN: ??_G?$Prototype@VMouseObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928150
+// MS2-PIN: ??_G?$Prototype@VPointObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928400
+// MS2-PIN: ??_G?$Prototype@VRectangleObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928490
+// MS2-PIN: ??_G?$Prototype@VSelection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928520
+// MS2-PIN: ??_G?$Prototype@VStageObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928640
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142928a40
+// MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@MEAAPEAXI@Z 0x142928b60
+// MS2-PIN: ??_GASString@GFx@Scaleform@@QEAAPEAXI@Z 0x142928e50
+// MS2-PIN: ??_GAmpMarker@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928fe0
+// MS2-PIN: ??_GAmpMarkerCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929040
+// MS2-PIN: ??_GAmpMarkerProto@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429290b0
+// MS2-PIN: ??_GAsBroadcaster@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429292a0
+// MS2-PIN: ??_GAsBroadcasterCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929300
+// MS2-PIN: ??_GAsBroadcasterProto@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929370
