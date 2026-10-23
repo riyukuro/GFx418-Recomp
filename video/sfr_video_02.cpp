@@ -1769,3 +1769,26 @@ unsigned FUN_140011450(void* object, const unsigned* source)
     *reinterpret_cast<void**>(item + 8) = value;
     return static_cast<unsigned>(length);
 }
+
+// MS2-FUNCTIONAL: grows the aligned callback buffer and advances its active range.
+// @0x140010cd0
+void FUN_140010cd0(void** buffer, unsigned __int64 requested)
+{
+    auto* state = static_cast<unsigned char*>(buffer[3]);
+    void* object = buffer[0];
+    auto** vtable = *reinterpret_cast<void***>(object);
+    if (*reinterpret_cast<void**>(state)) {
+        auto release = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(vtable) + 0x60));
+        release(object);
+    }
+
+    const unsigned __int64 alignment = reinterpret_cast<unsigned __int64*>(buffer)[1];
+    const unsigned __int64 size = ((alignment - 1 + requested) / alignment) * alignment;
+    auto allocate = reinterpret_cast<void* (*)(void*, unsigned __int64, unsigned)>(
+        *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(vtable) + 0x50));
+    *reinterpret_cast<void**>(state + 0x10) = allocate(object, size, 0);
+    *reinterpret_cast<void**>(state) = reinterpret_cast<void**>(state)[2];
+    reinterpret_cast<unsigned __int64*>(state)[1] =
+        size + reinterpret_cast<unsigned __int64*>(state)[0];
+}
