@@ -135,16 +135,11 @@ public:
         M[1][0] = shy; M[1][1] = sy;  M[1][2] = 0; M[1][3] = ty;
     }
 
-    // Maps the parallelogram src (three corners: x0 y0 x1 y1 x2 y2) onto dst.
-    Matrix2x4& SetParlToParl(const T* src, const T* dst)
-    {
-        SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
-        Matrix2x4 d(dst[2] - dst[0], dst[4] - dst[0], dst[0], dst[3] - dst[1], dst[5] - dst[1], dst[1]);
-        Invert();
-        Append(d);
-        return *this;
-    }
-    Matrix2x4& SetRectToParl(T x1, T y1, T x2, T y2, const T* parl)
+    // Maps the parallelogram src (three corners: x0 y0 x1 y1 x2 y2) onto dst; defined outside the class (no inline
+    // hint), as the exe keeps most calls to it (0x1425e74a0). SetRectToParl in turn is always expanded, also where
+    // the call it wraps stays (TextMeshProvider::calcHeightRatio).
+    Matrix2x4& SetParlToParl(const T* src, const T* dst);
+    __forceinline Matrix2x4& SetRectToParl(T x1, T y1, T x2, T y2, const T* parl)
     {
         T src[6] = { x1, y1, x2, y1, x2, y2 };
         return SetParlToParl(src, parl);
@@ -291,6 +286,16 @@ public:
         return *this;
     }
 };
+
+template<class T>
+Matrix2x4<T>& Matrix2x4<T>::SetParlToParl(const T* src, const T* dst)
+{
+    SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+    Matrix2x4 d(dst[2] - dst[0], dst[4] - dst[0], dst[0], dst[3] - dst[1], dst[5] - dst[1], dst[1]);
+    Invert();
+    Append(d);
+    return *this;
+}
 
 typedef Matrix2x4<float> Matrix2F;
 
