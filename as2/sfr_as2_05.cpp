@@ -138,6 +138,8 @@
 // MS2-RANGE: 0x14294f880-0x14294fc12 .text$mn
 // MS2-RANGE: 0x14294e940-0x14294ec0c .text$mn
 // MS2-RANGE: 0x1429505d0-0x142950b35 .text$mn
+// MS2-RANGE: 0x14294dd10-0x14294de69 .text$mn
+// MS2-RANGE: 0x14294f260-0x14294f4ef .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2805,7 +2807,7 @@ bool ColorTransformObject::GetMember(Environment* penv, const ASString& name, Va
         *val = Value(mColorTransform.M[1][2]);
     else if (strcmp(pname, "alphaOffset") == 0)
         *val = Value(mColorTransform.M[1][3]);
-    else if (memcmp(pname, "rgb", 4) == 0)
+    else if (strcmp(pname, "rgb") == 0)
     {
         int r = ColorTransform_OffsetToInt(mColorTransform.M[1][0]);
         int g = ColorTransform_OffsetToInt(mColorTransform.M[1][1]);
@@ -2869,7 +2871,7 @@ bool TransformObject::GetMember(Environment* penv, const ASString& name, Value* 
         val->SetUndefined();
         return false;
     }
-    else if (memcmp(pname, "matrix", 7) == 0)
+    else if (strcmp(pname, "matrix") == 0)
     {
         if (pMovieRoot)
         {
@@ -2911,6 +2913,76 @@ bool TransformObject::GetMember(Environment* penv, const ASString& name, Value* 
         Ptr<MatrixObject> pmo = *SF_HEAP_NEW(penv->GetHeap()) MatrixObject(penv);
         pmo->SetMatrixTwips(penv->GetSC(), m);
         *val = Value(pmo.GetPtr());
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// @0x14294dd10
+bool BlurFilterObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "blurX") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurX));
+        return true;
+    }
+    else if (strcmp(pname, "blurY") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurY));
+        return true;
+    }
+    else if (strcmp(pname, "quality") == 0)
+    {
+        val->SetInt(readonlyFilterParams().Passes);
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// @0x14294f260
+bool GlowFilterObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "alpha") == 0)
+    {
+        Number alpha = GetAlpha();
+        val->SetNumber(alpha);
+        return true;
+    }
+    else if (strcmp(pname, "blurX") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurX));
+        return true;
+    }
+    else if (strcmp(pname, "blurY") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurY));
+        return true;
+    }
+    else if (strcmp(pname, "color") == 0)
+    {
+        val->SetUInt_Call(readonlyFilterParams().Colors[0].ToColor32() & 0xFFFFFF);
+        return true;
+    }
+    else if (strcmp(pname, "inner") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Inner) != 0);
+        return true;
+    }
+    else if (strcmp(pname, "knockout") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Knockout) != 0);
+        return true;
+    }
+    else if (strcmp(pname, "quality") == 0)
+    {
+        val->SetInt_Call(readonlyFilterParams().Passes);
+        return true;
+    }
+    else if (strcmp(pname, "strength") == 0)
+    {
+        val->SetNumber(readonlyFilterParams().Strength);
         return true;
     }
     return GetMemberRaw(penv->GetSC(), name, val);
