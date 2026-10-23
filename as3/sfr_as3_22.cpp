@@ -37,3 +37,55 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // THUNKS-END
 
 // MS2-PIN: ??$FormatD1@PEBD@MsgFormat@Scaleform@@QEAAXAEBQEBD@Z 0x142685ff0
+
+namespace Scaleform {
+extern "C" void FUN_1425463f0(void*, const void*, UPInt);
+extern "C" void FUN_142546490(void*, const void*, UPInt);
+
+// ArrayData::Resize shrinks only after the size drops below half capacity; growth reserves 25% headroom.
+// MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call targets; register allocation differs.
+// @0x1425684a0
+void ResizeTextStyleArray(void* array, UPInt size)
+{
+    UPInt* fields = static_cast<UPInt*>(array);
+    if (size < fields[1])
+    {
+        if (size < (fields[2] >> 1))
+        {
+            FUN_1425463f0(array, array, size);
+            fields[1] = size;
+            return;
+        }
+    }
+    else if (fields[2] <= size)
+    {
+        FUN_1425463f0(array, array, (size >> 2) + size);
+        fields[1] = size;
+        return;
+    }
+    fields[1] = size;
+}
+
+// MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call targets; register allocation differs.
+// @0x142568520
+void ResizeStaticTextArray(void* array, UPInt size)
+{
+    UPInt* fields = static_cast<UPInt*>(array);
+    if (size < fields[1])
+    {
+        if (size < (fields[2] >> 1))
+        {
+            FUN_142546490(array, array, size);
+            fields[1] = size;
+            return;
+        }
+    }
+    else if (fields[2] <= size)
+    {
+        FUN_142546490(array, array, (size >> 2) + size);
+        fields[1] = size;
+        return;
+    }
+    fields[1] = size;
+}
+}
