@@ -382,6 +382,8 @@ public:
     InvokeAliasInfo* ResolveInvokeAlias(const char* pstr) const;
     // Calls the alias with the numArgs arguments on the _level0 stack (exe 0x142963b90).
     bool InvokeAlias(const char* pmethodName, const InvokeAliasInfo& iai, Value* presult, unsigned numArgs);
+    // Queues Stage.onResize on _level0 (exe 0x14296a450).
+    virtual void NotifyOnResize();
 };
 
 // The AS2 root of a character of an AS2 movie.

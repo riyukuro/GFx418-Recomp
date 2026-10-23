@@ -12,6 +12,7 @@
 namespace Scaleform { namespace GFx {
 
 template<class T> class ASStringHash;
+struct StreamContext;
 
 namespace AS2 {
 
@@ -507,6 +508,9 @@ public:
 
     static ActionBufferData* CreateNew(); // exe 0x142936620
     unsigned GetLength() const { return BufferLen; }
+    // (appended for sfr_as2_06) Copies eventLength bytes from the byte-aligned stream and skips them (exe
+    // 0x1429726a0).
+    void Read(StreamContext* psc, unsigned eventLength);
 
 protected:
     UByte*   pBuffer;       // +0x10

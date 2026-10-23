@@ -154,6 +154,8 @@
 // MS2-RANGE: 0x142963a10-0x142963aa0 .text$mn
 // MS2-RANGE: 0x142967c90-0x142967d10 .text$mn
 // MS2-RANGE: 0x142967bf0-0x142967c30 .text$mn
+// MS2-RANGE: 0x14296a450-0x14296a540 .text$mn
+// MS2-RANGE: 0x1429726a0-0x142972730 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -174,6 +176,7 @@
 #include "../include/kernel/sf_timer.h"
 #include "../include/gfx/gfx_input.h"
 #include "../include/render/render_twips.h"
+#include "../include/gfx/gfx_stream.h"
 
 // Stores *value under key in the hash at owner+0x10 and releases the passed reference (a folded hash set; the
 // prototype table of GlobalContext here). Defined in sfr_video_01.
@@ -1595,6 +1598,36 @@ static SF_FORCEINLINE InteractiveObject* GetMovieAtLevel(const MovieImpl* pmovie
 bool MovieRoot::Invoke(const char* pmethodName, GFx::Value* presult, const GFx::Value* pargs, unsigned numArgs)
 {
     return Invoke(GetMovieAtLevel(pMovieImpl, 0), pmethodName, presult, pargs, numArgs);
+}
+
+// @0x1429726a0
+void ActionBufferData::Read(StreamContext* psc, unsigned eventLength)
+{
+    psc->Align();
+    pBuffer = (UByte*)SF_HEAP_AUTO_ALLOC(this, eventLength);
+    memcpy(pBuffer, psc->pData + psc->CurByteIndex, eventLength);
+    BufferLen = eventLength;
+    psc->Align();
+    psc->CurByteIndex += eventLength;
+}
+
+// Queues Stage.onResize for the next action pass when there is a _level0.
+// MS2-FUNCTIONAL register allocation of the two _level0 lookups differs
+// @0x14296a450
+void MovieRoot::NotifyOnResize()
+{
+    if (GetMovieAtLevel(pMovieImpl, 0))
+    {
+        ActionEntry* pe = InsertEmptyAction(ActionPriority::AP_Frame);
+        if (pe)
+        {
+            InteractiveObject* plevel0 = GetMovieAtLevel(pMovieImpl, 0);
+            pe->Type          = ActionEntry::Entry_CFunction;
+            pe->pCharacter    = plevel0;
+            pe->pActionBuffer = 0;
+            pe->CFunction     = StageCtorFunction::NotifyOnResize;
+        }
+    }
 }
 
 static inline Environment* GetLevel0MovieEnvironment(MovieImpl* pmovieImpl)
