@@ -142,6 +142,7 @@
 // MS2-RANGE: 0x14294f260-0x14294f4ef .text$mn
 // MS2-RANGE: 0x14294ec10-0x14294ef4f .text$mn
 // MS2-RANGE: 0x14294d800-0x14294dbd7 .text$mn
+// MS2-RANGE: 0x14294e520-0x14294e93f .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3131,6 +3132,77 @@ bool BevelFilterObject::GetMember(Environment* penv, const ASString& name, Value
             val->SetString(penv->CreateString("inner"));
         else
             val->SetString(penv->CreateString("outer"));
+        return true;
+    }
+    else if (strcmp(pname, "strength") == 0)
+    {
+        val->SetNumber(readonlyFilterParams().Strength);
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// ArrayObject::SetElement as the exe inlines it here (the out-of-line copy is in sfr_as2_07).
+static SF_FORCEINLINE void ArrayObject_SetElement(ArrayObject* parr, int i, const Value& val)
+{
+    if (i >= 0 && i < parr->GetSize())
+    {
+        parr->LengthValueOverriden = false;
+        if (!parr->Elements[i])
+            parr->Elements[i] = SF_HEAP_AUTO_NEW(parr) Value();
+        *parr->Elements[i] = val;
+    }
+}
+
+// MS2-FUNCTIONAL scheduling: the exe stores the number tag of the matrix element before loading the float, ours after
+// @0x14294e520
+bool ColorMatrixFilterObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "matrix") == 0)
+    {
+        Render::Filter* f = GetFilter();
+        if (!f || f->GetFilterType() != Render::Filter_ColorMatrix)
+            return false;
+        Render::ColorMatrixFilter* pcm = static_cast<Render::ColorMatrixFilter*>(f);
+        // The AS matrix is row-major 4x5 (four multipliers then the offset per row).
+        const unsigned order[Render::ColorMatrixFilter::ColorMatrixEntries] =
+            { 0, 1, 2, 3, 16, 4, 5, 6, 7, 17, 8, 9, 10, 11, 18, 12, 13, 14, 15, 19 };
+        Ptr<ArrayObject> parr = *SF_HEAP_NEW(penv->GetHeap()) ArrayObject(penv);
+        parr->Resize(Render::ColorMatrixFilter::ColorMatrixEntries);
+        for (int i = 0; i < Render::ColorMatrixFilter::ColorMatrixEntries; ++i)
+            ArrayObject_SetElement(parr, i, Value((*pcm)[order[i]]));
+        val->SetAsObject(parr);
+        return true;
+    }
+    else if (strcmp(pname, "blurX") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurX));
+        return true;
+    }
+    else if (strcmp(pname, "blurY") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurY));
+        return true;
+    }
+    else if (strcmp(pname, "color") == 0)
+    {
+        val->SetUInt_Call(readonlyFilterParams().Colors[0].ToColor32() & 0xFFFFFF);
+        return true;
+    }
+    else if (strcmp(pname, "inner") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Inner) != 0);
+        return true;
+    }
+    else if (strcmp(pname, "knockout") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Knockout) != 0);
+        return true;
+    }
+    else if (strcmp(pname, "quality") == 0)
+    {
+        val->SetInt_Call(readonlyFilterParams().Passes);
         return true;
     }
     else if (strcmp(pname, "strength") == 0)
