@@ -194,6 +194,7 @@ public:
         UPInt LastCollectionFootprint;             // +0x28
         float HeapLimitMultiplier;                 // +0x30
 
+        bool OnExceedLimit(MemoryHeap* heap, UPInt overLimit); // exe 0x14296bbf0
         void Reset(MemoryHeap* heap);              // exe 0x14297df30
     };
 

@@ -43,6 +43,7 @@
 // MS2-RANGE: 0x142968f90-0x142969000 .text$mn
 // MS2-RANGE: 0x14296b820-0x14296b850 .text$mn
 // MS2-RANGE: 0x14296bba0-0x14296bbb0 .text$mn
+// MS2-RANGE: 0x14296bbf0-0x14296bd60 .text$mn
 // MS2-RANGE: 0x14296e790-0x14296e870 .text$mn
 // MS2-RANGE: 0x14296e870-0x14296e9f0 .text$mn
 // MS2-RANGE: 0x14296efd0-0x14296f070 .text$mn
@@ -2067,6 +2068,35 @@ void MemoryContextImpl::HeapLimit::Reset(MemoryHeap* heap)
     CurrentLimit = heap->GetFootprint();
     heap->SetLimit(0x20000);
     LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+}
+
+// MS2-FUNCTIONAL: applies the emergency collection threshold, honors the optional user limit, and updates heap limits.
+// @0x14296bbf0
+bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLimit)
+{
+    const UPInt footprint = heap->GetFootprint();
+    const UPInt heapLimit = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+    const UPInt projected = UPInt(float(footprint) * HeapLimitMultiplier) + heapLimit + overLimit;
+    if (UPInt(float(footprint) * HeapLimitMultiplier) <= footprint - CurrentLimit ||
+        (UserLevelLimit && UserLevelLimit < projected))
+    {
+        MemoryContextImpl* context = MemContext;
+        if (context->TextAllocator)
+        {
+            FUN_142606410(context->TextAllocator.GetPtr(), true);
+            FUN_142606150(context->TextAllocator.GetPtr(), true);
+        }
+        context->ASGC->ForceEmergencyCollect();
+        const UPInt collectedFootprint = heap->GetFootprint();
+        CurrentLimit = collectedFootprint;
+        if (!UserLevelLimit || projected <= UserLevelLimit)
+            return true;
+        if (footprint - collectedFootprint < overLimit)
+            LastCollectionFootprint = heapLimit + (collectedFootprint - footprint) + overLimit;
+    }
+    heap->SetLimit(UserLevelLimit && UserLevelLimit < projected ? LastCollectionFootprint : projected);
+    LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+    return true;
 }
 
 }}} // namespace Scaleform::GFx::AS2
