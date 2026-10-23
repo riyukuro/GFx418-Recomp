@@ -1915,6 +1915,14 @@ Scaleform::Render::TreeNode::NodeData* FUN_140010ca0(
     return new (destination) Scaleform::Render::TreeNode::NodeData(type);
 }
 
+// MS2-FUNCTIONAL: constructs the default tree node snapshot using its recovered base constructor.
+// @0x140010fe0
+Scaleform::Render::TreeNode::NodeData* FUN_140010fe0(
+    Scaleform::Render::TreeNode::NodeData* destination)
+{
+    return new (destination) Scaleform::Render::TreeNode::NodeData();
+}
+
 // MS2-FUNCTIONAL: copies the base node snapshot, then retains the shape provider and copies its morph ratio.
 // @0x140010ef0
 Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
