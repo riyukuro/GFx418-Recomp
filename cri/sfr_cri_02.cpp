@@ -36,6 +36,7 @@ extern const char* DAT_1431b9820;
 extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriUint8 DAT_143b27950[];
+extern const void* DAT_1431b95e8[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -2267,6 +2268,16 @@ void* FUN_14002d1a0(void* guard, void* lock)
     *(void**)guard = lock;
     FUN_14258aca0(lock);
     return guard;
+}
+
+// MS2-FUNCTIONAL: restore the abstract reader interface vtable and run its scalar delete path when requested.
+// @0x14002d170
+void* FUN_14002d170(CriMvFileReaderInterface* reader, CriUint8 flags)
+{
+    *(const void***)reader = DAT_1431b95e8;
+    if (flags & 1)
+        ::operator delete(reader);
+    return reader;
 }
 
 // MS2-FUNCTIONAL: replace the held reference, releasing the previous object when non-null.
