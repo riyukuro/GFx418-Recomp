@@ -1215,4 +1215,26 @@ void* FindAudioRequestEntry(void** set, const unsigned char* key)
     return nullptr;
 }
 
+// MS2-FUNCTIONAL: copies the record's scalar fields and strings, resizes its owned string list, then assigns each element.
+// @0x142687540
+void* CopyTextRecord(void* destination, const void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto* src = static_cast<const unsigned char*>(source);
+    *reinterpret_cast<unsigned*>(dst + 0x10) = *reinterpret_cast<const unsigned*>(src + 0x10);
+    *reinterpret_cast<unsigned*>(dst + 0x14) = *reinterpret_cast<const unsigned*>(src + 0x14);
+    for (std::size_t offset : { std::size_t(0x18), std::size_t(0x20), std::size_t(0x28), std::size_t(0x30), std::size_t(0x38) })
+        *reinterpret_cast<Scaleform::String*>(dst + offset) = *reinterpret_cast<const Scaleform::String*>(src + offset);
+    const std::size_t count = *reinterpret_cast<const std::size_t*>(src + 0x48);
+    ResizeStringArray(reinterpret_cast<void**>(dst + 0x40), count);
+    auto* dstStrings = static_cast<Scaleform::String*>(*reinterpret_cast<void**>(dst + 0x40));
+    auto* srcStrings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(src + 0x40));
+    for (std::size_t i = 0; i < count; ++i)
+        dstStrings[i] = srcStrings[i];
+    for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64), std::size_t(0x70) })
+        *reinterpret_cast<unsigned*>(dst + offset) = *reinterpret_cast<const unsigned*>(src + offset);
+    *reinterpret_cast<unsigned long long*>(dst + 0x68) = *reinterpret_cast<const unsigned long long*>(src + 0x68);
+    return destination;
+}
+
 }
