@@ -1380,6 +1380,53 @@ bool FUN_1423d14d0(void* self, const char* text)
     return result != 0;
 }
 
+// MS2-FUNCTIONAL: maps the executable's Japanese, Korean, and Chinese mode values to IMM conversion flags.
+// @0x1423d15b0
+unsigned long long FUN_1423d15b0(void* self, int mode)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
+    HKL layout = GetKeyboardLayout(0);
+    *reinterpret_cast<HKL*>(bytes + 0x90) = layout;
+    HIMC context = cx18_ImmGetContext(hwnd);
+    bool wasAssociated = true;
+    if (!context) {
+        wasAssociated = false;
+        cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
+        context = cx18_ImmGetContext(hwnd);
+        if (!context) return cx18_ImmReleaseContext(hwnd, nullptr);
+    }
+    DWORD conversion = 0, sentence = 0;
+    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
+    bool supported = true;
+    if ((conversion & 0xf) == 0) cx18_ImmSetOpenStatus(context, TRUE);
+    conversion &= ~0xfu;
+    const unsigned language = static_cast<unsigned>(reinterpret_cast<unsigned long long>(layout) & 0xffff);
+    if (language == 0x411) {
+        if (mode == 0) conversion |= 8;
+        else if (mode == 4) conversion |= 9;
+        else if (mode == 8) conversion |= 0xb;
+        else if (mode == 0x16) conversion |= 3;
+        else if (mode != 1) supported = false;
+    } else if (language == 0x412) {
+        if (mode == 0x32) conversion |= 9;
+        else if (mode == 0) conversion |= 8;
+        else if (mode != 1) supported = false;
+    } else if (language == 0x404 || language == 0x804) {
+        if (mode == 2) conversion |= 9;
+        else if (mode == 0) conversion |= 8;
+        else if (mode != 1) supported = false;
+    }
+    if (supported) {
+        cx18_ImmSetConversionStatus(context, conversion, sentence);
+        bytes[0x80] = 1;
+        cx18_ImmSetOpenStatus(context, TRUE);
+    }
+    cx18_ImmReleaseContext(hwnd, context);
+    if (!wasAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
+    return supported;
+}
+
 void FUN_1423d94f0(void*, void*);
 
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
