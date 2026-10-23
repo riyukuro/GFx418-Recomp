@@ -31,6 +31,8 @@ static BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
 }
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
+extern "C" void FUN_14257db50(void*);
+extern "C" void FUN_1423cdf60(void*);
 
 struct HWND__;
 
@@ -154,12 +156,31 @@ void* FUN_1423dbc50(void* object, unsigned long long flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: omits only the abstract purecall vptr store; allocation release follows the executable flag path.
 // @0x1423dbc80
 void* FUN_1423dbc80(void* object, unsigned long long flags)
 {
     if (flags & 1)
         Memory::Free(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: destructor helper is recovered from its executable call target; the purecall-only vptr is not declared locally.
+// @0x1423ce420
+void* FUN_1423ce420(void* object, unsigned long long flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1)
+        Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: executes child release and member cleanup in executable order; its anonymous abstract vptr is not declared locally.
+// @0x1423d1b50
+void FUN_1423d1b50(unsigned long long* object)
+{
+    Memory::Free(reinterpret_cast<void*>(object[0x16]));
+    FUN_1423cdf60(object);
 }
 
 // @0x1423ca660
