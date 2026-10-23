@@ -396,6 +396,7 @@ public:
 
 protected:
     friend class FunctionProto;
+    friend class FunctionCtorFunction;
 
     CFunctionObject(ASRefCountCollector* pcc);
     CFunctionObject(ASStringContext* psc); // exe 0x142919d70

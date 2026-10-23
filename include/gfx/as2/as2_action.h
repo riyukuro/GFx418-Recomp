@@ -380,6 +380,8 @@ public:
 
     // The builtin prototype of the type (exe 0x142954ba0).
     Object* GetPrototype(ASBuiltinType type);
+    // The prototype of the type as the movie's _global sees it: a user-replaced one when set (exe 0x142949660).
+    Object* GetActualPrototype(Environment* penv, ASBuiltinType type);
 
     ASRefCountCollector* GetGC();                     // exe 0x14294afc0 (0 without a movie)
     StringManager*       GetStringManager() const;    // exe 0x1429561c0

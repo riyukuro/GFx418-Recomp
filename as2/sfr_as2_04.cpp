@@ -18,13 +18,7 @@
 // MS2-RANGE: 0x142935680-0x142935820 .text$mn
 // MS2-RANGE: 0x142935b50-0x142935c70 .text$mn
 // MS2-RANGE: 0x142936620-0x142936680 .text$mn
-// MS2-RANGE: 0x1429367a0-0x1429367e0 .text$mn
-// MS2-RANGE: 0x142936880-0x1429368c0 .text$mn
-// MS2-RANGE: 0x142936bc0-0x142936c80 .text$mn
-// MS2-RANGE: 0x142936e10-0x142936e90 .text$mn
-// MS2-RANGE: 0x142937170-0x142937290 .text$mn
-// MS2-RANGE: 0x142937380-0x1429373c0 .text$mn
-// MS2-RANGE: 0x142937470-0x1429374f0 .text$mn
+// MS2-RANGE: 0x1429367a0-0x1429374f0 .text$mn
 // MS2-RANGE: 0x142937e20-0x142937ea0 .text$mn
 // MS2-RANGE: 0x142938180-0x1429381f0 .text$mn
 // MS2-RANGE: 0x142938830-0x142938850 .text$mn
@@ -323,16 +317,70 @@ ActionBufferData* ActionBufferData::CreateNew()
     return SF_NEW ActionBufferData();
 }
 
+// The Button and MovieClip instances made by new are only used here.
+inline ButtonObject::ButtonObject(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Button));
+}
+
+inline MovieClipObject::MovieClipObject(Environment* penv)
+    : Object(penv), ButtonEventMask(0), HasButtonHandlers(false)
+{
+    MovieClipObject::Set__proto__(penv->GetSC(), penv->GetSC()->pContext->GetActualPrototype(penv, ASBuiltin_MovieClip));
+}
+
 // @0x1429367a0
 Object* ArrayCtorFunction::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) ArrayObject(penv);
 }
 
+// MS2-FUNCTIONAL the exe inlines the AsBroadcaster(Environment*) ctor (sfr_as2_03)
+// @0x1429367e0
+Object* AsBroadcasterCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) AsBroadcaster(penv);
+}
+
 // @0x142936880
 Object* AsFunctionObject::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) Object(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BevelFilterObject(Environment*) ctor (sfr_as2_03)
+// @0x1429368c0
+Object* BevelFilterCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) BevelFilterObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BlurFilterObject(Environment*) ctor (sfr_as2_03)
+// @0x142936940
+Object* BlurFilterCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) BlurFilterObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BooleanObject(Environment*) ctor (sfr_as2_03)
+// @0x1429369b0
+Object* BooleanCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) BooleanObject(penv);
+}
+
+// @0x142936a50
+Object* ButtonCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) ButtonObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the ColorObject(Environment*) ctor (sfr_as2_03)
+// @0x142936b10
+Object* ColorCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) ColorObject(penv, 0);
 }
 
 // @0x142936bc0
@@ -353,6 +401,27 @@ Object* DateCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) DateObject(penv);
 }
 
+// MS2-FUNCTIONAL the exe inlines the DropShadowFilterObject(Environment*) ctor (sfr_as2_03)
+// @0x142936c80
+Object* DropShadowFilterCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) DropShadowFilterObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the ExternalInterface(Environment*) ctor (sfr_as2_03)
+// @0x142936cf0
+Object* ExternalInterfaceCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) ExternalInterface(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the CFunctionObject(ASStringContext*) ctor (sfr_as2_03)
+// @0x142936d90
+Object* FunctionCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) CFunctionObject(penv->GetSC());
+}
+
 // @0x142936e10
 Object* GASLoadVarsLoaderCtorFunction::CreateNewObject(Environment* penv) const
 {
@@ -363,6 +432,33 @@ Object* GASLoadVarsLoaderCtorFunction::CreateNewObject(Environment* penv) const
 Object* GASMatrixCtorFunction::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) MatrixObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the GlowFilterObject(Environment*) ctor (sfr_as2_03)
+// @0x142936e90
+Object* GlowFilterCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) GlowFilterObject(penv);
+}
+
+// @0x142936f30
+Object* MovieClipCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) MovieClipObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the MovieClipLoader(Environment*) ctor (sfr_as2_03)
+// @0x142936ff0
+Object* MovieClipLoaderCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) MovieClipLoader(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the NumberObject(Environment*) ctor (sfr_as2_03)
+// @0x1429370c0
+Object* NumberCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) NumberObject(penv);
 }
 
 // @0x142937170
@@ -389,10 +485,28 @@ Object* SharedObjectCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) SharedObject(penv);
 }
 
+// MS2-FUNCTIONAL the exe inlines the StringObject(Environment*) ctor (sfr_as2_03)
+// @0x142937290
+Object* StringCtorFunction::CreateNewObject(Environment* penv) const
+{
+    StringObject* pobj = SF_HEAP_NEW(penv->GetHeap()) StringObject(penv);
+    // length is computed by GetMemberRaw; the unset member only keeps its slot
+    ASStringContext* psc = penv->GetSC();
+    pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_length), Value(Value::UNSET), PropFlags());
+    return pobj;
+}
+
 // @0x142937380
 Object* StyleSheetCtorFunction::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) StyleSheetObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe inlines the TextFieldObject(Environment*) ctor (sfr_as2_03)
+// @0x1429373c0
+Object* TextFieldCtorFunction::CreateNewObject(Environment* penv) const
+{
+    return SF_HEAP_NEW(penv->GetHeap()) TextFieldObject(penv);
 }
 
 // @0x142937470
@@ -540,4 +654,8 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ??_7?$RefCountBase@VActionBufferData@AS2@GFx@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
-// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
+// MS2-PIN: ??_7ButtonObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217c48
+// MS2-PIN: ??_7ButtonObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217c90
+// MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216640
+// MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216688

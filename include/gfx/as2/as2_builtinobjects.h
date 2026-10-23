@@ -241,6 +241,7 @@ public:
 
     // The prototype instance has no button.
     ButtonObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    inline ButtonObject(Environment* penv); // defined in sfr_as2_04
 
     virtual ObjectType GetObjectType() const; // exe 0x1429541e0: Object_ButtonASObject
     virtual InteractiveObject*       GetASCharacter();       // exe 0x1429490c0
@@ -408,6 +409,7 @@ public:
 
     // The prototype instance has no sprite.
     inline MovieClipObject(ASStringContext* psc, Object* pprototype); // defined in sfr_as2_03
+    inline MovieClipObject(Environment* penv);                        // defined in sfr_as2_04
 
     virtual ObjectType GetObjectType() const; // exe 0x1429542a0: Object_MovieClipObject
 
@@ -563,6 +565,7 @@ public:
     virtual ObjectType               GetObjectType() const;  // exe 0x142954340: Object_TextField
 
 protected:
+    friend class TextFieldCtorFunction;
     TextFieldObject(ASStringContext* psc, Object* pprototype); // exe 0x142921520
     TextFieldObject(Environment* penv);                        // exe 0x142921580
 
@@ -845,6 +848,7 @@ private:
 class ExternalInterfaceCtorFunction : public CFunctionObject
 {
 public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936cf0
     static void GlobalCtor(const FnCall& fn); // exe 0x14295ae20 undefined
 };
 class MathCtorFunction : public CFunctionObject
@@ -909,6 +913,7 @@ public:
 class NumberCtorFunction : public CFunctionObject
 {
 public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429370c0
     // new Number(v) stores v in the instance, Number(v) converts v (exe 0x14295bd30).
     static void GlobalCtor(const FnCall& fn);
 };
@@ -917,6 +922,7 @@ public:
 class ColorCtorFunction : public CFunctionObject
 {
 public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936b10
     // Color(target) as a constructor retargets the instance, as a function makes a new one (exe 0x142959740).
     static void GlobalCtor(const FnCall& fn);
 };
@@ -962,10 +968,18 @@ public:
     static void GlobalCtor(const FnCall& fn);
 };
 
+// The Button class.
+class ButtonCtorFunction : public CFunctionObject
+{
+public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936a50
+};
+
 // The MovieClip class.
 class MovieClipCtorFunction : public CFunctionObject
 {
 public:
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936f30
     // MovieClip() on a clip object returns it, undefined otherwise (exe 0x14295bc40).
     static void GlobalCtor(const FnCall& fn);
 };
