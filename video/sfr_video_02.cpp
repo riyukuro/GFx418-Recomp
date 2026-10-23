@@ -540,6 +540,57 @@ void* FUN_14000fe00(void** weakProxy)
     return *reinterpret_cast<int*>(static_cast<char*>(object) + 8) ? object : 0;
 }
 
+// MS2-FUNCTIONAL: locks a weak proxy using the executable's proxy and target refcount fields.
+// @0x1400102c0
+void** FUN_1400102c0(void** weakProxy, void** strongTarget)
+{
+    void* proxy = *weakProxy;
+    if (proxy)
+    {
+        void* target = *reinterpret_cast<void**>(static_cast<char*>(proxy) + 8);
+        if (!target)
+        {
+            int* refs = static_cast<int*>(proxy);
+            if (--*refs == 0) FUN_142626160(proxy);
+            *weakProxy = 0;
+        }
+        else
+        {
+            int* refs = reinterpret_cast<int*>(static_cast<char*>(target) + 8);
+            if (*refs)
+            {
+                ++*refs;
+                *strongTarget = target;
+                return strongTarget;
+            }
+        }
+    }
+    *strongTarget = 0;
+    return strongTarget;
+}
+
+// @0x140010340
+void FUN_140010340(void* begin, size_t count)
+{
+    char* cursor = static_cast<char*>(begin) - 8 + count * 16;
+    while (count--)
+    {
+        void* weakProxy = *reinterpret_cast<void**>(cursor);
+        if (weakProxy) FUN_14257dcb0(weakProxy);
+        cursor -= 16;
+    }
+}
+
+// @0x1400103f0
+void FUN_1400103f0(UInt32* dst, const UInt32* src)
+{
+    if (!dst) return;
+    *dst = *src;
+    void* payload = *reinterpret_cast<void* const*>(src + 2);
+    if (payload) FUN_14257dc30(payload);
+    *reinterpret_cast<void**>(dst + 2) = payload;
+}
+
 // @0x14000ffd0
 void FUN_14000ffd0(void** object)
 {
