@@ -19,6 +19,19 @@
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
 #include "../third_party/src/expat-2.0.1/lib/expat.h"
 
+// The core library's GlobalObject hash key is a borrowed C string. Keep this
+// local declaration here: the shared AS3 headers do not expose the key type.
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+struct ConstStringKey { const char* pChar; };
+class ConstStringHashFn {
+public:
+    UPInt operator()(const ConstStringKey& key) const
+    {
+        return String::BernsteinHashFunction(key.pChar, strlen(key.pChar));
+    }
+};
+}}}}}
+
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 // Out-of-line Traits::GetConstructor, second copy.
@@ -1966,6 +1979,16 @@ using AS3ValueArrayData = ArrayDataBase<GFx::AS3::Value,
     AllocatorLH<GFx::AS3::Value, Stat_Default_Mem>, ArrayDefaultPolicy>;
 // @0x1423f0a20
 template AS3ValueArrayData::~ArrayDataBase();
+
+using AS3ConstStringKey = GFx::AS3::Instances::fl::ConstStringKey;
+using AS3ConstStringHash = GFx::AS3::Instances::fl::ConstStringHashFn;
+using AS3ConstStringNode = HashNode<AS3ConstStringKey, const GFx::AS3::ClassInfo*, AS3ConstStringHash>;
+using AS3ConstStringSet = HashSetBase<AS3ConstStringNode,
+    AS3ConstStringNode::NodeHashF, AS3ConstStringNode::NodeAltHashF,
+    AllocatorGH<AS3ConstStringKey, 328>,
+    HashsetCachedNodeEntry<AS3ConstStringNode, AS3ConstStringNode::NodeHashF>>;
+// @0x1423f0aa0
+template AS3ConstStringSet::~HashSetBase();
 
 template void GFx::AS3::NamespaceInstanceSetBase::Add<GFx::AS3::Instances::Namespace*>(
     void*, GFx::AS3::Instances::Namespace* const&);
