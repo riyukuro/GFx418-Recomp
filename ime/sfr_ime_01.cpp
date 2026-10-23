@@ -97,6 +97,7 @@ extern "C" void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
 extern bool FUN_1425b9b10(void*);
 extern "C" void FUN_14257db40(void*);
+extern "C" void FUN_1422fd480(void*, void*);
 extern "C" unsigned long long FUN_1423daf30(void*, int = 0);
 extern "C" void FUN_1423cc7c0(void*);
 extern "C" const unsigned long long DAT_14313b410;
@@ -2857,6 +2858,61 @@ unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long l
 // MS2-PIN: ??_7GFxIMEManagerWin32@IME@GFx@Scaleform@@6B@ 0x1431383e0
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: selects the requested IME language entry, avoids duplicate active layouts, and updates the four mode strings.
+// @0x1423d7940
+unsigned long long FUN_1423d7940(long long* manager, const char* primary, const char* fallback)
+{
+    Scaleform::String selected;
+    auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
+    auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
+    const unsigned count = static_cast<unsigned>(manager[0x1a]);
+    unsigned long long index = 0;
+    unsigned limit = 0;
+    bool fallbackSelected = false;
+    int language = 0x2000000;
+
+    for (; index < count; ++index) {
+        auto* entry = entries + index * 0x30;
+        auto* name = reinterpret_cast<Scaleform::String*>(entry + 0x10);
+        if (primary && _stricmp(primary, name->ToCStr()) == 0 && states[index] == 0) {
+            selected = *name;
+            states[index] = 1;
+            goto selected_entry;
+        }
+    }
+    limit = count;
+    for (index = 0; index < limit; ++index) {
+        auto* entry = entries + index * 0x30;
+        auto* name = reinterpret_cast<Scaleform::String*>(entry + 0x10);
+        if (fallback && _stricmp(fallback, name->ToCStr()) == 0) {
+            selected = *reinterpret_cast<Scaleform::String*>(entry + 0x18);
+            states[index] = 2;
+            fallbackSelected = true;
+            language = *reinterpret_cast<int*>(entry + 0x20);
+            break;
+        }
+    }
+    if (limit) {
+        for (unsigned i = 0; i < limit; ++i) {
+            if (states[i] == 1 && *reinterpret_cast<int*>(entries + i * 0x30 + 0x20) == language)
+                return 0xffffffffull;
+        }
+    }
+    if (!fallbackSelected) return 0xffffffffull;
+
+selected_entry:
+    {
+        const unsigned mask = reinterpret_cast<unsigned(*)(void*, unsigned)>(
+            (*reinterpret_cast<void***>(manager))[3])(manager,
+                *reinterpret_cast<unsigned*>(entries + index * 0x30 + 0x20));
+        if (mask & 0xf00) FUN_1422fd480(manager + 2, &selected);
+        if (mask & 0xf000) FUN_1422fd480(manager + 5, &selected);
+        if (mask & 0xf0000) FUN_1422fd480(manager + 8, &selected);
+        if (mask & 0xf) FUN_1422fd480(manager + 0xb, &selected);
+    }
+    return index;
+}
 
 // MS2-FUNCTIONAL: the executable's AvmMovieClip destructor is empty; this wrapper preserves its 0x68 sized-delete path.
 // @0x1423dbb60
