@@ -1562,6 +1562,135 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 }}}}}
 
+// SparseArray::PopFront and CutMultipleAt, out of line in the exe.
+void FUN_142423ef0(Scaleform::GFx::AS3::SparseArray* sa);
+void FUN_142408230(Scaleform::GFx::AS3::SparseArray* sa, Scaleform::UPInt pos, Scaleform::UPInt count, Scaleform::GFx::AS3::SparseArray* cut);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The exe inlines SparseArray::At and PushBack into the Array natives (same as sfr_as3_02).
+static SF_INLINE const Value& saAt03(const SparseArray& sa, UPInt ind)
+{
+    if (ind < sa.ValueA.GetSize())
+        return sa.ValueA[ind];
+    if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
+    {
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        const Value* v = p ? &p->Second : 0;
+        if (v)
+            return *v;
+    }
+    return sa.DefaultValue;
+}
+
+static SF_INLINE void saPushBack03(SparseArray& sa, const Value& v)
+{
+    if (sa.Length == sa.ValueA.GetSize())
+        sa.ValueA.PushBack(v);
+    else
+    {
+        sa.ValueHHighInd = sa.Length;
+        sa.ValueH.Set(sa.ValueHHighInd, v);
+    }
+    ++sa.Length;
+}
+
+namespace Instances { namespace fl
+{
+    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
+    // @0x1423ff400
+    void Array::AS3shift(Value& result)
+    {
+        if (SA.GetSize() == 0)
+        {
+            result.SetUndefined();
+            return;
+        }
+        result = saAt03(SA, 0);
+        FUN_142423ef0(&SA);
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Array constructor and keeps the inlined At's null select as a cmove
+    // @0x1423ff4d0
+    void Array::AS3slice(SPtr<Instances::fl::Array>& result, SInt32 startIndex, SInt32 endIndex)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        Array* arr = new(itr.Alloc()) Array(itr);
+        result = arr;
+        const SInt32 len = static_cast<SInt32>(SA.GetSize());
+        if (startIndex < 0)
+            startIndex += len;
+        if (endIndex < 0)
+            endIndex += len;
+        if (endIndex > len)
+            endIndex = len;
+        if (startIndex < 0)
+            startIndex = 0;
+        for (SInt32 i = startIndex; i < endIndex; ++i)
+            saPushBack03(arr->SA, saAt03(SA, i));
+    }
+
+    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
+    // @0x1423ff800
+    void Array::AS3some(bool& result, const Value& callback, const Value& thisObject)
+    {
+        if (!callback.IsNullOrUndefined())
+        {
+            Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+            for (UPInt i = 0; i < SA.GetSize(); ++i)
+            {
+                Value argv[3] = {saAt03(SA, i), Value(static_cast<UInt32>(i)), Value(this)};
+                if (!callback.IsCallable())
+                    break;
+                Value r;
+                GetVM().ExecuteInternalUnsafe(callback, _this, r, 3, argv, false);
+                if (GetVM().IsException())
+                    break;
+                if (!r.IsBool() || r.AsBool())
+                {
+                    result = true;
+                    return;
+                }
+            }
+        }
+        result = false;
+    }
+
+    // MS2-FUNCTIONAL: register allocation and the deleteCount spill differ from the exe
+    // @0x142400d30
+    void Array::AS3splice(Value& result, unsigned argc, const Value* argv)
+    {
+        SInt32 startIndex = 0;
+        UInt32 deleteCount;
+        if (argc > 0)
+        {
+            if (!argv[0].Convert2Int32(startIndex))
+                return;
+            if (startIndex < 0)
+                startIndex += static_cast<SInt32>(SA.GetSize());
+        }
+        if (startIndex < 0)
+            startIndex = 0;
+        if (argc < 2)
+            deleteCount = static_cast<UInt32>(SA.GetSize()) - startIndex;
+        else if (!argv[1].Convert2UInt32(deleteCount))
+            return;
+
+        InstanceTraits::fl::Array& itr = static_cast<InstanceTraits::fl::Array&>(GetInstanceTraits());
+        Pickable<Array> arr = itr.MakeInstance(itr);
+        result.Pick(arr);
+        FUN_142408230(&SA, startIndex, deleteCount, arr.GetPtr() ? &arr.GetPtr()->SA : NULL);
+
+        if (argc > 2)
+        {
+            if (static_cast<SInt32>(SA.GetSize()) < startIndex)
+                startIndex = static_cast<SInt32>(SA.GetSize());
+            SA.Insert(startIndex, argc - 2, argv + 2);
+        }
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
