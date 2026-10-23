@@ -48,6 +48,7 @@ extern "C" void FUN_1423daf30(void*);
 extern "C" void FUN_1423cc7c0(void*);
 extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
+extern "C" const void* DAT_14313ba60[];
 
 struct HWND__;
 
@@ -428,6 +429,19 @@ unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
         }
     }
     return 1;
+}
+
+// MS2-FUNCTIONAL: restores the executable's AS2/AS3 support vtable, runs shared base cleanup, and follows the 0x10 delete path.
+// @0x1423dbcb0
+void* FUN_1423dbcb0(unsigned long long* object, unsigned long long flags)
+{
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313ba60);
+    FUN_14257db40(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x10);
+        else Memory::Free(object);
+    }
+    return object;
 }
 
 // MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
