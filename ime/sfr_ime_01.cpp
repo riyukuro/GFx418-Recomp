@@ -14,6 +14,7 @@
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_state.h"
 #include "../include/gfx/as3/as3_support.h"
+#include "../include/gfx/xml/xml_object.h"
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
 namespace Scaleform { namespace GFx { namespace IME {
@@ -2301,6 +2302,18 @@ void FUN_1423d1830(void* self, unsigned long long* movie)
 void FUN_1423d94f0(void* self, void* value)
 {
     *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8) = value;
+}
+
+// MS2-FUNCTIONAL: instantiates our XML string hash set insertion path from the shared hash implementation; compiler codegen differs from the exe.
+// @0x1423ca950
+void FUN_1423ca950(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
+                   Scaleform::GFx::XML::DOMStringNode* const* value)
+{
+    using Node = Scaleform::GFx::XML::DOMStringNode;
+    using Hash = Scaleform::GFx::XML::DOMStringNodeHashFunc<Node*>;
+    using Entry = Scaleform::HashsetEntry<Node*, Hash>;
+    using Base = Scaleform::HashSetBase<Node*, Hash, Hash, Scaleform::AllocatorLH<Node*, 326>, Entry>;
+    static_cast<Base*>(set)->Add(heap, *value);
 }
 
 // MS2-FUNCTIONAL: calls the executable's IME provider and text composition vtables using their observed slots and fields.
