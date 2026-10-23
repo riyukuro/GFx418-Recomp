@@ -27,6 +27,12 @@ MS2_GLOBAL(0x143b27638, void*, VideoThunkE);
 MS2_GLOBAL(0x143b27640, void*, VideoThunkBaseE);
 MS2_GLOBAL(0x143b27488, void*, VideoThunkF);
 MS2_GLOBAL(0x143b27490, void*, VideoThunkBaseF);
+MS2_GLOBAL(0x143b27528, void*, VideoCallbackA);
+MS2_GLOBAL(0x143b27530, void*, VideoCallbackBaseA);
+MS2_GLOBAL(0x143b27548, void*, VideoCallbackB);
+MS2_GLOBAL(0x143b27550, void*, VideoCallbackBaseB);
+MS2_GLOBAL(0x143b275e8, void*, VideoCallbackC);
+MS2_GLOBAL(0x143b275f0, void*, VideoCallbackBaseC);
 
 MS2_EXTERN(0x1423df980, void(void*, void*, void*), VideoNative0);
 MS2_EXTERN(0x1423df850, void(void*, void*, void*), VideoNative1);
@@ -579,5 +585,40 @@ void FUN_140019c30(std::uint64_t* closure)
 void FUN_140019cd0(std::uint64_t* closure)
 {
     FUN_140019c30(closure);
+}
+
+namespace {
+void ConvertVideoCallback(void* vm, std::uint64_t callback, std::uint64_t context, Scaleform::GFx::AS3::Value* output)
+{
+    void* object = nullptr;
+    auto thunk = reinterpret_cast<void(*)(std::uint64_t, void**)>(callback);
+    thunk(reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(context)), reinterpret_cast<void**>(&object));
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
+        RetainVideoAtom(reinterpret_cast<std::uintptr_t>(object));
+        output->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
+        auto temporary = reinterpret_cast<std::uintptr_t>(object);
+        ReleaseVideoAtom(&temporary);
+    }
+    auto temporary = reinterpret_cast<std::uintptr_t>(object);
+    ReleaseVideoAtom(&temporary);
+}
+}
+// MS2-FUNCTIONAL: invokes the metadata callback and converts its object result to an AS3 Value.
+// @0x140019d70
+void FUN_140019d70(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
+{
+    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackA.get()), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseA.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+}
+// MS2-FUNCTIONAL: invokes the cue point callback and converts its object result to an AS3 Value.
+// @0x140019e20
+void FUN_140019e20(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
+{
+    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackB.get()), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseB.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+}
+// MS2-FUNCTIONAL: invokes the subtitle callback and converts its object result to an AS3 Value.
+// @0x140019ed0
+void FUN_140019ed0(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
+{
+    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackC.get()), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseC.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
 }
 } // namespace
