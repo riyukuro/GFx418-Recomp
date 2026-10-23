@@ -38,6 +38,10 @@ extern void* PTR_LAB_1431b67d0;
 extern void* PTR_LAB_1431b6740;
 extern void* PTR_LAB_1431b6540;
 extern void* PTR_LAB_1431b65f0;
+extern void* PTR_LAB_1431b5e70;
+extern void* PTR_LAB_1431b5e18;
+extern void* PTR_FUN_1431b5e20;
+extern void* PTR_s_attachVideo_1431b5800;
 extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
@@ -1891,6 +1895,23 @@ Scaleform::GFx::AS2::Object* FUN_1400122e0(
     *reinterpret_cast<void**>(object) = PTR_LAB_1431b65f0;
     extern void FUN_140007ba0(void*, void*, void*);
     FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
+    return object;
+}
+
+// MS2-FUNCTIONAL: initializes attachVideo's Object, prototype base, and registered function members.
+// @0x14000eb50
+Scaleform::GFx::AS2::Object* FUN_14000eb50(
+    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context)
+{
+    extern void FUN_14000e1e0(void*, void*);
+    extern void FUN_142961830(void*, void*, void*, const void*, const void*);
+    FUN_14000e1e0(object, context);
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b5e70;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x70) = PTR_LAB_1431b5e18;
+    *reinterpret_cast<void**>(object) = PTR_FUN_1431b5e20;
+    const unsigned char flags = 1;
+    FUN_142961830(reinterpret_cast<char*>(object) + 0x70, object, context,
+                  &PTR_s_attachVideo_1431b5800, &flags);
     return object;
 }
 
