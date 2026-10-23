@@ -3,6 +3,7 @@
 // MS2-UNIT: sfr_as2_06
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14295d700-0x14295d840 .text$mn
+// MS2-RANGE: 0x14295d5e0-0x14295d700 .text$mn
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
@@ -1890,6 +1891,7 @@ private:
     virtual bool RemoveElements(void* pdata, unsigned idx, int count);
     virtual bool GotoAndPlay(void* pdata, const char* frame, bool stop);
     virtual bool GotoAndPlay(void* pdata, unsigned frame, bool stop);
+    virtual bool HasMember(void* pdata, const char* name, bool isCharacter) const;
 };
 
 // The wide string storage of a VT_StringW value, from its characters.
@@ -1938,6 +1940,29 @@ bool AS2ValueObjectInterface::GotoAndPlay(void* pdata, const char* frame, bool s
         }
     }
     return false;
+}
+
+// MS2-FUNCTIONAL the exe builds the key node and calls the AS2 ObjectInterface slot directly; this resolves the
+// same character handle and uses the recovered string context and member lookup.
+// @0x14295d5e0
+bool AS2ValueObjectInterface::HasMember(void* pdata, const char* name, bool isCharacter) const
+{
+    AS2::MovieRoot* root = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
+    AS2::Environment* env = GetLevel0Environment(root->pMovieImpl);
+    AS2::ObjectInterface* object = static_cast<AS2::ObjectInterface*>(pdata);
+    if (isCharacter)
+    {
+        DisplayObject* displayObject = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
+        if (!displayObject)
+            return false;
+        InteractiveObject* interactive = static_cast<InteractiveObject*>(displayObject);
+        AS2::AvmCharacter* avm = static_cast<AS2::AvmCharacter*>(interactive->GetAvmIntObj());
+        object = avm->GetASObject();
+    }
+    if (!object)
+        return false;
+    ASString key = env->StringContext.CreateConstString(name);
+    return object->HasMember(&env->StringContext, key, false);
 }
 
 // The host's reference to a string node, a wide string, an AS object or a character handle.
