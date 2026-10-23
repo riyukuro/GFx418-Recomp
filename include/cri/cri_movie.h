@@ -272,6 +272,20 @@ struct CriMpvDecoderState
     CriSint32 DcPredictors[3];
 };
 
+struct CriMvMetadataAllocatorFields
+{
+    CriUint8 Reserved[0xee8];
+    void* Work;
+    void* Allocate;
+    void* Free;
+};
+
+struct CriMvHeapWorkState
+{
+    CriUint8 Reserved[0xee0];
+    CriHeap Heap;
+};
+
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
 void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 

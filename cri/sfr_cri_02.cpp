@@ -34,6 +34,14 @@ void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // Str
 void*    FUN_14002abd0(void* mem, int format, const void* psize, void* ptexman, void* pplayer); // VideoImage ctor
 void     FUN_140037950(void* player, const char* message, int severity);
 void     FUN_140044fdc(void* inputBuffer);
+CriSint32 FUN_140045ed0(const void* config);
+CriSint32 FUN_140044eb0(CriSint32 workCount);
+CriSint32 FUN_140045910(const void* config);
+CriSint32 FUN_140042150(void* player, void* source, void* work, CriUint32 size, CriSint32 flags);
+void     FUN_140037850(void* player);
+void     FUN_140037880(void* player);
+CriUint32 FUN_140030280(void* player, void* heap, void* work);
+CriHeap  FUN_140027fec(void* memory, CriSint32 size);
 
 // ==== CRI heap backed object allocation ============================================================================
 
@@ -1103,6 +1111,58 @@ CriBool criCs_IsInCriticalSection(const void* state)
     if (depth < 1)
         return 0;
     return GetCurrentThreadId() == *(const DWORD*)(bytes + 0x28);
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this stores its caller-supplied metadata allocator.
+// @0x1400301d0
+void criMvPly_SetMetaDataWorkAllocator(void* player, void* work, void* allocate, void* freeFn)
+{
+    CriMvMetadataAllocatorFields* fields = (CriMvMetadataAllocatorFields*)player;
+    fields->Work = work;
+    fields->Allocate = allocate;
+    fields->Free = freeFn;
+}
+
+// MS2-FUNCTIONAL: the work-size helper combines the CRI RBF, demux, and two universal-jump-buffer requirements.
+// @0x14002e9e0
+CriSint32 FUN_14002e9e0(void)
+{
+    CriUint32 rbfConfig[6] = { 1, 0x2800, 0, 0x40, 0, 0 };
+    CriSint32 total = 0x376c + 4 + FUN_140045ed0(rbfConfig);
+    total += 4 + FUN_140044eb0(8);
+    CriUint32 uniConfig[3] = { 1, 0, 0x40 };
+    total += FUN_140045910(uniConfig);
+    uniConfig[2] = 4;
+    return total + FUN_140045910(uniConfig);
+}
+
+// MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
+// @0x140030ed0
+CriSint32 criMvPly_CalcSubAudioWorkSize(void* player, void* source, void* work, CriUint32 size)
+{
+    return FUN_140042150(player, source, work, size, 0);
+}
+
+// MS2-FUNCTIONAL: retain CRI's critical-section bracket around work-buffer preparation.
+// @0x140030230
+CriUint32 criMvPly_AllocateWorkBuffer(void* player, void* heap, void* work)
+{
+    FUN_140037850(player);
+    CriUint32 result = FUN_140030280(player, heap, work);
+    FUN_140037880(player);
+    return result;
+}
+
+// MS2-FUNCTIONAL: create the supplied-memory heap, store it in the player, then prepare its work buffers under lock.
+// @0x140030e50
+CriUint32 criMvPly_AllocateWorkBufferWithWork(void* player, void* memory, CriSint32 size, void* work)
+{
+    FUN_140037850(player);
+    CriHeap heap = FUN_140027fec(memory, size);
+    ((CriMvHeapWorkState*)player)->Heap = heap;
+    CriUint32 result = FUN_140030280(player, heap, work);
+    FUN_140037880(player);
+    return result;
 }
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
