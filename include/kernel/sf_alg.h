@@ -219,6 +219,82 @@ template<class T> SF_INLINE const T Abs(const T v) { return (v >= 0) ? v : -v; }
 // (appended for the AS3 natives, sfr12) round half away from zero
 template<class T> SF_INLINE int IRound(const T a) { return (a > 0.0) ? (int)(a + 0.5) : (int)(a - 0.5); }
 
+// (appended, sfr19) QuickSortSlicedSafe without the scan bound checks, for a consistent less (the frame script
+// descriptors, 0x142439400).
+template<class ArrayT, class Less>
+void QuickSortSliced(ArrayT& arr, UPInt start, UPInt end, Less less)
+{
+    enum { InsertionSortMax = 9 };
+
+    if (end - start < 2)
+        return;
+
+    SPInt  ranges[80];
+    SPInt* ptop = ranges;
+    SPInt  lo   = (SPInt)start;
+    SPInt  hi   = (SPInt)end;
+
+    for (;;)
+    {
+        SPInt count = hi - lo;
+        SPInt i, j;
+        if (count > InsertionSortMax)
+        {
+            Swap(arr[lo], arr[lo + count / 2]);
+
+            i = lo + 1;
+            j = hi - 1;
+            if (less(arr[j], arr[i]))
+                Swap(arr[j], arr[i]);
+            if (less(arr[lo], arr[i]))
+                Swap(arr[lo], arr[i]);
+            if (less(arr[j], arr[lo]))
+                Swap(arr[j], arr[lo]);
+
+            for (;;)
+            {
+                do ++i; while (less(arr[i], arr[lo]));
+                do --j; while (less(arr[lo], arr[j]));
+                if (i > j)
+                    break;
+                Swap(arr[i], arr[j]);
+            }
+            Swap(arr[lo], arr[j]);
+
+            if (j - lo > hi - i)
+            {
+                ptop[0] = lo;
+                ptop[1] = j;
+                lo      = i;
+            }
+            else
+            {
+                ptop[0] = i;
+                ptop[1] = hi;
+                hi      = j;
+            }
+            ptop += 2;
+        }
+        else
+        {
+            for (j = lo, i = lo + 1; i < hi; j = i, ++i)
+            {
+                for (; less(arr[j + 1], arr[j]); --j)
+                {
+                    Swap(arr[j + 1], arr[j]);
+                    if (j == lo)
+                        break;
+                }
+            }
+            if (ptop <= ranges)
+                return;
+            ptop -= 2;
+            lo = ptop[0];
+            hi = ptop[1];
+        }
+    }
+}
+
 }} // namespace Scaleform::Alg
 
 #endif

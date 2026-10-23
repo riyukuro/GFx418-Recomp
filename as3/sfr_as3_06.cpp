@@ -2330,7 +2330,7 @@ namespace Instances { namespace fl_display
             pData = SF_REALLOC(pData, ((FrameCnt + 31) >> 5) * 4 + cnt * sizeof(Descr), StatMV_ActionScript_Mem);
         }
         Descr* pd = GetDescrs();
-        Alg::QuickSortSlicedSafe(pd, 0, DescrCnt, Descr::Less);
+        Alg::QuickSortSliced(pd, 0, DescrCnt, Descr::Less);
     }
 }}
 
@@ -2617,3 +2617,4 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ??4?$SPtr@VStage@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVStage@fl_display@Instances@123@@Z 0x14243d9c0
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dbb0
 // MS2-PIN: ??_G?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dc10
+// MS2-PIN: ??$LowerBoundSliced@PEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U12345678@P6A_NAEBU12345678@0@Z@Alg@Scaleform@@YA_KAEBQEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@1@_K1AEBU23456781@P6A_N22@Z@Z 0x142439080
