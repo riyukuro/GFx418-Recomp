@@ -23,6 +23,29 @@ void Traits::SetInstanceTraits(Pickable<InstanceTraits::Traits> itr)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// MS2-FUNCTIONAL 0x142527560: updates the pair and key-to-latest-slot chain; inlined refcount/hash paths differ.
+// @0x142527560
+void SlotContainerType::SetKey(AbsoluteIndex ind, const ASString& key)
+{
+    Pair& pair = VArray[static_cast<UPInt>(ind.Get())];
+    ASStringNode* node = key.GetNode();
+    if (pair.Key.GetPtr() == node)
+        return;
+
+    pair.Key = node;
+    SetType::Iterator it = KVHashSet.Find(node);
+    if (it.IsEnd())
+    {
+        pair.Prev = -1;
+        KVHashSet.Add(node, static_cast<SPInt>(ind.Get()));
+    }
+    else
+    {
+        pair.Prev = it->Second;
+        it->Second = static_cast<SPInt>(ind.Get());
+    }
+}
+
 // MS2-FUNCTIONAL 0x1425276d0: updates the pair name, prior-name chain and name-to-slot map; Ptr/Hash helpers produce different temporary refcount code.
 // @0x1425276d0
 void Slots::SetKey(AbsoluteIndex ind, const ASString& key)

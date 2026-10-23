@@ -306,6 +306,8 @@ public:
 
     // appends v named k, chained to the previous slot of that name. 0x1424e63b0
     AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
+    // updates this slot's key and the key-to-slot index. 0x142527560
+    void SetKey(AbsoluteIndex ind, const ASString& k);
 
     UPInt                                           Size;       // +0x00
     ArrayLH<Pair, StatMV_VM_SlotInfo_Mem>           VArray;     // +0x08
