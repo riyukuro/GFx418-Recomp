@@ -485,6 +485,23 @@ long long* FUN_1400151a0(long long* dst, const long long* src)
     return dst;
 }
 
+// @0x140013800
+long long* FUN_140013800(long long* dst, long long value)
+{
+    if (value) FUN_14257dc30(reinterpret_cast<void*>(value));
+    if (*dst) FUN_14257dcb0(reinterpret_cast<void*>(*dst));
+    *dst = value;
+    return dst;
+}
+
+// @0x1400138d0
+long long* FUN_1400138d0(long long* dst, const long long* src)
+{
+    if (*src) FUN_14257dc30(reinterpret_cast<void*>(*src));
+    *dst = *src;
+    return dst;
+}
+
 static void SetScalarValue(UInt32* value, UInt32 kind, const void* payload, size_t payloadSize)
 {
     *value = (*value & ~0x1fu) | kind;
