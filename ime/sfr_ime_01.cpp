@@ -35,6 +35,8 @@ extern "C" void FUN_14257db50(void*);
 extern "C" void FUN_1423cdf60(void*);
 extern "C" void FUN_1423cde00();
 extern "C" const void* DAT_14313a210[];
+extern "C" const void* DAT_14313b920[];
+extern "C" const void* DAT_14313b968[];
 extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 
 struct HWND__;
@@ -205,6 +207,8 @@ void* FUN_1423d1b90(unsigned long long* object, unsigned flags)
 void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigned long long arg3)
 {
     object[2] = arg2;
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313b920);
+    object[1] = reinterpret_cast<unsigned long long>(DAT_14313b968);
     object[5] = 0;
     object[8] = 0;
     object[0xe] = arg3;
@@ -218,6 +222,9 @@ void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigne
 // @0x1423da2c0
 void* FUN_1423da2c0(void* object, unsigned long long flags)
 {
+    auto* words = static_cast<unsigned long long*>(object);
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313b920);
+    words[1] = reinterpret_cast<unsigned long long>(DAT_14313b968);
     if (flags & 1) {
         if (flags & 4) FUN_14015b310(object, 0x110);
         else Memory::Free(object);
