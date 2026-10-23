@@ -170,6 +170,46 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 
 namespace Scaleform { namespace GFx { namespace IME {
 
+// MS2-FUNCTIONAL: recreates the executable's temporary IME-context acquisition and open-status query.
+// @0x1423cf3e0
+unsigned long long FUN_1423cf3e0(void* self)
+{
+    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28);
+    bool alreadyAssociated = true;
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) {
+        alreadyAssociated = false;
+        cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
+        context = cx18_ImmGetContext(hwnd);
+        if (!context) return static_cast<unsigned long long>(cx18_ImmReleaseContext(hwnd, nullptr)) & ~0xffull;
+    }
+    using GetOpenStatusFn = BOOL (WINAPI*)(HIMC);
+    auto getOpenStatus = reinterpret_cast<GetOpenStatusFn>(
+        GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetOpenStatus"));
+    const BOOL open = getOpenStatus(context);
+    if (!alreadyAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
+    cx18_ImmReleaseContext(hwnd, context);
+    return open != 0;
+}
+
+// MS2-FUNCTIONAL: maps the active Windows keyboard layout to the IME display labels observed in the executable.
+// @0x1423cf4a0
+String* FUN_1423cf4a0(void* self, String* output)
+{
+    const HKL layout = GetKeyboardLayout(0);
+    *reinterpret_cast<HKL*>(static_cast<unsigned char*>(self) + 0x90) = layout;
+    const unsigned language = reinterpret_cast<unsigned long long>(layout) & 0xffff;
+    const char* label = "Unknown";
+    switch (language) {
+    case 0x0419: label = "Russian"; break;
+    case 0x0404: case 0x0804: label = "Chinese"; break;
+    case 0x0409: case 0x0809: case 0x0c09: case 0x1009: label = "English"; break;
+    case 0x0411: label = "Japanese"; break;
+    case 0x0412: label = "Korean"; break;
+    }
+    return new (output) String(label);
+}
+
 // MS2-FUNCTIONAL: follows the executable's three-stage input-context COM query and releases each acquired interface.
 // @0x1423da320
 unsigned char FUN_1423da320(void* object, void*, void*, void* context)
