@@ -483,3 +483,34 @@ void DivideNestedRecords(void* array, unsigned long long divisor)
     }
 }
 }
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: returns one plus the recursive descendant count, matching the executable's seed value.
+// @0x14268a810
+unsigned CountTreeWithRoot(void* node)
+{
+    int count = 1;
+    auto* bytes = static_cast<unsigned char*>(node);
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    for (std::size_t i = 0; i < childCount; ++i)
+        CountTreeNodes(children[i], &count);
+    return static_cast<unsigned>(count);
+}
+
+// MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
+// @0x14268a870
+void* FindTreeNodeByKey(void* node, int key)
+{
+    auto* bytes = static_cast<unsigned char*>(node);
+    if (*reinterpret_cast<int*>(bytes + 0x28) == key)
+        return node;
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    for (std::size_t i = 0; i < childCount; ++i) {
+        if (void* found = FindTreeNodeByKey(children[i], key))
+            return found;
+    }
+    return nullptr;
+}
+}
