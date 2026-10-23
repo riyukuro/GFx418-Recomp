@@ -7,8 +7,66 @@
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
+#include "ms2/scaleform/include/gfx/gfx_textsnapshot.h"
 
 namespace Scaleform { namespace Render { class Font; }}
+
+// The CSS style sheet of a StyleSheet instance. Its bodies (sfr_gfx_06g, text_stylesheet.h) and its base
+// (text_styledtext.h) are built on the render text headers, which do not mix with these; only what the instance's
+// constructor and destructor touch is modeled.
+namespace Scaleform { namespace Render { namespace Text {
+
+struct Style;
+
+// Style lookup for HTML parsing. vftable 0x14316a718.
+class StyleManagerBase
+{
+public:
+    enum KeyType { CSS_Tag = 0, CSS_Class = 1, CSS_None = 2 };
+
+    virtual ~StyleManagerBase() {}
+    virtual const Style* GetStyle(KeyType type, const String& name) const = 0;
+    virtual const Style* GetStyle(KeyType type, const char* name, UPInt len = SF_MAX_UPINT) const = 0;
+    virtual const Style* GetStyle(KeyType type, const wchar_t* name, UPInt len = SF_MAX_UPINT) const = 0;
+};
+
+}}} // namespace Scaleform::Render::Text
+
+namespace Scaleform { namespace GFx { namespace Text {
+
+// 0x30 bytes, vftable 0x14316a738.
+class StyleManager : public Render::Text::StyleManagerBase
+{
+public:
+    StyleManager() : State(0) {}
+    ~StyleManager();                                                                        // 0x142609070
+
+    virtual const Render::Text::Style* GetStyle(KeyType type, const String& name) const;                  // 0x142609c70
+    virtual const Render::Text::Style* GetStyle(KeyType type, const char* name, UPInt len = SF_MAX_UPINT) const;   // 0x142609d30
+    virtual const Render::Text::Style* GetStyle(KeyType type, const wchar_t* name, UPInt len = SF_MAX_UPINT) const; // 0x142609dc0
+
+private:
+    // The styles by key (a HashUncachedLH): only its table pointer.
+    struct StyleHash
+    {
+        StyleHash() : pTable(NULL) {}
+        void* pTable;
+    };
+    // A style's key.
+    struct StyleKey
+    {
+        StyleKey() : Type(CSS_None) {}
+        KeyType     Type;       // +0x00
+        StringLH    Value;      // +0x08
+        UPInt       HashValue;  // +0x10
+    };
+
+    StyleHash   Styles;         // +0x08
+    StyleKey    TempKey;        // +0x10 the key of the last lookup
+    UInt32      State;          // +0x28
+};
+
+}}} // namespace Scaleform::GFx::Text
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -64,11 +122,14 @@ namespace Instances { namespace fl_text {
         void textGet(ASString& result);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x80 bytes.
     class StyleSheet : public Instances::fl_events::EventDispatcher
     {
     public:
         StyleSheet(InstanceTraits::Traits& t);   // 0x1424a8e80
+
+        Text::StyleManager  CSS;        // +0x50
+
         // @0x1424afea0
         void clear(const Value& result);
         // @0x1424b15e0
@@ -83,11 +144,16 @@ namespace Instances { namespace fl_text {
         void transform(SPtr<Instances::fl_text::TextFormat>& result, const Value&);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x70 bytes: no members of its own; the display text field it scripts is pDispObj.
     class TextField : public Instances::fl_display::InteractiveObject
     {
     public:
         TextField(InstanceTraits::Traits& t);   // 0x1424a9290
+        // @0x1424ac5e0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::TextField"; }
+        virtual void InitInstance(bool extCall = false);        // 0x1424acee0
+        virtual GFx::DisplayObject* CreateStageObject();        // 0x1424ac040
+
         // @0x1424af880
         void alwaysShowSelectionGet(bool& result);
         // @0x1424af8a0
@@ -258,11 +324,31 @@ namespace Instances { namespace fl_text {
         void wordWrapSet(const Value& result, bool);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x260 bytes: the properties, null while unset.
     class TextFormat : public Instances::fl::Object
     {
     public:
         TextFormat(InstanceTraits::Traits& t);   // 0x1424a9690
+
+        Value                       align;          // +0x038
+        Value                       blockIndent;    // +0x058
+        Value                       bullet;         // +0x078
+        Value                       bold;           // +0x098
+        Value                       color;          // +0x0b8
+        Value                       font;           // +0x0d8
+        Value                       italic;         // +0x0f8
+        Value                       indent;         // +0x118
+        Value                       kerning;        // +0x138
+        Value                       leading;        // +0x158
+        Value                       leftMargin;     // +0x178
+        Value                       rightMargin;    // +0x198
+        Value                       letterSpacing;  // +0x1b8
+        Value                       size;           // +0x1d8
+        SPtr<Instances::fl::Array>  tabStops;       // +0x1f8
+        Value                       target;         // +0x200
+        Value                       underline;      // +0x220
+        Value                       url;            // +0x240
+
         // @0x1424af820
         void alignGet(ASString& result);
         // @0x1424af870
@@ -356,11 +442,14 @@ namespace Instances { namespace fl_text {
         virtual void AS3Constructor(unsigned argc, const Value* argv);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // 0x60 bytes.
     class TextSnapshot : public Instances::fl::Object
     {
     public:
         TextSnapshot(InstanceTraits::Traits& t);   // 0x1424a9ea0
+
+        StaticTextSnapshotData  SnapshotData;   // +0x38
+
         // @0x1424afe80
         void charCountGet(SInt32& result);
         // @0x1424b07e0

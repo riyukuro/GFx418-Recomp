@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net_soloader.h"
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/gfx/gfx_statictextcharacter.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1401,12 +1402,20 @@ namespace ClassTraits { namespace fl_text
 
 namespace InstanceTraits { namespace fl_text
 {
-    // The instance layout is not recovered yet, so the size is the exe's constant.
     // @0x1424a8e50
     StyleSheet::StyleSheet(VM& vm, const ClassInfo& ci)
         : CTraits(vm, ci)
     {
-        SetMemSize(0x80);
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424a8e80
+    StyleSheet::StyleSheet(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+    {
     }
 }}
 
@@ -1425,12 +1434,20 @@ namespace ClassTraits { namespace fl_text
 
 namespace InstanceTraits { namespace fl_text
 {
-    // The instance layout is not recovered yet, so the size is the exe's constant.
     // @0x1424a9260
     TextField::TextField(VM& vm, const ClassInfo& ci)
         : CTraits(vm, ci)
     {
-        SetMemSize(0x70);
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424a9290
+    TextField::TextField(InstanceTraits::Traits& t)
+        : Instances::fl_display::InteractiveObject(t)
+    {
     }
 }}
 
@@ -1449,12 +1466,43 @@ namespace ClassTraits { namespace fl_text
 
 namespace InstanceTraits { namespace fl_text
 {
-    // The instance layout is not recovered yet, so the size is the exe's constant.
     // @0x1424a9660
     TextFormat::TextFormat(VM& vm, const ClassInfo& ci)
         : CTraits(vm, ci)
     {
-        SetMemSize(0x260);
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // Every property starts out null.
+    // @0x1424a9690
+    TextFormat::TextFormat(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+    {
+        const ASString nullStr = GetVM().GetStringManager().CreateNullString();
+        Value r, n;
+        n.SetNull();
+
+        align = nullStr;
+        blockIndent = n;
+        bold = n;
+        bullet = n;
+        color = n;
+        font = nullStr;
+        indent = n;
+        italic = n;
+        kerning = n;
+        leading = n;
+        leftMargin = n;
+        letterSpacing = n;
+        rightMargin = n;
+        size = n;
+        tabStops = NULL;
+        target = nullStr;
+        underline = n;
+        url = nullStr;
     }
 }}
 
@@ -1473,16 +1521,33 @@ namespace ClassTraits { namespace fl_text
 
 namespace InstanceTraits { namespace fl_text
 {
-    // The instance layout is not recovered yet, so the size is the exe's constant.
     // @0x1424a9e70
     TextSnapshot::TextSnapshot(VM& vm, const ClassInfo& ci)
         : CTraits(vm, ci)
     {
-        SetMemSize(0x60);
+        SetMemSize(sizeof(InstanceType));
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424a9ea0
+    TextSnapshot::TextSnapshot(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+    {
     }
 }}
 
 }}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx {
+
+// @0x1424aa050
+StaticTextSnapshotData::~StaticTextSnapshotData()
+{
+}
+
+}} // namespace Scaleform::GFx
 
 
 // ==== flash.net: instance helpers, constructors and object factories ===============================================

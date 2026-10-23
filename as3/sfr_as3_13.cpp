@@ -1103,7 +1103,6 @@ namespace Instances { namespace fl_text
     // Display text field, its document view and that view's styled text.
     static inline void* DisplayTextField(Instances::fl_display::DisplayObject* p) { return p->pDispObj.GetPtr(); }
     static inline void* DocViewOf(void* ptf)                { return *(void**)((UByte*)ptf + 0xe0); }
-    static inline void* SnapshotData(Instances::fl::Object* p) { return (UByte*)p + 0x38; }
     // Pixels <-> twips.
     static const double TwipsPerPixel = 20.0;
     static const double PixelsPerTwip = 0.05;
@@ -1309,7 +1308,7 @@ namespace Instances { namespace fl_text
     // @0x1424afe80
     void TextSnapshot::charCountGet(SInt32& result)
     {
-        result = (SInt32)FUN_1425e1360(SnapshotData(this));
+        result = (SInt32)FUN_1425e1360(&SnapshotData);
     }
 
     // An empty or reversed range tests the single character at start.
@@ -1318,13 +1317,13 @@ namespace Instances { namespace fl_text
     {
         if (end <= start)
             end = start + 1;
-        result = FUN_1425e1bc0(SnapshotData(this), (SPInt)start, (SPInt)end);
+        result = FUN_1425e1bc0(&SnapshotData, (SPInt)start, (SPInt)end);
     }
 
     // @0x1424b2f20
     void TextSnapshot::hitTestTextNearPos(Value::Number& result, Value::Number x, Value::Number y, Value::Number closeDist)
     {
-        result = FUN_1425e1840(SnapshotData(this), (float)(x * TwipsPerPixel), (float)(y * TwipsPerPixel),
+        result = FUN_1425e1840(&SnapshotData, (float)(x * TwipsPerPixel), (float)(y * TwipsPerPixel),
                                (float)(closeDist * TwipsPerPixel));
     }
 
@@ -1335,7 +1334,7 @@ namespace Instances { namespace fl_text
         SF_UNUSED(result);
         UInt32 c = color;
         ((UByte*)&c)[3] = 0xff;
-        FUN_1425e2b40(SnapshotData(this), &c);
+        FUN_1425e2b40(&SnapshotData, &c);
     }
 }}
 
@@ -1803,7 +1802,7 @@ namespace Instances { namespace fl_text
     void TextSnapshot::findText(SInt32& result, SInt32 beginIndex, const ASString& textToFind, bool caseSensitive)
     {
         String text(textToFind.ToCStr(), textToFind.GetSize());
-        result = FUN_1425e1020(SnapshotData(this), (SPInt)beginIndex, text.ToCStr(), caseSensitive);
+        result = FUN_1425e1020(&SnapshotData, (SPInt)beginIndex, text.ToCStr(), caseSensitive);
     }
 
     // The exe ignores includeLineEndings.
@@ -1813,7 +1812,7 @@ namespace Instances { namespace fl_text
     {
         SF_UNUSED(includeLineEndings);
         void* buf;
-        FUN_1425e1570(SnapshotData(this), &buf);
+        FUN_1425e1570(&SnapshotData, &buf);
         String& text = *reinterpret_cast<String*>(&buf);
         result = GetVM().GetStringManager().CreateString(text.ToCStr(), text.GetSize());
         text.~String();
@@ -1863,7 +1862,7 @@ namespace Instances { namespace fl_text
         if (endIndex <= beginIndex)
             endIndex = beginIndex + 1;
         void* buf;
-        FUN_1425e1740(SnapshotData(this), &buf, (SPInt)beginIndex, (SPInt)endIndex, includeLineEndings);
+        FUN_1425e1740(&SnapshotData, &buf, (SPInt)beginIndex, (SPInt)endIndex, includeLineEndings);
         String& text = *reinterpret_cast<String*>(&buf);
         result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
         text.~String();
