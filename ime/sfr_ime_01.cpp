@@ -10,6 +10,7 @@
 #include <vector>
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_memory.h"
+#include "../include/kernel/sf_hash.h"
 #include "../include/kernel/sf_string.h"
 #include "../include/kernel/sf_utf8util.h"
 #include "../include/gfx/gfx_loadproc.h"
@@ -20,6 +21,9 @@
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
 namespace Scaleform { namespace GFx { namespace IME {
+
+void FUN_1423d9090(void*, void*, unsigned long long);
+void FUN_1423d8b80(void*, void*, void*, unsigned long long);
     unsigned char FUN_1423da320(void*, void*, void*, void*);
     void FUN_1423d9500(void*);
     void FUN_1425b43c0(void*);
@@ -63,6 +67,11 @@ static BOOL cx18_ImmSetOpenStatus(HIMC context, BOOL open)
     typedef BOOL (WINAPI* Fn)(HIMC, BOOL);
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetOpenStatus"))(context, open);
 }
+static BOOL cx18_ImmGetOpenStatus(HIMC context)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetOpenStatus"))(context);
+}
 static BOOL cx18_ImmGetConversionStatus(HIMC context, DWORD* conversion, DWORD* sentence)
 {
     typedef BOOL (WINAPI* Fn)(HIMC, DWORD*, DWORD*);
@@ -88,7 +97,8 @@ extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
 extern "C" const void* DAT_14313a228[];
 extern "C" const void* DAT_14313a200[];
-extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
+extern "C" const void* DAT_143138360[];
+extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
 extern "C" void FUN_1423d8b80(void*, void*, void*, unsigned long long);
@@ -150,6 +160,8 @@ extern "C" void FUN_1422fbf60(void*);
 struct HWND__;
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 
 class GFxIMEManagerWin32
 {
@@ -939,11 +951,11 @@ void FUN_1423d8d10(unsigned long long* table, unsigned long long key)
 {
     auto* data = reinterpret_cast<unsigned long long*>(table[0]);
     if (!data) {
-        FUN_1423d9090(table, key, 8);
+        FUN_1423d9090(table, reinterpret_cast<void*>(key), 8);
         return;
     }
     if (data[1] * 4 + 4 < data[0] * 5)
-        FUN_1423d9090(table, key, data[1] * 2 + 2);
+        FUN_1423d9090(table, reinterpret_cast<void*>(key), data[1] * 2 + 2);
 }
 
 // MS2-FUNCTIONAL: releases the held ABC data and executes the ExecuteTag base teardown before optional scalar delete.
@@ -1700,11 +1712,9 @@ void FUN_1423d8e80(void* table, void* source)
         const char* text = *reinterpret_cast<const char**>(record + 8);
         const unsigned long long length = strlen(text);
         const unsigned long long hash = String::BernsteinHashFunction(text, length, 0x1505);
-        void* value = const_cast<char*>(text);
-        unsigned keyCopy = key;
-        void* valueRef = &value;
-        unsigned* keyRef = &keyCopy;
-        void* entry[2] = { valueRef, keyRef };
+        void* keyStorage = const_cast<char*>(text);
+        unsigned long long value[2] = { key, reinterpret_cast<unsigned long long>(source) };
+        void* entry[2] = { &keyStorage, value };
         FUN_1423d8b80(table, table, entry, hash);
         record = *reinterpret_cast<unsigned char**>(record + 24);
     }
@@ -2981,6 +2991,465 @@ void* FUN_1423dbb60(void* object, unsigned flags)
         else Scaleform::Memory::Free(object);
     }
     return object;
+}
+
+// MS2-FUNCTIONAL: releases the manager's shared values, command hash, and packed strings using the observed field offsets.
+// @0x1423cdf60
+void FUN_1423cdf60(unsigned long long* self)
+{
+    self[0] = reinterpret_cast<unsigned long long>(DAT_14313a228 + 6);
+    FUN_1423d9500(reinterpret_cast<void*>(self[6]));
+    if (self[6]) {
+        auto* child = reinterpret_cast<void*>(self[6]);
+        reinterpret_cast<unsigned long long(*)(void*, unsigned)>(
+            (*reinterpret_cast<void***>(child))[2])(child, 1);
+    }
+    FUN_1423ca920(nullptr, &self[0xf]);
+    Scaleform::Memory::Free(reinterpret_cast<void*>(self[8]));
+    using Node = Scaleform::HashNode<int, Scaleform::StringDataPtr, Scaleform::FixedSizeHash<int>>;
+    using Entry = Scaleform::HashsetCachedNodeEntry<Node, typename Node::NodeHashF>;
+    using Table = Scaleform::HashSetBase<Node, typename Node::NodeHashF, typename Node::NodeAltHashF,
+        Scaleform::AllocatorGH<int, 2>, Entry>;
+    reinterpret_cast<Table*>(self + 7)->Clear();
+    FUN_1423ca920(nullptr, &self[4]);
+    FUN_1423ca920(nullptr, &self[3]);
+    FUN_1423ca920(nullptr, &self[2]);
+}
+
+// MS2-FUNCTIONAL: forwards each executable-provided argument descriptor and invokes the matching AS3 method with an .Add suffix.
+// @0x1423d99f0
+void FUN_1423d99f0(void* raw, void** value)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    void* input = value ? *value : nullptr;
+    if (!*reinterpret_cast<unsigned char*>(self + 0x10)) {
+        if (input) FUN_14257dcd0(input);
+        return;
+    }
+    if (!input) return;
+
+    char command[0x400]{};
+    strcpy_s(command, sizeof(command), reinterpret_cast<const char*>(self + 0x10));
+    strcat_s(command, sizeof(command), ".Add");
+    const unsigned long long count = *reinterpret_cast<unsigned long long*>(self + 0x818);
+    auto** inputVtable = *reinterpret_cast<void***>(input);
+    for (unsigned long long i = 0; i < count; ++i) {
+        reinterpret_cast<void(*)(void*, void*, void*)>(inputVtable[1])(
+            input, self + 0x828 + i * 0x20, self + 0x810 + i * sizeof(void*));
+    }
+    void* movie = *reinterpret_cast<void**>(self + 0x868);
+    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+    values = values ? *reinterpret_cast<void**>(static_cast<unsigned char*>(values) + 0x18) : nullptr;
+    if (values) {
+        void* result = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, unsigned long long, unsigned)>(
+            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                values, command, &result, *reinterpret_cast<unsigned long long*>(self + 0x828),
+                *reinterpret_cast<unsigned*>(self + 0x830));
+    }
+    self[0x410] = 0;
+    FUN_14257dcd0(input);
+}
+
+// MS2-FUNCTIONAL: cancels composition, sends Escape down and up for candidate modes, and removes the candidate list.
+// @0x1423cefe0
+void FUN_1423cefe0(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    cx18_ImmNotifyIME(context, 0x15, 1, 0);
+    cx18_ImmNotifyIME(context, 0x15, 4, 0);
+    cx18_ImmReleaseContext(hwnd, context);
+    FUN_1423da320(*reinterpret_cast<void**>(bytes + 0xc8), nullptr, nullptr, nullptr);
+    const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x98);
+    if (mode - 5u < 2u) {
+        INPUT inputs[2]{};
+        for (auto& input : inputs) {
+            input.type = INPUT_KEYBOARD;
+            input.ki.wVk = VK_ESCAPE;
+            input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
+        }
+        inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(2, inputs, sizeof(INPUT));
+    }
+    **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
+    void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
+    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+    if (values) {
+        void* result = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                values, "RemoveList", &result, 0, 0);
+    }
+}
+
+// MS2-FUNCTIONAL: resets the IME manager's four predefined mode records, preserving the executable's growing 16-byte array.
+// @0x1423cb760
+void FUN_1423cb760(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    auto* array = reinterpret_cast<unsigned long long*>(bytes + 0x170);
+    unsigned long long length = array[1];
+    unsigned long long capacity = array[2];
+    if (length && (capacity & ~1ull)) {
+        Scaleform::Memory::Free(reinterpret_cast<void*>(array[0]));
+        array[0] = 0;
+        array[2] = 0;
+    } else if (!length && !capacity) {
+        cx18_ReserveGH(array, 0, 0x10);
+    }
+    array[1] = 0;
+    if (array[2] < 2) cx18_ReserveGH(array, 1, 0x10);
+    auto append = [array](unsigned a, unsigned b) {
+        unsigned long long next = ++array[1];
+        if (next >= array[2]) cx18_ReserveGH(array, (next >> 2) + next, 0x10);
+        auto* record = reinterpret_cast<unsigned*>(array[0]) + (next - 1) * 4;
+        record[0] = a;
+        record[1] = 0;
+        record[2] = b;
+        record[3] = 0;
+    };
+    append(0x2000, 0x412);
+    append(0x210000, 0x804);
+    append(0x400, 0x411);
+    append(9, 0x404);
+}
+
+// MS2-FUNCTIONAL: initializes the shared IME manager state, interns its embedded node, and installs the default conversion records.
+// @0x1423cabb0
+unsigned long long* FUN_1423cabb0(unsigned long long* self, unsigned long long owner)
+{
+    self[0] = reinterpret_cast<unsigned long long>(DAT_143138360);
+    for (unsigned i = 1; i <= 0x0d; ++i) self[i] = 0;
+    new (self + 0x0e) Scaleform::String();
+    self[0x0f] = owner;
+    for (unsigned i : { 0x12u, 0x13u, 0x14u, 0x17u, 0x18u, 0x19u,
+                        0x1fu, 0x20u, 0x21u, 0x23u, 0x27u, 0x28u, 0x29u,
+                        0x2bu, 0x2cu, 0x2du, 0x2eu, 0x2fu, 0x30u })
+        self[i] = 0;
+    *reinterpret_cast<unsigned*>(self + 0x1d) = 0x01000000;
+    *reinterpret_cast<unsigned*>(self + 0x25) = 0x01000000;
+    self[0x22] = reinterpret_cast<unsigned long long>(self + 0x23);
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x84) = 0x02000000;
+    *reinterpret_cast<unsigned*>(self + 0x11) = 0x02000000;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0xd4) = 0xffffffffu;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0xfc) = 0;
+
+    auto* node = reinterpret_cast<Scaleform::GFx::XML::DOMStringNode*>(self + 0x1b);
+    std::memset(node, 0, sizeof(void*));
+    FUN_1423ca950(reinterpret_cast<Scaleform::GFx::XML::XMLDOMStringNodeHash*>(self + 1),
+        self + 1, &node);
+    *reinterpret_cast<unsigned*>(self + 0x1a) = 0;
+    *reinterpret_cast<unsigned*>(self + 0x10) = 0;
+    FUN_1423cb760(self);
+    return self;
+}
+
+// MS2-FUNCTIONAL: removes every enumerated command key from the executable's chained 0x28-byte hash table.
+// @0x1423d8f20
+void FUN_1423d8f20(unsigned long long* map, void* source)
+{
+    auto** sourceVtable = *reinterpret_cast<void***>(source);
+    auto* sequence = reinterpret_cast<unsigned char*(*)(void*)>(sourceVtable[0])(source);
+    auto* cursor = sequence ? reinterpret_cast<unsigned long long*>(sequence + sizeof(void*)) : nullptr;
+    while (cursor && cursor[0]) {
+        const char* key = reinterpret_cast<const char*>(cursor[0]);
+        auto* table = reinterpret_cast<unsigned char*>(map[0]);
+        if (table) {
+            const unsigned long long mask = *reinterpret_cast<unsigned long long*>(table + 8);
+            const unsigned long long hash = Scaleform::String::BernsteinHashFunction(
+                key, std::strlen(key), 0x1505);
+            const unsigned long long home = mask & hash;
+            auto* entry = reinterpret_cast<unsigned long long*>(table + 0x10 + home * 0x28);
+            if (static_cast<long long>(entry[0]) != -2 && entry[1] == home) {
+                unsigned long long previous = home;
+                for (;;) {
+                    if (entry[1] == home && std::strcmp(reinterpret_cast<const char*>(entry[2]), key) == 0) {
+                        const unsigned long long next = entry[0];
+                        if (previous == home) {
+                            if (next != ~0ull) {
+                                auto* successor = reinterpret_cast<unsigned long long*>(table + 0x10 + next * 0x28);
+                                entry[0] = successor[0];
+                                entry[1] = successor[1];
+                                entry[2] = successor[2];
+                                entry[3] = successor[3];
+                                entry[4] = successor[4];
+                                entry = successor;
+                            }
+                        } else {
+                            auto* prior = reinterpret_cast<unsigned long long*>(table + 0x10 + previous * 0x28);
+                            prior[0] = next;
+                        }
+                        entry[0] = ~1ull;
+                        --*reinterpret_cast<unsigned long long*>(table);
+                        break;
+                    }
+                    const unsigned long long next = entry[0];
+                    if (next == ~0ull) break;
+                    previous = next;
+                    entry = reinterpret_cast<unsigned long long*>(table + 0x10 + next * 0x28);
+                }
+            }
+        }
+        cursor += 2;
+    }
+}
+
+// MS2-FUNCTIONAL: stores the supplied IME value for its matching language/mode and updates each affected mode string.
+// @0x1423d5b00
+void FUN_1423d5b00(unsigned long long* manager, const unsigned long long* value, const char* language)
+{
+    auto** vtable = reinterpret_cast<void**>(manager[0]);
+    const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned short)>(vtable[4])(
+        manager, *reinterpret_cast<const unsigned short*>(reinterpret_cast<const unsigned char*>(value) + 4));
+    auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
+    auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
+    const unsigned count = static_cast<unsigned>(manager[0x1a]);
+    for (unsigned i = 0; i < count; ++i) {
+        auto* entry = entries + i * 0x30;
+        auto* name = reinterpret_cast<Scaleform::String*>(entry + 0x10);
+        if (!language || _stricmp(name->ToCStr(), language) != 0 ||
+            *reinterpret_cast<unsigned*>(entry + 0x20) != mode) continue;
+
+        auto* copied = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x58));
+        if (!copied) return;
+        std::memcpy(copied, value, 0x58);
+        *reinterpret_cast<unsigned long long**>(entry + 0x28) = copied;
+        states[i] = 1;
+        if (*reinterpret_cast<unsigned char*>(copied + 10) & 1) {
+            *reinterpret_cast<unsigned*>(manager + 0x11) = *reinterpret_cast<unsigned*>(entry + 0x20);
+            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = mode;
+        }
+        if (mode & 0xf00) FUN_1422fd480(manager + 2, name);
+        if (mode & 0xf000) FUN_1422fd480(manager + 5, name);
+        if (mode & 0xf0000) FUN_1422fd480(manager + 8, name);
+        if (mode & 0xf) FUN_1422fd480(manager + 0xb, name);
+    }
+}
+
+// MS2-FUNCTIONAL: appends a wide composition update to the manager's UTF-8 log and records its language/mode tuple.
+// @0x1423d5d80
+void FUN_1423d5d80(void* raw, const void* event, const wchar_t* text)
+{
+    auto* bytes = static_cast<unsigned char*>(raw);
+    Scaleform::String converted(text);
+    const size_t length = converted.GetSize();
+    char* copy = static_cast<char*>(Scaleform::Memory::Alloc(length + 1));
+    if (!copy) return;
+    std::memcpy(copy, converted.ToCStr(), length + 1);
+
+    const unsigned short language = *reinterpret_cast<const unsigned short*>(
+        static_cast<const unsigned char*>(event) + 4);
+    const unsigned id = language & 0xfff;
+    unsigned mode = 0x01000000;
+    if (id == 0x409) mode = 0x10000000;
+    else if (id == 0x404) mode = 9;
+    else if (id == 0x804) mode = 0x80000;
+    else if (id == 0x412) mode = 0x2000;
+    else if (id == 0x411) mode = 0x400;
+    *reinterpret_cast<unsigned*>(bytes + 0x84) = mode;
+
+    auto* array = reinterpret_cast<unsigned long long*>(bytes + 0x90);
+    const unsigned long long next = array[1] + 1;
+    if (next >= array[2]) cx18_ReserveGH(array, (next >> 2) + next, 0x20);
+    array[1] = next;
+    auto* record = reinterpret_cast<unsigned char*>(array[0]) + (next - 1) * 0x20;
+    *reinterpret_cast<void**>(record) = copy;
+    *reinterpret_cast<unsigned long long*>(record + 8) = 0;
+    *reinterpret_cast<unsigned*>(record + 0x10) = mode;
+    *reinterpret_cast<unsigned*>(record + 0x14) = 0;
+    *reinterpret_cast<unsigned long long*>(record + 0x18) = language;
+
+    *reinterpret_cast<unsigned*>(bytes + 0x80) += 1;
+    *reinterpret_cast<Scaleform::String*>(bytes + 0x70) += converted;
+}
+
+// MS2-FUNCTIONAL: records the alternate IME composition message, whose language identifier is 0x0c bytes past the common event field.
+// @0x1423d7bc0
+void FUN_1423d7bc0(void* manager, const void* event, const wchar_t* text)
+{
+    FUN_1423d5d80(manager, static_cast<const unsigned char*>(event) + 0x0c, text);
+}
+
+// MS2-FUNCTIONAL: applies the executable's StatusWindow shape, symbol, and Japanese input-mode changes through IMM32.
+// @0x1423d7e80
+void FUN_1423d7e80(void* raw, const char* command, const char* value)
+{
+    auto* manager = static_cast<unsigned char*>(raw);
+    auto* child = *reinterpret_cast<unsigned char**>(manager + 0x78);
+    HWND hwnd = *reinterpret_cast<HWND*>(child + 0x68);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) return;
+    DWORD conversion = 0;
+    DWORD sentence = 0;
+    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
+    const bool enable = std::strcmp(value, "true") == 0;
+    if (std::strcmp(command, "StatusWindow_OnShape") == 0) {
+        conversion = enable ? (conversion | 8u) : (conversion & ~8u);
+    } else if (std::strcmp(command, "StatusWindow_OnInputMode") == 0) {
+        conversion = enable ? (conversion | 1u) : (conversion & ~1u);
+        if (std::strcmp(value, "Hiragana") == 0) {
+            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
+            conversion = (conversion & ~2u) | 1u;
+        } else if (std::strcmp(value, "Full-Width Katakana") == 0) {
+            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
+            conversion |= 0xbu;
+        } else if (std::strcmp(value, "Full-Width Alphanumeric") == 0) {
+            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
+            conversion = (conversion & ~1u) | 8u;
+        } else if (std::strcmp(value, "Half-Width Katakana") == 0) {
+            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
+            conversion = (conversion & ~8u) | 3u;
+        } else if (std::strcmp(value, "Half-Width Alphanumeric") == 0) {
+            conversion &= ~9u;
+        } else if (std::strcmp(value, "DirectInput") == 0 && cx18_ImmGetOpenStatus(context)) {
+            cx18_ImmSetOpenStatus(context, FALSE);
+        }
+    } else if (std::strcmp(command, "StatusWindow_OnSymbol") == 0) {
+        conversion = enable ? (conversion | 0x400u) : (conversion & ~0x400u);
+    }
+    cx18_ImmSetConversionStatus(context, conversion, sentence);
+    cx18_ImmReleaseContext(hwnd, context);
+}
+
+// MS2-FUNCTIONAL: selects a registered IME through its COM provider and logs the executable's failure cases.
+// @0x1423d5910
+void FUN_1423d5910(void* raw, const char* requested)
+{
+    auto* manager = static_cast<unsigned char*>(raw);
+    void* state = *reinterpret_cast<void**>(manager + 0x78);
+    if (!state) return;
+    auto* names = *reinterpret_cast<unsigned char**>(manager + 0x90);
+    const unsigned count = *reinterpret_cast<unsigned*>(manager + 0x80);
+    for (unsigned i = 0; i < count; ++i) {
+        auto* record = names + i * 0x20;
+        const char* name = *reinterpret_cast<const char**>(record);
+        const HKL layout = *reinterpret_cast<HKL*>(record + 0x18);
+        if (!name || _stricmp(name, requested) != 0 || !layout) continue;
+
+        void* provider = nullptr;
+        HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
+            CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068), &provider);
+        if (hr == CO_E_NOTINITIALIZED) {
+            auto* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x60);
+            if (log) reinterpret_cast<void(*)(void*, const char*)>(
+                (*reinterpret_cast<void***>(log))[0])(log,
+                    "\n Failure in COM, perhaps you called CoCreateInstance in another thread... ");
+            return;
+        }
+        if (FAILED(hr) || !provider) return;
+        reinterpret_cast<void(*)(void*, unsigned short)>((*reinterpret_cast<void***>(provider))[14])(
+            provider, *reinterpret_cast<unsigned short*>(record + 0x18));
+        reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
+        return;
+    }
+    auto* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x60);
+    if (log) {
+        auto** vtable = *reinterpret_cast<void***>(log);
+        auto write = reinterpret_cast<void(*)(void*, const char*)>(vtable[0]);
+        write(log, "\nCould not find requested IME in supported IME list!");
+        write(log, "\n--> You requested: ");
+        write(log, requested);
+    }
+}
+
+struct cx18_CommandEntry
+{
+    unsigned long long next;
+    unsigned long long home;
+    unsigned long long key;
+    unsigned long long value0;
+    unsigned long long value1;
+};
+
+static void cx18_CommandInsert(unsigned long long* table, unsigned long long hash,
+                               unsigned long long key, unsigned long long value0,
+                               unsigned long long value1)
+{
+    const unsigned long long mask = table[1];
+    const unsigned long long home = hash & mask;
+    auto* entries = reinterpret_cast<cx18_CommandEntry*>(table + 2);
+    auto& root = entries[home];
+    if (static_cast<long long>(root.next) == -2) {
+        root = { ~0ull, home, key, value0, value1 };
+        ++table[0];
+        return;
+    }
+
+    unsigned long long freeIndex = (home + 1) & mask;
+    while (static_cast<long long>(entries[freeIndex].next) != -2)
+        freeIndex = (freeIndex + 1) & mask;
+    if (root.home == home) {
+        unsigned long long tail = home;
+        while (entries[tail].next != ~0ull) tail = entries[tail].next;
+        entries[tail].next = freeIndex;
+        entries[freeIndex] = { ~0ull, home, key, value0, value1 };
+    } else {
+        const unsigned long long oldHome = root.home;
+        unsigned long long prior = oldHome;
+        while (entries[prior].next != home) prior = entries[prior].next;
+        entries[freeIndex] = root;
+        entries[prior].next = freeIndex;
+        root = { ~0ull, home, key, value0, value1 };
+    }
+    ++table[0];
+}
+
+// MS2-FUNCTIONAL: rebuilds the command hash table at a power-of-two capacity and rehashes existing command names.
+// @0x1423d9090
+void FUN_1423d9090(void* raw, void*, unsigned long long requested)
+{
+    auto* slot = static_cast<unsigned long long*>(raw);
+    auto* old = reinterpret_cast<unsigned long long*>(slot[0]);
+    if (!requested) {
+        Scaleform::Memory::Free(old);
+        slot[0] = 0;
+        return;
+    }
+    unsigned long long capacity = 8;
+    while (capacity < requested) capacity <<= 1;
+    auto* replacement = static_cast<unsigned long long*>(
+        Scaleform::Memory::Alloc(0x10 + capacity * sizeof(cx18_CommandEntry)));
+    if (!replacement) return;
+    replacement[0] = 0;
+    replacement[1] = capacity - 1;
+    auto* entries = reinterpret_cast<cx18_CommandEntry*>(replacement + 2);
+    for (unsigned long long i = 0; i < capacity; ++i)
+        entries[i] = { ~1ull, 0, 0, 0, 0 };
+
+    if (old) {
+        const unsigned long long oldCapacity = old[1] + 1;
+        auto* oldEntries = reinterpret_cast<cx18_CommandEntry*>(old + 2);
+        for (unsigned long long i = 0; i < oldCapacity; ++i) {
+            const auto& entry = oldEntries[i];
+            if (static_cast<long long>(entry.next) == -2) continue;
+            const char* name = reinterpret_cast<const char*>(entry.key);
+            const unsigned long long hash = Scaleform::String::BernsteinHashFunction(
+                name, std::strlen(name), 0x1505);
+            cx18_CommandInsert(replacement, hash, entry.key, entry.value0, entry.value1);
+        }
+        Scaleform::Memory::Free(old);
+    }
+    slot[0] = reinterpret_cast<unsigned long long>(replacement);
+}
+
+// MS2-FUNCTIONAL: grows the executable's command hash table and inserts a key plus its two-word handler payload.
+// @0x1423d8b80
+void FUN_1423d8b80(unsigned long long* map, void*, void** item, unsigned long long hash)
+{
+    auto* table = reinterpret_cast<unsigned long long*>(map[0]);
+    if (!table) {
+        FUN_1423d9090(map, map, 8);
+        table = reinterpret_cast<unsigned long long*>(map[0]);
+    } else if (table[0] * 5 > table[1] * 4 + 4) {
+        FUN_1423d9090(map, map, table[1] * 2 + 2);
+        table = reinterpret_cast<unsigned long long*>(map[0]);
+    }
+    if (!table || !item || !item[0] || !item[1]) return;
+    const auto key = reinterpret_cast<unsigned long long>(*static_cast<void**>(item[0]));
+    auto* value = static_cast<unsigned long long*>(item[1]);
+    cx18_CommandInsert(table, hash, key, value[0], value[1]);
 }
 
 }}}
