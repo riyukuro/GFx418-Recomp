@@ -1188,6 +1188,49 @@ bool FUN_1423dacf0(void* self)
     return success;
 }
 
+// MS2-FUNCTIONAL: records IME name/display metadata flags and appends the executable's empty cue record for imeName.
+// @0x1423ca6b0
+void FUN_1423ca6b0(void* raw, const char* name)
+{
+    if (!raw || !name) return;
+    auto* bytes = static_cast<unsigned char*>(raw);
+    if (strcmp(name, "language") == 0) bytes[0xa9] = 1;
+    *reinterpret_cast<unsigned*>(bytes + 0xb0) = 3;
+    if (strcmp(name, "imeName") == 0) {
+        *reinterpret_cast<unsigned*>(bytes + 0xb0) = 0;
+        bytes[0xaa] = 1;
+        auto* array = reinterpret_cast<unsigned long long*>(bytes + 0xb8);
+        const unsigned long long count = array[1];
+        if (count >= array[2]) {
+            const unsigned long long capacity = (count + 1) + ((count + 1) >> 2);
+            void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            if (array[0]) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(
+                DAT_143b15f60, reinterpret_cast<void*>(array[0]), capacity * 0x30));
+            else {
+                unsigned allocFlags = 2;
+                array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heapVtable[10])(
+                    DAT_143b15f60, capacity * 0x30, &allocFlags));
+            }
+            array[2] = capacity;
+        }
+        auto* record = reinterpret_cast<unsigned char*>(array[0]) + count * 0x30;
+        memset(record, 0, 0x30);
+        *reinterpret_cast<String*>(record + 0x10) = "";
+        *reinterpret_cast<String*>(record + 0x18) = "";
+        *reinterpret_cast<unsigned*>(record + 0x20) = 0x02000000;
+        array[1] = count + 1;
+        *reinterpret_cast<int*>(bytes + 0xd0) += 1;
+        return;
+    }
+    if (strcmp(name, "displayName") == 0) {
+        *reinterpret_cast<unsigned*>(bytes + 0xb0) = 1;
+        bytes[0xab] = 1;
+    } else if (strcmp(name, "code") == 0) {
+        *reinterpret_cast<unsigned*>(bytes + 0xb0) = 2;
+        bytes[0xac] = 1;
+    }
+}
+
 // MS2-FUNCTIONAL: implements the executable's supported COM interface IDs and returns the matching interface view.
 // @0x1423dadd0
 long long FUN_1423dadd0(long long* object, const unsigned long long* iid, void** output)
