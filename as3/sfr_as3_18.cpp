@@ -29,6 +29,34 @@ const Value& Value::GetUndefined()
     return undefinedValue;
 }
 
+// MS2-FUNCTIONAL 0x14250aa50: the empty public URI fast path and interned instance result match; factory call placement differs.
+// @0x14250aa50
+Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const ASString& uri) const
+{
+    if (uri.IsEmpty() && kind == Abc::NS_Public)
+        return GetPublicNamespace();
+    InstanceTraits::fl::Namespace& traits =
+        static_cast<InstanceTraits::fl::Namespace&>(GetClassTraitsNamespace().GetInstanceTraits());
+    Pickable<Instances::Namespace> ns = traits.MakeInternedInstance(kind, uri, Value::GetUndefined());
+    return *ns;
+}
+
+// MS2-FUNCTIONAL 0x14250aac0: builds the URI node with the VM string manager and delegates to the shared interner.
+// @0x14250aac0
+Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const StringDataPtr& uri) const
+{
+    ASString value = GetStringManager().CreateString(uri.ToCStr(), uri.GetSize());
+    return GetInternedNamespace(kind, value);
+}
+
+// MS2-FUNCTIONAL 0x14250ab50: normalizes a null C string to empty before interning.
+// @0x14250ab50
+Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const char* uri) const
+{
+    ASString value = GetStringManager().CreateString(uri ? uri : "", uri ? strlen(uri) : 0);
+    return GetInternedNamespace(kind, value);
+}
+
 // MS2-FUNCTIONAL 0x14250a900: tracer-only and class-traits tags still need exact edge-case matching.
 // @0x14250a900
 // The executable selects the boxed primitive traits from the value kind and takes the
