@@ -154,6 +154,8 @@ bool QueryChannelPlaying(void* soundSource)
 int FUN_1428d8efc(void*, void*);
 int FUN_1428d8f14(void*, void*);
 void FUN_14257d390(void*, long long, unsigned, unsigned);
+int FUN_1427483a0(void*, int);
+unsigned FUN_142748160(void*);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 int FUN_1428d8f2c(void*, bool);
@@ -556,5 +558,34 @@ void FillImageData(void* command, void*, void* image)
         for (unsigned x = 0; x < width; ++x)
             FUN_14257d390(image, base + pitch * y, x, color);
     }
+}
+}
+
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: closes the callback stream with the executable's common state reset helper.
+// @0x142745410
+unsigned long long CloseAudioStream(void*, void* stream)
+{
+    FUN_1427483a0(stream, 0);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: initializes a callback stream, stores its handle and the executable's 0x0fffffff limit.
+// @0x142745430
+unsigned long long OpenAudioStream(void* stream, void*, unsigned* length, void*, void** handle)
+{
+    FUN_1427483a0(stream, 0);
+    *handle = stream;
+    *length = 0x0fffffff;
+    return 0;
+}
+
+// MS2-FUNCTIONAL: returns the callback's success code or the executable's error value 20.
+// @0x142745490
+unsigned long long ValidateAudioStream(void*, void*, void* stream)
+{
+    return FUN_1427483a0(stream, 0) == 0 ? 0 : 20;
 }
 }
