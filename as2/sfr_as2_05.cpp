@@ -121,6 +121,7 @@
 // MS2-RANGE: 0x14294a430-0x14294a4e2 .text$mn
 // MS2-RANGE: 0x142953da0-0x142953ed5 .text$mn
 // MS2-RANGE: 0x142956090-0x142956193 .text$mn
+// MS2-RANGE: 0x142953280-0x142953519 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2240,6 +2241,61 @@ AvmCharacter::StandardMember AvmCharacter::GetStandardMemberConstant(const ASStr
     GetGC()->StandardMemberMap.GetCaseCheck(newname, &member, name.IsEmpty());
 done:
     return (StandardMember)member;
+}
+
+// The chain walk of Object::GetMemberRaw in one case mode.
+template<bool CaseSensitive>
+static SF_FORCEINLINE bool Object_GetMemberRawT(Object* pthis, ASStringContext* psc, const ASString& name,
+                                                Value* val)
+{
+    bool resolveHandlerSet = false;
+    for (Object* pobj = pthis; pobj; pobj = pobj->pProto)
+    {
+        if (psc->GetBuiltin(ASBuiltin___proto__).CompareBuiltIn_CaseCheck(name, CaseSensitive))
+        {
+            if (pobj->pProto)
+                val->SetAsObject(pobj->pProto);
+            else
+                val->SetUndefined();
+            return true;
+        }
+        if (psc->GetBuiltin(ASBuiltin___resolve).CompareBuiltIn_CaseCheck(name, CaseSensitive))
+        {
+            if (pobj->ResolveHandler.Function)
+                val->SetAsFunction(pobj->ResolveHandler);
+            else
+                val->SetUndefined();
+            return true;
+        }
+        MemberSet::Iterator it = MemberHash_FindCaseCheck(&pobj->Members, name, CaseSensitive);
+        if (!it.IsEnd())
+        {
+            const Value& mval = it->Second.mValue;
+            // An unset member of a prototype: the prototype resolves it itself.
+            if (!mval.IsSet() && pobj != pthis)
+                return pobj->GetMemberRaw(psc, name, val);
+            *val = mval;
+            return true;
+        }
+        // The first __resolve handler up the chain answers when nothing does.
+        if (!resolveHandlerSet && pobj->ResolveHandler.Function)
+        {
+            val->DropRefs();
+            val->T.Type = Value::RESOLVEHANDLER;
+            val->V.FunctionValue.Init(pobj->ResolveHandler);
+            resolveHandlerSet = true;
+        }
+    }
+    return false;
+}
+
+// MS2-FUNCTIONAL same logic; the exe keeps the chain pointer in rbx and lays out the prototype-recursion and resolve-handler tails differently
+// @0x142953280
+bool Object::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
+{
+    if (psc->IsCaseSensitive())
+        return Object_GetMemberRawT<true>(this, psc, name, val);
+    return Object_GetMemberRawT<false>(this, psc, name, val);
 }
 }}} // namespace Scaleform::GFx::AS2
 
