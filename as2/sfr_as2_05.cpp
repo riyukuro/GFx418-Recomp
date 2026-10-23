@@ -146,6 +146,8 @@
 // MS2-RANGE: 0x14294bd90-0x14294be96 .text$mn
 // MS2-RANGE: 0x14294fc20-0x1429502ff .text$mn
 // MS2-RANGE: 0x14295da50-0x14295db46 .text$mn
+// MS2-RANGE: 0x14294b2e0-0x14294b627 .text$mn
+// MS2-RANGE: 0x14294b630-0x14294b96a .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3344,6 +3346,58 @@ bool MouseCtorFunction::HasOverloadedCursorTypeFunction(ASStringContext* psc) co
 {
     Value func(psc, SetCursorType);
     return SetCursorTypeFunc.GetObjectPtr() != func.V.FunctionValue.GetObjectPtr();
+}
+
+// MS2-FUNCTIONAL scheduling: the exe stores each matrix element right after the join, ours after the next name load
+// @0x14294b2e0
+Render::Matrix2F MatrixObject::GetMatrix(Environment* penv)
+{
+    Render::Matrix2F m;
+    ASStringContext* psc = penv->GetSC();
+    ObjectInterface& oi = *this;
+    Value v;
+    bool found;
+
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("a"), &v);
+    m.Sx() = found ? (float)v.ToNumber(penv) : 1.0f;
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("b"), &v);
+    m.Shy() = found ? (float)v.ToNumber(penv) : 0.0f;
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("c"), &v);
+    m.Shx() = found ? (float)v.ToNumber(penv) : 0.0f;
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("d"), &v);
+    m.Sy() = found ? (float)v.ToNumber(penv) : 1.0f;
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("tx"), &v);
+    m.Tx() = found ? (float)v.ToNumber(penv) : 0.0f;
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("ty"), &v);
+    m.Ty() = found ? (float)v.ToNumber(penv) : 0.0f;
+    return m;
+}
+
+// @0x14294b630
+MatrixObject::GASMatrixArray* MatrixObject::GetMatrixAsValuesArray(ASStringContext* psc, GASMatrixArray* marr)
+{
+    ObjectInterface& oi = *this;
+    bool found;
+
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("a"), &(*marr)[0]);
+    if (!found)
+        (*marr)[0] = Value(1);
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("b"), &(*marr)[1]);
+    if (!found)
+        (*marr)[1] = Value(0);
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("c"), &(*marr)[2]);
+    if (!found)
+        (*marr)[2] = Value(0);
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("d"), &(*marr)[3]);
+    if (!found)
+        (*marr)[3] = Value(1);
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("tx"), &(*marr)[4]);
+    if (!found)
+        (*marr)[4] = Value(0);
+    found = oi.GetMemberRaw(psc, psc->CreateConstString("ty"), &(*marr)[5]);
+    if (!found)
+        (*marr)[5] = Value(0);
+    return marr;
 }
 }}} // namespace Scaleform::GFx::AS2
 
