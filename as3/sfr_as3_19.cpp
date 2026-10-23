@@ -24,6 +24,17 @@ void Traits::SetInstanceTraits(Pickable<InstanceTraits::Traits> itr)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// MS2-FUNCTIONAL 0x14252f6d0: delegates conversion to the recovered primitive/complex helper; the exe has an explicit tag switch.
+// @0x14252f6d0
+CheckResult Value::ToNumberValueInline()
+{
+    Number result;
+    if (!Convert2NumberInline(result))
+        return CheckResult(false);
+    SetNumber(result);
+    return CheckResult(true);
+}
+
 // MS2-FUNCTIONAL 0x14252f670: uses the recovered numeric coercion result; locale-sensitive range helpers differ.
 // @0x14252f670
 CheckResult Value::ToInt32Value()

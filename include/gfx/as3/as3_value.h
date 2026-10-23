@@ -674,16 +674,7 @@ public:
         return true;
     }
     CheckResult Convert2Number(Number& result) const;
-    SF_INLINE CheckResult ToNumberValueInline()
-    {
-        CheckResult rc = true;
-        Number result;
-        if (Convert2NumberInline(result))
-            SetNumber(result);
-        else
-            rc = false;
-        return rc;
-    }
+    CheckResult ToNumberValueInline();
     CheckResult ToNumberValue();
     CheckResult Convert2Int32(SInt32& result) const;
     CheckResult ToInt32Value();
