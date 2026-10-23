@@ -2393,6 +2393,21 @@ namespace Instances { namespace fl_display
     }
 }}
 
+// The const flavour of the frame script lower bound (an unreferenced COMDAT next to the mutable one).
+template UPInt Alg::LowerBoundSliced<const Instances::fl_display::MovieClip::FrameScript::Descr*,
+    Instances::fl_display::MovieClip::FrameScript::Descr,
+    bool (*)(const Instances::fl_display::MovieClip::FrameScript::Descr&, const Instances::fl_display::MovieClip::FrameScript::Descr&)>(
+    const Instances::fl_display::MovieClip::FrameScript::Descr* const&, UPInt, UPInt,
+    const Instances::fl_display::MovieClip::FrameScript::Descr&,
+    bool (*)(const Instances::fl_display::MovieClip::FrameScript::Descr&, const Instances::fl_display::MovieClip::FrameScript::Descr&));
+
+}}} // namespace Scaleform::GFx::AS3
+
+// Out of line in the exe, called from the AS3 transform code and the render tree.
+template Scaleform::Render::Matrix2x4<float>& Scaleform::Render::Matrix2x4<float>::Prepend(const Scaleform::Render::Matrix2x4<float>&);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 // SPtr assignment instances referenced out of line from the display object accessors.
 template SPtr<Instances::fl_display::DisplayObject>& SPtr<Instances::fl_display::DisplayObject>::operator=(const SPtr<Instances::fl_display::DisplayObject>&);
 template SPtr<Instances::fl_display::DisplayObject>& SPtr<Instances::fl_display::DisplayObject>::operator=(Instances::fl_display::DisplayObject*);
@@ -2618,3 +2633,5 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dbb0
 // MS2-PIN: ??_G?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dc10
 // MS2-PIN: ??$LowerBoundSliced@PEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U12345678@P6A_NAEBU12345678@0@Z@Alg@Scaleform@@YA_KAEBQEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@1@_K1AEBU23456781@P6A_N22@Z@Z 0x142439080
+// MS2-PIN: ??$LowerBoundSliced@PEBUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U12345678@P6A_NAEBU12345678@0@Z@Alg@Scaleform@@YA_KAEBQEBUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@1@_K1AEBU23456781@P6A_N22@Z@Z 0x142438fe0
+// MS2-PIN: ?Prepend@?$Matrix2x4@M@Render@Scaleform@@QEAAAEAV123@AEBV123@@Z 0x142445bc0
