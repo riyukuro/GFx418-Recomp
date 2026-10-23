@@ -2728,6 +2728,35 @@ unsigned char FUN_1423daae0(void* raw)
     return 1;
 }
 
+// MS2-FUNCTIONAL: looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
+// @0x1423d8d60
+unsigned long long FUN_1423d8d60(long long* map, long long operation, const char* key, unsigned long long flags)
+{
+    if (!operation) return 0;
+    auto* table = reinterpret_cast<unsigned char*>(map[0]);
+    if (!table) return 0;
+    const unsigned long long mask = *reinterpret_cast<unsigned long long*>(table + 8);
+    const unsigned long long hash = Scaleform::String::BernsteinHashFunction(key, std::strlen(key), 0x1505);
+    unsigned long long index = mask & hash;
+    unsigned char* entry = table + 0x10 + index * 0x28;
+    if (*reinterpret_cast<long long*>(entry) == -2 ||
+        *reinterpret_cast<unsigned long long*>(entry + 8) != index) return 0;
+    for (;;) {
+        if (*reinterpret_cast<unsigned long long*>(entry + 8) == index &&
+            std::strcmp(reinterpret_cast<const char*>(*reinterpret_cast<void**>(entry + 0x10)), key) == 0) {
+            void* handler = *reinterpret_cast<void**>(entry + 0x20);
+            const unsigned type = *reinterpret_cast<unsigned*>(entry + 0x18);
+            return reinterpret_cast<unsigned long long(*)(void*, long long, unsigned, const char*, unsigned long long)>(
+                (*reinterpret_cast<void***>(handler))[1])(handler, operation, type, key, flags);
+        }
+        const long long next = *reinterpret_cast<long long*>(entry);
+        if (next == -1) break;
+        index = static_cast<unsigned long long>(next);
+        entry = table + 0x10 + index * 0x28;
+    }
+    return 0;
+}
+
 // MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
 // @0x1423cad20
 unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
