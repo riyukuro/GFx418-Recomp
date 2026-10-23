@@ -31,6 +31,7 @@ extern "C" const char* DAT_143b27c48;
 extern "C" const void* DAT_143a47bc0[];
 extern "C" const void* DAT_143a47cb0[];
 extern "C" const char* DAT_143ba9d18;
+extern "C" const CriChar8 DAT_143a482e8[];
 extern "C" const void* PTR_FUN_143a48638;
 extern "C" const void* PTR_FUN_143a48668;
 extern "C" const void* PTR_FUN_1431b9b10;
@@ -3037,6 +3038,28 @@ void FUN_1400453c4(void* object)
     state->Entries[state->Count].State = -1;
     state->Writing = 0;
     state->Reading = 1;
+}
+
+// MS2-FUNCTIONAL: detect the encoded CSC flag in a CRI movie packet header.
+// @0x140040f80
+CriBool FUN_140040f80(const void* packet, CriSint32 size)
+{
+    struct PacketHeader
+    {
+        CriUint32 Reserved00;
+        CriChar8 Signature[8];
+        CriUint8 Reserved0c[0x0b];
+        CriChar8 CscFlag;
+    };
+    if (size < 0x18)
+        return 0;
+    const PacketHeader* header = (const PacketHeader*)packet;
+    for (CriUint32 index = 0; index < 8; ++index)
+    {
+        if (header->Signature[index] != DAT_143a482e8[index])
+            return 0;
+    }
+    return header->CscFlag == 'C';
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
