@@ -1619,6 +1619,108 @@ void FUN_140044fdc(void* object)
     *((CriUint8*)object + 10) = 1;
 }
 
+// MS2-FUNCTIONAL: forward the opaque argument through the Vdec callback at table offset 0x98.
+// @0x140044050
+void FUN_140044050(CriUint64* pair, void* value)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0x98))
+        (*(void (**)(CriUint64, void*))((CriUint8*)pair[1] + 0x98))(pair[0], value);
+}
+
+// MS2-FUNCTIONAL: call the Vdec callback at table offset 0x88 and add its fixed status bias.
+// @0x1400440a0
+CriUint32 FUN_1400440a0(CriUint64* pair, void* first, CriUint32 second, void* third)
+{
+    if (!pair || !*(void**)((CriUint8*)pair[1] + 0x88))
+        return 0;
+    return (*(CriUint32 (**)(CriUint64, void*, CriUint32, void*))((CriUint8*)pair[1] + 0x88))(
+        pair[0], first, second, third);
+}
+
+// MS2-FUNCTIONAL: invoke the Vdec callback at table offset 0x48 when provided.
+// @0x140044120
+void FUN_140044120(CriUint64* pair)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0x48))
+        (*(void (**)(CriUint64))((CriUint8*)pair[1] + 0x48))(pair[0]);
+}
+
+// MS2-FUNCTIONAL: pass the 32-bit option to the Vdec callback at table offset 0xa0.
+// @0x140044160
+void FUN_140044160(CriUint64* pair, CriUint32 option)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0xa0))
+        (*(void (**)(CriUint64, CriUint32))((CriUint8*)pair[1] + 0xa0))(pair[0], option);
+}
+
+// MS2-FUNCTIONAL: pass both 32-bit options to the Vdec callback at table offset 0xa8.
+// @0x1400441b0
+void FUN_1400441b0(CriUint64* pair, CriUint32 first, CriUint32 second)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0xa8))
+        (*(void (**)(CriUint64, CriUint32, CriUint32))((CriUint8*)pair[1] + 0xa8))(pair[0], first, second);
+}
+
+// MS2-FUNCTIONAL: pass the two opaque values to the Vdec callback at table offset 0xb0.
+// @0x140044210
+void FUN_140044210(CriUint64* pair, void* first, void* second)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0xb0))
+        (*(void (**)(CriUint64, void*, void*))((CriUint8*)pair[1] + 0xb0))(pair[0], first, second);
+}
+
+// MS2-FUNCTIONAL: pass the 32-bit option to the Vdec callback at table offset 0xb8.
+// @0x140044270
+void FUN_140044270(CriUint64* pair, CriUint32 option)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0xb8))
+        (*(void (**)(CriUint64, CriUint32))((CriUint8*)pair[1] + 0xb8))(pair[0], option);
+}
+
+// MS2-FUNCTIONAL: forward three arguments to the Vdec callback at table offset 0xc0.
+// @0x1400442c0
+void FUN_1400442c0(CriUint64* pair, CriUint32 option, void* first, void* second)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0xc0))
+        (*(void (**)(CriUint64, CriUint32, void*, void*))((CriUint8*)pair[1] + 0xc0))(
+            pair[0], option, first, second);
+}
+
+// MS2-FUNCTIONAL: pass the two opaque values to the Vdec callback at table offset 0xc8.
+// @0x140044330
+void FUN_140044330(CriUint64* pair, void* first, void* second)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0xc8))
+        (*(void (**)(CriUint64, void*, void*))((CriUint8*)pair[1] + 0xc8))(pair[0], first, second);
+}
+
+// MS2-FUNCTIONAL: call the encoded callback and preserve its 0x3e status adjustment.
+// @0x140044400
+CriSint32 FUN_140044400(void* callbackPair, CriUint32 first, CriUint32 second, CriUint32 third)
+{
+    if (!callbackPair || !*(void**)((CriUint8*)callbackPair + 0x10))
+        return 0;
+    CriUint32 result = (*(CriUint32 (**)(CriUint32, CriUint32, CriUint32))
+        (*(void**)((CriUint8*)callbackPair + 0x10)))(first, second, third);
+    return result + 0x3e;
+}
+
+// MS2-FUNCTIONAL: obtain the value from the Vdec callback at table offset 0x28, defaulting to zero.
+// @0x1400445d0
+CriUint64 FUN_1400445d0(CriUint64* pair)
+{
+    return pair && *(void**)((CriUint8*)pair[1] + 0x28)
+        ? (*(CriUint64 (**)(CriUint64))((CriUint8*)pair[1] + 0x28))(pair[0]) : 0;
+}
+
+// MS2-FUNCTIONAL: invoke the Vdec callback at table offset 0x38 when provided.
+// @0x140044680
+void FUN_140044680(CriUint64* pair)
+{
+    if (pair && *(void**)((CriUint8*)pair[1] + 0x38))
+        (*(void (**)(CriUint64))((CriUint8*)pair[1] + 0x38))(pair[0]);
+}
+
 // MS2-FUNCTIONAL: decrement CRI's shared demux counter.
 // @0x140044ea8
 void FUN_140044ea8(void)
