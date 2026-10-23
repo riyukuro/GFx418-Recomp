@@ -204,9 +204,13 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // THUNKS-END
 
 namespace Scaleform {
+// MS2-FUNCTIONAL ?Construct@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBVValue@AS3@GFx@2@@Z: element copy construction retains the same Value payloads; the exe uses an explicit tag/refcount sequence.
+// @0x1424f05a0
+template void ConstructorMov<GFx::AS3::Value>::Construct(void*, const GFx::AS3::Value&);
 // MS2-FUNCTIONAL ?ConstructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAX_KPEBVValue@AS3@GFx@2@@Z: the recovered copy loop delegates each element to Value copy construction; the exe emits raw member copies followed by tag-based AddRef.
 // @0x1424f08d0
 template void ConstructorMov<GFx::AS3::Value>::ConstructArray(void*, UPInt, const GFx::AS3::Value*);
 }
 
 // MS2-PIN: ?ConstructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAX_KPEBVValue@AS3@GFx@2@@Z 0x1424f08d0
+// MS2-PIN: ?Construct@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBVValue@AS3@GFx@2@@Z 0x1424f05a0
