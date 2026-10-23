@@ -777,6 +777,9 @@ public:
     // (appended, sfr13) a dynamic property by string name (0x1424e7f40).
     void AddDynamicSlotValuePair(const ASString& prop_name, const Value& v, SlotInfo::Attribute a = SlotInfo::aNone);
 
+    // (appended, sfr27) the class of the object's traits (native Object.constructor). 0x142532280
+    void constructor(Value& result);
+
 protected:
     SPtr<Traits>        pTraits;            // +0x20
     DynAttrsType        DynAttrs;           // +0x28
@@ -894,6 +897,8 @@ public:
     bool ContainsNamespace(const Instances::Namespace& ns) const;
     // (appended, sfr19) turns a numeric or "@"-prefixed name into its canonical form (0x14251cef0).
     void PostProcessName(bool isAttr);
+    // (appended, sfr27) a run-time name taken from v (a QName object or any value); no post-processing of QNames. 0x142528cc0
+    void SetRTNameUnsafe(const Value& v);
     // (appended, sfr19) a single namespace (possibly run-time), not a namespace set
     bool IsQName() const        { const UInt32 bits = static_cast<UInt32>(Kind) & 3; return bits == 0 || bits == 1; }
     // (appended, sfr19) an attribute name (@x)
