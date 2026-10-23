@@ -2393,6 +2393,42 @@ namespace Instances { namespace fl_display
     }
 }}
 
+}}} // namespace Scaleform::GFx::AS3
+
+// Filter list growth instances referenced out of line by the filter setters.
+template void Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::Render::Filter>, Scaleform::AllocatorGH<Scaleform::Ptr<Scaleform::Render::Filter>, 2>, Scaleform::ArrayDefaultPolicy>::Reserve(const void*, Scaleform::UPInt);
+template void Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::Render::Filter>, Scaleform::AllocatorGH<Scaleform::Ptr<Scaleform::Render::Filter>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void*, Scaleform::UPInt);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// VectorBase<UInt32>::Set instance, emitted here for the pixel vector writers.
+// MS2-FUNCTIONAL: exe calls an out-of-line CheckFixed copy (0x14255b2d0); ours inlines it
+// @0x142446540
+template <>
+CheckResult VectorBase<UInt32>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
+{
+    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    {
+        VM& vm = VMRef;
+        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        return false;
+    }
+    if (ind == (UInt32)V.GetSize())
+    {
+        if (!CheckFixed())
+            return false;
+        UPInt i = V.GetSize();
+        V.Resize(ind + 1);
+        for (; i < ind + 1; ++i)
+            V[i] = 0;
+    }
+    Value r;
+    if (!CheckCoerce(tr, v, r))
+        return false;
+    V[ind] = r.AsUInt();
+    return true;
+}
+
 // The const flavour of the frame script lower bound (an unreferenced COMDAT next to the mutable one).
 template UPInt Alg::LowerBoundSliced<const Instances::fl_display::MovieClip::FrameScript::Descr*,
     Instances::fl_display::MovieClip::FrameScript::Descr,
@@ -2635,3 +2671,6 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ??$LowerBoundSliced@PEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U12345678@P6A_NAEBU12345678@0@Z@Alg@Scaleform@@YA_KAEBQEAUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@1@_K1AEBU23456781@P6A_N22@Z@Z 0x142439080
 // MS2-PIN: ??$LowerBoundSliced@PEBUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U12345678@P6A_NAEBU12345678@0@Z@Alg@Scaleform@@YA_KAEBQEBUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@1@_K1AEBU23456781@P6A_N22@Z@Z 0x142438fe0
 // MS2-PIN: ?Prepend@?$Matrix2x4@M@Render@Scaleform@@QEAAAEAV123@AEBV123@@Z 0x142445bc0
+// MS2-PIN: ?Resize@?$ArrayDataDH@KU?$AllocatorDH@K$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z 0x142446430
+// MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424462b0
+// MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424464a0
