@@ -45,6 +45,9 @@ extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1423daf30(void*);
+extern "C" void FUN_1423cc7c0(void*);
+extern "C" const unsigned long long DAT_14313b410;
+extern "C" const unsigned long long DAT_14313b418;
 
 struct HWND__;
 
@@ -407,6 +410,24 @@ unsigned long long FUN_1423d9490(void* object, unsigned long long* value)
     data[length - 1] = item;
     if (item) FUN_14257dcd0(reinterpret_cast<void*>(item));
     return 0;
+}
+
+// MS2-FUNCTIONAL: compares the executable GUID, queries the child interface, and propagates its four-byte result at the observed offsets.
+// @0x1423d70d0
+unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
+{
+    if (guid[0] == DAT_14313b410 && guid[1] == DAT_14313b418) {
+        auto* bytes = static_cast<unsigned char*>(object);
+        void* child = *reinterpret_cast<void**>(bytes + 0x20);
+        unsigned char result[16]{};
+        const int hr = reinterpret_cast<int(*)(void*, void*)>((*reinterpret_cast<void***>(child))[4])(child, result);
+        const short code = *reinterpret_cast<short*>(result);
+        if (hr >= 0 && code == 3) {
+            *reinterpret_cast<unsigned*>(bytes - 0xcc) = *reinterpret_cast<unsigned*>(result + 8);
+            FUN_1423cc7c0(bytes - 0x1a0);
+        }
+    }
+    return 1;
 }
 
 // MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
