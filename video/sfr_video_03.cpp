@@ -85,6 +85,9 @@ MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
 MS2_EXTERN(0x1428d8f14, int(void*, void*), FUN_1428d8f14);
 MS2_EXTERN(0x1428d8efc, int(void*, void*), FUN_1428d8efc);
 MS2_EXTERN(0x1427443c0, void(void*), FUN_1427443c0);
+MS2_EXTERN(0x1425e3480, std::uint64_t(), FUN_1425e3480);
+MS2_EXTERN(0x142303a6b, int(void*, bool*), FUN_142303a6b);
+MS2_EXTERN(0x142745f50, void(void*), FUN_142745f50);
 MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
 MS2_EXTERN(0x14250d8f0, void*(void*, void*), FUN_14250d8f0);
 MS2_EXTERN(0x142442c30, void(void*, void*, void*), FUN_142442c30);
@@ -104,6 +107,8 @@ MS2_GLOBAL(0x1431b7de0, void*, VideoTraitsSubVtableB);
 MS2_GLOBAL(0x1431b4c60, void*, VideoAudioVtableA); MS2_GLOBAL(0x1431bec40, void*, VideoAudioVtableB);
 MS2_GLOBAL(0x1431bed60, void*, VideoAudioDeleteVtable); MS2_GLOBAL(0x1431bedd8, void*, VideoAudioSubVtable);
 MS2_GLOBAL(0x1431bede8, void*, VideoAudioEventVtable);
+MS2_GLOBAL(0x1431bee78, void*, VideoAudioStreamVtable);
+MS2_GLOBAL(0x1431beef0, void*, VideoAudioStreamSubVtable);
 MS2_GLOBAL(0x1431b7160, void*, VideoClassInfoA); MS2_GLOBAL(0x1431b7900, void*, VideoClassVtableA);
 MS2_GLOBAL(0x1431b71b0, void*, VideoInstanceVtableA); MS2_GLOBAL(0x1431b7260, void*, VideoCTraitsVtable);
 MS2_GLOBAL(0x1431b7b50, void*, VideoClassInfoB); MS2_GLOBAL(0x1431b7d50, void*, VideoClassVtableB);
@@ -1630,5 +1635,31 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
     FUN_1424fef00(vm, static_cast<unsigned char*>(callback) + 0xb8, Scaleform::GFx::AS3::Value::GetUndefined(), &selfValue, 1, &selfValue, 0);
     ReleaseVideoAtom(&parametersAtom);
     ReleaseVideoAtom(&eventAtom);
+}
+
+// MS2-FUNCTIONAL: initializes an FMOD stream callback, snapshots its start time, and records pause state.
+// @0x142743050
+std::uint64_t* FUN_142743050(std::uint64_t* object, void* player, void* streamState, void* channel)
+{
+    FUN_142742fb0(object, player, reinterpret_cast<std::uintptr_t>(streamState), channel);
+    *reinterpret_cast<void***>(object) = &VideoAudioStreamVtable;
+    *reinterpret_cast<void***>(object + 2) = &VideoAudioStreamSubVtable;
+    object[9] = FUN_1425e3480();
+    *reinterpret_cast<std::uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0x69) = 0;
+    ::new (reinterpret_cast<unsigned char*>(object) + 0x70) Scaleform::Lock(0);
+    *reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x98) = 0;
+    if (streamState) _InterlockedIncrement(reinterpret_cast<volatile long*>(static_cast<unsigned char*>(streamState) + 8));
+    object[0xb] = 0; object[0xc] = 0;
+    bool paused = false;
+    FUN_142303a6b(reinterpret_cast<void*>(object[7]), &paused);
+    if (paused) { object[10] = object[9]; return object; }
+    FUN_142745f50(streamState);
+    object[9] = FUN_1425e3480();
+    const auto a = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(streamState) + 0x70);
+    const auto b = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(streamState) + 0x50);
+    const auto c = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(streamState) + 0x48);
+    const auto d = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(streamState) + 0x4c);
+    object[0xc] = ((((static_cast<std::uint64_t>(a) << 3) / b) / c) * 1000000) / d;
+    return object;
 }
 } // namespace
