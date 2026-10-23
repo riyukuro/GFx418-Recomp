@@ -37,6 +37,7 @@ class FontResource;
 class MovieDef;
 class StateBagImpl;
 class Movie;
+class LoadQueueEntry;
 class UserEventHandler;
 class ExternalInterface;
 class KeyboardState;
@@ -184,6 +185,8 @@ public:
     // The movie's StateBag base (+0x10).
     StateBag* GetStateBag() const { return (StateBag*)&MovieBase_Unrecovered[2]; }
     MemoryHeap* GetMovieHeap() const { return pHeap; }
+    // Appends a load request to the queue processed on the next advance (exe 0x14256bdf0).
+    void AddLoadQueueEntry(LoadQueueEntry* pentry);
 
     // The object no longer stays on top of the levels (0x1425742c0).
     void RemoveTopmostLevelCharacter(DisplayObjectBase* pch);

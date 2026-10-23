@@ -221,6 +221,10 @@ public:
     // Queues a variables load of purl into ptarget (exe 0x142930a10).
     void AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
                               LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
+    // Appends the load to the movie's queue (exe 0x142930090).
+    void AddMovieLoadQueueEntry(LoadQueueEntry* pentry);
+    // Hands the load to a loader thread task (exe 0x14292fc90).
+    void AddLoadQueueEntryMT(LoadQueueEntry* pentry);
 
     // A queued action: a frame's action buffer, a clip event, or a function call on the character. 0x70 bytes.
     struct ActionEntry

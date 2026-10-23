@@ -43,6 +43,8 @@
 // MS2-RANGE: 0x142936360-0x142936506 .text$mn
 // MS2-RANGE: 0x1429431a0-0x1429431cc .text$mn
 // MS2-RANGE: 0x14292da40-0x14292dad4 .text$mn
+// MS2-RANGE: 0x14292f740-0x14292f951 .text$mn
+// MS2-RANGE: 0x142930a10-0x142930c30 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -982,6 +984,81 @@ static inline Environment* GetLevel0Environment(MovieImpl* pmovieImpl)
     return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
 }
 
+// A queued AS2 load: the target clip or level and the objects to notify. 0xc8 bytes.
+class GFxAS2LoadQueueEntry : public LoadQueueEntry
+{
+public:
+    struct HolderType
+    {
+        Value             ASObj;
+        Ptr<RefCountImpl> Loader;
+    };
+
+    int                  Level;                 // +0x28
+    Ptr<CharacterHandle> pCharacter;            // +0x30
+    Value                MovieClipLoaderHolder; // +0x38
+    Value                LoadVarsHolder;        // +0x58
+    HolderType           XMLHolder;             // +0x78
+    HolderType           CSSHolder;             // +0xa0
+
+    GFxAS2LoadQueueEntry(CharacterHandle* pchar, const String& url, LoadMethod method, bool loadingVars = false,
+                         bool quietOpen = false)
+        : LoadQueueEntry(url, method, loadingVars, quietOpen)
+    {
+        PConstruct(pchar, -1);
+    }
+    // A load into _level<level> (exe 0x14291c320).
+    GFxAS2LoadQueueEntry(int level, const String& url, LoadMethod method, bool loadingVars = false,
+                         bool quietOpen = false);
+
+    void PConstruct(CharacterHandle* pchar, int level); // exe 0x14296e6c0
+};
+
+// MS2-FUNCTIONAL the exe inlines the LoadQueueEntry ctor (out of line elsewhere) into the clip entry
+// @0x14292f740
+void MovieRoot::AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl, LoadQueueEntry::LoadMethod method,
+                                  MovieClipLoader* pmovieClipLoader)
+{
+    if (!ptarget)
+        return;
+    GFxAS2LoadQueueEntry* pentry  = 0;
+    int                   level   = -1;
+    Sprite*               psprite = ptarget->IsSprite() ? static_cast<Sprite*>(ptarget) : 0;
+    if (psprite && (level = static_cast<AvmSpriteBase&>(*AvmSprite::FromSprite(psprite)).GetLevel()) != -1)
+        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, String(purl), method);
+    else
+        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
+            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), String(purl), method);
+    if (pentry)
+    {
+        pentry->MovieClipLoaderHolder.SetAsObject(pmovieClipLoader);
+        AddMovieLoadQueueEntry(pentry);
+    }
+}
+
+// MS2-FUNCTIONAL the exe inlines the LoadQueueEntry ctor (out of line elsewhere) into the clip entry
+// @0x142930a10
+void MovieRoot::AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* purl, LoadQueueEntry::LoadMethod method)
+{
+    if (!ptarget)
+        return;
+    GFxAS2LoadQueueEntry* pentry  = 0;
+    int                   level   = -1;
+    Sprite*               psprite = ptarget->IsSprite() ? static_cast<Sprite*>(ptarget) : 0;
+    if (psprite && (level = static_cast<AvmSpriteBase&>(*AvmSprite::FromSprite(psprite)).GetLevel()) != -1)
+        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, String(purl), method, true);
+    else
+        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
+            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), String(purl), method, true);
+    if (pentry)
+    {
+        if (Ptr<State>(*pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager)))
+            AddLoadQueueEntryMT(pentry);
+        else
+            pMovieImpl->AddLoadQueueEntry(pentry);
+    }
+}
+
 // MS2-FUNCTIONAL regalloc: the exe loads the string manager through r9, not rcx
 // @0x142937d60
 void MovieRoot::CreateString(GFx::Value* pvalue, const char* pstring)
@@ -1366,3 +1443,5 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143221ff8
 // MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143222080
 // MS2-PIN: ??_GUserDefinedFunctionObject@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292da40
+// MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
+// MS2-PIN: ??_7GFxAS2LoadQueueEntry@AS2@GFx@Scaleform@@6B@ 0x143217748
