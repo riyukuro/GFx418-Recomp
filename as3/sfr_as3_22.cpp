@@ -433,3 +433,53 @@ void DetachChannelNode(void* node)
     }
 }
 }
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: multiplies each 64-bit element in each nested 16-byte record by the supplied factor.
+// @0x142687900
+void ScaleNestedRecords(void* array, unsigned factor)
+{
+    auto* bytes = static_cast<unsigned char*>(array);
+    void** items = *reinterpret_cast<void***>(bytes + 0x10);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
+    for (std::size_t i = 0; i < count; ++i) {
+        auto* item = static_cast<unsigned char*>(items[i]);
+        const std::size_t n = *reinterpret_cast<std::size_t*>(item + 0x28);
+        auto* values = *reinterpret_cast<unsigned long long**>(item + 0x20);
+        for (std::size_t j = 0; j < n; ++j)
+            values[j * 2 + 1] *= factor;
+    }
+}
+
+// MS2-FUNCTIONAL: divides the 32-bit and 64-bit values of each 32-byte record by the divisor.
+// @0x142688520
+void DivideRecordPairs(void* array, unsigned long long divisor)
+{
+    auto* bytes = static_cast<unsigned char*>(array);
+    auto* records = *reinterpret_cast<unsigned char**>(bytes + 0x10);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
+    const unsigned d = static_cast<unsigned>(divisor);
+    for (std::size_t i = 0; i < count; ++i) {
+        auto* record = records + i * 0x20;
+        *reinterpret_cast<unsigned*>(record) /= d;
+        *reinterpret_cast<unsigned long long*>(record + 8) /= d;
+    }
+}
+
+// MS2-FUNCTIONAL: divides each 64-bit element in each nested 16-byte record by the low 32-bit divisor.
+// @0x142688580
+void DivideNestedRecords(void* array, unsigned long long divisor)
+{
+    auto* bytes = static_cast<unsigned char*>(array);
+    void** items = *reinterpret_cast<void***>(bytes + 0x10);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
+    const unsigned d = static_cast<unsigned>(divisor);
+    for (std::size_t i = 0; i < count; ++i) {
+        auto* item = static_cast<unsigned char*>(items[i]);
+        const std::size_t n = *reinterpret_cast<std::size_t*>(item + 0x28);
+        auto* values = *reinterpret_cast<unsigned long long**>(item + 0x20);
+        for (std::size_t j = 0; j < n; ++j)
+            values[j * 2 + 1] /= d;
+    }
+}
+}
