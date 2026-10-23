@@ -36,6 +36,8 @@ extern void* PTR_LAB_1431b5fb0;
 extern void* PTR_LAB_1431b5f20;
 extern void* PTR_LAB_1431b67d0;
 extern void* PTR_LAB_1431b6740;
+extern void* PTR_LAB_1431b6540;
+extern void* PTR_LAB_1431b65f0;
 extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
@@ -1875,6 +1877,20 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
     ::new (static_cast<void*>(object)) Scaleform::GFx::AS2::CFunctionObject(context, FUN_140012340);
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b67d0;
     *reinterpret_cast<void**>(object) = PTR_LAB_1431b6740;
+    return object;
+}
+
+// MS2-FUNCTIONAL: initializes the recovered AS2 function prototype's Object and function-reference bases.
+// @0x1400122e0
+Scaleform::GFx::AS2::Object* FUN_1400122e0(
+    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context, void* prototype)
+{
+    ::new (static_cast<void*>(object)) Scaleform::GFx::AS2::Object(
+        context, static_cast<Scaleform::GFx::AS2::Object*>(prototype));
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b6540;
+    *reinterpret_cast<void**>(object) = PTR_LAB_1431b65f0;
+    extern void FUN_140007ba0(void*, void*, void*);
+    FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
     return object;
 }
 
