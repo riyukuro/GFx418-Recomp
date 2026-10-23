@@ -5369,7 +5369,7 @@ void FUN_14003e850(void* player, void* source, void* destination)
     }
 }
 
-CriBool FUN_1400530c0(const void*, CriUint32, CriUint32);
+void* FUN_1400530c0(const void*, CriUint32, CriUint32);
 CriBool FUN_140026dd0(void*, CriUint8*, CriUint32, CriUint32, void*, void*);
 void FUN_140021c90(void*, CriSint32, void*);
 
@@ -6781,4 +6781,358 @@ CriSint32 FUN_142ccbe90(void* decoder, void* queue)
         first = false;
     }
     return slice.Finish();
+}
+
+void* FUN_14004eea0(void*, CriUint32, CriUint32, void*, CriUint32);
+CriSint32 FUN_140050bd0(void*, void*, void*);
+void FUN_1400511d0(void*, void*, CriUint32);
+void FUN_1400511f0(void*, CriUint32, void*);
+CriSint32 FUN_140052c80(void*, void*, void*);
+CriSint32 FUN_140052d00(void*, void*);
+
+// MS2-FUNCTIONAL: decode one picture's slices into the supplied frame set through the MPEG video decoder.
+// @0x140040850
+CriSint32 FUN_140040850(void* player, void* stream, void* second, CriSint32* consumed, void* frames)
+{
+    struct Stream { void* Data; CriSint32 Size; };
+    struct Object { CriUint8 Reserved00[0x18]; CriSint32 Reserved18; CriSint32 Reserved1c; CriSint32 Reserved20; CriSint32 Reserved24; };
+    typedef CriSint32 (*SizeFunc)(void*, CriSint32);
+    typedef void (*ReleaseFunc)(void*);
+    Stream* input = (Stream*)stream;
+    Stream* tail = (Stream*)second;
+    void* temporary = NULL;
+    void* object;
+    if (second == NULL)
+    {
+        object = FUN_14004eea0(input->Data, (CriUint32)input->Size, 0, consumed, 0);
+        temporary = object;
+        if (!object)
+            return -1;
+    }
+    else
+    {
+        object = CriMpvField<void*>(player, 0x220);
+        if (!object)
+            return -1;
+        CriSint32 head = (CriSint32)(uintptr_t)input->Data - (CriSint32)(uintptr_t)CriMpvField<void*>(player, 0x228);
+        CriSint32 tailBytes = tail->Size + CriMpvField<CriSint32>(player, 0x234);
+        CriMpvField<CriSint32>(object, 0x24) = head;
+        CriMpvField<CriSint32>(object, 0x20) = tailBytes;
+        CriMpvField<CriSint32>(object, 0x1c) = head - tailBytes;
+        CriMpvField<CriSint32>(object, 0x18) = CriMpvField<CriSint32>(player, 0x230) - CriMpvField<CriSint32>(object, 0x1c);
+    }
+    CriSint32 result = FUN_140050bd0(CriMpvField<void*>(player, 0x78), object, frames);
+    void** vtable = *(void***)object;
+    if (second == NULL)
+    {
+        *consumed = input->Size - ((SizeFunc)vtable[9])(object, 1);
+    }
+    else
+    {
+        CriSint32 total = input->Size + tail->Size;
+        *consumed = total - ((SizeFunc)vtable[9])(object, 1);
+    }
+    if (temporary)
+        ((ReleaseFunc)(*(void***)temporary)[3])(temporary);
+    return result;
+}
+
+namespace
+{
+// Lay out a tiled YUV420 frame (three planes) starting at base for a picture of the given size.
+void CriMpvSetTiledFrame(void* frame, CriUint8* base, CriSint32 width, CriSint32 height)
+{
+    CriSint32 aligned = ((width + 0xf) / 0x10) * 0x10;
+    CriSint32 lumaBlocks = (aligned + 0x7f) / 0x80;
+    CriSint32 chromaBlocks = (aligned / 2 + 0x7f) / 0x80;
+    CriSint32 alignedHeight = ((height + 0x1f) / 0x20) * 0x20;
+    CriMpvField<CriSint16>(frame, 0x1a) = (CriSint16)(lumaBlocks * 0x80);
+    CriMpvField<CriSint16>(frame, 0x18) = (CriSint16)(chromaBlocks * 0x80);
+    CriMpvField<CriUint8*>(frame, 0x10) = base;
+    CriMpvField<CriUint8*>(frame, 0x00) = base + (CriSint64)(lumaBlocks * 0x80 * alignedHeight);
+    CriMpvField<CriUint8*>(frame, 0x08) = CriMpvField<CriUint8*>(frame, 0x00) + (CriSint64)(chromaBlocks * 0x80 * (alignedHeight / 2));
+}
+}
+
+// MS2-FUNCTIONAL: pull the next demuxed video picture, decode it and update the reference-picture window.
+// @0x14003efc0
+CriSint32 FUN_14003efc0(void* player)
+{
+    struct Chunk { void* Data; CriSint32 Size; CriSint32 Reserved; };
+    struct Record { CriUint8* Picture; CriUint8 Reserved08[8]; CriUint8* Output; CriUint32 Reserved18; CriSint32 Width;
+                    CriSint32 Height; CriUint32 Reserved24; CriUint64 Reserved28; CriUint64 Reserved30; };
+    typedef void (*InspectFunc)(void*, void*, void*);
+    CriUint8* d = (CriUint8*)player;
+    void* inputQueue = CriMpvField<void*>(player, 0x180);
+    void* poolQueue = CriMpvField<void*>(player, 0x58);
+    void* decoder = CriMpvField<void*>(player, 0x78);
+    CriSint32 produced = 0;
+    CriSint32 headerBytes = 0;
+    CriMpvField<void*>(player, 0x70) = NULL;
+    for (;;)
+    {
+        if (produced != 0)
+            return produced;
+        CriSint32 attributes[4] = {};
+        CriSint32 skip = 0;
+        CriSint32 dropAnchor = 0;
+        CriSint32 dropPair = 0;
+        if (FUN_1400467b8(inputQueue, 2) == 0)
+            return produced;
+        Chunk chunk;
+        Chunk extra;
+        FUN_1400467a0(inputQueue, 2, 0xffffffff, &chunk);
+        if (CriMpvField<InspectFunc>(player, 0x248) != NULL)
+        {
+            Chunk* secondary = NULL;
+            if (FUN_14003d6c0(&chunk) != 0)
+            {
+                FUN_1400467a0(inputQueue, 2, 0xffffffff, &extra);
+                secondary = &extra;
+            }
+            CriMpvField<InspectFunc>(player, 0x248)(&chunk, secondary, CriMpvField<void*>(player, 0x250));
+            if (secondary)
+                FUN_1400467a8(inputQueue, 2, &extra);
+        }
+        CriSint32 payloadSize;
+        CriUint8* payload = FUN_14003b674((const CriUint8*)chunk.Data, (CriUint32)chunk.Size, &payloadSize);
+        Chunk packet = { payload, payloadSize, 0 };
+        CriUint8* start = (CriUint8*)FUN_1400530c0(payload, (CriUint32)payloadSize, 0x4c);
+        if (!start)
+        {
+            FUN_1400467a8(inputQueue, 2, &chunk);
+            FUN_140041110(0, "E06100901M : Failed MPV_SearchDelim().", CriMpvField<CriUint32>(player, 0x194));
+            CriMpvField<CriSint32>(player, 0x18) = 4;
+            return produced;
+        }
+        CriUint8 saved[0x40];
+        FUN_1400511d0(decoder, saved, 0x40);
+        Chunk stream;
+        stream.Data = start;
+        stream.Size = chunk.Size - ((CriSint32)(uintptr_t)start - (CriSint32)(uintptr_t)chunk.Data);
+        if (FUN_140052c80(decoder, &stream, attributes) != 0)
+        {
+            FUN_1400467a8(inputQueue, 2, &chunk);
+            FUN_140041110(0, "E06100902M : failed MPV_DecodePicAtr().", CriMpvField<CriUint32>(player, 0x194));
+            CriMpvField<CriSint32>(player, 0x18) = 4;
+            return produced;
+        }
+        if (FUN_140052d00(decoder, d + 0xf8) != 0)
+        {
+            FUN_1400467a8(inputQueue, 2, &chunk);
+            FUN_140041110(0, "E06100903M : MPV_GetPicAtr().", CriMpvField<CriUint32>(player, 0x194));
+            CriMpvField<CriSint32>(player, 0x18) = 4;
+            return produced;
+        }
+        CriSint32 width = CriMpvField<CriSint32>(player, 0xf8);
+        CriSint32 height = CriMpvField<CriSint32>(player, 0xfc);
+        CriSint32 pictureType = CriMpvField<CriSint32>(player, 0x110);
+        CriUint32 headerSize;
+        FUN_1400511f0(decoder, 0, &headerSize);
+        attributes[2] = FUN_140040f80(saved, (CriSint32)headerSize);
+        stream.Data = (CriUint8*)stream.Data + attributes[0];
+        stream.Size -= attributes[0];
+        Chunk slot;
+        FUN_1400467a0(poolQueue, 0, 0xffffffff, &slot);
+        if (!slot.Data)
+        {
+            FUN_1400467a8(inputQueue, 2, &chunk);
+            FUN_1400410d0(0, "E06100904M : Can't get chunk data from frame buffer Sj.", 0);
+            CriMpvField<CriSint32>(player, 0x18) = 4;
+            return produced;
+        }
+        Record* record = (Record*)slot.Data;
+        void* current = d + 0xc0;
+        CriMpvSetTiledFrame(current, record->Picture, width, height);
+        CriMpvField<void*>(player, 0xe0) = d + 0xf8;
+        void* forward = d + 0x80;
+        void* backward = d + 0xa0;
+        if (pictureType < 1)
+        {
+            FUN_1400467a8(inputQueue, 2, &chunk);
+            FUN_140041110(0, "E06100908M : Found D Picture.", 0);
+            CriMpvField<CriSint32>(player, 0x18) = 4;
+            return produced;
+        }
+        if (pictureType < 3)
+        {
+            if (CriMpvField<void*>(player, 0x90) == NULL && CriMpvField<void*>(player, 0xb0) == NULL)
+            {
+                if (pictureType == 2)
+                {
+                    skip = 1;
+                    if (CriMpvField<CriSint32>(player, 0x34) != 1)
+                    {
+                        attributes[1] = 1;
+                        dropPair = 1;
+                    }
+                }
+                else if (CriMpvField<CriSint32>(player, 0x34) == 1)
+                {
+                    CriMpvField<void*>(player, 0x70) = CriMpvField<void*>(player, 0xd0);
+                    FUN_140040a20(player, (void**)&slot);
+                    CriMpvField<CriSint32>(player, 0x240) += 1;
+                }
+                else
+                {
+                    CriMpvSetTiledFrame(backward, CriMpvField<CriUint8*>(player, 0xd0), width, height);
+                    CriMpvField<void*>(player, 0x70) = NULL;
+                    memcpy(d + 0x60, &slot, 0x10);
+                }
+            }
+            else
+            {
+                CriMpvSetTiledFrame(forward, CriMpvField<CriUint8*>(player, 0xb0), width, height);
+                CriMpvSetTiledFrame(backward, CriMpvField<CriUint8*>(player, 0xd0), width, height);
+                CriMpvField<void*>(player, 0x70) = CriMpvField<void*>(player, 0x90);
+                if (CriMpvField<void*>(player, 0x90) != NULL || CriMpvField<void*>(player, 0xb0) == NULL)
+                {
+                    Chunk pending;
+                    if (FUN_1400467b8(poolQueue, 3) != 0)
+                    {
+                        FUN_1400467a0(poolQueue, 3, 0xffffffff, &pending);
+                        if (!pending.Data)
+                        {
+                            FUN_1400467a8(inputQueue, 2, &chunk);
+                            FUN_1400410d0(0, "E06100906M : Failed in crivmpv_DecodeOnePictureInPool() [IP-2a]", 0);
+                            CriMpvField<CriSint32>(player, 0x18) = 4;
+                            return produced;
+                        }
+                        FUN_1400467b0(poolQueue, 0, &pending);
+                    }
+                    memcpy(&pending, d + 0x60, 0x10);
+                    if (!pending.Data)
+                    {
+                        FUN_1400467a8(inputQueue, 2, &chunk);
+                        FUN_1400410d0(0, "E06100907M : Failed in crivmpv_DecodeOnePictureInPool() [IP-2b]", 0);
+                        CriMpvField<CriSint32>(player, 0x18) = 4;
+                        return produced;
+                    }
+                    FUN_140040a20(player, (void**)&pending);
+                    CriMpvField<CriSint32>(player, 0x240) += 1;
+                    memcpy(d + 0x60, &slot, 0x10);
+                }
+                else
+                {
+                    Chunk pending;
+                    memcpy(&pending, d + 0x60, 0x10);
+                    if (!pending.Data)
+                    {
+                        FUN_1400467a8(inputQueue, 2, &chunk);
+                        FUN_1400410d0(0, "E06100905M : Failed in crivmpv_DecodeOnePictureInPool() [IP-1]", 0);
+                        CriMpvField<CriSint32>(player, 0x18) = 4;
+                        return produced;
+                    }
+                    FUN_140040a20(player, (void**)&pending);
+                    CriMpvField<CriSint32>(player, 0x240) += 1;
+                    memcpy(d + 0x60, &slot, 0x10);
+                }
+            }
+        }
+        else
+        {
+            if (pictureType != 3)
+            {
+                FUN_1400467a8(inputQueue, 2, &chunk);
+                FUN_140041110(0, "E06100908M : Found D Picture.", 0);
+                CriMpvField<CriSint32>(player, 0x18) = 4;
+                return produced;
+            }
+            if (CriMpvField<CriUint32>(player, 0x34) < 3)
+            {
+                skip = 1;
+            }
+            else
+            {
+                if (CriMpvField<void*>(player, 0xb0) == NULL || CriMpvField<void*>(player, 0x90) == NULL)
+                {
+                    skip = 1;
+                    attributes[1] = 1;
+                    if (CriMpvField<void*>(player, 0xb0) == NULL && CriMpvField<void*>(player, 0x90) == NULL)
+                        dropPair = 1;
+                }
+                else
+                {
+                    CriMpvField<void*>(player, 0x70) = CriMpvField<void*>(player, 0xd0);
+                }
+                if (dropPair != 1)
+                    CriMpvField<CriSint32>(player, 0x240) += 1;
+            }
+        }
+        CriSint32 window = CriMpvField<CriSint32>(player, 0x238) + CriMpvField<CriSint32>(player, 0x23c);
+        CriSint32 decoded = CriMpvField<CriSint32>(player, 0x238) - 1 + CriMpvField<CriSint32>(player, 0x240);
+        if (window > 0 && pictureType == 3 && decoded < window)
+        {
+            skip = 1;
+            CriMpvField<CriSint32>(player, 0x19c) += 1;
+        }
+        if (window <= decoded && CriMpvField<CriSint32>(player, 0x1a0) != 0 && pictureType == 3)
+        {
+            skip = 1;
+            dropAnchor = 1;
+        }
+        if (skip == 1)
+        {
+            FUN_1400467a8(poolQueue, 0, &slot);
+            FUN_1400467b0(inputQueue, 0, &chunk);
+            if (FUN_14003d6c0(&chunk) != 0)
+            {
+                FUN_1400467a0(inputQueue, 2, 0xffffffff, &extra);
+                FUN_1400467b0(inputQueue, 0, &extra);
+            }
+            CriMpvField<CriSint32>(player, 0x188) -= 1;
+            if (dropPair == 1)
+            {
+                CriMpvField<CriSint32>(player, 0x18c) -= 1;
+            }
+            else
+            {
+                CriMpvField<CriSint32>(player, 0x1a4) += 1;
+                if (dropAnchor == 1)
+                    CriMpvField<CriSint32>(player, 0x1a0) -= 1;
+            }
+            FUN_14003ed40(player);
+        }
+        else
+        {
+            Chunk tailChunk = {};
+            Chunk* secondary = NULL;
+            if (FUN_14003d6c0(&chunk) != 0)
+            {
+                FUN_1400467a0(inputQueue, 2, 0xffffffff, &extra);
+                tailChunk = extra;
+                secondary = &tailChunk;
+            }
+            if (FUN_140040850(player, &stream, secondary, &headerBytes, forward) != 0)
+            {
+                FUN_1400467a8(inputQueue, 2, &packet);
+                FUN_140041110(0, "E06100909M : Failed MPV_DecodeFrm().", 0);
+                CriMpvField<CriSint32>(player, 0x18) = 4;
+                return produced;
+            }
+            CriMpvField<CriSint32>(player, 0x194) += 1;
+            produced += 1;
+            record->Output = CriMpvField<CriUint8*>(player, 0xd0);
+            record->Reserved18 = 0;
+            record->Width = CriMpvField<CriSint32>(player, 0xf8);
+            record->Height = CriMpvField<CriSint32>(player, 0xfc);
+            record->Reserved24 = CriMpvField<CriUint32>(player, 0x38);
+            record->Reserved28 = 0;
+            record->Reserved30 = CriMpvField<CriUint32>(player, 0x38);
+            CriMpvField<CriUint32>(record, 0xb0) = 0;
+            CriMpvField<CriSint32>(record, 0xbc) = attributes[2];
+            if (FUN_1400405d0(&stream, &tailChunk, (CriUint32)headerBytes) == 1)
+                CriMpvField<CriSint32>(player, 0x1ac) = 1;
+            if (pictureType == 3)
+                FUN_140040a20(player, (void**)&slot);
+            FUN_1400467b0(inputQueue, 0, &chunk);
+            if (FUN_14003d6c0(&chunk) != 0)
+            {
+                extra = tailChunk;
+                FUN_1400467b0(inputQueue, 0, &extra);
+            }
+            CriMpvField<CriSint32>(player, 0x188) -= 1;
+            FUN_14003ed40(player);
+        }
+    }
 }
