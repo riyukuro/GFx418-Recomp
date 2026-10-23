@@ -574,6 +574,46 @@ void FUN_140013a00(void*, Scaleform::GFx::AS3::Value* input)
     input->Convert2NumberInline(number);
 }
 
+// MS2-FUNCTIONAL: converts the AS3 Value to a signed 32-bit result through the recovered executable method.
+// @0x140012d00
+uintptr_t FUN_140012d00(uintptr_t self, SInt32* result, const Scaleform::GFx::AS3::Value* input)
+{
+    input->Convert2Int32(*result);
+    return self;
+}
+
+// MS2-FUNCTIONAL: converts the AS3 Value to a signed 32-bit result through the recovered executable method.
+// @0x140013a40
+void FUN_140013a40(SInt32* result, const Scaleform::GFx::AS3::Value* input)
+{
+    input->Convert2Int32(*result);
+}
+
+// MS2-FUNCTIONAL: converts the indexed AS3 Value to a signed 32-bit result when the index is in range.
+// @0x140015170
+void FUN_140015170(UInt32 index, SInt32* result, UInt32 length, const void* values)
+{
+    if (index < length)
+    {
+        const Scaleform::GFx::AS3::Value* input = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(
+            static_cast<const char*>(values) + static_cast<size_t>(index) * 0x20);
+        input->Convert2Int32(*result);
+    }
+}
+
+// MS2-FUNCTIONAL: performs the executable's inline numeric conversion on the indexed Value when present.
+// @0x1400150b0
+void FUN_1400150b0(UInt32 index, void*, UInt32 length, const void* values)
+{
+    if (index < length)
+    {
+        const Scaleform::GFx::AS3::Value* input = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(
+            static_cast<const char*>(values) + static_cast<size_t>(index) * 0x20);
+        double number;
+        input->Convert2NumberInline(number);
+    }
+}
+
 // MS2-FUNCTIONAL: uses the recovered AS3 Value assignment implementation for the executable's copy entry.
 // @0x1400129d0
 Scaleform::GFx::AS3::Value* FUN_1400129d0(Scaleform::GFx::AS3::Value* dst,
