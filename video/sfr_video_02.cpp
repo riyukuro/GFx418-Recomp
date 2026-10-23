@@ -49,6 +49,8 @@ extern void* PTR_FUN_1431b64f0;
 extern void* PTR_LAB_1431b6440;
 extern void* PTR_LAB_1431b6430;
 extern void* PTR_FUN_1431b7360;
+extern void* PTR_FUN_1431b6060;
+extern void* PTR_LAB_1431b63f8;
 extern void* DAT_143b274d8;
 extern void* DAT_143b274e0;
 extern void* DAT_143b27518;
@@ -2103,6 +2105,30 @@ void* FUN_1400140e0(void* object)
     *reinterpret_cast<unsigned*>(bytes + 0x80) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x84) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x90) = 0;
+    return object;
+}
+
+// MS2-FUNCTIONAL: constructs the InteractiveObject base and initializes the recovered video extent fields.
+// @0x140010000
+Scaleform::GFx::InteractiveObject* FUN_140010000(
+    Scaleform::GFx::InteractiveObject* object, void* definition,
+    Scaleform::GFx::MovieDefImpl* binding, Scaleform::GFx::ASMovieRootBase* root,
+    Scaleform::GFx::InteractiveObject* parent, const Scaleform::GFx::ResourceId* resourceId)
+{
+    object->Scaleform::GFx::InteractiveObject::InteractiveObject(
+        binding, root, parent, *resourceId);
+    auto* bytes = reinterpret_cast<char*>(object);
+    *reinterpret_cast<void**>(bytes + 0x18) = PTR_LAB_1431b63f8;
+    *reinterpret_cast<void**>(bytes) = PTR_FUN_1431b6060;
+    std::memset(bytes + 0xe0, 0, 0x10);
+    *reinterpret_cast<void**>(bytes + 0xf0) = definition;
+    *reinterpret_cast<void**>(bytes + 0xf8) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0x100) = nullptr;
+    auto* dimensions = static_cast<const unsigned char*>(definition);
+    *reinterpret_cast<float*>(bytes + 0xe8) =
+        static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x24)) * 20.0f;
+    *reinterpret_cast<float*>(bytes + 0xec) =
+        static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x28)) * 20.0f;
     return object;
 }
 
