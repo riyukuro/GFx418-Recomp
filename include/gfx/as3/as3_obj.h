@@ -57,6 +57,7 @@ namespace Abc
     class TraitInfo;
     class ClassInfo;
     class Multiname;
+    class HasTraits;    // (appended, sfr19)
 
     enum MultinameKind
     {
@@ -471,6 +472,13 @@ public:
     // (appended, sfr19) a public method also updates the VT record of the interface slot of the same name.
     // 0x1425310e0
     void UpdateVT4IM(const ASString& name, const Instances::Namespace& ns, const Value& v, SlotInfo::BindingType bt);
+    // (appended, sfr19) the slots and methods of ABC traits (ones with a slot id first, then the rest in order); false
+    // after the VerifyError of an illegal override. The instance size follows from parent_size. 0x1424e9b40
+    CheckResult AddSlots(const Abc::HasTraits& traits, VMAbcFile& file, unsigned parent_size);
+    // (appended, sfr19) how a slot declared with type mn stores its value. 0x1425075e0
+    SlotInfo::BindingType GetBindingType(VMAbcFile& file, const Abc::Multiname& mn) const;
+    // (appended, sfr19) MemSize from parent_size and the own value slots. 0x1424ee490
+    void CalculateMemSize(unsigned parent_size);
 
 protected:
     // (appended, sfr19) the parent is only referenced here; derived ctors copy its slots with CopyParentTraits.

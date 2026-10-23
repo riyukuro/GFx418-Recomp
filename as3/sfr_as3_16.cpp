@@ -406,6 +406,175 @@ void Traits::AddSlotCPP(const ASString& name, Pickable<const Instances::Namespac
     GetOwnSlotInfo(ind).Bind(dt, offset);
 }
 
+// Data traits (slot, class, function, const) may carry a slot id.
+static bool HasSlotID(const Abc::TraitInfo& ti)
+{
+    const Abc::TraitInfo::Type type = ti.GetType();
+    return type == Abc::TraitInfo::tSlot || (type >= Abc::TraitInfo::tClass && type <= Abc::TraitInfo::tConst);
+}
+
+static bool IsCodeTrait(const Abc::TraitInfo& ti)
+{
+    const Abc::TraitInfo::Type type = ti.GetType();
+    return (type >= Abc::TraitInfo::tMethod && type <= Abc::TraitInfo::tSetter) || type == Abc::TraitInfo::tFunction;
+}
+
+// The declared type of a slot or const; a class trait is typed by its class's name.
+static const Abc::Multiname& GetTypeName(const Abc::File& f, const Abc::TraitInfo& ti)
+{
+    const Abc::TraitInfo::Type type = ti.GetType();
+    if (type == Abc::TraitInfo::tSlot || type == Abc::TraitInfo::tConst)
+        return f.Const_Pool.GetMultiname(ti.Ind);
+    return f.Const_Pool.GetMultiname(f.AS3_Classes.Info[ti.Ind]->inst_info.name_ind);
+}
+
+// How trait ti binds; classes and consts are read only.
+static SlotInfo::BindingType GetTraitBT(const Traits& tr, VMAbcFile& file, const Abc::TraitInfo& ti, bool& const_)
+{
+    switch (ti.GetType())
+    {
+    case Abc::TraitInfo::tMethod:
+    case Abc::TraitInfo::tFunction:
+        return SlotInfo::BT_Code;
+    case Abc::TraitInfo::tGetter:
+        return SlotInfo::BT_Get;
+    case Abc::TraitInfo::tSetter:
+        return SlotInfo::BT_Set;
+    case Abc::TraitInfo::tClass:
+    case Abc::TraitInfo::tConst:
+        const_ = true;
+        // no break
+    case Abc::TraitInfo::tSlot:
+        return tr.GetBindingType(file, GetTypeName(file.GetAbcFile(), ti));
+    }
+    return SlotInfo::BT_ValueArray;
+}
+
+// Method v (named name in nsi's namespace) overrides the slot of that name and namespace, or gets a new one. False
+// when that slot is not a method.
+static bool RegisterWithVT(Traits& tr, const ASString& name, const SlotInfo& nsi, const Value& v,
+                           SlotInfo::BindingType bt)
+{
+    const Instances::Namespace& ns = *nsi.pNs;
+
+    SPInt ind = -1;
+    if (const UInt32* values = tr.FindSlotValues(name))
+    {
+        for (ind = *values; ind >= 0; ind = tr.GetPrevSlotIndex(ind))
+        {
+            if (IsSameNamespace(*tr.GetSlotInfo(AbsoluteIndex(ind)).pNs, ns))
+                break;
+        }
+    }
+
+    if (ind < 0)
+    {
+        tr.Add2VT(name, ns, nsi, v, bt);
+        return true;
+    }
+
+    const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
+    const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
+    if (cur_bt != SlotInfo::BT_Unknown && (cur_bt < SlotInfo::BT_Code || cur_bt > SlotInfo::BT_GetSet))
+        return false;
+
+    if (GetNewBT(cur_bt, bt) == bt)
+    {
+        tr.UpdateVT4IM(name, ns, v, bt);
+        tr.UpdateVT(si, v, bt);
+    }
+    else
+        tr.Add2VT(name, ns, si, v, bt);
+    return true;
+}
+
+// MS2-FUNCTIONAL: same operations; the exe inlines UpdateVT4IM/UpdateVT (with VTable::SetMethod) and
+// VM::ThrowVerifyError from the same unity TU, ours calls them.
+// @0x1424e9b40
+CheckResult Traits::AddSlots(const Abc::HasTraits& traits, VMAbcFile& file, unsigned parent_size)
+{
+    VM& vm = file.GetVM();
+
+    // slots with an id, in any order
+    for (UInt32 i = 0; i < traits.obj_traits.GetSize(); ++i)
+    {
+        const Abc::TraitInfo& ti = *file.GetAbcFile().Traits.TraitInfos[traits.obj_traits[i]];
+        if (!HasSlotID(ti))
+            continue;
+        const Abc::Multiname& mn = file.GetAbcFile().Const_Pool.GetMultiname(ti.name_ind);
+        if (ti.SlotId == 0)
+            continue;
+
+        bool const_ = false;
+        const SlotInfo::BindingType bt = GetTraitBT(*this, file, ti, const_);
+        const ASString name = file.GetInternedString(mn.NameIndex);
+        SlotInfo& si = AddSetSlot(RelativeIndex(ti.SlotId - 1), name,
+                                  Pickable<const Instances::Namespace>(&file.GetInternedNamespace(mn), PickValue),
+                                  file, ti, const_);
+
+        const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
+        bool ok;
+        if (IsCodeTrait(ti))
+        {
+            ok = cur_bt == SlotInfo::BT_Unknown || (cur_bt >= SlotInfo::BT_Code && cur_bt <= SlotInfo::BT_GetSet);
+            if (ok)
+                Add2VT(si, Value(static_cast<SInt32>(ti.Ind)), bt);
+        }
+        else
+        {
+            ok = cur_bt == SlotInfo::BT_Unknown;
+            if (ok)
+                si.Bind(bt, AbsoluteIndex(-1));
+        }
+
+        if (!ok)
+        {
+            vm.ThrowVerifyError(VM::Error(VM::eIllegalOverrideError, vm, name.ToCStr(), GetName().ToCStr()));
+            return false;
+        }
+    }
+
+    // the other members and the methods, in order
+    bool result = true;
+    for (UInt32 i = 0; i < traits.obj_traits.GetSize(); ++i)
+    {
+        const Abc::TraitInfo& ti = *file.GetAbcFile().Traits.TraitInfos[traits.obj_traits[i]];
+        if (HasSlotID(ti) && ti.SlotId != 0)
+            continue;
+
+        const Abc::Multiname& mn = file.GetAbcFile().Const_Pool.GetMultiname(ti.name_ind);
+        const AbsoluteIndex offset(IsCodeTrait(ti) ? -1 : static_cast<SPInt>(FixedValueSlotNumber++));
+        bool const_ = false;
+        const SlotInfo::BindingType bt = GetTraitBT(*this, file, ti, const_);
+        const ASString name = file.GetInternedString(mn.NameIndex);
+        Instances::Namespace& ns = file.GetInternedNamespace(mn);
+        const SlotInfo nsi(Pickable<const Instances::Namespace>(&ns, PickValue), file, ti,
+                           const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum,
+                           (GetQualifiedName() + "/" + name).GetNode());
+
+        if (IsCodeTrait(ti))
+            result = RegisterWithVT(*this, name, nsi, Value(static_cast<SInt32>(ti.Ind)), bt);
+        else
+        {
+            const AbsoluteIndex ind = Add(name, nsi);
+            SlotInfo& si = GetOwnSlotInfo(ind);
+            if (si.BindType == SlotInfo::BT_Unknown)
+                si.Bind(bt, offset);
+            else
+                result = false;
+        }
+
+        if (!result)
+        {
+            vm.ThrowVerifyError(VM::Error(VM::eIllegalOverrideError, vm, name.ToCStr(), GetName().ToCStr()));
+            return false;
+        }
+    }
+
+    CalculateMemSize(parent_size);
+    return result;
+}
+
 // ==== virtual machine ================================================================================================
 
 // @0x1424eaf00

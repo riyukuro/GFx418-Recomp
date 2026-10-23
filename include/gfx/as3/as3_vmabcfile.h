@@ -27,6 +27,8 @@ public:
     ASString GetInternedString(UPInt ind);
     // The namespace at constant pool index ind, interned on first use (0x14250ae60).
     Instances::Namespace& GetInternedNamespace(UPInt ind);
+    // (appended, sfr19) the namespace multiname mn is qualified with, interned on first use (0x14250abf0).
+    Instances::Namespace& GetInternedNamespace(const Abc::Multiname& mn);
     // The namespace set at constant pool index ind, made on first use (0x14250aff0).
     NamespaceSet& GetInternedNamespaceSet(UPInt ind);
     // (appended, sfr19) keeps the class traits made for this file's classes (Vector.<T> of them) alive.
