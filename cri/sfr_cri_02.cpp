@@ -111,6 +111,7 @@ void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value,
 void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
 void     FUN_140031140(void* player);
 void     FUN_140031290(void* player);
+CriBool  FUN_140031f40(void* player);
 CriBool  FUN_140031aa0(void* player);
 CriBool  FUN_1400314d0(void* player);
 CriSint32 FUN_140042d70(void* decoder, void* player);
@@ -4038,6 +4039,44 @@ CriBool FUN_140031da0(void* player, void* heap)
         }
     }
     memset(state->Table, 0, (size_t)state->Count * 0x38);
+    return 1;
+}
+
+// MS2-FUNCTIONAL: size and allocate the CRI Movie metadata and event work areas.
+// @0x140031ae0
+CriBool FUN_140031ae0(void* player)
+{
+    struct BaseSizeView { CriUint8 Reserved[0x63c]; CriSint32 Size; };
+    struct FeatureSizeA { CriUint8 Reserved[0x868]; CriSint32 Enabled; };
+    struct FeatureBytesA { CriUint8 Reserved[0x890]; CriSint32 Size; };
+    struct FeatureSizeB { CriUint8 Reserved[0x898]; CriSint32 Enabled; };
+    struct FeatureBytesB { CriUint8 Reserved[0x8a8]; CriSint32 Size; };
+    struct WorkSizeView { CriUint8 Reserved[0xe74]; CriUint32 Size; };
+    struct WorkHeapView { CriUint8 Reserved[0xde8]; void* Heap; };
+    struct QueueView { CriUint8 Reserved[0xd78]; void* Input; void* Read; };
+    struct MetaStreamView { CriUint8 Reserved[0xe78]; void* Stream; };
+    if (((MetaStreamView*)player)->Stream)
+        FUN_140031f40(player);
+
+    CriSint32 workSize = ((BaseSizeView*)player)->Size + 0x800;
+    if (((FeatureSizeA*)player)->Enabled != 0)
+        workSize += ((FeatureBytesA*)player)->Size;
+    if (((FeatureSizeB*)player)->Enabled != 0)
+        workSize += ((FeatureBytesB*)player)->Size;
+    CriSint32 queued = FUN_1400467b8(((QueueView*)player)->Read, 1) +
+                       FUN_1400467b8(((QueueView*)player)->Input, 1);
+    if (workSize < queued)
+        workSize = queued;
+    ((WorkSizeView*)player)->Size = (CriUint32)workSize;
+
+    void* heap = ((WorkHeapView*)player)->Heap;
+    if (!FUN_140031c40(player, heap, (CriUint32)workSize, 0x40))
+        return 0;
+    if (!FUN_140031da0(player, heap))
+    {
+        FUN_140031f40(player);
+        return 0;
+    }
     return 1;
 }
 
