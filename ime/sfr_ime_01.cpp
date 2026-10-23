@@ -93,6 +93,8 @@ extern "C" const unsigned long long DAT_1431c4d58;
 extern "C" const unsigned long long DAT_14313b8b8;
 extern "C" const unsigned long long DAT_1431c4828;
 extern "C" const unsigned long long DAT_1431c4830;
+extern "C" const unsigned long long DAT_14313b400;
+extern "C" const unsigned long long DAT_14313b408;
 extern "C" const unsigned long long DAT_1431c4d60;
 extern "C" const unsigned long long DAT_14313b8c0;
 extern "C" const unsigned long long DAT_1431c4e08;
@@ -166,6 +168,30 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: returns the executable's supported COM interface views and increments the shared refcount.
+// @0x1423d72a0
+long long FUN_1423d72a0(void* object, const unsigned long long* iid, void** output)
+{
+    if (!output) return static_cast<long long>(0x80070057u);
+    *output = nullptr;
+    auto* words = static_cast<unsigned long long*>(object);
+    unsigned long long* view;
+    if ((iid[0] == DAT_1431c4828 && iid[1] == DAT_1431c4830) ||
+        (iid[0] == DAT_14313b400 && iid[1] == DAT_14313b408)) {
+        view = words + 1;
+    } else if (iid[0] == *reinterpret_cast<const unsigned long long*>(DAT_1431c5018) &&
+               iid[1] == *reinterpret_cast<const unsigned long long*>(DAT_1431c5018 + 8)) {
+        view = words;
+    } else {
+        return static_cast<long long>(0x80004002u);
+    }
+    if (reinterpret_cast<unsigned long long>(object) == 0x1a0) view = nullptr;
+    *output = view;
+    if (!view) return static_cast<long long>(0x80004002u);
+    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[1])(object);
+    return 0;
+}
 
 // MS2-FUNCTIONAL: follows the executable's nested IME provider query and releases its temporary refcounted object.
 // @0x1423ce460
