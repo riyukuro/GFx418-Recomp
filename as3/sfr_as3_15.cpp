@@ -15,6 +15,7 @@
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/gfx/gfx_imecandidateliststyle.h"
+#include "ms2/scaleform/include/kernel/sf_msgformat.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -34,6 +35,7 @@ bool FUN_1425146d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 void FUN_142614e30(void* psubst, void* pimgDesc);        // DocView::ImageSubstitutor::RemoveImageDesc
 void FUN_1425bb680(void* ptf, const char* id);           // TextField::RemoveIdImageDescAssoc
 void FUN_1425b7220(void* ptf);                          // TextField::ClearIdImageDescAssoc
+const char* FUN_142509b60(int id);                     // the text of error id ("... {0} ...")
 // AvmTextField: one image substitution element (an object of the script's array) at index idx
 void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, const Scaleform::GFx::AS3::Value& ve);
 namespace Scaleform {
@@ -1791,6 +1793,167 @@ Value::Value(Object* v)
 {
     if (v)
         v->AddRef();
+}
+
+// VM::Error: "Error #<id>: <message>", the message being the error text with the arguments filled in.
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d6b90
+VM::Error::Error(ErrorID id, VM& vm)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    const int num = id;
+    const char* msg = FUN_142509b60(id);
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d6cf0
+VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const Value& arg2)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    StringManager& sm = vm.GetStringManager();
+    ASString s1 = sm.CreateEmptyString();
+    arg1.Convert2String(s1);
+    ASString s2 = sm.CreateEmptyString();
+    arg2.Convert2String(s2);
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, s1.ToCStr(), s2.ToCStr());
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d6f40
+VM::Error::Error(ErrorID id, VM& vm, const Value& arg1)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    ASString s1 = vm.GetStringManager().CreateEmptyString();
+    arg1.Convert2String(s1);
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, s1.ToCStr());
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d7130
+VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const char* arg2)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    ASString s1 = vm.GetStringManager().CreateEmptyString();
+    arg1.Convert2String(s1);
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, s1.ToCStr(), arg2);
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d7330
+VM::Error::Error(ErrorID id, VM& vm, int arg1)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, arg1);
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d74d0
+VM::Error::Error(ErrorID id, VM& vm, int arg1, int arg2)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, arg1, arg2);
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d7690
+VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const char* arg2)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, arg1, arg2);
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d7850
+VM::Error::Error(ErrorID id, VM& vm, const char* arg1)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, arg1);
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d79f0
+VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const Value& arg2)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    ASString s2 = vm.GetStringManager().CreateEmptyString();
+    arg2.Convert2String(s2);
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, arg1, s2.ToCStr());
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
+// @0x1424d7bf0
+VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int arg4)
+    : ID(id)
+    , Message(vm.GetStringManager().CreateEmptyString())
+{
+    String result;
+    String msg;
+    const int num = id;
+    const char* fmt = FUN_142509b60(id);
+    Scaleform::Format(msg, fmt, arg1, arg2, arg3, arg4);
+    Scaleform::Format(result, "Error #{0}: {1}", num, msg);
+    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
 }
 }} // namespace GFx::AS3
 

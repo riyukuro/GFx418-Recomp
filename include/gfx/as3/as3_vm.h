@@ -115,6 +115,9 @@ public:
         Error(ErrorID id, VM& vm, int arg1, int arg2);  // 0x1424d74d0
         Error(ErrorID id, VM& vm, int arg1);            // 0x1424d7330 (appended, sfr15)
         Error(ErrorID id, VM& vm, const Value& arg1, const char* arg2);   // 0x1424d7130 (appended, sfr19)
+        Error(ErrorID id, VM& vm, const Value& arg1);   // 0x1424d6f40 (appended, sfr19)
+        Error(ErrorID id, VM& vm, const Value& arg1, const Value& arg2);  // 0x1424d6cf0 (appended, sfr19)
+        Error(ErrorID id, VM& vm, const char* arg1, const Value& arg2);   // 0x1424d79f0 (appended, sfr19)
 
         ErrorID         GetErrorID() const  { return ID; }
         const ASString& GetMessage() const  { return Message; }
