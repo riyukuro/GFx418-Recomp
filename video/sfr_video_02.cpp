@@ -51,6 +51,10 @@ extern void* PTR_LAB_1431b6430;
 extern void* PTR_FUN_1431b7360;
 extern void* PTR_FUN_1431b6060;
 extern void* PTR_LAB_1431b63f8;
+extern void* PTR_LAB_1431b6690;
+extern void* PTR_LAB_1431b6638;
+extern void* PTR_FUN_1431b6640;
+extern void* PTR_s_connect_1431b6410;
 extern void* DAT_143b274d8;
 extern void* DAT_143b274e0;
 extern void* DAT_143b27518;
@@ -2131,6 +2135,22 @@ Scaleform::GFx::InteractiveObject* FUN_140010000(
         static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x24)) * 20.0f;
     *reinterpret_cast<float*>(bytes + 0xec) =
         static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x28)) * 20.0f;
+    return object;
+}
+
+// MS2-FUNCTIONAL: initializes the Connect prototype's Object, vtables, and native method table.
+// @0x140012510
+Scaleform::GFx::AS2::Object* FUN_140012510(
+    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
+    void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
+{
+    FUN_140012440(object, context, prototype, constructor);
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b6690;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = PTR_LAB_1431b6638;
+    *reinterpret_cast<void**>(object) = PTR_FUN_1431b6640;
+    unsigned char flags = 1;
+    FUN_142961830(reinterpret_cast<char*>(object) + 0x68, object, context,
+                  PTR_s_connect_1431b6410, &flags);
     return object;
 }
 
