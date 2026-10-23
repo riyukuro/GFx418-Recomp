@@ -188,6 +188,9 @@ private:
                    unsigned strokeStyle, float snapOffset, float morphRatio);
     void addStroke(MeshGenerator* gen, TessBase* stroker, const ToleranceParams& param, const TransformerBase* tr,
                    unsigned startPos, unsigned strokeStyle, float snapOffset, float morphRatio);
+    // the meshes of the tessellated layer into pout, mapped back through mtx; false when the output refused them
+    bool acquireTessMeshes(TessBase* tess, const Matrix2F& mtx, VertexOutput* pout, unsigned layer,
+                           unsigned strokeStyle, unsigned meshGenFlags, float morphRatio);   // 0x14262d9f0
     // the fill paths of the layer at startPos into the generator's tessellator
     void addFill(MeshGenerator* gen, const ToleranceParams& param, const TransformerBase* tr, unsigned startPos,
                  float morphRatio);

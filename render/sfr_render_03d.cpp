@@ -8,6 +8,9 @@
 // MS2-RANGE: 0x142623c60-0x142624020 .text$mn
 // MS2-RANGE: 0x142626190-0x142633210 .text$mn
 // MS2-PIN: ?ClearAndRelease@LinearHeap@Render@Scaleform@@QEAAXXZ 0x14262a910
+// MS2-PIN: ??_G?$TransformerWrapper@UScale9GridInfo@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x14262a230
+// MS2-PIN: ??_G?$TransformerWrapper@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x14262a260
+// MS2-PIN: ??_GTransformerBase@Render@Scaleform@@UEAAPEAXI@Z 0x14262a600
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -206,6 +209,18 @@ void MeshGenerator::Clear()
     Heap3.ClearAndRelease();
     Heap4.ClearAndRelease();
 }
+
+// The coordinate mapping of the tessellation: a matrix, or the cells of a 9-grid (0x10 bytes).
+template<class T> class TransformerWrapper : public TransformerBase
+{
+public:
+    TransformerWrapper(const T* tr = 0) : pTr(tr) {}
+
+    virtual void  Transform(float* x, float* y) const { pTr->Transform(x, y); }
+    virtual float GetScale() const                    { return pTr->GetScale(); }
+
+    const T* pTr;   // +0x08
+};
 
 // Re-encodes the two ends of the morph so that they have the same path records. Both ends always have the same
 // number of edges, but a path may end earlier on one side: then the other side's path is split there and the
@@ -1599,6 +1614,67 @@ void ShapeMeshProvider::addStroke(MeshGenerator* gen, TessBase* stroker, const T
     }
 }
 
+// The fill layer through the tessellator. A tessellation with too many vertices for 16-bit indices is retried with
+// a coarser curve tolerance, without the AA edges; after four tries the layer gets the null mesh.
+// MS2-FUNCTIONAL: the tolerance copy and the matrix swap their stack slots
+// @0x142632870
+bool ShapeMeshProvider::tessellateFill(Scale9GridInfo* s9g, unsigned layer, MeshBase* mesh, VertexOutput* pout,
+                                       unsigned meshGenFlags)
+{
+    MeshGenerator*  gen        = mesh->GetRenderer()->GetMeshGen();
+    const Matrix2F& viewMtx    = mesh->GetViewMatrix();
+    float           morphRatio = mesh->GetMorphRatio();
+    ToleranceParams param      = mesh->GetRenderer()->GetToleranceParams();
+
+    const TransformerBase*             tr = 0;
+    TransformerWrapper<Matrix2F>       mtxTr;
+    TransformerWrapper<Scale9GridInfo> s9gTr;
+    Matrix2F                           mtx;
+    float                              key[MeshKey::MaxKeySize];
+    if (s9g)
+    {
+        mtx   = viewMtx;
+        s9gTr = TransformerWrapper<Scale9GridInfo>(s9g);
+        tr    = &s9gTr;
+    }
+    else
+    {
+        if (!MeshKey::CalcMatrixKey(viewMtx, key, &mtx))
+            return createNullMesh(pout, layer, meshGenFlags);
+        mtxTr = TransformerWrapper<Matrix2F>(&mtx);
+        tr    = &mtxTr;
+    }
+
+    for (unsigned i = 0; i < 4; i++)
+    {
+        gen->Clear();
+        gen->mTess.SetFillRule(Tessellator::FillEvenOdd);
+        gen->mTess.SetToleranceParam(param);
+        gen->mTess.SetEdgeAAWidth(((meshGenFlags & (Mesh_EdgeAA | Mesh_Mask)) == Mesh_EdgeAA) ?
+                                  0.5f * param.EdgeAAScale : 0);
+        addFill(gen, param, tr, DrawLayers[layer].StartPos, morphRatio);
+        if ((meshGenFlags & Mesh_EdgeAA) && gen->mTess.GetSrcVertexCount() >= 0x8000)
+        {
+            // too complex for the AA edges
+            gen->Clear();
+            gen->mTess.SetEdgeAAWidth(0);
+            addFill(gen, param, tr, DrawLayers[layer].StartPos, morphRatio);
+            meshGenFlags &= ~Mesh_EdgeAA;
+        }
+        gen->mTess.Tessellate(false);
+        if (gen->mTess.GetVertexCount() < 0xffff)
+        {
+            bool ret = acquireTessMeshes(&gen->mTess, mtx, pout, layer, 0, meshGenFlags, morphRatio);
+            gen->Clear();
+            return ret;
+        }
+        meshGenFlags &= ~Mesh_EdgeAA;
+        param.CurveTolerance *= 4;
+    }
+    gen->Clear();
+    return createNullMesh(pout, layer, meshGenFlags);
+}
+
 // One zero vertex and a triangle on it: the layer still gets a mesh, of nothing.
 // @0x142631ef0
 bool ShapeMeshProvider::createNullMesh(VertexOutput* pout, unsigned layer, unsigned meshGenFlags)
@@ -1662,6 +1738,9 @@ void ShapeMeshProvider::computeImgAdjustMatrix(const Scale9GridData* s9g, unsign
 
 }} // namespace Scaleform::Render
 
+// MS2-PIN: ??_7?$TransformerWrapper@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@6B@ 0x14318f3d8
+// MS2-PIN: ??_7?$TransformerWrapper@UScale9GridInfo@Render@Scaleform@@@Render@Scaleform@@6B@ 0x14318f3f0
+// MS2-PIN: ??_7TransformerBase@Render@Scaleform@@6B@ 0x14318f228
 // MS2-PIN: ??_7MorphInterpolator@Render@Scaleform@@6B@ 0x14318f320
 // MS2-PIN: ??_7MorphShapeData@Render@Scaleform@@6B@ 0x14318f2a0
 // MS2-PIN: ??_7?$ShapeDataFloatTempl@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@6B@ 0x14318f248
