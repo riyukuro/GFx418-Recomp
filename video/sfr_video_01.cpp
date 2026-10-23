@@ -1802,6 +1802,62 @@ void FUN_1400067a0(void** values, Scaleform::UPInt count)
     }
 }
 
+class VideoGcPassAccess : public Scaleform::GFx::AS2::ASRefCountBaseType
+{
+public:
+    using Release = Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor;
+    using Mark = Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor;
+    using Scan = Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor;
+};
+
+template<class Functor>
+static void ForEachVideoPrototypeChild(void* object,
+    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    using namespace Scaleform::GFx::AS2;
+    auto* stream = static_cast<NetStream*>(object);
+    stream->ForEachChild_GC<Functor>(collector);
+    auto* bytes = static_cast<unsigned char*>(object);
+    const Scaleform::UPInt callbackOffsets[] = { 0xe0, 0xf8 };
+    for (auto offset : callbackOffsets)
+        reinterpret_cast<FunctionRefBase*>(bytes + offset)->ForEachChild_GC<Functor>(collector);
+    auto** table = reinterpret_cast<void**>(bytes + 0x110);
+    if (!*table) return;
+    auto* fields = static_cast<Scaleform::UPInt*>(*table);
+    auto** items = reinterpret_cast<Object**>(fields[0]);
+    for (Scaleform::UPInt i = 0; i < fields[1]; ++i)
+        if (items[i]) Functor::Call(collector, static_cast<ASRefCountBaseType*>(items[i]));
+}
+
+// MS2-FUNCTIONAL: visits prototype children with the collector's release pass.
+// @0x14000a5d0
+void FUN_14000a5d0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    ForEachVideoPrototypeChild<VideoGcPassAccess::Release>(object, collector);
+}
+
+// MS2-FUNCTIONAL: visits prototype children with the collector's cycle-mark pass.
+// @0x14000a230
+void FUN_14000a230(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    ForEachVideoPrototypeChild<VideoGcPassAccess::Mark>(object, collector);
+}
+
+// MS2-FUNCTIONAL: visits prototype children with the collector's in-use scan pass.
+// @0x14000a420
+void FUN_14000a420(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    ForEachVideoPrototypeChild<VideoGcPassAccess::Scan>(object, collector);
+}
+
+// MS2-FUNCTIONAL: performs the collector's release transition on one AS2 object.
+// @0x14000a540
+void FUN_14000a540(Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
+                   Scaleform::GFx::AS2::ASRefCountBaseType* object)
+{
+    VideoGcPassAccess::Release::Call(collector, object);
+}
+
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
 // @0x14000b300
 void FUN_14000b300(void* owner)
