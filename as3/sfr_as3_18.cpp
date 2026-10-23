@@ -968,6 +968,38 @@ bool AvmSprite::GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase> >* destArray
     return ret;
 }
 
+// @0x14251d000
+MovieRoot::ActionEntry* MovieRoot::ActionQueueType::PrependEntry(ActionLevel lvl)
+{
+    ActionEntry* pentry = GetNewEntry();
+    ActionQueueEntry& q = Entries[lvl];
+    pentry->pNextEntry = q.pActionRoot;
+    q.pActionRoot = pentry;
+    if (!q.pInsertEntry)
+        q.pInsertEntry = pentry;
+    if (!pentry->pNextEntry)
+        q.pLastEntry = pentry;
+    ++ModId;
+    return pentry;
+}
+
+// MS2-FUNCTIONAL: the exe untags with a branch (dec), cl picks a cmove
+// @0x1425189a0
+void AvmDisplayObj::OnDetachFromTimeline()
+{
+    pAS3RawPtr = GetAS3Obj();
+    reinterpret_cast<SPtr<Instances::fl_display::DisplayObject>&>(pAS3CollectiblePtr) = NULL;
+}
+
+// A sprite advances while it has a frame to execute or an enterFrame listener.
+// @0x142518160
+bool AvmSprite::MustBeInPlaylist() const
+{
+    if (!(SprFlags & Flag_NeedExecuteFrame) && !HasEventHandler(EventId(EventId::Event_EnterFrame)))
+        return false;
+    return true;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx {
