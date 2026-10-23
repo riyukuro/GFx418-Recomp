@@ -271,7 +271,7 @@ String& AvmDisplayObj::GetASClassName(String* className) const
 
 // MS2-FUNCTIONAL: the exe also makes a result-ignored call through vftable slot 4 of the movie root first.
 // @0x142506d30
-ASVM* AvmDisplayObj::GetAVM() const
+ASVM* AvmDisplayObj::GetAVM()
 {
     return GetAS3Root()->pAVM;
 }

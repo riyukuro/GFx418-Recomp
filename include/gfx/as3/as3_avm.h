@@ -89,7 +89,7 @@ public:
     void        ReleaseAS3Obj();
     Ptr<Log>    GetLog() const          { return GetMovieImpl()->GetLog(); }
     // (appended, sfr19) the VM of the movie (0x142506d30)
-    ASVM*       GetAVM() const;
+    ASVM*       GetAVM();
     // (appended, sfr19) the AS3 object, kept raw or as a tagged collectible pointer
     Instances::fl_display::DisplayObject* GetAS3Obj() const
     {

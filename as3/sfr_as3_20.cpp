@@ -96,6 +96,7 @@ class NotifyLoadInitCandidateList : public NotifyLoadInitC
 public:
     NotifyLoadInitCandidateList(MovieRoot* proot, Instances::fl_display::Loader* ploader, IMEManager* pimeManager)
         : pMovieRoot(proot), pLoader(ploader), pIMEManager(pimeManager) {}
+    virtual ~NotifyLoadInitCandidateList();
 
     // @0x142545160
     virtual void OpenEventCallback() {}
@@ -107,6 +108,11 @@ public:
     SPtr<Instances::fl_display::Loader>     pLoader;        // +0x18
     Ptr<IMEManager>                         pIMEManager;    // +0x20
 };
+
+// @0x1425430b0 (compiler-emitted scalar-deleting destructor)
+NotifyLoadInitCandidateList::~NotifyLoadInitCandidateList()
+{
+}
 
 // MS2-FUNCTIONAL: register allocation and local order (the exe keeps two unused host values)
 // @0x1425445d0
