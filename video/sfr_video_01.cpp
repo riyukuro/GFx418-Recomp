@@ -1705,6 +1705,24 @@ void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     FUN_14000a730(object, collector, operation);
 }
 
+// MS2-FUNCTIONAL: releases the weak target proxy and base state of the SWF sync object.
+// @0x140006290
+void FUN_140006290(void* object)
+{
+    auto** proxySlot = reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x10);
+    if (*proxySlot) FUN_14257dcd0(*proxySlot);
+    FUN_14257db50(object);
+}
+
+// MS2-FUNCTIONAL: destroys the SWF sync object and optionally frees its storage.
+// @0x1400062e0
+void* FUN_1400062e0(void* object, unsigned flags)
+{
+    FUN_140006290(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
 // @0x14000b300
 void FUN_14000b300(void* owner)
