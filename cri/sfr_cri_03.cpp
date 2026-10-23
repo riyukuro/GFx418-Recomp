@@ -28,6 +28,8 @@ void FUN_14004e250(void);
 void FUN_14004eb70(void);
 void FUN_14004f8d0(void);
 void FUN_140027fb4(void*, void*);
+CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
+CriSint32 FUN_1400500b0(CriSint32, void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
@@ -444,6 +446,42 @@ void* FUN_14003c060(CriUint32* count)
 CriSint32 decideInternalFramePoolNum(CriSint32 count)
 {
     return count == 0 ? (CriSint32)DAT_143b27c60 : count - 1 + (CriSint32)DAT_143b27c60;
+}
+
+// MS2-FUNCTIONAL: set the VMPV handle's processor-mask condition on its MPV instance.
+// @0x14003c9a0
+void criVmpv_SetProcessorMask(void* handle, CriUint32 mask)
+{
+    void* mpv = NULL;
+    if (handle)
+        memcpy(&mpv, (CriUint8*)handle + 0x78, sizeof(mpv));
+    FUN_14004e2f0(mpv, 0xd, (CriSint32)mask);
+}
+
+// MS2-FUNCTIONAL: pack up to three horizontal and vertical DLG parameters for the MPV core.
+// @0x14003ca00
+void FUN_14003ca00(void* context, CriSint32 count, const CriSint32* horizontal,
+                   const CriSint32* vertical)
+{
+    (void)context;
+    CriSint32 active = count > 3 ? 3 : count;
+    CriSint32 parameters[10] = {};
+    for (CriSint32 i = 0; i < active; ++i)
+    {
+        parameters[i * 3] = horizontal[i];
+        parameters[i * 3 + 1] = vertical[i];
+        parameters[i * 3 + 2] = 0x5a5a5a5a;
+    }
+    FUN_1400500b0(active, parameters);
+}
+
+// MS2-FUNCTIONAL: return the VMPV handle's current status field.
+// @0x14003cc70
+CriSint32 criVmpv_GetStatus(const void* handle)
+{
+    CriSint32 status;
+    memcpy(&status, (const CriUint8*)handle + 0x18, sizeof(status));
+    return status;
 }
 
 // MS2-FUNCTIONAL: release MPV and stream-memory subsystems when the final initializer reference ends.
