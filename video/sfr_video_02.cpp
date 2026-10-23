@@ -19,6 +19,7 @@ extern const void* FUN_14261c640(const void*, int);
 extern void FUN_142581700(void*);
 extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
+extern void FUN_1425925f0(void*);
 extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 
@@ -620,6 +621,38 @@ void FUN_1400103f0(UInt32* dst, const UInt32* src)
     void* payload = *reinterpret_cast<void* const*>(src + 2);
     if (payload) FUN_14257dc30(payload);
     *reinterpret_cast<void**>(dst + 2) = payload;
+}
+
+// @0x1400121c0
+void FUN_1400121c0(void** slot)
+{
+    char* object = static_cast<char*>(*slot);
+    if (object && (*reinterpret_cast<UInt32*>(object + 0x18) & 0x03ffffff) != 0)
+    {
+        --*reinterpret_cast<UInt32*>(object + 0x18);
+        FUN_1425925f0(object);
+    }
+}
+
+// @0x1400121f0
+void** FUN_1400121f0(void** slot, void* value)
+{
+    if (value)
+    {
+        UInt32* refs = reinterpret_cast<UInt32*>(static_cast<char*>(value) + 0x18);
+        *refs = (*refs + 1) & 0x8fffffff;
+    }
+    FUN_1400121c0(slot);
+    *slot = value;
+    return slot;
+}
+
+// @0x140012250
+void** FUN_140012250(void** slot, void* value)
+{
+    FUN_1400121c0(slot);
+    *slot = value;
+    return slot;
 }
 
 // MS2-FUNCTIONAL: encloses the object's cached local bounds with the supplied matrix, as observed in the executable.
