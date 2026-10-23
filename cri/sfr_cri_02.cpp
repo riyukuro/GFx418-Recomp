@@ -3771,6 +3771,64 @@ void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
     ++((StreamCounterView*)player)->Count;
 }
 
+// MS2-FUNCTIONAL: expose the next decoded file-read record when the movie state permits a read.
+// @0x140034d40
+void FUN_140034d40(void* player, CriMovieInputChunk* output)
+{
+    struct PlayerStateC { CriUint8 Reserved[0x0c]; CriSint32 Value; };
+    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
+    struct ReadRecordView { CriUint8 Reserved[0xd90]; CriMovieInputChunk Record; };
+    struct ReadSizeView { CriUint8 Reserved[0xd98]; CriSint32 Size; };
+    memset(output, 0, sizeof(*output));
+    CriSint32 status = getInternalStatus(player);
+    if (((ReadModeView*)player)->Mode == 1 || ((PlayerStateC*)player)->Value == 1 ||
+        status == 0 || status == 2 || (status >= 6 && status <= 10))
+        return;
+    CriSint32 lockState = isLockedInputChunk(player);
+    void* source = FUN_140037050(player, NULL, NULL);
+    if (!source || lockState == 1)
+        return;
+    ReadRecordView* current = (ReadRecordView*)player;
+    FUN_1400467a0(source, 0, -1, &current->Record);
+    if (((ReadSizeView*)player)->Size != 0)
+        *output = current->Record;
+}
+
+// MS2-FUNCTIONAL: refresh the player's pending byte counts from the selected input stream.
+// @0x140034c20
+void FUN_140034c20(void* player)
+{
+    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
+    struct InputStatsView { CriUint8 Reserved[0xec8]; CriSint32 Available; CriSint32 Remaining; CriSint32 Mode; };
+    struct ReadProgressView
+    {
+        CriUint8 Reserved0[0xd98];
+        CriSint32 BufferedBytes;
+        CriUint8 ReservedDC[0xdb0 - 0xd9c];
+        CriSint32 StreamBytes;
+    };
+    InputStatsView* stats = (InputStatsView*)player;
+    stats->Available = 0;
+    stats->Remaining = 0;
+    stats->Mode = 0;
+    CriSint32 status = getInternalStatus(player);
+    if (status >= 0 && status <= 1)
+        return;
+    CriUint32 available = 0;
+    CriUint32 mode = 0;
+    void* source = FUN_140037050(player, &available, &mode);
+    if (!source)
+        return;
+    CriSint32 remaining;
+    if (((ReadModeView*)player)->Mode == 1)
+        remaining = ((ReadProgressView*)player)->StreamBytes - FUN_1400467b8(source, 0);
+    else
+        remaining = available - FUN_1400467b8(source, 0) - ((ReadProgressView*)player)->BufferedBytes;
+    stats->Available = available;
+    stats->Remaining = remaining;
+    stats->Mode = mode;
+}
+
 // MS2-FUNCTIONAL: discard handled command chunks while returning ordinary input records to the stream.
 // @0x140033610
 void FUN_140033610(void* player)
