@@ -1549,6 +1549,30 @@ void FUN_140015830(void* object)
     }
 }
 
+// MS2-FUNCTIONAL: runs the executable invocation helper and reports a nonempty result when no exception is pending.
+// @0x140013e00
+unsigned char* FUN_140013e00(void* vm, unsigned char* result, unsigned* value,
+                             void* receiver, unsigned flags, void* argument)
+{
+    extern void FUN_1424f0750(void*, void*, void*, unsigned, void*, int);
+    FUN_1424f0750(vm, receiver, value, flags, argument, 1);
+    unsigned tag = *value & 0x1f;
+    bool hasValue = !*reinterpret_cast<unsigned char*>(static_cast<char*>(vm) + 0x180) && tag != 0 &&
+        (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(value + 4) != nullptr);
+    *result = hasValue ? 1 : 0;
+    return result;
+}
+
+// MS2-FUNCTIONAL: constructs a Value from the supplied strong object pointer.
+// @0x1400156a0
+Scaleform::GFx::AS3::Value* FUN_1400156a0(Scaleform::GFx::AS3::Value* result,
+                                         Scaleform::GFx::AS3::Object* const* object)
+{
+    result->SetUndefinedUnsafe();
+    result->AssignUnsafe(*object);
+    return result;
+}
+
 // MS2-FUNCTIONAL: creates the requested AS3 instance when traits are valid and stores it as a picked Value.
 // @0x1400155d0
 void FUN_1400155d0(void*, Scaleform::GFx::AS3::Value* result, void* traits)
