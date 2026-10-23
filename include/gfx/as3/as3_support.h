@@ -171,7 +171,9 @@ public:
 };
 
 // The AS3 side of a movie (0x6f8 bytes). Opaque until recovered: the loader side only constructs it and runs ABC
-// blocks; it is used through its ASMovieRootBase part (at offset 0).
+// blocks; it is used through its ASMovieRootBase part (at offset 0). (sfr19) Units that need its members include
+// as3_asvm.h first, which declares it instead.
+#ifndef MS2_SF_GFX_AS3_ASVM_H
 class MovieRoot
 {
 public:
@@ -188,6 +190,7 @@ public:
 private:
     UByte Data[0x6f8];
 };
+#endif
 
 void SF_STDCALL SymbolClassLoader(LoadProcess* p, const TagInfo& tagInfo);
 void SF_STDCALL DoAbcLoader(LoadProcess* p, const TagInfo& tagInfo);

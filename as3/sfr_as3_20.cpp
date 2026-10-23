@@ -7,10 +7,24 @@
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_support.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_moviedef.h"
+#include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_imemanager.h"
+#include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
+#include "ms2/scaleform/include/gfx/gfx_sprite.h"
+#include "ms2/scaleform/include/gfx/gfx_textfield.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_gfx.h"
 #undef GetObject
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -21,6 +35,491 @@ bool IMEManager::GetIMEMoviePath(String& path)
     return path.GetSize() != 0;
 }
 }}}
+
+namespace Scaleform { namespace GFx {
+
+// The host movie interface, as far as the IME manager calls it (Movie is a MovieImpl).
+class Movie
+{
+public:
+    // The value at the dotted AS path ppathToVar. 0x1425700a0
+    bool GetVariable(Value* pval, const char* ppathToVar) const;
+    // A function value calling pfc back. 0x14256e4c0
+    void CreateFunction(Value* pfunc, FunctionHandler* pfc, void* puserData = 0);
+};
+
+// The base does nothing with the root (exe 0x1425431c0, below the unit's tracked functions).
+void ASIMEManager::ASRootMovieCreated(Ptr<Sprite> spr)
+{
+}
+
+namespace AS3 {
+
+// The AS3 part of a display object container, with its AvmDisplayObjContainerBase part at +0x40. Opaque; only
+// the call the IME manager makes.
+class AvmDisplayObjContainer
+{
+public:
+    static AvmDisplayObjContainer* FromBase(AvmDisplayObjContainerBase* p)
+    {
+        return p ? reinterpret_cast<AvmDisplayObjContainer*>(reinterpret_cast<UByte*>(p) - 0x40) : NULL;
+    }
+    void AddChild(DisplayObjectBase* ch);   // 0x1424e6d90
+};
+
+static inline MovieImpl* GetMovieImpl(Movie* pmovie)
+{
+    return reinterpret_cast<MovieImpl*>(pmovie);
+}
+
+static inline MovieRoot* GetAS3Root(Movie* pmovie)
+{
+    return static_cast<MovieRoot*>(GetMovieImpl(pmovie)->pASMovieRoot);
+}
+
+// The focused character of the movie's first focus group.
+static inline Ptr<InteractiveObject> GetFocusedChar(Movie* pmovie)
+{
+    MovieImpl* pmovieImpl = GetMovieImpl(pmovie);
+    return pmovieImpl->FocusGroups[pmovieImpl->FocusGroupIndexes[0]].LastFocused;
+}
+
+static inline bool IsTextField(DisplayObjectBase* pch)
+{
+    return pch->GetType() == CharacterDef::TextField;
+}
+
+static inline TextField* ToTextField(DisplayObjectBase* pch)
+{
+    return reinterpret_cast<TextField*>(pch);
+}
+
+// Calls the IME manager's InitEventCallback when the candidate list movie has loaded: the movie goes on the stage
+// and gets its SendIMEMessage callback. 0x28 bytes; vftable 0x14317fdf0.
+class NotifyLoadInitCandidateList : public NotifyLoadInitC
+{
+public:
+    NotifyLoadInitCandidateList(MovieRoot* proot, Instances::fl_display::Loader* ploader, IMEManager* pimeManager)
+        : pMovieRoot(proot), pLoader(ploader), pIMEManager(pimeManager) {}
+
+    // @0x142545160
+    virtual void OpenEventCallback() {}
+    virtual void InitEventCallback();
+    // @0x142543e60
+    virtual void ErrorEventCallback() {}
+
+    MovieRoot*                              pMovieRoot;     // +0x10
+    SPtr<Instances::fl_display::Loader>     pLoader;        // +0x18
+    Ptr<IMEManager>                         pIMEManager;    // +0x20
+};
+
+// MS2-FUNCTIONAL: register allocation and local order (the exe keeps two unused host values)
+// @0x1425445d0
+void NotifyLoadInitCandidateList::InitEventCallback()
+{
+    if (!pMovieRoot)
+        return;
+    GFx::Value unused1, unused2;
+    Value loaderInfo, content;
+    Multiname loaderInfoName(pMovieRoot->pAVM->GetPublicNamespace(),
+                             Value(pMovieRoot->BuiltinsMgr.CreateString("contentLoaderInfo")));
+    if (!pLoader->GetProperty(loaderInfoName, loaderInfo) || !pIMEManager->CandListVal.IsNull())
+        return;
+    Multiname contentName(pMovieRoot->pAVM->GetPublicNamespace(),
+                          Value(pMovieRoot->BuiltinsMgr.CreateString("content")));
+    if (!loaderInfo.GetObject()->GetProperty(contentName, content))
+        return;
+    pMovieRoot->ASValue2GFxValue(content, &pIMEManager->CandListVal);
+    if (pIMEManager->CandListVal.IsNull())
+        return;
+
+    GFx::Value func;
+    pIMEManager->pMovie->CreateFunction(&func, pIMEManager->CustomFuncCandList);
+    pIMEManager->CandListVal.SetMember("SendIMEMessage", func);
+    pIMEManager->CandidateListState = 2;
+    GFx::DisplayObject* pstage = pMovieRoot->pStage;
+    AvmDisplayObjContainer* pstageAvm = pstage
+        ? AvmDisplayObjContainer::FromBase(pstage->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
+    pstageAvm->AddChild(pLoader->pDispObj);
+    pIMEManager->OnOpenCandidateList();
+    pIMEManager->CandListVal.Invoke("Init", NULL, NULL, 0);
+}
+
+// MS2-FUNCTIONAL: the base constructor and member stores in another order
+// @0x142542bd0
+IMEManager::IMEManager()
+    : UnsupportedIMEWindowsFlag(3), CandidateListState(0)
+{
+    CandListVal.SetNull();
+}
+
+// MS2-FUNCTIONAL: register allocation only
+// @0x142542da0
+IMEManager::~IMEManager()
+{
+}
+
+// @0x1425451f0
+void IMEManager::ShutDown()
+{
+    CandListVal.SetUndefined();
+}
+
+// The root sprite gets the SendLangBarMessage callback.
+// MS2-FUNCTIONAL: the pending exception goes through OutputAndIgnoreException (the exe inlines it)
+// @0x1425431d0
+void IMEManager::ASRootMovieCreated(Ptr<Sprite> spr)
+{
+    if (!pMovie)
+        return;
+    MovieRoot* proot = GetAS3Root(pMovie);
+    ASVM* pvm = proot->pAVM;
+    GFx::Value func;
+    pMovie->CreateFunction(&func, CustomFuncLanguageBar);
+    Value asFunc;
+    proot->GFxValue2ASValue(func, &asFunc);
+    AvmDisplayObj* pavm = ToAvmDisplayObj(reinterpret_cast<DisplayObjectBase*>(spr.GetPtr()));
+    if (!pavm)
+        return;
+    Multiname name(proot->pAVM->GetPublicNamespace(), Value(proot->BuiltinsMgr.CreateString("SendLangBarMessage")));
+    Instances::fl_display::DisplayObject* pobj = pavm->GetAS3Obj();
+    if (pobj && !pobj->SetProperty(name, asFunc) && pvm->IsException())
+        pvm->OutputAndIgnoreException();
+}
+
+void IMEManager::IMECommand(Movie* pmovie, const char* pcommand, const char* pparams)
+{
+}
+
+void IMEManager::BroadcastIMEConversion(const wchar_t* pstr)
+{
+}
+
+void IMEManager::BroadcastSwitchLanguage(const char* pstr)
+{
+    DispatchEvent(pstr, "SetCurrentLanguage", "StatusWindow");
+}
+
+void IMEManager::BroadcastSetSupportedLanguages(const char* pstr)
+{
+    DispatchEvent(pstr, "SetSupportedLanguages", "LangBar");
+}
+
+void IMEManager::BroadcastSetSupportedIMEs(const char* pstr)
+{
+    DispatchEvent(pstr, "SetSupportedIMENames", "LangBar");
+}
+
+void IMEManager::BroadcastSetCurrentInputLanguage(const char* pstr)
+{
+    DispatchEvent(pstr, "SetCurrentInputLanguage", "LangBar");
+}
+
+void IMEManager::BroadcastSetIMEName(const char* pstr)
+{
+    DispatchEvent(pstr, "SetIMEName", "LangBar");
+}
+
+void IMEManager::BroadcastSetConversionStatus(const char* pstr)
+{
+    DispatchEvent(pstr, "SetConversionStatus", "StatusWindow");
+}
+
+void IMEManager::BroadcastRemoveStatusWindow(const char* pstr)
+{
+    DispatchEvent(pstr, "RemoveStatusWindow", "StatusWindow");
+}
+
+void IMEManager::BroadcastDisplayStatusWindow(const char* pstr)
+{
+    DispatchEvent(pstr, "DisplayStatusWindow", "StatusWindow");
+}
+
+// Sends an IMEEventEx of type messageType carrying message to the language bar or the status window.
+// MS2-FUNCTIONAL: register allocation and local order (the exe keeps an unused value and argument array)
+// @0x142543b80
+void IMEManager::DispatchEvent(const char* message, const char* messageType, const char* type)
+{
+    if (!pMovie)
+        return;
+    MovieRoot* proot = GetAS3Root(pMovie);
+    Value unused;
+    ArrayLH<Value> unusedArgs;
+    AvmDisplayObj* pctx = NULL;
+    if (pLangContext2 && strcmp(type, "LangBar") == 0)
+        pctx = ToAvmDisplayObj(pLangContext2);
+    else if (pStatusContext2 && strcmp(type, "StatusWindow") == 0)
+        pctx = ToAvmDisplayObj(pStatusContext2);
+    if (!proot || !pctx)
+        return;
+    Instances::fl_display::DisplayObject* pdispatcher = pctx->GetAS3Obj();
+    ASString evtType = proot->BuiltinsMgr.CreateString(messageType);
+    if (!pdispatcher->HasEventHandler(evtType, false))
+        return;
+    SPtr<Instances::fl_gfx::IMEEventEx> pevt;
+    Value args[3] = { Value(evtType), Value(true), Value(true) };
+    ASVM* pvm = proot->pAVM;
+    pvm->ConstructInstance(pevt, pvm->GetClass(StringDataPtr("scaleform.gfx.IMEEventEx")), 3, args);
+    pevt->Target = pdispatcher;
+    pevt->message = message;
+    pdispatcher->DispatchEventObject(pevt, pdispatcher->pDispObj);
+}
+
+// MS2-FUNCTIONAL: register allocation only
+// @0x142543e70
+DisplayObject* IMEManager::GetCandidateListSprite() const
+{
+    if (CandListVal.IsNull() || !pMovie)
+        return NULL;
+    DisplayObject* psprite = NULL;
+    Value v;
+    GetAS3Root(pMovie)->GFxValue2ASValue(CandListVal, &v);
+    if (v.IsObject())
+    {
+        const Traits& tr = v.GetObject()->GetTraits();
+        if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
+                (unsigned)(Traits_DisplayObject_End - Traits_DisplayObject_Begin) &&
+            tr.IsInstanceTraits())
+            psprite = static_cast<Instances::fl_display::DisplayObject*>(v.GetObject())->pDispObj;
+    }
+    return psprite;
+}
+
+// The candidate list movie has set _global.gfx_ime_candidate_list_state.
+// MS2-FUNCTIONAL: register allocation only
+// @0x142544cf0
+bool IMEManager::IsCandidateListLoaded() const
+{
+    if (!pMovie)
+        return false;
+    GFx::Value v;
+    if (!pMovie->GetVariable(&v, "_global.gfx_ime_candidate_list_state"))
+        v.SetNumber(0);
+    return true;
+}
+
+// MS2-FUNCTIONAL: register allocation only
+// @0x142544e10
+bool IMEManager::IsTextFieldFocused(InteractiveObject* pfocusedChar) const
+{
+    if (!pMovie)
+        return false;
+    Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
+    return pfocused && IsTextField(pfocused) && ToTextField(pfocused)->IsIMEEnabled() &&
+           pfocused.GetPtr() == pfocusedChar;
+}
+
+// MS2-FUNCTIONAL: register allocation only
+// @0x142544ef0
+bool IMEManager::IsTextFieldFocused() const
+{
+    if (!pMovie)
+        return false;
+    Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
+    return IsTextFieldFocused(pfocused);
+}
+
+// Calls the candidate list's method at the dotted path pmethodName (the object path walked member by member).
+// MS2-FUNCTIONAL: register allocation and local order
+// @0x142544a00
+bool IMEManager::Invoke(const char* pmethodName, GFx::Value* presult, const GFx::Value* pargs, unsigned numArgs)
+{
+    if (CandListVal.IsUndefined() || CandListVal.IsNull())
+        return false;
+    int len = (int)strlen(pmethodName);
+    char* pbuf = (char*)SF_ALLOC(len + 1, StatIME_Mem);
+    char* pcontext = NULL;
+    memcpy(pbuf, pmethodName, len);
+    pbuf[len] = 0;
+    char* ptoken = strtok_s(pbuf, ".", &pcontext);
+    GFx::Value obj = CandListVal;
+    GFx::Value member = CandListVal;
+    char* pname = NULL;
+    while (!obj.IsNull() && ptoken)
+    {
+        obj = member;
+        obj.GetMember(ptoken, &member);
+        pname = ptoken;
+        ptoken = strtok_s(NULL, ".", &pcontext);
+    }
+    if (!obj.IsNull())
+        obj.Invoke(pname, presult, pargs, numArgs);
+    SF_FREE(pbuf);
+    return false;
+}
+
+// Clicks on the IME movies keep the focus where it is; a text field taking the focus gives the candidate list
+// its font, and the IME follows whether the new focus takes IME input.
+// MS2-FUNCTIONAL: register allocation and the order of the name/multiname temporaries
+// @0x142543f90
+InteractiveObject* IMEManager::HandleFocus(Movie* pmovie, InteractiveObject* poldFocus, InteractiveObject* pnewFocus,
+                                           InteractiveObject* ptopMostItem)
+{
+    IMEManagerBase* pime = pimeManager;
+    if (!pime || !pime->IsMovieActive(pmovie))
+        return pnewFocus;
+    if (ptopMostItem)
+    {
+        String path;
+        ptopMostItem->GetAbsolutePath(&path);
+        if (IsCandidateList(path.ToCStr()))
+            return poldFocus;
+        Value unused;
+        for (InteractiveObject* pch = ptopMostItem; pch; pch = pch->GetParent())
+        {
+            if (!pch->IsSprite())
+                continue;
+            AvmDisplayObj* pavm = ToAvmDisplayObj(pch);
+            Instances::fl_display::DisplayObject* pobj = pavm->GetAS3Obj();
+            Value result;
+            if (!pobj)
+                continue;
+            if (pobj->GetProperty(Multiname(pavm->GetAVM()->GetPublicNamespace(),
+                                            Value(pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsCandidateList"))),
+                                  result) ||
+                pobj->GetProperty(Multiname(pavm->GetAVM()->GetPublicNamespace(),
+                                            Value(pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsStatusWindow"))),
+                                  result) ||
+                pobj->GetProperty(Multiname(pavm->GetAVM()->GetPublicNamespace(),
+                                            Value(pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsLangBar"))),
+                                  result))
+                return poldFocus;
+        }
+    }
+    if (pnewFocus && IsTextField(pnewFocus))
+    {
+        if (DisplayObject* plist = GetCandidateListSprite())
+            ToTextField(pnewFocus)->SetCandidateListFont(plist);
+    }
+    if (poldFocus && IsTextField(poldFocus))
+        pime->DoFinalize();
+    pime->EnableIME(pnewFocus && IsTextField(pnewFocus) && ToTextField(pnewFocus)->IsIMEEnabled());
+    return pnewFocus;
+}
+
+// MS2-FUNCTIONAL: register allocation only
+// @0x142545060
+void IMEManager::OnOpenCandidateList()
+{
+    if (!pMovie)
+        return;
+    TextField* ptextField = pTextField;
+    if (!ptextField)
+    {
+        Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
+        if (!pfocused || !IsTextField(pfocused))
+            return;
+        ptextField = ToTextField(pfocused);
+    }
+    if (DisplayObject* plist = GetCandidateListSprite())
+        ptextField->SetCandidateListFont(plist);
+}
+
+// Starts loading the candidate list movie (CandidateSwfPath, next to the main movie): a Loader and its request go
+// through the load queue, and NotifyLoadInitCandidateList finishes once it is in. With bCheckIMEExists the file
+// must exist first.
+// MS2-FUNCTIONAL: register allocation, the state/URL temporaries and the notify object's reference handling
+// @0x142543440
+bool IMEManager::AcquireCandidateList()
+{
+    if (!pMovie)
+        return false;
+    MovieRoot* proot = GetAS3Root(pMovie);
+    Value loaderVal, requestVal, unused;
+    if (CandidateListState != 0)
+        return true;
+    if (pimeManager && pimeManager->bCheckIMEExists)
+    {
+        Ptr<FileOpenerBase> pfileOpener =
+            *static_cast<FileOpenerBase*>(pimeManager->pLoader->GetStateAddRef(State::State_FileOpener));
+        Ptr<URLBuilder> purlBuilder =
+            *static_cast<URLBuilder*>(pimeManager->pLoader->GetStateAddRef(State::State_URLBuilder));
+        if (!purlBuilder)
+            purlBuilder = *SF_NEW URLBuilder();
+        if (pfileOpener)
+        {
+            String path;
+            path = GetMovieImpl(pMovie)->AsMovieInterface()->GetMovieDef()->GetFileURL();
+            URLBuilder::ExtractFilePath(&path);
+            if (URLBuilder::IsPathAbsolute(path.ToCStr()))
+            {
+                URLBuilder::LocationInfo loc(URLBuilder::File_Regular, CandidateSwfPath, path);
+                String url;
+                if (purlBuilder)
+                    purlBuilder->BuildURL(&url, loc);
+                else
+                    URLBuilder::DefaultBuildURL(&url, loc);
+                if (pfileOpener->GetFileModifyTime(url.ToCStr()) == -1)
+                    return false;
+            }
+        }
+    }
+    CandidateListState = 1;
+    ASVM* pvm = proot->pAVM;
+    pvm->Construct("flash.display.Loader", loaderVal, 0, NULL, true);
+    if (pvm->IsException() || loaderVal.IsUndefined() || (loaderVal.IsObject() && !loaderVal.GetObject()))
+        return false;
+    pvm->Construct("flash.net.URLRequest", requestVal, 0, NULL, true);
+    if (pvm->IsException() || requestVal.IsUndefined() || (requestVal.IsObject() && !requestVal.GetObject()))
+        return false;
+    Instances::fl_display::Loader* ploader = static_cast<Instances::fl_display::Loader*>(loaderVal.GetObject());
+    Instances::fl_net::URLRequest* prequest = static_cast<Instances::fl_net::URLRequest*>(requestVal.GetObject());
+    ploader->InitInstance(false);
+    prequest->urlSet(unused, proot->BuiltinsMgr.CreateString(CandidateSwfPath));
+    LoadQueueEntry* pentry = SF_HEAP_NEW(proot->GetMovieImpl()->GetMovieHeap())
+        LoadQueueEntry(prequest, ploader, GFx::LoadQueueEntry::LM_None);
+    Ptr<NotifyLoadInitC> pnotify = *SF_NEW NotifyLoadInitCandidateList(proot, ploader, this);
+    pentry->NotifyLoadInitCInterface = pnotify;
+    proot->GetMovieImpl()->AddLoadQueueEntry(pentry);
+    return true;
+}
+
+// @0x1425451d0
+void IMEManager::SetIMEMoviePath(const char* pcandidateSwfPath)
+{
+    CandidateSwfPath = pcandidateSwfPath;
+}
+
+void IMEManager::SetActiveMovie(Movie* pmovie)
+{
+    pMovie = pmovie;
+}
+
+void IMEManager::SetIMEManager(IMEManagerBase* pimeMgr)
+{
+    pimeManager = pimeMgr;
+}
+
+bool IMEManager::Init(Log* plog)
+{
+    return true;
+}
+
+bool IMEManager::SetCompositionString(const char* pcompString)
+{
+    return false;
+}
+
+bool IMEManager::IsCandidateList(const char* ppath)
+{
+    return false;
+}
+
+bool IMEManager::IsStatusWindow(const char* ppath)
+{
+    return false;
+}
+
+bool IMEManager::IsLangBar(const char* ppath)
+{
+    return false;
+}
+
+void IMEManager::OnShutdown()
+{
+}
+
+}}} // namespace Scaleform::GFx::AS3
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
