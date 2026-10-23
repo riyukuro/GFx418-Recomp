@@ -38,6 +38,8 @@ class RefCountCollector : public RefCountBase<RefCountCollector<Stat>, Stat>
         BaseType*& operator[](UPInt i)   { return Pages[i >> 10][i & 0x3ff]; }
         // Grows by whole pages or shrinks (exe 0x142592860 for Stat 0x143).
         void       Resize(UPInt newSize);
+        // Frees the pages and the page table (exe 0x1429343f0 for Stat 0x143).
+        void       ClearAndRelease();
     };
 
 public:
@@ -45,7 +47,21 @@ public:
     UPInt     FirstFreeRootIndex; // +0x38
     Root      ListRoot;           // +0x40
     BaseType* pLastPtr;           // +0x60 work list insertion point
-    UByte     Flags;              // +0x68
+    UByte     Flags;              // +0x68 bit 0: a collection is running
+
+    // Counters of one collection. 8 bytes.
+    struct Stats
+    {
+        unsigned RootsNumber;
+        unsigned RootsFreedTotal;
+
+        Stats() : RootsNumber(0), RootsFreedTotal(0) {}
+    };
+
+    unsigned GetRootsCount() const { return (unsigned)Roots.GetSize(); }
+    bool     IsCollecting() const  { return (Flags & 1) != 0; }
+    // Frees the unreachable cycles among the buffered roots (exe 0x142592200 for Stat 0x143).
+    bool     Collect(Stats* pstats = 0);
 
     // Takes a buffered root out of the root buffer: the last slot is cut off, any other one goes to the free list.
     // Inline as in the exe, which also has an out-of-line copy (0x1425927d0 for Stat 0x143).
@@ -94,6 +110,23 @@ void RefCountCollector<Stat>::RemoveFromRoots(BaseType* root)
         root->ClearBuffered();
     }
 }
+
+// Collector of an AS2 movie: collects when the root buffer outgrows its limit or after a number of frames.
+class ASRefCountCollector : public RefCountCollector<StatMV_ActionScript_Mem>
+{
+public:
+    unsigned FrameCnt;               // +0x70 frames since the last collection
+    unsigned MaxRootCount;           // +0x74 current root limit
+    unsigned PeakRootCount;          // +0x78
+    unsigned LastRootCount;          // +0x7c roots before the last collection
+    UByte    Unrecovered_80[0x10];   // +0x80
+    unsigned PresetMaxRootCount;     // +0x90 configured root limit
+
+    // A full collection now (exe 0x142945c60).
+    void ForceCollect();
+    // A full collection that also frees an emptied root buffer and resets the limits (exe 0x142945d00).
+    void ForceEmergencyCollect();
+};
 
 }}} // namespace Scaleform::GFx::AS2
 

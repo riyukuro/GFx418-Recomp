@@ -86,6 +86,9 @@
 // MS2-RANGE: 0x142948660-0x1429487d4 .text$mn
 // MS2-RANGE: 0x142954520-0x14295458a .text$mn
 // MS2-RANGE: 0x1429485e0-0x142948652 .text$mn
+// MS2-RANGE: 0x142944cb0-0x142945002 .text$mn
+// MS2-RANGE: 0x142945c60-0x142945d69 .text$mn
+// MS2-RANGE: 0x14294a0b0-0x14294a0eb .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1412,6 +1415,154 @@ bool Object::DeleteMember(ASStringContext* psc, const ASString& name)
         psc->InvalidateOptAdvanceList();
     MemberHash_Remove(phash, name);
     return true;
+}
+
+// The next separator of a target path: '/' or a single '.' (".." belongs to the name), 0 at its end.
+static SF_FORCEINLINE const char* FindPathSeparator(const char* pstr)
+{
+    for (const char* p = pstr; *p; p++)
+    {
+        if (*p == '.')
+        {
+            if (p[1] != '.')
+                return p;
+            p++;
+        }
+        else if (*p == '/')
+            return p;
+    }
+    return 0;
+}
+
+static SF_FORCEINLINE MovieRoot* GetAS2Root_SC(const ASStringContext& sc)
+{
+    return static_cast<MovieRoot*>(sc.pContext->pMovieRoot->pASMovieRoot);
+}
+
+// Walks a target path one name at a time: a leading "/" starts at the top parent.
+// MS2-FUNCTIONAL cl swaps rbx/rdi between the name start and the separator scan; same code otherwise
+// @0x142944cb0
+InteractiveObject* Environment::FindTarget(const ASString& path, unsigned flags) const
+{
+    if (path.GetSize() == 0)
+        return IsInvalidTarget ? 0 : Target;
+
+    const char*        p    = path.ToCStr();
+    InteractiveObject* env  = Target;
+    ASString           name = GetBuiltin(ASBuiltin_empty_);
+    bool               first = true;
+    if (*p == '/')
+    {
+        env = env->GetTopParent();
+        p++;
+    }
+    for (;;)
+    {
+        const char* pnext = FindPathSeparator(p);
+        if (pnext == p)
+        {
+            if (!(flags & 4))
+                LogError("Invalid path '%s'", path.ToCStr());
+            break;
+        }
+        ASStringManager* pmgr = GetAS2Root_SC(StringContext)->BuiltinsMgr.pStringManager;
+        name = ASString(pnext ? pmgr->CreateStringNode(p, pnext - p) : pmgr->CreateStringNode(p));
+        if (name.GetSize() != 0)
+        {
+            AvmCharacter* pavm = env ? ToAvmCharacter(env) : 0;
+            env                = pavm->GetRelativeTarget(name, first);
+        }
+        if (!env || !pnext)
+            break;
+        p     = pnext + 1;
+        first = false;
+    }
+    return env;
+}
+
+// The movie loaded as _level<level>, 0 if none.
+static SF_FORCEINLINE InteractiveObject* GetLevelMovie(const MovieImpl* pmovieImpl, int level)
+{
+    for (unsigned i = 0; i < pmovieImpl->MovieLevelsSize; i++)
+    {
+        if (pmovieImpl->pMovieLevels[i].Level == level)
+            return pmovieImpl->pMovieLevels[i].pSprite;
+    }
+    return 0;
+}
+
+// A target path resolved from _level0, 0 without a _level0 or for an empty path.
+// @0x142944e90
+InteractiveObject* MovieRoot_FindTarget(const MovieRoot* proot, const ASString& path)
+{
+    if (!GetLevelMovie(proot->pMovieImpl, 0) || path.GetSize() == 0)
+        return 0;
+    AvmDisplayObjBase* pavm = GetLevelMovie(proot->pMovieImpl, 0)->GetAvmObjImpl();
+    return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment()->FindTarget(path);
+}
+
+// Out-of-line copy of the inline Environment::GetCollector.
+// @0x14294a0b0
+SF_NOINLINE ASRefCountCollector* Environment_GetCollector(Environment* penv)
+{
+    InteractiveObject* ptarget = penv->GetTarget();
+    if (ptarget)
+        return ToAvmCharacter(ptarget)->GetAS2Root()->MemContext->ASGC;
+    return 0;
+}
+
+// The character a value names (a character, or a target path string), 0 if none.
+// @0x142944f40
+InteractiveObject* Environment::FindTargetByValue(const Value& val)
+{
+    if (val.IsCharacter())
+    {
+        if (this && val.V.pCharHandle)
+        {
+            DisplayObject* pdisp = val.V.pCharHandle->ResolveCharacter(GetTarget()->GetMovieImpl());
+            if (pdisp)
+                return pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        }
+        return 0;
+    }
+    if (val.IsString())
+        return FindTarget(val.ToString(this), 0);
+    LogScriptError("Invalid movie clip path; neither string nor object");
+    return 0;
+}
+
+// @0x142945c60
+void ASRefCountCollector::ForceCollect()
+{
+    unsigned rootCount = GetRootsCount();
+    Stats    stats;
+    Collect(&stats);
+    PeakRootCount = Alg::Max(PeakRootCount, rootCount);
+    LastRootCount = rootCount;
+    FrameCnt      = 0;
+}
+
+// The movie's collector runs now; the generation argument is not used by AS2.
+// @0x142945cb0
+void MovieRoot_ForceCollect(MovieRoot* proot, unsigned)
+{
+    proot->GetASGC()->ForceCollect();
+}
+
+// @0x142945d00
+void ASRefCountCollector::ForceEmergencyCollect()
+{
+    unsigned rootCount = GetRootsCount();
+    Stats    stats;
+    Collect(&stats);
+    FrameCnt      = 0;
+    PeakRootCount = Alg::Max(PeakRootCount, rootCount);
+    LastRootCount = rootCount;
+    // An emptied root buffer gives its pages back.
+    if (!IsCollecting() && Roots.GetSize() == 0)
+        Roots.ClearAndRelease();
+    MaxRootCount  = PresetMaxRootCount;
+    PeakRootCount = 0;
 }
 
 }}} // namespace Scaleform::GFx::AS2

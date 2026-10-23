@@ -230,6 +230,9 @@ public:
     LocalFrame*        GetTopLocalFrame(int off = 0) const;
     // The character a value names (a character, or a target path string), 0 if none (exe 0x142944f40).
     InteractiveObject* FindTargetByValue(const Value& val);
+    // The character a target path names ("/a/b", "a.b", "../a"; empty: the target), 0 if none; flag 4 silences
+    // the error (exe 0x142944cb0).
+    InteractiveObject* FindTarget(const ASString& path, unsigned flags = 0) const;
     // Arguments of FindVariable: the name to resolve and where the value goes; the optional outputs
     // (owner, new target, flags) stay null for a plain lookup. 0x30 bytes.
     struct GetVarParams

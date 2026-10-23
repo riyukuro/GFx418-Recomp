@@ -77,7 +77,8 @@ public:
     InteractiveObject* pMainMovie;             // +0x50 _level0
     struct LevelInfo { int Level; InteractiveObject* pSprite; };   // (sfr_gfx_06)
     LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
-    void*            Unrecovered_60[2];        // +0x60
+    UPInt            MovieLevelsSize;          // +0x60 MovieLevels size
+    void*            Unrecovered_68;           // +0x68
     MovieDefRootNodeLinks RootMovieDefNodes;   // +0x70 the root nodes of the loaded movies (sfr_gfx_06d)
     StateBagImpl*    pStateBag;                // +0x80 Ptr<StateBagImpl>: the movie's own states (sfr_video_01)
     Render::TreeNode* pRenderRoot;             // +0x88 Ptr<TreeRoot> (sfr_gfx_06)
