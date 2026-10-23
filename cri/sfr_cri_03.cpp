@@ -1430,30 +1430,60 @@ void FUN_140046798(void* object)
 
 // MS2-FUNCTIONAL: call the stream-joint object's second virtual operation.
 // @0x1400467a0
-void FUN_1400467a0(void* object)
+void FUN_1400467a0(void* object, CriSint32 operation = 0, CriSint32 limit = 0, void* output = NULL)
 {
-    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x10)))(object);
+    if (object)
+    {
+        void* target = *(void**)((CriUint8*)*(void**)object + 0x10);
+        if (target)
+        {
+            typedef void (*Callback)(void*, CriSint32, CriSint32, void*);
+            ((Callback)target)(object, operation, limit, output);
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's third virtual operation.
 // @0x1400467a8
-void FUN_1400467a8(void* object)
+void FUN_1400467a8(void* object, CriSint32 operation = 0, void* chunk = NULL)
 {
-    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x18)))(object);
+    if (object)
+    {
+        void* target = *(void**)((CriUint8*)*(void**)object + 0x18);
+        if (target)
+        {
+            typedef void (*Callback)(void*, CriSint32, void*);
+            ((Callback)target)(object, operation, chunk);
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's fourth virtual operation.
 // @0x1400467b0
-void FUN_1400467b0(void* object)
+void FUN_1400467b0(void* object, CriSint32 operation = 0, void* chunk = NULL)
 {
-    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x20)))(object);
+    if (object)
+    {
+        void* target = *(void**)((CriUint8*)*(void**)object + 0x20);
+        if (target)
+        {
+            typedef void (*Callback)(void*, CriSint32, void*);
+            ((Callback)target)(object, operation, chunk);
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's fifth virtual operation.
 // @0x1400467b8
-void FUN_1400467b8(void* object)
+CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0)
 {
-    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x28)))(object);
+    if (!object)
+        return 0;
+    void* target = *(void**)((CriUint8*)*(void**)object + 0x28);
+    if (!target)
+        return 0;
+    typedef CriSint32 (*Callback)(void*, CriSint32);
+    return ((Callback)target)(object, query);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's indexed range operation with default bounds.
