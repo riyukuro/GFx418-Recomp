@@ -93,6 +93,10 @@ public:
     CheckResult Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr);
     // (appended, sfr16) Vector.splice: argv inserted at pos, unchecked. Value 0x142560d70
     void Insert(UPInt pos, unsigned argc, const Value* argv);
+    // (appended, sfr19) Vector.push: each argv coerced to tr and appended; stops at the first that cannot be
+    // (TypeError 1034). SInt32 0x1425616b0, UInt32 0x1425618d0, Number 0x142561af0, String 0x142561d20,
+    // Value 0x142561f40
+    void PushBack(unsigned argc, const Value* argv, const ClassTraits::Traits& tr);
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v);

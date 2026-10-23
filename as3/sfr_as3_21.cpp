@@ -2678,6 +2678,55 @@ bool Reader::ReadTraits(TraitTable& t, HasTraits::ObjectTraits& obj_traits)
 
 }}}} // namespace Scaleform::GFx::AS3::Abc
 
+// ---------------------------------------------------------------- Vector.push (sfr19)
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+#define MS2_VEC_PUSHBACK(T)                                                                                 \
+template <>                                                                                                 \
+void VectorBase<T>::PushBack(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)               \
+{                                                                                                           \
+    CheckFixed();                                                                                           \
+    if (Fixed)                                                                                              \
+        return;                                                                                             \
+    for (unsigned i = 0; i < argc; ++i)                                                                     \
+    {                                                                                                       \
+        Value r;                                                                                            \
+        if (!CheckCoerce(tr, argv[i], r))                                                                   \
+            break;                                                                                          \
+        PushBackUnsafe(r);                                                                                  \
+    }                                                                                                       \
+}
+
+// @0x1425616b0
+MS2_VEC_PUSHBACK(SInt32)
+// @0x1425618d0
+MS2_VEC_PUSHBACK(UInt32)
+// @0x142561af0
+MS2_VEC_PUSHBACK(Value::Number)
+// @0x142561d20
+MS2_VEC_PUSHBACK(Ptr<ASStringNode>)
+
+// @0x142561f40
+template <>
+void VectorBase<Value>::PushBack(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed)
+        return;
+    for (unsigned i = 0; i < argc; ++i)
+    {
+        Value r;
+        if (!CheckCoerce(tr, argv[i], r))
+            break;
+        V.PushBack(Value(r));
+    }
+}
+
+#undef MS2_VEC_PUSHBACK
+
+}}} // namespace Scaleform::GFx::AS3
+
 // ---------------------------------------------------------------- Vector coercion (sfr19)
 
 // Traits::GetConstructor, out of line in the exe (the InstanceTraits copy).

@@ -306,17 +306,6 @@ bool IsValidValueKind(UInt8 vk)
 // ArrayBase::Every (sfr_as3_21): callback(element, index, owner) on thisObject while it returns true
 bool FUN_14255bbd0(const Scaleform::GFx::AS3::ArrayBase& v, const Scaleform::GFx::AS3::Value& callback,
     const Scaleform::GFx::AS3::Value& thisObject, Scaleform::GFx::AS3::Instances::fl::Object* owner);
-// VectorBase<T>::PushBack(argc, argv, element ClassTraits) (sfr_as3_21)
-void FUN_142561d20(Scaleform::GFx::AS3::VectorBase<Scaleform::Ptr<Scaleform::GFx::ASStringNode> >& v, unsigned argc,
-    const Scaleform::GFx::AS3::Value* argv, const Scaleform::GFx::AS3::ClassTraits::Traits& tr);
-void FUN_142561af0(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value::Number>& v, unsigned argc,
-    const Scaleform::GFx::AS3::Value* argv, const Scaleform::GFx::AS3::ClassTraits::Traits& tr);
-void FUN_1425616b0(Scaleform::GFx::AS3::VectorBase<Scaleform::SInt32>& v, unsigned argc,
-    const Scaleform::GFx::AS3::Value* argv, const Scaleform::GFx::AS3::ClassTraits::Traits& tr);
-void FUN_142561f40(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value>& v, unsigned argc,
-    const Scaleform::GFx::AS3::Value* argv, const Scaleform::GFx::AS3::ClassTraits::Traits& tr);
-void FUN_1425618d0(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, unsigned argc,
-    const Scaleform::GFx::AS3::Value* argv, const Scaleform::GFx::AS3::ClassTraits::Traits& tr);
 // VectorBase<T>::Concat/Filter/Map member templates (this unit, below the natives)
 void FUN_142547960(Scaleform::GFx::AS3::VectorBase<Scaleform::Ptr<Scaleform::GFx::ASStringNode> >& v, Scaleform::GFx::AS3::Value& result,
     unsigned argc, const Scaleform::GFx::AS3::Value* argv, Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& owner);
@@ -727,21 +716,21 @@ void Vector_uint::AS3pop(UInt32& result)
 // @0x142558120
 void Vector_String::AS3push(Value& result, unsigned argc, const Value* argv)
 {
-    FUN_142561d20(V, argc, argv, GetVM().GetClassTraitsString());
+    V.PushBack(argc, argv, GetVM().GetClassTraitsString());
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
 // @0x1425581a0
 void Vector_double::AS3push(Value& result, unsigned argc, const Value* argv)
 {
-    FUN_142561af0(V, argc, argv, GetVM().GetClassTraitsNumber());
+    V.PushBack(argc, argv, GetVM().GetClassTraitsNumber());
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
 // @0x142558220
 void Vector_int::AS3push(Value& result, unsigned argc, const Value* argv)
 {
-    FUN_1425616b0(V, argc, argv, GetVM().GetClassTraitsSInt());
+    V.PushBack(argc, argv, GetVM().GetClassTraitsSInt());
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
@@ -749,14 +738,14 @@ void Vector_int::AS3push(Value& result, unsigned argc, const Value* argv)
 // @0x1425582a0
 void Vector_object::AS3push(Value& result, unsigned argc, const Value* argv)
 {
-    FUN_142561f40(V, argc, argv, GetEnclosedClassTraits(*this));
+    V.PushBack(argc, argv, GetEnclosedClassTraits(*this));
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
 // @0x142558340
 void Vector_uint::AS3push(Value& result, unsigned argc, const Value* argv)
 {
-    FUN_1425618d0(V, argc, argv, GetVM().GetClassTraitsUInt());
+    V.PushBack(argc, argv, GetVM().GetClassTraitsUInt());
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
