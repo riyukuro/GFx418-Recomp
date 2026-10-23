@@ -277,6 +277,8 @@ public:
         Array<Value>           FunctionParams; // +0x58
         unsigned               SessionId;      // +0x70 the DoActionsForSession batch it belongs to
 
+        // (appended for sfr_as2_06) An empty entry (inline in sfr_as2_06).
+        inline ActionEntry();
         // Exe 0x142925190, defined in sfr_as2_04.
         ~ActionEntry();
 
@@ -308,6 +310,16 @@ public:
         void AddToFreeList(ActionEntry* pentry);
         // Drops every queued action (exe 0x142934390).
         void Clear();
+
+        // (appended for sfr_as2_06)
+        void*       Field_a8; // +0xa8 (not identified yet)
+        MemoryHeap* pHeap;    // +0xb0 where new entries are allocated
+
+        // A recycled entry, or a new one from the heap (inline in sfr_as2_06).
+        inline ActionEntry* GetNewEntry();
+        // A recycled or new entry linked in after the level's insert point, for the current session (Field_a0)
+        // (exe 0x1429621f0); 0 if out of memory.
+        ActionEntry* InsertEntry(ActionPriority::Priority prio);
     };
 
     // Walks the queue in priority order; entries handed out go back to the free list.

@@ -119,6 +119,8 @@
 // MS2-RANGE: 0x14297dd70-0x14297df30 .text$mn
 // MS2-RANGE: 0x142968f00-0x142968f90 .text$mn
 // MS2-RANGE: 0x142966370-0x1429663d0 .text$mn
+// MS2-RANGE: 0x1429621f0-0x142962310 .text$mn
+// MS2-RANGE: 0x1429620d0-0x1429621f0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1234,6 +1236,66 @@ void Environment::Reset()
     FuncCallNestingLevel = 0;
     TryBlocks_Resize(&TryBlocks, 0);
     ThrowingValue.SetUndefined();
+}
+
+inline MovieRoot::ActionEntry::ActionEntry()
+{
+    pNextEntry    = 0;
+    Type          = Entry_None;
+    pActionBuffer = 0;
+    SessionId     = 0;
+}
+
+inline MovieRoot::ActionEntry* MovieRoot::ActionQueueType::GetNewEntry()
+{
+    ActionEntry* pentry;
+    if (pFreeEntry)
+    {
+        pentry             = pFreeEntry;
+        pFreeEntry         = pentry->pNextEntry;
+        pentry->pNextEntry = 0;
+        --FreeEntriesCount;
+    }
+    else
+    {
+        pentry = (ActionEntry*)SF_HEAP_ALLOC(pHeap, sizeof(ActionEntry), 0);
+        if (!pentry)
+            return 0;
+        ::new (pentry) ActionEntry;
+    }
+    return pentry;
+}
+
+// MS2-FUNCTIONAL the exe keeps the level's address in a register (cl indexes it; the inlined copy matches)
+// @0x1429621f0
+MovieRoot::ActionEntry* MovieRoot::ActionQueueType::InsertEntry(ActionPriority::Priority prio)
+{
+    ActionEntry* pentry = GetNewEntry();
+    if (!pentry)
+        return 0;
+    Level& level = Levels[prio];
+    if (!level.pInsertEntry)
+    {
+        pentry->pNextEntry = level.pActionRoot;
+        level.pActionRoot  = pentry;
+    }
+    else
+    {
+        pentry->pNextEntry              = level.pInsertEntry->pNextEntry;
+        level.pInsertEntry->pNextEntry = pentry;
+    }
+    level.pInsertEntry = pentry;
+    if (!pentry->pNextEntry)
+        level.pLastEntry = pentry;
+    pentry->SessionId = Field_a0;
+    ++ModId;
+    return pentry;
+}
+
+// @0x1429620d0
+MovieRoot::ActionEntry* MovieRoot::InsertEmptyAction(ActionPriority::Priority prio)
+{
+    return GetActionQueue().InsertEntry(prio);
 }
 
 // MoveTo starts a new path at the point (the open one ends without a new shape); LineTo adds a line to it.
