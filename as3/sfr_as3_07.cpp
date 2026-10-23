@@ -138,6 +138,10 @@ void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::Movie
 // MovieClip::GetLabeledFrame (exe body): resolves a frame label within a scene, throws if it is not found.
 bool FUN_142444050(Scaleform::GFx::AS3::Instances::fl_display::MovieClip* pthis, Scaleform::GFx::Sprite* psprite,
                    const Scaleform::GFx::AS3::Value& frame, const Scaleform::GFx::AS3::Value& scene, unsigned* ptargetFrame);
+// VM::IsOfType against class traits; MovieImpl::UpdateAllRenderNodes (exe bodies).
+bool FUN_1425146d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v,
+                   const Scaleform::GFx::AS3::ClassTraits::Traits& ctr);
+void FUN_142577c60(Scaleform::GFx::MovieImpl* pmovie);
 // AvmDisplayObj heap getter (exe body): the memory heap of the object's movie.
 Scaleform::MemoryHeap* FUN_14250a5c0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
 // MovieRoot::RemoveActionQueueEntriesFor, QueueFrameActions, ExecuteActionQueue.
@@ -227,6 +231,11 @@ public:
     // Applies filter to a rect of the source image, writing the result to this image at destPoint.
     void  ApplyFilter(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                       Filter* filter);                                                                            // 0x1425eaff0
+    // Renders a display list subtree / an image into this image through matrix and cxform, clipped to clipRect.
+    void  Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
+               const Rect<SInt32>* clipRect);                                                                     // 0x1425ebf70
+    void  Draw(Image* source, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
+               const Rect<SInt32>* clipRect, bool smoothing);                                                     // 0x1425eb8c0
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -1721,6 +1730,65 @@ namespace Instances { namespace fl_display
         // GFx::Stage +0x120 (the GFx stage class is not recovered)
         result = *reinterpret_cast<const ASString*>(reinterpret_cast<UByte*>(pDispObj.GetPtr()) + 0x120);
     }
+
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: exe calls Traits::GetConstructor out of line (0x142508460) and lays out the frame differently; same checks, matrix/cxform/clip setup and Draw calls
+    // @0x142449eb0
+    void BitmapData::draw(const Value& result, Instances::fl::Object* source, Instances::fl_geom::Matrix* matrix,
+                          Instances::fl_geom::ColorTransform* colorTransform, const ASString& blendMode,
+                          Instances::fl_geom::Rectangle* clipRect, bool smoothing)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!source)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "source"));
+        }
+        else
+        {
+            Render::Matrix2F m;
+            if (matrix)
+                m.Append(matrix->GetMatrixF());
+            Render::Cxform cx;
+            if (colorTransform)
+                cx = ClassTraits::fl_geom::ColorTransform::GetCxformFromColorTransform(colorTransform);
+            Render::BlendMode mode = Classes::fl_display::BlendMode::GetBlendMode(blendMode);
+            Render::Rect<SInt32> clip(0, 0, 0, 0);
+            if (clipRect)
+                clip = Render::Rect<SInt32>((SInt32)clipRect->x, (SInt32)clipRect->y,
+                                            (SInt32)(clipRect->x + clipRect->width), (SInt32)(clipRect->y + clipRect->height));
+            Render::DrawableImage* pdest = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr());
+
+            // A BitmapData (of this class) is drawn as an image, a display object through its render tree.
+            if (FUN_1425146d0(GetVM(), Value(source), GetTraits().GetConstructor().GetClassTraits()))
+            {
+                Render::Image* psource = reinterpret_cast<Render::Image*>(static_cast<BitmapData*>(source)->pImage.GetPtr());
+                pdest->Draw(psource, m, cx, mode, clipRect ? &clip : NULL, smoothing);
+            }
+            else if (FUN_1425145d0(GetVM(), Value(source), "flash.display.DisplayObject"))
+            {
+                m.PrependScaling(0.05f, 0.05f);     // twips to pixels
+                DisplayObject* pdobj = static_cast<DisplayObject*>(source);
+                if (pdobj->pDispObj)
+                {
+                    Render::TreeNode* pnode = pdobj->pDispObj->GetRenderNode();
+                    FUN_142577c60(static_cast<ASVM&>(GetVM()).GetMovieImpl());
+                    pdest->Draw(pnode, m, cx, mode, clipRect ? &clip : NULL);
+                }
+            }
+            else
+            {
+                VM& vm = GetVM();
+                vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "source"));
+            }
+        }
+    }
+#pragma strict_gs_check(pop)
 
 #pragma strict_gs_check(push, on)
     // MS2-FUNCTIONAL: exe uses an rbp frame and other registers (and keeps the source image in a cmov); same checks, filter-type switch and calls
