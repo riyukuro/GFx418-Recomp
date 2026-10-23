@@ -42,6 +42,7 @@ extern "C" const void* DAT_14313a228[];
 extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
+extern "C" void FUN_14257db40(void*);
 
 struct HWND__;
 
@@ -291,6 +292,54 @@ void FUN_1423cb920(void* object, DWORD code)
         FormatMessageA(0x1100, 0, code, 0, reinterpret_cast<LPSTR>(&message), 0, 0);
         if (message) LocalFree(message);
     }
+}
+
+// MS2-FUNCTIONAL: destructor helper and 0xb0 sized-delete path follow the executable; only allocator vtable dispatch uses Memory.
+// @0x1423ce3c0
+void* FUN_1423ce3c0(void* object, unsigned long long flags)
+{
+    FUN_1423cdf60(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0xb0);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: executes the common refcount-base cleanup and 0x10 sized-delete path from the executable.
+// @0x1423db8b0
+void* FUN_1423db8b0(void* object, unsigned long long flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x10);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: byte-identical common refcount-base cleanup and 0x10 sized-delete path.
+// @0x1423db910
+void* FUN_1423db910(void* object, unsigned long long flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x10);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: byte-identical common refcount-base cleanup and 0x10 sized-delete path.
+// @0x1423db970
+void* FUN_1423db970(void* object, unsigned long long flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x10);
+        else Memory::Free(object);
+    }
+    return object;
 }
 
 // MS2-FUNCTIONAL: forwards the recovered formatting arguments through the executable's Log vtable slot.
