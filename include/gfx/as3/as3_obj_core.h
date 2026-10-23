@@ -574,6 +574,8 @@ namespace Instances { namespace fl
         void multilineGet(bool& result);
         // @0x14242b010
         void sourceGet(ASString& result);
+        // (appended, sfr19) the flag letters ("g", "i", "m", "s", "x") as a string. 0x142429920
+        ASString GetFlags();
     };
 
     // 0x68 bytes.
@@ -936,6 +938,22 @@ namespace InstanceTraits { namespace fl
         static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1423e7990 (appended, sfr15)
         static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423f7310 (appended, sfr19)
+        static void AS3charAt(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423f7440 (appended, sfr19)
+        static void AS3charCodeAt(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423f8070 (appended, sfr19)
+        static void AS3concat(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423fb5b0 (appended, sfr19)
+        static void AS3lastIndexOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423fb960 (appended, sfr19)
+        static void AS3localeCompare(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423fbf90 (appended, sfr19)
+        static void AS3match(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423fd8f0 (appended, sfr19)
+        static void AS3replace(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1423fdfa0 (appended, sfr19)
+        static void AS3search(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class XML : public CTraits
