@@ -156,6 +156,10 @@
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 // MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
 // MS2-RANGE: 0x142926ab0-0x142926ae0 .text$mn
+// MS2-RANGE: 0x14291d150-0x14291d1e0 .text$mn
+// MS2-RANGE: 0x1429266f0-0x1429267a0 .text$mn
+// MS2-RANGE: 0x142926200-0x1429262a0 .text$mn
+// MS2-RANGE: 0x1429262a0-0x142926340 .text$mn
 // MS2-RANGE: 0x142923a90-0x142923b90 .text$mn
 // MS2-RANGE: 0x142926470-0x1429264d0 .text$mn
 // MS2-RANGE: 0x1429264d0-0x142926530 .text$mn
@@ -1397,6 +1401,33 @@ HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>& FUN_1429265f0(HashNode
 void FUN_142926670(HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>* pthis, const HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>::NodeRef& src)
 {
     *pthis = src;
+}
+
+// @0x14291d150
+MovieRoot::InvokeAliasInfo* FUN_14291d150(MovieRoot::InvokeAliasInfo* pthis, const MovieRoot::InvokeAliasInfo& src)
+{
+    return ::new (pthis) MovieRoot::InvokeAliasInfo(src);
+}
+
+// @0x1429266f0
+MovieRoot::InvokeAliasInfo& FUN_1429266f0(MovieRoot::InvokeAliasInfo* pthis, const MovieRoot::InvokeAliasInfo& src)
+{
+    return *pthis = src;
+}
+
+// MS2-FUNCTIONAL cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
+// @0x142926200
+const Array<Value>& FUN_142926200(Array<Value>* pthis, const Array<Value>& src)
+{
+    return *pthis = src;
+}
+
+// MS2-FUNCTIONAL cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
+// @0x1429262a0
+const ArrayLH<Value, StatMV_ActionScript_Mem>& FUN_1429262a0(ArrayLH<Value, StatMV_ActionScript_Mem>* pthis,
+                                                             const ArrayLH<Value, StatMV_ActionScript_Mem>& src)
+{
+    return *pthis = src;
 }
 
 // @0x142926ab0
