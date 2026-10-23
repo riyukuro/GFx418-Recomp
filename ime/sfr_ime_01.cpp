@@ -52,6 +52,7 @@ extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
 extern "C" const void* DAT_14313ba60[];
 extern "C" const unsigned char DAT_1431c51e8[];
+extern "C" const unsigned char DAT_1431c5018[];
 extern "C" void* DAT_143b15f60;
 extern "C" const void* DAT_14313bc60[];
 extern "C" void FUN_1423dd1c0();
@@ -842,6 +843,73 @@ void FUN_1423d0f10(void* self, char* text)
     *reinterpret_cast<String*>(static_cast<unsigned char*>(self) + 0x10) = text;
     FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30),
                   reinterpret_cast<long long>(text));
+}
+
+// MS2-FUNCTIONAL: performs the executable's interface query and retrieves the IME reading-state values.
+// @0x1423d6b70
+bool FUN_1423d6b70(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    void* source = *reinterpret_cast<void**>(bytes + 0x1c0);
+    if (!source) return false;
+    void* result = nullptr;
+    auto** vtable = *reinterpret_cast<void***>(source);
+    int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(vtable[0])(source, DAT_1431c51e8, &result);
+    bool success = false;
+    if (hr >= 0) {
+        auto** resultVtable = *reinterpret_cast<void***>(result);
+        hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
+            result, DAT_1431c5018, bytes + 0x1a0, bytes + 0x1b8);
+        success = hr >= 0;
+        if (!success) *reinterpret_cast<unsigned*>(bytes + 0x1b8) = 0xffffffff;
+        reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    }
+    return success;
+}
+
+// MS2-FUNCTIONAL: queries the event result and clears the pending composition when the host rejects it.
+// @0x1423d7610
+void FUN_1423d7610(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    unsigned* key = reinterpret_cast<unsigned*>(bytes + 0x1b8);
+    if (*key == 0xffffffff) return;
+    void* source = *reinterpret_cast<void**>(bytes + 0x1d0);
+    void* result = nullptr;
+    if (source) {
+        auto** vtable = *reinterpret_cast<void***>(source);
+        int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(vtable[0])(source, DAT_1431c51e8, &result);
+        if (hr >= 0) {
+            auto** resultVtable = *reinterpret_cast<void***>(result);
+            const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
+            if (status == static_cast<int>(0x80004000u))
+                reinterpret_cast<void(*)(void*)>(*reinterpret_cast<void***>(*reinterpret_cast<void**>(bytes + 0x1a0)) + 2)(
+                    *reinterpret_cast<void**>(bytes + 0x1a0));
+            reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+        }
+    }
+    *key = 0xffffffff;
+}
+
+// MS2-FUNCTIONAL: queries and acknowledges the second executable-tracked composition key.
+// @0x1423d7690
+void FUN_1423d7690(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    unsigned* key = reinterpret_cast<unsigned*>(bytes + 0x1b0);
+    if (*key == 0xffffffff) return;
+    void* source = *reinterpret_cast<void**>(bytes + 0x1d0);
+    void* result = nullptr;
+    if (source) {
+        auto** vtable = *reinterpret_cast<void***>(source);
+        const int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(vtable[0])(source, DAT_1431c51e8, &result);
+        if (hr >= 0) {
+            auto** resultVtable = *reinterpret_cast<void***>(result);
+            reinterpret_cast<void(*)(void*, unsigned)>(resultVtable[4])(result, *key);
+            reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+        }
+    }
+    *key = 0xffffffff;
 }
 
 void FUN_1423d94f0(void*, void*);
