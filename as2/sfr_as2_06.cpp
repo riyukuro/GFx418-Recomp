@@ -4,6 +4,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14295d700-0x14295d840 .text$mn
 // MS2-RANGE: 0x14295c710-0x14295c930 .text$mn
+// MS2-RANGE: 0x14295c930-0x14295ca00 .text$mn
 // MS2-RANGE: 0x14295ca10-0x14295d1c0 .text$mn
 // MS2-RANGE: 0x14295d5e0-0x14295d700 .text$mn
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
@@ -2073,6 +2074,18 @@ void StringCtorFunction::GlobalCtor(const FnCall& fn)
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_String && !fn.ThisPtr->IsBuiltinPrototype())
         static_cast<StringObject*>(fn.ThisPtr)->SetValue(fn.Env, result);
     *fn.Result = result;
+}
+
+// MS2-FUNCTIONAL: returns the active StyleSheet receiver or constructs a new sheet for a global call.
+// @0x14295c930
+void StyleSheetCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<StyleSheetObject> sheet;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_StyleSheet && !fn.ThisPtr->IsBuiltinPrototype())
+        sheet = static_cast<StyleSheetObject*>(fn.ThisPtr);
+    else
+        sheet = *SF_HEAP_NEW(fn.Env->GetHeap()) StyleSheetObject(fn.Env);
+    fn.Result->SetAsObject(sheet.GetPtr());
 }
 
 // MS2-FUNCTIONAL: creates or reuses the TextFormat receiver and applies the constructor arguments via AS2 members.
