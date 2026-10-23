@@ -8,6 +8,8 @@
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/as3/as3_support.h"
 
+namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
+
 struct HWND__;
 
 namespace Scaleform { namespace GFx { namespace IME {
@@ -197,6 +199,20 @@ void FUN_1423d0f10(void* self, char* text)
     *reinterpret_cast<String*>(static_cast<unsigned char*>(self) + 0x10) = text;
     FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30),
                   reinterpret_cast<long long>(text));
+}
+
+void FUN_1423d94f0(void*, void*);
+
+// MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
+// @0x1423d1830
+void FUN_1423d1830(void* self, unsigned long long* movie)
+{
+    unsigned long long value = *movie;
+    *reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(self) + 8) = value;
+    FUN_1423d94f0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30),
+                  reinterpret_cast<void*>(value));
+    if (value)
+        reinterpret_cast<Scaleform::GFx::Movie*>(value)->Release();
 }
 
 // @0x1423d94f0
