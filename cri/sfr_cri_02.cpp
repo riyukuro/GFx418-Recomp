@@ -1067,19 +1067,19 @@ CriSint32 getInternalStatus(void* player)
 
 // MS2-FUNCTIONAL: compares the frame and system time as the CRI player does, including unsigned-to-float wrap correction.
 // @0x1400397a0
-CriSint32 FUN_1400397a0(CriMvEasyPlayer*, const CriMvFrameInfo* frameInfo,
-                        CriUint64 count, CriUint64 unit, void*)
+__declspec(noinline) CriSint32 FUN_1400397a0(CriMvEasyPlayer*, const CriMvFrameInfo* frameInfo,
+                                              CriUint64 count, CriUint64 unit, void*)
 {
-    auto toFloat = [](CriUint64 value) {
-        CriFloat32 result = (CriFloat32)(CriSint64)value;
-        if ((CriSint64)value < 0)
-            result += 18446744073709551616.0f;
-        return result;
-    };
-    CriFloat32 frameCount = toFloat(*(const CriUint64*)((const CriUint8*)frameInfo + 0x28));
-    CriFloat32 frameUnit = toFloat(*(const CriUint64*)((const CriUint8*)frameInfo + 0x30));
-    CriFloat32 systemCount = toFloat(count);
-    CriFloat32 systemUnit = toFloat(unit);
+    CriUint64 frameCountValue = *(const CriUint64*)((const CriUint8*)frameInfo + 0x28);
+    CriUint64 frameUnitValue = *(const CriUint64*)((const CriUint8*)frameInfo + 0x30);
+    CriFloat32 frameCount = (CriFloat32)(CriSint64)frameCountValue;
+    CriFloat32 frameUnit = (CriFloat32)(CriSint64)frameUnitValue;
+    CriFloat32 systemCount = (CriFloat32)(CriSint64)count;
+    CriFloat32 systemUnit = (CriFloat32)(CriSint64)unit;
+    if ((CriSint64)frameCountValue < 0) frameCount += 18446744073709551616.0f;
+    if ((CriSint64)frameUnitValue < 0) frameUnit += 18446744073709551616.0f;
+    if ((CriSint64)count < 0) systemCount += 18446744073709551616.0f;
+    if ((CriSint64)unit < 0) systemUnit += 18446744073709551616.0f;
     return (frameCount * 1000.0f) / frameUnit <= (systemCount * 1000.0f) / systemUnit;
 }
 
