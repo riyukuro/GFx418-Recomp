@@ -3,7 +3,10 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423c8a50-0x1423c8fa0 .text$mn
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
+#include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_string.h"
+#include "../include/gfx/gfx_loadproc.h"
+#include "../include/gfx/as3/as3_support.h"
 
 struct HWND__;
 
@@ -156,6 +159,16 @@ void FUN_1423daef0(void* self)
 }
 
 extern void FUN_1423d9690(void*, void*, unsigned long long);
+
+// MS2-FUNCTIONAL: DoAbc base destruction and scalar delete are modeled from our shared ExecuteTag declaration.
+// @0x1423dbbf0
+void* FUN_1423dbbf0(Scaleform::GFx::AS3::DoAbc* self, unsigned long long flags)
+{
+    self->~DoAbc();
+    if (flags & 1)
+        ::operator delete(self);
+    return self;
+}
 
 // @0x1423cb740
 unsigned HashFunction(const char* text, unsigned long long length)
