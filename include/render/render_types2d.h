@@ -188,6 +188,24 @@ public:
     Rect& Offset(const Point<T>& p)        { return Offset(p.x, p.y); }
     void  SetTopLeft(const Point<T>& p)     { x1 = p.x; y1 = p.y; }
     void  SetBottomRight(const Point<T>& p) { x2 = p.x; y2 = p.y; }
+
+    // (appended for the text mesh provider, sfr_render_07o) shrinks this to the overlap with the other rect (taken
+    // by value first), or to the zero rect when they are apart
+    Rect& Intersect(T left, T top, T right, T bottom)
+    {
+        Rect r(left, top, right, bottom);
+        if (!Intersects(r))
+        {
+            Clear();
+            return *this;
+        }
+        x1 = (x1 > r.x1) ? x1 : r.x1;
+        x2 = (x2 > r.x2) ? r.x2 : x2;
+        y1 = (y1 > r.y1) ? y1 : r.y1;
+        y2 = (y2 > r.y2) ? r.y2 : y2;
+        return *this;
+    }
+    Rect& Intersect(const Rect& r) { return Intersect(r.x1, r.y1, r.x2, r.y2); }
 };
 
 typedef Point<float>  PointF;

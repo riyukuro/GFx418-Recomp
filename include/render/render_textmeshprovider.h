@@ -180,6 +180,9 @@ struct TextMeshLayer
     HMatrix               M;           // +0x28
     Ptr<PrimitiveFill>    pFill;       // +0x30
     float                 SizeScale;   // +0x38
+
+    // (appended for sfr_render_07o) out of line in the exe (0x1426e1ad0), called by the layer array's loops
+    SF_NOINLINE ~TextMeshLayer();
 };
 
 // The state of the glyph run addGlyph works on.

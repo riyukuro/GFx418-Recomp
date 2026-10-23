@@ -89,7 +89,8 @@ enum MeshUseStatus
     MUS_LRUTail   = 1,
     MUS_PrevFrame = 2,
     MUS_ThisFrame = 3,
-    MUS_InUse     = 4
+    MUS_InUse     = 4,
+    MUS_Pinned    = 5   // (appended for sfr_render_07o) a text mesh held by its primitive bundle
 };
 
 // the mesh cache entries (render_meshcache.h)
