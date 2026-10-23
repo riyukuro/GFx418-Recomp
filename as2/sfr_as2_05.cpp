@@ -105,6 +105,7 @@
 // MS2-RANGE: 0x14294b120-0x14294b162 .text$mn
 // MS2-RANGE: 0x14294b090-0x14294b10c .text$mn
 // MS2-RANGE: 0x142949860-0x142949892 .text$mn
+// MS2-RANGE: 0x142949660-0x1429497cd .text$mn
 // MS2-RANGE: 0x1429540c0-0x142954122 .text$mn
 // MS2-RANGE: 0x14294a040-0x14294a0a5 .text$mn
 // MS2-RANGE: 0x1429412b0-0x14294132f .text$mn
@@ -1311,7 +1312,7 @@ Object* FunctionObject::GetPrototype(ASStringContext* psc)
 }
 
 // @0x142954ba0
-Object* GlobalContext::GetPrototype(ASBuiltinType type)
+SF_NOINLINE Object* GlobalContext::GetPrototype(ASBuiltinType type)
 {
     Ptr<Object>* presult = Prototypes.Get(type);
     if (!presult)
@@ -2168,6 +2169,29 @@ ObjectInterface* WithStackEntry::GetObjectInterface() const
         return pObject;
     AvmCharacter* pavm = !pch ? 0 : AS2::ToAvmCharacter(pch);
     return pavm;
+}
+
+static inline StringManager* GetStrings(const GlobalContext* pgc)
+{
+    return ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager();
+}
+
+// MS2-FUNCTIONAL the builtin-name address is scheduled two instructions apart from the exe's
+// @0x142949660
+Object* GlobalContext::GetActualPrototype(Environment* penv, ASBuiltinType type)
+{
+    Ptr<Object> proto = GetPrototype(type);
+    Value       val;
+    if (pGlobal->GetMemberRaw(penv->GetSC(), GetStrings(this)->GetBuiltin(type), &val))
+    {
+        Ptr<Object> ctor = val.ToObject(penv);
+        if (ctor)
+        {
+            if (ctor->GetMemberRaw(penv->GetSC(), GetStrings(this)->GetBuiltin(ASBuiltin_prototype), &val))
+                proto = val.ToObject(penv);
+        }
+    }
+    return proto;
 }
 }}} // namespace Scaleform::GFx::AS2
 
