@@ -826,3 +826,78 @@ void ResizeLocalRecordArray(void** array, void* heapOwner, std::size_t requested
     ResizeRawArray(array, heapOwner, requested, 8);
 }
 }
+
+void FUN_14257dcb0(void* object);
+
+namespace Scaleform {
+static void ResizeStrongPointerArray(void** array, void* heapOwner, std::size_t requested)
+{
+    const std::size_t oldSize = reinterpret_cast<std::size_t>(array[1]);
+    const std::size_t capacity = reinterpret_cast<std::size_t>(array[2]);
+    auto** elements = static_cast<void**>(array[0]);
+    if (requested < oldSize) {
+        for (std::size_t i = oldSize; i > requested; --i)
+            if (elements[i - 1]) FUN_14257dcb0(elements[i - 1]);
+        if (requested < (capacity >> 1))
+            ReserveLocalPointerArrayA(array, heapOwner, requested);
+    } else if (capacity <= requested) {
+        ReserveLocalPointerArrayA(array, heapOwner, requested + (requested >> 2));
+    }
+    array[1] = reinterpret_cast<void*>(requested);
+}
+
+// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
+// @0x14268ea20
+void ResizeStrongPointerArrayA(void** array, void* heapOwner, std::size_t requested)
+{
+    ResizeStrongPointerArray(array, heapOwner, requested);
+}
+
+// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
+// @0x14268eac0
+void ResizeStrongPointerArrayB(void** array, void* heapOwner, std::size_t requested)
+{
+    ResizeStrongPointerArray(array, heapOwner, requested);
+}
+
+// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
+// @0x14268eb60
+void ResizeStrongPointerArrayC(void** array, void* heapOwner, std::size_t requested)
+{
+    ResizeStrongPointerArray(array, heapOwner, requested);
+}
+
+// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
+// @0x14268ec00
+void ResizeStrongPointerArrayD(void** array, void* heapOwner, std::size_t requested)
+{
+    ResizeStrongPointerArray(array, heapOwner, requested);
+}
+
+// MS2-FUNCTIONAL: releases truncated string storage and default-constructs every newly added element.
+// @0x14268e8c0
+void ResizeStringArray(void** array, void* heapOwner, std::size_t requested)
+{
+    const std::size_t oldSize = reinterpret_cast<std::size_t>(array[1]);
+    const std::size_t capacity = reinterpret_cast<std::size_t>(array[2]);
+    auto* elements = static_cast<unsigned long long*>(array[0]);
+    if (requested < oldSize) {
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        for (std::size_t i = oldSize; i > requested; --i) {
+            const auto encoded = elements[i - 1];
+            if (!encoded) continue;
+            auto* data = reinterpret_cast<unsigned char*>(encoded & ~3ull);
+            if (InterlockedDecrement(reinterpret_cast<volatile long*>(data + 8)) == 0)
+                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, data);
+        }
+        if (requested < (capacity >> 1))
+            ReserveLocalPointerArrayA(array, heapOwner, requested);
+    } else if (capacity <= requested) {
+        ReserveLocalPointerArrayA(array, heapOwner, requested + (requested >> 2));
+    }
+    elements = static_cast<unsigned long long*>(array[0]);
+    array[1] = reinterpret_cast<void*>(requested);
+    for (std::size_t i = oldSize; i < requested; ++i)
+        new (elements + i) Scaleform::String();
+}
+}
