@@ -392,6 +392,70 @@ void** FUN_1400128e0(ASStringManager* manager, void** result, const unsigned __i
 // @0x140012940
 void FUN_140012940(ASString* string) { string->SetNull(); }
 
+// MS2-FUNCTIONAL: creates a const node through the owning context's manager and retains it for the destination.
+// @0x140012f60
+void** FUN_140012f60(void* context, void** result, const char* text)
+{
+    ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
+    ASStringNode* node = manager->CreateConstStringNode(text, std::strlen(text), 0);
+    *result = node;
+    ++*reinterpret_cast<unsigned*>(reinterpret_cast<char*>(node) + 0x18);
+    return result;
+}
+
+// MS2-FUNCTIONAL: creates a string node through the context manager and retains it for the destination.
+// @0x140012fb0
+void** FUN_140012fb0(void* context, void** result, const char* text)
+{
+    ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
+    ASStringNode* node = manager->CreateStringNode(text);
+    *result = node;
+    ++*reinterpret_cast<unsigned*>(reinterpret_cast<char*>(node) + 0x18);
+    return result;
+}
+
+// MS2-FUNCTIONAL: decodes the executable's tagged string payload through the context manager.
+// @0x140012fe0
+void** FUN_140012fe0(void* context, void** result, const unsigned __int64* encoded)
+{
+    ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
+    return FUN_1400128e0(manager, result, encoded);
+}
+
+// @0x1400134c0
+void FUN_1400134c0(ASStringNode** node) { (*node)->Release(); }
+
+// @0x1400134e0
+void FUN_1400134e0(void* object)
+{
+    reinterpret_cast<ASStringNode**>(static_cast<char*>(object) + 0x10)[0]->Release();
+}
+
+// @0x140013100
+void FUN_140013100(void** ref) { if (*ref) FUN_14257dcd0(*ref); }
+
+// @0x140013120
+void** FUN_140013120(void** ref, void* value)
+{
+    if (*ref) FUN_14257dcd0(*ref);
+    *ref = value;
+    return ref;
+}
+
+// @0x140013180
+void FUN_140013180(void** ref) { if (*ref) FUN_14257dcd0(*ref); }
+
+// @0x1400131a0
+void** FUN_1400131a0(void** ref, void* value)
+{
+    if (*ref) FUN_14257dcd0(*ref);
+    *ref = value;
+    return ref;
+}
+
+// @0x1400132d0
+void FUN_1400132d0(void** ref) { if (*ref) FUN_14257dcb0(*ref); }
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
