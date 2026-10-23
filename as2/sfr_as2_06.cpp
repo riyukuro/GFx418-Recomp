@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x14295d5e0-0x14295d700 .text$mn
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
+// MS2-RANGE: 0x1429658d0-0x1429659e0 .text$mn
 // MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
 // MS2-RANGE: 0x142965f30-0x1429660c0 .text$mn
 // MS2-RANGE: 0x1429660c0-0x142966270 .text$mn
@@ -298,7 +299,26 @@ bool AvmCharacter::IsTabable() const
     return displayObject->TabIndex > 0;
 }
 
-// MS2-FUNCTIONAL the exe inlines tabEnabled lookup and Value conversion; this keeps the script override and tab-index fallback.
+// MS2-FUNCTIONAL: the exe inlines focusEnabled lookup and the final button-mode virtual call; this preserves script override and fallback semantics.
+// @0x1429658d0
+bool AvmSprite::IsFocusEnabled(FocusMovedType fmt) const
+{
+    if (fmt == GFx_FocusMovedByMouse)
+        return false;
+
+    Environment* env = const_cast<AvmSprite*>(this)->GetASEnvironment();
+    Object* object = const_cast<AvmSprite*>(this)->GetASObject();
+    if (env && object)
+    {
+        ASString focusEnabled = env->StringContext.CreateConstString("focusEnabled");
+        Value value;
+        if (object->GetMember(env, focusEnabled, &value) && !value.IsUndefined() && !value.IsNull())
+            return value.ToBool(env);
+    }
+    return static_cast<const AvmInteractiveObjBase*>(static_cast<const AvmCharacter*>(this))->ActsAsButton();
+}
+
+// MS2-FUNCTIONAL: the exe inlines tabEnabled lookup and Value conversion; this keeps the script override and tab-index fallback.
 // @0x1429660c0
 bool AvmTextField::IsTabable() const
 {
