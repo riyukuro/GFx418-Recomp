@@ -27,7 +27,6 @@ extern "C" void FUN_142585f70(void*, int);
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_14268f8f0(void*, void*, unsigned);
 extern "C" void FUN_14268f230(void*, void*, unsigned);
-extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_1426869a0(void*, void*, const void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
@@ -41,6 +40,71 @@ MS2_GLOBAL(0x142d175c8, float, ImageViewportScale);
 MS2_GLOBAL(0x142d175cc, float, ImageViewportBias);
 MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
 MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
+
+static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t* source)
+{
+    for (unsigned i = 1; i < 7; ++i)
+        destination[i] = source[i];
+}
+static void WriteFixedHashValue(std::uint64_t* row, const std::uint64_t* value)
+{
+    row[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
+    const auto* payload = reinterpret_cast<const std::uint64_t*>(value[1]);
+    for (unsigned i = 0; i < 4; ++i)
+        row[3 + i] = payload[i];
+}
+
+// MS2-FUNCTIONAL: inserts a key and six qwords of cached payload into the fixed-size hash table, relocating collisions and growing it as needed.
+// @0x1426867f0
+extern "C" void FUN_1426867f0(void* setObject, void* allocator, void* valueData, std::uint64_t hash)
+{
+    auto* value = static_cast<std::uint64_t*>(valueData);
+    auto** set = static_cast<std::uint64_t**>(setObject);
+    auto* table = *set;
+    std::uint64_t capacity;
+    if (!table) {
+        capacity = 8;
+    } else {
+        if (table[0] * 5 <= table[1] * 4 + 4)
+            goto insert_entry;
+        capacity = table[1] * 2 + 2;
+    }
+    FUN_1426906b0(setObject, allocator, capacity);
+insert_entry:
+    table = *set;
+    const std::uint64_t bucket = hash & table[1];
+    ++table[0];
+    auto* row = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) + 0x10 + bucket * 0x38);
+    const std::uint64_t occupant = row[0];
+    if (static_cast<std::int64_t>(occupant) == -2) {
+        row[0] = UINT64_MAX;
+        WriteFixedHashValue(row, value);
+    } else {
+        std::uint64_t empty = bucket;
+        do {
+            empty = (empty + 1) & table[1];
+        } while (static_cast<std::int64_t>(*reinterpret_cast<std::uint64_t*>(
+            reinterpret_cast<unsigned char*>(table) + 0x10 + empty * 0x38)) != -2);
+        auto* target = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) + 0x10 + empty * 0x38);
+        if (row[1] == bucket) {
+            target[0] = occupant;
+            CopyFixedHashPayload(target, row);
+            row[0] = empty;
+        } else {
+            auto* previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
+                0x10 + row[1] * 0x38);
+            while (previous[0] != bucket)
+                previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
+                    0x10 + previous[0] * 0x38);
+            target[0] = occupant;
+            CopyFixedHashPayload(target, row);
+            previous[0] = empty;
+            row[0] = UINT64_MAX;
+        }
+        WriteFixedHashValue(row, value);
+    }
+    row[1] = bucket;
+}
 
 namespace Scaleform {
 
