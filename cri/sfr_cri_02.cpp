@@ -95,6 +95,8 @@ CriHeap  FUN_140027fec(void* memory, CriSint32 size);
 void*    FUN_140030b50(CriSint32 codecId);
 void*    FUN_140044e40(void* decoderInterface);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
+void FUN_140046804(void* object, void* value);
+void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
 void     FUN_140039f50(void* section);
 void     FUN_140039f8c(void* section);
 void     FUN_1400411f8(void);
@@ -3419,6 +3421,45 @@ void FUN_140031100(void* player)
     FUN_140037850(player);
     FUN_140031140(player);
     FUN_140037880(player);
+}
+
+// MS2-FUNCTIONAL: drain the two CRI input streams into the decoder read queue and return consumed tails.
+// @0x140034330
+void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue)
+{
+    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
+    if (((ReadModeView*)player)->Mode != 0)
+        return;
+
+    struct ChunkView { void* Data; CriUint32 Size; } chunk = {};
+    struct BufferView { void* Data; CriUint32 Capacity; } buffer = {};
+    CriSint32 copied = 0;
+    while (FUN_1400467b8(readBuffer, 2) != 0)
+        FUN_1400467a0(readBuffer, 2, -1, &chunk);
+
+    while (FUN_1400467b8(readBuffer, 1) != 0)
+    {
+        FUN_140046804(dataQueue, &buffer);
+        FUN_1400467a0(readBuffer, 1, -1, &chunk);
+        if (buffer.Capacity < chunk.Size)
+            FUN_140037910(player, "E08120301M: Illigal data size of input stream.", buffer.Capacity);
+        memcpy(buffer.Data, chunk.Data, chunk.Size);
+        copied += chunk.Size;
+        FUN_140046814(dataQueue, &buffer, chunk.Size);
+    }
+
+    while (FUN_1400467b8(source, 1) != 0)
+    {
+        FUN_140046804(dataQueue, &buffer);
+        FUN_1400467a0(source, 1, -1, &chunk);
+        if (buffer.Capacity < chunk.Size)
+            FUN_140037910(player, "E08120302M: Illigal data size in input buffer.", buffer.Capacity);
+        memcpy(buffer.Data, chunk.Data, chunk.Size);
+        copied += chunk.Size;
+        FUN_140046814(dataQueue, &buffer, chunk.Size);
+        FUN_1400467b0(source, 0, &chunk);
+    }
+    (void)copied;
 }
 
 // MS2-FUNCTIONAL: copy the selected analyzed-header or input-buffer remainder into the read queue.
