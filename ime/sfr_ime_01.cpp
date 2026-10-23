@@ -3905,6 +3905,94 @@ void FUN_1423d4c20(void* raw, const void* event)
     }
 }
 
+// MS2-FUNCTIONAL: selects a registered language record, updates its state, and refreshes the affected conversion-mode lists.
+// @0x1423cada0
+int FUN_1423cada0(unsigned long long* manager, const char* primary, const char* alternate, unsigned short language)
+{
+    Scaleform::String selected;
+    auto* records = reinterpret_cast<unsigned char*>(manager[0x17]);
+    auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
+    const unsigned count = static_cast<unsigned>(manager[0x1a]);
+    const unsigned current = reinterpret_cast<unsigned(*)(void*)>(
+        (*reinterpret_cast<void***>(manager))[3])(manager);
+    int targetMode = 0x02000000;
+    for (unsigned i = 0; records && i < count; ++i) {
+        auto* record = records + i * 0x30;
+        auto* name = reinterpret_cast<Scaleform::String*>(record + 0x10);
+        if (primary && _stricmp(primary, name->ToCStr()) == 0 &&
+            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) == current) {
+            selected = *name;
+            targetMode = static_cast<int>(*reinterpret_cast<unsigned*>(record + 0x20));
+            const bool wasSet = states[i] != 0;
+            states[i] = 1;
+            if (!wasSet) {
+                const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned)>(
+                    (*reinterpret_cast<void***>(manager))[3])(manager, targetMode);
+                if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
+                if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
+                if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
+                if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
+            }
+            return static_cast<int>(i);
+        }
+    }
+
+    int chosen = -1;
+    unsigned effectiveMode = 0x02000000;
+    for (unsigned i = 0; records && i < count; ++i) {
+        auto* record = records + i * 0x30;
+        auto* languageName = reinterpret_cast<Scaleform::String*>(record + 0x10);
+        if (!alternate || _stricmp(alternate, languageName->ToCStr()) != 0 ||
+            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) != current) continue;
+        selected = *reinterpret_cast<Scaleform::String*>(record + 0x18);
+        targetMode = *reinterpret_cast<int*>(record + 0x20);
+        effectiveMode = targetMode;
+        const bool wasSet = states[i] != 0;
+        states[i] = 2;
+        chosen = static_cast<int>(i);
+        if (!wasSet) {
+            const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned)>(
+                (*reinterpret_cast<void***>(manager))[3])(manager, targetMode);
+            if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
+            if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
+            if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
+            if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
+        }
+        break;
+    }
+    if (chosen < 0) {
+        auto* config = reinterpret_cast<unsigned char*>(manager[0x2e]);
+        const unsigned configCount = static_cast<unsigned>(manager[0x2f]);
+        for (unsigned i = 0; records && i < count; ++i) {
+            auto* record = records + i * 0x30;
+            const int mode = *reinterpret_cast<int*>(record + 0x20);
+            for (unsigned j = 0; config && j < configCount; ++j) {
+                auto* entry = config + j * 0x20;
+                if (*reinterpret_cast<unsigned short*>(entry + 8) == language &&
+                    *reinterpret_cast<int*>(entry) == mode) {
+                    selected = primary ? primary : (alternate ? alternate : "");
+                    targetMode = mode;
+                    effectiveMode = mode;
+                    states[i] = 1;
+                    chosen = static_cast<int>(i);
+                    break;
+                }
+            }
+            if (chosen >= 0) break;
+        }
+    }
+    if (chosen >= 0 && states[chosen] == 1) {
+        const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned)>(
+            (*reinterpret_cast<void***>(manager))[3])(manager, static_cast<unsigned>(targetMode));
+        if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
+        if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
+        if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
+        if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
+    }
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = effectiveMode;
+    return chosen;
+}
+
 struct cx18_CommandEntry
 {
     unsigned long long next;
