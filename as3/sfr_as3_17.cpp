@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424ed890-0x142509d40 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-FUNCTIONAL 0x1424ed8f0: copy and ownership semantics match; the helper-based release/addref changes the call graph.
@@ -112,6 +113,13 @@ void Value::AssignUnsafe(Object* v)
     value.VS._1.VObj = v;
     if (v)
         v->AddRef();
+}
+
+// @0x1424efa70
+void IntervalTimer::Clear()
+{
+    Active = false;
+    TimerObj = static_cast<Instances::fl_utils::Timer*>(0);
 }
 }}}
 
