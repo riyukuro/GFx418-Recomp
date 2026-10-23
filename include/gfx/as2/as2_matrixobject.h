@@ -58,6 +58,9 @@ class GASMatrixCtorFunction : public CFunctionObject
 {
 public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e50
+
+    // new Matrix(a, b, c, d, tx, ty) sets the given members (exe 0x14295b020).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 // Matrix.prototype methods.

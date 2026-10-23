@@ -154,6 +154,7 @@
 // MS2-RANGE: 0x14295b480-0x14295bbdf .text$mn
 // MS2-RANGE: 0x142958720-0x142959160 .text$mn
 // MS2-RANGE: 0x142959bc0-0x142959f07 .text$mn
+// MS2-RANGE: 0x14295b020-0x14295b472 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3759,6 +3760,41 @@ void ColorTransformCtorFunction::GlobalCtor(const FnCall& fn)
             cx.M[1][1] = (float)fn.Arg(5).ToNumber(fn.Env);
             cx.M[1][2] = (float)fn.Arg(6).ToNumber(fn.Env);
             cx.M[1][3] = (float)fn.Arg(7).ToNumber(fn.Env);
+        }
+    }
+}
+
+// @0x14295b020
+void GASMatrixCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<MatrixObject> pmatrix;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Matrix && !fn.ThisPtr->IsBuiltinPrototype())
+        pmatrix = static_cast<MatrixObject*>(fn.ThisPtr);
+    else
+        pmatrix = *SF_HEAP_NEW(fn.Env->GetHeap()) MatrixObject(fn.Env);
+    fn.Result->SetAsObject(pmatrix.GetPtr());
+
+    if (fn.NArgs > 0)
+    {
+        ASStringContext* psc = fn.Env->GetSC();
+        pmatrix->SetMemberRaw(psc, psc->CreateConstString("a"), fn.Arg(0));
+        if (fn.NArgs > 1)
+        {
+            pmatrix->SetMemberRaw(psc, psc->CreateConstString("b"), fn.Arg(1));
+            if (fn.NArgs > 2)
+            {
+                pmatrix->SetMemberRaw(psc, psc->CreateConstString("c"), fn.Arg(2));
+                if (fn.NArgs > 3)
+                {
+                    pmatrix->SetMemberRaw(psc, psc->CreateConstString("d"), fn.Arg(3));
+                    if (fn.NArgs > 4)
+                    {
+                        pmatrix->SetMemberRaw(psc, psc->CreateConstString("tx"), fn.Arg(4));
+                        if (fn.NArgs > 5)
+                            pmatrix->SetMemberRaw(psc, psc->CreateConstString("ty"), fn.Arg(5));
+                    }
+                }
+            }
         }
     }
 }
