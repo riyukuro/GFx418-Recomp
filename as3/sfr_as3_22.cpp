@@ -922,6 +922,59 @@ insert_entry:
     row[2] = storedValue;
     row[1] = bucket;
 }
+
+// MS2-FUNCTIONAL: recreates the open-addressed table at the requested power-of-two size, rehashes occupied values, and frees the old allocation.
+// @0x142690a20
+extern "C" void FUN_142690a20(void* setObject, void* allocator, std::int64_t requestedSize)
+{
+    auto** set = static_cast<std::uint64_t**>(setObject);
+    auto* oldTable = *set;
+    if (requestedSize == 0) {
+        if (oldTable) {
+            const std::uint64_t oldCapacity = oldTable[1] + 1;
+            auto* bytes = reinterpret_cast<unsigned char*>(oldTable);
+            for (std::uint64_t i = 0; i < oldCapacity; ++i) {
+                auto* row = reinterpret_cast<std::uint64_t*>(bytes + 0x10 + i * 0x18);
+                if (static_cast<std::int64_t>(row[0]) != -2)
+                    row[0] = UINT64_MAX - 1;
+            }
+            auto** oldHeapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(oldHeapVtable[12])(DAT_143b15f60, oldTable);
+            *set = nullptr;
+        }
+        return;
+    }
+
+    std::uint64_t capacity = 8;
+    const std::uint64_t requested = static_cast<std::uint64_t>(requestedSize);
+    while (capacity < requested)
+        capacity <<= 1;
+    int statId = 2;
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* newTable = reinterpret_cast<std::uint64_t* (*)(void*, std::size_t, const int*)>(heapVtable[10])(
+        DAT_143b15f60, static_cast<std::size_t>(capacity * 0x18 + 0x10), &statId);
+    newTable[0] = 0;
+    newTable[1] = capacity - 1;
+    auto* newBytes = reinterpret_cast<unsigned char*>(newTable);
+    for (std::uint64_t i = 0; i < capacity; ++i)
+        *reinterpret_cast<std::uint64_t*>(newBytes + 0x10 + i * 0x18) = UINT64_MAX - 1;
+
+    *set = newTable;
+    if (oldTable) {
+        const std::uint64_t oldCapacity = oldTable[1] + 1;
+        auto* oldBytes = reinterpret_cast<unsigned char*>(oldTable);
+        for (std::uint64_t i = 0; i < oldCapacity; ++i) {
+            auto* row = reinterpret_cast<std::uint64_t*>(oldBytes + 0x10 + i * 0x18);
+            if (static_cast<std::int64_t>(row[0]) != -2) {
+                const auto* value = reinterpret_cast<const std::uint64_t*>(oldBytes + 0x20 + i * 0x18);
+                AddCachedPointer(setObject, allocator, value, HashImageKey(reinterpret_cast<const unsigned char*>(value)));
+                row[0] = UINT64_MAX - 1;
+            }
+        }
+        auto** oldHeapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(oldHeapVtable[12])(DAT_143b15f60, oldTable);
+    }
+}
 // The following stream and movie record helpers remain in the same Scaleform namespace.
 void ReadNarrowString(void*, void*);
 void ResizeStringArray(void**, std::size_t);
