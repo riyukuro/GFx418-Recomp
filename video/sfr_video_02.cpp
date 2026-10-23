@@ -1525,3 +1525,65 @@ void FUN_1400155d0(void*, Scaleform::GFx::AS3::Value* result, void* traits)
         : nullptr;
     result->Pick(instance);
 }
+
+// MS2-FUNCTIONAL: writes a numeric result only when the VM has no pending exception.
+// @0x1400156d0
+void FUN_1400156d0(void** frame)
+{
+    char* vm = static_cast<char*>(frame[0]);
+    if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
+        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetNumberUnsafe(
+            *reinterpret_cast<double*>(&frame[2]));
+}
+
+// MS2-FUNCTIONAL: captures the callback arguments and performs the requested numeric coercion.
+// @0x140015710
+void** FUN_140015710(void** frame, void* vm, void* receiver, int convert,
+                     Scaleform::GFx::AS3::Value* source, const uintptr_t* extra)
+{
+    frame[0] = vm;
+    frame[1] = receiver;
+    frame[2] = reinterpret_cast<void*>(*extra);
+    if (convert)
+    {
+        double ignored;
+        source->Convert2NumberInline(ignored);
+    }
+    return frame;
+}
+
+// MS2-FUNCTIONAL: writes an integer result only when the VM has no pending exception.
+// @0x140015750
+void FUN_140015750(void** frame)
+{
+    char* vm = static_cast<char*>(frame[0]);
+    if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
+        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetSInt32Unsafe(
+            reinterpret_cast<intptr_t>(frame[2]));
+}
+
+// MS2-FUNCTIONAL: writes a boolean result only when the VM has no pending exception.
+// @0x140015790
+void FUN_140015790(void** frame)
+{
+    char* vm = static_cast<char*>(frame[0]);
+    if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
+        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetBoolUnsafe(
+            static_cast<unsigned char>(reinterpret_cast<uintptr_t>(frame[2])) != 0);
+}
+
+// MS2-FUNCTIONAL: stores the callback context and converts the optional value to a boolean.
+// @0x1400157d0
+void** FUN_1400157d0(void** frame, void* vm, void* receiver, int convert,
+                     uintptr_t value, const unsigned char* extra)
+{
+    frame[0] = vm;
+    frame[1] = receiver;
+    frame[2] = reinterpret_cast<void*>(*extra);
+    if (convert)
+    {
+        extern unsigned char FUN_1424f0be0(uintptr_t);
+        frame[2] = reinterpret_cast<void*>(FUN_1424f0be0(value));
+    }
+    return frame;
+}
