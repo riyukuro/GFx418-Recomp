@@ -765,34 +765,6 @@ void FillImageData(void* command, void*, void* image)
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: writes the collection count, each image record header, and every nested 16-byte entry through the stream vtable.
-// @0x14268f4b0
-void WriteImageMetadataRecords(void* object, void* stream)
-{
-    auto* bytes = static_cast<unsigned char*>(object);
-    auto** streamVtable = *reinterpret_cast<void***>(stream);
-    auto write = [&](const void* data, unsigned size) {
-        reinterpret_cast<void (*)(void*, const void*, unsigned)>(streamVtable[9])(stream, data, size);
-    };
-    unsigned value = static_cast<unsigned>(*reinterpret_cast<std::size_t*>(bytes + 0x18));
-    write(&value, 4);
-    void** records = *reinterpret_cast<void***>(bytes + 0x10);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
-    for (std::size_t i = 0; i < count; ++i) {
-        auto* record = static_cast<unsigned char*>(records[i]);
-        value = *reinterpret_cast<unsigned*>(record + 0x10); write(&value, 4);
-        value = *reinterpret_cast<unsigned*>(record + 0x14); write(&value, 4);
-        value = *reinterpret_cast<unsigned*>(record + 0x18); write(&value, 4);
-        const std::size_t nestedCount = *reinterpret_cast<std::size_t*>(record + 0x28);
-        value = static_cast<unsigned>(nestedCount); write(&value, 4);
-        auto* nested = *reinterpret_cast<unsigned char**>(record + 0x20);
-        for (std::size_t j = 0; j < nestedCount; ++j) {
-            write(nested + j * 0x10, 4);
-            write(nested + j * 0x10 + 8, 8);
-        }
-    }
-}
-
 // MS2-FUNCTIONAL: closes the callback stream with the executable's common state reset helper.
 // @0x142745410
 unsigned long long CloseAudioStream(void*, void* stream)
@@ -1465,6 +1437,34 @@ void ClearFixedHashSet(void** set)
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
     reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
     set[0] = nullptr;
+}
+
+// MS2-FUNCTIONAL: writes the collection count, each image record header, and every nested 16-byte entry through the stream vtable.
+// @0x14268f4b0
+void WriteImageMetadataRecords(void* object, void* stream)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    auto** streamVtable = *reinterpret_cast<void***>(stream);
+    auto write = [&](const void* data, unsigned size) {
+        reinterpret_cast<void (*)(void*, const void*, unsigned)>(streamVtable[9])(stream, data, size);
+    };
+    unsigned value = static_cast<unsigned>(*reinterpret_cast<std::size_t*>(bytes + 0x18));
+    write(&value, 4);
+    void** records = *reinterpret_cast<void***>(bytes + 0x10);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
+    for (std::size_t i = 0; i < count; ++i) {
+        auto* record = static_cast<unsigned char*>(records[i]);
+        value = *reinterpret_cast<unsigned*>(record + 0x10); write(&value, 4);
+        value = *reinterpret_cast<unsigned*>(record + 0x14); write(&value, 4);
+        value = *reinterpret_cast<unsigned*>(record + 0x18); write(&value, 4);
+        const std::size_t nestedCount = *reinterpret_cast<std::size_t*>(record + 0x28);
+        value = static_cast<unsigned>(nestedCount); write(&value, 4);
+        auto* nested = *reinterpret_cast<unsigned char**>(record + 0x20);
+        for (std::size_t j = 0; j < nestedCount; ++j) {
+            write(nested + j * 0x10, 4);
+            write(nested + j * 0x10 + 8, 8);
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: reads a length-prefixed narrow string from the stream, appending each byte to the destination.
