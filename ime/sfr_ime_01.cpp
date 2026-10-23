@@ -4157,6 +4157,82 @@ void FUN_1423ceb30(void* raw)
             interfaceState, "DisplayInputWindow", &result, args, 4);
 }
 
+static void cx18_DispatchLangBarEvent(unsigned long long* self, unsigned long long payload,
+                                      const char* command, const char* argument)
+{
+    if (!command) return;
+    auto* provider = reinterpret_cast<unsigned char*>(self[0xf]);
+    auto** vtable = reinterpret_cast<void**>(self[0]);
+    if (std::strcmp(command, "CandidateList_OnSetItemDataMap") == 0) {
+        if (provider)
+            reinterpret_cast<void(*)(void*, unsigned long long, const char*, const char*)>(
+                (*reinterpret_cast<void***>(provider))[0xa0 / sizeof(void*)])(
+                    provider, payload, command, argument);
+    } else if (std::strcmp(command, "CandidateList_OnItemSelect") == 0) {
+        FUN_1423ca3f0(self);
+    } else if (std::strcmp(command, "LangBar_OnInit") == 0) {
+        auto* owner = reinterpret_cast<unsigned char*>(self[3]);
+        if (owner) *reinterpret_cast<unsigned long long*>(owner + 0x48) = payload;
+        if (provider) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[12])(provider);
+    } else if (std::strcmp(command, "StatusWindow_OnInit") == 0) {
+        auto* owner = reinterpret_cast<unsigned char*>(self[3]);
+        if (owner) *reinterpret_cast<unsigned long long*>(owner + 0x50) = payload;
+        reinterpret_cast<void(*)(void*, const char*)>(vtable[12])(self, self[0x16]
+            ? reinterpret_cast<const char*>((self[0x16] & ~3ull) + 0xc) : "");
+        reinterpret_cast<void(*)(void*)>(vtable[19])(self);
+        reinterpret_cast<void(*)(void*, int)>(vtable[6])(self, -1);
+    } else if (std::strcmp(command, "LangBar_OnSelectInputLang") == 0) {
+        reinterpret_cast<void(*)(void*)>(vtable[18])(self);
+        if (provider && argument)
+            reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(provider))[9])(provider, argument);
+    } else if (std::strcmp(command, "LangBar_OnSelectIME") == 0) {
+        FUN_1423d5910(self, argument ? argument : "");
+    } else if (std::strcmp(command, "LangBar_GetIMENames") == 0 && provider) {
+        const unsigned mode = *reinterpret_cast<unsigned*>(provider + 0x84);
+        unsigned countOffset = 0;
+        unsigned namesOffset = 0;
+        if (mode == 9) { countOffset = 0x60; namesOffset = 0x58; }
+        else if (mode == 0x400) { countOffset = 0x18; namesOffset = 0x10; }
+        else if (mode == 0x2000) { countOffset = 0x30; namesOffset = 0x28; }
+        else if (mode == 0x80000) { countOffset = 0x48; namesOffset = 0x40; }
+        else if (mode == 0x10000000) { reinterpret_cast<void(*)(void*)>(vtable[18])(self); return; }
+        Scaleform::String joined;
+        const unsigned count = countOffset ? *reinterpret_cast<unsigned*>(provider + countOffset) : 0;
+        auto* names = reinterpret_cast<Scaleform::String*>(*reinterpret_cast<void**>(provider + namesOffset));
+        for (unsigned i = 0; names && i < count; ++i) joined += names[i].ToCStr();
+        reinterpret_cast<void(*)(void*, const char*)>(vtable[14])(self, joined.ToCStr());
+    }
+}
+
+// MS2-FUNCTIONAL: dispatches candidate, language-bar, and status-window callbacks using the executable's event names.
+// @0x1423cd6b0
+void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
+                   unsigned long long* commandCell, unsigned long long* argumentCell)
+{
+    const char* command = commandCell && *commandCell
+        ? *reinterpret_cast<const char**>(*reinterpret_cast<void**>(*commandCell)) : nullptr;
+    const char* argument = argumentCell && *argumentCell
+        ? *reinterpret_cast<const char**>(*reinterpret_cast<void**>(*argumentCell)) : nullptr;
+    cx18_DispatchLangBarEvent(self, payload, command, argument);
+}
+
+// MS2-FUNCTIONAL: decodes the executable's external callback Value array and dispatches its event and optional string argument.
+// @0x1423cd0a0
+void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
+{
+    if (!self || !event) return;
+    const unsigned count = *reinterpret_cast<const unsigned*>(event + 0x28);
+    auto* values = *reinterpret_cast<unsigned char* const*>(event + 0x20);
+    if (!values || !count) return;
+    const char* command = *reinterpret_cast<const char**>(values + 0x10);
+    const unsigned type = *reinterpret_cast<const unsigned*>(values + 0x28) & 0x8f;
+    const char* argument = nullptr;
+    if (count > 1 && (type == Scaleform::GFx::Value::VT_String || type == Scaleform::GFx::Value::VT_StringW))
+        argument = *reinterpret_cast<const char**>(values + 0x30);
+    const unsigned long long payload = *reinterpret_cast<const unsigned long long*>(event + 8);
+    cx18_DispatchLangBarEvent(self, payload, command, argument);
+}
+
 // MS2-FUNCTIONAL: reuses the recovered candidate-window geometry bridge for the input-window reposition event.
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
