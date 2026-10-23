@@ -77,6 +77,9 @@
 // MS2-RANGE: 0x14295c650-0x14295c670 .text$mn
 // MS2-RANGE: 0x14295c670-0x14295c6f0 .text$mn
 // MS2-RANGE: 0x14295c6f0-0x14295c710 .text$mn
+// MS2-RANGE: 0x142948eb0-0x142948f10 .text$mn
+// MS2-RANGE: 0x142944950-0x1429449ee .text$mn
+// MS2-RANGE: 0x1429388e0-0x142938ab2 .text$mn
 // MS2-RANGE: 0x142948220-0x1429484dd .text$mn
 // MS2-RANGE: 0x142954800-0x142954a46 .text$mn
 // MS2-RANGE: 0x142954690-0x142954800 .text$mn
@@ -1283,6 +1286,132 @@ void GASLoadVarsLoaderCtorFunction::GlobalCtor(const FnCall& fn)
         fn.Result->SetAsObject(static_cast<LoadVarsObject*>(fn.ThisPtr));
     else
         fn.Result->SetNull();
+}
+
+
+// The member table's findIndexAlt ignoring case (exe COMDAT 0x142917040).
+SPInt MemberHash_FindIndexNoCase(const ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key);
+
+// @0x142948eb0
+// Hash::Get of the member table, the out-of-line copy of MemberHash_Get.
+SF_NOINLINE bool MemberHash_Get_Call(const ASStringHash_GC<Member>* phash, const ASString& key, Member* pmember)
+{
+    return MemberHash_Get(phash, key, pmember);
+}
+
+// Hash::GetCaseInsensitive of the member table: the member of key copied out.
+static SF_FORCEINLINE bool MemberHash_GetNoCase(const ASStringHash_GC<Member>* phash, const ASString& key,
+                                                Member* pmember)
+{
+    ASStringNoCaseKey ikey(key);
+    SPInt index = MemberHash_FindIndexNoCase(phash, ikey);
+    const ASStringHash_GC<Member>::NodeType* pnode = index >= 0 ? &phash->NodeAt(index) : 0;
+    if (pnode == 0)
+        return false;
+    if (pmember)
+        *pmember = pnode->Second;
+    return true;
+}
+
+// @0x142944950
+bool Object::FindMember(ASStringContext* psc, const ASString& name, Member* pmember)
+{
+    const ASStringHash_GC<Member>* phash = &Members;
+    return psc->IsCaseSensitive() ? MemberHash_Get_Call(phash, name, pmember)
+                                  : MemberHash_GetNoCase(phash, name, pmember);
+}
+
+typedef ASStringHash_GC<Member>::SetType   MemberSet;
+typedef ASStringHash_GC<Member>::EntryType MemberEntry;
+// The slot Clear and copy constructor of the member table, out of line in the exe (COMDATs 0x142934350 /
+// 0x142917730).
+void MemberEntry_Clear(MemberEntry* e);
+void MemberEntry_CopyConstruct(MemberEntry* e, const MemberEntry& src);
+
+// Find / FindCaseInsensitive / FindCaseCheck of the member table.
+inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    SPInt index = MemberHash_FindIndex(phash, key);
+    if (index >= 0)
+        return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
+    return MemberSet::Iterator(0, 0);
+}
+inline MemberSet::Iterator MemberHash_FindNoCase(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    ASStringNoCaseKey ikey(key);
+    SPInt index = MemberHash_FindIndexNoCase(phash, ikey);
+    if (index >= 0)
+        return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
+    return MemberSet::Iterator(0, 0);
+}
+inline MemberSet::Iterator MemberHash_FindCaseCheck(ASStringHash_GC<Member>* phash, const ASString& key,
+                                                    bool caseSensitive)
+{
+    return caseSensitive ? MemberHash_Find(phash, key) : MemberHash_FindNoCase(phash, key);
+}
+
+// Hash::Remove of the member table: unlinks the slot of key (the chain successor moves into a freed head slot).
+struct MemberTable
+{
+    UPInt EntryCount;
+    UPInt SizeMask;
+
+    MemberEntry& E(SPInt index) { return reinterpret_cast<MemberEntry*>(this + 1)[index]; }
+};
+static SF_FORCEINLINE void MemberHash_Remove(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    MemberTable*& pTable = reinterpret_cast<MemberTable*&>(phash->pTable);
+    if (pTable == 0)
+        return;
+
+    UPInt        h   = key.GetHashFlags();
+    SPInt        idx = h & pTable->SizeMask;
+    MemberEntry* e   = &pTable->E(idx);
+    if (e->IsEmpty() || e->GetCachedHash(pTable->SizeMask) != (UPInt)idx)
+        return;
+
+    SPInt home = idx;
+    SPInt prev = -1;
+    while (e->GetCachedHash(pTable->SizeMask) != (UPInt)home || !(e->Value == key))
+    {
+        prev = idx;
+        idx  = e->NextInChain;
+        if (idx == -1)
+            return;
+        e = &pTable->E(idx);
+    }
+
+    if (home == idx)
+    {
+        if (!e->IsEndOfChain())
+        {
+            MemberEntry* next = &pTable->E(e->NextInChain);
+            MemberEntry_Clear(e);
+            MemberEntry_CopyConstruct(e, *next);
+            e = next;
+        }
+    }
+    else
+        pTable->E(prev).NextInChain = e->NextInChain;
+    MemberEntry_Clear(e);
+    pTable->EntryCount--;
+}
+
+// MS2-FUNCTIONAL cl lays out the merged find-index test after the case-sensitive branch; same code otherwise
+// @0x1429388e0
+bool Object::DeleteMember(ASStringContext* psc, const ASString& name)
+{
+    ASStringHash_GC<Member>* phash = &Members;
+    MemberSet::Iterator      it    = MemberHash_FindCaseCheck(phash, name, psc->IsCaseSensitive());
+    if (it.IsEnd())
+        return false;
+    // Members the script must not delete.
+    if (it->Second.GetMemberFlags().GetDontDelete())
+        return false;
+    if (name == psc->GetBuiltin(ASBuiltin_onEnterFrame))
+        psc->InvalidateOptAdvanceList();
+    MemberHash_Remove(phash, name);
+    return true;
 }
 
 }}} // namespace Scaleform::GFx::AS2
