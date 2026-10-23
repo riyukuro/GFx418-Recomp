@@ -200,6 +200,12 @@ int FUN_1428d8eea(void*, float*);
 int FUN_1428d8ec0(void*, void*, unsigned, unsigned*);
 int FUN_1428d8eb4(void*, float*, float*, float*, int*);
 int FUN_1428d8eba(void*, void*, int*, int*, int*);
+int FUN_1428d8ea2(void*, unsigned*, unsigned*);
+int FUN_1428d8f02(void*, unsigned);
+int FUN_1428d8f08(void*, int);
+int FUN_1428d8ef6(void*, unsigned, unsigned);
+int FUN_1428d8f0e(void*, unsigned, unsigned, unsigned, unsigned);
+int FUN_1428d8ef0(void*, unsigned, unsigned, unsigned);
 
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
@@ -1127,6 +1133,51 @@ float QueryAudioElapsedSeconds(void* player)
     }
     LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(bytes + 0x70));
     return elapsedSeconds;
+}
+
+// MS2-FUNCTIONAL: applies loop bounds in milliseconds and schedules the channel's loop delay from the DSP clock.
+// @0x142745c80
+void ConfigureAudioLoop(void* player, int loopCount, float startSeconds, float endSeconds)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    auto* channel = *reinterpret_cast<FMOD::Channel**>(bytes + 0x38);
+    if (!channel || loopCount == 0)
+        return;
+    if (loopCount > 1) {
+        FUN_1428d8f02(channel, 2);
+        FUN_1428d8f08(channel, loopCount);
+    }
+
+    auto* request = *reinterpret_cast<unsigned char**>(bytes + 0x30);
+    auto* metadata = *reinterpret_cast<unsigned char**>(request + 0x38);
+    unsigned start = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x18) : 0;
+    unsigned loopLength = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x1c) : 0;
+    auto* sound = *reinterpret_cast<FMOD::Sound**>(request + 0x30);
+    unsigned soundLength = 0;
+    sound->getLength(&soundLength, 2);
+    float defaults[10] = {};
+    FUN_1428d8eb4(sound, defaults, nullptr, nullptr, nullptr);
+    if (startSeconds > 0.0f)
+        start = static_cast<unsigned>(static_cast<long long>(defaults[0] * startSeconds));
+    unsigned end = static_cast<unsigned>(static_cast<long long>(defaults[0] * endSeconds));
+    if (end == 0 || soundLength - 1 < end) {
+        end = start + loopLength;
+        if (loopLength == 0)
+            end = soundLength - 1;
+    }
+    FUN_1428d8ef6(channel, start, 2);
+    FUN_1428d8f0e(channel, start, 2, end, 2);
+
+    auto* manager = *reinterpret_cast<unsigned char**>(bytes + 0x28);
+    auto* system = *reinterpret_cast<FMOD::System**>(manager + 0x10);
+    unsigned clockHigh = 0, clockLow = 0;
+    FUN_1428d8ea2(system, &clockHigh, &clockLow);
+    const float duration = static_cast<float>((end - start) * loopCount) *
+                           (*reinterpret_cast<float*>(manager + 0xf4) / defaults[0]);
+    const unsigned delay = static_cast<unsigned>(static_cast<long long>(duration));
+    const unsigned nextLow = clockLow + delay;
+    clockHigh += nextLow < clockLow;
+    FUN_1428d8ef0(channel, 2, clockHigh, nextLow);
 }
 }
 
