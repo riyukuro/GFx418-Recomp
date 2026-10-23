@@ -41,6 +41,10 @@ extern const void* DAT_1431b91b0[];
 extern const void* DAT_1431b91d8[];
 extern const void* DAT_1431b9170[];
 extern const void* DAT_143149940[];
+extern const void* DAT_1431b93b0[];
+extern const void* DAT_1431b9360[];
+extern const void* DAT_1431b9410[];
+extern const void* DAT_1431b93c0[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -1084,6 +1088,28 @@ void VideoReader::ReadFile(UByte* buffer, SInt64 size)
         }
     }
     ReadStatus = ASYNC_STATUS_ERROR;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x14002ddd0
+void* FUN_14002ddd0(void* object, VideoReaderConfig* config)
+{
+    void** fields = (void**)object;
+    *((CriUint32*)object + 2) = 1;
+    fields[0] = (void*)DAT_1431b93b0;
+    fields[2] = (void*)DAT_1431b9360;
+    if (config)
+        FUN_14257dc30(config);
+    fields[3] = config;
+    fields[4] = NULL;
+    *((CriUint32*)object + 10) = 0;
+    FUN_14001d650(config, object);
+    *((CriUint32*)object + 11) = 0;
+    fields[0] = (void*)DAT_1431b9410;
+    *((CriUint32*)object + 13) = 0;
+    fields[2] = (void*)DAT_1431b93c0;
+    *((CriUint32*)object + 12) = 0;
+    return object;
 }
 
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
