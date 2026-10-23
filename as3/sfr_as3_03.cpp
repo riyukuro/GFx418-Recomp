@@ -2881,6 +2881,87 @@ namespace Scaleform { namespace GFx { namespace AS3 {
         return found;
     }
 }}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // MS2-FUNCTIONAL: frame differs (the Value temps around AbstractEqual are laid out differently)
+    // @0x142409b40
+    Boolean3 XMLElement::EqualsInternal(const XML& other)
+    {
+        Boolean3 r = XML::EqualsInternal(other);
+        if (r != undefined3)
+            return r;
+
+        const XMLElement& o = static_cast<const XMLElement&>(other);
+        if (!(*Ns == *o.Ns))
+            return false3;
+        const UPInt attrNum = Attrs.GetSize();
+        if (attrNum != o.Attrs.GetSize())
+            return false3;
+        const UPInt childNum = Children.GetSize();
+        if (childNum != o.Children.GetSize())
+            return false3;
+
+        for (UPInt i = 0; i < attrNum; ++i)
+        {
+            const XMLAttr& a = *Attrs[i];
+            UPInt j = 0;
+            for (; j < attrNum; ++j)
+            {
+                const XMLAttr& b = *o.Attrs[j];
+                if (!(a.Text == b.Text))
+                    continue;
+                if (a.Ns.GetPtr() == NULL ? b.Ns.GetPtr() != NULL : (b.Ns.GetPtr() == NULL || !(*a.Ns == *b.Ns)))
+                    continue;
+                if (a.Data == b.Data)
+                    break;
+            }
+            if (j >= attrNum)
+                return false3;
+        }
+
+        for (UPInt i = 0; i < childNum; ++i)
+        {
+            bool result;
+            AbstractEqual(result, Value(Children[i]), Value(o.Children[i]));
+            if (!result)
+                return false3;
+        }
+        return true3;
+    }
+
+    // @0x14240ae20
+    bool XMLElement::FindAttr(const Multiname& mn, UPInt& ind) const
+    {
+        if (mn.Name.IsString())
+        {
+            ASString name = mn.Name.AsString();
+            const UPInt size = Attrs.GetSize();
+            for (ind = 0; ind < size; ++ind)
+            {
+                if (Attrs[ind]->Matches(mn))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    // @0x14240afb0
+    bool XMLElement::FindChild(const Multiname& mn, UPInt& ind) const
+    {
+        if (mn.Name.IsString())
+        {
+            ASString name = mn.Name.AsString();
+            const UPInt size = Children.GetSize();
+            for (ind = 0; ind < size; ++ind)
+            {
+                XML* child = Children[ind];
+                if (child->GetKind() == kElement && child->Matches(mn))
+                    return true;
+            }
+        }
+        return false;
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500

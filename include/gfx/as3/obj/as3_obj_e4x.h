@@ -127,6 +127,10 @@ namespace Instances { namespace fl {
         virtual Instances::Namespace& GetCurrNamespace() const { return *Ns; }
         // @0x142408960
         virtual Pickable<XML> DeepCopy(XML* parent);
+        // (appended, sfr19) the first attribute matching mn (a string name), its index in ind. 0x14240ae20
+        bool FindAttr(const Multiname& mn, UPInt& ind) const;
+        // (appended, sfr19) the first element child matching mn (a string name), its index in ind. 0x14240afb0
+        bool FindChild(const Multiname& mn, UPInt& ind) const;
         // @0x1424153c0
         virtual void GetChildren(Instances::fl::XMLList& list, Kind k, const ASString* name = NULL);
         // @0x142415320
