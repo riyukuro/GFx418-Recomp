@@ -8,12 +8,13 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
 #include "ms2/scaleform/include/gfx/gfx_textsnapshot.h"
+#include "ms2/scaleform/include/kernel/sf_hash.h"
 
 namespace Scaleform { namespace Render { class Font; }}
 
 // The CSS style sheet of a StyleSheet instance. Its bodies (sfr_gfx_06g, text_stylesheet.h) and its base
 // (text_styledtext.h) are built on the render text headers, which do not mix with these; only what the instance's
-// constructor and destructor touch is modeled.
+// constructor and destructor and StyleSheet.styleNames touch is modeled.
 namespace Scaleform { namespace Render { namespace Text {
 
 struct Style;
@@ -48,22 +49,25 @@ public:
     void ClearStyle(KeyType type, const char* name, UPInt len = SF_MAX_UPINT);              // 0x1426095a0
     bool ParseCSS(const char* buffer, UPInt len);                                           // 0x14260b7f0
 
-private:
-    // The styles by key (a HashUncachedLH): only its table pointer.
-    struct StyleHash
-    {
-        StyleHash() : pTable(NULL) {}
-        void* pTable;
-    };
     // A style's key.
     struct StyleKey
     {
         StyleKey() : Type(CSS_None) {}
+        bool operator==(const StyleKey& o) const { return Type == o.Type && Value == o.Value; }
         KeyType     Type;       // +0x00
         StringLH    Value;      // +0x08
         UPInt       HashValue;  // +0x10
     };
+    struct StyleHashFunc
+    {
+        UPInt operator()(const StyleKey& key) const { return key.HashValue; }
+    };
+    // The styles by key (StatMV_Text_Mem 0x145).
+    typedef HashUncachedLH<StyleKey, Render::Text::Style*, StyleHashFunc, 0x145> StyleHash;
 
+    const StyleHash& GetStyles() const;                                                     // 0x142609e60
+
+private:
     StyleHash   Styles;         // +0x08
     StyleKey    TempKey;        // +0x10 the key of the last lookup
     UInt32      State;          // +0x28

@@ -5,6 +5,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424abbe0-0x1424ad030 .text$mn
 // MS2-RANGE: 0x1424ad870-0x1424bb1f0 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/gfx_assupport.h"
@@ -15,6 +17,9 @@
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/render/text_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/gfx_movieslots.h"
+#include "ms2/scaleform/include/gfx/gfx_fontprovider.h"
+#include "ms2/scaleform/include/kernel/sf_stringhash.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2439,7 +2444,242 @@ namespace Instances { namespace fl_text
         SnapshotData.Visit(&visitor, beginIndex, endIndex);
         result = parr;
     }
+
+    // MS2-FUNCTIONAL: the loop's end test (iterator != End()) keeps a materialized bool the exe folds away.
+    // @0x1424b4710
+    SF_NOINLINE void StyleSheet::styleNamesGet(SPtr<Instances::fl::Array>& result)
+    {
+        Pickable<Instances::fl::Array> parr = GetVM().MakeArray();
+        StringManager& sm = GetVM().GetStringManager();
+        String temp;
+        typedef GFx::Text::StyleManager::StyleHash StyleHash;
+        for (StyleHash::ConstIterator it = CSS.GetStyles().Begin(); it != CSS.GetStyles().End(); ++it)
+        {
+            temp.Clear();
+            if (it->First.Type == GFx::Text::StyleManager::CSS_Class)
+                temp.AppendChar('.');
+            temp += it->First.Value;
+            ASString name = sm.CreateString(temp);
+            Value v(name);
+            parr->SA.PushBack(v);
+        }
+        result = parr;
+    }
+
+    // Fills a TextFormat from the dynamic properties of a CSS-style object (StyleSheet.transform).
+    class CSSTextFormatLoader
+    {
+    public:
+        static void Process(TextFormat* tf, AS3::Object* pobj)
+        {
+            GlobalSlotIndex slotIdx(0);
+            while ((slotIdx = pobj->GetNextDynPropIndex(slotIdx)).IsValid())
+            {
+                Value name, value;
+                pobj->GetNextPropertyName(name, slotIdx);
+                pobj->GetNextPropertyValue(value, slotIdx);
+                if (name.IsString())
+                    processSub(tf, name.AsString(), value);
+            }
+        }
+
+    protected:
+        static void processSub(TextFormat* tf, const ASString& name, const Value& val);
+    };
+
+    // @0x1424b3350
+    SF_NOINLINE void CSSTextFormatLoader::processSub(TextFormat* tf, const ASString& name, const Value& val)
+    {
+        StringBuffer buff;
+        val.Convert2String(buff).DoNotCheck();
+        const char* pstr = buff.ToCStr();
+        char* temp = NULL;
+        UPInt sz = buff.GetSize();
+
+        if (name == "color")
+        {
+            UInt32 colval = strtol(pstr + 1, &temp, 16);
+            tf->color.SetUInt32(colval);
+        }
+        else if (name == "display")
+        {
+            // not supported
+        }
+        else if (name == "fontFamily")
+            tf->font = val;
+        else if (name == "fontSize")
+        {
+            float num = (float)SFstrtod(pstr, &temp);
+            tf->size.SetNumber(num);
+        }
+        else if (name == "fontStyle")
+        {
+            if (!strncmp("normal", pstr, (sz < 4) ? sz : 4))
+                tf->italic.SetBool(false);
+            else if (!strncmp("italic", pstr, (sz < 9) ? sz : 9))
+                tf->italic.SetBool(true);
+        }
+        else if (name == "fontWeight")
+        {
+            if (!strncmp("normal", pstr, (sz < 6) ? sz : 6))
+                tf->bold.SetBool(false);
+            else if (!strncmp("bold", pstr, (sz < 4) ? sz : 4))
+                tf->bold.SetBool(true);
+        }
+        else if (name == "kerning")
+        {
+            if (!strncmp("false", pstr, (sz < 5) ? sz : 5))
+                tf->kerning.SetBool(false);
+            else if (!strncmp("true", pstr, (sz < 4) ? sz : 4))
+                tf->kerning.SetBool(true);
+        }
+        else if (name == "leading")
+        {
+            float num = (float)SFstrtod(pstr, &temp);
+            tf->leading.SetNumber(num);
+        }
+        else if (name == "letterSpacing")
+        {
+            float num = (float)SFstrtod(pstr, &temp);
+            tf->letterSpacing.SetNumber(num);
+        }
+        else if (name == "marginLeft")
+        {
+            float num = (float)SFstrtod(pstr, &temp);
+            tf->leftMargin.SetNumber(num);
+        }
+        else if (name == "marginRight")
+        {
+            float num = (float)SFstrtod(pstr, &temp);
+            tf->rightMargin.SetNumber(num);
+        }
+        else if (name == "textAlign")
+            tf->align = val;
+        else if (name == "textDecoration")
+        {
+            if (!strncmp("none", pstr, (sz < 4) ? sz : 4))
+                tf->underline.SetBool(false);
+            else if (!strncmp("underline", pstr, (sz < 9) ? sz : 9))
+                tf->underline.SetBool(true);
+        }
+        else if (name == "textIndent")
+        {
+            float num = (float)SFstrtod(pstr, &temp);
+            tf->indent.SetNumber(num);
+        }
+    }
+
+    // A non-object format yields no result.
+    // @0x1424b4f80
+    SF_NOINLINE void StyleSheet::transform(SPtr<Instances::fl_text::TextFormat>& result, const Value& formatObject)
+    {
+        if (!formatObject.IsObject() || !formatObject.GetObject())
+            return;
+        AS3::Object* pobj = formatObject.GetObject();
+
+        SPtr<TextFormat> textFormat;
+        GetVM().ConstructBuiltinObject(textFormat, "flash.text.TextFormat").DoNotCheck();
+        CSSTextFormatLoader::Process(textFormat, pobj);
+        result = textFormat;
+    }
 }} // namespace Instances::fl_text
+
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- fl_text: Font.enumerateFonts and its font resource visitor ----
+
+// MovieImpl::LoadRegisteredFonts: adds the fonts registered with Font.registerFont.
+void FUN_1425711a0(Scaleform::GFx::MovieImpl* pmovie, Scaleform::HashSet<Scaleform::Ptr<Scaleform::Render::Font> >& fonts);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The movie's state bag (MovieImpl's StateBag base at +0x10; our MovieImpl is not polymorphic).
+static inline StateBag* MovieStateBag(MovieImpl* pmovie)
+{
+    return reinterpret_cast<StateBag*>((UByte*)pmovie + 0x10);
+}
+
+// The movie's font provider state.
+static inline Ptr<GFx::FontProvider> MovieFontProvider(MovieImpl* pmovie)
+{
+    return *(GFx::FontProvider*)MovieStateBag(pmovie)->GetStateAddRef(State::State_FontProvider);
+}
+
+// Collects the fonts among a movie's resources. 0x10 bytes; vftable 0x14316a058.
+class FontsVisitor : public MovieDef::ResourceVisitor
+{
+public:
+    FontsVisitor(HashSet<Ptr<Render::Font> >& fonts) : Fonts(fonts) {}
+
+    // @0x1424af670
+    virtual void Visit(MovieDef*, Resource* presource, ResourceId, const char*)
+    {
+        if (presource->GetResourceType() == Resource::RT_Font)
+        {
+            FontResource* pfontResource = static_cast<FontResource*>(presource);
+            Fonts.Set(pfontResource->GetFont());
+        }
+    }
+
+private:
+    FontsVisitor& operator=(const FontsVisitor&) { return *this; }
+
+    HashSet<Ptr<Render::Font> >& Fonts;     // +0x08
+};
+
+namespace Classes { namespace fl_text
+{
+    // The fonts of the movie's resources, the registered fonts and the font library's, as Font objects; with
+    // enumerateDeviceFonts also the system fonts by name.
+    // @0x1424b02f0
+    void Font::enumerateFonts(SPtr<Instances::fl::Array>& result, bool enumerateDeviceFonts)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        MovieImpl* proot = asvm.GetMovieImpl();
+        MovieDef* pmoviedef = AsMovieSlots(proot)->GetMovieDef();
+
+        HashSet<Ptr<Render::Font> > fonts;
+        FontsVisitor fontsVisitor(fonts);
+        pmoviedef->VisitResources(&fontsVisitor, MovieDef::ResVisit_Fonts);
+
+        FUN_1425711a0(proot, fonts);
+
+        FontLib* pfontlib = MovieStateBag(proot)->GetFontLib();
+        if (pfontlib)
+            pfontlib->LoadFonts(fonts);
+
+        Class* fontClass = asvm.GetClass(StringDataPtr("flash.text.Font"));
+        Pickable<Instances::fl::Array> retVal = asvm.MakeArray();
+
+        for (HashSet<Ptr<Render::Font> >::ConstIterator iter = fonts.Begin(); iter != fonts.End(); ++iter)
+        {
+            SPtr<Instances::fl_text::Font> font;
+            asvm.ConstructInstance(font, fontClass, 0, NULL);
+            font->pFont = *iter;
+            retVal->SA.PushBack(Value(font));
+        }
+
+        if (enumerateDeviceFonts)
+        {
+            GFx::FontProvider* pfontprovider = MovieFontProvider(proot);
+            if (pfontprovider)
+            {
+                StringHash<String> deviceFontNames;
+                pfontprovider->LoadFontNames(deviceFontNames);
+                for (StringHash<String>::ConstIterator iter = deviceFontNames.Begin(); iter != deviceFontNames.End();
+                     ++iter)
+                {
+                    SPtr<Instances::fl_text::Font> font;
+                    asvm.ConstructInstance(font, fontClass, 0, NULL);
+                    font->fontName = font->fontName.GetManager()->CreateString(iter->First.ToCStr(), iter->First.GetSize());
+                    retVal->SA.PushBack(Value(font));
+                }
+            }
+        }
+
+        result = retVal;
+    }
+}} // namespace Classes::fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
@@ -2667,3 +2907,4 @@ namespace Instances { namespace fl_text
 // MS2-PIN: ?Release@TextFormat@Text@Render@Scaleform@@QEBAXXZ 0x1424ae680 ; prop
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424b8f90 ; unique
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424b9030 ; unique
+// MS2-PIN: ??_7FontsVisitor@AS3@GFx@Scaleform@@6B@ 0x14316a058
