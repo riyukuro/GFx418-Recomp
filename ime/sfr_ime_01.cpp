@@ -1119,6 +1119,50 @@ void FUN_1423ccfc0(void*, long long owner, const char* command, const char* valu
     log->LogMessage("'\n");
 }
 
+// MS2-FUNCTIONAL: forwards the selected text to the active movie and applies the executable's state callback.
+// @0x1423ccdc0
+void FUN_1423ccdc0(unsigned long long* object, String* text)
+{
+    void* movie = reinterpret_cast<void*>(object[0xf]);
+    if (movie) {
+        void** vtable = *reinterpret_cast<void***>(movie);
+        reinterpret_cast<void(*)(void*)>(vtable[0x90 / sizeof(void*)])(movie);
+        reinterpret_cast<void(*)(void*, const char*)>(vtable[0x80 / sizeof(void*)])(movie, text->ToCStr());
+        const unsigned flags = *reinterpret_cast<unsigned*>(object + 0x11);
+        if (flags != 0x1000000 && (flags & 0xf00000) == 0) {
+            void** selfVtable = *reinterpret_cast<void***>(object);
+            reinterpret_cast<void(*)(void*, unsigned)>(selfVtable[0xa0 / sizeof(void*)])(
+                object, *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0xd4));
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: submits the default unsupported message and the selected language-specific movie text.
+// @0x1423cc2d0
+void FUN_1423cc2d0(unsigned long long* object)
+{
+    String text("Not Supported");
+    FUN_1423ccdc0(object, &text);
+    const unsigned count = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0xd0);
+    if (!count) return;
+    for (unsigned i = 0; i < count; ++i) {
+        const unsigned flags = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0x88);
+        auto* record = reinterpret_cast<unsigned char*>(object[0x17]) + i * 0x30;
+        if (flags != 0x1000000 && *reinterpret_cast<unsigned*>(record + 0x20) == flags &&
+            *reinterpret_cast<void**>(record + 0x28)) {
+            auto* states = reinterpret_cast<unsigned*>(object[50]);
+            if (states[i] == 2) {
+                text = *reinterpret_cast<String*>(record + 0x18);
+                FUN_1423ccdc0(object, &text);
+            }
+            if (states[i] != 1) return;
+            text = *reinterpret_cast<String*>(record + 0x10);
+            FUN_1423ccdc0(object, &text);
+            return;
+        }
+    }
+}
+
 void FUN_1423d94f0(void*, void*);
 
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
