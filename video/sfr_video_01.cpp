@@ -1447,6 +1447,59 @@ bool FUN_14000a090(Scaleform::GFx::ASStringNode** left,
     return FUN_14000a030(left, right, caseSensitive);
 }
 
+// MS2-FUNCTIONAL: erases one retained object from the pointer array and compacts the tail.
+// @0x14000a800
+void FUN_14000a800(void** array, Scaleform::UPInt index)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    auto** items = static_cast<void**>(*array);
+    if (fields[1] == 1) { FUN_140006e70(array, array, 0); return; }
+    ReleaseAs2GCObject(items[index]);
+    memmove(items + index, items + index + 1, (fields[1] - index - 1) * sizeof(void*));
+    --fields[1];
+}
+
+// MS2-FUNCTIONAL: releases all weak pairs and the allocated pair array.
+// @0x14000a8f0
+void FUN_14000a8f0(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_1400068d0(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+}
+
+// MS2-FUNCTIONAL: initializes an empty string-record array from the supplied source records.
+// @0x14000a950
+void* FUN_14000a950(void** destination, const void** source)
+{
+    return FUN_140007840(destination, source);
+}
+
+// MS2-FUNCTIONAL: releases the AS2 object stored in a hash entry and marks the entry unused.
+// @0x14000a9f0
+void FUN_14000a9f0(Scaleform::UPInt* entry)
+{
+    ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
+    entry[0] = ~Scaleform::UPInt(1);
+}
+
+// MS2-FUNCTIONAL: releases the AS2 object stored in a hash entry and marks the entry unused.
+// @0x14000aa30
+void FUN_14000aa30(Scaleform::UPInt* entry)
+{
+    ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
+    entry[0] = ~Scaleform::UPInt(1);
+}
+
+// MS2-FUNCTIONAL: destroys a NetStream and optionally returns its allocation to the global heap.
+// @0x14000aa70
+void* FUN_14000aa70(Scaleform::GFx::AS2::NetStream* stream, unsigned flags)
+{
+    stream->~NetStream();
+    if (flags & 1) Scaleform::Memory::Free(stream);
+    return stream;
+}
+
 // MS2-FUNCTIONAL: routes prototype constructor names to GASPrototypeBase and delegates other names.
 // @0x14000a110
 void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
