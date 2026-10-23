@@ -444,6 +444,23 @@ UByte FUN_14000ef80(Stream* stream) { return stream->ReadU8(); }
 // @0x14000efc0
 UInt16 FUN_14000efc0(Stream* stream) { return stream->ReadU16(); }
 
+// MS2-FUNCTIONAL: reads the tag fields at the executable offsets; the tag's public type is not yet recovered.
+// @0x14000f2d0
+void FUN_14000f2d0(void* tag, void* movieData)
+{
+    char* movie = static_cast<char*>(movieData);
+    Stream* stream = *reinterpret_cast<Stream**>(movie + 0x418);
+    if (!stream) stream = reinterpret_cast<Stream*>(movie + 0x50);
+    char* fields = static_cast<char*>(tag);
+    *reinterpret_cast<UInt16*>(fields + 0x20) = stream->ReadU16();
+    *reinterpret_cast<UInt16*>(fields + 0x24) = stream->ReadU16();
+    *reinterpret_cast<UInt16*>(fields + 0x28) = stream->ReadU16();
+    stream->ReadUInt(5);
+    fields[0x2c] = static_cast<char>(stream->ReadUInt(2));
+    fields[0x2d] = stream->ReadUInt(1) != 0;
+    fields[0x2e] = static_cast<char>(stream->ReadU8());
+}
+
 // @0x14000f0e0
 void FUN_14000f0e0(void* entry)
 {
