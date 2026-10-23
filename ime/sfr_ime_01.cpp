@@ -272,6 +272,27 @@ void* FUN_1423cdb60(unsigned long long* object, const char* text)
     return object;
 }
 
+// MS2-FUNCTIONAL: allocates four bytes per executable-observed record and stores the new buffer at +0x190.
+// @0x1423cad60
+void FUN_1423cad60(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0xd0);
+    void* data = Memory::Alloc(static_cast<UPInt>(count) * 4);
+    *reinterpret_cast<void**>(bytes + 0x190) = data;
+}
+
+// MS2-FUNCTIONAL: formats and releases the OS message exactly when the executable's +0x78 logger flag is set.
+// @0x1423cb920
+void FUN_1423cb920(void* object, DWORD code)
+{
+    if (*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x78)) {
+        char* message = 0;
+        FormatMessageA(0x1100, 0, code, 0, reinterpret_cast<LPSTR>(&message), 0, 0);
+        if (message) LocalFree(message);
+    }
+}
+
 // MS2-FUNCTIONAL: forwards the recovered formatting arguments through the executable's Log vtable slot.
 // @0x1423cd060
 void FUN_1423cd060(void* log, const char* format, ...)
