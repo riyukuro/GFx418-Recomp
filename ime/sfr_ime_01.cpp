@@ -2855,3 +2855,18 @@ unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long l
 
 // MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
 // MS2-PIN: ??_7GFxIMEManagerWin32@IME@GFx@Scaleform@@6B@ 0x1431383e0
+
+namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: the executable's AvmMovieClip destructor is empty; this wrapper preserves its 0x68 sized-delete path.
+// @0x1423dbb60
+void* FUN_1423dbb60(void* object, unsigned flags)
+{
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x68);
+        else Scaleform::Memory::Free(object);
+    }
+    return object;
+}
+
+}}}
