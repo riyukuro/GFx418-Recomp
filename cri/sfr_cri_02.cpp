@@ -50,6 +50,10 @@ void     FUN_140039f8c(void* section);
 void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
+void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
+CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* output);
+void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
+void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
 
 // ==== CRI heap backed object allocation ============================================================================
 
@@ -1347,6 +1351,51 @@ CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
     crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(movieYuvState,
         (const CriMvAlphaDecoderFrameInfo*)frameInfo);
     return 1;
+}
+
+// MS2-FUNCTIONAL: forward the player's video decoder and all five caller outputs to its frame-pool query.
+// @0x140036ed0
+void criMvPly_GetFramePoolInfo(void* player, void* a, void* b, void* c, void* d, void* e)
+{
+    if (player)
+        FUN_140044b90(((CriMvDecoderHandleFields*)player)->VideoDecoder, a, b, c, d, e);
+}
+
+// MS2-FUNCTIONAL: request the main audio stream's current data size from the movie audio manager.
+// @0x1400360c0
+CriUint32 criMvPly_GetDataSizeMainAudio(void* player, void* output)
+{
+    return FUN_140042f00(((CriMvSubAudioHandles*)player)->Manager, 0, player, output);
+}
+
+// MS2-FUNCTIONAL: request the secondary audio stream's current data size from the movie audio manager.
+// @0x140036100
+CriUint32 criMvPly_GetDataSizeSubAudio(void* player, void* output)
+{
+    return FUN_140042f00(((CriMvSubAudioHandles*)player)->Manager, 1, player, output);
+}
+
+// MS2-FUNCTIONAL: query the main audio stream's playback-complete state.
+// @0x140036140
+void criMvPly_IsEndMainAudioPlayback(void* player)
+{
+    FUN_140042df0(((CriMvSubAudioHandles*)player)->Manager, player, 0);
+}
+
+// MS2-FUNCTIONAL: query the secondary audio stream's playback-complete state.
+// @0x140036170
+void criMvPly_IsEndSubAudioPlayback(void* player)
+{
+    FUN_140042df0(((CriMvSubAudioHandles*)player)->Manager, player, 1);
+}
+
+// MS2-FUNCTIONAL: detach and clear the secondary audio decoder handle.
+// @0x140030fd0
+void criMvPly_DetachSubAudio(void* player)
+{
+    CriMvSubAudioHandles* audio = (CriMvSubAudioHandles*)player;
+    FUN_140042600(audio->Manager, audio->Decoder, 1);
+    audio->Decoder = NULL;
 }
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30

@@ -339,6 +339,14 @@ struct CriMvAlphaFrameSnapshot
     CriUint32 DisplayWidth;
 };
 
+struct CriMvSubAudioHandles
+{
+    CriUint8 Reserved[0xe10];
+    void* Manager;
+    CriUint8 Reserved2[8];
+    void* Decoder;
+};
+
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
 void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 
