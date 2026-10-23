@@ -14,8 +14,16 @@
 #include "../include/video/video_videoplayerimpl.h"
 
 void FUN_14257db50(void* object);
+void FUN_14257dcd0(void* object);
 void FUN_142584ce0(void* object);
 void FUN_142585580(void* object, const void* source);
+extern const void* const DAT_1431b8fc8[];
+extern const void* const DAT_1431b8fa0[];
+extern const void* const DAT_1431b8e08[];
+extern const void* const DAT_1431b9028[];
+extern const void* const DAT_1431b8fd0[];
+extern const void* const DAT_1431b8db0[];
+extern const void* const DAT_1431b8f18[];
 
 // MS2-FUNCTIONAL ??_GCriMvSoundInterface@@UEAAPEAXI@Z: this interface is compiled by CRI's VS2008 build; VS2017's
 // scalar-deleting destructor has the extra sized-delete branch when flag 4 is set.
@@ -5999,6 +6007,61 @@ void* FUN_140029de0(void* object)
         FUN_142584ce0((CriUint8*)object + 8);
     }
     return object;
+}
+
+// MS2-FUNCTIONAL: initialize the CRI system-timer callback object and retain its source.
+// @0x140029e40
+void* FUN_140029e40(void* object, void* source)
+{
+    *(CriUint32*)((CriUint8*)object + 8) = 1;
+    *(const void***)object = (const void**)DAT_1431b8fc8;
+    *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8fa0;
+    *(void**)((CriUint8*)object + 0x18) = NULL;
+    if (source)
+        ++*(CriUint32*)((CriUint8*)source + 8);
+    if (*(void**)((CriUint8*)object + 0x18))
+        FUN_14257dcd0(*(void**)((CriUint8*)object + 0x18));
+    *(void**)((CriUint8*)object + 0x18) = source;
+    return object;
+}
+
+// MS2-FUNCTIONAL: release the retained callback and then tear down its reference-count base.
+// @0x140029ed0
+void FUN_140029ed0(void* object)
+{
+    *(const void***)object = (const void**)DAT_1431b8fc8;
+    *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8fa0;
+    if (*(void**)((CriUint8*)object + 0x18))
+        FUN_14257dcd0(*(void**)((CriUint8*)object + 0x18));
+    *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8e08;
+    FUN_14257db50(object);
+}
+
+// MS2-FUNCTIONAL: perform the callback teardown and free the object when scalar-delete is requested.
+// @0x140029fa0
+void* FUN_140029fa0(void* object, CriUint64 flags)
+{
+    FUN_140029ed0(object);
+    if (flags & 1)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: tear down the CRI output callback's retained interface and reference-count base.
+// @0x14002a090
+void FUN_14002a090(void* object)
+{
+    *(const void***)object = (const void**)DAT_1431b9028;
+    *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8fd0;
+    *(const void***)((CriUint8*)object + 0x28) = (const void**)DAT_1431b8f18;
+    if (*(void**)((CriUint8*)object + 0x20))
+        FUN_14257dcd0(*(void**)((CriUint8*)object + 0x20));
+    *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8db0;
+    FUN_14257db50(object);
 }
 
 // MS2-FUNCTIONAL: these three CRI members each release their owned heap buffer.
