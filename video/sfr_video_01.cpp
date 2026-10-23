@@ -1653,6 +1653,37 @@ void FUN_14000b680(void** table, void* owner)
         FUN_14000b3b0(table, owner, fields[1] * 2 + 2);
 }
 
+// MS2-FUNCTIONAL: finalizes the prototype subobject and the NetStream base subobject.
+// @0x14000aec0
+void FUN_14000aec0(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0xd8)->~GASPrototypeBase();
+    reinterpret_cast<Scaleform::GFx::AS2::NetStream*>(object)->~NetStream();
+}
+
+// MS2-FUNCTIONAL: releases the derived prototype and NetStream state.
+// @0x14000a7b0
+void FUN_14000a7b0(void* object) { FUN_14000aec0(object); }
+
+// MS2-FUNCTIONAL: destroys the prototype and NetStream base, then optionally frees the object.
+// @0x14000a880
+void* FUN_14000a880(void* object, unsigned flags)
+{
+    FUN_14000aec0(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroys the prototype and NetStream base, then optionally frees the object.
+// @0x14000b1c0
+void* FUN_14000b1c0(void* object, unsigned flags)
+{
+    FUN_14000aec0(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
 // @0x14000b300
 void FUN_14000b300(void* owner)
