@@ -24,6 +24,9 @@ extern "C" CriUint32 DAT_143b27c6c;
 extern "C" CriUint64 DAT_143b27c70;
 extern "C" CriUint8 DAT_143b27948;
 extern "C" CriUint32 DAT_143b27c40;
+extern "C" const char* DAT_143b27c48;
+extern "C" const void* DAT_143a47bc0[];
+extern "C" const void* DAT_143a47cb0[];
 extern "C" const char* DAT_143ba9d18;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
@@ -50,6 +53,7 @@ void FUN_140046d50(void*, CriSint32);
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
 void FUN_1400479e0(void);
+void FUN_14004dc70(void);
 CriBool FUN_140024ff0(void);
 void FUN_140026f40(CriError&);
 void FUN_140024f80(void);
@@ -186,6 +190,20 @@ void CriMv::InitializeMana(CriError& error)
     if (!FUN_140024ff0())
         FUN_140026f40(error);
     FUN_140024f80();
+}
+
+// @0x14003bed0
+const void** FUN_14003bed0()
+{
+    DAT_143b27c48 = "\ncriVmpv/PCx64 Ver.3.32 Build:Jan 20 2012 18:13:28\n";
+    FUN_14004dc70();
+    return DAT_143a47bc0;
+}
+
+// @0x14003bf10
+const void** FUN_14003bf10()
+{
+    return DAT_143a47cb0;
 }
 
 // ==== CRI UTF heap callback helpers ================================================================================
