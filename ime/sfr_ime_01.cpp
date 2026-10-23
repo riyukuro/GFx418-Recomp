@@ -6,9 +6,11 @@
 #include <windows.h>
 #include <imm.h>
 #include <cstdarg>
+#include <vector>
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_memory.h"
 #include "../include/kernel/sf_string.h"
+#include "../include/kernel/sf_utf8util.h"
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_state.h"
 #include "../include/gfx/as3/as3_support.h"
@@ -36,6 +38,31 @@ static UINT cx18_ImmGetIMEFileNameA(HKL layout, LPSTR buffer, UINT capacity)
 {
     typedef UINT (WINAPI* Fn)(HKL, LPSTR, UINT);
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetIMEFileNameA"))(layout, buffer, capacity);
+}
+static BOOL cx18_ImmAssociateContextEx(HWND hwnd, HIMC context, DWORD flags)
+{
+    typedef BOOL (WINAPI* Fn)(HWND, HIMC, DWORD);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmAssociateContextEx"))(hwnd, context, flags);
+}
+static BOOL cx18_ImmSetOpenStatus(HIMC context, BOOL open)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC, BOOL);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetOpenStatus"))(context, open);
+}
+static BOOL cx18_ImmGetConversionStatus(HIMC context, DWORD* conversion, DWORD* sentence)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC, DWORD*, DWORD*);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetConversionStatus"))(context, conversion, sentence);
+}
+static BOOL cx18_ImmSetConversionStatus(HIMC context, DWORD conversion, DWORD sentence)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC, DWORD, DWORD);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetConversionStatus"))(context, conversion, sentence);
+}
+static BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD index, LPCVOID comp, DWORD compBytes, LPCVOID read, DWORD readBytes)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC, DWORD, LPCVOID, DWORD, LPCVOID, DWORD);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetCompositionStringW"))(context, index, comp, compBytes, read, readBytes);
 }
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
@@ -1313,6 +1340,44 @@ void FUN_1423cb660(void* self)
             cx18_ImmReleaseContext(hwnd, context);
         }
     }
+}
+
+// MS2-FUNCTIONAL: reopens the IME context when absent, applies the requested open state, and restores association.
+// @0x1423d1760
+unsigned long long FUN_1423d1760(void* self, unsigned char open)
+{
+    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28);
+    bool wasAssociated = true;
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) {
+        wasAssociated = false;
+        cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
+        context = cx18_ImmGetContext(hwnd);
+        if (!context) return cx18_ImmReleaseContext(hwnd, nullptr);
+    }
+    const BOOL result = cx18_ImmSetOpenStatus(context, open);
+    if (!wasAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
+    cx18_ImmReleaseContext(hwnd, context);
+    *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0x80) = open;
+    return result != 0;
+}
+
+// MS2-FUNCTIONAL: converts UTF-8 composition text to UTF-16 and sends it through the executable's IME composition API.
+// @0x1423d14d0
+bool FUN_1423d14d0(void* self, const char* text)
+{
+    const int utf16Length = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
+    std::vector<wchar_t> converted(utf16Length > 0 ? static_cast<size_t>(utf16Length) : 1, L'\0');
+    if (utf16Length > 0) MultiByteToWideChar(CP_UTF8, 0, text, -1, converted.data(), utf16Length);
+    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) return false;
+    static const wchar_t empty[] = L"";
+    const wchar_t* composition = converted[0] ? converted.data() : empty;
+    const BOOL result = cx18_ImmSetCompositionStringW(context, 9, composition,
+        static_cast<DWORD>(Scaleform::UTF8Util::GetLength(text, -1) * sizeof(wchar_t)), nullptr, 0);
+    cx18_ImmReleaseContext(hwnd, context);
+    return result != 0;
 }
 
 void FUN_1423d94f0(void*, void*);
