@@ -128,6 +128,8 @@
 // MS2-RANGE: 0x14296aa90-0x14296ab10 .text$mn
 // MS2-RANGE: 0x14297d460-0x14297d4b0 .text$mn
 // MS2-RANGE: 0x1429659e0-0x142965a20 .text$mn
+// MS2-RANGE: 0x142962b30-0x142962bb0 .text$mn
+// MS2-RANGE: 0x142963fc0-0x142964020 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1400,6 +1402,22 @@ bool AvmTextField::IsFocusEnabled(FocusMovedType fmt) const
             return false;
     }
     return true;
+}
+
+// @0x142962b30
+bool AvmSprite::Invoke(const char* methodName, Value* presult, unsigned numArgs)
+{
+    Ptr<Sprite> psprite = GetSprite(); // kept alive across the call
+    return GAS_Invoke(methodName, presult, this, reinterpret_cast<Environment*>(Unrecovered_38), numArgs,
+                      reinterpret_cast<Environment*>(Unrecovered_38)->GetTopIndex());
+}
+
+// @0x142963fc0
+bool AvmSprite::InvokeArgs(const char* methodName, Value* presult, const char* methodArgFmt, va_list args)
+{
+    Ptr<Sprite> psprite = GetSprite();
+    return GAS_InvokeParsed(methodName, presult, this, reinterpret_cast<Environment*>(Unrecovered_38), methodArgFmt,
+                            args);
 }
 
 }}} // namespace Scaleform::GFx::AS2

@@ -347,6 +347,12 @@ public:
 // stack; logs an error and returns false when it is not a function (exe 0x142946d10).
 bool GAS_Invoke(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
                 int firstArgBottomIndex, const char* pmethodName);
+// (appended for sfr_as2_06) The same for the method named pmethodName on pthis (exe 0x142946fc0); the arguments
+// pushed from pmethodArgFmt and the va_list (exe 0x142947800).
+bool GAS_Invoke(const char* pmethodName, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
+                int firstArgBottomIndex);
+bool GAS_InvokeParsed(const char* pmethodName, Value* presult, ObjectInterface* pthis, Environment* penv,
+                      const char* pmethodArgFmt, va_list args);
 
 // A try block entered by the running code. 0x10 bytes.
 struct Environment::TryDescr

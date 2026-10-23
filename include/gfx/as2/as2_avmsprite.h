@@ -152,6 +152,10 @@ public:
     void OnAddedDisplayObject(InteractiveObject* ch, unsigned sessionId, bool placeObject);
     // The replacement gets its load event and the queued actions run at once (exe 0x14297d460).
     virtual bool ReplaceChildCharacterOnLoad(InteractiveObject* poldChar, InteractiveObject* pnewChar);
+    // Calls the clip's method with numArgs arguments already on its environment's stack (exe 0x142962b30), or
+    // with the arguments in methodArgFmt and args (exe 0x142963fc0).
+    bool Invoke(const char* methodName, Value* presult, unsigned numArgs);
+    bool InvokeArgs(const char* methodName, Value* presult, const char* methodArgFmt, va_list args);
 };
 
 inline Sprite* ObjectInterface::ToSprite()
