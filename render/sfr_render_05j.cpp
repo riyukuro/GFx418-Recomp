@@ -284,6 +284,69 @@ void TreeCacheNode::forceUpdateImages()
 {
 }
 
+static inline RectF EnclosedBounds(const Matrix2F& m, const RectF& r)
+{
+    RectF result(RectF::NoInit);
+    m.EncloseTransform(&result, r);
+    return result;
+}
+
+// the bounds of a child's mask in our space (in 3D, the whole viewport); false for an invisible or empty mask
+// @0x142683c80
+bool TreeCacheNode::calcChildMaskBounds(RectF* bounds, TreeCacheNode* child)
+{
+    TreeCacheNode*            maskCache = child->pMask;
+    const TreeNode::NodeData* maskData  = maskCache->GetNodeData();
+    if (!maskData->IsVisible() || maskData->AproxParentBounds.IsEmpty())
+        return false;
+
+    // anything 3D up the tree: the bounds are not meaningful, use the viewport
+    bool           has3d  = maskData->Is3D();
+    TreeCacheNode* parent = this;
+    while (parent && !has3d)
+    {
+        has3d |= parent->GetNodeData()->Is3D();
+        parent = parent->GetParent();
+    }
+
+    if (has3d)
+    {
+        const Viewport& vp = pRoot->GetNodeData()->VP;
+        RectF           clipSpace(-1, -1, 1, 1);
+        switch (vp.Flags & Viewport::View_Orientation_Mask)
+        {
+        default:
+            *bounds = Viewport::ScaleToViewport(vp.Left, vp.Top, vp.Width, vp.Height, clipSpace);
+            break;
+        case Viewport::View_Orientation_L90:
+        case Viewport::View_Orientation_R90:
+            *bounds = Viewport::ScaleToViewport(vp.Left, vp.Top, vp.Height, vp.Width, clipSpace);
+            break;
+        }
+        return true;
+    }
+
+    const TreeNode::NodeData* childData = child->GetNodeData();
+
+    // the mask's matrix into our space: a sibling's is fine as is, a child's mask goes through the child
+    Matrix2F m(maskData->M2D());
+    if (maskCache->GetParent() != this)
+    {
+        if (maskCache->GetParent() == child)
+            m.Append(childData->M2D());
+        else
+        {
+            maskCache->CalcViewMatrix(&m);
+            Matrix2F view;
+            CalcViewMatrix(&view);
+            m.Append(view);
+        }
+    }
+
+    *bounds = EnclosedBounds(m, maskData->AproxLocalBounds);
+    return true;
+}
+
 // @0x142680c40
 void TreeCacheNode::CalcViewMatrix(Matrix2F* view) const
 {
@@ -562,6 +625,85 @@ TreeCacheContainer::~TreeCacheContainer()
             p->HandleRemoveNode();
         p = next;
     }
+}
+
+// syncs the cached children with the node's child array after inserts/removals
+// @0x142681c20
+void TreeCacheContainer::HandleChanges(unsigned changeBits)
+{
+    if (changeBits & Change_EdgeAAMode)
+        propagateEdgeAA(CalcEdgeAAMode(GetNodeData(), GetParent()));
+
+    if (!(changeBits & (Change_ChildInsert | Change_ChildRemove)))
+        return;
+
+    bool                  change     = false;
+    const TreeContainer::NodeData* data = GetNodeData();
+    UPInt                 childCount = data->Children.GetSize();
+    unsigned              index;
+    TreeCacheNode*        cached     = Children.GetFirst();
+
+    for (index = 0; index < childCount; index++)
+    {
+        TreeNode*      node      = data->Children.GetAt(index);
+        TreeCacheNode* nodeCache = node->GetRenderData();
+
+        // in place already
+        if (nodeCache == cached)
+        {
+            cached = cached->pNext;
+            continue;
+        }
+
+        // ours and in the child list (masks are not, pPrev == 0): the cached entries before it went away or moved
+        if (nodeCache && nodeCache->GetParent() == this && nodeCache->pPrev)
+        {
+            do
+            {
+                TreeCacheNode* next = cached->pNext;
+                cached->RemoveFromParent();
+                cached = next;
+            } while (cached != nodeCache && !Children.IsNull(cached));
+
+            change = true;
+            // this index again, now as an insert
+            index--;
+            continue;
+        }
+
+        // moved here from elsewhere in the tree: detach it from the old parent first
+        if (nodeCache && nodeCache->GetParent())
+        {
+            TreeCacheNode* oldParent = nodeCache->GetParent();
+            nodeCache->RemoveFromParent();
+            if (oldParent->pRoot)
+                oldParent->pRoot->AddToUpdate(oldParent, Update_Pattern);
+        }
+
+        TreeCacheNode* inserted = node->GetDisplayData()->updateCache(this, cached->pPrev, node, Depth + 1);
+        if (inserted && inserted->pRoot)
+            inserted->pRoot->AddToUpdate(inserted, Change_Matrix | Change_CxForm);
+        change = true;
+
+        // the insert can (rarely) move our next cached child into its subtree: start over
+        if (!Children.IsNull(cached) && cached->GetParent() != this)
+        {
+            cached = Children.GetFirst();
+            index  = (unsigned)-1;
+        }
+    }
+
+    // whatever is left has no node any more
+    while (!Children.IsNull(cached))
+    {
+        TreeCacheNode* next = cached->pNext;
+        cached->RemoveFromParent();
+        cached = next;
+        change = true;
+    }
+
+    if (change && IsPatternChainValid())
+        pRoot->AddToUpdate(this, Update_Pattern);
 }
 
 // @0x142682050
