@@ -1019,6 +1019,19 @@ namespace Classes { namespace fl
     {
         result = ::tan(v);
     }
+
+    // @0x14242b300
+    void Object::toStringProto(ASString& result)
+    {
+        result = GetVM().GetStringManager().CreateConstString("[class ") + GetTraits().GetName() + "]";
+    }
+
+    // @0x14242b3d0
+    void RegExp::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED4(ti, vm, argc, argv);
+        result.Assign(static_cast<Instances::fl::RegExp*>(_this.GetObject())->ToString());
+    }
 }}
 
 }}} // namespace Scaleform::GFx::AS3
@@ -1027,6 +1040,22 @@ namespace Classes { namespace fl
 typedef decltype(Scaleform::GFx::AS3::TClassTraitsCache::TContainer::mHash) Ms2ClassTraitsCacheSet;
 // @0x14242a640
 template void Ms2ClassTraitsCacheSet::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
+
+// Array's sparse part (HashDH<UPInt, Value>) rehash.
+typedef decltype(Scaleform::HashDH<Scaleform::UPInt, Scaleform::GFx::AS3::Value>::mHash) Ms2SparseValueSet;
+// MS2-FUNCTIONAL: same code; the exe calls Clear (0x142405fd0) out of line for a zero size, ours inlines it
+// @0x14242a870
+template void Ms2SparseValueSet::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
+
+// The XML namespace-resolution string set (HashSetDH<ASString>) rehash.
+// MS2-FUNCTIONAL: same code; the exe allocates and saves registers differently
+// @0x14242aaa0
+template void Scaleform::HashSetDH<Scaleform::GFx::ASString>::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
+
+// The XML duplicate check set (HashSet<Value, Value::HashFunctor>) rehash.
+// MS2-FUNCTIONAL: same code; the exe allocates and saves registers differently
+// @0x14242ac40
+template void Scaleform::HashSet<Scaleform::GFx::AS3::Value, Scaleform::GFx::AS3::Value::HashFunctor>::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@$0CM@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242b780
 // MS2-PIN: ?Func@?$ThunkFunc0@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$04_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14242b7e0
@@ -1312,3 +1341,6 @@ template void Ms2ClassTraitsCacheSet::BaseType::setRawCapacity(void* pheapAddr, 
 // MS2-PIN: ?Func@?$ThunkFunc0@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@$0CK@V?$SPtr@VTransform@fl_geom@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438a80
 // MS2-PIN: ?Func@?$ThunkFunc0@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$02V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438b30
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@$0BEJ@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14242a640
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorDH@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14242a870
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@VASString@GFx@Scaleform@@V?$FixedSizeHash@VASString@GFx@Scaleform@@@3@V43@U?$AllocatorDH@VASString@GFx@Scaleform@@$01@3@V?$HashsetCachedEntry@VASString@GFx@Scaleform@@V?$FixedSizeHash@VASString@GFx@Scaleform@@@3@@3@@Scaleform@@AEAAXPEAX_K@Z 0x14242aaa0
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@VValue@AS3@GFx@Scaleform@@UHashFunctor@1234@U51234@U?$AllocatorGH@VValue@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@VValue@AS3@GFx@Scaleform@@UHashFunctor@1234@@4@@Scaleform@@AEAAXPEAX_K@Z 0x14242ac40

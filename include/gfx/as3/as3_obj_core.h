@@ -1035,6 +1035,10 @@ namespace Classes { namespace fl
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
         // @0x142417f60
         virtual void InitPrototype(AS3::Object& obj) const;
+
+        // (appended, sfr19) "[class <name>]".
+        // 0x14242b300
+        void toStringProto(ASString& result);
     };
 
     class Array : public Class
@@ -1239,6 +1243,10 @@ namespace Classes { namespace fl
         virtual void InitPrototype(AS3::Object& obj) const;
         // @0x14241c560
         virtual Pickable<AS3::Object> MakePrototype() const;
+
+        // (appended, sfr19) the prototype's toString thunk.
+        // 0x14242b3d0
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class String : public Class
