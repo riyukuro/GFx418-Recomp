@@ -4775,6 +4775,59 @@ void FUN_140031470(void* player)
     FUN_1400317b0(player);
 }
 
+// MS2-FUNCTIONAL: drain subtitle decoder queues whose frame indices have fallen behind playback.
+// @0x1400369e0
+void FUN_1400369e0(void* player)
+{
+    struct VideoFrameView { CriUint8 Reserved[0x100]; CriSint32 Index; };
+    struct AlphaFrameView { CriUint8 Reserved[0xb0]; CriSint32 Index; };
+    VideoFrameView videoFrame = {};
+    AlphaFrameView alphaFrame = {};
+    struct SubtitleEndState
+    {
+        CriUint8 Reserved[0xe58];
+        CriSint32 Count;
+        CriSint32 Reserved2;
+        CriSint32 VideoDone;
+        CriSint32 AlphaDone;
+    };
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    SubtitleEndState* state = (SubtitleEndState*)player;
+    CriSint32 subtitleCount = state->Count;
+    if (subtitleCount <= 0)
+        return;
+
+    if (state->VideoDone != 1)
+    {
+        void* decoder = decoders->VideoDecoder;
+        while (FUN_140044870(decoder, &videoFrame))
+        {
+            if (subtitleCount <= videoFrame.Index)
+            {
+                state->VideoDone = 1;
+                break;
+            }
+            FUN_1400449c0(decoder, &videoFrame);
+            FUN_140044a30(decoder, &videoFrame);
+        }
+    }
+
+    void* alphaDecoder = decoders->AlphaDecoder;
+    if (alphaDecoder && state->AlphaDone != 1)
+    {
+        while (FUN_140043f10(alphaDecoder, &alphaFrame))
+        {
+            if (subtitleCount <= alphaFrame.Index)
+            {
+                state->AlphaDone = 1;
+                return;
+            }
+            FUN_140043fe0(alphaDecoder, &alphaFrame);
+            FUN_140044050(alphaDecoder, &alphaFrame);
+        }
+    }
+}
+
 // MS2-FUNCTIONAL: discard the player's pending subtitle chunk.
 // @0x140036e30
 void FUN_140036e30(void* player, CriMvSubtitleChunk* chunk)
