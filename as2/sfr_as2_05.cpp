@@ -160,6 +160,7 @@
 // MS2-RANGE: 0x142956380-0x142956407 .text$mn
 // MS2-RANGE: 0x142957100-0x14295726c .text$mn
 // MS2-RANGE: 0x1429579a0-0x142957b03 .text$mn
+// MS2-RANGE: 0x142956cd0-0x1429570f8 .text$mn
 
 #include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -1746,14 +1747,14 @@ static SF_FORCEINLINE bool IsPath_Cached(const ASString& name)
 }
 
 // @0x142943200
-bool Environment::FindAndGetVariableRaw(const GetVarParams& params) const
+SF_NOINLINE bool Environment::FindAndGetVariableRaw(const GetVarParams& params) const
 {
     if (!IsPath_Cached(params.VarName))
         return GetVariableRaw(params);
 
     Value        owner;
     GetVarParams pathParams(params.VarName, params.pResult);
-    pathParams.ppOwner      = params.ppOwner;
+    pathParams.pWithStack   = params.pWithStack;
     pathParams.ppNewTarget  = params.ppNewTarget;
     pathParams.pOwnerValue  = &owner;
     pathParams.ExcludeFlags = params.ExcludeFlags;
@@ -3971,6 +3972,65 @@ unsigned MovieRoot::GetVariableArraySize(const char* ppathToVar)
             size = static_cast<ArrayObject*>(pobj)->GetSize();
     }
     return size;
+}
+
+// The object a resolved "this" names: an object, else the script side of a character; the target's when "this"
+// was not found.
+static SF_FORCEINLINE ObjectInterface* Env_ThisObject(Environment* penv, bool found, const Value& owner)
+{
+    InteractiveObject* pchar = 0;
+    if (found)
+    {
+        ObjectInterface* pthis = owner.ToObject(penv);
+        if (pthis)
+            return pthis;
+        if (owner.IsCharacter() && owner.V.pCharHandle)
+        {
+            DisplayObject* pdisp = owner.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+            if (pdisp)
+                pchar = pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        }
+    }
+    else
+        pchar = penv->GetTarget();
+    AvmCharacter* pavm = pchar ? ToAvmCharacter(pchar) : 0;
+    return pavm;
+}
+
+// The resolve handler a value holds, null for anything else.
+static SF_FORCEINLINE FunctionRef Value_ToResolveHandler(const Value& v)
+{
+    if (v.GetType() == Value::RESOLVEHANDLER)
+        return FunctionRef(v.V.FunctionValue);
+    return FunctionRef();
+}
+
+// MS2-FUNCTIONAL the exe keeps the resolve handler in registers and inlines the FnCall dtor (out of line elsewhere)
+// @0x142956cd0
+bool Environment::GetVariable(const ASString& varname, Value* presult, const WithStackArray* pwithStack,
+                              InteractiveObject** ppnewTarget, Value* powner, unsigned exclFlags)
+{
+    bool rv = FindAndGetVariableRaw(GetVarParams(varname, presult, pwithStack, ppnewTarget, powner, exclFlags));
+    if (rv && presult->IsProperty())
+    {
+        Value            owner;
+        ObjectInterface* pthis;
+        pthis = Env_ThisObject(this, GetVariableRaw(GetVarParams(GetBuiltin(ASBuiltin_this), &owner, pwithStack)),
+                               owner);
+        presult->GetPropertyValue(this, pthis, presult);
+    }
+    else if (presult->GetType() == Value::RESOLVEHANDLER)
+    {
+        Value            owner;
+        ObjectInterface* pthis;
+        pthis = Env_ThisObject(this, GetVariable(GetBuiltin(ASBuiltin_this), &owner, pwithStack), owner);
+        FunctionRef resolveHandler(Value_ToResolveHandler(*presult));
+        Push(varname);
+        presult->SetUndefined();
+        resolveHandler.Invoke(FnCall(presult, pthis, this, 1, GetTopIndex()));
+        Drop1();
+    }
+    return rv;
 }
 }}} // namespace Scaleform::GFx::AS2
 

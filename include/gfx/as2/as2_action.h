@@ -249,19 +249,21 @@ public:
     // The character a target path names ("/a/b", "a.b", "../a"; empty: the target), 0 if none; flag 4 silences
     // the error (exe 0x142944cb0).
     InteractiveObject* FindTarget(const ASString& path, unsigned flags = 0) const;
-    // Arguments of FindVariable: the name to resolve and where the value goes; the optional outputs
-    // (owner, new target, flags) stay null for a plain lookup. 0x30 bytes.
+    // Arguments of FindVariable: the name to resolve and where the value goes; the with stack and the optional
+    // outputs (new target, owner) stay null for a plain lookup. 0x30 bytes.
     struct GetVarParams
     {
-        const ASString& VarName;   // +0x00
-        Value*          pResult;   // +0x08
-        void*           ppOwner;   // +0x10 unrecovered optional outputs
-        void*           ppNewTarget; // +0x18
-        Value*          pOwnerValue; // +0x20 the object the path resolved to (undefined if not an object)
-        int             ExcludeFlags; // +0x28
+        const ASString&       VarName;      // +0x00
+        Value*                pResult;      // +0x08
+        const WithStackArray* pWithStack;   // +0x10
+        InteractiveObject**   ppNewTarget;  // +0x18
+        Value*                pOwnerValue;  // +0x20 the object the path resolved to (undefined if not an object)
+        int                   ExcludeFlags; // +0x28
 
-        GetVarParams(const ASString& name, Value* presult)
-            : VarName(name), pResult(presult), ppOwner(0), ppNewTarget(0), pOwnerValue(0), ExcludeFlags(0) {}
+        GetVarParams(const ASString& name, Value* presult, const WithStackArray* pwithStack = 0,
+                     InteractiveObject** ppnewTarget = 0, Value* powner = 0, int exclFlags = 0)
+            : VarName(name), pResult(presult), pWithStack(pwithStack), ppNewTarget(ppnewTarget), pOwnerValue(powner),
+              ExcludeFlags(exclFlags) {}
     };
     // A plain name (no path) through the scope chain (exe 0x142957b10).
     bool               GetVariableRaw(const GetVarParams& params) const;
