@@ -2064,6 +2064,17 @@ void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
     }
 }
 
+// MS2-FUNCTIONAL: releases the embedded stack resource and conditionally deletes the TaskStack allocation.
+// @0x14000fe50
+void* FUN_14000fe50(void* object, unsigned flags)
+{
+    if (void* resource = *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 8))
+        FUN_14257dcb0(resource);
+    if (flags & 1)
+        ::operator delete(object);
+    return object;
+}
+
 // Shared path for the generated AS3 trait getters in this range.
 static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
                             void* callback, void* base)
