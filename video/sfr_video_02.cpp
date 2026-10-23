@@ -8,6 +8,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_events.h"
@@ -1617,6 +1618,45 @@ void FUN_140013600(void* array, unsigned __int64 index)
     }
     *reinterpret_cast<void**>(data + index * 8) = Scaleform::Memory::Alloc(0x2000);
     ++*reinterpret_cast<unsigned __int64*>(bytes + 0x10);
+}
+
+// MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
+// @0x140011b40
+void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
+{
+    auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+        reinterpret_cast<char*>(object) + 0x68);
+    prototype->~GASPrototypeBase();
+    object->~Object();
+}
+
+// MS2-FUNCTIONAL: scalar deleting form of the prototype and Object destruction.
+// @0x140011c00
+Scaleform::GFx::AS2::Object* FUN_140011c00(Scaleform::GFx::AS2::Object* object, unsigned flags)
+{
+    FUN_140011b40(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroys the GASPrototypeBase subobject, releases its retained object, then destroys Object.
+// @0x14000ebe0
+void FUN_14000ebe0(Scaleform::GFx::AS2::Object* object)
+{
+    char* bytes = reinterpret_cast<char*>(object);
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->~GASPrototypeBase();
+    int* refs = *reinterpret_cast<int**>(bytes + 0x68);
+    if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
+    object->~Object();
+}
+
+// MS2-FUNCTIONAL: scalar deleting form of VideoObject's prototype destruction.
+// @0x14000ec40
+Scaleform::GFx::AS2::Object* FUN_14000ec40(Scaleform::GFx::AS2::Object* object, unsigned flags)
+{
+    FUN_14000ebe0(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
 }
 
 // MS2-FUNCTIONAL: appends a copied reference entry and increments its intrusive reference count.
