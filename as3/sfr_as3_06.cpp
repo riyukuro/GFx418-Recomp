@@ -12,6 +12,13 @@
 #include "ms2/scaleform/include/gfx/gfx_imageresource.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display_pixels.h"
+// render_gradients.h uses Alg::Lerp from kernel/sf_alg.h, which shares its include guard with the
+// include/kernel/sf_alg.h this unit already pulled in.
+namespace Scaleform { namespace Alg {
+template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
+}}
+#include "ms2/scaleform/include/render/render_gradients.h"
+#include "ms2/scaleform/include/render/render_twips.h"
 #undef GetObject   // windows.h
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -2512,6 +2519,122 @@ CheckResult VectorBase<UInt32>::Set(UInt32 ind, const Value& v, const ClassTrait
 }
 
 }}} // namespace Scaleform::GFx::AS3
+
+// Graphics::AcquirePath: marks the display object dirty and starts a new path (a new shape when asked).
+// noinline: the gradient helper calls it out of line.
+// @0x142440d90
+__declspec(noinline) void FUN_142440d90(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, bool newShapeFlag)
+{
+    pthis->pDispObj->SetDirtyFlag();
+    pthis->pDispObj->InvalidateHitResult();
+    pthis->pDrawing->AcquirePath(newShapeFlag);
+}
+
+// Graphics: reads the gradient arguments of beginGradientFill / lineGradientStyle (type, colors, alphas,
+// ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio) into the complex fill. Unlike later
+// players this build requires all three arrays and uses an unscaled identity as the default matrix.
+// MS2-FUNCTIONAL: register allocation and scheduling differ (the exe shrink-wraps the prologue past the argc check)
+// @0x142441010
+void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, unsigned argc,
+                   const Scaleform::GFx::AS3::Value* argv, Scaleform::Render::ComplexFill* pfill)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx;
+    using namespace Scaleform::GFx::AS3;
+    if (argc < 4)
+        return;
+    ASString fillTypeStr(argv[0].AsString());
+    if (!(fillTypeStr == "linear") && !(fillTypeStr == "radial"))
+    {
+        VM& vm = pthis->GetVM();
+        vm.ThrowArgumentError(VM::Error(VM::eInvalidEnumParamError, vm, "type"));
+        return;
+    }
+
+    if (!argv[1].IsObject())
+        return;
+    Instances::fl::Array* colors = static_cast<Instances::fl::Array*>(argv[1].GetObject());
+    if (colors->GetTraits().GetTraitsType() != Traits_Array || colors->GetTraits().IsClassTraits())
+        return;
+    if (!argv[2].IsObject())
+        return;
+    Instances::fl::Array* alphas = static_cast<Instances::fl::Array*>(argv[2].GetObject());
+    if (alphas->GetTraits().GetTraitsType() != Traits_Array || alphas->GetTraits().IsClassTraits())
+        return;
+    if (!argv[3].IsObject())
+        return;
+    Instances::fl::Array* ratios = static_cast<Instances::fl::Array*>(argv[3].GetObject());
+    if (ratios->GetTraits().GetTraitsType() != Traits_Array || ratios->GetTraits().IsClassTraits())
+        return;
+
+    Render::Matrix2x4<double> matrix;
+    if (argc > 4 && FUN_1425145d0(pthis->GetVM(), argv[4], "flash.geom.Matrix"))
+        matrix = static_cast<Instances::fl_geom::Matrix*>(argv[4].GetObject())->GetMatrix();
+
+    bool linearRGB = false;
+    float focalPointRatio = 0;
+    if (argc > 5)
+    {
+        // spreadMethod: read but not used.
+        ASString spreadMethod(argv[5].AsString());
+        if (argc > 6)
+        {
+            linearRGB = argv[6].AsString() == "linearRGB";
+            if (argc > 7)
+            {
+                focalPointRatio = (float)argv[7].AsNumber();
+                if (NumberUtil::IsNaN(focalPointRatio))
+                    focalPointRatio = 0;
+                else if (focalPointRatio < -1)
+                    focalPointRatio = -1;
+                else if (focalPointRatio > 1)
+                    focalPointRatio = 1;
+            }
+        }
+    }
+
+    Render::GradientType gradType = Render::GradientLinear;
+    if (fillTypeStr == "radial")
+    {
+        gradType = Render::GradientRadial;
+        if (focalPointRatio != 0)
+            gradType = Render::GradientFocalPoint;
+    }
+    pfill->pGradient = *SF_NEW Render::GradientData(gradType, (UInt16)colors->GetSize(), linearRGB);
+    if (!pfill->pGradient)
+        return;
+    pfill->pGradient->SetFocalRatio(focalPointRatio);
+
+    for (UPInt i = 0; i < colors->GetSize(); i++)
+    {
+        UInt32 color;
+        colors->At(i).Convert2UInt32(color);
+        Value::Number a, r;
+        alphas->At(i).Convert2NumberInline(a);
+        ratios->At(i).Convert2NumberInline(r);
+        unsigned alpha = Alg::Min<unsigned>((unsigned)(a * 255.0), 255);
+        float ratio = Alg::Max(0.0f, Alg::Min((float)r, 255.0f));
+        Render::GradientRecord& record = pfill->pGradient->At((unsigned)i);
+        record.Ratio = (UByte)ratio;
+        record.ColorV.Raw = (color & 0xFFFFFF) | (alpha << 24);
+    }
+
+    FUN_142440d90(pthis, true);
+    Render::Matrix2F matF;
+    matF.Sx() = (float)matrix.Sx();
+    matF.Shy() = (float)matrix.Shy();
+    matF.Shx() = (float)matrix.Shx();
+    matF.Sy() = (float)matrix.Sy();
+    matF.Tx() = (float)Render::PixelsToTwips(matrix.Tx());
+    matF.Ty() = (float)Render::PixelsToTwips(matrix.Ty());
+    pfill->ImageMatrix.SetIdentity();
+    pfill->ImageMatrix.AppendScaling(1.0f / 32768.0f);
+    if (gradType == Render::GradientLinear)
+        pfill->ImageMatrix.AppendTranslation(0.5f, 0.0f);
+    else
+        pfill->ImageMatrix.AppendTranslation(0.5f, 0.5f);
+    pfill->ImageMatrix.Prepend(matF.GetInverse());
+}
 
 // The const flavour of the frame script lower bound (an unreferenced COMDAT next to the mutable one).
 template Scaleform::UPInt Scaleform::Alg::LowerBoundSliced<const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr*,

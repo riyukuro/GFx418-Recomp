@@ -100,7 +100,8 @@ public:
         eEOFError                   = 2030,
         eOutOfRangeError            = 1506,
         eSceneNotFound              = 2108,
-        eFrameLabelNotFoundInScene  = 2109
+        eFrameLabelNotFoundInScene  = 2109,
+        eInvalidEnumParamError      = 2008
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).
