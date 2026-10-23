@@ -78,6 +78,10 @@ public:
     static void SpriteSwapDepths(const FnCall& fn);
     static void SpriteLoadMovie(const FnCall& fn);
     static void SpriteLoadVariables(const FnCall& fn);
+    static void SpriteGetBounds(const FnCall& fn);
+    static void SpriteGetRect(const FnCall& fn);
+    static void SpriteLocalToGlobal(const FnCall& fn);
+    static void SpriteGlobalToLocal(const FnCall& fn);
     static void SpriteBeginGradientFill(const FnCall& fn);
     static void SpriteBeginBitmapFill(const FnCall& fn);
     static void SpriteLineGradientStyle(const FnCall& fn);

@@ -8,7 +8,7 @@
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142902a00 .text$mn
 // MS2-RANGE: 0x142902a10-0x1429033c0 .text$mn
-// MS2-RANGE: 0x1429033c0-0x142903b30 .text$mn
+// MS2-RANGE: 0x1429033c0-0x1429049b0 .text$mn
 // MS2-RANGE: 0x142905d70-0x142905e00 .text$mn
 // MS2-RANGE: 0x142906330-0x1429064b0 .text$mn
 // MS2-RANGE: 0x142906a90-0x142906d80 .text$mn
@@ -1129,6 +1129,112 @@ void AvmSprite::SpriteSwapDepths(const FnCall& fn)
         FUN_1425dcaf0(pcont);
         if (pother)
             pother->SetAcceptAnimMoves(false);
+    }
+}
+
+// getBounds / getRect: the clip's bounds in the space of the argument clip (itself by default), in pixels.
+static inline void SpriteBoundsObject(const FnCall& fn, bool rectOnly)
+{
+    Sprite* psprite = AvmSprite::SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    DisplayObjectBase* pspace = psprite;
+    if (fn.NArgs > 0)
+        pspace = fn.Arg(0).ToCharacter(fn.Env);
+    Sprite* pspaceSprite = (pspace && pspace->IsSprite()) ? static_cast<Sprite*>(pspace) : 0;
+    Render::Matrix2F m;
+    RectF            b(0, 0, 0, 0);
+    if (pspaceSprite)
+    {
+        if (pspaceSprite != psprite)
+        {
+            Render::Matrix2F wm;
+            pspaceSprite->GetWorldMatrix(&wm);
+            Matrix2F_SetInverse(&m, wm);
+            Render::Matrix2F cm;
+            psprite->GetWorldMatrix(&cm);
+            m.Prepend(cm);
+        }
+        m.EncloseTransform(&b, rectOnly ? psprite->GetRectBounds(Render::Matrix2F()) : psprite->GetBounds(Render::Matrix2F()));
+    }
+    Ptr<Object> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+    ASStringContext* psc = fn.Env->GetSC();
+    pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_xMin), Value(Render::TwipsToPixels(Double(b.x1))));
+    pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_xMax), Value(Render::TwipsToPixels(Double(b.x2))));
+    pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_yMin), Value(Render::TwipsToPixels(Double(b.y1))));
+    pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_yMax), Value(Render::TwipsToPixels(Double(b.y2))));
+    fn.Result->SetAsObject(pobj);
+}
+
+// MS2-FUNCTIONAL bounds object build: register allocation/scheduling differs
+// @0x142903b30
+void AvmSprite::SpriteGetBounds(const FnCall& fn)
+{
+    SpriteBoundsObject(fn, false);
+}
+
+// MS2-FUNCTIONAL bounds object build: register allocation/scheduling differs
+// @0x142903fc0
+void AvmSprite::SpriteGetRect(const FnCall& fn)
+{
+    SpriteBoundsObject(fn, true);
+}
+
+// @0x142904450
+void AvmSprite::SpriteLocalToGlobal(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 1)
+        return;
+    ASStringContext* psc  = fn.Env->GetSC();
+    ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
+    if (!pobj)
+        return;
+    Value x, y;
+    pobj->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_x), &x);
+    pobj->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_y), &y);
+    if (x.IsNumber() && y.IsNumber())
+    {
+        PointF pt = psprite->LocalToGlobal(PointF(Render::PixelsToTwips(float(x.ToNumber(fn.Env))), Render::PixelsToTwips(float(y.ToNumber(fn.Env)))));
+        {
+            Value vx(Render::TwipsToPixels(Double(pt.x)));
+            pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_x), vx);
+        }
+        {
+            Value vy(Render::TwipsToPixels(Double(pt.y)));
+            pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_y), vy);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL store/register order after GlobalToLocal (scheduling)
+// @0x142904700
+void AvmSprite::SpriteGlobalToLocal(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 1)
+        return;
+    ASStringContext* psc  = fn.Env->GetSC();
+    ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
+    if (!pobj)
+        return;
+    Value x, y;
+    pobj->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_x), &x);
+    pobj->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_y), &y);
+    if (x.IsNumber() && y.IsNumber())
+    {
+        PointF pt(Render::PixelsToTwips(float(x.ToNumber(fn.Env))), Render::PixelsToTwips(float(y.ToNumber(fn.Env))));
+        pt = psprite->GlobalToLocal(pt);
+        {
+            Value vx(Render::TwipsToPixels(Double(pt.x)));
+            pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_x), vx);
+        }
+        {
+            Value vy(Render::TwipsToPixels(Double(pt.y)));
+            pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_y), vy);
+        }
     }
 }
 

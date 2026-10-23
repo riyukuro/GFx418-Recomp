@@ -82,6 +82,10 @@ enum ASBuiltinType : int
     ASBuiltin_onDragOutAux     = 125,
     ASBuiltin_x      = 129,
     ASBuiltin_y      = 130,
+    ASBuiltin_xMin   = 131, // getBounds / getRect result members
+    ASBuiltin_xMax   = 132,
+    ASBuiltin_yMin   = 133,
+    ASBuiltin_yMax   = 134,
     ASBuiltin_0      = 143, // "0" .. "7" follow
     ASBuiltin_rendererString = 151, // movie clip renderer hints
     ASBuiltin_rendererFloat  = 152,
