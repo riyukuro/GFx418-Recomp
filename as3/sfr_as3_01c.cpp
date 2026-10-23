@@ -5,6 +5,7 @@
 // MS2-UNIT: sfr_as3_01c
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423e0260-0x1423f06a0 .text$mn
+// MS2-RANGE: 0x1423f06a0-0x1423f5770 .text$mn
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
@@ -1824,10 +1825,6 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PINS-END tplpin
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
-// MS2-PINS-BEGIN tplpin
-// MS2-PINS-END tplpin
-// MS2-PINS-BEGIN tplpin
-// MS2-PINS-END tplpin
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
 // MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
 // MS2-PIN: ??_7Interface@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313f870
@@ -1958,3 +1955,80 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ?Func@?$ThunkFunc0@VXML@fl@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VXMLList@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e3c20 ; unique
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e3cd0 ; unique
 // MS2-PIN: ?Func@?$ThunkFunc0@VXML@fl@Instances@AS3@GFx@Scaleform@@$01VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e3e20 ; unique
+// MS2-PIN: ??_E?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1423f1f90 ; vtslot
+// MS2-PIN: ??_EActivation@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2040 ; vtslot
+// MS2-PIN: ??_EArgumentError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f20a0 ; vtslot
+// MS2-PIN: ??_EArray@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2130 ; vtslot
+// MS2-PIN: ??_EArray@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f21c0 ; vtslot
+// MS2-PIN: ??_EArray@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2220 ; vtslot
+// MS2-PIN: ??_EArray@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2280 ; vtslot
+// MS2-PIN: ??_EBoolean@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f23f0 ; vtslot
+// MS2-PIN: ??_EBoolean@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2480 ; vtslot
+// MS2-PIN: ??_EBoolean@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f24e0 ; vtslot
+// MS2-PIN: ??_ECatch@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f25a0 ; vtslot
+// MS2-PIN: ??_ECatch@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2630 ; vtslot
+// MS2-PIN: ??_ECatch@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2690 ; vtslot
+// MS2-PIN: ??_ECatch@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f26f0 ; vtslot
+// MS2-PIN: ??_EClassCallConstruct@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2850 ; vtslot
+// MS2-PIN: ??_EDate@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2a10 ; vtslot
+// MS2-PIN: ??_EDate@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2aa0 ; vtslot
+// MS2-PIN: ??_EDate@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2b00 ; vtslot
+// MS2-PIN: ??_EDate@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2b60 ; vtslot
+// MS2-PIN: ??_EDefinitionError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2bc0 ; vtslot
+// MS2-PIN: ??_EError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2c80 ; vtslot
+// MS2-PIN: ??_EError@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2d10 ; vtslot
+// MS2-PIN: ??_EError@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2d70 ; vtslot
+// MS2-PIN: ??_EError@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2dd0 ; vtslot
+// MS2-PIN: ??_EEvalError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2e60 ; vtslot
+// MS2-PIN: ??_EGASRefCountBase@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f31f0 ; vtslot
+// MS2-PIN: ??_EInitStruct@String@Scaleform@@UEAAPEAXI@Z 0x1423f34e0 ; vtslot
+// MS2-PIN: ??_EInterface@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3570 ; vtslot
+// MS2-PIN: ??_EMath@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3600 ; vtslot
+// MS2-PIN: ??_EMath@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3690 ; vtslot
+// MS2-PIN: ??_ENamespace@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3750 ; vtslot
+// MS2-PIN: ??_ENamespace@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f37b0 ; vtslot
+// MS2-PIN: ??_ENamespace@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3840 ; vtslot
+// MS2-PIN: ??_ENamespace@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f38a0 ; vtslot
+// MS2-PIN: ??_ENamespaceInstanceFactory@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3930 ; vtslot
+// MS2-PIN: ??_ENumber@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f39f0 ; vtslot
+// MS2-PIN: ??_ENumber@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3a80 ; vtslot
+// MS2-PIN: ??_ENumber@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3ae0 ; vtslot
+// MS2-PIN: ??_EObject@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3b40 ; vtslot
+// MS2-PIN: ??_EObject@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3bd0 ; vtslot
+// MS2-PIN: ??_EObject@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3c30 ; vtslot
+// MS2-PIN: ??_EObject@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3c90 ; vtslot
+// MS2-PIN: ??_EQName@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3cf0 ; vtslot
+// MS2-PIN: ??_EQName@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3d80 ; vtslot
+// MS2-PIN: ??_EQName@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3de0 ; vtslot
+// MS2-PIN: ??_EQName@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3e40 ; vtslot
+// MS2-PIN: ??_ERangeError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3ee0 ; vtslot
+// MS2-PIN: ??_EReferenceError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3f70 ; vtslot
+// MS2-PIN: ??_ERegExp@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4000 ; vtslot
+// MS2-PIN: ??_ERegExp@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4090 ; vtslot
+// MS2-PIN: ??_ERegExp@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f40f0 ; vtslot
+// MS2-PIN: ??_ERegExp@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4150 ; vtslot
+// MS2-PIN: ??_ESecurityError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f41f0 ; vtslot
+// MS2-PIN: ??_EString@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4280 ; vtslot
+// MS2-PIN: ??_EString@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4310 ; vtslot
+// MS2-PIN: ??_EString@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4370 ; vtslot
+// MS2-PIN: ??_ESyntaxError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f43d0 ; vtslot
+// MS2-PIN: ??_ETypeError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4580 ; vtslot
+// MS2-PIN: ??_EURIError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4610 ; vtslot
+// MS2-PIN: ??_EUninitializedError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f46a0 ; vtslot
+// MS2-PIN: ??_EVerifyError@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f49f0 ; vtslot
+// MS2-PIN: ??_EXML@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4a80 ; vtslot
+// MS2-PIN: ??_EXML@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4b10 ; vtslot
+// MS2-PIN: ??_EXML@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4b70 ; vtslot
+// MS2-PIN: ??_EXMLList@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4f20 ; vtslot
+// MS2-PIN: ??_EXMLList@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4fb0 ; vtslot
+// MS2-PIN: ??_EXMLList@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5010 ; vtslot
+// MS2-PIN: ??_EXMLList@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5070 ; vtslot
+// MS2-PIN: ??_Eint_@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f52b0 ; vtslot
+// MS2-PIN: ??_Eint_@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5340 ; vtslot
+// MS2-PIN: ??_Eint_@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f53a0 ; vtslot
+// MS2-PIN: ??_Euint@fl@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5400 ; vtslot
+// MS2-PIN: ??_Euint@fl@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5490 ; vtslot
+// MS2-PIN: ??_Euint@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f54f0 ; vtslot
+// MS2-PIN: ?AS3Constructor@Array@fl@Instances@AS3@GFx@Scaleform@@UEAAXIPEBVValue@456@@Z 0x1423f5550 ; vtslot
+// MS2-PIN: ?AS3Constructor@Date@fl@Instances@AS3@GFx@Scaleform@@UEAAXIPEBVValue@456@@Z 0x1423f5650 ; vtslot
+// MS2-PIN: ??0ClassCallConstruct@AS3@GFx@Scaleform@@QEAA@AEAVTraits@ClassTraits@123@@Z 0x1423ec230 ; prop

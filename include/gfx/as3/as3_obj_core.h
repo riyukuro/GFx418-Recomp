@@ -9,6 +9,9 @@
 #include "ms2/scaleform/include/gfx/as3/as3_obj.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 
+// (appended, sfr19) PCRE's free hook (pcre_globals), which RegExp frees its compiled pattern through.
+extern "C" void (*pcre_free)(void*);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace fl
@@ -525,6 +528,12 @@ namespace Instances { namespace fl
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::RegExp"; }
         // @0x1423f5d90
         virtual void AS3Constructor(unsigned argc, const Value* argv);
+        // (appended, sfr19) frees the compiled pattern.
+        virtual ~RegExp()
+        {
+            pcre_free(CompRegExp);
+            CompRegExp = NULL;
+        }
 
     public:
         void*       CompRegExp;     // +0x38 compiled pattern (pcre)
@@ -688,6 +697,8 @@ public:
         : pNamespaceInstanceTraits(itr)
     {
     }
+    // (appended, sfr19) user-declared: the exe's dtor re-stores the vftable before clearing the set.
+    virtual ~NamespaceInstanceFactory() {}
 
     // The interned namespace of {kind, uri}: the one already made, or a new one with this prefix.
     // @0x14241baa0
@@ -820,6 +831,9 @@ namespace InstanceTraits { namespace fl
         static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);    // 0x1423e6170
         static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv); // 0x1423e61e0
         static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);  // 0x1423e62b0
+
+        // (appended, sfr19) the factory may outlive these traits: it forgets them.
+        virtual ~Namespace() { InstanceFactory->pNamespaceInstanceTraits = NULL; }
 
     public:
         Ptr<NamespaceInstanceFactory> InstanceFactory;    // +0xe8
