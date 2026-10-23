@@ -228,7 +228,7 @@ public:
     // Hands the load to a loader thread task (exe 0x14292fc90).
     void AddLoadQueueEntryMT(LoadQueueEntry* pentry);
 
-    // A queued action: a frame's action buffer, a clip event, or a function call on the character. 0x70 bytes.
+    // A queued action: a frame's action buffer, a clip event, or a function call on the character. 0x78 bytes.
     struct ActionEntry
     {
         enum EntryType
@@ -248,6 +248,7 @@ public:
         FunctionRef            Function;       // +0x38
         CFunctionPtr           CFunction;      // +0x50
         Array<Value>           FunctionParams; // +0x58
+        unsigned               SessionId;      // +0x70 the DoActionsForSession batch it belongs to
 
         // Exe 0x142925190, defined in sfr_as2_04.
         ~ActionEntry();
@@ -305,6 +306,13 @@ public:
 
         const ActionEntry* getNext(); // exe 0x142995180
     };
+
+    // The action queue (+0x80, inside the unrecovered block).
+    ActionQueueType& GetActionQueue() { return *reinterpret_cast<ActionQueueType*>(Unrecovered_58 + 0x28); }
+    // Runs every queued action (exe 0x142938bd0).
+    virtual void DoActions();
+    // Runs the queued actions of one session only, the others stay queued (exe 0x142938c40).
+    void DoActionsForSession(unsigned sessionId);
 };
 
 // The AS2 root of a character of an AS2 movie.

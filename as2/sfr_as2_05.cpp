@@ -92,6 +92,7 @@
 // MS2-RANGE: 0x142944690-0x142944949 .text$mn
 // MS2-RANGE: 0x142943200-0x142943351 .text$mn
 // MS2-RANGE: 0x142944a80-0x142944c5f .text$mn
+// MS2-RANGE: 0x142938bd0-0x142938d5f .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1728,6 +1729,90 @@ bool Environment::FindOwnerOfMember(const ASString& varname, Value* presult, con
         return true;
     }
     return false;
+}
+
+// MS2-FUNCTIONAL the exe tail-calls AddToFreeList from the inlined iterator destructor
+// @0x142938bd0
+void MovieRoot::DoActions()
+{
+    ActionQueueIterator iter(&GetActionQueue());
+    const ActionEntry* paction;
+    while ((paction = iter.getNext()) != 0)
+        paction->Execute(this);
+}
+
+// Walks the queue like ActionQueueIterator but hands out (and unlinks) only the entries of one session.
+struct ActionQueueSessionIterator
+{
+    typedef MovieRoot::ActionQueueType ActionQueueType;
+    typedef MovieRoot::ActionEntry     ActionEntry;
+
+    int              ModId;
+    ActionQueueType* pActionQueue;
+    ActionEntry*     pLastEntry;
+    int              CurrentPrio;
+    unsigned         SessionId;
+
+    ActionQueueSessionIterator(ActionQueueType* pactionQueue, unsigned sessionId)
+    {
+        pActionQueue = pactionQueue;
+        ModId        = 0;
+        CurrentPrio  = 0;
+        pLastEntry   = 0;
+        SessionId    = sessionId;
+    }
+    ~ActionQueueSessionIterator()
+    {
+        if (pLastEntry)
+            pActionQueue->AddToFreeList(pLastEntry);
+    }
+
+    const ActionEntry* getNext()
+    {
+        if (pActionQueue->ModId != ModId)
+        {
+            ModId       = pActionQueue->ModId;
+            CurrentPrio = 0;
+        }
+        ActionEntry* pentry = 0;
+        for (; CurrentPrio < ActionQueueType::AL_Count; ++CurrentPrio)
+        {
+            ActionEntry* pprev = 0;
+            for (pentry = pActionQueue->Levels[CurrentPrio].pActionRoot; pentry;
+                 pprev = pentry, pentry = pentry->pNextEntry)
+            {
+                if (pentry->SessionId == SessionId)
+                    break;
+            }
+            if (pentry)
+            {
+                if (!pprev)
+                    pActionQueue->Levels[CurrentPrio].pActionRoot = pentry->pNextEntry;
+                else
+                    pprev->pNextEntry = pentry->pNextEntry;
+                if (!pentry->pNextEntry)
+                    pActionQueue->Levels[CurrentPrio].pLastEntry = pprev;
+                if (pentry == pActionQueue->Levels[CurrentPrio].pInsertEntry)
+                    pActionQueue->Levels[CurrentPrio].pInsertEntry = !pentry->pNextEntry ? pprev : pentry->pNextEntry;
+                pentry->pNextEntry = 0;
+                break;
+            }
+        }
+        if (pLastEntry)
+            pActionQueue->AddToFreeList(pLastEntry);
+        pLastEntry = pentry;
+        return pentry;
+    }
+};
+
+// MS2-FUNCTIONAL cl keeps the iterator ModId in a different register; same code otherwise
+// @0x142938c40
+void MovieRoot::DoActionsForSession(unsigned sessionId)
+{
+    ActionQueueSessionIterator iter(&GetActionQueue(), sessionId);
+    const ActionEntry* paction;
+    while ((paction = iter.getNext()) != 0)
+        paction->Execute(this);
 }
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
