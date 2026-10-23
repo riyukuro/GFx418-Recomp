@@ -18,8 +18,20 @@ extern void FUN_14257db40(void*);
 extern void FUN_14257db50(void*);
 extern void FUN_1429260b0(void*);
 extern void FUN_140006a40(Scaleform::UPInt*);
+extern void FUN_1425925f0(void*);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
+
+static void ReleaseAs2GCObject(void* object)
+{
+    if (!object) return;
+    auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 0x18);
+    const unsigned value = *count;
+    if ((value & 0x03ffffff) != 0) {
+        *count = value - 1;
+        FUN_1425925f0(object);
+    }
+}
 
 // MS2-FUNCTIONAL: forwards the video sound stream's channel attachment callback when a channel is present.
 // @0x140002930
@@ -1239,6 +1251,75 @@ void FUN_140007450(Scaleform::UPInt* owner, Scaleform::GFx::AS2::Object** value)
 void FUN_140007510(Scaleform::UPInt* owner)
 {
     FUN_140007200(owner + 1);
+}
+
+// MS2-FUNCTIONAL: releases both owned AS2 references according to the weak/internal mode bits.
+// @0x1400074a0
+void FUN_1400074a0(Scaleform::UPInt* pair)
+{
+    auto* flags = reinterpret_cast<unsigned char*>(pair + 2);
+    if (!(flags[0] & 2)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[0]));
+    pair[0] = 0;
+    if (!(flags[0] & 1)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[1]));
+    pair[1] = 0;
+}
+
+// MS2-FUNCTIONAL: releases the owned AS2 object reference stored in the slot.
+// @0x140007570
+void FUN_140007570(void** slot) { ReleaseAs2GCObject(*slot); }
+
+// MS2-FUNCTIONAL: retains the incoming AS2 object, releases the old value, and assigns it.
+// @0x1400075a0
+void** FUN_1400075a0(void** destination, void** source)
+{
+    if (*source) {
+        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(*source) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    ReleaseAs2GCObject(*destination);
+    *destination = *source;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: releases the owned AS2 object reference in the slot.
+// @0x1400076d0
+void FUN_1400076d0(void** slot) { ReleaseAs2GCObject(*slot); }
+
+// MS2-FUNCTIONAL: retains a replacement AS2 object and releases the previous reference.
+// @0x140007700
+void** FUN_140007700(void** destination, void* replacement)
+{
+    if (replacement) {
+        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    ReleaseAs2GCObject(*destination);
+    *destination = replacement;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: overwrites the slot after releasing its previous AS2 reference.
+// @0x140007760
+void** FUN_140007760(void** destination, void* replacement)
+{
+    ReleaseAs2GCObject(*destination);
+    *destination = replacement;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: releases the owned AS2 object reference in the slot.
+// @0x1400077b0
+void FUN_1400077b0(void** slot) { ReleaseAs2GCObject(*slot); }
+
+// MS2-FUNCTIONAL: releases both references in the temporary AS2 value pair.
+// @0x140007a40
+void FUN_140007a40(Scaleform::UPInt* pair)
+{
+    auto* flags = reinterpret_cast<unsigned char*>(pair + 2);
+    if (!(flags[0] & 2)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[0]));
+    pair[0] = 0;
+    if (!(flags[0] & 1)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[1]));
+    pair[1] = 0;
 }
 
 namespace Scaleform { namespace GFx { namespace Video {
