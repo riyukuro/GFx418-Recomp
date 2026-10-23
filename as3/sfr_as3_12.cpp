@@ -7,6 +7,8 @@
 // MS2-RANGE: 0x1424ad4d0-0x1424ad870 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+
+
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/render/render_font.h"
@@ -17,6 +19,150 @@
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/gfx/gfx_statictextcharacter.h"
 #include "ms2/scaleform/include/gfx/gfx_asutils.h"
+#include "ms2/scaleform/include/kernel/sf_memory.h"
+#include "ms2/scaleform/include/gfx/gfx_asstring.h"
+#include "ms2/scaleform/include/gfx/as3/as3_value.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net.h"
+#include "ms2/scaleform/include/gfx/gfx_moviedef.h"
+#include "ms2/scaleform/include/gfx/gfx_textsnapshot.h"
+
+// Shared render/AS3 cleanup COMDATs are placed in this SCU by the executable.  Their data structures are
+// recovered here from the code that uses them; the neighboring AS3 text visitor classes live in sfr_as3_13.
+struct CX18ArrayLHEntry { void* Resource; unsigned char Rest[0x18]; };
+struct CX18ArrayLH { CX18ArrayLHEntry* Data; Scaleform::UPInt Size; Scaleform::UPInt Capacity; };
+struct CX18SharedObjectEntry
+{
+    unsigned char Prefix[0x10];
+    Scaleform::UPInt Next;
+    unsigned char Pad[8];
+    Scaleform::GFx::ASString Key;
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_net::SharedObject> Value;
+};
+struct CX18TextFormatCleanup
+{
+    unsigned char Pad0[8];
+    void* String0;
+    unsigned char Pad1[8];
+    void* String1;
+    Scaleform::GFx::ASStringNode* String2;
+    void* RefCounted;
+};
+struct CX18RefCountedPtr { Scaleform::RefCountImpl* Ptr; };
+
+// @0x1424a9ed0
+// MS2-FUNCTIONAL: walks and releases each resource entry, then frees and clears the backing ArrayLH storage.
+void FUN_1424a9ed0(void* pdata)
+{
+    CX18ArrayLH* array = (CX18ArrayLH*)pdata;
+    for (Scaleform::UPInt i = array->Size; i; --i)
+    {
+        Scaleform::GFx::ASStringNode* value = (Scaleform::GFx::ASStringNode*)array->Data[i - 1].Resource;
+        if (value)
+            value->Release();
+    }
+    if (array->Data)
+        Scaleform::Memory::GetGlobalHeap()->Free(array->Data);
+}
+
+// @0x1424a9f40
+// MS2-FUNCTIONAL: releases both owned fields of every live hash slot, marks it empty, and frees the slot array.
+void FUN_1424a9f40(void* ptable)
+{
+    struct CX18HashTable { CX18SharedObjectEntry* Data; Scaleform::UPInt Capacity; };
+    CX18HashTable* table = (CX18HashTable*)ptable;
+    if (!table->Data)
+        return;
+    Scaleform::UPInt count = table->Capacity + 1;
+    for (Scaleform::UPInt i = 0; i < count; ++i)
+    {
+        CX18SharedObjectEntry* slot = table->Data + i;
+        if (slot->Next == (Scaleform::UPInt)-2)
+            continue;
+        slot->Value.~SPtr();
+        slot->Key.~ASString();
+        slot->Next = (Scaleform::UPInt)-2;
+    }
+    Scaleform::Memory::GetGlobalHeap()->Free(table->Data);
+    table->Data = 0;
+}
+
+// @0x1424aa0f0
+// MS2-FUNCTIONAL: releases the four owned TextFormat fields in the order used by the executable.
+void FUN_1424aa0f0(void* pfmt)
+{
+    CX18TextFormatCleanup* fmt = (CX18TextFormatCleanup*)pfmt;
+    CX18RefCountedPtr* kit = (CX18RefCountedPtr*)((unsigned char*)pfmt + 0x30);
+    if (kit->Ptr)
+        kit->Ptr->Release();
+    CX18RefCountedPtr* handle = (CX18RefCountedPtr*)((unsigned char*)pfmt + 0x28);
+    if (handle->Ptr)
+        handle->Ptr->Release();
+    Scaleform::GFx::ASStringNode* node = (Scaleform::GFx::ASStringNode*)((Scaleform::UPInt)fmt->String2 & ~(Scaleform::UPInt)3);
+    if (node)
+        node->Release();
+    node = (Scaleform::GFx::ASStringNode*)((Scaleform::UPInt)fmt->String0 & ~(Scaleform::UPInt)3);
+    if (node)
+        node->Release();
+}
+
+// @0x1424aa770
+// MS2-FUNCTIONAL: releases the CSS holder resource and URL array, then performs the requested sized delete.
+void* FUN_1424aa770(void* self, unsigned flags)
+{
+    Scaleform::UPInt ref = *(Scaleform::UPInt*)((unsigned char*)self + 0x40);
+    if (ref)
+    {
+        if (ref & 1)
+            *(Scaleform::UPInt*)((unsigned char*)self + 0x40) = ref - 1;
+        else
+            ((Scaleform::RefCountImpl*)ref)->Release();
+    }
+    FUN_1424a9ed0((unsigned char*)self + 8);
+    if (flags & 1)
+        Scaleform::Memory::GetGlobalHeap()->Free(self);
+    return self;
+}
+
+// @0x1424aa810
+// MS2-FUNCTIONAL: tears down the URL array and conditionally releases the CSSHolderBase allocation.
+void* FUN_1424aa810(void* self, unsigned flags)
+{
+    FUN_1424a9ed0((unsigned char*)self + 8);
+    if (flags & 1)
+        Scaleform::Memory::GetGlobalHeap()->Free(self);
+    return self;
+}
+
+// @0x1424aac50
+// MS2-FUNCTIONAL: restores the ResourceVisitor vftable and frees the 0x10-byte visitor when requested.
+void* FUN_1424aac50(void* self, unsigned flags)
+{
+    ((Scaleform::GFx::MovieDef::ResourceVisitor*)self)->~ResourceVisitor();
+    if (flags & 1)
+        Scaleform::Memory::GetGlobalHeap()->Free(self);
+    return self;
+}
+
+// @0x1424aac80
+// MS2-FUNCTIONAL: restores the GlyphVisitor vftable and frees the 0x70-byte visitor when requested.
+void* FUN_1424aac80(void* self, unsigned flags)
+{
+    ((Scaleform::GFx::StaticTextSnapshotData::GlyphVisitor*)self)->~GlyphVisitor();
+    if (flags & 1)
+        Scaleform::Memory::GetGlobalHeap()->Free(self);
+    return self;
+}
+
+// @0x1424aada0
+// MS2-FUNCTIONAL: restores the ResourceVisitor vftable and frees the visitor when requested.
+void* FUN_1424aada0(void* self, unsigned flags)
+{
+    ((Scaleform::GFx::MovieDef::ResourceVisitor*)self)->~ResourceVisitor();
+    if (flags & 1)
+        Scaleform::Memory::GetGlobalHeap()->Free(self);
+    return self;
+}
+
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2631,7 +2777,6 @@ template void Scaleform::HashSetBase<SOSharedObjectNode,
 // MS2-PIN: ??_GStaticText@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142442e10
 // MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVObject@AS3@GFx@Scaleform@@U?$AllocatorLH@PEAVObject@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14249a070
 // MS2-PIN: ??0StaticText@fl_text@Instances@AS3@GFx@Scaleform@@QEAA@AEAVTraits@InstanceTraits@345@@Z 0x1424a8d20 ; unique
-// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
 // MS2-PIN: ??_7StyleManagerBase@Text@Render@Scaleform@@6B@ 0x14316a718
 // MS2-PIN: ??_7StyleManager@Text@GFx@Scaleform@@6B@ 0x14316a738
 // MS2-PIN: ??_7StyleSheet@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a758
@@ -2642,3 +2787,7 @@ template void Scaleform::HashSetBase<SOSharedObjectNode,
 // MS2-PIN: ??$add@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@?$HashSetBase@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAXAEBV?$Ptr@VFont@Render@Scaleform@@@1@_K@Z 0x1424a8170 ; unique
 // MS2-PIN: ??0?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@Scaleform@@QEAA@AEBV01@@Z 0x1424a8300 ; unique
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14249c160
+// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ??_7?$RefCountBaseNTS@VSharedObjectVisitor@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143162f10
+// MS2-PIN: ??_7SharedObjectVisitor@GFx@Scaleform@@6B@ 0x143162f18
+// MS2-PIN: ??_7ASSharedObjectLoader@AS3@GFx@Scaleform@@6B@ 0x1431633e8
