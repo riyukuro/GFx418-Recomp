@@ -630,6 +630,102 @@ void FUN_140015420(Scaleform::GFx::ASString* result, const Scaleform::GFx::AS3::
     input->Convert2String(*result);
 }
 
+// MS2-FUNCTIONAL: drops a retained AS3 object value using its executable release path.
+// @0x140014c50
+void FUN_140014c50(Scaleform::GFx::AS3::Value* value)
+{
+    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
+    {
+        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
+    }
+}
+
+// MS2-FUNCTIONAL: releases the two string nodes through the recovered ASStringNode ownership method.
+// @0x140014c90
+void FUN_140014c90(ASStringNode** strings)
+{
+    strings[1]->Release();
+    strings[0]->Release();
+}
+
+// MS2-FUNCTIONAL: releases the two string nodes at the executable's object offsets.
+// @0x140014cc0
+void FUN_140014cc0(void* object)
+{
+    char* bytes = static_cast<char*>(object);
+    reinterpret_cast<ASStringNode**>(bytes + 0x18)[0]->Release();
+    reinterpret_cast<ASStringNode**>(bytes + 0x10)[0]->Release();
+}
+
+// MS2-FUNCTIONAL: releases the three string nodes through the recovered ownership method.
+// @0x140014cf0
+void FUN_140014cf0(ASStringNode** strings)
+{
+    strings[2]->Release();
+    strings[1]->Release();
+    strings[0]->Release();
+}
+
+// MS2-FUNCTIONAL: releases the three string nodes at the executable's object offsets.
+// @0x140014d30
+void FUN_140014d30(void* object)
+{
+    char* bytes = static_cast<char*>(object);
+    reinterpret_cast<ASStringNode**>(bytes + 0x20)[0]->Release();
+    reinterpret_cast<ASStringNode**>(bytes + 0x18)[0]->Release();
+    reinterpret_cast<ASStringNode**>(bytes + 0x10)[0]->Release();
+}
+
+static void* NumberNaNBits();
+
+// MS2-FUNCTIONAL: stores the executable's NaN payload in the third numeric field.
+// @0x140014e10
+void** FUN_140014e10(void** values, void* first, void* second)
+{
+    values[0] = first;
+    values[1] = second;
+    values[2] = NumberNaNBits();
+    return values;
+}
+
+static void* NumberNaNBits()
+{
+    union { double number; void* pointer; } value;
+    value.number = NumberUtil::NaN();
+    return value.pointer;
+}
+
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140014e80
+void** FUN_140014e80(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140014ee0
+void** FUN_140014ee0(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140014f00
+void** FUN_140014f00(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140014f90
+void** FUN_140014f90(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140014fb0
+void** FUN_140014fb0(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140014fd0
+void** FUN_140014fd0(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140014ff0
+void** FUN_140014ff0(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140015010
+void** FUN_140015010(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140015030
+void** FUN_140015030(void** value) { *value = NumberNaNBits(); return value; }
+// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
+// @0x140015050
+void** FUN_140015050(void** value) { *value = NumberNaNBits(); return value; }
+
 // MS2-FUNCTIONAL: uses the recovered AS3 Value assignment implementation for the executable's copy entry.
 // @0x1400129d0
 Scaleform::GFx::AS3::Value* FUN_1400129d0(Scaleform::GFx::AS3::Value* dst,
