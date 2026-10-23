@@ -85,6 +85,8 @@ void FUN_140053650(void*);
 void FUN_140037950(void*, const CriChar8*, CriUint32);
 void FUN_140042600(void*, void*, CriSint32);
 CriSint32 FUN_1400310b0(void*);
+void FUN_1400345e0(void*, void*, CriUint32, CriSint32);
+void FUN_140053e60(void*, CriUint32, CriUint32, CriUint32);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -3298,6 +3300,51 @@ CriUint32 FUN_140043890(void* track, void* player, CriUint32 channel, CriUint32 
         return 0;
     CriUint32 available = FUN_140043420(track, player, channel);
     return available < maximum ? available : maximum;
+}
+
+// MS2-FUNCTIONAL: apply the selected channel's three decoder parameters to its audio decoder.
+// @0x140043970
+void FUN_140043970(void* track, void* player)
+{
+    struct AudioTrack
+    {
+        CriSint32 Present;
+        CriUint8 Reserved04[4];
+        CriSint32 Channel;
+        CriUint8 Reserved0c[4];
+        void* Decoder;
+    };
+    struct ChannelParameters { CriUint32 First, Second, Third, Reserved; };
+    struct PlayerParameters { CriUint8 Reserved00[0xb2c]; ChannelParameters Channels[16]; };
+    if (!track || !player)
+        return;
+    AudioTrack* audio = (AudioTrack*)track;
+    if (!audio->Present)
+        return;
+    ChannelParameters* channel = &((PlayerParameters*)player)->Channels[audio->Channel];
+    FUN_140053e60(audio->Decoder, channel->Second, channel->First, channel->Third);
+}
+
+// MS2-FUNCTIONAL: reset every audio track in a player and apply updated decoder parameters when enabled.
+// @0x140042700
+void FUN_140042700(void* trackSet, void* player)
+{
+    struct AudioTrackSet { void* Tracks[2]; CriSint32 Count; void* Configuration; };
+    struct TrackControl { CriUint32 Reserved; CriUint32 Control; };
+    struct PlayerState { CriUint8 Reserved00[0xe58]; CriSint32 ParameterUpdateEnabled; };
+    AudioTrackSet* tracks = (AudioTrackSet*)trackSet;
+    PlayerState* movie = (PlayerState*)player;
+    if (tracks->Tracks[0])
+    {
+        CriUint32 control = ((TrackControl*)tracks->Tracks[0])->Control;
+        FUN_1400345e0(player, tracks->Configuration, control, -1);
+    }
+    for (CriSint32 index = 0; index < tracks->Count; ++index)
+    {
+        FUN_140043550((CriSint32*)tracks->Tracks[index], player);
+        if (movie->ParameterUpdateEnabled > 0)
+            FUN_140043970(tracks->Tracks[index], player);
+    }
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
