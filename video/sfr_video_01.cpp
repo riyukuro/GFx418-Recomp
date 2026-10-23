@@ -1679,6 +1679,24 @@ void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scalefo
 }
 MS2_REPLACE(0x14000B9E0, FUN_14000b9e0, 519, 0x13C8EE9C);
 
+// MS2-FUNCTIONAL: hashes a 32-bit track key and inserts its value into the keyed table.
+// @0x14000c220
+void FUN_14000c220(void* table, const unsigned* key, void* value)
+{
+    void* pair[2] = {const_cast<unsigned*>(key), &value};
+    FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKey4(key));
+}
+
+// MS2-FUNCTIONAL: replaces the object for a 32-bit track id, releasing the caller's prior reference.
+// @0x14000c280
+void FUN_14000c280(void* owner, unsigned key, void** value)
+{
+    void* pair[2] = {&key, value};
+    auto* table = reinterpret_cast<unsigned char*>(owner) + 0x10;
+    FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKey4(&key));
+    ReleaseAs2GCObject(*value);
+}
+
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies, then optionally deletes the owner.
 // @0x14000b230
 void* FUN_14000b230(void* owner, unsigned flags)
