@@ -1335,6 +1335,22 @@ void ReadValueRecord(void* record, void* stream)
     }
 }
 
+// MS2-FUNCTIONAL: writes node scalars and recursively serializes the complete child list in order.
+// @0x14268eca0
+void WriteTextTreeNode(const void* node, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<const unsigned char*>(node);
+    WriteStreamBytes(stream, bytes + 0x10, 8);
+    WriteStreamBytes(stream, bytes + 0x18, 8);
+    WriteStreamBytes(stream, bytes + 0x20, 8);
+    WriteStreamBytes(stream, bytes + 0x28, 4);
+    const unsigned count = *reinterpret_cast<const unsigned*>(bytes + 0x38);
+    WriteStreamBytes(stream, &count, 4);
+    auto* children = static_cast<void* const*>(*reinterpret_cast<void* const*>(bytes + 0x30));
+    for (unsigned i = 0; i < count; ++i)
+        WriteTextTreeNode(children[i], stream, version);
+}
+
 // MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot.
 // @0x142745630
 void* FindAudioRequestEntry(void** set, const unsigned char* key)
