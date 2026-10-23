@@ -53,6 +53,18 @@ public:
     virtual const Environment* GetASEnvironment() const;         // slot 30, exe 0x142949400
     virtual InteractiveObject* GetTopParent(bool ignoreLockRoot = false) const;     // exe 0x142956b10
     virtual AvmCharacter*      GetAvmTopParent(bool ignoreLockRoot = false) const;  // exe 0x142949860
+    // Slot 34: bit n set when standard member n is a property of this kind of character (exe 0x142956060: none).
+    virtual unsigned           GetStandardMemberBitMask() const;
+
+    // The standard (built-in property) members that DeleteMember and friends look up.
+    enum StandardMember
+    {
+        M_InvalidMember      = -1,
+        M_useHandCursor      = 31, // clears the clip's useHandCursor setting
+        M_LastBitMaskMember  = 32  // the last member the bit mask covers
+    };
+    // The standard member the name spells, M_InvalidMember otherwise (exe 0x142956090).
+    StandardMember GetStandardMemberConstant(const ASString& newname) const;
 };
 
 // The script side of a character of an AS2 movie.

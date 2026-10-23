@@ -27,6 +27,8 @@
 // MS2-RANGE: 0x14292ff50-0x142930089 .text$mn
 // MS2-RANGE: 0x142930910-0x142930a10 .text$mn
 // MS2-RANGE: 0x142925190-0x14292522c .text$mn
+// MS2-RANGE: 0x1429385f0-0x142938830 .text$mn
+// MS2-RANGE: 0x142956060-0x142956070 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -722,6 +724,65 @@ void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
         pentry->~ActionEntry();
         SF_FREE(pentry);
     }
+}
+
+// @0x1429385f0
+bool ArrayObject::DeleteMember(ASStringContext* psc, const ASString& name)
+{
+    if (name.GetSize() > 0 && isdigit(name.ToCStr()[0]))
+    {
+        int idx;
+        if ((idx = ParseIndex(name)) < 0)
+            return false;
+        SetElement(idx, Value());
+        return true;
+    }
+    return Object::DeleteMember(psc, name);
+}
+
+// A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.
+static inline bool MayBeStandardMember(const ASString& name)
+{
+    if ((name.GetHashFlags() >> 29) & 1)
+        return true;
+    if (name.GetLength() != 0 && name.GetCharAt(0) == '_')
+    {
+        ASString lower(name.ToLowerNode());
+        if ((lower.GetHashFlags() >> 28) & 1)
+            return true;
+    }
+    return false;
+}
+
+// @0x142956060
+unsigned AvmCharacter::GetStandardMemberBitMask() const
+{
+    return 0;
+}
+
+// A standard property only resets the clip's setting (useHandCursor); other names go to the AS object.
+// MS2-FUNCTIONAL the exe tests the string flags with shr/and byte and orders the member branches differently
+// @0x1429386e0
+SF_NOINLINE bool AvmCharacter::DeleteMember(ASStringContext* psc, const ASString& name)
+{
+    if (MayBeStandardMember(name))
+    {
+        StandardMember member = GetStandardMemberConstant(name);
+        if (member != M_InvalidMember && member <= M_LastBitMaskMember &&
+            (GetStandardMemberBitMask() & (1u << member)))
+        {
+            switch (member)
+            {
+            case M_useHandCursor:
+                pDispObj->Flags &= ~InteractiveObject::Mask_UseHandCursor;
+                return true;
+            default:
+                return false;
+            }
+        }
+    }
+    Ptr<Object> obj = GetASObject();
+    return obj ? obj->DeleteMember(psc, name) : false;
 }
 }}} // namespace Scaleform::GFx::AS2
 
