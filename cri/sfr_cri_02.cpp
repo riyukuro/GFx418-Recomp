@@ -1058,6 +1058,53 @@ void FUN_140035090(void* record)
     *(CriSint32*)((CriUint8*)record + 0x3c) = -1;
 }
 
+// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// @0x140039dd4
+CriBool criCsWin_InitializeCriticalSection(LPCRITICAL_SECTION section)
+{
+    if (section)
+        InitializeCriticalSection(section);
+    return section != NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// @0x140039dfc
+CriBool criCsWin_DeleteCriticalSection(LPCRITICAL_SECTION section)
+{
+    if (section)
+        DeleteCriticalSection(section);
+    return section != NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// @0x140039e24
+CriBool FUN_140039e24(LPCRITICAL_SECTION section)
+{
+    if (section)
+        EnterCriticalSection(section);
+    return section != NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// @0x140039e4c
+CriBool FUN_140039e4c(LPCRITICAL_SECTION section)
+{
+    if (section)
+        LeaveCriticalSection(section);
+    return section != NULL;
+}
+
+// MS2-FUNCTIONAL: CRI Base was built with VS2008; this ownership check is rebuilt with our VS2017 toolset.
+// @0x140039e74
+CriBool criCs_IsInCriticalSection(const void* state)
+{
+    const CriUint8* bytes = (const CriUint8*)state;
+    CriSint32 depth = *(const CriSint32*)(bytes + 0x2c);
+    if (depth < 1)
+        return 0;
+    return GetCurrentThreadId() == *(const DWORD*)(bytes + 0x28);
+}
+
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
 // MS2-PIN: ??_7VideoPlayerImpl@Video@GFx@Scaleform@@6B@ 0x1431b9260
 // MS2-PIN: ??_7VideoDecoderSmp@Video@GFx@Scaleform@@6B@ 0x1431b9170
