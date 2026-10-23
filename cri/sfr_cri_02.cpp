@@ -2901,30 +2901,6 @@ void* FUN_14002abd0(void* object, CriUint32 tag, const CriUint32* sizePair,
     return object;
 }
 
-// MS2-FUNCTIONAL: release a non-null heap-owned member through the process Scaleform heap.
-// @0x14002ab70
-void FUN_14002ab70(void** value)
-{
-    if (*value)
-        FUN_14002d3f0(*value);
-}
-
-// MS2-FUNCTIONAL: release a non-null heap-owned member through the process Scaleform heap.
-// @0x14002acb0
-void FUN_14002acb0(void** value)
-{
-    if (*value)
-        FUN_14002d3f0(*value);
-}
-
-// MS2-FUNCTIONAL: release a non-null heap-owned member through the process Scaleform heap.
-// @0x14002acd0
-void FUN_14002acd0(void** value)
-{
-    if (*value)
-        FUN_14002d3f0(*value);
-}
-
 // MS2-FUNCTIONAL: clear the request vector while retaining a single-entry allocation when possible.
 // @0x14002aec0
 void FUN_14002aec0(CriUint64* array)
