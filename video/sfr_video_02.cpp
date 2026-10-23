@@ -19,6 +19,7 @@ extern const void* FUN_14261c640(const void*, int);
 extern void FUN_142581700(void*);
 extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
+extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 
 namespace Scaleform { namespace GFx { namespace Video {
@@ -139,6 +140,36 @@ uintptr_t FUN_14000e560() { return 0; }
 
 // @0x14000e580
 bool FUN_14000e580() { return false; }
+
+// MS2-FUNCTIONAL: reproduces the two indirect interface calls and this adjustment observed at this entry.
+// @0x14000e470
+void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
+{
+    void** base = adjustedThis - 1;
+    typedef void* (*GetContextFn)(void*);
+    void* context = reinterpret_cast<GetContextFn>(
+        *reinterpret_cast<void**>(static_cast<char*>(*base) + 0xf8))(base);
+    typedef void (*DispatchFn)(void*, void*, void*, void*);
+    reinterpret_cast<DispatchFn>(*reinterpret_cast<void**>(static_cast<char*>(*adjustedThis) + 0x20))(
+        adjustedThis, context, arg3, arg4);
+}
+
+// @0x14000e5d0
+void FUN_14000e5d0() { FUN_14296bba0(); }
+
+// MS2-FUNCTIONAL: builds the observed default color transform and dispatches it through the object's vtable.
+// @0x14000e590
+void FUN_14000e590(void** object)
+{
+    struct DefaultTransform
+    {
+        UInt32 multiplier[3];
+        UByte offsets[5];
+    } transform = {{1, 0, 0}, {0, 0, 0xff, 0, 0}};
+    typedef void (*ApplyFn)(void*, const DefaultTransform*);
+    reinterpret_cast<ApplyFn>(*reinterpret_cast<void**>(static_cast<char*>(*object) + 0x40))(
+        object, &transform);
+}
 
 // MS2-FUNCTIONAL: forwards the absolute-path query to the executable's AvmCharacter display object.
 // @0x14000e570
