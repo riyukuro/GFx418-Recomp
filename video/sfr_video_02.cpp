@@ -34,9 +34,8 @@ extern void FUN_14252c8b0(void*, unsigned, unsigned, unsigned);
 extern void FUN_1425ef130(void*);
 extern void FUN_1424d9310(void*, unsigned);
 extern void* FUN_142581520(void*, void*);
-extern void* DAT_143b15f60;
-extern void* PTR_FUN_14317b668;
-extern void* PTR_FUN_14317bc40;
+extern "C" void* DAT_143b15f60;
+extern "C" void* DAT_14317b668;
 extern bool FUN_1423dfe30(void*, unsigned __int64);
 extern void FUN_1424d6750();
 extern void FUN_1424d6ac0();
@@ -2969,7 +2968,7 @@ void* FUN_140011610(void* object, void** result, void* context)
     } else {
         auto** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
         if (transform) {
-            transform[0] = PTR_FUN_14317b668;
+            transform[0] = DAT_14317b668;
             transform[1] = reinterpret_cast<void*>(1);
             transform[2] = nullptr;
             transform[3] = nullptr;
@@ -3017,7 +3016,7 @@ void* FUN_140011610(void* object, void** result, void* context)
         return result;
     }
     FUN_1424d9310(nodeData, 3);
-    *reinterpret_cast<void***>(nodeData) = reinterpret_cast<void**>(PTR_FUN_14317bc40);
+    *reinterpret_cast<const void* const**>(nodeData) = Scaleform::Render::TreeShapeNodeDataVTable;
     using AddRef = void (*)(void*);
     auto* providerBase = shape + 0x10;
     reinterpret_cast<AddRef>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
