@@ -224,6 +224,9 @@ public:
     // test passes (the source pixel otherwise, with copySource) to this image at destPoint.
     UInt32 Threshold(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                      ThresholdOperation op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource);           // 0x1425ef1e0
+    // Applies filter to a rect of the source image, writing the result to this image at destPoint.
+    void  ApplyFilter(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                      Filter* filter);                                                                            // 0x1425eaff0
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -1718,6 +1721,93 @@ namespace Instances { namespace fl_display
         // GFx::Stage +0x120 (the GFx stage class is not recovered)
         result = *reinterpret_cast<const ASString*>(reinterpret_cast<UByte*>(pDispObj.GetPtr()) + 0x120);
     }
+
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: exe uses an rbp frame and other registers (and keeps the source image in a cmov); same checks, filter-type switch and calls
+    // @0x142447f10
+    void BitmapData::applyFilter(const Value& result, Instances::fl_display::BitmapData* sourceBitmapData,
+                                 Instances::fl_geom::Rectangle* sourceRect, Instances::fl_geom::Point* destPoint,
+                                 Instances::fl_filters::BitmapFilter* filter)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        if (!sourceBitmapData)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+            return;
+        }
+        if (!sourceRect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+            return;
+        }
+        if (!destPoint)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+            return;
+        }
+        if (!filter)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "filter"));
+            return;
+        }
+
+        Render::Filter* pfilter = filter->GetFilterData();
+        Render::DrawableImage* psource = reinterpret_cast<Render::DrawableImage*>(sourceBitmapData->pImage.GetPtr());
+        Render::DrawableImage* pdest = reinterpret_cast<Render::DrawableImage*>(this ? pImage.GetPtr() : NULL);
+        Render::Rect<SInt32> r((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                               (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
+        Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
+        if (!pfilter)
+        {
+            GetVM().GetUI().Output(FlashUI::Output_Warning, "The method BitmapData::applyFilter (unsupported filter type) is not implemented\n");
+            return;
+        }
+
+        // Filters that need an alpha channel can only write to a transparent image; a displacement map also needs
+        // the source image to match it.
+        bool transparent = pdest->IsTransparent();
+        switch (pfilter->GetFilterType())
+        {
+        case Render::Filter_Blur:
+        case Render::Filter_ColorMatrix:
+            break;
+        case Render::Filter_Shadow:
+        case Render::Filter_Glow:
+        case Render::Filter_Bevel:
+            if (!transparent)
+                goto failed;
+            break;
+        case Render::Filter_DisplacementMap:
+        {
+            bool sourceTransparent;
+            sourceBitmapData->transparentGet(sourceTransparent);
+            if (sourceTransparent != transparent)
+                goto failed;
+            break;
+        }
+        default:
+            GetVM().GetUI().Output(FlashUI::Output_Warning, "The method BitmapData::applyFilter (unsupported filter type) is not implemented\n");
+            return;
+        }
+        pdest->ApplyFilter(psource, r, dp, pfilter);
+        return;
+
+    failed:
+        VM& vm = GetVM();
+        vm.ThrowArgumentError(VM::Error(VM::eIllegalOperationError, vm,
+                                        "This filter operation cannot be performed with the specified input parameters."));
+    }
+#pragma strict_gs_check(pop)
 
     // @0x1424529e0
     void BitmapData::scroll(const Value& result, SInt32 x, SInt32 y)
