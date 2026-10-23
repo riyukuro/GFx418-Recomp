@@ -16,6 +16,7 @@
 #include "../include/gfx/gfx_stream.h"
 #include "../include/gfx/gfx_rendertree.h"
 #include <cstring>
+#include <cstdint>
 #include <new>
 
 extern void FUN_14257dc30(void*);
@@ -47,6 +48,36 @@ extern void* PTR_LAB_1431b6540;
 extern void* PTR_FUN_1431b64f0;
 extern void* PTR_LAB_1431b6440;
 extern void* PTR_LAB_1431b6430;
+extern void* DAT_143b274d8;
+extern void* DAT_143b274e0;
+extern void* DAT_143b27518;
+extern void* DAT_143b27520;
+extern void* DAT_143b27698;
+extern void* DAT_143b276a0;
+extern void* DAT_143b27458;
+extern void* DAT_143b27460;
+extern void* DAT_143b27478;
+extern void* DAT_143b27480;
+extern void* DAT_143b274f8;
+extern void* DAT_143b27500;
+extern void* DAT_143b27448;
+extern void* DAT_143b27450;
+extern void* DAT_143b274c8;
+extern void* DAT_143b274d0;
+extern void* DAT_143b274b8;
+extern void* DAT_143b274c0;
+extern void* DAT_143b276e8;
+extern void* DAT_143b276f0;
+extern void* DAT_143b27578;
+extern void* DAT_143b27580;
+extern void* DAT_143b27568;
+extern void* DAT_143b27570;
+extern void* DAT_143b27468;
+extern void* DAT_143b27470;
+extern void* DAT_143b27508;
+extern void* DAT_143b27510;
+extern void* DAT_143b274e8;
+extern void* DAT_143b274f0;
 extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
@@ -1953,6 +1984,125 @@ void FUN_14000f470(void* object, void* value)
     auto** heapVtable = *reinterpret_cast<void***>(heap);
     reinterpret_cast<void(*)(void*, void*, void*, unsigned*)>(heapVtable[0x70 / sizeof(void*)])(
         heap, value, object, &flags);
+}
+
+// Shared path for the generated AS3 trait getters in this range.
+static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
+                            void* callback, void* base)
+{
+    unsigned char payload[16]{};
+    auto offset = *reinterpret_cast<std::intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
+    reinterpret_cast<void(*)(char*, void*)>(callback)(reinterpret_cast<char*>(base) + offset, payload);
+    if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(instance) + 0x180) == 0)
+    {
+        output[0] = (output[0] & (type == 1 ? 0xffffffe1u : type == 3 ? 0xffffffe3u : 0xffffffe4u)) | type;
+        std::memcpy(reinterpret_cast<char*>(output) + 0x10, payload, sizeof(payload));
+    }
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140015d20
+void FUN_140015d20(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b274d8, DAT_143b274e0);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140015da0
+void FUN_140015da0(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b27518, DAT_143b27520);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140015eb0
+void FUN_140015eb0(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 3, DAT_143b27698, DAT_143b276a0);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140015f20
+void FUN_140015f20(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 3, DAT_143b27458, DAT_143b27460);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140015f90
+void FUN_140015f90(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 1, DAT_143b27478, DAT_143b27480);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016100
+void FUN_140016100(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b274f8, DAT_143b27500);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016180
+void FUN_140016180(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b27448, DAT_143b27450);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016200
+void FUN_140016200(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 3, DAT_143b274c8, DAT_143b274d0);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016270
+void FUN_140016270(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b274b8, DAT_143b274c0);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016530
+void FUN_140016530(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 1, DAT_143b276e8, DAT_143b276f0);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016600
+void FUN_140016600(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b27578, DAT_143b27580);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016680
+void FUN_140016680(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b27568, DAT_143b27570);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x140016790
+void FUN_140016790(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b27468, DAT_143b27470);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x1400168a0
+void FUN_1400168a0(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b27508, DAT_143b27510);
+}
+
+// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
+// @0x1400169b0
+void FUN_1400169b0(void*, void* instance, void* traits, unsigned* output)
+{
+    Video02TraitGet(instance, traits, output, 4, DAT_143b274e8, DAT_143b274f0);
 }
 
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
