@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x1424ed890-0x142509d40 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
+#undef GetObject
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-FUNCTIONAL 0x1424ed8f0: copy and ownership semantics match; the helper-based release/addref changes the call graph.
@@ -151,6 +152,47 @@ bool Multiname::ContainsNamespace(const Instances::Namespace& ns) const
             return true;
     }
     return false;
+}
+
+// MS2-FUNCTIONAL 0x1424f0be0: implements the exe's falsey cases for nullish, primitive, empty-string, and empty-object
+// values; the numeric predicates use direct IEEE-754 bits instead of the exe's two helper calls.
+// @0x1424f0be0
+bool Value::Convert2Boolean() const
+{
+    switch (GetKind())
+    {
+    case kUndefined:
+    case kNamespace:
+        return false;
+    case kBoolean:
+        return AsBool();
+    case kInt:
+        return AsInt() != 0;
+    case kUInt:
+        return AsUInt() != 0;
+    case kNumber:
+    {
+        union NumberBits { Number number; UInt64 bits; } n;
+        n.number = value.VNumber;
+        const UInt64 magnitude = n.bits & 0x7fffffffffffffffULL;
+        const bool nan = (magnitude & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL &&
+                         (magnitude & 0x000fffffffffffffULL) != 0;
+        return magnitude != 0 && !nan;
+    }
+    case kThunk:
+    case kVTableInd:
+    case kThunkClosure:
+    case kVTableIndClosure:
+        return true;
+    case kString:
+        return value.VS._1.VStr && value.VS._1.VStr->Size != 0;
+    case kObject:
+    case kClass:
+    case kFunction:
+        return GetObject() != 0;
+    default:
+        return false;
+    }
 }
 }}}
 
