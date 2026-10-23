@@ -644,6 +644,38 @@ void FUN_140015140(UInt32 index, UByte* result, UInt32 length, Scaleform::GFx::A
                        reinterpret_cast<char*>(values) + static_cast<size_t>(index) * 0x20))->Convert2Boolean();
 }
 
+// MS2-FUNCTIONAL: copies the Value to execute its recovered strong AddRef path without changing the source fields.
+// @0x140012a90
+void FUN_140012a90(Scaleform::GFx::AS3::Value* value)
+{
+    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
+    {
+        alignas(Scaleform::GFx::AS3::Value) unsigned char storage[sizeof(Scaleform::GFx::AS3::Value)];
+        new (storage) Scaleform::GFx::AS3::Value(*value);
+    }
+}
+
+// MS2-FUNCTIONAL: drops one weak or strong reference through Value's recovered release path.
+// @0x140012ac0
+void FUN_140012ac0(Scaleform::GFx::AS3::Value* value)
+{
+    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
+    {
+        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
+    }
+}
+
+// MS2-FUNCTIONAL: drops one strong object reference from a Value when its tag is collectable and not weak.
+// @0x140012b80
+void FUN_140012b80(void*, const UInt32* flags)
+{
+    if ((*flags & 0x1f) > 10 && (*flags & 0x200) == 0)
+    {
+        const Scaleform::GFx::AS3::Value* value = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(flags);
+        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
+    }
+}
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
