@@ -2064,3 +2064,14 @@ void FUN_140012400(Scaleform::GFx::AS2::Object* object,
     else if (operation == 1) FUN_140011ef0(object, collector);
     else if (operation == 2) FUN_140011fc0(object, collector);
 }
+
+// MS2-FUNCTIONAL: assigns the AS2 Object builtin prototype through its ObjectInterface subobject.
+// @0x140011ac0
+void FUN_140011ac0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::Environment* environment)
+{
+    auto* stringContext = environment->GetSC();
+    auto* prototype = stringContext->pContext->GetPrototype(
+        static_cast<Scaleform::GFx::AS2::ASBuiltinType>(0x22));
+    reinterpret_cast<Scaleform::GFx::AS2::ObjectInterface*>(
+        reinterpret_cast<unsigned char*>(object) + 0x20)->Set__proto__(stringContext, prototype);
+}
