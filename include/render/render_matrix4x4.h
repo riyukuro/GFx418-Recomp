@@ -128,6 +128,12 @@ public:
         MultiplyMatrix(Matrix3x4(*this), m);
         return *this;
     }
+    // (appended for sfr_render_05j) m applied after this
+    Matrix3x4& Append(const Matrix3x4& m)
+    {
+        MultiplyMatrix(m, Matrix3x4(*this));
+        return *this;
+    }
     // the 2D matrix with the z row of the identity
     Matrix3x4(const Matrix2x4<T>& m)
     {

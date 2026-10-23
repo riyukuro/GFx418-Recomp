@@ -167,6 +167,15 @@ inline CacheEffect* CacheEffectChain::GetEffect(StateType type) const
     return e;
 }
 
+// (appended for sfr_render_05j)
+inline bool CacheEffectChain::GetRange(BundleEntryRange* range)
+{
+    if (!pEffect)
+        return false;
+    pEffect->GetRange(range);
+    return true;
+}
+
 }} // namespace Scaleform::Render
 
 #endif

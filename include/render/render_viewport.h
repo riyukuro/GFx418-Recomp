@@ -96,6 +96,26 @@ public:
     bool GetClippedRect(Rect<T>* prect, bool useScissor = false) const;
     // narrows the view to one eye's half of a split stereo buffer (StereoDisplay value)
     void SetStereoViewport(unsigned display);
+
+    // (appended for sfr_render_05j) the clipped view relative to its own top-left corner (sfr_render_05j,
+    // 0x1426814b0)
+    bool GetCullRectF(RectF* prect, bool orient = true) const;
+
+    // clip-space bounds ([-1, 1], y up) to pixels of a width x height view (y down, so the y bounds swap)
+    template<class T>
+    static RectF ScaleToViewport(T left, T top, T width, T height, RectF& bounds)
+    {
+        RectF r;
+        r.x1 = scaleX((int)left, (int)width, bounds.x1);
+        r.y1 = scaleY((int)top, (int)height, bounds.y2);
+        r.x2 = scaleX((int)left, (int)width, bounds.x2);
+        r.y2 = scaleY((int)top, (int)height, bounds.y1);
+        return r;
+    }
+
+private:
+    static float scaleX(int, int width, float x) { return width * (x + 1) / 2.f; }
+    static float scaleY(int, int height, float y) { return height * (-y + 1) / 2.f; }
 };
 
 }} // namespace Scaleform::Render

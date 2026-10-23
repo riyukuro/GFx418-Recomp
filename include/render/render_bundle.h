@@ -161,6 +161,11 @@ public:
         return pImpl->UpdateBundleEntry(Data, p, tr, r, ib);
     }
     void DrawBundleEntry(BundleEntry* p, Renderer2DImpl* r) { pImpl->DrawBundleEntry(Data, p, r); }
+    // (appended for sfr_render_05j) equal keys that may share a bundle even when one-entry patterns overlap
+    bool MatchSingleItemOverlap(const SortKey& o) const
+    {
+        return Data == o.Data && pImpl == o.pImpl && (pImpl->Flags & SKF_MatchSingleOverlap);
+    }
 };
 
 // a group of consecutive entries with one key; vslot 3 refreshes an entry's mesh
@@ -195,6 +200,8 @@ public:
 
     // the position of entry in Entries, starting at its IndexHint (0x1426be740); public in the exe (QEAA)
     bool findEntryIndex(UPInt* pindex, BundleEntry* entry);
+    // (appended for sfr_render_05j) a leaf's chain changed: re-check the bundle
+    void SetNeedsUpdate() { NeedUpdate = true; }
 };
 
 // one leaf's place in the sorted bundle lists (0x40 bytes)

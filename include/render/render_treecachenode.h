@@ -50,7 +50,13 @@ enum TransformFlags
 enum
 {
     Update_Pattern = 0x01000000,
-    Update_InList  = 0x80000000
+    Update_InList  = 0x80000000,
+    // (appended for sfr_render_05j)
+    Update_PatternBounds = 0x02000000,   // a child's bounds moved: verify the pattern
+    Update_Pattern_Mask  = Update_Pattern | Update_PatternBounds,
+    // the state changes the cache effects (blend, mask, 3D view / projection, filter) follow
+    Change_State_Effect_Mask = Change_State_BlendMode | Change_State_MaskNode | Change_State_ViewMatrix3D |
+                               Change_State_ProjectionMatrix3D | Change_State_Filter
 };
 
 // What UpdateTransform hands down the cache tree: the cull rectangle, the accumulated 2D / 3D matrices and color
@@ -101,6 +107,73 @@ private:
         bRecomputeViewProj = src.bRecomputeViewProj;
         ViewProj           = src.ViewProj;
     }
+
+public:
+    // (appended for sfr_render_05j) the cull rectangle and view-projection only
+    TransformArgs(const TransformArgs& src)
+        : CullRect(src.CullRect), Mat3D(Matrix3F::NoInit), ViewProj(Matrix4F::NoInit), Mat(Matrix2F::NoInit),
+          Cx(Cxform::NoInit)
+    {
+        copyViewProj(src);
+    }
+    // a 3D transform; the 2D matrix starts as the identity
+    TransformArgs(const TransformArgs& src, const Matrix3F& mat)
+        : CullRect(src.CullRect), Mat3D(mat), ViewProj(Matrix4F::NoInit), Mat(Matrix2F::Identity), Cx(src.Cx)
+    {
+        copyViewProj(src);
+    }
+    // what the root hands its children: no 3D states yet
+    TransformArgs(const RectF& cullRect, const Matrix2F& mat2D, const Matrix3F& mat3D, const Cxform& cx)
+        : CullRect(cullRect), Mat3D(mat3D), viewState(0), projState(0), ViewProj(Matrix4F::NoInit),
+          bRecomputeViewProj(false), Mat(mat2D), Cx(cx)
+    {
+    }
+
+    void SetMatrix3D(const Matrix3F& m1, const Matrix3F& m2) { Mat3D.MultiplyMatrix(m1, m2); }
+    void PrependMatrix3D(const Matrix3F& m)                  { Mat3D.Prepend(m); }
+
+    // the 3D matrix, with the 2D one applied first when both are in use (0x142681550)
+    void GetMatrix3D(TransformFlags flags, Matrix3F* m) const
+    {
+        if (flags & TF_Has3D)
+        {
+            if (flags & TF_Has2D)
+                m->MultiplyMatrix(Mat3D, Mat);
+            else
+                *m = Mat3D;
+        }
+        else
+            *m = Mat;
+    }
+
+    // a new view or projection state forces the product to be recomputed
+    void SetViewProj(const ViewMatrix3DState* view, const ProjectionMatrix3DState* proj)
+    {
+        if (view)
+        {
+            viewState          = view;
+            bRecomputeViewProj = true;
+        }
+        if (proj)
+        {
+            projState          = proj;
+            bRecomputeViewProj = true;
+        }
+    }
+    // the states of src (when given), then the node's own
+    void SetViewProj(const TreeNode::NodeData* data, const TransformArgs* src)
+    {
+        if (src)
+            copyViewProj(*src);
+        if (data)
+        {
+            const ViewMatrix3DState* view =
+                data->HasViewMatrix3D() ? data->GetState<ViewMatrix3DState>() : 0;
+            const ProjectionMatrix3DState* proj =
+                data->HasProjectionMatrix3D() ? data->GetState<ProjectionMatrix3DState>() : 0;
+            SetViewProj(view, proj);
+        }
+    }
 };
 
 enum BundleEntryRangeType
@@ -134,12 +207,36 @@ public:
     bool           IsEmpty() const     { return pFirst == 0; }
     bool           IsValid() const     { return Length != (UInt32)Range_Invalid; }
     BundleIterator GetIterator() const { return BundleIterator(pFirst, pLast); }
+    // (appended for sfr_render_05j)
+    void Clear(BundleEntryRangeType type)
+    {
+        pFirst = pLast = 0;
+        Length = type;
+    }
+    void SetToEntry(BundleEntry* entry)
+    {
+        pFirst = pLast = entry;
+        Length = 1;
+    }
     // walks every chain to its end; checks only (0x1426be710)
     void VerifyValidChildDepth();
     // cuts each entry's chain where it reaches below topDepth (0x1426be490)
     void StripChainsByDepth(unsigned topDepth);
     // cuts every chain, for the leaves (0x1426be450)
     void StripChains();
+    SortKey& GetFirstKey() const { return pFirst->Key; }
+    // next's entries go after ours, linked through the last entry's next-pattern pointer
+    void Append(BundleEntryRange& next)
+    {
+        if (next.IsEmpty())
+            return;
+        if (!IsEmpty())
+            pLast->pNextPattern = next.pFirst;
+        else
+            pFirst = next.pFirst;
+        pLast = next.pLast;
+        Length += next.Length;
+    }
 };
 
 // (appended for sfr_render_06f) a range that remembers the chain tails it last extended (up to 8), so merging the
@@ -199,6 +296,8 @@ public:
         if (pEffect)
             updateBundleChain(pEffect, chain, maskChain);
     }
+    // (appended for sfr_render_05j) the outermost effect's range; false without effects
+    inline bool GetRange(BundleEntryRange* range);
 
 private:
     void updateBundleChain(CacheEffect* effect, BundleEntryRange* chain, BundleEntryRange* maskChain);
@@ -275,6 +374,40 @@ public:
                                    const Matrix4F& viewProj, MaskEffectState oldState, unsigned flags);   // 0x142684500
     bool calcFilterBounds(RectF* bounds, Matrix2F* boundAreaMatrix, const Matrix3F& viewMatrix,
                           const Matrix4F& viewProj, RectF* cullRect = 0);                       // 0x142683f80
+
+    // (appended for sfr_render_05j)
+    TreeNode*      GetNode() const                  { return pNode; }
+    void           SetParent(TreeCacheNode* parent) { pParent = parent; }
+    void           ApplyFlags(unsigned clearMask, unsigned setMask) { Flags = (UInt16)((Flags & ~clearMask) | setMask); }
+    bool           IsMaskNode() const               { return (Flags & NF_MaskNode) != 0; }
+    // visible and not culled
+    bool           IsDrawn() const                  { return (Flags & (NF_Visible | NF_Culled)) == NF_Visible; }
+    bool           HasMask() const                  { return pMask != 0; }
+    TreeCacheNode* GetMask() const                  { return pMask; }
+    void           SetMask(TreeCacheNode* mask)
+    {
+        pMask = mask;
+        SetFlags(GetFlags() | NF_HasMask);
+    }
+    void ClearMask()
+    {
+        pMask = 0;
+        SetFlags(GetFlags() & ~NF_HasMask);
+    }
+
+    // the parent's pattern is rebuilt in the depth pass (out of line at 0x142683c00)
+    inline void addParentToDepthPatternUpdate();
+
+    // unlinks from the parent's children (or mask slot) and detaches the subtree from the root
+    void RemoveFromParent();
+    // the mask's matrix prepended to t, then the mask's own transform update
+    void updateMaskTransform(TransformArgs& t, TransformFlags flags);
+    // re-wraps contentChain in the effect chain, with the mask's pattern when there is a mask
+    void updateEffectChain(BundleEntryRange* contentChain);
+    // a child's (or mask's) bounds in this node's space; false when empty
+    bool calcChildMaskBounds(RectF* bounds, TreeCacheNode* child);
+    // the node's matrix appended with every ancestor's
+    void CalcViewMatrix(Matrix2F* view) const;
 };
 
 // 0xa0 bytes
@@ -303,6 +436,12 @@ public:
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
     virtual bool IsPatternChainValid() const;
     virtual void forceUpdateImages();
+
+    // (appended for sfr_render_05j)
+    enum { Pattern_DisableMatch = 1 };
+    const TreeContainer::NodeData* GetNodeData() const { return ((TreeContainer*)pNode)->GetDisplayData(); }
+    // the children's chains merged into one pattern range
+    void BuildChildPattern(BundleEntryRange* pattern);
 };
 
 // (appended for sfr_render_03f)
@@ -347,7 +486,26 @@ public:
         }
         node->UpdateFlags |= flags;
     }
+
+    // (appended for sfr_render_05j)
+    // moves the update list into the depth buckets
+    void ChainUpdatesByDepth();
+    void ClearDepthUpdates()
+    {
+        DepthUpdates.Clear();
+        DepthUpdatesChained = false;
+    }
+    virtual void HandleChanges(unsigned changeBits);
+    // runs the pending updates: changes, transforms and patterns, in depth order
+    void UpdateTreeData();
+    void Draw();
 };
+
+inline void TreeCacheNode::addParentToDepthPatternUpdate()
+{
+    if (pRoot && GetParent())
+        pRoot->AddToDepthUpdate(GetParent(), Update_Pattern);
+}
 
 // A leaf drawn through a bundle: its bundle entry and pooled matrix. 0xb8 bytes; ctor 0x142680040, dtor
 // 0x1426801d0, ComputeFinalMatrix 0x142681200, UpdateBundlePattern 0x1426829e0, GetPatternChain 0x142681710.
@@ -378,6 +536,9 @@ public:
 
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
     virtual void UpdateBundlePattern(unsigned flags);
+
+    // (appended for sfr_render_05j)
+    virtual void HandleChanges(unsigned changeBits);
 };
 
 }} // namespace Scaleform::Render
