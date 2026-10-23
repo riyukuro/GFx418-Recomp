@@ -2452,6 +2452,48 @@ namespace Instances { namespace fl
 }}
 }}}
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // @0x14240b630
+    UInt32 XMLElement::ForEachAttr(const Multiname& prop_name, CallBack& cb)
+    {
+        UInt32 num = 0;
+        if (!prop_name.Name.IsString())
+            return num;
+        const UPInt size = Attrs.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            if (Attrs[i]->Matches(prop_name))
+            {
+                ++num;
+                if (!cb.Call(i))
+                    return num;
+            }
+        }
+        return num;
+    }
+
+    // MS2-FUNCTIONAL: exe inlines XML::Matches into the loop; ours calls it
+    // @0x14240b6d0
+    UInt32 XMLElement::ForEachChild(const Multiname& prop_name, CallBack& cb)
+    {
+        UInt32 num = 0;
+        const UPInt size = Children.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            if (Children[i]->Matches(prop_name))
+            {
+                ++num;
+                if (!cb.Call(i))
+                    return num;
+            }
+        }
+        return num;
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
