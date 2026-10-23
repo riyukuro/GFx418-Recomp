@@ -1447,6 +1447,146 @@ void TreeCacheRoot::HandleChanges(unsigned changeBits)
     TreeCacheContainer::HandleChanges(changeBits & ~Change_Viewport);
 }
 
+// a contributing filter on the node (the FilterSet test shared by both walks below)
+static inline bool hasContributingFilter(const TreeNode::NodeData* data)
+{
+    if (!data->HasFilter())
+        return false;
+    const FilterState* filterState = data->GetState<FilterState>();
+    if (!filterState)
+        return false;
+    const FilterSet* filters = filterState->GetFilters();
+    return filters && filters->IsContributing();
+}
+
+// MS2-FUNCTIONAL: register allocation (root kept in rsi, not spilled/reloaded via rbx) and stack-slot order differ;
+// the exe also passes no argument to UpdateBundlePattern (our signature takes flags, 0 here).
+// @0x142683380
+void TreeCacheRoot::UpdateTreeData()
+{
+    // Transforms flow from the root down, so the shallow buckets go first.
+    unsigned depthUsed = DepthUpdates.GetDepthUsed();
+    for (unsigned i = 0; i < depthUsed; i++)
+    {
+        for (TreeCacheNode* node = DepthUpdates.Get(i); node; node = node->pNextUpdate)
+        {
+            unsigned changed = node->UpdateFlags & (Change_Matrix | Change_CxForm);
+
+            if (node->UpdateFlags & Change_State_Scale9)
+            {
+                // the node checks its own Scale9 state; the parent says whether it is already inside one
+                TreeCacheNode* parent = node->GetParent();
+                node->propagateScale9Flag(parent ? (parent->GetFlags() & NF_PartOfScale9) : 0);
+                node->UpdateFlags &= ~Change_State_Scale9;
+                changed |= Change_Matrix;
+            }
+            if (node->UpdateFlags & Change_3D)
+            {
+                node->ApplyFlags(NF_3D, node->GetNodeData()->Flags & NF_3D);
+                node->propagate3DFlag(0);
+                node->UpdateFlags &= ~Change_3D;
+                changed |= Change_Matrix;
+            }
+
+            // Nothing moved: an enclosing contributing filter still has to be redrawn, so treat it as a
+            // color change.
+            if (!changed)
+            {
+                for (TreeCacheNode* p = node; p; p = p->GetParent())
+                {
+                    if (hasContributingFilter(p->GetNodeData()))
+                    {
+                        changed = Change_CxForm;
+                        break;
+                    }
+                }
+            }
+            if (!changed)
+                continue;
+
+            // Accumulate the ancestors' matrices and color transforms above the node.
+            const TreeNode::NodeData* data = node->GetNodeData();
+            bool is3D      = data->Is3D();
+            bool hasFilter = data->HasFilter();
+            TransformFlags flags = (TransformFlags)(changed | (ViewValid ? TF_NeedCull : 0));
+
+            TransformArgs args(ViewCullRect, is3D ? Matrix2F::Identity : data->M2D(),
+                               is3D ? data->M3D() : Matrix3F::Identity, hasFilter ? Cxform::Identity : data->Cx);
+            args.SetViewProj(data, (const TransformArgs*)0);
+            flags = (TransformFlags)(flags | (is3D ? TF_Has3D : TF_Has2D) | (hasFilter ? TF_ParentFilter : 0));
+
+            const ViewMatrix3DState* viewState =
+                data->HasViewMatrix3D() ? data->GetState<ViewMatrix3DState>() : 0;
+            const ProjectionMatrix3DState* projState =
+                data->HasProjectionMatrix3D() ? data->GetState<ProjectionMatrix3DState>() : 0;
+
+            for (TreeCacheNode* p = node->GetParent(); p; p = p->GetParent())
+            {
+                if (!p->IsDrawn())
+                    flags = (TransformFlags)(flags & ~TF_NeedCull);
+                const TreeNode::NodeData* pdata = p->GetNodeData();
+
+                if (flags & TF_Has3D)
+                {
+                    // the 2D matrix widened in place, M3D used by reference (no copy of either)
+                    Matrix3F        m2D(Matrix3F::NoInit);
+                    const Matrix3F* m = &pdata->M3D();
+                    if (!pdata->Is3D())
+                        m = new (&m2D) Matrix3F(pdata->M2D());
+                    args.SetMatrix3D(*m, Matrix3F(args.GetMat3DDirect()));
+                }
+                else if (pdata->Is3D())
+                {
+                    // a 3D ancestor: carry on in 3D from the 2D product so far
+                    args.SetMatrix3D(Matrix3F(args.Mat));
+                    args.SetMatrix3D(pdata->M3D(), Matrix3F(args.GetMat3DDirect()));
+                    args.Mat.SetIdentity();
+                    flags = (TransformFlags)((flags & ~TF_Has2D) | TF_Has3D);
+                }
+                else
+                    args.Mat.Append(pdata->M2D());
+
+                // a contributing filter applies its color transform to the filtered result, not to the children
+                if (hasContributingFilter(pdata))
+                    flags = (TransformFlags)(flags | TF_ParentFilter);
+                else
+                    args.Cx.Prepend(pdata->Cx);
+
+                // the nearest ancestor view / projection
+                if (!viewState && pdata->HasViewMatrix3D())
+                    viewState = pdata->GetState<ViewMatrix3DState>();
+                if (!projState && pdata->HasProjectionMatrix3D())
+                    projState = pdata->GetState<ProjectionMatrix3DState>();
+            }
+
+            args.SetViewProj(viewState, projState);
+            node->UpdateTransform(data, args, flags);
+            node->UpdateFlags &= ~(Change_Matrix | Change_CxForm);
+        }
+    }
+
+    // Patterns go bottom-up; the count is read again since culling may have queued deeper nodes.
+    for (unsigned i = DepthUpdates.GetDepthUsed(); i != 0; i--)
+    {
+        for (TreeCacheNode* node = DepthUpdates.Get(i - 1); node; node = node->pNextUpdate)
+        {
+            if (node->UpdateFlags & Update_Pattern_Mask)
+            {
+                node->UpdateBundlePattern(0);
+                node->UpdateFlags &= ~Update_Pattern_Mask;
+            }
+            node->UpdateFlags &= ~Update_InList;
+        }
+    }
+
+    ClearDepthUpdates();
+
+    for (BundleIterator ib = CachedChildPattern.GetIterator(); ib; ib++)
+        ib->UpdateBundleEntry(this, pRenderer2D, ib);
+
+    BundlePatternFrameId++;
+}
+
 // @0x1426813d0
 void TreeCacheRoot::Draw()
 {
