@@ -734,10 +734,98 @@ void SGMLParser<Char>::SkipSpaces()
 
 // Keep the wide overload as the small ABI adapter in the executable. ParseHtmlImpl remains an unrecovered local
 // callee while its parser body is being reconstructed from the exe.
-extern bool FUN_14267b1c0(StyledText* self, const wchar_t* phtml, UPInt htmlSize,
-                          StyledText::HTMLImageTagInfoArray* pimgInfoArr, bool multiline, bool condenseWhite,
-                          const StyleManagerBase* pstyleMgr, const TextFormat* txtFmt,
-                          const ParagraphFormat* paraFmt);
+// MS2-FUNCTIONAL: preserves decoded text, whitespace policy, paragraph breaks and default formats; rich tag
+// formatting and image descriptor extraction remain simplified.
+// @0x14267b1c0
+bool FUN_14267b1c0(StyledText* self, const wchar_t* phtml, UPInt htmlSize,
+                   StyledText::HTMLImageTagInfoArray* pimgInfoArr, bool multiline, bool condenseWhite,
+                   const StyleManagerBase* pstyleMgr, const TextFormat* txtFmt,
+                   const ParagraphFormat* paraFmt)
+{
+    SF_UNUSED2(pimgInfoArr, pstyleMgr);
+    self->Clear();
+    if (txtFmt)
+        self->SetDefaultTextFormat(*txtFmt);
+    if (paraFmt)
+        self->SetDefaultParagraphFormat(*paraFmt);
+
+    SGMLParser<wchar_t> parser(Memory::GetHeapByAddress(self), phtml, htmlSize);
+    const StyledText::NewLinePolicy newlinePolicy = multiline ? StyledText::NLP_CompressCRLF
+                                                               : StyledText::NLP_IgnoreCRLF;
+    bool previousSpace = false;
+    for (;;)
+    {
+        const int state = parser.GetNext();
+        if (state & SGMLPS_FINISHED)
+            break;
+        const int kind = state & ~SGMLPS_FINISHED;
+        if (kind == SGMLPS_CONTENT)
+        {
+            const wchar_t* content = 0;
+            UPInt length = 0;
+            if (!parser.ParseContent(&content, &length) || !length)
+                continue;
+            if (!condenseWhite)
+            {
+                self->AppendString(content, length, newlinePolicy, txtFmt, paraFmt);
+                continue;
+            }
+            for (UPInt i = 0; i < length; ++i)
+            {
+                const wchar_t c = content[i];
+                if (SFiswspace(c))
+                {
+                    if (!previousSpace && multiline)
+                    {
+                        const wchar_t space = L' ';
+                        self->AppendString(&space, 1, newlinePolicy, txtFmt, paraFmt);
+                    }
+                    previousSpace = true;
+                }
+                else
+                {
+                    self->AppendString(&c, 1, newlinePolicy, txtFmt, paraFmt);
+                    previousSpace = false;
+                }
+            }
+            continue;
+        }
+
+        const bool start = kind == SGMLPS_START_ELEMENT || kind == SGMLPS_EMPTY_ELEMENT;
+        const bool end = kind == SGMLPS_END_ELEMENT;
+        if (!start && !end)
+            continue;
+        const wchar_t* name = 0;
+        UPInt nameLength = 0;
+        const bool parsed = start ? parser.ParseStartElement(&name, &nameLength)
+                                  : parser.ParseEndElement(&name, &nameLength);
+        if (!parsed)
+            continue;
+        if (start)
+        {
+            const wchar_t* attrName = 0;
+            UPInt attrNameLength = 0;
+            while (parser.GetNextAttribute(&attrName, &attrNameLength))
+            {
+                const wchar_t* attrValue = 0;
+                UPInt attrValueLength = 0;
+                parser.GetNextAttributeValue(&attrValue, &attrValueLength);
+            }
+        }
+        if (!multiline || end)
+            continue;
+        const int br = SGMLCharIter<wchar_t>::StrCompare(name, nameLength, L"BR", 2);
+        const int paragraph = SGMLCharIter<wchar_t>::StrCompare(name, nameLength, L"P", 1);
+        const int listItem = SGMLCharIter<wchar_t>::StrCompare(name, nameLength, L"LI", 2);
+        const wchar_t newline = L'\n';
+        if (br == 0 || paragraph == 0 || listItem == 0)
+        {
+            self->AppendString(&newline, 1, newlinePolicy, txtFmt, paraFmt);
+            previousSpace = false;
+        }
+    }
+    return true;
+}
 
 // @0x14267f0d0
 bool StyledText::ParseHtml(const wchar_t* phtml, UPInt htmlSize, HTMLImageTagInfoArray* pimgInfoArr,
