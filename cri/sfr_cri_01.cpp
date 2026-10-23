@@ -5989,6 +5989,18 @@ void* FUN_1400293d0(void* object)
     return object;
 }
 
+// MS2-FUNCTIONAL: initialize the two embedded Scaleform strings when the optional CRI value exists.
+// @0x140029de0
+void* FUN_140029de0(void* object)
+{
+    if (object)
+    {
+        FUN_142584ce0(object);
+        FUN_142584ce0((CriUint8*)object + 8);
+    }
+    return object;
+}
+
 // MS2-FUNCTIONAL: these three CRI members each release their owned heap buffer.
 // @0x140029af0
 void FUN_140029af0(void** value)
