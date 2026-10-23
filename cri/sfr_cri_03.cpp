@@ -31,12 +31,14 @@ extern "C" const char* DAT_143ba9d18;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
 void FUN_140041190(void);
-void FUN_14003b2ac(void*, CriSint32, void*, CriUint32);
+void FUN_14003b2ac(void*, CriSint32, const void*, CriUint32);
 void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
 void FUN_14004eb70(void);
 void FUN_14004f8d0(void);
 void FUN_140027fb4(void*, void*);
+void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
+void* FUN_14003a1a0(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
 CriSint32 FUN_1400500b0(CriSint32, void*);
 void* FUN_14004e580(void);
@@ -195,6 +197,41 @@ void FUN_14003b6e0()
     registration.VideoDecoderInterface = (void*)FUN_14003bed0();
     registration.AlphaDecoderInterface = (void*)FUN_14003bf10();
     FUN_14002e6e0(&registration);
+}
+
+// MS2-FUNCTIONAL: route UTF allocations through the caller's CRI heap using its allocation mode.
+// @0x14003b20c
+void* FUN_14003b20c(void* heap, CriSint32 size, const CriChar8* name, CriSint32 alignment,
+                    CriSint32 allocationMode)
+{
+    CriSint32 type = 0;
+    if (allocationMode >= 0 && allocationMode <= 3)
+        type = allocationMode;
+    else
+        FUN_140038e24(0, "E08092651B", -3);
+    return FUN_140027f7c(heap, size, name, alignment, type);
+}
+
+// @0x14003b2a4
+void FUN_14003b2a4(void* heap, void* memory)
+{
+    FUN_140027fb4(heap, memory);
+}
+
+// MS2-FUNCTIONAL: adapt the four CRI heap modes and callbacks before constructing a UTF runtime table.
+// @0x14003b2ac
+void FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriUint32 size)
+{
+    struct HeapCallbacks { void* Allocate; void* Free; void* Heap; } callbacks;
+    CriSint32 type = 0;
+    if (allocationMode >= 0 && allocationMode <= 3)
+        type = allocationMode;
+    else
+        FUN_140038e24(0, "E08092650B", -3);
+    callbacks.Allocate = (void*)FUN_14003b20c;
+    callbacks.Free = (void*)FUN_14003b2a4;
+    callbacks.Heap = heap;
+    FUN_14003a1a0(&callbacks, (CriUint32)type, data, size);
 }
 
 // MS2-FUNCTIONAL: retains CRI's conditional decoder attachment followed by common Movie initialization.
