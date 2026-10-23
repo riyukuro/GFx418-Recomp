@@ -55,6 +55,7 @@ extern const void* DAT_1431b9430[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+struct CriMovieParsedChunk;
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
 
@@ -191,6 +192,7 @@ void     FUN_140044270(void* decoder, CriUint32 count);
 void     FUN_140044d70(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void     FUN_1400442c0(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void     FUN_140032650(void* player, void* streamSlot, void* output, const void* parsed);
+void     FUN_140032a70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
 void     FUN_140032db0(void* player, void* streamSlot, void* output, const void* parsed);
 void     FUN_140032b70(void* player, void* streamSlot, void* output, const void* parsed);
 void     FUN_140033e60(void* player, void* streamSlot);
@@ -3603,6 +3605,26 @@ void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMov
     if (output[3] == 0)
         output[3] = output[1];
     FUN_14003a108(document);
+}
+
+// MS2-FUNCTIONAL: parse one indexed CRI stream record and update its pending-record count.
+// @0x140033d70
+CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex)
+{
+    CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
+    CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
+    if (!slot->Active)
+        return 0;
+    if (input->Size > 0x1f)
+    {
+        CriSint32 size = 0;
+        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        CriUint32* streamOutput = (CriUint32*)((CriUint8*)slot + 0x50 + (size_t)outputIndex * 0x10);
+        FUN_140032a70(player, slot, streamOutput, &parsed);
+        --slot->Reserved2C4;
+        FUN_140033e60(player, slot);
+    }
+    return 1;
 }
 
 // MS2-FUNCTIONAL: compare video stream information and, when enabled, every plane's size pair.
