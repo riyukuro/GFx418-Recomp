@@ -1519,6 +1519,94 @@ namespace Scaleform { namespace GFx { namespace AS3
             ++it;
         }
     }
+
+    // SparseArray::PushBack (0x14241e4b0, sfr_as3_04), which the exe inlines into CutHash/CutMultipleAt.
+    static SF_INLINE void saCutPushBack(SparseArray& sa, const Value& v)
+    {
+        if (sa.Length == sa.ValueA.GetSize())
+            sa.ValueA.PushBack(v);
+        else
+        {
+            sa.ValueHHighInd = sa.Length;
+            sa.ValueH.Set(sa.ValueHHighInd, v);
+        }
+        ++sa.Length;
+    }
+
+    // The exe's index steps down from first_ind until it wraps past 0 (keys below first_ind then count as past the
+    // cut and move down by offset); kept as is.
+    // MS2-FUNCTIONAL: register allocation and stack slots differ (exe keeps i in rsi and reuses its slot for the moved key)
+    // @0x142407e30
+    void SparseArray::CutHash(UPInt first_ind, UPInt cut_num, UPInt offset, SparseArray* deleted)
+    {
+        Value v;
+        for (UPInt i = first_ind; i <= ValueHHighInd; --i)
+        {
+            if (const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* n = FUN_1423e87e0(&ValueH, &i))
+            {
+                v = n->Second;
+                ValueH.Remove(i);
+                if (i - first_ind >= cut_num)
+                    ValueH.Set(i - offset, v);
+                else if (deleted)
+                    saCutPushBack(*deleted, v);
+            }
+        }
+    }
+
+    // MS2-FUNCTIONAL: the exe re-reads the new low bound through a null hash iterator after CutHash (a fault when
+    // reached); ours keeps the first entry's key. Ours inlines ValueA.RemoveMultipleAt (0x14241ebb0), the exe calls it.
+    // @0x142408230
+    void SparseArray::CutMultipleAt(UPInt pos, UPInt count, SparseArray* deleted)
+    {
+        if (count == 0)
+            return;
+
+        if (pos < ValueA.GetSize())
+        {
+            const UPInt count_a = Alg::Min(count, ValueA.GetSize() - pos);
+            if (deleted)
+            {
+                for (UPInt i = pos; i < pos + count_a; ++i)
+                    saCutPushBack(*deleted, ValueA[i]);
+            }
+            ValueA.RemoveMultipleAt(pos, count_a);
+        }
+
+        if (ValueHLowInd)
+        {
+            if (ValueHLowInd < pos + count)
+            {
+                if (ValueHHighInd < pos + count)
+                {
+                    // Every hashed value is at or past pos: the hash empties.
+                    while (!ValueH.IsEmpty())
+                    {
+                        HashDH<UPInt, Value>::Iterator it = ValueH.Begin();
+                        if (deleted)
+                            saCutPushBack(*deleted, it->Second);
+                        ValueH.Remove(it->First);
+                    }
+                    ValueHHighInd = 0;
+                    ValueHLowInd = 0;
+                }
+                else
+                {
+                    CutHash(ValueHLowInd, pos - ValueHLowInd + count, count, deleted);
+                    ValueHLowInd = ValueH.Begin()->First;
+                }
+            }
+            else
+            {
+                MoveHashLeft(ValueHLowInd, count);
+                // The exe moves the low bound down twice (the high bound stays).
+                ValueHLowInd -= count;
+                ValueHLowInd -= count;
+            }
+        }
+
+        Length = ValueHHighInd ? ValueHHighInd + 1 : ValueA.GetSize();
+    }
 }}}
 
 namespace Scaleform { namespace GFx { namespace AS3
@@ -1953,9 +2041,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 }}}}}
 
-// SparseArray::PopFront and CutMultipleAt, out of line in the exe.
+// SparseArray::PopFront, out of line in the exe.
 void FUN_142423ef0(Scaleform::GFx::AS3::SparseArray* sa);
-void FUN_142408230(Scaleform::GFx::AS3::SparseArray* sa, Scaleform::UPInt pos, Scaleform::UPInt count, Scaleform::GFx::AS3::SparseArray* cut);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2070,7 +2157,7 @@ namespace Instances { namespace fl
         InstanceTraits::fl::Array& itr = static_cast<InstanceTraits::fl::Array&>(GetInstanceTraits());
         Pickable<Array> arr = itr.MakeInstance(itr);
         result.Pick(arr);
-        FUN_142408230(&SA, startIndex, deleteCount, arr.GetPtr() ? &arr.GetPtr()->SA : NULL);
+        SA.CutMultipleAt(startIndex, deleteCount, arr.GetPtr() ? &arr.GetPtr()->SA : NULL);
 
         if (argc > 2)
         {

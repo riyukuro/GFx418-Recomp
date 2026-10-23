@@ -93,7 +93,15 @@ public:
     void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, ASRefCountBaseType::GcOp op,
                          const ASRefCountBaseType& owner) const;
 
+    // (appended, sfr22) removes [pos, pos + count), pushing the removed values onto deleted when given. 0x142408230
+    void CutMultipleAt(UPInt pos, UPInt count, SparseArray* deleted);
+
 private:
+    // (appended, sfr22) the hash part of CutMultipleAt: from first_ind, values below first_ind + cut_num go to
+    // deleted, the rest move down by offset. 0x142407e30
+    void CutHash(UPInt first_ind, UPInt cut_num, UPInt offset, SparseArray* deleted);
+    // (appended, sfr22) moves the hashed values from first_ind up to the high bound down by offset. 0x14241ce70
+    void MoveHashLeft(UPInt first_ind, UPInt offset);
     UPInt GetLeftEqualInd(UPInt start_from) const;
     UPInt GetRightEqualInd(UPInt start_from, UPInt end_ind) const;
     void MoveHashRight(UPInt first_ind, UPInt offset);
