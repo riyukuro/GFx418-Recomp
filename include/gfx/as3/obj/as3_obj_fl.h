@@ -8,6 +8,9 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// E4X in-scope namespace list (as3_obj_e4x.h).
+class NamespaceArray;
+
 namespace Instances {
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class ThunkFunction : public Instances::FunctionBase
@@ -89,9 +92,116 @@ namespace Instances { namespace fl {
         void unescapeMultiByte(ASString& result, const ASString&);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // An E4X node. The base class is also the node of kind kNone; the element, attribute, text, comment and
+    // processing-instruction nodes derive from it (as3_obj_e4x.h). 0x48 bytes; vftable 0x1431429d0 (57 slots).
     class XML : public Instances::fl::Object
     {
+    public:
+        enum Kind { kNone, kElement, kText, kComment, kInstruction, kAttr };
+
+        // Text is the empty string. 0x1423efc90
+        explicit XML(InstanceTraits::Traits& t);
+        // 0x1423efce0
+        XML(InstanceTraits::Traits& t, const ASString& text, XML* parent = NULL);
+        // ??_G 0x1423f4bd0
+        virtual ~XML() {}
+
+        // @0x14240c240
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+        // @0x142415120
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl::XML"; }
+        // @0x142422070
+        virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);
+        // @0x142416800
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);
+        // @0x142409100
+        virtual CheckResult DeleteProperty(const Multiname& prop_name);
+        // @0x1424163b0
+        virtual void GetNextPropertyName(Value& name, GlobalSlotIndex ind) const;
+        // @0x1424161a0
+        virtual GlobalSlotIndex GetNextDynPropIndex(GlobalSlotIndex ind) const;
+        // @0x142416670
+        virtual void GetNextPropertyValue(Value& value, GlobalSlotIndex ind);
+
+        // The E4X node interface (slots 21-56). The overloads sit in reverse declaration order (23/24, 37/38).
+        // @0x142415c00
+        virtual const NamespaceArray* GetInScopeNamespaces() const { return NULL; }
+        // @0x142403fe0
+        virtual void AddInScopeNamespace(const Instances::Namespace& ns) {}
+        // @0x142404d70
+        virtual void AppendChild(const SPtr<XML>& child) {}
+        // @0x142404d60
+        virtual CheckResult AppendChild(const Value& child) { return true; }
+        // @0x142425a20
+        virtual void ToString(StringBuffer& buf, SInt32 ident);
+        // @0x142425d00
+        virtual void ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
+                                 const NamespaceArray* usedNotDeclared);
+        // @0x142415d80
+        virtual Kind GetKind() const { return kNone; }
+        // @0x142409a60
+        virtual Boolean3 EqualsInternal(const XML& other);
+        // @0x142417690
+        virtual bool HasSimpleContent() const { return false; }
+        // @0x142417320
+        virtual bool HasOwnProperty(const ASString& p) { return false; }
+        // @0x142415fc0
+        virtual const ASString& GetName() const { return Text; }
+        // the public namespace. 0x142415fd0
+        virtual const Instances::Namespace& GetNamespace() const;
+        // @0x142421c30
+        virtual void SetNamespace(Instances::Namespace& ns) {}
+        // @0x142421b40
+        virtual void SetNamespace2(Instances::Namespace& ns) {}
+        // the public namespace. 0x142415700
+        virtual Instances::Namespace& GetCurrNamespace() const;
+        // @0x1424087b0
+        virtual Pickable<XML> DeepCopy(XML* parent);
+        // @0x142415310
+        virtual void GetChildren(Instances::fl::XMLList& list, Kind k, const ASString* name = NULL) {}
+        // @0x142415300
+        virtual void GetChildren(Instances::fl::XMLList& list, const Multiname& prop_name) {}
+        // the index in Parent's children. 0x1424152a0
+        virtual CheckResult GetChildIndex(UPInt& ind) const { return false; }
+        // @0x1424157c0
+        virtual void GetDescendants(Instances::fl::XMLList& list, const Multiname& prop_name) {}
+        // @0x142419260
+        virtual CheckResult InsertChildAt(UPInt pos, const Value& child) { return false; }
+        // @0x142419190
+        virtual CheckResult InsertChildAfter(const Value& child1, const Value& child2) { return false; }
+        // @0x1424197e0
+        virtual CheckResult InsertChildBefore(const Value& child1, const Value& child2) { return false; }
+        // all children when child is NULL. 0x142408f40
+        virtual void DeleteChildren(XML* child) {}
+        // @0x142408ec0
+        virtual void DeleteByIndex(UPInt ind) {}
+        // @0x1424151d0
+        virtual void GetAttributes(Instances::fl::XMLList& list) {}
+        // @0x142416c40
+        virtual SPtr<Instances::fl::QName> GetQName() { return SPtr<Instances::fl::QName>(); }
+        // @0x14241d570
+        virtual void Normalize() {}
+        // lp: the node at which the lookup stops. 0x14240b200
+        virtual Instances::Namespace* FindNamespaceByPrefix(const ASString& prefix, XML* lp) const;
+        // @0x14240b380
+        virtual Instances::Namespace* FindNamespaceByURI(const ASString& uri, XML* lp) const;
+        // the prefixes used below this node and not declared up to lp. 0x142420260
+        virtual void ResolveNamespaces(HashSetDH<ASString>& nr, XML* lp) const {}
+        // @0x14241efc0
+        virtual XML* RemoveNamespace(const Value& ns) { return this; }
+        // @0x14241f190
+        virtual CheckResult Replace(const Multiname& prop_name, const Value& value) { return true; }
+        // @0x1423f6860
+        virtual CheckResult AS3Replace(const Multiname& prop_name, const Value& value) { return true; }
+        // @0x142421770
+        virtual void SetChildren(const Value& value) {}
+        // this node itself for the name "0". 0x1424168a0
+        virtual CheckResult GetProperty(const Multiname& prop_name, Instances::fl::XMLList& list);
+
+    public:
+        ASString    Text;       // +0x38 the name of an element/attribute/PI, the content of a text/comment
+        SPtr<XML>   Parent;     // +0x40
+
     public:
         // @0x1423f6b10
         void AS3addNamespace(SPtr<Instances::fl::XML>& result, const Value&);

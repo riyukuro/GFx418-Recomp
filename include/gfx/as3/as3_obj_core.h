@@ -583,6 +583,8 @@ namespace Instances { namespace fl
     {
     public:
         explicit XMLList(InstanceTraits::Traits& t);
+        // ??_G 0x1423f5070
+        virtual ~XMLList();
         // @0x142415160
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::XMLList"; }
         // @0x14240c440
@@ -605,10 +607,10 @@ namespace Instances { namespace fl
         virtual void GetNextPropertyValue(Value& value, GlobalSlotIndex ind);
 
     public:
-        ArrayLH<SPtr<Instances::fl::Object> >   List;               // +0x38 the XML items
-        SPtr<AS3::Object>                       TargetObject;       // +0x50
-        ASStringNode*                           TargetProperty;     // +0x58
-        SPtr<Instances::Namespace>              TargetNamespace;    // +0x60
+        SPtr<AS3::Object>                       TargetObject;       // +0x38
+        ASStringNode*                           TargetProperty;     // +0x40
+        SPtr<Instances::Namespace>              TargetNamespace;    // +0x48
+        ArrayLH<SPtr<Instances::fl::XML> >      List;               // +0x50 the XML items
 
     public:
         // native methods

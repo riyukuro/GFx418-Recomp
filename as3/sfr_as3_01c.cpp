@@ -13,6 +13,9 @@
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
+#define XML_STATIC  // the exe links expat statically (libgfxexpat)
+#include "../third_party/src/expat-2.0.1/lib/expat.h"
 
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
@@ -1195,7 +1198,87 @@ namespace Instances { namespace fl
         : Instance(t), TargetProperty(NULL)
     {
     }
+
+    // (inlined into ??_G 0x1423f5070)
+    XMLList::~XMLList()
+    {
+        if (TargetProperty)
+            TargetProperty->Release();
+    }
 }}
+
+namespace Instances { namespace fl
+{
+    // @0x1423efc90
+    XML::XML(InstanceTraits::Traits& t)
+        : Object(t), Text(t.GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    // @0x1423efce0
+    XML::XML(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : Object(t), Text(text), Parent(parent)
+    {
+    }
+
+    // @0x1423efd40
+    XMLAttr::XMLAttr(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
+                     const ASString& value, XML* parent)
+        : XML(t, name, parent), Data(value)
+    {
+        Ns = GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), ns.GetPrefix());
+    }
+
+    // @0x1423efe10
+    XMLComment::XMLComment(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : XML(t, text, parent)
+    {
+    }
+
+    // @0x1423efe80
+    XMLElement::XMLElement(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
+                           XML* parent)
+        : XML(t, name, parent)
+    {
+        Ns = GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), ns.GetPrefix());
+    }
+
+    // @0x1423f0260
+    XMLProcInstr::XMLProcInstr(InstanceTraits::Traits& t, const ASString& name, const ASString& data, XML* parent)
+        : XML(t, name, parent), Data(data)
+    {
+    }
+
+    // @0x1423f02e0
+    XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : XML(t, text, parent)
+    {
+    }
+}}
+
+// @0x1423f0130
+XMLParser::XMLParser(InstanceTraits::fl::XML& itr)
+    : NsSeparator(':')
+    , CurrKind(Instances::fl::XML::kNone)
+    , ITr(itr)
+    , Parser(XML_ParserCreate(NULL))
+    , RootElements(itr.GetVM().GetMemoryHeap())
+    , Text(itr.GetVM().GetStringManager().CreateEmptyString())
+    , KindStack(itr.GetVM().GetMemoryHeap())
+{
+    XML_SetUserData(Parser, this);
+    XML_SetElementHandler(Parser, StartElementExpatCallback, EndElementExpatCallback);
+    XML_SetCharacterDataHandler(Parser, CharacterDataExpatCallback);
+    XML_SetXmlDeclHandler(Parser, XmlDeclExpatCallback);
+    XML_SetDoctypeDeclHandler(Parser, StartDoctypeDeclExpatCallback, EndDoctypeDeclExpatCallback);
+    XML_SetDefaultHandler(Parser, DefaultExpatCallback);
+
+    const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&ITr));
+    if (!cl.ignoreComments)
+        XML_SetCommentHandler(Parser, CommentExpatCallback);
+    if (!cl.ignoreProcessingInstructions)
+        XML_SetProcessingInstructionHandler(Parser, ProcessingInstructionExpatCallback);
+}
 
 namespace ClassTraits { namespace fl
 {
@@ -2032,3 +2115,16 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ?AS3Constructor@Array@fl@Instances@AS3@GFx@Scaleform@@UEAAXIPEBVValue@456@@Z 0x1423f5550 ; vtslot
 // MS2-PIN: ?AS3Constructor@Date@fl@Instances@AS3@GFx@Scaleform@@UEAAXIPEBVValue@456@@Z 0x1423f5650 ; vtslot
 // MS2-PIN: ??0ClassCallConstruct@AS3@GFx@Scaleform@@QEAA@AEAVTraits@ClassTraits@123@@Z 0x1423ec230 ; prop
+// MS2-PIN: ??_7XML@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431429d0
+// MS2-PIN: ??_7XMLAttr@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142dc8
+// MS2-PIN: ??_7XMLElement@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142fa0
+// MS2-PIN: ??_7XMLText@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143168
+// MS2-PIN: ??_7XMLProcInstr@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143330
+// MS2-PIN: ??_7XMLComment@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431434f8
+// MS2-PIN: ??_GXML@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4bd0
+// MS2-PIN: ??_GXMLAttr@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4c80
+// MS2-PIN: ??_GXMLComment@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4d70
+// MS2-PIN: ??_GXMLElement@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4e20
+// MS2-PIN: ??_GXMLProcInstr@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5150
+// MS2-PIN: ??_GXMLText@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5200
+// MS2-PIN: ??_GXMLList@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5070
