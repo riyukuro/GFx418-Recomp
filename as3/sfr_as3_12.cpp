@@ -14,6 +14,7 @@
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/gfx/gfx_statictextcharacter.h"
+#include "ms2/scaleform/include/gfx/gfx_asutils.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -426,6 +427,8 @@ template struct ThunkFunc0<Instances::fl_text::TextField, 14, SInt32>;
 // THUNKS-END
 
 
+const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);  // VM::Resolve2ClassTraits
+
 // ==== flash.system: natives of the class objects ====================================================================
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -479,6 +482,29 @@ namespace Classes { namespace fl_system
             pime->SetEnabled(value);
     }
 
+}}
+
+// The global escapeMultiByte(): the AS3 escaping, or the AS2 byte escaping under System.useCodePage.
+// MS2-FUNCTIONAL: Traits::GetConstructor is inlined here (an out-of-line call in the exe); register allocation differs
+// @0x1424a02f0
+void escapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
+{
+    bool useCodePage = false;
+    // flash.system.System's class object, looked up as "flash.utils.System" like the exe does
+    Multiname mn(vm, StringDataPtr("flash.utils.System"));
+    const ClassTraits::Traits* ctr = FUN_142525270(vm, mn);
+    if (ctr && ctr->ITraits)
+        useCodePage = static_cast<Classes::fl_system::System&>(ctr->GetConstructor()).useCodePage;
+    String str;
+    if (!useCodePage)
+        ASUtils::AS3::Escape(value.ToCStr(), value.GetSize(), str);
+    else
+        ASUtils::Escape(value.ToCStr(), value.GetSize(), &str);
+    result = vm.GetStringManager().CreateString(str);
+}
+
+namespace Classes { namespace fl_system
+{
     // @0x1424a0570
     void Capabilities::hasIMEGet(bool& result)
     {
@@ -509,6 +535,28 @@ namespace Classes { namespace fl_system
         result = static_cast<UInt32>(Memory::pGlobalHeap->GetTotalFootprint());
     }
 }}
+
+// The global unescapeMultiByte(): result is left as it is when the AS3 decoding fails.
+// MS2-FUNCTIONAL: Traits::GetConstructor is inlined here (an out-of-line call in the exe); register allocation differs
+// @0x1424a09c0
+void unescapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
+{
+    bool useCodePage = false;
+    // flash.system.System's class object, looked up as "flash.utils.System" like the exe does
+    Multiname mn(vm, StringDataPtr("flash.utils.System"));
+    const ClassTraits::Traits* ctr = FUN_142525270(vm, mn);
+    if (ctr && ctr->ITraits)
+        useCodePage = static_cast<Classes::fl_system::System&>(ctr->GetConstructor()).useCodePage;
+    String str;
+    if (!useCodePage)
+    {
+        if (!ASUtils::AS3::Unescape(value.ToCStr(), value.GetSize(), str))
+            return;
+    }
+    else
+        ASUtils::Unescape(value.ToCStr(), value.GetSize(), &str);
+    result = vm.GetStringManager().CreateString(str);
+}
 
 }}} // namespace Scaleform::GFx::AS3
 
@@ -1772,6 +1820,40 @@ namespace Instances { namespace fl_net
         }
     }
 
+    // @0x14249a190
+    void URLLoader::SetBinaryData(const ArrayPOD<UByte>& binaryData)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<Class> cls = asvm.GetClass(StringDataPtr("flash.utils.ByteArray"));
+        SPtr<fl_utils::ByteArray> ba;
+        if (asvm.ConstructInstance(ba, cls))
+        {
+            ba->Set(binaryData.GetDataPtr(), binaryData.GetSize());
+            Data = ba;
+        }
+    }
+
+    // MS2-FUNCTIONAL: register choice for the VM load and argument order differ
+    // @0x14249a3d0
+    void URLLoader::SetTextString(const char* pdata)
+    {
+        Data.Assign(Value(GetVM().GetStringManager().CreateString(pdata)));
+    }
+
+    // MS2-FUNCTIONAL: register allocation of this/vm differs
+    // @0x14249a450
+    void URLLoader::SetVariablesDataString(const char* pdata)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SPtr<Class> cls = asvm.GetClass(StringDataPtr("flash.net.URLVariables"));
+        ASString str = GetVM().GetStringManager().CreateString(pdata);
+        Value arg(str);
+        SPtr<URLVariables> vars;
+        if (asvm.ConstructInstance(vars, cls, 1, &arg))
+            Data = vars;
+    }
+
+
     // Walks a shared object's data tree into a SharedObjectVisitor (SharedObject.flush). Each object is written
     // once: VisitedObjects stops the walk at objects already seen.
     struct SharedObjectDataWriter
@@ -1937,6 +2019,75 @@ namespace Instances { namespace fl_net
         }
         else
             vm.ThrowError(VM::Error(SharedObjectError, vm, "SharedObjectManager state is not installed!"));
+    }
+
+    // (sfr19) false when name has a character a shared object name cannot have; otherwise both are kept.
+    // @0x14249a290
+    bool SharedObject::SetNameAndLocalPath(const ASString& name, const ASString& localPath)
+    {
+        const char* pstr;
+        for (unsigned long ch = name.GetFirstCharAt(0, &pstr); ch != 0; ch = name.GetNextChar(&pstr))
+        {
+            switch (ch)
+            {
+            case '"': case '#': case '%': case '&': case '\'': case ',': case ':': case ';':
+            case '<': case '>': case '?': case '\\': case '~':
+                return false;
+            }
+            if (SFiswspace((wchar_t)ch))
+                return false;
+        }
+        Name = name.ToCStr();
+        LocalPath = localPath.ToCStr();
+        return true;
+    }
+}}
+
+namespace Classes { namespace fl_net
+{
+    // The shared object localPath:name, made once per movie and filled from the shared object manager's store; null
+    // for an invalid name or when nothing could be loaded.
+    // MS2-FUNCTIONAL: the exe inlines the SharedObject constructor (out of line in sfr_as3_11) and the name check
+    // @0x14249b710
+    void SharedObject::getLocal(SPtr<Instances::fl_net::SharedObject>& result, const ASString& name,
+                                const ASString& localPath, bool secure)
+    {
+        SF_UNUSED(secure);
+        ASString key = GetVM().GetStringManager().CreateString(localPath.ToCStr());
+        key.Append(":", 1);
+        key.Append(name);
+        if (SPtr<Instances::fl_net::SharedObject>* pfound = SharedObjects.Get(key))
+        {
+            result = *pfound;
+            return;
+        }
+
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        SPtr<Instances::fl_net::SharedObject> pso =
+            Pickable<Instances::fl_net::SharedObject>(new(itr.Alloc()) Instances::fl_net::SharedObject(itr));
+        if (!pso->SetNameAndLocalPath(name, localPath))
+        {
+            result = NULL;
+            return;
+        }
+
+        VM& vm = GetVM();
+        MovieImpl* proot = static_cast<ASVM&>(vm).GetMovieImpl();
+        SPtr<Instances::fl::Object> pdata = vm.MakeObject();
+        ASSharedObjectLoader loader(&vm, pdata);
+        Ptr<SharedObjectManagerBase> psomgr =
+            *static_cast<SharedObjectManagerBase*>(proot->GetStateBag()->GetStateAddRef(State::State_SharedObject));
+        Ptr<FileOpenerBase> pfileOpener = proot->GetStateBag()->GetFileOpener();
+        String sname(name.ToCStr());
+        String spath(localPath.ToCStr());
+        if (psomgr && psomgr->LoadSharedObject(sname, spath, &loader, pfileOpener))
+        {
+            pso->Data = pdata;
+            result = pso;
+            SharedObjects.Add(key, pso);
+        }
+        else
+            result = NULL;
     }
 }}
 
@@ -2142,6 +2293,18 @@ namespace InstanceTraits { namespace fl_net
 }}
 
 }}} // namespace Scaleform::GFx::AS3
+
+// The font set of TextField.getTextRuns/Font.enumerateFonts (sfr_as3_13): the AS3 library is one compilation unit,
+// so its adds sit in this part of the exe; instantiated here to place them the same way.
+// MS2-FUNCTIONAL 0x1424a8170: byte-identical; its CheckExpand call goes to the copy paired in sfr_as3_13 (0x1424abe30)
+namespace Scaleform {
+template void HashSetBase<Ptr<Render::Font>, FixedSizeHash<Ptr<Render::Font> >, FixedSizeHash<Ptr<Render::Font> >,
+    AllocatorGH<Ptr<Render::Font> >, HashsetCachedEntry<Ptr<Render::Font>, FixedSizeHash<Ptr<Render::Font> > > >
+    ::add<Render::Font*>(void*, Render::Font* const&, UPInt);
+template void HashSetBase<Ptr<Render::Font>, FixedSizeHash<Ptr<Render::Font> >, FixedSizeHash<Ptr<Render::Font> >,
+    AllocatorGH<Ptr<Render::Font> >, HashsetCachedEntry<Ptr<Render::Font>, FixedSizeHash<Ptr<Render::Font> > > >
+    ::add<Ptr<Render::Font> >(void*, const Ptr<Render::Font>&, UPInt);
+}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c560
@@ -2463,3 +2626,6 @@ namespace InstanceTraits { namespace fl_net
 // MS2-PIN: ??_7TextField@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316afd8
 // MS2-PIN: ??_7TextFormat@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a958
 // MS2-PIN: ??_7TextSnapshot@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316bc50
+// MS2-PIN: ??$add@PEAVFont@Render@Scaleform@@@?$HashSetBase@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAXAEBQEAVFont@Render@1@_K@Z 0x1424a7f90 ; unique
+// MS2-PIN: ??$add@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@?$HashSetBase@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAXAEBV?$Ptr@VFont@Render@Scaleform@@@1@_K@Z 0x1424a8170 ; unique
+// MS2-PIN: ??0?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@Scaleform@@QEAA@AEBV01@@Z 0x1424a8300 ; unique

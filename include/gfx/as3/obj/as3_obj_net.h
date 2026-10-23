@@ -96,6 +96,9 @@ namespace Instances { namespace fl_net {
 
         // (appended, sfr15) writes Data through pwriter (0x142499080); false without a writer.
         bool FlushImpl(GFx::SharedObjectVisitor* pwriter);
+        // (appended, sfr19) false for a name with a character shared object names cannot have; else both are kept.
+        // 0x14249a290
+        bool SetNameAndLocalPath(const ASString& name, const ASString& localPath);
     };
 
     // 0x80 bytes.
@@ -126,6 +129,10 @@ namespace Instances { namespace fl_net {
         void ExecuteErrorEvent(const char* errorStr);               // 0x142498e40
         void ExecuteOpenEvent();                                    // 0x142498ef0
         void ExecuteProgressEvent(UInt32 bytesLoaded, UInt32 bytesTotal);  // 0x142498fa0
+        // (appended, sfr19) the loaded data stored as the dataFormat asks: a ByteArray, a String, URLVariables
+        void SetBinaryData(const ArrayPOD<UByte>& binaryData);       // 0x14249a190
+        void SetTextString(const char* pdata);                      // 0x14249a3d0
+        void SetVariablesDataString(const char* pdata);             // 0x14249a450
 
         // @0x14249ad90
         void addEventListener(const Value& result, const ASString&, const Value&, bool, SInt32, bool);
