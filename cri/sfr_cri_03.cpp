@@ -60,6 +60,7 @@ void FUN_140046d50(void*, CriSint32);
 void FUN_14003a108(void*);
 CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
 void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
+const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
 void FUN_1400479e0(void);
@@ -398,6 +399,29 @@ CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* table, const CriChar8
 CriUint32 FUN_14003a45c(const CriUtfRtvView* table)
 {
     return table->RecordCount;
+}
+
+// MS2-FUNCTIONAL: use the cached sorted row index to find a UTF string key by binary search.
+// @0x14003aeb4
+CriUint32 FUN_14003aeb4(const CriUtfRtvView* table, CriUint32 slotIndex, const CriChar8* name)
+{
+    const CriUtfRtvView::CachedIndex* slot = &table->Slots[slotIndex];
+    CriUint32 low = 0;
+    CriUint32 high = table->RecordCount;
+    while (low < high)
+    {
+        CriUint32 middle = low + ((high - low) >> 1);
+        CriUint32 row = slot->SortedRows[middle];
+        const CriChar8* candidate = criUtfRtv_GetDataStr(table, row, slot->Key);
+        int order = strcmp(candidate ? candidate : "", name);
+        if (order == 0)
+            return row;
+        if (order < 0)
+            low = middle + 1;
+        else
+            high = middle;
+    }
+    return 0xffffffff;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; field types 0/2/4 read the executable's byte positions.

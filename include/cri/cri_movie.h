@@ -243,11 +243,26 @@ struct CriUtfRtvView
     const CriUint8* StringData;
     const CriUint8* BlobData;
     const CriUint8* RecordData;
+    const CriUint8* Reserved50;
     CriUint16 FieldCount;
     CriUint16 RecordSize;
     CriUint32 RecordCount;
     CriUtfRtvColumn* Columns;
+    struct CachedIndex
+    {
+        CriUint32 Key;
+        CriUint32 Reserved;
+        const CriUint32* SortedRows;
+    } Slots[4];
+    void* Context;
+    void* SecondaryAllocation;
 };
+static_assert(offsetof(CriUtfRtvView, StringData) == 0x38, "CRI UTF string block offset");
+static_assert(offsetof(CriUtfRtvView, FieldCount) == 0x58, "CRI UTF field count offset");
+static_assert(offsetof(CriUtfRtvView, RecordCount) == 0x5c, "CRI UTF record count offset");
+static_assert(offsetof(CriUtfRtvView, Columns) == 0x60, "CRI UTF column array offset");
+static_assert(offsetof(CriUtfRtvView, Slots) == 0x68, "CRI UTF cached index offsets");
+static_assert(sizeof(CriUtfRtvView) == 0xb8, "CRI UTF runtime table size");
 
 struct CriUtfRtvCell
 {
