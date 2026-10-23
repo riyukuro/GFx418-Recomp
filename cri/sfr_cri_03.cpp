@@ -59,10 +59,12 @@ void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
 void FUN_140041110(void*, const char*, CriUint32);
 void FUN_140046d50(void*, CriSint32);
 void FUN_140053570(void*);
+void FUN_140050e90(void*);
 void FUN_14003a108(void*);
 CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
 void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
+CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8*, CriUint32, CriUsfStandardHeader*);
 
 // MS2-FUNCTIONAL: send the supplied CRI diagnostic through the movie error dispatcher.
 // @0x1400410d0
@@ -93,6 +95,65 @@ void FUN_1400435d0(void* object)
     SyncHolder* holder = (SyncHolder*)object;
     if (holder && holder->Sync)
         FUN_140053570(holder->Sync);
+}
+
+// MS2-FUNCTIONAL: increment the movie player's paired audio and video progress counters.
+// @0x14003ebe0
+void FUN_14003ebe0(void* object)
+{
+    struct ProgressState { CriUint8 Reserved[0x19c]; CriSint32 Audio; CriSint32 Video; };
+    ProgressState* state = (ProgressState*)object;
+    ++state->Audio;
+    ++state->Video;
+}
+
+// MS2-FUNCTIONAL: accept only USF chunks whose parsed standard header has no special record flag.
+// @0x14003eeb0
+CriBool FUN_14003eeb0(const void* input)
+{
+    struct Input { const CriUint8* Data; CriUint32 Size; };
+    const Input* chunk = (const Input*)input;
+    CriUsfStandardHeader header = {};
+    if (!criUsfCmn_ParseUsfHeaderStd(chunk->Data, chunk->Size, &header))
+        return 0;
+    return header.Data[15] == 0;
+}
+
+// MS2-FUNCTIONAL: mark the input object active and release its retained work buffer when present.
+// @0x14003d8f0
+void FUN_14003d8f0(void* object)
+{
+    struct InputState { CriUint8 Reserved00[0x1c]; CriUint32 Active; CriUint8 Reserved20[0x58]; void* Work; };
+    InputState* state = (InputState*)object;
+    state->Active = 1;
+    if (state->Work)
+        FUN_140050e90(state->Work);
+}
+
+// MS2-FUNCTIONAL: initialize the CRI timer record from the system clock and clear its elapsed state.
+// @0x140041a60
+void FUN_140041a60(void* object)
+{
+    struct TimerState
+    {
+        CriUint8 Reserved00[0x10];
+        CriUint64 Start;
+        CriUint8 Reserved18[8];
+        CriUint8 Active;
+        CriUint8 Reserved21[7];
+        CriUint8 Mode;
+        CriUint8 Reserved29[7];
+        CriUint64 Elapsed;
+        CriUint64 SystemStart;
+        CriUint64 Reserved40;
+    };
+    TimerState* state = (TimerState*)object;
+    state->Elapsed = 0;
+    state->SystemStart = FUN_1425e3510();
+    state->Reserved40 = 0;
+    state->Mode = 0;
+    state->Active = 1;
+    state->Start = FUN_1425e3560();
 }
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
