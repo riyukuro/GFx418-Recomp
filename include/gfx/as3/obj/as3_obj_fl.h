@@ -16,6 +16,8 @@ namespace Instances {
         // @0x1424291d0
         void length(Value& result, unsigned, const Value*);
 
+        const ThunkInfo& GetThunk() const { return Function; }
+
     protected:
         const ThunkInfo& Function;  // +0x40 (sfr17)
     };

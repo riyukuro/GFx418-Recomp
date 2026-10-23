@@ -1562,6 +1562,175 @@ namespace InstanceTraits
     {
         result.Pick(new(t.Alloc()) Instances::fl::Object(t));
     }
+
+    // MS2-FUNCTIONAL: the exe inlines the Array constructor
+    // @0x14241a500
+    Pickable<Instances::fl::Array> fl::Array::MakeInstance(Array& t)
+    {
+        return Pickable<Instances::fl::Array>(new(t.Alloc()) Instances::fl::Array(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Array constructor
+    // @0x14241bd80
+    void fl::Array::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::Array(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Date constructor
+    // @0x14241a620
+    Pickable<Instances::fl::Date> fl::Date::MakeInstance(Date& t)
+    {
+        return Pickable<Instances::fl::Date>(new(t.Alloc()) Instances::fl::Date(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Date constructor
+    // @0x14241beb0
+    void fl::Date::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::Date(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Error constructor
+    // @0x14241a6a0
+    __declspec(noinline) Pickable<Instances::fl::Error> fl::Error::MakeInstance(Error& t)
+    {
+        return Pickable<Instances::fl::Error>(new(t.Alloc()) Instances::fl::Error(t));
+    }
+
+    // @0x14241bf20
+    void fl::Error::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(MakeInstance(static_cast<Error&>(t)));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the RegExp constructor
+    // @0x14241ad90
+    Pickable<Instances::fl::RegExp> fl::RegExp::MakeInstance(RegExp& t)
+    {
+        return Pickable<Instances::fl::RegExp>(new(t.Alloc()) Instances::fl::RegExp(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the RegExp constructor
+    // @0x14241c160
+    void fl::RegExp::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::RegExp(t));
+    }
+
+    // The traits of a class prototype object: plain object traits whose constructor is the class itself.
+    class Prototype : public fl::Object
+    {
+    public:
+        Prototype(VM& vm, const ClassInfo& ci, Class& c);
+    };
+}
+
+namespace Classes { namespace fl
+{
+    // MS2-FUNCTIONAL: the exe inlines the Array constructor
+    // @0x14241c350
+    Pickable<AS3::Object> Array::MakePrototype() const
+    {
+        InstanceTraits::fl::Array& itr = static_cast<InstanceTraits::fl::Array&>(GetClassTraits().GetInstanceTraits());
+        return itr.MakeInstance(itr);
+    }
+
+    // A Date prototype gets its own traits so its constructor is Date.
+    // MS2-FUNCTIONAL: the exe inlines the Date constructor
+    // @0x14241c400
+    Pickable<AS3::Object> Date::MakePrototype() const
+    {
+        SPtr<InstanceTraits::Prototype> prototype = MakePickable(new(GetVM().GetMemoryHeap()) InstanceTraits::Prototype(GetVM(), AS3::fl::DateCI, const_cast<Date&>(*this)));
+        InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
+        return Pickable<AS3::Object>(new(itr.Alloc()) Instances::fl::Date(*prototype));
+    }
+
+    // @0x14241c4d0
+    Pickable<AS3::Object> Error::MakePrototype() const
+    {
+        InstanceTraits::fl::Error& itr = static_cast<InstanceTraits::fl::Error&>(GetClassTraits().GetInstanceTraits());
+        return itr.MakeInstance(itr);
+    }
+}}
+}}} // namespace Scaleform::GFx::AS3
+
+// The instance traits of the four function kinds. Each names an anonymous function "Function-<hex id>".
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace InstanceTraits
+{
+    // Traits of AS3 (ABC) function closures.
+    class Function : public CTraits
+    {
+    public:
+        ASString GetFunctionName(const Value& _this) const;
+        SInt32 GetMethodInfoInd() const { return MethodInfoInd; }
+
+    public:
+        SInt32 MethodInfoInd;   // +0xe8
+    };
+
+    // Traits of unbound ABC methods (a method index value).
+    class MethodInd : public CTraits
+    {
+    public:
+        ASString GetMethodIndName(const Value& _this) const;
+    };
+
+    // Traits of native thunks.
+    class Thunk : public CTraits
+    {
+    public:
+        ASString GetThunkName(const Value& _this) const;
+    };
+
+    // Traits of native thunks wrapped in a function object.
+    class ThunkFunction : public CTraits
+    {
+    public:
+        ASString GetThunkName(const Value& _this) const;
+    };
+
+    // @0x142415b00
+    ASString Function::GetFunctionName(const Value& _this) const
+    {
+        const Function& itr = static_cast<const Function&>(_this.GetObject()->GetTraits());
+        LongFormatter f((unsigned long)itr.GetMethodInfoInd());
+        ASString s = GetVM().GetStringManager().CreateConstString("Function-");
+        f.SetBase(16).Convert();
+        s += f.ToCStr();
+        return s;
+    }
+
+    // @0x142415ef0
+    ASString MethodInd::GetMethodIndName(const Value& _this) const
+    {
+        LongFormatter f((unsigned long)_this.GetMethodInd());
+        ASString s = GetVM().GetStringManager().CreateConstString("Function-");
+        f.SetBase(16).Convert();
+        s += f.ToCStr();
+        return s;
+    }
+
+    // @0x142417100
+    ASString Thunk::GetThunkName(const Value& _this) const
+    {
+        LongFormatter f((unsigned long)(UPInt)&_this.AsThunk());
+        ASString s = GetVM().GetStringManager().CreateConstString("Function-");
+        f.SetBase(16).Convert();
+        s += f.ToCStr();
+        return s;
+    }
+
+    // @0x1424171d0
+    ASString ThunkFunction::GetThunkName(const Value& _this) const
+    {
+        LongFormatter f((unsigned long)(UPInt)&_this.AsThunkFunction().GetThunk());
+        ASString s = GetVM().GetStringManager().CreateConstString("Function-");
+        f.SetBase(16).Convert();
+        s += f.ToCStr();
+        return s;
+    }
 }
 }}} // namespace Scaleform::GFx::AS3
 

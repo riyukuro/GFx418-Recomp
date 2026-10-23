@@ -68,6 +68,8 @@ class NumericBase
 public:
     void SetBigLetters(bool flag = true) { BigLetters = flag; }
     void SetPrecision(unsigned prec = 1) { Precision = prec; }
+    // The converted text.
+    const char* ToCStr() const { return ValueStr; }
 
 protected:
     unsigned Precision:5;

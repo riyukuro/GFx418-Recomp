@@ -731,6 +731,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Array"; }
         // @0x14241bd80
         virtual void MakeObject(Value& result, Traits& t);
+
+        // (appended, sfr19) a new instance of t.
+        // @0x14241a500
+        Pickable<Instances::fl::Array> MakeInstance(Array& t);
     };
 
     class Boolean : public CTraits
@@ -771,6 +775,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Date"; }
         // @0x14241beb0
         virtual void MakeObject(Value& result, Traits& t);
+
+        // (appended, sfr19) a new instance of t.
+        // @0x14241a620
+        Pickable<Instances::fl::Date> MakeInstance(Date& t);
     };
 
     class Error : public CTraits
@@ -781,6 +789,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Error"; }
         // @0x14241bf20
         virtual void MakeObject(Value& result, Traits& t);
+
+        // (appended, sfr19) a new instance of t.
+        // @0x14241a6a0
+        Pickable<Instances::fl::Error> MakeInstance(Error& t);
     };
 
     class Namespace : public CTraits
@@ -864,6 +876,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::RegExp"; }
         // @0x14241c160
         virtual void MakeObject(Value& result, Traits& t);
+
+        // (appended, sfr19) a new instance of t.
+        // @0x14241ad90
+        Pickable<Instances::fl::RegExp> MakeInstance(RegExp& t);
     };
 
     class String : public CTraits
