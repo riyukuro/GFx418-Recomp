@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x14295dbb0-0x14295dbe0 .text$mn
+// MS2-RANGE: 0x14295e080-0x14295e1b0 .text$mn
 // MS2-RANGE: 0x1429658d0-0x1429659e0 .text$mn
 // MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
 // MS2-RANGE: 0x142965f30-0x1429660c0 .text$mn
@@ -122,6 +123,7 @@
 // MS2-RANGE: 0x142969f50-0x14296a0a0 .text$mn
 // MS2-RANGE: 0x14296a300-0x14296a450 .text$mn
 // MS2-RANGE: 0x1429696d0-0x1429697f0 .text$mn
+// MS2-RANGE: 0x142969aa0-0x142969bd0 .text$mn
 // MS2-RANGE: 0x142969850-0x142969980 .text$mn
 // MS2-RANGE: 0x142969980-0x142969aa0 .text$mn
 // MS2-RANGE: 0x14296c220-0x14296c430 .text$mn
@@ -202,6 +204,8 @@
 // Stores *value under key in the hash at owner+0x10 and releases the passed reference (a folded hash set; the
 // prototype table of GlobalContext here). Defined in sfr_video_01.
 void FUN_14000c280(void* owner, unsigned key, void** value);
+bool FUN_14260b7f0(void* styleManager, const char* text, unsigned __int64 length);
+bool FUN_14260b870(void* styleManager, const wchar_t* text, unsigned __int64 length);
 
 namespace Scaleform { namespace GFx {
 
@@ -1982,6 +1986,67 @@ void GASSharedObjectLoader::PopObject()
 void GASSharedObjectLoader::PopArray()
 {
     PopObject();
+}
+
+// The parser owns a temporary CSS buffer and writes parsed rules into the sheet's StyleManager.
+class CSSFileLoaderAndParserImpl
+{
+public:
+    UByte Unrecovered_08[0x10];
+    wchar_t* Buffer;
+    int BufferLen;
+
+    virtual void Init(Environment* penv, Object* sheet);
+};
+
+// MS2-FUNCTIONAL: records the completion status, pushes the result, and broadcasts onLoad to listeners.
+// @0x142969aa0
+void StyleSheetObject::NotifyOnLoad(Environment* penv, bool success)
+{
+    *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x90) = success ? 2u : 3u;
+    penv->Push(success);
+    AsBroadcaster::BroadcastMessage(penv, this, penv->CreateConstString("onLoad"), 1, penv->GetTopIndex());
+    penv->Drop1();
+}
+
+// MS2-FUNCTIONAL: handles UTF-8/UTF-16 BOMs, parses the owned buffer, releases it, and reports completion.
+// @0x14295e080
+void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
+{
+    bool success = false;
+    if (Buffer)
+    {
+        wchar_t* data = Buffer;
+        int length = BufferLen;
+        if (data[0] == 0xfeff)
+        {
+            *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) = 1;
+            data++;
+            length = length / 2 - 1;
+        }
+        else if (data[0] == 0xfffe)
+        {
+            *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) = 1;
+            data++;
+            length = length / 2 - 1;
+            for (int i = 0; i < length; ++i)
+                data[i] = wchar_t((unsigned(data[i]) << 8) | (unsigned(data[i]) >> 8));
+        }
+        else if (length > 2 && UByte(data[0]) == 0xef && UByte(data[0] >> 8) == 0xbb &&
+                 UByte(data[1]) == 0xbf)
+        {
+            data = reinterpret_cast<wchar_t*>(reinterpret_cast<UByte*>(data) + 3);
+            length -= 3;
+        }
+
+        void* styles = reinterpret_cast<UByte*>(sheet) + 0x68;
+        success = *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) == 1
+                      ? FUN_14260b870(styles, data, UPInt(length))
+                      : FUN_14260b7f0(styles, reinterpret_cast<const char*>(data), UPInt(length));
+        Memory::GetGlobalHeap()->Free(Buffer);
+        Buffer = 0;
+    }
+    static_cast<StyleSheetObject*>(sheet)->NotifyOnLoad(penv, success);
 }
 
 }}} // namespace Scaleform::GFx::AS2

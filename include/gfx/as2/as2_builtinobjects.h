@@ -693,6 +693,8 @@ class StyleSheetObject : public Object
 {
 public:
     StyleSheetObject(Environment* penv); // exe 0x142921190
+    // Completes a stylesheet load and notifies its listeners (exe 0x142969aa0).
+    void NotifyOnLoad(Environment* penv, bool success);
 
     void* Data68[6]; // +0x68 not recovered (a Text::StyleManager)
 
