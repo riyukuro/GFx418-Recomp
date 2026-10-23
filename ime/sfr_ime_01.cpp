@@ -754,6 +754,32 @@ void FUN_1423cde00(void* raw)
     FUN_1422fbf60(object + 0x102);
 }
 
+// MS2-FUNCTIONAL: releases the retained member, invokes the recovered AS support destructor, then follows delete flags.
+// @0x1423ce160
+void* FUN_1423ce160(unsigned long long* object, unsigned flags)
+{
+    FUN_1423ca920(nullptr, &object[3]);
+    object[3] = 0;
+    FUN_14257db50(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x20);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the recovered IME interface destructor before scalar or sized deletion.
+// @0x1423ce2f0
+void* FUN_1423ce2f0(unsigned long long* object, unsigned long long flags)
+{
+    FUN_1423cdee0(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0xe8);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
 extern void FUN_1423d9690(void*, void*, unsigned long long);
 
 // MS2-FUNCTIONAL: DoAbc base destruction and scalar delete are modeled from our shared ExecuteTag declaration.
