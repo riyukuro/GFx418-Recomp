@@ -11,6 +11,11 @@
 
 namespace Scaleform { namespace Render { namespace Text {
 
+// @0x14267dbe0
+StyledText::HTMLImageTagInfo::~HTMLImageTagInfo()
+{
+}
+
 // ***** SGMLCharIter
 
 // @0x14267dc50

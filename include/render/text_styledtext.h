@@ -284,6 +284,7 @@ public:
               Alignment(Align_BaseLine)
         {
         }
+        ~HTMLImageTagInfo();
     };
     typedef ArrayDH<HTMLImageTagInfo> HTMLImageTagInfoArray;
 
