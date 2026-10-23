@@ -621,4 +621,18 @@ void FUN_140019ed0(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* o
 {
     ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackC.get()), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseC.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
 }
+
+// MS2-FUNCTIONAL: copies a 32-bit integer into the numeric payload of an AS3 Value.
+// @0x14001a6f0
+void FUN_14001a6f0(std::uint32_t* value, const std::uint32_t* number)
+{
+    FUN_14001a260(value, *number);
+}
+// MS2-FUNCTIONAL: writes the callback's integer result to its output Value unless the VM has an exception.
+// @0x14001a8e0
+void FUN_14001a8e0(std::uint64_t* closure)
+{
+    if (*reinterpret_cast<unsigned char*>(closure[0] + 0x180) == 0)
+        FUN_14001a260(reinterpret_cast<std::uint32_t*>(closure[1]), static_cast<std::uint32_t>(closure[2]));
+}
 } // namespace
