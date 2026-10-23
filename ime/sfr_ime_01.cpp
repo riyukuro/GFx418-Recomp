@@ -20,6 +20,8 @@ namespace Scaleform { namespace GFx { namespace IME {
     unsigned char FUN_1423da320(void*, void*, void*, void*);
     void FUN_1423d9500(void*);
     void FUN_1425b43c0(void*);
+    void FUN_1423d5fd0(void*);
+    void FUN_1423c8bb0(unsigned long long*);
 } } }
 namespace Scaleform { namespace GFx { namespace AS3 { void SF_STDCALL DoAbcLoader(LoadProcess*, const TagInfo&); } } }
 extern "C" void FUN_1425c8cf0(unsigned, void*);
@@ -104,6 +106,9 @@ extern "C" const unsigned long long DAT_14313b8c8;
 extern "C" const unsigned char DAT_14313b400[];
 extern "C" const unsigned char DAT_1431c4878[];
 extern "C" const unsigned char DAT_1431c51b8[];
+extern "C" void* DAT_14313b520[];
+extern "C" void* DAT_14313b5a0[];
+extern "C" void* DAT_14313b5c0[];
 extern "C" const unsigned long long DAT_1431c4d60;
 extern "C" const unsigned long long DAT_14313b8c0;
 extern "C" const unsigned long long DAT_1431c4e08;
@@ -252,6 +257,26 @@ void FUN_1423ce5a0(void* self)
                 values, "RemoveInputWindow", &result, 0, 0);
     }
     cx18_ImmReleaseContext(hwnd, context);
+}
+
+// MS2-FUNCTIONAL: restores the three destructor vftable views, frees owned state, and honors scalar/sized delete flags.
+// @0x1423d56b0
+void* FUN_1423d56b0(void* self, unsigned long long flags)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    *reinterpret_cast<void***>(bytes) = DAT_14313b520;
+    *reinterpret_cast<void***>(bytes + 0x1a0) = DAT_14313b5a0;
+    *reinterpret_cast<void***>(bytes + 0x1a8) = DAT_14313b5c0;
+    FUN_1423d5fd0(self);
+    FUN_1423c8bb0(static_cast<unsigned long long*>(self));
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(self, 0x1d8);
+        else {
+            void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, self);
+        }
+    }
+    return self;
 }
 
 // MS2-FUNCTIONAL: releases the executable's linked IME records, pair arrays, and optional conversion interfaces.
