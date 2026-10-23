@@ -2609,6 +2609,39 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return r;
     }
 }}}}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // MS2-FUNCTIONAL: exe inlines the XML ctor 0x1423efce0
+    // @0x1424087b0
+    Pickable<XML> XML::DeepCopy(XML* parent)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        return Pickable<XML>(SF_HEAP_NEW(itr.GetVM().GetMemoryHeap()) XML(itr, Text, parent));
+    }
+
+    // @0x142408860
+    Pickable<XML> XMLAttr::DeepCopy(XML* parent)
+    {
+        InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
+        return Pickable<XML>(itr.MakeInstanceAttr(itr, *Ns, Text, Data, parent).GetPtr());
+    }
+
+    // MS2-FUNCTIONAL: exe inlines the XMLComment ctor
+    // @0x1424088b0
+    Pickable<XML> XMLComment::DeepCopy(XML* parent)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        return Pickable<XML>(SF_HEAP_NEW(itr.GetVM().GetMemoryHeap()) XMLComment(itr, Text, parent));
+    }
+
+    // MS2-FUNCTIONAL: exe inlines the XMLProcInstr ctor 0x1423f0260
+    // @0x142408d40
+    Pickable<XML> XMLProcInstr::DeepCopy(XML* parent)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        return Pickable<XML>(SF_HEAP_NEW(itr.GetVM().GetMemoryHeap()) XMLProcInstr(itr, Text, Data, parent));
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
