@@ -33,6 +33,8 @@ CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
 CriSint32 FUN_1400500b0(CriSint32, void*);
 void* FUN_14004e580(void);
 void FUN_14004ff90(void*, void*, void*);
+void FUN_1400467a8(void*, CriSint32, void*);
+void FUN_1400467b0(void*, CriSint32, void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
@@ -1472,6 +1474,54 @@ void FUN_140046784(void* object)
             ((DestroyFunction)destroy)(object);
         }
     }
+}
+
+// MS2-FUNCTIONAL: split a stream-joint chunk into a bounded prefix and its remaining suffix.
+// @0x1400467c0
+void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix)
+{
+    void* data;
+    CriUint32 size;
+    memcpy(&data, source, sizeof(data));
+    memcpy(&size, (const CriUint8*)source + 8, sizeof(size));
+    CriUint32 prefixSize = size < maximum ? size : maximum;
+    CriUint32 suffixSize = size - prefixSize;
+    void* suffixData = suffixSize ? (CriUint8*)data + prefixSize : NULL;
+    memcpy(prefix, &data, sizeof(data));
+    memcpy((CriUint8*)prefix + 8, &prefixSize, sizeof(prefixSize));
+    CriUint32 zero = 0;
+    memcpy((CriUint8*)prefix + 12, &zero, sizeof(zero));
+    memcpy(suffix, &suffixData, sizeof(suffixData));
+    memcpy((CriUint8*)suffix + 8, &suffixSize, sizeof(suffixSize));
+    memcpy((CriUint8*)suffix + 12, &zero, sizeof(zero));
+}
+
+// MS2-FUNCTIONAL: place a bounded prefix on the input queue and return the suffix to output.
+// @0x140046814
+void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size)
+{
+    CriUint8 prefix[0x10], suffix[0x10];
+    CriUint32 available;
+    memcpy(&available, (const CriUint8*)chunk + 8, sizeof(available));
+    if (available < size)
+        size = available;
+    criSj_SplitChunk(chunk, size, prefix, suffix);
+    FUN_1400467b0(streamJoint, 1, prefix);
+    FUN_1400467a8(streamJoint, 0, suffix);
+}
+
+// MS2-FUNCTIONAL: place a bounded prefix on the output queue and return the suffix to input.
+// @0x140046894
+void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size)
+{
+    CriUint8 prefix[0x10], suffix[0x10];
+    CriUint32 available;
+    memcpy(&available, (const CriUint8*)chunk + 8, sizeof(available));
+    if (available < size)
+        size = available;
+    criSj_SplitChunk(chunk, size, prefix, suffix);
+    FUN_1400467b0(streamJoint, 0, prefix);
+    FUN_1400467a8(streamJoint, 1, suffix);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's second virtual operation.
