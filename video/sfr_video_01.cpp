@@ -933,6 +933,38 @@ Scaleform::GFx::AS2::FunctionRefBase* FUN_140005590(
     return destination;
 }
 
+// MS2-FUNCTIONAL: releases the single allocation held by this stack or page descriptor.
+// @0x140006bb0
+void FUN_140006bb0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+
+// MS2-FUNCTIONAL: releases the single allocation held by this stack or page descriptor.
+// @0x140006bd0
+void FUN_140006bd0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+
+// MS2-FUNCTIONAL: releases each retained object in the pointer array and then the array allocation.
+// @0x140006c70
+void FUN_140006c70(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    auto** items = static_cast<void**>(*array);
+    for (Scaleform::UPInt i = fields[1]; i != 0; --i) {
+        void* object = items[i - 1];
+        if (object) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+    }
+    if (*array) Scaleform::Memory::Free(*array);
+}
+
+// MS2-FUNCTIONAL: resizes and copies the 12-byte records from the source array.
+// @0x140006db0
+void* FUN_140006db0(void** destination, const void** source)
+{
+    FUN_140005ca0(destination, reinterpret_cast<const Scaleform::UPInt*>(source)[1]);
+    auto count = reinterpret_cast<const Scaleform::UPInt*>(destination)[1];
+    if (*destination && count)
+        memcpy(*destination, *source, count * 12);
+    return destination;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
