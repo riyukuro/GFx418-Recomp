@@ -51,6 +51,8 @@ void FUN_14004ff90(void*, void*, void*);
 void FUN_1400467a8(void*, CriSint32, void*);
 void FUN_1400467b0(void*, CriSint32, void*);
 CriSint32 FUN_1400467b8(void*, CriSint32);
+void FUN_140046798(void*);
+void FUN_1400467a0(void*, CriSint32, CriSint32, void*);
 CriSint32 FUN_140053630(void*);
 CriUint32 FUN_140043420(void*, void*, CriUint32);
 CriUint32 FUN_140042f40(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
@@ -58,6 +60,7 @@ CriUint32 FUN_1400431a0(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 void criSj_SplitChunk(const void*, CriUint32, void*, void*);
 CriSint32 FUN_140027dd0(CriSint32);
 CriSint32 criVmpv_GetStatus(const void*);
+void FUN_14003e180(void*, const void*);
 const void** FUN_14003bed0(void);
 const void** FUN_14003bf10(void);
 void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration);
@@ -469,6 +472,70 @@ CriBool FUN_140040de0(void* object)
     if (criVmpv_GetStatus(object) != 2)
         return 0;
     return FUN_1400467b8(reader->Queue, 1) != 0;
+}
+
+// MS2-FUNCTIONAL: determine whether a USF chunk contains payload beyond its declared standard-header extent.
+// @0x14003d6c0
+CriBool FUN_14003d6c0(const void* input)
+{
+    struct Input { const CriUint8* Data; CriUint32 Size; };
+    const Input* chunk = (const Input*)input;
+    CriUsfStandardHeader header = {};
+    if (!criUsfCmn_ParseUsfHeaderStd(chunk->Data, chunk->Size, &header))
+        return 0;
+    CriUint32 declaredSize = 0;
+    memcpy(&declaredSize, header.Data + 4, sizeof(declaredSize));
+    return chunk->Size != declaredSize + 8;
+}
+
+// MS2-FUNCTIONAL: copy the stream-joint setup header into a zeroed 0xb0-byte local work record.
+// @0x14003e6a0
+void FUN_14003e6a0(void* target, const CriUint64* settings)
+{
+    struct SetupRecord { CriUint64 First; CriUint32 Count; CriUint8 Reserved[0xa4]; };
+    SetupRecord setup = {};
+    setup.First = settings[0];
+    memcpy(&setup.Count, settings + 1, sizeof(setup.Count));
+    FUN_14003e180(target, &setup);
+}
+
+// MS2-FUNCTIONAL: release the pending synchronization object for each member of the audio decoder list.
+// @0x1400427b0
+void FUN_1400427b0(void* decoderList)
+{
+    struct DecoderList { void* Decoders[2]; CriSint32 Count; };
+    DecoderList* list = (DecoderList*)decoderList;
+    for (CriSint32 index = 0; index < list->Count; ++index)
+        FUN_1400435d0(list->Decoders[index]);
+}
+
+// MS2-FUNCTIONAL: notify every decoder in the audio list that its player is active.
+// @0x140042880
+void FUN_140042880(void* decoderList)
+{
+    struct DecoderList { void* Decoders[2]; CriSint32 Count; };
+    DecoderList* list = (DecoderList*)decoderList;
+    if (list)
+        for (CriSint32 index = 0; index < list->Count; ++index)
+            FUN_140043680(list->Decoders[index]);
+}
+
+// MS2-FUNCTIONAL: release each non-null stream joint owned by the audio track set.
+// @0x140043610
+void FUN_140043610(void* trackSet)
+{
+    struct TrackSet
+    {
+        CriUint8 Reserved00[0x18];
+        CriUint32 Count;
+        CriUint8 Reserved1c[0x14];
+        void** Tracks;
+    };
+    TrackSet* tracks = (TrackSet*)trackSet;
+    if (tracks)
+        for (CriUint32 index = 0; index < tracks->Count; ++index)
+            if (tracks->Tracks[index])
+                FUN_140046798(tracks->Tracks[index]);
 }
 
 void FUN_1400478a0(void);
