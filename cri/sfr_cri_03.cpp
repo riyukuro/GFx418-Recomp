@@ -97,6 +97,7 @@ void FUN_14004eb50(void);
 void FUN_14004e3b0(CriUint64, CriUint64);
 void* FUN_14003da40(void*, void*);
 void* FUN_14003dd50(void*, void*);
+void* FUN_140027ed8(void*, CriSint32, const CriChar8*, ...);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -310,10 +311,10 @@ void FUN_14004647c(void* heap, CriUint32 first, CriUint32 second)
 
 // MS2-FUNCTIONAL: construct a temporary universal stream-joint with the requested pool dimensions.
 // @0x1400464c8
-void FUN_1400464c8(void* heap, CriUint32 first, CriUint32 second)
+void* FUN_1400464c8(void* heap, CriUint32 first, CriUint32 second)
 {
     const CriUint32 config[3] = { 1, first, second };
-    FUN_140046324(config, heap, 1);
+    return FUN_140046324(config, heap, 1);
 }
 
 // MS2-FUNCTIONAL: create the configured ring-buffer stream-joint and preserve its 24-byte setup record.
@@ -3680,6 +3681,58 @@ void FUN_140042600(void* manager, void* heap, CriSint32 index)
     }
     FUN_140027fb4(heap, track);
     table[index] = NULL;
+}
+
+// MS2-FUNCTIONAL: allocate a USF demux state, output table, and its paired stream joints.
+// @0x1400452b4
+void* FUN_1400452b4(void* heap, CriSint32 outputCount)
+{
+    struct OutputEntry { void* Queue; CriUint32 Reserved; CriSint32 State; };
+    struct UsfState
+    {
+        void* Heap;
+        CriUint8 Running;
+        CriUint8 Initialized;
+        CriUint8 Closed;
+        CriUint8 Reserved0b;
+        CriSint32 OutputCount;
+        void* Reserved10;
+        OutputEntry* Outputs;
+        void* InputQueue;
+        void* OutputQueue;
+        CriUint8 Reserved30[0x10];
+    };
+    UsfState* state = (UsfState*)FUN_140027ed8(heap, 0x40, "CriUsfDmx");
+    if (!state)
+        return NULL;
+    memset(state, 0, sizeof(*state));
+    state->Heap = heap;
+    state->OutputCount = outputCount;
+    state->Outputs = (OutputEntry*)FUN_140027ed8(heap, (outputCount + 1) * 0x10,
+                                                 "CriUsfDmxOut", 0);
+    if (!state->Outputs)
+    {
+        FUN_140044f28(state);
+        return NULL;
+    }
+    memset(state->Outputs, 0, ((size_t)outputCount + 1) * sizeof(OutputEntry));
+    state->InputQueue = FUN_1400464c8(heap, 0, 0x80);
+    if (!state->InputQueue)
+    {
+        FUN_140044f28(state);
+        return NULL;
+    }
+    state->OutputQueue = FUN_1400464c8(heap, 0, 0x80);
+    if (!state->OutputQueue)
+    {
+        FUN_140044f28(state);
+        return NULL;
+    }
+    state->Outputs[outputCount].Queue = state->OutputQueue;
+    state->Outputs[outputCount].State = -1;
+    state->Running = 1;
+    memset(state->Reserved30, 0, sizeof(state->Reserved30));
+    return state;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
