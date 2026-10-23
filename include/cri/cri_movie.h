@@ -212,6 +212,33 @@ struct CriMvSupplyInputBuffer
     void* InputBuffer;
 };
 
+// CRI UTF runtime table views. Column entries are 0x30 bytes; the table stores big-endian record fields.
+struct CriUtfRtvColumn
+{
+    CriSint32 Type;
+    CriUint8 Reserved0[4];
+    const CriChar8* Name;
+    CriUint8 Reserved1[4];
+    CriUint8 HasDefault;
+    CriUint8 IsRecordField;
+    CriUint16 DataOffset;
+    CriUint8 Reserved2[0x0c];
+    CriUint64 DefaultValue;
+    CriUint8 Reserved3[8];
+};
+
+struct CriUtfRtvView
+{
+    CriUint8 Reserved0[0x38];
+    const CriUint8* StringData;
+    CriUint8 Reserved1[8];
+    const CriUint8* RecordData;
+    CriUint16 FieldCount;
+    CriUint16 RecordSize;
+    CriUint32 RecordCount;
+    CriUtfRtvColumn* Columns;
+};
+
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
 void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 
