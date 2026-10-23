@@ -509,8 +509,12 @@ unsigned VideoSoundRendererStream::Streamer::GetPCMData(UByte* pdata, unsigned d
 class VideoSoundSystem_SoundRenderer : public VideoSoundSystem
 {
 public:
+    // MS2-FUNCTIONAL: initialize the Scaleform base and retain the selected sound renderer.
+    // @0x14001c890
     VideoSoundSystem_SoundRenderer(Sound::SoundRenderer* psoundPlayer, MemoryHeap* pheap)
         : VideoSoundSystem(pheap), pSoundPlayer(psoundPlayer) {}
+    // MS2-FUNCTIONAL: release the retained renderer while unwinding through VideoSoundSystem.
+    // @0x14001c900
     virtual ~VideoSoundSystem_SoundRenderer() {}
 
     virtual VideoSound* Create()
