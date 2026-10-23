@@ -11,11 +11,15 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/kernel/sf_array.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
+#include <cstdint>
+#include <cstring>
 
 extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
+extern "C" void FUN_142585f70(void*, int);
 
 namespace Scaleform {
 
@@ -103,6 +107,9 @@ class Sound
 public:
     ::FMOD_RESULT getLength(unsigned* length, unsigned timeUnit);
     ::FMOD_RESULT release();
+    ::FMOD_RESULT lock(unsigned offset, unsigned length, void** first, void** second,
+                       unsigned* firstLength, unsigned* secondLength);
+    ::FMOD_RESULT unlock(void* first, void* second, unsigned firstLength, unsigned secondLength);
 };
 class System
 {
@@ -1149,4 +1156,32 @@ void ClearFixedHashSet(void** set)
     reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
     set[0] = nullptr;
 }
+
+// MS2-FUNCTIONAL: reads a length-prefixed narrow string from the stream, appending each byte to the destination.
+// @0x142690630
+void ReadNarrowString(void* stream, void* destination)
+{
+    auto** vtable = *reinterpret_cast<void***>(stream);
+    unsigned length = 0;
+    reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, &length, sizeof(length));
+    for (unsigned i = 0; i < length; ++i) {
+        unsigned char ch = 0;
+        reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, &ch, 1);
+        FUN_142585f70(destination, static_cast<signed char>(ch));
+    }
+}
+
+// MS2-FUNCTIONAL: writes a narrow string's 32-bit length followed by its bytes to the stream.
+// @0x142690c70
+void WriteNarrowString(void* stream, const Scaleform::String* text)
+{
+    auto** vtable = *reinterpret_cast<void***>(stream);
+    const unsigned length = static_cast<unsigned>(text->GetLength());
+    reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, &length, sizeof(length));
+    const auto encoded = *reinterpret_cast<const std::uintptr_t*>(text);
+    auto* raw = reinterpret_cast<const unsigned char*>(encoded & ~std::uintptr_t(3));
+    for (unsigned i = 0; i < length; ++i)
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, raw + 12 + i, 1);
+}
+
 }
