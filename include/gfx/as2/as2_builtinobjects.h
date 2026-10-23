@@ -108,7 +108,13 @@ public:
 protected:
     void commonInit(Environment* penv); // exe 0x142995100
 };
-class StageObject : public Object {};
+class StageObject : public Object
+{
+public:
+    StageObject(Environment* penv); // exe 0x142920be0
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954310: Object_Stage
+};
 
 // 0x70 bytes.
 class BooleanObject : public Object
@@ -344,8 +350,12 @@ public:
 
     virtual InteractiveObject*       GetASCharacter();       // exe 0x1429492c0
     virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949340
+    virtual ObjectType               GetObjectType() const;  // exe 0x142954340: Object_TextField
 
 protected:
+    TextFieldObject(ASStringContext* psc, Object* pprototype); // exe 0x142921520
+    TextFieldObject(Environment* penv);                        // exe 0x142921580
+
     virtual void Finalize_GC(); // exe 0x1429430b0
 };
 
@@ -356,11 +366,19 @@ public:
     void* Data68[5]; // +0x68 StaticTextSnapshotData (0x28 bytes, layout not recovered)
 
     // (appended for sfr_as2_02: MovieClip.getTextSnapshot) an empty snapshot with the TextSnapshot prototype
+    // Out of line in the exe (0x1429231e0, sfr_as2_03); MovieClip.getTextSnapshot has it inlined, so its TU defines
+    // MS2_AS2_TEXTSNAPSHOT_CTOR_INLINE before the includes.
+#ifdef MS2_AS2_TEXTSNAPSHOT_CTOR_INLINE
     TextSnapshotObject(Environment* penv) : Object(penv)
     {
         ::new (Data68) StaticTextSnapshotData();
         Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_TextSnapshot));
     }
+#else
+    TextSnapshotObject(Environment* penv);
+#endif
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954360: Object_TextSnapshot
 
     StaticTextSnapshotData& GetData() { return *(StaticTextSnapshotData*)Data68; }
     void SetSelectColor(const Render::Color& color) { GetData().SetSelectColor(color); }

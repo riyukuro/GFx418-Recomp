@@ -14,6 +14,12 @@ class StringObject : public Object
 public:
     ASString sValue; // +0x68
 
+    StringObject(Environment* penv);                     // exe 0x142920ea0: ""
+    StringObject(Environment* penv, const ASString& val); // exe 0x142920f30
+
+    virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x142956730
+    virtual ObjectType  GetObjectType() const;                     // exe 0x142954320: Object_String
+
     // "length" defaults to the length of the string (exe 0x1429538a0).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
     virtual void SetValue(Environment* penv, const Value& v); // exe 0x14298cc80

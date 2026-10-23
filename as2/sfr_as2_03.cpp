@@ -31,6 +31,10 @@
 // MS2-RANGE: 0x14291e790-0x14291e830 .text$mn
 // MS2-RANGE: 0x14291eca0-0x14291ed40 .text$mn
 // MS2-RANGE: 0x14291ad30-0x14291adc0 .text$mn
+// MS2-RANGE: 0x142920ea0-0x142920fc0 .text$mn
+// MS2-RANGE: 0x142920be0-0x142920c50 .text$mn
+// MS2-RANGE: 0x1429231e0-0x142923250 .text$mn
+// MS2-RANGE: 0x142921520-0x1429215f0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -39,6 +43,7 @@
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
+#include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
@@ -261,6 +266,49 @@ ColorObject::ColorObject(Environment* penv, InteractiveObject* ptarget)
     : Object(penv), pCharacter(ptarget)
 {
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Color));
+}
+
+// @0x142920ea0
+StringObject::StringObject(Environment* penv)
+    : Object(penv), sValue(penv->GetBuiltin(ASBuiltin_empty_))
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_String));
+}
+
+// @0x142920f30
+StringObject::StringObject(Environment* penv, const ASString& val)
+    : Object(penv), sValue(val)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_String));
+}
+
+// @0x142920be0
+StageObject::StageObject(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Stage));
+}
+
+// @0x1429231e0
+TextSnapshotObject::TextSnapshotObject(Environment* penv)
+    : Object(penv)
+{
+    ::new (Data68) StaticTextSnapshotData();
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_TextSnapshot));
+}
+
+// @0x142921520
+TextFieldObject::TextFieldObject(ASStringContext* psc, Object* pprototype)
+    : Object(psc), pIMECompositionStringStyles(0)
+{
+    Set__proto__(psc, pprototype);
+}
+
+// @0x142921580
+TextFieldObject::TextFieldObject(Environment* penv)
+    : Object(penv), pIMECompositionStringStyles(0)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_TextField));
 }
 
 // @0x1429237f0
@@ -540,3 +588,11 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7MovieClipLoader@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216ac0
 // MS2-PIN: ??_7ColorObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432188a0
 // MS2-PIN: ??_7ColorObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432188e8
+// MS2-PIN: ??_7StringObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a920
+// MS2-PIN: ??_7StringObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a968
+// MS2-PIN: ??_7StageObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a510
+// MS2-PIN: ??_7StageObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a558
+// MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e2c8
+// MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e310
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218490
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432184d8
