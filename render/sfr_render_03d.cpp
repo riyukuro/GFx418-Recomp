@@ -439,10 +439,255 @@ private:
 
 // ***** Stroke bounds through a stroke generator (joins, caps and miters as they will be drawn)
 
-// out of line in the stroker part of this unit (0x142627650)
+// Collects the paths of one shape layer drawn with strokeStyle in the generator's stroke sorter (in the transformed
+// space) and sorts them into chains; pos ends at the start of the next layer. Returns the path type it stopped at.
+template<class Transformer>
+ShapePathType AddStrokeToSorter(const ShapeDataInterface& shape, ShapePosInfo* pos, unsigned strokeStyle,
+                                const Transformer& trans, StrokeGenerator* gen)
+{
+    ShapePathType pathType;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    bool          first = true;
+
+    gen->mStrokeSorter.Clear();
+    for (;;)
+    {
+        ShapePosInfo last = *pos;
+        pathType          = shape.ReadPathInfo(pos, coord, styles);
+        if (pathType == Shape_EndShape || (pathType == Shape_NewLayer && !first))
+        {
+            *pos = last;
+            break;
+        }
+        if (styles[2] == strokeStyle)
+        {
+            trans.Transform(&coord[0], &coord[1]);
+            gen->mStrokeSorter.AddVertexNV(coord[0], coord[1]);
+            PathEdgeType edge;
+            while ((edge = shape.ReadEdge(pos, coord)) != Edge_EndPath)
+            {
+                if (edge == Edge_LineTo)
+                {
+                    trans.Transform(&coord[0], &coord[1]);
+                    gen->mStrokeSorter.AddVertexNV(coord[0], coord[1]);
+                }
+                else if (edge == Edge_QuadTo)
+                {
+                    trans.Transform(&coord[0], &coord[1]);
+                    trans.Transform(&coord[2], &coord[3]);
+                    gen->mStrokeSorter.AddQuad(coord[0], coord[1], coord[2], coord[3]);
+                }
+                else if (edge == Edge_CubicTo)
+                {
+                    trans.Transform(&coord[0], &coord[1]);
+                    trans.Transform(&coord[2], &coord[3]);
+                    trans.Transform(&coord[4], &coord[5]);
+                    gen->mStrokeSorter.AddCubic(coord[0], coord[1], coord[2], coord[3], coord[4], coord[5]);
+                }
+            }
+            gen->mStrokeSorter.FinalizePath(0, 0, false, false);
+        }
+        else
+            shape.SkipPathData(pos);
+        first = false;
+    }
+    gen->mStrokeSorter.Sort();
+    return pathType;
+}
+
+// A round joined and capped stroke covers its sorted paths (curves included up to their extremes) grown by half
+// the width, so it needs no outline.
+template<class Transformer>
+RectF ComputeBoundsRoundStrokeSorter(const ShapeDataInterface& shape, ShapePosInfo* pos, unsigned strokeStyle,
+                                     const Transformer& trans, float width, StrokeGenerator* gen)
+{
+    RectF bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
+
+    const StrokeSorter& sorter = gen->mStrokeSorter;
+    for (unsigned i = 0; i < sorter.GetPathCount(); ++i)
+    {
+        unsigned n  = sorter.GetVertexCount(i);
+        float    x0 = 0;
+        float    y0 = 0;
+        for (unsigned j = 0; j < n;)
+        {
+            const StrokeSorter::VertexType& p1 = sorter.GetVertex(i, j++);
+            if (p1.segType == Math2D::Seg_MoveTo || p1.segType == Math2D::Seg_LineTo)
+            {
+                x0 = p1.x;
+                y0 = p1.y;
+                bounds.ExpandToPoint(x0, y0);
+            }
+            else if (p1.segType == Math2D::Seg_QuadTo)
+            {
+                const StrokeSorter::VertexType& p2 = sorter.GetVertex(i, j++);
+                float x, y;
+                float t = Math2D::QuadCurveExtremum(x0, p1.x, p2.x);
+                if (t > 0 && t < 1)
+                {
+                    Math2D::PointOnQuadCurve(x0, y0, p1.x, p1.y, p2.x, p2.y, t, &x, &y);
+                    bounds.ExpandToPoint(x, y);
+                }
+                t = Math2D::QuadCurveExtremum(y0, p1.y, p2.y);
+                if (t > 0 && t < 1)
+                {
+                    Math2D::PointOnQuadCurve(x0, y0, p1.x, p1.y, p2.x, p2.y, t, &x, &y);
+                    bounds.ExpandToPoint(x, y);
+                }
+                bounds.ExpandToPoint(p2.x, p2.y);
+                x0 = p2.x;
+                y0 = p2.y;
+            }
+            else if (p1.segType == Math2D::Seg_CubicTo)
+            {
+                const StrokeSorter::VertexType& p2 = sorter.GetVertex(i, j++);
+                const StrokeSorter::VertexType& p3 = sorter.GetVertex(i, j++);
+                float x, y, t1, t2;
+                Math2D::CubicCurveExtremum(x0, p1.x, p2.x, p3.x, &t1, &t2);
+                if (t1 > 0 && t1 < 1)
+                {
+                    Math2D::PointOnCubicCurve(x0, y0, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, t1, &x, &y);
+                    bounds.ExpandToPoint(x, y);
+                }
+                if (t2 > 0 && t2 < 1)
+                {
+                    Math2D::PointOnCubicCurve(x0, y0, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, t2, &x, &y);
+                    bounds.ExpandToPoint(x, y);
+                }
+                Math2D::CubicCurveExtremum(y0, p1.y, p2.y, p3.y, &t1, &t2);
+                if (t1 > 0 && t1 < 1)
+                {
+                    Math2D::PointOnCubicCurve(x0, y0, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, t1, &x, &y);
+                    bounds.ExpandToPoint(x, y);
+                }
+                if (t2 > 0 && t2 < 1)
+                {
+                    Math2D::PointOnCubicCurve(x0, y0, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, t2, &x, &y);
+                    bounds.ExpandToPoint(x, y);
+                }
+                bounds.ExpandToPoint(p3.x, p3.y);
+                x0 = p3.x;
+                y0 = p3.y;
+            }
+        }
+    }
+    if (bounds.IsNormal())
+    {
+        width /= 2;
+        bounds.x1 -= width;
+        bounds.y1 -= width;
+        bounds.x2 += width;
+        bounds.y2 += width;
+    }
+    return bounds;
+}
+
+// the stroke width in the transformed space
+template<class Transformer>
+SF_INLINE float scaledStrokeWidth(const StrokeStyleType& style, const Transformer& trans)
+{
+    float scale = 1.0f;
+    switch (style.Flags & StrokeScaling_Mask)
+    {
+    case StrokeScaling_Normal:     scale = trans.GetScale(); break;
+    case StrokeScaling_Horizontal: scale = trans.GetXScale(); break;
+    case StrokeScaling_Vertical:   scale = trans.GetYScale(); break;
+    case StrokeScaling_None:       break;
+    }
+    return style.Width * scale;
+}
+
+// sets the generator's stroker up for the style's joins and caps at width
+SF_INLINE void setupStroker(Stroker* stroker, const StrokeStyleType& style, float width, const ToleranceParams& param)
+{
+    StrokerTypes::LineJoinType join     = StrokerTypes::RoundJoin;
+    StrokerTypes::LineCapType  startCap = StrokerTypes::RoundCap;
+    StrokerTypes::LineCapType  endCap   = StrokerTypes::RoundCap;
+    switch (style.Flags & StrokeJoin_Mask)
+    {
+    case StrokeJoin_Round: break;
+    case StrokeJoin_Bevel: join = StrokerTypes::BevelJoin; break;
+    case StrokeJoin_Miter: join = StrokerTypes::MiterJoin; break;
+    }
+    switch (style.Flags & StrokeCap_Mask)
+    {
+    case StrokeCap_Round:  break;
+    case StrokeCap_None:   startCap = StrokerTypes::ButtCap; break;
+    case StrokeCap_Square: startCap = StrokerTypes::SquareCap; break;
+    }
+    switch (style.Flags & StrokeEndCap_Mask)
+    {
+    case StrokeEndCap_Round:  break;
+    case StrokeEndCap_None:   endCap = StrokerTypes::ButtCap; break;
+    case StrokeEndCap_Square: endCap = StrokerTypes::SquareCap; break;
+    }
+    stroker->SetWidth(width);
+    stroker->SetLineJoin(join);
+    stroker->SetStartLineCap(startCap);
+    stroker->SetEndLineCap(endCap);
+    stroker->SetMiterLimit(style.Miter);
+    stroker->SetToleranceParam(param);
+}
+
+// feeds sorted path i into sink, flattening its curves
+SF_INLINE void addSortedPath(TessBase* sink, const StrokeSorter& sorter, unsigned i, unsigned n,
+                             const ToleranceParams& param)
+{
+    for (unsigned j = 0; j < n;)
+    {
+        const StrokeSorter::VertexType& p1 = sorter.GetVertex(i, j++);
+        if (p1.segType == Math2D::Seg_MoveTo || p1.segType == Math2D::Seg_LineTo)
+            sink->AddVertex(p1.x, p1.y);
+        else if (p1.segType == Math2D::Seg_QuadTo)
+        {
+            const StrokeSorter::VertexType& p2 = sorter.GetVertex(i, j++);
+            TessellateQuadCurve(sink, param, p1.x, p1.y, p2.x, p2.y);
+        }
+        else if (p1.segType == Math2D::Seg_CubicTo)
+        {
+            const StrokeSorter::VertexType& p2 = sorter.GetVertex(i, j++);
+            const StrokeSorter::VertexType& p3 = sorter.GetVertex(i, j++);
+            TessellateCubicCurve(sink, param, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+        }
+    }
+}
+SF_INLINE void addSortedPath(TessBase* sink, const StrokeSorter& sorter, unsigned i, const ToleranceParams& param)
+{
+    addSortedPath(sink, sorter, i, sorter.GetVertexCount(i), param);
+}
+
+// The bounds of one stroke style over one shape layer: round strokes from their paths, the others from the
+// generated outlines.
 template<class Transformer>
 RectF ComputeBoundsSingleStroke(const ShapeDataInterface& shape, ShapePosInfo* pos, unsigned strokeStyle,
-                                const Transformer& trans, StrokeGenerator* gen, const ToleranceParams& param);
+                                const Transformer& trans, StrokeGenerator* gen, const ToleranceParams& param)
+{
+    StrokeStyleType style;
+    shape.GetStrokeStyle(strokeStyle, &style);
+    float width = scaledStrokeWidth(style, trans);
+    if ((style.Flags & StrokeJoin_Mask) == StrokeJoin_Round && (style.Flags & StrokeCap_Mask) == StrokeCap_Round)
+        return ComputeBoundsRoundStrokeSorter(shape, pos, strokeStyle, trans, width, gen);
+
+    setupStroker(&gen->mStroker, style, width, param);
+    AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
+
+    RectF bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    gen->mStroker.Clear();
+    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
+    {
+        gen->mPath.Clear();
+        addSortedPath(&gen->mStroker, gen->mStrokeSorter, i, param);
+        gen->mStroker.GenerateStroke(&gen->mPath);
+        for (unsigned j = 0; j < gen->mPath.GetNumVertices(); ++j)
+        {
+            const VertexPath::VertexType& v = gen->mPath.GetVertex(j);
+            bounds.ExpandToPoint(v.x, v.y);
+        }
+    }
+    return bounds;
+}
 
 // The strokes of one shape layer, each stroke style once (it is generated over all its paths of the layer);
 // pos ends at the start of the next layer.
@@ -510,13 +755,55 @@ RectF ComputeBoundsFillAndStrokes(const ShapeDataInterface& shape, const Transfo
 
 // ***** Hit tests
 
-// in other parts of the renderer (HitTestFill 0x1425fd750) and the stroker part of this unit (0x1426299a0)
+// in other parts of the renderer (HitTestFill 0x1425fd750)
 template<class Transformer>
 bool HitTestFill(const ShapeDataInterface& shape, const Transformer& trans, float x, float y);
+
+// A round joined and capped stroke is hit within half its width of its flattened paths.
+template<class Transformer>
+bool HitTestRoundJoinStroke(const ShapeDataInterface& shape, ShapePosInfo* pos, unsigned strokeStyle,
+                            const Transformer& trans, float width, float x, float y, StrokeGenerator* gen,
+                            const ToleranceParams& param)
+{
+    AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
+    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
+    {
+        unsigned n = gen->mStrokeSorter.GetVertexCount(i);
+        gen->mPath.Clear();
+        addSortedPath(&gen->mPath, gen->mStrokeSorter, i, n, param);
+        if (HitTestRoundStroke(gen->mPath, width, x, y))
+            return true;
+    }
+    return false;
+}
+
+// Tests one stroke style over one shape layer: round strokes against their paths, the others against the
+// generated outlines.
 template<class Transformer>
 bool HitTestSingleStroke(const ShapeDataInterface& shape, ShapePosInfo* pos, unsigned strokeStyle,
                          const Transformer& trans, float x, float y, StrokeGenerator* gen,
-                         const ToleranceParams& param);
+                         const ToleranceParams& param)
+{
+    StrokeStyleType style;
+    shape.GetStrokeStyle(strokeStyle, &style);
+    float width = scaledStrokeWidth(style, trans);
+    if ((style.Flags & StrokeJoin_Mask) == StrokeJoin_Round && (style.Flags & StrokeCap_Mask) == StrokeCap_Round)
+        return HitTestRoundJoinStroke(shape, pos, strokeStyle, trans, width, x, y, gen, param);
+
+    setupStroker(&gen->mStroker, style, width, param);
+    AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
+
+    gen->mStroker.Clear();
+    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
+    {
+        gen->mPath.Clear();
+        addSortedPath(&gen->mStroker, gen->mStrokeSorter, i, param);
+        gen->mStroker.GenerateStroke(&gen->mPath);
+        if (HitTestGeneralStroke(gen->mPath, x, y))
+            return true;
+    }
+    return false;
+}
 
 // Tests the strokes of one shape layer, each stroke style once; on a miss pos ends at the start of the next layer.
 template<class Transformer>
@@ -1024,3 +1311,11 @@ void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fil
 // MS2-PIN: ??$HitTestLayerStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@PEAUShapePosInfo@01@AEBV?$Matrix2x4@M@01@MMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x1426292d0
 // MS2-PIN: ??$HitTestShapeStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@MMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x142629810
 // MS2-PIN: ??$HitTestFillAndStrokes@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@AEBV?$Matrix2x4@M@01@MMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x1426290f0
+// MS2-FUNCTIONAL: same code, the exe saves xmm10-13 in the prologue; ours sinks the saves below the first ReadPathInfo
+// MS2-PIN: ??$AddStrokeToSorter@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AW4ShapePathType@01@AEBVShapeDataInterface@01@PEAUShapePosInfo@01@IAEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@@Z 0x142626190
+// MS2-PIN: ??$ComputeBoundsRoundStrokeSorter@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@PEAUShapePosInfo@01@IAEBV?$Matrix2x4@M@01@MPEAUStrokeGenerator@01@@Z 0x1426269d0
+// MS2-FUNCTIONAL: same code, register allocation differs (ours pushes r12)
+// MS2-PIN: ??$ComputeBoundsSingleStroke@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA?AV?$Rect@M@01@AEBVShapeDataInterface@01@PEAUShapePosInfo@01@IAEBV?$Matrix2x4@M@01@PEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x142627650
+// MS2-FUNCTIONAL: same code, ours keeps the ToleranceParams pointer in r13; the exe reloads it per path
+// MS2-PIN: ??$HitTestRoundJoinStroke@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@PEAUShapePosInfo@01@IAEBV?$Matrix2x4@M@01@MMMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x142629590
+// MS2-PIN: ??$HitTestSingleStroke@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@YA_NAEBVShapeDataInterface@01@PEAUShapePosInfo@01@IAEBV?$Matrix2x4@M@01@MMPEAUStrokeGenerator@01@AEBUToleranceParams@01@@Z 0x1426299a0

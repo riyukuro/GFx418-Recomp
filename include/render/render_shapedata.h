@@ -1094,6 +1094,23 @@ void ShapeDataPacked<ContainerType>::StartPath(ShapePosInfo* pos, ShapePathType 
 }
 
 
+// (appended for sfr_render_03d) the join and cap bits of StrokeStyleType::Flags
+enum StrokeStyleJoinCapFlags
+{
+    StrokeJoin_Round    = 0x00,
+    StrokeJoin_Bevel    = 0x10,
+    StrokeJoin_Miter    = 0x20,
+    StrokeJoin_Mask     = 0x30,
+    StrokeCap_Round     = 0x00,
+    StrokeCap_None      = 0x40,
+    StrokeCap_Square    = 0x80,
+    StrokeCap_Mask      = 0xC0,
+    StrokeEndCap_Round  = 0x000,
+    StrokeEndCap_None   = 0x100,
+    StrokeEndCap_Square = 0x200,
+    StrokeEndCap_Mask   = 0x300
+};
+
 }} // namespace Scaleform::Render
 
 #endif

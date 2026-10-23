@@ -7,6 +7,9 @@
 
 #include "ms2/scaleform/include/render/render_containers.h"
 #include "ms2/scaleform/include/render/render_tessellator.h"
+// (appended for sfr_render_03d)
+#include "ms2/scaleform/include/render/render_stroker.h"
+#include "ms2/scaleform/include/render/render_hittest.h"
 
 namespace Scaleform { namespace Render {
 
@@ -15,6 +18,10 @@ struct StrokeGenerator
 {
     LinearHeap Heap1;   // +0x00
     LinearHeap Heap2;   // +0x28
+    // (appended for sfr_render_03d: the stroke bound / hit-test templates)
+    Stroker      mStroker;        // +0x50
+    StrokeSorter mStrokeSorter;   // +0xa8
+    VertexPath   mPath;           // +0x178
 };
 
 // (appended for sfr_render_07o) the renderer's shared tessellation scratch (Renderer2DImpl +0x58): four linear
