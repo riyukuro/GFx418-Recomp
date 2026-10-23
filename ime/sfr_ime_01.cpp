@@ -4021,6 +4021,13 @@ void FUN_1423d5060(void* raw, int)
     }
 }
 
+// MS2-FUNCTIONAL: reuses the recovered candidate-window geometry bridge for the input-window reposition event.
+// @0x1423d0f60
+void FUN_1423d0f60(void* manager, int mode)
+{
+    FUN_1423d5060(manager, mode);
+}
+
 struct cx18_CommandEntry
 {
     unsigned long long next;
