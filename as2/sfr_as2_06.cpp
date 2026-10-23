@@ -147,6 +147,9 @@
 // MS2-RANGE: 0x14296a540-0x14296a7c0 .text$mn
 // MS2-RANGE: 0x14296a7c0-0x14296a850 .text$mn
 // MS2-RANGE: 0x14295d4f0-0x14295d5e0 .text$mn
+// MS2-RANGE: 0x1429697f0-0x142969850 .text$mn
+// MS2-RANGE: 0x14295d320-0x14295d3a0 .text$mn
+// MS2-RANGE: 0x14295d3a0-0x14295d450 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1565,6 +1568,18 @@ void MovieRoot::NotifyTransferFocus(InteractiveObject* curFocused, InteractiveOb
     Selection::BroadcastOnSetFocus(GetLevel0MovieEnvironment(pMovieImpl), curFocused, pnewFocus, controllerIdx);
 }
 
+// @0x1429697f0
+bool MovieRoot::NotifyOnFocusChange(InteractiveObject* curFocused, InteractiveObject* toBeFocused, unsigned,
+                                    FocusMovedType fmt, ProcessFocusKeyInfo*)
+{
+    if (fmt == GFx_FocusMovedByMouse)
+    {
+        if ((!curFocused || !curFocused->IsFocusEnabled(fmt)) && (!toBeFocused || !toBeFocused->IsFocusEnabled(fmt)))
+            return false;
+    }
+    return true;
+}
+
 // Back to the enclosing object; an array is on top again when it is one.
 // @0x14296f260
 void GASSharedObjectLoader::PopObject()
@@ -1637,6 +1652,8 @@ private:
     virtual bool IsDisplayObjectActive(void* pdata) const;
     virtual bool PopBack(void* pdata, Value* pval);
     virtual bool RemoveElements(void* pdata, unsigned idx, int count);
+    virtual bool GotoAndPlay(void* pdata, const char* frame, bool stop);
+    virtual bool GotoAndPlay(void* pdata, unsigned frame, bool stop);
 };
 
 // The wide string storage of a VT_StringW value, from its characters.
@@ -1651,6 +1668,40 @@ static inline AS2::Environment* GetLevel0Environment(MovieImpl* pmovieImpl)
 {
     AvmDisplayObjBase* pavm = pmovieImpl->pMainMovie->GetAvmObjImpl();
     return static_cast<AS2::AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
+}
+
+// Moves the clip pdata to frame (1-based) and plays or stops it; false for other characters.
+// @0x14295d320
+bool AS2ValueObjectInterface::GotoAndPlay(void* pdata, unsigned frame, bool stop)
+{
+    DisplayObject* pchar = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
+    if (pchar && pchar->IsSprite())
+    {
+        InteractiveObject* psprite = static_cast<InteractiveObject*>(pchar);
+        psprite->GotoFrame(frame - 1);
+        psprite->SetPlayState(stop ? State_Stopped : State_Playing);
+        return true;
+    }
+    return false;
+}
+
+// The same for a frame label (or a number in a string).
+// @0x14295d3a0
+bool AS2ValueObjectInterface::GotoAndPlay(void* pdata, const char* frame, bool stop)
+{
+    DisplayObject* pchar = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
+    if (pchar && pchar->IsSprite())
+    {
+        InteractiveObject* psprite = static_cast<InteractiveObject*>(pchar);
+        unsigned           frameNum;
+        if (psprite->GetLabeledFrame(frame, &frameNum, true))
+        {
+            psprite->GotoFrame(frameNum);
+            psprite->SetPlayState(stop ? State_Stopped : State_Playing);
+            return true;
+        }
+    }
+    return false;
 }
 
 // The host's reference to a string node, a wide string, an AS object or a character handle.

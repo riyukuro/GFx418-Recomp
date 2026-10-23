@@ -12,6 +12,7 @@
 #include "../gfx_loadproc.h"
 
 namespace Scaleform { namespace GFx { class Value; class FunctionHandler; } }
+namespace Scaleform { namespace GFx { struct ProcessFocusKeyInfo; } }
 namespace Scaleform { namespace Render { namespace Text { class Allocator; } } }
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -367,6 +368,9 @@ public:
     virtual void NotifyQueueSetFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt); // exe 0x14296a850
     virtual void NotifyTransferFocus(InteractiveObject* curFocused, InteractiveObject* pnewFocus,
                                      unsigned controllerIdx);                                          // exe 0x14296a8f0
+    // A mouse focus change needs one of the two characters to take mouse focus (exe 0x1429697f0).
+    virtual bool NotifyOnFocusChange(InteractiveObject* curFocused, InteractiveObject* toBeFocused,
+                                     unsigned controllerIdx, FocusMovedType fmt, ProcessFocusKeyInfo* pfocusKeyInfo);
 };
 
 // The AS2 root of a character of an AS2 movie.
