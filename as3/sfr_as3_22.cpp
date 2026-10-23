@@ -1190,4 +1190,29 @@ void WriteNarrowString(void* stream, const Scaleform::String* text)
         reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, raw + 12 + i, 1);
 }
 
+// MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot.
+// @0x142745630
+void* FindAudioRequestEntry(void** set, const unsigned char* key)
+{
+    auto* table = static_cast<std::uint64_t*>(*set);
+    if (!table)
+        return nullptr;
+    const std::uint64_t hash =
+        (((((std::uint64_t(key[3]) * 0x1003f + key[2]) * 0x1003f + key[1]) * 0x1003f + key[4] * 0xfc5d1543ec5f01ull) +
+           key[5] * 0x9b302c28162c612full + key[7] * 0xd7c3e496a311b1bfull +
+           key[6] * 0x5d02f409d62aee81ull - 0x514d9afbc3e934fbull + key[0])) & table[1];
+    auto* node = table + 2 + hash * 6;
+    if (static_cast<std::int64_t>(*node) != -2 && node[1] == hash) {
+        std::uint64_t index = hash;
+        while (node[1] != hash || node[2] != *reinterpret_cast<const std::uint64_t*>(key)) {
+            index = node[0];
+            if (index == ~std::uint64_t(0))
+                return nullptr;
+            node = table + 2 + index * 6;
+        }
+        return table + 4 + index * 6;
+    }
+    return nullptr;
+}
+
 }
