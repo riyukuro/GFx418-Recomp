@@ -42,6 +42,7 @@
 // MS2-RANGE: 0x14296b820-0x14296b850 .text$mn
 // MS2-RANGE: 0x14296bba0-0x14296bbb0 .text$mn
 // MS2-RANGE: 0x14296e790-0x14296e870 .text$mn
+// MS2-RANGE: 0x14296e870-0x14296e9f0 .text$mn
 // MS2-RANGE: 0x14296efd0-0x14296f070 .text$mn
 // MS2-RANGE: 0x14296f070-0x14296f0c0 .text$mn
 // MS2-RANGE: 0x14296f1b0-0x14296f260 .text$mn
@@ -412,6 +413,33 @@ void MovieClipLoader::NotifyOnLoadStart(Environment* penv, InteractiveObject* pt
     ASString eventName = penv->CreateConstString("onLoadStart");
     AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
     penv->Drop1();
+}
+
+// MS2-FUNCTIONAL: Ghidra confirms the delimiter split and null-extension path; this uses the recovered ASString helpers.
+// @0x14296e870
+bool Environment::ParsePath(ASStringContext* psc, const ASString& path, ASString* pbase, ASString* pextension)
+{
+    const char* text = path.ToCStr();
+    const char* split = strchr(text, ':');
+    if (!split)
+        split = strrchr(text, '.');
+    if (!split && !strrchr(text, '/'))
+        return false;
+
+    if (split)
+    {
+        int offset = static_cast<int>(split - text);
+        pextension->operator=(psc->CreateString(split + 1));
+        if (offset > 0 && text[offset - 1] == '/')
+            --offset;
+        *pbase = offset < 0 ? path : psc->CreateString(text, static_cast<UPInt>(offset));
+    }
+    else
+    {
+        pextension->operator=(psc->CreateConstString(""));
+        *pbase = path;
+    }
+    return true;
 }
 
 // @0x142962010

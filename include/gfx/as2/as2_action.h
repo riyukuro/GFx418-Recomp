@@ -323,6 +323,7 @@ public:
     TryDescr        PopTryBlock();
     // The name is a target path (has ':', '/' or '.'); the answer is cached in the string (exe 0x142965d10).
     static bool     IsPath(const ASString& varPath);
+    static bool     ParsePath(ASStringContext* psc, const ASString& path, ASString* pbase, ASString* pextension);
     // A Boolean / String / Number object wrapping the primitive at a distance from the top (or the given one),
     // undefined for other types (exe 0x14296f770 / 0x14296f640).
     Value           PrimitiveToTempObject(int index);
