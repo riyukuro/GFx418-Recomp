@@ -1464,4 +1464,25 @@ std::uint64_t* FUN_142743130(std::uint64_t* object)
     *reinterpret_cast<std::uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0x78) = 0;
     return object;
 }
+
+// MS2-FUNCTIONAL: reads the three event handler properties from the attached AS3 stream object.
+// @0x140017f20
+void FUN_140017f20(void* self, void*, void* frame)
+{
+    auto* vm = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
+    auto* vmImpl = *reinterpret_cast<unsigned char**>(vm + 0x10);
+    auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
+    auto* ns = *reinterpret_cast<Scaleform::GFx::AS3::Instances::Namespace**>(vm + 0x1d0);
+    auto* source = reinterpret_cast<Scaleform::GFx::AS3::Object*>(*reinterpret_cast<void**>(static_cast<unsigned char*>(frame) + 0x10));
+    const char* names[] = {"onMetaData", "onCuePoint", "onSubtitle"};
+    const std::size_t offsets[] = {0x98, 0xb8, 0xd8};
+    for (unsigned i = 0; i < 3; ++i) {
+        Scaleform::GFx::ASString name(manager->CreateStringNode(names[i]));
+        Scaleform::GFx::AS3::Value nameValue(name);
+        Scaleform::GFx::AS3::Multiname property(*ns, nameValue);
+        Scaleform::GFx::AS3::Value value;
+        if (source->GetProperty(property, value))
+            reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(self) + offsets[i])->Assign(value);
+    }
+}
 } // namespace
