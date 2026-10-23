@@ -59,9 +59,18 @@ public:
     // (appended, sfr19) keeps the class traits made for this file's classes (Vector.<T> of them) alive.
     void RegisterLoadedClass(const SPtr<ClassTraits::Traits>& tr) { LoadedClasses.PushBack(tr); }
 
-private:
-    VMAbcFile();
+    // (appended, sfr19) registers itself with the VM unless the VM is being destroyed. 0x1424dbb30
+    VMAbcFile(VM& vm, const Ptr<Abc::File>& file);
+    // (appended, sfr19) the vftable (0x14317b750) overrides
+    virtual ~VMAbcFile();                                       // 0x1424e3eb0
 
+protected:
+    virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;   // 0x142503ff0
+    virtual const char* GetAS3ObjectType() const;               // 0x142505e40
+    virtual String GetAS3ObjectName() const;                    // 0x142505dd0
+    virtual void Finalize_GC();                                 // 0x1425008d0
+
+private:
     // (appended, sfr19) makes the class traits of the file's classes, then its scripts (run when to_execute).
     // 0x142515b30
     CheckResult Load(bool to_execute);
@@ -70,9 +79,20 @@ private:
     bool RegisterScrips(bool to_execute);
 
     VM*              pVM;               // +0x20
-    const Abc::File* pFile;             // +0x28 (counted)
-    UPInt            Unk30[14];         // +0x30 (not modeled)
-    ArrayLH<SPtr<ClassTraits::Traits> > LoadedClasses;  // +0xa0 (appended, sfr19)
+    Ptr<Abc::File>   pFile;             // +0x28
+    // (appended, sfr19) the members from +0x30 on, from the dtor 0x1424e3eb0; the hash sets the recovered code
+    // does not use are kept as their table pointer.
+    AbcMultinameHash<SPtr<Instances::Namespace> > IntNamespaces;   // +0x30
+    void*            AbsObjectsTable;   // +0x38 (HashSetLH, 0x18-byte entries)
+    ArrayLH<SPtr<NamespaceSet> >        IntNamespaceSets;           // +0x40
+    ArrayLH<SPtr<ASStringNode> >        IntStrings;                 // +0x58 ([0] is the empty string)
+    void*            GlobalObjectsTable;    // +0x70 (HashSetLH, 0x18-byte entries)
+    ArrayLH<SPtr<VMAbcFile> >           Children;                   // +0x78
+    void*            ActivationTraitsCacheTable;    // +0x90 (by method body)
+    void*            FunctionTraitsCacheTable;      // +0x98 (by method index)
+    ArrayLH<SPtr<ClassTraits::Traits> > LoadedClasses;              // +0xa0
+    ArrayLH<ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>, StatMV_VM_VMAbcFile_Mem> OpCodeArray;    // +0xb8 (per method body)
+    ArrayLH<Abc::MethodBodyInfo::Exception, StatMV_VM_VMAbcFile_Mem>             Exceptions;     // +0xd0 (per method body)
 };
 
 // (appended, sfr19) the SlotInfo ctors need the complete VMAbcFile; declared in as3_obj.h.

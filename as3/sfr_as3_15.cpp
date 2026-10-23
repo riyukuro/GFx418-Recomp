@@ -54,6 +54,11 @@ void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, cons
 Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 // AvmInteractiveObj::AvmInteractiveObj (abstract here, so the derived ctors reach it by address)
 void FUN_1424d6480(void* self, Scaleform::GFx::InteractiveObject* pdispObj);
+// ArrayDataBase::ResizeNoConstruct(pheapAddr, newSize) of VMAbcFile::IntStrings, and ArrayData::Resize of its
+// OpCodeArray and Exceptions: out of line in the exe
+void FUN_142524a30(void* self, const void* pheapAddr, Scaleform::UPInt newSize);
+void FUN_1425244e0(void* self, Scaleform::UPInt newSize);
+void FUN_142524710(void* self, Scaleform::UPInt newSize);
 // ResourceHandle::GetResource, the exe's out-of-line copy (the header's is inline)
 Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* self, Scaleform::GFx::ResourceBinding* pbinding);
 // DisplayObject::DisplayObject (protected; ShapeObject is opaque here, so its ctor reaches it by address)
@@ -2710,6 +2715,27 @@ UDBase::UDBase(ClassTraits::Traits& t)
 
 } // Classes
 
+// MS2-FUNCTIONAL: same code; the exe keeps file in r15 (and saves an unused r12)
+// @0x1424dbb30
+VMAbcFile::VMAbcFile(VM& vm, const Ptr<Abc::File>& file)
+    : GASRefCountBase(vm.GetGCPtr()), pVM(&vm), pFile(file), AbsObjectsTable(NULL), GlobalObjectsTable(NULL),
+      ActivationTraitsCacheTable(NULL), FunctionTraitsCacheTable(NULL)
+{
+    RefCount |= Flag_HasFinalize;
+    {
+        // PushBack, with the exe's out-of-line ResizeNoConstruct
+        SPtr<ASStringNode> empty(vm.GetStringManager().GetEmptyStringNode());
+        FUN_142524a30(&IntStrings, &IntStrings, IntStrings.GetSize() + 1);
+        new (&IntStrings[IntStrings.GetSize() - 1]) SPtr<ASStringNode>(empty);
+    }
+    const UPInt n = file->MethodBodies.Info.GetSize();
+    // OpCodeArray.Resize(n) and Exceptions.Resize(n), out of line in the exe
+    FUN_1425244e0(&OpCodeArray, n);
+    FUN_142524710(&Exceptions, n);
+    if (!vm.InDestructor)
+        vm.VMAbcFilesWeak.PushBack(this);
+}
+
 // Only inlined in the exe (into the deleting destructor 0x1424e2f10); the members release themselves.
 IntervalTimer::~IntervalTimer()
 {
@@ -3097,3 +3123,4 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
 // MS2-PIN: ??$add@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBQEAVGASRefCountBase@AS3@GFx@1@_K@Z 0x1424d29d0
 // MS2-PIN: ??_7UDBase@Classes@AS3@GFx@Scaleform@@6B@ 0x14317f778
+// MS2-PIN: ??_7VMAbcFile@AS3@GFx@Scaleform@@6B@ 0x14317b750
