@@ -202,6 +202,9 @@ void     FUN_140036e80(void* player, CriMvSubtitleChunk* chunk);
 void     FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
 void     FUN_140046784(void* streamJoint);
 void     FUN_140027fb4(void* heap, void* memory);
+void     FUN_140044fa8(void* demux, void* value);
+void     FUN_140044fd8(void* demux, CriUint8 value);
+void     FUN_140044f9c(void* demux);
 void     FUN_140046798(void* streamJoint);
 void     FUN_1400420b0(void* manager, void* heap);
 void     FUN_140043be0(void* decoder);
@@ -3545,6 +3548,71 @@ CriBool FUN_140031f40(void* player)
             state->Release(state->ReleaseContext, state->WorkReleaseBuffer);
         state->Work = NULL;
     }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: reset a stopped CRI Movie player and reinitialize its demux output stream.
+// @0x140034960
+CriBool FUN_140034960(void* player)
+{
+    struct PlayerResetView
+    {
+        CriUint8 Reserved0[4];
+        CriSint32 Status;
+        CriUint32 InternalFlags;
+        CriUint8 Reserved0C[4];
+        CriUint32 ResetTimer;
+        CriUint8 Reserved14[0x14];
+        CriUint8 CurrentHeader[0x5c0];
+        CriUint16 CurrentSlot;
+        CriUint8 Reserved5EA[2];
+        CriUint32 SlotCount;
+        CriUint32 FrameCount;
+        CriUint8 Reserved5F4[4];
+        CriUint8 AnalyzedHeader[0x2c0];
+        CriUint32 HeaderSize;
+        CriUint8 Reserved8BC[0xd60 - 0x8bc];
+        CriUint32 ReadMode;
+        CriUint8 ReservedD64[4];
+        void* Demux;
+        CriUint8 ReservedD70[0x10];
+        void* OutputStream;
+        CriUint8 ReservedD88[0x140];
+        CriUint32 InputCount0;
+        CriUint32 InputCount1;
+        CriUint32 InputCount2;
+    };
+    if (!player)
+    {
+        FUN_140037950(NULL, "E05121601M: CriMvPly handle is NULL.", 0);
+        return 0;
+    }
+
+    PlayerResetView* state = (PlayerResetView*)player;
+    if (state->Status != 0 && state->Status != 7)
+    {
+        FUN_140037950(player, "E05121602M: Can't execute start in the current state.", state->Status);
+        return 0;
+    }
+
+    state->ResetTimer = 0;
+    state->HeaderSize = 0;
+    memset(state->AnalyzedHeader, 0, sizeof(state->AnalyzedHeader));
+    state->ReadMode = 0;
+    FUN_140044fa8(state->Demux, NULL);
+    FUN_140044fb0(state->Demux, 0, state->OutputStream, 0, (CriUint32)-1);
+    FUN_140044fd8(state->Demux, 0);
+    FUN_140044f9c(state->Demux);
+    memset(state->CurrentHeader, 0, sizeof(state->CurrentHeader));
+    state->HeaderSize = 0;
+    state->CurrentSlot = 1;
+    state->SlotCount = 0;
+    state->FrameCount = 0;
+    state->InputCount0 = 0;
+    state->InputCount1 = 0;
+    state->InputCount2 = 0;
+    state->InternalFlags = 0;
+    state->Status = 1;
     return 1;
 }
 
