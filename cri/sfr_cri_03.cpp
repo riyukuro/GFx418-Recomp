@@ -8,6 +8,9 @@
 // MS2-PINS-END tplpin
 #include "../include/cri/cri_movie.h"
 #include <windows.h>
+#include <cstring>
+
+extern "C" CriSint32 DAT_143ba9d28;
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -482,4 +485,165 @@ void mpvumc_IncreMbadr(CriMpvDecoderState* state)
         state->MacroblockColumn = 0;
     }
     ++state->MacroblockAddress;
+}
+
+// MS2-FUNCTIONAL: read the initialized flag stored in the CRI demux object.
+// @0x140044f8c
+CriSint32 FUN_140044f8c(void* object)
+{
+    return object ? *((CriUint8*)object + 9) : 0;
+}
+
+// MS2-FUNCTIONAL: reset the demux object's secondary state and mark it initialized.
+// @0x140044f9c
+void FUN_140044f9c(void* object)
+{
+    *((CriUint8*)object + 10) = 0;
+    *((CriUint8*)object + 9) = 1;
+}
+
+// MS2-FUNCTIONAL: store the demux object's opaque user-data pointer.
+// @0x140044fa8
+void FUN_140044fa8(void* object, void* value)
+{
+    *(void**)((CriUint8*)object + 0x10) = value;
+}
+
+// MS2-FUNCTIONAL: clear the demux object's one-byte status flag.
+// @0x140044fd8
+void FUN_140044fd8(void* object, CriUint8 value)
+{
+    *((CriUint8*)object + 0xb) = value;
+}
+
+// MS2-FUNCTIONAL: mark the demux object's reset flag.
+// @0x140044fdc
+void FUN_140044fdc(void* object)
+{
+    *((CriUint8*)object + 10) = 1;
+}
+
+// MS2-FUNCTIONAL: decrement CRI's shared demux counter.
+// @0x140044ea8
+void FUN_140044ea8(void)
+{
+    --DAT_143ba9d28;
+}
+
+// MS2-FUNCTIONAL: lock the object's embedded CRI critical section when present.
+// @0x1400459bc
+void FUN_1400459bc(void* object)
+{
+    void* section = *(void**)((CriUint8*)object + 0x10);
+    if (section)
+        FUN_140039f50((LPCRITICAL_SECTION)section);
+}
+
+// MS2-FUNCTIONAL: unlock the object's embedded CRI critical section when present.
+// @0x1400459d4
+void FUN_1400459d4(void* object)
+{
+    void* section = *(void**)((CriUint8*)object + 0x10);
+    if (section)
+        FUN_140039f8c((LPCRITICAL_SECTION)section);
+}
+
+// MS2-FUNCTIONAL: lock the ring-buffer object's embedded CRI critical section when present.
+// @0x140046014
+void FUN_140046014(void* object)
+{
+    void* section = *(void**)((CriUint8*)object + 0x10);
+    if (section)
+        FUN_140039f50((LPCRITICAL_SECTION)section);
+}
+
+// MS2-FUNCTIONAL: unlock the ring-buffer object's embedded CRI critical section when present.
+// @0x14004602c
+void FUN_14004602c(void* object)
+{
+    void* section = *(void**)((CriUint8*)object + 0x10);
+    if (section)
+        FUN_140039f8c((LPCRITICAL_SECTION)section);
+}
+
+// MS2-FUNCTIONAL: call the stream-joint object's first virtual operation.
+// @0x140046798
+void FUN_140046798(void* object)
+{
+    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 8)))(object);
+}
+
+// MS2-FUNCTIONAL: call the stream-joint object's second virtual operation.
+// @0x1400467a0
+void FUN_1400467a0(void* object)
+{
+    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x10)))(object);
+}
+
+// MS2-FUNCTIONAL: call the stream-joint object's third virtual operation.
+// @0x1400467a8
+void FUN_1400467a8(void* object)
+{
+    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x18)))(object);
+}
+
+// MS2-FUNCTIONAL: call the stream-joint object's fourth virtual operation.
+// @0x1400467b0
+void FUN_1400467b0(void* object)
+{
+    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x20)))(object);
+}
+
+// MS2-FUNCTIONAL: call the stream-joint object's fifth virtual operation.
+// @0x1400467b8
+void FUN_1400467b8(void* object)
+{
+    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 0x28)))(object);
+}
+
+// MS2-FUNCTIONAL: call the stream-joint object's indexed range operation with default bounds.
+// @0x140046804
+void FUN_140046804(void* object, void* value)
+{
+    (*(void (**)(void*, CriSint32, CriSint32, void*))(*(void**)((CriUint8*)*(void**)object + 0x10)))(object, 0, -1, value);
+}
+
+// MS2-FUNCTIONAL: copy a null-terminated string with the executable's bounded secure CRT helper.
+// @0x140046944
+char* FUN_140046944(char* dst, size_t size, const char* src)
+{
+    strcpy_s(dst, size, src);
+    return dst;
+}
+
+// MS2-FUNCTIONAL: copy a bounded string with the executable's secure CRT helper.
+// @0x14004695c
+char* FUN_14004695c(char* dst, size_t size, const char* src, size_t count)
+{
+    strncpy_s(dst, size, src, count);
+    return dst;
+}
+
+// MS2-FUNCTIONAL: append a bounded string with the executable's secure CRT helper.
+// @0x140046974
+char* FUN_140046974(char* dst, size_t size, const char* src, size_t count)
+{
+    strncat_s(dst, size, src, count);
+    return dst;
+}
+
+// MS2-FUNCTIONAL: append a null-terminated string with the executable's secure CRT helper.
+// @0x14004698c
+char* FUN_14004698c(char* dst, size_t size, const char* src)
+{
+    strcat_s(dst, size, src);
+    return dst;
+}
+
+// MS2-FUNCTIONAL: copy the requested number of bytes with the executable's secure CRT helper.
+// @0x1400469f0
+void* FUN_1400469f0(void* dst, size_t size, const void* src, size_t count)
+{
+    memcpy_s(dst, size, src, count);
+    return dst;
 }
