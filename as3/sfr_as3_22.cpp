@@ -684,6 +684,42 @@ unsigned CountTreeWithRoot(void* node)
     return static_cast<unsigned>(count);
 }
 
+// MS2-FUNCTIONAL: hashes the eight-byte key, follows the bucket collision chain, and returns the matching cached node index.
+// @0x14268a450
+void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
+{
+    auto* output = static_cast<std::uint64_t*>(result);
+    auto* set = static_cast<unsigned char*>(setObject);
+    auto* table = *reinterpret_cast<unsigned char**>(set);
+    std::int64_t found = -1;
+    if (table) {
+        const std::uint64_t hash = (((static_cast<std::uint64_t>(key[3]) * 0x1003full + key[2]) * 0x1003full + key[1]) * 0x1003full +
+            static_cast<std::uint64_t>(key[4]) * 0xfc5d1543ec5f01ull +
+            static_cast<std::uint64_t>(key[5]) * 0x9b302c28162c6120ull +
+            static_cast<std::uint64_t>(key[7]) * 0xd7c3e496a311bbbfll +
+            static_cast<std::uint64_t>(key[6]) * 0x5d02f409d62aee81ull -
+            0x514d9afbc3e934fbull + key[0]);
+        const std::uint64_t bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
+        auto* entry = reinterpret_cast<std::int64_t*>(table + 0x10 + bucket * 0x38);
+        if (entry[0] != -2 && static_cast<std::uint64_t>(entry[1]) == bucket) {
+            for (;;) {
+                if (static_cast<std::uint64_t>(entry[1]) == bucket &&
+                    static_cast<std::uint64_t>(entry[2]) == *reinterpret_cast<const std::uint64_t*>(key)) {
+                    found = static_cast<std::int64_t>(bucket);
+                    break;
+                }
+                const std::int64_t next = entry[0];
+                if (next == -1)
+                    break;
+                entry = reinterpret_cast<std::int64_t*>(table + 0x10 + next * 0x38);
+            }
+        }
+    }
+    output[0] = found < 0 ? 0 : reinterpret_cast<std::uint64_t>(setObject);
+    output[1] = found < 0 ? 0 : static_cast<std::uint64_t>(found);
+    return result;
+}
+
 // MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
 // @0x14268a870
 void* FindTreeNodeByKey(void* node, int key)
