@@ -3553,6 +3553,26 @@ void FUN_140032b70(void* player, void* workInfo, CriUint32* output, const CriMov
     FUN_14003a108(document);
 }
 
+// MS2-FUNCTIONAL: parse the cue metadata header and raise the required working-buffer size.
+// @0x140032c70
+void FUN_140032c70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+{
+    struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
+    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    output[1] = FUN_14003a85c(document, 0, "metadata_count");
+    output[2] = FUN_14003a85c(document, 0, "metadata_size");
+    output[3] = FUN_14003a85c(document, 0, "total_points");
+    CriUint32 timeUnit = FUN_14003a85c(document, 0, "time_unit");
+    ((CriUint64*)output)[2] = timeUnit;
+    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
+    WorkSizeView* work = (WorkSizeView*)workInfo;
+    if (work->Size < suggestedSize)
+        work->Size = suggestedSize;
+    if (output[1] == 1 && output[2] != 0 && output[3] != 0 && ((CriUint64*)output)[2] != 0)
+        output[0] = 1;
+    FUN_14003a108(document);
+}
+
 // MS2-FUNCTIONAL: discard handled command chunks while returning ordinary input records to the stream.
 // @0x140033610
 void FUN_140033610(void* player)
