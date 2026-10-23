@@ -146,6 +146,8 @@ CriBool  FUN_140035710(void* player, void* yuvBuffers, void* output);
 CriSint32 FUN_140044630(void* decoder);
 CriSint32 FUN_140044f8c(void* demux);
 void     FUN_140042880(void* audioManager);
+void     FUN_1400427b0(void* audioManager);
+void     FUN_140042800(void* audioManager);
 void     FUN_140044790(void* videoDecoder);
 void     FUN_140043e20(void* alphaDecoder);
 CriSint32 FUN_140043cb0(void* decoder);
@@ -4157,6 +4159,52 @@ void FUN_1400342b0(void* player)
         void* source = movie->seekinfo_flag == 0 ? input->InputBuffer : input->HeaderBuffer;
         FUN_140034330(player, source, input->ReadBuffer, input->DataQueue);
     }
+}
+
+// MS2-FUNCTIONAL: reset the player's demux, streams, audio manager, and seek metadata for a new open.
+// @0x140031570
+void FUN_140031570(void* player)
+{
+    struct ResetView
+    {
+        CriUint8 Reserved0[0xd60];
+        CriSint32 ReadMode;
+        CriUint32 HeaderChecked;
+        void* Demux;
+        CriUint32 Reserved70;
+        CriUint32 OutputCount;
+        void* InputBuffer;
+        void* ReadBuffer;
+        void* DataQueue;
+        CriMovieInputChunk CurrentRead;
+        void* MemoryInput;
+    };
+    struct CounterResetView { CriUint8 Reserved[0xe58]; CriUint8 Counters[0x1c]; };
+    struct HeaderResetView { CriUint8 Reserved[0xe80]; CriUint32 Value; };
+    ResetView* state = (ResetView*)player;
+    CriMvDecoderHandleFields* handles = (CriMvDecoderHandleFields*)player;
+    CriMvPlyObj* movie = (CriMvPlyObj*)player;
+    state->ReadMode = 0;
+    if (handles->AudioManager)
+        FUN_1400427b0(handles->AudioManager);
+    if (state->Demux)
+        FUN_1400453c4(state->Demux);
+    FUN_140046798(state->InputBuffer);
+    FUN_140046798(state->MemoryInput);
+    if (state->DataQueue)
+        FUN_140046798(state->DataQueue);
+    if (state->ReadBuffer)
+        FUN_140046798(state->ReadBuffer);
+    if (handles->AudioManager)
+        FUN_140042800(handles->AudioManager);
+    state->CurrentRead.Data = NULL;
+    state->CurrentRead.Size = 0;
+    state->HeaderChecked = 0;
+    state->OutputCount = 0;
+    movie->decoder_error = 0;
+    memset(((CounterResetView*)player)->Counters, 0, sizeof(((CounterResetView*)player)->Counters));
+    ((HeaderResetView*)player)->Value = 0;
+    memset(&movie->seektbl, 0, 0x2c);
 }
 
 // MS2-FUNCTIONAL: perform the executable's pending start/stop state transition on the player.
