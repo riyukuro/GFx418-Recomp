@@ -96,6 +96,7 @@ class Sound
 {
 public:
     ::FMOD_RESULT getLength(unsigned* length, unsigned timeUnit);
+    ::FMOD_RESULT release();
 };
 class Channel
 {
@@ -150,6 +151,7 @@ bool QueryChannelPlaying(void* soundSource)
 }
 }
 
+int FUN_1428d8f2c(void*, bool);
 int FUN_1428d8e96(void*, int*, int*, int*, int*, int*, int*);
 int FUN_1428d8e9c(void*, void**);
 int FUN_1428d8f26(void*, float*);
@@ -353,5 +355,36 @@ bool QuerySoundFormat(void* player, unsigned* formatFlag, int* channels, int* fr
         return false;
     *formatFlag = soundFormat == 5 ? 1u : 0u;
     return true;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: gets the master channel group and applies the requested mute state on success.
+// @0x142745e70
+void SetMasterMuted(void* player, bool muted)
+{
+    void* system = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x10);
+    void* group = nullptr;
+    if (FUN_1428d8e9c(system, &group) == 0)
+        FUN_1428d8f2c(group, muted);
+}
+
+// @0x1427461c0
+void ReleasePlayerSound(void* player)
+{
+    auto** sound = reinterpret_cast<FMOD::Sound**>(static_cast<char*>(player) + 0x30);
+    if (*sound)
+        (*sound)->release();
+    *sound = nullptr;
+}
+
+// @0x1427461f0
+void ReleasePlayerSoundCopy(void* player)
+{
+    auto** sound = reinterpret_cast<FMOD::Sound**>(static_cast<char*>(player) + 0x30);
+    if (*sound)
+        (*sound)->release();
+    *sound = nullptr;
 }
 }
