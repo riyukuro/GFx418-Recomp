@@ -307,7 +307,6 @@ void AvmSprite::ForceShutdown()
 }
 
 // The frame runs in the next ExecuteFrame: the sprite moves to the optimized playlist.
-// MS2-FUNCTIONAL: same flag updates and playlist call; register allocation differs.
 // @0x1424feab0
 void AvmSprite::ExecuteFrameTags(unsigned)
 {
@@ -336,7 +335,6 @@ void AvmSprite::ExecuteInitActionFrameTags(unsigned frame)
 }
 
 // The hand cursor in button mode.
-// MS2-FUNCTIONAL: same button-mode bit; reached through a different this adjustment.
 // @0x142508540
 unsigned AvmSprite::GetCursorType() const
 {

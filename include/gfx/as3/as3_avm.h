@@ -321,7 +321,7 @@ public:
     void        QueueFrameScript(unsigned frame);
 
     UByte*      InitActionsExecuted;        // +0x50 one bit per frame (FixedBitSetLH)
-    unsigned    InitActionsExecutedSize;    // +0x58 bits
+    UPInt       InitActionsExecutedSize;    // +0x58 bits
     UByte       SprFlags;                   // +0x60 Flag_*
 };
 

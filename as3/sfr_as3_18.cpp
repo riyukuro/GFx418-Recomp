@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142509d40-0x142523170 .text$mn
 #include <math.h>
 #include <stdlib.h>
+#include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -13,6 +14,7 @@
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #undef GetObject   // windows.h
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -734,7 +736,136 @@ void MovieRoot::GetMouseCursorTypeString(ASString& str, unsigned cursorType) con
     }
 }
 
+
+// @0x14250bc40
+ASString ClassTraits::Traits::GetName() const
+{
+    return GetInstanceTraits().GetName();
+}
+
+// @0x14250d550
+ASString ClassTraits::Traits::GetQualifiedName(QNameFormat f) const
+{
+    return GetInstanceTraits().GetQualifiedName(f);
+}
+
+// @0x14250bbd0
+ASString InstanceTraits::CTraits::GetName() const
+{
+    return GetVM().GetStringManager().GetStringManager()->CreateConstString(CI.GetName());
+}
+
+// @0x14250c060
+void Object::GetNextPropertyValue(Value& value, GlobalSlotIndex ind)
+{
+    if (ind.IsValid())
+        GetDynamicProperty(AbsoluteIndex(static_cast<SPInt>(ind.Get()) - 1), value);
+}
+
+// @0x142516270
+Pickable<Instances::fl::Array> VM::MakeArray() const
+{
+    InstanceTraits::fl::Array& itr = static_cast<InstanceTraits::fl::Array&>(TraitsArray->GetInstanceTraits());
+    return itr.MakeInstance(itr);
+}
+
+// @0x142516600
+Pickable<Instances::fl::Object> VM::MakeObject() const
+{
+    InstanceTraits::fl::Object& itr = static_cast<InstanceTraits::fl::Object&>(TraitsObject->GetInstanceTraits());
+    return itr.MakeInstance(itr);
+}
+
+// @0x142516630
+Pickable<Object> Class::MakePrototype() const
+{
+    return GetVM().MakeObject();
+}
+
+// @0x1425165a0
+void InstanceTraits::Traits::MakeObject(Value& result, Traits& t)
+{
+    // Traits::Alloc inlined
+    void* mem;
+    {
+        AllocInfo info(StatMV_VM_Instance_Mem, NULL, 0);
+        mem = t.GetVM().GetMemoryHeap()->Alloc(t.GetMemSize(), &info);
+    }
+    result.Pick(new(mem) Instances::fl::Object(t));
+}
+
+// @0x142521eb0
+void AvmDisplayObj::ReleaseAS3Obj()
+{
+    reinterpret_cast<SPtr<Instances::fl_display::DisplayObject>&>(pAS3CollectiblePtr) = NULL;
+    pAS3RawPtr = NULL;
+}
+
+
+// @0x142514f70
+bool AvmInteractiveObj::IsTabable() const
+{
+    if (!pDispObj->GetVisible())
+        return false;
+    const InteractiveObject* io = GetIntObj();
+    if (io->Flags & InteractiveObject::Mask_TabEnabled)
+        return (io->Flags & InteractiveObject::Mask_TabEnabled) == InteractiveObject::Mask_TabEnabled;
+    if (io->TabIndex > 0)
+        return true;
+    return false;
+}
+
+// @0x1425142a0
+bool AvmSprite::IsFocusEnabled(FocusMovedType fmt) const
+{
+    switch (fmt)
+    {
+    case GFx_FocusMovedByMouse:
+        if (!(SprFlags & Flag_ButtonMode) && !IsTabable())
+            return false;
+        return true;
+    case GFx_FocusMovedByAS:
+        return true;
+    }
+    return ActsAsButton();
+}
+
+// @0x142514fc0
+bool AvmSprite::IsTabable() const
+{
+    if (!pDispObj->GetVisible())
+        return false;
+    const Sprite* spr = GetSprite();
+    const unsigned te = spr->InteractiveObject::Flags & InteractiveObject::Mask_TabEnabled;
+    if (te != 0)
+    {
+        if (te != InteractiveObject::Mask_TabEnabled)
+            return false;
+        // tabEnabled set: tabable unless an ancestor has tabChildren off
+        for (const InteractiveObject* p = spr->GetParent(); p; p = p->GetParent())
+        {
+            const bool off = (p->Flags >> 15) & 1;    // Mask_TabChildrenDisabled
+            if (off)
+                return false;
+        }
+        return true;
+    }
+    if (spr->TabIndex > 0)
+        return true;
+    return (SprFlags & Flag_ButtonMode) != 0;
+}
+
 }}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx {
+
+// @0x142515190
+bool DisplayObject::IsUsedAsMask() const
+{
+    return IsUsedAsMaskFlagSet();
+}
+
+}} // namespace Scaleform::GFx
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
