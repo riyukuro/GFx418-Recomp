@@ -26,6 +26,8 @@
 
 namespace Scaleform { namespace GFx {
 
+template <> void LogBase<LoadProcess>::LogParse(const char* pfmt, ...) const;
+
 // ==== GFx_AS3Support =================================================================================================
 
 // @0x1423dc110
