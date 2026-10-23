@@ -2012,6 +2012,58 @@ void FUN_14000f470(void* object, void* value)
         heap, value, object, &flags);
 }
 
+// MS2-FUNCTIONAL: intercepts constructor aliases with the prototype base and delegates other names to Object.
+// @0x140011de0
+void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
+                   Scaleform::GFx::ASString* name, Scaleform::GFx::AS2::Value* value)
+{
+    const bool constructor = name->CompareBuiltIn_CaseCheck(
+        context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor), context->IsCaseSensitive());
+    const bool constructor2 = name->CompareBuiltIn_CaseCheck(
+        context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__), context->IsCaseSensitive());
+    if (constructor || constructor2)
+    {
+        auto* prototypeBase = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+            reinterpret_cast<char*>(object) + 0x48);
+        auto* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
+            reinterpret_cast<char*>(object) - 0x20);
+        prototypeBase->GetMemberRawConstructor(owner, context, *name, value, constructor);
+        return;
+    }
+    object->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
+}
+
+// MS2-FUNCTIONAL: returns the current function object when valid, otherwise allocates a plain Object.
+// @0x140012340
+void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
+{
+    auto* object = static_cast<Scaleform::GFx::AS2::Object*>(nullptr);
+    auto* thisObject = call.ThisPtr;
+    if (thisObject && thisObject->GetObjectType() == Scaleform::GFx::AS2::ObjectInterface::Object_Function)
+    {
+        auto* function = static_cast<Scaleform::GFx::AS2::FunctionObject*>(thisObject);
+        if (!function->IsNull())
+            object = static_cast<Scaleform::GFx::AS2::Object*>(function);
+    }
+    if (!object)
+    {
+        void* storage = call.Env->GetHeap()->Alloc(0x68);
+        if (storage)
+            object = FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), call.Env);
+    }
+    call.Result->SetAsObject(object);
+    if (object)
+    {
+        auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
+        if ((*count & 0x03ffffffu) != 0)
+        {
+            --*count;
+            if ((*count & 0x03ffffffu) == 0)
+                FUN_1425925f0(object);
+        }
+    }
+}
+
 // Shared path for the generated AS3 trait getters in this range.
 static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
                             void* callback, void* base)
