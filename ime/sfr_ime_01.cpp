@@ -943,6 +943,67 @@ extern "C" void FUN_1423d95f0(void* rawArray, void* allocator, unsigned long lon
     array[2] = capacity;
 }
 
+static void cx18_ReserveGH(unsigned long long* array, unsigned long long requested, unsigned long long stride)
+{
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    if (!requested) {
+        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
+        array[0] = array[2] = 0;
+        return;
+    }
+    const unsigned long long capacity = (requested + 3) & ~3ull;
+    const unsigned long long bytes = capacity * stride;
+    if (array[0]) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(
+        DAT_143b15f60, reinterpret_cast<void*>(array[0]), bytes));
+    else {
+        unsigned allocFlags = 2;
+        array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heapVtable[10])(
+            DAT_143b15f60, bytes, &allocFlags));
+    }
+    array[2] = capacity;
+}
+
+// MS2-FUNCTIONAL: reserves four-entry-rounded 12-byte ReadBufferInfo and transform storage.
+// @0x1423d1240
+void FUN_1423d1240(unsigned long long* array, void*, unsigned long long count)
+{ cx18_ReserveGH(array, count, 0xc); }
+
+// MS2-FUNCTIONAL: reserves four-entry-rounded 32-byte AS2/AS3 Value storage.
+// @0x1423d12e0
+void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count)
+{ cx18_ReserveGH(array, count, 0x20); }
+
+// MS2-FUNCTIONAL: reserves four-entry-rounded 32-byte Value storage at the parallel array site.
+// @0x1423d7370
+void FUN_1423d7370(unsigned long long* array, void*, unsigned long long count)
+{ cx18_ReserveGH(array, count, 0x20); }
+
+static void cx18_ReserveWide(unsigned long long* array, void* allocator, unsigned long long requested, unsigned flags)
+{
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    if (!requested) {
+        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
+        array[0] = array[2] = 0;
+        return;
+    }
+    const unsigned long long capacity = (requested + 3) & ~3ull;
+    if (array[0]) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(
+        DAT_143b15f60, reinterpret_cast<void*>(array[0]), capacity * 2));
+    else array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long, unsigned*)>(heapVtable[14])(
+        DAT_143b15f60, allocator, capacity * 2, &flags));
+    array[2] = capacity;
+}
+
+// MS2-FUNCTIONAL: reserves four-entry-rounded wchar_t storage with the executable's wide-string allocation tag.
+// @0x1423d1380
+void FUN_1423d1380(unsigned long long* array, void* allocator, unsigned long long count)
+{ cx18_ReserveWide(array, allocator, count, 0x201); }
+
+// MS2-FUNCTIONAL: reserves four-entry-rounded wchar_t storage for the parallel IME text array.
+// @0x1423d5340
+void FUN_1423d5340(unsigned long long* array, void* allocator, unsigned long long count)
+{ cx18_ReserveWide(array, allocator, count, 2); }
+
 // MS2-FUNCTIONAL: walks the executable's linked string records and inserts each key/value pair by Bernstein hash.
 // @0x1423d8e80
 void FUN_1423d8e80(void* table, void* source)
