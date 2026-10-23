@@ -4,11 +4,23 @@
 // MS2-UNIT: sfr_as3_20
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142542820-0x1425584f0 .text$mn
+#include "ms2/scaleform/include/kernel/sf_string.h"
+#include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_support.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #undef GetObject
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// @0x142543f40
+bool IMEManager::GetIMEMoviePath(String& path)
+{
+    path = "";
+    return path.GetSize() != 0;
+}
+}}}
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {

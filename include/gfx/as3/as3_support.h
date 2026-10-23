@@ -54,6 +54,7 @@ class IMEManager : public ASIMEManager
 {
 public:
     IMEManager();
+    bool GetIMEMoviePath(Scaleform::String& path);
 private:
     UByte Unrecovered[0xe0 - sizeof(ASIMEManager)];
 };
