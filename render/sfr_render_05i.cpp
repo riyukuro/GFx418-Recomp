@@ -7,6 +7,7 @@
 
 #include "ms2/scaleform/include/render/text_sgmlparser.h"
 #include "ms2/scaleform/include/render/text_styledtext.h"
+#include "ms2/scaleform/include/kernel/sf_utf8util.h"
 #include <string.h>
 
 namespace Scaleform { namespace Render { namespace Text {
@@ -669,6 +670,21 @@ bool StyledText::ParseHtml(const wchar_t* phtml, UPInt htmlSize, HTMLImageTagInf
 {
     return FUN_14267b1c0(this, phtml, htmlSize, pimgInfoArr, multiline, condenseWhite,
                          pstyleMgr, txtFmt, paraFmt);
+}
+
+// MS2-FUNCTIONAL: decodes UTF-8 to the same UTF-16 buffer and forwards the same parser arguments; compiler frame differs.
+// @0x14267eff0
+bool StyledText::ParseHtml(const char* phtml, UPInt htmlSize, HTMLImageTagInfoArray* pimgInfoArr,
+                           bool multiline, bool condenseWhite, const StyleManagerBase* pstyleMgr,
+                           const TextFormat* txtFmt, const ParagraphFormat* paraFmt)
+{
+    MemoryHeap* heap = Memory::GetGlobalHeap();
+    wchar_t* wide = static_cast<wchar_t*>(heap->Alloc(htmlSize * sizeof(wchar_t) + sizeof(wchar_t)));
+    const UPInt wideSize = UTF8Util::DecodeString(wide, phtml, static_cast<SPInt>(htmlSize));
+    const bool result = FUN_14267b1c0(this, wide, wideSize, pimgInfoArr, multiline, condenseWhite,
+                                      pstyleMgr, txtFmt, paraFmt);
+    heap->Free(wide);
+    return result;
 }
 
 template class SGMLCharIter<wchar_t>;
