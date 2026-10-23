@@ -5,8 +5,6 @@
 // MS2-UNIT: sfr_as3_01c
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423e0260-0x1423f06a0 .text$mn
-// MS2-PINS-BEGIN tplpin
-// MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
@@ -1957,3 +1955,6 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??$AsString@J@Scaleform@@YA?AVString@0@AEBJ@Z 0x1423e8220
 // MS2-PIN: ??$AsString@K@Scaleform@@YA?AVString@0@AEBK@Z 0x1423e8390
 // MS2-PIN: ??_7Activation@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313ffe8
+// MS2-PIN: ?Func@?$ThunkFunc0@VXML@fl@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VXMLList@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e3c20 ; unique
+// MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e3cd0 ; unique
+// MS2-PIN: ?Func@?$ThunkFunc0@VXML@fl@Instances@AS3@GFx@Scaleform@@$01VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e3e20 ; unique
