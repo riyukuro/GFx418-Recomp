@@ -619,6 +619,10 @@ namespace Instances { namespace fl
         // target, appended to the (resolved) target object; NULL when there is no target. More than one item throws.
         // 0x142420570
         CheckResult ResolveValue(Instances::fl::XML*& r);
+        // (appended, sfr19) appends every item of l. 0x142404e90
+        void Append(const XMLList& l);
+        // (appended, sfr19) appends x. 0x142404f20
+        void Append(Instances::fl::XML* x);
 
     public:
         // native methods

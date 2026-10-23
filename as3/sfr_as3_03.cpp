@@ -2141,6 +2141,45 @@ namespace Instances { namespace fl
 }}
 }}}
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // @0x142403c10
+    void XMLElement::AddAttr(const Instances::Namespace& ns, const ASString& name, const ASString& value)
+    {
+        InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
+        Attrs.PushBack(SPtr<XMLAttr>(itr.MakeInstanceAttr(itr, ns, name, value, this)));
+    }
+
+    // @0x142404d80
+    CheckResult XMLElement::AppendChild(const Value& child)
+    {
+        return InsertChildAt(Children.GetSize(), child);
+    }
+
+    // MS2-FUNCTIONAL: exe calls the out-of-line ArrayLH PushBack 0x142420060; ours inlines it
+    // @0x142404db0
+    void XMLElement::AppendChild(const SPtr<XML>& child)
+    {
+        Children.PushBack(child);
+    }
+
+    // @0x142404e90
+    void XMLList::Append(const XMLList& l)
+    {
+        const UPInt size = l.List.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+            List.PushBack(l.List[i]);
+    }
+
+    // @0x142404f20
+    void XMLList::Append(XML* x)
+    {
+        List.PushBack(x);
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0

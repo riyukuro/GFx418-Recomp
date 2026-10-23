@@ -195,6 +195,10 @@ namespace Instances { namespace fl {
         NamespaceArray                  Namespaces;     // +0x50 declared on this element
         ArrayLH<SPtr<XMLAttr> >         Attrs;          // +0x68
         ArrayLH<SPtr<XML> >             Children;       // +0x80
+
+    public:
+        // (appended, sfr19) a new attribute name=value in ns, parented to this. 0x142403c10
+        void AddAttr(const Instances::Namespace& ns, const ASString& name, const ASString& value);
     };
 
     // A text node: Text is the content. 0x48 bytes; vftable 0x143143168.
