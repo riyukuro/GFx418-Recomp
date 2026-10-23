@@ -728,4 +728,5 @@ void FUN_14001a800(std::uint64_t* object, std::uint8_t update)
         *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(object[14]) * VideoTwipsScale.get();
     }
 }
+
 } // namespace
