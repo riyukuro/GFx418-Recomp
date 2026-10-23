@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423ff040-0x1424133c0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include <windows.h>
 #include <sys/timeb.h>
@@ -1885,6 +1886,257 @@ namespace Instances { namespace fl
             SA.Assign(newSA);
             result = this;
         }
+    }
+}}
+}}}
+
+void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // A new list of the text children.
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x1424018e0
+    void XML::AS3text(SPtr<XMLList>& result)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
+            GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
+        result = itr.MakeInstance(itr);
+        GetChildren(*result, kText);
+    }
+
+    // A new list (with this list's target, when it has one) of the text children of every item.
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x1424019b0
+    void XMLList::AS3text(SPtr<XMLList>& result)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
+        if (TargetNamespace && TargetObject && TargetProperty)
+            result = itr.MakeInstance(itr, *TargetObject, ASString(TargetProperty), *TargetNamespace);
+        else
+            result = itr.MakeInstance(itr);
+        for (UPInt i = 0; i < List.GetSize(); ++i)
+            List[i]->GetChildren(*result, XML::kText);
+    }
+}}
+
+namespace Classes { namespace fl
+{
+    // A new Object with the current settings.
+    // MS2-FUNCTIONAL: written from behaviour
+    // @0x1423ff120
+    void XML::AS3settings(SPtr<Instances::fl::Object>& result)
+    {
+        VM& vm = GetVM();
+        StringManager& sm = vm.GetStringManager();
+        FUN_142516600(vm, result);
+        result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreComments"), Value(ignoreComments));
+        result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreProcessingInstructions"), Value(ignoreProcessingInstructions));
+        result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreWhitespace"), Value(ignoreWhitespace));
+        result->AddDynamicSlotValuePair(sm.CreateConstString("prettyPrinting"), Value(prettyPrinting));
+        result->AddDynamicSlotValuePair(sm.CreateConstString("prettyIndent"), Value(prettyIndent));
+    }
+}}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace InstanceTraits { namespace fl
+{
+    // @0x142401fd0
+    void String::AS3toLocaleLowerCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        ASString str = vm.GetStringManager().CreateEmptyString();
+        if (_this.Convert2String(str))
+            result = ASString(str.ToLowerNode());
+    }
+
+    // @0x142402080
+    void String::AS3toLocaleUpperCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        ASString str = vm.GetStringManager().CreateEmptyString();
+        if (_this.Convert2String(str))
+            result = ASString(str.ToUpperNode());
+    }
+
+    // @0x142402100
+    void String::AS3toLowerCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        ASString str = vm.GetStringManager().CreateEmptyString();
+        if (_this.Convert2String(str))
+            result = ASString(str.ToLowerNode());
+    }
+
+    // @0x1424031d0
+    void String::AS3toUpperCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        ASString str = vm.GetStringManager().CreateEmptyString();
+        if (_this.Convert2String(str))
+            result = ASString(str.ToUpperNode());
+    }
+
+    // MS2-FUNCTIONAL: written from behaviour
+    // @0x142402a90
+    void String::AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsString())
+            result.Assign(_this);
+        else if (_this.IsNullOrUndefined())
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, "null", "String"));
+        else
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), "String"));
+    }
+
+    // MS2-FUNCTIONAL: written from behaviour
+    // @0x142403880
+    void String::AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (_this.IsString())
+            result.Assign(_this);
+        else if (_this.IsNullOrUndefined())
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, "null", "String"));
+        else
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), "String"));
+    }
+
+    // @0x1424026a0
+    void Namespace::AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!_this.IsNamespace())
+            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
+        result = _this.AsNamespace().GetUri();
+    }
+}}
+
+namespace Instances { namespace fl
+{
+    // "Invalid Date" for the prototype.
+    // MS2-FUNCTIONAL: stack frame differs (exe keeps the buffer cookie layout differently)
+    // @0x1424025b0
+    void Date::AS3toString(ASString& result)
+    {
+        StringManager& sm = GetVM().GetStringManager();
+        if (this == &GetTraits().GetConstructor().GetPrototype())
+        {
+            result = sm.CreateConstString("Invalid Date");
+            return;
+        }
+        char buffer[128];
+        const UPInt len = formatDateTimeString(buffer, sizeof(buffer), TimeValue, LocalTZA, true, true, false);
+        result = sm.CreateString(buffer, len);
+    }
+
+    // @0x142402b70
+    void XML::AS3toString(ASString& result)
+    {
+        VM& vm = GetVM();
+        StringBuffer buf(vm.GetMemoryHeap());
+        ToString(buf, 0);
+        result = vm.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
+    }
+
+    // Simple content: the text of every item but comments and processing instructions; else toXMLString.
+    // MS2-FUNCTIONAL: stack frame differs (the exe keeps the bool result in a home slot)
+    // @0x142402c20
+    void XMLList::AS3toString(ASString& result)
+    {
+        bool simple;
+        AS3hasSimpleContent(simple);
+        if (!simple)
+        {
+            AS3toXMLString(result);
+            return;
+        }
+
+        VM& vm = GetVM();
+        StringBuffer buf(vm.GetMemoryHeap());
+        const UPInt size = List.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            XML* x = List[i];
+            const XML::Kind k = x->GetKind();
+            if (k != XML::kComment && k != XML::kInstruction)
+                x->ToString(buf, 0);
+        }
+        result = vm.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
+    }
+
+    // @0x142403250
+    void XML::AS3toXMLString(ASString& result)
+    {
+        VM& vm = GetVM();
+        StringBuffer buf(vm.GetMemoryHeap());
+        ToXMLString(buf, 0, NULL, NULL);
+        result = vm.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
+    }
+}}
+}}}
+
+namespace
+{
+    using namespace Scaleform::GFx::AS3;
+
+    // Add the non-public namespaces of nss to na that it doesn't hold yet.
+    void AddNamespaces03(NamespaceArray& na, const NamespaceArray* nss, const Instances::Namespace& pub)
+    {
+        if (!nss)
+            return;
+        const Scaleform::UPInt n = nss->Namespaces.GetSize();
+        for (Scaleform::UPInt i = 0; i < n; ++i)
+        {
+            Instances::Namespace* ns = nss->Namespaces[i];
+            if (*ns == pub)
+                continue;
+            Scaleform::UPInt j = 0;
+            for (; j < na.Namespaces.GetSize(); ++j)
+                if (*na.Namespaces[j] == *ns)
+                    break;
+            if (j == na.Namespaces.GetSize())
+                na.Namespaces.PushBack(ns);
+        }
+    }
+}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // The items, a line each, with the namespaces in scope at the target passed down.
+    // MS2-FUNCTIONAL: the exe keeps the collected namespaces in an ArrayDH; a plain-object target ends the walk
+    // @0x142403310
+    void XMLList::AS3toXMLString(ASString& result)
+    {
+        VM& vm = GetVM();
+        const UPInt size = List.GetSize();
+        NamespaceArray na;
+        if (size)
+        {
+            const Instances::Namespace& pub = vm.GetPublicNamespace();
+            AS3::Object* o = TargetObject;
+            while (o)
+            {
+                if (IsXMLObject(o))
+                {
+                    for (XML* x = static_cast<XML*>(o); x; x = x->Parent)
+                        AddNamespaces03(na, x->GetInScopeNamespaces(), pub);
+                    break;
+                }
+                if (!IsXMLListObject(o))
+                    break;
+                XMLList* l = static_cast<XMLList*>(o);
+                for (UPInt i = 0; i < l->List.GetSize(); ++i)
+                    AddNamespaces03(na, l->List[i]->GetInScopeNamespaces(), pub);
+                o = l->TargetObject;
+            }
+        }
+
+        StringBuffer buf(vm.GetMemoryHeap());
+        for (UPInt i = 0; i < size; ++i)
+        {
+            if (i)
+                buf.AppendChar('\n');
+            List[i]->ToXMLString(buf, 0, NULL, &na);
+        }
+        result = vm.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
     }
 }}
 }}}

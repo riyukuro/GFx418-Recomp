@@ -886,6 +886,8 @@ namespace InstanceTraits { namespace fl
         static void AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);    // 0x1423e6170
         static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv); // 0x1423e61e0
         static void valueOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);  // 0x1423e62b0
+        // (appended, sfr19)
+        static void AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);   // 0x1424026a0
 
         // (appended, sfr19) the factory may outlive these traits: it forgets them.
         virtual ~Namespace() { InstanceFactory->pNamespaceInstanceTraits = NULL; }
@@ -1002,6 +1004,14 @@ namespace InstanceTraits { namespace fl
         static void AS3replace(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1423fdfa0 (appended, sfr19)
         static void AS3search(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142401fd0 (appended, sfr19)
+        static void AS3toLocaleLowerCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402080 (appended, sfr19)
+        static void AS3toLocaleUpperCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142402100 (appended, sfr19)
+        static void AS3toLowerCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x1424031d0 (appended, sfr19)
+        static void AS3toUpperCase(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
     };
 
     class XML : public CTraits
