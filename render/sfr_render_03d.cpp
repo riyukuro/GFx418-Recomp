@@ -4,9 +4,10 @@
 // instance it records them in, and the bound / hit-test templates over ShapeDataInterface.
 // MS2-UNIT: sfr_render_03d
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142620040-0x1426202f0 .text$mn
-// MS2-RANGE: 0x142623c60-0x142624020 .text$mn
-// MS2-RANGE: 0x142626190-0x142633210 .text$mn
+// MS2-RANGE: 0x142620040-0x142620160 .text$mn
+// MS2-RANGE: 0x142623c60-0x142623d00 .text$mn
+// MS2-RANGE: 0x142626190-0x14262ce60 .text$mn
+// MS2-RANGE: 0x14262cfb0-0x142633210 .text$mn
 // MS2-PIN: ?ClearAndRelease@LinearHeap@Render@Scaleform@@QEAAXXZ 0x14262a910
 // MS2-PIN: ??_G?$TransformerWrapper@UScale9GridInfo@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x14262a230
 // MS2-PIN: ??_G?$TransformerWrapper@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x14262a260

@@ -238,7 +238,7 @@ void DocView::ParseHtml(const wchar_t* pwStr, UPInt strLen, bool condenseWhite,
     OnDocumentChanged(ViewNotify_SignificantTextChange | ViewNotify_ScrollingParamsChange);
 }
 
-// @0x14260df50
+// @0x14260e010
 void DocView::AppendText(const wchar_t* pwStr, UPInt strLen)
 {
     const TextFormat*      ptxtfmt;
@@ -251,7 +251,7 @@ void DocView::AppendText(const wchar_t* pwStr, UPInt strLen)
     OnDocumentChanged(ViewNotify_TextChange | ViewNotify_ScrollingParamsChange);
 }
 
-// @0x14260e010
+// @0x14260df50
 void DocView::AppendText(const char* putf8Str, UPInt utf8Len)
 {
     const TextFormat*      ptxtfmt;
@@ -2830,7 +2830,7 @@ UPInt DocView::EditCommand(DocView::CommandType cmdId, const void* command)
 // MS2-FUNCTIONAL ??1StyledText@Text@Render@Scaleform@@UEAA@XZ: the inlined paragraph array teardown picks other callee-saved registers (r12/r14/r15 for rbp/rsi) and a 0x10 bigger frame; same calls and order
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x14318e980
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
-// MS2-PIN: ??_7?$RefCountBaseNTS@VAllocator@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x14318e738
+// MS2-PIN: ??_7?$RefCountBaseNTS@VAllocator@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
 // MS2-PIN: ??_7StyledText@Text@Render@Scaleform@@6B@ 0x143184ca0
 // MS2-PIN: ??_7?$RefCountBaseNTS@UTextFilter@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143189a00

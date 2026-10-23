@@ -359,6 +359,12 @@ void TextFormat::SetFontList(const wchar_t* pfontList, UPInt fontListSz)
     UpdateSingleFontName();
 }
 
+// @0x142608140
+void TextFormat::SetFontName(const String& fontName)
+{
+    SetFontList(fontName);
+}
+
 // @0x142608150
 void TextFormat::SetFontName(const char* pfontName, UPInt fontNameSz)
 {

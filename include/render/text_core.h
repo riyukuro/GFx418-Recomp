@@ -273,6 +273,7 @@ public:
     void SetFontList(const String& fontList);
     void SetFontList(const wchar_t* pfontList, UPInt fontListSz = SF_MAX_UPINT);
     // a single face name (the list setters decide whether it holds one)
+    void SetFontName(const String& fontName);
     void SetFontName(const char* pfontName, UPInt fontNameSz = SF_MAX_UPINT);
     void SetFontName(const wchar_t* pfontName, UPInt fontNameSz = SF_MAX_UPINT);
     void SetFontHandle(FontHandle* pfontHandle);
