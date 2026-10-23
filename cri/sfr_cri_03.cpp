@@ -15,8 +15,12 @@ extern "C" const char* DAT_143ba9d08;
 extern "C" const char* DAT_143ba9d20;
 extern "C" void* DAT_143b15f60;
 extern "C" CriUint8 DAT_143b27c80[];
+extern "C" CriUint32 DAT_143b27c60;
+extern "C" CriUint32 DAT_143b27c6c;
+extern "C" CriUint64 DAT_143b27c70;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
+void FUN_14003b2ac(void*, CriSint32, void*, CriUint32);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -363,6 +367,13 @@ CriBool criUsfCmn_GetChunkIdAndSIze(const CriUint8* data, CriUint32 size, CriUin
     return 1;
 }
 
+// MS2-FUNCTIONAL: create a UTF runtime table using the CRI heap callback convention.
+// @0x14003b348
+void criUtfRtv_Create(void* heap, void* table, CriUint32 size)
+{
+    FUN_14003b2ac(heap, 1, table, size);
+}
+
 // MS2-FUNCTIONAL: decode the executable's 0x24-byte USF standard header fields.
 // @0x14003b3fc
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header)
@@ -401,6 +412,28 @@ const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriS
 CriSint32 criVmpv_CalcMovieHandleWork(CriSint32 count)
 {
     return count * 0x8000 + 0x2084;
+}
+
+// MS2-FUNCTIONAL: return the configured movie handle limit or the default limit of sixteen.
+// @0x14003c030
+CriUint32 criVmpv_GetMaxNumberOfHandles(void)
+{
+    return DAT_143b27c70 == 0 ? 0x10 : DAT_143b27c6c;
+}
+
+// MS2-FUNCTIONAL: expose the configured movie handle count and work buffer.
+// @0x14003c060
+void* FUN_14003c060(CriUint32* count)
+{
+    *count = DAT_143b27c6c;
+    return (void*)(uintptr_t)DAT_143b27c70;
+}
+
+// MS2-FUNCTIONAL: include the configured internal frame pool in the requested count.
+// @0x14003c350
+CriSint32 decideInternalFramePoolNum(CriSint32 count)
+{
+    return count == 0 ? (CriSint32)DAT_143b27c60 : count - 1 + (CriSint32)DAT_143b27c60;
 }
 
 // MS2-FUNCTIONAL: normalize the movie player's two 64-entry audio-track maps and copy the active entries.
