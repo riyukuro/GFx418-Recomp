@@ -12,6 +12,7 @@
 
 extern void FUN_14257dc30(void*);
 extern void FUN_14257dcb0(void*);
+extern void FUN_14257dcd0(void*);
 extern void FUN_1425eec50(void*, void*, unsigned __int64);
 extern const void* FUN_14261c640(const void*, int);
 extern void FUN_142581700(void*);
@@ -303,6 +304,97 @@ void FUN_14000fbc0(void* object)
     void* ref = *reinterpret_cast<void**>(static_cast<char*>(object) + 8);
     if (ref)
         FUN_14257dcb0(ref);
+}
+
+// @0x14000f4b0
+void FUN_14000f4b0(void** object) { if (*object) FUN_14257dcb0(*object); }
+
+// @0x14000f4e0
+void FUN_14000f4e0(void** object) { if (*object) FUN_14257dcb0(*object); }
+
+// @0x14000f500
+void** FUN_14000f500(void** dst, void* value)
+{
+    if (*dst) FUN_14257dcb0(*dst);
+    *dst = value;
+    return dst;
+}
+
+// @0x14000f550
+void** FUN_14000f550(void** dst, void* value)
+{
+    if (value)
+    {
+        void* base = static_cast<char*>(value) + 0x10;
+        typedef void (*RefFn)(void*);
+        reinterpret_cast<RefFn>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(base) + 1))(base);
+    }
+    *dst = value;
+    return dst;
+}
+
+// @0x14000f5a0
+void FUN_14000f5a0(void** object)
+{
+    if (*object)
+    {
+        void* base = static_cast<char*>(*object) + 0x10;
+        typedef void (*RefFn)(void*);
+        reinterpret_cast<RefFn>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(base) + 2))(base);
+    }
+}
+
+static void ReleaseRenderEntry(void* entry)
+{
+    if (!entry) return;
+    long long* count = reinterpret_cast<long long*>(static_cast<char*>(entry) + 0x40);
+    if (--*count == 0) FUN_142581700(entry);
+}
+
+// @0x14000f5c0
+void FUN_14000f5c0(void** object) { ReleaseRenderEntry(*object); }
+
+// @0x14000f5e0
+void** FUN_14000f5e0(void** dst, void* value)
+{
+    if (value) ++*reinterpret_cast<long long*>(static_cast<char*>(value) + 0x40);
+    ReleaseRenderEntry(*dst);
+    *dst = value;
+    return dst;
+}
+
+// @0x14000f660
+void FUN_14000f660(void** object) { ReleaseRenderEntry(*object); }
+
+// @0x14000f680
+void** FUN_14000f680(void** dst, void* value)
+{
+    ReleaseRenderEntry(*dst);
+    *dst = value;
+    return dst;
+}
+
+// @0x14000f6f0
+void FUN_14000f6f0(void** object)
+{
+    if (*object)
+    {
+        void* base = static_cast<char*>(*object) + 0x10;
+        typedef void (*RefFn)(void*);
+        reinterpret_cast<RefFn>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(base) + 2))(base);
+    }
+}
+
+// @0x14000f740
+void FUN_14000f740(void** object) { if (*object) FUN_14257dcd0(*object); }
+
+// @0x14000fd10
+void** FUN_14000fd10(void** dst, void** src)
+{
+    if (*src) ++*reinterpret_cast<long long*>(static_cast<char*>(*src) + 8);
+    ReleaseRenderEntry(*dst);
+    *dst = *src;
+    return dst;
 }
 
 // @0x14000fd70
