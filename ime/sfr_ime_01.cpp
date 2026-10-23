@@ -12,6 +12,22 @@
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
 
+static HIMC cx18_ImmGetContext(HWND hwnd)
+{
+    typedef HIMC (WINAPI* Fn)(HWND);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetContext"))(hwnd);
+}
+static BOOL cx18_ImmNotifyIME(HIMC context, DWORD action, DWORD index, DWORD value)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC, DWORD, DWORD, DWORD);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmNotifyIME"))(context, action, index, value);
+}
+static BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
+{
+    typedef BOOL (WINAPI* Fn)(HWND, HIMC);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmReleaseContext"))(hwnd, context);
+}
+
 struct HWND__;
 
 namespace Scaleform { namespace GFx { namespace IME {
@@ -240,17 +256,17 @@ void FUN_1423d07e0(void* self)
         reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();
 }
 
-// MS2-FUNCTIONAL: Windows IME calls and recovered field offsets match; SDK-specific API frame differs.
+// MS2-FUNCTIONAL: Windows IME calls and field offsets match; imm32 entry points are resolved at runtime because this target does not link imm32.lib.
 // @0x1423d1c10
 void FUN_1423d1c10(void* self)
 {
     unsigned char* bytes = static_cast<unsigned char*>(self);
     HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-    HIMC context = ImmGetContext(hwnd);
-    ImmNotifyIME(context, 0x15, 4, 0);
-    ImmNotifyIME(context, 0x15, 1, 0);
-    ImmNotifyIME(context, 0x15, 3, 0);
-    ImmReleaseContext(hwnd, context);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    cx18_ImmNotifyIME(context, 0x15, 4, 0);
+    cx18_ImmNotifyIME(context, 0x15, 1, 0);
+    cx18_ImmNotifyIME(context, 0x15, 3, 0);
+    cx18_ImmReleaseContext(hwnd, context);
     **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
     *reinterpret_cast<unsigned short*>(bytes + 0xd0) = 0;
 }
