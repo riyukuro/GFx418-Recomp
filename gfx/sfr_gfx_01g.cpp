@@ -9,7 +9,8 @@
 // MS2-RANGE: 0x14258d830-0x14258d930 .text$mn
 // MS2-RANGE: 0x14258dc80-0x14258e030 .text$mn
 // MS2-RANGE: 0x14258e070-0x14258e0b0 .text$mn
-// MS2-RANGE: 0x14258e470-0x14258ec50 .text$mn
+// MS2-RANGE: 0x14258e410-0x14258e470 .text$mn
+// MS2-RANGE: 0x14258e470-0x14258ecc0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -22,6 +23,22 @@
 #include "../include/render/render_twips.h"
 
 namespace Scaleform { namespace GFx {
+
+// The parse channel of the SWF reader, out of line for Stream (Read logs through it).
+// @0x14258e410
+template <> void LogBase<Stream>::LogParse(const char* pfmt, ...) const
+{
+    va_list args;
+    va_start(args, pfmt);
+    Stream* stream = (Stream*)this;
+    if (stream->IsVerboseParse())
+    {
+        Log* log = stream->GetLog();
+        if (stream->IsLogNotNull() || log)
+            log->LogMessageVarg(LogChannel_Parse | LogMessage_Text, pfmt, args);
+    }
+    va_end(args);
+}
 
 //
 // TextFieldDef
