@@ -56,6 +56,152 @@ void** FUN_1400029f0(void** channel, void* replacement)
     return channel;
 }
 
+// MS2-FUNCTIONAL: reports whether the owned player is in an active or transitional state.
+// @0x140003490
+bool FUN_140003490(void* player)
+{
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (!impl) return false;
+    int status = reinterpret_cast<int (*)(void*)>((*reinterpret_cast<void***>(impl))[3])(impl);
+    return status >= 1 && status <= 6;
+}
+
+// MS2-FUNCTIONAL: forwards Stop to the active player implementation.
+// @0x140003520
+void FUN_140003520(void* player)
+{
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[14])(impl);
+}
+
+// MS2-FUNCTIONAL: forwards Pause to the active player implementation.
+// @0x140003540
+void FUN_140003540(void* player)
+{
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[15])(impl);
+}
+
+// MS2-FUNCTIONAL: stores the ready flag and forwards the state update to the active player.
+// @0x140003580
+void FUN_140003580(void* player, bool ready)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    bytes[0xc0] = ready;
+    void* impl = *reinterpret_cast<void**>(bytes + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[21])(impl);
+}
+
+// MS2-FUNCTIONAL: forwards playback start to the active player implementation.
+// @0x1400035b0
+void FUN_1400035b0(void* player)
+{
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[18])(impl);
+}
+
+// MS2-FUNCTIONAL: forwards playback stop to the active player implementation.
+// @0x1400035d0
+void FUN_1400035d0(void* player)
+{
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[19])(impl);
+}
+
+// MS2-FUNCTIONAL: forwards seek to the active player implementation.
+// @0x1400035f0
+void FUN_1400035f0(void* player)
+{
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[20])(impl);
+}
+
+// MS2-FUNCTIONAL: forwards the frame-ready request to the active player implementation.
+// @0x140003610
+void FUN_140003610(void* player)
+{
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[7])(impl);
+}
+
+// MS2-FUNCTIONAL: updates the reload threshold and notifies the active player.
+// @0x140003650
+void FUN_140003650(void* player, unsigned threshold)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    *reinterpret_cast<unsigned*>(bytes + 0xc8) = threshold;
+    void* impl = *reinterpret_cast<void**>(bytes + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[22])(impl);
+}
+
+// MS2-FUNCTIONAL: updates the pool count and notifies the active player.
+// @0x140003680
+void FUN_140003680(void* player, unsigned count)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    *reinterpret_cast<unsigned*>(bytes + 0xc4) = count;
+    void* impl = *reinterpret_cast<void**>(bytes + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[23])(impl);
+}
+
+// MS2-FUNCTIONAL: updates buffer time and notifies the active player.
+// @0x1400036b0
+void FUN_1400036b0(void* player, float time)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    *reinterpret_cast<float*>(bytes + 0xcc) = time;
+    void* impl = *reinterpret_cast<void**>(bytes + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[24])(impl);
+}
+
+// MS2-FUNCTIONAL: updates the open timeout and notifies the active player.
+// @0x1400036e0
+void FUN_1400036e0(void* player, float timeout)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    *reinterpret_cast<float*>(bytes + 0xd0) = timeout;
+    void* impl = *reinterpret_cast<void**>(bytes + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[26])(impl);
+}
+
+// MS2-FUNCTIONAL: forwards video information retrieval into the active player.
+// @0x140003710
+void FUN_140003710(void* player)
+{
+    auto* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(impl))[28])(impl,
+        static_cast<unsigned char*>(player) + 0xf0);
+}
+
+// MS2-FUNCTIONAL: releases an owned Scaleform reference when present.
+// @0x140003770
+void FUN_140003770(void** value) { if (*value) FUN_14257dcb0(*value); }
+// MS2-FUNCTIONAL: releases an owned Scaleform reference when present.
+// @0x140003810
+void FUN_140003810(void** value) { if (*value) FUN_14257dcb0(*value); }
+// MS2-FUNCTIONAL: releases an owned Scaleform reference when present.
+// @0x140003850
+void FUN_140003850(void** value) { if (*value) FUN_14257dcb0(*value); }
+
+// MS2-FUNCTIONAL: releases the previous interface and stores the retained replacement.
+// @0x140003a70
+void** FUN_140003a70(void** destination, void* replacement)
+{
+    if (replacement) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(replacement))[1])(replacement);
+    if (*destination) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*destination))[2])(*destination);
+    *destination = replacement;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: releases and replaces a non-null interface slot without retaining the replacement.
+// @0x140003ab0
+void** FUN_140003ab0(void** destination, void* replacement)
+{
+    if (*destination) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*destination))[2])(*destination);
+    *destination = replacement;
+    return destination;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
@@ -1175,6 +1321,8 @@ public:
     VideoObject(Environment* penv);                                     // exe 0x14000dfb0
 
     virtual ObjectType GetObjectType() const { return Object_VideoASObject; }
+    virtual InteractiveObject* GetASCharacter();
+    virtual const InteractiveObject* GetASCharacter() const;
 
 protected:
     virtual void Finalize_GC();   // exe 0x14000db80
@@ -1224,6 +1372,23 @@ VideoObject::VideoObject(Environment* penv)
     : Object(penv)
 {
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Video));
+}
+
+// MS2-FUNCTIONAL: resolves the weak character handle and returns one strong reference to the live clip.
+// @0x14000daa0
+InteractiveObject* VideoObject::GetASCharacter()
+{
+    Ptr<InteractiveObject> strong = pCharacter;
+    InteractiveObject* character = strong.GetPtr();
+    if (character) character->AddRef();
+    return character;
+}
+
+// MS2-FUNCTIONAL: const overload of the weak character handle lookup.
+// @0x14000db10
+const InteractiveObject* VideoObject::GetASCharacter() const
+{
+    return const_cast<VideoObject*>(this)->GetASCharacter();
 }
 
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling

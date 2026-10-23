@@ -304,6 +304,7 @@ public:
     ~FnCall();
 
     Log* GetLog() const; // exe 0x14294b230
+    virtual bool IsVerboseActionErrors() const { return Env && Env->IsVerboseActionErrors(); }
 
     // Argument n (0 = first), read from the environment stack below the first argument.
     Value& Arg(int n) const { return *Env->Bottom(FirstArgBottomIndex - n); }
