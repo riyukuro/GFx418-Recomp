@@ -94,7 +94,7 @@ namespace fl_display
     extern const ClassInfo StageScaleModeCI;
 }
 
-// The exe never calls a Multiname copy constructor out of line; defined inline here for the PushBack below.
+// The out-of-line copy (0x1424d8f90) is in sfr_as3_15; the PushBack below inlines it, so it is inline here.
 inline Multiname::Multiname(const Multiname& other)
     : Kind(other.Kind)
     , Obj(other.Obj)

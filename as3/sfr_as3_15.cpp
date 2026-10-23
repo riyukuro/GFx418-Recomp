@@ -18,6 +18,9 @@
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/gfx/gfx_imecandidateliststyle.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/kernel/sf_simd.h"
+#include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_utils.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -260,6 +263,8 @@ namespace Classes { namespace fl_gfx
     }
 }}
 
+UPInt FUN_142507210(VM& vm, Array<SPtr<VMAbcFile> >& files);
+
 // SystemEx / TextFieldEx natives. The display TextField is opaque here (its flags word is at +0xfc), and so is its
 // Text::DocView (TextField+0xe0), whose header does not build with the AS3 kernel headers: AlignProps is at +0x148
 // (vertical alignment in bits 2-3: none/top/bottom/center; text auto size in bits 4-5: none/shrink/fit) and the
@@ -273,6 +278,22 @@ namespace Classes { namespace fl_gfx
         AsMovieSlots(static_cast<ASVM&>(GetVM()).GetMovieImpl())->SetVerboseAction(verbose);
         // FlashUI::NeedToCheckOpCode
         *((bool*)&GetVM().GetUI() + 0xc) = verbose;
+    }
+
+    // MS2-FUNCTIONAL: same code; the exe allocates one callee-saved register less (re-reads the string node from its slot)
+    // @0x1424ca6b0
+    void SystemEx::getCodeFileNames(SPtr<Instances::fl::Array>& result)
+    {
+        // VM::GetAllLoadedAbcFiles: fills files with every loaded ABC file, returns the count.
+        Array<SPtr<VMAbcFile> > files;
+        const UPInt n = FUN_142507210(GetVM(), files);
+        SPtr<Instances::fl::Array> arr = GetVM().MakeArray();
+        for (UPInt i = 0; i < n; ++i)
+        {
+            Value v(GetVM().GetStringManager().CreateString(files[i]->GetAbcFile().Source.ToCStr()));
+            arr->SA.PushBack(v);
+        }
+        result = arr;
     }
 
     // @0x1424c9e00
@@ -1696,6 +1717,7 @@ typedef HashNode<Ptr<GFx::ASStringNode>, UInt32, GFx::AS3::ASStringNodePtrHashFu
 // MS2-FUNCTIONAL: same template body; the exe inlines CheckExpand/setRawCapacity and the entry copy, here they are calls
 // @0x1424d2be0
 template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode>(void*, const MS2_DepthToObjsNode&, UPInt);
+// MS2-FUNCTIONAL: same template body; the exe inlines CheckExpand/setRawCapacity, here it is a call
 // @0x1424d3530
 template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::add<MS2_SlotNameNode>(
     void*, const MS2_SlotNameNode&, UPInt);
@@ -1738,6 +1760,13 @@ typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<M
 // MS2-FUNCTIONAL: same template body; the exe calls CheckExpand out of line, here it is inlined
 // @0x1424d5020
 template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
+// A number formatted on its own ("{0}").
+// @0x1424d2410
+template String AsString<double>(const double&);
+// Binary search over a sorted index array with a plain comparison function.
+// @0x1424d2780
+template UPInt Alg::LowerBoundSliced<ArrayDH_POD<UPInt, 0x148>, UPInt, bool (*)(const UPInt&, const UPInt&)>(
+    const ArrayDH_POD<UPInt, 0x148>&, UPInt, UPInt, const UPInt&, bool (*)(const UPInt&, const UPInt&));
 // @0x1424dc260
 template ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyleType, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x1424dc350
@@ -1745,6 +1774,14 @@ template ArrayDataBase<Render::StrokeStyleType, AllocatorLH<Render::StrokeStyleT
 // @0x1424dc440
 template ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>,
                        AllocatorLH<GFx::AS3::SPtr<GFx::ASStringNode>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+// The interned namespace sets of a VMAbcFile (+0x40).
+// @0x1424dc530
+template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>,
+                       AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+// @0x1424dc630
+template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, 2>,
                        ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x1424dc730
 template ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>,
@@ -1778,6 +1815,84 @@ void Value::AssignUnsafe<Instances::fl::GlobalObjectCPP>(const SPtr<Instances::f
     value = p;
     if (p)
         p->AddRef();
+}
+
+// @0x1424d5560
+ASRefCountCollector::ASRefCountCollector()
+{
+    FrameCnt = 0;
+    PeakRootCount = 0;
+    LastRootCount = 0;
+    LastCollectedRoots = 0;
+    LastPeakRootCount = 0;
+    TotalFramesCount = 0;
+    LastCollectionFrameNum = 0;
+    CollectionScheduledFlags = 0;
+    SuspendCnt = 0;
+    MaxRootCount = PresetMaxRootCount = 1000;
+    MaxFramesBetweenCollections = 0;
+}
+
+// Value::AddRefInternal as the exe expands it inline.
+static SF_INLINE void MS2_StrongAddRef(const Value& v)
+{
+    Object* obj;
+    switch (v.GetKind())
+    {
+    case Value::kString:
+        v.GetStringNode()->AddRef();
+        return;
+    case Value::kNamespace:
+    case Value::kObject:
+    case Value::kClass:
+    case Value::kFunction:
+    case Value::kThunkFunction:
+        obj = v.GetObject();
+        break;
+    case Value::kThunkClosure:
+    case Value::kVTableIndClosure:
+        obj = v.GetClosure();
+        break;
+    default:
+        return;
+    }
+    if (obj)
+        obj->AddRef();
+}
+
+// A strong copy: copies other with its reference, then trades a weak reference for a strong one to the object, or
+// for undefined if the object is gone.
+// MS2-FUNCTIONAL: same code; the exe stores the undefined kind before the shared tail clears the weak flag in memory
+// @0x1424dbe60
+Value::Value(const Value& other, StrongRefType)
+{
+    SIMD::PrefetchObj(&other);
+    memcpy(this, &other, sizeof(Value));
+    const KindType ok = other.GetKind();
+    if (IsRefCounted(ok))
+    {
+        if (other.IsWeakRef())
+            ++other.Bonus.pWeakProxy->RefCount;
+        else
+            MS2_StrongAddRef(other);
+    }
+
+    if (IsWeakRef())
+    {
+        if (Bonus.pWeakProxy->pObject)
+        {
+            MS2_StrongAddRef(*this);
+            Bonus.pWeakProxy->Release();
+        }
+        else
+        {
+            SetKind(kUndefined);
+            value.VS._1.VObj = NULL;
+            value.VS._2.VObj = NULL;
+        }
+        Bonus.pWeakProxy = NULL;
+        Flags &= ~weakRefMask;
+    }
 }
 
 // @0x1424dbf70
@@ -1942,6 +2057,37 @@ static inline Pickable<Instances::Namespace> MakePublicNamespace(VM& vm, const A
 // "pkg.Name" or "pkg::Name" as a public QName; a name without a package is in the public namespace.
 // MS2-FUNCTIONAL: same code; the exe keeps the separator position in r8 and branches on the "::" decrement
 // (register allocation)
+// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
+// @0x1424d8f90
+Multiname::Multiname(const Multiname& other)
+    : Kind(other.Kind)
+    , Obj(other.Obj)
+    , Name(other.Name)
+{
+}
+
+// Sets mn from a QName object (sfr_as3_03).
+void FUN_1425273b0(Multiname& mn, const Value& qname);
+
+// @0x1424d8a90
+Multiname::Multiname(Instances::Namespace& ns, const Value& name)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    if (Value::IsObject(name.GetKind()))
+    {
+        Object* obj = name.GetObject();
+        if (obj && obj->GetTraits().GetTraitsType() == Traits_QName && obj->GetTraits().IsInstanceTraits())
+        {
+            FUN_1425273b0(*this, name);
+            return;
+        }
+    }
+    Name.AssignUnsafe(name);
+    PostProcessName(false);
+}
+
+// MS2-FUNCTIONAL: same code; the exe branches on the colon flag before decrementing pos (we select it), and allocates registers differently
 // @0x1424d9040
 Multiname::Multiname(VM& vm, const StringDataPtr& qname)
     : Kind(static_cast<Abc::MultinameKind>(0))
@@ -2135,6 +2281,50 @@ Instance::Instance(VM& vm)
 {
 }
 
+// The parent class is the class object of the parent class traits' instance traits.
+// @0x1424d6ac0
+Class::Class(ClassTraits::Traits& t)
+    : Object(t)
+    , ParentClass(t.GetParent()
+                      ? &static_cast<const ClassTraits::Traits*>(t.GetParent())->GetInstanceTraits().GetConstructor()
+                      : NULL)
+    , Unk40(1)
+{
+}
+
+// Only inlined in the exe (into the deleting destructor 0x1424e2f10); the members release themselves.
+IntervalTimer::~IntervalTimer()
+{
+}
+
+// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
+// @0x1424d7e50
+IntervalTimer::IntervalTimer(const Value& function, unsigned delay, bool timeout)
+    : Function(function)
+    , CurrentCount(0)
+    , RepeatCount(0)
+    , Interval(UInt64(delay) * 1000)
+    , InvokeTime(0)
+    , Id(0)
+    , Active(true)
+    , Timeout(timeout)
+{
+}
+
+// @0x1424d7f10
+IntervalTimer::IntervalTimer(Instances::fl_utils::Timer* timerObj, unsigned delay, unsigned curCount,
+                             unsigned repeatCount)
+    : TimerObj(timerObj)
+    , CurrentCount(curCount)
+    , RepeatCount(repeatCount)
+    , Interval(UInt64(delay) * 1000)
+    , InvokeTime(0)
+    , Id(0)
+    , Active(true)
+    , Timeout(false)
+{
+}
+
 namespace InstanceTraits {
 
 // @0x1424d9410
@@ -2315,6 +2505,23 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
 }
 }} // namespace GFx::AS3
 
+namespace Render {
+// The TreeNode::NodeData vftable (0x14317b700), stored the way TreeContainer's and TreeShape's node data store theirs.
+extern const void* const TreeNodeNodeDataVTable[];
+
+// MS2-FUNCTIONAL: the exe sets Type, Flags and pVTable in an EntryData base constructor ahead of the members;
+// EntryData has none here, so they are stored after them
+// @0x1424d9310
+TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
+{
+    Type = (UInt16)type;
+    Flags = NF_Visible;
+    pVTable = TreeNodeNodeDataVTable;
+    AproxLocalBounds.Clear();
+    AproxParentBounds.Clear();
+}
+} // namespace Render
+
 } // namespace Scaleform
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VSoundTransform@fl_media@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424cdc40
@@ -2417,3 +2624,9 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
 // MS2-PIN: ??$add@UNodeRef@?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@@?$HashSetBase@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UDynAttrsKey@Object@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@1@_K@Z 0x1424d4600
 // MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@1@_K@Z 0x1424d4dd0
 // MS2-PIN: ??$add@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBV?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@1@_K@Z 0x1424d5020
+// MS2-PIN: ??$add@U?$HashNode@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@KVASStringNodePtrHashFunc@AS3@GFx@2@@Scaleform@@@?$HashSetBase@U?$HashNode@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@KVASStringNodePtrHashFunc@AS3@GFx@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$0BEN@@2@V?$HashsetNodeEntry@U?$HashNode@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@KVASStringNodePtrHashFunc@AS3@GFx@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@KVASStringNodePtrHashFunc@AS3@GFx@2@@1@_K@Z 0x1424d3530
+// MS2-PIN: ??0?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@AEBU01@@Z 0x1424d5310
+// MS2-PIN: ??0?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@QEAA@AEBU01@@Z 0x1424d5390
+// MS2-PIN: ??0?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@QEAA@AEBU01@@Z 0x1424d5420
+// MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VNamespaceSet@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VNamespaceSet@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1424dc530
+// MS2-PIN: ??0Multiname@AS3@GFx@Scaleform@@QEAA@AEAVNamespace@Instances@123@AEBVValue@123@@Z 0x1424d8a90

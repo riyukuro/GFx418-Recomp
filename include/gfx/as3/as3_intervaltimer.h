@@ -16,6 +16,8 @@ class IntervalTimer : public ASIntervalTimerIntf
 public:
     // A flash.utils.Timer's core timer; delay in milliseconds (0x1424d7f10).
     IntervalTimer(Instances::fl_utils::Timer* timerObj, unsigned delay, unsigned curCount, unsigned repeatCount);
+    // (appended, sfr19) a setInterval/setTimeout timer calling function every delay milliseconds (0x1424d7e50).
+    IntervalTimer(const Value& function, unsigned delay, bool timeout = false);
 
     virtual ~IntervalTimer();
 
