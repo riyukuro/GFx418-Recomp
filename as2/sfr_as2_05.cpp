@@ -105,6 +105,9 @@
 // MS2-RANGE: 0x14294b120-0x14294b162 .text$mn
 // MS2-RANGE: 0x14294b090-0x14294b10c .text$mn
 // MS2-RANGE: 0x142949860-0x142949892 .text$mn
+// MS2-RANGE: 0x1429540c0-0x142954122 .text$mn
+// MS2-RANGE: 0x14294a040-0x14294a0a5 .text$mn
+// MS2-RANGE: 0x1429412b0-0x14294132f .text$mn
 // MS2-RANGE: 0x14294ab70-0x14294ade1 .text$mn
 // MS2-RANGE: 0x14294a1e0-0x14294a2a6 .text$mn
 // MS2-RANGE: 0x14294a2b0-0x14294a370 .text$mn
@@ -2125,6 +2128,46 @@ void SelectionCtorFunction::GetFocusArray(const FnCall& fn)
         }
         fn.Result->SetAsObject(pobj);
     }
+}
+
+// @0x1429412b0
+void ValueProperty::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
+{
+    switch (operation)
+    {
+    case ASRefCountBaseType::Operation_Release:
+        GetterMethod.ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+        SetterMethod.ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_MarkInCycle:
+        GetterMethod.ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+        SetterMethod.ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_ScanInUse:
+        GetterMethod.ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+        SetterMethod.ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+        break;
+    default:;
+    }
+}
+
+// The out-of-line copy of the inline Value::GetCharacterNamePath.
+// @0x14294a040
+SF_NOINLINE const ASString& Value_GetCharacterNamePath(const Value* pval, Environment* penv)
+{
+    return pval->GetCharacterNamePath(penv);
+}
+
+// The scope object of the entry: the script object, or the character's script side.
+// @0x1429540c0
+ObjectInterface* WithStackEntry::GetObjectInterface() const
+{
+    bool               isObject = IsObject != 0;
+    InteractiveObject* pch      = pCharacter;
+    if (isObject)
+        return pObject;
+    AvmCharacter* pavm = !pch ? 0 : AS2::ToAvmCharacter(pch);
+    return pavm;
 }
 }}} // namespace Scaleform::GFx::AS2
 

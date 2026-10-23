@@ -170,6 +170,8 @@ public:
     };
     unsigned BlockEndPc : 31; // +0x08
     unsigned IsObject   : 1;
+
+    ObjectInterface* GetObjectInterface() const; // exe 0x1429540c0
 };
 typedef ArrayLH_POD<WithStackEntry, StatMV_ActionScript_Mem> WithStackArray;
 
