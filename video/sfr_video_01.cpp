@@ -729,6 +729,19 @@ void FUN_140005c20(void** array, Scaleform::UPInt size)
     fields[1] = size;
 }
 
+// MS2-FUNCTIONAL: resizes the 12-byte record array and clears each newly exposed record.
+// @0x140005ca0
+void FUN_140005ca0(void** array, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1], capacity = fields[2];
+    if (size < oldSize) { if (size < capacity / 2) FUN_140005260(array, array, size); }
+    else if (capacity <= size) FUN_140005260(array, array, size + (size >> 2));
+    fields[1] = size;
+    if (oldSize < size && *array)
+        memset(static_cast<unsigned char*>(*array) + oldSize * 12, 0, (size - oldSize) * 12);
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
