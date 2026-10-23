@@ -69,6 +69,12 @@ public:
     static void SpriteMoveTo(const FnCall& fn);
     static void SpriteLineTo(const FnCall& fn);
     static void SpriteCurveTo(const FnCall& fn);
+    static void SpriteGotoAndStop(const FnCall& fn);
+    static void SpriteGotoAndPlay(const FnCall& fn);
+    static void SpriteRemoveMovieClip(const FnCall& fn);
+    static void SpriteGetNextHighestDepth(const FnCall& fn);
+    static void SpriteGetInstanceAtDepth(const FnCall& fn);
+    static void SpriteSetMask(const FnCall& fn);
     static void SpriteBeginGradientFill(const FnCall& fn);
     static void SpriteBeginBitmapFill(const FnCall& fn);
     static void SpriteLineGradientStyle(const FnCall& fn);

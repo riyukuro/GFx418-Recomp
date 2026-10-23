@@ -7,8 +7,10 @@
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142902a00 .text$mn
 // MS2-RANGE: 0x142902a10-0x1429033c0 .text$mn
-// MS2-RANGE: 0x1429035a0-0x142903650 .text$mn
-// MS2-RANGE: 0x142903910-0x142903b30 .text$mn
+// MS2-RANGE: 0x1429035a0-0x142903b30 .text$mn
+// MS2-RANGE: 0x142905d70-0x142905e00 .text$mn
+// MS2-RANGE: 0x142906330-0x1429064b0 .text$mn
+// MS2-RANGE: 0x142906a90-0x142906ba0 .text$mn
 // MS2-RANGE: 0x142906d80-0x142906de0 .text$mn
 // MS2-RANGE: 0x142906fc0-0x142908840 .text$mn
 // MS2-RANGE: 0x142908c30-0x142908e90 .text$mn
@@ -827,6 +829,111 @@ void AvmSprite::SpriteLineStyle(const FnCall& fn)
             pdc->SetNoLine();
         }
     }
+}
+
+// A frame label or a 1-based frame number; unknown labels are ignored.
+void AvmSprite::SpriteGotoAndStop(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    if (fn.NArgs < 1)
+    {
+        psprite->LogScriptWarning("AvmSprite::SpriteGotoAndStop needs one arg");
+        return;
+    }
+    const Value& arg = fn.Arg(0);
+    unsigned frame = unsigned(-1);
+    if (arg.IsString())
+    {
+        ASString label = arg.ToString(fn.Env);
+        if (!psprite->GetLabeledFrame(label.ToCStr(), &frame))
+            return;
+    }
+    else
+        frame = arg.ToUInt32(fn.Env) - 1;
+    psprite->GotoFrame(frame);
+    psprite->SetPlayState(State_Stopped);
+}
+
+void AvmSprite::SpriteGotoAndPlay(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    if (fn.NArgs < 1)
+    {
+        psprite->LogScriptWarning("AvmSprite::SpriteGotoAndPlay needs one arg");
+        return;
+    }
+    const Value& arg = fn.Arg(0);
+    unsigned frame = unsigned(-1);
+    if (arg.IsString())
+    {
+        ASString label = arg.ToString(fn.Env);
+        if (!psprite->GetLabeledFrame(label.ToCStr(), &frame))
+            return;
+    }
+    else
+        frame = arg.ToUInt32(fn.Env) - 1;
+    psprite->GotoFrame(frame);
+    psprite->SetPlayState(State_Playing);
+}
+
+// Only clips at script depths (>= 0) can be removed.
+void AvmSprite::SpriteRemoveMovieClip(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    if (psprite->Depth < 16384)
+        psprite->LogScriptWarning("%s.removeMovieClip() failed - depth must be >= 0", psprite->GetName().ToCStr());
+    else
+        psprite->InteractiveObject::RemoveDisplayObject();
+}
+
+// MS2-FUNCTIONAL the exe clamps the depth before reading fn.Result and keeps 0 in ebp
+// @0x142906330
+void AvmSprite::SpriteGetNextHighestDepth(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+    {
+        int depth = Alg::Max(psprite->mDisplayList.GetLargestDepthInUse() - 16383, 0);
+        fn.Result->SetInt(depth);
+    }
+}
+
+void AvmSprite::SpriteGetInstanceAtDepth(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite && fn.NArgs >= 1)
+    {
+        int depth = int(fn.Arg(0).ToNumber(fn.Env)) + 16384;
+        DisplayObjectBase* pch = psprite->GetCharacterAtDepth(depth);
+        if (pch)
+            fn.Result->SetAsCharacter(pch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pch) : 0);
+    }
+}
+
+// null or a non-sprite removes the mask.
+void AvmSprite::SpriteSetMask(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 1)
+        return;
+    if (!fn.Arg(0).IsNull())
+    {
+        InteractiveObject* pch = fn.Arg(0).ToCharacter(fn.Env);
+        if (pch)
+        {
+            psprite->SetMask(pch->IsSprite() ? static_cast<Sprite*>(pch) : 0);
+            return;
+        }
+    }
+    psprite->SetMask(0);
 }
 
 // this is in the prototype chain of the argument (interfaces not counted).
