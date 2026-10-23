@@ -2910,6 +2910,35 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
     TraitsNamespace->RegisterSlots();
 }
 
+// The movie's VM: the classes the movie root makes its display, geometry and event objects from, looked up once.
+// @0x1424d5600
+ASVM::ASVM(MovieRoot* pmr, FlashUI& ui, FileLoader& loader, StringManager& sm, ASRefCountCollector& gc)
+    : VM(ui, loader, sm, gc), pMovieRoot(pmr), ExtensionsEnabled(false)
+{
+    GraphicsClass = GetClass(StringDataPtr("flash.display.Graphics"));
+    TransformClass = GetClass(StringDataPtr("flash.geom.Transform"));
+    MatrixClass = GetClass(StringDataPtr("flash.geom.Matrix"));
+    Matrix3DClass = GetClass(StringDataPtr("flash.geom.Matrix3D"));
+    PerspectiveProjectionClass = GetClass(StringDataPtr("flash.geom.PerspectiveProjection"));
+    ColorTransformClass = GetClass(StringDataPtr("flash.geom.ColorTransform"));
+    EventClass = GetClass(StringDataPtr("flash.events.Event"));
+    MouseEventClass = GetClass(StringDataPtr("flash.events.MouseEvent"));
+    KeyboardEventClass = GetClass(StringDataPtr("flash.events.KeyboardEvent"));
+    FocusEventClass = GetClass(StringDataPtr("flash.events.FocusEvent"));
+    TextEventClass = GetClass(StringDataPtr("flash.events.TextEvent"));
+    MouseEventExClass = GetClass(StringDataPtr("scaleform.gfx.MouseEventEx"));
+    KeyboardEventExClass = GetClass(StringDataPtr("scaleform.gfx.KeyboardEventEx"));
+    FocusEventExClass = GetClass(StringDataPtr("scaleform.gfx.FocusEventEx"));
+    TextEventExClass = GetClass(StringDataPtr("scaleform.gfx.TextEventEx"));
+    TimerEventClass = GetClass(StringDataPtr("flash.events.TimerEvent"));
+    ProgressEventClass = GetClass(StringDataPtr("flash.events.ProgressEvent"));
+    PointClass = GetClass(StringDataPtr("flash.geom.Point"));
+    RectangleClass = GetClass(StringDataPtr("flash.geom.Rectangle"));
+    TextFormatClass = GetClass(StringDataPtr("flash.text.TextFormat"));
+    EventDispatcherClass = GetClass(StringDataPtr("flash.events.EventDispatcher"));
+    Vector3DClass = GetClass(StringDataPtr("flash.geom.Vector3D"));
+}
+
 // Only inlined in the exe (into the deleting destructor 0x1424e2f10); the members release themselves.
 IntervalTimer::~IntervalTimer()
 {
@@ -3303,3 +3332,4 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??_7VM@AS3@GFx@Scaleform@@6B@ 0x14317b858
 // MS2-PIN: ??_7Anonimous@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b538
 // MS2-PIN: ??_7Void@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b5c0
+// MS2-PIN: ??_7ASVM@AS3@GFx@Scaleform@@6B@ 0x14317d8b0
