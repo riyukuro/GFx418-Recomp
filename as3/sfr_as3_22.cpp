@@ -101,6 +101,7 @@ class Channel
 {
 public:
     ::FMOD_RESULT isPlaying(bool* playing);
+    ::FMOD_RESULT getPosition(unsigned* position, unsigned timeUnit);
 };
 }
 
@@ -149,6 +150,7 @@ bool QueryChannelPlaying(void* soundSource)
 }
 }
 
+int FUN_1428d8e96(void*, int*, int*, int*, int*, int*, int*);
 int FUN_1428d8e9c(void*, void**);
 int FUN_1428d8f26(void*, float*);
 int FUN_1428d8eea(void*, float*);
@@ -197,5 +199,53 @@ float QueryChannelVolume(void* player)
     if (channel)
         FUN_1428d8f26(channel, &volume);
     return volume;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: preserves the executable's time-unit conversions and both FMOD position queries.
+// @0x1427458e0
+float QueryChannelTime(void* player)
+{
+    void* channel = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x38);
+    if (!channel)
+        return 0.0f;
+
+    unsigned offset = 0;
+    void* soundSource = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30);
+    if (soundSource) {
+        void* metadata = *reinterpret_cast<void**>(static_cast<char*>(soundSource) + 0x38);
+        if (metadata) {
+            const auto numerator = *reinterpret_cast<int*>(static_cast<char*>(metadata) + 0x1c) * 1000;
+            const auto denominator = *reinterpret_cast<unsigned*>(static_cast<char*>(metadata) + 0x14);
+            if (denominator)
+                offset = static_cast<unsigned>(numerator) / denominator;
+        }
+    }
+
+    unsigned position = 0;
+    unsigned dspPosition = 0;
+    reinterpret_cast<FMOD::Channel*>(channel)->getPosition(&position, 1);
+    reinterpret_cast<FMOD::Channel*>(channel)->getPosition(&dspPosition, 4);
+    (void)dspPosition;
+    return static_cast<float>(position - offset) / 1000.0f;
+}
+
+// MS2-FUNCTIONAL: stores both flags and the system pointer before querying and caching the software rate.
+// @0x142745bc0
+bool InitializeAudioSystem(void* player, void* system, unsigned char flag0, unsigned char flag1)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    bytes[0xf0] = flag0;
+    bytes[0xf1] = flag1;
+    *reinterpret_cast<void**>(bytes + 0x10) = system;
+    if (!system)
+        return false;
+
+    int rate = 0;
+    FUN_1428d8e96(system, &rate, nullptr, nullptr, nullptr, nullptr, nullptr);
+    *reinterpret_cast<float*>(bytes + 0xf4) = static_cast<float>(rate);
+    return true;
 }
 }
