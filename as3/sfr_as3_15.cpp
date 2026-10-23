@@ -28,6 +28,7 @@
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
+#include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -2115,6 +2116,10 @@ template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>,
 template ArrayDataBase<GFx::AS3::Abc::MethodBodyInfo::Exception,
                        AllocatorLH<GFx::AS3::Abc::MethodBodyInfo::Exception, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
                        ArrayDefaultPolicy>::~ArrayDataBase();
+// An array of namespace sets, out of line
+// @0x1424dc4b0
+template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, 2>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x1424dc730
 template ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>,
                        ArrayDefaultPolicy>::~ArrayDataBase();
@@ -2715,6 +2720,22 @@ UDBase::UDBase(ClassTraits::Traits& t)
 
 } // Classes
 
+// VM::PrepareClassTraits: registers tr and hands it on
+static inline Pickable<ClassTraits::Traits> MS2_PrepareClassTraits(VM& vm, ClassTraits::Traits* tr)
+{
+    vm.RegisterClassTraits(*tr);
+    return Pickable<ClassTraits::Traits>(tr);
+}
+
+// @0x1424dc160
+XMLSupport::XMLSupport(VM& vm)
+    : GASRefCountBase(vm.GetGCPtr()), Enabled(true), pVM(&vm),
+      TraitsQName(MS2_PrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::QName(vm))),
+      TraitsXML(MS2_PrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::XML(vm))),
+      TraitsXMLList(MS2_PrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::XMLList(vm)))
+{
+}
+
 // MS2-FUNCTIONAL: same code; the exe keeps file in r15 (and saves an unused r12)
 // @0x1424dbb30
 VMAbcFile::VMAbcFile(VM& vm, const Ptr<Abc::File>& file)
@@ -3124,3 +3145,4 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??$add@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBQEAVGASRefCountBase@AS3@GFx@1@_K@Z 0x1424d29d0
 // MS2-PIN: ??_7UDBase@Classes@AS3@GFx@Scaleform@@6B@ 0x14317f778
 // MS2-PIN: ??_7VMAbcFile@AS3@GFx@Scaleform@@6B@ 0x14317b750
+// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317f9e0

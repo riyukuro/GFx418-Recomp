@@ -51,6 +51,8 @@ public:
     MemoryHeap*             GetMemoryHeap() const       { return MHeap; }
     // (appended, sfr19) remembers file (not owned) unless the VM is being destroyed. 0x1424eaf00
     void AddVMAbcFileWeak(VMAbcFile* file);
+    // (appended, sfr19) adds tr to the VM's class set under its name and namespace. 0x1425210e0
+    void RegisterClassTraits(ClassTraits::Traits& tr);
     FlashUI&                GetUI() const               { return UI; }
     Pickable<Instances::fl::Array> MakeArray() const;    // 0x142516270
     Pickable<Instances::fl::Object> MakeObject() const;  // 0x142516600 (appended, sfr15)
@@ -295,6 +297,7 @@ class XMLSupport : public GASRefCountBase
 {
 public:
     virtual ~XMLSupport();                                                                              // slot 4
+    virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // slot 0, 0x142504520 (appended, sfr19)
 
     // overloads: MSVC gives the later declaration the earlier slot
     virtual CheckResult EqualsXML(bool& result, Instances::fl::XML& l, Instances::fl::XML& r) const;    // slot 7
@@ -312,8 +315,16 @@ public:
     virtual const ClassTraits::Traits* GetClassTraitsXMLList() const;                                   // slot 18
     virtual InstanceTraits::Traits* GetITraitsXMLList() const;                                          // slot 19
 
+    // (appended, sfr19) the E4X-enabled support: makes and registers the QName, XML and XMLList class traits.
+    // 0x1424dc160
+    XMLSupport(VM& vm);
+
 private:
-    XMLSupport();
+    bool                        Enabled;        // +0x20 (appended, sfr19)
+    VM*                         pVM;            // +0x28
+    SPtr<ClassTraits::Traits>   TraitsQName;    // +0x30
+    SPtr<ClassTraits::Traits>   TraitsXML;      // +0x38
+    SPtr<ClassTraits::Traits>   TraitsXMLList;  // +0x40
 };
 
 // The collector every object of this VM registers with.
