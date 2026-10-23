@@ -48,6 +48,7 @@ extern void* PTR_LAB_1431b6540;
 extern void* PTR_FUN_1431b64f0;
 extern void* PTR_LAB_1431b6440;
 extern void* PTR_LAB_1431b6430;
+extern void* PTR_FUN_1431b7360;
 extern void* DAT_143b274d8;
 extern void* DAT_143b274e0;
 extern void* DAT_143b27518;
@@ -2072,6 +2073,36 @@ void* FUN_14000fe50(void* object, unsigned flags)
         FUN_14257dcb0(resource);
     if (flags & 1)
         ::operator delete(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the executable base constructor and initializes the recovered application fields.
+// @0x1400140e0
+void* FUN_1400140e0(void* object)
+{
+    extern void FUN_14245f780(void*);
+    FUN_14245f780(object);
+    auto* bytes = static_cast<unsigned char*>(object);
+    *reinterpret_cast<void**>(bytes) = PTR_FUN_1431b7360;
+    *reinterpret_cast<void**>(bytes + 0x50) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0x58) = nullptr;
+    *reinterpret_cast<unsigned*>(bytes + 0x98) = 0;
+    *reinterpret_cast<void**>(bytes + 0xa0) = nullptr;
+    *reinterpret_cast<unsigned*>(bytes + 0xb8) = 0;
+    *reinterpret_cast<void**>(bytes + 0xc0) = nullptr;
+    *reinterpret_cast<unsigned*>(bytes + 0xd8) = 0;
+    *reinterpret_cast<double*>(bytes + 0x88) = 1.0;
+    bytes[0x60] = 0;
+    bytes[0x74] = 0;
+    *reinterpret_cast<float*>(bytes + 0x64) = 0.1f;
+    *reinterpret_cast<float*>(bytes + 0x6c) = 0.08f;
+    *reinterpret_cast<unsigned*>(bytes + 0x6c) = 2;
+    *reinterpret_cast<float*>(bytes + 0x70) = 5.0f;
+    *reinterpret_cast<float*>(bytes + 0x78) = 0.0f;
+    *reinterpret_cast<unsigned*>(bytes + 0x7c) = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0x80) = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0x84) = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0x90) = 0;
     return object;
 }
 
