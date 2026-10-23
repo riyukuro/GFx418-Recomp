@@ -8,6 +8,7 @@
 #include "ms2/scaleform/include/render/text_sgmlparser.h"
 #include "ms2/scaleform/include/render/text_styledtext.h"
 #include "ms2/scaleform/include/kernel/sf_utf8util.h"
+#include "ms2/scaleform/include/kernel/sf_alg.h"
 #include <string.h>
 
 namespace Scaleform { namespace Render { namespace Text {
@@ -32,6 +33,20 @@ template<> __declspec(dllexport) int SGMLElementDesc::Comparator<wchar_t>::Less(
 {
     return (-SGMLCharIter<wchar_t>::StrCompare(key.Str, element.ElemName, key.Size)) < 0;
 }
+
+}}} // namespace Scaleform::Render::Text
+
+namespace Scaleform { namespace Alg {
+using SGMLElementLessFn = int (*)(const Render::Text::SGMLElementDesc&,
+    const Render::Text::SGMLElementDesc::Comparable<wchar_t>&);
+// @0x14267b120
+template UPInt LowerBoundSliced<const Render::Text::SGMLElementDesc*,
+    Render::Text::SGMLElementDesc::Comparable<wchar_t>, SGMLElementLessFn>(
+    const Render::Text::SGMLElementDesc* const&, UPInt, UPInt,
+    const Render::Text::SGMLElementDesc::Comparable<wchar_t>&, SGMLElementLessFn);
+}}
+
+namespace Scaleform { namespace Render { namespace Text {
 
 // @0x14267dbe0
 StyledText::HTMLImageTagInfo::~HTMLImageTagInfo()
