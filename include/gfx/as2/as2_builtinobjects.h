@@ -62,6 +62,9 @@ public:
     // Gives pobj its own empty _listeners array (exe 0x142961ef0).
     static bool InitializeInstance(ASStringContext* psc, ObjectInterface* pobj);
 
+    AsBroadcaster(Environment* penv); // exe 0x142918470
+    virtual ObjectType GetObjectType() const; // exe 0x142954140: Object_AsBroadcaster
+
 protected:
     void commonInit(Environment* penv); // exe 0x142994e50
 };
@@ -76,16 +79,32 @@ public:
     static void BroadcastMessage(const FnCall& fn); // exe 0x1428fbdc0
     static void RemoveListener(const FnCall& fn);   // exe 0x1428fbea0
 };
-class ExternalInterface : public Object {};
+class ExternalInterface : public Object
+{
+public:
+    ExternalInterface(Environment* penv); // exe 0x14291bbd0
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954240: Object_ExternalInterface
+};
 class KeyObject : public Object {};
-class Math : public Object {};
+class Math : public Object
+{
+public:
+    Math(Environment* penv); // exe 0x14291e1a0
+};
 class MouseObject : public Object
 {
+public:
+    MouseObject(Environment* penv); // exe 0x14291eb20
+
 protected:
     void commonInit(Environment* penv); // exe 0x142995040
 };
 class Selection : public Object
 {
+public:
+    Selection(Environment* penv); // exe 0x1429204d0
+
 protected:
     void commonInit(Environment* penv); // exe 0x142995100
 };
@@ -234,8 +253,14 @@ protected:
 class NumberObject : public Object
 {
 public:
-    Number NumberValue; // +0x68
-    String StringValue; // +0x70 text of the last ToString
+    Number   NumberValue; // +0x68
+    StringLH StringValue; // +0x70 text of the last ToString
+
+    NumberObject(Environment* penv);           // exe 0x14291f430: 0
+    NumberObject(Environment* penv, Number v); // exe 0x14291f4b0
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429542b0: Object_Number
+    virtual Value      GetValue() const;      // exe 0x142956c90: NumberValue
 
     // Text of the value in the radix (see NumberUtil::ToString), kept alive in StringValue.
     const char* ToString(int radix)
@@ -259,6 +284,8 @@ class SharedObject : public Object
 {
 public:
     SharedObject(Environment* penv); // exe 0x142920710
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954300: Object_SharedObject
 
     String Name;      // +0x68
     String LocalPath; // +0x70

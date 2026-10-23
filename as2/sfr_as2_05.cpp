@@ -185,7 +185,7 @@ void MovieClipObject::Finalize_GC()
 // @0x142942e30
 void NumberObject::Finalize_GC()
 {
-    StringValue.~String();
+    StringValue.~StringLH();
     Object::Finalize_GC();
 }
 

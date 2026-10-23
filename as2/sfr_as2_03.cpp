@@ -19,6 +19,13 @@
 // MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
 // MS2-RANGE: 0x142919a00-0x142919af0 .text$mn
 // MS2-RANGE: 0x142917ed0-0x1429180c0 .text$mn
+// MS2-RANGE: 0x14291f430-0x14291f540 .text$mn
+// MS2-RANGE: 0x14291e1a0-0x14291e210 .text$mn
+// MS2-RANGE: 0x14291eb20-0x14291eb90 .text$mn
+// MS2-RANGE: 0x1429204d0-0x142920540 .text$mn
+// MS2-RANGE: 0x142918470-0x1429184e0 .text$mn
+// MS2-RANGE: 0x14291bbd0-0x14291bc40 .text$mn
+// MS2-RANGE: 0x142920710-0x142920790 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -123,6 +130,62 @@ ArrayObject::ArrayObject(Environment* penv)
     : Object(penv), LogPtr(penv->GetTarget()->GetLog()), RecursionCount(0), LengthValueOverriden(false)
 {
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Array));
+}
+
+// @0x14291f430
+NumberObject::NumberObject(Environment* penv)
+    : Object(penv), NumberValue(0)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Number));
+}
+
+// @0x14291f4b0
+NumberObject::NumberObject(Environment* penv, Number v)
+    : Object(penv), NumberValue(v)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Number));
+}
+
+// @0x14291e1a0
+Math::Math(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Math));
+}
+
+// @0x14291eb20
+MouseObject::MouseObject(Environment* penv)
+    : Object(penv)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Mouse));
+}
+
+// @0x1429204d0
+Selection::Selection(Environment* penv)
+    : Object(penv)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Selection));
+}
+
+// @0x142918470
+AsBroadcaster::AsBroadcaster(Environment* penv)
+    : Object(penv)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_AsBroadcaster));
+}
+
+// @0x14291bbd0
+ExternalInterface::ExternalInterface(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_ExternalInterface));
+}
+
+// @0x142920710
+SharedObject::SharedObject(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_SharedObject));
 }
 
 // @0x1429237f0
@@ -378,3 +441,17 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
 // MS2-PIN: ??_7ArrayObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ad30
 // MS2-PIN: ??_7ArrayObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ad78
+// MS2-PIN: ??_7NumberObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b140
+// MS2-PIN: ??_7NumberObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b188
+// MS2-PIN: ??_7Math@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b960
+// MS2-PIN: ??_7Math@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b9a8
+// MS2-PIN: ??_7MouseObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ca18
+// MS2-PIN: ??_7MouseObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ca60
+// MS2-PIN: ??_7Selection@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d278
+// MS2-PIN: ??_7Selection@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d2c0
+// MS2-PIN: ??_7AsBroadcaster@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321bdc8
+// MS2-PIN: ??_7AsBroadcaster@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321be10
+// MS2-PIN: ??_7ExternalInterface@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ce68
+// MS2-PIN: ??_7ExternalInterface@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ceb0
+// MS2-PIN: ??_7SharedObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321da98
+// MS2-PIN: ??_7SharedObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321dae0
