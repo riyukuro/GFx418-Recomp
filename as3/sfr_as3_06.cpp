@@ -19,6 +19,7 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 }}
 #include "ms2/scaleform/include/render/render_gradients.h"
 #include "ms2/scaleform/include/render/render_twips.h"
+#include "ms2/scaleform/include/render/render_filters.h"
 #undef GetObject   // windows.h
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -2520,6 +2521,48 @@ CheckResult VectorBase<UInt32>::Set(UInt32 ind, const Value& v, const ClassTrait
 
 }}} // namespace Scaleform::GFx::AS3
 
+// The loader's content LoaderInfo (Loader::GetContentLoaderInfo, out of line in the exe).
+// @0x142443d90
+Scaleform::GFx::AS3::Instances::fl_display::LoaderInfo* FUN_142443d90(Scaleform::GFx::AS3::Instances::fl_display::Loader* pthis)
+{
+    return pthis->pContentLoaderInfo.GetPtr();
+}
+
+// FilterSet::AddFilter, out of line in the exe (called from the filter conversion code).
+// @0x142440dd0
+void FUN_142440dd0(Scaleform::Render::FilterSet* pset, Scaleform::Render::Filter* pfilter)
+{
+    pset->AddFilter(pfilter);
+}
+
+// The frame script table destructor (an unreferenced COMDAT): Clear inlined.
+// MS2-FUNCTIONAL: ours calls the out-of-line Clear
+// @0x142440e50
+void FUN_142440e50(Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript* pthis)
+{
+    pthis->~FrameScript();
+}
+
+// ASVM::_constructInstance (exe body; as3_asvm.h clashes with as3_support.h's MovieRoot in this unit).
+bool FUN_142531f40(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>& pobj,
+                   Scaleform::GFx::AS3::Object* classObj, unsigned argc, const Scaleform::GFx::AS3::Value* argv);
+
+// A Scene object standing for the whole clip (no scene table): an unreferenced MovieClip helper.
+// MS2-FUNCTIONAL: written from the exe's control flow
+// @0x142440f80
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::Scene>
+FUN_142440f80(Scaleform::GFx::AS3::Instances::fl_display::MovieClip* pthis)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx;
+    using namespace Scaleform::GFx::AS3;
+    VM& vm = pthis->GetVM();
+    SPtr<Instances::fl_display::Scene> scene;
+    FUN_142531f40(vm, reinterpret_cast<SPtr<Object>&>(scene), vm.GetClass(StringDataPtr("flash.display.Scene")), 0, NULL);
+    scene->SpriteObj = static_cast<GFx::Sprite*>(pthis->pDispObj.GetPtr());
+    return scene;
+}
+
 // Graphics::AcquirePath: marks the display object dirty and starts a new path (a new shape when asked).
 // noinline: the gradient helper calls it out of line.
 // @0x142440d90
@@ -2539,8 +2582,9 @@ void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, 
                    const Scaleform::GFx::AS3::Value* argv, Scaleform::Render::ComplexFill* pfill)
 {
     using namespace Scaleform;
-    using namespace Scaleform::GFx;
     using namespace Scaleform::GFx::AS3;
+    using GFx::ASString;
+    namespace NumberUtil = GFx::NumberUtil;
     if (argc < 4)
         return;
     ASString fillTypeStr(argv[0].AsString());
