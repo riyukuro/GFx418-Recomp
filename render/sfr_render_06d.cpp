@@ -7,10 +7,8 @@
 // out-of-line members (Render_VertexPath, just ahead of it) live here too, the cache's scratch paths emit its vtable.
 // MS2-UNIT: sfr_render_06d
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426c21b0-0x1426c2460 .text$mn
-// MS2-RANGE: 0x1426c24e0-0x1426c51f0 .text$mn
-// MS2-RANGE: 0x1426c5700-0x1426c7da0 .text$mn
-// MS2-RANGE: 0x1426c7e00-0x1426cba30 .text$mn
+// MS2-RANGE: 0x1426c21b0-0x1426c51f0 .text$mn
+// MS2-RANGE: 0x1426c5280-0x1426cba30 .text$mn
 // The glyph rasters' refcount bases (non-RTTI, one slot each):
 // MS2-PIN: ??_7?$RefCountBaseNTS@VGlyphRaster@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143192d98
 // MS2-PIN: ??_G?$RefCountBaseNTS@VGlyphRaster@Render@Scaleform@@$0EO@@Scaleform@@UEAAPEAXI@Z 0x1426c4930
@@ -87,6 +85,7 @@ GlyphTextureImage::GlyphTextureImage(GlyphCache* cache, unsigned textureId, cons
 {
 }
 
+// @0x1426c5280
 GlyphTextureImage* GlyphTextureImage::Create(MemoryHeap* heap, TextureManager* texMan, GlyphCache* cache,
                                              unsigned textureId, const ImageSize& size, unsigned use)
 {
@@ -109,6 +108,7 @@ void GlyphTextureImage::TextureLost(TextureLossReason reason)
     pCache->TextureLost(TextureId, reason);
 }
 
+// @0x1426c53a0
 bool GlyphTextureMapper::Create(unsigned method, MemoryHeap* heap, TextureManager* texMan,
                                 PrimitiveFillManager* fillMan, GlyphCache* cache, unsigned textureId,
                                 const ImageSize& size)
@@ -575,7 +575,7 @@ bool GlyphCache::updateTextureGlyph(const GlyphNode* node)
 }
 
 // the AMP profiler's snapshot of the textures: each valid one is written through the AMP image writer
-class AmpGlyphImageWriter : public ImageFileWriter
+class AmpGlyphImageWriter : public ImageFileWriter_Mixin<AmpGlyphImageWriter>
 {
 public:
     AmpGlyphImageWriter() : Version(0) {}
@@ -1957,3 +1957,9 @@ void GlyphCache::LogWarning(const char* fmt, ...)
 }
 
 }} // namespace Scaleform::Render
+// MS2-PIN: ??_G?$ImageFileWriter_Mixin@VAmpGlyphImageWriter@Render@Scaleform@@VImageFileWriter@23@@Render@Scaleform@@UEAAPEAXI@Z 0x1426c2460
+// MS2-PIN: ??_7?$ImageFileWriter_Mixin@VAmpGlyphImageWriter@Render@Scaleform@@VImageFileWriter@23@@Render@Scaleform@@6B@ 0x143192d38
+// MS2-PIN: ?Write@AmpGlyphImageWriter@Render@Scaleform@@UEBA_NPEAVFile@3@AEBVImageData@23@PEBUImageWriteArgs@23@@Z 0x1426c2490
+// MS2-PIN: ??_GAmpGlyphImageWriter@Render@Scaleform@@UEAAPEAXI@Z 0x1426c24b0
+// MS2-PIN: ??_7AmpGlyphImageWriter@Render@Scaleform@@6B@ 0x143192d60
+// MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@EU?$AllocatorLH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1426c7da0
