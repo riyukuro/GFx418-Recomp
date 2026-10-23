@@ -3760,6 +3760,92 @@ void FUN_1423d0850(void* manager, DWORD listIndex)
     FUN_1423cf900(manager, listIndex);
 }
 
+// MS2-FUNCTIONAL: computes the executable's mode-specific candidate page and rebuilds the visible Scaleform rows.
+// @0x1423d3120
+void FUN_1423d3120(void* raw, DWORD listIndex)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) return;
+    const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
+    if (!bytes) { cx18_ImmReleaseContext(hwnd, context); return; }
+    auto* list = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes));
+    if (!list) { cx18_ImmReleaseContext(hwnd, context); return; }
+    const DWORD fetched = cx18_ImmGetCandidateListW(context, listIndex, list, bytes);
+    const DWORD count = list->dwCount;
+    const DWORD selection = list->dwSelection;
+    const DWORD osPage = list->dwPageSize;
+    *reinterpret_cast<DWORD*>(self + 0xcc) = count;
+    DWORD page = *reinterpret_cast<DWORD*>(self + 0xd4);
+    if (page <= osPage) page = osPage;
+    *reinterpret_cast<DWORD*>(self + 0xd4) = page;
+    DWORD first = list->dwPageStart;
+    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+    if (mode & 0xf00) first = page ? selection - selection % page : list->dwPageStart;
+    *reinterpret_cast<DWORD*>(self + 0x70) = first;
+    cx18_ImmReleaseContext(hwnd, context);
+    void* values = nullptr;
+    void* movie = *reinterpret_cast<void**>(self + 0x868);
+    if (movie) {
+        void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+        if (manager) values = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
+    }
+    if (!count) {
+        if (values) {
+            void* result = nullptr;
+            reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, "RemoveList", &result, nullptr, 0);
+        }
+        Scaleform::Memory::Free(list);
+        return;
+    }
+    DWORD visible = page;
+    if (mode == 0x410000) {
+        if (count > selection && count - selection > 5) visible = 5;
+        else visible = count - selection;
+        first = selection;
+    } else if (mode == 0x40000) {
+        const DWORD remain = count - first;
+        if (remain <= osPage) visible = remain;
+    } else if (mode == 0x60000) {
+        first = selection;
+        if (count - selection <= osPage) visible = count - selection;
+    } else if (mode != 0xd00001 && osPage <= count) {
+        const DWORD remain = count - first;
+        if (remain <= osPage) visible = remain;
+    }
+    *reinterpret_cast<DWORD*>(self + 0x70) = first;
+
+    void* output = *reinterpret_cast<void**>(self + 0x30);
+    FUN_1423d9500(output);
+    const DWORD end = visible < count - first ? first + visible : count;
+    for (DWORD i = first; i < end; ++i) {
+        const DWORD offset = list->dwOffset[i];
+        if (offset >= fetched) break;
+        const wchar_t* wide = reinterpret_cast<const wchar_t*>(reinterpret_cast<const unsigned char*>(list) + offset);
+        const int chars = static_cast<int>(wcslen(wide));
+        const int n = WideCharToMultiByte(CP_UTF8, 0, wide, chars, nullptr, 0, nullptr, nullptr);
+        if (n <= 0) continue;
+        auto* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(n) + 1));
+        if (!text) continue;
+        WideCharToMultiByte(CP_UTF8, 0, wide, chars, text, n, nullptr, nullptr);
+        text[n] = 0;
+        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
+        if (item) {
+            FUN_1423cdb60(item, text);
+            unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+            FUN_1423d9490(output, &retained);
+            FUN_14257dcd0(item);
+        }
+        Scaleform::Memory::Free(text);
+    }
+    const unsigned long long selected = selection >= first ? selection - first : 0;
+    FUN_1423d97f0(output, selected, 0);
+    FUN_1423d9b40(output);
+    Scaleform::Memory::Free(list);
+}
+
 struct cx18_CommandEntry
 {
     unsigned long long next;
