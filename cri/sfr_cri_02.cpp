@@ -235,6 +235,9 @@ void     FUN_140046784(void* streamJoint);
 void     FUN_140027fb4(void* heap, void* memory);
 void     FUN_140044fa8(void* demux, void* value);
 void     FUN_140044fd8(void* demux, CriUint8 value);
+void     FUN_140044f28(void* demux);
+void     FUN_140030c70(void* player);
+CriBool  FUN_140031f00(void* player);
 void     FUN_140044f9c(void* demux);
 void     FUN_140046798(void* streamJoint);
 void     FUN_1400420b0(void* manager, void* heap);
@@ -3495,6 +3498,79 @@ void* FUN_14002d840(void* object, CriUint64 flags)
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: release decoder queues, demux state, and heap-owned CRI Movie work areas.
+// @0x14002f610
+void FUN_14002f610(CriUint32* object)
+{
+    if (!object)
+        return;
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)object;
+    CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)object;
+    struct OwnedHeapFields
+    {
+        CriUint8 Reserved0[0xdc0];
+        CriHeap Heap;
+        CriUint8 ReservedD28[8];
+        void* HeapHandle;
+        CriUint8 ReservedD38[8];
+        void* Work;
+    };
+    struct ObjectFields
+    {
+        CriUint8 Reserved0[0x18];
+        void* Work;
+        void* Reader;
+    };
+    if (state->Status != 0 && state->Status != 7)
+        FUN_140037950(object, "E05063009M: Don't call criMvPly_Destroy during playback.", state->Status);
+    state->Status = 0;
+    FUN_140030c70(object);
+    FUN_140031f00(object);
+    if (queues->ReadBuffer)
+    {
+        FUN_140046784(queues->ReadBuffer);
+        queues->ReadBuffer = NULL;
+    }
+    if (state->Demux)
+    {
+        FUN_140044f28(state->Demux);
+        state->Demux = NULL;
+    }
+    if (queues->InputBuffer)
+    {
+        FUN_140046784(queues->InputBuffer);
+        queues->InputBuffer = NULL;
+    }
+    struct MemoryQueueView { CriUint8 Reserved[0xda0]; void* Queue; };
+    MemoryQueueView* memoryQueue = (MemoryQueueView*)object;
+    if (memoryQueue->Queue)
+    {
+        FUN_140046784(memoryQueue->Queue);
+        memoryQueue->Queue = NULL;
+    }
+    OwnedHeapFields* heapFields = (OwnedHeapFields*)object;
+    if (heapFields->HeapHandle)
+    {
+        FUN_140028074(heapFields->HeapHandle);
+        heapFields->HeapHandle = NULL;
+    }
+    ObjectFields* owned = (ObjectFields*)object;
+    if (owned->Reader)
+    {
+        void* reader = owned->Reader;
+        owned->Reader = NULL;
+        FUN_140039f00(reader);
+    }
+    if (heapFields->Heap && heapFields->Work)
+    {
+        void* work = heapFields->Work;
+        heapFields->Work = NULL;
+        FUN_140027fb4(heapFields->Heap, work);
+    }
+    if (heapFields->Heap)
+        FUN_140027fb4(heapFields->Heap, object);
 }
 
 // MS2-FUNCTIONAL: run reader-thread requests from the intrusive queue until its stop operation arrives.
