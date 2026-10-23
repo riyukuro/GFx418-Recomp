@@ -55,6 +55,8 @@ extern "C" const unsigned long long DAT_14313b418;
 extern "C" const void* DAT_14313ba60[];
 extern "C" const unsigned char DAT_1431c51e8[];
 extern "C" const unsigned char DAT_1431c5018[];
+extern "C" const unsigned char DAT_1431c4d58[];
+extern "C" const unsigned char DAT_14313b8b8[];
 extern "C" void* DAT_143b15f60;
 extern "C" const void* DAT_14313bc60[];
 extern "C" void FUN_1423dd1c0();
@@ -1017,6 +1019,48 @@ void FUN_1423d7690(void* self)
         }
     }
     *key = 0xffffffff;
+}
+
+// MS2-FUNCTIONAL: queries the executable's composition callback IID and records the returned result key.
+// @0x1423dac70
+bool FUN_1423dac70(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    void* source = *reinterpret_cast<void**>(bytes + 0x28);
+    void* result = nullptr;
+    auto** sourceVtable = *reinterpret_cast<void***>(source);
+    int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
+    bool success = false;
+    if (hr >= 0) {
+        auto** resultVtable = *reinterpret_cast<void***>(result);
+        hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
+            result, DAT_1431c4d58, bytes, bytes + 0x18);
+        success = hr >= 0;
+        if (!success) *reinterpret_cast<unsigned*>(bytes + 0x18) = 0xffffffff;
+    }
+    if (result) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(result))[2])(result);
+    return success;
+}
+
+// MS2-FUNCTIONAL: queries the executable's second composition callback IID and updates its result key.
+// @0x1423dacf0
+bool FUN_1423dacf0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    void* source = *reinterpret_cast<void**>(bytes + 0x28);
+    void* result = nullptr;
+    auto** sourceVtable = *reinterpret_cast<void***>(source);
+    int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
+    bool success = false;
+    if (hr >= 0) {
+        auto** resultVtable = *reinterpret_cast<void***>(result);
+        hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
+            result, DAT_14313b8b8, bytes + 8, bytes + 0x1c);
+        success = hr >= 0;
+        if (!success) *reinterpret_cast<unsigned*>(bytes + 0x1c) = 0xffffffff;
+    }
+    if (result) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(result))[2])(result);
+    return success;
 }
 
 void FUN_1423d94f0(void*, void*);
