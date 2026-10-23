@@ -2342,6 +2342,48 @@ void RemoveAudioRequest(void* manager, void* request)
     }
 }
 
+static bool SameAs3String(const Scaleform::String* left, const Scaleform::String* right)
+{
+    const std::size_t length = left->GetLength();
+    if (length != right->GetLength())
+        return false;
+    const auto leftBits = *reinterpret_cast<const std::uintptr_t*>(left);
+    const auto rightBits = *reinterpret_cast<const std::uintptr_t*>(right);
+    const auto* leftChars = reinterpret_cast<const unsigned char*>((leftBits & ~std::uintptr_t(3)) + 12);
+    const auto* rightChars = reinterpret_cast<const unsigned char*>((rightBits & ~std::uintptr_t(3)) + 12);
+    return std::memcmp(leftChars, rightChars, length) == 0;
+}
+
+// MS2-FUNCTIONAL: compares a text record's strings, string array, scalar identity, and near-equal geometry values.
+// @0x142687620
+long long TextRecordEquivalent(const void* leftRecord, const void* rightRecord)
+{
+    auto* left = static_cast<const unsigned char*>(leftRecord);
+    auto* right = static_cast<const unsigned char*>(rightRecord);
+    if (*reinterpret_cast<const std::uint32_t*>(left + 0x10) != *reinterpret_cast<const std::uint32_t*>(right + 0x10) ||
+        *reinterpret_cast<const std::uint32_t*>(left + 0x14) != *reinterpret_cast<const std::uint32_t*>(right + 0x14))
+        return 1;
+    for (std::size_t offset : { std::size_t(0x18), std::size_t(0x20), std::size_t(0x28), std::size_t(0x30), std::size_t(0x38) })
+        if (!SameAs3String(reinterpret_cast<const Scaleform::String*>(left + offset),
+                           reinterpret_cast<const Scaleform::String*>(right + offset)))
+            return 1;
+    const std::size_t stringCount = *reinterpret_cast<const std::size_t*>(left + 0x48);
+    if (stringCount != *reinterpret_cast<const std::size_t*>(right + 0x48))
+        return 1;
+    auto* leftStrings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(left + 0x40));
+    auto* rightStrings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(right + 0x40));
+    for (std::size_t i = 0; i < stringCount; ++i)
+        if (!SameAs3String(leftStrings + i, rightStrings + i))
+            return 1;
+    for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64) }) {
+        const float difference = *reinterpret_cast<const float*>(left + offset) - *reinterpret_cast<const float*>(right + offset);
+        if (difference < -0.00001f || difference > 0.00001f)
+            return 1;
+    }
+    return (*reinterpret_cast<void* const*>(left + 0x68) == *reinterpret_cast<void* const*>(right + 0x68) &&
+            *reinterpret_cast<const std::uint32_t*>(left + 0x70) == *reinterpret_cast<const std::uint32_t*>(right + 0x70)) ? 0 : 1;
+}
+
 // MS2-FUNCTIONAL: copies the record's scalar fields and strings, resizes its owned string list, then assigns each element.
 // @0x142687540
 void* CopyTextRecord(void* destination, const void* source)
