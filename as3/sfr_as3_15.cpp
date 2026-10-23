@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/gfx/gfx_movieslots.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
@@ -898,6 +899,87 @@ template ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::Dis
                        ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x1424dc7a0
 template ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
+// MS2-FUNCTIONAL: the exe calls ResizeNoConstruct and the copy-construct loop out of line, here they are inlined
+// @0x1424d5310
+template ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::ArrayDataDH(
+    const ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>&);
+typedef HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Value, GFx::AS3::Object::DynAttrsKeyHashFunctor> MS2_DynAttrsNode;
+// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
+// @0x1424d5390
+template MS2_DynAttrsNode::HashNode(const MS2_DynAttrsNode&);
+// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
+// @0x1424d5420
+template MS2_StringValueNode::HashNode(const MS2_StringValueNode&);
+typedef HashNode<GFx::AS3::TClassTraitsCache::Key, GFx::AS3::ClassTraits::Traits*,
+                 GFx::AS3::TClassTraitsCache::Key::HashFunctor> MS2_ClassTraitsCacheNode;
+typedef HashsetCachedNodeEntry<MS2_ClassTraitsCacheNode, MS2_ClassTraitsCacheNode::NodeHashF> MS2_ClassTraitsCacheEntry;
+// @0x1424d54a0
+template MS2_ClassTraitsCacheEntry::HashsetCachedNodeEntry(const MS2_ClassTraitsCacheEntry&);
+
+namespace GFx { namespace AS3 {
+// The SPtr overload with AssignUnsafe(Object*) expanded.
+// @0x1424d2590
+template <>
+void Value::AssignUnsafe<Instances::fl::GlobalObjectCPP>(const SPtr<Instances::fl::GlobalObjectCPP>& v)
+{
+    Object* p = v.GetPtr();
+    SetKind(kObject);
+    value = p;
+    if (p)
+        p->AddRef();
+}
+
+// @0x1424dbf70
+Value::Value(const ASString& v)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
+    {
+        SetKind(kObject);
+        value = (Object*)NULL;
+    }
+    else
+        value.VS._1.VStr->AddRef();
+}
+
+// @0x1424dbfc0
+Value::Value(ASStringNode* v)
+    : Flags(kString)
+    , value(v)
+{
+    if (v)
+    {
+        if (v == v->GetManager()->GetNullStringNode())
+        {
+            SetKind(kObject);
+            value = (Object*)NULL;
+        }
+        else
+            v->AddRef();
+    }
+    else
+        SetKind(kObject);
+}
+
+// @0x1424dc020
+Value::Value(Class* v)
+    : Flags(kClass)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
+// @0x1424dc050
+Value::Value(Object* v)
+    : Flags(kObject)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+}} // namespace GFx::AS3
 
 } // namespace Scaleform
 
