@@ -19,6 +19,8 @@
 // MS2-RANGE: 0x142935b50-0x142935c70 .text$mn
 // MS2-RANGE: 0x142936620-0x142936680 .text$mn
 // MS2-RANGE: 0x1429367a0-0x1429374f0 .text$mn
+// MS2-RANGE: 0x14292f250-0x14292f430 .text$mn
+// MS2-RANGE: 0x14292f5b0-0x14292f740 .text$mn
 // MS2-RANGE: 0x142937e20-0x142937ea0 .text$mn
 // MS2-RANGE: 0x142938180-0x1429381f0 .text$mn
 // MS2-RANGE: 0x142938830-0x142938850 .text$mn
@@ -582,6 +584,52 @@ void ArrayObject::ArrayLength(const FnCall& fn)
     MS2_AS2_CHECK_THIS(fn, Array);
     ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
     fn.Result->SetInt(pthis->GetSize());
+}
+
+// @0x14292f250
+void GASPrototypeBase::AddInterface(ASStringContext* psc, int index, FunctionObject* ctor)
+{
+    if (!pInterfaces && !ctor)
+    {
+        // The first call only sizes the array: index is the number of interfaces.
+        pInterfaces = SF_HEAP_NEW(psc->GetHeap()) InterfacesArray(index);
+    }
+    else
+    {
+        Value prototype;
+        if (ctor->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_prototype), &prototype))
+        {
+            Ptr<Object> pproto = prototype.ToObject(0);
+            (*pInterfaces)[index] = pproto;
+        }
+    }
+}
+
+// @0x14292f5b0
+bool AsBroadcaster::AddListener(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener)
+{
+    if (!pthis || !plistener)
+        return false;
+
+    Value listenersVal;
+    if (pthis->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin__listeners), &listenersVal))
+    {
+        Object* pobj = listenersVal.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object_Array)
+        {
+            Ptr<ArrayObject> plisteners = static_cast<ArrayObject*>(pobj);
+            for (unsigned i = 0, n = plisteners->GetSize(); i < n; ++i)
+            {
+                Value* pelem = plisteners->GetElementPtr(i);
+                if (pelem && pelem->ToObjectInterface_Call(penv) == plistener)
+                    return false;
+            }
+            Value listener;
+            listener.SetAsObjectInterface(plistener);
+            plisteners->PushBack(listener);
+        }
+    }
+    return true;
 }
 
 }}} // namespace Scaleform::GFx::AS2

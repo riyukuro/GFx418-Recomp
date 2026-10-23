@@ -20,6 +20,8 @@ protected:
     class InterfacesArray : public ArrayLH<Ptr<Object> >
     {
     public:
+        InterfacesArray(int size) : ArrayLH<Ptr<Object> >(size) {}
+
         void Finalize_GC() { AllocatorType::Free(Data.Data); }
     };
 
