@@ -1788,6 +1788,23 @@ void FUN_14000d390(Scaleform::GFx::AS2::Object* object,
     prototype->InitFunctionMembers(object, context, table, *flags);
 }
 
+struct VideoCtorProtoInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
+{
+    using GASPrototypeBase::InitFunctionMembers;
+};
+
+// MS2-FUNCTIONAL: initializes the NetStream constructor's prototype members at the observed subobject offset.
+// @0x140003ba0
+void FUN_140003ba0(Scaleform::GFx::AS2::Object* object,
+                   Scaleform::GFx::AS2::ASStringContext* context,
+                   Scaleform::GFx::AS2::NameFunction* table,
+                   const Scaleform::GFx::AS2::PropFlags* flags)
+{
+    auto* prototype = reinterpret_cast<VideoCtorProtoInitAccess*>(
+        reinterpret_cast<unsigned char*>(object) + 0xd8);
+    prototype->InitFunctionMembers(object, context, table, *flags);
+}
+
 // MS2-FUNCTIONAL: releases the weak proxy reference in this slot.
 // @0x14000d570
 void FUN_14000d570(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
