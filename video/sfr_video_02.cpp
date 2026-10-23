@@ -1792,3 +1792,31 @@ void FUN_140010cd0(void** buffer, unsigned __int64 requested)
     reinterpret_cast<unsigned __int64*>(state)[1] =
         size + reinterpret_cast<unsigned __int64*>(state)[0];
 }
+
+// MS2-FUNCTIONAL: destroys the retained GASPrototypeBase subobject before the AS2 object base.
+// @0x1400125a0
+void FUN_1400125a0(Scaleform::GFx::AS2::Object* object)
+{
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x68)->~GASPrototypeBase();
+    object->~Object();
+}
+
+// MS2-FUNCTIONAL: applies the prototype destructor and conditionally frees the object storage.
+// @0x1400125e0
+Scaleform::GFx::AS2::Object* FUN_1400125e0(Scaleform::GFx::AS2::Object* object, unsigned flags)
+{
+    FUN_1400125a0(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroys the AS2 callable and conditionally frees its storage.
+// @0x1400126b0
+Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
+    Scaleform::GFx::AS2::CFunctionObject* object, unsigned flags)
+{
+    object->~CFunctionObject();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
