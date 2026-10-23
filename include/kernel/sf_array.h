@@ -370,6 +370,21 @@ public:
             Data.Size -= num;
         }
     }
+    // (appended, sfr19) RemoveMultipleAt, always inlined: the AS3 Vector.splice bodies (sfr_as3_20) inline it
+    // where the compiler's heuristics alone do not.
+    __forceinline void RemoveMultipleAtInline(UPInt index, UPInt num)
+    {
+        if (Data.Size == num)
+        {
+            Clear();
+        }
+        else
+        {
+            AllocatorType::DestructArray(Data.Data + index, num);
+            AllocatorType::CopyArrayForward(Data.Data + index, Data.Data + index + num, Data.Size - num - index);
+            Data.Size -= num;
+        }
+    }
 
     void RemoveAt(UPInt index)
     {
