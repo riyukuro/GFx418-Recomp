@@ -13,6 +13,7 @@
 #include "../include/kernel/sf_utf8util.h"
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_state.h"
+#include "../include/gfx/gfx_value.h"
 #include "../include/gfx/as3/as3_support.h"
 #include "../include/gfx/xml/xml_object.h"
 
@@ -2581,6 +2582,35 @@ void FUN_1423d76f0(unsigned long long* manager, const char* name)
             (*reinterpret_cast<void***>(manager))[0x70 / sizeof(void*)])(
                 manager, error.ToCStr(), "GFxIME Error");
         return;
+    }
+}
+
+// MS2-FUNCTIONAL: stores the data item and issues the executable's SelectDataItem and SetList external calls.
+// @0x1423d97f0
+void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    *reinterpret_cast<unsigned long long*>(self + 0x860) = item;
+    if (!notify) return;
+    char* command = reinterpret_cast<char*>(self + 0x410);
+    strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
+    strcat_s(command, 0x400, ".SelectDataItem");
+    Scaleform::GFx::Value argument;
+    Scaleform::GFx::Value result;
+    auto* argBytes = reinterpret_cast<unsigned char*>(&argument);
+    *reinterpret_cast<unsigned*>(argBytes + 8) = Scaleform::GFx::Value::VT_Number;
+    *reinterpret_cast<double*>(argBytes + 0x10) = static_cast<double>(item);
+    void* movie = *reinterpret_cast<void**>(self + 0x868);
+    void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+    void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
+    if (bridge) {
+        auto** vtable = *reinterpret_cast<void***>(bridge);
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
+            vtable[0x78 / sizeof(void*)])(bridge, command, &result, &argument, 1);
+        strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
+        strcat_s(command, 0x400, ".SetList");
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
+            vtable[0x78 / sizeof(void*)])(bridge, command, &result, nullptr, 0);
     }
 }
 
