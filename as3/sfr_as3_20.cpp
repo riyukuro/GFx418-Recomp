@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
+#include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #undef GetObject
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -959,6 +960,143 @@ static __forceinline void VectorMap(VectorBase<T>& self, SPtr<I>& result, const 
     }
 }
 
+// ---- slice / splice
+
+// a splice() insertion argument (already of the element type) inserted at pos
+static SF_INLINE void InsertElement(VectorBase<Ptr<ASStringNode> >& v, UPInt pos, const Value& a)
+{
+    v.V.InsertAt(pos, Ptr<ASStringNode>(a.GetStringNode()));
+}
+static SF_INLINE void InsertElement(VectorBase<Value::Number>& v, UPInt pos, const Value& a) { v.V.InsertAt(pos, a.AsNumber()); }
+static SF_INLINE void InsertElement(VectorBase<SInt32>& v, UPInt pos, const Value& a)        { v.V.InsertAt(pos, a.AsInt()); }
+static SF_INLINE void InsertElement(VectorBase<Value>& v, UPInt pos, const Value& a)         { v.V.InsertAt(pos, a); }
+static SF_INLINE void InsertElement(VectorBase<UInt32>& v, UPInt pos, const Value& a)        { v.V.InsertAt(pos, a.AsUInt()); }
+
+template <typename T>
+static SF_INLINE void SlicePush(VectorBase<T>& d, const VectorBase<T>& s, UPInt i) { const T e = s.V[i]; d.PushBack(e); }
+static SF_INLINE void SlicePush(VectorBase<Ptr<ASStringNode> >& d, const VectorBase<Ptr<ASStringNode> >& s, UPInt i) { const Ptr<ASStringNode> e(s.V[i].GetPtr()); d.PushBack(e); }
+static SF_INLINE void SlicePush(VectorBase<Value>& d, const VectorBase<Value>& s, UPInt i) { const Value& e = s.V[i]; d.CheckFixed(); if (!d.Fixed) d.V.PushBack(e); }
+template <class I, class TR, typename T>
+static SF_INLINE void VectorSlice(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
+{
+    Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
+    I& r = *pr.GetPtr();
+    result.Pick(pr);
+
+    SInt32 startIndex = 0;
+    SInt32 endIndex = 0xffffff;
+    if (argc > 0 && !argv[0].Convert2Int32(startIndex))
+        return;
+    if (argc > 1 && !argv[1].Convert2Int32(endIndex))
+        return;
+
+    const SInt32 size = (SInt32)self.V.GetSize();
+    if (startIndex < 0)
+        startIndex += size;
+    startIndex = Alg::Max<SInt32>(0, startIndex);
+    if (endIndex < 0)
+        endIndex += size;
+    endIndex = Alg::Min((SInt32)self.V.GetSize(), endIndex);
+
+    for (SInt32 i = startIndex; i < endIndex; ++i)
+        SlicePush(r.V, self, i);
+}
+
+// RangeError 1125 (index out of range) naming the two values.
+static SF_INLINE void ThrowRangeError(ArrayBase& self, const char* value, const char* range)
+{
+    VM& vm = self.VMRef;
+    vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, value, range));
+}
+
+// Vector.splice: the count elements from pos moved into deleted, the new vector it returns.
+template <class I, typename T>
+static SF_INLINE void DeleteElements(VectorBase<T>& self, UPInt pos, UPInt count, I& deleted)
+{
+    for (UPInt i = 0; i < count && i + pos < self.V.GetSize(); ++i)
+        SlicePush(deleted.V, self, i + pos);
+    self.V.RemoveMultipleAtInline(pos, count);
+}
+// out of line for the String and object vectors
+void DeleteMultipleAt(VectorBase<Ptr<ASStringNode> >& self, UPInt pos, UPInt count, Vector_String& deleted);
+void DeleteMultipleAt(VectorBase<Value>& self, UPInt pos, UPInt count, Vector_object& deleted);
+template <class I, typename T>
+static SF_INLINE void DeleteMultipleAt(VectorBase<T>& self, UPInt pos, UPInt count, I& deleted)
+{
+    DeleteElements(self, pos, count, deleted);
+}
+
+// Vector.splice: argv inserted at pos (already of the element type).
+template <typename T>
+static SF_INLINE void InsertElements(VectorBase<T>& self, UPInt pos, unsigned argc, const Value* argv)
+{
+    for (UPInt i = 0; i < argc; ++i)
+        InsertElement(self, pos + i, argv[i]);
+}
+static SF_INLINE void InsertElements(VectorBase<Value>& self, UPInt pos, unsigned argc, const Value* argv)
+{
+    self.Insert(pos, argc, argv);
+}
+
+template <class I, class TR, typename T>
+static __forceinline void VectorSplice(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
+{
+    self.CheckFixed();
+    if (self.Fixed)
+        return;
+
+    SInt32 startIndex = 0;
+    if (argc > 0 && !argv[0].Convert2Int32(startIndex))
+        return;
+
+    const UInt32 size = (UInt32)self.V.GetSize();
+    UInt32 deleteCount = 0;
+    if (startIndex < 0)
+        startIndex += size;
+    if (argc > 1)
+    {
+        if (!argv[1].Convert2UInt32(deleteCount))
+            return;
+        if (startIndex < 0 || startIndex + deleteCount > size)
+        {
+            ThrowRangeError(self, AsString(size).ToCStr(), AsString(size).ToCStr());
+            return;
+        }
+    }
+    else
+        deleteCount = size - startIndex;
+
+    TR& itr = static_cast<TR&>(owner.GetTraits());
+    I* r;
+    {
+        SPtr<I> sr = itr.MakeInstanceS(itr);
+        r = sr.GetPtr();
+        result.Pick(sr);
+    }
+    if (startIndex > (SInt32)size || startIndex < 0)
+        return;
+
+    DeleteMultipleAt(self, startIndex, deleteCount, *r);
+
+    if (argc > 2)
+    {
+        startIndex = Alg::Min((SInt32)self.V.GetSize(), startIndex);
+        InsertElements(self, startIndex, argc - 2, argv + 2);
+    }
+}
+
+// @0x1425488d0
+void DeleteMultipleAt(VectorBase<Ptr<ASStringNode> >& self, UPInt pos, UPInt count, Vector_String& deleted)
+{
+    DeleteElements(self, pos, count, deleted);
+}
+
+// @0x142548a70
+void DeleteMultipleAt(VectorBase<Value>& self, UPInt pos, UPInt count, Vector_object& deleted)
+{
+    DeleteElements(self, pos, count, deleted);
+}
+
 // ---- sort: the elements are collected (as numbers, strings or element pointers), sorted, then copied back
 
 typedef Pair<Value::Number, UInt32> NumberPair;
@@ -1297,6 +1435,26 @@ void FUN_14254ce20(VectorBase<Value>& v, SPtr<VI::Vector_object>& result, const 
 void FUN_14254d380(VectorBase<UInt32>& v, SPtr<VI::Vector_uint>& result, const Value& callback, const Value& thisObject, VI::Vector_uint& owner)
 { VI::VectorMap<VI::Vector_uint, VT::Vector_uint>(v, result, callback, thisObject, owner); }
 
+// MS2-FUNCTIONAL: slice start clamp: the exe re-tests startIndex after the add (extra test before cmovs)
+// @0x14254fe70
+void FUN_14254fe70(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
+{ VI::VectorSlice<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: slice start clamp: the exe re-tests startIndex after the add (extra test before cmovs)
+// @0x142550070
+void FUN_142550070(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
+{ VI::VectorSlice<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: slice start clamp: the exe re-tests startIndex after the add (extra test before cmovs)
+// @0x142550290
+void FUN_142550290(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
+{ VI::VectorSlice<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
+// @0x142550490
+void FUN_142550490(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
+{ VI::VectorSlice<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: slice start clamp: the exe re-tests startIndex after the add (extra test before cmovs)
+// @0x142550640
+void FUN_142550640(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
+{ VI::VectorSlice<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
+
 // MS2-FUNCTIONAL: the exe keeps Value::SetNull and the result-array growth out of line; ours inlines them
 // @0x142550840
 void FUN_142550840(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
@@ -1317,6 +1475,27 @@ void FUN_1425526f0(VectorBase<Value>& v, Value& result, unsigned argc, const Val
 // @0x142553170
 void FUN_142553170(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
 { VI::VectorSort<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
+
+// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+// @0x142553bb0
+void FUN_142553bb0(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
+{ VI::VectorSplice<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+// @0x142553e90
+void FUN_142553e90(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
+{ VI::VectorSplice<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+// @0x142554280
+void FUN_142554280(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
+{ VI::VectorSplice<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+// @0x142554660
+void FUN_142554660(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
+{ VI::VectorSplice<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+// @0x142554880
+void FUN_142554880(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
+{ VI::VectorSplice<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
 
 
 // ==== Vector class traits (sfr19) ====================================================================================
