@@ -785,7 +785,7 @@ void* FUN_140006240(void** weakSlot)
     auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
         reinterpret_cast<Scaleform::UPInt>(*weakSlot) & ~Scaleform::UPInt(3));
     if (!proxy) return nullptr;
-    auto* object = proxy->GetObject();
+    auto* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
     if (object) return object;
     proxy->Release();
     *weakSlot = nullptr;
