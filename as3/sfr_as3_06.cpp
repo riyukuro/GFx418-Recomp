@@ -2438,15 +2438,15 @@ CheckResult VectorBase<UInt32>::Set(UInt32 ind, const Value& v, const ClassTrait
     return true;
 }
 
-// The const flavour of the frame script lower bound (an unreferenced COMDAT next to the mutable one).
-template UPInt Alg::LowerBoundSliced<const Instances::fl_display::MovieClip::FrameScript::Descr*,
-    Instances::fl_display::MovieClip::FrameScript::Descr,
-    bool (*)(const Instances::fl_display::MovieClip::FrameScript::Descr&, const Instances::fl_display::MovieClip::FrameScript::Descr&)>(
-    const Instances::fl_display::MovieClip::FrameScript::Descr* const&, UPInt, UPInt,
-    const Instances::fl_display::MovieClip::FrameScript::Descr&,
-    bool (*)(const Instances::fl_display::MovieClip::FrameScript::Descr&, const Instances::fl_display::MovieClip::FrameScript::Descr&));
-
 }}} // namespace Scaleform::GFx::AS3
+
+// The const flavour of the frame script lower bound (an unreferenced COMDAT next to the mutable one).
+template Scaleform::UPInt Scaleform::Alg::LowerBoundSliced<const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr*,
+    Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr,
+    bool (*)(const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&, const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&)>(
+    const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr* const&, Scaleform::UPInt, Scaleform::UPInt,
+    const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&,
+    bool (*)(const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&, const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&));
 
 // Out of line in the exe, called from the AS3 transform code and the render tree.
 template Scaleform::Render::Matrix2x4<float>& Scaleform::Render::Matrix2x4<float>::Prepend(const Scaleform::Render::Matrix2x4<float>&);
