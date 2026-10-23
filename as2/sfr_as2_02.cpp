@@ -8,11 +8,11 @@
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142902a00 .text$mn
 // MS2-RANGE: 0x142902a10-0x1429033c0 .text$mn
-// MS2-RANGE: 0x1429035a0-0x142903b30 .text$mn
+// MS2-RANGE: 0x1429033c0-0x142903b30 .text$mn
 // MS2-RANGE: 0x142905d70-0x142905e00 .text$mn
 // MS2-RANGE: 0x142906330-0x1429064b0 .text$mn
-// MS2-RANGE: 0x142906a90-0x142906ba0 .text$mn
-// MS2-RANGE: 0x142906d80-0x142906de0 .text$mn
+// MS2-RANGE: 0x142906a90-0x142906d80 .text$mn
+// MS2-RANGE: 0x142906d80-0x142906fc0 .text$mn
 // MS2-RANGE: 0x142906fc0-0x142908840 .text$mn
 // MS2-RANGE: 0x142908c30-0x142908e90 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
@@ -1071,6 +1071,103 @@ void SelectionCtorFunction::GetEndIndex(const FnCall& fn)
     Ptr<InteractiveObject> focusedChar = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
     if (focusedChar && focusedChar->GetType() == CharacterDef::TextField)
         fn.Result->SetNumber(Number(ToTextField(focusedChar)->GetEndIndex()));
+}
+
+// Empty in this build (folded with other empty bodies); called on the parent after a depth swap.
+void FUN_1425dcaf0(DisplayObjectBase* p);
+
+// Environment::SetTarget, inlined.
+static inline void SetEnvTarget(Environment* penv, InteractiveObject* ptarget)
+{
+    penv->IsInvalidTarget = false;
+    penv->Target          = ptarget;
+    penv->StringContext.UpdateVersion(ptarget->GetVersion());
+}
+
+// @0x1429033c0
+void AvmSprite::SpriteSwapDepths(const FnCall& fn)
+{
+    InteractiveObject* pchar = !fn.ThisPtr ? fn.Env->GetTarget() : fn.ThisPtr->ToCharacter();
+    if (!pchar || fn.NArgs < 1)
+        return;
+    InteractiveObject* pparent = pchar->GetParent();
+    const Value&       arg     = fn.Arg(0);
+    Sprite*            psprite = pchar->IsSprite() ? static_cast<Sprite*>(pchar) : 0;
+    InteractiveObject* pother  = 0;
+    int                depth2;
+    if (arg.IsNumber())
+    {
+        depth2 = int(arg.ToNumber(fn.Env)) + 16384;
+        if (unsigned(depth2) > 0x7efffffd)
+            return;
+    }
+    else
+    {
+        // A path resolves relative to the clip itself.
+        if (psprite)
+        {
+            InteractiveObject* psaved = fn.Env->Target;
+            SetEnvTarget(fn.Env, psprite);
+            pother                    = fn.Env->FindTargetByValue(arg);
+            SetEnvTarget(fn.Env, psaved);
+        }
+        else
+            pother = fn.Env->FindTargetByValue(arg);
+        if (!pother || pother == pchar || pparent != pother->GetParent())
+            return;
+        depth2 = pother->Depth;
+    }
+    if (pchar->Depth < 0)
+        return;
+    pchar->SetAcceptAnimMoves(false);
+    if (!pparent)
+        return;
+    DisplayObjContainer* pcont  = static_cast<DisplayObjContainer*>(pparent);
+    int                  depth1 = pchar->Depth;
+    if (pcont->mDisplayList.SwapDepths(pcont, depth1, depth2, pcont->GetCurrentFrame()))
+    {
+        FUN_1425dcaf0(pcont);
+        if (pother)
+            pother->SetAcceptAnimMoves(false);
+    }
+}
+
+// @0x142906ba0
+void AvmSprite::SpriteLoadMovie(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs <= 0)
+        return;
+    LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None;
+    if (fn.NArgs > 1)
+    {
+        // "get" / "post" (any case); anything else sends no variables.
+        ASString methodName(fn.Arg(1).ToString(fn.Env).ToLowerNode());
+        if (methodName == "get")
+            method = LoadQueueEntry::LM_Get;
+        else if (methodName == "post")
+            method = LoadQueueEntry::LM_Post;
+    }
+    ToAS2Root(psprite)->AddLoadQueueEntry(psprite, fn.Arg(0).ToString(fn.Env).ToCStr(), method);
+}
+
+// @0x142906de0
+void AvmSprite::SpriteLoadVariables(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs <= 0)
+        return;
+    LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None;
+    if (fn.NArgs > 1)
+    {
+        // "get" / "post" (any case); anything else sends no variables.
+        ASString methodName(fn.Arg(1).ToString(fn.Env).ToLowerNode());
+        if (methodName == "get")
+            method = LoadQueueEntry::LM_Get;
+        else if (methodName == "post")
+            method = LoadQueueEntry::LM_Post;
+    }
+    ToAS2Root(psprite)->AddVarLoadQueueEntry(psprite, fn.Arg(0).ToString(fn.Env).ToCStr(), method);
 }
 
 // this is in the prototype chain of the argument (interfaces not counted).

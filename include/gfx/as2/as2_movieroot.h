@@ -170,6 +170,9 @@ public:
     void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
                            LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None,
                            MovieClipLoader* pmovieClipLoader = 0);
+    // Queues a variables load of purl into ptarget (exe 0x142930a10).
+    void AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
+                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
 
     struct ActionEntry;
 

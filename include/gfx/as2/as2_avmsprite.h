@@ -75,6 +75,9 @@ public:
     static void SpriteGetNextHighestDepth(const FnCall& fn);
     static void SpriteGetInstanceAtDepth(const FnCall& fn);
     static void SpriteSetMask(const FnCall& fn);
+    static void SpriteSwapDepths(const FnCall& fn);
+    static void SpriteLoadMovie(const FnCall& fn);
+    static void SpriteLoadVariables(const FnCall& fn);
     static void SpriteBeginGradientFill(const FnCall& fn);
     static void SpriteBeginBitmapFill(const FnCall& fn);
     static void SpriteLineGradientStyle(const FnCall& fn);
