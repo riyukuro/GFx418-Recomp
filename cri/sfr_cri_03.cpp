@@ -82,7 +82,9 @@ void FUN_140053540(void*);
 void FUN_140037910(CriSint32, const CriChar8*, CriSint32);
 void FUN_1400379b0(CriSint32, const CriChar8*);
 void FUN_140053650(void*);
+void FUN_140037950(void*, const CriChar8*, CriUint32);
 void FUN_140042600(void*, void*, CriSint32);
+CriSint32 FUN_1400310b0(void*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
 void FUN_140041110(void*, const char*, CriUint32);
@@ -3164,6 +3166,64 @@ void FUN_1400436d0(void* state)
     DAT_143ba9d10 = 1;
     FUN_140053650(adec->Decoder);
     DAT_143ba9d10 = 0;
+}
+
+// MS2-FUNCTIONAL: release the decoder, both stream joints, and the heap-owned reader state.
+// @0x140044f28
+void FUN_140044f28(void* object)
+{
+    struct DecoderOwner
+    {
+        void* Heap;
+        void* Reserved08[2];
+        void* DecoderBuffer;
+        void* InputJoint;
+        void* OutputJoint;
+    };
+    DecoderOwner* owner = (DecoderOwner*)object;
+    if (!owner)
+        return;
+    if (owner->Heap && owner->DecoderBuffer)
+        FUN_140027fb4(owner->Heap, owner->DecoderBuffer);
+    if (owner->InputJoint)
+        FUN_140046784(owner->InputJoint);
+    if (owner->OutputJoint)
+        FUN_140046784(owner->OutputJoint);
+    if (owner->Heap)
+        FUN_140027fb4(owner->Heap, owner);
+}
+
+// MS2-FUNCTIONAL: return a bounded channel's available audio bytes when its decoder is ready.
+// @0x140043890
+CriUint32 FUN_140043890(void* track, void* player, CriUint32 channel, CriUint32 maximum)
+{
+    struct AudioTrack
+    {
+        CriSint32 Present;
+        CriUint8 Reserved04[0x0c];
+        void* Decoder;
+        CriUint32 ChannelCount;
+        CriUint32 Threshold;
+        CriUint8 Reserved20[0x10];
+        void* Queue;
+    };
+    struct PlayerState { CriUint8 Reserved00[8]; CriSint32 State; };
+    AudioTrack* audio = (AudioTrack*)track;
+    PlayerState* movie = (PlayerState*)player;
+    if (!audio || !audio->Decoder || !audio->Present)
+        return 0;
+    if (audio->ChannelCount < channel)
+    {
+        FUN_140037950(player, "E05063028M: Requested audio channel is invalid.", channel);
+        return 0;
+    }
+    if (movie->State == 1)
+        return 0;
+    CriSint32 status = FUN_1400310b0(player);
+    if (status != 4 && status != 5)
+        return 0;
+    CriUint32 available = FUN_140043420(track, player, channel);
+    return available < maximum ? available : maximum;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
