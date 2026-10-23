@@ -53,6 +53,8 @@ void FUN_14004f8d0(void);
 void FUN_140027fb4(void*, void*);
 void FUN_14004e2a0(void*);
 void FUN_140046784(void*);
+void* FUN_14004fe20(void*, CriUint32, CriUint32);
+void FUN_14003cae0(void*);
 void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
 void* FUN_14003a1a0(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
@@ -1405,6 +1407,112 @@ CriBool createMpvHn(void* handle)
     FUN_14004e2f0(mpv, 1, 0);
     FUN_14004ff90(mpv, (void*)FUN_140041190, NULL);
     return 1;
+}
+
+// MS2-FUNCTIONAL: build a VMPV handle with its decoder instance, frame pool, and stream joints.
+// @0x14003c390
+void* FUN_14003c390(void* heap, const CriUint32* config)
+{
+    if (!heap)
+        return NULL;
+    CriUint32 width, height, requestedFrames, optionA, optionB;
+    CriUint64* config64 = (CriUint64*)config;
+    memcpy(&width, config, sizeof(width));
+    memcpy(&height, config + 1, sizeof(height));
+    memcpy(&requestedFrames, config + 4, sizeof(requestedFrames));
+    memcpy(&optionA, config + 8, sizeof(optionA));
+    memcpy(&optionB, config + 9, sizeof(optionB));
+    void* source = NULL;
+    memcpy(&source, config64 + 3, sizeof(source));
+
+    CriUint8* handle = (CriUint8*)FUN_140027ed8(heap, 600, "CriVmpv__HnObj", 4);
+    if (!handle)
+    {
+        FUN_140041110(NULL, "E05070701M: Can't allocate vmpv handle.", 600);
+        return NULL;
+    }
+    memset(handle, 0, 600);
+    memcpy(handle + 0x10, &heap, sizeof(heap));
+    if (!createMpvHn(handle))
+    {
+        FUN_14003cae0(handle);
+        return NULL;
+    }
+    void* outputJoint = FUN_1400464c8(heap, 0, 0x20);
+    memcpy(handle + 0x180, &outputJoint, sizeof(outputJoint));
+    if (!outputJoint)
+    {
+        FUN_1400410d0(NULL, "E05070702M: Can't create stream joint.", 0);
+        FUN_14003cae0(handle);
+        return NULL;
+    }
+    CriUint32 frameCount = (CriUint32)decideInternalFramePoolNum((CriSint32)requestedFrames);
+    memcpy(handle + 0x28, &width, sizeof(width));
+    memcpy(handle + 0x2c, &height, sizeof(height));
+    memcpy(handle + 0x30, &frameCount, sizeof(frameCount));
+    CriUint32 poolBase;
+    memcpy(&poolBase, &DAT_143b27c60, sizeof(poolBase));
+    memcpy(handle + 0x34, &poolBase, sizeof(poolBase));
+    CriUint32 format = 0x7512;
+    memcpy(handle + 0x38, &format, sizeof(format));
+    memcpy(handle + 0x3c, &frameCount, sizeof(frameCount));
+    CriUint32 paddedWidth = (width + 0x0f) & ~0x0f;
+    CriUint32 paddedHeight = (height + 0x1f) & ~0x1f;
+    CriUint32 frameBytes = (((paddedWidth + 0x7f) & ~0x7f) * paddedHeight) +
+                           (((paddedWidth / 2 + 0x7f) & ~0x7f) * (paddedHeight / 2));
+    memcpy(handle + 0x40, &frameBytes, sizeof(frameBytes));
+    CriUint32 frameRecordBytes = 200;
+    memcpy(handle + 0x50, &frameRecordBytes, sizeof(frameRecordBytes));
+
+    size_t recordsBytes = (size_t)frameRecordBytes * frameCount;
+    CriUint8* records = (CriUint8*)FUN_140027ed8(heap, (CriSint32)(recordsBytes + 4),
+                                                 "CriVmpv__FrmPoolInfoAry", 4);
+    memcpy(handle + 0x48, &records, sizeof(records));
+    if (!records)
+    {
+        FUN_140041110(NULL, "E05092801M: Can't allocate frame pool info.",
+                      (CriUint32)recordsBytes);
+        FUN_14003cae0(handle);
+        return NULL;
+    }
+    memset(records, 0, recordsBytes);
+    for (CriUint32 i = 0; i < frameCount; ++i)
+    {
+        CriUint8* frame = (CriUint8*)FUN_140027ed8(heap, (CriSint32)frameBytes,
+                                                   "CriVmpv__FrmPoolBuf", 0x800);
+        memcpy(records + (size_t)i * frameRecordBytes, &frame, sizeof(frame));
+        if (!frame)
+        {
+            FUN_140041110(NULL, "E05070902M: Can't allocate frame buffer.", frameBytes);
+            FUN_14003cae0(handle);
+            return NULL;
+        }
+        memcpy(records + (size_t)i * frameRecordBytes + 8, &frameBytes, sizeof(frameBytes));
+    }
+    void* frameJoint = FUN_1400464c8(heap, 0, frameCount);
+    memcpy(handle + 0x58, &frameJoint, sizeof(frameJoint));
+    if (!frameJoint)
+    {
+        FUN_1400410d0(NULL, "E05070903M: Can't create frame pool stream joint.", 0);
+        FUN_14003cae0(handle);
+        return NULL;
+    }
+
+    if (source)
+    {
+        void* decoder = (void*)FUN_14004fe20(source, optionA, optionB);
+        memcpy(handle + 0x220, &decoder, sizeof(decoder));
+    }
+    memcpy(handle + 0x228, &source, sizeof(source));
+    memcpy(handle + 0x230, &optionA, sizeof(optionA));
+    memcpy(handle + 0x234, &optionB, sizeof(optionB));
+    CriSint32 zero = 0;
+    memcpy(handle + 0x238, &zero, sizeof(zero));
+    memcpy(handle + 0x23c, &zero, sizeof(zero));
+    memcpy(handle + 0x18, &zero, sizeof(zero));
+    CriSint32 active = 1;
+    memcpy(handle + 8, &active, sizeof(active));
+    return handle;
 }
 
 // MS2-FUNCTIONAL: release MPV and stream-memory subsystems when the final initializer reference ends.
