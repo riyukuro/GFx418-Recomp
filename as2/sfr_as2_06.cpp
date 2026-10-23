@@ -14,6 +14,7 @@
 // MS2-RANGE: 0x1429663d0-0x142966480 .text$mn
 // MS2-RANGE: 0x1429658d0-0x1429659e0 .text$mn
 // MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
+// MS2-RANGE: 0x142965160-0x142965250 .text$mn
 // MS2-RANGE: 0x142965f30-0x1429660c0 .text$mn
 // MS2-RANGE: 0x1429660c0-0x142966270 .text$mn
 // MS2-RANGE: 0x14295e1b0-0x14295e2b0 .text$mn
@@ -2315,6 +2316,20 @@ bool Environment::IsAvailable(const ASString& name, const WithStackArray* withSt
         return true;
     Object* global = StringContext.pContext ? StringContext.pContext->pGlobal : 0;
     return global && global->HasMember(const_cast<ASStringContext*>(&StringContext), name, false);
+}
+
+// MS2-FUNCTIONAL: queries the level-zero AS2 environment for the supplied variable or target path.
+// @0x142965160
+bool MovieRoot::IsAvailable(const char* name) const
+{
+    if (!name)
+        return false;
+    Sprite* level0 = GetLevelMovie(0);
+    if (!level0)
+        return false;
+    AvmCharacter* avm = ToAvmCharacter(level0);
+    Environment* environment = avm ? avm->GetASEnvironment() : 0;
+    return environment && environment->IsAvailable(environment->CreateString(name));
 }
 
 }}} // namespace Scaleform::GFx::AS2

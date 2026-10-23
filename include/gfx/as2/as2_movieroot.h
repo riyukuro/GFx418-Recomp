@@ -242,6 +242,8 @@ public:
     bool GetLevel0Path(String* ppath) const;
     // (appended for sfr_as2_05) the clip loaded as _level<level>, 0 if none (exe 0x14294b120).
     Sprite* GetLevelMovie(int level) const;
+    // Checks whether name resolves from the level-zero script environment (exe 0x142965160).
+    bool IsAvailable(const char* name) const;
     // A new empty movie clip loaded as _level<level> (loadVariables into a missing level) (exe 0x1429360e0).
     Sprite* CreateEmptyLevelMovie(LoadStates* pls, int level);
 
