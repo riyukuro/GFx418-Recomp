@@ -148,6 +148,8 @@ CriSint32 FUN_1400355b0(void* playerHandle);
 void     FUN_1400393f0(void* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c,
                        CriUint64 d, CriUint64 e);
 CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frameInfo);
+CriBool  FUN_140039180(CriMvEasyPlayer* easyPlayer, CriSint32 updateTime, CriUint32* output);
+void*    FUN_140035c80(void* player, void* output);
 CriBool  FUN_140035710(void* player, void* movieYuvState, void* outputInfo);
 CriBool  FUN_140035800(void* player, void* movieYuvState, void* outputInfo);
 CriSint32 FUN_1400397a0(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frameInfo,
@@ -1539,6 +1541,48 @@ CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frame
     if (callback)
         return callback(easyPlayer, frameInfo, count, unit, userData);
     return FUN_1400397a0(easyPlayer, frameInfo, count, unit, userData);
+}
+
+// MS2-FUNCTIONAL: fetch a due video frame from CriMvPly and retain its metadata on the easy player.
+// @0x140039180
+CriBool FUN_140039180(CriMvEasyPlayer* easyPlayer, CriSint32 updateTime, CriUint32* output)
+{
+    (void)updateTime;
+    *output = 0;
+    if (easyPlayer->pause_flag == 1 || easyPlayer->unk724 == 1)
+        return 0;
+    CriSint32 status = criMvPly_GetStatus(easyPlayer->mvply);
+    if (status >= 0 && status <= 4)
+        return 0;
+
+    CriMvFrameInfo frame = {};
+    void* frameToken = FUN_140035c80(easyPlayer->mvply, &frame);
+    CriBool hasFrame = frameToken != NULL;
+    CriBool onTime = FUN_140039330(easyPlayer, &frame);
+    if (!hasFrame || !onTime)
+        return 0;
+    easyPlayer->frame_info = frame;
+    return 1;
+}
+
+// MS2-FUNCTIONAL: fetch video and optional alpha frame metadata and retain the alpha snapshot on the easy player.
+// @0x140039010
+CriBool FUN_140039010(CriMvEasyPlayer* easyPlayer, void* yuvBuffers, void* outputInfo, CriUint32* result)
+{
+    *result = 0;
+    if (!FUN_140039180(easyPlayer, 0, result))
+        return 0;
+    CriBool hasVideo = FUN_140035710(easyPlayer->mvply, yuvBuffers, outputInfo);
+    if (hasVideo)
+    {
+        CriMvEasyPlayerFrameFields* frameFields = (CriMvEasyPlayerFrameFields*)easyPlayer;
+        CriMvAlphaFrameSnapshot alpha = {};
+        if (FUN_140035800(easyPlayer->mvply, yuvBuffers, &alpha))
+            memcpy(frameFields->AlphaFrameInfo, &alpha, sizeof(alpha));
+        else
+            memset(frameFields->AlphaFrameInfo, 0, sizeof(frameFields->AlphaFrameInfo));
+    }
+    return hasVideo;
 }
 
 // MS2-FUNCTIONAL: restores CRI's alternating timestamp-error correction using the frame-rate and state fields it stores.
