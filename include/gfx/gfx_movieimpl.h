@@ -165,6 +165,7 @@ public:
     }
     // Defined where InteractiveObject is complete (sfr_gfx_05b).
     inline bool IsFocused(const InteractiveObject* ch, unsigned controllerIdx) const;
+    bool IsKeyboardFocused(const InteractiveObject* ch, unsigned controllerIdx) const;
     bool IsFocusRectShown(unsigned controllerIdx) const
     {
         return FocusGroups[FocusGroupIndexes[controllerIdx]].FocusRectShown;

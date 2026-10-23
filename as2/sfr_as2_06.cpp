@@ -5,6 +5,7 @@
 // MS2-RANGE: 0x14295d700-0x14295d840 .text$mn
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
+// MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
 // MS2-RANGE: 0x14295e1b0-0x14295e2b0 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
 // MS2-RANGE: 0x142961830-0x142961a40 .text$mn
@@ -1827,6 +1828,14 @@ void ActionBufferData::Read(Stream* pin, unsigned length)
 
 } // namespace AS2
 
+// @0x142965bb0
+bool MovieImpl::IsKeyboardFocused(const InteractiveObject* ch, unsigned controllerIdx) const
+{
+    const unsigned group = FocusGroupIndexes[controllerIdx];
+    Ptr<InteractiveObject> focused = FocusGroups[group].LastFocused;
+    return focused.GetPtr() == ch && FocusGroups[group].FocusRectShown;
+}
+
 // The host side of AS2 values; only the members recovered in this unit.
 class AS2ValueObjectInterface : public Value::ObjectInterface
 {
@@ -2049,8 +2058,11 @@ __declspec(noinline) void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32
 // @0x1429673e0
 template void GFx::LogBase<GFx::AS2::ActionLogger>::LogAction(const char*, ...) const;
 
+// MS2-FUNCTIONAL the exe inlines Target->GetLog(), while this explicit instantiation calls the recovered
+// Environment::GetLog helper; the log routing and format are unchanged.
 // LogError functional (pinned at the end): Environment::GetLog (exe 0x14294b210) is out of line here, the exe
 // inlines Target->GetLog()
+// @0x142967b90
 template void GFx::LogBase<GFx::AS2::Environment>::LogError(const char*, ...) const;
 
 // The out-of-line array growth of the AS2 containers.
