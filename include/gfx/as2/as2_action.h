@@ -453,6 +453,7 @@ public:
     }
 
     static ActionBufferData* CreateNew(); // exe 0x142936620
+    unsigned GetLength() const { return BufferLen; }
 
 protected:
     UByte*   pBuffer;       // +0x10
@@ -473,6 +474,19 @@ protected:
     Ptr<ActionBufferData>                         pBufferData;         // +0x10
     ArrayCC<ASString, StatMV_ActionScript_Mem>    Dictionary;          // +0x18
     int                                           DeclDictProcessedAt; // +0x38
+
+public:
+    // What the code being run is (only the plain kind is named so far).
+    enum ExecuteType
+    {
+        Exec_Unknown = 0
+    };
+    // Runs the whole buffer in env (exe 0x142939e30).
+    void Execute(Environment* env);
+    // The interpreter: runs execBytes bytes from startPc in env, the return value to retval, starting with the
+    // with stack pinitialWithStack (exe 0x142939e60).
+    void Execute(Environment* env, int startPc, int execBytes, Value* retval, const WithStackArray* pinitialWithStack,
+                 ExecuteType execType);
 };
 
 SF_FORCEINLINE void FunctionRefBase::DropRefs()

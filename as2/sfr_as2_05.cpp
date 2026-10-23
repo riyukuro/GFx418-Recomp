@@ -93,6 +93,9 @@
 // MS2-RANGE: 0x142943200-0x142943351 .text$mn
 // MS2-RANGE: 0x142944a80-0x142944c5f .text$mn
 // MS2-RANGE: 0x142938bd0-0x142938d5f .text$mn
+// MS2-RANGE: 0x14293fbe0-0x14293fcc1 .text$mn
+// MS2-RANGE: 0x142939e30-0x142939e57 .text$mn
+// MS2-RANGE: 0x14293ff10-0x14293ff6a .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1813,6 +1816,46 @@ void MovieRoot::DoActionsForSession(unsigned sessionId)
     const ActionEntry* paction;
     while ((paction = iter.getNext()) != 0)
         paction->Execute(this);
+}
+
+// @0x14293fbe0
+void MovieRoot::ActionEntry::Execute(MovieRoot*) const
+{
+    if (!pCharacter || pCharacter->IsUnloaded())
+        return;
+    switch (Type)
+    {
+    case Entry_Buffer:
+        ToAvmCharacter(pCharacter)->ExecuteBuffer(pActionBuffer);
+        break;
+    case Entry_Event:
+        ToAvmCharacter(pCharacter)->ExecuteEvent(mEventId);
+        break;
+    case Entry_Function:
+        ToAvmCharacter(pCharacter)->ExecuteFunction(Function, FunctionParams);
+        break;
+    case Entry_CFunction:
+        ToAvmCharacter(pCharacter)->ExecuteCFunction(CFunction, FunctionParams);
+        break;
+    default:;
+    }
+}
+
+// @0x142939e30
+void ActionBuffer::Execute(Environment* env)
+{
+    Execute(env, 0, pBufferData->GetLength(), 0, 0, Exec_Unknown);
+}
+
+// @0x14293ff10
+bool AvmSprite::ExecuteBuffer(ActionBuffer* pactionbuffer)
+{
+    if (!pDispObj->IsUnloaded())
+    {
+        pactionbuffer->Execute(GetASEnvironment());
+        return true;
+    }
+    return false;
 }
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0

@@ -76,6 +76,18 @@ public:
     // 0x142935cc0).
     virtual void CloneInternalData(const InteractiveObject* src);
     virtual void CopyPhysicalProperties(const InteractiveObject* poldChar);
+
+    // (appended for sfr_as2_05)
+    // Slots 35..40. A standard member by index; opcodeFlag rejects the indices the set/getProperty opcodes cannot
+    // name (exe 0x14298ab80 / 0x142955080).
+    virtual bool SetStandardMember(StandardMember index, const Value& val, bool opcodeFlag);
+    virtual bool GetStandardMember(StandardMember index, Value* val, bool opcodeFlag) const;
+    // Run script on the character: an action buffer (sprites only), a clip event, a function, a native function
+    // (exe 0x142940160 for the event, 0x1429413c0, 0x14293ff70).
+    virtual bool ExecuteBuffer(ActionBuffer* pactionbuffer);
+    virtual bool ExecuteEvent(const EventId& id);
+    virtual bool ExecuteFunction(const FunctionRef& function, const Array<Value>& params);
+    virtual bool ExecuteCFunction(CFunctionPtr function, const Array<Value>& params);
 };
 
 // The script side of a character of an AS2 movie.

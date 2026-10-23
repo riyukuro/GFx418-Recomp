@@ -122,6 +122,10 @@ public:
     virtual void CloneInternalData(const InteractiveObject* src);
     virtual void CopyPhysicalProperties(const InteractiveObject* poldChar); // exe 0x142935d10
     void SetLevel(int level); // exe 0x142981bf0
+
+    // (appended for sfr_as2_05)
+    // Runs the whole buffer in the clip's environment; false once the clip is unloaded (exe 0x14293ff10).
+    virtual bool ExecuteBuffer(ActionBuffer* pactionbuffer);
 };
 
 inline Sprite* ObjectInterface::ToSprite()
