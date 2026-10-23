@@ -586,6 +586,6 @@ unsigned long long OpenAudioStream(void* stream, void*, unsigned* length, void*,
 // @0x142745490
 unsigned long long ValidateAudioStream(void*, void*, void* stream)
 {
-    return FUN_1427483a0(stream, 0) == 0 ? 0 : 20;
+    return FUN_1427483a0(stream, 0) == 0 ? 20 : 0;
 }
 }
