@@ -623,3 +623,40 @@ FMOD_RESULT CreateAudioSound(void* player, void* request, FMOD::Sound** sound)
     return result;
 }
 }
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: validates the encoded sample format, prepares the 0xd8-byte FMOD info block, and creates the sound.
+// @0x1427452e0
+FMOD_RESULT CreateAudioSoundFromRequest(void* player, void* request, FMOD::Sound** sound)
+{
+    auto* requestBytes = static_cast<unsigned char*>(request);
+    const unsigned format = *reinterpret_cast<unsigned*>(requestBytes + 0x10);
+    unsigned flags;
+    unsigned channels = 0;
+    unsigned defaultFrequency = 0;
+    unsigned soundFormat;
+    if ((format & 0x700) == 0x100) {
+        flags = 0x1a001040;
+        defaultFrequency = *reinterpret_cast<unsigned*>(requestBytes + 0x14);
+        channels = ((format & 7) == 2) + 1;
+        soundFormat = ((format & 8) != 0) + 1;
+    } else if ((format & 0x700) == 0x200) {
+        flags = 0x1a000240;
+        soundFormat = 0xb;
+    } else {
+        return static_cast<FMOD_RESULT>(0x19);
+    }
+
+    unsigned char info[0xd8] = {};
+    *reinterpret_cast<unsigned*>(info) = sizeof(info);
+    *reinterpret_cast<unsigned*>(info + 4) = *reinterpret_cast<unsigned*>(requestBytes + 0x28);
+    *reinterpret_cast<unsigned*>(info + 0x0c) = channels;
+    *reinterpret_cast<unsigned*>(info + 0x10) = defaultFrequency;
+    *reinterpret_cast<unsigned*>(info + 0x14) = soundFormat;
+    void* owner = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
+    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(owner) + 0x10));
+    return system->createSound(*reinterpret_cast<char**>(requestBytes + 0x20), flags,
+                               reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+}
+}
