@@ -5,6 +5,8 @@
 // MS2-RANGE: 0x142444c40-0x142445480 .text$mn
 // MS2-RANGE: 0x1423dfa20-0x1423dfba0 .text$mn
 // MS2-RANGE: 0x142446cb0-0x142446d90 .text$mn
+// MS2-RANGE: 0x1424eb700-0x1424eb7b0 .text$mn
+// MS2-RANGE: 0x1424ed770-0x1424ed7b0 .text$mn
 // MS2-RANGE: 0x142447090-0x142447310 .text$mn
 // MS2-RANGE: 0x14252b580-0x14252b5a0 .text$mn
 // MS2-RANGE: 0x1424ad030-0x1424ad0b0 .text$mn
@@ -3314,8 +3316,24 @@ template void Matrix2x4<float>::TransformByInverse(Point<float>*, const Point<fl
 // @0x142447090
 // MS2-FUNCTIONAL 0x142447090: same arithmetic; cl schedules the inverse's operands differently
 template Point<float> Matrix2x4<float>::TransformByInverse(const Point<float>&) const;
+// @0x1424eb700
+template Matrix2x4<float>& Matrix2x4<float>::AppendScaling(float, float);
 
 }} // namespace Scaleform::Render
+
+// ---- AS3 VM string conversion ----
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The value converted to a string (the empty string when it cannot be).
+// @0x1424ed770
+ASString VM::AsString(const Value& v)
+{
+    ASString result = GetStringManager().CreateEmptyString();
+    v.Convert2String(result);
+    return result;
+}
+
+}}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
