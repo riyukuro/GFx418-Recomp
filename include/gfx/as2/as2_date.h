@@ -5,6 +5,7 @@
 #define MS2_SF_GFX_AS2_DATE_H
 
 #include "as2_action.h"
+#include "as2_objectproto.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -14,6 +15,8 @@ class DateObject : public Object
 public:
     DateObject(Environment* penv);             // exe 0x14291b510
     DateObject(Environment* penv, SInt64 val); // exe 0x14291b5a0
+    // The prototype instance leaves the time fields unset.
+    DateObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
 
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x1429566c0
     virtual ObjectType  GetObjectType() const;                     // exe 0x142954220: Object_Date
@@ -36,10 +39,14 @@ protected:
     void commonInit(Environment* penv); // exe 0x142994fe0
 };
 
-// Date.prototype methods.
-class DateProto
+// Date.prototype.
+class DateProto : public Prototype<DateObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143213ae0
+
+    DateProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291b650
+
     static void DateGetTimezoneOffset(const FnCall& fn);
     static void DateGetMonth(const FnCall& fn);
     static void DateGetDate(const FnCall& fn);

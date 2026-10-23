@@ -5,6 +5,7 @@
 #define MS2_SF_GFX_AS2_ARRAYOBJECT_H
 
 #include "as2_action.h"
+#include "as2_objectproto.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -220,6 +221,15 @@ private:
     Environment*                                        Env;          // +0x10
     const Log*                                          LogPtr;       // +0x18
     Array<ArraySortFunctor>                             FunctorArray; // +0x20
+};
+
+// Array.prototype.
+class ArrayProto : public Prototype<ArrayObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213250
+
+    ArrayProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x1429180c0
 };
 
 // The Array class.

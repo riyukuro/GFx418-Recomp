@@ -545,6 +545,11 @@ public:
     Ptr<Object>          PixelBounds;     // +0x88 RectangleObject
 
     TransformObject(Environment* penv, InteractiveObject* pcharacter = 0); // exe 0x142923350
+    // The prototype instance has no target.
+    TransformObject(ASStringContext* psc, Object* pprototype) : Object(psc), pMovieRoot(0)
+    {
+        Set__proto__(psc, pprototype);
+    }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954370: Object_Transform
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -559,6 +564,15 @@ protected:
     virtual void Finalize_GC(); // exe 0x142943150
 
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
+};
+
+// Transform.prototype: no methods, the properties as undefined members.
+class TransformProto : public Prototype<TransformObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432134a0 (empty)
+
+    TransformProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x1429234f0
 };
 
 // Receiver of the mouse events of a movie (MovieRoot); vftable { dtor, OnMouseMove, OnMouseDown, OnMouseUp,

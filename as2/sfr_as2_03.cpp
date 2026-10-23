@@ -2,7 +2,14 @@
 // assignments of the script values, objects and prototypes (the out-of-line copies the unity build emitted).
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1429180c0-0x1429181f0 .text$mn
+// MS2-RANGE: 0x1429277d0-0x142927860 .text$mn
+// MS2-RANGE: 0x142927d30-0x142927dc0 .text$mn
+// MS2-RANGE: 0x142929210-0x1429292a0 .text$mn
+// MS2-RANGE: 0x14291b650-0x14291b750 .text$mn
 // MS2-RANGE: 0x142923350-0x1429234f0 .text$mn
+// MS2-RANGE: 0x1429234f0-0x1429237f0 .text$mn
+// MS2-RANGE: 0x1429289b0-0x142928a40 .text$mn
 // MS2-RANGE: 0x142925fb0-0x142926060 .text$mn
 // MS2-RANGE: 0x142925140-0x142925190 .text$mn
 // MS2-RANGE: 0x142925920-0x142925990 .text$mn
@@ -609,6 +616,13 @@ ArrayObject::ArrayObject(Environment* penv)
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Array));
 }
 
+// @0x1429180c0
+ArrayProto::ArrayProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<ArrayObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
 // @0x14291f430
 NumberObject::NumberObject(Environment* penv)
     : Object(penv), NumberValue(0)
@@ -685,6 +699,22 @@ TransformObject::TransformObject(Environment* penv, InteractiveObject* pcharacte
     PixelBounds = *penv->OperatorNew(penv->GetSC()->pContext->FlashGeomPackage, penv->GetBuiltin(ASBuiltin_Rectangle));
 }
 
+// MS2-FUNCTIONAL cl zeroes the string flags (r9d) after the name address; the exe does it before
+// @0x1429234f0
+TransformProto::TransformProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<TransformObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Value undef;
+    SetMemberRaw(psc, psc->CreateConstString("matrix"), undef, PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("concatenatedMatrix"), undef,
+                 PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("colorTransform"), undef, PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("concatenatedColorTransform"), undef,
+                 PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("pixelBounds"), undef, PropFlags(PropFlags::PropFlag_DontDelete));
+}
+
 // @0x14291b510
 DateObject::DateObject(Environment* penv)
     : Object(penv)
@@ -716,6 +746,13 @@ DateObject::DateObject(Environment* penv, SInt64 val)
     LocalOffset = 0;
     static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Date));
     SetDate(val);
+}
+
+// @0x14291b650
+DateProto::DateProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<DateObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
 // @0x14291e790
@@ -1437,3 +1474,25 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??1TransformObject@AS2@GFx@Scaleform@@UEAA@XZ 0x142925fb0
 // MS2-PIN: ??_7TransformObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432198e0
 // MS2-PIN: ??_7TransformObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219928
+// MS2-PIN: ??_7?$Prototype@VArrayObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ae20
+// MS2-PIN: ??_7?$Prototype@VArrayObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ae68
+// MS2-PIN: ??_7?$Prototype@VArrayObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321af10
+// MS2-PIN: ??_7ArrayProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321af18
+// MS2-PIN: ??_7ArrayProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321af60
+// MS2-PIN: ??_7ArrayProto@AS2@GFx@Scaleform@@6B@ 0x14321b008
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c2c8
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c310
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321c3b8
+// MS2-PIN: ??_7DateProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c3c0
+// MS2-PIN: ??_7DateProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c408
+// MS2-PIN: ??_7DateProto@AS2@GFx@Scaleform@@6B@ 0x14321c4b0
+// MS2-PIN: ??_G?$Prototype@VArrayObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429277d0
+// MS2-PIN: ??_G?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927d30
+// MS2-PIN: ??_GArrayProto@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929210
+// MS2-PIN: ??_7?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432199d0
+// MS2-PIN: ??_7?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219a18
+// MS2-PIN: ??_7?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143219ac0
+// MS2-PIN: ??_7TransformProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219ac8
+// MS2-PIN: ??_7TransformProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219b10
+// MS2-PIN: ??_7TransformProto@AS2@GFx@Scaleform@@6B@ 0x143219bb8
+// MS2-PIN: ??_G?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429289b0
