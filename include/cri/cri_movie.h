@@ -218,25 +218,44 @@ struct CriUtfRtvColumn
     CriSint32 Type;
     CriUint8 Reserved0[4];
     const CriChar8* Name;
-    CriUint8 Reserved1[4];
     CriUint8 HasDefault;
     CriUint8 IsRecordField;
     CriUint16 DataOffset;
-    CriUint8 Reserved2[0x0c];
-    CriUint64 DefaultValue;
-    CriUint8 Reserved3[8];
+    CriUint8 Reserved1[4];
+    CriUint64 DefaultValue[3];
 };
 
 struct CriUtfRtvView
 {
     CriUint8 Reserved0[0x38];
     const CriUint8* StringData;
-    CriUint8 Reserved1[8];
+    const CriUint8* BlobData;
     const CriUint8* RecordData;
     CriUint16 FieldCount;
     CriUint16 RecordSize;
     CriUint32 RecordCount;
     CriUtfRtvColumn* Columns;
+};
+
+struct CriUtfRtvCell
+{
+    CriUint8 Type;
+    CriUint8 Reserved[7];
+    CriUint8 Value[16];
+};
+
+struct CriUsfStandardHeader
+{
+    CriUint8 Data[0x24];
+};
+
+struct CriMvSubAudioTrackState
+{
+    CriUint8 Reserved[0x8cc];
+    CriSint32 TrackCount;
+    CriUint8 Reserved2[4];
+    CriSint32 TrackIds[64];
+    CriSint32 TrackValues[64];
 };
 
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
