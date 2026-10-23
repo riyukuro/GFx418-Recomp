@@ -354,6 +354,7 @@ protected:
 
 public:
     StateBagImpl(StateBagImpl* pdelegate) { pDelegate = pdelegate; }
+    StateBagImpl* GetDelegate() const { return pDelegate; }
     // Inline: the exe has no out-of-line copy (it is folded into the deleting destructor 0x14256bb20).
     virtual ~StateBagImpl() {}
 

@@ -121,6 +121,7 @@ public:
     // Copies the event handlers of src; button handlers carry over to the clip object (exe 0x1429348c0).
     virtual void CloneInternalData(const InteractiveObject* src);
     virtual void CopyPhysicalProperties(const InteractiveObject* poldChar); // exe 0x142935d10
+    void SetLevel(int level); // exe 0x142981bf0
 };
 
 inline Sprite* ObjectInterface::ToSprite()

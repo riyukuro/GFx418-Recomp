@@ -36,6 +36,8 @@
 // MS2-RANGE: 0x142935dc0-0x142935e8a .text$mn
 // MS2-RANGE: 0x142993810-0x1429938c2 .text$mn
 // MS2-RANGE: 0x1429362c0-0x142936357 .text$mn
+// MS2-RANGE: 0x1429360e0-0x1429362b3 .text$mn
+// MS2-RANGE: 0x142935ea0-0x1429360d3 .text$mn
 // MS2-RANGE: 0x14292e650-0x14292e6d3 .text$mn
 // MS2-RANGE: 0x142934820-0x1429349a0 .text$mn
 
@@ -53,6 +55,8 @@
 #include "../include/gfx/gfx_value.h"
 #include "../include/kernel/sf_utf8util.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/gfx_assupport.h"
+#include "../include/gfx/gfx_placeobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/render/render_twips.h"
@@ -1020,6 +1024,38 @@ Object* CreateFilterObject(Environment* penv, const Render::Filter* pfilter)
     return pobj;
 }
 
+// MS2-FUNCTIONAL regalloc: the exe keeps the zero / result in rdi and the data def in rbx (swapped)
+// @0x1429360e0
+Sprite* MovieRoot::CreateEmptyLevelMovie(LoadStates* pls, int level)
+{
+    Sprite* psprite = 0;
+    ResourceKey key = MovieDataDef::CreateMovieFileKey("", 0, 0, 0, 0);
+    MemoryHeap* pheap = pMovieImpl->GetMovieHeap();
+    Ptr<MovieDataDef> pdataDef =
+        *SF_HEAP_NEW(pheap ? pheap : Memory::GetGlobalHeap()) MovieDataDef(key, MovieDataDef::MT_Empty, "", pheap);
+    if (pdataDef)
+    {
+        pdataDef->InitEmptyMovieDef();
+        pls->SetRelativePathForDataDef(pdataDef);
+        Ptr<MovieDefImpl> pdefImpl = *SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
+            MovieDefImpl(pdataDef, pls->pBindStates, pls->pLoaderImpl, 0, pMovieImpl->pStateBag->GetDelegate(),
+                         pMovieImpl->GetMovieHeap(), true);
+        if (pdefImpl)
+        {
+            CharacterCreateInfo ccinfo;
+            ccinfo.pCharDef     = pdataDef;
+            ccinfo.pBindDefImpl = pdefImpl;
+            ccinfo.pResource    = 0;
+            psprite = static_cast<Sprite*>(pASSupport->CreateCharacterInstance(
+                pMovieImpl, ccinfo, 0, ResourceId(), CharacterDef::Sprite));
+            psprite->SetLoadedSeparately();
+            AvmSprite::FromSprite(psprite)->SetLevel(level);
+            pMovieImpl->SetLevelMovie(level, psprite);
+        }
+    }
+    return psprite;
+}
+
 // @0x14292e650
 void AvmSprite::AddActionBuffer(ActionBuffer* pbuffer, ActionPriority::Priority prio)
 {
@@ -1153,6 +1189,47 @@ SF_NOINLINE bool AvmCharacter::DeleteMember(ASStringContext* psc, const ASString
     return obj ? obj->DeleteMember(psc, name) : false;
 }
 }}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx {
+
+// The host side of AS2 values (GFx::Value object calls); only the members recovered so far.
+class AS2ValueObjectInterface : public Value::ObjectInterface
+{
+private:
+    virtual bool CreateEmptyMovieClip(void* pdata, Value* pmc, const char* instanceName, SInt32 depth);
+};
+
+// A new empty clip in the clip pdata (a free depth above the used ones when depth is negative); *pmc gets it.
+// @0x142935ea0
+bool AS2ValueObjectInterface::CreateEmptyMovieClip(void* pdata, Value* pmc, const char* instanceName, SInt32 depth)
+{
+    DisplayObject* pchar = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
+    if (!pchar || !pchar->IsSprite())
+        return false;
+    AS2::MovieRoot*   proot   = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
+    AS2::Environment* penv    = AS2::GetLevel0Environment(proot->pMovieImpl);
+    Sprite*           psprite = static_cast<Sprite*>(pchar);
+    if (depth < 0)
+    {
+        depth = psprite->mDisplayList.GetLargestDepthInUse() - 16383;
+        if (depth < 0)
+            depth = 0;
+    }
+    CharPosInfo pos(ResourceId(ResourceId::IdType_InternalConstant | 1), depth + 16384, 1, Render::Cxform::Identity,
+                    1, Render::Matrix2F::Identity);
+    if (pos.Depth < 0 || pos.Depth > 0x7efffffd)
+        return false;
+    Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, penv->CreateString(instanceName), 0, 0, ~0u, 1, 0, 0);
+    if (newch)
+    {
+        newch->SetAcceptAnimMoves(false);
+        AS2::Value val(static_cast<InteractiveObject*>(newch.GetPtr()));
+        proot->ASValue2GFxValue(penv, val, pmc);
+    }
+    return true;
+}
+
+}} // namespace Scaleform::GFx
 
 namespace Scaleform {
 

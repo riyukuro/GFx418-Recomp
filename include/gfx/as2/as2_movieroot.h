@@ -198,6 +198,8 @@ public:
     bool SetLevelMovie(int level, Sprite* psprite); // exe 0x142981d80
     // The directory of _level0's URL (exe 0x14294b090).
     bool GetLevel0Path(String* ppath) const;
+    // A new empty movie clip loaded as _level<level> (loadVariables into a missing level) (exe 0x1429360e0).
+    Sprite* CreateEmptyLevelMovie(LoadStates* pls, int level);
 
     // Attaches the movie and gives it a new global context (exe 0x1429891c0).
     virtual void SetMovie(MovieImpl* pmovie);
