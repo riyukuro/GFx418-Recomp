@@ -56,6 +56,8 @@ CriUint32 FUN_140043420(void*, void*, CriUint32);
 CriUint32 FUN_140042f40(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 CriUint32 FUN_1400431a0(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 void criSj_SplitChunk(const void*, CriUint32, void*, void*);
+CriSint32 FUN_140027dd0(CriSint32);
+CriSint32 criVmpv_GetStatus(const void*);
 const void** FUN_14003bed0(void);
 const void** FUN_14003bf10(void);
 void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration);
@@ -431,6 +433,42 @@ void FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32 chan
                    void* output, CriUint32 flags, CriUint32* result)
 {
     FUN_1400431a0(((void**)decoders)[index], player, channels, output, flags, result);
+}
+
+// MS2-FUNCTIONAL: calculate universal stream-joint work bytes plus the two aligned block headers.
+// @0x140046420
+CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const CriUint32* settings)
+{
+    CriSint32 headerBytes = FUN_140027dd0(8);
+    CriUint32 config[3] = { settings[0], first, second };
+    return FUN_140045910(config) + headerBytes * 2;
+}
+
+// MS2-FUNCTIONAL: request work sizing for the default one-block stream-joint setup.
+// @0x1400464a8
+void FUN_1400464a8(CriUint32 first, CriUint32 second)
+{
+    const CriUint32 settings[2] = { 0, 1 };
+    FUN_140046420(first, second, settings);
+}
+
+// MS2-FUNCTIONAL: test stream readiness after the active decoder state and buffered input are checked.
+// @0x140040de0
+CriBool FUN_140040de0(void* object)
+{
+    struct ReaderState
+    {
+        CriUint8 Reserved00[0x1c];
+        CriSint32 State;
+        CriUint8 Reserved20[0x38];
+        void* Queue;
+    };
+    ReaderState* reader = (ReaderState*)object;
+    if (reader->State == 1)
+        return 0;
+    if (criVmpv_GetStatus(object) != 2)
+        return 0;
+    return FUN_1400467b8(reader->Queue, 1) != 0;
 }
 
 void FUN_1400478a0(void);
