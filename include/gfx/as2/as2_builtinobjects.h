@@ -558,8 +558,17 @@ void ObjectPtrArray_PushBack(Array<Object*>* parray, Object* const& pobj);     /
 class GASSharedObjectLoader : public SharedObjectVisitor
 {
 public:
+    // (appended for sfr_as2_02) built on the stack by getLocal; pdata is not referenced.
+    GASSharedObjectLoader(Environment* penv, Object* pdata) : pEnv(penv), pData(pdata), bArrayIsTop(false) {}
+
     // Starts from the data object alone on the stack (exe 0x142932010).
     virtual void Begin();
+    virtual void PushObject(const String& name);                                               // exe 0x142972190
+    virtual void PushArray(const String& name);                                                // exe 0x1429718b0
+    virtual void AddProperty(const String& name, const String& value, GFx::Value::ValueType type); // exe 0x142930480
+    virtual void PopObject();                                                                  // exe 0x14296f260
+    virtual void PopArray();                                                                   // exe 0x14296f0c0
+    virtual void End() {}
 
 private:
     Environment*   pEnv;        // +0x10
@@ -788,6 +797,10 @@ public:
 class SharedObjectPtr : public Ptr<SharedObject>
 {
 public:
+    // (appended for sfr_as2_02)
+    SharedObjectPtr() {}
+    SharedObjectPtr(SharedObject* pobj) : Ptr<SharedObject>(pobj) {}
+
     virtual ~SharedObjectPtr() {}
     virtual void Finalize_GC() {}
 
@@ -818,6 +831,11 @@ protected:
     virtual void Finalize_GC(); // exe 0x142942f80
 
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
+
+private:
+    // (appended for sfr_as2_02)
+    // getLocal(name[, localPath]): the cached shared object, else a new one loaded by the manager (exe 0x142901410).
+    static void GetLocal(const FnCall& fn);
 };
 
 // The LoadVars class.

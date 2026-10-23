@@ -38,6 +38,7 @@
 // MS2-RANGE: 0x142908a70-0x142908c2c .text$mn
 // MS2-RANGE: 0x142906040-0x14290632c .text$mn
 // MS2-RANGE: 0x1429049b0-0x142905183 .text$mn
+// MS2-RANGE: 0x142901410-0x142901a70 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -2248,6 +2249,58 @@ void AvmSprite::SpriteHitTest(const FnCall& fn)
     }
 }
 #pragma strict_gs_check(pop)
+
+// getLocal(name[, localPath]): shared objects are cached by "localPath:name"; a new one gets its data replayed by
+// the shared object manager, null when the name is invalid or nothing could be loaded.
+// MS2-FUNCTIONAL: the exe inlines SetNameAndLocalPath (its character switch) and the cache lookup
+// @0x142901410
+void SharedObjectCtorFunction::GetLocal(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    ASString name = fn.Arg(0).ToString(fn.Env);
+    ASString localPath = fn.Env->CreateConstString("");
+    if (fn.NArgs > 1)
+        localPath = fn.Arg(1).ToString(fn.Env);
+    String nameStr(name.ToCStr());
+    String localPathStr(localPath.ToCStr());
+    ASString key = fn.Env->CreateString(localPathStr.ToCStr(), localPathStr.GetSize());
+    key.Append(":", 1);
+    key.Append(nameStr.ToCStr(), strlen(nameStr.ToCStr()));
+
+    FunctionRef ctor = fn.Env->GetConstructor(ASBuiltin_SharedObject);
+    SharedObjectCtorFunction* pctor = static_cast<SharedObjectCtorFunction*>(ctor.GetObjectPtr());
+    typedef ASStringHash_GC<SharedObjectPtr>::SetType SetType;
+    SetType& objects = *reinterpret_cast<SetType*>(&pctor->SharedObjects);
+    ASStringHash_GC<SharedObjectPtr>::NodeType* pnode = objects.GetAlt(key);
+    if (pnode)
+    {
+        fn.Result->SetAsObject(pnode->Second.GetPtr());
+        return;
+    }
+
+    Ptr<SharedObject> pobj = *static_cast<SharedObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_SharedObject)));
+    if (!pobj->SetNameAndLocalPath(nameStr, localPathStr))
+    {
+        fn.Result->SetNull();
+        return;
+    }
+    Ptr<Object> pdata = *fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Object));
+    GASSharedObjectLoader loader(fn.Env, pdata);
+    StateBag* pstates = fn.Env->GetTarget()->GetMovieImpl()->GetStateBag();
+    Ptr<SharedObjectManagerBase> psomgr =
+        *static_cast<SharedObjectManagerBase*>(pstates->GetStateAddRef(State::State_SharedObject));
+    FileOpenerBase* pfileOpener = fn.Env->GetTarget()->GetMovieImpl()->GetStateBag()->GetFileOpener();
+    if (psomgr && psomgr->LoadSharedObject(nameStr, localPathStr, &loader, pfileOpener))
+    {
+        pobj->SetDataObject(fn.Env, pdata);
+        fn.Result->SetAsObject(pobj);
+        ASStringHash_GC<SharedObjectPtr>::NodeType::NodeRef e(key, SharedObjectPtr(pobj));
+        objects.Add(&pctor->SharedObjects, e);
+    }
+    else
+        fn.Result->SetNull();
+}
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
@@ -2399,3 +2452,6 @@ template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const 
 // MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e310
 // MS2-PIN: ??_7GlyphVisitor@StaticTextSnapshotData@GFx@Scaleform@@6B@ 0x14316a500
 // MS2-PIN: ??_7GASTextSnapshotGlyphVisitor@AS2@GFx@Scaleform@@6B@ 0x1432228a0
+// MS2-PIN: ??_7?$RefCountBaseNTS@VSharedObjectVisitor@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143162f10
+// MS2-PIN: ??_7SharedObjectVisitor@GFx@Scaleform@@6B@ 0x143162f18
+// MS2-PIN: ??_7GASSharedObjectLoader@AS2@GFx@Scaleform@@6B@ 0x1432227a8
