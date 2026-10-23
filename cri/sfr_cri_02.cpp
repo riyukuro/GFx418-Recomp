@@ -3500,6 +3500,62 @@ void* FUN_14002d840(void* object, CriUint64 flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: restore the CRI movie player defaults after allocating its working storage.
+// @0x14002f850
+void FUN_14002f850(void* player)
+{
+    CriUint32* words = (CriUint32*)player;
+    CriMvPlyHeaderAnalysisFields* headers = (CriMvPlyHeaderAnalysisFields*)player;
+    words[0x8bc / 4] = 0x3f800000;
+    words[0x8c4 / 4] = 0x4000;
+    words[0x8c8 / 4] = 100;
+    words[0xe30 / 4] = 0xffffffff;
+    memset(headers->CurrentHeader, 0, 0x5c0);
+    for (CriUint32 slot = 0; slot < 2; ++slot)
+        words[(0x2e8 + slot * 0x2e0) / 4] = 0;
+    *(CriUint16*)((CriUint8*)player + 0x5e8) = 1;
+    words[0x5ec / 4] = 0;
+    words[0x5f0 / 4] = 0;
+    words[0x8cc / 4] = 3;
+    for (CriUint32 i = 0; i < 0x40; ++i)
+    {
+        words[0x8d0 / 4] = 0xffffffff;
+        words[(0x8d4 + i * 4) / 4] = 0x5a5a5a5a;
+        words[(0x9d4 + i * 4) / 4] = 0x5a5a5a5a;
+    }
+    words[0xd64 / 4] = 0;
+    words[0xf14 / 4] = 0;
+    words[0xe58 / 4] = 0;
+    words[0xe5c / 4] = 0;
+    words[0xe60 / 4] = 0;
+    words[0xe64 / 4] = 0;
+    words[0xe68 / 4] = 0;
+    words[0xe6c / 4] = 0;
+    words[0xe70 / 4] = 0;
+    words[0xe80 / 4] = 0;
+    *(void**)((CriUint8*)player + 0xe78) = NULL;
+    *(void**)((CriUint8*)player + 0xe88) = NULL;
+    words[0xe90 / 4] = 0;
+    words[0xe94 / 4] = 0;
+    *(void**)((CriUint8*)player + 0xe98) = NULL;
+    words[0xea0 / 4] = 0;
+    words[0xea4 / 4] = 0;
+    *(void**)((CriUint8*)player + 0xea8) = NULL;
+    words[0xeb0 / 4] = 0;
+    words[0xec8 / 4] = 0;
+    words[0xecc / 4] = 0;
+    words[0xed0 / 4] = 0;
+    words[0xed4 / 4] = 0x3f4ccccd;
+    *(CriUint64*)((CriUint8*)player + 0xee0) = 0;
+    *(CriUint64*)((CriUint8*)player + 0xee8) = 0;
+    *(CriUint64*)((CriUint8*)player + 0xef0) = 0;
+    *(CriUint64*)((CriUint8*)player + 0xef8) = 0;
+    *(CriUint64*)((CriUint8*)player + 0xf00) = 0;
+    *(CriUint64*)((CriUint8*)player + 0xf08) = 0;
+    words[0xed8 / 4] = 0xffffffff;
+    *(CriUint8*)((CriUint8*)player + 0xf10) = 0;
+}
+
 // MS2-FUNCTIONAL: release decoder queues, demux state, and heap-owned CRI Movie work areas.
 // @0x14002f610
 void FUN_14002f610(CriUint32* object)
