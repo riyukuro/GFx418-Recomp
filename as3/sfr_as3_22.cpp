@@ -2405,6 +2405,26 @@ static void CopyAs3RawRecords(unsigned char* destinationList, const unsigned cha
                     *reinterpret_cast<void* const*>(sourceList + 0x10), count * stride);
 }
 
+// MS2-FUNCTIONAL: orders a half-open range of 32-byte records using the supplied comparison callback.
+// @0x1426860f0
+extern "C" void FUN_1426860f0(void** array, std::size_t first, std::size_t last,
+                              unsigned char (*less)(const void*, const void*))
+{
+    auto* data = static_cast<unsigned char*>(*array);
+    if (!data || last <= first)
+        return;
+    unsigned char saved[0x20];
+    for (std::size_t i = first + 1; i < last; ++i) {
+        std::memcpy(saved, data + i * 0x20, sizeof(saved));
+        std::size_t position = i;
+        while (position > first && less(saved, data + (position - 1) * 0x20)) {
+            std::memcpy(data + position * 0x20, data + (position - 1) * 0x20, 0x20);
+            --position;
+        }
+        std::memcpy(data + position * 0x20, saved, sizeof(saved));
+    }
+}
+
 // MS2-FUNCTIONAL: copies the image resource record and its nested strong-reference arrays, metric lists, and lookup sets.
 // @0x142687250
 extern "C" long long FUN_142687250(void* destination, const void* source)
