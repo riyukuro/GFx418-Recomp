@@ -41,6 +41,8 @@ MS2_GLOBAL(0x143b27758, void*, VideoPropGetB); MS2_GLOBAL(0x143b27760, void*, Vi
 MS2_GLOBAL(0x143b27728, void*, VideoPropSetB); MS2_GLOBAL(0x143b27730, void*, VideoPropBaseSetB);
 MS2_GLOBAL(0x143b27738, void*, VideoPropGetC); MS2_GLOBAL(0x143b27740, void*, VideoPropBaseC);
 MS2_GLOBAL(0x143b27748, void*, VideoPropGetD); MS2_GLOBAL(0x143b27750, void*, VideoPropBaseD);
+MS2_GLOBAL(0x143b27768, void*, VideoPropSetC); MS2_GLOBAL(0x143b27770, void*, VideoPropBaseSetC);
+MS2_GLOBAL(0x143b27718, void*, VideoPropSetD); MS2_GLOBAL(0x143b27720, void*, VideoPropBaseSetD);
 MS2_GLOBAL(0x143b275f0, void*, VideoCallbackBaseC);
 
 MS2_EXTERN(0x1423df980, void(void*, void*, void*), VideoNative0);
@@ -802,4 +804,37 @@ void FUN_14001abd0(void*, void* vm, void* context, std::uint32_t* output)
     reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetD.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseD.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
+
+// MS2-FUNCTIONAL: forwards an object atom to the corresponding video property setter.
+// @0x14001ac80
+void FUN_14001ac80(void*, void* vm, void* context, std::uint64_t property, int count, const std::uint8_t* args)
+{
+    std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetC.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetC.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+}
+// MS2-FUNCTIONAL: forwards an object atom to the second corresponding video property setter.
+// @0x14001acd0
+void FUN_14001acd0(void*, void* vm, void* context, std::uint64_t property, int count, const std::uint8_t* args)
+{
+    std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetD.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetD.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+}
+// MS2-FUNCTIONAL: releases the retained atom field and invokes the AS3 cleanup hook.
+// @0x14001ae40
+void FUN_14001ae40(void* object)
+{
+    FUN_140019060(object);
+}
+// MS2-FUNCTIONAL: releases the retained atom field, invokes AS3 cleanup, and conditionally frees the object.
+// @0x14001aea0
+void* FUN_14001aea0(void* object, std::uint64_t flags)
+{
+    return FUN_140019b60(object, flags);
+}
+// @0x14001afd0
+void* FUN_14001afd0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x40 : nullptr; }
+// @0x14001afe0
+void* FUN_14001afe0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x30 : nullptr; }
 } // namespace
