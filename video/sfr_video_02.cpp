@@ -483,6 +483,61 @@ long long* FUN_1400151a0(long long* dst, const long long* src)
     return dst;
 }
 
+static void SetScalarValue(UInt32* value, UInt32 kind, const void* payload, size_t payloadSize)
+{
+    *value = (*value & ~0x1fu) | kind;
+    std::memset(reinterpret_cast<char*>(value) + 0x10, 0, 0x10);
+    std::memcpy(reinterpret_cast<char*>(value) + 0x10, payload, payloadSize);
+}
+
+// MS2-FUNCTIONAL: initializes the scalar kind and payload at the offsets used by the executable's AS3 Value.
+// @0x140013cc0
+void FUN_140013cc0(UInt32* value, UByte input) { SetScalarValue(value, 1, &input, sizeof(input)); }
+
+// MS2-FUNCTIONAL: initializes the integer kind and payload at the executable's AS3 Value offsets.
+// @0x140013cf0
+void FUN_140013cf0(UInt32* value, UInt32 input) { SetScalarValue(value, 3, &input, sizeof(input)); }
+
+// MS2-FUNCTIONAL: initializes the number kind and payload at the executable's AS3 Value offsets.
+// @0x140013d20
+void FUN_140013d20(UInt32* value, double input) { SetScalarValue(value, 4, &input, sizeof(input)); }
+
+// MS2-FUNCTIONAL: scalar boolean setter with the same tag and payload layout.
+// @0x140015110
+void FUN_140015110(UInt32* value, const UByte* input) { SetScalarValue(value, 1, input, sizeof(*input)); }
+
+// MS2-FUNCTIONAL: scalar integer setter with the same tag and payload layout.
+// @0x1400150e0
+void FUN_1400150e0(UInt32* value, const UInt32* input) { SetScalarValue(value, 3, input, sizeof(*input)); }
+
+// MS2-FUNCTIONAL: scalar number setter with the same tag and payload layout.
+// @0x140015080
+void FUN_140015080(UInt32* value, const double* input) { SetScalarValue(value, 4, input, sizeof(*input)); }
+
+// MS2-FUNCTIONAL: returning wrapper around the scalar boolean setter.
+// @0x140013fb0
+uintptr_t FUN_140013fb0(uintptr_t self, UInt32* value, const UByte* input)
+{
+    SetScalarValue(value, 1, input, sizeof(*input));
+    return self;
+}
+
+// MS2-FUNCTIONAL: returning wrapper around the scalar integer setter.
+// @0x140013ff0
+uintptr_t FUN_140013ff0(uintptr_t self, UInt32* value, const UInt32* input)
+{
+    SetScalarValue(value, 3, input, sizeof(*input));
+    return self;
+}
+
+// MS2-FUNCTIONAL: returning wrapper around the scalar number setter.
+// @0x140014020
+uintptr_t FUN_140014020(uintptr_t self, UInt32* value, const double* input)
+{
+    SetScalarValue(value, 4, input, sizeof(*input));
+    return self;
+}
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
