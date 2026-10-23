@@ -14,6 +14,8 @@
 #include "../include/gfx/as3/as3_support.h"
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
+namespace Scaleform { namespace GFx { namespace AS3 { void SF_STDCALL DoAbcLoader(LoadProcess*, const TagInfo&); } } }
+extern "C" void FUN_1425c8cf0(unsigned, void*);
 
 static HIMC cx18_ImmGetContext(HWND hwnd)
 {
@@ -50,6 +52,16 @@ extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
 extern "C" const void* DAT_14313ba60[];
 extern "C" const unsigned char DAT_1431c51e8[];
+extern "C" void* DAT_143b15f60;
+extern "C" const void* DAT_14313bc60[];
+extern "C" void FUN_1423dd1c0();
+extern "C" void FUN_1423dc7b0();
+extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
+extern "C" void FUN_142576820(void*, const char*, void**, int);
+extern "C" void FUN_1425b49b0();
+extern "C" void FUN_14257dc30(void*);
+extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
+extern "C" void FUN_1422fbf60(void*);
 
 struct HWND__;
 
@@ -398,6 +410,86 @@ void FUN_1423cd060(void* log, const char* format, ...)
     reinterpret_cast<void(*)(void*, unsigned*, const char*, void*)>(vtable[1])(log, &flags, format, &args);
     va_end(args);
 }
+
+// MS2-FUNCTIONAL: initializes the executable-observed refcount/vptr fields and registers both loader callbacks.
+// @0x1423db7f0
+void* FUN_1423db7f0(unsigned long long* object)
+{
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313bc60);
+    object[1] = 1;
+    *reinterpret_cast<unsigned*>(object + 2) = 0x23;
+    FUN_1425c8cf0(0x4c, reinterpret_cast<void*>(&FUN_1423dd1c0));
+    FUN_1425c8cf0(0x52, reinterpret_cast<void*>(&FUN_1423dc7b0));
+    return object;
+}
+
+// MS2-FUNCTIONAL: performs the executable's sample text and selection updates through the movie helpers.
+// @0x1423ca350
+void FUN_1423ca350(void* self)
+{
+    void* value = nullptr;
+    FUN_142576820(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
+                  "_root.Edit_MLine1.textBox.text", &value, 1);
+    if (value) {
+        void** vtable = *reinterpret_cast<void***>(value);
+        reinterpret_cast<void(*)(void*, void**, const char*)>(vtable[2])(value, &value, "Hello World");
+    }
+    FUN_1423ca030(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
+                  "Selection.setSelection", "%d %d", 5, 5);
+}
+
+// MS2-FUNCTIONAL: attaches the movie, updates the operating-system label and notifies the current IME child.
+// @0x1423ca410
+void FUN_1423ca410(void* self, void* movie)
+{
+    FUN_1425b49b0();
+    if (!movie) return;
+    void** fields = static_cast<void**>(self);
+    reinterpret_cast<void(*)(void*)>(*reinterpret_cast<void***>(fields[3]))(fields[3]);
+    *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0x80) = 0;
+    if (fields[0xe]) {
+        FUN_14257dc30(movie);
+        void* arg = movie;
+        reinterpret_cast<void(*)(void*, void**)>(*reinterpret_cast<void***>(fields[0xe]))(fields[0xe], &arg);
+    }
+    fields[0x14] = movie;
+}
+
+// MS2-FUNCTIONAL: releases executable-observed arrays, string members, and owned child references during teardown.
+// @0x1423c8bb0
+void FUN_1423c8bb0(unsigned long long* object)
+{
+    FUN_1423c9330(object[0x17], object[0x18]);
+    for (unsigned i : { 0x2eu, 0x2bu, 0x17u, 0x12u }) {
+        if (object[i]) {
+            void** manager = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void(*)(void*, void*)>(manager[0xc])(DAT_143b15f60,
+                                                                  reinterpret_cast<void*>(object[i]));
+            object[i] = 0;
+        }
+    }
+    if (object[0xe]) {
+        FUN_1423ca920(nullptr, &object[0xe]);
+        object[0xe] = 0;
+    }
+    FUN_1422fbf60(object + 0xb);
+    FUN_1422fbf60(object + 8);
+    FUN_1422fbf60(object + 5);
+    FUN_1422fbf60(object + 2);
+}
+
+// MS2-FUNCTIONAL: runs the recovered IME manager teardown and the executable's scalar or sized delete path.
+// @0x1423c8e10
+void* FUN_1423c8e10(void* object, unsigned long long flags)
+{
+    FUN_1423c8bb0(static_cast<unsigned long long*>(object));
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x1a0);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
 
 // MS2-FUNCTIONAL: appends a retained pointer to the executable-observed dynamic array using its expansion helper.
 // @0x1423d9490
