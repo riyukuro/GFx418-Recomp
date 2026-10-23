@@ -739,3 +739,90 @@ FMOD_RESULT CreateMetadataAudioSound(void* player, const char* path, FMOD::Sound
     return system->createSound(path, mode, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
 }
 }
+
+extern "C" void* DAT_143b15f60;
+
+namespace Scaleform {
+static void ReserveHeapArray(void** array, void* heapOwner, std::size_t requested,
+                             std::size_t elementBytes, bool localHeap)
+{
+    auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* data = static_cast<unsigned char*>(array[0]);
+    if (!requested) {
+        if (data)
+            reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
+        array[0] = nullptr;
+        array[2] = nullptr;
+        return;
+    }
+    const std::size_t capacity = (requested + 3) & ~std::size_t(3);
+    if (data) {
+        array[0] = reinterpret_cast<void* (*)(void*, void*, std::size_t)>(vtable[11])(
+            DAT_143b15f60, data, capacity * elementBytes);
+    } else {
+        unsigned flags[2] = { 2, 0 };
+        if (localHeap)
+            array[0] = reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(vtable[14])(
+                DAT_143b15f60, heapOwner, capacity * elementBytes, flags);
+        else
+            array[0] = reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(vtable[10])(
+                DAT_143b15f60, capacity * elementBytes, flags);
+    }
+    array[2] = reinterpret_cast<void*>(capacity);
+}
+
+// MS2-FUNCTIONAL: rounds capacity to four values and allocates or reallocates 32-byte records.
+// @0x14268e420
+void ReserveValueRecordArray(void** array, void* heapOwner, std::size_t requested)
+{
+    ReserveHeapArray(array, heapOwner, requested, 32, false);
+}
+
+// MS2-FUNCTIONAL: uses the local heap owner and eight-byte element stride observed by the executable.
+// @0x14268e4c0
+void ReserveLocalPointerArrayA(void** array, void* heapOwner, std::size_t requested)
+{
+    ReserveHeapArray(array, heapOwner, requested, 8, true);
+}
+
+// MS2-FUNCTIONAL: preserves the local heap allocation and four-element capacity rounding.
+// @0x14268e560
+void ReserveLocalPointerArrayB(void** array, void* heapOwner, std::size_t requested)
+{
+    ReserveHeapArray(array, heapOwner, requested, 8, true);
+}
+
+// MS2-FUNCTIONAL: preserves the local heap allocation and four-element capacity rounding.
+// @0x14268e600
+void ReserveLocalPointerArrayC(void** array, void* heapOwner, std::size_t requested)
+{
+    ReserveHeapArray(array, heapOwner, requested, 8, true);
+}
+
+static void ResizeRawArray(void** array, void* heapOwner, std::size_t requested, std::size_t stride)
+{
+    const std::size_t oldSize = reinterpret_cast<std::size_t>(array[1]);
+    const std::size_t capacity = reinterpret_cast<std::size_t>(array[2]);
+    if (requested < oldSize) {
+        if (requested < (capacity >> 1))
+            ReserveHeapArray(array, heapOwner, requested, stride, true);
+    } else if (capacity <= requested) {
+        ReserveHeapArray(array, heapOwner, requested + (requested >> 2), stride, true);
+    }
+    array[1] = reinterpret_cast<void*>(requested);
+}
+
+// MS2-FUNCTIONAL: applies the observed quarter-growth and half-shrink rules to the byte array.
+// @0x14268e840
+void ResizeLocalByteArray(void** array, void* heapOwner, std::size_t requested)
+{
+    ResizeRawArray(array, heapOwner, requested, 1);
+}
+
+// MS2-FUNCTIONAL: applies the same backing-array thresholds to the eight-byte record array.
+// @0x14268e9a0
+void ResizeLocalRecordArray(void** array, void* heapOwner, std::size_t requested)
+{
+    ResizeRawArray(array, heapOwner, requested, 8);
+}
+}
