@@ -44,6 +44,7 @@ CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
+void FUN_140046d50(void*, CriSint32);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -138,6 +139,21 @@ CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment)
 CriUint32 FUN_14003a0f8(CriSint32 index)
 {
     return (CriUint32)((index + 2 * index) * 16 + 0xb8);
+}
+
+// MS2-FUNCTIONAL: releases UTF table allocations and all four lazily allocated fast-search indexes.
+// @0x14003a108
+void criUtfRtv_Destroy(CriUint64* table)
+{
+    CriUint64* heap = (CriUint64*)table[0];
+    auto freeMem = (void(__fastcall*)(void*, void*))heap[1];
+    void* heapContext = (void*)heap[2];
+    if (table[0xc] != 0 && heap)
+        freeMem(heapContext, (void*)table[0x16]);
+    for (CriSint32 index = 0; index < 4; ++index)
+        if (table[0xe + index * 2] != 0)
+            FUN_140046d50(table, index);
+    freeMem(heapContext, (void*)table[0x15]);
 }
 
 // ==== CRI UTF heap callback helpers ================================================================================
