@@ -112,6 +112,8 @@ void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value)
 void     FUN_140031140(void* player);
 void     FUN_140031290(void* player);
 CriBool  FUN_140031f40(void* player);
+CriBool  FUN_1400318f0(void* player);
+CriBool  FUN_140032040(void* player);
 CriBool  FUN_140031aa0(void* player);
 CriBool  FUN_1400314d0(void* player);
 CriSint32 FUN_140042d70(void* decoder, void* player);
@@ -4294,6 +4296,54 @@ CriBool FUN_140031990(void* player)
     FUN_140044f9c(state->Demux);
     FUN_1400458b8(state->Demux);
     return 1;
+}
+
+// MS2-FUNCTIONAL: drive the file-open metadata phase until the demux is prepared for playback.
+// @0x1400317b0
+void FUN_1400317b0(void* player)
+{
+    struct LockView { CriUint8 Reserved[0x0c]; CriSint32 Value; };
+    struct OpenPhaseView { CriUint8 Reserved[0xe70]; CriSint32 Phase; };
+    struct MetaHeapView { CriUint8 Reserved[0xde8]; void* Heap; };
+    struct AllocatorView { CriUint8 Reserved[0xee8]; void* Allocate; };
+    struct InputReadyView { CriUint8 Reserved[0x638]; CriSint32 Ready; };
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    ((LockView*)player)->Value = 1;
+    if (isLockedInputChunk(player) == 1)
+        return;
+
+    OpenPhaseView* phase = (OpenPhaseView*)player;
+    if (phase->Phase == 0)
+    {
+        if (FUN_1400318f0(player) != 1)
+            goto cleanup;
+        if (!((MetaHeapView*)player)->Heap && !((AllocatorView*)player)->Allocate)
+        {
+            ((InputReadyView*)player)->Ready = 0;
+            FUN_140033610(player);
+        }
+        if (((InputReadyView*)player)->Ready == 0)
+        {
+            phase->Phase = 3;
+            state->Status = 2;
+            goto cleanup;
+        }
+        phase->Phase = 1;
+    }
+
+    if (phase->Phase == 1)
+    {
+        if (FUN_140031990(player) != 1)
+            goto cleanup;
+        phase->Phase = 2;
+    }
+    else if (phase->Phase != 2)
+        goto cleanup;
+
+    if (FUN_140032040(player) == 1)
+        state->Status = 2;
+cleanup:
+    ((LockView*)player)->Value = 0;
 }
 
 // MS2-FUNCTIONAL: advance a completed video or alpha decoder through the metadata and stop phases.
