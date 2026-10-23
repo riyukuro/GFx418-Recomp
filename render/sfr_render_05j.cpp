@@ -1013,6 +1013,79 @@ void TreeCacheContainer::HandleChanges(unsigned changeBits)
         pRoot->AddToUpdate(this, Update_Pattern);
 }
 
+// Culls the container, then hands each child the accumulated transform: 2D matrices append while the chain is
+// 2D, a 3D child folds the 2D part into the 3D matrix. Under a contributing filter the children start from the
+// identity color transform (the filter applies the parent's). The cache list is walked, not the data's children:
+// while the tree is being destroyed some of those have no cache node.
+// @0x142682f60
+void TreeCacheContainer::UpdateTransform(const TreeNode::NodeData* data, const TransformArgs& t, TransformFlags flags)
+{
+    TransformArgs args(t);
+    flags = updateCulling(data, t, &args.CullRect, flags);
+
+    SortParentBounds = data->AproxParentBounds;
+    SetFlags(GetFlags() & ~NF_ExpandedBounds);
+
+    TreeCacheNode* child = Children.GetFirst();
+    while (!Children.IsNull(child))
+    {
+        const TreeNode::NodeData* childData  = child->GetNodeData();
+        TransformFlags            childFlags =
+            (TransformFlags)(flags | (child->UpdateFlags & (Change_CxForm | Change_Matrix)));
+        child->UpdateFlags &= ~(Change_Matrix | Change_CxForm);
+
+        if (!childData->Is3D())
+        {
+            if (flags & TF_Has2D)
+                args.Mat.SetToAppend(childData->M2D(), t.Mat);
+            else
+                args.Mat = childData->M2D();
+            childFlags = (TransformFlags)(childFlags | TF_Has2D);
+            if (flags & TF_Has3D)
+                args.SetMatrix3D(t.GetMat3DDirect());
+        }
+        else
+        {
+            if (flags & TF_Has2D)
+            {
+                Matrix3F m3(Matrix3F::NoInit);
+                t.GetMatrix3D(flags, &m3);
+                args.SetMatrix3D(m3, childData->M3D());
+                childFlags = (TransformFlags)(childFlags & ~TF_Has2D);
+            }
+            else if (flags & TF_Has3D)
+            {
+                Matrix3F m3(Matrix3F::NoInit);
+                t.GetMatrix3D(flags, &m3);
+                args.SetMatrix3D(m3, childData->M3D());
+            }
+            childFlags = (TransformFlags)(childFlags | TF_Has3D);
+        }
+
+        args.SetViewProj(childData, &t);
+
+        bool accumulateCxform = true;
+        if (data->HasFilter())
+        {
+            const FilterState* filterState = data->GetState<FilterState>();
+            if (filterState)
+            {
+                const FilterSet* filters = filterState->GetFilters();
+                if (filters && filters->IsContributing())
+                    accumulateCxform = false;
+            }
+            childFlags = (TransformFlags)(childFlags | TF_ParentFilter);
+        }
+        if (accumulateCxform)
+            args.Cx.SetToAppend(childData->Cx, t.Cx);
+        else
+            args.Cx.SetIdentity();
+
+        child->UpdateTransform(childData, args, childFlags);
+        child = child->pNext;
+    }
+}
+
 // @0x142682050
 void TreeCacheContainer::HandleRemoveNode()
 {
