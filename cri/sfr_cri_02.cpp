@@ -15,6 +15,15 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include <new>
 
+extern "C" {
+extern void* DAT_143ffd550;
+extern const char* DAT_143b27aa8;
+extern const char* DAT_143b27bb0;
+extern void* DAT_143b27bb8;
+extern CriUint32 DAT_143b27bcc;
+extern CriUint32 DAT_143b27bd0;
+}
+
 // ---- exe helpers this part calls (bound by address until their units are recovered)
 
 void     FUN_14258b240(unsigned ms);                                    // Thread::MSleep
@@ -47,7 +56,9 @@ void*    FUN_140044e40(void* decoderInterface);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void     FUN_140039f50(void* section);
 void     FUN_140039f8c(void* section);
+void     FUN_1400411f8(void);
 void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
+void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
@@ -1330,6 +1341,16 @@ CriBool FUN_140035a90(void* player, const CriUint64* frameInfo)
     return 1;
 }
 
+// MS2-FUNCTIONAL: release the main decoder's current frame using the descriptor's first pointer.
+// @0x140035a40
+CriBool FUN_140035a40(void* player, const CriMvFrameInfo* frameInfo)
+{
+    void* localFrame[23] = {};
+    localFrame[0] = (void*)*(const CriUint64*)frameInfo;
+    FUN_140044050(*(void**)((CriUint8*)player + 0xe08), localFrame);
+    return 1;
+}
+
 // MS2-FUNCTIONAL: drain and release every queued alpha frame from the player decoder.
 // @0x140035bf0
 void FUN_140035bf0(void* player)
@@ -1471,6 +1492,89 @@ void FUN_140038df8(void)
 void FUN_140038e10(void)
 {
     FUN_140038ce4(0, NULL, 0, 0, NULL);
+}
+
+// MS2-FUNCTIONAL: enter the movie player's shared handle critical section.
+// @0x1400378b0
+void FUN_1400378b0(void)
+{
+    FUN_140039f50(DAT_143ffd550);
+}
+
+// MS2-FUNCTIONAL: leave the movie player's shared handle critical section.
+// @0x1400378e0
+void FUN_1400378e0(void)
+{
+    FUN_140039f8c(DAT_143ffd550);
+}
+
+// MS2-FUNCTIONAL: publish the executable's CRI Critical Section runtime banner.
+// @0x1400385b8
+void FUN_1400385b8(void)
+{
+    DAT_143b27aa8 = "\nCRI Critical Section/PCx64 Ver.1.00.12 Build:Jan 13 2012 19:02:02\n";
+}
+
+// MS2-FUNCTIONAL: initialize CRI Error's shared lock and install its initial callback.
+// @0x140038ca8
+void FUN_140038ca8(void* callback)
+{
+    FUN_1400411f8();
+    DAT_143b27bb0 = "\nCRI Error/PCx64 Ver.1.03.00 Build:Jan 13 2012 19:02:07\n";
+    DAT_143b27bb8 = callback;
+}
+
+// MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
+// @0x140038eec
+CriUint32 criErr_GetErrorCount(CriSint32 type)
+{
+    CriUint32 count = type == 0 ? DAT_143b27bcc : DAT_143b27bd0;
+    if (type == 0 || type == 1)
+        return count;
+    FUN_140038e24(0, "E09012703B", -2);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: reset one of CRI Error's two counters or report the invalid selector.
+// @0x140038f24
+void criErr_ResetErrorCount(CriSint32 type)
+{
+    if (type == 0)
+        DAT_143b27bcc = 0;
+    else if (type == 1)
+        DAT_143b27bd0 = 0;
+    else
+        FUN_140038e24(0, "E09012704B", -2);
+}
+
+// MS2-FUNCTIONAL: publish the callback and user object used to compare decoded frame times.
+// @0x140039750
+void CriMvEasyPlayer::SetCompareFrameTimeCallback(
+    CriSint32 (*callback)(CriMvEasyPlayer*, CriMvFrameInfo*, CriUint64, CriUint64, void*),
+    void* userObject, CriError& error)
+{
+    error = CRIERR_OK;
+    *(decltype(callback)*)((CriUint8*)this + 0x620) = callback;
+    *(void**)((CriUint8*)this + 0x628) = userObject;
+}
+
+// MS2-FUNCTIONAL: query the easy player's next frame using the standard one-frame offset.
+// @0x140038f60
+CriSint32 CriMvEasyPlayer::IsNextFrameOnTime(CriError& error)
+{
+    return isNextFrameOnTime(1, error);
+}
+
+// MS2-FUNCTIONAL: release the optional alpha frame and the associated main video frame.
+// @0x140039d80
+CriSint32 CriMvEasyPlayer::UnlockFrameBufferWithAlpha(const CriMvFrameInfo* frameInfo,
+                                                       const CriMvAlphaFrameInfo* alphaInfo,
+                                                       CriError& error)
+{
+    error = CRIERR_OK;
+    FUN_140035a90(*(void**)this, (const CriUint64*)alphaInfo);
+    FUN_140035a40(*(void**)this, frameInfo);
+    return 1;
 }
 
 // MS2-FUNCTIONAL: allocate the 0x40-byte memory reader from its CRI heap and initialize its state.

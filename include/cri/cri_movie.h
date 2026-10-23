@@ -715,6 +715,10 @@ public:
     void      SetCompareFrameTimeCallback(CriSint32 (*func)(CriMvEasyPlayer* mveasy, CriMvFrameInfo* frameinfo,
                                                             CriUint64 count, CriUint64 unit, void* usrobj),
                                           void* usrobj, CriError& err = CriMv::ErrorContainer); // 0x140039750
+    CriSint32 IsNextFrameOnTime(CriError& err = CriMv::ErrorContainer);                           // 0x140038f60
+    CriSint32 UnlockFrameBufferWithAlpha(const CriMvFrameInfo* frameinfo,
+                                         const CriMvAlphaFrameInfo* alphainfo,
+                                         CriError& err = CriMv::ErrorContainer);                  // 0x140039d80
 
     CriBool   GetFrameOnTimeAs32bitARGB(CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize,
                                         CriMvFrameInfo& frameinfo,
