@@ -16,12 +16,16 @@ extern "C" const char* DAT_143ba9d20;
 extern "C" void* DAT_143b15f60;
 extern "C" CriUint8 DAT_143b27c80[];
 extern "C" CriUint32 DAT_143b27c60;
+extern "C" CriUint32 DAT_143b27c68;
 extern "C" CriUint32 DAT_143b27c6c;
 extern "C" CriUint64 DAT_143b27c70;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
 void FUN_14003b2ac(void*, CriSint32, void*, CriUint32);
 void FUN_14003e850(void*, void*, void*);
+void FUN_14004e250(void);
+void FUN_14004eb70(void);
+void FUN_14004f8d0(void);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -435,6 +439,19 @@ void* FUN_14003c060(CriUint32* count)
 CriSint32 decideInternalFramePoolNum(CriSint32 count)
 {
     return count == 0 ? (CriSint32)DAT_143b27c60 : count - 1 + (CriSint32)DAT_143b27c60;
+}
+
+// MS2-FUNCTIONAL: release MPV and stream-memory subsystems when the final initializer reference ends.
+// @0x14003c130
+void FUN_14003c130(void)
+{
+    --DAT_143b27c68;
+    if (DAT_143b27c68 == 0)
+    {
+        FUN_14004e250();
+        FUN_14004eb70();
+        FUN_14004f8d0();
+    }
 }
 
 // MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
