@@ -77,6 +77,12 @@
 // MS2-RANGE: 0x14295c650-0x14295c670 .text$mn
 // MS2-RANGE: 0x14295c670-0x14295c6f0 .text$mn
 // MS2-RANGE: 0x14295c6f0-0x14295c710 .text$mn
+// MS2-RANGE: 0x142948220-0x1429484dd .text$mn
+// MS2-RANGE: 0x142954800-0x142954a46 .text$mn
+// MS2-RANGE: 0x142954690-0x142954800 .text$mn
+// MS2-RANGE: 0x142948660-0x1429487d4 .text$mn
+// MS2-RANGE: 0x142954520-0x14295458a .text$mn
+// MS2-RANGE: 0x1429485e0-0x142948652 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -921,6 +927,67 @@ bool PointObject::GetMember(Environment* penv, const ASString& name, Value* val)
         return true;
     }
     return Object::GetMember(penv, name, val);
+}
+
+// The out-of-line copies of the inline x/y readers (unity-build call sites that did not inline them).
+// @0x1429485e0
+SF_NOINLINE void GFxObject_GetPointProperties_Call(Environment* penv, Object* pobj, Value params[Point_NumProperties])
+{
+    GFxObject_GetPointProperties(penv, pobj, params);
+}
+
+// @0x142954520
+SF_NOINLINE void PointObject_GetProperties_Call(PointObject* pthis, ASStringContext* psc, Value params[Point_NumProperties])
+{
+    ObjectInterface& oi = *pthis;
+    oi.GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_x), &params[Point_X]);
+    oi.GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_y), &params[Point_Y]);
+}
+
+// @0x142948660
+void GFxObject_GetRectangleProperties(Environment* penv, Object* pobj, Value params[Rectangle_NumProperties])
+{
+    ASStringContext* psc = penv->GetSC();
+    ObjectInterface& oi = *pobj;
+    oi.GetMemberRaw(psc, psc->CreateConstString("x"), &params[Rectangle_X]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("y"), &params[Rectangle_Y]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("width"), &params[Rectangle_Width]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("height"), &params[Rectangle_Height]);
+}
+
+// @0x142954690
+void RectangleObject::GetProperties(ASStringContext* psc, Value params[Rectangle_NumProperties])
+{
+    ObjectInterface& oi = *this;
+    oi.GetMemberRaw(psc, psc->CreateConstString("x"), &params[Rectangle_X]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("y"), &params[Rectangle_Y]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("width"), &params[Rectangle_Width]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("height"), &params[Rectangle_Height]);
+}
+
+// MS2-FUNCTIONAL exe inlines GetProperties(psc) into a 0xf0 GS-cookie frame and converts h,w,y,x; same result
+// @0x142954800
+void RectangleObject::GetProperties(Environment* penv, ASRect& r)
+{
+    Value params[Rectangle_NumProperties];
+    GetProperties(penv->GetSC(), params);
+    r = ASRect(params[Rectangle_X].ToNumber(penv), params[Rectangle_Y].ToNumber(penv),
+               Render::Size<Number>(params[Rectangle_Width].ToNumber(penv), params[Rectangle_Height].ToNumber(penv)));
+}
+
+// @0x142948220
+void GFxObject_GetColorTransformProperties(Environment* penv, Object* pobj, Value params[GFxColorTransform_NumProperties])
+{
+    ASStringContext* psc = penv->GetSC();
+    ObjectInterface& oi = *pobj;
+    oi.GetMemberRaw(psc, psc->CreateConstString("redMultiplier"), &params[GFxColorTransform_RedMultiplier]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("greenMultiplier"), &params[GFxColorTransform_GreenMultiplier]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("blueMultiplier"), &params[GFxColorTransform_BlueMultiplier]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("alphaMultiplier"), &params[GFxColorTransform_AlphaMultiplier]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("redOffset"), &params[GFxColorTransform_RedOffset]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("greenOffset"), &params[GFxColorTransform_GreenOffset]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("blueOffset"), &params[GFxColorTransform_BlueOffset]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("alphaOffset"), &params[GFxColorTransform_AlphaOffset]);
 }
 
 // @0x1429565d0
