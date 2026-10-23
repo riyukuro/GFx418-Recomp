@@ -14,6 +14,8 @@
 
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
+extern void FUN_14257db40(void*);
+extern void FUN_14257db50(void*);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
 
@@ -790,6 +792,73 @@ void* FUN_140006240(void** weakSlot)
     proxy->Release();
     *weakSlot = nullptr;
     return nullptr;
+}
+
+// MS2-FUNCTIONAL: runs the Scaleform base destructor and conditionally releases the allocation.
+// @0x140002a60
+void* FUN_140002a60(void* object, unsigned flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the shared base destructor and conditionally releases the allocation.
+// @0x140002b30
+void* FUN_140002b30(void* object, unsigned flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the ref-counted base destructor and conditionally releases the allocation.
+// @0x140002bb0
+void* FUN_140002bb0(void* object, unsigned flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: tears down the sound stream's channel link before its base object.
+// @0x140002c10
+void* FUN_140002c10(void* object, unsigned flags)
+{
+    auto** fields = static_cast<void**>(object);
+    auto* channel = fields[2];
+    if (channel) *reinterpret_cast<void**>(static_cast<unsigned char*>(channel) + 0x10) = nullptr;
+    if (channel) FUN_14257dcb0(channel);
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the common ref-counted base destructor and optional allocation release.
+// @0x140002cc0
+void* FUN_140002cc0(void* object, unsigned flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the common ref-counted base destructor and optional allocation release.
+// @0x140002d20
+void* FUN_140002d20(void* object, unsigned flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the common ref-counted base destructor and optional allocation release.
+// @0x140002e40
+void* FUN_140002e40(void* object, unsigned flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
 }
 
 namespace Scaleform { namespace GFx { namespace Video {
