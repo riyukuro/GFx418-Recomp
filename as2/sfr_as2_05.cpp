@@ -151,6 +151,8 @@
 // MS2-RANGE: 0x1429598b0-0x142959bbc .text$mn
 // MS2-RANGE: 0x1429591e0-0x142959591 .text$mn
 // MS2-RANGE: 0x14295a4b0-0x14295ae14 .text$mn
+// MS2-RANGE: 0x14295b480-0x14295bbdf .text$mn
+// MS2-RANGE: 0x142958720-0x142959160 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3562,6 +3564,179 @@ void DropShadowFilterCtorFunction::GlobalCtor(const FnCall& fn)
     pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), Value(Value::UNSET));
     pfilter->SetMemberRaw(psc, psc->CreateConstString("hideObject"), Value(Value::UNSET));
     pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
+}
+
+// @0x14295b480
+void GlowFilterCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<GlowFilterObject> pfilter;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_GlowFilter)
+        pfilter = static_cast<GlowFilterObject*>(fn.ThisPtr);
+    else
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) GlowFilterObject(fn.Env);
+    fn.Result->SetAsObject(pfilter.GetPtr());
+
+    pfilter->SetDistance(0.0f);
+    pfilter->SetAngle(0.0f);
+    SetFilterRGB(pfilter->writableFilterParams().Colors[0], 0xFF0000);
+    pfilter->writableFilterParams().Colors[0].SetAlpha(0xFF);
+    pfilter->writableFilterParams().BlurX = 120.0f;
+    pfilter->writableFilterParams().BlurY = 120.0f;
+    pfilter->writableFilterParams().Strength = 2.0f;
+    pfilter->writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Knockout;
+    pfilter->writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_HideObject;
+    if (fn.NArgs > 0)
+    {
+        UInt32 rgb = fn.Arg(0).ToUInt32(fn.Env);
+        SetFilterRGB(pfilter->writableFilterParams().Colors[0], rgb);
+        if (fn.NArgs > 1)
+        {
+            UByte alpha = (UByte)(int)((float)fn.Arg(1).ToNumber(fn.Env) * 255.0f);
+            pfilter->writableFilterParams().Colors[0].SetAlpha(alpha);
+            if (fn.NArgs > 2)
+            {
+                float blurx = Render::PixelsToTwips((float)fn.Arg(2).ToNumber(fn.Env));
+                pfilter->writableFilterParams().BlurX = blurx;
+                if (fn.NArgs > 3)
+                {
+                    float blury = Render::PixelsToTwips((float)fn.Arg(3).ToNumber(fn.Env));
+                    pfilter->writableFilterParams().BlurY = blury;
+                    if (fn.NArgs > 4)
+                    {
+                        float strength = (float)fn.Arg(4).ToNumber(fn.Env);
+                        pfilter->writableFilterParams().Strength = strength;
+                        if (fn.NArgs > 5)
+                        {
+                            unsigned passes = (unsigned)fn.Arg(5).ToNumber(fn.Env);
+                            pfilter->writableFilterParams().Passes = passes;
+                            if (fn.NArgs > 6)
+                            {
+                                bool inner = fn.Arg(6).ToBool(fn.Env);
+                                Render::BlurFilterParams& p = pfilter->writableFilterParams();
+                                p.Mode = inner ? (p.Mode | Render::BlurFilterParams::Mode_Inner)
+                                               : (p.Mode & ~Render::BlurFilterParams::Mode_Inner);
+                                if (fn.NArgs > 7)
+                                {
+                                    bool knockout = fn.Arg(7).ToBool(fn.Env);
+                                    Render::BlurFilterParams& p = pfilter->writableFilterParams();
+                                    p.Mode = knockout ? (p.Mode | Render::BlurFilterParams::Mode_Knockout)
+                                                      : (p.Mode & ~Render::BlurFilterParams::Mode_Knockout);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    ASStringContext* psc = fn.Env->GetSC();
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("color"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("alpha"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
+}
+
+// @0x142958720
+void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<BevelFilterObject> pfilter;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_BevelFilter)
+        pfilter = static_cast<BevelFilterObject*>(fn.ThisPtr);
+    else
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) BevelFilterObject(fn.Env);
+    fn.Result->SetAsObject(pfilter.GetPtr());
+
+    pfilter->writableFilterParams().Passes = 1;
+    pfilter->SetDistance(4.0f);
+    pfilter->SetAngle(45.0f);
+    SetFilterRGB(pfilter->writableFilterParams().Colors[0], 0);
+    pfilter->writableFilterParams().Colors[0].SetAlpha(0xFF);
+    SetFilterRGB(pfilter->writableFilterParams().Colors[1], 0xFFFFFF);
+    pfilter->writableFilterParams().Colors[1].SetAlpha(0xFF);
+    pfilter->writableFilterParams().BlurX = 80.0f;
+    pfilter->writableFilterParams().BlurY = 80.0f;
+    pfilter->writableFilterParams().Strength = 1.0f;
+    pfilter->writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Knockout;
+    pfilter->writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_HideObject;
+    if (fn.NArgs > 0)
+    {
+        pfilter->SetDistance((float)(SInt16)fn.Arg(0).ToInt32(fn.Env));
+        if (fn.NArgs > 1)
+        {
+            pfilter->SetAngle((float)(SInt16)fn.Arg(1).ToInt32(fn.Env));
+            if (fn.NArgs > 2)
+            {
+                UInt32 rgb = fn.Arg(2).ToUInt32(fn.Env);
+                SetFilterRGB(pfilter->writableFilterParams().Colors[0], rgb);
+                if (fn.NArgs > 3)
+                {
+                    UByte alpha = (UByte)(int)((float)fn.Arg(3).ToNumber(fn.Env) * 255.0f);
+                    pfilter->writableFilterParams().Colors[0].SetAlpha(alpha);
+                    if (fn.NArgs > 4)
+                    {
+                        UInt32 rgb = fn.Arg(4).ToUInt32(fn.Env);
+                        SetFilterRGB(pfilter->writableFilterParams().Colors[1], rgb);
+                        if (fn.NArgs > 5)
+                        {
+                            UByte alpha = (UByte)(int)((float)fn.Arg(5).ToNumber(fn.Env) * 255.0f);
+                            pfilter->writableFilterParams().Colors[1].SetAlpha(alpha);
+                            if (fn.NArgs > 6)
+                            {
+                                float blurx = Render::PixelsToTwips((float)fn.Arg(6).ToNumber(fn.Env));
+                                pfilter->writableFilterParams().BlurX = blurx;
+                                if (fn.NArgs > 7)
+                                {
+                                    float blury = Render::PixelsToTwips((float)fn.Arg(7).ToNumber(fn.Env));
+                                    pfilter->writableFilterParams().BlurY = blury;
+                                    if (fn.NArgs > 8)
+                                    {
+                                        float strength = (float)fn.Arg(8).ToNumber(fn.Env);
+                                        pfilter->writableFilterParams().Strength = strength;
+                                        if (fn.NArgs > 9)
+                                        {
+                                            unsigned passes = (unsigned)fn.Arg(9).ToNumber(fn.Env);
+                                            pfilter->writableFilterParams().Passes = passes;
+                                            if (fn.NArgs > 10)
+                                            {
+                                                ASString type = fn.Arg(10).ToString(fn.Env);
+                                                bool inner = strcmp(type.ToCStr(), "inner") == 0;
+                                                Render::BlurFilterParams& p = pfilter->writableFilterParams();
+                                                p.Mode = inner ? (p.Mode | Render::BlurFilterParams::Mode_Inner)
+                                                               : (p.Mode & ~Render::BlurFilterParams::Mode_Inner);
+                                                if (fn.NArgs > 11)
+                                                {
+                                                    bool knockout = fn.Arg(11).ToBool(fn.Env);
+                                                    Render::BlurFilterParams& p = pfilter->writableFilterParams();
+                                                    p.Mode = knockout ? (p.Mode | Render::BlurFilterParams::Mode_Knockout)
+                                                                      : (p.Mode & ~Render::BlurFilterParams::Mode_Knockout);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    ASStringContext* psc = fn.Env->GetSC();
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("shadowColor"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("shadowAlpha"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("highlightColor"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("highlightAlpha"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("type"), Value(Value::UNSET));
     pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
 }
 }}} // namespace Scaleform::GFx::AS2
