@@ -51,6 +51,12 @@ public:
         pdc->AcquirePath(newShapeFlag);
         return pdc;
     }
+    // The drawing API of the clip (coordinates in pixels); each ends the open path first, as AcquirePath(true).
+    void                 BeginFill(unsigned rgba);                                   // exe 0x142932120
+    Render::ComplexFill* BeginFill();                                                // exe 0x1429320c0
+    void                 BeginBitmapFill(FillType fillType, ImageResource* pimageRes,
+                                         const Render::Matrix2F& mtx);              // exe 0x142932040
+    void                 CurveTo(float cx, float cy, float ax, float ay);            // exe 0x142937f90
     void SetNoFill(); // exe 0x142989390
     void SetNoLine(); // exe 0x142989400
     // lineWidth in pixels (exe 0x142981da0).

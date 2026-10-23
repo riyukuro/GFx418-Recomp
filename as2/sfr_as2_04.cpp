@@ -29,6 +29,8 @@
 // MS2-RANGE: 0x142925190-0x14292522c .text$mn
 // MS2-RANGE: 0x1429385f0-0x142938830 .text$mn
 // MS2-RANGE: 0x142956060-0x142956070 .text$mn
+// MS2-RANGE: 0x142932040-0x142932180 .text$mn
+// MS2-RANGE: 0x142937f90-0x142938020 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -44,6 +46,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
+#include "../include/render/render_twips.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -738,6 +741,36 @@ bool ArrayObject::DeleteMember(ASStringContext* psc, const ASString& name)
         return true;
     }
     return Object::DeleteMember(psc, name);
+}
+
+// @0x142932040
+void AvmSprite::BeginBitmapFill(FillType fillType, ImageResource* pimageRes, const Render::Matrix2F& mtx)
+{
+    AcquirePath(true)->BeginBitmapFill(fillType, pimageRes, mtx);
+}
+
+// @0x1429320c0
+Render::ComplexFill* AvmSprite::BeginFill()
+{
+    DrawingContext*      pdc   = AcquirePath(true);
+    Render::ComplexFill* pfill = pdc->CreateNewComplexFill();
+    pdc->BeginFill();
+    return pfill;
+}
+
+// @0x142932120
+void AvmSprite::BeginFill(unsigned rgba)
+{
+    AcquirePath(true)->BeginSolidFill(rgba);
+}
+
+// @0x142937f90
+void AvmSprite::CurveTo(float cx, float cy, float ax, float ay)
+{
+    DrawingContext* pdc = GetDrawingContext();
+    pdc->CurveTo(Render::PixelsToTwips(cx), Render::PixelsToTwips(cy), Render::PixelsToTwips(ax),
+                 Render::PixelsToTwips(ay));
+    GetSprite()->InvalidateHitResult();
 }
 
 // A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.
