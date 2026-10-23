@@ -51,6 +51,7 @@ extern const void* DAT_1431b9028[];
 extern const void* DAT_1431b8fd0[];
 extern const void* DAT_1431b8f18[];
 extern const void* DAT_1431b8db0[];
+extern const void* DAT_1431b9430[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -62,6 +63,9 @@ unsigned __int64 FUN_1425e3590(void);                                   // Timer
 void     FUN_14257dc30(void* p);                                        // RefCountImpl::AddRef
 void     FUN_14257dcb0(void* p);                                        // RefCountImpl::Release
 void     FUN_14257dcd0(void* p);
+void     FUN_14258a350(void* lock, CriSint32 spinCount, CriSint32 flags);
+void     FUN_142582300(void* queue, CriSint32 count, CriSint32 flags);
+void     FUN_14258a620(void* sync);
 void     FUN_14257db50(void* p);
 CriUint32 FUN_14257bdc0(void);
 void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
@@ -1117,6 +1121,36 @@ void* FUN_14002ddd0(void* object, VideoReaderConfig* config)
     *((CriUint32*)object + 13) = 0;
     fields[2] = (void*)DAT_1431b93c0;
     *((CriUint32*)object + 12) = 0;
+    return object;
+}
+
+// MS2-FUNCTIONAL: initialize the threaded reader configuration, intrusive reader list and synchronization objects.
+// @0x14002e450
+void* FUN_14002e450(void* object, void* heap, void* opener)
+{
+    void** fields = (void**)object;
+    CriUint32* words = (CriUint32*)object;
+    fields[0] = (void*)DAT_1431b91b0;
+    words[2] = 1;
+    fields[2] = heap;
+    if (opener)
+        FUN_14257dc30(opener);
+    fields[3] = opener;
+    fields[4] = fields[5] = fields[6] = NULL;
+    fields[0] = (void*)DAT_1431b9430;
+    *((CriUint8*)object + 0x38) = 1;
+    fields[8] = fields[9] = NULL;
+    words[20] = 0x7f;
+    fields[11] = NULL;
+    fields[12] = fields + 8;
+    void** sentinel = fields + 13;
+    sentinel[0] = sentinel;
+    sentinel[1] = sentinel;
+    FUN_14258a350(fields + 15, 1, 0);
+    FUN_142582300(fields + 20, 0, 0);
+    FUN_14258a620(fields + 32);
+    fields[31] = NULL;
+    fields[33] = NULL;
     return object;
 }
 
