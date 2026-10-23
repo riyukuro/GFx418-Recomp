@@ -135,6 +135,7 @@
 // MS2-RANGE: 0x14294f4f0-0x14294f7c5 .text$mn
 // MS2-RANGE: 0x142956760-0x142956ac1 .text$mn
 // MS2-RANGE: 0x142950300-0x1429505bb .text$mn
+// MS2-RANGE: 0x14294f880-0x14294fc12 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2710,6 +2711,67 @@ bool StageCtorFunction::GetMember(Environment* penv, const ASString& name, Value
         }
     }
     return GetMemberRaw(psc, name, val);
+}
+
+// A new Point object at pt, as a value.
+static SF_FORCEINLINE Value CreatePointValue(Environment* penv, const GASPoint& p)
+{
+    Ptr<PointObject> ppt = *SF_HEAP_NEW(penv->GetHeap()) PointObject(penv);
+    GASPoint pt(p);
+    ppt->SetProperties(penv, pt);
+    return Value(ppt.GetPtr());
+}
+
+// MS2-FUNCTIONAL the exe shares one SetProperties/Value tail between the three Point members; ours keeps one per member
+// @0x14294f880
+bool RectangleObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "left") == 0)
+    {
+        ASRect r;
+        GetProperties(penv, r);
+        *val = Value(r.x1);
+    }
+    else if (strcmp(pname, "right") == 0)
+    {
+        ASRect r;
+        GetProperties(penv, r);
+        *val = Value(r.x2);
+    }
+    else if (strcmp(pname, "top") == 0)
+    {
+        ASRect r;
+        GetProperties(penv, r);
+        *val = Value(r.y1);
+    }
+    else if (strcmp(pname, "bottom") == 0)
+    {
+        ASRect r;
+        GetProperties(penv, r);
+        *val = Value(r.y2);
+    }
+    else if (strcmp(pname, "topLeft") == 0)
+    {
+        ASRect r;
+        GetProperties(penv, r);
+        *val = CreatePointValue(penv, r.TopLeft());
+    }
+    else if (strcmp(pname, "bottomRight") == 0)
+    {
+        ASRect r;
+        GetProperties(penv, r);
+        *val = CreatePointValue(penv, r.BottomRight());
+    }
+    else if (strcmp(pname, "size") == 0)
+    {
+        ASRect r;
+        GetProperties(penv, r);
+        *val = CreatePointValue(penv, GASPoint(r.Width(), r.Height()));
+    }
+    else
+        return GetMemberRaw(penv->GetSC(), name, val);
+    return true;
 }
 }}} // namespace Scaleform::GFx::AS2
 
