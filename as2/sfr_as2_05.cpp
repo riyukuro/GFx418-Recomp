@@ -127,6 +127,7 @@
 // MS2-RANGE: 0x142954d10-0x142954eb4 .text$mn
 // MS2-RANGE: 0x142949c00-0x142949ce4 .text$mn
 // MS2-RANGE: 0x142954380-0x14295451e .text$mn
+// MS2-RANGE: 0x1429469d0-0x142946a76 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2451,6 +2452,20 @@ void MouseCtorFunction::GetPosition(const FnCall& fn)
         ppt->SetProperties(fn.Env, pt);
         fn.Result->SetAsObject(ppt.GetPtr());
     }
+}
+
+// ASnative mouse-button test: true when every button of the mask is down on the first mouse (no extension check, no
+// mouse-count check).
+void GAS_ASnativeMouseButtonStates(const FnCall& fn);
+
+// @0x1429469d0
+void GAS_ASnativeMouseButtonStates(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    unsigned mask = fn.Arg(0).ToUInt32(fn.Env);
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    fn.Result->SetBool((GetMovieMouseState(proot, 0)->GetButtonsState() & mask) == mask);
 }
 }}} // namespace Scaleform::GFx::AS2
 
