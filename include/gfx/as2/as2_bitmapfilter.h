@@ -133,6 +133,13 @@ public:
     BitmapFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x1429196c0
 };
 
+// The BitmapFilter class: abstract, it has no global constructor.
+class BitmapFilterCtorFunction : public CFunctionObject
+{
+public:
+    BitmapFilterCtorFunction(ASStringContext* psc); // exe 0x142919220
+};
+
 class BevelFilterProto : public Prototype<BevelFilterObject>
 {
 public:

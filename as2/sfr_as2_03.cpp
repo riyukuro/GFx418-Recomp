@@ -156,6 +156,8 @@
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 // MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
 // MS2-RANGE: 0x142926ab0-0x142926ae0 .text$mn
+// MS2-RANGE: 0x142919220-0x142919250 .text$mn
+// MS2-RANGE: 0x1429231b0-0x1429231e0 .text$mn
 // MS2-RANGE: 0x142920540-0x142920600 .text$mn
 // MS2-RANGE: 0x14291dcf0-0x14291dda0 .text$mn
 // MS2-RANGE: 0x14291dda0-0x14291df80 .text$mn
@@ -556,6 +558,12 @@ BitmapFilterProto::BitmapFilterProto(ASStringContext* psc, Object* pprototype, c
 {
 }
 
+// @0x142919220
+BitmapFilterCtorFunction::BitmapFilterCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, 0)
+{
+}
+
 // @0x142919860
 BlurFilterProto::BlurFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
     : Prototype<BlurFilterObject>(psc, pprototype, constructor)
@@ -822,6 +830,12 @@ TextSnapshotProto::TextSnapshotProto(ASStringContext* psc, Object* pprototype, c
     : Prototype<TextSnapshotObject>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+}
+
+// @0x1429231b0
+TextSnapshotCtorFunction::TextSnapshotCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, 0)
+{
 }
 
 // @0x14291f430
@@ -1889,3 +1903,7 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
 // MS2-PIN: ??_7SelectionCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d558
 // MS2-PIN: ??_7SelectionCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d5e0
+// MS2-PIN: ??_7BitmapFilterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321eae8
+// MS2-PIN: ??_7BitmapFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321eb70
+// MS2-PIN: ??_7TextSnapshotCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e5a8
+// MS2-PIN: ??_7TextSnapshotCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e630

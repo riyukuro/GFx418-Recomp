@@ -621,6 +621,13 @@ public:
     static void SetSelected(const FnCall& fn);
 };
 
+// The TextSnapshot class: it has no global constructor (snapshots come from MovieClip.getTextSnapshot).
+class TextSnapshotCtorFunction : public CFunctionObject
+{
+public:
+    TextSnapshotCtorFunction(ASStringContext* psc); // exe 0x1429231b0
+};
+
 // 0x98 bytes.
 class StyleSheetObject : public Object
 {
