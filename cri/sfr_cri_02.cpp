@@ -1445,6 +1445,34 @@ void criMvPly_GetNextSubtitleInfo(void* player, void* outputInfo)
     FUN_140036e80(player, &chunk);
 }
 
+// MS2-FUNCTIONAL: this CRI EasyFileReader utility is the executable's unsigned base-conversion parser.
+// @0x140038bd0
+CriUint64 FUN_140038bd0(const CriChar8* text, CriChar8** end, CriSint32 radix)
+{
+    return _strtoui64(text, end, radix);
+}
+
+// MS2-FUNCTIONAL: forward CRI Base's two-argument notification to its shared error dispatch routine.
+// @0x140038ddc
+void criErr_Notify(CriSint32 category, const CriChar8* message)
+{
+    FUN_140038ce4(category, message, 0, 0, NULL);
+}
+
+// MS2-FUNCTIONAL: preserve the executable's default empty error-dispatch call.
+// @0x140038df8
+void FUN_140038df8(void)
+{
+    FUN_140038ce4(0, NULL, 0, 0, NULL);
+}
+
+// MS2-FUNCTIONAL: preserve the executable's second default empty error-dispatch call.
+// @0x140038e10
+void FUN_140038e10(void)
+{
+    FUN_140038ce4(0, NULL, 0, 0, NULL);
+}
+
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
 // MS2-PIN: ??_7VideoPlayerImpl@Video@GFx@Scaleform@@6B@ 0x1431b9260
 // MS2-PIN: ??_7VideoDecoderSmp@Video@GFx@Scaleform@@6B@ 0x1431b9170
