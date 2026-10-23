@@ -29,6 +29,8 @@ extern "C" const char* DAT_143b27c48;
 extern "C" const void* DAT_143a47bc0[];
 extern "C" const void* DAT_143a47cb0[];
 extern "C" const char* DAT_143ba9d18;
+extern "C" const void* PTR_FUN_143a48638;
+extern "C" const void* PTR_FUN_143a48668;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
 void FUN_140041190(void);
@@ -66,6 +68,12 @@ CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
 void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8*, CriUint32, CriUsfStandardHeader*);
+CriSint32 FUN_140045910(const void*);
+void* FUN_1400459ec(const void*, void*, CriSint32);
+CriSint32 FUN_140045ed0(const void*);
+void* FUN_140045eec(const void*, void*, CriSint32);
+void FUN_140045998(void*);
+void FUN_140045fdc(void*);
 
 // MS2-FUNCTIONAL: send the supplied CRI diagnostic through the movie error dispatcher.
 // @0x1400410d0
@@ -193,6 +201,111 @@ void FUN_140043680(void* object)
         FUN_140053e40(player->Work);
     }
 }
+
+// MS2-FUNCTIONAL: allocate and initialize the CRI universal stream-joint object with its executable vtable.
+// @0x140046324
+void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
+{
+    CriSint32 workSize = FUN_140045910(config);
+    CriUint8* allocation = (CriUint8*)FUN_140027f7c(heap, workSize + 8, "CriSjUni", 8,
+                                                     (CriSint32)allocationMode);
+    if (!allocation)
+    {
+        FUN_140038e24(0, "E09021217B", -3);
+        return NULL;
+    }
+    memcpy(allocation, &heap, sizeof(heap));
+    void* object = FUN_1400459ec(config, allocation + 8, workSize);
+    if (object)
+    {
+        *(const void**)object = &PTR_FUN_143a48638;
+        return object;
+    }
+    FUN_140027fb4(heap, allocation);
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: allocate and initialize the CRI ring-buffer stream-joint object with its executable vtable.
+// @0x1400464f4
+void* FUN_1400464f4(const void* config, void* heap, CriUint32 allocationMode)
+{
+    CriSint32 workSize = FUN_140045ed0(config);
+    CriUint8* allocation = (CriUint8*)FUN_140027f7c(heap, workSize + 8, "CriSjRbf", 8,
+                                                     (CriSint32)allocationMode);
+    if (!allocation)
+    {
+        FUN_140038e24(0, "E09021703B", -3);
+        return NULL;
+    }
+    memcpy(allocation, &heap, sizeof(heap));
+    void* object = FUN_140045eec(config, allocation + 8, workSize);
+    if (object)
+    {
+        *(const void**)object = &PTR_FUN_143a48668;
+        return object;
+    }
+    FUN_140027fb4(heap, allocation);
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: construct a configured universal stream-joint from the caller's three-word settings.
+// @0x1400463f4
+void FUN_1400463f4(void* heap, CriUint32 first, CriUint32 second, const CriUint32* settings)
+{
+    CriUint32 config[3] = { settings[0], first, second };
+    FUN_140046324(config, heap, settings[1]);
+}
+
+// MS2-FUNCTIONAL: construct the default universal stream-joint with the requested pool dimensions.
+// @0x14004647c
+void FUN_14004647c(void* heap, CriUint32 first, CriUint32 second)
+{
+    const CriUint32 config[3] = { 0, first, second };
+    FUN_140046324(config, heap, 1);
+}
+
+// MS2-FUNCTIONAL: construct a temporary universal stream-joint with the requested pool dimensions.
+// @0x1400464c8
+void FUN_1400464c8(void* heap, CriUint32 first, CriUint32 second)
+{
+    const CriUint32 config[3] = { 1, first, second };
+    FUN_140046324(config, heap, 1);
+}
+
+// MS2-FUNCTIONAL: create the configured ring-buffer stream-joint and preserve its 24-byte setup record.
+// @0x1400465c4
+void FUN_1400465c4(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+                   CriUint64 poolBytes, const CriUint32* settings)
+{
+    CriUint8 config[0x18] = {};
+    memcpy(config, settings, sizeof(CriUint32));
+    memcpy(config + 4, &first, sizeof(first));
+    memcpy(config + 8, &second, sizeof(second));
+    memcpy(config + 0xc, &third, sizeof(third));
+    memcpy(config + 0x10, &poolBytes, sizeof(poolBytes));
+    FUN_1400464f4(config, heap, settings[1]);
+}
+
+// MS2-FUNCTIONAL: destroy the universal stream-joint lock and free its heap-prefixed allocation.
+// @0x1400463c8
+void FUN_1400463c8(void* object)
+{
+    struct Storage { void* Heap; CriUint8 Payload[1]; };
+    Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
+    FUN_140045998(object);
+    FUN_140027fb4(storage->Heap, storage);
+}
+
+// MS2-FUNCTIONAL: destroy the ring-buffer stream-joint lock and free its heap-prefixed allocation.
+// @0x140046598
+void FUN_140046598(void* object)
+{
+    struct Storage { void* Heap; CriUint8 Payload[1]; };
+    Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
+    FUN_140045fdc(object);
+    FUN_140027fb4(storage->Heap, storage);
+}
+
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
 void FUN_1400479e0(void);
@@ -200,6 +313,8 @@ void FUN_14004dc70(void);
 CriBool FUN_140024ff0(void);
 void FUN_140026f40(CriError&);
 void FUN_140024f80(void);
+void* FUN_140046324(const void*, void*, CriUint32);
+void* FUN_1400464f4(const void*, void*, CriUint32);
 
 // ==== CRI critical-section helpers ================================================================================
 
