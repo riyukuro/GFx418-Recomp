@@ -118,6 +118,7 @@ struct HTMLImageTagDesc : public ImageDesc
     UByte Alignment;
 
     HTMLImageTagDesc() : VSpace(0), HSpace(0), ParaId(~0u), Alignment(Align_BaseLine) {}
+    ~HTMLImageTagDesc();
 
     UPInt GetHash() const;
     bool operator==(const HTMLImageTagDesc& f) const

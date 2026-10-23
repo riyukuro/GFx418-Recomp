@@ -16,6 +16,12 @@ StyledText::HTMLImageTagInfo::~HTMLImageTagInfo()
 {
 }
 
+// MS2-FUNCTIONAL: member destruction order and ownership release match; compiler frame differs from the exe.
+// @0x14267dc80
+HTMLImageTagDesc::~HTMLImageTagDesc()
+{
+}
+
 // ***** SGMLCharIter
 
 // @0x14267dc50
