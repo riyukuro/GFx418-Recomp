@@ -14,6 +14,23 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "hook/ms2hook.h"
 
+MS2_GLOBAL(0x1431b59f0, void*, VideoProtoGCVtable);
+MS2_GLOBAL(0x1431b5940, void*, VideoProtoInterfaceVtable);
+MS2_GLOBAL(0x1431b5938, void*, VideoProtoBaseVtable);
+MS2_GLOBAL(0x1431b4be0, void*, VideoSoundStreamVtable);
+MS2_GLOBAL(0x1431b4b80, void*, VideoSoundVtable);
+MS2_GLOBAL(0x1431b4ce0, void*, VideoSoundChannelSystemVtable);
+MS2_GLOBAL(0x1431b5cb0, void*, AvmVideoCharacterVtable);
+MS2_GLOBAL(0x1431b5c00, void*, AvmVideoCharacterInterfaceVtable);
+MS2_GLOBAL(0x1431b5b40, void*, AvmVideoCharacterBaseVtable);
+MS2_GLOBAL(0x1431b5480, void*, NetStreamProtoVtable);
+MS2_GLOBAL(0x1431b54d0, void*, NetStreamProtoInterfaceVtable);
+MS2_GLOBAL(0x1431b5478, void*, NetStreamProtoBaseVtable);
+MS2_GLOBAL(0x1431b53c0, void*, NetStreamPrototypeVtable);
+MS2_GLOBAL(0x1431b5310, void*, NetStreamPrototypeInterfaceVtable);
+MS2_GLOBAL(0x1431b5300, void*, NetStreamPrototypeBaseVtable);
+MS2_GLOBAL(0x1431b4d80, Scaleform::GFx::AS2::NameFunction, NetStreamCloseFunctionTable);
+
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
 extern void FUN_14257db40(void*);
@@ -30,6 +47,14 @@ extern void FUN_14000b6e0(Scaleform::UPInt*, void*, const unsigned*, Scaleform::
 extern void FUN_14000b9e0(Scaleform::UPInt*, void*, void**, Scaleform::UPInt);
 extern unsigned* FUN_1400079b0(unsigned*, const unsigned*);
 extern void FUN_140007870(unsigned*, void**);
+extern void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter*);
+extern Scaleform::GFx::AS2::AvmCharacter* FUN_142918930(
+    Scaleform::GFx::AS2::AvmCharacter*, Scaleform::GFx::InteractiveObject*);
+
+struct NetStreamPrototypeInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
+{
+    using GASPrototypeBase::InitFunctionMembers;
+};
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
 
@@ -43,6 +68,11 @@ static void ReleaseAs2GCObject(void* object)
         FUN_1425925f0(object);
     }
 }
+
+struct VideoFinalizeAccess : Scaleform::GFx::AS2::Object
+{
+    using Object::Finalize_GC;
+};
 
 static Scaleform::UPInt VideoHashKey4(const void* key)
 {
@@ -154,6 +184,46 @@ void** FUN_1400029f0(void** channel, void* replacement)
     *channel = replacement;
     return channel;
 }
+
+// MS2-FUNCTIONAL: detaches the sound channel from the stream and tears down the video sound base.
+// @0x140002ab0
+void FUN_140002ab0(void* stream)
+{
+    auto* bytes = static_cast<unsigned char*>(stream);
+    *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
+    auto** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
+    if (*channelSlot) {
+        *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = nullptr;
+        FUN_14257dcb0(*channelSlot);
+    }
+    *reinterpret_cast<void***>(bytes) = &VideoSoundVtable;
+    FUN_14257db50(stream);
+}
+MS2_REPLACE(0x140002AB0, FUN_140002ab0, 68, 0x22F2F390);
+
+// MS2-FUNCTIONAL: initializes the refcounted stream and allocates its SoundChannelSystem back-reference.
+// @0x140002e80
+void* FUN_140002e80(void* stream)
+{
+    auto* bytes = static_cast<unsigned char*>(stream);
+    *reinterpret_cast<unsigned*>(bytes + 8) = 1;
+    *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
+    auto** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
+    void* channel = nullptr;
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt)>(heapVtable[10])(DAT_143b15f60, 0x20);
+    if (channel) {
+        auto* channelBytes = static_cast<unsigned char*>(channel);
+        *reinterpret_cast<void***>(channelBytes) = &VideoSoundChannelSystemVtable;
+        *reinterpret_cast<unsigned*>(channelBytes + 8) = 1;
+        *reinterpret_cast<void**>(channelBytes + 0x10) = stream;
+        *reinterpret_cast<float*>(channelBytes + 0x18) = 1.0f;
+    }
+    if (*channelSlot) FUN_14257dcb0(*channelSlot);
+    *channelSlot = channel;
+    return stream;
+}
+MS2_REPLACE(0x140002E80, FUN_140002e80, 140, 0x5B0FC81D);
 
 // MS2-FUNCTIONAL: stores the ready flag and forwards the state update to the active player.
 // @0x140003580
@@ -1971,6 +2041,25 @@ void FUN_140003ba0(Scaleform::GFx::AS2::Object* object,
     prototype->InitFunctionMembers(object, context, table, *flags);
 }
 
+// MS2-FUNCTIONAL: looks up the object's constructor member and copies it into the output function reference.
+// @0x140007ff0
+Scaleform::GFx::AS2::FunctionRef* FUN_140007ff0(
+    Scaleform::GFx::AS2::ObjectInterface* object,
+    Scaleform::GFx::AS2::FunctionRef* result,
+    Scaleform::GFx::AS2::ASStringContext* context)
+{
+    Scaleform::GFx::AS2::Value member;
+    auto* strings = context->pContext->GetStringManager();
+    const auto& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
+        reinterpret_cast<const unsigned char*>(strings) + 0x280);
+    if (object->GetMemberRaw(context, name, &member))
+        *result = member.ToFunction(nullptr);
+    else
+        *result = Scaleform::GFx::AS2::FunctionRef();
+    return result;
+}
+MS2_REPLACE(0x140007FF0, FUN_140007ff0, 126, 0x9AAB9CE7);
+
 // MS2-FUNCTIONAL: releases the weak proxy reference in this slot.
 // @0x14000d570
 void FUN_14000d570(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
@@ -2164,6 +2253,33 @@ void FUN_14000e410(void** subobject, void* a, void* b, void* c, void* d)
     (void)a;
 }
 
+// MS2-FUNCTIONAL: releases the VideoObject prototype table and retained script object before base finalization.
+// @0x14000dbc0
+void FUN_14000dbc0(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    auto** table = reinterpret_cast<void**>(bytes + 0xa8);
+    if (*table) {
+        if (*reinterpret_cast<void**>(*table)) Scaleform::Memory::Free(*reinterpret_cast<void**>(*table));
+        Scaleform::Memory::Free(*table);
+        *table = nullptr;
+    }
+    ReleaseAs2GCObject(*reinterpret_cast<void**>(bytes + 0x68));
+    *reinterpret_cast<void**>(bytes + 0x68) = nullptr;
+    reinterpret_cast<VideoFinalizeAccess*>(object)->Finalize_GC();
+}
+
+// MS2-FUNCTIONAL: drops the VideoCharacter image when destroying its AS2 wrapper.
+// @0x14000d330
+void FUN_14000d330(void* wrapper)
+{
+    auto* bytes = static_cast<unsigned char*>(wrapper);
+    void* character = *reinterpret_cast<void**>(bytes + 0x10);
+    if (character) character = static_cast<unsigned char*>(character) - 8;
+    if (character && *reinterpret_cast<void**>(static_cast<unsigned char*>(character) + 0x20))
+        FUN_140010a30(static_cast<Scaleform::GFx::Video::VideoCharacter*>(character));
+}
+
 // MS2-FUNCTIONAL: dispatches the video prototype's release, cycle-mark, and scan collector passes.
 // @0x14000a730
 void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
@@ -2172,6 +2288,29 @@ void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     if (operation == 0) FUN_14000a5d0(object, collector);
     else if (operation == 1) FUN_14000a230(object, collector);
     else if (operation == 2) FUN_14000a420(object, collector);
+}
+
+// MS2-FUNCTIONAL: releases the prototype's member table and weak provider, then finalizes the AS2 object base.
+// @0x14000a3a0
+void FUN_14000a3a0(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    auto** table = reinterpret_cast<void**>(bytes + 0x110);
+    if (*table) {
+        if (*reinterpret_cast<void**>(*table)) Scaleform::Memory::Free(*reinterpret_cast<void**>(*table));
+        Scaleform::Memory::Free(*table);
+        *table = nullptr;
+    }
+    auto** proxy = reinterpret_cast<void**>(bytes + 0x68);
+    if (*proxy) {
+        auto* proxyBytes = static_cast<unsigned char*>(*proxy);
+        *reinterpret_cast<void**>(proxyBytes + 0x18) = nullptr;
+        void* listener = *reinterpret_cast<void**>(proxyBytes + 0x48);
+        if (listener) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(listener))[14])(listener);
+        FUN_14257dcd0(*proxy);
+        *proxy = nullptr;
+    }
+    reinterpret_cast<VideoFinalizeAccess*>(object)->Finalize_GC();
 }
 
 // MS2-FUNCTIONAL: dispatches the companion video prototype's collector passes.
@@ -3538,6 +3677,61 @@ VideoObject::VideoObject(Environment* penv)
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Video));
 }
 
+// MS2-FUNCTIONAL: constructs the Video prototype from the recovered Object and prototype-base layout.
+// @0x14000e1e0
+Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototype,
+                      const FunctionRef& constructor)
+{
+    using VideoPrototypeLayout = Prototype<VideoObject>;
+    ::new (static_cast<void*>(object)) VideoPrototypeLayout(context, prototype, constructor);
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    *reinterpret_cast<void***>(bytes) = &VideoProtoGCVtable;
+    *reinterpret_cast<void***>(bytes + 0x20) = &VideoProtoInterfaceVtable;
+    *reinterpret_cast<void***>(bytes + 0x70) = &VideoProtoBaseVtable;
+    return object;
+}
+MS2_REPLACE(0x14000E1E0, FUN_14000e1e0, 196, 0x4DBA2484);
+
+// MS2-FUNCTIONAL: lazily allocates and caches the script VideoObject for its display character.
+// @0x14000e020
+VideoObject* FUN_14000e020(AvmCharacter* character)
+{
+    auto* bytes = reinterpret_cast<unsigned char*>(character);
+    auto** slot = reinterpret_cast<VideoObject**>(bytes + 0x48);
+    if (!*slot) {
+        void* storage = FUN_14000d360(0x70, character);
+        VideoObject* created = storage ? ::new (storage) VideoObject(character->GetGC(), character->GetDispObj()) : nullptr;
+        ReleaseAs2GCObject(*slot);
+        *slot = created;
+    }
+    return *slot;
+}
+
+// MS2-FUNCTIONAL: initializes the AVM video-character bases and retains its lazily created VideoObject state.
+// @0x14000e2b0
+AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayObject)
+{
+    FUN_142918930(character, displayObject);
+    auto* bytes = reinterpret_cast<unsigned char*>(character);
+    *reinterpret_cast<unsigned*>(bytes + 0x38) = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0x3c) = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0x40) = 0;
+    bytes[0x44] = 1;
+    *reinterpret_cast<void**>(bytes + 0x48) = nullptr;
+    *reinterpret_cast<void***>(bytes) = &AvmVideoCharacterVtable;
+    *reinterpret_cast<void***>(bytes + 8) = &AvmVideoCharacterInterfaceVtable;
+    *reinterpret_cast<void***>(bytes + 0x30) = &AvmVideoCharacterBaseVtable;
+    VideoObject* video = FUN_14000e020(character);
+    void* held = video ? *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(video) + 0x30) : nullptr;
+    if (held) {
+        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(held) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    ReleaseAs2GCObject(*reinterpret_cast<void**>(bytes + 0x18));
+    *reinterpret_cast<void**>(bytes + 0x18) = held;
+    return character;
+}
+
 // MS2-FUNCTIONAL: resolves the weak character handle and returns one strong reference to the live clip.
 // @0x14000daa0
 InteractiveObject* VideoObject::GetASCharacter()
@@ -3580,6 +3774,69 @@ void VideoCtorFunction::GlobalCtor(const FnCall& fn)
         fn.Result->SetAsObject(SF_HEAP_NEW(fn.Env->GetHeap()) VideoObject(fn.Env));
 }
 
+// MS2-FUNCTIONAL: constructs the NetStream prototype base and initializes its constructor links.
+// @0x140009e20
+Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototype,
+                      const FunctionRef& constructor)
+{
+    ::new (static_cast<void*>(object)) Prototype<NetStream>(context, prototype, constructor);
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    *reinterpret_cast<void***>(bytes) = &NetStreamPrototypeVtable;
+    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
+    *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamPrototypeBaseVtable;
+    *reinterpret_cast<unsigned*>(bytes + 0x118) = 0;
+    return object;
+}
+MS2_REPLACE(0x140009E20, FUN_140009e20, 129, 0x4DD78CE3);
+
+// MS2-FUNCTIONAL: adds the public close method and installs the NetStreamProto virtual tables.
+// @0x14000ae30
+Object* FUN_14000ae30(Object* object, ASStringContext* context, Object* prototype,
+                      const FunctionRef& constructor)
+{
+    FUN_140009e20(object, context, prototype, constructor);
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
+    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
+    *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
+    auto* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
+    access->InitFunctionMembers(object, context, &NetStreamCloseFunctionTable, PropFlags(1));
+    return object;
+}
+MS2_REPLACE(0x14000AE30, FUN_14000ae30, 106, 0xED9D13A6);
+
+// MS2-FUNCTIONAL: creates the NetStream constructor/prototype pair, registers the prototype and publishes the class.
+// @0x14000cf20
+FunctionRef FUN_14000cf20(GlobalContext* global)
+{
+    ASStringContext context(global, 8);
+    auto* ctorObject = SF_HEAP_NEW(context.GetHeap()) NetStreamCtorFunction(&context);
+    FunctionRef constructor(ctorObject);
+    ctorObject->Release();
+
+    auto* storage = Scaleform::Memory::AllocInHeap(context.GetHeap(), 0x120);
+    Object* proto = nullptr;
+    if (storage) {
+        auto* baseProto = ::new (storage) Prototype<NetStream>(
+            &context, global->GetPrototype(ASBuiltin_Object), constructor);
+        proto = baseProto;
+        auto* bytes = static_cast<unsigned char*>(storage);
+        *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
+        *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
+        *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
+        *reinterpret_cast<unsigned*>(bytes + 0x118) = 0;
+        auto* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
+        access->InitFunctionMembers(baseProto, &context, &NetStreamCloseFunctionTable, PropFlags(1));
+    }
+
+    if (proto) FUN_14000c280(global, 0x23, reinterpret_cast<void**>(&proto));
+    Value constructorValue(constructor);
+    global->pGlobal->SetMemberRaw(&context, context.CreateConstString("NetStream"), constructorValue,
+                                  PropFlags(3));
+    return constructor;
+}
+MS2_REPLACE(0x14000CF20, FUN_14000cf20, 797, 0x7DC142D2);
+
 }}} // namespace Scaleform::GFx::AS2
 
 // MS2-PIN: ??_7NetStream@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5030
@@ -3606,3 +3863,15 @@ void VideoCtorFunction::GlobalCtor(const FnCall& fn)
 // MS2-PIN: ??0?$WeakPtr@VInteractiveObject@GFx@Scaleform@@@Scaleform@@QEAA@PEAVInteractiveObject@GFx@1@@Z 0x140004ef0
 // MS2-PIN: ??0CuePointParam@VideoPlayer@Video@GFx@Scaleform@@QEAA@AEBU01234@@Z 0x140005390
 // MS2-PIN: ??0CuePoint@VideoPlayer@Video@GFx@Scaleform@@QEAA@XZ 0x14000a920
+// MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5478
+// MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b59f0
+// MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5940
+// MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1431b5938
+// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5480
+// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b54d0
+// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1431b5478
+// MS2-PIN: ??_7RefCountWeakSupportImpl@Scaleform@@6B@ 0x143183cf8
+// MS2-PIN: ??_7?$RefCountBaseNTS@VSyncObject@VideoPlayer@Video@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431b4f78
+// MS2-PIN: ??_7SyncObject@VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b4ff0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountWeakSupportImpl@Scaleform@@$01@Scaleform@@6B@ 0x143183cf8
+// MS2-PIN: ??_7?$RefCountBaseWeakSupport@VVideoProvider@Video@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431b4f30

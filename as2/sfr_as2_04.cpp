@@ -32,6 +32,7 @@
 // MS2-RANGE: 0x142932040-0x142932180 .text$mn
 // MS2-RANGE: 0x142937f90-0x142938020 .text$mn
 // MS2-RANGE: 0x14292dc70-0x14292df89 .text$mn
+// MS2-RANGE: 0x142935dc0-0x142935e8a .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -919,6 +920,16 @@ void MovieRoot::CreateStringW(GFx::Value* pvalue, const wchar_t* pstring)
     ASString     str  = penv->GetSC()->CreateString(pstring);
     pvalue->SetConvertStringW();
     ASValue2GFxValue(penv, Value(str), pvalue);
+}
+
+// MS2-FUNCTIONAL regalloc: the exe loads the global context through r9, not rdx
+// @0x142935dc0
+void MovieRoot::CreateArray(GFx::Value* pvalue)
+{
+    Environment* penv = GetLevel0Environment(pMovieImpl);
+    Ptr<Object>  pobj = *penv->OperatorNew(penv->GetBuiltin(ASBuiltin_Array));
+    Value        val(pobj);
+    ASValue2GFxValue(penv, val, pvalue);
 }
 
 // A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.

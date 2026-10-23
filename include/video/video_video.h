@@ -155,12 +155,19 @@ public:
     class SyncObject : public RefCountBaseNTS<SyncObject, Stat_Default_Mem>
     {
     public:
+        virtual void SetStartFrame(unsigned frame)
+        {
+            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(this) + 0x18) = frame;
+        }
+        virtual void Start() {}
+        virtual void Stop() {}
+        virtual void Pause(bool sw) { (void)sw; }
+        virtual void GetTime(UInt64* count, UInt64* unit)
+        {
+            *count = 0;
+            *unit = 1000;
+        }
         virtual ~SyncObject() {}
-        virtual void SetStartFrame(unsigned frame) = 0;
-        virtual void Start() = 0;
-        virtual void Stop() = 0;
-        virtual void Pause(bool sw) = 0;
-        virtual void GetTime(UInt64* count, UInt64* unit) = 0;
     };
 
     struct ReadBufferInfo

@@ -2065,7 +2065,7 @@ template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const 
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@Alg@Scaleform@@VArraySortFunctor@AS2@GFx@3@@Alg@Scaleform@@YA_NAEAV?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@01@_K1VArraySortFunctor@AS2@GFx@1@@Z 0x142914940
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@Alg@Scaleform@@VArraySortOnFunctor@AS2@GFx@3@@Alg@Scaleform@@YA_NAEAV?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@01@_K1VArraySortOnFunctor@AS2@GFx@1@@Z 0x142914bd0
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
-// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??_7ActionLogger@AS2@GFx@Scaleform@@6B@ 0x143215ac0
 // MS2-PIN: ??_7ActionBuffer@AS2@GFx@Scaleform@@6B@ 0x1432153c8
 // MS2-PIN: ??_7?$RefCountBaseNTS@VActionBuffer@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
