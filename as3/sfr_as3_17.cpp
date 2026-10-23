@@ -204,6 +204,12 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // THUNKS-END
 
 namespace Scaleform {
+using AS3NamespaceHash = GFx::AS3::NamespaceInstanceFactory::NamespaceHashFunc;
+using AS3NamespaceSet = HashSetDH<GFx::AS3::Instances::Namespace*, AS3NamespaceHash,
+                                 AS3NamespaceHash, Stat_Default_Mem,
+                                 HashsetEntry<GFx::AS3::Instances::Namespace*, AS3NamespaceHash>>;
+template void AS3NamespaceSet::CheckExpand();
+
 // MS2-FUNCTIONAL ?Construct@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBVValue@AS3@GFx@2@@Z: element copy construction retains the same Value payloads; the exe uses an explicit tag/refcount sequence.
 // @0x1424f05a0
 template void ConstructorMov<GFx::AS3::Value>::Construct(void*, const GFx::AS3::Value&);
