@@ -46,6 +46,15 @@ GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
 
 // MS2-FUNCTIONAL: opaque child pointers at +0x70 and +0x78 use executable-specific release thunks.
 // @0x1423c8ac0
-GFxIMEManagerWin32::~GFxIMEManagerWin32() = default;
+GFxIMEManagerWin32::~GFxIMEManagerWin32()
+{
+    if (p70)
+        reinterpret_cast<void(*)(void*, unsigned int)>(*reinterpret_cast<void***>(p70))(p70, 1);
+    if (p78)
+        reinterpret_cast<void(*)(void*, unsigned int)>(*reinterpret_cast<void***>(p78))(p78, 1);
+}
 
 }}}
+
+// MS2-PIN: ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z 0x1423c8ce0
+// MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
