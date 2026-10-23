@@ -857,3 +857,4 @@ template class SGMLParser<wchar_t>;
 }}} // namespace Scaleform::Render::Text
 
 // MS2-PIN: ?PopBack@?$ArrayBase@U?$ArrayDataDH@U?$SGMLStackElemDesc@_W@Text@Render@Scaleform@@U?$AllocatorDH@U?$SGMLStackElemDesc@_W@Text@Render@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x14267f410
+// MS2-PIN: ??_7HTMLImageTagDesc@Text@Render@Scaleform@@6B@ 0x143191bb0
