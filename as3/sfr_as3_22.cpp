@@ -791,6 +791,19 @@ FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Soun
     auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(playerBytes + 0x10));
     return system->createStream(path, mode, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
 }
+
+// MS2-FUNCTIONAL: resolves the stream owner and writes the created FMOD stream into the request record.
+// @0x142744680
+bool CreateRequestAudioStream(void* request)
+{
+    auto* bytes = static_cast<unsigned char*>(request);
+    auto* owner = *reinterpret_cast<void**>(bytes + 0x38);
+    if (!owner)
+        return false;
+    const char* path = *reinterpret_cast<const char**>(bytes + 0x28);
+    auto* sound = reinterpret_cast<FMOD::Sound**>(bytes + 0x30);
+    return CreateBufferedAudioStream(owner, path, sound) == 0;
+}
 }
 
 
