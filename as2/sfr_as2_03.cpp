@@ -155,6 +155,20 @@
 // MS2-RANGE: 0x14291b7d0-0x14291b810 .text$mn
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 // MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
+// MS2-RANGE: 0x142926ab0-0x142926ae0 .text$mn
+// MS2-RANGE: 0x142923a90-0x142923b90 .text$mn
+// MS2-RANGE: 0x142926470-0x1429264d0 .text$mn
+// MS2-RANGE: 0x1429264d0-0x142926530 .text$mn
+// MS2-RANGE: 0x142926530-0x142926590 .text$mn
+// MS2-RANGE: 0x142926590-0x1429265f0 .text$mn
+// MS2-RANGE: 0x1429265f0-0x142926670 .text$mn
+// MS2-RANGE: 0x142926670-0x1429266f0 .text$mn
+// MS2-RANGE: 0x142923c60-0x142923cb0 .text$mn
+// MS2-RANGE: 0x142923b90-0x142923bf0 .text$mn
+// MS2-RANGE: 0x14291cd10-0x14291cd60 .text$mn
+// MS2-RANGE: 0x142924490-0x142924520 .text$mn
+// MS2-RANGE: 0x142929140-0x1429291b0 .text$mn
+// MS2-RANGE: 0x1429291b0-0x142929210 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -1320,6 +1334,79 @@ GASPrototypeBase::~GASPrototypeBase()
 
 }}} // namespace Scaleform::GFx::AS2
 
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// The exe's unreferenced out-of-line copies of inline constructors and operators.
+// @0x14291cd10
+GlobalContext* FUN_14291cd10(GlobalContext* pthis, MovieImpl* proot)
+{
+    return ::new (pthis) GlobalContext(proot);
+}
+
+// @0x142923b90
+Value* FUN_142923b90(Value* pthis, const FunctionRef& func)
+{
+    return ::new (pthis) Value(func);
+}
+
+// MS2-FUNCTIONAL block layout of the null-character path (the exe returns early instead of joining)
+// @0x142923c60
+Value* FUN_142923c60(Value* pthis, InteractiveObject* pcharacter)
+{
+    return ::new (pthis) Value(pcharacter);
+}
+
+// @0x142923a90
+Value* FUN_142923a90(Value* pthis, const FunctionRef& getter, const FunctionRef& setter, MemoryHeap* pheap,
+                     ASRefCountCollector* pcc)
+{
+    return ::new (pthis) Value(getter, setter, pheap, pcc);
+}
+
+// @0x142926470
+HashNode<ASString, Object::Watchpoint, ASStringHashFunctor>& FUN_142926470(HashNode<ASString, Object::Watchpoint, ASStringHashFunctor>* pthis, const HashNode<ASString, Object::Watchpoint, ASStringHashFunctor>& src)
+{
+    return *pthis = src;
+}
+
+// @0x1429264d0
+void FUN_1429264d0(HashNode<ASString, Object::Watchpoint, ASStringHashFunctor>* pthis, const HashNode<ASString, Object::Watchpoint, ASStringHashFunctor>::NodeRef& src)
+{
+    *pthis = src;
+}
+
+// @0x142926530
+HashNode<ASString, Member, ASStringHashFunctor>& FUN_142926530(HashNode<ASString, Member, ASStringHashFunctor>* pthis, const HashNode<ASString, Member, ASStringHashFunctor>& src)
+{
+    return *pthis = src;
+}
+
+// @0x142926590
+void FUN_142926590(HashNode<ASString, Member, ASStringHashFunctor>* pthis, const HashNode<ASString, Member, ASStringHashFunctor>::NodeRef& src)
+{
+    *pthis = src;
+}
+
+// @0x1429265f0
+HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>& FUN_1429265f0(HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>* pthis, const HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>& src)
+{
+    return *pthis = src;
+}
+
+// @0x142926670
+void FUN_142926670(HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>* pthis, const HashNode<ASString, SharedObjectPtr, ASStringHashFunctor>::NodeRef& src)
+{
+    *pthis = src;
+}
+
+// @0x142926ab0
+bool FUN_142926ab0(const ASString* pthis, const ASString& str)
+{
+    return *pthis > str;
+}
+
+}}} // namespace Scaleform::GFx::AS2
+
 // MS2-PIN: ??1?$ArrayDataBase@VArraySortFunctor@AS2@GFx@Scaleform@@U?$AllocatorGH@VArraySortFunctor@AS2@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1429242d0
 // MS2-PIN: ??1?$ArrayDataBase@VValue@AS2@GFx@Scaleform@@U?$AllocatorLH@VValue@AS2@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1429243b0
 // MS2-PIN: ??1?$ArrayDataBase@VValue@AS2@GFx@Scaleform@@U?$AllocatorLH@VValue@AS2@GFx@Scaleform@@$0BED@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x142924420
@@ -1706,3 +1793,6 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_7MovieClipProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216870
 // MS2-PIN: ??_7MovieClipProto@AS2@GFx@Scaleform@@6B@ 0x143216918
 // MS2-PIN: ??_G?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928270
+// MS2-PIN: ??1?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@QEAA@XZ 0x142924490
+// MS2-PIN: ??_GStringCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929140
+// MS2-PIN: ??_GArrayObject@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429291b0
