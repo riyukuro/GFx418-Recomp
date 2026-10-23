@@ -2780,6 +2780,64 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return true;
     }
 }}}}}
+// the space runs AddIndent appends: [n] is n spaces, n = 0..10.
+extern const char* DAT_143a2d0d0[11];
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // @0x142404e10
+    void XML::AddIndent(StringBuffer& buf, SInt32 ident)
+    {
+        while (ident != 0)
+        {
+            const SInt32 n = ident < 10 ? ident : 10;
+            buf.AppendString(DAT_143a2d0d0[n], n);
+            ident -= n;
+        }
+    }
+
+    // @0x142409d80
+    void XML::EscapeAttributeValue(StringBuffer& buf, const ASString& s)
+    {
+        const char* p = s.ToCStr();
+        const char* end = p + s.GetSize();
+        while (p < end)
+        {
+            const UInt32 ch = UTF8Util::DecodeNextChar_Advance0(&p);
+            switch (ch)
+            {
+            case '\t':  buf.AppendString("&#x9;", 5); break;
+            case '\n':  buf.AppendString("&#xA;", 5); break;
+            case '\r':  buf.AppendString("&#xD;", 5); break;
+            case '"':   buf.AppendString("&quot;", 6); break;
+            case '&':   buf.AppendString("&amp;", 5); break;
+            case '\'':  buf.AppendString("&apos;", 6); break;
+            case '<':   buf.AppendString("&lt;", 4); break;
+            default:    buf.AppendChar(ch); break;
+            }
+        }
+    }
+
+    // @0x142409f00
+    void XML::EscapeElementValue(StringBuffer& buf, const ASString& s)
+    {
+        const char* p = s.ToCStr();
+        const char* end = p + s.GetSize();
+        while (p < end)
+        {
+            const UInt32 ch = UTF8Util::DecodeNextChar_Advance0(&p);
+            switch (ch)
+            {
+            case '"':   buf.AppendString("&quot;", 6); break;
+            case '&':   buf.AppendString("&amp;", 5); break;
+            case '\'':  buf.AppendString("&apos;", 6); break;
+            case '<':   buf.AppendString("&lt;", 4); break;
+            case '>':   buf.AppendString("&gt;", 4); break;
+            default:    buf.AppendChar(ch); break;
+            }
+        }
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
