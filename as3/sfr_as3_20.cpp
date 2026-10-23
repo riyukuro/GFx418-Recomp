@@ -1786,6 +1786,23 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec::Vector_uint, 14, const Value&, const Value&>(StringManager&);
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace Alg {
+// MS2-FUNCTIONAL: uses ref-counted Ptr assignment for the exe's explicit retain/release swap sequence.
+// @0x14254fda0
+void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values)
+{
+    UPInt left = 0;
+    UPInt right = values.GetSize();
+    while (left < right && left < --right)
+    {
+        Ptr<GFx::ASStringNode> value = values[left];
+        values[left] = values[right];
+        values[right] = value;
+        ++left;
+    }
+}
+}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$0A@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546850
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@K@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1425468b0
 // MS2-PIN: ?Func@?$ThunkFunc1@VVector_double@fl_vec@Instances@AS3@GFx@Scaleform@@$01$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142546920
