@@ -20,12 +20,16 @@ extern void* DAT_143ffd550;
 extern CriSint32 DAT_143ffd500;
 extern CriUint8 DAT_143ffd504[0x48];
 extern const char* DAT_143b27aa8;
+extern char DAT_143b27ab0[0x100];
 extern const char* DAT_143b27bb0;
 extern void* DAT_143b27bb8;
 extern void* DAT_143b27bc0;
 extern CriSint32 DAT_143b27bc8;
 extern CriUint32 DAT_143b27bcc;
 extern CriUint32 DAT_143b27bd0;
+extern CriSint32 DAT_1431b97a0[];
+extern const char* DAT_1431b97a8[];
+extern const char* DAT_1431b9820;
 extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriUint8 DAT_143b27950[];
@@ -64,6 +68,8 @@ CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void     FUN_140039f50(void* section);
 void     FUN_140039f8c(void* section);
 void     FUN_1400411f8(void);
+void     FUN_140046944(char* buffer, CriUint32 capacity, const char* text);
+void     FUN_14004698c(char* buffer, CriUint32 capacity, const char* text);
 void     FUN_140038190(const void* key);
 void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
 void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
@@ -1603,6 +1609,28 @@ void FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, Cri
         if (notify)
             notify(message, value, flags, owner);
     }
+}
+
+// MS2-FUNCTIONAL: find the CRI error text by code, format its message, and send it through the shared dispatcher.
+// @0x140038e24
+void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
+{
+    const char* description = "Unknown Error.";
+    if (DAT_1431b97a8[0])
+    {
+        for (CriUint32 i = 0; DAT_1431b97a8[i * 2]; ++i)
+        {
+            if (DAT_1431b97a0[i * 4] == error)
+            {
+                description = DAT_1431b97a8[i * 2];
+                break;
+            }
+        }
+    }
+    FUN_140046944(DAT_143b27ab0, 0x100, code);
+    FUN_14004698c(DAT_143b27ab0, 0x100, DAT_1431b9820);
+    FUN_14004698c(DAT_143b27ab0, 0x100, description);
+    FUN_140038ce4(category, DAT_143b27ab0, 0, 0, NULL);
 }
 
 // MS2-FUNCTIONAL: retain the default USM decryption key and update the shared decryptor state.
