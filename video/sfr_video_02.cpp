@@ -1907,6 +1907,14 @@ Scaleform::Render::TreeNode::NodeData* FUN_140010ed0(
     return destination;
 }
 
+// @0x140010ca0
+Scaleform::Render::TreeNode::NodeData* FUN_140010ca0(
+    Scaleform::Render::TreeNode::NodeData* destination,
+    Scaleform::Render::TreeNode::NodeData::EntryType type)
+{
+    return new (destination) Scaleform::Render::TreeNode::NodeData(type);
+}
+
 // MS2-FUNCTIONAL: copies the base node snapshot, then retains the shape provider and copies its morph ratio.
 // @0x140010ef0
 Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
