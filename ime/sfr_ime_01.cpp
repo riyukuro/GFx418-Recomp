@@ -70,6 +70,17 @@ static BOOL cx18_ImmSetCandidateWindow(HIMC context, LPCANDIDATEFORM form)
     typedef BOOL (WINAPI* Fn)(HIMC, LPCANDIDATEFORM);
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetCandidateWindow"))(context, form);
 }
+static UINT cx18_ImmGetVirtualKey(HWND hwnd)
+{
+    typedef UINT (WINAPI* Fn)(HWND);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetVirtualKey"))(hwnd);
+}
+static BOOL cx18_ImmIsUIMessageW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    typedef BOOL (WINAPI* Fn)(HWND, UINT, WPARAM, LPARAM);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmIsUIMessageW"))(
+        hwnd, message, wParam, lParam);
+}
 static BOOL cx18_ImmNotifyIME(HIMC context, DWORD action, DWORD index, DWORD value)
 {
     typedef BOOL (WINAPI* Fn)(HIMC, DWORD, DWORD, DWORD);
@@ -3844,6 +3855,54 @@ void FUN_1423d3120(void* raw, DWORD listIndex)
     FUN_1423d97f0(output, selected, 0);
     FUN_1423d9b40(output);
     Scaleform::Memory::Free(list);
+}
+
+// MS2-FUNCTIONAL: uses the recovered candidate page sizing and row conversion for the selected IMM list.
+// @0x1423d46f0
+void FUN_1423d46f0(void* manager, DWORD listIndex)
+{
+    FUN_1423d3120(manager, listIndex);
+}
+
+// MS2-FUNCTIONAL: updates the IME keyboard/layout state, decodes key events, and pages candidate lists for the executable modes.
+// @0x1423d4c20
+void FUN_1423d4c20(void* raw, const void* event)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    auto* message = static_cast<const unsigned char*>(event);
+    const UINT type = *reinterpret_cast<const UINT*>(message + 0xc);
+    if (type != WM_KEYDOWN && type != WM_KEYUP) return;
+    const WPARAM wParam = *reinterpret_cast<const WPARAM*>(message + 0x10);
+    const LPARAM lParam = *reinterpret_cast<const LPARAM*>(message + 0x18);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    BYTE state[256]{};
+    GetKeyboardState(state);
+    HKL layout = GetKeyboardLayout(0);
+    *reinterpret_cast<HKL*>(self + 0x58) = layout;
+    *reinterpret_cast<HKL*>(self + 0x5a8) = layout;
+    const UINT virtualKey = cx18_ImmGetVirtualKey(hwnd);
+    *reinterpret_cast<short*>(self + 0xd0) = static_cast<short>(virtualKey);
+    wchar_t translated[0x14]{};
+    ToUnicodeEx(virtualKey, static_cast<UINT>((lParam >> 16) & 0xff), state,
+        translated, 0x14, 0, layout);
+
+    const int mode = *reinterpret_cast<int*>(self + 0x98);
+    if (mode == 0x70000 && (virtualKey == VK_NEXT || virtualKey == VK_PRIOR)) {
+        HIMC context = cx18_ImmGetContext(hwnd);
+        if (context) {
+            cx18_ImmNotifyIME(context, 0x10, 0, 0);
+            const int delta = virtualKey == VK_NEXT ? 9 : -9;
+            cx18_ImmNotifyIME(context, 0x16, 0, *reinterpret_cast<int*>(self + 0x70) + delta);
+            cx18_ImmReleaseContext(hwnd, context);
+        }
+    }
+    if (type == WM_KEYDOWN && wParam != VK_PROCESSKEY)
+        *reinterpret_cast<short*>(self + 0xa0) = 1;
+    else if (type == WM_KEYUP) {
+        const BOOL consumed = cx18_ImmIsUIMessageW(nullptr, type, wParam, lParam);
+        *reinterpret_cast<unsigned char*>(self + 0xa1) = consumed ? 1 : 0;
+        if (!consumed) *reinterpret_cast<short*>(self + 0xa0) = 0;
+    }
 }
 
 struct cx18_CommandEntry
