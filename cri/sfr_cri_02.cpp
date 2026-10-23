@@ -96,7 +96,11 @@ CriSint32 FUN_140043cb0(void* decoder);
 void     FUN_140044750(void* decoder);
 void     FUN_140043dd0(void* decoder);
 CriSint32 FUN_1400355b0(void* playerHandle);
-void     FUN_1400393f0(void* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c, CriSint32 d, CriSint32 e);
+void     FUN_1400393f0(void* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c,
+                       CriUint64 d, CriUint64 e);
+CriSint32 FUN_140039330(void* easyPlayer, const CriMvFrameInfo* frameInfo);
+CriBool  FUN_140035710(void* player, void* movieYuvState, void* outputInfo);
+CriBool  FUN_140035800(void* player, void* movieYuvState, void* outputInfo);
 void     FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
 void     FUN_1400467a8(void* queue, CriSint32 operation, void* chunk);
 void     FUN_140036650(void* player);
@@ -1018,6 +1022,38 @@ void FUN_140031060(void* player, CriSint32 value)
 CriSint32 criMvPly_GetStatus(void* player)
 {
     return *(CriSint32*)((CriUint8*)player + 4);
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this wrapper preserves its status gate and frame-time update.
+// @0x140039c10
+CriSint32 FUN_140039c10(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frameInfo, CriError& error)
+{
+    error = CRIERR_OK;
+    CriSint32 status = criMvPly_GetStatus(easyPlayer->mvply);
+    if (status < 0 || status > 4)
+    {
+        CriSint32 onTime = FUN_140039330(easyPlayer, frameInfo);
+        FUN_1400393f0(easyPlayer, onTime, onTime, 0,
+                      *(const CriUint64*)((const CriUint8*)frameInfo + 0x28),
+                      *(const CriUint64*)((const CriUint8*)frameInfo + 0x30));
+        return onTime;
+    }
+    return 0;
+}
+
+// MS2-FUNCTIONAL: forwards both frame queries and copies the returned YUV metadata into the player's saved frame.
+// @0x140039cb0
+CriBool FUN_140039cb0(CriMvEasyPlayer* easyPlayer, void* yuvBuffers,
+                      CriMvFrameInfo* frameInfo, CriMvAlphaFrameInfo* alphaInfo, CriError& error)
+{
+    error = CRIERR_OK;
+    CriBool result = FUN_140035710(easyPlayer->mvply, yuvBuffers, frameInfo);
+    if (result == 1)
+    {
+        FUN_140035800(easyPlayer->mvply, yuvBuffers, alphaInfo);
+        memcpy(&easyPlayer->frame_info, frameInfo, 0xb0);
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
