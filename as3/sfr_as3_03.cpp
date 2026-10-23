@@ -1031,6 +1031,118 @@ namespace Scaleform { namespace GFx { namespace AS3
         }
         return DefaultValue;
     }
+
+    // @0x1424051b0
+    void SparseArray::Assign(const SparseArray& other)
+    {
+        if (this != &other)
+        {
+            Length = other.Length;
+            ValueHLowInd = other.ValueHLowInd;
+            ValueHHighInd = other.ValueHHighInd;
+            ValueH = other.ValueH;
+            ValueA = other.ValueA;
+        }
+    }
+
+    // MS2-FUNCTIONAL: the exe calls ArrayDataDH::Append (0x142404330) out of line; ours inlines it
+    // @0x1424046c0
+    void SparseArray::Append(const ValueArrayDH& x)
+    {
+        const UPInt size = x.GetSize();
+        if (Length == ValueA.GetSize())
+        {
+            ValueA.Append(x);
+            Length = ValueA.GetSize();
+        }
+        else
+        {
+            for (UPInt i = 0; i < size; ++i)
+            {
+                ValueHHighInd = Length;
+                ValueH.Set(ValueHHighInd, x[i]);
+                ++Length;
+            }
+        }
+    }
+
+    // @0x1424048a0
+    void SparseArray::Append(const ValueArray& x, UPInt ind, UPInt num)
+    {
+        const UPInt sizeX = x.GetSize();
+        if (Length == ValueA.GetSize())
+        {
+            for (UPInt i = 0; i < num && (ind + i) < sizeX; ++i)
+                ValueA.PushBack(x[ind + i]);
+            Length = ValueA.GetSize();
+        }
+        else
+        {
+            for (UPInt i = 0; i < num && (ind + i) < sizeX; ++i)
+            {
+                ValueHHighInd = Length;
+                ValueH.Set(ValueHHighInd, x[ind + i]);
+                ++Length;
+            }
+        }
+    }
+
+    // MS2-FUNCTIONAL: the inlined SparseArray::At keeps the hash-node null select as a cmove in the exe; ours branches
+    // @0x1424043e0
+    void SparseArray::Append(const SparseArray& other, UPInt ind, UPInt num)
+    {
+        const UPInt sizeO = other.GetSize();
+        if (Length == ValueA.GetSize())
+        {
+            for (UPInt i = 0; i < num && (ind + i) < sizeO; ++i)
+                ValueA.PushBack(other.At(ind + i));
+            Length = ValueA.GetSize();
+        }
+        else
+        {
+            for (UPInt i = 0; i < num && (ind + i) < sizeO; ++i)
+            {
+                ValueHHighInd = Length;
+                ValueH.Set(ValueHHighInd, other.At(ind + i));
+                ++Length;
+            }
+        }
+    }
+
+    // @0x142404b20
+    void SparseArray::Append(unsigned argc, const Value* argv)
+    {
+        if (Length == ValueA.GetSize())
+        {
+            for (unsigned i = 0; i < argc; ++i)
+                ValueA.PushBack(argv[i]);
+            Length = ValueA.GetSize();
+        }
+        else
+        {
+            for (unsigned i = 0; i < argc; ++i)
+            {
+                ValueHHighInd = Length;
+                ValueH.Set(ValueHHighInd, argv[i]);
+                ++Length;
+            }
+        }
+    }
+
+    // @0x14240b510
+    void SparseArray::ForEach(ArrayFunc& f) const
+    {
+        const UPInt sizeA = ValueA.GetSize();
+        for (UInt32 i = 0; i < sizeA; ++i)
+            f(i, ValueA[i]);
+
+        HashDH<UPInt, Value>::ConstIterator it = ValueH.Begin();
+        while (!it.IsEnd())
+        {
+            f(static_cast<UInt32>(it->First), it->Second);
+            ++it;
+        }
+    }
 }}}
 
 namespace Scaleform { namespace GFx { namespace AS3
@@ -1082,6 +1194,30 @@ namespace Scaleform { namespace GFx { namespace AS3
             return diff;
         }
     }}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // @0x142406120
+    bool ClassTraits::ClassClass::Coerce(const Value& value, Value& result) const
+    {
+        result.Assign(value);
+        return true;
+    }
+
+    // @0x1424057c0
+    void Instances::FunctionBase::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
+    {
+        Value r = Value::GetUndefined();
+        ExecuteUnsafe(_this, r, argc, argv);
+        r.Swap(result);
+    }
+
+    // @0x1424072a0
+    void Instances::fl::GlobalObject::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
+    {
+        GetVM().ThrowTypeError(VM::Error(VM::eConstructOfNonFunctionError, GetVM()));
+    }
 }}}
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl

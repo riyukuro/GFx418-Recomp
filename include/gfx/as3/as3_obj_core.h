@@ -44,6 +44,14 @@ namespace fl
 
 namespace InstanceTraits { namespace fl { class Namespace; } }
 
+// (appended, sfr19) visitor of SparseArray::ForEach: slot 1 is called per element with its index.
+class ArrayFunc
+{
+public:
+    virtual ~ArrayFunc() {}
+    virtual void operator()(UInt32 ind, const Value& v) = 0;
+};
+
 // Array storage: a dense part (ValueA) plus a hash for the indices past it. 0x68 bytes.
 class SparseArray
 {
@@ -64,6 +72,14 @@ public:
     void Insert(UPInt pos, unsigned argc, const Value* argv);
     const Value& Top() const;
     AbsoluteIndex GetNextArrayIndex(AbsoluteIndex ind) const;
+
+    // (appended, sfr19) bodies in sfr_as3_03.
+    void Assign(const SparseArray& other);
+    void Append(const ValueArrayDH& x);
+    void Append(const ValueArray& x, UPInt ind, UPInt num);
+    void Append(const SparseArray& other, UPInt ind, UPInt num);
+    void Append(unsigned argc, const Value* argv);
+    void ForEach(ArrayFunc& f) const;
 
 private:
     UPInt GetLeftEqualInd(UPInt start_from) const;

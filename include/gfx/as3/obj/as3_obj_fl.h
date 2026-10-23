@@ -26,6 +26,9 @@ namespace Instances { namespace fl {
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class GlobalObject : public Instances::fl::Object
     {
+    protected:
+        // (appended, sfr19) global objects are not constructible (body in sfr_as3_03).
+        virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
     };
 
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet

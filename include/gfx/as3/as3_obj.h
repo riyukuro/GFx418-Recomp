@@ -424,6 +424,14 @@ namespace ClassTraits
 
         SPtr<InstanceTraits::Traits> ITraits;   // +0xc0
     };
+
+    // (appended, sfr19) traits of the class Class; coercion keeps the value as is.
+    class ClassClass : public Traits
+    {
+    public:
+        ClassClass(VM& vm);
+        virtual bool Coerce(const Value& value, Value& result) const;
+    };
 }
 
 // ==== objects ========================================================================================================
@@ -680,6 +688,11 @@ namespace Instances
         explicit FunctionBase(InstanceTraits::Traits& t);
 
     public:
+        // (appended, sfr19) Call runs slot 21 into a temporary (body in sfr_as3_03).
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
+        // slot 21
+        virtual void ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv);
+
         // native methods
         // @0x1424292a0
         void lengthGet(UInt32& result);
