@@ -39,6 +39,7 @@ extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
 extern "C" const void* DAT_14313a228[];
+extern "C" const void* DAT_14313a200[];
 extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
@@ -340,6 +341,27 @@ void* FUN_1423db970(void* object, unsigned long long flags)
         else Memory::Free(object);
     }
     return object;
+}
+
+// MS2-FUNCTIONAL: restores the executable's anonymous prototype vptr before the destructor helper and size-selected delete.
+// @0x1423ce250
+void* FUN_1423ce250(unsigned long long* object, unsigned long long flags)
+{
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a200);
+    FUN_14257db50(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x10);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: releases each executable-tagged Value in reverse order using the recovered shared Value destructor.
+// @0x1423ce6c0
+void FUN_1423ce6c0(Scaleform::GFx::AS3::Value* values, unsigned long long count)
+{
+    while (count)
+        values[--count].~Value();
 }
 
 // MS2-FUNCTIONAL: forwards the recovered formatting arguments through the executable's Log vtable slot.
