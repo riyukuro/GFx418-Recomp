@@ -65,6 +65,17 @@ public:
         typedef void (*Fn)(MovieRoot*, GFx::LoadQueueEntry*, LoadStates*);
         (*reinterpret_cast<Fn const* const*>(this))[26](this, pentry, pls);
     }
+    // (appended, sfr19) the directory of _level0's URL into ppath; false (ppath cleared) without one. 0x14250da50
+    bool GetRootFilePath(String* ppath) const;
+    // (appended, sfr19) ASMovieRootBase::GetStringManager: 4.1.18 vftable slot 50 (+0x190).
+    ASStringManager* GetStringManager418() const
+    {
+        typedef ASStringManager* (*Fn)(const MovieRoot*);
+        return (*reinterpret_cast<Fn const* const*>(this))[50](this);
+    }
+protected:
+    // (appended, sfr19) the mouseCursorEvent name of a MouseCursorEvent cursor type. 0x14250bb10
+    void GetMouseCursorTypeString(ASString& str, unsigned cursorType) const;
 };
 
 class ASVM : public VM

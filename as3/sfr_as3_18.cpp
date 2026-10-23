@@ -10,6 +10,9 @@
 #include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #undef GetObject   // windows.h
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -618,6 +621,117 @@ Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind
 Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const char* name) const
 {
     return MakeInternedNamespace(kind, GetStringManager().CreateString(name ? name : ""));
+}
+
+// ==== traits vtable ====
+
+SF_INLINE VTable::VTable(Traits& tr)
+    : pTraits(&tr), Names(tr.GetVM().GetStringManager().CreateEmptyString())
+{
+}
+
+SF_INLINE VTable::VTable(Traits& tr, const VTable& parent)
+    : pTraits(&tr), VTMethods(parent.VTMethods), Names(parent.Names)
+{
+}
+
+// MS2-FUNCTIONAL: the exe inlines the Value/ASString array copies (its ArrayData::ResizeNoConstruct is out of line);
+// here the array copy ctors stay out of line
+// @0x14250fa80
+VTable& Traits::GetVT() const
+{
+    if (!pVTable)
+    {
+        if (pParent.GetPtr())
+            pVTable = SF_HEAP_NEW(pVM->GetMemoryHeap()) VTable(*const_cast<Traits*>(this), pParent->GetVT());
+        else
+            pVTable = SF_HEAP_NEW(pVM->GetMemoryHeap()) VTable(*const_cast<Traits*>(this));
+    }
+    return *pVTable;
+}
+
+// ==== prototypes ====
+
+// Whether slot i belongs to the parent table (a negative index counts as one).
+static SF_INLINE bool IsParentSlot(const Slots& s, SPInt i)
+{
+    if (i < 0)
+        return true;
+    return static_cast<UPInt>(i) < s.FirstOwnSlotNum;
+}
+
+// Whether slot i is not past the end of the table.
+static SF_INLINE bool IsBeforeEnd(const Slots& s, SPInt i)
+{
+    if (i < 0)
+        return true;
+    return static_cast<UPInt>(i) < s.GetSlotInfoNum();
+}
+
+// MS2-FUNCTIONAL: the exe calls the parent slot lookups out of line and re-reads FirstOwnSlotNum after each call
+// @0x142511890
+void Class::InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const
+{
+    InstanceTraits::Traits& itr = GetInstanceTraits();
+    const VTable& vt = itr.GetVT();
+    for (SPInt i = 0; static_cast<UInt32>(i) < itr.GetSlotInfoNum(); )
+    {
+        const SlotInfo& si = IsParentSlot(itr, i) ? itr.Parent->GetSlotInfo(AbsoluteIndex(i))
+                                                  : itr.VArray[static_cast<UInt32>(i) - itr.FirstOwnSlotNum].Value;
+        if (si.BindType == SlotInfo::BT_Code)
+        {
+            ASStringNode* name = IsParentSlot(itr, i) ? itr.Parent->GetSlotNameNode(AbsoluteIndex(i))
+                                                      : itr.VArray[static_cast<UInt32>(i) - itr.FirstOwnSlotNum].Key.GetPtr();
+            obj.AddDynamicSlotValuePair(ASString(name), (this->*f)(vt.VTMethods[si.ValueInd], itr),
+                                        SlotInfo::aDontEnum);
+        }
+        if (IsBeforeEnd(itr, i))
+            ++i;
+    }
+}
+
+// @0x142511ac0
+void Class::InitPrototypeFromVTableCheckType(AS3::Object& obj) const
+{
+    InitPrototypeFromVTable(obj, &Class::ConvertCheckType);
+}
+
+// @0x142511810
+void Class::InitPrototype(AS3::Object& obj) const
+{
+    if (GetParentClass())
+        GetParentClass()->InitPrototype(obj);
+    InitPrototypeFromVTable(obj, &Class::ConvertCheckType);
+    AddConstructor(obj);
+}
+
+// ==== MovieRoot ====
+
+// @0x14250da50
+bool MovieRoot::GetRootFilePath(String* ppath) const
+{
+    MovieImpl* pmovieImpl = pMovieImpl;
+    if (pmovieImpl->pMainMovie)
+    {
+        *ppath = pmovieImpl->pMainMovieDef->GetFileURL();
+        if (URLBuilder::ExtractFilePath(ppath))
+            return true;
+    }
+    ppath->Clear();
+    return false;
+}
+
+// @0x14250bb10
+void MovieRoot::GetMouseCursorTypeString(ASString& str, unsigned cursorType) const
+{
+    switch (cursorType)
+    {
+    case 0:  str = GetStringManager418()->CreateConstString("arrow", 5); break;
+    case 1:  str = GetStringManager418()->CreateConstString("hand", 4); break;
+    case 2:  str = GetStringManager418()->CreateConstString("ibeam", 5); break;
+    case 3:  str = GetStringManager418()->CreateConstString("button", 6); break;
+    default: str = GetStringManager418()->CreateConstString("auto", 4); break;
+    }
 }
 
 }}} // namespace Scaleform::GFx::AS3

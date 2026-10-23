@@ -314,10 +314,15 @@ public:
     SetType                                         KVHashSet;  // +0x20
 };
 
-// Method closures of a traits object. 0x20 bytes (unverified).
+// Method closures of a traits object. 0x40 bytes.
 class VTable : public NewOverrideBase<StatMV_VM_VTable_Mem>
 {
 public:
+    // (appended, sfr19) the root's empty table, or a deep copy of parent's methods and names for tr. Inlined into
+    // Traits::GetVT (bodies in sfr_as3_18).
+    VTable(Traits& tr);
+    VTable(Traits& tr, const VTable& parent);
+
     // (appended, sfr19) method m (a method index: kInt) bound as dt; returns the index of its slot (the getter's
     // for a get/set pair). 0x1424e8ed0
     AbsoluteIndex AddMethod(const Value& m, SlotInfo::BindingType dt, const ASString& name);
@@ -332,6 +337,8 @@ public:
 
     Traits*                                 pTraits;    // +0x00
     ArrayLH<Value, StatMV_VM_VTable_Mem>    VTMethods;  // +0x08
+    // (appended, sfr19) the method names (the exe keeps the debug names): data +0x20, default value +0x38.
+    ArrayCC<ASString, StatMV_VM_VTable_Mem> Names;      // +0x20
 };
 
 // ==== traits =========================================================================================================
@@ -798,6 +805,15 @@ public:
     Object& GetPrototype();
     // (appended, sfr19) obj.constructor = this (not enumerable). 0x1424e6f90
     void AddConstructor(Object& obj) const;
+    // (appended, sfr19) a vtable method as a prototype property value.
+    typedef Value (Class::*ConvertFunc)(const Value& v, const Traits& ot) const;
+    // (appended, sfr19) the method wrapped in a closure that checks the 'this' type of a call. 0x1424f1c60
+    Value ConvertCheckType(const Value& v, const Traits& ot) const;
+    // (appended, sfr19) the instance traits' methods (BT_Code slots) through f as non-enumerable properties of
+    // obj. 0x142511890
+    void InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const;
+    // (appended, sfr19) the same with ConvertCheckType. 0x142511ac0
+    void InitPrototypeFromVTableCheckType(AS3::Object& obj) const;
 
     // native methods
     // @0x142540ba0
