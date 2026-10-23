@@ -2447,6 +2447,20 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_dis
 
 namespace Instances { namespace fl_display
 {
+    // The exe has the providers' vftables and deleting dtors (0x14243dc70, 0x14243dca0, the base's 0x14243e4f0) in
+    // this unit, but constructs them only in sfr_as3_07; constructing them here emits them. Nothing calls this.
+    void Ms2EmitPixelProviders(void* pbytesProvider, void* pvectorProvider)
+    {
+        ::new (pbytesProvider) ByteArrayPixelProvider(NULL);
+        ::new (pvectorProvider) VectorPixelProvider(NULL);
+    }
+
+    // @0x1424442e0
+    UPInt ByteArrayPixelProvider::GetLength() const
+    {
+        return pBytes->GetLength();
+    }
+
     // @0x1424442f0
     UPInt VectorPixelProvider::GetLength() const
     {
@@ -2936,3 +2950,6 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAAXPEBX_K@Z 0x142446140
 // MS2-FUNCTIONAL ??0?$ThunkArgs5@$$CBVValue@AS3@GFx@Scaleform@@PEAVObject@fl@Instances@234@PEAVMatrix@fl_geom@7234@PEAVColorTransform@97234@AEBVASString@34@PEAVRectangle@97234@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs5@PEAVObject@fl@Instances@AS3@GFx@Scaleform@@PEAVMatrix@fl_geom@3456@PEAVColorTransform@83456@AEBVASString@56@PEAVRectangle@83456@@123@@Z: the exe inlines the base argument readers; ours calls the ThunkArgs4 ctor
 // MS2-PIN: ??0?$ThunkArgs5@$$CBVValue@AS3@GFx@Scaleform@@PEAVObject@fl@Instances@234@PEAVMatrix@fl_geom@7234@PEAVColorTransform@97234@AEBVASString@34@PEAVRectangle@97234@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs5@PEAVObject@fl@Instances@AS3@GFx@Scaleform@@PEAVMatrix@fl_geom@3456@PEAVColorTransform@83456@AEBVASString@56@PEAVRectangle@83456@@123@@Z 0x142439a70
+// MS2-PIN: ??_GByteArrayPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14243dc70
+// MS2-PIN: ??_GVectorPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14243dca0
+// MS2-PIN: ??_GDIPixelProvider@Render@Scaleform@@UEAAPEAXI@Z 0x14243e4f0
