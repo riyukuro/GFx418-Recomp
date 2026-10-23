@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
+#include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/gfx_loadproc.h"
@@ -16,6 +17,28 @@
 void FUN_142446e70(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* obj, void* p);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+// Trace values for the four built-in scalar traits are definitely non-null; user classes may have
+// either nullability, which is recorded conservatively by the tracer.
+// @0x1424ee980
+Value::TraceNullType TR::State::CanBeNull(const InstanceTraits::Traits& traits) const
+{
+    const UPInt stateRoot = *reinterpret_cast<const UPInt*>(this);
+    const UPInt traceContext = *reinterpret_cast<const UPInt*>(stateRoot + 0x20);
+    const UPInt vmTraits = *reinterpret_cast<const UPInt*>(traceContext + 0x28);
+    const UPInt builtinTraits = *reinterpret_cast<const UPInt*>(vmTraits + 0x20);
+    const InstanceTraits::Traits* const arg = &traits;
+    if (arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
+                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x220) + 0xc0) &&
+        arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
+                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x228) + 0xc0) &&
+        arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
+                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x218) + 0xc0) &&
+        arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
+                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x210) + 0xc0))
+        return Value::NullOrNot;
+    return Value::NotNull;
+}
+
 // MS2-FUNCTIONAL 0x1424ed8f0: copy and ownership semantics match; the helper-based release/addref changes the call graph.
 // @0x1424ed8f0
 void Value::Assign(const Value& other)

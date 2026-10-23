@@ -101,6 +101,7 @@ class State
 {
 public:
     ArrayDH<Value>& GetOpStack() { return OpStack; }
+    Value::TraceNullType CanBeNull(const InstanceTraits::Traits& traits) const; // 0x1424ee980
 
 private:
     State();
