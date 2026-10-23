@@ -46,6 +46,26 @@ CheckResult Value::ToInt32Value()
     return converted;
 }
 
+// MS2-FUNCTIONAL 0x14252fe80: uses the recovered numeric coercion result and AVM 32-bit modulo; the helper call graph differs.
+// @0x14252fe80
+CheckResult Value::ToUInt32Value()
+{
+    Number number;
+    CheckResult converted = Convert2NumberInline(number);
+    if (!converted)
+        return converted;
+
+    double wrapped = 0.0;
+    if (std::isfinite(number))
+    {
+        wrapped = std::fmod(std::trunc(number), 4294967296.0);
+        if (wrapped < 0.0)
+            wrapped += 4294967296.0;
+    }
+    SetUInt32(static_cast<UInt32>(wrapped));
+    return converted;
+}
+
 // MS2-FUNCTIONAL 0x142527560: updates the pair and key-to-latest-slot chain; inlined refcount/hash paths differ.
 // @0x142527560
 void SlotContainerType::SetKey(AbsoluteIndex ind, const ASString& key)
