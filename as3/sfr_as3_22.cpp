@@ -151,6 +151,8 @@ bool QueryChannelPlaying(void* soundSource)
 }
 }
 
+int FUN_1428d8efc(void*, void*);
+int FUN_1428d8f14(void*, void*);
 int FUN_1428d8f2c(void*, bool);
 int FUN_1428d8e96(void*, int*, int*, int*, int*, int*, int*);
 int FUN_1428d8e9c(void*, void**);
@@ -386,5 +388,48 @@ void ReleasePlayerSoundCopy(void* player)
     if (*sound)
         (*sound)->release();
     *sound = nullptr;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: unregisters callback and user data, then clears the channel reference.
+// @0x142746180
+void DetachChannelCallback(void** object)
+{
+    void* channel = object[7];
+    if (!channel)
+        return;
+    using Cleanup = void (*)(void*);
+    auto** vtable = *reinterpret_cast<void***>(object);
+    reinterpret_cast<Cleanup>(vtable[3])(object);
+    FUN_1428d8efc(channel, nullptr);
+    FUN_1428d8f14(channel, nullptr);
+    object[7] = nullptr;
+}
+
+// MS2-FUNCTIONAL: clears the channel registration and unlinks this node from its intrusive list.
+// @0x142746230
+void DetachChannelNode(void* node)
+{
+    auto* bytes = static_cast<unsigned char*>(node);
+    const int references = *reinterpret_cast<int*>(bytes - 8);
+    void* channel = *reinterpret_cast<void**>(bytes + 0x28);
+    if (references > 0 && channel) {
+        auto** vtable = *reinterpret_cast<void***>(bytes - 0x10);
+        reinterpret_cast<void (*)(void*)>(vtable[3])(bytes - 0x10);
+        FUN_1428d8efc(channel, nullptr);
+        FUN_1428d8f14(channel, nullptr);
+        *reinterpret_cast<void**>(bytes + 0x28) = nullptr;
+    }
+    *reinterpret_cast<void**>(bytes + 0x18) = nullptr;
+    void* next = *reinterpret_cast<void**>(bytes + 0x10);
+    if (next) {
+        void* previous = *reinterpret_cast<void**>(bytes + 8);
+        *reinterpret_cast<void**>(static_cast<char*>(previous) + 0x10) = next;
+        *reinterpret_cast<void**>(static_cast<char*>(next) + 8) = previous;
+        *reinterpret_cast<void**>(bytes + 8) = nullptr;
+        *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
+    }
 }
 }
