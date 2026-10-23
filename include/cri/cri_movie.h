@@ -125,10 +125,24 @@ struct CriMvWorkAllocator
 class CriAllocator
 {
 public:
+    static void* operator new(size_t size, CriHeap heap, CriHeapType type, const CriChar8* name, CriUint32 align);
     static void* operator new(size_t size, CriHeap heap);                                   // 0x14002e63c
+    static void* operator new(size_t size, CriHeap heap, CriHeapType type);
     static void* operator new(size_t size, CriHeap heap, const CriChar8* name, CriUint32 align); // 0x14002e680
     static void  operator delete(void* ptr, size_t size);                                   // 0x14002e5b0
+    static void  operator delete(void* ptr, CriHeap heap);
 };
+
+// Stack allocator used while assembling the CRI movie player's persistent work area (0x18 bytes).
+struct CriFixedAllocator
+{
+    CriUint8* Begin;
+    CriUint8* Current;
+    CriUint32 Size;
+};
+
+void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
+void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 
 // Movie data source the player streams from (implemented by the Scaleform video reader).
 class CriMvFileReaderInterface

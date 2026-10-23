@@ -22,6 +22,8 @@ unsigned __int64 FUN_1425e3590(void);                                   // Timer
 void     FUN_14257dc30(void* p);                                        // RefCountImpl::AddRef
 void     FUN_14257dcb0(void* p);                                        // RefCountImpl::Release
 void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
+void*    FUN_140027f7c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type);
+void     FUN_14001d650(void* config, void* reader);                     // VideoReaderConfig::AttachReader
 void*    FUN_140041d40(void* pheap);                                    // CriHeap over a MemoryHeap: create
 void     FUN_140041dd0(void* criheap);                                  //   and destroy
 void*    FUN_140041c00(void* mem);                                      // SystemTimerSyncObject::SystemTimerSyncObject
@@ -30,6 +32,90 @@ void*    FUN_14002d970(void* mem, void* pconfig);                       // Video
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
 void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
 void*    FUN_14002abd0(void* mem, int format, const void* psize, void* ptexman, void* pplayer); // VideoImage ctor
+
+// ==== CRI heap backed object allocation ============================================================================
+
+// The CRI allocator keeps its heap pointer in the eight bytes immediately after each object.
+// MS2-FUNCTIONAL: CRI's VS2008 build uses a different compiler toolset from our build.
+// @0x14002e548
+void* CriAllocator::operator new(size_t size, CriHeap heap, CriHeapType type, const CriChar8* name, CriUint32 align)
+{
+    CriUint32 allocationSize = (CriUint32)size + sizeof(CriHeap);
+    void* memory = FUN_140027f7c(heap, (CriSint32)allocationSize, name, (CriSint32)align, (CriSint32)type);
+    if (memory)
+    {
+        memset(memory, 0, allocationSize);
+        *(CriHeap*)((CriUint8*)memory + size) = heap;
+    }
+    return memory;
+}
+
+// MS2-FUNCTIONAL: CRI's VS2008 compiler does not emit the sized-delete lowering used by our toolset.
+// @0x14002e5b0
+void CriAllocator::operator delete(void* memory, size_t size)
+{
+    criHeap_Free(*(CriHeap*)((CriUint8*)memory + size), memory);
+}
+
+// MS2-FUNCTIONAL: the CRI VS2008 build has different code generation for this wrapper.
+// @0x14002e608
+void CriAllocator::operator delete(void* memory, CriHeap heap)
+{
+    criHeap_Free(heap, memory);
+}
+
+// MS2-FUNCTIONAL: the CRI VS2008 build has different code generation for this wrapper.
+// @0x14002e628
+int FUN_14002e628(CriSint32 alignment)
+{
+    return criHeap_DebugGetWorstExtraSize(alignment) + (int)sizeof(CriHeap);
+}
+
+// MS2-FUNCTIONAL: the CRI VS2008 build has different code generation for these allocator wrappers.
+// @0x14002e63c
+void* CriAllocator::operator new(size_t size, CriHeap heap)
+{
+    return CriAllocator::operator new(size, heap, CRIHEAP_TYPE_FIX, "CriAu_new", 0x10);
+}
+
+// MS2-FUNCTIONAL: the CRI VS2008 build uses a different compiler toolset from our build.
+// @0x14002e660
+void* CriAllocator::operator new(size_t size, CriHeap heap, CriHeapType type)
+{
+    return CriAllocator::operator new(size, heap, type, "CriAu_new", 0x10);
+}
+
+// MS2-FUNCTIONAL: the CRI VS2008 build uses a different compiler toolset from our build.
+// @0x14002e680
+void* CriAllocator::operator new(size_t size, CriHeap heap, const CriChar8* name, CriUint32 align)
+{
+    return CriAllocator::operator new(size, heap, CRIHEAP_TYPE_FIX, name, align);
+}
+
+// MS2-FUNCTIONAL: this internal CRI helper was built with VS2008.
+// @0x14002e6b0
+void CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator)
+{
+    allocator->Begin = (CriUint8*)begin;
+    allocator->Current = (CriUint8*)begin;
+    allocator->Size = size;
+}
+
+// MS2-FUNCTIONAL: CRI emits the empty helper as a short c2 return in its VS2008 build.
+// @0x14002e6bc
+void FUN_14002e6bc(CriFixedAllocator*)
+{
+}
+
+// MS2-FUNCTIONAL: the CRI VS2008 build uses a different register allocation for this allocator.
+// @0x14002e6c0
+void* CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align)
+{
+    size_t current = (size_t)allocator->Current;
+    size_t aligned = (current + align - 1) / align * align;
+    allocator->Current = (CriUint8*)(aligned + size);
+    return (void*)aligned;
+}
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -745,7 +831,7 @@ void VideoReader::ReadFile(UByte* buffer, SInt64 size)
 VideoReader::VideoReader(VideoReaderConfig* pconfig)
     : pReaderConfig(pconfig), pFile(NULL), ReadSize(0)
 {
-    pconfig->AttachReader(this);
+    FUN_14001d650(pconfig, this);
     OpenStatus  = ASYNC_STATUS_STOP;
     ReadStatus  = ASYNC_STATUS_STOP;
     CloseStatus = ASYNC_STATUS_STOP;
