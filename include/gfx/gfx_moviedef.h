@@ -79,6 +79,11 @@ public:
     inline Ptr<FontLib>        GetFontLib() const;
     // Defined in video/video_statebag.h.
     inline Ptr<Video::VideoBase> GetVideo() const;
+    // (appended for the player, sfr_gfx_01i)
+    Ptr<MultitouchInterface> GetMultitouchInterface() const
+    {
+        return *(MultitouchInterface*)GetStateAddRef(State::State_MultitouchInterface);
+    }
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it

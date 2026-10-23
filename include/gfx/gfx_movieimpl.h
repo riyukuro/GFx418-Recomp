@@ -14,6 +14,8 @@
 #include "../kernel/sf_array.h"
 #ifdef SF_GFX_PLAYERIMPL
 #include "gfx_player.h"
+#include "ms2/scaleform/kernel/sf_list.h"
+#include "gfx_keyboardstate.h"
 #endif
 
 namespace Scaleform {
@@ -54,6 +56,8 @@ class KeyboardState;
 class LogState;
 class IMEManagerBase;
 class IMECandidateListStyle;
+class CharacterHandle;
+class MovieImpl;
 
 // (sfr_gfx_06d) the links of the movie's list of root nodes (List<MovieDefRootNode>): the list root's pNext is the
 // first node, and the root itself passes for a node one base offset before it.
@@ -74,6 +78,24 @@ enum FocusMovedType
     GFx_FocusMovedByAS       = 3
 };
 #endif
+
+// Keyboard focus state of one focus group (one per controller group; 0x60 bytes, 16-aligned).
+struct FocusGroupDescr
+{
+    UByte   Unrecovered_00[0x28];      // +0x00 focus rect node, tabable array
+    mutable WeakPtr<InteractiveObject> LastFocused;   // +0x28 the focused character
+    Ptr<CharacterHandle> ModalClip;    // +0x30 the clip the focus is kept within
+    UInt32  LastFocusKeyCode;          // +0x38
+    UByte   Unrecovered_3c[4];
+    UByte   Unrecovered_40[0x10];      // +0x40 last focused rect
+    bool    FocusRectShown;            // +0x50 the focus rectangle is up (focus moved by keyboard)
+    UByte   Unrecovered_51[0xf];
+
+    // The modal clip, if it is still alive (exe 0x14256f7e0).
+    Sprite* GetModalClip(MovieImpl* proot);
+};
+static_assert(sizeof(FocusGroupDescr) == 0x60, "FocusGroupDescr size");
+static_assert(offsetof(FocusGroupDescr, FocusRectShown) == 0x50, "FocusGroupDescr::FocusRectShown");
 
 class MovieImpl
 #ifdef SF_GFX_PLAYERIMPL
@@ -154,19 +176,15 @@ public:
     void*            TopmostLevelCharacters[3]; // +0x2e10 ArrayLH<Ptr<InteractiveObject>>
     UInt64           StartTickMs;              // +0x2e28
     UInt64           PauseTickMs;              // +0x2e30
+#ifdef SF_GFX_PLAYERIMPL
+    ArrayLH<Ptr<ASIntervalTimerIntf>, 0x147> IntervalTimers; // +0x2e38 (StatMV_Other_Mem)
+#else
     void*            IntervalTimers[3];        // +0x2e38 ArrayLH<Ptr<ASIntervalTimerIntf>>
+#endif
     int              LastIntervalTimerId;      // +0x2e50
     void*            FocusRectContainerNode;   // +0x2e58 Ptr<TreeContainer>
 
-    // Keyboard focus state of one focus group (one per controller group; 0x60 bytes, 16-aligned).
-    struct FocusGroupDescr
-    {
-        UByte   Unrecovered_00[0x28];      // +0x00 focus rect node, tabable array
-        mutable WeakPtr<InteractiveObject> LastFocused;   // +0x28 the focused character
-        UByte   Unrecovered_30[0x20];      // +0x30 modal clip, last focus key, last focused rect
-        bool    FocusRectShown;            // +0x50 the focus rectangle is up (focus moved by keyboard)
-        UByte   Unrecovered_51[0xf];
-    };
+    typedef GFx::FocusGroupDescr FocusGroupDescr;
     FocusGroupDescr  FocusGroups[16];          // +0x2e60
     unsigned         FocusGroupsCnt;           // +0x3460 the focus groups in use (Selection.numFocusGroups)
     UByte            FocusGroupIndexes[16];    // +0x3464 controller index -> focus group
@@ -223,8 +241,19 @@ public:
     IMECandidateListStyle* pIMECandidateListStyle; // +0x3498
     LoadQueueEntryMT* pLoadQueueMTHead;        // +0x34a0 the loader-thread entries, newest first (sfr19)
     void*            RegisteredFonts[3];       // +0x34a8 ArrayLH<FontDesc>
+#ifdef SF_GFX_PLAYERIMPL
+    List<DrawingContext> DrawingContextList;   // +0x34c0
+    // A movie def kept alive until the render thread finished the frame it was let go in.
+    struct MDKillListEntry
+    {
+        UInt64            KillFrameId;
+        Ptr<MovieDefImpl> pMovieDef;
+    };
+    Array<MDKillListEntry, 0x147> MovieDefKillList;   // +0x34d0 (StatMV_Other_Mem)
+#else
     void*            DrawingContextList[2];    // +0x34c0 List<DrawingContext>
     void*            MovieDefKillList[3];      // +0x34d0 Array<MDKillListEntry>
+#endif
     ASMovieRootBase* pSavedASMovieRoot;        // +0x34e8 Ptr<ASMovieRootBase>
     void*            RenderContext[0x22];      // +0x34f0 Render::ContextImpl::Context (0x110; gfx_rendertree.h: the heap first)
     UByte            PreviouslyCaptured;       // +0x3600 bumped (incremented) by ForceUpdateImages
@@ -255,7 +284,7 @@ public:
     MemoryHeap* GetMovieHeap() const { return pHeap; }
     // Appends a load request to the queue processed on the next advance (exe 0x14256bdf0).
     void AddLoadQueueEntry(LoadQueueEntry* pentry);
-    // (appended, sfr19) Links a loader-thread entry in front of pLoadQueueMTHead (exe 0x14256be30).
+    // (appended, sfr19) Appends a loader-thread entry to the pLoadQueueMTHead list (exe 0x14256be30).
     void AddLoadQueueEntryMT(LoadQueueEntryMT* pentryMT);
 
     // The object no longer stays on top of the levels (0x1425742c0).
@@ -432,6 +461,19 @@ public:
     bool SetFocusTo(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt);
     // The stage-to-viewport matrix from the viewport, scale mode and alignment (exe 0x142574eb0).
     void ResetViewportMatrix();
+    // The font manager of the root node that loaded pdefImpl (exe 0x14256ed00).
+    FontManager* FindFontManager(MovieDefImpl* pdefImpl);
+    // The cursor shape of a mouse; the AVM root is told when it changes (exe 0x14256dc00).
+    void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType);
+    // Takes every object off the advance lists (exe 0x14256e150).
+    void ClearPlayList();
+#ifdef SF_GFX_PLAYERIMPL
+    // The listener of all four keyboards (exe 0x142575ec0).
+    void SetKeyboardListener(KeyboardState::IListener* l);
+#endif
+private:
+    // Rebuilds the render nodes of the drawings changed since the last capture (exe 0x142577c10).
+    void UpdateAllDrawingContexts();
 protected:
     void ResetKeyboardState();   // exe 0x142574c60
     void ResetMouseState();      // exe 0x142574ca0

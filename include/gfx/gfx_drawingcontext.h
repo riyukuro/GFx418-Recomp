@@ -50,6 +50,8 @@ public:
     void LineTo(float x, float y);        // 0x1425ff590
     void EndFill();                       // 0x1425ff3e0
     void UpdateRenderNode() const;        // 0x1426006a0
+    // (appended for the player, sfr_gfx_01i) drawn into since the last render node update
+    bool IsDirty() const { return (States & State_Dirty) != 0; }
 
     MemoryHeap*                pHeap;            // +0x20
     Ptr<Render::TreeContainer> pTreeContainer;   // +0x28

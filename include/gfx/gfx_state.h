@@ -51,6 +51,8 @@ public:
         State_IMEManager = 24,
         // (appended, sfr15) flash.net.SharedObject::flush queries 0x20
         State_SharedObject = 32,
+        // (appended for the player, sfr_gfx_01i) MovieImpl's multitouch accessors query 7
+        State_MultitouchInterface = 7,
     };
 
 protected:
@@ -61,6 +63,18 @@ public:
     virtual ~State() {}
 
     StateType GetStateType() const { return SType; }
+};
+
+// (appended for the player, sfr_gfx_01i) the host's touch input device.
+class MultitouchInterface : public State
+{
+public:
+    MultitouchInterface() : State(State_MultitouchInterface) {}
+
+    virtual unsigned GetMaxTouchPoints() const = 0;
+    virtual UInt32   GetSupportedGesturesMask() const = 0;
+    // inputMode: MovieImpl::MultitouchInputMode; false when the device cannot do it.
+    virtual bool     SetMultitouchInputMode(unsigned inputMode) = 0;
 };
 
 // Object owned by a library (XML, ...) that knows its MovieImpl; vtable 0x1432247b0.

@@ -23,6 +23,11 @@
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_log.h"
 #include "../include/gfx/gfx_keyboardstate.h"
+#include "../include/gfx/gfx_input.h"
+#include "../include/gfx/gfx_loaderimpl.h"
+#include "../include/gfx/gfx_playertasks.h"
+#include "../include/gfx/gfx_drawingcontext.h"
+#include "../include/gfx/as2/as2_object.h"
 #include "../include/render/render_color.h"
 
 namespace Scaleform { namespace GFx {
@@ -35,7 +40,7 @@ public:
     virtual void Slot00() = 0;
     virtual void Slot01() = 0;
     virtual void Slot02() = 0;
-    virtual void Slot03() = 0;
+    virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType) = 0;          // 3
     virtual void Slot04() = 0;
     virtual void Slot05() = 0;
     virtual void Slot06() = 0;
@@ -628,7 +633,233 @@ void MovieImpl::ShutdownRendering(bool wait)
     reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->Shutdown(wait);
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// MovieImpl: the load queues, input states, focus groups, timers and lists
+
+// @0x14256bdf0
+void MovieImpl::AddLoadQueueEntry(LoadQueueEntry* pentry)
+{
+    pentry->EntryTime = ++LastLoadQueueEntryCnt;
+    if (!pLoadQueueHead)
+    {
+        pLoadQueueHead = pentry;
+    }
+    else
+    {
+        LoadQueueEntry* plast = pLoadQueueHead;
+        while (plast->pNext)
+            plast = plast->pNext;
+        plast->pNext = pentry;
+    }
+}
+
+// @0x14256be30
+void MovieImpl::AddLoadQueueEntryMT(LoadQueueEntryMT* pentryMT)
+{
+    pentryMT->pQueueEntry->EntryTime = ++LastLoadQueueEntryCnt;
+    if (!pLoadQueueMTHead)
+    {
+        pLoadQueueMTHead = pentryMT;
+    }
+    else
+    {
+        LoadQueueEntryMT* plast = pLoadQueueMTHead;
+        while (plast->pNext)
+            plast = plast->pNext;
+        plast->pNext = pentryMT;
+        pentryMT->pPrev = plast;
+    }
+}
+
+// @0x142574ca0
+void MovieImpl::ResetMouseState()
+{
+    MouseState* pstates = reinterpret_cast<MouseState*>(MouseState0_1260);
+    for (unsigned i = 0; i < 4; ++i)
+        pstates[i].ResetState();
+}
+
+// @0x142575ec0
+void MovieImpl::SetKeyboardListener(KeyboardState::IListener* l)
+{
+    for (unsigned i = 0; i < 4; ++i)
+        reinterpret_cast<KeyboardState*>(KeyboardStates[i])->SetListener(l);
+}
+
+// @0x14256ed00
+FontManager* MovieImpl::FindFontManager(MovieDefImpl* pdefImpl)
+{
+    MovieDefRootNode* pnode = RootMovieDefNodes.pNext;
+    while (static_cast<MovieDefRootNode*>(&RootMovieDefNodes) != pnode)
+    {
+        if (pnode->pDefImpl == pdefImpl && pnode->pFontManager)
+            return pnode->pFontManager;
+        pnode = pnode->pNext;
+    }
+    return 0;
+}
+
+// @0x14256f7e0
+Sprite* FocusGroupDescr::GetModalClip(MovieImpl* proot)
+{
+    if (ModalClip)
+    {
+        Ptr<DisplayObject> pchar = ModalClip->ResolveCharacter(proot);
+        if (pchar)
+            return (Sprite*)pchar.GetPtr();
+    }
+    return 0;
+}
+
+// @0x14256f820
+Sprite* MovieImpl::GetModalClip(unsigned controllerIdx)
+{
+    return FocusGroups[FocusGroupIndexes[controllerIdx]].GetModalClip(this);
+}
+
+// @0x14256f730
+bool MovieImpl::GetMainMoviePath(String* ppath) const
+{
+    if (pMainMovie)
+    {
+        *ppath = ((MovieDef*)pMainMovieDef)->GetFileURL();
+        if (URLBuilder::ExtractFilePath(ppath))
+            return true;
+    }
+    ppath->Clear();
+    return false;
+}
+
+// @0x142577c10
+void MovieImpl::UpdateAllDrawingContexts()
+{
+    DrawingContext* pdc = DrawingContextList.GetFirst();
+    while (!DrawingContextList.IsNull(pdc))
+    {
+        if (pdc->IsDirty())
+            pdc->UpdateRenderNode();
+        pdc = DrawingContextList.GetNext(pdc);
+    }
+}
+
+// @0x14256dc00
+void MovieImpl::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
+{
+    MouseState& ms = reinterpret_cast<MouseState*>(MouseState0_1260)[mouseIdx];
+    if (ms.CursorType != newCursorType)
+        AsRootSlots(pASMovieRoot)->ChangeMouseCursorType(mouseIdx, newCursorType);
+    ms.CursorType = (ms.PresetCursorType == ~0u) ? newCursorType : ms.PresetCursorType;
+}
+
+// @0x14256e150
+void MovieImpl::ClearPlayList()
+{
+    for (InteractiveObject* pcur = pPlayList; pcur; )
+    {
+        InteractiveObject* pnext = pcur->pPlayNext;
+        pcur->pPlayPrevOpt = NULL;
+        pcur->pPlayNextOpt = NULL;
+        pcur->pPlayPrev = NULL;
+        pcur->pPlayNext = NULL;
+        pcur = pnext;
+    }
+    pPlayListOptHead = NULL;
+    pPlayList = NULL;
+}
+
+// @0x14256f920
+MovieImpl::MultitouchInputMode MovieImpl::GetMultitouchInputMode() const
+{
+    return (MultitouchInputMode)MultitouchMode;
+}
+
+// @0x14256f780
+unsigned MovieImpl::GetMaxTouchPoints() const
+{
+    Ptr<MultitouchInterface> mi = GetMultitouchInterface();
+    if (mi && (MultitouchMode & MTI_TouchPoint))
+        return mi->GetMaxTouchPoints();
+    return 0;
+}
+
+// @0x14256fd70
+UInt32 MovieImpl::GetSupportedGesturesMask() const
+{
+    Ptr<MultitouchInterface> mi = GetMultitouchInterface();
+    if (mi && (MultitouchMode & MTI_Gesture))
+        return mi->GetSupportedGesturesMask();
+    return 0;
+}
+
+// @0x142576290
+void MovieImpl::SetMultitouchInputMode(MultitouchInputMode mode)
+{
+    Ptr<MultitouchInterface> mi = GetMultitouchInterface();
+    if (mi)
+    {
+        if (mi->SetMultitouchInputMode(mode))
+            MultitouchMode = mode;
+    }
+}
+
+// @0x14256bd60
+int MovieImpl::AddIntervalTimer(ASIntervalTimerIntf* timer)
+{
+    timer->SetId(++LastIntervalTimerId);
+    IntervalTimers.PushBack(timer);
+    return LastIntervalTimerId;
+}
+
+// Only stops the timer; the advance takes cleared timers off the list.
+// @0x14256e0d0
+void MovieImpl::ClearIntervalTimer(int id)
+{
+    for (UPInt i = 0, n = IntervalTimers.GetSize(); i < n; ++i)
+    {
+        if (IntervalTimers[i] && IntervalTimers[i]->GetId() == id)
+        {
+            IntervalTimers[i]->Clear();
+            break;
+        }
+    }
+}
+
+// @0x14256be80
+void MovieImpl::AddMovieDefToKillList(MovieDefImpl* pdefImpl)
+{
+    if (!pdefImpl)
+        return;
+    for (UPInt i = 0; i < MovieDefKillList.GetSize(); ++i)
+    {
+        if (MovieDefKillList[i].pMovieDef == pdefImpl)
+        {
+            MovieDefKillList[i].KillFrameId =
+                reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->GetFinalizedFrameId();
+            return;
+        }
+    }
+    MDKillListEntry e;
+    e.KillFrameId = reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->GetFinalizedFrameId();
+    e.pMovieDef = pdefImpl;
+    MovieDefKillList.PushBack(e);
+}
+
+// @0x142575f10
+void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* pdata, bool isdobj)
+{
+    puserData->pLastObjectInterface = pobjIfc;
+    puserData->pLastData = pdata;
+    puserData->IsLastDispObj = isdobj;
+}
+
 }} // namespace Scaleform::GFx
 
 // MS2-FUNCTIONAL ?GetMouseState@MovieImpl@GFx@Scaleform@@UEAAXIPEAM0PEAI@Z: the exe computes both coordinates up front (no common 0.05 constant); this build sinks x into its branch
 // MS2-FUNCTIONAL ?Release@Movie@GFx@Scaleform@@QEAAXXZ: register allocation (the exe keeps this in rdi, this build in rbx)
+// MS2-FUNCTIONAL ?FindFontManager@MovieImpl@GFx@Scaleform@@QEAAPEAVFontManager@23@PEAVMovieDefImpl@23@@Z: instruction scheduling of the list root's null-checked downcast (same compares and loads)
+// MS2-FUNCTIONAL ?AddIntervalTimer@MovieImpl@GFx@Scaleform@@QEAAHPEAVASIntervalTimerIntf@23@@Z: cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
+// MS2-FUNCTIONAL ?AddMovieDefToKillList@MovieImpl@GFx@Scaleform@@QEAAXPEAVMovieDefImpl@23@@Z: cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UMDKillListEntry@MovieImpl@GFx@Scaleform@@U?$AllocatorGH@UMDKillListEntry@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142574640
+// MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1425746e0
+// MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@UMDKillListEntry@MovieImpl@GFx@Scaleform@@U?$AllocatorGH@UMDKillListEntry@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1425752c0
+// MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142575370

@@ -140,6 +140,10 @@ public:
     void ForceUpdateImages();                       // 0x14257ff60
     void SetCaptureThreadId(void* captureThreadId); // 0x142581220 (ThreadId)
 
+    UByte  Unrecovered_08[0xe0];
+    UInt64 FinalizedFrameId;   // +0xe8 the last frame the render thread is done with
+    UInt64 GetFinalizedFrameId() const { return FinalizedFrameId; }
+
 private:
     Entry* createEntryHelper(EntryData* data);
 };

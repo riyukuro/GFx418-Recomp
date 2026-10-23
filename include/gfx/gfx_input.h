@@ -150,6 +150,7 @@ public:
     Ptr<InteractiveObject> GetMouseButtonDownEntity(unsigned buttonIdx) const;
 
 protected:
+    friend class MovieImpl;   // (sfr_gfx_01i) the cursor type
     enum { Cursor_Arrow = 0 };
 
     mutable WeakPtr<InteractiveObject>           TopmostEntity;           // +0x00
