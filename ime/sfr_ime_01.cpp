@@ -119,7 +119,7 @@ void FUN_1423ca680(void* self, void* value)
 }
 
 // @0x1423d97d0
-void FUN_1423d97d0(void* self, long long enabled)
+__declspec(noinline) void FUN_1423d97d0(void* self, long long enabled)
 {
     char* text = static_cast<char*>(self) + 0x10;
     if (enabled)
@@ -181,6 +181,14 @@ void FUN_1423d9500(void* self)
 {
     FUN_1423d9690(static_cast<unsigned char*>(self) + 0x848,
                   static_cast<unsigned char*>(self) + 0x848, 0);
+}
+
+// @0x1423d0f10
+void FUN_1423d0f10(void* self, char* text)
+{
+    *reinterpret_cast<String*>(static_cast<unsigned char*>(self) + 0x10) = text;
+    FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30),
+                  reinterpret_cast<long long>(text));
 }
 
 // @0x1423d94f0
