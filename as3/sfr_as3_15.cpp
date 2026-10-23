@@ -52,6 +52,9 @@ void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, cons
 Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 // AvmInteractiveObj::AvmInteractiveObj (abstract here, so the derived ctors reach it by address)
 void FUN_1424d6480(void* self, Scaleform::GFx::InteractiveObject* pdispObj);
+// DisplayObject::DisplayObject (protected; ShapeObject is opaque here, so its ctor reaches it by address)
+void FUN_1425f07e0(void* self, Scaleform::GFx::ASMovieRootBase* pasRoot, Scaleform::GFx::InteractiveObject* pparent,
+                   Scaleform::GFx::ResourceId id);
 namespace Scaleform {
 // DocView::ImageSubstitutor::Element, the same stand-in as sfr_as3_14 (ArrayDataBase destructor = exe 0x1424c7090),
 // and the substitutor itself (the DocView's +0x30).
@@ -1713,6 +1716,28 @@ extern void* const AvmTextField_vftable[];
 extern void* const AvmTextField_vftable_30[];
 extern void* const AvmTextField_vftable_40[];
 extern void* const AvmStaticText_vftable[];
+
+extern void* const ShapeObject_vftable[];
+extern void* const ShapeObject_vftable_18[];
+extern void* const ShapeObject_vftable_90[];
+
+// A shape on the display list: a DisplayObject with its AS3 part at +0x90, then the shape def (+0xc0) and the
+// drawing context of the AS3 Graphics API (+0xc8, made on first use).
+// ShapeObject is opaque (its virtuals are unrecovered): its bases are built in place and the exe's vftables stored.
+// MS2-FUNCTIONAL: same code; the exe orders the inlined AvmDisplayObj member stores differently (scheduling)
+// @0x1424d98a0
+ShapeObject::ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
+{
+    FUN_1425f07e0(this, pasRoot, pparent, id);
+    new (Data + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
+    *reinterpret_cast<void* const**>(Data + 0x00) = ShapeObject_vftable;
+    *reinterpret_cast<void* const**>(Data + 0x18) = ShapeObject_vftable_18;
+    *reinterpret_cast<void* const**>(Data + 0x90) = ShapeObject_vftable_90;
+    if (pdef)
+        reinterpret_cast<Resource*>(pdef)->AddRef();
+    *reinterpret_cast<CharacterDef**>(Data + 0xc0) = pdef;
+    *reinterpret_cast<void**>(Data + 0xc8) = NULL;
+}
 
 // A button takes part in tab navigation by default.
 // MS2-FUNCTIONAL: AvmButton is opaque; its AvmInteractiveObj part is built in place and the exe's vftables stored
