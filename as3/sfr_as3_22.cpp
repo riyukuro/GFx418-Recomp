@@ -70,6 +70,8 @@ extern "C" void FUN_14268b3e0(void*, void*);
 extern "C" void FUN_14268ac40(void*, void*);
 extern "C" void FUN_142689aa0(void*, void*, void*);
 extern "C" void FUN_142689cb0(void*, void*, void*);
+int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
+int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 
 static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t* source)
 {
@@ -333,6 +335,68 @@ float QuerySoundDuration(void* soundSource)
     if (!sound || sound->getLength(&length, 1) != 0)
         return 0.0f;
     return static_cast<float>(length) / 1000.0f;
+}
+
+// MS2-FUNCTIONAL: reads one PCM block, applies the executable's six-sample endian shuffle, writes both FMOD lock regions, and advances the ring offsets.
+// @0x142745f50
+unsigned FUN_142745f50(void* player)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    auto* reader = *reinterpret_cast<void**>(bytes + 0x40);
+    const unsigned requested = *reinterpret_cast<unsigned*>(bytes + 0x60);
+    auto** readerVtable = *reinterpret_cast<void***>(reader);
+    const auto read = reinterpret_cast<unsigned (*)(void*, void*, unsigned)>(readerVtable[1]);
+    unsigned readCount = read(reader, *reinterpret_cast<void**>(bytes + 0x58), requested);
+    auto* buffer = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0x58));
+    if (readCount < requested)
+        std::memset(buffer + readCount, 0, requested - readCount);
+
+    if (*reinterpret_cast<int*>(bytes + 0x48) == 6) {
+        if (*reinterpret_cast<int*>(bytes + 0x68) == 5) {
+            for (unsigned pos = 0; pos < readCount; pos += 24) {
+                auto* words = reinterpret_cast<std::uint32_t*>(buffer + pos + 8);
+                std::swap(words[0], words[2]);
+                std::swap(words[1], words[3]);
+            }
+        } else {
+            for (unsigned pos = 0; pos < readCount; pos += 12) {
+                auto* words = reinterpret_cast<std::uint16_t*>(buffer + pos + 4);
+                std::swap(words[0], words[2]);
+                std::swap(words[1], words[3]);
+            }
+        }
+    }
+
+    auto* sound = *reinterpret_cast<void**>(bytes + 0x30);
+    void* first = nullptr;
+    void* second = nullptr;
+    unsigned firstLength = 0, secondLength = 0;
+    if (sound && FUN_1428d8ea8(sound, *reinterpret_cast<unsigned*>(bytes + 0x6c), requested,
+                               &first, &second, &firstLength, &secondLength) == 0) {
+        if (firstLength < requested) {
+            std::memcpy(first, buffer, firstLength);
+            const unsigned remaining = requested - firstLength;
+            const unsigned secondCopy = (remaining < secondLength) ? remaining : secondLength;
+            if (secondCopy)
+                std::memcpy(second, buffer + firstLength, secondCopy);
+            if (secondLength > secondCopy)
+                std::memset(static_cast<unsigned char*>(second) + secondCopy, 0, secondLength - secondCopy);
+        } else {
+            if (requested)
+                std::memcpy(first, buffer, requested);
+            if (firstLength > requested)
+                std::memset(static_cast<unsigned char*>(first) + requested, 0, firstLength - requested);
+            if (secondLength)
+                std::memset(second, 0, secondLength);
+        }
+        if (FUN_1428d8eae(sound, first, second, firstLength, secondLength) != 0)
+            return 0;
+    }
+    *reinterpret_cast<unsigned*>(bytes + 0x6c) += readCount;
+    *reinterpret_cast<unsigned*>(bytes + 0x70) += readCount;
+    if (*reinterpret_cast<unsigned*>(bytes + 0x64) <= *reinterpret_cast<unsigned*>(bytes + 0x6c))
+        *reinterpret_cast<unsigned*>(bytes + 0x6c) -= *reinterpret_cast<unsigned*>(bytes + 0x64);
+    return readCount;
 }
 
 // MS2-FUNCTIONAL: preserves the executable's null check and FMOD error handling.
