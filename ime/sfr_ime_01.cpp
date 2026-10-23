@@ -184,6 +184,44 @@ void FUN_1423d1b50(unsigned long long* object)
     FUN_1423cdf60(object);
 }
 
+// MS2-FUNCTIONAL: follows the recovered child/member teardown and sized-delete paths; only the anonymous abstract vptr store is omitted.
+// @0x1423d1b90
+void* FUN_1423d1b90(unsigned long long* object, unsigned flags)
+{
+    Memory::Free(reinterpret_cast<void*>(object[0x16]));
+    FUN_1423cdf60(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x5c0);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: initializes all non-vtable fields at the offsets observed in the executable constructor.
+// @0x1423da250
+void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigned long long arg3)
+{
+    object[2] = arg2;
+    object[5] = 0;
+    object[8] = 0;
+    object[0xe] = arg3;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0x3c) = 1;
+    object[3] = ~0ULL;
+    *reinterpret_cast<unsigned*>(object + 4) = ~0U;
+    return object;
+}
+
+// MS2-FUNCTIONAL: mirrors the executable allocation flag and 0x110 sized-delete branch; anonymous vptr stores are omitted.
+// @0x1423da2c0
+void* FUN_1423da2c0(void* object, unsigned long long flags)
+{
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x110);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
 // MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
 // @0x1423ce040
 void* FUN_1423ce040(void* object, unsigned long long flags)
