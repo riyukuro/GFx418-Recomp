@@ -28,6 +28,7 @@ extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_14268f8f0(void*, void*, unsigned);
 extern "C" void FUN_14268f230(void*, void*, unsigned);
 extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
+extern "C" void FUN_1426869a0(void*, void*, const void*, std::uint64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
 MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
@@ -736,6 +737,45 @@ void AddImageHashValue(void* set, const unsigned char* key, const std::uint64_t*
 {
     struct Pair { const unsigned char* key; std::uint64_t value; } pair{key, *value};
     FUN_1426867f0(set, set, &pair, HashImageKey(key));
+}
+
+// MS2-FUNCTIONAL: updates or inserts this node's cached key, then repeats the operation for its child nodes.
+// @0x14268a570
+void UpdateImageHashTree(void* node, void* setObject)
+{
+    auto* bytes = static_cast<unsigned char*>(node);
+    auto* key = bytes + 0x10;
+    auto* set = static_cast<unsigned char*>(setObject);
+    auto* table = *reinterpret_cast<unsigned char**>(set);
+    const std::uint64_t hash = HashImageKey(key);
+    if (table) {
+        const std::uint64_t bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
+        std::uint64_t index = bucket;
+        auto* entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + index * 0x18);
+        if (static_cast<std::int64_t>(entry[0]) != -2 && entry[1] == bucket) {
+            for (;;) {
+                if (entry[1] == bucket && entry[2] == *reinterpret_cast<std::uint64_t*>(key)) {
+                    *reinterpret_cast<std::uint64_t*>(table + 0x20 + index * 0x18) =
+                        *reinterpret_cast<std::uint64_t*>(key);
+                    break;
+                }
+                index = entry[0];
+                if (index == UINT64_MAX) {
+                    FUN_1426869a0(setObject, setObject, key, hash);
+                    break;
+                }
+                entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + index * 0x18);
+            }
+        } else {
+            FUN_1426869a0(setObject, setObject, key, hash);
+        }
+    } else {
+        FUN_1426869a0(setObject, setObject, key, hash);
+    }
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    for (std::size_t i = 0; i < count; ++i)
+        UpdateImageHashTree(children[i], setObject);
 }
 
 // MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
