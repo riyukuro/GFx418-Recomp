@@ -2556,6 +2556,34 @@ void FUN_1423d8870(unsigned long long* manager)
     FUN_1423d7140(manager);
 }
 
+// MS2-FUNCTIONAL: resolves the configured language string, activates its executable HKL, and reports activation failure.
+// @0x1423d76f0
+void FUN_1423d76f0(unsigned long long* manager, const char* name)
+{
+    manager[0x33] = 0;
+    const unsigned count = *reinterpret_cast<unsigned*>(manager + 0x1a);
+    auto* kinds = reinterpret_cast<unsigned*>(manager[0x32]);
+    auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
+    for (unsigned i = 0; i < count; ++i) {
+        const unsigned kind = kinds[i];
+        if (kind != 1 && kind != 2) continue;
+        const unsigned offset = kind == 1 ? 0x10 : 0x18;
+        const unsigned long long packed = *reinterpret_cast<unsigned long long*>(entries + i * 0x30 + offset);
+        const char* configured = reinterpret_cast<const char*>((packed & ~3ull) + 0xc);
+        if (std::strcmp(name, configured) != 0) continue;
+        HKL layout = *reinterpret_cast<HKL*>(entries + i * 0x30 + 0x28);
+        if (!layout) continue;
+        manager[0x33] = reinterpret_cast<unsigned long long>(layout);
+        if (ActivateKeyboardLayout(layout, 0)) return;
+        String error("Failure to activate input language ");
+        error += configured;
+        reinterpret_cast<void(*)(void*, const char*, const char*)>(
+            (*reinterpret_cast<void***>(manager))[0x70 / sizeof(void*)])(
+                manager, error.ToCStr(), "GFxIME Error");
+        return;
+    }
+}
+
 // MS2-FUNCTIONAL: uses our AS3 memory context declaration to release its heap limit handler, owned references, and allocated storage.
 // @0x1423dbd20
 void* FUN_1423dbd20(Scaleform::GFx::AS3::MemoryContextImpl* self, unsigned flags)
