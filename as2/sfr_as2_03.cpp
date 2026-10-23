@@ -137,6 +137,7 @@
 // MS2-RANGE: 0x142917ed0-0x1429180c0 .text$mn
 // MS2-RANGE: 0x14291f430-0x14291f540 .text$mn
 // MS2-RANGE: 0x14291e1a0-0x14291e210 .text$mn
+// MS2-RANGE: 0x14291e210-0x14291e6a0 .text$mn
 // MS2-RANGE: 0x14291eb20-0x14291eb90 .text$mn
 // MS2-RANGE: 0x1429204d0-0x142920540 .text$mn
 // MS2-RANGE: 0x142918470-0x1429184e0 .text$mn
@@ -334,12 +335,13 @@ ArrayCtorFunction::ArrayCtorFunction(ASStringContext* psc)
                                                           PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete);
 }
 
-// MS2-FUNCTIONAL the flags temporary is stored before the Value temporary
+// MS2-FUNCTIONAL this/psc register swap and AddConstMembers argument scheduling
 // @0x14291bc40
 ExternalInterfaceCtorFunction::ExternalInterfaceCtorFunction(ASStringContext* psc)
     : CFunctionObject(psc, GlobalCtor)
 {
-    static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("available"), Value(Value::UNSET));
+    Value unset(Value::UNSET);
+    static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("available"), unset);
     NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
 }
@@ -351,6 +353,46 @@ NumberCtorFunction::NumberCtorFunction(ASStringContext* psc)
     for (int i = 0; ConstTable[i].Name; i++)
         static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString(ConstTable[i].Name), Value(ConstTable[i].Function()),
                                                           PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x14291e210
+MathCtorFunction::MathCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    {
+        Value v(2.718281828459045);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("E"), v);
+    }
+    {
+        Value v(0.6931471805599453);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("LN2"), v);
+    }
+    {
+        Value v(1.4426950408889634);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("LOG2E"), v);
+    }
+    {
+        Value v(2.302585092994046);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("LN10"), v);
+    }
+    {
+        Value v(0.4342944819032518);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("LOG10E"), v);
+    }
+    {
+        Value v(3.141592653589793);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("PI"), v);
+    }
+    {
+        Value v(0.7071067811865476);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("SQRT1_2"), v);
+    }
+    {
+        Value v(1.4142135623730951);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("SQRT2"), v);
+    }
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
 }
 
 // @0x142920540
@@ -1961,3 +2003,5 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_7ExternalInterfaceCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d1d0
 // MS2-PIN: ??_7NumberCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b420
 // MS2-PIN: ??_7NumberCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b4a8
+// MS2-PIN: ??_7MathCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321bc40
+// MS2-PIN: ??_7MathCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321bcc8

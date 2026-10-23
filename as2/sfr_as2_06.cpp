@@ -102,6 +102,7 @@
 // MS2-RANGE: 0x1429775b0-0x142977ad0 .text$mn
 // MS2-RANGE: 0x142979260-0x1429797e0 .text$mn
 // MS2-RANGE: 0x142979fe0-0x14297a4a0 .text$mn
+// MS2-RANGE: 0x142978780-0x142978a90 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -923,6 +924,13 @@ FunctionRef NumberCtorFunction::Register(GlobalContext* pgc)
 FunctionRef SelectionCtorFunction::Register(GlobalContext* pgc)
 {
     return RegisterBuiltinClass<SelectionCtorFunction, SelectionProto>(pgc, ASBuiltin_Selection, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the MathProto ctor (sfr_as2_03)
+// @0x142978780
+FunctionRef MathCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<MathCtorFunction, MathProto>(pgc, ASBuiltin_Math, ASBuiltin_Object, pgc->pGlobal);
 }
 
 // @0x14295d1c0

@@ -962,6 +962,12 @@ class MathCtorFunction : public CFunctionObject
 {
 public:
     static void GlobalCtor(const FnCall& fn); // exe 0x14295bc00
+
+    // (appended for sfr_as2_06) The constants E, LN2, ..., SQRT2 and the static functions (exe 0x14291e210).
+    MathCtorFunction(ASStringContext* psc);
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213900: abs, acos, ...
+    // Creates the class and its prototype and publishes "Math" (exe 0x142978780).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 class SelectionCtorFunction : public CFunctionObject
 {
