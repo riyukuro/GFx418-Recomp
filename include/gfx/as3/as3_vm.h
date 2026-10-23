@@ -176,6 +176,8 @@ public:
     Classes::fl::uint&    GetClassUInt() const;       // 0x142508100
     // (appended, sfr16) the Vector.<Number> class object (Classes::fl_vec::Vector_double is not recovered)
     Class& GetClassVectorNumber() const;    // 0x142508230
+    // (appended, sfr19) the interned namespace of a kind and name (NULL: the empty name) (0x142516400).
+    Pickable<Instances::Namespace> MakeInternedNamespace(Abc::NamespaceKind kind, const char* name) const;
 
     Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
     Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }

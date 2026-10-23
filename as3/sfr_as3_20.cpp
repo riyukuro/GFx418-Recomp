@@ -1310,6 +1310,264 @@ void FUN_142553170(VectorBase<UInt32>& v, Value& result, unsigned argc, const Va
 { VI::VectorSort<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
 
 
+// ==== Vector class traits (sfr19) ====================================================================================
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace fl_vec
+{
+    extern const ClassInfo VectorCI;
+    extern const ClassInfo Vector_StringCI;
+    extern const ClassInfo Vector_doubleCI;
+    extern const ClassInfo Vector_intCI;
+    extern const ClassInfo Vector_objectCI;
+    extern const ClassInfo Vector_uintCI;
+    // The package of the Vector classes, "__AS3__.vec".
+    extern const char* NS_Vector;
+}
+
+namespace ClassTraits { namespace fl_vec
+{
+    // @0x142546c50
+    Pickable<Traits> Vector_int::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Vector_int(vm));
+    }
+
+    // @0x142546da0
+    Pickable<Traits> Vector_uint::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Vector_uint(vm));
+    }
+
+    // @0x142546ef0
+    Pickable<Traits> Vector_double::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Vector_double(vm));
+    }
+
+    // @0x142547040
+    Pickable<Traits> Vector_String::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Vector_String(vm));
+    }
+
+    // @0x142547190
+    Pickable<Traits> Vector_object::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Vector_object(vm));
+    }
+
+    // @0x142547420
+    Pickable<Traits> Vector::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Vector(vm));
+    }
+
+    // @0x142554c80
+    Vector::Vector(VM& vm)
+        : Traits(vm, AS3::fl_vec::VectorCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_vec::VectorCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_vec::Vector(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_vec
+{
+    // @0x142554d60
+    Vector::Vector(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_vec
+{
+    // @0x142554d90
+    Vector_String::Vector_String(VM& vm)
+        : Traits(vm, AS3::fl_vec::Vector_StringCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraitsType(vm, AS3::fl_vec::Vector_StringCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) ClassType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_vec
+{
+    // @0x142554e90
+    Vector_String::Vector_String(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_vec
+{
+    // @0x142554ec0
+    Vector_String::Vector_String(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        Flags |= ArrayLikeMask;
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_vec
+{
+    // @0x142554f50
+    Vector_double::Vector_double(VM& vm)
+        : Traits(vm, AS3::fl_vec::Vector_doubleCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraitsType(vm, AS3::fl_vec::Vector_doubleCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) ClassType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_vec
+{
+    // @0x142555050
+    Vector_double::Vector_double(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_vec
+{
+    // @0x142555080
+    Vector_double::Vector_double(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        Flags |= ArrayLikeMask;
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_vec
+{
+    // @0x142555110
+    Vector_int::Vector_int(VM& vm)
+        : Traits(vm, AS3::fl_vec::Vector_intCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraitsType(vm, AS3::fl_vec::Vector_intCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) ClassType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_vec
+{
+    // @0x142555210
+    Vector_int::Vector_int(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_vec
+{
+    // @0x142555240
+    Vector_int::Vector_int(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        Flags |= ArrayLikeMask;
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_vec
+{
+    // The traits of Vector.<*>; its instance traits are made per element type.
+    // @0x1425552d0
+    Vector_object::Vector_object(VM& vm)
+        : Traits(vm, AS3::fl_vec::Vector_objectCI)
+        , EnclosedClassTraits(NULL)
+    {
+        TraitsType = Traits_Vector_object;
+    }
+
+    // @0x142555310
+    Vector_object::Vector_object(VM& vm, const ASString& n, const ClassTraits::Traits* ect)
+        : Traits(vm, AS3::fl_vec::Vector_objectCI)
+        , EnclosedClassTraits(ect)
+    {
+        TraitsType = Traits_Vector_object;
+
+        InstanceTraits::Traits* it = new(vm.GetMemoryHeap()) InstanceTraitsType(vm, n,
+            vm.MakeInternedNamespace(Abc::NS_Public, AS3::fl_vec::NS_Vector),
+            &vm.GetClassTraitsObject().GetInstanceTraits(), true, true);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(vm.GetMemoryHeap()) ClassType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_vec
+{
+    // @0x1425554a0
+    Vector_object::Vector_object(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_vec
+{
+    // @0x1425554d0
+    Vector_object::Vector_object(VM& vm, const ASString& n, Pickable<Instances::Namespace> ns, const Traits* pt,
+        bool isDynamic, bool isFinal)
+        : RTraits(vm, n, ns, pt, isDynamic, isFinal)
+    {
+        Flags |= ArrayLikeMask;
+        TraitsType = Traits_Vector_object;
+        for (unsigned i = 0; i < ThunkInfoNum; ++i)
+            Add2VT(AS3::fl_vec::Vector_objectCI, AS3::fl_vec::Vector_objectCI.InstanceMethod[i]);
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_vec
+{
+    // @0x1425555c0
+    Vector_uint::Vector_uint(VM& vm)
+        : Traits(vm, AS3::fl_vec::Vector_uintCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraitsType(vm, AS3::fl_vec::Vector_uintCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) ClassType(*this)));
+    }
+}}
+
+namespace Classes { namespace fl_vec
+{
+    // @0x1425556c0
+    Vector_uint::Vector_uint(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_vec
+{
+    // @0x1425556f0
+    Vector_uint::Vector_uint(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        Flags |= ArrayLikeMask;
+        SetMemSize(0x70);
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // Argument defaults of the Vector.<T> callback methods, emitted out of line here (their ThunkFunc2 thunks are in
 // sfr_as3_21): every 7, filter 8, forEach 9, some 11, map 14 per element type; callback undefined, thisObject null.
 namespace Scaleform { namespace GFx { namespace AS3 {

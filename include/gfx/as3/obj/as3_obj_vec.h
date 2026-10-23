@@ -369,76 +369,249 @@ namespace Instances { namespace fl_vec {
 
 }}
 
-// (appended, sfr16) the instance traits of Vector.<T>; MakeInstanceS/MakeObject bodies in sfr_as3_21.
+// (appended, sfr16) the instance traits of Vector.<T>; MakeInstanceS/MakeObject bodies in sfr_as3_21, ctors in
+// sfr_as3_20 (sfr19). Typed vectors are array-like CTraits of 0x70-byte instances; Vector.<Object> instances carry
+// their own name (RTraits), one traits object per element type.
 namespace InstanceTraits { namespace fl_vec {
-    class Vector_String : public fl::Object
+    // vftable 0x143182858.
+    class Vector_String : public CTraits
     {
     public:
         typedef Instances::fl_vec::Vector_String InstanceType;
 
-        Vector_String(VM& vm, const ClassInfo& ci);
+        Vector_String(VM& vm, const ClassInfo& ci);                // 0x142554ec0
         static Pickable<InstanceType> MakeInstance(Vector_String& t)
         {
             return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
         }
+        // @0x142560100
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl_vec::Vector_String"; }
         SPtr<InstanceType> MakeInstanceS(Vector_String& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
-    class Vector_double : public fl::Object
+    // vftable 0x143182558.
+    class Vector_double : public CTraits
     {
     public:
         typedef Instances::fl_vec::Vector_double InstanceType;
 
-        Vector_double(VM& vm, const ClassInfo& ci);
+        Vector_double(VM& vm, const ClassInfo& ci);                // 0x142555080
         static Pickable<InstanceType> MakeInstance(Vector_double& t)
         {
             return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
         }
+        // @0x142560140
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl_vec::Vector_double"; }
         SPtr<InstanceType> MakeInstanceS(Vector_double& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
-    class Vector_int : public fl::Object
+    // vftable 0x143181f20.
+    class Vector_int : public CTraits
     {
     public:
         typedef Instances::fl_vec::Vector_int InstanceType;
 
-        Vector_int(VM& vm, const ClassInfo& ci);
+        Vector_int(VM& vm, const ClassInfo& ci);                // 0x142555240
         static Pickable<InstanceType> MakeInstance(Vector_int& t)
         {
             return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
         }
+        // @0x142560180
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl_vec::Vector_int"; }
         SPtr<InstanceType> MakeInstanceS(Vector_int& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
-    class Vector_object : public fl::Object
+    // vftable 0x143182b58.
+    class Vector_object : public RTraits
     {
     public:
         typedef Instances::fl_vec::Vector_object InstanceType;
+        enum { ThunkInfoNum = 23 };
 
-        Vector_object(VM& vm, const ClassInfo& ci);
+        Vector_object(VM& vm, const ASString& n, Pickable<Instances::Namespace> ns, const Traits* pt, bool isDynamic,
+            bool isFinal);                                      // 0x1425554d0
         static Pickable<InstanceType> MakeInstance(Vector_object& t)
         {
             return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
         }
+        // @0x1425601c0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Vector_object"; }
         SPtr<InstanceType> MakeInstanceS(Vector_object& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
-    class Vector_uint : public fl::Object
+    // vftable 0x143182238.
+    class Vector_uint : public CTraits
     {
     public:
         typedef Instances::fl_vec::Vector_uint InstanceType;
 
-        Vector_uint(VM& vm, const ClassInfo& ci);
+        Vector_uint(VM& vm, const ClassInfo& ci);                // 0x1425556f0
         static Pickable<InstanceType> MakeInstance(Vector_uint& t)
         {
             return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
         }
+        // @0x142560200
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Vector_uint"; }
         SPtr<InstanceType> MakeInstanceS(Vector_uint& t);
         virtual void MakeObject(Value& result, Traits& t);
+    };
+}}
+
+namespace Classes { namespace fl_vec {
+    class Vector_String; class Vector_double; class Vector_int; class Vector_object; class Vector_uint;
+}}
+
+// (appended, sfr19) the class traits of Vector and Vector.<T>: each makes its instance traits and class object.
+// Ctors and MakeClassTraits in sfr_as3_20.
+namespace ClassTraits { namespace fl_vec {
+    // vftable 0x143181c40.
+    class Vector : public Traits
+    {
+    public:
+        Vector(VM& vm);                                         // 0x142554c80
+        // @0x1425600c0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Vector"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);        // 0x142547420
+    };
+
+    // vftable 0x143182908.
+    class Vector_String : public Traits
+    {
+    public:
+        typedef InstanceTraits::fl_vec::Vector_String InstanceTraitsType;
+        typedef Classes::fl_vec::Vector_String ClassType;
+
+        Vector_String(VM& vm);                                     // 0x142554d90
+        // @0x1425600e0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Vector_String"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);        // 0x142547040
+    };
+
+    // vftable 0x143182608.
+    class Vector_double : public Traits
+    {
+    public:
+        typedef InstanceTraits::fl_vec::Vector_double InstanceTraitsType;
+        typedef Classes::fl_vec::Vector_double ClassType;
+
+        Vector_double(VM& vm);                                     // 0x142554f50
+        // @0x142560120
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Vector_double"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);        // 0x142546ef0
+    };
+
+    // vftable 0x143181fd0.
+    class Vector_int : public Traits
+    {
+    public:
+        typedef InstanceTraits::fl_vec::Vector_int InstanceTraitsType;
+        typedef Classes::fl_vec::Vector_int ClassType;
+
+        Vector_int(VM& vm);                                     // 0x142555110
+        // @0x142560160
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Vector_int"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);        // 0x142546c50
+    };
+
+    // A Vector.<T> of objects; the element type is EnclosedClassTraits (NULL for Vector.<*>). 0xd0 bytes.
+    // vftable 0x143182c00.
+    class Vector_object : public Traits
+    {
+    public:
+        typedef InstanceTraits::fl_vec::Vector_object InstanceTraitsType;
+        typedef Classes::fl_vec::Vector_object ClassType;
+
+        Vector_object(VM& vm);                                  // 0x1425552d0
+        Vector_object(VM& vm, const ASString& n, const ClassTraits::Traits* ect);  // 0x142555310
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;             // 0x14255c1d0 (sfr_as3_21)
+        // @0x1425601a0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::fl_vec::Vector_object"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);        // 0x142547190
+
+        const ClassTraits::Traits& GetEnclosedClassTraits() const { return *EnclosedClassTraits; }
+
+        SPtr<const ClassTraits::Traits> EnclosedClassTraits;    // +0xc8
+    };
+
+    // vftable 0x1431822e0.
+    class Vector_uint : public Traits
+    {
+    public:
+        typedef InstanceTraits::fl_vec::Vector_uint InstanceTraitsType;
+        typedef Classes::fl_vec::Vector_uint ClassType;
+
+        Vector_uint(VM& vm);                                     // 0x1425555c0
+        // @0x1425601e0
+        virtual const char* GetAS3ObjectType() const { return "ClassTraits::Vector_uint"; }
+        static Pickable<Traits> MakeClassTraits(VM& vm);        // 0x142546da0
+    };
+}}
+
+// (appended, sfr19) the class objects of Vector and Vector.<T>. 0x50 bytes. Ctors in sfr_as3_20, Call and
+// ApplyTypeArgs in sfr_as3_21.
+namespace Classes { namespace fl_vec {
+    // vftable 0x143181cd0.
+    class Vector : public Class
+    {
+    public:
+        Vector(ClassTraits::Traits& t);                         // 0x142554d60
+        // @0x1425600d0
+        virtual const char* GetAS3ObjectType() const { return "Classes::fl_vec::Vector"; }
+        virtual Class& ApplyTypeArgs(unsigned argc, const Value* argv);           // 0x14255a5c0
+    };
+
+    // vftable 0x1431829a0.
+    class Vector_String : public Class
+    {
+    public:
+        Vector_String(ClassTraits::Traits& t);                     // 0x142554e90
+        // @0x1425600f0
+        virtual const char* GetAS3ObjectType() const { return "Classes::Vector_String"; }
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);   // 0x14255a700
+    };
+
+    // vftable 0x1431826a0.
+    class Vector_double : public Class
+    {
+    public:
+        Vector_double(ClassTraits::Traits& t);                     // 0x142555050
+        // @0x142560130
+        virtual const char* GetAS3ObjectType() const { return "Classes::Vector_double"; }
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);   // 0x14255a8a0
+    };
+
+    // vftable 0x143182060.
+    class Vector_int : public Class
+    {
+    public:
+        Vector_int(ClassTraits::Traits& t);                     // 0x142555210
+        // @0x142560170
+        virtual const char* GetAS3ObjectType() const { return "Classes::Vector_int"; }
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);   // 0x14255aa40
+    };
+
+    // vftable 0x143182ca0.
+    class Vector_object : public Class
+    {
+    public:
+        Vector_object(ClassTraits::Traits& t);                     // 0x1425554a0
+        // @0x1425601b0
+        virtual const char* GetAS3ObjectType() const { return "Classes::Vector_object"; }
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);   // 0x14255abe0
+    };
+
+    // vftable 0x143182378.
+    class Vector_uint : public Class
+    {
+    public:
+        Vector_uint(ClassTraits::Traits& t);                     // 0x1425556c0
+        // @0x1425601f0
+        virtual const char* GetAS3ObjectType() const { return "Classes::Vector_uint"; }
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);   // 0x14255ad80
     };
 }}
 
