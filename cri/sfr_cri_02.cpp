@@ -100,6 +100,10 @@ CriSint32 FUN_140041ee0(const void* params);
 CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const void* flags);
 void* FUN_140030be0(CriSint32 codecId);
 CriSint32 FUN_140045910(const void* config);
+void     FUN_14002e6b0(void* memory, CriSint32 size, CriFixedAllocator* allocator);
+void*    FUN_14002e6c0(CriFixedAllocator* allocator, CriSint32 size, CriSint32 align);
+void*    FUN_140045144(CriSint32 count, void* work, CriSint32 workSize);
+void*    FUN_1400459ec(const void* config, void* work, CriSint32 workSize);
 CriSint32 FUN_140042150(void* player, void* source, void* work, CriUint32 size, CriSint32 flags);
 void     FUN_140037850(void* player);
 void     FUN_140037880(void* player);
@@ -110,6 +114,7 @@ void*    FUN_1400452b4(CriHeap heap, CriSint32 count);
 void*    FUN_1400464c8(CriHeap heap, CriSint32 kind, CriSint32 alignment);
 void     FUN_1400372c0(void* player, CriBool enabled);
 void     FUN_14002f610(CriUint32* player);
+void     FUN_14002f850(void* player);
 void*    FUN_140030b50(CriSint32 codecId);
 void*    FUN_140044e40(void* decoderInterface);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
@@ -2664,6 +2669,152 @@ void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
     FUN_14004698c(DAT_143b27ab0, 0x100, DAT_1431b9820);
     FUN_14004698c(DAT_143b27ab0, 0x100, description);
     FUN_140038ce4(category, DAT_143b27ab0, 0, 0, NULL);
+}
+
+// MS2-FUNCTIONAL: construct a CRI Movie player and its work queues inside the supplied memory block.
+// @0x14002eb20
+void* FUN_14002eb20(void* work, CriSint32 workSize)
+{
+    if (DAT_143ffd500 < 1)
+    {
+        FUN_140037950(NULL, "E10051202M: criMvPly_Create was called without Initialization.", 0);
+        return NULL;
+    }
+    if (!work || workSize < 0)
+    {
+        FUN_140037950(NULL, "E10051203M: Passed illegal memory or memory size to criMvPly_Create.", 0);
+        return NULL;
+    }
+    CriFixedAllocator allocator = {};
+    FUN_14002e6b0(work, workSize, &allocator);
+    CriUint32* words = (CriUint32*)FUN_14002e6c0(&allocator, 0xf18, 4);
+    if (!words)
+    {
+        FUN_140037950(NULL, "E10051204M: Can't allocate handle object memory.", 0xf18);
+        return NULL;
+    }
+    memset(words, 0, 0xf18);
+    struct HeapFields
+    {
+        CriUint8 Reserved0[0xdc0];
+        CriHeap Heap;
+        CriUint8 ReservedD28[8];
+        void* HeapHandle;
+        CriUint8 ReservedD38[8];
+        void* LocalWork;
+    };
+    struct WorkFields { CriUint8 Reserved0[0x18]; void* CriticalWork; void* CriticalSection; };
+    HeapFields* heapFields = (HeapFields*)words;
+    WorkFields* workFields = (WorkFields*)words;
+
+    workFields->CriticalWork = FUN_14002e6c0(&allocator, 0x48, 4);
+    if (!workFields->CriticalWork)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051205M: Can't allocate critical section work memory.", 0x48);
+        return NULL;
+    }
+    workFields->CriticalSection = FUN_140039ea8(workFields->CriticalWork, 0x48);
+    if (!workFields->CriticalSection)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051206M: Can't create CriticalSection for CRI Movie.", 0);
+        return NULL;
+    }
+
+    words[0x376] = 0x2800;
+    void* localBuffer = FUN_14002e6c0(&allocator, 0x2800, 4);
+    *(void**)((CriUint8*)words + 0xde0) = localBuffer;
+    if (!localBuffer)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051207M: Can't allocate internal heap memory.", 0x2800);
+        return NULL;
+    }
+    heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, 0x2800);
+    if (!heapFields->HeapHandle)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051208M: Can't create internal heap handle.", 0);
+        return NULL;
+    }
+
+    CriUint32 rbfConfig[6] = { 1, 0x2800, 0, 0x40, 0, 0 };
+    CriSint32 inputSize = FUN_140045ed0(rbfConfig);
+    void* inputWork = FUN_14002e6c0(&allocator, inputSize, 4);
+    if (!inputWork)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051209M: Cannot allocate memory for input SJ to analyze header chunk.", inputSize);
+        return NULL;
+    }
+    CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)words;
+    queues->InputBuffer = FUN_140045eec(rbfConfig, inputWork, inputSize);
+    if (!queues->InputBuffer)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051210M: Cannot create input SJ to analyze header chunk.", 0);
+        return NULL;
+    }
+
+    words[0x35c] = 8;
+    CriSint32 demuxSize = FUN_140044eb0(words[0x35c]);
+    void* demuxWork = FUN_14002e6c0(&allocator, demuxSize, 4);
+    if (!demuxWork)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051201M: Cannot allocate memory for UsfDemux.", demuxSize);
+        return NULL;
+    }
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)words;
+    state->Demux = FUN_140045144((CriSint32)words[0x35c], demuxWork, demuxSize);
+    if (!state->Demux)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E05063007M: Can't create UsfDemux.", 0);
+        return NULL;
+    }
+
+    CriUint32 outputConfig[3] = { 1, 0, 0x40 };
+    CriSint32 outputSize = FUN_140045910(outputConfig);
+    void* outputWork = FUN_14002e6c0(&allocator, outputSize, 4);
+    if (!outputWork)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051211M: Cannot allocate memory for output stream.", outputSize);
+        return NULL;
+    }
+    queues->ReadBuffer = FUN_1400459ec(outputConfig, outputWork, outputSize);
+    if (!queues->ReadBuffer)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E10051212M: Can't create output stream.", 0);
+        return NULL;
+    }
+
+    CriUint32 memoryConfig[3] = { 1, 0, 4 };
+    CriSint32 memorySize = FUN_140045910(memoryConfig);
+    void* memoryWork = FUN_14002e6c0(&allocator, memorySize, 4);
+    if (!memoryWork)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E11112531M: Cannot allocate memory for memory input SJ.", memorySize);
+        return NULL;
+    }
+    struct MemoryQueueView { CriUint8 Reserved[0xda0]; void* Queue; };
+    ((MemoryQueueView*)words)->Queue = FUN_1400459ec(memoryConfig, memoryWork, memorySize);
+    if (!((MemoryQueueView*)words)->Queue)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E11112532M: Can't create input SJ for memory input.", 0);
+        return NULL;
+    }
+    ((CriMvReadBufferState*)words)->Mode = 0;
+    FUN_14002f850(words);
+    words[0] = 1;
+    FUN_1400372c0(words, 0);
+    FUN_14002e6bc(&allocator);
+    return words;
 }
 
 // MS2-FUNCTIONAL: estimate CRI Movie work memory for stream buffers and the selected decoders.
