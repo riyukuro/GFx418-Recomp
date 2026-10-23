@@ -967,6 +967,8 @@ namespace Instances
         VM&                 GetVM() const       { return VMRef; }
         // (appended, sfr19) the second namespace of an interface method's VT record.
         bool                GetIsInterface() const  { return IsInterface != 0; }
+        // (appended, sfr19) same uri and kind (the prefix is ignored).
+        bool operator==(const Namespace& other) const { return Uri.GetNode() == other.Uri.GetNode() && Kind == other.Kind; }
 
     protected:
         SPInt                           Kind:4;         // +0x20

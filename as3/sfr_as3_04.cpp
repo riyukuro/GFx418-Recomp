@@ -2284,6 +2284,53 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return ForEachChild(prop_name, cb) != 0;
     }
 
+    // The attributes (for an attribute name) or elements prop_name matches, at any depth, in document order.
+    // MS2-FUNCTIONAL: the exe inlines ForEachAttr (sfr_as3_03)
+    // @0x1424157d0
+    void XMLElement::GetDescendants(XMLList& list, const Multiname& prop_name)
+    {
+        if (prop_name.IsAttr())
+        {
+            AttrGet cb(*this, list);
+            ForEachAttr(prop_name, cb);
+        }
+
+        const UPInt size = Children.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            XML* child = Children[i];
+
+            if (!prop_name.IsAttr())
+            {
+                if (child->Matches(prop_name))
+                    list.Apppend(child);
+            }
+
+            child->GetDescendants(list, prop_name);
+        }
+    }
+
+    // p names an attribute ("@x") or a child of this element.
+    // MS2-FUNCTIONAL: the exe inlines ForEachAttr (sfr_as3_03)
+    // @0x142417330
+    bool XMLElement::HasOwnProperty(const ASString& p)
+    {
+        bool result = false;
+
+        if (p.IsEmpty())
+            return result;
+
+        EmptyCallBack cb(*this);
+        Multiname mn(GetVM().GetPublicNamespace(), Value(p));
+
+        if (mn.IsAttr())
+            result = ForEachAttr(mn, cb) != 0;
+        else
+            result = ForEachChild(mn, cb) != 0;
+
+        return result;
+    }
+
     // MS2-FUNCTIONAL: frame layout: the exe keeps ind and the CheckResult in the argument home slots
     // @0x1424174c0
     bool XMLElement::HasProperty(const Multiname& prop_name, bool /*check_prototype*/)
@@ -2336,6 +2383,12 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         Ns = &ns;
     }
 
+    // @0x142421f80
+    void XML::SetParent(XML* p)
+    {
+        Parent = p;
+    }
+
     // The attributes follow the element into ns.
     // @0x142421cb0
     void XMLElement::SetNamespace(Namespace& ns)
@@ -2350,6 +2403,38 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     void XMLElement::SetNamespace2(Namespace& ns)
     {
         Ns = &ns;
+    }
+
+    // Collect the prefix of Ns into nr unless lp already declares it.
+    // @0x142420270
+    void XMLAttr::ResolveNamespaces(HashSetDH<ASString>& nr, XML* lp) const
+    {
+        if (Ns->GetPrefix().IsString())
+        {
+            const ASString prefix = ASString(ASString(Ns->GetPrefix()));
+            if (!FindNamespaceByPrefix(prefix, lp) && !nr.Get(prefix))
+                nr.Add(prefix);
+        }
+    }
+
+    // MS2-FUNCTIONAL: hash byte terms scheduled in a different order
+    // @0x1424203b0
+    void XMLElement::ResolveNamespaces(HashSetDH<ASString>& nr, XML* lp) const
+    {
+        if (Ns->GetPrefix().IsString())
+        {
+            const ASString prefix = ASString(ASString(Ns->GetPrefix()));
+            if (!FindNamespaceByPrefix(prefix, lp) && !nr.Get(prefix))
+                nr.Add(prefix);
+        }
+
+        UPInt n = Attrs.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+            Attrs[i]->ResolveNamespaces(nr, lp);
+
+        n = Children.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+            Children[i]->ResolveNamespaces(nr, lp);
     }
 
     // An attribute prints as its escaped value.
@@ -2490,6 +2575,60 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return true;
     }
 
+    // @0x1424191a0
+    CheckResult XMLElement::InsertChildAfter(const Value& child1, const Value& child2)
+    {
+        bool result = false;
+
+        if (child1.IsNullOrUndefined())
+            result = InsertChildAt(0, child2);
+        else
+        {
+            XML* x = ToXML(child1);
+            if (x)
+            {
+                const UPInt n = Children.GetSize();
+                for (UPInt i = 0; i < n; ++i)
+                {
+                    if (Children[i] == x)
+                    {
+                        result = InsertChildAt(static_cast<UInt32>(i + 1), child2);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // @0x1424197f0
+    CheckResult XMLElement::InsertChildBefore(const Value& child1, const Value& child2)
+    {
+        bool result = false;
+
+        if (child1.IsNullOrUndefined())
+            result = InsertChildAt(static_cast<UInt32>(Children.GetSize()), child2);
+        else
+        {
+            XML* x = ToXML(child1);
+            if (x)
+            {
+                const UPInt n = Children.GetSize();
+                for (UPInt i = 0; i < n; ++i)
+                {
+                    if (Children[i] == x)
+                    {
+                        result = InsertChildAt(static_cast<UInt32>(i), child2);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     // @0x142425c90
     XML* XMLElement::ToXML(const Value& v) const
     {
@@ -2502,6 +2641,158 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                 return list->List[0];
         }
         return NULL;
+    }
+
+    // @0x14241f4b0
+    CheckResult XMLElement::Replace(const Multiname& prop_name, const Value& value)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+            return Replace(ind, value);
+
+        VM& vm = GetVM();
+        vm.ThrowTypeError(VM::Error(VM::eXMLAssignmentToIndexedXMLNotAllowed, vm));
+        return false;
+    }
+
+    // Drop ns from the in-scope declarations of this element and its children, unless the element or one of
+    // its attributes is in ns.
+    // s has only white space.
+    static inline bool IsWhiteSpaceString(const ASString& s)
+    {
+        for (UInt32 i = 0; i < s.GetSize(); ++i)
+        {
+            if (!ASUtils::IsWhiteSpace(s.ToCStr()[i]))
+                return false;
+        }
+        return true;
+    }
+
+    // Merge each run of adjacent text children into its first non-blank node; blank leading text goes.
+    // MS2-FUNCTIONAL: one register differs in the inlined white-space loop
+    // @0x14241d580
+    void XMLElement::Normalize()
+    {
+        XMLText* txt = NULL;
+        UPInt size = Children.GetSize();
+
+        for (UPInt i = 0; i < size; ++i)
+        {
+            XML* child = Children[i];
+
+            if (child->GetKind() == kText)
+            {
+                XMLText* txt_child = static_cast<XMLText*>(child);
+
+                if (txt)
+                {
+                    if (!txt_child->Text.IsEmpty())
+                        txt->Text.Append(txt_child->Text);
+
+                    Children.RemoveAt(i);
+                    --i;
+                    --size;
+                }
+                else if (!txt_child->Text.IsEmpty() && !IsWhiteSpaceString(txt_child->Text))
+                    txt = txt_child;
+                else
+                {
+                    Children.RemoveAt(i);
+                    --i;
+                    --size;
+                }
+            }
+            else
+                txt = NULL;
+        }
+    }
+
+    // MS2-FUNCTIONAL: Namespaces.RemoveAt is inlined (the exe calls 0x14241e8b0)
+    // @0x14241efd0
+    XML* XMLElement::RemoveNamespace(const Value& ns)
+    {
+        SPtr<const Namespace> removeNs;
+
+        if (ns.IsNamespace())
+            removeNs = &ns.AsNamespace();
+        else
+            removeNs = GetVM().MakeNamespace(Abc::NS_Private, ns.AsString(), Value::GetUndefined());
+
+        if (GetNamespace() == *removeNs)
+            return this;
+
+        for (UPInt i = 0; i < Attrs.GetSize(); ++i)
+        {
+            if (Attrs[i]->GetNamespace() == *removeNs)
+                return this;
+        }
+
+        for (UPInt i = 0; i < Namespaces.Namespaces.GetSize(); ++i)
+        {
+            const Namespace& inScopeNs = *Namespaces.Namespaces[i];
+            if (inScopeNs.GetUri() == removeNs->GetUri() &&
+                (removeNs->GetPrefix().IsUndefined() || StrictEqual(removeNs->GetPrefix(), inScopeNs.GetPrefix())))
+            {
+                Namespaces.Namespaces.RemoveAt(i);
+                break;
+            }
+        }
+
+        for (UPInt i = 0; i < Children.GetSize(); ++i)
+            Children[i]->RemoveNamespace(ns);
+
+        return this;
+    }
+
+    // MS2-FUNCTIONAL: the exe calls SetParent and the SPtr<XML> assignment out of line
+    // @0x14241f1a0
+    CheckResult XMLElement::Replace(UPInt ind, const Value& value)
+    {
+        bool result = true;
+
+        if (ind >= Children.GetSize())
+        {
+            Children.Resize(Children.GetSize() + 1);
+            ind = Children.GetSize() - 1;
+            Children[ind] = NULL;
+        }
+
+        if (value.IsObject() && IsXMLObject(value.GetObject()) &&
+            static_cast<XML*>(value.GetObject())->GetKind() != kAttr)
+        {
+            XML* x = static_cast<XML*>(value.GetObject());
+            if (x->GetKind() == kElement)
+            {
+                for (XML* p = this; p; p = p->Parent)
+                {
+                    if (p == x)
+                    {
+                        VM& vm = GetVM();
+                        vm.ThrowTypeError(VM::Error(VM::eXMLIllegalCyclicalLoop, vm));
+                        return false;
+                    }
+                }
+            }
+
+            x->SetParent(this);
+            if (Children[ind])
+                Children[ind]->Parent = NULL;
+            Children[ind] = x;
+        }
+        else if (value.IsObject() && IsXMLListObject(value.GetObject()))
+        {
+            DeleteByIndex(ind);
+            result = InsertChildAt(ind, value);
+        }
+        else
+        {
+            if (Children[ind])
+                Children[ind]->Parent = NULL;
+            ASString str = value.AsString();
+            Children[ind] = Pickable<XML>(new(GetVM().GetMemoryHeap()) XMLText(GetInstanceTraits(), str, this));
+        }
+
+        return result;
     }
 
     // @0x1424166c0

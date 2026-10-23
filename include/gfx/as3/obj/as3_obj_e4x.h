@@ -186,6 +186,9 @@ namespace Instances { namespace fl {
         // (appended, sfr19) prop_name names a child (an attribute for an attribute name); a list index only
         // "0". check_prototype is unused. Not virtual in this build. 0x1424174c0
         bool HasProperty(const Multiname& prop_name, bool check_prototype);
+        // (appended, sfr19) replace child ind (appended when past the end) with value: an XML node, a list's
+        // items, or a text node of value's string. 0x14241f1a0
+        CheckResult Replace(UPInt ind, const Value& value);
 
     public:
         SPtr<Instances::Namespace>      Ns;             // +0x48

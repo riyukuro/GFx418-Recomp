@@ -112,7 +112,8 @@ public:
         // (appended, sfr19 Traits::Add2VT)
         eIllegalOverrideError       = 1053,
         // (appended, sfr19 E4X)
-        eXMLAssignmentToIndexedXMLNotAllowed = 1087
+        eXMLAssignmentToIndexedXMLNotAllowed = 1087,
+        eXMLIllegalCyclicalLoop     = 1118
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).

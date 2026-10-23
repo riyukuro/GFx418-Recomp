@@ -210,6 +210,8 @@ namespace Instances { namespace fl {
         static void AddIndent(StringBuffer& buf, SInt32 ident);
         // (appended, sfr19) s with the five XML entities escaped. 0x142409f00
         static void EscapeElementValue(StringBuffer& buf, const ASString& s);
+        // (appended, sfr19) out of line. 0x142421f80
+        void SetParent(XML* p);
 
     public:
         ASString    Text;       // +0x38 the name of an element/attribute/PI, the content of a text/comment
