@@ -136,6 +136,7 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 #include "../include/kernel/sf_utf8util.h"
 #include "../include/gfx/gfx_asutils.h"
 #include <string.h>
+#include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1572,6 +1573,26 @@ FUN_14241a5b0(Scaleform::GFx::AS3::InstanceTraits::Interface*, Scaleform::GFx::A
         new(t.Alloc()) Scaleform::GFx::AS3::Instances::fl::Object(t));
 }
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The namespace set of NamespaceInstanceFactory hashes a namespace by its kind and uri.
+struct NamespaceInstanceHashFunc
+{
+    UPInt operator()(const Instances::Namespace* ns) const
+    { return (ns->GetUri().GetHash() << 2) ^ (unsigned)ns->GetKind(); }
+};
+typedef HashSetBase<Instances::Namespace*, NamespaceInstanceHashFunc, NamespaceInstanceHashFunc,
+                    AllocatorLH<Instances::Namespace*, 2>,
+                    HashsetEntry<Instances::Namespace*, NamespaceInstanceHashFunc> > NamespaceInstanceSetBase;
+}}}
+// Its out-of-line rehash.
+template void Scaleform::GFx::AS3::NamespaceInstanceSetBase::setRawCapacity(void*, Scaleform::UPInt);
+// MultinameHash<ClassTraits::Traits*>::Get: the class traits cached under {name, ns}.
+// MS2-FUNCTIONAL: the exe builds the temporary key in another home slot
+// @0x142414ac0
+Scaleform::GFx::AS3::ClassTraits::Traits**
+FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self, const Scaleform::GFx::ASString& name,
+              const Scaleform::GFx::AS3::Instances::Namespace& ns)
+{ return self->Entries.Get(Scaleform::GFx::AS3::TClassTraitsCache::Key(name, &ns)); }
 // Multiname::IsAnyNamespace: a qualified name with no namespace.
 // @0x1424198b0
 bool FUN_1424198b0(const Scaleform::GFx::AS3::Multiname& mn)
@@ -1698,3 +1719,5 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-FUNCTIONAL ?InsertAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_KAEBV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@@Z: the exe calls ResizeNoConstruct out of line; ours inlines it
 // MS2-PIN: ?InsertAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_KAEBV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@@Z 0x1424190e0
 // MS2-PIN: ?RemoveMultipleAt@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K0@Z 0x14241ebb0
+// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@U6345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@@5@@Scaleform@@AEAAXPEAX_K@Z: the exe calls Add out of line; ours inlines it
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@U6345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@@5@@Scaleform@@AEAAXPEAX_K@Z 0x14242a240
