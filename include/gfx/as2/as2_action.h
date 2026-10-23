@@ -159,6 +159,20 @@ public:
     }
 };
 
+// One level of the with() scope chain: a script object or a character, and the pc that ends the block. 0x10 bytes.
+class WithStackEntry
+{
+public:
+    union
+    {
+        Object*            pObject;    // +0x00 IsObject set
+        InteractiveObject* pCharacter; // +0x00 otherwise
+    };
+    unsigned BlockEndPc : 31; // +0x08
+    unsigned IsObject   : 1;
+};
+typedef ArrayLH_POD<WithStackEntry, StatMV_ActionScript_Mem> WithStackArray;
+
 // Script execution context of a target character. 0x198 bytes.
 class Environment : public LogBase<Environment>, public NewOverrideBase<StatMV_ActionScript_Mem>
 {
@@ -252,6 +266,10 @@ public:
     // GetVariableRaw for plain names; a path goes through FindVariable, which must resolve its owner
     // (exe 0x142943200).
     bool               FindAndGetVariableRaw(const GetVarParams& params) const;
+    // The object of the scope chain (with stack, target, _global) that has the member, as a value
+    // (exe 0x142944a80).
+    bool               FindOwnerOfMember(const ASString& varname, Value* presult,
+                                         const WithStackArray* pwithStack = 0) const;
     // Resolves a variable path (with/scope chain, targets); false if not found (exe 0x142945010).
     bool               FindVariable(const GetVarParams& params, bool searchUndefined = false,
                                     ASString* pvarName = 0) const;

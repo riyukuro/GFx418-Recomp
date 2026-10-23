@@ -91,6 +91,7 @@
 // MS2-RANGE: 0x14294a0b0-0x14294a0eb .text$mn
 // MS2-RANGE: 0x142944690-0x142944949 .text$mn
 // MS2-RANGE: 0x142943200-0x142943351 .text$mn
+// MS2-RANGE: 0x142944a80-0x142944c5f .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1670,6 +1671,64 @@ bool Environment::FindAndGetVariableRaw(const GetVarParams& params) const
     return found;
 }
 
+
+// @0x142944a80
+bool Environment::FindOwnerOfMember(const ASString& varname, Value* presult, const WithStackArray* pwithStack) const
+{
+    if (!presult)
+        return false;
+    if (pwithStack)
+    {
+        for (SPInt i = int(pwithStack->GetSize()) - 1; i >= 0; i--)
+        {
+            const WithStackEntry& entry = (*pwithStack)[i];
+            UByte isobj = UByte(entry.IsObject);
+            InteractiveObject* pchar = entry.pCharacter;
+            ObjectInterface* iface;
+            if (isobj)
+                iface = (Object*)pchar;  // the same pointer slot, read once
+            else
+            {
+                if (!pchar)
+                    continue;
+                AvmCharacter* pavm = ToAvmCharacter(pchar);
+                if (!pavm)
+                    continue;
+                iface = pavm;
+            }
+            if (iface && iface->HasMember(const_cast<ASStringContext*>(&StringContext), varname, false))
+            {
+                if (iface->IsASCharacter())
+                    presult->SetAsCharacter(iface->ToCharacter());
+                else
+                    presult->SetAsObject(static_cast<Object*>(iface));
+                return true;
+            }
+        }
+    }
+    if (!Target)
+        return false;
+    if (ToAvmCharacter(Target)->HasMember(const_cast<ASStringContext*>(&StringContext), varname, false))
+    {
+        CharacterHandle* phandle = Target ? Target->GetCharacterHandle() : 0;
+        if (presult->T.Type != Value::CHARACTER || presult->V.pCharHandle != phandle)
+        {
+            presult->DropRefs();
+            presult->T.Type        = Value::CHARACTER;
+            presult->V.pCharHandle = phandle;
+            if (phandle)
+                phandle->AddRef();
+        }
+        return true;
+    }
+    Object* pglobal = StringContext.pContext->pGlobal;
+    if (pglobal && pglobal->HasMember(const_cast<ASStringContext*>(&StringContext), varname, false))
+    {
+        presult->SetAsObject(pglobal);
+        return true;
+    }
+    return false;
+}
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
 // MS2-PIN: ?GetCaseCheck@?$ASStringHashBase@VFunctionRef@AS2@GFx@Scaleform@@V?$HashUncachedLH@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@$0BEE@@4@@GFx@Scaleform@@QEAAPEAVFunctionRef@AS2@23@AEBVASString@23@_N@Z 0x142949f60
