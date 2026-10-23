@@ -1574,6 +1574,45 @@ namespace Instances { namespace fl_display
         return NULL;
     }
 
+    // MS2-FUNCTIONAL: the no-scene throw schedules the scene-name load differently
+    // @0x142444050
+    bool MovieClip::GetLabeledFrame(GFx::Sprite* spr, const Value& frame, const Value& scene, unsigned* targetFrame)
+    {
+        spr->GetLabeledFrame(frame.AsString().ToCStr(), targetFrame);
+        if (!scene.IsNull() && !scene.IsUndefined())
+        {
+            ASString sceneName = GetVM().GetStringManager().CreateEmptyString();
+            scene.Convert2String(sceneName);
+            const MovieDataDef::SceneInfo* pscene = GetSceneInfoByName(sceneName);
+            if (!pscene)
+            {
+                GetVM().ThrowArgumentError(VM::Error(VM::eSceneNotFound, GetVM(), sceneName.ToCStr()));
+                return false;
+            }
+            if (pscene != GetSceneInfo(*targetFrame))
+            {
+                GetVM().ThrowArgumentError(VM::Error(VM::eFrameLabelNotFoundInScene, GetVM(), frame, sceneName.ToCStr()));
+                return false;
+            }
+        }
+        else
+        {
+            // No scene given: the label has to be in the current scene.
+            const MovieDataDef::SceneInfo* pcur = GetSceneInfo(spr->GetCurrentFrame());
+            if (pcur)
+            {
+                const MovieDataDef::SceneInfo* ptarget = GetSceneInfo(*targetFrame);
+                if (pcur != ptarget)
+                {
+                    VM& vm = GetVM();
+                    vm.ThrowArgumentError(VM::Error(VM::eFrameLabelNotFoundInScene, vm, frame, pcur->Name.ToCStr()));
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     // @0x142443250
     // noinline: GetFrameScript calls it out of line.
     __declspec(noinline) const MovieClip::FrameScript::Descr* MovieClip::FrameScript::Get(unsigned frame)

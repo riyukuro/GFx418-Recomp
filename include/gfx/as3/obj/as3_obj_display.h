@@ -702,6 +702,10 @@ namespace Instances { namespace fl_display {
         const MovieDataDef::SceneInfo* GetSceneInfo(unsigned frame) const;
         const MovieDataDef::SceneInfo* GetSceneInfoByName(const ASString& name) const;
     public:
+        // Resolves frame (a label) to *targetFrame and checks that it lies in scene (or the current scene when
+        // scene is null/undefined); throws and returns false otherwise (0x142444050).
+        bool GetLabeledFrame(GFx::Sprite* spr, const Value& frame, const Value& scene, unsigned* targetFrame);
+
         FrameScript frameScript;    // +0x78
 
         // @0x1424478a0

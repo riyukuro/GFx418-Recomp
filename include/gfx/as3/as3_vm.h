@@ -98,7 +98,9 @@ public:
         eAddObjectItselfError       = 2024,
         eIllegalOperationError      = 2077,
         eEOFError                   = 2030,
-        eOutOfRangeError            = 1506
+        eOutOfRangeError            = 1506,
+        eSceneNotFound              = 2108,
+        eFrameLabelNotFoundInScene  = 2109
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).
@@ -111,6 +113,7 @@ public:
         Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int arg4);   // 0x1424d7bf0
         Error(ErrorID id, VM& vm, int arg1, int arg2);  // 0x1424d74d0
         Error(ErrorID id, VM& vm, int arg1);            // 0x1424d7330 (appended, sfr15)
+        Error(ErrorID id, VM& vm, const Value& arg1, const char* arg2);   // 0x1424d7130 (appended, sfr19)
 
         ErrorID         GetErrorID() const  { return ID; }
         const ASString& GetMessage() const  { return Message; }

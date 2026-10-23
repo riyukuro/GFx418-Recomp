@@ -135,9 +135,6 @@ Scaleform::GFx::DisplayObject* FUN_14250cbe0(Scaleform::GFx::AS3::AvmDisplayObj*
 Scaleform::GFx::DisplayObject* FUN_14250f960(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
 // AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
 void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
-// MovieClip::GetLabeledFrame (exe body): resolves a frame label within a scene, throws if it is not found.
-bool FUN_142444050(Scaleform::GFx::AS3::Instances::fl_display::MovieClip* pthis, Scaleform::GFx::Sprite* psprite,
-                   const Scaleform::GFx::AS3::Value& frame, const Scaleform::GFx::AS3::Value& scene, unsigned* ptargetFrame);
 // VM::IsOfType against class traits; MovieImpl::UpdateAllRenderNodes (exe bodies).
 bool FUN_1425146d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v,
                    const Scaleform::GFx::AS3::ClassTraits::Traits& ctr);
@@ -1413,7 +1410,7 @@ namespace Instances { namespace fl_display
         unsigned targetFrame;
         if (frame.IsString())
         {
-            if (!FUN_142444050(pthis, psprite, frame, scene, &targetFrame))
+            if (!pthis->GetLabeledFrame(psprite, frame, scene, &targetFrame))
                 return;
         }
         else
