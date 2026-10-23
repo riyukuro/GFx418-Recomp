@@ -36,6 +36,8 @@ MS2_GLOBAL(0x143192170, void*, AS3MovieImageStringSetVtable);
 MS2_GLOBAL(0x143192190, void*, AS3MovieImageValueSetVtable);
 MS2_GLOBAL(0x1431921a0, void*, AS3MovieImageNameSetVtable);
 MS2_GLOBAL(0x143192180, void*, AS3MovieImageTreeVtable);
+MS2_GLOBAL(0x1431921d0, void*, AS3MovieResourceDataVtable);
+MS2_GLOBAL(0x143192160, void*, AS3MovieMemoryItemVtable);
 MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
 MS2_GLOBAL(0x1431bed18, void*, AS3SoundRequestVtable);
@@ -57,6 +59,7 @@ extern "C" void FUN_14268d2b0(void*, void*, unsigned);
 extern "C" void FUN_14268c930(void*, void*, unsigned);
 extern "C" void FUN_14268cfe0(void*, void*, unsigned);
 extern "C" void* FUN_142686ae0(void*);
+extern "C" void* FUN_142686d30(void*);
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
 extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
@@ -2632,6 +2635,42 @@ extern "C" void* FUN_142686ae0(void* object)
             new (child + 0x10) Scaleform::StringLH();
         *reinterpret_cast<void**>(bytes + offsets[i]) = child;
     }
+    return object;
+}
+
+static void* CreateAs3ReportBlock(void* owner, std::size_t size, std::uint32_t statId, void* vtable, bool hasString)
+{
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* block = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+        DAT_143b15f60, owner, size, &statId));
+    if (!block)
+        return nullptr;
+    std::memset(block, 0, size);
+    *reinterpret_cast<void**>(block) = vtable;
+    *reinterpret_cast<std::uint32_t*>(block + 8) = 1;
+    if (hasString)
+        new (block + 0x10) Scaleform::StringLH();
+    return block;
+}
+
+// MS2-FUNCTIONAL: initializes the movie resource data record, its three memory items, lookup set, and named tree list.
+// @0x142686d30
+extern "C" void* FUN_142686d30(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    std::memset(bytes + 0x10, 0, 0x148);
+    *reinterpret_cast<void**>(bytes) = AS3MovieResourceDataVtable;
+    *reinterpret_cast<std::uint32_t*>(bytes + 8) = 1;
+    void* itemA = CreateAs3ReportBlock(object, 0x48, 2, AS3MovieMemoryItemVtable, true);
+    void* itemB = CreateAs3ReportBlock(object, 0x48, 2, AS3MovieMemoryItemVtable, true);
+    void* itemC = CreateAs3ReportBlock(object, 0x48, 2, AS3MovieMemoryItemVtable, true);
+    void* values = CreateAs3ReportBlock(object, 0x30, 0x242, AS3MovieImageValueSetVtable, false);
+    void* tree = CreateAs3ReportBlock(object, 0x38, 2, AS3MovieImageTreeVtable, true);
+    *reinterpret_cast<void**>(bytes + 0x128) = itemA;
+    *reinterpret_cast<void**>(bytes + 0x130) = itemB;
+    *reinterpret_cast<void**>(bytes + 0x138) = itemC;
+    *reinterpret_cast<void**>(bytes + 0xe8) = values;
+    *reinterpret_cast<void**>(bytes + 0xf0) = tree;
     return object;
 }
 
