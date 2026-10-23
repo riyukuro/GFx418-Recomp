@@ -44,6 +44,7 @@ MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
 MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
 MS2_GLOBAL(0x14318f048, void*, AS3MovieMarkerVtable);
 MS2_GLOBAL(0x14318f020, void*, AS3TextValueRecordVtable);
+MS2_GLOBAL(0x14318f030, void*, AS3MovieViewValueVtable);
 extern "C" void FUN_14268cd80(void*, void*, unsigned);
 extern "C" void FUN_14268c510(void*, void*, unsigned);
 extern "C" void FUN_14268d2b0(void*, void*, unsigned);
@@ -2527,6 +2528,64 @@ extern "C" void FUN_14268cd80(void* object, void* stream, unsigned)
             ReadAs3StreamBytes(stream, values + j * 0x10, 4);
             ReadAs3StreamBytes(stream, values + j * 0x10 + 8, 8);
         }
+    }
+}
+
+// MS2-FUNCTIONAL: reads the image info string, counted movie-image records, and versioned movie-to-manager lookup entries.
+// @0x14268c930
+extern "C" void FUN_14268c930(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    Scaleform::ReadNarrowString(stream, bytes + 0x10);
+    unsigned count = 0;
+    ReadAs3StreamBytes(stream, &count, 4);
+    Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0x18), count);
+    auto** images = *reinterpret_cast<unsigned char***>(bytes + 0x18);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    std::uint32_t localStat = 2;
+    for (unsigned i = 0; i < count; ++i) {
+        auto* image = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, object, 0x48, &localStat));
+        if (!image)
+            return;
+        std::memset(image, 0, 0x48);
+        *reinterpret_cast<void**>(image) = MovieImageInfoVtable;
+        *reinterpret_cast<std::uint32_t*>(image + 8) = 1;
+        if (images[i]) FUN_14257dcb0(images[i]);
+        images[i] = image;
+        Scaleform::ReadMovieImageRecord(image, stream, version);
+    }
+
+    unsigned cachedCount = 0;
+    ReadAs3StreamBytes(stream, &cachedCount, 4);
+    std::uint32_t cachedStat = 0x242;
+    for (unsigned i = 0; i < cachedCount; ++i) {
+        std::uint64_t key = 0;
+        ReadAs3StreamBytes(stream, &key, 8);
+        auto* value = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, object, 0x30, &cachedStat));
+        if (!value) {
+            Scaleform::String discardedName;
+            Scaleform::ReadNarrowString(stream, &discardedName);
+            std::uint32_t discarded = 0;
+            std::uint64_t discardedWide = 0;
+            ReadAs3StreamBytes(stream, &discarded, 4);
+            ReadAs3StreamBytes(stream, &discardedWide, 8);
+            ReadAs3StreamBytes(stream, &discarded, 4);
+            ReadAs3StreamBytes(stream, &discarded, 4);
+            continue;
+        }
+        std::memset(value, 0, 0x30);
+        *reinterpret_cast<void**>(value) = AS3MovieViewValueVtable;
+        *reinterpret_cast<std::uint32_t*>(value + 8) = 1;
+        new (value + 0x10) Scaleform::StringLH();
+        Scaleform::ReadNarrowString(stream, value + 0x10);
+        ReadAs3StreamBytes(stream, value + 0x18, 4);
+        ReadAs3StreamBytes(stream, value + 0x20, 8);
+        ReadAs3StreamBytes(stream, value + 0x28, 4);
+        ReadAs3StreamBytes(stream, value + 0x2c, 4);
+        Scaleform::AddMovieViewHashEntry(reinterpret_cast<void**>(bytes + 0x30), bytes + 0x30, key, value);
+        FUN_14257dcb0(value);
     }
 }
 
