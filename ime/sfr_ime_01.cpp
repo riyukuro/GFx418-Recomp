@@ -683,6 +683,16 @@ void FUN_1423ca680(void* self, void* value)
     *reinterpret_cast<void**>(bytes + 0x68) = value;
 }
 
+// MS2-FUNCTIONAL: passes a retained String copy to the child interface, then releases it on scope exit.
+// @0x1423ca8b0
+unsigned char FUN_1423ca8b0(void* self, const String* value)
+{
+    void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x78);
+    String copy(*value);
+    void** vtable = *reinterpret_cast<void***>(child);
+    return reinterpret_cast<unsigned char(*)(void*, String)>(vtable[0x68 / sizeof(void*)])(child, copy);
+}
+
 // @0x1423d97d0
 __declspec(noinline) void FUN_1423d97d0(void* self, long long enabled)
 {
