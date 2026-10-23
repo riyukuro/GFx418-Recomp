@@ -148,6 +148,8 @@
 // MS2-RANGE: 0x14295da50-0x14295db46 .text$mn
 // MS2-RANGE: 0x14294b2e0-0x14294b627 .text$mn
 // MS2-RANGE: 0x14294b630-0x14294b96a .text$mn
+// MS2-RANGE: 0x1429598b0-0x142959bbc .text$mn
+// MS2-RANGE: 0x1429591e0-0x142959591 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3398,6 +3400,67 @@ MatrixObject::GASMatrixArray* MatrixObject::GetMatrixAsValuesArray(ASStringConte
     if (!found)
         (*marr)[5] = Value(0);
     return marr;
+}
+
+// @0x1429598b0
+void ColorMatrixFilterCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<ColorMatrixFilterObject> pfilter;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_ColorMatrixFilter)
+        pfilter = static_cast<ColorMatrixFilterObject*>(fn.ThisPtr);
+    else
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) ColorMatrixFilterObject(fn.Env);
+    fn.Result->SetAsObject(pfilter.GetPtr());
+
+    if (fn.NArgs > 0)
+    {
+        Object* pobj = fn.Arg(0).ToObject(fn.Env);
+        if (pobj && pobj->InstanceOf(fn.Env, fn.Env->GetPrototype(ASBuiltin_Array)))
+        {
+            ArrayObject* parr = static_cast<ArrayObject*>(pobj);
+            // The AS matrix is row-major 4x5 (four multipliers then the offset per row).
+            const unsigned order[Render::ColorMatrixFilter::ColorMatrixEntries] =
+                { 0, 1, 2, 3, 16, 4, 5, 6, 7, 17, 8, 9, 10, 11, 18, 12, 13, 14, 15, 19 };
+            Render::Filter* f = pfilter->GetFilter();
+            if (f && f->GetFilterType() == Render::Filter_ColorMatrix)
+            {
+                Render::ColorMatrixFilter* pcm = static_cast<Render::ColorMatrixFilter*>(f);
+                for (int i = 0; i < parr->GetSize(); ++i)
+                    (*pcm)[order[i]] = (float)parr->GetElementPtr(i)->ToNumber(fn.Env);
+            }
+        }
+    }
+    pfilter->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("matrix"), Value(Value::UNSET));
+}
+
+// @0x1429591e0
+void BlurFilterCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<BlurFilterObject> pfilter;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_BlurFilter)
+        pfilter = static_cast<BlurFilterObject*>(fn.ThisPtr);
+    else
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) BlurFilterObject(fn.Env);
+    fn.Result->SetAsObject(pfilter.GetPtr());
+
+    pfilter->writableFilterParams().Colors[0].SetAlpha(0xFF);
+    pfilter->writableFilterParams().BlurX = 80.0f;
+    pfilter->writableFilterParams().BlurY = 80.0f;
+    pfilter->writableFilterParams().Strength = 1.0f;
+    if (fn.NArgs > 0)
+    {
+        pfilter->writableFilterParams().BlurX = Render::PixelsToTwips((float)fn.Arg(0).ToNumber(fn.Env));
+        if (fn.NArgs > 1)
+        {
+            pfilter->writableFilterParams().BlurY = Render::PixelsToTwips((float)fn.Arg(1).ToNumber(fn.Env));
+            if (fn.NArgs > 2)
+                pfilter->writableFilterParams().Passes = (unsigned)fn.Arg(2).ToNumber(fn.Env);
+        }
+    }
+    ASStringContext* psc = fn.Env->GetSC();
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), Value(Value::UNSET));
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
 }
 }}} // namespace Scaleform::GFx::AS2
 

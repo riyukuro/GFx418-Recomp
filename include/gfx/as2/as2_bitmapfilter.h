@@ -12,6 +12,12 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // Common base of the filter objects.
 class BitmapFilterObject : public Object
 {
+    // The class constructors set the filter defaults and arguments.
+    friend class BevelFilterCtorFunction;
+    friend class BlurFilterCtorFunction;
+    friend class DropShadowFilterCtorFunction;
+    friend class GlowFilterCtorFunction;
+
 public:
     BitmapFilterObject(ASStringContext* psc, Object* pprototype) : Object(psc)
     {
