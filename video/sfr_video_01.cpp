@@ -1828,6 +1828,88 @@ void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
     object->~Object();
 }
 
+// MS2-FUNCTIONAL: resolves constructor and prototype properties from the embedded video prototype.
+// @0x14000d760
+void FUN_14000d760(Scaleform::GFx::AS2::Object* subobject,
+                   Scaleform::GFx::AS2::ASStringContext* context,
+                   const Scaleform::GFx::ASString* name,
+                   Scaleform::GFx::AS2::Value* result)
+{
+    const char* text = name->ToCStr();
+    const bool hiddenConstructor = strcmp(text, "__constructor__") == 0;
+    const bool constructor = strcmp(text, "constructor") == 0;
+    if (!hiddenConstructor && !constructor) {
+        subobject->GetMemberRaw(context, *name, result);
+        return;
+    }
+    auto* object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
+        reinterpret_cast<unsigned char*>(subobject) - 0x20);
+    auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+        reinterpret_cast<unsigned char*>(subobject) + 0x50);
+    prototype->GetMemberRawConstructor(object, context, *name, result, hiddenConstructor);
+}
+
+struct VideoObjectGcAccess : Scaleform::GFx::AS2::Object
+{
+    using Object::ForEachChild_GC;
+};
+
+class VideoGcPassAccess : public Scaleform::GFx::AS2::ASRefCountBaseType
+{
+public:
+    using Release = Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor;
+    using Mark = Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor;
+    using Scan = Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor;
+};
+
+template<class Functor>
+static void ForEachVideoObjectChild(void* object,
+    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    using namespace Scaleform::GFx::AS2;
+    reinterpret_cast<VideoObjectGcAccess*>(object)->ForEachChild_GC<Functor>(collector);
+    auto* bytes = static_cast<unsigned char*>(object);
+    reinterpret_cast<FunctionRefBase*>(bytes + 0x78)->ForEachChild_GC<Functor>(collector);
+    reinterpret_cast<FunctionRefBase*>(bytes + 0x90)->ForEachChild_GC<Functor>(collector);
+    auto** values = reinterpret_cast<void**>(bytes + 0xa8);
+    if (!*values) return;
+    auto* fields = static_cast<Scaleform::UPInt*>(*values);
+    auto** items = reinterpret_cast<Object**>(fields[0]);
+    for (Scaleform::UPInt i = 0; i < fields[1]; ++i)
+        if (items[i]) Functor::Call(collector, static_cast<ASRefCountBaseType*>(items[i]));
+}
+
+// MS2-FUNCTIONAL: marks all video object children as candidates in a cycle.
+// @0x14000d870
+void FUN_14000d870(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    ForEachVideoObjectChild<VideoGcPassAccess::Mark>(object, collector);
+}
+
+// MS2-FUNCTIONAL: scans all video object children for live references.
+// @0x14000d9c0
+void FUN_14000d9c0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    ForEachVideoObjectChild<VideoGcPassAccess::Scan>(object, collector);
+}
+
+// MS2-FUNCTIONAL: releases all video object child references through the cycle collector.
+// @0x14000dc30
+void FUN_14000dc30(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    ForEachVideoObjectChild<VideoGcPassAccess::Release>(object, collector);
+}
+
+// MS2-FUNCTIONAL: dispatches the video object's release, mark, and scan collector passes.
+// @0x14000e1a0
+void FUN_14000e1a0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
+                   int operation)
+{
+    if (operation == 0) FUN_14000dc30(object, collector);
+    else if (operation == 1) FUN_14000d870(object, collector);
+    else if (operation == 2) FUN_14000d9c0(object, collector);
+}
+
 // MS2-FUNCTIONAL: dispatches the video prototype's release, cycle-mark, and scan collector passes.
 // @0x14000a730
 void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
@@ -1924,14 +2006,6 @@ void FUN_1400067a0(void** values, Scaleform::UPInt count)
         if (value) FUN_14257dcb0(value);
     }
 }
-
-class VideoGcPassAccess : public Scaleform::GFx::AS2::ASRefCountBaseType
-{
-public:
-    using Release = Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor;
-    using Mark = Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor;
-    using Scan = Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor;
-};
 
 template<class Functor>
 static void ForEachVideoPrototypeChild(void* object,
