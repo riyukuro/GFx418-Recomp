@@ -3445,6 +3445,56 @@ bool FUN_1423d05a0(void* raw)
     return FUN_1423d43b0(raw);
 }
 
+// MS2-FUNCTIONAL: handles the executable's disable, selection, numeric index, and comma/colon list-change events.
+// @0x1423d9ee0
+unsigned long long FUN_1423d9ee0(void* raw, void*, int event, void*, const char* value)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    if (!value) value = "";
+    if (event == 0xf1) {
+        self[0x10] = 0;
+        return 1;
+    }
+    if (event == 0xf2) {
+        *reinterpret_cast<long long*>(self + 0x840) = std::atoi(value);
+        FUN_1423d9b40(self);
+        return 1;
+    }
+    if (event == 0xf6) {
+        *reinterpret_cast<long long*>(self + 0x860) = std::atoi(value);
+        return 1;
+    }
+    if (event != 0xf3) return 0;
+
+    auto* strings = reinterpret_cast<unsigned long long*>(self + 0x810);
+    auto* items = reinterpret_cast<unsigned long long*>(self + 0x828);
+    for (unsigned long long i = 0; i < strings[1]; ++i)
+        FUN_1423ca920(nullptr, reinterpret_cast<unsigned long long*>(strings[0]) + i);
+    strings[1] = 0;
+    FUN_1423d9730(items, items, 0);
+    const unsigned long long oldItems = 0;
+    if (*value) {
+        const char* begin = value;
+        for (const char* cursor = value;; ++cursor) {
+            if (*cursor != ',' && *cursor != ':' && *cursor != '\0') continue;
+            const size_t length = static_cast<size_t>(cursor - begin);
+            if (strings[1] >= strings[2])
+                cx18_ReserveGH(strings, strings[1] ? (strings[1] >> 2) + strings[1] : 4, sizeof(Scaleform::String));
+            auto* slot = reinterpret_cast<Scaleform::String*>(strings[0]) + strings[1];
+            new (slot) Scaleform::String(std::string(begin, length).c_str());
+            ++strings[1];
+            if (!*cursor) break;
+            begin = cursor + 1;
+        }
+    }
+    const unsigned long long count = strings[1];
+    if (count > items[2]) cx18_ReserveGH(items, (count >> 2) + count, 0x20);
+    if (count > oldItems)
+        std::memset(reinterpret_cast<unsigned char*>(items[0]) + oldItems * 0x20, 0, (count - oldItems) * 0x20);
+    items[1] = count;
+    return 1;
+}
+
 // MS2-FUNCTIONAL: maps the executable's built-in language labels to registered layouts and dispatches the selected language.
 // @0x1423d7420
 unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long* packedName)
