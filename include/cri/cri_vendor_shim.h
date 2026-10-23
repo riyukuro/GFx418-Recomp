@@ -23,6 +23,15 @@ template <int N> struct CriVecPart
     CriVecPart& operator=(unsigned __int64 v) { memcpy(p, &v, N < 8 ? N : 8); return *this; }
     CriVecPart& operator=(const V16& v) { memcpy(p, v.b, N < 16 ? N : 16); return *this; }
 };
+struct cri_addr
+{
+    void* p;
+    template <typename T> operator T*() const { return (T*)p; }
+    operator __int64() const { return (__int64)p; }
+    template <typename T> bool operator==(T* o) const { return p == (void*)o; }
+    template <typename T> bool operator!=(T* o) const { return p != (void*)o; }
+};
+#define CRI_ADDR(x) (cri_addr{(void*)&(x)})
 #define CRI_PART(vec, offset, size) (CriVecPart<size>{(vec).b + (offset)})
 #define CRI_IPART(var, offset, size) (CriVecPart<size>{(unsigned char*)&(var) + (offset)})
 
