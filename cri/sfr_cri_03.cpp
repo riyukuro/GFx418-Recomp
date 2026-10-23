@@ -1607,6 +1607,52 @@ void FUN_14003cae0(void* handle)
     FUN_140027fb4(heap, handle);
 }
 
+// MS2-FUNCTIONAL: drain pending VMPV input, reset frame records, and restore the ready handle state.
+// @0x14003cdd0
+void FUN_14003cdd0(void* handle)
+{
+    CriUint8* bytes = (CriUint8*)handle;
+    CriSint32 inactive = 0;
+    memcpy(bytes + 8, &inactive, sizeof(inactive));
+    CriUint8 chunk[16] = {};
+    void* inputJoint = NULL;
+    memcpy(&inputJoint, bytes + 0x180, sizeof(inputJoint));
+    while (FUN_1400467b8(inputJoint, 1) != 0)
+    {
+        FUN_1400467a0(inputJoint, 2, -1, chunk);
+        FUN_1400467b0(inputJoint, 0, chunk);
+    }
+    if (inputJoint)
+        FUN_140046798(inputJoint);
+
+    memset(bytes + 400, 0, 0x18);
+    memset(bytes + 0x188, 0, 8);
+    void* frameJoint = NULL;
+    CriUint8* frameRecords = NULL;
+    CriUint32 frameCount, recordBytes;
+    memcpy(&frameJoint, bytes + 0x58, sizeof(frameJoint));
+    memcpy(&frameRecords, bytes + 0x48, sizeof(frameRecords));
+    memcpy(&frameCount, bytes + 0x3c, sizeof(frameCount));
+    memcpy(&recordBytes, bytes + 0x50, sizeof(recordBytes));
+    FUN_140046798(frameJoint);
+    memset(bytes + 0x60, 0, 12);
+    for (CriUint32 i = 0; i < frameCount; ++i)
+    {
+        CriUint8* record = frameRecords + (size_t)i * 200;
+        memset(record + 0x10, 0, 0xb0);
+        struct QueueRecord { void* Data; CriUint64 Size; } queueRecord = { record, recordBytes };
+        FUN_1400467b0(frameJoint, 0, &queueRecord);
+    }
+    memset(bytes + 0x90, 0, sizeof(void*));
+    memset(bytes + 0xb0, 0, sizeof(void*));
+    memset(bytes + 0xd0, 0, sizeof(void*));
+    memset(bytes + 0x70, 0, sizeof(void*));
+    CriSint32 active = 1;
+    CriSint32 status = 0;
+    memcpy(bytes + 8, &active, sizeof(active));
+    memcpy(bytes + 0x18, &status, sizeof(status));
+}
+
 // MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
 // @0x14003d4b0
 void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer)
