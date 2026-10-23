@@ -10,7 +10,7 @@
 // MS2-RANGE: 0x1429035a0-0x142903650 .text$mn
 // MS2-RANGE: 0x142903910-0x142903b30 .text$mn
 // MS2-RANGE: 0x142906d80-0x142906de0 .text$mn
-// MS2-RANGE: 0x142908090-0x142908840 .text$mn
+// MS2-RANGE: 0x142906fc0-0x142908840 .text$mn
 // MS2-RANGE: 0x142908c30-0x142908e90 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142914500-0x142914660 .text$mn
@@ -44,6 +44,7 @@
 #include "../include/kernel/sf_alg.h"
 #include "../include/kernel/sf_msgformat.h"
 #include "../include/kernel/sf_stringhash.h"
+#include "../include/render/render_twips.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -597,6 +598,235 @@ void AvmSprite::SpriteUnloadMovie(const FnCall& fn)
     Sprite* psprite = SpriteGetTarget(fn);
     if (psprite)
         ToAS2Root(psprite)->AddLoadQueueEntry(psprite, "");
+}
+
+// Drops the drawing (and the cached hit result).
+void AvmSprite::SpriteClear(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    if (psprite->GetDrawingContext())
+        psprite->GetDrawingContext()->Clear();
+    psprite->InvalidateHitResult();
+    psprite->SetDirtyFlag();
+}
+
+// beginFill([rgb[, alpha 0..100]]): no colour ends the fill.
+void AvmSprite::SpriteBeginFill(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    if (fn.NArgs > 0)
+    {
+        UInt32 rgba = fn.Arg(0).ToUInt32(fn.Env) | 0xFF000000;
+        if (fn.NArgs > 1)
+        {
+            float alpha = float(fn.Arg(1).ToNumber(fn.Env)) * 255.0f / 100.0f;
+            rgba        = (UInt32(Alg::Max(0.0f, Alg::Min(alpha, 255.0f))) << 24) | (rgba & 0xFFFFFF);
+        }
+        FromSprite(psprite)->AcquirePath(true)->BeginSolidFill(rgba);
+    }
+    else
+    {
+        AvmSprite*      avm = FromSprite(psprite);
+        DrawingContext* pdc = avm->GetDrawingContext();
+        avm->AcquirePath(true);
+        pdc->SetNoFill();
+    }
+}
+
+void AvmSprite::SpriteEndFill(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+        FromSprite(psprite)->AcquirePath(true)->EndFill();
+}
+
+// Pen moves take pixels; the drawing is in twips.
+void AvmSprite::SpriteMoveTo(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite && fn.NArgs >= 2)
+    {
+        float           x   = float(fn.Arg(0).ToNumber(fn.Env));
+        float           y   = float(fn.Arg(1).ToNumber(fn.Env));
+        AvmSprite*      avm = FromSprite(psprite);
+        DrawingContext* pdc = avm->AcquirePath(false);
+        pdc->MoveTo(Render::PixelsToTwips(x), Render::PixelsToTwips(y));
+        avm->GetSprite()->InvalidateHitResult();
+    }
+}
+
+void AvmSprite::SpriteLineTo(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite && fn.NArgs >= 2)
+    {
+        float           x   = float(fn.Arg(0).ToNumber(fn.Env));
+        float           y   = float(fn.Arg(1).ToNumber(fn.Env));
+        AvmSprite*      avm = FromSprite(psprite);
+        DrawingContext* pdc = avm->GetDrawingContext();
+        pdc->LineTo(Render::PixelsToTwips(x), Render::PixelsToTwips(y));
+        avm->GetSprite()->InvalidateHitResult();
+    }
+}
+
+void AvmSprite::SpriteCurveTo(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite && fn.NArgs >= 4)
+    {
+        float      cx  = float(fn.Arg(0).ToNumber(fn.Env));
+        float      cy  = float(fn.Arg(1).ToNumber(fn.Env));
+        float      ax  = float(fn.Arg(2).ToNumber(fn.Env));
+        float      ay  = float(fn.Arg(3).ToNumber(fn.Env));
+        AvmSprite*      avm = FromSprite(psprite);
+        DrawingContext* pdc = avm->GetDrawingContext();
+        pdc->CurveTo(Render::PixelsToTwips(cx), Render::PixelsToTwips(cy), Render::PixelsToTwips(ax), Render::PixelsToTwips(ay));
+        avm->GetSprite()->InvalidateHitResult();
+    }
+}
+
+void AvmSprite::SpriteBeginGradientFill(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+    {
+        DrawingContext*      pdc   = FromSprite(psprite)->AcquirePath(true);
+        Render::ComplexFill* pfill = pdc->CreateNewComplexFill();
+        pdc->BeginFill();
+        if (pfill)
+            SpriteCreateGradient(fn, pfill);
+    }
+}
+
+// MS2-FUNCTIONAL the exe puts the GetMatrix temporary below the matrix local and keeps the fill type in ebp
+// @0x1429072c0
+void AvmSprite::SpriteBeginBitmapFill(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite && fn.NArgs > 0)
+    {
+        Ptr<Object> pobj = fn.Arg(0).ToObject(fn.Env);
+        if (pobj && pobj->GetObjectType() == Object_BitmapData)
+        {
+            ImageResource* pimageRes = static_cast<BitmapData*>(pobj.GetPtr())->pImageRes;
+            if (pimageRes)
+            {
+                Render::Matrix2F mtx;
+                if (fn.NArgs > 1)
+                {
+                    Object* pmobj = fn.Arg(1).ToObject(fn.Env);
+                    if (pmobj && pmobj->GetObjectType() == Object_Matrix)
+                        mtx = static_cast<MatrixObject*>(pmobj)->GetMatrix(fn.Env);
+                }
+                bool repeat    = true;
+                bool smoothing = false;
+                if (fn.NArgs > 2)
+                {
+                    repeat = fn.Arg(2).ToBool(fn.Env);
+                    if (fn.NArgs > 3)
+                        smoothing = fn.Arg(3).ToBool(fn.Env);
+                }
+                FillType fillType;
+                if (smoothing)
+                    fillType = repeat ? Fill_TiledSmoothImage : Fill_ClippedSmoothImage;
+                else if (repeat)
+                    fillType = Fill_TiledImage;
+                else
+                    fillType = Fill_ClippedImage;
+                AvmSprite*      avm = FromSprite(psprite);
+                DrawingContext* pdc = avm->GetDrawingContext();
+                avm->GetSprite()->SetDirtyFlag();
+                avm->GetSprite()->InvalidateHitResult();
+                pdc->AcquirePath(true);
+                pdc->BeginBitmapFill(fillType, pimageRes, mtx);
+            }
+        }
+    }
+}
+
+void AvmSprite::SpriteLineGradientStyle(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+    {
+        Render::ComplexFill* pfill = FromSprite(psprite)->AcquirePath(true)->CreateLineComplexFill();
+        if (pfill)
+            SpriteCreateGradient(fn, pfill);
+    }
+}
+
+void AvmSprite::SpriteLineStyle(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    if (fn.NArgs > 0)
+    {
+        float    lineWidth  = float(fn.Arg(0).ToNumber(fn.Env));
+        UInt32   rgba       = 0xFF000000;
+        bool     hinting    = false;
+        unsigned scaling    = 0;
+        unsigned caps       = 0;
+        unsigned joins      = 0;
+        float    miterLimit = 3.0f;
+        if (fn.NArgs >= 2)
+        {
+            rgba = fn.Arg(1).ToUInt32(fn.Env) | 0xFF000000;
+            if (fn.NArgs >= 3)
+            {
+                float alpha = float(fn.Arg(2).ToNumber(fn.Env)) * 255.0f / 100.0f;
+                rgba        = (UInt32(Alg::Max(0.0f, Alg::Min(alpha, 255.0f))) << 24) | (rgba & 0xFFFFFF);
+                if (fn.NArgs >= 4)
+                {
+                    hinting = fn.Arg(3).ToBool(fn.Env);
+                    if (fn.NArgs >= 5)
+                    {
+                        ASString str = fn.Arg(4).ToString(fn.Env);
+                        if (str == "none")
+                            scaling = 6;
+                        else if (str == "vertical")
+                            scaling = 4;
+                        else if (str == "horizontal")
+                            scaling = 2;
+                        if (fn.NArgs > 5)
+                        {
+                            str = fn.Arg(5).ToString(fn.Env);
+                            if (str == "none")
+                                caps = 0x140;
+                            else if (str == "square")
+                                caps = 0x280;
+                            if (fn.NArgs > 6)
+                            {
+                                str = fn.Arg(6).ToString(fn.Env);
+                                if (str == "miter")
+                                    joins = 0x20;
+                                else if (str == "bevel")
+                                    joins = 0x10;
+                                if (fn.NArgs > 7)
+                                    miterLimit = Alg::Min(255.0f, Alg::Max(1.0f, float(fn.Arg(7).ToNumber(fn.Env))));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        DrawingContext* pdc = FromSprite(psprite)->GetDrawingContext();
+        pdc->ChangeLineStyle(Render::PixelsToTwips(lineWidth), rgba, hinting, scaling, caps, joins, miterLimit);
+    }
+    else
+    {
+        AvmSprite*      avm = FromSprite(psprite);
+        DrawingContext* pdc = avm->GetDrawingContext();
+        if (!pdc->NoLine())
+        {
+            avm->AcquirePath(false);
+            pdc->SetNoLine();
+        }
+    }
 }
 
 // this is in the prototype chain of the argument (interfaces not counted).

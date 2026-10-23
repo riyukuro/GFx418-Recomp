@@ -62,7 +62,27 @@ public:
     // Mirrors the clip's button handler state into its MovieClipObject (exe 0x142981650).
     void SetHasButtonHandlers(bool has);
 
+    // (appended for sfr_as2_02: the drawing API natives)
+    static void SpriteClear(const FnCall& fn);
+    static void SpriteBeginFill(const FnCall& fn);
+    static void SpriteEndFill(const FnCall& fn);
+    static void SpriteMoveTo(const FnCall& fn);
+    static void SpriteLineTo(const FnCall& fn);
+    static void SpriteCurveTo(const FnCall& fn);
+    static void SpriteBeginGradientFill(const FnCall& fn);
+    static void SpriteBeginBitmapFill(const FnCall& fn);
+    static void SpriteLineGradientStyle(const FnCall& fn);
+    static void SpriteLineStyle(const FnCall& fn);
+    // The script side of a clip; AvmCharacter sits at the start of its AVM object.
+    static AvmSprite* FromSprite(Sprite* psprite)
+    {
+        return static_cast<AvmSprite*>(
+            static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(psprite->GetAvmObjImpl())));
+    }
+
 private:
+    // Fills a gradient from beginGradientFill / lineGradientStyle arguments (exe 0x14298efe0).
+    static void SpriteCreateGradient(const FnCall& fn, Render::ComplexFill* pfill);
     // Both lookups: penv is 0 for GetMemberRaw, psc 0 for GetMember (exe 0x14294bff0).
     bool GetMember(Environment* penv, ASStringContext* psc, const ASString& name, Value* val);
     MovieClipObject* GetMovieClipObject(); // exe 0x142953da0
