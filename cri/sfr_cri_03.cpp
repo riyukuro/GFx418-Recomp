@@ -436,6 +436,48 @@ CriSint32 decideInternalFramePoolNum(CriSint32 count)
     return count == 0 ? (CriSint32)DAT_143b27c60 : count - 1 + (CriSint32)DAT_143b27c60;
 }
 
+// MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
+// @0x14003d4b0
+void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer)
+{
+    memcpy((CriUint8*)handle + 0x200, &videoBuffer, sizeof(videoBuffer));
+    memcpy((CriUint8*)handle + 0x208, &alphaBuffer, sizeof(alphaBuffer));
+}
+
+// MS2-FUNCTIONAL: publish the secondary video and alpha output buffers on a movie handle.
+// @0x14003d500
+void FUN_14003d500(void* handle, void* videoBuffer, void* alphaBuffer)
+{
+    memcpy((CriUint8*)handle + 0x210, &videoBuffer, sizeof(videoBuffer));
+    memcpy((CriUint8*)handle + 0x218, &alphaBuffer, sizeof(alphaBuffer));
+}
+
+// MS2-FUNCTIONAL: return the frame pointer currently stored in a CRI VMPV handle.
+// @0x14003d940
+void* FUN_14003d940(void* handle)
+{
+    void* frame;
+    memcpy(&frame, (CriUint8*)handle + 0x180, sizeof(frame));
+    return frame;
+}
+
+// MS2-FUNCTIONAL: mark the VMPV handle's frame-ready flag.
+// @0x14003d970
+void FUN_14003d970(void* handle)
+{
+    CriUint32 ready = 1;
+    memcpy((CriUint8*)handle + 0x20, &ready, sizeof(ready));
+}
+
+// MS2-FUNCTIONAL: return the number of picture records held by a video decoder.
+// @0x14003d9a0
+CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
+{
+    CriUint32 count;
+    memcpy(&count, (const CriUint8*)decoder + 0x188, sizeof(count));
+    return count;
+}
+
 // MS2-FUNCTIONAL: normalize the movie player's two 64-entry audio-track maps and copy the active entries.
 // @0x14003b720
 void FUN_14003b720(CriMvSubAudioTrackState* state, CriSint32 count,
