@@ -201,6 +201,13 @@ public:
     // the results of the four channels are added.
     void  PaletteMap(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                      UInt32** channels);                                                                          // 0x1425ee140
+    // Copies numPixels pseudo-random pixels of a rect of the source image to destPoint (fillColor when the source
+    // is this image); returns the seed to continue the dissolve with.
+    SInt32 PixelDissolve(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                         SInt32 randomSeed, SInt32 numPixels, Color fillColor);                                  // 0x1425ee720
+    // Fills this image with Perlin noise; offsets holds x / y float pairs, one per octave (offsetCount floats).
+    void  PerlinNoise(float frequencyX, float frequencyY, unsigned numOctaves, unsigned randomSeed, bool stitch,
+                      bool fractalNoise, unsigned channelOptions, bool grayScale, float* offsets, unsigned offsetCount); // 0x1425ee4d0
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -1752,6 +1759,116 @@ namespace Instances { namespace fl_display
         }
         FUN_1425eddc0(pImage, randomSeed, low, high, channelOptions, grayScale);
     }
+
+    // perlinNoise(baseX, baseY, numOctaves, randomSeed, stitch, fractalNoise[, channelOptions, grayScale, offsets]):
+    // offsets is an array of flash.geom.Point, read as x / y float pairs (at most 128 floats).
+    // @0x142451340
+    void BitmapData::perlinNoise(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (argc < 6)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "BitmapData::perlinNoise"));
+        }
+        else
+        {
+            Value::Number baseX = 1.0, baseY = 1.0;
+            UInt32 numOctaves = 1, randomSeed = 0;
+            if (!argv[0].Convert2Number(baseX) || !argv[1].Convert2Number(baseY) ||
+                !argv[2].Convert2UInt32(numOctaves) || !argv[3].Convert2UInt32(randomSeed))
+                return;
+            bool stitch = argv[4].Convert2Boolean();
+            bool fractalNoise = argv[5].Convert2Boolean();
+            UInt32 channelOptions = 7;
+            if (argc >= 7 && !argv[6].Convert2UInt32(channelOptions))
+                return;
+            bool grayScale = (argc >= 8) ? argv[7].Convert2Boolean() : false;
+
+            float* poffsets = NULL;
+            unsigned offsetCount = 0;
+            float offsets[128];
+            if (argc >= 9 && argv[8].GetObject())
+            {
+                memset(offsets, 0, sizeof(offsets));
+                poffsets = offsets;
+                if (!FUN_1425145d0(GetVM(), Value(argv[8]), "Array"))
+                    return;
+                Instances::fl::Array* arr = static_cast<Instances::fl::Array*>(argv[8].GetObject());
+                {
+                    UInt32 len;
+                    arr->lengthGet(len);
+                    offsetCount = len * 2;
+                }
+                if (offsetCount > 128)
+                    offsetCount = 128;
+                for (unsigned i = 0; i < offsetCount; ++i)
+                {
+                    offsets[i * 2] = 0;
+                    offsets[i * 2 + 1] = 0;
+                    AS3::Object* pobj = arr->SA.At(i).GetObject();
+                    if (FUN_1425145d0(GetVM(), Value(pobj), "flash.geom.Point"))
+                    {
+                        Instances::fl_geom::Point* pt = static_cast<Instances::fl_geom::Point*>(pobj);
+                        offsets[i * 2] = (float)pt->x;
+                        offsets[i * 2 + 1] = (float)pt->y;
+                    }
+                }
+            }
+            reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->PerlinNoise((float)baseX, (float)baseY, numOctaves, randomSeed,
+                stitch, fractalNoise, channelOptions, grayScale, poffsets, offsetCount);
+        }
+    }
+
+    // pixelDissolve(sourceBitmapData, sourceRect, destPoint, randomSeed, numPixels, fillColor).
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: stack slots of the point / color / rect locals and the error temporaries; same code otherwise
+    // @0x142451770
+    void BitmapData::pixelDissolve(SInt32& result, Instances::fl_display::BitmapData* sourceBitmapData, Instances::fl_geom::Rectangle* sourceRect,
+                                   Instances::fl_geom::Point* destPoint, SInt32 randomSeed, SInt32 numPixels, UInt32 fillColor)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (!sourceBitmapData)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+        }
+        else if (!sourceRect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+        }
+        else if (!destPoint)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+        }
+        else if (numPixels < 0)
+        {
+            // 2027: the parameter must be a non-negative number
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::ErrorID(2027), vm, "numPixels"));
+        }
+        else
+        {
+            Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
+            Render::Color color(fillColor);
+            Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                      (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            result = pimage->PixelDissolve(sourceBitmapData->pImage, rect, dp, randomSeed, numPixels, color);
+        }
+    }
+#pragma strict_gs_check(pop)
 
     // The Graphics object of a sprite or shape, made on first use and bound to the display object's drawing.
     static SF_FORCEINLINE void MakeGraphics(VM& vm, SPtr<Instances::fl_display::Graphics>& pgraphics, GFx::DisplayObject* pdobj)
