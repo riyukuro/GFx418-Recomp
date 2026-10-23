@@ -40,6 +40,7 @@ extern const void* DAT_1431b95e8[];
 extern const void* DAT_1431b91b0[];
 extern const void* DAT_1431b91d8[];
 extern const void* DAT_1431b9170[];
+extern const void* DAT_143149940[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -2229,6 +2230,46 @@ void FUN_14002ab90(void* object)
     if (fields[3])
         FUN_14257dcb0(fields[3]);
     FUN_14257db50(object);
+}
+
+// MS2-FUNCTIONAL: initialize the shared reference-count core and retain its first owned object.
+// @0x14002aab0
+void* FUN_14002aab0(void* object, void* first, void* second)
+{
+    void** fields = (void**)object;
+    fields[0] = (void*)DAT_143149940;
+    *(CriUint32*)((CriUint8*)object + 8) = 1;
+    fields[0] = (void*)DAT_143149940;
+    fields[2] = first;
+    fields[3] = second;
+    fields[4] = NULL;
+    if (first)
+        FUN_14257dc30(first);
+    return object;
+}
+
+// MS2-FUNCTIONAL: release a non-null heap-owned member through the process Scaleform heap.
+// @0x14002ab70
+void FUN_14002ab70(void** value)
+{
+    if (*value)
+        FUN_14002d3f0(*value);
+}
+
+// MS2-FUNCTIONAL: release a non-null heap-owned member through the process Scaleform heap.
+// @0x14002acb0
+void FUN_14002acb0(void** value)
+{
+    if (*value)
+        FUN_14002d3f0(*value);
+}
+
+// MS2-FUNCTIONAL: release a non-null heap-owned member through the process Scaleform heap.
+// @0x14002acd0
+void FUN_14002acd0(void** value)
+{
+    if (*value)
+        FUN_14002d3f0(*value);
 }
 
 // MS2-FUNCTIONAL: destroy the same owned fields and optionally free the containing allocation.
