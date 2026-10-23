@@ -103,6 +103,7 @@ class System
 {
 public:
     ::FMOD_RESULT createSound(const char* path, unsigned mode, ::FMOD_CREATESOUNDEXINFO* info, Sound** sound);
+    ::FMOD_RESULT createStream(const char* path, unsigned mode, ::FMOD_CREATESOUNDEXINFO* info, Sound** sound);
 };
 class Channel
 {
@@ -658,5 +659,47 @@ FMOD_RESULT CreateAudioSoundFromRequest(void* player, void* request, FMOD::Sound
     auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(owner) + 0x10));
     return system->createSound(*reinterpret_cast<char**>(requestBytes + 0x20), flags,
                                reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: constructs the callback-backed FMOD stream descriptor for the two accepted request formats.
+// @0x1427450b0
+FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Sound** sound)
+{
+    const unsigned format = *reinterpret_cast<const unsigned*>(path + 0x10);
+    unsigned mode;
+    unsigned channels = 0;
+    unsigned frequency = 0;
+    unsigned soundFormat;
+    if ((format & 0x700) == 0x100) {
+        mode = 0x2003040;
+        frequency = *reinterpret_cast<const unsigned*>(path + 0x14);
+        channels = ((format & 7) == 2) + 1;
+        soundFormat = ((format & 8) != 0) + 1;
+    } else if ((format & 0x700) == 0x200) {
+        mode = 0x2002040;
+        soundFormat = 0xb;
+    } else {
+        return static_cast<FMOD_RESULT>(0x19);
+    }
+
+    unsigned char info[0xd8] = {};
+    *reinterpret_cast<unsigned*>(info) = sizeof(info);
+    *reinterpret_cast<unsigned*>(info + 4) = 0x0fffffff;
+    *reinterpret_cast<unsigned*>(info + 0x0c) = channels;
+    *reinterpret_cast<unsigned*>(info + 0x10) = frequency;
+    *reinterpret_cast<unsigned*>(info + 0x14) = soundFormat;
+    *reinterpret_cast<unsigned*>(info + 0x18) = 0x2000;
+    using Callback = void (*)();
+    *reinterpret_cast<Callback*>(info + 0x78) = reinterpret_cast<Callback>(&OpenAudioStream);
+    *reinterpret_cast<Callback*>(info + 0x80) = reinterpret_cast<Callback>(&CloseAudioStream);
+    *reinterpret_cast<Callback*>(info + 0x88) = reinterpret_cast<Callback>(&ReadAudioCallback);
+    *reinterpret_cast<Callback*>(info + 0x90) = reinterpret_cast<Callback>(&ValidateAudioStream);
+
+    auto* playerBytes = static_cast<char*>(player);
+    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(playerBytes + 0x10));
+    return system->createStream(path, mode, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
 }
 }
