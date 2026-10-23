@@ -14,6 +14,7 @@
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_events.h"
 #include "../include/gfx/gfx_stream.h"
+#include "../include/gfx/gfx_rendertree.h"
 #include <cstring>
 #include <new>
 
@@ -1842,4 +1843,42 @@ void FUN_1400152b0(unsigned __int64* object)
     object[1] = 0;
     if ((words[4] >> 24 & 1) == 0)
         reinterpret_cast<unsigned*>(object + 3)[0] = 0xffffffff;
+}
+
+// MS2-FUNCTIONAL: delegates the common render-tree snapshot copy to TreeNode::NodeData.
+// @0x140010ed0
+Scaleform::Render::TreeNode::NodeData* FUN_140010ed0(
+    Scaleform::Render::TreeNode::NodeData* destination,
+    const Scaleform::Render::TreeNode::NodeData* source)
+{
+    destination->operator=(*source);
+    return destination;
+}
+
+// MS2-FUNCTIONAL: copies the base node snapshot, then retains the shape provider and copies its morph ratio.
+// @0x140010ef0
+Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
+    Scaleform::Render::TreeShape::NodeData* destination,
+    const Scaleform::Render::TreeShape::NodeData* source)
+{
+    destination->Scaleform::Render::TreeNode::NodeData::operator=(
+        *static_cast<const Scaleform::Render::TreeNode::NodeData*>(source));
+    void* incoming = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
+    void* current = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90);
+    if (incoming) {
+        void* refBase = static_cast<unsigned char*>(incoming) + 0x10;
+        auto addRef = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
+        addRef(refBase);
+    }
+    if (current) {
+        void* refBase = static_cast<unsigned char*>(current) + 0x10;
+        auto release = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 0x10));
+        release(refBase);
+    }
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = incoming;
+    *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) =
+        *reinterpret_cast<const float*>(reinterpret_cast<const unsigned char*>(source) + 0x98);
+    return destination;
 }
