@@ -17,6 +17,11 @@ class NamespaceArray
 {
 public:
     ArrayLH<SPtr<Instances::Namespace> >    Namespaces;     // +0x00
+
+    // (appended, sfr19) pushes ns; with checkUnique, not if an equal namespace (uri + kind) is already in. 0x142403b60
+    void Add(Instances::Namespace& ns, bool checkUnique = true);
+    // (appended, sfr19) Add(ns, true) for every namespace of other. 0x142404230
+    void AddUnique(const NamespaceArray& other);
 };
 
 namespace Instances { namespace fl {

@@ -2180,6 +2180,30 @@ namespace Instances { namespace fl
 }}
 }}}
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+    // MS2-FUNCTIONAL: exe stores the raw pointer after an out-of-line resize 0x14241ff20; ours pushes an SPtr
+    // @0x142403b60
+    void NamespaceArray::Add(Instances::Namespace& ns, bool checkUnique)
+    {
+        if (checkUnique)
+        {
+            for (UPInt i = 0; i < Namespaces.GetSize(); ++i)
+                if (*Namespaces[i] == ns)
+                    return;
+        }
+        Namespaces.PushBack(SPtr<Instances::Namespace>(&ns));
+    }
+
+    // MS2-FUNCTIONAL: same push as Add, inlined into the loop
+    // @0x142404230
+    void NamespaceArray::AddUnique(const NamespaceArray& other)
+    {
+        const UPInt size = other.Namespaces.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+            Add(*other.Namespaces[i], true);
+    }
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
