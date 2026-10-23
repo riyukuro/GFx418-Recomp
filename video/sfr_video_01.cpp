@@ -13,6 +13,8 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 
 extern void FUN_14257dcb0(void*);
+extern void FUN_14257dcd0(void*);
+extern void* FUN_1425f1910(void*);
 
 // MS2-FUNCTIONAL: forwards the video sound stream's channel attachment callback when a channel is present.
 // @0x140002930
@@ -200,6 +202,91 @@ void** FUN_140003ab0(void** destination, void* replacement)
     if (*destination) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*destination))[2])(*destination);
     *destination = replacement;
     return destination;
+}
+
+// MS2-FUNCTIONAL: releases the weak reference proxy held by this slot.
+// @0x140003b20
+void FUN_140003b20(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+
+// MS2-FUNCTIONAL: replaces the weak reference proxy after releasing its prior proxy.
+// @0x140003b40
+void** FUN_140003b40(void** proxy, void* replacement)
+{
+    if (*proxy) FUN_14257dcd0(*proxy);
+    *proxy = replacement;
+    return proxy;
+}
+
+// MS2-FUNCTIONAL: releases the weak reference proxy held by this slot.
+// @0x140003c00
+void FUN_140003c00(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+
+// MS2-FUNCTIONAL: retains the replacement proxy before releasing the current proxy.
+// @0x140003c20
+void** FUN_140003c20(void** proxy, void* replacement)
+{
+    if (replacement) ++*reinterpret_cast<int*>(static_cast<unsigned char*>(replacement) + 8);
+    if (*proxy) FUN_14257dcd0(*proxy);
+    *proxy = replacement;
+    return proxy;
+}
+
+// MS2-FUNCTIONAL: replaces the weak reference proxy after releasing its prior proxy.
+// @0x140003c70
+void** FUN_140003c70(void** proxy, void* replacement)
+{
+    if (*proxy) FUN_14257dcd0(*proxy);
+    *proxy = replacement;
+    return proxy;
+}
+
+// MS2-FUNCTIONAL: releases a weak reference proxy when the slot is populated.
+// @0x140003d10
+void FUN_140003d10(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+// MS2-FUNCTIONAL: releases a weak reference proxy when the slot is populated.
+// @0x140003da0
+void FUN_140003da0(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+
+// MS2-FUNCTIONAL: creates and retains a display object's character handle on first use.
+// @0x140004310
+void FUN_140004310(void* object)
+{
+    if (!*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x70)) FUN_1425f1910(object);
+}
+
+// MS2-FUNCTIONAL: retrieves the display object's character type into the caller's output slot.
+// @0x140004330
+void** FUN_140004330(void** character, void** result)
+{
+    *result = reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(character))[3])(character, 0x1e);
+    return result;
+}
+
+// MS2-FUNCTIONAL: retrieves the display object's subtype into the caller's output slot.
+// @0x140004350
+void** FUN_140004350(void** character, void** result)
+{
+    *result = reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(character))[3])(character, 0xb);
+    return result;
+}
+
+// MS2-FUNCTIONAL: forwards the action to refresh the active player implementation.
+// @0x140004600
+void FUN_140004600(void* object)
+{
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    void* impl = *reinterpret_cast<void**>(owner + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[14])(impl);
+}
+
+// MS2-FUNCTIONAL: stores the reload-threshold value and forwards it to the active player.
+// @0x140004650
+void FUN_140004650(void* object, double threshold)
+{
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    void* impl = *reinterpret_cast<void**>(owner + 0x48);
+    *reinterpret_cast<float*>(owner + 0xc8) = static_cast<float>(threshold);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[22])(impl);
 }
 
 namespace Scaleform { namespace GFx { namespace Video {
