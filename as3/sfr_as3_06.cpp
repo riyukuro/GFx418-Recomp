@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
 #include "ms2/scaleform/include/gfx/gfx_imageresource.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display_pixels.h"
 #undef GetObject   // windows.h
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -2363,6 +2364,35 @@ namespace Classes { namespace fl_display
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_display::MovieClip, 13, const Value&, const Value&>(StringManager&);
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_display::MovieClip, 14, const Value&, const Value&>(StringManager&);
 
+namespace Instances { namespace fl_display
+{
+    // @0x1424442f0
+    UPInt VectorPixelProvider::GetLength() const
+    {
+        UInt32 length;
+        pVector->lengthGet(length);
+        return length;
+    }
+
+    // @0x142445f30
+    UInt32 ByteArrayPixelProvider::ReadNextPixel()
+    {
+        UInt32 v;
+        pBytes->readUnsignedInt(v);
+        return v;
+    }
+
+    // @0x142445f50
+    UInt32 VectorPixelProvider::ReadNextPixel()
+    {
+        Value v;
+        UInt32 ind = Index++;
+        if (ind < (UInt32)pVector->V.V.GetSize())
+            v.SetUInt32Unsafe(pVector->V.V[ind]);
+        return v.AsUInt();
+    }
+}}
+
 // SPtr assignment instances referenced out of line from the display object accessors.
 template SPtr<Instances::fl_display::DisplayObject>& SPtr<Instances::fl_display::DisplayObject>::operator=(const SPtr<Instances::fl_display::DisplayObject>&);
 template SPtr<Instances::fl_display::DisplayObject>& SPtr<Instances::fl_display::DisplayObject>::operator=(Instances::fl_display::DisplayObject*);
@@ -2585,3 +2615,5 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ??4?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVRectangle@fl_geom@Instances@123@@Z 0x14243d8e0
 // MS2-PIN: ??4?$SPtr@VSprite@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVSprite@fl_display@Instances@123@@Z 0x14243d950
 // MS2-PIN: ??4?$SPtr@VStage@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVStage@fl_display@Instances@123@@Z 0x14243d9c0
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dbb0
+// MS2-PIN: ??_G?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dc10
