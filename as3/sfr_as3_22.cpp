@@ -15,6 +15,7 @@
 #include "ms2/scaleform/kernel/sf_memitem.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
+#include "hook/ms2hook.h"
 #include <cstdint>
 #include <cstring>
 
@@ -22,6 +23,7 @@ extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
+MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
 
 namespace Scaleform {
 
@@ -1448,6 +1450,22 @@ void* CopyTextRecord(void* destination, const void* source)
         *reinterpret_cast<unsigned*>(dst + offset) = *reinterpret_cast<const unsigned*>(src + offset);
     *reinterpret_cast<unsigned long long*>(dst + 0x68) = *reinterpret_cast<const unsigned long long*>(src + 0x68);
     return destination;
+}
+
+// MS2-FUNCTIONAL: initializes the refcounted text record, all five local-heap strings, and its empty child state.
+// @0x1426870e0
+void* InitializeTextRecord(void* object)
+{
+    auto* fields = static_cast<unsigned long long*>(object);
+    *reinterpret_cast<void***>(object) = &AS3TextRecordVtable;
+    *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 8) = 1;
+    fields[2] = 0;
+    for (std::size_t i = 3; i <= 7; ++i)
+        new (fields + i) Scaleform::StringLH();
+    for (std::size_t i = 8; i <= 13; ++i)
+        fields[i] = 0;
+    *reinterpret_cast<unsigned*>(fields + 14) = 0;
+    return object;
 }
 
 // MS2-FUNCTIONAL: finds the source tree's maximum depth and adds it to each destination child and descendant.
