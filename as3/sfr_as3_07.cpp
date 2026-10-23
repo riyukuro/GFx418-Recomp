@@ -178,6 +178,8 @@ public:
     Color GetPixel32(SInt32 x, SInt32 y);               // 0x1425ecd50
     bool  SetPixel(SInt32 x, SInt32 y, Color c);        // 0x1425eef90
     bool  SetPixel32(SInt32 x, SInt32 y, Color c);      // 0x1425eef20
+    // The per-channel (r, g, b, a) value counts of the image, or of rect when given.
+    void  Histogram(Rect<SInt32>* rect, unsigned colors[4][256]);                                                  // 0x1425ed440
     // Alpha hit tests of the image at firstPoint: against a rect, or against a second image placed at secondPoint.
     bool  HitTest(const Point<SInt32>& firstPoint, const Rect<SInt32>& secondRect, UInt32 firstAlphaThreshold);   // 0x1425ed5e0
     bool  HitTest(ImageBase* secondImage, const Point<SInt32>& firstPoint, const Point<SInt32>& secondPoint,
@@ -1718,6 +1720,116 @@ namespace Instances { namespace fl_display
                           (cx0 + GraphicsSinPi4 * rx) * 20.0f, (cy1 - GraphicsSinPi4 * ry) * 20.0f);
         pDrawing->CurveTo((cx0 + rx) * 20.0f, (cy1 - GraphicsTanPi8 * ry) * 20.0f,
                           (cx0 + rx) * 20.0f, cy1 * 20.0f);
+        pDispObj->InvalidateHitResult();
+    }
+
+    // Rounded-rectangle corner control points: a = r * (1 - sin(pi/4)), b = 2a (separately rounded constants).
+    static const double GraphicsCornerA = 0.2928932188134524;
+    static const double GraphicsCornerB = 0.585786437626905;
+
+    // A rectangle with a separate radius per corner (each clamped to twice the smaller side), drawn clockwise from the
+    // bottom-right corner, in twips.
+    // MS2-FUNCTIONAL: exe multiplies by a 2.0 constant (ours folds to addsd) and schedules the first corner's twip conversions differently
+    // @0x14244b070
+    void Graphics::drawRoundRectComplex(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        if (argc < 8)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "drawRoundRectComplex", 8, 8, argc));
+            return;
+        }
+        Value::Number x, y, width, height, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius;
+        argv[0].Convert2Number(x);
+        argv[1].Convert2Number(y);
+        argv[2].Convert2Number(width);
+        argv[3].Convert2Number(height);
+        argv[4].Convert2Number(topLeftRadius);
+        argv[5].Convert2Number(topRightRadius);
+        argv[6].Convert2Number(bottomLeftRadius);
+        argv[7].Convert2Number(bottomRightRadius);
+
+        if (NumberUtil::IsNaN(width))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "width"));
+            return;
+        }
+        if (NumberUtil::IsNaN(height))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "height"));
+            return;
+        }
+        if (NumberUtil::IsNaN(topLeftRadius))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "topLeftRadius"));
+            return;
+        }
+        if (NumberUtil::IsNaN(topRightRadius))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "topRightRadius"));
+            return;
+        }
+        if (NumberUtil::IsNaN(bottomLeftRadius))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "bottomLeftRadius"));
+            return;
+        }
+        if (NumberUtil::IsNaN(bottomRightRadius))
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "bottomRightRadius"));
+            return;
+        }
+
+        Value::Number right  = x + width;
+        Value::Number bottom = y + height;
+        Value::Number maxRadius = width;
+        if (!(height > width))
+            maxRadius = height;
+        maxRadius *= 2.0;
+        topLeftRadius     = Alg::Min(topLeftRadius, maxRadius);
+        topRightRadius    = Alg::Min(topRightRadius, maxRadius);
+        bottomLeftRadius  = Alg::Min(bottomLeftRadius, maxRadius);
+        bottomRightRadius = Alg::Min(bottomRightRadius, maxRadius);
+
+        Value::Number a = bottomRightRadius * GraphicsCornerA;
+        Value::Number b = bottomRightRadius * GraphicsCornerB;
+        pDrawing->MoveTo(float(right * 20.0), float((bottom - bottomRightRadius) * 20.0));
+        pDrawing->CurveTo(float(right * 20.0), float((bottom - b) * 20.0),
+                          float((right - a) * 20.0), float((bottom - a) * 20.0));
+        pDrawing->CurveTo(float((right - b) * 20.0), float(bottom * 20.0),
+                          float((right - bottomRightRadius) * 20.0), float(bottom * 20.0));
+
+        a = bottomLeftRadius * GraphicsCornerA;
+        b = bottomLeftRadius * GraphicsCornerB;
+        pDrawing->LineTo(float((x + bottomLeftRadius) * 20.0), float(bottom * 20.0));
+        pDrawing->CurveTo(float((x + b) * 20.0), float(bottom * 20.0),
+                          float((x + a) * 20.0), float((bottom - a) * 20.0));
+        pDrawing->CurveTo(float(x * 20.0), float((bottom - b) * 20.0),
+                          float(x * 20.0), float((bottom - bottomLeftRadius) * 20.0));
+
+        a = topLeftRadius * GraphicsCornerA;
+        b = topLeftRadius * GraphicsCornerB;
+        pDrawing->LineTo(float(x * 20.0), float((y + topLeftRadius) * 20.0));
+        pDrawing->CurveTo(float(x * 20.0), float((y + b) * 20.0),
+                          float((x + a) * 20.0), float((y + a) * 20.0));
+        pDrawing->CurveTo(float((x + b) * 20.0), float(y * 20.0),
+                          float((x + topLeftRadius) * 20.0), float(y * 20.0));
+
+        a = topRightRadius * GraphicsCornerA;
+        b = topRightRadius * GraphicsCornerB;
+        pDrawing->LineTo(float((right - topRightRadius) * 20.0), float(y * 20.0));
+        pDrawing->CurveTo(float((right - b) * 20.0), float(y * 20.0),
+                          float((right - a) * 20.0), float((y + a) * 20.0));
+        pDrawing->CurveTo(float(right * 20.0), float((y + b) * 20.0),
+                          float(right * 20.0), float((y + topRightRadius) * 20.0));
+        pDrawing->LineTo(float(right * 20.0), float((bottom - bottomRightRadius) * 20.0));
         pDispObj->InvalidateHitResult();
     }
 
@@ -4257,6 +4369,56 @@ namespace Instances { namespace fl_display
             Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
             pimage->CopyPixels(sourceBitmapData->pImage, rect, dp, palpha, &ap, mergeAlpha);
+        }
+    }
+#pragma strict_gs_check(pop)
+
+#pragma strict_gs_check(push, on)
+    // Per-channel 256-bucket histograms of the bitmap (or of hRect), returned as a Vector.<Vector.<Number>>
+    // holding the red, green, blue and alpha counts.
+    // MS2-FUNCTIONAL: frame layout and register allocation differ (the exe keeps result in rdi and the error Value rbp-based)
+    // @0x14244e670
+    void BitmapData::histogram(SPtr<Instances::fl::Object>& result, Instances::fl_geom::Rectangle* hRect)
+    {
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        Render::Rect<SInt32> rect(0, 0, 0, 0);
+        Render::Rect<SInt32>* prect = NULL;
+        if (hRect)
+        {
+            rect = Render::Rect<SInt32>((SInt32)hRect->x, (SInt32)hRect->y,
+                                        (SInt32)(hRect->x + hRect->width), (SInt32)(hRect->y + hRect->height));
+            prect = &rect;
+        }
+        unsigned colors[4][256];
+        (this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL)->Histogram(prect, colors);
+
+        Value count(UInt32(4));
+        Value vec;
+        GetVM().Construct("Vector.<Vector.<Number>>", vec, 1, &count, true);
+        if (GetVM().IsException() || vec.IsNullOrUndefined())
+            return;
+        result = static_cast<Instances::fl::Object*>(vec.GetObject());
+
+        SPtr<Instances::fl::Object> channels[4];
+        for (unsigned i = 0; i < 4; ++i)
+        {
+            Value size(UInt32(256));
+            if (!GetVM().ConstructBuiltinObject(channels[i], "Vector.<Number>", 1, &size))
+                return;
+            for (unsigned j = 0; j < 256; ++j)
+            {
+                Multiname mn(GetVM().GetPublicNamespace(), Value(UInt32(j)));
+                if (!channels[i]->SetProperty(mn, Value(UInt32(colors[i][j]))))
+                    return;
+            }
+            Multiname mn(GetVM().GetPublicNamespace(), Value(UInt32(i)));
+            if (!result->SetProperty(mn, Value(channels[i])))
+                return;
         }
     }
 #pragma strict_gs_check(pop)
