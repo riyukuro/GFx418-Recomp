@@ -403,6 +403,31 @@ template struct ThunkFunc1<Instances::fl::XMLList, 1, const Value, const Value&>
 typedef ThunkFunc0<Instances::fl::XMLList, 2, SInt32> TFunc_Instances_XMLList_AS3length;
 template struct ThunkFunc0<Instances::fl::XMLList, 2, SInt32>;
 
+namespace InstanceTraits
+{
+    // Traits of a method's activation object (its local slots), unnamed, in the public namespace. vftable
+    // 0x14313ffe8; GetFixedMemSize (0x142415ac0) and MakeObject (0x14241bd70) are folded with other classes'.
+    class Activation : public RTraits
+    {
+        friend class AS3::VM;
+    private:
+        Activation(VM& vm);
+
+    public:
+        virtual unsigned GetFixedMemSize() const { return 0x38; }
+        virtual void MakeObject(Value& result, Traits& t) { SF_UNUSED2(result, t); }
+    };
+
+    // @0x1423eb860
+    Activation::Activation(VM& vm)
+        : RTraits(vm, vm.GetStringManager().CreateEmptyString(),
+                  Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue), NULL, true, true)
+    {
+        TraitsType = Traits_Activation;
+        SetMemSize(0x38);
+    }
+}
+
 namespace ClassTraits { namespace fl
 {
     // @0x1423e7de0
@@ -1922,3 +1947,4 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??$FormatD1@PEBD@MsgFormat@Scaleform@@QEAAXAEBQEBD@Z 0x1423e85f0
 // MS2-PIN: ??$AsString@J@Scaleform@@YA?AVString@0@AEBJ@Z 0x1423e8220
 // MS2-PIN: ??$AsString@K@Scaleform@@YA?AVString@0@AEBK@Z 0x1423e8390
+// MS2-PIN: ??_7Activation@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313ffe8
