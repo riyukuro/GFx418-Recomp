@@ -55,6 +55,7 @@ public:
     Ptr<Image> pImage;            // +0x10
     void*      Unk_18;            // +0x18
     RectF      UvBounds;          // +0x20 texture coordinates of the glyph
+    PointF     UvOrigin;          // +0x30 its origin (baseline / pen position) in texture coordinates
 };
 
 // corner of a rectangle outline
@@ -606,6 +607,53 @@ void TextMeshProvider::addImage(TmpTextStorage& storage, const GlyphRunData& dat
     storage.Entries.PushBack(e);
 }
 
+// @0x1426e6380
+void TextMeshProvider::createVectorGlyph(unsigned layerIdx, Renderer2DImpl* ren, const HMatrix& m, unsigned meshGenFlags)
+{
+    TextMeshLayer& layer = Layers[layerIdx];
+    TextMeshEntry& ent   = Entries[layer.Start];
+
+    // a run of one glyph, rebuilt from the entry
+    GlyphRunData data;
+    data.pFont           = ent.EntryData.VectorData.pFont;
+    data.pFontHandle     = pCache->RegisterFont(data.pFont);
+    data.FontSize        = ent.EntryData.VectorData.FontSize;
+    data.VectorSize      = 0;
+    data.RasterSize      = 0;
+    data.NomWidth        = 0;
+    data.NomHeight       = 0;
+    data.TexHeight       = 0;
+    data.mColor          = ent.mColor;
+    data.NewLineX        = ent.EntryData.VectorData.x;
+    data.NewLineY        = ent.EntryData.VectorData.y;
+    data.GlyphBounds     = RectF(0, 0, 0, 0);
+    data.HeightRatio     = HeightRatio;
+    data.HintedNomHeight = 0;
+
+    UInt16 flags = ent.EntryData.VectorData.Flags;
+    Ptr<VectorGlyphShape> shape =
+        *pCache->CreateGlyphShape(data, ent.EntryData.VectorData.GlyphIndex, (float)data.VectorSize,
+                                  (flags & GlyphParam::FauxBold) != 0, (flags & GlyphParam::FauxItalic) != 0,
+                                  flags >> 12, true);
+    data.HintedNomHeight = shape->pShape->GetHintedSize();
+
+    float sizeScale = data.FontSize / data.NomHeight;
+    float keyData[MeshKey::MaxKeySize];
+    Matrix2F scaling = Matrix2F::Scaling(HeightRatio * sizeScale);
+    unsigned keyFlags = CalcVectorParams(layer, ent, scaling, sizeScale, m, ren, meshGenFlags, keyData);
+
+    const ToleranceParams& cfg = ren->GetToleranceParams();
+    layer.pMeshKey  = *ren->GetMeshKeyManager()->CreateMatchingKey(shape, 0, keyFlags, keyData, cfg);
+    layer.pShape    = shape;
+    layer.SizeScale = sizeScale;
+
+    // the first use of this key: its mesh, scaled to the screen size
+    if (!layer.pMeshKey->pMesh)
+        layer.pMeshKey->pMesh =
+            *SF_HEAP_AUTO_NEW(this) Mesh(ren, layer.pMeshKey->GetKeySet(), scaling, 0, 0, meshGenFlags);
+    layer.pMesh = (Mesh*)layer.pMeshKey->pMesh.GetPtr();
+}
+
 // MS2-FUNCTIONAL: scheduling and register allocation of the two rect transforms (the exe keeps three xmm
 // registers live across them)
 // @0x1426e6690
@@ -1153,6 +1201,65 @@ void TextMeshProvider::addMask(TmpTextStorage& storage)
     storage.Entries.PushBack(e);
 }
 
+// MS2-FUNCTIONAL: snap test: the exe shifts the font flags (shr 7) and tests each glyph flag from memory; register choice
+// @0x1426e56c0
+void TextMeshProvider::addRasterGlyph(TmpTextStorage& storage, TextLayerType type, GlyphRunData& data, UInt32 color,
+                                      GlyphNode* node, float screenSize, bool snap, float stretch)
+{
+    // raster-only fonts (font flag 0x80) and readable unstretched glyphs start on a whole pixel
+    float x = data.NewLineX;
+    const GlyphParam& gp = node->Param;
+    if (snap && (((data.pFont->GetFontFlags() >> 7) & 1) != 0 ||
+                 ((gp.Flags & GlyphParam::OptRead) != 0 && ((gp.Flags & GlyphParam::Stretch) ? 2.5f : 1.0f) <= 1.0f)))
+        x = snapX(data);
+
+    UInt16           textureId = node->pSlot->TextureId & ~GlyphSlot::Mask;
+    const GlyphRect& r         = node->mRect;
+    if (r.w > 1 && r.h > 1)
+    {
+        // the glyph image sits one texel in from its slot rectangle; Origin is in 1/16 texels
+        RectF rect;
+        rect.x1 = float(node->Origin.x) / 16.0f + 1.0f;
+        rect.y1 = float(node->Origin.y) / 16.0f + 1.0f;
+        rect.x2 = rect.x1 + r.w - 2.0f;
+        rect.y2 = rect.y1 + r.h - 2.0f;
+
+        float size = node->Param.GetFontSize();
+        if (size < 1e-5f)
+            size = 1e-5f;
+        float k = (screenSize * node->Scale / size) / data.HeightRatio;
+        rect.x1 *= k / stretch;
+        rect.y1 *= k;
+        rect.x2 *= k / stretch;
+        rect.y2 *= k;
+
+        float offsetX = 0, offsetY = 0;
+        if (type == TextLayer_Shadow)
+        {
+            offsetX = data.Param.ShadowOffsetX;
+            offsetY = data.Param.ShadowOffsetY;
+        }
+        rect.x1 += x + offsetX;
+        rect.y1 += data.NewLineY + offsetY;
+        rect.x2 += x + offsetX;
+        rect.y2 += data.NewLineY + offsetY;
+
+        TmpTextMeshEntry e;
+        e.LayerType = (UInt16)type;
+        e.TextureId = textureId;
+        e.EntryIdx  = (unsigned)storage.Entries.GetSize();
+        e.mColor    = color;
+        e.pFill     = pCache->GetFill(type, textureId);
+        e.pFill->AddRef();
+        e.EntryData.RasterData.Coord[0] = rect.x1;
+        e.EntryData.RasterData.Coord[1] = rect.y1;
+        e.EntryData.RasterData.Coord[2] = rect.x2;
+        e.EntryData.RasterData.Coord[3] = rect.y2;
+        e.EntryData.RasterData.pGlyph   = node;
+        storage.Entries.PushBack(e);
+    }
+}
+
 // @0x1426e5930
 void TextMeshProvider::addSelection(TmpTextStorage& storage, UInt32 color, const RectF& rect)
 {
@@ -1167,6 +1274,57 @@ void TextMeshProvider::addSelection(TmpTextStorage& storage, UInt32 color, const
     e.EntryData.SelectionData.Coord[1] = rect.y1;
     e.EntryData.SelectionData.Coord[2] = rect.x2;
     e.EntryData.SelectionData.Coord[3] = rect.y2;
+    storage.Entries.PushBack(e);
+}
+
+// @0x1426e5990
+void TextMeshProvider::addTextureGlyph(TmpTextStorage& storage, const TextureGlyph* tgl, GlyphRunData& data, UInt32 color)
+{
+    float     x = data.NewLineX;
+    ImageSize s = tgl->pImage->GetSize();
+
+    // texture coordinates to glyph space: the font's texture glyph height maps to the font size
+    float scaleX = data.FontSize / data.TexHeight * s.Width;
+    float scaleY = data.FontSize / data.TexHeight * s.Height;
+
+    float x1 = (tgl->UvBounds.x1 - tgl->UvOrigin.x) * scaleX + x;
+    float y1 = (tgl->UvBounds.y1 - tgl->UvOrigin.y) * scaleY + data.NewLineY;
+    float x2 = (tgl->UvBounds.x2 - tgl->UvOrigin.x) * scaleX + x;
+    float y2 = (tgl->UvBounds.y2 - tgl->UvOrigin.y) * scaleY + data.NewLineY;
+
+    TmpTextMeshEntry e;
+    e.LayerType = TextLayer_PackedText;
+    e.TextureId = 0;
+    e.EntryIdx  = (unsigned)storage.Entries.GetSize();
+    e.mColor    = color;
+
+    // distance field fonts (font flag 0x10000) get their own layer
+    if (data.pFont->GetFontFlags() & 0x10000)
+    {
+        PrimitiveFillData fd(PrimFill_UVTextureDFAlpha_VColor, &RasterGlyphVertex::Format,
+                             tgl->pImage->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
+        e.pFill     = pCache->GetPrimitiveFillManager()->CreateFill(fd);
+        e.LayerType = TextLayer_PackedDFAText;
+        Flags |= BF_DistField;
+    }
+    else if (tgl->pImage->GetFormat() == Image_A8)
+    {
+        PrimitiveFillData fd(PrimFill_UVTextureAlpha_VColor, &RasterGlyphVertex::Format,
+                             tgl->pImage->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
+        e.pFill = pCache->GetPrimitiveFillManager()->CreateFill(fd);
+    }
+    else
+    {
+        PrimitiveFillData fd(PrimFill_UVTexture, &ImageGlyphVertex::Format,
+                             tgl->pImage->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
+        e.pFill = pCache->GetPrimitiveFillManager()->CreateFill(fd);
+    }
+
+    e.EntryData.PackedData.Coord[0] = x1;
+    e.EntryData.PackedData.Coord[1] = y1;
+    e.EntryData.PackedData.Coord[2] = x2;
+    e.EntryData.PackedData.Coord[3] = y2;
+    e.EntryData.PackedData.pGlyph   = tgl;
     storage.Entries.PushBack(e);
 }
 
