@@ -481,6 +481,39 @@ void ScaleNestedRecords(void* array, unsigned factor)
     }
 }
 
+// MS2-FUNCTIONAL: scales nested 16-byte entries, 32-byte paired records, and 24-byte timestamp records.
+// @0x142687980
+void* ScaleTextTreeRecords(void* object, unsigned factor)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    auto* nestedArray = *reinterpret_cast<unsigned char**>(bytes + 0x58);
+    auto** nestedItems = *reinterpret_cast<unsigned char***>(nestedArray + 0x10);
+    const std::size_t nestedCount = *reinterpret_cast<std::size_t*>(nestedArray + 0x18);
+    for (std::size_t i = 0; i < nestedCount; ++i) {
+        auto* item = nestedItems[i];
+        auto* values = *reinterpret_cast<unsigned long long**>(item + 0x20);
+        const std::size_t count = *reinterpret_cast<std::size_t*>(item + 0x28);
+        for (std::size_t j = 0; j < count; ++j)
+            values[j * 2 + 1] *= factor;
+    }
+
+    auto* pairArray = *reinterpret_cast<unsigned char**>(bytes + 0x60);
+    auto* pairs = *reinterpret_cast<unsigned char**>(pairArray + 0x10);
+    const std::size_t pairCount = *reinterpret_cast<std::size_t*>(pairArray + 0x18);
+    for (std::size_t i = 0; i < pairCount; ++i) {
+        auto* pair = pairs + i * 0x20;
+        *reinterpret_cast<unsigned*>(pair + 0x10) *= factor;
+        *reinterpret_cast<unsigned long long*>(pair + 0x18) *= factor;
+    }
+
+    auto* timeArray = *reinterpret_cast<unsigned char**>(bytes + 0x68);
+    auto* times = *reinterpret_cast<unsigned char**>(timeArray + 0x10);
+    const std::size_t timeCount = *reinterpret_cast<std::size_t*>(timeArray + 0x18);
+    for (std::size_t i = 0; i < timeCount; ++i)
+        *reinterpret_cast<unsigned long long*>(times + i * 0x18 + 0x10) *= factor;
+    return object;
+}
+
 // MS2-FUNCTIONAL: divides the 32-bit and 64-bit values of each 32-byte record by the divisor.
 // @0x142688520
 void DivideRecordPairs(void* array, unsigned long long divisor)
