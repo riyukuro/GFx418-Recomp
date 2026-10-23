@@ -31,8 +31,21 @@ public:
     virtual ~FlashUI() {}                                               // slot 0
     virtual void Output(OutputMessageType type, const char* msg) = 0;   // slot 1
 };
-class FileLoader;
+namespace Abc { class File; }
 class XMLSupport;
+
+// (appended, sfr19) the ABC files the VM loads on construction (the movie root's file list). vftable order from the
+// VM constructor 0x1424dae90: GetSize is slot 1, GetFile(UPInt) slot 3.
+class FileLoader
+{
+public:
+    virtual ~FileLoader() {}                                            // slot 0
+    virtual UPInt GetSize() const = 0;                                  // slot 1
+    // overloads: MSVC gives the later declaration the earlier slot
+    virtual const Ptr<Abc::File>& GetFile(UPInt n) = 0;                 // slot 3
+    virtual const Ptr<Abc::File>& GetFile(const ASString& name) = 0;    // slot 2
+    virtual void AddFile(Ptr<Abc::File>& file) = 0;                     // slot 4
+};
 
 namespace Instances { namespace fl { class GlobalObjectCPP; class Array; class XML; class XMLList; class QName; } }
 namespace InstanceTraits { namespace fl { class GlobalObject; class Namespace; } }
@@ -240,6 +253,9 @@ public:
     ClassTraits::Traits& GetClassTraitsArray() const        { return *TraitsArray; }
     ClassTraits::Traits& GetClassTraitsNull() const         { return *TraitsNull; }
     ClassTraits::Traits& GetClassTraitsVoid() const         { return *TraitsVoid; }
+    // (appended, sfr19) +0x270/+0x278 hold the instance traits of null and void (InstanceTraits::Anonimous/Void)
+    InstanceTraits::Traits& GetITraitsNull() const { return *reinterpret_cast<InstanceTraits::Traits*>(TraitsNull.GetPtr()); }
+    InstanceTraits::Traits& GetITraitsVoid() const { return *reinterpret_cast<InstanceTraits::Traits*>(TraitsVoid.GetPtr()); }
 
 public:
     bool                                    Initialized;        // +0x008
@@ -259,7 +275,7 @@ public:
     bool                                    HandleException;    // +0x180
     Value                                   ExceptionObj;       // +0x188
     ArrayLH<SPtr<Instances::fl::GlobalObject> > GlobalObjects;  // +0x1a8
-    SPtr<VMAppDomain>                       SystemDomain;       // +0x1c0
+    VMAppDomain*                            SystemDomain;       // +0x1c0 (an SPtr; VMAppDomain is not modeled yet)
     TClassTraitsCache                       ClassTraitsSet;     // +0x1c8 class traits by {name, ns} (Resolve2Vector 0x142563380)
     SPtr<Instances::Namespace>          PublicNamespace;    // +0x1d0
     SPtr<Instances::Namespace>          AS3Namespace;       // +0x1d8
@@ -275,7 +291,7 @@ public:
     SPtr<ClassTraits::Traits>               TraitsUint;         // +0x228
     SPtr<ClassTraits::Traits>               TraitsString;       // +0x230
     SPtr<ClassTraits::Traits>               TraitsArray;        // +0x238
-    SPtr<ClassTraits::Traits>               Traits240;          // +0x240 QName or Catch (unverified)
+    SPtr<ClassTraits::Traits>               Traits240;          // +0x240 Catch (ClassTraits::fl::Catch)
     SPtr<ClassTraits::Traits>               TraitsVector;       // +0x248
     SPtr<ClassTraits::Traits>               TraitsVector_int;   // +0x250
     SPtr<ClassTraits::Traits>               TraitsVector_uint;  // +0x258
@@ -291,13 +307,15 @@ public:
     ArrayLH_POD<VMAbcFile*>                 VMAbcFilesWeak;     // +0x2c0
 };
 
-// E4X hooks of the VM (VM+0x40); the XML library's XMLSupportImpl overrides them. vftable 0x14317f9e0 (no RTTI).
-// (appended, sfr15)
+// E4X hooks of the VM (VM+0x40). The VM starts with this base (vftable 0x14317b7b8, no RTTI; its hooks do nothing)
+// and swaps in the XML library's XMLSupportImpl, which overrides them. (appended, sfr15)
 class XMLSupport : public GASRefCountBase
 {
 public:
+    // (appended, sfr19) only inlined (VM constructor 0x1424dae90)
+    XMLSupport(VM& vm, bool enabled = false) : GASRefCountBase(vm.GetGCPtr()), Enabled(enabled) {}
     virtual ~XMLSupport();                                                                              // slot 4
-    virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // slot 0, 0x142504520 (appended, sfr19)
+    virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // slot 0, 0x142504510 (appended, sfr19)
 
     // overloads: MSVC gives the later declaration the earlier slot
     virtual CheckResult EqualsXML(bool& result, Instances::fl::XML& l, Instances::fl::XML& r) const;    // slot 7
@@ -315,12 +333,20 @@ public:
     virtual const ClassTraits::Traits* GetClassTraitsXMLList() const;                                   // slot 18
     virtual InstanceTraits::Traits* GetITraitsXMLList() const;                                          // slot 19
 
-    // (appended, sfr19) the E4X-enabled support: makes and registers the QName, XML and XMLList class traits.
-    // 0x1424dc160
-    XMLSupport(VM& vm);
-
 private:
     bool                        Enabled;        // +0x20 (appended, sfr19)
+};
+
+// (appended, sfr19) the E4X-enabled support: makes and registers the QName, XML and XMLList class traits.
+// vftable 0x14317f9e0 (no RTTI).
+class XMLSupportImpl : public XMLSupport
+{
+public:
+    XMLSupportImpl(VM& vm);     // 0x1424dc160
+    virtual ~XMLSupportImpl();                                                                          // 0x1424e4190
+    virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // 0x142504520
+
+private:
     VM*                         pVM;            // +0x28
     SPtr<ClassTraits::Traits>   TraitsQName;    // +0x30
     SPtr<ClassTraits::Traits>   TraitsXML;      // +0x38

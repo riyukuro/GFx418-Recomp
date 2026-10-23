@@ -28,6 +28,7 @@ public:
     void   Release(UPInt n)  { pCurrent -= n; }
 
 private:
+    friend class VM;    // (appended, sfr19) the VM constructor builds its operand stack in place
     ValueStack();
 
     // (appended, sfr19) a new page of at least 64 values (global heap). 0x1424eb6b0
@@ -66,6 +67,7 @@ public:
     };
 
 private:
+    friend class VM;    // (appended, sfr19) the VM constructor builds its register file in place
     ValueRegisterFile();
 
     // A new page of a multiple of 64 values (at least the largest so far; global heap). 0x1424eb640

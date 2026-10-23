@@ -690,6 +690,7 @@ namespace ClassTraits
         void SetInstanceTraits(Pickable<InstanceTraits::Traits> itr);
 
     protected:
+        friend class AS3::VM;   // (appended, sfr19) the VM constructor registers the slots of the core classes
         // (appended, sfr19) adds the slots every class object has (0x1425216d0).
         void RegisterSlots();
     public:

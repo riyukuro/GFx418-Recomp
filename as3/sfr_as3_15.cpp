@@ -2728,8 +2728,8 @@ static inline Pickable<ClassTraits::Traits> MS2_PrepareClassTraits(VM& vm, Class
 }
 
 // @0x1424dc160
-XMLSupport::XMLSupport(VM& vm)
-    : GASRefCountBase(vm.GetGCPtr()), Enabled(true), pVM(&vm),
+XMLSupportImpl::XMLSupportImpl(VM& vm)
+    : XMLSupport(vm, true), pVM(&vm),
       TraitsQName(MS2_PrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::QName(vm))),
       TraitsXML(MS2_PrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::XML(vm))),
       TraitsXMLList(MS2_PrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::XMLList(vm)))
@@ -2755,6 +2755,159 @@ VMAbcFile::VMAbcFile(VM& vm, const Ptr<Abc::File>& file)
     FUN_142524710(&Exceptions, n);
     if (!vm.InDestructor)
         vm.VMAbcFilesWeak.PushBack(this);
+}
+
+namespace fl { extern const char* NS_AS3; extern const char* NS_XML; extern const ClassInfo FunctionCI; }
+namespace fl_vec { extern const char* NS_Vector; }
+
+// SF_HEAP_NEW's allocation, for the constructors called through their addresses
+static inline void* MS2_VMAlloc(MemoryHeap* heap, UPInt size)
+{
+    return SF_HEAP_ALLOC(heap, size, StatMV_ActionScript_Mem);
+}
+
+namespace InstanceTraits {
+
+// (sfr19) the instance traits of null (VM +0x270): a prototype-less Object-constructed traits. Only inlined.
+class Anonimous : public Prototype
+{
+public:
+    Anonimous(VM& vm) : Prototype(vm, CInfo) {}
+    virtual ~Anonimous();           // 0x1424e25b0
+    static const ClassInfo CInfo;   // 0x14317af30
+};
+
+// (sfr19) the instance traits of void (VM +0x278). Only inlined.
+class Void : public Prototype
+{
+public:
+    Void(VM& vm) : Prototype(vm, CInfo) {}
+    virtual ~Void();                // 0x1424e4040
+    static const ClassInfo CInfo;   // 0x14317af80
+};
+
+} // namespace InstanceTraits
+
+}}} // namespace Scaleform::GFx::AS3
+
+extern const Scaleform::GFx::AS3::ClassInfo DAT_14313dc60;     // the CInfo of the plain function traits (VM +0x280)
+// ClassTraits::Function(VM&, const ClassInfo&) (0xe8 bytes)
+void* FUN_1423eca40(void* self, Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::ClassInfo& ci);
+// InstanceTraits::Function(VM&, const ClassInfo&) (0x100 bytes)
+void* FUN_1423ecf50(void* self, Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::ClassInfo& ci);
+void* FUN_1423eb860(void* self, Scaleform::GFx::AS3::VM& vm);  // InstanceTraits::Activation(VM&) (0xd0 bytes)
+void* FUN_1423ed1c0(void* self, Scaleform::GFx::AS3::VM& vm);  // InstanceTraits::fl::GlobalObject(VM&) (0xe8 bytes)
+// Instances::fl::GlobalObjectCPP(VM&, InstanceTraits::fl::GlobalObject&) (0xd8 bytes)
+void* FUN_1423ed260(void* self, Scaleform::GFx::AS3::VM& vm, void* itr);
+void FUN_142423d00(Scaleform::GFx::AS3::Class* cl);            // Class::InitPrototype-like: the class Class's set-up
+void FUN_142522db0(void* arr, void* heapAddr, Scaleform::UPInt newCap);    // ArrayLH<GlobalObject*> Reserve
+void FUN_1424dde10(void* frame);                               // CallFrame::~CallFrame
+bool FUN_142521780(Scaleform::GFx::AS3::VMAbcFile* file);      // VMAbcFile::RegisterUserDefinedClassTraits
+bool FUN_142521390(Scaleform::GFx::AS3::VMAbcFile* file, bool to_execute); // VMAbcFile::RegisterScrips
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The VM: its stacks, the namespaces and class traits of the built-in types, the global object, then every ABC file
+// of the loader (the scripts of the last one run). The XML hooks start disabled and the E4X support replaces them
+// once the base classes exist. The exe inlines the Prototype, ValueStack and ValueRegisterFile constructors; ours
+// calls them, and builds the stacks in place over the VM's opaque members.
+// MS2-FUNCTIONAL: out-of-line constructors and a different exception-unwind layout
+// @0x1424dae90
+VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCountCollector& gc)
+    : Initialized(false), InDestructor(false), StringManagerRef(string_manager), GC(&gc), UI(ui), Loader(loader),
+      InInitializer(0), MHeap(Memory::GetHeapByAddress(this)), XMLSupport_(Pickable<XMLSupport>(SF_HEAP_NEW(MHeap)
+      XMLSupport(*this))), ScopeStack(MHeap), HandleException(false), SystemDomain(NULL)
+{
+    new (OpStack) ValueStack();
+    reinterpret_cast<ValueStack*>(OpStack)->Reserve(1);
+    {
+        // the paged call stack: no pages yet, and a default frame on the VM's heap
+        for (unsigned i = 1; i < 5; ++i)
+            Unk070[i] = 0;
+        UInt64 def[0xa8 / 8];
+        memset(def, 0, sizeof(def));
+        reinterpret_cast<CallFrame*>(def)->pHeap = MHeap;
+        new (CallStack) CallFrame(*reinterpret_cast<CallFrame*>(def));
+        FUN_1424dde10(def);
+    }
+    new (RegisterFile) ValueRegisterFile();
+
+    PublicNamespace = Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, ""));
+    AS3Namespace = Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl::NS_AS3));
+    VectorNamespace = Pickable<Instances::Namespace>(
+        SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl_vec::NS_Vector));
+    XMLNamespace = Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl::NS_XML));
+
+    TraitsClassClass = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::ClassClass(*this));
+    TraitsObject = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Object(*this));
+    TraitsNamespace = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Namespace(*this));
+    TraitsFunction = MS2_PrepareClassTraits(*this, static_cast<ClassTraits::Traits*>(
+        FUN_1423eca40(MS2_VMAlloc(MHeap, 0xe8), *this, fl::FunctionCI)));
+    TraitsBoolean = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Boolean(*this));
+    TraitsNumber = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Number(*this));
+    TraitsInt = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::int_(*this));
+    TraitsUint = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::uint(*this));
+    TraitsString = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::String(*this));
+    TraitsArray = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Array(*this));
+    Traits240 = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Catch(*this));
+    TraitsVector = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector(*this));
+    TraitsVector_int = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_int(*this));
+    TraitsVector_uint = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_uint(*this));
+    TraitsVector_double = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_double(*this));
+    TraitsVector_String = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_String(*this));
+
+    TraitsNull = Pickable<ClassTraits::Traits>(
+        reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Anonimous(*this)));
+    TraitsVoid = Pickable<ClassTraits::Traits>(
+        reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Void(*this)));
+    NoFunctionTraits = Pickable<InstanceTraits::Traits>(
+        static_cast<InstanceTraits::Traits*>(FUN_1423ecf50(MS2_VMAlloc(MHeap, 0x100), *this, DAT_14313dc60)));
+    ActivationTraits = Pickable<InstanceTraits::Traits>(
+        static_cast<InstanceTraits::Traits*>(FUN_1423eb860(MS2_VMAlloc(MHeap, 0xd0), *this)));
+    TraitaGlobalObject = Pickable<InstanceTraits::fl::GlobalObject>(
+        static_cast<InstanceTraits::fl::GlobalObject*>(FUN_1423ed1c0(MS2_VMAlloc(MHeap, 0xe8), *this)));
+    GlobalObject = Pickable<Instances::fl::GlobalObjectCPP>(static_cast<Instances::fl::GlobalObjectCPP*>(
+        FUN_1423ed260(MS2_VMAlloc(MHeap, 0xd8), *this, TraitaGlobalObject.GetPtr())));
+    GlobalObjectValue = Value(reinterpret_cast<Object*>(GlobalObject.GetPtr()));
+
+    XMLSupport_ = Pickable<XMLSupport>(SF_HEAP_NEW(MHeap) XMLSupportImpl(*this));
+
+    // functions without traits of their own are constructed by the class Function
+    {
+        Class& ctor = TraitsFunction->GetInstanceTraits().GetConstructor();
+        NoFunctionTraits->pConstructor = &ctor;
+    }
+    Initialized = true;
+
+    // GlobalObjects.PushBack, without a reference (the global object is held by GlobalObject)
+    {
+        struct RawArray { Instances::fl::GlobalObject** Data; UPInt Size; UPInt Capacity; };
+        RawArray& a = reinterpret_cast<RawArray&>(GlobalObjects);
+        const UPInt size = a.Size + 1;
+        if (size < a.Size)
+        {
+            if (size < (a.Capacity >> 1))
+                FUN_142522db0(&a, &a, size);
+        }
+        else if (size >= a.Capacity)
+            FUN_142522db0(&a, &a, size + (size >> 2));
+        a.Size = size;
+        a.Data[size - 1] = reinterpret_cast<Instances::fl::GlobalObject*>(GlobalObject.GetPtr());
+    }
+
+    const UPInt n = Loader.GetSize();
+    for (UPInt i = 0; i < n; ++i)
+    {
+        SPtr<VMAbcFile> file = Pickable<VMAbcFile>(SF_HEAP_NEW(MHeap) VMAbcFile(*this, Loader.GetFile(i)));
+        if (FUN_142521780(file.GetPtr()) && FUN_142521390(file.GetPtr(), i == n - 1))
+            SPtr<VMAbcFile> loaded = file;
+    }
+
+    TraitsClassClass->pParent = TraitsObject.GetPtr();
+    TraitsClassClass->RegisterSlots();
+    FUN_142423d00(&TraitsClassClass->GetInstanceTraits().GetConstructor());
+    TraitsObject->RegisterSlots();
+    TraitsNamespace->RegisterSlots();
 }
 
 // Only inlined in the exe (into the deleting destructor 0x1424e2f10); the members release themselves.
@@ -3145,4 +3298,8 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??$add@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBQEAVGASRefCountBase@AS3@GFx@1@_K@Z 0x1424d29d0
 // MS2-PIN: ??_7UDBase@Classes@AS3@GFx@Scaleform@@6B@ 0x14317f778
 // MS2-PIN: ??_7VMAbcFile@AS3@GFx@Scaleform@@6B@ 0x14317b750
-// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
+// MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
+// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
+// MS2-PIN: ??_7VM@AS3@GFx@Scaleform@@6B@ 0x14317b858
+// MS2-PIN: ??_7Anonimous@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b538
+// MS2-PIN: ??_7Void@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b5c0
