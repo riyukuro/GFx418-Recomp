@@ -5,6 +5,7 @@
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
 #include <windows.h>
 #include <imm.h>
+#include <cstdarg>
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_memory.h"
 #include "../include/kernel/sf_string.h"
@@ -39,6 +40,8 @@ extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
 extern "C" const void* DAT_14313a228[];
 extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
+extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
+extern "C" void FUN_14257dcd0(void*);
 
 struct HWND__;
 
@@ -267,6 +270,33 @@ void* FUN_1423cdb60(unsigned long long* object, const char* text)
     new (value) String();
     *value = text;
     return object;
+}
+
+// MS2-FUNCTIONAL: forwards the recovered formatting arguments through the executable's Log vtable slot.
+// @0x1423cd060
+void FUN_1423cd060(void* log, const char* format, ...)
+{
+    unsigned flags = 0x1000;
+    va_list args;
+    va_start(args, format);
+    auto** vtable = *reinterpret_cast<void***>(log);
+    reinterpret_cast<void(*)(void*, unsigned*, const char*, void*)>(vtable[1])(log, &flags, format, &args);
+    va_end(args);
+}
+
+// MS2-FUNCTIONAL: appends a retained pointer to the executable-observed dynamic array using its expansion helper.
+// @0x1423d9490
+unsigned long long FUN_1423d9490(void* object, unsigned long long* value)
+{
+    auto* array = reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(object) + 0x848);
+    const unsigned long long length = *reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(object) + 0x850);
+    FUN_1423d9690(array, array, length + 1);
+    auto* data = reinterpret_cast<unsigned long long*>(array[0]);
+    unsigned long long item = *value;
+    if (item) ++*reinterpret_cast<volatile long*>(item + 8);
+    data[length - 1] = item;
+    if (item) FUN_14257dcd0(reinterpret_cast<void*>(item));
+    return 0;
 }
 
 // MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
