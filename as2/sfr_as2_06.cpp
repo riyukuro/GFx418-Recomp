@@ -114,6 +114,10 @@
 // MS2-RANGE: 0x142978a90-0x142978dd0 .text$mn
 // MS2-RANGE: 0x142963400-0x1429635f0 .text$mn
 // MS2-RANGE: 0x142969450-0x1429694e0 .text$mn
+// MS2-RANGE: 0x142969bd0-0x142969d90 .text$mn
+// MS2-RANGE: 0x142969d90-0x142969f50 .text$mn
+// MS2-RANGE: 0x142969f50-0x14296a0a0 .text$mn
+// MS2-RANGE: 0x14296a300-0x14296a450 .text$mn
 // MS2-RANGE: 0x1429696d0-0x1429697f0 .text$mn
 // MS2-RANGE: 0x142969850-0x142969980 .text$mn
 // MS2-RANGE: 0x142969980-0x142969aa0 .text$mn
@@ -363,6 +367,49 @@ void LoadVarsObject::NotifyOnLoad(Environment* penv, bool success)
 {
     penv->Push(Value(success));
     ASString eventName = penv->GetBuiltin(ASBuiltin_onLoad);
+    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Drop1();
+}
+
+// MS2-FUNCTIONAL: broadcasts the recovered argument list through AsBroadcaster's equivalent local callback.
+// @0x142969bd0
+void MovieClipLoader::NotifyOnLoadComplete(Environment* penv, InteractiveObject* ptarget, int status)
+{
+    penv->Push(Value(status));
+    penv->Push(Value(ptarget));
+    ASString eventName = penv->CreateConstString("onLoadComplete");
+    AsBroadcaster::BroadcastMessage(penv, this, eventName, 2, penv->GetTopIndex());
+    penv->Drop(2);
+}
+
+// MS2-FUNCTIONAL: broadcasts the recovered argument list through AsBroadcaster's equivalent local callback.
+// @0x142969d90
+void MovieClipLoader::NotifyOnLoadError(Environment* penv, InteractiveObject* ptarget, const char* errorCode, int status)
+{
+    penv->Push(Value(status));
+    penv->Push(Value(penv->CreateConstString(errorCode)));
+    penv->Push(Value(ptarget));
+    ASString eventName = penv->CreateConstString("onLoadError");
+    AsBroadcaster::BroadcastMessage(penv, this, eventName, 3, penv->GetTopIndex());
+    penv->Drop(3);
+}
+
+// MS2-FUNCTIONAL: broadcasts the recovered argument through AsBroadcaster's equivalent local callback.
+// @0x142969f50
+void MovieClipLoader::NotifyOnLoadInit(Environment* penv, InteractiveObject* ptarget)
+{
+    penv->Push(Value(ptarget));
+    ASString eventName = penv->CreateConstString("onLoadInit");
+    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Drop1();
+}
+
+// MS2-FUNCTIONAL: broadcasts the recovered argument through AsBroadcaster's equivalent local callback.
+// @0x14296a300
+void MovieClipLoader::NotifyOnLoadStart(Environment* penv, InteractiveObject* ptarget)
+{
+    penv->Push(Value(ptarget));
+    ASString eventName = penv->CreateConstString("onLoadStart");
     AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
     penv->Drop1();
 }
