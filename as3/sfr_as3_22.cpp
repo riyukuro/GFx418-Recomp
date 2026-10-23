@@ -137,6 +137,7 @@ class Channel
 public:
     ::FMOD_RESULT isPlaying(bool* playing);
     ::FMOD_RESULT getPosition(unsigned* position, unsigned timeUnit);
+    ::FMOD_RESULT stop();
 };
 }
 
@@ -206,6 +207,7 @@ int FUN_1428d8f08(void*, int);
 int FUN_1428d8ef6(void*, unsigned, unsigned);
 int FUN_1428d8f0e(void*, unsigned, unsigned, unsigned, unsigned);
 int FUN_1428d8ef0(void*, unsigned, unsigned, unsigned);
+void FUN_142742830(long long*, unsigned long long*);
 
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
@@ -1499,6 +1501,60 @@ void* FindAudioRequestEntry(void** set, const unsigned char* key)
         return table + 4 + index * 6;
     }
     return nullptr;
+}
+
+// MS2-FUNCTIONAL: removes a finished request from its keyed channel list, pulses completion when the table empties, and stops/releases the channel.
+// @0x1427454b0
+void RemoveAudioRequest(void* manager, void* request)
+{
+    if (!request)
+        return;
+    auto* requestBytes = static_cast<unsigned char*>(request);
+    auto* sound = *reinterpret_cast<unsigned char**>(requestBytes + 0x30);
+    if (!sound)
+        return;
+    unsigned long long key = *reinterpret_cast<unsigned long long*>(sound + 0x40);
+    if (!key)
+        return;
+
+    auto* managerBytes = static_cast<unsigned char*>(manager);
+    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0x80));
+    auto** set = reinterpret_cast<void**>(managerBytes + 0xa8);
+    auto* entry = static_cast<unsigned long long*>(FindAudioRequestEntry(set,
+        reinterpret_cast<const unsigned char*>(&key)));
+    bool removed = false;
+    if (entry) {
+        auto** channels = reinterpret_cast<void**>(entry[0]);
+        const std::size_t count = entry[1];
+        std::size_t emptyCount = 0;
+        for (std::size_t i = 0; i < count; ++i) {
+            if (channels[i] == request) {
+                channels[i] = nullptr;
+                removed = true;
+            }
+            if (!channels[i])
+                ++emptyCount;
+        }
+        if (emptyCount == count)
+            FUN_142742830(reinterpret_cast<long long*>(set), &key);
+    }
+
+    auto* table = *reinterpret_cast<void**>(managerBytes + 0xa8);
+    if ((!table || *reinterpret_cast<unsigned long long*>(table) == 0) && managerBytes[0xf1] &&
+        *reinterpret_cast<void**>(managerBytes + 0x18)) {
+        managerBytes[0x78] = 1;
+        FUN_14257dcb0(*reinterpret_cast<void**>(managerBytes + 0x18));
+        *reinterpret_cast<void**>(managerBytes + 0x18) = nullptr;
+        reinterpret_cast<Scaleform::Event*>(managerBytes + 0x20)->PulseEvent();
+    }
+    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0x80));
+
+    if (removed) {
+        auto* channel = *reinterpret_cast<FMOD::Channel**>(requestBytes + 0x38);
+        if (channel)
+            channel->stop();
+        FUN_14257dcb0(request);
+    }
 }
 
 // MS2-FUNCTIONAL: copies the record's scalar fields and strings, resizes its owned string list, then assigns each element.
