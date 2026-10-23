@@ -385,6 +385,8 @@ public:
                                               const char* pubid, int has_internal_subset);
     // @0x1424096d0
     static void EndDoctypeDeclExpatCallback(void* userData);
+    // never registered (the exe body is identical to EndDoctypeDecl). @0x142409670
+    static void EndCDataSectionExpatCallback(void* userData);
     // @0x142408eb0
     static void DefaultExpatCallback(void* userData, const char* s, int len);
     // @0x1424064e0
@@ -395,12 +397,16 @@ public:
     // appends the top-level nodes (AddRef) to nodes. 0x142416f20
     void GetRootNodes(ArrayLH<SPtr<Instances::fl::XML> >& nodes) const;
 
+    // flushes the pending text node when leaving kText, then sets CurrKind. 0x142421d60
+    void SetNodeKind(Kind k);
+    void PopNodeKind() { KindStack.PopBack(); }
+
 public:
     char                                        NsSeparator;    // +0x00 ':'
-    Instances::fl::XML::Kind                    CurrKind;       // +0x04
+    Kind                                        CurrKind;       // +0x04
     InstanceTraits::fl::XML&                    ITr;            // +0x08
     XML_ParserStruct*                           Parser;         // +0x10
-    SPtr<Instances::fl::XMLElement>             CurrElement;    // +0x18
+    SPtr<Instances::fl::XML>                    CurrElement;    // +0x18
     ArrayDH<SPtr<Instances::fl::XML> >          RootElements;   // +0x20
     ASString                                    Text;           // +0x40 the pending character data
     ArrayDH_POD<Kind>                           KindStack;      // +0x48

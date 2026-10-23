@@ -1274,7 +1274,7 @@ namespace Instances { namespace fl
 // @0x1423f0130
 XMLParser::XMLParser(InstanceTraits::fl::XML& itr)
     : NsSeparator(':')
-    , CurrKind(Instances::fl::XML::kNone)
+    , CurrKind(kNone)
     , ITr(itr)
     , Parser(XML_ParserCreate(NULL))
     , RootElements(itr.GetVM().GetMemoryHeap())

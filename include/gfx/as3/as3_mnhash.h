@@ -37,6 +37,9 @@ public:
     };
 
     typedef HashLH<Key, C, typename Key::HashFunctor, SID> TContainer;
+    // (appended, sfr22) a new entry name/ns -> v (no check for an existing one).
+    void Add(const ASString& name, const Instances::Namespace& ns, const C& v) { Entries.Add(Key(name, &ns), v); }
+
     TContainer Entries;
 
     MultinameHash() {}

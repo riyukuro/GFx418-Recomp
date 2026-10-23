@@ -71,6 +71,19 @@ namespace Instances {
         const Class& DataTypeClass;             // +0x50
     };
 
+    // (appended, sfr22) a function closure of ABC code over the scope stack it was made in. 0x88 bytes,
+    // vftable 0x14313f9b8 (constructor 0x1423ed090).
+    class Function : public FunctionBase
+    {
+    public:
+        // @0x14240bea0
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+
+    private:
+        ScopeStackType  StoredScopeStack;   // +0x40
+        Value           StoredThis;         // +0x60 'this' for a call that passes none (undefined unless bound)
+        ASString        Name;               // +0x80
+    };
 }
 
 // (appended, sfr19) the traits of AS3 (ABC) function closures; GetFunctionName names an anonymous one
@@ -81,9 +94,14 @@ namespace InstanceTraits {
     public:
         ASString GetFunctionName(const Value& _this) const;
         SInt32 GetMethodInfoInd() const { return MethodInfoInd; }
+        // (appended, sfr22) @0x14240be40
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
 
     public:
         SInt32 MethodInfoInd;   // +0xe8
+        // (appended, sfr22)
+        SPtr<VMAbcFile>                         File;   // +0xf0
+        SPtr<Instances::fl::GlobalObjectScript> GOS;    // +0xf8
     };
 }
 
@@ -96,6 +114,13 @@ namespace ClassTraits {
         InstanceTraits::ThunkFunction& GetThunkFunctionTraits() const { return *ThunkFunctionTraits; }
         InstanceTraits::Traits& GetMethodIndTraits() const     { return *MethodIndTraits; }
         InstanceTraits::Traits& GetVTableTraits() const        { return *VTableTraits; }
+        // (appended, sfr22) @0x14240bdb0
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+        // (appended, sfr22) function kinds (and objects with function instance traits) pass as they are.
+        // @0x142406140
+        virtual bool Coerce(const Value& value, Value& result) const;
+        // @0x1424062f0
+        bool CoerceValue(const Value& value, Value& result) const;
 
     private:
         SPtr<InstanceTraits::Traits>        ThunkTraits;            // +0xc8
@@ -135,12 +160,21 @@ namespace Instances { namespace fl {
     protected:
         // (appended, sfr19) global objects are not constructible (body in sfr_as3_03).
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
+        // (appended, sfr22) global objects are not callable either. 0x1424058a0
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
     };
 
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // MS2-FUNCTIONAL: the registration hash at +0x38 is kept opaque (sfr22: the other members follow the exe's constructor
+    // 0x1423ed260)
     class GlobalObjectCPP : public Instances::fl::GlobalObject
     {
     public:
+        // (appended, sfr22) a fixed slot named after class cl in the public namespace, holding cl. 0x142403ca0
+        void AddFixedSlot(Class& cl);
+        // (appended, sfr22) a fixed slot prop_name/ns of type ctr holding v, also registered as a class of the VM; index
+        // receives its slot index. 0x142403d70
+        const SlotInfo& AddFixedSlotValuePair(const ASString& prop_name, Pickable<const Instances::Namespace> ns,
+                                              const ClassTraits::Traits* ctr, const Value& v, UPInt& index);
         // (appended, sfr19)
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObjectCPP"; }
         // (appended, sfr19) binds a registered builtin class on its first public lookup. 0x142418be0
@@ -196,6 +230,27 @@ namespace Instances { namespace fl {
         void unescape(Value& result, unsigned, const Value*);
         // @0x14242b700
         void unescapeMultiByte(ASString& result, const ASString&);
+
+        // (appended, sfr22)
+        void*                   CIRegistrationHash;     // +0x38 builtin ClassInfo by name (not recovered)
+        const Value::Number     PositiveInfinity;       // +0x40
+        const Value::Number     NegativeInfinity;       // +0x48
+        const Value::Number     NaN;                    // +0x50
+        const Value             undefined;              // +0x58
+        const UInt32            HIDE_NSURI_METHODS;     // +0x78
+        const UInt32            INCLUDE_BASES;          // +0x7c
+        const UInt32            INCLUDE_INTERFACES;     // +0x80
+        const UInt32            INCLUDE_VARIABLES;      // +0x84
+        const UInt32            INCLUDE_ACCESSORS;      // +0x88
+        const UInt32            INCLUDE_METHODS;        // +0x8c
+        const UInt32            INCLUDE_METADATA;       // +0x90
+        const UInt32            INCLUDE_CONSTRUCTOR;    // +0x94
+        const UInt32            INCLUDE_TRAITS;         // +0x98
+        const UInt32            USE_ITRAITS;            // +0x9c
+        const UInt32            HIDE_OBJECT;            // +0xa0
+        const UInt32            FLASH10_FLAGS;          // +0xa4
+        ValueArray              Values;                 // +0xa8 the fixed slot values
+        ArrayLH<SPtr<ClassTraits::Traits> > CTraits;    // +0xc0
     };
 
     // An E4X node. The base class is also the node of kind kNone; the element, attribute, text, comment and
@@ -398,6 +453,8 @@ namespace Instances { namespace fl {
         void AS3setNamespace(const Value& result, const Value&);
         // @0x1424018e0
         void AS3text(SPtr<Instances::fl::XMLList>& result);
+        // @0x1424018c0 (sfr22)
+        SPtr<Instances::fl::XMLList> AS3text();
         // @0x142402b70
         void AS3toString(ASString& result);
         // @0x142403250

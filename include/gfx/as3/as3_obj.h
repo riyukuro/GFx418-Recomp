@@ -685,6 +685,8 @@ namespace ClassTraits
     public:
         // slot 14
         virtual bool Coerce(const Value& value, Value& result) const;
+        // (appended, sfr22) the generic coercion the class-specific ones fall back to. 0x1424f01c0
+        bool CoerceValue(const Value& value, Value& result) const;
 
         InstanceTraits::Traits& GetInstanceTraits() const { return *ITraits; }
         void SetInstanceTraits(Pickable<InstanceTraits::Traits> itr);
@@ -983,6 +985,9 @@ namespace Instances
         bool operator==(const Namespace& other) const { return Uri.GetNode() == other.Uri.GetNode() && Kind == other.Kind; }
         // (appended, sfr19) E4X clears a prefix that a new in-scope declaration shadows.
         void                SetPrefix(const Value& prefix)  { Prefix.Assign(prefix); }
+        // (appended, sfr22) copies prefix, uri, kind and factory (E4X deep copies of in-scope namespaces).
+        // (inline in as3_obj_core.h, which completes NamespaceInstanceFactory)
+        Namespace& operator=(const Namespace& other);
 
     protected:
         SPInt                           Kind:4;         // +0x20

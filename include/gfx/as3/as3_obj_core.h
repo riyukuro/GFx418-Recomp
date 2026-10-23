@@ -799,6 +799,19 @@ public:
     InstanceTraits::fl::Namespace*  pNamespaceInstanceTraits;   // +0x18
 };
 
+// (appended, sfr22)
+inline Instances::Namespace& Instances::Namespace::operator=(const Namespace& other)
+{
+    if (this != &other)
+    {
+        Prefix.Assign(other.Prefix);
+        Uri = other.Uri;
+        Kind = other.Kind;
+        pFactory = other.pFactory;
+    }
+    return *this;
+}
+
 namespace InstanceTraits { namespace fl
 {
     class Array : public CTraits
@@ -981,6 +994,8 @@ namespace InstanceTraits { namespace fl
     public:
         // @0x1423ff660
         static void AS3slice(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // @0x142400e50 (appended, sfr22)
+        static void AS3split(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1424013f0
         static void AS3substr(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1424015b0
@@ -1051,6 +1066,8 @@ namespace InstanceTraits { namespace fl
                                                           const ASString& value, Instances::fl::XML* parent);
         // (appended, sfr19) a new text node; the string is made with t's VM. 0x14241b850
         Pickable<Instances::fl::XMLText> MakeInstanceText(XML& t, const StringDataPtr& str, Instances::fl::XML* parent);
+        // 0x14241b7a0
+        Pickable<Instances::fl::XMLText> MakeInstanceText(XML& t, const ASString& str, Instances::fl::XML* parent);
     };
 
     class XMLList : public CTraits

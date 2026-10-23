@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x1423ff040-0x1424133c0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include <windows.h>
 #include <sys/timeb.h>
@@ -256,6 +257,15 @@ template struct ThunkFunc1<Instances::fl::GlobalObjectCPP, 19, Value, const Valu
 template struct ThunkFunc1<Instances::fl::GlobalObjectCPP, 23, ASString, const ASString&>;
 // thunk 0x142410b20: Instances::fl::RegExp::AS3test
 template struct ThunkFunc1<Instances::fl::RegExp, 9, bool, const ASString&>;
+// Classes::fl::XML::AS3setSettings / setSettings argument 0 defaults to null
+template <> struct ThunkMethodDefault<Classes::fl::XML, 2, 0, const Value&>
+{
+    SF_INLINE static Value Get(StringManager&) { return Value::GetNull(); }
+};
+template <> struct ThunkMethodDefault<Classes::fl::XML, 3, 0, const Value&>
+{
+    SF_INLINE static Value Get(StringManager&) { return Value::GetNull(); }
+};
 // thunk 0x142410c60: Classes::fl::XML::AS3setSettings
 template struct ThunkFunc1<Classes::fl::XML, 2, const Value, const Value&>;
 // thunk 0x142410db0: Classes::fl::XML::setSettings
@@ -636,6 +646,45 @@ namespace ClassTraits { namespace fl
     }
 }} // namespace ClassTraits::fl
 
+namespace ClassTraits
+{
+    // @0x142406140
+    bool Function::Coerce(const Value& value, Value& result) const
+    {
+        return CoerceValue(value, result);
+    }
+
+    // @0x1424062f0
+    bool Function::CoerceValue(const Value& value, Value& result) const
+    {
+        switch (value.GetKind())
+        {
+        case Value::kThunk:
+        case Value::kVTableInd:
+        case Value::kFunction:
+        case Value::kThunkFunction:
+        case Value::kThunkClosure:
+        case Value::kVTableIndClosure:
+            result = value;
+            return true;
+        case Value::kObject:
+            if (const Object* obj = value.GetObject())
+            {
+                const AS3::Traits& tr = obj->GetTraits();
+                if (tr.GetTraitsType() == Traits_Function && tr.IsInstanceTraits())
+                {
+                    result = value;
+                    return true;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+        return Traits::CoerceValue(value, result);
+    }
+} // namespace ClassTraits
+
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -814,7 +863,19 @@ namespace InstanceTraits { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+// VM::GetValueTraits.
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// VM::IsOfType(v, class name).
+bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
+// The parts of str split at each delim (at most limit of them), as a new Array. 0x142424ca0
+Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array> FUN_142424ca0(Scaleform::GFx::AS3::VM& vm,
+                                                                               const Scaleform::GFx::ASString& str,
+                                                                               const char* delim, Scaleform::UInt32 limit);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
+
+// SparseArray::PushBack, inlined (defined with Array.sort below).
+static SF_INLINE void saPushBack03(SparseArray& sa, const Value& v);
 
 namespace InstanceTraits { namespace fl
 {
@@ -872,6 +933,71 @@ namespace InstanceTraits { namespace fl
             }
         }
         result = ASString(str.SubstringNode(start, end));
+    }
+
+    // MS2-FUNCTIONAL: the exe pre-zeroes the shared CheckResult slot and keeps limit in a callee-saved register; register allocation differs
+    // @0x142400e50
+    void String::AS3split(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        StringManager& sm = vm.GetStringManager();
+        ASString str = sm.CreateEmptyString();
+        if (!_this.Convert2String(str))
+            return;
+
+        Value delimiter;
+        if (argc >= 1 && !argv[0].IsNullOrUndefined())
+            delimiter = argv[0];
+
+        UInt32 limit = 0x7fffffff;
+        if (argc >= 2 && !argv[1].IsNullOrUndefined())
+        {
+            Value::Number nlimit;
+            if (!argv[1].Convert2Number(nlimit))
+                return;
+            limit = (UInt32)nlimit;
+        }
+
+        if (delimiter.IsObject() && FUN_1425145d0(vm, delimiter, "RegExp"))
+        {
+            SPtr<Instances::fl::RegExp> pre = static_cast<Instances::fl::RegExp*>(delimiter.GetObject());
+            pre->IsGlobal = true;
+
+            // RegExp.source
+            StringManager& rsm = pre->GetVM().GetStringManager();
+            ASString src = rsm.CreateEmptyString();
+            src = rsm.CreateString(pre->Pattern);
+            if (!src.IsEmpty())
+            {
+                SPtr<Instances::fl::Array> parr = vm.MakeArray();
+                unsigned next = 0;
+                unsigned cnt = 0;
+                for (;;)
+                {
+                    SPtr<Instances::fl::Object> m;
+                    pre->AS3exec(m, str);
+                    if (!m || cnt++ >= limit)
+                        break;
+                    const SInt32 matchOffset = pre->MatchOffset;
+                    const SInt32 matchLength = pre->MatchLength;
+                    ASString sub(str.SubstringNode(next, matchOffset));
+                    saPushBack03(parr->SA, Value(sub));
+                    next = matchOffset + matchLength;
+                }
+                if (cnt < limit)
+                {
+                    ASString sub(str.SubstringNode(next, str.GetLength()));
+                    saPushBack03(parr->SA, Value(sub));
+                }
+                result = parr;
+                return;
+            }
+            delimiter = src;
+        }
+
+        ASString delimStr = sm.CreateEmptyString();
+        if (!delimiter.Convert2String(delimStr))
+            return;
+        result.Pick(FUN_142424ca0(vm, str, delimStr.ToCStr(), limit));
     }
 
     // @0x1424013f0
@@ -1535,6 +1661,13 @@ namespace Scaleform { namespace GFx { namespace AS3
         r.Swap(result);
     }
 
+    // @0x1424058a0
+    void Instances::fl::GlobalObject::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
+    {
+        GetVM().ThrowTypeError(VM::Error(VM::eCallOfNonFunctionError, GetVM(),
+                                         FUN_14250ffc0(GetVM(), _this).GetName().ToCStr()));
+    }
+
     // @0x1424072a0
     void Instances::fl::GlobalObject::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
     {
@@ -1898,12 +2031,20 @@ namespace Instances { namespace fl
     // A new list of the text children.
     // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x1424018e0
-    void XML::AS3text(SPtr<XMLList>& result)
+    __declspec(noinline) void XML::AS3text(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
             GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
         result = itr.MakeInstance(itr);
         GetChildren(*result, kText);
+    }
+
+    // @0x1424018c0
+    SPtr<XMLList> XML::AS3text()
+    {
+        SPtr<XMLList> result;
+        AS3text(result);
+        return result;
     }
 
     // A new list (with this list's target, when it has one) of the text children of every item.
@@ -2455,6 +2596,7 @@ namespace Instances { namespace fl
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
+    // MS2-FUNCTIONAL: exe shrink-wraps the rbx/rsi saves past the IsString check (chained unwind info)
     // @0x14240b630
     UInt32 XMLElement::ForEachAttr(const Multiname& prop_name, CallBack& cb)
     {
@@ -3001,6 +3143,231 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 }}}}}
 
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // @0x142405ef0
+    void XMLParser::CharacterDataExpatCallback(void* userData, const char* s, int len)
+    {
+        XMLParser* p = static_cast<XMLParser*>(userData);
+        p->SetNodeKind(kText);
+        p->Text.Append(s, len);
+    }
+
+    // MS2-FUNCTIONAL: exe inlines the XMLComment ctor
+    // @0x1424064e0
+    void XMLParser::CommentExpatCallback(void* userData, const char* data)
+    {
+        XMLParser* p = static_cast<XMLParser*>(userData);
+        InstanceTraits::fl::XML& itr = p->ITr;
+        VM& vm = itr.GetVM();
+        p->SetNodeKind(kComment);
+        SPtr<Instances::fl::XML> el;
+        el.Pick(SF_HEAP_NEW(vm.GetMemoryHeap()) Instances::fl::XMLComment(itr, vm.GetStringManager().CreateString(data),
+                                                                          p->CurrElement));
+        if (p->CurrElement && p->CurrElement->GetKind() == Instances::fl::XML::kElement)
+            p->CurrElement->AppendChild(el);
+        else
+        {
+            p->CurrElement = el;
+            p->RootElements.PushBack(el);
+        }
+    }
+
+    // MS2-FUNCTIONAL: register allocation of the climb loop differs (obj 342 / exe 350 bytes)
+    // @0x142409730
+    void XMLParser::EndElementExpatCallback(void* userData, const char* name)
+    {
+        XMLParser* p = static_cast<XMLParser*>(userData);
+        p->SetNodeKind(kElement);
+        p->PopNodeKind();
+        // climb to the parent of the element being closed
+        Instances::fl::XML* el = p->CurrElement;
+        while (el && el->Parent)
+        {
+            SPtr<Instances::fl::XML> parent = el->Parent;
+            p->CurrElement = parent;
+            if (el->Text == name)
+                break;
+            el = p->CurrElement;
+        }
+    }
+
+    // @0x142409670
+    void XMLParser::EndCDataSectionExpatCallback(void* userData)
+    {
+        static_cast<XMLParser*>(userData)->PopNodeKind();
+    }
+
+    // @0x1424096d0
+    void XMLParser::EndDoctypeDeclExpatCallback(void* userData)
+    {
+        static_cast<XMLParser*>(userData)->PopNodeKind();
+    }
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
+{
+    // @0x142405920
+    void ListGet::Call(UPInt ind1, UPInt ind2)
+    {
+        SPtr<XML> child = static_cast<XMLElement*>(List.List[ind1].GetPtr())->Children[ind2];
+        Result.List.PushBack(child);
+    }
+
+    // MS2-FUNCTIONAL: the namespace copy assignment and the PushBack growth are inlined differently
+    // @0x142408960
+    Pickable<XML> XMLElement::DeepCopy(XML* parent)
+    {
+        InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
+        Pickable<XMLElement> r = itr.MakeInstanceElement(itr, *Ns, Text, parent);
+
+        UPInt size = Attrs.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            SPtr<XMLAttr> a;
+            a.Pick(static_cast<XMLAttr*>(Attrs[i]->DeepCopy(r.GetPtr()).GetPtr()));
+            r->Attrs.PushBack(a);
+        }
+
+        size = Children.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&itr));
+            if (!(Children[i]->GetKind() == kComment && cl.ignoreComments) &&
+                !(Children[i]->GetKind() == kInstruction && cl.ignoreProcessingInstructions))
+            {
+                SPtr<XML> c = Children[i]->DeepCopy(r.GetPtr());
+                r->Children.PushBack(c);
+            }
+        }
+
+        for (UPInt i = 0; i < Namespaces.Namespaces.GetSize(); ++i)
+        {
+            SPtr<Instances::Namespace> nsCopy = GetVM().MakeNamespace(Abc::NS_Public,
+                                                                      GetVM().GetStringManager().CreateEmptyString(),
+                                                                      Value::GetUndefined());
+            *nsCopy = *Namespaces.Namespaces[i];
+            r->Namespaces.Namespaces.PushBack(nsCopy);
+        }
+
+        return Pickable<XML>(r.GetPtr());
+    }
+
+    // @0x142408c70
+    Pickable<XMLList> XMLList::DeepCopy(XML* parent)
+    {
+        Pickable<XMLList> r = MakeXMLListInstance();
+        const UPInt size = List.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            SPtr<XML> c = List[i]->DeepCopy(parent);
+            r->List.PushBack(c);
+        }
+        return r;
+    }
+}}}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
+{
+    // @0x142403ca0
+    void GlobalObjectCPP::AddFixedSlot(Class& cl)
+    {
+        UPInt index = 0;
+        ASString name = cl.GetClassTraits().GetName();
+        VM& vm = GetVM();
+        ClassTraits::Traits* ctr = &cl.GetClassTraits();
+        AddFixedSlotValuePair(name, Pickable<const Namespace>(vm.PublicNamespace.GetPtr(), PickValue), ctr, Value(&cl),
+                              index);
+    }
+
+    // MS2-FUNCTIONAL: our build shrink-wraps the prologue (the exe saves every callee-saved register up front)
+    // @0x142403d70
+    const SlotInfo& GlobalObjectCPP::AddFixedSlotValuePair(const ASString& prop_name, Pickable<const Namespace> ns,
+                                                           const ClassTraits::Traits* ctr, const Value& v, UPInt& index)
+    {
+        Values.PushBack(v);
+        AS3::Traits& tr = GetTraits();
+        tr.AddSlotCPP(prop_name, ns, ctr, SlotInfo::BT_Value, AbsoluteIndex(tr.FixedValueSlotNumber++), false);
+        GetVM().ClassTraitsSet.Add(prop_name, *ns, const_cast<ClassTraits::Traits*>(ctr));
+        index = tr.GetSlotInfoNum() - 1;
+        return tr.GetSlotInfo(AbsoluteIndex(index));
+    }
+}}}}}
+
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace InstanceTraits { namespace fl
+{
+    // @0x14240bf90
+    void GlobalObjectScript::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Traits::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, File, op, *this);
+    }
+}} // namespace InstanceTraits::fl
+
+namespace ClassTraits
+{
+    // @0x14240c1a0
+    void UserDefined::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Traits::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, File, op, *this);
+    }
+} // namespace ClassTraits
+
+namespace Instances
+{
+    // @0x14240bea0
+    void Function::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        FunctionBase::ForEachChild_GC(prcc, op);
+        FUN_142503660(prcc, StoredScopeStack, op, *this);
+        AS3::ForEachChild_GC(prcc, StoredThis, op, *this);
+    }
+} // namespace Instances
+
+namespace InstanceTraits
+{
+    // @0x14240be40
+    void Function::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Traits::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, File, op, *this);
+        AS3::ForEachChild_GC(prcc, GOS, op, *this);
+    }
+} // namespace InstanceTraits
+
+namespace ClassTraits
+{
+    // @0x14240bdb0
+    void Function::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Traits::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, ThunkTraits, op, *this);
+        AS3::ForEachChild_GC(prcc, ThunkFunctionTraits, op, *this);
+        AS3::ForEachChild_GC(prcc, MethodIndTraits, op, *this);
+        AS3::ForEachChild_GC(prcc, VTableTraits, op, *this);
+    }
+} // namespace ClassTraits
+
+namespace InstanceTraits
+{
+    // @0x14240c1f0
+    void UserDefined::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        RTraits::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, Script, op, *this);
+    }
+} // namespace InstanceTraits
+}}} // namespace Scaleform::GFx::AS3
+
+
+// The element destructor of GlobalObjectCPP::CTraits (ArrayLH<SPtr<ClassTraits::Traits> >), shared with the array
+// resize of that type. 0x142409550
+template void Scaleform::ConstructorMov<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::ClassTraits::Traits> >::
+    DestructArray(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::ClassTraits::Traits>* p, Scaleform::UPInt count);
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
@@ -3150,3 +3517,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$03VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413380
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$05VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424133a0
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x1424094f0
+// MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x1424095b0
+// MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VXMLAttr@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VXMLAttr@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x142409610
+// MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x142409550

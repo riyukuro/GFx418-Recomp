@@ -61,6 +61,8 @@ namespace InstanceTraits { namespace fl {
     class GlobalObjectScript : public GlobalObject
     {
     public:
+        // (appended, sfr22) 0x14240bf90
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::GlobalObjectScript"; }
         virtual unsigned GetFixedMemSize() const { return sizeof(Instances::fl::GlobalObjectScript); }
         virtual VMAbcFile* GetFilePtr() const { return File; }
@@ -87,6 +89,8 @@ namespace InstanceTraits {
     class UserDefined : public RTraits
     {
     public:
+        // (appended, sfr22) 0x14240c1f0
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::UserDefined"; }
         virtual VMAbcFile* GetFilePtr() const { return &GetFile(); }
         // The parent's slots first, then the class's own. 0x142423dc0
@@ -118,6 +122,8 @@ namespace ClassTraits {
     class UserDefined : public Traits
     {
     public:
+        // (appended, sfr22) 0x14240c1a0
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::UserDefined"; }
         virtual unsigned GetFixedMemSize() const { return 0x50; }   // sizeof(Classes::UserDefined)
         virtual VMAbcFile* GetFilePtr() const { return File; }
