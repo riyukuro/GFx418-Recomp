@@ -2875,6 +2875,59 @@ CriSint32 FUN_140037400(void* player, const CriMvStreamingParameters* params)
     return total + FUN_140046420(0, 0x40, flags);
 }
 
+// MS2-FUNCTIONAL: copies the CRI decoded frame planes and stream dimensions into the public frame record.
+// @0x140035260
+void FUN_140035260(void* player, void* output, const void* frameInfo,
+                   CriUint64 firstWord, CriUint32 flags)
+{
+    struct PlaneSource { CriUint64 data; CriUint32 width; CriUint32 lines; CriUint32 pitch; };
+    struct FrameSource {
+        CriUint64 token; CriUint32 frameId; CriUint32 width; CriUint32 height; CriUint32 pitch;
+        CriUint64 displayWidth; CriUint64 displayHeight; CriUint32 frameSize; CriUint8 reserved0[12];
+        CriUint32 planeCount; CriUint8 reserved1[4]; PlaneSource planes[4]; CriUint8 reserved2[8];
+        CriUint32 textureWidth; CriUint32 textureHeight;
+    };
+    struct PlaneOutput { CriUint64 data; CriUint32 size; CriUint32 pitch; CriUint32 width; CriUint32 lines; };
+    struct FrameOutput {
+        CriUint64 token; CriUint32 frameId; CriUint32 width; CriUint32 height; CriUint32 flags;
+        CriUint32 playerWidth; CriUint32 playerHeight; CriUint32 pitch; CriUint32 reserved0;
+        CriUint64 displayWidth; CriUint64 displayHeight; CriUint32 textureWidth; CriUint32 frameSize;
+        CriUint32 textureHeight; CriUint32 playerFormat; CriUint32 planeCount; CriUint32 reserved1;
+        PlaneOutput planes[4];
+    };
+    FrameSource* frame = (FrameSource*)frameInfo;
+    FrameOutput* result = (FrameOutput*)output;
+    CriUint8* state = (CriUint8*)player;
+    result->token = firstWord;
+    result->frameId = frame->frameId;
+    result->width = frame->width;
+    result->height = frame->height;
+    result->flags = flags;
+    result->pitch = frame->pitch;
+    result->displayWidth = frame->displayWidth;
+    result->displayHeight = frame->displayHeight;
+    result->textureWidth = frame->textureWidth;
+    result->frameSize = frame->frameSize;
+    result->textureHeight = frame->textureHeight;
+    memcpy(&result->playerWidth, state + 0xafc, sizeof(CriUint32));
+    memcpy(&result->playerHeight, state + 0xb00, sizeof(CriUint32));
+    memcpy(&result->playerFormat, state + 0xd54, sizeof(CriUint32));
+    CriUint32 planeCount = frame->planeCount;
+    result->planeCount = planeCount;
+    result->planes[0].data = result->planes[1].data = 0;
+    result->planes[2].data = result->planes[3].data = 0;
+    for (CriUint32 i = 0; i < planeCount; ++i)
+    {
+        PlaneSource* source = &frame->planes[i];
+        PlaneOutput* dest = &result->planes[i];
+        dest->data = source->data;
+        dest->pitch = source->pitch;
+        dest->width = source->width;
+        dest->lines = source->lines;
+        dest->size = source->pitch * source->lines;
+    }
+}
+
 // MS2-FUNCTIONAL: update playback-frame timing statistics and the public frame-result state.
 // @0x1400393f0
 void FUN_1400393f0(CriMvEasyPlayer* player, CriSint32 onTime, CriSint32 validFrame,
