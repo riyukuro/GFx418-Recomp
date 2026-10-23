@@ -522,6 +522,16 @@ void IMEManager::OnShutdown()
 
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The class object's string form uses the VM's canonical name for its traits.
+// MS2-FUNCTIONAL: the executable builds the same value through a lower-level string-node path.
+// @0x142542a60
+void ClassToString(Object* pobj, ASString* presult)
+{
+    *presult = pobj->GetVM().GetStringManager().CreateConstString("[class ") + pobj->GetTraits().GetName() + "]";
+}
+}}}
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2468,3 +2478,8 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_G?$VectorBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556270 ; prop
 // MS2-PIN: ??_G?$VectorBase@VValue@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425562c0 ; prop
 // MS2-PIN: ??_GArrayBase@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556310 ; unique
+// The scalar-deleting destructor bodies share an identical COMDAT; pin each emitted type to the matching exe slot.
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142542e10
+// MS2-PIN: ??_G?$RefCountBase@VNotifyLoadInitC@AS3@GFx@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142542e70
+// MS2-PIN: ??_GNotifyLoadInitC@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142542ed0
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CAB@@Scaleform@@UEAAPEAXI@Z 0x142543050
