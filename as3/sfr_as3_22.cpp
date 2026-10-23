@@ -3871,6 +3871,45 @@ void FUN_142675870(void* command, void* context, void* textures, const void* tex
         *reinterpret_cast<unsigned*>(bytes + 0x4c), *reinterpret_cast<bool*>(bytes + 0x50));
 }
 
+// MS2-FUNCTIONAL: scales the palette-map texture transform for the destination image and submits its channel table and mask to the HAL.
+// @0x142675560
+void FUN_142675560(void* command, void* context, void* textures, const void* texgen)
+{
+    auto* bytes = static_cast<unsigned char*>(command);
+    float transform[8] = { ThresholdTransformX[0], ThresholdTransformX[1], ThresholdTransformX[2], ThresholdTransformX[3],
+                           ThresholdTransformY[0], ThresholdTransformY[1], ThresholdTransformY[2], ThresholdTransformY[3] };
+    auto** commandVtable = *reinterpret_cast<void***>(command);
+    const bool requiresSource = reinterpret_cast<bool (*)(void*)>(commandVtable[11])(command);
+    if (!requiresSource) {
+        auto* image = *reinterpret_cast<void**>(bytes + 8);
+        auto** imageVtable = *reinterpret_cast<void***>(image);
+        unsigned size[2] = {};
+        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, size);
+        const float scaleX = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x24) - *reinterpret_cast<int*>(bytes + 0x1c)) / size[1];
+        const float scaleY = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x20) - *reinterpret_cast<int*>(bytes + 0x18)) / size[0];
+        for (unsigned i = 0; i < 4; ++i) {
+            transform[i] *= scaleY * 2.0f;
+            transform[i + 4] *= scaleX * DrawableImageScale2;
+        }
+        unsigned origin[2] = {};
+        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, origin);
+        transform[3] = (static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
+                       size[0] + transform[3];
+        transform[7] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x2c)) - origin[1] * ImageViewportScale) /
+                       size[1] + transform[7]) * DrawableImageScale2;
+    } else {
+        transform[0] = ImageViewportBias;
+        transform[3] = ImageViewportClampBias;
+        transform[5] = DrawableImageScale2;
+        transform[7] = FloatOne;
+    }
+    auto* renderer = *reinterpret_cast<void**>(static_cast<unsigned char*>(context) + 8);
+    auto** rendererVtable = *reinterpret_cast<void***>(renderer);
+    reinterpret_cast<void (*)(void*, void*, const void*, const float*, const unsigned*, unsigned)>(rendererVtable[47])(
+        renderer, textures, texgen, transform, *reinterpret_cast<const unsigned**>(bytes + 0x40),
+        *reinterpret_cast<unsigned*>(bytes + 0x48));
+}
+
 // MS2-FUNCTIONAL: snapshots accumulated renderer timings, resolves cached labels, logs each duration/count pair, and releases the snapshot.
 // @0x14268bd60
 void FUN_14268bd60(void* source, Scaleform::Log* log)
