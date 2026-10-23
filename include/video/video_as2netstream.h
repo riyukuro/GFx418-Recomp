@@ -26,6 +26,7 @@ class NetStream : public Object
 
 public:
     NetStream(Environment* penv);   // exe 0x14000cc90
+    NetStream(ASStringContext* psc, Object* pprototype); // exe 0x140007ce0
     ~NetStream();   // exe 0x140008070
 
     virtual ObjectType GetObjectType() const { return Object_NetStream; }

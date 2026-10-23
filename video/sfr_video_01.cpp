@@ -1972,6 +1972,14 @@ NetStream::NetStream(Environment* penv)
     commonInit(penv);
 }
 
+// MS2-FUNCTIONAL: constructs a NetStream against an existing prototype context.
+// @0x140007ce0
+NetStream::NetStream(ASStringContext* psc, Object* pprototype)
+    : Object(psc), Paused(false)
+{
+    Object::Set__proto__(psc, pprototype);
+}
+
 inline void NetStream::ReleaseVideoProvider()
 {
     if (pVideoProvider)
