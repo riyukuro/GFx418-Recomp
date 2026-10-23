@@ -140,6 +140,7 @@
 // MS2-RANGE: 0x14295d450-0x14295d4e0 .text$mn
 // MS2-RANGE: 0x142964200-0x142964370 .text$mn
 // MS2-RANGE: 0x14297dd70-0x14297df30 .text$mn
+// MS2-RANGE: 0x14297df30-0x14297dfb0 .text$mn
 // MS2-RANGE: 0x142968f00-0x142968f90 .text$mn
 // MS2-RANGE: 0x142966370-0x1429663d0 .text$mn
 // MS2-RANGE: 0x1429621f0-0x142962310 .text$mn
@@ -207,6 +208,8 @@
 void FUN_14000c280(void* owner, unsigned key, void** value);
 bool FUN_14260b7f0(void* styleManager, const char* text, unsigned __int64 length);
 bool FUN_14260b870(void* styleManager, const wchar_t* text, unsigned __int64 length);
+bool FUN_142606410(void* allocator, bool noAllocationsAllowed);
+bool FUN_142606150(void* allocator, bool noAllocationsAllowed);
 
 namespace Scaleform { namespace GFx {
 
@@ -2048,6 +2051,22 @@ void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
         Buffer = 0;
     }
     static_cast<StyleSheetObject*>(sheet)->NotifyOnLoad(penv, success);
+}
+
+// MS2-FUNCTIONAL: flushes text caches, forces an emergency AS2 collection, then resets the heap's budget counters.
+// @0x14297df30
+void MemoryContextImpl::HeapLimit::Reset(MemoryHeap* heap)
+{
+    MemoryContextImpl* context = MemContext;
+    if (context->TextAllocator)
+    {
+        FUN_142606410(context->TextAllocator.GetPtr(), true);
+        FUN_142606150(context->TextAllocator.GetPtr(), true);
+    }
+    context->ASGC->ForceEmergencyCollect();
+    CurrentLimit = heap->GetFootprint();
+    heap->SetLimit(0x20000);
+    LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
 }
 
 }}} // namespace Scaleform::GFx::AS2

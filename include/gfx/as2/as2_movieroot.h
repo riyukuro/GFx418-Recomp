@@ -184,6 +184,19 @@ public:
 class MemoryContextImpl : public MemoryContext
 {
 public:
+    // The heap's emergency collection handler (embedded at +0x30 in the executable context).
+    class HeapLimit : public MemoryHeap::LimitHandler
+    {
+    public:
+        MemoryContextImpl* MemContext;             // +0x10
+        UPInt UserLevelLimit;                      // +0x18
+        UPInt CurrentLimit;                        // +0x20
+        UPInt LastCollectionFootprint;             // +0x28
+        float HeapLimitMultiplier;                 // +0x30
+
+        void Reset(MemoryHeap* heap);              // exe 0x14297df30
+    };
+
     MemoryHeap*                   Heap;                 // +0x10 the movie's heap
     UByte                         Unrecovered_18[0x08]; // +0x18
     ASRefCountCollector*          ASGC;                 // +0x20
