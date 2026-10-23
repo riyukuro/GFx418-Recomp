@@ -66,6 +66,9 @@ void     FUN_14257dcd0(void* p);
 void     FUN_14258a350(void* lock, CriSint32 spinCount, CriSint32 flags);
 void     FUN_142582300(void* queue, CriSint32 count, CriSint32 flags);
 void     FUN_14258a620(void* sync);
+void     FUN_14258a810(void* sync);
+void     FUN_142582530(void* queue);
+void     FUN_14258a720(void* lock);
 void     FUN_14257db50(void* p);
 CriUint32 FUN_14257bdc0(void);
 void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
@@ -1152,6 +1155,33 @@ void* FUN_14002e450(void* object, void* heap, void* opener)
     fields[31] = NULL;
     fields[33] = NULL;
     return object;
+}
+
+// MS2-FUNCTIONAL: release the threaded reader config's sync state, live readers and retained CRI opener.
+// @0x14002e2a0
+void FUN_14002e2a0(void* object)
+{
+    void** fields = (void**)object;
+    fields[0] = (void*)DAT_1431b9430;
+    if (fields[33])
+        FUN_14257dcb0(fields[33]);
+    FUN_14258a810(fields + 32);
+    if (fields[31])
+        FUN_14257dcb0(fields[31]);
+    FUN_142582530(fields + 20);
+    FUN_14258a720(fields + 15);
+    void* reader = fields[8];
+    while (reader)
+    {
+        void* next = *(void**)((CriUint8*)reader + 0x1bc8);
+        FUN_14002d3f0(reader);
+        reader = next;
+    }
+    if (fields[4])
+        FUN_14002d3f0(fields[4]);
+    if (fields[3])
+        FUN_14257dcb0(fields[3]);
+    FUN_14257db50(object);
 }
 
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
