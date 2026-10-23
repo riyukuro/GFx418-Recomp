@@ -2875,6 +2875,60 @@ CriSint32 FUN_140037400(void* player, const CriMvStreamingParameters* params)
     return total + FUN_140046420(0, 0x40, flags);
 }
 
+// MS2-FUNCTIONAL: update playback-frame timing statistics and the public frame-result state.
+// @0x1400393f0
+void FUN_1400393f0(CriMvEasyPlayer* player, CriSint32 onTime, CriSint32 validFrame,
+                   CriSint32 dropped, CriUint64 count, CriUint64 unit)
+{
+    if (onTime == 1 && validFrame == 1 && player->unk650 == 0)
+    {
+        player->unk650 = 1;
+    }
+    else if (onTime == 0)
+    {
+        CriUint64* counters = (CriUint64*)player->playback_info;
+        ++counters[5];
+        player->last_frame_result = 1;
+    }
+    else
+    {
+        if (validFrame == 1)
+        {
+            CriUint64 currentFrame = *(CriUint64*)player->playback_info;
+            CriUint64 difference = currentFrame - player->unk658;
+            CriUint64* counters = (CriUint64*)player->playback_info;
+            if (difference == 1) ++counters[1];
+            else if (difference == 2) ++counters[2];
+            else if (difference == 3) ++counters[3];
+            else if (difference != 0) ++counters[4];
+
+            CriUint64 systemCount = 0;
+            CriUint64 systemUnit = 1;
+            player->GetTime(systemCount, systemUnit);
+            double currentMs = systemUnit ? (double)systemCount / (double)systemUnit : 0.0;
+            double frameMs = unit ? (double)count / (double)unit : 0.0;
+            CriFloat32 elapsed = (CriFloat32)((currentMs - frameMs) * 1000.0);
+            CriFloat32* timing = (CriFloat32*)player->playback_info;
+            if (timing[14] < elapsed)
+                timing[14] = elapsed;
+            player->unk660 += elapsed;
+            timing[15] = currentFrame == 0 ? player->unk660 : player->unk660 / (CriFloat32)currentFrame;
+            player->unk658 = currentFrame;
+            player->last_frame_result = 0;
+        }
+        else if (!player->modules_stopped)
+        {
+            CriUint64* counters = (CriUint64*)player->playback_info;
+            ++counters[6];
+            CriMvInputBufferInfo info = {};
+            player->GetInputBufferInfo(info);
+            player->last_frame_result = 2;
+        }
+        if (dropped != 0)
+            player->last_frame_result = 3;
+    }
+}
+
 // MS2-FUNCTIONAL: translate the active CRI stream slot into the public streaming-parameter record.
 // @0x14002fbe0
 void FUN_14002fbe0(void* player, CriMvStreamingParameters* output)
