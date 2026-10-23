@@ -1322,6 +1322,96 @@ void FUN_140007a40(Scaleform::UPInt* pair)
     pair[1] = 0;
 }
 
+// MS2-FUNCTIONAL: retains the replacement AS2 object and releases the old slot value.
+// @0x140007600
+void** FUN_140007600(void** destination, void* replacement)
+{
+    if (replacement) {
+        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    ReleaseAs2GCObject(*destination);
+    *destination = replacement;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: appends an object pointer to the array and retains it.
+// @0x140007680
+void FUN_140007680(void** array, void** value)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    FUN_140006e70(array, array, fields[1] + 1);
+    auto** slot = static_cast<void**>(*array) + fields[1] - 1;
+    if (*value) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*value))[1])(*value);
+    *slot = *value;
+}
+
+// MS2-FUNCTIONAL: releases all weak pairs in the backing array and then frees it.
+// @0x1400077f0
+void FUN_1400077f0(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_1400068d0(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+}
+
+// MS2-FUNCTIONAL: initializes an empty two-string record array and copies the supplied records.
+// @0x140007840
+void* FUN_140007840(void** destination, const void** source)
+{
+    destination[0] = destination[1] = destination[2] = nullptr;
+    FUN_140007370(destination, static_cast<const Scaleform::String*>(*source),
+                  reinterpret_cast<const Scaleform::UPInt*>(source)[1]);
+    return destination;
+}
+
+// MS2-FUNCTIONAL: copies the type field and retains the AS2 object pointer in the source value.
+// @0x140007870
+void FUN_140007870(unsigned* destination, void** source)
+{
+    *destination = *static_cast<unsigned*>(*source);
+    auto** sourceSlot = static_cast<void**>(source[1]);
+    void* replacement = sourceSlot ? *sourceSlot : nullptr;
+    if (replacement) {
+        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    ReleaseAs2GCObject(*reinterpret_cast<void**>(destination + 2));
+    *reinterpret_cast<void**>(destination + 2) = replacement;
+}
+
+// MS2-FUNCTIONAL: releases the object reference in the second pointer-sized field.
+// @0x1400078d0
+void FUN_1400078d0(void** value)
+{
+    ReleaseAs2GCObject(value[1]);
+}
+
+// MS2-FUNCTIONAL: releases the second-field object reference and optionally deletes the wrapper.
+// @0x140007960
+void* FUN_140007960(void* value, unsigned flags)
+{
+    ReleaseAs2GCObject(*reinterpret_cast<void**>(static_cast<unsigned char*>(value) + 8));
+    if (flags & 1) ::operator delete(value);
+    return value;
+}
+
+// MS2-FUNCTIONAL: assigns a typed AS2 value while retaining the replacement and releasing the old object.
+// @0x1400079b0
+unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
+{
+    const auto type = *source;
+    void* replacement = *reinterpret_cast<void* const*>(source + 2);
+    if (replacement) {
+        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    ReleaseAs2GCObject(*reinterpret_cast<void**>(destination + 2));
+    *destination = type;
+    *reinterpret_cast<void**>(destination + 2) = replacement;
+    return destination;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
