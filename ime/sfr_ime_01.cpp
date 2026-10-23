@@ -183,6 +183,14 @@ void FUN_1423d9500(void* self)
                   static_cast<unsigned char*>(self) + 0x848, 0);
 }
 
+// MS2-FUNCTIONAL: the executable passes a non-null global token to FUN_1423d97d0; its body only tests non-nullness.
+// @0x1423ce570
+void FUN_1423ce570(void* self)
+{
+    *reinterpret_cast<String*>(static_cast<unsigned char*>(self) + 0x10) = "";
+    FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30), 1);
+}
+
 // @0x1423d0f10
 void FUN_1423d0f10(void* self, char* text)
 {
