@@ -1575,4 +1575,60 @@ void FUN_140019890(void* self, const std::uint64_t* firstAtom, const std::uint64
     auto temporary = result;
     ReleaseVideoAtom(&temporary);
 }
+
+// MS2-FUNCTIONAL: builds a CRI subtitle/cue event object with its name, timestamp, type and parameter map.
+// @0x140018930
+void FUN_140018930(void* callback, const std::uint32_t* eventData)
+{
+    auto* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x20);
+    auto* vm = *reinterpret_cast<unsigned char**>(root + 0x78);
+    auto* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0xb8);
+    if (callbackValue->GetKind() == Scaleform::GFx::AS3::Value::kUndefined) return;
+    std::uint64_t eventAtom = 0, parametersAtom = 0;
+    FUN_142516600(vm, &eventAtom);
+    auto* eventObject = reinterpret_cast<Scaleform::GFx::AS3::Object*>(eventAtom);
+    auto* vmImpl = *reinterpret_cast<unsigned char**>(vm + 0x10);
+    auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
+    auto addString = [&](Scaleform::GFx::AS3::Object* object, const char* key, std::uint64_t atom) {
+        Scaleform::GFx::ASString property(manager->CreateStringNode(key));
+        auto* node = reinterpret_cast<Scaleform::GFx::ASStringNode*>(atom & ~std::uint64_t(3));
+        Scaleform::GFx::ASString string(node);
+        Scaleform::GFx::AS3::Value value(string);
+        object->AddDynamicSlotValuePair(property, value);
+    };
+    addString(eventObject, "name", *reinterpret_cast<const std::uint64_t*>(eventData + 2));
+    {
+        Scaleform::GFx::ASString key(manager->CreateStringNode("time"));
+        Scaleform::GFx::AS3::Value value(static_cast<double>(eventData[4]) / VideoDurationScale.get());
+        eventObject->AddDynamicSlotValuePair(key, value);
+    }
+    {
+        Scaleform::GFx::ASString key(manager->CreateStringNode("type"));
+        Scaleform::GFx::ASString type(manager->CreateStringNode(eventData[0] == 1 ? "navigation" : "event"));
+        Scaleform::GFx::AS3::Value value(type);
+        eventObject->AddDynamicSlotValuePair(key, value);
+    }
+    const auto count = *reinterpret_cast<const std::uint64_t*>(eventData + 8);
+    if (count) {
+        FUN_142516600(vm, &parametersAtom);
+        auto* parameters = reinterpret_cast<Scaleform::GFx::AS3::Object*>(parametersAtom);
+        auto* entries = *reinterpret_cast<const std::uint64_t* const*>(eventData + 6);
+        for (std::uint64_t i = 0; i < count; ++i) {
+            auto* pair = reinterpret_cast<const std::uint64_t*>(reinterpret_cast<const unsigned char*>(entries) + i * 0x10);
+            auto* keyNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(pair[0] & ~std::uint64_t(3));
+            auto* valueNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(pair[1] & ~std::uint64_t(3));
+            Scaleform::GFx::ASString property(manager->CreateStringNode(keyNode->pData, keyNode->Size));
+            Scaleform::GFx::ASString text(valueNode);
+            Scaleform::GFx::AS3::Value value(text);
+            parameters->AddDynamicSlotValuePair(property, value);
+        }
+        Scaleform::GFx::ASString key(manager->CreateStringNode("parameters"));
+        Scaleform::GFx::AS3::Value value(parameters);
+        eventObject->AddDynamicSlotValuePair(key, value);
+    }
+    Scaleform::GFx::AS3::Value selfValue(eventObject);
+    FUN_1424fef00(vm, static_cast<unsigned char*>(callback) + 0xb8, Scaleform::GFx::AS3::Value::GetUndefined(), &selfValue, 1, &selfValue, 0);
+    ReleaseVideoAtom(&parametersAtom);
+    ReleaseVideoAtom(&eventAtom);
+}
 } // namespace
