@@ -729,4 +729,16 @@ void FUN_14001a800(std::uint64_t* object, std::uint8_t update)
     }
 }
 
+
+// MS2-FUNCTIONAL: destroys the AS3 DisplayObject subobject and conditionally frees the allocation.
+// @0x14001a2f0
+void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, std::uint64_t flags)
+{
+    object->~DisplayObject();
+    if (flags & 1) {
+        auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, object);
+    }
+    return object;
+}
 } // namespace
