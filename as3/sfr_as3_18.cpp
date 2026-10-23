@@ -9,6 +9,18 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// MS2-FUNCTIONAL 0x14250c230: returns the executable's null-tagged singleton; C++ local-static initialization differs.
+// @0x14250c230
+const Value& Value::GetNull()
+{
+    static const Value nullValue = []() {
+        Value value;
+        value.SetNullUnsafe();
+        return value;
+    }();
+    return nullValue;
+}
+
 // MS2-FUNCTIONAL 0x14250a900: tracer-only and class-traits tags still need exact edge-case matching.
 // @0x14250a900
 // The executable selects the boxed primitive traits from the value kind and takes the
