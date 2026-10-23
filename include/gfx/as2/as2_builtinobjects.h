@@ -576,6 +576,17 @@ public:
 class AmpMarkerCtorFunction : public CFunctionObject
 {
 public:
+    AmpMarkerCtorFunction(ASStringContext* psc); // exe 0x142917bf0
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936790
+
+    // exe 0x142982af0 / 0x14294bd90
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x143214230: addMarker
+
     static void GlobalCtor(const FnCall& fn); // exe 0x142958490 null
 
 private:

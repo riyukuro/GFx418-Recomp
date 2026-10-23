@@ -16,6 +16,13 @@
 // MS2-RANGE: 0x14291f670-0x14291f8d0 .text$mn
 // MS2-RANGE: 0x142919d70-0x142919da0 .text$mn
 // MS2-RANGE: 0x142919df0-0x142919ee0 .text$mn
+// MS2-RANGE: 0x142917bf0-0x142917c90 .text$mn
+// MS2-RANGE: 0x142918d10-0x142918d90 .text$mn
+// MS2-RANGE: 0x1429197b0-0x142919830 .text$mn
+// MS2-RANGE: 0x14291aaf0-0x14291ab70 .text$mn
+// MS2-RANGE: 0x14291b750-0x14291b7d0 .text$mn
+// MS2-RANGE: 0x14291c010-0x14291c090 .text$mn
+// MS2-RANGE: 0x14291cd60-0x14291cde0 .text$mn
 // MS2-RANGE: 0x1429184e0-0x142918580 .text$mn
 // MS2-RANGE: 0x142919060-0x142919100 .text$mn
 // MS2-RANGE: 0x142919980-0x142919a00 .text$mn
@@ -58,6 +65,7 @@
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_pointobject.h"
+#include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
@@ -214,6 +222,50 @@ TextFieldCtorFunction::TextFieldCtorFunction(ASStringContext* psc)
 
 // @0x142922650
 TextFormatCtorFunction::TextFormatCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x142917bf0
+AmpMarkerCtorFunction::AmpMarkerCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142918d10
+BevelFilterCtorFunction::BevelFilterCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x1429197b0
+BlurFilterCtorFunction::BlurFilterCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x14291aaf0
+ColorMatrixFilterCtorFunction::ColorMatrixFilterCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x14291b750
+DropShadowFilterCtorFunction::DropShadowFilterCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x14291c010
+FunctionCtorFunction::FunctionCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, FunctionProto::GlobalCtor)
+{
+}
+
+// @0x14291cd60
+GlowFilterCtorFunction::GlowFilterCtorFunction(ASStringContext* psc)
     : CFunctionObject(psc, GlobalCtor)
 {
 }
@@ -730,3 +782,17 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7TextFieldCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432187f8
 // MS2-PIN: ??_7TextFormatCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d968
 // MS2-PIN: ??_7TextFormatCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d9f0
+// MS2-PIN: ??_7AmpMarkerCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e198
+// MS2-PIN: ??_7AmpMarkerCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e220
+// MS2-PIN: ??_7BevelFilterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321fb28
+// MS2-PIN: ??_7BevelFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321fbb0
+// MS2-PIN: ??_7BlurFilterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f718
+// MS2-PIN: ??_7BlurFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f7a0
+// MS2-PIN: ??_7ColorMatrixFilterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ff38
+// MS2-PIN: ??_7ColorMatrixFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ffc0
+// MS2-PIN: ??_7DropShadowFilterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321eef8
+// MS2-PIN: ??_7DropShadowFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ef80
+// MS2-PIN: ??_7FunctionCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215950
+// MS2-PIN: ??_7FunctionCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432159d8
+// MS2-PIN: ??_7GlowFilterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f308
+// MS2-PIN: ??_7GlowFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f390

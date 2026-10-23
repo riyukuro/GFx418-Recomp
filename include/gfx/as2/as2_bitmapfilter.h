@@ -75,7 +75,52 @@ class GlowFilterObject : public BitmapFilterObject {};
 class ColorMatrixFilterCtorFunction : public CFunctionObject
 {
 public:
+    ColorMatrixFilterCtorFunction(ASStringContext* psc); // exe 0x14291aaf0
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936bc0
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x1429598b0
+};
+
+// The classes of the other filters.
+class BevelFilterCtorFunction : public CFunctionObject
+{
+public:
+    BevelFilterCtorFunction(ASStringContext* psc); // exe 0x142918d10
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429368c0
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x142958720
+};
+
+class BlurFilterCtorFunction : public CFunctionObject
+{
+public:
+    BlurFilterCtorFunction(ASStringContext* psc); // exe 0x1429197b0
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936940
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x1429591e0
+};
+
+class DropShadowFilterCtorFunction : public CFunctionObject
+{
+public:
+    DropShadowFilterCtorFunction(ASStringContext* psc); // exe 0x14291b750
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c80
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295a4b0
+};
+
+class GlowFilterCtorFunction : public CFunctionObject
+{
+public:
+    GlowFilterCtorFunction(ASStringContext* psc); // exe 0x14291cd60
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e90
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295b480
 };
 
 }}} // namespace Scaleform::GFx::AS2

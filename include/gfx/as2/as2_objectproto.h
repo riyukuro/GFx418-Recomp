@@ -196,6 +196,15 @@ public:
     static void GlobalCtor(const FnCall& fn);
 };
 
+// The Function class.
+class FunctionCtorFunction : public CFunctionObject
+{
+public:
+    FunctionCtorFunction(ASStringContext* psc); // exe 0x14291c010
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936d90
+};
+
 }}} // namespace Scaleform::GFx::AS2
 
 #endif
