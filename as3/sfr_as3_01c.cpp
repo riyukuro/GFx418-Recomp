@@ -85,7 +85,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
             r += 60.0;
         return r;
     }
-}}}
+}}} 
 
 // The thunks below call through ThunkFuncN<...>::Method, defined (with its dynamic initializer) in the sfr_as3di_*
 // units.
@@ -1959,7 +1959,43 @@ template<class A, class B, class C> struct Triple
 };
 }}}
 
+namespace GFx { namespace AS3 { namespace Impl {
+class CompareAsNumber {
+public:
+    explicit CompareAsNumber(bool desc) : Desc(desc) {}
+    bool operator()(const Triple<Value::Number, const Value*, unsigned>& a,
+                    const Triple<Value::Number, const Value*, unsigned>& b) const
+    { return Desc ? b.First < a.First : a.First < b.First; }
+    bool Equal(const Triple<Value::Number, const Value*, unsigned>& a,
+               const Triple<Value::Number, const Value*, unsigned>& b) const
+    { return a.First == b.First; }
+private:
+    const bool Desc;
+};
+class CompareAsString {
+public:
+    explicit CompareAsString(const GFx::AS3::CompareAsString& cmp) : Cmp(cmp) {}
+    bool operator()(const Triple<ASString, const Value*, unsigned>& a,
+                    const Triple<ASString, const Value*, unsigned>& b) const
+    { return Cmp.Compare(a.First, b.First) < 0; }
+    bool Equal(const Triple<ASString, const Value*, unsigned>& a,
+               const Triple<ASString, const Value*, unsigned>& b) const
+    { return Cmp.Compare(a.First, b.First) == 0; }
+private:
+    GFx::AS3::CompareAsString Cmp;
+};
+}}}
+
 using AS3StringValueTriple = GFx::AS3::Impl::Triple<GFx::ASString, const GFx::AS3::Value*, unsigned>;
+using AS3NumberValueTriple = GFx::AS3::Impl::Triple<GFx::AS3::Value::Number, const GFx::AS3::Value*, unsigned>;
+using AS3StringValueTripleArray = ArrayDH<AS3StringValueTriple>;
+using AS3NumberValueTripleArray = ArrayDH<AS3NumberValueTriple>;
+// @0x1423e99d0
+template bool Alg::QuickSortSafe(AS3StringValueTripleArray&, GFx::AS3::Impl::CompareAsString);
+// @0x1423ea060
+template bool Alg::QuickSortSlicedSafe(AS3NumberValueTripleArray&, UPInt, UPInt, GFx::AS3::Impl::CompareAsNumber);
+// @0x1423ea400
+template bool Alg::QuickSortSlicedSafe(AS3StringValueTripleArray&, UPInt, UPInt, GFx::AS3::Impl::CompareAsString);
 using AS3StringValueTripleData = ArrayDataBase<AS3StringValueTriple,
     AllocatorDH<AS3StringValueTriple, Stat_Default_Mem>, ArrayDefaultPolicy>;
 // @0x1423f0630
