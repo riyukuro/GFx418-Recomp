@@ -321,7 +321,8 @@ public:
     void        QueueFrameScript(unsigned frame);
 
     UByte*      InitActionsExecuted;        // +0x50 one bit per frame (FixedBitSetLH)
-    UPInt       InitActionsExecutedSize;    // +0x58 bits
+    unsigned    InitActionsExecutedSize;    // +0x58 bits (the ctor stores 4 bytes)
+    UInt32      InitActionsExecutedPad;     // +0x5c end of the 0x10-byte bit set
     UByte       SprFlags;                   // +0x60 Flag_*
 };
 

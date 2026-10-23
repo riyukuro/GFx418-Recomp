@@ -22,6 +22,8 @@
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_utils.h"
 #include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
+#include "ms2/scaleform/include/kernel/sf_std.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -320,6 +322,16 @@ namespace Classes { namespace fl_gfx
     enum { TAS_None, TAS_Shrink, TAS_Fit };
 
     static inline UByte* TextDocView(GFx::DisplayObject* ptf) { return *(UByte**)((UByte*)ptf + 0xe0); }
+    // The head of Text::DocView: its image substitutor at +0x30.
+    struct DocViewHead
+    {
+        UByte                   Unrecovered_00[0x30];
+        MS2_ImageSubstitutor*   pImageSubstitutor;  // +0x30
+    };
+    static inline DocViewHead* TextDocViewHead(GFx::DisplayObject* ptf)
+    {
+        return reinterpret_cast<DocViewHead*>(TextDocView(ptf));
+    }
     static inline unsigned GetVAlignment(UByte* pdoc)   { return (pdoc[0x148] >> 2) & 3; }
     static inline unsigned GetTextAutoSize(UByte* pdoc) { return (pdoc[0x148] >> 4) & 3; }
     static inline void SetVAlignment(UByte* pdoc, unsigned a)
@@ -472,9 +484,9 @@ namespace Classes { namespace fl_gfx
         {
             // clear all substitutions
             FUN_1425b7220(ptf);
-            UByte* pdoc = TextDocView(ptf);
-            delete *(MS2_ImageSubstitutor**)(pdoc + 0x30);
-            *(MS2_ImageSubstitutor**)(pdoc + 0x30) = NULL;
+            DocViewHead* pdoc = TextDocViewHead(ptf);
+            delete pdoc->pImageSubstitutor;
+            pdoc->pImageSubstitutor = NULL;
             TextDocView(ptf)[0x14b] |= 2;   // DocView: reformat
             FUN_1425bc060(ptf);
         }
@@ -536,8 +548,7 @@ namespace Classes { namespace fl_gfx
         if (!bitmapData)
         {
             // DocView::GetImageSubstitutor
-            UByte* pdoc = TextDocView(ptf);
-            MS2_ImageSubstitutor*& psubst = *(MS2_ImageSubstitutor**)(pdoc + 0x30);
+            MS2_ImageSubstitutor*& psubst = TextDocViewHead(ptf)->pImageSubstitutor;
             if (!psubst)
                 psubst = new MS2_ImageSubstitutor;
             if (psubst)
@@ -1679,6 +1690,28 @@ namespace InstanceTraits { namespace fl_gfx
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 }}
+// noinline: the derived ctors call it out of line.
+// @0x1424d6480
+__declspec(noinline) AvmInteractiveObj::AvmInteractiveObj(InteractiveObject* pdispObj)
+    : AvmDisplayObj(pdispObj), MouseOverCnt(0), IntFlags(0)
+{
+    pdispObj->TabIndex = -1;
+}
+
+// MS2-FUNCTIONAL: same code; the byte count lives in rdi, the exe has it in rbx
+// @0x1424d6590
+AvmSprite::AvmSprite(Sprite* pspr)
+    : AvmDisplayObjContainer(reinterpret_cast<DisplayObjContainer*>(pspr))
+{
+    InitActionsExecutedSize = GetSprite()->pDef->GetFrameCount();
+    UPInt bytes = (InitActionsExecutedSize + 7) >> 3;
+    InitActionsExecuted = static_cast<UByte*>(Memory::AllocAutoHeap(&InitActionsExecuted, bytes,
+                                                                    AllocInfo(StatMV_ActionScript_Mem, 0, 0)));
+    memset(InitActionsExecuted, 0, bytes);
+    SprFlags = 0;
+    GetSprite()->Flags &= ~Sprite::Flags_LockRoot;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
