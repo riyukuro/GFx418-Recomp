@@ -1618,3 +1618,33 @@ void FUN_140013600(void* array, unsigned __int64 index)
     *reinterpret_cast<void**>(data + index * 8) = Scaleform::Memory::Alloc(0x2000);
     ++*reinterpret_cast<unsigned __int64*>(bytes + 0x10);
 }
+
+// MS2-FUNCTIONAL: appends a copied reference entry and increments its intrusive reference count.
+// @0x1400113a0
+unsigned FUN_1400113a0(void* array, const unsigned* source)
+{
+    char* bytes = static_cast<char*>(array);
+    auto length = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
+    FUN_1425eec50(bytes + 0x18, bytes + 0x18, length + 1);
+    char* item = *reinterpret_cast<char**>(bytes + 0x18) - 0x10 + length * 0x10;
+    *reinterpret_cast<unsigned*>(item) = *source;
+    void* value = *reinterpret_cast<void* const*>(source + 2);
+    if (value) FUN_14257dc30(value);
+    *reinterpret_cast<void**>(item + 8) = value;
+    return static_cast<unsigned>(length);
+}
+
+// MS2-FUNCTIONAL: appends a copied reference entry in the nested +0x88 collection.
+// @0x140011450
+unsigned FUN_140011450(void* object, const unsigned* source)
+{
+    char* array = static_cast<char*>(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x88)) + 0x18;
+    auto length = *reinterpret_cast<unsigned __int64*>(array + 8);
+    FUN_1425eec50(array, array, length + 1);
+    char* item = *reinterpret_cast<char**>(array) - 0x10 + length * 0x10;
+    *reinterpret_cast<unsigned*>(item) = *source;
+    void* value = *reinterpret_cast<void* const*>(source + 2);
+    if (value) FUN_14257dc30(value);
+    *reinterpret_cast<void**>(item + 8) = value;
+    return static_cast<unsigned>(length);
+}
