@@ -616,6 +616,26 @@ namespace Instances { namespace fl_media
         pSoundObject->LoadFile(SoundURL, Streaming);
     }
 
+    // @0x1424d1b60
+    void Sound::play(Value& result, Value::Number startTime, SInt32 loops, Instances::fl_media::SoundTransform* sndTransform)
+    {
+        Value v;
+        Value r;
+        VM& vm = GetVM();
+        vm.Construct("flash.media.SoundChannel", v, 0, NULL, true);
+        if (vm.IsException() || v.IsNullOrUndefined())
+            return;
+
+        SPtr<Instances::fl_media::SoundChannel> channel = static_cast<Instances::fl_media::SoundChannel*>(v.GetObject());
+        channel->pSoundObject = pSoundObject;
+        pChannel = channel;
+        if (pSoundObject)
+            pSoundObject->Play((int)startTime, loops);
+        if (sndTransform)
+            channel->soundTransformSet(r, sndTransform);
+        result.Assign(channel);
+    }
+
     // @0x1424d20e0
     void Sound::urlGet(ASString& result)
     {
@@ -629,6 +649,33 @@ namespace Instances { namespace fl_media
         if (pSoundObject)
             v = pSoundObject->GetPosition();
         result = v;
+    }
+
+    // @0x1424d1ea0
+    void SoundChannel::soundTransformGet(SPtr<Instances::fl_media::SoundTransform>& result)
+    {
+        Value v;
+        VM& vm = GetVM();
+        vm.Construct("flash.media.SoundTransform", v, 0, NULL, true);
+        if (vm.IsException() || v.IsNullOrUndefined())
+            return;
+
+        SPtr<Instances::fl_media::SoundTransform> st = static_cast<Instances::fl_media::SoundTransform*>(v.GetObject());
+        if (pSoundObject)
+        {
+            Value r;
+            st->volumeSet(r, pSoundObject->GetVolume() / 100);
+            st->Pan = pSoundObject->GetPan() / 100;
+        }
+        result = st;
+    }
+
+    // @0x1424d1e80
+    SPtr<Instances::fl_media::SoundTransform> SoundChannel::soundTransformGet()
+    {
+        SPtr<Instances::fl_media::SoundTransform> result;
+        soundTransformGet(result);
+        return result;
     }
 
     // @0x1424d2070
@@ -1162,26 +1209,35 @@ namespace Instances { namespace fl_media
     }
 
     // MS2-FUNCTIONAL: same control flow; the exe keeps found inverted and allocates the name/symbol stack slots the other way round
-    // @0x1424d1130
-    void Sound::InitInstance(bool extCall)
+    // @0x1424d0a00
+    bool Sound::CreateLibraryObject()
     {
-        if (extCall || pResource)
-            return;
+        if (pResource)
+            return false;
         ASVM& vm = static_cast<ASVM&>(GetVM());
         MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
         if (!pdefImpl || !GetTraits().IsAbcObject())
-            return;
-        bool found;
+            return false;
         ASString name = GetTraits().GetQualifiedName(Traits::qnfWithDot);
         ResourceBindData data;
+        bool found;
         {
             String symbol(name.ToCStr());
             found = vm.GetMovieImpl()->FindExportedResource(pdefImpl, &data, symbol);
         }
         if (!found)
-            return;
+            return false;
         if (data.pResource && (data.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_SoundSample)))
             pResource = static_cast<SoundResource*>(data.pResource.GetPtr());
+        return true;
+    }
+
+    // MS2-FUNCTIONAL: inlined CreateLibraryObject; the exe keeps found inverted
+    // @0x1424d1130
+    void Sound::InitInstance(bool extCall)
+    {
+        if (!extCall)
+            CreateLibraryObject();
     }
 
     // @0x1424cf9b0

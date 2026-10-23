@@ -58,6 +58,7 @@ namespace Instances { namespace fl_media {
         // @0x1424d20e0
         void urlGet(ASString& result);
 
+        bool CreateLibraryObject();         // 0x1424d0a00: binds the library sound of an exported subclass
         void DispatchEventComplete();       // 0x1424d0b60
         void DispatchEventIOError();        // 0x1424d0c20
         void DispatchEventOpen();           // 0x1424d0cd0
@@ -84,6 +85,7 @@ namespace Instances { namespace fl_media {
         void rightPeakGet(Value::Number& result);
         // @0x1424d1ea0
         void soundTransformGet(SPtr<Instances::fl_media::SoundTransform>& result);
+        SPtr<Instances::fl_media::SoundTransform> soundTransformGet();   // 0x1424d1e80
         // @0x1424d2070
         void soundTransformSet(const Value& result, Instances::fl_media::SoundTransform*);
         // @0x1424d20d0
