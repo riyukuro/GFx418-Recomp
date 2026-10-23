@@ -771,6 +771,27 @@ Scaleform::GFx::AS2::FunctionRefBase* FUN_140005f00(
     return destination;
 }
 
+// MS2-FUNCTIONAL: releases the retained weak proxy in the owning SyncObject field.
+// @0x1400061f0
+void FUN_1400061f0(void** proxy)
+{
+    if (*proxy) FUN_14257dcd0(*proxy);
+}
+
+// MS2-FUNCTIONAL: resolves a weak proxy and clears the slot after the target has died.
+// @0x140006240
+void* FUN_140006240(void** weakSlot)
+{
+    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+        reinterpret_cast<Scaleform::UPInt>(*weakSlot) & ~Scaleform::UPInt(3));
+    if (!proxy) return nullptr;
+    auto* object = proxy->GetObject();
+    if (object) return object;
+    proxy->Release();
+    *weakSlot = nullptr;
+    return nullptr;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
