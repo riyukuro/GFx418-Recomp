@@ -162,6 +162,7 @@
 // MS2-RANGE: 0x14296a990-0x14296a9f0 .text$mn
 // MS2-RANGE: 0x14296a9f0-0x14296aa90 .text$mn
 // MS2-RANGE: 0x1429654a0-0x142965510 .text$mn
+// MS2-RANGE: 0x142965570-0x1429658d0 .text$mn
 // MS2-RANGE: 0x14296f0d0-0x14296f1b0 .text$mn
 // MS2-RANGE: 0x14297d080-0x14297d0d0 .text$mn
 // MS2-RANGE: 0x142967c30-0x142967c90 .text$mn
@@ -2097,6 +2098,69 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
     heap->SetLimit(UserLevelLimit && UserLevelLimit < projected ? LastCollectionFootprint : projected);
     LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
     return true;
+}
+
+// MS2-FUNCTIONAL: implements AS2 nullish, primitive, object identity, character-path, and coercive equality cases.
+// @0x142965570
+bool Value::IsEqual(Environment* penv, const Value& other) const
+{
+    const type left = GetType();
+    const type right = other.GetType();
+    const bool leftNullish = left == UNDEFINED || left == NULLTYPE || left == UNSET;
+    const bool rightNullish = right == UNDEFINED || right == NULLTYPE || right == UNSET;
+    if (leftNullish || rightNullish)
+        return leftNullish && rightNullish;
+
+    if (left == right)
+    {
+        switch (left)
+        {
+        case BOOLEAN:
+            return V.BooleanValue == other.V.BooleanValue;
+        case INTEGER:
+            return NV.Int32Value == other.NV.Int32Value;
+        case NUMBER:
+            return NV.NumberValue == other.NV.NumberValue ||
+                   (NumberUtil_IsNaN(NV.NumberValue) && NumberUtil_IsNaN(other.NV.NumberValue));
+        case STRING:
+            return V.pStringNode == other.V.pStringNode;
+        case OBJECT:
+            return V.pObjectValue == other.V.pObjectValue;
+        case CHARACTER:
+            if (V.pCharHandle == other.V.pCharHandle)
+                return true;
+            if (!V.pCharHandle || !other.V.pCharHandle)
+                return false;
+            return GetCharacterNamePath(penv).GetNode() == other.GetCharacterNamePath(penv).GetNode();
+        case FUNCTION:
+        case FUNCTIONNAME:
+            return reinterpret_cast<const UPInt*>(this)[1] == reinterpret_cast<const UPInt*>(&other)[1];
+        default:
+            return false;
+        }
+    }
+
+    if (left == BOOLEAN)
+    {
+        Value number(ToNumber(penv));
+        return number.IsEqual(penv, other);
+    }
+    if (right == BOOLEAN)
+    {
+        Value number(other.ToNumber(penv));
+        return IsEqual(penv, number);
+    }
+
+    if (left == OBJECT && right == OBJECT)
+        return V.pObjectValue == other.V.pObjectValue;
+    if (left == CHARACTER && right == CHARACTER)
+        return GetCharacterNamePath(penv).GetNode() == other.GetCharacterNamePath(penv).GetNode();
+    if ((left == STRING && right == STRING))
+        return V.pStringNode == other.V.pStringNode;
+
+    const Number lhs = ToNumber(penv);
+    const Number rhs = other.ToNumber(penv);
+    return lhs == rhs || (NumberUtil_IsNaN(lhs) && NumberUtil_IsNaN(rhs));
 }
 
 }}} // namespace Scaleform::GFx::AS2
