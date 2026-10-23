@@ -45,6 +45,14 @@
 // MS2-RANGE: 0x14290a8c0-0x14290aab4 .text$mn
 // MS2-RANGE: 0x14290b1c0-0x14290b2b4 .text$mn
 // MS2-RANGE: 0x14290b920-0x14290b9e5 .text$mn
+// MS2-RANGE: 0x14290aac0-0x14290afbc .text$mn
+// MS2-RANGE: 0x14290afc0-0x14290b1be .text$mn
+// MS2-RANGE: 0x14290b9f0-0x14290bb16 .text$mn
+// MS2-RANGE: 0x14290bb20-0x14290bc49 .text$mn
+// MS2-RANGE: 0x14290bc50-0x14290bd8d .text$mn
+// MS2-RANGE: 0x14290bd90-0x14290becd .text$mn
+// MS2-RANGE: 0x142909b00-0x142909d71 .text$mn
+// MS2-RANGE: 0x142909d80-0x14290a0ea .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -90,6 +98,62 @@ unsigned FUN_142612bd0(void* pdoc, float x, float y);                       // D
 bool     FUN_142611ff0(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetCharBoundaries
 bool     FUN_142612740(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetExactCharBoundaries
 void     FUN_14260df50(void* pdoc, const char* putf8Str, unsigned long long utf8Len);        // DocView::AppendText
+void     FUN_14260de50(void* pdoc, const char* phtml, unsigned long long htmlSize, bool condenseWhite,
+                       void* pimgInfoArr);                                                 // DocView::AppendHtml
+void     FUN_1425ba7d0(void* ptf, void* pimgInfoArr);                                       // TextField::ProcessImageTags
+bool     FUN_142612d50(void* pdoc, unsigned line, void* pmetrics);                          // DocView::GetLineMetrics
+const wchar_t* FUN_142612f00(void* pdoc, unsigned line, unsigned long long* plen);         // DocView::GetLineText
+void     FUN_142617440(void* pek, unsigned long long startPos, unsigned long long endPos, bool useRichClipboard);  // EditorKit::CopyToClipboard
+void     FUN_1426175b0(void* pek, unsigned long long startPos, unsigned long long endPos, bool useRichClipboard);  // EditorKit::CutToClipboard
+unsigned long long FUN_142619270(void* pek, unsigned long long startPos, unsigned long long endPos,
+                                 bool useRichClipboard);                                   // EditorKit::PasteFromClipboard
+// The DocView / EditorKit fields the clipboard natives read.
+inline void* DocView_GetEditorKit(void* pdoc) { return *(void**)((char*)pdoc + 0xd8); }
+inline unsigned long long DocView_SelectionPos(void* pdoc, int i) { return ((unsigned long long*)((char*)pdoc + 0x38))[i]; }
+inline unsigned long long DocView_GetBeginSelection(void* pdoc)
+{
+    return DocView_SelectionPos(pdoc, 0) < DocView_SelectionPos(pdoc, 1) ? DocView_SelectionPos(pdoc, 0) : DocView_SelectionPos(pdoc, 1);
+}
+inline unsigned long long DocView_GetEndSelection(void* pdoc)
+{
+    return DocView_SelectionPos(pdoc, 0) > DocView_SelectionPos(pdoc, 1) ? DocView_SelectionPos(pdoc, 0) : DocView_SelectionPos(pdoc, 1);
+}
+inline void* EditorKit_GetDocView(void* pek) { return *(void**)((char*)pek + 0x10); }
+inline bool  EditorKit_DoesUseRichClipboard(void* pek) { return (*((unsigned char*)pek + 0xa0) & 4) != 0; }
+inline void* DocView_GetStyledText(void* pdoc) { return *(void**)((char*)pdoc + 0x10); }
+inline const void* StyledText_GetDefaultParagraphFormat(void* pst) { return *(const void**)((char*)pst + 0x30); }
+inline const void* StyledText_GetDefaultTextFormat(void* pst) { return *(const void**)((char*)pst + 0x38); }
+unsigned long long FUN_142598a50(void* pst);                                               // StyledText::GetLength
+bool     FUN_1425996b0(void* pst, const void** pptextFmt, const void** ppparaFmt, unsigned long long pos);  // StyledText::GetTextAndParagraphFormat
+unsigned long long FUN_142617990(void* pek);                                               // EditorKit::GetCursorPos
+void     FUN_142619b80(void* pek, unsigned long long pos, bool updateSelection);            // EditorKit::SetCursorPos
+void     FUN_142615410(void* pdoc, const void* pparaFmt, unsigned long long startPos, unsigned long long endPos);  // DocView::SetParagraphFormat
+void     FUN_142615640(void* pdoc, const void* ptextFmt, unsigned long long startPos, unsigned long long endPos);  // DocView::SetTextFormat
+void     FUN_1424ae680(const void* ptextFmt);                                               // TextFormat::Release
+void     FUN_1424ae650(const void* pparaFmt);                                               // ParagraphFormat::Release
+
+namespace Scaleform {
+// DocView::LineMetrics, in twips.
+struct MS2_LineMetrics
+{
+    unsigned Width, Height;
+    unsigned Ascent, Descent;
+    int      FirstCharXOff;
+    int      Leading;
+};
+// StyledText::HTMLImageTagInfo: the same stand-in as sfr_as3_14 / sfr_as3_15 (the ArrayDataBase destructor
+// instantiation is the exe's 0x1424c7100).
+struct MS2_HTMLImageTagInfo // 0x40 bytes
+{
+    Ptr<RefCountNTSImpl> pTextImageDesc;
+    StringDH             Url; // +0x08
+    StringDH             Id;  // +0x18
+    unsigned             Width, Height;
+    int                  VSpace, HSpace;
+    unsigned             ParaId;
+    UByte                Alignment;
+};
+} // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -2549,6 +2613,252 @@ void AvmTextField::AppendText(const FnCall& fn)
     ASString str = fn.Arg(0).ToString(fn.Env);
     FUN_14260df50(ptf->GetDocument(), str.ToCStr(), SF_MAX_UPINT);
     ptf->SetCompleteReformatReq();
+    ptf->SetDirtyFlag();
+}
+
+// getLineMetrics(lineIndex): an object with the line's ascent, descent, width, height, leading and x in pixels.
+// MS2-FUNCTIONAL register allocation and stack layout differ from the exe
+// @0x14290aac0
+void AvmTextField::GetLineMetrics(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
+    int             line = int(fn.Arg(0).ToNumber(fn.Env));
+    MS2_LineMetrics metrics;
+    if (line < 0 || !FUN_142612d50(ptf->GetDocument(), unsigned(line), &metrics))
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    Ptr<Object> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("ascent"), Value(Render::TwipsToPixels(Double(metrics.Ascent))));
+    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("descent"), Value(Render::TwipsToPixels(Double(metrics.Descent))));
+    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("width"), Value(Render::TwipsToPixels(Double(metrics.Width))));
+    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("height"), Value(Render::TwipsToPixels(Double(metrics.Height))));
+    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("leading"), Value(Render::TwipsToPixels(Double(metrics.Leading))));
+    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("x"), Value(Render::TwipsToPixels(Double(metrics.FirstCharXOff))));
+    fn.Result->SetAsObject(pobj);
+}
+
+// getLineText(lineIndex): undefined for a negative index, "" past the last line.
+// @0x14290afc0
+void AvmTextField::GetLineText(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
+    int line = int(fn.Arg(0).ToNumber(fn.Env));
+    if (line < 0)
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    UPInt          len   = 0;
+    const wchar_t* ptext = FUN_142612f00(ptf->GetDocument(), unsigned(line), &len);
+    if (ptext)
+    {
+        String str;
+        str.AppendString(ptext, SPInt(len));
+        fn.Result->SetString(fn.Env->CreateString(str));
+    }
+    else
+        fn.Result->SetString(fn.Env->CreateConstString(""));
+}
+
+// appendHtml(html): not for a field with a style sheet; <img> tags become image substitutions.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
+// @0x14290b9f0
+void AvmTextField::AppendHtml(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (ptf->HasStyleSheet() || fn.NArgs < 1)
+        return;
+    ASString                      str = fn.Arg(0).ToString(fn.Env);
+    ArrayDH<MS2_HTMLImageTagInfo> imageInfoArray(Memory::GetHeapByAddress(ptf));
+    FUN_14260de50(ptf->GetDocument(), str.ToCStr(), SF_MAX_UPINT, false, &imageInfoArray);
+    ptf->SetCompleteReformatReq();
+    if (imageInfoArray.GetSize() > 0)
+        FUN_1425ba7d0(ptf, &imageInfoArray);
+    ptf->SetDirtyFlag();
+}
+
+// copyToClipboard([richClipboard, startIndex, endIndex]): by default the selection, rich when the editor uses the
+// rich clipboard.
+// MS2-FUNCTIONAL register allocation differs from the exe
+// @0x14290bb20
+void AvmTextField::CopyToClipboard(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    void* pek = DocView_GetEditorKit(GetTextFieldTarget(fn)->GetDocument());
+    if (!pek)
+        return;
+    bool     richClipboard = EditorKit_DoesUseRichClipboard(pek);
+    unsigned startPos      = unsigned(DocView_GetBeginSelection(EditorKit_GetDocView(pek)));
+    unsigned endPos        = unsigned(DocView_GetEndSelection(EditorKit_GetDocView(pek)));
+    if (fn.NArgs >= 1)
+        richClipboard = fn.Arg(0).ToBool(fn.Env);
+    if (fn.NArgs >= 2)
+        startPos = fn.Arg(1).ToUInt32(fn.Env);
+    if (fn.NArgs >= 3)
+        endPos = fn.Arg(2).ToUInt32(fn.Env);
+    FUN_142617440(pek, startPos, endPos, richClipboard);
+}
+
+// cutToClipboard([richClipboard, startIndex, endIndex])
+// MS2-FUNCTIONAL register allocation differs from the exe
+// @0x14290bc50
+void AvmTextField::CutToClipboard(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    void*      pek = DocView_GetEditorKit(ptf->GetDocument());
+    if (!pek)
+        return;
+    bool     richClipboard = EditorKit_DoesUseRichClipboard(pek);
+    unsigned startPos      = unsigned(DocView_GetBeginSelection(EditorKit_GetDocView(pek)));
+    unsigned endPos        = unsigned(DocView_GetEndSelection(EditorKit_GetDocView(pek)));
+    if (fn.NArgs >= 1)
+        richClipboard = fn.Arg(0).ToBool(fn.Env);
+    if (fn.NArgs >= 2)
+        startPos = fn.Arg(1).ToUInt32(fn.Env);
+    if (fn.NArgs >= 3)
+        endPos = fn.Arg(2).ToUInt32(fn.Env);
+    FUN_1426175b0(pek, startPos, endPos, richClipboard);
+    ptf->SetDirtyFlag();
+}
+
+// pasteFromClipboard([richClipboard, startIndex, endIndex]): replaces the range.
+// MS2-FUNCTIONAL register allocation differs from the exe
+// @0x14290bd90
+void AvmTextField::PasteFromClipboard(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    void*      pek = DocView_GetEditorKit(ptf->GetDocument());
+    if (!pek)
+        return;
+    bool     richClipboard = EditorKit_DoesUseRichClipboard(pek);
+    unsigned startPos      = unsigned(DocView_GetBeginSelection(EditorKit_GetDocView(pek)));
+    unsigned endPos        = unsigned(DocView_GetEndSelection(EditorKit_GetDocView(pek)));
+    if (fn.NArgs >= 1)
+        richClipboard = fn.Arg(0).ToBool(fn.Env);
+    if (fn.NArgs >= 2)
+        startPos = fn.Arg(1).ToUInt32(fn.Env);
+    if (fn.NArgs >= 3)
+        endPos = fn.Arg(2).ToUInt32(fn.Env);
+    FUN_142619270(pek, startPos, endPos, richClipboard);
+    ptf->SetDirtyFlag();
+}
+
+// replaceSel(text): the selection becomes text in the field's default formats, the cursor goes behind it.
+// @0x142909b00
+void AvmTextField::ReplaceSel(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (ptf->HasStyleSheet() || fn.NArgs < 1 || !DocView_GetEditorKit(ptf->GetDocument()))
+        return;
+    ASString    str         = fn.Arg(0).ToString(fn.Env);
+    void*       pstyledText = DocView_GetStyledText(ptf->GetDocument());
+    const void* ptextFmt    = StyledText_GetDefaultTextFormat(pstyledText);
+    const void* pparaFmt    = StyledText_GetDefaultParagraphFormat(pstyledText);
+    unsigned    len         = str.GetLength();
+    void*       pdocView    = EditorKit_GetDocView(DocView_GetEditorKit(ptf->GetDocument()));
+    UPInt       startPos    = DocView_GetBeginSelection(pdocView);
+    UPInt       endPos      = DocView_GetEndSelection(pdocView);
+    if (len < 1024)
+    {
+        wchar_t wbuf[1024];
+        UTF8Util::DecodeString(wbuf, str.ToCStr());
+        ptf->ReplaceTextA(wbuf, startPos, endPos, SF_MAX_UPINT);
+    }
+    else
+    {
+        wchar_t* pwbuf = (wchar_t*)SF_ALLOC(UPInt(len + 1) * sizeof(wchar_t), StatMV_Text_Mem);
+        UTF8Util::DecodeString(pwbuf, str.ToCStr());
+        ptf->ReplaceTextA(pwbuf, startPos, endPos, SF_MAX_UPINT);
+        SF_FREE(pwbuf);
+    }
+    UPInt newEnd = startPos + len;
+    FUN_142619b80(DocView_GetEditorKit(ptf->GetDocument()), newEnd, false);
+    if (pparaFmt)
+        FUN_142615410(ptf->GetDocument(), pparaFmt, startPos, newEnd);
+    if (ptextFmt)
+        FUN_142615640(ptf->GetDocument(), ptextFmt, startPos, newEnd);
+    ptf->SetDirtyFlag();
+}
+
+// replaceText(beginIndex, endIndex, text): text takes the formats of the first replaced character.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
+// @0x142909d80
+void AvmTextField::ReplaceTextA(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (ptf->HasStyleSheet() || fn.NArgs < 3)
+        return;
+    Number   start = fn.Arg(0).ToNumber(fn.Env);
+    Number   end   = fn.Arg(1).ToNumber(fn.Env);
+    ASString str   = fn.Arg(2).ToString(fn.Env);
+    unsigned len   = str.GetLength();
+    unsigned startPos = unsigned(start);
+    unsigned endPos   = unsigned(end);
+    if (start < 0 || end < 0 || startPos > endPos)
+        return;
+    UPInt       textLen  = FUN_142598a50(DocView_GetStyledText(ptf->GetDocument()));
+    UPInt       newLen   = UPInt(len) - UPInt(endPos - startPos) + textLen;
+    const void* ptextFmt = 0;
+    const void* pparaFmt = 0;
+    if (startPos < textLen)
+        FUN_1425996b0(DocView_GetStyledText(ptf->GetDocument()), &ptextFmt, &pparaFmt, startPos);
+    else
+    {
+        ptextFmt = StyledText_GetDefaultTextFormat(DocView_GetStyledText(ptf->GetDocument()));
+        pparaFmt = StyledText_GetDefaultParagraphFormat(DocView_GetStyledText(ptf->GetDocument()));
+    }
+    // Both are held across the replacement.
+    if (ptextFmt)
+        ++*(int*)ptextFmt;
+    if (pparaFmt)
+        ++*(int*)pparaFmt;
+    if (len < 1024)
+    {
+        wchar_t wbuf[1024];
+        UTF8Util::DecodeString(wbuf, str.ToCStr());
+        ptf->ReplaceTextA(wbuf, startPos, endPos, SF_MAX_UPINT);
+    }
+    else
+    {
+        wchar_t* pwbuf = (wchar_t*)SF_ALLOC(UPInt(len + 1) * sizeof(wchar_t), StatMV_Text_Mem);
+        UTF8Util::DecodeString(pwbuf, str.ToCStr());
+        ptf->ReplaceTextA(pwbuf, startPos, endPos, SF_MAX_UPINT);
+        SF_FREE(pwbuf);
+    }
+    void* pek = DocView_GetEditorKit(ptf->GetDocument());
+    if (pek && FUN_142617990(pek) > newLen)
+        FUN_142619b80(DocView_GetEditorKit(ptf->GetDocument()), newLen, false);
+    unsigned newEnd = startPos + len;
+    if (pparaFmt)
+        FUN_142615410(ptf->GetDocument(), pparaFmt, startPos, newEnd);
+    if (ptextFmt)
+    {
+        FUN_142615640(ptf->GetDocument(), ptextFmt, startPos, newEnd);
+        FUN_1424ae680(ptextFmt);
+    }
+    if (pparaFmt)
+        FUN_1424ae650(pparaFmt);
     ptf->SetDirtyFlag();
 }
 }}} // namespace Scaleform::GFx::AS2

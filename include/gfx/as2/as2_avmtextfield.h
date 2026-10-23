@@ -41,6 +41,14 @@ public:
     static void GetLineLength(const FnCall& fn);           // exe 0x14290a9c0
     static void GetFirstCharInParagraph(const FnCall& fn); // exe 0x14290b1c0
     static void AppendText(const FnCall& fn);              // exe 0x14290b920
+    static void GetLineMetrics(const FnCall& fn);          // exe 0x14290aac0
+    static void GetLineText(const FnCall& fn);             // exe 0x14290afc0
+    static void AppendHtml(const FnCall& fn);              // exe 0x14290b9f0
+    static void CopyToClipboard(const FnCall& fn);         // exe 0x14290bb20
+    static void CutToClipboard(const FnCall& fn);          // exe 0x14290bc50
+    static void PasteFromClipboard(const FnCall& fn);      // exe 0x14290bd90
+    static void ReplaceSel(const FnCall& fn);              // exe 0x142909b00
+    static void ReplaceTextA(const FnCall& fn);            // exe 0x142909d80 (replaceText)
 };
 
 }}} // namespace Scaleform::GFx::AS2

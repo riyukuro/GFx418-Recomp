@@ -52,6 +52,8 @@ public:
     void SetCompleteReformatReq() { *reinterpret_cast<UInt32*>(Unrecovered + 0xfc) |= 0x10000; }
     bool HasStyleSheet() const;   // exe 0x1425b9730
     void SetDirtyFlag();          // exe 0x1425bc060
+    // Replaces [beginPos, endPos) with the first strLen characters of pstr (all of it for SF_MAX_UPINT).
+    void ReplaceTextA(const wchar_t* pstr, UPInt beginPos, UPInt endPos, UPInt strLen); // exe 0x1425bb810
 
 private:
     UByte Unrecovered[0x148];
