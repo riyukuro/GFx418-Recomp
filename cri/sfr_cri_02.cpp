@@ -130,6 +130,11 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 chann
 void     FUN_140036e30(void* player, CriMvSubtitleChunk* chunk);
 void     FUN_140036e80(void* player, CriMvSubtitleChunk* chunk);
 void     FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
+void     FUN_140046784(void* streamJoint);
+void     FUN_140046798(void* streamJoint);
+void     FUN_1400420b0(void* manager, void* heap);
+void     FUN_140043be0(void* decoder);
+void     FUN_140028074(void* heap);
 
 // ==== CRI heap backed object allocation ============================================================================
 
@@ -1981,6 +1986,47 @@ void FUN_140030c70(void* player)
     FUN_140037850(player);
     FUN_140030cb0(player);
     FUN_140037880(player);
+}
+
+// MS2-FUNCTIONAL: release every CRI Movie player subsystem and clear its owned state.
+// @0x140030cb0
+void FUN_140030cb0(void* player)
+{
+    CriUint8* bytes = (CriUint8*)player;
+    void** fields = (void**)player;
+    if (fields[0xe28 / sizeof(void*)])
+    {
+        FUN_140046784(fields[0xe28 / sizeof(void*)]);
+        fields[0xe28 / sizeof(void*)] = 0;
+    }
+    if (fields[0xe10 / sizeof(void*)])
+    {
+        FUN_1400420b0(fields[0xe10 / sizeof(void*)], fields[0xee0 / sizeof(void*)]);
+        fields[0xe10 / sizeof(void*)] = 0;
+    }
+    if (fields[0xe40 / sizeof(void*)])
+    {
+        FUN_140043be0(fields[0xe40 / sizeof(void*)]);
+        fields[0xe40 / sizeof(void*)] = 0;
+    }
+    if (fields[0xe08 / sizeof(void*)])
+    {
+        FUN_140043be0(fields[0xe08 / sizeof(void*)]);
+        fields[0xe08 / sizeof(void*)] = 0;
+    }
+    if (fields[0xd88 / sizeof(void*)])
+    {
+        FUN_140046784(fields[0xd88 / sizeof(void*)]);
+        memset(bytes + 0xdf8, 0, 8);
+        fields[0xd88 / sizeof(void*)] = 0;
+    }
+    memset(bytes + 0xad8, 0, 0x288);
+    if (fields[0xee0 / sizeof(void*)])
+    {
+        FUN_140028074(fields[0xee0 / sizeof(void*)]);
+        fields[0xee0 / sizeof(void*)] = 0;
+    }
+    memset(bytes + 0xad4, 0, 4);
 }
 
 // MS2-FUNCTIONAL: perform the player update under its handle critical section.
