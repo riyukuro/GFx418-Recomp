@@ -131,7 +131,7 @@ struct VertexShader
     int                           Uniforms[Uniform::SU_Count];  // +0x10, constant registers from the D3DX table
 
     bool Init(HAL* phal, const VertexShaderDesc* pd);   // 0x142741430
-    void Shutdown();                                    // 0x142741a90
+    void Shutdown();                                    // 0x142741ac0
 };
 
 struct FragShader
@@ -143,7 +143,7 @@ struct FragShader
     int                           TexParams[8];               // +0x60
 
     bool Init(HAL* phal, const FragShaderDesc* pd);     // 0x142741620
-    void Shutdown();                                    // 0x142741ac0
+    void Shutdown();                                    // 0x142741a90
 };
 
 // The D3D declaration a VertexFormat gets the first time it is drawn with a vertex shader.

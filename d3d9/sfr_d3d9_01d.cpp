@@ -1583,13 +1583,13 @@ void ShaderInterface::SetTexture(Shader, unsigned var, Render::Texture* ptexture
 }
 
 // @0x142741a90
-void VertexShader::Shutdown()
+void FragShader::Shutdown()
 {
     pProg = 0;
 }
 
 // @0x142741ac0
-void FragShader::Shutdown()
+void VertexShader::Shutdown()
 {
     pProg = 0;
 }

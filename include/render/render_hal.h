@@ -328,6 +328,8 @@ public:
 protected:
     bool initHAL(const HALInitParams& params);
     bool shutdownHAL();
+    // tells every registered HALNotify of a HAL event (0x142742580)
+    void notifyHandlers(HALNotifyType type);
 
 public:
     unsigned                     HALState;              // +0x010

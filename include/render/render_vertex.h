@@ -114,6 +114,14 @@ struct VertexXY16i
     static VertexFormat Format;   // 0x143a2fb70
 };
 
+// (appended for the D3D9 HAL, sfr_d3d9_01f) positions plus a per-vertex alpha factor
+struct VertexXY16iAlpha
+{
+    SInt16 x, y;
+    UByte  Alpha[4];
+    static VertexFormat Format;   // 0x143a2fbd0
+};
+
 // (appended for the mesh cache, sfr_render_07g) converts count vertices between formats through a stack buffer
 // (0x1426b9730)
 void ConvertVertices_Buffered(const VertexFormat& srcFormat, void* src, const VertexFormat& destFormat, void* dest,

@@ -61,6 +61,8 @@ public:
         ReuseLimit_ScreenSize = ~(UPInt)0   // 8 bytes per screen pixel
     };
 
+    RenderBufferManager(bool requireExactDepthStencil = false, UPInt memReuseLimit = ReuseLimit_ScreenSize,
+                        UPInt memAbsoluteLimit = 0);   // 0x1429a3670
     virtual ~RenderBufferManager();
 
     virtual bool Initialize(TextureManager* manager, ImageFormat format, const ImageSize& screenSize = ImageSize(0));
