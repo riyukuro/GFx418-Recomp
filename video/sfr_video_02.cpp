@@ -31,6 +31,8 @@ extern void FUN_140025410(void*);
 extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 extern void FUN_14257db50(void*);
+extern void* DAT_1431b6060;
+extern void* DAT_1431b63f8;
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
 
 namespace Scaleform { namespace GFx { namespace Video {
@@ -146,6 +148,40 @@ void FUN_140014730(void* object, void*, double value)
     unsigned tag = *reinterpret_cast<unsigned*>(bytes + 0xd8) & 0x1f;
     if (tag && (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(bytes + 0xe8)))
         FUN_140025410(*reinterpret_cast<void**>(bytes + 0x50));
+}
+
+// MS2-FUNCTIONAL: restores the InteractiveObject base tables, releases its provider and weak proxy, then destroys the base.
+// @0x1400104d0
+void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
+{
+    char* bytes = reinterpret_cast<char*>(object);
+    *reinterpret_cast<void***>(bytes) = &DAT_1431b6060;
+    *reinterpret_cast<void***>(bytes + 0x18) = &DAT_1431b63f8;
+    if (void* provider = *reinterpret_cast<void**>(bytes + 0x100))
+        reinterpret_cast<void (*)(void*)>(*reinterpret_cast<void***>(provider) + 2)(provider);
+    int* refs = *reinterpret_cast<int**>(bytes + 0xf8);
+    if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
+    object->~InteractiveObject();
+}
+
+// MS2-FUNCTIONAL: scalar deleting form of the recovered VideoCharacter base destruction.
+// @0x140010530
+Scaleform::GFx::InteractiveObject* FUN_140010530(Scaleform::GFx::InteractiveObject* object,
+                                                  unsigned __int64 flags)
+{
+    FUN_1400104d0(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: invokes the recovered CFunctionObject destructor and conditionally frees its storage.
+// @0x14000ed20
+Scaleform::GFx::AS2::CFunctionObject* FUN_14000ed20(
+    Scaleform::GFx::AS2::CFunctionObject* object, unsigned flags)
+{
+    object->~CFunctionObject();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
 }
 
 // VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
