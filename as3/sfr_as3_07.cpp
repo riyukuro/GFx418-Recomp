@@ -138,6 +138,8 @@ void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::Movie
 // MovieClip::GetLabeledFrame (exe body): resolves a frame label within a scene, throws if it is not found.
 bool FUN_142444050(Scaleform::GFx::AS3::Instances::fl_display::MovieClip* pthis, Scaleform::GFx::Sprite* psprite,
                    const Scaleform::GFx::AS3::Value& frame, const Scaleform::GFx::AS3::Value& scene, unsigned* ptargetFrame);
+// AvmDisplayObj heap getter (exe body): the memory heap of the object's movie.
+Scaleform::MemoryHeap* FUN_14250a5c0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
 // MovieRoot::RemoveActionQueueEntriesFor, QueueFrameActions, ExecuteActionQueue.
 void FUN_142522490(Scaleform::GFx::AS3::MovieRoot* proot, int level, Scaleform::GFx::DisplayObject* pdobj);
 void FUN_142520080(Scaleform::GFx::AS3::MovieRoot* proot);
@@ -1358,6 +1360,38 @@ namespace Instances { namespace fl_display
             result = 0;
         else
             result = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->GetCurrentFrame() + 1;
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines FrameScript::Descr's copy constructor into the PushBack
+    // @0x1424478a0
+    void MovieClip::addFrameScript(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        if (!pDispObj)
+            CreateStageObject();
+        GFx::Sprite* psprite = pDispObj->IsSprite() ? static_cast<GFx::Sprite*>(pDispObj.GetPtr()) : NULL;
+        if (!psprite)
+            return;
+        AvmDisplayObj* pavm = reinterpret_cast<AvmDisplayObj*>(psprite->GetAvmObjImpl());
+
+        // (frame, function) pairs; frames that do not convert are skipped.
+        ArrayCPP<FrameScript::Descr> descrs;
+        const unsigned pairCnt = argc >> 1;
+        for (unsigned i = 0, j = 0; i < pairCnt; ++i, j += 2)
+        {
+            SInt32 frame;
+            if (argv[j].Convert2Int32(frame))
+                descrs.PushBack(FrameScript::Descr(argv[j + 1], frame));
+        }
+        frameScript.Set(FUN_14250a5c0(pavm), psprite->pDef->GetFrameCount(), (unsigned)descrs.GetSize(),
+                        descrs.GetDataPtr());
+        if (frameScript.Get(psprite->GetCurrentFrame()))
+        {
+            // AvmSprite flags (+0x60) bit 1: a frame script is pending for the current frame.
+            reinterpret_cast<UByte*>(pavm)[0x60] |= 2;
+            if (psprite->IsInPlayList())
+                psprite->AddToOptimizedPlayList();
+        }
     }
 
     // Shared by gotoAndPlay/gotoAndStop: moves to the frame and runs the queued frame actions right away.
