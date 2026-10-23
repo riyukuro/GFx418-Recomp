@@ -56,9 +56,14 @@ enum ASBuiltinType : int
     ASBuiltin_TextSnapshot     = 43,
     ASBuiltin_SharedObject     = 44,
     ASBuiltin_unknown_         = 46,
+    ASBuiltin_dot_             = 49, // "."
+    ASBuiltin_dotdot_          = 50, // ".."
     ASBuiltin_undefined        = 51,
+    ASBuiltin_this             = 61,
     ASBuiltin_super            = 62,
-    ASBuiltin_this             = 68,
+    ASBuiltin__root            = 64, // "_root"
+    ASBuiltin__parent          = 65, // "_parent"
+    ASBuiltin_arguments        = 68,
     ASBuiltin_prototype        = 77,
     ASBuiltin___proto__        = 78,
     ASBuiltin_constructor      = 79,

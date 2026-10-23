@@ -124,6 +124,7 @@
 // MS2-RANGE: 0x142953280-0x142953519 .text$mn
 // MS2-RANGE: 0x142953980-0x142953ca5 .text$mn
 // MS2-RANGE: 0x142953cc0-0x142953d9f .text$mn
+// MS2-RANGE: 0x142954d10-0x142954eb4 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1645,7 +1646,7 @@ static SF_FORCEINLINE const Value* ValueHash_GetCaseCheck(const ASStringHash_GC<
     return 0;
 }
 
-// The innermost local frame that has varname; "this" (and "super" from version 6) stop the search.
+// The innermost local frame that has varname; "arguments" (and "super" from version 6) stop the search.
 // MS2-FUNCTIONAL cl merges the found and the this/super exits into one frame release; same code otherwise
 // @0x142944690
 const Value* Environment::FindLocal(const ASString& varname) const
@@ -1660,7 +1661,7 @@ const Value* Environment::FindLocal(const ASString& varname) const
         if (pval)
             return pval;
         unsigned version = GetVersion();
-        if (version >= 5 && GetBuiltin(ASBuiltin_this).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
+        if (version >= 5 && GetBuiltin(ASBuiltin_arguments).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
             return 0;
         if (version >= 6 && GetBuiltin(ASBuiltin_super).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
             return 0;
@@ -2365,6 +2366,49 @@ void SelectionCtorFunction::GetModalClip(const FnCall& fn)
         if (phandle)
             phandle->AddRef();
     }
+}
+
+// "." / "this", ".." / "_parent", "_root", "_levelN" (first path element only) or a child by instance name.
+// @0x142954d10
+InteractiveObject* AvmSprite::GetRelativeTarget(const ASString& name, bool firstCall)
+{
+    const Environment* penv          = reinterpret_cast<const Environment*>(Unrecovered_38);
+    bool               caseSensitive = penv->IsCaseSensitive();
+    if (name.IsBuiltin())
+    {
+        if (caseSensitive)
+        {
+            if (penv->GetBuiltin(ASBuiltin_dot_) == name || penv->GetBuiltin(ASBuiltin_this) == name)
+                return GetSprite();
+            if (penv->GetBuiltin(ASBuiltin_dotdot_) == name || penv->GetBuiltin(ASBuiltin__parent) == name)
+                return GetSprite()->GetParent();
+            if (penv->GetBuiltin(ASBuiltin__root) == name)
+                return GetTopParent();
+        }
+        else
+        {
+            name.ResolveLowercase();
+            if (penv->GetBuiltin(ASBuiltin_dot_) == name ||
+                penv->GetBuiltin(ASBuiltin_this).GetNode()->pLower == name.GetNode()->pLower)
+                return GetSprite();
+            if (penv->GetBuiltin(ASBuiltin_dotdot_) == name ||
+                penv->GetBuiltin(ASBuiltin__parent).GetNode()->pLower == name.GetNode()->pLower)
+                return GetSprite()->GetParent();
+            if (penv->GetBuiltin(ASBuiltin__root).GetNode()->pLower == name.GetNode()->pLower)
+                return GetTopParent();
+        }
+    }
+    if (name.ToCStr()[0] == '_' && firstCall)
+    {
+        const char* ptail = 0;
+        int         level = MovieRoot::ParseLevelName(name.ToCStr(), &ptail, caseSensitive);
+        if (level != -1 && *ptail == 0)
+            return GetAS2Root()->GetLevelMovie(level);
+    }
+    DisplayObject* pch = GetSprite()->mDisplayList.GetDisplayObjectByName(name, penv->IsCaseSensitive());
+    if (pch && pch->IsInteractiveObject())
+        return static_cast<InteractiveObject*>(pch);
+    return 0;
 }
 }}} // namespace Scaleform::GFx::AS2
 

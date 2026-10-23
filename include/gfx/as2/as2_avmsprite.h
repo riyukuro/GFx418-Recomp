@@ -132,6 +132,8 @@ public:
     virtual void ExecuteInitActionFrameTags(unsigned frame);
     // AvmInteractiveObjBase override: hand or arrow (exe 0x14294a430).
     virtual unsigned GetCursorType() const;
+    // AvmCharacter override: a path element relative to the clip (exe 0x142954d10).
+    virtual InteractiveObject* GetRelativeTarget(const ASString& name, bool firstCall);
 
     // The data members (only those used so far). AvmSpriteBase's vftable is at +0x30.
     UByte                                   Unrecovered_38[0x1e0 - 0x38];
