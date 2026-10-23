@@ -64,10 +64,16 @@ MS2_EXTERN(0x142519200, void(), FUN_142519200);
 MS2_EXTERN(0x142506e10, const char*(void*, void*), FUN_142506e10);
 MS2_EXTERN(0x142519d50, void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t), FUN_142519d50);
 MS2_EXTERN(0x1424ddc20, void(void*), FUN_1424ddc20);
+MS2_EXTERN(0x1424d6750, void(void*), FUN_1424d6750);
+MS2_EXTERN(0x1424d6480, void(void*), FUN_1424d6480);
 MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
 MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
 MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
 MS2_GLOBAL(0x14317bf80, void*, AvmInteractiveVtable);
+MS2_GLOBAL(0x1431b7c70, void*, VideoTraitsVtable);
+MS2_GLOBAL(0x1431b7f60, void*, VideoTraitsBaseVtable);
+MS2_GLOBAL(0x1431b7ea0, void*, VideoTraitsSubVtableA);
+MS2_GLOBAL(0x1431b7de0, void*, VideoTraitsSubVtableB);
 MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
 MS2_EXTERN(0x1424eb610, void*(void*), FUN_1424eb610);
 MS2_EXTERN(0x140010b80, void(void*, void*), FUN_140010b80);
@@ -1024,5 +1030,43 @@ std::uint64_t* FUN_142742f70(std::uint64_t* destination, const std::uint64_t* so
     destination[0] = source[0]; destination[1] = source[1]; destination[2] = source[2];
     FUN_142742ed0(destination + 3, source + 3);
     return destination;
+}
+
+// MS2-FUNCTIONAL: runs the base AS3 traits initializer and installs the Video traits vtable and object size.
+// @0x14001a080
+void* FUN_14001a080(void* traits)
+{
+    FUN_1424d6750(traits);
+    *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(traits) + 0xc) = 0x78;
+    *reinterpret_cast<void***>(traits) = &VideoTraitsVtable;
+    return traits;
+}
+// MS2-FUNCTIONAL: releases an old reference and stores the supplied pointer.
+// @0x14001a0e0
+std::uint64_t* FUN_14001a0e0(std::uint64_t* holder, std::uint64_t replacement)
+{
+    if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
+    *holder = replacement; return holder;
+}
+// MS2-FUNCTIONAL: initializes a native callback record with its VM, property and integer payload.
+// @0x14001a920
+std::uint64_t* FUN_14001a920(std::uint64_t* record, std::uint64_t vm, std::uint64_t property, int, std::uint64_t, const std::uint32_t* value)
+{
+    record[1] = property; record[0] = vm; reinterpret_cast<std::uint32_t*>(record)[4] = *value;
+    return record;
+}
+// MS2-FUNCTIONAL: runs the AS3 traits base initializer and installs the Video player traits vtables and defaults.
+// @0x14001af70
+std::uint64_t* FUN_14001af70(std::uint64_t* traits)
+{
+    FUN_1424d6480(traits);
+    reinterpret_cast<std::uint32_t*>(traits)[20] = 0;
+    *reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(traits) + 0x4c) = 0;
+    reinterpret_cast<std::uint32_t*>(traits)[18] = 0;
+    *reinterpret_cast<std::uint8_t*>(reinterpret_cast<unsigned char*>(traits) + 0x54) = 1;
+    *reinterpret_cast<void***>(traits) = &VideoTraitsBaseVtable;
+    reinterpret_cast<void***>(traits)[6] = &VideoTraitsSubVtableA;
+    reinterpret_cast<void***>(traits)[8] = &VideoTraitsSubVtableB;
+    return traits;
 }
 } // namespace
