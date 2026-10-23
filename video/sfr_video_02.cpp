@@ -10,6 +10,7 @@
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/as3_vm.h"
+#include "../include/gfx/as3/obj/as3_obj_events.h"
 #include "../include/gfx/gfx_stream.h"
 #include <cstring>
 #include <new>
@@ -25,6 +26,7 @@ extern void FUN_14257eb30(void*);
 extern void FUN_1425925f0(void*);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
+extern void FUN_140025300(void*);
 extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 
@@ -698,6 +700,35 @@ void** FUN_140014e10(void** values, void* first, void* second)
     values[1] = second;
     values[2] = NumberNaNBits();
     return values;
+}
+
+static void ReleaseAS3ValueAt(void* address)
+{
+    Scaleform::GFx::AS3::Value* value = static_cast<Scaleform::GFx::AS3::Value*>(address);
+    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
+    {
+        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
+    }
+}
+
+// MS2-FUNCTIONAL: releases the VideoPlayer references and AS3 fields before delegating to the recovered base dtor.
+// @0x140014830
+void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* dispatcher)
+{
+    char* fields = reinterpret_cast<char*>(dispatcher);
+    void* player = *reinterpret_cast<void**>(fields + 0x50);
+    if (player)
+    {
+        *reinterpret_cast<void**>(static_cast<char*>(player) + 0x18) = 0;
+        FUN_140025300(player);
+    }
+    ReleaseAS3ValueAt(fields + 0x98);
+    ReleaseAS3ValueAt(fields + 0xb8);
+    ReleaseAS3ValueAt(fields + 0xd8);
+    void* weakRefs[2] = {*reinterpret_cast<void**>(fields + 0x58), player};
+    for (void* ref : weakRefs)
+        if (ref) FUN_14257dcd0(ref);
+    dispatcher->~EventDispatcher();
 }
 
 // MS2-FUNCTIONAL: reads the supplied sound-transform value and refreshes the stored player coordinates.
