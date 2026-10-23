@@ -11,6 +11,12 @@
 #include <cstring>
 
 extern "C" CriSint32 DAT_143ba9d28;
+extern "C" const char* DAT_143ba9d08;
+extern "C" const char* DAT_143ba9d20;
+extern "C" void* DAT_143b15f60;
+extern "C" CriUint8 DAT_143b27c80[];
+void FUN_1400532b0(void);
+void FUN_1400532d0(void);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -646,4 +652,86 @@ void* FUN_1400469f0(void* dst, size_t size, const void* src, size_t count)
 {
     memcpy_s(dst, size, src, count);
     return dst;
+}
+
+// MS2-FUNCTIONAL: execute the CRI Movie Player manager initialization hook.
+// @0x140041ea0
+void criMvPlyAmng_Initialize(void)
+{
+    FUN_1400532b0();
+}
+
+// MS2-FUNCTIONAL: execute the CRI Movie Player manager finalization hook.
+// @0x140041ec0
+void criMvPlyAmng_Finalize(void)
+{
+    FUN_1400532d0();
+}
+
+// MS2-FUNCTIONAL: return the player's shared work-memory size and default alignment.
+// @0x1400411e0
+void* FUN_1400411e0(CriUint32* size)
+{
+    *size = 0x10;
+    return DAT_143b27c80;
+}
+
+// MS2-FUNCTIONAL: publish CRI Base's runtime banner string.
+// @0x1400411f8
+void FUN_1400411f8(void)
+{
+    DAT_143ba9d08 = "\nCRI Base/PCx64 Ver.2.21.07 Build:Jan 13 2012 19:02:07\n";
+}
+
+// MS2-FUNCTIONAL: forward to the attached object's virtual stop operation when present.
+// @0x140041250
+void FUN_140041250(void* object)
+{
+    void** target = *(void***)((CriUint8*)object + 0x10);
+    if (target)
+        (*(void (**)(void*))(*(void**)((CriUint8*)*target + 0x10)))(*target);
+}
+
+// MS2-FUNCTIONAL: forward to the attached object's virtual operation at slot five when present.
+// @0x1400412c0
+void FUN_1400412c0(void* object)
+{
+    void** target = *(void***)((CriUint8*)object + 0x10);
+    if (target)
+        (*(void (**)(void*))(*(void**)((CriUint8*)*target + 0x28)))(*target);
+}
+
+// MS2-FUNCTIONAL: forward to the attached object's virtual destroy operation when present.
+// @0x140041340
+void FUN_140041340(void* object)
+{
+    void** target = *(void***)((CriUint8*)object + 0x10);
+    if (target)
+        (*(void (**)(void*))(*(void**)((CriUint8*)*target + 0x40)))(*target);
+}
+
+// MS2-FUNCTIONAL: invoke the global heap manager's work-size operation.
+// @0x140041d20
+CriUint64 FUN_140041d20(void)
+{
+    void* manager = DAT_143b15f60;
+    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)manager + 0x60)))(manager);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: release the supplied CRI heap through the global heap manager.
+// @0x140041dd0
+void FUN_140041dd0(void* heap)
+{
+    void* manager = DAT_143b15f60;
+    (*(void (**)(void*, void*))(*(void**)((CriUint8*)*(void**)manager + 0x60)))(manager, heap);
+}
+
+// MS2-FUNCTIONAL: initialize the USF demux runtime banner on first use and increment its reference count.
+// @0x140044e84
+void FUN_140044e84(void)
+{
+    if (DAT_143ba9d28 == 0)
+        DAT_143ba9d20 = "\nCRI UsfDmx/PCx64 Ver.1.01.03 Build:Jan 13 2012 19:02:04\n";
+    ++DAT_143ba9d28;
 }
