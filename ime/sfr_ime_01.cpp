@@ -126,6 +126,8 @@ extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
 extern "C" const void* DAT_14313a228[];
+extern "C" const void* DAT_14313a238[];
+extern "C" const void* DAT_14313a5f8[];
 extern "C" const void* DAT_14313a200[];
 extern "C" const void* DAT_143138360[];
 extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
@@ -3441,6 +3443,50 @@ bool FUN_1423d43b0(void* raw)
 bool FUN_1423d05a0(void* raw)
 {
     return FUN_1423d43b0(raw);
+}
+
+// MS2-FUNCTIONAL: initializes the executable's input-window strings, owner link, callback table, and UTF-16 backing arrays.
+// @0x1423d18b0
+void* FUN_1423d18b0(void* raw, void* owner, void* userData)
+{
+    auto* words = static_cast<unsigned long long*>(raw);
+    auto* bytes = static_cast<unsigned char*>(raw);
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a5f8);
+    words[1] = 0;
+    for (unsigned slot : { 2u, 3u, 4u, 0xfu }) new (words + slot) Scaleform::String();
+    words[5] = reinterpret_cast<unsigned long long>(userData);
+    for (unsigned slot : { 7u, 8u, 9u, 10u, 0x16u, 0x17u, 0x18u }) words[slot] = 0;
+    words[0x15] = reinterpret_cast<unsigned long long>(owner);
+
+    auto* child = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x870));
+    if (child) {
+        FUN_1423d9430(child, raw);
+        child[0] = reinterpret_cast<unsigned long long>(DAT_14313a238);
+    }
+    words[6] = reinterpret_cast<unsigned long long>(child);
+    FUN_1423d8e80(words + 7, child);
+
+    bytes[0x80] = 1;
+    *reinterpret_cast<unsigned long long*>(bytes + 0x84) = 0x14;
+    *reinterpret_cast<unsigned*>(bytes + 0x8c) = 0x00ffffff;
+    *reinterpret_cast<unsigned*>(bytes + 0xd4) = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0x60) = 0;
+    *reinterpret_cast<unsigned short*>(bytes + 0xa0) = 0;
+    words[0xb4] = 1;
+    words[0xb6] = 0;
+    bytes[0x5bc] = 0;
+
+    auto initializeArray = [](unsigned long long* array) {
+        auto* buffer = static_cast<wchar_t*>(Scaleform::Memory::Alloc(0x200));
+        if (!buffer) return;
+        std::memset(buffer, 0, 0x200);
+        array[0] = reinterpret_cast<unsigned long long>(buffer);
+        array[1] = 0x100;
+        array[2] = 0x100;
+    };
+    initializeArray(words + 8);
+    initializeArray(words + 0x16);
+    return raw;
 }
 
 // MS2-FUNCTIONAL: rebuilds the AS3 status list by clearing it, replaying retained row callbacks, and restoring selection.
