@@ -4775,6 +4775,71 @@ void FUN_140031470(void* player)
     FUN_1400317b0(player);
 }
 
+// MS2-FUNCTIONAL: consume a queued CRID subtitle header and update the alternate subtitle stream slot.
+// @0x140036710
+void FUN_140036710(void* player)
+{
+    if (!player)
+        return;
+    struct SubtitleQueueView { CriUint8 Reserved[0xd80]; void* Queue; };
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    void* queue = ((SubtitleQueueView*)player)->Queue;
+    if (!queue)
+        return;
+
+    struct SubtitleRingState
+    {
+        CriUint8 Reserved[0x5e8];
+        CriUint16 CurrentIndex;
+        CriUint8 Reserved2[6];
+        CriUint32 Phase;
+    };
+    struct SubtitleStreamEntry
+    {
+        CriUint8 Reserved0[0x10];
+        CriUint32 Field10;
+        CriUint8 Reserved1[0x38];
+        CriUint32 Field4c;
+        CriUint8 Reserved2[0x200];
+        CriUint32 Field250;
+        CriUint8 Reserved3[0x1c];
+        CriUint32 Field270;
+        CriUint8 Reserved4[0x6c];
+        CriUint32 State;
+    };
+    struct SubtitleStreamList { CriUint8 Reserved[0x28]; SubtitleStreamEntry Entries[2]; };
+    struct SubtitleHistory { CriUint32 Field0; CriUint32 Field4; CriUint32 Field8; CriUint32 FieldC; CriUint32 Field10; };
+    struct SubtitleHistorySlot { CriUint8 Reserved[0x2cc]; SubtitleHistory Value; };
+    struct SubtitleHistoryTable { CriUint8 Reserved[0x2ec]; SubtitleHistorySlot Slots[2]; };
+    SubtitleRingState* ring = (SubtitleRingState*)player;
+    if ((ring->Phase % 2) == ring->CurrentIndex)
+        return;
+    SubtitleStreamEntry* target = &((SubtitleStreamList*)player)->Entries[ring->CurrentIndex];
+    if (target->State == 1)
+        return;
+
+    CriMovieInputChunk chunk = {};
+    if (FUN_1400467b8(queue, 1) && (FUN_1400467a0(queue, 1, -1, &chunk), chunk.Size > 0x1f))
+    {
+        CriUint32 parsed[14] = {};
+        FUN_14003b3fc(chunk.Data, chunk.Size, parsed);
+        if (parsed[0] == 0x43524944)
+        {
+            CriSint32 contentSize = 0;
+            CriMovieParsedChunk header = { FUN_14003b674(chunk.Data, chunk.Size, &contentSize), contentSize, 0 };
+            FUN_140032420(player, target, &header);
+            SubtitleHistory* history = &((SubtitleHistoryTable*)player)->Slots[ring->CurrentIndex].Value;
+            history->Field0 = target->Field4c;
+            history->Field4 = target->Field10;
+            history->Field8 = target->Field250;
+            history->FieldC = target->Field270;
+            history->Field10 = 0;
+            target->State = 1;
+        }
+        FUN_1400467b0(queue, 0, &chunk);
+    }
+}
+
 // MS2-FUNCTIONAL: drain subtitle decoder queues whose frame indices have fallen behind playback.
 // @0x1400369e0
 void FUN_1400369e0(void* player)
