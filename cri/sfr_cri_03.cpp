@@ -441,3 +441,45 @@ CriUint32 criUtfRtv_SearchRecNoByStr(const CriUtfRtvView* table, CriUint32 field
     }
     return 0xffffffff;
 }
+
+// MS2-FUNCTIONAL: these state initializers clear the decoder's four motion-vector components.
+// @0x142ccb4f0
+void MPVDEC_ResetMv(CriMpvDecoderState* state)
+{
+    memset(state->MotionVectors, 0, sizeof(state->MotionVectors));
+}
+
+// MS2-FUNCTIONAL: reset the three MPEG DC predictors to the executable's midpoint value.
+// @0x142ccb500
+void MPVDEC_ResetDc(CriMpvDecoderState* state)
+{
+    state->DcPredictors[0] = 0x400;
+    state->DcPredictors[1] = 0x400;
+    state->DcPredictors[2] = 0x400;
+}
+
+// MS2-FUNCTIONAL: adjust macroblock address and column by 1 minus the supplied run length.
+// @0x142ccc580
+void mpvumc_SubMbadr(CriMpvDecoderState* state, CriSint32 run)
+{
+    CriSint32 delta = 1 - run;
+    state->MacroblockAddress += delta;
+    state->MacroblockColumn += delta;
+    while (state->MacroblockColumn < 0)
+    {
+        state->MacroblockColumn += state->MacroblockWidth;
+        --state->MacroblockRow;
+    }
+}
+
+// MS2-FUNCTIONAL: advance the macroblock column, wrapping to the next row at the row width.
+// @0x142ccc5c0
+void mpvumc_IncreMbadr(CriMpvDecoderState* state)
+{
+    if (++state->MacroblockColumn >= state->MacroblockWidth)
+    {
+        ++state->MacroblockRow;
+        state->MacroblockColumn = 0;
+    }
+    ++state->MacroblockAddress;
+}

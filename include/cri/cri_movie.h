@@ -258,6 +258,20 @@ struct CriMvSubAudioTrackState
     CriSint32 TrackValues[64];
 };
 
+struct CriMpvDecoderState
+{
+    CriUint8 Reserved0[0x10];
+    CriSint32 MotionVectors[4];
+    CriUint8 Reserved1[0x15a0 - 0x20];
+    CriSint32 MacroblockWidth;
+    CriUint8 Reserved2[0x1794 - 0x15a4];
+    CriSint32 MacroblockAddress;
+    CriSint32 MacroblockRow;
+    CriSint32 MacroblockColumn;
+    CriUint8 Reserved3[0x17ac - 0x17a0];
+    CriSint32 DcPredictors[3];
+};
+
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
 void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 
