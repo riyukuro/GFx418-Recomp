@@ -1244,4 +1244,28 @@ void* CopyTextRecord(void* destination, const void* source)
     return destination;
 }
 
+// MS2-FUNCTIONAL: finds the source tree's maximum depth and adds it to each destination child and descendant.
+// @0x14268e6a0
+void AddTreeDepthOffset(void* destination, void* source)
+{
+    auto* src = static_cast<unsigned char*>(source);
+    int maximum = *reinterpret_cast<int*>(src + 0x28);
+    auto** sourceChildren = *reinterpret_cast<void***>(src + 0x30);
+    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x38);
+    for (std::size_t i = 0; i < sourceCount; ++i)
+        UpdateTreeMaximumDepth(sourceChildren[i], reinterpret_cast<unsigned*>(&maximum));
+
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto** destinationChildren = *reinterpret_cast<void***>(dst + 0x30);
+    const std::size_t destinationCount = *reinterpret_cast<std::size_t*>(dst + 0x38);
+    for (std::size_t i = 0; i < destinationCount; ++i) {
+        auto* child = static_cast<unsigned char*>(destinationChildren[i]);
+        *reinterpret_cast<int*>(child + 0x28) += maximum;
+        auto** grandchildren = *reinterpret_cast<void***>(child + 0x30);
+        const std::size_t grandchildCount = *reinterpret_cast<std::size_t*>(child + 0x38);
+        for (std::size_t j = 0; j < grandchildCount; ++j)
+            AddTreeNodeValue(grandchildren[j], &maximum);
+    }
+}
+
 }
