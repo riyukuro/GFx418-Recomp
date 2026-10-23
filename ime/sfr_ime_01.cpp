@@ -122,6 +122,9 @@ extern "C" const unsigned long long DAT_1431c4ee8;
 extern "C" const unsigned long long DAT_1431c4898;
 extern "C" const unsigned long long DAT_1431c5068;
 extern "C" const unsigned long long DAT_14313b6b0;
+extern "C" const unsigned long long DAT_1431c4858;
+extern "C" const unsigned long long DAT_1431c4d28;
+extern "C" const unsigned long long DAT_14313b8d8;
 extern "C" const unsigned long long DAT_1431c4ef0;
 extern "C" void* DAT_143b15f60;
 extern "C" const void* DAT_14313bc60[];
@@ -2544,6 +2547,54 @@ unsigned long long FUN_1423da730(void* raw, int state)
         }
     }
     return 0;
+}
+
+// MS2-FUNCTIONAL: creates the IME COM manager and records both executable callback interfaces and their result keys.
+// @0x1423daae0
+unsigned char FUN_1423daae0(void* raw)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    IUnknown* manager = nullptr;
+    HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28),
+        reinterpret_cast<void**>(&manager));
+    if (FAILED(hr) || !manager) return 0;
+    *reinterpret_cast<IUnknown**>(self + 0x28) = manager;
+    IUnknown* controller = nullptr;
+    hr = manager->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b8d8),
+        reinterpret_cast<void**>(&controller));
+    if (FAILED(hr) || !controller) {
+        manager->Release();
+        *reinterpret_cast<IUnknown**>(self + 0x28) = nullptr;
+        return 0;
+    }
+    auto** controllerVtable = *reinterpret_cast<void***>(controller);
+    reinterpret_cast<void(*)(void*, void*, unsigned)>(controllerVtable[0x70 / sizeof(void*)])(
+        controller, self + 0x38, 4);
+    *reinterpret_cast<IUnknown**>(self + 0x40) = controller;
+
+    auto queryCallback = [&](const void* iid, void* argument, unsigned* resultKey) {
+        IUnknown* callback = nullptr;
+        HRESULT query = manager->QueryInterface(*reinterpret_cast<const IID*>(&DAT_1431c51e8),
+            reinterpret_cast<void**>(&callback));
+        if (FAILED(query) || !callback) return false;
+        auto** vtable = *reinterpret_cast<void***>(callback);
+        query = reinterpret_cast<HRESULT(*)(void*, const void*, void*, unsigned*)>(vtable[3])(
+            callback, iid, argument, resultKey);
+        callback->Release();
+        return SUCCEEDED(query);
+    };
+    if (!queryCallback(&DAT_1431c4d58, self, reinterpret_cast<unsigned*>(self + 0x18))) {
+        *reinterpret_cast<unsigned*>(self + 0x18) = 0xffffffff;
+        return 0;
+    }
+    if (!queryCallback(&DAT_14313b8b8, self + 8, reinterpret_cast<unsigned*>(self + 0x1c))) {
+        *reinterpret_cast<unsigned*>(self + 0x1c) = 0xffffffff;
+        return 0;
+    }
+    auto* owner = *reinterpret_cast<unsigned char**>(self + 0x10);
+    *reinterpret_cast<int*>(owner + 0xbc) = 0;
+    return 1;
 }
 
 // MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
