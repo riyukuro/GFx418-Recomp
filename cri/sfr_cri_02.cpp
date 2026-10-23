@@ -36,6 +36,7 @@ extern const char* DAT_1431b97a8[];
 extern const char* DAT_1431b9820;
 extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
+extern CriSint32 DAT_143b27948;
 extern CriUint8 DAT_143b27950[];
 extern const void* DAT_1431b95e8[];
 extern const void* DAT_1431b91b0[];
@@ -2651,6 +2652,104 @@ void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
     FUN_14004698c(DAT_143b27ab0, 0x100, DAT_1431b9820);
     FUN_14004698c(DAT_143b27ab0, 0x100, description);
     FUN_140038ce4(category, DAT_143b27ab0, 0, 0, NULL);
+}
+
+// MS2-FUNCTIONAL: translate the active CRI stream slot into the public streaming-parameter record.
+// @0x14002fbe0
+void FUN_14002fbe0(void* player, CriMvStreamingParameters* output)
+{
+    memset(output, 0, sizeof(*output));
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    if (state->Status == 0 || state->Status == 1 || state->Status == 8 ||
+        state->Status == 9 || state->Status == 10)
+        return;
+
+    CriMvPlyHeaderAnalysisFields* headers = (CriMvPlyHeaderAnalysisFields*)player;
+    CriMovieStreamSlotsView* slots = (CriMovieStreamSlotsView*)player;
+    CriUint32* stream = NULL;
+    if (*(CriUint32*)((CriUint8*)player + 0x5ec) == 0)
+        stream = (CriUint32*)headers->AnalyzedHeader;
+    else
+        stream = (CriUint32*)&slots->Ring.Slots[(*(CriUint32*)((CriUint8*)player + 0x5f0) % 2)];
+
+    CriUint32* dest = (CriUint32*)output;
+    dest[1] = *(CriUint32*)((CriUint8*)player + 0x8bc);
+    dest[2] = stream[0x0c / 4];
+    dest[3] = stream[0x04 / 4];
+    dest[4] = stream[0x08 / 4];
+    dest[5] = 0xffffffff;
+    dest[6] = stream[0x10 / 4];
+    if (stream[0x14 / 4] == 0)
+    {
+        for (CriUint32 i = 7; i <= 0x12; ++i)
+            dest[i] = 0;
+    }
+    else
+    {
+        dest[7] = stream[0x14 / 4];
+        dest[8] = stream[0x18 / 4];
+        dest[9] = stream[0x1c / 4];
+        dest[10] = stream[0x20 / 4];
+        dest[11] = 0;
+        dest[12] = stream[0x24 / 4];
+        dest[13] = stream[0x28 / 4];
+        dest[14] = stream[0x2c / 4];
+        dest[15] = stream[0x30 / 4];
+        dest[16] = stream[0x34 / 4];
+        dest[17] = stream[0x38 / 4];
+        dest[18] = stream[0x3c / 4];
+    }
+
+    CriUint32 firstAudio = 0xffffffff;
+    for (CriUint32 i = 0; i < 0x20; ++i)
+    {
+        CriUint32* sourceAudio = stream + 0x50 / 4 + i * 4;
+        CriUint32* outputAudio = dest + 0x54 / 4 + i * 4;
+        if (sourceAudio[1] == 0)
+        {
+            outputAudio[0] = outputAudio[1] = outputAudio[2] = outputAudio[3] = 0;
+        }
+        else
+        {
+            outputAudio[0] = sourceAudio[0];
+            outputAudio[1] = sourceAudio[1];
+            outputAudio[2] = sourceAudio[2];
+            outputAudio[3] = *(CriUint32*)((CriUint8*)player + 0x8c4);
+            if (firstAudio == 0xffffffff)
+                firstAudio = i;
+        }
+    }
+    output->num_audio = stream[0x4c / 4];
+    output->track_play_audio = -1;
+    if (output->num_audio != 0)
+    {
+        CriSint32 selected = *(CriSint32*)((CriUint8*)player + 0x8c8);
+        if (selected == 100)
+            output->track_play_audio = (CriSint32)firstAudio;
+        else if (selected >= 0 && selected < 0x20 &&
+                 stream[(0x54 + selected * 0x10) / 4] != 0)
+            output->track_play_audio = selected;
+    }
+
+    dest[0xa1] = stream[0x40 / 4] != 0;
+    if (stream[0x250 / 4] != 0 && stream[0x258 / 4] == 1)
+    {
+        output->num_subtitle = stream[0x25c / 4];
+        output->max_subtitle_size = stream[0x268 / 4];
+    }
+    output->channel_play_subtitle = -1;
+    output->num_alpha = stream[0x270 / 4];
+    output->alpha_prm[0].max_width = stream[0x274 / 4];
+    output->alpha_prm[0].max_height = stream[0x278 / 4];
+    output->alpha_prm[0].disp_width = stream[0x27c / 4];
+    output->alpha_prm[0].disp_height = stream[0x280 / 4];
+    output->alpha_prm[0].framerate = stream[0x284 / 4];
+    output->alpha_prm[0].total_frames = stream[0x288 / 4];
+    output->alpha_prm[0].alpha_type = stream[0x28c / 4];
+    output->is_playable = 1;
+    if (dest[0x11] == 2 && DAT_143b27948 == 0)
+        output->is_playable = 0;
+    output->format_ver = stream[0x290 / 4];
 }
 
 // MS2-FUNCTIONAL: derive the 32-byte CRI USM byte mask from the supplied key seed.
