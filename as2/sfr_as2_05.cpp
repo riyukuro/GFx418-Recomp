@@ -122,6 +122,7 @@
 // MS2-RANGE: 0x142953da0-0x142953ed5 .text$mn
 // MS2-RANGE: 0x142956090-0x142956193 .text$mn
 // MS2-RANGE: 0x142953280-0x142953519 .text$mn
+// MS2-RANGE: 0x142953980-0x142953ca5 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2296,6 +2297,51 @@ bool Object::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val
     if (psc->IsCaseSensitive())
         return Object_GetMemberRawT<true>(this, psc, name, val);
     return Object_GetMemberRawT<false>(this, psc, name, val);
+}
+
+// Value::SetAsFunction where the exe inlines it.
+static SF_FORCEINLINE void Value_SetAsFunctionInl(Value* pval, const FunctionRefBase& func)
+{
+    if (pval->T.Type != Value::FUNCTION || pval->V.FunctionValue.Function != func.Function)
+    {
+        pval->DropRefs();
+        pval->T.Type = Value::FUNCTION;
+        pval->V.FunctionValue.Init(func);
+    }
+}
+
+// MS2-FUNCTIONAL same logic; register allocation and the constructor copy (exe builds it in registers) differ
+// @0x142953980
+bool GASPrototypeBase::GetMemberRawConstructor(Object* pthis, ASStringContext* psc, const ASString& name,
+                                               Value* val, bool isConstructor2)
+{
+    Value  v(Value::UNSET);
+    Member m;
+    // A member set on the prototype itself wins.
+    if (psc->IsCaseSensitive() ? MemberHash_Get(&pthis->Members, name, &m)
+                               : MemberHash_GetNoCase(&pthis->Members, name, &m))
+    {
+        v = m.GetMemberValue();
+        if (v.IsSet())
+        {
+            *val = v;
+            return true;
+        }
+    }
+    FunctionRef ctor;
+    if (isConstructor2)
+        ctor = __Constructor__;
+    else
+        ctor.Init(FunctionRef(Constructor));
+    if (!ctor.Function)
+    {
+        val->SetUndefined();
+        if (pthis->pProto)
+            return pthis->pProto->GetMemberRaw(psc, name, val);
+    }
+    else
+        Value_SetAsFunctionInl(val, ctor);
+    return true;
 }
 }}} // namespace Scaleform::GFx::AS2
 
