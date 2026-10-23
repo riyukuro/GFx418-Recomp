@@ -1196,6 +1196,327 @@ namespace Scaleform { namespace GFx { namespace AS3
     }}
 }}}
 
+// ---- Array.sort: the elements are collected (as numbers, strings or element pointers), sorted, then copied back
+namespace Scaleform {
+// A sort key and the index of the element it came from (same as sfr_as3_20).
+template <typename F, typename S>
+struct Pair
+{
+    Pair(const F& f, const S& s) : First(f), Second(s) {}
+
+    F First;
+    S Second;
+};
+}
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // A sort key, the element and its index.
+    template <typename T1, typename T2, typename T3>
+    struct Triple : public Pair<T1, T2>
+    {
+        Triple(const T1& f, const T2& s, const T3& t) : Pair<T1, T2>(f, s), Third(t) {}
+
+        T3 Third;
+    };
+
+    typedef Triple<ASString, const Value*, UInt32>      StringValueTriple;
+    typedef Triple<Value::Number, const Value*, UInt32> NumberValueTriple;
+    typedef Pair<const Value*, UInt32>                  ValuePtrPair;
+
+    // Array.sort option bits.
+    enum
+    {
+        SortFlags_CaseInsensitive    = 0x1,
+        SortFlags_Descending         = 0x2,
+        SortFlags_UniqueSort         = 0x4,
+        SortFlags_ReturnIndexedArray = 0x8,
+        SortFlags_Numeric            = 0x10,
+        SortFlags_Locale             = 0x400
+    };
+
+    // numeric ordering of the keys. 1 byte, passed by value.
+    class CompareAsNumber
+    {
+    public:
+        CompareAsNumber(bool desc) : Desc(desc) {}
+
+        bool operator()(const NumberValueTriple& a, const NumberValueTriple& b) const
+        {
+            if (Desc)
+                return b.First < a.First;
+            return a.First < b.First;
+        }
+        bool Equal(const NumberValueTriple& a, const NumberValueTriple& b) const { return a.First == b.First; }
+
+    private:
+        CompareAsNumber& operator=(const CompareAsNumber&);
+
+        const bool Desc;
+    };
+
+    // string ordering of the keys, by CompareAsString::Compare.
+    class CompareAsStringTriple
+    {
+    public:
+        CompareAsStringTriple(const CompareAsString& c) : Cmp(c) {}
+
+        bool operator()(const StringValueTriple& a, const StringValueTriple& b) const { return Cmp.Compare(a.First, b.First) < 0; }
+        bool Equal(const StringValueTriple& a, const StringValueTriple& b) const { return Cmp.Compare(a.First, b.First) == 0; }
+
+    private:
+        CompareAsStringTriple& operator=(const CompareAsStringTriple&);
+
+        CompareAsString Cmp;
+    };
+
+    // ordering by a script compare function. 0x10 bytes: the VM and the function (no descending flag in 4.1).
+    class CompareValuePtr
+    {
+    public:
+        CompareValuePtr(VM& vm, const Value& f) : Vm(vm), Func(f) {}
+
+        bool operator()(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) < 0; }
+        bool Equal(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) == 0; }
+
+        int Compare(const Value& a, const Value& b) const;
+
+    private:
+        CompareValuePtr& operator=(const CompareValuePtr&);
+
+        VM&          Vm;
+        const Value& Func;
+    };
+
+    // The collectors' operator() bodies lie in sfr_as3_02's range (0x1423f1ec0/0x1423f1d70/0x1423f1cb0); they are
+    // defined here until that unit is written. vftables 0x143141580/0x143141590/0x1431415a0.
+    class ValuePtrCollector : public ArrayFunc
+    {
+    public:
+        ValuePtrCollector(ArrayDH<ValuePtrPair>& p) : Pairs(p) {}
+
+        virtual void operator()(UInt32 ind, const Value& v) { Pairs.PushBack(ValuePtrPair(&v, ind)); }
+
+    private:
+        ValuePtrCollector& operator=(const ValuePtrCollector&);
+
+        ArrayDH<ValuePtrPair>& Pairs;
+    };
+
+    class Value2StrCollector : public ArrayFunc
+    {
+    public:
+        Value2StrCollector(VM& vm, ArrayDH<StringValueTriple>& p) : Vm(vm), Pairs(p) {}
+
+        virtual void operator()(UInt32 ind, const Value& v)
+        {
+            ASString str = Vm.GetStringManager().CreateEmptyString();
+            if (!v.Convert2String(str))
+                return;
+            Pairs.PushBack(StringValueTriple(str, &v, ind));
+        }
+
+    private:
+        Value2StrCollector& operator=(const Value2StrCollector&);
+
+        VM&                         Vm;
+        ArrayDH<StringValueTriple>& Pairs;
+    };
+
+    class Value2NumberCollector : public ArrayFunc
+    {
+    public:
+        Value2NumberCollector(ArrayDH<NumberValueTriple>& p) : Pairs(p) {}
+
+        virtual void operator()(UInt32 ind, const Value& v)
+        {
+            Value::Number num;
+            if (!v.Convert2Number(num))
+                return;
+            Pairs.PushBack(NumberValueTriple(num, &v, ind));
+        }
+
+    private:
+        Value2NumberCollector& operator=(const Value2NumberCollector&);
+
+        ArrayDH<NumberValueTriple>& Pairs;
+    };
+
+    // SparseArray::PushBack (0x14241e4b0, sfr_as3_04), which the exe inlines into Array.sort.
+    static SF_INLINE void PushBackInline(SparseArray& sa, const Value& v)
+    {
+        if (sa.Length == sa.ValueA.GetSize())
+            sa.ValueA.PushBack(v);
+        else
+        {
+            sa.ValueHHighInd = sa.Length;
+            sa.ValueH.Set(sa.ValueHHighInd, v);
+        }
+        ++sa.Length;
+    }
+
+    // MS2-FUNCTIONAL: argument setup scheduling around ExecuteInternalUnsafe differs (same instructions, reordered)
+    // @0x142406e70
+    int CompareValuePtr::Compare(const Value& a, const Value& b) const
+    {
+        Value result;
+        Value argv[2] = {a, b};
+        VM& vm = Vm;
+
+        vm.ExecuteInternalUnsafe(Func, Value::GetUndefined(), result, 2, argv, false);
+        if (Vm.IsException())
+            return 0;
+
+        Value::Number n;
+        if (!result.Convert2Number(n))
+            return 0;
+        if (NumberUtil::IsNEGATIVE_INFINITY(n))
+            return -1;
+        if (NumberUtil::IsPOSITIVE_INFINITY(n))
+            return 1;
+        if (NumberUtil::IsNEGATIVE_ZERO(n))
+            return -1;
+        if (NumberUtil::IsPOSITIVE_ZERO(n))
+            return 1;
+        return n == 0.0 ? 0 : (n < 0.0 ? -1 : 1);
+    }
+
+    namespace Instances { namespace fl
+    {
+        // MS2-FUNCTIONAL: frame 0x10 smaller and newSA/compareFunction stack slots differ; code otherwise identical
+        // @0x1423ffba0
+        void Array::AS3sort(Value& result, unsigned argc, const Value* argv)
+        {
+            Value compareFunction;
+            SInt32 flags = 0;
+
+            if (argc > 0)
+            {
+                if (argv[0].IsCallable())
+                    compareFunction = argv[0];
+                else if (!argv[0].Convert2Int32(flags))
+                    return;
+            }
+            if (argc > 1)
+                if (!argv[1].Convert2Int32(flags))
+                    return;
+
+            SparseArray newSA(GetVM().GetMemoryHeap());
+
+            if (!compareFunction.IsNullOrUndefined())
+            {
+                ArrayDH<ValuePtrPair> pairs(GetVM().GetMemoryHeap());
+                ValuePtrCollector vc(pairs);
+                SA.ForEach(vc);
+
+                CompareValuePtr functor(GetVM(), compareFunction);
+                Alg::QuickSortSafe(pairs, functor);
+                const UPInt size = pairs.GetSize();
+
+                if (flags & SortFlags_UniqueSort)
+                {
+                    for (UInt32 i = 1; i < size; ++i)
+                    {
+                        if (functor.Equal(pairs[i - 1], pairs[i]))
+                        {
+                            result.SetNull();
+                            return;
+                        }
+                    }
+                }
+
+                if (flags & SortFlags_ReturnIndexedArray)
+                    for (UPInt i = 0; i < size; ++i)
+                        PushBackInline(newSA, Value(pairs[i].Second));
+                else
+                    for (UPInt i = 0; i < size; ++i)
+                        PushBackInline(newSA, *pairs[i].First);
+
+                if (size < GetSize())
+                    newSA.Resize(GetSize());
+            }
+            else if (flags & SortFlags_Numeric)
+            {
+                ArrayDH<NumberValueTriple> pairs(GetVM().GetMemoryHeap());
+                Value2NumberCollector vc(pairs);
+                SA.ForEach(vc);
+
+                CompareAsNumber functor((flags & SortFlags_Descending) != 0);
+                Alg::QuickSortSafe(pairs, functor);
+                const UPInt size = pairs.GetSize();
+
+                if (flags & SortFlags_UniqueSort)
+                {
+                    for (UInt32 i = 1; i < size; ++i)
+                    {
+                        if (functor.Equal(pairs[i - 1], pairs[i]))
+                        {
+                            result.SetNull();
+                            return;
+                        }
+                    }
+                }
+
+                if (flags & SortFlags_ReturnIndexedArray)
+                    for (UPInt i = 0; i < size; ++i)
+                        PushBackInline(newSA, Value(pairs[i].Third));
+                else
+                    for (UPInt i = 0; i < size; ++i)
+                        PushBackInline(newSA, *pairs[i].Second);
+
+                if (size < GetSize())
+                    newSA.Resize(GetSize());
+            }
+            else
+            {
+                ArrayDH<StringValueTriple> pairs(GetVM().GetMemoryHeap());
+                Value2StrCollector vc(GetVM(), pairs);
+                SA.ForEach(vc);
+
+                CompareAsStringTriple functor(CompareAsString((flags & SortFlags_Descending) != 0,
+                                                              (flags & SortFlags_CaseInsensitive) != 0,
+                                                              (flags & SortFlags_Locale) != 0));
+                Alg::QuickSortSafe(pairs, functor);
+                const UPInt size = pairs.GetSize();
+
+                if (flags & SortFlags_UniqueSort)
+                {
+                    for (UInt32 i = 1; i < size; ++i)
+                    {
+                        if (functor.Equal(pairs[i - 1], pairs[i]))
+                        {
+                            result.SetNull();
+                            return;
+                        }
+                    }
+                }
+
+                if (flags & SortFlags_ReturnIndexedArray)
+                    for (UPInt i = 0; i < size; ++i)
+                        PushBackInline(newSA, Value(pairs[i].Third));
+                else
+                    for (UPInt i = 0; i < size; ++i)
+                        PushBackInline(newSA, *pairs[i].Second);
+
+                if (size < GetSize())
+                    newSA.Resize(GetSize());
+            }
+
+            if (flags & SortFlags_ReturnIndexedArray)
+            {
+                Pickable<Instances::fl::Array> newArr = GetVM().MakeArray();
+                result.Pick(newArr);
+                newArr->SA.Assign(newSA);
+            }
+            else
+            {
+                SA.Assign(newSA);
+                result.Assign(this);
+            }
+        }
+    }}
+}}}
+
 namespace Scaleform { namespace GFx { namespace AS3
 {
     // @0x142406120
