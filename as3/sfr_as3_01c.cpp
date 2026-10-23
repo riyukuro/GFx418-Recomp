@@ -1937,6 +1937,21 @@ using NamespaceInstanceSetBase = HashSetBase<Instances::Namespace*, NamespaceIns
     HashsetEntry<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHashFunc>>;
 }}}
 namespace Scaleform {
+namespace GFx { namespace AS3 { namespace Impl {
+template<class A, class B, class C> struct Triple
+{
+    A First;
+    B Second;
+    C Third;
+};
+}}}
+
+using AS3StringValueTriple = GFx::AS3::Impl::Triple<GFx::ASString, const GFx::AS3::Value*, unsigned>;
+using AS3StringValueTripleData = ArrayDataBase<AS3StringValueTriple,
+    AllocatorDH<AS3StringValueTriple, Stat_Default_Mem>, ArrayDefaultPolicy>;
+// @0x1423f0630
+template AS3StringValueTripleData::~ArrayDataBase();
+
 using AS3TraitsPtr = GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>;
 using AS3TraitsPtrArrayData = ArrayDataBase<AS3TraitsPtr, AllocatorLH<AS3TraitsPtr, Stat_Default_Mem>, ArrayDefaultPolicy>;
 // @0x1423f07a0
