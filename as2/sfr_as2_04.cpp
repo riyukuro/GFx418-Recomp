@@ -49,6 +49,8 @@
 // MS2-RANGE: 0x1429381f0-0x1429384e1 .text$mn
 // MS2-RANGE: 0x142934a80-0x142934f87 .text$mn
 // MS2-RANGE: 0x142934f90-0x1429351fd .text$mn
+// MS2-RANGE: 0x14296e6c0-0x14296e731 .text$mn
+// MS2-RANGE: 0x14291c320-0x14291c3fb .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -1018,6 +1020,22 @@ public:
 
     void PConstruct(CharacterHandle* pchar, int level); // exe 0x14296e6c0
 };
+
+// @0x14296e6c0
+void GFxAS2LoadQueueEntry::PConstruct(CharacterHandle* pchar, int level)
+{
+    pCharacter = pchar;
+    Level      = level;
+}
+
+// @0x14291c320
+GFxAS2LoadQueueEntry::GFxAS2LoadQueueEntry(int level, const String& url, LoadMethod method, bool loadingVars,
+                                           bool quietOpen)
+    : LoadQueueEntry(url, method, loadingVars, quietOpen)
+{
+    PConstruct(0, level);
+    Type = LoadType((loadingVars ? LT_LoadText : (url.ToCStr() ? LT_LoadMovie : LT_UnloadMovie)) | LTF_LevelFlag);
+}
 
 // MS2-FUNCTIONAL the exe inlines the LoadQueueEntry ctor (out of line elsewhere) into the clip entry
 // @0x14292f740
