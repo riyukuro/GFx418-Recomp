@@ -26,11 +26,19 @@
 // MS2-RANGE: 0x142918470-0x1429184e0 .text$mn
 // MS2-RANGE: 0x14291bbd0-0x14291bc40 .text$mn
 // MS2-RANGE: 0x142920710-0x142920790 .text$mn
+// MS2-RANGE: 0x14291aee0-0x14291af50 .text$mn
+// MS2-RANGE: 0x14291b510-0x14291b650 .text$mn
+// MS2-RANGE: 0x14291e790-0x14291e830 .text$mn
+// MS2-RANGE: 0x14291eca0-0x14291ed40 .text$mn
+// MS2-RANGE: 0x14291ad30-0x14291adc0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/as2/as2_colortransform.h"
+#include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
@@ -186,6 +194,73 @@ SharedObject::SharedObject(Environment* penv)
     : Object(penv)
 {
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_SharedObject));
+}
+
+// @0x14291aee0
+ColorTransformObject::ColorTransformObject(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_ColorTransform));
+}
+
+// @0x14291b510
+DateObject::DateObject(Environment* penv)
+    : Object(penv)
+{
+    Date        = 0;
+    Time        = 0;
+    Year        = 0;
+    JDate       = 0;
+    LDate       = 0;
+    LTime       = 0;
+    LYear       = 0;
+    LJDate      = 0;
+    LocalOffset = 0;
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Date));
+}
+
+// @0x14291b5a0
+DateObject::DateObject(Environment* penv, SInt64 val)
+    : Object(penv)
+{
+    Date        = 0;
+    Time        = 0;
+    Year        = 0;
+    JDate       = 0;
+    LDate       = 0;
+    LTime       = 0;
+    LYear       = 0;
+    LJDate      = 0;
+    LocalOffset = 0;
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Date));
+    SetDate(val);
+}
+
+// @0x14291e790
+__declspec(safebuffers) MatrixObject::MatrixObject(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Matrix));
+    SetMatrix(penv, Render::Matrix2F());
+}
+
+// @0x14291eca0
+MovieClipLoader::MovieClipLoader(Environment* penv)
+    : Object(penv)
+{
+    ASStringContext* psc = penv->GetSC();
+    static_cast<ObjectInterface*>(this)->Set__proto__(psc, penv->GetPrototype(ASBuiltin_MovieClipLoader));
+    ObjectInterface* pobj = this;
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
+}
+
+// @0x14291ad30
+ColorObject::ColorObject(Environment* penv, InteractiveObject* ptarget)
+    : Object(penv), pCharacter(ptarget)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Color));
 }
 
 // @0x1429237f0
@@ -455,3 +530,13 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7ExternalInterface@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ceb0
 // MS2-PIN: ??_7SharedObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321da98
 // MS2-PIN: ??_7SharedObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321dae0
+// MS2-PIN: ??_7ColorTransformObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432190c0
+// MS2-PIN: ??_7ColorTransformObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219108
+// MS2-PIN: ??_7DateObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c1d8
+// MS2-PIN: ??_7DateObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c220
+// MS2-PIN: ??_7MatrixObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218cb0
+// MS2-PIN: ??_7MatrixObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143218cf8
+// MS2-PIN: ??_7MovieClipLoader@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216a50
+// MS2-PIN: ??_7MovieClipLoader@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216ac0
+// MS2-PIN: ??_7ColorObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432188a0
+// MS2-PIN: ??_7ColorObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432188e8

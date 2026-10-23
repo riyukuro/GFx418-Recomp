@@ -33,6 +33,12 @@ public:
 
     ColorTransformObject(Environment* penv); // exe 0x14291aee0
 
+    virtual ObjectType GetObjectType() const; // exe 0x142954210: Object_ColorTransform
+    // exe 0x1429858c0 / 0x14294e940
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+
     // The transform with the factors clamped (exe 0x14294a580).
     const Render::Cxform GetCxform();
 };

@@ -144,6 +144,8 @@ public:
 
     ColorObject(Environment* penv, InteractiveObject* ptarget); // exe 0x14291ad30
 
+    virtual ObjectType GetObjectType() const; // exe 0x142954200: Object_Color
+
     void SetTarget(InteractiveObject* ptarget) { pCharacter = ptarget; }
 
 protected:
@@ -163,6 +165,18 @@ public:
     };
 
     StringHashLH<ProgressDesc> ProgressInfo; // +0x68 by URL
+
+    MovieClipLoader(Environment* penv); // exe 0x14291eca0
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954290: Object_MovieClipLoader
+
+    // Broadcast the onLoad* events to the listeners (exe 0x14296a300 / 0x142969bd0 / 0x142969f50 / 0x142969d90 /
+    // 0x14296a0a0).
+    virtual void NotifyOnLoadStart(Environment* penv, InteractiveObject* ptarget);
+    virtual void NotifyOnLoadComplete(Environment* penv, InteractiveObject* ptarget, int status);
+    virtual void NotifyOnLoadInit(Environment* penv, InteractiveObject* ptarget);
+    virtual void NotifyOnLoadError(Environment* penv, InteractiveObject* ptarget, const char* errorCode, int status);
+    virtual void NotifyOnLoadProgress(Environment* penv, InteractiveObject* ptarget, int loadedBytes, int totalBytes);
 
     // Byte counts of the movie loading into pch, 0 when it is not tracked (exe 0x14294b170 / 0x142956b40).
     int GetLoadedBytes(InteractiveObject* pch) const;

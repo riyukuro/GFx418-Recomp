@@ -12,7 +12,11 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class DateObject : public Object
 {
 public:
-    DateObject(Environment* penv); // exe 0x14291b510
+    DateObject(Environment* penv);             // exe 0x14291b510
+    DateObject(Environment* penv, SInt64 val); // exe 0x14291b5a0
+
+    virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x1429566c0
+    virtual ObjectType  GetObjectType() const;                     // exe 0x142954220: Object_Date
 
     SInt64 Date;        // +0x68 ms since 1 Jan 1970 UTC
     int    Time;        // +0x70 ms within the UTC day

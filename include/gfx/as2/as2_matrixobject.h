@@ -38,6 +38,8 @@ public:
 
     MatrixObject(Environment* penv); // exe 0x14291e790
 
+    virtual ObjectType GetObjectType() const; // exe 0x142954280: Object_Matrix
+
     // a, b, c, d, tx, ty (missing members read as the identity).
     GASMatrixArray*  GetMatrixAsValuesArray(ASStringContext* psc, GASMatrixArray* marr); // exe 0x14294b630
     Render::Matrix2F GetMatrix(Environment* penv);                                     // exe 0x14294b2e0
