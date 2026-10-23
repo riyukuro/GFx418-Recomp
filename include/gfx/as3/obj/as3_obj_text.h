@@ -18,6 +18,8 @@ namespace Scaleform { namespace Render { class Font; }}
 namespace Scaleform { namespace Render { namespace Text {
 
 struct Style;
+class TextFormat;       // (appended, sfr19) opaque here; fl_text::TextFormat converts to and from them
+class ParagraphFormat;
 
 // Style lookup for HTML parsing. vftable 0x14316a718.
 class StyleManagerBase
@@ -348,6 +350,12 @@ namespace Instances { namespace fl_text {
         // @0x1424abc10
         virtual void AS3Constructor(unsigned argc, const Value* argv);
     public:
+        // (appended, sfr19) the property values and tabStops. 0x1424ac140
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+        // (appended, sfr19) the set properties written into render text formats (unset ones cleared). 0x1424ac700
+        void GetTextFormat(Render::Text::ParagraphFormat* parafmt, Render::Text::TextFormat* fmt);
+        // (appended, sfr19) the properties read back from render text formats (unset ones null). 0x1424ae6b0
+        void SetTextFormat(const Render::Text::ParagraphFormat* parafmt, const Render::Text::TextFormat* fmt);
 
         Value                       align;          // +0x038
         Value                       blockIndent;    // +0x058

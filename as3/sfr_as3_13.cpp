@@ -1467,8 +1467,16 @@ void* FUN_1425b91e0(void* ptf, void* ptext, bool html);    // TextField::GetText
 void  FUN_1425bd9a0(void* ptf, const char* ptext, bool html, bool notifyVariable);  // TextField::SetTextValue
 bool  FUN_1425b9b10(void* ptf);                             // TextField::IsReadOnly
 bool  FUN_1425b9730(void* ptf);                             // TextField::HasStyleSheet
-void  FUN_1424ae6b0(void* pobj, const void* ppara, const void* pfmt);  // fl_text::TextFormat::SetTextFormat (from Render::Text formats)
-void  FUN_1424ac700(void* pobj, void* ppara, void* pfmt);              // fl_text::TextFormat::GetTextFormat (into Render::Text formats)
+const Scaleform::String& FUN_142606750(const void* pfmt);              // Render::Text::TextFormat::GetFontList
+const unsigned* FUN_142606b20(const void* ppara, unsigned* pcount);    // Render::Text::ParagraphFormat::GetTabStops
+void  FUN_142607d90(void* pfmt, bool v);                               // Render::Text::TextFormat::SetBold
+void  FUN_1426082a0(void* pfmt, bool v);                               // Render::Text::TextFormat::SetItalic
+void  FUN_1426084d0(void* pfmt, bool v);                               // Render::Text::TextFormat::SetUnderline
+void  FUN_142608330(void* pfmt, bool v);                               // Render::Text::TextFormat::SetKerning
+void  FUN_142607f40(void* pfmt, const char* pstr, unsigned long long len);  // Render::Text::TextFormat::SetFontList
+void  FUN_142608530(void* pfmt, const char* pstr, unsigned long long len);  // Render::Text::TextFormat::SetUrl
+void  FUN_142605c10(void* ppara, unsigned n);                          // Render::Text::ParagraphFormat::AllocTabStops
+void  FUN_1426084b0(void* ppara, unsigned i, unsigned v);              // Render::Text::ParagraphFormat::SetTabStopsElement
 void  FUN_142584fc0(void* pstr, void* pheap);                          // StringDH::StringDH(MemoryHeap*)
 void  FUN_1424aa0f0(void* pfmt);                                       // Render::Text::TextFormat destructor
 void  FUN_142606690(void* ppara);                                      // Render::Text::ParagraphFormat destructor (FreeTabStops)
@@ -1601,6 +1609,316 @@ namespace Instances { namespace fl_text
         p.PresentMask = 0;
     }
 
+    // Render::Text::ParagraphFormat present bits (+0x1a), alignment in bits 9-10 and bullet in bit 15.
+    enum
+    {
+        Para_Alignment = 0x01, Para_BlockIndent = 0x02, Para_Indent = 0x04, Para_Leading = 0x08,
+        Para_LeftMargin = 0x10, Para_RightMargin = 0x20, Para_TabStops = 0x40, Para_Bullet = 0x80,
+        Para_AlignMask = 0x600, Para_AlignShift = 9, Para_BulletOn = 0x8000
+    };
+    enum { Align_Left, Align_Right, Align_Justify, Align_Center };
+    // Render::Text::TextFormat present bits (+0x42) and format flags (+0x40).
+    enum
+    {
+        Fmt_Color = 0x01, Fmt_LetterSpacing = 0x02, Fmt_FontList = 0x04, Fmt_FontSize = 0x08, Fmt_Bold = 0x10,
+        Fmt_Italic = 0x20, Fmt_Underline = 0x40, Fmt_Kerning = 0x80, Fmt_Url = 0x100, Fmt_FontHandle = 0x1000
+    };
+    enum { Flag_Bold = 0x01, Flag_Italic = 0x02, Flag_Underline = 0x04, Flag_Kerning = 0x08 };
+
+    static SF_INLINE void SetParaAlignment(ParagraphFormatStorage& p, unsigned a)
+    {
+        p.PresentMask = (UInt16)((p.PresentMask & ~Para_AlignMask) | (a << Para_AlignShift) | Para_Alignment);
+    }
+    // A twips value of a pixel count kept within 0..720 (lo = 0) or -720..720 (lo = -720).
+    static SF_INLINE SInt16 ClampPixels(SInt32 v, SInt32 lo)
+    {
+        if (v < lo)
+            return (SInt16)lo;
+        if (v > 720)
+            return 720;
+        return (SInt16)v;
+    }
+
+    // MS2-FUNCTIONAL: written from the exe's control flow (render formats kept as raw storage here)
+    // @0x1424ac700
+    void TextFormat::GetTextFormat(Render::Text::ParagraphFormat* parafmt, Render::Text::TextFormat* fmt)
+    {
+        ParagraphFormatStorage& para = *reinterpret_cast<ParagraphFormatStorage*>(parafmt);
+        TextFormatStorage& tf = *reinterpret_cast<TextFormatStorage*>(fmt);
+        StringManager& sm = GetVM().GetStringManager();
+        SInt32 iv;
+        UInt32 uv;
+        Value::Number nv;
+
+        if (!align.IsNullOrUndefined())
+        {
+            ASString str = sm.CreateEmptyString();
+            align.Convert2String(str);
+            const char* s = str.ToCStr();
+            if (!strcmp(s, "left"))
+                SetParaAlignment(para, Align_Left);
+            else if (!strcmp(s, "right"))
+                SetParaAlignment(para, Align_Right);
+            else if (!strcmp(s, "center"))
+                SetParaAlignment(para, Align_Center);
+            else if (!strcmp(s, "justify"))
+                SetParaAlignment(para, Align_Justify);
+            else
+                para.PresentMask &= ~(Para_AlignMask | Para_Alignment);
+        }
+
+        if (blockIndent.IsNullOrUndefined())
+        {
+            para.PresentMask &= ~Para_BlockIndent;
+            para.BlockIndent = 0;
+        }
+        else
+        {
+            blockIndent.Convert2Int32(iv);
+            para.PresentMask |= Para_BlockIndent;
+            para.BlockIndent = (UInt16)ClampPixels(iv, 0);
+        }
+
+        if (bold.IsNullOrUndefined())
+        {
+            tf.FormatFlags &= ~Flag_Bold;
+            tf.PresentMask &= ~Fmt_Bold;
+        }
+        else
+            FUN_142607d90(fmt, bold.Convert2Boolean());
+        if (italic.IsNullOrUndefined())
+        {
+            tf.FormatFlags &= ~Flag_Italic;
+            tf.PresentMask &= ~Fmt_Italic;
+        }
+        else
+            FUN_1426082a0(fmt, italic.Convert2Boolean());
+        if (underline.IsNullOrUndefined())
+        {
+            tf.FormatFlags &= ~Flag_Underline;
+            tf.PresentMask &= ~Fmt_Underline;
+        }
+        else
+            FUN_1426084d0(fmt, underline.Convert2Boolean());
+
+        if (bullet.IsNullOrUndefined())
+            para.PresentMask &= ~(Para_BulletOn | Para_Bullet);
+        else
+        {
+            if (bullet.Convert2Boolean())
+                para.PresentMask |= Para_BulletOn;
+            else
+                para.PresentMask &= ~Para_BulletOn;
+            para.PresentMask |= Para_Bullet;
+        }
+
+        if (color.IsNullOrUndefined())
+        {
+            tf.PresentMask &= ~Fmt_Color;
+            tf.ColorV = 0xFF000000u;
+        }
+        else
+        {
+            color.Convert2UInt32(uv);
+            tf.PresentMask |= Fmt_Color;
+            tf.ColorV = (tf.ColorV & 0xFF000000u) | (uv & 0xFFFFFFu);
+        }
+
+        if (font.IsNullOrUndefined())
+            tf.PresentMask &= ~(Fmt_FontList | Fmt_FontHandle);
+        else
+        {
+            ASString str = sm.CreateEmptyString();
+            font.Convert2String(str);
+            FUN_142607f40(fmt, str.ToCStr(), ~0ull);
+        }
+
+        if (indent.IsNullOrUndefined())
+        {
+            para.Indent = 0;
+            para.PresentMask &= ~Para_Indent;
+        }
+        else
+        {
+            indent.Convert2Int32(iv);
+            para.PresentMask |= Para_Indent;
+            para.Indent = ClampPixels(iv, -720);
+        }
+        if (leading.IsNullOrUndefined())
+        {
+            para.Leading = 0;
+            para.PresentMask &= ~Para_Leading;
+        }
+        else
+        {
+            leading.Convert2Int32(iv);
+            para.PresentMask |= Para_Leading;
+            para.Leading = ClampPixels(iv, -720);
+        }
+        if (leftMargin.IsNullOrUndefined())
+        {
+            para.LeftMargin = 0;
+            para.PresentMask &= ~Para_LeftMargin;
+        }
+        else
+        {
+            leftMargin.Convert2Int32(iv);
+            para.PresentMask |= Para_LeftMargin;
+            para.LeftMargin = (UInt16)ClampPixels(iv, 0);
+        }
+        if (rightMargin.IsNullOrUndefined())
+        {
+            para.RightMargin = 0;
+            para.PresentMask &= ~Para_RightMargin;
+        }
+        else
+        {
+            rightMargin.Convert2Int32(iv);
+            para.PresentMask |= Para_RightMargin;
+            para.RightMargin = (UInt16)ClampPixels(iv, 0);
+        }
+
+        if (size.IsNullOrUndefined())
+        {
+            tf.FontSize = 0;
+            tf.PresentMask &= ~Fmt_FontSize;
+        }
+        else
+        {
+            // pixels to twips; sizes of 128 and more are 127
+            size.Convert2Int32(iv);
+            if (iv >= 0)
+            {
+                tf.PresentMask |= Fmt_FontSize;
+                if (iv >= 128)
+                    tf.FontSize = 127 * 20;
+                else if ((float)iv >= 3276.8f)
+                    tf.FontSize = 0xFFFF;
+                else
+                    tf.FontSize = (UInt16)(int)((float)iv * 20.0f);
+            }
+        }
+
+        if (url.IsNullOrUndefined())
+        {
+            reinterpret_cast<String*>(&tf.Url)->Clear();
+            tf.PresentMask &= ~Fmt_Url;
+        }
+        else
+        {
+            ASString str = sm.CreateEmptyString();
+            url.Convert2String(str);
+            FUN_142608530(fmt, str.ToCStr(), ~0ull);
+        }
+
+        if (letterSpacing.IsNullOrUndefined())
+        {
+            tf.PresentMask &= ~Fmt_LetterSpacing;
+            tf.LetterSpacing = 0;
+        }
+        else
+        {
+            letterSpacing.Convert2NumberInline(nv);
+            if (nv < -720.0 || nv > 720.0)
+                nv = nv < -720.0 ? -720.0 : 720.0;
+            tf.PresentMask |= Fmt_LetterSpacing;
+            tf.LetterSpacing = (SInt16)(int)((float)nv * 20.0f);
+        }
+
+        if (kerning.IsNullOrUndefined())
+        {
+            tf.FormatFlags &= ~Flag_Kerning;
+            tf.PresentMask &= ~Fmt_Kerning;
+        }
+        else
+            FUN_142608330(fmt, kerning.Convert2Boolean());
+
+        if (!tabStops)
+        {
+            FUN_142606690(parafmt);
+            para.PresentMask &= ~Para_TabStops;
+        }
+        else
+        {
+            UPInt n = tabStops->GetSize();
+            FUN_142605c10(parafmt, (unsigned)n);
+            para.PresentMask |= Para_TabStops;
+            for (UPInt i = 0; i < n; ++i)
+            {
+                tabStops->At(i).Convert2NumberInline(nv);
+                FUN_1426084b0(parafmt, (unsigned)i, (unsigned)(SInt64)nv);
+            }
+        }
+    }
+
+    // MS2-FUNCTIONAL: written from the exe's control flow (render formats kept as raw storage here)
+    // @0x1424ae6b0
+    void TextFormat::SetTextFormat(const Render::Text::ParagraphFormat* parafmt, const Render::Text::TextFormat* fmt)
+    {
+        const ParagraphFormatStorage& para = *reinterpret_cast<const ParagraphFormatStorage*>(parafmt);
+        const TextFormatStorage& tf = *reinterpret_cast<const TextFormatStorage*>(fmt);
+        VM& vm = GetVM();
+        StringManager& sm = vm.GetStringManager();
+        ASString nullStr = sm.CreateNullString();
+        Value nullValue = Value::GetNull();
+
+        if (para.PresentMask & Para_Alignment)
+        {
+            const char* palign = "left";
+            switch ((para.PresentMask & Para_AlignMask) >> Para_AlignShift)
+            {
+            case Align_Right:   palign = "right"; break;
+            case Align_Justify: palign = "justify"; break;
+            case Align_Center:  palign = "center"; break;
+            }
+            align = sm.CreateString(palign);
+        }
+        else
+            align = nullStr;
+
+        blockIndent = (para.PresentMask & Para_BlockIndent) ? Value((UInt32)para.BlockIndent) : nullValue;
+        bold = (tf.PresentMask & Fmt_Bold) ? Value((tf.FormatFlags & Flag_Bold) != 0) : nullValue;
+        italic = (tf.PresentMask & Fmt_Italic) ? Value((tf.FormatFlags & Flag_Italic) != 0) : nullValue;
+        underline = (tf.PresentMask & Fmt_Underline) ? Value((tf.FormatFlags & Flag_Underline) != 0) : nullValue;
+        bullet = (para.PresentMask & Para_Bullet)
+            ? Value((para.PresentMask & (Para_BulletOn | Para_Bullet)) == (Para_BulletOn | Para_Bullet)) : nullValue;
+        color = (tf.PresentMask & Fmt_Color) ? Value((Value::Number)(tf.ColorV & 0xFFFFFFu)) : nullValue;
+        if (tf.PresentMask & Fmt_FontList)
+        {
+            const String& fonts = FUN_142606750(fmt);
+            font = sm.CreateString(fonts.ToCStr(), fonts.GetSize());
+        }
+        else
+            font = nullStr;
+        indent = (para.PresentMask & Para_Indent) ? Value((Value::Number)para.Indent) : nullValue;
+        kerning = (tf.PresentMask & Fmt_Kerning) ? Value((tf.FormatFlags & Flag_Kerning) != 0) : nullValue;
+        leading = (para.PresentMask & Para_Leading) ? Value((Value::Number)para.Leading) : nullValue;
+        leftMargin = (para.PresentMask & Para_LeftMargin) ? Value((Value::Number)para.LeftMargin) : nullValue;
+        letterSpacing = (tf.PresentMask & Fmt_LetterSpacing)
+            ? Value((Value::Number)(SInt16)(tf.LetterSpacing / 20)) : nullValue;
+        rightMargin = (para.PresentMask & Para_RightMargin) ? Value((Value::Number)para.RightMargin) : nullValue;
+        size = (tf.PresentMask & Fmt_FontSize) ? Value((Value::Number)((float)tf.FontSize * 0.05f)) : nullValue;
+        target = nullStr;
+        const String& purl = *reinterpret_cast<const String*>(&tf.Url);
+        if ((tf.PresentMask & Fmt_Url) && purl.GetLength() != 0)
+            url = sm.CreateString(purl.ToCStr(), purl.GetSize());
+        else
+            url = nullStr;
+
+        if (para.PresentMask & Para_TabStops)
+        {
+            unsigned n = 0;
+            const unsigned* pstops = FUN_142606b20(parafmt, &n);
+            SPtr<Instances::fl::Array> arr = vm.MakeArray();
+            arr->Resize(n);
+            for (unsigned i = 0; i < n; ++i)
+                arr->Set(i, Value((Value::Number)pstops[i]));
+            tabStops = arr;
+        }
+        else
+            tabStops = NULL;
+    }
+
     // @0x1424affb0
     void TextField::defaultTextFormatGet(SPtr<Instances::fl_text::TextFormat>& result)
     {
@@ -1609,7 +1927,8 @@ namespace Instances { namespace fl_text
         void* ppara = DefaultParaFormat(pdoc);
         ASVM& asvm = static_cast<ASVM&>(GetVM());
         asvm.ConstructInstance(result, asvm.TextFormatClass, 0, NULL);
-        FUN_1424ae6b0(result.GetPtr(), ppara, pfmt);
+        result->SetTextFormat(reinterpret_cast<const Render::Text::ParagraphFormat*>(ppara),
+                              reinterpret_cast<const Render::Text::TextFormat*>(pfmt));
     }
 
     // @0x1424b0020
@@ -1625,7 +1944,8 @@ namespace Instances { namespace fl_text
         InitTextFormat(fmt, MovieHeapOf(asvm.GetMovieImpl()));
         ParagraphFormatStorage para;
         InitParagraphFormat(para);
-        FUN_1424ac700(value, &para, &fmt);
+        value->GetTextFormat(reinterpret_cast<Render::Text::ParagraphFormat*>(&para),
+                             reinterpret_cast<Render::Text::TextFormat*>(&fmt));
 
         TextFormatStorage mergedFmt;
         FUN_14259c250(DocumentOf(ptf), FUN_142607870(DefaultTextFormat(DocumentOf(ptf)), &mergedFmt, &fmt));
@@ -2005,6 +2325,101 @@ namespace Instances { namespace fl_text
         }
     }
 
+    // One property of the getStyle result object, named in the public namespace.
+    static SF_INLINE void SetStyleProperty(Instances::fl::Object* pobj, Instances::Namespace& ns, const ASString& name,
+                                           const Value& v)
+    {
+        pobj->SetProperty(Multiname(ns, Value(name)), v);
+    }
+
+    // The style named by name (".name" a class, else a tag) as an object of CSS property strings and numbers,
+    // or null when there is none.
+    // MS2-FUNCTIONAL: written from the exe's control flow; temporaries are released in a different order
+    // @0x1424b15e0
+    void StyleSheet::getStyle(SPtr<Instances::fl::Object>& result, const ASString& name)
+    {
+        const char* pname = name.ToCStr();
+        const Render::Text::Style* pstyle;
+        if (name.GetSize() != 0 && pname[0] == '.')
+            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Class, pname + 1, name.GetSize() - 1);
+        else
+            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Tag, pname);
+        if (!pstyle)
+        {
+            result = NULL;
+            return;
+        }
+
+        VM& vm = GetVM();
+        SPtr<Instances::fl::Object> pobj = vm.MakeObject();
+        StringManager& sm = vm.GetStringManager();
+        Instances::Namespace& ns = vm.GetPublicNamespace();
+        const TextFormatStorage& tf = *reinterpret_cast<const TextFormatStorage*>(pstyle);
+        const ParagraphFormatStorage& para =
+            *reinterpret_cast<const ParagraphFormatStorage*>(reinterpret_cast<const UByte*>(pstyle) + 0x48);
+
+        if (tf.PresentMask & Fmt_Color)
+        {
+            static const char hex[] = "0123456789ABCDEF";
+            String color;
+            color.AppendChar('#');
+            const UInt32 c = tf.ColorV;
+            color.AppendChar(hex[((c >> 16) & 0xFF) >> 4]);
+            color.AppendChar(hex[(c >> 16) & 0xF]);
+            color.AppendChar(hex[((c >> 8) & 0xFF) >> 4]);
+            color.AppendChar(hex[(c >> 8) & 0xF]);
+            color.AppendChar(hex[(c & 0xFF) >> 4]);
+            color.AppendChar(hex[c & 0xF]);
+            SetStyleProperty(pobj, ns, sm.CreateString("color"),
+                             Value(sm.CreateString(color.ToCStr(), color.GetSize())));
+        }
+        if (tf.PresentMask & Fmt_FontList)
+        {
+            const String& fonts = FUN_142606750(&tf);
+            SetStyleProperty(pobj, ns, sm.CreateString("fontFamily"),
+                             Value(sm.CreateString(fonts.ToCStr(), fonts.GetSize())));
+        }
+        if (tf.PresentMask & Fmt_FontSize)
+            SetStyleProperty(pobj, ns, sm.CreateString("fontSize"),
+                             Value((Value::Number)((float)tf.FontSize * 0.05f)));
+        if (tf.PresentMask & Fmt_Italic)
+            SetStyleProperty(pobj, ns, sm.CreateString("fontStyle"),
+                             Value(sm.CreateString((tf.FormatFlags & Flag_Italic) ? "italic" : "normal")));
+        if (tf.PresentMask & Fmt_Bold)
+            SetStyleProperty(pobj, ns, sm.CreateString("fontWeight"),
+                             Value(sm.CreateString((tf.FormatFlags & Flag_Bold) ? "bold" : "normal")));
+        if (tf.PresentMask & Fmt_Kerning)
+            SetStyleProperty(pobj, ns, sm.CreateString("kerning"),
+                             Value(sm.CreateString((tf.FormatFlags & Flag_Kerning) ? "true" : "false")));
+        if (para.PresentMask & Para_Leading)
+            SetStyleProperty(pobj, ns, sm.CreateString("leading"), Value((SInt32)para.Leading));
+        if (tf.PresentMask & Fmt_LetterSpacing)
+            SetStyleProperty(pobj, ns, sm.CreateString("letterSpacing"),
+                             Value((Value::Number)(SInt16)(tf.LetterSpacing / 20)));
+        if (para.PresentMask & Para_LeftMargin)
+            SetStyleProperty(pobj, ns, sm.CreateString("marginLeft"), Value((UInt32)para.LeftMargin));
+        if (para.PresentMask & Para_RightMargin)
+            SetStyleProperty(pobj, ns, sm.CreateString("marginRight"), Value((UInt32)para.RightMargin));
+        if (para.PresentMask & Para_Alignment)
+        {
+            const char* align;
+            switch (para.PresentMask & Para_AlignMask)
+            {
+            case 0:      align = "left"; break;
+            case 0x600:  align = "center"; break;
+            case 0x200:  align = "right"; break;
+            default:     align = "justify"; break;
+            }
+            SetStyleProperty(pobj, ns, sm.CreateString("textAlign"), Value(sm.CreateString(align)));
+        }
+        if (tf.PresentMask & Fmt_Underline)
+            SetStyleProperty(pobj, ns, sm.CreateString("textDecoration"),
+                             Value(sm.CreateString((tf.FormatFlags & Flag_Underline) ? "underline" : "none")));
+        if (para.PresentMask & Para_Indent)
+            SetStyleProperty(pobj, ns, sm.CreateString("textIndent"), Value((SInt32)para.Indent));
+        result = pobj;
+    }
+
     // A null style object removes the style; otherwise the object is written out as a CSS rule and parsed in.
     // MS2-FUNCTIONAL: the exe tail-calls ClearStyle on two paths (ours selects the key type with sete); register allocation differs
     // @0x1424b43a0
@@ -2288,7 +2703,8 @@ namespace Instances { namespace fl_text
             Render::Text::TextFormat      fmt(MovieHeapOf(asvm.GetMovieImpl()));
             Render::Text::ParagraphFormat para;
             FUN_1425990d0(DocumentOf(DisplayTextField(this)), &fmt, &para, (SPInt)begin, (SPInt)end);
-            FUN_1424ae6b0(pformat.GetPtr(), &para, &fmt);
+            pformat->SetTextFormat(reinterpret_cast<const Render::Text::ParagraphFormat*>(&para),
+                                   reinterpret_cast<const Render::Text::TextFormat*>(&fmt));
         }
         result = pformat;
     }
@@ -2308,7 +2724,8 @@ namespace Instances { namespace fl_text
         ASVM& asvm = static_cast<ASVM&>(GetVM());
         Render::Text::TextFormat      fmt(MovieHeapOf(asvm.GetMovieImpl()));
         Render::Text::ParagraphFormat para;
-        FUN_1424ac700(format, &para, &fmt);
+        format->GetTextFormat(reinterpret_cast<Render::Text::ParagraphFormat*>(&para),
+                              reinterpret_cast<Render::Text::TextFormat*>(&fmt));
         FUN_142615640(DocViewOf(ptf), &fmt, (unsigned)begin, (unsigned)end);
         FUN_142615410(DocViewOf(ptf), &para, (unsigned)begin, (unsigned)end);
         FUN_1425bc060(ptf);
@@ -2788,6 +3205,58 @@ namespace Instances { namespace fl_text
     }
 }}
 
+// ---- fl_text: TextFormat collector visit ----
+
+// Visits the collectable a value holds (0x142504530).
+void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                              ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner);
+
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (v.IsGarbageCollectable() && !v.IsWeakRef())
+        ForEachChild_GC_Internal(prcc, v, op, owner);
+}
+
+// The exe passes the owner as a third argument to every GcOp (r8); the shared GcOp typedef has two.
+typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const ASRefCountBaseType** pchild,
+                              const ASRefCountBaseType& owner);
+
+template <class T>
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const SPtr<T>& p,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (p.GetPtr())
+        reinterpret_cast<GcOpWithOwner>(op)(prcc,
+            const_cast<const ASRefCountBaseType**>(reinterpret_cast<ASRefCountBaseType**>(p.GetRawPtr())), owner);
+}
+
+namespace Instances { namespace fl_text {
+    // @0x1424ac140
+    void TextFormat::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, align, op, *this);
+        AS3::ForEachChild_GC(prcc, blockIndent, op, *this);
+        AS3::ForEachChild_GC(prcc, bullet, op, *this);
+        AS3::ForEachChild_GC(prcc, bold, op, *this);
+        AS3::ForEachChild_GC(prcc, color, op, *this);
+        AS3::ForEachChild_GC(prcc, font, op, *this);
+        AS3::ForEachChild_GC(prcc, italic, op, *this);
+        AS3::ForEachChild_GC(prcc, indent, op, *this);
+        AS3::ForEachChild_GC(prcc, kerning, op, *this);
+        AS3::ForEachChild_GC(prcc, leading, op, *this);
+        AS3::ForEachChild_GC(prcc, leftMargin, op, *this);
+        AS3::ForEachChild_GC(prcc, rightMargin, op, *this);
+        AS3::ForEachChild_GC(prcc, letterSpacing, op, *this);
+        AS3::ForEachChild_GC(prcc, size, op, *this);
+        AS3::ForEachChild_GC(prcc, tabStops, op, *this);
+        AS3::ForEachChild_GC(prcc, target, op, *this);
+        AS3::ForEachChild_GC(prcc, underline, op, *this);
+        AS3::ForEachChild_GC(prcc, url, op, *this);
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc1@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5730
@@ -2908,3 +3377,4 @@ namespace Instances { namespace fl_text
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424b8f90 ; unique
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424b9030 ; unique
 // MS2-PIN: ??_7FontsVisitor@AS3@GFx@Scaleform@@6B@ 0x14316a058
+// MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
