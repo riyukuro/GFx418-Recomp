@@ -458,6 +458,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8d30
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::FocusEventEx"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c96a0
+        Pickable<InstanceType> MakeInstance(FocusEventEx& t);   // 0x1424c9270
     };
 
     // 0x70 bytes per instance, vftable 0x143175098.
@@ -470,6 +471,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8db0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::GamePadAnalogEvent"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c9700
+        Pickable<InstanceType> MakeInstance(GamePadAnalogEvent& t);   // 0x1424c92f0
     };
 
     // 0x60 bytes per instance, vftable 0x143175cc0.
@@ -482,6 +484,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8de0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::IMECandidateListStyle"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c9760
+        Pickable<InstanceType> MakeInstance(IMECandidateListStyle& t);   // 0x1424c9360
     };
 
     // 0x60 bytes per instance, vftable 0x143175910.
@@ -494,6 +497,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8e20
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::IMEEventEx"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c97e0
+        Pickable<InstanceType> MakeInstance(IMEEventEx& t);   // 0x1424c9400
     };
 
     // 0x78 bytes per instance, vftable 0x143174cf8.
@@ -506,6 +510,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8e90
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::KeyboardEventEx"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c9860
+        Pickable<InstanceType> MakeInstance(KeyboardEventEx& t);   // 0x1424c9490
     };
 
     // 0x68 bytes per instance, vftable 0x1431742d0.
@@ -518,6 +523,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8ed0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::MouseCursorEvent"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c98c0
+        Pickable<InstanceType> MakeInstance(MouseCursorEvent& t);   // 0x1424c9510
     };
 
     // 0xa0 bytes per instance, vftable 0x1431749e8.
@@ -530,6 +536,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8f10
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::MouseEventEx"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c9950
+        Pickable<InstanceType> MakeInstance(MouseEventEx& t);   // 0x1424c95b0
     };
 
     // 0x68 bytes per instance, vftable 0x1431755e8.
@@ -542,6 +549,7 @@ namespace InstanceTraits { namespace fl_gfx {
         // @0x1424c8f70
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextEventEx"; }
         virtual void MakeObject(Value& result, Traits& t);                  // 0x1424c99c0
+        Pickable<InstanceType> MakeInstance(TextEventEx& t);   // 0x1424c9630
     };
 
 }}

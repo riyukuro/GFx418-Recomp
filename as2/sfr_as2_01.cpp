@@ -2,6 +2,10 @@
 // (Boolean prototype methods, the Math object functions, Date prototype getters/setters).
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142444c40-0x142445480 .text$mn
+// MS2-RANGE: 0x1424ad0b0-0x1424ad4d0 .text$mn
+// MS2-RANGE: 0x1424c9270-0x1424c9630 .text$mn
+// MS2-RANGE: 0x1424c9630-0x1424c96a0 .text$mn
 // MS2-RANGE: 0x1423dbde0-0x1423dbe60 .text$mn
 // MS2-RANGE: 0x1423dbea0-0x1423dc0b0 .text$mn
 // MS2-RANGE: 0x1428eb050-0x1428eb900 .text$mn
@@ -63,6 +67,8 @@
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/gfx/as3/as3_support.h"
+#include "../include/gfx/as3/obj/as3_obj_natives.h"
+#include "../include/gfx/as3/as3_avm.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -2895,6 +2901,216 @@ RemoveObjectTag* AS3Support::AllocRemoveObjectTag(LoadProcess* p)
 }} // namespace Scaleform::GFx
 // MS2-PIN: ??_7LocalInvokeCallback@?6??BroadcastMessage@AsBroadcasterProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x143221850
 // MS2-PIN: ??_7StringVisitor@?1??ToString@LoadVarsProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x1432223c8
+// ---- fl_display instance makers: a new instance of the traits' class ----
+namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl_display {
+// @0x142444c40
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<AVM1Movie::InstanceType> AVM1Movie::MakeInstance(AVM1Movie& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142444cb0
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Bitmap::InstanceType> Bitmap::MakeInstance(Bitmap& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142444d30
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<BitmapData::InstanceType> BitmapData::MakeInstance(BitmapData& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142444db0
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<DisplayObject::InstanceType> DisplayObject::MakeInstance(DisplayObject& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142444e00
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<DisplayObjectContainer::InstanceType> DisplayObjectContainer::MakeInstance(DisplayObjectContainer& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142444e80
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<FrameLabel::InstanceType> FrameLabel::MakeInstance(FrameLabel& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142444f10
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Graphics::InstanceType> Graphics::MakeInstance(Graphics& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142444f90
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<InteractiveObject::InstanceType> InteractiveObject::MakeInstance(InteractiveObject& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445010
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Loader::InstanceType> Loader::MakeInstance(Loader& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445090
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<LoaderInfo::InstanceType> LoaderInfo::MakeInstance(LoaderInfo& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445110
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<MorphShape::InstanceType> MorphShape::MakeInstance(MorphShape& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445180
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<MovieClip::InstanceType> MovieClip::MakeInstance(MovieClip& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445200
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Scene::InstanceType> Scene::MakeInstance(Scene& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445280
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Shape::InstanceType> Shape::MakeInstance(Shape& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445300
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<SimpleButton::InstanceType> SimpleButton::MakeInstance(SimpleButton& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445380
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Sprite::InstanceType> Sprite::MakeInstance(Sprite& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x142445400
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Stage::InstanceType> Stage::MakeInstance(Stage& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+}}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_display
+
+// ---- fl_text instance makers ----
+namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl_text {
+// @0x1424ad0b0
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<CSMSettings::InstanceType> CSMSettings::MakeInstance(CSMSettings& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424ad130
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<Font::InstanceType> Font::MakeInstance(Font& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424ad200
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<StaticText::InstanceType> StaticText::MakeInstance(StaticText& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424ad270
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<StyleSheet::InstanceType> StyleSheet::MakeInstance(StyleSheet& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424ad300
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<TextField::InstanceType> TextField::MakeInstance(TextField& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424ad370
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<TextFormat::InstanceType> TextFormat::MakeInstance(TextFormat& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424ad3c0
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<TextLineMetrics::InstanceType> TextLineMetrics::MakeInstance(TextLineMetrics& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424ad450
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<TextSnapshot::InstanceType> TextSnapshot::MakeInstance(TextSnapshot& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+}}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_text
+
+// ---- fl_gfx instance makers ----
+namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl_gfx {
+// @0x1424c9270
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<FocusEventEx::InstanceType> FocusEventEx::MakeInstance(FocusEventEx& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424c92f0
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<GamePadAnalogEvent::InstanceType> GamePadAnalogEvent::MakeInstance(GamePadAnalogEvent& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424c9360
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<IMECandidateListStyle::InstanceType> IMECandidateListStyle::MakeInstance(IMECandidateListStyle& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424c9400
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<IMEEventEx::InstanceType> IMEEventEx::MakeInstance(IMEEventEx& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424c9490
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<KeyboardEventEx::InstanceType> KeyboardEventEx::MakeInstance(KeyboardEventEx& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424c9510
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<MouseCursorEvent::InstanceType> MouseCursorEvent::MakeInstance(MouseCursorEvent& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424c95b0
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<MouseEventEx::InstanceType> MouseEventEx::MakeInstance(MouseEventEx& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+// @0x1424c9630
+// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
+Pickable<TextEventEx::InstanceType> TextEventEx::MakeInstance(TextEventEx& t)
+{
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+}
+}}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_gfx
+
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
@@ -2904,3 +3120,4 @@ RemoveObjectTag* AS3Support::AllocRemoveObjectTag(LoadProcess* p)
 // MS2-PIN: ??_7PlaceObject3Tag@GFx@Scaleform@@6B@ 0x14313bb60
 // MS2-PIN: ??_7RemoveObject2Tag@GFx@Scaleform@@6B@ 0x14313bbc0
 // MS2-PIN: ??_7RemoveObjectTag@GFx@Scaleform@@6B@ 0x14313bc10
+// MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510

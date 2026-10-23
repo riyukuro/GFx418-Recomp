@@ -657,6 +657,7 @@ namespace InstanceTraits { namespace fl_text {
         CSMSettings(VM& vm, const ClassInfo& ci);
         // @0x1424ac460
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::CSMSettings"; }
+        Pickable<InstanceType> MakeInstance(CSMSettings& t);   // 0x1424ad0b0
         // @0x1424ad4d0
         virtual void MakeObject(Value& result, Traits& t)
         {
@@ -672,6 +673,7 @@ namespace InstanceTraits { namespace fl_text {
         Font(VM& vm, const ClassInfo& ci);
         // @0x1424ac4a0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Font"; }
+        Pickable<InstanceType> MakeInstance(Font& t);   // 0x1424ad130
         // @0x1424ad540
         virtual void MakeObject(Value& result, Traits& t)
         {
@@ -687,6 +689,7 @@ namespace InstanceTraits { namespace fl_text {
         TextLineMetrics(VM& vm, const ClassInfo& ci);
         // @0x1424ac690
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextLineMetrics"; }
+        Pickable<InstanceType> MakeInstance(TextLineMetrics& t);   // 0x1424ad3c0
         // @0x1424ad780
         virtual void MakeObject(Value& result, Traits& t)
         {
@@ -702,6 +705,7 @@ namespace InstanceTraits { namespace fl_text {
         StaticText(VM& vm, const ClassInfo& ci);
         // @0x1424ac530
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::StaticText"; }
+        Pickable<InstanceType> MakeInstance(StaticText& t);   // 0x1424ad200
         // @0x1424ad5f0
         virtual void MakeObject(Value& result, Traits& t)
         {
@@ -717,6 +721,7 @@ namespace InstanceTraits { namespace fl_text {
         StyleSheet(VM& vm, const ClassInfo& ci);
         // @0x1424ac560
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::StyleSheet"; }
+        Pickable<InstanceType> MakeInstance(StyleSheet& t);   // 0x1424ad270
         // @0x1424ad650
         virtual void MakeObject(Value& result, Traits& t)
         {
@@ -732,6 +737,7 @@ namespace InstanceTraits { namespace fl_text {
         TextField(VM& vm, const ClassInfo& ci);
         // @0x1424ac5d0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextField"; }
+        Pickable<InstanceType> MakeInstance(TextField& t);   // 0x1424ad300
         // @0x1424ad6e0
         virtual void MakeObject(Value& result, Traits& t)
         {
@@ -747,6 +753,7 @@ namespace InstanceTraits { namespace fl_text {
         TextFormat(VM& vm, const ClassInfo& ci);
         // @0x1424ac640
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextFormat"; }
+        Pickable<InstanceType> MakeInstance(TextFormat& t);   // 0x1424ad370
         // @0x1424ad740
         virtual void MakeObject(Value& result, Traits& t)
         {
@@ -762,6 +769,7 @@ namespace InstanceTraits { namespace fl_text {
         TextSnapshot(VM& vm, const ClassInfo& ci);
         // @0x1424ac6e0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextSnapshot"; }
+        Pickable<InstanceType> MakeInstance(TextSnapshot& t);   // 0x1424ad450
         // @0x1424ad800
         virtual void MakeObject(Value& result, Traits& t)
         {
