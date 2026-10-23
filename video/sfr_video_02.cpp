@@ -591,6 +591,26 @@ void FUN_1400103f0(UInt32* dst, const UInt32* src)
     *reinterpret_cast<void**>(dst + 2) = payload;
 }
 
+// MS2-FUNCTIONAL: encloses the object's cached local bounds with the supplied matrix, as observed in the executable.
+// @0x140010200
+Scaleform::Render::RectF* FUN_140010200(void* object, Scaleform::Render::RectF* result,
+                                        const Scaleform::Render::Matrix2F* matrix)
+{
+    matrix->EncloseTransform(result,
+        *reinterpret_cast<const Scaleform::Render::RectF*>(static_cast<char*>(object) + 0xe0));
+    return result;
+}
+
+// MS2-FUNCTIONAL: wrapper recovered as the executable's direct EncloseTransform call.
+// @0x1400101e0
+Scaleform::Render::RectF* FUN_1400101e0(const Scaleform::Render::Matrix2F* matrix,
+                                        Scaleform::Render::RectF* result,
+                                        const Scaleform::Render::RectF* source)
+{
+    matrix->EncloseTransform(result, *source);
+    return result;
+}
+
 // @0x14000ffd0
 void FUN_14000ffd0(void** object)
 {
