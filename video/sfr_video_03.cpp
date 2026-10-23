@@ -45,6 +45,8 @@ MS2_GLOBAL(0x143b27738, void*, VideoPropGetC); MS2_GLOBAL(0x143b27740, void*, Vi
 MS2_GLOBAL(0x143b27748, void*, VideoPropGetD); MS2_GLOBAL(0x143b27750, void*, VideoPropBaseD);
 MS2_GLOBAL(0x143b27768, void*, VideoPropSetC); MS2_GLOBAL(0x143b27770, void*, VideoPropBaseSetC);
 MS2_GLOBAL(0x143b27718, void*, VideoPropSetD); MS2_GLOBAL(0x143b27720, void*, VideoPropBaseSetD);
+MS2_GLOBAL(0x143b276d8, void*, VideoStringCallbackA); MS2_GLOBAL(0x143b276e0, void*, VideoStringCallbackBaseA);
+MS2_GLOBAL(0x143b27598, void*, VideoStringCallbackB); MS2_GLOBAL(0x143b275a0, void*, VideoStringCallbackBaseB);
 MS2_GLOBAL(0x143b277a8, void*, VideoCriWork);
 MS2_GLOBAL(0x143b277b0, std::uint32_t, VideoCriWorkSize);
 MS2_GLOBAL(0x143b277b4, int, VideoCriUsers);
@@ -1305,5 +1307,61 @@ void* FUN_1400199e0(void* traits, void* vm)
 void* FUN_14001ad20(void* traits, void* vm)
 {
     return BuildVideoTraits(traits, vm, &VideoClassInfoB, &VideoClassVtableB, &VideoInstanceVtableB, 0x78);
+}
+
+namespace {
+Scaleform::GFx::ASStringNode* MakeVideoNullString(Scaleform::GFx::ASStringManager* manager)
+{
+    return manager->CreateConstStringNode("null", 4, 0);
+}
+void ReleaseVideoString(Scaleform::GFx::ASStringNode* node)
+{
+    if (node && --*reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(node) + 0x18) == 0)
+        node->ReleaseNode();
+}
+}
+// MS2-FUNCTIONAL: dispatches the metadata or cue callback with converted AS3 string parameters.
+// @0x140017520
+void FUN_140017520(void*, void* vm, void* frame, std::uint64_t property, unsigned count, const std::uint64_t* args)
+{
+    auto* vmImpl = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x10);
+    auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
+    auto* first = MakeVideoNullString(manager); auto* second = MakeVideoNullString(manager);
+    std::uint64_t defaults[2] = {reinterpret_cast<std::uintptr_t>(first), reinterpret_cast<std::uintptr_t>(second)};
+    std::uint64_t record[4]{};
+    FUN_140017130(record, reinterpret_cast<std::uintptr_t>(vm), property, count, args, defaults);
+    ReleaseVideoString(first); ReleaseVideoString(second);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
+        std::uint64_t outA = 0, outB = 0;
+        auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackA.get());
+        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseA.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB);
+        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outA));
+        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outB));
+    }
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
+}
+// MS2-FUNCTIONAL: dispatches the subtitle callback with converted AS3 string parameters.
+// @0x140017670
+void FUN_140017670(void*, void* vm, void* frame, std::uint64_t property, unsigned count, const std::uint64_t* args)
+{
+    auto* vmImpl = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x10);
+    auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
+    auto* first = MakeVideoNullString(manager); auto* second = MakeVideoNullString(manager); auto* third = MakeVideoNullString(manager);
+    std::uint64_t defaults[3] = {reinterpret_cast<std::uintptr_t>(first), reinterpret_cast<std::uintptr_t>(second), reinterpret_cast<std::uintptr_t>(third)};
+    std::uint64_t record[5]{};
+    FUN_140017250(record, reinterpret_cast<std::uintptr_t>(vm), property, count, args, defaults);
+    ReleaseVideoString(first); ReleaseVideoString(second); ReleaseVideoString(third);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
+        std::uint64_t outA = 0, outB = 0, outC = 0;
+        auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackB.get());
+        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseB.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB, &outC);
+        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outA));
+        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outB));
+        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outC));
+    }
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[4]));
 }
 } // namespace
