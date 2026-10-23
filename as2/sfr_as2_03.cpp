@@ -166,6 +166,7 @@
 // MS2-RANGE: 0x1429266f0-0x1429267a0 .text$mn
 // MS2-RANGE: 0x142926200-0x1429262a0 .text$mn
 // MS2-RANGE: 0x1429262a0-0x142926340 .text$mn
+// MS2-RANGE: 0x142926340-0x142926470 .text$mn
 // MS2-RANGE: 0x142923a90-0x142923b90 .text$mn
 // MS2-RANGE: 0x142926470-0x1429264d0 .text$mn
 // MS2-RANGE: 0x1429264d0-0x142926530 .text$mn
@@ -1509,6 +1510,13 @@ const ArrayLH<Value, StatMV_ActionScript_Mem>& FUN_1429262a0(ArrayLH<Value, Stat
                                                              const ArrayLH<Value, StatMV_ActionScript_Mem>& src)
 {
     return *pthis = src;
+}
+
+// @0x142926340
+void FUN_142926340(HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>* pthis,
+                   const HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>& src)
+{
+    *pthis = src;
 }
 
 // @0x142926ab0

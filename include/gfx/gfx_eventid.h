@@ -118,9 +118,10 @@ struct EventIdHashFunctor
 {
     UPInt operator()(const EventId& data) const
     {
+        UPInt hash = data.Id;
         if (data.Id & EventId::Event_KeyPress)
-            return data.Id ^ data.KeyCode;
-        return data.Id;
+            hash ^= data.KeyCode;
+        return hash;
     }
 };
 
