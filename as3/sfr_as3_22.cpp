@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
+#include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include <cstdint>
 #include <cstring>
 
@@ -35,6 +36,11 @@ template void ArrayData<GFx::TaskThreadInPool*, AllocatorGH<GFx::TaskThreadInPoo
 template void ArrayData<float, AllocatorLH_POD<float, 2>, ArrayDefaultPolicy>::Resize(UPInt);
 template void MsgFormat::FormatD1<unsigned long>(const unsigned long&);
 template void MsgFormat::FormatD1<const char*>(const char* const&);
+
+// The Context::CreateEntry template allocates TreeContainer::NodeData, runs its encoded
+// constructor, and hands the node data to the context entry table.
+template Render::TreeContainer*
+Render::ContextImpl::Context::CreateEntry<Render::TreeContainer>();
 
 } // namespace Scaleform
 
