@@ -1833,6 +1833,74 @@ void criMvPlyAmng_Finalize(void)
     FUN_1400532d0();
 }
 
+// MS2-FUNCTIONAL: initialize the timer snapshot with the current CRI clock and its live-state flag.
+// @0x1400419d0
+void FUN_1400419d0(void* snapshot)
+{
+    *(CriUint64*)snapshot = FUN_1425e3560();
+    *((CriUint8*)snapshot + 0x10) = 1;
+}
+
+// MS2-FUNCTIONAL: initialize an elapsed-time accumulator with a stopped flag and current clock.
+// @0x1400419f0
+void FUN_1400419f0(void* timer)
+{
+    *(CriUint64*)((CriUint8*)timer + 8) = FUN_1425e3560();
+    *((CriUint8*)timer + 0x10) = 0;
+}
+
+// MS2-FUNCTIONAL: initialize the alternate timer snapshot layout with a running flag.
+// @0x140041bd0
+void* FUN_140041bd0(void* snapshot)
+{
+    *(CriUint64*)snapshot = FUN_1425e3560();
+    *((CriUint8*)snapshot + 0x10) = 1;
+    return snapshot;
+}
+
+// MS2-FUNCTIONAL: reset the timer's accumulated duration and capture a fresh stopped-time origin.
+// @0x140041aa0
+void FUN_140041aa0(void* timer)
+{
+    *(CriUint64*)((CriUint8*)timer + 0x18) = FUN_1425e3560();
+    *((CriUint8*)timer + 0x20) = 0;
+    *(CriUint64*)((CriUint8*)timer + 0x40) = 0;
+}
+
+// MS2-FUNCTIONAL: forward the requested state to the attached player interface when present.
+// @0x1400412e0
+void FUN_1400412e0(void* player, CriSint32 state)
+{
+    void* target = *(void**)((CriUint8*)player + 0x10);
+    if (target)
+        (*(void (**)(void*, CriBool))((CriUint8*)*(void**)target + 0x30))(target, state == 1);
+}
+
+// MS2-FUNCTIONAL: forward the supplied output pointer to the attached player's slot-four callback.
+// @0x1400412a0
+void FUN_1400412a0(void* player)
+{
+    void* target = *(void**)((CriUint8*)player + 0x10);
+    if (target)
+        (*(void (**)(void*, void*))((CriUint8*)*(void**)target + 0x20))(target, (CriUint8*)player + 0x18);
+}
+
+// MS2-FUNCTIONAL: report whether the attached player callback returns the active state value.
+// @0x140041270
+CriBool FUN_140041270(void* player)
+{
+    void* target = *(void**)((CriUint8*)player + 0x10);
+    return target && (*(CriSint32 (**)(void*))((CriUint8*)*(void**)target + 0x18))(target) != 1;
+}
+
+// MS2-FUNCTIONAL: forward the two supplied values to the attached player's slot-one callback.
+// @0x140041220
+CriBool FUN_140041220(void* player, void*, CriUint32 first, CriUint32 second)
+{
+    void* target = *(void**)((CriUint8*)player + 0x10);
+    return target ? (*(CriBool (**)(void*, CriUint32, CriUint32))((CriUint8*)*(void**)target + 8))(target, first, second) : 0;
+}
+
 // MS2-FUNCTIONAL: return the player's shared work-memory size and default alignment.
 // @0x1400411e0
 void* FUN_1400411e0(CriUint32* size)
