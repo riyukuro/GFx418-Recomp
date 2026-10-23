@@ -89,3 +89,62 @@ void ResizeStaticTextArray(void* array, UPInt size)
     fields[1] = size;
 }
 }
+
+enum FMOD_RESULT : int {};
+namespace FMOD {
+class Sound
+{
+public:
+    ::FMOD_RESULT getLength(unsigned* length, unsigned timeUnit);
+};
+class Channel
+{
+public:
+    ::FMOD_RESULT isPlaying(bool* playing);
+};
+}
+
+namespace Scaleform {
+static FMOD::Sound* SoundForLength(void* soundSource)
+{
+    return *reinterpret_cast<FMOD::Sound**>(static_cast<char*>(soundSource) + 0x30);
+}
+
+// MS2-FUNCTIONAL: retains the executable's null check, FMOD millisecond query, and failure result.
+// @0x142745760
+unsigned QuerySoundLength(void* soundSource)
+{
+    FMOD::Sound* sound = SoundForLength(soundSource);
+    unsigned length = 0;
+    return sound && sound->getLength(&length, 8) == 0 ? length : 0;
+}
+
+// MS2-FUNCTIONAL: byte-identical behavior to the neighboring FMOD length query; emitted as a distinct exe copy.
+// @0x1427457a0
+unsigned QuerySoundLengthCopy(void* soundSource)
+{
+    FMOD::Sound* sound = SoundForLength(soundSource);
+    unsigned length = 0;
+    return sound && sound->getLength(&length, 8) == 0 ? length : 0;
+}
+
+// MS2-FUNCTIONAL: retains the executable's sample-unit query and conversion to seconds.
+// @0x1427457e0
+float QuerySoundDuration(void* soundSource)
+{
+    FMOD::Sound* sound = SoundForLength(soundSource);
+    unsigned length = 0;
+    if (!sound || sound->getLength(&length, 1) != 0)
+        return 0.0f;
+    return static_cast<float>(length) / 1000.0f;
+}
+
+// MS2-FUNCTIONAL: preserves the executable's null check and FMOD error handling.
+// @0x142745c40
+bool QueryChannelPlaying(void* soundSource)
+{
+    FMOD::Channel* channel = *reinterpret_cast<FMOD::Channel**>(static_cast<char*>(soundSource) + 0x38);
+    bool playing = false;
+    return channel && channel->isPlaying(&playing) == 0 ? playing : false;
+}
+}
