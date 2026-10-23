@@ -1559,7 +1559,7 @@ void FUN_140015750(void** frame)
     char* vm = static_cast<char*>(frame[0]);
     if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
         static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetSInt32Unsafe(
-            reinterpret_cast<intptr_t>(frame[2]));
+            static_cast<Scaleform::SInt32>(reinterpret_cast<intptr_t>(frame[2])));
 }
 
 // MS2-FUNCTIONAL: writes a boolean result only when the VM has no pending exception.
@@ -1586,4 +1586,15 @@ void** FUN_1400157d0(void** frame, void* vm, void* receiver, int convert,
         frame[2] = reinterpret_cast<void*>(FUN_1424f0be0(value));
     }
     return frame;
+}
+
+// MS2-FUNCTIONAL: creates an instance through the supplied traits and writes the resulting pointer.
+// @0x140014ac0
+void** FUN_140014ac0(void*, void** result, void* traits)
+{
+    extern void* FUN_1424eb610(void*);
+    extern void* FUN_1400140e0(void*, void*);
+    void* instanceTraits = FUN_1424eb610(traits);
+    *result = instanceTraits ? FUN_1400140e0(instanceTraits, traits) : nullptr;
+    return result;
 }
