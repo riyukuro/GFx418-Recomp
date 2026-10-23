@@ -141,6 +141,15 @@ void FUN_1423daef0(void* self)
     }
 }
 
+extern void FUN_1423d9690(void*, void*, unsigned long long);
+
+// @0x1423d9500
+void FUN_1423d9500(void* self)
+{
+    FUN_1423d9690(static_cast<unsigned char*>(self) + 0x848,
+                  static_cast<unsigned char*>(self) + 0x848, 0);
+}
+
 // @0x1423d94f0
 void FUN_1423d94f0(void* self, void* value)
 {
