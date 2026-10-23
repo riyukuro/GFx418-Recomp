@@ -83,7 +83,7 @@ public:
         CFunctionPtr                                CFunction;      // +0x58
         Ptr<NotifyLoadInitC>                        pNLoadInitCL;   // +0x60
 
-        ActionEntry() : pNextEntry(NULL), Type(Entry_None), CFunction(NULL) {}
+        ActionEntry() { pNextEntry = NULL; Type = Entry_None; }   // CFunction is set by SetAction/ClearAction
 
         void SetAction(DisplayObject* pcharacter, const EventId& id)
         {

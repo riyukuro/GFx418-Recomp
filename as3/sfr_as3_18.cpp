@@ -855,9 +855,129 @@ bool AvmSprite::IsTabable() const
     return (SprFlags & Flag_ButtonMode) != 0;
 }
 
+// @0x14250bd10
+SF_NOINLINE MovieRoot::ActionEntry* MovieRoot::ActionQueueType::GetNewEntry()
+{
+    ActionEntry* pentry;
+    if (pFreeEntry)
+    {
+        pentry = pFreeEntry;
+        pFreeEntry = pentry->pNextEntry;
+        pentry->pNextEntry = NULL;
+        --FreeEntriesCount;
+    }
+    else
+    {
+        pentry = SF_HEAP_NEW(pHeap) ActionEntry;
+        if (!pentry)
+            return NULL;
+        pentry->ClearAction();
+    }
+    return pentry;
+}
+
+// @0x142512800
+MovieRoot::ActionEntry* MovieRoot::ActionQueueType::InsertEntry(ActionLevel lvl)
+{
+    ActionEntry* pentry = GetNewEntry();
+    ActionQueueEntry& q = Entries[lvl];
+    if (!q.pInsertEntry)
+    {
+        pentry->pNextEntry = q.pActionRoot;
+        q.pActionRoot = pentry;
+    }
+    else
+    {
+        pentry->pNextEntry = q.pInsertEntry->pNextEntry;
+        q.pInsertEntry->pNextEntry = pentry;
+    }
+    q.pInsertEntry = pentry;
+    if (!pentry->pNextEntry)
+        q.pLastEntry = pentry;
+    ++ModId;
+    return pentry;
+}
+
+// @0x142512790
+MovieRoot::ActionEntry* MovieRoot::InsertEmptyAction(ActionLevel lvl)
+{
+    return ActionQueue.InsertEntry(lvl);
+}
+
+// @0x142512750
+void AvmInteractiveObj::InsertChildToPlayList(InteractiveObject* ch)
+{
+    if (InteractiveObject* pafter = FindInsertToPlayList(ch))
+        ch->InsertToPlayListAfter(pafter);
+    else
+        ch->AddToPlayList();
+}
+
+// @0x142514340
+bool AvmSprite::IsLevelMovie() const
+{
+    return pDispObj->GetParent() == NULL;
+}
+
+// @0x142514f10
+bool AvmDisplayObjContainer::IsTabable() const
+{
+    if (!pDispObj->GetVisible())
+        return false;
+    const InteractiveObject* io = GetIntObj();
+    if (io->Flags & InteractiveObject::Mask_TabEnabled)
+        return (io->Flags & InteractiveObject::Mask_TabEnabled) == InteractiveObject::Mask_TabEnabled;
+    return io->TabIndex > 0;
+}
+
+// MS2-FUNCTIONAL: same code, the exe keeps strlen+1 in rdi and the copy in rbx (registers swapped)
+// @0x142511760
+void AvmDisplayObj::InitClassName(const char* name)
+{
+    if (!pClassName)
+    {
+        const UPInt len = SFstrlen(name) + 1;
+        char* p = static_cast<char*>(SF_HEAP_AUTO_ALLOC(pDispObj, len));
+        memcpy(p, name, len);
+        pClassName = p;
+    }
+}
+
+// @0x14250c2e0
+bool AvmDisplayObj::GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase> >* destArray, const Render::PointF& pt) const
+{
+    if (pDispObj->PointTestLocal(pt, 1))   // test the shape
+    {
+        destArray->InsertAt(0, Ptr<DisplayObjectBase>(pDispObj));
+        return true;
+    }
+    return false;
+}
+
+// @0x14250c7c0
+bool AvmSprite::GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase> >* destArray, const Render::PointF& pt) const
+{
+    bool ret = AvmDisplayObjContainer::GetObjectsUnderPoint(destArray, pt);
+    if (!ret && GetSprite()->pDrawingAPI)
+    {
+        DrawingContext* pdc = GetSprite()->GetDrawingContext();
+        ret = pdc->DefPointTestLocal(pt, true, pDispObj);
+        if (ret)
+            destArray->InsertAt(0, Ptr<DisplayObjectBase>(pDispObj));
+    }
+    return ret;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx {
+
+// The focus rectangle defaults to the local bounds.
+// @0x142509d40
+RectF InteractiveObject::GetFocusRect() const
+{
+    return GetBounds(Matrix());
+}
 
 // @0x142515190
 bool DisplayObject::IsUsedAsMask() const
