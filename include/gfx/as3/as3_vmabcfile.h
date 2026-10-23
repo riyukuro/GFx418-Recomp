@@ -37,6 +37,13 @@ public:
 private:
     VMAbcFile();
 
+    // (appended, sfr19) makes the class traits of the file's classes, then its scripts (run when to_execute).
+    // 0x142515b30
+    CheckResult Load(bool to_execute);
+    // (appended, sfr19) the two halves of Load. 0x142521780, 0x142521390
+    bool RegisterUserDefinedClassTraits();
+    bool RegisterScrips(bool to_execute);
+
     VM*              pVM;               // +0x20
     const Abc::File* pFile;             // +0x28 (counted)
     UPInt            Unk30[14];         // +0x30 (not modeled)

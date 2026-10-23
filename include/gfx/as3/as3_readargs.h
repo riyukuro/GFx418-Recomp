@@ -32,9 +32,13 @@ private:
 
     // (appended, sfr19) a new page of at least 64 values (global heap). 0x1424eb6b0
     Page* AllocPage(UInt16 pageSize);
+    // (appended, sfr19) a reserved page of at least pageSize values, else a new one. 0x1425182a0
+    Page* NewPage(UInt16 pageSize);
 
     UPInt  Unk00;               // +0x00
     Value* pCurrent;            // +0x08
+    UPInt  Unk10[2];            // +0x10 (not modeled)
+    Page*  pReserved;           // +0x20 (appended, sfr19) released pages, kept for reuse
 };
 
 // (appended, sfr19) the register files of the call frames: pages of values, each followed by the sizes of the
@@ -42,6 +46,10 @@ private:
 class ValueRegisterFile
 {
 public:
+    // (appended, sfr19) releases the num registers of the innermost reservation; a page left empty goes back to
+    // the reserved list. 0x142521fb0
+    void ReleaseReserved(UInt16 num);
+
     struct Page
     {
         UInt16      CurrPos;            // +0x00
@@ -58,10 +66,18 @@ private:
 
     // A new page of a multiple of 64 values (at least the largest so far; global heap). 0x1424eb640
     Page* AllocPage(UInt16 pageSize);
+    // (appended, sfr19) a reserved page of at least pageSize values, else a new one. 0x1425181c0
+    Page* NewPage(UInt16 pageSize);
 
-    UInt16      Unk00;                  // +0x00
-    UInt16      Unk02;                  // +0x02
+    // (appended, sfr19) the sizes of the register sets reserved in page p, after its values.
+    static UInt16* GetReservations(Page* p) { return reinterpret_cast<UInt16*>(p->Values + p->PageSize); }
+
+    UInt16      Unk00;                  // +0x00 registers reserved in the current page
+    UInt16      Unk02;                  // +0x02 the largest page on the reserved list
     UInt16      MaxAllocatedPageSize;   // +0x04
+    Value*      pRF;                    // +0x08 (appended, sfr19) the innermost register set
+    Page*       pCurrentPage;           // +0x10
+    Page*       pReservedPage;          // +0x18 released pages, kept for reuse
 };
 
 // 0x138 bytes.

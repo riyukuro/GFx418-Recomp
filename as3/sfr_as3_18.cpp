@@ -4,7 +4,11 @@
 // MS2-UNIT: sfr_as3_18
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142509d40-0x142523170 .text$mn
+#include <math.h>
+#include <stdlib.h>
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
+#include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #undef GetObject   // windows.h
 
@@ -217,6 +221,49 @@ void Value::ReleaseWeakRef()
     value.VS._2.VObj = NULL;
 }
 
+// A collectable reference: a tagged pointer (low bit set) holds no count and is only untagged.
+static SF_INLINE void ReleaseGCRef(Object*& p)
+{
+    if (reinterpret_cast<UPInt>(p) & 1)
+        p = reinterpret_cast<Object*>(reinterpret_cast<UPInt>(p) - 1);
+    else if (p)
+        p->Release();
+}
+
+// @0x142521f00
+void Value::ReleaseInternal()
+{
+    switch (GetKind())
+    {
+    case kString:
+        value.VS._1.VStr->Release();
+        break;
+    case kNamespace:
+        ReleaseGCRef(value.VS._1.VObj);
+        break;
+    case kObject:
+        ReleaseGCRef(value.VS._1.VObj);
+        break;
+    case kClass:
+        ReleaseGCRef(value.VS._1.VObj);
+        break;
+    case kFunction:
+        ReleaseGCRef(value.VS._1.VObj);
+        break;
+    case kThunkFunction:
+        ReleaseGCRef(value.VS._1.VObj);
+        break;
+    case kThunkClosure:
+        ReleaseGCRef(value.VS._2.VObj);
+        break;
+    case kVTableIndClosure:
+        ReleaseGCRef(value.VS._2.VObj);
+        break;
+    default:
+        break;
+    }
+}
+
 // @0x1425157a0
 bool Value::IsValidWeakRef() const
 {
@@ -365,6 +412,183 @@ void STPtr::GetValueUnsafe(Value& v)
         }
     }
     v.SetNull();
+}
+
+// ==== vector indices ====
+
+// The largest vector index, 2^32 - 1.
+static const double kMaxVectorInd = 4294967295.0;
+
+// @0x142510800
+CheckResult GetVectorInd(const Multiname& prop_name, UInt32& ind)
+{
+    bool result = false;
+    const Value& name = prop_name.Name;
+    switch (name.GetKind())
+    {
+    case Value::kInt:
+        if (name.AsInt() >= 0)
+        {
+            ind = name.AsInt();
+            result = true;
+        }
+        break;
+    case Value::kUInt:
+        ind = name.AsUInt();
+        result = true;
+        break;
+    case Value::kNumber:
+    {
+        const Value::Number d = name.AsNumber();
+        Value::Number ip;
+        if (d >= 0 && modf(d, &ip) == 0 && d <= kMaxVectorInd)
+        {
+            ind = static_cast<UInt32>(d);
+            result = true;
+        }
+        break;
+    }
+    case Value::kString:
+        result = GetVectorInd(name.GetStringNode(), ind);
+        break;
+    default:
+        break;
+    }
+    return result;
+}
+
+// Whether s[0, size) is an array index: digits, optionally followed by '.' and nothing but zeros ("3.000").
+static inline bool IsIndexString(const char* s, UInt32 size)
+{
+    if (static_cast<UByte>(s[0] - '0') > 9)
+        return false;
+    for (UInt32 i = 1; i < size; ++i)
+    {
+        const char c = s[i];
+        if (static_cast<UByte>(c - '0') > 9)
+        {
+            if (c != '.')
+                return false;
+            for (UInt32 j = i + 1; j < size; ++j)
+                if (s[j] != '0')
+                    return false;
+            break;
+        }
+    }
+    return true;
+}
+
+// @0x142510960
+CheckResult GetVectorInd(ASStringNode* node, UInt32& ind)
+{
+    bool result = false;
+    if (node && node->Size != 0 && IsIndexString(node->pData, node->Size))
+    {
+        char* end;
+        const double d = strtod(node->pData, &end);
+        if (d <= kMaxVectorInd)
+        {
+            ind = static_cast<UInt32>(d);
+            result = true;
+        }
+    }
+    return result;
+}
+
+// ==== value stack and register file pages ====
+
+// MS2-FUNCTIONAL: the exe inlines AllocPage (out of line in sfr_as3_16) into the not-found path
+// @0x1425182a0
+ValueStack::Page* ValueStack::NewPage(UInt16 pageSize)
+{
+    Page* p = pReserved;
+    for (; p; p = p->pNext)
+        if (pageSize <= p->PageSize)
+            break;
+    if (!p)
+        return AllocPage(pageSize);
+
+    if (p == pReserved)
+    {
+        pReserved = p->pNext;
+        if (pReserved)
+            pReserved->pPrev = NULL;
+    }
+    else
+    {
+        p->pPrev->pNext = p->pNext;
+        if (p->pNext)
+            p->pNext->pPrev = p->pPrev;
+        p->pPrev = NULL;
+    }
+    p->pNext = NULL;
+    return p;
+}
+
+// MS2-FUNCTIONAL: the exe inlines AllocPage (out of line in sfr_as3_16) into the not-found path
+// @0x1425181c0
+ValueRegisterFile::Page* ValueRegisterFile::NewPage(UInt16 pageSize)
+{
+    if (pageSize <= Unk02)
+    {
+        Page* p = pReservedPage;
+        for (; p; p = p->pNext)
+            if (pageSize <= p->PageSize)
+                break;
+        if (p)
+        {
+            if (p == pReservedPage)
+            {
+                pReservedPage = p->pNext;
+                if (pReservedPage)
+                    pReservedPage->pPrev = NULL;
+            }
+            else
+            {
+                p->pPrev->pNext = p->pNext;
+                if (p->pNext)
+                    p->pNext->pPrev = p->pPrev;
+                p->pPrev = NULL;
+            }
+            p->pNext = NULL;
+            return p;
+        }
+    }
+    return AllocPage(pageSize);
+}
+
+// @0x142521fb0
+void ValueRegisterFile::ReleaseReserved(UInt16 num)
+{
+    for (UInt16 i = 0; i < num; ++i)
+        pRF[i].Release();
+    Unk00 -= num;
+
+    Page* cur = pCurrentPage;
+    --cur->CurrPos;
+    pRF -= GetReservations(cur)[cur->CurrPos];
+
+    if (Unk00 == 0 && pCurrentPage->pPrev)
+    {
+        // the page is empty: back to the reserved list, the previous one becomes current
+        Unk02 = Alg::Max(pCurrentPage->PageSize, Unk02);
+        Page* prev = pCurrentPage->pPrev;
+        pCurrentPage->pPrev = NULL;
+        pCurrentPage->pNext = pReservedPage;
+        pReservedPage = pCurrentPage;
+        pCurrentPage = prev;
+        prev->pNext = NULL;
+        Unk00 = pCurrentPage->ReservedNum;
+        pRF = pCurrentPage->pCurrent;
+    }
+}
+
+// ==== VMAbcFile ====
+
+// @0x142515b30
+CheckResult VMAbcFile::Load(bool to_execute)
+{
+    return RegisterUserDefinedClassTraits() && RegisterScrips(to_execute);
 }
 
 // ==== VM: interned namespaces ====

@@ -138,6 +138,8 @@ public:
 
 // A property name that is an array index ("3", 3u, 3.0) -> ind. 0x142510800
 CheckResult GetVectorInd(const Multiname& prop_name, UInt32& ind);
+// (appended, sfr19) the same for a string name: digits, optionally followed by '.' and zeros. 0x142510960
+CheckResult GetVectorInd(ASStringNode* node, UInt32& ind);
 
 }}} // namespace Scaleform::GFx::AS3
 

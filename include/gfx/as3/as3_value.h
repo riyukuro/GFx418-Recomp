@@ -373,6 +373,7 @@ struct ThunkInfo
 
 enum StrongRefType { StrongRefValue };
 class ValueStack;
+class ValueRegisterFile;
 
 class Value
 {
@@ -790,6 +791,8 @@ public:
     }
 
 private:
+    friend class ValueRegisterFile;     // (appended, sfr19) ReleaseReserved releases registers in place
+
     SF_INLINE void AddRefString() const         { value.VS._1.VStr->AddRef(); }
     void AddRefObject() const;
     void AddRefClosure() const;
