@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x142620040-0x1426202f0 .text$mn
 // MS2-RANGE: 0x142623c60-0x142624020 .text$mn
 // MS2-RANGE: 0x142626190-0x142633210 .text$mn
+// MS2-PIN: ?ClearAndRelease@LinearHeap@Render@Scaleform@@QEAAXXZ 0x14262a910
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -191,6 +192,21 @@ void ShapeMeshProvider::AttachShape(ShapeDataInterface* shape, ShapeDataInterfac
     }
     acquireShapeData();
 }
+
+// @0x14262a890
+void MeshGenerator::Clear()
+{
+    mTess.Clear();
+    mStroker.Clear();
+    mStrokeSorter.Clear();
+    mHairliner.Clear();
+    mStrokerAA.Clear();
+    Heap1.ClearAndRelease();
+    Heap2.ClearAndRelease();
+    Heap3.ClearAndRelease();
+    Heap4.ClearAndRelease();
+}
+
 // Re-encodes the two ends of the morph so that they have the same path records. Both ends always have the same
 // number of edges, but a path may end earlier on one side: then the other side's path is split there and the
 // short side continues from where its path started. An edge kind mismatch (line against quad) promotes the line
@@ -1397,6 +1413,74 @@ void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned
     }
     else
         matrix->SetIdentity();
+}
+
+// a fill style that is not a solid color
+static inline bool isComplexFill(const ShapeDataInterface* shape, unsigned fillStyle)
+{
+    if (fillStyle)
+    {
+        FillStyleType fill;
+        shape->GetFillStyle(fillStyle, &fill);
+        return fill.pFill != 0;
+    }
+    return false;
+}
+
+// The paths of the layer at startPos with different fills on their two sides, into the generator's tessellator.
+// @0x14262e490
+void ShapeMeshProvider::addFill(MeshGenerator* gen, const ToleranceParams& param, const TransformerBase* tr,
+                                unsigned startPos, float morphRatio)
+{
+    ShapePosInfo  pos1(startPos);
+    ShapePosInfo  pos2(startPos);
+    ShapePathType pathType;
+    PathEdgeType  edge;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+
+    bool first = true;
+
+    MorphInterpolator shape(pShapeData, pMorphData, morphRatio, pos2);
+
+    while ((pathType = shape.ReadPathInfo(&pos1, coord, styles)) != Shape_EndShape)
+    {
+        if (!first && pathType == Shape_NewLayer)
+            break;
+        first = false;
+
+        if (styles[0] != styles[1])
+        {
+            tr->Transform(&coord[0], &coord[1]);
+            TessBase* tess = &gen->mTess;
+            tess->AddVertex(coord[0], coord[1]);
+            while ((edge = shape.ReadEdge(&pos1, coord)) != Edge_EndPath)
+            {
+                if (edge == Edge_LineTo)
+                {
+                    tr->Transform(&coord[0], &coord[1]);
+                    tess->AddVertex(coord[0], coord[1]);
+                }
+                else if (edge == Edge_QuadTo)
+                {
+                    tr->Transform(&coord[0], &coord[1]);
+                    tr->Transform(&coord[2], &coord[3]);
+                    TessellateQuadCurve(tess, param, coord[0], coord[1], coord[2], coord[3]);
+                }
+                else if (edge == Edge_CubicTo)
+                {
+                    tr->Transform(&coord[0], &coord[1]);
+                    tr->Transform(&coord[2], &coord[3]);
+                    tr->Transform(&coord[4], &coord[5]);
+                    TessellateCubicCurve(tess, param, coord[0], coord[1], coord[2], coord[3], coord[4], coord[5]);
+                }
+            }
+            tess->FinalizePath(styles[0], styles[1], isComplexFill(pShapeData, styles[0]),
+                               isComplexFill(pShapeData, styles[1]));
+        }
+        else
+            shape.SkipPathData(&pos1);
+    }
 }
 
 // @0x14262ef50

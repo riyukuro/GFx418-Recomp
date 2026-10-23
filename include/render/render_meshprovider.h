@@ -188,6 +188,9 @@ private:
                    unsigned strokeStyle, float snapOffset, float morphRatio);
     void addStroke(MeshGenerator* gen, TessBase* stroker, const ToleranceParams& param, const TransformerBase* tr,
                    unsigned startPos, unsigned strokeStyle, float snapOffset, float morphRatio);
+    // the fill paths of the layer at startPos into the generator's tessellator
+    void addFill(MeshGenerator* gen, const ToleranceParams& param, const TransformerBase* tr, unsigned startPos,
+                 float morphRatio);
     // a mesh of one degenerate triangle, for a layer with nothing to draw
     bool createNullMesh(VertexOutput* pout, unsigned layer, unsigned meshGenFlags);
     // the image fill matrix correction of a scale9 grid: the bounds of the fill's paths onto their grid mapping
