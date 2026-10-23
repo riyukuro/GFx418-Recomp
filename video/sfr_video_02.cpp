@@ -140,6 +140,35 @@ uintptr_t FUN_14000e560() { return 0; }
 // @0x14000e580
 bool FUN_14000e580() { return false; }
 
+// MS2-FUNCTIONAL: forwards the absolute-path query to the executable's AvmCharacter display object.
+// @0x14000e570
+const char* FUN_14000e570(AvmCharacter* pavm, String* path)
+{
+    return pavm->pDispObj->GetAbsolutePath(path);
+}
+
+// MS2-FUNCTIONAL: these executable entries are FID-conflict copies of the display-object forwarding wrapper.
+// @0x14000e630
+void FUN_14000e630(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
+{
+    pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
+}
+
+// MS2-FUNCTIONAL: executable duplicate of the physical-property forwarding entry above.
+// @0x14000e640
+void FUN_14000e640(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
+{
+    pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
+}
+
+// MS2-FUNCTIONAL: forwards the focus callback through the AvmCharacter interface.
+// @0x14000e650
+void FUN_14000e650(AvmCharacter* pavm, InteractiveObject::FocusEventType event,
+                   InteractiveObject* oldOrNewFocus, unsigned controller, FocusMovedType moved)
+{
+    pavm->OnFocus(event, oldOrNewFocus, controller, moved);
+}
+
 // @0x14000e600
 bool FUN_14000e600() { return false; }
 
