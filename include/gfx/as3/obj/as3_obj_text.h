@@ -127,6 +127,8 @@ namespace Instances { namespace fl_text {
     {
     public:
         StaticText(InstanceTraits::Traits& t) : Instances::fl_display::DisplayObject(t) {}   // 0x1424a8d20
+        // (appended, sfr19) 0x1424ac540
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::StaticText"; }
         // @0x1424b4d00
         void textGet(ASString& result);
     };
@@ -136,6 +138,8 @@ namespace Instances { namespace fl_text {
     {
     public:
         StyleSheet(InstanceTraits::Traits& t);   // 0x1424a8e80
+        // (appended, sfr19) 0x1424ac570
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::StyleSheet"; }
 
         Text::StyleManager  CSS;        // +0x50
 
@@ -346,6 +350,8 @@ namespace Instances { namespace fl_text {
     {
     public:
         TextFormat(InstanceTraits::Traits& t);   // 0x1424a9690
+        // (appended, sfr19) 0x1424ac650
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::TextFormat"; }
     protected:
         // @0x1424abc10
         virtual void AS3Constructor(unsigned argc, const Value* argv);
@@ -475,6 +481,8 @@ namespace Instances { namespace fl_text {
     {
     public:
         TextSnapshot(InstanceTraits::Traits& t);   // 0x1424a9ea0
+        // (appended, sfr19) 0x1424ac6f0
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::TextSnapshot"; }
 
         StaticTextSnapshotData  SnapshotData;   // +0x38
 
