@@ -1909,6 +1909,7 @@ typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<M
 // @0x1424d5020
 template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
 // Adding by raw pointer: the entry is built from a temporary SPtr.
+// MS2-FUNCTIONAL: register allocation differs (the exe saves rdi late and swaps rbx/rdi)
 // @0x1424d29d0
 template void MS2_GCRootSet::add<GFx::AS3::GASRefCountBase*>(void*, GFx::AS3::GASRefCountBase* const&, UPInt);
 // The VM's set of script global objects (HashSetLH<SPtr<GlobalObjectScript>> by pointer value).
@@ -2995,3 +2996,4 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317e228
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317e238
 // MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
+// MS2-PIN: ??$add@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBQEAVGASRefCountBase@AS3@GFx@1@_K@Z 0x1424d29d0
