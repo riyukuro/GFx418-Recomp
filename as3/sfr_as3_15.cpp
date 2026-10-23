@@ -2091,6 +2091,38 @@ Instance::Instance(InstanceTraits::Traits& t)
     t.ConstructTail(*this);
 }
 
+// Object(VM&) is inlined into Instance(VM&) as well: an object with no traits yet.
+inline Object::Object(VM& vm)
+    : GASRefCountBase(&vm.GetGC())
+    , pUserDataHolder(NULL)
+{
+}
+
+// MS2-FUNCTIONAL: same stores; the exe writes the vftable before the reference count (scheduling)
+// @0x1424d93a0
+Instance::Instance(VM& vm)
+    : Object(vm)
+{
+}
+
+namespace InstanceTraits {
+
+// @0x1424d9410
+Prototype::Prototype(VM& vm, const ClassInfo& ci)
+    : CTraits(vm, ci)
+{
+    SetConstructor(vm.GetClassTraitsObject().GetInstanceTraits().GetConstructor());
+}
+
+// @0x1424d9470
+Prototype::Prototype(VM& vm, const ClassInfo& ci, Class& c)
+    : CTraits(vm, ci)
+{
+    SetConstructor(c);
+}
+
+} // namespace InstanceTraits
+
 // VM::Error: "Error #<id>: <message>", the message being the error text with the arguments filled in.
 
 // MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
@@ -2351,3 +2383,4 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
 // MS2-PIN: ??_GXMLNode@fl_xml@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424cd8e0
 // MS2-PIN: ??_GXMLDocument@fl_xml@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424cd700
 // MS2-PIN: ??_GSound@fl_media@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424d0260
+// MS2-PIN: ??_7Prototype@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b4b0

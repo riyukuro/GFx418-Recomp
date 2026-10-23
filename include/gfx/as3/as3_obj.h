@@ -411,7 +411,7 @@ namespace InstanceTraits
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::RTraits"; }
         virtual ASString GetName() const;           // 0x14250bc20
         virtual unsigned GetFixedMemSize() const;   // 0x142509d10
-    virtual void MakeObject(Value& result, Traits& t);  // 0x142516570
+        virtual void MakeObject(Value& result, Traits& t);  // 0x142516570
 
     public:
         ASString                                Name;                   // +0xc8
@@ -457,6 +457,17 @@ namespace InstanceTraits
             static void setPropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         };
     }
+
+    // (appended, sfr19) Traits that make no objects: those of class prototype objects, whose constructor is the
+    // class (or Object's class). vftable 0x14317b4b0.
+    class Prototype : public CTraits
+    {
+    public:
+        Prototype(VM& vm, const ClassInfo& ci);             // 0x1424d9410
+        Prototype(VM& vm, const ClassInfo& ci, Class& c);   // 0x1424d9470
+
+        virtual void MakeObject(Value& result, Traits& t) { SF_UNUSED2(result, t); }  // 0x142516560
+    };
 }
 
 namespace ClassTraits

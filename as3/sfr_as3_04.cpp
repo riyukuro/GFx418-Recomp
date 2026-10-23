@@ -1712,13 +1712,6 @@ namespace InstanceTraits
     {
         result.Pick(new(t.Alloc()) Instances::fl::RegExp(t));
     }
-
-    // The traits of a class prototype object: plain object traits whose constructor is the class itself.
-    class Prototype : public fl::Object
-    {
-    public:
-        Prototype(VM& vm, const ClassInfo& ci, Class& c);
-    };
 }
 
 namespace Classes { namespace fl
