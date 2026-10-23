@@ -539,6 +539,12 @@ static Pickable<const Instances::Namespace> GetMethodNamespace(VM& vm, const Cla
     return Pickable<const Instances::Namespace>(&vm.GetPublicNamespace(), PickValue);
 }
 
+// @0x1424e5500
+void Traits::Add2StoredScopeStack(const Value& o)
+{
+    InitScope.PushBack(o);
+}
+
 // MS2-FUNCTIONAL: our TU inlines VTable::AddMethod (0x1424e8ed0, defined below), which the exe calls; the get/set
 // merge also rewrites the unchanged ValueInd there.
 // @0x1424e5510

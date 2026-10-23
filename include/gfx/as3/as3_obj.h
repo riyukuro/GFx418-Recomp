@@ -465,6 +465,8 @@ public:
     // follows it. 0x1424e5660
     void Add2VT(const ASString& name, const Instances::Namespace& ns, const SlotInfo& nsi, const Value& v,
                 SlotInfo::BindingType bt);
+    // (appended, sfr19) o pushed onto the stored scope stack the class's methods run in. 0x1424e5500
+    void Add2StoredScopeStack(const Value& o);
     // (appended, sfr19) the method table, created on first use. 0x14250fa80
     VTable& GetVT() const;
     // (appended, sfr19) overrides the VT method of slot si (unless a plain method would be replaced by an
