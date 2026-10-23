@@ -2630,3 +2630,7 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??0?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@QEAA@AEBU01@@Z 0x1424d5420
 // MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VNamespaceSet@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VNamespaceSet@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1424dc530
 // MS2-PIN: ??0Multiname@AS3@GFx@Scaleform@@QEAA@AEAVNamespace@Instances@123@AEBVValue@123@@Z 0x1424d8a90
+// MS2-PIN: ??0ID3Info@fl_media@Instances@AS3@GFx@Scaleform@@QEAA@AEAVTraits@InstanceTraits@345@@Z 0x1424cf4f0 ; unique
+// MS2-PIN: ??$AsString@N@Scaleform@@YA?AVString@0@AEBN@Z 0x1424d2410 ; unique
+// MS2-PIN: ??$Format@HVString@Scaleform@@@Scaleform@@YA_KAEBVSink@MsgFormat@0@PEBDAEBHAEBVString@0@@Z 0x1424d25d0 ; unique
+// MS2-PIN: ??$LowerBoundSliced@V?$ArrayDH_POD@_K$0BEI@UArrayDefaultPolicy@Scaleform@@@Scaleform@@_KP6A_NAEB_K0@Z@Alg@Scaleform@@YA_KAEBV?$ArrayDH_POD@_K$0BEI@UArrayDefaultPolicy@Scaleform@@@1@_K1AEB_KP6A_N22@Z@Z 0x1424d2780 ; unique
