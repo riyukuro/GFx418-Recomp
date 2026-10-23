@@ -289,3 +289,40 @@ void AddTreeNodeValue(void* node, const int* value)
         AddTreeNodeValue(children[i], value);
 }
 }
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: clips the requested rectangle against both image sizes and returns the origin delta.
+// @0x142675bb0
+bool ClipImageRect(void* command, void* firstImage, void* secondImage, const int* requested,
+                   unsigned* clipped, int* originDelta)
+{
+    const unsigned* firstSize = *reinterpret_cast<unsigned**>(static_cast<char*>(firstImage) + 0x10);
+    const unsigned* secondSize = *reinterpret_cast<unsigned**>(static_cast<char*>(secondImage) + 0x10);
+    const int dx = *reinterpret_cast<const int*>(static_cast<const char*>(command) + 0x28) - requested[0];
+    const int dy = *reinterpret_cast<const int*>(static_cast<const char*>(command) + 0x2c) - requested[1];
+    originDelta[0] = dx;
+    originDelta[1] = dy;
+
+    const int reqLeft = requested[0];
+    const int reqTop = requested[1];
+    const int reqRight = requested[2];
+    const int reqBottom = requested[3];
+    if (reqTop > static_cast<int>(firstSize[1]) || reqBottom < 0 || reqRight < 0 ||
+        reqLeft > static_cast<int>(firstSize[0]))
+        return false;
+
+    const unsigned left = static_cast<unsigned>(reqLeft < 0 ? 0 : reqLeft) + dx;
+    const unsigned right = static_cast<unsigned>(reqRight < static_cast<int>(firstSize[0]) ? reqRight : firstSize[0]) + dx;
+    const unsigned top = static_cast<unsigned>(reqTop < 0 ? 0 : reqTop) + dy;
+    const unsigned bottom = static_cast<unsigned>(reqBottom < static_cast<int>(firstSize[1]) ? reqBottom : firstSize[1]) + dy;
+    if (static_cast<int>(right) < 0 || static_cast<int>(top) > static_cast<int>(secondSize[1]) ||
+        static_cast<int>(left) > static_cast<int>(secondSize[0]) || static_cast<int>(bottom) < 0)
+        return false;
+
+    clipped[0] = left;
+    clipped[1] = top;
+    clipped[2] = right < secondSize[0] ? right : secondSize[0];
+    clipped[3] = bottom < secondSize[1] ? bottom : secondSize[1];
+    return true;
+}
+}
