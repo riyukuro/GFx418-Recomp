@@ -57,6 +57,7 @@ void FUN_140046798(void*);
 void FUN_1400467a0(void*, CriSint32, CriSint32, void*);
 CriSint32 FUN_140053630(void*);
 CriUint32 FUN_140043420(void*, void*, CriUint32);
+CriSint32 FUN_140043750(void*, void*);
 CriUint32 FUN_140042f40(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 CriUint32 FUN_1400431a0(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 void criSj_SplitChunk(const void*, CriUint32, void*, void*);
@@ -2889,4 +2890,56 @@ CriSint32 FUN_140045c08(void* object, CriSint32 lane)
     if (section)
         FUN_140039f8c(section);
     return total;
+}
+
+// MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
+// @0x140040a20
+void FUN_140040a20(void* player, void** inputDescriptor)
+{
+    struct PlayerState
+    {
+        CriUint8 Reserved00[0x58];
+        void* Joint;
+        CriUint8 Reserved60[0x138];
+        CriSint32 InputCount;
+        CriUint8 Reserved19c[8];
+        CriUint32 DescriptorValue;
+    };
+    struct InputDescriptor { CriUint8 Reserved00[0xb4]; CriUint32 Value; };
+    PlayerState* state = (PlayerState*)player;
+    ((InputDescriptor*)*inputDescriptor)->Value = state->DescriptorValue;
+    FUN_1400467b0(state->Joint, 1, inputDescriptor);
+    ++state->InputCount;
+}
+
+// MS2-FUNCTIONAL: verify each decoder entry in a CRI track set accepts the supplied operation.
+// @0x140042cf0
+CriBool FUN_140042cf0(void* trackSet, void* operation)
+{
+    if (!trackSet)
+        return 1;
+    struct TrackSet { void* Decoders[2]; CriSint32 Count; };
+    TrackSet* set = (TrackSet*)trackSet;
+    for (CriSint32 index = 0; index < set->Count; ++index)
+    {
+        if (!FUN_140043750(set->Decoders[index], operation))
+            return 0;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: read the three queue counters for the selected CRI stream joint lane.
+// @0x1400450c0
+void FUN_1400450c0(void* stream, CriUint32 lane, CriUint32* first, CriUint32* second,
+                   CriUint32* third)
+{
+    struct StreamQueues { CriUint8 Reserved00[0x18]; CriUint8* Entries; };
+    StreamQueues* state = (StreamQueues*)stream;
+    CriUint8* entry = state->Entries + (size_t)lane * 0x10;
+    void* queue = *(void**)entry;
+    if (!queue)
+        return;
+    *first = (CriUint32)FUN_1400467b8(queue, 1);
+    *second = (CriUint32)FUN_1400467b8(queue, 0);
+    *third = (CriUint32)FUN_1400467b8(queue, 2);
 }
