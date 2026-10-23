@@ -43,6 +43,7 @@ MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
 MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
 MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
 MS2_GLOBAL(0x14318f048, void*, AS3MovieMarkerVtable);
+MS2_GLOBAL(0x14318f020, void*, AS3TextValueRecordVtable);
 extern "C" void FUN_14268cd80(void*, void*, unsigned);
 extern "C" void FUN_14268c510(void*, void*, unsigned);
 extern "C" void FUN_14268d2b0(void*, void*, unsigned);
@@ -2259,6 +2260,57 @@ static void ReadAs3StreamBytes(void* stream, void* output, std::size_t size)
     reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, output, size);
 }
 
+// MS2-FUNCTIONAL: rebuilds the counted text value records, including each record's scalar values and 16-byte samples.
+// @0x14268cd80
+extern "C" void FUN_14268cd80(void* object, void* stream, unsigned)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned count = 0;
+    ReadAs3StreamBytes(stream, &count, 4);
+    Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0x10), count);
+    auto** records = *reinterpret_cast<unsigned char***>(bytes + 0x10);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    std::uint32_t statId = 0x242;
+    for (unsigned i = 0; i < count; ++i) {
+        auto* record = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, object, 0x38, &statId));
+        if (!record) {
+            if (records[i])
+                FUN_14257dcb0(records[i]);
+            records[i] = nullptr;
+            std::uint32_t discarded = 0;
+            ReadAs3StreamBytes(stream, &discarded, 4);
+            ReadAs3StreamBytes(stream, &discarded, 4);
+            ReadAs3StreamBytes(stream, &discarded, 4);
+            unsigned valueCount = 0;
+            ReadAs3StreamBytes(stream, &valueCount, 4);
+            for (unsigned j = 0; j < valueCount; ++j) {
+                std::uint64_t discardedValue = 0;
+                ReadAs3StreamBytes(stream, &discarded, 4);
+                ReadAs3StreamBytes(stream, &discardedValue, 8);
+            }
+            continue;
+        }
+        std::memset(record, 0, 0x38);
+        *reinterpret_cast<void**>(record) = AS3TextValueRecordVtable;
+        *reinterpret_cast<std::uint32_t*>(record + 8) = 1;
+        if (records[i])
+            FUN_14257dcb0(records[i]);
+        records[i] = record;
+        ReadAs3StreamBytes(stream, record + 0x10, 4);
+        ReadAs3StreamBytes(stream, record + 0x14, 4);
+        ReadAs3StreamBytes(stream, record + 0x18, 4);
+        unsigned valueCount = 0;
+        ReadAs3StreamBytes(stream, &valueCount, 4);
+        Scaleform::ResizeRawArray(reinterpret_cast<void**>(record + 0x20), record + 0x20, valueCount, 0x10);
+        auto* values = *reinterpret_cast<unsigned char**>(record + 0x20);
+        for (unsigned j = 0; j < valueCount; ++j) {
+            ReadAs3StreamBytes(stream, values + j * 0x10, 4);
+            ReadAs3StreamBytes(stream, values + j * 0x10 + 8, 8);
+        }
+    }
+}
+
 // MS2-FUNCTIONAL: reads the versioned movie image header and marker records, then delegates the nested resource tables.
 // @0x14268cfe0
 extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
@@ -2286,6 +2338,8 @@ extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
             auto* marker = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
                 DAT_143b15f60, object, 0x20, &statId));
             if (!marker) {
+                if (markers[i])
+                    FUN_14257dcb0(markers[i]);
                 markers[i] = nullptr;
                 Scaleform::String discardedName;
                 Scaleform::ReadNarrowString(stream, &discardedName);
