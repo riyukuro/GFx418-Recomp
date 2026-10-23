@@ -21,6 +21,14 @@ const Value& Value::GetNull()
     return nullValue;
 }
 
+// MS2-FUNCTIONAL 0x14250f8f0: default-constructed Value has the undefined tag; local-static initialization differs.
+// @0x14250f8f0
+const Value& Value::GetUndefined()
+{
+    static const Value undefinedValue;
+    return undefinedValue;
+}
+
 // MS2-FUNCTIONAL 0x14250a900: tracer-only and class-traits tags still need exact edge-case matching.
 // @0x14250a900
 // The executable selects the boxed primitive traits from the value kind and takes the
