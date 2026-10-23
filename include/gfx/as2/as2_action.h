@@ -290,6 +290,8 @@ public:
     // GetVariableRaw for plain names; a path goes through FindVariable, which must resolve its owner
     // (exe 0x142943200).
     bool               FindAndGetVariableRaw(const GetVarParams& params) const;
+    // Tests whether a name resolves through the current scope chain (exe 0x142964e50).
+    bool               IsAvailable(const ASString& name, const WithStackArray* withStack = 0) const;
     // The object of the scope chain (with stack, target, _global) that has the member, as a value
     // (exe 0x142944a80).
     bool               FindOwnerOfMember(const ASString& varname, Value* presult,

@@ -140,6 +140,7 @@
 // MS2-RANGE: 0x142965e50-0x142965f00 .text$mn
 // MS2-RANGE: 0x14295d450-0x14295d4e0 .text$mn
 // MS2-RANGE: 0x142964200-0x142964370 .text$mn
+// MS2-RANGE: 0x142964e50-0x142965160 .text$mn
 // MS2-RANGE: 0x14297dd70-0x14297df30 .text$mn
 // MS2-RANGE: 0x14297df30-0x14297dfb0 .text$mn
 // MS2-RANGE: 0x142968f00-0x142968f90 .text$mn
@@ -2161,6 +2162,35 @@ bool Value::IsEqual(Environment* penv, const Value& other) const
     const Number lhs = ToNumber(penv);
     const Number rhs = other.ToNumber(penv);
     return lhs == rhs || (NumberUtil_IsNaN(lhs) && NumberUtil_IsNaN(rhs));
+}
+
+// MS2-FUNCTIONAL: checks raw/path lookup, with scopes, local variables, the target object, and the global object.
+// @0x142964e50
+bool Environment::IsAvailable(const ASString& name, const WithStackArray* withStack) const
+{
+    if (name.GetLength() == 0)
+        return false;
+
+    Value value;
+    GetVarParams params(name, &value, withStack);
+    if (FindAndGetVariableRaw(params))
+        return true;
+
+    if (withStack)
+    {
+        for (SPInt i = SPInt(withStack->GetSize()) - 1; i >= 0; --i)
+        {
+            ObjectInterface* iface = (*withStack)[UPInt(i)].GetObjectInterface();
+            if (iface && iface->HasMember(const_cast<ASStringContext*>(&StringContext), name, false))
+                return true;
+        }
+    }
+    if (FindLocal(name))
+        return true;
+    if (Target && ToAvmCharacter(Target)->HasMember(const_cast<ASStringContext*>(&StringContext), name, false))
+        return true;
+    Object* global = StringContext.pContext ? StringContext.pContext->pGlobal : 0;
+    return global && global->HasMember(const_cast<ASStringContext*>(&StringContext), name, false);
 }
 
 }}} // namespace Scaleform::GFx::AS2
