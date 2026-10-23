@@ -1253,6 +1253,35 @@ static void AddMovieViewHashEntry(void** setObject, void* allocator, std::uint64
     home[3] = reinterpret_cast<std::uint64_t>(value);
 }
 
+// MS2-FUNCTIONAL: clears the destination cached pointer set and rehashes every live source key/value pair into it.
+// @0x142689aa0
+extern "C" void FUN_142689aa0(void* destination, void* allocator, void* sourceSet)
+{
+    auto** destinationSet = static_cast<void**>(destination);
+    auto* oldTable = static_cast<std::uint64_t*>(*destinationSet);
+    if (oldTable) {
+        const std::uint64_t mask = oldTable[1];
+        for (std::uint64_t i = 0; i <= mask; ++i) {
+            auto* row = oldTable + 2 + i * 4;
+            if (static_cast<std::int64_t>(row[0]) == -2)
+                continue;
+            if (row[3]) FUN_14257dcb0(reinterpret_cast<void*>(row[3]));
+            row[0] = UINT64_C(0xfffffffffffffffe);
+        }
+        oldTable[0] = 0;
+    }
+    auto* sourceTable = *static_cast<std::uint64_t**>(sourceSet);
+    if (!sourceTable)
+        return;
+    const std::uint64_t mask = sourceTable[1];
+    for (std::uint64_t i = 0; i <= mask; ++i) {
+        auto* row = sourceTable + 2 + i * 4;
+        if (static_cast<std::int64_t>(row[0]) == -2)
+            continue;
+        AddMovieViewHashEntry(destinationSet, allocator, row[2], reinterpret_cast<void*>(row[3]));
+    }
+}
+
 // MS2-FUNCTIONAL: merges keyed movie-name counters and inserts the source table's retained String values by their 64-bit keys.
 // @0x14268b3e0
 extern "C" void FUN_14268b3e0(void* destination, void* source)
@@ -3142,17 +3171,17 @@ extern "C" long long FUN_142687250(void* destination, const void* source)
     auto* dstMetrics = *reinterpret_cast<unsigned char**>(dst + 0x60);
     auto* srcMetrics = *reinterpret_cast<const unsigned char* const*>(src + 0x60);
     CopyAs3RawRecords(dstMetrics, srcMetrics, 0x20);
-    FUN_142689aa0(dstMetrics + 0x28, dstMetrics + 0x28, *reinterpret_cast<void* const*>(srcMetrics + 0x28));
+    FUN_142689aa0(dstMetrics + 0x28, dstMetrics + 0x28, const_cast<unsigned char*>(srcMetrics + 0x28));
     auto* dstNames = *reinterpret_cast<unsigned char**>(dst + 0x68);
     auto* srcNames = *reinterpret_cast<const unsigned char* const*>(src + 0x68);
     CopyAs3RawRecords(dstNames, srcNames, 0x18);
-    FUN_142689cb0(dstNames + 0x28, dstNames + 0x28, *reinterpret_cast<void* const*>(srcNames + 0x28));
+    FUN_142689cb0(dstNames + 0x28, dstNames + 0x28, const_cast<unsigned char*>(srcNames + 0x28));
 
     auto* dstTree = *reinterpret_cast<unsigned char**>(dst + 0x70);
     auto* srcTree = *reinterpret_cast<const unsigned char* const*>(src + 0x70);
     *reinterpret_cast<Scaleform::String*>(dstTree + 0x10) = *reinterpret_cast<const Scaleform::String*>(srcTree + 0x10);
     CopyAs3StrongArray(reinterpret_cast<void**>(dstTree + 0x18), reinterpret_cast<void* const*>(srcTree + 0x18));
-    FUN_142689aa0(dstTree + 0x30, dstTree + 0x30, *reinterpret_cast<void* const*>(srcTree + 0x30));
+    FUN_142689aa0(dstTree + 0x30, dstTree + 0x30, const_cast<unsigned char*>(srcTree + 0x30));
     return static_cast<long long>(reinterpret_cast<std::uintptr_t>(destination));
 }
 
