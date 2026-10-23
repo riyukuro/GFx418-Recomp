@@ -11,6 +11,7 @@
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/gfx_stream.h"
 #include <cstring>
+#include <new>
 
 extern void FUN_14257dc30(void*);
 extern void FUN_14257dcb0(void*);
@@ -554,6 +555,47 @@ void FUN_140013a00(void*, Scaleform::GFx::AS3::Value* input)
 {
     double number;
     input->Convert2NumberInline(number);
+}
+
+// MS2-FUNCTIONAL: uses the recovered AS3 Value assignment implementation for the executable's copy entry.
+// @0x1400129d0
+Scaleform::GFx::AS3::Value* FUN_1400129d0(Scaleform::GFx::AS3::Value* dst,
+                                          const Scaleform::GFx::AS3::Value* src)
+{
+    *dst = *src;
+    return dst;
+}
+
+// MS2-FUNCTIONAL: initializes the destination with the executable's AS3 Value copy semantics.
+// @0x140013be0
+Scaleform::GFx::AS3::Value* FUN_140013be0(Scaleform::GFx::AS3::Value* dst,
+                                          const Scaleform::GFx::AS3::Value* src)
+{
+    return new (dst) Scaleform::GFx::AS3::Value(*src);
+}
+
+// MS2-FUNCTIONAL: duplicate AS3 Value copy constructor recovered through the local type.
+// @0x1400151e0
+Scaleform::GFx::AS3::Value* FUN_1400151e0(Scaleform::GFx::AS3::Value* dst,
+                                          const Scaleform::GFx::AS3::Value* src)
+{
+    return new (dst) Scaleform::GFx::AS3::Value(*src);
+}
+
+// MS2-FUNCTIONAL: initializes from the AS3 Value undefined singleton used by the executable.
+// @0x140013ec0
+Scaleform::GFx::AS3::Value* FUN_140013ec0(Scaleform::GFx::AS3::Value* dst)
+{
+    return new (dst) Scaleform::GFx::AS3::Value(Scaleform::GFx::AS3::Value::GetUndefined());
+}
+
+// MS2-FUNCTIONAL: initializes the same undefined Value payload as the executable default helper.
+// @0x140015340
+UInt32* FUN_140015340(UInt32* dst)
+{
+    Scaleform::GFx::AS3::Value* value = reinterpret_cast<Scaleform::GFx::AS3::Value*>(dst);
+    new (value) Scaleform::GFx::AS3::Value(Scaleform::GFx::AS3::Value::GetUndefined());
+    return dst;
 }
 
 // @0x14000f830
