@@ -138,6 +138,7 @@ extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
 extern "C" const void* DAT_14313a228[];
 extern "C" const void* DAT_14313a238[];
+extern "C" const void* DAT_14313a450[];
 extern "C" const void* DAT_14313a5f8[];
 extern "C" const void* DAT_14313a200[];
 extern "C" const void* DAT_143138360[];
@@ -3551,6 +3552,49 @@ unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long
     }
     FUN_1423ca920(nullptr, packedName);
     return 0;
+}
+
+// MS2-FUNCTIONAL: initializes the IME command state, callback interface, string members, and both dynamic buffers.
+// @0x1423cdbb0
+void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData)
+{
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a450);
+    words[1] = 0;
+    for (unsigned slot : { 2u, 3u, 4u, 0xfu, 0x16u }) new (words + slot) Scaleform::String();
+    words[5] = reinterpret_cast<unsigned long long>(userData);
+    for (unsigned slot : { 7u, 8u, 9u, 10u, 0x17u, 0x18u }) words[slot] = 0;
+    words[0x15] = reinterpret_cast<unsigned long long>(owner);
+
+    auto* child = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x870));
+    if (child) {
+        FUN_1423d9430(child, words);
+        child[0] = reinterpret_cast<unsigned long long>(DAT_14313a238);
+    }
+    words[6] = reinterpret_cast<unsigned long long>(child);
+    FUN_1423d8e80(words + 7, child);
+    reinterpret_cast<unsigned char*>(words)[0x10] = 1;
+    *reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(words) + 0x84) = 0x14;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0x8c) = 0x00ffffff;
+    words[0xb] = 0;
+    *reinterpret_cast<unsigned*>(words + 0xc) = 0;
+
+    auto* buffer = static_cast<wchar_t*>(Scaleform::Memory::Alloc(0x200));
+    if (buffer) {
+        std::memset(buffer, 0, 0x200);
+        words[8] = reinterpret_cast<unsigned long long>(buffer);
+        words[9] = words[10] = 0x100;
+    }
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0x64) = 0;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0xdc) = 1;
+
+    auto* child2 = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x110));
+    if (child2) {
+        FUN_1423da250(child2, reinterpret_cast<unsigned long long>(words),
+            reinterpret_cast<unsigned long long>(userData));
+        FUN_1423daae0(child2);
+    }
+    words[0x19] = reinterpret_cast<unsigned long long>(child2);
+    return words;
 }
 
 // MS2-FUNCTIONAL: initializes the executable's input-window strings, owner link, callback table, and UTF-16 backing arrays.
