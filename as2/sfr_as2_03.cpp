@@ -156,6 +156,7 @@
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 // MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
 // MS2-RANGE: 0x142926ab0-0x142926ae0 .text$mn
+// MS2-RANGE: 0x142920e10-0x142920ea0 .text$mn
 // MS2-RANGE: 0x142919220-0x142919250 .text$mn
 // MS2-RANGE: 0x1429231b0-0x1429231e0 .text$mn
 // MS2-RANGE: 0x142920540-0x142920600 .text$mn
@@ -815,6 +816,13 @@ NumberProto::NumberProto(ASStringContext* psc, Object* pprototype, const Functio
     : Prototype<NumberObject>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142920e10
+StringManager::StringManager(ASStringManager* pmgr)
+    : pStringManager(pmgr), pStaticStrings(BuiltinStrings)
+{
+    pmgr->InitBuiltinArray(Builtins, pStaticStrings, BuiltinCount);
 }
 
 // @0x142920fc0

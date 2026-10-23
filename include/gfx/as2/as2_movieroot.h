@@ -131,6 +131,12 @@ public:
     ASStringManager*   pStringManager;         // +0x4e0
     const char**       pStaticStrings;         // +0x4e8
 
+    // The builtins come from the static name table (exe 0x142920e10).
+    StringManager(ASStringManager* pmgr);
+
+    // The names of the ASBuiltinType values (exe 0x143a51c30).
+    static const char* BuiltinStrings[BuiltinCount];
+
     const ASString& GetBuiltin(int btype) const { return (const ASString&)Builtins[btype]; }
     ASString        CreateString(const char* pstr, UPInt length) const
     {
