@@ -118,6 +118,9 @@ extern "C" const unsigned long long DAT_14313b8c0;
 extern "C" const unsigned long long DAT_1431c4e08;
 extern "C" const unsigned long long DAT_1431c4e10;
 extern "C" const unsigned long long DAT_1431c4ee8;
+extern "C" const unsigned long long DAT_1431c4898;
+extern "C" const unsigned long long DAT_1431c5068;
+extern "C" const unsigned long long DAT_14313b6b0;
 extern "C" const unsigned long long DAT_1431c4ef0;
 extern "C" void* DAT_143b15f60;
 extern "C" const void* DAT_14313bc60[];
@@ -2385,6 +2388,47 @@ const char* FUN_1423cf1c0(void* raw)
     if (!alreadyAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
     cx18_ImmReleaseContext(hwnd, context);
     return *text->ToCStr() ? text->ToCStr() : "UNKNOWN";
+}
+
+// MS2-FUNCTIONAL: matches the executable's language-specific IME registration, creates the COM provider, and sends its settings record.
+// @0x1423d5740
+void FUN_1423d5740(unsigned long long* self, const unsigned char* name)
+{
+    const unsigned count = *reinterpret_cast<unsigned*>(self + 0x1a);
+    auto* kinds = reinterpret_cast<unsigned*>(self[0x32]);
+    auto* entries = reinterpret_cast<unsigned char*>(self[0x17]);
+    for (unsigned i = 0; i < count; ++i) {
+        const unsigned kind = kinds[i];
+        if (kind != 1 && kind != 2) continue;
+        const unsigned long long packed = *reinterpret_cast<unsigned long long*>(entries + i * 0x30 + (kind == 1 ? 0x10 : 0x18));
+        const char* entryName = reinterpret_cast<const char*>((packed & ~3ull) + 0xc);
+        if (std::strcmp(reinterpret_cast<const char*>(name), entryName) != 0) continue;
+        const unsigned language = reinterpret_cast<unsigned(*)(void*, unsigned)>(
+            (*reinterpret_cast<void***>(self))[3])(self, *reinterpret_cast<unsigned*>(entries + i * 0x30 + 0x20));
+        if (language != *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x84) ||
+            !*reinterpret_cast<void**>(entries + i * 0x30 + 0x28)) continue;
+        IUnknown* instance = nullptr;
+        HRESULT result = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
+            CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068),
+            reinterpret_cast<void**>(&instance));
+        if (FAILED(result) || !instance) return;
+        IUnknown* settings = nullptr;
+        result = instance->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b6b0),
+            reinterpret_cast<void**>(&settings));
+        if (SUCCEEDED(result) && settings) {
+            auto** settingsVtable = *reinterpret_cast<void***>(settings);
+            auto* record = *reinterpret_cast<unsigned char**>(entries + i * 0x30 + 0x28);
+            if (record) {
+                reinterpret_cast<void(*)(void*, unsigned, unsigned short, void*, void*, unsigned long long, unsigned)>(
+                    settingsVtable[3])(settings, *reinterpret_cast<unsigned*>(record),
+                    *reinterpret_cast<unsigned short*>(record + 4), record + 8, record + 0x18,
+                    *reinterpret_cast<unsigned long long*>(record + 0x48), 0x10000000);
+            }
+            settings->Release();
+        }
+        instance->Release();
+        return;
+    }
 }
 
 // MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
