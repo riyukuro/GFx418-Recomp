@@ -3354,6 +3354,13 @@ void FUN_1423d5910(void* raw, const char* requested)
     }
 }
 
+// MS2-FUNCTIONAL: forwards StatusWindow mode updates through the recovered IMM32 handler used by the sibling event entry point.
+// @0x1423d61f0
+void FUN_1423d61f0(void* manager, const char* command, const char* value)
+{
+    FUN_1423d7e80(manager, command, value);
+}
+
 struct cx18_CommandEntry
 {
     unsigned long long next;
