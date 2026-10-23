@@ -42,6 +42,14 @@ void     FUN_140037850(void* player);
 void     FUN_140037880(void* player);
 CriUint32 FUN_140030280(void* player, void* heap, void* work);
 CriHeap  FUN_140027fec(void* memory, CriSint32 size);
+void*    FUN_140030b50(CriSint32 codecId);
+void*    FUN_140044e40(void* decoderInterface);
+CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
+void     FUN_140039f50(void* section);
+void     FUN_140039f8c(void* section);
+void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
+void*    FUN_1400449c0(void* decoder, void* frameInfo);
+void     FUN_140044050(void* decoder, void* frameInfo);
 
 // ==== CRI heap backed object allocation ============================================================================
 
@@ -1163,6 +1171,182 @@ CriUint32 criMvPly_AllocateWorkBufferWithWork(void* player, void* memory, CriSin
     CriUint32 result = FUN_140030280(player, heap, work);
     FUN_140037880(player);
     return result;
+}
+
+// MS2-FUNCTIONAL: absent decoder interfaces and missing core functions use the executable's divided-input fallback.
+// @0x140037360
+CriBool isAvailableDividedInputChunk(void* player)
+{
+    CriSint32 codec = *(CriSint32*)((CriUint8*)player + 0x44);
+    void* decoder = FUN_140030b50(codec);
+    if (!decoder)
+        return 1;
+    void* core = FUN_140044e40(decoder);
+    if (!core)
+        return 1;
+    void* callback = *(void**)((CriUint8*)core + 0x10);
+    if (!callback)
+        return 1;
+    return ((CriBool(__fastcall*)(void))callback)();
+}
+
+// MS2-FUNCTIONAL: a divided decoder input uses the fixed extension; otherwise retain the configured minimum size.
+// @0x140037310
+CriUint32 decideReadBufferExtSize(void* player)
+{
+    if (isAvailableDividedInputChunk(player))
+        return 0x2800;
+    CriUint32 size = *(CriUint32*)((CriUint8*)player + 0x0c);
+    return size < 0x2800 ? 0x2800 : size;
+}
+
+// MS2-FUNCTIONAL: selects the active CRI read buffer and returns its available and bounded sizes.
+// @0x140037050
+void* FUN_140037050(void* player, CriUint32* available, CriUint32* bounded)
+{
+    CriMvReadBufferState* state = (CriMvReadBufferState*)player;
+    void* buffer;
+    CriUint32 first, second;
+    if (state->Mode == 0)
+    {
+        if (getInternalStatus(player) == 1)
+        {
+            if (state->BufferMode == 0)
+            {
+                buffer = state->ReadyBuffer;
+                first = second = state->DataAvailable;
+            }
+            else
+            {
+                buffer = state->Buffer;
+                first = second = state->BufferSize;
+            }
+        }
+        else
+        {
+            buffer = state->ReadBuffer;
+            first = state->ReadBufferSize;
+            second = (CriUint32)((float)(state->AverageReadSize / 8) * state->ReadRate);
+            if (first < second)
+                second = first;
+        }
+    }
+    else
+    {
+        buffer = state->CurrentBuffer;
+        first = second = 0;
+    }
+    if (available)
+        *available = first;
+    if (bounded)
+        *bounded = second;
+    return buffer;
+}
+
+// MS2-FUNCTIONAL: report bytes in the current or selected CRI input buffer, including partially consumed chunks.
+// @0x1400371d0
+CriSint32 criMvPly_PeekInputBufferData(void* player)
+{
+    CriMvReadBufferState* state = (CriMvReadBufferState*)player;
+    void* buffer;
+    if (state->Mode == 0)
+    {
+        if (getInternalStatus(player) == 1)
+            buffer = state->BufferMode == 0 ? state->ReadyBuffer : state->Buffer;
+        else
+            buffer = state->ReadBuffer;
+    }
+    else
+    {
+        buffer = state->CurrentBuffer;
+    }
+    if (!buffer)
+        return 0;
+    if (state->Mode == 1)
+        return state->CurrentOffset - FUN_1400467b8(state->CurrentBuffer, 0);
+    return FUN_1400467b8(buffer, 1);
+}
+
+// MS2-FUNCTIONAL: enter the player's lock through the CRI critical-section wrapper.
+// @0x140037850
+void FUN_140037850(void* player)
+{
+    FUN_140039f50(*(void**)((CriUint8*)player + 0x20));
+}
+
+// MS2-FUNCTIONAL: leave the player's lock through the CRI critical-section wrapper.
+// @0x140037880
+void FUN_140037880(void* player)
+{
+    FUN_140039f8c(*(void**)((CriUint8*)player + 0x20));
+}
+
+// MS2-FUNCTIONAL: forward CRI's non-state-changing diagnostic through the shared error notifier.
+// @0x140037910
+void FUN_140037910(void* owner, const char* message, CriSint32 value)
+{
+    FUN_140038ce4(0, message, value, 0, owner);
+}
+
+// MS2-FUNCTIONAL: mark the movie player in error before forwarding the diagnostic.
+// @0x140037950
+void FUN_140037950(void* owner, const char* message, CriSint32 value)
+{
+    if (owner)
+        ((CriMvErrorState*)owner)->Error = 1;
+    FUN_140038ce4(0, message, value, 0, owner);
+}
+
+// MS2-FUNCTIONAL: copy the decoder's 0x38-byte alpha-frame metadata and overlay current movie dimensions.
+// @0x140035480
+void FUN_140035480(void* player, void* destination, const void* source)
+{
+    memcpy(destination, source, 0x38);
+    CriMvAlphaFrameSnapshot* out = (CriMvAlphaFrameSnapshot*)destination;
+    const CriMvAlphaMovieDimensions* movie = (const CriMvAlphaMovieDimensions*)player;
+    out->Height = movie->Height;
+    out->Width = movie->Width;
+    out->DisplayWidth = movie->DisplayWidth;
+}
+
+// MS2-FUNCTIONAL: release the alpha decoder frame using its copied frame descriptor when an alpha decoder exists.
+// @0x140035a90
+CriBool FUN_140035a90(void* player, const CriUint64* frameInfo)
+{
+    void* decoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
+    if (!decoder)
+        return 0;
+    CriUint64 local[11] = {};
+    local[0] = *frameInfo;
+    FUN_140044050(decoder, local);
+    return 1;
+}
+
+// MS2-FUNCTIONAL: drain and release every queued alpha frame from the player decoder.
+// @0x140035bf0
+void FUN_140035bf0(void* player)
+{
+    void* decoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
+    CriUint64 frameInfo[10];
+    while (FUN_1400449c0(decoder, frameInfo))
+        FUN_140044050(decoder, frameInfo);
+}
+
+// MS2-FUNCTIONAL: get the current alpha frame only while the movie is in a frame-producing state.
+// @0x140035800
+CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
+{
+    crimvply_clearAlphaFrameInfoMembers(outputInfo);
+    CriMvDecoderHandleFields* handles = (CriMvDecoderHandleFields*)player;
+    if (!handles->AlphaDecoder || !crimvply_isUnderGetFrameCondition(player))
+        return 0;
+    CriUint64 frameInfo[10] = {};
+    if (!FUN_1400449c0(handles->AlphaDecoder, frameInfo))
+        return 0;
+    FUN_140035480(player, outputInfo, frameInfo);
+    crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(movieYuvState,
+        (const CriMvAlphaDecoderFrameInfo*)frameInfo);
+    return 1;
 }
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30

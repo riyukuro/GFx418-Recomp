@@ -286,6 +286,59 @@ struct CriMvHeapWorkState
     CriHeap Heap;
 };
 
+struct CriMvReadBufferState
+{
+    CriUint8 Reserved0[0xd60];
+    CriSint32 Mode;
+    CriUint8 Reserved1[0x14];
+    void* ReadyBuffer;
+    CriUint8 Reserved2[8];
+    void* ReadBuffer;
+    CriUint8 Reserved3[0x10];
+    void* CurrentBuffer;
+    CriUint8 Reserved4[8];
+    CriSint32 CurrentOffset;
+    CriUint8 Reserved5[0x14];
+    CriUint32 DataAvailable;
+    CriUint8 Reserved6[0x2c];
+    CriUint32 ReadBufferSize;
+    CriUint8 Reserved7[0x74];
+    CriSint32 BufferMode;
+    CriUint32 BufferSize;
+    void* Buffer;
+    CriUint8 Reserved8[0x60];
+    CriUint32 AverageReadSize;
+    CriUint8 Reserved9[0x3f0];
+    CriFloat32 ReadRate;
+};
+
+struct CriMvDecoderHandleFields
+{
+    CriUint8 Reserved0[0xe08];
+    void* VideoDecoder;
+    CriUint8 Reserved1[0x30];
+    void* AlphaDecoder;
+};
+
+struct CriMvAlphaMovieDimensions
+{
+    CriUint8 Reserved[0xd44];
+    CriUint32 Width;
+    CriUint32 Height;
+    CriUint8 Reserved2[8];
+    CriUint32 DisplayWidth;
+};
+
+struct CriMvAlphaFrameSnapshot
+{
+    CriUint8 Reserved0[0x0c];
+    CriUint32 Height;
+    CriUint8 Reserved1[4];
+    CriUint32 Width;
+    CriUint8 Reserved2[0x1c];
+    CriUint32 DisplayWidth;
+};
+
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
 void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 
