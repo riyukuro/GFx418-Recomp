@@ -22,6 +22,8 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 // VM::describeTypeEx (returns the ASString through a hidden pointer)
 Scaleform::GFx::ASString* FUN_1425322c0(Scaleform::GFx::AS3::VM* vm, void* result, const Scaleform::GFx::AS3::Value& v);
 void FUN_1425bc060(void* ptf);                          // TextField::SetDirtyFlag
+namespace Scaleform { namespace GFx { class MovieImpl; class Sprite; }}
+Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);   // MovieImpl::GetModalClip
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -368,6 +370,118 @@ namespace Classes { namespace fl_gfx
             return;
         }
         result = false;
+    }
+}}
+
+namespace
+{
+    // The AS3 part of a display object (as3_avm.h is not included here): the CreateASInstance slot (15) and the
+    // AS3 object pointers.
+    class AvmDisplayObj15 : public AvmDisplayObjBase
+    {
+    public:
+        virtual void        OnRemoved(bool byTimeline);
+        virtual void        Unrecovered_14();
+        virtual unsigned    CreateASInstance(bool execute);
+
+        Instances::fl_display::DisplayObject* GetAS3Obj() const
+        {
+            Instances::fl_display::DisplayObject* p = pAS3RawPtr;
+            if (!p)
+                p = pAS3CollectiblePtr;
+            if (reinterpret_cast<UPInt>(p) & 1)
+                p = reinterpret_cast<Instances::fl_display::DisplayObject*>(reinterpret_cast<UByte*>(p) - 1);
+            return p;
+        }
+
+        Instances::fl_display::DisplayObject*   pAS3CollectiblePtr; // +0x08 SPtr<>
+        Instances::fl_display::DisplayObject*   pAS3RawPtr;         // +0x10
+    };
+
+    // AS3::AvmInteractiveObj: the AvmInteractiveObjBase interface sits at +0x30.
+    class AvmInteractiveObjHead15 : public AvmDisplayObj15
+    {
+        UByte   Unrecovered_18[0x18];
+    };
+    class AvmInteractiveObj15 : public AvmInteractiveObjHead15, public AvmInteractiveObjBase
+    {
+    };
+
+    inline AvmDisplayObj15* ToAvmDisplayObj15(GFx::DisplayObject* p)
+    {
+        return static_cast<AvmDisplayObj15*>(p->GetAvmObjImpl());
+    }
+    inline AvmInteractiveObj15* ToAvmInteractiveObj15(GFx::InteractiveObject* p)
+    {
+        return static_cast<AvmInteractiveObj15*>(p->GetAvmIntObj());
+    }
+}
+
+namespace Classes { namespace fl_gfx
+{
+    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x1424cae10
+    void Extensions::getMouseTopMostEntity(SPtr<Instances::fl_display::DisplayObject>& result, bool testAll,
+                                           UInt32 mouseIndex)
+    {
+        MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (mouseIndex >= AsMovieSlots(proot)->GetMouseCursorCount())
+            return;
+        // MouseState[mouseIndex].LastPosition (the states are 0x50 apart; no state past the fourth)
+        const Render::PointF* plast = (mouseIndex < 4)
+            ? reinterpret_cast<const Render::PointF*>(reinterpret_cast<UByte*>(proot) + 0x1298 + mouseIndex * (UPInt)0x50)
+            : reinterpret_cast<const Render::PointF*>((UPInt)0x38);
+        Render::PointF mousePos = *plast;
+        GFx::InteractiveObject* ptop = proot->GetTopMostEntity(mousePos, mouseIndex, testAll, NULL);
+        if (ptop)
+        {
+            AvmInteractiveObj15* pavm = ToAvmInteractiveObj15(ptop);
+            pavm->CreateASInstance(true);
+            result = pavm->GetAS3Obj();
+        }
+        else
+            result = NULL;
+    }
+
+    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch, ours with cmov; xmm2/xmm3 swapped in the point transform
+    // @0x1424cb000
+    void Extensions::getTopMostEntity(SPtr<Instances::fl_display::DisplayObject>& result, Value::Number x,
+                                      Value::Number y, bool testAll)
+    {
+        MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (proot->pMainMovie)
+        {
+            Render::Matrix2F m;
+            proot->pMainMovie->GetWorldMatrix(&m);
+            Render::PointF p((float)(x * 20.0), (float)(y * 20.0));
+            Render::PointF pt(m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3],
+                              m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3]);
+            GFx::InteractiveObject* ptop = proot->GetTopMostEntity(pt, 0, testAll, NULL);
+            if (ptop)
+            {
+                AvmInteractiveObj15* pavm = ToAvmInteractiveObj15(ptop);
+                pavm->CreateASInstance(true);
+                result = pavm->GetAS3Obj();
+                return;
+            }
+        }
+        result = NULL;
+    }
+
+    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x1424cad40
+    void FocusManager::getModalClip(SPtr<Instances::fl_display::Sprite>& result, UInt32 controllerIdx)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        if (!vm.ExtensionsEnabled)
+            return;
+        GFx::Sprite* pmodal = FUN_14256f820(vm.GetMovieImpl(), controllerIdx);
+        if (!pmodal)
+            return;
+        Instances::fl_display::DisplayObject* ido = ToAvmDisplayObj15(reinterpret_cast<GFx::DisplayObject*>(pmodal))->GetAS3Obj();
+        BuiltinTraitsType tt = ido->GetTraits().GetTraitsType();
+        if (tt == Traits_Sprite || tt == Traits_MovieClip)
+            result = static_cast<Instances::fl_display::Sprite*>(ido);
     }
 }}
 

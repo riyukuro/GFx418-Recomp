@@ -74,7 +74,7 @@ public:
     virtual void Slot40() = 0;
     virtual void Slot41() = 0;
     virtual void Slot42() = 0;
-    virtual void Slot43() = 0;
+    virtual unsigned GetMouseCursorCount() const = 0;                                           // 43 (+0x158)
     virtual void Slot44() = 0;
     virtual unsigned GetControllerCount() const = 0;                                            // 45 (+0x168)
     virtual void Slot46() = 0;
