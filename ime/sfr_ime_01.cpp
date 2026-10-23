@@ -802,6 +802,32 @@ void* FUN_1423ce2f0(unsigned long long* object, unsigned long long flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: runs the executable's State cleanup and honors both scalar and sized delete flags.
+// @0x1423dba40
+void* FUN_1423dba40(void* object, unsigned long long flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x18);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: releases both retained AbcDataBuffer fields, invokes the base helper, and follows delete flags.
+// @0x1423dbab0
+void* FUN_1423dbab0(unsigned long long* object, unsigned flags)
+{
+    FUN_1423ca920(nullptr, &object[5]);
+    FUN_1423ca920(nullptr, &object[2]);
+    FUN_14257db40(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x38);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
 extern void FUN_1423d9690(void*, void*, unsigned long long);
 
 // MS2-FUNCTIONAL: DoAbc base destruction and scalar delete are modeled from our shared ExecuteTag declaration.
