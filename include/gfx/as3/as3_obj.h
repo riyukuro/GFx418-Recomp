@@ -875,6 +875,8 @@ public:
     Multiname(VM& vm, const Value& name);
     // (appended, sfr19) multiname mn of an ABC file's constant pool, its strings and namespaces interned (0x1424d8ec0).
     Multiname(VMAbcFile& file, const Abc::Multiname& mn);
+    // (appended, sfr19) the any-name "" in the default XML namespace (else the public one) (0x1424d8bb0).
+    explicit Multiname(VM& vm);
 
     // True when ns is the namespace, or one of the namespace set, the name is qualified with (0x1424f0b70).
     bool ContainsNamespace(const Instances::Namespace& ns) const;

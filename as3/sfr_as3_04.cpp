@@ -1750,6 +1750,23 @@ namespace InstanceTraits
         return Pickable<Instances::fl::XMLElement>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLElement(t, ns, name, parent));
     }
 
+    // MS2-FUNCTIONAL: the exe inlines the XMLAttr constructor
+    // @0x14241b3e0
+    Pickable<Instances::fl::XMLAttr> fl::XML::MakeInstanceAttr(XML& t, const Instances::Namespace& ns, const ASString& name,
+                                                              const ASString& value, Instances::fl::XML* parent)
+    {
+        return Pickable<Instances::fl::XMLAttr>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLAttr(t, ns, name, value, parent));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLText constructor
+    // @0x14241b850
+    Pickable<Instances::fl::XMLText> fl::XML::MakeInstanceText(XML& t, const StringDataPtr& str, Instances::fl::XML* parent)
+    {
+        VM& vm = t.GetVM();
+        const ASString text = vm.GetStringManager().CreateString(str.ToCStr(), str.GetSize());
+        return Pickable<Instances::fl::XMLText>(new(vm.GetMemoryHeap()) Instances::fl::XMLText(t, text, parent));
+    }
+
     // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241c2b0
     void fl::XMLList::MakeObject(Value& result, Traits& t)
@@ -2246,6 +2263,298 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             result = Replace(i.AsInt(), c);
 
         return result;
+    }
+
+    // The node a list assignment works on. A one-item list is its item; an empty list with a target gets a new
+    // element of the target name appended to the (resolved) target node; an untargeted or "*" list has none.
+    // MS2-FUNCTIONAL: the exe inlines the Error and the List push; register allocation differs
+    // @0x142420570
+    CheckResult XMLList::ResolveValue(XML*& r)
+    {
+        r = NULL;
+        VM& vm = GetVM();
+        const UPInt size = List.GetSize();
+        if (size == 0)
+        {
+            if (!TargetObject || !TargetProperty || strcmp(TargetProperty->pData, "*") == 0)
+                return true;
+
+            XML* base = NULL;
+            const Traits& tr = TargetObject->GetTraits();
+            switch (tr.GetTraitsType())
+            {
+            case Traits_XML:
+                if (!tr.IsInstanceTraits())
+                    return false;
+                base = static_cast<XML*>(TargetObject.GetPtr());
+                break;
+            case Traits_XMLList:
+                if (!tr.IsInstanceTraits())
+                    return false;
+                if (!static_cast<XMLList*>(TargetObject.GetPtr())->ResolveValue(base))
+                    return false;
+                break;
+            default:
+                return false;
+            }
+            if (base == NULL)
+                return true;
+
+            InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
+            SPtr<XML> target = itr.MakeInstanceElement(itr, *TargetNamespace, ASString(TargetProperty), base);
+            base->AppendChild(target);
+            List.PushBack(target);
+            r = target;
+        }
+        else if (size == 1)
+            r = List[0];
+        else
+        {
+            vm.ThrowTypeError(VM::Error(VM::eXMLAssigmentOneItemLists, vm));
+            return false;
+        }
+        return true;
+    }
+
+    // E4X [[Put]] on a list. An index at or past the end appends a new node to the target (an attribute, a text
+    // or an element of the target name) after the last item; the indexed item then takes the value: an attribute
+    // is set on its parent, a list is spliced in its place, a node or string replaces it in its parent, anything
+    // else becomes its content. Any other name is put on the only item (an empty list resolves its target).
+    // MS2-FUNCTIONAL: the exe inlines ShallowCopy, the XMLList and XMLText constructors and the attribute search
+    // @0x142422a20
+    CheckResult XMLList::SetProperty(const Multiname& prop_name, const Value& value)
+    {
+        VM& vm = GetVM();
+        UInt32 i = 0;
+
+        if (GetVectorInd(prop_name, i))
+        {
+            XML* r = NULL;
+            XMLList* rList = NULL;
+
+            if (TargetObject)
+            {
+                const Traits& tr = TargetObject->GetTraits();
+                if (!tr.IsInstanceTraits())
+                    return false;
+                switch (tr.GetTraitsType())
+                {
+                case Traits_XML:
+                    r = static_cast<XML*>(TargetObject.GetPtr());
+                    break;
+                case Traits_XMLList:
+                    rList = static_cast<XMLList*>(TargetObject.GetPtr());
+                    if (!rList->ResolveValue(r))
+                        return false;
+                    break;
+                default:
+                    return false;
+                }
+                if (r == NULL)
+                    return false;
+            }
+
+            if (i >= List.GetSize())
+            {
+                if (rList != NULL)
+                {
+                    if (rList->List.GetSize() != 1)
+                        return false;
+                    r = rList->List[0];
+                }
+                if (r && r->GetKind() != XML::kElement)
+                    return false;
+
+                XMLElement* rElement = static_cast<XMLElement*>(r);
+                SPtr<XML> y;
+                InstanceTraits::fl::XML& itr_xml = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
+
+                const bool isAttribute = TargetNamespace && TargetProperty &&
+                                         Multiname(*TargetNamespace, Value(ASString(TargetProperty))).IsAttr();
+                if (isAttribute)
+                {
+                    Multiname target_mn(*TargetNamespace, Value(ASString(TargetProperty)));
+                    if (target_mn.Name.IsString())
+                    {
+                        const ASString name = target_mn.Name.AsString();
+                        for (UPInt k = 0; k < rElement->Attrs.GetSize(); ++k)
+                        {
+                            if (rElement->Attrs[k]->Matches(target_mn))
+                                return false;
+                        }
+                    }
+                    y = itr_xml.MakeInstanceAttr(itr_xml, *TargetNamespace, ASString(TargetProperty),
+                                                 vm.GetStringManager().CreateEmptyString(), r);
+                }
+                else if (TargetProperty == NULL || strcmp(TargetProperty->pData, "*") == 0)
+                    y = itr_xml.MakeInstanceText(itr_xml, StringDataPtr("", 0), r);
+                else
+                    y = itr_xml.MakeInstanceElement(itr_xml, *TargetNamespace, ASString(TargetProperty), r);
+
+                i = static_cast<UInt32>(List.GetSize());
+
+                if (!isAttribute)
+                {
+                    if (r != NULL)
+                    {
+                        UInt32 j;
+                        const UPInt size = rElement->Children.GetSize();
+                        if (i > 0)
+                        {
+                            const XML* xml = List[i - 1];
+                            j = 0;
+                            while (j < size - 1 && rElement->Children[j] != xml)
+                                ++j;
+                        }
+                        else
+                            j = static_cast<UInt32>(size - 1);
+
+                        if (!r->InsertChildAt(j + 1, Value(y)))
+                            return false;
+                    }
+
+                    if (IsXMLObject(value))
+                        y->AS3setName(Value::GetUndefined(), Value(static_cast<XML*>(value.GetObject())->GetName()));
+                    else if (IsXMLListObject(value))
+                        y->AS3setName(Value::GetUndefined(), Value(static_cast<XMLList*>(value.GetObject())->TargetProperty));
+                }
+
+                List.PushBack(y);
+            }
+
+            Value V(value);
+            {
+                bool isTextValue = true;
+                if (IsXMLObject(value))
+                {
+                    const XML::Kind kind = static_cast<XML*>(value.GetObject())->GetKind();
+                    isTextValue = kind == XML::kText || kind == XML::kAttr;
+                }
+                else if (IsXMLListObject(value))
+                    isTextValue = false;
+
+                if (isTextValue)
+                {
+                    ASString strValue = vm.GetStringManager().CreateEmptyString();
+                    if (!value.Convert2String(strValue))
+                        return false;
+                    V.Assign(strValue);
+                }
+            }
+
+            XML* xml = List[i];
+            const XML::Kind xmlKind = xml->GetKind();
+
+            if (xmlKind == XML::kAttr)
+            {
+                Multiname z(const_cast<Instances::Namespace&>(xml->GetNamespace()), Value(xml->GetName()));
+                xml->Parent->SetProperty(z, V);
+                SPtr<XMLList> attr = MakeXMLListInstance();
+                xml->Parent->GetProperty(z, *attr);
+                List[i] = attr->List[0];
+            }
+            else if (IsXMLListObject(V))
+            {
+                SPtr<XMLList> c = static_cast<XMLList*>(V.GetObject())->ShallowCopy();
+                XML* parent = xml->Parent;
+                const UPInt csize = c->List.GetSize();
+
+                if (parent != NULL)
+                {
+                    UPInt q;
+                    if (xml->GetChildIndex(q))
+                    {
+                        XMLElement* eparent = static_cast<XMLElement*>(parent);
+                        if (!eparent->Replace(q, Value(c)))
+                            return false;
+                        for (UPInt j = 0; j < csize; ++j)
+                            c->List[j] = eparent->Children[q + j];
+                    }
+                }
+
+                const UPInt oldSize = List.GetSize();
+                if (csize > 1)
+                    List.Resize(oldSize + csize - 1);
+
+                if (csize == 0)
+                    List.RemoveAt(i);
+                else
+                {
+                    if (csize > 1)
+                    {
+                        for (UPInt j = oldSize - 1; j > i; --j)
+                        {
+                            List[j + csize - 1] = List[j];
+                            List[j] = NULL;
+                        }
+                    }
+
+                    for (UPInt j = 0; j < csize; ++j)
+                    {
+                        XML* l_value = List[i + j];
+                        XML* r_value = c->List[j];
+                        if (l_value && r_value->GetKind() != XML::kElement)
+                        {
+                            const Multiname mn(l_value->GetCurrNamespace(), Value(vm.GetStringManager().CreateConstString("*")));
+                            Pickable<XML> new_xml = l_value->DeepCopy(l_value->Parent);
+                            List[i + j] = new_xml;
+                            if (!new_xml->SetProperty(mn, Value(r_value)))
+                                return false;
+                        }
+                        else
+                            List[i + j] = r_value;
+                    }
+                }
+            }
+            else if (IsXMLObject(V) || xmlKind == XML::kText || xmlKind == XML::kComment || xmlKind == XML::kInstruction)
+            {
+                XML* parent = xml->Parent;
+                if (parent != NULL)
+                {
+                    UPInt q;
+                    if (xml->GetChildIndex(q))
+                    {
+                        XMLElement* eparent = static_cast<XMLElement*>(parent);
+                        if (!eparent->Replace(q, V) || eparent->Children.GetSize() <= q)
+                            return false;
+                        V.Assign(eparent->Children[q]);
+                    }
+                }
+
+                if (V.IsString())
+                {
+                    InstanceTraits::fl::XML& itr_xml = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
+                    List[i] = Pickable<XML>(new(itr_xml.GetVM().GetMemoryHeap()) XMLText(itr_xml, V.AsString(), parent));
+                }
+                else
+                    List[i] = static_cast<XML*>(V.GetObject());
+            }
+            else
+            {
+                const Multiname mn(vm);
+                if (!List[i]->SetProperty(mn, V))
+                    return false;
+            }
+        }
+        else if (List.GetSize() <= 1)
+        {
+            if (List.GetSize() == 0)
+            {
+                XML* r;
+                if (!ResolveValue(r) || r == NULL)
+                    return false;
+                List.PushBack(r);
+            }
+            if (!List[0]->SetProperty(prop_name, value))
+                return false;
+        }
+        else
+        {
+            vm.ThrowTypeError(VM::Error(VM::eXMLAssigmentOneItemLists, vm));
+            return false;
+        }
+
+        return true;
     }
 
     // An XML node enumerates as a one-item list: its only name is "0".

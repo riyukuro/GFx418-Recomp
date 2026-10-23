@@ -81,6 +81,8 @@ namespace Instances { namespace fl {
     class XML;
     class XMLList;
     class XMLElement;   // (appended, sfr19)
+    class XMLAttr;      // (appended, sfr19)
+    class XMLText;      // (appended, sfr19)
 }}
 
 namespace Instances { namespace fl_accessibility {

@@ -615,6 +615,10 @@ namespace Instances { namespace fl
     public:
         // (appended, sfr19) a list of deep copies of the items, parented to parent. 0x142408c70
         Pickable<XMLList> DeepCopy(Instances::fl::XML* parent);
+        // (appended, sfr19) the single item r stands for: List[0], or for an empty list a new element named by the
+        // target, appended to the (resolved) target object; NULL when there is no target. More than one item throws.
+        // 0x142420570
+        CheckResult ResolveValue(Instances::fl::XML*& r);
 
     public:
         // native methods
@@ -1021,6 +1025,11 @@ namespace InstanceTraits { namespace fl
         // (appended, sfr19) a new element named name in (a public copy of) ns. 0x14241b5b0
         Pickable<Instances::fl::XMLElement> MakeInstanceElement(XML& t, const Instances::Namespace& ns,
                                                                 const ASString& name, Instances::fl::XML* parent);
+        // (appended, sfr19) a new attribute name=value in (a public copy of) ns. 0x14241b3e0
+        Pickable<Instances::fl::XMLAttr> MakeInstanceAttr(XML& t, const Instances::Namespace& ns, const ASString& name,
+                                                          const ASString& value, Instances::fl::XML* parent);
+        // (appended, sfr19) a new text node; the string is made with t's VM. 0x14241b850
+        Pickable<Instances::fl::XMLText> MakeInstanceText(XML& t, const StringDataPtr& str, Instances::fl::XML* parent);
     };
 
     class XMLList : public CTraits
