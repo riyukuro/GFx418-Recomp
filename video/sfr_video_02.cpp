@@ -1944,6 +1944,17 @@ Scaleform::GFx::AS2::Object* FUN_140012440(
     return object;
 }
 
+// MS2-FUNCTIONAL: forwards the lookup through the executable's global heap vtable.
+// @0x14000f470
+void FUN_14000f470(void* object, void* value)
+{
+    unsigned flags = 2;
+    auto* heap = Scaleform::Memory::pGlobalHeap;
+    auto** heapVtable = *reinterpret_cast<void***>(heap);
+    reinterpret_cast<void(*)(void*, void*, void*, unsigned*)>(heapVtable[0x70 / sizeof(void*)])(
+        heap, value, object, &flags);
+}
+
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
 // @0x140011b40
 void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
