@@ -65,6 +65,7 @@
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
+#include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/gfx_value.h"
 #include "../include/kernel/sf_utf8util.h"
@@ -589,17 +590,6 @@ bool AsBroadcaster::BroadcastMessage(Environment* penv, ObjectInterface* pthis, 
     BroadcastMessageWithCallback(penv, pthis, eventName, &callback);
     return true;
 }
-
-// The AS2 text field's part of the movie (only the broadcast native so far).
-class AvmTextField : public AvmCharacter
-{
-public:
-    // Sends the event named by the first argument to the listeners of the text field.
-    static void BroadcastMessage(const FnCall& fn);
-
-    virtual void CloneInternalData(const InteractiveObject* src);
-    virtual void CopyPhysicalProperties(const InteractiveObject* poldChar);
-};
 
 // @0x1429321c0
 void AvmTextField::BroadcastMessage(const FnCall& fn)

@@ -8,7 +8,8 @@
 #include "ms2/scaleform/include/gfx/gfx_characterdef.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobject.h"
 
-namespace Scaleform { namespace GFx {
+namespace Scaleform { namespace Render { namespace Text { class DocView; } }
+namespace GFx {
 
 // The edit text definition (a struct in 4.1.18, as the TextField constructor's mangled name has it); members
 // unrecovered.
@@ -41,6 +42,16 @@ public:
     bool IsIMEDisabledFlag() const { return (GetFlags418() & 0x800) != 0; }
     bool IsPassword() const        { return (GetFlags418() & 0x4) != 0; }
     UInt32 GetFlags418() const     { return *reinterpret_cast<const UInt32*>(Unrecovered + 0xfc); }  // +0xfc Flags
+
+    // (appended for the AS2 TextField natives, sfr_as2_02)
+    Render::Text::DocView* GetDocument() const   // +0xe0 the document view
+    {
+        return *reinterpret_cast<Render::Text::DocView* const*>(Unrecovered + 0xe0);
+    }
+    // The next advance reformats the whole text.
+    void SetCompleteReformatReq() { *reinterpret_cast<UInt32*>(Unrecovered + 0xfc) |= 0x10000; }
+    bool HasStyleSheet() const;   // exe 0x1425b9730
+    void SetDirtyFlag();          // exe 0x1425bc060
 
 private:
     UByte Unrecovered[0x148];

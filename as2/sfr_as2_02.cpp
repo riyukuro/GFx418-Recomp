@@ -40,6 +40,11 @@
 // MS2-RANGE: 0x1429049b0-0x142905183 .text$mn
 // MS2-RANGE: 0x142901410-0x142901a70 .text$mn
 // MS2-RANGE: 0x142905190-0x1429055e9 .text$mn
+// MS2-RANGE: 0x14290a0f0-0x14290a17c .text$mn
+// MS2-RANGE: 0x14290a180-0x14290a8b4 .text$mn
+// MS2-RANGE: 0x14290a8c0-0x14290aab4 .text$mn
+// MS2-RANGE: 0x14290b1c0-0x14290b2b4 .text$mn
+// MS2-RANGE: 0x14290b920-0x14290b9e5 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -48,6 +53,7 @@
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
+#include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_colortransform.h"
@@ -72,6 +78,18 @@
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/render/render_twips.h"
 #include "../include/render/render_screentoworld.h"
+
+// Render::Text::DocView (render/text_docview.h needs the full kernel array headers, not the ones of this unit): the
+// document view calls of the TextField natives, by address.
+unsigned long long FUN_142612af0(void* pdoc, unsigned long long pos);       // DocView::GetFirstCharInParagraph
+unsigned FUN_142612c50(void* pdoc, unsigned long long pos);                 // DocView::GetLineIndexOfChar
+unsigned long long FUN_142612cb0(void* pdoc, unsigned line, bool* phasNewLine);  // DocView::GetLineLength
+unsigned long long FUN_142612e80(void* pdoc, unsigned line);                // DocView::GetLineOffset
+unsigned long long FUN_142612240(void* pdoc, float x, float y);             // DocView::GetCharIndexAtPoint
+unsigned FUN_142612bd0(void* pdoc, float x, float y);                       // DocView::GetLineIndexAtPoint
+bool     FUN_142611ff0(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetCharBoundaries
+bool     FUN_142612740(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetExactCharBoundaries
+void     FUN_14260df50(void* pdoc, const char* putf8Str, unsigned long long utf8Len);        // DocView::AppendText
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -2357,6 +2375,181 @@ void AvmSprite::SpriteAttachBitmap(const FnCall& fn)
         psprite->ReplaceDisplayObject(pos, pnewCh, emptyName);
         psprite->SetAcceptAnimMoves(false);
     }
+}
+
+// removeTextField(): only for fields created by script (depth from 0x4000 on).
+// @0x14290a0f0
+void AvmTextField::RemoveTextField(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    InteractiveObject* pch = ToCharacter(ptf);
+    if (pch->Depth < 0x4000)
+    {
+        pch->LogScriptWarning("%s.removeMovieClip() failed - depth must be >= 0", pch->GetName().ToCStr());
+        return;
+    }
+    pch->RemoveDisplayObject();
+}
+
+// The boundaries of a character in pixels as a Rectangle, null if there is no such character.
+static void SetCharBoundariesResult(const FnCall& fn, bool found, const RectF& rect)
+{
+    if (!found)
+    {
+        fn.Result->SetNull();
+        return;
+    }
+    Ptr<RectangleObject> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) RectangleObject(fn.Env);
+    Render::RectD r(Render::TwipsToPixels(Double(rect.x1)), Render::TwipsToPixels(Double(rect.y1)), Render::TwipsToPixels(Double(rect.x2)),
+            Render::TwipsToPixels(Double(rect.y2)));
+    pobj->SetProperties(fn.Env, r);
+    fn.Result->SetAsObject(pobj);
+}
+
+// getCharBoundaries(charIndex)
+// MS2-FUNCTIONAL the exe inlines the Rectangle result into each caller
+// @0x14290a180
+void AvmTextField::GetCharBoundaries(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
+    RectF    rect(0);
+    bool     found = FUN_142611ff0(ptf->GetDocument(), &rect, idx);
+    SetCharBoundariesResult(fn, found, rect);
+}
+
+// getCharIndexAtPoint(x, y): -1 if there is no character there.
+// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// @0x14290a350
+void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 2)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    Number x   = fn.Arg(0).ToNumber(fn.Env);
+    Number y   = fn.Arg(1).ToNumber(fn.Env);
+    UPInt  pos = FUN_142612240(ptf->GetDocument(), float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
+    fn.Result->SetNumber(pos == SF_MAX_UPINT ? -1 : Number(pos));
+}
+
+// getExactCharBoundaries(charIndex)
+// MS2-FUNCTIONAL the exe inlines the Rectangle result into each caller
+// @0x14290a4b0
+void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
+    RectF    rect(0);
+    bool     found = FUN_142612740(ptf->GetDocument(), &rect, idx);
+    SetCharBoundariesResult(fn, found, rect);
+}
+
+// getLineIndexAtPoint(x, y): -1 if there is no line there.
+// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// @0x14290a680
+void AvmTextField::GetLineIndexAtPoint(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 2)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    Number   x    = fn.Arg(0).ToNumber(fn.Env);
+    Number   y    = fn.Arg(1).ToNumber(fn.Env);
+    unsigned line = FUN_142612bd0(ptf->GetDocument(), float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
+    fn.Result->SetNumber(line == ~0u ? -1 : Number(line));
+}
+
+// getLineIndexOfChar(charIndex)
+// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// @0x14290a7d0
+void AvmTextField::GetLineIndexOfChar(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    int idx = int(fn.Arg(0).ToNumber(fn.Env));
+    if (idx < 0)
+    {
+        fn.Result->SetNumber(-1);
+        return;
+    }
+    unsigned line = FUN_142612c50(ptf->GetDocument(), unsigned(idx));
+    fn.Result->SetNumber(line == ~0u ? -1 : Number(line));
+}
+
+// getLineOffset(lineIndex): the index of its first character.
+// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// @0x14290a8c0
+void AvmTextField::GetLineOffset(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    int line = int(fn.Arg(0).ToNumber(fn.Env));
+    if (line < 0)
+    {
+        fn.Result->SetNumber(-1);
+        return;
+    }
+    UPInt off = FUN_142612e80(ptf->GetDocument(), unsigned(line));
+    fn.Result->SetNumber(off == SF_MAX_UPINT ? -1 : Number(off));
+}
+
+// getLineLength(lineIndex)
+// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// @0x14290a9c0
+void AvmTextField::GetLineLength(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    int line = int(fn.Arg(0).ToNumber(fn.Env));
+    if (line < 0)
+    {
+        fn.Result->SetNumber(-1);
+        return;
+    }
+    UPInt len = FUN_142612cb0(ptf->GetDocument(), unsigned(line), 0);
+    fn.Result->SetNumber(len == SF_MAX_UPINT ? -1 : Number(len));
+}
+
+// getFirstCharInParagraph(charIndex)
+// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// @0x14290b1c0
+void AvmTextField::GetFirstCharInParagraph(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    int idx = int(fn.Arg(0).ToNumber(fn.Env));
+    if (idx < 0)
+    {
+        fn.Result->SetNumber(-1);
+        return;
+    }
+    UPInt pos = FUN_142612af0(ptf->GetDocument(), unsigned(idx));
+    fn.Result->SetNumber(pos == SF_MAX_UPINT ? -1 : Number(pos));
+}
+
+// appendText(text): not for a field with a style sheet.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
+// @0x14290b920
+void AvmTextField::AppendText(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (ptf->HasStyleSheet() || fn.NArgs < 1)
+        return;
+    ASString str = fn.Arg(0).ToString(fn.Env);
+    FUN_14260df50(ptf->GetDocument(), str.ToCStr(), SF_MAX_UPINT);
+    ptf->SetCompleteReformatReq();
+    ptf->SetDirtyFlag();
 }
 }}} // namespace Scaleform::GFx::AS2
 
