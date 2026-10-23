@@ -1822,6 +1822,8 @@ CriSint32 FUN_140042150(const void* decoder, const CriUint32* config)
 }
 
 void FUN_14257da20(void*, void*);
+CriUint32 FUN_14257c0c0(void*);
+void FUN_14257c050(void*, CriUint32, void*);
 
 // MS2-FUNCTIONAL: resolve and cache the decoder instance from its media interface and owner state.
 // @0x140041910
@@ -1842,6 +1844,35 @@ void* FUN_140041910(void** decoderObject, void** mediaInterface)
         mediaObject, format, channels, output, codec, decoderObject, 0);
     FUN_14257da20(decoderObject, instance);
     return instance;
+}
+
+// MS2-FUNCTIONAL: clear the output buffers supplied for each available decoder picture plane.
+// @0x140041390
+void FUN_140041390(void* owner, void* outputSet)
+{
+    (void)owner;
+    struct OutputBuffer
+    {
+        CriUint32 Format;
+        CriUint32 Flags;
+        void* Reserved;
+        size_t Size;
+        void* Data;
+    } outputs[4] = {};
+    CriUint32 count = FUN_14257c0c0(outputSet);
+    if (count >= 3)
+    {
+        for (CriUint32 i = 0; i < 3; ++i)
+        {
+            FUN_14257c050(outputSet, i, &outputs[i]);
+            memset(outputs[i].Data, 0, outputs[i].Size);
+        }
+        count = FUN_14257c0c0(outputSet);
+        if (count < 4)
+            return;
+    }
+    FUN_14257c050(outputSet, count < 3 ? 0 : 3, &outputs[3]);
+    memset(outputs[3].Data, 0, outputs[3].Size);
 }
 
 template <typename Result, typename... Args>
