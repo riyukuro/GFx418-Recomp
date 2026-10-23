@@ -599,6 +599,102 @@ void Traits::ForEachChild_GC(Collector* prcc, const Object& obj, GcOp op) const
 }
 
 // MS2-FUNCTIONAL: the parent-slot test of the inlined GetSlotInfo is not materialised as a bool
+// MS2-FUNCTIONAL: the tag bit of the inlined GetAS3Obj is cleared with a cmov, not a branch
+// @0x142505cc0
+SPtr<Instances::fl_display::DisplayObject> AvmDisplayObjContainer::GetAS3ChildAt(unsigned index)
+{
+    DisplayObjectBase* ch = GetDisplayObjContainer()->GetChildAt(index);
+    if (ch)
+    {
+        AvmDisplayObj* pavm = ToAvmDisplayObj(ch);
+        pavm->CreateASInstance(true);
+        return pavm->GetAS3Obj();
+    }
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: the tag bit of the inlined GetAS3Obj is cleared with a cmov, not a branch
+// @0x142505d40
+SPtr<Instances::fl_display::DisplayObject> AvmDisplayObjContainer::GetAS3ChildByName(const ASString& name)
+{
+    DisplayObject* ch = GetDisplayObjContainer()->mDisplayList.GetDisplayObjectByName(name, true);
+    if (ch)
+    {
+        AvmDisplayObj* pavm = ToAvmDisplayObj(ch);
+        pavm->CreateASInstance(true);
+        return pavm->GetAS3Obj();
+    }
+    return NULL;
+}
+
+// ---- the core class objects (built on demand by their instance traits) ----
+
+// @0x142507df0
+Classes::fl::Array& VM::GetClassArray() const
+{
+    return reinterpret_cast<Classes::fl::Array&>(TraitsArray->GetInstanceTraits().GetConstructor());
+}
+
+// @0x142507e30
+Classes::fl::Boolean& VM::GetClassBoolean() const
+{
+    return reinterpret_cast<Classes::fl::Boolean&>(TraitsBoolean->GetInstanceTraits().GetConstructor());
+}
+
+// @0x142507e70
+Classes::fl::int_& VM::GetClassSInt() const
+{
+    return reinterpret_cast<Classes::fl::int_&>(TraitsInt->GetInstanceTraits().GetConstructor());
+}
+
+// @0x142507eb0
+Classes::fl::Number& VM::GetClassNumber() const
+{
+    return reinterpret_cast<Classes::fl::Number&>(TraitsNumber->GetInstanceTraits().GetConstructor());
+}
+
+// @0x142507ef0
+Classes::fl::String& VM::GetClassString() const
+{
+    return reinterpret_cast<Classes::fl::String&>(TraitsString->GetInstanceTraits().GetConstructor());
+}
+
+// @0x142508100
+Classes::fl::uint& VM::GetClassUInt() const
+{
+    return reinterpret_cast<Classes::fl::uint&>(TraitsUint->GetInstanceTraits().GetConstructor());
+}
+
+// @0x1425081f0
+Class& VM::GetClassVector() const
+{
+    return TraitsVector->GetInstanceTraits().GetConstructor();
+}
+
+// @0x142508230
+Class& VM::GetClassVectorNumber() const
+{
+    return TraitsVector_double->GetInstanceTraits().GetConstructor();
+}
+
+// @0x142508270
+Class& VM::GetClassVectorSInt() const
+{
+    return TraitsVector_int->GetInstanceTraits().GetConstructor();
+}
+
+// @0x1425082b0
+Class& VM::GetClassVectorString() const
+{
+    return TraitsVector_String->GetInstanceTraits().GetConstructor();
+}
+
+// @0x1425082f0
+Class& VM::GetClassVectorUInt() const
+{
+    return TraitsVector_uint->GetInstanceTraits().GetConstructor();
+}
+
 // @0x142504580
 void Traits::ForEachChild_GC_Slot(Collector* prcc, const Object& obj, GcOp op) const
 {
