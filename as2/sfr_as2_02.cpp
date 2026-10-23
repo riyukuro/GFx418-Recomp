@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_as2_02
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1428fdc00-0x1428ff660 .text$mn
+// MS2-RANGE: 0x1428ffcd0-0x1429006a0 .text$mn
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142902a00 .text$mn
 // MS2-RANGE: 0x142902a10-0x1429033c0 .text$mn
@@ -41,6 +42,7 @@
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_event.h"
+#include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/kernel/sf_alg.h"
@@ -934,6 +936,141 @@ void AvmSprite::SpriteSetMask(const FnCall& fn)
         }
     }
     psprite->SetMask(0);
+}
+
+// @0x1428ffcd0
+void SelectionCtorFunction::GetFocus(const FnCall& fn)
+{
+    fn.Result->SetNull();
+    if (!fn.Env)
+        return;
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 1)
+        controllerIdx = fn.Arg(0).ToUInt32(fn.Env);
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    Ptr<InteractiveObject> focusedChar = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+    if (focusedChar)
+        fn.Result->SetString(focusedChar->GetCharacterHandle()->NamePath);
+}
+
+// Value::ToCharacter, expanded in place where the exe has it inline.
+static inline InteractiveObject* ResolveCharacterValue(const Value& val, const Environment* penv)
+{
+    if (val.IsCharacter() && penv && val.V.pCharHandle)
+    {
+        DisplayObject* pdisp = val.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+        if (pdisp)
+            return pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+    }
+    return 0;
+}
+
+// @0x1428ffe30
+void SelectionCtorFunction::SetFocus(const FnCall& fn)
+{
+    fn.Result->SetBool(false);
+    if (fn.NArgs < 1 || !fn.Env)
+        return;
+    Ptr<InteractiveObject> newFocus;
+    if (fn.Arg(0).IsString())
+    {
+        Value val;
+        if (fn.Env->FindVariable(Environment::GetVarParams(fn.Arg(0).ToString(fn.Env), &val)))
+            newFocus = ResolveCharacterValue(val, fn.Env);
+    }
+    else
+        newFocus = fn.Arg(0).ToCharacter(fn.Env);
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 2)
+        controllerIdx = fn.Arg(1).ToUInt32(fn.Env);
+    if (newFocus)
+    {
+        if (newFocus->IsFocusEnabled(GFx_FocusMovedByKeyboard))
+        {
+            fn.Env->GetTarget()->GetMovieImpl()->SetKeyboardFocusTo(newFocus, controllerIdx, GFx_FocusMovedByKeyboard);
+            fn.Result->SetBool(true);
+        }
+    }
+    else
+    {
+        fn.Env->GetTarget()->GetMovieImpl()->SetKeyboardFocusTo(0, controllerIdx, GFx_FocusMovedByKeyboard);
+        fn.Result->SetBool(true);
+    }
+}
+
+// The AS2 Selection natives reach the TextField through the focused InteractiveObject (TextField is opaque here;
+// both start at the DisplayObjectBase part).
+static inline TextField* ToTextField(InteractiveObject* pch)
+{
+    return reinterpret_cast<TextField*>(pch);
+}
+
+// @0x1429000d0
+void SelectionCtorFunction::SetSelection(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (!fn.Env)
+        return;
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 3)
+        controllerIdx = fn.Arg(2).ToUInt32(fn.Env);
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    Ptr<InteractiveObject> focusedChar = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+    if (focusedChar && focusedChar->GetType() == CharacterDef::TextField)
+    {
+        SPInt bi = 0, ei = SPInt(SF_MAX_UPINT >> 1);
+        if (fn.NArgs >= 2)
+        {
+            bi = fn.Arg(0).ToInt32(fn.Env);
+            ei = fn.Arg(1).ToInt32(fn.Env);
+        }
+        ToTextField(focusedChar)->SetSelection(bi, ei);
+    }
+}
+
+// @0x142900260
+void SelectionCtorFunction::GetCaretIndex(const FnCall& fn)
+{
+    fn.Result->SetNumber(-1);
+    if (!fn.Env)
+        return;
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 1)
+        controllerIdx = fn.Arg(0).ToUInt32(fn.Env);
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    Ptr<InteractiveObject> focusedChar = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+    if (focusedChar && focusedChar->GetType() == CharacterDef::TextField)
+        fn.Result->SetNumber(Number(ToTextField(focusedChar)->GetCaretIndex()));
+}
+
+// @0x1429003c0
+void SelectionCtorFunction::GetBeginIndex(const FnCall& fn)
+{
+    fn.Result->SetNumber(-1);
+    if (!fn.Env)
+        return;
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 3)
+        controllerIdx = fn.Arg(2).ToUInt32(fn.Env);
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    Ptr<InteractiveObject> focusedChar = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+    if (focusedChar && focusedChar->GetType() == CharacterDef::TextField)
+        fn.Result->SetNumber(Number(ToTextField(focusedChar)->GetBeginIndex()));
+}
+
+// @0x142900530
+void SelectionCtorFunction::GetEndIndex(const FnCall& fn)
+{
+    fn.Result->SetNumber(-1);
+    if (!fn.Env)
+        return;
+    unsigned controllerIdx = 0;
+    if (fn.Env->CheckExtensions() && fn.NArgs >= 3)
+        controllerIdx = fn.Arg(2).ToUInt32(fn.Env);
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    Ptr<InteractiveObject> focusedChar = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+    if (focusedChar && focusedChar->GetType() == CharacterDef::TextField)
+        fn.Result->SetNumber(Number(ToTextField(focusedChar)->GetEndIndex()));
 }
 
 // this is in the prototype chain of the argument (interfaces not counted).

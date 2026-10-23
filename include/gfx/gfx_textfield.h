@@ -23,6 +23,12 @@ public:
               ResourceId id);
     operator DisplayObjectBase*() { return reinterpret_cast<DisplayObjectBase*>(this); }
 
+    // Selection (AS2 Selection natives, sfr_as2_02).
+    SPInt GetCaretIndex() const;                         // exe 0x1425b7e70
+    UPInt GetBeginIndex() const;                         // exe 0x1425b7df0
+    UPInt GetEndIndex() const;                           // exe 0x1425b8220
+    void  SetSelection(SPInt beginIndex, SPInt endIndex); // exe 0x1425bcfc0
+
 private:
     UByte Unrecovered[0x148];
 };

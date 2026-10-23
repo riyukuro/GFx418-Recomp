@@ -498,6 +498,14 @@ class SelectionCtorFunction : public CFunctionObject
 {
 public:
     static void GlobalCtor(const FnCall& fn); // exe 0x14295c650
+
+private:
+    static void GetFocus(const FnCall& fn);      // exe 0x1428ffcd0
+    static void SetFocus(const FnCall& fn);      // exe 0x1428ffe30
+    static void SetSelection(const FnCall& fn);  // exe 0x1429000d0
+    static void GetCaretIndex(const FnCall& fn); // exe 0x142900260
+    static void GetBeginIndex(const FnCall& fn); // exe 0x1429003c0
+    static void GetEndIndex(const FnCall& fn);   // exe 0x142900530
 };
 class StageCtorFunction : public CFunctionObject
 {

@@ -218,6 +218,23 @@ public:
     LocalFrame*        GetTopLocalFrame(int off = 0) const;
     // The character a value names (a character, or a target path string), 0 if none (exe 0x142944f40).
     InteractiveObject* FindTargetByValue(const Value& val);
+    // Arguments of FindVariable: the name to resolve and where the value goes; the optional outputs
+    // (owner, new target, flags) stay null for a plain lookup. 0x30 bytes.
+    struct GetVarParams
+    {
+        const ASString& VarName;   // +0x00
+        Value*          pResult;   // +0x08
+        void*           ppOwner;   // +0x10 unrecovered optional outputs
+        void*           ppNewTarget; // +0x18
+        void*           pIsLocal;  // +0x20
+        int             ExcludeFlags; // +0x28
+
+        GetVarParams(const ASString& name, Value* presult)
+            : VarName(name), pResult(presult), ppOwner(0), ppNewTarget(0), pIsLocal(0), ExcludeFlags(0) {}
+    };
+    // Resolves a variable path (with/scope chain, targets); false if not found (exe 0x142945010).
+    bool               FindVariable(const GetVarParams& params, bool searchUndefined = false,
+                                    ASString* pvarName = 0) const;
     // The constructor of a builtin class from _global, null if it is not a function (exe 0x14294a0f0).
     FunctionRef        GetConstructor(ASBuiltinType className);
 
