@@ -13,6 +13,7 @@
 // MS2-RANGE: 0x1426c7e00-0x1426cba30 .text$mn
 
 #include "ms2/scaleform/include/render/render_glyphcache.h"
+#include "ms2/scaleform/include/render/render_boundbox.h"
 #include "ms2/scaleform/include/render/render_hal.h"
 #include "ms2/scaleform/include/render/render_imagefile.h"
 
@@ -727,6 +728,342 @@ void GlyphCache::cacheFullWarning()
         LogWarning("Increase raster glyph cache capacity - see GlyphCacheParams.");
         RasterCacheWarning = false;
     }
+}
+
+// ---- glyph outlines ----
+
+// bounds of the selected fill paths through a transformer, empty (inverted 1e30) when there are none
+template<class Transformer>
+static RectF ComputeBoundsFill(const ShapeDataInterface& shape, const Transformer& trans, BoundEdges edges)
+{
+    RectF bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    ExpandBoundsToFill(shape, trans, &bounds, edges);
+    return bounds;
+}
+
+// Unhinted glyphs take the font's bounds, falling back to the outline's when the font has none; hinted ones are
+// measured on the hinted outline first.
+// @0x1426ca230
+void GlyphCache::getGlyphBounds(VectorGlyphShape* glyphShape, const ShapeDataInterface* shape) const
+{
+    if (glyphShape->Key.HintedVector == 0)
+    {
+        glyphShape->Key.pFont->pFont->GetGlyphBounds(glyphShape->Key.GlyphIndex, &glyphShape->Bounds);
+        if (glyphShape->Bounds.x1 >= glyphShape->Bounds.x2 || glyphShape->Bounds.y1 >= glyphShape->Bounds.y2)
+        {
+            if (!shape->IsEmpty())
+                glyphShape->Bounds = ComputeBoundsFill(*shape, Matrix2F(), Bound_AllEdges);
+        }
+    }
+    else
+    {
+        if (!shape->IsEmpty())
+            glyphShape->Bounds = ComputeBoundsFill(*shape, Matrix2F(), Bound_AllEdges);
+        else
+            glyphShape->Key.pFont->pFont->GetGlyphBounds(glyphShape->Key.GlyphIndex, &glyphShape->Bounds);
+    }
+}
+
+// The winding of the contour with the largest extent (of the first layer's filled paths): its signed area > 0.
+// @0x1426caa80
+bool GlyphCache::isOuterContourCW(const ShapeDataInterface* shape) const
+{
+    float minX1 = 1e10f, minY1 = 1e10f, maxX1 = -1e10f, maxY1 = -1e10f;
+    float minX2 = 1e10f, minY2 = 1e10f, maxX2 = -1e10f, maxY2 = -1e10f;
+    bool  cw = true;
+
+    ShapePosInfo  pos(shape->GetStartingPos());
+    ShapePathType pathType;
+    PathEdgeType  edge;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    bool          first = true;
+    while ((pathType = shape->ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
+    {
+        if (!first && pathType == Shape_NewLayer)
+            break;
+        first = false;
+
+        if (styles[0] != styles[1])
+        {
+            float area   = 0;
+            float startX = coord[0];
+            float startY = coord[1];
+            float lastX  = coord[0];
+            float lastY  = coord[1];
+            while ((edge = shape->ReadEdge(&pos, coord)) != Edge_EndPath)
+            {
+                if (coord[0] < minX1) minX1 = coord[0];
+                if (coord[1] < minY1) minY1 = coord[1];
+                if (coord[0] > maxX1) maxX1 = coord[0];
+                if (coord[1] > maxY1) maxY1 = coord[1];
+                area += lastX * coord[1] - lastY * coord[0];
+                lastX = coord[0];
+                lastY = coord[1];
+
+                // a curve counts through its control and end points
+                if (edge == Edge_QuadTo)
+                {
+                    if (coord[2] < minX1) minX1 = coord[2];
+                    if (coord[3] < minY1) minY1 = coord[3];
+                    if (coord[2] > maxX1) maxX1 = coord[2];
+                    if (coord[3] > maxY1) maxY1 = coord[3];
+                    area += lastX * coord[3] - lastY * coord[2];
+                    lastX = coord[2];
+                    lastY = coord[3];
+                }
+            }
+
+            if (lastX != startX || lastY != startY)
+            {
+                if (startX < minX1) minX1 = startX;
+                if (startY < minY1) minY1 = startY;
+                if (startX > maxX1) maxX1 = startX;
+                if (startY > maxY1) maxY1 = startY;
+                area += lastX * startY - lastY * startX;
+            }
+
+            if (minX1 < minX2 || minY1 < minY2 || maxX1 > maxX2 || maxY1 > maxY2)
+            {
+                minX2 = minX1;
+                minY2 = minY1;
+                maxX2 = maxX1;
+                maxY2 = maxY1;
+                cw    = area > 0;
+            }
+        }
+        else
+            shape->SkipPathData(&pos);
+    }
+    return cw;
+}
+
+// ---- blur / filters on the A8 work raster ----
+
+// a sub-rectangle of the raster seen row by row (X) or column by column (Y), so one blur pass serves both directions
+class ImgBlurWrapperX
+{
+public:
+    ImgBlurWrapperX(UByte* img, unsigned pitch, unsigned x, unsigned y, unsigned w, unsigned h)
+        : Img(img), Pitch(pitch), Sx(x), Sy(y), W(w), H(h) {}
+
+    unsigned GetWidth() const  { return W; }
+    unsigned GetHeight() const { return H; }
+    UByte    GetPixel(unsigned x, unsigned y) const { return Img[Pitch * (Sy + y) + Sx + x]; }
+    void     CopySpanTo(unsigned x, unsigned y, unsigned len, const UByte* src)
+    {
+        memcpy(Img + Pitch * (Sy + y) + Sx + x, src, len);
+    }
+
+private:
+    ImgBlurWrapperX(const ImgBlurWrapperX&);
+    void operator=(const ImgBlurWrapperX&);
+    UByte*   Img;
+    unsigned Pitch;
+    unsigned Sx, Sy, W, H;
+};
+
+class ImgBlurWrapperY
+{
+public:
+    ImgBlurWrapperY(UByte* img, unsigned pitch, unsigned x, unsigned y, unsigned w, unsigned h)
+        : Img(img), Pitch(pitch), Sx(x), Sy(y), W(w), H(h) {}
+
+    unsigned GetWidth() const  { return H; }
+    unsigned GetHeight() const { return W; }
+    UByte    GetPixel(unsigned x, unsigned y) const { return Img[Pitch * (Sy + x) + Sx + y]; }
+    void     CopySpanTo(unsigned x, unsigned y, unsigned len, const UByte* src)
+    {
+        UByte* p = Img + Pitch * (Sy + x) + Sx + y;
+        do
+        {
+            *p = *src++;
+            p += Pitch;
+        } while (--len);
+    }
+
+private:
+    ImgBlurWrapperY(const ImgBlurWrapperY&);
+    void operator=(const ImgBlurWrapperY&);
+    UByte*   Img;
+    unsigned Pitch;
+    unsigned Sx, Sy, W, H;
+};
+
+// Recursive (IIR) gaussian approximation, one direction: every line runs forward into sum (padded on both sides
+// so the tails fade out), then backward into buf, which is copied back over the line.
+template<class Img, class SumBuf, class ColorBuf>
+void RecursiveBlur(Img& img, float radius, SumBuf& sum, ColorBuf& buf)
+{
+    if (radius < 0.62f)
+        radius = 0.62f;
+
+    int w   = img.GetWidth();
+    int h   = img.GetHeight();
+    int pad = int(ceilf(radius)) + 3;
+    int x, y;
+
+    float s  = radius * 0.5f;
+    float q  = (s < 2.5f) ? 3.97156f - 4.14554f * sqrtf(1.0f - 0.26891f * s) : 0.98711f * s - 0.9633f;
+    float q2 = q * q;
+    float q3 = q2 * q;
+
+    float b0 = 1.0f / (1.57825f + 2.44413f * q + 1.4281f * q2 + 0.422205f * q3);
+    float b2 = 2.44413f * q + 2.85619f * q2 + 1.26661f * q3;
+    float b3 = -1.4281f * q2 - 1.26661f * q3;
+    float b4 = 0.422205f * q3;
+    float b1 = 1.0f - (b2 + b3 + b4) * b0;
+    b2 *= b0;
+    b3 *= b0;
+    b4 *= b0;
+
+    sum.Resize(w + 2 * pad);
+    buf.Resize(w + 2 * pad);
+
+    for (y = 0; y < h; y++)
+    {
+        float a1 = 0, a2 = 0, a3 = 0, a4 = 0;
+
+        for (x = 0; x < pad; ++x)
+            sum[x] = 0;
+        for (x = 0; x < w; ++x)
+        {
+            a1 = sum[x + pad] = b1 * img.GetPixel(x, y) + b2 * a2 + b3 * a3 + b4 * a4;
+            a4 = a3;
+            a3 = a2;
+            a2 = a1;
+        }
+        for (x = 0; x < pad; ++x)
+        {
+            a1 = sum[x + w + pad] = b2 * a2 + b3 * a3 + b4 * a4;
+            a4 = a3;
+            a3 = a2;
+            a2 = a1;
+        }
+
+        a1 = a2 = a3 = a4 = 0;
+        for (x = w + pad + pad - 1; x >= pad; --x)
+        {
+            a1 = b1 * sum[x] + b2 * a2 + b3 * a3 + b4 * a4;
+            a4 = a3;
+            a3 = a2;
+            a2 = a1;
+            buf[x] = UByte(a1 + 0.5f);
+        }
+        img.CopySpanTo(0, y, w, &buf[pad]);
+    }
+}
+
+// @0x1426cb1b0
+void GlyphCache::recursiveBlur(UByte* img, unsigned pitch, unsigned sx, unsigned sy, unsigned w, unsigned h,
+                               float rx, float ry)
+{
+    ImgBlurWrapperX rows(img, pitch, sx, sy, w, h);
+    RecursiveBlur(rows, rx, BlurSum, BlurStack);
+    ImgBlurWrapperY cols(img, pitch, sx, sy, w, h);
+    RecursiveBlur(cols, ry, BlurSum, BlurStack);
+}
+
+// scales the coverage around bias (a shadow's strength), clamped to a byte
+// @0x1426cb510
+void GlyphCache::strengthenImage(UByte* img, unsigned pitch, unsigned sx, unsigned sy, unsigned w, unsigned h,
+                                 float ratio, int bias)
+{
+    if (ratio != 1.0f)
+    {
+        for (unsigned y = 0; y < h; ++y)
+        {
+            UByte* p = img + (sy + y) * pitch + sx;
+            for (unsigned x = 0; x < w; ++x)
+            {
+                int v = int((int(*p) - bias) * ratio + 0.5f) + bias;
+                if (v < 0)
+                    v = 0;
+                if (v > 255)
+                    v = 255;
+                *p++ = UByte(v);
+            }
+        }
+    }
+}
+
+// spreads every pixel over its neighbours through the scanline filter's tables (at most 256 pixels)
+// @0x1426ca120
+void GlyphCache::filterScanline(UByte* sl, unsigned w) const
+{
+    UByte  line[256];
+    UByte* src = sl;
+    UByte* dst = line;
+    if (w > 256)
+        w = 256;
+    memset(line, 0, w);
+    for (unsigned i = 2; i + 2 < w; ++i)
+        ScanlineFilter.Filter(src++, dst++);
+    memcpy(sl, line, w);
+}
+
+// @0x1426cb180
+void GlyphCache::rasterTooBigWarning()
+{
+    if (RasterTooBigWarning)
+    {
+        LogWarning("Warning: Raster glyph is too big - increase GlyphCacheParams.MaxSlotHeight");
+        RasterTooBigWarning = false;
+    }
+}
+
+// ---- cached glyph sizes ----
+
+// text sizes go up a quarter before they are rounded up to the next ramp step
+// @0x1426c7e50
+float GlyphCache::SnapFontSizeToRamp(float screenSize) const
+{
+    unsigned size = unsigned(floor(screenSize));
+    size += (size + 3) >> 2;
+    if (size <= 255)
+        size = FontSizeRamp[FontSizeMap[size] + 1];
+    else
+        size = 255;
+    return float(size);
+}
+
+// @0x1426c7ea0
+float GlyphCache::SnapShadowSizeToRamp(float screenSize) const
+{
+    unsigned size = unsigned(floor(screenSize));
+    if (size <= 255)
+        size = FontSizeRamp[FontSizeMap[size] + 1];
+    else
+        size = 255;
+    return float(size);
+}
+
+// readability-optimized text keeps quarter pixels, other text snaps to the ramp; a size that still fits the slots
+// once scaled up is clamped to the slot height
+// @0x1426c6170
+float GlyphCache::GetCachedFontSize(const GlyphParam& gp, float screenSize, bool exactFit) const
+{
+    if (!exactFit)
+    {
+        if (!(gp.Flags & GlyphParam::OptRead))
+            screenSize = SnapFontSizeToRamp(screenSize);
+        else
+            screenSize = float(floor(screenSize * 4.0f + 0.5f) * 0.25);
+    }
+    float maxHeight = float(MaxSlotHeight - 2 * SlotPadding);
+    if (screenSize <= maxHeight * Param.MaxRasterScale)
+        return (screenSize < maxHeight) ? screenSize : maxHeight;
+    return screenSize;
+}
+
+// @0x1426c6220
+float GlyphCache::GetCachedShadowSize(float screenSize, const GlyphRaster* ras) const
+{
+    if (ras)
+        return float(ras->HintedSize);
+    float size      = SnapShadowSizeToRamp(screenSize);
+    float maxHeight = float(MaxSlotHeight - 2 * SlotPadding);
+    return (size < maxHeight) ? size : maxHeight;
 }
 
 // @0x1426c66d0
