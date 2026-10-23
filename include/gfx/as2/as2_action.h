@@ -477,6 +477,10 @@ public:
     bool UnregisterClassA(ASStringContext* psc, const ASString& className);
     // The registration entry of a built-in class (exe 0x142949900).
     ClassRegEntry* GetBuiltinClassRegistrar(ASString className);
+
+protected:
+    // (appended for sfr_as2_06) Refills the standard member map (exe 0x142961c40).
+    void InitStandardMembers();
 };
 
 enum { StatMD_ASBinaryData_Mem = 0x108 };

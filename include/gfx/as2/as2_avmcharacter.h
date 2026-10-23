@@ -103,6 +103,18 @@ public:
     bool HasClipEventHandler(const EventId& id) const;
     // Calls each clip event handler for the event with this as this; false when there is none (exe 0x142964200).
     bool InvokeClipEventHandlers(Environment* penv, const EventId& id);
+
+    // One standard member name: the member it spells, and whether "_" names match it in any case.
+    struct MemberTableType
+    {
+        const char*    pName;
+        StandardMember Id;
+        bool           CaseInsensitive;
+    };
+    // The standard member names, ended by a null name (exe 0x143a512e0).
+    static const MemberTableType MemberTable[];
+    // Fills the global context's standard member map from the table (exe 0x142961b40).
+    static void InitStandardMembers(GlobalContext* pgc);
 };
 
 // The script side of a character of an AS2 movie.

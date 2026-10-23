@@ -121,6 +121,8 @@
 // MS2-RANGE: 0x142966370-0x1429663d0 .text$mn
 // MS2-RANGE: 0x1429621f0-0x142962310 .text$mn
 // MS2-RANGE: 0x1429620d0-0x1429621f0 .text$mn
+// MS2-RANGE: 0x142961b40-0x142961c40 .text$mn
+// MS2-RANGE: 0x142961c40-0x142961d40 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1315,6 +1317,27 @@ void AvmSprite::LineTo(float x, float y)
     GetSprite()->InvalidateHitResult();
 }
 
+
+// @0x142961b40
+void AvmCharacter::InitStandardMembers(GlobalContext* pgc)
+{
+    ASStringManager* psm = static_cast<MovieRoot*>(pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->pStringManager;
+    pgc->StandardMemberMap.SetCapacity(117);
+    for (const MemberTableType* pentry = MemberTable; pentry->pName; pentry++)
+    {
+        ASString name(psm->CreateConstString(pentry->pName, strlen(pentry->pName),
+            pentry->CaseInsensitive ? (ASString::Flag_StandardMember | ASString::Flag_CaseInsensitive)
+                                    : ASString::Flag_StandardMember));
+        pgc->StandardMemberMap.Add(name, (char)pentry->Id);
+    }
+}
+
+// @0x142961c40
+void GlobalContext::InitStandardMembers()
+{
+    StandardMemberMap.Clear();
+    AvmCharacter::InitStandardMembers(this);
+}
 
 }}} // namespace Scaleform::GFx::AS2
 
