@@ -78,6 +78,7 @@ extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
 extern "C" void FUN_1423d8b80(void*, void*, void*, unsigned long long);
+unsigned HashFunction(const char*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1423daf30(void*);
@@ -1229,6 +1230,61 @@ void FUN_1423ca6b0(void* raw, const char* name)
         *reinterpret_cast<unsigned*>(bytes + 0xb0) = 2;
         bytes[0xac] = 1;
     }
+}
+
+// MS2-FUNCTIONAL: appends a 32-byte Value record and retains its referenced payload when required.
+// @0x1423d4fa0
+void FUN_1423d4fa0(unsigned long long* array, const unsigned long long* value)
+{
+    const unsigned long long oldLength = array[1];
+    const unsigned long long newLength = oldLength + 1;
+    if (newLength >= array[2])
+        FUN_1423d12e0(array, array, (newLength >> 2) + newLength);
+    array[1] = newLength;
+    auto* output = reinterpret_cast<unsigned long long*>(array[0]) + (newLength - 1) * 4;
+    output[0] = 0;
+    output[1] = value[1];
+    output[2] = value[2];
+    output[3] = value[3];
+    if ((static_cast<unsigned>(value[1]) >> 6) & 1) {
+        output[0] = value[0];
+        void* ref = reinterpret_cast<void*>(value[0]);
+        reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(ref))[1])(ref);
+    }
+}
+
+// MS2-FUNCTIONAL: activates the saved keyboard layout whose name matches the requested string.
+// @0x1423d7890
+void FUN_1423d7890(void* self, const char* name)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x80);
+    auto* entries = reinterpret_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0x90));
+    for (unsigned i = 0; i < count; ++i) {
+        char* savedName = *reinterpret_cast<char**>(entries + i * 0x20);
+        if (savedName && strcmp(savedName, name) == 0) {
+            HKL layout = *reinterpret_cast<HKL*>(entries + i * 0x20 + 0x18);
+            if (layout) {
+                *reinterpret_cast<HKL*>(bytes + 0x198) = layout;
+                ActivateKeyboardLayout(layout, 0);
+            }
+            return;
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: stores the current keyboard-layout name together with its executable hash and byte length.
+// @0x1423d7df0
+void* FUN_1423d7df0(void*, void* rawStringInfo)
+{
+    char layoutName[16]{};
+    GetKeyboardLayoutNameA(layoutName);
+    const unsigned long long length = strlen(layoutName) + 1;
+    auto* stringInfo = static_cast<unsigned char*>(rawStringInfo);
+    *reinterpret_cast<String*>(stringInfo) = layoutName;
+    *reinterpret_cast<unsigned long long*>(stringInfo + 8) = HashFunction(layoutName, length);
+    *reinterpret_cast<unsigned long long*>(stringInfo + 16) = length;
+    return rawStringInfo;
 }
 
 // MS2-FUNCTIONAL: implements the executable's supported COM interface IDs and returns the matching interface view.
