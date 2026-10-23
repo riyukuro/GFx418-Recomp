@@ -376,6 +376,19 @@ void FUN_140010390(unsigned __int64* array, void* reserveSource, unsigned __int6
     array[1] = newSize;
 }
 
+// MS2-FUNCTIONAL: creates an AS string from the encoded string payload and retains the new node.
+// @0x1400128e0
+void** FUN_1400128e0(ASStringManager* manager, void** result, const unsigned __int64* encoded)
+{
+    unsigned __int64 stringData = *encoded & ~static_cast<unsigned __int64>(3);
+    const char* chars = reinterpret_cast<const char*>(stringData + 0xc);
+    unsigned __int64 length = *reinterpret_cast<const unsigned __int64*>(stringData) & 0x7fffffffffffffffULL;
+    ASStringNode* node = manager->CreateStringNode(chars, static_cast<UPInt>(length));
+    *result = node;
+    ++*reinterpret_cast<int*>(reinterpret_cast<char*>(node) + 0x18);
+    return result;
+}
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
