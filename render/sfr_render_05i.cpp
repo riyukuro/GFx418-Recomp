@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x14267b120-0x14267fce0 .text$mn
 
 #include "ms2/scaleform/include/render/text_sgmlparser.h"
+#include "ms2/scaleform/include/render/text_styledtext.h"
 #include <string.h>
 
 namespace Scaleform { namespace Render { namespace Text {
@@ -641,6 +642,22 @@ void SGMLParser<Char>::SkipSpaces()
 {
     while (!Iter.IsFinished() && Iter.IsSpace(*Iter))
         ++Iter;
+}
+
+// Keep the wide overload as the small ABI adapter in the executable. ParseHtmlImpl remains an unrecovered local
+// callee while its parser body is being reconstructed from the exe.
+extern bool FUN_14267b1c0(StyledText* self, const wchar_t* phtml, UPInt htmlSize,
+                          StyledText::HTMLImageTagInfoArray* pimgInfoArr, bool multiline, bool condenseWhite,
+                          const StyleManagerBase* pstyleMgr, const TextFormat* txtFmt,
+                          const ParagraphFormat* paraFmt);
+
+// @0x14267f0d0
+bool StyledText::ParseHtml(const wchar_t* phtml, UPInt htmlSize, HTMLImageTagInfoArray* pimgInfoArr,
+                           bool multiline, bool condenseWhite, const StyleManagerBase* pstyleMgr,
+                           const TextFormat* txtFmt, const ParagraphFormat* paraFmt)
+{
+    return FUN_14267b1c0(this, phtml, htmlSize, pimgInfoArr, multiline, condenseWhite,
+                         pstyleMgr, txtFmt, paraFmt);
 }
 
 template class SGMLCharIter<wchar_t>;
