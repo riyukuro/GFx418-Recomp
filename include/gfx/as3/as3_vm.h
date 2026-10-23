@@ -191,6 +191,9 @@ public:
     Class& GetClassVectorUInt() const;      // 0x1425082f0
     // (appended, sfr19) the interned namespace of a kind and name (NULL: the empty name) (0x142516400).
     Pickable<Instances::Namespace> MakeInternedNamespace(Abc::NamespaceKind kind, const char* name) const;
+    // (appended, sfr19) the same by an ASString or a StringDataPtr URI (0x1425162a0 / 0x142516340).
+    Pickable<Instances::Namespace> MakeInternedNamespace(Abc::NamespaceKind kind, const ASString& uri) const;
+    Pickable<Instances::Namespace> MakeInternedNamespace(Abc::NamespaceKind kind, const StringDataPtr& uri) const;
     // Namespace instances interned by their kind and URI (0x14250aa50 / 0x14250aac0 / 0x14250ab50).
     Instances::Namespace& GetInternedNamespace(Abc::NamespaceKind kind, const ASString& uri) const;
     Instances::Namespace& GetInternedNamespace(Abc::NamespaceKind kind, const StringDataPtr& uri) const;

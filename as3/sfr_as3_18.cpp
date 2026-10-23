@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142509d40-0x142523170 .text$mn
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#undef GetObject   // windows.h
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -130,6 +131,184 @@ void Object::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
         }
     }
     name.SetUndefined();
+}
+
+// ==== Value: references ====
+
+// @0x14251c720
+void Value::Pick(Value& other)
+{
+    Release();
+    Flags = other.Flags;
+    Bonus = other.Bonus;
+    value = other.value;
+    other.Flags = kUndefined;
+}
+
+// @0x14251c7a0
+void Value::Pick(Class* v)
+{
+    Release();
+    SetKind(kClass);
+    value = v;
+}
+
+// @0x14251c820
+void Value::Pick(Object* v)
+{
+    Release();
+    SetKind(kObject);
+    value = v;
+}
+
+// A weak reference becomes a strong one (undefined when its object is gone).
+// MS2-FUNCTIONAL ?MakeStrongRef@Value@AS3@GFx@Scaleform@@QEAA_NXZ: same AddRef switch; the exe schedules the final Bonus/flag stores differently and encodes the kind mask as imm32
+// @0x142516670
+bool Value::MakeStrongRef()
+{
+    if (IsWeakRef())
+    {
+    if (IsValidWeakRef())
+    {
+        switch (GetKind())
+        {
+        case kString:
+            ++value.VS._1.VStr->RefCount;
+            break;
+        case kNamespace:
+        case kObject:
+        case kClass:
+        case kFunction:
+        case kThunkFunction:
+            if (value.VS._1.VObj)
+                value.VS._1.VObj->AddRef();
+            break;
+        case kThunkClosure:
+        case kVTableIndClosure:
+            if (value.VS._2.VObj)
+                value.VS._2.VObj->AddRef();
+            break;
+        default:
+            break;
+        }
+        Bonus.pWeakProxy->Release();
+    }
+    else
+    {
+        value.VS._1.VObj = NULL;
+        SetKind(kUndefined);
+        value.VS._2.VObj = NULL;
+    }
+
+    Bonus.pWeakProxy = NULL;
+    Flags &= ~weakRefMask;
+    return true;
+    }
+    return false;
+}
+
+// @0x142522190
+void Value::ReleaseWeakRef()
+{
+    Bonus.pWeakProxy->Release();
+    Flags &= ~(kindMask | weakRefMask);
+    Bonus.pWeakProxy = NULL;
+    value.VS._1.VObj = NULL;
+    value.VS._2.VObj = NULL;
+}
+
+// @0x1425157a0
+bool Value::IsValidWeakRef() const
+{
+    if (IsWeakRef())
+        return Bonus.pWeakProxy->pObject != NULL;
+    return true;
+}
+
+// @0x142514bf0
+bool IsQNameObject(const Value& v)
+{
+    if (v.IsObject() && v.GetObject())
+    {
+        const Traits& tr = v.GetObject()->GetTraits();
+        return tr.GetTraitsType() == Traits_QName && tr.IsInstanceTraits();
+    }
+    return false;
+}
+
+// @0x1425157c0
+bool IsXMLListObject(Object* obj)
+{
+    bool result = false;
+    if (obj && obj->GetTraits().GetTraitsType() == Traits_XMLList && obj->GetTraits().IsInstanceTraits())
+        result = true;
+    return result;
+}
+
+// @0x1425157f0
+bool IsXMLObject(Object* obj)
+{
+    bool result = false;
+    if (obj && obj->GetTraits().GetTraitsType() == Traits_XML && obj->GetTraits().IsInstanceTraits())
+        result = true;
+    return result;
+}
+
+// A string of decimal digits, optionally followed by '.' and zeros only: its number.
+// @0x14250ee30
+CheckResult GetStrNumber(ASStringNode* str, Value::Number& result)
+{
+    if (str == NULL || str->Size == 0)
+        return false;
+    const char* s = str->pData;
+    if (static_cast<UByte>(s[0] - '0') > 9)
+        return false;
+    for (unsigned i = 1; i < str->Size; ++i)
+    {
+        if (static_cast<UByte>(s[i] - '0') > 9)
+        {
+            if (s[i] != '.')
+                return false;
+            for (++i; i < str->Size; ++i)
+            {
+                if (s[i] != '0')
+                    return false;
+            }
+            break;
+        }
+    }
+    char* end;
+    result = strtod(s, &end);
+    return true;
+}
+
+// ==== VM: interned namespaces ====
+
+// @0x1425162a0
+Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const ASString& uri) const
+{
+    if (uri.IsEmpty() && kind == Abc::NS_Public)
+    {
+        Instances::Namespace* ns = PublicNamespace.GetPtr();
+        if (ns)
+            ns->AddRef();
+        return Pickable<Instances::Namespace>(ns);
+    }
+    InstanceTraits::fl::Namespace& itr =
+        static_cast<InstanceTraits::fl::Namespace&>(GetClassTraitsNamespace().GetInstanceTraits());
+    return itr.MakeInternedInstance(kind, uri, Value::GetUndefined());
+}
+
+// @0x142516340
+Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const StringDataPtr& uri) const
+{
+    return MakeInternedNamespace(kind, GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
+}
+
+// @0x142516400
+Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const char* name) const
+{
+    return MakeInternedNamespace(kind, GetStringManager().CreateString(name ? name : ""));
 }
 
 }}} // namespace Scaleform::GFx::AS3
