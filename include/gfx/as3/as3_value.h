@@ -99,20 +99,71 @@ namespace Abc
 
 // ==== builtin strings ================================================================================================
 
-// Indices of the AS3 builtin strings (only the leading ones are named so far; 61 in all).
+// Indices of the AS3 builtin strings, in the order of the exe's static name table.
 enum BuiltinType
 {
-    AS3Builtin_empty_,      // ""
+    AS3Builtin_empty_,          // ""
     AS3Builtin_undefined,
     AS3Builtin_null,
-    AS3Builtin_true = 4,
+    AS3Builtin_void,
+    AS3Builtin_true,
     AS3Builtin_false,
-    AS3Builtin_comma_ = 14, // ","
-    AS3Builtin_zero,        // "0" (appended, sfr15)
-    AS3Builtin_NaN,         // "NaN" (appended, sfr19)
-    AS3Builtin_timer = 37,
+    AS3Builtin_boolean,
+    AS3Builtin_number,
+    AS3Builtin_string,
+    AS3Builtin_function,
+    AS3Builtin_object,
+    AS3Builtin_xml,
+    AS3Builtin_unknown,
+    AS3Builtin_hitArea,
+    AS3Builtin_comma_,          // ","
+    AS3Builtin_zero,            // "0"
+    AS3Builtin_NaN,
+    AS3Builtin_Infinity,
+    AS3Builtin_negInfinity,     // "-Infinity"
+    AS3Builtin_objectPrefix_,   // "[object "
+    AS3Builtin_closeBracket_,   // "]"
+    AS3Builtin_namespace,
+    AS3Builtin_global,
+    AS3Builtin_length,
+    AS3Builtin_toString,
+    AS3Builtin_valueOf,
+    AS3Builtin_Class,
+    AS3Builtin_Date,
+    AS3Builtin_activate,
+    AS3Builtin_added,
+    AS3Builtin_addedToStage,
+    AS3Builtin_removed,
+    AS3Builtin_removedFromStage,
+    AS3Builtin_deactivate,
+    AS3Builtin_enterFrame,
+    AS3Builtin_frameConstructed,
+    AS3Builtin_exitFrame,
+    AS3Builtin_timer,
     AS3Builtin_timerComplete,
-    AS3BuiltinConst_Count_ = 61
+    AS3Builtin_complete,
+    AS3Builtin_progress,
+    AS3Builtin_open,
+    AS3Builtin_init,
+    AS3Builtin_render,
+    AS3Builtin_resize,
+    AS3Builtin_mouseCursorChange,
+    AS3Builtin_click,
+    AS3Builtin_doubleClick,
+    AS3Builtin_mouseDown,
+    AS3Builtin_mouseMove,
+    AS3Builtin_mouseOut,
+    AS3Builtin_mouseOver,
+    AS3Builtin_mouseUp,
+    AS3Builtin_mouseWheel,
+    AS3Builtin_rollOut,
+    AS3Builtin_rollOver,
+    AS3Builtin_keyDown,
+    AS3Builtin_keyUp,
+    AS3Builtin_textInput,
+    AS3Builtin_change,
+    AS3Builtin_scroll,
+    AS3BuiltinConst_Count_
 };
 
 // The AS3 builtin string table plus the manager that makes new strings. 0x1f8 bytes.

@@ -974,11 +974,18 @@ namespace InstanceTraits { namespace fl_media
         SetMemSize(0x70);
     }
 
-    // MS2-FUNCTIONAL: same source; the exe schedules the vftable store and the first empty-string load of the inlined ID3Info ctor differently
+    // MS2-FUNCTIONAL: same source; the exe schedules the vftable store of the inlined ID3Info ctor before the first empty-string load
     // @0x1424d15d0
     void ID3Info::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // MS2-FUNCTIONAL: same source; the exe schedules the vftable store and the empty-string loads of the inlined ID3Info ctor differently
+    // @0x1424d1280
+    Pickable<Instances::fl_media::ID3Info> ID3Info::MakeInstance(ID3Info& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
     // @0x1424cf800
@@ -986,6 +993,12 @@ namespace InstanceTraits { namespace fl_media
         : CTraits(vm, ci)
     {
         SetMemSize(0x78);
+    }
+
+    // @0x1424d13c0
+    Pickable<Instances::fl_media::Sound> Sound::MakeInstance(Sound& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
     // @0x1424d1700
@@ -1001,6 +1014,12 @@ namespace InstanceTraits { namespace fl_media
         SetMemSize(0x58);
     }
 
+    // @0x1424d1450
+    Pickable<Instances::fl_media::SoundChannel> SoundChannel::MakeInstance(SoundChannel& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
     // @0x1424d1780
     void SoundChannel::MakeObject(Value& result, Traits& t)
     {
@@ -1012,6 +1031,12 @@ namespace InstanceTraits { namespace fl_media
         : CTraits(vm, ci)
     {
         SetMemSize(0x48);
+    }
+
+    // @0x1424d14d0
+    Pickable<Instances::fl_media::SoundLoaderContext> SoundLoaderContext::MakeInstance(SoundLoaderContext& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
     // @0x1424d17e0
@@ -1027,6 +1052,12 @@ namespace InstanceTraits { namespace fl_media
         SetMemSize(0x48);
     }
 
+    // @0x1424d1550
+    Pickable<Instances::fl_media::SoundTransform> SoundTransform::MakeInstance(SoundTransform& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
     // @0x1424d1850
     void SoundTransform::MakeObject(Value& result, Traits& t)
     {
@@ -1036,8 +1067,10 @@ namespace InstanceTraits { namespace fl_media
 
 namespace Instances { namespace fl_media
 {
+    // Forced inline: the exe inlines this ctor into both InstanceTraits MakeObject and MakeInstance; the out-of-line
+    // copy is still emitted.
     // @0x1424cf4f0
-    ID3Info::ID3Info(InstanceTraits::Traits& t)
+    SF_INLINE ID3Info::ID3Info(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , album(GetVM().GetStringManager().CreateEmptyString())
         , artist(GetVM().GetStringManager().CreateEmptyString())
@@ -1054,6 +1087,48 @@ namespace Instances { namespace fl_media
         : Instances::fl_events::EventDispatcher(t)
     {
         Streaming = false;
+    }
+
+    // @0x1424d0b60
+    void Sound::DispatchEventComplete()
+    {
+        SPtr<fl_events::Event> evt =
+            CreateEventObject(static_cast<ASVM&>(GetVM()).GetBuiltin(AS3Builtin_complete), false, false);
+        evt->Target = this;
+        DispatchSingleEvent(evt, false);
+    }
+
+    // @0x1424d0c20
+    void Sound::DispatchEventIOError()
+    {
+        SPtr<fl_events::Event> evt = CreateIOErrorEventObject("soundIOError");
+        evt->Target = this;
+        DispatchSingleEvent(evt, false);
+    }
+
+    // @0x1424d0cd0
+    void Sound::DispatchEventOpen()
+    {
+        SPtr<fl_events::Event> evt =
+            CreateEventObject(static_cast<ASVM&>(GetVM()).GetBuiltin(AS3Builtin_open), false, false);
+        evt->Target = this;
+        DispatchSingleEvent(evt, false);
+    }
+
+    // @0x1424d0d90
+    void Sound::DispatchEventSoundComplete()
+    {
+        if (pChannel)
+            pChannel->DispatchEventSoundComplete();
+    }
+
+    // @0x1424d0ea0
+    void SoundChannel::DispatchEventSoundComplete()
+    {
+        ASString type = GetVM().GetStringManager().CreateConstString("soundComplete");
+        SPtr<fl_events::Event> evt = CreateEventObject(type, false, false);
+        evt->Target = this;
+        DispatchSingleEvent(evt, false);
     }
 
     // @0x1424d0fa0

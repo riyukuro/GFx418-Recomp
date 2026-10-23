@@ -58,6 +58,11 @@ namespace Instances { namespace fl_media {
         // @0x1424d20e0
         void urlGet(ASString& result);
 
+        void DispatchEventComplete();       // 0x1424d0b60
+        void DispatchEventIOError();        // 0x1424d0c20
+        void DispatchEventOpen();           // 0x1424d0cd0
+        void DispatchEventSoundComplete();  // 0x1424d0d90
+
         Ptr<SoundObject>    pSoundObject;   // +0x50
         Ptr<SoundResource>  pResource;      // +0x58 the library sound of an exported Sound subclass
         String              SoundURL;       // +0x60
@@ -83,6 +88,8 @@ namespace Instances { namespace fl_media {
         void soundTransformSet(const Value& result, Instances::fl_media::SoundTransform*);
         // @0x1424d20d0
         void stop(const Value& result);
+
+        void DispatchEventSoundComplete();  // 0x1424d0ea0
 
         Ptr<SoundObject>    pSoundObject;   // +0x50; 0x58 bytes
     };
@@ -148,6 +155,7 @@ namespace InstanceTraits { namespace fl_media {
         ID3Info(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::ID3Info"; }
         virtual void MakeObject(Value& result, Traits& t);  // 0x1424d15d0
+        Pickable<InstanceType> MakeInstance(ID3Info& t);   // 0x1424d1280
     };
 
     class Sound : public CTraits
@@ -158,6 +166,7 @@ namespace InstanceTraits { namespace fl_media {
         Sound(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Sound"; }
         virtual void MakeObject(Value& result, Traits& t);  // 0x1424d1700
+        Pickable<InstanceType> MakeInstance(Sound& t);   // 0x1424d13c0
     };
 
     class SoundChannel : public CTraits
@@ -168,6 +177,7 @@ namespace InstanceTraits { namespace fl_media {
         SoundChannel(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::SoundChannel"; }
         virtual void MakeObject(Value& result, Traits& t);  // 0x1424d1780
+        Pickable<InstanceType> MakeInstance(SoundChannel& t);   // 0x1424d1450
     };
 
     class SoundLoaderContext : public CTraits
@@ -178,6 +188,7 @@ namespace InstanceTraits { namespace fl_media {
         SoundLoaderContext(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::SoundLoaderContext"; }
         virtual void MakeObject(Value& result, Traits& t);  // 0x1424d17e0
+        Pickable<InstanceType> MakeInstance(SoundLoaderContext& t);   // 0x1424d14d0
     };
 
     class SoundTransform : public CTraits
@@ -188,6 +199,7 @@ namespace InstanceTraits { namespace fl_media {
         SoundTransform(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::SoundTransform"; }
         virtual void MakeObject(Value& result, Traits& t);  // 0x1424d1850
+        Pickable<InstanceType> MakeInstance(SoundTransform& t);   // 0x1424d1550
     };
 }}
 
