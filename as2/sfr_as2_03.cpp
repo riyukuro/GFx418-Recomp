@@ -37,7 +37,7 @@
 // MS2-RANGE: 0x142921480-0x142921520 .text$mn
 // MS2-RANGE: 0x142922650-0x1429226d0 .text$mn
 // MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
-// MS2-RANGE: 0x142919a00-0x142919af0 .text$mn
+// MS2-RANGE: 0x142919a00-0x142919c00 .text$mn
 // MS2-RANGE: 0x142917ed0-0x1429180c0 .text$mn
 // MS2-RANGE: 0x14291f430-0x14291f540 .text$mn
 // MS2-RANGE: 0x14291e1a0-0x14291e210 .text$mn
@@ -282,6 +282,13 @@ BooleanObject::BooleanObject(Environment* penv, bool v)
     : Object(penv), BValue(v)
 {
     static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Boolean));
+}
+
+// @0x142919af0
+BooleanProto::BooleanProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<BooleanObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
 // @0x142917ed0
@@ -796,3 +803,10 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7FunctionCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432159d8
 // MS2-PIN: ??_7GlowFilterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f308
 // MS2-PIN: ??_7GlowFilterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f390
+// MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b640
+// MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b688
+// MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321b730
+// MS2-PIN: ??_7BooleanProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b738
+// MS2-PIN: ??_7BooleanProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b780
+// MS2-PIN: ??_7BooleanProto@AS2@GFx@Scaleform@@6B@ 0x14321b828
+// MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028

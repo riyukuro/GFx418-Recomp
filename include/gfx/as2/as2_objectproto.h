@@ -39,6 +39,9 @@ protected:
     // Part of the prototype construction: the constructor, and its "prototype" member back to pthis
     // (exe 0x14295e1b0).
     void Init(Object* pthis, ASStringContext* psc, const FunctionRef& constructor);
+    // Adds the table's functions to the prototype pthis (exe 0x142961830).
+    void InitFunctionMembers(Object* pthis, ASStringContext* psc, const NameFunction* table,
+                             const PropFlags& flags = PropFlags::PropFlag_DontEnum);
 
 public:
     virtual ~GASPrototypeBase();

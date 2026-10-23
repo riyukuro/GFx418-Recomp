@@ -124,6 +124,10 @@ public:
 
     BooleanObject(Environment* penv);         // exe 0x142919a00: false
     BooleanObject(Environment* penv, bool v); // exe 0x142919a70
+    BooleanObject(ASStringContext* psc, Object* pprototype) : Object(psc), BValue(false)
+    {
+        Set__proto__(psc, pprototype);
+    }
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x1429566a0
     virtual ObjectType  GetObjectType() const;                     // exe 0x1429541d0: Object_Boolean
     virtual void SetValue(Environment* penv, const Value& v); // exe 0x14298cc30
@@ -131,6 +135,14 @@ public:
 
 protected:
     void CommonInit(Environment* penv); // exe 0x142934a00
+};
+// The Boolean prototype object.
+class BooleanProto : public Prototype<BooleanObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213630
+
+    BooleanProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919af0
 };
 class ButtonObject : public Object
 {
