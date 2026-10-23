@@ -2468,6 +2468,55 @@ void FUN_1423d5740(unsigned long long* self, const unsigned char* name)
     }
 }
 
+// MS2-FUNCTIONAL: releases the executable's active IME list/window by state index and updates its composition bookkeeping.
+// @0x1423da730
+unsigned long long FUN_1423da730(void* raw, int state)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    auto* manager = static_cast<unsigned char*>(*reinterpret_cast<void**>(self + 8));
+    const unsigned mode = *reinterpret_cast<unsigned*>(manager + 0x98);
+    if (((mode - 0x01000000u) & 0xfeffffffu) != 0) {
+        auto** managerVtable = *reinterpret_cast<void***>(manager);
+        if (reinterpret_cast<unsigned char(*)(void*, void*)>(managerVtable[6])(manager,
+                *reinterpret_cast<void**>(manager + 8))) {
+            --*reinterpret_cast<int*>(manager + 0xbc);
+            if (state == *reinterpret_cast<int*>(self + 0x48)) {
+                if (*reinterpret_cast<void**>(manager + 8)) {
+                    void* bridge = *reinterpret_cast<void**>(manager + 0xa8);
+                    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(bridge) + 0x18);
+                    if (values) {
+                        void* output = nullptr;
+                        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                                values, "RemoveList", &output, 0, 0);
+                    }
+                }
+                FUN_1423d9500(*reinterpret_cast<void**>(manager + 0x30));
+                *reinterpret_cast<unsigned char*>(self + 0x56) = 0;
+            }
+            if (state == *reinterpret_cast<int*>(self + 0x4c)) {
+                if (*reinterpret_cast<void**>(manager + 8)) {
+                    void* bridge = *reinterpret_cast<void**>(manager + 0xa8);
+                    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(bridge) + 0x18);
+                    if (values) {
+                        void* output = nullptr;
+                        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                                values, "RemoveInputWindow", &output, 0, 0);
+                    }
+                }
+                *reinterpret_cast<String*>(manager + 0xb0) = "";
+            }
+            if (*reinterpret_cast<int*>(manager + 0xbc) == 0 &&
+                static_cast<char>(*reinterpret_cast<unsigned long long*>(manager + 0xc0))) {
+                reinterpret_cast<void(*)(void*, int)>(
+                    (*reinterpret_cast<void***>(manager))[0xd8 / sizeof(void*)])(manager, 0);
+            }
+        }
+    }
+    return 0;
+}
+
 // MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
 // @0x1423cad20
 unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
