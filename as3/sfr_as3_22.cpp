@@ -1282,6 +1282,41 @@ extern "C" void FUN_142689aa0(void* destination, void* allocator, void* sourceSe
     }
 }
 
+// MS2-FUNCTIONAL: clears the destination resource-id map and copies each live keyed Scaleform string entry.
+// @0x142689cb0
+extern "C" void FUN_142689cb0(void* destination, void* allocator, void* sourceSet)
+{
+    auto** destinationSet = static_cast<void**>(destination);
+    auto* oldTable = static_cast<std::uint64_t*>(*destinationSet);
+    if (oldTable) {
+        const std::uint64_t mask = oldTable[1];
+        for (std::uint64_t i = 0; i <= mask; ++i) {
+            auto* row = oldTable + 2 + i * 4;
+            if (static_cast<std::int64_t>(row[0]) == -2)
+                continue;
+            reinterpret_cast<Scaleform::String*>(row + 3)->~String();
+            row[0] = UINT64_C(0xfffffffffffffffe);
+        }
+        oldTable[0] = 0;
+    }
+    auto* sourceTable = *static_cast<std::uint64_t**>(sourceSet);
+    if (!sourceTable)
+        return;
+    const std::uint64_t mask = sourceTable[1];
+    for (std::uint64_t i = 0; i <= mask; ++i) {
+        auto* row = sourceTable + 2 + i * 4;
+        if (static_cast<std::int64_t>(row[0]) == -2)
+            continue;
+        const std::uint64_t key = row[2];
+        struct StringPair { const void* key; const Scaleform::String* value; } pair{
+            &key, reinterpret_cast<const Scaleform::String*>(row + 3)
+        };
+        AddStringHashEntry(destination, allocator,
+            reinterpret_cast<const std::uint64_t*>(&pair),
+            HashImageKey(reinterpret_cast<const unsigned char*>(&key)));
+    }
+}
+
 // MS2-FUNCTIONAL: merges keyed movie-name counters and inserts the source table's retained String values by their 64-bit keys.
 // @0x14268b3e0
 extern "C" void FUN_14268b3e0(void* destination, void* source)
