@@ -984,3 +984,67 @@ void SetAudioPaused(void* player, bool paused)
     LeaveCriticalSection(lock);
 }
 }
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: destroys an audio request record, releases its FMOD sound when the final request reference drops, and unlinks it from its owner list.
+// @0x1427462b0
+void ReleaseAudioRequestRecord(void* request)
+{
+    auto* bytes = static_cast<unsigned char*>(request);
+    *reinterpret_cast<void**>(bytes + 0x18) = nullptr;
+    auto* references = reinterpret_cast<volatile long*>(bytes - 8);
+    long count = *references;
+    while (count != 0) {
+        if (InterlockedCompareExchange(references, count + 1, count) == count) {
+            auto* sound = *reinterpret_cast<FMOD::Sound**>(bytes + 0x20);
+            if (sound)
+                sound->release();
+            *reinterpret_cast<FMOD::Sound**>(bytes + 0x20) = nullptr;
+            auto* previous = *reinterpret_cast<void**>(bytes + 8);
+            auto* next = *reinterpret_cast<void**>(bytes + 0x10);
+            if (next) {
+                *reinterpret_cast<void**>(static_cast<unsigned char*>(previous) + 0x10) = next;
+                *reinterpret_cast<void**>(static_cast<unsigned char*>(next) + 8) = previous;
+                *reinterpret_cast<void**>(bytes + 8) = nullptr;
+                *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
+            }
+            if (InterlockedDecrement(references) == 1) {
+                void** object = reinterpret_cast<void**>(bytes - 0x10);
+                reinterpret_cast<void (*)(void*, unsigned)>((*reinterpret_cast<void***>(object))[0])(object, 1);
+            }
+            return;
+        }
+        count = *references;
+    }
+    auto* next = *reinterpret_cast<void**>(bytes + 0x10);
+    if (next) {
+        auto* previous = *reinterpret_cast<void**>(bytes + 8);
+        *reinterpret_cast<void**>(static_cast<unsigned char*>(previous) + 0x10) = next;
+        *reinterpret_cast<void**>(static_cast<unsigned char*>(next) + 8) = previous;
+        *reinterpret_cast<void**>(bytes + 8) = nullptr;
+        *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
+    }
+}
+
+// MS2-FUNCTIONAL: clears a player sound's callback data, drops its FMOD sound when referenced, and detaches its list node.
+// @0x142746380
+void ClearPlayerSoundRecord(void* request)
+{
+    auto* bytes = static_cast<unsigned char*>(request);
+    *reinterpret_cast<void**>(bytes + 0x28) = nullptr;
+    if (*reinterpret_cast<long*>(bytes - 8) > 0) {
+        auto* sound = *reinterpret_cast<FMOD::Sound**>(bytes + 0x20);
+        if (sound)
+            sound->release();
+        *reinterpret_cast<FMOD::Sound**>(bytes + 0x20) = nullptr;
+    }
+    auto* next = *reinterpret_cast<void**>(bytes + 0x10);
+    if (next) {
+        auto* previous = *reinterpret_cast<void**>(bytes + 8);
+        *reinterpret_cast<void**>(static_cast<unsigned char*>(previous) + 0x10) = next;
+        *reinterpret_cast<void**>(static_cast<unsigned char*>(next) + 8) = previous;
+        *reinterpret_cast<void**>(bytes + 8) = nullptr;
+        *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
+    }
+}
+}
