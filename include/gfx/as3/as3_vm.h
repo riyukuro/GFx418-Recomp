@@ -183,6 +183,12 @@ public:
                                        const Value* argv);
     // (appended, sfr19) runs the interpreter until the call stack drops below max_stack_depth frames. 0x1424fa5b0
     int ExecuteCode(unsigned max_stack_depth = 1);
+    // (appended, sfr22) pushes a frame that runs method body mbi_ind of file on _this, or throws a stack overflow
+    // once 128 frames are on the call stack. Only inlined (Instances::Function::Execute 0x14240a1c0); the body is
+    // in as3_callframe.h.
+    void AddFrame(const Value& invoker, VMAbcFile& file, SInt32 mbi_ind, const Value& _this, unsigned argc,
+                  const Value* argv, bool discard_result, const ScopeStackType& saved_scope, const Traits& ot,
+                  const ASString& name);
 
     // A new instance of the global class gname constructed with argv, stored in result; extCall marks a call from
     // C++ rather than from script (0x1424f0750).

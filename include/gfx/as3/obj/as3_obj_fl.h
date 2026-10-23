@@ -78,6 +78,11 @@ namespace Instances {
     public:
         // @0x14240bea0
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+        // (appended, sfr22) slot 21: runs the call to completion. 0x14240ac30
+        virtual void ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // (appended, sfr22) slot 22: pushes a call frame of the method body on the bound or the given this.
+        // 0x14240a1c0
+        virtual void Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result = false);
 
     private:
         ScopeStackType  StoredScopeStack;   // +0x40

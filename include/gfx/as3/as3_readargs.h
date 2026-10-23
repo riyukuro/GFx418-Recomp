@@ -29,6 +29,8 @@ public:
 
 private:
     friend class VM;    // (appended, sfr19) the VM constructor builds its operand stack in place
+    friend class CallFrame; // (appended, sfr22) a new frame keeps the stack position and reserves its values
+    friend class Value;     // (appended, sfr22) Value::Pick moves the top value out
     ValueStack();
 
     // (appended, sfr19) a new page of at least 64 values (global heap). 0x1424eb6b0
@@ -46,6 +48,18 @@ private:
     Page*  pReserved;           // +0x20 (appended, sfr19) released pages, kept for reuse
 };
 
+// (appended, sfr22) moves the top value of the stack into this one and pops it. Only inlined
+// (Instances::Function::ExecuteUnsafe 0x14240ac30).
+SF_INLINE void Value::Pick(ValueStack& v)
+{
+    Release();
+    const Value& top = *v.pCurrent;
+    Flags = top.Flags;
+    Bonus = top.Bonus;
+    value = top.value;
+    --v.pCurrent;
+}
+
 // (appended, sfr19) the register files of the call frames: pages of values, each followed by the sizes of the
 // register sets reserved in it. Only what AllocPage touches is modeled.
 class ValueRegisterFile
@@ -54,6 +68,8 @@ public:
     // (appended, sfr19) releases the num registers of the innermost reservation; a page left empty goes back to
     // the reserved list. 0x142521fb0
     void ReleaseReserved(UInt16 num);
+    // (appended, sfr22) reserves the num registers of a new call frame. 0x1425240e0
+    void Reserve(UInt16 num);
 
     struct Page
     {

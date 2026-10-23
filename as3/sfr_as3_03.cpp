@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
+#include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include <windows.h>
 #include <sys/timeb.h>
@@ -3373,6 +3374,15 @@ namespace ClassTraits
     }
 } // namespace ClassTraits
 
+// Only inlined (Function::Execute and the other frame pushers here).
+inline Value::Value(Instances::Function* v)
+    : Flags(kFunction)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
 namespace Instances
 {
     // @0x14240bea0
@@ -3381,6 +3391,33 @@ namespace Instances
         FunctionBase::ForEachChild_GC(prcc, op);
         FUN_142503660(prcc, StoredScopeStack, op, *this);
         AS3::ForEachChild_GC(prcc, StoredThis, op, *this);
+    }
+
+    // @0x14240a1c0
+    void Function::Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result)
+    {
+        const InstanceTraits::Function& itr = static_cast<const InstanceTraits::Function&>(GetTraits());
+        VM& vm = GetVM();
+        const Value& real_this = StoredThis.IsNullOrUndefined() ? _this : StoredThis;
+        VMAbcFile& file = *itr.File;
+        const SInt32 mbi_ind = file.GetAbcFile().Methods.Info[itr.MethodInfoInd]->MethodBodyInfoInd;
+        const Traits& otr = itr.GOS->GetTraits();
+        vm.AddFrame(Value(this), file, mbi_ind, real_this, argc, argv, discard_result, StoredScopeStack, otr, Name);
+    }
+
+    // @0x14240ac30
+    void Function::ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        Execute(_this, argc, argv);
+        if (GetVM().IsException())
+            return;
+
+        // The frame holds this until it is popped; keep it alive past that.
+        SPtr<Function> gc_guard(this);
+        GetVM().ExecuteCode();
+        VM& vm = GetVM();
+        if (!vm.IsException())
+            result.Pick(*reinterpret_cast<ValueStack*>(vm.OpStack));
     }
 } // namespace Instances
 
