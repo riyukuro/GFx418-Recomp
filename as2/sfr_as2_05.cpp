@@ -140,6 +140,7 @@
 // MS2-RANGE: 0x1429505d0-0x142950b35 .text$mn
 // MS2-RANGE: 0x14294dd10-0x14294de69 .text$mn
 // MS2-RANGE: 0x14294f260-0x14294f4ef .text$mn
+// MS2-RANGE: 0x14294ec10-0x14294ef4f .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2963,6 +2964,85 @@ bool GlowFilterObject::GetMember(Environment* penv, const ASString& name, Value*
     else if (strcmp(pname, "color") == 0)
     {
         val->SetUInt_Call(readonlyFilterParams().Colors[0].ToColor32() & 0xFFFFFF);
+        return true;
+    }
+    else if (strcmp(pname, "inner") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Inner) != 0);
+        return true;
+    }
+    else if (strcmp(pname, "knockout") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Knockout) != 0);
+        return true;
+    }
+    else if (strcmp(pname, "quality") == 0)
+    {
+        val->SetInt_Call(readonlyFilterParams().Passes);
+        return true;
+    }
+    else if (strcmp(pname, "strength") == 0)
+    {
+        val->SetNumber(readonlyFilterParams().Strength);
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// The shadow angle / distance of a blur-type filter, 0 for others.
+static SF_FORCEINLINE float BitmapFilter_GetAngle(const BitmapFilterObject* pobj)
+{
+    Render::Filter* f = pobj->GetFilter();
+    if (f && f->GetFilterType() >= Render::Filter_Blur && f->GetFilterType() <= Render::Filter_Blur_End)
+        return static_cast<Render::BlurFilterImpl*>(f)->GetAngle();
+    return 0;
+}
+static SF_FORCEINLINE float BitmapFilter_GetDistance(const BitmapFilterObject* pobj)
+{
+    Render::Filter* f = pobj->GetFilter();
+    if (f && f->GetFilterType() >= Render::Filter_Blur && f->GetFilterType() <= Render::Filter_Blur_End)
+        return static_cast<Render::BlurFilterImpl*>(f)->GetDistance();
+    return 0;
+}
+
+// @0x14294ec10
+bool DropShadowFilterObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "alpha") == 0)
+    {
+        Number alpha = GetAlpha();
+        val->SetNumber(alpha);
+        return true;
+    }
+    else if (strcmp(pname, "angle") == 0)
+    {
+        val->SetNumber(BitmapFilter_GetAngle(this));
+        return true;
+    }
+    else if (strcmp(pname, "blurX") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurX));
+        return true;
+    }
+    else if (strcmp(pname, "blurY") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurY));
+        return true;
+    }
+    else if (strcmp(pname, "color") == 0)
+    {
+        val->SetUInt_Call(readonlyFilterParams().Colors[0].ToColor32() & 0xFFFFFF);
+        return true;
+    }
+    else if (strcmp(pname, "distance") == 0)
+    {
+        val->SetNumber(BitmapFilter_GetDistance(this));
+        return true;
+    }
+    else if (strcmp(pname, "hideObject") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_HideObject) != 0);
         return true;
     }
     else if (strcmp(pname, "inner") == 0)
