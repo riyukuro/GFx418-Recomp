@@ -14,9 +14,13 @@
 
 namespace Scaleform {
 
+namespace GFx { class StaticTextRecord; class TaskThreadInPool; }
+
 // The executable's four adjacent Resize bodies are template instances of the recovered ArrayData implementation.
-template void ArrayData<UByte, AllocatorLH<UByte, 2>, ArrayDefaultPolicy>::Resize(UPInt);
-template void ArrayBase<ArrayData<UByte, AllocatorLH<UByte, 2>, ArrayDefaultPolicy>>::Resize(UPInt);
+// MS2-PIN: ?Resize@?$ArrayBase@U?$ArrayData@EU?$AllocatorGH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x142568420
+template void ArrayBase<ArrayData<UByte, AllocatorGH_POD<UByte, 2>, ArrayDefaultPolicy>>::Resize(UPInt);
+// MS2-PIN: ?Resize@?$ArrayData@PEAVTaskThreadInPool@GFx@Scaleform@@U?$AllocatorGH@PEAVTaskThreadInPool@GFx@Scaleform@@$01@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAX_K@Z 0x1425685a0
+template void ArrayData<GFx::TaskThreadInPool*, AllocatorGH<GFx::TaskThreadInPool*, 2>, ArrayDefaultPolicy>::Resize(UPInt);
 template void MsgFormat::FormatD1<unsigned long>(const unsigned long&);
 template void MsgFormat::FormatD1<const char*>(const char* const&);
 
