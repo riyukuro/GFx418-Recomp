@@ -321,8 +321,9 @@ public:
         State_Dead
     };
 
-    Texture(TextureManagerLocks* locks, const ImageSize& size, UByte mipLevels, UInt16 use, ImageBase* image)
-        : pManagerLocks(locks), pImage(image), ImgSize(size), State(State_InitPending), MipLevels(mipLevels),
+    // (sfr_d3d9_01b) out of line in the exe, its HAL texture ctors call it
+    SF_NOINLINE Texture(TextureManagerLocks* locks, const ImageSize& size, UByte mipLevels, UInt16 use, ImageBase* image)
+        : ListNode<Texture>(), pManagerLocks(locks), pImage(image), ImgSize(size), State(State_InitPending), MipLevels(mipLevels),
           TextureCount(1), Use(use), TextureFlags(0)
     {
     }
