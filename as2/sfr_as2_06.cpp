@@ -83,6 +83,7 @@
 // MS2-RANGE: 0x14297dcd0-0x14297dd70 .text$mn
 // MS2-RANGE: 0x14297dfb0-0x14297e060 .text$mn
 // MS2-RANGE: 0x14297e060-0x14297e0e0 .text$mn
+// MS2-RANGE: 0x14297e1b0-0x14297e230 .text$mn
 // MS2-RANGE: 0x14297e0e0-0x14297e1b0 .text$mn
 // MS2-RANGE: 0x14297e230-0x14297e2b0 .text$mn
 // MS2-RANGE: 0x14297e2b0-0x14297e330 .text$mn
@@ -2704,6 +2705,10 @@ template void ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::A
 template void ArrayDataBase<GFx::AS2::WithStackEntry,
                             AllocatorLH_POD<GFx::AS2::WithStackEntry, GFx::AS2::StatMV_ActionScript_Mem>,
                             ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x14297e1b0
+template void ArrayData<GFx::AS2::WithStackEntry,
+                        AllocatorLH_POD<GFx::AS2::WithStackEntry, GFx::AS2::StatMV_ActionScript_Mem>,
+                        ArrayDefaultPolicy>::Resize(UPInt);
 // @0x14297dcd0
 template void ArrayDataBase<bool, AllocatorLH<bool, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 // TryBlocks_Resize
