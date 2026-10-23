@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x14295d5e0-0x14295d700 .text$mn
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
+// MS2-RANGE: 0x14295dbb0-0x14295dbe0 .text$mn
 // MS2-RANGE: 0x1429658d0-0x1429659e0 .text$mn
 // MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
 // MS2-RANGE: 0x142965f30-0x1429660c0 .text$mn
@@ -455,6 +456,15 @@ void Selection::QueueSetFocus(Environment* penv, InteractiveObject* newFocus, un
     entry->FunctionParams.PushBack(Value(newFocus));
     entry->FunctionParams.PushBack(Value(static_cast<int>(fmt)));
     entry->FunctionParams.PushBack(Value(static_cast<Number>(controllerIdx)));
+}
+
+// MS2-FUNCTIONAL: follows the exe's this adjustment and TextField style-sheet pointer tests at +0x108/+0x40.
+// @0x14295dbb0
+bool AvmTextFieldBase_HasStyleSheet(const void* self)
+{
+    const unsigned char* textField = static_cast<const unsigned char*>(self) - 0x10;
+    const void* styleData = *reinterpret_cast<void* const*>(textField + 0x108);
+    return styleData && *reinterpret_cast<void* const*>(static_cast<const unsigned char*>(styleData) + 0x40);
 }
 
 // @0x142962010
