@@ -144,6 +144,10 @@ void     FUN_140035260(void* player, void* output, const void* frameInfo, CriUin
 CriBool  FUN_1400355b0(void* player, void* output);
 CriBool  FUN_140035710(void* player, void* yuvBuffers, void* output);
 CriSint32 FUN_140044630(void* decoder);
+CriSint32 FUN_140044f8c(void* demux);
+void     FUN_140042880(void* audioManager);
+void     FUN_140044790(void* videoDecoder);
+void     FUN_140043e20(void* alphaDecoder);
 CriSint32 FUN_140043cb0(void* decoder);
 void     FUN_140044750(void* decoder);
 void     FUN_140043dd0(void* decoder);
@@ -3648,6 +3652,58 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
         FUN_1400467b0(source, 0, &chunk);
     }
     (void)copied;
+}
+
+// MS2-FUNCTIONAL: validate the CRI Movie signature, reset the demux, and start ready decoders.
+// @0x140034730
+void FUN_140034730(void* player)
+{
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)player;
+    struct HeaderGateView { CriUint8 Reserved[0xd64]; CriSint32 HeaderChecked; };
+    struct HeaderSizeView { CriUint8 Reserved[0x8b8]; CriUint32 Size; };
+    FUN_140037850(player);
+    void* demux = state->Demux;
+    if (FUN_140044f8c(demux) == 4)
+        FUN_1400379b0(player, "Status of demux is ERROR.");
+    else if (state->Status != 2)
+    {
+        HeaderGateView* headerState = (HeaderGateView*)player;
+        if (headerState->HeaderChecked == 0 && state->Status == 1 &&
+            ((HeaderSizeView*)player)->Size == 0)
+        {
+            CriMovieChunkQueueRecord record = {};
+            FUN_1400467a0(queues->InputBuffer, 1, -1, &record);
+            if (!record.Chunk || record.Type < 4)
+            {
+                FUN_1400467a8(queues->InputBuffer, 1, &record);
+                FUN_140037880(player);
+                return;
+            }
+            const CriUint8* signature = (const CriUint8*)record.Chunk;
+            if (signature[0] != 'C' || signature[1] != 'R' ||
+                signature[2] != 'I' || signature[3] != 'D')
+            {
+                FUN_1400467a8(queues->InputBuffer, 1, &record);
+                FUN_140037950(player, "E07020701M: Input is not CRI Movie data.", 0);
+                FUN_140037880(player);
+                return;
+            }
+            FUN_1400467a8(queues->InputBuffer, 1, &record);
+            headerState->HeaderChecked = 1;
+        }
+        if (headerState->HeaderChecked == 1)
+            FUN_1400458b8(demux);
+        if (FUN_140044f8c(demux) == 2)
+        {
+            FUN_140042880(((CriMvDecoderHandleFields*)player)->AudioManager);
+            if (((CriMvDecoderHandleFields*)player)->VideoDecoder)
+                FUN_140044790(((CriMvDecoderHandleFields*)player)->VideoDecoder);
+            if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+                FUN_140043e20(((CriMvDecoderHandleFields*)player)->AlphaDecoder);
+        }
+    }
+    FUN_140037880(player);
 }
 
 // MS2-FUNCTIONAL: parse sample rate, channel count, sample count, and buffer size from an audio header.
