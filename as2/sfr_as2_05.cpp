@@ -155,7 +155,9 @@
 // MS2-RANGE: 0x142958720-0x142959160 .text$mn
 // MS2-RANGE: 0x142959bc0-0x142959f07 .text$mn
 // MS2-RANGE: 0x14295b020-0x14295b472 .text$mn
+// MS2-RANGE: 0x142959f10-0x14295a4a2 .text$mn
 
+#include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_keyobject.h"
@@ -3797,6 +3799,70 @@ void GASMatrixCtorFunction::GlobalCtor(const FnCall& fn)
             }
         }
     }
+}
+
+
+// Day of the year at which each month ends, for common and leap years.
+static const int DateMonthEnds[2][12] = {
+    {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
+    {31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366}};
+// Date(...) / new Date(...): the current time, ms since 1970 (one argument) or the local date of the year, month[,
+// date[, hours[, minutes[, seconds[, ms]]]]] arguments (years 0..99 are 1900 based). Called as a function it gives
+// the date string.
+// @0x142959f10
+void DateCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<DateObject> pdate;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Date)
+        pdate = static_cast<DateObject*>(fn.ThisPtr);
+    else
+        pdate = *SF_HEAP_NEW(fn.Env->GetHeap()) DateObject(fn.Env);
+
+    __timeb64             tb;
+    TIME_ZONE_INFORMATION tzi;
+    _ftime64(&tb);
+    DWORD tzid = GetTimeZoneInformation(&tzi);
+    LONG  bias = tzi.Bias;
+    if (tzid == TIME_ZONE_ID_STANDARD)
+        bias += tzi.StandardBias;
+    else if (tzid == TIME_ZONE_ID_DAYLIGHT)
+        bias += tzi.DaylightBias;
+    pdate->LocalOffset = bias * -60000;
+    pdate->SetDate(tb.time * 1000 + tb.millitm);
+
+    if (fn.NArgs == 1)
+        pdate->SetDate((SInt64)fn.Arg(0).ToNumber(fn.Env));
+    else if (fn.NArgs >= 2)
+    {
+        int year = (int)fn.Arg(0).ToNumber(fn.Env);
+        if (year <= 99)
+            year += 1900;
+        int start = Date_StartOfYear(year);
+        int date  = start;
+        int month = (int)fn.Arg(1).ToNumber(fn.Env);
+        if (month)
+            date += DateMonthEnds[IsLeapYear(year)][month - 1];
+        if (fn.NArgs >= 3)
+            date += (int)fn.Arg(2).ToNumber(fn.Env) - 1;
+        int time = 0;
+        if (fn.NArgs >= 4)
+            time = (int)fn.Arg(3).ToNumber(fn.Env) * 3600000;
+        if (fn.NArgs >= 5)
+            time += (int)fn.Arg(4).ToNumber(fn.Env) * 60000;
+        if (fn.NArgs >= 6)
+            time += (int)fn.Arg(5).ToNumber(fn.Env) * 1000;
+        if (fn.NArgs >= 7)
+            time += (int)fn.Arg(6).ToNumber(fn.Env);
+        pdate->LYear  = year;
+        pdate->LTime  = time;
+        pdate->LJDate = date - start;
+        pdate->LDate  = (SInt64)date * 86400000 + time;
+        pdate->UpdateGMT();
+        pdate->SetDate(pdate->Date);
+    }
+
+    fn.Result->SetAsObject(pdate.GetPtr());
+    fn.Result->SetString(fn.Result->ToString(fn.Env));
 }
 }}} // namespace Scaleform::GFx::AS2
 
