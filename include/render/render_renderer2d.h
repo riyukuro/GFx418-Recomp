@@ -93,6 +93,8 @@ public:
     // (appended for sfr_render_07k) drops the glyphs of a destroyed font, then merges the freed slots
     void CleanUpFont(FontCacheHandle* font);   // 0x1426c4f10
     void MergeCacheSlots();                    // 0x1426c67b0
+    // (appended for sfr_render_07l) printf-style warning to the renderer's log
+    void LogWarning(const char* fmt, ...);     // 0x1426c6710
 };
 
 enum DisplayPass

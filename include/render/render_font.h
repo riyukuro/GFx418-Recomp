@@ -19,6 +19,7 @@ class GlyphShape;
 class GlyphRaster;
 class FontCacheHandle;
 class FontCacheHandleManager;
+class GlyphCache;
 
 // The font's link to the glyph cache's handle of it (0x10 bytes); dropped with the font. releaseFont lives with the
 // font cache handle unit (0x1426d4b40).
@@ -156,6 +157,11 @@ public:
 protected:
     SInt16             LowerCaseTop, UpperCaseTop;  // +0x20
     FontCacheHandleRef hRef;                        // +0x28
+
+    // (appended for sfr_render_07l) the hinting tops: -(glyph top) of the first sample capital / small letter the
+    // font has; both -1 (auto-hinting off, warned through log) when it lacks either
+    void   calcLowerUpperTop(GlyphCache* log);   // 0x1426d4c30
+    UInt16 calcTopBound(UInt16 code);             // 0x1426d4dc0, 0 without the glyph
 };
 
 }} // namespace Scaleform::Render
