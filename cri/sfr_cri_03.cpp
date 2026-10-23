@@ -35,6 +35,8 @@ void* FUN_14004e580(void);
 void FUN_14004ff90(void*, void*, void*);
 void FUN_1400467a8(void*, CriSint32, void*);
 void FUN_1400467b0(void*, CriSint32, void*);
+void FUN_140046014(void*);
+void FUN_14004602c(void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
@@ -967,6 +969,74 @@ void criSjRbf_Reset(void* ringBuffer)
         memcpy(bytes + cleared[i], &zero, sizeof(zero));
     memcpy(&capacity, bytes + 0x38, sizeof(capacity));
     memcpy(bytes + 0x24, &capacity, sizeof(capacity));
+    FUN_14004602c(ringBuffer);
+}
+
+// MS2-FUNCTIONAL: reserve a bounded input or output region from the CRI stream ring buffer.
+// @0x140046094
+void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requested, void* result)
+{
+    CriUint8* bytes = (CriUint8*)ringBuffer;
+    FUN_140046014(ringBuffer);
+    CriUint32 size, end, available, position;
+    void* data;
+    memcpy(&size, bytes + 0x38, sizeof(size));
+    memcpy(&end, bytes + 0x3c, sizeof(end));
+    memcpy(&data, bytes + 0x30, sizeof(data));
+    if (direction == 0)
+    {
+        memcpy(&position, bytes + 0x28, sizeof(position));
+        memcpy(&available, bytes + 0x24, sizeof(available));
+        CriUint32 contiguous = size - position + end;
+        if (available < contiguous)
+            contiguous = available;
+        if (requested > contiguous)
+            requested = contiguous;
+        void* chunk = (CriUint8*)data + position;
+        position = (position + requested) % size;
+        available -= requested;
+        CriUint32 total;
+        memcpy(&total, bytes + 0x40, sizeof(total));
+        total += requested;
+        memcpy(bytes + 0x28, &position, sizeof(position));
+        memcpy(bytes + 0x24, &available, sizeof(available));
+        memcpy(bytes + 0x40, &total, sizeof(total));
+        memcpy(result, &chunk, sizeof(chunk));
+        memcpy((CriUint8*)result + 8, &requested, sizeof(requested));
+        CriUint32 zero = 0;
+        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
+    }
+    else if (direction == 1)
+    {
+        memcpy(&position, bytes + 0x2c, sizeof(position));
+        memcpy(&available, bytes + 0x20, sizeof(available));
+        CriUint32 contiguous = size - position + end;
+        if (available < contiguous)
+            contiguous = available;
+        if (requested > contiguous)
+            requested = contiguous;
+        void* chunk = (CriUint8*)data + position;
+        position = (position + requested) % size;
+        available -= requested;
+        CriUint32 total;
+        memcpy(&total, bytes + 0x48, sizeof(total));
+        total += requested;
+        memcpy(bytes + 0x2c, &position, sizeof(position));
+        memcpy(bytes + 0x20, &available, sizeof(available));
+        memcpy(bytes + 0x48, &total, sizeof(total));
+        memcpy(result, &chunk, sizeof(chunk));
+        memcpy((CriUint8*)result + 8, &requested, sizeof(requested));
+        CriUint32 zero = 0;
+        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
+    }
+    else
+    {
+        void* empty = NULL;
+        CriUint32 zero = 0;
+        memcpy(result, &empty, sizeof(empty));
+        memcpy((CriUint8*)result + 8, &zero, sizeof(zero));
+        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
+    }
     FUN_14004602c(ringBuffer);
 }
 
