@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/kernel/sf_memitem.h"
+#include "ms2/scaleform/kernel/sf_log.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "hook/ms2hook.h"
@@ -208,6 +209,8 @@ int FUN_1428d8ef6(void*, unsigned, unsigned);
 int FUN_1428d8f0e(void*, unsigned, unsigned, unsigned, unsigned);
 int FUN_1428d8ef0(void*, unsigned, unsigned, unsigned);
 void FUN_142742830(long long*, unsigned long long*);
+void FUN_14268b710(void*, Scaleform::Log*);
+void FUN_14268bd60(void*, Scaleform::Log*);
 
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
@@ -1645,6 +1648,18 @@ void* CreateAudioEventManager()
     object[0xf0] = 0;
     *reinterpret_cast<unsigned*>(object + 0xf4) = 0;
     return object;
+}
+
+// MS2-FUNCTIONAL: prints the movie-view heading and enumerates the function and renderer hash tables.
+// @0x14268c080
+void LogMovieViewFunctions(void* movieView, Scaleform::Log* log)
+{
+    auto* bytes = static_cast<unsigned char*>(movieView);
+    auto encoded = *reinterpret_cast<std::uintptr_t*>(bytes + 0x20);
+    const char* name = reinterpret_cast<const char*>((encoded & ~std::uintptr_t(3)) + 0xc);
+    log->LogMessage("========== MOVIE VIEW FUNCTIONS FOR %s ======\n", name);
+    FUN_14268b710(*reinterpret_cast<void**>(bytes + 0x60), log);
+    FUN_14268bd60(*reinterpret_cast<void**>(bytes + 0x70), log);
 }
 
 // MS2-FUNCTIONAL: creates and links a sound request under the manager lock, then initializes its FMOD sound or stream.
