@@ -414,6 +414,9 @@ public:
 class AsFunctionObject : public FunctionObject
 {
 public:
+    // The executable stores each parsed argument descriptor in 16 bytes; fields are not recovered in this header.
+    struct ArgSpec { UByte Unrecovered[0x10]; };
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936880
 
     MovieImpl*           pMovieRoot;   // +0x68 0 for a function without a target

@@ -66,6 +66,7 @@
 // MS2-RANGE: 0x14297d4b0-0x14297d550 .text$mn
 // MS2-RANGE: 0x14297d550-0x14297d5f0 .text$mn
 // MS2-RANGE: 0x14297d5f0-0x14297d690 .text$mn
+// MS2-RANGE: 0x14297d690-0x14297d730 .text$mn
 // MS2-RANGE: 0x14297dc30-0x14297dcd0 .text$mn
 // MS2-RANGE: 0x14297d730-0x14297d7d0 .text$mn
 // MS2-RANGE: 0x14297d7d0-0x14297d870 .text$mn
@@ -2436,6 +2437,10 @@ template void GFx::LogBase<GFx::AS2::ActionLogger>::LogAction(const char*, ...) 
 template void GFx::LogBase<GFx::AS2::Environment>::LogError(const char*, ...) const;
 
 // The out-of-line array growth of the AS2 containers.
+// @0x14297d690
+template void ArrayDataBase<GFx::AS2::AsFunctionObject::ArgSpec,
+                            AllocatorLH<GFx::AS2::AsFunctionObject::ArgSpec, GFx::AS2::StatMV_ActionScript_Mem>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 // @0x14297d4b0
 template void ArrayDataBase<GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Page*,
                             AllocatorLH<GFx::AS2::PagedStack<GFx::AS2::Value, 32>::Page*, 2>,
