@@ -94,6 +94,8 @@ void FUN_1400467c0(const void*, CriUint32, void*, void*);
 void FUN_14004f8a0(void);
 void FUN_14004eb50(void);
 void FUN_14004e3b0(CriUint64, CriUint64);
+void* FUN_14003da40(void*, void*);
+void* FUN_14003dd50(void*, void*);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -3536,6 +3538,74 @@ void FUN_14003ef00(void* object)
         else
             FUN_1400467b0(reader->Queue, 0, chunk);
     }
+}
+
+// MS2-FUNCTIONAL: obtain a CRI video descriptor and publish its packed playback fields.
+// @0x14003e2a0
+void* FUN_14003e2a0(void* source, void* destination)
+{
+    struct DescriptorInput
+    {
+        void* Value;
+        CriUint32 Field08, Field0c, Field10, Field14;
+        CriUint64 Field18;
+        CriUint8 Reserved20[0x30];
+        CriUint32 Field50;
+    } input = {};
+    struct DescriptorOutput
+    {
+        void* Value;
+        CriUint32 Field08, Field0c, Field10, Field14, Field18, Reserved1c;
+        CriUint64 Field20;
+        CriUint8 Reserved28[0x20];
+        CriUint32 Ready;
+    };
+    if (!FUN_14003da40(source, &input))
+        return NULL;
+    DescriptorOutput* output = (DescriptorOutput*)destination;
+    output->Value = input.Value;
+    output->Field08 = input.Field08;
+    output->Field0c = input.Field0c;
+    output->Field10 = input.Field10;
+    output->Field14 = input.Field50;
+    output->Field18 = input.Field14;
+    output->Field20 = input.Field18;
+    output->Ready = 1;
+    return output->Value;
+}
+
+// MS2-FUNCTIONAL: obtain an alternate CRI video descriptor and publish its packed playback fields.
+// @0x14003e5d0
+void* FUN_14003e5d0(void* source, void* destination)
+{
+    struct DescriptorInput
+    {
+        void* Value;
+        CriUint32 Field08, Field0c, Field10, Field14;
+        CriUint64 Field18;
+        CriUint8 Reserved20[0x30];
+        CriUint32 Field50;
+    } input = {};
+    struct DescriptorOutput
+    {
+        void* Value;
+        CriUint32 Field08, Field0c, Field10, Field14, Field18, Reserved1c;
+        CriUint64 Field20;
+        CriUint8 Reserved28[0x20];
+        CriUint32 Ready;
+    };
+    if (!FUN_14003dd50(source, &input))
+        return NULL;
+    DescriptorOutput* output = (DescriptorOutput*)destination;
+    output->Value = input.Value;
+    output->Field08 = input.Field08;
+    output->Field0c = input.Field0c;
+    output->Field10 = input.Field10;
+    output->Field14 = input.Field50;
+    output->Field18 = input.Field14;
+    output->Field20 = input.Field18;
+    output->Ready = 1;
+    return output->Value;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
