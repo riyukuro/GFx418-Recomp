@@ -2589,6 +2589,63 @@ extern "C" void FUN_14268c930(void* object, void* stream, unsigned version)
     }
 }
 
+// MS2-FUNCTIONAL: reads the versioned movie-to-manager records and interns each keyed ASIMEManager value.
+// @0x14268c510
+extern "C" void FUN_14268c510(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned recordCount = 0;
+    ReadAs3StreamBytes(stream, &recordCount, 4);
+    Scaleform::ResizeRawArray(reinterpret_cast<void**>(bytes + 0x10), bytes + 0x10, recordCount, 0x20);
+    auto* records = *reinterpret_cast<unsigned char**>(bytes + 0x10);
+    for (unsigned i = 0; i < recordCount; ++i) {
+        auto* record = records + i * 0x20;
+        ReadAs3StreamBytes(stream, record, 8);
+        ReadAs3StreamBytes(stream, record + 8, 8);
+        ReadAs3StreamBytes(stream, record + 0x10, 4);
+        ReadAs3StreamBytes(stream, record + 0x18, 8);
+    }
+
+    unsigned entryCount = 0;
+    ReadAs3StreamBytes(stream, &entryCount, 4);
+    std::uint32_t statId = 0x242;
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    for (unsigned i = 0; i < entryCount; ++i) {
+        std::uint64_t key = 0;
+        ReadAs3StreamBytes(stream, &key, 8);
+        auto* value = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, object, 0x30, &statId));
+        if (!value) {
+            Scaleform::String discardedName;
+            Scaleform::ReadNarrowString(stream, &discardedName);
+            std::uint32_t discarded = 0;
+            std::uint64_t discardedWide = 0;
+            ReadAs3StreamBytes(stream, &discarded, 4);
+            if (version > 8) {
+                ReadAs3StreamBytes(stream, &discardedWide, 8);
+                ReadAs3StreamBytes(stream, &discarded, 4);
+                if (version > 12)
+                    ReadAs3StreamBytes(stream, &discarded, 4);
+            }
+            continue;
+        }
+        std::memset(value, 0, 0x30);
+        *reinterpret_cast<void**>(value) = AS3MovieViewValueVtable;
+        *reinterpret_cast<std::uint32_t*>(value + 8) = 1;
+        new (value + 0x10) Scaleform::StringLH();
+        Scaleform::ReadNarrowString(stream, value + 0x10);
+        ReadAs3StreamBytes(stream, value + 0x18, 4);
+        if (version > 8) {
+            ReadAs3StreamBytes(stream, value + 0x20, 8);
+            ReadAs3StreamBytes(stream, value + 0x28, 4);
+            if (version > 12)
+                ReadAs3StreamBytes(stream, value + 0x2c, 4);
+        }
+        Scaleform::AddMovieViewHashEntry(reinterpret_cast<void**>(bytes + 0x28), bytes + 0x28, key, value);
+        FUN_14257dcb0(value);
+    }
+}
+
 // MS2-FUNCTIONAL: reads the versioned movie image header and marker records, then delegates the nested resource tables.
 // @0x14268cfe0
 extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
