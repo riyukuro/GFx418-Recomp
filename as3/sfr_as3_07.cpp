@@ -194,6 +194,13 @@ public:
     bool  SetPixels(const Rect<SInt32>& destRect, DIPixelProvider& provider);                                     // 0x1425ef060
     // The twips area a filter covers when applied to sourceRect (twips).
     static void CalcFilterRect(RectF* result, const Rect<SInt32>& sourceRect, Filter* filter);                     // 0x1425eb180
+    // Blends a rect of the source image into this image at destPoint with per-channel multipliers (0..256).
+    void  Merge(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                UInt32 redMultiplier, UInt32 greenMultiplier, UInt32 blueMultiplier, UInt32 alphaMultiplier); // 0x1425edc00
+    // Maps each channel of a rect of the source image through a 256-entry table (NULL leaves the channel as is);
+    // the results of the four channels are added.
+    void  PaletteMap(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                     UInt32** channels);                                                                          // 0x1425ee140
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -2048,6 +2055,99 @@ namespace Instances { namespace fl_display
         default: break;
         }
     }
+
+#pragma strict_gs_check(push, on)
+    // paletteMap(sourceBitmapData, sourceRect, destPoint, redArray, greenArray, blueArray, alphaArray): the channel
+    // arrays are read into 256-entry tables; a missing or null array leaves its channel unmapped.
+    // MS2-FUNCTIONAL: stack layout (the exe frame is 0x10 larger and shares the argument and error slots); same code otherwise
+    // @0x142450f00
+    void BitmapData::paletteMap(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (argc >= 3)
+        {
+            Instances::fl_display::BitmapData* sourceBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
+            Instances::fl_geom::Rectangle* sourceRect = static_cast<Instances::fl_geom::Rectangle*>(argv[1].GetObject());
+            Instances::fl_geom::Point* destPoint = static_cast<Instances::fl_geom::Point*>(argv[2].GetObject());
+            if (!sourceBitmapData)
+            {
+                VM& vm = GetVM();
+                vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+            }
+            else if (!sourceRect)
+            {
+                VM& vm = GetVM();
+                vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+            }
+            else if (!destPoint)
+            {
+                VM& vm = GetVM();
+                vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+            }
+            else
+            {
+                UInt32* channels[4];
+                UInt32 tables[4][256];
+                for (unsigned i = 0; i < 4; ++i)
+                {
+                    Instances::fl::Array* arr = (i < argc - 3) ? static_cast<Instances::fl::Array*>(argv[3 + i].GetObject()) : NULL;
+                    if (arr)
+                    {
+                        channels[i] = tables[i];
+                        for (UPInt j = 0; j < 256; ++j)
+                            arr->SA.At(j).Convert2UInt32(channels[i][j]);
+                    }
+                    else
+                        channels[i] = NULL;
+                }
+                Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
+                Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                          (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
+                reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->PaletteMap(sourceBitmapData->pImage, rect, dp, channels);
+            }
+        }
+    }
+#pragma strict_gs_check(pop)
+
+#pragma strict_gs_check(push, on)
+    // merge(sourceBitmapData, sourceRect, destPoint, redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier):
+    // only the full seven-argument form does anything.
+    // MS2-FUNCTIONAL: the exe keeps pImage in a volatile register until the cast (no rbp push in the prolog); stack slots
+    // @0x142450590
+    void BitmapData::merge(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+        }
+        else if (argc == 7)
+        {
+            Instances::fl_display::BitmapData* sourceBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
+            Instances::fl_geom::Point* destPoint = static_cast<Instances::fl_geom::Point*>(argv[2].GetObject());
+            Instances::fl_geom::Rectangle* sourceRect = static_cast<Instances::fl_geom::Rectangle*>(argv[1].GetObject());
+            if (!sourceBitmapData)
+                return;
+            Render::ImageBase* psource = sourceBitmapData->pImage;
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            if (!psource || !pimage)
+                return;
+            UInt32 mult[4];
+            for (unsigned i = 0; i < argc - 3; ++i)
+                argv[3 + i].Convert2UInt32(mult[i]);
+            Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
+            Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                      (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
+            pimage->Merge(psource, rect, dp, mult[0], mult[1], mult[2], mult[3]);
+        }
+    }
+#pragma strict_gs_check(pop)
 
     // @0x142450540
     void DisplayObject::maskSet(const Value& result, Instances::fl_display::DisplayObject* value)
