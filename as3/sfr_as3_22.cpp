@@ -155,7 +155,7 @@ int FUN_1428d8efc(void*, void*);
 int FUN_1428d8f14(void*, void*);
 void FUN_14257d390(void*, long long, unsigned, unsigned);
 int FUN_1427483a0(void*, int);
-unsigned FUN_142748160(void*);
+unsigned long long FUN_142748160(void*, void*, unsigned);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 int FUN_1428d8f2c(void*, bool);
@@ -587,5 +587,16 @@ unsigned long long OpenAudioStream(void* stream, void*, unsigned* length, void*,
 unsigned long long ValidateAudioStream(void*, void*, void* stream)
 {
     return FUN_1427483a0(stream, 0) == 0 ? 20 : 0;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: reads callback bytes from the fifth-argument stream state and reports the count.
+// @0x142745470
+unsigned long long ReadAudioCallback(void*, void* buffer, unsigned bytes, unsigned* bytesRead, void* stream)
+{
+    *bytesRead = static_cast<unsigned>(FUN_142748160(stream, buffer, bytes));
+    return 0;
 }
 }
