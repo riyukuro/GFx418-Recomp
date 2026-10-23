@@ -41,6 +41,10 @@ struct ImageGlyphVertex
 // vertex of the alpha (raster, packed and distance field) glyph quads: position, texture coordinates, colour
 struct RasterGlyphVertex
 {
+    float  x, y;
+    UInt32 Color;
+    float  u, v;
+    void   Set(float x_, float y_, float u_, float v_, UInt32 c) { x = x_; y = y_; Color = c; u = u_; v = v_; }
     static VertexFormat Format;   // 0x143a2fe50
 };
 
@@ -49,6 +53,8 @@ class TextureGlyph : public RefCountBase<TextureGlyph, Stat_Default_Mem>
 {
 public:
     Ptr<Image> pImage;            // +0x10
+    void*      Unk_18;            // +0x18
+    RectF      UvBounds;          // +0x20 texture coordinates of the glyph
 };
 
 // corner of a rectangle outline
@@ -726,6 +732,166 @@ void TextMeshProvider::setMeshData(TessBase* tess, VertexOutput* verOut, const U
         verCount.IStart += num;
         start += num;
     }
+}
+
+// The quads of a run of glyphs packed into font textures: alpha glyphs carry the text colour, colour glyphs (any other
+// texture format) only their texture coordinates. The first glyph's texture decides for the whole layer.
+// @0x1426e6c90
+bool TextMeshProvider::generatePackedMesh(VertexOutput* verOut, const TextMeshLayer& layer)
+{
+    enum { GlyphChunkSize = 64 };
+
+    RasterGlyphVertex verA8[GlyphChunkSize * 4];
+    ImageGlyphVertex  verC32[GlyphChunkSize * 4];
+    UInt16            indices[GlyphChunkSize * 6];
+
+    unsigned totalGlyphs = layer.Count;
+#ifdef __clang__
+    // clang folds the initializer into .rdata: set the exe globals' addresses at run time instead
+    VertexOutput::Fill fillA8  = { 4 * totalGlyphs, 6 * totalGlyphs, 0, 0, 0, 0 };
+    VertexOutput::Fill fillC32 = { 4 * totalGlyphs, 6 * totalGlyphs, 0, 0, 0, 0 };
+    fillA8.pFormat  = &RasterGlyphVertex::Format;
+    fillC32.pFormat = &ImageGlyphVertex::Format;
+#else
+    VertexOutput::Fill fillA8  = { 4 * totalGlyphs, 6 * totalGlyphs, &RasterGlyphVertex::Format, 0, 0, 0 };
+    VertexOutput::Fill fillC32 = { 4 * totalGlyphs, 6 * totalGlyphs, &ImageGlyphVertex::Format, 0, 0, 0 };
+#endif
+
+    bool a8 = Entries[layer.Start].EntryData.PackedData.pGlyph->pImage->GetFormat() == Image_A8;
+
+    if (!verOut->BeginOutput(a8 ? &fillA8 : &fillC32, 1, Matrix2F::Identity))
+        return false;
+
+    unsigned glyphCount  = 0;
+    unsigned glyphOffset = 0;
+    for (unsigned i = 0; i < totalGlyphs; ++i)
+    {
+        if (glyphCount >= GlyphChunkSize)
+        {
+            verOut->SetVertices(0, glyphOffset * 4, a8 ? (void*)verA8 : (void*)verC32, GlyphChunkSize * 4);
+            verOut->SetIndices(0, glyphOffset * 6, indices, GlyphChunkSize * 6);
+            glyphCount = 0;
+            glyphOffset += GlyphChunkSize;
+        }
+        const TextMeshEntry&   ent = Entries[i + layer.Start];
+        const GlyphTextureEnt& pak = ent.EntryData.PackedData;
+        RectF                  tex = pak.pGlyph->UvBounds;
+        UInt32                 c   = ent.mColor;
+
+        unsigned verIdx = glyphCount * 4;
+        unsigned indIdx = glyphCount * 6;
+        unsigned idx    = i * 4;
+        RectF    chr(pak.Coord[0], pak.Coord[1], pak.Coord[2], pak.Coord[3]);
+
+        clipGlyphRect(chr, tex);
+
+        if (a8)
+        {
+            verA8[verIdx + 0].Set(chr.x1, chr.y1, tex.x1, tex.y1, c);
+            verA8[verIdx + 1].Set(chr.x2, chr.y1, tex.x2, tex.y1, c);
+            verA8[verIdx + 2].Set(chr.x2, chr.y2, tex.x2, tex.y2, c);
+            verA8[verIdx + 3].Set(chr.x1, chr.y2, tex.x1, tex.y2, c);
+        }
+        else
+        {
+            verC32[verIdx + 0].Set(chr.x1, chr.y1, tex.x1, tex.y1);
+            verC32[verIdx + 1].Set(chr.x2, chr.y1, tex.x2, tex.y1);
+            verC32[verIdx + 2].Set(chr.x2, chr.y2, tex.x2, tex.y2);
+            verC32[verIdx + 3].Set(chr.x1, chr.y2, tex.x1, tex.y2);
+        }
+        indices[indIdx + 0] = UInt16(idx + 0);
+        indices[indIdx + 1] = UInt16(idx + 1);
+        indices[indIdx + 2] = UInt16(idx + 2);
+        indices[indIdx + 3] = UInt16(idx + 2);
+        indices[indIdx + 4] = UInt16(idx + 3);
+        indices[indIdx + 5] = UInt16(idx + 0);
+        ++glyphCount;
+    }
+
+    if (glyphCount)
+    {
+        verOut->SetVertices(0, glyphOffset * 4, a8 ? (void*)verA8 : (void*)verC32, glyphCount * 4);
+        verOut->SetIndices(0, glyphOffset * 6, indices, glyphCount * 6);
+    }
+    else
+        generateNullVectorMesh(verOut);
+
+    verOut->EndOutput();
+    return true;
+}
+
+// The quads of a run of rasterized glyphs, out of the glyph cache texture; the cache keeps a one texel border around
+// every glyph, left out of the texture rectangle here. Quads leave in chunks of 64.
+// @0x1426e7110
+bool TextMeshProvider::generateRasterMesh(VertexOutput* verOut, const TextMeshLayer& layer)
+{
+    enum { GlyphChunkSize = 64 };
+
+    RasterGlyphVertex vertices[GlyphChunkSize * 4];
+    UInt16            indices[GlyphChunkSize * 6];
+
+    unsigned totalGlyphs = layer.Count;
+#ifdef __clang__
+    // clang folds the initializer into .rdata: set the exe global's address at run time instead
+    VertexOutput::Fill fill = { 4 * totalGlyphs, 6 * totalGlyphs, 0, 0, 0, 0 };
+    fill.pFormat = &RasterGlyphVertex::Format;
+#else
+    VertexOutput::Fill fill = { 4 * totalGlyphs, 6 * totalGlyphs, &RasterGlyphVertex::Format, 0, 0, 0 };
+#endif
+    float scaleU = pCache->GetScaleU();
+    float scaleV = pCache->GetScaleV();
+
+    if (!verOut->BeginOutput(&fill, 1, Matrix2F::Identity))
+        return false;
+
+    unsigned glyphCount  = 0;
+    unsigned glyphOffset = 0;
+    for (unsigned i = 0; i < totalGlyphs; ++i)
+    {
+        if (glyphCount >= GlyphChunkSize)
+        {
+            verOut->SetVertices(0, glyphOffset * 4, vertices, GlyphChunkSize * 4);
+            verOut->SetIndices(0, glyphOffset * 6, indices, GlyphChunkSize * 6);
+            glyphCount = 0;
+            glyphOffset += GlyphChunkSize;
+        }
+        const TextMeshEntry&  ent = Entries[i + layer.Start];
+        const GlyphRasterEnt& ras = ent.EntryData.RasterData;
+        const GlyphRect&      r   = ras.pGlyph->mRect;
+        UInt32                c   = ent.mColor;
+
+        unsigned verIdx = glyphCount * 4;
+        unsigned indIdx = glyphCount * 6;
+        unsigned idx    = i * 4;
+        RectF    chr(ras.Coord[0], ras.Coord[1], ras.Coord[2], ras.Coord[3]);
+        float    texX1 = (r.x + 1) * scaleU;
+        float    texY1 = (r.y + 1) * scaleV;
+        float    texX2 = texX1 + (r.w - 2) * scaleU;
+        float    texY2 = texY1 + (r.h - 2) * scaleV;
+        RectF    tex(texX1, texY1, texX2, texY2);
+
+        clipGlyphRect(chr, tex);
+
+        vertices[verIdx + 0].Set(chr.x1, chr.y1, tex.x1, tex.y1, c);
+        vertices[verIdx + 1].Set(chr.x2, chr.y1, tex.x2, tex.y1, c);
+        vertices[verIdx + 2].Set(chr.x2, chr.y2, tex.x2, tex.y2, c);
+        vertices[verIdx + 3].Set(chr.x1, chr.y2, tex.x1, tex.y2, c);
+        indices[indIdx + 0] = UInt16(idx + 0);
+        indices[indIdx + 1] = UInt16(idx + 1);
+        indices[indIdx + 2] = UInt16(idx + 2);
+        indices[indIdx + 3] = UInt16(idx + 2);
+        indices[indIdx + 4] = UInt16(idx + 3);
+        indices[indIdx + 5] = UInt16(idx + 0);
+        ++glyphCount;
+    }
+
+    if (!glyphCount)
+        return generateNullVectorMesh(verOut);
+
+    verOut->SetVertices(0, glyphOffset * 4, vertices, glyphCount * 4);
+    verOut->SetIndices(0, glyphOffset * 6, indices, glyphCount * 6);
+    verOut->EndOutput();
+    return true;
 }
 
 // MS2-FUNCTIONAL: generateNullVectorMesh inlined (exe calls it), regalloc
