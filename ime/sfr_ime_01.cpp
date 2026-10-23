@@ -1621,7 +1621,31 @@ void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count)
 // MS2-FUNCTIONAL: reserves four-entry-rounded 32-byte Value storage at the parallel array site.
 // @0x1423d7370
 void FUN_1423d7370(unsigned long long* array, void*, unsigned long long count)
-{ cx18_ReserveGH(array, count, 0x20); }
+{
+    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+    if (!count) {
+        if (array[0]) {
+            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
+            array[0] = 0;
+            array[2] = 0;
+            return;
+        }
+        array[2] = 0;
+        return;
+    }
+    const unsigned long long capacity = (count + 3) & ~3ull;
+    const unsigned long long bytes = capacity << 5;
+    if (array[0]) {
+        array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heap[11])(
+            DAT_143b15f60, reinterpret_cast<void*>(array[0]), bytes));
+        array[2] = capacity;
+        return;
+    }
+    unsigned flags = 2;
+    array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heap[10])(
+        DAT_143b15f60, bytes, &flags));
+    array[2] = capacity;
+}
 
 static void cx18_ReserveWide(unsigned long long* array, void* allocator, unsigned long long requested, unsigned flags)
 {
