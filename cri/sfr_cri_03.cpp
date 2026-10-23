@@ -75,6 +75,7 @@ void FUN_14257db50(void);
 void FUN_140054040(void*, void*, void*);
 void FUN_140053540(void*);
 void FUN_140037910(CriSint32, const CriChar8*, CriSint32);
+void FUN_140042600(void*, void*, CriSint32);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
 void FUN_140041110(void*, const char*, CriUint32);
@@ -2974,6 +2975,68 @@ CriBool FUN_140043750(void* decoder, const void* operation)
             return 0;
     }
     return 1;
+}
+
+// MS2-FUNCTIONAL: release all audio decoder entries and the owning stream joint from a player manager.
+// @0x1400420b0
+void FUN_1400420b0(void* manager, void* heap)
+{
+    struct AudioManager
+    {
+        void* Decoders[2];
+        CriSint32 Count;
+        void* InputJoint;
+    };
+    AudioManager* audio = (AudioManager*)manager;
+    for (CriSint32 index = 0; index < audio->Count; ++index)
+    {
+        if (audio->Decoders[index])
+            FUN_140042600(manager, heap, index);
+    }
+    if (audio->InputJoint)
+    {
+        FUN_140046784(audio->InputJoint);
+        audio->InputJoint = NULL;
+    }
+    FUN_140027fb4(heap, manager);
+}
+
+// MS2-FUNCTIONAL: drain and reset a CRI movie output ring before restoring its terminal queue entry.
+// @0x1400453c4
+void FUN_1400453c4(void* object)
+{
+    struct QueueEntry { void* Queue; CriUint32 Reserved; CriSint32 State; };
+    struct OutputState
+    {
+        CriUint8 Reserved00[8];
+        CriUint8 Reading;
+        CriUint8 Writing;
+        CriUint8 Active;
+        CriUint8 Reserved0b[1];
+        CriUint32 Count;
+        CriUint8 Reserved10[8];
+        QueueEntry* Entries;
+        void* InputQueue;
+        void* OutputQueue;
+    };
+    OutputState* state = (OutputState*)object;
+    state->Reading = 0;
+    state->Writing = 0;
+    while (FUN_1400467b8(state->InputQueue) != 0)
+    {
+        CriUint8 chunk[0x10];
+        FUN_1400467a0(state->InputQueue, 1, -1, chunk);
+        FUN_1400467b0(state->InputQueue, 0, NULL);
+    }
+    memset(state->Entries, 0, ((size_t)state->Count + 1) * sizeof(QueueEntry));
+    state->Active = 0;
+    FUN_140046798(state->InputQueue);
+    FUN_140046798(state->OutputQueue);
+    state->Entries[state->Count].Queue = state->OutputQueue;
+    state->Entries[state->Count].Reserved = 0;
+    state->Entries[state->Count].State = -1;
+    state->Writing = 0;
+    state->Reading = 1;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
