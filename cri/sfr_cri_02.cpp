@@ -22,6 +22,8 @@ extern CriUint8 DAT_143ffd504[0x48];
 extern const char* DAT_143b27aa8;
 extern const char* DAT_143b27bb0;
 extern void* DAT_143b27bb8;
+extern void* DAT_143b27bc0;
+extern CriSint32 DAT_143b27bc8;
 extern CriUint32 DAT_143b27bcc;
 extern CriUint32 DAT_143b27bd0;
 extern const void* DAT_143b27a40;
@@ -1575,6 +1577,32 @@ void FUN_140038ca8(void* callback)
     FUN_1400411f8();
     DAT_143b27bb0 = "\nCRI Error/PCx64 Ver.1.03.00 Build:Jan 13 2012 19:02:07\n";
     DAT_143b27bb8 = callback;
+}
+
+// MS2-FUNCTIONAL: dispatch through the optional callback while temporarily suppressing recursive dispatch, then update the appropriate counter.
+// @0x140038ce4
+void FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner)
+{
+    FUN_1400411f8();
+    typedef void (*CriErrorCallback)(const char*, CriSint32, CriSint32, void*);
+    CriErrorCallback notify = (CriErrorCallback)DAT_143b27bb8;
+    CriErrorCallback secondary = (CriErrorCallback)DAT_143b27bc0;
+    if (secondary)
+    {
+        DAT_143b27bb8 = NULL;
+        DAT_143b27bc0 = NULL;
+        secondary(message, value, flags, owner);
+    }
+    DAT_143b27bb8 = (void*)notify;
+    DAT_143b27bc0 = (void*)secondary;
+    if (DAT_143b27bc8 == 1 && category == 1)
+        ++DAT_143b27bd0;
+    else
+    {
+        ++DAT_143b27bcc;
+        if (notify)
+            notify(message, value, flags, owner);
+    }
 }
 
 // MS2-FUNCTIONAL: retain the default USM decryption key and update the shared decryptor state.
