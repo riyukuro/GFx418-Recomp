@@ -60,6 +60,14 @@ void FUN_1424d6480(void* self, Scaleform::GFx::InteractiveObject* pdispObj);
 // OpCodeArray and Exceptions: out of line in the exe
 void FUN_142524a30(void* self, const void* pheapAddr, Scaleform::UPInt newSize);
 void FUN_1425244e0(void* self, Scaleform::UPInt newSize);
+// VM::UnregisterAbcFile: drops file from VMAbcFilesWeak unless the VM is being destroyed
+bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
+// the clear-and-free of the VMAbcFile hash sets not modeled (abs objects, global objects, activation and function
+// traits caches), each passed the address of its table pointer
+void FUN_1424dd1a0(void* table);
+void FUN_1424dd250(void* table);
+void FUN_1424dcdd0(void* table);
+void FUN_1424dcc30(void* table);
 void FUN_142524710(void* self, Scaleform::UPInt newSize);
 // ResourceHandle::GetResource, the exe's out-of-line copy (the header's is inline)
 Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* self, Scaleform::GFx::ResourceBinding* pbinding);
@@ -2982,6 +2990,27 @@ VMAbcFile::VMAbcFile(VM& vm, const Ptr<Abc::File>& file)
         vm.VMAbcFilesWeak.PushBack(this);
 }
 
+// MS2-FUNCTIONAL: the exe has no out-of-line ~VMAbcFile; it is inlined in the scalar deleting destructor 0x1424e3eb0
+// (the unmodeled hash sets are cleared through the exe's helpers, the modeled members by their own destructors).
+VMAbcFile::~VMAbcFile()
+{
+    FUN_142522a60(pVM, this);
+    FUN_1424dcc30(&FunctionTraitsCacheTable);
+    FUN_1424dcdd0(&ActivationTraitsCacheTable);
+    FUN_1424dd250(&GlobalObjectsTable);
+    FUN_1424dd1a0(&AbsObjectsTable);
+}
+
+// MS2-FUNCTIONAL: inlined in the scalar deleting destructors 0x1424e4120 and 0x1424e4190; the members release
+// themselves.
+XMLSupport::~XMLSupport()
+{
+}
+
+XMLSupportImpl::~XMLSupportImpl()
+{
+}
+
 namespace fl { extern const char* NS_AS3; extern const char* NS_XML; extern const ClassInfo FunctionCI; }
 namespace fl_vec { extern const char* NS_Vector; }
 
@@ -3010,6 +3039,15 @@ public:
     virtual ~Void();                // 0x1424e4040
     static const ClassInfo CInfo;   // 0x14317af80
 };
+
+// MS2-FUNCTIONAL: inlined in the scalar deleting destructors 0x1424e25b0 and 0x1424e4040 (just ~CTraits)
+Anonimous::~Anonimous()
+{
+}
+
+Void::~Void()
+{
+}
 
 } // namespace InstanceTraits
 
