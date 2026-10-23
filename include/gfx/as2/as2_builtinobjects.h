@@ -303,6 +303,12 @@ class BitmapData : public Object
 {
 public:
     BitmapData(Environment* penv); // exe 0x142918ef0
+    virtual ~BitmapData(); // inline, defined in sfr_as2_03 (needs the complete ImageResource)
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429541a0: Object_BitmapData
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x1429854f0
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294dbe0
 
     Ptr<ImageResource> pImageRes; // +0x68
     Ptr<MovieDef>      pMovieDef; // +0x70 keeps the image heap of the movie alive
@@ -452,6 +458,7 @@ public:
 
     virtual InteractiveObject*       GetASCharacter();       // exe 0x1429492c0
     virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949340
+    virtual ~TextFieldObject(); // exe 0x142925f10
     virtual ObjectType               GetObjectType() const;  // exe 0x142954340: Object_TextField
 
 protected:
@@ -486,6 +493,7 @@ public:
     void SetSelectColor(const Render::Color& color) { GetData().SetSelectColor(color); }
 
 protected:
+    virtual ~TextSnapshotObject(); // exe 0x142925f70
     virtual void Finalize_GC(); // exe 0x142943130
 };
 

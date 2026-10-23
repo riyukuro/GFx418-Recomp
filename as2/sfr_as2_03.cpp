@@ -5,12 +5,17 @@
 // MS2-RANGE: 0x142923cb0-0x142923dd0 .text$mn
 // MS2-RANGE: 0x1429254e0-0x142925560 .text$mn
 // MS2-RANGE: 0x142924d20-0x142924d90 .text$mn
-// MS2-RANGE: 0x142924e00-0x142925030 .text$mn
+// MS2-RANGE: 0x142924d90-0x142924e00 .text$mn
+// MS2-RANGE: 0x142924e00-0x142925120 .text$mn
 // MS2-RANGE: 0x142925560-0x1429255a0 .text$mn
 // MS2-RANGE: 0x142925600-0x142925680 .text$mn
 // MS2-RANGE: 0x142925750-0x142925850 .text$mn
 // MS2-RANGE: 0x142925990-0x1429259d0 .text$mn
 // MS2-RANGE: 0x142925cf0-0x142925e70 .text$mn
+// MS2-RANGE: 0x1429252e0-0x142925350 .text$mn
+// MS2-RANGE: 0x1429255a0-0x1429255c0 .text$mn
+// MS2-RANGE: 0x142925e70-0x142925ee0 .text$mn
+// MS2-RANGE: 0x142925f10-0x142925fb0 .text$mn
 // MS2-RANGE: 0x1429237f0-0x142923a90 .text$mn
 // MS2-RANGE: 0x1429267a0-0x142926a00 .text$mn
 // MS2-RANGE: 0x142923e70-0x142923f30 .text$mn
@@ -100,6 +105,7 @@
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/gfx/as2/as2_object.h"
@@ -921,6 +927,34 @@ Object::~Object()
     MemberHash_Destruct(&Members);
 }
 
+// Inlined in the exe: no out-of-line copy.
+inline BitmapData::~BitmapData()
+{
+}
+
+// @0x1429255a0
+FunctionObject::~FunctionObject()
+{
+}
+
+// @0x1429252e0
+ArrayObject::~ArrayObject()
+{
+    Resize(0);
+}
+
+// @0x142925f10
+TextFieldObject::~TextFieldObject()
+{
+    SF_FREE(pIMECompositionStringStyles);
+}
+
+// @0x142925f70
+TextSnapshotObject::~TextSnapshotObject()
+{
+    GetData().~StaticTextSnapshotData();
+}
+
 // @0x142925560
 BitmapFilterObject::~BitmapFilterObject()
 {
@@ -964,6 +998,14 @@ template Prototype<ColorMatrixFilterObject, Environment>::~Prototype();
 template Prototype<DropShadowFilterObject, Environment>::~Prototype();
 // @0x142924ee0
 template Prototype<GlowFilterObject, Environment>::~Prototype();
+
+// The out-of-line destructors of the other prototypes.
+// @0x142924d90
+template Prototype<BitmapData, Environment>::~Prototype();
+// @0x142925030
+template Prototype<NumberObject, Environment>::~Prototype();
+// @0x1429250a0
+template Prototype<TextFieldObject, Environment>::~Prototype();
 
 }}} // namespace Scaleform::GFx::AS2
 
@@ -1282,3 +1324,15 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_7ColorTransformProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432192a8
 // MS2-PIN: ??_7ColorTransformProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432192f0
 // MS2-PIN: ??_7ColorTransformProto@AS2@GFx@Scaleform@@6B@ 0x143219398
+// MS2-PIN: ??1SharedObject@AS2@GFx@Scaleform@@UEAA@XZ 0x142925e70
+// MS2-PIN: ??_7?$Prototype@VBitmapData@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219de0
+// MS2-PIN: ??_7?$Prototype@VBitmapData@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219e28
+// MS2-PIN: ??_7?$Prototype@VBitmapData@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143219ed0
+// MS2-PIN: ??_7?$Prototype@VNumberObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b230
+// MS2-PIN: ??_7?$Prototype@VNumberObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b278
+// MS2-PIN: ??_7?$Prototype@VNumberObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321b320
+// MS2-PIN: ??_7?$Prototype@VTextFieldObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218580
+// MS2-PIN: ??_7?$Prototype@VTextFieldObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432185c8
+// MS2-PIN: ??_7?$Prototype@VTextFieldObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143218670
+// MS2-PIN: ??_7BitmapData@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219cf0
+// MS2-PIN: ??_7BitmapData@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219d38

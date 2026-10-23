@@ -37,6 +37,7 @@ public:
 
     ArrayObject(Environment* penv); // exe 0x142918010
     ArrayObject(ASStringContext* psc); // exe 0x142917f70
+    virtual ~ArrayObject(); // exe 0x1429252e0
 
     // Object_Array (exe 0x142954130).
     virtual ObjectType GetObjectType() const;
