@@ -33,6 +33,7 @@ void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSyst
 void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
 void*    FUN_14002abd0(void* mem, int format, const void* psize, void* ptexman, void* pplayer); // VideoImage ctor
 void     FUN_140037950(void* player, const char* message, int severity);
+void     FUN_140044fdc(void* inputBuffer);
 
 // ==== CRI heap backed object allocation ============================================================================
 
@@ -956,19 +957,19 @@ CriUint32 FUN_1400358d0(void* output, const void* info)
     if (planes != 0)
     {
         out[0].Buffer = in->Planes[0].Buffer;
-        out[0].Stride = in->Planes[0].Stride * (CriSint32)in->Planes[0].Height;
+        out[0].Stride = (CriSint32)in->Planes[0].Height * (CriSint32)in->Planes[0].Width;
         out[0].Height = in->Planes[0].Height;
     }
     if (planes > 1)
     {
         out[1].Buffer = in->Planes[1].Buffer;
-        out[1].Stride = in->Planes[1].Stride * (CriSint32)in->Planes[1].Height;
+        out[1].Stride = (CriSint32)in->Planes[1].Height * (CriSint32)in->Planes[1].Width;
         out[1].Height = in->Planes[1].Height;
     }
     if (planes > 2)
     {
         out[2].Buffer = in->Planes[2].Buffer;
-        out[2].Stride = in->Planes[2].Stride * (CriSint32)in->Planes[2].Height;
+        out[2].Stride = (CriSint32)in->Planes[2].Height * (CriSint32)in->Planes[2].Width;
         out[2].Height = in->Planes[2].Height;
     }
     return planes;
@@ -1028,6 +1029,33 @@ void* crimvply_transitErrorState(void* player, void* fallback)
         return player;
     }
     return fallback;
+}
+
+// MS2-FUNCTIONAL: CRI Movie was built with VS2008; preserve the input-chunk state check from the executable.
+// @0x140035000
+CriBool isLockedInputChunk(const void* player)
+{
+    return ((const CriMvInputLockState*)player)->Locked != 0;
+}
+
+// MS2-FUNCTIONAL: CRI Movie was built with VS2008; this transition helper is rebuilt with our VS2017 toolset.
+// @0x140035050
+void criMvPly_TerminateSupply(void* player)
+{
+    CriMvSupplyState* state = (CriMvSupplyState*)player;
+    state->SupplyEnded = 1;
+    state->Terminated = 1;
+    FUN_140044fdc(((CriMvSupplyInputBuffer*)player)->InputBuffer);
+}
+
+// MS2-FUNCTIONAL: initializes the observed 0x90-byte next-frame record and its two sentinel fields.
+// @0x140035090
+void FUN_140035090(void* record)
+{
+    memset(record, 0, 0x90);
+    *(CriSint32*)((CriUint8*)record + 8) = -1;
+    *(CriUint32*)((CriUint8*)record + 0x30) = 1;
+    *(CriSint32*)((CriUint8*)record + 0x3c) = -1;
 }
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30

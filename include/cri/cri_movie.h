@@ -154,7 +154,14 @@ struct CriMvFramePlaneSource
     CriUint8 Reserved0[0x38];
     CriUint32 PlaneCount;
     CriUint32 Reserved1;
-    CriMvPlaneInfo Planes[3];
+    struct PlaneSource
+    {
+        CriUint64 Buffer;
+        CriUint32 Reserved;
+        CriUint32 Width;
+        CriUint32 Height;
+        CriUint32 Reserved2;
+    } Planes[3];
 };
 
 struct CriMvAlphaDecoderFrameInfo
@@ -184,6 +191,25 @@ struct CriMvErrorState
 {
     CriUint8 Reserved[0xf14];
     CriUint32 Error;
+};
+
+struct CriMvInputLockState
+{
+    CriUint8 Reserved[0xd98];
+    CriSint32 Locked;
+};
+
+struct CriMvSupplyState
+{
+    CriUint8 Reserved0[0x0c];
+    CriSint32 SupplyEnded;
+    CriSint32 Terminated;
+};
+
+struct CriMvSupplyInputBuffer
+{
+    CriUint8 Reserved[0xd68];
+    void* InputBuffer;
 };
 
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
