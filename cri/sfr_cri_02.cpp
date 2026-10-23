@@ -75,6 +75,11 @@ void     FUN_1400453c4(void* demux);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
 void     FUN_140044ae0(void* decoder);
+CriBool  FUN_140032090(void* player);
+CriBool  FUN_140033030(void* player);
+CriBool  FUN_140031f40(void* player);
+CriBool  FUN_140034960(void* player);
+void     FUN_140035260(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
 CriSint32 FUN_140044630(void* decoder);
 CriSint32 FUN_140043cb0(void* decoder);
 CriSint32 FUN_1400355b0(void* playerHandle);
@@ -1836,6 +1841,58 @@ CriSint32 FUN_140039110(void* easyPlayer, CriMvFrameInfo* frameInfo, CriError* e
     FUN_1400393f0(easyPlayer, 0, 0, 1, 0, 0);
     (void)frameInfo;
     return result;
+}
+
+// MS2-FUNCTIONAL: apply the analyzed movie header after a successful decoder analysis pass.
+// @0x1400318f0
+CriBool FUN_1400318f0(void* player)
+{
+    if (((CriMvPlyObj*)player)->decoder_error)
+        return 0;
+    if (FUN_140032090(player) != 1)
+        return 0;
+    CriMvPlyHeaderAnalysisFields* fields = (CriMvPlyHeaderAnalysisFields*)player;
+    memcpy(fields->CurrentHeader, fields->AnalyzedHeader, sizeof(fields->CurrentHeader));
+    fields->HeaderParameter = 0;
+    return 1;
+}
+
+// MS2-FUNCTIONAL: complete the metadata stage only when parsing succeeds without a decoder error.
+// @0x140032040
+CriBool FUN_140032040(void* player)
+{
+    return ((CriMvPlyObj*)player)->decoder_error == 0 && FUN_140033030(player) == 1;
+}
+
+// MS2-FUNCTIONAL: run the metadata-work cleanup under the player's handle critical section.
+// @0x140031f00
+CriBool FUN_140031f00(void* player)
+{
+    FUN_140037850(player);
+    CriBool result = FUN_140031f40(player);
+    FUN_140037880(player);
+    return result;
+}
+
+// MS2-FUNCTIONAL: enter the player's handle lock around the requested CRI Movie transition.
+// @0x140034920
+CriBool FUN_140034920(void* player)
+{
+    FUN_140037850(player);
+    CriBool result = FUN_140034960(player);
+    FUN_140037880(player);
+    return result;
+}
+
+// MS2-FUNCTIONAL: copy the decoded frame metadata and add the alpha frame metadata when available.
+// @0x1400356a0
+void FUN_1400356a0(void* player, void* output, void* alphaOutput,
+                   const CriMvFrameInfo* frameInfo, const void* alphaInfo)
+{
+    FUN_140035260(player, output, frameInfo, *(const CriUint64*)frameInfo,
+                  *(const CriUint32*)((const CriUint8*)frameInfo + 0x0c));
+    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+        FUN_140035480(player, alphaOutput, alphaInfo);
 }
 
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.

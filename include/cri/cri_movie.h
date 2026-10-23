@@ -664,6 +664,18 @@ static_assert(offsetof(CriMvPlyStateTransitionFields, Demux) == 0xd68, "CriMvPly
 static_assert(offsetof(CriMvPlyStateTransitionFields, LastFrame) == 0xe30, "CriMvPly frame offset");
 static_assert(offsetof(CriMvPlyStateTransitionFields, StopState) == 0xf10, "CriMvPly stop-state offset");
 
+struct CriMvPlyHeaderAnalysisFields
+{
+    CriUint8  Reserved0[0x28];
+    CriUint8  CurrentHeader[0x2c0];                               // 0x28
+    CriUint8  Reserved2E8[0x18];
+    CriUint64 HeaderParameter;                                    // 0x300
+    CriUint8  Reserved308[0x2f0];
+    CriUint8  AnalyzedHeader[0x2c0];                              // 0x5f8
+};
+static_assert(offsetof(CriMvPlyHeaderAnalysisFields, HeaderParameter) == 0x300, "movie header parameter offset");
+static_assert(offsetof(CriMvPlyHeaderAnalysisFields, AnalyzedHeader) == 0x5f8, "analyzed header offset");
+
 // The "easy player": file/memory input, decoding, sync and sound on top of one player handle. 0x728 bytes.
 struct CriMvYuvBuffers;
 struct CriMvAlphaFrameInfo;
