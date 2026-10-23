@@ -35,9 +35,57 @@ MS2_EXTERN(0x1423df410, void(void*, void*, void*), VideoNative3);
 MS2_EXTERN(0x1423dfda0, void(void*, void*, void*), VideoNative4);
 MS2_EXTERN(0x1424f1390, void(void*, void*, void*), ConvertAS3ValueToString);
 MS2_EXTERN(0x1424f0d30, void(void*, void*, int*, int, void*), ConvertAS3ValueToInt32);
+MS2_EXTERN(0x1423dfa20, void(), ReleaseAS3GcObject);
 
 namespace {
 using VideoGenericThunk = void(*)(void*, void*, void*);
+
+void ReleaseVideoAtom(std::uint64_t* value)
+{
+    auto atom = *value;
+    if (!atom) return;
+    if (atom & 1) { *value = atom - 1; return; }
+    auto* refs = reinterpret_cast<std::uint32_t*>(atom + 0x10);
+    if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(); }
+}
+
+void RetainVideoAtom(std::uint64_t atom)
+{
+    if (atom) {
+        auto* refs = reinterpret_cast<std::uint32_t*>(atom + 0x10);
+        *refs = (*refs + 1) & 0x8fbfffff;
+    }
+}
+
+void FUN_140017320(void* tablePtr, const std::uint64_t* key)
+{
+    auto* table = *reinterpret_cast<unsigned char**>(tablePtr);
+    if (!table) return;
+    std::uint64_t hash = 0x1505;
+    auto* bytes = reinterpret_cast<const unsigned char*>(key);
+    for (int i = 7; i >= 0; --i) hash = bytes[i] + hash * 0x1003f;
+    auto bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
+    auto* entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
+    if (entry[0] == ~std::uint64_t(1) || entry[1] != bucket) return;
+    std::uint64_t previous = ~std::uint64_t(0), current = bucket;
+    while (entry[1] != bucket || entry[2] != *key) {
+        previous = current;
+        current = entry[0];
+        if (current == ~std::uint64_t(0)) return;
+        entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + current * 0x20);
+    }
+    auto next = entry[0];
+    if (current == bucket && next != ~std::uint64_t(0)) {
+        auto* following = reinterpret_cast<std::uint64_t*>(table + 0x10 + next * 0x20);
+        entry[0] = ~std::uint64_t(1);
+        entry[0] = following[0]; entry[1] = following[1]; entry[2] = following[2]; entry[3] = following[3];
+        following[0] = ~std::uint64_t(1);
+    } else {
+        if (current != bucket) *reinterpret_cast<std::uint64_t*>(table + 0x10 + previous * 0x20) = next;
+        entry[0] = ~std::uint64_t(1);
+    }
+    --*reinterpret_cast<std::uint64_t*>(table);
+}
 
 // MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the first property thunk.
 // @0x140016b50
@@ -213,5 +261,115 @@ void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned 
                 reinterpret_cast<std::uintptr_t>(VideoThunkBaseF.get()) + root, member, value, extra);
         }
     }
+}
+
+// MS2-FUNCTIONAL: drops the recorded atom-table payload and removes its key from the receiver cache.
+// @0x140017880
+void FUN_140017880(void* receiver, std::uint64_t* atom)
+{
+    if ((*reinterpret_cast<std::uint32_t*>(atom + 2) & 0x04000000) == 0) return;
+    *reinterpret_cast<std::uint32_t*>(atom + 2) &= 0xfbffffff;
+    auto* table = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(receiver) + 0x70);
+    if (!table) return;
+    const std::uint64_t key = reinterpret_cast<std::uintptr_t>(atom);
+    auto index = FUN_140016f40(&table, &key);
+    if (index < 0) return;
+    auto* entry = reinterpret_cast<unsigned char*>(table) + (index + 1) * 0x20;
+    auto* value = *reinterpret_cast<std::uint32_t**>(entry + 8);
+    if (!value) return;
+    value[2] = value[3] = 0;
+    --value[0];
+    if (value[0] == 0) { auto fn = *reinterpret_cast<VideoGenericThunk*>(*reinterpret_cast<unsigned char***>(value) + 0x60); fn(value, nullptr, nullptr); }
+    FUN_140017320(&table, &key);
+}
+
+// MS2-FUNCTIONAL: decrements a live AS3 object reference and invokes the runtime release hook.
+// @0x140017990
+void FUN_140017990(void* object)
+{
+    auto* refs = reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(object) + 0x10);
+    if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(); }
+}
+
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x1400179b0
+void FUN_1400179b0(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x1400179f0
+void FUN_1400179f0(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017a30
+void FUN_140017a30(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017a70
+void FUN_140017a70(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017ab0
+void FUN_140017ab0(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017af0
+void FUN_140017af0(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017b30
+void FUN_140017b30(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017b70
+void FUN_140017b70(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017bb0
+void FUN_140017bb0(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017bf0
+void FUN_140017bf0(std::uint64_t* value) { ReleaseVideoAtom(value); }
+// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// @0x140017c30
+void FUN_140017c30(std::uint64_t* value) { ReleaseVideoAtom(value); }
+
+// MS2-FUNCTIONAL: replaces an AS3 atom without taking a reference to the replacement.
+// @0x140017c70
+std::uint64_t* FUN_140017c70(std::uint64_t* destination, std::uint64_t replacement)
+{
+    if (*destination != replacement) { ReleaseVideoAtom(destination); *destination = replacement; }
+    return destination;
+}
+
+// MS2-FUNCTIONAL: replaces an AS3 atom and retains an object-valued replacement.
+// @0x140017cd0
+std::uint64_t* FUN_140017cd0(std::uint64_t* destination, std::uint64_t replacement)
+{
+    if (*destination != replacement) { ReleaseVideoAtom(destination); RetainVideoAtom(replacement); *destination = replacement; }
+    return destination;
+}
+
+// MS2-FUNCTIONAL: copy-assigns an AS3 atom with a retain of its managed object payload.
+// @0x140017d40
+std::uint64_t* FUN_140017d40(std::uint64_t* destination, const std::uint64_t* source)
+{
+    if (destination != source) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
+    return destination;
+}
+// MS2-FUNCTIONAL: copy-assigns an AS3 atom with a retain of its managed object payload.
+// @0x140017db0
+std::uint64_t* FUN_140017db0(std::uint64_t* destination, const std::uint64_t* source)
+{
+    if (destination != source) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
+    return destination;
+}
+
+// MS2-FUNCTIONAL: assigns the AS3 object's unsafe Value view and then releases its retained atom.
+// @0x140017e40
+void* FUN_140017e40(void* result, Scaleform::GFx::AS3::Value* value, std::uint64_t* atom)
+{
+    value->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(*atom));
+    ReleaseVideoAtom(atom);
+    return result;
+}
+// MS2-FUNCTIONAL: assigns the AS3 object's unsafe Value view and then releases its retained atom.
+// @0x140017eb0
+void* FUN_140017eb0(void* result, Scaleform::GFx::AS3::Value* value, std::uint64_t* atom)
+{
+    value->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(*atom));
+    ReleaseVideoAtom(atom);
+    return result;
 }
 } // namespace
