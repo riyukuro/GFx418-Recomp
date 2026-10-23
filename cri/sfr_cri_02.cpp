@@ -109,7 +109,16 @@ void*    FUN_1400459ec(const void* config, void* work, CriSint32 workSize);
 CriSint32 FUN_140042150(void* player, void* source, void* work, CriUint32 size, CriSint32 flags);
 void     FUN_140037850(void* player);
 void     FUN_140037880(void* player);
+struct CriMovieInputChunk;
 CriUint32 FUN_140030280(void* player, void* heap, void* work);
+CriUint32 decideReadBufferExtSize(void* player);
+void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player);
+void*    FUN_140041f70(void* player, void* heap, const CriMvStreamingParameters* params);
+void*    FUN_140043af0(void* decoderInterface, void* heap, const void* config);
+void*    FUN_140044470(void* decoderInterface, void* heap, const void* config);
+void     FUN_140044de0(void* decoder, void* callback, void* context);
+void     FUN_140044330(void* decoder, void* callback, void* context);
+void     FUN_140044c10(void* decoder, CriUint32 mask);
 CriHeap  FUN_140027fec(void* memory, CriSint32 size);
 void*    FUN_140039ea8(void* work, CriSint32 workSize);
 void*    FUN_1400452b4(CriHeap heap, CriSint32 count);
@@ -2167,6 +2176,195 @@ CriUint32 criMvPly_AllocateWorkBuffer(void* player, void* heap, void* work)
     CriUint32 result = FUN_140030280(player, heap, work);
     FUN_140037880(player);
     return result;
+}
+
+// MS2-FUNCTIONAL: configure the movie's read queue, decoder interfaces, audio manager, and output stream.
+// @0x140030280
+CriUint32 FUN_140030280(void* player, void* heap, void* work)
+{
+    CriSint32 status = getInternalStatus(player);
+    if (status != 0 && status != 2)
+    {
+        FUN_140037950(player, "E05063010M: Don't call criMvPly_Setup in the current state.", status);
+        return 0;
+    }
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    if (state->StartReady == 1)
+        FUN_140030c70(player);
+
+    const CriMvStreamingParameters* params = (const CriMvStreamingParameters*)work;
+    memcpy((CriUint8*)player + 0xad8, params, sizeof(*params));
+    memcpy((CriUint8*)player + 0xdf0, &heap, sizeof(heap));
+
+    CriUint32 readSize = 0;
+    CriUint32 readExtension = 0;
+    CriUint32 memoryInput = 0;
+    memcpy(&memoryInput, (CriUint8*)player + 0xd60, sizeof(memoryInput));
+    if (memoryInput == 0)
+    {
+        if (params->read_buffer_size == 0xffffffff)
+        {
+            readSize = (CriUint32)((float)(params->max_bitrate / 8) * params->buffering_time);
+            if (readSize < params->min_buffer_size)
+                readSize = params->min_buffer_size;
+        }
+        else
+            readSize = params->read_buffer_size;
+        CriUint32 rounded = readSize + 0x800;
+        readSize = (rounded / 0x800) * 0x800;
+        readExtension = decideReadBufferExtSize((void*)params);
+        memcpy((CriUint8*)player + 0xdf8, &readSize, sizeof(readSize));
+        memcpy((CriUint8*)player + 0xdfc, &readExtension, sizeof(readExtension));
+        void* readBuffer = FUN_140046730(heap, (CriSint32)readSize, (CriSint32)readExtension,
+                                         0x40, "CriMvPly::ReadBuf");
+        memcpy((CriUint8*)player + 0xd88, &readBuffer, sizeof(readBuffer));
+        if (!readBuffer)
+        {
+            FUN_140037950(player, "E05063012M: Can't create SJ for read buffer.", 0);
+            FUN_140030c70(player);
+            return 0;
+        }
+    }
+    else
+    {
+        memcpy((CriUint8*)player + 0xdf8, &readSize, sizeof(readSize));
+        memcpy((CriUint8*)player + 0xdfc, &readExtension, sizeof(readExtension));
+        void* noBuffer = NULL;
+        memcpy((CriUint8*)player + 0xd88, &noBuffer, sizeof(noBuffer));
+    }
+
+    if (memoryInput == 0)
+    {
+        memcpy((CriUint8*)player + 0xe48, &readSize, sizeof(readSize));
+        memcpy((CriUint8*)player + 0xe4c, &readExtension, sizeof(readExtension));
+        CriMovieInputChunk chunk = {};
+        void* readBuffer = NULL;
+        memcpy(&readBuffer, (CriUint8*)player + 0xd88, sizeof(readBuffer));
+        FUN_1400467a0(readBuffer, 0, -1, &chunk);
+        memcpy((CriUint8*)player + 0xe50, &chunk.Data, sizeof(chunk.Data));
+        FUN_1400467a8(readBuffer, 0, &chunk);
+    }
+
+    if (params->num_video != 0)
+    {
+        CriUint32 videoCodec = 0;
+        memcpy(&videoCodec, (const CriUint8*)params + 0x44, sizeof(videoCodec));
+        void* decoderInterface = FUN_140030b50((CriSint32)videoCodec);
+        if (!decoderInterface)
+        {
+            FUN_140037950(player, "E11030201M: Not found any available video decoder.", 0);
+            FUN_140030c70(player);
+            return 0;
+        }
+        CriUint32 codec = 0x40534656;
+        CriUint32 zero = 0;
+        memcpy((CriUint8*)player + 0xe00, &codec, sizeof(codec));
+        memcpy((CriUint8*)player + 0xe04, &zero, sizeof(zero));
+        struct DecoderConfig
+        {
+            CriUint32 Width, Height, PlayerFormat, PlayerPitch, StreamFormat;
+            CriUint32 Reserved;
+            void* OutputBuffer;
+            CriUint32 BufferSize, BufferExtension;
+        } videoConfig = {};
+        videoConfig.Width = params->video_prm[0].max_width;
+        videoConfig.Height = params->video_prm[0].max_height;
+        memcpy(&videoConfig.PlayerFormat, (CriUint8*)player + 0xae4, sizeof(CriUint32));
+        memcpy(&videoConfig.PlayerPitch, (CriUint8*)player + 0x640, sizeof(CriUint32));
+        videoConfig.StreamFormat = params->video_prm[0].num_frame_pools;
+        if (memoryInput == 0)
+        {
+            memcpy(&videoConfig.OutputBuffer, (CriUint8*)player + 0xe50, sizeof(void*));
+            memcpy(&videoConfig.BufferSize, (CriUint8*)player + 0xe48, sizeof(CriUint32));
+            memcpy(&videoConfig.BufferExtension, (CriUint8*)player + 0xe4c, sizeof(CriUint32));
+        }
+        void* videoDecoder = FUN_140043af0(decoderInterface, heap, &videoConfig);
+        memcpy((CriUint8*)player + 0xe08, &videoDecoder, sizeof(videoDecoder));
+        if (!videoDecoder)
+        {
+            FUN_140037950(player, "E05063013M: Can't create Video decoder.", 0);
+            FUN_140030c70(player);
+            return 0;
+        }
+        if (FUN_140037a10() == 1)
+            FUN_140044de0(videoDecoder, (void*)FUN_140037a40, player);
+        CriUint32 processorMask = 0;
+        memcpy(&processorMask, (const CriUint8*)params + 0x30, sizeof(processorMask));
+        FUN_140044c10(videoDecoder, processorMask);
+
+        if (params->num_alpha == 0)
+        {
+            void* noAlpha = NULL;
+            memcpy((CriUint8*)player + 0xe40, &noAlpha, sizeof(noAlpha));
+        }
+        else
+        {
+            CriUint32 alphaCodec = 0;
+            memcpy(&alphaCodec, (const CriUint8*)params + 0x280, sizeof(alphaCodec));
+            void* alphaInterface = FUN_140030be0((CriSint32)alphaCodec);
+            if (!alphaInterface)
+            {
+                FUN_140037950(player, "E11030701M: Not found any available alpha decoder.", 0);
+                FUN_140030c70(player);
+                return 0;
+            }
+            DecoderConfig alphaConfig = {};
+            alphaConfig.Width = params->alpha_prm[0].max_width;
+            alphaConfig.Height = params->alpha_prm[0].max_height;
+            memcpy(&alphaConfig.PlayerFormat, (CriUint8*)player + 0xae4, sizeof(CriUint32));
+            memcpy(&alphaConfig.PlayerPitch, (CriUint8*)player + 0x894, sizeof(CriUint32));
+            alphaConfig.StreamFormat = params->video_prm[0].num_frame_pools;
+            memcpy(&alphaConfig.OutputBuffer, (CriUint8*)player + 0xe50, sizeof(void*));
+            memcpy(&alphaConfig.BufferSize, (CriUint8*)player + 0xe48, sizeof(CriUint32));
+            memcpy(&alphaConfig.BufferExtension, (CriUint8*)player + 0xe4c, sizeof(CriUint32));
+            void* alphaDecoder = FUN_140044470(alphaInterface, heap, &alphaConfig);
+            memcpy((CriUint8*)player + 0xe40, &alphaDecoder, sizeof(alphaDecoder));
+            if (!alphaDecoder)
+            {
+                FUN_140037950(player, "E08082100M: Can't create Alpha decoder.", 0);
+                FUN_140030c70(player);
+                return 0;
+            }
+            if (FUN_140037a10() == 1)
+                FUN_140044330(alphaDecoder, (void*)FUN_140037a40, player);
+        }
+        void* alphaDecoder = NULL;
+        memcpy(&alphaDecoder, (CriUint8*)player + 0xe40, sizeof(alphaDecoder));
+        FUN_1400377a0(player, videoDecoder, alphaDecoder);
+    }
+
+    void* manager = FUN_140041f70(player, heap, params);
+    memcpy((CriUint8*)player + 0xe10, &manager, sizeof(manager));
+    if (!manager)
+    {
+        FUN_140037910(player, "E07090703M: Can't create CriMvPlyAmng.", 0);
+        FUN_140030c70(player);
+        return 0;
+    }
+    if (params->track_play_audio >= 0)
+    {
+        const CriUint8* audioInfo = (const CriUint8*)params + 0x54 +
+            (size_t)params->track_play_audio * 0x10;
+        if (!FUN_140042270(manager, player, heap, (void*)audioInfo,
+                           (CriUint32)params->track_play_audio, 0))
+        {
+            FUN_140030c70(player);
+            return 0;
+        }
+        if (FUN_140037a10() == 1)
+            FUN_140041e30(manager, FUN_140038000, player, 0);
+    }
+    void* output = FUN_1400464c8((CriHeap)heap, 0, 0x40);
+    memcpy((CriUint8*)player + 0xe28, &output, sizeof(output));
+    if (!output)
+    {
+        FUN_140037950(player, "E06102501M: Can't create SJ for output stream.", 0);
+        FUN_140030c70(player);
+        return 0;
+    }
+    memcpy((CriUint8*)player + 0xe34, (const CriUint8*)params + 0x258, sizeof(CriUint32));
+    state->StartReady = 1;
+    return 1;
 }
 
 // MS2-FUNCTIONAL: create the supplied-memory heap, store it in the player, then prepare its work buffers under lock.
