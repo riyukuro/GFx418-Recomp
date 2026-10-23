@@ -349,6 +349,10 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432134f0
 
     MovieClipLoaderProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291edc0
+
+    static void GetProgress(const FnCall& fn); // exe 0x1428eb050
+    static void LoadClip(const FnCall& fn);    // exe 0x1428eb340
+    static void UnloadClip(const FnCall& fn);  // exe 0x1428eb6d0
 };
 
 // 0x78 bytes.
@@ -1227,6 +1231,8 @@ public:
 
     // BitmapData() called as a function: a new empty bitmap (exe 0x142959160).
     static void GlobalCtor(const FnCall& fn);
+    // loadBitmap(linkageId) (exe 0x1428f1e70).
+    static void LoadBitmapA(const FnCall& fn);
 
     // (appended for sfr_as2_06) Creates the class and its prototype and publishes "BitmapData" (exe 0x142974460).
     static FunctionRef Register(GlobalContext* pgc);

@@ -81,6 +81,7 @@ enum ASBuiltinType : int
     ASBuiltin_typeFunction_    = 83, // "[type Function]"
     ASBuiltin_typeObject_      = 84, // "[type Object]"
     ASBuiltin_objectObject_    = 85, // "[object Object]"
+    ASBuiltin_toString         = 86,
     ASBuiltin_INVALID          = 90,
     ASBuiltin_onPress          = 91,
     ASBuiltin_onRelease        = 92,
@@ -263,6 +264,10 @@ public:
 
     // Queues a load of purl into ptarget, an empty url unloads it (exe 0x14292f740).
     void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
+                           LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None,
+                           MovieClipLoader* pmovieClipLoader = 0);
+    // Queues a load of purl into the level or path ptargetName (exe 0x14292f960).
+    void AddLoadQueueEntry(const char* ptargetName, const char* purl, Environment* penv,
                            LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None,
                            MovieClipLoader* pmovieClipLoader = 0);
     // Queues a variables load of purl into ptarget (exe 0x142930a10).

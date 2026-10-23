@@ -2,6 +2,7 @@
 // (Boolean prototype methods, the Math object functions, Date prototype getters/setters).
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1428eb050-0x1428eb900 .text$mn
 // MS2-RANGE: 0x1428ec0b0-0x1428ec780 .text$mn
 // MS2-RANGE: 0x14292bdc0-0x14292bdf0 .text$mn
 // MS2-RANGE: 0x142993ff0-0x142994160 .text$mn
@@ -24,6 +25,9 @@
 // MS2-RANGE: 0x1428fbdc0-0x1428fbea0 .text$mn
 // MS2-RANGE: 0x1428fbea0-0x1428fc080 .text$mn
 // MS2-RANGE: 0x1428fc080-0x1428fc160 .text$mn
+// MS2-RANGE: 0x1428f1e70-0x1428f2040 .text$mn
+// MS2-RANGE: 0x1428f6de0-0x1428f7290 .text$mn
+// MS2-RANGE: 0x1428f7ed0-0x1428f8540 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
 // MS2-RANGE: 0x1428fb110-0x1428fbb70 .text$mn
@@ -34,6 +38,8 @@
 #include <math.h>
 
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/gfx_imageresource.h"
+#include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_keyobject.h"
@@ -868,7 +874,239 @@ void LoadVarsProto::ToString(const FnCall& fn)
     visitor.pString = &result;
     pthis->VisitMembers(fn.Env->GetSC(), &visitor, 0);
     result.Remove(result.GetLength() - 1, 1);
-    fn.Result->SetString(fn.Env->CreateString(result));
+    fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+}
+
+// ---- MovieClipLoader ----
+
+// @0x1428eb340
+// MS2-FUNCTIONAL same flow; the exe inlines the argument-stack lookups and the character check in a different order
+void MovieClipLoaderProto::LoadClip(const FnCall& fn)
+{
+    fn.Result->SetBool(false);
+    if (fn.NArgs < 2)
+        return;
+    MovieClipLoader* pmcl = 0;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == ObjectInterface::Object_MovieClipLoader)
+        pmcl = (MovieClipLoader*)fn.ThisPtr;
+    ASString               url = fn.Arg(0).ToString(fn.Env);
+    Ptr<InteractiveObject> ptarget;
+    if (fn.Arg(1).IsCharacter())
+        ptarget = fn.Arg(1).ToCharacter(fn.Env);
+    else
+    {
+        ASString path = fn.Arg(1).ToString(fn.Env);
+        ptarget = fn.Env->FindTarget(path, 0);
+    }
+    MovieRoot* proot = fn.Env->GetAS2Root();
+    if (ptarget)
+        proot->AddLoadQueueEntry(ptarget, url.ToCStr(), LoadQueueEntry::LM_None, pmcl);
+    else
+    {
+        bool         caseSensitive = fn.Env->GetTarget()->GetVersion() > 6;
+        const char*  ptail;
+        ASString     tname = fn.Arg(1).ToString(fn.Env);
+        if (MovieRoot::ParseLevelName(tname.ToCStr(), &ptail, caseSensitive) == -1)
+            return;
+        ASString lname = fn.Arg(1).ToString(fn.Env);
+        proot->AddLoadQueueEntry(lname.ToCStr(), url.ToCStr(), fn.Env, LoadQueueEntry::LM_None, pmcl);
+    }
+    fn.Result->SetBool(true);
+}
+
+// @0x1428eb6d0
+// MS2-FUNCTIONAL same flow; the exe's inlined argument lookups and level/path dispatch are scheduled differently
+void MovieClipLoaderProto::UnloadClip(const FnCall& fn)
+{
+    fn.Result->SetBool(false);
+    if (fn.NArgs < 1)
+        return;
+    Ptr<InteractiveObject> ptarget;
+    const Value&           arg = fn.Arg(0);
+    if (arg.IsCharacter())
+        ptarget = arg.ToCharacter(fn.Env);
+    else if (arg.IsNumber())
+        ptarget = fn.Env->GetAS2Root()->GetLevelMovie(arg.ToInt32(fn.Env));
+    else
+    {
+        ASString path = arg.ToString(fn.Env);
+        ptarget = fn.Env->FindTarget(path, 0);
+    }
+    if (!ptarget)
+        return;
+    fn.Env->GetAS2Root()->AddLoadQueueEntry(ptarget, "", LoadQueueEntry::LM_None, 0);
+    fn.Result->SetBool(true);
+}
+
+// @0x1428eb050
+// MS2-FUNCTIONAL same members and calls; the exe's argument lookup and hash probe are scheduled differently
+void MovieClipLoaderProto::GetProgress(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    fn.Result->SetUndefined();
+    MS2_AS2_CHECK_THIS(fn, MovieClipLoader);
+    MovieClipLoader* pthis = (MovieClipLoader*)fn.ThisPtr;
+    Ptr<Object>      pobj = Pickable<Object>(SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env));
+    ASString         target = fn.Arg(0).ToString(fn.Env);
+    MovieClipLoader::ProgressDesc* pdesc = pthis->ProgressInfo.Get(String(target.ToCStr()));
+    if (pdesc)
+    {
+        ASStringContext* psc = fn.Env->GetSC();
+        pobj->SetMemberRaw(psc, psc->CreateConstString("bytesLoaded"), Value(pdesc->LoadedBytes), PropFlags());
+        pobj->SetMemberRaw(psc, psc->CreateConstString("bytesTotal"), Value(pdesc->TotalBytes), PropFlags());
+    }
+    fn.Result->SetAsObject(pobj);
+}
+
+// Global trace(): logs the argument; an object with a toString function is converted by it. Text is cut at 2000
+// bytes and carriage returns become line feeds.
+// @0x1428f6de0
+// MS2-FUNCTIONAL same logic; the exe branches around the length clamp and keeps it in a 64-bit register (cl uses cmov here)
+void GAS_GlobalTrace(const FnCall& fn)
+{
+    ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
+    if (pobj)
+    {
+        Value method;
+        if (pobj->GetMemberRaw(fn.Env->GetSC(), fn.Env->GetBuiltin(ASBuiltin_toString), &method) && method.IsFunction())
+        {
+            Value result;
+            GAS_Invoke(method, &result, pobj, fn.Env, 0, fn.Env->GetTopIndex(), 0);
+            fn.LogScriptMessage("%s\n", result.ToString(fn.Env).ToCStr());
+            return;
+        }
+    }
+    ASString text = fn.Arg(0).ToString(fn.Env);
+    char     buf[2000];
+    unsigned len = text.GetSize();
+    if (len >= 2000)
+        len = 1999;
+    strncpy_s(buf, 2000, text.ToCStr(), len);
+    if (len < 2000)
+        buf[len] = 0;
+    for (char* p = buf; *p; ++p)
+        if (*p == '\r')
+            *p = '\n';
+    fn.LogScriptMessage(text.GetSize() >= 2000 ? "%s..." : "%s\n", buf);
+}
+
+// BitmapData.loadBitmap(linkageId): a bitmap holding the image resource exported with the id, null without one.
+// @0x1428f1e70
+// MS2-FUNCTIONAL same calls; register allocation and the resource-release epilogue are scheduled differently
+void BitmapDataCtorFunction::LoadBitmapA(const FnCall& fn)
+{
+    fn.Result->SetNull();
+    if (fn.NArgs < 1)
+        return;
+    ASString           id = fn.Arg(0).ToString(fn.Env);
+    InteractiveObject* ptarget = fn.Env->GetTarget();
+    Ptr<ImageResource> pimg = ptarget->GetMovieImpl()->GetImageResourceByLinkageId(ptarget->GetResourceMovieDef(), id.ToCStr());
+    if (!pimg)
+    {
+        fn.Env->LogScriptWarning("BitmapData::LoadBitmap: LoadMovieImageCallback failed to load image \"%s\"", id.ToCStr());
+        return;
+    }
+    Ptr<MovieDefImpl> pdef = ptarget->GetResourceMovieDef();
+    Ptr<BitmapData>   pbitmap = *SF_HEAP_NEW(fn.Env->GetHeap()) BitmapData(fn.Env);
+    pbitmap->SetImage(fn.Env, pimg, pdef);
+    fn.Result->SetAsObject(pbitmap);
+}
+
+// Global parseInt(string, radix): the radix is 8 or 16 for a 0 / 0x prefix when not given, NaN for a radix outside 2..36
+// or text without digits.
+// @0x1428f70b0
+// MS2-FUNCTIONAL same logic; register allocation and argument-stack lookup scheduling differ
+void GAS_GlobalParseInt(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    ASString text = fn.Arg(0).ToString(fn.Env);
+    int      radix = 10;
+    int      skip = 0;
+    if (fn.NArgs >= 2)
+    {
+        radix = fn.Arg(1).ToInt32(fn.Env);
+        if (radix < 2 || radix > 36)
+        {
+            fn.Result->SetNumber(NumberUtil::NaN());
+            return;
+        }
+    }
+    else if (text.GetSize() > 1 && text.ToCStr()[0] == '0')
+    {
+        radix = 8;
+        skip = 1;
+        if (text.ToCStr()[1] == 'x' || text.ToCStr()[1] == 'X')
+        {
+            radix = 16;
+            skip = 2;
+        }
+    }
+    char* pend = 0;
+    int   val = (int)strtol(text.ToCStr() + skip, &pend, radix);
+    if (text.ToCStr() + skip == pend && radix != 8)
+        fn.Result->SetNumber(NumberUtil::NaN());
+    else
+        fn.Result->SetInt(val);
+}
+
+// ---- Global escape functions ----
+
+// @0x1428f7ed0
+// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
+void GAS_GlobalEscape(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (fn.NArgs == 1)
+    {
+        ASString src = fn.Arg(0).ToString(fn.Env);
+        String   result;
+        ASUtils::Escape(src.ToCStr(), src.GetSize(), &result);
+        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+    }
+}
+
+// @0x1428f8020
+// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
+void GAS_GlobalUnescape(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (fn.NArgs == 1)
+    {
+        ASString src = fn.Arg(0).ToString(fn.Env);
+        String   result;
+        ASUtils::Unescape(src.ToCStr(), src.GetSize(), &result);
+        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+    }
+}
+
+// @0x1428f8170
+// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
+void GAS_GlobalEscapeSpecialHTML(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (fn.NArgs == 1)
+    {
+        ASString src = fn.Arg(0).ToString(fn.Env);
+        String   result;
+        String::EscapeSpecialHTML(src.ToCStr(), src.GetLength(), &result);
+        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+    }
+}
+
+// @0x1428f83d0
+// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
+void GAS_GlobalUnescapeSpecialHTML(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (fn.NArgs == 1)
+    {
+        ASString src = fn.Arg(0).ToString(fn.Env);
+        String   result;
+        String::UnescapeSpecialHTML(src.ToCStr(), src.GetLength(), &result);
+        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+    }
 }
 
 // ---- Matrix ----

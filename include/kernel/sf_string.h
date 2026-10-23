@@ -125,6 +125,9 @@ public:
     void   AppendString(const wchar_t* pstr, SPInt len = -1);
     // Removes len characters at character index posAt (exe 0x142587840).
     void   Remove(UPInt posAt, SPInt len = 1);
+    // (exe 0x1425869b0 / 0x142588010)
+    static void EscapeSpecialHTML(const char* psrc, UPInt length, String* pescaped);
+    static void UnescapeSpecialHTML(const char* psrc, UPInt length, String* punescaped);
 
     // Character (not byte) count and character range [start, end) (exe: GetLength 0x142587010, Substring 0x142587b20).
     UPInt  GetLength() const;
