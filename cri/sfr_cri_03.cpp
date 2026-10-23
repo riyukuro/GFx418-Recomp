@@ -9,6 +9,7 @@
 #include "../include/cri/cri_movie.h"
 #include <windows.h>
 #include <cstring>
+#include <memory>
 
 extern "C" CriSint32 DAT_143ba9d28;
 extern "C" CriSint32 DAT_143b27be0;
@@ -56,6 +57,9 @@ void FUN_140054040(void*, void*, void*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140041110(void*, const char*, CriUint32);
 void FUN_140046d50(void*, CriSint32);
+void FUN_14003a108(void*);
+CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
+void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
 void FUN_1400479e0(void);
@@ -233,6 +237,79 @@ void FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriUi
     callbacks.Free = (void*)FUN_14003b2a4;
     callbacks.Heap = heap;
     FUN_14003a1a0(&callbacks, (CriUint32)type, data, size);
+}
+
+// MS2-FUNCTIONAL: allocate the UTF runtime table and field records through its CRI heap callbacks, then let the
+// executable's shared UTF parser populate the table layout.
+// @0x14003a1a0
+void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* data, CriUint32 size)
+{
+    typedef void* (*AllocateFn)(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
+    typedef void (*FreeFn)(void*, void*);
+    struct Callbacks { AllocateFn Allocate; FreeFn Free; void* Context; };
+    struct RuntimeTable
+    {
+        void* Self;
+        Callbacks Init;
+        CriUint32 Flags, Reserved24;
+        const CriUint8* Base;
+        CriUint32 Size, Reserved34;
+        const CriUint8* RecordData;
+        const CriUint8* StringData;
+        const CriUint8* BlobData;
+        const CriUint8* Reserved50;
+        CriUint16 FieldCount, RecordSize;
+        CriUint32 RecordCount;
+        void* Columns;
+        CriUint8 Slots[0x40];
+        void* Context;
+        void* SecondaryAllocation;
+    };
+    if (!callbackBlock)
+    {
+        FUN_140038e24(0, "E06100303", -2);
+        return NULL;
+    }
+
+    Callbacks* callbacks = (Callbacks*)callbackBlock;
+    CriUint8* rawTable = (CriUint8*)callbacks->Allocate(callbacks->Context, 0xb8, "@UTF1", 0x10,
+                                                        (CriSint32)allocationMode);
+    if (!rawTable)
+    {
+        FUN_140038e24(0, "E06100310", -3);
+        return NULL;
+    }
+
+    memset(rawTable, 0, 0xb8);
+    void* tableMemory = rawTable;
+    size_t tableSpace = 0xb8;
+    RuntimeTable* table = (RuntimeTable*)std::align(0x10, sizeof(RuntimeTable), tableMemory, tableSpace);
+    CriUint32 fieldCount = FUN_1400472c0((const CriUint8*)data, size);
+    CriUint32 recordsSize = fieldCount * 0x30;
+    CriUint8* rawRecords = (CriUint8*)callbacks->Allocate(callbacks->Context, (CriSint32)recordsSize,
+                                                           "@UTF2", 0x10, (CriSint32)allocationMode);
+    if (rawRecords)
+    {
+        memset(rawRecords, 0, recordsSize);
+        void* recordsMemory = rawRecords;
+        size_t recordsSpace = recordsSize;
+        void* records = std::align(0x10, recordsSize, recordsMemory, recordsSpace);
+        if (FUN_140046e04(table, rawTable, fieldCount, records, rawRecords, data, size,
+                          callbackBlock, allocationMode))
+            return table;
+        FUN_14003a108(table);
+        return NULL;
+    }
+
+    table->Self = &table->Init;
+    table->Init = *callbacks;
+    table->Flags = allocationMode;
+    table->Columns = NULL;
+    table->Context = rawTable;
+    table->SecondaryAllocation = NULL;
+    FUN_14003a108(table);
+    FUN_140038e24(0, "E06100312", -3);
+    return NULL;
 }
 
 // MS2-FUNCTIONAL: retains CRI's conditional decoder attachment followed by common Movie initialization.
