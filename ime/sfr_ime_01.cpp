@@ -130,6 +130,7 @@ extern "C" const unsigned long long DAT_14313b8d8;
 extern "C" const unsigned long long DAT_1431c4888;
 extern "C" const unsigned long long DAT_1431c51d8;
 extern "C" const unsigned long long DAT_1431c48f8;
+extern "C" const unsigned char DAT_143a2a3e0[];
 extern "C" const unsigned long long DAT_1431c4ef0;
 extern "C" void* DAT_143b15f60;
 extern "C" const void* DAT_14313bc60[];
@@ -2726,6 +2727,49 @@ unsigned char FUN_1423daae0(void* raw)
     auto* owner = *reinterpret_cast<unsigned char**>(self + 0x10);
     *reinterpret_cast<int*>(owner + 0xbc) = 0;
     return 1;
+}
+
+// MS2-FUNCTIONAL: resolves a language-specific IME string from the executable locale table and releases its reference.
+// @0x1423d8a10
+unsigned long long FUN_1423d8a10(unsigned long long* manager, const unsigned long long* stringInfo)
+{
+    const unsigned current = *reinterpret_cast<const unsigned*>(DAT_143a2a3e0 + 8);
+    const char* text = reinterpret_cast<const char*>((*stringInfo & ~3ull) + 0xc);
+    if (current != 0x02000000) {
+        for (unsigned index = 0; index < 64; ++index) {
+            const auto* locale = reinterpret_cast<const unsigned char*>(DAT_143a2a3e0) + index * 0x10;
+            const unsigned localeId = *reinterpret_cast<const unsigned*>(locale + 8);
+            if (localeId == 0x02000000) break;
+            const char* localeName = *reinterpret_cast<const char* const*>(locale);
+            if (std::strcmp(text, localeName) != 0) continue;
+            const unsigned count = *reinterpret_cast<unsigned*>(manager + 0x1a);
+            auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
+            auto* kinds = reinterpret_cast<unsigned*>(manager[0x32]);
+            for (unsigned i = 0; i < count; ++i) {
+                if (*reinterpret_cast<unsigned*>(entries + i * 0x30 + 0x20) != localeId) continue;
+                const unsigned offset = kinds[i] == 1 ? 0x10 : kinds[i] == 2 ? 0x18 : 0;
+                if (!offset) continue;
+                const unsigned long long selected = *reinterpret_cast<unsigned long long*>(entries + i * 0x30 + offset);
+                reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager))[0x40 / sizeof(void*)])(
+                    manager, reinterpret_cast<const char*>((selected & ~3ull) + 0xc));
+                const unsigned long long packed = *stringInfo;
+                auto* refs = reinterpret_cast<volatile long*>((packed & ~3ull) + 8);
+                if (_InterlockedDecrement(refs) == 1) {
+                    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+                    reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
+                        reinterpret_cast<void*>(packed & ~3ull));
+                }
+                return 1;
+            }
+        }
+    }
+    auto* refs = reinterpret_cast<volatile long*>((*stringInfo & ~3ull) + 8);
+    if (_InterlockedDecrement(refs) == 1) {
+        void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
+            reinterpret_cast<void*>(*stringInfo & ~3ull));
+    }
+    return 0;
 }
 
 // MS2-FUNCTIONAL: looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
