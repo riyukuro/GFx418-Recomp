@@ -562,6 +562,8 @@ namespace Classes { namespace fl_vec {
         // @0x1425600d0
         virtual const char* GetAS3ObjectType() const { return "Classes::fl_vec::Vector"; }
         virtual Class& ApplyTypeArgs(unsigned argc, const Value* argv);           // 0x14255a5c0
+        // The class traits of Vector.<elem> for an element class without a builtin vector, made on first use.
+        ClassTraits::Traits& Resolve2Vector(const ClassTraits::Traits& elem);       // 0x142563380
     };
 
     // vftable 0x1431829a0.

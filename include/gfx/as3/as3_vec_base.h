@@ -51,6 +51,11 @@ public:
     CheckResult CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const;
     // (appended, sfr16) whether every element of arr is of type tr. 0x1425614e0
     CheckResult OfCorrectType(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const;
+    // (appended, sfr19) the elements of arr (an Array or a Vector) coerced to tr and appended; TypeError 1034 on
+    // the first that cannot be. The Value overload returns false when v is neither (or an exception was thrown).
+    void AppendCoerce(const ArrayBase& arr, const ClassTraits::Traits& tr);             // 0x14255a0b0
+    void AppendCoerce(const Instances::fl::Array& arr, const ClassTraits::Traits& tr);  // 0x14255a2d0
+    bool AppendCoerce(const Value& v, const ClassTraits::Traits& tr);                   // 0x14255a4b0
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v) = 0;

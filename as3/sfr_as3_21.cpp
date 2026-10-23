@@ -1592,31 +1592,31 @@ CheckResult ArrayBase::OfCorrectType(const Instances::fl::Array& arr, const Clas
 namespace InstanceTraits { namespace fl_vec {
 
 // @0x142560ef0
-SPtr<Vector_String::InstanceType> Vector_String::MakeInstanceS(Vector_String& t)
+__declspec(noinline) SPtr<Vector_String::InstanceType> Vector_String::MakeInstanceS(Vector_String& t)
 {
     return MakeInstance(t);
 }
 
 // @0x142560f90
-SPtr<Vector_double::InstanceType> Vector_double::MakeInstanceS(Vector_double& t)
+__declspec(noinline) SPtr<Vector_double::InstanceType> Vector_double::MakeInstanceS(Vector_double& t)
 {
     return MakeInstance(t);
 }
 
 // @0x142561030
-SPtr<Vector_int::InstanceType> Vector_int::MakeInstanceS(Vector_int& t)
+__declspec(noinline) SPtr<Vector_int::InstanceType> Vector_int::MakeInstanceS(Vector_int& t)
 {
     return MakeInstance(t);
 }
 
 // @0x1425610d0
-SPtr<Vector_object::InstanceType> Vector_object::MakeInstanceS(Vector_object& t)
+__declspec(noinline) SPtr<Vector_object::InstanceType> Vector_object::MakeInstanceS(Vector_object& t)
 {
     return MakeInstance(t);
 }
 
 // @0x142561170
-SPtr<Vector_uint::InstanceType> Vector_uint::MakeInstanceS(Vector_uint& t)
+__declspec(noinline) SPtr<Vector_uint::InstanceType> Vector_uint::MakeInstanceS(Vector_uint& t)
 {
     return MakeInstance(t);
 }
@@ -2677,6 +2677,182 @@ bool Reader::ReadTraits(TraitTable& t, HasTraits::ObjectTraits& obj_traits)
 }
 
 }}}} // namespace Scaleform::GFx::AS3::Abc
+
+// ---------------------------------------------------------------- Vector coercion (sfr19)
+
+// Traits::GetConstructor, out of line in the exe (the InstanceTraits copy).
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// @0x14255a0b0
+void ArrayBase::AppendCoerce(const ArrayBase& arr, const ClassTraits::Traits& tr)
+{
+    if (!CheckFixed())
+        return;
+    const UInt32 size = arr.GetSize();
+    for (UInt32 i = 0; i < size; ++i)
+    {
+        Value r;
+        Value v;
+        arr.GetValueUnsafe(i, v);
+        if (!tr.Coerce(v, r))
+        {
+            VM& vm = VMRef;
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, v).GetName().ToCStr(),
+                tr.GetName().ToCStr()));
+            break;
+        }
+        PushBackValueUnsafe(r);
+    }
+}
+
+// @0x14255a2d0
+void ArrayBase::AppendCoerce(const Instances::fl::Array& arr, const ClassTraits::Traits& tr)
+{
+    if (!CheckFixed())
+        return;
+    const UPInt size = arr.GetSize();
+    for (UPInt i = 0; i < size; ++i)
+    {
+        Value r;
+        const Value& v = arr.At(i);
+        if (!tr.Coerce(v, r))
+        {
+            VM& vm = VMRef;
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, v).GetName().ToCStr(),
+                tr.GetName().ToCStr()));
+            break;
+        }
+        PushBackValueUnsafe(r);
+    }
+}
+
+// @0x14255a4b0
+bool ArrayBase::AppendCoerce(const Value& v, const ClassTraits::Traits& tr)
+{
+    VM& vm = VMRef;
+    const ClassTraits::Traits& ctr = FUN_142507f60(vm, v);
+    if (FUN_1425149a0(ctr, vm.GetClassTraitsArray()))
+    {
+        AppendCoerce(*static_cast<const Instances::fl::Array*>(v.GetObject()), tr);
+        return !VMRef.IsException();
+    }
+    if (FUN_1425149a0(ctr, *vm.TraitsVector_int) || FUN_1425149a0(ctr, *vm.TraitsVector_uint) ||
+        FUN_1425149a0(ctr, *vm.TraitsVector_double) || FUN_1425149a0(ctr, *vm.TraitsVector_String) ||
+        (ctr.GetTraitsType() == Traits_Vector_object && ctr.IsClassTraits()))
+    {
+        // Every Vector.<T> instance keeps its VectorBase at +0x38.
+        const ArrayBase* a = reinterpret_cast<const ArrayBase*>(reinterpret_cast<const char*>(v.GetObject()) + 0x38);
+        if (a)
+        {
+            AppendCoerce(*a, tr);
+            return !vm.IsException();
+        }
+    }
+    return false;
+}
+
+namespace Classes { namespace fl_vec {
+
+// @0x14255a5c0
+Class& Vector::ApplyTypeArgs(unsigned argc, const Value* argv)
+{
+    if (argc != 1)
+    {
+        VM& vm = GetVM();
+        vm.ThrowTypeError(VM::Error(VM::eWrongTypeArgCountError, vm));
+        return *this;
+    }
+    const Value& type = argv[0];
+    if (!type.IsClass() && !type.IsNullOrUndefined())
+    {
+        VM& vm = GetVM();
+        vm.ThrowTypeError(VM::Error(VM::eCorruptABCError, vm));
+        return *this;
+    }
+    const Class& cl = type.IsNullOrUndefined()
+        ? FUN_142508460(&GetVM().GetClassTraitsObject().GetInstanceTraits()) : type.AsClass();
+    const ClassTraits::Traits& ctr = cl.GetClassTraits();
+    VM& vm = GetVM();
+    if (&ctr == &vm.GetClassTraitsSInt())
+        return vm.GetClassVectorSInt();
+    if (&ctr == &vm.GetClassTraitsUInt())
+        return vm.GetClassVectorUInt();
+    if (&ctr == &vm.GetClassTraitsNumber())
+        return vm.GetClassVectorNumber();
+    if (&ctr == &vm.GetClassTraitsString())
+        return vm.GetClassVectorString();
+    return FUN_142508460(&Resolve2Vector(ctr).GetInstanceTraits());
+}
+
+// Vector.<T>(v): v itself when it is null/undefined or already a Vector.<T>, else a new Vector.<T> of v's
+// elements (an Array or another Vector) coerced to T; TypeError 1034 when v is neither.
+#define MS2_VEC_CALL(TYPE, ELEM)                                                                            \
+void TYPE::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)              \
+{                                                                                                           \
+    if (argc == 1)                                                                                          \
+    {                                                                                                       \
+        const Value& v = argv[0];                                                                           \
+        InstanceTraits::fl_vec::TYPE& itr = static_cast<InstanceTraits::fl_vec::TYPE&>(GetInstanceTraits());\
+        if (v.IsNullOrUndefined() || &FUN_14250ffc0(GetVM(), v) == &itr)                                    \
+            result = v;                                                                                     \
+        else                                                                                                \
+        {                                                                                                   \
+            SPtr<Instances::fl_vec::TYPE> p = itr.MakeInstanceS(itr);                                       \
+            if (p->V.AppendCoerce(v, ELEM))                                                                 \
+                result = p;                                                                                 \
+            else                                                                                            \
+            {                                                                                               \
+                VM& vm = GetVM();                                                                           \
+                vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, v, itr.GetName().ToCStr()));     \
+            }                                                                                               \
+        }                                                                                                   \
+    }                                                                                                       \
+    else                                                                                                    \
+    {                                                                                                       \
+        VM& vm = GetVM();                                                                                   \
+        vm.ThrowRangeError(VM::Error(VM::eCoerceArgumentCountError, vm, (int)argc));                        \
+    }                                                                                                       \
+}
+
+// @0x14255a700
+// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
+MS2_VEC_CALL(Vector_String, p->GetVM().GetClassTraitsString())
+// @0x14255a8a0
+// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
+MS2_VEC_CALL(Vector_double, p->GetVM().GetClassTraitsNumber())
+// @0x14255aa40
+// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
+MS2_VEC_CALL(Vector_int, p->GetVM().GetClassTraitsSInt())
+// @0x14255abe0
+// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
+MS2_VEC_CALL(Vector_object, static_cast<const ClassTraits::fl_vec::Vector_object&>(
+    FUN_142508490(&p->GetTraits()).GetClassTraits()).GetEnclosedClassTraits())
+// @0x14255ad80
+// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
+MS2_VEC_CALL(Vector_uint, p->GetVM().GetClassTraitsUInt())
+
+#undef MS2_VEC_CALL
+
+}} // namespace Classes::fl_vec
+
+namespace ClassTraits { namespace fl_vec {
+
+// @0x14255c1d0
+void Vector_object::ForEachChild_GC(Collector* prcc, GcOp op) const
+{
+    Traits::ForEachChild_GC(prcc, op);
+    // The exe passes the owner as a third argument to the GcOp (r8); the shared GcOp typedef has two.
+    typedef void (*GcOpWithOwner)(Collector* prcc, const ASRefCountBaseType** pchild, const ASRefCountBaseType& owner);
+    if (EnclosedClassTraits.GetPtr())
+        reinterpret_cast<GcOpWithOwner>(op)(prcc,
+            reinterpret_cast<const ASRefCountBaseType**>(EnclosedClassTraits.GetRawPtr()), *this);
+}
+
+}} // namespace ClassTraits::fl_vec
+
+}}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$04VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c2b0
 // MS2-PIN: ?Func@?$ThunkFunc0@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@$0BA@V?$SPtr@VVector_String@fl_vec@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14255c320
