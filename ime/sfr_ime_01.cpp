@@ -3,6 +3,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423c8a50-0x1423c8fa0 .text$mn
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
+#include <windows.h>
+#include <imm.h>
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_string.h"
 #include "../include/gfx/gfx_loadproc.h"
@@ -236,6 +238,21 @@ void FUN_1423d07e0(void* self)
     *(static_cast<unsigned char*>(self) + 0xb8) = 0;
     if (value)
         reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();
+}
+
+// MS2-FUNCTIONAL: Windows IME calls and recovered field offsets match; SDK-specific API frame differs.
+// @0x1423d1c10
+void FUN_1423d1c10(void* self)
+{
+    unsigned char* bytes = static_cast<unsigned char*>(self);
+    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
+    HIMC context = ImmGetContext(hwnd);
+    ImmNotifyIME(context, 0x15, 4, 0);
+    ImmNotifyIME(context, 0x15, 1, 0);
+    ImmNotifyIME(context, 0x15, 3, 0);
+    ImmReleaseContext(hwnd, context);
+    **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
+    *reinterpret_cast<unsigned short*>(bytes + 0xd0) = 0;
 }
 
 // @0x1423d1830
