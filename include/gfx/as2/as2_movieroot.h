@@ -207,6 +207,8 @@ public:
 
         ~InvokeAliasInfo(); // exe 0x142925ae0
     };
+    // Registers (or replaces) the alias the host calls by name (exe 0x14292f430).
+    void AddInvokeAlias(const ASString& alias, CharacterHandle* pthisChar, Object* pthisObj, const FunctionRef& func);
 
     StringManager* GetStringManager() { return &BuiltinsMgr; }
 

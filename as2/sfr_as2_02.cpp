@@ -33,6 +33,7 @@
 // MS2-RANGE: 0x142901280-0x142901406 .text$mn
 // MS2-RANGE: 0x142908e90-0x142909300 .text$mn
 // MS2-RANGE: 0x1428ffa20-0x1428ffcca .text$mn
+// MS2-RANGE: 0x1428ff660-0x1428ffa19 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -2064,6 +2065,30 @@ void ExternalInterfaceCtorFunction::Call(const FnCall& fn)
         fn.LogScriptWarning("ExternalInterface.call - handler is not installed.");
         fn.Result->SetUndefined();
     }
+}
+
+// MS2-FUNCTIONAL the exe expands the FunctionRef copy (local frame flag) inline and orders the ToFunction blocks differently
+// @0x1428ff660
+void ExternalInterfaceCtorFunction::AddCallback(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (fn.NArgs < 3)
+        return;
+    MovieImpl* pmovie = fn.Env->GetTarget()->GetMovieImpl();
+    ASString aliasName(fn.Arg(0).ToString(fn.Env));
+    FunctionRef func = fn.Arg(2).ToFunction(fn.Env);
+    Ptr<CharacterHandle> thisChar;
+    Ptr<Object> thisObj;
+    if (fn.Arg(1).IsCharacter())
+    {
+        Ptr<InteractiveObject> pch = ResolveCharacterValue(fn.Arg(1), fn.Env);
+        if (pch)
+            thisChar = pch->GetCharacterHandle();
+    }
+    else
+        thisObj = fn.Arg(1).ToObject(fn.Env);
+    static_cast<MovieRoot*>(pmovie->pASMovieRoot)->AddInvokeAlias(aliasName, thisChar, thisObj, func);
+    fn.Result->SetBool(true);
 }
 }}} // namespace Scaleform::GFx::AS2
 

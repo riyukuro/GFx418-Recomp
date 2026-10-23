@@ -888,6 +888,7 @@ public:
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
     // (appended for sfr_as2_02)
     static void Call(const FnCall& fn); // exe 0x1428ffa20
+    static void AddCallback(const FnCall& fn); // exe 0x1428ff660
 };
 class MathCtorFunction : public CFunctionObject
 {
