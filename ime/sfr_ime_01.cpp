@@ -263,6 +263,58 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
+// MS2-FUNCTIONAL: processes the executable's IME key and mouse messages, including composition cancellation.
+// @0x1423d0cf0
+void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
+{
+    const unsigned message = *reinterpret_cast<const unsigned*>(event + 0xc);
+    const unsigned long long key = *reinterpret_cast<const unsigned long long*>(event + 0x10);
+    if (message == 0x100 && key == 0x10) {
+        *reinterpret_cast<unsigned short*>(self + 0x14) = 1;
+    }
+    if (message == 0x101 && static_cast<unsigned char>(self[0x14]) == 1 && key == 0xe5) {
+        void* child = reinterpret_cast<void*>(self[1]);
+        if (child) {
+            unsigned char notification[0x28]{};
+            *reinterpret_cast<unsigned*>(notification) = 6;
+            *reinterpret_cast<unsigned*>(notification + 8) = 0x10;
+            reinterpret_cast<void(*)(void*, const void*)>((*reinterpret_cast<void***>(child))[0x110 / sizeof(void*)])(
+                child, notification);
+        }
+    }
+    if (message == 0x202 && *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0xb9)) {
+        reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(self))[0x110 / sizeof(void*)])(
+            self, -*reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x64));
+        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0xb9) = 0;
+    }
+    const unsigned mode = static_cast<unsigned>(self[0x13]);
+    const bool inputMode = mode == 0xd00001 || (mode >= 5 && mode <= 6) || mode == 0xa10000 || mode == 0xb10000;
+    const bool clearKey = (message == 0x100 && key == 0x25) || (key >= 0x26 && key <= 0x28) || key == 0xd;
+    if (!inputMode || !clearKey || !(message == 0x100 || key >= 0x26)) return;
+    HWND hwnd = reinterpret_cast<HWND>(self[5]);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    cx18_ImmNotifyIME(context, 0x15, 4, 0);
+    cx18_ImmNotifyIME(context, 0x11, 0, 0);
+    FUN_1423da320(reinterpret_cast<void*>(self[0x19]), nullptr, nullptr, nullptr);
+    if (mode == 5 || mode == 6) {
+        INPUT input{};
+        input.type = INPUT_KEYBOARD;
+        input.ki.wVk = VK_ESCAPE;
+        input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
+        SendInput(1, &input, sizeof(input));
+    }
+    *reinterpret_cast<unsigned short*>(*reinterpret_cast<unsigned short**>(self + 8)) = 0;
+    void* movie = reinterpret_cast<void*>(self[0x15]);
+    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+    if (values) {
+        void* output = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                values, "RemoveInputWindow", &output, 0, 0);
+    }
+    cx18_ImmReleaseContext(hwnd, context);
+}
+
 // MS2-FUNCTIONAL: dispatches the executable's IME composition and candidate-list messages by input mode.
 // @0x1423d02d0
 LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long type, LPARAM value)
