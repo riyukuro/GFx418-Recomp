@@ -1948,8 +1948,10 @@ template void AS3StringHashSetBase::add<AS3String>(void*, const AS3String&, UPIn
 
 using AS3Value = GFx::AS3::Value;
 using AS3ValueHashSetBase = HashSetBase<AS3Value, AS3Value::HashFunctor, AS3Value::HashFunctor,
-    AllocatorDH<AS3Value, Stat_Default_Mem>, HashsetEntry<AS3Value, AS3Value::HashFunctor>>;
+    AllocatorGH<AS3Value, Stat_Default_Mem>, HashsetCachedEntry<AS3Value, AS3Value::HashFunctor>>;
 template void AS3ValueHashSetBase::add<AS3Value>(void*, const AS3Value&, UPInt);
+template HashsetCachedEntry<AS3Value, AS3Value::HashFunctor>::HashsetCachedEntry(
+    const HashsetCachedEntry<AS3Value, AS3Value::HashFunctor>&);
 
 using AS3UInt64ValueNode = HashNode<UInt64, GFx::AS3::Value, FixedSizeHash<UInt64>>;
 using AS3UInt64ValueSetBase = HashSetBase<AS3UInt64ValueNode, AS3UInt64ValueNode::NodeHashF,
