@@ -230,6 +230,213 @@ void TextMeshProvider::ClearEntries()
     Flags &= ~(BF_Created | BF_HasVectorGlyphs | BF_HasUnderlines | BF_HasMask);
 }
 
+// font and glyph flag tests in the exe's bit-extract form
+static inline bool fontFlag(const Font* f, unsigned bit) { return ((f->GetFontFlags() >> bit) & 1) != 0; }
+static inline bool glyphFlag(const GlyphParam& gp, unsigned bit) { return ((gp.Flags >> bit) & 1) != 0; }
+
+// Walks the layout's records into entries (glyphs, backgrounds, selections, underlines, cursors, images), adds the
+// clip mask when vector glyphs or underlines may stick out, sorts the entries into layers and gives every layer
+// its mesh (vector glyph layers get theirs from createVectorGlyph).
+// MS2-FUNCTIONAL: block placement (the exe moves the later record cases past the loop) and xmm allocation; integer ops identical
+// @0x1426e24d0
+bool TextMeshProvider::CreateMeshData(const TextLayout* layout, Renderer2DImpl* ren, const HMatrix& m,
+                                      const Matrix4F& m4, const Viewport& vp, unsigned meshGenFlags)
+{
+    pRenderer = ren;
+
+    TmpTextStorage storage(Memory::GetGlobalHeap());
+
+    Flags &= ~(BF_Created | BF_HasVectorGlyphs | BF_HasUnderlines);
+    Matrix2F viewMatrix = m.GetMatrix2D();
+    bool     snap       = !(m.Has3D() || viewMatrix.IsFreeRotation());
+
+    GlyphRunData data;
+    data.Param           = layout->GetParam();
+    data.Bounds          = layout->GetBounds();
+    data.pFont           = 0;
+    data.pFontHandle     = 0;
+    data.FontSize        = 0;
+    data.VectorSize      = 0;
+    data.RasterSize      = 0;
+    data.NomWidth        = 0;
+    data.NomHeight       = 0;
+    data.TexHeight       = 0;
+    data.mColor          = 0;
+    data.NewLineX        = 0;
+    data.NewLineY        = 0;
+    data.GlyphBounds     = RectF(0, 0, 0, 0);
+    data.DirMtx          = m.GetMatrix2D();
+    data.InvMtx          = data.DirMtx.GetInverse();
+    data.HeightRatio     = calcHeightRatio(m, m4, vp);
+    data.HintedNomHeight = 0;
+    HeightRatio          = data.HeightRatio;
+
+    // no optimized-for-readability or auto-fit glyphs in 3D
+    if (m.Has3D())
+    {
+        data.Param.TextParam.Flags &= ~(GlyphParam::OptRead | GlyphParam::AutoFit);
+        data.Param.ShadowParam.Flags &= ~(GlyphParam::OptRead | GlyphParam::AutoFit);
+    }
+
+    Flags &= ~BF_Clip;
+    ClipBox = layout->GetClipBox();
+    if (!ClipBox.IsEmpty())
+        Flags |= BF_Clip;
+
+    Font* font = 0;
+    Flags |= BF_Creating;
+
+    TextLayout::Record rec;
+    UPInt pos       = 0;
+    bool  cacheIsOK = true;
+    while (cacheIsOK && (pos = layout->ReadNext(pos, &rec)) != 0)
+    {
+        switch (layout->GetRecordType(rec))
+        {
+        case TextLayout::Record_Char:
+            if ((rec.mChar.Flags & TextLayout::Flag_Invisible) == 0)
+                cacheIsOK = addGlyph(storage, data, rec.mChar.GlyphIndex,
+                                     (rec.mChar.Flags & TextLayout::Flag_FauxBold) != 0,
+                                     (rec.mChar.Flags & TextLayout::Flag_FauxItalic) != 0, snap, meshGenFlags);
+            else
+                cacheIsOK = true;
+            data.NewLineX += rec.mChar.Advance;
+            break;
+
+        case TextLayout::Record_Color:
+            data.mColor = rec.mColor.mColor;
+            break;
+
+        case TextLayout::Record_Background:
+            addBackground(storage, rec.mBackground.BackgroundColor, rec.mBackground.BorderColor, data.Bounds);
+            break;
+
+        case TextLayout::Record_NewLine:
+            data.NewLineX = rec.mLine.x;
+            data.NewLineY = rec.mLine.y;
+            if (snap && ((data.pFont && fontFlag(data.pFont, 7)) || glyphFlag(data.Param.TextParam, 0)))
+                data.NewLineY = snapY(data);
+            break;
+
+        case TextLayout::Record_Font:
+            font             = rec.mFont.pFont;
+            data.pFont       = font;
+            data.pFontHandle = pCache->RegisterFont(font);
+            data.FontSize    = rec.mFont.mSize;
+            data.TexHeight   = font->GetTextureGlyphHeight();
+            // a raster-only font starts on a whole pixel line
+            if (snap && data.pFont && fontFlag(data.pFont, 7))
+                data.NewLineY = snapY(data);
+            break;
+
+        case TextLayout::Record_Selection:
+            addSelection(storage, rec.mSelection.mColor,
+                         RectF(rec.mSelection.x1, rec.mSelection.y1, rec.mSelection.x2, rec.mSelection.y2));
+            break;
+
+        case TextLayout::Record_Underline:
+            addUnderline(storage, rec.mUnderline.mColor, (TextUnderlineStyle)rec.mUnderline.Style, rec.mUnderline.x,
+                         rec.mUnderline.y, rec.mUnderline.Len);
+            Flags |= BF_HasUnderlines;
+            break;
+
+        case TextLayout::Record_Cursor:
+            addCursor(storage, rec.mCursor.mColor,
+                      RectF(rec.mCursor.x1, rec.mCursor.y1, rec.mCursor.x2, rec.mCursor.y2));
+            break;
+
+        case TextLayout::Record_Image:
+            addImage(storage, data, rec.mImage.pImage, rec.mImage.ScaleX, rec.mImage.ScaleY, rec.mImage.BaseLine,
+                     snap);
+            data.NewLineX += rec.mImage.Advance;
+            break;
+
+        case TextLayout::Record_RefCntData:
+            break;
+        }
+    }
+
+    UPInt i;
+    if ((Flags & BF_Clip) && (Flags & (BF_HasVectorGlyphs | BF_HasUnderlines)))
+    {
+        // the clear box: everything drawn, padded by a screen pixel; masked shapes and underlines get own layers
+        addMask(storage);
+        bool first = true;
+        ClearBox.Clear();
+        for (i = 0; i < storage.Entries.GetSize(); ++i)
+        {
+            TmpTextMeshEntry& ent = storage.Entries[i];
+            RectF bounds(0, 0, 0, 0);
+            switch (ent.LayerType)
+            {
+            case TextLayer_RasterText:
+                bounds = RectF(ent.EntryData.RasterData.Coord[0], ent.EntryData.RasterData.Coord[1],
+                               ent.EntryData.RasterData.Coord[2], ent.EntryData.RasterData.Coord[3]);
+                break;
+            case TextLayer_PackedText:
+                bounds = RectF(ent.EntryData.PackedData.Coord[0], ent.EntryData.PackedData.Coord[1],
+                               ent.EntryData.PackedData.Coord[2], ent.EntryData.PackedData.Coord[3]);
+                break;
+            case TextLayer_Images:
+                bounds = RectF(ent.EntryData.ImageData.Coord[0], ent.EntryData.ImageData.Coord[1],
+                               ent.EntryData.ImageData.Coord[2], ent.EntryData.ImageData.Coord[3]);
+                break;
+            case TextLayer_Shapes:
+            {
+                const GlyphVectorEnt& vec = ent.EntryData.VectorData;
+                float scale = vec.FontSize / vec.pFont->GetNominalGlyphHeight();
+                vec.pFont->GetGlyphBounds(vec.GlyphIndex, &bounds);
+                bounds.x1 = bounds.x1 * scale + vec.x;
+                bounds.y1 = bounds.y1 * scale + vec.y;
+                bounds.x2 = bounds.x2 * scale + vec.x;
+                bounds.y2 = bounds.y2 * scale + vec.y;
+                ent.LayerType = TextLayer_Shapes_Masked;
+                break;
+            }
+            }
+            if (!bounds.IsEmpty())
+            {
+                if (first)
+                    ClearBox = bounds;
+                else
+                    ClearBox.Union(bounds);
+                first = false;
+            }
+            if (ent.LayerType == TextLayer_Underline)
+                ent.LayerType = TextLayer_Underline_Masked;
+        }
+        float pad = 1 / HeightRatio;
+        ClearBox.x1 -= pad;
+        ClearBox.y1 -= pad;
+        ClearBox.x2 += pad;
+        ClearBox.y2 += pad;
+        Flags |= BF_HasMask;
+    }
+
+    UnpinSlots();
+    Flags &= ~BF_Creating;
+
+    sortEntries(storage);
+
+    for (i = 0; i < Layers.GetSize(); ++i)
+    {
+        TextMeshLayer& layer = Layers[i];
+        if (layer.Type == TextLayer_Shapes || layer.Type == TextLayer_Shapes_Masked)
+        {
+            createVectorGlyph((unsigned)i, ren, m, meshGenFlags);
+            Flags |= BF_HasVectorGlyphs;
+        }
+        else
+        {
+            layer.M     = m;
+            layer.pMesh = *SF_HEAP_AUTO_NEW(this) Mesh(ren, this, viewMatrix, 0, (unsigned)i, meshGenFlags);
+        }
+    }
+
+    Flags |= BF_Created;
+    return true;
+}
+
 // Builds the mesh of one layer. The tessellation matrix is only the height ratio (the local-to-screen scale): that
 // keeps it from degenerating under heavy 3D or non-uniform transforms, at some cost to the EdgeAA there.
 // MS2-FUNCTIONAL: generate* tail calls not emitted (safebuffers stands in for the exe having no GS cookie), scheduling
@@ -638,10 +845,6 @@ void TextMeshProvider::addCursor(TmpTextStorage& storage, UInt32 color, const Re
     e.EntryData.SelectionData.Coord[3] = rect.y2;
     storage.Entries.PushBack(e);
 }
-
-// font and glyph flag tests in the exe's bit-extract form
-static inline bool fontFlag(const Font* f, unsigned bit) { return ((f->GetFontFlags() >> bit) & 1) != 0; }
-static inline bool glyphFlag(const GlyphParam& gp, unsigned bit) { return ((gp.Flags >> bit) & 1) != 0; }
 
 // @0x1426e49d0
 bool TextMeshProvider::addGlyph(TmpTextStorage& storage, GlyphRunData& data, unsigned glyphIndex, bool fauxBold,
