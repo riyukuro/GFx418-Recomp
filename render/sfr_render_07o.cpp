@@ -27,6 +27,7 @@
 namespace Scaleform { namespace Render {
 
 // MS2-PIN: ??_7TextMeshProvider@Render@Scaleform@@6B@ 0x143193f50
+// MS2-PIN: ??_7MeshProvider@Render@Scaleform@@6B@ 0x14318f0c0
 
 // the EdgeAA factor of each 2-bit tessellator alpha / factor code (Renderer2DImpl)
 extern const UByte Factors[4];   // 0x14318fb30
