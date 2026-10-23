@@ -93,6 +93,8 @@ extern "C" const unsigned long long DAT_1431c4d58;
 extern "C" const unsigned long long DAT_14313b8b8;
 extern "C" const unsigned long long DAT_1431c4828;
 extern "C" const unsigned long long DAT_1431c4830;
+extern "C" const unsigned long long DAT_14313b8a8;
+extern "C" const unsigned long long DAT_14313b8c8;
 extern "C" const unsigned char DAT_14313b400[];
 extern "C" const unsigned long long DAT_1431c4d60;
 extern "C" const unsigned long long DAT_14313b8c0;
@@ -167,6 +169,38 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: follows the executable's three-stage input-context COM query and releases each acquired interface.
+// @0x1423da320
+unsigned char FUN_1423da320(void* object, void*, void*, void* context)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    void* initial = *reinterpret_cast<void**>(bytes + 0x28);
+    if (!initial) return 0;
+    void* first = nullptr;
+    void* second = nullptr;
+    void* third = nullptr;
+    unsigned char result = 0;
+    const int hr1 = reinterpret_cast<int(*)(void*, const void*, void**, void*, unsigned, unsigned long long)>(
+        (*reinterpret_cast<void***>(initial))[0])(initial, &DAT_14313b8a8, &first, context, 0,
+                                                   0xfffffffffffffffeull);
+    if (hr1 >= 0) {
+        const int hr2 = reinterpret_cast<int(*)(void*, unsigned, void**)>(
+            (*reinterpret_cast<void***>(first))[6])(first,
+                *reinterpret_cast<unsigned*>(bytes + 0x64), &second);
+        if (hr2 >= 0 && second) {
+            const int hr3 = reinterpret_cast<int(*)(void*, const void*, void**)>(
+                (*reinterpret_cast<void***>(second))[0])(second, &DAT_14313b8c8, &third);
+            if (hr3 >= 0 && third) {
+                reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(third))[0x88 / sizeof(void*)])(third);
+                result = 1;
+            }
+        }
+    }
+    for (void* value : { first, second, third })
+        if (value) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(value))[2])(value);
+    return result;
+}
 
 // MS2-FUNCTIONAL: returns the executable's supported COM interface views and increments the shared refcount.
 // @0x1423d72a0
