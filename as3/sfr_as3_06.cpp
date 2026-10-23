@@ -2688,6 +2688,13 @@ template Scaleform::UPInt Scaleform::Alg::LowerBoundSliced<const Scaleform::GFx:
     const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&,
     bool (*)(const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&, const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&));
 
+// The first five arguments of BitmapData.draw (source, matrix, colorTransform, blendMode, clipRect), read out of
+// line by its thunk.
+template struct Scaleform::GFx::AS3::ThunkArgs5<const Scaleform::GFx::AS3::Value,
+    Scaleform::GFx::AS3::Instances::fl::Object*, Scaleform::GFx::AS3::Instances::fl_geom::Matrix*,
+    Scaleform::GFx::AS3::Instances::fl_geom::ColorTransform*, const Scaleform::GFx::ASString&,
+    Scaleform::GFx::AS3::Instances::fl_geom::Rectangle*>;
+
 // Out of line in the exe, called from the AS3 transform code and the render tree.
 template Scaleform::Render::Matrix2x4<float>& Scaleform::Render::Matrix2x4<float>::Prepend(const Scaleform::Render::Matrix2x4<float>&);
 
@@ -2927,3 +2934,5 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ?Construct@?$ConstructorCPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@2@@Z 0x142440f00
 // MS2-FUNCTIONAL ?Reserve@?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAAXPEBX_K@Z: the exe calls ConstructorCPP<Descr>::Construct out of line in the element-wise move; ours inlines it
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAAXPEBX_K@Z 0x142446140
+// MS2-FUNCTIONAL ??0?$ThunkArgs5@$$CBVValue@AS3@GFx@Scaleform@@PEAVObject@fl@Instances@234@PEAVMatrix@fl_geom@7234@PEAVColorTransform@97234@AEBVASString@34@PEAVRectangle@97234@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs5@PEAVObject@fl@Instances@AS3@GFx@Scaleform@@PEAVMatrix@fl_geom@3456@PEAVColorTransform@83456@AEBVASString@56@PEAVRectangle@83456@@123@@Z: the exe inlines the base argument readers; ours calls the ThunkArgs4 ctor
+// MS2-PIN: ??0?$ThunkArgs5@$$CBVValue@AS3@GFx@Scaleform@@PEAVObject@fl@Instances@234@PEAVMatrix@fl_geom@7234@PEAVColorTransform@97234@AEBVASString@34@PEAVRectangle@97234@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs5@PEAVObject@fl@Instances@AS3@GFx@Scaleform@@PEAVMatrix@fl_geom@3456@PEAVColorTransform@83456@AEBVASString@56@PEAVRectangle@83456@@123@@Z 0x142439a70
