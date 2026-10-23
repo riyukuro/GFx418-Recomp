@@ -1708,6 +1708,56 @@ void FUN_14003cca0(void* handle)
     }
 }
 
+// MS2-FUNCTIONAL: append a decoded-frame timestamp to the bounded history ring.
+// @0x14003d550
+void FUN_14003d550(void* handle)
+{
+    CriUint8* bytes = (CriUint8*)handle;
+    CriUint32 index = 0;
+    CriUint32 slot = 0;
+    for (; index < 8; ++index)
+    {
+        CriUint32 timestamp;
+        memcpy(&timestamp, bytes + 0x1b8 + (size_t)index * 8, sizeof(timestamp));
+        if (timestamp == 0)
+        {
+            slot = index;
+            break;
+        }
+    }
+    if (index == 8)
+    {
+        CriUint32 oldest;
+        memcpy(&oldest, bytes + 0x1b8, sizeof(oldest));
+        memcpy(bytes + 500, &oldest, sizeof(oldest));
+        for (index = 0; index < 8; ++index)
+        {
+            if (index < 7)
+            {
+                memcpy(bytes + 0x1b4 + (size_t)index * 8,
+                       bytes + 0x1b4 + (size_t)(index + 1) * 8, sizeof(CriUint32));
+                memcpy(bytes + 0x1b8 + (size_t)index * 8,
+                       bytes + 0x1b8 + (size_t)(index + 1) * 8, sizeof(CriUint32));
+            }
+            else
+            {
+                CriUint32 zero = 0;
+                memcpy(bytes + 0x1b4 + (size_t)index * 8, &zero, sizeof(zero));
+                memcpy(bytes + 0x1b8 + (size_t)index * 8, &zero, sizeof(zero));
+            }
+        }
+        slot = 7;
+    }
+    CriUint32 timestamp, frameNumber;
+    CriSint32 offset;
+    memcpy(&timestamp, bytes + 0x1b0, sizeof(timestamp));
+    memcpy(bytes + 0x1b4 + (size_t)slot * 8, &timestamp, sizeof(timestamp));
+    memcpy(&frameNumber, bytes + 0x18c, sizeof(frameNumber));
+    memcpy(&offset, bytes + 0x238, sizeof(offset));
+    CriUint32 adjusted = offset < 1 ? frameNumber : frameNumber + (CriUint32)offset;
+    memcpy(bytes + 0x1b8 + (size_t)slot * 8, &adjusted, sizeof(adjusted));
+}
+
 // MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
 // @0x14003d4b0
 void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer)
