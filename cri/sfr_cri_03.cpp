@@ -945,6 +945,38 @@ CriSint32 criSjUni_GetNumChainPool(void* streamJoint)
     return count;
 }
 
+// MS2-FUNCTIONAL: drain every active stream-joint queue and return its chunks to the free list.
+// @0x140045b7c
+void criSjUni_Reset(void* streamJoint)
+{
+    CriUint8* bytes = (CriUint8*)streamJoint;
+    void* lock;
+    memcpy(&lock, bytes + 0x10, sizeof(lock));
+    if (lock)
+        FUN_140039f50((LPCRITICAL_SECTION)lock);
+    for (CriUint32 index = 0; index < 4; ++index)
+    {
+        size_t listOffset = 0x20 + (size_t)index * sizeof(void*);
+        void* node;
+        memcpy(&node, bytes + listOffset, sizeof(node));
+        while (node)
+        {
+            void* next;
+            memcpy(&next, node, sizeof(next));
+            memset(node, 0, 0x20);
+            void* freeHead;
+            memcpy(&freeHead, bytes + 0x48, sizeof(freeHead));
+            memcpy(node, &freeHead, sizeof(freeHead));
+            memcpy(bytes + 0x48, &node, sizeof(node));
+            node = next;
+        }
+        void* empty = NULL;
+        memcpy(bytes + listOffset, &empty, sizeof(empty));
+    }
+    if (lock)
+        FUN_140039f8c((LPCRITICAL_SECTION)lock);
+}
+
 // MS2-FUNCTIONAL: return the current tick delta and timestamp for a CRI timer record.
 // @0x140041a10
 void FUN_140041a10(const void* state, CriSint64* elapsed, CriUint64* timestamp)
