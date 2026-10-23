@@ -38,6 +38,9 @@ extern void FUN_14257db40(void*);
 extern void FUN_142625ee0(const void*);
 extern void FUN_142626070(void*, const void*);
 extern void FUN_1423dfba0(void*, void*);
+extern void FUN_142518040(void*);
+extern void FUN_142515a20(void*, float, float);
+extern void FUN_1424f96c0(void*);
 extern void FUN_142961830(void*, void*, void*, void*, const void*);
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
 
@@ -1494,6 +1497,38 @@ Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, 
     object->~Object();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: appends the saved endpoint to a shape path when it differs from the last point.
+// @0x140011410
+void FUN_140011410(void* path)
+{
+    auto* bytes = static_cast<unsigned char*>(path);
+    const float lastX = *reinterpret_cast<float*>(bytes + 0x5c);
+    const float lastY = *reinterpret_cast<float*>(bytes + 0x60);
+    if (lastX != *reinterpret_cast<float*>(bytes + 0x54) ||
+        lastY != *reinterpret_cast<float*>(bytes + 0x58))
+        FUN_142515a20(path, *reinterpret_cast<float*>(bytes + 0x54), *reinterpret_cast<float*>(bytes + 0x58));
+}
+
+// MS2-FUNCTIONAL: rebuilds a path from its control points, closes it at the current endpoint, and finalizes it.
+// @0x140011500
+void FUN_140011500(void* object, float x1, float y1, float x2, float y2)
+{
+    void* path = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88);
+    FUN_142518040(path);
+    FUN_142515a20(path, x2, y1);
+    FUN_142515a20(path, x2, y2);
+    FUN_142515a20(path, x1, y2);
+    FUN_140011410(path);
+    FUN_1424f96c0(path);
+}
+
+// MS2-FUNCTIONAL: appends the saved endpoint to the nested shape path when it differs from its last point.
+// @0x1400115c0
+void FUN_1400115c0(void* object)
+{
+    FUN_140011410(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88));
 }
 
 // MS2-FUNCTIONAL: constructs an Object and installs the environment's builtin prototype type 0x22.
