@@ -123,6 +123,7 @@
 // MS2-RANGE: 0x142956090-0x142956193 .text$mn
 // MS2-RANGE: 0x142953280-0x142953519 .text$mn
 // MS2-RANGE: 0x142953980-0x142953ca5 .text$mn
+// MS2-RANGE: 0x142953cc0-0x142953d9f .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -142,6 +143,9 @@
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_movieslots.h"
+
+// MovieImpl::GetModalClip (exe 0x14256f820).
+Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -2342,6 +2346,25 @@ bool GASPrototypeBase::GetMemberRawConstructor(Object* pthis, ASStringContext* p
     else
         Value_SetAsFunctionInl(val, ctor);
     return true;
+}
+
+// Selection.getModalClip(controllerIdx): the modal clip of the controller.
+// @0x142953cc0
+void SelectionCtorFunction::GetModalClip(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot         = fn.Env->GetTarget()->GetMovieImpl();
+    Sprite*    pmodal = FUN_14256f820(proot, fn.NArgs >= 1 ? fn.Arg(0).ToUInt32(fn.Env) : 0);
+    Value*  presult = fn.Result;
+    CharacterHandle* phandle = pmodal ? pmodal->GetCharacterHandle() : 0;
+    if (presult->T.Type != Value::CHARACTER || presult->V.pCharHandle != phandle)
+    {
+        presult->DropRefs();
+        presult->T.Type        = Value::CHARACTER;
+        presult->V.pCharHandle = phandle;
+        if (phandle)
+            phandle->AddRef();
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 

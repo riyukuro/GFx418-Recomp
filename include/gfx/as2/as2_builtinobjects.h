@@ -897,6 +897,7 @@ private:
     static void GetControllerMaskByFocusGroup(const FnCall& fn); // exe 0x14294a2b0
     static void GetFocusBitmask(const FnCall& fn);               // exe 0x14294adf0
     static void GetFocusArray(const FnCall& fn);                 // exe 0x14294ab70
+    static void GetModalClip(const FnCall& fn);                  // exe 0x142953cc0
 };
 class StageCtorFunction : public CFunctionObject
 {
