@@ -21,6 +21,33 @@ void Traits::SetInstanceTraits(Pickable<InstanceTraits::Traits> itr)
 
 }}}} // namespace Scaleform::GFx::AS3::ClassTraits
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// MS2-FUNCTIONAL 0x1425276d0: updates the pair name, prior-name chain and name-to-slot map; Ptr/Hash helpers produce different temporary refcount code.
+// @0x1425276d0
+void Slots::SetKey(AbsoluteIndex ind, const ASString& key)
+{
+    const UInt32 ownIndex = static_cast<UInt32>(ind.Get()) - static_cast<UInt32>(FirstOwnSlotNum);
+    Pair& pair = VArray[ownIndex];
+    if (pair.Key.GetPtr() == key.GetNode())
+        return;
+
+    pair.Key = key.GetNode();
+    const UInt32* previous = Set.Get(pair.Key);
+    if (previous)
+    {
+        pair.Prev = static_cast<SPInt>(*previous);
+        Set.Set(pair.Key, static_cast<UInt32>(ind.Get()));
+    }
+    else
+    {
+        pair.Prev = -1;
+        Set.Set(pair.Key, static_cast<UInt32>(ind.Get()));
+    }
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
