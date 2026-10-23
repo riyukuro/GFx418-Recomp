@@ -208,6 +208,20 @@ public:
     // Fills this image with Perlin noise; offsets holds x / y float pairs, one per octave (offsetCount floats).
     void  PerlinNoise(float frequencyX, float frequencyY, unsigned numOctaves, unsigned randomSeed, bool stitch,
                       bool fractalNoise, unsigned channelOptions, bool grayScale, float* offsets, unsigned offsetCount); // 0x1425ee4d0
+    // Threshold compare operations ("<", "<=", ">", ">=", "==", "!=").
+    enum ThresholdOperation
+    {
+        Operation_Less,
+        Operation_LessEqual,
+        Operation_Greater,
+        Operation_GreaterEqual,
+        Operation_Equal,
+        Operation_NotEqual
+    };
+    // Tests the pixels of a rect of the source image against threshold (both masked) and writes color where the
+    // test passes (the source pixel otherwise, with copySource) to this image at destPoint.
+    UInt32 Threshold(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                     ThresholdOperation op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource);           // 0x1425ef1e0
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
@@ -387,6 +401,13 @@ namespace ClassTraits { namespace fl_events
     Pickable<Traits> KeyboardEvent::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) KeyboardEvent(vm));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
+    // @0x142458820
+    Pickable<Traits> ContextMenuEvent::MakeClassTraits(VM& vm)
+    {
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ContextMenuEvent(vm));
     }
 
     // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
@@ -1759,6 +1780,84 @@ namespace Instances { namespace fl_display
         }
         FUN_1425eddc0(pImage, randomSeed, low, high, channelOptions, grayScale);
     }
+
+    // threshold(sourceBitmapData, sourceRect, destPoint, operation, threshold[, color, mask, copySource]).
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: stack slots of the converted arguments and the error temporaries; same code otherwise
+    // @0x142453eb0
+    void BitmapData::threshold(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        if (!pImage)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
+        }
+        if (argc < 5)
+            return;
+        Instances::fl_display::BitmapData* sourceBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
+        Instances::fl_geom::Point* destPoint = static_cast<Instances::fl_geom::Point*>(argv[2].GetObject());
+        Instances::fl_geom::Rectangle* sourceRect = static_cast<Instances::fl_geom::Rectangle*>(argv[1].GetObject());
+        if (!sourceBitmapData)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+            return;
+        }
+        if (!sourceRect)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+            return;
+        }
+        if (!destPoint)
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+            return;
+        }
+
+        ASString opstr = argv[3].AsString();
+        const char* pop = opstr.ToCStr();
+        Render::DrawableImage::ThresholdOperation op;
+        if (!strcmp(pop, "<="))
+            op = Render::DrawableImage::Operation_LessEqual;
+        else if (!strcmp(pop, "<"))
+            op = Render::DrawableImage::Operation_Less;
+        else if (!strcmp(pop, ">"))
+            op = Render::DrawableImage::Operation_Greater;
+        else if (!strcmp(pop, ">="))
+            op = Render::DrawableImage::Operation_GreaterEqual;
+        else if (!strcmp(pop, "!="))
+            op = Render::DrawableImage::Operation_NotEqual;
+        else if (!strcmp(pop, "=="))
+            op = Render::DrawableImage::Operation_Equal;
+        else
+        {
+            VM& vm = GetVM();
+            vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "The operation string is not a valid operation."));
+            return;
+        }
+
+        UInt32 thresholdValue;
+        UInt32 color = 0;
+        UInt32 mask = 0xFFFFFFFF;
+        bool copySource = true;
+        if (!argv[4].Convert2UInt32(thresholdValue))
+            return;
+        if (argc >= 6 && !argv[5].Convert2UInt32(color))
+            return;
+        if (argc >= 7 && !argv[6].Convert2UInt32(mask))
+            return;
+        if (argc >= 8)
+            copySource = argv[7].Convert2Boolean();
+        reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->Threshold(sourceBitmapData->pImage,
+            Render::Rect<SInt32>((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                 (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height)),
+            Render::Point<SInt32>((SInt32)destPoint->x, (SInt32)destPoint->y), op, thresholdValue, color, mask, copySource);
+    }
+#pragma strict_gs_check(pop)
 
     // perlinNoise(baseX, baseY, numOctaves, randomSeed, stitch, fractalNoise[, channelOptions, grayScale, offsets]):
     // offsets is an array of flash.geom.Point, read as x / y float pairs (at most 128 floats).
