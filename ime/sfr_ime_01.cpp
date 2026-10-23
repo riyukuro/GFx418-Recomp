@@ -157,6 +157,12 @@ void FUN_1423daef0(void* self)
 
 extern void FUN_1423d9690(void*, void*, unsigned long long);
 
+// @0x1423cb740
+unsigned HashFunction(const char* text, unsigned long long length)
+{
+    return static_cast<unsigned>(String::BernsteinHashFunctionCIS(text, length, 0x1505)) & 0xffffff;
+}
+
 // @0x1423d9500
 void FUN_1423d9500(void* self)
 {
