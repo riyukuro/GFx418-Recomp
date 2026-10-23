@@ -12,6 +12,7 @@
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/gfx_loaderimpl.h"
+#include "hook/ms2hook.h"
 
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
@@ -19,12 +20,16 @@ extern void FUN_14257db40(void*);
 extern void FUN_14257db50(void*);
 extern void FUN_1429260b0(void*);
 extern void FUN_140006a40(Scaleform::UPInt*);
-extern void FUN_14000b3b0(void**, void*, Scaleform::UPInt);
+extern void FUN_14000b3b0(Scaleform::UPInt*, void*, Scaleform::UPInt);
 extern void FUN_1425925f0(void*);
 extern void FUN_14000a5d0(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a230(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a420(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a730(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*, int);
+extern void FUN_14000b6e0(Scaleform::UPInt*, void*, const unsigned*, Scaleform::UPInt);
+extern void FUN_14000b9e0(Scaleform::UPInt*, void*, void**, Scaleform::UPInt);
+extern unsigned* FUN_1400079b0(unsigned*, const unsigned*);
+extern void FUN_140007870(unsigned*, void**);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
 
@@ -37,6 +42,66 @@ static void ReleaseAs2GCObject(void* object)
         *count = value - 1;
         FUN_1425925f0(object);
     }
+}
+
+static Scaleform::UPInt VideoHashKey4(const void* key)
+{
+    const auto* bytes = static_cast<const unsigned char*>(key);
+    Scaleform::UPInt hash = 0x1505;
+    for (int i = 3; i >= 0; --i) hash = hash * 0x1003f + bytes[i];
+    return hash;
+}
+
+template<class CopyEntry>
+static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const void* key,
+                                 Scaleform::UPInt hash, CopyEntry copyEntry)
+{
+    auto** tableSlot = reinterpret_cast<void**>(tableRef);
+    auto* table = static_cast<Scaleform::UPInt*>(*tableSlot);
+    if (!table) FUN_14000b3b0(tableRef, owner, 8);
+    else if (table[1] * 4 + 4 < table[0] * 5)
+        FUN_14000b3b0(tableRef, owner, table[1] * 2 + 2);
+    table = static_cast<Scaleform::UPInt*>(*tableSlot);
+    const Scaleform::UPInt mask = table[1];
+    ++table[0];
+    const Scaleform::UPInt home = hash & mask;
+    auto* entries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(table) + 0x10);
+    auto* homeEntry = entries + home * 3;
+    if (homeEntry[0] == ~Scaleform::UPInt(1)) {
+        homeEntry[0] = ~Scaleform::UPInt(0);
+        copyEntry(homeEntry + 1, key);
+        return;
+    }
+    Scaleform::UPInt freeIndex = (home + 1) & mask;
+    while (entries[freeIndex * 3] != ~Scaleform::UPInt(1)) freeIndex = (freeIndex + 1) & mask;
+    auto* freeEntry = entries + freeIndex * 3;
+    freeEntry[0] = homeEntry[0];
+    copyEntry(freeEntry + 1, homeEntry + 1);
+    const bool belongsHere = (VideoHashKey4(homeEntry + 1) & mask) == home;
+    if (belongsHere) {
+        copyEntry(homeEntry + 1, key);
+        homeEntry[0] = freeIndex;
+    } else {
+        Scaleform::UPInt predecessor = VideoHashKey4(homeEntry + 1) & mask;
+        auto* previous = entries + predecessor * 3;
+        while (previous[0] != home) {
+            predecessor = previous[0];
+            previous = entries + predecessor * 3;
+        }
+        previous[0] = freeIndex;
+        copyEntry(homeEntry + 1, key);
+        homeEntry[0] = ~Scaleform::UPInt(0);
+    }
+}
+
+static void CopyVideoHashValue(Scaleform::UPInt* destination, const void* source)
+{
+    FUN_1400079b0(reinterpret_cast<unsigned*>(destination), static_cast<const unsigned*>(source));
+}
+
+static void CopyVideoHashPair(Scaleform::UPInt* destination, const void* source)
+{
+    FUN_140007870(reinterpret_cast<unsigned*>(destination), const_cast<void**>(static_cast<void* const*>(source)));
 }
 
 // MS2-FUNCTIONAL: forwards the video sound stream's channel attachment callback when a channel is present.
@@ -1561,6 +1626,58 @@ void FUN_14000b080(void** table)
 // MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
 // @0x14000b120
 void FUN_14000b120(void** table) { FUN_14000b080(table); }
+MS2_REPLACE(0x14000B120, FUN_14000b120, 151, 0x2FA9FB59);
+
+// MS2-FUNCTIONAL: allocates a power-of-two table, rehashes live key/value entries, and releases the old table.
+// @0x14000b3b0
+void FUN_14000b3b0(Scaleform::UPInt* tableRef, void* owner, Scaleform::UPInt requested)
+{
+    auto** slot = reinterpret_cast<void**>(tableRef);
+    if (!requested) { FUN_14000b120(slot); return; }
+    Scaleform::UPInt capacity = 8;
+    while (capacity < requested) capacity <<= 1;
+    unsigned stat = 2;
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* fresh = static_cast<Scaleform::UPInt*>(reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
+        DAT_143b15f60, owner, capacity * 0x18 + 0x10, &stat));
+    fresh[0] = 0;
+    fresh[1] = capacity - 1;
+    auto* freshEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(fresh) + 0x10);
+    for (Scaleform::UPInt i = 0; i < capacity; ++i) freshEntries[i * 3] = ~Scaleform::UPInt(1);
+    auto* old = static_cast<Scaleform::UPInt*>(*slot);
+    if (old) {
+        const Scaleform::UPInt oldCapacity = old[1] + 1;
+        auto* oldEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(old) + 0x10);
+        for (Scaleform::UPInt i = 0; i < oldCapacity; ++i) {
+            auto* entry = oldEntries + i * 3;
+            if (entry[0] == ~Scaleform::UPInt(1)) continue;
+            FUN_14000b6e0(reinterpret_cast<Scaleform::UPInt*>(&fresh), owner,
+                          reinterpret_cast<unsigned*>(entry + 1), VideoHashKey4(entry + 1));
+            ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
+            entry[0] = ~Scaleform::UPInt(1);
+        }
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, old);
+    }
+    *slot = fresh;
+}
+MS2_REPLACE(0x14000B3B0, FUN_14000b3b0, 373, 0x43C35EF0);
+
+// MS2-FUNCTIONAL: inserts a 32-bit key and retained AS2 object into its chained hash bucket.
+// @0x14000b6e0
+void FUN_14000b6e0(Scaleform::UPInt* tableRef, void* owner, const unsigned* keyValue,
+                   Scaleform::UPInt hash)
+{
+    InsertVideoHashEntry(tableRef, owner, keyValue, hash, CopyVideoHashValue);
+}
+MS2_REPLACE(0x14000B6E0, FUN_14000b6e0, 519, 0xCD214316);
+
+// MS2-FUNCTIONAL: inserts a 32-bit key and retained object from the table's pair record.
+// @0x14000b9e0
+void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash)
+{
+    InsertVideoHashEntry(tableRef, owner, pair, hash, CopyVideoHashPair);
+}
+MS2_REPLACE(0x14000B9E0, FUN_14000b9e0, 519, 0x13C8EE9C);
 
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies, then optionally deletes the owner.
 // @0x14000b230
@@ -1648,6 +1765,7 @@ void FUN_14000bbf0(void** array)
     if (*array) FUN_14000b530(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
+MS2_REPLACE(0x14000BBF0, FUN_14000bbf0, 48, 0x2BDC02A7);
 
 // MS2-FUNCTIONAL: destroys the NetStream provider and optionally frees its allocation.
 // @0x14000cbd0
@@ -1657,6 +1775,7 @@ void* FUN_14000cbd0(Scaleform::GFx::AS2::VideoProviderNetStream* provider, unsig
     if (flags & 1) Scaleform::Memory::Free(provider);
     return provider;
 }
+MS2_REPLACE(0x14000CBD0, FUN_14000cbd0, 55, 0xF2F45D2B);
 
 // MS2-FUNCTIONAL: destroys the NetStream constructor function and optionally releases its allocation.
 // @0x14000cee0
@@ -1667,6 +1786,7 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFuncti
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
+MS2_REPLACE(0x14000CEE0, FUN_14000cee0, 55, 0xD65AF946);
 
 // MS2-FUNCTIONAL: resizes storage for 48-byte video-track records with four-slot rounding.
 // @0x14000b940
@@ -1697,10 +1817,10 @@ void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
 // @0x14000b680
 void FUN_14000b680(void** table, void* owner)
 {
-    if (!*table) { FUN_14000b3b0(table, owner, 8); return; }
+    if (!*table) { FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, 8); return; }
     auto* fields = static_cast<Scaleform::UPInt*>(*table);
     if (fields[1] * 4 + 4 < fields[0] * 5)
-        FUN_14000b3b0(table, owner, fields[1] * 2 + 2);
+        FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, fields[1] * 2 + 2);
 }
 
 // MS2-FUNCTIONAL: adjusts the 48-byte track-record array with the observed shrink/growth policy.
