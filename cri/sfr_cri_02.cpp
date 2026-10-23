@@ -32,6 +32,7 @@ void*    FUN_14002d970(void* mem, void* pconfig);                       // Video
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
 void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
 void*    FUN_14002abd0(void* mem, int format, const void* psize, void* ptexman, void* pplayer); // VideoImage ctor
+void     FUN_140037950(void* player, const char* message, int severity);
 
 // ==== CRI heap backed object allocation ============================================================================
 
@@ -884,6 +885,150 @@ VideoReader* VideoReaderConfigSmp::CreateReader()
 }
 
 }}} // namespace Scaleform::GFx::Video
+
+// ==== CRI Movie player state and frame-buffer helpers ===============================================================
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
+// @0x140031020
+void FUN_140031020(void* player, CriUint32 value)
+{
+    *(CriUint32*)((CriUint8*)player + 0x8c4) = value;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
+// @0x140031040
+void criMvPly_SetAudioTrack(void* player, CriUint32 track)
+{
+    *(CriUint32*)((CriUint8*)player + 0x8c8) = track;
+}
+
+// MS2-FUNCTIONAL: preserves the executable's invalid-value store after its diagnostic call.
+// @0x140031060
+void FUN_140031060(void* player, CriSint32 value)
+{
+    if (value < 1)
+        FUN_140037950(player, "E10120701M: the parameter nframe must be greater than 0", 0);
+    *(CriSint32*)((CriUint8*)player + 0xed8) = value;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
+// @0x1400310b0
+CriSint32 criMvPly_GetStatus(void* player)
+{
+    return *(CriSint32*)((CriUint8*)player + 4);
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
+// @0x1400310e0
+CriSint32 getInternalStatus(void* player)
+{
+    return *(CriSint32*)((CriUint8*)player + 4);
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this helper is rebuilt with our VS2017 toolset.
+// @0x1400351c0
+void crimvply_clearAlphaFrameInfoMembers(void* info)
+{
+    memset(info, 0, 0x40);
+    *(CriSint32*)((CriUint8*)info + 0x08) = -1;
+    *(CriUint32*)((CriUint8*)info + 0x28) = 1;
+    *(CriSint32*)((CriUint8*)info + 0x30) = -1;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this predicate is rebuilt with our VS2017 toolset.
+// @0x140035560
+CriBool crimvply_isUnderGetFrameCondition(void* player)
+{
+    if (*(CriSint32*)((CriUint8*)player + 8) == 1)
+        return 0;
+    CriSint32 status = *(CriSint32*)((CriUint8*)player + 4);
+    return status == 4 || status == 5;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this frame-info copier is rebuilt with our VS2017 toolset.
+// @0x1400358d0
+CriUint32 FUN_1400358d0(void* output, const void* info)
+{
+    CriMvPlaneInfo* out = (CriMvPlaneInfo*)output;
+    const CriMvFramePlaneSource* in = (const CriMvFramePlaneSource*)info;
+    memset(out, 0, 0x40);
+    CriUint32 planes = in->PlaneCount;
+    if (planes != 0)
+    {
+        out[0].Buffer = in->Planes[0].Buffer;
+        out[0].Stride = in->Planes[0].Stride * (CriSint32)in->Planes[0].Height;
+        out[0].Height = in->Planes[0].Height;
+    }
+    if (planes > 1)
+    {
+        out[1].Buffer = in->Planes[1].Buffer;
+        out[1].Stride = in->Planes[1].Stride * (CriSint32)in->Planes[1].Height;
+        out[1].Height = in->Planes[1].Height;
+    }
+    if (planes > 2)
+    {
+        out[2].Buffer = in->Planes[2].Buffer;
+        out[2].Stride = in->Planes[2].Stride * (CriSint32)in->Planes[2].Height;
+        out[2].Height = in->Planes[2].Height;
+    }
+    return planes;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this plane updater is rebuilt with our VS2017 toolset.
+// @0x1400359e0
+void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const CriMvAlphaDecoderFrameInfo* info)
+{
+    if (info->PlaneIndex != -1)
+    {
+        CriMvPlaneInfo* dst = &((CriMvYuvBufferState*)player)->Plane;
+        dst->Buffer = info->Buffer;
+        dst->Stride = (CriSint32)info->Height * (CriSint32)info->Stride;
+        dst->Height = info->Height;
+    }
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this setter is rebuilt with our VS2017 toolset.
+// @0x140036450
+void criMvPly_SetSubtitleChannel(void* player, CriUint32 channel)
+{
+    *(CriUint32*)((CriUint8*)player + 0xe34) = channel;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this setter is rebuilt with our VS2017 toolset.
+// @0x1400372c0
+void criMvPly_SetPcmFormat(void* player, CriSint32 format)
+{
+    *(CriSint32*)((CriUint8*)player + 0xe18) = format;
+    *(CriUint32*)((CriUint8*)player + 0xe1c) = format == 0 ? 2 : 4;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this setter is rebuilt with our VS2017 toolset.
+// @0x140037740
+void FUN_140037740(void* player, CriUint32 value0, CriUint32 value1)
+{
+    CriMvStateFlags* state = (CriMvStateFlags*)player;
+    state->Value0 = value0;
+    state->Value1 = value1;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this setter is rebuilt with our VS2017 toolset.
+// @0x140037780
+void FUN_140037780(void* player, CriUint32 value)
+{
+    ((CriMvStateFlags*)player)->Value2 = value;
+}
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this state transition is rebuilt with our VS2017 toolset.
+// @0x1400379b0
+void* crimvply_transitErrorState(void* player, void* fallback)
+{
+    if (player)
+    {
+        ((CriMvErrorState*)player)->Error = 1;
+        return player;
+    }
+    return fallback;
+}
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
 // MS2-PIN: ??_7VideoPlayerImpl@Video@GFx@Scaleform@@6B@ 0x1431b9260

@@ -141,6 +141,51 @@ struct CriFixedAllocator
     CriUint32 Size;
 };
 
+// YUV plane description passed between the CRI movie and alpha decoders.
+struct CriMvPlaneInfo
+{
+    CriUint64 Buffer;
+    CriSint32 Stride;
+    CriUint32 Height;
+};
+
+struct CriMvFramePlaneSource
+{
+    CriUint8 Reserved0[0x38];
+    CriUint32 PlaneCount;
+    CriUint32 Reserved1;
+    CriMvPlaneInfo Planes[3];
+};
+
+struct CriMvAlphaDecoderFrameInfo
+{
+    CriUint64 Buffer;
+    CriSint32 PlaneIndex;
+    CriUint32 Reserved;
+    CriUint32 Stride;
+    CriUint32 Height;
+};
+
+struct CriMvYuvBufferState
+{
+    CriUint8 Reserved[0x30];
+    CriMvPlaneInfo Plane;
+};
+
+struct CriMvStateFlags
+{
+    CriUint8 Reserved[0xe58];
+    CriUint32 Value0;
+    CriUint32 Value1;
+    CriUint32 Value2;
+};
+
+struct CriMvErrorState
+{
+    CriUint8 Reserved[0xf14];
+    CriUint32 Error;
+};
+
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
 void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 
