@@ -15,7 +15,7 @@
 // MS2-RANGE: 0x1424c9630-0x1424c96a0 .text$mn
 // MS2-RANGE: 0x1423dbde0-0x1423dbe60 .text$mn
 // MS2-RANGE: 0x1423dbea0-0x1423dc0b0 .text$mn
-// MS2-RANGE: 0x1428eb050-0x1428eb900 .text$mn
+// MS2-RANGE: 0x1428eb050-0x1428ebd60 .text$mn
 // MS2-RANGE: 0x1428ec0b0-0x1428ec780 .text$mn
 // MS2-RANGE: 0x14292bdc0-0x14292bdf0 .text$mn
 // MS2-RANGE: 0x142993ff0-0x142994160 .text$mn
@@ -41,10 +41,15 @@
 // MS2-RANGE: 0x1428f1e70-0x1428f2040 .text$mn
 // MS2-RANGE: 0x1428f86b0-0x1428f8720 .text$mn
 // MS2-RANGE: 0x1428f9ba0-0x1428f9cf0 .text$mn
+// MS2-RANGE: 0x1428f5740-0x1428f65c0 .text$mn
 // MS2-RANGE: 0x1428f6de0-0x1428f7290 .text$mn
 // MS2-RANGE: 0x1428f8540-0x1428f86b0 .text$mn
 // MS2-RANGE: 0x1428fafd0-0x1428fb110 .text$mn
 // MS2-RANGE: 0x1428f74a0-0x1428f7580 .text$mn
+// MS2-RANGE: 0x1428f7740-0x1428f7c10 .text$mn
+// MS2-RANGE: 0x1428f9f50-0x1428fa620 .text$mn
+// MS2-RANGE: 0x1428fa7a0-0x1428faed0 .text$mn
+// MS2-RANGE: 0x1428f7d30-0x1428f7ed0 .text$mn
 // MS2-RANGE: 0x1428f7ed0-0x1428f8540 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
@@ -82,6 +87,8 @@
 #include "../include/gfx/as3/obj/as3_obj_natives.h"
 #include "../include/gfx/as3/as3_avm.h"
 #include "../include/gfx/gfx_imemanager.h"
+#include "../include/render/text_highlight.h"
+#include "../include/gfx/gfx_imecandidateliststyle.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -1131,6 +1138,306 @@ void GAS_GlobalGetInputLanguage(const FnCall& fn)
     fn.Result->SetString(lang);
 }
 
+// Global ASnative(800, 2): the native mouse button state test (sfr_as2_05), undefined for any other pair.
+void GAS_ASnativeMouseButtonStates(const FnCall& fn);
+
+// @0x1428f7d30
+// MS2-FUNCTIONAL same logic; the exe's argument lookups and reference handling are scheduled differently
+void GAS_GlobalASnative(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    if (fn.NArgs < 2)
+        return;
+    unsigned a = fn.Arg(0).ToUInt32(fn.Env);
+    unsigned b = fn.Arg(1).ToUInt32(fn.Env);
+    if (a != 800 || b != 2)
+        return;
+    Ptr<CFunctionObject> pfunc =
+        SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env->GetSC(), GAS_ASnativeMouseButtonStates);
+    fn.Result->SetAsFunction(FunctionRef(pfunc));
+}
+
+// Global ASSetPropFlags(object, names, setTrue[, setFalse]): sets / clears the DontEnum/DontDelete/ReadOnly bits of the
+// named members (a comma separated string or an array), of all members for null names.
+// @0x1428f7740
+// MS2-FUNCTIONAL same logic; the exe's argument decoding and visitor setup are scheduled differently
+void GAS_GlobalASSetPropFlags(const FnCall& fn)
+{
+    class FlagsVisitor : public ObjectInterface::MemberVisitor
+    {
+    public:
+        ObjectInterface* pObj;
+        ASStringContext* pSC;
+        UByte            SetTrue;
+        UByte            SetFalse;
+
+        // @0x1428f7bb0
+        virtual void Visit(const ASString& name, const Value& val, UByte flags)
+        {
+            pObj->SetMemberFlags(pSC, name, (UByte)((~SetFalse & flags) | SetTrue));
+        }
+    };
+
+    UByte            version = fn.Env->GetVersion();
+    ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
+    if (!pobj)
+        return;
+
+    Ptr<ArrayObject> props;
+    int              setFalseDefault = 0;
+    const Value&     names = fn.Arg(1);
+    if (names.IsString())
+    {
+        ASString list = names.ToString(fn.Env);
+        props = StringProto::StringSplit(fn.Env, list, ",", 0x3fffffff);
+        setFalseDefault = -1;
+    }
+    else if (names.IsObject())
+    {
+        Object* pn = names.ToObject(fn.Env);
+        if (pn && pn->GetObjectType() == ObjectInterface::Object_Array)
+            props = static_cast<ArrayObject*>(pn);
+        else if (pn && pn->GetObjectType() == ObjectInterface::Object_String)
+        {
+            ASString list = names.ToString(fn.Env);
+            props = StringProto::StringSplit(fn.Env, list, ",", 0x3fffffff);
+        }
+        else
+            return;
+        setFalseDefault = -1;
+    }
+    else if (!names.IsNull())
+        return;
+
+    UByte setTrue = (UByte)(fn.Arg(2).ToInt32(fn.Env) & 7);
+    UByte setFalse;
+    if (fn.NArgs == 3)
+        setFalse = (UByte)((version == 5 ? setFalseDefault : 0) & 7);
+    else
+        setFalse = (UByte)(fn.Arg(3).ToUInt32(fn.Env) & 7);
+
+    ASStringContext* psc = fn.Env->GetSC();
+    if (!props)
+    {
+        FlagsVisitor visitor;
+        visitor.pObj = pobj;
+        visitor.pSC = psc;
+        visitor.SetTrue = setTrue;
+        visitor.SetFalse = setFalse;
+        pobj->VisitMembers(psc, &visitor, 0xc, 0);
+    }
+    else
+    {
+        for (int i = 0; i < props->GetSize(); i++)
+        {
+            Value* pv = props->GetElementPtr(i);
+            if (!pv)
+                continue;
+            ASString name = pv->ToString(fn.Env);
+            Member   m;
+            if (pobj->FindMember(psc, name, &m))
+                pobj->SetMemberFlags(psc, name, (UByte)((~setFalse & m.mValue.T.PropFlags) | setTrue));
+        }
+    }
+}
+
+// ---- Global IME candidate list style ----
+}}} // namespace Scaleform::GFx::AS2
+// Bodies of the exe called here, by their addresses.
+bool FUN_1425b4570(void* pime, Scaleform::GFx::IMECandidateListStyle* pstyle);       // IMEManagerBase::GetCandidateListStyle
+bool FUN_1425b4de0(void* pime, const Scaleform::GFx::IMECandidateListStyle& style);  // IMEManagerBase::SetCandidateListStyle
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// Global getIMECandidateListStyle(): an object with the style members that are set.
+// @0x1428fa7a0
+// MS2-FUNCTIONAL same members and conversions; the exe's temporaries and branch layout differ
+void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn)
+{
+    Ptr<IMEManagerBase> pime = fn.Env->GetTarget()->GetMovieImpl()->GetIMEManager();
+    if (!pime)
+        return;
+    IMECandidateListStyle style;
+    if (!FUN_1425b4570(pime, &style))
+        return;
+    Ptr<Object>      pobj = SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+    ASStringContext* psc = fn.Env->GetSC();
+    if (style.HasTextColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("textColor"), Value((Number)style.GetTextColor()), PropFlags());
+    if (style.HasBackgroundColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("backgroundColor"), Value((Number)style.GetBackgroundColor()), PropFlags());
+    if (style.HasIndexBackgroundColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("indexBackgroundColor"), Value((Number)style.GetIndexBackgroundColor()), PropFlags());
+    if (style.HasSelectedTextColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("selectedTextColor"), Value((Number)style.GetSelectedTextColor()), PropFlags());
+    if (style.HasSelectedBackgroundColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("selectedTextBackgroundColor"), Value((Number)style.GetSelectedBackgroundColor()), PropFlags());
+    if (style.HasSelectedIndexBackgroundColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("selectedIndexBackgroundColor"), Value((Number)style.GetSelectedIndexBackgroundColor()), PropFlags());
+    if (style.HasFontSize())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("fontSize"), Value((Number)style.GetFontSize()), PropFlags());
+    if (style.HasReadingWindowTextColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("readingWindowTextColor"), Value((Number)style.GetReadingWindowTextColor()), PropFlags());
+    if (style.HasReadingWindowBackgroundColor())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("readingWindowBackgroundColor"), Value((Number)style.GetReadingWindowBackgroundColor()), PropFlags());
+    if (style.HasReadingWindowFontSize())
+        pobj->SetMemberRaw(psc, psc->CreateConstString("readingWindowFontSize"), Value((Number)style.GetReadingWindowFontSize()), PropFlags());
+    fn.Result->SetAsObject(pobj);
+}
+
+// Global setIMECandidateListStyle(object): the numeric members of the object become the style.
+// @0x1428f9f50
+// MS2-FUNCTIONAL same members and conversions; the exe's temporaries and branch layout differ
+void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    Ptr<IMEManagerBase> pime = fn.Env->GetTarget()->GetMovieImpl()->GetIMEManager();
+    if (!pime)
+        return;
+    Object* pobjArg = fn.Arg(0).ToObject(fn.Env);
+    if (!pobjArg)
+        return;
+    Ptr<Object>         holder = pobjArg;
+    ObjectInterface*    pobj = pobjArg;
+    ASStringContext*    psc = fn.Env->GetSC();
+    IMECandidateListStyle style;
+    Value               val;
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("textColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetTextColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("backgroundColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetBackgroundColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("indexBackgroundColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetIndexBackgroundColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("selectedTextColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetSelectedTextColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("selectedTextBackgroundColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetSelectedBackgroundColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("selectedIndexBackgroundColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetSelectedIndexBackgroundColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("fontSize"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetFontSize((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("readingWindowTextColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetReadingWindowTextColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("readingWindowBackgroundColor"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetReadingWindowBackgroundColor((UInt32)(SInt64)n);
+    }
+    if (pobj->GetMemberRaw(psc, psc->CreateConstString("readingWindowFontSize"), &val))
+    {
+        Number n = val.ToNumber(fn.Env);
+        if (!NumberUtil::IsNaNOrInfinity(n))
+            style.SetReadingWindowFontSize((UInt32)(SInt64)n);
+    }
+    FUN_1425b4de0(pime, style);
+}
+
+// ---- TextField IME composition string styles ----
+}}} // namespace Scaleform::GFx::AS2
+// Bodies of the exe called here (not recovered yet), by their addresses.
+Scaleform::GFx::AS2::TextFieldObject* FUN_142956410(Scaleform::GFx::AS2::AvmTextField* ptextField);   // AvmTextField::GetTextFieldASObject
+void FUN_142981750(Scaleform::GFx::AS2::TextFieldObject* pobj, const Scaleform::GFx::Text::IMEStyle* pstyle); // TextFieldObject::SetIMECompositionStringStyles
+Scaleform::Render::Text::HighlightInfo FUN_14296e9f0(const Scaleform::GFx::AS2::FnCall& fn, unsigned index,
+                                                     const Scaleform::Render::Text::HighlightInfo& base);   // TextFieldProto::ParseStyle
+void FUN_142968610(const Scaleform::GFx::AS2::FnCall& fn, const Scaleform::Render::Text::HighlightInfo& info); // TextFieldProto::MakeStyle
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// The category of an IME style name (exe 0x1429487e0).
+int GFx_StringToIMEStyleCategory(const ASString& name);
+
+// The IME styles as the text field object stores them (Text::IMEStyle, 0x54 bytes): a highlight look per category.
+struct IMEStyleData
+{
+    enum { SC_MaxNum = 5 };
+    Render::Text::HighlightInfo HighlightStyles[SC_MaxNum];
+    UByte                       PresenceMask;
+    IMEStyleData() : PresenceMask(0) {}
+    bool HasElement(UPInt n) const { return (PresenceMask & (1 << n)) != 0; }
+};
+
+// The text field object of this (a text field or its AS object), referenced.
+static Ptr<TextFieldObject> GetThisTextFieldObject(const FnCall& fn)
+{
+    if (!fn.ThisPtr)
+        return 0;
+    if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextField)
+        return FUN_142956410((AvmTextField*)fn.ThisPtr);
+    if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextFieldASObject)
+        return (TextFieldObject*)fn.ThisPtr;
+    return 0;
+}
+
+// TextField.setIMECompositionStringStyle(category, style)
+// @0x1428eb900
+// MS2-FUNCTIONAL same sequence; the exe copies the highlight records field by field and keeps the temporaries in different slots
+void TextFieldProto::SetIMECompositionStringStyle(const FnCall& fn)
+{
+    Ptr<TextFieldObject> ptf = GetThisTextFieldObject(fn);
+    if (!ptf || fn.NArgs < 1)
+        return;
+    ASString                 name = fn.Arg(0).ToString(fn.Env);
+    int cat = GFx_StringToIMEStyleCategory(name);
+    if (cat < IMEStyleData::SC_MaxNum)
+    {
+        IMEStyleData  newStyle;
+        IMEStyleData* pold = (IMEStyleData*)ptf->GetIMECompositionStringStyles();
+        if (pold)
+            newStyle = *pold;
+        newStyle.HighlightStyles[cat] = FUN_14296e9f0(fn, 1, newStyle.HighlightStyles[cat]);
+        newStyle.PresenceMask |= (UByte)(1 << cat);
+        FUN_142981750(ptf, (const Text::IMEStyle*)&newStyle);
+    }
+}
+
+// TextField.getIMECompositionStringStyle(category)
+// @0x1428ebbd0
+// MS2-FUNCTIONAL same sequence; temporaries and release order differ
+void TextFieldProto::GetIMECompositionStringStyle(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Ptr<TextFieldObject> ptf = GetThisTextFieldObject(fn);
+    if (!ptf || fn.NArgs < 1)
+        return;
+    IMEStyleData* pstyles = (IMEStyleData*)ptf->GetIMECompositionStringStyles();
+    ASString      name = fn.Arg(0).ToString(fn.Env);
+    int           cat = GFx_StringToIMEStyleCategory(name);
+    if (pstyles && cat < IMEStyleData::SC_MaxNum && pstyles->HasElement(cat))
+        FUN_142968610(fn, pstyles->HighlightStyles[cat]);
+}
+
 // ---- Global escape functions ----
 
 // @0x1428f7ed0
@@ -1226,6 +1533,160 @@ void StyleSheetProto::ParseCSS(const FnCall& fn)
     }
     else
         fn.ThisPtrError("StyleSheet");
+}
+
+// Array.sort([compareFunction], [options]): sorts a copy and swaps it in, or returns a copy / 0 for a duplicate.
+// @0x1428f5740
+// MS2-FUNCTIONAL same sequence; the exe keeps the argument/functor temporaries in different registers
+void ArrayObject::ArraySort(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+    pthis->LengthValueOverriden = false;
+
+    FunctionRef sortFunc;
+    int         flags = 0;
+    if (fn.NArgs >= 1)
+    {
+        if (fn.Arg(0).IsFunction())
+        {
+            sortFunc = fn.Arg(0).ToFunction(fn.Env);
+            if (fn.NArgs >= 2)
+                flags = fn.Arg(1).ToInt32(fn.Env);
+        }
+        else
+            flags = fn.Arg(0).ToInt32(fn.Env);
+    }
+
+    Ptr<ArrayObject> pnew = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    pnew->ShallowCopyFrom(*pthis);
+
+    ArraySortFunctor sf(fn.ThisPtr, flags, sortFunc, fn.Env, pthis->LogPtr);
+    Alg::ArrayAdaptor<Value*> adaptor(pnew->Elements.GetDataPtr(), pnew->Elements.GetSize());
+    if (!Alg::QuickSortSlicedSafe(adaptor, 0, pnew->Elements.GetSize(), sf))
+        fn.Env->LogScriptError("Array.sort - sorting failed, check your sort functor");
+
+    bool duplicate = false;
+    if (flags & SortFlags_UniqueSort)
+    {
+        for (int i = 1; i < pnew->GetSize(); i++)
+            if (sf.Compare(pnew->Elements[i - 1], pnew->Elements[i]) == 0)
+            {
+                duplicate = true;
+                break;
+            }
+    }
+    if (duplicate)
+    {
+        fn.Result->SetInt(0);
+        ArrayObjectElements_Resize(&pnew->Elements, 0);
+    }
+    else if (flags & SortFlags_ReturnIndexedArray)
+    {
+        pnew->MakeDeepCopy(fn.Env->GetHeap());
+        fn.Result->SetAsObject(pnew);
+    }
+    else
+    {
+        pthis->ShallowCopyFrom(*pnew);
+        ArrayObjectElements_Resize(&pnew->Elements, 0);
+        fn.Result->SetAsObject(pthis);
+    }
+}
+
+// Array.sortOn(fieldNames, [options]): sorts by the named members of the elements, one option word per field.
+// @0x1428f5d60
+// MS2-FUNCTIONAL same sequence; the exe's functor array construction and temporaries are scheduled differently
+void ArrayObject::ArraySortOn(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Array);
+    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
+    ArrayCC<ASString> fields(fn.Env->GetBuiltin(ASBuiltin_Array));
+    ArrayLH<int>      options;
+    if (fn.NArgs == 0)
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    pthis->LengthValueOverriden = false;
+
+    ASString dummy = fn.Env->GetBuiltin(ASBuiltin_Array);
+    Object* parr = fn.Arg(0).ToObject(fn.Env);
+    if (parr && parr->GetObjectType() == Object_Array)
+    {
+        ArrayObject* pa = static_cast<ArrayObject*>(parr);
+        for (int i = 0; i < pa->GetSize(); i++)
+        {
+            if (Value* pv = pa->GetElementPtr(i))
+                fields.PushBack(pv->ToString(fn.Env));
+            else
+                fields.PushBack(dummy);
+        }
+    }
+    else
+        fields.PushBack(fn.Arg(0).ToString(fn.Env));
+
+    options.Resize(fields.GetSize());
+    for (UPInt i = 0; i < options.GetSize(); i++)
+        options[i] = 0;
+    int flags = 0;
+    if (fn.NArgs >= 2)
+    {
+        Object* po = fn.Arg(1).ToObject(fn.Env);
+        if (po && po->GetObjectType() == Object_Array)
+        {
+            ArrayObject* pa = static_cast<ArrayObject*>(po);
+            for (int i = 0; i < pa->GetSize() && (UPInt)i < fields.GetSize(); i++)
+                if (Value* pv = pa->GetElementPtr(i))
+                    options[i] = pv->ToInt32(fn.Env);
+        }
+        else
+        {
+            flags = fn.Arg(1).ToInt32(fn.Env);
+            for (UPInt i = 0; i < fields.GetSize(); i++)
+                options[i] = flags;
+        }
+    }
+
+    Ptr<ArrayObject> pnew = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    ArrayObjectElements_Resize(&pnew->Elements, pthis->Elements.GetSize());
+    for (UPInt i = 0; i < pnew->Elements.GetSize(); i++)
+        pnew->Elements[i] = pthis->Elements[i];
+
+    ArraySortOnFunctor sf(fn.ThisPtr, &fields, fn.Env, pthis->LogPtr);
+    sf.GetFunctorArray().Resize(fields.GetSize());
+    for (UPInt i = 0; i < fields.GetSize(); i++)
+        sf.GetFunctorArray()[i] = ArraySortFunctor(fn.ThisPtr, options[i], FunctionRef(), fn.Env, pthis->LogPtr);
+    Alg::ArrayAdaptor<Value*> adaptor(pnew->Elements.GetDataPtr(), pnew->Elements.GetSize());
+    Alg::QuickSortSlicedSafe(adaptor, 0, pnew->Elements.GetSize(), sf);
+
+    bool duplicate = false;
+    if (flags & SortFlags_UniqueSort)
+    {
+        for (int i = 1; i < pnew->GetSize(); i++)
+            if (sf.Compare(pnew->Elements[i - 1], pnew->Elements[i]) == 0)
+            {
+                duplicate = true;
+                break;
+            }
+    }
+    if (duplicate)
+    {
+        fn.Result->SetInt(0);
+    }
+    else if (flags & SortFlags_ReturnIndexedArray)
+    {
+        pnew->MakeDeepCopy(fn.Env->GetHeap());
+        fn.Result->SetAsObject(pnew);
+    }
+    else
+    {
+        ArrayObjectElements_Resize(&pthis->Elements, pnew->Elements.GetSize());
+        for (UPInt i = 0; i < pnew->Elements.GetSize(); i++)
+            pthis->Elements[i] = pnew->Elements[i];
+        ArrayObjectElements_Resize(&pnew->Elements, 0);
+        fn.Result->SetAsObject(pthis);
+    }
 }
 
 // ---- Matrix ----
@@ -3346,3 +3807,4 @@ ASString VM::AsString(const Value& v)
 // MS2-PIN: ??_7RemoveObjectTag@GFx@Scaleform@@6B@ 0x14313bc10
 // MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510
 // MS2-PIN: ?TransformByInverse@?$Matrix2x4@M@Render@Scaleform@@QEBA?AV?$Point@M@23@AEBV423@@Z 0x142447090
+// MS2-PIN: ??_7FlagsVisitor@?1??GAS_GlobalASSetPropFlags@AS2@GFx@Scaleform@@YAXAEBVFnCall@234@@Z@6B@ 0x143214fb8

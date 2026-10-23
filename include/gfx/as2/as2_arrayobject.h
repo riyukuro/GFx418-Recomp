@@ -209,6 +209,12 @@ private:
 class ArraySortOnFunctor
 {
 public:
+    ArraySortOnFunctor(ObjectInterface* pthis, const ArrayCC<ASString>* fields, Environment* penv, const Log* plog)
+        : This(pthis), FieldArray(fields), Env(penv), LogPtr(plog)
+    {
+    }
+    // The per-field functors the caller fills in.
+    Array<ArraySortFunctor>& GetFunctorArray() { return FunctorArray; }
     ArraySortOnFunctor(const ArraySortOnFunctor& src); // exe 0x142918270
 
     // Negative when a sorts before b (exe 0x142934f90).

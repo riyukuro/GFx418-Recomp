@@ -724,6 +724,14 @@ protected:
     virtual void Finalize_GC();
 };
 
+// TextField.prototype IME natives (the rest of the class is not modeled yet).
+class TextFieldProto
+{
+public:
+    static void SetIMECompositionStringStyle(const FnCall& fn); // exe 0x1428eb900
+    static void GetIMECompositionStringStyle(const FnCall& fn); // exe 0x1428ebbd0
+};
+
 // StyleSheet.prototype: the CSS methods working on the style manager at +0x68.
 class StyleSheetProto : public Prototype<StyleSheetObject>
 {
