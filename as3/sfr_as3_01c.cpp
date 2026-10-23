@@ -403,6 +403,15 @@ template struct ThunkFunc1<Instances::fl::XMLList, 1, const Value, const Value&>
 typedef ThunkFunc0<Instances::fl::XMLList, 2, SInt32> TFunc_Instances_XMLList_AS3length;
 template struct ThunkFunc0<Instances::fl::XMLList, 2, SInt32>;
 
+// @0x1423ef9b0
+Value::Value(Instances::Namespace* v)
+    : Flags(kNamespace)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
 namespace InstanceTraits
 {
     // Traits of a method's activation object (its local slots), unnamed, in the public namespace. vftable
