@@ -2549,6 +2549,13 @@ unsigned long long FUN_1423da730(void* raw, int state)
     return 0;
 }
 
+// MS2-FUNCTIONAL: refreshes the keyboard layout and mode label through the recovered shared language update path.
+// @0x1423d8870
+void FUN_1423d8870(unsigned long long* manager)
+{
+    FUN_1423d7140(manager);
+}
+
 // MS2-FUNCTIONAL: creates the IME COM manager and records both executable callback interfaces and their result keys.
 // @0x1423daae0
 unsigned char FUN_1423daae0(void* raw)
