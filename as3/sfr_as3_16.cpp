@@ -458,6 +458,46 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
     return AbstractEqual(result, num, r);
 }
 
+// ECMA-262 11.8.5: undefined3 when either side is NaN.
+// MS2-FUNCTIONAL: exe shares one release tail for both temporaries; our inlined conversions are longer
+// @0x1424e4f40
+CheckResult AbstractLessThan(Boolean3& result, const Value& l, const Value& r)
+{
+    Value _1;
+    Value _2;
+
+    if (!l.Convert2PrimitiveValueUnsafe(_1, Value::hintNumber) || !r.Convert2PrimitiveValueUnsafe(_2, Value::hintNumber))
+        return false;
+
+    const Value::KindType k1 = _1.GetKind();
+    const Value::KindType k2 = _2.GetKind();
+
+    if (k1 == Value::kInt && k2 == Value::kInt)
+    {
+        result = _1.AsInt() < _2.AsInt() ? true3 : false3;
+        return true;
+    }
+    if (k1 == Value::kUInt && k2 == Value::kUInt)
+    {
+        result = _1.AsUInt() < _2.AsUInt() ? true3 : false3;
+        return true;
+    }
+    if (k1 == Value::kString && k2 == Value::kString && _1.AsStringNode() && _2.AsStringNode())
+    {
+        result = _1.AsString() < _2.AsString() ? true3 : false3;
+        return true;
+    }
+
+    if (!_1.ToNumberValueInline() || !_2.ToNumberValueInline())
+        return false;
+
+    Boolean3 r3 = undefined3;
+    if (!_1.IsNaN() && !_2.IsNaN())
+        r3 = _1.AsNumber() < _2.AsNumber() ? true3 : false3;
+    result = r3;
+    return true;
+}
+
 // ==== traits =========================================================================================================
 
 namespace fl { extern const char* NS_AS3; }
