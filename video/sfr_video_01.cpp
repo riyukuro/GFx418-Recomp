@@ -391,6 +391,84 @@ void FUN_140004650(void* object, double threshold)
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[22])(impl);
 }
 
+// MS2-FUNCTIONAL: updates the frame-pool count on the NetStream's player and forwards the new value.
+// @0x140004680
+void FUN_140004680(void* object, double count)
+{
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    void* impl = *reinterpret_cast<void**>(owner + 0x48);
+    *reinterpret_cast<int*>(owner + 0xc4) = static_cast<int>(count);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[23])(impl);
+}
+
+// MS2-FUNCTIONAL: updates buffer time on the NetStream's player and forwards it.
+// @0x1400046b0
+void FUN_1400046b0(void* object, double time)
+{
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    void* impl = *reinterpret_cast<void**>(owner + 0x48);
+    *reinterpret_cast<float*>(owner + 0xcc) = static_cast<float>(time);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[24])(impl);
+}
+
+// MS2-FUNCTIONAL: updates the open timeout on the NetStream's player and forwards it.
+// @0x1400046e0
+void FUN_1400046e0(void* object, double timeout)
+{
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    void* impl = *reinterpret_cast<void**>(owner + 0x48);
+    *reinterpret_cast<float*>(owner + 0xd0) = static_cast<float>(timeout);
+    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[26])(impl);
+}
+
+// MS2-FUNCTIONAL: forwards a seek position to the active player implementation.
+// @0x140004710
+void FUN_140004710(void* object, double position)
+{
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    void* impl = *reinterpret_cast<void**>(owner + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*, int)>((*reinterpret_cast<void***>(impl))[7])(impl, static_cast<int>(position));
+}
+
+// MS2-FUNCTIONAL: forwards the video-info request to the active player with the stored output buffer.
+// @0x140004770
+void FUN_140004770(void* object)
+{
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    void* impl = *reinterpret_cast<void**>(owner + 0x48);
+    if (impl) reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(impl))[28])(impl, owner + 0xf0);
+}
+
+// MS2-FUNCTIONAL: builds the three-field URL location value using owned copies of the two strings.
+// @0x140004290
+Scaleform::GFx::URLBuilder::LocationInfo* FUN_140004290(
+    Scaleform::GFx::URLBuilder::LocationInfo* location, Scaleform::GFx::URLBuilder::FileUse use,
+    const Scaleform::String& filename, const Scaleform::String& parentPath)
+{
+    location->Use = use;
+    new (&location->FileName) Scaleform::String(filename);
+    new (&location->ParentPath) Scaleform::String(parentPath);
+    return location;
+}
+
+// MS2-FUNCTIONAL: destroys a character handle and frees its allocation when requested.
+// @0x1400042d0
+Scaleform::GFx::CharacterHandle* FUN_1400042d0(Scaleform::GFx::CharacterHandle* handle, unsigned flags)
+{
+    handle->~CharacterHandle();
+    if (flags & 1) Scaleform::Memory::Free(handle);
+    return handle;
+}
+
+// MS2-FUNCTIONAL: destroys the FnCall logging frame and frees its allocation when requested.
+// @0x1400043b0
+Scaleform::GFx::AS2::FnCall* FUN_1400043b0(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
+{
+    call->~FnCall();
+    if (flags & 1) operator delete(call);
+    return call;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
