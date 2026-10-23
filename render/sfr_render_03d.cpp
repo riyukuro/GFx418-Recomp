@@ -1780,6 +1780,140 @@ bool ShapeMeshProvider::acquireTessMeshes(TessBase* tess, const Matrix2F& mtx, V
     return createNullMesh(pout, layer, meshGenFlags);
 }
 
+// One stroke style of the layer. Thin strokes without AA edges become hairlines, solid opaque strokes go through the
+// AA stroker, everything else through the stroker into the tessellator; hinted strokes snap to the pixel grid.
+// MS2-FUNCTIONAL: the view matrix scalars take other xmm registers and the frame keeps 0x10 more (rbx pushed)
+// @0x142632ba0
+bool ShapeMeshProvider::tessellateStroke(Scale9GridInfo* s9g, unsigned strokeStyle, unsigned layer, MeshBase* mesh,
+                                         VertexOutput* pout, unsigned meshGenFlags)
+{
+    MeshGenerator*         gen        = mesh->GetRenderer()->GetMeshGen();
+    const ToleranceParams& param      = mesh->GetRenderer()->GetToleranceParams();
+    Matrix2F               viewMtx    = mesh->GetViewMatrix();
+    float                  morphRatio = mesh->GetMorphRatio();
+
+    StrokeStyleType ss;
+    GetStrokeStyle(strokeStyle, &ss, morphRatio);
+    unsigned startPos = DrawLayers[layer].StartPos;
+    if (ss.Miter < 1)
+        ss.Miter = 1;
+
+    bool hinted = (ss.Flags & StrokeFlag_StrokeHinting) != 0;
+    if (hinted)
+    {
+        viewMtx.Tx() = floorf(((viewMtx.Tx() < 0) ? -0.5f : 0.5f) + viewMtx.Tx());
+        viewMtx.Ty() = floorf(viewMtx.Ty() + ((viewMtx.Ty() < 0) ? -0.5f : 0.5f));
+    }
+
+    TransformerWrapper<Matrix2F>       mtxTr;
+    Matrix2F                           mtx(viewMtx);
+    TransformerWrapper<Scale9GridInfo> s9gTr;
+    if (s9g)
+        s9gTr = TransformerWrapper<Scale9GridInfo>(s9g);
+    else
+        mtxTr = TransformerWrapper<Matrix2F>(&mtx);
+    const TransformerBase* tr = !s9g ? (const TransformerBase*)&mtxTr : (const TransformerBase*)&s9gTr;
+
+    gen->Clear();
+
+    float scale = ss.Units;
+    if (!s9g)
+    {
+        switch (ss.Flags & StrokeScaling_Mask)
+        {
+        case StrokeScaling_Normal:     scale = viewMtx.GetScale();  break;
+        case StrokeScaling_Horizontal: scale = viewMtx.GetXScale(); break;
+        case StrokeScaling_Vertical:   scale = viewMtx.GetYScale(); break;
+        }
+    }
+    float width  = ss.Width * scale;
+    float edgeAA = 0.5f;
+    if ((meshGenFlags & (Mesh_EdgeAA | Mesh_Mask)) != Mesh_EdgeAA)
+    {
+        edgeAA = 0;
+        width  = float(floor(double(width)) + 1.0);
+    }
+
+    float offset = hinted ? ((width < 1.26f || (int(ceilf(width - 0.25f)) & 1)) ? 0.5f : 0) : 0.25f;
+
+    bool solid  = (ss.Color & 0xFF000000) >= 0xF0000000 && !ss.pFill;
+    bool aaStrk = (meshGenFlags & Mesh_Mask) == 0 ? solid : false;
+
+    TessBase* tess;
+    if (width < 1.25f && !aaStrk && edgeAA > 0)
+    {
+        gen->mHairliner.SetWidth((width < 1) ? edgeAA : width - 1 + edgeAA);
+        gen->mHairliner.SetToleranceParam(param);
+        tess = &gen->mHairliner;
+        addStroke(gen, tess, param, tr, startPos, strokeStyle, offset, morphRatio);
+        gen->mHairliner.Tessellate();
+    }
+    else
+    {
+        StrokerTypes::LineJoinType lj  = StrokerTypes::RoundJoin;
+        StrokerTypes::LineCapType  slc = StrokerTypes::RoundCap;
+        StrokerTypes::LineCapType  elc = StrokerTypes::RoundCap;
+        switch (ss.Flags & StrokeJoin_Mask)
+        {
+        case StrokeJoin_Bevel: lj = StrokerTypes::BevelJoin; break;
+        case StrokeJoin_Miter: lj = StrokerTypes::MiterJoin; break;
+        }
+        switch (ss.Flags & StrokeCap_Mask)
+        {
+        case StrokeCap_None:   slc = StrokerTypes::ButtCap;   break;
+        case StrokeCap_Square: slc = StrokerTypes::SquareCap; break;
+        }
+        switch (ss.Flags & StrokeEndCap_Mask)
+        {
+        case StrokeEndCap_None:   elc = StrokerTypes::ButtCap;   break;
+        case StrokeEndCap_Square: elc = StrokerTypes::SquareCap; break;
+        }
+
+        width -= 2 * edgeAA;
+        if (width < 0.1f)
+        {
+            if (aaStrk)
+                width = 0;
+            else
+            {
+                edgeAA += -0.05f;
+                width = 0.1f;
+            }
+        }
+
+        if (aaStrk)
+        {
+            gen->mStrokerAA.SetSolidWidth(width * 0.5f);
+            gen->mStrokerAA.SetEdgeAAWidth(2 * (edgeAA * param.EdgeAAScale));
+            gen->mStrokerAA.SetEndLineCap(elc);
+            gen->mStrokerAA.SetLineJoin(lj);
+            gen->mStrokerAA.SetStartLineCap(slc);
+            gen->mStrokerAA.SetMiterLimit(ss.Miter);
+            gen->mStrokerAA.SetToleranceParam(param);
+            tess = &gen->mStrokerAA;
+            addStroke(gen, tess, param, tr, startPos, strokeStyle, offset, morphRatio);
+        }
+        else
+        {
+            gen->mStroker.SetEndLineCap(elc);
+            gen->mStroker.SetWidth(width);
+            gen->mStroker.SetLineJoin(lj);
+            gen->mStroker.SetStartLineCap(slc);
+            gen->mStroker.SetMiterLimit(ss.Miter);
+            gen->mStroker.SetToleranceParam(param);
+            tess = &gen->mTess;
+            gen->mTess.SetFillRule(Tessellator::FillStroker);
+            gen->mTess.SetEdgeAAWidth(edgeAA * param.EdgeAAScale);
+            addStroke(gen, param, tr, startPos, strokeStyle, offset, morphRatio);
+            gen->mTess.Tessellate(false);
+        }
+    }
+
+    bool ret = acquireTessMeshes(tess, mtx, pout, layer, strokeStyle, meshGenFlags, morphRatio);
+    gen->Clear();
+    return ret;
+}
+
 // The fill layer through the tessellator. A tessellation with too many vertices for 16-bit indices is retried with
 // a coarser curve tolerance, without the AA edges; after four tries the layer gets the null mesh.
 // MS2-FUNCTIONAL: the tolerance copy and the matrix swap their stack slots

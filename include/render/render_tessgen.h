@@ -48,8 +48,15 @@ public:
     virtual unsigned  GetVertices(TessMesh* mesh, TessVertex* vertices, unsigned num) const;
     virtual void      GetTrianglesI16(unsigned meshIdx, UInt16* idx, unsigned start, unsigned num) const;
 
+    // (appended for sfr_render_03d: the shape mesh provider's hairlines) the width is kept doubled
+    void SetWidth(CoordType w) { Width = w * 2; }
+    void SetToleranceParam(const ToleranceParams& param);   // 0x1426b4360
+    void Tessellate();                                      // 0x1426b4660
+
 private:
-    UByte Unk_Members[0x2a0 - 8];   // +0x08
+    UByte     Unk_08[0x10];          // +0x08
+    CoordType Width;                 // +0x18
+    UByte     Unk_1c[0x2a0 - 0x1c];  // +0x1c
 };
 
 class StrokerAA : public TessBase
@@ -71,6 +78,25 @@ public:
     virtual unsigned  GetVertices(TessMesh* mesh, TessVertex* vertices, unsigned num) const;
     virtual void      GetTrianglesI16(unsigned meshIdx, UInt16* idx, unsigned start, unsigned num) const;
     // (the size is not recovered yet)
+    // (appended for sfr_render_03d: the shape mesh provider's solid AA strokes) left and right of the path alike
+    void SetSolidWidth(CoordType w)  { SolidWidthR = SolidWidthL = w; }
+    void SetEdgeAAWidth(CoordType w) { EdgeAAWidthR = EdgeAAWidthL = w; }
+    void SetLineJoin(StrokerTypes::LineJoinType lj)   { LineJoin = lj; }
+    void SetStartLineCap(StrokerTypes::LineCapType lc) { StartLineCap = lc; }
+    void SetEndLineCap(StrokerTypes::LineCapType lc)   { EndLineCap = lc; }
+    void SetMiterLimit(CoordType ml)  { MiterLimit = ml; }
+    void SetToleranceParam(const ToleranceParams& param);   // 0x1426ae280
+
+private:
+    StrokerTypes::LineJoinType LineJoin;       // +0x08
+    StrokerTypes::LineCapType  StartLineCap;   // +0x0c
+    StrokerTypes::LineCapType  EndLineCap;     // +0x10
+    CoordType                  MiterLimit;     // +0x14
+    UByte                      Unk_18[8];      // +0x18
+    CoordType                  SolidWidthL;    // +0x20
+    CoordType                  SolidWidthR;    // +0x24
+    CoordType                  EdgeAAWidthL;   // +0x28
+    CoordType                  EdgeAAWidthR;   // +0x2c
 };
 
 struct MeshGenerator
