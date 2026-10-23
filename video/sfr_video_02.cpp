@@ -28,6 +28,10 @@ extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
 extern void FUN_1425925f0(void*);
 extern bool FUN_1423dfe30(void*, unsigned __int64);
+extern void FUN_1424d6750();
+extern void FUN_1424d6ac0();
+extern void* PTR_FUN_1431b71b0;
+extern void* PTR_FUN_1431b7260;
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
 extern void FUN_140025300(void*);
@@ -1825,6 +1829,25 @@ void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned co
         return;
     }
     reinterpret_cast<const Scaleform::GFx::AS3::Value*>(value)->Convert2String(*result);
+}
+
+// MS2-FUNCTIONAL: initializes the executable's class-traits object, its 0xf8-byte instance size, and vtable.
+// @0x140012ec0
+void* FUN_140012ec0(void* object)
+{
+    FUN_1424d6750();
+    *reinterpret_cast<unsigned*>(static_cast<char*>(object) + 0x60) = 0xf8;
+    *reinterpret_cast<void**>(object) = PTR_FUN_1431b71b0;
+    return object;
+}
+
+// MS2-FUNCTIONAL: runs the base traits constructor and installs the executable's derived traits vtable.
+// @0x140012f10
+void* FUN_140012f10(void* object)
+{
+    FUN_1424d6ac0();
+    *reinterpret_cast<void**>(object) = PTR_FUN_1431b7260;
+    return object;
 }
 
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
