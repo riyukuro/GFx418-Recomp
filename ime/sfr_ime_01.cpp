@@ -490,6 +490,27 @@ void* FUN_1423c8e10(void* object, unsigned long long flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: releases the executable-observed cue and object arrays before the common IME base teardown.
+// @0x1423c8e70
+void* FUN_1423c8e70(unsigned long long* object, unsigned flags)
+{
+    auto** cuePairs = reinterpret_cast<void**>(object[0x2b]);
+    for (unsigned long long i = 0; i < object[0x2c]; ++i) {
+        if (cuePairs[i * 3 + 1]) Memory::Free(cuePairs[i * 3 + 1]);
+        if (cuePairs[i * 3]) Memory::Free(cuePairs[i * 3]);
+    }
+    auto** records = reinterpret_cast<void**>(object[0x12]);
+    const unsigned count = *reinterpret_cast<unsigned*>(object + 0x10);
+    for (unsigned i = 0; i < count; ++i)
+        if (records[i * 4]) Memory::Free(records[i * 4]);
+    FUN_1423c8bb0(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x1a0);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
 
 // MS2-FUNCTIONAL: appends a retained pointer to the executable-observed dynamic array using its expansion helper.
 // @0x1423d9490
