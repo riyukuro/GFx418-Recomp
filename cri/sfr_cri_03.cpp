@@ -87,6 +87,8 @@ CriSint32 FUN_140045ed0(const void*);
 void* FUN_140045eec(const void*, void*, CriSint32);
 void FUN_140045998(void*);
 void FUN_140045fdc(void*);
+void FUN_140045474(void*);
+void FUN_14029dd60(void*, const CriChar8*, const void*);
 
 // MS2-FUNCTIONAL: send the supplied CRI diagnostic through the movie error dispatcher.
 // @0x1400410d0
@@ -536,6 +538,51 @@ void FUN_140043610(void* trackSet)
         for (CriUint32 index = 0; index < tracks->Count; ++index)
             if (tracks->Tracks[index])
                 FUN_140046798(tracks->Tracks[index]);
+}
+
+// MS2-FUNCTIONAL: refresh a read-buffer header when its state is active, then drain one queued chunk.
+// @0x1400458b8
+void FUN_1400458b8(void* object)
+{
+    struct ReaderBuffer
+    {
+        CriUint8 Reserved00[9];
+        CriUint8 State;
+        CriUint8 Reserved0a[0x16];
+        void* Queue;
+        CriUint8 Reserved28[8];
+        CriUint8 Chunk[0x20];
+    };
+    ReaderBuffer* reader = (ReaderBuffer*)object;
+    if (reader->State == 1 || reader->State == 2)
+        FUN_140045474(object);
+    if (reader->Queue)
+    {
+        FUN_1400467a0(reader->Queue, 1, -1, reader->Chunk);
+        FUN_1400467a8(reader->Queue, 1, reader->Chunk);
+    }
+}
+
+// MS2-FUNCTIONAL: release the manager's input joint and all child audio decoder track sets.
+// @0x140042800
+void FUN_140042800(void* manager)
+{
+    struct AudioManager { void* Decoders[2]; CriSint32 Count; void* InputJoint; };
+    AudioManager* audio = (AudioManager*)manager;
+    if (!audio)
+        return;
+    if (audio->InputJoint)
+        FUN_140046798(audio->InputJoint);
+    for (CriSint32 index = 0; index < audio->Count; ++index)
+        FUN_140043610(audio->Decoders[index]);
+}
+
+// MS2-FUNCTIONAL: pass two variadic formatter arguments to the executable's Scaleform string formatter.
+// @0x1400469c4
+void FUN_1400469c4(void* string, const CriChar8* format, CriUint64 first, CriUint64 second)
+{
+    const CriUint64 arguments[2] = { first, second };
+    FUN_14029dd60(string, format, arguments);
 }
 
 void FUN_1400478a0(void);
