@@ -370,6 +370,10 @@ namespace InstanceTraits
     public:
         Interface(VM& vm, const ClassInfo& ci);
         virtual void MakeObject(Value& result, Traits& t);
+
+        // (appended, sfr19) a new plain object of t.
+        // @0x14241aaf0
+        Pickable<Instances::fl::Object> MakeInstance(Interface& t);
     };
 
     namespace fl
@@ -382,6 +386,10 @@ namespace InstanceTraits
             // @0x142414f50
             virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::Object"; }
             virtual void MakeObject(Value& result, Traits& t);
+
+            // (appended, sfr19) a new instance of t.
+            // @0x14241ac70
+            Pickable<Instances::fl::Object> MakeInstance(Object& t);
 
         public:
             // @0x1423fa9e0 (appended, sfr15)

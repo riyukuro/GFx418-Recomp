@@ -765,6 +765,10 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::Catch"; }
         // @0x14241be30
         virtual void MakeObject(Value& result, Traits& t);
+
+        // (appended, sfr19) a new instance of t.
+        // @0x14241a5b0
+        Pickable<Instances::fl::Catch> MakeInstance(Catch& t);
     };
 
     class Date : public CTraits
