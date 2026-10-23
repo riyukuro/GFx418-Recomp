@@ -13,6 +13,10 @@
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 
+extern "C" void FUN_1426906b0(void*, void*, std::size_t);
+extern "C" void FUN_142747530(void*, void*, std::size_t);
+extern "C" void FUN_1427478c0(void*, void*, std::size_t);
+
 namespace Scaleform {
 
 namespace GFx { class StaticTextRecord; class TaskThreadInPool; }
@@ -1070,5 +1074,44 @@ void ReserveVideoPlayerArray(void** array, void*, std::size_t requested)
         array[0] = reinterpret_cast<void* (*)(void*, std::size_t, const int*)>(vtable[10])(DAT_143b15f60, bytes, &flags);
     }
     array[2] = reinterpret_cast<void*>(capacity);
+}
+
+// MS2-FUNCTIONAL: initializes an empty hash table at eight slots and doubles it when live entries exceed its 80 percent load threshold.
+// @0x142689ec0
+void CheckExpandAS3HashSet(void** set, void* owner)
+{
+    auto* table = static_cast<std::size_t*>(*set);
+    if (!table) {
+        FUN_1426906b0(set, owner, 8);
+        return;
+    }
+    if (table[1] * 4 + 4 < table[0] * 5)
+        FUN_1426906b0(set, owner, table[1] * 2 + 2);
+}
+
+// MS2-FUNCTIONAL: applies the same empty-table initialization and 80 percent expansion test to this hash layout.
+// @0x142744560
+void CheckExpandAS3PointerSet(void** set, void* owner)
+{
+    auto* table = static_cast<std::size_t*>(*set);
+    if (!table) {
+        FUN_142747530(set, owner, 8);
+        return;
+    }
+    if (table[1] * 4 + 4 < table[0] * 5)
+        FUN_142747530(set, owner, table[1] * 2 + 2);
+}
+
+// MS2-FUNCTIONAL: applies the same empty-table initialization and 80 percent expansion test to this hash layout.
+// @0x1427445b0
+void CheckExpandAS3CachedSet(void** set, void* owner)
+{
+    auto* table = static_cast<std::size_t*>(*set);
+    if (!table) {
+        FUN_1427478c0(set, owner, 8);
+        return;
+    }
+    if (table[1] * 4 + 4 < table[0] * 5)
+        FUN_1427478c0(set, owner, table[1] * 2 + 2);
 }
 }
