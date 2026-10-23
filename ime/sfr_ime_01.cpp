@@ -55,6 +55,21 @@ static LONG cx18_ImmGetCompositionStringW(HIMC context, DWORD index, LPVOID buff
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetCompositionStringW"))(
         context, index, buffer, bytes);
 }
+static DWORD cx18_ImmGetProperty(HKL layout, DWORD index)
+{
+    typedef DWORD (WINAPI* Fn)(HKL, DWORD);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetProperty"))(layout, index);
+}
+static BOOL cx18_ImmSetCompositionWindow(HIMC context, LPCOMPOSITIONFORM form)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC, LPCOMPOSITIONFORM);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetCompositionWindow"))(context, form);
+}
+static BOOL cx18_ImmSetCandidateWindow(HIMC context, LPCANDIDATEFORM form)
+{
+    typedef BOOL (WINAPI* Fn)(HIMC, LPCANDIDATEFORM);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetCandidateWindow"))(context, form);
+}
 static BOOL cx18_ImmNotifyIME(HIMC context, DWORD action, DWORD index, DWORD value)
 {
     typedef BOOL (WINAPI* Fn)(HIMC, DWORD, DWORD, DWORD);
@@ -3374,6 +3389,58 @@ void FUN_1423d5910(void* raw, const char* requested)
 void FUN_1423d61f0(void* manager, const char* command, const char* value)
 {
     FUN_1423d7e80(manager, command, value);
+}
+
+// MS2-FUNCTIONAL: resets composition state, initializes the IME window positions, and applies them through IMM32.
+// @0x1423d43b0
+bool FUN_1423d43b0(void* raw)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
+    if (!owner) return false;
+    auto* factory = *reinterpret_cast<unsigned char**>(owner + 0x10);
+    void* textState = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(factory))[3])(factory);
+    *reinterpret_cast<unsigned*>(self + 0xcc) = 0;
+    *reinterpret_cast<unsigned*>(self + 0x64) = 0;
+    *reinterpret_cast<unsigned*>(self + 0xd4) = 0;
+    *reinterpret_cast<unsigned*>(self + 0x5a4) = 1;
+    std::memset(*reinterpret_cast<void**>(self + 0x40), 0, 0x100);
+    auto* modeBuffer = *reinterpret_cast<wchar_t**>(self + 0xb0);
+    if (modeBuffer) {
+        modeBuffer[0] = modeBuffer[1] = modeBuffer[2] = modeBuffer[3] = L' ';
+        modeBuffer[4] = 0;
+    }
+    HKL layout = GetKeyboardLayout(0);
+    *reinterpret_cast<HKL*>(self + 0x58) = layout;
+    unsigned mode = cx18_ImmGetProperty(layout, 4) >> 0x12 & 1;
+    const int state = *reinterpret_cast<int*>(self + 0x98);
+    if (state == 0xd00001) mode = 0;
+    else if (state == 0xa10000 || state == 0xb10000 || state == 6) mode = 1;
+    *reinterpret_cast<unsigned*>(self + 0x5a0) = mode;
+
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (context) {
+        CANDIDATEFORM candidate{};
+        candidate.dwIndex = 0;
+        candidate.dwStyle = CFS_CANDIDATEPOS;
+        candidate.ptCurrentPos = { -1000, -1000 };
+        COMPOSITIONFORM composition{};
+        composition.dwStyle = CFS_POINT;
+        composition.ptCurrentPos = candidate.ptCurrentPos;
+        cx18_ImmSetCompositionWindow(context, &composition);
+        cx18_ImmSetCandidateWindow(context, &candidate);
+        cx18_ImmReleaseContext(hwnd, context);
+    }
+    if (textState) FUN_14257dcb0(textState);
+    return state != 0x01000000;
+}
+
+// MS2-FUNCTIONAL: shares the executable's IME composition reset and IMM window setup path.
+// @0x1423d05a0
+bool FUN_1423d05a0(void* raw)
+{
+    return FUN_1423d43b0(raw);
 }
 
 // MS2-FUNCTIONAL: rebuilds the AS3 status list by clearing it, replaying retained row callbacks, and restoring selection.
