@@ -249,3 +249,43 @@ bool InitializeAudioSystem(void* player, void* system, unsigned char flag0, unsi
     return true;
 }
 }
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: recursively computes the greatest node depth field while walking the child array.
+// @0x142686540
+void UpdateTreeMaximumDepth(void* node, unsigned* maximum)
+{
+    auto* bytes = static_cast<unsigned char*>(node);
+    const unsigned depth = *reinterpret_cast<unsigned*>(bytes + 0x28);
+    if (depth > *maximum)
+        *maximum = depth;
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    for (std::size_t i = 0; i < count; ++i)
+        UpdateTreeMaximumDepth(children[i], maximum);
+}
+
+// MS2-FUNCTIONAL: counts each tree node and all descendants using the executable's child range.
+// @0x1426865a0
+void CountTreeNodes(void* node, int* count)
+{
+    ++*count;
+    auto* bytes = static_cast<unsigned char*>(node);
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    for (std::size_t i = 0; i < childCount; ++i)
+        CountTreeNodes(children[i], count);
+}
+
+// MS2-FUNCTIONAL: adds the supplied count to every node's 32-bit accumulated value recursively.
+// @0x1426865f0
+void AddTreeNodeValue(void* node, const int* value)
+{
+    auto* bytes = static_cast<unsigned char*>(node);
+    *reinterpret_cast<int*>(bytes + 0x28) += *value;
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    for (std::size_t i = 0; i < childCount; ++i)
+        AddTreeNodeValue(children[i], value);
+}
+}
