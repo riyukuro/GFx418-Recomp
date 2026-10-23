@@ -28,6 +28,15 @@ extern void FUN_142581700(void*);
 extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
 extern void FUN_1425925f0(void*);
+extern void FUN_142678490(void*);
+extern void FUN_1426786e0(void*);
+extern void FUN_14252c8b0(void*, unsigned, unsigned, unsigned);
+extern void FUN_1425ef130(void*);
+extern void FUN_1424d9310(void*, unsigned);
+extern void* FUN_142581520(void*, void*);
+extern void* DAT_143b15f60;
+extern void* PTR_FUN_14317b668;
+extern void* PTR_FUN_14317bc40;
 extern bool FUN_1423dfe30(void*, unsigned __int64);
 extern void FUN_1424d6750();
 extern void FUN_1424d6ac0();
@@ -2933,6 +2942,96 @@ void* FUN_1400105b0(void* object)
         if (parent && childIndex != ~Scaleform::UPInt(0)) parent->Insert(childIndex, node);
     }
     return node;
+}
+
+// MS2-FUNCTIONAL: constructs the video shape provider, scales its geometry to the decoded frame, and creates a tree entry.
+// @0x140011610
+void* FUN_140011610(void* object, void** result, void* context)
+{
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    alignas(16) unsigned allocInfo[4] = { 2, 0, 0, 0 };
+    using Allocate = void* (*)(void*, void*, size_t, const void*);
+    auto allocate = reinterpret_cast<Allocate>(heapVtable[14]);
+    auto* shape = static_cast<unsigned char*>(allocate(DAT_143b15f60, object, 0x90, allocInfo));
+    if (!shape) { *result = nullptr; return result; }
+    FUN_142678490(shape);
+    const auto ifaceIndex = static_cast<unsigned char>(static_cast<unsigned char*>(object)[0x6d]);
+    auto** ifaceVtable = *reinterpret_cast<void***>(static_cast<unsigned char*>(object) + ifaceIndex * 4);
+    using GetVideoExtent = void* (*)(void*);
+    auto* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>(ifaceVtable[12])(object));
+    auto* path = *reinterpret_cast<void**>(shape + 0x88);
+    auto* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
+    if (!provider) {
+        FUN_14252c8b0(path, 0, 0, 0);
+        FUN_142518040(path);
+        FUN_142515a20(path, 0.0f, 0.0f);
+        FUN_1424f96c0(path);
+    } else {
+        auto** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
+        if (transform) {
+            transform[0] = PTR_FUN_14317b668;
+            transform[1] = reinterpret_cast<void*>(1);
+            transform[2] = nullptr;
+            transform[3] = nullptr;
+            float* m = reinterpret_cast<float*>(transform + 4);
+            for (int i = 0; i < 12; ++i) m[i] = 0.0f;
+            m[0] = m[5] = m[10] = m[11] = 0.05f;
+            auto** providerVtable = *reinterpret_cast<void***>(provider);
+            reinterpret_cast<void (*)(void*)>(providerVtable[1])(provider);
+            transform[2] = provider;
+            float left = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe0);
+            float top = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe4);
+            float right = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe8);
+            float bottom = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xec);
+            const float sx = (static_cast<float>(*reinterpret_cast<int*>(extent + 8)) * 20.0f) / (right - left);
+            const float sy = (static_cast<float>(*reinterpret_cast<int*>(extent + 12)) * 20.0f) / (bottom - top);
+            m[0] *= sx; m[1] *= sx; m[2] *= sx; m[3] *= sx;
+            m[4] *= sy; m[5] *= sy; m[6] *= sy; m[7] *= sy;
+            *reinterpret_cast<unsigned char*>(transform + 8) =
+                *reinterpret_cast<unsigned char*>(extent + 0x14) ? 3 : 1;
+            auto* pathBytes = static_cast<unsigned char*>(path);
+            auto* fillCount = reinterpret_cast<Scaleform::UPInt*>(pathBytes + 0x20);
+            const auto oldFillCount = *fillCount;
+            FUN_1425eec50(pathBytes + 0x18, pathBytes + 0x18, oldFillCount + 1);
+            auto* fillArray = *reinterpret_cast<unsigned char**>(pathBytes + 0x18);
+            auto* fill = reinterpret_cast<unsigned*>(fillArray - 0x10 + oldFillCount * 0x10);
+            *fill = 0;
+            FUN_14257dc30(transform);
+            *reinterpret_cast<void**>(fill + 2) = transform;
+            FUN_1425ef130(path);
+            auto pathVtable = *reinterpret_cast<void***>(path);
+            auto fillStyles = reinterpret_cast<unsigned (*)(void*)>(pathVtable[2])(path);
+            FUN_14252c8b0(path, fillStyles, 0, 0);
+            FUN_140011500(shape, left, top, right, bottom);
+            FUN_1426786e0(shape);
+            auto** transformVtable = *reinterpret_cast<void***>(transform);
+            reinterpret_cast<void (*)(void*)>(transformVtable[2])(transform);
+        }
+    }
+    using AllocateNodeData = void* (*)(void*, size_t, size_t);
+    auto allocateNodeData = reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(context))[10]);
+    auto* nodeData = static_cast<unsigned char*>(allocateNodeData(context, 0xa0, 0));
+    if (!nodeData) {
+        reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(shape + 0x10))[2])(shape + 0x10);
+        *result = nullptr;
+        return result;
+    }
+    FUN_1424d9310(nodeData, 3);
+    *reinterpret_cast<void***>(nodeData) = reinterpret_cast<void**>(PTR_FUN_14317bc40);
+    using AddRef = void (*)(void*);
+    auto* providerBase = shape + 0x10;
+    reinterpret_cast<AddRef>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
+    *reinterpret_cast<void**>(nodeData + 0x90) = shape;
+    *reinterpret_cast<float*>(nodeData + 0x98) = 0.0f;
+    void* entry = FUN_142581520(context, nodeData);
+    if (entry) ++*reinterpret_cast<int*>(static_cast<unsigned char*>(entry) + 8);
+    *result = entry;
+    reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(providerBase))[2])(providerBase);
+    if (entry) {
+        int* refs = reinterpret_cast<int*>(static_cast<unsigned char*>(entry) + 8);
+        if (--*refs == 0) FUN_142581700(entry);
+    }
+    return result;
 }
 
 namespace {
