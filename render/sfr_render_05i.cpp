@@ -27,6 +27,21 @@ struct SGMLElementDesc
     };
 };
 
+template<class Char> struct SGMLStackElemDesc
+{
+    const Char* pElemName;
+    UPInt ElemNameSize;
+    const SGMLElementDesc* pElemDesc;
+    UPInt StartPos;
+    TextFormat TextFmt;
+    ParagraphFormat ParaFmt;
+    SGMLStackElemDesc()
+        : pElemName(0), ElemNameSize(0), pElemDesc(0), StartPos(0),
+          TextFmt(Memory::GetHeapByAddress(&pElemName)), ParaFmt()
+    {
+    }
+};
+
 // @0x14267ecf0
 template<> __declspec(dllexport) int SGMLElementDesc::Comparator<wchar_t>::Less(
     const SGMLElementDesc& element, const SGMLElementDesc::Comparable<wchar_t>& key)
@@ -35,6 +50,24 @@ template<> __declspec(dllexport) int SGMLElementDesc::Comparator<wchar_t>::Less(
 }
 
 }}} // namespace Scaleform::Render::Text
+
+namespace Scaleform {
+using SGMLStackElem = Render::Text::SGMLStackElemDesc<wchar_t>;
+using SGMLStackAlloc = AllocatorDH<SGMLStackElem, Stat_Default_Mem>;
+using SGMLStackData = ArrayDataBase<SGMLStackElem, SGMLStackAlloc, ArrayDefaultPolicy>;
+using SGMLStackArrayData = ArrayDataDH<SGMLStackElem, SGMLStackAlloc, ArrayDefaultPolicy>;
+
+// @0x14267db70
+template SGMLStackData::~ArrayDataBase();
+// @0x14267de50
+template void ConstructorMov<SGMLStackElem>::Construct(void*, const SGMLStackElem&);
+// @0x14267f410
+template void ArrayBase<SGMLStackArrayData>::PopBack(UPInt);
+// @0x14267f510
+template void SGMLStackData::Reserve(const void*, UPInt);
+// @0x14267f650
+template void SGMLStackData::ResizeNoConstruct(const void*, UPInt);
+}
 
 namespace Scaleform { namespace Alg {
 using SGMLElementLessFn = int (*)(const Render::Text::SGMLElementDesc&,
