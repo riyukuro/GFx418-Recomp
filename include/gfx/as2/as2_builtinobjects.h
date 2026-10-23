@@ -139,6 +139,9 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+
+    // Next value of the movie's random generator (exe 0x142953f50).
+    static UInt32 GetNextRandom(MovieImpl* proot);
 };
 // The Math prototype object.
 class MathProto : public Prototype<Math>
@@ -292,6 +295,11 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432136c0
 
     ColorProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291adc0
+
+    static void GetRGB(const FnCall& fn);       // exe 0x1428ed450
+    static void SetRGB(const FnCall& fn);       // exe 0x1428ed2a0
+    static void GetTransform(const FnCall& fn); // exe 0x1428eccf0
+    static void SetTransform(const FnCall& fn); // exe 0x1428ec780
 };
 class MovieClipLoader : public Object
 {
@@ -414,6 +422,15 @@ public:
     static void DefaultOnData(const FnCall& fn);
     // Decodes the url-encoded name=value pairs of data into members of pobj (exe 0x1429670e0).
     static bool LoadVariables(Environment* penv, ObjectInterface* pobj, const String& data);
+
+    static void AddRequestHeader(const FnCall& fn); // exe 0x1428ec0b0
+    static void Decode(const FnCall& fn);           // exe 0x1428ec130
+    static void GetBytesLoaded(const FnCall& fn);   // exe 0x1428ec290
+    static void GetBytesTotal(const FnCall& fn);    // exe 0x1428ec330
+    static void Load(const FnCall& fn);             // exe 0x1428ec3d0
+    static void Send(const FnCall& fn);             // exe 0x1428ec510
+    static void SendAndLoad(const FnCall& fn);      // exe 0x1428ec590
+    static void ToString(const FnCall& fn);         // exe 0x1428ec610
 };
 class MovieClipObject : public Object
 {
@@ -1051,6 +1068,27 @@ public:
 
     // (appended for the vftable) Math cannot be instantiated (exe 0x142936f10).
     virtual Object* CreateNewObject(Environment*) const { return 0; }
+
+private:
+    // The Math functions (exe 0x1428fb110-0x1428fbb70).
+    static void Abs(const FnCall& fn);
+    static void Acos(const FnCall& fn);
+    static void Asin(const FnCall& fn);
+    static void Atan(const FnCall& fn);
+    static void Ceil(const FnCall& fn);
+    static void Cos(const FnCall& fn);
+    static void Exp(const FnCall& fn);
+    static void Floor(const FnCall& fn);
+    static void Log(const FnCall& fn);
+    static void Sin(const FnCall& fn);
+    static void Sqrt(const FnCall& fn);
+    static void Tan(const FnCall& fn);
+    static void Atan2(const FnCall& fn);
+    static void Max(const FnCall& fn);
+    static void Min(const FnCall& fn);
+    static void Pow(const FnCall& fn);
+    static void Random(const FnCall& fn);
+    static void Round(const FnCall& fn);
 };
 class SelectionCtorFunction : public CFunctionObject
 {
@@ -1225,6 +1263,10 @@ public:
 
     // (appended for sfr_as2_06) Creates the class and its prototype and publishes "AsBroadcaster" (exe 0x142973a80).
     static FunctionRef Register(GlobalContext* pgc);
+
+private:
+    // AsBroadcaster.initialize(obj) (exe 0x1428fc080).
+    static void Initialize(const FnCall& fn);
 };
 
 // The Button class.

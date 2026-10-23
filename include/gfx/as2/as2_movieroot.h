@@ -18,6 +18,7 @@ namespace Scaleform { namespace Render { namespace Text { class Allocator; } } }
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 class MovieClipLoader;
+class LoadVarsObject;
 class MouseListener;
 
 // Ids of the strings every AS2 movie creates up front (index into StringManager::Builtins).
@@ -266,6 +267,9 @@ public:
                            MovieClipLoader* pmovieClipLoader = 0);
     // Queues a variables load of purl into ptarget (exe 0x142930a10).
     void AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
+                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
+    // The same for a LoadVars object (exe 0x142930c30).
+    void AddVarLoadQueueEntry(LoadVarsObject* ploadVars, const char* purl,
                               LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
     // Appends the load to the movie's queue (exe 0x142930090).
     void AddMovieLoadQueueEntry(LoadQueueEntry* pentry);

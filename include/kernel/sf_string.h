@@ -123,6 +123,8 @@ public:
     // exe: ToUpper 0x142587e00, AppendString(const wchar_t*, SPInt) 0x142586230.
     String ToUpper() const;
     void   AppendString(const wchar_t* pstr, SPInt len = -1);
+    // Removes len characters at character index posAt (exe 0x142587840).
+    void   Remove(UPInt posAt, SPInt len = 1);
 
     // Character (not byte) count and character range [start, end) (exe: GetLength 0x142587010, Substring 0x142587b20).
     UPInt  GetLength() const;

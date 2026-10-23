@@ -2,6 +2,10 @@
 // (Boolean prototype methods, the Math object functions, Date prototype getters/setters).
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1428ec0b0-0x1428ec780 .text$mn
+// MS2-RANGE: 0x14292bdc0-0x14292bdf0 .text$mn
+// MS2-RANGE: 0x142993ff0-0x142994160 .text$mn
+// MS2-RANGE: 0x1428ec780-0x1428ed580 .text$mn
 // MS2-RANGE: 0x1428ed580-0x1428ef8d0 .text$mn
 // MS2-RANGE: 0x1428ef8d0-0x1428f1e30 .text$mn
 // MS2-RANGE: 0x1428f1e30-0x1428f1e70 .text$mn
@@ -14,6 +18,12 @@
 // MS2-RANGE: 0x1428f65c0-0x1428f6de0 .text$mn
 // MS2-RANGE: 0x1428f7290-0x1428f73b0 .text$mn
 // MS2-RANGE: 0x1428f7c10-0x1428f7d30 .text$mn
+// MS2-RANGE: 0x1428f82d0-0x1428f83d0 .text$mn
+// MS2-RANGE: 0x1428faed0-0x1428fafd0 .text$mn
+// MS2-RANGE: 0x1428fbd10-0x1428fbdc0 .text$mn
+// MS2-RANGE: 0x1428fbdc0-0x1428fbea0 .text$mn
+// MS2-RANGE: 0x1428fbea0-0x1428fc080 .text$mn
+// MS2-RANGE: 0x1428fc080-0x1428fc160 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
 // MS2-RANGE: 0x1428fb110-0x1428fbb70 .text$mn
@@ -24,9 +34,13 @@
 #include <math.h>
 
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_avmsprite.h"
+#include "../include/gfx/as2/as2_avmtextfield.h"
+#include "../include/gfx/as2/as2_keyobject.h"
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
+#include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_movieroot.h"
@@ -40,13 +54,6 @@
 #include "../include/kernel/sf_utf8util.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
-
-// Boolean wrapper object. 0x70 bytes.
-class BooleanObject : public Object
-{
-public:
-    bool bValue; // +0x68
-};
 
 // Boolean.prototype.toString(): "true" / "false" of the wrapped value.
 // @0x1428f4cd0
@@ -65,36 +72,6 @@ void GAS_BooleanValueOf(const FnCall& fn)
     BooleanObject* pthis = (BooleanObject*)(Object*)fn.ThisPtr;
     fn.Result->SetBool(pthis->GetValue().ToBool(fn.Env));
 }
-
-class Math
-{
-public:
-    // Next value of the movie's random generator (exe 0x142953f50).
-    static UInt32 GetNextRandom(MovieImpl* proot);
-};
-
-// The Math object's functions; every argument goes through ToNumber.
-class MathCtorFunction
-{
-    static void Abs(const FnCall& fn);
-    static void Acos(const FnCall& fn);
-    static void Asin(const FnCall& fn);
-    static void Atan(const FnCall& fn);
-    static void Ceil(const FnCall& fn);
-    static void Cos(const FnCall& fn);
-    static void Exp(const FnCall& fn);
-    static void Floor(const FnCall& fn);
-    static void Log(const FnCall& fn);
-    static void Sin(const FnCall& fn);
-    static void Sqrt(const FnCall& fn);
-    static void Tan(const FnCall& fn);
-    static void Atan2(const FnCall& fn);
-    static void Max(const FnCall& fn);
-    static void Min(const FnCall& fn);
-    static void Pow(const FnCall& fn);
-    static void Random(const FnCall& fn);
-    static void Round(const FnCall& fn);
-};
 
 // @0x1428fb110
 void MathCtorFunction::Abs(const FnCall& fn)
@@ -521,11 +498,380 @@ void BlurFilterProto::Clone(const FnCall& fn)
     fn.Result->SetAsObject(pfilter);
 }
 
-// ---- Matrix ----
+// A new BevelFilter sharing this one's render filter.
+// @0x1428f82d0
+void BevelFilterProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, BevelFilter);
+    BitmapFilterObject* pthis = (BitmapFilterObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<Object> pfilter =
+        *fn.Env->OperatorNew(fn.Env->GetSC()->pContext->FlashFiltersPackage, fn.Env->GetBuiltin(ASBuiltin_BevelFilter), 0);
+    BitmapFilterObject* pnew = static_cast<BitmapFilterObject*>(pfilter.GetPtr());
+    pnew->SetFilter(pthis->GetFilter());
+    fn.Result->SetAsObject(pfilter);
+}
+
+// A new ColorMatrixFilter sharing this one's render filter.
+// @0x1428faed0
+void ColorMatrixFilterProto::Clone(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, ColorMatrixFilter);
+    BitmapFilterObject* pthis = (BitmapFilterObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<Object> pfilter = *fn.Env->OperatorNew(fn.Env->GetSC()->pContext->FlashFiltersPackage,
+                                               fn.Env->GetBuiltin(ASBuiltin_ColorMatrixFilter), 0);
+    BitmapFilterObject* pnew = static_cast<BitmapFilterObject*>(pfilter.GetPtr());
+    pnew->SetFilter(pthis->GetFilter());
+    fn.Result->SetAsObject(pfilter);
+}
+
+// ---- AsBroadcaster ----
+
+// @0x1428fbd10
+void AsBroadcasterProto::AddListener(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    ObjectInterface* plistener = fn.Arg(0).ToObjectInterface(fn.Env);
+    AsBroadcaster::AddListener(fn.Env, fn.ThisPtr, plistener);
+    fn.Result->SetBool(true);
+}
+
+// @0x1428fbdc0
+// MS2-FUNCTIONAL the inlined broadcast computes the argument count and stack index before the callback setup (scheduling)
+void AsBroadcasterProto::BroadcastMessage(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    ASString eventName = fn.Arg(0).ToString(fn.Env);
+    // AsBroadcaster::BroadcastMessage, inlined.
+    if (fn.ThisPtr)
+    {
+        class LocalInvokeCallback : public AsBroadcaster::InvokeCallback
+        {
+        public:
+            int NArgs;
+            int FirstArgBottomIndex;
+
+            LocalInvokeCallback(int nargs, int firstArg) : NArgs(nargs), FirstArgBottomIndex(firstArg) {}
+
+            virtual void Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method)
+            {
+                Value result;
+                method.Invoke(FnCall(&result, pthis, penv, NArgs, FirstArgBottomIndex));
+            }
+        } callback(fn.NArgs - 1, fn.Env->GetTopIndex() - 1);
+        AsBroadcaster::BroadcastMessageWithCallback(fn.Env, fn.ThisPtr, eventName, &callback);
+    }
+    fn.Result->SetUndefined();
+}
+
+// @0x1428fbea0
+// MS2-FUNCTIONAL same inlined listener search, different register allocation and result flag placement
+void AsBroadcasterProto::RemoveListener(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    ObjectInterface* plistener = fn.Arg(0).ToObjectInterface(fn.Env);
+    Environment*     penv = fn.Env;
+    bool             removed = false;
+    // AsBroadcaster::RemoveListener, inlined.
+    if (fn.ThisPtr && plistener)
+    {
+        Value listeners;
+        if (fn.ThisPtr->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin__listeners), &listeners))
+        {
+            Object* pobj = listeners.ToObject(penv);
+            if (pobj && pobj->GetObjectType() == Object_Array)
+            {
+                Ptr<ArrayObject> parray = static_cast<ArrayObject*>(pobj);
+                for (int i = (int)parray->GetSize() - 1; i >= 0; --i)
+                {
+                    Value* pelem = parray->GetElementPtr(i);
+                    if (pelem && pelem->ToObjectInterface_Call(penv) == plistener)
+                    {
+                        parray->RemoveElements(i, 1);
+                        removed = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    fn.Result->SetBool(removed);
+}
+
+// @0x1428fc080
+void AsBroadcasterCtorFunction::Initialize(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
+    fn.Result->SetUndefined();
+    ASStringContext* psc = fn.Env->GetSC();
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
+}
 
 // cl's /GS heuristic guards the address-taken Matrix2F locals and temporaries of these natives; the exe frames carry
 // no cookie (only the ones passing the matrix to an out-of-line member do).
 #define MS2_AS2_NOGS __declspec(safebuffers)
+
+// ---- Color ----
+
+// Color.getRGB(): the add row of the target's transform as 0xRRGGBB.
+// @0x1428ed450
+// MS2-FUNCTIONAL same operations; the exe's register allocation differs (negated add-row bytes via imul on two lanes)
+void ColorProto::GetRGB(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Color);
+    ColorObject* pthis = (ColorObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<InteractiveObject> pchar = pthis->pCharacter;
+    if (!pchar)
+        return;
+    Render::Cxform cx = pchar->GetCxform();
+    SInt32 r = (SInt32)(SInt64)cx.M[1][0];
+    SInt32 g = (SInt32)(SInt64)cx.M[1][1];
+    SInt32 b = (SInt32)(SInt64)cx.M[1][2];
+    fn.Result->SetInt(((-(r << 16)) & 0xff0000) | ((-(g << 8)) & 0xff00) | ((-b) & 0xff));
+}
+
+// Color.setRGB(rgb): zeroes the multipliers and sets the add row.
+// @0x1428ed2a0
+void ColorProto::SetRGB(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Color);
+    ColorObject* pthis = (ColorObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<InteractiveObject> pchar = pthis->pCharacter;
+    if (fn.NArgs < 1 || !pchar)
+        return;
+    UInt32 rgb = (UInt32)(SInt64)fn.Arg(0).ToNumber(fn.Env);
+    Render::Cxform cx = pchar->GetCxform();
+    cx.M[0][0] = cx.M[0][1] = cx.M[0][2] = 0;
+    cx.M[1][0] = (float)((rgb >> 16) & 0xff);
+    cx.M[1][1] = (float)((rgb >> 8) & 0xff);
+    cx.M[1][2] = (float)(rgb & 0xff);
+    cx.Normalize();
+    pchar->SetCxform(cx);
+    pchar->SetAcceptAnimMoves(false);
+}
+
+// Color.getTransform(): an object with the ra/ga/ba/aa multipliers in percent and rb/gb/bb/ab adds in 0..255.
+// @0x1428eccf0
+// MS2-FUNCTIONAL the exe keeps the null test of the new object's release at the end (cl drops it after the member calls here)
+MS2_AS2_NOGS void ColorProto::GetTransform(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Color);
+    ColorObject* pthis = (ColorObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<InteractiveObject> pchar = pthis->pCharacter;
+    if (!pchar)
+        return;
+    Render::Cxform cx = pchar->GetCxform();
+    Ptr<Object>    pobj = Pickable<Object>(SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env));
+    ASStringContext* psc = fn.Env->GetSC();
+#define MS2_AS2_PUT(name, expr) pobj->SetMemberRaw(psc, psc->CreateConstString(name), Value(Number(expr)), PropFlags())
+    MS2_AS2_PUT("ba", cx.M[0][2] * 100.0f);
+    MS2_AS2_PUT("ga", cx.M[0][1] * 100.0f);
+    MS2_AS2_PUT("ra", cx.M[0][0] * 100.0f);
+    MS2_AS2_PUT("aa", cx.M[0][3] * 100.0f);
+    MS2_AS2_PUT("bb", cx.M[1][2] * 255.0f);
+    MS2_AS2_PUT("gb", cx.M[1][1] * 255.0f);
+    MS2_AS2_PUT("rb", cx.M[1][0] * 255.0f);
+    MS2_AS2_PUT("ab", cx.M[1][3] * 255.0f);
+#undef MS2_AS2_PUT
+    fn.Result->SetAsObject(pobj);
+}
+
+// Color.setTransform(obj): reads the same members back; absent ones keep the current value.
+// @0x1428ec780
+void ColorProto::SetTransform(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, Color);
+    ColorObject* pthis = (ColorObject*)fn.ThisPtr;
+    if (!pthis)
+        return;
+
+    Ptr<InteractiveObject> pchar = pthis->pCharacter;
+    if (fn.NArgs < 1 || !pchar)
+        return;
+    ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
+    if (!pobj)
+        return;
+
+    Render::Cxform   cx = pchar->GetCxform();
+    Value            val;
+    ASStringContext* psc = fn.Env->GetSC();
+#define MS2_AS2_GET(name, dst, div)                                                    if (pobj->GetMemberRaw(psc, psc->CreateConstString(name), &val))                    dst = (float)val.ToNumber(fn.Env) / div
+    MS2_AS2_GET("ba", cx.M[0][2], 100.0f);
+    MS2_AS2_GET("ga", cx.M[0][1], 100.0f);
+    MS2_AS2_GET("ra", cx.M[0][0], 100.0f);
+    MS2_AS2_GET("aa", cx.M[0][3], 100.0f);
+    MS2_AS2_GET("bb", cx.M[1][2], 255.0f);
+    MS2_AS2_GET("gb", cx.M[1][1], 255.0f);
+    MS2_AS2_GET("rb", cx.M[1][0], 255.0f);
+    MS2_AS2_GET("ab", cx.M[1][3], 255.0f);
+#undef MS2_AS2_GET
+    pchar->SetCxform(cx);
+    pchar->SetAcceptAnimMoves(false);
+}
+
+// ---- LoadVars ----
+
+// @0x1428ec0b0
+// MS2-FUNCTIONAL the exe tests the this-class check after loading the environment and tail-calls the error path (branch layout)
+void LoadVarsProto::AddRequestHeader(const FnCall& fn)
+{
+    if (!fn.CheckThisPtr(ObjectInterface::Object_LoadVars))
+        fn.ThisPtrError("LoadVars");
+    else
+    {
+        Log* plog = fn.Env->GetTarget()->GetLog();
+        if (plog)
+            plog->LogMessageById(Log_ScriptWarning, "LoadVars.addRequestHeader is not implemented.");
+    }
+}
+
+// LoadVars.decode(string): unescapes the string and loads its name=value pairs into the object.
+// @0x1428ec130
+// MS2-FUNCTIONAL same calls; cl orders the null-guarded this conversion differently around the string temporaries
+void LoadVarsProto::Decode(const FnCall& fn)
+{
+    if (fn.NArgs <= 0)
+        return;
+    MS2_AS2_CHECK_THIS(fn, LoadVars);
+    Object* pthis = (Object*)fn.ThisPtr;
+    ASString src = fn.Arg(0).ToString(fn.Env);
+    String   data;
+    ASUtils::Unescape(src.ToCStr(), src.GetLength(), &data);
+    if (pthis)
+        LoadVariables(fn.Env, pthis, data);
+}
+
+// @0x1428ec290
+void LoadVarsProto::GetBytesLoaded(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, LoadVars);
+    LoadVarsObject* pthis = (LoadVarsObject*)fn.ThisPtr;
+    Number          loaded = pthis->BytesLoaded;
+    if (loaded < 0)
+        fn.Result->SetUndefined();
+    else
+        fn.Result->SetNumber(loaded);
+}
+
+// @0x1428ec330
+void LoadVarsProto::GetBytesTotal(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, LoadVars);
+    LoadVarsObject* pthis = (LoadVarsObject*)fn.ThisPtr;
+    Number          total = pthis->BytesTotal;
+    if (total < 0)
+        fn.Result->SetUndefined();
+    else
+        fn.Result->SetNumber(total);
+}
+
+// LoadVars.load(url): queues the load, false without an url.
+// @0x1428ec3d0
+// MS2-FUNCTIONAL same calls; register allocation of the this conversion and the url string differs
+void LoadVarsProto::Load(const FnCall& fn)
+{
+    if (fn.NArgs == 0)
+    {
+        fn.Result->SetBool(false);
+        return;
+    }
+    MS2_AS2_CHECK_THIS(fn, LoadVars);
+    LoadVarsObject* pthis = (LoadVarsObject*)fn.ThisPtr;
+    ASString        url = fn.Arg(0).ToString(fn.Env);
+    pthis->BytesLoaded = 0;
+    fn.Env->GetAS2Root()->AddVarLoadQueueEntry(pthis, url.ToCStr(), LoadQueueEntry::LM_None);
+    fn.Result->SetBool(true);
+}
+
+// @0x1428ec510
+// MS2-FUNCTIONAL the exe tests the this-class check after loading the environment and tail-calls the error path (branch layout)
+void LoadVarsProto::Send(const FnCall& fn)
+{
+    if (!fn.CheckThisPtr(ObjectInterface::Object_LoadVars))
+        fn.ThisPtrError("LoadVars");
+    else
+    {
+        Log* plog = fn.Env->GetTarget()->GetLog();
+        if (plog)
+            plog->LogMessageById(Log_ScriptWarning, "LoadVars.send is not implemented.");
+    }
+}
+
+// @0x1428ec590
+// MS2-FUNCTIONAL the exe tests the this-class check after loading the environment and tail-calls the error path (branch layout)
+void LoadVarsProto::SendAndLoad(const FnCall& fn)
+{
+    if (!fn.CheckThisPtr(ObjectInterface::Object_LoadVars))
+        fn.ThisPtrError("LoadVars");
+    else
+    {
+        Log* plog = fn.Env->GetTarget()->GetLog();
+        if (plog)
+            plog->LogMessageById(Log_ScriptWarning, "LoadVars.sendAndLoad is not implemented.");
+    }
+}
+
+// LoadVars.toString(): the members as url-encoded name=value pairs joined by &.
+// @0x1428ec610
+// MS2-FUNCTIONAL same calls; the result string node is built with different operand order (CreateString inline)
+void LoadVarsProto::ToString(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, LoadVars);
+    class StringVisitor : public ObjectInterface::MemberVisitor
+    {
+    public:
+        Environment* pEnv;
+        String*      pString;
+
+        // @0x142993ff0
+        virtual void Visit(const ASString& name, const Value& val, UByte flags)
+        {
+            StringBuffer buf(Memory::GetGlobalHeap());
+            String       escaped;
+            ASUtils::Escape(name.ToCStr(), name.GetSize(), &escaped);
+            buf.AppendString(escaped.ToCStr(), escaped.GetSize());
+            buf.AppendString("=");
+            escaped.Clear();
+            ASString valStr = val.ToString(pEnv);
+            ASUtils::Escape(valStr.ToCStr(), valStr.GetSize(), &escaped);
+            buf.AppendString(escaped.ToCStr(), escaped.GetSize());
+            buf.AppendString("&");
+            *pString = buf;
+        }
+    };
+
+    Object* pthis = (Object*)fn.ThisPtr;
+    String  result;
+    StringVisitor visitor;
+    visitor.pEnv = fn.Env;
+    visitor.pString = &result;
+    pthis->VisitMembers(fn.Env->GetSC(), &visitor, 0);
+    result.Remove(result.GetLength() - 1, 1);
+    fn.Result->SetString(fn.Env->CreateString(result));
+}
+
+// ---- Matrix ----
 
 // "(a=.., b=.., c=.., d=.., tx=.., ty=..)" with six significant digits.
 // @0x1428ed580
@@ -1042,8 +1388,8 @@ void RectangleProto::InflatePoint(const FnCall& fn)
 }
 
 // New rectangle of the overlap; all zero when there is none or it has no area.
-// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
 // @0x1428f0760
+// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
 void RectangleProto::Intersection(const FnCall& fn)
 {
     ASRect ret(0, 0, 0, 0);
@@ -1077,8 +1423,8 @@ void RectangleProto::Intersection(const FnCall& fn)
     fn.Result->SetAsObject(pr.GetPtr());
 }
 
-// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
 // @0x1428f0b20
+// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
 void RectangleProto::Intersects(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Rectangle);
@@ -1205,8 +1551,8 @@ void RectangleProto::SetEmpty(const FnCall& fn)
 }
 
 // "(x=.., y=.., width=.., height=..)" with six significant digits.
-// MS2-FUNCTIONAL fn and the -1 length swap rsi/rdi and the string manager is loaded before str (register allocation)
 // @0x1428f1780
+// MS2-FUNCTIONAL fn and the -1 length swap rsi/rdi and the string manager is loaded before str (register allocation)
 void RectangleProto::ToString(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Rectangle);
@@ -1350,8 +1696,8 @@ void PointProto::Normalize(const FnCall& fn)
     }
 }
 
-// MS2-FUNCTIONAL the exe keeps dy's type byte in a register across the calls (unity-build alias knowledge)
 // @0x1428f2790
+// MS2-FUNCTIONAL the exe keeps dy's type byte in a register across the calls (unity-build alias knowledge)
 void PointProto::Offset(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Point);
@@ -2274,3 +2620,9 @@ void DateProto::DateGetUTCMonth(const FnCall& fn)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+// MS2-PIN: ??_7LocalInvokeCallback@?6??BroadcastMessage@AsBroadcasterProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x143221850
+// MS2-PIN: ??_7StringVisitor@?1??ToString@LoadVarsProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x1432223c8
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
+// MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
