@@ -1027,7 +1027,7 @@ void FUN_140006810(void** array, void* owner, Scaleform::UPInt capacity)
 // @0x1400069a0
 void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
 {
-    FUN_1400051c0(reinterpret_cast<longlong*>(array), owner, capacity);
+    FUN_1400051c0(array, owner, capacity);
 }
 
 // MS2-FUNCTIONAL: clears this array descriptor, releasing its buffer when it is dynamically sized.
@@ -1036,7 +1036,7 @@ void FUN_140006bf0(void** array)
 {
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (fields[1] == 0) {
-        if (fields[2] == 0) FUN_1400051c0(reinterpret_cast<longlong*>(array), array, 0);
+        if (fields[2] == 0) FUN_1400051c0(array, array, 0);
         fields[1] = 0;
         return;
     }
