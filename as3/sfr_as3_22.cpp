@@ -34,6 +34,10 @@ MS2_GLOBAL(0x1431bed18, void*, AS3SoundRequestVtable);
 MS2_GLOBAL(0x1431bed50, void*, AS3SoundRequestNodeVtable);
 MS2_GLOBAL(0x1431bef00, void*, AS3BufferedRequestVtable);
 MS2_GLOBAL(0x1431bef38, void*, AS3BufferedRequestNodeVtable);
+MS2_GLOBAL(0x142d175c8, float, ImageViewportScale);
+MS2_GLOBAL(0x142d175cc, float, ImageViewportBias);
+MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
+MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
 
 namespace Scaleform {
 
@@ -760,6 +764,28 @@ void ClearSoundBuffer(void* player)
 
 
 namespace Scaleform {
+// MS2-FUNCTIONAL: prepares the image viewport transform and dispatches the fill and blend operations through the render context.
+// @0x142675790
+void DrawImageViewport(void* command, void* contextOwner, void** image, void* state)
+{
+    auto* owner = static_cast<unsigned char*>(contextOwner);
+    void* context = *reinterpret_cast<void**>(owner + 8);
+    auto** vtable = *reinterpret_cast<void***>(context);
+    const float measured = reinterpret_cast<float (*)(void*)>(vtable[0x1e0 / sizeof(void*)])(context);
+    const float scaled = measured * ImageViewportBias;
+    struct DrawPayload { std::uint32_t color[4]; float transform[4]; } payload{};
+    std::memcpy(payload.color, ImageViewportColor.get(), sizeof(payload.color));
+    payload.transform[0] = 0.0f;
+    payload.transform[1] = scaled;
+    payload.transform[2] = 0.0f;
+    payload.transform[3] = ImageViewportOrigin - scaled * ImageViewportScale;
+    reinterpret_cast<void (*)(void*, void*, const DrawPayload*, void*)>(vtable[0x188 / sizeof(void*)])(
+        context, *image, &payload, static_cast<unsigned char*>(state) + 0x20);
+    reinterpret_cast<void (*)(void*, unsigned, unsigned)>(vtable[0x118 / sizeof(void*)])(
+        context, static_cast<unsigned>(*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(
+            *reinterpret_cast<void**>(static_cast<unsigned char*>(command) + 8)) + 0x48) != 0) + 0x0f, 1);
+}
+
 // MS2-FUNCTIONAL: clips a rectangle to the destination image and fills the surviving pixels with the selected alpha-adjusted color.
 // @0x142676ac0
 void FillClippedImageRect(void* command, void*, void* image)
