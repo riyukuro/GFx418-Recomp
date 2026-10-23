@@ -137,6 +137,7 @@ public:
     enum FlagsType
     {
         Flag_NoInvisibleAdvance = 0x800,       // _global.noInvisibleAdvance: hidden clips stop advancing
+        Flag_SetCursorTypeFuncOverloaded = 0x1000, // (appended, sfr_as2_07) Mouse.setCursorType replaced by a script
         Flag_ContinueAnimation  = 0x2000,      // _global.gfxExtensions continueAnimation (sfr_gfx_06)
         Shift_AlwaysEnableKeyboardPress = 26,  // two bits: 0 undefined, 1 true, 2 false, 3 read as -1
         Shift_DisableFocusRolloverEvent = 28,  // two bits, the same encoding

@@ -138,6 +138,7 @@
 // MS2-RANGE: 0x14291f430-0x14291f540 .text$mn
 // MS2-RANGE: 0x14291e1a0-0x14291e210 .text$mn
 // MS2-RANGE: 0x14291e210-0x14291e6a0 .text$mn
+// MS2-RANGE: 0x14291e940-0x14291eb20 .text$mn
 // MS2-RANGE: 0x14291eb20-0x14291eb90 .text$mn
 // MS2-RANGE: 0x1429204d0-0x142920540 .text$mn
 // MS2-RANGE: 0x142918470-0x1429184e0 .text$mn
@@ -940,6 +941,24 @@ Math::Math(Environment* penv)
     : Object(penv)
 {
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Math));
+}
+
+// @0x14291e940
+MouseCtorFunction::MouseCtorFunction(ASStringContext* psc, MovieRoot* proot)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    proot->pMouseListener = this;
+    // AsBroadcaster::Initialize, its InitializeProto inlined.
+    ObjectInterface* pobj = this;
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
+    UpdateListenersArray(psc, 0);
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+    // Kept to tell a script replacement of setCursorType (HasOverloadedCursorTypeFunction).
+    SetCursorTypeFunc = Value(psc, SetCursorType).ToFunction(0);
+    LastClickTime     = 0;
 }
 
 // @0x14291eb20
@@ -2005,3 +2024,9 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_7NumberCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b4a8
 // MS2-PIN: ??_7MathCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321bc40
 // MS2-PIN: ??_7MathCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321bcc8
+// MS2-PIN: ??_7MouseCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321cd08
+// MS2-PIN: ??_7MouseCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321cd90
+// MS2-PIN: ??_7MouseCtorFunction@AS2@GFx@Scaleform@@6B@ 0x14321ce38
+// MS2-PIN: ??_7MouseListener@AS2@GFx@Scaleform@@6B@ 0x143217718
+// MS2-PIN: ??_GMouseListener@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292bfc0
+// MS2-PIN: ??_GMouseCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292beb0

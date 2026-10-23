@@ -103,6 +103,7 @@
 // MS2-RANGE: 0x142979260-0x1429797e0 .text$mn
 // MS2-RANGE: 0x142979fe0-0x14297a4a0 .text$mn
 // MS2-RANGE: 0x142978780-0x142978a90 .text$mn
+// MS2-RANGE: 0x142978a90-0x142978dd0 .text$mn
 // MS2-RANGE: 0x142963400-0x1429635f0 .text$mn
 // MS2-RANGE: 0x142969450-0x1429694e0 .text$mn
 // MS2-RANGE: 0x14296c220-0x14296c430 .text$mn
@@ -1108,6 +1109,20 @@ int MouseCtorFunction::PushListenersParams(Environment* penv, unsigned mouseInde
 FunctionRef MathCtorFunction::Register(GlobalContext* pgc)
 {
     return RegisterBuiltinClass<MathCtorFunction, MathProto>(pgc, ASBuiltin_Math, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the MouseProto ctor (sfr_as2_03)
+// @0x142978a90
+FunctionRef MouseCtorFunction::Register(GlobalContext* pgc)
+{
+    // As RegisterBuiltinClass, but the class also becomes the movie's mouse listener.
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap)
+                             MouseCtorFunction(&sc, static_cast<MovieRoot*>(pgc->pMovieRoot->pASMovieRoot)));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) MouseProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    SetBuiltinPrototype(pgc, ASBuiltin_Mouse, proto);
+    pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Mouse), Value(ctor));
+    return ctor;
 }
 
 // @0x14295d1c0

@@ -805,6 +805,17 @@ public:
     // getButtonsState) when extensions are on (exe 0x14294f4f0).
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
 
+    // (appended for sfr_as2_03/06) Makes the class a broadcaster and the movie's mouse listener; the static
+    // functions and the original setCursorType (exe 0x14291e940).
+    MouseCtorFunction(ASStringContext* psc, MovieRoot* proot);
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213d60: show, hide, ...
+    // Creates the class and its prototype and publishes "Mouse" (exe 0x142978a90).
+    static FunctionRef Register(GlobalContext* pgc);
+protected:
+    // pListenersArray from the _listeners member (exe 0x142992a20).
+    void UpdateListenersArray(ASStringContext* psc, Environment* penv);
+public:
+
     // (appended for sfr_as2_06) MouseListener: onMouseMove / onMouseDown / onMouseUp / onMouseWheel to the
     // listeners (exe 0x14296cb80, 0x14296c220, 0x14296cbf0, 0x14296cd30); IsEmpty: a listener array without
     // listeners (exe 0x1429654e0).
@@ -844,6 +855,16 @@ private:
     static int PushListenersParams(Environment* penv, unsigned mouseIndex, ASBuiltinType eventName,
                                    const Value& method, const ASString* ptargetName, unsigned button, int delta,
                                    bool dblClick);
+
+public:
+    // (appended for the vftable) Mouse cannot be instantiated (exe 0x142936f20). setCursorType records a script
+    // replacement in the movie; _listeners refreshes pListenersArray (exe 0x1429864e0).
+    virtual Object* CreateNewObject(Environment*) const { return 0; }
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
+protected:
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const; // exe 0x1429411c0
+    virtual void Finalize_GC(); // exe 0x142942dc0
 };
 
 // Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes, vftable { dtor, Finalize_GC }.
@@ -1014,6 +1035,9 @@ public:
     static const NameFunction StaticFunctionTable[]; // exe 0x143213900: abs, acos, ...
     // Creates the class and its prototype and publishes "Math" (exe 0x142978780).
     static FunctionRef Register(GlobalContext* pgc);
+
+    // (appended for the vftable) Math cannot be instantiated (exe 0x142936f10).
+    virtual Object* CreateNewObject(Environment*) const { return 0; }
 };
 class SelectionCtorFunction : public CFunctionObject
 {

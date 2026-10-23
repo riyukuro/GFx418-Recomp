@@ -31,6 +31,8 @@
 // MS2-RANGE: 0x14298ee10-0x14298ee70 .text$mn
 // MS2-RANGE: 0x14298fe50-0x14298fe90 .text$mn
 // MS2-RANGE: 0x142990240-0x1429902c0 .text$mn
+// MS2-RANGE: 0x142992a20-0x142992b00 .text$mn
+// MS2-RANGE: 0x1429864e0-0x142986790 .text$mn
 // MS2-RANGE: 0x142990960-0x142990c30 .text$mn
 // MS2-RANGE: 0x142990c40-0x142990cc0 .text$mn
 // MS2-RANGE: 0x142990d00-0x142990dd0 .text$mn
@@ -421,6 +423,46 @@ void DateObject::commonInit(Environment* penv)
     LJDate      = 0;
     LocalOffset = 0;
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Date));
+}
+
+// @0x142992a20
+void MouseCtorFunction::UpdateListenersArray(ASStringContext* psc, Environment* penv)
+{
+    Value listeners;
+    if (GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin__listeners), &listeners))
+    {
+        Object* pobj = listeners.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object_Array)
+            pListenersArray = static_cast<ArrayObject*>(pobj);
+        else
+            pListenersArray = 0;
+    }
+}
+
+// MS2-FUNCTIONAL the exe inlines HasOverloadedCursorTypeFunction (sfr_as2_05) and the extension test
+// @0x1429864e0
+bool MouseCtorFunction::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
+{
+    ASStringContext* psc = penv->GetSC();
+    if (name == psc->GetBuiltin(ASBuiltin_setCursorType))
+    {
+        if (psc->pContext->CheckExtensions())
+        {
+            SetCursorTypeFunc = val.ToFunction(penv);
+            MovieImpl* pmovie = penv->GetTarget()->GetMovieImpl();
+            if (HasOverloadedCursorTypeFunction(psc))
+                pmovie->Flags |= MovieImpl::Flag_SetCursorTypeFuncOverloaded;
+            else
+                pmovie->Flags &= ~MovieImpl::Flag_SetCursorTypeFuncOverloaded;
+        }
+    }
+    else if (name == psc->GetBuiltin(ASBuiltin__listeners))
+    {
+        bool rv = Object::SetMember(penv, name, val, flags);
+        UpdateListenersArray(psc, penv);
+        return rv;
+    }
+    return Object::SetMember(penv, name, val, flags);
 }
 
 // @0x142995040

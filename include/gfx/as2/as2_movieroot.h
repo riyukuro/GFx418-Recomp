@@ -17,6 +17,7 @@ namespace Scaleform { namespace Render { namespace Text { class Allocator; } } }
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 class MovieClipLoader;
+class MouseListener;
 
 // Ids of the strings every AS2 movie creates up front (index into StringManager::Builtins).
 enum ASBuiltinType : int
@@ -194,7 +195,8 @@ class MovieRoot : public ASMovieRootBase
 public:
     UByte              Unrecovered_28[0x10];  // +0x28
     MemoryContextImpl* MemContext;            // +0x38
-    UByte              Unrecovered_40[0x10];  // +0x40
+    UByte              Unrecovered_40[0x8];   // +0x40
+    MouseListener*     pMouseListener;        // +0x48 the Mouse class (set by its constructor)
     Ptr<GlobalContext> pGlobalContext;        // +0x50
     Value              ExternalIntfRetVal;    // +0x58 set by the host handler of ExternalInterface.call
     UByte              Unrecovered_78[0xc0];  // +0x78
