@@ -94,6 +94,9 @@ enum ASBuiltinType : int
     ASBuiltin_onReleaseOutsideAux = 123,
     ASBuiltin_onDragOverAux    = 124,
     ASBuiltin_onDragOutAux     = 125,
+    ASBuiltin_width  = 126,
+    ASBuiltin_height = 127,
+    ASBuiltin_useHandCursor = 128,
     ASBuiltin_x      = 129,
     ASBuiltin_y      = 130,
     ASBuiltin_xMin   = 131, // getBounds / getRect result members

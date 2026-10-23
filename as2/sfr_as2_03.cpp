@@ -3,6 +3,12 @@
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1429180c0-0x1429181f0 .text$mn
+// MS2-RANGE: 0x14291adc0-0x14291aee0 .text$mn
+// MS2-RANGE: 0x14291edc0-0x14291eee0 .text$mn
+// MS2-RANGE: 0x142919c00-0x142919d70 .text$mn
+// MS2-RANGE: 0x142927c00-0x142927c90 .text$mn
+// MS2-RANGE: 0x1429281e0-0x142928260 .text$mn
+// MS2-RANGE: 0x142927b00-0x142927b90 .text$mn
 // MS2-RANGE: 0x14291f540-0x14291f670 .text$mn
 // MS2-RANGE: 0x142920fc0-0x142921110 .text$mn
 // MS2-RANGE: 0x142923250-0x142923350 .text$mn
@@ -625,6 +631,30 @@ ArrayObject::ArrayObject(Environment* penv)
 // @0x1429180c0
 ArrayProto::ArrayProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
     : Prototype<ArrayObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// MS2-FUNCTIONAL SetMemberRaw argument scheduling (xor r9d,r9d) differs, same as PointProto
+// @0x142919c00
+ButtonProto::ButtonProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<ButtonObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+    SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_useHandCursor), Value(true),
+                 PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+}
+
+// @0x14291adc0
+ColorProto::ColorProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<ColorObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x14291edc0
+MovieClipLoaderProto::MovieClipLoaderProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<MovieClipLoader>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
@@ -1545,3 +1575,26 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_7TextSnapshotProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e4f8
 // MS2-PIN: ??_7TextSnapshotProto@AS2@GFx@Scaleform@@6B@ 0x14321e5a0
 // MS2-PIN: ??_G?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928900
+// MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217d38
+// MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217d80
+// MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143217e28
+// MS2-PIN: ??_7ButtonProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217e30
+// MS2-PIN: ??_7ButtonProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217e78
+// MS2-PIN: ??_7ButtonProto@AS2@GFx@Scaleform@@6B@ 0x143217f20
+// MS2-PIN: ??_G?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927b00
+// MS2-PIN: ??_7?$Prototype@VColorObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218990
+// MS2-PIN: ??_7?$Prototype@VColorObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432189d8
+// MS2-PIN: ??_7?$Prototype@VColorObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143218a80
+// MS2-PIN: ??_7ColorProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218a88
+// MS2-PIN: ??_7ColorProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143218ad0
+// MS2-PIN: ??_7ColorProto@AS2@GFx@Scaleform@@6B@ 0x143218b78
+// MS2-PIN: ??_G?$Prototype@VColorObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927c00
+// MS2-PIN: ??_7?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216b68
+// MS2-PIN: ??_7?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216bd8
+// MS2-PIN: ??_7?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216c80
+// MS2-PIN: ??_7MovieClipLoaderProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216c88
+// MS2-PIN: ??_7MovieClipLoaderProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216cf8
+// MS2-PIN: ??_7MovieClipLoaderProto@AS2@GFx@Scaleform@@6B@ 0x143216da0
+// MS2-PIN: ??_G?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429281e0
+// MS2-PIN: ??_7ButtonObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217c48
+// MS2-PIN: ??_7ButtonObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217c90

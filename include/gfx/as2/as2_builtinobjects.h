@@ -239,11 +239,24 @@ class ButtonObject : public Object
 public:
     WeakPtr<InteractiveObject> pButton; // +0x68
 
+    // The prototype instance has no button.
+    ButtonObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429541e0: Object_ButtonASObject
     virtual InteractiveObject*       GetASCharacter();       // exe 0x1429490c0
     virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949140
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942d20
+};
+
+// Button.prototype: the methods and useHandCursor = true.
+class ButtonProto : public Prototype<ButtonObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432135f0
+
+    ButtonProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919c00
 };
 class ColorObject : public Object
 {
@@ -251,6 +264,8 @@ public:
     WeakPtr<InteractiveObject> pCharacter; // +0x68
 
     ColorObject(Environment* penv, InteractiveObject* ptarget); // exe 0x14291ad30
+    // The prototype instance has no target.
+    ColorObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954200: Object_Color
 
@@ -258,6 +273,15 @@ public:
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942d60
+};
+
+// Color.prototype.
+class ColorProto : public Prototype<ColorObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432136c0
+
+    ColorProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291adc0
 };
 class MovieClipLoader : public Object
 {
@@ -275,6 +299,8 @@ public:
     StringHashLH<ProgressDesc> ProgressInfo; // +0x68 by URL
 
     MovieClipLoader(Environment* penv); // exe 0x14291eca0
+    // The prototype instance tracks nothing.
+    MovieClipLoader(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954290: Object_MovieClipLoader
 
@@ -296,6 +322,15 @@ protected:
 private:
     // Prototype, the broadcaster members and an own _listeners array (exe 0x142995080).
     void commonInit(Environment* penv);
+};
+
+// MovieClipLoader.prototype.
+class MovieClipLoaderProto : public Prototype<MovieClipLoader>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432134f0
+
+    MovieClipLoaderProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291edc0
 };
 
 // 0x78 bytes.
