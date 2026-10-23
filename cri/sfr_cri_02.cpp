@@ -123,6 +123,7 @@ void     FUN_1400453c4(void* demux);
 void     FUN_1400458b8(void* demux);
 void*    FUN_14003b348(void* heap, const void* data, CriUint32 size);
 CriUint32 FUN_14003a85c(void* object, CriSint32 index, const char* key);
+CriSint32 FUN_14003a3e0(void* object, const char* key);
 void     FUN_14003a108(void* object);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 CriBool  FUN_140043d40(void* decoder);
@@ -3570,6 +3571,37 @@ void FUN_140032c70(void* player, void* workInfo, CriUint32* output, const CriMov
         work->Size = suggestedSize;
     if (output[1] == 1 && output[2] != 0 && output[3] != 0 && ((CriUint64*)output)[2] != 0)
         output[0] = 1;
+    FUN_14003a108(document);
+}
+
+// MS2-FUNCTIONAL: parse video dimensions, timing, codec, alpha, and metadata information.
+// @0x140032db0
+void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+{
+    struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
+    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    CriUint32 rateNumerator = FUN_14003a85c(document, 0, "framerate_n");
+    CriUint32 rateDenominator = FUN_14003a85c(document, 0, "framerate_d");
+    output[4] = (CriUint32)(((float)rateNumerator * 1000.0f) / (float)rateDenominator);
+    output[5] = FUN_14003a85c(document, 0, "total_frames");
+    output[0] = FUN_14003a85c(document, 0, "width");
+    output[1] = FUN_14003a85c(document, 0, "height");
+    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
+    WorkSizeView* work = (WorkSizeView*)workInfo;
+    if (work->Size < suggestedSize)
+        work->Size = suggestedSize;
+    output[10] = FUN_14003a3e0(document, "pre_padding") < 1
+        ? 0x40 : FUN_14003a85c(document, 0, "pre_padding");
+    output[6] = FUN_14003a85c(document, 0, "alpha_type");
+    output[7] = FUN_14003a85c(document, 0, "mpeg_codec");
+    output[8] = FUN_14003a85c(document, 0, "metadata_count");
+    output[9] = FUN_14003a85c(document, 0, "metadata_size");
+    output[2] = FUN_14003a85c(document, 0, "disp_width");
+    if (output[2] == 0)
+        output[2] = output[0];
+    output[3] = FUN_14003a85c(document, 0, "disp_height");
+    if (output[3] == 0)
+        output[3] = output[1];
     FUN_14003a108(document);
 }
 
