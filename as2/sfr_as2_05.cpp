@@ -157,6 +157,9 @@
 // MS2-RANGE: 0x14295b020-0x14295b472 .text$mn
 // MS2-RANGE: 0x142959f10-0x14295a4a2 .text$mn
 // MS2-RANGE: 0x142953520-0x142953873 .text$mn
+// MS2-RANGE: 0x142956380-0x142956407 .text$mn
+// MS2-RANGE: 0x142957100-0x14295726c .text$mn
+// MS2-RANGE: 0x1429579a0-0x142957b03 .text$mn
 
 #include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -175,6 +178,8 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_imageresource.h"
+#include "../include/kernel/sf_std.h"
+#include "../include/render/text_core.h"
 #include "../include/gfx/gfx_input.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_movieslots.h"
@@ -3922,6 +3927,51 @@ bool StageCtorFunction::GetMemberRaw(ASStringContext* psc, const ASString& name,
     }
     return Object::GetMemberRaw(psc, name, val);
 }
+
+// MS2-FUNCTIONAL the exe calls the Allocator ctor out of line (0x1424d61c0); the header ctor is inline
+// @0x142956380
+Render::Text::Allocator* MovieRoot::GetTextAllocator()
+{
+    if (!MemContext->TextAllocator)
+        MemContext->TextAllocator = *SF_HEAP_NEW(MemContext->Heap) Render::Text::Allocator(MemContext->Heap);
+    return MemContext->TextAllocator;
+}
+
+// @0x142957100
+bool MovieRoot::GetVariable(GFx::Value* pval, const char* ppathToVar) const
+{
+    if (!AS2::GetLevelMovie(pMovieImpl, 0) || !pval)
+        return false;
+    AvmDisplayObjBase* pavm = AS2::GetLevelMovie(pMovieImpl, 0)->GetAvmObjImpl();
+    Environment* penv = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
+    ASString path(penv->CreateString(ppathToVar));
+    Value    retVal;
+    if (penv->GetVariable(path, &retVal))
+    {
+        ASValue2GFxValue(penv, retVal, pval);
+        return true;
+    }
+    return false;
+}
+
+// @0x1429579a0
+unsigned MovieRoot::GetVariableArraySize(const char* ppathToVar)
+{
+    if (!AS2::GetLevelMovie(pMovieImpl, 0))
+        return 0;
+    AvmDisplayObjBase* pavm = AS2::GetLevelMovie(pMovieImpl, 0)->GetAvmObjImpl();
+    Environment* penv = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
+    ASString path(penv->CreateString(ppathToVar));
+    Value    retVal;
+    unsigned size = 0;
+    if (penv->GetVariable(path, &retVal) && retVal.IsObject())
+    {
+        Object* pobj = retVal.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object::Object_Array)
+            size = static_cast<ArrayObject*>(pobj)->GetSize();
+    }
+    return size;
+}
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {
@@ -3999,3 +4049,6 @@ bool AS2ValueObjectInterface::GetElement(void* pdata, unsigned idx, Value* pval)
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216640
 // MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216688
+// MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
+// MS2-PIN: ??_7?$RefCountBaseNTS@VAllocator@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98

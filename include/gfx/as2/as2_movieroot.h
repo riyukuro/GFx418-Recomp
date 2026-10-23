@@ -12,6 +12,7 @@
 #include "../gfx_loadproc.h"
 
 namespace Scaleform { namespace GFx { class Value; class FunctionHandler; } }
+namespace Scaleform { namespace Render { namespace Text { class Allocator; } } }
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -173,12 +174,14 @@ public:
     }
 };
 
-// Memory of an AS2 movie (heap, string manager, collector); only the collector is read so far.
+// Memory of an AS2 movie (heap, string manager, collector, text allocator).
 class MemoryContextImpl : public MemoryContext
 {
 public:
-    UByte                Unrecovered_10[0x10]; // +0x10
-    ASRefCountCollector* ASGC;                 // +0x20
+    MemoryHeap*                   Heap;                 // +0x10 the movie's heap
+    UByte                         Unrecovered_18[0x08]; // +0x18
+    ASRefCountCollector*          ASGC;                 // +0x20
+    Ptr<Render::Text::Allocator> TextAllocator;        // +0x28 created on first use (MovieRoot::GetTextAllocator)
 };
 
 // AS2 half of a movie.
@@ -328,6 +331,14 @@ public:
     virtual void DoActions();
     // Runs the queued actions of one session only, the others stay queued (exe 0x142938c40).
     void DoActionsForSession(unsigned sessionId);
+
+    // The text allocator of the movie's memory context, created on first use (exe 0x142956380).
+    virtual Render::Text::Allocator* GetTextAllocator();
+    // The value of a variable path from _level0 as a host value; false without a _level0 or if not found
+    // (exe 0x142957100).
+    virtual bool GetVariable(GFx::Value* pval, const char* ppathToVar) const;
+    // The length of the Array a variable path from _level0 names, 0 otherwise (exe 0x1429579a0).
+    virtual unsigned GetVariableArraySize(const char* ppathToVar);
 };
 
 // The AS2 root of a character of an AS2 movie.

@@ -272,6 +272,10 @@ public:
     // (exe 0x142944a80).
     bool               FindOwnerOfMember(const ASString& varname, Value* presult,
                                          const WithStackArray* pwithStack = 0) const;
+    // A variable by name or path through the scope chain; the owner and new target are optional outputs
+    // (exe 0x142956cd0).
+    bool               GetVariable(const ASString& varname, Value* presult, const WithStackArray* pwithStack = 0,
+                                   InteractiveObject** ppnewTarget = 0, Value* powner = 0, unsigned exclFlags = 0);
     // Resolves a variable path (with/scope chain, targets); false if not found (exe 0x142945010).
     bool               FindVariable(const GetVarParams& params, bool searchUndefined = false,
                                     ASString* pvarName = 0) const;
