@@ -158,6 +158,15 @@ public:
     static CacheEffect* Create(TreeCacheNode* node, const State* state, CacheEffect* next);
 };
 
+// (appended for sfr_render_06e)
+inline CacheEffect* CacheEffectChain::GetEffect(StateType type) const
+{
+    CacheEffect* e = pEffect;
+    while (e && e->GetType() != type)
+        e = e->pNext;
+    return e;
+}
+
 }} // namespace Scaleform::Render
 
 #endif

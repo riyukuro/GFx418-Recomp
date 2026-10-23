@@ -12,6 +12,7 @@
 #include "ms2/scaleform/include/render/render_treeshape.h"
 #include "ms2/scaleform/include/render/render_meshkey.h"
 #include "ms2/scaleform/include/render/render_bundle.h"
+#include "ms2/scaleform/include/render/render_primitivebundle.h"
 #include "ms2/scaleform/include/render/render_matrixpool.h"
 #include "ms2/scaleform/include/render/render_hal.h"
 #include "ms2/scaleform/include/render/render_primitive.h"

@@ -36,6 +36,10 @@ struct DICommand;
 // (appended for sfr_render_07q)
 class RenderQueueItem;
 class MaskPrimitive;
+// (appended for sfr_render_06e)
+class ComplexMesh;
+template<class T> struct StrideArray;
+namespace MatrixPoolImpl { class HMatrix; }
 
 class HAL : public RefCountBase<HAL, StatRender_Mem>
 {
@@ -72,13 +76,14 @@ public:
     virtual void Draw(const RenderQueueItem& item) = 0;                                           // 27
     // (named for sfr_render_07p) draws the prepared batches [start, end) of a primitive
     virtual void DrawProcessedPrimitive(Primitive* p, PrimitiveBatch* start, PrimitiveBatch* end) = 0;   // 28
-    virtual void halSlot29() = 0;                                                                 // 29
+    virtual void DrawProcessedComplexMeshes(ComplexMesh* p,
+                                            const StrideArray<MatrixPoolImpl::HMatrix>& matrices) = 0;   // 29
     // (named for sfr_render_07q) a mask: push it and draw its areas into the stencil, then draw clipped by it
     virtual void PushMask_BeginSubmit(MaskPrimitive* primitive) = 0;                              // 30
     virtual void EndMaskSubmit() = 0;                                                             // 31
     virtual void PopMask() = 0;                                                                   // 32
-    virtual void halSlot33() = 0;                                                                 // 33
-    virtual void halSlot34() = 0;                                                                 // 34
+    virtual void PushBlendMode(BlendMode mode) = 0;                                               // 33
+    virtual void PopBlendMode() = 0;                                                              // 34
     virtual void applyBlendMode(BlendMode mode, bool sourceAc = false, bool forceAc = false) = 0;  // 35
     virtual void PrepareFilters(FilterPrimitive* primitive) = 0;                                  // 36
     virtual void PushFilters(FilterPrimitive* primitive) = 0;                                     // 37

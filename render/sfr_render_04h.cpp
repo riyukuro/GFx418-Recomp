@@ -299,6 +299,6 @@ void DICommand_Merge::ExecuteHWCopyAction(DICommandContext& context, Texture** t
 // MS2-PIN: ??_7FilterSet@Render@Scaleform@@6B@ 0x14318cce0
 // MS2-PIN: ??_7Interface@RenderQueueItem@Render@Scaleform@@6B@ 0x143191990
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EE@@Scaleform@@6B@ 0x1431919b0
-// MS2-PIN: ??_7?$RefCountBase@VFilterPrimitive@Render@Scaleform@@$0EE@@Scaleform@@6B@ 0x1431928a8
+// MS2-PIN: ??_7?$RefCountBase@VFilterPrimitive@Render@Scaleform@@$0EE@@Scaleform@@6B@ 0x1431919f0
 // MS2-PIN: ??_7FilterPrimitive@Render@Scaleform@@6B?$RefCountBase@VFilterPrimitive@Render@Scaleform@@$0EE@@2@@ 0x1431919f8
 // MS2-PIN: ??_7FilterPrimitive@Render@Scaleform@@6BInterface@RenderQueueItem@12@@ 0x143191a00

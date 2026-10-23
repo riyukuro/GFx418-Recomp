@@ -129,6 +129,40 @@ public:
     BundleEntry* GetFirst() const  { return pFirst; }
     BundleEntry* GetLast() const   { return pLast; }
     UInt32       GetLength() const { return Length & ~(UInt32)Range_Invalid; }
+
+    // (appended for sfr_render_06f)
+    bool           IsEmpty() const     { return pFirst == 0; }
+    bool           IsValid() const     { return Length != (UInt32)Range_Invalid; }
+    BundleIterator GetIterator() const { return BundleIterator(pFirst, pLast); }
+    // walks every chain to its end; checks only (0x1426be710)
+    void VerifyValidChildDepth();
+    // cuts each entry's chain where it reaches below topDepth (0x1426be490)
+    void StripChainsByDepth(unsigned topDepth);
+    // cuts every chain, for the leaves (0x1426be450)
+    void StripChains();
+};
+
+// (appended for sfr_render_06f) a range that remembers the chain tails it last extended (up to 8), so merging the
+// child ranges into it does not walk the chains again
+class BundleEntryRangeMatcher : public BundleEntryRange
+{
+    enum { MergeLengthLimit = 8 };
+    mutable BundleEntry* pLastEntries[MergeLengthLimit];   // +0x18
+    mutable UPInt        LastEntryCount;                   // +0x58
+
+public:
+    BundleEntryRangeMatcher(BundleEntryRangeType type) : BundleEntryRange(type), LastEntryCount(0) {}
+
+    void operator=(const BundleEntryRange& src)
+    {
+        BundleEntryRange::operator=(src);
+        LastEntryCount = 0;
+    }
+
+    // true when other's keys are a sub-sequence of ours; with pmergeDepth, other's entries are also chained onto
+    // the matching ones (0x1426bdfc0)
+    bool Match(BundleEntryRange& other, unsigned* pmergeDepth = 0) const;
+    void MergeMatchingChains(BundleEntryRange& other, unsigned mergeDepth) { Match(other, &mergeDepth); }
 };
 
 // (appended for sfr_render_07h) how a mask clips its content, from TreeCacheNode::calcMaskBounds
@@ -154,6 +188,8 @@ public:
     ~CacheEffectChain();
 
     bool IsEmpty() const { return pEffect == 0; }
+    // (appended for sfr_render_06e) the first effect of the kind, 0 when there is none (render_cacheeffect.h)
+    inline CacheEffect* GetEffect(StateType type) const;
 
     // re-reads the node's states for the changed kinds; true when the parent's pattern must be rebuilt
     bool UpdateEffects(TreeCacheNode* node, unsigned changeFlags);

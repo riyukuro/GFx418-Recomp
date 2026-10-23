@@ -256,6 +256,16 @@ class ViewMatrix3DPrimitive : public RefCountBase<ViewMatrix3DPrimitive, StatRen
                               public RenderQueueItem::Interface
 {
 public:
+    // (appended for sfr_render_06e) starts as identity, cleared
+    ViewMatrix3DPrimitive(HAL* hal) : pHAL(hal), bHasViewMatrix(false) {}
+    // declared: the deleting dtor stores the class vftables before the base dtor
+    ~ViewMatrix3DPrimitive() {}
+    void SetViewMatrix(Matrix3F m)   // by value: read whole before the store
+    {
+        ViewMatrix     = m;
+        bHasViewMatrix = true;
+    }
+
     virtual void EmitToHAL(RenderQueueItem&, RenderQueueProcessor&);
 
 private:
@@ -269,6 +279,16 @@ class ProjectionMatrix3DPrimitive : public RefCountBase<ProjectionMatrix3DPrimit
                                     public RenderQueueItem::Interface
 {
 public:
+    // (appended for sfr_render_06e) starts as identity, cleared
+    ProjectionMatrix3DPrimitive(HAL* hal) : pHAL(hal), bHasProjectionMatrix(false) {}
+    // declared: the deleting dtor stores the class vftables before the base dtor
+    ~ProjectionMatrix3DPrimitive() {}
+    void SetProjectionMatrix(Matrix4F m)   // by value: read whole before the store
+    {
+        ProjectionMatrix     = m;
+        bHasProjectionMatrix = true;
+    }
+
     virtual void EmitToHAL(RenderQueueItem&, RenderQueueProcessor&);
 
 private:
