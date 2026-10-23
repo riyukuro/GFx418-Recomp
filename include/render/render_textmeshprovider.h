@@ -104,6 +104,13 @@ struct VectorGlyphShape : public MeshProvider_KeySupport, public ListNode<Vector
     UPInt GetHashValue() const { return Key.GetHashValue(); }
     bool  operator==(const VectorGlyphShape& o) const { return Key == o.Key; }
 
+    // (appended for sfr_render_06d) hashes the glyph cache's shape set by key
+    struct PtrHashFunctor
+    {
+        UPInt operator()(const VectorGlyphShape* shape) const { return shape->Key.GetHashValue(); }
+        UPInt operator()(const VectorGlyphKey& key) const     { return key.GetHashValue(); }
+    };
+
     bool generateNullVectorMesh(VertexOutput* verOut);
 };
 

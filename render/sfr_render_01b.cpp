@@ -8,6 +8,7 @@
 #include <string.h>
 #include "ms2/scaleform/include/render/render_context.h"
 #include "ms2/scaleform/include/render/render_renderer2d.h"
+#include "ms2/scaleform/include/render/render_glyphcache.h"
 
 namespace Scaleform { namespace Render {
 

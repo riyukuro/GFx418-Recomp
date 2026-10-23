@@ -108,6 +108,16 @@ struct GlyphCacheParams
     bool     UseAutoFit;            // +0x34
     bool     UseVectorOnFullCache;  // +0x35
     bool     FenceWaitOnFullCache;  // +0x36
+
+    // square textures of texSize; the glyph cache's ctor has it inlined, the client's copy is 0x1422f5320
+    GlyphCacheParams(unsigned texSize = 1024, unsigned numTextures = 1, unsigned maxSlotHeight = 48,
+                     unsigned slotPadding = 2)
+        : TextureWidth(texSize), TextureHeight(texSize), NumTextures(numTextures), MaxSlotHeight(maxSlotHeight),
+          SlotPadding(slotPadding), TexUpdWidth(256), TexUpdHeight(512), MaxRasterScale(1.0f),
+          MaxVectorCacheSize(500), FauxItalicAngle(0.25f), FauxBoldRatio(0.045f), OutlineRatio(0.01f),
+          ShadowQuality(1.0f), UseAutoFit(true), UseVectorOnFullCache(false), FenceWaitOnFullCache(true)
+    {
+    }
 };
 
 // the glyph cache's settings interface (Render_GlyphCacheConfig)
@@ -120,75 +130,9 @@ public:
     virtual void                    ClearCache() = 0;
 };
 
-// Outline of the glyph cache (Render_GlyphCache, unit sfr_render_06): its bases only, so a GlyphCache* converts to
-// its GlyphCacheConfig (at +0x18).
-class GlyphCache : public RefCountBase<GlyphCache, Stat_Default_Mem>, public CacheBase, public GlyphCacheConfig
-{
-public:
-    // (appended for sfr_render_07k) drops the glyphs of a destroyed font, then merges the freed slots
-    void CleanUpFont(FontCacheHandle* font);   // 0x1426c4f10
-    void MergeCacheSlots();                    // 0x1426c67b0
-    // (appended for sfr_render_07l) printf-style warning to the renderer's log
-    void LogWarning(const char* fmt, ...);     // 0x1426c6710
-
-    // (appended for sfr_render_07o) what the text mesh providers use: fills per layer / texture, the glyph lookup
-    // and rasterizer, the shared vector glyph shapes, the slot queue and the in-use list
-    PrimitiveFill*    GetFill(TextLayerType type, unsigned textureId);                       // 0x1426c62a0
-    Image*            GetImage(unsigned textureId);                                          // 0x1426c6380
-    FontCacheHandle*  RegisterFont(Font* font);                                              // 0x1426c7c10
-    float             GetCachedFontSize(const GlyphParam& gp, float screenSize, bool exactFit) const;  // 0x1426c6170
-    float             GetCachedShadowSize(float screenSize, const GlyphRaster* ras) const;  // 0x1426c6220
-    GlyphNode*        FindGlyph(TextMeshProvider* tm, const GlyphParam& gp);                 // 0x1426c6110
-    GlyphNode*        RasterizeGlyph(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp);  // 0x1426c6840
-    GlyphNode*        RasterizeShadow(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp,
-                                      float screenSize, const GlyphRaster* ras);             // 0x1426c6d80
-    VectorGlyphShape* CreateGlyphShape(GlyphRunData& data, unsigned glyphIndex, float screenSize, bool fauxBold,
-                                       bool fauxItalic, unsigned outline, bool needsVectorShape);  // 0x1426c5700
-
-    // (appended for sfr_render_07o) the outcome of the last rasterization
-    enum RasResult
-    {
-        Res_Success,
-        Res_ShapeIsEmpty,
-        Res_ShapeNotFound,
-        Res_ShapeIsTooBig,
-        Res_NoRasterCache,
-        Res_CacheFull
-    };
-    RasResult GetRasResult() const       { return Result; }
-    float     GetMaxRasterScale() const  { return Param.MaxRasterScale; }
-
-    MemoryHeap*             GetHeap()                 { return pHeap; }
-    TextureManager*         GetTextureManager()       { return pTexMan; }
-    PrimitiveFillManager*   GetPrimitiveFillManager() { return pFillMan; }
-    float                   GetScaleU() const         { return ScaleU; }
-    float                   GetScaleV() const         { return ScaleV; }
-    GlyphQueue&             GetQueue()                { return *(GlyphQueue*)Unk_Queue; }
-    List<TextMeshProvider>& GetTextInUse()            { return TextInUse; }
-
-private:
-    // the texture mappers, the slot queue (GlyphQueue +0x1098) and the update state stay opaque until the glyph
-    // cache's own unit (sfr_render_06)
-    GlyphCacheParams        Param;                     // +0x20
-    MemoryHeap*             pHeap;                     // +0x58
-    HAL*                    pRenderer;                 // +0x60
-    PrimitiveFillManager*   pFillMan;                  // +0x68
-    TextureManager*         pTexMan;                   // +0x70
-    unsigned                TextureWidth;              // +0x78
-    unsigned                TextureHeight;             // +0x7c
-    unsigned                MaxNumTextures;            // +0x80
-    unsigned                MaxSlotHeight;             // +0x84
-    unsigned                SlotPadding;               // +0x88
-    float                   ScaleU;                    // +0x8c
-    float                   ScaleV;                    // +0x90
-    float                   ShadowQuality;             // +0x94
-    UByte                   Unk_Textures[0x1098 - 0x98];
-    UByte                   Unk_Queue[0x1240 - 0x1098];
-    List<TextMeshProvider>  TextInUse;                 // +0x1240
-    List<TextMeshProvider>  TextInPin;                 // +0x1250
-    UByte                   Unk_Tail[0x13b0 - 0x1260];
-    RasResult               Result;                    // +0x13b0
-};
+// the glyph cache (Render_GlyphCache, unit sfr_render_06d) is recovered in render_glyphcache.h; its GlyphCacheConfig
+// sits at +0x18
+class GlyphCache;
 
 enum DisplayPass
 {

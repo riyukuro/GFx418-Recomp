@@ -10,6 +10,7 @@
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/render/render_types2d.h"
 #include "ms2/scaleform/include/render/render_renderer2d.h"
+#include "ms2/scaleform/include/render/render_glyphcache.h"
 
 namespace Scaleform { namespace Render {
 

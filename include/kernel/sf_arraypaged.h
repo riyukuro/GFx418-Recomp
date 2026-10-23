@@ -137,6 +137,16 @@ public:
         }
     }
 
+    // (appended for sfr_render_06d) drops the items from n on, pages are kept
+    void CutAt(UPInt n)
+    {
+        if (n < Size)
+        {
+            Allocator::DestructArrayPaged(Pages, n, Size, PageShift, PageMask);
+            Size = n;
+        }
+    }
+
     UPInt    GetSize() const               { return Size; }
     const T& operator[](UPInt i) const     { return Pages[i >> PageShift][i & PageMask]; }
     T&       operator[](UPInt i)           { return Pages[i >> PageShift][i & PageMask]; }

@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/render/render_textmeshprovider.h"
 #include "ms2/scaleform/include/render/render_renderer2d.h"
+#include "ms2/scaleform/include/render/render_glyphcache.h"
 #include "ms2/scaleform/include/render/render_glyphqueue.h"
 #include "ms2/scaleform/include/render/render_meshcache.h"
 #include "ms2/scaleform/include/render/render_sync.h"
@@ -39,15 +40,7 @@ struct ImageGlyphVertex
     static VertexFormat Format;   // 0x143a30328
 };
 
-// vertex of the alpha (raster, packed and distance field) glyph quads: position, texture coordinates, colour
-struct RasterGlyphVertex
-{
-    float  x, y;
-    UInt32 Color;
-    float  u, v;
-    void   Set(float x_, float y_, float u_, float v_, UInt32 c) { x = x_; y = y_; Color = c; u = u_; v = v_; }
-    static VertexFormat Format;   // 0x143a2fe50
-};
+// the alpha glyph quads' vertex (RasterGlyphVertex) is the glyph cache's, render_glyphcache.h
 
 // a glyph packed into a font texture; only its image is read here (+0x10, after the refcount base)
 class TextureGlyph : public RefCountBase<TextureGlyph, Stat_Default_Mem>

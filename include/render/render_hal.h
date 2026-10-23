@@ -27,6 +27,7 @@ class DepthStencilBuffer;
 class PrimitiveFill;
 struct PrimitiveFillData;
 class MeshCache;
+class RQCacheInterface;
 class FilterPrimitive;
 // (appended for sfr_render_07p)
 class Primitive;
@@ -101,7 +102,8 @@ public:
     virtual TextureManager* GetTextureManager() = 0;                                              // 52
     // (appended for sfr_render_04f)
     virtual MeshCache& GetMeshCache() = 0;                                                        // 53
-    virtual void halSlot54() = 0;                                                                 // 54
+    // (appended for sfr_render_06d)
+    virtual RQCacheInterface& GetRQCacheInterface() = 0;                                         // 54
     virtual void halSlot55() = 0;                                                                 // 55
     // the hardware vertex formats a fill is drawn with: plain, batched and instanced
     virtual void MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
