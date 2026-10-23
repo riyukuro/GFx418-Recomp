@@ -1,0 +1,217 @@
+// Recovered Scaleform GFx video player glue from the executable; SDK material is reference only.
+// MS2-UNIT: sfr_video_03
+// MS2-FLAGS: scaleform
+// MS2-RANGE: 0x140016b50-0x14001c000 .text$mn
+// MS2-RANGE: 0x142742ed0-0x1427433f0 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
+#include "../include/video/video_video.h"
+#include "../include/video/video_videoplayerimpl.h"
+#include "../include/gfx/gfx_stream.h"
+#include "../include/gfx/as3/as3_value.h"
+#include "hook/ms2hook.h"
+#include <cstring>
+#include <cstdint>
+#include <new>
+#include <limits>
+
+MS2_GLOBAL(0x143b27608, void*, VideoThunkA);
+MS2_GLOBAL(0x143b27610, void*, VideoThunkBaseA);
+MS2_GLOBAL(0x143b27588, void*, VideoThunkB);
+MS2_GLOBAL(0x143b27590, void*, VideoThunkBaseB);
+MS2_GLOBAL(0x143b27708, void*, VideoThunkC);
+MS2_GLOBAL(0x143b27710, void*, VideoThunkBaseC);
+MS2_GLOBAL(0x143b275f8, void*, VideoThunkD);
+MS2_GLOBAL(0x143b27600, void*, VideoThunkBaseD);
+MS2_GLOBAL(0x143b27638, void*, VideoThunkE);
+MS2_GLOBAL(0x143b27640, void*, VideoThunkBaseE);
+MS2_GLOBAL(0x143b27488, void*, VideoThunkF);
+MS2_GLOBAL(0x143b27490, void*, VideoThunkBaseF);
+
+MS2_EXTERN(0x1423df980, void(void*, void*, void*), VideoNative0);
+MS2_EXTERN(0x1423df850, void(void*, void*, void*), VideoNative1);
+MS2_EXTERN(0x1423dfd20, void(void*, void*, void*), VideoNative2);
+MS2_EXTERN(0x1423df410, void(void*, void*, void*), VideoNative3);
+MS2_EXTERN(0x1423dfda0, void(void*, void*, void*), VideoNative4);
+MS2_EXTERN(0x1424f1390, void(void*, void*, void*), ConvertAS3ValueToString);
+MS2_EXTERN(0x1424f0d30, void(void*, void*, int*, int, void*), ConvertAS3ValueToInt32);
+
+namespace {
+using VideoGenericThunk = void(*)(void*, void*, void*);
+
+// MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the first property thunk.
+// @0x140016b50
+void FUN_140016b50(void*, void* object, void* callFrame, void* member, int argc,
+                   Scaleform::GFx::AS3::Value* args)
+{
+    auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
+    auto number = std::numeric_limits<double>::quiet_NaN();
+    if (argc != 0) args->Convert2NumberInline(number);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
+        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkA.get())(
+            static_cast<unsigned char*>(VideoThunkBaseA.get()) + reinterpret_cast<std::uintptr_t>(root),
+            member, number);
+    }
+}
+
+// MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the second property thunk.
+// @0x140016be0
+void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
+                   Scaleform::GFx::AS3::Value* args)
+{
+    auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
+    auto number = std::numeric_limits<double>::quiet_NaN();
+    if (argc != 0) args->Convert2NumberInline(number);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
+        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkB.get())(
+            static_cast<unsigned char*>(VideoThunkBaseB.get()) + reinterpret_cast<std::uintptr_t>(root),
+            member, number);
+    }
+}
+
+// MS2-FUNCTIONAL: dispatches one of the six recovered native getters selected by the trait index.
+// @0x140016c70
+void FUN_140016c70(void* object, void* result, unsigned kind)
+{
+    static const VideoGenericThunk calls[] = {VideoNative0.get(), VideoNative1.get(), VideoNative2.get(),
+                                               VideoNative3.get(), VideoNative4.get(), nullptr};
+    if (kind < 5) calls[kind](object, result, nullptr);
+    else if (kind == 5) reinterpret_cast<VideoGenericThunk>(
+        *reinterpret_cast<void**>(static_cast<unsigned char*>(result) + 0x40))(object, result, nullptr);
+}
+
+// MS2-FUNCTIONAL: invokes the native setter and then marks the trait value as assigned.
+// @0x140016d10
+void FUN_140016d10(void* object, void* value)
+{
+    reinterpret_cast<void(*)(void*, void*, void*)>(*reinterpret_cast<void**>(object))(
+        object, value, reinterpret_cast<void*>(VideoNative3.get()));
+    reinterpret_cast<void(*)(void*, int)>(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20))(
+        object, 1);
+}
+
+// MS2-FUNCTIONAL: constructs the recovered three-field AS3 value, retaining its managed payload.
+// @0x140016e30
+std::uint64_t* FUN_140016e30(std::uint64_t* out, std::uint64_t type, std::uint64_t flags,
+                             int hasValue, std::uint32_t* sourceType, std::uint64_t* payload)
+{
+    out[0] = type; out[1] = flags; out[2] = *payload;
+    auto* count = reinterpret_cast<std::uint32_t*>(out[2] + 0x18);
+    ++*count;
+    if (hasValue) {
+        const auto tag = *sourceType & 0x1f;
+        if (tag >= 0x0c && tag < 0x10 && *reinterpret_cast<std::uint64_t*>(sourceType + 4) == 0) {
+            auto* node = reinterpret_cast<unsigned char*>(out[2]);
+            auto shared = *reinterpret_cast<std::uint64_t*>(node + 8);
+            ++*reinterpret_cast<std::uint32_t*>(shared + 0x80);
+            auto* refs = reinterpret_cast<std::uint32_t*>(node + 0x18);
+            if (--*refs == 0) reinterpret_cast<Scaleform::GFx::ASStringNode*>(node)->ReleaseNode();
+            out[2] = shared + 0x68;
+        } else {
+            ConvertAS3ValueToString(sourceType, out + 2, out + 2);
+        }
+    }
+    return out;
+}
+
+// MS2-FUNCTIONAL: normalizes the AS3 value tag and calls the trait setter for non-default values.
+// @0x140016ed0
+void FUN_140016ed0(std::uint64_t* value, void* object)
+{
+    auto& tag = *reinterpret_cast<std::uint32_t*>(value + 2);
+    if ((tag & 0x70000000) != 0x10000000) {
+        tag = (tag & 0x9fffffff) | 0x10000000;
+        VideoNative1.get()(object, value, nullptr);
+    }
+}
+
+// MS2-FUNCTIONAL: computes the executable's 8-byte key hash and searches its chained bucket.
+// @0x140016f40
+std::int64_t FUN_140016f40(void* tablePtr, const std::uint64_t* key)
+{
+    auto* table = *reinterpret_cast<unsigned char**>(tablePtr);
+    if (!table) return -1;
+    std::uint64_t hash = 0x1505;
+    auto* bytes = reinterpret_cast<const unsigned char*>(key);
+    for (int i = 7; i >= 0; --i) hash = bytes[i] + hash * 0x1003f;
+    auto mask = *reinterpret_cast<std::uint64_t*>(table + 8);
+    auto index = hash & mask;
+    auto* entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + index * 0x20);
+    if (entry[0] == ~std::uint64_t(1) || entry[1] != index) return -1;
+    for (auto link = index;;) {
+        entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + link * 0x20);
+        if (entry[1] == index && entry[2] == *key) return static_cast<std::int64_t>(link);
+        link = entry[0];
+        if (link == ~std::uint64_t(0)) break;
+    }
+    return -1;
+}
+
+// MS2-FUNCTIONAL: forwards an AS3 value through the third property thunk unless its receiver is disabled.
+// @0x140016fd0
+void FUN_140016fd0(void*, void* object, void* callFrame, void* member, int argc,
+                   const std::uint8_t* args)
+{
+    std::uint64_t value = 0;
+    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
+    if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
+        auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
+        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkC.get())(
+            reinterpret_cast<std::uintptr_t>(VideoThunkBaseC.get()) + root, member, value);
+    }
+}
+
+// MS2-FUNCTIONAL: forwards the AS3 value through the fourth property thunk unless its receiver is disabled.
+// @0x140017020
+void FUN_140017020(void*, void* object, void* callFrame, void* member, int argc,
+                   const std::uint8_t* args)
+{
+    std::uint64_t value = 0;
+    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
+    if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
+        auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
+        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkD.get())(
+            reinterpret_cast<std::uintptr_t>(VideoThunkBaseD.get()) + root, member, value);
+    }
+}
+
+// MS2-FUNCTIONAL: forwards the AS3 value through the fifth property thunk unless its receiver is disabled.
+// @0x140017070
+void FUN_140017070(void*, void* object, void* callFrame, void* member, int argc,
+                   const std::uint8_t* args)
+{
+    std::uint64_t value = 0;
+    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
+    if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
+        auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
+        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkE.get())(
+            reinterpret_cast<std::uintptr_t>(VideoThunkBaseE.get()) + root, member, value);
+    }
+}
+
+// MS2-FUNCTIONAL: returns the chained hash-set bucket index for a matching 8-byte key.
+// @0x140017440
+void* FUN_140017440(void* table, const std::uint64_t* key)
+{
+    auto index = FUN_140016f40(table, key);
+    return index < 0 ? nullptr : static_cast<unsigned char*>(table) + (index + 1) * 0x20;
+}
+
+// MS2-FUNCTIONAL: normalizes a value argument and dispatches the recovered setter with its optional integer.
+// @0x140017470
+void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned argc,
+                   const std::uint8_t* args)
+{
+    std::uint64_t value = 0;
+    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
+    int extra = -1;
+    if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
+        if (argc > 1) ConvertAS3ValueToInt32(const_cast<std::uint8_t*>(args + 0x20), &extra, &extra, -1, object);
+        if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
+            auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
+            reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t, int)>(VideoThunkF.get())(
+                reinterpret_cast<std::uintptr_t>(VideoThunkBaseF.get()) + root, member, value, extra);
+        }
+    }
+}
+} // namespace
