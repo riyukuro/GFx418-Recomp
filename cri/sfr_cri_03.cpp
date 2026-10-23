@@ -87,6 +87,7 @@ void FUN_140042600(void*, void*, CriSint32);
 CriSint32 FUN_1400310b0(void*);
 void FUN_1400345e0(void*, void*, CriUint32, CriSint32);
 void FUN_140053e60(void*, CriUint32, CriUint32, CriUint32);
+void FUN_1400467c0(const void*, CriUint32, void*, void*);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -3344,6 +3345,138 @@ void FUN_140042700(void* trackSet, void* player)
         FUN_140043550((CriSint32*)tracks->Tracks[index], player);
         if (movie->ParameterUpdateEnabled > 0)
             FUN_140043970(tracks->Tracks[index], player);
+    }
+}
+
+// MS2-FUNCTIONAL: dequeue a chunk large enough for the request or split its head in single-buffer mode.
+// @0x140045c60
+void FUN_140045c60(void* object, CriSint32 lane, CriUint32 requested, CriUint64* output)
+{
+    struct ChunkNode { ChunkNode* Next; CriUint64 Reserved08; void* Data; CriUint32 Size, Reserved1c; };
+    struct RingQueue
+    {
+        CriUint8 Reserved00[0x10];
+        LPCRITICAL_SECTION Lock;
+        CriSint32 Mode;
+        CriUint32 Reserved1c;
+        ChunkNode* Heads[5];
+        ChunkNode* FreeList;
+    };
+    RingQueue* queue = (RingQueue*)object;
+    if (queue->Lock)
+        FUN_140039f50(queue->Lock);
+    ChunkNode* node = queue->Heads[lane];
+    if (node && node->Size <= requested)
+    {
+        output[0] = (CriUint64)node->Data;
+        output[1] = node->Size;
+        queue->Heads[lane] = node->Next;
+        memset(node, 0, sizeof(*node));
+        node->Next = queue->FreeList;
+        queue->FreeList = node;
+    }
+    else if (node && queue->Mode == 1)
+    {
+        CriUint64 chunk[2] = { (CriUint64)node->Data, node->Size };
+        CriUint64 prefix[2] = {}, suffix[2] = {};
+        FUN_1400467c0(chunk, requested, prefix, suffix);
+        output[0] = prefix[0];
+        output[1] = prefix[1];
+        node->Data = (void*)suffix[0];
+        node->Size = (CriUint32)suffix[1];
+    }
+    else
+    {
+        output[0] = 0;
+        output[1] = 0;
+    }
+    if (queue->Lock)
+        FUN_140039f8c(queue->Lock);
+}
+
+// MS2-FUNCTIONAL: append a contiguous input chunk to the lane tail or consume a recycled node.
+// @0x140045d34
+void FUN_140045d34(void* object, CriSint32 lane, const CriUint64* input)
+{
+    struct ChunkNode { ChunkNode* Next; CriUint64 Reserved08; void* Data; CriUint32 Size, Reserved1c; };
+    struct RingQueue
+    {
+        CriUint8 Reserved00[0x10];
+        LPCRITICAL_SECTION Lock;
+        CriSint32 Mode;
+        CriUint32 Reserved1c;
+        ChunkNode* Heads[5];
+        ChunkNode* FreeList;
+    };
+    RingQueue* queue = (RingQueue*)object;
+    void* data = (void*)input[0];
+    CriUint32 size = (CriUint32)input[1];
+    if (size != 0 && data)
+    {
+        if (queue->Lock)
+            FUN_140039f50(queue->Lock);
+        ChunkNode** tail = &queue->Heads[lane];
+        ChunkNode* last = NULL;
+        while (*tail)
+        {
+            last = *tail;
+            tail = &(*tail)->Next;
+        }
+        if (queue->Mode == 1 && last && (CriUint8*)last->Data + last->Size == data)
+            last->Size += size;
+        else if (queue->FreeList)
+        {
+            ChunkNode* node = queue->FreeList;
+            queue->FreeList = node->Next;
+            memset(node, 0, sizeof(*node));
+            node->Data = data;
+            node->Size = size;
+            *tail = node;
+        }
+        if (queue->Lock)
+            FUN_140039f8c(queue->Lock);
+    }
+}
+
+// MS2-FUNCTIONAL: prepend a contiguous input chunk or a recycled node to the selected ring lane.
+// @0x140045e04
+void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input)
+{
+    struct ChunkNode { ChunkNode* Next; CriUint64 Reserved08; void* Data; CriUint32 Size, Reserved1c; };
+    struct RingQueue
+    {
+        CriUint8 Reserved00[0x10];
+        LPCRITICAL_SECTION Lock;
+        CriSint32 Mode;
+        CriUint32 Reserved1c;
+        ChunkNode* Heads[5];
+        ChunkNode* FreeList;
+    };
+    RingQueue* queue = (RingQueue*)object;
+    void* data = (void*)input[0];
+    CriUint32 size = (CriUint32)input[1];
+    if (size != 0 && data)
+    {
+        if (queue->Lock)
+            FUN_140039f50(queue->Lock);
+        ChunkNode*& head = queue->Heads[lane];
+        if (queue->Mode == 1 && head && (CriUint8*)data + size == head->Data)
+        {
+            head->Data = data;
+            head->Size += size;
+        }
+        else if (queue->FreeList)
+        {
+            ChunkNode* node = queue->FreeList;
+            queue->FreeList = node->Next;
+            memset(node, 0, sizeof(*node));
+            node->Data = data;
+            node->Size = size;
+            node->Next = head;
+            head = node;
+        }
+        if (queue->Lock)
+            FUN_140039f8c(queue->Lock);
     }
 }
 
