@@ -14,6 +14,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
+#include "ms2/scaleform/include/gfx/gfx_imecandidateliststyle.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -23,6 +24,24 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 // VM::describeTypeEx (returns the ASString through a hidden pointer)
 Scaleform::GFx::ASString* FUN_1425322c0(Scaleform::GFx::AS3::VM* vm, void* result, const Scaleform::GFx::AS3::Value& v);
 void FUN_1425bc060(void* ptf);                          // TextField::SetDirtyFlag
+bool FUN_1425b9730(void* ptf);                          // TextField::HasStyleSheet
+// DocView::AppendHtml (the image tags it meets go to *pimgInfoArr)
+void FUN_14260de50(void* pdoc, const char* phtml, Scaleform::UPInt htmlSize, bool multiline, void* pimgInfoArr);
+void FUN_1425ba7d0(void* ptf, void* pimgInfoArr);       // TextField::ProcessImageTags
+namespace Scaleform {
+// StyledText::HTMLImageTagInfo: the render Text headers do not mix with this kernel tree, so the same stand-in as
+// sfr_as3_14 (whose ArrayDataBase destructor instantiation is the exe's 0x1424c7100).
+struct MS2_HTMLImageTagInfo                 // 0x40 bytes
+{
+    Ptr<RefCountNTSImpl> pTextImageDesc;
+    StringDH             Url;               // +0x08
+    StringDH             Id;                // +0x18
+    unsigned             Width, Height;
+    int                  VSpace, HSpace;
+    unsigned             ParaId;
+    UByte                Alignment;
+};
+}
 namespace Scaleform { namespace GFx { class MovieImpl; class Sprite; }}
 Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);   // MovieImpl::GetModalClip
 
@@ -111,6 +130,27 @@ namespace Instances { namespace fl_gfx
         SPtr<Instances::fl_events::Event> result;
         clone(result);
         return result;
+    }
+
+    // MS2-FUNCTIONAL: the exe reloads each temporary string node from the stack after the Value ctor, ours keeps it in rbx
+    // @0x1424cc0f0
+    void GamePadAnalogEvent::toString(ASString& result)
+    {
+        Value r;
+        VM& vm = GetVM();
+        Value argv[] = {
+            Value(vm.GetStringManager().CreateConstString("GamePadAnalogEvent")),
+            Value(vm.GetStringManager().CreateConstString("type")),
+            Value(vm.GetStringManager().CreateConstString("bubbles")),
+            Value(vm.GetStringManager().CreateConstString("cancelable")),
+            Value(vm.GetStringManager().CreateConstString("eventPhase")),
+            Value(vm.GetStringManager().CreateConstString("code")),
+            Value(vm.GetStringManager().CreateConstString("controllerIdx")),
+            Value(vm.GetStringManager().CreateConstString("xvalue")),
+            Value(vm.GetStringManager().CreateConstString("yvalue"))
+        };
+        formatToString(r, sizeof(argv) / sizeof(argv[0]), argv);
+        r.Convert2String(result).DoNotCheck();
     }
 }}
 
@@ -324,6 +364,35 @@ namespace Classes { namespace fl_gfx
             flags |= 0x800;
         else
             flags &= ~0x800u;
+    }
+
+    // @0x1424c9bb0
+    void TextFieldEx::appendHtml(const Value& result, Instances::fl_text::TextField* textField, const ASString& newHtml)
+    {
+        SF_UNUSED(result);
+        VM& vm = GetVM();
+        if (!textField)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "textField"));
+            return;
+        }
+        if (!static_cast<ASVM&>(vm).ExtensionsEnabled)
+            return;
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (!ptf)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "textField"));
+            return;
+        }
+        if (FUN_1425b9730(ptf))
+            return;
+        ArrayDH<MS2_HTMLImageTagInfo> imageInfoArray(Memory::GetHeapByAddress(ptf));
+        FUN_14260de50(TextDocView(ptf), newHtml.ToCStr(), SF_MAX_UPINT, false, &imageInfoArray);
+        // TextField: the text was set from script (flags word bit 16)
+        *(UInt32*)((UByte*)ptf + 0xfc) |= 0x10000;
+        if (imageInfoArray.GetSize() > 0)
+            FUN_1425ba7d0(ptf, &imageInfoArray);
+        FUN_1425bc060(ptf);
     }
 }}
 
@@ -548,6 +617,75 @@ namespace Classes { namespace fl_gfx
         IMEManagerBase* pime = movie->GetIMEManager().GetPtr();
         if (pime)
             pime->SendLangBarMessage(mc->pDispObj.GetPtr(), command, message);
+    }
+
+    // MS2-FUNCTIONAL: identical but for the encoding of one shift (the exe's shr al, 1 takes an imm8)
+    // @0x1424cab90
+    void IMEEx::getIMECandidateListStyle(SPtr<Instances::fl_gfx::IMECandidateListStyle>& result)
+    {
+        GFx::IMECandidateListStyle st;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        MovieImpl* movie = vm.GetMovieImpl();
+        if (!movie)
+            return;
+        movie->GetIMECandidateListStyle(&st);
+        if (!vm.ConstructInstance(result, GetVM().GetClass(StringDataPtr("scaleform.gfx.IMECandidateListStyle"))))
+            return;
+        if (st.HasTextColor())
+            result->textColor = st.GetTextColor();
+        if (st.HasBackgroundColor())
+            result->backgroundColor = st.GetBackgroundColor();
+        if (st.HasIndexBackgroundColor())
+            result->indexBackgroundColor = st.GetIndexBackgroundColor();
+        if (st.HasSelectedTextColor())
+            result->selectedTextColor = st.GetSelectedTextColor();
+        if (st.HasSelectedBackgroundColor())
+            result->selectedBackgroundColor = st.GetSelectedBackgroundColor();
+        if (st.HasSelectedIndexBackgroundColor())
+            result->selectedIndexBackgroundColor = st.GetSelectedIndexBackgroundColor();
+        if (st.HasFontSize())
+            result->fontSize = st.GetFontSize();
+        if (st.HasReadingWindowTextColor())
+            result->readingWindowTextColor = st.GetReadingWindowTextColor();
+        if (st.HasReadingWindowBackgroundColor())
+            result->readingWindowBackgroundColor = st.GetReadingWindowBackgroundColor();
+        if (st.HasReadingWindowFontSize())
+            result->readingWindowFontSize = st.GetReadingWindowFontSize();
+    }
+
+    // MS2-FUNCTIONAL: the exe sets up an rbp frame for the style struct; same stores, flags and call
+    // @0x1424cb980
+    void IMEEx::setIMECandidateListStyle(const Value& result, Instances::fl_gfx::IMECandidateListStyle* pstyle)
+    {
+        SF_UNUSED(result);
+        GFx::IMECandidateListStyle st;
+        MovieImpl* movie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (!movie)
+            return;
+        if (pstyle->textColor != -1)
+            st.SetTextColor(pstyle->textColor);
+        // the exe sets the selected text color twice
+        if (pstyle->selectedTextColor != -1)
+            st.SetSelectedTextColor(pstyle->selectedTextColor);
+        if (pstyle->selectedTextColor != -1)
+            st.SetSelectedTextColor(pstyle->selectedTextColor);
+        if (pstyle->fontSize != -1)
+            st.SetFontSize(pstyle->fontSize);
+        if (pstyle->backgroundColor != -1)
+            st.SetBackgroundColor(pstyle->backgroundColor);
+        if (pstyle->selectedBackgroundColor != -1)
+            st.SetSelectedBackgroundColor(pstyle->selectedBackgroundColor);
+        if (pstyle->indexBackgroundColor != -1)
+            st.SetIndexBackgroundColor(pstyle->indexBackgroundColor);
+        if (pstyle->selectedIndexBackgroundColor != -1)
+            st.SetSelectedIndexBackgroundColor(pstyle->selectedIndexBackgroundColor);
+        if (pstyle->readingWindowTextColor != -1)
+            st.SetReadingWindowTextColor(pstyle->readingWindowTextColor);
+        if (pstyle->readingWindowBackgroundColor != -1)
+            st.SetReadingWindowBackgroundColor(pstyle->readingWindowBackgroundColor);
+        if (pstyle->readingWindowFontSize != -1)
+            st.SetReadingWindowFontSize(pstyle->readingWindowFontSize);
+        movie->SetIMECandidateListStyle(st);
     }
 }}
 
@@ -1432,7 +1570,7 @@ void Value::AssignUnsafe<Instances::fl::GlobalObjectCPP>(const SPtr<Instances::f
 }
 
 // @0x1424dbf70
-Value::Value(const ASString& v)
+SF_NOINLINE Value::Value(const ASString& v)
     : Flags(kString)
     , value(v.GetNode())
 {

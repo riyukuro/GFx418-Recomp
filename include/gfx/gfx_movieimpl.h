@@ -41,6 +41,7 @@ class ExternalInterface;
 class KeyboardState;
 class LogState;
 class IMEManagerBase;
+class IMECandidateListStyle;
 
 // (sfr_gfx_06d) the links of the movie's list of root nodes (List<MovieDefRootNode>): the list root's pNext is the
 // first node, and the root itself passes for a node one base offset before it.
@@ -325,6 +326,9 @@ public:
     UInt32 GetControllerMaskByFocusGroup(unsigned focusGroupIdx);   // exe 0x14256f050
     // (appended for the AS3 Sound, sfr17) the resource exported from pdefImpl's library as symbol.
     bool FindExportedResource(MovieDefImpl* pdefImpl, struct ResourceBindData* pdata, const String& symbol);   // exe 0x14256ec50
+    // (appended for the AS3 IMEEx, sfr19) the IME candidate list style, copied out / in by value.
+    void GetIMECandidateListStyle(IMECandidateListStyle* pst) const;   // exe 0x14256f310
+    void SetIMECandidateListStyle(const IMECandidateListStyle& st);    // exe 0x142575c30
 };
 
 // The leading Movie vftable slots, for the virtual calls MovieImpl makes on itself (GetVisibleFrameRect).
