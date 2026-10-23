@@ -27,6 +27,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
+#include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -2697,6 +2698,18 @@ Class::Class(ClassTraits::Traits& t)
 {
 }
 
+namespace Classes {
+
+// MS2-FUNCTIONAL: the exe inlines Class::Class here; ours calls it (0x1424d6ac0)
+// @0x1424dadb0
+UDBase::UDBase(ClassTraits::Traits& t)
+    : Class(t)
+{
+    t.ConstructTail(*this);
+}
+
+} // Classes
+
 // Only inlined in the exe (into the deleting destructor 0x1424e2f10); the members release themselves.
 IntervalTimer::~IntervalTimer()
 {
@@ -3083,3 +3096,4 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317e238
 // MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
 // MS2-PIN: ??$add@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBQEAVGASRefCountBase@AS3@GFx@1@_K@Z 0x1424d29d0
+// MS2-PIN: ??_7UDBase@Classes@AS3@GFx@Scaleform@@6B@ 0x14317f778
