@@ -24,6 +24,7 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+class LoadQueueEntry;   // (appended, sfr19) as3_loadqueue.h
 class MovieRoot : public ASMovieRootBase
 {
 public:
@@ -50,9 +51,20 @@ public:
     // (appended for the Loader natives, sfr17) the load queue.
     void UnloadMovie(Instances::fl_display::Loader* ploader, bool stop = false, bool gc = false);   // 0x1425305f0
     void AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, Instances::fl_display::Loader* loader,
-                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);         // 0x1424e9090
+                              GFx::LoadQueueEntry::LoadMethod method = GFx::LoadQueueEntry::LM_None); // 0x1424e9090
     void AddNewLoadQueueEntry(Instances::fl_utils::ByteArray* bytes, Instances::fl_display::Loader* loader,
-                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);         // 0x1424e9010
+                              GFx::LoadQueueEntry::LoadMethod method = GFx::LoadQueueEntry::LM_None); // 0x1424e9010
+    // (appended, sfr19) URLLoader.load. 0x1424e9210
+    void AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, Instances::fl_net::URLLoader* loader,
+                              GFx::LoadQueueEntry::LoadMethod method = GFx::LoadQueueEntry::LM_None);
+    // (appended, sfr19) pentry handed to a loader-thread entry (variables, binary or movie). 0x1424e8c20
+    void AddLoadQueueEntryMT(LoadQueueEntry* pentry);
+    // (appended, sfr19) ASMovieRootBase::ProcessLoadQueueEntry: 4.1.18 vftable slot 26 (+0xd0).
+    void ProcessLoadQueueEntry418(GFx::LoadQueueEntry* pentry, LoadStates* pls)
+    {
+        typedef void (*Fn)(MovieRoot*, GFx::LoadQueueEntry*, LoadStates*);
+        (*reinterpret_cast<Fn const* const*>(this))[26](this, pentry, pls);
+    }
 };
 
 class ASVM : public VM

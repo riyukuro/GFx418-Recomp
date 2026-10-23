@@ -7,6 +7,9 @@
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
+#include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
+#include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_taskmanager.h"
 #undef GetObject   // windows.h
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -933,6 +936,111 @@ ValueStack::Page* ValueStack::AllocPage(UInt16 pageSize)
     p->PageSize       = size;
     p->ReservationNum = 0;
     return p;
+}
+
+// ==== the load queue ====
+
+// MS2-FUNCTIONAL ??1LoadQueueEntry@AS3@GFx@Scaleform@@UEAA@XZ: the exe calls AutoPtr<ArrayPOD<UByte> >'s dtor out of
+// line (0x1424dc9f0); ours inlines it
+// @0x1424e3020 (??_G)
+LoadQueueEntry::~LoadQueueEntry()
+{
+    NotifyLoadInitCInterface = NULL;
+}
+
+// Inlined into MovieRoot::AddLoadQueueEntryMT in the exe.
+inline LoadQueueEntryMT_LoadMovie::LoadQueueEntryMT_LoadMovie(LoadQueueEntry* pqueueEntry, MovieImpl* pmovieImpl)
+    : LoadQueueEntryMT(pqueueEntry, pmovieImpl)
+    , CharSwitched(false)
+    , BytesLoaded(0)
+    , FirstFrameLoaded(false)
+{
+    bool stripped = false;
+    if (InteractiveObject* pmain = pMovieImpl->pMainMovie)
+        stripped = (pmain->GetResourceMovieDef()->GetSWFFlags() & 0x10) != 0; // MovieInfo::SWF_Stripped
+    pPreloadTask = *SF_NEW MoviePreloadTask(pMovieImpl, pqueueEntry->URL, stripped, pqueueEntry->QuietOpen);
+    Ptr<TaskManager> ptm = *static_cast<TaskManager*>(pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager));
+    ptm->AddTask(pPreloadTask);
+
+    // A newer load of the same Loader / URLLoader replaces the pending ones.
+    LoadQueueEntry* pentry = static_cast<LoadQueueEntry*>(pQueueEntry);
+    for (LoadQueueEntryMT* p = pmovieImpl->pLoadQueueMTHead; p; p = p->GetNext())
+    {
+        LoadQueueEntry* pother = static_cast<LoadQueueEntry*>(p->GetQueueEntry());
+        if ((pother->mLoader && pother->mLoader == pentry->mLoader) ||
+            (pother->mURLLoader && pother->mURLLoader == pentry->mURLLoader))
+            pother->Canceled = true;
+    }
+}
+
+// MS2-FUNCTIONAL: the exe inlines LoadQueueEntryMT_LoadMovie's ctor (with TaskManager/Ptr handling); ours inlines
+// it from the same definition, with its own register allocation
+// @0x1424e8c20
+void MovieRoot::AddLoadQueueEntryMT(LoadQueueEntry* pentry)
+{
+    MemoryHeap* pheap = pMovieImpl->GetMovieHeap();
+    LoadQueueEntryMT* pentryMT;
+    if (pentry->Type & GFx::LoadQueueEntry::LTF_VarsFlag)
+        pentryMT = SF_HEAP_NEW(pheap) LoadQueueEntryMT_LoadVars(pentry, pMovieImpl);
+    else if (pentry->Type & GFx::LoadQueueEntry::LTF_BinaryFlag)
+        pentryMT = SF_HEAP_NEW(pheap) LoadQueueEntryMT_LoadBinary(pentry, pMovieImpl);
+    else
+        pentryMT = SF_HEAP_NEW(pheap) LoadQueueEntryMT_LoadMovie(pentry, pMovieImpl);
+    if (pentryMT)
+        pMovieImpl->AddLoadQueueEntryMT(pentryMT);
+    else
+        delete pentry;
+}
+
+// @0x1424e9010
+void MovieRoot::AddNewLoadQueueEntry(Instances::fl_utils::ByteArray* bytes, Instances::fl_display::Loader* loader,
+                                     GFx::LoadQueueEntry::LoadMethod method)
+{
+    LoadQueueEntry* pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntry(bytes, loader, method);
+    if (pentry)
+        pMovieImpl->AddLoadQueueEntry(pentry);
+}
+
+// An image protocol URL ("img://") loaded synchronously is processed at once; other URLs go to the loader thread
+// when there is a task manager.
+// MS2-FUNCTIONAL: the exe inlines the entry's ctor and keeps the TaskManager Ptr in a flag-guarded temporary
+// @0x1424e9090
+void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, Instances::fl_display::Loader* loader,
+                                     GFx::LoadQueueEntry::LoadMethod method)
+{
+    LoadQueueEntry* pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntry(urlRequest, loader, method);
+    if (!pentry)
+        return;
+    bool sync = false;
+    const bool image = LoaderImpl::IsProtocolImage(pentry->URL, NULL, &sync);
+    if (image && sync)
+    {
+        Ptr<LoadStates> pls = *SF_NEW LoadStates(pMovieImpl->pMainMovieDef->pLoaderImpl,
+                                                 pMovieImpl->GetStateBag()->GetStateBagImpl());
+        ProcessLoadQueueEntry418(pentry, pls);
+        delete pentry;
+        return;
+    }
+    if (pentry->URL.GetLength() != 0 && !image &&
+        Ptr<State>(*pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager)))
+        AddLoadQueueEntryMT(pentry);
+    else
+        pMovieImpl->AddLoadQueueEntry(pentry);
+}
+
+// @0x1424e9210
+void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, Instances::fl_net::URLLoader* loader,
+                                     GFx::LoadQueueEntry::LoadMethod method)
+{
+    LoadQueueEntry* pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntry(urlRequest, loader, method);
+    if (!pentry)
+        return;
+    pentry->Type = loader->IsLoadingBinary() ? GFx::LoadQueueEntry::LT_LoadBinary : GFx::LoadQueueEntry::LT_LoadText;
+    if (pentry->URL.GetLength() != 0 &&
+        Ptr<State>(*pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager)))
+        AddLoadQueueEntryMT(pentry);
+    else
+        pMovieImpl->AddLoadQueueEntry(pentry);
 }
 
 }}} // namespace Scaleform::GFx::AS3

@@ -21,6 +21,7 @@
 #include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_utils.h"
+#include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -2512,6 +2513,44 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
     Scaleform::Format(msg, fmt, arg1, arg2, arg3, arg4);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+}
+
+// MS2-FUNCTIONAL: the exe inlines the GFx::LoadQueueEntry ctor (out of line in sfr_as2_03) and ArrayPOD::Resize
+// @0x1424d7f90
+LoadQueueEntry::LoadQueueEntry(Instances::fl_utils::ByteArray* bytes, Instances::fl_display::Loader* loader,
+                               LoadMethod method)
+    : GFx::LoadQueueEntry(String(""), method, false, false)
+{
+    mLoader = loader;
+    FirstExec = true;
+    NotifyLoadInitCInterface = NULL;
+    mBytes = SF_HEAP_AUTO_NEW(this) ArrayPOD<UByte>();
+    mBytes->Resize(bytes->GetLength());
+    memcpy(mBytes->GetDataPtr(), bytes->Data.GetDataPtr(), mBytes->GetSize());
+}
+
+// MS2-FUNCTIONAL: the exe inlines the GFx::LoadQueueEntry ctor (out of line in sfr_as2_03)
+// @0x1424d81a0
+LoadQueueEntry::LoadQueueEntry(Instances::fl_net::URLRequest* request, Instances::fl_display::Loader* loader,
+                               LoadMethod method, bool quietOpen)
+    : GFx::LoadQueueEntry(String(request ? request->GetUrl().ToCStr() : ""), method, false, quietOpen)
+{
+    mLoader = loader;
+    mURLRequest = request;
+    FirstExec = true;
+    NotifyLoadInitCInterface = NULL;
+}
+
+// MS2-FUNCTIONAL: the exe inlines the GFx::LoadQueueEntry ctor (out of line in sfr_as2_03)
+// @0x1424d8350
+LoadQueueEntry::LoadQueueEntry(Instances::fl_net::URLRequest* request, Instances::fl_net::URLLoader* loader,
+                               LoadMethod method, bool quietOpen)
+    : GFx::LoadQueueEntry(String(request ? request->GetUrl().ToCStr() : ""), method, true, quietOpen)
+{
+    mURLLoader = loader;
+    mURLRequest = request;
+    FirstExec = true;
+    NotifyLoadInitCInterface = NULL;
 }
 }} // namespace GFx::AS3
 

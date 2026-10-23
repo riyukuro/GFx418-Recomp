@@ -38,6 +38,7 @@ class MovieDef;
 class StateBagImpl;
 class Movie;
 class LoadQueueEntry;
+class LoadQueueEntryMT;
 class UserEventHandler;
 class ExternalInterface;
 class KeyboardState;
@@ -169,7 +170,9 @@ public:
 
     // (appended for the display objects, sfr_gfx_06)
     UInt32           Flags2;                   // +0x3494 (sfr_gfx_06b)
-    UByte            Unrecovered_3498[0x58];   // +0x3498
+    UByte            Unrecovered_3498[8];      // +0x3498
+    LoadQueueEntryMT* pLoadQueueMTHead;        // +0x34a0 the loader-thread entries, newest first (sfr19)
+    UByte            Unrecovered_34a8[0x48];   // +0x34a8
     void*            RenderContext[1];         // +0x34f0 Render::Context (gfx_rendertree.h: the heap first), rest unrecovered
     UByte            Unrecovered_34f8[0x3630 - 0x34f8]; // +0x34f8 rest of the context, the tail of the movie
     int              DeviceOrientation;        // +0x3630 OrientationEvent: 0 default, 1 rotated left, 2 right, 3 upside down (sfr19)
@@ -188,6 +191,8 @@ public:
     MemoryHeap* GetMovieHeap() const { return pHeap; }
     // Appends a load request to the queue processed on the next advance (exe 0x14256bdf0).
     void AddLoadQueueEntry(LoadQueueEntry* pentry);
+    // (appended, sfr19) Links a loader-thread entry in front of pLoadQueueMTHead (exe 0x14256be30).
+    void AddLoadQueueEntryMT(LoadQueueEntryMT* pentryMT);
 
     // The object no longer stays on top of the levels (0x1425742c0).
     void RemoveTopmostLevelCharacter(DisplayObjectBase* pch);
