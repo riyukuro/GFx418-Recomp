@@ -17,6 +17,7 @@ extern void FUN_14257dcd0(void*);
 extern void FUN_14257db40(void*);
 extern void FUN_14257db50(void*);
 extern void FUN_1429260b0(void*);
+extern void FUN_140006a40(Scaleform::UPInt*);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
 
@@ -1082,6 +1083,57 @@ void FUN_140006f50(void** array, void* owner, Scaleform::UPInt size)
         FUN_1400069a0(array, owner, size + (size >> 2));
     }
     fields[1] = size;
+}
+
+// MS2-FUNCTIONAL: appends an object value to the current paged stack block.
+// @0x140006ff0
+void FUN_140006ff0(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
+{
+    *stack += 0x20;
+    if (stack[2] <= *stack) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
+    if (*stack) ::new (reinterpret_cast<void*>(*stack)) Scaleform::GFx::AS2::Value(*value);
+}
+
+// MS2-FUNCTIONAL: appends a retained object value to the current paged stack block.
+// @0x140007030
+void FUN_140007030(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
+{
+    *stack += 0x20;
+    if (stack[2] <= *stack) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
+    if (*stack) {
+        auto* bytes = reinterpret_cast<unsigned char*>(*stack);
+        bytes[0] = 5;
+        auto* object = *value;
+        *reinterpret_cast<Scaleform::GFx::AS2::Object**>(bytes + 8) = object;
+        if (object) object->AddRef();
+    }
+}
+
+// MS2-FUNCTIONAL: assigns the source 12-byte record array into the destination descriptor.
+// @0x140007230
+void* FUN_140007230(void** destination, const void** source)
+{
+    return FUN_140006db0(destination, source);
+}
+
+// MS2-FUNCTIONAL: appends and retains one object in the pointer array.
+// @0x140007270
+void FUN_140007270(void** array, void** value)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    FUN_140006e70(array, array, fields[1] + 1);
+    auto** slot = static_cast<void**>(*array) + fields[1] - 1;
+    if (*value) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*value))[1])(*value);
+    *slot = *value;
+}
+
+// MS2-FUNCTIONAL: destroys weak-pair records and releases their backing allocation.
+// @0x1400072c0
+void FUN_1400072c0(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_1400068d0(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
 }
 
 namespace Scaleform { namespace GFx { namespace Video {
