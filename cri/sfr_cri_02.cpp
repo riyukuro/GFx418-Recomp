@@ -2310,11 +2310,21 @@ CriMvEasyFileReaderMem::~CriMvEasyFileReaderMem()
 {
 }
 
+// MS2-FUNCTIONAL: destroy the reader and release its CRI heap allocation when requested.
+// @0x140038c40
+void* FUN_140038c40(CriMvEasyFileReaderMem* reader, CriUint32 flags)
+{
+    reader->~CriMvEasyFileReaderMem();
+    if ((flags & 1) != 0)
+        CriAllocator::operator delete(reader, (size_t)0x40);
+    return reader;
+}
+
 // MS2-FUNCTIONAL: destroy the reader through its virtual deleting destructor.
 // @0x1400386c0
 void CriMvEasyFileReaderMem::Destroy(void)
 {
-    delete this;
+    FUN_140038c40(this, 1);
 }
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30

@@ -592,6 +592,7 @@ struct CriMvCuePointInfo
 // The memory "file" reader the easy player uses for SetData (sfr_cri_02).
 class CriMvEasyFileReaderMem : public CriMvFileReaderInterface
 {
+    friend void* FUN_140038c40(CriMvEasyFileReaderMem* reader, CriUint32 flags);
 public:
     static CriMvEasyFileReaderMem* Create(CriHeap heap);                                    // 0x1400385d0
     void Open(CriChar8* fname) override;                                                    // 0x140038720
