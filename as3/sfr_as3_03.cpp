@@ -2642,6 +2642,63 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return Pickable<XML>(SF_HEAP_NEW(itr.GetVM().GetMemoryHeap()) XMLProcInstr(itr, Text, Data, parent));
     }
 }}}}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // MS2-FUNCTIONAL: exe inlines the XMLText ctor 0x1423f02e0
+    // @0x142408e00
+    Pickable<XML> XMLText::DeepCopy(XML* parent)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        return Pickable<XML>(SF_HEAP_NEW(itr.GetVM().GetMemoryHeap()) XMLText(itr, Text, parent));
+    }
+
+    // @0x142408ed0
+    void XMLElement::DeleteByIndex(UPInt ind)
+    {
+        if (ind < Children.GetSize())
+        {
+            Children[ind]->Parent = NULL;
+            Children.RemoveAt(ind);
+        }
+    }
+
+    // MS2-FUNCTIONAL: exe clears through the out-of-line ArrayLH ResizeNoConstruct 0x142420060
+    // @0x142408f50
+    void XMLElement::DeleteChildren(XML* child)
+    {
+        const UPInt size = Children.GetSize();
+        if (child == NULL)
+        {
+            for (UPInt i = 0; i < size; ++i)
+                Children[i]->Parent = NULL;
+            Children.Clear();
+        }
+        else
+        {
+            for (UPInt i = 0; i < size; ++i)
+            {
+                if (Children[i] == child)
+                {
+                    Children[i]->Parent = NULL;
+                    Children.RemoveAt(i);
+                    return;
+                }
+            }
+        }
+    }
+
+    // @0x142409060
+    CheckResult Array::DeleteProperty(const Multiname& prop_name)
+    {
+        UInt32 ind;
+        if (!GetArrayInd(prop_name, ind))
+            return Object::DeleteProperty(prop_name);
+        if (ind >= SA.GetSize())
+            return false;
+        SA.RemoveMultipleAt(ind, 1);
+        return true;
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
