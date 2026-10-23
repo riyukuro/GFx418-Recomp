@@ -771,17 +771,6 @@ void Vector_String::AS3reverse(SPtr<Vector_String>& result)
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 Scaleform::GFx::AS3::ClassTraits::Traits& FUN_142507f60(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
-// Append(other) / PushBack(element) of the result instances (sfr_as3_21)
-void FUN_142559c00(Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& other);
-void FUN_142559cd0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& other);
-void FUN_142559dc0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& other);
-void FUN_142559eb0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& other);
-void FUN_142559fc0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& r, const Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& other);
-void FUN_1425621c0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_String& r, Scaleform::GFx::ASStringNode* v);
-void FUN_142562280(Scaleform::GFx::AS3::Instances::fl_vec::Vector_double& r, Scaleform::GFx::AS3::Value::Number v);
-void FUN_142562340(Scaleform::GFx::AS3::Instances::fl_vec::Vector_int& r, Scaleform::SInt32 v);
-void FUN_1425623f0(Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& r, const Scaleform::GFx::AS3::Value& v);
-void FUN_142562470(Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& r, Scaleform::UInt32 v);
 
 namespace Scaleform {
 // A sort key and the index of the element it came from.
@@ -812,18 +801,18 @@ static SF_INLINE Value ElementValue(const Value& e)                 { return e; 
 static SF_INLINE Value ElementValue(UInt32 e)                       { return Value(e); }
 
 // an element pushed into the result instance
-static SF_INLINE void PushElement(Vector_String& r, const Ptr<ASStringNode>& e)    { FUN_1425621c0(r, e.GetPtr()); }
-static SF_INLINE void PushElement(Vector_double& r, Value::Number e)                { FUN_142562280(r, e); }
-static SF_INLINE void PushElement(Vector_int& r, SInt32 e)                         { FUN_142562340(r, e); }
-static SF_INLINE void PushElement(Vector_object& r, const Value& e)                { FUN_1425623f0(r, e); }
-static SF_INLINE void PushElement(Vector_uint& r, UInt32 e)                        { FUN_142562470(r, e); }
+static SF_INLINE void PushElement(Vector_String& r, const Ptr<ASStringNode>& e)    { r.PushBack(e.GetPtr()); }
+static SF_INLINE void PushElement(Vector_double& r, Value::Number e)                { r.PushBack(e); }
+static SF_INLINE void PushElement(Vector_int& r, SInt32 e)                         { r.PushBack(e); }
+static SF_INLINE void PushElement(Vector_object& r, const Value& e)                { r.PushBack(e); }
+static SF_INLINE void PushElement(Vector_uint& r, UInt32 e)                        { r.PushBack(e); }
 
 // a coerced Value pushed into the result instance
-static SF_INLINE void PushCoerced(Vector_String& r, const Value& v)    { FUN_1425621c0(r, v.AsStringNode()); }
-static SF_INLINE void PushCoerced(Vector_double& r, const Value& v)    { FUN_142562280(r, v.AsNumber()); }
-static SF_INLINE void PushCoerced(Vector_int& r, const Value& v)       { FUN_142562340(r, v.AsInt()); }
-static SF_INLINE void PushCoerced(Vector_object& r, const Value& v)    { FUN_1425623f0(r, v); }
-static SF_INLINE void PushCoerced(Vector_uint& r, const Value& v)      { FUN_142562470(r, v.AsUInt()); }
+static SF_INLINE void PushCoerced(Vector_String& r, const Value& v)    { r.PushBack(v.AsStringNode()); }
+static SF_INLINE void PushCoerced(Vector_double& r, const Value& v)    { r.PushBack(v.AsNumber()); }
+static SF_INLINE void PushCoerced(Vector_int& r, const Value& v)       { r.PushBack(v.AsInt()); }
+static SF_INLINE void PushCoerced(Vector_object& r, const Value& v)    { r.PushBack(v); }
+static SF_INLINE void PushCoerced(Vector_uint& r, const Value& v)      { r.PushBack(v.AsUInt()); }
 
 // a concat() argument of the element type, appended in place
 static SF_INLINE void ConcatPush(Vector_String& r, const Value& v)
@@ -837,11 +826,11 @@ static SF_INLINE void ConcatPush(Vector_int& r, const Value& v)     { if (r.V.Ch
 static SF_INLINE void ConcatPush(Vector_object& r, const Value& v)  { if (r.V.CheckFixed()) r.V.V.PushBack(v); }
 static SF_INLINE void ConcatPush(Vector_uint& r, const Value& v)    { if (r.V.CheckFixed()) r.V.V.PushBack(v.AsUInt()); }
 
-static SF_INLINE void Append(Vector_String& r, const Vector_String& o)  { FUN_142559c00(r, o); }
-static SF_INLINE void Append(Vector_double& r, const Vector_double& o)  { FUN_142559cd0(r, o); }
-static SF_INLINE void Append(Vector_int& r, const Vector_int& o)        { FUN_142559dc0(r, o); }
-static SF_INLINE void Append(Vector_object& r, const Vector_object& o)  { FUN_142559eb0(r, o); }
-static SF_INLINE void Append(Vector_uint& r, const Vector_uint& o)      { FUN_142559fc0(r, o); }
+static SF_INLINE void Append(Vector_String& r, const Vector_String& o)  { r.Append(o); }
+static SF_INLINE void Append(Vector_double& r, const Vector_double& o)  { r.Append(o); }
+static SF_INLINE void Append(Vector_int& r, const Vector_int& o)        { r.Append(o); }
+static SF_INLINE void Append(Vector_object& r, const Vector_object& o)  { r.Append(o); }
+static SF_INLINE void Append(Vector_uint& r, const Vector_uint& o)      { r.Append(o); }
 
 // the ClassTraits map() coerces the callback results to
 static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_String& o)  { return o.GetVM().GetClassTraitsString(); }

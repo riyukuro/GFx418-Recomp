@@ -43,6 +43,9 @@ public:
     ASString Join(const ASString& sep) const;
     // Vector.some: calls callback(element, index, owner) on thisObject until one returns true. 0x142563ee0
     bool Some(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const;
+    // (appended, sfr19) Vector.every: calls callback(element, index, owner) on thisObject while it returns true.
+    // 0x14255bbd0
+    bool Every(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const;
     // TypeError 1034 unless v is callable. 0x14255af20
     CheckResult CheckCallable(const Value& v) const;
     // v coerced to tr into result; TypeError 1034 when it cannot be. 0x14255afd0
@@ -97,6 +100,22 @@ public:
     // (TypeError 1034). SInt32 0x1425616b0, UInt32 0x1425618d0, Number 0x142561af0, String 0x142561d20,
     // Value 0x142561f40
     void PushBack(unsigned argc, const Value* argv, const ClassTraits::Traits& tr);
+    // (appended, sfr19) v appended unless fixed (RangeError).
+    void PushBack(const T& v)
+    {
+        CheckFixed();
+        if (!Fixed)
+            V.PushBack(v);
+    }
+    // (appended, sfr19) other's elements appended unless fixed (RangeError).
+    void Append(const VectorBase& other)
+    {
+        CheckFixed();
+        if (Fixed)
+            return;
+        for (UPInt i = 0; i < static_cast<UInt32>(other.V.GetSize()); ++i)
+            V.PushBack(other.V[i]);
+    }
 
 protected:
     virtual void   PushBackValueUnsafe(const Value& v);

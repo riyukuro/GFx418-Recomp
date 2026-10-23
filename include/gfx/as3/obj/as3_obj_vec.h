@@ -79,6 +79,9 @@ namespace Instances { namespace fl_vec {
         // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_String::MakeInstanceS
         explicit Vector_String(InstanceTraits::Traits& t) : Instances::fl::Object(t)
             , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
+        // (appended, sfr19) other's elements appended (unless fixed); v appended (unless fixed). Bodies in sfr_as3_21
+        void Append(const Vector_String& other);   // 0x142559c00
+        void PushBack(ASStringNode* v); // 0x1425621c0
     };
 
     // 0x70 bytes; vftable 0x143182488.
@@ -150,6 +153,9 @@ namespace Instances { namespace fl_vec {
         // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_double::MakeInstanceS
         explicit Vector_double(InstanceTraits::Traits& t) : Instances::fl::Object(t)
             , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
+        // (appended, sfr19) other's elements appended (unless fixed); v appended (unless fixed). Bodies in sfr_as3_21
+        void Append(const Vector_double& other);   // 0x142559cd0
+        void PushBack(Value::Number v); // 0x142562280
     };
 
     // 0x70 bytes; vftable 0x143181e58.
@@ -221,6 +227,9 @@ namespace Instances { namespace fl_vec {
         // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_int::MakeInstanceS
         explicit Vector_int(InstanceTraits::Traits& t) : Instances::fl::Object(t)
             , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
+        // (appended, sfr19) other's elements appended (unless fixed); v appended (unless fixed). Bodies in sfr_as3_21
+        void Append(const Vector_int& other);   // 0x142559dc0
+        void PushBack(SInt32 v);      // 0x142562340
     };
 
     // 0x70 bytes; vftable 0x143182a88.
@@ -294,6 +303,9 @@ namespace Instances { namespace fl_vec {
         // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_object::MakeInstanceS
         explicit Vector_object(InstanceTraits::Traits& t) : Instances::fl::Object(t)
             , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
+        // (appended, sfr19) other's elements appended (unless fixed); v appended (unless fixed). Bodies in sfr_as3_21
+        void Append(const Vector_object& other);   // 0x142559eb0
+        void PushBack(const Value& v); // 0x1425623f0
     };
 
     // 0x70 bytes; vftable 0x143182170.
@@ -365,6 +377,9 @@ namespace Instances { namespace fl_vec {
         // (appended, sfr16) inlined into InstanceTraits::fl_vec::Vector_uint::MakeInstanceS
         explicit Vector_uint(InstanceTraits::Traits& t) : Instances::fl::Object(t)
             , V(t.GetVM().GetMemoryHeap(), t.GetVM()) {}
+        // (appended, sfr19) other's elements appended (unless fixed); v appended (unless fixed). Bodies in sfr_as3_21
+        void Append(const Vector_uint& other);   // 0x142559fc0
+        void PushBack(UInt32 v);      // 0x142562470
     };
 
 }}

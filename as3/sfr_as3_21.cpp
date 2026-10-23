@@ -333,12 +333,11 @@ CheckResult ArrayBase::CheckCallable(const Value& v) const
 }
 
 // @0x142563ee0
-// MS2-FUNCTIONAL: Value temporaries/cleanup laid out differently
 bool ArrayBase::Some(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const
 {
     if (callback.IsNullOrUndefined() || !CheckCallable(callback))
         return false;
-    Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+    Value _this(!thisObject.IsNullOrUndefined() ? thisObject : callback);
     const UInt32 size = GetSize();
     for (UInt32 i = 0; i < size; ++i)
     {
@@ -350,10 +349,32 @@ bool ArrayBase::Some(const Value& callback, const Value& thisObject, Instances::
             break;
         if (!result.IsBool())
             return false;
-        if (result.AsBool())
+        if (result.AsBool() == true)
             return true;
     }
     return false;
+}
+
+// @0x14255bbd0
+bool ArrayBase::Every(const Value& callback, const Value& thisObject, Instances::fl::Object* owner) const
+{
+    if (callback.IsNullOrUndefined() || !CheckCallable(callback))
+        return false;
+    UInt32 i = 0;
+    Value _this(!thisObject.IsNullOrUndefined() ? thisObject : callback);
+    const UInt32 size = GetSize();
+    for (; i < size; ++i)
+    {
+        Value argv[3] = {Value::GetUndefined(), Value(i), Value(owner)};
+        Value result;
+        GetValue(i, argv[0]);
+        VMRef.ExecuteInternalUnsafe(callback, _this, result, 3, argv, false);
+        if (VMRef.IsException())
+            break;
+        if (!result.IsBool() || !result.AsBool())
+            break;
+    }
+    return i == size;
 }
 
 // @0x14255b1d0
@@ -2677,6 +2698,34 @@ bool Reader::ReadTraits(TraitTable& t, HasTraits::ObjectTraits& obj_traits)
 }
 
 }}}} // namespace Scaleform::GFx::AS3::Abc
+
+// ---------------------------------------------------------------- Vector.<T> append (sfr19)
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
+
+// @0x142559c00
+void Vector_String::Append(const Vector_String& other) { V.Append(other.V); }
+// @0x142559cd0
+void Vector_double::Append(const Vector_double& other) { V.Append(other.V); }
+// @0x142559dc0
+void Vector_int::Append(const Vector_int& other) { V.Append(other.V); }
+// @0x142559eb0
+void Vector_object::Append(const Vector_object& other) { V.Append(other.V); }
+// @0x142559fc0
+void Vector_uint::Append(const Vector_uint& other) { V.Append(other.V); }
+
+// @0x1425621c0
+void Vector_String::PushBack(ASStringNode* v) { V.PushBack(v); }
+// @0x142562280
+void Vector_double::PushBack(Value::Number v) { V.PushBack(v); }
+// @0x142562340
+void Vector_int::PushBack(SInt32 v) { V.PushBack(v); }
+// @0x1425623f0
+void Vector_object::PushBack(const Value& v) { V.PushBack(v); }
+// @0x142562470
+void Vector_uint::PushBack(UInt32 v) { V.PushBack(v); }
+
+}}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
 
 // ---------------------------------------------------------------- Vector.push (sfr19)
 
