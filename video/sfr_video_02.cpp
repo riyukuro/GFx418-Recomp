@@ -12,7 +12,6 @@
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_events.h"
 #include "../include/gfx/gfx_stream.h"
-#include "../kernel/sf_exedata.h"
 #include <cstring>
 #include <new>
 
@@ -36,8 +35,6 @@ extern void FUN_14257db40(void*);
 extern void FUN_142625ee0(const void*);
 extern void FUN_142626070(void*, const void*);
 extern void FUN_142961830(void*, void*, void*, void*, const void*);
-extern void* DAT_1431b6060;
-extern void* DAT_1431b63f8;
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
 
 namespace Scaleform { namespace GFx { namespace Video {
@@ -160,8 +157,6 @@ void FUN_140014730(void* object, void*, double value)
 void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
 {
     char* bytes = reinterpret_cast<char*>(object);
-    *reinterpret_cast<void***>(bytes) = Scaleform::SF_ExeData(&DAT_1431b6060);
-    *reinterpret_cast<void***>(bytes + 0x18) = Scaleform::SF_ExeData(&DAT_1431b63f8);
     if (void* provider = *reinterpret_cast<void**>(bytes + 0x100))
         reinterpret_cast<void (*)(void*)>(*reinterpret_cast<void***>(provider) + 2)(provider);
     int* refs = *reinterpret_cast<int**>(bytes + 0xf8);
@@ -1516,4 +1511,17 @@ void FUN_140011d90(void* object)
 void FUN_140011b10(void* object, void* stringContext, void* functions, const void* flags)
 {
     FUN_142961830(static_cast<char*>(object) + 0x68, object, stringContext, functions, flags);
+}
+
+// MS2-FUNCTIONAL: creates the requested AS3 instance when traits are valid and stores it as a picked Value.
+// @0x1400155d0
+void FUN_1400155d0(void*, Scaleform::GFx::AS3::Value* result, void* traits)
+{
+    extern void* FUN_1424eb610(void*);
+    extern void* FUN_1400140e0(void*, void*);
+    void* instanceTraits = FUN_1424eb610(traits);
+    Scaleform::GFx::AS3::Object* instance = instanceTraits
+        ? static_cast<Scaleform::GFx::AS3::Object*>(FUN_1400140e0(instanceTraits, traits))
+        : nullptr;
+    result->Pick(instance);
 }
