@@ -528,3 +528,5 @@ void TextPrimitiveBundle::startPrimitive(RenderQueueItem& item, TextPrepareBuffe
 // MS2-PIN: ??_7?$RefCountBase@VMaskPrimitive@Render@Scaleform@@$0EE@@Scaleform@@6B@ 0x143192880
 // MS2-PIN: ??_7MaskPrimitive@Render@Scaleform@@6B?$RefCountBase@VMaskPrimitive@Render@Scaleform@@$0EE@@2@@ 0x143192888
 // MS2-PIN: ??_7MaskPrimitive@Render@Scaleform@@6BInterface@RenderQueueItem@12@@ 0x143192890
+// (the deleting dtor at 0x1426f2830, slot 0 of the Bundle vftable)
+// MS2-PIN: ??_GTextPrimitiveBundle@Render@Scaleform@@UEAAPEAXI@Z 0x1426f2830
