@@ -3462,6 +3462,41 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
     (void)copied;
 }
 
+// MS2-FUNCTIONAL: advance a completed video or alpha decoder through the metadata and stop phases.
+// @0x1400344f0
+void FUN_1400344f0(void* player)
+{
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    if (decoders->VideoDecoder && FUN_140044630(decoders->VideoDecoder) != 3)
+        return;
+
+    if (decoders->AlphaDecoder)
+    {
+        FUN_140035bf0(player);
+        if (FUN_140043cb0(decoders->AlphaDecoder) != 3)
+        {
+            state->StopState = 2;
+            return;
+        }
+    }
+
+    CriSint32 result = FUN_140042d70(decoders->AudioManager, player);
+    if (result == 1)
+    {
+        if (isLockedInputChunk(player) == 1)
+            state->StopState = 3;
+        else
+        {
+            FUN_140031570(player);
+            state->Status = 6;
+            state->StopState = 5;
+        }
+    }
+    else
+        state->StopState = 4;
+}
+
 // MS2-FUNCTIONAL: copy the selected analyzed-header or input-buffer remainder into the read queue.
 // @0x1400342b0
 void FUN_1400342b0(void* player)
