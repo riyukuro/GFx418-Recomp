@@ -86,6 +86,9 @@ MS2_EXTERN(0x1428d8f14, int(void*, void*), FUN_1428d8f14);
 MS2_EXTERN(0x1428d8efc, int(void*, void*), FUN_1428d8efc);
 MS2_EXTERN(0x1427443c0, void(void*), FUN_1427443c0);
 MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
+MS2_EXTERN(0x14250d8f0, void*(void*, void*), FUN_14250d8f0);
+MS2_EXTERN(0x142442c30, void(void*, void*, void*), FUN_142442c30);
+MS2_EXTERN(0x1424edca0, void(void*, void*), FUN_1424edca0);
 MS2_EXTERN(0x1424fef00, void(void*, void*, const void*, void*, unsigned, void*, unsigned), FUN_1424fef00);
 MS2_EXTERN(0x1424f0750, void(void*, const char*, void*, int, int, int), FUN_1424f0750);
 MS2_EXTERN(0x1424d2150, void(void*, void*, std::uint64_t), FUN_1424d2150);
@@ -1518,5 +1521,31 @@ void FUN_1400182f0(void* callback, const std::uint32_t* info)
         auto* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0x98);
         FUN_1424fef00(vmRoot, callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), &objectValue, 1, &objectValue, 0);
     }
+}
+
+// MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef.
+// @0x14001a470
+void* FUN_14001a470(void* self)
+{
+    auto* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
+    auto* library = *reinterpret_cast<unsigned char**>(root + 0x2d8);
+    auto* movieDef = FUN_14250d8f0(root, self);
+    if (!movieDef) return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
+    alignas(8) std::uint64_t createInfo[3]{};
+    FUN_142442c30(self, createInfo, movieDef);
+    if (!createInfo[0]) return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
+    auto* creator = *reinterpret_cast<void**>(library + 0x18);
+    auto** vtable = *reinterpret_cast<void***>(creator);
+    auto create = reinterpret_cast<void*(*)(void*, void*, void*, int, std::uint32_t*, int)>(vtable[4]);
+    std::uint32_t flags[2] = {0x40000, 0};
+    auto* display = create(creator, *reinterpret_cast<void**>(library + 0x10), createInfo, 0, flags, 7);
+    auto* slot = reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
+    if (*slot) FUN_14257dcd0(*slot);
+    *slot = display;
+    if (display) {
+        auto* frame = static_cast<unsigned char*>(display) + static_cast<unsigned char>(static_cast<unsigned char*>(display)[0x6d]) * 4;
+        FUN_1424edca0(frame, self);
+    }
+    return display;
 }
 } // namespace
