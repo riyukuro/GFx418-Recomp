@@ -353,6 +353,41 @@ void AddTreeNodeValue(void* node, const int* value)
     for (std::size_t i = 0; i < childCount; ++i)
         AddTreeNodeValue(children[i], value);
 }
+
+void* FindFixedHashKey(void*, void*, const unsigned char*);
+void AddImageHashValue(void*, const unsigned char*, const void*);
+
+// MS2-FUNCTIONAL: adds or updates this tree node's fixed-hash record, then processes all child nodes.
+// @0x142686440
+void AccumulateImageTreeValue(void* node, void* set)
+{
+    auto* bytes = static_cast<unsigned char*>(node);
+    auto* key = bytes + 0x10;
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(set) + 8) != 0 ||
+        (*reinterpret_cast<std::uint64_t*>(key) >> 32) == 1) {
+        std::uint64_t found[2] = {};
+        FindFixedHashKey(set, found, key);
+        if (!found[0] || *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(
+                              reinterpret_cast<void*>(found[0])) + 8) < found[1]) {
+            struct ValueRecord { std::uint64_t key; std::uint64_t index; std::uint32_t count; std::uint32_t pad; std::uint64_t size; };
+            ValueRecord value{*reinterpret_cast<std::uint64_t*>(key), 0, 1, 0,
+                              *reinterpret_cast<std::uint64_t*>(bytes + 0x20) -
+                              *reinterpret_cast<std::uint64_t*>(bytes + 0x18)};
+            AddImageHashValue(set, key, &value);
+        } else {
+            auto* base = reinterpret_cast<unsigned char*>(found[0]);
+            auto* entry = base + 0x38 + found[1] * 0x38;
+            ++*reinterpret_cast<std::uint32_t*>(entry);
+            *reinterpret_cast<std::uint64_t*>(entry + 8) +=
+                *reinterpret_cast<std::uint64_t*>(bytes + 0x20) -
+                *reinterpret_cast<std::uint64_t*>(bytes + 0x18);
+        }
+    }
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    for (std::size_t i = 0; i < count; ++i)
+        AccumulateImageTreeValue(children[i], set);
+}
 }
 
 namespace Scaleform {
@@ -733,9 +768,9 @@ void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
 
 // MS2-FUNCTIONAL: inserts an eight-byte key/value pair through the recovered cached hash-set insertion routine.
 // @0x1426899e0
-void AddImageHashValue(void* set, const unsigned char* key, const std::uint64_t* value)
+void AddImageHashValue(void* set, const unsigned char* key, const void* value)
 {
-    struct Pair { const unsigned char* key; std::uint64_t value; } pair{key, *value};
+    struct Pair { const unsigned char* key; std::uint64_t value; } pair{key, reinterpret_cast<std::uint64_t>(value)};
     FUN_1426867f0(set, set, &pair, HashImageKey(key));
 }
 
