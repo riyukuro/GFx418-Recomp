@@ -3376,6 +3376,51 @@ void FUN_1423d61f0(void* manager, const char* command, const char* value)
     FUN_1423d7e80(manager, command, value);
 }
 
+// MS2-FUNCTIONAL: rebuilds the AS3 status list by clearing it, replaying retained row callbacks, and restoring selection.
+// @0x1423d9b40
+void FUN_1423d9b40(void* raw)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    const char* prefix = reinterpret_cast<const char*>(self + 0x10);
+    if (!*prefix) return;
+    char command[0x400]{};
+    void* movie = *reinterpret_cast<void**>(self + 0x868);
+    void* movieManager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
+    void* values = movieManager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movieManager) + 0x18) : nullptr;
+    if (values) {
+        void* result = nullptr;
+        strcpy_s(command, sizeof(command), prefix);
+        strcat_s(command, sizeof(command), ".ClearList");
+        reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, command, &result, nullptr, 0);
+    }
+
+    const unsigned long long rowCount = *reinterpret_cast<unsigned long long*>(self + 0x850);
+    auto* rows = *reinterpret_cast<void***>(self + 0x848);
+    auto* descriptors = reinterpret_cast<unsigned char*>(self + 0x828);
+    auto* arguments = reinterpret_cast<unsigned char*>(self + 0x810);
+    const unsigned long long argumentCount = *reinterpret_cast<unsigned long long*>(self + 0x818);
+    for (unsigned long long row = 0; rows && row < rowCount; ++row) {
+        void* callback = rows[row];
+        if (!callback) continue;
+        auto** callbackVtable = *reinterpret_cast<void***>(callback);
+        for (unsigned long long i = 0; i < argumentCount; ++i)
+            reinterpret_cast<void(*)(void*, void*, void*)>(callbackVtable[1])(
+                callback, descriptors + i * 0x20, arguments + i * sizeof(void*));
+        if (values) {
+            void* result = nullptr;
+            strcpy_s(command, sizeof(command), prefix);
+            strcat_s(command, sizeof(command), ".Add");
+            reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                    values, command, &result, descriptors, *reinterpret_cast<unsigned*>(self + 0x830));
+        }
+        FUN_14257dcd0(callback);
+    }
+
+    FUN_1423d97f0(self, *reinterpret_cast<unsigned long long*>(self + 0x860), 1);
+}
+
 // MS2-FUNCTIONAL: retrieves the IMM candidate page, converts its UTF-16 entries, and refreshes the movie's candidate list.
 // @0x1423cf900
 void FUN_1423cf900(void* raw, DWORD listIndex)
