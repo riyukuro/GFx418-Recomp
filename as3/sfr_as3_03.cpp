@@ -430,6 +430,69 @@ namespace Instances { namespace fl
     }
 }} // namespace Instances::fl
 
+// The out-of-line copies of Value::Assign / AssignUnsafe of the function, namespace and thunk function kinds, which
+// the exe keeps in this TU (the header inlines them).
+struct ValueAssignCopies
+{
+    template <typename T>
+    static SF_INLINE void AssignUnsafe(Value& v, Value::KindType kind, T* p)
+    {
+        v.SetKind(kind);
+        v.value = p;
+        if (p)
+            p->AddRef();
+    }
+    template <typename T>
+    static SF_INLINE void Assign(Value& v, Value::KindType kind, T* p)
+    {
+        v.Release();
+        AssignUnsafe(v, kind, p);
+    }
+
+    static void AssignFunction(Value& v, Instances::Function* p);
+    static void AssignNamespace(Value& v, Instances::Namespace* p);
+    static void AssignThunkFunction(Value& v, Instances::ThunkFunction* p);
+    static void AssignUnsafeFunction(Value& v, Instances::Function* p);
+    static void AssignUnsafeNamespace(Value& v, Instances::Namespace* p);
+    static void AssignUnsafeThunkFunction(Value& v, Instances::ThunkFunction* p);
+};
+
+// @0x1424052a0
+void ValueAssignCopies::AssignFunction(Value& v, Instances::Function* p)
+{
+    Assign(v, Value::kFunction, p);
+}
+
+// @0x142405310
+void ValueAssignCopies::AssignNamespace(Value& v, Instances::Namespace* p)
+{
+    Assign(v, Value::kNamespace, p);
+}
+
+// @0x142405380
+void ValueAssignCopies::AssignThunkFunction(Value& v, Instances::ThunkFunction* p)
+{
+    Assign(v, Value::kThunkFunction, p);
+}
+
+// @0x1424053f0
+void ValueAssignCopies::AssignUnsafeFunction(Value& v, Instances::Function* p)
+{
+    AssignUnsafe(v, Value::kFunction, p);
+}
+
+// @0x142405420
+void ValueAssignCopies::AssignUnsafeNamespace(Value& v, Instances::Namespace* p)
+{
+    AssignUnsafe(v, Value::kNamespace, p);
+}
+
+// @0x142405450
+void ValueAssignCopies::AssignUnsafeThunkFunction(Value& v, Instances::ThunkFunction* p)
+{
+    AssignUnsafe(v, Value::kThunkFunction, p);
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // VM::GetValueTraits: the traits of a value (0x14250ffc0).
