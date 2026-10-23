@@ -309,6 +309,13 @@ class TextSnapshotObject : public Object
 public:
     void* Data68[5]; // +0x68 StaticTextSnapshotData (0x28 bytes, layout not recovered)
 
+    // (appended for sfr_as2_02: MovieClip.getTextSnapshot) an empty snapshot with the TextSnapshot prototype
+    TextSnapshotObject(Environment* penv) : Object(penv)
+    {
+        ::new (Data68) StaticTextSnapshotData();
+        Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_TextSnapshot));
+    }
+
     StaticTextSnapshotData& GetData() { return *(StaticTextSnapshotData*)Data68; }
     void SetSelectColor(const Render::Color& color) { GetData().SetSelectColor(color); }
 

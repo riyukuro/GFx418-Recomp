@@ -21,6 +21,9 @@
 // MS2-RANGE: 0x142914880-0x142914e60 .text$mn
 // MS2-RANGE: 0x142914e60-0x142917780 .text$mn
 // MS2-RANGE: 0x142917780-0x142917bf0 .text$mn
+// MS2-RANGE: 0x142905b80-0x142905d70 .text$mn
+// MS2-RANGE: 0x1429064b0-0x142906650 .text$mn
+// MS2-RANGE: 0x1429069f0-0x142906a90 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -1238,6 +1241,60 @@ void AvmSprite::SpriteGlobalToLocal(const FnCall& fn)
     }
 }
 
+// @0x1429065d0
+void AvmSprite::SpriteGetSWFVersion(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+        fn.Result->SetInt(psprite->GetVersion());
+}
+
+// Drops the dragged character; the clip may now leave the optimized advance list.
+// @0x1429069f0
+void AvmSprite::SpriteStopDrag(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (psprite)
+    {
+        psprite->GetMovieImpl()->pKeepAdvancingChar = 0;
+        UInt32 flags = psprite->InteractiveObject::Flags;
+        bool optAdv = ((flags >> 21) & 1) != 0;
+        bool marked = ((flags >> 22) & 1) != 0;
+        switch (psprite->Sprite::CheckAdvanceStatus(optAdv && !marked))
+        {
+        case 1:  psprite->AddToOptimizedPlayList(); break;
+        case -1: psprite->MarkToRemoveFromOptimizedPlayList(); break;
+        }
+    }
+}
+
+// duplicateMovieClip(name, depth [, initObject]): the copy goes to the clip's parent; SWF 6+ returns it.
+// @0x142905b80
+void AvmSprite::SpriteDuplicateMovieClip(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 2)
+        return;
+    ObjectInterface* initSource = (fn.NArgs == 3) ? fn.Arg(2).ToObjectInterface(fn.Env) : 0;
+    Ptr<InteractiveObject> newch = AS2::ToAvmCharacter(psprite)->CloneDisplayObject(
+        fn.Arg(0).ToString(fn.Env), int(fn.Arg(1).ToNumber(fn.Env)) + 16384, initSource);
+    if (psprite->GetVersion() >= 6)
+        fn.Result->SetAsCharacter(newch);
+}
+
+// A snapshot of the clip's static text.
+// @0x1429064b0
+void AvmSprite::SpriteGetTextSnapshot(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    Ptr<TextSnapshotObject> psnap = *SF_HEAP_NEW(fn.Env->GetHeap()) TextSnapshotObject(fn.Env);
+    psprite->GetTextSnapshot(&psnap->GetData());
+    fn.Result->SetAsObject(psnap);
+}
+
 // @0x142906ba0
 void AvmSprite::SpriteLoadMovie(const FnCall& fn)
 {
@@ -1868,3 +1925,5 @@ template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const 
 // MS2-PIN: ??0ActionLogger@AS2@GFx@Scaleform@@QEAA@PEAVDisplayObject@23@PEBD@Z 0x142917910
 // MS2-PIN: ??$GFx_LoadBitmap@VString@Scaleform@@@AS2@GFx@Scaleform@@YAPEAVBitmapData@012@PEAVEnvironment@012@AEBVString@2@@Z 0x142914770
 // MS2-PIN: ??_7?$LogBase@VActionLogger@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e2c8
+// MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e310

@@ -82,6 +82,10 @@ public:
     static void SpriteGetRect(const FnCall& fn);
     static void SpriteLocalToGlobal(const FnCall& fn);
     static void SpriteGlobalToLocal(const FnCall& fn);
+    static void SpriteGetSWFVersion(const FnCall& fn);
+    static void SpriteStopDrag(const FnCall& fn);
+    static void SpriteDuplicateMovieClip(const FnCall& fn);
+    static void SpriteGetTextSnapshot(const FnCall& fn);
     static void SpriteBeginGradientFill(const FnCall& fn);
     static void SpriteBeginBitmapFill(const FnCall& fn);
     static void SpriteLineGradientStyle(const FnCall& fn);

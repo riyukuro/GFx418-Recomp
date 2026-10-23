@@ -34,6 +34,7 @@ enum ASBuiltinType : int
     ASBuiltin_DropShadowFilter = 38,
     ASBuiltin_GlowFilter       = 39,
     ASBuiltin_BlurFilter       = 40,
+    ASBuiltin_TextSnapshot     = 43,
     ASBuiltin_unknown_         = 46,
     ASBuiltin_undefined        = 51,
     ASBuiltin_prototype        = 77,

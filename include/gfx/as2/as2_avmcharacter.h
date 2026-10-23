@@ -23,6 +23,8 @@ public:
 
     // __proto__ becomes the "prototype" member of psrcObj, if it has one (exe 0x14298a480).
     void SetProtoToPrototypeOf(ObjectInterface* psrcObj);
+    // A copy of the character under its parent at depth, initialized from psource (exe 0x142934610).
+    InteractiveObject* CloneDisplayObject(const ASString& newname, int depth, const ObjectInterface* psource);
 
     // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
