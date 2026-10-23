@@ -9,6 +9,15 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// @0x14250cc30
+SPInt Slots::GetPrevSlotIndex(SPInt ind) const
+{
+    const Slots* slots = this;
+    while (static_cast<UPInt>(ind) < slots->FirstOwnSlotNum)
+        slots = slots->Parent;
+    return slots->VArray[static_cast<UPInt>(ind - static_cast<SPInt>(slots->FirstOwnSlotNum))].Prev;
+}
+
 // MS2-FUNCTIONAL 0x14250c230: returns the executable's null-tagged singleton; C++ local-static initialization differs.
 // @0x14250c230
 const Value& Value::GetNull()

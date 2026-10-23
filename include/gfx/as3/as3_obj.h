@@ -277,12 +277,7 @@ public:
         return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value;
     }
     // (appended, sfr19) the previous slot of the same name as slot ind, or -1 (out-of-line copy 0x14250cc30).
-    SPInt GetPrevSlotIndex(SPInt ind) const
-    {
-        if (static_cast<UPInt>(ind) < FirstOwnSlotNum)
-            return Parent->GetPrevSlotIndex(ind);
-        return VArray[ind - FirstOwnSlotNum].Prev;
-    }
+    SPInt GetPrevSlotIndex(SPInt ind) const;  // 0x14250cc30
 
     UPInt               FirstOwnSlotNum;    // +0x00
     const Slots*        Parent;             // +0x08
