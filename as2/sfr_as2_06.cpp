@@ -112,6 +112,10 @@
 // MS2-RANGE: 0x14296cbf0-0x14296cd30 .text$mn
 // MS2-RANGE: 0x14296cd30-0x14296ce70 .text$mn
 // MS2-RANGE: 0x142971d70-0x142972190 .text$mn
+// MS2-RANGE: 0x142969040-0x142969080 .text$mn
+// MS2-RANGE: 0x142965e50-0x142965f00 .text$mn
+// MS2-RANGE: 0x14295d450-0x14295d4e0 .text$mn
+// MS2-RANGE: 0x142964200-0x142964370 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1158,6 +1162,53 @@ void TransformCtorFunction::GlobalCtor(const FnCall& fn)
         ptransform = *SF_HEAP_NEW(fn.Env->GetHeap()) TransformObject(fn.Env);
     ptransform->SetTarget(ptarget);
     fn.Result->SetAsObject(ptransform.GetPtr());
+}
+
+// @0x142969040
+bool Environment::NeedTermination(int execType) const
+{
+    if ((execType == ActionBuffer::Exec_Unknown || execType == ActionBuffer::Exec_Function) && Target->IsUnloading())
+        return true;
+    if (Target->IsUnloaded())
+        return true;
+    return false;
+}
+
+// MS2-FUNCTIONAL the exe reads the string node flags as bit-fields (shift and test)
+// @0x142965e50
+bool AvmCharacter::IsStandardMember(const ASString& memberName, ASString* plowerCaseName)
+{
+    if (memberName.GetHashFlags() & ASConstString::Flag_StandardMember)
+        return true;
+    if (memberName.GetLength() == 0 || memberName.GetCharAt(0) != '_')
+        return false;
+    ASString lower(memberName.ToLowerNode());
+    if (!(lower.GetHashFlags() & ASConstString::Flag_CaseInsensitive))
+        return false;
+    if (plowerCaseName)
+        *plowerCaseName = lower;
+    return true;
+}
+
+// MS2-FUNCTIONAL the exe calls the event handler hash lookup out of line
+// @0x14295d450
+bool AvmCharacter::HasClipEventHandler(const EventId& id) const
+{
+    EventId key = (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id;
+    return EventHandlers.Get(key) != 0;
+}
+
+// MS2-FUNCTIONAL the exe calls the event handler hash lookup out of line
+// @0x142964200
+bool AvmCharacter::InvokeClipEventHandlers(Environment* penv, const EventId& id)
+{
+    EventId key = (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id;
+    const ArrayLH<Value, StatMV_ActionScript_Mem>* phandlers = EventHandlers.Get(key);
+    if (!phandlers)
+        return false;
+    for (UPInt i = 0, n = phandlers->GetSize(); i < n; i++)
+        GAS_Invoke((*phandlers)[i], 0, this, penv, 0, penv->GetTopIndex() + 1, 0);
+    return true;
 }
 
 

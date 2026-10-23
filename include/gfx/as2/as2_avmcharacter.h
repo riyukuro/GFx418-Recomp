@@ -94,6 +94,15 @@ public:
     virtual bool ExecuteEvent(const EventId& id);
     virtual bool ExecuteFunction(const FunctionRef& function, const Array<Value>& params);
     virtual bool ExecuteCFunction(CFunctionPtr function, const Array<Value>& params);
+
+    // (appended for sfr_as2_06)
+    // The name is a standard member; else a "_" name whose lowercase form is a case-insensitive one, which goes to
+    // *plowerCaseName (exe 0x142965e50).
+    static bool IsStandardMember(const ASString& memberName, ASString* plowerCaseName = 0);
+    // A clip event handler for the event; key down / up handlers are found by the event alone (exe 0x14295d450).
+    bool HasClipEventHandler(const EventId& id) const;
+    // Calls each clip event handler for the event with this as this; false when there is none (exe 0x142964200).
+    bool InvokeClipEventHandlers(Environment* penv, const EventId& id);
 };
 
 // The script side of a character of an AS2 movie.

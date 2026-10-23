@@ -163,6 +163,7 @@
 // MS2-RANGE: 0x142956cd0-0x1429570f8 .text$mn
 // MS2-RANGE: 0x14293fcd0-0x14293fdee .text$mn
 // MS2-RANGE: 0x14293fdf0-0x14293ff0e .text$mn
+// MS2-RANGE: 0x142946d10-0x142946fc0 .text$mn
 
 #include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -4089,6 +4090,31 @@ void GFxAS2LoadXMLTask::Execute()
 {
     LoadFile();
 }
+// MS2-FUNCTIONAL the exe inlines the FnCall destructor
+// @0x142946d10
+bool GAS_Invoke(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
+                int firstArgBottomIndex, const char* pmethodName)
+{
+    FunctionRef func = method.ToFunction(penv);
+    if (presult)
+        presult->SetUndefined();
+    if (!func.IsNull())
+    {
+        func.Invoke(FnCall(presult, pthis, penv, nargs, firstArgBottomIndex), pmethodName);
+        return true;
+    }
+    if (penv && penv->IsVerboseActionErrors())
+    {
+        if (pthis && pthis->IsASCharacter())
+            penv->LogScriptError("Invoked method %s.%s is not a function",
+                                 pthis->ToCharacter_Call()->GetCharacterHandle()->NamePath.ToCStr(),
+                                 pmethodName ? pmethodName : "<unknown>");
+        else
+            penv->LogScriptError("Invoked method %s is not a function", pmethodName ? pmethodName : "<unknown>");
+    }
+    return false;
+}
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {

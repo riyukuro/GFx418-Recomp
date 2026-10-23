@@ -316,7 +316,17 @@ public:
     inline ASString        CreateString(const char* pstr) const; // as2_movieroot.h
     inline ASString        CreateString(const String& str) const; // as2_movieroot.h
     inline ASString        CreateConstString(const char* pstr) const; // as2_movieroot.h
+
+    // (appended for sfr_as2_06)
+    // The code must stop: the target is unloaded, or (plain code and functions) being unloaded; execType is an
+    // ActionBuffer::ExecuteType (exe 0x142969040).
+    bool NeedTermination(int execType) const;
 };
+
+// (appended for sfr_as2_05) Calls the function method holds or names with nargs arguments from the environment's
+// stack; logs an error and returns false when it is not a function (exe 0x142946d10).
+bool GAS_Invoke(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
+                int firstArgBottomIndex, const char* pmethodName);
 
 // A try block entered by the running code. 0x10 bytes.
 struct Environment::TryDescr
@@ -492,7 +502,8 @@ public:
     // What the code being run is (only the plain kind is named so far).
     enum ExecuteType
     {
-        Exec_Unknown = 0
+        Exec_Unknown = 0,
+        Exec_Function = 3 // (appended for sfr_as2_06)
     };
     // Runs the whole buffer in env (exe 0x142939e30).
     void Execute(Environment* env);
