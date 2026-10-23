@@ -42,6 +42,39 @@ const InstanceTraits::Traits& VM::GetInstanceTraits(const Value& v) const
     }
 }
 
+// MS2-FUNCTIONAL 0x14250be40: iterator preserves bucket order; exact tombstone boundary comparison remains to verify.
+// @0x14250be40
+GlobalSlotIndex Object::GetNextDynPropIndex(GlobalSlotIndex ind) const
+{
+    const DynAttrsType& attrs = DynAttrs;
+    DynAttrsType::ConstIterator it = attrs.Begin();
+    const UPInt start = ind.IsValid() ? static_cast<UPInt>(ind.Get() - 1) : 0;
+    for (; !it.IsEnd(); ++it)
+    {
+        if (static_cast<UPInt>(it.GetIndex()) < start)
+            continue;
+        if ((it->First.Flags & 1) == 0)
+            return GlobalSlotIndex(static_cast<UInt32>(it.GetIndex() + 1));
+    }
+    return GlobalSlotIndex(0);
+}
+
+// MS2-FUNCTIONAL 0x14250c010: name lookup follows the recovered bucket index; invalid-index behavior remains to verify.
+// @0x14250c010
+void Object::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+{
+    const UPInt target = ind.IsValid() ? static_cast<UPInt>(ind.Get() - 1) : 0;
+    for (DynAttrsType::ConstIterator it = DynAttrs.Begin(); !it.IsEnd(); ++it)
+    {
+        if (static_cast<UPInt>(it.GetIndex()) == target)
+        {
+            name.Assign(it->First.Name);
+            return;
+        }
+    }
+    name.SetUndefined();
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
