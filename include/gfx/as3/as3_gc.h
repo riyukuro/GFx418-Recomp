@@ -230,6 +230,10 @@ public:
             FirstFreeRootIndex = idx;
         }
     }
+    // Frees p's root slot when it holds one without being listed, then clears the root mark (out of line, 0x1423dfba0).
+    void RemoveRoot(const BaseType* p);
+    // Collector op: drops one reference; the last one parks the object for the end of the collection (0x1423df980).
+    static void ReleaseChildCall(RefCountCollector* prcc, const BaseType** pchild);
     // The weak proxy of a dying object forgets it.
     void RemoveWeakProxy(const BaseType* p)
     {

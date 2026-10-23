@@ -3,7 +3,10 @@
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142444c40-0x142445480 .text$mn
-// MS2-RANGE: 0x1423dfa20-0x1423dfba0 .text$mn
+// MS2-RANGE: 0x1423df8a0-0x1423dfef0 .text$mn
+// MS2-RANGE: 0x1423e0090-0x1423e0260 .text$mn
+// MS2-RANGE: 0x1424447c0-0x142444a00 .text$mn
+// MS2-RANGE: 0x142444a00-0x142444bc0 .text$mn
 // MS2-RANGE: 0x142446cb0-0x142446d90 .text$mn
 // MS2-RANGE: 0x1424eb700-0x1424eb7b0 .text$mn
 // MS2-RANGE: 0x1424ed770-0x1424ed7b0 .text$mn
@@ -3757,7 +3760,102 @@ void RefCountBaseGC<Stat>::ReleaseInternal() const
 }
 template void RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal() const;
 
+// @0x1423dfba0
+// MS2-FUNCTIONAL same transitions; the exe moves the Resize call behind the common exit and reloads the index differently
+template<int Stat>
+void RefCountCollector<Stat>::RemoveRoot(const BaseType* p)
+{
+    if (p->IsInRootList() && !p->IsInList())
+    {
+        UInt32 idx = p->RootIndex;
+        if ((UPInt)(idx + 1) == Roots.GetSize())
+            Roots.Resize(idx);
+        else
+        {
+            Roots[idx] = (const BaseType*)((FirstFreeRootIndex << 1) | 1);
+            FirstFreeRootIndex = idx;
+        }
+    }
+    p->RefCount &= ~BaseType::Flag_InRootList;
+    if (!p->IsInList())
+        p->RootIndex = ~0u;
+}
+
+// @0x1423df980
+// MS2-FUNCTIONAL same transitions; the exe reloads *pchild after the decrement instead of keeping the pointer in a register
+template<int Stat>
+void RefCountCollector<Stat>::ReleaseChildCall(RefCountCollector* prcc, const BaseType** pchild)
+{
+    --(*pchild)->RefCount;
+    if ((*pchild)->IsRefCntZero())
+    {
+        prcc->RemoveRoot(*pchild);
+        (*pchild)->RefCount |= BaseType::Flag_DelayedRelease;
+        if (!(*pchild)->IsInList())
+            prcc->AddToList(*pchild);
+    }
+    else
+        (*pchild)->ReleaseInternal();
+}
+template void RefCountCollector<StatMV_ActionScript_Mem>::RemoveRoot(const BaseType* p);
+template void RefCountCollector<StatMV_ActionScript_Mem>::ReleaseChildCall(RefCountCollector* prcc, const BaseType** pchild);
+
 }}} // namespace Scaleform::GFx::AS3
+
+// ---- AS3 class traits factory ----
+namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits { namespace fl {
+// @0x1423e0090
+// MS2-FUNCTIONAL the exe inlines the Math constructor (traits, instance traits and the Math class object); cl calls it
+Pickable<Traits> Math::MakeClassTraits(VM& vm)
+{
+    return Pickable<Traits>(new(vm.GetMemoryHeap()) Math(vm));
+}
+}}}}} // namespace Scaleform::GFx::AS3::ClassTraits::fl
+
+// ---- AS3 display instance set-up ----
+// AvmDisplayObj::GetAS3Root, MovieRoot::AddScriptableMovieClip.
+Scaleform::GFx::AS3::MovieRoot* FUN_142505ee0(const Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+void FUN_1424e9380(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::DisplayObject* pcont);
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
+// A script-created shape gets its stage object right away.
+// @0x1424447c0
+// MS2-FUNCTIONAL the exe inlines CreateStageObject; cl calls the virtual
+void Shape::InitInstance(bool extCall)
+{
+    if (!extCall)
+        CreateStageObject();
+}
+// @0x142444890
+// MS2-FUNCTIONAL the exe inlines CreateStageObject; cl calls the virtual
+void SimpleButton::InitInstance(bool extCall)
+{
+    if (!extCall)
+        CreateStageObject();
+}
+// A script-created sprite also registers as scriptable, and a movie clip marks its display object.
+// @0x142444a00
+// MS2-FUNCTIONAL the exe inlines CreateStageObject; cl calls the virtual
+void Sprite::InitInstance(bool extCall)
+{
+    if (!extCall)
+    {
+        CreateStageObject();
+        FUN_1424e9380(FUN_142505ee0(ToAvmDisplayObj(pDispObj)), pDispObj);
+        if (IsMovieClip())
+            pDispObj->Flags |= GFx::DisplayObject::Mask_MovieClip;
+    }
+}
+}}}}} // namespace Scaleform::GFx::AS3::Instances::fl_display
+
+// ---- collector root buffer: out-of-line page buffer copies ----
+namespace Scaleform {
+typedef const GFx::AS3::ASRefCountBaseType* GCRootPtr;
+typedef ArrayPagedBase<GCRootPtr, 10, 5, AllocatorPagedLH_POD<GCRootPtr, Stat_Default_Mem> > GCRootBase;
+// @0x1423dfc30
+template void GCRootBase::Resize(UPInt newSize);
+// @0x1423df8a0
+template bool GCRootBase::PushBackSafe(const GCRootBase::ValueType& val);
+} // namespace Scaleform
 
 // ---- Matrix2x4 out-of-line copies ----
 namespace Scaleform { namespace Render {
@@ -3808,3 +3906,6 @@ ASString VM::AsString(const Value& v)
 // MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510
 // MS2-PIN: ?TransformByInverse@?$Matrix2x4@M@Render@Scaleform@@QEBA?AV?$Point@M@23@AEBV423@@Z 0x142447090
 // MS2-PIN: ??_7FlagsVisitor@?1??GAS_GlobalASSetPropFlags@AS2@GFx@Scaleform@@YAXAEBVFnCall@234@@Z@6B@ 0x143214fb8
+// MS2-PIN: ?Resize@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAAX_K@Z 0x1423dfc30
+// MS2-PIN: ?PushBackSafe@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAA_NAEBQEBV?$RefCountBaseGC@$0BED@@AS3@GFx@2@@Z 0x1423df8a0
+// MS2-PIN: ?allocatePageSafe@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@AEAA_N_K@Z 0x1423dfe30
