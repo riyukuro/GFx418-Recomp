@@ -45,6 +45,8 @@ extern const void* DAT_1431b93b0[];
 extern const void* DAT_1431b9360[];
 extern const void* DAT_1431b9410[];
 extern const void* DAT_1431b93c0[];
+extern const void* DAT_143183b28[];
+extern const void* DAT_1431b9080[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -56,6 +58,7 @@ unsigned __int64 FUN_1425e3590(void);                                   // Timer
 void     FUN_14257dc30(void* p);                                        // RefCountImpl::AddRef
 void     FUN_14257dcb0(void* p);                                        // RefCountImpl::Release
 void     FUN_14257db50(void* p);
+CriUint32 FUN_14257bdc0(void);
 void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
 void*    FUN_140027f7c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type);
 void     FUN_14001d650(void* config, void* reader);                     // VideoReaderConfig::AttachReader
@@ -2274,6 +2277,29 @@ void* FUN_14002aab0(void* object, void* first, void* second)
     return object;
 }
 
+// MS2-FUNCTIONAL: initialize the extended reference core and its embedded allocator metadata.
+// @0x14002abd0
+void* FUN_14002abd0(void* object, CriUint32 tag, const CriUint32* sizePair,
+                    const void* source, void* owner)
+{
+    CriUint32* words = (CriUint32*)object;
+    void** fields = (void**)object;
+    fields[0] = (void*)DAT_143149940;
+    words[2] = 1;
+    fields[2] = NULL;
+    fields[3] = source ? (CriUint8*)source + 0x10 : NULL;
+    fields[4] = NULL;
+    words[10] = tag;
+    fields[0] = (void*)DAT_143183b28;
+    words[11] = sizePair[0];
+    words[12] = sizePair[1];
+    words[13] = 0x10;
+    words[14] = FUN_14257bdc0();
+    fields[0] = (void*)DAT_1431b9080;
+    fields[8] = owner;
+    return object;
+}
+
 // MS2-FUNCTIONAL: release a non-null heap-owned member through the process Scaleform heap.
 // @0x14002ab70
 void FUN_14002ab70(void** value)
@@ -2296,6 +2322,33 @@ void FUN_14002acd0(void** value)
 {
     if (*value)
         FUN_14002d3f0(*value);
+}
+
+// MS2-FUNCTIONAL: clear the request vector while retaining a single-entry allocation when possible.
+// @0x14002aec0
+void FUN_14002aec0(CriUint64* array)
+{
+    if (array[1] == 0)
+    {
+        if (array[2] == 0)
+        {
+            FUN_140029d30(array, array, 0);
+            array[1] = 0;
+            return;
+        }
+    }
+    else if ((array[2] & ~CriUint64(1)) != 0)
+    {
+        if (array[0])
+        {
+            FUN_14002d3f0((void*)array[0]);
+            array[0] = 0;
+        }
+        array[2] = 0;
+        array[1] = 0;
+        return;
+    }
+    array[1] = 0;
 }
 
 // MS2-FUNCTIONAL: destroy the same owned fields and optionally free the containing allocation.
