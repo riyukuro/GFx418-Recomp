@@ -159,6 +159,7 @@ void*    FUN_1400385c8(void* storage, CriSint32 size);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
+void*    FUN_14002db40(void* thread, void* config);
 CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* output);
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
@@ -1125,6 +1126,50 @@ void* FUN_14002ddd0(void* object, VideoReaderConfig* config)
     fields[2] = (void*)DAT_1431b93c0;
     *((CriUint32*)object + 12) = 0;
     return object;
+}
+
+// MS2-FUNCTIONAL: lazily start the threaded reader service and allocate a reader on its configured heap.
+// @0x14002e050
+VideoReader* VideoReaderConfigThrd::CreateReader()
+{
+    void** config = (void**)this;
+    void* heap = config[2];
+    if (!config[31])
+    {
+        struct ThreadParams
+        {
+            void* (*Entry)(void*, void*);
+            void* UserData;
+            CriUint64 StackSize;
+            CriSint32 Processor;
+            CriSint32 Priority;
+            CriSint32 Flags;
+            CriSint32 Reserved;
+        } params = { FUN_14002db40, this, 0x10000, -1, 0, 1, 0 };
+        void* heapVtable = *(void**)heap;
+        void* (__fastcall *allocateThread)(void*, size_t) =
+            (void* (__fastcall *)(void*, size_t))(*(void**)((CriUint8*)heapVtable + 0x50));
+        void* memory = allocateThread(heap, 0x60);
+        void* thread = memory ? FUN_14258a490(memory, &params) : NULL;
+        if (config[31])
+            FUN_14257dcb0(config[31]);
+        config[31] = thread;
+        if (thread)
+        {
+            void** vtable = *(void***)thread;
+            CriBool (__fastcall *start)(void*, CriBool) = (CriBool (__fastcall *)(void*, CriBool))vtable[5];
+            if (start(thread, 1))
+            {
+                void (__fastcall *setName)(void*, const char*) = (void (__fastcall *)(void*, const char*))vtable[7];
+                setName(thread, "Scaleform Video Reader");
+            }
+        }
+    }
+    void* heapVtable = *(void**)heap;
+    void* (__fastcall *allocateReader)(void*, size_t) =
+        (void* (__fastcall *)(void*, size_t))(*(void**)((CriUint8*)heapVtable + 0x50));
+    void* memory = allocateReader(heap, 0x50);
+    return memory ? (VideoReader*)FUN_14002ddd0(memory, this) : NULL;
 }
 
 // MS2-FUNCTIONAL: initialize the threaded reader configuration, intrusive reader list and synchronization objects.
