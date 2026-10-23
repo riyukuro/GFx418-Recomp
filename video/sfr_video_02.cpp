@@ -43,6 +43,8 @@ extern void FUN_142515a20(void*, float, float);
 extern void FUN_1424f96c0(void*);
 extern void FUN_142961830(void*, void*, void*, void*, const void*);
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
+extern void FUN_142469440(void*, void*, void*);
+extern void FUN_142504530(void*, void*, void*, void*);
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -1736,6 +1738,21 @@ void FUN_140013600(void* array, unsigned __int64 index)
     }
     *reinterpret_cast<void**>(data + index * 8) = Scaleform::Memory::Alloc(0x2000);
     ++*reinterpret_cast<unsigned __int64*>(bytes + 0x10);
+}
+
+// MS2-FUNCTIONAL: follows the executable's EventDispatcher GC traversal and visits its three strong Value fields.
+// @0x140012e10
+void FUN_140012e10(void* dispatcher, void* collector, void* operation)
+{
+    char* fields = static_cast<char*>(dispatcher);
+    FUN_142469440(dispatcher, collector, operation);
+    const unsigned offsets[] = {0x98u, 0xb8u, 0xd8u};
+    for (unsigned offset : offsets)
+    {
+        unsigned tag = *reinterpret_cast<unsigned*>(fields + offset);
+        if ((tag & 0x1f) > 10 && (tag & 0x200) == 0)
+            FUN_142504530(collector, fields + offset, operation, dispatcher);
+    }
 }
 
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
