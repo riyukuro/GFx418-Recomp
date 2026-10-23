@@ -97,6 +97,8 @@ extern "C" const unsigned long long DAT_1431c4830;
 extern "C" const unsigned long long DAT_14313b8a8;
 extern "C" const unsigned long long DAT_14313b8c8;
 extern "C" const unsigned char DAT_14313b400[];
+extern "C" const unsigned char DAT_1431c4878[];
+extern "C" const unsigned char DAT_1431c51b8[];
 extern "C" const unsigned long long DAT_1431c4d60;
 extern "C" const unsigned long long DAT_14313b8c0;
 extern "C" const unsigned long long DAT_1431c4e08;
@@ -245,6 +247,28 @@ String* FUN_1423cf4a0(void* self, String* output)
     case 0x0412: label = "Korean"; break;
     }
     return new (output) String(label);
+}
+
+// MS2-FUNCTIONAL: recreates the executable's COM instance activation, nested object creation, and release sequence.
+// @0x1423da8b0
+HRESULT FUN_1423da8b0(void*, void* argument, void* value)
+{
+    void* factory = nullptr;
+    HRESULT result = CoCreateInstance(*reinterpret_cast<const IID*>(DAT_1431c4878), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(DAT_1431c51b8), &factory);
+    if (FAILED(result)) return result;
+    void* object = nullptr;
+    const HRESULT created = reinterpret_cast<HRESULT(*)(void*, void*, void**, unsigned)>(
+        (*reinterpret_cast<void***>(factory))[5])(factory, argument, &object, 0);
+    if (FAILED(created)) {
+        result = static_cast<HRESULT>(0x80070005u);
+    } else {
+        result = reinterpret_cast<HRESULT(*)(void*, void*)>(
+            (*reinterpret_cast<void***>(object))[5])(object, value);
+        reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+    }
+    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(factory))[2])(factory);
+    return result;
 }
 
 // MS2-FUNCTIONAL: follows the executable's three-stage input-context COM query and releases each acquired interface.
