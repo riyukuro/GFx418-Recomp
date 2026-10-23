@@ -13,16 +13,7 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// The Loader's load-init notification, held by the entry while it is pending (body not recovered; a thread-safe
-// counted object, released through RefCountImpl::Release).
-class NotifyLoadInitC : public RefCountImpl
-{
-public:
-    // (appended, sfr19) the Loader's open / init / error events (4.1.18 has no load-complete slot)
-    virtual void OpenEventCallback() = 0;   // 1
-    virtual void InitEventCallback() = 0;   // 2
-    virtual void ErrorEventCallback() = 0;  // 3
-};
+// NotifyLoadInitC (the Loader's load-init notification) is declared in as3_asvm.h.
 
 // One AS3 load request: the requesting Loader or URLLoader, the URLRequest, or the bytes of Loader.loadBytes.
 // 0x60 bytes; vftable 0x14317d888.
