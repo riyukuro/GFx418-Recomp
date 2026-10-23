@@ -80,6 +80,25 @@ void* FUN_140015590(void* object, unsigned __int64 flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: calls CTraits' executable destructor and frees through the global heap when requested.
+// @0x140014a80
+Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_140014a80(
+    Scaleform::GFx::AS3::InstanceTraits::CTraits* object, unsigned flags)
+{
+    object->~CTraits();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: calls Class' executable destructor and frees through the global heap when requested.
+// @0x140014b10
+Scaleform::GFx::AS3::Class* FUN_140014b10(Scaleform::GFx::AS3::Class* object, unsigned flags)
+{
+    object->~Class();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
 // VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
 // MS2-FUNCTIONAL: image release and render-tree refresh recovered with the local image layout.
 // @0x140010a30
