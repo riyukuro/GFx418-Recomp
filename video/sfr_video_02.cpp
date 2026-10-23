@@ -34,6 +34,8 @@ extern void* PTR_FUN_1431b71b0;
 extern void* PTR_FUN_1431b7260;
 extern void* PTR_LAB_1431b5fb0;
 extern void* PTR_LAB_1431b5f20;
+extern void* PTR_LAB_1431b67d0;
+extern void* PTR_LAB_1431b6740;
 extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
@@ -1861,6 +1863,18 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000ecc0(
     ::new (static_cast<void*>(object)) Scaleform::GFx::AS2::CFunctionObject(context, FUN_14000e100);
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b5fb0;
     *reinterpret_cast<void**>(object) = PTR_LAB_1431b5f20;
+    return object;
+}
+
+// MS2-FUNCTIONAL: constructs the frame-rate native function object and installs its executable tables.
+// @0x140012650
+Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
+    Scaleform::GFx::AS2::CFunctionObject* object, Scaleform::GFx::AS2::ASStringContext* context)
+{
+    extern void FUN_140012340(const Scaleform::GFx::AS2::FnCall&);
+    ::new (static_cast<void*>(object)) Scaleform::GFx::AS2::CFunctionObject(context, FUN_140012340);
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b67d0;
+    *reinterpret_cast<void**>(object) = PTR_LAB_1431b6740;
     return object;
 }
 
