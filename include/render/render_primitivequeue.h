@@ -195,6 +195,13 @@ public:
     void Insert(UPInt index, const HMatrix& m);
     void Remove(UPInt index, UPInt count);
 
+    // (appended for sfr_render_07q)
+    MaskPrimitive(HAL* hal, MaskAreaType type) : pHAL(hal), Type(type) {}
+    UPInt          GetMaskCount() const         { return MaskAreas.GetSize(); }
+    const HMatrix* GetMaskAreaMatrices() const  { return MaskAreas.GetDataPtr(); }
+    // starts the mask submission; nothing while only the filters are emitted
+    virtual void EmitToHAL(RenderQueueItem& item, RenderQueueProcessor& qp);   // 0x14266d890
+
 private:
     HAL*             pHAL;        // +0x18
     MaskAreaType     Type;        // +0x20

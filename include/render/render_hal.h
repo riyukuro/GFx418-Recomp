@@ -32,6 +32,9 @@ class FilterPrimitive;
 class Primitive;
 class PrimitiveBatch;
 struct DICommand;
+// (appended for sfr_render_07q)
+class RenderQueueItem;
+class MaskPrimitive;
 
 class HAL : public RefCountBase<HAL, StatRender_Mem>
 {
@@ -64,13 +67,15 @@ public:
     virtual void halSlot24() = 0;                                                                 // 24
     virtual void halSlot25() = 0;                                                                 // 25
     virtual void halSlot26() = 0;                                                                 // 26
-    virtual void halSlot27() = 0;                                                                 // 27
+    // (named for sfr_render_07q) queues the item for drawing
+    virtual void Draw(const RenderQueueItem& item) = 0;                                           // 27
     // (named for sfr_render_07p) draws the prepared batches [start, end) of a primitive
     virtual void DrawProcessedPrimitive(Primitive* p, PrimitiveBatch* start, PrimitiveBatch* end) = 0;   // 28
     virtual void halSlot29() = 0;                                                                 // 29
-    virtual void halSlot30() = 0;                                                                 // 30
-    virtual void halSlot31() = 0;                                                                 // 31
-    virtual void halSlot32() = 0;                                                                 // 32
+    // (named for sfr_render_07q) a mask: push it and draw its areas into the stencil, then draw clipped by it
+    virtual void PushMask_BeginSubmit(MaskPrimitive* primitive) = 0;                              // 30
+    virtual void EndMaskSubmit() = 0;                                                             // 31
+    virtual void PopMask() = 0;                                                                   // 32
     virtual void halSlot33() = 0;                                                                 // 33
     virtual void halSlot34() = 0;                                                                 // 34
     virtual void applyBlendMode(BlendMode mode, bool sourceAc = false, bool forceAc = false) = 0;  // 35

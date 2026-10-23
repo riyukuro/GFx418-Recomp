@@ -713,6 +713,13 @@ void MaskPrimitive::Remove(UPInt index, UPInt count)
     MaskAreas.RemoveMultipleAt(index, count);
 }
 
+// @0x14266d890
+void MaskPrimitive::EmitToHAL(RenderQueueItem&, RenderQueueProcessor& qp)
+{
+    if (qp.GetQueueEmitFilter() == RenderQueueProcessor::QPF_All)
+        qp.GetHAL()->PushMask_BeginSubmit(this);
+}
+
 //--------------------------------------------------------------------
 // ***** FilterPrimitive
 

@@ -19,8 +19,13 @@ namespace Scaleform { namespace Render {
 
 class BundleEntry;
 class TreeCacheNode;
+// (appended for sfr_render_07q)
+class TreeCacheRoot;
+class Renderer2DImpl;
+class BundleIterator;
 class MeshProvider;
 class PrimitiveFill;
+class SortKey;
 
 enum SortKeyType
 {
@@ -56,6 +61,18 @@ typedef void* SortKeyData;
 // (appended for sfr_render_07n) selects the text key constructor
 enum SortKeyTextType { SortKeyText };
 
+// (appended for sfr_render_07q) key flags; equal keys with SKF_MatchNoOverlap share a bundle
+enum SortKeyFlags
+{
+    SKF_MatchNoOverlap = 0x2000
+};
+
+// (appended for sfr_render_07q) how a key changes the range being matched; only the default is used so far
+enum SortKeyTransition
+{
+    SKT_Skip
+};
+
 // what a key's data is and how it is counted
 struct SortKeyInterface
 {
@@ -65,6 +82,14 @@ struct SortKeyInterface
     virtual ~SortKeyInterface() {}
     virtual void AddRef(SortKeyData) {}
     virtual void Release(SortKeyData) {}
+    // (appended for sfr_render_07q) slots 3-5: the range transition, creating / refreshing the entry's bundle, and
+    // drawing it
+    virtual SortKeyTransition GetRangeTransition(SortKeyData, const SortKey&) { return SKT_Skip; }
+    virtual bool UpdateBundleEntry(SortKeyData, BundleEntry*, TreeCacheRoot*, Renderer2DImpl*,
+                                   const BundleIterator&) { return false; }
+    virtual void DrawBundleEntry(SortKeyData, BundleEntry*, Renderer2DImpl*) {}
+
+    SortKeyInterface(SortKeyType type, unsigned flags = 0) : Type(type), Flags(flags) {}
 };
 
 class SortKey
@@ -124,6 +149,20 @@ public:
     virtual void UpdateMesh(BundleEntry* entry);
 
     void RemoveEntry(BundleEntry* entry);
+
+    // (appended for sfr_render_07q) the chain is set up before the bundle counts as needing an update
+    Bundle(BundleEntry* top) : NeedUpdate(true), FrameId(0)
+    {
+        UpdateChain(top);
+        NeedUpdate = true;
+    }
+    // user-declared: the destructor stores the Bundle vtable again (TextPrimitiveBundle dtor 0x1426f2740)
+    ~Bundle() {}
+    void UpdateChain(BundleEntry* newTop);   // 0x1426be590
+
+protected:
+    // the position of entry in Entries, starting at its IndexHint (0x1426be740)
+    bool findEntryIndex(UPInt* pindex, BundleEntry* entry);
 };
 
 // one leaf's place in the sorted bundle lists (0x40 bytes)
@@ -165,6 +204,18 @@ public:
             Ptr<Bundle> held = pBundle;
             held->RemoveEntry(this);
         }
+    }
+
+    // (appended for sfr_render_07q) moves the entry into bundle, leaving its old one
+    void SetBundle(Bundle* bundle, unsigned index)
+    {
+        if (pBundle && pBundle != bundle)
+        {
+            Ptr<Bundle> held = pBundle;
+            held->RemoveEntry(this);
+        }
+        pBundle   = bundle;
+        IndexHint = (UInt16)index;
     }
 
     void         SetNextPattern(BundleEntry* next) { pNextPattern = next; }

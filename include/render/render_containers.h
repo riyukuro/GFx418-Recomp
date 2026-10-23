@@ -379,6 +379,20 @@ public:
             }
         }
     }
+    // (appended for the text bundle, sfr_render_07q)
+    void InsertAt(UPInt index, const C& val)
+    {
+        C* p = insertSpot(index);
+        if (p)
+            ConstructAlt<C>(p, val);
+    }
+    void Clear()
+    {
+        DestructArray<C>(GetBuffer(), Size);
+        if (Size > InternalSize)
+            SF_FREE(Block.pData);
+        Size = 0;
+    }
 
 private:
     static UPInt roundReserve(UPInt n) { return (n + 3) & ~UPInt(3); }
