@@ -24,6 +24,9 @@ extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
+extern "C" void FUN_14268ef30(void*, void*, unsigned);
+extern "C" void FUN_14268f8f0(void*, void*, unsigned);
+extern "C" void FUN_14268f230(void*, void*, unsigned);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
 MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
@@ -1449,6 +1452,8 @@ static void WriteImageStream(void* stream, const void* data, unsigned size)
     reinterpret_cast<void (*)(void*, const void*, unsigned)>(streamVtable[9])(stream, data, size);
 }
 
+void WriteNarrowString(void*, const String*);
+
 // MS2-FUNCTIONAL: writes the collection count, each image record header, and every nested 16-byte entry through the stream vtable.
 // @0x14268f4b0
 void WriteImageMetadataRecords(void* object, void* stream)
@@ -1471,6 +1476,41 @@ void WriteImageMetadataRecords(void* object, void* stream)
             WriteImageStream(stream, nested + j * 0x10 + 8, 8);
         }
     }
+}
+
+// MS2-FUNCTIONAL: serializes the versioned movie image data, nested image records, and trailing resource tables.
+// @0x14268f600
+void WriteMovieImageData(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    WriteImageStream(stream, bytes + 0x10, 4);
+    WriteImageStream(stream, bytes + 0x14, 4);
+    WriteImageStream(stream, bytes + 0x18, 4);
+    if (version > 3) {
+        WriteNarrowString(stream, reinterpret_cast<const String*>(bytes + 0x20));
+        WriteImageStream(stream, bytes + 0x28, 4);
+        WriteImageStream(stream, bytes + 0x2c, 4);
+        WriteImageStream(stream, bytes + 0x30, 4);
+        WriteImageStream(stream, bytes + 0x34, 4);
+        WriteImageStream(stream, bytes + 0x38, 4);
+    }
+    if (version > 5) {
+        const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x48);
+        unsigned count32 = static_cast<unsigned>(count);
+        WriteImageStream(stream, &count32, 4);
+        auto** entries = *reinterpret_cast<void***>(bytes + 0x40);
+        for (std::size_t i = 0; i < count; ++i) {
+            auto* entry = static_cast<unsigned char*>(entries[i]);
+            if (version > 10)
+                WriteNarrowString(stream, reinterpret_cast<const String*>(entry + 0x10));
+            WriteImageStream(stream, entry + 0x18, 4);
+        }
+    }
+    WriteImageMetadataRecords(*reinterpret_cast<void**>(bytes + 0x58), stream);
+    FUN_14268ef30(*reinterpret_cast<void**>(bytes + 0x60), stream, version);
+    FUN_14268f8f0(*reinterpret_cast<void**>(bytes + 0x68), stream, version);
+    if (version > 0x18)
+        FUN_14268f230(*reinterpret_cast<void**>(bytes + 0x70), stream, version);
 }
 
 // MS2-FUNCTIONAL: reads a length-prefixed narrow string from the stream, appending each byte to the destination.
