@@ -22,12 +22,15 @@ extern "C" const char* DAT_143ba9d20;
 extern "C" void* DAT_143b15f60;
 extern "C" CriUint8 DAT_143b27c80[];
 extern "C" CriUint32 DAT_143b27c60;
+extern "C" CriUint32 DAT_143b27c64;
 extern "C" CriUint32 DAT_143b27c68;
 extern "C" CriUint32 DAT_143b27c6c;
 extern "C" CriUint64 DAT_143b27c70;
 extern "C" CriSint32 DAT_143ba9d10;
 extern "C" CriUint8 DAT_143b27948;
 extern "C" CriUint32 DAT_143b27c40;
+extern "C" CriUint64 DAT_143b27c50;
+extern "C" CriUint64 DAT_143b27c58;
 extern "C" const char* DAT_143b27c48;
 extern "C" const void* DAT_143a47bc0[];
 extern "C" const void* DAT_143a47cb0[];
@@ -88,6 +91,9 @@ CriSint32 FUN_1400310b0(void*);
 void FUN_1400345e0(void*, void*, CriUint32, CriSint32);
 void FUN_140053e60(void*, CriUint32, CriUint32, CriUint32);
 void FUN_1400467c0(const void*, CriUint32, void*, void*);
+void FUN_14004f8a0(void);
+void FUN_14004eb50(void);
+void FUN_14004e3b0(CriUint64, CriUint64);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -3477,6 +3483,58 @@ void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input)
         }
         if (queue->Lock)
             FUN_140039f8c(queue->Lock);
+    }
+}
+
+// MS2-FUNCTIONAL: initialize shared MPV library work buffers once and maintain their reference count.
+// @0x14003c080
+void FUN_14003c080(void)
+{
+    if (DAT_143b27c68 == 0)
+    {
+        DAT_143b27c50 = 0;
+        DAT_143b27c58 = 0;
+        DAT_143b27c60 = 0;
+        DAT_143b27c64 = 0;
+        if (DAT_143b27c70 == 0)
+        {
+            FUN_1400410d0(0, "E10092150M: MPV libwork is not set.", 0);
+            return;
+        }
+        DAT_143b27c50 = (CriUint64)DAT_143b27c6c << 2;
+        DAT_143b27c58 = (DAT_143b27c70 + 3) & ~(CriUint64)3;
+        DAT_143b27c60 = 3;
+        FUN_14004f8a0();
+        FUN_14004eb50();
+        FUN_14004e3b0(DAT_143b27c50, DAT_143b27c58);
+    }
+    ++DAT_143b27c68;
+}
+
+// MS2-FUNCTIONAL: drain one pending movie ring chunk after its sample count reaches a full block.
+// @0x14003ef00
+void FUN_14003ef00(void* object)
+{
+    struct Reader
+    {
+        CriUint8 Reserved00[0x50];
+        CriUint32 BlockSize;
+        CriUint32 Reserved54;
+        void* Queue;
+        CriUint8 Reserved60[0x20];
+        CriUint8 Reserved80[0x10];
+        void* CurrentData;
+    };
+    Reader* reader = (Reader*)object;
+    CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue) / reader->BlockSize;
+    if (samples > 0)
+    {
+        CriUint64 chunk[2] = {};
+        FUN_1400467a0(reader->Queue, 3, -1, chunk);
+        if (!chunk[0] || reader->CurrentData == (void*)chunk[0])
+            FUN_1400467a8(reader->Queue, 3, chunk);
+        else
+            FUN_1400467b0(reader->Queue, 0, chunk);
     }
 }
 
