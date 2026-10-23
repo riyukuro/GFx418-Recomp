@@ -528,4 +528,36 @@ void* FUN_140019b60(void* object, std::uint64_t flags)
     }
     return object;
 }
+
+// MS2-FUNCTIONAL: invokes the stored object's callback with this closure as context.
+// @0x14001b3f0
+void FUN_14001b3f0(std::uint64_t* closure)
+{
+    auto* object = reinterpret_cast<std::uint64_t*>(closure[0]);
+    if (object) reinterpret_cast<void(*)(void*, std::uint64_t)>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(object) + 2))(object, closure[1]);
+}
+// MS2-FUNCTIONAL: invokes the stored object's release slot.
+// @0x14001b880
+void FUN_14001b880(std::uint64_t* holder)
+{
+    auto* object = reinterpret_cast<void*>(holder[0]);
+    if (object) { auto** vtable = *reinterpret_cast<void***>(object); reinterpret_cast<void(*)(void*)>(vtable[8])(object); }
+}
+// MS2-FUNCTIONAL: retains the replacement heap, releases the previous heap, then stores it.
+// @0x14001b8a0
+std::uint64_t* FUN_14001b8a0(std::uint64_t* holder, void* replacement)
+{
+    if (replacement) { auto** vtable = *reinterpret_cast<void***>(replacement); reinterpret_cast<void(*)(void*)>(vtable[7])(replacement); }
+    FUN_14001b880(holder);
+    *holder = reinterpret_cast<std::uintptr_t>(replacement);
+    return holder;
+}
+// MS2-FUNCTIONAL: releases the previous heap and stores the supplied pointer without retaining it.
+// @0x14001b8e0
+std::uint64_t* FUN_14001b8e0(std::uint64_t* holder, std::uint64_t replacement)
+{
+    if (*holder) { FUN_14001b880(holder); *holder = replacement; }
+    else *holder = replacement;
+    return holder;
+}
 } // namespace
