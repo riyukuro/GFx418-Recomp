@@ -96,6 +96,8 @@
 // MS2-RANGE: 0x14293fbe0-0x14293fcc1 .text$mn
 // MS2-RANGE: 0x142939e30-0x142939e57 .text$mn
 // MS2-RANGE: 0x14293ff10-0x14293ff6a .text$mn
+// MS2-RANGE: 0x14293ff70-0x14294015d .text$mn
+// MS2-RANGE: 0x1429413c0-0x1429415bd .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1853,6 +1855,50 @@ bool AvmSprite::ExecuteBuffer(ActionBuffer* pactionbuffer)
     if (!pDispObj->IsUnloaded())
     {
         pactionbuffer->Execute(GetASEnvironment());
+        return true;
+    }
+    return false;
+}
+
+// Calls the native function with the parameters pushed on the environment stack (last one deepest).
+// MS2-FUNCTIONAL the exe inlines ~FnCall (the header keeps it out of line for the other callers)
+// @0x14293ff70
+bool AvmCharacter::ExecuteCFunction(CFunctionPtr function, const Array<Value>& params)
+{
+    if (function)
+    {
+        Value        result;
+        Environment* penv  = GetASEnvironment();
+        int          nargs = (int)params.GetSize();
+        for (int i = nargs - 1; i >= 0; i--)
+            penv->Push(params[i]);
+        {
+            FnCall fn(&result, this, penv, nargs, penv->GetTopIndex());
+            function(fn);
+        }
+        penv->Drop(nargs);
+        return true;
+    }
+    return false;
+}
+
+// Calls the script function with the parameters pushed on the environment stack (last one deepest).
+// MS2-FUNCTIONAL the exe inlines ~FnCall (the header keeps it out of line for the other callers)
+// @0x1429413c0
+bool AvmCharacter::ExecuteFunction(const FunctionRef& function, const Array<Value>& params)
+{
+    if (function.Function)
+    {
+        Value        result;
+        Environment* penv  = GetASEnvironment();
+        int          nargs = (int)params.GetSize();
+        for (int i = nargs - 1; i >= 0; i--)
+            penv->Push(params[i]);
+        {
+            FnCall fn(&result, this, penv, nargs, penv->GetTopIndex());
+            function.Invoke(fn);
+        }
+        penv->Drop(nargs);
         return true;
     }
     return false;
