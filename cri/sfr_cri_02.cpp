@@ -15,6 +15,7 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include <new>
 #include <cstring>
+#include <cstdlib>
 
 extern "C" {
 extern void* DAT_143b15f60;
@@ -108,6 +109,7 @@ void     FUN_1400411f8(void);
 void     FUN_140046944(char* buffer, CriUint32 capacity, const char* text);
 void     FUN_14004698c(char* buffer, CriUint32 capacity, const char* text);
 void     FUN_140038190(const void* key);
+CriBool  FUN_1400389f0(void* reader, const char* path, CriUint64* size, CriUint64* offset);
 void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
 void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
 void     FUN_140031140(void* player);
@@ -3498,6 +3500,33 @@ void* FUN_14002d840(void* object, CriUint64 flags)
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: parse an MFS memory-file path into its hexadecimal size and address components.
+// @0x1400389f0
+CriBool FUN_1400389f0(void* reader, const char* path, CriUint64* size, CriUint64* offset)
+{
+    (void)reader;
+    if (!path || memcmp(path, "MFS:", 4) != 0)
+        return 0;
+    const char* cursor = path + 4;
+    char first[32] = {};
+    CriUint32 length = 0;
+    while (*cursor && *cursor != '.')
+    {
+        if (length + 1 < sizeof(first))
+            first[length] = *cursor;
+        ++length;
+        ++cursor;
+    }
+    if (*cursor != '.')
+        return 0;
+    ++cursor;
+    if (size)
+        *size = (CriUint64)_strtoui64(first, NULL, 16);
+    if (offset)
+        *offset = (CriUint64)_strtoui64(cursor, NULL, 16);
+    return 1;
 }
 
 // MS2-FUNCTIONAL: restore the CRI movie player defaults after allocating its working storage.
