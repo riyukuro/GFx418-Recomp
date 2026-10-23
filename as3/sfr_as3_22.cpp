@@ -73,6 +73,7 @@ extern "C" void FUN_142689cb0(void*, void*, void*);
 extern "C" void FUN_14268f600(void*, void*, unsigned);
 extern "C" void FUN_14268f230(void*, void*, unsigned);
 extern "C" void FUN_14268ed90(void*, void*, unsigned);
+extern "C" void* FUN_142689640(void*, int);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 
@@ -3782,6 +3783,50 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
 
     LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
     return object;
+}
+
+// MS2-FUNCTIONAL: snapshots accumulated renderer timings, resolves cached labels, logs each duration/count pair, and releases the snapshot.
+// @0x14268bd60
+void FUN_14268bd60(void* source, Scaleform::Log* log)
+{
+    auto* snapshot = static_cast<unsigned char*>(FUN_142689640(source, 1));
+    if (!snapshot)
+        return;
+    auto* table = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(source) + 0x30);
+    auto* entries = *reinterpret_cast<const unsigned char**>(snapshot + 0x10);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(snapshot + 0x18);
+    for (std::size_t i = 0; i < count; ++i) {
+        const auto* record = entries + i * 0x20;
+        const std::uint64_t key = *reinterpret_cast<const std::uint64_t*>(record);
+        const Scaleform::String* label = nullptr;
+        if (table) {
+            const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
+            const std::uint64_t bucket = HashImageKey(reinterpret_cast<const unsigned char*>(&key)) & mask;
+            auto* row = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
+            if (static_cast<std::int64_t>(row[0]) != -2 && row[1] == bucket) {
+                for (;;) {
+                    if (row[1] == bucket && row[2] == key) {
+                        label = reinterpret_cast<const Scaleform::String*>(row + 3);
+                        break;
+                    }
+                    const std::uint64_t next = row[0];
+                    if (next == UINT64_MAX)
+                        break;
+                    row = reinterpret_cast<std::uint64_t*>(table + 0x10 + next * 0x20);
+                }
+            }
+        }
+        const char* name = "";
+        if (label) {
+            const std::uint64_t encoded = *reinterpret_cast<const std::uint64_t*>(label);
+            name = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
+        }
+        const std::uint64_t ticks = *reinterpret_cast<const std::uint64_t*>(record + 0x18);
+        const unsigned calls = *reinterpret_cast<const unsigned*>(record + 0x10);
+        log->LogMessage("%s: %llu ms (%u times)\n", name,
+                        static_cast<unsigned long long>(ticks / 10000000ull), calls);
+    }
+    FUN_14257dcb0(snapshot);
 }
 
 }
