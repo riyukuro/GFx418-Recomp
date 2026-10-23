@@ -13,6 +13,18 @@
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 // the registered class traits of a multiname (VM, 0x14250d760)
 const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_14250d760(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);
+// VM: the class traits registered for name/ns (loaded ones first, then the builtin table).
+Scaleform::GFx::AS3::ClassTraits::Traits* FUN_1425251e0(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::ASString& name,
+    const Scaleform::GFx::AS3::Instances::Namespace& ns);
+// Traits::GetConstructor, out of line in the exe (the InstanceTraits copy).
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+// GlobalObject::AddFixedSlotValuePair (sfr_as3_03): a fixed slot name/ns of type ctr holding v; index receives it
+const void* FUN_142403d70(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
+    Scaleform::Pickable<const Scaleform::GFx::AS3::Instances::Namespace> ns, const Scaleform::GFx::AS3::ClassTraits::Traits* ctr,
+    const Scaleform::GFx::AS3::Value& v, Scaleform::UPInt& index);
+// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
+const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
+FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -148,6 +160,25 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// The exe inlines SparseArray::At into the Array string helpers.
+static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
+{
+    if (ind < sa.ValueA.GetSize())
+        return sa.ValueA[ind];
+    if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
+    {
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        const Value* v = p ? &p->Second : 0;
+        if (v)
+            return *v;
+    }
+    return sa.DefaultValue;
+}
+
+// Free helpers out of line in the exe (VM call/convert paths).
+CheckResult ExecutePropertyUnsafe(VM& vm, const Multiname& prop_name, const Value& _this, Value& result, unsigned argc, const Value* argv); // 0x1424ff910
+ASString AsString(const Value& v, StringManager& sm); // 0x1424eb7b0
+
 // ---- Namespace / script global objects / user-defined classes ----
 
 // @0x142414c30
@@ -226,6 +257,102 @@ bool InstanceTraits::UserDefined::SupportsInterface(const Traits& t) const
 CheckResult ClassTraits::UserDefined::SetupSlotValues(AS3::Object& for_obj) const
 {
     return AS3::Traits::SetupSlotValues(*File, class_info.stat_info, for_obj);
+}
+
+// MS2-FUNCTIONAL: the exe builds the class Value after the name call (argument evaluation order)
+// @0x142418be0
+const SlotInfo* Instances::fl::GlobalObjectCPP::InitializeOnDemand(const SlotInfo* si, const ASString& name,
+                                                                   const Instances::Namespace& ns, UPInt& index)
+{
+    if (si == NULL && ns.GetKind() == Abc::NS_Public)
+    {
+        ClassTraits::Traits* ctr = FUN_1425251e0(&GetVM(), name, ns);
+        if (ctr)
+        {
+            Class& cl = FUN_142508460(&ctr->GetInstanceTraits());
+            si = static_cast<const SlotInfo*>(FUN_142403d70(this, cl.GetClassTraits().GetName(),
+                Pickable<const Instances::Namespace>(&ns, PickValue), &cl.GetClassTraits(), Value(&cl), index));
+        }
+    }
+    return si;
+}
+
+// @0x142421ac0
+void Traits::SetConstructor(Class& c)
+{
+    pConstructor = &c;
+}
+
+// MS2-FUNCTIONAL: the exe loads the Pattern size mask after the VM chain (instruction scheduling)
+// @0x142425890
+ASString Instances::fl::RegExp::ToString()
+{
+    StringManager& sm = GetVM().GetStringManager();
+    ASString slash = sm.CreateConstString("/");
+    ASString pattern = GetVM().GetStringManager().CreateEmptyString();
+    pattern = GetVM().GetStringManager().CreateString(Pattern.ToCStr(), Pattern.GetSize());
+    return sm.CreateConstString("/") + pattern + slash + GetFlags();
+}
+
+// MS2-FUNCTIONAL: the exe tests the m/s/x option bits with shr+test instead of test-byte masks
+// @0x142429920
+__declspec(noinline) ASString Instances::fl::RegExp::GetFlags()
+{
+    ASString result = GetVM().GetStringManager().CreateEmptyString();
+    const char* s = IsGlobal ? "g" : "";
+    result.Append(s, strlen(s));
+    s = (OptionFlags & 1) ? "i" : "";
+    result.Append(s, strlen(s));
+    s = (OptionFlags & 2) ? "m" : "";
+    result.Append(s, strlen(s));
+    s = (OptionFlags & 4) ? "s" : "";
+    result.Append(s, strlen(s));
+    s = (OptionFlags & 8) ? "x" : "";
+    result.Append(s, strlen(s));
+    return result;
+}
+
+// MS2-FUNCTIONAL: the exe keeps the inlined hash-node select as a cmove against a zero register; ours branches
+// @0x142425540
+ASString Instances::fl::Array::ToLocaleStringInternal() const
+{
+    StringBuffer buf(GetVM().GetMemoryHeap());
+    for (UPInt i = 0; i < SA.GetSize(); ++i)
+    {
+        if (i > 0)
+            buf.AppendString(",");
+        const Value& v = saAt(SA, i);
+        if (v.IsNullOrUndefined())
+            continue;
+        const Multiname prop_name(GetVM().GetPublicNamespace(), GetVM().GetStringManager().CreateConstString("toLocaleString"));
+        Value r;
+        if (!ExecutePropertyUnsafe(GetVM(), prop_name, v, r, 0, NULL))
+            break;
+        if (r.IsString())
+            buf.AppendString(r.AsString().ToCStr());
+        else
+            buf.AppendString(AsString(r, GetVM().GetStringManager()).ToCStr());
+    }
+    return GetVM().GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
+}
+
+// MS2-FUNCTIONAL: the exe keeps the inlined hash-node select as a cmove against a zero register; ours branches
+// @0x142425b50
+ASString Instances::fl::Array::ToStringInternal(const ASString& sep) const
+{
+    StringBuffer buf(GetVM().GetMemoryHeap());
+    for (UPInt i = 0; i < SA.GetSize(); ++i)
+    {
+        if (i > 0)
+            buf.AppendString(sep.ToCStr());
+        const Value& v = saAt(SA, i);
+        if (!v.IsNullOrUndefined())
+        {
+            if (!v.Convert2String(buf))
+                break;
+        }
+    }
+    return GetVM().GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
 }
 
 // ---- Slots ----
@@ -467,6 +594,122 @@ void SparseArray::RemoveHash(UPInt first_ind, UPInt num)
         const UPInt ind = i + first_ind;
         if (ValueH.Get(ind))
             ValueH.Remove(ind);
+    }
+}
+
+// MS2-FUNCTIONAL: the exe inlines RemoveHash and calls the ValueA range removal out of line; inlining differs
+// @0x14241ec80
+void SparseArray::RemoveMultipleAt(UPInt pos, UPInt count)
+{
+    if (count == 0)
+        return;
+
+    if (pos < ValueA.GetSize())
+    {
+        const UPInt count_a = ValueA.GetSize() - pos;
+        if (pos + count < ValueA.GetSize())
+        {
+            // the tail of ValueA moves into the hash
+            const UPInt sizeA = ValueA.GetSize();
+            for (UPInt i = pos + count; i < sizeA; ++i)
+            {
+                if (ValueHLowInd == 0)
+                    ValueHLowInd = i;
+                ValueH.Set(i, ValueA[i]);
+                if (ValueHHighInd < i)
+                    ValueHHighInd = i;
+            }
+        }
+        ValueA.RemoveMultipleAt(pos, count_a);
+    }
+
+    if (!ValueH.IsEmpty() && ValueHLowInd < pos + count && ValueHHighInd >= pos)
+    {
+        if (ValueHLowInd >= pos && ValueHHighInd < pos + count)
+        {
+            ValueH.Clear();
+            ValueHLowInd = 0;
+            ValueHHighInd = 0;
+        }
+        else
+        {
+            RemoveHash(Alg::Max(pos, ValueHLowInd), count);
+            if (ValueHHighInd < pos + count)
+                ValueHHighInd = GetLeftEqualInd(pos);
+            if (ValueHLowInd >= pos)
+                ValueHLowInd = GetRightEqualInd(pos + count, ValueHHighInd);
+        }
+    }
+
+    if (Length <= pos + count)
+        Length = pos;
+}
+
+// MS2-FUNCTIONAL: same structure; register allocation and the inlined hash Get/Set/Remove layout differ
+// @0x142420800
+void SparseArray::Reverse()
+{
+    if (GetSize() == ValueA.GetSize())
+    {
+        // dense only
+        SPInt lo = 0;
+        SPInt hi = static_cast<SPInt>(ValueA.GetSize()) - 1;
+        while (lo < hi)
+        {
+            Alg::Swap(ValueA[lo], ValueA[hi]);
+            ++lo;
+            --hi;
+        }
+    }
+    else
+    {
+        // from and to are absolute indices
+        UInt32 from = 0;
+        UPInt to = GetSize() - 1;
+
+        const UPInt sizeA = ValueA.GetSize();
+        for (; from < sizeA; ++from, --to)
+        {
+            const Value tmp = ValueA[from];
+            Set(from, saAt(*this, to));
+            Set(to, tmp);
+        }
+
+        // hash only
+        Value value_from;
+        Value value_to;
+        bool range_changed = false;
+        while (from < to)
+        {
+            if (ValueH.Get(from, &value_from))
+            {
+                if (ValueH.Get(to, &value_to))
+                {
+                    ValueH.Set(to, value_from);
+                    ValueH.Set(from, value_to);
+                }
+                else
+                {
+                    range_changed = true;
+                    ValueH.Remove(from);
+                    ValueH.Set(to, value_from);
+                }
+            }
+            else if (ValueH.Get(to, &value_to))
+            {
+                range_changed = true;
+                ValueH.Remove(to);
+                ValueH.Set(from, value_to);
+            }
+            ++from;
+            --to;
+        }
+
+        if (range_changed)
+        {
+            ValueHHighInd = GetLeftEqualInd(ValueHHighInd);
+            ValueHLowInd = GetRightEqualInd(0, ValueHHighInd);
+        }
     }
 }
 

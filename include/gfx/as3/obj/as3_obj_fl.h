@@ -47,6 +47,9 @@ namespace Instances { namespace fl {
     public:
         // (appended, sfr19)
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObjectCPP"; }
+        // (appended, sfr19) binds a registered builtin class on its first public lookup. 0x142418be0
+        virtual const SlotInfo* InitializeOnDemand(const SlotInfo* si, const ASString& name,
+                                                   const Instances::Namespace& ns, UPInt& index);
         // @0x142427bd0
         void clearInterval(const Value& result, UInt32);
         // @0x142427bf0
