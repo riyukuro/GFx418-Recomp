@@ -83,6 +83,7 @@ static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t
     for (unsigned i = 1; i < 7; ++i)
         destination[i] = source[i];
 }
+
 static void WriteFixedHashValue(std::uint64_t* row, const std::uint64_t* value)
 {
     row[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
@@ -3868,4 +3869,44 @@ void FUN_14268bd60(void* source, Scaleform::Log* log)
     FUN_14257dcb0(snapshot);
 }
 
+}
+
+// MS2-FUNCTIONAL: emits each accumulated function timing record with its cached name; the executable additionally merges duplicates and sorts by frequency.
+// @0x14268b710
+void FUN_14268b710(void* source, Scaleform::Log* log)
+{
+    auto* bytes = static_cast<unsigned char*>(source);
+    auto* records = *reinterpret_cast<const unsigned char**>(bytes + 0x10);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
+    auto* table = *reinterpret_cast<unsigned char**>(bytes + 0x28);
+    for (std::size_t i = 0; i < count; ++i) {
+        const auto* record = records + i * 0x20;
+        const std::uint64_t key = *reinterpret_cast<const std::uint64_t*>(record);
+        const Scaleform::String* label = nullptr;
+        if (table) {
+            const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
+            const std::uint64_t bucket = Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&key)) & mask;
+            auto* row = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
+            if (static_cast<std::int64_t>(row[0]) != -2 && row[1] == bucket) {
+                for (;;) {
+                    if (row[1] == bucket && row[2] == key) {
+                        label = reinterpret_cast<const Scaleform::String*>(row + 3);
+                        break;
+                    }
+                    const std::uint64_t next = row[0];
+                    if (next == UINT64_MAX)
+                        break;
+                    row = reinterpret_cast<std::uint64_t*>(table + 0x10 + next * 0x20);
+                }
+            }
+        }
+        const char* name = "";
+        if (label) {
+            const std::uint64_t encoded = *reinterpret_cast<const std::uint64_t*>(label);
+            name = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
+        }
+        log->LogMessage("%s: %llu ms (%u times)\n", name,
+                        static_cast<unsigned long long>(*reinterpret_cast<const std::uint64_t*>(record + 0x18) / 10000000ull),
+                        *reinterpret_cast<const unsigned*>(record + 0x10));
+    }
 }
