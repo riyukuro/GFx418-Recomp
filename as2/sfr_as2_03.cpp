@@ -38,6 +38,8 @@
 // MS2-RANGE: 0x142922650-0x1429226d0 .text$mn
 // MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
 // MS2-RANGE: 0x142919a00-0x142919c00 .text$mn
+// MS2-RANGE: 0x14291fc10-0x14291fcf0 .text$mn
+// MS2-RANGE: 0x14291fe60-0x1429204c0 .text$mn
 // MS2-RANGE: 0x142918dd0-0x142918ef0 .text$mn
 // MS2-RANGE: 0x1429196c0-0x1429197b0 .text$mn
 // MS2-RANGE: 0x142919860-0x142919980 .text$mn
@@ -80,6 +82,7 @@
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_pointobject.h"
+#include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
@@ -399,6 +402,48 @@ GlowFilterProto::GlowFilterProto(ASStringContext* psc, Object* pprototype, const
     : Prototype<GlowFilterObject>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+// @0x14291fc10
+PointObject::PointObject(Environment* penv)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Point));
+    SetProperties(penv->GetSC(), Point_DefaultParams);
+}
+
+// MS2-FUNCTIONAL cl zeroes the string flags (r9d) after the Value temp; the exe does it right after the length
+// @0x14291fe60
+PointProto::PointProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<PointObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("length"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+}
+
+// MS2-FUNCTIONAL cl keeps penv in rdi; the exe keeps it in rbx and still saves rdi
+// @0x142920000
+RectangleObject::RectangleObject(Environment* penv)
+    : Object(penv)
+{
+    ASStringContext* psc = penv->GetSC();
+    Set__proto__(psc, penv->GetPrototype(ASBuiltin_Rectangle));
+    SetProperties(psc, Rectangle_DefaultParams);
+}
+
+// MS2-FUNCTIONAL cl zeroes the string flags (r9d) after the Value temp; the exe does it right after the length
+// @0x142920080
+RectangleProto::RectangleProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<RectangleObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("left"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("top"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("right"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("bottom"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("topLeft"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("bottomRight"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("size"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
 }
 
 // @0x142919af0
@@ -1033,3 +1078,19 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7DropShadowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ec60
 // MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f028
 // MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f070
+// MS2-PIN: ??_7PointObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a100
+// MS2-PIN: ??_7PointObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a148
+// MS2-PIN: ??_7?$Prototype@VPointObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a1f0
+// MS2-PIN: ??_7?$Prototype@VPointObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a238
+// MS2-PIN: ??_7?$Prototype@VPointObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321a2e0
+// MS2-PIN: ??_7PointProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a2e8
+// MS2-PIN: ??_7PointProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a330
+// MS2-PIN: ??_7PointProto@AS2@GFx@Scaleform@@6B@ 0x14321a3d8
+// MS2-PIN: ??_7RectangleObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432194d0
+// MS2-PIN: ??_7RectangleObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219518
+// MS2-PIN: ??_7?$Prototype@VRectangleObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432195c0
+// MS2-PIN: ??_7?$Prototype@VRectangleObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219608
+// MS2-PIN: ??_7?$Prototype@VRectangleObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432196b0
+// MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432196b8
+// MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219700
+// MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6B@ 0x1432197a8

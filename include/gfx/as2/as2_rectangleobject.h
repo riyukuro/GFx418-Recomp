@@ -32,12 +32,23 @@ void GFxObject_GetRectangleProperties(Environment* penv, Object* pobj, Value par
 
 // All NaN (exe 0x143d74730).
 extern const Value Rectangle_NaNParams[Rectangle_NumProperties];
+// The x, y, width and height of a new Rectangle (exe 0x143a51bb0).
+extern const Value Rectangle_DefaultParams[Rectangle_NumProperties];
 
 // Rectangle instance. 0x68 bytes.
 class RectangleObject : public Object
 {
 public:
     RectangleObject(Environment* penv); // exe 0x142920000
+    RectangleObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429542f0
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x142986d60
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294f880
 
     void GetProperties(ASStringContext* psc, Value params[Rectangle_NumProperties]);       // exe 0x142954690
     void SetProperties(ASStringContext* psc, const Value params[Rectangle_NumProperties]); // exe 0x142989e90
@@ -45,10 +56,14 @@ public:
     void SetProperties(Environment* penv, const ASRect& r);                                // exe 0x14298a040
 };
 
-// Rectangle.prototype methods.
-class RectangleProto
+// Rectangle.prototype: the methods plus the edge and corner members.
+class RectangleProto : public Prototype<RectangleObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x1432130e0
+
+    RectangleProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920080
+
     static void Clone(const FnCall& fn);
     static void Contains(const FnCall& fn);
     static void ContainsPoint(const FnCall& fn);

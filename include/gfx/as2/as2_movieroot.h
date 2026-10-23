@@ -27,6 +27,8 @@ enum ASBuiltinType : int
     ASBuiltin_TextField = 10,
     ASBuiltin_Color    = 11,
     ASBuiltin_Matrix   = 13,
+    ASBuiltin_Point    = 14,
+    ASBuiltin_Rectangle = 15,
     ASBuiltin_ColorTransform = 16,
     ASBuiltin_Stage         = 18,
     ASBuiltin_AsBroadcaster = 19,

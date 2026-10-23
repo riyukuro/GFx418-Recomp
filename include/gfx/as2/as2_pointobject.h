@@ -4,6 +4,7 @@
 #define MS2_SF_GFX_AS2_POINTOBJECT_H
 
 #include "as2_movieroot.h"
+#include "as2_objectproto.h"
 #include "../../render/render_types2d.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -30,12 +31,20 @@ SF_FORCEINLINE void GFxObject_GetPointProperties(Environment* penv, Object* pobj
 
 // Both NaN (exe 0x143d747b0).
 extern const Value Point_NanParams[Point_NumProperties];
+// The x and y of a new Point (exe 0x143a51b70).
+extern const Value Point_DefaultParams[Point_NumProperties];
 
 // Point instance. 0x68 bytes.
 class PointObject : public Object
 {
 public:
     PointObject(Environment* penv); // exe 0x14291fc10
+    PointObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429542e0
 
     void GetProperties(Environment* penv, GASPoint& pt);       // exe 0x142954590
     void SetProperties(Environment* penv, const GASPoint& pt); // exe 0x142989db0
@@ -58,10 +67,14 @@ public:
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
 };
 
-// Point.prototype methods.
-class PointProto
+// Point.prototype: the methods plus a length member.
+class PointProto : public Prototype<PointObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143213530
+
+    PointProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291fe60
+
     static void Add(const FnCall& fn);
     static void Clone(const FnCall& fn);
     static void Equals(const FnCall& fn);
