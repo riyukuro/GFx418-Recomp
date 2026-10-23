@@ -29,6 +29,8 @@ extern void FUN_140025750(void*, int, int);
 extern void FUN_140025300(void*);
 extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
+extern void FUN_14257db50(void*);
+void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -41,6 +43,42 @@ public:
 };
 
 }}} // namespace Scaleform::GFx::Video
+
+// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
+// @0x140013350
+void* FUN_140013350(void* object, unsigned __int64 flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
+// @0x140014bb0
+void* FUN_140014bb0(void* object, unsigned __int64 flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
+// @0x140015550
+void* FUN_140015550(void* object, unsigned __int64 flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: dispatches the recovered EventDispatcher destructor, then conditionally frees the allocation.
+// @0x140015590
+void* FUN_140015590(void* object, unsigned __int64 flags)
+{
+    FUN_140014830(static_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(object));
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
 
 // VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
 // MS2-FUNCTIONAL: image release and render-tree refresh recovered with the local image layout.
