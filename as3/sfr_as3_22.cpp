@@ -1114,4 +1114,39 @@ void CheckExpandAS3CachedSet(void** set, void* owner)
     if (table[1] * 4 + 4 < table[0] * 5)
         FUN_1427478c0(set, owner, table[1] * 2 + 2);
 }
+
+// MS2-FUNCTIONAL: decrements every encoded object's reference count, frees objects released by the array, then frees the backing buffer.
+// @0x142687170
+void DestroyStrongReferenceArray(void** array)
+{
+    auto* elements = static_cast<unsigned long long*>(array[0]);
+    const std::size_t count = reinterpret_cast<std::size_t>(array[1]);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    for (std::size_t i = count; i != 0; --i) {
+        const auto encoded = elements[i - 1];
+        auto* object = reinterpret_cast<unsigned char*>(encoded & ~3ull);
+        auto* refs = reinterpret_cast<volatile long*>(object + 8);
+        if (encoded && InterlockedDecrement(refs) == 1)
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, object);
+    }
+    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, elements);
+}
+
+// MS2-FUNCTIONAL: marks each occupied fixed-width hash bucket deleted, frees the table allocation, and clears the set pointer.
+// @0x1426871f0
+void ClearFixedHashSet(void** set)
+{
+    auto* table = static_cast<unsigned char*>(set[0]);
+    if (!table)
+        return;
+    const std::size_t buckets = *reinterpret_cast<std::size_t*>(table + 8) + 1;
+    for (std::size_t i = 0; i < buckets; ++i) {
+        auto* marker = reinterpret_cast<long long*>(table + 0x10 + i * 0x38);
+        if (*marker != -2)
+            *marker = -2;
+    }
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
+    set[0] = nullptr;
+}
 }
