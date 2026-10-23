@@ -4,6 +4,14 @@
 // MS2-UNIT: sfr_as3_21
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425584f0-0x142568420 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEBJU?$AllocatorDH@PEBJ$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1425629a0 ; prop
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEBNU?$AllocatorDH@PEBN$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142562ae0 ; prop
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142562b80 ; prop
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEBVValue@AS3@GFx@Scaleform@@U?$AllocatorDH@PEBVValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142562c20 ; prop
+// MS2-PIN: ?Reserve@?$ArrayDataBase@U?$Pair@NK@Scaleform@@U?$AllocatorDH@U?$Pair@NK@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142562cc0 ; prop
+// MS2-PIN: ?Reserve@?$ArrayDataBase@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@U?$AllocatorDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142562d60 ; prop
+// MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
@@ -1709,6 +1717,7 @@ void Vector_uint::MakeObject(Value& result, Traits& t)
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/gfx_sprite.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1831,6 +1840,34 @@ Sprite* SoundObject::GetSprite()
 int SoundObject::GetVolume()
 {
     return Volume;
+}
+
+// @0x142565470
+void SoundObject::LoadFile(const String& url, bool streaming)
+{
+    Sprite* psprite = GetSprite();
+    if (!psprite)
+        return;
+    Sound::SoundRenderer* pplayer = GetSoundRenderer(pMovieRoot);
+    if (!pplayer)
+        return;
+
+    pSound->DispatchEventOpen();
+    Ptr<LoadStates> pls = *new LoadStates(pMovieRoot->pMainMovieDef->pLoaderImpl, pMovieRoot->pStateBag);
+    String level0Path;
+    pMovieRoot->GetMainMoviePath(&level0Path);
+    URLBuilder::LocationInfo loc(URLBuilder::File_Regular, url, level0Path);
+    String fileName;
+    pls->BuildURL(&fileName, loc);
+    Ptr<Sound::SoundSample> psample = *pplayer->CreateSampleFromFile(fileName.ToCStr(), streaming);
+    if (!psample)
+        pSound->DispatchEventIOError();
+    else
+    {
+        pSample   = psample;
+        pResource = 0;
+        pSound->DispatchEventComplete();
+    }
 }
 
 // @0x142565720

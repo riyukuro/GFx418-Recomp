@@ -1757,3 +1757,6 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec
 // MS2-PIN: ??_GCode@Abc@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142545b70
 // MS2-PIN: ??_7Code@Abc@AS3@GFx@Scaleform@@6B@ 0x143181a00
 // MS2-PIN: ??_7File@Abc@AS3@GFx@Scaleform@@6B@ 0x14317b050
+// MS2-PIN: ??_G?$VectorBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556270 ; prop
+// MS2-PIN: ??_G?$VectorBase@VValue@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425562c0 ; prop
+// MS2-PIN: ??_GArrayBase@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556310 ; unique
