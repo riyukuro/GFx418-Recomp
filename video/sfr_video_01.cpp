@@ -1746,6 +1746,88 @@ void* FUN_14000b1c0(void* object, unsigned flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: sets a value's numeric payload after dropping any held reference.
+// @0x14000d250
+void FUN_14000d250(Scaleform::GFx::AS2::Value* value, double number)
+{
+    value->SetNumber(number);
+}
+
+// MS2-FUNCTIONAL: sets the bool tag and payload after releasing any previous reference.
+// @0x14000d2a0
+void FUN_14000d2a0(Scaleform::GFx::AS2::Value* value, bool boolean)
+{
+    value->SetBool(boolean);
+}
+
+// MS2-FUNCTIONAL: allocates from the global Scaleform heap using the requested memory stat.
+// @0x14000d360
+void* FUN_14000d360(Scaleform::UPInt size, void* owner)
+{
+    unsigned stat = 0x143;
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    return reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
+        DAT_143b15f60, owner, size, &stat);
+}
+
+struct VideoPrototypeInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
+{
+    using GASPrototypeBase::InitFunctionMembers;
+};
+
+// MS2-FUNCTIONAL: registers methods in the GAS prototype subobject at its observed object offset.
+// @0x14000d390
+void FUN_14000d390(Scaleform::GFx::AS2::Object* object,
+                   Scaleform::GFx::AS2::ASStringContext* context,
+                   Scaleform::GFx::AS2::NameFunction* table,
+                   const Scaleform::GFx::AS2::PropFlags* flags)
+{
+    auto* prototype = reinterpret_cast<VideoPrototypeInitAccess*>(
+        reinterpret_cast<unsigned char*>(object) + 0x70);
+    prototype->InitFunctionMembers(object, context, table, *flags);
+}
+
+// MS2-FUNCTIONAL: releases the weak proxy reference in this slot.
+// @0x14000d570
+void FUN_14000d570(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+
+// MS2-FUNCTIONAL: optionally deletes a small polymorphic helper object.
+// @0x14000d5c0
+void* FUN_14000d5c0(void* object, unsigned flags)
+{
+    if (flags & 1) ::operator delete(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: releases the owned object pointer and destroys the AS2 Object base.
+// @0x14000d5f0
+void FUN_14000d5f0(Scaleform::GFx::AS2::Object* object)
+{
+    auto** slot = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
+    if (*slot) FUN_14257dcb0(*slot);
+    object->~Object();
+}
+
+// MS2-FUNCTIONAL: releases a weak proxy and optionally deletes its wrapper.
+// @0x14000d630
+void* FUN_14000d630(void** proxy, unsigned flags)
+{
+    if (*proxy) FUN_14257dcd0(*proxy);
+    if (flags & 1) ::operator delete(proxy);
+    return proxy;
+}
+
+// MS2-FUNCTIONAL: destroys the video prototype extension and its AS2 Object base.
+// @0x14000d680
+void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
+{
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->~GASPrototypeBase();
+    void** slot = reinterpret_cast<void**>(bytes + 0x68);
+    if (*slot) FUN_14257dcb0(*slot);
+    object->~Object();
+}
+
 // MS2-FUNCTIONAL: dispatches the video prototype's release, cycle-mark, and scan collector passes.
 // @0x14000a730
 void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
