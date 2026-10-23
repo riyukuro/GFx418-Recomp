@@ -169,6 +169,10 @@ void     FUN_140044d20(void* decoder, CriUint32 count);
 void     FUN_140044270(void* decoder, CriUint32 count);
 void     FUN_140044d70(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void     FUN_1400442c0(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
+void     FUN_140032650(void* player, void* streamSlot, void* output, const void* parsed);
+void     FUN_140032db0(void* player, void* streamSlot, void* output, const void* parsed);
+void     FUN_140032b70(void* player, void* streamSlot, void* output, const void* parsed);
+void     FUN_140033e60(void* player, void* streamSlot);
 void*    FUN_14002db40(void* thread, void* config);
 CriBool  FUN_140042270(void* manager, void* player, void* source, void* streamInfo,
                        CriUint32 stream, CriBool enable);
@@ -274,6 +278,48 @@ struct CriMovieChunkQueueRecord
 {
     void* Chunk;
     CriUint32 Type;
+    CriUint32 Reserved;
+};
+
+struct CriMovieStreamSlotView
+{
+    CriUint8 Prefix[0x14];
+    CriUint8 PrimaryOutput[0x258 - 0x14];
+    CriUint8 AlphaOutput[0x274 - 0x258];
+    CriUint8 SubtitleOutput[0x2C0 - 0x274];
+    CriSint32 Active;
+    CriSint32 Reserved2C4;
+    CriSint32 PendingPrimary;
+    CriSint32 PendingSubtitle;
+    CriSint32 PendingAlpha;
+    CriUint8 Tail[0x2E0 - 0x2D8];
+};
+
+union CriMovieStreamSlotsView
+{
+    struct
+    {
+        CriUint8 Prefix[0x28];
+        CriMovieStreamSlotView Slots[4];
+    } Ring;
+    struct
+    {
+        CriUint8 IndexPrefix[0x5E8];
+        CriUint16 Current;
+    } Selector;
+};
+
+struct CriMovieInputChunk
+{
+    const CriUint8* Data;
+    CriUint32 Size;
+    CriUint32 Reserved;
+};
+
+struct CriMovieParsedChunk
+{
+    const CriUint8* Data;
+    CriSint32 Size;
     CriUint32 Reserved;
 };
 
@@ -1771,6 +1817,63 @@ void FUN_140034690(void* player)
         if (FUN_140043cb0(fields[0x1c8]) == 4)
             FUN_1400379b0(player, "The internal status of AlphaDec is ERROR.");
     }
+}
+
+// MS2-FUNCTIONAL: accept decoded primary-stream metadata and decrement its pending record count.
+// @0x1400340f0
+CriBool FUN_1400340f0(void* player, const CriMovieInputChunk* input)
+{
+    CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
+    CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
+    if (!slot->Active)
+        return 0;
+    if (input->Size > 0x1f)
+    {
+        CriSint32 size = 0;
+        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        FUN_140032650(player, slot, slot->PrimaryOutput, &parsed);
+        --slot->PendingPrimary;
+        FUN_140033e60(player, slot);
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: accept decoded subtitle-stream metadata and decrement its pending record count.
+// @0x1400341d0
+CriBool FUN_1400341d0(void* player, const CriMovieInputChunk* input)
+{
+    CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
+    CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
+    if (!slot->Active)
+        return 0;
+    if (input->Size > 0x1f)
+    {
+        CriSint32 size = 0;
+        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        FUN_140032db0(player, slot, slot->SubtitleOutput, &parsed);
+        --slot->PendingAlpha;
+        FUN_140033e60(player, slot);
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: accept decoded alpha-stream metadata and decrement its pending record count.
+// @0x140036d50
+CriBool FUN_140036d50(void* player, const CriMovieInputChunk* input)
+{
+    CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
+    CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
+    if (!slot->Active)
+        return 0;
+    if (input->Size > 0x1f)
+    {
+        CriSint32 size = 0;
+        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        FUN_140032b70(player, slot, slot->AlphaOutput, &parsed);
+        --slot->PendingSubtitle;
+        FUN_140033e60(player, slot);
+    }
+    return 1;
 }
 
 // MS2-FUNCTIONAL: replace the pending movie chunk and save the most recently enqueued record.
