@@ -23,6 +23,7 @@ class MovieDefImpl;
 class ImageResource;
 class FontManager;
 class ASString;
+struct ASStringNode;
 }
 class MemoryHeap;
 class Log;
@@ -68,7 +69,8 @@ class MovieImpl
 public:
     void*            MovieBase_Unrecovered[3]; // +0x00 RefCountBase vftable + count, StateBag vftable
     ASMovieRootBase* pASMovieRoot;             // +0x18 Ptr<ASMovieRootBase>: the AVM specific root
-    void*            Unrecovered_20[4];        // +0x20
+    void*            Unrecovered_20[3];        // +0x20
+    void*            pObjectInterface;         // +0x38 Value::ObjectInterface*: how host values reach the VM objects
     MemoryHeap*      pHeap;                    // +0x40 the movie's heap
     MovieDefImpl*    pMainMovieDef;            // +0x48 Ptr<MovieDefImpl>: the _level0 movie (sfr_gfx_07f)
     InteractiveObject* pMainMovie;             // +0x50 _level0
@@ -329,6 +331,18 @@ public:
     // (appended for the AS3 IMEEx, sfr19) the IME candidate list style, copied out / in by value.
     void GetIMECandidateListStyle(IMECandidateListStyle* pst) const;   // exe 0x14256f310
     void SetIMECandidateListStyle(const IMECandidateListStyle& st);    // exe 0x142575c30
+
+    // (appended for sfr_as2_04) the wide copy of a string handed to the host as a VT_StringW value; it keeps
+    // the string node. 0x20 bytes with the first character; the ctor and dtor are defined where used.
+    class WideStringStorage : public RefCountBase<WideStringStorage, 0x143>   // StatMV_ActionScript_Mem
+    {
+    public:
+        ASStringNode* pNode;    // +0x10
+        wchar_t       pData[1]; // +0x18 the decoded characters, 0 terminated
+
+        WideStringStorage(ASStringNode* pnode);
+        virtual ~WideStringStorage();
+    };
 };
 
 // The leading Movie vftable slots, for the virtual calls MovieImpl makes on itself (GetVisibleFrameRect).

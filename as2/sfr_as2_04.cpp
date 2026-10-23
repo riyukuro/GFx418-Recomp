@@ -21,7 +21,7 @@
 // MS2-RANGE: 0x1429367a0-0x1429374f0 .text$mn
 // MS2-RANGE: 0x14292f250-0x14292f430 .text$mn
 // MS2-RANGE: 0x14292f5b0-0x14292f740 .text$mn
-// MS2-RANGE: 0x142937e20-0x142937ea0 .text$mn
+// MS2-RANGE: 0x142937d60-0x142937f90 .text$mn
 // MS2-RANGE: 0x142938180-0x1429381f0 .text$mn
 // MS2-RANGE: 0x142938830-0x142938850 .text$mn
 // MS2-RANGE: 0x14292ff50-0x142930089 .text$mn
@@ -31,6 +31,7 @@
 // MS2-RANGE: 0x142956060-0x142956070 .text$mn
 // MS2-RANGE: 0x142932040-0x142932180 .text$mn
 // MS2-RANGE: 0x142937f90-0x142938020 .text$mn
+// MS2-RANGE: 0x14292dc70-0x14292df89 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -43,6 +44,8 @@
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/gfx_value.h"
+#include "../include/kernel/sf_utf8util.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
@@ -773,6 +776,151 @@ void AvmSprite::CurveTo(float cx, float cy, float ax, float ay)
     GetSprite()->InvalidateHitResult();
 }
 
+} // namespace AS2
+
+inline MovieImpl::WideStringStorage::WideStringStorage(ASStringNode* pnode) : pNode(pnode)
+{
+    pNode->AddRef();
+    UTF8Util::DecodeString(pData, pNode->pData, pNode->Size);
+}
+
+inline MovieImpl::WideStringStorage::~WideStringStorage()
+{
+    pNode->Release();
+}
+
+namespace AS2 {
+
+// @0x14292dc70
+void MovieRoot::ASValue2GFxValue(Environment* penv, const Value& v, GFx::Value* pdestVal) const
+{
+    typedef GFx::Value::ObjectInterface HostObjectInterface;
+
+    // The host type: the one the host asked for, else the closest to the script type.
+    int type;
+    if (pdestVal->Type & GFx::Value::VTC_ConvertBit)
+        type = pdestVal->Type & 0xf;
+    else
+    {
+        switch (v.GetType())
+        {
+        case Value::UNDEFINED: type = GFx::Value::VT_Undefined; break;
+        case Value::BOOLEAN:   type = GFx::Value::VT_Boolean; break;
+        case Value::NULLTYPE:  type = GFx::Value::VT_Null; break;
+        case Value::NUMBER:
+        case Value::INTEGER:   type = GFx::Value::VT_Number; break;
+        case Value::OBJECT:
+        case Value::FUNCTION:  type = GFx::Value::VT_Object; break;
+        case Value::CHARACTER: type = GFx::Value::VT_DisplayObject; break;
+        default:               type = GFx::Value::VT_String; break;
+        }
+    }
+    if (pdestVal->IsManagedValue())
+        pdestVal->ReleaseManagedValue();
+
+    switch (type)
+    {
+    case GFx::Value::VT_Undefined:
+    case GFx::Value::VT_Null:
+        pdestVal->Type = GFx::Value::ValueType(type);
+        break;
+    case GFx::Value::VT_Boolean:
+        pdestVal->Type          = GFx::Value::VT_Boolean;
+        pdestVal->mValue.BValue = v.ToBool(penv);
+        break;
+    case GFx::Value::VT_Int:
+        pdestVal->Type          = GFx::Value::VT_Int;
+        pdestVal->mValue.IValue = (SInt32)v.ToNumber(penv);
+        break;
+    case GFx::Value::VT_UInt:
+        pdestVal->Type           = GFx::Value::VT_UInt;
+        pdestVal->mValue.UIValue = (UInt32)v.ToNumber(penv);
+        break;
+    case GFx::Value::VT_Number:
+        pdestVal->Type          = GFx::Value::VT_Number;
+        pdestVal->mValue.NValue = v.ToNumber(penv);
+        break;
+    case GFx::Value::VT_String:
+    {
+        // The host shares the string node.
+        ASString      str   = v.ToString(penv);
+        ASStringNode* pnode = str.GetNode();
+        pdestVal->mValue.pData      = pnode;
+        pdestVal->Type              = GFx::Value::ValueType(GFx::Value::VT_String | GFx::Value::VTC_ManagedBit);
+        pdestVal->pObjectInterface  = (HostObjectInterface*)pMovieImpl->pObjectInterface;
+        ((HostObjectInterface*)pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, pnode);
+        break;
+    }
+    case GFx::Value::VT_StringW:
+    {
+        // A wide copy, kept alive by the host's reference.
+        ASString      str   = v.ToString(penv);
+        ASStringNode* pnode = str.GetNode();
+        unsigned      len   = str.GetLength();
+        void*    pmem = pMovieImpl->GetMovieHeap()->Alloc(
+            sizeof(MovieImpl::WideStringStorage) - 1 + sizeof(wchar_t) * (len + 1));
+        pdestVal->Type = GFx::Value::ValueType(GFx::Value::VT_StringW | GFx::Value::VTC_ManagedBit);
+        Ptr<MovieImpl::WideStringStorage> pwstr = *::new (pmem) MovieImpl::WideStringStorage(pnode);
+        wchar_t* pdata = pwstr->pData;
+        pdestVal->mValue.pStringW  = pdata;
+        pdestVal->pObjectInterface = (HostObjectInterface*)pMovieImpl->pObjectInterface;
+        ((HostObjectInterface*)pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, pdata);
+        break;
+    }
+    case GFx::Value::VT_Object:
+    {
+        // Arrays keep their own host type.
+        ObjectInterface*      pobj    = v.ToObjectInterface_Call(penv);
+        GFx::Value::ValueType objType = GFx::Value::VT_Object;
+        if (pobj->IsASObject() && pobj->ToASObject()->GetObjectType() == Object::Object_Array)
+            objType = GFx::Value::VT_Array;
+        pdestVal->mValue.pData     = pobj;
+        pdestVal->Type             = GFx::Value::ValueType(objType | GFx::Value::VTC_ManagedBit);
+        pdestVal->pObjectInterface = (HostObjectInterface*)pMovieImpl->pObjectInterface;
+        ((HostObjectInterface*)pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, pobj);
+        break;
+    }
+    case GFx::Value::VT_DisplayObject:
+    {
+        // Characters go by their handle.
+        InteractiveObject* pch = v.ToObjectInterface_Call(penv)->ToCharacter_Call();
+        pdestVal->Type = GFx::Value::ValueType(GFx::Value::VT_DisplayObject | GFx::Value::VTC_ManagedBit);
+        CharacterHandle* phandle   = pch->GetCharacterHandle();
+        pdestVal->mValue.pData     = phandle;
+        pdestVal->pObjectInterface = (HostObjectInterface*)pMovieImpl->pObjectInterface;
+        ((HostObjectInterface*)pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, phandle);
+        break;
+    }
+    default:;
+    }
+}
+
+// The environment of _level0, through its AS2 character.
+static inline Environment* GetLevel0Environment(MovieImpl* pmovieImpl)
+{
+    AvmDisplayObjBase* pavm = pmovieImpl->pMainMovie->GetAvmObjImpl();
+    return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
+}
+
+// MS2-FUNCTIONAL regalloc: the exe loads the string manager through r9, not rcx
+// @0x142937d60
+void MovieRoot::CreateString(GFx::Value* pvalue, const char* pstring)
+{
+    Environment* penv = GetLevel0Environment(pMovieImpl);
+    ASString     str  = penv->CreateString(pstring);
+    ASValue2GFxValue(penv, Value(str), pvalue);
+}
+
+// MS2-FUNCTIONAL regalloc: the exe loads the string manager through r9, not rcx
+// @0x142937ea0
+void MovieRoot::CreateStringW(GFx::Value* pvalue, const wchar_t* pstring)
+{
+    Environment* penv = GetLevel0Environment(pMovieImpl);
+    ASString     str  = penv->GetSC()->CreateString(pstring);
+    pvalue->SetConvertStringW();
+    ASValue2GFxValue(penv, Value(str), pvalue);
+}
+
 // A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.
 static inline bool MayBeStandardMember(const ASString& name)
 {
@@ -892,3 +1040,6 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ??_7ButtonObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217c90
 // MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216640
 // MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216688
+// MS2-PIN: ??_7WideStringStorage@MovieImpl@GFx@Scaleform@@6B@ 0x14317ca48
+// MS2-PIN: ??_7?$RefCountBase@VWideStringStorage@MovieImpl@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x14318ccd8

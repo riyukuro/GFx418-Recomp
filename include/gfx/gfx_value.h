@@ -11,11 +11,14 @@ namespace Scaleform { namespace GFx {
 
 class Movie;
 class MovieImpl;
+namespace AS2 { class MovieRoot; }
 
 // 0x20 bytes: the VM interface of a managed value (object, array, display object, closure), the type, the value,
 // and one more word for AS3 values.
 class Value
 {
+    friend class AS2::MovieRoot;
+
 public:
     // How a managed value reaches its VM object.
     class ObjectInterface
@@ -62,6 +65,13 @@ public:
     }
 
     ValueType GetType() const { return ValueType(Type & VTC_TypeMask); }
+    // Marks the value as a wide string still to be filled by the VM (the old managed value released).
+    void SetConvertStringW()
+    {
+        if (IsManagedValue())
+            ReleaseManagedValue();
+        Type = ValueType(VT_StringW | VTC_ConvertBit);
+    }
 
 protected:
     union ValueUnion

@@ -10,6 +10,8 @@
 #include "../gfx_movieimpl.h"
 #include "../gfx_playertasks.h"
 
+namespace Scaleform { namespace GFx { class Value; } }
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 class MovieClipLoader;
@@ -145,6 +147,7 @@ public:
         return pStringManager->CreateString(pstr, length);
     }
     ASString CreateString(const char* pstr) const { return ASString(pStringManager->CreateStringNode(pstr)); }
+    ASString CreateString(const wchar_t* pwstr) const { return ASString(pStringManager->CreateStringNode(pwstr)); }
     // A string over the literal itself (not copied).
     ASString CreateConstString(const char* pstr) const
     {
@@ -195,6 +198,12 @@ public:
 
     // Attaches the movie and gives it a new global context (exe 0x1429891c0).
     virtual void SetMovie(MovieImpl* pmovie);
+
+    // A host value holding the string, converted through the _level0 environment.
+    virtual void CreateString(GFx::Value* pvalue, const char* pstring);      // exe 0x142937d60
+    virtual void CreateStringW(GFx::Value* pvalue, const wchar_t* pstring);  // exe 0x142937ea0
+    // Converts v into a host value (exe 0x14292dc70).
+    void ASValue2GFxValue(Environment* penv, const Value& v, GFx::Value* pdestVal) const;
 
     // Queues a load of purl into ptarget, an empty url unloads it (exe 0x14292f740).
     void AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
@@ -301,6 +310,11 @@ inline void ASStringContext::InvalidateOptAdvanceList() const
 inline ASString ASStringContext::CreateString(const char* pstr) const
 {
     return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateString(pstr);
+}
+
+inline ASString ASStringContext::CreateString(const wchar_t* pwstr) const
+{
+    return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateString(pwstr);
 }
 
 inline ASString Environment::CreateString(const char* pstr) const
