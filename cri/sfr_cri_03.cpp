@@ -25,6 +25,7 @@ extern "C" CriUint32 DAT_143b27c60;
 extern "C" CriUint32 DAT_143b27c68;
 extern "C" CriUint32 DAT_143b27c6c;
 extern "C" CriUint64 DAT_143b27c70;
+extern "C" CriSint32 DAT_143ba9d10;
 extern "C" CriUint8 DAT_143b27948;
 extern "C" CriUint32 DAT_143b27c40;
 extern "C" const char* DAT_143b27c48;
@@ -79,6 +80,8 @@ void FUN_14257e4a0(void*, void*);
 void FUN_140054040(void*, void*, void*);
 void FUN_140053540(void*);
 void FUN_140037910(CriSint32, const CriChar8*, CriSint32);
+void FUN_1400379b0(CriSint32, const CriChar8*);
+void FUN_140053650(void*);
 void FUN_140042600(void*, void*, CriSint32);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -3141,6 +3144,26 @@ void* FUN_140041d40(void* manager)
     fields[1] = heap;
     FUN_14257e4a0(heap, adapter);
     return adapter;
+}
+
+// MS2-FUNCTIONAL: execute one audio decoder operation unless its status is already an error.
+// @0x1400436d0
+void FUN_1400436d0(void* state)
+{
+    struct AdecState { CriSint32 Present; CriUint8 Reserved04[0x0c]; void* Decoder; };
+    if (!state)
+        return;
+    AdecState* adec = (AdecState*)state;
+    if (!adec->Present || !adec->Decoder)
+        return;
+    if (FUN_140053630(adec->Decoder) == 4)
+    {
+        FUN_1400379b0(0, "Status of Adec is ERROR.");
+        return;
+    }
+    DAT_143ba9d10 = 1;
+    FUN_140053650(adec->Decoder);
+    DAT_143ba9d10 = 0;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
