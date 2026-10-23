@@ -125,6 +125,9 @@ void     FUN_1400458b8(void* demux);
 void*    FUN_14003b348(void* heap, const void* data, CriUint32 size);
 CriUint32 FUN_14003a85c(void* object, CriSint32 index, const char* key);
 CriSint32 FUN_14003a3e0(void* object, const char* key);
+CriSint32 FUN_14003a45c(void* object);
+CriSint32 FUN_14003a894(void* object, CriSint32 index, const char* key);
+void*    FUN_14003a648(void* object, CriSint32 index, CriSint32 value);
 void     FUN_14003a108(void* object);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 CriBool  FUN_140043d40(void* decoder);
@@ -3813,6 +3816,27 @@ void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
     slot->Active = 0;
     state->Selector.Current = nextIndex;
     ++((StreamCounterView*)player)->Count;
+}
+
+// MS2-FUNCTIONAL: select the last seek-table entry whose frame id does not exceed the requested frame.
+// @0x140033700
+void FUN_140033700(void* player, const void* data, CriUint32 size, CriSint32 targetFrame,
+                   void** outputData, CriSint32* outputFrame)
+{
+    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, data, size);
+    CriSint32 count = FUN_14003a45c(document);
+    CriSint32 index = 0;
+    CriSint32 frame = 0;
+    void* selectedData = NULL;
+    while (index < count &&
+           (frame = FUN_14003a894(document, index, "ofs_frmid")) <= targetFrame)
+    {
+        selectedData = FUN_14003a648(document, index, 0);
+        ++index;
+    }
+    *outputData = selectedData;
+    *outputFrame = FUN_14003a894(document, index == 0 ? 0 : index - 1, "ofs_frmid");
+    FUN_14003a108(document);
 }
 
 // MS2-FUNCTIONAL: expose the next decoded file-read record when the movie state permits a read.
