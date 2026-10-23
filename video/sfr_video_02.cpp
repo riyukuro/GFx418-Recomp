@@ -1486,3 +1486,12 @@ void* FUN_140010e60(void** destination, void* const* source)
     *destination = value;
     return destination;
 }
+
+// MS2-FUNCTIONAL: runs Object's executable destructor and frees the allocation when requested.
+// @0x140011d10
+Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, unsigned flags)
+{
+    object->~Object();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
