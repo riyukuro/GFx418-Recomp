@@ -12,6 +12,50 @@
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 
+extern void FUN_14257dcb0(void*);
+
+// MS2-FUNCTIONAL: forwards the video sound stream's channel attachment callback when a channel is present.
+// @0x140002930
+void FUN_140002930(void* stream)
+{
+    void* channel = *reinterpret_cast<void**>(static_cast<unsigned char*>(stream) + 0x10);
+    if (channel) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(channel))[5])(channel);
+}
+
+// MS2-FUNCTIONAL: stores the stream state and notifies the attached channel of the new state.
+// @0x140002960
+void FUN_140002960(void* stream, unsigned state)
+{
+    auto* bytes = static_cast<unsigned char*>(stream);
+    *reinterpret_cast<unsigned*>(bytes + 0x18) = state;
+    void* channel = *reinterpret_cast<void**>(bytes + 0x10);
+    if (channel) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(channel))[11])(channel);
+}
+
+// MS2-FUNCTIONAL: forwards the stop notification when the stream has an attached channel.
+// @0x140002980
+void FUN_140002980(void* stream)
+{
+    void* channel = *reinterpret_cast<void**>(static_cast<unsigned char*>(stream) + 0x10);
+    if (channel) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(channel))[10])(channel);
+}
+
+// MS2-FUNCTIONAL: releases the currently retained audio channel if one is assigned.
+// @0x1400029d0
+void FUN_1400029d0(void** channel)
+{
+    if (*channel) FUN_14257dcb0(*channel);
+}
+
+// MS2-FUNCTIONAL: replaces the retained audio channel after releasing its previous value.
+// @0x1400029f0
+void** FUN_1400029f0(void** channel, void* replacement)
+{
+    if (*channel) FUN_14257dcb0(*channel);
+    *channel = replacement;
+    return channel;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
