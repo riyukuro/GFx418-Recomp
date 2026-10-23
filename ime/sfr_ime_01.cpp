@@ -254,6 +254,62 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
+// MS2-FUNCTIONAL: releases the executable's linked IME records, pair arrays, and optional conversion interfaces.
+// @0x1423d5fd0
+void FUN_1423d5fd0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+    const unsigned listCount = *reinterpret_cast<unsigned*>(bytes + 0xd0);
+    auto** lists = *reinterpret_cast<void***>(bytes + 0xb8);
+    for (unsigned i = 0; i < listCount; ++i) {
+        auto* node = *reinterpret_cast<void***>(reinterpret_cast<unsigned char*>(lists[i]) + 0x28);
+        while (node) {
+            void* next = node[1];
+            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, node[0]);
+            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, node);
+            node = static_cast<void**>(next);
+        }
+    }
+    auto* pairs = *reinterpret_cast<unsigned char**>(bytes + 0x158);
+    const unsigned long long pairCount = *reinterpret_cast<unsigned long long*>(bytes + 0x160);
+    for (unsigned long long i = 0; i < pairCount; ++i) {
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
+            *reinterpret_cast<void**>(pairs + i * 0x18 + 8));
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
+            *reinterpret_cast<void**>(pairs + i * 0x18));
+    }
+    auto* items = *reinterpret_cast<unsigned char**>(bytes + 0x90);
+    const unsigned itemCount = *reinterpret_cast<unsigned*>(bytes + 0x80);
+    for (unsigned i = 0; i < itemCount; ++i) {
+        void* item = *reinterpret_cast<void**>(items + static_cast<unsigned long long>(i) * 0x20);
+        if (item) reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, item);
+    }
+    auto* remote = *reinterpret_cast<void**>(bytes + 0x1d0);
+    auto releaseRemote = [](void* value) {
+        if (value) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(value))[2])(value);
+    };
+    auto releaseId = [&](unsigned offset, bool handleSpecial) {
+        if (*reinterpret_cast<int*>(bytes + offset) == -1) return;
+        void* queried = nullptr;
+        if (remote && SUCCEEDED(reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
+                (*reinterpret_cast<void***>(remote))[0])(remote, DAT_1431c51e8, &queried))) {
+            const HRESULT hr = reinterpret_cast<HRESULT(*)(void*, unsigned)>(
+                (*reinterpret_cast<void***>(queried))[4])(queried,
+                    *reinterpret_cast<unsigned*>(bytes + offset));
+            if (handleSpecial && static_cast<unsigned>(hr) == 0x80040200u) {
+                void* callback = *reinterpret_cast<void**>(bytes + 0x1a0);
+                reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(callback))[2])(callback);
+            }
+            releaseRemote(queried);
+        }
+        *reinterpret_cast<int*>(bytes + offset) = -1;
+    };
+    releaseId(0x1b8, true);
+    releaseId(0x1b0, false);
+    releaseRemote(*reinterpret_cast<void**>(bytes + 0x1a0));
+}
+
 // MS2-FUNCTIONAL: follows the executable's selected TextField refcount and input-eligibility checks.
 // @0x1423cf570
 unsigned char FUN_1423cf570(void*, void* rawMovie)
