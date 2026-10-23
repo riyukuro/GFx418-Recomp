@@ -54,6 +54,7 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
         reinterpret_cast<void(*)(void*, unsigned int)>(*reinterpret_cast<void***>(p78))(p78, 1);
 }
 
+
 }}}
 
 // MS2-PIN: ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z 0x1423c8ce0
@@ -144,6 +145,17 @@ void FUN_1423daef0(void* self)
 void FUN_1423d94f0(void* self, void* value)
 {
     *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8) = value;
+}
+
+// MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
+// @0x1423cad20
+unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
+{
+    unsigned hash = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(node) + 0x24);
+    if (hash != static_cast<unsigned>(query[2]))
+        return static_cast<unsigned long long>(hash & 0xffffff00u);
+    return static_cast<unsigned long long>(_stricmp(reinterpret_cast<const char*>(node[0]),
+        reinterpret_cast<const char*>((query[0] & ~3ull) + 0xc)) == 0);
 }
 
 }}}
