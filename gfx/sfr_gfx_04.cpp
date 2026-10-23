@@ -2438,3 +2438,11 @@ bool MatchFileNames(const String& path1, const String& path2)
 // MS2-PIN: ?GetStats@ResourceReport@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z 0x1425d14b0
 // MS2-PIN: ??_GConstShapeNoStyles@GFx@Scaleform@@UEAAPEAXI@Z 0x1425ccac0
 // MS2-PIN: ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
+// Non-RTTI base and interface tables recovered from executable vptr stores.
+// MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+// MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
+// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
