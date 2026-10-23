@@ -2279,7 +2279,7 @@ SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc,
                                ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
 {
     if (p.GetPtr())
-        CallGcOp(op, prcc, const_cast<const ASRefCountBaseType**>(reinterpret_cast<ASRefCountBaseType**>(p.GetRawPtr())), owner);
+        CallGcOp(op, prcc, const_cast<const ASRefCountBaseType**>((ASRefCountBaseType**)(p.GetRawPtr())), owner);
 }
 
 // Visits every item of a counted pointer array.
@@ -2361,6 +2361,18 @@ namespace Instances { namespace fl
         SA.ForEachChild_GC(prcc, op, *this);
     }
 }}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances
+{
+    // @0x14240c160
+    void ThunkFunction::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        FunctionBase::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, OriginationTraits, op, *this);
+    }
+}
 }}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
