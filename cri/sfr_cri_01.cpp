@@ -13,6 +13,10 @@
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
 
+void FUN_14257db50(void* object);
+void FUN_142584ce0(void* object);
+void FUN_142585580(void* object, const void* source);
+
 // MS2-FUNCTIONAL ??_GCriMvSoundInterface@@UEAAPEAXI@Z: this interface is compiled by CRI's VS2008 build; VS2017's
 // scalar-deleting destructor has the extra sized-delete branch when flag 4 is set.
 // @0x1400283a0
@@ -5954,6 +5958,187 @@ void FUN_14001d6d0(CriUint64* array, CriSint64 index)
     memmove(data + index, data + index + 1, (size_t)count * sizeof(CriUint64));
     --array[1];
 }
+
+// MS2-FUNCTIONAL: release the stored allocation through Scaleform's global heap.
+// @0x140029a10
+void FUN_140029a10(void** value)
+{
+    if (*value)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, *value);
+    }
+}
+
+// MS2-FUNCTIONAL: copy both embedded Scaleform strings in the CRI value object.
+// @0x140029070
+void* FUN_140029070(void* destination, const void* source)
+{
+    FUN_142585580(destination, source);
+    FUN_142585580((CriUint8*)destination + 8, (const CriUint8*)source + 8);
+    return destination;
+}
+
+// MS2-FUNCTIONAL: construct the object's two embedded Scaleform strings in place.
+// @0x1400293d0
+void* FUN_1400293d0(void* object)
+{
+    FUN_142584ce0(object);
+    FUN_142584ce0((CriUint8*)object + 8);
+    return object;
+}
+
+// MS2-FUNCTIONAL: these three CRI members each release their owned heap buffer.
+// @0x140029af0
+void FUN_140029af0(void** value)
+{
+    if (*value)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, *value);
+    }
+}
+
+// MS2-FUNCTIONAL: this member releases its owned Scaleform heap buffer when non-null.
+// @0x140029b10
+void FUN_140029b10(void** value)
+{
+    if (*value)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, *value);
+    }
+}
+
+// MS2-FUNCTIONAL: this member releases its owned Scaleform heap buffer when non-null.
+// @0x140029e20
+void FUN_140029e20(void** value)
+{
+    if (*value)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, *value);
+    }
+}
+
+// MS2-FUNCTIONAL: forward the CRI adapter's start callback when one is installed.
+// @0x140029f20
+void FUN_140029f20(void* adapter)
+{
+    void* target = *(void**)((CriUint8*)adapter + 8);
+    if (target)
+    {
+        void** vtable = *(void***)target;
+        ((void (*)(void*))vtable[2])(target);
+    }
+}
+
+// MS2-FUNCTIONAL: forward the CRI adapter's stop callback when one is installed.
+// @0x140029f40
+void FUN_140029f40(void* adapter)
+{
+    void* target = *(void**)((CriUint8*)adapter + 8);
+    if (target)
+    {
+        void** vtable = *(void***)target;
+        ((void (*)(void*))vtable[3])(target);
+    }
+}
+
+// MS2-FUNCTIONAL: pass the enabled state through the adapter's third callback.
+// @0x140029f60
+void FUN_140029f60(void* adapter, int enabled)
+{
+    void* target = *(void**)((CriUint8*)adapter + 8);
+    if (target)
+    {
+        void** vtable = *(void***)target;
+        ((void (*)(void*, bool))vtable[4])(target, enabled == 1);
+    }
+}
+
+static void CriArrayReserve(void** array, CriUint64* capacity, CriUint64 count, size_t elementSize)
+{
+    void* heap = DAT_143b15f60;
+    void** vtable = *(void***)heap;
+    if (count == 0)
+    {
+        if (array[0])
+        {
+            ((void (*)(void*, void*))vtable[12])(heap, array[0]);
+            array[0] = NULL;
+        }
+        *capacity = 0;
+        return;
+    }
+
+    CriUint64 newCapacity = (count + 3) & ~(CriUint64)3;
+    if (array[0])
+    {
+        array[0] = ((void* (*)(void*, void*, size_t))vtable[11])(
+            heap, array[0], (size_t)(newCapacity * elementSize));
+    }
+    else
+    {
+        CriUint32 heapFlags = 2;
+        array[0] = ((void* (*)(void*, size_t, const CriUint32*))vtable[10])(
+            heap, (size_t)(newCapacity * elementSize), &heapFlags);
+    }
+    *capacity = newCapacity;
+}
+
+// MS2-FUNCTIONAL: grow or release the CRI pointer vector with four-slot capacity rounding.
+// @0x140029bf0
+void FUN_140029bf0(void** array, void*, CriUint64 count)
+{
+    CriArrayReserve(array, (CriUint64*)array + 2, count, sizeof(void*));
+}
+
+// MS2-FUNCTIONAL: this CRI vector uses the same four-slot allocation policy.
+// @0x140029c90
+void FUN_140029c90(void** array, void*, CriUint64 count)
+{
+    CriArrayReserve(array, (CriUint64*)array + 2, count, sizeof(void*));
+}
+
+// MS2-FUNCTIONAL: this CRI vector stores three-word elements and rounds capacity by four.
+// @0x140029d30
+void FUN_140029d30(void** array, void*, CriUint64 count)
+{
+    CriArrayReserve(array, (CriUint64*)array + 2, count, sizeof(void*) + 4);
+}
+
+static void* CriRefCountDeletingDtor(void* object, CriUint64 flags)
+{
+    FUN_14257db50(object);
+    if ((flags & 1) != 0)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
+// @0x140029970
+void* FUN_140029970(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
+
+// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
+// @0x1400299d0
+void* FUN_1400299d0(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
+
+// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
+// @0x140029a50
+void* FUN_140029a50(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
+
+// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
+// @0x140029ab0
+void* FUN_140029ab0(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
 
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
