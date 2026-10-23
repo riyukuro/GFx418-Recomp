@@ -24,6 +24,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
@@ -1842,9 +1843,34 @@ typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<M
 // MS2-FUNCTIONAL: same template body; the exe calls CheckExpand out of line, here it is inlined
 // @0x1424d5020
 template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
+// The VM's set of script global objects (HashSetLH<SPtr<GlobalObjectScript>> by pointer value).
+typedef GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript> MS2_ScriptPtr;
+typedef HashSetBase<MS2_ScriptPtr, FixedSizeHash<MS2_ScriptPtr>, FixedSizeHash<MS2_ScriptPtr>, AllocatorLH<MS2_ScriptPtr, 2>,
+                    HashsetCachedEntry<MS2_ScriptPtr, FixedSizeHash<MS2_ScriptPtr> > > MS2_ScriptSet;
+// @0x1424d5180
+template void MS2_ScriptSet::add<MS2_ScriptPtr>(void*, const MS2_ScriptPtr&, UPInt);
+// A VMAbcFile's interned namespaces by constant pool index; the VM adds a whole node to another map of the type.
+typedef GFx::AS3::AbcMultinameHash<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace> >::Key MS2_AbcNsKey;
+typedef HashNode<MS2_AbcNsKey, GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, FixedSizeHash<MS2_AbcNsKey> > MS2_AbcNsNode;
+typedef MS2_HashSetOf<MS2_AbcNsNode, AllocatorLH<MS2_AbcNsKey, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                      HashsetCachedNodeEntry<MS2_AbcNsNode, MS2_AbcNsNode::NodeHashF> >::Type MS2_AbcNsSet;
+// @0x1424d4850
+template void MS2_AbcNsSet::add<MS2_AbcNsNode::NodeRef>(void*, const MS2_AbcNsNode::NodeRef&, UPInt);
+// @0x1424d3380
+template void MS2_AbcNsSet::add<MS2_AbcNsNode>(void*, const MS2_AbcNsNode&, UPInt);
+// A VMAbcFile's function closure traits by method index.
+typedef HashNode<UInt32, GFx::AS3::SPtr<GFx::AS3::InstanceTraits::Function>, FixedSizeHash<UInt32> > MS2_FunctionTraitsNode;
+typedef MS2_HashSetOf<MS2_FunctionTraitsNode, AllocatorLH<UInt32, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                      HashsetCachedNodeEntry<MS2_FunctionTraitsNode, MS2_FunctionTraitsNode::NodeHashF> >::Type
+    MS2_FunctionTraitsSet;
+// @0x1424d3d50
+template void MS2_FunctionTraitsSet::add<MS2_FunctionTraitsNode::NodeRef>(void*, const MS2_FunctionTraitsNode::NodeRef&,
+                                                                        UPInt);
 // A number formatted on its own ("{0}").
 // @0x1424d2410
 template String AsString<double>(const double&);
+// @0x1424d22a0
+template String AsString<long>(const long&);
 // Binary search over a sorted index array with a plain comparison function.
 // @0x1424d2780
 template UPInt Alg::LowerBoundSliced<ArrayDH_POD<UPInt, 0x148>, UPInt, bool (*)(const UPInt&, const UPInt&)>(

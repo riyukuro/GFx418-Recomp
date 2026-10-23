@@ -2188,16 +2188,7 @@ namespace Classes { namespace fl
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace InstanceTraits
 {
-    // Traits of AS3 (ABC) function closures.
-    class Function : public CTraits
-    {
-    public:
-        ASString GetFunctionName(const Value& _this) const;
-        SInt32 GetMethodInfoInd() const { return MethodInfoInd; }
-
-    public:
-        SInt32 MethodInfoInd;   // +0xe8
-    };
+    // Function (the traits of ABC function closures) is in as3_obj_fl.h.
 
     // Traits of unbound ABC methods (a method index value).
     class MethodInd : public CTraits
