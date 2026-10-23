@@ -85,6 +85,20 @@ public:
     GASRefCountBase(Collector* gc) : BaseType(gc) { }
 };
 
+// (appended, sfr19) VMAbcFile (a GASRefCountBase) is not modeled; SlotInfo::File releases through the base, which
+// is what the exe does (the Traits ctor 0x1424daa20 needs the slot table's destructor).
+template <>
+inline void SPtr<VMAbcFile>::Release()
+{
+    if (pObject)
+    {
+        if ((UPInt)pObject & 1)
+            pObject = (ObjType*)((UPInt)pObject - 1);
+        else
+            reinterpret_cast<GASRefCountBase*>(pObject)->Release();
+    }
+}
+
 // ==== slot indices ===================================================================================================
 
 // Index into an object's slot values, 0-based.
@@ -187,6 +201,9 @@ public:
     typedef ArrayLH<Pair, StatMV_VM_SlotInfo_Mem>                                           SlotContainerType;
     typedef HashUncachedLH<Ptr<ASStringNode>, UInt32, ASStringNodePtrHashFunc,
                            StatMV_VM_SlotInfoHash_Mem>                                       SetType;
+
+    // (appended, sfr19) an empty table (inlined by the Traits ctor 0x1424daa20).
+    Slots() : FirstOwnSlotNum(0), Parent(NULL) {}
 
     UPInt               FirstOwnSlotNum;    // +0x00
     const Slots*        Parent;             // +0x08
@@ -304,10 +321,26 @@ public:
     }
 
     void SetConstructor(Pickable<Class> c)  { pConstructor = c; }
+    // (appended, sfr19) a shared class object (0x142421ac0).
+    void SetConstructor(Class& c);
     void SetMemSize(unsigned sz)            { MemSize = sz; }
 
     // Raw memory for one instance (MemSize bytes) from the VM heap.
     void* Alloc() const;
+
+    // (appended, sfr19) fills the slot values of a new instance (0x1424f0a50).
+    void ConstructTail(Object& obj) const;
+
+    // (appended, sfr19) slot and method registration from a C++ ClassInfo.
+    void AddSlot(const MemberInfo& mi);                         // 0x1424e9910
+    void Add2VT(const ClassInfo& ci, const ThunkInfo& func);    // 0x1424e56f0
+
+protected:
+    // (appended, sfr19) the parent is only referenced here; derived ctors copy its slots with CopyParentTraits.
+    Traits(VM& vm, const Traits* pt, bool isDynamic, bool isFinal);    // 0x1424daa20
+    // (appended, sfr19) takes over the parent's slot table, first own slot and fixed value slot count
+    // (0x1425115f0; name ours).
+    void CopyParentTraits();
 
 public:
     AbsoluteIndex           FirstOwnSlotInd;        // +0x50
@@ -337,6 +370,10 @@ namespace InstanceTraits
         virtual void MakeObject(Value& result, Traits& t);
         virtual void AS3Constructor(const AS3::Traits& ot, const Value& _this, unsigned argc, const Value* argv) const;
         virtual bool SupportsInterface(const Traits&) const;
+
+    protected:
+        // (appended, sfr19)
+        Traits(Pickable<Instances::Namespace> ns, VM& vm, const AS3::Traits* pt, bool isDynamic, bool isFinal); // 0x1424dad50
 
     public:
         Instances::Namespace& GetNamespace() const { return *Ns; }
@@ -429,6 +466,11 @@ namespace ClassTraits
 
         InstanceTraits::Traits& GetInstanceTraits() const { return *ITraits; }
         void SetInstanceTraits(Pickable<InstanceTraits::Traits> itr);
+
+    protected:
+        // (appended, sfr19) adds the slots every class object has (0x1425216d0).
+        void RegisterSlots();
+    public:
 
         SPtr<InstanceTraits::Traits> ITraits;   // +0xc0
     };

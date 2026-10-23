@@ -1795,6 +1795,113 @@ Value::Value(Object* v)
         v->AddRef();
 }
 
+// The class traits of a ClassInfo's parent class, NULL for none (0x142525ca0).
+const ClassTraits::Traits* RetrieveParentClassTraits(VM& vm, const ClassInfo& ci);
+
+// @0x1424daa20
+// noinline: the derived ctors call it out of line.
+__declspec(noinline) Traits::Traits(VM& vm, const Traits* pt, bool isDynamic, bool isFinal)
+    : GASRefCountBase(&vm.GetGC())
+    , FirstOwnSlotInd(0)
+    , FixedValueSlotNumber(0)
+    , MemSize(0)
+    , Flags(0)
+    , TraitsType(pt ? pt->GetTraitsType() : Traits_Unknown)
+    , pVM(&vm)
+    , pConstructor(NULL)
+    , pParent(pt)
+    , InitScope(vm.GetMemoryHeap())
+{
+    const bool arrayLike = pt ? pt->IsArrayLike() : false;
+    Flags &= ~(SPInt)(ArrayLikeMask | ObjectTypeMask | IsFinalMask);
+    RefCount |= Flag_DeleteLast;
+    Flags |= (-(SPInt)arrayLike & ArrayLikeMask) | (-(SPInt)isFinal & IsFinalMask) | (-(SPInt)isDynamic & ObjectTypeMask);
+}
+
+namespace InstanceTraits
+{
+    // @0x1424dad50
+    Traits::Traits(Pickable<Instances::Namespace> ns, VM& vm, const AS3::Traits* pt, bool isDynamic, bool isFinal)
+        : AS3::Traits(vm, pt, isDynamic, isFinal)
+        , Ns(ns)
+    {
+        CopyParentTraits();
+    }
+
+    // The public namespace for an empty package name, else the interned public namespace of the package.
+    static Pickable<Instances::Namespace> MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind, const char* name)
+    {
+        ASString uri = vm.GetStringManager().CreateString(name ? name : "");
+        if (kind == Abc::NS_Public && uri.IsEmpty())
+        {
+            Pickable<Instances::Namespace> ns(vm.PublicNamespace.GetPtr());
+            if (ns.GetPtr())
+                ns.GetPtr()->AddRef();
+            return ns;
+        }
+        return static_cast<fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits())
+            .MakeInternedInstance(kind, uri, Value::GetUndefined());
+    }
+
+    static const Traits* GetParentInstanceTraits(VM& vm, const ClassInfo& ci)
+    {
+        const ClassTraits::Traits* ctr = RetrieveParentClassTraits(vm, ci);
+        const Traits* itr = NULL;
+        if (ctr)
+            itr = &ctr->GetInstanceTraits();
+        return itr;
+    }
+
+    // MS2-FUNCTIONAL: same code; the exe stores the public namespace result before the null test and loads the
+    // string manager after the package name select (scheduling)
+    // @0x1424d6750
+    CTraits::CTraits(VM& vm, const ClassInfo& ci)
+        : Traits(MakeInternedNamespace(vm, Abc::NS_Public, ci.GetPkgName()), vm, GetParentInstanceTraits(vm, ci),
+                 ci.IsDynamicObject(), ci.IsFinalType())
+        , CI(ci)
+    {
+        for (UInt8 i = 0; i < ci.InstanceMemberNum; ++i)
+            AddSlot(ci.InstanceMember[i]);
+
+        for (UInt8 i = 0; i < ci.InstanceMethodNum; ++i)
+            Add2VT(ci, ci.InstanceMethod[i]);
+    }
+}
+
+namespace ClassTraits
+{
+    // Class objects are dynamic and not final.
+    // @0x1424dabd0
+    Traits::Traits(VM& vm, const ClassInfo& ci)
+        : AS3::Traits(vm, RetrieveParentClassTraits(vm, ci), true, false)
+    {
+        SetConstructor(vm.GetClassTraitsClassClass().GetInstanceTraits().GetConstructor());
+        Flags |= IsClassMask;
+        RegisterSlots();
+
+        for (UInt8 i = 0; i < ci.ClassMethodNum; ++i)
+            Add2VT(ci, ci.ClassMethod[i]);
+
+        for (UInt8 i = 0; i < ci.ClassMemberNum; ++i)
+            AddSlot(ci.ClassMember[i]);
+    }
+}
+
+// Object(Traits&) has no out-of-line copy in the exe; the Instance ctor inlines it.
+inline Object::Object(Traits& t)
+    : GASRefCountBase(&t.GetVM().GetGC())
+    , pTraits(&t)
+    , pUserDataHolder(NULL)
+{
+}
+
+// @0x1424d7de0
+Instance::Instance(InstanceTraits::Traits& t)
+    : Object(t)
+{
+    t.ConstructTail(*this);
+}
+
 // VM::Error: "Error #<id>: <message>", the message being the error text with the arguments filled in.
 
 // MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
