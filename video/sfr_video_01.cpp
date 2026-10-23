@@ -1500,6 +1500,86 @@ void* FUN_14000aa70(Scaleform::GFx::AS2::NetStream* stream, unsigned flags)
     return stream;
 }
 
+// MS2-FUNCTIONAL: constructs the cue-point name and zeros its three numeric fields.
+// @0x14000b020
+void FUN_14000b020(void* cue)
+{
+    auto* bytes = static_cast<unsigned char*>(cue);
+    new (bytes + 8) Scaleform::String();
+    memset(bytes + 0x18, 0, 0x18);
+}
+
+// MS2-FUNCTIONAL: initializes an empty cue-point array and copies the supplied records.
+// @0x14000b050
+void* FUN_14000b050(void** destination, const void** source)
+{
+    return FUN_140007840(destination, source);
+}
+
+// MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
+// @0x14000b080
+void FUN_14000b080(void** table)
+{
+    if (!*table) return;
+    auto* data = static_cast<unsigned char*>(*table);
+    const auto count = *reinterpret_cast<Scaleform::UPInt*>(data + 8) + 1;
+    auto* bytes = data + 0x10;
+    for (Scaleform::UPInt i = 0; i < count; ++i, bytes += 0x18) {
+        auto* entry = reinterpret_cast<Scaleform::UPInt*>(bytes);
+        if (entry[0] != ~Scaleform::UPInt(1)) {
+            ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
+            entry[0] = ~Scaleform::UPInt(1);
+        }
+    }
+    Scaleform::Memory::Free(*table);
+    *table = nullptr;
+}
+
+// MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
+// @0x14000b120
+void FUN_14000b120(void** table) { FUN_14000b080(table); }
+
+// MS2-FUNCTIONAL: releases pair arrays and weak proxies, then optionally deletes the owner.
+// @0x14000b230
+void* FUN_14000b230(void* owner, unsigned flags)
+{
+    auto* bytes = static_cast<unsigned char*>(owner);
+    auto** array = reinterpret_cast<void**>(bytes + 0x18);
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_1400068d0(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+        (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
+    if (proxy) proxy->Release();
+    if (flags & 1) ::operator delete(owner);
+    return owner;
+}
+
+// MS2-FUNCTIONAL: initializes each cue-point record with an empty string and zeroed metadata.
+// @0x14000b2a0
+void FUN_14000b2a0(void* records, Scaleform::UPInt count)
+{
+    auto* bytes = static_cast<unsigned char*>(records);
+    for (Scaleform::UPInt i = 0; i < count; ++i, bytes += 0x30) {
+        new (bytes + 8) Scaleform::String();
+        memset(bytes + 0x18, 0, 0x18);
+    }
+}
+
+// MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
+// @0x14000b300
+void FUN_14000b300(void* owner)
+{
+    auto* bytes = static_cast<unsigned char*>(owner);
+    auto** array = reinterpret_cast<void**>(bytes + 0x18);
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_1400068d0(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+        (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
+    if (proxy) proxy->Release();
+}
+
 // MS2-FUNCTIONAL: routes prototype constructor names to GASPrototypeBase and delegates other names.
 // @0x14000a110
 void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
