@@ -5,6 +5,9 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142498890-0x1424abbe0 .text$mn
 // MS2-RANGE: 0x1424ad4d0-0x1424ad870 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PIN: ??_GInitStruct@String@Scaleform@@UEAAPEAXI@Z 0x1424aada0 ; unique
+// MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/render/render_font.h"
