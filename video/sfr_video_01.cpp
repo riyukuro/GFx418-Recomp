@@ -66,6 +66,15 @@ void FUN_1400029d0(void** channel)
     if (*channel) FUN_14257dcb0(*channel);
 }
 
+// MS2-FUNCTIONAL: returns the terminated byte string length using the exe's bounded scan behavior.
+// @0x140002f70
+Scaleform::UPInt FUN_140002f70(const char* text)
+{
+    const char* cursor = text;
+    while (*cursor) ++cursor;
+    return static_cast<Scaleform::UPInt>(cursor - text);
+}
+
 // MS2-FUNCTIONAL: replaces the retained audio channel after releasing its previous value.
 // @0x1400029f0
 void** FUN_1400029f0(void** channel, void* replacement)
