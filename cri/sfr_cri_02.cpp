@@ -168,6 +168,8 @@ CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source);
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source);
 void     FUN_14002aa30(CriUint64* array, CriUint64 length);
 void     FUN_14000bd60(void* array, void* source, CriUint64 length);
+void     FUN_14001d720(void* manager, void* reader);
+void     FUN_1425845e0(void* event, CriSint32 timeout);
 void     FUN_14002b2e0(void* object);
 void     FUN_14002c5f0(void* object);
 void     FUN_14002e2a0(void* object);
@@ -209,6 +211,20 @@ struct CriMvRequestQueueView
     CriMvRequestNode* Tail;
     CriUint8 Lock[0x28];
     CriUint8 Event[1];
+};
+
+struct CriMvRequestManagerView
+{
+    CriUint8 Reserved0[0x28];
+    void* ActiveReader;
+    CriUint8 Reserved1[0x28];
+    CriMvRequestNode* FreeList;
+    CriUint8 Reserved2[8];
+    CriMvRequestNode* Head;
+    CriMvRequestNode* Tail;
+    CriUint8 Lock[0x28];
+    CriUint8 Event[0x58];
+    void* StopEvent;
 };
 
 struct CriMvReaderRequestView
@@ -1990,6 +2006,36 @@ void FUN_14002e260(void* object, void* first, void* second)
     CriMvReaderRequestView* state = (CriMvReaderRequestView*)object;
     state->ReadPending = 1;
     FUN_14002e140(state->Queue, 1, (CriUint8*)object - 0x10, NULL, first, second);
+}
+
+// MS2-FUNCTIONAL: remove all requests for a detached reader, return their nodes, then stop an idle worker.
+// @0x14002e370
+void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
+{
+    FUN_14258aca0(manager->Lock);
+    CriMvRequestNode* sentinel = (CriMvRequestNode*)&manager->Head;
+    CriMvRequestNode* node = manager->Tail;
+    while (node != sentinel)
+    {
+        CriMvRequestNode* previous = node->Previous;
+        if (node->Request == reader)
+        {
+            node->Next->Previous = node->Previous;
+            node->Previous->Next = node->Next;
+            node->Next = manager->FreeList;
+            manager->FreeList = node;
+        }
+        node = previous;
+    }
+    FUN_14258bb70(manager->Lock);
+    FUN_14001d720(manager, reader);
+    if (!manager->ActiveReader && manager->StopEvent)
+    {
+        FUN_14002e140(manager, 3, NULL, NULL, NULL, NULL);
+        FUN_1425845e0(manager->StopEvent, -1);
+        FUN_14257dcb0(manager->StopEvent);
+        manager->StopEvent = NULL;
+    }
 }
 
 // MS2-FUNCTIONAL: resize the first eight-byte vector flavor, using its three-quarter growth policy.
