@@ -26,6 +26,7 @@ MS2_GLOBAL(0x143b275f8, void*, VideoThunkD);
 MS2_GLOBAL(0x143b27600, void*, VideoThunkBaseD);
 MS2_GLOBAL(0x143b27638, void*, VideoThunkE);
 MS2_GLOBAL(0x1431b7ba0, void*, VideoDisplayVtable);
+MS2_GLOBAL(0x142d692bc, float, VideoTwipsScale);
 MS2_GLOBAL(0x143b27640, void*, VideoThunkBaseE);
 MS2_GLOBAL(0x143b27488, void*, VideoThunkF);
 MS2_GLOBAL(0x143b27490, void*, VideoThunkBaseF);
@@ -677,6 +678,54 @@ void FUN_14001a410(void* self, void*, void* netStream)
     if (display) {
         FUN_140010b80(display, player);
         if (player) { auto** vtable = *reinterpret_cast<void***>(player); reinterpret_cast<void(*)(void*, void*)>(vtable[7])(player, display); }
+    }
+}
+
+// MS2-FUNCTIONAL: destroys AS3 CTraits and conditionally frees the allocation through the Scaleform heap.
+// @0x14001a5c0
+Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_14001a5c0(Scaleform::GFx::AS3::InstanceTraits::CTraits* traits, std::uint32_t flags)
+{
+    traits->~CTraits();
+    if (flags & 1) {
+        auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, traits);
+    }
+    return traits;
+}
+// MS2-FUNCTIONAL: transfers an object into an AS3 Value using the Pick operation.
+// @0x14001a690
+Scaleform::GFx::AS3::Value* FUN_14001a690(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Object* object)
+{
+    value->Pick(object);
+    return value;
+}
+// MS2-FUNCTIONAL: converts coordinate arguments and stores the Video rectangle in twips.
+// @0x14001a760
+void FUN_14001a760(void* self, unsigned count, Scaleform::GFx::AS3::Value* args)
+{
+    if (count > 1) {
+        double ignored = 0;
+        args[0].Convert2NumberInline(ignored);
+        args[1].Convert2NumberInline(ignored);
+        auto* player = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
+        *reinterpret_cast<std::uint32_t*>(player + 0xe0) = 0;
+        *reinterpret_cast<std::uint32_t*>(player + 0xe4) = 0;
+        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x68)) * VideoTwipsScale.get();
+        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x70)) * VideoTwipsScale.get();
+    }
+}
+// MS2-FUNCTIONAL: updates the player rectangle from the stored Video dimensions when resize is enabled.
+// @0x14001a800
+void FUN_14001a800(std::uint64_t* object, std::uint8_t update)
+{
+    if (!update) {
+        auto** vtable = *reinterpret_cast<void***>(object);
+        reinterpret_cast<void(*)(void*)>(vtable[21])(object);
+        auto* player = reinterpret_cast<unsigned char*>(object[11]);
+        *reinterpret_cast<std::uint32_t*>(player + 0xe0) = 0;
+        *reinterpret_cast<std::uint32_t*>(player + 0xe4) = 0;
+        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(object[13]) * VideoTwipsScale.get();
+        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(object[14]) * VideoTwipsScale.get();
     }
 }
 } // namespace
