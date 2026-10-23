@@ -5717,6 +5717,36 @@ void VideoPlayerImpl::SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spa
 
 }}} // namespace Scaleform::GFx::Video
 
+void FUN_14257dc30(void*);
+void FUN_14257dcb0(void*);
+
+// MS2-FUNCTIONAL: replace a reference-counted Video interface and apply the stored sound mode.
+// @0x14001c170
+void FUN_14001c170(void* owner, void* replacement)
+{
+    CriUint8* bytes = (CriUint8*)owner;
+    void* current;
+    memcpy(&current, bytes + 0x10, sizeof(current));
+    if (current)
+    {
+        void** vtable = *(void***)current;
+        ((void (*)(void*))vtable[3])(current);
+    }
+    if (replacement)
+        FUN_14257dc30(replacement);
+    if (current)
+        FUN_14257dcb0(current);
+    memcpy(bytes + 0x10, &replacement, sizeof(replacement));
+    bytes[0x20] = 0;
+    if (replacement)
+    {
+        void** vtable = *(void***)replacement;
+        CriUint32 mode;
+        memcpy(&mode, bytes + 0x18, sizeof(mode));
+        ((void (*)(void*, CriUint32))vtable[10])(replacement, mode);
+    }
+}
+
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
 // MS2-PIN: ??_7VideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@6B@ 0x1431b80e0
