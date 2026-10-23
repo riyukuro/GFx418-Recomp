@@ -614,6 +614,22 @@ void FUN_1400150b0(UInt32 index, void*, UInt32 length, const void* values)
     }
 }
 
+// MS2-FUNCTIONAL: converts the input Value into the supplied ASString through the recovered conversion method.
+// @0x140013f20
+uintptr_t FUN_140013f20(uintptr_t self, Scaleform::GFx::ASString* result,
+                        const Scaleform::GFx::AS3::Value* input)
+{
+    input->Convert2String(*result);
+    return self;
+}
+
+// MS2-FUNCTIONAL: converts the input Value into the supplied ASString through the recovered conversion method.
+// @0x140015420
+void FUN_140015420(Scaleform::GFx::ASString* result, const Scaleform::GFx::AS3::Value* input)
+{
+    input->Convert2String(*result);
+}
+
 // MS2-FUNCTIONAL: uses the recovered AS3 Value assignment implementation for the executable's copy entry.
 // @0x1400129d0
 Scaleform::GFx::AS3::Value* FUN_1400129d0(Scaleform::GFx::AS3::Value* dst,
