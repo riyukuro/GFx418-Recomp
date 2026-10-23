@@ -3675,6 +3675,72 @@ void FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 thir
     FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
 }
 
+// MS2-FUNCTIONAL: append a decoder read span to its wrapped input buffer and update read counters.
+// @0x140046170
+void FUN_140046170(void* ring, CriSint32 mode, CriUint64* span)
+{
+    CriUint32 length = (CriUint32)span[1];
+    uintptr_t source = (uintptr_t)span[0];
+    if (length == 0 || source == 0)
+        return;
+    CriUint8* bytes = (CriUint8*)ring;
+    void* lock;
+    void* buffer;
+    CriUint32 writeOffset, capacity;
+    memcpy(&lock, bytes + 0x10, sizeof(lock));
+    memcpy(&buffer, bytes + 0x30, sizeof(buffer));
+    memcpy(&writeOffset, bytes + 0x38, sizeof(writeOffset));
+    memcpy(&capacity, bytes + 0x3c, sizeof(capacity));
+    CriUint32 sourceOffset = (CriUint32)source - (CriUint32)(uintptr_t)buffer;
+    if (mode == 1)
+    {
+        if (sourceOffset < capacity)
+        {
+            CriUint32 first = capacity - sourceOffset;
+            if (length < first)
+                first = length;
+            memcpy((CriUint8*)buffer + writeOffset + sourceOffset, (const void*)source, first);
+        }
+        CriUint32 end = sourceOffset + length;
+        if (writeOffset < end)
+        {
+            CriUint32 wrapped = end - writeOffset;
+            if (length < wrapped)
+                wrapped = length;
+            memcpy(buffer, (CriUint8*)buffer + end - wrapped, wrapped);
+        }
+        if (lock)
+            FUN_140039f50((LPCRITICAL_SECTION)lock);
+        CriUint32 value;
+        memcpy(&value, bytes + 0x20, sizeof(value));
+        value += length;
+        memcpy(bytes + 0x20, &value, sizeof(value));
+        memcpy(&value, bytes + 0x4c, sizeof(value));
+        value += length;
+        memcpy(bytes + 0x4c, &value, sizeof(value));
+    }
+    else
+    {
+        if (mode != 0)
+        {
+            span[1] = 0;
+            span[0] = 0;
+            return;
+        }
+        if (lock)
+            FUN_140039f50((LPCRITICAL_SECTION)lock);
+        CriUint32 value;
+        memcpy(&value, bytes + 0x24, sizeof(value));
+        value += length;
+        memcpy(bytes + 0x24, &value, sizeof(value));
+        memcpy(&value, bytes + 0x44, sizeof(value));
+        value += length;
+        memcpy(bytes + 0x44, &value, sizeof(value));
+    }
+    if (lock)
+        FUN_140039f8c((LPCRITICAL_SECTION)lock);
+}
+
 // MS2-FUNCTIONAL: create the named CRI video heap and attach its allocator to the returned adapter.
 // @0x140041d40
 void* FUN_140041d40(void* manager)
