@@ -81,6 +81,9 @@ MS2_EXTERN(0x14001ad20, void*(void*, void*), FUN_14001ad20);
 MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
 MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
 MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
+MS2_EXTERN(0x1428d8f14, int(void*, void*), FUN_1428d8f14);
+MS2_EXTERN(0x1428d8efc, int(void*, void*), FUN_1428d8efc);
+MS2_EXTERN(0x1427443c0, void(void*), FUN_1427443c0);
 MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
 MS2_EXTERN(0x1424f0750, void(void*, const char*, void*, int, int, int), FUN_1424f0750);
 MS2_EXTERN(0x1424d2150, void(void*, void*, std::uint64_t), FUN_1424d2150);
@@ -91,6 +94,9 @@ MS2_GLOBAL(0x1431b7c70, void*, VideoTraitsVtable);
 MS2_GLOBAL(0x1431b7f60, void*, VideoTraitsBaseVtable);
 MS2_GLOBAL(0x1431b7ea0, void*, VideoTraitsSubVtableA);
 MS2_GLOBAL(0x1431b7de0, void*, VideoTraitsSubVtableB);
+MS2_GLOBAL(0x1431b4c60, void*, VideoAudioVtableA); MS2_GLOBAL(0x1431bec40, void*, VideoAudioVtableB);
+MS2_GLOBAL(0x1431bed60, void*, VideoAudioDeleteVtable); MS2_GLOBAL(0x1431bedd8, void*, VideoAudioSubVtable);
+MS2_GLOBAL(0x1431bede8, void*, VideoAudioEventVtable);
 MS2_GLOBAL(0x1431b7160, void*, VideoClassInfoA); MS2_GLOBAL(0x1431b7900, void*, VideoClassVtableA);
 MS2_GLOBAL(0x1431b71b0, void*, VideoInstanceVtableA); MS2_GLOBAL(0x1431b7260, void*, VideoCTraitsVtable);
 MS2_GLOBAL(0x1431b7b50, void*, VideoClassInfoB); MS2_GLOBAL(0x1431b7d50, void*, VideoClassVtableB);
@@ -1418,4 +1424,44 @@ void FUN_140019470(void* self, std::uint64_t* output) { GetVideoSoundTransform(s
 // MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's default transform value.
 // @0x140019660
 void FUN_140019660(void* self, std::uint64_t* output) { GetVideoSoundTransform(self, output, 0x90); }
+
+// MS2-FUNCTIONAL: initializes and links the per-channel callback object, then registers it with FMOD.
+// @0x142742fb0
+std::uint64_t* FUN_142742fb0(std::uint64_t* object, void* player, std::uint64_t userData, void* channel)
+{
+    auto* node = object + 2;
+    *reinterpret_cast<void***>(object) = &VideoAudioDeleteVtable;
+    reinterpret_cast<std::uint32_t*>(object)[2] = 1;
+    *reinterpret_cast<void***>(node) = &VideoAudioVtableB;
+    object[4] = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(player) + 0xc0);
+    object[3] = reinterpret_cast<std::uintptr_t>(static_cast<unsigned char*>(player) + 0xb0);
+    auto** link = reinterpret_cast<std::uint64_t**>(static_cast<unsigned char*>(player) + 0xc0);
+    if (*link) (*link)[1] = reinterpret_cast<std::uintptr_t>(node);
+    *link = reinterpret_cast<std::uint64_t*>(node);
+    *reinterpret_cast<void***>(object) = &VideoAudioVtableA;
+    *reinterpret_cast<void***>(node) = &VideoAudioSubVtable;
+    object[8] = 0; object[5] = reinterpret_cast<std::uintptr_t>(player); object[6] = userData; object[7] = reinterpret_cast<std::uintptr_t>(channel);
+    FUN_1428d8f14(channel, object);
+    FUN_1428d8efc(channel, reinterpret_cast<void*>(FUN_1427443c0.get()));
+    return object;
+}
+// MS2-FUNCTIONAL: initializes the audio event listener, its locks, and its intrusive-list sentinel.
+// @0x142743130
+std::uint64_t* FUN_142743130(std::uint64_t* object)
+{
+    *reinterpret_cast<void***>(object) = &VideoAudioEventVtable;
+    reinterpret_cast<std::uint32_t*>(object)[2] = 1;
+    object[2] = 0; object[3] = 0;
+    ::new (reinterpret_cast<unsigned char*>(object) + 0x20) Scaleform::Event(false, false);
+    ::new (reinterpret_cast<unsigned char*>(object) + 0x80) Scaleform::Lock(0);
+    object[0x15] = 0;
+    object[0x17] = reinterpret_cast<std::uintptr_t>(object + 0x16);
+    *reinterpret_cast<void***>(object + 0x16) = &VideoAudioVtableB;
+    object[0x18] = reinterpret_cast<std::uintptr_t>(object + 0x16);
+    ::new (reinterpret_cast<unsigned char*>(object) + 0xc8) Scaleform::Lock(0);
+    *reinterpret_cast<std::uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0xf0) = 0;
+    *reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0xf4) = 0;
+    *reinterpret_cast<std::uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0x78) = 0;
+    return object;
+}
 } // namespace
