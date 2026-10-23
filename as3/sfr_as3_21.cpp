@@ -312,8 +312,10 @@ ASString ArrayBase::Join(const ASString& sep) const
         if (i != 0)
             buf.AppendString(sep.ToCStr());
         Value v;
-        GetValue(i, v);
-        if (!v.IsNullOrUndefined() && !v.Convert2String(buf))
+        GetValueUnsafe(i, v);
+        if (v.IsNullOrUndefined())
+            continue;
+        if (!v.Convert2String(buf))
             break;
     }
     return VMRef.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
@@ -423,15 +425,18 @@ void VectorBase<SInt32>::PushBackValueUnsafe(const Value& v)
 
 // @0x142562e70
 template <>
-CheckResult VectorBase<SInt32>::Resize(UInt32 size)
+CheckResult VectorBase<SInt32>::Resize(UPInt size)
 {
-    if (!CheckFixed())
-        return false;
-    UPInt i = V.GetSize();
-    V.Resize(size);
-    for (; i < size; ++i)
-        V[i] = 0;
-    return true;
+    bool ok = false;
+    if (CheckFixed())
+    {
+        UPInt i = V.GetSize();
+        V.Resize(size);
+        for (; i < size; ++i)
+            V[i] = 0;
+        ok = true;
+    }
+    return ok;
 }
 
 // @0x142563720
@@ -506,15 +511,18 @@ void VectorBase<UInt32>::PushBackValueUnsafe(const Value& v)
 
 // @0x142562f30
 template <>
-CheckResult VectorBase<UInt32>::Resize(UInt32 size)
+CheckResult VectorBase<UInt32>::Resize(UPInt size)
 {
-    if (!CheckFixed())
-        return false;
-    UPInt i = V.GetSize();
-    V.Resize(size);
-    for (; i < size; ++i)
-        V[i] = 0;
-    return true;
+    bool ok = false;
+    if (CheckFixed())
+    {
+        UPInt i = V.GetSize();
+        V.Resize(size);
+        for (; i < size; ++i)
+            V[i] = 0;
+        ok = true;
+    }
+    return ok;
 }
 
 // @0x1425644f0
@@ -569,15 +577,18 @@ void VectorBase<Value::Number>::PushBackValueUnsafe(const Value& v)
 
 // @0x142562ff0
 template <>
-CheckResult VectorBase<Value::Number>::Resize(UInt32 size)
+CheckResult VectorBase<Value::Number>::Resize(UPInt size)
 {
-    if (!CheckFixed())
-        return false;
-    UPInt i = V.GetSize();
-    V.Resize(size);
-    for (; i < size; ++i)
-        V[i] = 0;
-    return true;
+    bool ok = false;
+    if (CheckFixed())
+    {
+        UPInt i = V.GetSize();
+        V.Resize(size);
+        for (; i < size; ++i)
+            V[i] = 0;
+        ok = true;
+    }
+    return ok;
 }
 
 // @0x142564650
@@ -632,15 +643,18 @@ void VectorBase<Ptr<ASStringNode> >::PushBackValueUnsafe(const Value& v)
 
 // @0x1425630f0
 template <>
-CheckResult VectorBase<Ptr<ASStringNode> >::Resize(UInt32 size)
+CheckResult VectorBase<Ptr<ASStringNode> >::Resize(UPInt size)
 {
-    if (!CheckFixed())
-        return false;
-    UPInt i = V.GetSize();
-    V.Resize(size);
-    for (; i < size; ++i)
-        V[i] = Ptr<ASStringNode>(VMRef.GetStringManager().GetBuiltin(AS3Builtin_null).GetNode());
-    return true;
+    bool ok = false;
+    if (CheckFixed())
+    {
+        UPInt i = V.GetSize();
+        V.Resize(size);
+        for (; i < size; ++i)
+            V[i] = Ptr<ASStringNode>(VMRef.GetStringManager().GetBuiltin(AS3Builtin_null).GetNode());
+        ok = true;
+    }
+    return ok;
 }
 
 // @0x1425638c0
@@ -714,17 +728,21 @@ void VectorBase<Value>::PushBackValueUnsafe(const Value& v)
     PushBackUnsafe(v);
 }
 
+// MS2-FUNCTIONAL: ours inlines ArrayDataDH<Value>::Resize, the exe calls it (0x14241fdd0)
 // @0x142563240
 template <>
-CheckResult VectorBase<Value>::Resize(UInt32 size)
+CheckResult VectorBase<Value>::Resize(UPInt size)
 {
-    if (!CheckFixed())
-        return false;
-    UPInt i = V.GetSize();
-    V.Resize(size);
-    for (; i < size; ++i)
-        V[i] = Value(Value::GetNull());
-    return true;
+    bool ok = false;
+    if (CheckFixed())
+    {
+        UPInt i = V.GetSize();
+        V.Resize(size);
+        for (; i < size; ++i)
+            V[i] = Value(Value::GetNull());
+        ok = true;
+    }
+    return ok;
 }
 
 template class VectorBase<SInt32>;

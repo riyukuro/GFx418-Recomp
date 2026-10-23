@@ -32,7 +32,10 @@ public:
     CheckResult CheckFixed() const
     {
         if (Fixed)
-            VMRef.ThrowRangeError(VM::Error(VM::eVectorFixedError, VMRef, "Vector"));
+        {
+            VM& vm = VMRef;
+            vm.ThrowRangeError(VM::Error(VM::eVectorFixedError, vm, "Vector"));
+        }
         return !Fixed;
     }
 
@@ -76,7 +79,7 @@ public:
     // Appends v's payload as the element type; the caller has already coerced v to it.
     void PushBackUnsafe(const Value& v);
     // The AS3 length setter: new elements get the type's default (0, null).
-    CheckResult Resize(UInt32 size);
+    CheckResult Resize(UPInt size);
     // Vector.unshift: argv (already of the element type tr) are inserted at the front.
     // SInt32 0x142564390, UInt32 0x1425644f0, Number 0x142564650, String 0x142564860, Value 0x1425649c0
     void Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr);
