@@ -306,6 +306,7 @@ public:
     MovieImpl* FindMovieImpl() const;
     bool       IsAncestor(DisplayObjectBase* ch) const;
     RectF      GetScale9Grid() const;
+    bool       HasScale9Grid() const; // (appended for sfr_as2_06) exe 0x14295db50
 
     InteractiveObject* GetTopMostMouseEntityDef(CharacterDef* pdef, const PointF& pt, bool testAll = false,
                                                 const InteractiveObject* ignoreMC = 0);

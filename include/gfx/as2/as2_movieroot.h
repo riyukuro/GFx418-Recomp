@@ -363,6 +363,10 @@ public:
     // (appended for sfr_as2_02) a new sprite of the timeline, with an added reference (exe 0x142937cf0).
     Sprite* CreateSprite(TimelineDef* ptimelineDef, MovieDefImpl* pdefImpl, InteractiveObject* parent,
                          ResourceId id, bool loadedSeparately = false);
+    // (appended for sfr_as2_06) focus changes reach Selection through the _level0 environment.
+    virtual void NotifyQueueSetFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt); // exe 0x14296a850
+    virtual void NotifyTransferFocus(InteractiveObject* curFocused, InteractiveObject* pnewFocus,
+                                     unsigned controllerIdx);                                          // exe 0x14296a8f0
 };
 
 // The AS2 root of a character of an AS2 movie.

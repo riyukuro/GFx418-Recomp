@@ -175,6 +175,13 @@ public:
         Set__proto__(psc, pprototype);
     }
 
+    // (appended for sfr_as2_06) queues the focus change for the action queue (exe 0x142972490).
+    static void QueueSetFocus(Environment* penv, InteractiveObject* pnewFocus, unsigned controllerIdx,
+                              FocusMovedType fmt);
+    // Broadcasts onSetFocus to the Selection listeners (exe 0x1429326a0).
+    static void BroadcastOnSetFocus(Environment* penv, InteractiveObject* pold, InteractiveObject* pnew,
+                                    unsigned controllerIdx);
+
 protected:
     void commonInit(Environment* penv); // exe 0x142995100
     // ASnative focus transfer: (character, FocusMovedType, controller) to MovieImpl::TransferFocus (exe 0x1429390a0).
@@ -1090,6 +1097,12 @@ public:
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
     // width and height of the visible stage (pixels), scaleMode and align of the view (exe 0x142953520).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+
+    // (appended for sfr_as2_06) broadcasts onResize, with the visible rect as a Rectangle when the extensions are
+    // on (exe 0x14296a540).
+    void NotifyOnResize(Environment* penv);
+    // Stage.onResize notification of the movie fn runs in (exe 0x14296a7c0).
+    static void NotifyOnResize(const FnCall& fn);
 
     MovieImpl* pMovieRoot; // +0x70 the movie of the stage
 

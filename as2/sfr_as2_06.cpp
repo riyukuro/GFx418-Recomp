@@ -140,6 +140,13 @@
 // MS2-RANGE: 0x14296f0d0-0x14296f1b0 .text$mn
 // MS2-RANGE: 0x14297d080-0x14297d0d0 .text$mn
 // MS2-RANGE: 0x142967c30-0x142967c90 .text$mn
+// MS2-RANGE: 0x14295db50-0x14295dbb0 .text$mn
+// MS2-RANGE: 0x14296a850-0x14296a8f0 .text$mn
+// MS2-RANGE: 0x14296a8f0-0x14296a990 .text$mn
+// MS2-RANGE: 0x14296f260-0x14296f2b0 .text$mn
+// MS2-RANGE: 0x14296a540-0x14296a7c0 .text$mn
+// MS2-RANGE: 0x14296a7c0-0x14296a850 .text$mn
+// MS2-RANGE: 0x14295d4f0-0x14295d5e0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1217,7 +1224,7 @@ bool AvmCharacter::IsStandardMember(const ASString& memberName, ASString* plower
 
 // MS2-FUNCTIONAL the exe calls the event handler hash lookup out of line
 // @0x14295d450
-bool AvmCharacter::HasClipEventHandler(const EventId& id) const
+__declspec(noinline) bool AvmCharacter::HasClipEventHandler(const EventId& id) const
 {
     EventId key = (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id;
     return EventHandlers.Get(key) != 0;
@@ -1431,6 +1438,28 @@ bool AvmSprite::InvokeArgs(const char* methodName, Value* presult, const char* m
 }
 
 // A sprite with an onEnterFrame handler has to stay in the playlist.
+// @0x14295d4f0
+bool AvmSprite::HasEventHandler(const EventId& id) const
+{
+    if (HasClipEventHandler(id))
+        return true;
+    ASBuiltinType btype = EventId_GetFunctionNameBuiltinType(id);
+    ASString      method(GetAS2Root()->GetStringManager()->GetBuiltin(btype));
+    if (!method.IsEmpty())
+    {
+        Object* pclipObj = *reinterpret_cast<Object* const*>(&Unrecovered_38[0x1d8 - 0x38]);
+        Value   v;
+        Object* pobj = pclipObj ? pclipObj : Get__proto__();
+        if (pobj)
+        {
+            Environment* penv = reinterpret_cast<Environment*>(const_cast<UByte*>(Unrecovered_38));
+            if (pobj->GetMemberRaw(penv->GetSC(), method, &v))
+                return true;
+        }
+    }
+    return false;
+}
+
 // @0x142969000
 bool AvmSprite::MustBeInPlaylist() const
 {
@@ -1477,6 +1506,77 @@ bool AvmTextField::OnUnloading(bool)
 {
     GetDispObj()->RemoveFromPlayList();
     return true;
+}
+
+// MS2-FUNCTIONAL BroadcastMessage and the Rectangle creation are calls here; the exe inlines both
+// @0x14296a540
+void StageCtorFunction::NotifyOnResize(Environment* penv)
+{
+    if (penv->GetSC()->pContext->CheckExtensions())
+    {
+        Render::RectF rect = penv->GetTarget()->GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect();
+        Value         v    = CreateRectangleObject(penv, rect);
+        penv->Push(v);
+        AsBroadcaster::BroadcastMessage(penv, this, penv->CreateConstString("onResize"), 1, penv->GetTopIndex());
+        penv->Drop1();
+    }
+    else
+        AsBroadcaster::BroadcastMessage(penv, this, penv->CreateConstString("onResize"), 0, 0);
+}
+
+// @0x14296a7c0
+void StageCtorFunction::NotifyOnResize(const FnCall& fn)
+{
+    Value stageCtorVal;
+    if (fn.Env->GetSC()->pContext->pGlobal->GetMemberRaw(fn.Env->GetSC(), fn.Env->GetBuiltin(ASBuiltin_Stage),
+                                                          &stageCtorVal) &&
+        stageCtorVal.GetType() != Value::FUNCTIONNAME)
+    {
+        ObjectInterface* pobj = stageCtorVal.ToObject(fn.Env);
+        if (pobj)
+            static_cast<StageCtorFunction*>(pobj)->NotifyOnResize(fn.Env);
+    }
+}
+
+// The environment of _level0 (MovieRoot::GetLevelMovie(0) inline).
+static inline Environment* GetLevel0MovieEnvironment(MovieImpl* pmovieImpl)
+{
+    InteractiveObject* pmovie = 0;
+    for (unsigned i = 0; i < pmovieImpl->MovieLevelsSize; i++)
+    {
+        if (pmovieImpl->pMovieLevels[i].Level == 0)
+        {
+            pmovie = pmovieImpl->pMovieLevels[i].pSprite;
+            break;
+        }
+    }
+    return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmovie->GetAvmObjImpl()))->GetASEnvironment();
+}
+
+// @0x14296a850
+void MovieRoot::NotifyQueueSetFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt)
+{
+    Selection::QueueSetFocus(GetLevel0MovieEnvironment(pMovieImpl), ch, controllerIdx, fmt);
+}
+
+// @0x14296a8f0
+void MovieRoot::NotifyTransferFocus(InteractiveObject* curFocused, InteractiveObject* pnewFocus, unsigned controllerIdx)
+{
+    Selection::BroadcastOnSetFocus(GetLevel0MovieEnvironment(pMovieImpl), curFocused, pnewFocus, controllerIdx);
+}
+
+// Back to the enclosing object; an array is on top again when it is one.
+// @0x14296f260
+void GASSharedObjectLoader::PopObject()
+{
+    ObjectPtrArray_Resize(&ObjectStack, ObjectStack.GetSize() - 1);
+    bArrayIsTop = ObjectStack[ObjectStack.GetSize() - 1]->GetObjectType() == ObjectInterface::Object_Array;
+}
+
+// @0x14296f0c0
+void GASSharedObjectLoader::PopArray()
+{
+    PopObject();
 }
 
 }}} // namespace Scaleform::GFx::AS2
@@ -1641,6 +1741,13 @@ bool AS2ValueObjectInterface::RemoveElements(void* pdata, unsigned idx, int coun
         count = size - idx;
     parr->RemoveElements(idx, Alg::Min(size - idx, (unsigned)count));
     return true;
+}
+
+// Set when the 9-slice grid is a non-empty rectangle.
+// @0x14295db50
+bool DisplayObjectBase::HasScale9Grid() const
+{
+    return !GetScale9Grid().IsEmpty();
 }
 
 }} // namespace Scaleform::GFx

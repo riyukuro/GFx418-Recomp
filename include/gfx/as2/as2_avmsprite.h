@@ -160,6 +160,8 @@ public:
     virtual bool MustBeInPlaylist() const;
     // ch (a child at its depth) leaves the display list; false when it is not there (exe 0x14297cf70).
     bool RemoveCharacter(DisplayObjectBase* ch);
+    // A clip event handler, or a method of the event's name on the clip object or the prototype (exe 0x14295d4f0).
+    virtual bool HasEventHandler(const EventId& id) const;
 };
 
 inline Sprite* ObjectInterface::ToSprite()
