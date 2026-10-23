@@ -157,6 +157,9 @@ namespace Instances { namespace fl {
         // @0x1424169f0
         virtual CheckResult GetProperty(const Multiname& prop_name, Instances::fl::XMLList& list);
 
+        // v itself if it is an XML, the single item if it is a one-item XMLList, else NULL. 0x142425c90
+        XML* ToXML(const Value& v) const;
+
     public:
         SPtr<Instances::Namespace>      Ns;             // +0x48
         NamespaceArray                  Namespaces;     // +0x50 declared on this element
@@ -238,6 +241,9 @@ namespace Instances { namespace fl {
 class XMLParser
 {
 public:
+    // The parse state: which kind of node the pending character data belongs to.
+    enum Kind { kNone, kElement, kText, kComment, kDecl, kCData, kDocType, kProcInstr };
+
     // 0x1423f0130
     XMLParser(InstanceTraits::fl::XML& itr);
 
@@ -262,6 +268,9 @@ public:
     // @0x14241e160
     static void ProcessingInstructionExpatCallback(void* userData, const char* target, const char* data);
 
+    // appends the top-level nodes (AddRef) to nodes. 0x142416f20
+    void GetRootNodes(ArrayLH<SPtr<Instances::fl::XML> >& nodes) const;
+
 public:
     char                                        NsSeparator;    // +0x00 ':'
     Instances::fl::XML::Kind                    CurrKind;       // +0x04
@@ -270,7 +279,7 @@ public:
     SPtr<Instances::fl::XMLElement>             CurrElement;    // +0x18
     ArrayDH<SPtr<Instances::fl::XML> >          RootElements;   // +0x20
     ASString                                    Text;           // +0x40 the pending character data
-    ArrayDH_POD<Instances::fl::XML::Kind>       KindStack;      // +0x48
+    ArrayDH_POD<Kind>                           KindStack;      // +0x48
 };
 
 }}} // namespace Scaleform::GFx::AS3

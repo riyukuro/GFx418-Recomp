@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x1424133c0-0x14242a640 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1969,13 +1970,127 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances
     }
 }}}} // namespace Scaleform::GFx::AS3::Instances
 
+// ==== E4X nodes ======================================================================================================
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
+{
+    // An XML node enumerates as a one-item list: its only name is "0".
+    // MS2-FUNCTIONAL: the exe addresses the empty builtin off the string manager (lea) instead of a copied pointer
+    // @0x1424163b0
+    void XML::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+    {
+        StringManager& sm = GetVM().GetStringManager();
+        if (ind.IsValid())
+            name.Assign(sm.CreateConstString("0"));
+        else
+            name.Assign(sm.GetBuiltin(AS3Builtin_empty_));
+    }
+
+    // @0x142416670
+    void XML::GetNextPropertyValue(Value& value, GlobalSlotIndex ind)
+    {
+        if (ind.IsValid())
+            value.Assign(this);
+        else
+            value.SetUndefined();
+    }
+
+    // @0x142416800
+    CheckResult XML::GetProperty(const Multiname& prop_name, Value& value)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            if (ind == 0)
+            {
+                value.Assign(this);
+                return true;
+            }
+            value.SetUndefined();
+        }
+        return false;
+    }
+
+    // @0x1424168a0
+    CheckResult XML::GetProperty(const Multiname& prop_name, XMLList& list)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind) && ind == 0)
+        {
+            list.Apppend(this);
+            return true;
+        }
+        return false;
+    }
+
+    // @0x1424151e0
+    void XMLElement::GetAttributes(XMLList& list)
+    {
+        const UPInt n = Attrs.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+            list.List.PushBack(SPtr<XML>(Attrs[i]));
+    }
+
+    // @0x1424176b0
+    bool XMLElement::HasSimpleContent() const
+    {
+        const UPInt n = Children.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+        {
+            if (Children[i]->GetKind() == kElement)
+                return false;
+        }
+        return true;
+    }
+
+    // @0x142425c90
+    XML* XMLElement::ToXML(const Value& v) const
+    {
+        if (IsXMLObject(v))
+            return static_cast<XML*>(v.GetObject());
+        if (IsXMLListObject(v))
+        {
+            XMLList* list = static_cast<XMLList*>(v.GetObject());
+            if (list->List.GetSize() == 1)
+                return list->List[0];
+        }
+        return NULL;
+    }
+
+    // @0x1424166c0
+    void XMLList::GetNextPropertyValue(Value& value, GlobalSlotIndex ind)
+    {
+        if (ind.Get() <= static_cast<UInt32>(List.GetSize()))
+            value.Assign(List[ind.Get() - 1]);
+        else
+            value.SetUndefined();
+    }
+
+    // @0x142423b50
+    void XMLList::SetTargetProperty(ASStringNode* prop)
+    {
+        if (TargetProperty)
+            TargetProperty->Release();
+        TargetProperty = prop;
+        if (prop)
+            prop->AddRef();
+    }
+}}}}} // namespace Scaleform::GFx::AS3::Instances::fl
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // @0x142416f20
+    void XMLParser::GetRootNodes(ArrayLH<SPtr<Instances::fl::XML> >& nodes) const
+    {
+        for (UPInt i = 0; i < RootElements.GetSize(); ++i)
+            nodes.PushBack(RootElements[i]);
+    }
+}}} // namespace Scaleform::GFx::AS3
+
 // The array element types of the Array sort helpers and of the XML parser's node-kind stack.
 namespace Scaleform {
 template <class F, class S> struct Pair { F First; S Second; };
 namespace GFx { namespace AS3 {
 namespace Impl { template <class A, class B, class C> struct Triple { A First; B Second; C Third; }; }
-class XMLParser { public: enum Kind { kNone }; };
-namespace Instances { namespace fl { class XMLAttr : public XML {}; } }
 }}} // namespace Scaleform::GFx::AS3
 
 // The out-of-line ArrayDataBase::Reserve instances of this range.

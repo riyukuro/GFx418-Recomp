@@ -112,8 +112,6 @@ namespace Instances { namespace fl {
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::XML"; }
         // @0x142422070
         virtual CheckResult SetProperty(const Multiname& prop_name, const Value& value);
-        // @0x142416800
-        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);
         // @0x142409100
         virtual CheckResult DeleteProperty(const Multiname& prop_name);
         // @0x1424163b0
@@ -195,8 +193,12 @@ namespace Instances { namespace fl {
         virtual CheckResult AS3Replace(const Multiname& prop_name, const Value& value) { return true; }
         // @0x142421770
         virtual void SetChildren(const Value& value) {}
+        // Declared after the node interface so that MSVC appends this new overload as the last slot (56)
+        // instead of grouping it with the Object override below.
         // this node itself for the name "0". 0x1424168a0
         virtual CheckResult GetProperty(const Multiname& prop_name, Instances::fl::XMLList& list);
+        // @0x142416800
+        virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);
 
     public:
         ASString    Text;       // +0x38 the name of an element/attribute/PI, the content of a text/comment
