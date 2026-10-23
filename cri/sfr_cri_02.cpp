@@ -160,6 +160,10 @@ void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
 void*    FUN_14002db40(void* thread, void* config);
+CriBool  FUN_140042270(void* manager, void* player, void* source, void* streamInfo,
+                       CriUint32 stream, CriBool enable);
+void     FUN_140041e30(void* manager, void (*callback)(void**, void*), void* player, CriBool enable);
+CriBool  FUN_140037a10(void);
 CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* output);
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
@@ -229,6 +233,15 @@ struct CriMvRequestPoolView
     CriUint32 NodesInLastBlock;
     CriUint32 Reserved;
     CriMvRequestNode* FreeList;
+};
+
+struct CriMovieAttachView
+{
+    CriUint8 StreamInfo[0xB2C];
+    CriUint8 StreamInfoTail[0x2E4];
+    void* Manager;
+    CriUint8 ReservedE18[8];
+    void* AttachedSource;
 };
 
 struct CriMvRequestQueueView
@@ -1692,6 +1705,21 @@ CriSint32 FUN_14002e9e0(void)
     total += FUN_140045910(uniConfig);
     uniConfig[2] = 4;
     return total + FUN_140045910(uniConfig);
+}
+
+// MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
+// @0x140030f10
+CriBool FUN_140030f10(void* player, void* source, CriUint32 stream)
+{
+    CriMovieAttachView* state = (CriMovieAttachView*)player;
+    state->AttachedSource = source;
+    CriBool attached = FUN_140042270(state->Manager, player, source,
+                                     &state->StreamInfo[stream * 0x10], stream, 1);
+    if (!attached)
+        return 0;
+    if (FUN_140037a10() == 1)
+        FUN_140041e30(state->Manager, FUN_140038000, player, 1);
+    return 1;
 }
 
 // MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
