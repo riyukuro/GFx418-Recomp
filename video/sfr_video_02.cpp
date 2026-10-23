@@ -337,6 +337,45 @@ void FUN_140011120(void** parray, UInt32 value)
     }
 }
 
+// MS2-FUNCTIONAL: appends one byte with the executable's growth thresholds and reserve call.
+// @0x140010f60
+void FUN_140010f60(unsigned __int64* array, const UByte* value)
+{
+    unsigned __int64 nextSize = array[1] + 1;
+    if (nextSize < array[1])
+    {
+        if ((array[2] >> 1) <= nextSize)
+            FUN_1425eec50(array, array, nextSize);
+    }
+    else if (nextSize >= array[2])
+        FUN_1425eec50(array, array, nextSize + (nextSize >> 2));
+    array[1] = nextSize;
+    UByte* data = reinterpret_cast<UByte*>(array[0]);
+    if (data) data[nextSize - 1] = *value;
+}
+
+// MS2-FUNCTIONAL: resizes the executable's byte array and preserves its observed quarter-growth policy.
+// @0x140010390
+void FUN_140010390(unsigned __int64* array, void* reserveSource, unsigned __int64 newSize)
+{
+    if (newSize < array[1])
+    {
+        if (newSize < (array[2] >> 1))
+        {
+            FUN_1425eec50(array, reserveSource, newSize);
+            array[1] = newSize;
+            return;
+        }
+    }
+    else if (array[2] <= newSize)
+    {
+        FUN_1425eec50(array, reserveSource, newSize + (newSize >> 2));
+        array[1] = newSize;
+        return;
+    }
+    array[1] = newSize;
+}
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
@@ -654,6 +693,7 @@ void** FUN_140012250(void** slot, void* value)
     *slot = value;
     return slot;
 }
+
 
 // MS2-FUNCTIONAL: encloses the object's cached local bounds with the supplied matrix, as observed in the executable.
 // @0x140010200
