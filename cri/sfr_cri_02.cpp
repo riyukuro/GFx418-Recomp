@@ -1099,6 +1099,78 @@ CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frame
     return FUN_1400397a0(easyPlayer, frameInfo, count, unit, userData);
 }
 
+// MS2-FUNCTIONAL: restores CRI's alternating timestamp-error correction using the frame-rate and state fields it stores.
+// @0x1400398a0
+CriSint32 CriMvEasyPlayer::compareFrameTimeFluctuation(CriMvEasyPlayer* easyPlayer,
+    CriMvFrameInfo* frameInfo, CriUint64 count, CriUint64 unit, void*)
+{
+    CriSint32* mode = (CriSint32*)((CriUint8*)easyPlayer + 0x3a8);
+    if (*mode == 0)
+        return 1;
+
+    CriFloat32 base = *(CriFloat32*)((CriUint8*)easyPlayer + (*mode == 1 ? 0x70c : 0x710));
+    CriFloat32 period = *(CriFloat32*)((CriUint8*)easyPlayer + 0x714) *
+                        *(CriFloat32*)((CriUint8*)easyPlayer + 0x718);
+    CriFloat32 center = base + period;
+
+    CriUint64 frameCount = *(CriUint64*)((CriUint8*)frameInfo + 0x28);
+    CriUint64 frameUnit = *(CriUint64*)((CriUint8*)frameInfo + 0x30);
+    CriUint64 frameCycle = frameUnit * 600;
+    CriUint64 systemCycle = unit * 600;
+    CriUint64 frameQuotient = frameCount / frameCycle;
+    CriUint64 systemQuotient = count / systemCycle;
+    CriUint64 adjustedCount = count;
+    if (frameQuotient > 1 && systemQuotient > 1)
+    {
+        CriUint64 cycles = (frameQuotient < systemQuotient ? frameQuotient : systemQuotient) - 1;
+        frameCount -= frameCycle * cycles;
+        adjustedCount -= systemCycle * cycles;
+    }
+
+    CriFloat32 frameCountFloat = (CriFloat32)(CriSint64)frameCount;
+    CriFloat32 frameUnitFloat = (CriFloat32)(CriSint64)frameUnit;
+    CriFloat32 systemCountFloat = (CriFloat32)(CriSint64)adjustedCount;
+    CriFloat32 systemUnitFloat = (CriFloat32)(CriSint64)unit;
+    if ((CriSint64)frameCount < 0) frameCountFloat += 18446744073709551616.0f;
+    if ((CriSint64)frameUnit < 0) frameUnitFloat += 18446744073709551616.0f;
+    if ((CriSint64)adjustedCount < 0) systemCountFloat += 18446744073709551616.0f;
+    if ((CriSint64)unit < 0) systemUnitFloat += 18446744073709551616.0f;
+    CriFloat32 frameTime = frameCountFloat * 1000.0f / frameUnitFloat;
+    CriFloat32 systemTime = systemCountFloat * 1000.0f / systemUnitFloat;
+    CriFloat32 delta = systemTime - frameTime;
+    CriSint32* phase = (CriSint32*)((CriUint8*)easyPlayer + 0x708);
+    if (*phase == 1)
+    {
+        CriFloat32 corrected = systemTime - period - frameTime;
+        if (corrected >= 0.0f && corrected < period)
+        {
+            *phase = 2;
+            return 1;
+        }
+        return 0;
+    }
+    if (*phase == 2)
+    {
+        CriFloat32 corrected = systemTime + center - frameTime;
+        if (corrected < 0.0f)
+        {
+            if (-period < corrected)
+                *phase = 1;
+            return 0;
+        }
+        return 1;
+    }
+    if (delta < 0.0f)
+    {
+        if (period < delta)
+            *phase = 1;
+        return 0;
+    }
+    if (delta < center)
+        *phase = 2;
+    return 1;
+}
+
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this helper is rebuilt with our VS2017 toolset.
 // @0x1400351c0
 void crimvply_clearAlphaFrameInfoMembers(void* info)
