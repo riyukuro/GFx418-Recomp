@@ -319,7 +319,8 @@ struct CriMovieStreamSlotView
     CriSint32 PendingPrimary;
     CriSint32 PendingSubtitle;
     CriSint32 PendingAlpha;
-    CriUint8 Tail[0x2E0 - 0x2D8];
+    CriSint32 PendingAuxiliary;
+    CriUint64 NextDataOffset;
 };
 
 union CriMovieStreamSlotsView
@@ -3661,6 +3662,31 @@ CriBool FUN_140033ff0(void* player, const void* leftValue, const void* rightValu
         }
     }
     return 1;
+}
+
+// MS2-FUNCTIONAL: finish a stream slot once all its metadata records have arrived and rotate buffers.
+// @0x140033e60
+void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
+{
+    struct RotationGateView { CriUint8 Reserved[0xb28]; CriSint32 BufferCount; };
+    struct StreamCounterView { CriUint8 Reserved[0x5ec]; CriUint32 Count; };
+    CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
+    if (slot->PendingPrimary != 0 || slot->PendingSubtitle != 0 ||
+        slot->PendingAlpha != 0 || slot->PendingAuxiliary != 0)
+        return;
+    if (((RotationGateView*)player)->BufferCount >= 0 && slot->Reserved2C4 != 0)
+        return;
+
+    CriUint16 nextIndex = (CriUint16)((state->Selector.Current + 1) & 1);
+    CriMovieStreamSlotView* next = &state->Ring.Slots[nextIndex];
+    CriUint32 dataSize = *(CriUint32*)((CriUint8*)next->PrimaryOutput + 0x44);
+    next->NextDataOffset += dataSize;
+    CriMvPlyHeaderAnalysisFields* header = (CriMvPlyHeaderAnalysisFields*)player;
+    if (!FUN_140033ff0(player, header->AnalyzedHeader, slot))
+        FUN_140037950(player, "E07092101M: Entered movie file contains invalid stream info.", 0);
+    slot->Active = 0;
+    state->Selector.Current = nextIndex;
+    ++((StreamCounterView*)player)->Count;
 }
 
 // MS2-FUNCTIONAL: discard handled command chunks while returning ordinary input records to the stream.
