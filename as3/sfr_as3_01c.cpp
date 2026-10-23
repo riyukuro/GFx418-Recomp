@@ -1937,6 +1937,21 @@ using NamespaceInstanceSetBase = HashSetBase<Instances::Namespace*, NamespaceIns
     HashsetEntry<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHashFunc>>;
 }}}
 namespace Scaleform {
+using AS3TraitsPtr = GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>;
+using AS3TraitsPtrArrayData = ArrayDataBase<AS3TraitsPtr, AllocatorLH<AS3TraitsPtr, Stat_Default_Mem>, ArrayDefaultPolicy>;
+// @0x1423f07a0
+template AS3TraitsPtrArrayData::~ArrayDataBase();
+
+using AS3XMLPtr = GFx::AS3::SPtr<GFx::AS3::Instances::fl::XML>;
+using AS3XMLPtrArrayData = ArrayDataBase<AS3XMLPtr, AllocatorDH<AS3XMLPtr, Stat_Default_Mem>, ArrayDefaultPolicy>;
+// @0x1423f0820
+template AS3XMLPtrArrayData::~ArrayDataBase();
+
+using AS3ValueArrayData = ArrayDataBase<GFx::AS3::Value,
+    AllocatorLH<GFx::AS3::Value, Stat_Default_Mem>, ArrayDefaultPolicy>;
+// @0x1423f0a20
+template AS3ValueArrayData::~ArrayDataBase();
+
 template void GFx::AS3::NamespaceInstanceSetBase::Add<GFx::AS3::Instances::Namespace*>(
     void*, GFx::AS3::Instances::Namespace* const&);
 
