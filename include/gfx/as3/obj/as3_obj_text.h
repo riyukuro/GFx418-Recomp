@@ -45,6 +45,9 @@ public:
     virtual const Render::Text::Style* GetStyle(KeyType type, const char* name, UPInt len = SF_MAX_UPINT) const;   // 0x142609d30
     virtual const Render::Text::Style* GetStyle(KeyType type, const wchar_t* name, UPInt len = SF_MAX_UPINT) const; // 0x142609dc0
 
+    void ClearStyle(KeyType type, const char* name, UPInt len = SF_MAX_UPINT);              // 0x1426095a0
+    bool ParseCSS(const char* buffer, UPInt len);                                           // 0x14260b7f0
+
 private:
     // The styles by key (a HashUncachedLH): only its table pointer.
     struct StyleHash

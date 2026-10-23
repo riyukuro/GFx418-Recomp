@@ -1941,6 +1941,74 @@ namespace Instances { namespace fl_text
             *(UInt32*)((UByte*)this + 0x78) = 3;
     }
 
+    // Writes the dynamic properties of a style object as CSS declarations: "name:value;" each, with the
+    // camel-cased TextFormat names spelled the CSS way.
+    // MS2-FUNCTIONAL: register allocation and loop shape differ (the exe keeps the slot index in edi across the property reads)
+    // @0x1424ae370
+    void AppendCSSDeclarations(String& css, AS3::Object* pstyle)
+    {
+        for (GlobalSlotIndex ind = pstyle->GetNextDynPropIndex(GlobalSlotIndex(0)); ind.IsValid();
+             ind = pstyle->GetNextDynPropIndex(ind))
+        {
+            Value name, value;
+            pstyle->GetNextPropertyName(name, ind);
+            pstyle->GetNextPropertyValue(value, ind);
+            if (!name.IsString())
+                continue;
+
+            ASString    nameStr = name.AsString();
+            const char* pname   = nameStr.ToCStr();
+            const char* pcss;
+            if (!strcmp(pname, "fontFamily"))           pcss = "font-family";
+            else if (!strcmp(pname, "fontSize"))        pcss = "font-size";
+            else if (!strcmp(pname, "fontStyle"))       pcss = "font-style";
+            else if (!strcmp(pname, "fontWeight"))      pcss = "font-weight";
+            else if (!strcmp(pname, "letterSpacing"))   pcss = "letter-spacing";
+            else if (!strcmp(pname, "marginLeft"))      pcss = "margin-left";
+            else if (!strcmp(pname, "marginRight"))     pcss = "margin-right";
+            else if (!strcmp(pname, "textAlign"))       pcss = "text-align";
+            else if (!strcmp(pname, "textDecoration"))  pcss = "text-decoration";
+            else if (!strcmp(pname, "textIndent"))      pcss = "text-indent";
+            else                                        pcss = pname;
+            css.AppendString(pcss);
+            css.AppendString(":");
+            StringBuffer buf;
+            value.Convert2String(buf);
+            css.AppendString(buf.ToCStr());
+            css.AppendString(";");
+        }
+    }
+
+    // A null style object removes the style; otherwise the object is written out as a CSS rule and parsed in.
+    // MS2-FUNCTIONAL: the exe tail-calls ClearStyle on two paths (ours selects the key type with sete); register allocation differs
+    // @0x1424b43a0
+    void StyleSheet::setStyle(const Value& result, const ASString& styleName, const Value& styleObject)
+    {
+        SF_UNUSED(result);
+        if (styleName.IsEmpty())
+            return;
+        if (styleObject.IsObject() && !styleObject.GetObject())
+        {
+            if (!styleName.IsEmpty())
+            {
+                const char* pname = styleName.ToCStr();
+                if (pname[0] == '.')
+                    CSS.ClearStyle(Text::StyleManager::CSS_Class, pname);
+                else
+                    CSS.ClearStyle(Text::StyleManager::CSS_Tag, pname);
+            }
+            return;
+        }
+        if (!styleObject.IsObject())
+            return;
+        String css;
+        css.AppendString(styleName.ToCStr());
+        css.AppendChar('{');
+        AppendCSSDeclarations(css, styleObject.GetObject());
+        css.AppendChar('}');
+        CSS.ParseCSS(css.ToCStr(), css.GetSize());
+    }
+
     // @0x1424b4bf0
     void TextFormat::tabStopsSet(const Value& result, Instances::fl::Array* value)
     {
