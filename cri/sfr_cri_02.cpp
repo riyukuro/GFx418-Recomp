@@ -155,6 +155,7 @@ void     FUN_140042e40(void* manager, CriSint32 stream, void* player, CriUint32 
 void     FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 format,
                        void* output, CriUint32 sampleCount, void* result);
 void*    FUN_140043f10(void* decoder, void* frameInfo);
+void*    FUN_140043fe0(void* decoder, void* frameInfo);
 void     FUN_140044e84(void);
 void     FUN_140039fc8(void);
 void     FUN_14003a010(void);
@@ -3915,6 +3916,26 @@ CriBool FUN_140035e90(void* player, void* frameInfo, void* reserved1, void* rese
     if (!decoder)
         return 0;
     return FUN_140043f10(decoder, frameInfo) != NULL;
+}
+
+// MS2-FUNCTIONAL: advance the alpha decoder to the requested frame, releasing frames skipped en route.
+// @0x140035db0
+CriBool FUN_140035db0(void* player, CriSint32 targetFrame, void* frameInfo, void* reserved)
+{
+    if (!FUN_140035e90(player, frameInfo, frameInfo, reserved))
+        return 0;
+    void* decoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
+    for (;;)
+    {
+        CriSint32 currentFrame = *(CriSint32*)((CriUint8*)frameInfo + 8);
+        if (targetFrame <= currentFrame)
+            return 1;
+        if (!FUN_140043fe0(decoder, frameInfo))
+            return 0;
+        FUN_140044050(decoder, frameInfo);
+        if (currentFrame + 1 == targetFrame)
+            return FUN_140043f10(decoder, frameInfo) != NULL;
+    }
 }
 
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
