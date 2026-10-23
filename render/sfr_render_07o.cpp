@@ -1512,6 +1512,62 @@ float TextMeshProvider::snapY(const GlyphRunData& data) const
     return y;
 }
 
+// Sorts the collected entries (by kind, then fill), groups them into layers and moves both into the provider's
+// arrays; the fills move with their reference.
+// @0x1426e8be0
+void TextMeshProvider::sortEntries(TmpTextStorage& storage)
+{
+    storage.Layers.Clear();
+
+    CmpEntries cmp(pCache);
+    ArrayPaged<TmpTextMeshEntry, 6, 4>& arr = storage.Entries;
+    Alg::QuickSortSliced(arr, 0, arr.GetSize(), cmp);
+
+    UPInt start = 0;
+    UPInt end   = 0;
+    for (; end < storage.Entries.GetSize(); ++end)
+    {
+        if (storage.Entries[start].LayerType != storage.Entries[end].LayerType ||
+            storage.Entries[start].pFill != storage.Entries[end].pFill)
+        {
+            if (end > start)
+            {
+                addLayer(storage, start, end);
+                start = end;
+            }
+        }
+    }
+    if (end > start)
+        addLayer(storage, start, end);
+
+    Entries.Resize(storage.Entries.GetSize());
+    Layers.Resize(storage.Layers.GetSize());
+    UPInt i;
+    for (i = 0; i < storage.Entries.GetSize(); ++i)
+    {
+        const TmpTextMeshEntry& e1 = storage.Entries[i];
+        TextMeshEntry&          e2 = Entries[i];
+        e2.LayerType = e1.LayerType;
+        e2.TextureId = e1.TextureId;
+        e2.mColor    = e1.mColor;
+        e2.pFill     = *e1.pFill;
+        e2.EntryData = e1.EntryData;
+    }
+
+    for (i = 0; i < storage.Layers.GetSize(); ++i)
+    {
+        const TmpTextMeshLayer& l1 = storage.Layers[i];
+        TextMeshLayer&          l2 = Layers[i];
+        l2.Type      = l1.Type;
+        l2.Start     = l1.Start;
+        l2.Count     = l1.Count;
+        l2.pMesh     = 0;
+        l2.M         = HMatrix();
+        l2.pFill     = l1.pFill;
+        l2.SizeScale = 1;
+    }
+}
+
 }} // namespace Scaleform::Render
 
 namespace Scaleform {
