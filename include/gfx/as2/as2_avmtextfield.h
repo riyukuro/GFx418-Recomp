@@ -53,6 +53,18 @@ public:
     static void SetNewTextFormat(const FnCall& fn);        // exe 0x142909590
     static void GetTextFormat(const FnCall& fn);           // exe 0x1429096e0
     static void GetNewTextFormat(const FnCall& fn);        // exe 0x1429099d0
+    static void SetImageSubstitutions(const FnCall& fn);   // exe 0x14290b2c0
+
+    // The script side of a text field; AvmCharacter sits at the start of its AVM object.
+    static AvmTextField* FromCharacter(InteractiveObject* pch)
+    {
+        return static_cast<AvmTextField*>(
+            static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pch->GetAvmObjImpl())));
+    }
+
+private:
+    // Applies one substitution object (the idx-th of the call's argument) to the field (exe 0x14296f870, sfr_as2_06).
+    void ProceedImageSubstitution(const FnCall& fn, int idx, const Value* pve);
 };
 
 }}} // namespace Scaleform::GFx::AS2

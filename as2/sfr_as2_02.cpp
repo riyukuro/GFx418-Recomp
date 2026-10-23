@@ -57,6 +57,7 @@
 // MS2-RANGE: 0x142909590-0x1429096d1 .text$mn
 // MS2-RANGE: 0x1429096e0-0x1429099ca .text$mn
 // MS2-RANGE: 0x1429099d0-0x142909af3 .text$mn
+// MS2-RANGE: 0x14290b2c0-0x14290b4b7 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -141,6 +142,11 @@ void     FUN_1425990d0(void* pst, Scaleform::Render::Text::TextFormat* ptextFmt,
                        unsigned long long startPos, unsigned long long endPos);            // StyledText::GetTextAndParagraphFormat
 void     FUN_14259c250(void* pst, const Scaleform::Render::Text::TextFormat& fmt);                     // StyledText::SetDefaultTextFormat
 void     FUN_14259c170(void* pst, const Scaleform::Render::Text::ParagraphFormat& fmt);                // StyledText::SetDefaultParagraphFormat
+void     FUN_1425b7220(void* ptf);                                                          // TextField::ClearIdImageDescAssoc
+void     FUN_1424c7090(void* psubst);                                                       // ImageSubstitutor element array dtor
+inline void* DocView_GetImageSubstitutor(void* pdoc) { return *(void**)((char*)pdoc + 0x30); }
+inline void  DocView_SetImageSubstitutor(void* pdoc, void* psubst) { *(void**)((char*)pdoc + 0x30) = psubst; }
+inline void  DocView_SetReformatReq(void* pdoc) { *((unsigned char*)pdoc + 0x14b) |= 2; }
 
 namespace Scaleform {
 // DocView::LineMetrics, in twips.
@@ -3017,6 +3023,52 @@ void AvmTextField::GetNewTextFormat(const FnCall& fn)
     if (pparaFmt)
         pfmtObj->SetParagraphFormat(fn.Env->GetSC(), *pparaFmt);
     fn.Result->SetAsObject(pfmtObj);
+}
+
+// setImageSubstitutions(null | substitution object | array of them); null drops every substitution.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
+// @0x14290b2c0
+void AvmTextField::SetImageSubstitutions(const FnCall& fn)
+{
+    fn.Result->SetBool(false);
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
+    if (fn.Arg(0).IsNull())
+    {
+        FUN_1425b7220(ptf);
+        void* pdoc   = ptf->GetDocument();
+        void* psubst = DocView_GetImageSubstitutor(pdoc);
+        if (psubst)
+        {
+            FUN_1424c7090(psubst);
+            SF_FREE(psubst);
+        }
+        DocView_SetImageSubstitutor(pdoc, 0);
+        DocView_SetReformatReq(ptf->GetDocument());
+        ptf->SetDirtyFlag();
+        return;
+    }
+    // The field as a character (TextField is opaque here).
+    InteractiveObject* pch  = reinterpret_cast<InteractiveObject*>(ptf);
+    Object*            pobj = fn.Arg(0).ToObject(fn.Env);
+    if (!pobj)
+    {
+        pch->LogScriptWarning("%s.setImageSubstitutions() failed: parameter should be either 'null', object or array",
+                              pch->GetName().ToCStr());
+        return;
+    }
+    AvmTextField* pavmTf = FromCharacter(pch);
+    if (pobj->GetObjectType() == Object_Array)
+    {
+        ArrayObject* parr = static_cast<ArrayObject*>(pobj);
+        for (int i = 0, n = parr->GetSize(); i < n; ++i)
+            pavmTf->ProceedImageSubstitution(fn, i, parr->GetElementPtr(i));
+    }
+    else
+        pavmTf->ProceedImageSubstitution(fn, 0, &fn.Arg(0));
 }
 }}} // namespace Scaleform::GFx::AS2
 
