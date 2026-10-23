@@ -24,6 +24,7 @@ extern void FUN_1425925f0(void*);
 extern void FUN_14000a5d0(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a230(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a420(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
+extern void FUN_14000a730(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*, int);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
 
@@ -1908,6 +1909,76 @@ void FUN_14000e1a0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     if (operation == 0) FUN_14000dc30(object, collector);
     else if (operation == 1) FUN_14000d870(object, collector);
     else if (operation == 2) FUN_14000d9c0(object, collector);
+}
+
+// MS2-FUNCTIONAL: dispatches release, mark, and scan passes for the AS2 video object.
+// @0x140007f70
+void FUN_140007f70(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
+                   int operation)
+{
+    FUN_14000a730(object, collector, operation);
+}
+
+// MS2-FUNCTIONAL: releases one retained AS2 reference in the slot.
+// @0x14000dd50
+void FUN_14000dd50(void** slot) { ReleaseAs2GCObject(*slot); }
+
+// MS2-FUNCTIONAL: releases an old AS2 reference and stores the replacement.
+// @0x14000dd80
+void** FUN_14000dd80(void** slot, void* replacement)
+{
+    ReleaseAs2GCObject(*slot);
+    *slot = replacement;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: dispatches release, mark, and scan passes for the AS2 video object.
+// @0x14000ddd0
+void FUN_14000ddd0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
+                   int operation)
+{
+    FUN_14000e1a0(object, collector, operation);
+}
+
+// MS2-FUNCTIONAL: destroys the Video object and optionally frees its allocation.
+// @0x14000de80
+void* FUN_14000de80(Scaleform::GFx::AS2::Object* object, unsigned flags)
+{
+    auto** proxy = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
+    if (*proxy) FUN_14257dcd0(*proxy);
+    object->~Object();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroys the video prototype and AS2 Object base, optionally releasing storage.
+// @0x14000d940
+void* FUN_14000d940(Scaleform::GFx::AS2::Object* object, unsigned flags)
+{
+    FUN_14000d680(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: sends the executable's fixed video event payload through the receiver vtable.
+// @0x14000e390
+void FUN_14000e390(void* receiver)
+{
+    struct EventPayload { unsigned type, a, b; unsigned char c, d, e, f; } payload = { 1, 0, 0, 0, 0, 0xff, 0 };
+    reinterpret_cast<void (*)(void*, const EventPayload*)>((*reinterpret_cast<void***>(receiver))[8])(
+        receiver, &payload);
+}
+
+// MS2-FUNCTIONAL: forwards the character's event through the containing video object.
+// @0x14000e410
+void FUN_14000e410(void** subobject, void* a, void* b, void* c, void* d)
+{
+    void* object = subobject - 1;
+    auto** baseVtable = *reinterpret_cast<void***>(object);
+    void* character = reinterpret_cast<void* (*)(void*)>(baseVtable[31])(object);
+    reinterpret_cast<void (*)(void*, void*, void*, void*, void*)>(
+        (*reinterpret_cast<void***>(*subobject))[3])(subobject, character, b, c, d);
+    (void)a;
 }
 
 // MS2-FUNCTIONAL: dispatches the video prototype's release, cycle-mark, and scan collector passes.
