@@ -39,6 +39,7 @@
 // MS2-RANGE: 0x142906040-0x14290632c .text$mn
 // MS2-RANGE: 0x1429049b0-0x142905183 .text$mn
 // MS2-RANGE: 0x142901410-0x142901a70 .text$mn
+// MS2-RANGE: 0x142905190-0x1429055e9 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -2300,6 +2301,62 @@ void SharedObjectCtorFunction::GetLocal(const FnCall& fn)
     }
     else
         fn.Result->SetNull();
+}
+
+// attachBitmap(bitmapData, depth[, pixelSnapping, smoothing]): a new sprite showing the image at the depth.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line for depth and smoothing
+// @0x142905190
+void AvmSprite::SpriteAttachBitmap(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 2 || psprite->GetVersion() < 8)
+        return;
+
+    Ptr<Object> pobj = fn.Arg(0).ToObject(fn.Env);
+    if (!pobj || pobj->GetObjectType() != Object_BitmapData)
+    {
+        psprite->LogScriptWarning("%s.attachBitmap() failed - the argument is not a BitmapData.",
+                                  psprite->GetName().ToCStr());
+        return;
+    }
+    BitmapData*    pbmpData = static_cast<BitmapData*>(pobj.GetPtr());
+    ImageResource* pimage   = pbmpData->pImageRes;
+    if (!pimage)
+    {
+        psprite->LogScriptWarning("%s.attachBitmap() failed - no image set in BitmapData.",
+                                  psprite->GetName().ToCStr());
+        return;
+    }
+
+    int         depth = int(fn.Arg(1).ToNumber(fn.Env)) + 0x4000;
+    CharPosInfo pos(ResourceId(1), depth, true, Cxform::Identity, true, Matrix2F::Identity);
+    if ((unsigned)depth > 0x7efffffd)
+    {
+        psprite->LogScriptWarning("%s.attachBitmap() failed - depth (%d) must be >= 0",
+                                  psprite->GetName().ToCStr(), pos.Depth);
+        return;
+    }
+
+    bool       smoothing = (fn.NArgs >= 4) ? fn.Arg(3).ToBool(fn.Env) : false;
+    MovieImpl* proot     = fn.Env->GetTarget()->GetMovieImpl();
+    MovieRoot* pasRoot   = static_cast<MovieRoot*>(proot->pASMovieRoot);
+    Ptr<MovieDefImpl> pimgDef = *proot->CreateImageMovieDef(pimage, smoothing, "");
+    if (!pimgDef)
+        return;
+    pimgDef->GetDataDef()->pData->SetExtMovieDef(pbmpData->pMovieDef);
+
+    Ptr<Sprite> pnewCh = *pasRoot->CreateSprite(pimgDef->GetDataDef(), pimgDef, psprite, ResourceId(0x10001), true);
+    if (pnewCh)
+    {
+        CharPosInfo pos2(ResourceId(1), 1, false, Cxform(), true, Matrix2F());
+        ASString    emptyName(fn.Env->GetBuiltin(ASBuiltin_empty_));
+        pnewCh->AddToPlayList();
+        pnewCh->ModifyOptimizedPlayList();
+        pnewCh->AddDisplayObject(pos2, emptyName, 0, 0, 1, 0, 0, 0);
+        psprite->ReplaceDisplayObject(pos, pnewCh, emptyName);
+        psprite->SetAcceptAnimMoves(false);
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 

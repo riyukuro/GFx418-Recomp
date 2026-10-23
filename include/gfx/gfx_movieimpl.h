@@ -22,6 +22,7 @@ class DrawingContext;
 class DisplayObjContainer;
 class MovieDefImpl;
 class ImageResource;
+class LoadStates;
 class FontManager;
 class ASString;
 struct ASStringNode;
@@ -347,6 +348,10 @@ public:
     // (appended for the AS3 IMEEx, sfr19) the IME candidate list style, copied out / in by value.
     void GetIMECandidateListStyle(IMECandidateListStyle* pst) const;   // exe 0x14256f310
     void SetIMECandidateListStyle(const IMECandidateListStyle& st);    // exe 0x142575c30
+    // (appended for sfr_as2_02) a movie definition holding just the image, for attachBitmap; returns an added
+    // reference.
+    MovieDefImpl* CreateImageMovieDef(ImageResource* pimageRes, bool bilinear, const char* purl,
+                                      LoadStates* pls = 0);   // exe 0x14256e4d0
 
     // (appended for sfr_as2_04) the wide copy of a string handed to the host as a VT_StringW value; it keeps
     // the string node. 0x20 bytes with the first character; the ctor and dtor are defined where used.

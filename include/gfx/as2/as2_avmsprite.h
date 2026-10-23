@@ -142,6 +142,7 @@ public:
     // (appended for sfr_as2_02)
     static void SpriteCreateTextField(const FnCall& fn); // exe 0x142906040
     static void SpriteHitTest(const FnCall& fn); // exe 0x1429049b0
+    static void SpriteAttachBitmap(const FnCall& fn); // exe 0x142905190
 };
 
 inline Sprite* ObjectInterface::ToSprite()

@@ -342,6 +342,9 @@ public:
     virtual bool GetVariable(GFx::Value* pval, const char* ppathToVar) const;
     // The length of the Array a variable path from _level0 names, 0 otherwise (exe 0x1429579a0).
     virtual unsigned GetVariableArraySize(const char* ppathToVar);
+    // (appended for sfr_as2_02) a new sprite of the timeline, with an added reference (exe 0x142937cf0).
+    Sprite* CreateSprite(TimelineDef* ptimelineDef, MovieDefImpl* pdefImpl, InteractiveObject* parent,
+                         ResourceId id, bool loadedSeparately = false);
 };
 
 // The AS2 root of a character of an AS2 movie.
