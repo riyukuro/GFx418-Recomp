@@ -58,3 +58,30 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 
 // MS2-PIN: ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z 0x1423c8ce0
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
+
+namespace Scaleform { namespace GFx { namespace IME {
+
+// @0x1423ca640
+void FUN_1423ca640(void* self, unsigned value)
+{
+    *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x84) = value;
+    void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x70);
+    void** vtable = *reinterpret_cast<void***>(child);
+    reinterpret_cast<void(*)(void*)>(vtable[17])(child);
+}
+
+// @0x1423ca660
+void FUN_1423ca660(void* self, unsigned value)
+{
+    unsigned char* bytes = static_cast<unsigned char*>(self);
+    *reinterpret_cast<unsigned*>(bytes + 0xc0) = value;
+    *reinterpret_cast<unsigned*>(*reinterpret_cast<unsigned char**>(bytes + 0x70) + 0x9c) = value;
+}
+
+// @0x1423d94f0
+void FUN_1423d94f0(void* self, void* value)
+{
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8) = value;
+}
+
+}}}
