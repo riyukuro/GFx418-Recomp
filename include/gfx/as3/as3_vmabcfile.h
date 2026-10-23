@@ -10,11 +10,16 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// A set of namespaces a multiname is qualified with. 0x38 bytes, vftable 0x14317b058; members not modeled.
+// A set of namespaces a multiname is qualified with. 0x38 bytes, vftable 0x14317b058.
 class NamespaceSet : public GASRefCountBase
 {
 private:
     NamespaceSet();
+public:
+    // (appended, sfr19)
+    const ArrayLH<SPtr<Instances::Namespace> >& GetNamespaces() const { return Namespaces; }
+private:
+    ArrayLH<SPtr<Instances::Namespace> >    Namespaces;     // +0x20
 };
 
 class VMAbcFile : public GASRefCountBase

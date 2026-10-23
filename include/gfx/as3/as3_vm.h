@@ -209,6 +209,14 @@ public:
     Instances::Namespace& GetInternedNamespace(Abc::NamespaceKind kind, const char* uri) const;
 
     Instances::Namespace& GetPublicNamespace() const    { return *PublicNamespace; }
+    // (appended, sfr19) the default xml namespace of the running call frame (frames are 0xa8 bytes, 64 to a
+    // page; the call stack's size is Unk070[1], its page table Unk070[4]).
+    Instances::Namespace* GetDefXMLNamespace() const
+    {
+        const UPInt i = Unk070[1] - 1;
+        return *reinterpret_cast<Instances::Namespace* const*>(
+            reinterpret_cast<const char* const*>(Unk070[4])[i >> 6] + (i & 0x3f) * 0xa8 + 0x58);
+    }
     Instances::Namespace& GetAS3Namespace() const       { return *AS3Namespace; }
     Instances::Namespace& GetVectorNamespace() const    { return *VectorNamespace; }
 

@@ -200,6 +200,9 @@ namespace Instances { namespace fl {
         // @0x142416800
         virtual CheckResult GetProperty(const Multiname& prop_name, Value& value);
 
+        // (appended, sfr19) this node is named by prop_name (E4X name and namespace matching). 0x14241ca70
+        bool Matches(const Multiname& prop_name) const;
+
     public:
         ASString    Text;       // +0x38 the name of an element/attribute/PI, the content of a text/comment
         SPtr<XML>   Parent;     // +0x40

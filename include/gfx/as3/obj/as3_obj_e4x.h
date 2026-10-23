@@ -160,6 +160,30 @@ namespace Instances { namespace fl {
         // v itself if it is an XML, the single item if it is a one-item XMLList, else NULL. 0x142425c90
         XML* ToXML(const Value& v) const;
 
+        // (appended, sfr19) a visitor of the attributes or children ForEachAttr/ForEachChild select.
+        // vftable 0x143142f90 (slot 1 pure).
+        class CallBack
+        {
+        public:
+            CallBack(XMLElement& el) : Element(el) {}
+            // ??_G 0x1423f2540
+            virtual ~CallBack() {}
+            // ind indexes Attrs or Children; false stops the walk.
+            virtual bool Call(UPInt ind) = 0;
+
+        protected:
+            XMLElement&     Element;        // +0x08
+
+        private:
+            CallBack& operator=(const CallBack&);
+        };
+
+        // (appended, sfr19) cb for each attribute prop_name matches (none unless the name is a string); the
+        // number visited. 0x14240b630
+        UInt32 ForEachAttr(const Multiname& prop_name, CallBack& cb);
+        // (appended, sfr19) the same over the children. 0x14240b6d0
+        UInt32 ForEachChild(const Multiname& prop_name, CallBack& cb);
+
     public:
         SPtr<Instances::Namespace>      Ns;             // +0x48
         NamespaceArray                  Namespaces;     // +0x50 declared on this element
@@ -231,6 +255,68 @@ namespace Instances { namespace fl {
         virtual Boolean3 EqualsInternal(const XML& other);
         // @0x1424088b0
         virtual Pickable<XML> DeepCopy(XML* parent);
+    };
+
+    // (appended, sfr19) the XMLElement::CallBack visitors (vftables 0x1431439b8-0x1431439f8; the ??_G bodies
+    // sit with the ctors in sfr_as3_01c, the Call bodies in sfr_as3_03).
+
+    // Counts only. vftable 0x1431439b8, ??_G 0x1423f2c50
+    class EmptyCallBack : public XMLElement::CallBack
+    {
+    public:
+        EmptyCallBack(XMLElement& el) : XMLElement::CallBack(el) {}
+        // 0x142405770 (one body with ThunkDefault<bool>::Get)
+        virtual bool Call(UPInt ind) { SF_UNUSED(ind); return true; }
+    };
+
+    // The first matching attribute. vftable 0x1431439c8, ??_G 0x1423f2380
+    class AttrGetFirst : public XMLElement::CallBack
+    {
+    public:
+        AttrGetFirst(XMLElement& el) : XMLElement::CallBack(el) {}
+        // @0x142405590
+        virtual bool Call(UPInt ind);
+
+    public:
+        SPtr<XML>   Result;     // +0x10
+    };
+
+    // The first matching child. vftable 0x1431439d8, ??_G 0x1423f27e0
+    class ChildGetFirst : public XMLElement::CallBack
+    {
+    public:
+        ChildGetFirst(XMLElement& el) : XMLElement::CallBack(el) {}
+        // @0x142405640
+        virtual bool Call(UPInt ind);
+
+    public:
+        SPtr<XML>   Result;     // +0x10
+    };
+
+    // Appends the matching children to List. vftable 0x1431439e8, ??_G 0x1423f27b0
+    class ChildGet : public XMLElement::CallBack
+    {
+    public:
+        ChildGet(XMLElement& el, XMLList& list) : XMLElement::CallBack(el), List(list) {}
+        // @0x1424055e0
+        virtual bool Call(UPInt ind);
+
+    private:
+        XMLList&    List;       // +0x10
+        ChildGet& operator=(const ChildGet&);
+    };
+
+    // Appends the matching attributes to List. vftable 0x1431439f8, ??_G 0x1423f2350
+    class AttrGet : public XMLElement::CallBack
+    {
+    public:
+        AttrGet(XMLElement& el, XMLList& list) : XMLElement::CallBack(el), List(list) {}
+        // @0x142405500
+        virtual bool Call(UPInt ind);
+
+    private:
+        XMLList&    List;       // +0x10
+        AttrGet& operator=(const AttrGet&);
     };
 
 }} // namespace Instances::fl

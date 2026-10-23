@@ -880,6 +880,16 @@ public:
     bool ContainsNamespace(const Instances::Namespace& ns) const;
     // (appended, sfr19) turns a numeric or "@"-prefixed name into its canonical form (0x14251cef0).
     void PostProcessName(bool isAttr);
+    // (appended, sfr19) a single namespace (possibly run-time), not a namespace set
+    bool IsQName() const        { const UInt32 bits = static_cast<UInt32>(Kind) & 3; return bits == 0 || bits == 1; }
+    // (appended, sfr19) an attribute name (@x)
+    bool IsAttr() const         { return ((static_cast<UInt32>(Kind) >> 3) & 1) != 0; }
+    // (appended, sfr19) qualified with no namespace (*::x)
+    bool IsAnyNamespace() const { return IsQName() && Obj.GetPtr() == NULL; }
+    // (appended, sfr19) the name is null, undefined or empty (x::*). 0x1424198d0
+    bool IsAnyType() const;
+    // (appended, sfr19) the namespace of a qualified name. 0x14250bce0
+    Instances::Namespace& GetNamespace() const;
 
     Abc::MultinameKind      Kind;   // +0x00
     SPtr<GASRefCountBase>   Obj;    // +0x08 namespace or namespace set

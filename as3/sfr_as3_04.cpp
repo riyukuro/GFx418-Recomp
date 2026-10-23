@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1971,8 +1972,87 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances
 }}}} // namespace Scaleform::GFx::AS3::Instances
 
 // ==== E4X nodes ======================================================================================================
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // The E4X wildcard name: null, undefined or the empty string.
+    // @0x1424198d0
+    bool Multiname::IsAnyType() const
+    {
+        return Name.IsNullOrUndefined() || (Name.IsString() && Name.AsString().IsEmpty());
+    }
+}}} // namespace Scaleform::GFx::AS3
+
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
 {
+    // E4X name matching: the local name (or the wildcard), then the namespace. An unqualified element name
+    // means the default xml namespace (the public one when the call frame has none); a namespace set matches
+    // through its public members, an empty URI again standing for the default namespace.
+    // MS2-FUNCTIONAL: register allocation (exe keeps the result in dil and this in r14)
+    // @0x14241ca70
+    bool XML::Matches(const Multiname& prop_name) const
+    {
+        bool result = false;
+        if (prop_name.Name.IsString())
+        {
+        const ASString name = prop_name.Name.AsString();
+        if (GetName() == name || prop_name.IsAnyType())
+        {
+            if (prop_name.IsQName())
+            {
+                if (prop_name.IsAnyNamespace())
+                    result = true;
+                else
+                {
+                    const Instances::Namespace& ns = prop_name.GetNamespace();
+                    VM& vm = GetVM();
+                    Instances::Namespace* def_ns = vm.GetDefXMLNamespace();
+                    if (def_ns == NULL)
+                        def_ns = &vm.GetPublicNamespace();
+                    const ASString& uri = ns.GetKind() == Abc::NS_Public &&
+                                          (prop_name.IsAttr() || !ns.GetUri().IsEmpty()) ? ns.GetUri()
+                                                                                          : def_ns->GetUri();
+                    if (uri == GetNamespace().GetUri())
+                        result = true;
+                }
+            }
+            else if (prop_name.IsAnyType())
+                result = true;
+            else
+            {
+                VM& vm = GetVM();
+                const Instances::Namespace& cur_ns = GetNamespace();
+                Instances::Namespace* def_ns = NULL;
+                if (!prop_name.IsAttr())
+                    def_ns = vm.GetDefXMLNamespace();
+                Instances::Namespace& pub_ns = vm.GetPublicNamespace();
+                if (def_ns == NULL)
+                    def_ns = &pub_ns;
+
+                if (prop_name.ContainsNamespace(pub_ns))
+                {
+                    const ArrayLH<SPtr<Instances::Namespace> >& nss =
+                        static_cast<const NamespaceSet*>(prop_name.Obj.GetPtr())->GetNamespaces();
+                    for (UPInt i = 0; i < nss.GetSize(); ++i)
+                    {
+                        const Instances::Namespace& ns = *nss[i];
+                        if (ns.GetKind() != Abc::NS_Public)
+                            continue;
+                        const ASString& uri = ns.GetUri().IsEmpty() ? def_ns->GetUri() : ns.GetUri();
+                        if (uri == cur_ns.GetUri())
+                        {
+                            result = true;
+                            break;
+                        }
+                    }
+                }
+                else if (def_ns->GetUri() == cur_ns.GetUri())
+                    result = def_ns->GetKind() == cur_ns.GetKind();
+            }
+        }
+        }
+        return result;
+    }
+
     // An XML node enumerates as a one-item list: its only name is "0".
     // MS2-FUNCTIONAL: the exe addresses the empty builtin off the string manager (lea) instead of a copied pointer
     // @0x1424163b0
