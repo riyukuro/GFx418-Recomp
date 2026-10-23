@@ -406,6 +406,11 @@ public:
     UInt16          ButtonEventMask;   // +0x70 button events with a handler set on the clip
     bool            HasButtonHandlers; // +0x72
 
+    // The prototype instance has no sprite.
+    inline MovieClipObject(ASStringContext* psc, Object* pprototype); // defined in sfr_as2_03
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429542a0: Object_MovieClipObject
+
     // The clip or the first movie clip prototype handles button events (exe 0x14292e120).
     bool ActsAsButton() const;
 
@@ -447,6 +452,19 @@ protected:
     void SetMemberCommon(ASStringContext* psc, const ASString& name, const Value& val);
     // Sets (or clears) the mask bit of an on* button handler the clip gains (or loses) (exe 0x142992540).
     void TrackMemberButtonHandler(ASStringContext* psc, const ASString& name, bool deleteFlag = false);
+};
+
+// MovieClip.prototype: the methods and useHandCursor = true.
+class MovieClipProto : public Prototype<MovieClipObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213ef0
+
+    MovieClipProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291eee0
+
+private:
+    // MovieClipObject::SetMemberRaw, inlined (defined in sfr_as2_03).
+    inline bool SetClipMemberRaw(ASStringContext* psc, const ASString& name, const Value& val, const PropFlags& flags);
 };
 class NumberObject : public Object
 {

@@ -12,6 +12,8 @@
 // MS2-RANGE: 0x1429285b0-0x142928620 .text$mn
 // MS2-RANGE: 0x14291adc0-0x14291aee0 .text$mn
 // MS2-RANGE: 0x14291edc0-0x14291eee0 .text$mn
+// MS2-RANGE: 0x14291eee0-0x14291f070 .text$mn
+// MS2-RANGE: 0x142928270-0x142928300 .text$mn
 // MS2-RANGE: 0x142919c00-0x142919d70 .text$mn
 // MS2-RANGE: 0x142927c00-0x142927c90 .text$mn
 // MS2-RANGE: 0x1429281e0-0x142928260 .text$mn
@@ -664,6 +666,32 @@ MovieClipLoaderProto::MovieClipLoaderProto(ASStringContext* psc, Object* pprotot
     : Prototype<MovieClipLoader>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// The mask is cleared after the prototype is set.
+inline MovieClipObject::MovieClipObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+{
+    Set__proto__(psc, pprototype);
+    ButtonEventMask   = 0;
+    HasButtonHandlers = false;
+}
+
+// MovieClipObject::SetMemberRaw, which the exe inlines into the prototype ctor.
+inline bool MovieClipProto::SetClipMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
+                                             const PropFlags& flags)
+{
+    SetMemberCommon(psc, name, val);
+    return Object::SetMemberRaw(psc, name, val, flags);
+}
+
+// MS2-FUNCTIONAL argument scheduling around the inlined SetMemberCommon call (mov rcx,r15 one slot early)
+// @0x14291eee0
+MovieClipProto::MovieClipProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<MovieClipObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+    SetClipMemberRaw(psc, psc->GetBuiltin(ASBuiltin_useHandCursor), Value(true),
+                     PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
 }
 
 // The prototype instance has no image.
@@ -1669,3 +1697,12 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_G?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927fa0
 // MS2-PIN: ??_7LoadVarsObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216ed8
 // MS2-PIN: ??_7LoadVarsObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216f20
+// MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216640
+// MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216688
+// MS2-PIN: ??_7?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216730
+// MS2-PIN: ??_7?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216778
+// MS2-PIN: ??_7?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216820
+// MS2-PIN: ??_7MovieClipProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216828
+// MS2-PIN: ??_7MovieClipProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216870
+// MS2-PIN: ??_7MovieClipProto@AS2@GFx@Scaleform@@6B@ 0x143216918
+// MS2-PIN: ??_G?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928270
