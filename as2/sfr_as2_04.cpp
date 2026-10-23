@@ -51,6 +51,8 @@
 // MS2-RANGE: 0x142934f90-0x1429351fd .text$mn
 // MS2-RANGE: 0x14296e6c0-0x14296e731 .text$mn
 // MS2-RANGE: 0x14291c320-0x14291c3fb .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -1153,9 +1155,9 @@ static SF_FORCEINLINE bool ArraySortGetNumber(const Value* pval, Environment* pe
 // @0x142934a80
 int ArraySortFunctor::Compare(const Value* a, const Value* b) const
 {
-    Value        undefined;
-    const Value* pa = a ? a : &undefined;
-    const Value* pb = b ? b : &undefined;
+    Value        undef;
+    const Value* pa = a ? a : &undef;
+    const Value* pb = b ? b : &undef;
     if (!Func.IsNull())
     {
         // The script function: compare(a, b).
@@ -1220,9 +1222,9 @@ static SF_FORCEINLINE ObjectInterface* ArraySortToObject(const Value* pval, cons
 // @0x142934f90
 int ArraySortOnFunctor::Compare(const Value* a, const Value* b) const
 {
-    const Value      undefined;
-    const Value*     pa  = a ? a : &undefined;
-    const Value*     pb  = b ? b : &undefined;
+    const Value      undef;
+    const Value*     pa  = a ? a : &undef;
+    const Value*     pb  = b ? b : &undef;
     ASStringContext* psc = Env->GetSC();
     // The first field the two objects differ in decides.
     for (unsigned i = 0; i < FunctorArray.GetSize(); i++)
@@ -1601,8 +1603,8 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216640
 // MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216688
 // MS2-PIN: ??_7WideStringStorage@MovieImpl@GFx@Scaleform@@6B@ 0x14317ca48
-// MS2-PIN: ??_7?$RefCountBase@VWideStringStorage@MovieImpl@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14318ccd8
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7?$RefCountBase@VWideStringStorage@MovieImpl@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7SizeVisitor@?1??ComputeSizeInBytes@SharedObject@AS2@GFx@Scaleform@@QEAA_KPEAVEnvironment@345@@Z@6B@ 0x1432227e8
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
 // MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143221ff8
