@@ -121,6 +121,37 @@ void IntervalTimer::Clear()
     Active = false;
     TimerObj = static_cast<Instances::fl_utils::Timer*>(0);
 }
+
+// MS2-FUNCTIONAL 0x1424f0b70: preserves the exe's URI-node identity and namespace-kind test using the recovered
+// NamespaceSet array layout at +0x20/+0x28.
+// @0x1424f0b70
+bool Multiname::ContainsNamespace(const Instances::Namespace& ns) const
+{
+    const ASStringNode* uri = ns.GetUri().GetNode();
+    const UInt8 nsKind = static_cast<UInt8>(ns.GetKind());
+    const UInt32 kind = static_cast<UInt32>(Kind);
+    const GASRefCountBase* object = Obj.GetPtr();
+    if ((kind & 3) != 2)
+    {
+        const Instances::Namespace* candidate = static_cast<const Instances::Namespace*>(object);
+        return candidate && candidate->GetUri().GetNode() == uri &&
+               ((static_cast<UInt8>(candidate->GetKind()) ^ nsKind) & 0x0f) == 0;
+    }
+    if (!object)
+        return false;
+
+    const char* bytes = reinterpret_cast<const char*>(object);
+    const auto* entries = *reinterpret_cast<SPtr<Instances::Namespace> const* const*>(bytes + 0x20);
+    const UPInt count = *reinterpret_cast<const UPInt*>(bytes + 0x28);
+    for (UPInt i = 0; i < count; ++i)
+    {
+        const Instances::Namespace* candidate = entries[i].GetPtr();
+        if (candidate && candidate->GetUri().GetNode() == uri &&
+            ((static_cast<UInt8>(candidate->GetKind()) ^ nsKind) & 0x0f) == 0)
+            return true;
+    }
+    return false;
+}
 }}}
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
