@@ -50,6 +50,9 @@ void FUN_140046d50(void*, CriSint32);
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
 void FUN_1400479e0(void);
+CriBool FUN_140024ff0(void);
+void FUN_140026f40(CriError&);
+void FUN_140024f80(void);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -174,6 +177,15 @@ void FUN_14003b880()
     FUN_1400493c0();
     FUN_1400479e0();
     DAT_143b27c40 = 1;
+}
+
+// MS2-FUNCTIONAL: retains CRI's conditional decoder attachment followed by common Movie initialization.
+// @0x14003bea0
+void CriMv::InitializeMana(CriError& error)
+{
+    if (!FUN_140024ff0())
+        FUN_140026f40(error);
+    FUN_140024f80();
 }
 
 // ==== CRI UTF heap callback helpers ================================================================================
