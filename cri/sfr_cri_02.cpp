@@ -16,6 +16,7 @@
 #include <new>
 
 extern "C" {
+extern const CriUint8 DAT_143b27a88[];
 extern void* DAT_143ffd550;
 extern CriSint32 DAT_143ffd500;
 extern CriUint8 DAT_143ffd504[0x48];
@@ -34,6 +35,8 @@ extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriUint8 DAT_143b27950[];
 }
+
+const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
 
@@ -141,6 +144,28 @@ void     FUN_140046798(void* streamJoint);
 void     FUN_1400420b0(void* manager, void* heap);
 void     FUN_140043be0(void* decoder);
 void     FUN_140028074(void* heap);
+
+// @0x140038000
+void FUN_140038000(void** record, void*)
+{
+    CriSint32 contentsSize = 0;
+    CriUint8* contents = (CriUint8*)FUN_14003b674((const CriUint8*)record[0],
+        *(CriUint32*)((CriUint8*)record + 8), &contentsSize);
+    if (!contents || contentsSize <= 0x13f)
+        return;
+    for (CriUint32 i = 0x140; i < (CriUint32)contentsSize; ++i)
+        contents[i] ^= DAT_143b27a88[i % 0x20];
+}
+
+// @0x1400380d0
+void FUN_1400380d0(void** record, void*)
+{
+    CriSint32 contentsSize = 0;
+    CriUint8* contents = (CriUint8*)FUN_14003b674((const CriUint8*)record[0],
+        *(CriUint32*)((CriUint8*)record + 8), &contentsSize);
+    for (CriUint32 i = 0; contents && i + 0x10 < (CriUint32)contentsSize; ++i)
+        contents[i + 0x10] ^= 0xff;
+}
 
 // ==== CRI heap backed object allocation ============================================================================
 
