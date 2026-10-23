@@ -370,6 +370,11 @@ public:
 
     // 0x1423f0130
     XMLParser(InstanceTraits::fl::XML& itr);
+    // (appended, sfr22) frees the expat parser. 0x1423f16e0
+    ~XMLParser();
+
+    // (appended, sfr22) parses str from pos (one top-level node, or a list of them when isList). 0x14241d6f0
+    CheckResult Parse(const StringDataPtr& str, UPInt& pos, bool isList = false);
 
     // The expat handlers; userData is the XMLParser.
     // @0x142424100

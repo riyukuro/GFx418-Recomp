@@ -505,6 +505,8 @@ void ValueAssignCopies::AssignUnsafeThunkFunction(Value& v, Instances::ThunkFunc
 
 // VM::GetValueTraits: the traits of a value (0x14250ffc0).
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// ValueStack::PopBack: pops (and releases) the top n values (0x14241de40).
+void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n);
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 
@@ -639,6 +641,96 @@ namespace Classes { namespace fl
                 return;
         }
         _this = r;
+    }
+
+    // new XML(v): a deep copy of an XML value, the one item of a one-item list, the parse of markup, else a text
+    // node holding v as a string (empty for no argument, null or undefined).
+    // MS2-FUNCTIONAL: the exe inlines MakeInstanceText (and the XMLText constructor) at each text node
+    // @0x1424077a0
+    void XML::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
+    {
+        VM& vm = GetVM();
+        InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetClassTraits().GetInstanceTraits());
+
+        if (argc > 0)
+        {
+            const Value& v = argv[0];
+            const Traits& tr = FUN_14250ffc0(vm, v);
+            const BuiltinTraitsType tt = tr.GetTraitsType();
+
+            if (tr.IsClassTraits())
+            {
+                if (!extCall)
+                    FUN_14241de40(reinterpret_cast<ValueStack*>(vm.OpStack), argc);
+                vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::Construct"));
+                return;
+            }
+
+            if (!v.IsNullOrUndefined() && tr.IsInstanceTraits())
+            {
+                switch (tt)
+                {
+                case Traits_Boolean:
+                case Traits_SInt:
+                case Traits_UInt:
+                case Traits_Number:
+                    {
+                        ASString text = vm.GetStringManager().CreateEmptyString();
+                        v.Convert2String(text).DoNotCheck();
+                        _this = itr.MakeInstanceText(itr, text, NULL);
+                    }
+                    return;
+                case Traits_String:
+                    {
+                        ASString text = v.AsString();
+                        if (*ASUtils::SkipWhiteSpace(text.ToCStr(), text.GetSize()) != '<')
+                        {
+                            // Not markup: a single text node.
+                            if (ignoreWhitespace)
+                                text = ASString(text.TruncateWhitespaceNode());
+                            InstanceTraits::fl::XML& titr =
+                                static_cast<InstanceTraits::fl::XML&>(GetClassTraits().GetInstanceTraits());
+                            _this = titr.MakeInstanceText(titr, text, NULL);
+                        }
+                        else
+                        {
+                            XMLParser parser(itr);
+                            UPInt pos = 0;
+                            if (parser.Parse(StringDataPtr(text.ToCStr(), text.GetSize()), pos))
+                                _this.Assign(parser.CurrElement);
+                            else
+                            {
+                                // Malformed markup gives an empty text node.
+                                InstanceTraits::fl::XML& titr =
+                                    static_cast<InstanceTraits::fl::XML&>(GetClassTraits().GetInstanceTraits());
+                                _this = titr.MakeInstanceText(titr, vm.GetStringManager().CreateEmptyString(), NULL);
+                            }
+                        }
+                    }
+                    return;
+                case Traits_XML:
+                    _this = static_cast<Instances::fl::XML*>(v.GetObject())->DeepCopy(NULL);
+                    return;
+                case Traits_XMLList:
+                    {
+                        const Instances::fl::XMLList& list = static_cast<const Instances::fl::XMLList&>(*v.GetObject());
+                        if (list.List.GetSize() == 1)
+                            _this.Assign(list.List[0]);
+                        else
+                        {
+                            if (!extCall)
+                                FUN_14241de40(reinterpret_cast<ValueStack*>(vm.OpStack), argc);
+                            vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::Construct"));
+                        }
+                    }
+                    return;
+                default:
+                    break;
+                }
+            }
+        }
+
+        _this = itr.MakeInstanceText(itr, vm.GetStringManager().CreateEmptyString(), NULL);
     }
 
     // @0x142407bf0
