@@ -514,6 +514,98 @@ const SlotInfo* FindDynamicSlot(const SlotContainerType& c, const ASString& k, c
     }
     return NULL;
 }
+
+// Visits the collectable a value holds.
+// MS2-FUNCTIONAL: the member offset is selected before the add
+// @0x142504530
+void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                              ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>*, const ASRefCountBaseType**,
+                                  const ASRefCountBaseType&);
+    const char* p = reinterpret_cast<const char*>(&v);
+    const unsigned kind = v.GetKind();
+    if (kind < Value::kNamespace)
+        return;
+    if (kind <= Value::kThunkFunction)
+        p += 0x10;          // the object
+    else if (kind <= Value::kVTableIndClosure)
+        p += 0x18;          // a closure's object
+    else
+        return;
+    const ASRefCountBaseType* const* pchild = reinterpret_cast<const ASRefCountBaseType* const*>(p);
+    if (*pchild)
+        reinterpret_cast<GcOpWithOwner>(op)(prcc, const_cast<const ASRefCountBaseType**>(pchild), owner);
+}
+
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (v.IsGarbageCollectable() && !v.IsWeakRef())
+        ForEachChild_GC_Internal(prcc, v, op, owner);
+}
+
+// MS2-FUNCTIONAL: the inlined value visits laid out differently
+// @0x142503b50
+void SlotInfo::ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Object& obj,
+                               ASRefCountBaseType::GcOp op) const
+{
+    typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>*, const ASRefCountBaseType**,
+                                  const ASRefCountBaseType&);
+    switch (BindType)
+    {
+    case BT_ValueArray:
+        // the global object's value array (GlobalObjectCPP +0xa8; its members are not modelled yet)
+        AS3::ForEachChild_GC(prcc, (*reinterpret_cast<Value* const*>(reinterpret_cast<const char*>(&obj) + 0xa8))[ValueInd],
+                             op, obj);
+        break;
+    case BT_Value:
+        AS3::ForEachChild_GC(prcc, *reinterpret_cast<const Value*>(reinterpret_cast<const char*>(&obj) + ValueInd),
+                             op, obj);
+        break;
+    case BT_ObjectAS:
+        {
+            // a tagged pointer: the collector sees it untagged, the tag bits are kept
+            UPInt& ptr = *reinterpret_cast<UPInt*>(const_cast<char*>(reinterpret_cast<const char*>(&obj)) + ValueInd);
+            const UPInt raw = ptr;
+            if (raw)
+            {
+                const ASRefCountBaseType* child = reinterpret_cast<const ASRefCountBaseType*>(raw & ~(UPInt)6);
+                reinterpret_cast<GcOpWithOwner>(op)(prcc, &child, obj);
+                ptr = reinterpret_cast<UPInt>(child) | (raw & 6);
+            }
+        }
+        break;
+    case BT_ObjectCpp:
+        {
+            const ASRefCountBaseType** pchild = reinterpret_cast<const ASRefCountBaseType**>(
+                const_cast<char*>(reinterpret_cast<const char*>(&obj)) + ValueInd);
+            if (*pchild)
+                reinterpret_cast<GcOpWithOwner>(op)(prcc, pchild, obj);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+// MS2-FUNCTIONAL: the parent-slot test of the inlined GetSlotInfo is not materialised as a bool
+// @0x142503ce0
+void Traits::ForEachChild_GC(Collector* prcc, const Object& obj, GcOp op) const
+{
+    const SPInt size = GetSlotInfoNum();
+    for (SPInt i = 0; i < size; ++i)
+        GetSlotInfo(AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
+}
+
+// MS2-FUNCTIONAL: the parent-slot test of the inlined GetSlotInfo is not materialised as a bool
+// @0x142504580
+void Traits::ForEachChild_GC_Slot(Collector* prcc, const Object& obj, GcOp op) const
+{
+    const UPInt size = GetSlotInfoNum();
+    for (UPInt i = 0; i < size; ++i)
+        GetSlotInfo(AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
+}
 }}}
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)

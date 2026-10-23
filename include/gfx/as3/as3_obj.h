@@ -221,6 +221,11 @@ public:
 
     // (appended, sfr13) what a slot value is read for: plain get, or a call.
     enum ValTarget { valGet, valExecute };
+
+    // (appended, sfr19) visits the collectable this slot binds in obj (the global object's value array, a Value, an
+    // object tagged pointer or a C++ object pointer). 0x142503b50
+    void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Object& obj,
+                         RefCountBaseGC<StatMV_ActionScript_Mem>::GcOp op) const;
 };
 
 // Hash functor of the slot name set.
@@ -510,6 +515,10 @@ public:
     SlotInfo::BindingType GetBindingType(VMAbcFile& file, const Abc::Multiname& mn) const;
     // (appended, sfr19) MemSize from parent_size and the own value slots. 0x1424ee490
     void CalculateMemSize(unsigned parent_size);
+    // (appended, sfr19) visits the collectables obj keeps in every slot of these traits (signed / unsigned index
+    // loop). 0x142503ce0, 0x142504580
+    void ForEachChild_GC(Collector* prcc, const Object& obj, GcOp op) const;
+    void ForEachChild_GC_Slot(Collector* prcc, const Object& obj, GcOp op) const;
 
 protected:
     // (appended, sfr19) the parent is only referenced here; derived ctors copy its slots with CopyParentTraits.
