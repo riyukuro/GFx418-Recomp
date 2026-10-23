@@ -155,6 +155,8 @@ int FUN_1428d8e9c(void*, void**);
 int FUN_1428d8f26(void*, float*);
 int FUN_1428d8eea(void*, float*);
 int FUN_1428d8ec0(void*, void*, unsigned, unsigned*);
+int FUN_1428d8eb4(void*, float*, float*, float*, int*);
+int FUN_1428d8eba(void*, void*, int*, int*, int*);
 
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
@@ -323,6 +325,33 @@ bool ClipImageRect(void* command, void* firstImage, void* secondImage, const int
     clipped[1] = top;
     clipped[2] = right < secondSize[0] ? right : secondSize[0];
     clipped[3] = bottom < secondSize[1] ? bottom : secondSize[1];
+    return true;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: reports channels, integer default frequency, and the executable's supported-format flag.
+// @0x142745ac0
+bool QuerySoundFormat(void* player, unsigned* formatFlag, int* channels, int* frequency)
+{
+    void* sound = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30);
+    if (!sound)
+        return false;
+
+    int soundFormat = 0;
+    int channelCount = 0;
+    if (FUN_1428d8eba(sound, nullptr, &soundFormat, &channelCount, nullptr) != 0)
+        return false;
+    *channels = channelCount;
+
+    float defaultFrequency = 0.0f;
+    if (FUN_1428d8eb4(sound, &defaultFrequency, nullptr, nullptr, nullptr) != 0)
+        return false;
+    *frequency = static_cast<int>(defaultFrequency);
+    if (soundFormat != 2 && soundFormat != 5)
+        return false;
+    *formatFlag = soundFormat == 5 ? 1u : 0u;
     return true;
 }
 }
