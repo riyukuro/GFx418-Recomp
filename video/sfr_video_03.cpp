@@ -9,6 +9,7 @@
 #include "../include/video/video_videoplayerimpl.h"
 #include "../include/gfx/gfx_stream.h"
 #include "../include/gfx/as3/as3_value.h"
+#include "../include/gfx/as3/obj/as3_obj_display.h"
 #include "hook/ms2hook.h"
 #include <cstring>
 #include <cstdint>
@@ -24,6 +25,7 @@ MS2_GLOBAL(0x143b27710, void*, VideoThunkBaseC);
 MS2_GLOBAL(0x143b275f8, void*, VideoThunkD);
 MS2_GLOBAL(0x143b27600, void*, VideoThunkBaseD);
 MS2_GLOBAL(0x143b27638, void*, VideoThunkE);
+MS2_GLOBAL(0x1431b7ba0, void*, VideoDisplayVtable);
 MS2_GLOBAL(0x143b27640, void*, VideoThunkBaseE);
 MS2_GLOBAL(0x143b27488, void*, VideoThunkF);
 MS2_GLOBAL(0x143b27490, void*, VideoThunkBaseF);
@@ -43,6 +45,7 @@ MS2_EXTERN(0x1424f1390, void(void*, void*, void*), ConvertAS3ValueToString);
 MS2_EXTERN(0x1424f0d30, void(void*, void*, int*, int, void*), ConvertAS3ValueToInt32);
 MS2_EXTERN(0x1423dfa20, void(), ReleaseAS3GcObject);
 MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
+MS2_EXTERN(0x1424eb610, void*(void*), FUN_1424eb610);
 extern "C" void* DAT_143b15f60;
 
 namespace {
@@ -634,5 +637,33 @@ void FUN_14001a8e0(std::uint64_t* closure)
 {
     if (*reinterpret_cast<unsigned char*>(closure[0] + 0x180) == 0)
         FUN_14001a260(reinterpret_cast<std::uint32_t*>(closure[1]), static_cast<std::uint32_t>(closure[2]));
+}
+
+// MS2-FUNCTIONAL: constructs a Video AS3 DisplayObject with the executable's default dimensions and vtable.
+// @0x14001a000
+Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* FUN_14001a000(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
+{
+    using DisplayObject = Scaleform::GFx::AS3::Instances::fl_display::DisplayObject;
+    new (object) Scaleform::GFx::AS3::Instances::fl_display::DisplayObject(*traits);
+    *reinterpret_cast<double*>(reinterpret_cast<unsigned char*>(object) + 0x68) = 320.0;
+    *reinterpret_cast<double*>(reinterpret_cast<unsigned char*>(object) + 0x70) = 240.0;
+    *reinterpret_cast<void***>(object) = &VideoDisplayVtable;
+    return object;
+}
+// MS2-FUNCTIONAL: allocates and constructs the Video AS3 DisplayObject into the caller's result slot.
+// @0x14001a600
+void* FUN_14001a600(void*, void** result, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
+{
+    auto* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(FUN_1424eb610(traits));
+    *result = object ? FUN_14001a000(object, traits) : nullptr;
+    return result;
+}
+// MS2-FUNCTIONAL: allocates and constructs a Video AS3 DisplayObject, then transfers it into a Value.
+// @0x14001a860
+void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
+{
+    auto* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(FUN_1424eb610(traits));
+    if (object) FUN_14001a000(object, traits);
+    value->Pick(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
 }
 } // namespace
