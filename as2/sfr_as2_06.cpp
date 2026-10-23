@@ -117,6 +117,8 @@
 // MS2-RANGE: 0x14295d450-0x14295d4e0 .text$mn
 // MS2-RANGE: 0x142964200-0x142964370 .text$mn
 // MS2-RANGE: 0x14297dd70-0x14297df30 .text$mn
+// MS2-RANGE: 0x142968f00-0x142968f90 .text$mn
+// MS2-RANGE: 0x142966370-0x1429663d0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1232,6 +1234,23 @@ void Environment::Reset()
     FuncCallNestingLevel = 0;
     TryBlocks_Resize(&TryBlocks, 0);
     ThrowingValue.SetUndefined();
+}
+
+// MoveTo starts a new path at the point (the open one ends without a new shape); LineTo adds a line to it.
+// @0x142968f00
+void AvmSprite::MoveTo(float x, float y)
+{
+    DrawingContext* pdc = AcquirePath(false);
+    pdc->MoveTo(Render::PixelsToTwips(x), Render::PixelsToTwips(y));
+    GetSprite()->InvalidateHitResult();
+}
+
+// @0x142966370
+void AvmSprite::LineTo(float x, float y)
+{
+    DrawingContext* pdc = GetDrawingContext();
+    pdc->LineTo(Render::PixelsToTwips(x), Render::PixelsToTwips(y));
+    GetSprite()->InvalidateHitResult();
 }
 
 

@@ -57,6 +57,8 @@ public:
     void                 BeginBitmapFill(FillType fillType, ImageResource* pimageRes,
                                          const Render::Matrix2F& mtx);              // exe 0x142932040
     void                 CurveTo(float cx, float cy, float ax, float ay);            // exe 0x142937f90
+    void                 MoveTo(float x, float y);                                   // exe 0x142968f00
+    void                 LineTo(float x, float y);                                   // exe 0x142966370
     void SetNoFill(); // exe 0x142989390
     void SetNoLine(); // exe 0x142989400
     // lineWidth in pixels (exe 0x142981da0).
