@@ -2316,6 +2316,35 @@ void FUN_1423ca950(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
     static_cast<Base*>(set)->Add(heap, *value);
 }
 
+// MS2-FUNCTIONAL: inserts the supplied DOM string through our recovered hash-set implementation; it recomputes the node's cached hash.
+// @0x1423caa80
+void FUN_1423caa80(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
+                   Scaleform::GFx::XML::DOMStringNode* const* value, unsigned long long)
+{
+    using Node = Scaleform::GFx::XML::DOMStringNode;
+    using Hash = Scaleform::GFx::XML::DOMStringNodeHashFunc<Node*>;
+    using Entry = Scaleform::HashsetEntry<Node*, Hash>;
+    using Base = Scaleform::HashSetBase<Node*, Hash, Hash, Scaleform::AllocatorLH<Node*, 326>, Entry>;
+    static_cast<Base*>(set)->Add(heap, *value);
+}
+
+// MS2-FUNCTIONAL: delegates capacity replacement to the typed XML hash set; this preserves entries but emits different helper code.
+// @0x1423cce50
+void FUN_1423cce50(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
+                   unsigned long long capacity)
+{
+    using Node = Scaleform::GFx::XML::DOMStringNode;
+    using Hash = Scaleform::GFx::XML::DOMStringNodeHashFunc<Node*>;
+    using Entry = Scaleform::HashsetEntry<Node*, Hash>;
+    using Base = Scaleform::HashSetBase<Node*, Hash, Hash, Scaleform::AllocatorLH<Node*, 326>, Entry>;
+    auto* base = static_cast<Base*>(set);
+    if (!capacity) {
+        base->Clear();
+        return;
+    }
+    base->SetCapacity(heap, capacity - capacity / 5);
+}
+
 // MS2-FUNCTIONAL: calls the executable's IME provider and text composition vtables using their observed slots and fields.
 // @0x1423daf30
 unsigned long long FUN_1423daf30(void* raw, int offset)
