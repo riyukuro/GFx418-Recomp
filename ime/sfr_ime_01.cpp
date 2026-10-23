@@ -36,7 +36,7 @@ static BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
 extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_14257db50(void*);
 extern "C" void FUN_1423cdf60(void*);
-extern "C" void FUN_1423cde00();
+extern "C" void FUN_1423cde00(void*);
 extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
@@ -633,7 +633,7 @@ void* FUN_1423ce0a0(void* object, unsigned long long flags)
 // @0x1423ce100
 void* FUN_1423ce100(void* object, unsigned long long flags)
 {
-    FUN_1423cde00();
+    FUN_1423cde00(object);
     if (flags & 1) {
         if (flags & 4) FUN_14015b310(object, 0x870);
         else Memory::Free(object);
@@ -645,7 +645,7 @@ void* FUN_1423ce100(void* object, unsigned long long flags)
 // @0x1423ce1f0
 void* FUN_1423ce1f0(void* object, unsigned long long flags)
 {
-    FUN_1423cde00();
+    FUN_1423cde00(object);
     if (flags & 1) {
         if (flags & 4) FUN_14015b310(object, 0x870);
         else Memory::Free(object);
@@ -721,6 +721,37 @@ void FUN_1423daef0(void* self)
         reinterpret_cast<void(*)(void*)>(vtable[4])(second);
         reinterpret_cast<void(*)(void*)>(vtable[2])(second);
     }
+}
+
+// MS2-FUNCTIONAL: tears down the event source, retained strings, and helper-owned state in executable order.
+// @0x1423cdee0
+void FUN_1423cdee0(unsigned long long* object)
+{
+    FUN_1423db000(reinterpret_cast<unsigned long long*>(object[0x19]));
+    FUN_1423db060(reinterpret_cast<unsigned long long*>(object[0x19]));
+    FUN_1423daef0(reinterpret_cast<void*>(object[0x19]));
+    if (object[0x19]) {
+        void** vtable = *reinterpret_cast<void***>(object[0x19]);
+        reinterpret_cast<void(*)(void*)>(vtable[2])(reinterpret_cast<void*>(object[0x19]));
+    }
+    FUN_1423ca920(nullptr, &object[0x16]);
+    object[0x16] = 0;
+    FUN_1423cdf60(object);
+}
+
+// MS2-FUNCTIONAL: releases the dynamic value array, member string, and callback resources seen in the executable.
+// @0x1423cde00
+void FUN_1423cde00(void* raw)
+{
+    auto* object = static_cast<unsigned long long*>(raw);
+    const unsigned long long count = object[0x10a];
+    auto* entries = reinterpret_cast<unsigned long long*>(object[0x109]);
+    for (unsigned long long i = count; i; --i)
+        if (entries[i - 1]) FUN_14257dcd0(reinterpret_cast<void*>(entries[i - 1]));
+    Memory::Free(entries);
+    FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::AS3::Value*>(object[0x105]), object[0x106]);
+    Memory::Free(reinterpret_cast<void*>(object[0x105]));
+    FUN_1422fbf60(object + 0x102);
 }
 
 extern void FUN_1423d9690(void*, void*, unsigned long long);
