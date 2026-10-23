@@ -21,6 +21,9 @@ extern void FUN_1429260b0(void*);
 extern void FUN_140006a40(Scaleform::UPInt*);
 extern void FUN_14000b3b0(void**, void*, Scaleform::UPInt);
 extern void FUN_1425925f0(void*);
+extern void FUN_14000a5d0(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
+extern void FUN_14000a230(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
+extern void FUN_14000a420(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
 
@@ -1682,6 +1685,24 @@ void* FUN_14000b1c0(void* object, unsigned flags)
     FUN_14000aec0(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: dispatches the video prototype's release, cycle-mark, and scan collector passes.
+// @0x14000a730
+void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
+                   int operation)
+{
+    if (operation == 0) FUN_14000a5d0(object, collector);
+    else if (operation == 1) FUN_14000a230(object, collector);
+    else if (operation == 2) FUN_14000a420(object, collector);
+}
+
+// MS2-FUNCTIONAL: dispatches the companion video prototype's collector passes.
+// @0x14000a770
+void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
+                   int operation)
+{
+    FUN_14000a730(object, collector, operation);
 }
 
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
