@@ -107,6 +107,12 @@ public:
     bool        IsStageAccessible() const;                          // 0x142514d20
     // The object now lives on the timeline: the AS3 object is kept raw, the counted reference dropped. 0x1425189a0
     void        OnDetachFromTimeline();
+    // (appended, sfr19) the AS3 object of the class GetASClassName names, made without running its constructor;
+    // false when there is no such class. 0x1424f2450
+    bool        CreateASInstanceNoCtor(bool execute);
+    // (appended, sfr19) runs the constructor of the object CreateASInstanceNoCtor made (now when execute, else
+    // queued). 0x1424ee800
+    unsigned    CallCtor(bool execute);
 };
 
 // AS3 part of an interactive object, with its AvmInteractiveObjBase part at +0x30. 0x40 bytes;
@@ -221,7 +227,7 @@ public:
     void SetChildIndex(DisplayObjectBase* ch, unsigned index);          // 0x142526610
     void SwapChildrenAt(unsigned i1, unsigned i2);                      // 0x14252e6d0
     void SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);  // 0x14252e590
-    void RemoveChild(DisplayObjectBase* ch);                            // 0x142522570
+    DisplayObjectBase* RemoveChild(DisplayObjectBase* ch);              // the child removed, or NULL. 0x142522570
     void RemoveChildAt(unsigned index);                                 // 0x1425226a0
     void AddChild(DisplayObjectBase* ch);                               // 0x1424e6d90
     void AddChildAt(DisplayObjectBase* ch, unsigned index);             // 0x1424e6e90

@@ -4,9 +4,16 @@
 // MS2-UNIT: sfr_as3_17
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424ed890-0x142509d40 .text$mn
+#include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/gfx_loadproc.h"
 #undef GetObject
+
+// The AS3 object's +0x50 counted reference set to p (unrecovered).
+void FUN_142446e70(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* obj, void* p);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-FUNCTIONAL 0x1424ed8f0: copy and ownership semantics match; the helper-based release/addref changes the call graph.
@@ -192,6 +199,159 @@ bool Value::Convert2Boolean() const
         return GetObject() != 0;
     default:
         return false;
+    }
+}
+
+// ---- the AVM parts of the display objects (as3_avm.h) and the movie root's action queues ----
+
+// @0x1424f2400
+unsigned AvmDisplayObj::CreateASInstance(bool execute)
+{
+    if (!pAS3RawPtr && !pAS3CollectiblePtr && CreateASInstanceNoCtor(execute))
+        return CallCtor(execute);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: same two parent lookups; the inlined AVM-part casts compile to a different branch layout.
+// @0x142505e50
+Instances::fl_display::DisplayObject* AvmDisplayObj::GetAS3Parent() const
+{
+    if (!ToAvmInteractiveObj(pDispObj->GetParent()))
+        return NULL;
+    return ToAvmInteractiveObj(pDispObj->GetParent())->GetAS3Obj();
+}
+
+// @0x142505ee0
+MovieRoot* AvmDisplayObj::GetAS3Root() const
+{
+    return static_cast<MovieRoot*>(pDispObj->GetASMovieRoot());
+}
+
+// MS2-FUNCTIONAL: same three-way class name choice; the String assignments are emitted differently.
+// @0x142505f20
+String& AvmDisplayObj::GetASClassName(String* className) const
+{
+    const char* name = pClassName;
+    if (!name)
+    {
+        const String* exportName = pDispObj->GetResourceMovieDef()->GetNameOfExportedResource(ResourceId(pDispObj->Id));
+        if (exportName)
+        {
+            *className = *exportName;
+            return *className;
+        }
+        name = GetDefaultASClassName();
+    }
+    *className = name;
+    return *className;
+}
+
+// MS2-FUNCTIONAL: the exe also makes a result-ignored call through vftable slot 4 of the movie root first.
+// @0x142506d30
+ASVM* AvmDisplayObj::GetAVM() const
+{
+    return GetAS3Root()->pAVM;
+}
+
+// MS2-FUNCTIONAL: same path building; the temporary ASString release is inlined differently.
+// @0x142506e10
+const char* AvmDisplayObj::GetAbsolutePath(String* ppath) const
+{
+    if (pDispObj->GetParent())
+    {
+        pDispObj->GetParent()->GetAbsolutePath(ppath);
+        ppath->AppendString(".");
+        ppath->AppendString(pDispObj->GetName().ToCStr());
+    }
+    return ppath->ToCStr();
+}
+
+// @0x142507550
+AvmInteractiveObj* AvmDisplayObj::GetAvmParent() const
+{
+    return ToAvmInteractiveObj(pDispObj->GetParent());
+}
+
+// The top parent's AVM part when the parent belongs to an AS3 movie (the parent is not checked for NULL).
+// @0x142507590
+AvmInteractiveObj* AvmInteractiveObj::GetAvmTopParent(bool ignoreLockRoot) const
+{
+    if (pDispObj->GetParent()->GetAVMVersion() == 2)
+        return AvmInteractiveObj::FromBase(pDispObj->GetParent()->GetTopParent(ignoreLockRoot)->GetAvmIntObj());
+    return NULL;
+}
+
+// @0x1424efe00
+void AvmInteractiveObj::CloneInternalData(const InteractiveObject*)
+{
+}
+
+// @0x1424f1f70
+void AvmInteractiveObj::CopyPhysicalProperties(const InteractiveObject*)
+{
+}
+
+// @0x1424f7190
+bool AvmDisplayObjContainer::DetachChild(DisplayObjectBase* ch)
+{
+    return RemoveChild(ch) != NULL;
+}
+
+// MS2-FUNCTIONAL: same AS3-object lookup and call; the null tests are ordered differently.
+// @0x142504810
+void AvmSprite::ForceShutdown()
+{
+    Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
+    if (as3obj)
+        FUN_142446e70(as3obj, NULL);
+}
+
+// The frame runs in the next ExecuteFrame: the sprite moves to the optimized playlist.
+// MS2-FUNCTIONAL: same flag updates and playlist call; register allocation differs.
+// @0x1424feab0
+void AvmSprite::ExecuteFrameTags(unsigned)
+{
+    SprFlags |= Flag_NeedExecuteFrame;
+    if (GetSprite()->IsInPlayList())
+        GetSprite()->AddToOptimizedPlayList();
+    GetSprite()->Flags &= ~DisplayObjectBase::Mask_JustLoaded;
+}
+
+// Runs the init actions of frame once.
+// MS2-FUNCTIONAL: same bit test, init-action run and bit set; the Ptr<Sprite> addref/release is laid out differently.
+// @0x1424fee10
+void AvmSprite::ExecuteInitActionFrameTags(unsigned frame)
+{
+    const unsigned byteIndex = frame >> 3;
+    if (InitActionsExecuted[byteIndex] & (1 << (frame & 7)))
+        return;
+    Ptr<Sprite> spr = GetSprite();
+    TimelineDef::Frame initActions;
+    if (spr->pDef->GetInitActions(&initActions, frame) && initActions.GetTagCount())
+    {
+        for (unsigned i = 0; i < initActions.GetTagCount(); ++i)
+            initActions.GetTag(i)->Execute(GetSprite());
+        InitActionsExecuted[byteIndex] |= UByte(1 << (frame & 7));
+    }
+}
+
+// The hand cursor in button mode.
+// MS2-FUNCTIONAL: same button-mode bit; reached through a different this adjustment.
+// @0x142508540
+unsigned AvmSprite::GetCursorType() const
+{
+    return SprFlags & Flag_ButtonMode;
+}
+
+// MS2-FUNCTIONAL: same queue walk; the iterator construction and free-list release are scheduled differently.
+// @0x1424fa450
+void MovieRoot::ExecuteActionQueues()
+{
+    for (unsigned lvl = 0; lvl < AL_Count_; ++lvl)
+    {
+        ActionQueueIterator iter(ActionLevel(lvl), &ActionQueue);
+        while (const ActionEntry* entry = iter.getNext())
+            entry->Execute(this);
     }
 }
 }}}
