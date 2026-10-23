@@ -308,6 +308,24 @@ void SharedObjectCtorFunction::Finalize_GC()
     Object::Finalize_GC();
 }
 
+// No pdata in the exe (0x1429411f0, jumps to the three instances).
+void Object::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
+{
+    switch (operation)
+    {
+    case ASRefCountBaseType::Operation_Release:
+        ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_MarkInCycle:
+        ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_ScanInUse:
+        ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+        break;
+    default:;
+    }
+}
+
 // No pdata in the exe (0x142942dc0, a jump): the collector releases the listeners and setCursorType.
 void MouseCtorFunction::Finalize_GC()
 {

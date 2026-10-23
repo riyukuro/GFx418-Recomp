@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x14295e1b0-0x14295e2b0 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
+// MS2-RANGE: 0x142961830-0x142961a40 .text$mn
 // MS2-RANGE: 0x142961d40-0x142961d80 .text$mn
 // MS2-RANGE: 0x142961ef0-0x142961fe0 .text$mn
 // MS2-RANGE: 0x142961fe0-0x142962010 .text$mn
@@ -668,6 +669,20 @@ void GASPrototypeBase::Init(Object* pthis, ASStringContext* psc, const FunctionR
     SetConstructor(pthis, psc, constructor);
     Constructor->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_prototype), Value(pthis),
                               PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete);
+}
+
+
+// MS2-FUNCTIONAL the exe inlines the CFunctionObject ctor (sfr_as2_03)
+// @0x142961830
+void GASPrototypeBase::InitFunctionMembers(Object* pthis, ASStringContext* psc, const NameFunction* table,
+                                           const PropFlags& flags)
+{
+    Ptr<Object> pfuncProto = psc->pContext->GetPrototype(ASBuiltin_Function);
+    for (UPInt i = 0; table[i].Name; i++)
+    {
+        FunctionRef func(*SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, pfuncProto, table[i].Function));
+        pthis->SetMemberRaw(psc, psc->CreateConstString(table[i].Name), Value(func), flags);
+    }
 }
 
 
