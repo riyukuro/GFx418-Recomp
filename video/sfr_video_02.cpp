@@ -1980,3 +1980,87 @@ void FUN_1400112a0(
     }
     *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(data) + 0x90) = provider;
 }
+
+namespace {
+struct AS2ObjectGCTraversal : Scaleform::GFx::AS2::Object
+{
+    using Collector = Scaleform::GFx::AS2::ASRefCountBaseType::Collector;
+    using ReleaseFunctor = Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor;
+    using MarkInCycleFunctor = Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor;
+    using ScanInUseFunctor = Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor;
+    template<class Functor> static void Run(const Scaleform::GFx::AS2::Object* object, Collector* collector)
+    {
+        reinterpret_cast<const AS2ObjectGCTraversal*>(object)->template ForEachChild_GC<Functor>(collector);
+    }
+};
+
+struct AS2PrototypeGCTraversal : Scaleform::GFx::AS2::GASPrototypeBase
+{
+    using Collector = Scaleform::GFx::AS2::ASRefCountBaseType::Collector;
+    template<class Functor> static void Run(const AS2PrototypeGCTraversal* self, Collector* collector)
+    {
+        self->Constructor.template ForEachChild_GC<Functor>(collector);
+        self->__Constructor__.template ForEachChild_GC<Functor>(collector);
+        if (self->pInterfaces) {
+            for (Scaleform::UPInt i = 0, count = self->pInterfaces->GetSize(); i < count; ++i) {
+                const auto& pinterface = (*self->pInterfaces)[i];
+                if (pinterface) Functor::Call(collector, pinterface);
+            }
+        }
+    }
+};
+
+template<class Functor>
+void VisitAS2PrototypeChildren(Scaleform::GFx::AS2::Object* object,
+                               Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    AS2ObjectGCTraversal::Run<Functor>(object, collector);
+    auto* proto = reinterpret_cast<const AS2PrototypeGCTraversal*>(
+        reinterpret_cast<const unsigned char*>(object) + 0x68);
+    AS2PrototypeGCTraversal::Run<Functor>(proto, collector);
+}
+}
+
+// MS2-FUNCTIONAL: traverses object and prototype children during the collector's cycle marking pass.
+// @0x140011ef0
+void FUN_140011ef0(Scaleform::GFx::AS2::Object* object,
+                   Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    VisitAS2PrototypeChildren<AS2ObjectGCTraversal::MarkInCycleFunctor>(object, collector);
+}
+
+// MS2-FUNCTIONAL: traverses object and prototype children during the collector's in-use scan.
+// @0x140011fc0
+void FUN_140011fc0(Scaleform::GFx::AS2::Object* object,
+                   Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    VisitAS2PrototypeChildren<AS2ObjectGCTraversal::ScanInUseFunctor>(object, collector);
+}
+
+// MS2-FUNCTIONAL: releases object and prototype child references before collector destruction.
+// @0x1400120a0
+void FUN_1400120a0(Scaleform::GFx::AS2::Object* object,
+                   Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    VisitAS2PrototypeChildren<AS2ObjectGCTraversal::ReleaseFunctor>(object, collector);
+}
+
+// MS2-FUNCTIONAL: dispatches a collector pass to the matching prototype child traversal.
+// @0x1400122a0
+void FUN_1400122a0(Scaleform::GFx::AS2::Object* object,
+                   Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector, int operation)
+{
+    if (operation == 0) FUN_1400120a0(object, collector);
+    else if (operation == 1) FUN_140011ef0(object, collector);
+    else if (operation == 2) FUN_140011fc0(object, collector);
+}
+
+// MS2-FUNCTIONAL: dispatches a collector pass to the matching prototype child traversal.
+// @0x140012400
+void FUN_140012400(Scaleform::GFx::AS2::Object* object,
+                   Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector, int operation)
+{
+    if (operation == 0) FUN_1400120a0(object, collector);
+    else if (operation == 1) FUN_140011ef0(object, collector);
+    else if (operation == 2) FUN_140011fc0(object, collector);
+}
