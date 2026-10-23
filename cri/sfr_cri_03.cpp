@@ -22,6 +22,8 @@ extern "C" CriUint32 DAT_143b27c60;
 extern "C" CriUint32 DAT_143b27c68;
 extern "C" CriUint32 DAT_143b27c6c;
 extern "C" CriUint64 DAT_143b27c70;
+extern "C" CriUint8 DAT_143b27948;
+extern "C" CriUint32 DAT_143b27c40;
 extern "C" const char* DAT_143ba9d18;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
@@ -45,6 +47,9 @@ CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140046d50(void*, CriSint32);
+void FUN_1400478a0(void);
+void FUN_1400493c0(void);
+void FUN_1400479e0(void);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -154,6 +159,21 @@ void criUtfRtv_Destroy(CriUint64* table)
         if (table[0xe + index * 2] != 0)
             FUN_140046d50(table, index);
     freeMem(heapContext, (void*)table[0x15]);
+}
+
+// @0x14003b840
+void criMvPly_AttachM2V()
+{
+    FUN_1400478a0();
+    DAT_143b27948 = 1;
+}
+
+// @0x14003b880
+void FUN_14003b880()
+{
+    FUN_1400493c0();
+    FUN_1400479e0();
+    DAT_143b27c40 = 1;
 }
 
 // ==== CRI UTF heap callback helpers ================================================================================
