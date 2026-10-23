@@ -31,6 +31,11 @@ namespace Instances { namespace fl {
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class GlobalObject : public Instances::fl::Object
     {
+    public:
+        // (appended, sfr19)
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObject"; }
+        // (appended, sfr19) slot 21: runs the script behind the global object; nothing for the C++ one. 0x14240a4a0
+        virtual void Execute() { }
     protected:
         // (appended, sfr19) global objects are not constructible (body in sfr_as3_03).
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
@@ -40,6 +45,8 @@ namespace Instances { namespace fl {
     class GlobalObjectCPP : public Instances::fl::GlobalObject
     {
     public:
+        // (appended, sfr19)
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObjectCPP"; }
         // @0x142427bd0
         void clearInterval(const Value& result, UInt32);
         // @0x142427bf0

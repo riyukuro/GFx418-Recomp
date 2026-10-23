@@ -8,8 +8,12 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
+// the registered class traits of a multiname (VM, 0x14250d760)
+const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_14250d760(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Instances::fl::Array::AS3slice argument 1 default
@@ -143,6 +147,86 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 #include "ms2/scaleform/include/gfx/gfx_movieslots.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ---- Namespace / script global objects / user-defined classes ----
+
+// @0x142414c30
+String Instances::Namespace::GetAS3ObjectName() const
+{
+    return String(GetUri().ToCStr());
+}
+
+// @0x142414c00
+String Instances::fl::GlobalObjectScript::GetAS3ObjectName() const
+{
+    return GetFile().GetAbcFile().Source;
+}
+
+// @0x142418d00
+const SlotInfo* Instances::fl::GlobalObjectScript::InitializeOnDemand(const SlotInfo* si, const ASString& /*name*/,
+                                                                      const Instances::Namespace& /*ns*/,
+                                                                      UPInt& /*index*/)
+{
+    if (si)
+        InitOnDemand();
+    return si;
+}
+
+// @0x142414c60
+String Classes::UserDefined::GetAS3ObjectName() const
+{
+    return String(GetTraits().GetQualifiedName().ToCStr());
+}
+
+// @0x142415a60
+VMAbcFile& InstanceTraits::UserDefined::GetFile() const
+{
+    return GetScript().GetFile();
+}
+
+// @0x142423dc0
+CheckResult InstanceTraits::UserDefined::SetupSlotValues(AS3::Object& for_obj) const
+{
+    if (GetParent() && !GetParent()->SetupSlotValues(for_obj))
+        return false;
+    return AS3::Traits::SetupSlotValues(GetFile(), class_info.inst_info, for_obj);
+}
+
+// @0x1424177b0
+void InstanceTraits::UserDefined::InitOnDemand() const
+{
+    Script->InitOnDemand();
+}
+
+// @0x14241e140
+CheckResult InstanceTraits::UserDefined::PreInit(const Value& _this) const
+{
+    return SetupSlotValues(*_this.GetObject());
+}
+
+// MS2-FUNCTIONAL: register allocation of the file pointer differs (r9 in the exe)
+// @0x142425370
+bool InstanceTraits::UserDefined::SupportsInterface(const Traits& t) const
+{
+    const Abc::Instance::Interfaces& ifs = class_info.inst_info.implemented_interfaces;
+    VM& vm = GetVM();
+    const UPInt n = ifs.info.GetSize();
+    for (UPInt i = 0; i < n; ++i)
+    {
+        VMAbcFile& file = GetFile();
+        const Multiname mn(file, file.GetAbcFile().Const_Pool.GetMultiname(ifs.info[static_cast<UInt32>(i)]));
+        const ClassTraits::Traits* ctr = FUN_14250d760(vm, mn);
+        if (ctr && (&ctr->GetInstanceTraits() == &t || ctr->GetInstanceTraits().SupportsInterface(t)))
+            return true;
+    }
+    return false;
+}
+
+// @0x142423d90
+CheckResult ClassTraits::UserDefined::SetupSlotValues(AS3::Object& for_obj) const
+{
+    return AS3::Traits::SetupSlotValues(*File, class_info.stat_info, for_obj);
+}
 
 // ---- Slots ----
 

@@ -468,6 +468,8 @@ public:
 
     // (appended, sfr19) fills the slot values of a new instance (0x1424f0a50).
     void ConstructTail(Object& obj) const;
+    // (appended, sfr19) fills for_obj's slots declared by t (traits of an ABC class or script) of file. 0x14252c0e0
+    CheckResult SetupSlotValues(VMAbcFile& file, const Abc::HasTraits& t, Object& for_obj) const;
     // (appended, sfr19) releases the slot values of a dying instance. 0x1424f6de0
     void DestructTail(Object& obj) const;
 
