@@ -27,6 +27,7 @@ extern "C" void FUN_142585f70(void*, int);
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_14268f8f0(void*, void*, unsigned);
 extern "C" void FUN_14268f230(void*, void*, unsigned);
+extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
 MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
@@ -688,6 +689,16 @@ unsigned CountTreeWithRoot(void* node)
     return static_cast<unsigned>(count);
 }
 
+static std::uint64_t HashImageKey(const unsigned char* key)
+{
+    return (((static_cast<std::uint64_t>(key[3]) * 0x1003full + key[2]) * 0x1003full + key[1]) * 0x1003full +
+            static_cast<std::uint64_t>(key[4]) * 0xfc5d1543ec5f01ull +
+            static_cast<std::uint64_t>(key[5]) * 0x9b302c28162c6120ull +
+            static_cast<std::uint64_t>(key[7]) * 0xd7c3e496a311bbbfll +
+            static_cast<std::uint64_t>(key[6]) * 0x5d02f409d62aee81ull -
+            0x514d9afbc3e934fbull + key[0]);
+}
+
 // MS2-FUNCTIONAL: hashes the eight-byte key, follows the bucket collision chain, and returns the matching cached node index.
 // @0x14268a450
 void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
@@ -697,12 +708,7 @@ void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
     auto* table = *reinterpret_cast<unsigned char**>(set);
     std::int64_t found = -1;
     if (table) {
-        const std::uint64_t hash = (((static_cast<std::uint64_t>(key[3]) * 0x1003full + key[2]) * 0x1003full + key[1]) * 0x1003full +
-            static_cast<std::uint64_t>(key[4]) * 0xfc5d1543ec5f01ull +
-            static_cast<std::uint64_t>(key[5]) * 0x9b302c28162c6120ull +
-            static_cast<std::uint64_t>(key[7]) * 0xd7c3e496a311bbbfll +
-            static_cast<std::uint64_t>(key[6]) * 0x5d02f409d62aee81ull -
-            0x514d9afbc3e934fbull + key[0]);
+        const std::uint64_t hash = HashImageKey(key);
         const std::uint64_t bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
         auto* entry = reinterpret_cast<std::int64_t*>(table + 0x10 + bucket * 0x38);
         if (entry[0] != -2 && static_cast<std::uint64_t>(entry[1]) == bucket) {
@@ -722,6 +728,14 @@ void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
     output[0] = found < 0 ? 0 : reinterpret_cast<std::uint64_t>(setObject);
     output[1] = found < 0 ? 0 : static_cast<std::uint64_t>(found);
     return result;
+}
+
+// MS2-FUNCTIONAL: inserts an eight-byte key/value pair through the recovered cached hash-set insertion routine.
+// @0x1426899e0
+void AddImageHashValue(void* set, const unsigned char* key, const std::uint64_t* value)
+{
+    struct Pair { const unsigned char* key; std::uint64_t value; } pair{key, *value};
+    FUN_1426867f0(set, set, &pair, HashImageKey(key));
 }
 
 // MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
