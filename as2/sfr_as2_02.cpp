@@ -37,6 +37,7 @@
 // MS2-RANGE: 0x142908840-0x142908a68 .text$mn
 // MS2-RANGE: 0x142908a70-0x142908c2c .text$mn
 // MS2-RANGE: 0x142906040-0x14290632c .text$mn
+// MS2-RANGE: 0x1429049b0-0x142905183 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -68,6 +69,7 @@
 #include "../include/kernel/sf_msgformat.h"
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/render/render_twips.h"
+#include "../include/render/render_screentoworld.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -2151,6 +2153,101 @@ void AvmSprite::SpriteCreateTextField(const FnCall& fn)
         fn.Result->SetAsCharacter(ptextField);
     }
 }
+
+#pragma strict_gs_check(push, on)
+// hitTest(x, y[, shapeFlag[, ...]]) tests a stage point (pixels) against the bounds or the shapes, 3D clips through
+// the movie's screen-to-world state; hitTest(target) tests the world bounds of both clips for overlap.
+// MS2-FUNCTIONAL: the exe calls FnCall::Arg out of line for the optional arguments and the target
+// @0x1429049b0
+void AvmSprite::SpriteHitTest(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    fn.Result->SetBool(false);
+    RectF bounds = psprite->GetBounds(Matrix2F());
+    if (bounds.IsNull())
+        return;
+    if (fn.NArgs >= 2)
+    {
+        float x = (float)fn.Arg(0).ToNumber(fn.Env) * 20.0f;
+        float y = (float)fn.Arg(1).ToNumber(fn.Env) * 20.0f;
+        UByte mask = 0;
+        if (fn.NArgs >= 3 && fn.Arg(2).ToBool(fn.Env))
+            mask = 1;
+        if (fn.NArgs >= 4)
+            mask |= fn.Arg(3).ToBool(fn.Env) ? 2 : 0;
+        Render::PointF pt(x, y);
+        MovieImpl* proot = psprite->GetMovieImpl();
+        if (proot && psprite->Is3D(true))
+        {
+            proot->SetNormalizedScreenCoords(pt);
+            Matrix3F view;
+            Matrix4F proj;
+            Render::ScreenToWorld& stw = proot->GetScreenToWorld();
+            if (psprite->GetProjectionMatrix3D(&proj))
+                stw.SetProjection(proj);
+            if (psprite->GetViewMatrix3D(&view))
+                stw.SetView(view);
+            Matrix3F world;
+            psprite->GetWorldMatrix3D(&world);
+            stw.SetWorld(world);
+            stw.GetWorldPoint(&pt);
+            fn.Result->SetBool(psprite->PointTestLocal(pt, mask));
+            return;
+        }
+        Matrix2F level;
+        psprite->GetLevelMatrix(&level);
+        Render::PointF local = level.TransformByInverse(pt);
+        bool hit = false;
+        if (!(psprite->Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
+        {
+            if (bounds.Contains(local))
+            {
+                if (!(mask & 1))
+                {
+                    fn.Result->SetBool(true);
+                    return;
+                }
+                hit = psprite->PointTestLocal(local, mask);
+            }
+        }
+        else
+            hit = psprite->PointTestLocal(local, mask);
+        fn.Result->SetBool(hit);
+    }
+    else if (fn.NArgs == 1)
+    {
+        InteractiveObject* ptarget = 0;
+        const Value& arg = fn.Arg(0);
+        if (arg.IsCharacter())
+            ptarget = arg.ToCharacter(fn.Env);
+        else
+        {
+            Value val;
+            if (fn.Env->GetVariable(arg.ToString(fn.Env), &val))
+                ptarget = ResolveCharacterValue(val, fn.Env);
+        }
+        if (!ptarget)
+            return;
+        RectF tbounds = ptarget->GetBounds(Matrix2F());
+        if (tbounds.IsNull())
+            return;
+        RectF world1, world2;
+        {
+            Matrix2F m;
+            psprite->GetWorldMatrix(&m);
+            m.EncloseTransform(&world1, bounds);
+        }
+        {
+            Matrix2F m;
+            ptarget->GetWorldMatrix(&m);
+            m.EncloseTransform(&world2, tbounds);
+        }
+        fn.Result->SetBool(world1.Intersects(world2));
+    }
+}
+#pragma strict_gs_check(pop)
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
