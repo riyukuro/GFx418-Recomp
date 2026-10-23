@@ -2362,6 +2362,17 @@ namespace Classes { namespace fl_display
 // scene null); the thunks live in sfr_as3_05, which sees the same defaults through as3_obj_thunkdefs.h.
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_display::MovieClip, 13, const Value&, const Value&>(StringManager&);
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_display::MovieClip, 14, const Value&, const Value&>(StringManager&);
+
+// SPtr assignment instances referenced out of line from the display object accessors.
+template SPtr<Instances::fl_display::DisplayObject>& SPtr<Instances::fl_display::DisplayObject>::operator=(const SPtr<Instances::fl_display::DisplayObject>&);
+template SPtr<Instances::fl_display::DisplayObject>& SPtr<Instances::fl_display::DisplayObject>::operator=(Instances::fl_display::DisplayObject*);
+template SPtr<Instances::fl_display::DisplayObjectContainer>& SPtr<Instances::fl_display::DisplayObjectContainer>::operator=(Instances::fl_display::DisplayObjectContainer*);
+template SPtr<Instances::fl_display::Graphics>& SPtr<Instances::fl_display::Graphics>::operator=(const SPtr<Instances::fl_display::Graphics>&);
+template SPtr<Instances::fl_display::InteractiveObject>& SPtr<Instances::fl_display::InteractiveObject>::operator=(Instances::fl_display::InteractiveObject*);
+template SPtr<Instances::fl_display::LoaderInfo>& SPtr<Instances::fl_display::LoaderInfo>::operator=(const SPtr<Instances::fl_display::LoaderInfo>&);
+template SPtr<Instances::fl_geom::Rectangle>& SPtr<Instances::fl_geom::Rectangle>::operator=(Instances::fl_geom::Rectangle*);
+template SPtr<Instances::fl_display::Sprite>& SPtr<Instances::fl_display::Sprite>::operator=(Instances::fl_display::Sprite*);
+template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>::operator=(Instances::fl_display::Stage*);
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc3@VBitmapData@fl_display@Instances@AS3@GFx@Scaleform@@$0P@V?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@456@KK_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142438be0
@@ -2565,3 +2576,12 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_dis
 // MS2-PIN: ??$ThunkMakeDefs2@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$0N@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142439120
 // MS2-PIN: ??$ThunkMakeDefs2@VMovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$0O@AEBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@YA?AU?$ThunkDefs2@AEBVValue@AS3@GFx@Scaleform@@AEBV1234@@012@AEAVStringManager@012@@Z 0x142439280
 // MS2-PIN: ??_GImageResource@GFx@Scaleform@@UEAAPEAXI@Z 0x14243ede0
+// MS2-PIN: ??4?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x14243d5d0
+// MS2-PIN: ??4?$SPtr@VDisplayObject@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVDisplayObject@fl_display@Instances@123@@Z 0x14243d640
+// MS2-PIN: ??4?$SPtr@VDisplayObjectContainer@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVDisplayObjectContainer@fl_display@Instances@123@@Z 0x14243d6b0
+// MS2-PIN: ??4?$SPtr@VGraphics@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x14243d720
+// MS2-PIN: ??4?$SPtr@VInteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVInteractiveObject@fl_display@Instances@123@@Z 0x14243d790
+// MS2-PIN: ??4?$SPtr@VLoaderInfo@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x14243d800
+// MS2-PIN: ??4?$SPtr@VRectangle@fl_geom@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVRectangle@fl_geom@Instances@123@@Z 0x14243d8e0
+// MS2-PIN: ??4?$SPtr@VSprite@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVSprite@fl_display@Instances@123@@Z 0x14243d950
+// MS2-PIN: ??4?$SPtr@VStage@fl_display@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVStage@fl_display@Instances@123@@Z 0x14243d9c0
