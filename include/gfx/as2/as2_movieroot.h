@@ -204,12 +204,54 @@ public:
     void AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
                               LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
 
-    struct ActionEntry;
+    // A queued action: a frame's action buffer, a clip event, or a function call on the character. 0x70 bytes.
+    struct ActionEntry
+    {
+        enum EntryType
+        {
+            Entry_None,
+            Entry_Buffer,    // ActionBuffer
+            Entry_Event,     // EventId
+            Entry_Function,  // Function(FunctionParams)
+            Entry_CFunction  // CFunction(FunctionParams)
+        };
+
+        ActionEntry*           pNextEntry;     // +0x00
+        EntryType              Type;           // +0x08
+        Ptr<InteractiveObject> pCharacter;     // +0x10
+        Ptr<ActionBuffer>      pActionBuffer;  // +0x18
+        EventId                mEventId;       // +0x20
+        FunctionRef            Function;       // +0x38
+        CFunctionPtr           CFunction;      // +0x50
+        Array<Value>           FunctionParams; // +0x58
+
+        // Exe 0x142925190, defined in sfr_as2_04.
+        ~ActionEntry();
+
+        // Runs the action on its character (exe 0x14293fbe0).
+        void Execute(MovieRoot* proot) const;
+    };
 
     // The queued actions per priority (only the members used so far).
     struct ActionQueueType
     {
-        void AddToFreeList(ActionEntry* pentry); // exe 0x142930910
+        // A priority level: the queued entries, from pActionRoot to pLastEntry.
+        struct Level
+        {
+            ActionEntry* pActionRoot;  // +0x00
+            ActionEntry* pInsertEntry; // +0x08
+            ActionEntry* pLastEntry;   // +0x10
+        };
+        enum { AL_Count = 6, FreeEntriesLimit = 50 };
+
+        Level        Levels[AL_Count];  // +0x00
+        int          ModId;             // +0x90 bumped when the queue changes under an iterator
+        ActionEntry* pFreeEntry;        // +0x98 the recycled entries
+        unsigned     Field_a0;          // +0xa0 (not identified yet)
+        unsigned     FreeEntriesCount;  // +0xa4
+
+        // Clears pentry and keeps it for reuse (up to FreeEntriesLimit), deletes it otherwise (exe 0x142930910).
+        void AddToFreeList(ActionEntry* pentry);
         // Drops every queued action (exe 0x142934390).
         void Clear();
     };

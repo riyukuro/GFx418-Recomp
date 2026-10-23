@@ -24,6 +24,9 @@
 // MS2-RANGE: 0x142937e20-0x142937ea0 .text$mn
 // MS2-RANGE: 0x142938180-0x1429381f0 .text$mn
 // MS2-RANGE: 0x142938830-0x142938850 .text$mn
+// MS2-RANGE: 0x14292ff50-0x142930089 .text$mn
+// MS2-RANGE: 0x142930910-0x142930a10 .text$mn
+// MS2-RANGE: 0x142925190-0x14292522c .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -632,6 +635,94 @@ bool AsBroadcaster::AddListener(Environment* penv, ObjectInterface* pthis, Objec
     return true;
 }
 
+
+// The findIndexAlt of the local variable table, exact and ignoring case (exe COMDATs 0x1429173d0 / 0x142917130,
+// called where cl inlines them).
+SPInt ValueHash_FindIndex(const ASStringHash_GC<Value>* phash, const ASString& key);
+SPInt ValueHash_FindIndexNoCase(const ASStringHash_GC<Value>* phash, const ASStringNoCaseKey& key);
+
+typedef ASStringHash_GC<Value>::SetType ValueSet;
+
+// Find / FindCaseInsensitive / FindCaseCheck of the local variable table.
+inline ValueSet::Iterator ValueHash_Find(ASStringHash_GC<Value>* phash, const ASString& key)
+{
+    SPInt index = ValueHash_FindIndex(phash, key);
+    if (index >= 0)
+        return ValueSet::Iterator(reinterpret_cast<ValueSet*>(phash), index);
+    return ValueSet::Iterator(0, 0);
+}
+inline ValueSet::Iterator ValueHash_FindNoCase(ASStringHash_GC<Value>* phash, const ASString& key)
+{
+    ASStringNoCaseKey ikey(key);
+    SPInt index = ValueHash_FindIndexNoCase(phash, ikey);
+    if (index >= 0)
+        return ValueSet::Iterator(reinterpret_cast<ValueSet*>(phash), index);
+    return ValueSet::Iterator(0, 0);
+}
+inline ValueSet::Iterator ValueHash_FindCaseCheck(ASStringHash_GC<Value>* phash, const ASString& key,
+                                                  bool caseSensitive)
+{
+    return caseSensitive ? ValueHash_Find(phash, key) : ValueHash_FindNoCase(phash, key);
+}
+
+// The exe keeps it out of line (DeclareLocal calls it).
+// @0x14292ff50
+SF_NOINLINE void Environment::AddLocal(const ASString& varname, const Value& val)
+{
+    Ptr<LocalFrame> plocalFrame = LocalFrames[LocalFrames.GetSize() - 1];
+    if (plocalFrame)
+    {
+        ASStringHash_GC<Value>* pvars = &plocalFrame->Variables;
+        ValueSet::Iterator it = ValueHash_FindCaseCheck(pvars, varname, IsCaseSensitive());
+        if (it != reinterpret_cast<ValueSet*>(pvars)->End())
+            it->Second = val;
+        else
+        {
+            ASStringHash_GC<Value>::NodeType::NodeRef e(varname, val);
+            reinterpret_cast<ValueSet*>(pvars)->Add(pvars, e);
+        }
+    }
+}
+
+}}} // namespace Scaleform::GFx::AS2
+
+// Instantiated out of line in sfr_as2_07 (exe 0x14297e710).
+extern template void Scaleform::ArrayDataBase<Scaleform::GFx::AS2::Value,
+                                              Scaleform::AllocatorGH<Scaleform::GFx::AS2::Value, 2>,
+                                              Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);
+// Instantiated out of line in sfr_as2_03 (exe 0x142924340).
+extern template Scaleform::ArrayDataBase<Scaleform::GFx::AS2::Value,
+                                         Scaleform::AllocatorGH<Scaleform::GFx::AS2::Value, 2>,
+                                         Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// The exe keeps it out of line (AddToFreeList calls it).
+// @0x142925190
+SF_NOINLINE MovieRoot::ActionEntry::~ActionEntry()
+{
+}
+
+// @0x142930910
+void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
+{
+    pentry->Type          = ActionEntry::Entry_None;
+    pentry->pActionBuffer = 0;
+    pentry->pCharacter    = 0;
+    pentry->Function.DropRefs();
+    pentry->FunctionParams.Clear();
+    if (FreeEntriesCount < FreeEntriesLimit)
+    {
+        pentry->pNextEntry = pFreeEntry;
+        ++FreeEntriesCount;
+        pFreeEntry = pentry;
+    }
+    else
+    {
+        pentry->~ActionEntry();
+        SF_FREE(pentry);
+    }
+}
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
