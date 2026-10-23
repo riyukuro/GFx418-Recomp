@@ -70,6 +70,9 @@ extern "C" void FUN_14268b3e0(void*, void*);
 extern "C" void FUN_14268ac40(void*, void*);
 extern "C" void FUN_142689aa0(void*, void*, void*);
 extern "C" void FUN_142689cb0(void*, void*, void*);
+extern "C" void FUN_14268f600(void*, void*, unsigned);
+extern "C" void FUN_14268f230(void*, void*, unsigned);
+extern "C" void FUN_14268ed90(void*, void*, unsigned);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 
@@ -2651,6 +2654,94 @@ static void WriteStreamBytes(void* stream, const void* data, std::size_t size)
 {
     auto** vtable = *reinterpret_cast<void***>(stream);
     reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, data, size);
+}
+
+// MS2-FUNCTIONAL: writes versioned movie counters and nested records in stream order, delegating child serializers to their recovered entry points.
+// @0x14268fb40
+void WriteMovieImageAggregate(const void* object, void* stream, unsigned version)
+{
+    const auto* bytes = static_cast<const unsigned char*>(object);
+    WriteStreamBytes(stream, bytes + 0x10, 8);
+    const unsigned leading[] = {0x18, 0x1c, 0x24, 0x20};
+    for (unsigned offset : leading)
+        WriteStreamBytes(stream, bytes + offset, 4);
+    const std::uint32_t zero = 0;
+    if (version < 0x15)
+        WriteStreamBytes(stream, &zero, 4);
+    for (unsigned offset = 0x28; offset <= 0x3c; offset += 4)
+        WriteStreamBytes(stream, bytes + offset, 4);
+    if (version > 0x1d)
+        WriteStreamBytes(stream, bytes + 0x40, 4);
+    for (unsigned offset = 0x44; offset <= 0x58; offset += 4)
+        WriteStreamBytes(stream, bytes + offset, 4);
+    if (version > 0xf)
+        WriteStreamBytes(stream, bytes + 0x5c, 4);
+    for (unsigned offset = 0x60; offset <= 0x7c; offset += 4)
+        WriteStreamBytes(stream, bytes + offset, 4);
+    if (version > 0xd) {
+        for (unsigned offset = 0x80; offset <= 0x88; offset += 4)
+            WriteStreamBytes(stream, bytes + offset, 4);
+        if (version > 0x17)
+            WriteStreamBytes(stream, bytes + 0x8c, 4);
+        if (version > 0x1a) {
+            WriteStreamBytes(stream, bytes + 0x90, 4);
+            WriteStreamBytes(stream, bytes + 0x94, 4);
+        }
+    }
+    WriteStreamBytes(stream, bytes + 0x98, 8);
+    if (version > 0x1c)
+        WriteStreamBytes(stream, bytes + 0xa0, 4);
+    for (unsigned offset = 0xa4; offset <= 0xac; offset += 4)
+        WriteStreamBytes(stream, bytes + offset, 4);
+    if (version > 0x1b)
+        WriteStreamBytes(stream, bytes + 0xb0, 12);
+    WriteStreamBytes(stream, bytes + 0xbc, 16);
+
+    const unsigned viewCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0xd8));
+    WriteStreamBytes(stream, &viewCount, 4);
+    auto** views = *reinterpret_cast<void***>(const_cast<unsigned char*>(bytes + 0xd0));
+    for (unsigned i = 0; i < viewCount; ++i)
+        FUN_14268f600(views[i], stream, version);
+    if (version > 0xe)
+        FUN_14268ef30(*reinterpret_cast<void* const*>(bytes + 0xe8), stream, version);
+    if (version > 0x18)
+        FUN_14268f230(*reinterpret_cast<void* const*>(bytes + 0xf0), stream, version);
+
+    const unsigned idCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0x100));
+    WriteStreamBytes(stream, &idCount, 4);
+    auto* ids = *reinterpret_cast<const std::uint32_t* const*>(bytes + 0xf8);
+    for (unsigned i = 0; i < idCount; ++i)
+        WriteStreamBytes(stream, ids + i, 4);
+    if (version > 8) {
+        const unsigned valueCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0x118));
+        WriteStreamBytes(stream, &valueCount, 4);
+        auto* values = *reinterpret_cast<const std::uint64_t* const*>(bytes + 0x110);
+        for (unsigned i = 0; i < valueCount; ++i)
+            WriteStreamBytes(stream, values + i, 8);
+    }
+    reinterpret_cast<const Scaleform::MemItem*>(*reinterpret_cast<void* const*>(bytes + 0x128))->Write(
+        *static_cast<Scaleform::File*>(stream), version);
+    if (version < 0x13) {
+        Scaleform::MemItem legacy(0);
+        legacy.Write(*static_cast<Scaleform::File*>(stream), version);
+    }
+    if (version > 2)
+        reinterpret_cast<const Scaleform::MemItem*>(*reinterpret_cast<void* const*>(bytes + 0x130))->Write(
+            *static_cast<Scaleform::File*>(stream), version);
+    if (version > 6)
+        reinterpret_cast<const Scaleform::MemItem*>(*reinterpret_cast<void* const*>(bytes + 0x138))->Write(
+            *static_cast<Scaleform::File*>(stream), version);
+    if (version > 0x10) {
+        const unsigned recordCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0x148));
+        WriteStreamBytes(stream, &recordCount, 4);
+        auto** records = *reinterpret_cast<void***>(const_cast<unsigned char*>(bytes + 0x140));
+        for (unsigned i = 0; i < recordCount; ++i)
+            FUN_14268ed90(records[i], stream, version);
+    }
+    if (version < 8) {
+        WriteStreamBytes(stream, &zero, 4);
+        WriteStreamBytes(stream, &zero, 4);
+    }
 }
 
 // MS2-FUNCTIONAL: serializes the record's scalar fields followed by each fixed-width value and timestamp pair.
