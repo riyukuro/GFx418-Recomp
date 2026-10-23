@@ -28,6 +28,8 @@ MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
 MS2_GLOBAL(0x1431bed18, void*, AS3SoundRequestVtable);
 MS2_GLOBAL(0x1431bed50, void*, AS3SoundRequestNodeVtable);
+MS2_GLOBAL(0x1431bef00, void*, AS3BufferedRequestVtable);
+MS2_GLOBAL(0x1431bef38, void*, AS3BufferedRequestNodeVtable);
 
 namespace Scaleform {
 
@@ -937,6 +939,7 @@ void ResizeLocalRecordArray(void** array, std::size_t requested)
 }
 
 void FUN_14257dcb0(void* object);
+void FUN_14257dc30(void* object);
 unsigned long long FUN_1425e3480();
 int FUN_1428d8ed8(void*, bool);
 
@@ -1577,6 +1580,65 @@ void* CreateAudioRequest(void* manager, const char* path, bool stream)
     auto** objectVtable = *reinterpret_cast<void***>(object);
     reinterpret_cast<void (*)(void*, unsigned)>(objectVtable[0])(object, 1);
     return nullptr;
+}
+
+// MS2-FUNCTIONAL: builds a linked buffered request, retains its backing data, and creates its callback-fed FMOD sound.
+// @0x1427447f0
+void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels, unsigned rate, bool wideSamples)
+{
+    auto* managerBytes = static_cast<unsigned char*>(manager);
+    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    unsigned flags[2] = { 2, 0 };
+    auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
+        DAT_143b15f60, 0x78, flags));
+    if (!object) {
+        LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+        return nullptr;
+    }
+
+    auto* node = object + 0x10;
+    auto* sentinel = managerBytes + 0xb0;
+    void* oldTail = *reinterpret_cast<void**>(managerBytes + 0xc0);
+    *reinterpret_cast<void***>(object) = &AS3BufferedRequestVtable;
+    *reinterpret_cast<unsigned*>(object + 8) = 1;
+    *reinterpret_cast<void***>(node) = &AS3BufferedRequestNodeVtable;
+    *reinterpret_cast<void**>(node + 8) = sentinel;
+    *reinterpret_cast<void**>(node + 0x10) = oldTail;
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(oldTail) + 8) = node;
+    *reinterpret_cast<void**>(managerBytes + 0xc0) = node;
+    *reinterpret_cast<void**>(object + 0x28) = manager;
+    *reinterpret_cast<void**>(object + 0x30) = nullptr;
+    *reinterpret_cast<void**>(object + 0x38) = nullptr;
+    *reinterpret_cast<void**>(object + 0x40) = backing;
+    if (backing)
+        FUN_14257dc30(backing);
+
+    const unsigned bits = wideSamples ? 32u : 16u;
+    const unsigned format = wideSamples ? 5u : 2u;
+    const unsigned length = (rate / 1000u) * (bits >> 3) * channels * 0x5dcu;
+    *reinterpret_cast<unsigned*>(object + 0x48) = channels;
+    *reinterpret_cast<unsigned*>(object + 0x4c) = rate;
+    *reinterpret_cast<unsigned*>(object + 0x50) = bits;
+    *reinterpret_cast<unsigned*>(object + 0x68) = format;
+    *reinterpret_cast<unsigned*>(object + 0x64) = length;
+    *reinterpret_cast<void**>(object + 0x58) = nullptr;
+    *reinterpret_cast<unsigned*>(object + 0x60) = 0;
+    *reinterpret_cast<unsigned long long*>(object + 0x6c) = 0;
+
+    unsigned char info[0xd8] = {};
+    *reinterpret_cast<unsigned*>(info) = sizeof(info);
+    *reinterpret_cast<int*>(info + 4) = static_cast<int>(length);
+    *reinterpret_cast<int*>(info + 0x0c) = static_cast<int>(channels);
+    *reinterpret_cast<unsigned*>(info + 0x10) = rate;
+    *reinterpret_cast<unsigned*>(info + 0x14) = format;
+    auto* system = *reinterpret_cast<FMOD::System**>(managerBytes + 0x10);
+    auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
+    if (system->createSound(nullptr, 0x442, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound) == 0)
+        (*sound)->getLength(reinterpret_cast<unsigned*>(info), 4);
+
+    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    return object;
 }
 
 }
