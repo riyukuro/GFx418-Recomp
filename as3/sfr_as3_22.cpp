@@ -796,6 +796,13 @@ void ReserveValueRecordArray(void** array, void* heapOwner, std::size_t requeste
     ReserveHeapArray(array, heapOwner, requested, 32, false);
 }
 
+// MS2-FUNCTIONAL: rounds pointer capacity to four slots and uses the global heap's allocate, reallocate, and free paths.
+// @0x142678170
+void ReserveGlobalPointerArray(void** array, void*, std::size_t requested)
+{
+    ReserveHeapArray(array, nullptr, requested, 8, false);
+}
+
 // MS2-FUNCTIONAL: uses the local heap owner and eight-byte element stride observed by the executable.
 // @0x14268e4c0
 void ReserveLocalPointerArrayA(void** array, void* heapOwner, std::size_t requested)
