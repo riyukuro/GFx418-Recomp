@@ -161,6 +161,8 @@
 // MS2-RANGE: 0x142957100-0x14295726c .text$mn
 // MS2-RANGE: 0x1429579a0-0x142957b03 .text$mn
 // MS2-RANGE: 0x142956cd0-0x1429570f8 .text$mn
+// MS2-RANGE: 0x14293fcd0-0x14293fdee .text$mn
+// MS2-RANGE: 0x14293fdf0-0x14293ff0e .text$mn
 
 #include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -177,6 +179,7 @@
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_loadqueue.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/kernel/sf_std.h"
@@ -4031,6 +4034,18 @@ bool Environment::GetVariable(const ASString& varname, Value* presult, const Wit
         Drop1();
     }
     return rv;
+}
+
+// @0x14293fcd0
+void GFxAS2LoadCSSTask::Execute()
+{
+    LoadFile();
+}
+
+// @0x14293fdf0
+void GFxAS2LoadXMLTask::Execute()
+{
+    LoadFile();
 }
 }}} // namespace Scaleform::GFx::AS2
 
