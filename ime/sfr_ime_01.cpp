@@ -16,6 +16,7 @@
 #include "../include/gfx/as3/as3_support.h"
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
+namespace Scaleform { namespace GFx { namespace IME { unsigned char FUN_1423da320(void*, void*, void*, void*); } } }
 namespace Scaleform { namespace GFx { namespace AS3 { void SF_STDCALL DoAbcLoader(LoadProcess*, const TagInfo&); } } }
 extern "C" void FUN_1425c8cf0(unsigned, void*);
 
@@ -172,6 +173,36 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: closes the executable's composition state, Escape-clears candidate modes, and removes the input window.
+// @0x1423ce5a0
+void FUN_1423ce5a0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    cx18_ImmNotifyIME(context, 0x15, 4, 0);
+    cx18_ImmNotifyIME(context, 0x11, 0, 0);
+    FUN_1423da320(*reinterpret_cast<void**>(bytes + 0xc8), nullptr, nullptr, nullptr);
+    const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x98);
+    if (mode - 5u < 2u) {
+        INPUT input{};
+        input.type = INPUT_KEYBOARD;
+        input.ki.wVk = VK_ESCAPE;
+        input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
+        SendInput(1, &input, sizeof(input));
+    }
+    *reinterpret_cast<unsigned short*>(*reinterpret_cast<unsigned short**>(bytes + 0x40)) = 0;
+    void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
+    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+    if (values) {
+        void* result = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                values, "RemoveInputWindow", &result, 0, 0);
+    }
+    cx18_ImmReleaseContext(hwnd, context);
+}
 
 // MS2-FUNCTIONAL: follows the executable's selected TextField refcount and input-eligibility checks.
 // @0x1423cf570
