@@ -328,9 +328,12 @@ struct CriMvDecoderHandleFields
 {
     CriUint8 Reserved0[0xe08];
     void* VideoDecoder;
-    CriUint8 Reserved1[0x30];
+    void* AudioManager;                                           // 0xe10
+    CriUint8 Reserved2[0x28];
     void* AlphaDecoder;
 };
+static_assert(offsetof(CriMvDecoderHandleFields, AudioManager) == 0xe10, "CRI movie audio manager offset");
+static_assert(offsetof(CriMvDecoderHandleFields, AlphaDecoder) == 0xe40, "CRI alpha decoder offset");
 
 struct CriMvEasyPlayerFrameFields
 {
@@ -663,6 +666,21 @@ static_assert(offsetof(CriMvPlyStateTransitionFields, StartReady) == 0xad4, "Cri
 static_assert(offsetof(CriMvPlyStateTransitionFields, Demux) == 0xd68, "CriMvPly demux offset");
 static_assert(offsetof(CriMvPlyStateTransitionFields, LastFrame) == 0xe30, "CriMvPly frame offset");
 static_assert(offsetof(CriMvPlyStateTransitionFields, StopState) == 0xf10, "CriMvPly stop-state offset");
+
+struct CriMvPlyInputQueueFields
+{
+    CriUint8  Reserved0[0xd78];
+    void*     InputBuffer;                                        // 0xd78
+    void*     ReadBuffer;                                         // 0xd80
+    void*     DataQueue;                                          // 0xd88
+    CriUint8  Reserved90[0xe5c - 0xd90];
+    CriSint32 PendingData;                                        // 0xe5c
+    CriUint8  ReservedE60[0xe78 - 0xe60];
+    void*     HeaderBuffer;                                       // 0xe78
+};
+static_assert(offsetof(CriMvPlyInputQueueFields, InputBuffer) == 0xd78, "CRI input buffer offset");
+static_assert(offsetof(CriMvPlyInputQueueFields, PendingData) == 0xe5c, "CRI pending data offset");
+static_assert(offsetof(CriMvPlyInputQueueFields, HeaderBuffer) == 0xe78, "CRI header buffer offset");
 
 struct CriMvPlyHeaderAnalysisFields
 {

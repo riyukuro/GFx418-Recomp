@@ -70,7 +70,7 @@ void     FUN_140031290(void* player);
 CriBool  FUN_140031410(void* player);
 void     FUN_1400317b0(void* player);
 void     FUN_140034730(void* player);
-void     FUN_1400342b0(void* player);
+void     FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
 void     FUN_1400453c4(void* demux);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
@@ -79,9 +79,14 @@ CriBool  FUN_140032090(void* player);
 CriBool  FUN_140033030(void* player);
 CriBool  FUN_140031f40(void* player);
 CriBool  FUN_140034960(void* player);
+CriBool  FUN_140031ae0(void* player);
+void     FUN_140030cb0(void* player);
+void     FUN_140034b60(void* player);
 void     FUN_140035260(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
 CriSint32 FUN_140044630(void* decoder);
 CriSint32 FUN_140043cb0(void* decoder);
+void     FUN_140044750(void* decoder);
+void     FUN_140043dd0(void* decoder);
 CriSint32 FUN_1400355b0(void* playerHandle);
 void     FUN_1400393f0(void* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c, CriSint32 d, CriSint32 e);
 void     FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
@@ -90,6 +95,11 @@ void     FUN_140036650(void* player);
 void     FUN_140036710(void* player);
 void     FUN_1400369e0(void* player);
 void     FUN_140034c20(void* player);
+void     FUN_140042e40(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                       void* output, CriUint32 sampleCount, void* result);
+void     FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                       void* output, CriUint32 sampleCount, void* result);
+void*    FUN_140043f10(void* decoder, void* frameInfo);
 void     FUN_140044e84(void);
 void     FUN_140039fc8(void);
 void     FUN_14003a010(void);
@@ -1701,6 +1711,19 @@ void FUN_140031100(void* player)
     FUN_140037880(player);
 }
 
+// MS2-FUNCTIONAL: copy the selected analyzed-header or input-buffer remainder into the read queue.
+// @0x1400342b0
+void FUN_1400342b0(void* player)
+{
+    CriMvPlyObj* movie = (CriMvPlyObj*)player;
+    CriMvPlyInputQueueFields* input = (CriMvPlyInputQueueFields*)player;
+    if (input->PendingData < 1)
+    {
+        void* source = movie->seekinfo_flag == 0 ? input->InputBuffer : input->HeaderBuffer;
+        FUN_140034330(player, source, input->ReadBuffer, input->DataQueue);
+    }
+}
+
 // MS2-FUNCTIONAL: perform the executable's pending start/stop state transition on the player.
 // @0x140031140
 void FUN_140031140(void* player)
@@ -1893,6 +1916,95 @@ void FUN_1400356a0(void* player, void* output, void* alphaOutput,
                   *(const CriUint32*)((const CriUint8*)frameInfo + 0x0c));
     if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
         FUN_140035480(player, alphaOutput, alphaInfo);
+}
+
+// MS2-FUNCTIONAL: destroy player-owned decoders and queues under the player's handle lock.
+// @0x140030c70
+void FUN_140030c70(void* player)
+{
+    FUN_140037850(player);
+    FUN_140030cb0(player);
+    FUN_140037880(player);
+}
+
+// MS2-FUNCTIONAL: perform the player update under its handle critical section.
+// @0x140031aa0
+CriBool FUN_140031aa0(void* player)
+{
+    FUN_140037850(player);
+    CriBool result = FUN_140031ae0(player);
+    FUN_140037880(player);
+    return result;
+}
+
+// MS2-FUNCTIONAL: request both video decoders to stop and move the player into stop-pending state.
+// @0x140034b60
+void FUN_140034b60(void* player)
+{
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    if (state->Status == 0 || state->Status == 7)
+        state->Status = 0;
+    else if (state->Status != 9 && state->Status != 6)
+    {
+        state->InternalFlags = 1;
+        state->Status = 8;
+        if (decoders->VideoDecoder)
+            FUN_140044750(decoders->VideoDecoder);
+        if (decoders->AlphaDecoder)
+            FUN_140043dd0(decoders->AlphaDecoder);
+    }
+}
+
+// MS2-FUNCTIONAL: stop the player under its handle critical section.
+// @0x140034b20
+void FUN_140034b20(void* player)
+{
+    FUN_140037850(player);
+    FUN_140034b60(player);
+    FUN_140037880(player);
+}
+
+// MS2-FUNCTIONAL: fetch a 16-bit waveform block from the main audio stream.
+// @0x140035f00
+void FUN_140035f00(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+{
+    FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
+                  format, output, sampleCount, result);
+}
+
+// MS2-FUNCTIONAL: fetch a 32-bit waveform block from the main audio stream.
+// @0x140035f70
+void FUN_140035f70(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+{
+    FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
+                  format, output, sampleCount, result);
+}
+
+// MS2-FUNCTIONAL: fetch a 16-bit waveform block from the secondary audio stream.
+// @0x140035fe0
+void FUN_140035fe0(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+{
+    FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
+                  format, output, sampleCount, result);
+}
+
+// MS2-FUNCTIONAL: fetch a 32-bit waveform block from the secondary audio stream.
+// @0x140036050
+void FUN_140036050(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+{
+    FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
+                  format, output, sampleCount, result);
+}
+
+// MS2-FUNCTIONAL: request the next alpha-frame metadata record when the alpha decoder is present.
+// @0x140035e90
+CriBool FUN_140035e90(void* player, void* frameInfo, void* reserved1, void* reserved2)
+{
+    void* decoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
+    if (!decoder)
+        return 0;
+    return FUN_140043f10(decoder, frameInfo) != NULL;
 }
 
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
