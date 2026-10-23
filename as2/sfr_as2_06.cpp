@@ -4,6 +4,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14295d700-0x14295d840 .text$mn
 // MS2-RANGE: 0x14295c710-0x14295c930 .text$mn
+// MS2-RANGE: 0x14295ca10-0x14295d1c0 .text$mn
 // MS2-RANGE: 0x14295d5e0-0x14295d700 .text$mn
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
@@ -2070,6 +2071,23 @@ void StringCtorFunction::GlobalCtor(const FnCall& fn)
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_String && !fn.ThisPtr->IsBuiltinPrototype())
         static_cast<StringObject*>(fn.ThisPtr)->SetValue(fn.Env, result);
     *fn.Result = result;
+}
+
+// MS2-FUNCTIONAL: creates or reuses the TextFormat receiver and applies the constructor arguments via AS2 members.
+// @0x14295ca10
+void TextFormatCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    Ptr<TextFormatObject> format;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_TextFormat && !fn.ThisPtr->IsBuiltinPrototype())
+        format = static_cast<TextFormatObject*>(fn.ThisPtr);
+    else
+        format = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
+
+    static const char* names[] = {"font", "size", "color", "bold", "italic", "underline", "url", "target", "align", "leftMargin", "rightMargin", "indent", "leading"};
+    for (unsigned i = 0; i < 13 && i < fn.NArgs; ++i)
+        format->SetMember(fn.Env, fn.Env->CreateConstString(names[i]), fn.Arg(i));
+
+    fn.Result->SetAsObject(format.GetPtr());
 }
 
 // MS2-FUNCTIONAL: handles UTF-8/UTF-16 BOMs, parses the owned buffer, releases it, and reports completion.
