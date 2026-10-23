@@ -159,7 +159,10 @@ void     FUN_140029bf0(void* array, void* source, CriUint64 capacity);
 void     FUN_140029c90(void* array, void* source, CriUint64 capacity);
 void     FUN_140029d30(void* array, void* source, CriUint64 capacity);
 void     FUN_14002afe0(void* array);
-void     FUN_14002a4a0(void* array, CriUint64 source, CriUint64 length);
+void     FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count);
+void     FUN_140006f50(void* array, void* source, CriUint64 capacity);
+void     FUN_1400051c0(void* array, void* source, CriUint64 capacity);
+void     FUN_142584950(void* destination, const void* source);
 void     FUN_14002ba30(void* object);
 void     FUN_14002c550(void* object);
 void     FUN_14002b2e0(void* object);
@@ -2103,6 +2106,79 @@ void FUN_14002a550(void* items, CriSint64 count)
     }
 }
 
+// MS2-FUNCTIONAL: append a three-word record using the vector's twelve-byte element stride.
+// @0x14002a900
+void FUN_14002a900(CriUint64* array, const CriUint32* value)
+{
+    CriUint64 length = array[1] + 1;
+    CriUint64 capacity = array[2];
+    if (length < array[1])
+    {
+        if ((capacity >> 1) <= length)
+            FUN_140029d30(array, array, length);
+    }
+    else if (length >= capacity)
+        FUN_140029d30(array, array, (length >> 2) + length);
+    array[1] = length;
+    CriUint32* destination = (CriUint32*)(array[0] - 12 + length * 12);
+    if (destination)
+    {
+        destination[0] = value[0];
+        destination[1] = value[1];
+        destination[2] = value[2];
+    }
+}
+
+// MS2-FUNCTIONAL: append a four-word record using the vector's sixteen-byte element stride.
+// @0x14002a6f0
+void FUN_14002a6f0(CriUint64* array, const CriUint32* value)
+{
+    CriUint64 length = array[1] + 1;
+    CriUint64 capacity = array[2];
+    if (length < array[1])
+    {
+        if ((capacity >> 1) <= length)
+            FUN_1400051c0(array, array, length);
+    }
+    else if (length >= capacity)
+        FUN_1400051c0(array, array, (length >> 2) + length);
+    array[1] = length;
+    CriUint32* destination = (CriUint32*)(array[0] - 16 + length * 16);
+    if (destination)
+    {
+        destination[0] = value[0];
+        destination[1] = value[1];
+        destination[2] = value[2];
+        destination[3] = value[3];
+    }
+}
+
+// MS2-FUNCTIONAL: append a pair of retained strings to the first fixed-width string vector.
+// @0x14002af50
+void FUN_14002af50(CriUint64* array, const CriUint64* value)
+{
+    FUN_140006f50(array, array, array[1] + 1);
+    CriUint64* destination = (CriUint64*)(array[0] - 0x10 + array[1] * 0x10);
+    if (destination)
+    {
+        FUN_142584950(destination, value);
+        FUN_142584950(destination + 1, value + 1);
+    }
+}
+
+// MS2-FUNCTIONAL: append a pair of retained strings to the second fixed-width string vector.
+// @0x14002b950
+void FUN_14002b950(CriUint64* array, const CriUint64* value)
+{
+    FUN_140006f50(array, array, array[1] + 1);
+    CriUint64* destination = (CriUint64*)(array[0] - 0x10 + array[1] * 0x10);
+    if (destination)
+    {
+        FUN_142584950(destination, value);
+        FUN_142584950(destination + 1, value + 1);
+    }
+}
+
 // MS2-FUNCTIONAL: initialize a lock guard's stored lock pointer and acquire the lock.
 // @0x14002d1a0
 void* FUN_14002d1a0(void* guard, void* lock)
@@ -2211,12 +2287,61 @@ void FUN_14002acd0(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
+// MS2-FUNCTIONAL: append a run of pointer values, growing backing storage by the observed quarter margin.
+// @0x14002a4a0
+void FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count)
+{
+    if (!count)
+        return;
+    CriUint64 oldLength = array[1];
+    CriUint64 newLength = oldLength + count;
+    if (newLength < oldLength)
+    {
+        if (newLength < (array[2] >> 1))
+            FUN_140029bf0(array, array, newLength);
+    }
+    else if (array[2] <= newLength)
+        FUN_140029bf0(array, array, (newLength >> 2) + newLength);
+    array[1] = newLength;
+    CriUint64* destination = (CriUint64*)array[0] + oldLength;
+    for (CriUint64 i = 0; i < count; ++i)
+        if (destination)
+            destination[i] = source[i];
+}
+
+// MS2-FUNCTIONAL: clear a vector while preserving its one-element inline-capacity sentinel.
+// @0x14002afe0
+void FUN_14002afe0(CriUint64* array)
+{
+    if (array[1] == 0)
+    {
+        if (array[2] == 0)
+        {
+            FUN_140029bf0(array, array, 0);
+            array[1] = 0;
+            return;
+        }
+    }
+    else if ((array[2] & ~((CriUint64)1)) != 0)
+    {
+        if (array[0])
+        {
+            FUN_14002d3f0((void*)array[0]);
+            array[0] = 0;
+        }
+        array[2] = 0;
+        array[1] = 0;
+        return;
+    }
+    array[1] = 0;
+}
+
 // MS2-FUNCTIONAL: clear the destination vector before cloning its two-word source state.
 // @0x14002a980
 CriUint64* FUN_14002a980(CriUint64* destination, const CriUint64* source)
 {
     destination[0] = destination[1] = destination[2] = 0;
-    FUN_14002a4a0(destination, source[0], source[1]);
+    FUN_14002a4a0(destination, (const CriUint64*)source[0], source[1]);
     return destination;
 }
 
@@ -2225,7 +2350,7 @@ CriUint64* FUN_14002a980(CriUint64* destination, const CriUint64* source)
 CriUint64* FUN_14002afb0(CriUint64* destination, const CriUint64* source)
 {
     destination[0] = destination[1] = destination[2] = 0;
-    FUN_14002a4a0(destination, source[0], source[1]);
+    FUN_14002a4a0(destination, (const CriUint64*)source[0], source[1]);
     return destination;
 }
 
@@ -2234,7 +2359,7 @@ CriUint64* FUN_14002afb0(CriUint64* destination, const CriUint64* source)
 CriUint64* FUN_14002b9b0(CriUint64* destination, const CriUint64* source)
 {
     destination[0] = destination[1] = destination[2] = 0;
-    FUN_14002a4a0(destination, source[0], source[1]);
+    FUN_14002a4a0(destination, (const CriUint64*)source[0], source[1]);
     return destination;
 }
 
