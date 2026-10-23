@@ -132,7 +132,10 @@ class ConstShapeNoStyles : public ShapeDataBase
 {
 public:
     ConstShapeNoStyles() : ShapeDataBase(Empty_Shape) { *(const void* const**)this = MS2_SF_ConstShapeNoStyles_vftable; }
+    virtual ~ConstShapeNoStyles();
 };
+
+ConstShapeNoStyles::~ConstShapeNoStyles() {}
 
 // The image of an empty video definition (Video_VideoCharacter, 0x30 bytes) with its inline construction.
 struct EmptyVideoDefImage
@@ -2432,3 +2435,6 @@ bool MatchFileNames(const String& path1, const String& path2)
 }
 
 }} // namespace Scaleform::GFx
+// MS2-PIN: ?GetStats@ResourceReport@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z 0x1425d14b0
+// MS2-PIN: ??_GConstShapeNoStyles@GFx@Scaleform@@UEAAPEAXI@Z 0x1425ccac0
+// MS2-PIN: ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
