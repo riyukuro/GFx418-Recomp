@@ -28,7 +28,33 @@ bool FUN_1425b9730(void* ptf);                          // TextField::HasStyleSh
 // DocView::AppendHtml (the image tags it meets go to *pimgInfoArr)
 void FUN_14260de50(void* pdoc, const char* phtml, Scaleform::UPInt htmlSize, bool multiline, void* pimgInfoArr);
 void FUN_1425ba7d0(void* ptf, void* pimgInfoArr);       // TextField::ProcessImageTags
+// VM::IsOfType(v, class traits)
+bool FUN_1425146d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v,
+                   const Scaleform::GFx::AS3::ClassTraits::Traits& ctr);
+void FUN_142614e30(void* psubst, void* pimgDesc);        // DocView::ImageSubstitutor::RemoveImageDesc
+void FUN_1425bb680(void* ptf, const char* id);           // TextField::RemoveIdImageDescAssoc
+void FUN_1425b7220(void* ptf);                          // TextField::ClearIdImageDescAssoc
+// AvmTextField: one image substitution element (an object of the script's array) at index idx
+void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, const Scaleform::GFx::AS3::Value& ve);
 namespace Scaleform {
+// DocView::ImageSubstitutor::Element, the same stand-in as sfr_as3_14 (ArrayDataBase destructor = exe 0x1424c7090),
+// and the substitutor itself (the DocView's +0x30).
+struct MS2_ImageSubstElement                // 0x38 bytes
+{
+    wchar_t              SubString[20];
+    Ptr<RefCountNTSImpl> pImageDesc;        // +0x28
+    UByte                SubStringLen;
+};
+// Text::ImageDesc (a RefCountBaseNTS): only its image is touched here.
+struct MS2_TextImageDesc : public RefCountNTSImpl
+{
+    Ptr<Render::Image> pImage;              // +0x10
+};
+struct MS2_ImageSubstitutor : public NewOverrideBase<Stat_Default_Mem>
+{
+    ~MS2_ImageSubstitutor();                // out of line in the exe: the Elements destructor 0x1424c7090
+    ArrayLH<MS2_ImageSubstElement> Elements;
+};
 // StyledText::HTMLImageTagInfo: the render Text headers do not mix with this kernel tree, so the same stand-in as
 // sfr_as3_14 (whose ArrayDataBase destructor instantiation is the exe's 0x1424c7100).
 struct MS2_HTMLImageTagInfo                 // 0x40 bytes
@@ -43,6 +69,41 @@ struct MS2_HTMLImageTagInfo                 // 0x40 bytes
 };
 }
 namespace Scaleform { namespace GFx { class MovieImpl; class Sprite; }}
+namespace Scaleform {
+void LogDebugMessage(LogMessageId id, const char* fmt, ...);
+namespace GFx {
+// What an image creator is asked to make (0x38 bytes); the same as sfr_gfx_06e.
+class ImageCreateInfo
+{
+public:
+    enum { Create_SourceImage = 3 };
+
+    ImageCreateInfo(int type, MemoryHeap* pheap, unsigned use, Resource::ResourceUse ruse)
+        : Type(type), pHeap(pheap), Use(use), RUse(ruse), pLog(0), pFileOpener(0), pIFHRegistry(0), pMovie(0)
+    {
+    }
+
+    int                   Type;          // +0
+    MemoryHeap*           pHeap;         // +8
+    unsigned              Use;           // +0x10
+    Resource::ResourceUse RUse;          // +0x14
+    void*                 pLog;          // +0x18
+    void*                 pFileOpener;   // +0x20
+    void*                 pIFHRegistry;  // +0x28
+    void*                 pMovie;        // +0x30
+};
+struct ImageCreateExportInfo;
+
+// Turns image files and sources into images (vftable 0x143184c60); the same as sfr_gfx_06e.
+class ImageCreator : public State
+{
+public:
+    virtual Render::Image* LoadProtocolImage(const ImageCreateInfo& info, const String& url);
+    virtual Render::Image* LoadImageFile(const ImageCreateInfo& info, const String& url);
+    virtual Render::Image* LoadExportedImage(const ImageCreateExportInfo& info, const String& url);
+    virtual Render::Image* CreateImage(const ImageCreateInfo& info, Render::ImageSource* source);
+};
+}}
 Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);   // MovieImpl::GetModalClip
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -364,6 +425,118 @@ namespace Classes { namespace fl_gfx
             flags |= 0x800;
         else
             flags &= ~0x800u;
+    }
+
+    // @0x1424cbb40
+    void TextFieldEx::setImageSubstitutions(const Value& result, Instances::fl_text::TextField* textField, const Value& substInfo)
+    {
+        SF_UNUSED(result);
+        VM& vm = GetVM();
+        if (!textField)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "TextFieldEx::setImageSubstitutions"));
+            return;
+        }
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (substInfo.IsNull() || substInfo.IsUndefined())
+        {
+            // clear all substitutions
+            FUN_1425b7220(ptf);
+            UByte* pdoc = TextDocView(ptf);
+            delete *(MS2_ImageSubstitutor**)(pdoc + 0x30);
+            *(MS2_ImageSubstitutor**)(pdoc + 0x30) = NULL;
+            TextDocView(ptf)[0x14b] |= 2;   // DocView: reformat
+            FUN_1425bc060(ptf);
+        }
+        else if (substInfo.IsObject())
+        {
+            Object* pobj = substInfo.GetObject();
+            if (FUN_1425146d0(vm, substInfo, *vm.TraitsArray))
+            {
+                Instances::fl::Array* parr = static_cast<Instances::fl::Array*>(pobj);
+                for (UPInt i = 0, n = parr->GetSize(); i < n; ++i)
+                {
+                    const Value& ve = parr->At(i);
+                    if (ve.IsObject())
+                    {
+                        AvmInteractiveObjBase* pavm = ptf->GetAvmObjImpl()->ToAvmInteractiveObjBase();
+                        FUN_14251d070(pavm ? (UByte*)pavm - 0x30 : NULL, vm, (unsigned)i, ve);
+                    }
+                }
+            }
+            else if (substInfo.IsObject())
+            {
+                AvmInteractiveObjBase* pavm = ptf->GetAvmObjImpl()->ToAvmInteractiveObjBase();
+                FUN_14251d070(pavm ? (UByte*)pavm - 0x30 : NULL, vm, 0, substInfo);
+            }
+        }
+        else
+            ptf->LogScriptWarning("%s.setImageSubstitutions() failed: parameter should be either 'null', object or array",
+                                  ptf->GetName().ToCStr());
+    }
+
+    // MS2-FUNCTIONAL: same code; the exe keeps the text field in rsi and the hash table in rbp (register permutation)
+    // @0x1424cc450
+    void TextFieldEx::updateImageSubstitution(const Value& result, Instances::fl_text::TextField* textField, const ASString& id, Instances::fl_display::BitmapData* bitmapData)
+    {
+        SF_UNUSED(result);
+        if (!textField)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (!ptf)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        // TextField::pImageDescAssoc
+        StringHash<Ptr<MS2_TextImageDesc> >* passoc = *(StringHash<Ptr<MS2_TextImageDesc> >**)((UByte*)ptf + 0x120);
+        if (!passoc)
+            return;
+        Ptr<MS2_TextImageDesc>* ppimgDesc;
+        {
+            String key(id.ToCStr());
+            ppimgDesc = passoc->Get(key);
+        }
+        if (!ppimgDesc)
+            return;
+        MS2_TextImageDesc* pimgDesc = *ppimgDesc;
+        if (!bitmapData)
+        {
+            // DocView::GetImageSubstitutor
+            UByte* pdoc = TextDocView(ptf);
+            MS2_ImageSubstitutor*& psubst = *(MS2_ImageSubstitutor**)(pdoc + 0x30);
+            if (!psubst)
+                psubst = new MS2_ImageSubstitutor;
+            if (psubst)
+            {
+                FUN_142614e30(psubst, pimgDesc);
+                TextDocView(ptf)[0x14b] |= 2;   // DocView: reformat
+                FUN_1425bb680(ptf, id.ToCStr());
+                FUN_1425bc060(ptf);
+            }
+        }
+        else
+        {
+            ImageResource* pimageRes = bitmapData->GetImageResource();
+            Ptr<MovieDefImpl> pmd = ptf->GetResourceMovieDef();
+            Ptr<Render::Image> img;
+            if (pimageRes->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
+                img = (Render::Image*)pimageRes->GetImage();
+            else if (!Ptr<ImageCreator>(*(ImageCreator*)pmd->GetStateAddRef(State::State_ImageCreator)))
+                LogDebugMessage(Log_Warning, "ImageCreator is null in UpdateImageSubstitution");
+            else
+            {
+                ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, Memory::GetHeapByAddress(ptf), 1,
+                                      Resource::Use_Bitmap);
+                img = *Ptr<ImageCreator>(*(ImageCreator*)pmd->GetStateAddRef(State::State_ImageCreator))
+                           ->CreateImage(cinfo, (Render::ImageSource*)pimageRes->GetImage());
+            }
+            pimgDesc->pImage = img;
+            FUN_1425bc060(ptf);
+        }
     }
 
     // @0x1424c9bb0
