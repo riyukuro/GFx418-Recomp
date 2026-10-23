@@ -130,6 +130,7 @@
 // MS2-RANGE: 0x1429469d0-0x142946a76 .text$mn
 // MS2-RANGE: 0x1429494d0-0x142949612 .text$mn
 // MS2-RANGE: 0x1429390a0-0x142939213 .text$mn
+// MS2-RANGE: 0x14294ef50-0x14294f13e .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1118,8 +1119,9 @@ int MovieClipLoader::GetTotalBytes(InteractiveObject* pch) const
     return 0;
 }
 
+// The exe calls it out of line (Environment::GetMember).
 // @0x142954a50
-bool Value::GetPropertyValue(Environment* penv, ObjectInterface* pthis, Value* value) const
+SF_NOINLINE bool Value::GetPropertyValue(Environment* penv, ObjectInterface* pthis, Value* value) const
 {
     if (T.Type == PROPERTY && penv)
     {
@@ -2518,6 +2520,33 @@ void Selection::DoTransferFocus(const FnCall& fn)
     FocusMovedType fmt           = (FocusMovedType)(int)fn.Arg(1).ToNumber(fn.Env);
     unsigned       controllerIdx = fn.Arg(2).ToUInt32(fn.Env);
     FUN_142577060(proot, Value_ToCharacterInl(fn.Arg(0), fn.Env), controllerIdx, fmt);
+}
+
+// MS2-FUNCTIONAL the exe keeps the resolve handler copy in registers (no frame pointer); ours builds it on the frame
+// @0x14294ef50
+bool Environment::GetMember(ObjectInterface* pthis, const ASString& name, Value* pval)
+{
+    bool rv = pthis->GetMember(this, name, pval);
+    if (rv && pval->IsProperty())
+    {
+        pval->GetPropertyValue(this, pthis, pval);
+        return rv;
+    }
+    if (pval->GetType() == Value::RESOLVEHANDLER)
+    {
+        FunctionRef resolveHandler(pval->V.FunctionValue); // ToResolveHandler, inlined
+        if (resolveHandler.Function)
+        {
+            Push(name);
+            pval->SetUndefined();
+            resolveHandler.Invoke(FnCall(pval, pthis, this, 1, GetTopIndex()));
+            Drop1();
+            rv = true;
+        }
+        else
+            rv = false;
+    }
+    return rv;
 }
 }}} // namespace Scaleform::GFx::AS2
 

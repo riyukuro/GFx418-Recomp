@@ -275,6 +275,9 @@ public:
     // Resolves a variable path (with/scope chain, targets); false if not found (exe 0x142945010).
     bool               FindVariable(const GetVarParams& params, bool searchUndefined = false,
                                     ASString* pvarName = 0) const;
+    // A member of pthis with properties evaluated and a resolve handler (__resolve) called with the name
+    // (exe 0x14294ef50).
+    bool               GetMember(ObjectInterface* pthis, const ASString& name, Value* pval);
     // The constructor of a builtin class from _global, null if it is not a function (exe 0x14294a0f0).
     FunctionRef        GetConstructor(ASBuiltinType className);
 
