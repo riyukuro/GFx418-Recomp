@@ -105,6 +105,8 @@
 // MS2-RANGE: 0x14294b120-0x14294b162 .text$mn
 // MS2-RANGE: 0x14294b090-0x14294b10c .text$mn
 // MS2-RANGE: 0x142949860-0x142949892 .text$mn
+// MS2-RANGE: 0x142949900-0x142949952 .text$mn
+// MS2-RANGE: 0x14294a430-0x14294a4e2 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1997,6 +1999,37 @@ AvmCharacter* AvmCharacter::GetAvmTopParent(bool ignoreLockRoot) const
     // AvmCharacter sits at the start of the AVM object.
     return static_cast<AvmCharacter*>(
         static_cast<AvmInteractiveObjBase*>(pparent->GetTopParent(ignoreLockRoot)->GetAvmObjImpl()));
+}
+
+// The registration entry of a built-in class, 0 when the name is not one (the name is taken by value).
+// The exe's out-of-line Hash::Get the registry lookup calls (folded with other tables of 0x10-byte values).
+GlobalContext::ClassRegEntry* FUN_140001bd0(ASStringHash<GlobalContext::ClassRegEntry>* phash, const ASString& key);
+
+// @0x142949900
+GlobalContext::ClassRegEntry* GlobalContext::GetBuiltinClassRegistrar(ASString className)
+{
+    ClassRegEntry* pentry = FUN_140001bd0(&BuiltinClassesRegistry, className);
+    if (pentry)
+        return pentry;
+    return 0;
+}
+
+// A clip that acts as a button shows the hand (1) unless its useHandCursor is set to a false value; others the
+// arrow (0).
+// @0x14294a430
+unsigned AvmSprite::GetCursorType() const
+{
+    if (static_cast<const AvmCharacter*>(this)->ActsAsButton())
+    {
+        const Environment* penv = GetASEnvironment();
+        Value val;
+        if (const_cast<AvmSprite*>(this)->GetMember(const_cast<Environment*>(penv),
+                                                     penv->GetBuiltin(ASBuiltin_useHandCursor), &val) &&
+            (val.IsUndefined() || !val.ToBool(penv)))
+            return 0;
+        return 1;
+    }
+    return 0;
 }
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0

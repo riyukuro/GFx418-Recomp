@@ -130,6 +130,8 @@ public:
     // tags once (exe 0x1429415c0).
     virtual void ExecuteFrame0Events();
     virtual void ExecuteInitActionFrameTags(unsigned frame);
+    // AvmInteractiveObjBase override: hand or arrow (exe 0x14294a430).
+    virtual unsigned GetCursorType() const;
 
     // The data members (only those used so far). AvmSpriteBase's vftable is at +0x30.
     UByte                                   Unrecovered_38[0x1e0 - 0x38];

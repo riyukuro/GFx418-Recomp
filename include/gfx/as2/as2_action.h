@@ -434,6 +434,8 @@ public:
     bool RegisterClassA(ASStringContext* psc, const ASString& className, const FunctionRef& ctorFunction);
     // Object.registerClass(name, null): drops the class name; false if it was not registered (exe 0x142992680).
     bool UnregisterClassA(ASStringContext* psc, const ASString& className);
+    // The registration entry of a built-in class (exe 0x142949900).
+    ClassRegEntry* GetBuiltinClassRegistrar(ASString className);
 };
 
 enum { StatMD_ASBinaryData_Mem = 0x108 };
