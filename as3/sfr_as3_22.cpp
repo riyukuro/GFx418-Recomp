@@ -48,6 +48,8 @@ extern "C" void FUN_14268aff0(void*, void*);
 extern "C" void FUN_14268a8e0(void*, void*);
 extern "C" void FUN_14268b3e0(void*, void*);
 extern "C" void FUN_14268ac40(void*, void*);
+extern "C" void FUN_142689aa0(void*, void*, void*);
+extern "C" void FUN_142689cb0(void*, void*, void*);
 
 static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t* source)
 {
@@ -2379,6 +2381,60 @@ static bool SameAs3String(const Scaleform::String* left, const Scaleform::String
     const auto* leftChars = reinterpret_cast<const unsigned char*>((leftBits & ~std::uintptr_t(3)) + 12);
     const auto* rightChars = reinterpret_cast<const unsigned char*>((rightBits & ~std::uintptr_t(3)) + 12);
     return std::memcmp(leftChars, rightChars, length) == 0;
+}
+
+static void CopyAs3StrongArray(void** destinationArray, void* const* sourceArray)
+{
+    const std::size_t count = reinterpret_cast<const std::size_t*>(sourceArray)[1];
+    Scaleform::ResizeStrongPointerArrayB(destinationArray, count);
+    auto** dstItems = static_cast<void**>(destinationArray[0]);
+    auto* srcItems = static_cast<void* const*>(sourceArray[0]);
+    for (std::size_t i = 0; i < count; ++i) {
+        if (srcItems[i]) FUN_14257dc30(srcItems[i]);
+        if (dstItems[i]) FUN_14257dcb0(dstItems[i]);
+        dstItems[i] = srcItems[i];
+    }
+}
+
+static void CopyAs3RawRecords(unsigned char* destinationList, const unsigned char* sourceList, std::size_t stride)
+{
+    const std::size_t count = *reinterpret_cast<const std::size_t*>(sourceList + 0x18);
+    Scaleform::ResizeRawArray(reinterpret_cast<void**>(destinationList + 0x10), destinationList + 0x10, count, stride);
+    if (count)
+        std::memcpy(*reinterpret_cast<void**>(destinationList + 0x10),
+                    *reinterpret_cast<void* const*>(sourceList + 0x10), count * stride);
+}
+
+// MS2-FUNCTIONAL: copies the image resource record and its nested strong-reference arrays, metric lists, and lookup sets.
+// @0x142687250
+extern "C" long long FUN_142687250(void* destination, const void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto* src = static_cast<const unsigned char*>(source);
+    std::memcpy(dst + 0x10, src + 0x10, 12);
+    *reinterpret_cast<Scaleform::String*>(dst + 0x20) = *reinterpret_cast<const Scaleform::String*>(src + 0x20);
+    std::memcpy(dst + 0x28, src + 0x28, 20);
+
+    CopyAs3StrongArray(reinterpret_cast<void**>(dst + 0x40), reinterpret_cast<void* const*>(src + 0x40));
+
+    auto* dstPtrRecords = *reinterpret_cast<unsigned char**>(dst + 0x58);
+    auto* srcPtrRecords = *reinterpret_cast<const unsigned char* const*>(src + 0x58);
+    CopyAs3StrongArray(reinterpret_cast<void**>(dstPtrRecords + 0x10), reinterpret_cast<void* const*>(srcPtrRecords + 0x10));
+    auto* dstMetrics = *reinterpret_cast<unsigned char**>(dst + 0x60);
+    auto* srcMetrics = *reinterpret_cast<const unsigned char* const*>(src + 0x60);
+    CopyAs3RawRecords(dstMetrics, srcMetrics, 0x20);
+    FUN_142689aa0(dstMetrics + 0x28, dstMetrics + 0x28, *reinterpret_cast<void* const*>(srcMetrics + 0x28));
+    auto* dstNames = *reinterpret_cast<unsigned char**>(dst + 0x68);
+    auto* srcNames = *reinterpret_cast<const unsigned char* const*>(src + 0x68);
+    CopyAs3RawRecords(dstNames, srcNames, 0x18);
+    FUN_142689cb0(dstNames + 0x28, dstNames + 0x28, *reinterpret_cast<void* const*>(srcNames + 0x28));
+
+    auto* dstTree = *reinterpret_cast<unsigned char**>(dst + 0x70);
+    auto* srcTree = *reinterpret_cast<const unsigned char* const*>(src + 0x70);
+    *reinterpret_cast<Scaleform::String*>(dstTree + 0x10) = *reinterpret_cast<const Scaleform::String*>(srcTree + 0x10);
+    CopyAs3StrongArray(reinterpret_cast<void**>(dstTree + 0x18), reinterpret_cast<void* const*>(srcTree + 0x18));
+    FUN_142689aa0(dstTree + 0x30, dstTree + 0x30, *reinterpret_cast<void* const*>(srcTree + 0x30));
+    return static_cast<long long>(reinterpret_cast<std::uintptr_t>(destination));
 }
 
 // MS2-FUNCTIONAL: compares a text record's strings, string array, scalar identity, and near-equal geometry values.
