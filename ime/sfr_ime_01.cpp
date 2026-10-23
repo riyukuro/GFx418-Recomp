@@ -1105,6 +1105,20 @@ int FUN_1423daeb0(void* self)
     return remaining;
 }
 
+// MS2-FUNCTIONAL: emits the executable's four-part IME command log message when the state bag has a logger.
+// @0x1423ccfc0
+void FUN_1423ccfc0(void*, long long owner, const char* command, const char* value)
+{
+    auto* bag = reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10);
+    auto log = bag->GetLog();
+    if (!log) return;
+    log->LogMessage("imecommand: '");
+    log->LogMessage(const_cast<char*>(command));
+    log->LogMessage("' '");
+    log->LogMessage("%s", value);
+    log->LogMessage("'\n");
+}
+
 void FUN_1423d94f0(void*, void*);
 
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
