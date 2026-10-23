@@ -136,6 +136,8 @@
 // MS2-RANGE: 0x142956760-0x142956ac1 .text$mn
 // MS2-RANGE: 0x142950300-0x1429505bb .text$mn
 // MS2-RANGE: 0x14294f880-0x14294fc12 .text$mn
+// MS2-RANGE: 0x14294e940-0x14294ec0c .text$mn
+// MS2-RANGE: 0x1429505d0-0x142950b35 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2772,6 +2774,146 @@ bool RectangleObject::GetMember(Environment* penv, const ASString& name, Value* 
     else
         return GetMemberRaw(penv->GetSC(), name, val);
     return true;
+}
+
+// A channel offset as an integer; NaN counts as 0.
+static SF_FORCEINLINE int ColorTransform_OffsetToInt(float v)
+{
+    if (NumberUtil::IsNaN(v))
+        v = 0;
+    return (int)v;
+}
+
+// MS2-FUNCTIONAL our build merges the eight number members into one Value tail; the exe assigns in each branch
+// @0x14294e940
+bool ColorTransformObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "redMultiplier") == 0)
+        *val = Value(mColorTransform.M[0][0]);
+    else if (strcmp(pname, "greenMultiplier") == 0)
+        *val = Value(mColorTransform.M[0][1]);
+    else if (strcmp(pname, "blueMultiplier") == 0)
+        *val = Value(mColorTransform.M[0][2]);
+    else if (strcmp(pname, "alphaMultiplier") == 0)
+        *val = Value(mColorTransform.M[0][3]);
+    else if (strcmp(pname, "redOffset") == 0)
+        *val = Value(mColorTransform.M[1][0]);
+    else if (strcmp(pname, "greenOffset") == 0)
+        *val = Value(mColorTransform.M[1][1]);
+    else if (strcmp(pname, "blueOffset") == 0)
+        *val = Value(mColorTransform.M[1][2]);
+    else if (strcmp(pname, "alphaOffset") == 0)
+        *val = Value(mColorTransform.M[1][3]);
+    else if (memcmp(pname, "rgb", 4) == 0)
+    {
+        int r = ColorTransform_OffsetToInt(mColorTransform.M[1][0]);
+        int g = ColorTransform_OffsetToInt(mColorTransform.M[1][1]);
+        int b = ColorTransform_OffsetToInt(mColorTransform.M[1][2]);
+        UInt32 rgb = ((((UInt32)(UInt8)r << 8) | (UInt8)g) << 8) | (UInt8)b;
+        *val = Value((Number)rgb);
+    }
+    else
+        return GetMemberRaw(penv->GetSC(), name, val);
+    return true;
+}
+
+// The ColorTransform object takes the transform with the add row in 0..255.
+static SF_FORCEINLINE void ColorTransform_SetCxform(ColorTransformObject* pct, const Render::Cxform& cx)
+{
+    pct->mColorTransform = cx;
+    pct->mColorTransform.M[1][0] *= 255.0f;
+    pct->mColorTransform.M[1][1] *= 255.0f;
+    pct->mColorTransform.M[1][2] *= 255.0f;
+    pct->mColorTransform.M[1][3] *= 255.0f;
+}
+
+// MS2-FUNCTIONAL the exe calls the out-of-line Matrix2x4::Prepend and keeps the result flag in a register
+// @0x1429505d0
+bool TransformObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "pixelBounds") == 0)
+    {
+        if (pMovieRoot)
+        {
+            Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
+            if (ch)
+            {
+                Render::RectF b = ch->GetBounds(ch->GetMatrix());
+                int           h = Alg::IRound(Render::TwipsToPixels(b.y2 - b.y1));
+                int           w = Alg::IRound(Render::TwipsToPixels(b.x2 - b.x1));
+                int           y = Alg::IRound(Render::TwipsToPixels(b.y1));
+                int           x = Alg::IRound(Render::TwipsToPixels(b.x1));
+                ASRect        r(Double(x), Double(y), Double(x) + Double(w), Double(y) + Double(h));
+                static_cast<RectangleObject*>(PixelBounds.GetPtr())->SetProperties(penv, r);
+                val->SetAsObject(PixelBounds);
+                return true;
+            }
+        }
+        val->SetUndefined();
+        return false;
+    }
+    else if (strcmp(pname, "colorTransform") == 0)
+    {
+        if (pMovieRoot)
+        {
+            Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
+            if (ch)
+            {
+                ColorTransform_SetCxform(static_cast<ColorTransformObject*>(pColorTransform.GetPtr()), ch->GetCxform());
+                val->SetAsObject(pColorTransform);
+                return true;
+            }
+        }
+        val->SetUndefined();
+        return false;
+    }
+    else if (memcmp(pname, "matrix", 7) == 0)
+    {
+        if (pMovieRoot)
+        {
+            Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
+            if (ch)
+            {
+                Render::Matrix2F m = ch->GetMatrix();
+                static_cast<MatrixObject*>(Matrix.GetPtr())->SetMatrixTwips(penv->GetSC(), m);
+                val->SetAsObject(Matrix);
+                return true;
+            }
+        }
+        val->SetUndefined();
+        return false;
+    }
+    else if (strcmp(pname, "concatenatedColorTransform") == 0)
+    {
+        Render::Cxform cx;
+        if (pMovieRoot)
+        {
+            Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
+            for (DisplayObjectBase* p = ch; p; p = p->GetParent())
+                cx.Prepend(p->GetCxform());
+        }
+        Ptr<ColorTransformObject> pct = *SF_HEAP_NEW(penv->GetHeap()) ColorTransformObject(penv);
+        ColorTransform_SetCxform(pct, cx);
+        *val = Value(pct.GetPtr());
+        return true;
+    }
+    else if (strcmp(pname, "concatenatedMatrix") == 0)
+    {
+        Render::Matrix2F m;
+        if (pMovieRoot)
+        {
+            Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
+            for (DisplayObjectBase* p = ch; p; p = p->GetParent())
+                m.Prepend(p->GetMatrix());
+        }
+        Ptr<MatrixObject> pmo = *SF_HEAP_NEW(penv->GetHeap()) MatrixObject(penv);
+        pmo->SetMatrixTwips(penv->GetSC(), m);
+        *val = Value(pmo.GetPtr());
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
 }
 }}} // namespace Scaleform::GFx::AS2
 

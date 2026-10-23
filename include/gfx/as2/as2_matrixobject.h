@@ -49,6 +49,8 @@ public:
     GASMatrixArray*  GetMatrixAsValuesArray(ASStringContext* psc, GASMatrixArray* marr); // exe 0x14294b630
     Render::Matrix2F GetMatrix(Environment* penv);                                     // exe 0x14294b2e0
     void             SetMatrix(Environment* penv, const Render::Matrix2F& m);          // exe 0x142982370
+    // As SetMatrix, the translation given in twips (exe 0x142982690).
+    void             SetMatrixTwips(ASStringContext* psc, const Render::Matrix2F& m);
 };
 
 // The flash.geom.Matrix class.
