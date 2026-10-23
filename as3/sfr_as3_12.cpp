@@ -10,6 +10,7 @@
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/gfx_sharedobject.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net_soloader.h"
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 
@@ -1876,28 +1877,7 @@ namespace Instances { namespace fl_net
 
 // ---- the shared object loader -------------------------------------------------------------------------------------
 
-// Rebuilds the data object of a shared object from the visits of the shared object manager (SharedObject.getLocal).
-// 0x40 bytes.
-class ASSharedObjectLoader : public SharedObjectVisitor
-{
-public:
-    ASSharedObjectLoader(VM* pvm, Instances::fl::Object* psobj)
-        : pVM(pvm), pData(psobj), bArrayIsTop(false) {}
-
-    virtual void Begin();
-    virtual void PushObject(const String& name);
-    virtual void PushArray(const String& name);
-    virtual void AddProperty(const String& name, const String& value, GFx::Value::ValueType type);
-    virtual void PopObject();
-    virtual void PopArray();
-    virtual void End();
-
-private:
-    VM*                                 pVM;            // +0x10
-    Instances::fl::Object*              pData;          // +0x18
-    ArrayLH<AS3::Object*>               ObjectStack;    // +0x20
-    bool                                bArrayIsTop;    // +0x38
-};
+// ASSharedObjectLoader: as3_obj_net_soloader.h (sfr_as3_11 emits its deleting dtor).
 
 // MS2-FUNCTIONAL: cl inlines the object stack PushBack the exe tail-calls
 // @0x142498cb0

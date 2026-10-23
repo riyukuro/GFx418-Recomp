@@ -4,15 +4,12 @@
 // MS2-UNIT: sfr_as3_11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424837b0-0x142498890 .text$mn
-// MS2-PINS-BEGIN tplpin
-// MS2-PIN: ??0?$ThunkArgs2@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@AEBV534@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs2@AEBVASString@GFx@Scaleform@@AEBV123@@123@@Z 0x1424959c0 ; unique
-// MS2-PIN: ??1?$ThunkArgs1@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@@AS3@GFx@Scaleform@@QEAA@XZ 0x142497230 ; unique
-// MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobject.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net_soloader.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -3005,6 +3002,40 @@ namespace ClassTraits { namespace fl_net
 
 }}} // namespace Scaleform::GFx::AS3
 
+// COMDATs of the shared object code in sfr_as3_12 that the exe keeps in this unit's range.
+
+// The SharedObject class's cache of loaded shared objects (HashUncachedLH<ASString, SPtr<SharedObject>>): inserts.
+typedef Scaleform::HashNode<Scaleform::GFx::ASString, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_net::SharedObject>,
+                            Scaleform::GFx::ASStringHashFunctor> Ms2SharedObjectNode;
+typedef decltype(Scaleform::HashUncachedLH<Scaleform::GFx::ASString, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_net::SharedObject>,
+                                           Scaleform::GFx::ASStringHashFunctor, 324>::mHash) Ms2SharedObjectSet;
+// @0x142495470
+template void Ms2SharedObjectSet::BaseType::add<Ms2SharedObjectNode>(void* pheapAddr, const Ms2SharedObjectNode& key, Scaleform::UPInt hashValue);
+// @0x1424957c0
+template void Ms2SharedObjectSet::BaseType::add<Ms2SharedObjectNode::NodeRef>(void* pheapAddr, const Ms2SharedObjectNode::NodeRef& key, Scaleform::UPInt hashValue);
+
+// SharedObjectDataWriter's visited object set (HashUncached<Object*, Object*>): inserts and Clear.
+typedef Scaleform::HashNode<Scaleform::GFx::AS3::Object*, Scaleform::GFx::AS3::Object*,
+                            Scaleform::IdentityHash<Scaleform::GFx::AS3::Object*> > Ms2VisitedObjectNode;
+typedef decltype(Scaleform::HashUncached<Scaleform::GFx::AS3::Object*, Scaleform::GFx::AS3::Object*,
+                                         Scaleform::IdentityHash<Scaleform::GFx::AS3::Object*> >::mHash) Ms2VisitedObjectSet;
+// @0x142495630
+template void Ms2VisitedObjectSet::BaseType::add<Ms2VisitedObjectNode::NodeRef>(void* pheapAddr, const Ms2VisitedObjectNode::NodeRef& key, Scaleform::UPInt hashValue);
+// @0x1424972e0
+template void Ms2VisitedObjectSet::BaseType::Clear();
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The exe has ASSharedObjectLoader's vftable and deleting dtor (0x1424974d0, its bases' 0x142497470 / 0x142497eb0)
+// here, but constructs it only in sfr_as3_12 (SharedObject.getLocal); constructing one here emits them. Nothing
+// calls this.
+void Ms2EmitSharedObjectLoader(void* ploader, VM* pvm)
+{
+    ::new (ploader) ASSharedObjectLoader(pvm, NULL);
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424914e0
 // MS2-PIN: ?Func@?$ThunkFunc1@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142491540
 // MS2-PIN: ?Func@?$ThunkFunc0@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$01_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424915a0
@@ -3147,3 +3178,9 @@ namespace ClassTraits { namespace fl_net
 // MS2-PIN: ??_GURLVariables@fl_net@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498730
 // MS2-PIN: ??_GURLVariables@fl_net@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498790
 // MS2-PIN: ??_GXMLSocket@fl_net@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142498800
+// MS2-PIN: ??_GASSharedObjectLoader@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424974d0
+// MS2-PIN: ??_7?$RefCountBaseNTS@VSharedObjectVisitor@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143162f10
+// MS2-PIN: ??_7SharedObjectVisitor@GFx@Scaleform@@6B@ 0x143162f18
+// MS2-PIN: ??_7ASSharedObjectLoader@AS3@GFx@Scaleform@@6B@ 0x1431633e8
+// MS2-PIN: ??0?$ThunkArgs2@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@AEBV534@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs2@AEBVASString@GFx@Scaleform@@AEBV123@@123@@Z 0x1424959c0 ; unique
+// MS2-PIN: ??1?$ThunkArgs1@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@AEBVASString@34@@AS3@GFx@Scaleform@@QEAA@XZ 0x142497230 ; unique
