@@ -642,7 +642,11 @@ class StyleSheetObject : public Object
 public:
     StyleSheetObject(Environment* penv); // exe 0x142921190
 
-    void* Data68[6]; // +0x68 not recovered
+    void* Data68[6]; // +0x68 not recovered (a Text::StyleManager)
+
+protected:
+    // (appended for sfr_as2_05) destroys the style manager (exe 0x142942ff0).
+    virtual void Finalize_GC();
 };
 
 // 0xd0 bytes.

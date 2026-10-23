@@ -100,6 +100,11 @@
 // MS2-RANGE: 0x1429413c0-0x1429415bd .text$mn
 // MS2-RANGE: 0x142941330-0x1429413a3 .text$mn
 // MS2-RANGE: 0x1429415c0-0x14294167b .text$mn
+// MS2-RANGE: 0x142942ff0-0x142943011 .text$mn
+// MS2-RANGE: 0x142942930-0x142942981 .text$mn
+// MS2-RANGE: 0x14294b120-0x14294b162 .text$mn
+// MS2-RANGE: 0x14294b090-0x14294b10c .text$mn
+// MS2-RANGE: 0x142949860-0x142949892 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -117,6 +122,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_imageresource.h"
+#include "../include/gfx/gfx_loaderimpl.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -234,6 +240,19 @@ void StringObject::Finalize_GC()
     Object::Finalize_GC();
 }
 
+// The style manager of a style sheet object (its virtual destructor is all that is used here).
+struct StyleSheetCSS
+{
+    virtual ~StyleSheetCSS();
+};
+
+// @0x142942ff0
+void StyleSheetObject::Finalize_GC()
+{
+    reinterpret_cast<StyleSheetCSS*>(Data68)->~StyleSheetCSS();
+    Object::Finalize_GC();
+}
+
 // @0x142943020
 void SuperObject::Finalize_GC()
 {
@@ -336,6 +355,8 @@ template void Prototype<SharedObject>::Finalize_GC();
 template void Prototype<StageObject>::Finalize_GC();
 // @0x1429428d0
 template void Prototype<StringObject>::Finalize_GC();
+// @0x142942930
+template void Prototype<StyleSheetObject>::Finalize_GC();
 // @0x142942990
 template void Prototype<TextFieldObject>::Finalize_GC();
 // @0x142942a10
@@ -1939,6 +1960,43 @@ void AvmSprite::ExecuteInitActionFrameTags(unsigned frame)
             InitActionsExecuted[frame] = true;
         }
     }
+}
+
+// @0x14294b120
+Sprite* MovieRoot::GetLevelMovie(int level) const
+{
+    MovieImpl* pmovie = pMovieImpl;
+    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    {
+        if (pmovie->pMovieLevels[i].Level == level)
+            return static_cast<Sprite*>(pmovie->pMovieLevels[i].pSprite);
+    }
+    return 0;
+}
+
+// @0x14294b090
+bool MovieRoot::GetLevel0Path(String* ppath) const
+{
+    if (GetLevelMovie(0))
+    {
+        *ppath = pMovieImpl->pMainMovieDef->GetFileURL();
+        if (URLBuilder::ExtractFilePath(ppath))
+            return true;
+    }
+    ppath->Clear();
+    return false;
+}
+
+// The top parent of an AVM1 parent.
+// @0x142949860
+AvmCharacter* AvmCharacter::GetAvmTopParent(bool ignoreLockRoot) const
+{
+    InteractiveObject* pparent = pDispObj->pParent;
+    if (pparent->GetASMovieRoot()->AVMVersion != 1)
+        return 0;
+    // AvmCharacter sits at the start of the AVM object.
+    return static_cast<AvmCharacter*>(
+        static_cast<AvmInteractiveObjBase*>(pparent->GetTopParent(ignoreLockRoot)->GetAvmObjImpl()));
 }
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
