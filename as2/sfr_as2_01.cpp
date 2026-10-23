@@ -3,7 +3,10 @@
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142444c40-0x142445480 .text$mn
+// MS2-RANGE: 0x1423dfa20-0x1423dfba0 .text$mn
 // MS2-RANGE: 0x142446cb0-0x142446d90 .text$mn
+// MS2-RANGE: 0x142447090-0x142447310 .text$mn
+// MS2-RANGE: 0x14252b580-0x14252b5a0 .text$mn
 // MS2-RANGE: 0x1424ad030-0x1424ad0b0 .text$mn
 // MS2-RANGE: 0x1424ad0b0-0x1424ad4d0 .text$mn
 // MS2-RANGE: 0x1424c9270-0x1424c9630 .text$mn
@@ -2876,7 +2879,23 @@ void DateProto::DateGetUTCMonth(const FnCall& fn)
 // @0x142446cb0
 void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src)
 {
-    m->SetInverse(src);
+    float det = src.M[0][0] * src.M[1][1] - src.M[0][1] * src.M[1][0];
+    if (det == 0)
+    {
+        m->SetIdentity();
+        m->M[0][3] = -src.M[0][3];
+        m->M[1][3] = -src.M[1][3];
+    }
+    else
+    {
+        float inv = 1 / det;
+        m->M[0][0] = src.M[1][1] * inv;
+        m->M[1][1] = src.M[0][0] * inv;
+        m->M[0][1] = -src.M[0][1] * inv;
+        m->M[1][0] = -src.M[1][0] * inv;
+        m->M[0][3] = -(m->M[0][0] * src.M[0][3] + m->M[0][1] * src.M[1][3]);
+        m->M[1][3] = -(m->M[1][0] * src.M[0][3] + m->M[1][1] * src.M[1][3]);
+    }
 }
 
 }}} // namespace Scaleform::GFx::AS2
@@ -2909,6 +2928,13 @@ RemoveObjectTag* AS3Support::AllocRemoveObjectTag(LoadProcess* p)
     return p->AllocTag<RemoveObjectTag>();
 }
 
+
+// @0x14252b580
+void DisplayObjectBase::SetVisible(bool visible)
+{
+    SetVisibleFlag(visible);
+    SetDirtyFlag();
+}
 }} // namespace Scaleform::GFx
 // MS2-PIN: ??_7LocalInvokeCallback@?6??BroadcastMessage@AsBroadcasterProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x143221850
 // MS2-PIN: ??_7StringVisitor@?1??ToString@LoadVarsProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x1432223c8
@@ -3128,6 +3154,68 @@ namespace Scaleform { namespace GFx {
 template void LogBase<LogState>::LogScriptWarning(const char* pfmt, ...) const;
 }} // namespace Scaleform::GFx
 
+// ---- AS3 collectable refcount ----
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The last reference is gone: finalize and delete, or park the object in the collector for a cycle check.
+// @0x1423dfa20
+// MS2-FUNCTIONAL same transitions; the exe tests InRootList before InList and allocates the flag registers differently
+template<int Stat>
+void RefCountBaseGC<Stat>::ReleaseInternal() const
+{
+    if (IsRefCntZero())
+    {
+        if (HasFinalize())
+        {
+            const_cast<RefCountBaseGC*>(this)->Finalize_GC();
+            if (IsInList())
+            {
+                RefCount |= Flag_DelayedRelease;
+                return;
+            }
+        }
+        RefCount &= ~(Mask_State << Shift_State);
+        if (IsInRootList())
+        {
+            pRCC->RemoveFromRoots(this);
+            RefCount &= ~Flag_InRootList;
+        }
+        if (IsInList())
+            RemoveFromList();
+        delete const_cast<RefCountBaseGC*>(this);
+    }
+    else if (GetState() != 3)
+    {
+        SetState(3);
+        if (!IsInList() && !IsInRootList())
+            pRCC->AddRoot(this);
+    }
+}
+template void RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal() const;
+
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- Matrix2x4 out-of-line copies ----
+namespace Scaleform { namespace Render {
+
+// p mapped through the inverse of this matrix.
+// @0x1424471c0
+template<class T>
+void Matrix2x4<T>::TransformByInverse(Point<T>* result, const Point<T>& p) const
+{
+    Matrix2x4 m(*this);
+    m.Invert();
+    result->x = m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3];
+    result->y = m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3];
+}
+// MS2-FUNCTIONAL 0x1424471c0: same arithmetic; cl schedules the inverse's operands differently
+template void Matrix2x4<float>::TransformByInverse(Point<float>*, const Point<float>&) const;
+// @0x142447090
+// MS2-FUNCTIONAL 0x142447090: same arithmetic; cl schedules the inverse's operands differently
+template Point<float> Matrix2x4<float>::TransformByInverse(const Point<float>&) const;
+
+}} // namespace Scaleform::Render
+
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
@@ -3138,3 +3226,4 @@ template void LogBase<LogState>::LogScriptWarning(const char* pfmt, ...) const;
 // MS2-PIN: ??_7RemoveObject2Tag@GFx@Scaleform@@6B@ 0x14313bbc0
 // MS2-PIN: ??_7RemoveObjectTag@GFx@Scaleform@@6B@ 0x14313bc10
 // MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510
+// MS2-PIN: ?TransformByInverse@?$Matrix2x4@M@Render@Scaleform@@QEBA?AV?$Point@M@23@AEBV423@@Z 0x142447090
