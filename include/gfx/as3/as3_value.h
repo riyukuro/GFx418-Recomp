@@ -496,12 +496,12 @@ public:
     void AssignUnsafe(Object* v);
     void Assign(Class* v);
     void AssignUnsafe(Class* v);
-    void Assign(Instances::Function* v);
-    void AssignUnsafe(Instances::Function* v);
-    void Assign(Instances::ThunkFunction* v);
-    void AssignUnsafe(Instances::ThunkFunction* v);
-    void Assign(Instances::Namespace* v);
-    void AssignUnsafe(Instances::Namespace* v);
+    SF_INLINE void Assign(Instances::Function* v)       { Release(); AssignUnsafe(v); }
+    SF_INLINE void AssignUnsafe(Instances::Function* v) { SetKind(kFunction); value.VS._1.VFunct = v; if (v) AddRefInternal(); }
+    SF_INLINE void Assign(Instances::ThunkFunction* v)       { Release(); AssignUnsafe(v); }
+    SF_INLINE void AssignUnsafe(Instances::ThunkFunction* v) { SetKind(kThunkFunction); value.VS._1.VThunkFunct = v; if (v) AddRefInternal(); }
+    SF_INLINE void Assign(Instances::Namespace* v)       { Release(); AssignUnsafe(v); }
+    SF_INLINE void AssignUnsafe(Instances::Namespace* v) { SetKind(kNamespace); value.VS._1.VNs = v; if (v) AddRefInternal(); }
 
     Value& operator=(const Value& other)                { Assign(other); return *this; }
     Value& operator=(const ThunkInfo& v)                { Assign(v); return *this; }

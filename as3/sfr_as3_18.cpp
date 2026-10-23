@@ -19,6 +19,43 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+namespace {
+const Value& GetNullSingleton()
+{
+    static const Value nullValue = []() {
+        Value value;
+        value.SetNullUnsafe();
+        return value;
+    }();
+    return nullValue;
+}
+}
+
+// MS2-FUNCTIONAL 0x14250a1b0: kind-to-trait selection matches; exe branches before following the VM trait pointer chain.
+// @0x14250a1b0
+InstanceTraits::Traits& TR::State::GetFunctType(const Value& value) const
+{
+    const UPInt stateRoot = *reinterpret_cast<const UPInt*>(this);
+    const UPInt traceContext = *reinterpret_cast<const UPInt*>(stateRoot + 0x20);
+    const UPInt vmTraits = *reinterpret_cast<const UPInt*>(traceContext + 0x28);
+    const UPInt builtinTraits = *reinterpret_cast<const UPInt*>(vmTraits + 0x20);
+    const UPInt functions = *reinterpret_cast<const UPInt*>(builtinTraits + 0x208);
+    const UInt32 kind = *reinterpret_cast<const UInt32*>(&value) & 0x1f;
+    UPInt offset = 0xc0;
+    if (kind == 5)
+        offset = 0xc8;
+    else if (kind != 7)
+    {
+        if (kind == 0x10)
+            offset = 0xd0;
+        else if (kind == 0x11)
+            offset = 0xe0;
+    }
+    else
+        offset = 0xe0;
+    return **reinterpret_cast<InstanceTraits::Traits**>(functions + offset);
+}
+
 // @0x14250cc30
 SPInt Slots::GetPrevSlotIndex(SPInt ind) const
 {
@@ -28,16 +65,11 @@ SPInt Slots::GetPrevSlotIndex(SPInt ind) const
     return slots->VArray[static_cast<UPInt>(ind - static_cast<SPInt>(slots->FirstOwnSlotNum))].Prev;
 }
 
-// MS2-FUNCTIONAL 0x14250c230: returns the executable's null-tagged singleton; C++ local-static initialization differs.
+// MS2-FUNCTIONAL 0x14250c230: returns the same null singleton; the exe keeps its TLS initializer inside this function.
 // @0x14250c230
 const Value& Value::GetNull()
 {
-    static const Value nullValue = []() {
-        Value value;
-        value.SetNullUnsafe();
-        return value;
-    }();
-    return nullValue;
+    return GetNullSingleton();
 }
 
 // MS2-FUNCTIONAL 0x14250f8f0: default-constructed Value has the undefined tag; local-static initialization differs.
