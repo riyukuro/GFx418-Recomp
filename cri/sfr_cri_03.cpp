@@ -81,6 +81,7 @@ const void** FUN_14003bf10(void);
 void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration);
 void FUN_140046014(void*);
 void FUN_14004602c(void*);
+CriSint32 FUN_140046604(CriUint32, CriUint32, CriUint32, const CriUint32*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_14257db50(void);
@@ -1798,6 +1799,26 @@ CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
     CriUint32 count;
     memcpy(&count, (const CriUint8*)decoder + 0x188, sizeof(count));
     return count;
+}
+
+CriSint32 FUN_1400532e0(CriSint32 count);
+
+// MS2-FUNCTIONAL: size the CRI decoder's rolling output records and per-channel stream buffers.
+// @0x140042150
+CriSint32 FUN_140042150(const void* decoder, const CriUint32* config)
+{
+    CriUint32 channels, rate;
+    memcpy(&channels, (const CriUint8*)config + 4, sizeof(channels));
+    memcpy(&rate, (const CriUint8*)config + 0xc, sizeof(rate));
+    CriSint32 blockSize = 0x9c + 0x9c + FUN_1400532e0((CriSint32)channels);
+    CriUint32 decoderWidth;
+    memcpy(&decoderWidth, (const CriUint8*)decoder + 0xe1c, sizeof(decoderWidth));
+    CriUint32 bufferCount = decoderWidth * 0xc80 / channels;
+    CriUint32 streamBytes = rate * decoderWidth + bufferCount * decoderWidth;
+    const CriUint32 settings[2] = { 1, 1 };
+    for (CriUint32 i = 0; i < channels; ++i)
+        blockSize += FUN_140046604(streamBytes, decoderWidth * 0x840, 4, settings);
+    return blockSize;
 }
 
 void FUN_14257da20(void*, void*);
