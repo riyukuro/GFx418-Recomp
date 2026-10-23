@@ -918,6 +918,14 @@ class StageCtorFunction : public CFunctionObject
 {
 public:
     static void GlobalCtor(const FnCall& fn); // exe 0x14295c6f0
+
+    // Extension members visibleRect, safeRect (the visible rect when unset) and originalRect, as new Rectangle
+    // objects (exe 0x142950300).
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+
+private:
+    // A Rectangle object for rect (pixels) (exe 0x142937bc0).
+    static Value CreateRectangleObject(Environment* penv, const Render::RectF& rect);
 };
 
 // The Boolean class.

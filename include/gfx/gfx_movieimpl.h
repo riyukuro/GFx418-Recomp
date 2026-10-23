@@ -359,7 +359,7 @@ class __declspec(novtable) MovieInterface418
 {
 public:
     virtual void Slot00() = 0;
-    virtual void Slot01() = 0;
+    virtual MovieDef* GetMovieDef() const = 0; // 1
     virtual void Slot02() = 0;
     virtual void Slot03() = 0;
     virtual void Slot04() = 0;
@@ -376,6 +376,7 @@ public:
     virtual void Slot15() = 0;
     virtual void Slot16() = 0;
     virtual Render::RectF GetVisibleFrameRect() const = 0; // 17
+    virtual Render::RectF GetSafeRect() const = 0;         // 18 the title-safe stage rect, empty when unset
 };
 
 inline const MovieInterface418* MovieImpl::AsMovieInterface() const

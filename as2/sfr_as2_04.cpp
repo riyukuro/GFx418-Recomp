@@ -51,6 +51,7 @@
 // MS2-RANGE: 0x142934f90-0x1429351fd .text$mn
 // MS2-RANGE: 0x14296e6c0-0x14296e731 .text$mn
 // MS2-RANGE: 0x14291c320-0x14291c3fb .text$mn
+// MS2-RANGE: 0x142937bc0-0x142937c98 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -1480,6 +1481,18 @@ SF_NOINLINE bool AvmCharacter::DeleteMember(ASStringContext* psc, const ASString
     }
     Ptr<Object> obj = GetASObject();
     return obj ? obj->DeleteMember(psc, name) : false;
+}
+
+// @0x142937bc0
+Value StageCtorFunction::CreateRectangleObject(Environment* penv, const Render::RectF& rect)
+{
+    Value result;
+    Ptr<Object> obj =
+        *penv->OperatorNew(penv->GetSC()->pContext->FlashGeomPackage, penv->GetBuiltin(ASBuiltin_Rectangle));
+    ASRect r(rect.x1, rect.y1, rect.x2, rect.y2);
+    static_cast<RectangleObject*>(obj.GetPtr())->SetProperties(penv, r);
+    result.SetAsObject(obj);
+    return result;
 }
 }}} // namespace Scaleform::GFx::AS2
 

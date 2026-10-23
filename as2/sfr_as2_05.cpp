@@ -134,6 +134,7 @@
 // MS2-RANGE: 0x14294f140-0x14294f251 .text$mn
 // MS2-RANGE: 0x14294f4f0-0x14294f7c5 .text$mn
 // MS2-RANGE: 0x142956760-0x142956ac1 .text$mn
+// MS2-RANGE: 0x142950300-0x1429505bb .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2676,6 +2677,39 @@ void MouseCtorFunction::GetTopMostEntity(const FnCall& fn)
 found:
     if (InteractiveObject* ptop = proot->GetTopMostEntity(pt, mouseIndex, testAll))
         fn.Result->SetAsCharacter(ptop);
+}
+
+// @0x142950300
+bool StageCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    ASStringContext* psc = penv->GetSC();
+    if (psc->pContext->CheckExtensions())
+    {
+        if (ConstName_CompareCaseCheck(psc->CreateConstString("visibleRect"), name,
+                                       penv->IsCaseSensitive()))
+        {
+            Render::RectF rect = penv->GetTarget()->GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect();
+            *val = CreateRectangleObject(penv, rect);
+            return true;
+        }
+        else if (ConstName_CompareCaseCheck(psc->CreateConstString("safeRect"), name,
+                                            psc->IsCaseSensitive()))
+        {
+            Render::RectF rect = penv->GetTarget()->GetMovieImpl()->AsMovieInterface()->GetSafeRect();
+            if (rect.IsEmpty())
+                rect = penv->GetTarget()->GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect();
+            *val = CreateRectangleObject(penv, rect);
+            return true;
+        }
+        else if (ConstName_CompareCaseCheck(psc->CreateConstString("originalRect"), name,
+                                            psc->IsCaseSensitive()))
+        {
+            Render::RectF rect = penv->GetTarget()->GetMovieImpl()->AsMovieInterface()->GetMovieDef()->GetFrameRect();
+            *val = CreateRectangleObject(penv, rect);
+            return true;
+        }
+    }
+    return GetMemberRaw(psc, name, val);
 }
 }}} // namespace Scaleform::GFx::AS2
 
