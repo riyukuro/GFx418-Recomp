@@ -724,6 +724,19 @@ protected:
     virtual void Finalize_GC();
 };
 
+// StyleSheet.prototype: the CSS methods working on the style manager at +0x68.
+class StyleSheetProto : public Prototype<StyleSheetObject>
+{
+public:
+    static void Clear(const FnCall& fn);         // exe 0x1428f86b0
+    static void GetStyle(const FnCall& fn);      // exe 0x1428f8720
+    static void GetStyleNames(const FnCall& fn); // exe 0x1428f9630
+    static void Load(const FnCall& fn);          // exe 0x1428f99f0
+    static void ParseCSS(const FnCall& fn);      // exe 0x1428f9ba0
+    static void SetStyle(const FnCall& fn);      // exe 0x1428f9cf0
+    static void Transform(const FnCall& fn);     // exe 0x1428fa620
+};
+
 // 0xd0 bytes.
 class TextFormatObject : public Object
 {
