@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/kernel/sf_array.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/kernel/sf_threads.h"
 
 namespace Scaleform {
 
@@ -828,6 +829,8 @@ void ResizeLocalRecordArray(void** array, void* heapOwner, std::size_t requested
 }
 
 void FUN_14257dcb0(void* object);
+unsigned long long FUN_1425e3480();
+int FUN_1428d8ed8(void*, bool);
 
 namespace Scaleform {
 static void ResizeStrongPointerArray(void** array, void* heapOwner, std::size_t requested)
@@ -950,5 +953,34 @@ void ClearStyleHashSet(void* hashSet)
     }
     reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
     set[0] = nullptr;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: serializes pause changes, updates paused timestamps, and pulses the completion event on resume.
+// @0x142745eb0
+void SetAudioPaused(void* player, bool paused)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    auto* lock = reinterpret_cast<CRITICAL_SECTION*>(bytes + 0x70);
+    EnterCriticalSection(lock);
+    if (static_cast<bool>(bytes[0x68]) != paused) {
+        void* channel = *reinterpret_cast<void**>(bytes + 0x38);
+        if (channel)
+            FUN_1428d8ed8(channel, paused);
+        bytes[0x68] = paused;
+        const long long now = static_cast<long long>(FUN_1425e3480());
+        if (!paused) {
+            *reinterpret_cast<long long*>(bytes + 0x48) = now;
+            auto* event = reinterpret_cast<Scaleform::Event*>(*reinterpret_cast<void**>(bytes + 0x28));
+            event->PulseEvent();
+        } else {
+            *reinterpret_cast<long long*>(bytes + 0x50) = now;
+            auto* accumulated = reinterpret_cast<long long*>(bytes + 0x58);
+            *accumulated += now - *reinterpret_cast<long long*>(bytes + 0x48);
+        }
+    }
+    LeaveCriticalSection(lock);
 }
 }
