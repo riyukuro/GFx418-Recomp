@@ -90,6 +90,7 @@
 // MS2-RANGE: 0x142945c60-0x142945d69 .text$mn
 // MS2-RANGE: 0x14294a0b0-0x14294a0eb .text$mn
 // MS2-RANGE: 0x142944690-0x142944949 .text$mn
+// MS2-RANGE: 0x142943200-0x142943351 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1622,6 +1623,51 @@ bool AvmCharacter::FindMember(ASStringContext* psc, const ASString& name, Member
     if (!pobj)
         return false;
     return pobj->FindMember(psc, name, pmember);
+}
+
+// The name is a target path; the strchr scan of IsPath inlined behind the cached answer.
+static SF_FORCEINLINE bool IsPath_Cached(const ASString& name)
+{
+    unsigned flags = name.GetHashFlags();
+    if (UByte(flags >> 25) & 1) // Flag_IsNotPath
+        return false;
+    if (flags & ASString::Flag_PathCheck)
+        return true;
+    const char* pstr = name.ToCStr();
+    if (strchr(pstr, ':') != 0 || strchr(pstr, '/') != 0 || strchr(pstr, '.') != 0)
+    {
+        name.SetPathFlags(ASString::Flag_PathCheck);
+        return true;
+    }
+    name.SetPathFlags(ASString::Flag_PathCheck | ASString::Flag_IsNotPath);
+    return false;
+}
+
+// @0x142943200
+bool Environment::FindAndGetVariableRaw(const GetVarParams& params) const
+{
+    if (!IsPath_Cached(params.VarName))
+        return GetVariableRaw(params);
+
+    Value        owner;
+    GetVarParams pathParams(params.VarName, params.pResult);
+    pathParams.ppOwner      = params.ppOwner;
+    pathParams.ppNewTarget  = params.ppNewTarget;
+    pathParams.pOwnerValue  = &owner;
+    pathParams.ExcludeFlags = params.ExcludeFlags;
+    bool found = FindVariable(pathParams);
+    if (!owner.IsUndefined())
+    {
+        if (params.pOwnerValue)
+            *params.pOwnerValue = owner;
+    }
+    else
+    {
+        if (!(params.ExcludeFlags & 4))
+            LogScriptError("GetVariable failed: can't resolve the path \"%s\"", params.VarName.ToCStr());
+        found = false;
+    }
+    return found;
 }
 
 }}} // namespace Scaleform::GFx::AS2

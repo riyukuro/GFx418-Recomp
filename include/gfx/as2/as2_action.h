@@ -241,12 +241,17 @@ public:
         Value*          pResult;   // +0x08
         void*           ppOwner;   // +0x10 unrecovered optional outputs
         void*           ppNewTarget; // +0x18
-        void*           pIsLocal;  // +0x20
+        Value*          pOwnerValue; // +0x20 the object the path resolved to (undefined if not an object)
         int             ExcludeFlags; // +0x28
 
         GetVarParams(const ASString& name, Value* presult)
-            : VarName(name), pResult(presult), ppOwner(0), ppNewTarget(0), pIsLocal(0), ExcludeFlags(0) {}
+            : VarName(name), pResult(presult), ppOwner(0), ppNewTarget(0), pOwnerValue(0), ExcludeFlags(0) {}
     };
+    // A plain name (no path) through the scope chain (exe 0x142957b10).
+    bool               GetVariableRaw(const GetVarParams& params) const;
+    // GetVariableRaw for plain names; a path goes through FindVariable, which must resolve its owner
+    // (exe 0x142943200).
+    bool               FindAndGetVariableRaw(const GetVarParams& params) const;
     // Resolves a variable path (with/scope chain, targets); false if not found (exe 0x142945010).
     bool               FindVariable(const GetVarParams& params, bool searchUndefined = false,
                                     ASString* pvarName = 0) const;
