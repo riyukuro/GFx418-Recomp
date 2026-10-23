@@ -432,6 +432,18 @@ unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
     return 1;
 }
 
+// MS2-FUNCTIONAL: forwards a copied String to the child method at vtable offset +0x68 and releases the consumed argument.
+// @0x1423ca8b0
+unsigned char FUN_1423ca8b0(void* object, String* value)
+{
+    String local(*value);
+    void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x78);
+    auto** vtable = *reinterpret_cast<void***>(child);
+    const unsigned char result = reinterpret_cast<unsigned char(*)(void*, String)>(vtable[13])(child, local);
+    value->~String();
+    return result;
+}
+
 // MS2-FUNCTIONAL: restores the executable's AS2/AS3 support vtable, runs shared base cleanup, and follows the 0x10 delete path.
 // @0x1423dbcb0
 void* FUN_1423dbcb0(unsigned long long* object, unsigned long long flags)
