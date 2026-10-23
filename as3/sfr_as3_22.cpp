@@ -24,6 +24,8 @@ extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
+MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
+MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
 
 namespace Scaleform {
 
@@ -1490,6 +1492,34 @@ void AddTreeDepthOffset(void* destination, void* source)
         for (std::size_t j = 0; j < grandchildCount; ++j)
             AddTreeNodeValue(grandchildren[j], &maximum);
     }
+}
+
+// MS2-FUNCTIONAL: allocates the audio event manager and constructs its event, locks, and circular list sentinel.
+// @0x142744fe0
+void* CreateAudioEventManager()
+{
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    unsigned flags[2] = { 2, 0 };
+    auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
+        DAT_143b15f60, 0xf8, flags));
+    if (!object)
+        return nullptr;
+    *reinterpret_cast<void***>(object) = &AS3AudioEventVtable;
+    *reinterpret_cast<unsigned*>(object + 8) = 1;
+    *reinterpret_cast<unsigned long long*>(object + 0x10) = 0;
+    *reinterpret_cast<unsigned long long*>(object + 0x18) = 0;
+    ::new (static_cast<void*>(object + 0x20)) Scaleform::Event(false, false);
+    ::new (static_cast<void*>(object + 0x80)) Scaleform::Lock(0);
+    *reinterpret_cast<unsigned long long*>(object + 0xa8) = 0;
+    auto* sentinel = object + 0xb0;
+    *reinterpret_cast<void***>(sentinel) = &AS3AudioListNodeVtable;
+    *reinterpret_cast<void**>(object + 0xb8) = sentinel;
+    *reinterpret_cast<void**>(object + 0xc0) = sentinel;
+    ::new (static_cast<void*>(object + 0xc8)) Scaleform::Lock(0);
+    object[0x78] = 0;
+    object[0xf0] = 0;
+    *reinterpret_cast<unsigned*>(object + 0xf4) = 0;
+    return object;
 }
 
 }
