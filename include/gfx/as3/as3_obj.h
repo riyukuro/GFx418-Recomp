@@ -306,6 +306,8 @@ class ASStringNodeHashFunc
 {
 public:
     UPInt operator()(ASStringNode* const& data) const { return data->HashFlags; }
+    // (appended, sfr19) the same for string keys (VM's alias -> class map)
+    UPInt operator()(const ASString& data) const { return data.GetNode()->HashFlags; }
 };
 
 // (appended, sfr19) a stand-alone named slot table: slots in order plus name -> last index. 0x28 bytes.

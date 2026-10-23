@@ -24,6 +24,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/gfx_textfield.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -46,6 +47,10 @@ void FUN_1425b7220(void* ptf);                          // TextField::ClearIdIma
 const char* FUN_142509b60(int id);                     // the text of error id ("... {0} ...")
 // AvmTextField: one image substitution element (an object of the script's array) at index idx
 void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, const Scaleform::GFx::AS3::Value& ve);
+// Value::operator=(const ASString&), out of line in the exe
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
+// AvmInteractiveObj::AvmInteractiveObj (abstract here, so the derived ctors reach it by address)
+void FUN_1424d6480(void* self, Scaleform::GFx::InteractiveObject* pdispObj);
 namespace Scaleform {
 // DocView::ImageSubstitutor::Element, the same stand-in as sfr_as3_14 (ArrayDataBase destructor = exe 0x1424c7090),
 // and the substitutor itself (the DocView's +0x30).
@@ -1698,6 +1703,49 @@ __declspec(noinline) AvmInteractiveObj::AvmInteractiveObj(InteractiveObject* pdi
     pdispObj->TabIndex = -1;
 }
 
+// The exe's vftables of the AS3 parts of buttons, text fields and static text; these classes are not modelled
+// beyond their size, so their ctors store them by hand.
+extern void* const AvmButton_vftable[];
+extern void* const AvmButton_vftable_30[];
+extern void* const AvmButton_vftable_40[];
+extern void* const AvmTextField_vftable[];
+extern void* const AvmTextField_vftable_30[];
+extern void* const AvmTextField_vftable_40[];
+extern void* const AvmStaticText_vftable[];
+
+// A button takes part in tab navigation by default.
+// MS2-FUNCTIONAL: AvmButton is opaque; its AvmInteractiveObj part is built in place and the exe's vftables stored
+// @0x1424d63e0
+AvmButton::AvmButton(Button* pbtn)
+{
+    FUN_1424d6480(this, reinterpret_cast<InteractiveObject*>(pbtn));
+    *reinterpret_cast<void* const**>(Data + 0x00) = AvmButton_vftable;
+    *reinterpret_cast<void* const**>(Data + 0x30) = AvmButton_vftable_30;
+    *reinterpret_cast<void* const**>(Data + 0x40) = AvmButton_vftable_40;
+    reinterpret_cast<InteractiveObject*>(pbtn)->Flags |= InteractiveObject::Mask_TabEnabled;
+}
+
+// MS2-FUNCTIONAL: AvmStaticText is opaque; its AvmDisplayObj part is built in place and the exe's vftable stored
+// @0x1424d6650
+AvmStaticText::AvmStaticText(StaticTextCharacter* ptxt)
+{
+    new (this) AvmDisplayObj(reinterpret_cast<DisplayObject*>(ptxt));
+    *reinterpret_cast<void* const**>(Data) = AvmStaticText_vftable;
+}
+
+// An AS3 text field starts with the caret at 0.
+// MS2-FUNCTIONAL: AvmTextField is opaque; its AvmInteractiveObj part is built in place and the exe's vftables stored
+// @0x1424d66b0
+AvmTextField::AvmTextField(TextField* ptxt)
+{
+    FUN_1424d6480(this, reinterpret_cast<InteractiveObject*>(ptxt));
+    *reinterpret_cast<void* const**>(Data + 0x00) = AvmTextField_vftable;
+    *reinterpret_cast<void* const**>(Data + 0x30) = AvmTextField_vftable_30;
+    *reinterpret_cast<void* const**>(Data + 0x40) = AvmTextField_vftable_40;
+    *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(ptxt) + 0xfc) |= 2;
+    ptxt->SetSelection(0, 0);
+}
+
 // MS2-FUNCTIONAL: same code; the byte count lives in rdi, the exe has it in rbx
 // @0x1424d6590
 AvmSprite::AvmSprite(Sprite* pspr)
@@ -1771,6 +1819,13 @@ template void decltype(GFx::AS3::Object::DynAttrsType::mHash)::BaseType::add<MS2
 // @0x1424d4a40
 template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::add<MS2_SlotNameNode::NodeRef>(
     void*, const MS2_SlotNameNode::NodeRef&, UPInt);
+// The VM's registerClassAlias map (alias -> class).
+typedef HashUncachedLH<GFx::ASString, GFx::AS3::Class*, GFx::AS3::ASStringNodeHashFunc, GFx::AS3::StatMV_VM_VM_Mem>
+    MS2_AliasClassHash;
+typedef HashNode<GFx::ASString, GFx::AS3::Class*, GFx::AS3::ASStringNodeHashFunc> MS2_AliasClassNode;
+// @0x1424d4c10
+template void decltype(MS2_AliasClassHash::mHash)::BaseType::add<MS2_AliasClassNode::NodeRef>(
+    void*, const MS2_AliasClassNode::NodeRef&, UPInt);
 // MS2-FUNCTIONAL: same template body; register allocation and the save of the scratch registers differ
 // @0x1424d4dd0
 template void MS2_StringValueSet::add<MS2_StringValueNode::NodeRef>(void*, const MS2_StringValueNode::NodeRef&, UPInt);
@@ -1807,8 +1862,28 @@ template ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>,
 template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>,
                        AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
                        ArrayDefaultPolicy>::~ArrayDataBase();
+// The byte code of a VMAbcFile's methods (+0xb8; word code).
+// @0x1424dc3d0
+template ArrayDataBase<ArrayLH_POD<UPInt, GFx::AS3::StatMV_VM_AbcFile_Mem>,
+                       AllocatorLH<ArrayLH_POD<UPInt, GFx::AS3::StatMV_VM_AbcFile_Mem>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+// The class traits loaded from a VMAbcFile (+0xa0).
+// @0x1424dc5b0
+template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>,
+                       AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x1424dc630
 template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, 2>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+// The files a VMAbcFile loaded (+0x78).
+// @0x1424dc6b0
+template ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>,
+                       AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                       ArrayDefaultPolicy>::~ArrayDataBase();
+// The exception tables of a VMAbcFile's methods (+0xd0).
+// @0x1424dc800
+template ArrayDataBase<GFx::AS3::Abc::MethodBodyInfo::Exception,
+                       AllocatorLH<GFx::AS3::Abc::MethodBodyInfo::Exception, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
                        ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x1424dc730
 template ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>,
@@ -2112,6 +2187,18 @@ Multiname::Multiname(Instances::Namespace& ns, const Value& name)
     }
     Name.AssignUnsafe(name);
     PostProcessName(false);
+}
+
+// The any-name "" in the running frame's default XML namespace, else the public one.
+// MS2-FUNCTIONAL: same code; the exe inlines the first SPtr assignment and calls SetPtr for the fallback, ours calls it for both
+// @0x1424d8bb0
+Multiname::Multiname(VM& vm)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+{
+    FUN_1424e0d40(Name, vm.GetStringManager().CreateEmptyString());
+    Obj = vm.GetDefXMLNamespace();
+    if (Obj.GetPtr() == NULL)
+        Obj.SetPtr(vm.PublicNamespace.GetPtr());
 }
 
 // MS2-FUNCTIONAL: same code; the exe branches on the colon flag before decrementing pos (we select it), and allocates registers differently
@@ -2716,3 +2803,10 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??$AsString@N@Scaleform@@YA?AVString@0@AEBN@Z 0x1424d2410 ; unique
 // MS2-PIN: ??$Format@HVString@Scaleform@@@Scaleform@@YA_KAEBVSink@MsgFormat@0@PEBDAEBHAEBVString@0@@Z 0x1424d25d0 ; unique
 // MS2-PIN: ??$LowerBoundSliced@V?$ArrayDH_POD@_K$0BEI@UArrayDefaultPolicy@Scaleform@@@Scaleform@@_KP6A_NAEB_K0@Z@Alg@Scaleform@@YA_KAEBV?$ArrayDH_POD@_K$0BEI@UArrayDefaultPolicy@Scaleform@@@1@_K1AEB_KP6A_N22@Z@Z 0x1424d2780 ; unique
+// MS2-PIN: ??1?$ArrayDataBase@UException@MethodBodyInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH@UException@MethodBodyInfo@Abc@AS3@GFx@Scaleform@@$0BFE@@6@UArrayDefaultPolicy@6@@Scaleform@@QEAA@XZ 0x1424dc800 ; unique
+// MS2-PIN: ??1?$ArrayDataBase@V?$ArrayLH_POD@_K$0BFC@UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$ArrayLH_POD@_K$0BFC@UArrayDefaultPolicy@Scaleform@@@Scaleform@@$0BFE@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ 0x1424dc3d0 ; unique
+// MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1424dc5b0 ; unique
+// MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VVMAbcFile@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VVMAbcFile@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1424dc6b0 ; unique
+// MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VVMAbcFile@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VVMAbcFile@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1424dc630 ; unique
+// MS2-PIN: ??0AvmDisplayObj@AS3@GFx@Scaleform@@QEAA@PEAVDisplayObject@23@@Z 0x1424d6430 ; unique
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEJ@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@1@_K@Z 0x1424d4c10 ; unique
