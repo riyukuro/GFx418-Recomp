@@ -72,6 +72,10 @@ public:
 // (appended for sfr_render_03d) the vertex layouts a shape mesh fill names
 struct VertexXY16iCF32
 {
+    // (fields appended for sfr_render_07o) position, colour, then the two blend factors
+    SInt16 x, y;
+    UInt32 Color;
+    UByte  Factors[4];
     static VertexFormat Format;   // 0x143a2fbe8
 };
 struct Image9GridVertex

@@ -24,6 +24,15 @@ namespace Scaleform { namespace Render {
 
 // MS2-PIN: ??_7TextMeshProvider@Render@Scaleform@@6B@ 0x143193f50
 
+// vertex of the image and colour glyph quads: position, then texture coordinates
+struct ImageGlyphVertex
+{
+    float x, y;
+    float u, v;
+    void  Set(float x_, float y_, float u_, float v_) { x = x_; y = y_; u = u_; v = v_; }
+    static VertexFormat Format;   // 0x143a30328
+};
+
 // @0x1426e1ad0
 TextMeshLayer::~TextMeshLayer()
 {
@@ -249,6 +258,206 @@ void TextMeshProvider::addCursor(TmpTextStorage& storage, UInt32 color, const Re
     e.EntryData.SelectionData.Coord[2] = rect.x2;
     e.EntryData.SelectionData.Coord[3] = rect.y2;
     storage.Entries.PushBack(e);
+}
+
+// @0x1426e5130
+void TextMeshProvider::addImage(TmpTextStorage& storage, const GlyphRunData& data, Image* img, float scaleX,
+                                float scaleY, float baseLine, bool snap)
+{
+    float x = data.NewLineX;
+    float y = data.NewLineY - baseLine * scaleY;
+    if (snap)
+        x = snapX(data);
+
+    TmpTextMeshEntry e;
+    e.LayerType = TextLayer_Images;
+    e.TextureId = 0;
+    e.EntryIdx  = (unsigned)storage.Entries.GetSize();
+
+    // the image's own texture, clamped and filtered
+    PrimitiveFillData fd(PrimFill_UVTexture, &ImageGlyphVertex::Format, img->GetTexture(pCache->GetTextureManager()),
+                         ImageFillMode(Wrap_Clamp, Sample_Linear));
+    e.pFill = pCache->GetPrimitiveFillManager()->CreateFill(fd);
+
+    e.EntryData.ImageData.Coord[0] = x;
+    e.EntryData.ImageData.Coord[1] = y;
+    e.EntryData.ImageData.Coord[2] = x + (float)img->GetSize().Width * scaleX;
+    e.EntryData.ImageData.Coord[3] = y + (float)img->GetSize().Height * scaleY;
+    e.EntryData.ImageData.pImage   = img;
+    storage.Entries.PushBack(e);
+}
+
+// MS2-FUNCTIONAL: scheduling and register allocation of the two rect transforms (the exe keeps three xmm
+// registers live across them)
+// @0x1426e6690
+bool TextMeshProvider::generateImageMesh(VertexOutput* verOut, const TextMeshLayer& layer)
+{
+    ImageGlyphVertex ver[4];
+    UInt16 idx[6] = { 0, 1, 2, 0, 2, 3 };
+    VertexOutput::Fill fill = { 4, 6, &ImageGlyphVertex::Format, 0, 0, 0 };
+    const TextImageEnt& ent = Entries[layer.Start].EntryData.ImageData;
+    Image* img = ent.pImage;
+
+    // the image's coordinate-to-UV mapping (size, scale and sub-image offset)
+    Matrix2F uv(Matrix2F::NoInit);
+    img->GetUVNormMatrix(&uv, pCache->GetTextureManager());
+
+    RectF tex(0, 0, 1, 1);
+    uv.Transform(&tex.x1, &tex.y1);
+    uv.Transform(&tex.x2, &tex.y2);
+
+    float x0 = ent.Coord[0];
+    float y0 = ent.Coord[1];
+    RectF chr(0, 0, ent.Coord[2] - x0, ent.Coord[3] - y0);
+    uv.Transform(&chr.x1, &chr.y1);
+    uv.Transform(&chr.x2, &chr.y2);
+    chr += PointF(x0, y0);
+
+    clipGlyphRect(chr, tex);
+
+    ver[0].Set(chr.x1, chr.y1, tex.x1, tex.y1);
+    ver[1].Set(chr.x2, chr.y1, tex.x2, tex.y1);
+    ver[2].Set(chr.x2, chr.y2, tex.x2, tex.y2);
+    ver[3].Set(chr.x1, chr.y2, tex.x1, tex.y2);
+
+    if (!verOut->BeginOutput(&fill, 1, Matrix2F::Identity))
+        return false;
+    verOut->SetVertices(0, 0, ver, 4);
+    verOut->SetIndices(0, 0, idx, 6);
+    verOut->EndOutput();
+    return true;
+}
+
+// @0x1426e6960
+bool TextMeshProvider::generateMask(VertexOutput* verOut, const TextMeshLayer& layer)
+{
+    // a quad over nearly the whole 16-bit range, mapped onto the mask rectangle by the vertex matrix
+    const MaskEnt& e = Entries[layer.Start].EntryData.MaskData;
+    SInt16 c[4] = { -32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4 };
+
+    Matrix2F m;
+    m.SetRectToRect(c[0], c[1], c[2], c[3], e.Coord[0], e.Coord[1], e.Coord[2], e.Coord[3]);
+
+    VertexXY16i ver[4];
+    ver[0].x = c[0]; ver[0].y = c[1];
+    ver[1].x = c[2]; ver[1].y = c[1];
+    ver[2].x = c[2]; ver[2].y = c[3];
+    ver[3].x = c[0]; ver[3].y = c[3];
+    UInt16 idx[6] = { 0, 1, 2, 0, 2, 3 };
+
+    VertexOutput::Fill fill = { 4, 6, &VertexXY16i::Format, 0, 0, 0 };
+    if (!verOut->BeginOutput(&fill, 1, m))
+        return false;
+    verOut->SetVertices(0, 0, ver, 4);
+    verOut->SetIndices(0, 0, idx, 6);
+    verOut->EndOutput();
+    return true;
+}
+
+// @0x1426e6ad0
+bool TextMeshProvider::generateNullVectorMesh(VertexOutput* verOut)
+{
+    // a single degenerate triangle on one zero vertex
+    VertexXY16iCF32 ver[1];
+    UInt16          tri[3];
+    ver[0].x = 0;
+    ver[0].y = 0;
+    ver[0].Color = 0;
+    ver[0].Factors[0] = 0;
+    ver[0].Factors[1] = 0;
+    tri[0] = tri[1] = tri[2] = 0;
+    VertexOutput::Fill fill;
+    fill.VertexCount = 1;
+    fill.IndexCount  = 3;
+    fill.pFormat     = &VertexXY16iCF32::Format;
+    fill.FillIndex0  = 0;
+    fill.FillIndex1  = 0;
+    fill.MergeFlags  = 0;
+    fill.MeshIndex   = 0;
+    if (!verOut->BeginOutput(&fill, 1, Matrix2F::Identity))
+        return false;
+    verOut->SetVertices(0, 0, ver, 1);
+    verOut->SetIndices(0, 0, tri, 3);
+    verOut->EndOutput();
+    return true;
+}
+
+// @0x1426e6bb0
+bool VectorGlyphShape::generateNullVectorMesh(VertexOutput* verOut)
+{
+    // a single degenerate triangle on one zero vertex
+    VertexXY16iCF32 ver[1];
+    UInt16          tri[3];
+    ver[0].x = 0;
+    ver[0].y = 0;
+    ver[0].Color = 0;
+    ver[0].Factors[0] = 0;
+    ver[0].Factors[1] = 0;
+    tri[0] = tri[1] = tri[2] = 0;
+    VertexOutput::Fill fill;
+    fill.VertexCount = 1;
+    fill.IndexCount  = 3;
+    fill.pFormat     = &VertexXY16iCF32::Format;
+    fill.FillIndex0  = 0;
+    fill.FillIndex1  = 0;
+    fill.MergeFlags  = 0;
+    fill.MeshIndex   = 0;
+    if (!verOut->BeginOutput(&fill, 1, Matrix2F::Identity))
+        return false;
+    verOut->SetVertices(0, 0, ver, 1);
+    verOut->SetIndices(0, 0, tri, 3);
+    verOut->EndOutput();
+    return true;
+}
+
+// @0x1426e53a0
+void TextMeshProvider::addLayer(TmpTextStorage& storage, TextLayerType type, unsigned start, unsigned count)
+{
+    // a layer draws at most 0x3ffe entries; longer runs are cut into several layers
+    do
+    {
+        unsigned n = (count < 0x3ffe) ? count : 0x3ffe;
+        TmpTextMeshLayer layer;
+        layer.Type  = type;
+        layer.Start = start;
+        layer.Count = n;
+        layer.pFill = storage.Entries[start].pFill;
+        storage.Layers.PushBack(layer);
+        count -= n;
+        start += n;
+    } while (count);
+}
+
+// @0x1426e5500
+void TextMeshProvider::addLayer(TmpTextStorage& storage, UPInt start, UPInt end)
+{
+    UInt16 type = storage.Entries[start].LayerType;
+    // text right after its shadow with the same fill joins the shadow's layer (the last built mesh layer)
+    if (type == TextLayer_RasterText && Layers.GetSize())
+    {
+        TextMeshLayer& prev = Layers.Back();
+        if ((prev.Type == TextLayer_Shadow || prev.Type == TextLayer_ShadowText) &&
+            storage.Entries[start].pFill == storage.Entries[prev.Start].pFill)
+        {
+            prev.Type   = TextLayer_ShadowText;
+            prev.Count += unsigned(end - start);
+            return;
+        }
+    }
+    if (type == TextLayer_Shapes || type == TextLayer_Shapes_Masked)
+    {
+        // one layer per vector shape
+        for (UPInt i = start; i < end; ++i)
+            addLayer(storage, (TextLayerType)storage.Entries[start].LayerType, unsigned(i), 1);
+    }
+    else if (type == TextLayer_Images)
+    {
+        // one layer per image
+        for (UPInt i = start; i < end; ++i)
+            addLayer(storage, TextLayer_Images, unsigned(i), 1);
+    }
+    else
+        addLayer(storage, (TextLayerType)type, unsigned(start), unsigned(end - start));
 }
 
 // @0x1426e5660
