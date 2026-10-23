@@ -191,6 +191,7 @@ void*    FUN_1400385c8(void* storage, CriSint32 size);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044a30(void* decoder, void* frameInfo);
+void     FUN_140044b20(void* decoder, CriUint32 frameId, CriUint64* count, CriUint64* unit);
 CriBool  FUN_140043f70(void* decoder, void* buffers, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
 void     FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
@@ -2377,6 +2378,43 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
         ++consumed;
     }
     return consumed;
+}
+
+// MS2-FUNCTIONAL: decode a subtitle record and calculate its audio-synchronized presentation position.
+// @0x140036f40
+void FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo)
+{
+    struct SubtitleOutputView
+    {
+        const CriUint8* Text;
+        CriUint32 Value8;
+        CriUint32 Channel;
+        CriUint64 FrameDuration;
+        CriUint64 Position;
+        CriUint32 TextSize;
+        CriUint32 Reserved24;
+        CriUint32 FrameId;
+        CriUint32 Reserved2C;
+        CriUint32 Offset;
+        CriUint32 Reserved34;
+    };
+    SubtitleOutputView* output = (SubtitleOutputView*)outputInfo;
+    CriSint32 contentSize = 0;
+    const CriUint8* content = FUN_14003b674(chunk->Data, chunk->Size, &contentSize);
+    const CriUint32* fields = (const CriUint32*)content;
+    output->Channel = fields[0];
+    output->FrameDuration = fields[1];
+    output->Offset = fields[2];
+    output->TextSize = fields[3];
+    output->Value8 = fields[4];
+    output->Text = content + 20;
+    output->FrameId = ((CriMvSubtitleFields*)player)->SubtitleIndex;
+
+    CriUint64 count = 0;
+    CriUint64 unit = 0;
+    FUN_140044b20(((CriMvDecoderHandleFields*)player)->VideoDecoder, output->FrameId,
+                  &count, &unit);
+    output->Position = (count / unit) * output->FrameDuration + output->Offset;
 }
 
 // MS2-FUNCTIONAL: read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage.
