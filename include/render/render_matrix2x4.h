@@ -285,6 +285,19 @@ public:
         M[1][3] = m.M[1][0] * t.M[0][3] + m.M[1][1] * t.M[1][3] + m.M[1][3];
         return *this;
     }
+
+    // (appended for the movie, sfr_gfx_01i) p mapped through the matrix, by value
+    Point<T> Transform(const Point<T>& p) const
+    {
+        return Point<T>(M[0][0] * p.x + M[0][1] * p.y + M[0][3], M[1][0] * p.x + M[1][1] * p.y + M[1][3]);
+    }
+    // the bounds of r's image, by value (the out-of-line one writes straight into the result)
+    Rect<T> EncloseTransform(const Rect<T>& r) const
+    {
+        Rect<T> d(Rect<T>::NoInit);
+        EncloseTransform(&d, r);
+        return d;
+    }
 };
 
 template<class T>

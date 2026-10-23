@@ -16,10 +16,13 @@
 // MS2-PINS-END tplpin
 
 #define SF_GFX_PLAYERIMPL
+#define MS2_SF_HASH_CLEAR_NOINLINE           // HashSet Clear out of line, as the exe calls it
+#include "../include/kernel/sf_alg.h"   // first: Alg::UpperBit out of line, as the exe calls it
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_interactiveobject.h"
 #include "../include/gfx/gfx_movieimpl.h"
+#include "../include/gfx/gfx_movieimplstates.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_log.h"
 #include "../include/gfx/gfx_keyboardstate.h"
@@ -27,8 +30,14 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_playertasks.h"
 #include "../include/gfx/gfx_drawingcontext.h"
+#include "../include/gfx/gfx_value.h"
 #include "../include/gfx/as2/as2_object.h"
 #include "../include/render/render_color.h"
+#include "../include/kernel/sf_msgformat.h"
+#include "../include/video/video_as3providernetstream.h"
+#include "../include/kernel/sf_timer.h"
+#include "../include/kernel/sf_std.h"
+#include <stdlib.h>
 
 namespace Scaleform { namespace GFx {
 
@@ -54,11 +63,11 @@ public:
     virtual DisplayObjectBase* GetRootMovie(DisplayObjectBase* dobj = 0) const = 0;            // 14
     virtual void Slot15() = 0;
     virtual void Slot16() = 0;
-    virtual void Slot17() = 0;
+    virtual void NotifyOnResize() = 0;                                                         // 17
     virtual void Slot18() = 0;
     virtual void Slot19() = 0;
     virtual void Slot20() = 0;
-    virtual void Slot21() = 0;
+    virtual void OnMovieFocus(bool set) = 0;                                                   // 21
     virtual void Slot22() = 0;
     virtual void Slot23() = 0;
     virtual void Slot24() = 0;
@@ -110,6 +119,15 @@ template<UInt32 mask>
 inline bool IsFlagSet(UInt32 value)
 {
     return (value & mask) != 0;
+}
+// The matching flag setter.
+template<UInt32 mask>
+inline void SetFlag(UInt32& value, bool set)
+{
+    if (set)
+        value |= mask;
+    else
+        value &= ~mask;
 }
 
 // One of the four mouse states (0x50 bytes from +0x1260).
@@ -852,6 +870,266 @@ void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* p
     puserData->IsLastDispObj = isdobj;
 }
 
+// The AS getTimer() clock: milliseconds since the movie started. A test stream in Record mode gets each reading, in
+// Play mode it supplies them.
+// @0x14256ee60
+UInt64 MovieImpl::GetASTimerMs() const
+{
+    TestStream* ptest = GetTestStream();
+    if (ptest)
+    {
+        if (ptest->TestStatus == TestStream::Record)
+        {
+            UInt64 t = Timer::GetTicks() / 1000 - StartTickMs;
+            LongFormatter f(t);
+            f.Convert();
+            ptest->SetParameter("timer", f.ToCStr());
+            return t;
+        }
+        String tstr;
+        ptest->GetParameter("timer", &tstr);
+        return _strtoui64(tstr.ToCStr(), NULL, 10);
+    }
+    return Timer::GetTicks() / 1000 - StartTickMs;
+}
+
+// Freezes or resumes the movie: the AS clock stops while paused, the advancing objects and the videos are told.
+// @0x1425762f0
+void MovieImpl::SetPause(bool pause)
+{
+    const UInt32 Flag_Paused = 0x100000;
+    if ((IsFlagSet<Flag_Paused>(Flags) && pause) || (!IsFlagSet<Flag_Paused>(Flags) && !pause))
+        return;
+    if (pause)
+        Flags |= Flag_Paused;
+    else
+        Flags &= ~Flag_Paused;
+    UInt64 t = Timer::GetTicks() / 1000;
+    if (pause)
+        PauseTickMs = t;
+    else
+        StartTickMs += t - PauseTickMs;
+
+    InteractiveObject* pnext = NULL;
+    for (InteractiveObject* pch = pPlayList; pch; pch = pnext)
+    {
+        pnext = pch->pPlayNext;
+        pch->SetPause(pause);
+    }
+    if (VideoProviders.GetSize() > 0)
+    {
+        for (HashSet<Ptr<Video::VideoProvider> >::Iterator it = VideoProviders.Begin(); it != VideoProviders.End(); ++it)
+        {
+            Ptr<Video::VideoProvider> pvideo = *it;
+            pvideo->Pause(pause);
+        }
+    }
+}
+
+// @0x142576a10
+void MovieImpl::SetViewport(const Viewport& viewDesc)
+{
+    if (memcmp(&viewDesc, &mViewport, sizeof(mViewport)) == 0)
+        return;
+
+    int   prevLeft   = mViewport.Left;
+    int   prevTop    = mViewport.Top;
+    int   prevWidth  = mViewport.Width;
+    int   prevHeight = mViewport.Height;
+    float prevScale  = mViewport.Scale;
+    float prevRatio  = mViewport.AspectRatio;
+
+    SetFlag<0x1>(Flags, true);   // the viewport was set
+    mViewport = viewDesc;
+
+    Render::RectF prevVisRect = VisibleFrameRect;
+    UpdateViewport();
+
+    if (prevVisRect != VisibleFrameRect ||
+        (ViewScaleMode == SM_NoScale &&
+            (prevWidth != mViewport.Width || prevHeight != mViewport.Height ||
+             prevLeft  != mViewport.Left  || prevTop    != mViewport.Top ||
+             prevScale != mViewport.Scale || prevRatio  != mViewport.AspectRatio)) ||
+        (ViewScaleMode != SM_ExactFit &&
+            (prevWidth != mViewport.Width ||
+             prevHeight != mViewport.Height || prevRatio != mViewport.AspectRatio)))
+    {
+        AsRootSlots(pASMovieRoot)->NotifyOnResize();
+    }
+    static_cast<Render::TreeRoot*>(pRenderRoot)->SetViewport(mViewport);
+    static_cast<Render::TreeRoot*>(pRenderRoot)->SetBackgroundColor(*(Render::Color*)&BackgroundColor);
+    static_cast<Render::TreeRoot*>(pRenderRoot)->SetMatrix(*(Render::Matrix2F*)ViewportMatrix);
+}
+
+// Queues a host mouse update: the move, then a press or a release for every button whose state changed.
+// @0x142571e20
+void MovieImpl::NotifyMouseState(float x, float y, unsigned buttons, unsigned mouseIndex)
+{
+    Render::PointF pt(Render::PointF::NoInit);
+    reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix)->TransformByInverse(&pt, Render::PointF(x, y));
+
+    if (mouseIndex < MouseCursorCount)
+    {
+        GFx::InputEventsQueue* pqueue = reinterpret_cast<GFx::InputEventsQueue*>(InputEventsQueue);
+        pqueue->AddMouseMove(mouseIndex, pt);
+        unsigned lastButtons = reinterpret_cast<const MouseStateView*>(MouseState0_1260)[mouseIndex].Buttons;
+        for (unsigned i = 0, mask = 1; i < 16; i++, mask <<= 1)   // MouseButton_MaxNum
+        {
+            if ((buttons & mask) && !(lastButtons & mask))
+                pqueue->AddMouseButtonEvent(mouseIndex, pt, (buttons & mask), 0);
+            else if ((lastButtons & mask) && !(buttons & mask))
+                pqueue->AddMouseButtonEvent(mouseIndex, pt, (lastButtons & mask),
+                                            InputEventsQueueEntry::MouseButton_Released);
+        }
+    }
+}
+
+// @0x142571f10
+void MovieImpl::OnMovieFocus(bool set)
+{
+    if (!set)
+    {
+        ResetKeyboardState();
+        ResetMouseState();
+    }
+    SetFlag<0x40000>(Flags, set);   // the movie is focused
+    Ptr<IMEManagerBase> pimeManager = GetIMEManager();
+    if (pimeManager)
+    {
+        pimeManager->SetActiveMovie(this);
+        if (!set)
+        {
+            // a composition left open is committed as typed
+            const wchar_t* pcomposition = pimeManager->GetCompositionString();
+            if (pcomposition && SFwcslen(pcomposition) != 0)
+            {
+                pimeManager->SetWideCursor(false);
+                pimeManager->FinalizeComposition(pcomposition);
+            }
+        }
+    }
+    AsRootSlots(pASMovieRoot)->OnMovieFocus(set);
+}
+
+// Whether the screen point hits one of the levels; HitTest_ButtonEvents asks for something that takes button events.
+// @0x142570a00
+bool MovieImpl::HitTest(float x, float y, HitTestType testCond, unsigned controllerIdx)
+{
+    Render::PointF pt(Render::PointF::NoInit);
+    reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix)->TransformByInverse(&pt, Render::PointF(x, y));
+
+    SetNormalizedScreenCoords(pt);
+
+    for (unsigned movieIndex = (unsigned)MovieLevelsSize; movieIndex > 0; movieIndex--)
+    {
+        InteractiveObject* pmovie = pMovieLevels[movieIndex - 1].pSprite;
+
+        Render::RectF movieLocalBounds = pmovie->GetBounds(Render::Matrix2F());
+
+        Render::PointF ptMv(Render::PointF::NoInit);
+        pmovie->TransformPointToLocal(&ptMv, pt, false);
+
+        if (movieLocalBounds.Contains(ptMv) || pmovie->Has3D())
+        {
+            switch (testCond)
+            {
+            case HitTest_Bounds:
+                if (pmovie->PointTestLocal(ptMv, 0))
+                    return true;
+                break;
+            case HitTest_Shapes:
+                if (pmovie->PointTestLocal(ptMv, DisplayObjectBase::HitTest_TestShape))
+                    return true;
+                break;
+            case HitTest_ButtonEvents:
+                {
+                    DisplayObjectBase::TopMostDescr descr;
+                    descr.ControllerIdx = controllerIdx;
+                    if (GetAVMVersion() == 1)
+                    {
+                        // AS1/AS2: only clips with button handlers are hit
+                        if (pmovie->GetTopMostMouseEntity(ptMv, &descr) == DisplayObjectBase::TopMost_Found)
+                            return true;
+                    }
+                    else
+                    {
+                        // AS3: anything is hit; one of its parents must act as a button
+                        descr.TestAll = true;
+                        if (pmovie->GetTopMostMouseEntity(ptMv, &descr) == DisplayObjectBase::TopMost_Found)
+                        {
+                            for (InteractiveObject* p = descr.pResult; p; p = p->GetParent())
+                            {
+                                if (p->HasAvmObject() && p->GetAvmIntObj()->ActsAsButton())
+                                    return true;
+                            }
+                        }
+                    }
+                    break;
+                }
+            case HitTest_ShapesNoInvisible:
+                if (pmovie->PointTestLocal(ptMv,
+                        DisplayObjectBase::HitTest_TestShape | DisplayObjectBase::HitTest_IgnoreInvisible))
+                    return true;
+                break;
+            }
+        }
+    }
+    return false;
+}
+
+Render::PointF MovieImpl::TranslateToScreen(const Render::PointF& p, Render::Matrix2F* puserMatrix)
+{
+    Render::Matrix2F worldMatrix;
+    pMainMovie->GetWorldMatrix(&worldMatrix);
+    Render::Matrix2F mat = *reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix);
+
+    if (puserMatrix)
+        mat.Prepend(*puserMatrix);
+    mat.Prepend(worldMatrix);
+    return mat.Transform(Render::PixelsToTwips(p));
+}
+
+Render::RectF MovieImpl::TranslateToScreen(const Render::RectF& r, Render::Matrix2F* puserMatrix)
+{
+    Render::Matrix2F worldMatrix;
+    pMainMovie->GetWorldMatrix(&worldMatrix);
+    Render::Matrix2F mat = *reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix);
+
+    if (puserMatrix)
+        mat.Prepend(*puserMatrix);
+    mat.Prepend(worldMatrix);
+    return mat.EncloseTransform(Render::PixelsToTwips(r));
+}
+
+// pathToCharacter: a path such as "_root.hud.mc"; pt is in pixels in that character's space, *presPt in screen
+// pixels.
+bool MovieImpl::TranslateLocalToScreen(const char* pathToCharacter, const Render::PointF& pt, Render::PointF* presPt,
+                                       Render::Matrix2F* userMatrix)
+{
+    Value res;
+    if (!GetVariable(&res, pathToCharacter))
+        return false;
+    Render::Matrix2F worldMatrix;
+    if (!res.GetWorldMatrix(&worldMatrix))
+        return false;
+
+    Render::Matrix2F mat = *reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix);
+    // the world matrix translates in pixels: undo the viewport matrix's 1/20
+    mat.AppendScaling(20.f, 20.f);
+
+    if (userMatrix)
+        mat.Prepend(*userMatrix);
+    mat.Prepend(worldMatrix);
+    *presPt = mat.Transform(pt);
+    return true;
+}
+
+void MovieImpl::AddVideoProvider(Video::VideoProvider* pvideo)
+{
+    if (pvideo)
+        VideoProviders.Add(pvideo);
+}
+
 }} // namespace Scaleform::GFx
 
 // MS2-FUNCTIONAL ?GetMouseState@MovieImpl@GFx@Scaleform@@UEAAXIPEAM0PEAI@Z: the exe computes both coordinates up front (no common 0.05 constant); this build sinks x into its branch
@@ -859,7 +1137,16 @@ void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* p
 // MS2-FUNCTIONAL ?FindFontManager@MovieImpl@GFx@Scaleform@@QEAAPEAVFontManager@23@PEAVMovieDefImpl@23@@Z: instruction scheduling of the list root's null-checked downcast (same compares and loads)
 // MS2-FUNCTIONAL ?AddIntervalTimer@MovieImpl@GFx@Scaleform@@QEAAHPEAVASIntervalTimerIntf@23@@Z: cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
 // MS2-FUNCTIONAL ?AddMovieDefToKillList@MovieImpl@GFx@Scaleform@@QEAAXPEAVMovieDefImpl@23@@Z: cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
+// MS2-FUNCTIONAL ?HitTest@MovieImpl@GFx@Scaleform@@UEAA_NMMW4HitTestType@Movie@23@I@Z: scheduling of the inlined SetNormalizedScreenCoords (same as sfr_gfx_06 GetMouseX)
+// MS2-FUNCTIONAL ?TranslateToScreen@MovieImpl@GFx@Scaleform@@UEAA?AV?$Point@M@Render@3@AEBV453@PEAV?$Matrix2x4@M@53@@Z: xmm register allocation of the inlined Prepend pair (same operations)
+// MS2-FUNCTIONAL ?TranslateToScreen@MovieImpl@GFx@Scaleform@@UEAA?AV?$Rect@M@Render@3@AEBV453@PEAV?$Matrix2x4@M@53@@Z: xmm register allocation of the inlined Prepend pair (same operations)
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UMDKillListEntry@MovieImpl@GFx@Scaleform@@U?$AllocatorGH@UMDKillListEntry@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142574640
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1425746e0
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@UMDKillListEntry@MovieImpl@GFx@Scaleform@@U?$AllocatorGH@UMDKillListEntry@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1425752c0
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142575370
+// MS2-PIN: ??$add@PEAVVideoProvider@Video@GFx@Scaleform@@@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAXAEBQEAVVideoProvider@Video@GFx@1@_K@Z 0x142569870
+// MS2-PIN: ??$add@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAXAEBV?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@1@_K@Z 0x142569c00
+// MS2-PIN: ?CheckExpand@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@QEAAXPEAX@Z 0x14256dc50
+// MS2-PIN: ?Clear@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@QEAAXXZ 0x14256df40
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAX_K@Z 0x142579060
+// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358

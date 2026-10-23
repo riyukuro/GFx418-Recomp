@@ -19,6 +19,11 @@ inline double PixelsToTwips(double x) { return x * 20.0; }
 namespace Scaleform { namespace Render {
 // (a template without inline, taking the point by value, scaled as a point times the point (20, 20))
 template<class T> Point<T> PixelsToTwips(Point<T> p) { return Point<T>(p * Point<T>(T(20.))); }
+// (appended for the movie, sfr_gfx_01i) a rectangle, edge by edge
+inline Rect<float> PixelsToTwips(const Rect<float>& r)
+{
+    return Rect<float>(PixelsToTwips(r.x1), PixelsToTwips(r.y1), PixelsToTwips(r.x2), PixelsToTwips(r.y2));
+}
 
 }} // namespace Scaleform::Render
 

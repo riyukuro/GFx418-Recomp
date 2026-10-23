@@ -334,9 +334,11 @@ public:
 
 // (appended for the player, sfr_gfx_01i) the root of a movie's render tree: viewport and background color.
 class Color;
+class Viewport;
 class TreeRoot : public TreeContainer
 {
 public:
+    void SetViewport(const Viewport& vp);          // 0x14261d890
     void SetBackgroundColor(const Color& color);   // 0x142575a20 (inline in render_treenode.h)
 };
 

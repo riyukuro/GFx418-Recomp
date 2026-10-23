@@ -16,6 +16,7 @@
 #include "gfx_player.h"
 #include "ms2/scaleform/kernel/sf_list.h"
 #include "gfx_keyboardstate.h"
+#include "../kernel/sf_hash.h"
 #endif
 
 namespace Scaleform {
@@ -23,6 +24,7 @@ class File;
 namespace GFx {
 
 class ASMovieRootBase;
+namespace Video { class VideoProvider; }
 class DisplayObjectBase;
 class InteractiveObject;
 class Sprite;
@@ -145,7 +147,11 @@ public:
     float            ScreenToWorldSx;          // +0x130 ScreenToWorld: the normalized mouse position (y up)
     float            ScreenToWorldSy;          // +0x134
     void*            ScreenToWorldRest[0x1d];  // +0x138 the rest of Render::ScreenToWorld
-    void*            Unrecovered_220;          // +0x220 (this build only: 8 bytes before the cached log)
+#ifdef SF_GFX_PLAYERIMPL
+    HashSet<Ptr<Video::VideoProvider> > VideoProviders; // +0x220 the playing videos (paused with the movie)
+#else
+    void*            VideoProviders;           // +0x220 HashSet<Ptr<Video::VideoProvider>>
+#endif
     Ptr<Log>         pCachedLog;               // +0x228 the log state's log, cached (sfr_gfx_06)
     UserEventHandler* pUserEventHandler;       // +0x230 Ptr<UserEventHandler>: cached during advance (sfr12)
     void*            pFSCommandHandler;        // +0x238 Ptr<FSCommandHandler>
@@ -461,6 +467,11 @@ public:
     bool SetFocusTo(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt);
     // The stage-to-viewport matrix from the viewport, scale mode and alignment (exe 0x142574eb0).
     void ResetViewportMatrix();
+    // (appended, sfr_gfx_01i) The view scale/offset, visible frame and viewport matrix from the viewport, the scale
+    // mode and the alignment (exe 0x1425787d0).
+    void UpdateViewport();
+    // (appended, sfr_gfx_01i) Registers a playing video; the movie pauses it with itself (exe 0x14256c520).
+    void AddVideoProvider(Video::VideoProvider* pvideo);
     // The font manager of the root node that loaded pdefImpl (exe 0x14256ed00).
     FontManager* FindFontManager(MovieDefImpl* pdefImpl);
     // The cursor shape of a mouse; the AVM root is told when it changes (exe 0x14256dc00).
@@ -477,6 +488,9 @@ private:
 protected:
     void ResetKeyboardState();   // exe 0x142574c60
     void ResetMouseState();      // exe 0x142574ca0
+    // The movie got or lost the host's focus (Event::SetFocus / KillFocus); losing it resets the keyboards and mice
+    // and finalizes an IME composition in progress (exe 0x142571f10).
+    void OnMovieFocus(bool set);
 public:
 
 #ifdef SF_GFX_PLAYERIMPL

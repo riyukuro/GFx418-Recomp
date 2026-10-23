@@ -61,8 +61,9 @@ private:
     virtual void Slot26();                                              // OnCandidateListLoaded
     virtual void Slot27();                                              // OnCandidateListStyleRequest
     virtual void Slot28();                                              // OnEnableIME
-    virtual void Slot29();                                              // SetActiveMovie
 public:
+    // (sfr24) the movie the IME works for from now on.
+    virtual void SetActiveMovie(Movie* pmovie);                         // 29
     // (sfr19) whether pmovie is the movie the IME works for.
     virtual bool IsMovieActive(Movie* pmovie) const;                    // 30
 private:
@@ -76,6 +77,11 @@ public:
     void DoFinalize();                                                  // 0x1425b43d0
     // Switches the IME on or off (OnEnableIME) when that changes IMEDisabled.
     void EnableIME(bool enable);                                        // 0x1425b4400
+    // (appended, sfr24) what the player's OnMovieFocus uses.
+    // Ends the composition with the given text (len ~0: up to the terminator).
+    void FinalizeComposition(const wchar_t* pstr, UPInt len = ~UPInt(0)); // 0x1425b4420
+    // Widens or narrows the focused text field's cursor.
+    void SetWideCursor(bool ow = true);                                 // 0x1425b4ec0
 
 private:
     UByte   Unrecovered_18[0x28 - 0x18];    // +0x18 Ptr<ASIMEManager>, the active movie

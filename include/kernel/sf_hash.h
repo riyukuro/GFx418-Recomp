@@ -141,6 +141,10 @@ public:
         }
     }
 
+    // A unit whose exe setRawCapacity calls Clear out of line defines MS2_SF_HASH_CLEAR_NOINLINE (sfr_gfx_01i).
+#ifdef MS2_SF_HASH_CLEAR_NOINLINE
+    SF_NOINLINE
+#endif
     void Clear()
     {
         if (pTable)

@@ -5,7 +5,9 @@
 
 #include "../kernel/sf_refcount.h"
 
-namespace Scaleform { namespace GFx {
+namespace Scaleform {
+class String;
+namespace GFx {
 
 class FileOpenerBase;
 class MovieImpl;
@@ -53,6 +55,8 @@ public:
         State_SharedObject = 32,
         // (appended for the player, sfr_gfx_01i) MovieImpl's multitouch accessors query 7
         State_MultitouchInterface = 7,
+        // (appended for the player, sfr_gfx_01i) MovieImpl::GetASTimerMs queries 0x1f
+        State_TestStream = 31,
     };
 
 protected:
@@ -75,6 +79,23 @@ public:
     virtual UInt32   GetSupportedGesturesMask() const = 0;
     // inputMode: MovieImpl::MultitouchInputMode; false when the device cannot do it.
     virtual bool     SetMultitouchInputMode(unsigned inputMode) = 0;
+};
+
+// (appended for the player, sfr_gfx_01i) a recorded test run: in Record mode the player writes the values that
+// vary between runs (the AS timer) into it, in Play mode it reads them back so the run repeats.
+class TestStream : public State
+{
+public:
+    TestStream() : State(State_TestStream) {}
+
+    virtual bool GetParameter(const char* parameter, String* value) = 0;
+    virtual bool SetParameter(const char* parameter, const char* value) = 0;
+
+    enum
+    {
+        Record,
+        Play
+    } TestStatus;   // +0x18
 };
 
 // Object owned by a library (XML, ...) that knows its MovieImpl; vtable 0x1432247b0.

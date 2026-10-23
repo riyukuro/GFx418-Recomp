@@ -108,6 +108,12 @@ public:
         TopMost_FoundNothing = 2, // nothing here and the search stops
         TopMost_Continue    = 3  // nothing here yet, keep searching
     };
+    // (sfr24) PointTestLocal's hitTestMask bits: 0 tests the bounds only.
+    enum HitTestMask
+    {
+        HitTest_TestShape       = 1, // the shapes, not just their bounds
+        HitTest_IgnoreInvisible = 2  // invisible objects are not hit
+    };
 
     virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const = 0;
 
@@ -458,7 +464,8 @@ struct DisplayObjectBase::TopMostDescr
     bool                     TestAll;       // +0x18 in: also hit objects without button handlers
     unsigned                 ControllerIdx; // +0x1c in
 
-    TopMostDescr() : pIgnoreMC(0), TestAll(false), ControllerIdx(0) {}
+    // LocalPt is left unset (the exe stores nothing there)
+    TopMostDescr() : LocalPt(PointF::NoInit), pIgnoreMC(0), TestAll(false), ControllerIdx(0) {}
 };
 
 // (appended for the GFx_DisplayObject unit, sfr_gfx_06) the lazily allocated transform state of a display object.

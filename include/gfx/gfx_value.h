@@ -7,7 +7,9 @@
 
 #include "gfx_state.h"
 
-namespace Scaleform { namespace GFx {
+namespace Scaleform {
+namespace Render { template<class T> class Matrix2x4; }
+namespace GFx {
 
 class Movie;
 class MovieImpl;
@@ -20,6 +22,8 @@ class Value
     friend class AS2::MovieRoot;
 
 public:
+    class DisplayInfo;
+
     // How a managed value reaches its VM object.
     class ObjectInterface
     {
@@ -29,6 +33,32 @@ public:
 
         virtual void ObjectAddRef(Value* val, void* pobj)  = 0; // 1
         virtual void ObjectRelease(Value* val, void* pobj) = 0; // 2
+
+        // (appended for the movie, sfr_gfx_01i) the member, array and display object access of the AVM side
+        // (AS2ValueObjectInterface vftable 0x143222128; this build has no ByteArray slots)
+        class ObjVisitor;
+        class ArrVisitor;
+        virtual bool     HasMember(void* pdata, const char* name, bool isdobj) const = 0;                     // 3
+        virtual bool     GetMember(void* pdata, const char* name, Value* pval, bool isdobj) const = 0;        // 4
+        virtual bool     SetMember(void* pdata, const char* name, const Value& value, bool isdobj) = 0;      // 5
+        virtual bool     Invoke(void* pdata, Value* presult, const char* name, const Value* pargs, UPInt nargs,
+                                bool isdobj) = 0;                                                             // 6
+        virtual bool     InvokeClosure(void* pdata, UPInt dataAux, Value* presult, const Value* pargs,
+                                       UPInt nargs) = 0;                                                      // 7
+        virtual bool     DeleteMember(void* pdata, const char* name, bool isdobj) = 0;                       // 8
+        virtual void     VisitMembers(void* pdata, ObjVisitor* visitor, bool isdobj) const = 0;              // 9
+        virtual unsigned GetArraySize(void* pdata) const = 0;                                                // 10
+        virtual bool     SetArraySize(void* pdata, unsigned sz) = 0;                                         // 11
+        virtual bool     GetElement(void* pdata, unsigned idx, Value* pval) const = 0;                       // 12
+        virtual bool     SetElement(void* pdata, unsigned idx, const Value& value) = 0;                      // 13
+        virtual void     VisitElements(void* pdata, ArrVisitor* visitor, unsigned idx, int count) const = 0; // 14
+        virtual bool     PushBack(void* pdata, const Value& value) = 0;                                      // 15
+        virtual bool     PopBack(void* pdata, Value* pval) = 0;                                              // 16
+        virtual bool     RemoveElements(void* pdata, unsigned idx, int count) = 0;                           // 17
+        virtual bool     IsDisplayObjectActive(void* pdata) const = 0;                                       // 18
+        virtual bool     GetDisplayInfo(void* pdata, DisplayInfo* pinfo) const = 0;                          // 19
+        virtual bool     SetDisplayInfo(void* pdata, const DisplayInfo& info) = 0;                           // 20
+        virtual bool     GetWorldMatrix(void* pdata, Render::Matrix2x4<float>* pmat) const = 0;              // 21
 
     protected:
         MovieImpl* pMovieRoot;                                  // +0x08
@@ -117,8 +147,8 @@ public:
         Type = VT_Number;
         mValue.NValue = v;
     }
-    // ObjectInterface::GetMember/SetMember/Invoke are its vftable slots 4/5/6 (not declared on ObjectInterface:
-    // the AS2 interface overrides only part of it so far).
+    // ObjectInterface::GetMember/SetMember/Invoke are its vftable slots 4/5/6 (these raw slot calls predate the
+    // declarations on ObjectInterface).
     bool GetMember(const char* name, Value* pval) const
     {
         typedef bool (*Fn)(ObjectInterface*, void*, const char*, Value*, bool);
@@ -136,6 +166,11 @@ public:
         typedef bool (*Fn)(ObjectInterface*, void*, Value*, const char*, const Value*, UPInt, bool);
         return (*reinterpret_cast<Fn const* const*>(pObjectInterface))[6](pObjectInterface, mValue.pData, presult,
                                                                            name, args, nargs, IsDisplayObject());
+    }
+    // (appended for the movie, sfr_gfx_01i) the world matrix of a display object value, translation in pixels
+    bool GetWorldMatrix(Render::Matrix2x4<float>* pmat) const
+    {
+        return pObjectInterface->GetWorldMatrix(mValue.pData, pmat);
     }
 
 protected:
