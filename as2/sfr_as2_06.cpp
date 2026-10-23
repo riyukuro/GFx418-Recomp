@@ -54,6 +54,7 @@
 // MS2-RANGE: 0x142971a50-0x142971ac0 .text$mn
 // MS2-RANGE: 0x142971ba0-0x142971c50 .text$mn
 // MS2-RANGE: 0x142971c50-0x142971cc0 .text$mn
+// MS2-RANGE: 0x142972830-0x1429729b0 .text$mn
 // MS2-RANGE: 0x142972330-0x142972410 .text$mn
 // MS2-RANGE: 0x142972410-0x142972490 .text$mn
 // MS2-RANGE: 0x142973040-0x142973080 .text$mn
@@ -465,6 +466,41 @@ bool AvmTextFieldBase_HasStyleSheet(const void* self)
     const unsigned char* textField = static_cast<const unsigned char*>(self) - 0x10;
     const void* styleData = *reinterpret_cast<void* const*>(textField + 0x108);
     return styleData && *reinterpret_cast<void* const*>(static_cast<const unsigned char*>(styleData) + 0x40);
+}
+
+struct AvmSwfEvent
+{
+    EventId Id;
+    Ptr<ActionBufferData> pActionBuffer;
+
+    void Read(StreamContext* stream, unsigned eventId);
+};
+static_assert(offsetof(AvmSwfEvent, pActionBuffer) == 0x18, "AvmSwfEvent exe layout");
+static_assert(sizeof(AvmSwfEvent) == 0x20, "AvmSwfEvent exe size");
+
+// MS2-FUNCTIONAL: reproduces the executable event header, key byte, action-data read, and stream-length correction.
+// @0x142972830
+void AvmSwfEvent::Read(StreamContext* stream, unsigned eventId)
+{
+    Id = EventId(eventId);
+    Id.ControllerIndex = -1;
+    unsigned actionLength = stream->ReadU32();
+    if (eventId & EventId::Event_KeyPress)
+    {
+        Id.KeyCode = stream->ReadU8();
+        if (actionLength)
+            --actionLength;
+    }
+
+    pActionBuffer = MakePickable(ActionBufferData::CreateNew());
+    if (!pActionBuffer)
+        return;
+    pActionBuffer->Read(stream, actionLength);
+    const unsigned actualLength = pActionBuffer->GetLength();
+    if (actualLength < actionLength)
+        stream->CurByteIndex += actionLength - actualLength;
+    else if (actualLength > actionLength)
+        stream->CurByteIndex -= actualLength - actionLength;
 }
 
 // @0x142962010
