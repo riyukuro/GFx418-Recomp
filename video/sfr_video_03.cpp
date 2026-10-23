@@ -1231,4 +1231,30 @@ int FUN_14001b6b0(void* player, std::uint32_t* output, std::uint32_t requestedBy
     *reinterpret_cast<std::uint64_t*>(state + 0x48) += samples;
     return static_cast<int>((channels * static_cast<std::uint32_t>(samples) & 0x7ffffff) << 2);
 }
+
+// MS2-FUNCTIONAL: captures two string callback parameters, retaining defaults and converting supplied AS3 values.
+// @0x140017130
+std::uint64_t* FUN_140017130(std::uint64_t* record, std::uint64_t vm, std::uint64_t property, unsigned count, const std::uint64_t* args, const std::uint64_t* defaults)
+{
+    record[0] = vm; record[1] = property;
+    record[2] = defaults[0];
+    if (record[2]) ++*reinterpret_cast<std::uint32_t*>(record[2] + 0x18);
+    if (count) ConvertAS3ValueToString(const_cast<std::uint64_t*>(args), nullptr, record + 2);
+    record[3] = defaults[1];
+    if (record[3]) ++*reinterpret_cast<std::uint32_t*>(record[3] + 0x18);
+    if (count > 1 && *reinterpret_cast<unsigned char*>(vm + 0x180) == 0)
+        ConvertAS3ValueToString(const_cast<std::uint64_t*>(args + 4), nullptr, record + 3);
+    return record;
+}
+// MS2-FUNCTIONAL: captures three string callback parameters and converts each supplied AS3 argument.
+// @0x140017250
+std::uint64_t* FUN_140017250(std::uint64_t* record, std::uint64_t vm, std::uint64_t property, unsigned count, const std::uint64_t* args, const std::uint64_t* defaults)
+{
+    FUN_140017130(record, vm, property, count, args, defaults);
+    record[4] = defaults[2];
+    if (record[4]) ++*reinterpret_cast<std::uint32_t*>(record[4] + 0x18);
+    if (count > 2 && *reinterpret_cast<unsigned char*>(vm + 0x180) == 0)
+        ConvertAS3ValueToString(const_cast<std::uint64_t*>(args + 8), nullptr, record + 4);
+    return record;
+}
 } // namespace
