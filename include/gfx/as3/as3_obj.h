@@ -84,6 +84,8 @@ public:
     typedef RefCountBaseGC<StatMV_ActionScript_Mem> BaseType;
 
     GASRefCountBase(Collector* gc) : BaseType(gc) { }
+    // (appended, sfr19) the weak proxy of an object that has one is told it died. 0x1424de190
+    virtual ~GASRefCountBase();
 };
 
 // (appended, sfr19) VMAbcFile (a GASRefCountBase) is not modeled; SlotInfo::File releases through the base, which
@@ -439,6 +441,8 @@ public:
 
     // (appended, sfr19) fills the slot values of a new instance (0x1424f0a50).
     void ConstructTail(Object& obj) const;
+    // (appended, sfr19) releases the slot values of a dying instance. 0x1424f6de0
+    void DestructTail(Object& obj) const;
 
     // (appended, sfr19) slot and method registration from a C++ ClassInfo.
     void AddSlot(const MemberInfo& mi);                         // 0x1424e9910
@@ -515,6 +519,8 @@ namespace InstanceTraits
         virtual void MakeObject(Value& result, Traits& t);
         virtual void AS3Constructor(const AS3::Traits& ot, const Value& _this, unsigned argc, const Value* argv) const;
         virtual bool SupportsInterface(const Traits&) const;
+        // (appended, sfr19) 0x1424df2f0
+        virtual ~Traits();
 
     protected:
         // (appended, sfr19)
@@ -556,6 +562,7 @@ namespace InstanceTraits
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::RTraits"; }
         virtual ASString GetName() const;           // 0x14250bc20
         virtual unsigned GetFixedMemSize() const;   // 0x142509d10
+        virtual ~RTraits();                         // (appended, sfr19) 0x1424de960
         virtual void MakeObject(Value& result, Traits& t);  // 0x142516570
 
     public:

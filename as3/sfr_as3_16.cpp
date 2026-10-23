@@ -6,6 +6,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -113,6 +114,91 @@ void Object::AddDynamicSlotValuePair(const Value& prop_name, const Value& v, Slo
     ASString name = GetVM().GetStringManager().CreateEmptyString();
     if (prop_name.Convert2String(name))
         AddDynamicSlotValuePair(name, v, a);
+}
+
+// ==== destructors ===================================================================================================
+
+// The user data an application attached to an object (GFx::Value::SetUserData) and the movie it was set from.
+// 0x10 bytes.
+class Object::UserDataHolder : public NewOverrideBase<StatMV_ActionScript_Mem>
+{
+public:
+    Movie*      pMovieView; // +0x00
+    ASUserData* pUserData;  // +0x08
+
+    // Drops the weak reference of the user data and tells it that the object is gone.
+    void NotifyDestroy(Object* pthis) const
+    {
+        if (pUserData)
+        {
+            ASUserData_SetLastObjectValue(pUserData, 0, 0, false);
+            pUserData->OnDestroy(pMovieView, pthis);
+        }
+    }
+};
+
+// MS2-FUNCTIONAL: the exe calls WProxyHash.Get out of line (0x1425058c0); cl inlines it.
+// @0x1424de190
+GASRefCountBase::~GASRefCountBase()
+{
+    if (HasWeakRef())
+    {
+        Collector* rcc = GetCollector();
+        WeakProxy* wp = NULL;
+        if (rcc->WProxyHash.Get(this, &wp) && wp)
+        {
+            wp->NotifyObjectDied();
+            wp->Release();
+            rcc->WProxyHash.Remove(this);
+        }
+    }
+}
+
+// @0x1424de820
+Object::~Object()
+{
+    if (pUserDataHolder)
+    {
+        pUserDataHolder->NotifyDestroy(this);
+        delete pUserDataHolder;
+    }
+}
+
+// @0x1424de2e0
+Instance::~Instance()
+{
+    reinterpret_cast<const Traits*>(reinterpret_cast<UPInt>(pTraits.GetPtr()) & ~UPInt(1))->DestructTail(*this);
+}
+
+// @0x1424de0e0
+Class::~Class()
+{
+}
+
+// MS2-FUNCTIONAL: inlining differs: the exe inlines the InitScope ArrayDH dtor and calls AutoPtr<VTable>::Reset
+// out of line (0x142524290); cl does the opposite.
+// @0x1424df220
+Traits::~Traits()
+{
+}
+
+namespace InstanceTraits
+{
+    // @0x1424df2f0
+    Traits::~Traits()
+    {
+    }
+
+    // MS2-FUNCTIONAL: the exe calls the ArrayDataBase<Multiname> dtor out of line (0x1424dc870); cl inlines it.
+    // @0x1424ddd90
+    CTraits::~CTraits()
+    {
+    }
+
+    // @0x1424de960
+    RTraits::~RTraits()
+    {
+    }
 }
 
 // ==== virtual table ==================================================================================================
