@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x14252c7e0-0x142542820 .text$mn
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include <cmath>
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits {
 
@@ -22,6 +23,28 @@ void Traits::SetInstanceTraits(Pickable<InstanceTraits::Traits> itr)
 }}}} // namespace Scaleform::GFx::AS3::ClassTraits
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+
+// MS2-FUNCTIONAL 0x14252f670: uses the recovered numeric coercion result; locale-sensitive range helpers differ.
+// @0x14252f670
+CheckResult Value::ToInt32Value()
+{
+    Number number;
+    CheckResult converted = Convert2NumberInline(number);
+    if (!converted)
+        return converted;
+
+    double wrapped = 0.0;
+    if (std::isfinite(number))
+    {
+        wrapped = std::fmod(std::trunc(number), 4294967296.0);
+        if (wrapped >= 2147483648.0)
+            wrapped -= 4294967296.0;
+        else if (wrapped < -2147483648.0)
+            wrapped += 4294967296.0;
+    }
+    SetSInt32(static_cast<SInt32>(wrapped));
+    return converted;
+}
 
 // MS2-FUNCTIONAL 0x142527560: updates the pair and key-to-latest-slot chain; inlined refcount/hash paths differ.
 // @0x142527560
