@@ -73,6 +73,8 @@ CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_14257db50(void);
 void FUN_140054040(void*, void*, void*);
+void FUN_140053540(void*);
+void FUN_140037910(CriSint32, const CriChar8*, CriSint32);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
 void FUN_140041110(void*, const char*, CriUint32);
@@ -2890,6 +2892,45 @@ CriSint32 FUN_140045c08(void* object, CriSint32 lane)
     if (section)
         FUN_140039f8c(section);
     return total;
+}
+
+// MS2-FUNCTIONAL: dispatch the EasyFileReader free operation and release its heap-owned adapter.
+// @0x140044560
+void FUN_140044560(CriUint64* adapter)
+{
+    struct FileAdapterOps { CriUint8 Reserved00[0x20]; void* Free; };
+    if (adapter && adapter[1] && ((FileAdapterOps*)adapter[1])->Free)
+    {
+        (*(void (**)(CriUint64))((FileAdapterOps*)adapter[1])->Free)(adapter[0]);
+        adapter[0] = 0;
+        adapter[1] = 0;
+        FUN_140027fb4((void*)adapter[2], adapter);
+    }
+}
+
+// MS2-FUNCTIONAL: clear the current Sofdec input state and reset its attached audio decoder.
+// @0x140043550
+void FUN_140043550(CriSint32* state, void* input)
+{
+    struct InputState
+    {
+        CriSint32 HasState;
+        CriUint8 Reserved04[0x0c];
+        void* AudioDecoder;
+        CriUint8 Reserved18[0x10];
+        void* InputControl;
+        CriUint8 Reserved30[0x60];
+        CriSint32 ResetState;
+    };
+    if (!input || !state)
+        return;
+    InputState* decoder = (InputState*)state;
+    decoder->ResetState = 0;
+    if (decoder->HasState == 0)
+        return;
+    if (!decoder->InputControl)
+        FUN_140037910(0, "E05063023M: Don't have input SJ.", 0);
+    FUN_140053540(decoder->AudioDecoder);
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
