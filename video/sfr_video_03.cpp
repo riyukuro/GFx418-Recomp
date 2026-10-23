@@ -29,6 +29,7 @@ MS2_GLOBAL(0x143b27600, void*, VideoThunkBaseD);
 MS2_GLOBAL(0x143b27638, void*, VideoThunkE);
 MS2_GLOBAL(0x1431b7ba0, void*, VideoDisplayVtable);
 MS2_GLOBAL(0x142d692bc, float, VideoTwipsScale);
+MS2_GLOBAL(0x142d15c1c, float, VideoDurationScale);
 MS2_GLOBAL(0x143b27640, void*, VideoThunkBaseE);
 MS2_GLOBAL(0x143b27488, void*, VideoThunkF);
 MS2_GLOBAL(0x143b27490, void*, VideoThunkBaseF);
@@ -85,6 +86,7 @@ MS2_EXTERN(0x1428d8f14, int(void*, void*), FUN_1428d8f14);
 MS2_EXTERN(0x1428d8efc, int(void*, void*), FUN_1428d8efc);
 MS2_EXTERN(0x1427443c0, void(void*), FUN_1427443c0);
 MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
+MS2_EXTERN(0x1424fef00, void(void*, void*, const void*, void*, unsigned, void*, unsigned), FUN_1424fef00);
 MS2_EXTERN(0x1424f0750, void(void*, const char*, void*, int, int, int), FUN_1424f0750);
 MS2_EXTERN(0x1424d2150, void(void*, void*, std::uint64_t), FUN_1424d2150);
 MS2_EXTERN(0x140026ed0, void(void*), FUN_140026ed0);
@@ -1483,6 +1485,38 @@ void FUN_140017f20(void* self, void*, void* frame)
         Scaleform::GFx::AS3::Value value;
         if (source->GetProperty(property, value))
             reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(self) + offsets[i])->Assign(value);
+    }
+}
+
+// MS2-FUNCTIONAL: builds the metadata object from CRI stream dimensions and track counts, then invokes its callback.
+// @0x1400182f0
+void FUN_1400182f0(void* callback, const std::uint32_t* info)
+{
+    auto* vm = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
+    if (*reinterpret_cast<unsigned char*>(vm + 0x98) == 0) {
+        auto* vmRoot = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(vm + 0x20) + 0x78);
+        std::uint64_t objectResult = 0;
+        FUN_142516600(vmRoot, &objectResult);
+        auto* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(objectResult);
+        auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(vmRoot + 0x10) + 0x1e8);
+        auto addNumber = [&](const char* name, double number) {
+            Scaleform::GFx::ASString key(manager->CreateStringNode(name));
+            Scaleform::GFx::AS3::Value value(number);
+            object->AddDynamicSlotValuePair(key, value);
+        };
+        auto addInt = [&](const char* name, std::uint32_t number) {
+            Scaleform::GFx::ASString key(manager->CreateStringNode(name));
+            Scaleform::GFx::AS3::Value value(static_cast<Scaleform::UInt32>(number));
+            object->AddDynamicSlotValuePair(key, value);
+        };
+        const float scale = VideoDurationScale.get();
+        addNumber("duration", (static_cast<float>(info[4]) * scale) / static_cast<float>(info[2]));
+        addInt("width", info[0]); addInt("height", info[1]); addInt("totalFrames", info[4]);
+        addNumber("frameRate", static_cast<float>(info[2]) / scale);
+        addInt("subtitleTracksCount", info[0xc]); addInt("audioTracksCount", info[0x10]); addInt("cuePointsCount", info[8]);
+        Scaleform::GFx::AS3::Value objectValue(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
+        auto* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0x98);
+        FUN_1424fef00(vmRoot, callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), &objectValue, 1, &objectValue, 0);
     }
 }
 } // namespace
