@@ -8,6 +8,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/gfx_stream.h"
 #include <cstring>
 
@@ -536,6 +537,23 @@ uintptr_t FUN_140014020(uintptr_t self, UInt32* value, const double* input)
 {
     SetScalarValue(value, 4, input, sizeof(*input));
     return self;
+}
+
+// MS2-FUNCTIONAL: performs the inline numeric conversion on the executable's AS3 Value input.
+// @0x140012d30
+uintptr_t FUN_140012d30(uintptr_t self, uintptr_t, Scaleform::GFx::AS3::Value* input)
+{
+    double number;
+    input->Convert2NumberInline(number);
+    return self;
+}
+
+// MS2-FUNCTIONAL: performs the inline numeric conversion into the executable's temporary result.
+// @0x140013a00
+void FUN_140013a00(void*, Scaleform::GFx::AS3::Value* input)
+{
+    double number;
+    input->Convert2NumberInline(number);
 }
 
 // @0x14000f830
