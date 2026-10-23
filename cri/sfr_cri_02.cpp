@@ -159,11 +159,22 @@ void*    FUN_1400385c8(void* storage, CriSint32 size);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
+void     FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
+void     FUN_140044680(void* decoder);
+void     FUN_140043d00(void* decoder);
+void     FUN_1400379b0(void* owner, const char* message);
+CriBool  FUN_1400467b8(void* queue, CriSint32 operation);
+void     FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
+void     FUN_140044d20(void* decoder, CriUint32 count);
+void     FUN_140044270(void* decoder, CriUint32 count);
+void     FUN_140044d70(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
+void     FUN_1400442c0(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void*    FUN_14002db40(void* thread, void* config);
 CriBool  FUN_140042270(void* manager, void* player, void* source, void* streamInfo,
                        CriUint32 stream, CriBool enable);
 void     FUN_140041e30(void* manager, void (*callback)(void**, void*), void* player, CriBool enable);
 CriBool  FUN_140037a10(void);
+void     FUN_140037910(void* owner, const char* message, CriSint32 value);
 CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* output);
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
@@ -242,6 +253,28 @@ struct CriMovieAttachView
     void* Manager;
     CriUint8 ReservedE18[8];
     void* AttachedSource;
+};
+
+struct CriMovieOutputLogView
+{
+    CriUint8 Padding[0xD68];
+    void* Output;
+    CriUint32 Capacity;
+    CriUint32 Count;
+};
+
+struct CriMovieQueueView
+{
+    CriUint8 Padding[0xDA0];
+    void* Queue;
+    CriUint8 LastChunk[0x10];
+};
+
+struct CriMovieChunkQueueRecord
+{
+    void* Chunk;
+    CriUint32 Type;
+    CriUint32 Reserved;
 };
 
 struct CriMvRequestQueueView
@@ -1705,6 +1738,64 @@ CriSint32 FUN_14002e9e0(void)
     total += FUN_140045910(uniConfig);
     uniConfig[2] = 4;
     return total + FUN_140045910(uniConfig);
+}
+
+// MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
+// @0x1400345e0
+void FUN_1400345e0(void* player, void* value, CriUint32 type, CriUint32 flags)
+{
+    CriMovieOutputLogView* state = (CriMovieOutputLogView*)player;
+    if (state->Count >= state->Capacity)
+        FUN_140037910(player, "E05063025M: Can't entry output stream info.", state->Count);
+    FUN_140044fb0(state->Output, state->Count, value, type, flags);
+    ++state->Count;
+}
+
+// MS2-FUNCTIONAL: detect terminal decoder errors and report them through the player error logger.
+// @0x140034690
+void FUN_140034690(void* player)
+{
+    void** fields = (void**)player;
+    if (fields[0x1c1])
+    {
+        FUN_140044680(fields[0x1c1]);
+        if (FUN_140044630(fields[0x1c1]) == 4)
+        {
+            FUN_1400379b0(player, "The internal status of Vdec is ERROR.");
+            return;
+        }
+    }
+    if (fields[0x1c8])
+    {
+        FUN_140043d00(fields[0x1c8]);
+        if (FUN_140043cb0(fields[0x1c8]) == 4)
+            FUN_1400379b0(player, "The internal status of AlphaDec is ERROR.");
+    }
+}
+
+// MS2-FUNCTIONAL: replace the pending movie chunk and save the most recently enqueued record.
+// @0x1400363b0
+void FUN_1400363b0(void* player, void* chunk, CriUint32 type)
+{
+    CriMovieQueueView* state = (CriMovieQueueView*)player;
+    CriMovieChunkQueueRecord item = {};
+    if (FUN_1400467b8(state->Queue, 0))
+        FUN_1400467a0(state->Queue, 0, -1, &item);
+    item.Chunk = chunk;
+    item.Type = type;
+    FUN_1400467b0(state->Queue, 1, &item);
+    memcpy(state->LastChunk, &item, sizeof(item));
+}
+
+// MS2-FUNCTIONAL: forward video sizing and stream metadata to the video and alpha decoder interfaces.
+// @0x1400377a0
+void FUN_1400377a0(void* player, void* videoDecoder, void* alphaDecoder)
+{
+    CriUint32* words = (CriUint32*)player;
+    FUN_140044d20(videoDecoder, words[0x8d0 / 4]);
+    FUN_140044270(alphaDecoder, words[0x8d0 / 4]);
+    FUN_140044d70(videoDecoder, words[0x8cc / 4], words + 0x8d4 / 4, words + 0x9d4 / 4);
+    FUN_1400442c0(alphaDecoder, words[0x8cc / 4], words + 0x8d4 / 4, words + 0x9d4 / 4);
 }
 
 // MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
