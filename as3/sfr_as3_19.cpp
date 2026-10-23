@@ -15,8 +15,9 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits {
 // @0x1425274f0
 void Traits::SetInstanceTraits(Pickable<InstanceTraits::Traits> itr)
 {
-    Flags = (Flags & ~AS3::Traits::IsInterfaceMask) |
-            (itr->IsInterface() ? AS3::Traits::IsInterfaceMask : 0);
+    const UInt32 incomingFlags = static_cast<UInt32>(itr->Flags);
+    const SPInt interfaceMask = -static_cast<SPInt>((incomingFlags >> 2) & 1);
+    Flags ^= (Flags ^ interfaceMask) & AS3::Traits::IsInterfaceMask;
     ITraits = itr;
 }
 
