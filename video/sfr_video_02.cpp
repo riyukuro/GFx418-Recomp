@@ -2274,6 +2274,24 @@ void FUN_140015c40(void* object)
     *oldState = state;
 }
 
+// MS2-FUNCTIONAL: converts the optional subtitle value and updates the video text surface and dimensions.
+// @0x140014460
+void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3::Value* input)
+{
+    if (!hasValue)
+        return;
+    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(reinterpret_cast<char*>(object) + 0x98);
+    Scaleform::GFx::AS3::Value text(*input);
+    text.ToStringValue(vm->GetStringManager());
+    *reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(object) + 0x60) = 0;
+    extern void FUN_140026720(void*, void*, void*);
+    auto* surface = *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x50);
+    FUN_140026720(surface, text.GetStringNode(), vm);
+    FUN_140025750(surface,
+        static_cast<int>(*reinterpret_cast<double*>(reinterpret_cast<char*>(object) + 0x88) * 100.0),
+        static_cast<int>(*reinterpret_cast<double*>(reinterpret_cast<char*>(object) + 0x90) * 100.0));
+}
+
 // Shared path for the generated AS3 trait getters in this range.
 static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
                             void* callback, void* base)
