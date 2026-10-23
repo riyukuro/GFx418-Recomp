@@ -1908,6 +1908,9 @@ typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<M
 // MS2-FUNCTIONAL: same template body; the exe calls CheckExpand out of line, here it is inlined
 // @0x1424d5020
 template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
+// Adding by raw pointer: the entry is built from a temporary SPtr.
+// @0x1424d29d0
+template void MS2_GCRootSet::add<GFx::AS3::GASRefCountBase*>(void*, GFx::AS3::GASRefCountBase* const&, UPInt);
 // The VM's set of script global objects (HashSetLH<SPtr<GlobalObjectScript>> by pointer value).
 typedef GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript> MS2_ScriptPtr;
 typedef HashSetBase<MS2_ScriptPtr, FixedSizeHash<MS2_ScriptPtr>, FixedSizeHash<MS2_ScriptPtr>, AllocatorLH<MS2_ScriptPtr, 2>,
@@ -1931,6 +1934,60 @@ typedef MS2_HashSetOf<MS2_FunctionTraitsNode, AllocatorLH<UInt32, GFx::AS3::Stat
 // @0x1424d3d50
 template void MS2_FunctionTraitsSet::add<MS2_FunctionTraitsNode::NodeRef>(void*, const MS2_FunctionTraitsNode::NodeRef&,
                                                                         UPInt);
+// A VMAbcFile's activation traits by method body (+0x90), made on first use with the name "activation@...".
+typedef HashNode<const GFx::AS3::Abc::MethodBodyInfo*, GFx::AS3::SPtr<GFx::AS3::InstanceTraits::Traits>,
+                 FixedSizeHash<const GFx::AS3::Abc::MethodBodyInfo*> > MS2_ActivationTraitsNode;
+typedef MS2_HashSetOf<MS2_ActivationTraitsNode, AllocatorLH<const GFx::AS3::Abc::MethodBodyInfo*, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                      HashsetCachedNodeEntry<MS2_ActivationTraitsNode, MS2_ActivationTraitsNode::NodeHashF> >::Type
+    MS2_ActivationTraitsSet;
+// @0x1424d4430
+template void MS2_ActivationTraitsSet::add<MS2_ActivationTraitsNode::NodeRef>(void*, const MS2_ActivationTraitsNode::NodeRef&,
+                                                                            UPInt);
+// @0x1424d3200
+template void MS2_ActivationTraitsSet::add<MS2_ActivationTraitsNode>(void*, const MS2_ActivationTraitsNode&, UPInt);
+// A local map of 0x1424f4a90 (sfr_as3_17): a UInt32 key to a slot position, the absolute index and the slots it is in.
+struct MS2_SlotPos
+{
+    SPInt       Ind;
+    const void* pSlots;
+
+    MS2_SlotPos(const MS2_SlotPos& other) : Ind(other.Ind), pSlots(other.pSlots) {}
+    MS2_SlotPos& operator=(const MS2_SlotPos& other)
+    {
+        Ind    = other.Ind;
+        pSlots = other.pSlots;
+        return *this;
+    }
+};
+typedef HashNode<UInt32, MS2_SlotPos, FixedSizeHash<UInt32> > MS2_SlotPosNode;
+typedef MS2_HashSetOf<MS2_SlotPosNode, AllocatorDH<UInt32, 2>,
+                      HashsetCachedNodeEntry<MS2_SlotPosNode, MS2_SlotPosNode::NodeHashF> >::Type MS2_SlotPosSet;
+// @0x1424d3ba0
+template void MS2_SlotPosSet::add<MS2_SlotPosNode::NodeRef>(void*, const MS2_SlotPosNode::NodeRef&, UPInt);
+// @0x1424d2d50
+template void MS2_SlotPosSet::add<MS2_SlotPosNode>(void*, const MS2_SlotPosNode&, UPInt);
+// The movie root's loaded movie definitions (+0x6e8), keyed by identity, with a use count.
+struct MS2_LoadedMovieDefInfo
+{
+    Ptr<GFx::MovieDefImpl> pMovieDef;
+    unsigned               UseCnt;
+
+    MS2_LoadedMovieDefInfo(GFx::MovieDefImpl* def) : pMovieDef(def), UseCnt(1) {}
+};
+typedef HashNode<GFx::MovieDefImpl*, MS2_LoadedMovieDefInfo, IdentityHash<GFx::MovieDefImpl*> > MS2_LoadedMovieDefNode;
+typedef MS2_HashSetOf<MS2_LoadedMovieDefNode, AllocatorLH<GFx::MovieDefImpl*, 2>,
+                      HashsetNodeEntry<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF> >::Type
+    MS2_LoadedMovieDefSet;
+// @0x1424d4220
+template void MS2_LoadedMovieDefSet::add<MS2_LoadedMovieDefNode::NodeRef>(void*, const MS2_LoadedMovieDefNode::NodeRef&,
+                                                                        UPInt);
+// @0x1424d3030
+template void MS2_LoadedMovieDefSet::add<MS2_LoadedMovieDefNode>(void*, const MS2_LoadedMovieDefNode&, UPInt);
+// A local set of object pointers in 0x1424dfbf0 (sfr_as3_16), hashed bytewise.
+typedef HashSetBase<const void*, FixedSizeHash<const void*>, FixedSizeHash<const void*>, AllocatorDH<const void*, 2>,
+                    HashsetCachedEntry<const void*, FixedSizeHash<const void*> > > MS2_ObjPtrSet;
+// @0x1424d2890
+template void MS2_ObjPtrSet::add<const void*>(void*, const void* const&, UPInt);
 // A number formatted on its own ("{0}").
 // @0x1424d2410
 template String AsString<double>(const double&);
@@ -2943,7 +3000,4 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317de60
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317e228
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317e238
-// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317e330
-// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B@ 0x14317e3e8
-// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317d220
 // MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
