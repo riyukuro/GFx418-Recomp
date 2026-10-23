@@ -89,6 +89,8 @@ MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
 MS2_EXTERN(0x14250d8f0, void*(void*, void*), FUN_14250d8f0);
 MS2_EXTERN(0x142442c30, void(void*, void*, void*), FUN_142442c30);
 MS2_EXTERN(0x1424edca0, void(void*, void*), FUN_1424edca0);
+MS2_EXTERN(0x142467b50, void(void*, void*, void*, void*), FUN_142467b50);
+MS2_EXTERN(0x1424687d0, void(void*, void*, int), FUN_1424687d0);
 MS2_EXTERN(0x1424fef00, void(void*, void*, const void*, void*, unsigned, void*, unsigned), FUN_1424fef00);
 MS2_EXTERN(0x1424f0750, void(void*, const char*, void*, int, int, int), FUN_1424f0750);
 MS2_EXTERN(0x1424d2150, void(void*, void*, std::uint64_t), FUN_1424d2150);
@@ -1547,5 +1549,30 @@ void* FUN_14001a470(void* self)
         FUN_1424edca0(frame, self);
     }
     return display;
+}
+
+// MS2-FUNCTIONAL: creates a callback property object from the supplied AS3 strings and binds it to this stream.
+// @0x140019890
+void FUN_140019890(void* self, const std::uint64_t* firstAtom, const std::uint64_t* secondAtom)
+{
+    auto* vm = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x10);
+    auto* firstNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*firstAtom & ~std::uint64_t(3));
+    auto* secondNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*secondAtom & ~std::uint64_t(3));
+    Scaleform::GFx::ASString first(firstNode);
+    Scaleform::GFx::ASString second(secondNode);
+    std::uint64_t result = 0;
+    FUN_142467b50(vm, &result, &first, &second);
+    auto* object = reinterpret_cast<unsigned char*>(result);
+    auto currentVm = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(self) + 0x10);
+    auto* owner = reinterpret_cast<unsigned char*>(object + 0x48);
+    auto old = *reinterpret_cast<std::uint64_t*>(owner);
+    if (old != currentVm) {
+        ReleaseVideoAtom(reinterpret_cast<std::uint64_t*>(owner));
+        RetainVideoAtom(currentVm);
+        *reinterpret_cast<std::uint64_t*>(owner) = currentVm;
+    }
+    FUN_1424687d0(vm, object, 0);
+    auto temporary = result;
+    ReleaseVideoAtom(&temporary);
 }
 } // namespace
