@@ -16,6 +16,7 @@ extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
 extern void FUN_14257db40(void*);
 extern void FUN_14257db50(void*);
+extern void FUN_1429260b0(void*);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
 
@@ -857,6 +858,33 @@ void* FUN_140002d20(void* object, unsigned flags)
 void* FUN_140002e40(void* object, unsigned flags)
 {
     FUN_14257db40(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: releases the retained interface in this slot.
+// @0x140003a50
+void FUN_140003a50(void** interfaceSlot)
+{
+    if (*interfaceSlot)
+        reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*interfaceSlot))[2])(*interfaceSlot);
+}
+
+// MS2-FUNCTIONAL: releases the tagged proxy pair in reverse field order.
+// @0x140004b00
+void FUN_140004b00(Scaleform::UPInt* pair)
+{
+    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[2] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
+    if (second) second->Release();
+    if (first) first->Release();
+}
+
+// MS2-FUNCTIONAL: destroys the base object and releases its allocation when requested.
+// @0x140003df0
+void* FUN_140003df0(void* object, unsigned flags)
+{
+    FUN_1429260b0(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
