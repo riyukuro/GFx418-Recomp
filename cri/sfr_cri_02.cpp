@@ -98,6 +98,11 @@ void     FUN_140037850(void* player);
 void     FUN_140037880(void* player);
 CriUint32 FUN_140030280(void* player, void* heap, void* work);
 CriHeap  FUN_140027fec(void* memory, CriSint32 size);
+void*    FUN_140039ea8(void* work, CriSint32 workSize);
+void*    FUN_1400452b4(CriHeap heap, CriSint32 count);
+void*    FUN_1400464c8(CriHeap heap, CriSint32 kind, CriSint32 alignment);
+void     FUN_1400372c0(void* player, CriBool enabled);
+void     FUN_14002f610(CriUint32* player);
 void*    FUN_140030b50(CriSint32 codecId);
 void*    FUN_140044e40(void* decoderInterface);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
@@ -3726,6 +3731,111 @@ void FUN_14002f850(void* player)
     *(CriUint64*)((CriUint8*)player + 0xf08) = 0;
     words[0xed8 / 4] = 0xffffffff;
     *(CriUint8*)((CriUint8*)player + 0xf10) = 0;
+}
+
+// MS2-FUNCTIONAL: allocate and initialize a CRI Movie player from the caller's Scaleform heap.
+// @0x14002f1f0
+void* FUN_14002f1f0(CriHeap heap)
+{
+    if (!DAT_143ffd500 || !heap)
+    {
+        FUN_140037950(NULL, "E09031803M: criMvPly_Create was called without Initialization.", 0);
+        return NULL;
+    }
+    CriUint32* words = (CriUint32*)FUN_140027ed8(heap, 0xf18, "CriMvPly::HnObj", 4);
+    if (!words)
+    {
+        FUN_140037950(NULL, "E05063001M: Can't allocate handle object memory.", 0xf18);
+        return NULL;
+    }
+    memset(words, 0, 0xf18);
+    words[0] = 1;
+    struct HeapFields
+    {
+        CriUint8 Reserved0[0xdc0];
+        CriHeap Heap;
+        CriUint8 ReservedD28[8];
+        void* HeapHandle;
+        CriUint8 ReservedD38[8];
+        void* LocalWork;
+    };
+    struct WorkFields { CriUint8 Reserved0[0x18]; void* CriticalWork; void* CriticalSection; };
+    HeapFields* heapFields = (HeapFields*)words;
+    WorkFields* workFields = (WorkFields*)words;
+    heapFields->Heap = heap;
+    *(CriHeap*)((CriUint8*)words + 0xde8) = heap;
+
+    workFields->CriticalWork = FUN_140027ed8(heap, 0x48, "CriMvPly::CriCsWork", 4);
+    if (!workFields->CriticalWork)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E08102001M: Can't allocate cs handle memory.", 0x48);
+        return NULL;
+    }
+    workFields->CriticalSection = FUN_140039ea8(workFields->CriticalWork, 0x48);
+    if (!workFields->CriticalSection)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E05081501M: Can't create CriticalSection for CRI Movie.", 0);
+        return NULL;
+    }
+
+    words[0x376] = 0x2800;
+    void* localBuffer = FUN_140027ed8(heap, 0x2800, "CriMvPly::LocalHeapBuf", 4);
+    *(void**)((CriUint8*)words + 0xde0) = localBuffer;
+    if (!localBuffer)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E05063002M: Can't allocate internal heap memory.", 0x2800);
+        return NULL;
+    }
+    heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, 0x2800);
+    if (!heapFields->HeapHandle)
+    {
+        FUN_14002f610(words);
+        FUN_140037910(NULL, "E05063005M: Can't create internal heap handle.", 0);
+        return NULL;
+    }
+    words[0x372] = 0x2800;
+    CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)words;
+    queues->InputBuffer = FUN_140046730(heap, 0x2800, 0, 0x40, "CriMvPly::HeadAnalyInput");
+    if (!queues->InputBuffer)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E05063006M: Can't create input SJ to analyze header chunk.", 0);
+        return NULL;
+    }
+    words[0x35c] = 8;
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)words;
+    state->Demux = FUN_1400452b4(heap, 8);
+    if (!state->Demux)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E05063007M: Can't create UsfDemux.", 0);
+        return NULL;
+    }
+    queues->ReadBuffer = FUN_1400464c8(heap, 0, 0x40);
+    if (!queues->ReadBuffer)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E05063008M: Can't create output stream.", 0);
+        return NULL;
+    }
+    words[0x35d] = 0;
+    struct MemoryQueueView { CriUint8 Reserved[0xda0]; void* Queue; };
+    MemoryQueueView* memoryQueue = (MemoryQueueView*)words;
+    memoryQueue->Queue = FUN_1400464c8(heap, 1, 4);
+    if (!memoryQueue->Queue)
+    {
+        FUN_14002f610(words);
+        FUN_140037950(NULL, "E05070601M: Can't create SJ for memory input.", 0);
+        return NULL;
+    }
+    ((CriMvReadBufferState*)words)->Mode = 0;
+    FUN_14002f850(words);
+    words[0] = 1;
+    FUN_1400372c0(words, 0);
+    return words;
 }
 
 // MS2-FUNCTIONAL: release decoder queues, demux state, and heap-owned CRI Movie work areas.
