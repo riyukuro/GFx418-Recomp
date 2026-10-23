@@ -62,6 +62,20 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 
 namespace Scaleform { namespace GFx { namespace IME {
 
+// @0x1423ca560
+void FUN_1423ca560(GFxIMEManagerWin32* self, unsigned lang)
+{
+    String* text = &self->conversionMode;
+    *text = "Unknown";
+    if (lang & 0x10000000) *text = "English";
+    if (lang & 0x00000f00) *text = "Japanese";
+    if (lang & 0x0000f000) *text = "Korean";
+    if (lang & 0x00ff0000) *text = "Chinese (Simplified)";
+    if (lang & 0x0000000f) *text = "Chinese (Traditional)";
+    void** vtable = *reinterpret_cast<void***>(self);
+    reinterpret_cast<void(*)(void*, const char*)>(vtable[0x60 / sizeof(void*)])(self, text->ToCStr());
+}
+
 // @0x1423ca640
 void FUN_1423ca640(void* self, unsigned value)
 {
