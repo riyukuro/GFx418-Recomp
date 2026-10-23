@@ -40,6 +40,7 @@ enum ASBuiltinType : int
     ASBuiltin_ExternalInterface = 28,
     ASBuiltin_MovieClipLoader = 29,
     ASBuiltin_BitmapData      = 30,
+    ASBuiltin_LoadVars        = 31,
     ASBuiltin_NetStream        = 35,
     ASBuiltin_Video            = 36,
     ASBuiltin_DropShadowFilter = 38,

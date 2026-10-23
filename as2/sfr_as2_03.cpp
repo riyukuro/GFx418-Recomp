@@ -156,6 +156,7 @@
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 // MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
 // MS2-RANGE: 0x142926ab0-0x142926ae0 .text$mn
+// MS2-RANGE: 0x14291dda0-0x14291df80 .text$mn
 // MS2-RANGE: 0x14291d150-0x14291d1e0 .text$mn
 // MS2-RANGE: 0x1429266f0-0x1429267a0 .text$mn
 // MS2-RANGE: 0x142926200-0x1429262a0 .text$mn
@@ -730,6 +731,29 @@ SharedObjectProto::SharedObjectProto(ASStringContext* psc, Object* pprototype, c
     : Prototype<SharedObject>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// MS2-FUNCTIONAL scheduling of the PropFlags temporary and the contentType string around CreateConstStringNode
+// @0x14291dda0
+LoadVarsObject::LoadVarsObject(Environment* penv) : Object(penv)
+{
+    ASStringContext* psc = penv->GetSC();
+    Set__proto__(psc, penv->GetPrototype(ASBuiltin_LoadVars));
+    // AsBroadcaster::Initialize, its InitializeProto inlined.
+    ObjectInterface* pobj = this;
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
+    BytesLoaded = -1;
+    BytesTotal  = -1;
+    // The object listens to its own events.
+    AsBroadcaster::AddListener(penv, pobj, pobj);
+    {
+        ASString contentType = penv->CreateConstString("application/x-www-form-urlencoded");
+        SetMemberRaw(psc, penv->CreateConstString("contentType"), Value(contentType),
+                     PropFlags(PropFlags::PropFlag_DontEnum));
+    }
+    SetMemberRaw(psc, penv->CreateConstString("loaded"), Value(), PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
 // MS2-FUNCTIONAL inlined Value(psc, CFunctionPtr) store scheduling (pLocalFrame store hoisted into the null branch)
