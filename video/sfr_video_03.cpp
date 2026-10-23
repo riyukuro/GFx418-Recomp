@@ -372,4 +372,41 @@ void* FUN_140017eb0(void* result, Scaleform::GFx::AS3::Value* value, std::uint64
     ReleaseVideoAtom(atom);
     return result;
 }
+
+// MS2-FUNCTIONAL: assigns an atom after releasing the previous managed value.
+// @0x1400190c0
+std::uint64_t* FUN_1400190c0(std::uint64_t* destination, std::uint64_t replacement)
+{
+    if (*destination != replacement) { ReleaseVideoAtom(destination); *destination = replacement; }
+    return destination;
+}
+// MS2-FUNCTIONAL: copy-assigns an atom while retaining its managed object.
+// @0x140019120
+std::uint64_t* FUN_140019120(std::uint64_t* destination, const std::uint64_t* source)
+{
+    if (destination != source) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
+    return destination;
+}
+// MS2-FUNCTIONAL: assigns an object atom to an unsafe AS3 Value and releases the temporary reference.
+// @0x1400191d0
+void FUN_1400191d0(Scaleform::GFx::AS3::Value* destination, const std::uint64_t* source)
+{
+    auto object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(*source);
+    RetainVideoAtom(*source);
+    destination->AssignUnsafe(object);
+    auto temp = *source;
+    ReleaseVideoAtom(&temp);
+}
+// MS2-FUNCTIONAL: assigns an object atom to an unsafe AS3 Value and releases the temporary reference.
+// @0x140019220
+void FUN_140019220(Scaleform::GFx::AS3::Value* destination, const std::uint64_t* source)
+{
+    FUN_1400191d0(destination, source);
+}
+// MS2-FUNCTIONAL: replaces the retained object atom at byte offset 0x80.
+// @0x140019270
+void FUN_140019270(void* object, std::uint64_t replacement)
+{
+    FUN_1400190c0(reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(object) + 0x80), replacement);
+}
 } // namespace
