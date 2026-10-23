@@ -9,6 +9,7 @@
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as3/as3_value.h"
+#include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/gfx_stream.h"
 #include <cstring>
 #include <new>
@@ -640,6 +641,15 @@ void FUN_140014c50(Scaleform::GFx::AS3::Value* value)
     }
 }
 
+// MS2-FUNCTIONAL: assigns a Pickable object into the AS3 Value through the recovered Pick operation.
+// @0x140014c30
+Scaleform::GFx::AS3::Value* FUN_140014c30(Scaleform::GFx::AS3::Value* value,
+                                          Scaleform::GFx::AS3::Object* object)
+{
+    value->Pick(object);
+    return value;
+}
+
 // MS2-FUNCTIONAL: releases the two string nodes through the recovered ASStringNode ownership method.
 // @0x140014c90
 void FUN_140014c90(ASStringNode** strings)
@@ -795,6 +805,15 @@ uintptr_t FUN_140012cd0(uintptr_t self, UByte* result, Scaleform::GFx::AS3::Valu
 {
     *result = input->Convert2Boolean();
     return self;
+}
+
+// MS2-FUNCTIONAL: forwards the executable's argument frame to the recovered VM internal invocation method.
+// @0x140012c30
+void FUN_140012c30(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value& function,
+                   const Scaleform::GFx::AS3::Value& thisValue, Scaleform::GFx::AS3::Value& result,
+                   unsigned argc, const Scaleform::GFx::AS3::Value* argv, bool discardResult)
+{
+    vm->ExecuteInternalUnsafe(function, thisValue, result, argc, argv, discardResult);
 }
 
 // MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
