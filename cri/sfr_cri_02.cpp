@@ -2244,6 +2244,65 @@ void criMvPly_DetachSubAudio(void* player)
     audio->Decoder = NULL;
 }
 
+// MS2-FUNCTIONAL: select the next subtitle chunk matching a channel while consuming decoder control records.
+// @0x140036b80
+CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 channel)
+{
+    CriSint32 consumed = 0;
+    memset(output, 0, sizeof(*output));
+    if (!player)
+        return 0;
+    void* queue = ((CriMvSubtitleFields*)player)->Queue;
+    if (!queue)
+        return 0;
+
+    CriMovieChunkQueueRecord record = {};
+    struct SubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 Value; };
+    struct SubtitleMetadataView { CriUint8 Reserved[0x0c]; CriSint32 Channel; };
+    CriUint8 parsedHeader[0x24] = {};
+    CriUint8 subtitleInfo[0x10] = {};
+    while (FUN_1400467b8(queue, 1) != 0)
+    {
+        FUN_1400467a0(queue, 1, -1, &record);
+        if (!record.Chunk)
+            return consumed;
+        CriUint32 size = record.Type;
+        if (size < 0x20)
+            return consumed;
+        FUN_14003b3fc((const CriUint8*)record.Chunk, size, parsedHeader);
+        CriUint8 type = parsedHeader[0x0f];
+        if (type == 1 || type == 2)
+        {
+            if (type == 1)
+            {
+                CriMovieInputChunk input = { (const CriUint8*)record.Chunk, size, 0 };
+                if (!FUN_140036d50(player, &input))
+                {
+                    FUN_1400467a8(queue, 1, &record);
+                    return 0;
+                }
+                ++((SubtitleFrameCounter*)player)->Value;
+            }
+            FUN_1400467b0(queue, 0, &record);
+        }
+        else
+        {
+            CriMovieInputChunk input = { (const CriUint8*)record.Chunk, size, 0 };
+            FUN_140036f40(player, (CriMvSubtitleChunk*)&input, subtitleInfo);
+            CriSint32 chunkChannel = ((SubtitleMetadataView*)subtitleInfo)->Channel;
+            if (channel == chunkChannel)
+            {
+                output->Data = (CriUint8*)record.Chunk;
+                output->Size = size;
+                return consumed;
+            }
+            FUN_1400467b0(queue, 0, &record);
+        }
+        ++consumed;
+    }
+    return consumed;
+}
+
 // MS2-FUNCTIONAL: read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage.
 // @0x140036470
 void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, void* outputInfo)
