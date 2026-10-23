@@ -80,6 +80,7 @@ extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
 extern "C" void FUN_1423d8b80(void*, void*, void*, unsigned long long);
 unsigned HashFunction(const char*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
+extern void FUN_14257dcb0(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1423daf30(void*);
 extern "C" void FUN_1423cc7c0(void*);
@@ -165,6 +166,24 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: follows the executable's nested IME provider query and releases its temporary refcounted object.
+// @0x1423ce460
+unsigned char FUN_1423ce460(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    void* provider = *reinterpret_cast<void**>(bytes + 8);
+    if (!provider) return 1;
+    void* factory = *reinterpret_cast<void**>(static_cast<unsigned char*>(provider) + 0x10);
+    void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>(
+        (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+    if (!temporary) return 1;
+    void* interfaceObject = *reinterpret_cast<void**>(static_cast<unsigned char*>(temporary) + 0x18);
+    unsigned char result = reinterpret_cast<unsigned char(*)(void*)>(
+        (*reinterpret_cast<void***>(interfaceObject))[0x70 / sizeof(void*)])(interfaceObject);
+    FUN_14257dcb0(temporary);
+    return result;
+}
 
 // @0x1423ca560
 void FUN_1423ca560(GFxIMEManagerWin32* self, unsigned lang)
