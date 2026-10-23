@@ -2375,6 +2375,83 @@ namespace Instances
 }
 }}}
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace fl { extern const char* NS_XML; }
+namespace Instances { namespace fl
+{
+    // @0x14240b200
+    Instances::Namespace* XML::FindNamespaceByPrefix(const ASString& prefix, XML* lp) const
+    {
+        if (Parent.GetPtr() != lp)
+            return Parent->FindNamespaceByPrefix(prefix, lp);
+        if (strcmp(prefix.ToCStr(), "xml") == 0)
+            return GetVM().XMLNamespace.GetPtr();
+        return NULL;
+    }
+
+    // @0x14240b380
+    Instances::Namespace* XML::FindNamespaceByURI(const ASString& uri, XML* lp) const
+    {
+        if (Parent.GetPtr() != lp)
+            return Parent->FindNamespaceByURI(uri, lp);
+        if (strcmp(uri.ToCStr(), AS3::fl::NS_XML) == 0)
+            return GetVM().XMLNamespace.GetPtr();
+        return NULL;
+    }
+
+    // @0x14240b260
+    Instances::Namespace* XMLElement::FindNamespaceByPrefix(const ASString& prefix, XML* lp) const
+    {
+        const ArrayLH<SPtr<Instances::Namespace> >& nss = Namespaces.Namespaces;
+        for (UPInt i = 0; i < nss.GetSize(); ++i)
+        {
+            const Value& p = nss[i]->GetPrefix();
+            if (p.IsString() && p.AsString() == prefix)
+                return nss[i].GetPtr();
+        }
+        return XML::FindNamespaceByPrefix(prefix, lp);
+    }
+
+    // MS2-FUNCTIONAL: exe tail-jumps through the parent vslot; ours keeps a frame for the string compare
+    // @0x14240b3e0
+    Instances::Namespace* XMLElement::FindNamespaceByURI(const ASString& uri, XML* lp) const
+    {
+        const ArrayLH<SPtr<Instances::Namespace> >& nss = Namespaces.Namespaces;
+        for (UPInt i = 0; i < nss.GetSize(); ++i)
+        {
+            if (nss[i]->GetUri() == uri)
+                return nss[i].GetPtr();
+        }
+        // the exe tests the uri against the "xml" prefix here, not against NS_XML
+        if (Parent.GetPtr() != lp)
+            return Parent->FindNamespaceByURI(uri, lp);
+        if (strcmp(uri.ToCStr(), "xml") == 0)
+            return GetVM().XMLNamespace.GetPtr();
+        return NULL;
+    }
+
+    // @0x14240b490
+    Instances::Namespace* XMLList::FindNamespaceByURI(const ASString& uri) const
+    {
+        AS3::Object* obj = TargetObject.GetPtr();
+        while (obj)
+        {
+            if (IsXMLObject(obj))
+                return static_cast<XML*>(obj)->FindNamespaceByURI(uri, NULL);
+            if (IsXMLListObject(obj))
+            {
+                XMLList* l = static_cast<XMLList*>(obj);
+                Instances::Namespace* ns = l->TargetNamespace.GetPtr();
+                if (ns && ns->GetUri() == uri)
+                    return ns;
+                obj = l->TargetObject.GetPtr();
+            }
+        }
+        return NULL;
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
