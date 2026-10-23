@@ -47,6 +47,10 @@ extern const void* DAT_1431b9410[];
 extern const void* DAT_1431b93c0[];
 extern const void* DAT_143183b28[];
 extern const void* DAT_1431b9080[];
+extern const void* DAT_1431b9028[];
+extern const void* DAT_1431b8fd0[];
+extern const void* DAT_1431b8f18[];
+extern const void* DAT_1431b8db0[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -57,6 +61,7 @@ void     FUN_14258b240(unsigned ms);                                    // Threa
 unsigned __int64 FUN_1425e3590(void);                                   // Timer::GetTicks
 void     FUN_14257dc30(void* p);                                        // RefCountImpl::AddRef
 void     FUN_14257dcb0(void* p);                                        // RefCountImpl::Release
+void     FUN_14257dcd0(void* p);
 void     FUN_14257db50(void* p);
 CriUint32 FUN_14257bdc0(void);
 void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
@@ -2274,6 +2279,23 @@ void* FUN_14002aab0(void* object, void* first, void* second)
     fields[4] = NULL;
     if (first)
         FUN_14257dc30(first);
+    return object;
+}
+
+// MS2-FUNCTIONAL: tear down the video player reference core and optionally free the object storage.
+// @0x14002a0e0
+void* FUN_14002a0e0(void* object, CriUint32 flags)
+{
+    void** fields = (void**)object;
+    fields[0] = (void*)DAT_1431b9028;
+    fields[2] = (void*)DAT_1431b8fd0;
+    fields[5] = (void*)DAT_1431b8f18;
+    if (fields[4])
+        FUN_14257dcd0(fields[4]);
+    fields[2] = (void*)DAT_1431b8db0;
+    FUN_14257db50(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
     return object;
 }
 
