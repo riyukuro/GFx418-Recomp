@@ -153,6 +153,8 @@ bool QueryChannelPlaying(void* soundSource)
 
 int FUN_1428d8efc(void*, void*);
 int FUN_1428d8f14(void*, void*);
+int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
+int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 int FUN_1428d8f2c(void*, bool);
 int FUN_1428d8e96(void*, int*, int*, int*, int*, int*, int*);
 int FUN_1428d8e9c(void*, void**);
@@ -512,5 +514,26 @@ void* FindTreeNodeByKey(void* node, int key)
             return found;
     }
     return nullptr;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: locks the sound region at offset zero, clears the first segment, and unlocks it.
+// @0x142744600
+void ClearSoundBuffer(void* player)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    void* sound = *reinterpret_cast<void**>(bytes + 0x30);
+    const unsigned length = *reinterpret_cast<unsigned*>(bytes + 0x64);
+    void* first = nullptr;
+    void* second = nullptr;
+    unsigned firstLength = 0;
+    unsigned secondLength = 0;
+    if (FUN_1428d8ea8(sound, 0, length, &first, &second, &firstLength, &secondLength) == 0) {
+        if (first && firstLength)
+            memset(first, 0, firstLength);
+        FUN_1428d8eae(sound, first, second, firstLength, secondLength);
+    }
 }
 }
