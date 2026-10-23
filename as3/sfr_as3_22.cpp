@@ -31,6 +31,11 @@ extern "C" void FUN_14268f8f0(void*, void*, unsigned);
 extern "C" void FUN_1426869a0(void*, void*, const void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
+MS2_GLOBAL(0x1431921b0, void*, AS3MovieImageDataVtable);
+MS2_GLOBAL(0x143192170, void*, AS3MovieImageStringSetVtable);
+MS2_GLOBAL(0x143192190, void*, AS3MovieImageValueSetVtable);
+MS2_GLOBAL(0x1431921a0, void*, AS3MovieImageNameSetVtable);
+MS2_GLOBAL(0x143192180, void*, AS3MovieImageTreeVtable);
 MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
 MS2_GLOBAL(0x1431bed18, void*, AS3SoundRequestVtable);
@@ -2532,6 +2537,38 @@ extern "C" void FUN_14268cd80(void* object, void* stream, unsigned)
             ReadAs3StreamBytes(stream, values + j * 0x10 + 8, 8);
         }
     }
+}
+
+// MS2-FUNCTIONAL: initializes the movie image data record, its five strings, and the four owned collection records.
+// @0x142686ae0
+extern "C" void* FUN_142686ae0(void* object)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    std::memset(bytes + 0x10, 0, 0x68);
+    *reinterpret_cast<void**>(bytes) = AS3MovieImageDataVtable;
+    *reinterpret_cast<std::uint32_t*>(bytes + 8) = 1;
+    new (bytes + 0x20) Scaleform::StringLH();
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    const std::size_t sizes[4] = { 0x28, 0x30, 0x30, 0x38 };
+    void* vtables[4] = { AS3MovieImageStringSetVtable, AS3MovieImageValueSetVtable,
+                         AS3MovieImageNameSetVtable, AS3MovieImageTreeVtable };
+    const std::size_t offsets[4] = { 0x58, 0x60, 0x68, 0x70 };
+    std::uint32_t stat = 0x242;
+    for (unsigned i = 0; i < 4; ++i) {
+        auto* child = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, object, sizes[i], &stat));
+        if (!child) {
+            *reinterpret_cast<void**>(bytes + offsets[i]) = nullptr;
+            continue;
+        }
+        std::memset(child, 0, sizes[i]);
+        *reinterpret_cast<void**>(child) = vtables[i];
+        *reinterpret_cast<std::uint32_t*>(child + 8) = 1;
+        if (i == 3)
+            new (child + 0x10) Scaleform::StringLH();
+        *reinterpret_cast<void**>(bytes + offsets[i]) = child;
+    }
+    return object;
 }
 
 // MS2-FUNCTIONAL: reads the image info string, counted movie-image records, and versioned movie-to-manager lookup entries.
