@@ -78,6 +78,68 @@ void FUN_1423ca660(void* self, unsigned value)
     *reinterpret_cast<unsigned*>(*reinterpret_cast<unsigned char**>(bytes + 0x70) + 0x9c) = value;
 }
 
+// @0x1423ca3f0
+void FUN_1423ca3f0(void* self)
+{
+    void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x70);
+    if (child) {
+        void** vtable = *reinterpret_cast<void***>(child);
+        reinterpret_cast<void(*)(void*)>(vtable[0x98 / sizeof(void*)])(child);
+    }
+}
+
+// @0x1423ca680
+void FUN_1423ca680(void* self, void* value)
+{
+    unsigned char* bytes = static_cast<unsigned char*>(self);
+    void* child = *reinterpret_cast<void**>(bytes + 0x70);
+    if (child) {
+        void** vtable = *reinterpret_cast<void***>(child);
+        reinterpret_cast<void(*)(void*)>(vtable[2])(child);
+    }
+    *reinterpret_cast<void**>(bytes + 0x68) = value;
+}
+
+// @0x1423d97d0
+void FUN_1423d97d0(void* self, long long enabled)
+{
+    char* text = static_cast<char*>(self) + 0x10;
+    if (enabled)
+        strcpy_s(text, 0x400, "candidateList");
+    else
+        *text = 0;
+}
+
+// @0x1423daeb0
+int FUN_1423daeb0(long long* self)
+{
+    int count = *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x3c) - 1;
+    *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x3c) = count;
+    if (count == 0) {
+        void** vtable = *reinterpret_cast<void***>(self);
+        reinterpret_cast<void(*)(void*, int)>(vtable[0x40 / sizeof(void*)])(self, 1);
+    }
+    return count;
+}
+
+// MS2-FUNCTIONAL: indirect calls through opaque child vtables retain Ghidra’s recovered slots; child interface signatures are unavailable.
+// @0x1423daef0
+void FUN_1423daef0(void* self)
+{
+    unsigned char* bytes = static_cast<unsigned char*>(self);
+    void* first = *reinterpret_cast<void**>(bytes + 0x28);
+    if (first) {
+        void** vtable = *reinterpret_cast<void***>(first);
+        reinterpret_cast<void(*)(void*)>(vtable[2])(first);
+    }
+    void* second = *reinterpret_cast<void**>(bytes + 0x40);
+    if (second) {
+        void** vtable = *reinterpret_cast<void***>(second);
+        reinterpret_cast<void(*)(void*)>(vtable[4])(second);
+        reinterpret_cast<void(*)(void*)>(vtable[2])(second);
+    }
+}
+
 // @0x1423d94f0
 void FUN_1423d94f0(void* self, void* value)
 {
