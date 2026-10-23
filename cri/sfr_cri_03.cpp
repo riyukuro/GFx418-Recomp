@@ -43,6 +43,9 @@ void* FUN_14004e580(void);
 void FUN_14004ff90(void*, void*, void*);
 void FUN_1400467a8(void*, CriSint32, void*);
 void FUN_1400467b0(void*, CriSint32, void*);
+const void** FUN_14003bed0(void);
+const void** FUN_14003bf10(void);
+void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration);
 void FUN_140046014(void*);
 void FUN_14004602c(void*);
 CriUint64 FUN_1425e3510(void);
@@ -181,6 +184,17 @@ void FUN_14003b880()
     FUN_1400493c0();
     FUN_1400479e0();
     DAT_143b27c40 = 1;
+}
+
+// MS2-FUNCTIONAL: register the MPEG video and alpha decoder interfaces with CriMv.
+// @0x14003b6e0
+void FUN_14003b6e0()
+{
+    CriMvCodecRegistrationEntry registration = {};
+    registration.CodecId = 1;
+    registration.VideoDecoderInterface = (void*)FUN_14003bed0();
+    registration.AlphaDecoderInterface = (void*)FUN_14003bf10();
+    FUN_14002e6e0(&registration);
 }
 
 // MS2-FUNCTIONAL: retains CRI's conditional decoder attachment followed by common Movie initialization.
