@@ -610,6 +610,9 @@ namespace Instances { namespace fl
         // @0x1424166c0
         virtual void GetNextPropertyValue(Value& value, GlobalSlotIndex ind);
 
+        // (appended, sfr19) E4X list == v: item by item against another list, else the single item against v. 0x142409890
+        CheckResult Equals(bool& result, const Value& v);
+
     public:
         SPtr<AS3::Object>                       TargetObject;       // +0x38
         ASStringNode*                           TargetProperty;     // +0x40

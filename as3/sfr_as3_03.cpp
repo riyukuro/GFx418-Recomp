@@ -2962,6 +2962,44 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return false;
     }
 }}}}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // @0x142409890
+    CheckResult XMLList::Equals(bool& result, const Value& v)
+    {
+        if (v.IsUndefined())
+        {
+            if (List.GetSize() == 0)
+            {
+                result = true;
+                return true;
+            }
+        }
+        else if (IsXMLListObject(v))
+        {
+            const XMLList& other = static_cast<const XMLList&>(*v.GetObject());
+            const UPInt size = List.GetSize();
+            if (other.List.GetSize() != size)
+            {
+                result = false;
+                return true;
+            }
+            for (UPInt i = 0; i < size; ++i)
+            {
+                if (!AbstractEqual(result, Value(List[i]), Value(other.List[i])))
+                    return false;
+                if (!result)
+                    break;
+            }
+            return true;
+        }
+
+        if (List.GetSize() == 1)
+            return AbstractEqual(result, Value(List[0]), v);
+        result = false;
+        return true;
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
