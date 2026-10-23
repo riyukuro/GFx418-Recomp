@@ -180,6 +180,7 @@ void*    FUN_1400385c8(void* storage, CriSint32 size);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044a30(void* decoder, void* frameInfo);
+CriBool  FUN_140043f70(void* decoder, void* buffers, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
 void     FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
 void     FUN_140044680(void* decoder);
@@ -2147,6 +2148,28 @@ void FUN_140035480(void* player, void* destination, const void* source)
     out->Height = movie->Height;
     out->Width = movie->Width;
     out->DisplayWidth = movie->DisplayWidth;
+}
+
+// MS2-FUNCTIONAL: ask the alpha decoder to copy one frame into the caller's buffers and publish its metadata.
+// @0x140035af0
+CriBool FUN_140035af0(void* player, void* buffer, CriUint32 format, void* outputInfo)
+{
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    if (!decoders->AlphaDecoder || !crimvply_isUnderGetFrameCondition(player))
+        return 0;
+
+    struct DimensionsView { CriUint8 Reserved[0x60c]; CriUint32 Width; CriUint32 Height; };
+    struct BufferRequest { void* Buffer; CriUint32 Width; CriUint32 Height; CriUint32 Format; };
+    BufferRequest request = { buffer, ((DimensionsView*)player)->Width,
+                              ((DimensionsView*)player)->Height, format };
+    CriUint8 frameInfo[0x50] = {};
+    if (!FUN_140043f70(decoders->AlphaDecoder, &request, frameInfo))
+    {
+        FUN_140037910(NULL, "E08082104M: Cannot copy the alpha frame buffer.", 0);
+        return 0;
+    }
+    FUN_140035480(player, outputInfo, frameInfo);
+    return 1;
 }
 
 // MS2-FUNCTIONAL: release the alpha decoder frame using its copied frame descriptor when an alpha decoder exists.
