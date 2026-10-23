@@ -474,6 +474,7 @@ Font::NativeHintingType* FontProviderWinAPI::findNativeHinting(const char* name)
 }
 
 // @0x142649880
+// MS2-FUNCTIONAL: frame: the exe shrink-wraps the rdi save into the not-found path and pins the args in rsi/rbp/r14/r15; same body
 void FontProviderWinAPI::SetHinting(const char* name, Font::NativeHintingRange vectorRange,
                                     Font::NativeHintingRange rasterRange, unsigned maxVectorHintedSize,
                                     unsigned maxRasterHintedSize)
