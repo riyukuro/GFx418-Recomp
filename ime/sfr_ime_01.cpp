@@ -93,8 +93,7 @@ extern "C" const unsigned long long DAT_1431c4d58;
 extern "C" const unsigned long long DAT_14313b8b8;
 extern "C" const unsigned long long DAT_1431c4828;
 extern "C" const unsigned long long DAT_1431c4830;
-extern "C" const unsigned long long DAT_14313b400;
-extern "C" const unsigned long long DAT_14313b408;
+extern "C" const unsigned char DAT_14313b400[];
 extern "C" const unsigned long long DAT_1431c4d60;
 extern "C" const unsigned long long DAT_14313b8c0;
 extern "C" const unsigned long long DAT_1431c4e08;
@@ -178,7 +177,8 @@ long long FUN_1423d72a0(void* object, const unsigned long long* iid, void** outp
     auto* words = static_cast<unsigned long long*>(object);
     unsigned long long* view;
     if ((iid[0] == DAT_1431c4828 && iid[1] == DAT_1431c4830) ||
-        (iid[0] == DAT_14313b400 && iid[1] == DAT_14313b408)) {
+        (iid[0] == *reinterpret_cast<const unsigned long long*>(DAT_14313b400) &&
+         iid[1] == *reinterpret_cast<const unsigned long long*>(DAT_14313b400 + 8))) {
         view = words + 1;
     } else if (iid[0] == *reinterpret_cast<const unsigned long long*>(DAT_1431c5018) &&
                iid[1] == *reinterpret_cast<const unsigned long long*>(DAT_1431c5018 + 8)) {
