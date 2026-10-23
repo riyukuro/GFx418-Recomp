@@ -4804,13 +4804,16 @@ void FUN_140036710(void* player)
         CriUint32 Field250;
         CriUint8 Reserved3[0x1c];
         CriUint32 Field270;
-        CriUint8 Reserved4[0x6c];
+        CriUint8 Reserved4[0x4c];
         CriUint32 State;
+        CriUint32 History0;
+        CriUint32 History4;
+        CriUint32 History8;
+        CriUint32 HistoryC;
+        CriUint32 History10;
+        CriUint8 Reserved5[8];
     };
     struct SubtitleStreamList { CriUint8 Reserved[0x28]; SubtitleStreamEntry Entries[2]; };
-    struct SubtitleHistory { CriUint32 Field0; CriUint32 Field4; CriUint32 Field8; CriUint32 FieldC; CriUint32 Field10; };
-    struct SubtitleHistorySlot { CriUint8 Reserved[0x2cc]; SubtitleHistory Value; };
-    struct SubtitleHistoryTable { CriUint8 Reserved[0x2ec]; SubtitleHistorySlot Slots[2]; };
     SubtitleRingState* ring = (SubtitleRingState*)player;
     if ((ring->Phase % 2) == ring->CurrentIndex)
         return;
@@ -4828,12 +4831,11 @@ void FUN_140036710(void* player)
             CriSint32 contentSize = 0;
             CriMovieParsedChunk header = { FUN_14003b674(chunk.Data, chunk.Size, &contentSize), contentSize, 0 };
             FUN_140032420(player, target, &header);
-            SubtitleHistory* history = &((SubtitleHistoryTable*)player)->Slots[ring->CurrentIndex].Value;
-            history->Field0 = target->Field4c;
-            history->Field4 = target->Field10;
-            history->Field8 = target->Field250;
-            history->FieldC = target->Field270;
-            history->Field10 = 0;
+            target->History0 = target->Field4c;
+            target->History4 = target->Field10;
+            target->History8 = target->Field250;
+            target->HistoryC = target->Field270;
+            target->History10 = 0;
             target->State = 1;
         }
         FUN_1400467b0(queue, 0, &chunk);
