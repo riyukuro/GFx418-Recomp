@@ -1016,6 +1016,40 @@ void FUN_140006940(Scaleform::String* destination, Scaleform::UPInt count,
     }
 }
 
+// MS2-FUNCTIONAL: grows or shrinks the pointer array using the observed quarter-capacity policy.
+// @0x140006810
+void FUN_140006810(void** array, void* owner, Scaleform::UPInt capacity)
+{
+    FUN_1400050c0(array, owner, capacity);
+}
+
+// MS2-FUNCTIONAL: reallocates storage for 16-byte records with four-element capacity rounding.
+// @0x1400069a0
+void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
+{
+    FUN_1400051c0(reinterpret_cast<longlong*>(array), owner, capacity);
+}
+
+// MS2-FUNCTIONAL: clears this array descriptor, releasing its buffer when it is dynamically sized.
+// @0x140006bf0
+void FUN_140006bf0(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (fields[1] == 0) {
+        if (fields[2] == 0) FUN_1400051c0(reinterpret_cast<longlong*>(array), array, 0);
+        fields[1] = 0;
+        return;
+    }
+    if ((fields[2] & ~Scaleform::UPInt(1)) != 0) {
+        if (*array) Scaleform::Memory::Free(*array);
+        *array = nullptr;
+        fields[2] = 0;
+        fields[1] = 0;
+        return;
+    }
+    fields[1] = 0;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
