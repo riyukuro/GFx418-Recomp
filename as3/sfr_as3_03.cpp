@@ -865,6 +865,8 @@ namespace InstanceTraits { namespace fl
 
 // VM::GetValueTraits.
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// ClassTraits::Traits::IsParentTypeOf: t is base or derives from it.
+bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& base, const Scaleform::GFx::AS3::ClassTraits::Traits& t);
 // VM::IsOfType(v, class name).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // The parts of str split at each delim (at most limit of them), as a new Array. 0x142424ca0
@@ -2513,7 +2515,62 @@ namespace Instances
         FunctionBase::ForEachChild_GC(prcc, op);
         AS3::ForEachChild_GC(prcc, OriginationTraits, op, *this);
     }
+
+    // VM::IsOfType(v, ctr), inlined.
+    static SF_INLINE bool IsOfType03(VM& vm, const Value& v, const ClassTraits::Traits& ctr)
+    {
+        return FUN_1425149a0(ctr, vm.GetClassTraits(v));
+    }
+
+    // The TypeError of a 'this' of class from where a to is expected.
+    static SF_INLINE void ThrowCheckTypeError03(const FunctionBase& f, const ClassTraits::Traits& from,
+                                                const ClassTraits::Traits& to)
+    {
+        f.GetVM().ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, f.GetVM(), from.GetName().ToCStr(),
+                                           to.GetName().ToCStr()));
+    }
+
+    // @0x14240ad20
+    void ThunkFunction::ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        GetVM().ExecuteInternalUnsafe(Value(Function), _this, result, argc, argv, false);
+    }
+
+    // @0x14240a9a0
+    void ThunkFunction::Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result)
+    {
+        const Value func(Function);
+        VM& vm = GetVM();
+        Value result(Value::GetUndefined());
+        vm.ExecuteInternalUnsafe(func, _this, result, argc, argv, !discard_result);
+    }
+
+    // @0x14240aac0
+    void CheckTypeTF::ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (!IsOfType03(GetVM(), _this, DataTypeClass.GetClassTraits()))
+            return ThrowCheckTypeError03(*this, GetVM().GetClassTraits(_this), DataTypeClass.GetClassTraits());
+        ThunkFunction::ExecuteUnsafe(_this, result, argc, argv);
+    }
+
+    // @0x142409fd0
+    void CheckTypeTF::Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result)
+    {
+        if (!IsOfType03(GetVM(), _this, DataTypeClass.GetClassTraits()))
+            return ThrowCheckTypeError03(*this, GetVM().GetClassTraits(_this), DataTypeClass.GetClassTraits());
+        ThunkFunction::Execute(_this, argc, argv, discard_result);
+    }
 }
+
+namespace Instances { namespace fl
+{
+    // The class traits table is the only collectable member the exe visits here. @0x14240bf10
+    void GlobalObjectCPP::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Instances::fl::Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, CTraits, op, *this);
+    }
+}}
 }}}
 
 namespace Scaleform { namespace GFx { namespace AS3 {

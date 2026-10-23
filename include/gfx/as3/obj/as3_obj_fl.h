@@ -175,6 +175,8 @@ namespace Instances { namespace fl {
         // receives its slot index. 0x142403d70
         const SlotInfo& AddFixedSlotValuePair(const ASString& prop_name, Pickable<const Instances::Namespace> ns,
                                               const ClassTraits::Traits* ctr, const Value& v, UPInt& index);
+        // (appended, sfr22) visits the class traits table. 0x14240bf10
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         // (appended, sfr19)
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObjectCPP"; }
         // (appended, sfr19) binds a registered builtin class on its first public lookup. 0x142418be0
