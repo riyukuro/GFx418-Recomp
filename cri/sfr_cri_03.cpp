@@ -26,6 +26,9 @@ void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
 void FUN_14004eb70(void);
 void FUN_14004f8d0(void);
+CriUint64 FUN_1425e3510(void);
+CriUint64 FUN_1425e3560(void);
+void FUN_140054040(void*, void*, void*);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -494,6 +497,109 @@ CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
     CriUint32 count;
     memcpy(&count, (const CriUint8*)decoder + 0x188, sizeof(count));
     return count;
+}
+
+// MS2-FUNCTIONAL: return the current tick delta and timestamp for a CRI timer record.
+// @0x140041a10
+void FUN_140041a10(const void* state, CriSint64* elapsed, CriUint64* timestamp)
+{
+    CriUint64 now = FUN_1425e3510();
+    *timestamp = now;
+    CriUint8* bytes = (CriUint8*)state;
+    CriUint64 base;
+    if (bytes[0x10] == 0)
+        memcpy(&base, bytes + 8, sizeof(base));
+    else
+        base = FUN_1425e3560();
+    CriUint64 start;
+    memcpy(&start, bytes, sizeof(start));
+    *elapsed = (CriSint64)(base - start);
+}
+
+// MS2-FUNCTIONAL: toggle the timer record's paused state and accumulate elapsed ticks.
+// @0x140041ad0
+void FUN_140041ad0(void* state, CriBool paused)
+{
+    CriUint8* bytes = (CriUint8*)state;
+    if (bytes[0x28] == paused)
+        return;
+    CriUint64 now = FUN_1425e3560();
+    if (paused)
+    {
+        memcpy(bytes + 0x18, &now, sizeof(now));
+        bytes[0x20] = 0;
+        CriUint64 timestamp = FUN_1425e3510();
+        memcpy(bytes + 0x38, &timestamp, sizeof(timestamp));
+        CriUint64 base;
+        if (bytes[0x20] == 0)
+            memcpy(&base, bytes + 0x18, sizeof(base));
+        else
+            base = FUN_1425e3560();
+        CriUint64 start, elapsed, total;
+        memcpy(&start, bytes + 0x10, sizeof(start));
+        elapsed = base - start;
+        memcpy(bytes + 0x30, &elapsed, sizeof(elapsed));
+        memcpy(&total, bytes + 0x40, sizeof(total));
+        total += elapsed;
+        memcpy(bytes + 0x40, &total, sizeof(total));
+        bytes[0x28] = paused;
+        return;
+    }
+    memcpy(bytes + 0x10, &now, sizeof(now));
+    bytes[0x20] = 1;
+    bytes[0x28] = 0;
+}
+
+// MS2-FUNCTIONAL: report the accumulated pause duration or the active timer delta and timestamp.
+// @0x140041b50
+void FUN_140041b50(void* state, CriSint64* elapsed, CriUint64* timestamp)
+{
+    CriUint8* bytes = (CriUint8*)state;
+    if (bytes[0x28] != 0)
+    {
+        memcpy(elapsed, bytes + 0x40, sizeof(*elapsed));
+        memcpy(timestamp, bytes + 0x38, sizeof(*timestamp));
+        return;
+    }
+    CriUint64 now = FUN_1425e3510();
+    memcpy(bytes + 0x38, &now, sizeof(now));
+    CriUint64 base;
+    if (bytes[0x20] == 0)
+        memcpy(&base, bytes + 0x18, sizeof(base));
+    else
+        base = FUN_1425e3560();
+    CriUint64 start, total;
+    memcpy(&start, bytes + 0x10, sizeof(start));
+    CriUint64 delta = base - start;
+    memcpy(bytes + 0x30, &delta, sizeof(delta));
+    memcpy(&total, bytes + 0x40, sizeof(total));
+    *elapsed = (CriSint64)(total + delta);
+    *timestamp = now;
+}
+
+// MS2-FUNCTIONAL: install the notification callback and its user data on a player manager.
+// @0x140041df0
+void FUN_140041df0(void* manager, void* callback, void* userData)
+{
+    memcpy((CriUint8*)manager + 0x28, &callback, sizeof(callback));
+    memcpy((CriUint8*)manager + 0x30, &userData, sizeof(userData));
+}
+
+// MS2-FUNCTIONAL: route a decrypt callback to the selected active audio decoder.
+// @0x140041e30
+void FUN_140041e30(void* manager, void* callback, void* userData, CriSint32 stream)
+{
+    if (!manager)
+        return;
+    void* decoder;
+    memcpy(&decoder, (CriUint8*)manager + (size_t)stream * sizeof(void*), sizeof(decoder));
+    if (decoder)
+    {
+        void* decrypt;
+        memcpy(&decrypt, (CriUint8*)decoder + 0x10, sizeof(decrypt));
+        if (decrypt)
+            FUN_140054040(decrypt, callback, userData);
+    }
 }
 
 // MS2-FUNCTIONAL: store the two frame dimensions on a CRI video handle.
