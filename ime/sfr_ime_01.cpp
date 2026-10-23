@@ -4264,6 +4264,44 @@ void FUN_1423d1d10(void* raw, long long message, long long compositionFlag, long
     }
 }
 
+// MS2-FUNCTIONAL: formats the executable's native/alphanumeric, shape, and Japanese IME conversion state labels.
+// @0x1423cc7c0
+void FUN_1423cc7c0(void* raw, unsigned conversion)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    void* state = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x78);
+    if (!state) return;
+    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(state) + 0x68);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) return;
+    DWORD sentence = 0;
+    if (conversion == 0xffffffffu)
+        cx18_ImmGetConversionStatus(context, reinterpret_cast<DWORD*>(&conversion), &sentence);
+    Scaleform::String label;
+    const unsigned mode = *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x84);
+    if (mode == 9 || mode == 0x80000 || mode == 0x2000) {
+        label += (conversion & 1) ? "Native" : "Alphanumeric";
+        label += (conversion & 8) ? "_FullShape" : "_HalfShape";
+        if (mode == 9 && (conversion & 0x400)) label += "_FullWidth";
+        else if (mode == 0x80000 && (conversion & 0x400)) label += "_FullShape";
+    } else if (mode == 0x400) {
+        if (!cx18_ImmGetOpenStatus(context)) {
+            *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0xa8) = 0;
+            label = "DirectInput";
+        } else if (!(conversion & 1)) {
+            label = (conversion & 8) ? "Alphanumeric_FullShape" : "Alphanumeric_HalfShape";
+        } else {
+            *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0xa8) = 1;
+            if ((conversion & 0xa) == 0xa) label = "Katakana_FullShape";
+            else if ((conversion & 0xa) == 8) label = "Hiragana_FullShape";
+            else label = "Katakana_HalfShape";
+        }
+    }
+    reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(state))[0x88 / sizeof(void*)])(
+        state, label.ToCStr());
+    cx18_ImmReleaseContext(hwnd, context);
+}
+
 // MS2-FUNCTIONAL: reuses the recovered candidate-window geometry bridge for the input-window reposition event.
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
