@@ -5909,6 +5909,52 @@ void* FUN_14001d1d0(void* state)
         (Scaleform::Sound::SoundRenderer*)soundPlayer);
 }
 
+// MS2-FUNCTIONAL: clear a Scaleform pointer array and release oversized storage.
+// @0x14001d5d0
+void FUN_14001d5d0(CriUint64* array)
+{
+    CriUint64 size = array[1];
+    CriUint64 capacity = array[2];
+    if (size == 0)
+    {
+        if (capacity == 0)
+        {
+            FUN_14001c570(array, array, 0);
+            array[1] = 0;
+            return;
+        }
+    }
+    else if ((capacity & ~(CriUint64)1) != 0)
+    {
+        if (array[0])
+        {
+            void* heap = DAT_143b15f60;
+            void** vtable = *(void***)heap;
+            ((void (*)(void*, void*))vtable[12])(heap, (void*)(uintptr_t)array[0]);
+            array[0] = 0;
+        }
+        array[2] = 0;
+        array[1] = 0;
+        return;
+    }
+    array[1] = 0;
+}
+
+// MS2-FUNCTIONAL: remove one pointer from a Scaleform array and compact the remaining entries.
+// @0x14001d6d0
+void FUN_14001d6d0(CriUint64* array, CriSint64 index)
+{
+    if (array[1] == 1)
+    {
+        FUN_14001d5d0(array);
+        return;
+    }
+    CriUint64* data = (CriUint64*)(uintptr_t)array[0];
+    CriUint64 count = array[1] - (CriUint64)index - 1;
+    memmove(data + index, data + index + 1, (size_t)count * sizeof(CriUint64));
+    --array[1];
+}
+
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
 // MS2-PIN: ??_7VideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@6B@ 0x1431b80e0
