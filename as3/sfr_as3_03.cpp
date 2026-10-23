@@ -2736,6 +2736,50 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return true;
     }
 }}}}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // MS2-FUNCTIONAL: frame differs (exe keeps the Value/Multiname temps in a different layout)
+    // @0x142409340
+    CheckResult XMLList::DeleteProperty(const Multiname& prop_name)
+    {
+        UInt32 ind;
+        const UPInt size = List.GetSize();
+        if (GetVectorInd(prop_name, ind))
+        {
+            if (ind < size)
+            {
+                XML* x = List[ind];
+                XML* parent = x->Parent;
+                if (parent)
+                {
+                    if (x->GetKind() == XML::kAttr)
+                    {
+                        Value name(x->GetName());
+                        Multiname mn(x->GetCurrNamespace(), name);
+                        parent->DeleteProperty(mn);
+                    }
+                    else
+                    {
+                        UPInt pos;
+                        if (x->GetChildIndex(pos))
+                            parent->DeleteByIndex(pos);
+                    }
+                }
+                List.RemoveAt(ind);
+            }
+        }
+        else
+        {
+            for (UPInt i = 0; i < size; ++i)
+            {
+                XML* x = List[i];
+                if (x->GetKind() == XML::kElement && !x->DeleteProperty(prop_name))
+                    return false;
+            }
+        }
+        return true;
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
