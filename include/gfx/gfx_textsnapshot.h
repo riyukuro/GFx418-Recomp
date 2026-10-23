@@ -49,6 +49,7 @@ public:
         virtual ~GlyphVisitor() {}
         virtual void OnVisit() = 0;
 
+        Render::Font*           GetFont() const     { return pFont; }  // (appended, sfr19)
         UPInt                   GetRunIndex() const { return RunIdx; }
         const Render::Color&    GetColor() const    { return ColorValue; }
         float                   GetHeight() const   { return Height; }

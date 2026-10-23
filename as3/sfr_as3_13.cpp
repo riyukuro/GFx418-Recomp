@@ -2351,6 +2351,98 @@ namespace Classes { namespace fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ---- fl_text: TextSnapshot::getTextRunInfo and its glyph visitor ----
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Turns each visited glyph into an object of its run info (index, selection, font, color, size, matrix and
+// corners in pixels) pushed onto the result array. 0x80 bytes; its vftable 0x14316be60 has no RTTI.
+class TextSnapshotGlyphVisitor : public StaticTextSnapshotData::GlyphVisitor
+{
+public:
+    TextSnapshotGlyphVisitor(VM* vm, Instances::fl::Array* parr) : pVM(vm), pArray(parr) {}
+
+    // @0x1424ad870
+    // MS2-FUNCTIONAL: register allocation (the matrix entries are scaled before the value is released)
+    void OnVisit()
+    {
+        SPtr<Instances::fl::Object> pobj = pVM->MakeObject();
+
+        StringManager& sm = pVM->GetStringManager();
+        Value val;
+
+        val.SetUInt32((UInt32)GetRunIndex());
+        pobj->AddDynamicSlotValuePair(sm.CreateString("indexInRun"), val);
+
+        val.SetBool(IsSelected());
+        pobj->AddDynamicSlotValuePair(sm.CreateConstString("selected"), val);
+
+        pobj->AddDynamicSlotValuePair(sm.CreateString("font"), sm.CreateString(GetFont()->GetName()));
+
+        val.SetNumber((float)GetColor().ToColor32());
+        pobj->AddDynamicSlotValuePair(sm.CreateConstString("color"), val);
+
+        val.SetNumber(GetHeight());
+        pobj->AddDynamicSlotValuePair(sm.CreateConstString("height"), val);
+
+        const Render::Matrix2F& mat = GetMatrix();
+        val.SetNumber(TwipsToPixels(mat.Sx()));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_a"), val);
+        val.SetNumber(TwipsToPixels(mat.Shy()));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_b"), val);
+        val.SetNumber(TwipsToPixels(mat.Shx()));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_c"), val);
+        val.SetNumber(TwipsToPixels(mat.Sy()));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_d"), val);
+        val.SetNumber(TwipsToPixels(mat.Tx()));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_tx"), val);
+        val.SetNumber(TwipsToPixels(mat.Ty()));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_ty"), val);
+
+        const Render::PointF& bl = GetCorners().BottomLeft();
+        const Render::PointF& br = GetCorners().BottomRight();
+        const Render::PointF& tl = GetCorners().TopLeft();
+        const Render::PointF& tr = GetCorners().TopRight();
+        val.SetNumber(TwipsToPixels(bl.x));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner0x"), val);
+        val.SetNumber(TwipsToPixels(bl.y));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner0y"), val);
+        val.SetNumber(TwipsToPixels(br.x));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner1x"), val);
+        val.SetNumber(TwipsToPixels(br.y));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner1y"), val);
+        val.SetNumber(TwipsToPixels(tr.x));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner2x"), val);
+        val.SetNumber(TwipsToPixels(tr.y));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner2y"), val);
+        val.SetNumber(TwipsToPixels(tl.x));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner3x"), val);
+        val.SetNumber(TwipsToPixels(tl.y));
+        pobj->AddDynamicSlotValuePair(sm.CreateString("corner3y"), val);
+
+        pArray->SA.PushBack(Value(pobj));
+    }
+
+private:
+    VM*                   pVM;      // +0x68
+    Instances::fl::Array* pArray;   // +0x70
+};
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424b2d00
+    SF_NOINLINE void TextSnapshot::getTextRunInfo(SPtr<Instances::fl::Array>& result, SInt32 beginIndex, SInt32 endIndex)
+    {
+        VM& vm = GetVM();
+        SPtr<Instances::fl::Array> parr = vm.MakeArray();
+        TextSnapshotGlyphVisitor visitor(&vm, parr);
+        SnapshotData.Visit(&visitor, beginIndex, endIndex);
+        result = parr;
+    }
+}} // namespace Instances::fl_text
+
+}}} // namespace Scaleform::GFx::AS3
+
 // ---- fl_text: by-value overloads of the result-reference natives ----
 // Each makes an empty result, fills it through the reference form and returns it.
 
@@ -2569,3 +2661,9 @@ namespace Instances { namespace fl_text
 // MS2-PIN: ??_GMouseCursor@fl_ui@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424b8940
 // MS2-PIN: ??_GMultitouch@fl_ui@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424b8a30
 // MS2-PIN: ??_GMultitouchInputMode@fl_ui@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424b8b20
+// MS2-PIN: ??_7TextSnapshotGlyphVisitor@AS3@GFx@Scaleform@@6B@ 0x14316be60
+// MS2-PIN: ??_7GlyphVisitor@StaticTextSnapshotData@GFx@Scaleform@@6B@ 0x14316a500
+// MS2-PIN: ?Release@ParagraphFormat@Text@Render@Scaleform@@QEBAXXZ 0x1424ae650 ; prop
+// MS2-PIN: ?Release@TextFormat@Text@Render@Scaleform@@QEBAXXZ 0x1424ae680 ; prop
+// MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424b8f90 ; unique
+// MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424b9030 ; unique
