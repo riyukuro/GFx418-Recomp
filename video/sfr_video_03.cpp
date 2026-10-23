@@ -1197,4 +1197,38 @@ void FUN_14001b620(void* state)
     }
     *reinterpret_cast<std::uint32_t*>(bytes + 0x38) = 0;
 }
+
+// MS2-FUNCTIONAL: reads interleaved PCM words from the per-channel stream buffers.
+// @0x14001b6b0
+int FUN_14001b6b0(void* player, std::uint32_t* output, std::uint32_t requestedBytes)
+{
+    auto* state = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(player) + 0x10);
+    const auto channels = *reinterpret_cast<std::uint32_t*>(state + 0x38);
+    auto remaining = static_cast<std::uint64_t>((requestedBytes & 0x1fffffff) >> 2) / channels;
+    std::uint64_t samples = 0;
+    auto* reader = *reinterpret_cast<void**>(state + 0x30);
+    if (reader) {
+        auto** vtable = *reinterpret_cast<void***>(reader);
+        auto read = reinterpret_cast<std::uint32_t(*)(void*, std::uint32_t, void*, std::uint64_t)>(vtable[2]);
+        if (channels == 1) {
+            samples = read(reader, 1, output, remaining);
+        } else {
+            while (remaining) {
+                auto received = read(reader, channels, state + 0x50, remaining);
+                if (!received) break;
+                auto* destination = output;
+                auto** buffers = reinterpret_cast<void**>(state + 0x50);
+                for (std::uint32_t frame = 0; frame < received; ++frame) {
+                    for (std::uint32_t channel = 0; channel < channels; ++channel)
+                        *destination++ = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(buffers[channel]) + frame * 4);
+                }
+                output = destination;
+                samples += received;
+                remaining -= received;
+            }
+        }
+    }
+    *reinterpret_cast<std::uint64_t*>(state + 0x48) += samples;
+    return static_cast<int>((channels * static_cast<std::uint32_t>(samples) & 0x7ffffff) << 2);
+}
 } // namespace
