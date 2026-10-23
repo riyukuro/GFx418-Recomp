@@ -17,7 +17,7 @@
 // MS2-RANGE: 0x142934a00-0x142934a80 .text$mn
 // MS2-RANGE: 0x142935200-0x142935680 .text$mn
 // MS2-RANGE: 0x142935680-0x142935820 .text$mn
-// MS2-RANGE: 0x142935b50-0x142935c70 .text$mn
+// MS2-RANGE: 0x142935b50-0x142935dc0 .text$mn
 // MS2-RANGE: 0x142936620-0x142936680 .text$mn
 // MS2-RANGE: 0x1429367a0-0x1429374f0 .text$mn
 // MS2-RANGE: 0x14292f250-0x14292f430 .text$mn
@@ -36,7 +36,7 @@
 // MS2-RANGE: 0x142935dc0-0x142935e8a .text$mn
 // MS2-RANGE: 0x142993810-0x1429938c2 .text$mn
 // MS2-RANGE: 0x14292e650-0x14292e6d3 .text$mn
-// MS2-RANGE: 0x1429348c0-0x142934940 .text$mn
+// MS2-RANGE: 0x142934820-0x1429349a0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -571,11 +571,14 @@ bool AsBroadcaster::BroadcastMessage(Environment* penv, ObjectInterface* pthis, 
 }
 
 // The AS2 text field's part of the movie (only the broadcast native so far).
-class AvmTextField
+class AvmTextField : public AvmCharacter
 {
 public:
     // Sends the event named by the first argument to the listeners of the text field.
     static void BroadcastMessage(const FnCall& fn);
+
+    virtual void CloneInternalData(const InteractiveObject* src);
+    virtual void CopyPhysicalProperties(const InteractiveObject* poldChar);
 };
 
 // @0x1429321c0
@@ -1011,6 +1014,33 @@ void AvmSprite::AddActionBuffer(ActionBuffer* pbuffer, ActionPriority::Priority 
 void FUN_142926340(HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>* pthis,
                    const HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>& src);
 
+// The script side of a button (only the clone hooks so far).
+class AvmButton : public AvmCharacter
+{
+public:
+    virtual void CloneInternalData(const InteractiveObject* src);
+    virtual void CopyPhysicalProperties(const InteractiveObject* poldChar);
+};
+
+// The event handlers of src's script side replace this one's.
+inline void CopyEventHandlers(AvmCharacter* pthis, const InteractiveObject* src)
+{
+    const AvmCharacter* psrc = !src ? 0 : static_cast<const AvmCharacter*>(src->GetAvmIntObj());
+    FUN_142926340(&pthis->EventHandlers, psrc->EventHandlers);
+}
+
+// @0x142934820
+void AvmButton::CloneInternalData(const InteractiveObject* src)
+{
+    CopyEventHandlers(this, src);
+}
+
+// @0x142934870
+void AvmCharacter::CloneInternalData(const InteractiveObject* src)
+{
+    CopyEventHandlers(this, src);
+}
+
 // @0x1429348c0
 void AvmSprite::CloneInternalData(const InteractiveObject* src)
 {
@@ -1022,6 +1052,36 @@ void AvmSprite::CloneInternalData(const InteractiveObject* src)
         if (pobj)
             pobj->HasButtonHandlers = true;
     }
+}
+
+// @0x142934950
+void AvmTextField::CloneInternalData(const InteractiveObject* src)
+{
+    CopyEventHandlers(this, src);
+}
+
+// @0x142935c70
+void AvmButton::CopyPhysicalProperties(const InteractiveObject* poldChar)
+{
+    CopyEventHandlers(this, poldChar);
+}
+
+// @0x142935cc0
+void AvmCharacter::CopyPhysicalProperties(const InteractiveObject* poldChar)
+{
+    CopyEventHandlers(this, poldChar);
+}
+
+// @0x142935d10
+void AvmSprite::CopyPhysicalProperties(const InteractiveObject* poldChar)
+{
+    CopyEventHandlers(this, poldChar);
+}
+
+// @0x142935d60
+void AvmTextField::CopyPhysicalProperties(const InteractiveObject* poldChar)
+{
+    CopyEventHandlers(this, poldChar);
 }
 
 // A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.

@@ -68,6 +68,12 @@ public:
     };
     // The standard member the name spells, M_InvalidMember otherwise (exe 0x142956090).
     StandardMember GetStandardMemberConstant(const ASString& newname) const;
+
+    // (appended for sfr_as2_04)
+    // AvmInteractiveObjBase overrides: both take over the event handlers of the other character (exe 0x142934870,
+    // 0x142935cc0).
+    virtual void CloneInternalData(const InteractiveObject* src);
+    virtual void CopyPhysicalProperties(const InteractiveObject* poldChar);
 };
 
 // The script side of a character of an AS2 movie.
