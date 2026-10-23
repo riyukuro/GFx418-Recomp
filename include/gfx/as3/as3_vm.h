@@ -159,6 +159,9 @@ public:
     void OutputError(const Value& e);
     // (sfr_as3_09) drops the pending exception after printing it
     void OutputAndIgnoreException();     // 0x14246c440
+    // (appended, sfr19) ExecuteInternalUnsafe keeping the result; an exception is printed and dropped. 0x142500620
+    void Execute_IgnoreExceptionUnsafe(const Value& func, const Value& _this, Value& result, unsigned argc,
+                                       const Value* argv);
 
     // A new instance of the global class gname constructed with argv, stored in result; extCall marks a call from
     // C++ rather than from script (0x1424f0750).

@@ -314,7 +314,7 @@ void AvmSprite::ExecuteFrameTags(unsigned)
     SprFlags |= Flag_NeedExecuteFrame;
     if (GetSprite()->IsInPlayList())
         GetSprite()->AddToOptimizedPlayList();
-    GetSprite()->Flags &= ~DisplayObjectBase::Mask_JustLoaded;
+    GetSprite()->DisplayObjectBase::Flags &= ~DisplayObjectBase::Mask_JustLoaded;
 }
 
 // Runs the init actions of frame once.
@@ -352,6 +352,91 @@ void MovieRoot::ExecuteActionQueues()
         ActionQueueIterator iter(ActionLevel(lvl), &ActionQueue);
         while (const ActionEntry* entry = iter.getNext())
             entry->Execute(this);
+    }
+}
+
+// Creates the timeline children of frame 0 once: the sprite joins the playlist when its parent is on it, gets its
+// load event and runs the init actions of frame 0.
+// MS2-FUNCTIONAL: same playlist, load-event and init-action steps; the parent is reloaded and the AvmSprite this
+// adjustment differs.
+// @0x1424f3320
+void AvmSprite::CreateChildren()
+{
+    if (SprFlags & Flag_ChildrenCreated)
+        return;
+    Sprite* spr = GetSprite();
+    if (!spr->IsInPlayList() && spr->GetParent() && spr->GetParent()->IsInPlayList())
+    {
+        if (!spr->GetParent())
+            spr->AddToPlayList();
+        else
+            GetAvmParent()->InsertChildToPlayList(spr);
+        spr->ModifyOptimizedPlayList();
+    }
+    if (!(spr->Flags & Sprite::Flags_OnEventLoadCalled))
+        spr->DefaultOnEventLoad();
+    if (spr->HasAvmObject())
+        spr->GetAvmSprite()->ExecuteInitActionFrameTags(0);
+    SprFlags |= Flag_ChildrenCreated;
+}
+
+// ToInt32 of ECMA-262: NaN, infinities and zeros give 0, everything else is truncated modulo 2^32.
+// MS2-FUNCTIONAL: same NaN/zero tests, floor/fmod reduction and wrap; xmm7 holds 0.0 across the calls in the exe.
+// @0x1424f1d60
+SInt32 ConvertDouble2SInt32(Double v)
+{
+    if (NumberUtil::IsNaNOrInfinity(v) || NumberUtil::IsPOSITIVE_ZERO(v) || NumberUtil::IsNEGATIVE_ZERO(v))
+        return 0;
+    const bool neg = v < 0.0;
+    Double d = v;
+    if (neg)
+        d = -d;
+    d = floor(d);
+    if (d > 4294967295.0)
+        d = fmod(d, 4294967296.0);
+    if (d >= 2147483648.0)
+    {
+        const int low = int(d - 2147483648.0);
+        if (neg)
+            return SInt32(0x80000000u - unsigned(low));
+        return SInt32(unsigned(low) + 0x80000000u);
+    }
+    if (neg)
+        d = -d;
+    return int(d);
+}
+
+// The thunk of a method 4.1.18 does not implement: a warning naming it.
+// @0x1424f9480
+void ThunkInfo::EmptyFunc(const ThunkInfo& ti, VM& vm, const Value&, Value&, unsigned, const Value*)
+{
+    String msg("The method ");
+    if (ti.NamespaceName)
+    {
+        msg += ti.NamespaceName;
+        msg += "::";
+    }
+    if (ti.Name)
+    {
+        msg += ti.Name;
+        msg += "()";
+    }
+    msg += " is not implemented\n";
+    vm.GetUI().Output(FlashUI::Output_Warning, msg.ToCStr());
+}
+
+// Calls func; an exception it raises is printed and dropped.
+// MS2-FUNCTIONAL: same call and exception reset; the exception branch is laid out inline in the exe.
+// @0x142500620
+void VM::Execute_IgnoreExceptionUnsafe(const Value& func, const Value& _this, Value& result, unsigned argc,
+                                       const Value* argv)
+{
+    ExecuteInternalUnsafe(func, _this, result, argc, argv, false);
+    if (IsException())
+    {
+        HandleException = false;
+        OutputError(ExceptionObj);
+        ExceptionObj.SetUndefined();
     }
 }
 }}}
