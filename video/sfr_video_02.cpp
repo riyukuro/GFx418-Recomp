@@ -8,6 +8,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as2/as2_actiontypes.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/as3_vm.h"
@@ -1512,6 +1513,40 @@ void FUN_140011d90(void* object)
 void FUN_140011b10(void* object, void* stringContext, void* functions, const void* flags)
 {
     FUN_142961830(static_cast<char*>(object) + 0x68, object, stringContext, functions, flags);
+}
+
+// MS2-FUNCTIONAL: sets the result to the executable's undefined Value without releasing its fresh storage.
+// @0x1400158e0
+Scaleform::GFx::AS3::Value* FUN_1400158e0(Scaleform::GFx::AS3::Value* result)
+{
+    result->SetUndefinedUnsafe();
+    return result;
+}
+
+// MS2-FUNCTIONAL: clears the current object and walks/releases its chained child references.
+// @0x140015830
+void FUN_140015830(void* object)
+{
+    char* bytes = static_cast<char*>(object);
+    void* first = *reinterpret_cast<void**>(bytes + 0x80);
+    if (first) FUN_14257dc30(first);
+    if (first) FUN_14257dcb0(first);
+    *reinterpret_cast<void**>(bytes + 0x80) = nullptr;
+    if (!first) return;
+    *reinterpret_cast<unsigned char*>(bytes + 0x78) |= 0x10;
+    void* node = first;
+    for (;;)
+    {
+        void* child = *reinterpret_cast<void**>(static_cast<char*>(node) + 0x20);
+        if (child) FUN_14257dc30(child);
+        if (child) FUN_14257dcb0(child);
+        *reinterpret_cast<void**>(static_cast<char*>(node) + 0x20) = nullptr;
+        if (child) FUN_14257dc30(child);
+        if (node) FUN_14257dcb0(node);
+        if (!child) break;
+        FUN_14257dcb0(child);
+        node = child;
+    }
 }
 
 // MS2-FUNCTIONAL: creates the requested AS3 instance when traits are valid and stores it as a picked Value.
