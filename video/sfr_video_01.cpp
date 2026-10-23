@@ -469,6 +469,27 @@ Scaleform::GFx::AS2::FnCall* FUN_1400043b0(Scaleform::GFx::AS2::FnCall* call, un
     return call;
 }
 
+// MS2-FUNCTIONAL: releases the owned proxy at this weak-pointer slot when present.
+// @0x1400045c0
+void** FUN_1400045c0(void** proxy, unsigned flags)
+{
+    if (*proxy) FUN_14257dcd0(*proxy);
+    if (flags & 1) operator delete(proxy);
+    return proxy;
+}
+
+// MS2-FUNCTIONAL: releases a non-null intrusive reference stored in the slot.
+// @0x140004dd0
+void FUN_140004dd0(void** value) { if (*value) FUN_14257dcb0(*value); }
+
+// MS2-FUNCTIONAL: frees the object held by the first pointer slot when non-null.
+// @0x140004e50
+void FUN_140004e50(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+
+// MS2-FUNCTIONAL: frees the object held by the first pointer slot when non-null.
+// @0x140004e90
+void FUN_140004e90(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
