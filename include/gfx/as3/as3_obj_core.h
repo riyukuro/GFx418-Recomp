@@ -84,6 +84,11 @@ public:
     void Append(unsigned argc, const Value* argv);
     void ForEach(ArrayFunc& f) const;
 
+    // (appended, sfr19) bodies in sfr_as3_04.
+    void RemoveMultipleAt(UPInt pos, UPInt count);  // 0x14241ec80
+    void Reverse();                                 // 0x142420800
+    void Pop() { if (GetSize()) RemoveMultipleAt(GetSize() - 1, 1); }
+
 private:
     UPInt GetLeftEqualInd(UPInt start_from) const;
     UPInt GetRightEqualInd(UPInt start_from, UPInt end_ind) const;

@@ -5,6 +5,7 @@
 // MS2-RANGE: 0x1423f5770-0x1423ff040 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
+#undef GetObject
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -279,6 +280,232 @@ namespace Instances { namespace fl
     {
         TimeValue = timeClip(t);
         result = TimeValue;
+    }
+}} // namespace Instances::fl
+
+}}} // namespace Scaleform::GFx::AS3
+
+// VM::GetValueTraits: the traits of a value (0x14250ffc0).
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+
+// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
+const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
+FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The exe inlines SparseArray::At and PushBack into the Array natives (out-of-line copies in sfr_as3_03/04).
+static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
+{
+    if (ind < sa.ValueA.GetSize())
+        return sa.ValueA[ind];
+    if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
+    {
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        const Value* v = p ? &p->Second : 0;
+        if (v)
+            return *v;
+    }
+    return sa.DefaultValue;
+}
+
+static SF_INLINE void saPushBack(SparseArray& sa, const Value& v)
+{
+    if (sa.Length == sa.ValueA.GetSize())
+        sa.ValueA.PushBack(v);
+    else
+    {
+        sa.ValueHHighInd = sa.Length;
+        sa.ValueH.Set(sa.ValueHHighInd, v);
+    }
+    ++sa.Length;
+}
+
+namespace Instances { namespace fl
+{
+    // ---- Array natives ----
+
+    // MS2-FUNCTIONAL: the exe inlines the Array constructor
+    // @0x1423f7f50
+    void Array::AS3concat(Value& result, unsigned argc, const Value* argv)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        Array* arr = new(itr.Alloc()) Array(itr);
+        result.Pick(arr);
+        if (arr != this)
+            arr->SA.Assign(SA);
+
+        const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+        if (argc == 1 && tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits())
+        {
+            const SparseArray& other = static_cast<Array*>(argv[0].GetObject())->SA;
+            arr->SA.Append(other, 0, other.GetSize());
+        }
+        else
+            arr->SA.Append(argc, argv);
+    }
+
+    // Calls callback(element, index, this) on thisObject (callback itself when that is null) for every element;
+    // stops when callback is not callable or throws.
+
+    // The result is always false: the exe never stores true.
+    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
+    // @0x1423f8f60
+    void Array::AS3every(bool& result, const Value& callback, const Value& thisObject)
+    {
+        if (!callback.IsNullOrUndefined())
+        {
+            Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+            for (UPInt i = 0; i < SA.GetSize(); ++i)
+            {
+                Value argv[3] = {saAt(SA, i), Value(static_cast<UInt32>(i)), Value(this)};
+                if (!callback.IsCallable())
+                    break;
+                Value r;
+                GetVM().ExecuteInternalUnsafe(callback, _this, r, 3, argv, false);
+                if (GetVM().IsException())
+                    break;
+                if (!r.IsBool() || !r.AsBool())
+                    break;
+            }
+        }
+        result = false;
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Array constructor and keeps the inlined At's null select as a cmove
+    // @0x1423f9880
+    void Array::AS3filter(SPtr<Instances::fl::Array>& result, const Value& callback, const Value& thisObject)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        Array* arr = new(itr.Alloc()) Array(itr);
+        result = arr;
+        if (callback.IsNullOrUndefined())
+            return;
+        Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+        for (UPInt i = 0; i < SA.GetSize(); ++i)
+        {
+            Value argv[3] = {saAt(SA, i), Value(static_cast<UInt32>(i)), Value(this)};
+            if (!callback.IsCallable())
+                break;
+            Value r;
+            GetVM().ExecuteInternalUnsafe(callback, _this, r, 3, argv, false);
+            if (GetVM().IsException())
+                break;
+            if (r.IsBool() && r.AsBool())
+                saPushBack(arr->SA, saAt(SA, i));
+        }
+    }
+
+    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
+    // @0x1423f9d60
+    void Array::AS3forEach(const Value& /*result*/, const Value& callback, const Value& thisObject)
+    {
+        if (callback.IsNullOrUndefined())
+            return;
+        Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+        for (UPInt i = 0; i < SA.GetSize(); ++i)
+        {
+            Value argv[3] = {saAt(SA, i), Value(static_cast<UInt32>(i)), Value(this)};
+            if (!callback.IsCallable())
+                break;
+            Value r;
+            GetVM().ExecuteInternalUnsafe(callback, _this, r, 3, argv, false);
+            if (GetVM().IsException())
+                break;
+        }
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Array constructor and keeps the inlined At's null select as a cmove
+    // @0x1423fbb20
+    void Array::AS3map(SPtr<Instances::fl::Array>& result, const Value& callback, const Value& thisObject)
+    {
+        InstanceTraits::Traits& itr = GetInstanceTraits();
+        Array* arr = new(itr.Alloc()) Array(itr);
+        result = arr;
+        if (callback.IsNullOrUndefined())
+            return;
+        Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+        for (UPInt i = 0; i < SA.GetSize(); ++i)
+        {
+            Value argv[3] = {saAt(SA, i), Value(static_cast<UInt32>(i)), Value(this)};
+            if (!callback.IsCallable())
+                break;
+            Value r;
+            GetVM().ExecuteInternalUnsafe(callback, _this, r, 3, argv, false);
+            if (GetVM().IsException())
+                break;
+            saPushBack(arr->SA, r);
+        }
+    }
+
+    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
+    // @0x1423fb1a0
+    void Array::AS3indexOf(SInt32& result, const Value& searchElement, SInt32 fromIndex)
+    {
+        if (fromIndex < 0)
+            fromIndex += static_cast<SInt32>(SA.GetSize());
+        for (UPInt i = static_cast<SPInt>(fromIndex); i < SA.GetSize(); ++i)
+        {
+            if (StrictEqual(saAt(SA, i), searchElement))
+            {
+                result = static_cast<SInt32>(i);
+                return;
+            }
+        }
+        result = -1;
+    }
+
+    // @0x1423fb450
+    void Array::AS3join(Value& result, unsigned argc, const Value* argv)
+    {
+        ASString sep = GetVM().GetStringManager().GetBuiltin(AS3Builtin_comma_);
+        if (argc > 0 && !argv[0].Convert2String(sep))
+            return;
+        result = ToStringInternal(sep);
+    }
+
+    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
+    // @0x1423fb4e0
+    void Array::AS3lastIndexOf(SInt32& result, const Value& searchElement, SInt32 fromIndex)
+    {
+        if (fromIndex < 0)
+            fromIndex += static_cast<SInt32>(SA.GetSize());
+        SPInt i = static_cast<SPInt>(SA.GetSize()) - 1;
+        if (static_cast<SPInt>(fromIndex) < i)
+            i = fromIndex;
+        for (; i >= 0; --i)
+        {
+            if (StrictEqual(saAt(SA, i), searchElement))
+            {
+                result = static_cast<SInt32>(i);
+                return;
+            }
+        }
+        result = -1;
+    }
+
+    // @0x1423fcd60
+    void Array::AS3pop(Value& result)
+    {
+        if (SA.GetSize() > 0)
+        {
+            result = SA.Top();
+            SA.Pop();
+        }
+    }
+
+    // @0x1423fd780
+    void Array::AS3push(Value& result, unsigned argc, const Value* argv)
+    {
+        SA.Append(argc, argv);
+        result.SetUInt32(static_cast<UInt32>(SA.GetSize()));
+    }
+
+    // @0x1423fdf30
+    void Array::AS3reverse(SPtr<Instances::fl::Array>& result)
+    {
+        SA.Reverse();
+        result = this;
     }
 }} // namespace Instances::fl
 
