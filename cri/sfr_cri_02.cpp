@@ -98,9 +98,11 @@ void     FUN_140043dd0(void* decoder);
 CriSint32 FUN_1400355b0(void* playerHandle);
 void     FUN_1400393f0(void* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c,
                        CriUint64 d, CriUint64 e);
-CriSint32 FUN_140039330(void* easyPlayer, const CriMvFrameInfo* frameInfo);
+CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frameInfo);
 CriBool  FUN_140035710(void* player, void* movieYuvState, void* outputInfo);
 CriBool  FUN_140035800(void* player, void* movieYuvState, void* outputInfo);
+CriSint32 FUN_1400397a0(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frameInfo,
+                        CriUint64 count, CriUint64 unit, void* userData);
 void     FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
 void     FUN_1400467a8(void* queue, CriSint32 operation, void* chunk);
 void     FUN_140036650(void* player);
@@ -1061,6 +1063,40 @@ CriBool FUN_140039cb0(CriMvEasyPlayer* easyPlayer, void* yuvBuffers,
 CriSint32 getInternalStatus(void* player)
 {
     return *(CriSint32*)((CriUint8*)player + 4);
+}
+
+// MS2-FUNCTIONAL: compares the frame and system time as the CRI player does, including unsigned-to-float wrap correction.
+// @0x1400397a0
+CriSint32 FUN_1400397a0(CriMvEasyPlayer*, const CriMvFrameInfo* frameInfo,
+                        CriUint64 count, CriUint64 unit, void*)
+{
+    auto toFloat = [](CriUint64 value) {
+        CriFloat32 result = (CriFloat32)(CriSint64)value;
+        if ((CriSint64)value < 0)
+            result += 18446744073709551616.0f;
+        return result;
+    };
+    CriFloat32 frameCount = toFloat(*(const CriUint64*)((const CriUint8*)frameInfo + 0x28));
+    CriFloat32 frameUnit = toFloat(*(const CriUint64*)((const CriUint8*)frameInfo + 0x30));
+    CriFloat32 systemCount = toFloat(count);
+    CriFloat32 systemUnit = toFloat(unit);
+    return (frameCount * 1000.0f) / frameUnit <= (systemCount * 1000.0f) / systemUnit;
+}
+
+// MS2-FUNCTIONAL: selects CRI's configured comparison callback or the built-in frame-time comparison.
+// @0x140039330
+CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frameInfo)
+{
+    CriUint64 count = 0;
+    CriUint64 unit = 0;
+    CriError error = CRIERR_OK;
+    easyPlayer->GetTime(count, unit, error);
+    auto callback = *(CriSint32(__fastcall**)(CriMvEasyPlayer*, const CriMvFrameInfo*, CriUint64,
+                                                CriUint64, void*))((CriUint8*)easyPlayer + 0x620);
+    void* userData = *(void**)((CriUint8*)easyPlayer + 0x628);
+    if (callback)
+        return callback(easyPlayer, frameInfo, count, unit, userData);
+    return FUN_1400397a0(easyPlayer, frameInfo, count, unit, userData);
 }
 
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this helper is rebuilt with our VS2017 toolset.
