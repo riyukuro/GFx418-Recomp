@@ -156,6 +156,7 @@ void     FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 
                        void* output, CriUint32 sampleCount, void* result);
 void*    FUN_140043f10(void* decoder, void* frameInfo);
 void*    FUN_140043fe0(void* decoder, void* frameInfo);
+void*    FUN_140044870(void* decoder, void* frameInfo);
 void     FUN_140044e84(void);
 void     FUN_140039fc8(void);
 void     FUN_14003a010(void);
@@ -3936,6 +3937,36 @@ CriBool FUN_140035db0(void* player, CriSint32 targetFrame, void* frameInfo, void
         if (currentFrame + 1 == targetFrame)
             return FUN_140043f10(decoder, frameInfo) != NULL;
     }
+}
+
+// MS2-FUNCTIONAL: pair the next video frame with its matching alpha frame when the alpha decoder is ready.
+// @0x140035c80
+void* FUN_140035c80(void* player, void* output)
+{
+    FUN_140035090(output);
+    if (!crimvply_isUnderGetFrameCondition(player))
+        return NULL;
+
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    CriMvFrameInfo frame = {};
+    void* frameToken = FUN_140044870(decoders->VideoDecoder, &frame);
+    if (!frameToken)
+        return NULL;
+
+    if (decoders->AlphaDecoder)
+    {
+        if (FUN_140043cb0(decoders->AlphaDecoder) == 3)
+        {
+            FUN_140037950(player, "E08092600M: Alpha channel is lost.", 0);
+            return NULL;
+        }
+        CriUint8 alphaFrame[0x50] = {};
+        if (!FUN_140035db0(player, frame.frame_id, alphaFrame, NULL))
+            return NULL;
+    }
+
+    FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, 0);
+    return frameToken;
 }
 
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
