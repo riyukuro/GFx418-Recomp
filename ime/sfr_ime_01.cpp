@@ -919,6 +919,30 @@ extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long lon
     array[1] = length;
 }
 
+// MS2-FUNCTIONAL: reserves four-entry-rounded pointer storage with the executable's AllocatorLH heap slots.
+// @0x1423d95f0
+extern "C" void FUN_1423d95f0(void* rawArray, void* allocator, unsigned long long requested)
+{
+    auto* array = static_cast<unsigned long long*>(rawArray);
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    if (!requested) {
+        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
+        array[0] = 0;
+        array[2] = 0;
+        return;
+    }
+    const unsigned long long capacity = (requested + 3) & ~3ull;
+    if (array[0]) {
+        array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(
+            DAT_143b15f60, reinterpret_cast<void*>(array[0]), capacity * sizeof(void*)));
+    } else {
+        unsigned allocFlags = 2;
+        array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long, unsigned*)>(heapVtable[14])(
+            DAT_143b15f60, allocator, capacity * sizeof(void*), &allocFlags));
+    }
+    array[2] = capacity;
+}
+
 // MS2-FUNCTIONAL: walks the executable's linked string records and inserts each key/value pair by Bernstein hash.
 // @0x1423d8e80
 void FUN_1423d8e80(void* table, void* source)
