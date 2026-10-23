@@ -546,10 +546,16 @@ public:
 
     TransformObject(Environment* penv, InteractiveObject* pcharacter = 0); // exe 0x142923350
 
+    virtual ObjectType GetObjectType() const; // exe 0x142954370: Object_Transform
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x142988380
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x1429505d0
+
     // The character the transform reads and writes, 0 for none (exe 0x14298ba60).
     void SetTarget(InteractiveObject* pcharacter);
 
 protected:
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const; // exe 0x142941280
     virtual void Finalize_GC(); // exe 0x142943150
 
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02

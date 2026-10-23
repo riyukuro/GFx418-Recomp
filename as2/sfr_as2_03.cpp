@@ -2,6 +2,8 @@
 // assignments of the script values, objects and prototypes (the out-of-line copies the unity build emitted).
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142923350-0x1429234f0 .text$mn
+// MS2-RANGE: 0x142925fb0-0x142926060 .text$mn
 // MS2-RANGE: 0x142925140-0x142925190 .text$mn
 // MS2-RANGE: 0x142925920-0x142925990 .text$mn
 // MS2-RANGE: 0x1429275f0-0x142927640 .text$mn
@@ -668,6 +670,19 @@ ColorTransformObject::ColorTransformObject(Environment* penv)
     : Object(penv)
 {
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_ColorTransform));
+}
+
+// @0x142923350
+TransformObject::TransformObject(Environment* penv, InteractiveObject* pcharacter)
+    : Object(penv), pMovieRoot(0)
+{
+    SetTarget(pcharacter);
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Transform));
+    // The matrix, color transform and pixel bounds the properties hand out, made through flash.geom.
+    Matrix          = *penv->OperatorNew(penv->GetSC()->pContext->FlashGeomPackage, penv->GetBuiltin(ASBuiltin_Matrix));
+    pColorTransform = *penv->OperatorNew(penv->GetSC()->pContext->FlashGeomPackage,
+                                         penv->GetBuiltin(ASBuiltin_ColorTransform));
+    PixelBounds = *penv->OperatorNew(penv->GetSC()->pContext->FlashGeomPackage, penv->GetBuiltin(ASBuiltin_Rectangle));
 }
 
 // @0x14291b510
@@ -1419,3 +1434,6 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
 // MS2-PIN: ??_7ActionBuffer@AS2@GFx@Scaleform@@6B@ 0x1432153c8
 // MS2-PIN: ??_7?$RefCountBaseNTS@VActionBuffer@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??1TransformObject@AS2@GFx@Scaleform@@UEAA@XZ 0x142925fb0
+// MS2-PIN: ??_7TransformObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432198e0
+// MS2-PIN: ??_7TransformObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219928
