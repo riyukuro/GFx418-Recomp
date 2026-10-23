@@ -35,6 +35,7 @@ extern "C" void FUN_14257db50(void*);
 extern "C" void FUN_1423cdf60(void*);
 extern "C" void FUN_1423cde00();
 extern "C" const void* DAT_14313a210[];
+extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 
 struct HWND__;
 
@@ -222,6 +223,30 @@ void* FUN_1423da2c0(void* object, unsigned long long flags)
         else Memory::Free(object);
     }
     return object;
+}
+
+// MS2-FUNCTIONAL: hash-table capacity growth threshold and requested capacities follow the executable; table allocation helper is exe-bound.
+// @0x1423d8d10
+void FUN_1423d8d10(unsigned long long* table, unsigned long long key)
+{
+    auto* data = reinterpret_cast<unsigned long long*>(table[0]);
+    if (!data) {
+        FUN_1423d9090(table, key, 8);
+        return;
+    }
+    if (data[1] * 4 + 4 < data[0] * 5)
+        FUN_1423d9090(table, key, data[1] * 2 + 2);
+}
+
+// MS2-FUNCTIONAL: releases the held ABC data and executes the ExecuteTag base teardown before optional scalar delete.
+// @0x1423dbba0
+void* FUN_1423dbba0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
+{
+    Scaleform::GFx::AS3::AbcDataBuffer* abc = self->pAbc.GetPtr();
+    if (abc) abc->Release();
+    self->Scaleform::GFx::ExecuteTag::~ExecuteTag();
+    if (flags & 1) ::operator delete(self);
+    return self;
 }
 
 // MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
