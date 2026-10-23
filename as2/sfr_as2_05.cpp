@@ -105,6 +105,10 @@
 // MS2-RANGE: 0x14294b120-0x14294b162 .text$mn
 // MS2-RANGE: 0x14294b090-0x14294b10c .text$mn
 // MS2-RANGE: 0x142949860-0x142949892 .text$mn
+// MS2-RANGE: 0x14294ab70-0x14294ade1 .text$mn
+// MS2-RANGE: 0x14294a1e0-0x14294a2a6 .text$mn
+// MS2-RANGE: 0x14294a2b0-0x14294a370 .text$mn
+// MS2-RANGE: 0x14294adf0-0x14294afa7 .text$mn
 // MS2-RANGE: 0x14294a500-0x14294a572 .text$mn
 // MS2-RANGE: 0x14294a8f0-0x14294a9a4 .text$mn
 // MS2-RANGE: 0x14294a9b0-0x14294aa77 .text$mn
@@ -129,6 +133,7 @@
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_loaderimpl.h"
+#include "../include/gfx/gfx_movieslots.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -2049,6 +2054,77 @@ Environment* AsFunctionObject::GetEnvironment(const FnCall& fn, Ptr<InteractiveO
     if (!penv)
         penv = fn.Env;
     return penv;
+}
+
+// Selection.getControllerFocusGroup(controllerIdx): the focus group of the controller.
+// @0x14294a1e0
+void SelectionCtorFunction::GetControllerFocusGroup(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot         = fn.Env->GetTarget()->GetMovieImpl();
+    unsigned   controllerIdx = 0;
+    if (fn.NArgs >= 1)
+        controllerIdx = fn.Arg(0).ToUInt32(fn.Env);
+    fn.Result->SetNumber(AsMovieSlots(proot)->GetControllerFocusGroup(controllerIdx));
+}
+
+// Selection.getControllerMaskByFocusGroup(focusGroupIdx): the controllers of the group, one bit each.
+// @0x14294a2b0
+void SelectionCtorFunction::GetControllerMaskByFocusGroup(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot         = fn.Env->GetTarget()->GetMovieImpl();
+    unsigned   focusGroupIdx = 0;
+    if (fn.NArgs >= 1)
+        focusGroupIdx = fn.Arg(0).ToUInt32(fn.Env);
+    fn.Result->SetNumber((int)proot->GetControllerMaskByFocusGroup(focusGroupIdx));
+}
+
+// Selection.getFocusBitmask(ch) (extensions only): bit n set when controller n has ch focused; null otherwise.
+// @0x14294adf0
+void SelectionCtorFunction::GetFocusBitmask(const FnCall& fn)
+{
+    fn.Result->SetNull();
+    if (fn.Env && fn.Env->CheckExtensions() && fn.NArgs >= 1)
+    {
+        Ptr<InteractiveObject> ch   = fn.Arg(0).ToCharacter(fn.Env);
+        unsigned               mask = 0;
+        unsigned               bit  = 1;
+        for (unsigned i = 0; i < 4; ++i, bit <<= 1)
+        {
+            MovieImpl*             proot = fn.Env->GetTarget()->GetMovieImpl();
+            Ptr<InteractiveObject> focused =
+                Ptr<InteractiveObject>(proot->FocusGroups[proot->FocusGroupIndexes[i]].LastFocused);
+            if (focused == ch)
+                mask |= bit;
+        }
+        fn.Result->SetNumber((UInt32)(UInt16)mask);
+    }
+}
+
+// Selection.getFocusArray(ch) (extensions only): the controllers that have ch focused; null otherwise.
+// MS2-FUNCTIONAL the exe keeps a null test on the new array before the final release; ours drops it (same code otherwise)
+// @0x14294ab70
+void SelectionCtorFunction::GetFocusArray(const FnCall& fn)
+{
+    fn.Result->SetNull();
+    if (fn.Env && fn.Env->CheckExtensions() && fn.NArgs >= 1)
+    {
+        Ptr<InteractiveObject> ch   = fn.Arg(0).ToCharacter(fn.Env);
+        Ptr<Object>            pobj = *fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array));
+        ArrayObject*           parr = static_cast<ArrayObject*>(pobj.GetPtr());
+        if (parr->Elements.GetCapacity() < 4)
+            parr->Elements.Reserve(4);
+        for (unsigned i = 0; i < 4; ++i)
+        {
+            MovieImpl*             proot = fn.Env->GetTarget()->GetMovieImpl();
+            Ptr<InteractiveObject> focused =
+                Ptr<InteractiveObject>(proot->FocusGroups[proot->FocusGroupIndexes[i]].LastFocused);
+            if (focused == ch)
+                parr->PushBack(Value((int)i));
+        }
+        fn.Result->SetAsObject(pobj);
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 

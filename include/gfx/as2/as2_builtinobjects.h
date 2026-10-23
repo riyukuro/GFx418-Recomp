@@ -890,6 +890,11 @@ private:
     static void GetCaretIndex(const FnCall& fn); // exe 0x142900260
     static void GetBeginIndex(const FnCall& fn); // exe 0x1429003c0
     static void GetEndIndex(const FnCall& fn);   // exe 0x142900530
+    // (appended for sfr_as2_05)
+    static void GetControllerFocusGroup(const FnCall& fn);       // exe 0x14294a1e0
+    static void GetControllerMaskByFocusGroup(const FnCall& fn); // exe 0x14294a2b0
+    static void GetFocusBitmask(const FnCall& fn);               // exe 0x14294adf0
+    static void GetFocusArray(const FnCall& fn);                 // exe 0x14294ab70
 };
 class StageCtorFunction : public CFunctionObject
 {
