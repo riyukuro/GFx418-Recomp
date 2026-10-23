@@ -11,12 +11,17 @@
 // MS2-RANGE: 0x1426c24e0-0x1426c51f0 .text$mn
 // MS2-RANGE: 0x1426c5700-0x1426c7da0 .text$mn
 // MS2-RANGE: 0x1426c7e00-0x1426cba30 .text$mn
+// The glyph rasters' refcount bases (non-RTTI, one slot each):
+// MS2-PIN: ??_7?$RefCountBaseNTS@VGlyphRaster@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143192d98
+// MS2-PIN: ??_G?$RefCountBaseNTS@VGlyphRaster@Render@Scaleform@@$0EO@@Scaleform@@UEAAPEAXI@Z 0x1426c4930
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@UEAAPEAXI@Z 0x1426c48d0
 
 #include "ms2/scaleform/include/render/render_tessgen.h" // first: StrokeGenerator is a struct here, as 07o mangles it
 #include "ms2/scaleform/include/render/render_glyphcache.h"
 #include "ms2/scaleform/include/render/render_boundbox.h"
 #include "ms2/scaleform/include/render/render_hal.h"
 #include "ms2/scaleform/include/render/render_imagefile.h"
+#include "ms2/scaleform/include/render/render_resizeimage.h"
 
 #include <string.h>
 #include <math.h>
@@ -1020,6 +1025,227 @@ GlyphNode* GlyphCache::RasterizeGlyph(GlyphRunData& data, TextMeshProvider* tm, 
     return node;
 }
 
+// A knocked-out shadow keeps only what lies outside the glyph: every pixel is scaled down by the unblurred
+// coverage saved in KnockOutCopy.
+inline void GlyphCache::knockOut(UByte* raster)
+{
+    const UByte* glyph = &KnockOutCopy[0];
+    for (UPInt i = 0; i < KnockOutCopy.GetSize(); ++i)
+    {
+        unsigned outside = 255 - *glyph++;
+        *raster = UByte((*raster * outside + 255) >> 8);
+        ++raster;
+    }
+}
+inline void GlyphCache::knockOut(ArrayLH_POD<UByte, SID>& image)
+{
+    const UByte* glyph  = &KnockOutCopy[0];
+    UByte*       raster = &image[0];
+    for (UPInt i = 0; i < KnockOutCopy.GetSize(); ++i)
+    {
+        unsigned outside = 255 - *glyph++;
+        *raster = UByte((*raster * outside + 255) >> 8);
+        ++raster;
+    }
+}
+
+// A shadow / glow: from the font's own raster when it has one, otherwise the outline is rasterized with the blur
+// radius as extra padding, softened by a gamma, blurred, strengthened and optionally knocked out. Shadows taller
+// than the quality-scaled slot are drawn smaller and stretched back by the node's scale.
+// MS2-FUNCTIONAL: knock-out loop loads the raster pointer before KnockOutCopy's (exe the other way round)
+// @0x1426c6d80
+GlyphNode* GlyphCache::RasterizeShadow(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp,
+                                       float screenSize, const GlyphRaster* ras)
+{
+    if (MaxNumTextures == 0)
+    {
+        Result = Res_NoRasterCache;
+        return 0;
+    }
+    if (ras)
+    {
+        GlyphNode* node = createShadowFromRaster(data, tm, gp, screenSize, ras);
+        if (node)
+            return node;
+    }
+    if (data.pShape == 0)
+    {
+        Result = Res_ShapeNotFound;
+        return 0;
+    }
+
+    float k     = gp.GetFontSize() / screenSize;
+    float blurX = gp.GetBlurX() * k * data.HeightRatio;
+    float blurY = gp.GetBlurY() * k * data.HeightRatio;
+    float maxH  = float(MaxSlotHeight) * ShadowQuality - float(2 * SlotPadding);
+
+    float rasterScale = 1.0f;
+    float scale = gp.GetFontSize() / (data.HintedNomHeight ? float(data.HintedNomHeight) : data.NomHeight);
+    float y1    = data.GlyphBounds.y1;
+    float y2    = data.GlyphBounds.y2;
+    if (y1 >= y2)
+        y1 = y2 = 0;
+    y1 = y1 * scale - blurY;
+    y2 = y2 * scale + blurY;
+    float h = y2 - y1;
+    if (h >= maxH)
+    {
+        k            = maxH / h;
+        scale       *= k;
+        blurX       *= k;
+        blurY       *= k;
+        rasterScale  = 1.0f / k;
+    }
+
+    int intBlurX = int(ceil(blurX));
+    int intBlurY = int(ceil(blurY));
+
+    Ras.Clear();
+    addShapeToRasterizer(data.pShape, scale, scale);
+
+    int padX = SlotPadding + intBlurX;
+    int padY = SlotPadding + intBlurY;
+    int x1 = 0, x2 = 0, iy1 = 0, iy2 = 0;
+    if (Ras.SortCells())
+    {
+        x1  = Ras.GetMinX() - padX;
+        x2  = Ras.GetMaxX() + padX;
+        iy1 = Ras.GetMinY() - padY;
+        iy2 = Ras.GetMaxY() + padY;
+    }
+    unsigned w  = x2 - x1 + 1;
+    unsigned hh = iy2 - iy1 + 1;
+    if (hh > MaxSlotHeight)
+        hh = MaxSlotHeight;
+
+    GlyphNode* node = allocateGlyph(tm, gp, w, hh);
+    if (!node)
+    {
+        Result = Res_CacheFull;
+        cacheFullWarning();
+        return 0;
+    }
+    node->Origin.x = SInt16(x1 * 16);
+    node->Origin.y = SInt16(iy1 * 16);
+    node->Scale    = rasterScale;
+
+    RasterData.Resize(w * hh);
+    RasterPitch = w;
+    memset(&RasterData[0], 0, w * hh);
+
+    if (w > 1 && hh > 1)
+    {
+        // a softer gamma makes blurred shadows and glows stronger
+        float gamma = 1.0f;
+        if (gp.BlurX || gp.BlurY)
+            gamma = 0.4f;
+        if (gamma != Ras.GetGamma2())
+            Ras.SetGamma2(gamma);
+
+        for (unsigned i = 0; i < Ras.GetNumScanlines() && padY + i < hh; ++i)
+        {
+            UByte* sl = &RasterData[(padY + i) * RasterPitch];
+            Ras.SweepScanline(i, sl + padX, 1, 1);
+        }
+
+        int bias = 0;
+        int sx = 0, sy = 0;
+        if (gp.IsKnockOut())
+            KnockOutCopy = RasterData;
+        if (blurX > 0 || blurY > 0)
+        {
+            recursiveBlur(&RasterData[0], RasterPitch, sx, sy, w, hh, blurX, blurY);
+            bias = 8;
+        }
+        strengthenImage(&RasterData[0], RasterPitch, sx, sy, w, hh,
+                        gp.GetBlurStrength(), (gp.GetBlurStrength() <= 1.0f) ? 0 : bias);
+        if (gp.IsKnockOut())
+            knockOut(&RasterData[0]);
+    }
+
+    updateTextureGlyph(node);
+    ++RasterizationCount;
+    Ras.Clear();
+    return node;
+}
+
+// A shadow / glow from the font's own raster: the bitmap is copied into a padded source buffer, blurred,
+// strengthened and optionally knocked out there, then bilinearly shrunk into RasterData when the slot is smaller
+// (the node's scale stretches it back).
+// @0x1426c9ba0
+GlyphNode* GlyphCache::createShadowFromRaster(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp,
+                                              float screenSize, const GlyphRaster* ras)
+{
+    float k     = gp.GetFontSize() / screenSize;
+    float blurX = gp.GetBlurX() * k * data.HeightRatio;
+    float blurY = gp.GetBlurY() * k * data.HeightRatio;
+    float maxH  = float(MaxSlotHeight) * ShadowQuality - float(2 * SlotPadding);
+    float shrink = 1.0f;
+    float h = blurY + blurY + float(unsigned(ras->Height));
+    if (h >= maxH)
+    {
+        shrink  = maxH / h;
+        blurX  *= shrink;
+        blurY  *= shrink;
+    }
+
+    unsigned padX = int(ceil(blurX)) + SlotPadding;
+    unsigned padY = int(ceil(blurY)) + SlotPadding;
+    unsigned srcW = ras->Width + 1 + 2 * padX;
+    unsigned srcH = ras->Height + 1 + 2 * padY;
+    unsigned w    = unsigned(ceilf(float(srcW) * shrink));
+    unsigned hh   = unsigned(ceilf(float(srcH) * shrink));
+    if (hh > MaxSlotHeight)
+        hh = MaxSlotHeight;
+
+    GlyphNode* node = allocateGlyph(tm, gp, w, hh);
+    if (!node)
+    {
+        Result = Res_CacheFull;
+        cacheFullWarning();
+        return 0;
+    }
+    node->Origin.x = SInt16(float(-(ras->OriginX + int(padX)) * 16) * w / srcW);
+    node->Origin.y = SInt16(float(-(ras->OriginY + int(padY)) * 16) * hh / srcH);
+    node->Scale    = (float(srcH) / float(hh) + float(srcW) / float(w)) * 0.5f;
+
+    RasterDataSrc.Resize(srcW * srcH);
+    RasterData.Resize(w * hh);
+    RasterPitch = w;
+    memset(&RasterDataSrc[0], 0, srcW * srcH);
+
+    if (srcW > 1 && srcH > 1)
+    {
+        for (unsigned i = 0; i < unsigned(ras->Height) && padY + i < srcH; ++i)
+            memcpy(&RasterDataSrc[0] + ((padY + i) * srcW + padX), &ras->Raster[0] + unsigned(ras->Width) * i, unsigned(ras->Width));
+
+        int bias = 0;
+        if (gp.IsKnockOut())
+            KnockOutCopy = RasterDataSrc;
+        if (blurX > 0 || blurY > 0)
+        {
+            recursiveBlur(&RasterDataSrc[0], srcW, 0, 0, srcW, srcH, blurX, blurY);
+            bias = 8;
+        }
+        strengthenImage(&RasterDataSrc[0], srcW, 0, 0, srcW, srcH,
+                        gp.GetBlurStrength(), (gp.GetBlurStrength() <= 1.0f) ? 0 : bias);
+        if (gp.IsKnockOut())
+            knockOut(RasterDataSrc);
+    }
+
+    if (srcH == hh && srcW == w)
+        RasterData = RasterDataSrc;
+    else
+    {
+        memset(&RasterData[0], 0, w * hh);
+        ResizeImageBilinear(&RasterData[0], w, hh, w, &RasterDataSrc[0], srcW, srcH, srcW, ResizeGray);
+    }
+
+    updateTextureGlyph(node);
+    ++RasterizationCount;
+    return node;
+}
+
 // ---- glyph outlines ----
 
 // bounds of the selected fill paths through a transformer, empty (inverted 1e30) when there are none
@@ -1595,7 +1821,7 @@ void RecursiveBlur(Img& img, float radius, SumBuf& sum, ColorBuf& buf)
 }
 
 // @0x1426cb1b0
-void GlyphCache::recursiveBlur(UByte* img, unsigned pitch, unsigned sx, unsigned sy, unsigned w, unsigned h,
+SF_NOINLINE void GlyphCache::recursiveBlur(UByte* img, unsigned pitch, unsigned sx, unsigned sy, unsigned w, unsigned h,
                                float rx, float ry)
 {
     ImgBlurWrapperX rows(img, pitch, sx, sy, w, h);

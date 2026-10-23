@@ -102,6 +102,7 @@ struct GlyphParam
     // (appended for sfr_render_06d) hinting / readability stretch of the rasterized glyph
     bool  IsAutoFit() const  { return (Flags & AutoFit) != 0; }
     float GetStretch() const { return (Flags & Stretch) ? 2.5f : 1.0f; }
+    bool  IsKnockOut() const { return (Flags & KnockOut) != 0; }
 };
 
 // The parameters of a whole text field: the text and its drop shadow (0x40 bytes).
