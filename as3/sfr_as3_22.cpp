@@ -26,6 +26,8 @@ extern "C" void FUN_142585f70(void*, int);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
 MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
+MS2_GLOBAL(0x1431bed18, void*, AS3SoundRequestVtable);
+MS2_GLOBAL(0x1431bed50, void*, AS3SoundRequestNodeVtable);
 
 namespace Scaleform {
 
@@ -1520,6 +1522,48 @@ void* CreateAudioEventManager()
     object[0xf0] = 0;
     *reinterpret_cast<unsigned*>(object + 0xf4) = 0;
     return object;
+}
+
+// MS2-FUNCTIONAL: creates and links a sound request under the manager lock, then initializes its FMOD sound or stream.
+// @0x142744ea0
+void* CreateAudioRequest(void* manager, const char* path, bool stream)
+{
+    auto* managerBytes = static_cast<unsigned char*>(manager);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    unsigned flags[2] = { 2, 0 };
+    auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
+        DAT_143b15f60, 0x40, flags));
+    if (!object)
+        return nullptr;
+
+    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    auto* node = object + 0x10;
+    auto* sentinel = managerBytes + 0xb0;
+    void* oldTail = *reinterpret_cast<void**>(managerBytes + 0xc0);
+    *reinterpret_cast<void***>(object) = &AS3SoundRequestVtable;
+    *reinterpret_cast<unsigned*>(object + 8) = 1;
+    *reinterpret_cast<void***>(node) = &AS3SoundRequestNodeVtable;
+    *reinterpret_cast<void**>(node + 8) = sentinel;
+    *reinterpret_cast<void**>(node + 0x10) = oldTail;
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(oldTail) + 8) = node;
+    *reinterpret_cast<void**>(managerBytes + 0xc0) = node;
+    *reinterpret_cast<void**>(object + 0x28) = manager;
+    *reinterpret_cast<void**>(object + 0x30) = nullptr;
+    *reinterpret_cast<void**>(object + 0x38) = nullptr;
+
+    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    auto* system = *reinterpret_cast<FMOD::System**>(managerBytes + 0x10);
+    auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
+    const auto result = stream
+        ? system->createStream(path, 0x49, nullptr, sound)
+        : system->createSound(path, 0x49, nullptr, sound);
+    if (result == 0)
+        return object;
+
+    *sound = nullptr;
+    auto** objectVtable = *reinterpret_cast<void***>(object);
+    reinterpret_cast<void (*)(void*, unsigned)>(objectVtable[0])(object, 1);
+    return nullptr;
 }
 
 }
