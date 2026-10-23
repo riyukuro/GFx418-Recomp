@@ -522,6 +522,8 @@ public:
 protected:
     // (appended, sfr19) the parent is only referenced here; derived ctors copy its slots with CopyParentTraits.
     Traits(VM& vm, const Traits* pt, bool isDynamic, bool isFinal);    // 0x1424daa20
+    // (appended, sfr19) traits without a parent; only the class Class's traits use it (always inlined).
+    explicit Traits(VM& vm);
     // (appended, sfr19) takes over the parent's slot table, first own slot and fixed value slot count
     // (0x1425115f0; name ours).
     void CopyParentTraits();
@@ -664,6 +666,12 @@ namespace ClassTraits
     {
     public:
         Traits(VM& vm, const ClassInfo& ci);
+        // (appended, sfr19) 0x1424dacd0
+        Traits(VM& vm, const ClassTraits::Traits* pt);
+    protected:
+        // (appended, sfr19) the class Class's traits, which have no parent. 0x1424dab20
+        explicit Traits(VM& vm);
+    public:
 
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         // @0x142415070

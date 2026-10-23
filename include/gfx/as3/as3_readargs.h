@@ -35,9 +35,13 @@ private:
     // (appended, sfr19) a reserved page of at least pageSize values, else a new one. 0x1425182a0
     Page* NewPage(UInt16 pageSize);
 
-    UPInt  Unk00;               // +0x00
+    // (appended, sfr19) makes room for n more values, moving to a new page when the current one is full. 0x1425241f0
+    void Reserve(UInt16 n);
+
+    UInt16 ReservedNum;         // +0x00 (sfr19) values reserved by the last Reserve
     Value* pCurrent;            // +0x08
-    UPInt  Unk10[2];            // +0x10 (not modeled)
+    Value* pStack;              // +0x10 (sfr19) the bottom of the current reservation
+    Page*  pCurrentPage;        // +0x18 (sfr19)
     Page*  pReserved;           // +0x20 (appended, sfr19) released pages, kept for reuse
 };
 
