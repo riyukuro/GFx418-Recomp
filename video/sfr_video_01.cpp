@@ -1149,7 +1149,7 @@ public:
 
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140007ba0
-void ObjectInterface::Set__proto__(ASStringContext* psc, Object* protoObj)
+void Object::Set__proto__(ASStringContext* psc, Object* protoObj)
 {
     if (!pProto)
         SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),

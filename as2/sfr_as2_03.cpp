@@ -13,6 +13,11 @@
 // MS2-RANGE: 0x142924520-0x142924d20 .text$mn
 // MS2-RANGE: 0x142925ae0-0x142925be0 .text$mn
 // MS2-RANGE: 0x142926100-0x142926190 .text$mn
+// MS2-RANGE: 0x14291f670-0x14291f8d0 .text$mn
+// MS2-RANGE: 0x142919d70-0x142919da0 .text$mn
+// MS2-RANGE: 0x142919df0-0x142919ee0 .text$mn
+// MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
+// MS2-RANGE: 0x142919a00-0x142919af0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -25,6 +30,78 @@
 #include "../include/gfx/as2/as2_value.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
+
+// @0x14291c090
+FunctionObject::FunctionObject(ASStringContext* psc)
+    : Object(psc)
+{
+}
+
+// @0x14291f670
+Object::Object(ASRefCountCollector* pcc)
+    : ASRefCountBase<Object>(pcc), pWatchpoints(0), ArePropertiesSet(false),
+      IsListenerSet(false)
+{
+    pProto = 0;
+}
+
+// @0x14291f6f0
+SF_NOINLINE Object::Object(ASStringContext* psc)
+    : ASRefCountBase<Object>(psc->GetGC()), pWatchpoints(0), ArePropertiesSet(false),
+      IsListenerSet(false)
+{
+    pProto = 0;
+}
+
+// @0x14291f790
+Object::Object(ASStringContext* psc, Object* pprototype)
+    : ASRefCountBase<Object>(psc->GetGC()), pWatchpoints(0), ArePropertiesSet(false),
+      IsListenerSet(false)
+{
+    Set__proto__(psc, pprototype);
+}
+
+// @0x14291f810
+Object::Object(Environment* penv)
+    : ASRefCountBase<Object>(penv->GetCollector()), pWatchpoints(0), ArePropertiesSet(false),
+      IsListenerSet(false)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Object));
+}
+
+// @0x142919d70
+CFunctionObject::CFunctionObject(ASStringContext* psc)
+    : FunctionObject(psc), pFunction(0)
+{
+}
+
+// @0x142919df0
+CFunctionObject::CFunctionObject(ASStringContext* psc, CFunctionPtr func)
+    : FunctionObject(psc), pFunction(func)
+{
+    Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
+}
+
+// @0x142919e70
+CFunctionObject::CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func)
+    : FunctionObject(psc), pFunction(func)
+{
+    Set__proto__(psc, pprototype);
+}
+
+// @0x142919a00
+BooleanObject::BooleanObject(Environment* penv)
+    : Object(penv), BValue(false)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Boolean));
+}
+
+// @0x142919a70
+BooleanObject::BooleanObject(Environment* penv, bool v)
+    : Object(penv), BValue(v)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Boolean));
+}
 
 // @0x1429237f0
 Value::Value(const Value& v)
@@ -267,3 +344,13 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
 // MS2-PIN: ??_7?$ASRefCountBase@UValueProperty@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@6B@ 0x1432153d0
 // MS2-PIN: ??_7ValueProperty@AS2@GFx@Scaleform@@6B@ 0x1432153e8
+// MS2-PIN: ??_7ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215410
+// MS2-PIN: ??_7?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@6B@ 0x1432154b8
+// MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432154d0
+// MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215518
+// MS2-PIN: ??_7BooleanObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b550
+// MS2-PIN: ??_7BooleanObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b598
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778

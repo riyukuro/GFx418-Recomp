@@ -26,6 +26,8 @@ public:
 
     void* pTable;
 
+    ASStringHash_GC() : pTable(0) {}
+
     void* operator new(UPInt sz, MemoryHeap* heap) { return Memory::AllocInHeap(heap, sz); }
     void  operator delete(void* p, MemoryHeap*) { SF_FREE(p); }
 
@@ -171,19 +173,19 @@ public:
     virtual const char* GetTextValue(Environment* penv = 0) const;
     virtual ObjectType  GetObjectType() const;
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
-                           const PropFlags& flags = PropFlags());
-    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
-    virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember);
-    virtual bool DeleteMember(ASStringContext* psc, const ASString& name);
-    virtual bool SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags);
+                           const PropFlags& flags = PropFlags()) = 0;
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val) = 0;
+    virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember) = 0;
+    virtual bool DeleteMember(ASStringContext* psc, const ASString& name) = 0;
+    virtual bool SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags) = 0;
     virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
-                              const ObjectInterface* instance = 0) const;
-    virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes);
+                              const ObjectInterface* instance = 0) const = 0;
+    virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes) = 0;
     virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
-                              const PropFlags& flags = PropFlags());
-    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+                              const PropFlags& flags = PropFlags()) = 0;
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val) = 0;
     virtual FunctionRef ToFunction();
-    virtual void        Set__proto__(ASStringContext* psc, Object* protoObj);
+    virtual void        Set__proto__(ASStringContext* psc, Object* protoObj) = 0;
     virtual FunctionRef Get__constructor__(ASStringContext* psc);
     virtual bool IsSuper() const;
     virtual bool IsBuiltinPrototype() const;
@@ -276,6 +278,9 @@ public:
     Object(ASStringContext* psc); // exe 0x14291f6f0 (appended for sfr_video_01)
     Object(ASStringContext* psc, Object* pprototype); // exe 0x14291f790
     virtual ~Object();
+    virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x140007dc0
+    virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember); // exe 0x142944950
+    virtual void Set__proto__(ASStringContext* psc, Object* protoObj);                    // exe 0x140007ba0
     virtual void  SetValue(Environment* penv, const Value&);
     virtual Value GetValue() const;
     virtual bool  DoesImplement(Environment*, const Object* prototype) const;
@@ -346,14 +351,14 @@ class FunctionObject : public Object
 {
 public:
     virtual ~FunctionObject();
-    virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>* ptargetCh);
-    virtual void    Invoke(const FnCall& fn, LocalFrame*, const char* pmethodName);
-    virtual bool    IsNull() const;
-    virtual bool    IsEqual(const FunctionObject& f) const;
-    virtual bool    IsCFunction() const;
+    virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>* ptargetCh) = 0;
+    virtual void    Invoke(const FnCall& fn, LocalFrame*, const char* pmethodName) = 0;
+    virtual bool    IsNull() const = 0;
+    virtual bool    IsEqual(const FunctionObject& f) const = 0;
+    virtual bool    IsCFunction() const; // exe 0x142965490: false
     virtual bool    IsAsFunction() const;
     virtual Object* CreateNewObject(Environment*) const;
-    virtual int     GetNumArgs() const;
+    virtual int     GetNumArgs() const = 0;
     // (appended for sfr_as2_02: the Object overrides of these would otherwise fill the slots)
     virtual ObjectType  GetObjectType() const; // exe 0x14000ce70: Object_Function
     virtual FunctionRef ToFunction();          // exe 0x142991140: a reference to this
@@ -368,6 +373,7 @@ public:
 
 protected:
     FunctionObject(ASRefCountCollector* pcc);
+    FunctionObject(ASStringContext* psc); // exe 0x14291c090
     // The exe also has an out-of-line copy, 0x14291c0c0.
     FunctionObject(Environment* penv) : Object(penv) {}
 };
@@ -384,17 +390,24 @@ public:
     // Calls the native; through super it runs on the real this, then the super drops its alternate prototype
     // (exe 0x142962bb0).
     virtual void Invoke(const FnCall& fn, LocalFrame*, const char* pmethodName);
+    virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>* ptargetCh); // exe 0x14294ab50: fn.Env
+    virtual bool IsNull() const;      // exe 0x14000ce90: no native
+    virtual bool IsCFunction() const; // exe 0x14000cea0: true
+    virtual int  GetNumArgs() const;  // exe 0x14000ceb0: -1
 
 protected:
     friend class FunctionProto;
 
     CFunctionObject(ASRefCountCollector* pcc);
+    CFunctionObject(ASStringContext* psc); // exe 0x142919d70
     // A function object without a native (new Function()); the exe also has an out-of-line copy, 0x142919db0.
     CFunctionObject(Environment* penv) : FunctionObject(penv), pFunction(0) {}
 
 public:
     // A native function object (exe 0x142919df0).
     CFunctionObject(ASStringContext* psc, CFunctionPtr func);
+    // A native function object with the given prototype (exe 0x142919e70).
+    CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func);
 };
 
 // Function defined in script (the action buffer of a DefineFunction). Its instances are plain objects.
@@ -449,6 +462,12 @@ inline FunctionRef Value::ToFunction(const Environment* penv) const
     else if (T.Type == FUNCTIONNAME)
         return ResolveFunctionName(penv);
     return FunctionRef();
+}
+
+// No user data and no prototype yet.
+inline ObjectInterface::ObjectInterface()
+    : pUserDataHolder(0)
+{
 }
 
 }}} // namespace Scaleform::GFx::AS2

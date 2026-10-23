@@ -23,6 +23,7 @@ enum ASBuiltinType : int
     ASBuiltin_String = 3,
     ASBuiltin_Number  = 4,
     ASBuiltin_Boolean = 5,
+    ASBuiltin_Function = 7,
     ASBuiltin_AsBroadcaster = 19,
     ASBuiltin_Date          = 20,
     ASBuiltin_Selection     = 21,
@@ -250,6 +251,14 @@ inline ASString Environment::CreateConstString(const char* pstr) const
 inline ASString ASStringContext::CreateConstString(const char* pstr) const
 {
     return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateConstString(pstr);
+}
+
+// The collector of the movie, or 0 without a context or a movie.
+inline ASRefCountCollector* ASStringContext::GetGC()
+{
+    if (pContext && pContext->pMovieRoot)
+        return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetASGC();
+    return 0;
 }
 
 inline ASString ASStringContext::CreateString(const char* pstr, UPInt length) const
