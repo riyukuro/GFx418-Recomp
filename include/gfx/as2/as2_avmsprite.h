@@ -138,6 +138,9 @@ public:
     // The data members (only those used so far). AvmSpriteBase's vftable is at +0x30.
     UByte                                   Unrecovered_38[0x1e0 - 0x38];
     ArrayLH<bool, StatMV_ActionScript_Mem>  InitActionsExecuted; // +0x1e0 per frame
+
+    // (appended for sfr_as2_02)
+    static void SpriteCreateTextField(const FnCall& fn); // exe 0x142906040
 };
 
 inline Sprite* ObjectInterface::ToSprite()

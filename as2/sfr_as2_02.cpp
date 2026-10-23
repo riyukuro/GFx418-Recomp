@@ -36,6 +36,7 @@
 // MS2-RANGE: 0x1428ff660-0x1428ffa19 .text$mn
 // MS2-RANGE: 0x142908840-0x142908a68 .text$mn
 // MS2-RANGE: 0x142908a70-0x142908c2c .text$mn
+// MS2-RANGE: 0x142906040-0x14290632c .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -2122,6 +2123,33 @@ void TextSnapshotProto::HitTestTextNearPos(const FnCall& fn)
     float closeDist = (fn.NArgs > 2) ? (float)fn.Arg(2).ToNumber(fn.Env) : 0.0f;
     int idx = pthis->GetData().HitTestTextNearPos(Render::PixelsToTwips(x), Render::PixelsToTwips(y), Render::PixelsToTwips(closeDist));
     fn.Result->SetNumber((Number)idx);
+}
+
+// createTextField(name, depth, x, y, width, height): a new empty text field.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line (as createEmptyMovieClip)
+// @0x142906040
+void AvmSprite::SpriteCreateTextField(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 6)
+        return;
+    CharPosInfo pos(ResourceId(ResourceId::IdType_InternalConstant | 2), int(fn.Arg(1).ToNumber(fn.Env)) + 16384,
+                    1, Render::Cxform::Identity, 1, Render::Matrix2F::Identity);
+    if (unsigned(pos.Depth) > 0x7efffffdu)
+        return;
+    Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, fn.Arg(0).ToString(fn.Env), 0, 0, ~0u, 1, 0, 0);
+    if (newch)
+    {
+        newch->SetAcceptAnimMoves(false);
+        InteractiveObject* ptextField = newch->IsInteractiveObject() ? static_cast<InteractiveObject*>(newch.GetPtr()) : 0;
+        AvmCharacter* pavm = ptextField ? AS2::ToAvmCharacter(ptextField) : 0;
+        pavm->SetStandardMember(AvmCharacter::M_x, fn.Arg(2), false);
+        pavm->SetStandardMember(AvmCharacter::M_y, fn.Arg(3), false);
+        pavm->SetStandardMember(AvmCharacter::M_width, fn.Arg(4), false);
+        pavm->SetStandardMember(AvmCharacter::M_height, fn.Arg(5), false);
+        fn.Result->SetAsCharacter(ptextField);
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 

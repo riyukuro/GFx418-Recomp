@@ -67,6 +67,10 @@ public:
     enum StandardMember
     {
         M_InvalidMember      = -1,
+        M_x                  = 0,
+        M_y                  = 1,
+        M_width              = 8,
+        M_height             = 9,
         M_useHandCursor      = 31, // clears the clip's useHandCursor setting
         M_LastBitMaskMember  = 32  // the last member the bit mask covers
     };
