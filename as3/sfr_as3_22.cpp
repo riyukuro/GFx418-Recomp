@@ -1197,6 +1197,27 @@ void WriteNarrowString(void* stream, const Scaleform::String* text)
         reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, raw + 12 + i, 1);
 }
 
+// MS2-FUNCTIONAL: serializes the record's scalar fields followed by each fixed-width value and timestamp pair.
+// @0x142690380
+void WriteValueRecord(const void* record, void* stream)
+{
+    auto* src = static_cast<const unsigned char*>(record);
+    auto** vtable = *reinterpret_cast<void***>(stream);
+    auto write = [stream, vtable](const void* data, std::size_t size) {
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, data, size);
+    };
+    write(src + 0x10, 4);
+    write(src + 0x14, 4);
+    write(src + 0x18, 4);
+    const unsigned count = *reinterpret_cast<const unsigned*>(src + 0x28);
+    write(&count, 4);
+    auto* entries = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(src + 0x20));
+    for (unsigned i = 0; i < count; ++i) {
+        write(entries + i * 0x10, 4);
+        write(entries + i * 0x10 + 8, 8);
+    }
+}
+
 // MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot.
 // @0x142745630
 void* FindAudioRequestEntry(void** set, const unsigned char* key)
