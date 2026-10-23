@@ -19,6 +19,7 @@ extern void FUN_14257db40(void*);
 extern void FUN_14257db50(void*);
 extern void FUN_1429260b0(void*);
 extern void FUN_140006a40(Scaleform::UPInt*);
+extern void FUN_14000b3b0(void**, void*, Scaleform::UPInt);
 extern void FUN_1425925f0(void*);
 extern void* FUN_1425f1910(void*);
 extern "C" void* DAT_143b15f60;
@@ -1615,6 +1616,41 @@ void FUN_14000b8f0(void** array)
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_14000b530(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
+}
+
+// MS2-FUNCTIONAL: resizes storage for 48-byte video-track records with four-slot rounding.
+// @0x14000b940
+void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    if (!capacity) {
+        if (*array) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, *array);
+        *array = nullptr;
+        fields[2] = 0;
+        return;
+    }
+    capacity = (capacity + 3) & ~Scaleform::UPInt(3);
+    if (*array) {
+        *array = reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt)>(heapVtable[11])(
+            DAT_143b15f60, *array, capacity * 0x30);
+    } else {
+        unsigned flags = 2;
+        *array = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, unsigned*)>(heapVtable[10])(
+            DAT_143b15f60, capacity * 0x30, &flags);
+    }
+    fields[2] = capacity;
+    (void)owner;
+}
+
+// MS2-FUNCTIONAL: initializes or grows the video-track hash table at its observed load threshold.
+// @0x14000b680
+void FUN_14000b680(void** table, void* owner)
+{
+    if (!*table) { FUN_14000b3b0(table, owner, 8); return; }
+    auto* fields = static_cast<Scaleform::UPInt*>(*table);
+    if (fields[1] * 4 + 4 < fields[0] * 5)
+        FUN_14000b3b0(table, owner, fields[1] * 2 + 2);
 }
 
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
