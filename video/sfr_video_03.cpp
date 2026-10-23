@@ -560,4 +560,24 @@ std::uint64_t* FUN_14001b8e0(std::uint64_t* holder, std::uint64_t replacement)
     else *holder = replacement;
     return holder;
 }
+
+// MS2-FUNCTIONAL: converts a callback object to an unsafe Value when the VM has no pending exception, then drops the callback atom.
+// @0x140019c30
+void FUN_140019c30(std::uint64_t* closure)
+{
+    auto* vm = reinterpret_cast<unsigned char*>(closure[0]);
+    auto atom = closure[2];
+    if (vm[0x180] == 0) {
+        RetainVideoAtom(atom);
+        reinterpret_cast<Scaleform::GFx::AS3::Value*>(closure[1])->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(atom));
+        ReleaseVideoAtom(&atom);
+    }
+    ReleaseVideoAtom(closure + 2);
+}
+// MS2-FUNCTIONAL: converts a callback object to an unsafe Value when the VM has no pending exception, then drops the callback atom.
+// @0x140019cd0
+void FUN_140019cd0(std::uint64_t* closure)
+{
+    FUN_140019c30(closure);
+}
 } // namespace
