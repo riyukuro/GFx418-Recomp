@@ -1591,6 +1591,32 @@ void FUN_14000b620(unsigned* destination, const unsigned* source)
     if (destination) FUN_14000b350(destination, source);
 }
 
+// MS2-FUNCTIONAL: releases nested weak-pair arrays and proxy handles in each 48-byte record.
+// @0x14000b530
+void FUN_14000b530(void* records, Scaleform::UPInt count)
+{
+    auto* record = static_cast<unsigned char*>(records) - 0x18 + count * 0x30;
+    while (count--) {
+        auto** nested = reinterpret_cast<void**>(record);
+        auto nestedCount = *reinterpret_cast<Scaleform::UPInt*>(record + 8);
+        if (*nested) FUN_1400068d0(*nested, nestedCount);
+        if (*nested) Scaleform::Memory::Free(*nested);
+        auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+            (*reinterpret_cast<Scaleform::UPInt*>(record - 0x10)) & ~Scaleform::UPInt(3));
+        if (proxy) proxy->Release();
+        record -= 0x30;
+    }
+}
+
+// MS2-FUNCTIONAL: destroys every nested video-track record and releases the outer array.
+// @0x14000b8f0
+void FUN_14000b8f0(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_14000b530(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+}
+
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
 // @0x14000b300
 void FUN_14000b300(void* owner)
