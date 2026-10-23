@@ -280,13 +280,8 @@ public:
     const UInt32* FindSlotValues(const ASString& k) const;
     // (appended, sfr19) slots of this table and its parents.
     UPInt GetSlotInfoNum() const { return FirstOwnSlotNum + VArray.GetSize(); }
-    // (appended, sfr19) slot ind, own or a parent's (the out-of-line copy 0x142416fb0 is the parent call).
-    const SlotInfo& GetSlotInfo(AbsoluteIndex ind) const
-    {
-        if (ind.Get() < 0 || static_cast<UPInt>(ind.Get()) < FirstOwnSlotNum)
-            return Parent->GetSlotInfo(ind);
-        return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value;
-    }
+    // (appended, sfr19) slot ind, own or a parent's. 0x142416fb0
+    const SlotInfo& GetSlotInfo(AbsoluteIndex ind) const;
     // (appended, sfr19) the previous slot of the same name as slot ind, or -1 (out-of-line copy 0x14250cc30).
     SPInt GetPrevSlotIndex(SPInt ind) const;  // 0x14250cc30
     // (appended, sfr19) the name of slot ind, own or a parent's. 0x14250dce0

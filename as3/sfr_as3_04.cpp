@@ -144,6 +144,17 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// ---- Slots ----
+
+// MS2-FUNCTIONAL: the exe materialises the parent-slot test as a bool (setb) before branching
+// @0x142416fb0
+const SlotInfo& Slots::GetSlotInfo(AbsoluteIndex ind) const
+{
+    if (ind.Get() < 0 || static_cast<UPInt>(ind.Get()) < FirstOwnSlotNum)
+        return Parent->GetSlotInfo(ind);
+    return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value;
+}
+
 // ---- Value: reference take-over of the function / namespace kinds ----
 
 // @0x14241dc00
@@ -3681,3 +3692,4 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-PIN: ??_7ChildGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439e8
 // MS2-PIN: ??_7AttrGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439f8
 // MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0
+// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
