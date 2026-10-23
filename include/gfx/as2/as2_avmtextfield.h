@@ -49,6 +49,10 @@ public:
     static void PasteFromClipboard(const FnCall& fn);      // exe 0x14290bd90
     static void ReplaceSel(const FnCall& fn);              // exe 0x142909b00
     static void ReplaceTextA(const FnCall& fn);            // exe 0x142909d80 (replaceText)
+    static void SetTextFormat(const FnCall& fn);           // exe 0x142909300
+    static void SetNewTextFormat(const FnCall& fn);        // exe 0x142909590
+    static void GetTextFormat(const FnCall& fn);           // exe 0x1429096e0
+    static void GetNewTextFormat(const FnCall& fn);        // exe 0x1429099d0
 };
 
 }}} // namespace Scaleform::GFx::AS2

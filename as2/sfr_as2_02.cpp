@@ -53,6 +53,10 @@
 // MS2-RANGE: 0x14290bd90-0x14290becd .text$mn
 // MS2-RANGE: 0x142909b00-0x142909d71 .text$mn
 // MS2-RANGE: 0x142909d80-0x14290a0ea .text$mn
+// MS2-RANGE: 0x142909300-0x142909586 .text$mn
+// MS2-RANGE: 0x142909590-0x1429096d1 .text$mn
+// MS2-RANGE: 0x1429096e0-0x1429099ca .text$mn
+// MS2-RANGE: 0x1429099d0-0x142909af3 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -86,6 +90,8 @@
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/render/render_twips.h"
 #include "../include/render/render_screentoworld.h"
+#include "../include/kernel/sf_std.h"
+#include "../include/render/text_core.h"
 
 // Render::Text::DocView (render/text_docview.h needs the full kernel array headers, not the ones of this unit): the
 // document view calls of the TextField natives, by address.
@@ -131,6 +137,10 @@ void     FUN_142615410(void* pdoc, const void* pparaFmt, unsigned long long star
 void     FUN_142615640(void* pdoc, const void* ptextFmt, unsigned long long startPos, unsigned long long endPos);  // DocView::SetTextFormat
 void     FUN_1424ae680(const void* ptextFmt);                                               // TextFormat::Release
 void     FUN_1424ae650(const void* pparaFmt);                                               // ParagraphFormat::Release
+void     FUN_1425990d0(void* pst, Scaleform::Render::Text::TextFormat* ptextFmt, Scaleform::Render::Text::ParagraphFormat* pparaFmt,
+                       unsigned long long startPos, unsigned long long endPos);            // StyledText::GetTextAndParagraphFormat
+void     FUN_14259c250(void* pst, const Scaleform::Render::Text::TextFormat& fmt);                     // StyledText::SetDefaultTextFormat
+void     FUN_14259c170(void* pst, const Scaleform::Render::Text::ParagraphFormat& fmt);                // StyledText::SetDefaultParagraphFormat
 
 namespace Scaleform {
 // DocView::LineMetrics, in twips.
@@ -2860,6 +2870,153 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
     if (pparaFmt)
         FUN_1424ae650(pparaFmt);
     ptf->SetDirtyFlag();
+}
+
+// setTextFormat([beginIndex, [endIndex,]] textFormat): the whole text, one character or [beginIndex, endIndex).
+// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
+// @0x142909300
+void AvmTextField::SetTextFormat(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (ptf->HasStyleSheet())
+        return;
+    if (fn.NArgs == 1)
+    {
+        Object* pobj = fn.Arg(0).ToObject(fn.Env);
+        if (pobj && pobj->GetObjectType() == Object_TextFormat)
+        {
+            TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
+            FUN_142615640(ptf->GetDocument(), &pfmtObj->GetTextFormat(), 0, SF_MAX_UPINT);
+            FUN_142615410(ptf->GetDocument(), &pfmtObj->GetParagraphFormat(), 0, SF_MAX_UPINT);
+            ptf->SetDirtyFlag();
+        }
+    }
+    else if (fn.NArgs == 2)
+    {
+        Object* pobj = fn.Arg(1).ToObject(fn.Env);
+        if (pobj && pobj->GetObjectType() == Object_TextFormat)
+        {
+            Number pos = fn.Arg(0).ToNumber(fn.Env);
+            if (pos >= 0)
+            {
+                TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
+                unsigned          upos    = unsigned(pos);
+                FUN_142615640(ptf->GetDocument(), &pfmtObj->GetTextFormat(), upos, upos + 1);
+                FUN_142615410(ptf->GetDocument(), &pfmtObj->GetParagraphFormat(), upos, upos + 1);
+                ptf->SetDirtyFlag();
+            }
+        }
+    }
+    else if (fn.NArgs >= 3)
+    {
+        Object* pobj = fn.Arg(2).ToObject(fn.Env);
+        if (pobj && pobj->GetObjectType() == Object_TextFormat)
+        {
+            Number start = Alg::Max(Number(0), fn.Arg(0).ToNumber(fn.Env));
+            Number end   = Alg::Max(Number(0), fn.Arg(1).ToNumber(fn.Env));
+            if (end >= start)
+            {
+                TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
+                unsigned          ustart  = unsigned(start);
+                unsigned          uend    = unsigned(end);
+                FUN_142615640(ptf->GetDocument(), &pfmtObj->GetTextFormat(), ustart, uend);
+                FUN_142615410(ptf->GetDocument(), &pfmtObj->GetParagraphFormat(), ustart, uend);
+                ptf->SetDirtyFlag();
+            }
+        }
+    }
+}
+
+// setNewTextFormat(textFormat): merged into the formats new text gets.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg and the TextFormat destructor out of line
+// @0x142909590
+void AvmTextField::SetNewTextFormat(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+        return;
+    TextField* ptf = GetTextFieldTarget(fn);
+    if (ptf->HasStyleSheet() || fn.NArgs < 1)
+        return;
+    Object* pobj = fn.Arg(0).ToObject(fn.Env);
+    if (pobj && pobj->GetObjectType() == Object_TextFormat)
+    {
+        TextFormatObject* pfmtObj     = static_cast<TextFormatObject*>(pobj);
+        void*             pstyledText = DocView_GetStyledText(ptf->GetDocument());
+        const Render::Text::TextFormat* ptextFmt =
+            (const Render::Text::TextFormat*)StyledText_GetDefaultTextFormat(pstyledText);
+        const Render::Text::ParagraphFormat* pparaFmt =
+            (const Render::Text::ParagraphFormat*)StyledText_GetDefaultParagraphFormat(pstyledText);
+        FUN_14259c250(DocView_GetStyledText(ptf->GetDocument()), ptextFmt->Merge(pfmtObj->GetTextFormat()));
+        ptf->SetCompleteReformatReq();
+        FUN_14259c170(DocView_GetStyledText(ptf->GetDocument()), pparaFmt->Merge(pfmtObj->GetParagraphFormat()));
+        ptf->SetCompleteReformatReq();
+    }
+}
+
+// getTextFormat([beginIndex, [endIndex]]): a TextFormat with what the characters of the range have in common.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg and the format destructors out of line
+// @0x1429096e0
+void AvmTextField::GetTextFormat(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    TextField* ptf        = GetTextFieldTarget(fn);
+    UPInt      beginIndex = 0;
+    UPInt      endIndex   = SF_MAX_UPINT;
+    if (fn.NArgs >= 1)
+    {
+        Number begin = Alg::Max(Number(0), fn.Arg(0).ToNumber(fn.Env));
+        if (begin >= 0)
+            beginIndex = unsigned(begin);
+    }
+    if (fn.NArgs >= 1)
+    {
+        // Only the character at beginIndex without an endIndex.
+        Number end = (fn.NArgs >= 2) ? fn.Arg(1).ToNumber(fn.Env) : fn.Arg(0).ToNumber(fn.Env) + 1;
+        end        = Alg::Max(Number(0), end);
+        if (end >= 0)
+            endIndex = unsigned(end);
+    }
+    if (beginIndex > endIndex)
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    Render::Text::TextFormat      textFmt(fn.Env->GetHeap());
+    Render::Text::ParagraphFormat paraFmt;
+    FUN_1425990d0(DocView_GetStyledText(ptf->GetDocument()), &textFmt, &paraFmt, beginIndex, endIndex);
+    Ptr<TextFormatObject> pfmtObj = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
+    pfmtObj->SetTextFormat(fn.Env->GetSC(), textFmt);
+    pfmtObj->SetParagraphFormat(fn.Env->GetSC(), paraFmt);
+    fn.Result->SetAsObject(pfmtObj);
+}
+
+// getNewTextFormat(): a TextFormat with the formats new text gets.
+// @0x1429099d0
+void AvmTextField::GetNewTextFormat(const FnCall& fn)
+{
+    if (!IsTextFieldTarget(fn))
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    TextField* ptf         = GetTextFieldTarget(fn);
+    void*      pstyledText = DocView_GetStyledText(ptf->GetDocument());
+    const Render::Text::TextFormat* ptextFmt =
+        (const Render::Text::TextFormat*)StyledText_GetDefaultTextFormat(pstyledText);
+    const Render::Text::ParagraphFormat* pparaFmt =
+        (const Render::Text::ParagraphFormat*)StyledText_GetDefaultParagraphFormat(pstyledText);
+    Ptr<TextFormatObject> pfmtObj = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
+    if (ptextFmt)
+        pfmtObj->SetTextFormat(fn.Env->GetSC(), *ptextFmt);
+    if (pparaFmt)
+        pfmtObj->SetParagraphFormat(fn.Env->GetSC(), *pparaFmt);
+    fn.Result->SetAsObject(pfmtObj);
 }
 }}} // namespace Scaleform::GFx::AS2
 

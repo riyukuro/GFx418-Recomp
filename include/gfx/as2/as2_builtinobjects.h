@@ -698,6 +698,10 @@ public:
     Render::Text::TextFormat&      GetTextFormat()      { return *(Render::Text::TextFormat*)Data68; }
     Render::Text::ParagraphFormat& GetParagraphFormat() { return *(Render::Text::ParagraphFormat*)(Data68 + 9); }
 
+    // (appended for sfr_as2_02) the AS properties from a format.
+    void SetTextFormat(ASStringContext* psc, const Render::Text::TextFormat& textFmt);           // exe 0x14298c090
+    void SetParagraphFormat(ASStringContext* psc, const Render::Text::ParagraphFormat& paraFmt); // exe 0x142989480
+
 protected:
     virtual void Finalize_GC(); // exe 0x142943100
 };
