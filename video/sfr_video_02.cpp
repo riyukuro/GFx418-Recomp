@@ -23,6 +23,8 @@ extern void FUN_142581700(void*);
 extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
 extern void FUN_1425925f0(void*);
+extern void FUN_1424d2140(void*, double*);
+extern void FUN_140025750(void*, int, int);
 extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 
@@ -696,6 +698,32 @@ void** FUN_140014e10(void** values, void* first, void* second)
     values[1] = second;
     values[2] = NumberNaNBits();
     return values;
+}
+
+// MS2-FUNCTIONAL: reads the supplied sound-transform value and refreshes the stored player coordinates.
+// @0x1400142e0
+void FUN_1400142e0(void* object, void*, void* soundTransform)
+{
+    if (!soundTransform) return;
+    char* fields = static_cast<char*>(object);
+    double* x = reinterpret_cast<double*>(fields + 0x88);
+    FUN_1424d2140(soundTransform, x);
+    FUN_140025750(*reinterpret_cast<void**>(fields + 0x50),
+                  static_cast<int>(x[0] * 20.0),
+                  static_cast<int>(*reinterpret_cast<double*>(fields + 0x90) * 20.0));
+}
+
+// MS2-FUNCTIONAL: reads the second supplied sound-transform value and refreshes the stored player coordinates.
+// @0x140014770
+void FUN_140014770(void* object, void*, void* soundTransform)
+{
+    if (!soundTransform) return;
+    char* fields = static_cast<char*>(object);
+    double* y = reinterpret_cast<double*>(fields + 0x90);
+    FUN_1424d2140(soundTransform, y);
+    FUN_140025750(*reinterpret_cast<void**>(fields + 0x50),
+                  static_cast<int>(*reinterpret_cast<double*>(fields + 0x88) * 20.0),
+                  static_cast<int>(y[0] * 20.0));
 }
 
 static void* NumberNaNBits()
