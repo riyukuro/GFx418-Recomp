@@ -144,6 +144,7 @@
 // MS2-RANGE: 0x14294d800-0x14294dbd7 .text$mn
 // MS2-RANGE: 0x14294e520-0x14294e93f .text$mn
 // MS2-RANGE: 0x14294bd90-0x14294be96 .text$mn
+// MS2-RANGE: 0x14294fc20-0x1429502ff .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3224,6 +3225,116 @@ bool AmpMarkerCtorFunction::GetMember(Environment* penv, const ASString& name, V
         return true;
     }
     return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// A two-bit Selection property of the movie: 0 undefined, 1 true, otherwise false (3 reads as -1).
+static SF_FORCEINLINE void Selection_GetFlag(Value* val, unsigned bits)
+{
+    int v = (int)bits;
+    if (v == 3)
+        v = -1;
+    if (v == 0)
+        val->SetUndefined();
+    else
+        val->SetBool(v == 1);
+}
+
+// MS2-FUNCTIONAL the exe inlines Value(ASStringContext*, CFunctionPtr) and the CFunctionObject ctor (sfr_as2_03)
+// @0x14294fc20
+bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    ASStringContext* psc = penv->GetSC();
+    if (psc->pContext->CheckExtensions())
+    {
+        MovieImpl*  pmovie = penv->GetTarget()->GetMovieImpl();
+        const char* pname  = name.ToCStr();
+        if (strcmp(pname, "captureFocus") == 0)
+        {
+            *val = Value(psc, CaptureFocus);
+            return true;
+        }
+        else if (strcmp(pname, "disableFocusAutoRelease") == 0)
+        {
+            Selection_GetFlag(val, (pmovie->Flags >> MovieImpl::Shift_DisableFocusAutoRelease) & 3);
+            return true;
+        }
+        else if (strcmp(pname, "alwaysEnableArrowKeys") == 0)
+        {
+            Selection_GetFlag(val, (pmovie->Flags >> MovieImpl::Shift_AlwaysEnableArrowKeys) & 3);
+            return true;
+        }
+        else if (strcmp(pname, "alwaysEnableKeyboardPress") == 0)
+        {
+            Selection_GetFlag(val, (pmovie->Flags >> MovieImpl::Shift_AlwaysEnableKeyboardPress) & 3);
+            return true;
+        }
+        else if (strcmp(pname, "disableFocusRolloverEvent") == 0)
+        {
+            Selection_GetFlag(val, (pmovie->Flags >> MovieImpl::Shift_DisableFocusRolloverEvent) & 3);
+            return true;
+        }
+        else if (strcmp(pname, "disableFocusKeys") == 0)
+        {
+            Selection_GetFlag(val, pmovie->Flags >> MovieImpl::Shift_DisableFocusKeys);
+            return true;
+        }
+        else if (strcmp(pname, "modalClip") == 0)
+        {
+            val->SetAsCharacter(pmovie->GetModalClip(0));
+            return true;
+        }
+        else if (strcmp(pname, "moveFocus") == 0)
+        {
+            *val = Value(psc, MoveFocus);
+            return true;
+        }
+        else if (strcmp(pname, "findFocus") == 0)
+        {
+            *val = Value(psc, FindFocus);
+            return true;
+        }
+        else if (strcmp(pname, "setModalClip") == 0)
+        {
+            *val = Value(psc, SetModalClip);
+            return true;
+        }
+        else if (strcmp(pname, "getModalClip") == 0)
+        {
+            *val = Value(psc, GetModalClip);
+            return true;
+        }
+        else if (strcmp(pname, "setControllerFocusGroup") == 0)
+        {
+            *val = Value(psc, SetControllerFocusGroup);
+            return true;
+        }
+        else if (strcmp(pname, "getControllerFocusGroup") == 0)
+        {
+            *val = Value(psc, GetControllerFocusGroup);
+            return true;
+        }
+        else if (strcmp(pname, "getFocusBitmask") == 0)
+        {
+            *val = Value(psc, GetFocusBitmask);
+            return true;
+        }
+        else if (strcmp(pname, "numFocusGroups") == 0)
+        {
+            *val = Value((int)pmovie->FocusGroupsCnt);
+            return true;
+        }
+        else if (strcmp(pname, "getControllerMaskByFocusGroup") == 0)
+        {
+            *val = Value(psc, GetControllerMaskByFocusGroup);
+            return true;
+        }
+        else if (strcmp(pname, "getFocusArray") == 0)
+        {
+            *val = Value(psc, GetFocusArray);
+            return true;
+        }
+    }
+    return GetMemberRaw(psc, name, val);
 }
 }}} // namespace Scaleform::GFx::AS2
 

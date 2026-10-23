@@ -17,6 +17,7 @@ namespace GFx {
 class ASMovieRootBase;
 class DisplayObjectBase;
 class InteractiveObject;
+class Sprite;
 class DrawingContext;
 class DisplayObjContainer;
 class MovieDefImpl;
@@ -124,7 +125,7 @@ public:
         UByte   Unrecovered_51[0xf];
     };
     FocusGroupDescr  FocusGroups[16];          // +0x2e60
-    UInt32           Unrecovered_3460;         // +0x3460
+    unsigned         FocusGroupsCnt;           // +0x3460 the focus groups in use (Selection.numFocusGroups)
     UByte            FocusGroupIndexes[16];    // +0x3464 controller index -> focus group
     UByte            Unrecovered_3474[4];      // +0x3474
     InteractiveObject* pPlayList;              // +0x3478 the advance list, last added first (sfr_gfx_06b)
@@ -137,7 +138,11 @@ public:
         Flag_NoInvisibleAdvance = 0x800,       // _global.noInvisibleAdvance: hidden clips stop advancing
         Flag_ContinueAnimation  = 0x2000,      // _global.gfxExtensions continueAnimation (sfr_gfx_06)
         Shift_AlwaysEnableKeyboardPress = 26,  // two bits: 0 undefined, 1 true, 2 false, 3 read as -1
-        Shift_DisableFocusRolloverEvent = 28   // two bits, the same encoding
+        Shift_DisableFocusRolloverEvent = 28,  // two bits, the same encoding
+        // (appended, sfr_as2_05) the other Selection extension properties, same encoding
+        Shift_DisableFocusAutoRelease   = 22,
+        Shift_AlwaysEnableArrowKeys     = 24,
+        Shift_DisableFocusKeys          = 30
     };
     bool IsNoInvisibleAdvanceFlagSet() const { return (Flags & Flag_NoInvisibleAdvance) != 0; }
     // _focusrect rollover events suppressed (disableFocusRolloverEvent extension property).
@@ -185,6 +190,8 @@ public:
     // The topmost interactive object under a point (twips), skipping ignoreMC (exe 0x14256fde0).
     InteractiveObject* GetTopMostEntity(const Render::PointF& mousePos, unsigned controllerIdx, bool testAll,
                                         const InteractiveObject* ignoreMC = NULL);
+    // The modal clip of the controller's focus group, if it is still alive (exe 0x14256f820).
+    Sprite* GetModalClip(unsigned controllerIdx);
 
     // The movie's StateBag base (+0x10).
     StateBag* GetStateBag() const { return (StateBag*)&MovieBase_Unrecovered[2]; }

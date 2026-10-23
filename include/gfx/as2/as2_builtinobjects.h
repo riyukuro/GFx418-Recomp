@@ -913,6 +913,11 @@ private:
     static void GetFocusBitmask(const FnCall& fn);               // exe 0x14294adf0
     static void GetFocusArray(const FnCall& fn);                 // exe 0x14294ab70
     static void GetModalClip(const FnCall& fn);                  // exe 0x142953cc0
+    static void CaptureFocus(const FnCall& fn);                  // exe 0x142932ab0
+    static void MoveFocus(const FnCall& fn);                     // exe 0x1429689e0
+    static void FindFocus(const FnCall& fn);                     // exe 0x142943ce0
+    static void SetModalClip(const FnCall& fn);                  // exe 0x142989060
+    static void SetControllerFocusGroup(const FnCall& fn);       // exe 0x142980120
 };
 class StageCtorFunction : public CFunctionObject
 {
