@@ -124,6 +124,7 @@ void     FUN_1400458b8(void* demux);
 void*    FUN_14003b348(void* heap, const void* data, CriUint32 size);
 CriUint32 FUN_14003a85c(void* object, CriSint32 index, const char* key);
 void     FUN_14003a108(void* object);
+CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
 void     FUN_140044ae0(void* decoder);
@@ -3550,6 +3551,36 @@ void FUN_140032b70(void* player, void* workInfo, CriUint32* output, const CriMov
     if (output[1] != 0 && ((CriUint64*)output)[1] != 0 && output[4] != 0)
         output[0] = 1;
     FUN_14003a108(document);
+}
+
+// MS2-FUNCTIONAL: discard handled command chunks while returning ordinary input records to the stream.
+// @0x140033610
+void FUN_140033610(void* player)
+{
+    void* queue = ((CriMvPlyInputQueueFields*)player)->ReadBuffer;
+    struct ChunkView { void* Data; CriUint32 Size; } chunk = {};
+    CriUint8 parsedHeader[0x20];
+    CriSint32 contentSize = 0;
+    for (;;)
+    {
+        if (FUN_1400467b8(queue, 1) == 0)
+            return;
+        FUN_1400467a0(queue, 1, -1, &chunk);
+        if (chunk.Size < 0x20)
+        {
+            FUN_1400467a8(queue, 1, &chunk);
+            return;
+        }
+        memset(parsedHeader, 0, sizeof(parsedHeader));
+        FUN_14003b3fc((const CriUint8*)chunk.Data, chunk.Size, parsedHeader);
+        FUN_14003b674((const CriUint8*)chunk.Data, chunk.Size, &contentSize);
+        if (parsedHeader[0xf] != 2 && parsedHeader[0xf] != 3)
+        {
+            FUN_1400467a8(queue, 1, &chunk);
+            return;
+        }
+        FUN_1400467b0(queue, 2, &chunk);
+    }
 }
 
 // MS2-FUNCTIONAL: release the player's output stream, decoder work area, and callback-owned buffers.
