@@ -85,6 +85,7 @@ void FUN_140053650(void*);
 void FUN_140037950(void*, const CriChar8*, CriUint32);
 void FUN_140042600(void*, void*, CriSint32);
 CriSint32 FUN_1400310b0(void*);
+void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
 void FUN_140041110(void*, const char*, CriUint32);
@@ -3146,6 +3147,79 @@ void* FUN_140041d40(void* manager)
     fields[1] = heap;
     FUN_14257e4a0(heap, adapter);
     return adapter;
+}
+
+// MS2-FUNCTIONAL: map the current CRI movie frame into its segment and update presentation time.
+// @0x140040c00
+void FUN_140040c00(void* player, void* context)
+{
+    struct PlayerTimeline
+    {
+        CriUint8 Reserved000[0x190];
+        CriSint32 FrameOffset;
+        CriUint8 Reserved194[8];
+        CriSint32 TimestampBase;
+        CriUint8 Reserved1a0[0x14];
+        struct Entry { CriSint32 Begin, End; } Entries[8];
+        CriSint32 FinalEnd;
+        CriUint8 Reserved1f8[0x40];
+        CriSint32 FrameAdjustment;
+    };
+    struct FrameContext
+    {
+        CriUint8 Reserved000[8];
+        CriSint32 Frame;
+        CriUint8 Reserved00c[0x0c];
+        CriUint64 PresentationTime;
+        CriUint8 Reserved020[8];
+        CriSint32 SegmentDelta;
+        CriUint8 Reserved02c[0x78];
+        CriSint32 FrameAdjustment;
+        CriSint32 SegmentIndex;
+    };
+    PlayerTimeline* timeline = (PlayerTimeline*)player;
+    FrameContext* frame = (FrameContext*)context;
+    CriSint32 adjusted = timeline->FrameOffset;
+    if (timeline->FrameAdjustment > 0)
+        adjusted += timeline->FrameAdjustment;
+    frame->Frame = adjusted + frame->FrameAdjustment;
+    FUN_140040cc0(player, (CriUint32)frame->Frame, &frame->SegmentIndex, &frame->SegmentDelta);
+    frame->PresentationTime = (CriUint64)(CriUint32)(adjusted + timeline->TimestampBase) * 1000;
+}
+
+// MS2-FUNCTIONAL: locate a frame among eight media segments and return its index and end-relative offset.
+// @0x140040cc0
+void FUN_140040cc0(void* player, CriUint32 frame, CriSint32* segmentIndex, CriSint32* delta)
+{
+    struct PlayerTimeline
+    {
+        CriUint8 Reserved000[0x190];
+        CriUint8 Reserved190[0x24];
+        struct Entry { CriSint32 Begin, End; } Entries[8];
+        CriSint32 FinalEnd;
+    };
+    PlayerTimeline* timeline = (PlayerTimeline*)player;
+    CriSint32 index = 0;
+    CriSint32 selected = 0;
+    for (; index < 8; ++index)
+    {
+        const PlayerTimeline::Entry& entry = timeline->Entries[index];
+        if (entry.End == 0)
+        {
+            selected = index == 0 ? 0 : timeline->Entries[index - 1].Begin + 1;
+            break;
+        }
+        if (frame < (CriUint32)entry.End)
+        {
+            selected = entry.Begin;
+            break;
+        }
+    }
+    if (index == 8)
+        selected = timeline->Entries[7].Begin + 1;
+    CriSint32 end = index == 0 ? timeline->FinalEnd : timeline->Entries[index - 1].End;
+    *segmentIndex = selected;
+    *delta = (CriSint32)frame - end;
 }
 
 // MS2-FUNCTIONAL: execute one audio decoder operation unless its status is already an error.
