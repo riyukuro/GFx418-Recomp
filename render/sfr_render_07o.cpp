@@ -18,11 +18,16 @@
 #include "ms2/scaleform/include/render/render_matrixpool.h"
 #include "ms2/scaleform/include/render/render_viewport.h"
 #include "ms2/scaleform/include/render/render_math2d.h"
+#include "ms2/scaleform/include/render/render_tessgen.h"
+#include "ms2/scaleform/kernel/sf_arraystaticbuff.h"
 #include <math.h>
 
 namespace Scaleform { namespace Render {
 
 // MS2-PIN: ??_7TextMeshProvider@Render@Scaleform@@6B@ 0x143193f50
+
+// the EdgeAA factor of each 2-bit tessellator alpha / factor code (Renderer2DImpl)
+extern const UByte Factors[4];   // 0x14318fb30
 
 // vertex of the image and colour glyph quads: position, then texture coordinates
 struct ImageGlyphVertex
@@ -32,6 +37,31 @@ struct ImageGlyphVertex
     void  Set(float x_, float y_, float u_, float v_) { x = x_; y = y_; u = u_; v = v_; }
     static VertexFormat Format;   // 0x143a30328
 };
+
+// corner of a rectangle outline
+struct CornerVertex
+{
+    float x, y;
+    CornerVertex() {}
+    CornerVertex(float x_, float y_) : x(x_), y(y_) {}
+};
+
+// where the edges v0 v1 and v1 v2, both pushed outwards by width, meet (v1 itself when they are parallel)
+// @0x1426e1730
+template<class VertexType>
+static void calcMiter(const VertexType v0, const VertexType v1, const VertexType v2, float width, float* x, float* y)
+{
+    float l01 = Math2D::Distance(v0, v1);
+    float l12 = Math2D::Distance(v1, v2);
+    float ax  = width * (v1.y - v0.y) / l01;
+    float ay  = width * (v0.x - v1.x) / l01;
+    float bx  = width * (v2.y - v1.y) / l12;
+    float by  = width * (v1.x - v2.x) / l12;
+    *x = v1.x;
+    *y = v1.y;
+    Math2D::Intersection(v0.x + ax, v0.y + ay, v1.x + ax, v1.y + ay, v1.x + bx, v1.y + by, v2.x + bx, v2.y + by,
+                         x, y, 0.001f);
+}
 
 // @0x1426e1ad0
 TextMeshLayer::~TextMeshLayer()
@@ -294,7 +324,13 @@ bool TextMeshProvider::generateImageMesh(VertexOutput* verOut, const TextMeshLay
 {
     ImageGlyphVertex ver[4];
     UInt16 idx[6] = { 0, 1, 2, 0, 2, 3 };
+#ifdef __clang__
+    // clang folds the initializer into .rdata: set the exe global's address at run time instead
+    VertexOutput::Fill fill = { 4, 6, 0, 0, 0, 0 };
+    fill.pFormat = &ImageGlyphVertex::Format;
+#else
     VertexOutput::Fill fill = { 4, 6, &ImageGlyphVertex::Format, 0, 0, 0 };
+#endif
     const TextImageEnt& ent = Entries[layer.Start].EntryData.ImageData;
     Image* img = ent.pImage;
 
@@ -345,13 +381,204 @@ bool TextMeshProvider::generateMask(VertexOutput* verOut, const TextMeshLayer& l
     ver[3].x = c[0]; ver[3].y = c[3];
     UInt16 idx[6] = { 0, 1, 2, 0, 2, 3 };
 
+#ifdef __clang__
+    // clang folds the initializer into .rdata: set the exe global's address at run time instead
+    VertexOutput::Fill fill = { 4, 6, 0, 0, 0, 0 };
+    fill.pFormat = &VertexXY16i::Format;
+#else
     VertexOutput::Fill fill = { 4, 6, &VertexXY16i::Format, 0, 0, 0 };
+#endif
     if (!verOut->BeginOutput(&fill, 1, m))
         return false;
     verOut->SetVertices(0, 0, ver, 4);
     verOut->SetIndices(0, 0, idx, 6);
     verOut->EndOutput();
     return true;
+}
+
+// @0x1426e8840
+void TextMeshProvider::setMeshData(TessBase* tess, VertexOutput* verOut, const UInt32* colors, VertexCountType& verCount)
+{
+    // vertices and triangles leave the tessellator in chunks of 64
+    enum { Chunk = 64 };
+    TessVertex      src[Chunk];
+    VertexXY16iCF32 dst[Chunk];
+    UInt16          tri[Chunk * 3];
+
+    TessMesh mesh;
+    tess->GetMesh(0, &mesh);
+
+    unsigned n;
+    while ((n = tess->GetVertices(&mesh, src, Chunk)) != 0)
+    {
+        for (unsigned i = 0; i < n; ++i)
+        {
+            const TessVertex& t = src[i];
+            VertexXY16iCF32&  v = dst[i];
+            v.x = (SInt16)floorf(t.x < 0 ? t.x - 0.5f : t.x + 0.5f);
+            v.y = (SInt16)floorf(t.y < 0 ? t.y - 0.5f : t.y + 0.5f);
+            if (t.Flags & TessStyleMixColors)
+                v.Color = ((colors[t.Styles[0] - 1] | colors[t.Styles[1] - 1]) >> 1) & 0x7F7F7F7F;
+            else
+                v.Color = colors[t.Styles[(t.Flags & TessStyleUseColor2) ? 1 : 0] - 1];
+            v.Factors[0] = Factors[t.Flags & 3];
+            v.Factors[1] = Factors[(t.Flags >> 2) & 3];
+        }
+        verOut->SetVertices(0, verCount.VStart, dst, n);
+        verCount.VStart += n;
+    }
+
+    unsigned triCount = tess->GetMeshTriangleCount(0);
+    for (unsigned start = 0; start < triCount;)
+    {
+        unsigned num = Chunk;
+        if (start + num > triCount)
+        {
+            num = triCount - start;
+            if (num == 0)
+                break;
+        }
+        tess->GetTrianglesI16(0, tri, start, num);
+        verOut->SetIndices(0, verCount.IStart * 3, tri, num * 3);
+        verCount.IStart += num;
+        start += num;
+    }
+}
+
+// MS2-FUNCTIONAL: generateNullVectorMesh inlined (exe calls it), regalloc
+// @0x1426e74d0
+bool TextMeshProvider::generateRectangle(Renderer2DImpl* ren, VertexOutput* verOut, const Matrix2F& mtx,
+                                         const float* coord, UInt32 fillColor, UInt32 borderColor,
+                                         unsigned meshGenFlags)
+{
+    UInt32         colors[2] = { fillColor, borderColor };
+    MeshGenerator* gen       = ren->GetMeshGen();
+    gen->Clear();
+    gen->mTess.SetFillRule(Tessellator::FillNonZero);
+    gen->mTess.SetToleranceParam(ren->GetToleranceParams());
+    const ToleranceParams tol = ren->GetToleranceParams();
+    bool edgeAA = (meshGenFlags & (Mesh_EdgeAA | Mesh_Mask)) == Mesh_EdgeAA;
+    gen->mTess.SetEdgeAAWidth(edgeAA ? tol.EdgeAAScale * 0.5f : 0.0f);
+
+    // the corners clockwise from the top left, in screen space
+    float c[8] = { coord[0], coord[1], coord[2], coord[1], coord[2], coord[3], coord[0], coord[3] };
+    mtx.Transform(c + 0, c + 1);
+    mtx.Transform(c + 2, c + 3);
+    mtx.Transform(c + 4, c + 5);
+    mtx.Transform(c + 6, c + 7);
+
+    if (fillColor)
+    {
+        gen->mTess.AddVertex(c[0], c[1]);
+        gen->mTess.AddVertex(c[2], c[3]);
+        gen->mTess.AddVertex(c[4], c[5]);
+        gen->mTess.AddVertex(c[6], c[7]);
+        gen->mTess.ClosePath();
+        gen->mTess.FinalizePath(0, 1, false, false);
+    }
+    if (borderColor)
+    {
+        // a one pixel frame: the rectangle and its outset
+        gen->mTess.AddVertex(c[0], c[1]);
+        gen->mTess.AddVertex(c[2], c[3]);
+        gen->mTess.AddVertex(c[4], c[5]);
+        gen->mTess.AddVertex(c[6], c[7]);
+        gen->mTess.ClosePath();
+        gen->mTess.FinalizePath(0, 2, false, false);
+
+        CornerVertex p0(c[0], c[1]), p1(c[2], c[3]), p2(c[4], c[5]), p3(c[6], c[7]);
+        float y, x;
+        calcMiter(p1, p0, p3, 1, &x, &y);
+        gen->mTess.AddVertex(x, y);
+        calcMiter(p0, p3, p2, 1, &x, &y);
+        gen->mTess.AddVertex(x, y);
+        calcMiter(p3, p2, p1, 1, &x, &y);
+        gen->mTess.AddVertex(x, y);
+        calcMiter(p2, p1, p0, 1, &x, &y);
+        gen->mTess.AddVertex(x, y);
+        gen->mTess.ClosePath();
+        gen->mTess.FinalizePath(0, 2, false, false);
+    }
+
+    gen->mTess.Tessellate(false);
+    gen->mTess.Transform(mtx.GetInverse());
+    Matrix2F toMesh = gen->mTess.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
+
+    VertexOutput::Fill fill = { gen->mTess.GetMeshVertexCount(0), gen->mTess.GetMeshTriangleCount(0) * 3,
+                                &VertexXY16iCF32::Format, 0, 0, 0, 0 };
+    if (fill.VertexCount == 0)
+        return generateNullVectorMesh(verOut);
+
+    bool ok = verOut->BeginOutput(&fill, 1, toMesh);
+    if (ok)
+    {
+        VertexCountType count;
+        setMeshData(&gen->mTess, verOut, colors, count);
+        verOut->EndOutput();
+    }
+    gen->Clear();
+    return ok;
+}
+
+// MS2-FUNCTIONAL: frame 0x10 smaller than the exe (unused stack slot), code otherwise identical
+// @0x1426e7a60
+bool TextMeshProvider::generateSelection(Renderer2DImpl* ren, VertexOutput* verOut, const TextMeshLayer& layer,
+                                         const Matrix2F& mtx, unsigned meshGenFlags)
+{
+    MeshGenerator* gen = ren->GetMeshGen();
+    gen->Clear();
+    gen->mTess.SetFillRule(Tessellator::FillNonZero);
+    gen->mTess.SetToleranceParam(ren->GetToleranceParams());
+
+    // one style per selection rectangle, its colour at style - 1
+    ArrayStaticBuffPOD<UInt32, 16> colors(Memory::GetGlobalHeap());
+
+    const ToleranceParams tol = ren->GetToleranceParams();
+    bool edgeAA = (meshGenFlags & (Mesh_EdgeAA | Mesh_Mask)) == Mesh_EdgeAA;
+    gen->mTess.SetEdgeAAWidth(edgeAA ? tol.EdgeAAScale * 0.5f : 0.0f);
+
+    float x, y;
+    for (unsigned i = 0; i < layer.Count; ++i)
+    {
+        const TextMeshEntry& e   = Entries[layer.Start + i];
+        const SelectionEnt&  sel = e.EntryData.SelectionData;
+        RectF r(sel.Coord[0], sel.Coord[1], sel.Coord[2], sel.Coord[3]);
+        if (Flags & BF_Clip)
+            r.Intersect(ClipBox);
+        if (!r.IsEmpty())
+        {
+            x = r.x1; y = r.y1; mtx.Transform(&x, &y); gen->mTess.AddVertex(x, y);
+            x = r.x2; y = r.y1; mtx.Transform(&x, &y); gen->mTess.AddVertex(x, y);
+            x = r.x2; y = r.y2; mtx.Transform(&x, &y); gen->mTess.AddVertex(x, y);
+            x = r.x1; y = r.y2; mtx.Transform(&x, &y); gen->mTess.AddVertex(x, y);
+        }
+        colors.PushBack(e.mColor);
+        gen->mTess.ClosePath();
+        gen->mTess.FinalizePath(0, i + 1, false, false);
+    }
+    gen->mTess.Tessellate(false);
+
+    bool ok = true;
+    if (gen->mTess.GetMeshCount() && gen->mTess.GetVertexCount())
+    {
+        gen->mTess.Transform(mtx.GetInverse());
+        Matrix2F toMesh = gen->mTess.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
+
+        VertexOutput::Fill fill = { gen->mTess.GetMeshVertexCount(0), gen->mTess.GetMeshTriangleCount(0) * 3,
+                                    &VertexXY16iCF32::Format, 0, 0, 0, 0 };
+        ok = verOut->BeginOutput(&fill, 1, toMesh);
+        if (ok)
+        {
+            VertexCountType count;
+            setMeshData(&gen->mTess, verOut, &colors[0], count);
+            verOut->EndOutput();
+        }
+    }
+    else
+        ok = generateNullVectorMesh(verOut);
+
+    gen->Clear();
+    return ok;
 }
 
 // @0x1426e6ad0

@@ -40,6 +40,7 @@ struct GlyphRunData;
 struct VectorGlyphShape;
 class GlyphQueue;
 namespace MatrixPoolImpl { class MatrixPool; }
+struct MeshGenerator;
 
 // a cache whose buffers the renderer unlocks after a frame (Render_Primitive)
 class CacheBase
@@ -230,6 +231,8 @@ public:
     // (appended for sfr_render_04h) the matrix pool, +0xd40 inside the region above
     MatrixPoolImpl::MatrixPool& GetMatrixPool() { return *(MatrixPoolImpl::MatrixPool*)(Unk_FillManager + (0xd40 - 0xd18)); }
     GlyphCache* GetGlyphCache() const { return pGlyphCache; }
+    // (appended for sfr_render_07o) the mesh generator at the start of the members (+0x58)
+    MeshGenerator* GetMeshGen() { return (MeshGenerator*)Unk_Members; }
 
     MeshCacheConfig* GetMeshCacheConfig() const;
 
