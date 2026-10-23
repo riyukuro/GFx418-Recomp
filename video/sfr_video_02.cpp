@@ -456,6 +456,33 @@ void** FUN_1400131a0(void** ref, void* value)
 // @0x1400132d0
 void FUN_1400132d0(void** ref) { if (*ref) FUN_14257dcb0(*ref); }
 
+// @0x1400159f0
+void** FUN_1400159f0(void** result, void* context)
+{
+    ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
+    ASStringNode* first = manager->CreateConstStringNode("null", 4, 0);
+    first->AddRef();
+    ASStringNode* second = manager->CreateConstStringNode("null", 4, 0);
+    second->AddRef();
+    result[0] = second;
+    result[1] = first;
+    return result;
+}
+
+// @0x1400151a0
+long long* FUN_1400151a0(long long* dst, const long long* src)
+{
+    typedef void (*RefFn)(void*);
+    if (*src)
+        reinterpret_cast<RefFn>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(*src) + 1))(
+            reinterpret_cast<void*>(*src));
+    if (*dst)
+        reinterpret_cast<RefFn>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(*dst) + 2))(
+            reinterpret_cast<void*>(*dst));
+    *dst = *src;
+    return dst;
+}
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
