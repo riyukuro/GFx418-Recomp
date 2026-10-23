@@ -100,6 +100,14 @@ public:
     {
         return caseSensitive ? BaseType::Get(key) : GetCaseInsensitive(key);
     }
+    // Copies the value out when found (pvalue may be null).
+    bool GetCaseCheck(const ASString& key, U* pvalue, bool caseSensitive) const
+    {
+        if (caseSensitive)
+            return BaseType::Get(key, pvalue);
+        ASStringNoCaseKey ikey(key);
+        return BaseType::GetAlt(ikey, pvalue);
+    }
 
     __forceinline typename BaseType::Iterator FindCaseInsensitive(const ASString& key)
     {

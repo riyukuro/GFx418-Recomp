@@ -120,6 +120,7 @@
 // MS2-RANGE: 0x142949900-0x142949952 .text$mn
 // MS2-RANGE: 0x14294a430-0x14294a4e2 .text$mn
 // MS2-RANGE: 0x142953da0-0x142953ed5 .text$mn
+// MS2-RANGE: 0x142956090-0x142956193 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2214,6 +2215,31 @@ MovieClipObject* AvmSprite::GetMovieClipObject()
     if (!pobj)
         pobj = *SF_HEAP_NEW(GetSprite()->GetMovieImpl()->GetMovieHeap()) MovieClipObject(GetGC(), GetSprite());
     return pobj;
+}
+
+// MS2-FUNCTIONAL same logic; the exe lays the failed-lowercase release out of line and schedules the lookup flag differently
+// @0x142956090
+AvmCharacter::StandardMember AvmCharacter::GetStandardMemberConstant(const ASString& newname) const
+{
+    char     member = M_InvalidMember;
+    ASString name   = GetStrings(GetGC())->GetBuiltin(ASBuiltin_empty_);
+    bool     isStandard = ((newname.GetHashFlags() >> 29) & 1) != 0; // Flag_StandardMember
+    if (!isStandard)
+    {
+        // Only "_"-names have a case-insensitive twin among the standard members.
+        if (newname.GetLength() == 0 || newname.GetCharAt(0) != '_')
+            goto done;
+        {
+            ASString lower(newname.ToLowerNode());
+            bool     isCaseInsensitive = ((lower.GetHashFlags() >> 28) & 1) != 0;
+            if (!isCaseInsensitive)
+                goto done;
+            name = lower;
+        }
+    }
+    GetGC()->StandardMemberMap.GetCaseCheck(newname, &member, name.IsEmpty());
+done:
+    return (StandardMember)member;
 }
 }}} // namespace Scaleform::GFx::AS2
 
