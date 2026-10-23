@@ -180,6 +180,8 @@ void     FUN_14002e2a0(void* object);
 void     FUN_142579470(void* object);
 void     FUN_142585580(void* destination, const void* source);
 void     FUN_142584ce0(void* string);
+void     FUN_14000bc40(void* destination, void* source, CriUint64 capacity);
+void     FUN_140007370(void* destination, CriUint64 first, CriUint64 second);
 
 struct CriMvRequestNode
 {
@@ -2313,6 +2315,23 @@ void* FUN_14002b350(void* object, CriUint32 flags)
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: append one 0x30-byte video record and retain its two string fields.
+// @0x14002c4b0
+void FUN_14002c4b0(CriUint64* array, const CriUint32* value)
+{
+    FUN_14000bc40(array, array, array[1] + 1);
+    CriUint32* destination = (CriUint32*)(array[0] - 0x30 + array[1] * 0x30);
+    if (!destination)
+        return;
+    destination[0] = value[0];
+    FUN_142584950(destination + 2, value + 2);
+    destination[4] = value[4];
+    *(CriUint64*)(destination + 6) = 0;
+    *(CriUint64*)(destination + 8) = 0;
+    *(CriUint64*)(destination + 10) = 0;
+    FUN_140007370(destination + 6, *(const CriUint64*)(value + 6), *(const CriUint64*)(value + 8));
 }
 
 // MS2-FUNCTIONAL: copy a vector of paired strings after resizing its destination.
