@@ -1426,6 +1426,24 @@ unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
     return destination;
 }
 
+// MS2-FUNCTIONAL: destroys the AS2 call frame and optionally deletes its storage.
+// @0x140007b70
+void* FUN_140007b70(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
+{
+    call->~FnCall();
+    if (flags & 1) ::operator delete(call);
+    return call;
+}
+
+// MS2-FUNCTIONAL: destroys a prototype base and optionally deletes its storage.
+// @0x140007c80
+void* FUN_140007c80(Scaleform::GFx::AS2::GASPrototypeBase* prototype, unsigned flags)
+{
+    prototype->~GASPrototypeBase();
+    if (flags & 1) ::operator delete(prototype);
+    return prototype;
+}
+
 // MS2-FUNCTIONAL: resolves the lowercase node for an ActionScript string when needed.
 // @0x140009ec0
 void FUN_140009ec0(Scaleform::GFx::ASStringNode** nodeSlot)
@@ -1787,6 +1805,20 @@ void FUN_1400067a0(void** values, Scaleform::UPInt count)
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
 // @0x14000b300
 void FUN_14000b300(void* owner)
+{
+    auto* bytes = static_cast<unsigned char*>(owner);
+    auto** array = reinterpret_cast<void**>(bytes + 0x18);
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (*array) FUN_1400068d0(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+        (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
+    if (proxy) proxy->Release();
+}
+
+// MS2-FUNCTIONAL: releases the paired proxy array and weak proxy fields in this owner.
+// @0x14000afd0
+void FUN_14000afd0(void* owner)
 {
     auto* bytes = static_cast<unsigned char*>(owner);
     auto** array = reinterpret_cast<void**>(bytes + 0x18);
