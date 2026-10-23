@@ -907,6 +907,18 @@ CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
     return config[2] * 0x20 + 8 + base;
 }
 
+// MS2-FUNCTIONAL: calculate the demux work area from its two unified-joint pools and output records.
+// @0x140044eb0
+CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount)
+{
+    const CriSint32 config[3] = { 1, 0, 0x80 };
+    CriSint32 jointBytes = criSjUni_CalculateWorkSize(config);
+    CriSint32 roundedJointBytes = (jointBytes + 7) & ~7;
+    CriSint32 recordBytes = outputCount * 0x10 + 0x17;
+    CriSint32 recordUnits = (recordBytes + ((recordBytes >> 31) & 7)) >> 3;
+    return roundedJointBytes + 0x48 + roundedJointBytes + recordUnits * 8;
+}
+
 // MS2-FUNCTIONAL: pop a recycled 0x20-byte chunk from the unified stream-joint free list.
 // @0x14004592c
 void* FUN_14004592c(void* streamJoint)
