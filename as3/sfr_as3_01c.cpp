@@ -1908,6 +1908,29 @@ namespace Instances {
 
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace Alg {
+template <class ArrayT> void ReverseArray(ArrayT& values);
+
+// MS2-FUNCTIONAL: the Value::Swap loop preserves array ownership; the compiler emits a different frame/prolog.
+// @0x1423eaa80
+template <> void ReverseArray<ArrayDH<GFx::AS3::Value, 2, ArrayDefaultPolicy>>(
+    ArrayDH<GFx::AS3::Value, 2, ArrayDefaultPolicy>& values)
+{
+    GFx::AS3::Value* data = values.GetDataPtr();
+    SPInt left = 0;
+    SPInt right = static_cast<SPInt>(values.GetSize()) - 1;
+    if (right > 0)
+    {
+        do
+        {
+            data[left].Swap(data[right]);
+            ++left;
+            --right;
+        } while (left < right);
+    }
+}
+}}
+
 // MsgFormat argument binders the error-message formatting in this file instantiates.
 template void Scaleform::MsgFormat::FormatD1<int>(const int&);
 template void Scaleform::MsgFormat::FormatD1<const char*>(const char* const&);
