@@ -24,6 +24,7 @@ extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
+extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_14268f8f0(void*, void*, unsigned);
 extern "C" void FUN_14268f230(void*, void*, unsigned);
@@ -40,6 +41,10 @@ MS2_GLOBAL(0x142d175c8, float, ImageViewportScale);
 MS2_GLOBAL(0x142d175cc, float, ImageViewportBias);
 MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
 MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
+MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
+extern "C" void FUN_1426240f0(void*, void*, std::size_t);
+extern "C" void FUN_14257dcb0(void*);
+extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
 
 static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t* source)
 {
@@ -105,7 +110,6 @@ insert_entry:
     }
     row[1] = bucket;
 }
-
 namespace Scaleform {
 
 namespace GFx { class StaticTextRecord; class TaskThreadInPool; }
@@ -894,6 +898,73 @@ insert_entry:
     row[2] = storedValue;
     row[1] = bucket;
 }
+// The following stream and movie record helpers remain in the same Scaleform namespace.
+void ReadNarrowString(void*, void*);
+static void ReadMovieBytes(void* stream, void* destination, std::size_t size)
+{
+    auto** vtable = *reinterpret_cast<void***>(stream);
+    reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, destination, size);
+}
+
+// MS2-FUNCTIONAL: reads the versioned movie image record and reconstructs its refcounted child records recursively.
+// @0x14268c190
+void ReadMovieImageRecord(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    ReadMovieBytes(stream, bytes + 0x10, 8);
+    ReadMovieBytes(stream, bytes + 0x18, 8);
+    ReadMovieBytes(stream, bytes + 0x20, 8);
+    ReadMovieBytes(stream, bytes + 0x28, 4);
+    std::uint32_t count = 0;
+    ReadMovieBytes(stream, &count, 4);
+    const std::size_t oldCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
+    FUN_1426240f0(bytes + 0x30, bytes + 0x30, count);
+    void** children = *reinterpret_cast<void***>(bytes + 0x30);
+    if (oldCount < count)
+        std::memset(children + oldCount, 0, (count - oldCount) * sizeof(void*));
+    for (std::size_t i = 0; i < count; ++i) {
+        int flags = 2;
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        void* child = reinterpret_cast<void* (*)(void*, void*, std::size_t, const int*)>(heapVtable[14])(
+            DAT_143b15f60, object, 0x48, &flags);
+        if (child) {
+            std::memset(child, 0, 0x48);
+            *reinterpret_cast<void***>(child) = &MovieImageInfoVtable;
+            *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(child) + 8) = 1;
+        }
+        if (children[i])
+            FUN_14257dcb0(children[i]);
+        children[i] = child;
+        if (child)
+            ReadMovieImageRecord(child, stream, version);
+    }
+}
+
+// MS2-FUNCTIONAL: reads a movie image's versioned narrow-string and scalar fields from the input stream.
+// @0x14268c370
+void ReadMovieImageFields(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    ReadMovieBytes(stream, bytes + 0x10, 4);
+    ReadNarrowString(stream, bytes + 0x18);
+    if (version < 0x1d) {
+        std::uint32_t ignoredLength = 0;
+        ReadMovieBytes(stream, &ignoredLength, 4);
+        for (std::uint32_t i = 0; i < ignoredLength; ++i) {
+            unsigned char ignored = 0;
+            ReadMovieBytes(stream, &ignored, 1);
+        }
+    }
+    ReadMovieBytes(stream, bytes + 0x20, 4);
+    unsigned char flag = 0;
+    ReadMovieBytes(stream, &flag, 1);
+    bytes[0x24] = flag != 0;
+    ReadMovieBytes(stream, bytes + 0x28, 4);
+    ReadMovieBytes(stream, bytes + 0x2c, 4);
+    ReadMovieBytes(stream, bytes + 0x30, 4);
+    ReadMovieBytes(stream, bytes + 0x34, 4);
+    ReadMovieBytes(stream, bytes + 0x38, 4);
+}
 
 // MS2-FUNCTIONAL: updates or inserts this node's cached key, then repeats the operation for its child nodes.
 // @0x14268a570
@@ -932,6 +1003,68 @@ void UpdateImageHashTree(void* node, void* setObject)
     const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
     for (std::size_t i = 0; i < count; ++i)
         UpdateImageHashTree(children[i], setObject);
+}
+
+// MS2-FUNCTIONAL: inserts a key and copied Scaleform string in the cached hash table, rehoming colliding entries and growing at the recovered threshold.
+// @0x142686650
+void AddStringHashEntry(void* setObject, void* allocator, const std::uint64_t* value, std::uint64_t hash)
+{
+    auto** set = static_cast<std::uint64_t**>(setObject);
+    auto* table = *set;
+    std::uint64_t capacity;
+    if (!table) {
+        capacity = 8;
+    } else {
+        if (table[0] * 5 <= table[1] * 4 + 4)
+            goto insert_string;
+        capacity = table[1] * 2 + 2;
+    }
+    FUN_1426251d0(setObject, allocator, static_cast<std::int64_t>(capacity));
+insert_string:
+    table = *set;
+    const std::uint64_t bucket = hash & table[1];
+    ++table[0];
+    auto* row = reinterpret_cast<unsigned char*>(table) + bucket * 0x20;
+    auto* entry = reinterpret_cast<std::uint64_t*>(row + 0x10);
+    const std::uint64_t occupant = entry[0];
+    auto* sourceString = reinterpret_cast<const String*>(value[1]);
+    if (static_cast<std::int64_t>(occupant) == -2) {
+        entry[0] = UINT64_MAX;
+        entry[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
+        new (row + 0x28) String(*sourceString);
+    } else {
+        std::uint64_t empty = bucket;
+        do {
+            empty = (empty + 1) & table[1];
+        } while (static_cast<std::int64_t>(*reinterpret_cast<std::uint64_t*>(
+            reinterpret_cast<unsigned char*>(table) + empty * 0x20 + 0x10)) != -2);
+        auto* targetBytes = reinterpret_cast<unsigned char*>(table) + empty * 0x20;
+        auto* target = reinterpret_cast<std::uint64_t*>(targetBytes + 0x10);
+        if (entry[1] == bucket) {
+            target[0] = occupant;
+            target[1] = entry[1];
+            target[2] = entry[2];
+            new (targetBytes + 0x28) String(*reinterpret_cast<String*>(row + 0x28));
+            entry[0] = empty;
+            entry[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
+            *reinterpret_cast<String*>(row + 0x28) = *sourceString;
+        } else {
+            auto* previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
+                entry[1] * 0x20 + 0x10);
+            while (previous[0] != bucket)
+                previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
+                    previous[0] * 0x20 + 0x10);
+            target[0] = occupant;
+            target[1] = entry[1];
+            target[2] = entry[2];
+            new (targetBytes + 0x28) String(*reinterpret_cast<String*>(row + 0x28));
+            previous[0] = empty;
+            entry[0] = UINT64_MAX;
+            entry[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
+            new (row + 0x28) String(*sourceString);
+        }
+    }
+    entry[1] = bucket;
 }
 
 // MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
