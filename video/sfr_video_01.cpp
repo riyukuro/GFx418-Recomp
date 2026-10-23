@@ -1051,6 +1051,54 @@ void FUN_140006bf0(void** array)
     fields[1] = 0;
 }
 
+// MS2-FUNCTIONAL: obtains a 0x400-byte value page, records it, and updates the current stack cursors.
+// @0x140006a40
+void FUN_140006a40(Scaleform::UPInt* stack)
+{
+    auto** freePage = reinterpret_cast<void**>(stack[7]);
+    void* page = nullptr;
+    if (freePage) {
+        page = freePage;
+        stack[7] = *reinterpret_cast<Scaleform::UPInt*>(static_cast<unsigned char*>(page) + 0x400);
+    } else {
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        page = reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned)>(heapVtable[14])(
+            DAT_143b15f60, stack, 0x408, 0);
+    }
+    if (!page) { stack[0] -= 0x20; return; }
+    auto* pages = reinterpret_cast<void**>(stack + 4);
+    auto size = stack[5] + 1;
+    if (size >= stack[6]) FUN_1400050c0(reinterpret_cast<void**>(stack + 4), stack + 4, size + (size >> 2));
+    stack[5] = size;
+    pages[size - 1] = page;
+    stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
+    stack[0] = stack[1];
+    stack[3] = stack[2] - 0x20;
+    stack[2] = stack[1] + 0x400;
+}
+
+// MS2-FUNCTIONAL: returns the last page to the free list and restores the preceding stack page.
+// @0x140006cf0
+void FUN_140006cf0(Scaleform::UPInt* stack)
+{
+    if (stack[5] < 2) {
+        stack[0] += 0x20;
+        if (stack[0]) *reinterpret_cast<unsigned char*>(stack[0]) = 0;
+        return;
+    }
+    auto** pages = reinterpret_cast<void**>(stack + 4);
+    void* page = pages[stack[5] - 1];
+    *reinterpret_cast<Scaleform::UPInt*>(static_cast<unsigned char*>(page) + 0x400) = stack[7];
+    stack[7] = reinterpret_cast<Scaleform::UPInt>(page);
+    FUN_140005c20(reinterpret_cast<void**>(stack + 4), stack[5] - 1);
+    page = pages[stack[5] - 1];
+    stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
+    stack[2] = stack[1] + 0x400;
+    stack[0] = stack[1] + 0x3e0;
+    stack[3] = stack[5] < 2 ? stack[1] :
+        reinterpret_cast<Scaleform::UPInt>(pages[stack[5] - 2]) + 0x3e0;
+}
+
 // MS2-FUNCTIONAL: removes retained elements beyond the new size and adjusts pointer capacity.
 // @0x140006e70
 void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
