@@ -33,6 +33,7 @@ static BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
 extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_14257db50(void*);
 extern "C" void FUN_1423cdf60(void*);
+extern "C" void FUN_1423cde00();
 
 struct HWND__;
 
@@ -181,6 +182,54 @@ void FUN_1423d1b50(unsigned long long* object)
 {
     Memory::Free(reinterpret_cast<void*>(object[0x16]));
     FUN_1423cdf60(object);
+}
+
+// MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
+// @0x1423ce040
+void* FUN_1423ce040(void* object, unsigned long long flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x10);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: byte-identical deleting wrapper body to the adjacent executable copy, with the same destructor and sized-free path.
+// @0x1423ce0a0
+void* FUN_1423ce0a0(void* object, unsigned long long flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x10);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: destructor helper and sized-free path follow the executable; heap dispatch uses our Memory facade.
+// @0x1423ce100
+void* FUN_1423ce100(void* object, unsigned long long flags)
+{
+    FUN_1423cde00();
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x870);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: same helper sequence and allocation size as the adjacent executable copy.
+// @0x1423ce1f0
+void* FUN_1423ce1f0(void* object, unsigned long long flags)
+{
+    FUN_1423cde00();
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x870);
+        else Memory::Free(object);
+    }
+    return object;
 }
 
 // @0x1423ca660
