@@ -2005,6 +2005,48 @@ void WriteMovieImageData(void* object, void* stream, unsigned version)
         FUN_14268f230(*reinterpret_cast<void**>(bytes + 0x70), stream, version);
 }
 
+// MS2-FUNCTIONAL: writes the version-nine string resource arrays and each occupied cached hash entry with its length-prefixed name.
+// @0x14268f8f0
+void WriteStringResourceTable(void* object, void* stream, unsigned version)
+{
+    if (version < 9)
+        return;
+    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x18);
+    WriteImageStream(stream, &count, 4);
+    auto* records = *reinterpret_cast<unsigned char**>(bytes + 0x10);
+    for (std::size_t i = 0; i < count; ++i) {
+        WriteImageStream(stream, records + i * 0x18, 8);
+        WriteImageStream(stream, records + i * 0x18 + 8, 4);
+        WriteImageStream(stream, records + i * 0x18 + 0x10, 8);
+    }
+    auto* table = *reinterpret_cast<unsigned char**>(bytes + 0x28);
+    unsigned entryCount = table ? *reinterpret_cast<unsigned*>(table) : 0;
+    WriteImageStream(stream, &entryCount, 4);
+    if (!table)
+        return;
+    std::uint64_t index = 0;
+    const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
+    auto* marker = reinterpret_cast<std::int64_t*>(table + 0x10);
+    while (index <= mask) {
+        if (*marker != -2) {
+            auto* row = table + index * 0x20;
+            const std::uint64_t value = *reinterpret_cast<std::uint64_t*>(row + 0x20);
+            WriteImageStream(stream, &value, 8);
+            auto* text = reinterpret_cast<const String*>(row + 0x28);
+            const std::size_t length = text->GetLength();
+            const unsigned length32 = static_cast<unsigned>(length);
+            WriteImageStream(stream, &length32, 4);
+            const auto encoded = *reinterpret_cast<const std::uint64_t*>(text);
+            const char* chars = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
+            for (std::size_t j = 0; j < length; ++j)
+                WriteImageStream(stream, chars + j, 1);
+        }
+        ++index;
+        marker += 4;
+    }
+}
+
 // MS2-FUNCTIONAL: reads a length-prefixed narrow string from the stream, appending each byte to the destination.
 // @0x142690630
 void ReadNarrowString(void* stream, void* destination)
