@@ -6,6 +6,7 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 #include "../include/video/video_video.h"
+#include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include <cstring>
 
@@ -16,6 +17,83 @@ extern const void* FUN_14261c640(const void*, int);
 extern void FUN_142581700(void*);
 extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
+extern void FUN_1400105b0(void*);
+
+namespace Scaleform { namespace GFx { namespace Video {
+
+// The provider back-pointer sits at +0x40 and is used while detaching a frame image.
+class VideoImage : public RefCountBaseV<VideoImage, Stat_Default_Mem>
+{
+public:
+    UByte Pad[0x40 - 0x10];
+    VideoProvider* pVideoProvider;
+};
+
+}}} // namespace Scaleform::GFx::Video
+
+// VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
+// MS2-FUNCTIONAL: image release and render-tree refresh recovered with the local image layout.
+// @0x140010a30
+void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
+{
+    char* object = reinterpret_cast<char*>(pvideo);
+    Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
+        reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
+    if (*image)
+    {
+        (*image)->pVideoProvider = 0;
+        *image = (Scaleform::GFx::Video::VideoImage*)0;
+        FUN_1400105b0(pvideo);
+    }
+}
+
+// MS2-FUNCTIONAL: refreshes the provider image and render-tree state; the transform cache refresh is simplified.
+// @0x140010a70
+void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
+{
+    char* object = reinterpret_cast<char*>(pvideo);
+    Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>* provider =
+        reinterpret_cast<Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>*>(object + 0xf8);
+    Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
+        reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
+    Scaleform::Ptr<Scaleform::GFx::Video::VideoProvider> strong = *provider;
+    if (strong)
+    {
+        int width = 0, height = 0;
+        Scaleform::GFx::Video::VideoImage* next = strong->GetTexture(&width, &height);
+        if (next)
+        {
+            if (*image)
+                (*image)->pVideoProvider = 0;
+            *image = next;
+            (*image)->pVideoProvider = strong.GetPtr();
+        }
+    }
+    FUN_1400105b0(pvideo);
+}
+
+// MS2-FUNCTIONAL: updates the weak provider reference and detaches the old image before render refresh.
+// @0x140010b80
+void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* pvideo,
+                   Scaleform::GFx::Video::VideoProvider* pprovider)
+{
+    char* object = reinterpret_cast<char*>(pvideo);
+    Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>* provider =
+        reinterpret_cast<Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>*>(object + 0xf8);
+    Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
+        reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
+    Scaleform::Ptr<Scaleform::GFx::Video::VideoProvider> current = *provider;
+    if (current.GetPtr() != pprovider)
+    {
+        *provider = pprovider;
+        if (*image)
+        {
+            (*image)->pVideoProvider = 0;
+            *image = (Scaleform::GFx::Video::VideoImage*)0;
+            FUN_1400105b0(pvideo);
+        }
+    }
+}
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -59,6 +137,15 @@ uintptr_t FUN_14000e560() { return 0; }
 
 // @0x14000e580
 bool FUN_14000e580() { return false; }
+
+// @0x14000e600
+bool FUN_14000e600() { return false; }
+
+// @0x14000e610
+uintptr_t FUN_14000e610() { return 0; }
+
+// @0x14000e620
+bool FUN_14000e620() { return false; }
 
 // The four AS2 Video-character traits live on the secondary AvmVideoCharacter base (+0x08).
 // This preserves the exe's field offsets and sends all other names through the script object.
@@ -105,15 +192,6 @@ bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value*
     }
     return true;
 }
-
-// @0x14000e600
-bool FUN_14000e600() { return false; }
-
-// @0x14000e610
-uintptr_t FUN_14000e610() { return 0; }
-
-// @0x14000e620
-bool FUN_14000e620() { return false; }
 
 // @0x14000fc90
 void* FUN_14000fc90(void* dst, const void* src) { return std::memcpy(dst, src, 0x30); }
@@ -289,6 +367,39 @@ void FUN_14000f270(void* node)
     if (*reinterpret_cast<void**>(static_cast<char*>(node) + 0x40))
         FUN_142626160(static_cast<char*>(node) + 0x40);
     FUN_14257eb30(node);
+}
+
+// @0x14000fdb0
+void** FUN_14000fdb0(void** dst, void* next)
+{
+    if (*dst)
+        FUN_14257dcb0(*dst);
+    *dst = next;
+    return dst;
+}
+
+// MS2-FUNCTIONAL: raw weak-proxy lock follows the exe's proxy/object offsets and returns a live target.
+// @0x14000fe00
+void* FUN_14000fe00(void** weakProxy)
+{
+    void* proxy = *weakProxy;
+    if (!proxy)
+        return 0;
+    void* object = *reinterpret_cast<void**>(static_cast<char*>(proxy) + 8);
+    if (!object)
+    {
+        FUN_14257dcb0(proxy);
+        *weakProxy = 0;
+        return 0;
+    }
+    return *reinterpret_cast<int*>(static_cast<char*>(object) + 8) ? object : 0;
+}
+
+// @0x14000ffd0
+void FUN_14000ffd0(void** object)
+{
+    if (*object)
+        FUN_14257dcb0(*object);
 }
 
 }}} // namespace Scaleform::GFx::AS2
