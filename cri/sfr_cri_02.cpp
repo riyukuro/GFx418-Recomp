@@ -3920,6 +3920,49 @@ void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
     ++((StreamCounterView*)player)->Count;
 }
 
+// MS2-FUNCTIONAL: parse MPEG and legacy video metadata fields into the stream record.
+// @0x140032650
+void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+{
+    struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
+    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    CriSint32 codecPresent = FUN_14003a3e0(document, "mpeg_codec");
+    if (codecPresent < 1)
+        output[9] = FUN_14003a3e0(document, "fps_cyc") < 1 ? 0 : 3;
+    else
+        output[9] = FUN_14003a85c(document, 0, "mpeg_codec");
+
+    CriUint32 numerator = FUN_14003a85c(document, 0, "framerate_n");
+    CriUint32 denominator = FUN_14003a85c(document, 0, "framerate_d");
+    output[4] = (CriUint32)(((float)numerator * 1000.0f) / (float)denominator);
+    output[5] = FUN_14003a85c(document, 0, "total_frames");
+    output[0] = FUN_14003a85c(document, 0, "width");
+    output[1] = FUN_14003a85c(document, 0, "height");
+    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
+    WorkSizeView* work = (WorkSizeView*)workInfo;
+    if (work->Size < suggestedSize)
+        work->Size = suggestedSize;
+    output[13] = FUN_14003a3e0(document, "pre_padding") < 1
+        ? 0x40 : FUN_14003a85c(document, 0, "pre_padding");
+    output[6] = FUN_14003a85c(document, 0, "mat_width");
+    if (output[6] == 0)
+        output[6] = output[0];
+    output[7] = FUN_14003a85c(document, 0, "mat_height");
+    if (output[7] == 0)
+        output[7] = output[1];
+    output[8] = FUN_14003a85c(document, 0, "scrn_width");
+    output[10] = FUN_14003a85c(document, 0, "mpeg_dcprec");
+    output[11] = FUN_14003a85c(document, 0, "metadata_count");
+    output[12] = FUN_14003a85c(document, 0, "metadata_size");
+    output[2] = FUN_14003a85c(document, 0, "disp_width");
+    if (output[2] == 0)
+        output[2] = output[0];
+    output[3] = FUN_14003a85c(document, 0, "disp_height");
+    if (output[3] == 0)
+        output[3] = output[1];
+    FUN_14003a108(document);
+}
+
 // MS2-FUNCTIONAL: select the last seek-table entry whose frame id does not exceed the requested frame.
 // @0x140033700
 void FUN_140033700(void* player, const void* data, CriUint32 size, CriSint32 targetFrame,
