@@ -929,6 +929,10 @@ public:
     // Extension members visibleRect, safeRect (the visible rect when unset) and originalRect, as new Rectangle
     // objects (exe 0x142950300).
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+    // width and height of the visible stage (pixels), scaleMode and align of the view (exe 0x142953520).
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+
+    MovieImpl* pMovieRoot; // +0x70 the movie of the stage
 
 private:
     // A Rectangle object for rect (pixels) (exe 0x142937bc0).

@@ -156,6 +156,7 @@
 // MS2-RANGE: 0x142959bc0-0x142959f07 .text$mn
 // MS2-RANGE: 0x14295b020-0x14295b472 .text$mn
 // MS2-RANGE: 0x142959f10-0x14295a4a2 .text$mn
+// MS2-RANGE: 0x142953520-0x142953873 .text$mn
 
 #include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -3863,6 +3864,63 @@ void DateCtorFunction::GlobalCtor(const FnCall& fn)
 
     fn.Result->SetAsObject(pdate.GetPtr());
     fn.Result->SetString(fn.Result->ToString(fn.Env));
+}
+
+// The Stage.scaleMode string of a view scale mode.
+static const char* Stage_ScaleModeName(MovieSlots418::ScaleModeType mode)
+{
+    switch (mode)
+    {
+    case MovieSlots418::SM_NoScale:  return "noScale";
+    case MovieSlots418::SM_ExactFit: return "exactFit";
+    case MovieSlots418::SM_NoBorder: return "noBorder";
+    default:                         return "showAll";
+    }
+}
+
+// The Stage.align string of a view alignment ("" when centered).
+static const char* Stage_AlignName(MovieSlots418::AlignType align)
+{
+    switch (align)
+    {
+    case MovieSlots418::Align_TopCenter:    return "T";
+    case MovieSlots418::Align_BottomCenter: return "B";
+    case MovieSlots418::Align_CenterLeft:   return "L";
+    case MovieSlots418::Align_CenterRight:  return "R";
+    case MovieSlots418::Align_TopLeft:      return "TL";
+    case MovieSlots418::Align_TopRight:     return "TR";
+    case MovieSlots418::Align_BottomLeft:   return "BL";
+    case MovieSlots418::Align_BottomRight:  return "BR";
+    default:                                return "";
+    }
+}
+
+// MS2-FUNCTIONAL the align names come from a string-pointer table (exe: jump table of lea), the shared strlen tail
+// is laid out differently
+// @0x142953520
+bool StageCtorFunction::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
+{
+    if (psc->GetBuiltin(ASBuiltin_width).CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive()))
+    {
+        val->SetInt((int)Render::TwipsToPixels(pMovieRoot->GetVisibleFrameRectInTwips().Width()));
+        return true;
+    }
+    else if (psc->GetBuiltin(ASBuiltin_height).CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive()))
+    {
+        val->SetInt((int)Render::TwipsToPixels(pMovieRoot->GetVisibleFrameRectInTwips().Height()));
+        return true;
+    }
+    else if (ConstName_CompareCaseCheck(psc->CreateConstString("scaleMode"), name, psc->IsCaseSensitive()))
+    {
+        val->SetString(psc->CreateConstString(Stage_ScaleModeName(AsMovieSlots(pMovieRoot)->GetViewScaleMode())));
+        return true;
+    }
+    else if (ConstName_CompareCaseCheck(psc->CreateConstString("align"), name, psc->IsCaseSensitive()))
+    {
+        val->SetString(psc->CreateConstString(Stage_AlignName(AsMovieSlots(pMovieRoot)->GetViewAlignment())));
+        return true;
+    }
+    return Object::GetMemberRaw(psc, name, val);
 }
 }}} // namespace Scaleform::GFx::AS2
 
