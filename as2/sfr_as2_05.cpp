@@ -131,6 +131,7 @@
 // MS2-RANGE: 0x1429494d0-0x142949612 .text$mn
 // MS2-RANGE: 0x1429390a0-0x142939213 .text$mn
 // MS2-RANGE: 0x14294ef50-0x14294f13e .text$mn
+// MS2-RANGE: 0x14294f140-0x14294f251 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2547,6 +2548,32 @@ bool Environment::GetMember(ObjectInterface* pthis, const ASString& name, Value*
             rv = false;
     }
     return rv;
+}
+
+// A property name against a constant one in the case mode of the movie; both lowercase twins are resolved,
+// the constant's first.
+static SF_FORCEINLINE bool ConstName_CompareCaseCheck(const ASString& constName, const ASString& name,
+                                                      bool caseSensitive)
+{
+    if (caseSensitive)
+        return constName == name;
+    constName.ResolveLowercase();
+    name.ResolveLowercase();
+    return constName.GetNode()->pLower == name.GetNode()->pLower;
+}
+
+// MS2-FUNCTIONAL penv kept in a different callee-saved register (allocation only)
+// @0x14294f140
+bool ExternalInterfaceCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    if (ConstName_CompareCaseCheck(penv->GetSC()->CreateConstString("available"), name,
+                                   penv->GetSC()->IsCaseSensitive()))
+    {
+        bool available = penv->GetTarget()->GetMovieImpl()->pExtIntfHandler != 0;
+        val->SetBool(available);
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
 }
 }}} // namespace Scaleform::GFx::AS2
 

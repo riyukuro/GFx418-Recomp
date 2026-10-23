@@ -867,6 +867,8 @@ class ExternalInterfaceCtorFunction : public CFunctionObject
 public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936cf0
     static void GlobalCtor(const FnCall& fn); // exe 0x14295ae20 undefined
+    // "available": an ExternalInterface handler is installed (exe 0x14294f140).
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
 };
 class MathCtorFunction : public CFunctionObject
 {
