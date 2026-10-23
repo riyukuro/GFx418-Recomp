@@ -332,6 +332,16 @@ struct CriMvDecoderHandleFields
     void* AlphaDecoder;
 };
 
+struct CriMvEasyPlayerFrameFields
+{
+    CriUint8 Reserved0[8];
+    void* PlayerHandle;                                           // 0x08
+    CriUint8 Reserved10[0x348];
+    CriUint8 AlphaFrameInfo[0x38];                                // 0x358
+};
+static_assert(offsetof(CriMvEasyPlayerFrameFields, PlayerHandle) == 0x08, "easy player handle offset");
+static_assert(offsetof(CriMvEasyPlayerFrameFields, AlphaFrameInfo) == 0x358, "easy player alpha frame offset");
+
 struct CriMvAlphaMovieDimensions
 {
     CriUint8 Reserved[0xd44];

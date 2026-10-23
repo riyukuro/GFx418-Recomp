@@ -75,6 +75,12 @@ void     FUN_1400453c4(void* demux);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
 void     FUN_140044ae0(void* decoder);
+CriSint32 FUN_140044630(void* decoder);
+CriSint32 FUN_140043cb0(void* decoder);
+CriSint32 FUN_1400355b0(void* playerHandle);
+void     FUN_1400393f0(void* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c, CriSint32 d, CriSint32 e);
+void     FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
+void     FUN_1400467a8(void* queue, CriSint32 operation, void* chunk);
 void     FUN_140036650(void* player);
 void     FUN_140036710(void* player);
 void     FUN_1400369e0(void* player);
@@ -1753,6 +1759,25 @@ void FUN_1400314a0(void* player)
     FUN_140044ae0(((CriMvDecoderHandleFields*)player)->VideoDecoder);
 }
 
+// MS2-FUNCTIONAL: report whether both decoder backends have completed their stop processing.
+// @0x1400314d0
+CriBool FUN_1400314d0(void* player)
+{
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    if (decoders->VideoDecoder && FUN_140044630(decoders->VideoDecoder) != 0)
+    {
+        state->StopState = 1;
+        return 0;
+    }
+    if (decoders->AlphaDecoder && FUN_140043cb0(decoders->AlphaDecoder) != 0)
+    {
+        state->StopState = 2;
+        return 0;
+    }
+    return 1;
+}
+
 // MS2-FUNCTIONAL: decode a video frame while holding the global CRI movie-player lock.
 // @0x1400313d0
 CriBool FUN_1400313d0(void* player)
@@ -1769,6 +1794,48 @@ void FUN_140031470(void* player)
 {
     FUN_140034730(player);
     FUN_1400317b0(player);
+}
+
+// MS2-FUNCTIONAL: discard the player's pending subtitle chunk.
+// @0x140036e30
+void FUN_140036e30(void* player, CriMvSubtitleChunk* chunk)
+{
+    void* queue = player ? ((CriMvSubtitleFields*)player)->Queue : NULL;
+    if (queue)
+        FUN_1400467b0(queue, 0, chunk);
+}
+
+// MS2-FUNCTIONAL: return a subtitle chunk to the head of the player's subtitle queue.
+// @0x140036e80
+void FUN_140036e80(void* player, CriMvSubtitleChunk* chunk)
+{
+    void* queue = player ? ((CriMvSubtitleFields*)player)->Queue : NULL;
+    if (queue)
+        FUN_1400467a8(queue, 1, chunk);
+}
+
+// MS2-FUNCTIONAL: release the main and current alpha frame held by the easy player.
+// @0x140038fa0
+CriSint32 FUN_140038fa0(void* easyPlayer, const CriMvFrameInfo* frameInfo, CriError* error)
+{
+    CriMvEasyPlayerFrameFields* fields = (CriMvEasyPlayerFrameFields*)easyPlayer;
+    *error = CRIERR_OK;
+    FUN_140035a40(fields->PlayerHandle, frameInfo);
+    if (*(CriUint64*)fields->AlphaFrameInfo)
+        FUN_140035a90(fields->PlayerHandle, (const CriUint64*)fields->AlphaFrameInfo);
+    return 1;
+}
+
+// MS2-FUNCTIONAL: discard the next decoded frame and clear the current-frame bookkeeping.
+// @0x140039110
+CriSint32 FUN_140039110(void* easyPlayer, CriMvFrameInfo* frameInfo, CriError* error)
+{
+    CriMvEasyPlayerFrameFields* fields = (CriMvEasyPlayerFrameFields*)easyPlayer;
+    *error = CRIERR_OK;
+    CriSint32 result = FUN_1400355b0(fields->PlayerHandle);
+    FUN_1400393f0(easyPlayer, 0, 0, 1, 0, 0);
+    (void)frameInfo;
+    return result;
 }
 
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
