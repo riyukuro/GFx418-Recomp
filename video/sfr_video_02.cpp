@@ -2292,6 +2292,25 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
         static_cast<int>(*reinterpret_cast<double*>(reinterpret_cast<char*>(object) + 0x90) * 100.0));
 }
 
+// MS2-FUNCTIONAL: interns the dynamic property name and invokes the executable trait setter.
+// @0x140014900
+void FUN_140014900(void* object, const unsigned long long* encodedName)
+{
+    auto* traits = static_cast<char*>(object) + 0x10;
+    const unsigned kind = *reinterpret_cast<unsigned*>(traits + 0xd8) & 0x1f;
+    if (kind == 0 || (kind >= 0x10 && *reinterpret_cast<void**>(traits + 0xe8) == nullptr))
+        return;
+    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(traits + 0x98);
+    auto* node = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*encodedName & ~3ull);
+    Scaleform::GFx::AS3::Value propertyName(node);
+    unsigned flags = 0;
+    extern void FUN_1424fef00(void*, void*, const void*, void*, int, const void*, int);
+    FUN_1424fef00(vm, traits + 0xd8, &Scaleform::GFx::AS3::Value::GetUndefined(),
+                  &flags, 1, &propertyName, 0);
+    if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(vm) + 0x180) != 0)
+        vm->OutputAndIgnoreException();
+}
+
 // Shared path for the generated AS3 trait getters in this range.
 static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
                             void* callback, void* base)
