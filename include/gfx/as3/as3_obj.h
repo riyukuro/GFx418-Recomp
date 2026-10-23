@@ -49,7 +49,7 @@ namespace Instances
         class GlobalObjectScript;
     }
 }
-namespace InstanceTraits { class Traits; class CTraits; class Interface; namespace fl { class Object; } }
+namespace InstanceTraits { class Traits; class CTraits; class Interface; namespace fl { class Object; class Namespace; } }
 namespace ClassTraits    { class Traits; }
 
 namespace Abc
@@ -643,6 +643,7 @@ namespace Instances
     // AS3 Namespace. 0x60 bytes. vftable 0x143140070 (7 slots).
     class Namespace : public GASRefCountBase
     {
+        friend class InstanceTraits::fl::Namespace;
     public:
         Namespace(VM& vm, Abc::NamespaceKind kind, const char* uri);
     protected:

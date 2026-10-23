@@ -672,9 +672,33 @@ public:
     {
     }
 
+    // The interned namespace of {kind, uri}: the one already made, or a new one with this prefix.
+    // @0x14241baa0
+    Pickable<Instances::Namespace> MakeNamespace(Abc::NamespaceKind kind, const ASString& uri, const Value& prefix);
+
 public:
-    typedef HashSetLH<Instances::Namespace*, FixedSizeHash<Instances::Namespace*>, FixedSizeHash<Instances::Namespace*>,
-                      Stat_Default_Mem, HashsetEntry<Instances::Namespace*, FixedSizeHash<Instances::Namespace*> > >
+    // A namespace is hashed by its kind and uri; Key looks one up without making it.
+    struct Key
+    {
+        Key(Abc::NamespaceKind kind, const ASString& uri) : Kind(kind), Uri(uri) {}
+
+        friend bool operator==(const Instances::Namespace* ns, const Key& key)
+        { return ns->GetKind() == key.Kind && ns->GetUri().GetNode() == key.Uri.GetNode(); }
+
+        Abc::NamespaceKind  Kind;
+        ASString            Uri;
+    };
+
+    struct NamespaceHashFunc
+    {
+        UPInt operator()(const Instances::Namespace* ns) const
+        { return (ns->GetUri().GetHash() << 2) ^ (unsigned)ns->GetKind(); }
+        UPInt operator()(const Key& key) const
+        { return (key.Uri.GetHash() << 2) ^ (unsigned)key.Kind; }
+    };
+
+    typedef HashSetLH<Instances::Namespace*, NamespaceHashFunc, NamespaceHashFunc, Stat_Default_Mem,
+                      HashsetEntry<Instances::Namespace*, NamespaceHashFunc> >
         NamespaceSetType;
 
     NamespaceSetType                NamespaceSet;               // +0x10
@@ -751,6 +775,12 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::Namespace"; }
         // @0x14241c040
         virtual void MakeObject(Value& result, Traits& t);
+
+        // @0x14241ab60
+        Pickable<Instances::Namespace> MakeInstance(Abc::NamespaceKind kind, const ASString& uri, const Value& prefix);
+        // @0x14241ba70
+        Pickable<Instances::Namespace> MakeInternedInstance(Abc::NamespaceKind kind, const ASString& uri,
+                                                            const Value& prefix);
 
         static void prefixGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);     // 0x1423e6090
         static void uriGet(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);        // 0x1423e6100

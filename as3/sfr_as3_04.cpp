@@ -1574,18 +1574,86 @@ FUN_14241a5b0(Scaleform::GFx::AS3::InstanceTraits::Interface*, Scaleform::GFx::A
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-// The namespace set of NamespaceInstanceFactory hashes a namespace by its kind and uri.
-struct NamespaceInstanceHashFunc
+typedef HashSetBase<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHashFunc,
+                    NamespaceInstanceFactory::NamespaceHashFunc, AllocatorLH<Instances::Namespace*, Stat_Default_Mem>,
+                    HashsetEntry<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHashFunc> >
+    NamespaceInstanceSetBase;
+
+// MS2-FUNCTIONAL: the exe inlines the Namespace constructor
+// @0x14241ab60
+Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInstance(Abc::NamespaceKind kind, const ASString& uri,
+                                                                           const Value& prefix)
 {
-    UPInt operator()(const Instances::Namespace* ns) const
-    { return (ns->GetUri().GetHash() << 2) ^ (unsigned)ns->GetKind(); }
-};
-typedef HashSetBase<Instances::Namespace*, NamespaceInstanceHashFunc, NamespaceInstanceHashFunc,
-                    AllocatorLH<Instances::Namespace*, 2>,
-                    HashsetEntry<Instances::Namespace*, NamespaceInstanceHashFunc> > NamespaceInstanceSetBase;
+    return Pickable<Instances::Namespace>(SF_HEAP_AUTO_NEW(this) Instances::Namespace(GetVM(), InstanceFactory, kind, uri, prefix));
+}
+
+// @0x14241ba70
+Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInternedInstance(Abc::NamespaceKind kind,
+                                                                                   const ASString& uri,
+                                                                                   const Value& prefix)
+{
+    return InstanceFactory->MakeNamespace(kind, uri, prefix);
+}
+
+// MS2-FUNCTIONAL: the exe keeps the lookup key in other registers
+// @0x14241baa0
+Pickable<Instances::Namespace> NamespaceInstanceFactory::MakeNamespace(Abc::NamespaceKind kind, const ASString& uri,
+                                                                       const Value& prefix)
+{
+    Instances::Namespace** pns = NamespaceSet.GetAlt(Key(kind, uri));
+    if (pns)
+        return Pickable<Instances::Namespace>(*pns, PickValue);
+
+    Pickable<Instances::Namespace> ns = pNamespaceInstanceTraits->MakeInstance(kind, uri, prefix);
+    NamespaceSet.Add(ns.GetPtr());
+    return ns;
+}
 }}}
-// Its out-of-line rehash.
+// The namespace set's out-of-line rehash.
 template void Scaleform::GFx::AS3::NamespaceInstanceSetBase::setRawCapacity(void*, Scaleform::UPInt);
+// Namespace enumerates two properties: 1 = uri, 2 = prefix.
+// Namespace::GetNextPropIndex.
+// @0x1424161e0
+Scaleform::GFx::AS3::GlobalSlotIndex*
+FUN_1424161e0(const Scaleform::GFx::AS3::Instances::Namespace*, Scaleform::GFx::AS3::GlobalSlotIndex* result,
+              Scaleform::GFx::AS3::GlobalSlotIndex ind)
+{
+    if (ind.Get() <= 1)
+    {
+        ind = Scaleform::GFx::AS3::GlobalSlotIndex(ind.Get() + 1);
+        *result = ind;
+        return result;
+    }
+    *result = Scaleform::GFx::AS3::GlobalSlotIndex(0);
+    return result;
+}
+// Namespace::GetNextPropertyName.
+// @0x1424162b0
+void FUN_1424162b0(const Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::GFx::AS3::Value& name,
+                   Scaleform::GFx::AS3::GlobalSlotIndex ind)
+{
+    Scaleform::GFx::AS3::VM& vm = self->GetVM();
+    switch (ind.Get())
+    {
+    case 1: name.Assign(vm.GetStringManager().CreateConstString("uri")); break;
+    case 2: name.Assign(vm.GetStringManager().CreateConstString("prefix")); break;
+    }
+}
+// Namespace::GetNextPropertyValue.
+// @0x142416600
+void FUN_142416600(Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::GFx::AS3::Value& value,
+                   Scaleform::GFx::AS3::GlobalSlotIndex ind)
+{
+    switch (ind.Get())
+    {
+    case 1: value.Assign(self->GetUri()); break;
+    case 2: value.Assign(self->GetPrefix()); break;
+    }
+}
+// Namespace::SetUri.
+// @0x142423bd0
+void FUN_142423bd0(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::ASString& uri)
+{ const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = uri; }
 // MultinameHash<ClassTraits::Traits*>::Get: the class traits cached under {name, ns}.
 // MS2-FUNCTIONAL: the exe builds the temporary key in another home slot
 // @0x142414ac0
@@ -1719,5 +1787,5 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-FUNCTIONAL ?InsertAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_KAEBV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@@Z: the exe calls ResizeNoConstruct out of line; ours inlines it
 // MS2-PIN: ?InsertAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_KAEBV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@@Z 0x1424190e0
 // MS2-PIN: ?RemoveMultipleAt@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K0@Z 0x14241ebb0
-// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@U6345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@@5@@Scaleform@@AEAAXPEAX_K@Z: the exe calls Add out of line; ours inlines it
-// MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@U6345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceInstanceHashFunc@345@@5@@Scaleform@@AEAAXPEAX_K@Z 0x14242a240
+// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@AEAAXPEAX_K@Z: the exe keeps the table in another register
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@AEAAXPEAX_K@Z 0x14242a240
