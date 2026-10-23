@@ -621,6 +621,167 @@ MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundArea
     return MES_Combinable;
 }
 
+// Mask bounds narrow cullRect (and update the mask effect), the filter effect follows the node's matrix and color
+// transform, and the node is culled when transparent or outside cullRect; a culled node clears TF_NeedCull for
+// its children. 4.1.18 has no 3D culling exception: a 3D node outside the view stays culled.
+// MS2-FUNCTIONAL: same code, the exe calls GetMatrix3D and TransformBounds3D out of line in the 3D view cull
+// @0x142685210
+TransformFlags TreeCacheNode::updateCulling(const TreeNode::NodeData* data, const TransformArgs& t, RectF* cullRect,
+                                            TransformFlags flags)
+{
+    bool culled = false;
+    bool is3d   = (flags & TF_Has3D) != 0;
+    if (flags & TF_NeedCull)
+    {
+        RectF    bounds;
+        Matrix3F m3(Matrix3F::NoInit);
+        if (HasMask() || data->HasFilter())
+            t.GetMatrix3D(flags, &m3);
+
+        if (HasMask())
+        {
+            Matrix2F        maskAreaMatrix;
+            MaskEffect*     maskEffect = (MaskEffect*)Effects.GetEffect(State_MaskNode);
+            MaskEffectState mes;
+            if (maskEffect)
+            {
+                mes = calcMaskBounds(&bounds, &maskAreaMatrix, m3, t.GetViewProj(), maskEffect->MES, flags);
+                if (maskEffect->UpdateMatrix(mes, maskAreaMatrix))
+                {
+                    UpdateFlags |= Change_State_MaskNode;
+                    addParentToDepthPatternUpdate();
+                }
+            }
+            else
+                mes = calcMaskBounds(&bounds, &maskAreaMatrix, m3, t.GetViewProj(), MES_NoMask, flags);
+
+            if (mes != MES_NoMask)
+            {
+                if (mes == MES_Culled)
+                    culled = true;
+                else
+                {
+                    if (!is3d)
+                        t.Mat.EncloseTransform(&bounds, bounds);
+                    else
+                        TransformBounds3D(t.GetViewProj(), pRoot->GetNodeData()->VP, m3, bounds);
+
+                    // the mask bounds are not oriented: an oriented 3D view keeps the whole cullRect
+                    if (!is3d || !(pRoot->GetNodeData()->VP.Flags & Viewport::View_Orientation_Mask))
+                    {
+                        if (!cullRect->IntersectRect(cullRect, bounds))
+                            culled = true;
+                    }
+                }
+            }
+        }
+
+        // the filter area and color transform follow the node's matrix and color changes
+        if (data->HasFilter() && (flags & (TF_Matrix | TF_Cxform)))
+        {
+            Matrix2F      m;
+            RectF         filterBounds;
+            FilterEffect* filterEffect = (FilterEffect*)Effects.GetEffect(State_Filter);
+            if (filterEffect && calcFilterBounds(&filterBounds, &m, m3, t.GetViewProj(), cullRect))
+            {
+                filterEffect->UpdateMatrix(m);
+                Cxform cx = t.Cx;
+                cx.Append(data->Cx);
+                filterEffect->UpdateCxform(cx);
+                filterEffect->Update(data->GetState<FilterState>());
+            }
+        }
+
+        // under a filter: flag the ancestors up to the filtered one so its pattern is rebuilt
+        if (flags & TF_ParentFilter)
+        {
+            TreeCacheNode* p = this;
+            unsigned       marked;
+            for (;;)
+            {
+                unsigned updateFlags = p->UpdateFlags;
+                marked               = updateFlags & Change_State_Filter;
+                TreeCacheNode* parent = p->GetParent();
+                if (marked || !parent || parent->GetNodeData()->HasFilter())
+                    break;
+                p->UpdateFlags = updateFlags | Change_State_Filter;
+                p              = parent;
+            }
+            if (!marked)
+            {
+                if (p->GetParent())
+                    p->GetParent()->UpdateFlags |= Change_State_Filter | Update_Pattern;
+                p->addParentToDepthPatternUpdate();
+            }
+        }
+
+        // an (almost) transparent leaf is culled, unless it draws a mask
+        if ((flags & TF_CullCxform) && !culled)
+        {
+            if (fabs((double)t.Cx.M[0][3]) < 0.001f && fabs((double)t.Cx.M[1][3]) < 1.0f / 255.0f &&
+                !(GetFlags() & NF_PartOfMask))
+                culled = true;
+        }
+
+        if (!culled && pRoot)
+        {
+            if (!is3d)
+            {
+                t.Mat.EncloseTransform(&bounds, data->AproxLocalBounds);
+                if (!cullRect->Intersects(bounds))
+                    culled = true;
+            }
+            else
+            {
+                Matrix3F m3d(Matrix3F::NoInit);
+                t.GetMatrix3D(flags, &m3d);
+                RectF viewportBounds =
+                    TransformBounds3D(t.GetViewProj(), pRoot->GetNodeData()->VP, m3d, data->AproxLocalBounds, true);
+                if (!cullRect->Intersects(viewportBounds))
+                    culled = true;
+            }
+        }
+    }
+
+    // no culling while the view is rotated
+    if (pRoot && (pRoot->GetNodeData()->VP.Flags & Viewport::View_Orientation_Mask))
+        culled = false;
+
+    // the root always draws (the stage color)
+    if (culled && this != pRoot)
+    {
+        if (!(GetFlags() & NF_Culled))
+        {
+            SetFlags(GetFlags() | NF_Culled);
+            addParentToDepthPatternUpdate();
+        }
+        flags = (TransformFlags)(flags & ~TF_NeedCull);
+    }
+    else if (GetFlags() & NF_Culled)
+    {
+        SetFlags(GetFlags() & ~NF_Culled);
+        addParentToDepthPatternUpdate();
+    }
+
+    if (HasMask())
+    {
+        if (!(flags & TF_Has3D))
+        {
+            TransformArgs args(t, t.Mat);
+            updateMaskTransform(args, flags);
+        }
+        else
+        {
+            Matrix3F m3(Matrix3F::NoInit);
+            t.GetMatrix3D(flags, &m3);
+            TransformArgs args(t, m3);
+            args.Mat = Matrix2F::Identity;
+            updateMaskTransform(args, flags);
+        }
+    }
+    return flags;
+}
+
 // ***** The child bounds a pattern merge must not overlap
 
 // a stack array of 32 items that moves to the heap when it outgrows them (temporary storage only)

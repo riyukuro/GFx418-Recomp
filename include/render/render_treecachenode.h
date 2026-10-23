@@ -362,8 +362,10 @@ public:
     Matrix4F              GetViewProj() const;
 
     void updateMaskCache(const TreeNode::NodeData* data, UInt16 depth, bool updateSubtree);
-    // culls against cullRect (narrowed by a mask) and sets NF_Culled; 0x142685210
-    void updateCulling(const TreeNode::NodeData* data, const TransformArgs& t, RectF* cullRect, TransformFlags flags);
+    // culls against cullRect (narrowed by a mask) and sets NF_Culled; 0x142685210. Returns flags, without
+    // TF_NeedCull once the node is culled (its children need no culling).
+    TransformFlags updateCulling(const TreeNode::NodeData* data, const TransformArgs& t, RectF* cullRect,
+                                 TransformFlags flags);
 
     // (appended for sfr_render_07h)
     MatrixPoolImpl::MatrixPool& GetMatrixPool() const;                       // 0x1426815d0
@@ -395,7 +397,7 @@ public:
         SetFlags(GetFlags() & ~NF_HasMask);
     }
 
-    // the parent's pattern is rebuilt in the depth pass (out of line at 0x142683c00)
+    // the parent's pattern is rebuilt in the depth pass (never inlined: out of line at 0x142683c00)
     inline void addParentToDepthPatternUpdate();
 
     // unlinks from the parent's children (or mask slot) and detaches the subtree from the root
@@ -501,7 +503,7 @@ public:
     void Draw();
 };
 
-inline void TreeCacheNode::addParentToDepthPatternUpdate()
+__declspec(noinline) inline void TreeCacheNode::addParentToDepthPatternUpdate()
 {
     if (pRoot && GetParent())
         pRoot->AddToDepthUpdate(GetParent(), Update_Pattern);
