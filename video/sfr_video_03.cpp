@@ -8,6 +8,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_videoplayerimpl.h"
 #include "../include/gfx/gfx_stream.h"
+#include "../include/kernel/sf_array.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/obj/as3_obj_display.h"
 #include "hook/ms2hook.h"
@@ -997,5 +998,31 @@ void FUN_14001bfd0(void* object, const std::uint32_t* id)
         std::uint32_t value = *id;
         FUN_1425cd370(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x38), &value);
     }
+}
+
+// MS2-FUNCTIONAL: copies a VideoPlayer pointer array into fresh allocator owned storage.
+// @0x142742ed0
+void* FUN_142742ed0(void* destination, const std::uint64_t* source)
+{
+    using Element = Scaleform::GFx::Video::VideoPlayerImpl*;
+    using Data = Scaleform::ArrayDataBase<Element, Scaleform::AllocatorGH<Element, 2>, Scaleform::ArrayDefaultPolicy>;
+    auto* output = static_cast<Data*>(destination);
+    output->Data = nullptr; output->Size = 0; output->Policy.SetCapacity(0);
+    const auto count = source[1];
+    auto* input = reinterpret_cast<Element*>(source[0]);
+    if (count) {
+        output->Reserve(output, (count >> 2) + count);
+        output->Size = count;
+        for (std::uint64_t i = 0; i < count; ++i) output->Data[i] = input[i];
+    }
+    return destination;
+}
+// MS2-FUNCTIONAL: copies the three leading array fields and deep copies the VideoPlayer list.
+// @0x142742f70
+std::uint64_t* FUN_142742f70(std::uint64_t* destination, const std::uint64_t* source)
+{
+    destination[0] = source[0]; destination[1] = source[1]; destination[2] = source[2];
+    FUN_142742ed0(destination + 3, source + 3);
+    return destination;
 }
 } // namespace
