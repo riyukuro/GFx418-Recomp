@@ -145,6 +145,7 @@
 // MS2-RANGE: 0x14294e520-0x14294e93f .text$mn
 // MS2-RANGE: 0x14294bd90-0x14294be96 .text$mn
 // MS2-RANGE: 0x14294fc20-0x1429502ff .text$mn
+// MS2-RANGE: 0x14295da50-0x14295db46 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3335,6 +3336,14 @@ bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, V
         }
     }
     return GetMemberRaw(psc, name, val);
+}
+
+// MS2-FUNCTIONAL the exe inlines Value(ASStringContext*, CFunctionPtr) and the CFunctionObject ctor (sfr_as2_03)
+// @0x14295da50
+bool MouseCtorFunction::HasOverloadedCursorTypeFunction(ASStringContext* psc) const
+{
+    Value func(psc, SetCursorType);
+    return SetCursorTypeFunc.GetObjectPtr() != func.V.FunctionValue.GetObjectPtr();
 }
 }}} // namespace Scaleform::GFx::AS2
 

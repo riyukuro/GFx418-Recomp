@@ -731,6 +731,8 @@ public:
     // Asks the user event handler for cursor shape cursorType on mouse mouseIndex; false without a handler
     // (exe 0x142980380).
     static bool SetCursorType(MovieImpl* proot, unsigned mouseIndex, unsigned cursorType);
+    // Mouse.setCursorType was replaced by a script function (exe 0x14295da50).
+    bool HasOverloadedCursorTypeFunction(ASStringContext* psc) const;
 
 protected:
     // Mouse.setCursorType(shape[, mouse]) (exe 0x142980240).
