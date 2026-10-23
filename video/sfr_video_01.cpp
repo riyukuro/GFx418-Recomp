@@ -756,6 +756,21 @@ void FUN_140005db0(Scaleform::String* destination, const Scaleform::String* sour
     }
 }
 
+// MS2-FUNCTIONAL: initializes a FunctionRefBase from the source, including its frame ownership mode.
+// @0x140005f00
+Scaleform::GFx::AS2::FunctionRefBase* FUN_140005f00(
+    Scaleform::GFx::AS2::FunctionRefBase* destination,
+    const Scaleform::GFx::AS2::FunctionRefBase* source)
+{
+    destination->Function = source->Function;
+    destination->Flags = 0;
+    if (destination->Function) destination->Function->AddRef();
+    destination->pLocalFrame = nullptr;
+    if (source->pLocalFrame)
+        destination->SetLocalFrame(source->pLocalFrame, (source->Flags & 1) != 0);
+    return destination;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
