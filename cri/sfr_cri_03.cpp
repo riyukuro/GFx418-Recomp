@@ -55,12 +55,45 @@ CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
+void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
 void FUN_140041110(void*, const char*, CriUint32);
 void FUN_140046d50(void*, CriSint32);
+void FUN_140053570(void*);
 void FUN_14003a108(void*);
 CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
 void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
+
+// MS2-FUNCTIONAL: send the supplied CRI diagnostic through the movie error dispatcher.
+// @0x1400410d0
+void FUN_1400410d0(void* owner, const CriChar8* message, CriUint32 value)
+{
+    FUN_140038ce4(0, message, (CriSint32)value, 0, owner);
+}
+
+// MS2-FUNCTIONAL: the second CRI diagnostic entry point forwards the same tuple to the shared dispatcher.
+// @0x140041110
+void FUN_140041110(void* owner, const CriChar8* message, CriUint32 value)
+{
+    FUN_140038ce4(0, message, (CriSint32)value, 0, owner);
+}
+
+// MS2-FUNCTIONAL: report the picture decode failure through the generic CRI error callback.
+// @0x140041190
+void FUN_140041190(void)
+{
+    FUN_1400410d0(NULL, "E07111401M : An error occurred while decoding picture data in MPV module.", 0);
+}
+
+// MS2-FUNCTIONAL: forward the contained synchronization object to its release helper when present.
+// @0x1400435d0
+void FUN_1400435d0(void* object)
+{
+    struct SyncHolder { CriUint8 Reserved[0x10]; void* Sync; };
+    SyncHolder* holder = (SyncHolder*)object;
+    if (holder && holder->Sync)
+        FUN_140053570(holder->Sync);
+}
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
 void FUN_1400479e0(void);
