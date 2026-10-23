@@ -143,6 +143,7 @@
 // MS2-RANGE: 0x14294ec10-0x14294ef4f .text$mn
 // MS2-RANGE: 0x14294d800-0x14294dbd7 .text$mn
 // MS2-RANGE: 0x14294e520-0x14294e93f .text$mn
+// MS2-RANGE: 0x14294bd90-0x14294be96 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3208,6 +3209,18 @@ bool ColorMatrixFilterObject::GetMember(Environment* penv, const ASString& name,
     else if (strcmp(pname, "strength") == 0)
     {
         val->SetNumber(readonlyFilterParams().Strength);
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// MS2-FUNCTIONAL the exe inlines Value(ASStringContext*, CFunctionPtr) and the CFunctionObject ctor (sfr_as2_03)
+// @0x14294bd90
+bool AmpMarkerCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    if (strcmp(name.ToCStr(), "addMarker") == 0)
+    {
+        *val = Value(penv->GetSC(), AddMarker);
         return true;
     }
     return GetMemberRaw(penv->GetSC(), name, val);
