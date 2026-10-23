@@ -3,6 +3,12 @@
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1429180c0-0x1429181f0 .text$mn
+// MS2-RANGE: 0x14291f540-0x14291f670 .text$mn
+// MS2-RANGE: 0x142920fc0-0x142921110 .text$mn
+// MS2-RANGE: 0x142923250-0x142923350 .text$mn
+// MS2-RANGE: 0x142928310-0x142928350 .text$mn
+// MS2-RANGE: 0x1429286d0-0x142928750 .text$mn
+// MS2-RANGE: 0x142928900-0x142928990 .text$mn
 // MS2-RANGE: 0x1429277d0-0x142927860 .text$mn
 // MS2-RANGE: 0x142927d30-0x142927dc0 .text$mn
 // MS2-RANGE: 0x142929210-0x1429292a0 .text$mn
@@ -621,6 +627,28 @@ ArrayProto::ArrayProto(ASStringContext* psc, Object* pprototype, const FunctionR
     : Prototype<ArrayObject>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x14291f540
+NumberProto::NumberProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<NumberObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142920fc0
+StringProto::StringProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<StringObject>(psc, pprototype, constructor)
+{
+    sValue = psc->GetBuiltin(ASBuiltin_typeObject_);
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142923250
+TextSnapshotProto::TextSnapshotProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<TextSnapshotObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
 }
 
 // @0x14291f430
@@ -1496,3 +1524,24 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_7TransformProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219b10
 // MS2-PIN: ??_7TransformProto@AS2@GFx@Scaleform@@6B@ 0x143219bb8
 // MS2-PIN: ??_G?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429289b0
+// MS2-PIN: ??_7?$Prototype@VNumberObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b230
+// MS2-PIN: ??_7?$Prototype@VNumberObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b278
+// MS2-PIN: ??_7?$Prototype@VNumberObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321b320
+// MS2-PIN: ??_7NumberProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b328
+// MS2-PIN: ??_7NumberProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b370
+// MS2-PIN: ??_7NumberProto@AS2@GFx@Scaleform@@6B@ 0x14321b418
+// MS2-PIN: ??_G?$Prototype@VNumberObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928310
+// MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321aa10
+// MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321aa58
+// MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321ab00
+// MS2-PIN: ??_7StringProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ab08
+// MS2-PIN: ??_7StringProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ab50
+// MS2-PIN: ??_7StringProto@AS2@GFx@Scaleform@@6B@ 0x14321abf8
+// MS2-PIN: ??_G?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429286d0
+// MS2-PIN: ??_7?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e3b8
+// MS2-PIN: ??_7?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e400
+// MS2-PIN: ??_7?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321e4a8
+// MS2-PIN: ??_7TextSnapshotProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e4b0
+// MS2-PIN: ??_7TextSnapshotProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e4f8
+// MS2-PIN: ??_7TextSnapshotProto@AS2@GFx@Scaleform@@6B@ 0x14321e5a0
+// MS2-PIN: ??_G?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142928900

@@ -5,6 +5,7 @@
 
 #include "as2_action.h"
 #include "as2_arrayobject.h"
+#include "as2_objectproto.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -16,6 +17,11 @@ public:
 
     StringObject(Environment* penv);                     // exe 0x142920ea0: ""
     StringObject(Environment* penv, const ASString& val); // exe 0x142920f30
+    // The prototype instance starts out as "".
+    StringObject(ASStringContext* psc, Object* pprototype) : Object(psc), sValue(psc->GetBuiltin(ASBuiltin_empty_))
+    {
+        Set__proto__(psc, pprototype);
+    }
 
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x142956730
     virtual ObjectType  GetObjectType() const;                     // exe 0x142954320: Object_String
@@ -31,9 +37,13 @@ protected:
 };
 
 // String.prototype methods.
-class StringProto
+class StringProto : public Prototype<StringObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143213770
+
+    StringProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920fc0
+
     static void StringCharAt(const FnCall& fn);
     static void StringCharCodeAt(const FnCall& fn);
     static void StringConcat(const FnCall& fn);

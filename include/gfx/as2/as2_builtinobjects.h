@@ -386,6 +386,8 @@ public:
 
     NumberObject(Environment* penv);           // exe 0x14291f430: 0
     NumberObject(Environment* penv, Number v); // exe 0x14291f4b0
+    // The prototype instance holds 0.
+    NumberObject(ASStringContext* psc, Object* pprototype) : Object(psc), NumberValue(0) { Set__proto__(psc, pprototype); }
 
     virtual ObjectType GetObjectType() const; // exe 0x1429542b0: Object_Number
     virtual Value      GetValue() const;      // exe 0x142956c90: NumberValue
@@ -486,6 +488,12 @@ public:
 #else
     TextSnapshotObject(Environment* penv);
 #endif
+    // The prototype instance: an empty snapshot.
+    TextSnapshotObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        ::new (Data68) StaticTextSnapshotData();
+        Set__proto__(psc, pprototype);
+    }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954360: Object_TextSnapshot
 
@@ -497,10 +505,14 @@ protected:
     virtual void Finalize_GC(); // exe 0x142943130
 };
 
-// TextSnapshot methods.
-class TextSnapshotProto
+// TextSnapshot.prototype.
+class TextSnapshotProto : public Prototype<TextSnapshotObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143214250
+
+    TextSnapshotProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142923250
+
     static void FindTextA(const FnCall& fn);
     static void GetCount(const FnCall& fn);
     static void GetSelected(const FnCall& fn);
@@ -763,6 +775,15 @@ public:
 
     // new Boolean(v) stores v in the instance, Boolean(v) converts v (exe 0x1429595a0).
     static void GlobalCtor(const FnCall& fn);
+};
+
+// Number.prototype.
+class NumberProto : public Prototype<NumberObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432141a0
+
+    NumberProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291f540
 };
 
 // The Number class.

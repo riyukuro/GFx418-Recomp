@@ -56,6 +56,7 @@ enum ASBuiltinType : int
     ASBuiltin__listeners       = 81, // "_listeners"
     ASBuiltin___resolve        = 82,
     ASBuiltin_typeFunction_    = 83, // "[type Function]"
+    ASBuiltin_typeObject_      = 84, // "[type Object]"
     ASBuiltin_objectObject_    = 85, // "[object Object]"
     ASBuiltin_INVALID          = 90,
     ASBuiltin_onPress          = 91,
