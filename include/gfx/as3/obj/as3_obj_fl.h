@@ -73,6 +73,20 @@ namespace Instances {
 
 }
 
+// (appended, sfr19) the traits of AS3 (ABC) function closures; GetFunctionName names an anonymous one
+// "Function-<hex id>" (body in sfr_as3_04). A VMAbcFile caches them by method index.
+namespace InstanceTraits {
+    class Function : public CTraits
+    {
+    public:
+        ASString GetFunctionName(const Value& _this) const;
+        SInt32 GetMethodInfoInd() const { return MethodInfoInd; }
+
+    public:
+        SInt32 MethodInfoInd;   // +0xe8
+    };
+}
+
 // (appended, sfr19) the traits of the class Function keep the traits of the native function kinds.
 namespace ClassTraits {
     class Function : public Traits

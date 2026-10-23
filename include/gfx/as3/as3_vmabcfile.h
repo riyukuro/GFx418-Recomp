@@ -22,6 +22,26 @@ private:
     ArrayLH<SPtr<Instances::Namespace> >    Namespaces;     // +0x20
 };
 
+// (appended, sfr19) a map keyed by an ABC constant pool index (and the index of the multiname that follows it, -1
+// for none), hashed bytewise: a VMAbcFile interns its namespaces in one (+0x30, lookup 0x1425057f0, add 0x1424d4850).
+template<class C, int SID = StatMV_VM_VMAbcFile_Mem>
+class AbcMultinameHash
+{
+public:
+    struct Key
+    {
+        UPInt NsInd;
+        SPInt NextMnInd;
+
+        Key(UPInt ind, SPInt next_ind = -1) : NsInd(ind), NextMnInd(next_ind) {}
+        Key(const Key& other) : NsInd(other.NsInd), NextMnInd(other.NextMnInd) {}
+        bool operator==(const Key& other) const { return NsInd == other.NsInd && NextMnInd == other.NextMnInd; }
+    };
+
+    typedef HashLH<Key, C, FixedSizeHash<Key>, SID> TContainer;
+    TContainer Entries;
+};
+
 class VMAbcFile : public GASRefCountBase
 {
 public:
