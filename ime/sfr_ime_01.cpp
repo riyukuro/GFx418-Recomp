@@ -94,7 +94,7 @@ extern "C" void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
 extern bool FUN_1425b9b10(void*);
 extern "C" void FUN_14257db40(void*);
-extern "C" void FUN_1423daf30(void*);
+extern "C" unsigned long long FUN_1423daf30(void*, int = 0);
 extern "C" void FUN_1423cc7c0(void*);
 extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
@@ -2274,6 +2274,37 @@ void FUN_1423d1830(void* self, unsigned long long* movie)
 void FUN_1423d94f0(void* self, void* value)
 {
     *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8) = value;
+}
+
+// MS2-FUNCTIONAL: calls the executable's IME provider and text composition vtables using their observed slots and fields.
+// @0x1423daf30
+unsigned long long FUN_1423daf30(void* raw, int offset)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    void* provider = nullptr;
+    auto** managerVtable = *reinterpret_cast<void***>(*reinterpret_cast<void**>(self + 0x28));
+    const int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(managerVtable[0])(
+        *reinterpret_cast<void**>(self + 0x28), &DAT_14313b8a8, &provider);
+    if (hr >= 0 && provider) {
+        void* context = nullptr;
+        auto** providerVtable = *reinterpret_cast<void***>(provider);
+        const int getContext = reinterpret_cast<int(*)(void*, unsigned, void**)>(providerVtable[6])(
+            provider, *reinterpret_cast<unsigned*>(self + 0x50), &context);
+        void* text = nullptr;
+        if (getContext >= 0 && context) {
+            auto** contextVtable = *reinterpret_cast<void***>(context);
+            const int query = reinterpret_cast<int(*)(void*, const void*, void**)>(contextVtable[0])(
+                context, &DAT_14313b8c8, &text);
+            if (query >= 0 && text)
+                reinterpret_cast<void(*)(void*, int)>(
+                    (*reinterpret_cast<void***>(text))[0x78 / sizeof(void*)])(
+                        text, *reinterpret_cast<int*>(self + 0x60) + offset);
+            if (text) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(text))[2])(text);
+            reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(context))[2])(context);
+        }
+        reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
+    }
+    return 0;
 }
 
 // MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
