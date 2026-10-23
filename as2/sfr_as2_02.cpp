@@ -24,6 +24,9 @@
 // MS2-RANGE: 0x142905b80-0x142905d70 .text$mn
 // MS2-RANGE: 0x1429064b0-0x142906650 .text$mn
 // MS2-RANGE: 0x1429069f0-0x142906a90 .text$mn
+// MS2-RANGE: 0x142905e00-0x142906040 .text$mn
+// MS2-RANGE: 0x142905a00-0x142905b80 .text$mn
+// MS2-RANGE: 0x142906650-0x1429069f0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -48,6 +51,8 @@
 #include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_moviedef.h"
+#include "../include/gfx/gfx_placeobject.h"
+#include "../include/video/video_statebag.h"
 #include "../include/kernel/sf_alg.h"
 #include "../include/kernel/sf_msgformat.h"
 #include "../include/kernel/sf_stringhash.h"
@@ -1249,6 +1254,57 @@ void AvmSprite::SpriteGetSWFVersion(const FnCall& fn)
         fn.Result->SetInt(psprite->GetVersion());
 }
 
+// startDrag([lockCenter [, left, top, right, bottom]]): the clip follows the mouse, optionally kept in the rectangle.
+// MS2-FUNCTIONAL regalloc: the exe keeps the twips factor and the four bounds in xmm6-xmm11 and an rbp frame
+// @0x142906650
+void AvmSprite::SpriteStartDrag(const FnCall& fn)
+{
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    MovieImpl::DragState st;
+    bool lockCenter = false;
+    if (fn.NArgs > 0)
+    {
+        lockCenter = fn.Arg(0).ToBool(fn.Env);
+        if (fn.NArgs > 4)
+        {
+            st.Bound = true;
+            float x0 = Render::PixelsToTwips(float(fn.Arg(1).ToNumber(fn.Env)));
+            float y0 = Render::PixelsToTwips(float(fn.Arg(2).ToNumber(fn.Env)));
+            float x1 = Render::PixelsToTwips(float(fn.Arg(3).ToNumber(fn.Env)));
+            float y1 = Render::PixelsToTwips(float(fn.Arg(4).ToNumber(fn.Env)));
+            float left = x0, right = x1;
+            if (x1 < x0)
+            {
+                left  = x1;
+                right = x0;
+            }
+            float top = y0, bottom = y1;
+            if (y1 < y0)
+            {
+                top    = y1;
+                bottom = y0;
+            }
+            st.BoundLT.x = left;
+            st.BoundLT.y = top;
+            st.BoundRB.x = right;
+            st.BoundRB.y = bottom;
+        }
+    }
+    st.pCharacter = psprite;
+    st.InitCenterDelta(lockCenter);
+    psprite->GetMovieImpl()->SetDragState(st);
+    UInt32 flags = psprite->InteractiveObject::Flags;
+    bool optAdv = ((flags >> 21) & 1) != 0;
+    bool marked = ((flags >> 22) & 1) != 0;
+    switch (psprite->Sprite::CheckAdvanceStatus(optAdv && !marked))
+    {
+    case 1:  psprite->AddToOptimizedPlayList(); break;
+    case -1: psprite->MarkToRemoveFromOptimizedPlayList(); break;
+    }
+}
+
 // Drops the dragged character; the clip may now leave the optimized advance list.
 // @0x1429069f0
 void AvmSprite::SpriteStopDrag(const FnCall& fn)
@@ -1268,6 +1324,28 @@ void AvmSprite::SpriteStopDrag(const FnCall& fn)
     }
 }
 
+// attachAudio(netStream): hands the stream's sound to the video module for this clip.
+// @0x142905a00
+void AvmSprite::SpriteAttachAudio(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite)
+        return;
+    if (fn.NArgs < 1)
+    {
+        fn.Env->LogScriptError("%s.attachAudio() needs one Argument", psprite->GetName().ToCStr());
+        return;
+    }
+    Object* pobj = fn.Arg(0).ToObject(fn.Env);
+    if (pobj && pobj->GetObjectType() == Object::Object_NetStream)
+    {
+        Video::VideoBase* pvideo = fn.Env->GetTarget()->GetMovieImpl()->GetStateBag()->GetVideo().GetPtr();
+        if (pvideo && pvideo->GetAS2Support())
+            pvideo->GetAS2Support()->AttachAudio(pobj, psprite);
+    }
+}
+
 // duplicateMovieClip(name, depth [, initObject]): the copy goes to the clip's parent; SWF 6+ returns it.
 // @0x142905b80
 void AvmSprite::SpriteDuplicateMovieClip(const FnCall& fn)
@@ -1281,6 +1359,27 @@ void AvmSprite::SpriteDuplicateMovieClip(const FnCall& fn)
         fn.Arg(0).ToString(fn.Env), int(fn.Arg(1).ToNumber(fn.Env)) + 16384, initSource);
     if (psprite->GetVersion() >= 6)
         fn.Result->SetAsCharacter(newch);
+}
+
+// createEmptyMovieClip(name, depth): a fresh empty clip on this one; it is returned.
+// MS2-FUNCTIONAL the exe calls FnCall::Arg(0) out of line; IsInteractiveObject tested as al&1
+// @0x142905e00
+void AvmSprite::SpriteCreateEmptyMovieClip(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 2)
+        return;
+    CharPosInfo pos(ResourceId(ResourceId::IdType_InternalConstant | 1), int(fn.Arg(1).ToNumber(fn.Env)) + 16384,
+                    1, Render::Cxform::Identity, 1, Render::Matrix2F::Identity);
+    if (unsigned(pos.Depth) > 0x7efffffdu)
+        return;
+    Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, fn.Arg(0).ToString(fn.Env), 0, 0, ~0u, 1, 0, 0);
+    if (newch)
+    {
+        newch->SetAcceptAnimMoves(false);
+        fn.Result->SetAsCharacter(newch->IsInteractiveObject() ? static_cast<InteractiveObject*>(newch.GetPtr()) : 0);
+    }
 }
 
 // A snapshot of the clip's static text.

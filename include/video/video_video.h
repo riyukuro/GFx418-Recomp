@@ -35,6 +35,9 @@ class DisplayObjectBase;
 class ResourceId;
 class MovieDefImpl;
 namespace AS3 { class VM; }
+namespace AS2 { class GlobalContext; class Object; }
+class ASStringContext;
+class Sprite;
 struct TagInfo;
 
 namespace Video {
@@ -59,6 +62,17 @@ public:
     virtual DisplayObjectBase* CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef, InteractiveObject* pparent,
                                                  ResourceId rid, MovieDefImpl* pbindDefImpl) = 0;
     virtual void               RegisterASClasses(AS3::VM* pvm) = 0;
+};
+
+// The AS2 side (vftable 0x1431b4ab0: dtor, CreateASCharacter, RegisterASClasses, AttachAudio).
+class AS2VideoSupport : public RefCountBaseNTS<AS2VideoSupport, Stat_Default_Mem>
+{
+public:
+    virtual DisplayObjectBase* CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef, InteractiveObject* pparent,
+                                                 ResourceId rid, MovieDefImpl* pbindDefImpl) = 0;
+    virtual void               RegisterASClasses(AS2::GlobalContext& gc, ASStringContext& sc) = 0;
+    // MovieClip.attachAudio(netStream): the stream's sound goes to the clip.
+    virtual void               AttachAudio(AS2::Object* pnetStream, Sprite* pchar) = 0;
 };
 
 // Abstract video state stored in the StateBag (State_Video).
