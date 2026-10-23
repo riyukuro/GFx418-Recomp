@@ -880,13 +880,6 @@ void* FUN_140044e40(void* decoder)
     return criDecoderCall<void*>(decoder, 0xe8, NULL);
 }
 
-// MS2-FUNCTIONAL: report the stream demuxer's current state byte.
-// @0x140044f8c
-CriSint32 FUN_140044f8c(const void* demux)
-{
-    return demux ? *(const CriUint8*)((const CriUint8*)demux + 9) : 0;
-}
-
 // MS2-FUNCTIONAL: store one output stream joint and its size flags in the demux table.
 // @0x140044fb0
 void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit)
@@ -917,6 +910,62 @@ CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount)
     CriSint32 recordBytes = outputCount * 0x10 + 0x17;
     CriSint32 recordUnits = (recordBytes + ((recordBytes >> 31) & 7)) >> 3;
     return roundedJointBytes + 0x48 + roundedJointBytes + recordUnits * 8;
+}
+
+// MS2-FUNCTIONAL: calculate ring-buffer work size from its synchronization flag and pool sizes.
+// @0x140045ed0
+CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config)
+{
+    return (config[0] == 1 ? 0xa0 : 0x58) + config[1] + config[2] + config[3];
+}
+
+// MS2-FUNCTIONAL: destroy the ring-buffer lock and clear its lock pointer.
+// @0x140045fdc
+void FUN_140045fdc(void* ringBuffer)
+{
+    void* lock;
+    memcpy(&lock, (CriUint8*)ringBuffer + 0x10, sizeof(lock));
+    if (lock)
+    {
+        criCs_Destroy((LPCRITICAL_SECTION)lock);
+        lock = NULL;
+        memcpy((CriUint8*)ringBuffer + 0x10, &lock, sizeof(lock));
+    }
+}
+
+// MS2-FUNCTIONAL: enter the ring-buffer's optional critical section.
+// @0x140046014
+void FUN_140046014(void* ringBuffer)
+{
+    void* lock;
+    memcpy(&lock, (CriUint8*)ringBuffer + 0x10, sizeof(lock));
+    if (lock)
+        FUN_140039f50((LPCRITICAL_SECTION)lock);
+}
+
+// MS2-FUNCTIONAL: leave the ring-buffer's optional critical section.
+// @0x14004602c
+void FUN_14004602c(void* ringBuffer)
+{
+    void* lock;
+    memcpy(&lock, (CriUint8*)ringBuffer + 0x10, sizeof(lock));
+    if (lock)
+        FUN_140039f8c((LPCRITICAL_SECTION)lock);
+}
+
+// MS2-FUNCTIONAL: clear all ring-buffer counters and restore its available-capacity field.
+// @0x140046044
+void criSjRbf_Reset(void* ringBuffer)
+{
+    CriUint8* bytes = (CriUint8*)ringBuffer;
+    FUN_140046014(ringBuffer);
+    const size_t cleared[] = { 0x20, 0x28, 0x2c, 0x40, 0x44, 0x48, 0x4c };
+    CriUint32 zero = 0, capacity;
+    for (size_t i = 0; i < sizeof(cleared) / sizeof(cleared[0]); ++i)
+        memcpy(bytes + cleared[i], &zero, sizeof(zero));
+    memcpy(&capacity, bytes + 0x38, sizeof(capacity));
+    memcpy(bytes + 0x24, &capacity, sizeof(capacity));
+    FUN_14004602c(ringBuffer);
 }
 
 // MS2-FUNCTIONAL: pop a recycled 0x20-byte chunk from the unified stream-joint free list.
@@ -1403,29 +1452,26 @@ void FUN_1400459d4(void* object)
         FUN_140039f8c((LPCRITICAL_SECTION)section);
 }
 
-// MS2-FUNCTIONAL: lock the ring-buffer object's embedded CRI critical section when present.
-// @0x140046014
-void FUN_140046014(void* object)
-{
-    void* section = *(void**)((CriUint8*)object + 0x10);
-    if (section)
-        FUN_140039f50((LPCRITICAL_SECTION)section);
-}
-
-// MS2-FUNCTIONAL: unlock the ring-buffer object's embedded CRI critical section when present.
-// @0x14004602c
-void FUN_14004602c(void* object)
-{
-    void* section = *(void**)((CriUint8*)object + 0x10);
-    if (section)
-        FUN_140039f8c((LPCRITICAL_SECTION)section);
-}
-
 // MS2-FUNCTIONAL: call the stream-joint object's first virtual operation.
 // @0x140046798
 void FUN_140046798(void* object)
 {
     (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 8)))(object);
+}
+
+// MS2-FUNCTIONAL: call the stream-joint object's deleting destructor slot.
+// @0x140046784
+void FUN_140046784(void* object)
+{
+    if (object)
+    {
+        void* destroy = *(void**)*(void**)object;
+        if (destroy)
+        {
+            typedef void (*DestroyFunction)(void*);
+            ((DestroyFunction)destroy)(object);
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's second virtual operation.
