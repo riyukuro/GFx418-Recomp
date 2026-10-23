@@ -188,6 +188,8 @@ extern "C" const unsigned long long DAT_1431c4888;
 extern "C" const unsigned long long DAT_1431c51d8;
 extern "C" const unsigned long long DAT_1431c48f8;
 extern "C" const unsigned char DAT_143a2a3e0[];
+extern "C" const unsigned char DAT_143a293e0[];
+extern "C" const int DAT_143a2a6b4;
 extern "C" const char DAT_14305cd3c[];
 extern "C" const unsigned long long DAT_1431c4ef0;
 extern "C" void* DAT_143b15f60;
@@ -3595,6 +3597,31 @@ void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData)
     }
     words[0x19] = reinterpret_cast<unsigned long long>(child2);
     return words;
+}
+
+// MS2-FUNCTIONAL: appends the executable's built-in IME name pairs and locale IDs to the manager's 0x30-byte records.
+// @0x1423cc3d0
+void FUN_1423cc3d0(void* raw)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    auto* array = reinterpret_cast<unsigned long long*>(self + 0xb8);
+    const auto* entries = reinterpret_cast<const unsigned char*>(DAT_143a293e0);
+    const int count = DAT_143a2a6b4;
+    for (int i = 0; i < count; ++i) {
+        const auto* entry = entries + static_cast<size_t>(i) * 0x20;
+        const char* name = *reinterpret_cast<const char* const*>(entry);
+        const char* display = *reinterpret_cast<const char* const*>(entry + 8);
+        const unsigned locale = *reinterpret_cast<const unsigned*>(entry + 0x10);
+        const unsigned long long next = array[1] + 1;
+        if (next >= array[2]) cx18_ReserveGH(array, next ? (next >> 2) + next : 4, 0x30);
+        auto* record = static_cast<unsigned char*>(reinterpret_cast<void*>(array[0])) + (next - 1) * 0x30;
+        std::memset(record, 0, 0x30);
+        new (record + 0x10) Scaleform::String(name ? name : "");
+        new (record + 0x18) Scaleform::String(display ? display : "");
+        *reinterpret_cast<unsigned*>(record + 0x20) = locale;
+        array[1] = next;
+        ++*reinterpret_cast<int*>(self + 0xd0);
+    }
 }
 
 // MS2-FUNCTIONAL: initializes the executable's input-window strings, owner link, callback table, and UTF-16 backing arrays.
