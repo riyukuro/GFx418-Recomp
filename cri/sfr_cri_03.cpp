@@ -479,6 +479,62 @@ CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
     return count;
 }
 
+// MS2-FUNCTIONAL: invoke the Initialize entry in the decoder interface table.
+// @0x140043a20
+void FUN_140043a20(const void* decoder)
+{
+    if (decoder)
+    {
+        void** table = *(void***)decoder;
+        if (table && table[0])
+        {
+            typedef void (*VoidFunction)(void);
+            ((VoidFunction)table[0])();
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: invoke the decoder interface's finalize entry when present.
+// @0x140043a50
+void FUN_140043a50(void* decoder)
+{
+    if (decoder)
+    {
+        void** apiTable = *(void***)((CriUint8*)decoder + 8);
+        if (apiTable && apiTable[0])
+        {
+            typedef void (*VoidFunction)(void);
+            ((VoidFunction)apiTable[0])();
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: query the decoder work size and include the executable's 0x2e-byte wrapper.
+// @0x140043a80
+CriSint32 FUN_140043a80(void* decoder, CriSint32 a, CriSint32 b, CriSint32 c)
+{
+    if (!decoder)
+        return 0;
+    void** apiTable = *(void***)((CriUint8*)decoder + 0x10);
+    if (!apiTable || !apiTable[0])
+        return 0;
+    typedef CriSint32 (*WorkSizeFunction)(CriSint32, CriSint32, CriSint32);
+    return ((WorkSizeFunction)apiTable[0])(a, b, c) + 0x2e;
+}
+
+// MS2-FUNCTIONAL: invoke the alpha decoder interface's frame-info query when available.
+// @0x140043c50
+void* FUN_140043c50(void** decoder)
+{
+    if (!decoder || !decoder[1])
+        return NULL;
+    void** apiTable = (void**)decoder[1];
+    if (!apiTable[0x28 / sizeof(void*)])
+        return NULL;
+    typedef void* (*FrameInfoFunction)(void*);
+    return ((FrameInfoFunction)apiTable[0x28 / sizeof(void*)])(*decoder);
+}
+
 // MS2-FUNCTIONAL: copy an RFB frame only while the VMPV handle is not stopped and data is present.
 // @0x14003e110
 CriBool FUN_14003e110(void* handle, void* output, void** frame)
