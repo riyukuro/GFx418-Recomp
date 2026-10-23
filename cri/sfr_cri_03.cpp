@@ -9,6 +9,7 @@
 #include "../include/cri/cri_movie.h"
 #include <windows.h>
 #include <cstring>
+#include <cstddef>
 #include <memory>
 #include <cstdarg>
 #include <cstdio>
@@ -4381,4 +4382,2403 @@ void FUN_1400450c0(void* stream, CriUint32 lane, CriUint32* first, CriUint32* se
     *first = (CriUint32)FUN_1400467b8(queue, 1);
     *second = (CriUint32)FUN_1400467b8(queue, 0);
     *third = (CriUint32)FUN_1400467b8(queue, 2);
+}
+
+// MS2-FUNCTIONAL: advance the read or write cursor of a CRI ring-buffer stream joint after a consumed chunk.
+// @0x14004624c
+void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr)
+{
+    struct Chunk { CriUint8* Data; CriSint32 Size; };
+    struct Joint
+    {
+        CriUint8 Reserved00[0x10];
+        LPCRITICAL_SECTION Lock;
+        CriSint32 Counter20;
+        CriSint32 Counter24;
+        CriUint32 WriteCursor;
+        CriUint32 ReadCursor;
+        CriUint8* Base;
+        CriUint32 Capacity;
+        CriSint32 Reserved3c;
+        CriSint32 Avail40;
+        CriSint32 Reserved44;
+        CriSint32 Avail48;
+    };
+    Joint* state = (Joint*)joint;
+    Chunk* chunk = (Chunk*)chunkPtr;
+    if (chunk->Size == 0 || !chunk->Data)
+        return;
+    if (lane == 0)
+    {
+        if (state->Lock)
+            FUN_140039f50(state->Lock);
+        CriUint32 capacity = state->Capacity;
+        CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->WriteCursor) % capacity;
+        if (cursor == (CriUint32)((CriUint64)(chunk->Data - state->Base) % (CriUint64)capacity))
+        {
+            state->WriteCursor = cursor;
+            state->Counter24 += chunk->Size;
+            state->Avail40 -= chunk->Size;
+        }
+    }
+    else
+    {
+        if (lane != 1)
+        {
+            chunk->Size = 0;
+            chunk->Data = NULL;
+            return;
+        }
+        if (state->Lock)
+            FUN_140039f50(state->Lock);
+        CriUint32 capacity = state->Capacity;
+        CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->ReadCursor) % capacity;
+        if (cursor == (CriUint32)((CriUint64)(chunk->Data - state->Base) % (CriUint64)capacity))
+        {
+            state->ReadCursor = cursor;
+            state->Counter20 += chunk->Size;
+            state->Avail48 -= chunk->Size;
+        }
+    }
+    if (state->Lock)
+        FUN_140039f8c(state->Lock);
+}
+
+// MS2-FUNCTIONAL: create the CRI alpha decoder handle object around a decoder-implementation interface.
+// @0x140043af0
+void* FUN_140043af0(void* implementation, void* heap, void* parameter)
+{
+    struct Implementation { CriUint8 Reserved00[0x18]; void* (*Create)(void*, void*); };
+    Implementation* impl = (Implementation*)implementation;
+    if (!impl || !impl->Create)
+        return NULL;
+    void** object = (void**)FUN_140027ed8(heap, 0x18, "CriAlphaDec: HnObj", 4, 0, 0);
+    if (!object)
+    {
+        FUN_140038e24(0, "E2011030702M", -3);
+        return NULL;
+    }
+    void* created = impl->Create(heap, parameter);
+    if (!created)
+    {
+        FUN_140027fb4(heap, object);
+        return NULL;
+    }
+    object[0] = created;
+    object[1] = implementation;
+    object[2] = heap;
+    return object;
+}
+
+// MS2-FUNCTIONAL: create the CRI video decoder handle object around a decoder-implementation interface.
+// @0x140044470
+void* FUN_140044470(void* implementation, void* heap, void* parameter)
+{
+    struct Implementation { CriUint8 Reserved00[0x18]; void* (*Create)(void*, void*); };
+    Implementation* impl = (Implementation*)implementation;
+    if (!impl || !impl->Create)
+        return NULL;
+    void** object = (void**)FUN_140027ed8(heap, 0x18, "CriVdec: HnObj", 4, 0, 0);
+    if (!object)
+    {
+        FUN_140038e24(0, "E2011030701M", -3);
+        return NULL;
+    }
+    void* created = impl->Create(heap, parameter);
+    if (!created)
+    {
+        FUN_140027fb4(heap, object);
+        return NULL;
+    }
+    object[0] = created;
+    object[1] = implementation;
+    object[2] = heap;
+    return object;
+}
+
+// MS2-FUNCTIONAL: skip leading zero bytes of the first stream queue chunk and split it between two joints.
+// @0x140044fe4
+void FUN_140044fe4(void* stream)
+{
+    struct Chunk { CriUint8* Data; CriSint32 Size; };
+    struct Stream { CriUint8 Reserved00[0x10]; void* Source; CriUint8 Reserved18[8]; void* First; void* Second; };
+    Stream* state = (Stream*)stream;
+    void* source = state->Source;
+    void* first = state->First;
+    void* second = state->Second;
+    Chunk chunk;
+    CriUint8 split[16];
+    FUN_1400467a0(source, 1, 0x7fffffff, &chunk);
+    CriSint32 index = 1;
+    if (1 < chunk.Size)
+    {
+        do
+        {
+            chunk.Data = chunk.Data + 1;
+            if (*chunk.Data != 0)
+            {
+                FUN_1400467c0(&chunk, index, &chunk, split);
+                FUN_1400467a8(source, 1, split);
+                FUN_1400467b0(first, 1, &chunk);
+                second = state->Second;
+                FUN_1400467b0(second, 1, &chunk);
+                return;
+            }
+            ++index;
+        } while (index < chunk.Size);
+    }
+    FUN_1400467b0(first, 1, &chunk);
+    FUN_1400467b0(second, 1, &chunk);
+}
+
+extern "C" const void* PTR_FUN_143a485d8;
+extern "C" const void* PTR_FUN_143a48608;
+void FUN_14002e6b0(void*, CriUint32, CriMvWorkAllocator*);
+void* FUN_14002e6c0(CriMvWorkAllocator*, CriUint32, CriUint32);
+void FUN_14002e6bc(CriMvWorkAllocator*);
+void FUN_140038ddc(CriSint32, const CriChar8*);
+
+// MS2-FUNCTIONAL: lay out a CRI ring-buffer stream joint inside the supplied work area.
+// @0x140045eec
+void* FUN_140045eec(const void* config, void* work, CriSint32 workSize)
+{
+    const CriSint32* settings = (const CriSint32*)config;
+    CriMvWorkAllocator allocator;
+    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
+    void** object = (void**)FUN_14002e6c0(&allocator, 0x50, 8);
+    memset(object, 0, 0x50);
+    object[0] = (void*)&PTR_FUN_143a48608;
+    object[1] = (void*)"CriSjRbf";
+    if (settings[0] == 1)
+    {
+        void* csWork = FUN_14002e6c0(&allocator, 0x48, 1);
+        object[2] = criCs_Create(csWork, 0x48);
+        if (!object[2])
+        {
+            FUN_140038ddc(0, "E09021620B:Failed in criCs_Create().");
+            return NULL;
+        }
+    }
+    else
+    {
+        object[2] = NULL;
+    }
+    object[3] = *(void* const*)(settings + 4);
+    object[6] = FUN_14002e6c0(&allocator, (CriUint32)(settings[1] + settings[2]), (CriUint32)settings[3]);
+    *(CriSint32*)(object + 7) = settings[1];
+    *(CriSint32*)((CriUint8*)object + 0x3c) = settings[2];
+    FUN_140046798(object);
+    FUN_14002e6bc(&allocator);
+    return object;
+}
+
+// MS2-FUNCTIONAL: lay out a CRI universal stream joint and its free list of 0x20-byte chunk records.
+// @0x1400459ec
+void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize)
+{
+    const CriUint32* settings = (const CriUint32*)config;
+    CriMvWorkAllocator allocator;
+    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
+    void** object = (void**)FUN_14002e6c0(&allocator, 0x50, 8);
+    memset(object, 0, 0x50);
+    object[0] = (void*)&PTR_FUN_143a485d8;
+    object[1] = (void*)"CriSjUni";
+    if (settings[0] == 1)
+    {
+        void* csWork = FUN_14002e6c0(&allocator, 0x48, 1);
+        object[2] = criCs_Create(csWork, 0x48);
+        if (!object[2])
+        {
+            FUN_140038ddc(0, "E09021213:Failed in criCs_Create().");
+            return NULL;
+        }
+    }
+    else
+    {
+        object[2] = NULL;
+    }
+    *(CriUint32*)(object + 3) = settings[1];
+    object[4] = NULL;
+    object[5] = NULL;
+    object[6] = NULL;
+    object[7] = NULL;
+    object[8] = FUN_14002e6c0(&allocator, settings[2] << 5, 8);
+    object[9] = NULL;
+    for (CriUint32 index = 0; index < settings[2]; ++index)
+    {
+        void** record = (void**)((CriUint8*)object[8] + (CriUint64)index * 0x20);
+        memset(record, 0, 0x20);
+        record[0] = object[9];
+        object[9] = record;
+    }
+    FUN_14002e6bc(&allocator);
+    return object;
+}
+
+
+void FUN_1400314a0(void*);
+CriSint32 FUN_14003efc0(void*);
+
+namespace
+{
+// Video player (VMPV handle) fields touched by the queue helpers below.
+struct CriVideoQueueFields
+{
+    CriUint8 Reserved00[0x18];
+    CriSint32 Status;
+    CriSint32 Busy;
+    CriSint32 Mode;
+    CriSint32 Running;
+    CriUint8 Reserved28[0x28];
+    CriUint32 UnitSize;
+    CriUint8 Reserved54[4];
+    void* Queue;
+    void* Pending;
+    CriUint32 PendingSize;
+    CriUint8 Reserved6c[4];
+    void* Cursor;
+    CriUint8 Reserved78[8];
+    void* Window;
+    void* WindowNext;
+    void* WindowEnd;
+    CriUint16 Flags;
+    CriUint16 FlagsHigh;
+    CriUint8 Reserved9c[0x14];
+    void* Staged;
+    CriUint8 Reserveda8[0xc8];
+    void* InputQueue;
+    CriUint32 PictureCount;
+    CriUint8 Reserved18c[4];
+    CriUint32 Decoded;
+    CriUint32 Threshold;
+};
+}
+
+static_assert(offsetof(CriVideoQueueFields, Queue) == 0x58 && offsetof(CriVideoQueueFields, Staged) == 0xb0 &&
+              offsetof(CriVideoQueueFields, InputQueue) == 0x180 && offsetof(CriVideoQueueFields, Threshold) == 0x194 &&
+              offsetof(CriVideoQueueFields, Decoded) == 0x190 && offsetof(CriVideoQueueFields, UnitSize) == 0x50, "layout");
+
+// MS2-FUNCTIONAL: drain the demuxed chunk queue of a video player, counting the chunks it consumes.
+// @0x14003ed40
+CriSint32 FUN_14003ed40(void* player)
+{
+    struct Chunk { const CriUint8* Data; CriSint32 Size; CriSint32 Reserved; };
+    void* queue = ((CriVideoQueueFields*)player)->InputQueue;
+    CriSint32 count = 0;
+    while (FUN_1400467b8(queue, 2) != 0)
+    {
+        Chunk second = {};
+        Chunk first;
+        FUN_1400467a0(queue, 2, 0xffffffff, &first);
+        if (FUN_14003eeb0(&first) != 0)
+        {
+            FUN_1400467a8(queue, 2, &first);
+            return count;
+        }
+        if (FUN_14003d6c0(&first) != 0)
+        {
+            if (FUN_1400467b8(queue, 2) == 0)
+            {
+                FUN_1400467a8(queue, 2, &first);
+                return count;
+            }
+            FUN_1400467a0(queue, 2, 0xffffffff, &second);
+            CriUsfStandardHeader header = {};
+            criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &header);
+            CriUint32 payload;
+            memcpy(&payload, header.Data + 4, sizeof(payload));
+            if ((CriUint32)(first.Size + second.Size) < payload + 8U)
+                FUN_1400410d0(0, "E08121602M : Video chunk might not be demuxed properly.\n", 0);
+        }
+        FUN_1400467b0(queue, 0, &first);
+        if (second.Data)
+            FUN_1400467b0(queue, 0, &second);
+        ++count;
+    }
+    return count;
+}
+
+// MS2-FUNCTIONAL: flush the pending reference-picture input of a VMPV player into its stream joint.
+// @0x140040a90
+void FUN_140040a90(void* player)
+{
+    CriVideoQueueFields* state = (CriVideoQueueFields*)player;
+    if (state->Staged == NULL)
+        return;
+    state->FlagsHigh = 0;
+    state->Flags = 0;
+    state->WindowEnd = state->Staged;
+    state->Window = state->WindowEnd;
+    state->WindowNext = state->Window;
+    state->Cursor = state->WindowEnd;
+    state->Staged = NULL;
+    void* descriptor[2];
+    memcpy(descriptor, &state->Pending, sizeof(descriptor));
+    if (descriptor[0] == NULL)
+    {
+        FUN_140041110(0, "E06100910M : Failed in crivmpv_FlushReferencePictureInPool()", 0);
+        state->Status = 4;
+        return;
+    }
+    FUN_140040a20(player, descriptor);
+    state->Pending = NULL;
+    state->WindowEnd = NULL;
+    void* pending[2];
+    FUN_1400467a0(state->Queue, 3, 0xffffffff, pending);
+    if (pending[0])
+        FUN_1400467b0(state->Queue, 0, pending);
+}
+
+// MS2-FUNCTIONAL: report the per-lane picture queue depths of a VMPV player in whole pictures.
+// @0x140040e40
+void FUN_140040e40(void* player, CriUint32* total, CriUint32* first, CriSint32* second, CriUint32* third,
+                   CriUint32* fourth)
+{
+    CriVideoQueueFields* state = (CriVideoQueueFields*)player;
+    *first = 0;
+    *second = 0;
+    *third = 0;
+    *fourth = 0;
+    if (!state || !state->Queue)
+        return;
+    *total = state->PictureCount;
+    *first = (CriUint32)FUN_1400467b8(state->Queue, 1) / state->UnitSize;
+    *second = (CriSint32)((CriUint32)FUN_1400467b8(state->Queue, 3) / state->UnitSize);
+    if (state->Pending != NULL)
+        *second += 1;
+    *third = (CriUint32)FUN_1400467b8(state->Queue, 2) / state->UnitSize;
+    *fourth = (CriUint32)FUN_1400467b8(state->Queue, 0) / state->UnitSize;
+}
+
+// MS2-FUNCTIONAL: return the smallest per-channel count of whole audio frames buffered in a sound decoder.
+// @0x140043420
+CriUint32 FUN_140043420(void* decoder, void* player, CriUint32 channels)
+{
+    struct Decoder
+    {
+        CriSint32 Enabled;
+        CriUint8 Reserved04[0xc];
+        void* Handle;
+        CriUint32 ChannelLimit;
+        CriUint8 Reserved1c[0x14];
+        void* Queues[1];
+    };
+    struct Player { CriUint8 Reserved00[8]; CriSint32 Mode; CriUint8 Reserved0c[0xe10]; CriUint32 FrameSize; };
+    Decoder* base = (Decoder*)decoder;
+    Player* ply = (Player*)player;
+    if (!base || !base->Handle || base->Enabled == 0)
+        return 0;
+    if (base->ChannelLimit < channels)
+        FUN_140037950(player, "E05063028M : Requested audio channel number is too many", channels);
+    if (ply->Mode == 1)
+        return 0;
+    CriSint32 status = FUN_1400310b0(player);
+    if (status != 5 && status != 4)
+        return 0;
+    CriUint32 frameSize = ply->FrameSize;
+    CriUint32 minimum = (CriUint32)FUN_1400467b8(base->Queues[0], 1) / frameSize;
+    for (CriUint32 channel = 1; channel < channels; ++channel)
+    {
+        CriUint32 count = (CriUint32)FUN_1400467b8((&base->Queues[0])[channel * 2], 1) / frameSize;
+        if (count < minimum)
+            minimum = count;
+    }
+    return minimum;
+}
+
+// MS2-FUNCTIONAL: run a video player's decode step once the demuxer has queued data.
+// @0x14003ec30
+CriSint32 FUN_14003ec30(void* player)
+{
+    CriVideoQueueFields* state = (CriVideoQueueFields*)player;
+    if (!state || state->Busy == 1)
+        return 0;
+    if (criVmpv_GetStatus(player) != 2)
+        return 0;
+    FUN_14003ef00(player);
+    if (FUN_1400467b8(state->Queue, 0) == 0)
+        return 0;
+    CriSint32 result = 0;
+    state->Running = 1;
+    if (criVdecCmn_GetNumPictureData(player) != 0)
+    {
+        FUN_14003ed40(player);
+        result = FUN_14003efc0(player);
+    }
+    else if (state->Mode == 1 && FUN_1400467b8(state->InputQueue, 1) == 0 && state->Decoded < state->Threshold)
+    {
+        FUN_140040a90(player);
+    }
+    state->Running = 0;
+    return result;
+}
+
+// MS2-FUNCTIONAL: ask the owner to stop when the playback clock has run ahead of the nominal frame rate.
+// @0x1400414f0
+void FUN_1400414f0(void* handle)
+{
+    struct Owner { CriUint8 Reserved00[8]; CriMvEasyPlayer* Player; CriUint8 Reserved10[0x2d0]; CriUint32 FrameRate;
+                   CriUint32 Reserved2e4; CriUint64 FramesDone; CriUint64 FramesUnit; };
+    struct Handle { CriUint8 Reserved00[0x40]; Owner* State; };
+    Owner* state = ((Handle*)handle)->State;
+    if (!state)
+        return;
+    CriMvEasyPlayer* owner = state->Player;
+    CriUint64 count;
+    CriUint64 unit;
+    owner->GetTime(count, unit);
+    float counts = (float)count;
+    float units = (float)unit;
+    float framesDone = (float)state->FramesDone;
+    float framesUnit = (float)state->FramesUnit;
+    if (1000.0f / ((float)state->FrameRate / 1000.0f) < (counts / units) * 1000.0f - (framesDone / framesUnit) * 1000.0f)
+    {
+        struct EasyFields { CriUint8 Reserved00[8]; void* Inner; };
+        FUN_1400314a0(((EasyFields*)owner)->Inner);
+    }
+}
+
+// MS2-FUNCTIONAL: reset a VMPV player's counters and return every picture record to its free queue.
+// @0x14003d720
+void FUN_14003d720(void* player)
+{
+    struct Player
+    {
+        CriUint8 Reserved00[0x18];
+        CriSint32 Status;
+        CriSint32 Busy;
+        CriSint32 Mode;
+        CriSint32 Running;
+        CriUint8 Reserved28[0x14];
+        CriUint32 RecordCount;
+        CriUint8 Reserved40[8];
+        CriUint8* Records;
+        CriUint32 UnitSize;
+        CriUint8 Reserved54[4];
+        void* Queue;
+        void* Pending;
+        CriSint32 PendingSize;
+        CriUint8 Reserved6c[4];
+        void* Cursor;
+        CriUint8 Reserved78[0x18];
+        void* WindowEnd;
+        CriUint8 Reserved98[0x18];
+        void* Staged;
+        CriUint8 Reservedb8[0x18];
+        void* Reserved0d0;
+        CriUint8 Reservedd8[0xa8];
+        CriUint32 Counter180;
+        CriUint32 Counter184;
+        CriUint32 PictureCount;
+        CriUint8 Reserved18c[4];
+        CriUint32 Counter190;
+        CriUint32 Counter194;
+        CriUint32 Counter198;
+        CriUint32 Counter19c;
+        CriUint32 Counter1a0;
+        CriUint32 Counter1a4;
+        CriUint32 Counter1a8;
+        CriUint32 Counter1ac;
+        CriUint8 Reserved1b0[0x90];
+        CriUint32 Counter240;
+    };
+    static_assert(offsetof(Player, Records) == 0x48 && offsetof(Player, Queue) == 0x58 && offsetof(Player, Cursor) == 0x70 &&
+                  offsetof(Player, Staged) == 0xb0 && offsetof(Player, PictureCount) == 0x188 &&
+                  offsetof(Player, Counter1ac) == 0x1ac && offsetof(Player, Counter240) == 0x240, "layout");
+    struct Record { void* Data; CriUint32 Size; };
+    Player* state = (Player*)player;
+    state->Counter190 = 0;
+    state->Counter194 = 0;
+    state->Counter198 = 0;
+    state->Counter19c = 0;
+    state->Counter1a0 = 0;
+    state->Counter1a4 = 0;
+    state->Status = 1;
+    state->Mode = 0;
+    state->Busy = 0;
+    state->Running = 0;
+    state->PictureCount = 0;
+    state->Counter240 = 0;
+    FUN_140046798(state->Queue);
+    state->Pending = NULL;
+    state->PendingSize = 0;
+    for (CriUint32 index = 0; index < state->RecordCount; ++index)
+    {
+        Record record;
+        record.Data = state->Records + (CriUint64)index * 200;
+        record.Size = state->UnitSize;
+        memset(state->Records + 0x10 + (CriUint64)index * 200, 0, 0xb0);
+        FUN_1400467b0(state->Queue, 0, &record);
+    }
+    state->WindowEnd = NULL;
+    state->Staged = NULL;
+    state->Reserved0d0 = NULL;
+    state->Cursor = NULL;
+    state->Counter1a8 = 0;
+    state->Counter1ac = 0;
+}
+
+extern "C" CriUint32 DAT_143b27c3c;
+void FUN_140049300(const void*, void*, void*);
+void FUN_14004c0c0(const void*, void*, void*);
+void FUN_14004cbb0(const void*, void*, void*);
+void FUN_140035090(void*);
+CriBool FUN_140035560(void*);
+void FUN_1400351c0(void*);
+CriUint32 FUN_1400358d0(void*, const void*);
+void FUN_1400359e0(void*, const void*);
+void FUN_140035260(void*, void*, const void*, CriUint64, CriUint32);
+void FUN_140035480(void*, void*, const void*);
+void FUN_14003bb60(void*, CriUint8*, CriUint32, CriUint32, const void*, const void*, const void*);
+
+// MS2-FUNCTIONAL: convert YUV (and optional alpha) planes into the caller's 32-bit ARGB buffer.
+// @0x14003bb60
+void FUN_14003bb60(void* player, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize, const void* srcbufs,
+                   const void* src_vinf, const void* src_ainf)
+{
+    struct PlaneRef { CriUint8* Data; CriUint32 Reserved08; CriUint32 Pitch; };
+    struct YuvBuffers { PlaneRef Planes[3]; };
+    struct AlphaInfo { CriUint8* Data; CriUint32 Reserved08; CriUint32 Width; CriUint32 Height; CriUint32 Reserved14;
+                       CriUint32 Reserved18; CriUint32 Pitch; };
+    struct VideoInfo { CriUint8 Reserved00[0xc]; CriUint32 Width; CriUint32 Height; };
+    struct PlaneDesc { CriUint8* Data; CriUint32 Width; CriUint32 Height; CriUint32 Pitch; CriUint32 Reserved; };
+    struct SourceDesc { CriUint32 Count; CriUint32 Reserved; PlaneDesc Planes[4]; };
+    struct DestDesc { CriUint32 Count; CriUint32 Reserved; CriUint8* Data; CriUint32 Width; CriUint32 Height; CriUint32 Pitch; };
+    struct PlayerSize { CriUint8 Reserved00[0x614]; CriUint32 Width; CriUint32 Height; };
+    (void)dstbufsize;
+    if (DAT_143b27c40 != 1)
+        FUN_140037950(NULL, "E10110401M : Please call initialization function for 32bit ARGB frame output.", 0);
+    const YuvBuffers* yuv = (const YuvBuffers*)srcbufs;
+    const AlphaInfo* alpha = (const AlphaInfo*)src_ainf;
+    const VideoInfo* video = (const VideoInfo*)src_vinf;
+    if (!yuv || !alpha || !dstbuf)
+    {
+        FUN_140037910(0, "E10060100M : NULL pointer is passed into criMvPly_CopyFrameARGB8888Buffer().", 0);
+        return;
+    }
+    if (alpha->Data != NULL && (video->Width != alpha->Width || video->Height != alpha->Height))
+    {
+        FUN_140037950(NULL, "E11012101M : The resolutions of alpha stream and video stream should be same in the frame format. Use YUV buffers format.", 0);
+        return;
+    }
+    const PlayerSize* size = (const PlayerSize*)player;
+    CriUint32 halfWidth = (size->Width + 1U) / 2;
+    CriUint32 halfHeight = (size->Height + 1U) / 2;
+    SourceDesc source = {};
+    source.Count = 3;
+    source.Planes[0].Data = yuv->Planes[0].Data;
+    source.Planes[0].Width = size->Width;
+    source.Planes[0].Height = size->Height;
+    source.Planes[0].Pitch = yuv->Planes[0].Pitch;
+    source.Planes[1].Data = yuv->Planes[1].Data;
+    source.Planes[1].Width = halfWidth;
+    source.Planes[1].Height = halfHeight;
+    source.Planes[1].Pitch = yuv->Planes[1].Pitch;
+    source.Planes[2].Data = yuv->Planes[2].Data;
+    source.Planes[2].Width = halfWidth;
+    source.Planes[2].Height = halfHeight;
+    source.Planes[2].Pitch = yuv->Planes[2].Pitch;
+    source.Planes[3].Data = alpha->Data;
+    source.Planes[3].Width = alpha->Width;
+    source.Planes[3].Height = alpha->Height;
+    source.Planes[3].Pitch = alpha->Pitch;
+    DestDesc dest = {};
+    dest.Count = 1;
+    dest.Data = dstbuf;
+    dest.Width = video->Width;
+    dest.Height = video->Height;
+    dest.Pitch = dstpitch;
+    CriUint64 options[6] = {};
+    if (DAT_143b27c3c == 1)
+        FUN_140049300(&source, &dest, options);
+    else
+        FUN_14004c0c0(&source, &dest, options);
+    if (source.Planes[3].Data != NULL)
+    {
+        source.Planes[0].Data = source.Planes[3].Data;
+        source.Planes[0].Width = source.Planes[3].Width;
+        source.Planes[0].Height = source.Planes[3].Height;
+        options[0] = 0;
+        FUN_14004cbb0(&source, &dest, options);
+    }
+}
+
+CriBool FUN_14003b8b0(void*, CriUint8*, CriUint32, CriUint32, void*);
+
+// MS2-FUNCTIONAL: fetch the next decoded frame (and alpha frame) and convert it into a 32-bit ARGB buffer.
+// @0x14003b8b0
+CriBool FUN_14003b8b0(void* player, CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize, void* frameinfo)
+{
+    struct FrameInfo { CriUint8 Reserved00[0xc]; CriUint32 Width; CriUint32 Height; };
+    struct Player
+    {
+        CriUint8 Reserved00[0x5f0];
+        CriUint32 FrameId;
+        CriUint8 Reserved5f4[0x814];
+        void* VideoDecoder;
+        CriUint8 Reservede10[0x30];
+        void* AlphaDecoder;
+    };
+    static_assert(offsetof(Player, VideoDecoder) == 0xe08 && offsetof(Player, AlphaDecoder) == 0xe40, "layout");
+    Player* ply = (Player*)player;
+    FrameInfo* output = (FrameInfo*)frameinfo;
+    FUN_140035090(output);
+    if (!FUN_140035560(player))
+        return 0;
+    if (bufsize < output->Width * 4 * output->Height)
+    {
+        FUN_140037950(player, "E09012805M : ARGB buffer is too small.", 0);
+        return 0;
+    }
+    CriUint8 alphaInfo[0x38];
+    CriUint8 alphaCopy[0x38];
+    CriMvFrameInfo videoFrame;
+    CriMvFrameInfo converted;
+    CriUint8 alphaFrame[0x50];
+    CriUint8 yuvInfo[0x40];
+    FUN_1400351c0(alphaInfo);
+    memset(alphaFrame, 0, sizeof(alphaFrame));
+    void* videoToken = FUN_1400449c0(ply->VideoDecoder, &videoFrame);
+    if (!videoToken)
+    {
+        FUN_140037910(0, "E10060101M : Cannot get the pointer to video frame buffer.", 0);
+        return 0;
+    }
+    if (ply->AlphaDecoder != NULL && FUN_140043fe0(ply->AlphaDecoder, alphaFrame) == NULL)
+    {
+        FUN_140037910(0, "E08082502M : Cannot get the pointer to alpha frame buffer.", 0);
+        return 0;
+    }
+    FUN_140035260(player, &converted, &videoFrame, (CriUint64)(uintptr_t)videoFrame.imageptr, videoFrame.width);
+    FUN_140035480(player, alphaInfo, alphaFrame);
+    FUN_1400358d0(yuvInfo, &videoFrame);
+    FUN_1400359e0(yuvInfo, alphaFrame);
+    FUN_14003bb60(player, imagebuf, pitch, bufsize, yuvInfo, &converted, alphaInfo);
+    memcpy(&ply->FrameId, (const CriUint8*)&videoFrame + 0xa8, sizeof(ply->FrameId));
+    if (ply->AlphaDecoder != NULL)
+        FUN_140044050((CriUint64*)ply->AlphaDecoder, alphaFrame);
+    FUN_140044a30(ply->VideoDecoder, &videoFrame);
+    FUN_140035260(player, output, &videoFrame, (CriUint64)(uintptr_t)imagebuf, pitch);
+    return 1;
+}
+
+extern "C" CriUint32 DAT_143b27c78;
+
+namespace
+{
+// 0xb0-byte decoded-frame description copied out of a queue record; the plane table starts at +0x38.
+struct CriDecodedPlane { CriUint8* Data; CriUint32 Width; CriUint32 Height; CriUint32 Pitch; CriUint32 Reserved; };
+struct CriDecodedFrame
+{
+    CriUint8* Base;
+    CriUint8 Reserved08[4];
+    CriUint32 Width;
+    CriUint32 Height;
+    CriUint8 Reserved14[0x24];
+    CriUint32 PlaneCount;
+    CriUint32 Reserved3c;
+    CriDecodedPlane Planes[3];
+    CriUint8 Reserved88[0x28];
+};
+struct CriFrameRecord { CriUint8* Key; CriUint8 Reserved08[8]; CriDecodedFrame Frame; CriUint32 Mode; };
+struct CriVideoFrameSource
+{
+    CriUint8 Reserved00[0x34];
+    CriUint32 ChannelCount;
+    CriUint8 Reserved38[0x20];
+    void* Queue;
+    CriUint8 Reserved60[0x30];
+    void* Window;
+    CriUint8 Reserved98[0xf8];
+    CriUint32 Position;
+};
+static_assert(sizeof(CriDecodedFrame) == 0xb0 && offsetof(CriFrameRecord, Mode) == 0xc0 &&
+              offsetof(CriVideoFrameSource, Queue) == 0x58 && offsetof(CriVideoFrameSource, Window) == 0x90 &&
+              offsetof(CriVideoFrameSource, Position) == 0x190, "layout");
+
+// Describe the tiled YUV420 layout of a decoded frame whose picture memory starts at frame->Base.
+void CriDescribeTiledFrame(CriDecodedFrame* frame)
+{
+    CriUint32 width = frame->Width;
+    CriUint32 height = frame->Height;
+    CriUint32 alignedWidth = ((width + 0xf) / 0x10) * 0x10;
+    CriSint16 lumaPitch = (CriSint16)((alignedWidth + 0x7f) / 0x80) * 0x80;
+    CriSint16 chromaPitch = (CriSint16)((alignedWidth / 2 + 0x7f) / 0x80) * 0x80;
+    CriUint8* base = frame->Base;
+    CriUint8* lumaEnd = base + (CriUint64)(((alignedWidth + 0x7f) / 0x80) * 0x80 * ((height + 0x1f) / 0x20) * 0x20);
+    CriUint8* chromaEnd = lumaEnd + (CriUint64)(((alignedWidth / 2 + 0x7f) / 0x80) * 0x80 *
+                                                ((((height + 0x1f) / 0x20) * 0x20) / 2));
+    frame->PlaneCount = 3;
+    frame->Planes[0].Data = base;
+    frame->Planes[0].Width = width;
+    frame->Planes[0].Height = height;
+    frame->Planes[0].Pitch = (CriUint32)(CriSint32)lumaPitch;
+    frame->Planes[1].Data = lumaEnd;
+    frame->Planes[1].Width = width / 2;
+    frame->Planes[1].Height = height / 2;
+    frame->Planes[1].Pitch = (CriUint32)(CriSint32)chromaPitch;
+    frame->Planes[2].Data = chromaEnd;
+    frame->Planes[2].Width = width / 2;
+    frame->Planes[2].Height = height / 2;
+    frame->Planes[2].Pitch = (CriUint32)(CriSint32)chromaPitch;
+}
+}
+
+// MS2-FUNCTIONAL: peek the next decoded picture of a VMPV player and describe its tiled YUV420 planes.
+// @0x14003da40
+void* FUN_14003da40(void* player, void* output)
+{
+    CriVideoFrameSource* source = (CriVideoFrameSource*)player;
+    if (FUN_140040de0(player) == 0)
+        return NULL;
+    CriFrameRecord* record;
+    FUN_1400467a0(source->Queue, 1, 0xffffffff, &record);
+    if (!record)
+        return NULL;
+    CriDecodedFrame* frame = (CriDecodedFrame*)output;
+    memcpy(frame, &record->Frame, sizeof(record->Frame));
+    FUN_140040c00(player, frame);
+    CriDescribeTiledFrame(frame);
+    FUN_1400467a8(source->Queue, 1, &record);
+    return frame->Base;
+}
+
+// MS2-FUNCTIONAL: take the next decoded picture of a VMPV player, describe its planes and mark it consumed.
+// @0x14003dd50
+void* FUN_14003dd50(void* player, void* output)
+{
+    CriVideoFrameSource* source = (CriVideoFrameSource*)player;
+    if (FUN_140040de0(player) == 0)
+        return NULL;
+    if (DAT_143b27c78 == 1 && FUN_1400467b8(source->Queue, 2) != 0)
+        return NULL;
+    CriFrameRecord* record;
+    FUN_1400467a0(source->Queue, 1, 0xffffffff, &record);
+    if (!record)
+        return NULL;
+    CriFrameRecord* taken = record;
+    CriDecodedFrame* frame = (CriDecodedFrame*)output;
+    memcpy(frame, &record->Frame, sizeof(record->Frame));
+    FUN_140040c00(player, frame);
+    CriDescribeTiledFrame(frame);
+    source->Position += 1;
+    FUN_1400467b0(source->Queue, 2, &record);
+    if (source->Window == (void*)taken->Key)
+        taken->Mode = source->ChannelCount < 3 ? 0 : 3;
+    else
+        taken->Mode = 0;
+    return frame->Base;
+}
+
+// MS2-FUNCTIONAL: copy one tiled luma plane row by row into a caller buffer with its own pitch.
+// @0x14003e370
+CriBool FUN_14003e370(void* player, void* destination, void* source)
+{
+    struct Player { CriUint8 Reserved00[0x1c]; CriSint32 Busy; CriUint8 Reserved20[0xd8]; CriSint32 Width; };
+    struct Destination { CriUint8* Data; CriUint32 RowBytes; CriUint32 Rows; CriUint32 Pitch; };
+    struct Source { const CriUint8* Data; };
+    static_assert(offsetof(Player, Width) == 0xf8, "layout");
+    Player* ply = (Player*)player;
+    Destination* dst = (Destination*)destination;
+    Source* src = (Source*)source;
+    if (ply->Busy == 1 || !src || !src->Data)
+        return 0;
+    CriSint32 aligned = ((ply->Width + 0xf) / 0x10) * 0x10 + 0x7f;
+    CriSint16 srcPitch = (CriSint16)(aligned / 0x80) * 0x80;
+    const CriUint8* srcRow = src->Data;
+    CriUint32 copyBytes = (CriUint32)(CriSint32)srcPitch;
+    if (dst->RowBytes < copyBytes)
+        copyBytes = dst->RowBytes;
+    CriUint8* dstRow = dst->Data;
+    for (CriUint32 row = 0; row < dst->Rows; ++row)
+    {
+        memcpy(dstRow, srcRow, copyBytes);
+        srcRow += srcPitch;
+        dstRow += dst->Pitch;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: pull one demuxed chunk from a video player's input queue and advance its decode state machine.
+// @0x14003cff0
+CriSint32 FUN_14003cff0(void* player)
+{
+    struct Chunk { const CriUint8* Data; CriSint32 Size; CriSint32 Reserved; };
+    struct Player
+    {
+        CriUint8 Reserved00[0x180];
+        void* Queue;
+        CriUint32 Chunks;
+        CriUint32 Chunks2;
+        CriUint8 Reserved190[0x18];
+        CriSint32 Phase;
+        CriSint32 PhaseFlag;
+        CriSint32 Metas;
+        CriUint8 Reserved1b4[0x4c];
+        CriSint32 (*HeaderCallback)(void*, void*);
+        void* HeaderArg;
+        void (*EndCallback)(void*);
+        void* EndArg;
+    };
+    static_assert(offsetof(Player, Phase) == 0x1a8 && offsetof(Player, Metas) == 0x1b0 &&
+                  offsetof(Player, HeaderCallback) == 0x200 && offsetof(Player, EndArg) == 0x218, "layout");
+    Player* state = (Player*)player;
+    CriSint32 result = 0;
+    if (FUN_1400467b8(state->Queue, 1) == 0)
+        return result;
+    Chunk first;
+    Chunk second = {};
+    FUN_1400467a0(state->Queue, 1, 0xffffffff, &first);
+    CriUsfStandardHeader header = {};
+    criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &header);
+    CriUint8 kind = header.Data[15];
+    if (kind == 0)
+    {
+        state->Phase = 3;
+        if (FUN_14003d6c0(&first) == 0)
+        {
+            FUN_1400467b0(state->Queue, 2, &first);
+        }
+        else
+        {
+            if (FUN_1400467b8(state->Queue, 1) == 0)
+            {
+                FUN_1400467a8(state->Queue, 1, &first);
+                return result;
+            }
+            FUN_1400467a0(state->Queue, 1, 0xffffffff, &second);
+            CriUsfStandardHeader secondHeader = {};
+            criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &secondHeader);
+            CriUint32 payload;
+            memcpy(&payload, secondHeader.Data + 4, sizeof(payload));
+            if ((CriUint32)(first.Size + second.Size) < payload + 8U)
+            {
+                FUN_1400410d0(0, "E07111401M : Video chunk might not be demuxed properly..\n", 0);
+            }
+            else
+            {
+                FUN_1400467b0(state->Queue, 2, &first);
+                FUN_1400467b0(state->Queue, 2, &second);
+            }
+        }
+        state->Chunks += 1;
+        state->Chunks2 += 1;
+        result = 1;
+    }
+    else if (kind == 1)
+    {
+        state->Phase = 1;
+        if (state->HeaderCallback != NULL)
+        {
+            if (state->HeaderCallback(state->HeaderArg, &first) != 1)
+            {
+                FUN_1400467a8(state->Queue, 1, &first);
+                return result;
+            }
+        }
+    }
+    else if (kind == 2)
+    {
+        if (state->Phase == 1)
+        {
+            state->PhaseFlag = 0;
+            if (state->EndCallback != NULL)
+                state->EndCallback(state->EndArg);
+        }
+        if (state->Phase == 3)
+        {
+            FUN_14003d550(player);
+            state->Metas += 1;
+        }
+    }
+    else if (kind == 3)
+    {
+        state->Phase = 2;
+        if (FUN_14003d6c0(&first) != 0)
+        {
+            if (FUN_1400467b8(state->Queue, 1) == 0)
+            {
+                FUN_1400467a8(state->Queue, 1, &first);
+                return result;
+            }
+            FUN_1400467a0(state->Queue, 1, 0xffffffff, &second);
+            CriUsfStandardHeader secondHeader = {};
+            criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &secondHeader);
+            CriUint32 payload;
+            memcpy(&payload, secondHeader.Data + 4, sizeof(payload));
+            if ((CriUint32)(first.Size + second.Size) < payload + 8U)
+                FUN_1400410d0(0, "E08121601M : Video meta chunk might not be demuxed properly.\n", 0);
+        }
+    }
+    if (kind != 0 && kind < 4)
+    {
+        CriSint32 lane = state->Chunks == 0 ? 0 : 2;
+        FUN_1400467b0(state->Queue, lane, &first);
+        if (second.Data)
+            FUN_1400467b0(state->Queue, lane, &second);
+    }
+    return result;
+}
+
+// MS2-FUNCTIONAL: copy the three tiled YUV420 planes of a decoded picture into caller planes with their own pitches.
+// @0x14003e850
+void FUN_14003e850(void* player, void* source, void* destination)
+{
+    struct Player { CriUint8 Reserved00[0xf8]; CriSint32 Width; CriSint32 Height; };
+    struct Plane { CriUint8* Data; CriUint32 RowBytes; CriUint32 Rows; CriUint32 Pitch; CriUint32 Reserved; };
+    struct Destination { Plane Planes[3]; };
+    static_assert(offsetof(Player, Height) == 0xfc && sizeof(Plane) == 0x18, "layout");
+    Player* ply = (Player*)player;
+    Destination* dst = (Destination*)destination;
+    CriSint32 alignedWidth = ((ply->Width + 0xf) / 0x10) * 0x10;
+    CriSint32 alignedHeight = ((ply->Height + 0x1f) / 0x20) * 0x20;
+    CriSint16 lumaPitch = (CriSint16)((alignedWidth + 0x7f) / 0x80) * 0x80;
+    CriSint16 chromaPitch = (CriSint16)((alignedWidth / 2 + 0x7f) / 0x80) * 0x80;
+    const CriUint8* lumaStart = (const CriUint8*)source;
+    const CriUint8* chromaStart = lumaStart + (CriSint64)(((alignedWidth + 0x7f) / 0x80) * 0x80 * alignedHeight);
+    const CriUint8* chroma2Start = chromaStart +
+                                   (CriSint64)(((alignedWidth / 2 + 0x7f) / 0x80) * 0x80 * (alignedHeight / 2));
+    CriUint32 chromaBytes = (dst->Planes[0].RowBytes + 1U) / 2;
+    CriUint32 chromaRows = (dst->Planes[0].Rows + 1U) / 2;
+    CriUint32 lumaCopy = (CriUint32)(CriSint32)lumaPitch;
+    if (dst->Planes[0].RowBytes < lumaCopy)
+        lumaCopy = dst->Planes[0].RowBytes;
+    CriUint8* out = dst->Planes[0].Data;
+    for (CriUint32 row = 0; row < dst->Planes[0].Rows; ++row)
+    {
+        memcpy(out, lumaStart, lumaCopy);
+        lumaStart += lumaPitch;
+        out += dst->Planes[0].Pitch;
+    }
+    CriUint32 chromaCopy = (CriUint32)(CriSint32)chromaPitch;
+    if (chromaBytes < chromaCopy)
+        chromaCopy = chromaBytes;
+    out = dst->Planes[1].Data;
+    for (CriUint32 row = 0; row < chromaRows; ++row)
+    {
+        memcpy(out, chromaStart, chromaCopy);
+        chromaStart += chromaPitch;
+        out += dst->Planes[1].Pitch;
+    }
+    out = dst->Planes[2].Data;
+    for (CriUint32 row = 0; row < chromaRows; ++row)
+    {
+        memcpy(out, chroma2Start, chromaCopy);
+        chroma2Start += chromaPitch;
+        out += dst->Planes[2].Pitch;
+    }
+}
+
+CriBool FUN_1400530c0(const void*, CriUint32, CriUint32);
+CriBool FUN_140026dd0(void*, CriUint8*, CriUint32, CriUint32, void*, void*);
+void FUN_140021c90(void*, CriSint32, void*);
+
+// MS2-FUNCTIONAL: look for a start-code signature across the tail of one chunk and the head of the next.
+// @0x1400405d0
+CriBool FUN_1400405d0(void* firstChunk, void* secondChunk, CriUint32 offset)
+{
+    struct Chunk { CriUint8* Data; CriUint32 Size; };
+    Chunk* first = (Chunk*)firstChunk;
+    Chunk* second = (Chunk*)secondChunk;
+    Chunk head;
+    Chunk tail;
+    if (first->Size < offset)
+    {
+        head.Data = NULL;
+        head.Size = 0;
+        if (second->Data == NULL)
+        {
+            tail.Data = NULL;
+            tail.Size = 0;
+        }
+        else
+        {
+            tail.Data = second->Data + (offset - first->Size);
+            tail.Size = second->Size - (offset - first->Size);
+        }
+    }
+    else
+    {
+        if (first->Data == NULL)
+        {
+            head.Data = NULL;
+            head.Size = 0;
+        }
+        else
+        {
+            head.Data = first->Data + offset;
+            head.Size = first->Size - offset;
+        }
+        if (second->Data == NULL)
+        {
+            tail.Data = NULL;
+            tail.Size = 0;
+        }
+        else
+        {
+            tail.Data = second->Data;
+            tail.Size = second->Size;
+        }
+    }
+    if (head.Data != NULL && head.Size >= 4 && FUN_1400530c0(head.Data, head.Size, 0x80) != 0)
+        return 1;
+    if (tail.Data == NULL || tail.Size == 0)
+        return 0;
+    CriUint8 joined[8];
+    CriUint32 headBytes = head.Size < 4 ? head.Size : 3;
+    CriUint32 tailBytes = tail.Size < 4 ? tail.Size : 3;
+    if (head.Data != NULL && (CriSint32)headBytes > 0)
+        memcpy(joined, head.Data + (head.Size - headBytes), (size_t)(CriSint32)headBytes);
+    if (tail.Data != NULL && (CriSint32)tailBytes > 0)
+        memcpy(joined + (CriSint32)headBytes, tail.Data, (size_t)(CriSint32)tailBytes);
+    if ((CriSint32)(headBytes + tailBytes) >= 4 && FUN_1400530c0(joined, headBytes + tailBytes, 0x80) != 0)
+        return 1;
+    if (tail.Data == NULL || tail.Size < 4 || FUN_1400530c0(tail.Data, tail.Size, 0x80) == 0)
+        return 0;
+    return 1;
+}
+
+void FUN_1400436d0(void*);
+
+// MS2-FUNCTIONAL: route one stream chunk to the decoder owning the given id and report whether all decoders are fed.
+// @0x140042ba0
+CriUint32 FUN_140042ba0(void* trackSet, void* chunk, CriSint32 id, CriSint32* counts)
+{
+    struct Decoder { CriUint8 Reserved00[8]; CriSint32 Id; };
+    struct TrackSet { Decoder* Decoders[2]; CriSint32 Count; CriUint8 Reserved14[4]; void* Queue; CriUint32 Limit; };
+    TrackSet* set = (TrackSet*)trackSet;
+    CriSint32 index = 0;
+    for (;; ++index)
+    {
+        if (set->Count <= index)
+        {
+            FUN_1400467b0(set->Queue, 0, chunk);
+            return 2;
+        }
+        if (id == set->Decoders[index]->Id)
+            break;
+    }
+    CriUint32 result = 1;
+    FUN_1400467a8(set->Queue, 1, chunk);
+    FUN_1400436d0(set->Decoders[index]);
+    counts[index] += 1;
+    for (index = 0; index < set->Count; ++index)
+    {
+        if ((CriUint32)counts[index] < set->Limit)
+            result = 2;
+        if (set->Limit + 1U <= (CriUint32)counts[index])
+            return 1;
+    }
+    return result;
+}
+
+CriUint32 FUN_140043890(void*, void*, CriUint32, CriUint32);
+
+namespace
+{
+// Shared body of the 16-bit and 32-bit PCM drains: each channel queue is copied into its own output buffer.
+CriUint32 CriDrainAudioChannels(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode,
+                                CriUint32* info, CriUint32 stride)
+{
+    struct Decoder { CriUint8 Reserved00[0x30]; void* Queues[8]; };
+    struct Player { CriUint8 Reserved00[0xb2c]; CriUint32 Rate; CriUint8 Reserveb30[0x2ec]; CriUint32 FrameSize; };
+    struct Chunk { void* Data; CriUint32 Size; };
+    static_assert(offsetof(Player, FrameSize) == 0xe1c, "layout");
+    Decoder* source = (Decoder*)decoder;
+    Player* ply = (Player*)player;
+    CriUint32 frames = FUN_140043890(decoder, player, channels, mode);
+    if (frames == 0)
+        return 0;
+    CriUint8* cursors[8];
+    CriUint32 remaining[8] = {};
+    for (CriUint32 channel = 0; channel < channels; ++channel)
+    {
+        cursors[channel] = ((CriUint8* const*)outputs)[channel];
+        remaining[channel] = frames;
+    }
+    while (remaining[0] != 0)
+    {
+        for (CriUint32 channel = 0; channel < channels; ++channel)
+        {
+            void* queue = source->Queues[channel];
+            Chunk chunk;
+            FUN_1400467a0(queue, 1, remaining[channel] * ply->FrameSize, &chunk);
+            if (chunk.Size != 0)
+            {
+                CriUint32 count = chunk.Size / ply->FrameSize;
+                memcpy(cursors[channel], chunk.Data, count * ply->FrameSize);
+                cursors[channel] += (CriUint64)count * stride;
+                remaining[channel] -= count;
+            }
+            FUN_1400467b0(queue, 0, &chunk);
+        }
+    }
+    info[0] = channels;
+    info[1] = frames;
+    info[2] = ply->Rate;
+    return frames;
+}
+}
+
+// MS2-FUNCTIONAL: drain buffered audio frames of every channel queue into per-channel 16-bit output buffers.
+// @0x140042f40
+CriUint32 FUN_140042f40(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode, CriUint32* info)
+{
+    return CriDrainAudioChannels(decoder, player, channels, outputs, mode, info, 2);
+}
+
+// MS2-FUNCTIONAL: drain buffered audio frames of every channel queue into per-channel 32-bit output buffers.
+// @0x1400431a0
+CriUint32 FUN_1400431a0(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode, CriUint32* info)
+{
+    return CriDrainAudioChannels(decoder, player, channels, outputs, mode, info, 4);
+}
+
+void FUN_1400531e0(void*, const void*, void*, void*);
+
+// MS2-FUNCTIONAL: pull the next movie frame into the three (or four) texture planes handed in by the renderer.
+// @0x1400415f0
+CriBool FUN_1400415f0(void* handle, void* planeSet)
+{
+    struct Buffer { CriUint32 Format; CriUint32 Flags; CriUint64 Pitch; CriUint64 Size; CriUint8* Data; };
+    struct YuvEntry { CriUint8* Data; CriUint32 Size; CriUint32 Pitch; };
+    struct YuvSet { YuvEntry Entries[4]; };
+    struct State
+    {
+        CriUint8 Reserved00[8];
+        CriMvEasyPlayer* Player;
+        CriUint8 Reserved10[0x2b0];
+        CriMvFrameInfo Frame;
+        CriUint8 Reserved388[8];
+        CriUint8 AlphaKeep;
+        CriUint8 Reserved391[0x18];
+        CriUint8 Delivered;
+        CriUint8 Cleared;
+        CriUint8 PausePending;
+    };
+    struct Handle { CriUint8 Reserved00[0x40]; State* State; };
+    static_assert(offsetof(State, Frame) == 0x2c0 && offsetof(State, AlphaKeep) == 0x390 &&
+                  offsetof(State, Delivered) == 0x3a9 && offsetof(State, PausePending) == 0x3ab, "layout");
+    State* state = ((Handle*)handle)->State;
+    if (!state)
+        return 0;
+    if (state->Cleared)
+    {
+        FUN_140041390(handle, planeSet);
+        state->Cleared = 0;
+        return 1;
+    }
+    CriMvEasyPlayer* owner = state->Player;
+    if (owner->IsNextFrameOnTime() == 0)
+        return 0;
+    CriUint32 count = FUN_14257c0c0(planeSet);
+    if (count < 3)
+    {
+        Buffer buffer = {};
+        FUN_14257c050(planeSet, 0, &buffer);
+        FUN_140026dd0(owner, buffer.Data, (CriUint32)buffer.Pitch, (CriUint32)buffer.Size, &state->Frame, &CriMv::ErrorContainer);
+        FUN_1400414f0(handle);
+    }
+    else
+    {
+        Buffer luma = {};
+        Buffer chromaU = {};
+        Buffer chromaV = {};
+        Buffer alpha = {};
+        YuvSet yuv = {};
+        FUN_14257c050(planeSet, 0, &luma);
+        yuv.Entries[0].Data = luma.Data;
+        yuv.Entries[0].Size = (CriUint32)luma.Size;
+        yuv.Entries[0].Pitch = (CriUint32)luma.Pitch;
+        FUN_14257c050(planeSet, 1, &chromaU);
+        yuv.Entries[1].Data = chromaU.Data;
+        yuv.Entries[1].Size = (CriUint32)chromaU.Size;
+        yuv.Entries[1].Pitch = (CriUint32)chromaU.Pitch;
+        FUN_14257c050(planeSet, 2, &chromaV);
+        yuv.Entries[2].Data = chromaV.Data;
+        yuv.Entries[2].Size = (CriUint32)chromaV.Size;
+        yuv.Entries[2].Pitch = (CriUint32)chromaV.Pitch;
+        if (FUN_14257c0c0(planeSet) > 3)
+        {
+            FUN_14257c050(planeSet, 3, &alpha);
+            if (state->AlphaKeep == 0)
+            {
+                memset(alpha.Data, 0xff, (size_t)alpha.Flags * (size_t)alpha.Pitch);
+            }
+            else
+            {
+                yuv.Entries[3].Data = alpha.Data;
+                yuv.Entries[3].Size = (CriUint32)alpha.Size;
+                yuv.Entries[3].Pitch = (CriUint32)alpha.Pitch;
+            }
+        }
+        FUN_1400531e0(owner, &yuv, &state->Frame, &CriMv::ErrorContainer);
+        FUN_1400414f0(handle);
+    }
+    state->Delivered = 1;
+    if (state->PausePending)
+    {
+        FUN_140021c90(owner, 1, &CriMv::ErrorContainer);
+        state->PausePending = 0;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: build a stream demuxer object holding two universal stream joints and a per-track table.
+// @0x140045144
+void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
+{
+    struct Track { void* Joint; CriUint32 Reserved08; CriUint32 Limit; };
+    struct Demux
+    {
+        void* Reserved00;
+        CriUint8 Ready;
+        CriUint8 Reserved09;
+        CriUint8 Reserved0a;
+        CriUint8 Reserved0b;
+        CriSint32 Count;
+        void* Reserved10;
+        Track* Tracks;
+        void* Input;
+        void* Output;
+        CriUint64 Tail[2];
+    };
+    static_assert(sizeof(Demux) == 0x40, "layout");
+    memset(work, 0, (size_t)workSize);
+    CriMvWorkAllocator allocator;
+    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
+    Demux* demux = (Demux*)FUN_14002e6c0(&allocator, 0x40, 8);
+    if (demux != NULL)
+    {
+        demux->Reserved00 = NULL;
+        demux->Reserved10 = NULL;
+        demux->Reserved09 = 0;
+        demux->Count = count;
+        demux->Reserved0a = 0;
+        demux->Tracks = (Track*)FUN_14002e6c0(&allocator, (CriUint32)(count + 1) * 0x10, 8);
+        if (demux->Tracks != NULL)
+        {
+            CriUint32 config[3] = { 1, 0, 0x80 };
+            CriUint32 size = (CriUint32)FUN_140045910(config);
+            demux->Input = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
+            if (demux->Input != NULL)
+            {
+                config[2] = 0x80;
+                size = (CriUint32)FUN_140045910(config);
+                demux->Output = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
+                if (demux->Output != NULL)
+                {
+                    Track* last = &demux->Tracks[(CriUint32)demux->Count];
+                    last->Joint = demux->Output;
+                    last->Reserved08 = 0;
+                    last->Limit = 0xffffffffu;
+                    demux->Ready = 1;
+                    memset(demux->Tail, 0, sizeof(demux->Tail));
+                    FUN_14002e6bc(&allocator);
+                    return demux;
+                }
+            }
+        }
+        FUN_140044f28(demux);
+    }
+    return NULL;
+}
+
+CriUint8* FUN_14003b674(const CriUint8*, CriUint32, CriSint32*);
+
+// MS2-FUNCTIONAL: route queued USF chunks to the matching track decoders until a track set needs more data.
+// @0x1400428e0
+void FUN_1400428e0(void* trackSet, void* player)
+{
+    struct Chunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
+    struct Decoder { CriUint8 Reserved00[0x90]; CriSint32 Active; };
+    struct TrackSet
+    {
+        Decoder* Decoders[2];
+        CriSint32 Count;
+        CriUint8 Reserved14[4];
+        void* Queue;
+        CriUint8 Reserved20[8];
+        CriSint32 (*Callback)(void*, void*, CriUint8);
+        void* CallbackArg;
+    };
+    struct Player { CriUint8 Reserved00[0xb08]; CriUint32 Rate; CriUint8 Reservedb0c[0x34c]; CriSint32 Elapsed;
+                    CriUint8 Reservede5c[0x10]; CriSint32 Started; };
+    static_assert(offsetof(Player, Elapsed) == 0xe58 && offsetof(Player, Started) == 0xe6c &&
+                  offsetof(TrackSet, Callback) == 0x28, "layout");
+    TrackSet* set = (TrackSet*)trackSet;
+    Player* ply = (Player*)player;
+    void* queue = set->Queue;
+    CriSint32 counts[2] = {};
+    for (;;)
+    {
+        Chunk chunk;
+        do
+        {
+            if (FUN_1400467b8(queue, 1) == 0)
+            {
+                if (FUN_1400467b8(queue, 1) != 0)
+                    return;
+                for (CriSint32 index = 0; index < set->Count; ++index)
+                {
+                    if (set->Decoders[index]->Active == 1)
+                        FUN_1400436d0(set->Decoders[index]);
+                }
+                return;
+            }
+            FUN_1400467a0(queue, 1, 0xffffffff, &chunk);
+        } while (chunk.Size < 0x20);
+        CriUsfStandardHeader header;
+        criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, &header);
+        CriSint32 contentSize;
+        FUN_14003b674(chunk.Data, chunk.Size, &contentSize);
+        CriUint8 kind = header.Data[15];
+        CriUint8 track = header.Data[12];
+        if (kind == 1)
+        {
+            CriSint32 accepted = 1;
+            if (set->Callback != NULL)
+                accepted = set->Callback(set->CallbackArg, &chunk, track);
+            if (accepted != 1)
+            {
+                FUN_1400467a8(queue, 1, &chunk);
+                return;
+            }
+            FUN_1400467b0(queue, 0, &chunk);
+            continue;
+        }
+        if (kind != 0)
+        {
+            FUN_1400467b0(queue, 0, &chunk);
+            continue;
+        }
+        if (0 < ply->Elapsed && ply->Started != 1)
+        {
+            CriUint32 timeNumerator;
+            CriUint32 timeDenominator;
+            memcpy(&timeNumerator, header.Data + 0x14, sizeof(timeNumerator));
+            memcpy(&timeDenominator, header.Data + 0x18, sizeof(timeDenominator));
+            if ((float)timeNumerator / (float)timeDenominator <
+                ((float)ply->Elapsed * 1000.0) / (float)ply->Rate)
+            {
+                FUN_1400467b0(queue, 0, &chunk);
+                continue;
+            }
+            ply->Started = 1;
+        }
+        if (FUN_140042ba0(trackSet, &chunk, track, counts) == 1)
+            return;
+    }
+}
+
+CriSint32 FUN_140045b34(void*);
+
+// MS2-FUNCTIONAL: match demuxed USF chunks against the per-track filters and hand them to the matching track queues.
+// @0x140045474
+void FUN_140045474(void* object)
+{
+    struct Chunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
+    struct TrackEntry { void* Queue; CriUint32 Type; CriUint32 Id; };
+    struct Demux
+    {
+        CriUint8 Reserved00[9];
+        CriUint8 State;
+        CriUint8 Flush;
+        CriUint8 Primed;
+        CriSint32 Count;
+        void* Input;
+        TrackEntry* Tracks;
+        void* Output;
+    };
+    static_assert(offsetof(Demux, Output) == 0x20 && sizeof(TrackEntry) == 0x10, "layout");
+    Demux* demux = (Demux*)object;
+    void* input = demux->Input;
+    void* output = demux->Output;
+    TrackEntry* tracks = demux->Tracks;
+    CriSint32 count = demux->Count;
+    Chunk first;
+    Chunk second;
+    Chunk split;
+    Chunk rest;
+    Chunk tail;
+    CriUsfStandardHeader header;
+    CriSint32 index;
+    CriSint32 matched;
+    CriSint32 available;
+    CriUint32 headerSize;
+    CriUint32 needed;
+    CriUint32 type;
+    Chunk* source;
+    CriUint32 length;
+    if (demux->Primed == 1)
+    {
+        void* queue = tracks[count].Queue;
+        FUN_1400467a0(queue, 1, 0xffffffff, &first);
+        while (first.Size != 0)
+        {
+            FUN_1400467b0(queue, 0, &first);
+            FUN_1400467a0(queue, 1, 0xffffffff, &first);
+        }
+        count += 1;
+        first.Size = 0;
+    }
+    do
+    {
+        FUN_1400467a0(output, 1, 0xffffffff, &first);
+        if (first.Size == 0)
+        {
+            if (demux->State == 2)
+            {
+                demux->State = 3;
+                return;
+            }
+            goto drainInput;
+        }
+        matched = 0;
+        for (index = 0; index < count; ++index)
+        {
+            if (tracks[index].Queue != NULL)
+            {
+                FUN_1400467a0(tracks[index].Queue, 0, 0xffffffff, &second);
+                if (first.Data == second.Data)
+                {
+                    length = second.Size < first.Size ? second.Size : first.Size;
+                    FUN_1400467c0(&first, length, &first, &split);
+                    FUN_1400467c0(&second, length, &second, &rest);
+                    FUN_1400467b0(input, 0, &first);
+                    FUN_1400467a8(output, 1, &split);
+                    FUN_1400467a8(tracks[index].Queue, 0, &rest);
+                    break;
+                }
+                FUN_1400467a8(tracks[index].Queue, 0, &second);
+            }
+            ++matched;
+        }
+    } while (matched != count);
+    FUN_1400467a8(output, 1, &first);
+drainInput:
+    {
+        available = FUN_1400467b8(input, 1);
+        FUN_1400467a0(input, 1, 0x7fffffff, &first);
+        while (first.Size != 0)
+        {
+            available -= (CriSint32)first.Size;
+            if (*first.Data == 0)
+            {
+                FUN_1400467a8(input, 1, &first);
+                FUN_140044fe4(object);
+            }
+            else
+            {
+                tail.Data = NULL;
+                tail.Size = 0;
+                if (criUsfCmn_ParseUsfHeaderStd(first.Data, first.Size, &header) == 0)
+                    goto releaseFirst;
+                memcpy(&headerSize, header.Data + 4, sizeof(headerSize));
+                needed = headerSize + 8;
+                if (first.Size < needed)
+                {
+                    if (available < 1)
+                        goto releaseFirst;
+                    FUN_1400467a0(input, 1, 0x7fffffff, &tail);
+                    if (tail.Size + first.Size < needed)
+                    {
+                        FUN_1400467a8(input, 1, &tail);
+                        goto releaseFirst;
+                    }
+                    source = &tail;
+                    length = (headerSize - first.Size) + 8;
+                }
+                else
+                {
+                    source = &first;
+                    length = needed;
+                }
+                FUN_1400467c0(source, length, source, &second);
+                FUN_1400467a8(input, 1, &second);
+                memcpy(&type, header.Data, sizeof(type));
+                for (index = 0; index < count; ++index)
+                {
+                    TrackEntry* track = &tracks[index];
+                    if (track->Queue != NULL && (track->Type == 0 || track->Type == type) &&
+                        (track->Id == 0xffffffffu || track->Id == (CriUint32)header.Data[12]))
+                    {
+                        if (FUN_140045b34(output) < 3 || FUN_140045b34(track->Queue) < 3)
+                            goto releaseTail;
+                        FUN_1400467b0(track->Queue, 1, &first);
+                        FUN_1400467b0(output, 1, &first);
+                        first.Data = NULL;
+                        first.Size = 0;
+                        if (tail.Data != NULL)
+                        {
+                            FUN_1400467b0(track->Queue, 1, &tail);
+                            FUN_1400467b0(output, 1, &tail);
+                            tail.Data = NULL;
+                            tail.Size = 0;
+                        }
+                        break;
+                    }
+                }
+                if (index == count)
+                {
+releaseTail:
+                    if (tail.Data != NULL)
+                        FUN_1400467a8(input, 1, &tail);
+releaseFirst:
+                    FUN_1400467a8(input, 1, &first);
+                    return;
+                }
+            }
+            available = FUN_1400467b8(input, 1);
+            FUN_1400467a0(input, 1, 0x7fffffff, &first);
+        }
+    }
+    if (demux->Flush == 1)
+        demux->State = 2;
+}
+
+// ---- MPEG video (PSFD section) macroblock reconstruction helpers ----
+extern "C" void (**DAT_143fe8248)(CriUint8*, CriUint8*, CriSint32, CriSint32, CriSint32);
+extern "C" void (**DAT_143fe8250)(void*);
+
+namespace
+{
+template <typename T>
+T& CriMpvField(void* decoder, size_t offset)
+{
+    return *(T*)((CriUint8*)decoder + offset);
+}
+
+enum CriMpvOffset : size_t
+{
+    MPV_COEF_LUMA = 0x900,       // six 0x80-byte coefficient blocks
+    MPV_COEF_INTRA = 0x300,      // six 0x100-byte coefficient blocks
+    MPV_COEF_BASE = 0xc00,
+    MPV_COEF_BASE_FIRST = 0xc40,
+    MPV_BLOCK_CONTEXT = 0x1300,
+    MPV_MB_WIDTH = 0x15a0,
+    MPV_MB_HEIGHT = 0x15a4,
+    MPV_REF0 = 0x1638,
+    MPV_REF1 = 0x1658,
+    MPV_CB_BASE = 0x16b0,
+    MPV_CR_BASE = 0x16b8,
+    MPV_LUMA_BASE = 0x16c0,
+    MPV_CHROMA_STRIDE = 0x16c8,
+    MPV_LUMA_STRIDE = 0x16ca,
+    MPV_SKIP_FUNC = 0x1718,
+    MPV_BLOCK_FUNC = 0x1738,
+    MPV_EMIT_FUNC = 0x1740,
+    MPV_QUANT = 0x1748,
+    MPV_MV0 = 0x174c,
+    MPV_MV1 = 0x1770,
+    MPV_ADDRESS = 0x1794,
+    MPV_ROW = 0x1798,
+    MPV_COLUMN = 0x179c,
+    MPV_CODED = 0x17a8,
+    MPV_DC = 0x17ac,
+    MPV_BLOCK_SLOTS = 0x17c8,
+    MPV_DECODE_BLOCK = 0x1818,
+    MPV_DECODE_INTER = 0x1820,
+    MPV_TABLE_LUMA = 0x1838,
+    MPV_TABLE_CHROMA = 0x1840,
+    MPV_CLAMP_COUNT = 0x18ec,
+};
+
+struct CriMpvBlockEntry
+{
+    void* Function;
+    CriUint8* Data;
+    CriSint32 Stride;
+    CriSint32 Reserved;
+};
+
+typedef CriSint32 (*CriMpvDecodeBlockFunc)(void*, void*);
+typedef void (*CriMpvBlockFunc)(void*, void*, CriSint32);
+typedef void (*CriMpvEmitFunc)(void*);
+typedef void (*CriMpvSkipFunc)(void*);
+}
+
+// MS2-FUNCTIONAL: predict one block from a reference plane at an integer plus half-pel motion offset.
+// @0x142ccc5f0
+void FUN_142ccc5f0(CriUint8* reference, CriUint8* destination, CriSint32 stride, CriSint32 stride2, CriSint32 width,
+                   CriSint32 height, CriSint32 x, CriSint32 y, CriSint32 mvx, CriSint32 mvy, CriSint32 flags)
+{
+    CriSint64 index = (CriSint64)flags * 8 + (CriSint64)(mvx & 1) * 2 + ((width >> 2) & 4) + (mvy & 1);
+    CriUint8* source = reference + (CriSint64)(((mvy >> 1) + y) * stride) + x + (mvx >> 1);
+    CriUint8* target = destination + (CriSint64)(y * stride) + x;
+    DAT_143fe8248[index](source, target, stride, stride2, height);
+}
+
+// MS2-FUNCTIONAL: dispatch the inverse-transform add for each coded block of the current macroblock.
+// @0x142ccc6c0
+void FUN_142ccc6c0(void* decoder, CriSint32 codedBlocks, CriSint32 mode)
+{
+    CriUint32 coded = (CriUint32)(codedBlocks >> 0x18) & 0xff;
+    if ((coded & 0x3f) == 0)
+        return;
+    CriMpvBlockEntry entries[8];
+    CriMpvBlockEntry* out = entries;
+    CriSint32 y = CriMpvField<CriSint32>(decoder, MPV_ROW) << 4;
+    CriSint32 x = CriMpvField<CriSint32>(decoder, MPV_COLUMN) << 4;
+    void** slots = (void**)((CriUint8*)decoder + MPV_BLOCK_SLOTS);
+    if (coded & 0x3c)
+    {
+        CriSint32 stride = CriMpvField<CriSint16>(decoder, MPV_LUMA_STRIDE);
+        CriUint8* base = CriMpvField<CriUint8*>(decoder, MPV_LUMA_BASE) + (CriSint64)(stride * y) + x;
+        if (coded & 0x20)
+        {
+            out->Function = slots[0];
+            out->Data = base;
+            out->Stride = stride;
+            ++out;
+        }
+        if (coded & 0x10)
+        {
+            out->Function = slots[1];
+            out->Data = base + 8;
+            out->Stride = stride;
+            ++out;
+        }
+        if (coded & 8)
+        {
+            out->Function = slots[2];
+            out->Data = base + (CriSint64)(stride * 8);
+            out->Stride = stride;
+            ++out;
+        }
+        if (coded & 4)
+        {
+            out->Function = slots[3];
+            out->Data = base + (CriSint64)(stride * 8) + 8;
+            out->Stride = stride;
+            ++out;
+        }
+    }
+    if (coded & 3)
+    {
+        CriSint32 stride = CriMpvField<CriSint16>(decoder, MPV_CHROMA_STRIDE);
+        CriSint32 offset = (y >> 1) * stride + (x >> 1);
+        if (coded & 2)
+        {
+            out->Function = slots[4];
+            out->Data = CriMpvField<CriUint8*>(decoder, MPV_CB_BASE) + offset;
+            out->Stride = stride;
+            ++out;
+        }
+        if (coded & 1)
+        {
+            out->Function = slots[5];
+            out->Data = CriMpvField<CriUint8*>(decoder, MPV_CR_BASE) + offset;
+            out->Stride = stride;
+            ++out;
+        }
+    }
+    out->Function = NULL;
+    DAT_143fe8250[(CriSint64)mode](entries);
+}
+
+// MS2-FUNCTIONAL: run the skipped-macroblock callback for each address stepped back over, then resume reconstruction.
+// @0x142ccc860
+void FUN_142ccc860(void* decoder, CriSint32 run)
+{
+    CriMpvSkipFunc skip = CriMpvField<CriMpvSkipFunc>(decoder, MPV_SKIP_FUNC);
+    CriSint32 target = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+    CriMpvField<CriSint32>(decoder, MPV_CODED) = 0;
+    mpvumc_SubMbadr((CriMpvDecoderState*)decoder, run);
+    if (CriMpvField<CriSint32>(decoder, MPV_ADDRESS) < target)
+    {
+        do
+        {
+            skip(decoder);
+            mpvumc_IncreMbadr((CriMpvDecoderState*)decoder);
+        } while (CriMpvField<CriSint32>(decoder, MPV_ADDRESS) < target);
+    }
+}
+
+// MS2-FUNCTIONAL: motion-compensate one macroblock from a reference frame with a clamped motion vector.
+// @0x142ccc8c0
+void FUN_142ccc8c0(void* decoder, void* referenceFrame, void* motion, CriSint32 flags)
+{
+    struct Frame { CriUint8* Chroma0; CriUint8* Chroma1; CriUint8* Luma; CriSint16 ChromaStride; CriSint16 LumaStride; };
+    struct Motion { CriUint8 Reserved00[0x18]; CriSint32 X; CriSint32 Y; };
+    CriSint32 x = CriMpvField<CriSint32>(decoder, MPV_COLUMN) << 4;
+    CriSint32 y = CriMpvField<CriSint32>(decoder, MPV_ROW) << 4;
+    Motion* mv = (Motion*)motion;
+    Frame* frame = (Frame*)referenceFrame;
+    CriSint32 mvx = mv->X;
+    CriSint32 mvy = mv->Y;
+    CriSint32 widthLimit = CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH) << 4;
+    CriSint32 heightLimit = CriMpvField<CriSint32>(decoder, MPV_MB_HEIGHT) << 4;
+    CriSint32 bound = (-x) * 2;
+    if (mvx < bound)
+    {
+        CriMpvField<CriSint32>(decoder, MPV_CLAMP_COUNT) += 1;
+        mvx = bound;
+    }
+    else
+    {
+        bound = (widthLimit - x) * 2 - 0x20;
+        if (mvx > bound)
+        {
+            CriMpvField<CriSint32>(decoder, MPV_CLAMP_COUNT) += 1;
+            mvx = bound;
+        }
+    }
+    bound = (-y) * 2;
+    if (mvy < bound)
+    {
+        mvy = bound;
+        CriMpvField<CriSint32>(decoder, MPV_CLAMP_COUNT) += 1;
+    }
+    else
+    {
+        bound = (heightLimit - y) * 2 - 0x20;
+        if (mvy > bound)
+        {
+            mvy = bound;
+            CriMpvField<CriSint32>(decoder, MPV_CLAMP_COUNT) += 1;
+        }
+    }
+    CriSint32 lumaStride = frame->LumaStride;
+    FUN_142ccc5f0(frame->Luma, CriMpvField<CriUint8*>(decoder, MPV_LUMA_BASE), lumaStride, lumaStride, 0x10, 0x10, x, y,
+                  mvx, mvy, flags);
+    CriSint32 chromaStride = frame->ChromaStride;
+    CriSint32 chromaX = x >> 1;
+    CriSint32 chromaY = y >> 1;
+    CriSint32 halfX = (mvx - (mvx >> 31)) >> 1;
+    CriSint32 halfY = (mvy - (mvy >> 31)) >> 1;
+    FUN_142ccc5f0(frame->Chroma0, CriMpvField<CriUint8*>(decoder, MPV_CB_BASE), chromaStride, chromaStride, 8, 8,
+                  chromaX, chromaY, halfX, halfY, flags);
+    FUN_142ccc5f0(frame->Chroma1, CriMpvField<CriUint8*>(decoder, MPV_CR_BASE), chromaStride, chromaStride, 8, 8,
+                  chromaX, chromaY, halfX, halfY, flags);
+}
+
+// MS2-FUNCTIONAL: forward-predicted macroblock: compensate from the first reference and add the residual.
+// @0x142ccca50
+void FUN_142ccca50(void* decoder)
+{
+    FUN_142ccc8c0(decoder, (CriUint8*)decoder + MPV_REF0, (CriUint8*)decoder + MPV_MV0, 0);
+    FUN_142ccc6c0(decoder, CriMpvField<CriSint32>(decoder, MPV_CODED), 1);
+}
+
+// MS2-FUNCTIONAL: backward-predicted macroblock: compensate from the second reference and add the residual.
+// @0x142ccca90
+void FUN_142ccca90(void* decoder)
+{
+    FUN_142ccc8c0(decoder, (CriUint8*)decoder + MPV_REF1, (CriUint8*)decoder + MPV_MV1, 0);
+    FUN_142ccc6c0(decoder, CriMpvField<CriSint32>(decoder, MPV_CODED), 1);
+}
+
+// MS2-FUNCTIONAL: bidirectional macroblock: average both reference predictions and add the residual.
+// @0x142cccad0
+void FUN_142cccad0(void* decoder)
+{
+    FUN_142ccc8c0(decoder, (CriUint8*)decoder + MPV_REF0, (CriUint8*)decoder + MPV_MV0, 0);
+    FUN_142ccc8c0(decoder, (CriUint8*)decoder + MPV_REF1, (CriUint8*)decoder + MPV_MV1, 1);
+    FUN_142ccc6c0(decoder, CriMpvField<CriSint32>(decoder, MPV_CODED), 1);
+}
+
+// MS2-FUNCTIONAL: copy skipped macroblocks from the first reference with a zero motion vector.
+// @0x142cccb30
+void FUN_142cccb30(void* decoder, CriSint32 run)
+{
+    CriUint8 zeroMotion[0x20] = {};
+    CriSint32 target = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+    mpvumc_SubMbadr((CriMpvDecoderState*)decoder, run);
+    if (CriMpvField<CriSint32>(decoder, MPV_ADDRESS) < target)
+    {
+        do
+        {
+            FUN_142ccc8c0(decoder, (CriUint8*)decoder + MPV_REF0, zeroMotion, 0);
+            mpvumc_IncreMbadr((CriMpvDecoderState*)decoder);
+        } while (CriMpvField<CriSint32>(decoder, MPV_ADDRESS) < target);
+    }
+}
+
+// MS2-FUNCTIONAL: decode the six 8x8 blocks of an intra macroblock and hand them to the block output function.
+// @0x142cccba0
+CriSint32 FUN_142cccba0(void* decoder)
+{
+    CriUint8* base = (CriUint8*)decoder;
+    memset(base + MPV_COEF_LUMA, 0, 0x300);
+    CriUint8* context = base + MPV_BLOCK_CONTEXT;
+    CriMpvField<CriSint32>(context, 0x30) = CriMpvField<CriSint32>(decoder, MPV_QUANT);
+    CriMpvField<CriSint32>(context, 0x48) = 0;
+    CriMpvField<void*>(context, 0x28) = base + MPV_COEF_BASE;
+    CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_LUMA);
+    CriMpvField<void*>(context, 0x38) = base + MPV_DC;
+    CriMpvField<void*>(context, 0x20) = base + MPV_COEF_LUMA;
+    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK);
+    CriSint32 counts[6];
+    counts[0] = decode(decoder, context);
+    CriMpvField<void*>(context, 0x20) = base + 0x980;
+    counts[1] = decode(decoder, context);
+    CriMpvField<void*>(context, 0x20) = base + 0xa00;
+    counts[2] = decode(decoder, context);
+    CriMpvField<void*>(context, 0x20) = base + 0xa80;
+    counts[3] = decode(decoder, context);
+    CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_CHROMA);
+    CriMpvField<void*>(context, 0x38) = base + MPV_DC + 4;
+    CriMpvField<void*>(context, 0x20) = base + 0xb00;
+    counts[4] = decode(decoder, context);
+    CriMpvField<void*>(context, 0x38) = base + MPV_DC + 8;
+    CriMpvField<void*>(context, 0x20) = base + 0xb80;
+    counts[5] = decode(decoder, context);
+    CriMpvBlockFunc emit = CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC);
+    void** slots = (void**)(base + MPV_BLOCK_SLOTS);
+    for (CriSint32 block = 0; block < 6; ++block)
+        emit(base + MPV_COEF_LUMA + (CriSint64)block * 0x80, slots[block], counts[block]);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: decode the coded 8x8 inter blocks of a macroblock and hand them to the block output function.
+// @0x142cccd80
+CriSint32 FUN_142cccd80(void* decoder)
+{
+    CriUint8* base = (CriUint8*)decoder;
+    CriUint8* context = base + MPV_BLOCK_CONTEXT;
+    CriMpvField<CriSint32>(context, 0x48) = 1;
+    CriMpvField<CriSint32>(context, 0x30) = CriMpvField<CriSint32>(decoder, MPV_QUANT);
+    CriMpvField<void*>(context, 0x28) = base + MPV_COEF_BASE_FIRST;
+    CriSint32 counts[6];
+    CriSint32 mask = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
+    CriUint8* coefficients = base + MPV_COEF_LUMA;
+    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_INTER);
+    for (CriSint32 block = 0; block < 6; ++block)
+    {
+        if (mask < 0)
+        {
+            CriMpvField<void*>(context, 0x20) = coefficients;
+            counts[block] = decode(decoder, context);
+        }
+        mask += mask;
+        coefficients += 0x80;
+    }
+    CriMpvBlockFunc emit = CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC);
+    void** slots = (void**)(base + MPV_BLOCK_SLOTS);
+    mask = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
+    for (CriSint32 block = 0; block < 6; ++block)
+    {
+        if (mask < 0)
+            emit(base + MPV_COEF_LUMA + (CriSint64)block * 0x80, slots[block], counts[block]);
+        mask += mask;
+    }
+    return 0;
+}
+
+// MS2-FUNCTIONAL: decode the six blocks of an intra macroblock into 16-bit coefficient planes and emit their counts.
+// @0x142cccef0
+CriSint32 FUN_142cccef0(void* decoder)
+{
+    CriUint8* base = (CriUint8*)decoder;
+    CriUint8* intra = base + MPV_COEF_INTRA;
+    memset(intra, 0, 0x600);
+    CriUint8* context = base + MPV_BLOCK_CONTEXT;
+    CriMpvField<CriSint32>(context, 0x48) = 0;
+    CriMpvField<CriSint32>(context, 0x30) = CriMpvField<CriSint32>(decoder, MPV_QUANT);
+    CriMpvField<void*>(context, 0x28) = base + MPV_COEF_BASE;
+    CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_LUMA);
+    CriMpvField<void*>(context, 0x20) = intra;
+    CriMpvField<void*>(context, 0x38) = base + MPV_DC;
+    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK);
+    CriUint8* counts = base + 0x1350;
+    counts[0] = (CriUint8)decode(decoder, context);
+    CriMpvField<void*>(context, 0x20) = base + 0x400;
+    counts[1] = (CriUint8)decode(decoder, context);
+    CriMpvField<void*>(context, 0x20) = base + 0x500;
+    counts[2] = (CriUint8)decode(decoder, context);
+    CriMpvField<void*>(context, 0x20) = base + 0x600;
+    counts[3] = (CriUint8)decode(decoder, context);
+    CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_CHROMA);
+    CriMpvField<void*>(context, 0x38) = base + MPV_DC + 4;
+    CriMpvField<void*>(context, 0x20) = base + 0x700;
+    counts[4] = (CriUint8)decode(decoder, context);
+    CriMpvField<void*>(context, 0x38) = base + MPV_DC + 8;
+    CriMpvField<void*>(context, 0x20) = base + 0x800;
+    counts[5] = (CriUint8)decode(decoder, context);
+    CriMpvField<CriMpvEmitFunc>(decoder, MPV_BLOCK_FUNC)(counts);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: decode the coded inter blocks of a macroblock into 16-bit coefficient planes and emit their counts.
+// @0x142ccd080
+CriSint32 FUN_142ccd080(void* decoder)
+{
+    CriUint8* base = (CriUint8*)decoder;
+    CriUint8* context = base + MPV_BLOCK_CONTEXT;
+    CriMpvField<CriSint32>(context, 0x48) = 1;
+    CriMpvField<CriSint32>(context, 0x30) = CriMpvField<CriSint32>(decoder, MPV_QUANT);
+    CriMpvField<void*>(context, 0x28) = base + MPV_COEF_BASE_FIRST;
+    CriUint8* coefficients = base + MPV_COEF_INTRA;
+    CriSint32 mask = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
+    CriUint8* counts = base + 0x1350;
+    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_INTER);
+    for (CriSint32 block = 0; block < 6; ++block)
+    {
+        if (mask < 0)
+        {
+            CriMpvField<void*>(context, 0x20) = coefficients;
+            counts[block] = (CriUint8)decode(decoder, context);
+        }
+        mask += mask;
+        coefficients += 0x100;
+    }
+    CriMpvField<CriSint32>(decoder, 0x1380) = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
+    CriMpvField<CriMpvEmitFunc>(decoder, MPV_EMIT_FUNC)(counts);
+    return 0;
+}
+
+extern "C" const CriSint16* DAT_143d74a38;
+extern "C" const CriSint16* DAT_143d749c8;
+extern "C" const CriSint16* DAT_143d74a30;
+extern "C" const CriSint16* DAT_143d749f0;
+extern "C" const CriSint16* DAT_143d749e0;
+extern "C" const CriSint16* DAT_143d749d8;
+extern "C" const CriSint16* DAT_143d74a08;
+extern "C" const CriSint16* DAT_143d74a20;
+extern "C" const CriSint16* DAT_143d74a00;
+extern "C" const CriSint16* DAT_143d749f8;
+extern "C" const CriSint16* DAT_143d749d0;
+void FUN_140069020(const void*, CriUint32, void*, void*);
+CriSint32 FUN_140051d90(void*);
+void FUN_1400663f0(void);
+
+namespace
+{
+enum CriMpvBitOffset : size_t
+{
+    MPV_BITS_HIGH = 0x1280,
+    MPV_BITS_LOW = 0x1284,
+    MPV_BITS_POSITION = 0x1288,
+    MPV_BITS_CURSOR = 0x1290,
+    MPV_CHUNK = 0x1800,
+    MPV_CHUNK_BIT_OFFSET = 0x1810,
+    MPV_LAST_ADDRESS = 0x17a0,
+    MPV_MB_FLAGS = 0x17a4,
+    MPV_STOP = 0x18f0,
+    MPV_ABORT = 0x17f8,
+    MPV_CALLBACK_COUNTDOWN = 0x1830,
+    MPV_CALLBACK_RELOAD = 0x1580,
+    MPV_CALLBACK_FUNC = 0x1588,
+    MPV_CALLBACK_ARG = 0x1590,
+};
+
+struct CriMpvChunk
+{
+    CriUint8* Data;
+    CriUint32 Size;
+    CriUint32 Reserved;
+};
+
+inline CriUint32 CriReadBigEndian32(const CriUint8* data)
+{
+    return ((CriUint32)data[0] << 24) | ((CriUint32)data[1] << 16) | ((CriUint32)data[2] << 8) | data[3];
+}
+
+typedef void (*CriMpvQueueGet)(void*, CriSint32, CriSint32, void*);
+typedef void (*CriMpvQueuePut)(void*, CriSint32, void*);
+
+// Bit window of the MPEG video decoder: a 64-bit big-endian window split over two words (High holds the next
+// unread bits, Low the following 32), with Position counting the bits of High already consumed.
+struct CriMpvBitReader
+{
+    CriUint32 High;
+    CriUint32 Low;
+    CriSint32 Position;
+    const CriUint8* Cursor;
+
+    void Load(void* decoder)
+    {
+        High = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+        Low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+        Position = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+        Cursor = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+    }
+    void Store(void* decoder) const
+    {
+        CriMpvField<CriUint32>(decoder, MPV_BITS_LOW) = Low;
+        CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH) = High;
+        CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION) = Position;
+        CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR) = Cursor;
+    }
+    // Position the window at the start of a chunk, skipping extra bits past the 4-byte aligned base.
+    void Start(const CriMpvChunk& chunk, CriUint32 extra)
+    {
+        const CriUint8* aligned = (const CriUint8*)((uintptr_t)chunk.Data & ~(uintptr_t)3);
+        CriUint32 misalign = (CriUint32)(((uintptr_t)chunk.Data & 3) * 8);
+        High = CriReadBigEndian32(aligned) << misalign;
+        Low = CriReadBigEndian32(aligned + 4);
+        Cursor = aligned + 8;
+        Position = (CriSint32)(misalign + extra);
+        if (Position >= 0x20)
+        {
+            High = Low;
+            Low = CriReadBigEndian32(Cursor);
+            Position -= 0x20;
+            High <<= Position;
+            Cursor += 4;
+        }
+        else
+        {
+            High <<= extra;
+        }
+    }
+    CriUint32 Peek(CriSint32 count) const
+    {
+        CriUint32 window = High >> (32 - count);
+        if (Position > 32 - count)
+            window |= Low >> (64 - count - Position);
+        return window;
+    }
+    void Consume(CriSint32 count)
+    {
+        Position += count;
+        if (Position >= 0x20)
+        {
+            High = Low;
+            Low = CriReadBigEndian32(Cursor);
+            Position -= 0x20;
+            High <<= Position;
+            Cursor += 4;
+        }
+        else
+        {
+            High <<= count;
+        }
+    }
+    CriUint32 Read(CriSint32 count)
+    {
+        CriUint32 value = Peek(count);
+        Consume(count);
+        return value;
+    }
+};
+
+// One slice worth of chunk handling shared by the MPEG video slice decoders below.
+struct CriMpvSlice
+{
+    void* Decoder;
+    void* Queue;
+    CriMpvBitReader Bits;
+
+    CriMpvChunk& Chunk() const { return CriMpvField<CriMpvChunk>(Decoder, MPV_CHUNK); }
+    void** Vtable() const { return *(void***)Queue; }
+    void GetChunk() { ((CriMpvQueueGet)Vtable()[6])(Queue, 1, 0x7fffffff, &Chunk()); }
+    // Hand back the bytes the bit reader has not reached yet and release the consumed head of the chunk.
+    void ReturnUnread(CriSint32 consumed)
+    {
+        CriMpvChunk remaining;
+        FUN_140069020(&Chunk(), (CriUint32)consumed, &Chunk(), &remaining);
+        ((CriMpvQueuePut)Vtable()[8])(Queue, 0, &Chunk());
+        ((CriMpvQueuePut)Vtable()[7])(Queue, 1, &remaining);
+    }
+    CriSint32 ConsumedBytes(CriSint32 alignedBits) const
+    {
+        return (CriSint32)(((CriUint32)(alignedBits >> 3)) - (CriUint32)(uintptr_t)Chunk().Data +
+                           (CriUint32)(uintptr_t)Bits.Cursor - 8);
+    }
+    // End of the slice: give the unread bytes back and let the queue finish its chunk.
+    CriSint32 Finish()
+    {
+        ReturnUnread(ConsumedBytes(Bits.Position + 7));
+        return FUN_140051d90(Queue);
+    }
+    // After a macroblock: when fewer than 0x800 bytes are left in the chunk, fetch the next one.
+    void Refill()
+    {
+        CriSint32 misaligned = Bits.Position & 7;
+        CriSint32 consumed = ConsumedBytes(Bits.Position - misaligned + 7);
+        if ((CriSint32)Chunk().Size - consumed > 0x800)
+            return;
+        ReturnUnread(consumed);
+        GetChunk();
+        Bits.Start(Chunk(), (CriUint32)misaligned);
+    }
+    // Run the periodic user callback and apply the stop conditions; returns false when the slice must end.
+    bool AfterMacroblock()
+    {
+        if (CriMpvField<CriSint32>(Decoder, MPV_STOP) != 0 || CriMpvField<CriSint32>(Decoder, MPV_ABORT) != 0)
+            return false;
+        if (--CriMpvField<CriSint32>(Decoder, MPV_CALLBACK_COUNTDOWN) <= 0)
+        {
+            CriMpvField<CriSint32>(Decoder, MPV_CALLBACK_COUNTDOWN) = CriMpvField<CriSint32>(Decoder, MPV_CALLBACK_RELOAD);
+            CriMpvField<void (*)(void*)>(Decoder, MPV_CALLBACK_FUNC)(CriMpvField<void*>(Decoder, MPV_CALLBACK_ARG));
+        }
+        Bits.Load(Decoder);
+        Refill();
+        return true;
+    }
+    // macroblock_address_increment: returns false at a start code or the end of the picture.
+    bool ReadAddress(CriSint32 peekBits, const CriSint16* tableA, const CriSint16* tableB, CriSint32* delta)
+    {
+        CriSint32 previous = CriMpvField<CriSint32>(Decoder, MPV_ADDRESS);
+        CriSint32 entry;
+        CriSint32 increment;
+        for (;;)
+        {
+            CriUint32 window = Bits.Peek(peekBits);
+            entry = window < (1u << (peekBits - 4)) ? tableA[window] : tableB[window >> 6];
+            Bits.Consume(entry & 0xf);
+            increment = (CriSint32)(((CriUint32)entry >> 4) & 0x3f);
+            if (increment == 0x22)
+                continue;
+            if (increment == 0x23)
+            {
+                CriMpvField<CriSint32>(Decoder, MPV_ADDRESS) += 0x21;
+                continue;
+            }
+            if (increment == 0x24)
+                return false;
+            CriMpvField<CriSint32>(Decoder, MPV_ADDRESS) += increment;
+            break;
+        }
+        CriSint32 address = CriMpvField<CriSint32>(Decoder, MPV_ADDRESS);
+        CriMpvField<CriUint32>(Decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 10;
+        if (address > CriMpvField<CriSint32>(Decoder, MPV_LAST_ADDRESS))
+            return false;
+        CriSint32 step = address - previous;
+        CriSint32 width = CriMpvField<CriSint32>(Decoder, MPV_MB_WIDTH);
+        CriMpvField<CriSint32>(Decoder, MPV_COLUMN) += step;
+        while (CriMpvField<CriSint32>(Decoder, MPV_COLUMN) >= width)
+        {
+            CriMpvField<CriSint32>(Decoder, MPV_COLUMN) -= width;
+            CriMpvField<CriSint32>(Decoder, MPV_ROW) += 1;
+            width = CriMpvField<CriSint32>(Decoder, MPV_MB_WIDTH);
+        }
+        *delta = step;
+        return step != -2;
+    }
+    // Read the optional 5-bit quantiser scale selected by bit 0x10 of the macroblock flags.
+    void ReadQuantiser(CriUint32 flags)
+    {
+        if (flags & 0x10)
+            CriMpvField<CriUint32>(Decoder, MPV_QUANT) = Bits.Read(5);
+    }
+};
+}
+
+// MS2-FUNCTIONAL: decode one DC coefficient difference with the MPEG intra VLC tables and update its predictor.
+// @0x142ccb520
+CriSint32 FUN_142ccb520(void* decoder, void* parameters, CriSint32* output, CriSint32* predictor)
+{
+    struct Parameters { CriSint32 Double; CriSint32 Size; CriSint32 SignBits; CriSint32 Range; };
+    Parameters* params = (Parameters*)parameters;
+    CriMpvBitReader bits;
+    bits.Load(decoder);
+    CriUint32 window = bits.Peek(11);
+    CriSint32 entry = (window & 0xffffff80) == 0 ? DAT_143d74a38[window] : DAT_143d749c8[window >> 6];
+    CriSint32 symbol = (CriSint8)entry;
+    if (symbol == 0x7f)
+    {
+        bits.Store(decoder);
+        return -1;
+    }
+    bits.Consume((CriUint32)(CriUint16)entry >> 8);
+    if (symbol == 0)
+    {
+        *output = *predictor;
+    }
+    else
+    {
+        CriSint32 size = params->Size;
+        if (size != 0)
+        {
+            CriUint32 value = bits.Read(size);
+            CriSint32 adjust = params->Range - (CriSint32)value - 1;
+            symbol <<= size;
+            if (symbol <= 0)
+                symbol += adjust;
+            else
+                symbol -= adjust;
+        }
+        CriSint32 total = (CriSint32)((CriUint32)(*predictor + symbol) << params->SignBits) >> params->SignBits;
+        *output = total;
+        *predictor = total;
+    }
+    if (params->Double != 0)
+        *output <<= 1;
+    bits.Store(decoder);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: decode the macroblocks of an intra-only MPEG video slice chunk by chunk.
+// @0x142ccb000
+CriSint32 FUN_142ccb000(void* decoder, void* queue)
+{
+    CriMpvSlice slice;
+    slice.Decoder = decoder;
+    slice.Queue = queue;
+    slice.GetChunk();
+    slice.Bits.Start(slice.Chunk(), CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
+    while (slice.Bits.Peek(23) != 0)
+    {
+        CriSint32 step;
+        if (!slice.ReadAddress(12, DAT_143d74a30, DAT_143d749f0, &step))
+            break;
+        slice.ReadQuantiser(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS));
+        slice.Bits.Store(decoder);
+        CriMpvField<void (*)(void*)>(decoder, 0x18d0)(decoder);
+        CriMpvField<void (*)(void*)>(decoder, 0x1700)(decoder);
+        CriMpvField<void (*)(void*)>(decoder, 0x1710)(decoder);
+        if (!slice.AfterMacroblock())
+            break;
+    }
+    return slice.Finish();
+}
+
+namespace
+{
+typedef void (*CriMpvMacroblockFunc)(void*);
+typedef void (*CriMpvSkipRunFunc)(void*, CriSint32);
+
+// Decode the horizontal and vertical motion-vector components of one vector set; returns true on a bad code.
+bool CriMpvReadMotion(CriMpvSlice& slice, size_t setOffset)
+{
+    void* decoder = slice.Decoder;
+    slice.Bits.Store(decoder);
+    CriSint32 horizontal = FUN_142ccb520(decoder, (CriUint8*)decoder + setOffset, (CriSint32*)((CriUint8*)decoder + setOffset + 0x18),
+                                         (CriSint32*)((CriUint8*)decoder + setOffset + 0x10));
+    CriSint32 vertical = FUN_142ccb520(decoder, (CriUint8*)decoder + setOffset, (CriSint32*)((CriUint8*)decoder + setOffset + 0x1c),
+                                       (CriSint32*)((CriUint8*)decoder + setOffset + 0x14));
+    slice.Bits.Load(decoder);
+    return (horizontal | vertical) != 0;
+}
+
+// Read the 9-bit coded_block_pattern when bit 2 of the macroblock flags asks for it.
+void CriMpvReadPattern(CriMpvSlice& slice, CriUint32 flags)
+{
+    if (flags & 2)
+    {
+        CriUint32 window = slice.Bits.Peek(9);
+        CriSint32 entry = DAT_143d74a20[window];
+        CriMpvField<CriSint32>(slice.Decoder, MPV_CODED) = (CriSint32)((CriUint32)entry << 16) & (CriSint32)0xfff00000;
+        slice.Bits.Consume((CriUint8)entry);
+    }
+    else
+    {
+        CriMpvField<CriSint32>(slice.Decoder, MPV_CODED) = 0;
+    }
+}
+}
+
+// MS2-FUNCTIONAL: decode the macroblocks of a predicted MPEG video slice with forward and backward vectors.
+// @0x142ccb710
+CriSint32 FUN_142ccb710(void* decoder, void* queue)
+{
+    CriMpvSlice slice;
+    slice.Decoder = decoder;
+    slice.Queue = queue;
+    slice.GetChunk();
+    slice.Bits.Start(slice.Chunk(), CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
+    bool first = true;
+    while (slice.Bits.Peek(23) != 0)
+    {
+        CriSint32 step;
+        if (!slice.ReadAddress(11, DAT_143d749e0, DAT_143d749d8, &step))
+            break;
+        if (!first && (CriUint32)step > 1)
+        {
+            CriMpvField<CriMpvSkipRunFunc>(decoder, 0x16f8)(decoder, step);
+            MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
+            FUN_1400663f0();
+        }
+        CriMpvField<CriMpvMacroblockFunc>(decoder, 0x18d0)(decoder);
+        if (!(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 0x20))
+        {
+            CriSint32 entry = DAT_143d74a08[slice.Bits.Peek(6)];
+            slice.Bits.Consume((CriUint8)entry);
+            CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 8;
+        }
+        CriUint32 flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
+        slice.ReadQuantiser(flags);
+        if ((flags & 8) && CriMpvReadMotion(slice, 0x174c))
+            break;
+        if ((CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 4) && CriMpvReadMotion(slice, 0x1770))
+            break;
+        flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
+        CriMpvReadPattern(slice, flags);
+        slice.Bits.Store(decoder);
+        if (flags & 1)
+        {
+            CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1700)(decoder);
+            CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1710)(decoder);
+            MPVDEC_ResetMv((CriMpvDecoderState*)((CriUint8*)decoder + 0x174c));
+            MPVDEC_ResetMv((CriMpvDecoderState*)((CriUint8*)decoder + 0x1770));
+        }
+        else
+        {
+            CriMpvMacroblockFunc predict = CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1718 + ((flags >> 2) & 3) * 8);
+            CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1718) = predict;
+            if (CriMpvField<CriSint32>(decoder, MPV_CODED) != 0)
+                CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1708)(decoder);
+            predict(decoder);
+            MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
+        }
+        if (!slice.AfterMacroblock())
+            break;
+        first = false;
+    }
+    return slice.Finish();
+}
+
+// MS2-FUNCTIONAL: decode the macroblocks of a forward-predicted MPEG video slice with a single vector set.
+// @0x142ccbe90
+CriSint32 FUN_142ccbe90(void* decoder, void* queue)
+{
+    CriMpvSlice slice;
+    slice.Decoder = decoder;
+    slice.Queue = queue;
+    slice.GetChunk();
+    slice.Bits.Start(slice.Chunk(), CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
+    bool first = true;
+    while (slice.Bits.Peek(23) != 0)
+    {
+        CriSint32 step;
+        if (!slice.ReadAddress(11, DAT_143d74a00, DAT_143d749f8, &step))
+            break;
+        if (!first && (CriUint32)step > 1)
+        {
+            CriMpvField<CriMpvSkipRunFunc>(decoder, 0x16f8)(decoder, step);
+            MPVDEC_ResetMv((CriMpvDecoderState*)((CriUint8*)decoder + 0x174c));
+            MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
+            FUN_1400663f0();
+        }
+        CriMpvField<CriMpvMacroblockFunc>(decoder, 0x18d0)(decoder);
+        if (!(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 0x20))
+        {
+            CriSint32 entry = DAT_143d749d0[slice.Bits.Peek(5)];
+            slice.Bits.Consume((CriUint8)entry);
+            CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 8;
+        }
+        CriUint32 flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
+        slice.ReadQuantiser(flags);
+        if (flags & 8)
+        {
+            if (CriMpvReadMotion(slice, 0x174c))
+                break;
+        }
+        else
+        {
+            MPVDEC_ResetMv((CriMpvDecoderState*)((CriUint8*)decoder + 0x174c));
+        }
+        flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
+        CriMpvReadPattern(slice, flags);
+        slice.Bits.Store(decoder);
+        if (flags & 1)
+        {
+            CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1700)(decoder);
+            CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1710)(decoder);
+        }
+        else
+        {
+            if (CriMpvField<CriSint32>(decoder, MPV_CODED) != 0)
+                CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1708)(decoder);
+            CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1728)(decoder);
+            MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
+        }
+        if (!slice.AfterMacroblock())
+            break;
+        first = false;
+    }
+    return slice.Finish();
 }
