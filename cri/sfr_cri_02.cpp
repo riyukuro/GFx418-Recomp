@@ -240,6 +240,9 @@ void     FUN_140046798(void* streamJoint);
 void     FUN_1400420b0(void* manager, void* heap);
 void     FUN_140043be0(void* decoder);
 void     FUN_140028074(void* heap);
+void     FUN_142584540(void* event, CriSint32 timeout);
+void     FUN_14258b260(void* event);
+void     FUN_14002d5e0(void* request, void* a, void* b);
 void     FUN_14258aca0(void* lock);
 void     FUN_14258bb70(void* lock);
 void     FUN_142583d50(void* event);
@@ -3492,6 +3495,110 @@ void* FUN_14002d840(void* object, CriUint64 flags)
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: run reader-thread requests from the intrusive queue until its stop operation arrives.
+// @0x14002db40
+void* FUN_14002db40(void* thread, void* opaqueConfig)
+{
+    (void)thread;
+    CriMvReaderThreadConfigView* config = (CriMvReaderThreadConfigView*)opaqueConfig;
+    struct RequestPoolHead { CriUint8 Reserved[0x58]; CriMvRequestNode* FreeList; };
+    struct ReaderMemoryView
+    {
+        CriUint8 Reserved0[0x20];
+        void* Resource;
+        CriUint8 Reserved28[4];
+        CriUint32 State2c;
+        CriUint32 State30;
+        CriUint32 State34;
+        CriUint8 Reserved38[0x10];
+        CriSint32 ResultSize;
+    };
+    bool keepRunning = true;
+    do
+    {
+        FUN_142584540(config->Event, -1);
+        FUN_14258aca0(config->Lock);
+        if (config->Reader)
+        {
+            void** vtable = *(void***)config->Reader;
+            ((void(__fastcall*)(void*))vtable[1])(config->Reader);
+        }
+        FUN_14258bb70(config->Lock);
+
+        FUN_14258aca0(config->Lock);
+        CriMvRequestNode* sentinel = (CriMvRequestNode*)&config->Head;
+        while (config->Tail != sentinel)
+        {
+            CriMvRequestNode* request = config->Tail;
+            request->Next->Previous = request->Previous;
+            request->Previous->Next = request->Next;
+            switch (request->Operation)
+            {
+            case 0:
+            {
+                void* reader = request->Request;
+                void* memoryOwner = *(void**)((CriUint8*)reader + 0x18);
+                void* allocator = *(void**)((CriUint8*)memoryOwner + 0x18);
+                void** vtable = *(void***)allocator;
+                using Allocate = void* (__fastcall*)(void*, size_t, CriUint32, CriUint32);
+                void* resource = ((Allocate)vtable[1])(allocator, (size_t)request->ArgumentA, 0x21, 0x1b6);
+                ReaderMemoryView* state = (ReaderMemoryView*)reader;
+                if (state->Resource)
+                    FUN_14257dcb0(state->Resource);
+                state->Resource = resource;
+                void** resourceVtable = resource ? *(void***)resource : NULL;
+                using IsReady = CriBool (__fastcall*)(void*);
+                if (!resource || !((IsReady)resourceVtable[2])(resource))
+                {
+                    state->State2c = 3;
+                    state->State30 = 3;
+                    state->State34 = 3;
+                }
+                else
+                {
+                    using GetSize = CriSint32 (__fastcall*)(void*);
+                    state->State2c = 2;
+                    state->ResultSize = ((GetSize)resourceVtable[6])(resource);
+                }
+                break;
+            }
+            case 1:
+                FUN_14002d5e0(request->Request, request->ArgumentA, request->ArgumentB);
+                break;
+            case 2:
+            {
+                ReaderMemoryView* state = (ReaderMemoryView*)request->Request;
+                void* resource = state->Resource;
+                void** vtable = resource ? *(void***)resource : NULL;
+                using IsFinished = CriBool (__fastcall*)(void*);
+                state->State30 = (!resource || ((IsFinished)vtable[0x98 / sizeof(void*)])(resource)) ? 2 : 3;
+                if (resource)
+                    FUN_14257dcb0(resource);
+                state->Resource = NULL;
+                break;
+            }
+            case 3:
+                keepRunning = false;
+                break;
+            default:
+                break;
+            }
+            RequestPoolHead* pool = (RequestPoolHead*)config;
+            request->Next = pool->FreeList;
+            pool->FreeList = request;
+        }
+        FUN_14258bb70(config->Lock);
+        if (config->Reader)
+        {
+            void** vtable = *(void***)config->Reader;
+            ((void(__fastcall*)(void*))vtable[2])(config->Reader);
+        }
+        FUN_14258b260(config->Condition);
+        FUN_14258bb70(config->Lock);
+    } while (keepRunning);
+    return NULL;
 }
 
 // MS2-FUNCTIONAL: enable or disable reader IO, wake the thread, and wait for its queued work to drain.
