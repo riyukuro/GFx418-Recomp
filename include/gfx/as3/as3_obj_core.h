@@ -286,6 +286,7 @@ namespace Instances { namespace fl
             int  TZA;                                // +0x18
             int  Hour, Minute, Sec;                  // +0x1C
 
+            Parser(const char* str);                 // 0x1423ee1f0
             Value::Number MakeDate(int localTZA) const;
 
         private:

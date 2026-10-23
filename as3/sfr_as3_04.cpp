@@ -797,7 +797,7 @@ namespace Instances { namespace fl
     }
 
     // @0x14241a080
-    Value::Number Date::Parser::MakeDate(int localTZA) const
+    SF_NOINLINE Value::Number Date::Parser::MakeDate(int localTZA) const
     {
         if (!Valid)
             return NumberUtil::NaN();
@@ -1074,6 +1074,25 @@ namespace Instances { namespace fl
         result = t;
     }
 
+    // @0x142429bd0
+    void GlobalObjectCPP::parseInt(Value& result, unsigned argc, const Value* argv)
+    {
+        ASString str = GetVM().GetStringManager().GetBuiltin(AS3Builtin_NaN);
+        if (argc >= 1 && !argv[0].Convert2String(str))
+            return;
+        SInt32 radix = 0;
+        const UInt32 len = str.GetSize();
+        UInt32 endIndex = 0;
+        if (len == 0)
+        {
+            result = Value(NumberUtil::NaN());
+            return;
+        }
+        if (argc >= 2 && !argv[1].Convert2Int32(radix))
+            return;
+        result = Value(NumberUtil::StringToInt(str.ToCStr(), len, radix, &endIndex));
+    }
+
     // MS2-FUNCTIONAL: same logic; register allocation around the temporary String differs
     // @0x142429af0
     void GlobalObjectCPP::parseFloat(Value::Number& result, const ASString& str)
@@ -1240,6 +1259,17 @@ namespace Classes { namespace fl
         result.ToNumberValue();
     }
 
+    // @0x142429a70
+    void Date::parse(Value::Number& result, const Value& v)
+    {
+        ASString s = GetVM().GetStringManager().CreateEmptyString();
+        if (v.Convert2String(s))
+        {
+            Instances::fl::Date::Parser p(s.ToCStr());
+            result = p.MakeDate(0);
+        }
+    }
+
     // @0x142429d40
     void Math::pow(Value::Number& result, Value::Number x, Value::Number y)
     {
@@ -1328,6 +1358,50 @@ namespace Instances { namespace fl
         result = GetVM().GetStringManager().CreateString(out);
     }
 
+    // MS2-FUNCTIONAL: same code; the size-mask constant is loaded at a different point and the null return is not a tail call
+    // @0x1424282f0
+    void GlobalObjectCPP::escape(Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc > 0)
+        {
+            if (argv[0].IsNullOrUndefined())
+            {
+                result.Assign(GetVM().GetStringManager().GetBuiltin(AS3Builtin_null));
+                return;
+            }
+            ASString str = GetVM().GetStringManager().CreateEmptyString();
+            if (argv[0].Convert2String(str))
+            {
+                String out;
+                ASUtils::AS3::Escape(str.ToCStr(), str.GetSize(), out);
+                result.Assign(GetVM().GetStringManager().CreateString(out));
+            }
+        }
+        else
+            result.Assign(GetVM().GetStringManager().GetBuiltin(AS3Builtin_undefined));
+    }
+
+    // The movie's fscommand handler (MovieImpl+0x238): a State whose slot 1 is the callback.
+    class FSCommandHandlerSlots : public RefCountBase<FSCommandHandlerSlots, Stat_Default_Mem>
+    {
+    public:
+        virtual void Callback(MovieImpl* pmovie, const char* pcommand, const char* parg) = 0;
+    };
+
+    // @0x142428890
+    void GlobalObjectCPP::fscommand(Value& result, unsigned argc, const Value* argv)
+    {
+        SF_UNUSED(result);
+        MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        FSCommandHandlerSlots* phandler = static_cast<FSCommandHandlerSlots*>(proot->pFSCommandHandler);
+        if (phandler && argc > 0)
+        {
+            ASString command = argv[0].AsString();
+            ASString args = argc > 1 ? argv[1].AsString() : GetVM().GetStringManager().GetBuiltin(AS3Builtin_empty_);
+            phandler->Callback(proot, command.ToCStr(), args.ToCStr());
+        }
+    }
+
     // @0x142428a80
     void GlobalObjectCPP::getDefinitionByName(Value& result, const ASString& name)
     {
@@ -1353,6 +1427,13 @@ namespace Instances { namespace fl
             result.Assign(itr.GetParent()->GetQualifiedName());
         else
             result.SetNull();
+    }
+    // The Error's string form followed by its stack trace on a new line.
+    // @0x142428c80
+    void Error::getStackTrace(ASString& result)
+    {
+        toStringProto(result);
+        result += (String("\n") + String(StackTrace.ToCStr(), StackTrace.GetSize())).ToCStr();
     }
 }} // namespace Instances::fl
 
