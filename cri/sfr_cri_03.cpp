@@ -19,6 +19,7 @@ extern "C" CriUint32 DAT_143b27c60;
 extern "C" CriUint32 DAT_143b27c68;
 extern "C" CriUint32 DAT_143b27c6c;
 extern "C" CriUint64 DAT_143b27c70;
+extern "C" const char* DAT_143ba9d18;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
 void FUN_14003b2ac(void*, CriSint32, void*, CriUint32);
@@ -26,6 +27,7 @@ void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
 void FUN_14004eb70(void);
 void FUN_14004f8d0(void);
+void FUN_140027fb4(void*, void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
@@ -497,6 +499,305 @@ CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
     CriUint32 count;
     memcpy(&count, (const CriUint8*)decoder + 0x188, sizeof(count));
     return count;
+}
+
+template <typename Result, typename... Args>
+static Result criDecoderCall(void* wrapper, size_t offset, Result fallback, Args... args)
+{
+    if (!wrapper)
+        return fallback;
+    void** object = (void**)wrapper;
+    if (!object[1])
+        return fallback;
+    void* target = *(void**)((CriUint8*)object[1] + offset);
+    if (!target)
+        return fallback;
+    typedef Result (*Callback)(void*, Args...);
+    return ((Callback)target)(object[0], args...);
+}
+
+template <typename... Args>
+static void criDecoderCallVoid(void* wrapper, size_t offset, Args... args)
+{
+    if (!wrapper)
+        return;
+    void** object = (void**)wrapper;
+    if (!object[1])
+        return;
+    void* target = *(void**)((CriUint8*)object[1] + offset);
+    if (target)
+    {
+        typedef void (*Callback)(void*, Args...);
+        ((Callback)target)(object[0], args...);
+    }
+}
+
+// MS2-FUNCTIONAL: query the status callback in the alpha decoder interface.
+// @0x140043cb0
+CriSint32 FUN_140043cb0(void* decoder)
+{
+    return criDecoderCall<CriSint32>(decoder, 0x30, 0);
+}
+
+// MS2-FUNCTIONAL: execute the alpha decoder when it has an execution callback.
+// @0x140043d00
+void FUN_140043d00(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x38);
+}
+
+// MS2-FUNCTIONAL: decode one alpha frame and return the decoder's result.
+// @0x140043d40
+CriBool FUN_140043d40(void* decoder)
+{
+    return criDecoderCall<CriBool>(decoder, 0x40, 0);
+}
+
+// MS2-FUNCTIONAL: request the alpha decoder to skip its current frame.
+// @0x140043d90
+void FUN_140043d90(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x50);
+}
+
+// MS2-FUNCTIONAL: request the alpha decoder to stop.
+// @0x140043dd0
+void FUN_140043dd0(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x58);
+}
+
+// MS2-FUNCTIONAL: run the alpha decoder's completion callback.
+// @0x140043e20
+void FUN_140043e20(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x60);
+}
+
+// MS2-FUNCTIONAL: retrieve the alpha decoder's completion state.
+// @0x140043e60
+CriSint32 FUN_140043e60(void* decoder)
+{
+    return criDecoderCall<CriSint32>(decoder, 0x68, 0);
+}
+
+// MS2-FUNCTIONAL: query the number of alpha decoder frame pools.
+// @0x140043eb0
+CriUint32 criAlphaDec_GetNumDecPool(void* decoder)
+{
+    return criDecoderCall<CriUint32>(decoder, 0x70, 0);
+}
+
+// MS2-FUNCTIONAL: retrieve the next alpha frame metadata record.
+// @0x140043f10
+void* FUN_140043f10(void* decoder, void* frameInfo)
+{
+    return criDecoderCall<void*>(decoder, 0x78, NULL, frameInfo);
+}
+
+// MS2-FUNCTIONAL: ask the alpha decoder to copy a frame into the requested output buffers.
+// @0x140043f70
+CriBool criAlphaDec_CopyAlphaFrameBuffer(void* decoder, void* buffers, void* frameInfo)
+{
+    return criDecoderCall<CriBool>(decoder, 0x80, 0, buffers, frameInfo);
+}
+
+// MS2-FUNCTIONAL: destroy an alpha decoder, clear its wrapper, and release the wrapper allocation.
+// @0x140043be0
+void FUN_140043be0(void* decoder)
+{
+    if (!decoder)
+        return;
+    void** object = (void**)decoder;
+    if (!object[1])
+        return;
+    void** apiTable = (void**)object[1];
+    typedef void (*DestroyCallback)(void*);
+    DestroyCallback destroy = (DestroyCallback)apiTable[0x20 / sizeof(void*)];
+    if (!destroy)
+        return;
+    destroy(object[0]);
+    object[0] = NULL;
+    object[1] = NULL;
+    FUN_140027fb4(object[2], decoder);
+}
+
+// MS2-FUNCTIONAL: retrieve an alpha decoder frame pointer through its callback table.
+// @0x140043fe0
+void* FUN_140043fe0(void* decoder, void* frameInfo)
+{
+    return criDecoderCall<void*>(decoder, 0x90, NULL, frameInfo);
+}
+
+// MS2-FUNCTIONAL: query the video decoder's current status.
+// @0x140044630
+CriSint32 FUN_140044630(void* decoder)
+{
+    return criDecoderCall<CriSint32>(decoder, 0x30, 0);
+}
+
+// MS2-FUNCTIONAL: decode one frame through the video decoder interface.
+// @0x1400446c0
+CriBool FUN_1400446c0(void* decoder)
+{
+    return criDecoderCall<CriBool>(decoder, 0x40, 0);
+}
+
+// MS2-FUNCTIONAL: invoke the video decoder's frame skip callback.
+// @0x140044710
+void FUN_140044710(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x50);
+}
+
+// MS2-FUNCTIONAL: request the video decoder to stop.
+// @0x140044750
+void FUN_140044750(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x58);
+}
+
+// MS2-FUNCTIONAL: invoke the video decoder's completion callback.
+// @0x140044790
+void FUN_140044790(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x60);
+}
+
+// MS2-FUNCTIONAL: query the video decoder's completion state.
+// @0x1400447d0
+CriSint32 FUN_1400447d0(void* decoder)
+{
+    return criDecoderCall<CriSint32>(decoder, 0x68, 0);
+}
+
+// MS2-FUNCTIONAL: query the video decoder's frame-pool count.
+// @0x140044820
+CriUint32 criVdec_GetNumDecPool(void* decoder)
+{
+    return criDecoderCall<CriUint32>(decoder, 0x70, 0);
+}
+
+// MS2-FUNCTIONAL: retrieve the next video frame metadata record.
+// @0x140044870
+void* criVdec_GetNextFrameInfo(void* decoder, void* frameInfo)
+{
+    return criDecoderCall<void*>(decoder, 0x78, NULL, frameInfo);
+}
+
+// MS2-FUNCTIONAL: request a video decoder frame buffer using the supplied format and output data.
+// @0x1400448d0
+CriBool criVdec_GetFrameBuffer(void* decoder, void* format, CriUint32 mode, void* output)
+{
+    return criDecoderCall<CriBool>(decoder, 0x80, 0, format, mode, output);
+}
+
+// MS2-FUNCTIONAL: copy video decoder frame planes to the caller's output buffers.
+// @0x140044950
+CriBool criVdec_CopyFrameYuvBuffers(void* decoder, void* output, void* frameInfo)
+{
+    return criDecoderCall<CriBool>(decoder, 0x88, 0, output, frameInfo);
+}
+
+// MS2-FUNCTIONAL: retrieve a decoded video frame pointer.
+// @0x1400449c0
+void* FUN_1400449c0(void* decoder, void* frameInfo)
+{
+    return criDecoderCall<void*>(decoder, 0x90, NULL, frameInfo);
+}
+
+// MS2-FUNCTIONAL: release a video decoder frame pointer.
+// @0x140044a30
+void FUN_140044a30(void* decoder, void* frameInfo)
+{
+    criDecoderCallVoid(decoder, 0x98, frameInfo);
+}
+
+// MS2-FUNCTIONAL: retrieve the decoder's video parameters.
+// @0x140044a90
+void criVdec_GetVideoParameter(void* decoder, void* parameters)
+{
+    criDecoderCallVoid(decoder, 0xa0, parameters);
+}
+
+// MS2-FUNCTIONAL: ask the decoder to skip its current frame.
+// @0x140044ae0
+void FUN_140044ae0(void* decoder)
+{
+    criDecoderCallVoid(decoder, 0x48);
+}
+
+// MS2-FUNCTIONAL: query the decoder's concatenated stream offset.
+// @0x140044b20
+void FUN_140044b20(void* decoder, CriUint32 stream, void* offset, void* timestamp)
+{
+    criDecoderCallVoid(decoder, 0xa8, stream, offset, timestamp);
+}
+
+// MS2-FUNCTIONAL: retrieve decoder frame-pool metadata through the interface callback.
+// @0x140044b90
+void FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e)
+{
+    criDecoderCallVoid(decoder, 0xb0, a, b, c, d, e);
+}
+
+// MS2-FUNCTIONAL: configure the alpha decoder processor mask.
+// @0x140044c10
+void FUN_140044c10(void* decoder, CriUint32 mask)
+{
+    criDecoderCallVoid(decoder, 0xb8, mask);
+}
+
+// MS2-FUNCTIONAL: configure the video decoder seek position and mode.
+// @0x140044c60
+void FUN_140044c60(void* decoder, CriUint32 position, CriUint32 mode)
+{
+    criDecoderCallVoid(decoder, 0xc0, position, mode);
+}
+
+// MS2-FUNCTIONAL: set the video decoder's notification callback and user data.
+// @0x140044cc0
+void FUN_140044cc0(void* decoder, void* callback, void* userData)
+{
+    criDecoderCallVoid(decoder, 0xc8, callback, userData);
+}
+
+// MS2-FUNCTIONAL: configure the video decoder processor mask.
+// @0x140044d20
+void criVdec_SetProcessorMask(void* decoder, CriUint32 mask)
+{
+    criDecoderCallVoid(decoder, 0xd0, mask);
+}
+
+// MS2-FUNCTIONAL: call the decoder interface's initialize entry point.
+// @0x140044390
+void FUN_140044390(const void* decoderInterface)
+{
+    DAT_143ba9d18 = "\ncriVdec/PCx64 Ver.3.30 Build:Jan 20 2012 18:13:28\n";
+    if (decoderInterface)
+    {
+        void* initialize = *(void* const*)decoderInterface;
+        if (initialize)
+        {
+            typedef void (*Callback)(void);
+            ((Callback)initialize)();
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: call the decoder interface's finalize entry point.
+// @0x1400443d0
+void FUN_1400443d0(void* decoderInterface)
+{
+    if (!decoderInterface)
+        return;
+    void* finalize;
+    memcpy(&finalize, (CriUint8*)decoderInterface + 8, sizeof(finalize));
+    if (finalize)
+    {
+        typedef void (*Callback)(void);
+        ((Callback)finalize)();
+    }
 }
 
 // MS2-FUNCTIONAL: return the current tick delta and timestamp for a CRI timer record.
