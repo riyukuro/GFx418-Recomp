@@ -107,6 +107,8 @@ extern void* DAT_143b27438;
 extern void* DAT_143b27440;
 extern void* DAT_143b275b8;
 extern void* DAT_143b275c0;
+extern void* DAT_143b27678;
+extern void* DAT_143b27680;
 extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
@@ -2367,6 +2369,20 @@ void FUN_140016a30(void*, void* instance, void* traits, void* context, int hasVa
                   Scaleform::GFx::AS3::Value* value)
 {
     Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27438, DAT_143b27440, false);
+}
+
+// MS2-FUNCTIONAL: stores either the supplied AS3 Value or an undefined Value in the active trait slot.
+// @0x140016060
+void FUN_140016060(void*, void* instance, void* traits, void* context, int hasValue,
+                   Scaleform::GFx::AS3::Value* value)
+{
+    if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(instance) + 0x180) != 0)
+        return;
+    auto offset = *reinterpret_cast<std::intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
+    Scaleform::GFx::AS3::Value undefinedValue;
+    auto* stored = hasValue ? value : &undefinedValue;
+    reinterpret_cast<void(*)(char*, void*, const Scaleform::GFx::AS3::Value*)>(DAT_143b27678)(
+        reinterpret_cast<char*>(DAT_143b27680) + offset, context, stored);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
