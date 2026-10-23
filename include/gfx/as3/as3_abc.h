@@ -127,6 +127,7 @@ public:
 class ConstPool : public NewOverrideBase<StatMV_VM_AbcConstPool_Mem>
 {
 public:
+    ConstPool(); // 0x142545230
     typedef ArrayLH_POD<SInt32, StatMV_VM_AbcConstPool_Mem>           IntType;
     typedef ArrayLH_POD<UInt32, StatMV_VM_AbcConstPool_Mem>           UIntType;
     typedef ArrayLH<StringView, StatMV_VM_AbcConstPool_Mem>           StringsType;

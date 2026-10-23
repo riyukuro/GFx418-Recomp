@@ -28,6 +28,13 @@
 #undef GetObject
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+// MS2-FUNCTIONAL 0x142545230: initializes the constant-pool arrays and empty namespace; the exe uses its shared empty-string sentinel.
+// @0x142545230
+Abc::ConstPool::ConstPool()
+    : DoubleCount(0), ConstDouble(0), any_namespace(), AnyType{MNF_QName, 0, 0, -1}
+{
+}
+
 // @0x142543f40
 bool IMEManager::GetIMEMoviePath(String& path)
 {
