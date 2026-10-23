@@ -55,8 +55,16 @@ extern "C" const unsigned long long DAT_14313b418;
 extern "C" const void* DAT_14313ba60[];
 extern "C" const unsigned char DAT_1431c51e8[];
 extern "C" const unsigned char DAT_1431c5018[];
-extern "C" const unsigned char DAT_1431c4d58[];
-extern "C" const unsigned char DAT_14313b8b8[];
+extern "C" const unsigned long long DAT_1431c4d58;
+extern "C" const unsigned long long DAT_14313b8b8;
+extern "C" const unsigned long long DAT_1431c4828;
+extern "C" const unsigned long long DAT_1431c4830;
+extern "C" const unsigned long long DAT_1431c4d60;
+extern "C" const unsigned long long DAT_14313b8c0;
+extern "C" const unsigned long long DAT_1431c4e08;
+extern "C" const unsigned long long DAT_1431c4e10;
+extern "C" const unsigned long long DAT_1431c4ee8;
+extern "C" const unsigned long long DAT_1431c4ef0;
 extern "C" void* DAT_143b15f60;
 extern "C" const void* DAT_14313bc60[];
 extern "C" void FUN_1423dd1c0();
@@ -1034,7 +1042,7 @@ bool FUN_1423dac70(void* self)
     if (hr >= 0) {
         auto** resultVtable = *reinterpret_cast<void***>(result);
         hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
-            result, DAT_1431c4d58, bytes, bytes + 0x18);
+            result, &DAT_1431c4d58, bytes, bytes + 0x18);
         success = hr >= 0;
         if (!success) *reinterpret_cast<unsigned*>(bytes + 0x18) = 0xffffffff;
     }
@@ -1055,12 +1063,46 @@ bool FUN_1423dacf0(void* self)
     if (hr >= 0) {
         auto** resultVtable = *reinterpret_cast<void***>(result);
         hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
-            result, DAT_14313b8b8, bytes + 8, bytes + 0x1c);
+            result, &DAT_14313b8b8, bytes + 8, bytes + 0x1c);
         success = hr >= 0;
         if (!success) *reinterpret_cast<unsigned*>(bytes + 0x1c) = 0xffffffff;
     }
     if (result) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(result))[2])(result);
     return success;
+}
+
+// MS2-FUNCTIONAL: implements the executable's supported COM interface IDs and returns the matching interface view.
+// @0x1423dadd0
+long long FUN_1423dadd0(long long* object, const unsigned long long* iid, void** output)
+{
+    if (!output) return static_cast<long long>(0x80070057u);
+    *output = nullptr;
+    long long* view = object;
+    if ((iid[0] != DAT_1431c4828 || iid[1] != DAT_1431c4830) &&
+        (iid[0] != DAT_1431c4d58 || iid[1] != DAT_1431c4d60)) {
+        if (iid[0] == DAT_14313b8b8 && iid[1] == DAT_14313b8c0) view = object ? object + 1 : nullptr;
+        else if (iid[0] != DAT_1431c4e08 || iid[1] != DAT_1431c4e10) {
+            if (iid[0] != DAT_1431c4ee8 || iid[1] != DAT_1431c4ef0)
+                return static_cast<long long>(0x80004002u);
+        }
+    }
+    *output = view;
+    if (!view) return static_cast<long long>(0x80004002u);
+    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[1])(object);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: decrements the executable's 32-bit interface refcount and triggers scalar deletion at zero.
+// @0x1423daeb0
+int FUN_1423daeb0(void* self)
+{
+    auto* count = reinterpret_cast<int*>(static_cast<unsigned char*>(self) + 0x3c);
+    const int remaining = --*count;
+    if (remaining == 0) {
+        void** vtable = *reinterpret_cast<void***>(self);
+        reinterpret_cast<void(*)(void*, int)>(vtable[8])(self, 1);
+    }
+    return remaining;
 }
 
 void FUN_1423d94f0(void*, void*);
