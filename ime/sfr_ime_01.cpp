@@ -49,6 +49,12 @@ static DWORD cx18_ImmGetCandidateListW(HIMC context, DWORD index, LPCANDIDATELIS
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetCandidateListW"))(
         context, index, list, bytes);
 }
+static LONG cx18_ImmGetCompositionStringW(HIMC context, DWORD index, LPVOID buffer, DWORD bytes)
+{
+    typedef LONG (WINAPI* Fn)(HIMC, DWORD, LPVOID, DWORD);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetCompositionStringW"))(
+        context, index, buffer, bytes);
+}
 static BOOL cx18_ImmNotifyIME(HIMC context, DWORD action, DWORD index, DWORD value)
 {
     typedef BOOL (WINAPI* Fn)(HIMC, DWORD, DWORD, DWORD);
@@ -97,6 +103,8 @@ static BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD index, LPCVOID com
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_14257db50(void*);
+extern "C" void FUN_1425b4e80(void*, const wchar_t*, ...);
+extern "C" void FUN_1425b4ea0(void*);
 extern "C" void FUN_1423cdf60(void*);
 extern "C" void FUN_1423cde00(void*);
 extern "C" const void* DAT_14313a210[];
@@ -3431,6 +3439,63 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
     FUN_1423d9b40(list);
     *reinterpret_cast<unsigned char*>(self + 0xb9) = 1;
     Scaleform::Memory::Free(candidates);
+}
+
+// MS2-FUNCTIONAL: forwards IMM composition text to the recovered GFx text-state helpers and preserves the executable mode cases.
+// @0x1423d2410
+void FUN_1423d2410(void* raw, unsigned* outputLength)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
+    auto* factory = *reinterpret_cast<unsigned char**>(owner + 0x10);
+    void* base = reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) {
+        if (base) FUN_14257dcb0(base);
+        return;
+    }
+    const LONG byteCount = cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, nullptr, 0);
+    if (byteCount < 0) {
+        cx18_ImmReleaseContext(hwnd, context);
+        if (base) FUN_14257dcb0(base);
+        return;
+    }
+    const unsigned count = static_cast<unsigned>(byteCount / sizeof(wchar_t));
+    auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc((count + 1) * sizeof(wchar_t)));
+    if (!text) {
+        cx18_ImmReleaseContext(hwnd, context);
+        if (base) FUN_14257dcb0(base);
+        return;
+    }
+    cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, text, static_cast<DWORD>(byteCount));
+    text[count] = 0;
+    for (unsigned i = 0; i < count; ++i)
+        if (text[i] == L' ' || text[i] == 0x3000) text[i] = 0x00a0;
+
+    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+    const bool clear = mode == 1 || mode == 3 || mode == 5 || mode == 7 || mode == 0x60000 || mode == 0xd00001;
+    const bool update = mode == 2 || mode == 4 || mode == 6 || mode == 10 || mode == 0x200 || mode == 0x300 ||
+        mode == 0x400 || mode == 0x70000 || mode == 0x90000 || mode == 0xa0000 || mode == 0xd00002 ||
+        mode == 0xd00800 || mode == 0xd00900;
+    const bool composition = mode == 0xc10000 || mode == 0x110000 || mode == 0x210000 || mode == 0x410000 ||
+        mode == 0x810000 || mode == 0x910000 || mode == 0xd10000;
+    if (clear) {
+        FUN_1425b4e80(base, L"", -1ll);
+        if (outputLength) *outputLength = 0;
+    } else if (update) {
+        FUN_1425b4e80(base, text, -1ll);
+        if (outputLength) *outputLength = count;
+    } else if (composition) {
+        FUN_1425b4e80(base, text);
+        if (outputLength) *outputLength = count;
+        const LONG readBytes = cx18_ImmGetCompositionStringW(context, GCS_COMPREADSTR, nullptr, 0);
+        FUN_1425b4ea0(base);
+        *reinterpret_cast<unsigned*>(self + 0x64) = count - static_cast<unsigned>(readBytes);
+    }
+    Scaleform::Memory::Free(text);
+    cx18_ImmReleaseContext(hwnd, context);
+    if (base) FUN_14257dcb0(base);
 }
 
 struct cx18_CommandEntry
