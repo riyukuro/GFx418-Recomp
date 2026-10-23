@@ -46,6 +46,7 @@ MS2_EXTERN(0x1424f0d30, void(void*, void*, int*, int, void*), ConvertAS3ValueToI
 MS2_EXTERN(0x1423dfa20, void(), ReleaseAS3GcObject);
 MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
 MS2_EXTERN(0x1424eb610, void*(void*), FUN_1424eb610);
+MS2_EXTERN(0x140010b80, void(void*, void*), FUN_140010b80);
 extern "C" void* DAT_143b15f60;
 
 namespace {
@@ -665,5 +666,17 @@ void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3
     auto* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(FUN_1424eb610(traits));
     if (object) FUN_14001a000(object, traits);
     value->Pick(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
+}
+
+// MS2-FUNCTIONAL: attaches the supplied AS3 NetStream's VideoPlayer to this Video's display object and adds its reference.
+// @0x14001a410
+void FUN_14001a410(void* self, void*, void* netStream)
+{
+    auto* player = netStream ? *reinterpret_cast<void**>(static_cast<unsigned char*>(netStream) + 0x50) : nullptr;
+    auto* display = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
+    if (display) {
+        FUN_140010b80(display, player);
+        if (player) { auto** vtable = *reinterpret_cast<void***>(player); reinterpret_cast<void(*)(void*, void*)>(vtable[7])(player, display); }
+    }
 }
 } // namespace
