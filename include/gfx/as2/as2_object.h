@@ -421,6 +421,8 @@ public:
 
     // The character the function was defined in, 0 once it is gone (exe 0x142956230).
     InteractiveObject* GetTargetCharacter();
+    // The defining character's environment while it lives, else fn.Env (exe 0x14294aa80).
+    virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>* ptargetCh);
 };
 
 SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)

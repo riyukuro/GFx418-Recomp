@@ -105,6 +105,10 @@
 // MS2-RANGE: 0x14294b120-0x14294b162 .text$mn
 // MS2-RANGE: 0x14294b090-0x14294b10c .text$mn
 // MS2-RANGE: 0x142949860-0x142949892 .text$mn
+// MS2-RANGE: 0x14294a500-0x14294a572 .text$mn
+// MS2-RANGE: 0x14294a8f0-0x14294a9a4 .text$mn
+// MS2-RANGE: 0x14294a9b0-0x14294aa77 .text$mn
+// MS2-RANGE: 0x14294aa80-0x14294ab4a .text$mn
 // MS2-RANGE: 0x142949900-0x142949952 .text$mn
 // MS2-RANGE: 0x14294a430-0x14294a4e2 .text$mn
 
@@ -2031,7 +2035,88 @@ unsigned AvmSprite::GetCursorType() const
     }
     return 0;
 }
+
+// The environment of the defining character while it lives (and that character), the caller's otherwise.
+// @0x14294aa80
+Environment* AsFunctionObject::GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>* ptargetCh)
+{
+    Ptr<InteractiveObject> ch = GetTargetCharacter();
+    Environment* penv = 0;
+    if (ch)
+        penv = AS2::ToAvmCharacter(ch)->GetASEnvironment();
+    if (ptargetCh)
+        *ptargetCh = ch;
+    if (!penv)
+        penv = fn.Env;
+    return penv;
+}
 }}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx {
+
+// The host side of AS2 values (GFx::Value object calls); only the members recovered in this unit.
+class AS2ValueObjectInterface : public Value::ObjectInterface
+{
+private:
+    virtual bool GetCxform(void* pdata, Render::Cxform* pcx) const;
+    virtual bool GetDisplayMatrix(void* pdata, Render::Matrix2F* pmat) const;
+    virtual bool GetElement(void* pdata, unsigned idx, Value* pval) const;
+};
+
+// The environment of _level0, through its AS2 character.
+static inline AS2::Environment* GetLevel0Environment(MovieImpl* pmovieImpl)
+{
+    AvmDisplayObjBase* pavm = pmovieImpl->pMainMovie->GetAvmObjImpl();
+    return static_cast<AS2::AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
+}
+
+// The color transform of the clip or text field pdata; false for other characters or once it is gone.
+// @0x14294a500
+bool AS2ValueObjectInterface::GetCxform(void* pdata, Render::Cxform* pcx) const
+{
+    DisplayObject* pchar = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
+    if (pchar && (pchar->GetType() == CharacterDef::TextField || pchar->IsSprite()))
+    {
+        *pcx = pchar->GetCxform();
+        return true;
+    }
+    return false;
+}
+
+// The matrix of the character pdata with the translation in pixels; false once the character is gone.
+// @0x14294a8f0
+bool AS2ValueObjectInterface::GetDisplayMatrix(void* pdata, Render::Matrix2F* pmat) const
+{
+    DisplayObject* pchar = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
+    if (!pchar)
+        return false;
+    Render::Matrix2F m = pchar->GetMatrix();
+    m.Tx() = Render::TwipsToPixels(m.Tx());
+    m.Ty() = Render::TwipsToPixels(m.Ty());
+    *pmat = m;
+    return true;
+}
+
+// Element idx of the array pdata as a host value; false (and undefined) past the end or for a hole.
+// @0x14294a9b0
+bool AS2ValueObjectInterface::GetElement(void* pdata, unsigned idx, Value* pval) const
+{
+    pval->SetUndefined();
+    AS2::ArrayObject* parr = static_cast<AS2::ArrayObject*>(static_cast<AS2::ObjectInterface*>(pdata));
+    if (idx < (unsigned)parr->GetSize())
+    {
+        AS2::Value* pelem = parr->GetElementPtr(idx);
+        if (pelem)
+        {
+            AS2::MovieRoot* proot = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
+            proot->ASValue2GFxValue(GetLevel0Environment(proot->pMovieImpl), *pelem, pval);
+            return true;
+        }
+    }
+    return false;
+}
+
+}} // namespace Scaleform::GFx
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
 // MS2-PIN: ?GetCaseCheck@?$ASStringHashBase@VFunctionRef@AS2@GFx@Scaleform@@V?$HashUncachedLH@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@$0BEE@@4@@GFx@Scaleform@@QEAAPEAVFunctionRef@AS2@23@AEBVASString@23@_N@Z 0x142949f60
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0

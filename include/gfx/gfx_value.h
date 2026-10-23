@@ -65,6 +65,12 @@ public:
     }
 
     ValueType GetType() const { return ValueType(Type & VTC_TypeMask); }
+    void SetUndefined()
+    {
+        if (IsManagedValue())
+            ReleaseManagedValue();
+        Type = VT_Undefined;
+    }
     // Marks the value as a wide string still to be filled by the VM (the old managed value released).
     void SetConvertStringW()
     {
