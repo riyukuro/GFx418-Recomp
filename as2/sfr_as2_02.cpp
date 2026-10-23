@@ -34,6 +34,8 @@
 // MS2-RANGE: 0x142908e90-0x142909300 .text$mn
 // MS2-RANGE: 0x1428ffa20-0x1428ffcca .text$mn
 // MS2-RANGE: 0x1428ff660-0x1428ffa19 .text$mn
+// MS2-RANGE: 0x142908840-0x142908a68 .text$mn
+// MS2-RANGE: 0x142908a70-0x142908c2c .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -2090,6 +2092,37 @@ void ExternalInterfaceCtorFunction::AddCallback(const FnCall& fn)
     static_cast<MovieRoot*>(pmovie->pASMovieRoot)->AddInvokeAlias(aliasName, thisChar, thisObj, func);
     fn.Result->SetBool(true);
 }
+
+// TextSnapshot.getTextRunInfo(start, end): an array with an info object per glyph in [start, end).
+// @0x142908840
+void TextSnapshotProto::GetTextRunInfo(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis || fn.NArgs < 2)
+        return;
+    UInt32 start = fn.Arg(0).ToUInt32(fn.Env);
+    UInt32 end   = fn.Arg(1).ToUInt32(fn.Env);
+    Ptr<ArrayObject> parr = *SF_HEAP_NEW(fn.Env->GetHeap()) ArrayObject(fn.Env);
+    GASTextSnapshotGlyphVisitor visitor(fn.Env, parr);
+    pthis->GetData().Visit(&visitor, start, end);
+    fn.Result->SetAsObject(parr);
+}
+
+// TextSnapshot.hitTestTextNearPos(x, y[, closeDist]): the character index near the point, -1 if none.
+// @0x142908a70
+void TextSnapshotProto::HitTestTextNearPos(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, TextSnapshot);
+    TextSnapshotObject* pthis = (TextSnapshotObject*)fn.ThisPtr;
+    if (!pthis || fn.NArgs < 2)
+        return;
+    float x = (float)fn.Arg(0).ToNumber(fn.Env);
+    float y = (float)fn.Arg(1).ToNumber(fn.Env);
+    float closeDist = (fn.NArgs > 2) ? (float)fn.Arg(2).ToNumber(fn.Env) : 0.0f;
+    int idx = pthis->GetData().HitTestTextNearPos(Render::PixelsToTwips(x), Render::PixelsToTwips(y), Render::PixelsToTwips(closeDist));
+    fn.Result->SetNumber((Number)idx);
+}
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
@@ -2239,3 +2272,5 @@ template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const 
 // MS2-PIN: ??_7?$LogBase@VActionLogger@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e2c8
 // MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e310
+// MS2-PIN: ??_7GlyphVisitor@StaticTextSnapshotData@GFx@Scaleform@@6B@ 0x14316a500
+// MS2-PIN: ??_7GASTextSnapshotGlyphVisitor@AS2@GFx@Scaleform@@6B@ 0x1432228a0

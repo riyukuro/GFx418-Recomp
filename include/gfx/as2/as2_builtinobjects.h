@@ -639,6 +639,9 @@ public:
     static void GetText(const FnCall& fn);
     static void SetSelectColor(const FnCall& fn);
     static void SetSelected(const FnCall& fn);
+    // (appended for sfr_as2_02)
+    static void GetTextRunInfo(const FnCall& fn);     // exe 0x142908840
+    static void HitTestTextNearPos(const FnCall& fn); // exe 0x142908a70
 };
 
 // The TextSnapshot class: it has no global constructor (snapshots come from MovieClip.getTextSnapshot).
@@ -646,6 +649,20 @@ class TextSnapshotCtorFunction : public CFunctionObject
 {
 public:
     TextSnapshotCtorFunction(ASStringContext* psc); // exe 0x1429231b0
+};
+
+// (appended for sfr_as2_02) Appends an info object per visited glyph to an array (TextSnapshot.getTextRunInfo).
+// 0x80 bytes.
+class ArrayObject;
+class GASTextSnapshotGlyphVisitor : public StaticTextSnapshotData::GlyphVisitor
+{
+public:
+    GASTextSnapshotGlyphVisitor(Environment* penv, ArrayObject* parray) : pEnv(penv), pArray(parray) {}
+
+    virtual void OnVisit(); // exe 0x14296d330
+
+    Environment* pEnv;   // +0x68
+    ArrayObject* pArray; // +0x70
 };
 
 // 0x98 bytes.
