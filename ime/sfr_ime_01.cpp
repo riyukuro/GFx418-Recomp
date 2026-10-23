@@ -927,6 +927,31 @@ void FUN_1423d8e80(void* table, void* source)
     }
 }
 
+// MS2-FUNCTIONAL: clears the pending value array, builds the RemoveList path, and queries the movie object.
+// @0x1423d9520
+void FUN_1423d9520(void* raw)
+{
+    auto* bytes = static_cast<unsigned char*>(raw);
+    FUN_1423d9690(bytes + 0x848, bytes + 0x848, 0);
+    char* command = reinterpret_cast<char*>(bytes + 0x410);
+    strcpy_s(command, 0x400, reinterpret_cast<const char*>(bytes + 0x10));
+    strcat_s(command, 0x400, ".RemoveList");
+    void* movie = *reinterpret_cast<void**>(bytes + 0x868);
+    void* state = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+    void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x18);
+    if (manager) {
+        void* result = nullptr;
+        void** vtable = *reinterpret_cast<void***>(manager);
+        reinterpret_cast<void(*)(void*, const char*, void**, int, int)>(vtable[0x78 / sizeof(void*)])(
+            manager, command, &result, 0, 0);
+        *command = 0;
+        if (result) {
+            void** resultVtable = *reinterpret_cast<void***>(result);
+            reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+        }
+    }
+}
+
 // MS2-FUNCTIONAL: performs the executable's interface query and retrieves the IME reading-state values.
 // @0x1423d6b70
 bool FUN_1423d6b70(void* self)
