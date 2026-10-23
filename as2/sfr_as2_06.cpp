@@ -184,6 +184,7 @@
 // MS2-RANGE: 0x14295d3a0-0x14295d450 .text$mn
 // MS2-RANGE: 0x1429635f0-0x142963820 .text$mn
 // MS2-RANGE: 0x142963a10-0x142963aa0 .text$mn
+// MS2-RANGE: 0x142963aa0-0x142963b90 .text$mn
 // MS2-RANGE: 0x142967c90-0x142967d10 .text$mn
 // MS2-RANGE: 0x142967bf0-0x142967c30 .text$mn
 // MS2-RANGE: 0x14296a450-0x14296a540 .text$mn
@@ -1029,6 +1030,7 @@ void CFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char*)
 }
 
 
+// MS2-FUNCTIONAL: dispatches to InvokeImpl and restores the alternate prototype when called through super.
 // @0x142963aa0
 void UserDefinedFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char*)
 {
