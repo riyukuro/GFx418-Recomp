@@ -33,6 +33,7 @@ extern "C" const void* DAT_143a47cb0[];
 extern "C" const char* DAT_143ba9d18;
 extern "C" const CriChar8 DAT_143a482e8[];
 extern "C" const CriUint64 DAT_1431b9ca0;
+extern "C" const void* PTR_LAB_143a48350;
 extern "C" const void* PTR_FUN_143a48638;
 extern "C" const void* PTR_FUN_143a48668;
 extern "C" const void* PTR_FUN_1431b9b10;
@@ -74,6 +75,7 @@ void FUN_14004602c(void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_14257db50(void);
+void FUN_14257e4a0(void*, void*);
 void FUN_140054040(void*, void*, void*);
 void FUN_140053540(void*);
 void FUN_140037910(CriSint32, const CriChar8*, CriSint32);
@@ -3122,6 +3124,23 @@ void FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 thir
                    const CriUint32* settings)
 {
     FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
+}
+
+// MS2-FUNCTIONAL: create the named CRI video heap and attach its allocator to the returned adapter.
+// @0x140041d40
+void* FUN_140041d40(void* manager)
+{
+    const CriUint64 config[8] = { 0, 0x40, 0x20000, 0, ~(CriUint64)0, 0, 0, 0 };
+    void** managerVtable = *(void***)manager;
+    void* heap = (*(void* (**)(void*, const CriChar8*, const CriUint64*))managerVtable[4])(
+        manager, "_Cri_Video_Heap", config);
+    void** heapVtable = *(void***)heap;
+    void* adapter = (*(void* (**)(void*, size_t))heapVtable[10])(heap, 0x10);
+    void** fields = (void**)adapter;
+    fields[0] = (void*)PTR_LAB_143a48350;
+    fields[1] = heap;
+    FUN_14257e4a0(heap, adapter);
+    return adapter;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
