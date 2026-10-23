@@ -35,6 +35,7 @@ extern void FUN_14257db50(void*);
 extern void FUN_14257db40(void*);
 extern void FUN_142625ee0(const void*);
 extern void FUN_142626070(void*, const void*);
+extern void FUN_142961830(void*, void*, void*, void*, const void*);
 extern void* DAT_1431b6060;
 extern void* DAT_1431b63f8;
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
@@ -1508,4 +1509,11 @@ void FUN_140011d90(void* object)
     }
     extern void FUN_142942e70(void*);
     FUN_142942e70(object);
+}
+
+// MS2-FUNCTIONAL: forwards prototype function-member initialization with the observed +0x68 base subobject.
+// @0x140011b10
+void FUN_140011b10(void* object, void* stringContext, void* functions, const void* flags)
+{
+    FUN_142961830(static_cast<char*>(object) + 0x68, object, stringContext, functions, flags);
 }
