@@ -171,7 +171,7 @@ public:
     virtual Status    GetStatus(void) = 0;                                                  // 7
     virtual void      Pause(CriBool sw) = 0;                                                // 8
     virtual void      GetTime(CriUint64& count, CriUint64& unit) = 0;                       // 9
-    virtual ~CriMvSoundInterface() {}                                                       // 10
+    virtual ~CriMvSoundInterface();                                                         // 10
 };
 
 // Clock the player syncs to when there is no audio.
@@ -182,7 +182,7 @@ public:
     virtual void Stop(void) = 0;                                                            // 1
     virtual void Pause(CriBool sw) = 0;                                                     // 2
     virtual void GetTime(CriUint64& count, CriUint64& unit) = 0;                            // 3
-    virtual ~CriMvSystemTimerInterface() {}                                                 // 4
+    virtual ~CriMvSystemTimerInterface();                                                   // 4
 };
 
 #define CRIMV_MAX_VIDEO_NUM     1

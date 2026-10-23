@@ -13,6 +13,15 @@
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
 
+// MS2-FUNCTIONAL ??_GCriMvSoundInterface@@UEAAPEAXI@Z: this interface is compiled by CRI's VS2008 build; VS2017's
+// scalar-deleting destructor has the extra sized-delete branch when flag 4 is set.
+// @0x1400283a0
+CriMvSoundInterface::~CriMvSoundInterface() {}
+
+// MS2-FUNCTIONAL ??_GCriMvSystemTimerInterface@@UEAAPEAXI@Z: CRI's VS2008 deleting destructor has no sized-delete path.
+// @0x1400283e0
+CriMvSystemTimerInterface::~CriMvSystemTimerInterface() {}
+
 namespace Scaleform { namespace GFx {
 
 // ---- loader pieces used by ReadDefineVideoStreamTag (the loader headers are not shared yet; only what is touched)
