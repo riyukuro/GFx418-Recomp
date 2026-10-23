@@ -217,7 +217,7 @@ public:
 
 private:
     ObjectInterface*                                    This;         // +0x00
-    const void*                                         FieldArray;   // +0x08 ArrayCC<ASString> of the field names
+    const ArrayCC<ASString>*                            FieldArray;   // +0x08 the field names
     Environment*                                        Env;          // +0x10
     const Log*                                          LogPtr;       // +0x18
     Array<ArraySortFunctor>                             FunctorArray; // +0x20

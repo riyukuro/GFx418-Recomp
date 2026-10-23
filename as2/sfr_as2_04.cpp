@@ -47,6 +47,8 @@
 // MS2-RANGE: 0x142930a10-0x142930c30 .text$mn
 // MS2-RANGE: 0x142934610-0x142934820 .text$mn
 // MS2-RANGE: 0x1429381f0-0x1429384e1 .text$mn
+// MS2-RANGE: 0x142934a80-0x142934f87 .text$mn
+// MS2-RANGE: 0x142934f90-0x1429351fd .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -61,6 +63,7 @@
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/gfx_value.h"
 #include "../include/kernel/sf_utf8util.h"
+#include "../include/kernel/sf_std.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_assupport.h"
 #include "../include/gfx/gfx_placeobject.h"
@@ -1107,6 +1110,119 @@ void LoadVarsProto::DefaultOnData(const FnCall& fn)
     penv->Push(loaded);
     AsBroadcaster::BroadcastMessage(penv, pobj, penv->CreateConstString("onLoad"), 1, penv->GetTopIndex());
     penv->Drop1();
+}
+
+// A number value, or a string that parses as a whole as one (+, -, . or a digit first).
+static SF_FORCEINLINE bool ArraySortGetNumber(const Value* pval, Environment* penv, Number* pnum)
+{
+    if (pval->IsNumber())
+    {
+        *pnum = pval->ToNumber(penv);
+        return true;
+    }
+    ASString    str = pval->ToString(penv);
+    const char* p   = str.ToCStr();
+    if (p && ((*p >= '0' && *p <= '9') || *p == '+' || *p == '-' || *p == '.'))
+    {
+        char* tail = 0;
+        *pnum      = Scaleform::SFstrtod(p, &tail);
+        if (!tail || !*tail)
+            return true;
+    }
+    return false;
+}
+
+// @0x142934a80
+int ArraySortFunctor::Compare(const Value* a, const Value* b) const
+{
+    Value        undefined;
+    const Value* pa = a ? a : &undefined;
+    const Value* pb = b ? b : &undefined;
+    if (!Func.IsNull())
+    {
+        // The script function: compare(a, b).
+        Value result;
+        Env->Push(*pb);
+        Env->Push(*pa);
+        FnCall fn(&result, This, Env, 2, Env->GetTopIndex());
+        Func.Invoke(fn);
+        Env->Drop(2);
+        if (!fn.Result)
+            return 0;
+        int ret = fn.Result->ToInt32(Env);
+        return (Flags & ArrayObject::SortFlags_Descending) ? -ret : ret;
+    }
+    if (Flags & ArrayObject::SortFlags_Numeric)
+    {
+        Number na = 0, nb = 0;
+        bool   aIsNum = ArraySortGetNumber(pa, Env, &na);
+        bool   bIsNum = ArraySortGetNumber(pb, Env, &nb);
+        if (aIsNum && bIsNum)
+        {
+            int ret = 0;
+            if (nb > na)
+                ret = -1;
+            if (na > nb)
+                ret = 1;
+            return (Flags & ArrayObject::SortFlags_Descending) ? -ret : ret;
+        }
+    }
+    ASString sa = pa->ToString(Env);
+    ASString sb = pb->ToString(Env);
+    int      ret;
+    if (Flags & ArrayObject::SortFlags_Locale)
+        ret = sa.LocaleCompare_CaseCheck(sb.ToCStr(), sb.GetLength(),
+                                         !(Flags & ArrayObject::SortFlags_CaseInsensitive));
+    else if (Flags & ArrayObject::SortFlags_CaseInsensitive)
+        ret = String::CompareNoCase(sa.ToCStr(), sb.ToCStr());
+    else
+        ret = strcmp(sa.ToCStr(), sb.ToCStr());
+    return (Flags & ArrayObject::SortFlags_Descending) ? -ret : ret;
+}
+
+// The object of a value, the script object of a character included (Value::ToObjectInterface with the character
+// lookup expanded, as the exe has it here).
+static SF_FORCEINLINE ObjectInterface* ArraySortToObject(const Value* pval, const Environment* penv)
+{
+    if (pval->GetType() == Value::CHARACTER)
+    {
+        InteractiveObject* pchar = 0;
+        if (penv && pval->V.pCharHandle)
+        {
+            DisplayObject* pdisp = pval->V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+            if (pdisp)
+                pchar = pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        }
+        return pchar ? ToAvmCharacter(pchar) : 0;
+    }
+    return pval->ToObject(penv);
+}
+
+// MS2-FUNCTIONAL the exe drops the dtor of the undefined fallback value (and saves other registers)
+// @0x142934f90
+int ArraySortOnFunctor::Compare(const Value* a, const Value* b) const
+{
+    const Value      undefined;
+    const Value*     pa  = a ? a : &undefined;
+    const Value*     pb  = b ? b : &undefined;
+    ASStringContext* psc = Env->GetSC();
+    // The first field the two objects differ in decides.
+    for (unsigned i = 0; i < FunctorArray.GetSize(); i++)
+    {
+        ObjectInterface* pobjA = ArraySortToObject(pa, Env);
+        ObjectInterface* pobjB = ArraySortToObject(pb, Env);
+        if (!pobjA || !pobjB)
+            continue;
+        const ASString& field = (*FieldArray)[i];
+        Value           va, vb;
+        if (pobjA->GetMemberRaw(psc, field, &va) && pobjB->GetMemberRaw(psc, field, &vb))
+        {
+            int ret = FunctorArray[i].Compare(&va, &vb);
+            if (ret)
+                return ret;
+        }
+    }
+    return 0;
 }
 
 // MS2-FUNCTIONAL regalloc: the exe loads the global context through r9, not rdx
