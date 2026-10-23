@@ -37,6 +37,9 @@ extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriUint8 DAT_143b27950[];
 extern const void* DAT_1431b95e8[];
+extern const void* DAT_1431b91b0[];
+extern const void* DAT_1431b91d8[];
+extern const void* DAT_1431b9170[];
 }
 
 const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -160,6 +163,7 @@ void     FUN_140029bf0(void* array, void* source, CriUint64 capacity);
 void     FUN_140029c90(void* array, void* source, CriUint64 capacity);
 void     FUN_140029d30(void* array, void* source, CriUint64 capacity);
 void     FUN_14002afe0(void* array);
+void     FUN_14002d3f0(void* allocation);
 void     FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count);
 void     FUN_140006f50(void* array, void* source, CriUint64 capacity);
 void     FUN_1400051c0(void* array, void* source, CriUint64 capacity);
@@ -2184,6 +2188,104 @@ void FUN_14002aa30(CriUint64* array, CriUint64 length)
             }
         }
     }
+}
+
+// MS2-FUNCTIONAL: release the owned opener and heap blocks before destroying the reference-count base.
+// @0x14002ab90
+void FUN_14002ab90(void* object)
+{
+    void** fields = (void**)object;
+    if (fields[4])
+        FUN_14002d3f0(fields[4]);
+    if (fields[3])
+        FUN_14257dcb0(fields[3]);
+    FUN_14257db50(object);
+}
+
+// MS2-FUNCTIONAL: destroy the same owned fields and optionally free the containing allocation.
+// @0x14002b0f0
+void* FUN_14002b0f0(void* object, CriUint32 flags)
+{
+    void** fields = (void**)object;
+    if (fields[4])
+        FUN_14002d3f0(fields[4]);
+    if (fields[3])
+        FUN_14257dcb0(fields[3]);
+    FUN_14257db50(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: construct the reader configuration base and retain its file opener.
+// @0x14002b070
+void* FUN_14002b070(void* object, void* heap, void* opener)
+{
+    void** fields = (void**)object;
+    fields[0] = (void*)DAT_1431b91b0;
+    *((CriUint32*)fields + 2) = 1;
+    fields[2] = heap;
+    if (opener)
+        FUN_14257dc30(opener);
+    fields[3] = opener;
+    fields[4] = fields[5] = fields[6] = NULL;
+    *((CriUint8*)object + 0x38) = 1;
+    return object;
+}
+
+// MS2-FUNCTIONAL: finalize the sampled reader configuration and release its two owned members.
+// @0x14002b1b0
+void FUN_14002b1b0(void* object)
+{
+    void** fields = (void**)object;
+    fields[0] = (void*)DAT_1431b91d8;
+    if (fields[4])
+        FUN_14002d3f0(fields[4]);
+    if (fields[3])
+        FUN_14257dcb0(fields[3]);
+    FUN_14257db50(object);
+}
+
+// MS2-FUNCTIONAL: construct the sampled reader configuration from its base state and opener.
+// @0x14002b150
+void* FUN_14002b150(void* object, void* heap, void* opener)
+{
+    FUN_14002b070(object, heap, opener);
+    *(void**)object = (void*)DAT_1431b91d8;
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroy the sampled reader configuration and conditionally release its allocation.
+// @0x14002b200
+void* FUN_14002b200(void* object, CriUint32 flags)
+{
+    FUN_14002b1b0(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: release both player arrays and restore the synchronous decoder's base state.
+// @0x14002ad30
+void FUN_14002ad30(void* object)
+{
+    void** fields = (void**)object;
+    fields[0] = (void*)DAT_1431b9170;
+    if (fields[6])
+        FUN_14002d3f0(fields[6]);
+    if (fields[3])
+        FUN_14002d3f0(fields[3]);
+    FUN_14257db50(object);
+}
+
+// MS2-FUNCTIONAL: destroy the synchronous decoder and optionally return its storage to the global heap.
+// @0x14002b350
+void* FUN_14002b350(void* object, CriUint32 flags)
+{
+    FUN_14002ad30(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
 }
 
 // MS2-FUNCTIONAL: copy a vector of paired strings after resizing its destination.
