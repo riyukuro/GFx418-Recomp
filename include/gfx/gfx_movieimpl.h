@@ -35,7 +35,8 @@ struct ASStringNode;
 }
 class MemoryHeap;
 class Log;
-namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld; }
+namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld;
+                   namespace Text { class Allocator; } }
 namespace GFx {
 class StateBag;
 class ASIntervalTimerIntf;
@@ -226,7 +227,7 @@ public:
     void*            MovieDefKillList[3];      // +0x34d0 Array<MDKillListEntry>
     ASMovieRootBase* pSavedASMovieRoot;        // +0x34e8 Ptr<ASMovieRootBase>
     void*            RenderContext[0x22];      // +0x34f0 Render::ContextImpl::Context (0x110; gfx_rendertree.h: the heap first)
-    bool             PreviouslyCaptured;       // +0x3600 bumped by ForceUpdateImages
+    UByte            PreviouslyCaptured;       // +0x3600 bumped (incremented) by ForceUpdateImages
     void*            DIContext;                // +0x3608 Ptr<Render::DrawableImageContext>
     void*            pRTCommandQueue;          // +0x3610 ThreadCommandQueue*
     void*            MultitouchHAL;            // +0x3618 Ptr<MultitouchInterface>
@@ -419,6 +420,22 @@ public:
         WideStringStorage(ASStringNode* pnode);
         virtual ~WideStringStorage();
     };
+
+    // (appended for the player, sfr_gfx_01i)
+    // Swaps in the AVM root (the AVM's CreateMovie sets it; exe 0x142575930).
+    void SetASMovieRoot(ASMovieRootBase* pasMovieRoot);
+    // The movie is shutting down: no render root left, or the shutdown flag set (exe 0x142571170).
+    bool IsShutdowning() const;
+    // The text allocator of the AVM root (exe 0x14256fdd0).
+    Render::Text::Allocator* GetTextAllocator();
+    // Moves the focus of the controller's focus group to ch (exe 0x142575b10).
+    bool SetFocusTo(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt);
+    // The stage-to-viewport matrix from the viewport, scale mode and alignment (exe 0x142574eb0).
+    void ResetViewportMatrix();
+protected:
+    void ResetKeyboardState();   // exe 0x142574c60
+    void ResetMouseState();      // exe 0x142574ca0
+public:
 
 #ifdef SF_GFX_PLAYERIMPL
     // (sfr_gfx_01i) the Movie interface; exe vftables 0x143183640 (68 slots) and 0x143183860 (StateBag).

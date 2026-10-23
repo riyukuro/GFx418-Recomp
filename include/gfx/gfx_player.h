@@ -181,6 +181,20 @@ public:
     void     CreateFunction(Value* pvalue, FunctionHandler* pfc, void* puserData = 0);
     bool     GetVariable(Value* pval, const char* ppathToVar) const;
     bool     Invoke(const char* ppathToMethod, Value* presult, const Value* pargs, unsigned numArgs);
+
+    // How SetVariable keeps a value whose target does not exist yet.
+    enum SetVarType
+    {
+        SV_Normal,      // not kept
+        SV_Sticky,      // kept until the target appears
+        SV_Permanent    // kept, reapplied whenever the target is created again
+    };
+    bool     SetVariable(const char* ppathToVar, const Value& value, SetVarType setType = SV_Sticky);
+    // The value an ExternalInterface.call made by the movie returns.
+    void     SetExternalInterfaceRetVal(const Value& retVal);
+    // pargFmt: one character per argument (%d %u %s %ls %f %hf %b %r ...).
+    bool     Invoke(const char* ppathToMethod, Value* presult, const char* pargFmt, ...);
+    bool     InvokeArgs(const char* ppathToMethod, Value* presult, const char* pargFmt, va_list args);
 };
 
 }} // namespace Scaleform::GFx

@@ -133,6 +133,13 @@ public:
 
     MemoryHeap* pHeap;
 
+    // (appended for the player, sfr_gfx_01i)
+    bool HasChanges() const;                        // 0x142580270
+    void Shutdown(bool waitFlag);                   // 0x142581230
+    bool IsShutdownComplete() const;                // 0x1425802a0
+    void ForceUpdateImages();                       // 0x14257ff60
+    void SetCaptureThreadId(void* captureThreadId); // 0x142581220 (ThreadId)
+
 private:
     Entry* createEntryHelper(EntryData* data);
 };
@@ -319,6 +326,14 @@ public:
     ShapeMeshProvider* GetShape() const        { return GetReadOnlyData()->pMeshProvider; }
     // takes a reference on the provider (defined where ShapeMeshProvider is complete, sfr_gfx_06e)
     inline void        SetShape(ShapeMeshProvider* pshape);
+};
+
+// (appended for the player, sfr_gfx_01i) the root of a movie's render tree: viewport and background color.
+class Color;
+class TreeRoot : public TreeContainer
+{
+public:
+    void SetBackgroundColor(const Color& color);   // 0x142575a20 (inline in render_treenode.h)
 };
 
 }} // namespace Scaleform::Render
