@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/render/render_context.h"
 #include "ms2/scaleform/include/render/render_stats.h"
 #include "ms2/scaleform/include/render/render_meshkey.h"
+#include "ms2/scaleform/include/render/render_textlayertype.h"
 
 namespace Scaleform { namespace Render {
 
@@ -26,6 +27,18 @@ class MeshKeyManager;
 class FontCacheHandle;
 struct GlyphCacheParams;
 class Renderer2DImpl;
+// (appended for sfr_render_07o) the glyph cache's text side
+class Font;
+class GlyphRaster;
+class Image;
+class PrimitiveFill;
+class TextureManager;
+class TextMeshProvider;
+struct GlyphParam;
+struct GlyphNode;
+struct GlyphRunData;
+struct VectorGlyphShape;
+class GlyphQueue;
 namespace MatrixPoolImpl { class MatrixPool; }
 
 // a cache whose buffers the renderer unlocks after a frame (Render_Primitive)
@@ -95,6 +108,49 @@ public:
     void MergeCacheSlots();                    // 0x1426c67b0
     // (appended for sfr_render_07l) printf-style warning to the renderer's log
     void LogWarning(const char* fmt, ...);     // 0x1426c6710
+
+    // (appended for sfr_render_07o) what the text mesh providers use: fills per layer / texture, the glyph lookup
+    // and rasterizer, the shared vector glyph shapes, the slot queue and the in-use list
+    PrimitiveFill*    GetFill(TextLayerType type, unsigned textureId);                       // 0x1426c62a0
+    Image*            GetImage(unsigned textureId);                                          // 0x1426c6380
+    FontCacheHandle*  RegisterFont(Font* font);                                              // 0x1426c7c10
+    float             GetCachedFontSize(const GlyphParam& gp, float screenSize, bool exactFit) const;  // 0x1426c6170
+    float             GetCachedShadowSize(float screenSize, const GlyphRaster* ras) const;  // 0x1426c6220
+    GlyphNode*        FindGlyph(TextMeshProvider* tm, const GlyphParam& gp);                 // 0x1426c6110
+    GlyphNode*        RasterizeGlyph(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp);  // 0x1426c6840
+    GlyphNode*        RasterizeShadow(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp,
+                                      float screenSize, const GlyphRaster* ras);             // 0x1426c6d80
+    VectorGlyphShape* CreateGlyphShape(GlyphRunData& data, unsigned glyphIndex, float screenSize, bool fauxBold,
+                                       bool fauxItalic, unsigned outline, bool needsVectorShape);  // 0x1426c5700
+
+    MemoryHeap*             GetHeap()                 { return pHeap; }
+    TextureManager*         GetTextureManager()       { return pTexMan; }
+    PrimitiveFillManager*   GetPrimitiveFillManager() { return pFillMan; }
+    float                   GetScaleU() const         { return ScaleU; }
+    float                   GetScaleV() const         { return ScaleV; }
+    GlyphQueue&             GetQueue()                { return *(GlyphQueue*)Unk_Queue; }
+    List<TextMeshProvider>& GetTextInUse()            { return TextInUse; }
+
+private:
+    // GlyphCacheParams Param (+0x20); the texture mappers, the slot queue (GlyphQueue +0x1098) and the update
+    // state stay opaque until the glyph cache's own unit (sfr_render_06)
+    UByte                   Unk_Param[0x58 - 0x20];
+    MemoryHeap*             pHeap;                     // +0x58
+    HAL*                    pRenderer;                 // +0x60
+    PrimitiveFillManager*   pFillMan;                  // +0x68
+    TextureManager*         pTexMan;                   // +0x70
+    unsigned                TextureWidth;              // +0x78
+    unsigned                TextureHeight;             // +0x7c
+    unsigned                MaxNumTextures;            // +0x80
+    unsigned                MaxSlotHeight;             // +0x84
+    unsigned                SlotPadding;               // +0x88
+    float                   ScaleU;                    // +0x8c
+    float                   ScaleV;                    // +0x90
+    float                   ShadowQuality;             // +0x94
+    UByte                   Unk_Textures[0x1098 - 0x98];
+    UByte                   Unk_Queue[0x1240 - 0x1098];
+    List<TextMeshProvider>  TextInUse;                 // +0x1240
+    List<TextMeshProvider>  TextInPin;                 // +0x1250
 };
 
 enum DisplayPass

@@ -23,6 +23,7 @@
 #include "ms2/scaleform/include/render/render_textlayout.h"
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/render/render_glyphshape.h"
+#include "ms2/scaleform/include/render/render_textlayertype.h"
 
 namespace Scaleform { namespace Render {
 
@@ -41,25 +42,6 @@ class TextMeshProvider;
 class Fence;
 struct GlyphNode;
 struct TextNotifier;
-
-// The kinds of text layers, in drawing order.
-enum TextLayerType
-{
-    TextLayer_Background,
-    TextLayer_Selection,
-    TextLayer_Shadow,
-    TextLayer_ShadowText,
-    TextLayer_RasterText,
-    TextLayer_PackedText,
-    TextLayer_PackedDFAText,
-    TextLayer_Images,
-    TextLayer_Shapes,
-    TextLayer_Underline,
-    TextLayer_Cursor,
-    TextLayer_Mask,
-    TextLayer_Shapes_Masked,
-    TextLayer_Underline_Masked
-};
 
 // What identifies a shared vector glyph: the face, the glyph, its hinting and the faux style / outline.
 struct VectorGlyphKey
