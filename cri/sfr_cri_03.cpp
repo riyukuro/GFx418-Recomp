@@ -60,6 +60,7 @@ void FUN_140041110(void*, const char*, CriUint32);
 void FUN_140046d50(void*, CriSint32);
 void FUN_140053570(void*);
 void FUN_140050e90(void*);
+void FUN_140053e40(void*);
 void FUN_14003a108(void*);
 CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
 void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
@@ -154,6 +155,43 @@ void FUN_140041a60(void* object)
     state->Mode = 0;
     state->Active = 1;
     state->Start = FUN_1425e3560();
+}
+
+// MS2-FUNCTIONAL: translate the reader interface's three states into the movie's public status values.
+// @0x140041300
+CriUint32 FUN_140041300(void* object)
+{
+    struct ReaderOwner { CriUint8 Reserved[0x10]; void* Reader; };
+    ReaderOwner* owner = (ReaderOwner*)object;
+    if (!owner->Reader)
+        return 0;
+    void** vtable = *(void***)owner->Reader;
+    CriSint32 state = ((CriSint32 (*)(void*))vtable[7])(owner->Reader);
+    if (state == 0)
+        return 0;
+    if (state == 1)
+        return 1;
+    return state == 2 ? 0 : 2;
+}
+
+// MS2-FUNCTIONAL: flag the video player and notify its retained work object.
+// @0x140043680
+void FUN_140043680(void* object)
+{
+    struct PlayerState
+    {
+        CriSint32 Type;
+        CriUint8 Reserved04[0x0c];
+        void* Work;
+        CriUint8 Reserved18[0x78];
+        CriSint32 Active;
+    };
+    PlayerState* player = (PlayerState*)object;
+    if (player && player->Type)
+    {
+        player->Active = 1;
+        FUN_140053e40(player->Work);
+    }
 }
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
