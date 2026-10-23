@@ -605,6 +605,8 @@ public:
     CriSint64 GetFileSize(void) override;                                                   // 0x1400389d0
     ~CriMvEasyFileReaderMem() override;                                                     // 0x140038c80
     virtual void Destroy(void);                                                             // 10, 0x1400386c0
+protected:
+    CriMvEasyFileReaderMem();                                                               // 0x140038c10
 private:
     CriUint8* Data;                                                                         // 0x08
     CriSint64 FileSize;                                                                     // 0x10

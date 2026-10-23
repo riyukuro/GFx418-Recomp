@@ -2135,6 +2135,13 @@ CriMvEasyFileReaderMem* CriMvEasyFileReaderMem::Create(CriHeap heap)
     return reader;
 }
 
+// MS2-FUNCTIONAL: initialize the CRI file-reader base before the derived memory-reader vtable is installed.
+// @0x140038c10
+CriMvEasyFileReaderMem::CriMvEasyFileReaderMem()
+    : CriMvFileReaderInterface()
+{
+}
+
 // MS2-FUNCTIONAL: open MFS:<hex-address>.<hex-size> memory-file names.
 // @0x140038720
 void CriMvEasyFileReaderMem::Open(CriChar8* fname)
