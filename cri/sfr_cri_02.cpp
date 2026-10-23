@@ -163,12 +163,15 @@ void     FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 coun
 void     FUN_140006f50(void* array, void* source, CriUint64 capacity);
 void     FUN_1400051c0(void* array, void* source, CriUint64 capacity);
 void     FUN_142584950(void* destination, const void* source);
-void     FUN_14002ba30(void* object);
-void     FUN_14002c550(void* object);
+CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source);
+CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source);
+void     FUN_14002aa30(CriUint64* array, CriUint64 length);
+void     FUN_14000bd60(void* array, void* source, CriUint64 length);
 void     FUN_14002b2e0(void* object);
 void     FUN_14002c5f0(void* object);
 void     FUN_14002e2a0(void* object);
 void     FUN_142579470(void* object);
+void     FUN_142585580(void* destination, const void* source);
 void     FUN_142584ce0(void* string);
 
 struct CriMvRequestNode
@@ -232,6 +235,16 @@ struct CriMvReaderThreadConfigView
     CriUint8 Event[0x60];
     CriUint8 Condition[8];
     void* Reader;
+};
+
+struct CriVideoRecordCopyView
+{
+    CriUint32 Type;
+    CriUint32 Reserved0;
+    CriUint64 Name;
+    CriUint32 Flags;
+    CriUint32 Reserved1;
+    CriUint64 NestedStrings[3];
 };
 
 // @0x140038000
@@ -2106,6 +2119,74 @@ void FUN_14002a550(void* items, CriSint64 count)
     }
 }
 
+// MS2-FUNCTIONAL: resize a vector of two-string records and initialize each newly added pair.
+// @0x14002aa30
+void FUN_14002aa30(CriUint64* array, CriUint64 length)
+{
+    CriUint64 oldLength = array[1];
+    FUN_140006f50(array, array, length);
+    if (oldLength < length)
+    {
+        CriUint8* item = (CriUint8*)array[0] + oldLength * 0x10;
+        for (CriUint64 i = oldLength; i < length; ++i, item += 0x10)
+        {
+            if (item)
+            {
+                FUN_142584ce0(item);
+                FUN_142584ce0(item + 8);
+            }
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: copy a vector of paired strings after resizing its destination.
+// @0x14002ba30
+CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source)
+{
+    FUN_14002aa30(destination, source[1]);
+    CriUint8* out = (CriUint8*)destination[0];
+    const CriUint8* in = (const CriUint8*)source[0];
+    for (CriUint64 i = 0; i < destination[1]; ++i)
+    {
+        FUN_142585580(out, in);
+        FUN_142585580(out + 8, in + 8);
+        out += 0x10;
+        in += 0x10;
+    }
+    return destination;
+}
+
+// MS2-FUNCTIONAL: copy the 0x30-byte video records and their nested paired-string vectors.
+// @0x14002c550
+CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source)
+{
+    FUN_14000bd60(destination, destination, source[1]);
+    CriUint8* out = (CriUint8*)destination[0];
+    const CriUint8* in = (const CriUint8*)source[0];
+    for (CriUint64 i = 0; i < destination[1]; ++i)
+    {
+        CriVideoRecordCopyView* record = (CriVideoRecordCopyView*)(out + i * sizeof(CriVideoRecordCopyView));
+        const CriVideoRecordCopyView* sourceRecord =
+            (const CriVideoRecordCopyView*)(in + i * sizeof(CriVideoRecordCopyView));
+        record->Type = sourceRecord->Type;
+        FUN_142585580(&record->Name, &sourceRecord->Name);
+        record->Flags = sourceRecord->Flags;
+        FUN_14002ba30(record->NestedStrings, sourceRecord->NestedStrings);
+    }
+    return destination;
+}
+
+// MS2-FUNCTIONAL: copy the descriptor fields and nested string vector of a video record.
+// @0x14002c260
+CriUint32* FUN_14002c260(CriUint32* destination, const CriUint32* source)
+{
+    destination[0] = source[0];
+    FUN_142585580(destination + 2, source + 2);
+    destination[4] = source[4];
+    FUN_14002ba30((CriUint64*)(destination + 6), (const CriUint64*)(source + 6));
+    return destination;
+}
+
 // MS2-FUNCTIONAL: append a three-word record using the vector's twelve-byte element stride.
 // @0x14002a900
 void FUN_14002a900(CriUint64* array, const CriUint32* value)
@@ -2365,17 +2446,17 @@ CriUint64* FUN_14002b9b0(CriUint64* destination, const CriUint64* source)
 
 // MS2-FUNCTIONAL: run the matching vector helper and preserve the original object pointer.
 // @0x14002c0c0
-void* FUN_14002c0c0(void* object)
+void* FUN_14002c0c0(void* object, void* source)
 {
-    FUN_14002ba30(object);
+    FUN_14002ba30((CriUint64*)object, (const CriUint64*)source);
     return object;
 }
 
 // MS2-FUNCTIONAL: run the matching vector helper and preserve the original object pointer.
 // @0x14002c780
-void* FUN_14002c780(void* object)
+void* FUN_14002c780(void* object, void* source)
 {
-    FUN_14002c550(object);
+    FUN_14002c550((CriUint64*)object, (const CriUint64*)source);
     return object;
 }
 
