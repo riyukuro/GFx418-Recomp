@@ -742,6 +742,14 @@ void FUN_140005ca0(void** array, Scaleform::UPInt size)
         memset(static_cast<unsigned char*>(*array) + oldSize * 12, 0, (size - oldSize) * 12);
 }
 
+// MS2-FUNCTIONAL: releases the stored allocation through Scaleform's global heap.
+// @0x140005f60
+void FUN_140005f60(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+
+// MS2-FUNCTIONAL: releases the stored allocation through Scaleform's global heap.
+// @0x140005fa0
+void FUN_140005fa0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
