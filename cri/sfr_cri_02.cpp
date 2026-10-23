@@ -3605,6 +3605,42 @@ void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMov
     FUN_14003a108(document);
 }
 
+// MS2-FUNCTIONAL: compare video stream information and, when enabled, every plane's size pair.
+// @0x140033ff0
+CriBool FUN_140033ff0(void* player, const void* leftValue, const void* rightValue)
+{
+    struct PlaneInfo { CriSint32 First; CriSint32 Second; CriUint8 Reserved[8]; };
+    struct StreamInfo
+    {
+        CriUint8 Reserved0[0x14];
+        CriSint32 Field14;
+        CriSint32 Field18;
+        CriUint8 Reserved20[4];
+        CriSint32 Field24;
+        CriUint8 Reserved28[0x24];
+        CriUint32 PlaneCount;
+        PlaneInfo Planes[8];
+    };
+    struct CompareModeView { CriUint8 Reserved[0xb28]; CriSint32 Mode; };
+    const StreamInfo* left = (const StreamInfo*)leftValue;
+    const StreamInfo* right = (const StreamInfo*)rightValue;
+    if (left->Field18 != right->Field18 || left->Field14 != right->Field14 ||
+        left->Field24 != right->Field24)
+        return 0;
+    if (((CompareModeView*)player)->Mode >= 0)
+    {
+        if (left->PlaneCount != right->PlaneCount)
+            return 0;
+        for (CriUint32 i = 0; i < left->PlaneCount; ++i)
+        {
+            if (left->Planes[i].First != right->Planes[i].First ||
+                left->Planes[i].Second != right->Planes[i].Second)
+                return 0;
+        }
+    }
+    return 1;
+}
+
 // MS2-FUNCTIONAL: discard handled command chunks while returning ordinary input records to the stream.
 // @0x140033610
 void FUN_140033610(void* player)
