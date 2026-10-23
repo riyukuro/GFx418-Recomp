@@ -40,6 +40,9 @@
 // MS2-RANGE: 0x142935ea0-0x1429360d3 .text$mn
 // MS2-RANGE: 0x14292e650-0x14292e6d3 .text$mn
 // MS2-RANGE: 0x142934820-0x1429349a0 .text$mn
+// MS2-RANGE: 0x142936360-0x142936506 .text$mn
+// MS2-RANGE: 0x1429431a0-0x1429431cc .text$mn
+// MS2-RANGE: 0x14292da40-0x14292dad4 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -859,6 +862,13 @@ inline MovieImpl::WideStringStorage::~WideStringStorage()
     pNode->Release();
 }
 
+// The host's callback behind a function value (only the reference count is needed here).
+class FunctionHandler : public RefCountBase<FunctionHandler, Stat_Default_Mem>
+{
+public:
+    virtual ~FunctionHandler() {}
+};
+
 namespace AS2 {
 
 // @0x14292dc70
@@ -1054,6 +1064,50 @@ Sprite* MovieRoot::CreateEmptyLevelMovie(LoadStates* pls, int level)
         }
     }
     return psprite;
+}
+
+// Function object around a host FunctionHandler (sfr_as2_06 calls it). 0x78 bytes. Its deleting dtor (exe
+// 0x14292da40) is functional only: the exe inlines ~FunctionObject, defined out of line in sfr_as2_03.
+class UserDefinedFunctionObject : public FunctionObject
+{
+protected:
+    Ptr<FunctionHandler> pContext;  // +0x68
+    void*                pUserData; // +0x70
+
+    virtual void Finalize_GC()
+    {
+        pContext.Clear();
+        Object::Finalize_GC();
+    }
+
+public:
+    UserDefinedFunctionObject(ASStringContext* psc, FunctionHandler* pfc, void* puserData)
+        : FunctionObject(psc), pContext(pfc), pUserData(puserData)
+    {
+        Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
+    }
+
+    virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>*) { return fn.Env; }
+    virtual void         Invoke(const FnCall& fn, LocalFrame*, const char*); // exe 0x142963aa0 (sfr_as2_06)
+    virtual bool         IsNull() const { return !pContext; }
+    virtual bool         IsEqual(const FunctionObject&) const { return false; }
+    virtual int          GetNumArgs() const { return -1; }
+};
+
+// @0x142936360
+void MovieRoot::CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, void* puserData)
+{
+    Environment* penv = GetLevel0Environment(pMovieImpl);
+    Value        val;
+    Ptr<FunctionObject> pfunc =
+        *SF_HEAP_NEW(penv->GetHeap()) UserDefinedFunctionObject(penv->GetSC(), pfc, puserData);
+    {
+        FunctionRef fref(pfunc);
+        val.DropRefs();
+        val.T.Type = Value::FUNCTION;
+        val.V.FunctionValue.Init(fref);
+    }
+    ASValue2GFxValue(penv, val, pvalue);
 }
 
 // @0x14292e650
@@ -1309,3 +1363,6 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x14318ccd8
 // MS2-PIN: ??_7SizeVisitor@?1??ComputeSizeInBytes@SharedObject@AS2@GFx@Scaleform@@QEAA_KPEAVEnvironment@345@@Z@6B@ 0x1432227e8
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
+// MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143221ff8
+// MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143222080
+// MS2-PIN: ??_GUserDefinedFunctionObject@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292da40

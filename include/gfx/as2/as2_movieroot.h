@@ -11,7 +11,7 @@
 #include "../gfx_playertasks.h"
 #include "../gfx_loadproc.h"
 
-namespace Scaleform { namespace GFx { class Value; } }
+namespace Scaleform { namespace GFx { class Value; class FunctionHandler; } }
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -209,6 +209,8 @@ public:
     virtual void CreateStringW(GFx::Value* pvalue, const wchar_t* pstring);  // exe 0x142937ea0
     // A new Array object as a host value (exe 0x142935dc0).
     virtual void CreateArray(GFx::Value* pvalue);
+    // A host function object calling pfc with puserData (exe 0x142936360).
+    virtual void CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, void* puserData);
     // Converts v into a host value (exe 0x14292dc70).
     void ASValue2GFxValue(Environment* penv, const Value& v, GFx::Value* pdestVal) const;
 
