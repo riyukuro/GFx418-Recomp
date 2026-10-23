@@ -22,6 +22,12 @@ public:
     void Add(Instances::Namespace& ns, bool checkUnique = true);
     // (appended, sfr19) Add(ns, true) for every namespace of other. 0x142404230
     void AddUnique(const NamespaceArray& other);
+    // (appended, sfr19) an equal namespace (uri + prefix) is in. 0x14240ada0
+    bool Find(const Instances::Namespace& ns) const;
+    // (appended, sfr19) a namespace with prefix is in. 0x14240aed0
+    bool FindByPrefix(const ASString& prefix) const;
+    // (appended, sfr19) a namespace with uri is in. 0x14240af70
+    bool FindByUri(const ASString& uri) const;
 };
 
 namespace Instances { namespace fl {

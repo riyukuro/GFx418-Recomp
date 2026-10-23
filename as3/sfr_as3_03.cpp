@@ -2838,6 +2838,49 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         }
     }
 }}}}}
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+    // @0x14240ada0
+    bool NamespaceArray::Find(const Instances::Namespace& ns) const
+    {
+        const UPInt size = Namespaces.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            const Instances::Namespace& cur = *Namespaces[i];
+            if (cur.GetUri() == ns.GetUri() && StrictEqual(cur.GetPrefix(), ns.GetPrefix()))
+                return true;
+        }
+        return false;
+    }
+
+    // @0x14240aed0
+    bool NamespaceArray::FindByPrefix(const ASString& prefix) const
+    {
+        bool found = false;
+        for (UPInt i = 0; !found; ++i)
+        {
+            if (i >= Namespaces.GetSize())
+                return found;
+            const Value& p = Namespaces[i]->GetPrefix();
+            if (!p.IsNullOrUndefined())
+                found = p.AsString() == prefix;
+        }
+        return found;
+    }
+
+    // @0x14240af70
+    bool NamespaceArray::FindByUri(const ASString& uri) const
+    {
+        bool found = false;
+        for (UPInt i = 0; !found; ++i)
+        {
+            if (i >= Namespaces.GetSize())
+                return found;
+            found = Namespaces[i]->GetUri() == uri;
+        }
+        return found;
+    }
+}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
