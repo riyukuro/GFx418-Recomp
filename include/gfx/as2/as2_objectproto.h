@@ -170,6 +170,10 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937170
 
     static const NameFunction StaticFunctionTable[]; // exe 0x1432142f0: registerClass
+
+private:
+    // (appended for sfr_as2_02)
+    static void RegisterClassA(const FnCall& fn); // exe 0x142908e90 (registerClass)
 };
 
 // Object.prototype methods (only the natives so far).

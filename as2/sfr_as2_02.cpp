@@ -31,6 +31,7 @@
 // MS2-RANGE: 0x142901150-0x142901276 .text$mn
 // MS2-RANGE: 0x142900fc0-0x14290114c .text$mn
 // MS2-RANGE: 0x142901280-0x142901406 .text$mn
+// MS2-RANGE: 0x142908e90-0x142909300 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -1984,6 +1985,43 @@ void SharedObjectProto::GetSize(const FnCall& fn)
     if (!pthis)
         return;
     fn.Result->SetInt((int)pthis->ComputeSizeInBytes(fn.Env));
+}
+
+// GetCaseCheck / RemoveCaseCheck of the registered class table (exe 0x142949f60 / 0x14297cd20).
+FunctionRef* ClassHash_GetCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
+void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
+
+// Object.registerClass(name, ctor) binds the constructor to the linkage name; null removes the binding.
+// @0x142908e90
+void ObjectCtorFunction::RegisterClassA(const FnCall& fn)
+{
+    fn.Result->SetBool(false);
+    if (fn.NArgs < 2)
+    {
+        fn.Env->LogScriptError("Error: Too few parameters for Object.registerClass (%d)", fn.NArgs);
+        return;
+    }
+    GlobalContext* pgc = fn.Env->GetSC()->pContext;
+    ASString       classname(fn.Arg(0).ToString(fn.Env));
+    if (fn.Arg(1).IsFunction())
+    {
+        FunctionRef func = fn.Arg(1).ToFunction(fn.Env);
+        pgc->RegisteredClasses.SetCaseCheck(classname, func, fn.Env->IsCaseSensitive());
+        fn.Result->SetBool(true);
+    }
+    else if (fn.Arg(1).IsNull())
+    {
+        bool rv = false;
+        if (ClassHash_GetCaseCheck(&pgc->RegisteredClasses, classname, fn.Env->IsCaseSensitive()))
+        {
+            ClassHash_RemoveCaseCheck(&pgc->RegisteredClasses, classname, fn.Env->IsCaseSensitive());
+            rv = true;
+        }
+        fn.Result->SetBool(rv);
+    }
+    else
+        fn.Env->LogScriptError("Second parameter of Object.registerClass(%s, %s) should be function or null",
+                               classname.ToCStr(), fn.Arg(1).ToString(fn.Env).ToCStr());
 }
 }}} // namespace Scaleform::GFx::AS2
 
