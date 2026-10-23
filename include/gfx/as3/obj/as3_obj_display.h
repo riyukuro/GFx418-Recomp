@@ -698,6 +698,9 @@ namespace Instances { namespace fl_display {
         virtual bool IsMovieClip() const;                    // 0x142444be0
     protected:
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+        // The scene holding frame / named name, NULL unless the sprite is a movie (0x1424443f0 / 0x142444490).
+        const MovieDataDef::SceneInfo* GetSceneInfo(unsigned frame) const;
+        const MovieDataDef::SceneInfo* GetSceneInfoByName(const ASString& name) const;
     public:
         FrameScript frameScript;    // +0x78
 

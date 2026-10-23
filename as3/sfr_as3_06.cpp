@@ -1540,6 +1540,40 @@ namespace Instances { namespace fl_display
         }
     }
 
+    // @0x1424443f0
+    const MovieDataDef::SceneInfo* MovieClip::GetSceneInfo(unsigned frame) const
+    {
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        if (psprite->pDef->GetType() == CharacterDef::MovieData)
+        {
+            UPInt count = 0;
+            const MovieDataDef::SceneInfo* pscenes = psprite->GetResourceMovieDef()->GetDataDef()->GetScenes(&count);
+            for (UPInt i = 0; i < count; ++i)
+            {
+                if (frame >= pscenes[i].Offset && frame < pscenes[i].Offset + pscenes[i].NumFrames)
+                    return &pscenes[i];
+            }
+        }
+        return NULL;
+    }
+
+    // @0x142444490
+    const MovieDataDef::SceneInfo* MovieClip::GetSceneInfoByName(const ASString& name) const
+    {
+        GFx::Sprite* psprite = static_cast<GFx::Sprite*>(pDispObj.GetPtr());
+        if (psprite->pDef->GetType() == CharacterDef::MovieData)
+        {
+            UPInt count = 0;
+            const MovieDataDef::SceneInfo* pscenes = psprite->GetResourceMovieDef()->GetDataDef()->GetScenes(&count);
+            for (UPInt i = 0; i < count; ++i)
+            {
+                if (strcmp(name.ToCStr(), pscenes[i].Name.ToCStr()) == 0)
+                    return &pscenes[i];
+            }
+        }
+        return NULL;
+    }
+
     // @0x142443250
     // noinline: GetFrameScript calls it out of line.
     __declspec(noinline) const MovieClip::FrameScript::Descr* MovieClip::FrameScript::Get(unsigned frame)
