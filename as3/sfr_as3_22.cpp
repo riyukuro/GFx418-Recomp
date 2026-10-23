@@ -2084,6 +2084,51 @@ void WriteTextRecordGroup(void* object, void* stream, unsigned version)
     }
 }
 
+static void WriteAs3RecordBytes(void* stream, const void* data, std::size_t size)
+{
+    auto** streamVtable = *reinterpret_cast<void***>(stream);
+    reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, data, size);
+}
+
+// MS2-FUNCTIONAL: serializes the image metadata records and cached image names, with later fields gated by format version.
+// @0x14268ef30
+extern "C" void FUN_14268ef30(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x18);
+    WriteAs3RecordBytes(stream, &count, 4);
+    auto* records = *reinterpret_cast<unsigned char**>(bytes + 0x10);
+    for (unsigned i = 0; i < count; ++i) {
+        auto* record = records + i * 0x20;
+        WriteAs3RecordBytes(stream, record, 8);
+        WriteAs3RecordBytes(stream, record + 8, 8);
+        WriteAs3RecordBytes(stream, record + 0x10, 4);
+        WriteAs3RecordBytes(stream, record + 0x18, 8);
+    }
+
+    auto* table = *reinterpret_cast<unsigned char**>(bytes + 0x28);
+    const unsigned entryCount = table ? *reinterpret_cast<unsigned*>(table) : 0;
+    WriteAs3RecordBytes(stream, &entryCount, 4);
+    if (!table)
+        return;
+    const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
+    for (std::uint64_t i = 0; i <= mask; ++i) {
+        auto* row = table + i * 0x20;
+        if (*reinterpret_cast<std::int64_t*>(row + 0x10) == -2)
+            continue;
+        WriteAs3RecordBytes(stream, row + 0x20, 8);
+        auto* value = *reinterpret_cast<unsigned char**>(row + 0x28);
+        Scaleform::WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(value + 0x10));
+        WriteAs3RecordBytes(stream, value + 0x18, 4);
+        if (version > 8) {
+            WriteAs3RecordBytes(stream, value + 0x20, 8);
+            WriteAs3RecordBytes(stream, value + 0x28, 4);
+            if (version > 12)
+                WriteAs3RecordBytes(stream, value + 0x2c, 4);
+        }
+    }
+}
+
 // MS2-FUNCTIONAL: reads a length-prefixed narrow string from the stream, appending each byte to the destination.
 // @0x142690630
 void ReadNarrowString(void* stream, void* destination)
