@@ -2425,6 +2425,59 @@ extern "C" void FUN_1426860f0(void** array, std::size_t first, std::size_t last,
     }
 }
 
+// MS2-FUNCTIONAL: divides movie timing counters, nested text and metric timestamps, renderer records, and MemItem totals.
+// @0x142688760
+extern "C" long long FUN_142688760(void* object, std::uint32_t divisor)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    *reinterpret_cast<std::uint64_t*>(bytes + 0x10) /= divisor;
+    for (std::size_t offset = 0x18; offset <= 0xc8; offset += 4)
+        *reinterpret_cast<std::uint32_t*>(bytes + offset) /= divisor;
+
+    const std::size_t movieCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
+    auto** movies = *reinterpret_cast<unsigned char***>(bytes + 0xd0);
+    for (std::size_t movieIndex = 0; movieIndex < movieCount; ++movieIndex) {
+        auto* movie = movies[movieIndex];
+        auto* textGroup = *reinterpret_cast<unsigned char**>(movie + 0x58);
+        const std::size_t textCount = *reinterpret_cast<std::size_t*>(textGroup + 0x18);
+        auto** texts = *reinterpret_cast<unsigned char***>(textGroup + 0x10);
+        for (std::size_t i = 0; i < textCount; ++i) {
+            auto* text = texts[i];
+            const std::size_t valueCount = *reinterpret_cast<std::size_t*>(text + 0x28);
+            auto* values = *reinterpret_cast<unsigned char**>(text + 0x20);
+            for (std::size_t j = 0; j < valueCount; ++j)
+                *reinterpret_cast<std::uint64_t*>(values + j * 0x10 + 8) /= divisor;
+        }
+
+        auto* metrics = *reinterpret_cast<unsigned char**>(movie + 0x60);
+        const std::size_t metricCount = *reinterpret_cast<std::size_t*>(metrics + 0x18);
+        auto* metricRows = *reinterpret_cast<unsigned char**>(metrics + 0x10);
+        for (std::size_t i = 0; i < metricCount; ++i) {
+            auto* row = metricRows + i * 0x20;
+            *reinterpret_cast<std::uint32_t*>(row + 0x10) /= divisor;
+            *reinterpret_cast<std::uint64_t*>(row + 0x18) /= divisor;
+        }
+
+        auto* names = *reinterpret_cast<unsigned char**>(movie + 0x68);
+        const std::size_t nameCount = *reinterpret_cast<std::size_t*>(names + 0x18);
+        auto* nameRows = *reinterpret_cast<unsigned char**>(names + 0x10);
+        for (std::size_t i = 0; i < nameCount; ++i)
+            *reinterpret_cast<std::uint64_t*>(nameRows + i * 0x18 + 0x10) /= divisor;
+    }
+
+    auto* renderer = *reinterpret_cast<unsigned char**>(bytes + 0xe8);
+    const std::size_t rendererCount = *reinterpret_cast<std::size_t*>(renderer + 0x18);
+    auto* rendererRows = *reinterpret_cast<unsigned char**>(renderer + 0x10);
+    for (std::size_t i = 0; i < rendererCount; ++i) {
+        auto* row = rendererRows + i * 0x20;
+        *reinterpret_cast<std::uint32_t*>(row + 0x10) /= divisor;
+        *reinterpret_cast<std::uint64_t*>(row + 0x18) /= divisor;
+    }
+    for (std::size_t offset : { std::size_t(0x128), std::size_t(0x130), std::size_t(0x138) })
+        reinterpret_cast<Scaleform::MemItem*>(*reinterpret_cast<void**>(bytes + offset))->operator/=(divisor);
+    return static_cast<long long>(reinterpret_cast<std::uintptr_t>(object));
+}
+
 // MS2-FUNCTIONAL: copies the image resource record and its nested strong-reference arrays, metric lists, and lookup sets.
 // @0x142687250
 extern "C" long long FUN_142687250(void* destination, const void* source)
