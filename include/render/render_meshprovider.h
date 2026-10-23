@@ -22,6 +22,12 @@ class FillData;
 class MeshKeyManager;
 class MeshKeySet;
 struct ToleranceParams;
+// (appended for sfr_render_03d)
+struct MeshGenerator;
+class TransformerBase;
+class TessBase;
+class Scale9GridData;
+struct Scale9GridInfo;
 
 // Source of the meshes of one shape (vftable 0x14318f0c0). GetData is the only slot without a default.
 class MeshProvider
@@ -172,6 +178,25 @@ private:
 
     void countComplexFills(const TmpPathsArray& paths, UPInt i1, UPInt i2, DrawLayerType* layer);
     void createDrawLayers(const TmpPathsArray& paths, UPInt i1, UPInt i2);
+
+    // (appended for sfr_render_03d) collects the paths of one stroke style of the layer at startPos into the
+    // generator's stroke sorter, dashed, transformed and snapped
+    void addToStrokeSorter(MeshGenerator* gen, const ToleranceParams& param, const TransformerBase* tr,
+                           unsigned startPos, unsigned strokeStyle, float snapOffset, float morphRatio);
+    // the stroke's outline into the generator's tessellator, or its paths into another stroker
+    void addStroke(MeshGenerator* gen, const ToleranceParams& param, const TransformerBase* tr, unsigned startPos,
+                   unsigned strokeStyle, float snapOffset, float morphRatio);
+    void addStroke(MeshGenerator* gen, TessBase* stroker, const ToleranceParams& param, const TransformerBase* tr,
+                   unsigned startPos, unsigned strokeStyle, float snapOffset, float morphRatio);
+    // a mesh of one degenerate triangle, for a layer with nothing to draw
+    bool createNullMesh(VertexOutput* pout, unsigned layer, unsigned meshGenFlags);
+    // the image fill matrix correction of a scale9 grid: the bounds of the fill's paths onto their grid mapping
+    void computeImgAdjustMatrix(const Scale9GridData* s9g, unsigned layer, unsigned imgFillStyle, Matrix2F* mtx);
+    // the layer's mesh through the 9-grid: the image cells of an image 9-grid layer, else the fill or the stroke
+    bool generateImage9Grid(Scale9GridInfo* s9g, MeshBase* mesh, VertexOutput* pout, unsigned layer);
+    bool tessellateFill(Scale9GridInfo* s9g, unsigned layer, MeshBase* mesh, VertexOutput* pout, unsigned meshGenFlags);
+    bool tessellateStroke(Scale9GridInfo* s9g, unsigned strokeStyle, unsigned layer, MeshBase* mesh,
+                          VertexOutput* pout, unsigned meshGenFlags);
 };
 
 // The two ends of a morph re-encoded with matching path records (built by ShapeMeshProvider::createMorphData).

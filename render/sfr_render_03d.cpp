@@ -18,6 +18,9 @@
 #include "ms2/scaleform/include/render/render_color.h"
 #include "ms2/scaleform/include/render/render_boundbox.h"
 #include "ms2/scaleform/include/render/render_tessgen.h"
+#include "ms2/scaleform/include/render/render_scale9grid.h"
+#include "ms2/scaleform/include/render/render_renderer2d.h"
+#include "ms2/scaleform/include/render/render_hal.h"
 #include "ms2/scaleform/kernel/sf_alg.h"
 
 namespace Scaleform { namespace Render {
@@ -1083,7 +1086,7 @@ void ShapeMeshProvider::GetFillStyle(unsigned idx, FillStyleType* style, float m
 }
 
 // @0x14262bf30
-void ShapeMeshProvider::GetStrokeStyle(unsigned idx, StrokeStyleType* style, float morphRatio) const
+SF_NOINLINE void ShapeMeshProvider::GetStrokeStyle(unsigned idx, StrokeStyleType* style, float morphRatio) const
 {
     pShapeData->GetStrokeStyle(idx, style);
     if (!pMorphData || morphRatio == 0)
@@ -1175,6 +1178,55 @@ bool fillStyleIsComplex(const ShapeDataInterface* shape, unsigned style)
         return fill.pFill != 0;
     }
     return false;
+}
+
+// The mesh of an image 9-grid layer: its image cut into the grid cells (a degenerate triangle when nothing is left).
+// MS2-FUNCTIONAL: stack layout (ours places the inlined layer bounds 16 bytes at the top of the frame, not the bottom)
+// @0x142632030
+bool ShapeMeshProvider::generateImage9Grid(Scale9GridInfo* s9g, MeshBase* mesh, VertexOutput* pout, unsigned layer)
+{
+    RectF bounds = (DrawLayers[layer].Image9GridType == 2) ? IdentityBounds : getLayerBounds(layer);
+
+    ShapePosInfo pos(DrawLayers[layer].StartPos);
+    float        coord[Edge_MaxCoord];
+    unsigned     styles[3];
+    pShapeData->ReadPathInfo(&pos, coord, styles);
+    FillStyleType fillStyle;
+    pShapeData->GetFillStyle(styles[0] ? styles[0] : styles[1], &fillStyle);
+
+    TextureManager* manager = mesh->GetRenderer()->GetHAL()->GetTextureManager();
+    Matrix2F        uvMatrix(Matrix2F::NoInit);
+    static_cast<Image*>(fillStyle.pFill->pImage.GetPtr())->GetUVNormMatrix(&uvMatrix, manager);   // an Image here
+    Scale9GridTess tess(Memory::GetGlobalHeap(), *s9g, bounds, uvMatrix, fillStyle.pFill->ImageMatrix);
+
+    if (tess.GetIndexCount())
+    {
+        VertexOutput::Fill vfill = { tess.GetVertexCount(), tess.GetIndexCount(), &Image9GridVertex::Format, 0, 0 };
+        if (!pout->BeginOutput(&vfill, 1, Matrix2F()))
+            return false;
+        pout->SetVertices(0, 0, tess.GetVertices(), tess.GetVertexCount());
+        pout->SetIndices(0, 0, tess.GetIndices(), tess.GetIndexCount());
+    }
+    else
+    {
+        Image9GridVertex ver[1];
+        UInt16           tri[3];
+        ver[0].Set(0, 0, 0, 0);
+        tri[0] = tri[1] = tri[2] = 0;
+#ifdef __clang__
+        // clang folds the initializer into .rdata: set the exe global's address at run time instead
+        VertexOutput::Fill vfill = { 1, 3, 0, 0, 0 };
+        vfill.pFormat = &Image9GridVertex::Format;
+#else
+        VertexOutput::Fill vfill = { 1, 3, &Image9GridVertex::Format, 0, 0 };
+#endif
+        if (!pout->BeginOutput(&vfill, 1, Matrix2F::Identity))
+            return false;
+        pout->SetVertices(0, 0, ver, 1);
+        pout->SetIndices(0, 0, tri, 3);
+    }
+    pout->EndOutput();
+    return true;
 }
 
 // The image / gradient of fill fillIndex of a layer (of its stroke for a stroke layer); imgFillStyle receives the
@@ -1274,6 +1326,254 @@ void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fil
     }
     else
         *data = FillData(Fill_VColor);
+}
+
+// The matrix the fill's texture coordinates are generated with: the image matrix of the fill (morphed between the
+// two shapes' inverses), adjusted to the 9-grid scaling and mapped into the image's UV space.
+// The vertices of a mesh: through its 9-grid, the image cells or the tessellated fill / stroke of its layer.
+// MS2-FUNCTIONAL: frame 0x10 larger (the exe saves rbp in the home slot of meshGenFlags)
+// @0x14262b1f0
+bool ShapeMeshProvider::GetData(MeshBase* mesh, VertexOutput* out, unsigned meshGenFlags)
+{
+    Ptr<Scale9GridInfo> s9g;
+    unsigned            layer = mesh->GetLayer();
+    bool                ret;
+    if (mesh->GetScale9Grid() && DrawLayers[layer].Image9GridType)
+    {
+        s9g = *SF_HEAP_AUTO_NEW(this) Scale9GridInfo(mesh->GetScale9Grid(), Matrix2F());
+        ret = generateImage9Grid(s9g, mesh, out, layer);
+    }
+    else
+    {
+        if (mesh->GetScale9Grid())
+            s9g = *SF_HEAP_AUTO_NEW(this) Scale9GridInfo(mesh->GetScale9Grid(), mesh->GetScale9Grid()->ViewMtx);
+        unsigned strokeStyle = DrawLayers[layer].StrokeStyle;
+        if (strokeStyle == 0)
+            ret = tessellateFill(s9g, layer, mesh, out, meshGenFlags);
+        else
+            ret = tessellateStroke(s9g, strokeStyle, layer, mesh, out, meshGenFlags);
+    }
+    return ret;
+}
+
+// MS2-FUNCTIONAL: the inlined inverse of the 9-grid adjustment schedules its products in another order (registers)
+// @0x14262b560
+void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned layer, unsigned fillIndex,
+                                      unsigned meshGenFlags)
+{
+    unsigned     imgFillStyle = 0;
+    ComplexFill* fill         = getComplexFill(layer, fillIndex, &imgFillStyle);
+    if (fill)
+    {
+        *matrix = fill->ImageMatrix;
+        if (pMorphData && mesh->GetMorphRatio() != 0)
+        {
+            float    t  = mesh->GetMorphRatio();
+            Matrix2F m2 = getMorphMatrix(layer, fillIndex).GetInverse();
+            Matrix2F m1 = fill->ImageMatrix.GetInverse();
+            matrix->M[0][0] = m1.M[0][0] + (m2.M[0][0] - m1.M[0][0]) * t;
+            matrix->M[1][0] = m1.M[1][0] + (m2.M[1][0] - m1.M[1][0]) * t;
+            matrix->M[0][1] = m1.M[0][1] + (m2.M[0][1] - m1.M[0][1]) * t;
+            matrix->M[1][1] = m1.M[1][1] + (m2.M[1][1] - m1.M[1][1]) * t;
+            matrix->M[0][2] = m1.M[0][2] + (m2.M[0][2] - m1.M[0][2]) * t;
+            matrix->M[1][2] = m1.M[1][2] + (m2.M[1][2] - m1.M[1][2]) * t;
+            matrix->M[0][3] = m1.M[0][3] + (m2.M[0][3] - m1.M[0][3]) * t;
+            matrix->M[1][3] = m1.M[1][3] + (m2.M[1][3] - m1.M[1][3]) * t;
+            matrix->Invert();
+        }
+        if (mesh && mesh->GetScale9Grid())
+        {
+            Matrix2F mtx;
+            computeImgAdjustMatrix(mesh->GetScale9Grid(), layer, imgFillStyle, &mtx);
+            matrix->Prepend(mtx.GetInverse());
+        }
+        if (fill->pImage)
+        {
+            TextureManager* manager = mesh->GetRenderer()->GetHAL()->GetTextureManager();
+            Matrix2F        uv(Matrix2F::NoInit);
+            static_cast<Image*>(fill->pImage.GetPtr())->GetUVGenMatrix(&uv, manager);   // an Image here
+            matrix->Append(uv);
+        }
+    }
+    else
+        matrix->SetIdentity();
+}
+
+// @0x14262ef50
+void ShapeMeshProvider::addToStrokeSorter(MeshGenerator* gen, const ToleranceParams& param, const TransformerBase* tr,
+                                          unsigned startPos, unsigned strokeStyle, float snapOffset,
+                                          float morphRatio)
+{
+    ShapePosInfo  pos1(startPos);
+    ShapePosInfo  pos2(startPos);
+    ShapePathType pathType;
+    PathEdgeType  edge;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+
+    StrokeStyleType style;
+    GetStrokeStyle(strokeStyle, &style, morphRatio);
+
+    MorphInterpolator shape(pShapeData, pMorphData, morphRatio, pos2);
+
+    bool first = true;
+    while ((pathType = shape.ReadPathInfo(&pos1, coord, styles)) != Shape_EndShape)
+    {
+        if (!first && pathType == Shape_NewLayer)
+            break;
+        first = false;
+
+        if (styles[2] == strokeStyle)
+        {
+            gen->mStrokeSorter.AddVertexNV(coord[0], coord[1]);
+            while ((edge = shape.ReadEdge(&pos1, coord)) != Edge_EndPath)
+            {
+                if (edge == Edge_LineTo)
+                    gen->mStrokeSorter.AddVertexNV(coord[0], coord[1]);
+                else if (edge == Edge_QuadTo)
+                    gen->mStrokeSorter.AddQuad(coord[0], coord[1], coord[2], coord[3]);
+                else if (edge == Edge_CubicTo)
+                    gen->mStrokeSorter.AddCubic(coord[0], coord[1], coord[2], coord[3], coord[4], coord[5]);
+            }
+            gen->mStrokeSorter.FinalizePath(0, 0, false, false);
+        }
+        else
+            shape.SkipPathData(&pos1);
+    }
+    gen->mStrokeSorter.Sort();
+
+    if (style.pDashes)
+        gen->mStrokeSorter.GenerateDashes(style.pDashes, param, tr->GetScale());
+
+    gen->mStrokeSorter.Transform(tr);
+
+    // hinted strokes snap to the pixel grid, unless dashed (the dashes are line segments only)
+    if (style.Flags & StrokeFlag_StrokeHinting)
+    {
+        if (!style.pDashes)
+            gen->mStrokeSorter.Snap(snapOffset, snapOffset);
+    }
+    else if (snapOffset > 0)
+        gen->mStrokeSorter.AddOffset(snapOffset, snapOffset);
+}
+
+// the same for the mesh strokes, which skip the move-to vertices
+SF_INLINE void addSortedSegments(TessBase* sink, const StrokeSorter& sorter, unsigned i, const ToleranceParams& param)
+{
+    unsigned n = sorter.GetVertexCount(i);
+    for (unsigned j = 0; j < n;)
+    {
+        const StrokeSorter::VertexType& v1 = sorter.GetVertex(i, j++);
+        switch (v1.segType)
+        {
+        case Math2D::Seg_LineTo:
+            sink->AddVertex(v1.x, v1.y);
+            break;
+        case Math2D::Seg_QuadTo:
+        {
+            const StrokeSorter::VertexType& v2 = sorter.GetVertex(i, j++);
+            TessellateQuadCurve(sink, param, v1.x, v1.y, v2.x, v2.y);
+            break;
+        }
+        case Math2D::Seg_CubicTo:
+        {
+            const StrokeSorter::VertexType& v2 = sorter.GetVertex(i, j++);
+            const StrokeSorter::VertexType& v3 = sorter.GetVertex(i, j++);
+            TessellateCubicCurve(sink, param, v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
+            break;
+        }
+        }
+    }
+}
+
+// The outline of one stroke style of the layer, path by path, into the generator's tessellator.
+// @0x14262ea80
+void ShapeMeshProvider::addStroke(MeshGenerator* gen, const ToleranceParams& param, const TransformerBase* tr,
+                                  unsigned startPos, unsigned strokeStyle, float snapOffset, float morphRatio)
+{
+    addToStrokeSorter(gen, param, tr, startPos, strokeStyle, snapOffset, morphRatio);
+    gen->mStroker.Clear();
+    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
+    {
+        addSortedSegments(&gen->mStroker, gen->mStrokeSorter, i, param);
+        gen->mStroker.GenerateStroke(&gen->mTess);
+    }
+}
+
+// The same paths into another stroker (hairlines, anti-aliased strokes), each one finalized.
+// @0x14262ece0
+void ShapeMeshProvider::addStroke(MeshGenerator* gen, TessBase* stroker, const ToleranceParams& param,
+                                  const TransformerBase* tr, unsigned startPos, unsigned strokeStyle,
+                                  float snapOffset, float morphRatio)
+{
+    addToStrokeSorter(gen, param, tr, startPos, strokeStyle, snapOffset, morphRatio);
+    stroker->Clear();
+    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
+    {
+        addSortedSegments(stroker, gen->mStrokeSorter, i, param);
+        stroker->FinalizePath(0, 0, false, false);
+    }
+}
+
+// One zero vertex and a triangle on it: the layer still gets a mesh, of nothing.
+// @0x142631ef0
+bool ShapeMeshProvider::createNullMesh(VertexOutput* pout, unsigned layer, unsigned meshGenFlags)
+{
+    struct { SInt16 x, y; UInt32 Color; } ver[1];   // VertexXY16iC32
+    UInt16 tri[3];
+    ver[0].x = ver[0].y = 0;
+    ver[0].Color = 0;
+    tri[0] = tri[1] = tri[2] = 0;
+
+    FillData fd(Fill_VColor);
+    VertexOutput::Fill vfill = { 1, 3, fd.pVFormat, 0, 0 };
+    if (!pout->BeginOutput(&vfill, 1, Matrix2F::Identity))
+        return false;
+    pout->SetVertices(0, 0, ver, 1);
+    pout->SetIndices(0, 0, tri, 3);
+    pout->EndOutput();
+    return true;
+}
+
+// MS2-FUNCTIONAL: ours inlines Matrix2F::SetInverse into the Invert (the exe calls 0x142446cb0 on a stack copy)
+// @0x14262f720
+void ShapeMeshProvider::computeImgAdjustMatrix(const Scale9GridData* s9g, unsigned layer, unsigned imgFillStyle,
+                                               Matrix2F* mtx)
+{
+    ShapePosInfo  pos(GetLayerStartPos(layer));
+    ShapePathType pathType;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    bool          first = true;
+    RectF         bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    Matrix2F      m;
+    while ((pathType = pShapeData->ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
+    {
+        if (!first && pathType == Shape_NewLayer)
+            break;
+        first = false;
+        if (styles[0] == imgFillStyle || styles[1] == imgFillStyle)
+            ExpandBoundsToPath(*pShapeData, m, &pos, coord, &bounds);
+        else
+            pShapeData->SkipPathData(&pos);
+    }
+
+    mtx->SetIdentity();
+    if (bounds.x1 < bounds.x2 && bounds.y1 < bounds.y2)
+    {
+        // where the grid puts three corners of the fill's bounds
+        Scale9GridInfo grid(s9g, Matrix2F());
+        float parl[6] = { bounds.x1, bounds.y1, bounds.x2, bounds.y1, bounds.x2, bounds.y2 };
+        grid.Transform(&parl[0], &parl[1]);
+        grid.Transform(&parl[2], &parl[3]);
+        grid.Transform(&parl[4], &parl[5]);
+        // SetRectToParl; the exe expands the parallelogram mapping in this function
+        float src[6] = { bounds.x1, bounds.y1, bounds.x2, bounds.y1, bounds.x2, bounds.y2 };
+        mtx->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+        Matrix2F d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1], parl[1]);
+        mtx->Invert();
+        mtx->Append(d);
+    }
 }
 
 }} // namespace Scaleform::Render

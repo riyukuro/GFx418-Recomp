@@ -78,10 +78,7 @@ struct VertexXY16iCF32
     UByte  Factors[4];
     static VertexFormat Format;   // 0x143a2fbe8
 };
-struct Image9GridVertex
-{
-    static VertexFormat Format;   // 0x143a2f968
-};
+// (Image9GridVertex, 0x143a2f968: render_scale9grid.h)
 
 class HAL;
 class PrimitiveFillManager;

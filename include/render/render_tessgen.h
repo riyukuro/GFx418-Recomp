@@ -34,6 +34,9 @@ struct MeshGenerator
     LinearHeap  Heap3;   // +0x50
     LinearHeap  Heap4;   // +0x78
     Tessellator mTess;   // +0xa0
+    // (appended for sfr_render_03d: the shape mesh provider's strokes)
+    Stroker      mStroker;        // +0x608
+    StrokeSorter mStrokeSorter;   // +0x660
 
     // clears the tessellator and the strokers, then the heaps
     void Clear();        // 0x14262a890
