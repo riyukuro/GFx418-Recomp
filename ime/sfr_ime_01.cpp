@@ -16,7 +16,11 @@
 #include "../include/gfx/as3/as3_support.h"
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
-namespace Scaleform { namespace GFx { namespace IME { unsigned char FUN_1423da320(void*, void*, void*, void*); } } }
+namespace Scaleform { namespace GFx { namespace IME {
+    unsigned char FUN_1423da320(void*, void*, void*, void*);
+    void FUN_1423d9500(void*);
+    void FUN_1425b43c0(void*);
+} } }
 namespace Scaleform { namespace GFx { namespace AS3 { void SF_STDCALL DoAbcLoader(LoadProcess*, const TagInfo&); } } }
 extern "C" void FUN_1425c8cf0(unsigned, void*);
 
@@ -173,6 +177,52 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: follows the executable's composition-specific Escape path and both candidate/input-window teardown paths.
+// @0x1423d2f00
+void FUN_1423d2f00(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    if (*reinterpret_cast<unsigned*>(bytes + 0x98) == 0x00c10000) {
+        void* base = *reinterpret_cast<void**>(bytes + 8);
+        void* factory = static_cast<unsigned char*>(base) + 0x10;
+        void* value = reinterpret_cast<void*(*)(void*, int)>(
+            (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+        INPUT input{};
+        input.type = INPUT_KEYBOARD;
+        input.ki.wVk = VK_ESCAPE;
+        input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
+        SendInput(1, &input, sizeof(input));
+        FUN_1425b43c0(value);
+        FUN_1423d9500(*reinterpret_cast<void**>(bytes + 0x30));
+        void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
+        void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+        if (values) {
+            void* result = nullptr;
+            reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                    values, "RemoveList", &result, 0, 0);
+        }
+        if (value) FUN_14257dcb0(value);
+        return;
+    }
+    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    cx18_ImmNotifyIME(context, 0x15, 1, 0);
+    cx18_ImmNotifyIME(context, 0x11, 0, 0);
+    cx18_ImmNotifyIME(context, 0x15, 4, 0);
+    cx18_ImmReleaseContext(hwnd, context);
+    **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
+    *reinterpret_cast<unsigned short*>(bytes + 0xd0) = 0;
+    void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
+    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+    if (values) {
+        void* result = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                values, "RemoveInputWindow", &result, 0, 0);
+    }
+}
 
 // MS2-FUNCTIONAL: closes the executable's composition state, Escape-clears candidate modes, and removes the input window.
 // @0x1423ce5a0
