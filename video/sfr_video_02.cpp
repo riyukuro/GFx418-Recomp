@@ -32,6 +32,7 @@ extern void FUN_140025410(void*);
 extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 extern void FUN_14257db50(void*);
+extern void FUN_14257db40(void*);
 extern void* DAT_1431b6060;
 extern void* DAT_1431b63f8;
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
@@ -1420,3 +1421,16 @@ void FUN_14000ffd0(void** object)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+// MS2-FUNCTIONAL: releases the two owned members and invokes the recovered base destructor.
+// @0x140010490
+void FUN_140010490(void* object)
+{
+    char* bytes = static_cast<char*>(object);
+    if (*reinterpret_cast<void**>(bytes + 0x18)) FUN_14257dcb0(*reinterpret_cast<void**>(bytes + 0x18));
+    void* fill = *reinterpret_cast<void**>(bytes + 0x10);
+    if (fill) reinterpret_cast<void (*)(void*)>(*reinterpret_cast<void***>(fill) + 2)(fill);
+    FUN_14257db40(object);
+}
+
+// MS2-PIN: ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x140010ed0
