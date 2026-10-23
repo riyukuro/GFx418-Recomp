@@ -479,6 +479,33 @@ CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
     return count;
 }
 
+// MS2-FUNCTIONAL: store the two frame dimensions on a CRI video handle.
+// @0x140041030
+void FUN_140041030(void* handle, CriUint32 width, CriUint32 height)
+{
+    memcpy((CriUint8*)handle + 0x238, &width, sizeof(width));
+    memcpy((CriUint8*)handle + 0x23c, &height, sizeof(height));
+}
+
+// MS2-FUNCTIONAL: publish the two caller-provided buffer pointers on the CRI video handle.
+// @0x140041080
+void FUN_140041080(void* handle, void* first, void* second)
+{
+    memcpy((CriUint8*)handle + 0x248, &first, sizeof(first));
+    memcpy((CriUint8*)handle + 0x250, &second, sizeof(second));
+}
+
+// MS2-FUNCTIONAL: mark the CRI handle's error state when a handle is supplied.
+// @0x140041150
+void FUN_140041150(void* handle)
+{
+    if (handle)
+    {
+        CriUint32 state = 4;
+        memcpy((CriUint8*)handle + 0x18, &state, sizeof(state));
+    }
+}
+
 // MS2-FUNCTIONAL: invoke the Initialize entry in the decoder interface table.
 // @0x140043a20
 void FUN_140043a20(const void* decoder)
