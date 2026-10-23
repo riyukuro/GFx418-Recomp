@@ -639,6 +639,138 @@ void TextMeshProvider::addCursor(TmpTextStorage& storage, UInt32 color, const Re
     storage.Entries.PushBack(e);
 }
 
+// font and glyph flag tests in the exe's bit-extract form
+static inline bool fontFlag(const Font* f, unsigned bit) { return ((f->GetFontFlags() >> bit) & 1) != 0; }
+static inline bool glyphFlag(const GlyphParam& gp, unsigned bit) { return ((gp.Flags >> bit) & 1) != 0; }
+
+// @0x1426e49d0
+bool TextMeshProvider::addGlyph(TmpTextStorage& storage, GlyphRunData& data, unsigned glyphIndex, bool fauxBold,
+                                bool fauxItalic, bool snap, unsigned meshGenFlags)
+{
+    bool  needVector = false;
+    bool  drawShadow = true;
+    float screenSize = data.FontSize * data.HeightRatio;
+
+    // a font texture glyph is used as is unless the text is drawn too large for it (then a vector glyph, no shadow)
+    const TextureGlyph* tgl = data.pFont->GetTextureGlyph(glyphIndex);
+    if (tgl)
+    {
+        if (fontFlag(data.pFont, 12) || screenSize <= data.TexHeight * pCache->GetMaxRasterScale())
+        {
+            if (tgl->pImage)
+                addTextureGlyph(storage, tgl, data, data.mColor);
+            return true;
+        }
+        needVector = true;
+        drawShadow = false;
+    }
+
+    if (meshGenFlags & Mesh_Mask)
+        needVector = true;
+
+    bool textBold   = (data.Param.TextParam.Flags & GlyphParam::FauxBold) != 0;
+    bool textItalic = (data.Param.TextParam.Flags & GlyphParam::FauxItalic) != 0;
+    Ptr<VectorGlyphShape> sh = *pCache->CreateGlyphShape(data, glyphIndex, screenSize, textBold | fauxBold,
+                                                         textItalic | fauxItalic, data.Param.TextParam.GetOutline(),
+                                                         false);
+
+    GlyphParam gp = data.Param.TextParam;
+    gp.pFont      = data.pFontHandle;
+    gp.GlyphIndex = (UInt16)glyphIndex;
+    gp.SetFauxBold(((data.Param.TextParam.Flags & GlyphParam::FauxBold) != 0) | fauxBold);
+    gp.SetFauxItalic(((data.Param.TextParam.Flags & GlyphParam::FauxItalic) != 0) | fauxItalic);
+    gp.SetFontSize(pCache->GetCachedFontSize(gp, screenSize, data.pRaster != 0));
+    gp.SetUseRaster(data.RasterSize != 0);
+    gp.SetStretch(false);
+
+    // small readable glyphs of an unhinted vector font are rasterized stretched
+    if (glyphFlag(gp, 0) && !glyphFlag(gp, 8) && data.VectorSize == 0 && data.RasterSize == 0 &&
+        !fontFlag(gp.pFont->pFont, 7) && gp.GetBlurX() == 0 && gp.GetBlurY() == 0)
+    {
+        float w = gp.pFont->pFont->GetGlyphWidth(gp.GlyphIndex) * screenSize / gp.pFont->pFont->GetNominalGlyphHeight();
+        if (3 * w < pCache->GetQueue().GetMaxSlotHeight())
+            gp.SetStretch(true);
+    }
+
+    bool autoFit = pCache->GetParams().UseAutoFit && snap && gp.GetOutline() == 0 && glyphFlag(gp, 0) && glyphFlag(gp, 1) &&
+                   screenSize > 6 && (fontFlag(gp.pFont->pFont, 13) || fontFlag(gp.pFont->pFont, 4));
+    gp.SetAutoFit(autoFit);
+
+    if (!glyphFlag(data.Param.ShadowParam, 5) && !needVector)
+    {
+        float      stretch = (gp.Flags & GlyphParam::Stretch) ? 2.5f : 1.0f;
+        GlyphNode* node    = pCache->FindGlyph(this, gp);
+        if (node)
+            addRasterGlyph(storage, TextLayer_RasterText, data, data.mColor, node, screenSize, snap, stretch);
+        else
+        {
+            if (gp.BlurX || gp.BlurY)
+                node = pCache->RasterizeShadow(data, this, gp, screenSize, data.pRaster);
+            else
+                node = pCache->RasterizeGlyph(data, this, gp);
+            if (node)
+                addRasterGlyph(storage, TextLayer_RasterText, data, data.mColor, node, screenSize, snap, stretch);
+            else
+            {
+                GlyphCache::RasResult res = pCache->GetRasResult();
+                if (res == GlyphCache::Res_ShapeNotFound)
+                {
+                    // a missing glyph shows as a small box
+                    float w = data.FontSize / 4;
+                    float h = data.FontSize / 2;
+                    RectF bounds(data.NewLineX + w / 2, data.NewLineY - h - h / 4, data.NewLineX + w + w / 2,
+                                 data.NewLineY - h / 4);
+                    addSelection(storage, data.mColor, bounds);
+                    return true;
+                }
+                if (res == GlyphCache::Res_ShapeIsEmpty)
+                    return true;
+                if (res == GlyphCache::Res_CacheFull)
+                {
+                    if (!pCache->GetParams().UseVectorOnFullCache)
+                        return false;
+                    needVector = true;
+                }
+                if (res == GlyphCache::Res_ShapeIsTooBig || res == GlyphCache::Res_NoRasterCache)
+                    needVector = true;
+            }
+        }
+    }
+
+    if (needVector && !data.pShape->IsEmpty())
+    {
+        addVectorGlyph(storage, data.mColor, data.pFontHandle, (UInt16)glyphIndex, gp.Flags, data.FontSize,
+                       data.NewLineX, data.NewLineY);
+        Flags |= BF_HasVectorGlyphs;
+    }
+
+    if (data.Param.ShadowColor && drawShadow)
+    {
+        UInt32 color = data.Param.ShadowColor;
+        gp           = data.Param.ShadowParam;
+        gp.SetOptRead(false);
+        gp.SetAutoFit(false);
+        gp.pFont = data.pFontHandle;
+        gp.SetFauxBold(((data.Param.TextParam.Flags & GlyphParam::FauxBold) != 0) | fauxBold);
+        gp.SetFauxItalic(((data.Param.TextParam.Flags & GlyphParam::FauxItalic) != 0) | fauxItalic);
+        gp.SetFontSize(pCache->GetCachedShadowSize(screenSize, data.pRaster));
+        gp.GlyphIndex = (UInt16)glyphIndex;
+
+        GlyphNode* node = pCache->FindGlyph(this, gp);
+        if (node)
+            addRasterGlyph(storage, TextLayer_Shadow, data, color, node, screenSize, snap, 1);
+        else
+        {
+            node = pCache->RasterizeShadow(data, this, gp, screenSize, data.pRaster);
+            if (node)
+                addRasterGlyph(storage, TextLayer_Shadow, data, color, node, screenSize, snap, 1);
+            else if (pCache->GetRasResult() == GlyphCache::Res_CacheFull)
+                return false;
+        }
+    }
+    return true;
+}
+
 // @0x1426e5130
 void TextMeshProvider::addImage(TmpTextStorage& storage, const GlyphRunData& data, Image* img, float scaleX,
                                 float scaleY, float baseLine, bool snap)

@@ -89,6 +89,27 @@ public:
 // the HAL's mesh cache (CacheBase at +0, MeshCacheConfig at +8), recovered in render_meshcache.h
 class MeshCache;
 
+// (appended for sfr_render_07o) the glyph cache's settings (0x38 bytes)
+struct GlyphCacheParams
+{
+    unsigned TextureWidth;          // +0x00
+    unsigned TextureHeight;
+    unsigned NumTextures;
+    unsigned MaxSlotHeight;
+    unsigned SlotPadding;           // +0x10
+    unsigned TexUpdWidth;
+    unsigned TexUpdHeight;
+    float    MaxRasterScale;        // +0x1c
+    unsigned MaxVectorCacheSize;    // +0x20
+    float    FauxItalicAngle;
+    float    FauxBoldRatio;
+    float    OutlineRatio;
+    float    ShadowQuality;         // +0x30
+    bool     UseAutoFit;            // +0x34
+    bool     UseVectorOnFullCache;  // +0x35
+    bool     FenceWaitOnFullCache;  // +0x36
+};
+
 // the glyph cache's settings interface (Render_GlyphCacheConfig)
 class GlyphCacheConfig
 {
@@ -124,6 +145,19 @@ public:
     VectorGlyphShape* CreateGlyphShape(GlyphRunData& data, unsigned glyphIndex, float screenSize, bool fauxBold,
                                        bool fauxItalic, unsigned outline, bool needsVectorShape);  // 0x1426c5700
 
+    // (appended for sfr_render_07o) the outcome of the last rasterization
+    enum RasResult
+    {
+        Res_Success,
+        Res_ShapeIsEmpty,
+        Res_ShapeNotFound,
+        Res_ShapeIsTooBig,
+        Res_NoRasterCache,
+        Res_CacheFull
+    };
+    RasResult GetRasResult() const       { return Result; }
+    float     GetMaxRasterScale() const  { return Param.MaxRasterScale; }
+
     MemoryHeap*             GetHeap()                 { return pHeap; }
     TextureManager*         GetTextureManager()       { return pTexMan; }
     PrimitiveFillManager*   GetPrimitiveFillManager() { return pFillMan; }
@@ -133,9 +167,9 @@ public:
     List<TextMeshProvider>& GetTextInUse()            { return TextInUse; }
 
 private:
-    // GlyphCacheParams Param (+0x20); the texture mappers, the slot queue (GlyphQueue +0x1098) and the update
-    // state stay opaque until the glyph cache's own unit (sfr_render_06)
-    UByte                   Unk_Param[0x58 - 0x20];
+    // the texture mappers, the slot queue (GlyphQueue +0x1098) and the update state stay opaque until the glyph
+    // cache's own unit (sfr_render_06)
+    GlyphCacheParams        Param;                     // +0x20
     MemoryHeap*             pHeap;                     // +0x58
     HAL*                    pRenderer;                 // +0x60
     PrimitiveFillManager*   pFillMan;                  // +0x68
@@ -152,6 +186,8 @@ private:
     UByte                   Unk_Queue[0x1240 - 0x1098];
     List<TextMeshProvider>  TextInUse;                 // +0x1240
     List<TextMeshProvider>  TextInPin;                 // +0x1250
+    UByte                   Unk_Tail[0x13b0 - 0x1260];
+    RasResult               Result;                    // +0x13b0
 };
 
 enum DisplayPass
