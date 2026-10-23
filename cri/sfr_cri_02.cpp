@@ -19,7 +19,7 @@
 
 extern "C" {
 extern void* DAT_143b15f60;
-extern const CriUint8 DAT_143b27a88[];
+extern CriUint8 DAT_143b27a88[];
 extern void* DAT_143ffd550;
 extern CriSint32 DAT_143ffd500;
 extern CriUint8 DAT_143ffd504[0x48];
@@ -2651,6 +2651,50 @@ void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
     FUN_14004698c(DAT_143b27ab0, 0x100, DAT_1431b9820);
     FUN_14004698c(DAT_143b27ab0, 0x100, description);
     FUN_140038ce4(category, DAT_143b27ab0, 0, 0, NULL);
+}
+
+// MS2-FUNCTIONAL: derive the 32-byte CRI USM byte mask from the supplied key seed.
+// @0x140038190
+void FUN_140038190(const void* key)
+{
+    uintptr_t seed = (uintptr_t)key;
+    CriSint8 signedByte4 = (CriSint8)(seed >> 32);
+    CriUint8 bytes[0x20] = {};
+    bytes[0] = (CriUint8)seed;
+    bytes[1] = (CriUint8)(seed >> 8);
+    bytes[2] = (CriUint8)(seed >> 16);
+    bytes[3] = (CriUint8)((seed >> 24) - 0x34);
+    bytes[4] = (CriUint8)(signedByte4 - 7);
+    bytes[5] = (CriUint8)((seed >> 40) ^ 0x13);
+    bytes[6] = (CriUint8)((seed >> 48) + 0x61);
+    bytes[7] = (CriUint8)(bytes[0] ^ 0xff);
+    bytes[8] = (CriUint8)(bytes[2] + bytes[1]);
+    bytes[9] = (CriUint8)(bytes[1] - bytes[7]);
+    bytes[10] = (CriUint8)(bytes[2] ^ 0xff);
+    bytes[11] = (CriUint8)(bytes[1] ^ 0xff);
+    bytes[12] = (CriUint8)(bytes[11] + bytes[9]);
+    bytes[13] = (CriUint8)(bytes[8] - bytes[3]);
+    bytes[14] = (CriUint8)(bytes[13] ^ 0xff);
+    bytes[15] = (CriUint8)(bytes[10] - bytes[11]);
+    bytes[16] = (CriUint8)(bytes[8] - bytes[15]);
+    bytes[17] = (CriUint8)(bytes[16] ^ bytes[7]);
+    bytes[18] = (CriUint8)(bytes[15] ^ 0xff);
+    bytes[19] = (CriUint8)(bytes[3] ^ 0x10);
+    bytes[20] = (CriUint8)(signedByte4 - 0x39);
+    bytes[21] = (CriUint8)(bytes[5] - 0x13);
+    bytes[22] = (CriUint8)(bytes[6] ^ 0xf3);
+    bytes[23] = (CriUint8)(bytes[19] - bytes[15]);
+    bytes[24] = (CriUint8)(bytes[21] + bytes[7]);
+    bytes[25] = (CriUint8)('!' - bytes[19]);
+    bytes[26] = (CriUint8)(bytes[20] ^ bytes[23]);
+    bytes[27] = (CriUint8)(bytes[22] * 2);
+    bytes[28] = (CriUint8)(bytes[23] + 0x44);
+    bytes[29] = (CriUint8)(bytes[3] + bytes[4]);
+    bytes[30] = (CriUint8)(bytes[5] - bytes[22]);
+    bytes[31] = (CriUint8)(bytes[29] ^ bytes[19]);
+    static const CriUint8 alternate[4] = { 0x55, 0x52, 0x55, 0x43 };
+    for (CriUint32 i = 0; i < 0x20; ++i)
+        DAT_143b27a88[i] = (i & 1) ? alternate[(i % 8) / 2] : (CriUint8)(bytes[i] ^ 0xff);
 }
 
 // MS2-FUNCTIONAL: retain the default USM decryption key and update the shared decryptor state.
