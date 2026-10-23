@@ -12,6 +12,7 @@
 #include "ms2/scaleform/include/gfx/gfx_movieslots.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/gfx/gfx_imecandidateliststyle.h"
@@ -107,6 +108,10 @@ public:
 };
 }}
 Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);   // MovieImpl::GetModalClip
+// The exe keeps one out-of-line copy of storing a raw pointer into a namespace slot (0x1424e0710).
+namespace Scaleform { namespace GFx { namespace AS3 {
+template <> SPtr<GASRefCountBase>& SPtr<GASRefCountBase>::SetPtr(GASRefCountBase* p);
+}}}
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1828,6 +1833,13 @@ namespace InstanceTraits
         CopyParentTraits();
     }
 
+    // @0x1424d94b0
+    RTraits::RTraits(VM& vm, const ASString& n, Pickable<Instances::Namespace> ns, const AS3::Traits* pt, bool isDynamic, bool isFinal)
+        : Traits(ns, vm, pt, isDynamic, isFinal)
+        , Name(n)
+    {
+    }
+
     // The public namespace for an empty package name, else the interned public namespace of the package.
     static Pickable<Instances::Namespace> MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind, const char* name)
     {
@@ -1885,6 +1897,131 @@ namespace ClassTraits
         for (UInt8 i = 0; i < ci.ClassMemberNum; ++i)
             AddSlot(ci.ClassMember[i]);
     }
+}
+
+// The public namespace of uri (the VM's own one for the empty uri).
+static inline Pickable<Instances::Namespace> MakePublicNamespace(VM& vm, const ASString& uri)
+{
+    if (uri.IsEmpty())
+        return Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue);
+    return static_cast<InstanceTraits::fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits())
+        .MakeInternedInstance(Abc::NS_Public, uri, Value::GetUndefined());
+}
+
+// "pkg.Name" or "pkg::Name" as a public QName; a name without a package is in the public namespace.
+// MS2-FUNCTIONAL: same code; the exe keeps the separator position in r8 and branches on the "::" decrement
+// (register allocation)
+// @0x1424d9040
+Multiname::Multiname(VM& vm, const StringDataPtr& qname)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+{
+    bool colonColon = true;
+    SPInt pos = qname.FindLastChar(':');
+    if (pos < 0)
+    {
+        colonColon = false;
+        pos = qname.FindLastChar('.');
+    }
+    const StringDataPtr name = qname.GetTrimLeft(pos + 1);
+
+    if (pos > 0)
+    {
+        if (colonColon)
+            --pos;
+        Obj = MakePublicNamespace(vm, vm.GetStringManager().CreateString(qname.ToCStr(), pos));
+    }
+    else
+        Obj = vm.PublicNamespace.GetPtr();
+
+    Name = vm.GetStringManager().CreateString(name.ToCStr(), name.GetSize());
+    PostProcessName(false);
+}
+
+// The kind keeps the file's flag encoding. Every name but the any-type one is interned; only qualified, non-late
+// names and namespace sets get a namespace object.
+// MS2-FUNCTIONAL: same code; the exe keeps the namespace kind in edx (register allocation)
+// @0x1424d8ec0
+Multiname::Multiname(VMAbcFile& file, const Abc::Multiname& mn)
+    : Kind(static_cast<Abc::MultinameKind>(mn.Kind))
+{
+    if (&mn != &file.GetAbcFile().Const_Pool.AnyType)
+    {
+        Name = file.GetInternedString(mn.NameIndex);
+        PostProcessName(false);
+    }
+
+    const Abc::MultinameFlagKind nsKind = static_cast<Abc::MultinameFlagKind>(mn.Kind & 3);
+    if (nsKind == Abc::MNF_NS_Qualified && !((UInt8)((UInt32)mn.Kind >> 2) & 1))
+    {
+        if (mn.Ind != 0)
+            Obj = &file.GetInternedNamespace(mn.Ind);
+    }
+    else if (nsKind == Abc::MNF_NS_Multi)
+        Obj = &file.GetInternedNamespaceSet(mn.Ind);
+}
+
+// Multiname = QName object (the QName's local name and namespace); XML is not modeled yet.
+void FUN_1425273b0(Multiname& mn, const Value& qname);
+
+// The default xml namespace of the running call frame (frames are 0xa8 bytes, 64 to a page).
+static inline GASRefCountBase* CurrentDefXMLNamespace(const VM& vm)
+{
+    const UPInt i = vm.Unk070[1] - 1;
+    return *reinterpret_cast<GASRefCountBase* const*>(
+        reinterpret_cast<const char* const*>(vm.Unk070[4])[i >> 6] + (i & 0x3f) * 0xa8 + 0x58);
+}
+
+// A run-time name: a QName object gives its name and namespace; strings and numbers are the name, other objects
+// their string form, in the default xml namespace (else the public one). Anything else throws a TypeError.
+// MS2-FUNCTIONAL: same code; the exe duplicates the epilogue per return and keeps &Name in rdi (block layout)
+// @0x1424d8cb0
+Multiname::Multiname(VM& vm, const Value& name)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+{
+    const Value::KindType kind = name.GetKind();
+    if (!((kind >= Value::kInt && kind <= Value::kNumber) || kind == Value::kString))
+    {
+        if (Value::IsObject(kind))
+        {
+            Object* obj = name.GetObject();
+            if (obj && obj->GetTraits().GetTraitsType() == Traits_QName && obj->GetTraits().IsInstanceTraits())
+            {
+                FUN_1425273b0(*this, name);
+                return;
+            }
+        }
+        if (!Value::IsObject(kind))
+        {
+            vm.ThrowTypeError(VM::Error(VM::eInvalidArgumentError, vm, "Multiname"));
+            return;
+        }
+        if (name.GetObject() == NULL)
+        {
+            vm.ThrowTypeError(VM::Error(VM::eNotImplementedError, vm, "Multiname"));
+            return;
+        }
+
+        Name.Assign(name);
+        ASString str = vm.GetStringManager().CreateEmptyString();
+        if (!Name.Convert2String(str))
+            return;
+        Name = str;
+    }
+    else
+        Name.Assign(name);
+
+    PostProcessName(false);
+
+    GASRefCountBase* ns = CurrentDefXMLNamespace(vm);
+    if (ns != Obj.GetPtr())
+    {
+        Obj.Pick(static_cast<GASRefCountBase*>(NULL));
+        if (ns)
+            ns->AddRef();
+        Obj.GetRawRef() = ns;
+    }
+    if (!Obj)
+        Obj = vm.PublicNamespace.GetPtr();
 }
 
 // Object(Traits&) has no out-of-line copy in the exe; the Instance ctor inlines it.

@@ -246,6 +246,15 @@ public:
     // The view without leading and trailing white space (exe 0x142587110).
     StringDataPtr GetTruncateWhitespace() const;
 
+    // (appended, sfr19) index of the last c at or before initInd, -1 for none (exe 0x142586e30).
+    SPInt FindLastChar(char c, UPInt initInd = ~0) const;
+    // (appended, sfr19) the view without its first size bytes.
+    StringDataPtr GetTrimLeft(UPInt size) const
+    {
+        size = GetSize() < size ? GetSize() : size;
+        return StringDataPtr(ToCStr() + size, GetSize() - size);
+    }
+
 protected:
     const char* pStr;
     UPInt       Size;

@@ -401,6 +401,22 @@ namespace InstanceTraits
         ArrayLH<Multiname>                      ImplementsInterfaces;   // +0xd0
     };
 
+    // (appended, sfr19) Traits of runtime-made instances that carry their own name (function/activation objects).
+    // 0xd0 bytes. vftable 0x14317b428.
+    class RTraits : public Traits
+    {
+    public:
+        RTraits(VM& vm, const ASString& n, Pickable<Instances::Namespace> ns, const AS3::Traits* pt, bool isDynamic, bool isFinal); // 0x1424d94b0
+        // @0x142414fb0
+        virtual const char* GetAS3ObjectType() const { return "InstanceTraits::RTraits"; }
+        virtual ASString GetName() const;           // 0x14250bc20
+        virtual unsigned GetFixedMemSize() const;   // 0x142509d10
+    virtual void MakeObject(Value& result, Traits& t);  // 0x142516570
+
+    public:
+        ASString                                Name;                   // +0xc8
+    };
+
     // Traits of an interface implemented in C++. vftable 0x14313f870 (keeps the CTraits type string).
     class Interface : public CTraits
     {
@@ -643,9 +659,15 @@ public:
     Multiname(const Multiname& other);
     // From a qualified name "pkg.Name" (0x1424d9040).
     Multiname(VM& vm, const StringDataPtr& qname);
+    // (appended, sfr19) run-time name from a value: a QName object, a string or number, or another object's text (0x1424d8cb0).
+    Multiname(VM& vm, const Value& name);
+    // (appended, sfr19) multiname mn of an ABC file's constant pool, its strings and namespaces interned (0x1424d8ec0).
+    Multiname(VMAbcFile& file, const Abc::Multiname& mn);
 
     // True when ns is the namespace, or one of the namespace set, the name is qualified with (0x1424f0b70).
     bool ContainsNamespace(const Instances::Namespace& ns) const;
+    // (appended, sfr19) turns a numeric or "@"-prefixed name into its canonical form (0x14251cef0).
+    void PostProcessName(bool isAttr);
 
     Abc::MultinameKind      Kind;   // +0x00
     SPtr<GASRefCountBase>   Obj;    // +0x08 namespace or namespace set

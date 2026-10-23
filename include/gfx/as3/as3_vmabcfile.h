@@ -1,0 +1,42 @@
+// VMAbcFile: the VM side of a loaded ABC file (interned strings, namespaces and namespace sets of its constant pool).
+// Only the members the recovered code reads are modeled; the VMFile base and the rest of the layout are not, so
+// nothing here may allocate or copy one. Recovered from GetInternedString 0x14250b240, GetInternedNamespace
+// 0x14250ae60, GetInternedNamespaceSet 0x14250aff0 and Multiname(VMAbcFile&, const Abc::Multiname&) 0x1424d8ec0.
+#ifndef MS2_SCALEFORM_GFX_AS3_AS3_VMABCFILE_H
+#define MS2_SCALEFORM_GFX_AS3_AS3_VMABCFILE_H
+
+#include "ms2/scaleform/include/gfx/as3/as3_obj.h"
+#include "ms2/scaleform/include/gfx/as3/as3_abc.h"
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// A set of namespaces a multiname is qualified with. 0x38 bytes, vftable 0x14317b058; members not modeled.
+class NamespaceSet : public GASRefCountBase
+{
+private:
+    NamespaceSet();
+};
+
+class VMAbcFile : public GASRefCountBase
+{
+public:
+    VM&              GetVM() const      { return *pVM; }
+    const Abc::File& GetAbcFile() const { return *pFile; }
+
+    // The string at constant pool index ind, interned on first use (0x14250b240).
+    ASString GetInternedString(UPInt ind);
+    // The namespace at constant pool index ind, interned on first use (0x14250ae60).
+    Instances::Namespace& GetInternedNamespace(UPInt ind);
+    // The namespace set at constant pool index ind, made on first use (0x14250aff0).
+    NamespaceSet& GetInternedNamespaceSet(UPInt ind);
+
+private:
+    VMAbcFile();
+
+    VM*              pVM;               // +0x20
+    const Abc::File* pFile;             // +0x28 (counted)
+};
+
+}}} // Scaleform::GFx::AS3
+
+#endif
