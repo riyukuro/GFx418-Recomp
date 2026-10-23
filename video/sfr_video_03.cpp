@@ -88,6 +88,8 @@ MS2_EXTERN(0x1427443c0, void(void*), FUN_1427443c0);
 MS2_EXTERN(0x1425e3480, std::uint64_t(), FUN_1425e3480);
 MS2_EXTERN(0x142303a6b, int(void*, bool*), FUN_142303a6b);
 MS2_EXTERN(0x142745f50, void(void*), FUN_142745f50);
+MS2_EXTERN(0x142303a29, int(void*, const char*, unsigned, void*, void**), FUN_142303a29);
+MS2_EXTERN(0x142303a4d, int(void*, std::uint32_t*, unsigned), FUN_142303a4d);
 MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
 MS2_EXTERN(0x14250d8f0, void*(void*, void*), FUN_14250d8f0);
 MS2_EXTERN(0x142442c30, void(void*, void*, void*), FUN_142442c30);
@@ -107,6 +109,9 @@ MS2_GLOBAL(0x1431b7de0, void*, VideoTraitsSubVtableB);
 MS2_GLOBAL(0x1431b4c60, void*, VideoAudioVtableA); MS2_GLOBAL(0x1431bec40, void*, VideoAudioVtableB);
 MS2_GLOBAL(0x1431bed60, void*, VideoAudioDeleteVtable); MS2_GLOBAL(0x1431bedd8, void*, VideoAudioSubVtable);
 MS2_GLOBAL(0x1431bede8, void*, VideoAudioEventVtable);
+MS2_GLOBAL(0x1431bcbb0, void*, VideoSoundDeleteVtable);
+MS2_GLOBAL(0x1431bef00, void*, VideoSoundVtable);
+MS2_GLOBAL(0x1431bef38, void*, VideoSoundSubVtable);
 MS2_GLOBAL(0x1431bee78, void*, VideoAudioStreamVtable);
 MS2_GLOBAL(0x1431beef0, void*, VideoAudioStreamSubVtable);
 MS2_GLOBAL(0x1431b7160, void*, VideoClassInfoA); MS2_GLOBAL(0x1431b7900, void*, VideoClassVtableA);
@@ -1660,6 +1665,52 @@ std::uint64_t* FUN_142743050(std::uint64_t* object, void* player, void* streamSt
     const auto c = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(streamState) + 0x48);
     const auto d = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(streamState) + 0x4c);
     object[0xc] = ((((static_cast<std::uint64_t>(a) << 3) / b) / c) * 1000000) / d;
+    return object;
+}
+
+// MS2-FUNCTIONAL: initializes the FMOD streaming sound, computes its PCM format, and creates the sound handle.
+// @0x142743240
+std::uint64_t* FUN_142743240(std::uint64_t* object, void* owner, void* stream, int stereo, std::uint32_t rate, std::uint32_t channels)
+{
+    auto* node = object + 2;
+    *reinterpret_cast<void***>(object) = &VideoSoundDeleteVtable;
+    reinterpret_cast<std::uint32_t*>(object)[2] = 1;
+    *reinterpret_cast<void***>(node) = &VideoAudioVtableB;
+    object[4] = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(owner) + 0xc0);
+    object[3] = reinterpret_cast<std::uintptr_t>(static_cast<unsigned char*>(owner) + 0xb0);
+    auto** link = reinterpret_cast<std::uint64_t**>(static_cast<unsigned char*>(owner) + 0xc0);
+    if (*link) (*link)[1] = reinterpret_cast<std::uintptr_t>(node);
+    *link = reinterpret_cast<std::uint64_t*>(node);
+    object[7] = 0;
+    *reinterpret_cast<void***>(object) = &VideoSoundVtable;
+    *reinterpret_cast<void***>(node) = &VideoSoundSubVtable;
+    object[5] = reinterpret_cast<std::uintptr_t>(owner);
+    object[6] = 0; object[8] = 0;
+    reinterpret_cast<std::uint32_t*>(object)[18] = rate;
+    *reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x4c) = channels;
+    object[0xb] = 0; reinterpret_cast<std::uint32_t*>(object)[0xc] = 0;
+    *reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(object) + 0x6c) = 0;
+    if (stream) FUN_14257dc30(stream);
+    if (object[8]) FUN_14257dcb0(reinterpret_cast<void*>(object[8]));
+    object[8] = reinterpret_cast<std::uintptr_t>(stream);
+    const std::uint32_t format = stereo ? 5 : 2;
+    const std::uint32_t sampleBits = stereo ? 0x20 : 0x10;
+    reinterpret_cast<std::uint32_t*>(object)[0xd] = format;
+    reinterpret_cast<std::uint32_t*>(object)[10] = sampleBits;
+    const auto pcmBytes = static_cast<std::int32_t>((channels / 1000) * (sampleBits >> 3) * rate * 0x5dc);
+    *reinterpret_cast<std::int32_t*>(reinterpret_cast<unsigned char*>(object) + 100) = pcmBytes;
+    alignas(8) unsigned char info[0xd8]{};
+    *reinterpret_cast<std::uint32_t*>(info) = sizeof(info);
+    *reinterpret_cast<std::int32_t*>(info + 4) = pcmBytes;
+    *reinterpret_cast<std::int32_t*>(info + 0xc) = static_cast<std::int32_t>(rate);
+    *reinterpret_cast<std::uint32_t*>(info + 0x10) = channels;
+    *reinterpret_cast<std::uint32_t*>(info + 0x14) = format;
+    auto* system = *reinterpret_cast<void**>(static_cast<unsigned char*>(owner) + 0x10);
+    auto result = FUN_142303a29(system, nullptr, 0x442, info, reinterpret_cast<void**>(object + 6));
+    if (result == 0) {
+        std::uint32_t length = 0;
+        FUN_142303a4d(reinterpret_cast<void*>(object[6]), &length, 4);
+    } else object[6] = 0;
     return object;
 }
 } // namespace
