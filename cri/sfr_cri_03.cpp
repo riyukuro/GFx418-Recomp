@@ -33,6 +33,8 @@ extern "C" const void* DAT_143a47cb0[];
 extern "C" const char* DAT_143ba9d18;
 extern "C" const void* PTR_FUN_143a48638;
 extern "C" const void* PTR_FUN_143a48668;
+extern "C" const void* PTR_FUN_1431b9b10;
+extern "C" const void* PTR_FUN_1431b4f78;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
 void FUN_140041190(void);
@@ -68,6 +70,7 @@ void FUN_140046014(void*);
 void FUN_14004602c(void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
+void FUN_14257db50(void);
 void FUN_140054040(void*, void*, void*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -2815,4 +2818,75 @@ void FUN_140044e84(void)
     if (DAT_143ba9d28 == 0)
         DAT_143ba9d20 = "\nCRI UsfDmx/PCx64 Ver.1.01.03 Build:Jan 13 2012 19:02:04\n";
     ++DAT_143ba9d28;
+}
+
+// MS2-FUNCTIONAL: initialize the CRI timer context and its default interval/counter fields.
+// @0x140041c00
+void* FUN_140041c00(void* context)
+{
+    struct TimerContext
+    {
+        const void* Vtable;
+        CriUint32 Flags;
+        CriUint32 Reserved0c;
+        CriUint64 Start;
+        CriUint64 Reserved18;
+        CriUint8 Active;
+        CriUint8 Reserved21[7];
+        CriUint64 Reserved28;
+        CriUint64 Current;
+        CriUint64 Interval;
+        CriUint64 Reserved40;
+    };
+    TimerContext* timer = (TimerContext*)context;
+    timer->Flags = 1;
+    timer->Vtable = PTR_FUN_1431b9b10;
+    timer->Start = FUN_1425e3560();
+    timer->Active = 1;
+    timer->Reserved28 = 0;
+    timer->Current = 0;
+    timer->Interval = 1000000;
+    timer->Reserved40 = 0;
+    return context;
+}
+
+// MS2-FUNCTIONAL: destroy the global heap manager and optionally free its owning object.
+// @0x140041c60
+void* FUN_140041c60(void* manager, CriUint64 flags)
+{
+    *(const void**)manager = PTR_FUN_1431b4f78;
+    FUN_14257db50();
+    if (flags & 1)
+    {
+        void* globalManager = DAT_143b15f60;
+        (*(void (**)(void*, void*))(*(void**)((CriUint8*)*(void**)globalManager + 0x60)))(globalManager, manager);
+    }
+    return manager;
+}
+
+// MS2-FUNCTIONAL: sum the queued byte counts in one CRI reader ring-buffer lane.
+// @0x140045c08
+CriSint32 FUN_140045c08(void* object, CriSint32 lane)
+{
+    struct ReaderRing
+    {
+        CriUint8 Reserved00[0x10];
+        LPCRITICAL_SECTION Section;
+        CriUint8 Reserved18[8];
+        void* Queues[2];
+    };
+    ReaderRing* ring = (ReaderRing*)object;
+    LPCRITICAL_SECTION section = ring->Section;
+    if (section)
+        FUN_140039f50(section);
+    CriSint32 total = 0;
+    void* entry = ring->Queues[lane];
+    while (entry)
+    {
+        total += *(CriSint32*)((CriUint8*)entry + 0x18);
+        entry = *(void**)entry;
+    }
+    if (section)
+        FUN_140039f8c(section);
+    return total;
 }
