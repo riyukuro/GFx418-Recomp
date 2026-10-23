@@ -127,6 +127,7 @@
 // MS2-RANGE: 0x14296cbf0-0x14296cd30 .text$mn
 // MS2-RANGE: 0x14296cd30-0x14296ce70 .text$mn
 // MS2-RANGE: 0x142971d70-0x142972190 .text$mn
+// MS2-RANGE: 0x142972490-0x1429726a0 .text$mn
 // MS2-RANGE: 0x1429718b0-0x142971a50 .text$mn
 // MS2-RANGE: 0x142972190-0x142972330 .text$mn
 // MS2-RANGE: 0x142969040-0x142969080 .text$mn
@@ -440,6 +441,20 @@ bool Environment::ParsePath(ASStringContext* psc, const ASString& path, ASString
         *pbase = path;
     }
     return true;
+}
+
+// MS2-FUNCTIONAL: queues the same CFunction and three argument values using recovered ActionEntry/Array interfaces.
+// @0x142972490
+void Selection::QueueSetFocus(Environment* penv, InteractiveObject* newFocus, unsigned controllerIdx,
+                              FocusMovedType fmt)
+{
+    MovieRoot* root = ToAS2Root(penv->GetTarget());
+    MovieRoot::ActionEntry* entry = root->InsertEmptyAction(ActionPriority::AP_Frame);
+    entry->Type = MovieRoot::ActionEntry::Entry_CFunction;
+    entry->CFunction = DoTransferFocus;
+    entry->FunctionParams.PushBack(Value(newFocus));
+    entry->FunctionParams.PushBack(Value(static_cast<int>(fmt)));
+    entry->FunctionParams.PushBack(Value(static_cast<Number>(controllerIdx)));
 }
 
 // @0x142962010
@@ -1844,6 +1859,7 @@ static inline Environment* GetLevel0MovieEnvironment(MovieImpl* pmovieImpl)
     return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmovie->GetAvmObjImpl()))->GetASEnvironment();
 }
 
+// MS2-FUNCTIONAL: queues the Selection CFunction with the recovered focus arguments through the environment helper.
 // @0x14296a850
 void MovieRoot::NotifyQueueSetFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt)
 {
