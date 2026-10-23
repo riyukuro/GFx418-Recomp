@@ -1707,6 +1707,37 @@ template void MS2_StringValueSet::add<MS2_StringValueNode>(void*, const MS2_Stri
 template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode::NodeRef>(void*, const MS2_DepthToObjsNode::NodeRef&, UPInt);
 // @0x1424d40a0
 template void MS2_WeakProxySet::add<MS2_WeakProxyNode::NodeRef>(void*, const MS2_WeakProxyNode::NodeRef&, UPInt);
+typedef HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Value, GFx::AS3::Object::DynAttrsKeyHashFunctor> MS2_DynAttrsNode;
+// MS2-FUNCTIONAL: same template body; register allocation and the save of the scratch registers differ
+// @0x1424d4600
+template void decltype(GFx::AS3::Object::DynAttrsType::mHash)::BaseType::add<MS2_DynAttrsNode::NodeRef>(
+    void*, const MS2_DynAttrsNode::NodeRef&, UPInt);
+// @0x1424d4a40
+template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::add<MS2_SlotNameNode::NodeRef>(
+    void*, const MS2_SlotNameNode::NodeRef&, UPInt);
+// MS2-FUNCTIONAL: same template body; register allocation and the save of the scratch registers differ
+// @0x1424d4dd0
+template void MS2_StringValueSet::add<MS2_StringValueNode::NodeRef>(void*, const MS2_StringValueNode::NodeRef&, UPInt);
+// String node -> index maps of the VM (HashLH<ASStringNode*, SInt64>): the nodes hash by their stored HashFlags.
+namespace GFx { namespace AS3 {
+class ASStringNodeHashFunc
+{
+public:
+    UPInt operator()(ASStringNode* const& data) const { return data->HashFlags; }
+};
+}} // namespace GFx::AS3
+typedef HashNode<GFx::ASStringNode*, SInt64, GFx::AS3::ASStringNodeHashFunc> MS2_StringIndexNode;
+typedef MS2_HashSetOf<MS2_StringIndexNode, AllocatorLH<GFx::ASStringNode*, GFx::AS3::StatMV_VM_SlotInfoHash_Mem>,
+                      HashsetNodeEntry<MS2_StringIndexNode, MS2_StringIndexNode::NodeHashF> >::Type MS2_StringIndexSet;
+// @0x1424d3f10
+template void MS2_StringIndexSet::add<MS2_StringIndexNode::NodeRef>(void*, const MS2_StringIndexNode::NodeRef&, UPInt);
+// The set of roots the collector keeps alive (HashSetLH<SPtr<GASRefCountBase>> by pointer value).
+typedef GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> MS2_GCRootPtr;
+typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<MS2_GCRootPtr>, AllocatorLH<MS2_GCRootPtr, 2>,
+                    HashsetCachedEntry<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr> > > MS2_GCRootSet;
+// MS2-FUNCTIONAL: same template body; the exe calls CheckExpand out of line, here it is inlined
+// @0x1424d5020
+template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
 // @0x1424dc260
 template ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyleType, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x1424dc350
@@ -1724,7 +1755,6 @@ template ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 2>, ArrayDefaul
 // @0x1424d5310
 template ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::ArrayDataDH(
     const ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>&);
-typedef HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Value, GFx::AS3::Object::DynAttrsKeyHashFunctor> MS2_DynAttrsNode;
 // MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
 // @0x1424d5390
 template MS2_DynAttrsNode::HashNode(const MS2_DynAttrsNode&);
@@ -2384,3 +2414,6 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
 // MS2-PIN: ??_GXMLDocument@fl_xml@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424cd700
 // MS2-PIN: ??_GSound@fl_media@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424d0260
 // MS2-PIN: ??_7Prototype@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b4b0
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@@?$HashSetBase@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UDynAttrsKey@Object@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@1@_K@Z 0x1424d4600
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@1@_K@Z 0x1424d4dd0
+// MS2-PIN: ??$add@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBV?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@1@_K@Z 0x1424d5020
