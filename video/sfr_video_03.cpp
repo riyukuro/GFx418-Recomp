@@ -66,6 +66,10 @@ MS2_EXTERN(0x142519d50, void(void*, std::uint32_t, void*, std::uint32_t, std::ui
 MS2_EXTERN(0x1424ddc20, void(void*), FUN_1424ddc20);
 MS2_EXTERN(0x1424d6750, void(void*), FUN_1424d6750);
 MS2_EXTERN(0x1424d6480, void(void*), FUN_1424d6480);
+MS2_EXTERN(0x140019470, void(void*, void*), FUN_140019470);
+MS2_EXTERN(0x140019660, void(void*, void*), FUN_140019660);
+MS2_EXTERN(0x1400199e0, void*(void*, void*), FUN_1400199e0);
+MS2_EXTERN(0x14001ad20, void*(void*, void*), FUN_14001ad20);
 MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
 MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
 MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
@@ -1068,5 +1072,38 @@ std::uint64_t* FUN_14001af70(std::uint64_t* traits)
     reinterpret_cast<void***>(traits)[6] = &VideoTraitsSubVtableA;
     reinterpret_cast<void***>(traits)[8] = &VideoTraitsSubVtableB;
     return traits;
+}
+
+// MS2-FUNCTIONAL: initializes a null output and forwards metadata handling to its callback helper.
+// @0x140019850
+std::uint64_t* FUN_140019850(void* self, std::uint64_t* result)
+{
+    *result = 0; FUN_140019470(self, result); return result;
+}
+// MS2-FUNCTIONAL: initializes a null output and forwards cue-point handling to its callback helper.
+// @0x140019870
+std::uint64_t* FUN_140019870(void* self, std::uint64_t* result)
+{
+    *result = 0; FUN_140019660(self, result); return result;
+}
+// MS2-FUNCTIONAL: allocates a Video instance-traits object and constructs it for the supplied class traits.
+// @0x140019bd0
+void** FUN_140019bd0(void** result, void* classTraits)
+{
+    auto* heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(classTraits) + 0x38);
+    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10]);
+    auto* object = allocate(heap, 200, 0);
+    *result = object ? FUN_1400199e0(object, classTraits) : nullptr;
+    return result;
+}
+// MS2-FUNCTIONAL: allocates a Video traits object and constructs it for the supplied class traits.
+// @0x14001af10
+void** FUN_14001af10(void** result, void* classTraits)
+{
+    auto* heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(classTraits) + 0x38);
+    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10]);
+    auto* object = allocate(heap, 200, 0);
+    *result = object ? FUN_14001ad20(object, classTraits) : nullptr;
+    return result;
 }
 } // namespace
