@@ -1351,6 +1351,24 @@ void WriteTextTreeNode(const void* node, void* stream, unsigned version)
         WriteTextTreeNode(children[i], stream, version);
 }
 
+// MS2-FUNCTIONAL: writes text metadata and a version-gated empty compatibility string, normalizing the boolean byte.
+// @0x14268ed90
+void WriteTextMetadata(const void* record, void* stream, unsigned version)
+{
+    auto* src = static_cast<const unsigned char*>(record);
+    WriteStreamBytes(stream, src + 0x10, 4);
+    WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + 0x18));
+    if (version < 0x1d) {
+        const unsigned zeroLength = 0;
+        WriteStreamBytes(stream, &zeroLength, 4);
+    }
+    WriteStreamBytes(stream, src + 0x20, 4);
+    const unsigned char enabled = *reinterpret_cast<const unsigned char*>(src + 0x24) != 0;
+    WriteStreamBytes(stream, &enabled, 1);
+    for (std::size_t offset : { std::size_t(0x28), std::size_t(0x2c), std::size_t(0x30), std::size_t(0x34), std::size_t(0x38) })
+        WriteStreamBytes(stream, src + offset, 4);
+}
+
 // MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot.
 // @0x142745630
 void* FindAudioRequestEntry(void** set, const unsigned char* key)
