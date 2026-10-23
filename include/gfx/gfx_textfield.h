@@ -7,15 +7,109 @@
 
 #include "ms2/scaleform/include/gfx/gfx_characterdef.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobject.h"
+#include "ms2/scaleform/include/gfx/gfx_stream.h"
+#include "ms2/scaleform/include/render/render_color.h"
 
 namespace Scaleform { namespace Render { namespace Text { class DocView; } }
 namespace GFx {
 
-// The edit text definition (a struct in 4.1.18, as the TextField constructor's mangled name has it); members
-// unrecovered.
+class FontResource;
+class LoadProcess;
+
+// The edit text definition, as the DefineEditText tag gives it (a struct in 4.1.18, as the TextField constructor's
+// mangled name has it). Bodies: GFx_TextFieldDef (sfr_gfx_01c); vftable 0x143184748.
+//   0x90 bytes: the constructor inits up to +0x84, but both allocation sites (the tag loader and
+//   MovieDataDef's empty definitions) ask for 0x90; nothing in the exe touches +0x88.
 struct TextFieldDef : public CharacterDef
 {
+    ResourcePtr<FontResource> pFont;        // +0x20
+    ResourceId                FontId;       // +0x30
+    StringLH                  FontClass;    // +0x38
+    RectF                     TextRect;     // +0x40
+    float                     TextHeight;   // +0x50 in twips
+    Render::Color             ColorV;       // +0x54
+    int                       MaxLength;    // +0x58
+    float                     LeftMargin;   // +0x5c
+    float                     RightMargin;  // +0x60
+    float                     Indent;       // +0x64 first line
+    float                     Leading;      // +0x68 extra line spacing
+
+    StringLH                  DefaultText;  // +0x70
+    StringLH                  VariableName; // +0x78
+
+    enum
+    {
+        Flags_WordWrap      = 0x1,
+        Flags_Multiline     = 0x2,
+        Flags_Password      = 0x4,
+        Flags_ReadOnly      = 0x8,
+        Flags_AutoSize      = 0x10,
+        Flags_Selectable    = 0x20,
+        Flags_Border        = 0x40,
+        Flags_Html          = 0x80,
+        Flags_UseDeviceFont = 0x100,
+        Flags_HasLayout     = 0x200, // the alignment, margins, indent and leading came with the tag
+        Flags_AAReadability = 0x400,
+        Flags_EmptyTextDef  = 0x800, // made by createTextField, not loaded
+        Flags_WasStatic     = 0x1000
+    };
+    UInt16 Flags; // +0x80
+
+    enum alignment
+    {
+        ALIGN_LEFT,
+        ALIGN_RIGHT,
+        ALIGN_CENTER,
+        ALIGN_JUSTIFY
+    };
+    alignment Alignment; // +0x84
+
+private:
+    UByte Unrecovered_88[8]; // +0x88 (see above)
+
+public:
+    TextFieldDef();
+    ~TextFieldDef();
+
+    virtual unsigned         GetResourceTypeCode() const { return MakeTypeCode(RT_EditTextDef); }
+    virtual CharacterDefType GetType() const { return TextField; }
+
+    void SetFlag(UInt16 flag, bool v) { if (v) Flags |= flag; else Flags &= ~flag; }
+    bool HasFlag(UInt16 flag) const   { return (Flags & flag) != 0; }
+
+    void SetWordWrap(bool v = true)        { SetFlag(Flags_WordWrap, v); }
+    void SetMultiline(bool v = true)       { SetFlag(Flags_Multiline, v); }
+    void SetPassword(bool v = true)        { SetFlag(Flags_Password, v); }
+    void SetReadOnly(bool v = true)        { SetFlag(Flags_ReadOnly, v); }
+    void SetAutoSize(bool v = true)        { SetFlag(Flags_AutoSize, v); }
+    void SetSelectable(bool v = true)      { SetFlag(Flags_Selectable, v); }
+    void SetBorder(bool v = true)          { SetFlag(Flags_Border, v); }
+    void SetHtml(bool v = true)            { SetFlag(Flags_Html, v); }
+    void SetUseDeviceFont(bool v = true)   { SetFlag(Flags_UseDeviceFont, v); }
+    void SetHasLayout(bool v = true)       { SetFlag(Flags_HasLayout, v); }
+    void SetAAForReadability(bool v = true){ SetFlag(Flags_AAReadability, v); }
+    void SetEmptyTextDef(bool v = true)    { SetFlag(Flags_EmptyTextDef, v); }
+    void SetWasStatic(bool v = true)       { SetFlag(Flags_WasStatic, v); }
+
+    bool IsWordWrap() const         { return HasFlag(Flags_WordWrap); }
+    bool IsMultiline() const        { return HasFlag(Flags_Multiline); }
+    bool IsPassword() const         { return HasFlag(Flags_Password); }
+    bool IsReadOnly() const         { return HasFlag(Flags_ReadOnly); }
+    bool IsAutoSize() const         { return HasFlag(Flags_AutoSize); }
+    bool IsSelectable() const       { return HasFlag(Flags_Selectable); }
+    bool IsBorder() const           { return HasFlag(Flags_Border); }
+    bool IsHtml() const             { return HasFlag(Flags_Html); }
+    bool DoesUseDeviceFont() const  { return HasFlag(Flags_UseDeviceFont); }
+    bool HasLayout() const          { return HasFlag(Flags_HasLayout); }
+    bool IsAAForReadability() const { return HasFlag(Flags_AAReadability); }
+    bool IsEmptyTextDef() const     { return HasFlag(Flags_EmptyTextDef); }
+    bool WasStatic() const          { return HasFlag(Flags_WasStatic); }
+
+    // The definition createTextField uses: 12 px black device-font text, read-only and selectable.
+    void InitEmptyTextDef();
+    void Read(LoadProcess* p, TagType tagType);
 };
+static_assert(sizeof(TextFieldDef) == 0x90, "TextFieldDef size (both allocation sites)");
 
 class TextField
 {

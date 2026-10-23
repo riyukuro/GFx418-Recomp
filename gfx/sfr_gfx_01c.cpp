@@ -1,9 +1,9 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 GFx_TextFieldDef, part one: the
-// TextClipboard and TextKeyMap states (TextFieldDef itself and its tag loaders are not recovered yet).
+// TextClipboard and TextKeyMap states (TextFieldDef and its tag loaders are in sfr_gfx_01g).
 // Third source of queue unit sfr_gfx_01 (the unit spans several original GFx sources).
 // MS2-UNIT: sfr_gfx_01c
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14258d510-0x14258d550 .text$mn
+// MS2-RANGE: 0x14258d2a0-0x14258d550 .text$mn
 // MS2-RANGE: 0x14258d600-0x14258d640 .text$mn
 // MS2-RANGE: 0x14258d650-0x14258d6a0 .text$mn
 // MS2-RANGE: 0x14258d7a0-0x14258d830 .text$mn
@@ -163,6 +163,30 @@ const TextKeyMap::KeyMapEntry* TextKeyMap::Find(unsigned keyCode, const KeyModif
     }
     return 0;
 }
+
+} // namespace GFx
+
+// The out-of-line binary searches over the key map (by entry and by key code), with int-returning comparators
+// (explicit instantiations belong to a namespace enclosing Alg).
+// @0x14258d2a0
+template UPInt Alg::LowerBound<Array<GFx::TextKeyMap::KeyMapEntry>, unsigned, int (*)(const GFx::TextKeyMap::KeyMapEntry&, unsigned)>(
+    const Array<GFx::TextKeyMap::KeyMapEntry>&, const unsigned&, int (*)(const GFx::TextKeyMap::KeyMapEntry&, unsigned));
+// @0x14258d330
+template UPInt Alg::LowerBound<Array<GFx::TextKeyMap::KeyMapEntry>, GFx::TextKeyMap::KeyMapEntry,
+                               int (*)(const GFx::TextKeyMap::KeyMapEntry&, const GFx::TextKeyMap::KeyMapEntry&)>(
+    const Array<GFx::TextKeyMap::KeyMapEntry>&, const GFx::TextKeyMap::KeyMapEntry&,
+    int (*)(const GFx::TextKeyMap::KeyMapEntry&, const GFx::TextKeyMap::KeyMapEntry&));
+// @0x14258d3d0
+template UPInt Alg::LowerBoundSliced<Array<GFx::TextKeyMap::KeyMapEntry>, unsigned,
+                                     int (*)(const GFx::TextKeyMap::KeyMapEntry&, unsigned)>(
+    const Array<GFx::TextKeyMap::KeyMapEntry>&, UPInt, UPInt, const unsigned&, int (*)(const GFx::TextKeyMap::KeyMapEntry&, unsigned));
+// @0x14258d470
+template UPInt Alg::LowerBoundSliced<Array<GFx::TextKeyMap::KeyMapEntry>, GFx::TextKeyMap::KeyMapEntry,
+                                     int (*)(const GFx::TextKeyMap::KeyMapEntry&, const GFx::TextKeyMap::KeyMapEntry&)>(
+    const Array<GFx::TextKeyMap::KeyMapEntry>&, UPInt, UPInt, const GFx::TextKeyMap::KeyMapEntry&,
+    int (*)(const GFx::TextKeyMap::KeyMapEntry&, const GFx::TextKeyMap::KeyMapEntry&));
+
+namespace GFx {
 
 // @0x14258e0c0
 TextKeyMap* TextKeyMap::InitWindowsKeyMap()
