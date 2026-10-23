@@ -1882,3 +1882,101 @@ Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
         *reinterpret_cast<const float*>(reinterpret_cast<const unsigned char*>(source) + 0x98);
     return destination;
 }
+
+// MS2-FUNCTIONAL: constructs a TreeShape snapshot and retains its provider and morph ratio.
+// @0x140011170
+Scaleform::Render::TreeShape::NodeData* FUN_140011170(
+    Scaleform::Render::TreeShape::NodeData* destination,
+    const Scaleform::Render::TreeShape::NodeData* source)
+{
+    new (destination) Scaleform::Render::TreeShape::NodeData();
+    void* provider = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
+    if (provider) {
+        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
+        auto addRef = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
+        addRef(refBase);
+    }
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = provider;
+    *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) =
+        *reinterpret_cast<const float*>(reinterpret_cast<const unsigned char*>(source) + 0x98);
+    return destination;
+}
+
+// MS2-FUNCTIONAL: conditionally constructs and initializes a TreeShape snapshot with a retained provider.
+// @0x140011330
+Scaleform::Render::TreeShape::NodeData* FUN_140011330(
+    Scaleform::Render::TreeShape::NodeData* destination,
+    const Scaleform::Render::TreeShape::NodeData* source)
+{
+    return destination ? FUN_140011170(destination, source) : nullptr;
+}
+
+// MS2-FUNCTIONAL: constructs a TreeShape snapshot with a retained provider and zero morph ratio.
+// @0x1400111d0
+Scaleform::Render::TreeShape::NodeData* FUN_1400111d0(
+    Scaleform::Render::TreeShape::NodeData* destination, const void* const* providerRef)
+{
+    if (!destination) return nullptr;
+    new (destination) Scaleform::Render::TreeShape::NodeData();
+    void* provider = const_cast<void*>(*providerRef);
+    if (provider) {
+        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
+        auto addRef = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
+        addRef(refBase);
+    }
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = provider;
+    *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) = 0.0f;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: constructs a shape snapshot from a provider pointer and initializes its morph ratio.
+// @0x140011010
+Scaleform::Render::TreeShape::NodeData* FUN_140011010(
+    Scaleform::Render::TreeShape::NodeData* destination, void* provider)
+{
+    if (!destination) return nullptr;
+    new (destination) Scaleform::Render::TreeShape::NodeData();
+    if (provider) {
+        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
+        auto addRef = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
+        addRef(refBase);
+    }
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = provider;
+    *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) = 0.0f;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: releases the shape provider before destroying the base node snapshot.
+// @0x140011070
+void FUN_140011070(Scaleform::Render::TreeShape::NodeData* node)
+{
+    void* provider = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(node) + 0x90);
+    if (provider) {
+        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
+        auto release = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 0x10));
+        release(refBase);
+    }
+    node->Scaleform::Render::TreeNode::NodeData::~NodeData();
+}
+
+// MS2-FUNCTIONAL: creates a TreeShape entry whose snapshot retains the supplied mesh provider.
+// @0x1400112a0
+void FUN_1400112a0(
+    Scaleform::Render::Context* context, const void* const* providerRef)
+{
+    auto* shape = context->CreateEntry<Scaleform::Render::TreeShape>();
+    if (!shape) return;
+    auto* data = shape->GetWritableData(sizeof(Scaleform::Render::TreeShape::NodeData));
+    void* provider = const_cast<void*>(*providerRef);
+    if (provider) {
+        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
+        auto addRef = reinterpret_cast<void (*)(void*)>(
+            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
+        addRef(refBase);
+    }
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(data) + 0x90) = provider;
+}
