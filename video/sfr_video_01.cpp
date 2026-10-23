@@ -1412,6 +1412,31 @@ unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
     return destination;
 }
 
+// MS2-FUNCTIONAL: resolves the lowercase node for an ActionScript string when needed.
+// @0x140009ec0
+void FUN_140009ec0(Scaleform::GFx::ASStringNode** nodeSlot)
+{
+    if (*nodeSlot && !(*nodeSlot)->pLower) (*nodeSlot)->ResolveLowercase_Impl();
+}
+
+// MS2-FUNCTIONAL: compares string node identity, using cached lowercase nodes for insensitive mode.
+// @0x14000a030
+bool FUN_14000a030(Scaleform::GFx::ASStringNode** left,
+                   Scaleform::GFx::ASStringNode** right, bool caseSensitive)
+{
+    if (caseSensitive) return *left == *right;
+    FUN_140009ec0(right);
+    return *left && *right && (*left)->pLower == (*right)->pLower;
+}
+
+// MS2-FUNCTIONAL: returns the equality result with the same case handling as the bool helper.
+// @0x14000a090
+bool FUN_14000a090(Scaleform::GFx::ASStringNode** left,
+                   Scaleform::GFx::ASStringNode** right, bool caseSensitive)
+{
+    return FUN_14000a030(left, right, caseSensitive);
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
