@@ -599,3 +599,16 @@ const char* AvmInteractiveObj::GetAbsolutePath(String* ppath) const
 } // namespace AS3
 
 }} // namespace Scaleform::GFx
+
+// Non-RTTI interface and shared-base tables emitted by this SCU; addresses are from the exe's constructor stores.
+// MS2-PIN: ??_7?$RefCountBase@VMemoryContext@GFx@Scaleform@@$01@Scaleform@@6B@ 0x14313c0a8
+// MS2-PIN: ??_7MemoryContext@GFx@Scaleform@@6B@ 0x14313c0a8
+// MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
+// MS2-PIN: ??_7HeapLimit@MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c090
+// MS2-PIN: ??_7MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c0a8
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14313c088
+// MS2-PIN: ??_7?$RefCountBase@VAbcDataBuffer@AS3@GFx@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14313c088
+// MS2-PIN: ??_7AbcDataBuffer@AS3@GFx@Scaleform@@6B@ 0x14313c088
+// MS2-PIN: ??_7DoAbc@AS3@GFx@Scaleform@@6B@ 0x14313c0b0
+// MS2-PIN: ?ExecuteWithPriority@ExecuteTag@GFx@Scaleform@@UEAAXPEAVDisplayObjContainer@23@W4Priority@ActionPriority@23@@Z 0x1423dcc10
+// MS2-PIN: ?Trace@ExecuteTag@GFx@Scaleform@@UEAAXPEBD@Z 0x1423dd510

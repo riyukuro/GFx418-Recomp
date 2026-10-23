@@ -1912,7 +1912,6 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
 // MS2-PIN: ??_7Interface@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313f870
 // MS2-PIN: ??_7Object@fl@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313f650
-// MS2-PIN: ??_7ClassCallConstruct@AS3@GFx@Scaleform@@6B@ 0x14313f3c8
 // MS2-PIN: ??_7Object@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f590
 // MS2-PIN: ??_7Namespace@Instances@AS3@GFx@Scaleform@@6B@ 0x143140070
 // MS2-PIN: ??_7Array@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431415b0
@@ -2121,6 +2120,8 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_7XMLText@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143168
 // MS2-PIN: ??_7XMLProcInstr@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143330
 // MS2-PIN: ??_7XMLComment@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431434f8
+// MS2-PIN: ??_7ClassCallConstruct@AS3@GFx@Scaleform@@6B@ 0x143140350
+// MS2-PIN: ?Call@ClassCallConstruct@AS3@GFx@Scaleform@@UEAAXAEBVValue@234@AEAV5234@IQEBV5234@@Z 0x1424ee6f0 ; vtslot
 // MS2-PIN: ??_GXML@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4bd0
 // MS2-PIN: ??_GXMLAttr@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4c80
 // MS2-PIN: ??_GXMLComment@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4d70
@@ -2128,3 +2129,6 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_GXMLProcInstr@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5150
 // MS2-PIN: ??_GXMLText@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5200
 // MS2-PIN: ??_GXMLList@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5070
+// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BFA@@Scaleform@@6B@ 0x14313f3c8
+// MS2-PIN: ??_7?$RefCountBase@VNamespaceInstanceFactory@AS3@GFx@Scaleform@@$0BFA@@Scaleform@@6B@ 0x143140af8
