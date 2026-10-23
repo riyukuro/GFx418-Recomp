@@ -25,6 +25,7 @@ namespace Scaleform { namespace GFx { namespace IME {
     void FUN_1423ca560(void*, unsigned);
     void FUN_1423ccdc0(unsigned long long*, String*);
     void FUN_1423cc2d0(unsigned long long*);
+    void FUN_1423cc570(unsigned long long*);
 } } }
 namespace Scaleform { namespace GFx { namespace AS3 { void SF_STDCALL DoAbcLoader(LoadProcess*, const TagInfo&); } } }
 extern "C" void FUN_1425c8cf0(unsigned, void*);
@@ -260,6 +261,24 @@ void FUN_1423ce5a0(void* self)
                 values, "RemoveInputWindow", &result, 0, 0);
     }
     cx18_ImmReleaseContext(hwnd, context);
+}
+
+// MS2-FUNCTIONAL: destroys the XML node chain after unlinking each DOM string node from its hash table.
+// @0x1423cb0f0
+void FUN_1423cb0f0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    ::operator delete[](*reinterpret_cast<void**>(bytes + 0x190));
+    void* node = *reinterpret_cast<void**>(bytes + 0x140);
+    *reinterpret_cast<void**>(bytes + 0x110) = node;
+    while (node) {
+        void* next = *reinterpret_cast<void**>(static_cast<unsigned char*>(node) + 0x28);
+        FUN_1423cc570(static_cast<unsigned long long*>(node));
+        void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, node);
+        *reinterpret_cast<void**>(bytes + 0x110) = next;
+        node = next;
+    }
 }
 
 // MS2-FUNCTIONAL: unlinks this DOM string node from the executable's bucket chains and releases its key allocation.
