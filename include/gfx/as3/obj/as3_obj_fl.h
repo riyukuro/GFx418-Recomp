@@ -11,20 +11,102 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // E4X in-scope namespace list (as3_obj_e4x.h).
 class NamespaceArray;
 
+namespace InstanceTraits { class ThunkFunction; }
+namespace Classes { class Function; }
+
 namespace Instances {
-    // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
+    // A native thunk wrapped in a function object. 0x50 bytes.
     class ThunkFunction : public Instances::FunctionBase
     {
+        friend class Classes::Function;
+
+    protected:
+        // (appended, sfr19)
+        ThunkFunction(InstanceTraits::Traits& t, const ThunkInfo& thunk, const Traits& ot)
+            : FunctionBase(t)
+            , Function(thunk)
+            , OriginationTraits(&ot)
+        {
+        }
+
     public:
+        // (appended, sfr19) also visits the origination traits. 0x14240c160
+        virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
+        // (appended, sfr19) slot 21. 0x14240ad20
+        virtual void ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // (appended, sfr19) slot 22. 0x14240a9a0
+        virtual void Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result = false);
+
         // @0x1424291d0
         void length(Value& result, unsigned, const Value*);
 
         const ThunkInfo& GetThunk() const { return Function; }
+        // (appended, sfr19) the traits the thunk came from (a prototype's class).
+        const Traits& GetOriginationTraits() const { return *OriginationTraits; }
 
     protected:
-        const ThunkInfo& Function;  // +0x40 (sfr17)
+        const ThunkInfo& Function;              // +0x40 (sfr17)
+        SPtr<const Traits> OriginationTraits;   // +0x48 (sfr19)
     };
 
+    // (appended, sfr19) a thunk function that checks the type of 'this' before the call. 0x58 bytes.
+    class CheckTypeTF : public ThunkFunction
+    {
+        friend class Classes::Function;
+
+    protected:
+        CheckTypeTF(InstanceTraits::Traits& t, const ThunkInfo& thunk, const Class& data_type, const Traits& ot)
+            : ThunkFunction(t, thunk, ot)
+            , DataTypeClass(data_type)
+        {
+        }
+
+    public:
+        // slot 21. 0x14240aac0
+        virtual void ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // slot 22. 0x142409fd0
+        virtual void Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result = false);
+
+    private:
+        const Class& DataTypeClass;             // +0x50
+    };
+
+}
+
+// (appended, sfr19) the traits of the class Function keep the traits of the native function kinds.
+namespace ClassTraits {
+    class Function : public Traits
+    {
+    public:
+        InstanceTraits::Traits& GetThunkTraits() const         { return *ThunkTraits; }
+        InstanceTraits::ThunkFunction& GetThunkFunctionTraits() const { return *ThunkFunctionTraits; }
+        InstanceTraits::Traits& GetMethodIndTraits() const     { return *MethodIndTraits; }
+        InstanceTraits::Traits& GetVTableTraits() const        { return *VTableTraits; }
+
+    private:
+        SPtr<InstanceTraits::Traits>        ThunkTraits;            // +0xc8
+        SPtr<InstanceTraits::ThunkFunction> ThunkFunctionTraits;    // +0xd0
+        SPtr<InstanceTraits::Traits>        MethodIndTraits;        // +0xd8
+        SPtr<InstanceTraits::Traits>        VTableTraits;           // +0xe0
+    };
+}
+
+// (appended, sfr19) the class Function makes the function objects of native thunks.
+namespace Classes {
+    class Function : public Class
+    {
+    public:
+        const ClassTraits::Function& GetClassTraits() const
+        {
+            return static_cast<const ClassTraits::Function&>(Class::GetClassTraits());
+        }
+
+        // 0x14241c600
+        Pickable<Instances::ThunkFunction> MakeThunkFunction(const ThunkInfo& thunk, const Traits& ot) const;
+        // 0x142419d90
+        Pickable<Instances::CheckTypeTF> MakeCheckTypeInstance(const Class& data_type, const ThunkInfo& thunk,
+                                                               const Traits& ot) const;
+    };
 }
 
 namespace Instances { namespace fl {

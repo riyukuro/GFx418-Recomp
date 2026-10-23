@@ -831,6 +831,8 @@ public:
     typedef Value (Class::*ConvertFunc)(const Value& v, const Traits& ot) const;
     // (appended, sfr19) the method wrapped in a closure that checks the 'this' type of a call. 0x1424f1c60
     Value ConvertCheckType(const Value& v, const Traits& ot) const;
+    // (appended, sfr19) the method value itself, unchecked. 0x1424f1cf0
+    Value ConvertCopy(const Value& v, const Traits& ot) const;
     // (appended, sfr19) the instance traits' methods (BT_Code slots) through f as non-enumerable properties of
     // obj. 0x142511890
     void InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const;
@@ -989,9 +991,11 @@ namespace Instances
     public:
         // (appended, sfr19) Call runs slot 21 into a temporary (body in sfr_as3_03).
         virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
+        // (appended, sfr19) slot 12: new f() (body in sfr_as3_03). 0x142407230
+        virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
         // slot 21
         virtual void ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv);
-        // slot 22 (0x142407230)
+        // slot 22 (0x14240a490)
         virtual void Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result = false);
         // slot 23: the declared parameter count, the AS3 length (the base body is shared with an empty function)
         virtual UInt32 GetMaxParamNum() const;
