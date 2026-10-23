@@ -26,6 +26,17 @@ void StrokePath::AddVertex(const StrokeVertex& v)
         Path.PushBack(v);
 }
 
+// Clear keeps the pages for reuse, ClearAndRelease frees them; neither leaf has unwind data, so both stay untagged
+void StrokePath::Clear()
+{
+    Path.Clear();
+}
+
+void StrokePath::ClearAndRelease()
+{
+    Path.ClearAndRelease();
+}
+
 // @0x1426aa310
 bool StrokePath::ClosePath()
 {

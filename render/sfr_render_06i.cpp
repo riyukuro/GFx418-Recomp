@@ -1,10 +1,13 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Render, the anti-aliased stroker
-// TU (Render_StrokerAA), the part in queue unit sfr_render_06: caps, joins and the per-segment join window. A path
-// is widened into a solid core plus an AA fringe on each side; every cap and join emits its edge vertices and the
+// TU (Render_StrokerAA): construction, the per-path driver and the mesh accessors (the part in queue unit
+// sfr_render_05; one TU with the rest, since FinalizePath inlines the width/cap/join helpers), caps, joins and the
+// per-segment join window. A path is widened into a solid core plus an AA fringe on each side; every cap and join emits its edge vertices and the
 // triangles bridging them to the previous ones (SolidL/R, TotalL/R).
-// Queue unit sfr_render_06 is split along its original sources (06i Render_StrokerAA, 0x1426ae190 onwards).
+// Queue unit sfr_render_06 is split along its original sources (06i Render_StrokerAA, 0x1426ae190 onwards, plus
+// 0x1426ad030-0x1426ae0a0 from queue unit sfr_render_05).
 // MS2-UNIT: sfr_render_06i
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1426ad030-0x1426ae0a0 .text$mn
 // MS2-RANGE: 0x1426ae190-0x1426b2000 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -1044,7 +1047,212 @@ void StrokerAA::calcWidths(WidthsType& w) const
     w.widthCoeff    = w.rightSideCalc ? w.totalWidthL / w.totalWidthR : w.totalWidthR / w.totalWidthL;
 }
 
+// round joins and caps, the default AA fringe of half a pixel on each side and an empty bound box
+// @0x1426ad030
+StrokerAA::StrokerAA(LinearHeap* heap)
+    : LineJoin(RoundJoin),
+      StartLineCap(RoundCap),
+      EndLineCap(RoundCap),
+      MiterLimit(3.0f),
+      StyleLeft(1),
+      StyleRight(1),
+      WidthLeft(0),
+      WidthRight(0),
+      AaWidthLeft(0.5f),
+      AaWidthRight(0.5f),
+      Tolerance(1),
+      IntersectionEpsilon(0.01f),
+      Closed(false),
+      Path(heap),
+      Vertices(heap),
+      Triangles(heap),
+      MinX(MaxCoord),
+      MinY(MaxCoord),
+      MaxX(MinCoord),
+      MaxY(MinCoord)
+{
+}
+
+// @0x1426ad170
+void StrokerAA::Clear()
+{
+    Path.ClearAndRelease();
+    Vertices.ClearAndRelease();
+    Triangles.ClearAndRelease();
+    Closed = false;
+    MinX   = MaxCoord;
+    MinY   = MaxCoord;
+    MaxX   = MinCoord;
+    MaxY   = MinCoord;
+}
+
+// @0x1426ad1f0
+void StrokerAA::ClosePath()
+{
+    Path.ClosePath();
+    Closed = true;
+}
+
+// strokes the collected path: a closed one is joined all the way round (the first joins are emitted before their
+// predecessors exist, so their placeholder indices are patched afterwards); an open one gets its start cap, the inner
+// joins, a butt join onto the last segment and the end cap. The path is consumed
+// @0x1426ad210
+void StrokerAA::FinalizePath(unsigned, unsigned, bool, bool)
+{
+    if (!Closed)
+        Closed = Path.ClosePath();
+
+    SolidL = unsigned(MarkerSolidL);
+    SolidR = unsigned(MarkerSolidR);
+    TotalL = unsigned(MarkerTotalL);
+    TotalR = unsigned(MarkerTotalR);
+
+    WidthsType widths;
+    calcWidths(widths);
+
+    JoinParamType joinParam;
+
+    UPInt i;
+    if (Closed)
+    {
+        if (Path.GetVertexCount() > 2)
+        {
+            calcJoinParam(Path.GetVertex(Path.GetVertexCount() - 2), Path.GetVertex(Path.GetVertexCount() - 1),
+                          Path.GetVertex(0), widths, joinParam);
+            calcJoinParam(Path.GetVertex(Path.GetVertexCount() - 1), Path.GetVertex(0), Path.GetVertex(1), widths,
+                          joinParam);
+
+            UPInt startTri = Triangles.GetSize();
+            for (i = 0; i < Path.GetVertexCount(); i++)
+            {
+                // the vertex two ahead, wrapping round the closed path
+                UPInt forw = i + 2;
+                if (forw >= Path.GetVertexCount())
+                    forw -= Path.GetVertexCount();
+                calcJoin(Path.GetVertex(i), Path.GetVertexNext(i), Path.GetVertex(forw), widths, joinParam);
+            }
+            // only the first joins can refer to the edge vertices of the last one
+            for (i = 0; i < 6 && startTri + i < Triangles.GetSize(); i++)
+            {
+                TriangleType& tri = Triangles[startTri + i];
+                if (tri.v1 == MarkerSolidL) tri.v1 = SolidL;
+                if (tri.v1 == MarkerSolidR) tri.v1 = SolidR;
+                if (tri.v1 == MarkerTotalL) tri.v1 = TotalL;
+                if (tri.v1 == MarkerTotalR) tri.v1 = TotalR;
+                if (tri.v2 == MarkerSolidL) tri.v2 = SolidL;
+                if (tri.v2 == MarkerSolidR) tri.v2 = SolidR;
+                if (tri.v2 == MarkerTotalL) tri.v2 = TotalL;
+                if (tri.v2 == MarkerTotalR) tri.v2 = TotalR;
+                if (tri.v3 == MarkerSolidL) tri.v3 = SolidL;
+                if (tri.v3 == MarkerSolidR) tri.v3 = SolidR;
+                if (tri.v3 == MarkerTotalL) tri.v3 = TotalL;
+                if (tri.v3 == MarkerTotalR) tri.v3 = TotalR;
+            }
+        }
+    }
+    else
+    {
+        if (Path.GetVertexCount() > 1)
+        {
+            // square caps are butt caps on a path lengthened by half the width at that end
+            CoordType avrInc = (WidthLeft + WidthRight) / 2;
+            if (StartLineCap == SquareCap)
+            {
+                StrokeVertex& v0 = Path.GetVertex(0);
+                StrokeVertex& v1 = Path.GetVertex(1);
+                v0.x -= (v1.x - v0.x) * avrInc / v0.dist;
+                v0.y -= (v1.y - v0.y) * avrInc / v0.dist;
+                v0.dist += avrInc;
+            }
+            if (EndLineCap == SquareCap)
+            {
+                StrokeVertex& v0 = Path.GetVertex(Path.GetVertexCount() - 2);
+                StrokeVertex& v1 = Path.GetVertex(Path.GetVertexCount() - 1);
+                v1.x += (v1.x - v0.x) * avrInc / v0.dist;
+                v1.y += (v1.y - v0.y) * avrInc / v0.dist;
+                v0.dist += avrInc;
+            }
+
+            calcCap(Path.GetVertex(0), Path.GetVertex(1), Path.GetVertex(0).dist, widths, false);
+
+            if (Path.GetVertexCount() > 2)
+            {
+                calcInitialJoinParam(Path.GetVertex(0), Path.GetVertex(1), widths, joinParam);
+                calcJoinParam(Path.GetVertex(0), Path.GetVertex(1), Path.GetVertex(2), widths, joinParam);
+
+                UPInt end = Path.GetVertexCount() - 2;
+                for (i = 1; i < end; i++)
+                    calcJoin(Path.GetVertex(i), Path.GetVertex(i + 1), Path.GetVertex(i + 2), widths, joinParam);
+
+                // the last inner join looks ahead at the last segment mirrored past the end point
+                const StrokeVertex& v0 = Path.GetVertex(end);
+                const StrokeVertex& v1 = Path.GetVertex(end + 1);
+                StrokeVertex        vLast;
+                vLast.x    = 2 * v1.x - v0.x;
+                vLast.y    = 2 * v1.y - v0.y;
+                vLast.dist = v0.dist;
+                calcJoin(Path.GetVertex(i), Path.GetVertex(i + 1), vLast, widths, joinParam);
+            }
+
+            calcButtJoin(Path.GetVertex(Path.GetVertexCount() - 2), Path.GetVertex(Path.GetVertexCount() - 1),
+                         Path.GetVertex(Path.GetVertexCount() - 2).dist, widths);
+            calcCap(Path.GetVertex(Path.GetVertexCount() - 1), Path.GetVertex(Path.GetVertexCount() - 2),
+                    Path.GetVertex(Path.GetVertexCount() - 2).dist, widths, true);
+        }
+    }
+    Path.Clear();
+    Closed = false;
+}
+
+// the one mesh spans every output vertex
+void StrokerAA::GetMesh(unsigned, TessMesh* mesh) const
+{
+    mesh->MeshIdx     = 0;
+    mesh->Style1      = 1;
+    mesh->Style2      = 0;
+    mesh->Flags1      = 0;
+    mesh->Flags2      = 0;
+    mesh->StartVertex = 0;
+    mesh->VertexCount = (unsigned)Vertices.GetSize();
+}
+
+// copies up to num vertices from mesh->StartVertex on (advancing it); the solid core is opaque, the fringe is not
+// @0x1426ade00
+unsigned StrokerAA::GetVertices(TessMesh* mesh, TessVertex* vertices, unsigned num) const
+{
+    unsigned i = 0;
+    for (i = 0; i < num && mesh->StartVertex < Vertices.GetSize(); ++mesh->StartVertex)
+    {
+        const VertexType& v = Vertices[mesh->StartVertex];
+        vertices->x         = v.x;
+        vertices->y         = v.y;
+        vertices->Idx       = 0;
+        vertices->Styles[0] = v.style;
+        vertices->Styles[1] = 0;
+        vertices->Flags     = UInt16(v.alpha ? TessStyleOpaque : 0);
+        ++vertices;
+        ++i;
+    }
+    return i;
+}
+
+// @0x1426add70
+void StrokerAA::GetTrianglesI16(unsigned, UInt16* idx, unsigned start, unsigned num) const
+{
+    for (unsigned j = 0; j < num; ++j)
+    {
+        const TriangleType& t = Triangles[start + j];
+        *idx++ = (UInt16)t.v1;
+        *idx++ = (UInt16)t.v2;
+        *idx++ = (UInt16)t.v3;
+    }
+}
+
 }} // namespace Scaleform::Render
 
 // MS2-PIN: ?addTriangle@StrokerAA@Render@Scaleform@@AEAAXIII@Z 0x1426ae6b0
 // MS2-PIN: ?addVertex@StrokerAA@Render@Scaleform@@AEAAIMMII@Z 0x1426ae7d0
+// MS2-PIN: ?AddVertex@StrokerAA@Render@Scaleform@@UEAAXMM@Z 0x1426ad140
+// MS2-PIN: ??_GStrokerAA@Render@Scaleform@@UEAAPEAXI@Z 0x1426ad110
+// MS2-PIN: ??_7StrokerAA@Render@Scaleform@@6B@ 0x1431924f0
+// MS2-PIN: ??_7TessBase@Render@Scaleform@@6B@ 0x14318fbd8

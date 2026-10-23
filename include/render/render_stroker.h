@@ -42,8 +42,8 @@ public:
 
     StrokePath(LinearHeap* heap) : Path(heap) {}
 
-    void      Clear()           { Path.Clear(); }
-    void      ClearAndRelease() { Path.ClearAndRelease(); }
+    void      Clear();             // 0x1426aa240 (out of line, as the stroker TUs call it)
+    void      ClearAndRelease();   // 0x1426aa2f0
     CoordType GetLastX() const  { return Path.Back().x; }
     CoordType GetLastY() const  { return Path.Back().y; }
     void      AddVertex(const StrokeVertex& v);
