@@ -201,6 +201,7 @@ namespace Instances { namespace fl_text {
         void contextMenuGet(SPtr<Instances::fl_display::NativeMenu>& result);
         // @0x1424affb0
         void defaultTextFormatGet(SPtr<Instances::fl_text::TextFormat>& result);
+        SPtr<Instances::fl_text::TextFormat> defaultTextFormatGet();
         // @0x1424b0020
         void defaultTextFormatSet(const Value& result, Instances::fl_text::TextFormat*);
         // @0x1424b0230
@@ -339,6 +340,10 @@ namespace Instances { namespace fl_text {
     {
     public:
         TextFormat(InstanceTraits::Traits& t);   // 0x1424a9690
+    protected:
+        // @0x1424abc10
+        virtual void AS3Constructor(unsigned argc, const Value* argv);
+    public:
 
         Value                       align;          // +0x038
         Value                       blockIndent;    // +0x058

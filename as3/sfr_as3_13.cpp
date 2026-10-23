@@ -14,6 +14,7 @@
 #include "ms2/scaleform/include/render/render_twips.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/render/text_core.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1076,6 +1077,25 @@ namespace Instances { namespace fl_text
     }
 
     // The exe converts the arguments and drops them: the metrics stay zero.
+    // @0x1424abc10
+    void TextFormat::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        Instances::fl::Object::AS3Constructor(argc, argv);
+        if (argc >= 1)  font.Assign(argv[0]);
+        if (argc >= 2)  size.Assign(argv[1]);
+        if (argc >= 3)  color.Assign(argv[2]);
+        if (argc >= 4)  bold.Assign(argv[3]);
+        if (argc >= 5)  italic.Assign(argv[4]);
+        if (argc >= 6)  underline.Assign(argv[5]);
+        if (argc >= 7)  url.Assign(argv[6]);
+        if (argc >= 8)  target.Assign(argv[7]);
+        if (argc >= 9)  align.Assign(argv[8]);
+        if (argc >= 10) leftMargin.Assign(argv[9]);
+        if (argc >= 11) rightMargin.Assign(argv[10]);
+        if (argc >= 12) indent.Assign(argv[11]);
+        if (argc >= 13) leading.Assign(argv[12]);
+    }
+
     // @0x1424abd70
     // MS2-FUNCTIONAL: written from the exe's control flow
     void TextLineMetrics::AS3Constructor(unsigned argc, const Value* argv)
@@ -1577,12 +1597,11 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424affb0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::defaultTextFormatGet(SPtr<Instances::fl_text::TextFormat>& result)
     {
         void* pdoc = DocumentOf(DisplayTextField(this));
-        void* ppara = DefaultParaFormat(pdoc);
         void* pfmt = DefaultTextFormat(pdoc);
+        void* ppara = DefaultParaFormat(pdoc);
         ASVM& asvm = static_cast<ASVM&>(GetVM());
         asvm.ConstructInstance(result, asvm.TextFormatClass, 0, NULL);
         FUN_1424ae6b0(result.GetPtr(), ppara, pfmt);
@@ -2147,6 +2166,13 @@ void  FUN_142615640(void* pdoc, const Scaleform::Render::Text::TextFormat* pfmt,
                     unsigned long long start, unsigned long long end);          // DocView::SetTextFormat
 unsigned long long FUN_142617990(void* pek);                                    // EditorKit::GetCursorPos
 void  FUN_142619b80(void* pek, unsigned long long pos, bool selectionChange);   // EditorKit::SetCursorPos
+bool  FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& base,
+                    const Scaleform::GFx::AS3::ClassTraits::Traits& t);       // ClassTraits: t is base or derives from it
+bool  FUN_142573d60(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::MovieDefImpl* pdef,
+                    Scaleform::GFx::FontResource* pfont);                      // MovieImpl::RegisterFont
+void  FUN_1425990d0(void* ptext, Scaleform::Render::Text::TextFormat* pdestFmt,
+                    Scaleform::Render::Text::ParagraphFormat* pdestPara, unsigned long long start,
+                    unsigned long long end);                                    // StyledText::GetTextAndParagraphFormat (range, merged)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2244,6 +2270,24 @@ namespace Instances { namespace fl_text
         FUN_1425bc060(ptf);
     }
 
+    // @0x1424b2ad0
+    void TextField::getTextFormat(SPtr<Instances::fl_text::TextFormat>& result, SInt32 beginIndex, SInt32 endIndex)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        SInt32 begin = (beginIndex != -1) ? beginIndex : 0;
+        SInt32 end   = (endIndex != -1) ? endIndex : 0x7FFFFFFF;
+        SPtr<Instances::fl_text::TextFormat> pformat;
+        asvm.ConstructInstance(pformat, asvm.TextFormatClass, 0, NULL);
+        if (begin <= end)
+        {
+            Render::Text::TextFormat      fmt(MovieHeapOf(asvm.GetMovieImpl()));
+            Render::Text::ParagraphFormat para;
+            FUN_1425990d0(DocumentOf(DisplayTextField(this)), &fmt, &para, (SPInt)begin, (SPInt)end);
+            FUN_1424ae6b0(pformat.GetPtr(), &para, &fmt);
+        }
+        result = pformat;
+    }
+
     // @0x1424b44d0
     void TextField::setTextFormat(const Value& result, Instances::fl_text::TextFormat* format, SInt32 beginIndex,
                                   SInt32 endIndex)
@@ -2265,6 +2309,45 @@ namespace Instances { namespace fl_text
         FUN_1425bc060(ptf);
     }
 }} // namespace Instances::fl_text
+
+namespace Classes { namespace fl_text
+{
+    // @0x1424b3810
+    void Font::registerFont(const Value& result, Class* font)
+    {
+        SF_UNUSED(result);
+        if (font && FUN_1425149a0(GetClassTraits(), font->GetClassTraits()))
+        {
+            ASVM& vm = static_cast<ASVM&>(GetVM());
+            ASString name = font->GetClassTraits().GetInstanceTraits().GetQualifiedName(Traits::qnfWithDot);
+            VMAbcFile* pfile = font->GetClassTraits().GetFilePtr();
+            if (pfile)
+            {
+                // The movie the class's ABC came from (the GFx ABC file keeps it past the Abc::File tables).
+                MovieDefImpl* pdef = *(MovieDefImpl**)((UByte*)&pfile->GetAbcFile() + 0x188);
+                ResourceBindData data;
+                bool found;
+                {
+                    String symbol(name.ToCStr());
+                    found = FUN_14256ec50(vm.GetMovieImpl(), pdef, &data, symbol);
+                }
+                if (found && data.pResource &&
+                    (data.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_Font)))
+                    FUN_142573d60(vm.GetMovieImpl(), pdef, static_cast<FontResource*>(data.pResource.GetPtr()));
+            }
+            return;
+        }
+        String className("unknown");
+        if (font)
+        {
+            VMAbcFile* pfile = font->GetClassTraits().GetFilePtr();
+            if (pfile)
+                className = pfile->GetAbcFile().Source;
+        }
+        VM& vm = GetVM();
+        vm.ThrowArgumentError(VM::Error((VM::ErrorID)2136, vm, className.ToCStr()));
+    }
+}} // namespace Classes::fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
@@ -2298,6 +2381,14 @@ namespace Instances { namespace fl_text
     {
         SPtr<Instances::fl_display::DisplayObject> result;
         getImageReference(result, id);
+        return result;
+    }
+
+    // @0x1424aff40
+    SPtr<Instances::fl_text::TextFormat> TextField::defaultTextFormatGet()
+    {
+        SPtr<Instances::fl_text::TextFormat> result;
+        defaultTextFormatGet(result);
         return result;
     }
 
