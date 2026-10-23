@@ -2699,6 +2699,75 @@ bool Reader::ReadTraits(TraitTable& t, HasTraits::ObjectTraits& obj_traits)
 
 }}}} // namespace Scaleform::GFx::AS3::Abc
 
+// ---------------------------------------------------------------- Vector.<*>.unshift (sfr19)
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// @0x1425649c0
+template <>
+void VectorBase<Value>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
+{
+    CheckFixed();
+    if (Fixed || !CheckArgTypes(argc, argv, tr))
+        return;
+    V.InsertMultipleAt(0, argc);
+    for (unsigned i = 0; i < argc; ++i)
+        V[i] = Value(argv[i]);
+}
+
+// @0x142563e40
+template <>
+__declspec(noinline) void VectorBase<Value>::SetUnsafe(UInt32 ind, const Value& v)
+{
+    V[ind] = Value(v);
+}
+
+// @0x142563a00
+// MS2-FUNCTIONAL: size compares scheduled differently
+template <>
+__declspec(noinline) CheckResult VectorBase<Value>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
+{
+    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    {
+        VM& vm = VMRef;
+        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        return false;
+    }
+    if (ind == (UInt32)V.GetSize() && !Resize(ind + 1))
+        return false;
+    Value r;
+    if (!CheckCoerce(tr, v, r))
+        return false;
+    SetUnsafe(ind, r);
+    return true;
+}
+
+namespace Instances { namespace fl_vec {
+
+// @0x142563cd0
+CheckResult Vector_object::SetProperty(const Multiname& prop_name, const Value& value)
+{
+    UInt32 ind;
+    if (GetVectorInd(prop_name, ind))
+        return V.Set(ind, value, static_cast<const ClassTraits::fl_vec::Vector_object&>(
+            FUN_142508490(&GetTraits()).GetClassTraits()).GetEnclosedClassTraits());
+    VM& vm = GetVM();
+    vm.ThrowReferenceError(VM::Error(VM::eWriteSealedError, vm, prop_name.Name, GetTraits().GetName().ToCStr()));
+    return false;
+}
+
+// @0x142559890
+void Vector_object::AS3unshift(Value& result, unsigned argc, const Value* argv)
+{
+    V.Unshift(argc, argv, static_cast<const ClassTraits::fl_vec::Vector_object&>(
+        FUN_142508490(&GetTraits()).GetClassTraits()).GetEnclosedClassTraits());
+    result.SetUInt32((UInt32)V.V.GetSize());
+}
+
+}} // namespace Instances::fl_vec
+
+}}} // namespace Scaleform::GFx::AS3
+
 // ---------------------------------------------------------------- Vector.<T> append (sfr19)
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {

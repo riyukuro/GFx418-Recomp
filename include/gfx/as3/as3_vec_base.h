@@ -94,6 +94,8 @@ public:
     // Element write: v is coerced to the element type tr (throws on failure); ind == size appends unless fixed.
     // SInt32 0x142563720, UInt32 0x142446540, Number 0x1424864c0, String 0x1425638c0, Value 0x142563a00
     CheckResult Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr);
+    // (appended, sfr19) element ind = v (already of the element type). Value 0x142563e40 (out of line)
+    void SetUnsafe(UInt32 ind, const Value& v);
     // (appended, sfr16) Vector.splice: argv inserted at pos, unchecked. Value 0x142560d70
     void Insert(UPInt pos, unsigned argc, const Value* argv);
     // (appended, sfr19) Vector.push: each argv coerced to tr and appended; stops at the first that cannot be
