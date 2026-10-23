@@ -27,6 +27,7 @@ extern void FUN_1425925f0(void*);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
 extern void FUN_140025300(void*);
+extern void FUN_140025410(void*);
 extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 extern void FUN_14257db50(void*);
@@ -113,6 +114,38 @@ void* FUN_140015c00(void* object, unsigned __int64 flags)
     FUN_14257db50(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: clears the event-side state and optionally invokes the listener object's first callback.
+// @0x140014400
+void FUN_140014400(void* object, void*, char invoke)
+{
+    void* target = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
+    FUN_140025300(target);
+    if (invoke)
+    {
+        void** vtable = *reinterpret_cast<void***>(target);
+        reinterpret_cast<void (*)(void*)>(vtable[4])(target);
+    }
+}
+
+// MS2-FUNCTIONAL: returns the integer result of the object's count query plus one as a double.
+// @0x1400146c0
+void FUN_1400146c0(void* object, double* result)
+{
+    extern int FUN_140025360(void*);
+    *result = static_cast<double>(FUN_140025360(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x50)) + 1);
+}
+
+// MS2-FUNCTIONAL: updates the stored track index and releases the old AS3 value when its tag requires it.
+// @0x140014730
+void FUN_140014730(void* object, void*, double value)
+{
+    char* bytes = static_cast<char*>(object);
+    *reinterpret_cast<int*>(bytes + 0x84) = static_cast<int>(value) - 1;
+    unsigned tag = *reinterpret_cast<unsigned*>(bytes + 0xd8) & 0x1f;
+    if (tag && (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(bytes + 0xe8)))
+        FUN_140025410(*reinterpret_cast<void**>(bytes + 0x50));
 }
 
 // VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
