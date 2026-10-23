@@ -121,6 +121,9 @@ void     FUN_140034730(void* player);
 void     FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
 void     FUN_1400453c4(void* demux);
 void     FUN_1400458b8(void* demux);
+void*    FUN_14003b348(void* heap, const void* data, CriUint32 size);
+CriUint32 FUN_14003a85c(void* object, CriSint32 index, const char* key);
+void     FUN_14003a108(void* object);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
 void     FUN_140044ae0(void* decoder);
@@ -3511,6 +3514,42 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
         FUN_1400467b0(source, 0, &chunk);
     }
     (void)copied;
+}
+
+// MS2-FUNCTIONAL: parse sample rate, channel count, sample count, and buffer size from an audio header.
+// @0x140032a70
+void FUN_140032a70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+{
+    struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
+    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    output[0] = FUN_14003a85c(document, 0, "sampling_rate");
+    output[1] = FUN_14003a85c(document, 0, "num_channels");
+    output[2] = FUN_14003a85c(document, 0, "total_samples");
+    output[3] = FUN_14003a85c(document, 0, "ixsize");
+    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
+    WorkSizeView* work = (WorkSizeView*)workInfo;
+    if (work->Size < suggestedSize)
+        work->Size = suggestedSize;
+    FUN_14003a108(document);
+}
+
+// MS2-FUNCTIONAL: parse channel and time-base metadata for a CRI Movie stream record.
+// @0x140032b70
+void FUN_140032b70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+{
+    struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
+    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    output[1] = FUN_14003a85c(document, 0, "num_channels");
+    CriUint32 timeUnit = FUN_14003a85c(document, 0, "time_unit");
+    ((CriUint64*)output)[1] = timeUnit;
+    output[4] = 0x400;
+    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
+    WorkSizeView* work = (WorkSizeView*)workInfo;
+    if (work->Size < suggestedSize)
+        work->Size = suggestedSize;
+    if (output[1] != 0 && ((CriUint64*)output)[1] != 0 && output[4] != 0)
+        output[0] = 1;
+    FUN_14003a108(document);
 }
 
 // MS2-FUNCTIONAL: release the player's output stream, decoder work area, and callback-owned buffers.
