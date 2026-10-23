@@ -156,6 +156,10 @@ public:
     // with the arguments in methodArgFmt and args (exe 0x142963fc0).
     bool Invoke(const char* methodName, Value* presult, unsigned numArgs);
     bool InvokeArgs(const char* methodName, Value* presult, const char* methodArgFmt, va_list args);
+    // AvmSpriteBase override: an onEnterFrame handler keeps the clip in the playlist (exe 0x142969000).
+    virtual bool MustBeInPlaylist() const;
+    // ch (a child at its depth) leaves the display list; false when it is not there (exe 0x14297cf70).
+    bool RemoveCharacter(DisplayObjectBase* ch);
 };
 
 inline Sprite* ObjectInterface::ToSprite()

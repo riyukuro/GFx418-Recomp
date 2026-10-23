@@ -130,6 +130,16 @@
 // MS2-RANGE: 0x1429659e0-0x142965a20 .text$mn
 // MS2-RANGE: 0x142962b30-0x142962bb0 .text$mn
 // MS2-RANGE: 0x142963fc0-0x142964020 .text$mn
+// MS2-RANGE: 0x142969000-0x142969040 .text$mn
+// MS2-RANGE: 0x14297cf70-0x14297d030 .text$mn
+// MS2-RANGE: 0x14296d120-0x14296d140 .text$mn
+// MS2-RANGE: 0x14296d310-0x14296d330 .text$mn
+// MS2-RANGE: 0x14296a990-0x14296a9f0 .text$mn
+// MS2-RANGE: 0x14296a9f0-0x14296aa90 .text$mn
+// MS2-RANGE: 0x1429654a0-0x142965510 .text$mn
+// MS2-RANGE: 0x14296f0d0-0x14296f1b0 .text$mn
+// MS2-RANGE: 0x14297d080-0x14297d0d0 .text$mn
+// MS2-RANGE: 0x142967c30-0x142967c90 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -310,7 +320,7 @@ __declspec(noinline) void ArrayObject::RemoveElements(int start, int count)
 }
 
 // @0x14297e330
-void ArrayObject::Resize(int size)
+__declspec(noinline) void ArrayObject::Resize(int size)
 {
     if (size < 0)
         size = 0;
@@ -1420,6 +1430,55 @@ bool AvmSprite::InvokeArgs(const char* methodName, Value* presult, const char* m
                             args);
 }
 
+// A sprite with an onEnterFrame handler has to stay in the playlist.
+// @0x142969000
+bool AvmSprite::MustBeInPlaylist() const
+{
+    return static_cast<const AvmCharacter*>(this)->HasEventHandler(EventId(EventId::Event_EnterFrame));
+}
+
+// The sprite child at ch's depth that is ch itself leaves the display list; false when it is not there.
+// @0x14297cf70
+bool AvmSprite::RemoveCharacter(DisplayObjectBase* ch)
+{
+    Sprite* psprite = GetSprite();
+    int     depth   = ch->Depth;
+    UPInt   size    = psprite->mDisplayList.GetCount();
+    UPInt   index   = psprite->mDisplayList.FindDisplayIndex(depth);
+    if (index >= size)
+        return false;
+    // Several entries can share the depth: look for ch among them.
+    DisplayObjectBase* pch = psprite->mDisplayList.GetDisplayObject(index);
+    while (pch && pch != ch && depth == pch->Depth && index + 1 < size)
+        pch = psprite->mDisplayList.GetDisplayObject(++index);
+    if (index >= size || pch != ch)
+        return false;
+    psprite->mDisplayList.RemoveEntryAtIndex(psprite, index);
+    return true;
+}
+
+// The script side of a button (only the unload hook here; sfr_as2_04 has the clone hooks).
+class AvmButton : public AvmCharacter
+{
+public:
+    virtual bool OnUnloading(bool mayRemove);
+};
+
+// Buttons and text fields unload at once, leaving the playlist.
+// @0x14296d120
+bool AvmButton::OnUnloading(bool)
+{
+    GetDispObj()->RemoveFromPlayList();
+    return true;
+}
+
+// @0x14296d310
+bool AvmTextField::OnUnloading(bool)
+{
+    GetDispObj()->RemoveFromPlayList();
+    return true;
+}
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {
@@ -1467,6 +1526,121 @@ void LogBase<AS2::FnCall>::LogScriptWarning(const char* pfmt, ...) const
             plog->LogMessageVarg(Log_ScriptWarning, pfmt, argList);
     }
     va_end(argList);
+}
+
+// The host side of AS2 values; only the members recovered in this unit.
+class AS2ValueObjectInterface : public Value::ObjectInterface
+{
+private:
+    virtual void ObjectAddRef(Value* val, void* pobj);
+    virtual void ObjectRelease(Value* val, void* pobj);
+    virtual bool IsDisplayObjectActive(void* pdata) const;
+    virtual bool PopBack(void* pdata, Value* pval);
+    virtual bool RemoveElements(void* pdata, unsigned idx, int count);
+};
+
+// The wide string storage of a VT_StringW value, from its characters.
+static inline MovieImpl::WideStringStorage* GetWideStringStorage(void* pdata)
+{
+    return reinterpret_cast<MovieImpl::WideStringStorage*>(
+        static_cast<UByte*>(pdata) - offsetof(MovieImpl::WideStringStorage, pData));
+}
+
+// The environment of _level0, through its AS2 character.
+static inline AS2::Environment* GetLevel0Environment(MovieImpl* pmovieImpl)
+{
+    AvmDisplayObjBase* pavm = pmovieImpl->pMainMovie->GetAvmObjImpl();
+    return static_cast<AS2::AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
+}
+
+// The host's reference to a string node, a wide string, an AS object or a character handle.
+// @0x14296a990
+void AS2ValueObjectInterface::ObjectAddRef(Value* val, void* pobj)
+{
+    switch (val->GetType())
+    {
+    case Value::VT_String:
+        static_cast<ASStringNode*>(pobj)->AddRef();
+        break;
+    case Value::VT_StringW:
+        GetWideStringStorage(pobj)->AddRef();
+        break;
+    case Value::VT_Object:
+    case Value::VT_Array:
+        static_cast<AS2::ObjectInterface*>(pobj)->ToASObject()->AddRef();
+        break;
+    case Value::VT_DisplayObject:
+        static_cast<CharacterHandle*>(pobj)->AddRef();
+        break;
+    default:;
+    }
+}
+
+// @0x14296a9f0
+void AS2ValueObjectInterface::ObjectRelease(Value* val, void* pobj)
+{
+    switch (val->GetType())
+    {
+    case Value::VT_String:
+        static_cast<ASStringNode*>(pobj)->Release();
+        break;
+    case Value::VT_StringW:
+        GetWideStringStorage(pobj)->Release();
+        break;
+    case Value::VT_Object:
+    case Value::VT_Array:
+        static_cast<AS2::ObjectInterface*>(pobj)->ToASObject()->Release();
+        break;
+    case Value::VT_DisplayObject:
+    {
+        CharacterHandle* phandle = static_cast<CharacterHandle*>(pobj);
+        if (--phandle->RefCount <= 0)
+            delete phandle;
+        break;
+    }
+    default:;
+    }
+}
+
+// @0x1429654a0
+bool AS2ValueObjectInterface::IsDisplayObjectActive(void* pdata) const
+{
+    return static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot) != 0;
+}
+
+// The last element of the array pdata goes to pval (when given) and off the array; false (pval undefined) when
+// the array is empty.
+// @0x14296f0d0
+bool AS2ValueObjectInterface::PopBack(void* pdata, Value* pval)
+{
+    AS2::MovieRoot*   proot = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
+    AS2::ArrayObject* parr  = static_cast<AS2::ArrayObject*>(static_cast<AS2::ObjectInterface*>(pdata));
+    AS2::Environment* penv  = GetLevel0Environment(proot->pMovieImpl);
+    int               size  = parr->GetSize();
+    if (size <= 0)
+    {
+        if (pval)
+            pval->SetUndefined();
+        return false;
+    }
+    if (pval)
+        proot->ASValue2GFxValue(penv, *parr->Elements[size - 1], pval);
+    parr->PopBack();
+    return true;
+}
+
+// count elements of the array pdata from idx on (to the end when negative) are removed; false past the end.
+// @0x14297d080
+bool AS2ValueObjectInterface::RemoveElements(void* pdata, unsigned idx, int count)
+{
+    AS2::ArrayObject* parr = static_cast<AS2::ArrayObject*>(static_cast<AS2::ObjectInterface*>(pdata));
+    unsigned          size = parr->GetSize();
+    if (idx >= size)
+        return false;
+    if (count < 0)
+        count = size - idx;
+    parr->RemoveElements(idx, Alg::Min(size - idx, (unsigned)count));
+    return true;
 }
 
 }} // namespace Scaleform::GFx

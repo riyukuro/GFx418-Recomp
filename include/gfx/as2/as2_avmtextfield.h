@@ -69,6 +69,8 @@ private:
 public:
     // (appended for sfr_as2_06) A click gives no focus to a read-only field that cannot be selected (exe 0x1429659e0).
     virtual bool IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const;
+    // Unloads at once, leaving the playlist (exe 0x14296d310).
+    virtual bool OnUnloading(bool mayRemove);
 };
 
 }}} // namespace Scaleform::GFx::AS2
