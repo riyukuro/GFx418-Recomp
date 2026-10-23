@@ -4233,6 +4233,37 @@ void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
     cx18_DispatchLangBarEvent(self, payload, command, argument);
 }
 
+// MS2-FUNCTIONAL: handles the executable's IME composition notification and input-window teardown message tuple.
+// @0x1423d1d10
+void FUN_1423d1d10(void* raw, long long message, long long compositionFlag, long long extra)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    if (message != 0x282 || compositionFlag != 0xe || extra != 0x12) return;
+    const unsigned state = *reinterpret_cast<unsigned*>(self + 0x98);
+    const short key = *reinterpret_cast<short*>(self + 0xd0);
+    if (key == 8 && (state == 4 || state == 0x40000)) {
+        auto* buffer = *reinterpret_cast<wchar_t**>(self + 0x40);
+        if (buffer) {
+            size_t length = wcslen(buffer);
+            if (length) buffer[length - 1] = 0;
+        }
+        FUN_1423ceb30(self);
+    } else if (state == 2) {
+        FUN_1423ceb30(self);
+    } else if (key == 0x20 && state == 4) {
+        void* movie = *reinterpret_cast<void**>(self + 0xa8);
+        void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
+        void* bridge = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
+        if (bridge) {
+            void* result = nullptr;
+            reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                    bridge, "RemoveInputWindow", &result, nullptr, 0);
+        }
+        if (auto* input = *reinterpret_cast<wchar_t**>(self + 0x40)) input[0] = 0;
+    }
+}
+
 // MS2-FUNCTIONAL: reuses the recovered candidate-window geometry bridge for the input-window reposition event.
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
