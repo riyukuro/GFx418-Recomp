@@ -28,7 +28,7 @@ Renderer2D::~Renderer2D()
 }
 
 // @0x142582210
-MeshCacheConfig* Renderer2D::GetMeshCacheConfig() const { return pImpl->GetMeshCacheConfig(); }
+bool Renderer2D::BeginFrame() { return pImpl->BeginFrame(); }
 
 // @0x1425821f0
 void Renderer2D::BeginDisplay(Color bg, const Viewport& vp) { pImpl->BeginDisplay(bg, vp); }

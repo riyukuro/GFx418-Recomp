@@ -20,6 +20,8 @@
 namespace Scaleform { namespace Render {
 
 class TreeCacheNode;
+// (appended for sfr_render_04p)
+class Renderer2DImpl;
 
 namespace ContextImpl {
 
@@ -108,6 +110,8 @@ protected:
     friend class Snapshot;
     friend class RTHandle;
     friend struct RTHandle::HandleData;
+    // (appended for sfr_render_04p) the renderer matches roots to a context
+    friend class Scaleform::Render::Renderer2DImpl;
 
     union {
         Entry*       pPrev;

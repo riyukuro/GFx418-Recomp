@@ -351,6 +351,8 @@ class MeshKeyManager : public RefCountBase<MeshKeyManager, StatRender_Mem>
 {
     friend class MeshKeySet;
     friend class MeshKeySetHandle;
+    // (appended for sfr_render_04p) UpdateComplexMeshes holds the key set lock
+    friend class Renderer2DImpl;
 public:
     MeshKeyManager(MemoryHeap* renderHeap) : pRenderHeap(renderHeap) {}
     ~MeshKeyManager() { DestroyAllKeys(); }

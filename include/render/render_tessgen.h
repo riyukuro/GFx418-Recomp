@@ -22,6 +22,12 @@ struct StrokeGenerator
     Stroker      mStroker;        // +0x50
     StrokeSorter mStrokeSorter;   // +0xa8
     VertexPath   mPath;           // +0x178
+
+    // (appended for sfr_render_04p: Renderer2DImpl's ctor) both heaps on the renderer's heap
+    StrokeGenerator(MemoryHeap* heap)
+        : Heap1(heap), Heap2(heap), mStroker(&Heap1), mStrokeSorter(&Heap2), mPath(&Heap1)
+    {
+    }
 };
 
 // (appended for sfr_render_07o) the renderer's shared tessellation scratch (Renderer2DImpl +0x58): four linear
@@ -390,6 +396,14 @@ struct MeshGenerator
     StrokeSorter mStrokeSorter;   // +0x660
     Hairliner    mHairliner;      // +0x730
     StrokerAA    mStrokerAA;      // +0x9d0
+
+    // (appended for sfr_render_04p: Renderer2DImpl's ctor) the tessellator works in the first two heaps, the
+    // strokers in the third, the stroke sorter in the fourth
+    MeshGenerator(MemoryHeap* heap)
+        : Heap1(heap), Heap2(heap), Heap3(heap), Heap4(heap), mTess(&Heap1, &Heap2), mStroker(&Heap3),
+          mStrokeSorter(&Heap4), mHairliner(&Heap3), mStrokerAA(&Heap3)
+    {
+    }
 
     // clears the tessellator and the strokers, then the heaps
     void Clear();        // 0x14262a890

@@ -183,6 +183,7 @@ class PrimitiveFillManager : public RefCountBase<PrimitiveFillManager, StatRende
 
 public:
     PrimitiveFillManager(HAL* hal) : pHAL(hal) {}
+    ~PrimitiveFillManager() {}
 
     PrimitiveFill* CreateFill(const PrimitiveFillData& data);
     // the shared fill for fillData (0x14266d170); a gradient fill reports its image through gradientImage

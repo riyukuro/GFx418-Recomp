@@ -461,6 +461,26 @@ public:
 
     const TreeRoot::NodeData* GetNodeData() const { return ((TreeRoot*)pNode)->GetDisplayData(); }
 
+    // (appended for sfr_render_04p) built by Renderer2DImpl::Draw (vftable 0x14318fb70); the HAL goes in the
+    // container's +0x98 slot
+    TreeCacheRoot(Renderer2DImpl* renderer2D, HAL* hal, unsigned flags, TreeNode* node)
+        : TreeCacheContainer(node, renderer2D, flags), pUpdateList(0), DepthUpdatesChained(false),
+          DepthUpdates(Memory::GetHeapByAddress(getThis()), 0)
+    {
+        Reserved98 = (UPInt)hal;
+        pRoot      = this;
+        CachedChildPattern.Clear(Range_Empty);
+    }
+    ~TreeCacheRoot()
+    {
+        if (pPrev)
+        {
+            RemoveNode();
+            pPrev = pNext = 0;
+        }
+    }
+    void* getThis() { return this; }
+
     void AddToUpdate(TreeCacheNode* node, unsigned flags)
     {
         if (!(node->UpdateFlags & Update_InList))

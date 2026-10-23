@@ -1,8 +1,6 @@
-// Recovered Scaleform 4.1.18 Render: Renderer2D, the public front end of the 2D renderer (Renderer2D), and the
-// outline of Renderer2DImpl it forwards to. Renderer2DImpl's members (mesh/stroke generators, fill manager, matrix
-// pool, glyph cache, ...) are recovered with its own TU (Renderer2DImpl, unit sfr_render_04); until then the class
-// carries its exact base classes and size (0xe60, the allocation in Renderer2D::Renderer2D) and the members the
-// front end calls.
+// Recovered Scaleform 4.1.18 Render: Renderer2D, the public front end of the 2D renderer (Renderer2D), and
+// Renderer2DImpl it forwards to, with its full member layout (size 0xe60, the allocation in Renderer2D::Renderer2D);
+// Renderer2DImpl's own members are recovered in unit sfr_render_04p.
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 #ifndef MS2_SF_RENDER_RENDERER2D_H
 #define MS2_SF_RENDER_RENDERER2D_H
@@ -14,6 +12,12 @@
 #include "ms2/scaleform/include/render/render_stats.h"
 #include "ms2/scaleform/include/render/render_meshkey.h"
 #include "ms2/scaleform/include/render/render_textlayertype.h"
+// (appended for sfr_render_04p: Renderer2DImpl's members)
+#include "ms2/scaleform/include/render/render_tessgen.h"
+#include "ms2/scaleform/include/render/render_primitive.h"
+#include "ms2/scaleform/include/render/render_matrixpool.h"
+#include "ms2/scaleform/include/render/render_toleranceparams.h"
+#include "ms2/scaleform/include/render/render_viewport.h"
 
 namespace Scaleform { namespace Render {
 
@@ -188,16 +192,21 @@ public:
 
 class Renderer2DImpl : public NewOverrideBase<StatRender_Mem>, public Context::RenderNotify, public HALNotify
 {
-    Ptr<HAL>        pHal;                                       // +0x50
-    // MeshGen, StrokeGen, Tolerances, FillManager, MPool, pMeshKeyManager: recovered with sfr_render_04
-    UByte           Unk_Members[0xcd8 - 0x58];
-    // (split for the shape cache nodes, sfr_render_03f: only their offsets are known so far)
-    UByte           Unk_Tolerances[0xd18 - 0xcd8];              // ToleranceParams +0xcd8
-    UByte           Unk_FillManager[0xdc8 - 0xd18];             // PrimitiveFillManager +0xd18
-    MeshKeyManager* pMeshKeyManager;                            // +0xdc8
-    Ptr<GlyphCache> pGlyphCache;                                // +0xdd0
-    // mGlyphCacheParam, the complex mesh update list, VP, RenderRoots
-    UByte           Unk_Members2[0xe60 - 0xdd8];
+    // (filled in for sfr_render_04p, Renderer2DImpl) the members the ctor at 0x14263e0f0 builds
+    friend class ComplexMesh;
+
+    Ptr<HAL>                      pHal;                     // +0x50
+    MeshGenerator                 MeshGen;                  // +0x58
+    StrokeGenerator               StrokeGen;                // +0xb00
+    ToleranceParams               Tolerances;               // +0xcd8
+    PrimitiveFillManager          FillManager;              // +0xd18
+    MatrixPoolImpl::MatrixPool    MPool;                    // +0xd40
+    Ptr<MeshKeyManager>           pMeshKeyManager;          // +0xdc8
+    Ptr<GlyphCache>               pGlyphCache;              // +0xdd0
+    GlyphCacheParams              mGlyphCacheParam;         // +0xdd8
+    List<ComplexMesh::UpdateNode> mComplexMeshUpdateList;   // +0xe10
+
+    void* getThis() { return this; }
 
 public:
     Renderer2DImpl(HAL* hal);
@@ -205,27 +214,36 @@ public:
 
     HAL*        GetHAL() const        { return pHal; }
     // (appended for sfr_render_03f)
-    const ToleranceParams& GetToleranceParams() const { return *(const ToleranceParams*)Unk_Tolerances; }
-    PrimitiveFillManager&  GetPrimitiveFillManager()  { return *(PrimitiveFillManager*)Unk_FillManager; }
+    const ToleranceParams& GetToleranceParams() const { return Tolerances; }
+    PrimitiveFillManager&  GetPrimitiveFillManager()  { return FillManager; }
     MeshKeyManager*        GetMeshKeyManager() const  { return pMeshKeyManager; }
-    // (appended for sfr_render_04h) the matrix pool, +0xd40 inside the region above
-    MatrixPoolImpl::MatrixPool& GetMatrixPool() { return *(MatrixPoolImpl::MatrixPool*)(Unk_FillManager + (0xd40 - 0xd18)); }
+    // (appended for sfr_render_04h)
+    MatrixPoolImpl::MatrixPool& GetMatrixPool() { return MPool; }
     GlyphCache* GetGlyphCache() const { return pGlyphCache; }
-    // (appended for sfr_render_07o) the mesh generator at the start of the members (+0x58)
-    MeshGenerator* GetMeshGen() { return (MeshGenerator*)Unk_Members; }
+    // (appended for sfr_render_07o)
+    MeshGenerator* GetMeshGen() { return &MeshGen; }
+    // (appended for sfr_render_04p)
+    StrokeGenerator* GetStrokeGen() { return &StrokeGen; }
+    void SetToleranceParams(const ToleranceParams& params) { Tolerances = params; }
 
     MeshCacheConfig* GetMeshCacheConfig() const;
+    void SetGlyphCacheParam(const GlyphCacheParams& param);
 
     bool BeginFrame();
     void EndFrame();
     void BeginDisplay(Color backgroundColor, const Viewport& viewport);
     void EndDisplay();
     void Draw(TreeRoot* root);
+    // refreshes image fills of every root (or only those of context)
+    void ForceUpdateImages(Context* context = 0);
 
 protected:
+    Viewport            VP;            // +0xe20, the viewport of the open display
+    List<TreeCacheNode> RenderRoots;   // +0xe50
+
     // (appended for sfr_render_04f) complex meshes with image fills, refreshed when textures change
-    friend class ComplexMesh;
     void AddComplexMeshToUpdateList(ComplexMesh::UpdateNode& node);   // 0x14263edc0
+    void UpdateComplexMeshes();
 
     virtual void EntryDestroy(Context::Entry*);
     virtual void EntryFlush(Context::Entry*);
