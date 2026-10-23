@@ -475,6 +475,152 @@ void SnapRectToPixels(RectF& rect)
     rect.y2 = ceilf(rect.y2 + 10.0f);
 }
 
+// the pixel area a filter on this node renders into: its view bounds kept inside the cull rectangle (grown by the
+// filter's reach, at most 32 pixels), returned as a matrix over the unit square; false when nothing is left.
+// bounds gets the local bounds in 2D only.
+// MS2-FUNCTIONAL: same code, the exe keeps cullRect and the node data in other saved registers
+// @0x142683f80
+bool TreeCacheNode::calcFilterBounds(RectF* bounds, Matrix2F* boundAreaMatrix, const Matrix3F& viewMatrix,
+                                     const Matrix4F& viewProj, RectF* cullRect)
+{
+    const TreeNode::NodeData* data = GetNodeData();
+    if (!pRoot)
+        return false;
+
+    bool           has3d  = data->Is3D();
+    TreeCacheNode* parent = this;
+    while (parent && !has3d)
+    {
+        has3d |= parent->GetNodeData()->Is3D();
+        parent = parent->GetParent();
+    }
+
+    RectF cullRectTemp, viewClipRect;
+    if (!has3d)
+    {
+        Matrix2F view2D;
+        memcpy(view2D.M, viewMatrix.M, sizeof(view2D.M));   // its top two rows
+        *bounds = data->AproxLocalBounds;
+        view2D.EncloseTransform(&viewClipRect, *bounds);
+    }
+    else
+        viewClipRect = TransformBounds3D(viewProj, pRoot->GetNodeData()->VP, viewMatrix, data->AproxLocalBounds);
+
+    // no cull rectangle given: the visible view
+    const Viewport& vp = pRoot->GetNodeData()->VP;
+    {
+        Rect<int> visible;
+        if (vp.GetClippedRect(&visible, true))
+            cullRectTemp.SetRect((float)(visible.x1 - vp.Left), (float)(visible.y1 - vp.Top),
+                                 (float)(visible.x2 - vp.Left), (float)(visible.y2 - vp.Top));
+    }
+    if (!cullRect)
+        cullRect = &cullRectTemp;
+    RectF orientCullRect = *cullRect;
+    switch (vp.Flags & Viewport::View_Orientation_Mask)
+    {
+    case Viewport::View_Orientation_L90:
+    case Viewport::View_Orientation_R90:
+        orientCullRect.SetRect(cullRectTemp.y1, cullRectTemp.x1, cullRectTemp.y2, cullRectTemp.x2);
+        break;
+    }
+
+    RectF expandedCullRect = orientCullRect;
+    data->expandByFilterBounds(&expandedCullRect, false);
+    RectF limitRect = orientCullRect;
+    limitRect.Expand(32.0f, 32.0f);
+    expandedCullRect.IntersectRect(&expandedCullRect, limitRect);
+
+    RectF area(RectF::NoInit);
+    if (!expandedCullRect.IntersectRect(&area, viewClipRect))
+        return false;
+    float x1 = floorf(area.x1), y1 = floorf(area.y1);
+    float x2 = ceilf(area.x2), y2 = ceilf(area.y2);
+    boundAreaMatrix->SetMatrix(x2 - x1, 0, x1, 0, y2 - y1, y1);
+    return true;
+}
+
+// view pixel area outside the mask above which it clips instead of being drawn with its content, by the previous
+// state (a lower bar to stay clipped, a higher one to stay combined)
+static const float MaskClipAreasThresholds[] = { 23500.0f, 23500.0f, 17000.0f, 30000.0f };
+
+// how the mask of this node applies: culled when it misses the content, else clipped to their overlap (a large
+// uncovered area, no filter above) or combined over their union. bounds gets the mask bounds, boundAreaMatrix the
+// area to clear as a matrix over the unit square.
+// MS2-FUNCTIONAL: same code, the exe allocates the bounds registers and stack slots differently
+// @0x142684500
+MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundAreaMatrix, const Matrix3F& viewMatrix,
+                                              const Matrix4F& viewProj, MaskEffectState oldState, unsigned flags)
+{
+    const TreeNode::NodeData* data     = GetNodeData();
+    const TreeNode::NodeData* maskData = GetMask()->GetNodeData();
+    if (!maskData->IsVisible() || !pRoot)
+        return MES_NoMask;
+
+    bool           has3d  = maskData->Is3D();
+    TreeCacheNode* parent = this;
+    while (parent && !has3d)
+    {
+        has3d |= parent->GetNodeData()->Is3D();
+        parent = parent->GetParent();
+    }
+
+    if (!has3d)
+    {
+        Matrix2F view2D;
+        memcpy(view2D.M, viewMatrix.M, sizeof(view2D.M));   // its top two rows
+
+        // the mask in our space
+        Matrix2F m(maskData->M2D());
+        *bounds = EnclosedBounds(m, maskData->AproxLocalBounds);
+
+        RectF intersect, boundsUnion;
+        if (!bounds->IntersectRect(&intersect, data->AproxLocalBounds))
+            return MES_Culled;
+        bounds->UnionRect(&boundsUnion, data->AproxLocalBounds);
+        SnapRectToPixels(boundsUnion);
+
+        RectF viewUnionBounds = EnclosedBounds(view2D, boundsUnion);
+        float fraction        = (intersect.Width() * intersect.Height()) / (boundsUnion.Width() * boundsUnion.Height());
+        float viewArea        = viewUnionBounds.Width() * viewUnionBounds.Height();
+        float uncoveredArea   = viewArea * (1.0f - fraction);
+
+        if (uncoveredArea > MaskClipAreasThresholds[oldState] && (flags & TF_ParentFilter) == 0)
+        {
+            // the overlap in view pixels (the matrix keeps no rotation, so a unit square clears it exactly)
+            RectF viewClipRect;
+            viewMatrix.EncloseTransform(&viewClipRect, intersect);
+            SnapRectToPixels(viewClipRect);
+            boundAreaMatrix->SetMatrix(viewClipRect.Width(), 0, viewClipRect.x1, 0, viewClipRect.Height(),
+                                       viewClipRect.y1);
+            return MES_Clipped;
+        }
+
+        // the whole union, cleared in local space
+        boundAreaMatrix->SetMatrix(boundsUnion.Width(), 0, boundsUnion.x1, 0, boundsUnion.Height(), boundsUnion.y1);
+        boundAreaMatrix->Append(view2D);
+        return MES_Combinable;
+    }
+
+    // 3D: both in viewport pixels, the view and projection from the root
+    Matrix4F maskViewProj;
+    Matrix3F maskView;
+    GetMask()->CalcViewMatrix(&maskView, &maskViewProj);
+    const Viewport& vp            = pRoot->GetNodeData()->VP;
+    *bounds                       = TransformBounds3D(maskViewProj, vp, maskView, maskData->AproxLocalBounds);
+    RectF           contentBounds = TransformBounds3D(viewProj, vp, viewMatrix, data->AproxLocalBounds);
+
+    RectF intersect;
+    if (!bounds->IntersectRect(&intersect, contentBounds))
+        return MES_Culled;
+    *bounds = bounds->Union(contentBounds);
+
+    RectF viewClipRect = *bounds;
+    SnapRectToPixels(viewClipRect);
+    boundAreaMatrix->SetMatrix(viewClipRect.Width(), 0, viewClipRect.x1, 0, viewClipRect.Height(), viewClipRect.y1);
+    return MES_Combinable;
+}
+
 // ***** The child bounds a pattern merge must not overlap
 
 // a stack array of 32 items that moves to the heap when it outgrows them (temporary storage only)
