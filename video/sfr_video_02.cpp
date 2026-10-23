@@ -33,6 +33,8 @@ extern void FUN_14296bba0();
 extern void FUN_1400105b0(void*);
 extern void FUN_14257db50(void*);
 extern void FUN_14257db40(void*);
+extern void FUN_142625ee0(const void*);
+extern void FUN_142626070(void*, const void*);
 extern void* DAT_1431b6060;
 extern void* DAT_1431b63f8;
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
@@ -1433,4 +1435,54 @@ void FUN_140010490(void* object)
     FUN_14257db40(object);
 }
 
-// MS2-PIN: ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x140010ed0
+// MS2-FUNCTIONAL: copies both StateData words and retains the referenced bag when nonempty.
+// @0x140010d70
+void FUN_140010d70(void* destination, const void* source)
+{
+    *static_cast<unsigned __int64*>(destination) = *static_cast<const unsigned __int64*>(source);
+    *reinterpret_cast<unsigned __int64*>(static_cast<char*>(destination) + 8) =
+        *reinterpret_cast<const unsigned __int64*>(static_cast<const char*>(source) + 8);
+    if (*static_cast<const unsigned __int64*>(source)) FUN_142625ee0(destination);
+}
+
+// MS2-FUNCTIONAL: assigns the bag only when either side contains state data.
+// @0x140010da0
+void FUN_140010da0(void* destination, const void* source)
+{
+    if (*static_cast<const unsigned __int64*>(source) || *static_cast<const unsigned __int64*>(destination))
+        FUN_142626070(destination, source);
+}
+
+// MS2-FUNCTIONAL: adds a reference through the owned object's interface vtable.
+// @0x140010de0
+void* FUN_140010de0(void** destination, void* const* source)
+{
+    void* value = *source;
+    if (value)
+    {
+        void** iface = *reinterpret_cast<void***>(static_cast<char*>(value) + 0x10);
+        reinterpret_cast<void (*)(void*)>(iface[1])(static_cast<char*>(value) + 0x10);
+    }
+    *destination = value;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: retains the replacement, releases the old value, then stores the replacement.
+// @0x140010e60
+void* FUN_140010e60(void** destination, void* const* source)
+{
+    void* value = *source;
+    if (value)
+    {
+        void** iface = *reinterpret_cast<void***>(static_cast<char*>(value) + 0x10);
+        reinterpret_cast<void (*)(void*)>(iface[1])(static_cast<char*>(value) + 0x10);
+    }
+    void* old = *destination;
+    if (old)
+    {
+        void** iface = *reinterpret_cast<void***>(static_cast<char*>(old) + 0x10);
+        reinterpret_cast<void (*)(void*)>(iface[2])(static_cast<char*>(old) + 0x10);
+    }
+    *destination = value;
+    return destination;
+}
