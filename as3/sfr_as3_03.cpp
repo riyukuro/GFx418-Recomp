@@ -2337,6 +2337,32 @@ namespace Instances { namespace fl
 }}
 }}}
 
+// Visits every value of a value array for owner (0x142503660).
+void FUN_142503660(Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>* prcc,
+                   const Scaleform::GFx::AS3::ValueArrayDH& a, Scaleform::GFx::AS3::ASRefCountBaseType::GcOp op,
+                   const Scaleform::GFx::AS3::ASRefCountBaseType& owner);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+    // @0x14240c050
+    void SparseArray::ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, ASRefCountBaseType::GcOp op,
+                                      const ASRefCountBaseType& owner) const
+    {
+        FUN_142503660(prcc, ValueA, op, owner);
+        for (HashDH<UPInt, Value>::ConstIterator it = ValueH.Begin(); !it.IsEnd(); ++it)
+            AS3::ForEachChild_GC(prcc, it->Second, op, owner);
+    }
+
+namespace Instances { namespace fl
+{
+    // @0x14240bc90
+    void Array::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Instance::ForEachChild_GC(prcc, op);
+        SA.ForEachChild_GC(prcc, op, *this);
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0

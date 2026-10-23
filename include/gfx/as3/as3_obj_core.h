@@ -89,6 +89,10 @@ public:
     void Reverse();                                 // 0x142420800
     void Pop() { if (GetSize()) RemoveMultipleAt(GetSize() - 1, 1); }
 
+    // (appended, sfr19) visits the dense and the hashed values for owner. 0x14240c050
+    void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, ASRefCountBaseType::GcOp op,
+                         const ASRefCountBaseType& owner) const;
+
 private:
     UPInt GetLeftEqualInd(UPInt start_from) const;
     UPInt GetRightEqualInd(UPInt start_from, UPInt end_ind) const;
