@@ -57,6 +57,16 @@ MS2_EXTERN(0x1423dfa20, void(), ReleaseAS3GcObject);
 MS2_EXTERN(0x14257dc30, void(void*), FUN_14257dc30);
 MS2_EXTERN(0x14257dcd0, void(void*), FUN_14257dcd0);
 MS2_EXTERN(0x14257dcb0, void(void*), FUN_14257dcb0);
+MS2_EXTERN(0x142518c70, bool(void*, void*), FUN_142518c70);
+MS2_EXTERN(0x142526340, void(void*, std::uint64_t), FUN_142526340);
+MS2_EXTERN(0x142519200, void(), FUN_142519200);
+MS2_EXTERN(0x142506e10, const char*(void*, void*), FUN_142506e10);
+MS2_EXTERN(0x142519d50, void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t), FUN_142519d50);
+MS2_EXTERN(0x1424ddc20, void(void*), FUN_1424ddc20);
+MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
+MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
+MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
+MS2_GLOBAL(0x14317bf80, void*, AvmInteractiveVtable);
 MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
 MS2_EXTERN(0x1424eb610, void*(void*), FUN_1424eb610);
 MS2_EXTERN(0x140010b80, void(void*, void*), FUN_140010b80);
@@ -923,5 +933,69 @@ std::uint64_t* FUN_14001be10(std::uint64_t* holder, void* replacement)
 std::uint64_t* FUN_14001be50(std::uint64_t* holder, std::uint64_t replacement)
 {
     if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
+}
+
+// MS2-FUNCTIONAL: forwards event dispatch to the common AS3 interactive object handler.
+// @0x14001b040
+bool thunk_FUN_142518c70(void* object, void* event) { return FUN_142518c70(object, event); }
+// MS2-FUNCTIONAL: normalizes a tagged atom and dispatches it through the recovered AS3 helper.
+// @0x14001b050
+void thunk_FUN_142519080(void* value)
+{
+    auto atom = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(value) + 0x10);
+    if (!atom) atom = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(value) + 8);
+    if (atom & 1) --atom;
+    FUN_142526340(value, atom);
+}
+// MS2-FUNCTIONAL: forwards to the shared AS3 movie callback.
+// @0x14001b060
+void thunk_FUN_142519200() { FUN_142519200(); }
+// MS2-FUNCTIONAL: forwards absolute path formatting to the AS3 display object helper.
+// @0x14001b0a0
+const char* thunk_FUN_142506e10(void* object, void* path) { return FUN_142506e10(object, path); }
+// MS2-FUNCTIONAL: forwards focus changes to the shared AS3 interactive object handler.
+// @0x14001b0e0
+void FUN_14001b0e0(void* object, std::uint32_t event, void* target, std::uint32_t controller, std::uint32_t moved)
+{
+    FUN_142519d50(object, event, target, controller, moved);
+}
+// MS2-FUNCTIONAL: restores the executable's AvmInteractiveObj vtable and destroys the base object.
+// @0x14001b3a0
+void* FUN_14001b3a0(void* object)
+{
+    *reinterpret_cast<void***>(static_cast<unsigned char*>(object) + 0x40) = &AvmInteractiveVtable;
+    FUN_1424ddc20(object);
+    return object;
+}
+// MS2-FUNCTIONAL: replaces the pointer only after releasing the previously stored value.
+// @0x14001bac0
+std::uint64_t* FUN_14001bac0(std::uint64_t* holder, std::uint64_t replacement)
+{
+    if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
+    *holder = replacement; return holder;
+}
+// MS2-FUNCTIONAL: releases the retained pointer stored in the holder.
+// @0x14001bb40
+void FUN_14001bb40(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
+// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+// @0x14001bb80
+void FUN_14001bb80(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+// MS2-FUNCTIONAL: releases the Scaleform resource stored in the holder.
+// @0x14001bd20
+void FUN_14001bd20(void** holder) { if (*holder) FUN_1425a4030(*holder); }
+// MS2-FUNCTIONAL: requests the global Scaleform log when no video log is installed.
+// @0x14001bf90
+void FUN_14001bf90(void* object)
+{
+    if (!*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20)) FUN_14257e080();
+}
+// MS2-FUNCTIONAL: adds the resource identifier to the movie load task while no failure is present.
+// @0x14001bfd0
+void FUN_14001bfd0(void* object, const std::uint32_t* id)
+{
+    if (*reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(object) + 0x3b8) == 0) {
+        std::uint32_t value = *id;
+        FUN_1425cd370(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x38), &value);
+    }
 }
 } // namespace
