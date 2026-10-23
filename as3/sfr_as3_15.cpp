@@ -29,6 +29,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "ms2/scaleform/include/gfx/gfx_input.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -134,6 +135,11 @@ public:
 };
 }}
 Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);   // MovieImpl::GetModalClip
+// MovieImpl's focus-key processing (moveFocus/findFocus): pinfo is a ProcessFocusKeyInfo (MS2_FocusKeyInfo).
+void FUN_142570d80(Scaleform::GFx::MovieImpl* pmovie, void* pinfo, const void* pkeyEntry, bool inclFocusEnabled,
+                   void* pfocusGroup);                                                  // MovieImpl::InitFocusKeyInfo
+void FUN_142572050(Scaleform::GFx::MovieImpl* pmovie, int eventType, const void* pkeyEntry, void* pinfo); // ProcessFocusKey
+void FUN_14256eae0(Scaleform::GFx::MovieImpl* pmovie, void* pinfo);                     // FinalizeProcessFocusKey
 // The exe keeps one out-of-line copy of storing a raw pointer into a namespace slot (0x1424e0710).
 namespace Scaleform { namespace GFx { namespace AS3 {
 template <> SPtr<GASRefCountBase>& SPtr<GASRefCountBase>::SetPtr(GASRefCountBase* p);
@@ -827,6 +833,225 @@ namespace Classes { namespace fl_gfx
         Ptr<GFx::InteractiveObject> focused = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
         if (focused != newfocus)
             asvm.GetMovieImpl()->SetKeyboardFocusTo(newfocus, controllerIdx, GFx_FocusMovedByAS);
+    }
+
+    // The focus-key state MovieImpl threads through InitFocusKeyInfo/ProcessFocusKey/FinalizeProcessFocusKey
+    // (0x40 bytes on the stack; only what moveFocus touches is named).
+    struct MS2_FocusKeyInfo
+    {
+        void*                       pFocusGroup;        // +0x00
+        Ptr<GFx::InteractiveObject> CurFocused;         // +0x08
+        int                         CurFocusIdx;        // +0x10
+        UByte                       Unrecovered14[0x0c];
+        UInt64                      Unrecovered20[3];   // +0x20
+        UInt32                      Unrecovered38;      // +0x38 (its byte +0x3a is ManualFocus)
+        bool                        Unrecovered3c;      // +0x3c
+
+        MS2_FocusKeyInfo() : pFocusGroup(NULL), CurFocusIdx(-1), Unrecovered38(0), Unrecovered3c(false)
+        {
+            Unrecovered20[0] = Unrecovered20[1] = Unrecovered20[2] = 0;
+        }
+        bool& ManualFocus() { return reinterpret_cast<bool*>(&Unrecovered38)[2]; }
+    };
+
+    // Moves the focus as the key named keyToSimulate would ("up", "down", "left", "right", "tab", "shifttab"),
+    // starting from startFromMovie or the controller's focused object; result is the object focused then.
+    // MS2-FUNCTIONAL: the focus-key info is built through a local struct; the exe dereferences a null focus result
+    // @0x1424cb2c0
+    void FocusManager::moveFocus(SPtr<Instances::fl_display::InteractiveObject>& result, const ASString& keyToSimulate,
+                                 Instances::fl_display::InteractiveObject* startFromMovie, bool includeFocusEnabledChars,
+                                 UInt32 controllerIdx)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        if (!asvm.ExtensionsEnabled)
+            return;
+        MovieImpl* proot = asvm.GetMovieImpl();
+        Ptr<GFx::InteractiveObject> startCh;
+        if (startFromMovie)
+            startCh = static_cast<GFx::InteractiveObject*>(startFromMovie->pDispObj.GetPtr());
+        else
+            startCh = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+
+        const char* keystr = keyToSimulate.ToCStr();
+        UInt32 keycode;
+        bool shift = false;
+        if (!strcmp(keystr, "up"))
+            keycode = Key::Up;
+        else if (!strcmp(keystr, "down"))
+            keycode = Key::Down;
+        else if (!strcmp(keystr, "left"))
+            keycode = Key::Left;
+        else if (!strcmp(keystr, "right"))
+            keycode = Key::Right;
+        else if (!strcmp(keystr, "tab"))
+            keycode = Key::Tab;
+        else if (!strcmp(keystr, "shifttab"))
+        {
+            keycode = Key::Tab;
+            shift = true;
+        }
+        else
+        {
+            if (asvm.GetLog())
+                asvm.GetLog()->LogWarning("moveFocus - invalid string id for key: '%s'", keyToSimulate.ToCStr());
+            return;
+        }
+
+        InputEventsQueueEntry::KeyEntry ke;
+        ke.Code = keycode;
+        ke.KeysState = shift ? 1 : 0;
+        ke.KeyboardIndex = (UInt8)controllerIdx;
+        MS2_FocusKeyInfo info;
+        FUN_142570d80(proot, &info, &ke, includeFocusEnabledChars, NULL);
+        info.CurFocused = startCh;
+        info.ManualFocus() = true;
+        FUN_142572050(proot, 5, &ke, &info);
+        FUN_14256eae0(proot, &info);
+        if (info.CurFocused)
+            result = static_cast<Instances::fl_display::InteractiveObject*>(
+                ToAvmInteractiveObj15(info.CurFocused)->GetAS3Obj());
+        else
+            result = NULL;
+    }
+
+    // The focus group findFocus hands InitFocusKeyInfo (MovieImpl::FocusGroupDescr; the movie's own is unmodeled).
+    struct MS2_FindFocusGroup
+    {
+        void*                                     pFocusRectNode;   // +0x00 (never set here)
+        ArrayDH<Ptr<GFx::InteractiveObject> >     TabableArray;     // +0x08
+        WeakPtr<GFx::InteractiveObject>           LastFocused;      // +0x28
+        Ptr<CharacterHandle>                      ModalClip;        // +0x30
+        UInt32                                    LastFocusKeyCode; // +0x38
+        UInt64                                    LastFocusedRect[2]; // +0x40
+        UInt16                                    FocusRectShown;   // +0x50
+
+        MS2_FindFocusGroup(MemoryHeap* pheap) : pFocusRectNode(NULL), TabableArray(pheap), LastFocusKeyCode(0),
+                                                FocusRectShown(0)
+        {
+            LastFocusedRect[0] = LastFocusedRect[1] = 0;
+        }
+    };
+
+    // Finds the object the key named keyToSimulate would move the focus to, without moving it, within
+    // parentMovie (or the modal clip); with loop, wraps around to the tabable object furthest the other way.
+    // MS2-FUNCTIONAL: the focus group and key info are local structs; the group's focus rect node is not released
+    // @0x1424c9f20
+    void FocusManager::findFocus(SPtr<Instances::fl_display::InteractiveObject>& result, const ASString& keyToSimulate,
+                                 Instances::fl_display::DisplayObjectContainer* parentMovie, bool loop,
+                                 Instances::fl_display::InteractiveObject* startFromMovie,
+                                 bool includeFocusEnabledChars, UInt32 controllerIdx)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        if (!asvm.ExtensionsEnabled)
+            return;
+        MovieImpl* proot = asvm.GetMovieImpl();
+        Ptr<GFx::InteractiveObject> startCh;
+        if (startFromMovie)
+            startCh = static_cast<GFx::InteractiveObject*>(startFromMovie->pDispObj.GetPtr());
+        else
+            startCh = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+
+        const char* keystr = keyToSimulate.ToCStr();
+        UInt32 keycode;
+        bool shift = false;
+        if (!strcmp(keystr, "up"))
+            keycode = Key::Up;
+        else if (!strcmp(keystr, "down"))
+            keycode = Key::Down;
+        else if (!strcmp(keystr, "left"))
+            keycode = Key::Left;
+        else if (!strcmp(keystr, "right"))
+            keycode = Key::Right;
+        else if (!strcmp(keystr, "tab"))
+            keycode = Key::Tab;
+        else if (!strcmp(keystr, "shifttab"))
+        {
+            keycode = Key::Tab;
+            shift = true;
+        }
+        else
+            return;
+
+        Ptr<GFx::DisplayObject> modal;
+        if (parentMovie)
+            modal = parentMovie->pDispObj.GetPtr();
+        else
+            modal = reinterpret_cast<GFx::DisplayObject*>(FUN_14256f820(proot, controllerIdx));
+
+        InputEventsQueueEntry::KeyEntry ke;
+        ke.Code = keycode;
+        ke.KeysState = shift ? 1 : 0;
+        ke.KeyboardIndex = (UInt8)controllerIdx;
+        MS2_FocusKeyInfo info;
+        MS2_FindFocusGroup group(asvm.GetMovieImpl()->GetMovieHeap());
+        if (modal)
+            group.ModalClip = modal->GetCharacterHandle();
+        group.LastFocused = startCh;
+        FUN_142570d80(proot, &info, &ke, includeFocusEnabledChars, &group);
+        info.ManualFocus() = true;
+        FUN_142572050(proot, 5, &ke, &info);
+
+        if (info.CurFocused && info.CurFocused != startCh)
+            result = static_cast<Instances::fl_display::InteractiveObject*>(
+                ToAvmInteractiveObj15(info.CurFocused)->GetAS3Obj());
+        else if (loop && group.TabableArray.GetSize() > 0)
+        {
+            UPInt n = group.TabableArray.GetSize();
+            if (keycode == Key::Tab)
+            {
+                GFx::InteractiveObject* pch = shift ? group.TabableArray[n - 1].GetPtr() : group.TabableArray[0].GetPtr();
+                result = static_cast<Instances::fl_display::InteractiveObject*>(ToAvmInteractiveObj15(pch)->GetAS3Obj());
+                return;
+            }
+            const UByte* pinfo = reinterpret_cast<const UByte*>(&info);
+            const float sentinel = 1.17549435e-38f;
+            float best = sentinel;
+            UPInt bestIdx = 0;
+            for (UPInt i = 0; i < n; ++i)
+            {
+                Ptr<GFx::InteractiveObject> ch = group.TabableArray[i];
+                if (!pinfo[0x3b] && !ch->IsTabable())
+                    continue;
+                if (!ch->IsFocusAllowed(proot, pinfo[0x38]))
+                    continue;
+                Render::Matrix2F m;
+                ch->GetLevelMatrix(&m);
+                RectF r;
+                m.EncloseTransform(&r, ch->GetFocusRect());
+                float v;
+                bool better;
+                switch (keycode)
+                {
+                case Key::Left:
+                    v = r.x2;
+                    better = best == sentinel || v > best;
+                    break;
+                case Key::Up:
+                    v = r.y2;
+                    better = best == sentinel || v > best;
+                    break;
+                case Key::Right:
+                    v = r.x1;
+                    better = best == sentinel || best > v;
+                    break;
+                case Key::Down:
+                    v = r.y1;
+                    better = best == sentinel || best > v;
+                    break;
+                default:
+                    continue;
+                }
+                if (better)
+                {
+                    bestIdx = i;
+                    best = v;
+                }
+            }
+            result = static_cast<Instances::fl_display::InteractiveObject*>(
+                ToAvmInteractiveObj15(group.TabableArray[bestIdx])->GetAS3Obj());
+        }
+        else
+            result = NULL;
     }
     // @0x1424cc860
     void Extensions::visibleRectGet(SPtr<Instances::fl_geom::Rectangle>& result)
