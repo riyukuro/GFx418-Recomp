@@ -4798,6 +4798,89 @@ void FUN_140033810(void* player)
     }
 }
 
+// MS2-FUNCTIONAL: consume USF metadata records and retain the seek, cue, and VFS table records.
+// @0x140033030
+CriBool FUN_140033030(void* player)
+{
+    CriMvPlyObj* movie = (CriMvPlyObj*)player;
+    void* queue = NULL;
+    memcpy(&queue, (CriUint8*)player + 0xd80, sizeof(queue));
+    CriBool foundEnd = 0;
+    CriMovieInputChunk chunk = {};
+    for (;;)
+    {
+        if (FUN_1400467b8(queue, 1) == 0)
+            return foundEnd;
+        chunk = {};
+        FUN_1400467a0(queue, 1, -1, &chunk);
+        if (chunk.Size < 0x20)
+        {
+            FUN_1400467a8(queue, 1, &chunk);
+            continue;
+        }
+
+        CriUsfStandardHeader header = {};
+        FUN_14003b3fc(chunk.Data, chunk.Size, &header);
+        CriSint32 contentSize = 0;
+        const CriUint8* contents = FUN_14003b674(chunk.Data, chunk.Size, &contentSize);
+        CriUint32 tableId = 0;
+        memcpy(&tableId, header.Data, sizeof(tableId));
+        CriUint8 recordType = header.Data[15];
+        if (recordType == 0)
+        {
+            FUN_1400467a8(queue, 1, &chunk);
+            return 1;
+        }
+        if (recordType == 3 && contents && contentSize > 0)
+        {
+            CriUint32* metadataRecords = (CriUint32*)((CriUint8*)player + 0xe80);
+            ++*metadataRecords;
+            void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
+            CriUint32 count = (CriUint32)FUN_14003a45c(table);
+            if (tableId == 0x40414c50)
+            {
+                memcpy((CriUint8*)player + 0xe98, &contents, sizeof(contents));
+                memcpy((CriUint8*)player + 0xea0, &contentSize, sizeof(contentSize));
+                memcpy((CriUint8*)player + 0xea4, &count, sizeof(count));
+            }
+            else if (tableId == 0x40435545)
+            {
+                memcpy((CriUint8*)player + 0xea8, &contents, sizeof(contents));
+                memcpy((CriUint8*)player + 0xeb0, &contentSize, sizeof(contentSize));
+                memcpy((CriUint8*)player + 0xeb8, &count, sizeof(count));
+            }
+            else if (tableId == 0x40534656)
+            {
+                memcpy((CriUint8*)player + 0xe88, &contents, sizeof(contents));
+                memcpy((CriUint8*)player + 0xe90, &contentSize, sizeof(contentSize));
+                memcpy((CriUint8*)player + 0xe94, &count, sizeof(count));
+            }
+            FUN_14003a108(table);
+        }
+        else if (recordType == 2)
+        {
+            CriUint32 parsedCount = 0;
+            memcpy(&parsedCount, (CriUint8*)player + 0xe80, sizeof(parsedCount));
+            if (parsedCount != 0)
+                foundEnd = 1;
+        }
+        FUN_1400467b0(queue, 2, &chunk);
+        if (foundEnd)
+            break;
+    }
+
+    CriUint32 memoryInputMode = 0;
+    memcpy(&memoryInputMode, (CriUint8*)player + 0xd60, sizeof(memoryInputMode));
+    if (memoryInputMode == 1)
+    {
+        CriUint64 inputPosition = 0;
+        memcpy(&inputPosition, (CriUint8*)player + 0xda8, sizeof(inputPosition));
+        CriUint32 consumed = (CriUint32)((CriUint32)(uintptr_t)chunk.Data - (CriUint32)inputPosition + chunk.Size);
+        memcpy((CriUint8*)player + 0xdb8, &consumed, sizeof(consumed));
+    }
+    return 1;
+}
+
 CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex)
 {
     CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
