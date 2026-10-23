@@ -45,6 +45,22 @@ public:
     virtual void End() {}
 };
 
+// (appended for sfr_render_06g) brackets a scope with one event; Begin only when asked to
+class ScopedRenderEvent
+{
+public:
+    ScopedRenderEvent(RenderEvent& evt, String eventName, bool trigger = true) : EventObj(evt)
+    {
+        if (trigger)
+            EventObj.Begin(eventName);
+    }
+    ~ScopedRenderEvent() { EventObj.End(); }
+
+private:
+    void operator=(const ScopedRenderEvent&);
+    RenderEvent& EventObj;
+};
+
 }} // namespace Scaleform::Render
 
 #endif

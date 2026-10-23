@@ -31,6 +31,8 @@ public:
     // (appended for flash.geom, sfr_as3_11) both coordinates set to v; the coordinate-wise product
     explicit Point(T v) { SetPoint(v, v); }
     const Point operator*(const Point& p) const { return Point(x * p.x, y * p.y); }
+    // (appended for MatrixState::recalculateUVPOC, sfr_render_06g) the coordinate-wise difference
+    const Point operator-(const Point& p) const { return Point(x - p.x, y - p.y); }
 };
 
 template<class T>
@@ -86,8 +88,9 @@ public:
 
     void SetRect(T left, T top, T right, T bottom) { x1 = left; y1 = top; x2 = right; y2 = bottom; }
 
-    bool operator==(const Rect& r) const { return x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2; }
-    bool operator!=(const Rect& r) const { return !(*this == r); }
+    // the exe compares the x pair before the y pair
+    bool operator==(const Rect& r) const { return x1 == r.x1 && x2 == r.x2 && y1 == r.y1 && y2 == r.y2; }
+    bool operator!=(const Rect& r) const { return x1 != r.x1 || x2 != r.x2 || y1 != r.y1 || y2 != r.y2; }
     // (appended for sfr_render_04h) the same rectangle in another type, each edge cast
     template<class S> operator Rect<S>() const { return Rect<S>((S)x1, (S)y1, (S)x2, (S)y2); }
 

@@ -8,11 +8,25 @@
 #include "ms2/scaleform/kernel/sf_list.h"
 #include "ms2/scaleform/include/render/render_meshkey.h"
 #include "ms2/scaleform/include/render/render_matrixpool.h"
-#include "ms2/scaleform/include/render/render_hal.h"
+// (sfr_render_06g) the HAL embeds the render queue, so render_hal.h comes last (through render_queue.h, below);
+// these are the headers this one used to get from it
+#include "ms2/scaleform/include/render/render_types2d.h"
+#include "ms2/scaleform/include/render/render_matrix2x4.h"
+#include "ms2/scaleform/include/render/render_matrix4x4.h"
+#include "ms2/scaleform/kernel/sf_array.h"
+#include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/include/render/render_image.h"
+#include "ms2/scaleform/include/render/render_buffer.h"
+#include "ms2/scaleform/include/render/render_primitive.h"
+#include "ms2/scaleform/include/render/render_events.h"
+#include "ms2/scaleform/include/render/render_viewport.h"
+#include "ms2/scaleform/include/render/render_constants.h"
+#include "ms2/scaleform/include/render/render_cxform.h"
 #include "ms2/scaleform/include/render/render_filters.h"
 
 namespace Scaleform { namespace Render {
 
+class HAL;
 class RenderQueueProcessor;
 class PrimitiveBatch;
 // (appended for sfr_render_07p)
@@ -56,6 +70,13 @@ public:
     void            Clear() { pImpl = 0; Data = 0; }
     QIPrepareResult Prepare(RenderQueueProcessor& qp, bool waitForCache) { return pImpl->Prepare(*this, qp, waitForCache); }
     void            EmitToHAL(RenderQueueProcessor& qp)                  { pImpl->EmitToHAL(*this, qp); }
+    // (appended for sfr_render_06g) copied field by field (HAL::Draw 0x1426bfce0)
+    RenderQueueItem& operator=(const RenderQueueItem& o)
+    {
+        pImpl = o.pImpl;
+        Data  = o.Data;
+        return *this;
+    }
 
 protected:
     Interface* pImpl;
@@ -236,6 +257,8 @@ public:
     void Remove(UPInt index, UPInt count);
 
     CacheState GetCacheState() const { return Caching; }
+    // (appended for sfr_render_06g)
+    FilterSet* GetFilters() const { return pFilters; }
     void GetCacheResults(RenderTarget** results, unsigned count);
     void SetCacheResults(CacheState state, RenderTarget** results, unsigned count);
 
@@ -298,5 +321,10 @@ private:
 };
 
 }} // namespace Scaleform::Render
+
+// (sfr_render_06g) the queue and the HAL after the items; render_meshcache.h does this itself once it is complete
+#ifndef MS2_SF_RENDER_MESHCACHE_H
+#include "ms2/scaleform/include/render/render_queue.h"
+#endif
 
 #endif

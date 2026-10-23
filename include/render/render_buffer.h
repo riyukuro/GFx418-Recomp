@@ -12,12 +12,20 @@ namespace Scaleform { namespace Render {
 
 class RenderBufferManager;
 class DepthStencilSurface;
+// (appended for sfr_render_06g)
+class RenderBuffer;
+class DepthStencilBuffer;
 
-// per-HAL surfaces attached to a render buffer; the buffer owns it (layout lands with the HAL units)
+// per-HAL surfaces attached to a render buffer; the buffer owns it
 class RenderTargetData : public NewOverrideBase<StatRender_TextureManager_Mem>
 {
 public:
     virtual ~RenderTargetData();
+
+    // (appended for sfr_render_06g) the buffer this data belongs to and the depth stencil drawn with it
+    RenderBuffer*           pBuffer;               // +0x08
+    Ptr<DepthStencilBuffer> pDepthStencilBuffer;   // +0x10
+    UPInt                   CacheID;               // +0x18
 };
 
 // (values as the exe compares them: temporary 3, depth stencil 5)

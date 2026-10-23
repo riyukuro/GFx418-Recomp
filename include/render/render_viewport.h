@@ -30,6 +30,10 @@ public:
         View_Orientation_L90    = 0x30,
         View_Orientation_Mask   = 0x30,
         View_RenderTextureAlpha = View_IsRenderTexture | View_AlphaComposite,
+        // (appended for sfr_render_06g) the half of a side-by-side / top-bottom stereo buffer drawn into
+        View_Stereo_SplitV      = 0x40,
+        View_Stereo_SplitH      = 0x80,
+        View_Stereo_AnySplit    = 0xc0,
         View_FirstHalFlag       = 0x100
     };
 
@@ -85,6 +89,13 @@ public:
                ScissorWidth == o.ScissorWidth && ScissorHeight == o.ScissorHeight && Flags == o.Flags;
     }
     bool operator!=(const Viewport& o) const { return !(*this == o); }
+
+    // (appended for sfr_render_06g) the visible part of the view inside the buffer (and the scissor when asked);
+    // false when nothing is left
+    template<class T>
+    bool GetClippedRect(Rect<T>* prect, bool useScissor = false) const;
+    // narrows the view to one eye's half of a split stereo buffer (StereoDisplay value)
+    void SetStereoViewport(unsigned display);
 };
 
 }} // namespace Scaleform::Render

@@ -399,4 +399,7 @@ public:
 
 }} // namespace Scaleform::Render
 
+// (sfr_render_06g) the HAL embeds the queue: see render_primitivequeue.h
+#include "ms2/scaleform/include/render/render_queue.h"
+
 #endif

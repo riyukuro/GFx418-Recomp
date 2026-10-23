@@ -366,6 +366,8 @@ public:
         return m;
     }
     Matrix4x4(const Matrix4x4& m1, const Matrix4x4& m2) { MultiplyMatrix(m1, m2); }
+    // (appended for sfr_render_06g)
+    Matrix4x4(const Matrix2x4<T>& m1, const Matrix4x4& m2) { MultiplyMatrix(m1, m2); }
     // this = m1 * m2, the portable product (Matrix4x4<double>: 0x142485d30)
     void MultiplyMatrix_NonOpt(const Matrix4x4& m1, const Matrix4x4& m2)
     {

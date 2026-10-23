@@ -309,6 +309,9 @@ template<> inline Matrix2x4<double> Matrix2x4<double>::Rotation(double radians)
     return Matrix2x4<double>(c, -s, 0.0, s, c, 0.0);
 }
 
+// m1 * m2: m2 applied first (out of line in sfr_render_06g, 0x1426bf710)
+const Matrix2x4<float> operator*(const Matrix2x4<float>& m1, const Matrix2x4<float>& m2);
+
 }} // namespace Scaleform::Render
 
 #endif
