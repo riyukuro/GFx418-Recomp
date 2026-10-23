@@ -48,6 +48,11 @@ MS2_GLOBAL(0x1431bef00, void*, AS3BufferedRequestVtable);
 MS2_GLOBAL(0x1431bef38, void*, AS3BufferedRequestNodeVtable);
 MS2_GLOBAL(0x142d175c8, float, ImageViewportScale);
 MS2_GLOBAL(0x142d175cc, float, ImageViewportBias);
+MS2_GLOBAL(0x142d175e0, float, ImageViewportClampBias);
+MS2_GLOBAL(0x142eab358, float, DrawableImageScale2);
+MS2_GLOBAL(0x142ceab84, float, FloatOne);
+MS2_GLOBAL(0x143003a80, float[4], ThresholdTransformX);
+MS2_GLOBAL(0x1430569c0, float[4], ThresholdTransformY);
 MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
 MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
 MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
@@ -3823,6 +3828,47 @@ void FUN_142677260(void* command, void*, void* imageData)
             FUN_14257d390(imageData, pitch * y + pixels, x, pixel);
         }
     }
+}
+
+// MS2-FUNCTIONAL: rebuilds the threshold draw transform and forwards the operation, threshold, color, mask, and copy-source flag to the renderer.
+// @0x142675870
+void FUN_142675870(void* command, void* context, void* textures, const void* texgen)
+{
+    auto* bytes = static_cast<unsigned char*>(command);
+    float transform[8] = { ThresholdTransformX[0], ThresholdTransformX[1], ThresholdTransformX[2], ThresholdTransformX[3],
+                           ThresholdTransformY[0], ThresholdTransformY[1], ThresholdTransformY[2], ThresholdTransformY[3] };
+    auto** commandVtable = *reinterpret_cast<void***>(command);
+    const bool requiresSource = reinterpret_cast<bool (*)(void*)>(commandVtable[11])(command);
+    if (!requiresSource) {
+        auto* image = *reinterpret_cast<void**>(bytes + 8);
+        auto** imageVtable = *reinterpret_cast<void***>(image);
+        unsigned size[2] = {};
+        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, size);
+        const float scaleX = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x20) - *reinterpret_cast<int*>(bytes + 0x18)) / size[0];
+        const float scaleY = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x24) - *reinterpret_cast<int*>(bytes + 0x1c)) / size[1];
+        for (unsigned i = 0; i < 4; ++i) {
+            transform[i] *= scaleX * 2.0f;
+            transform[i + 4] *= scaleY * DrawableImageScale2;
+        }
+        unsigned origin[2] = {};
+        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, origin);
+        transform[3] = (static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
+                       size[0] + transform[3];
+        transform[7] = (static_cast<float>(*reinterpret_cast<int*>(bytes + 0x2c)) - origin[1] * ImageViewportScale) /
+                       size[1] + transform[7];
+        transform[7] *= DrawableImageScale2;
+    } else {
+        transform[0] = ImageViewportBias;
+        transform[3] = ImageViewportClampBias;
+        transform[5] = DrawableImageScale2;
+        transform[7] = FloatOne;
+    }
+    auto* renderer = *reinterpret_cast<void**>(static_cast<unsigned char*>(context) + 8);
+    auto** rendererVtable = *reinterpret_cast<void***>(renderer);
+    reinterpret_cast<void (*)(void*, void*, const void*, const float*, unsigned, unsigned, unsigned, unsigned, bool)>(rendererVtable[48])(
+        renderer, textures, texgen, transform, *reinterpret_cast<unsigned*>(bytes + 0x40),
+        *reinterpret_cast<unsigned*>(bytes + 0x44), *reinterpret_cast<unsigned*>(bytes + 0x48),
+        *reinterpret_cast<unsigned*>(bytes + 0x4c), *reinterpret_cast<bool*>(bytes + 0x50));
 }
 
 // MS2-FUNCTIONAL: snapshots accumulated renderer timings, resolves cached labels, logs each duration/count pair, and releases the snapshot.
