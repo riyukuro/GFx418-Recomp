@@ -37,7 +37,12 @@
 // MS2-RANGE: 0x1428fbea0-0x1428fc080 .text$mn
 // MS2-RANGE: 0x1428fc080-0x1428fc160 .text$mn
 // MS2-RANGE: 0x1428f1e70-0x1428f2040 .text$mn
+// MS2-RANGE: 0x1428f86b0-0x1428f8720 .text$mn
+// MS2-RANGE: 0x1428f9ba0-0x1428f9cf0 .text$mn
 // MS2-RANGE: 0x1428f6de0-0x1428f7290 .text$mn
+// MS2-RANGE: 0x1428f8540-0x1428f86b0 .text$mn
+// MS2-RANGE: 0x1428fafd0-0x1428fb110 .text$mn
+// MS2-RANGE: 0x1428f74a0-0x1428f7580 .text$mn
 // MS2-RANGE: 0x1428f7ed0-0x1428f8540 .text$mn
 // MS2-RANGE: 0x1428f73b0-0x1428f74a0 .text$mn
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
@@ -74,6 +79,7 @@
 #include "../include/gfx/as3/as3_support.h"
 #include "../include/gfx/as3/obj/as3_obj_natives.h"
 #include "../include/gfx/as3/as3_avm.h"
+#include "../include/gfx/gfx_imemanager.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -1067,6 +1073,62 @@ void GAS_GlobalParseInt(const FnCall& fn)
         fn.Result->SetInt(val);
 }
 
+// Global ifFrameLoaded(frame): true when the frame has been loaded in this (or the target) clip.
+// @0x1428f74a0
+void GAS_GlobalIfFrameLoaded(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    fn.Result->SetBool(false);
+    Sprite* psprite;
+    if (!fn.ThisPtr)
+        psprite = (Sprite*)fn.Env->GetTarget();
+    else
+    {
+        if (fn.ThisPtr->GetObjectType() != ObjectInterface::Object_Sprite)
+            return;
+        psprite = (Sprite*)fn.ThisPtr;
+    }
+    if (!psprite)
+        return;
+    int frame = fn.Arg(0).ToInt32(fn.Env);
+    if (frame < (int)psprite->GetLoadingFrame())
+        fn.Result->SetBool(true);
+}
+
+// ---- Global IME functions ----
+
+// Global imecommand(command, parameter): forwards to the movie's IME manager.
+// @0x1428f8540
+// MS2-FUNCTIONAL same calls; register allocation of the movie/IME temporaries differs
+void GAS_GlobalIMECommand(const FnCall& fn)
+{
+    if (fn.NArgs < 2)
+        return;
+    MovieImpl*          pmovie = fn.Env->GetTarget()->GetMovieImpl();
+    Ptr<IMEManagerBase> pime = pmovie->GetIMEManager();
+    if (pime)
+    {
+        ASString param = fn.Arg(1).ToString(fn.Env);
+        ASString command = fn.Arg(0).ToString(fn.Env);
+        pime->IMECommand(reinterpret_cast<Movie*>(pmovie), command.ToCStr(), param.ToCStr());
+    }
+}
+
+// Global getInputLanguage(): the IME's input language, "UNKNOWN" without an IME.
+// @0x1428fafd0
+// MS2-FUNCTIONAL same calls; register allocation of the movie/IME temporaries differs
+void GAS_GlobalGetInputLanguage(const FnCall& fn)
+{
+    if (!fn.Env)
+        return;
+    Ptr<IMEManagerBase> pime = fn.Env->GetTarget()->GetMovieImpl()->GetIMEManager();
+    ASString            lang = fn.Env->CreateConstString("UNKNOWN");
+    if (pime)
+        lang = fn.Env->CreateString(pime->GetInputLanguage());
+    fn.Result->SetString(lang);
+}
+
 // ---- Global escape functions ----
 
 // @0x1428f7ed0
@@ -1123,6 +1185,45 @@ void GAS_GlobalUnescapeSpecialHTML(const FnCall& fn)
         String::UnescapeSpecialHTML(src.ToCStr(), src.GetLength(), &result);
         fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
     }
+}
+
+// ---- StyleSheet ----
+// Bodies of the exe called here (not recovered yet), by their addresses; the style manager is opaque.
+}}} // namespace Scaleform::GFx::AS2
+void FUN_142609630(void* pstyleManager);                              // Text::StyleManager::Clear
+bool FUN_14260b7f0(void* pstyleManager, const char* pcss, unsigned size); // Text::StyleManager::ParseCSS
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// StyleSheet.clear()
+// @0x1428f86b0
+void StyleSheetProto::Clear(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, StyleSheet);
+    StyleSheetObject* pthis = (StyleSheetObject*)fn.ThisPtr;
+    if (pthis)
+        FUN_142609630(pthis->Data68);
+}
+
+// StyleSheet.parseCSS(text): false without a text or a parse error.
+// @0x1428f9ba0
+void StyleSheetProto::ParseCSS(const FnCall& fn)
+{
+    if (fn.CheckThisPtr(ObjectInterface::Object_StyleSheet))
+    {
+        StyleSheetObject* pthis = (StyleSheetObject*)fn.ThisPtr;
+        if (!pthis)
+            return;
+        if (fn.NArgs < 1)
+        {
+            fn.Result->SetBool(false);
+            return;
+        }
+        Value    arg(fn.Arg(0));
+        ASString css = arg.ToString(fn.Env);
+        fn.Result->SetBool(FUN_14260b7f0(pthis->Data68, css.ToCStr(), css.GetSize()));
+    }
+    else
+        fn.ThisPtrError("StyleSheet");
 }
 
 // ---- Matrix ----

@@ -20,7 +20,10 @@ public:
     virtual ~IMEManagerBase() {}                                        // 0
 private:
     virtual void Slot01();                                              // Init
-    virtual void Slot02();                                              // IMECommand
+public:
+    // (sfr26) the IME command of the imecommand global (command, parameter).
+    virtual void IMECommand(Movie* pmovie, const char* pcommand, const char* pparams); // 2
+private:
     virtual void Slot03();                                              // ProcessIMEMessage
     virtual void Slot04();                                              // HandleIMEEvent
     virtual void Slot05();                                              // ClearCandidateListPath
@@ -30,7 +33,10 @@ public:
     virtual bool        SetEnabled(bool enable);                        // 8
     virtual bool        GetEnabled();                                   // 9
 private:
-    virtual void Slot10();                                              // GetInputLanguage
+public:
+    // (sfr26) the language of the active input locale.
+    virtual String GetInputLanguage();                                  // 10
+private:
     virtual void Slot11();                                              // BroadcastIMEConversion
     virtual void Slot12();                                              // BroadcastSwitchLanguage
     virtual void Slot13();                                              // BroadcastSetSupportedLanguages
