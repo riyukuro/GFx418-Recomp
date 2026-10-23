@@ -11,9 +11,11 @@
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
 #include "ms2/scaleform/include/gfx/gfx_asutils.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
+#include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
 #include "../third_party/src/expat-2.0.1/lib/expat.h"
 
@@ -1853,6 +1855,27 @@ namespace InstanceTraits { namespace fl
 
 namespace Instances { namespace fl
 {
+    // MS2-FUNCTIONAL: preserves the Array constructor's numeric-length validation and value-copy behavior; compiler codegen differs.
+    // @0x1423f5550
+    void Array::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        if (argc == 1 && argv[0].IsNumeric())
+        {
+            Value::Number number;
+            if (argv[0].Convert2NumberInline(number) && number >= 0 && number <= 0xffffffffu)
+            {
+                Resize(static_cast<UInt32>(number));
+                return;
+            }
+            GetVM().ThrowRangeError(VM::Error(static_cast<VM::ErrorID>(1005), GetVM(), static_cast<SInt32>(number)));
+            return;
+        }
+
+        Resize(argc);
+        for (unsigned i = 0; i < argc; ++i)
+            SA.Set(i, argv[i]);
+    }
+
     // Array's toString/toLocaleString are not generic: this is assumed to be an Array.
     // @0x1423e0260
     void Array::toLocaleStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
@@ -1907,6 +1930,43 @@ namespace Instances {
 }
 
 }}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+using NamespaceInstanceSetBase = HashSetBase<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHashFunc,
+    NamespaceInstanceFactory::NamespaceHashFunc, AllocatorLH<Instances::Namespace*, Stat_Default_Mem>,
+    HashsetEntry<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHashFunc>>;
+}}}
+namespace Scaleform {
+template void GFx::AS3::NamespaceInstanceSetBase::Add<GFx::AS3::Instances::Namespace*>(
+    void*, GFx::AS3::Instances::Namespace* const&);
+
+using AS3String = GFx::ASString;
+using AS3StringHashSetBase = HashSetBase<AS3String, FixedSizeHash<AS3String>, FixedSizeHash<AS3String>,
+    AllocatorDH<AS3String, Stat_Default_Mem>, HashsetCachedEntry<AS3String, FixedSizeHash<AS3String>>>;
+template AS3String* AS3StringHashSetBase::Get<AS3String>(const AS3String&);
+template void AS3StringHashSetBase::add<AS3String>(void*, const AS3String&, UPInt);
+
+using AS3Value = GFx::AS3::Value;
+using AS3ValueHashSetBase = HashSetBase<AS3Value, AS3Value::HashFunctor, AS3Value::HashFunctor,
+    AllocatorDH<AS3Value, Stat_Default_Mem>, HashsetEntry<AS3Value, AS3Value::HashFunctor>>;
+template void AS3ValueHashSetBase::add<AS3Value>(void*, const AS3Value&, UPInt);
+
+using AS3UInt64ValueNode = HashNode<UInt64, GFx::AS3::Value, FixedSizeHash<UInt64>>;
+using AS3UInt64ValueSetBase = HashSetBase<AS3UInt64ValueNode, AS3UInt64ValueNode::NodeHashF,
+    AS3UInt64ValueNode::NodeAltHashF, AllocatorDH<AS3UInt64ValueNode, Stat_Default_Mem>,
+    HashsetCachedNodeEntry<AS3UInt64ValueNode, AS3UInt64ValueNode::NodeHashF>>;
+template const AS3UInt64ValueNode* AS3UInt64ValueSetBase::GetAlt<UInt64>(const UInt64&) const;
+template void AS3UInt64ValueSetBase::add<AS3UInt64ValueNode>(void*, const AS3UInt64ValueNode&, UPInt);
+template void AS3UInt64ValueSetBase::add<AS3UInt64ValueNode::NodeRef>(void*, const AS3UInt64ValueNode::NodeRef&, UPInt);
+
+using AS3TraitsKey = GFx::AS3::TClassTraitsCache::Key;
+using AS3TraitsNode = HashNode<AS3TraitsKey, GFx::AS3::ClassTraits::Traits*, AS3TraitsKey::HashFunctor>;
+using AS3TraitsSetBase = HashSetBase<AS3TraitsNode, AS3TraitsNode::NodeHashF, AS3TraitsNode::NodeAltHashF,
+    AllocatorLH<AS3TraitsNode, GFx::AS3::StatMV_VM_VM_Mem>,
+    HashsetCachedNodeEntry<AS3TraitsNode, AS3TraitsNode::NodeHashF>>;
+template void AS3TraitsSetBase::add<AS3TraitsNode>(void*, const AS3TraitsNode&, UPInt);
+template void AS3TraitsSetBase::add<AS3TraitsNode::NodeRef>(void*, const AS3TraitsNode::NodeRef&, UPInt);
+}
 
 namespace Scaleform { namespace Alg {
 template <class ArrayT> void ReverseArray(ArrayT& values);
