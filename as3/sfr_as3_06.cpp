@@ -2213,6 +2213,7 @@ namespace Instances { namespace fl_display
         }
     }
 
+    // MS2-FUNCTIONAL: code byte-exact; unwind info differs (exe frame 16B vs 13B)
     // @0x142443d00
     GFx::DisplayObject* LoaderInfo::GetContentDispObj() const
     {
@@ -2953,3 +2954,6 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ??_GByteArrayPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14243dc70
 // MS2-PIN: ??_GVectorPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14243dca0
 // MS2-PIN: ??_GDIPixelProvider@Render@Scaleform@@UEAAPEAXI@Z 0x14243e4f0
+// MS2-PIN: ??_7DIPixelProvider@Render@Scaleform@@6B@ 0x143149c28
+// MS2-PIN: ??_7ByteArrayPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a930
+// MS2-PIN: ??_7VectorPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a950
