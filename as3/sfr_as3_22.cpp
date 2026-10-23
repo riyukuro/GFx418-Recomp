@@ -1072,6 +1072,40 @@ void SetAudioPaused(void* player, bool paused)
     }
     LeaveCriticalSection(lock);
 }
+
+// MS2-FUNCTIONAL: computes elapsed playback time under the player's lock and clamps/records the audio end time.
+// @0x142745980
+float QueryAudioElapsedSeconds(void* player)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(bytes + 0x70));
+    float elapsedSeconds;
+    if (!bytes[0x68] && !bytes[0x69]) {
+        auto* format = *reinterpret_cast<unsigned char**>(bytes + 0x30);
+        const std::uint64_t rate = *reinterpret_cast<unsigned*>(format + 0x4c);
+        const std::uint64_t bitDepth = *reinterpret_cast<unsigned*>(format + 0x50);
+        const std::uint64_t sampleFrames = *reinterpret_cast<unsigned*>(format + 0x70);
+        const std::uint64_t channels = *reinterpret_cast<unsigned*>(format + 0x48);
+        const std::uint64_t totalSamples = ((sampleFrames * 8) / bitDepth) / channels;
+        const std::uint64_t duration = (totalSamples * 1000000ull) / rate;
+        const std::uint64_t now = FUN_1425e3480();
+        std::uint64_t elapsed = (*reinterpret_cast<std::uint64_t*>(bytes + 0x58) -
+                                 *reinterpret_cast<std::uint64_t*>(bytes + 0x48)) + now;
+        if (duration < elapsed) {
+            bytes[0x69] = 1;
+            *reinterpret_cast<std::uint64_t*>(bytes + 0x50) = now;
+            *reinterpret_cast<std::uint64_t*>(bytes + 0x58) = duration;
+            elapsed = duration;
+        }
+        elapsedSeconds = *reinterpret_cast<float*>(bytes + 0x98) +
+                         static_cast<float>(elapsed) / 1000000.0f;
+    } else {
+        elapsedSeconds = *reinterpret_cast<float*>(bytes + 0x98) +
+                         static_cast<float>(*reinterpret_cast<std::uint64_t*>(bytes + 0x58)) / 1000000.0f;
+    }
+    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(bytes + 0x70));
+    return elapsedSeconds;
+}
 }
 
 namespace Scaleform {
