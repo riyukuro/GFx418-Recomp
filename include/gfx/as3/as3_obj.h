@@ -993,6 +993,10 @@ namespace Instances
         // slot 23: the declared parameter count, the AS3 length (the base body is shared with an empty function)
         virtual UInt32 GetMaxParamNum() const;
 
+        // @0x1423e4a80
+        static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
+                                  const Value* argv);
+
         // native methods
         // @0x1424292a0
         void lengthGet(UInt32& result);

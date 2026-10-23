@@ -1884,6 +1884,28 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XM
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 28, const Value&, const Value&>(StringManager&);
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 29, const Value&, const Value&>(StringManager&);
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 36, const Value&, const Value&>(StringManager&);
+namespace Instances {
+    // MS2-FUNCTIONAL: matches the function-versus-thunk string semantics; local formatter and ASString codegen differs.
+    // @0x1423e4a80
+    void FunctionBase::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
+                                    const Value* argv)
+    {
+        StringManager& strings = vm.GetStringManager();
+        if (!_this.IsThunk())
+        {
+            result.Assign(strings.CreateConstString("function Function() {}"));
+            return;
+        }
+
+        LongFormatter formatter(static_cast<unsigned long>(reinterpret_cast<UPInt>(&_this.AsThunk())));
+        formatter.SetBase(16).Convert();
+        ASString text = strings.CreateConstString("[object Function-");
+        text.Append(formatter.ToCStr(), strlen(formatter.ToCStr()));
+        text.Append("]", 1);
+        result.Assign(text);
+    }
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MsgFormat argument binders the error-message formatting in this file instantiates.
