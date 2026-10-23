@@ -35,6 +35,7 @@
 // MS2-RANGE: 0x14292dc70-0x14292df89 .text$mn
 // MS2-RANGE: 0x142935dc0-0x142935e8a .text$mn
 // MS2-RANGE: 0x142993810-0x1429938c2 .text$mn
+// MS2-RANGE: 0x1429362c0-0x142936357 .text$mn
 // MS2-RANGE: 0x14292e650-0x14292e6d3 .text$mn
 // MS2-RANGE: 0x142934820-0x1429349a0 .text$mn
 
@@ -994,6 +995,29 @@ void MovieRoot::CreateArray(GFx::Value* pvalue)
     Ptr<Object>  pobj = *penv->OperatorNew(penv->GetBuiltin(ASBuiltin_Array));
     Value        val(pobj);
     ASValue2GFxValue(penv, val, pvalue);
+}
+
+// The script object of pfilter's type (new flash.filters.<class>) with the base state of pfilter; 0 for the types
+// without a class.
+// @0x1429362c0
+Object* CreateFilterObject(Environment* penv, const Render::Filter* pfilter)
+{
+    int className;
+    switch (pfilter->GetFilterType())
+    {
+    case Render::Filter_Blur:        className = ASBuiltin_BlurFilter; break;
+    case Render::Filter_Shadow:      className = ASBuiltin_DropShadowFilter; break;
+    case Render::Filter_Glow:        className = ASBuiltin_GlowFilter; break;
+    case Render::Filter_Bevel:       className = ASBuiltin_BevelFilter; break;
+    case Render::Filter_ColorMatrix: className = ASBuiltin_ColorMatrixFilter; break;
+    default:
+        return 0;
+    }
+    BitmapFilterObject* pobj = static_cast<BitmapFilterObject*>(
+        penv->OperatorNew(penv->GetSC()->pContext->FlashFiltersPackage, penv->GetBuiltin(className)));
+    if (pobj)
+        *pobj->GetFilter() = *pfilter;
+    return pobj;
 }
 
 // @0x14292e650
