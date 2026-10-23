@@ -1047,4 +1047,28 @@ void ClearPlayerSoundRecord(void* request)
         *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
     }
 }
+
+// MS2-FUNCTIONAL: rounds pointer capacity to four entries, reallocates through the global heap, and frees storage when capacity is zero.
+// @0x1427463e0
+void ReserveVideoPlayerArray(void** array, void*, std::size_t requested)
+{
+    auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void* data = array[0];
+    std::size_t capacity = requested ? ((requested + 3) & ~std::size_t(3)) : 0;
+    if (!capacity) {
+        if (data)
+            reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
+        array[0] = nullptr;
+        array[2] = nullptr;
+        return;
+    }
+    const std::size_t bytes = capacity * sizeof(void*);
+    if (data) {
+        array[0] = reinterpret_cast<void* (*)(void*, void*, std::size_t)>(vtable[11])(DAT_143b15f60, data, bytes);
+    } else {
+        int flags = 2;
+        array[0] = reinterpret_cast<void* (*)(void*, std::size_t, const int*)>(vtable[10])(DAT_143b15f60, bytes, &flags);
+    }
+    array[2] = reinterpret_cast<void*>(capacity);
+}
 }
