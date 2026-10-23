@@ -751,11 +751,17 @@ public:
 };
 
 // Receiver of the mouse events of a movie (MovieRoot); vftable { dtor, OnMouseMove, OnMouseDown, OnMouseUp,
-// OnMouseWheel, IsEmpty }, only the dtor declared so far.
+// OnMouseWheel, IsEmpty }.
 class MouseListener
 {
 public:
     virtual ~MouseListener() {}
+    // (appended for sfr_as2_06)
+    virtual void OnMouseMove(Environment* penv, unsigned mouseIndex) const = 0;
+    virtual void OnMouseDown(Environment* penv, unsigned mouseIndex, unsigned button, InteractiveObject* ptarget) const = 0;
+    virtual void OnMouseUp(Environment* penv, unsigned mouseIndex, unsigned button, InteractiveObject* ptarget) const = 0;
+    virtual void OnMouseWheel(Environment* penv, unsigned mouseIndex, int sdelta, InteractiveObject* ptarget) const = 0;
+    virtual bool IsEmpty() const = 0;
 };
 
 class ArrayObject;
@@ -765,8 +771,8 @@ class MouseCtorFunction : public CFunctionObject, public MouseListener
 {
 public:
     Ptr<ArrayObject> pListenersArray;   // +0x78
-    SInt32           LastMousePos[2];   // +0x80
-    UInt32           LastClickTime;     // +0x88
+    mutable SInt32   LastMousePos[2];   // +0x80 (the double-click test of OnMouseDown)
+    mutable UInt32   LastClickTime;     // +0x88
     FunctionRef      SetCursorTypeFunc; // +0x90
 
     // Asks the user event handler for cursor shape cursorType on mouse mouseIndex; false without a handler
@@ -798,6 +804,46 @@ public:
     // Extension members (setCursorType, the button and cursor constants, getTopMostEntity, getPosition,
     // getButtonsState) when extensions are on (exe 0x14294f4f0).
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+
+    // (appended for sfr_as2_06) MouseListener: onMouseMove / onMouseDown / onMouseUp / onMouseWheel to the
+    // listeners (exe 0x14296cb80, 0x14296c220, 0x14296cbf0, 0x14296cd30); IsEmpty: a listener array without
+    // listeners (exe 0x1429654e0).
+    virtual bool IsEmpty() const;
+protected:
+    virtual void OnMouseMove(Environment* penv, unsigned mouseIndex) const;
+    virtual void OnMouseDown(Environment* penv, unsigned mouseIndex, unsigned button, InteractiveObject* ptarget) const;
+    virtual void OnMouseUp(Environment* penv, unsigned mouseIndex, unsigned button, InteractiveObject* ptarget) const;
+    virtual void OnMouseWheel(Environment* penv, unsigned mouseIndex, int sdelta, InteractiveObject* ptarget) const;
+
+private:
+    // Calls the event method of each listener with the arguments of PushListenersParams.
+    class LocalInvokeCallback : public AsBroadcaster::InvokeCallback
+    {
+    public:
+        unsigned        MouseIndex;  // +0x08
+        ASBuiltinType   EventName;   // +0x0c
+        const ASString* pTargetName; // +0x10
+        unsigned        Button;      // +0x18
+        int             Delta;       // +0x1c
+        bool            DblClick;    // +0x20
+
+        LocalInvokeCallback(unsigned mouseIndex, ASBuiltinType eventName, const ASString* ptargetName,
+                            unsigned button, int delta, bool dblClick)
+            : MouseIndex(mouseIndex), EventName(eventName), pTargetName(ptargetName), Button(button),
+              Delta(delta), DblClick(dblClick) {}
+
+        virtual void Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method); // exe 0x142963400
+    };
+
+    // Broadcasts eventName to the listeners (exe 0x142969450).
+    void NotifyListeners(Environment* penv, unsigned mouseIndex, ASBuiltinType eventName,
+                         const ASString* ptargetName = 0, unsigned button = 0, int delta = 0,
+                         bool dblClick = false) const;
+    // Pushes the arguments of the event for method (extensions: mouse index, position, double click, target and
+    // button); the count, or -1 when the extended button event must not reach method (exe 0x142971d70).
+    static int PushListenersParams(Environment* penv, unsigned mouseIndex, ASBuiltinType eventName,
+                                   const Value& method, const ASString* ptargetName, unsigned button, int delta,
+                                   bool dblClick);
 };
 
 // Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes, vftable { dtor, Finalize_GC }.

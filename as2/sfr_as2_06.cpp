@@ -103,6 +103,13 @@
 // MS2-RANGE: 0x142979260-0x1429797e0 .text$mn
 // MS2-RANGE: 0x142979fe0-0x14297a4a0 .text$mn
 // MS2-RANGE: 0x142978780-0x142978a90 .text$mn
+// MS2-RANGE: 0x142963400-0x1429635f0 .text$mn
+// MS2-RANGE: 0x142969450-0x1429694e0 .text$mn
+// MS2-RANGE: 0x14296c220-0x14296c430 .text$mn
+// MS2-RANGE: 0x14296cb80-0x14296cbf0 .text$mn
+// MS2-RANGE: 0x14296cbf0-0x14296cd30 .text$mn
+// MS2-RANGE: 0x14296cd30-0x14296ce70 .text$mn
+// MS2-RANGE: 0x142971d70-0x142972190 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -119,6 +126,9 @@
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/kernel/sf_msgformat.h"
+#include "../include/kernel/sf_timer.h"
+#include "../include/gfx/gfx_input.h"
+#include "../include/render/render_twips.h"
 
 // Stores *value under key in the hash at owner+0x10 and releases the passed reference (a folded hash set; the
 // prototype table of GlobalContext here). Defined in sfr_video_01.
@@ -926,6 +936,173 @@ FunctionRef SelectionCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<SelectionCtorFunction, SelectionProto>(pgc, ASBuiltin_Selection, ASBuiltin_Object, pgc->pGlobal);
 }
 
+// MovieImpl keeps one MouseState per mouse (4, 0x50 bytes each) at +0x1260, not recovered in gfx_movieimpl.h
+// yet; null past the last one (the exe still reads through it).
+static inline const MouseState* GetMovieMouseState(MovieImpl* proot, unsigned mouseIndex)
+{
+    if (mouseIndex >= 4)
+        return 0;
+    return reinterpret_cast<const MouseState*>(reinterpret_cast<const UByte*>(proot) + 0x1260) + mouseIndex;
+}
+
+// @0x14296cb80
+void MouseCtorFunction::OnMouseMove(Environment* penv, unsigned mouseIndex) const
+{
+    NotifyListeners(penv, mouseIndex, ASBuiltin_onMouseMove);
+}
+
+// @0x14296c220
+void MouseCtorFunction::OnMouseDown(Environment* penv, unsigned mouseIndex, unsigned button,
+                                    InteractiveObject* ptarget) const
+{
+    bool dblClick = false;
+    if (penv->CheckExtensions())
+    {
+        UInt32 ticks = (UInt32)(Timer::GetTicks() / 1000);
+        Render::PointF pos = GetMovieMouseState(penv->GetTarget()->GetMovieImpl(), mouseIndex)->GetLastPosition();
+        SInt32 x = (SInt32)Render::TwipsToPixels(pos.x);
+        SInt32 y = (SInt32)Render::TwipsToPixels(pos.y);
+        // A second click within 300 ms at the same pixel.
+        if (ticks <= LastClickTime + 300 && LastMousePos[0] == x && LastMousePos[1] == y)
+            dblClick = true;
+        LastMousePos[0] = x;
+        LastMousePos[1] = y;
+        LastClickTime   = ticks;
+    }
+    if (ptarget)
+    {
+        ASString path = ptarget->GetCharacterHandle()->NamePath;
+        NotifyListeners(penv, mouseIndex, ASBuiltin_onMouseDown, &path, button, 0, dblClick);
+    }
+    else
+        NotifyListeners(penv, mouseIndex, ASBuiltin_onMouseDown, 0, button, 0, dblClick);
+}
+
+// @0x14296cbf0
+void MouseCtorFunction::OnMouseUp(Environment* penv, unsigned mouseIndex, unsigned button,
+                                  InteractiveObject* ptarget) const
+{
+    if (ptarget)
+    {
+        ASString path = ptarget->GetCharacterHandle()->NamePath;
+        NotifyListeners(penv, mouseIndex, ASBuiltin_onMouseUp, &path, button);
+    }
+    else
+        NotifyListeners(penv, mouseIndex, ASBuiltin_onMouseUp, 0, button);
+}
+
+// @0x14296cd30
+void MouseCtorFunction::OnMouseWheel(Environment* penv, unsigned mouseIndex, int sdelta,
+                                     InteractiveObject* ptarget) const
+{
+    if (ptarget)
+    {
+        ASString path = ptarget->GetCharacterHandle()->NamePath;
+        NotifyListeners(penv, mouseIndex, ASBuiltin_onMouseWheel, &path, 0, sdelta);
+    }
+    else
+        NotifyListeners(penv, mouseIndex, ASBuiltin_onMouseWheel, 0, 0, sdelta);
+}
+
+bool MouseCtorFunction::IsEmpty() const
+{
+    return pListenersArray && pListenersArray->GetSize() == 0;
+}
+
+// @0x142969450
+void MouseCtorFunction::NotifyListeners(Environment* penv, unsigned mouseIndex, ASBuiltinType eventName,
+                                        const ASString* ptargetName, unsigned button, int delta,
+                                        bool dblClick) const
+{
+    LocalInvokeCallback callback(mouseIndex, eventName, ptargetName, button, delta, dblClick);
+    AsBroadcaster::BroadcastMessageWithCallback(penv, const_cast<MouseCtorFunction*>(this),
+                                                penv->GetBuiltin(eventName), &callback);
+}
+
+// MS2-FUNCTIONAL frame layout (exe keeps an rbp frame) and register allocation
+// @0x142963400
+void MouseCtorFunction::LocalInvokeCallback::Invoke(Environment* penv, ObjectInterface* pthis,
+                                                    const FunctionRef& method)
+{
+    int nargs = PushListenersParams(penv, MouseIndex, EventName, Value(method), pTargetName, Button, Delta,
+                                    DblClick);
+    if (nargs < 0)
+        return;
+    Value result;
+    method.Invoke(FnCall(&result, pthis, penv, nargs, penv->GetTopIndex()));
+    penv->Drop(nargs);
+}
+
+// MS2-FUNCTIONAL event compare folding and FunctionRef temporary scheduling
+// @0x142971d70
+int MouseCtorFunction::PushListenersParams(Environment* penv, unsigned mouseIndex, ASBuiltinType eventName,
+                                           const Value& method, const ASString* ptargetName, unsigned button,
+                                           int delta, bool dblClick)
+{
+    int  nargs     = 0;
+    // Without extensions (or for a method taking no arguments) only the standard arguments.
+    bool noExtArgs = !penv->CheckExtensions();
+    if (penv->CheckExtensions() && button != 0 &&
+        (eventName == ASBuiltin_onMouseDown || eventName == ASBuiltin_onMouseUp))
+    {
+        // An extended button other than the left one only reaches methods that declare arguments.
+        FunctionRef func = method.ToFunction(penv);
+        if (func.IsNull())
+            return -1;
+        if (func->GetNumArgs() <= 0)
+        {
+            if (button > 1)
+                return -1;
+            noExtArgs = true;
+        }
+    }
+    if (penv->CheckExtensions() && !noExtArgs)
+    {
+        if (eventName == ASBuiltin_onMouseDown && dblClick)
+        {
+            penv->Push(dblClick);
+            nargs = 1;
+        }
+        Render::PointF pos = GetMovieMouseState(penv->GetTarget()->GetMovieImpl(), mouseIndex)->GetLastPosition();
+        penv->Push(Number(Render::TwipsToPixels(floor(pos.y + 0.5))));
+        penv->Push(Number(Render::TwipsToPixels(floor(pos.x + 0.5))));
+        penv->Push(Value((int)mouseIndex));
+        nargs += 3;
+    }
+    if (eventName != ASBuiltin_onMouseMove)
+    {
+        if (ptargetName && (eventName == ASBuiltin_onMouseWheel || !noExtArgs))
+        {
+            penv->Push(*ptargetName);
+            ++nargs;
+        }
+        else if (nargs)
+        {
+            penv->Push(Value(Value::NULLTYPE));
+            ++nargs;
+        }
+    }
+    if (eventName == ASBuiltin_onMouseDown || eventName == ASBuiltin_onMouseUp)
+    {
+        if (button && !noExtArgs)
+        {
+            penv->Push(Number(button));
+            ++nargs;
+        }
+        else if (nargs)
+        {
+            penv->Push(Value(Value::NULLTYPE));
+            ++nargs;
+        }
+    }
+    else if (eventName == ASBuiltin_onMouseWheel)
+    {
+        penv->Push(Value(delta));
+        ++nargs;
+    }
+    return nargs;
+}
+
 // MS2-FUNCTIONAL the exe inlines the MathProto ctor (sfr_as2_03)
 // @0x142978780
 FunctionRef MathCtorFunction::Register(GlobalContext* pgc)
@@ -1158,3 +1335,5 @@ template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS2::
 // MS2-PIN: ??_7ColorCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143218c08
 // MS2-PIN: ??_7ButtonCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217f28
 // MS2-PIN: ??_7ButtonCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217fb0
+// MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7LocalInvokeCallback@MouseCtorFunction@AS2@GFx@Scaleform@@6B@ 0x14321ccf8
