@@ -44,6 +44,7 @@ extern "C" const void* DAT_14313a228[];
 extern "C" const void* DAT_14313a200[];
 extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
+extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1423daf30(void*);
@@ -828,8 +829,6 @@ void* FUN_1423dbab0(unsigned long long* object, unsigned flags)
     return object;
 }
 
-extern void FUN_1423d9690(void*, void*, unsigned long long);
-
 // MS2-FUNCTIONAL: DoAbc base destruction and scalar delete are modeled from our shared ExecuteTag declaration.
 // @0x1423dbbf0
 void* FUN_1423dbbf0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
@@ -869,6 +868,39 @@ void FUN_1423d0f10(void* self, char* text)
     *reinterpret_cast<String*>(static_cast<unsigned char*>(self) + 0x10) = text;
     FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30),
                   reinterpret_cast<long long>(text));
+}
+
+// MS2-FUNCTIONAL: trims retained array items, grows through the executable's reserve helper, and stores the new length.
+// @0x1423d9690
+extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long long length)
+{
+    auto* array = static_cast<unsigned long long*>(rawArray);
+    unsigned long long oldLength = array[1];
+    unsigned long long capacity = array[2];
+    if (length < oldLength) {
+        auto** items = reinterpret_cast<void**>(array[0]);
+        for (unsigned long long i = oldLength; i > length; --i)
+            if (items[i - 1]) FUN_14257dcd0(items[i - 1]);
+        if ((capacity >> 1) <= length)
+            FUN_1423d95f0(array, allocator, length);
+    } else if (length >= capacity) {
+        FUN_1423d95f0(array, allocator, (length >> 2) + length);
+    }
+    array[1] = length;
+}
+
+// MS2-FUNCTIONAL: resizes the executable's Value array, destructing removed entries before changing its capacity.
+// @0x1423d9730
+extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long long length)
+{
+    auto* array = static_cast<unsigned long long*>(rawArray);
+    if (length < array[1]) {
+        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::AS3::Value*>(array[0]), array[1] - length);
+        if (length < (array[2] >> 1)) FUN_1423d95f0(array, allocator, length);
+    } else if (length >= array[2]) {
+        FUN_1423d95f0(array, allocator, (length >> 2) + length);
+    }
+    array[1] = length;
 }
 
 // MS2-FUNCTIONAL: performs the executable's interface query and retrieves the IME reading-state values.
