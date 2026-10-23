@@ -1795,6 +1795,20 @@ void* FUN_140015250(void* array)
     return static_cast<char*>(pages[page]) + (index & 0x3ff) * sizeof(void*);
 }
 
+// MS2-FUNCTIONAL: converts the decoded frame index to seconds using the stream's millisecond duration.
+// @0x140014340
+void FUN_140014340(void* object, double* result)
+{
+    void* stream = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
+    extern int FUN_140025360(void*);
+    const unsigned duration = *reinterpret_cast<unsigned*>(static_cast<char*>(stream) + 0x58);
+    if (duration)
+        *result = static_cast<double>(static_cast<float>(FUN_140025360(stream)) /
+                                      (static_cast<float>(duration) / 1000.0f));
+    else
+        *result = 0.0;
+}
+
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
 // @0x140011b40
 void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
