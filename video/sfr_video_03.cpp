@@ -103,7 +103,7 @@ void RetainVideoAtom(std::uint64_t atom)
     }
 }
 
-void FUN_140017320(void* tablePtr, const std::uint64_t* key)
+void EraseVideoAtomHashEntry(void* tablePtr, const std::uint64_t* key)
 {
     auto* table = *reinterpret_cast<unsigned char**>(tablePtr);
     if (!table) return;
@@ -326,7 +326,7 @@ void FUN_140017880(void* receiver, std::uint64_t* atom)
     value[2] = value[3] = 0;
     --value[0];
     if (value[0] == 0) { auto fn = *reinterpret_cast<VideoGenericThunk*>(*reinterpret_cast<unsigned char***>(value) + 0x60); fn(value, nullptr, nullptr); }
-    FUN_140017320(&table, &key);
+    EraseVideoAtomHashEntry(&table, &key);
 }
 
 // MS2-FUNCTIONAL: decrements a live AS3 object reference and invokes the runtime release hook.
@@ -1105,5 +1105,22 @@ void** FUN_14001af10(void** result, void* classTraits)
     auto* object = allocate(heap, 200, 0);
     *result = object ? FUN_14001ad20(object, classTraits) : nullptr;
     return result;
+}
+
+// MS2-FUNCTIONAL: initializes the AS3 callback record and captures the optional first atom argument.
+// @0x1400170c0
+std::uint64_t* FUN_1400170c0(std::uint64_t* record, std::uint64_t vm, std::uint64_t property, unsigned count, const std::uint8_t* args, const std::uint64_t* defaults)
+{
+    record[0] = vm; record[1] = property;
+    record[2] = defaults[0];
+    if (count) record[2] = ((*args & 0x1f) != 0) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
+    record[3] = defaults[1];
+    return record;
+}
+// MS2-FUNCTIONAL: removes the hashed atom key from its chained Scaleform table.
+// @0x140017320
+void FUN_140017320(std::uint64_t* table, const std::uint64_t* key)
+{
+    EraseVideoAtomHashEntry(table, key);
 }
 } // namespace
