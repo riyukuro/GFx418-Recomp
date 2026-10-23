@@ -750,6 +750,38 @@ void FUN_140005f60(void** allocation) { if (*allocation) Scaleform::Memory::Free
 // @0x140005fa0
 void FUN_140005fa0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
 
+// MS2-FUNCTIONAL: releases the two tagged weak-proxy references, then optionally frees the pair.
+// @0x140005d30
+void* FUN_140005d30(Scaleform::UPInt* pair, unsigned flags)
+{
+    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+    if (second) second->Release();
+    if (first) first->Release();
+    if (flags & 1) ::operator delete(pair);
+    return pair;
+}
+
+// MS2-FUNCTIONAL: releases the two tagged weak-proxy references held by this pair.
+// @0x140005df0
+void FUN_140005df0(Scaleform::UPInt* pair)
+{
+    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+    if (second) second->Release();
+    if (first) first->Release();
+}
+
+// MS2-FUNCTIONAL: copies both shared string members when a destination pair is supplied.
+// @0x140005db0
+void FUN_140005db0(Scaleform::String* destination, const Scaleform::String* source)
+{
+    if (destination) {
+        new (destination) Scaleform::String(source[0]);
+        new (destination + 1) Scaleform::String(source[1]);
+    }
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
