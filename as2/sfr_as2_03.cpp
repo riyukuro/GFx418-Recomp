@@ -78,6 +78,7 @@
 // MS2-RANGE: 0x14291ab70-0x14291ac10 .text$mn
 // MS2-RANGE: 0x14291b7d0-0x14291b810 .text$mn
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
+// MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -508,6 +509,23 @@ RectangleProto::RectangleProto(ASStringContext* psc, Object* pprototype, const F
     SetMemberRaw(psc, psc->CreateConstString("topLeft"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
     SetMemberRaw(psc, psc->CreateConstString("bottomRight"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
     SetMemberRaw(psc, psc->CreateConstString("size"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+}
+
+// MS2-FUNCTIONAL cl zeroes the string flags (r9d) after the Value temp; the exe does it right after the length
+// @0x14291af50
+ColorTransformProto::ColorTransformProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<ColorTransformObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("redMultiplier"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("greenMultiplier"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("blueMultiplier"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("alphaMultiplier"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("redOffset"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("greenOffset"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("blueOffset"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("alphaOffset"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("rgb"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
 }
 
 // @0x142919af0
@@ -1165,3 +1183,9 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7ShadowFilter@Render@Scaleform@@6B@ 0x14315acc0
 // MS2-PIN: ??_7GlowFilter@Render@Scaleform@@6B@ 0x14315acd8
 // MS2-PIN: ??_7BevelFilter@Render@Scaleform@@6B@ 0x14315acf0
+// MS2-PIN: ??_7?$Prototype@VColorTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432191b0
+// MS2-PIN: ??_7?$Prototype@VColorTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432191f8
+// MS2-PIN: ??_7?$Prototype@VColorTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432192a0
+// MS2-PIN: ??_7ColorTransformProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432192a8
+// MS2-PIN: ??_7ColorTransformProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432192f0
+// MS2-PIN: ??_7ColorTransformProto@AS2@GFx@Scaleform@@6B@ 0x143219398
