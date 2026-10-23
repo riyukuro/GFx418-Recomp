@@ -278,6 +278,11 @@ public:
     }
     // (appended, sfr19) the previous slot of the same name as slot ind, or -1 (out-of-line copy 0x14250cc30).
     SPInt GetPrevSlotIndex(SPInt ind) const;  // 0x14250cc30
+    // (appended, sfr19) the name of slot ind, own or a parent's. 0x14250dce0
+    ASStringNode* GetSlotNameNode(AbsoluteIndex ind) const;
+    // (appended, sfr19) p becomes the parent: own slots start after its slots, and its name set is copied.
+    // 0x142511400
+    void Inherit(const Slots& p);
 
     UPInt               FirstOwnSlotNum;    // +0x00
     const Slots*        Parent;             // +0x08
@@ -322,6 +327,8 @@ public:
     void SetMethod(AbsoluteIndex ind, const Value& m, SlotInfo::BindingType dt, const ASString& name);
 
     Traits& GetTraits() const { return *pTraits; }
+    // (appended, sfr19) method slot ind; a method index becomes a closure kVTableInd of the traits. 0x14250fd90
+    Value GetValue(AbsoluteIndex ind) const;
 
     Traits*                                 pTraits;    // +0x00
     ArrayLH<Value, StatMV_VM_VTable_Mem>    VTMethods;  // +0x08

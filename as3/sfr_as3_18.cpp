@@ -282,6 +282,91 @@ CheckResult GetStrNumber(ASStringNode* str, Value::Number& result)
     return true;
 }
 
+// ==== slots, traits, classes ====
+
+// MS2-FUNCTIONAL: the exe materializes the own/parent test as a bool before branching
+// @0x14250dce0
+ASStringNode* Slots::GetSlotNameNode(AbsoluteIndex ind) const
+{
+    bool inParent;
+    if (ind.Get() < 0)
+        inParent = true;
+    else
+        inParent = static_cast<UPInt>(ind.Get()) < FirstOwnSlotNum;
+    if (inParent)
+        return Parent->GetSlotNameNode(ind);
+    return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Key.GetPtr();
+}
+
+// @0x142511400
+void Slots::Inherit(const Slots& p)
+{
+    Parent = &p;
+    FirstOwnSlotNum = p.FirstOwnSlotNum + p.VArray.GetSize();
+    Set = p.Set;
+}
+
+// MS2-FUNCTIONAL: the exe inlines the Value copy's AddRef switch; ours calls it
+// @0x14250fd90
+Value VTable::GetValue(AbsoluteIndex ind) const
+{
+    const Value& v = VTMethods[static_cast<UInt32>(ind.Get())];
+    if (v.IsMethodInd())
+        return Value(static_cast<SInt32>(ind.Get()), *pTraits, Value::kVTableInd);
+    return v;
+}
+
+// MS2-FUNCTIONAL: same calls; register allocation and the separator select differ
+// @0x14250d570
+ASString InstanceTraits::Traits::GetQualifiedName(QNameFormat f) const
+{
+    const Instances::Namespace& ns = GetNamespace();
+    const ASString name = GetName();
+    if (ns.GetUri().IsEmpty())
+        return name;
+    return ns.GetUri() + (f == qnfWithColons ? "::" : ".") + name;
+}
+
+// @0x14250d4c0
+Object& Class::GetPrototype()
+{
+    if (!pPrototype)
+    {
+        pPrototype = MakePrototype();
+        InitPrototype(*pPrototype);
+    }
+    return *pPrototype;
+}
+
+// The value of a traced pointer: a null object when it is empty.
+// MS2-FUNCTIONAL: the exe inlines AssignUnsafe(Object*/Class*) and calls Value::SetNull; ours the reverse
+// @0x1425100f0
+void STPtr::GetValueUnsafe(Value& v)
+{
+    if (pObject)
+    {
+        ObjType* p = GetRawAddr();
+        switch (AS3::GetObjectTag(reinterpret_cast<UPInt>(pObject)))
+        {
+        case Value::otObject:
+            v.AssignUnsafe(static_cast<Object*>(p));
+            return;
+        case Value::otClass:
+            v.AssignUnsafe(static_cast<Class*>(p));
+            return;
+        case Value::otFunction:
+            v.AssignUnsafe(reinterpret_cast<Instances::Function*>(p));   // (not modeled; its counted base is first)
+            return;
+        case Value::otNamespace:
+            v.AssignUnsafe(static_cast<Instances::Namespace*>(p));
+            return;
+        default:
+            break;
+        }
+    }
+    v.SetNull();
+}
+
 // ==== VM: interned namespaces ====
 
 // @0x1425162a0
