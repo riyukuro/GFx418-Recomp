@@ -61,6 +61,11 @@ void     FUN_1400411f8(void);
 void     FUN_140038190(const void* key);
 void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
 void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
+void     FUN_140031140(void* player);
+void     FUN_140031290(void* player);
+CriBool  FUN_140031410(void* player);
+void     FUN_1400317b0(void* player);
+void     FUN_140034730(void* player);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
@@ -1539,6 +1544,42 @@ void FUN_1400379e0(const void* key)
 CriBool FUN_140037a10(void)
 {
     return DAT_143b27a40 != NULL;
+}
+
+// MS2-FUNCTIONAL: lock the player handle, apply its pending start transition, then unlock it.
+// @0x140031100
+void FUN_140031100(void* player)
+{
+    FUN_140037850(player);
+    FUN_140031140(player);
+    FUN_140037880(player);
+}
+
+// MS2-FUNCTIONAL: run the CRI movie player once under its per-player critical section.
+// @0x140031250
+void FUN_140031250(void* player)
+{
+    FUN_140037850(player);
+    FUN_140031290(player);
+    FUN_140037880(player);
+}
+
+// MS2-FUNCTIONAL: decode a video frame while holding the global CRI movie-player lock.
+// @0x1400313d0
+CriBool FUN_1400313d0(void* player)
+{
+    FUN_1400378b0();
+    CriBool result = FUN_140031410(player);
+    FUN_1400378e0();
+    return result;
+}
+
+// MS2-FUNCTIONAL: process a pending video-server frame and update decoder progress.
+// @0x140031470
+void FUN_140031470(void* player)
+{
+    FUN_140034730(player);
+    FUN_1400317b0(player);
 }
 
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
