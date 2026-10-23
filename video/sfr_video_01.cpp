@@ -889,6 +889,50 @@ void* FUN_140003df0(void* object, unsigned flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: destroys weak-reference support state and optionally frees the object.
+// @0x140004fb0
+void* FUN_140004fb0(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
+{
+    object->~RefCountWeakSupportImpl();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: releases the two weak-proxy references stored in this small pair.
+// @0x140005300
+void FUN_140005300(Scaleform::UPInt* pair)
+{
+    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+    if (second) second->Release();
+    if (first) first->Release();
+}
+
+// MS2-FUNCTIONAL: tears down weak-reference support state and optionally frees its allocation.
+// @0x140005430
+void* FUN_140005430(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
+{
+    object->~RefCountWeakSupportImpl();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: constructs the function and local-frame references from the supplied fields.
+// @0x140005590
+Scaleform::GFx::AS2::FunctionRefBase* FUN_140005590(
+    Scaleform::GFx::AS2::FunctionRefBase* destination,
+    const Scaleform::GFx::AS2::FunctionRefBase* source, unsigned char flags)
+{
+    destination->Flags = flags;
+    destination->Function = source->Function;
+    if (destination->Function && !(flags & Scaleform::GFx::AS2::FunctionRefBase::FuncRef_Internal))
+        destination->Function->AddRef();
+    destination->pLocalFrame = nullptr;
+    if (source->pLocalFrame)
+        destination->SetLocalFrame(source->pLocalFrame, (source->Flags & 1) != 0);
+    return destination;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
