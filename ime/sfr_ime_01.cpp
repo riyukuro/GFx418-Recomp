@@ -32,6 +32,11 @@ static BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
     typedef BOOL (WINAPI* Fn)(HWND, HIMC);
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmReleaseContext"))(hwnd, context);
 }
+static UINT cx18_ImmGetIMEFileNameA(HKL layout, LPSTR buffer, UINT capacity)
+{
+    typedef UINT (WINAPI* Fn)(HKL, LPSTR, UINT);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetIMEFileNameA"))(layout, buffer, capacity);
+}
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_14257db50(void*);
@@ -1159,6 +1164,28 @@ void FUN_1423cc2d0(unsigned long long* object)
             text = *reinterpret_cast<String*>(record + 0x10);
             FUN_1423ccdc0(object, &text);
             return;
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: loads the active IME module, hides its reading window when available, and releases the context.
+// @0x1423cb660
+void FUN_1423cb660(void* self)
+{
+    char fileName[0x104]{};
+    if (!cx18_ImmGetIMEFileNameA(GetKeyboardLayout(0), fileName, sizeof(fileName))) return;
+    HMODULE ime = LoadLibraryA(fileName);
+    if (!ime) return;
+    FARPROC getReading = GetProcAddress(ime, "GetReadinString");
+    FARPROC showWindow = GetProcAddress(ime, "ShowReadingWindow");
+    (void)getReading;
+    void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x78);
+    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(child) + 0x68);
+    if (showWindow) {
+        HIMC context = cx18_ImmGetContext(hwnd);
+        if (context) {
+            reinterpret_cast<void(WINAPI*)(HIMC, int)>(showWindow)(context, 0);
+            cx18_ImmReleaseContext(hwnd, context);
         }
     }
 }
