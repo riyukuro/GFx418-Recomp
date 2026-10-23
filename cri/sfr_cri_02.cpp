@@ -105,6 +105,13 @@ void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value,
 void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
 void     FUN_140031140(void* player);
 void     FUN_140031290(void* player);
+CriBool  FUN_1400314d0(void* player);
+CriSint32 FUN_140042d70(void* decoder, void* player);
+void     FUN_1400428e0(void* audioManager, void* player);
+void     FUN_140031570(void* player);
+void     FUN_140034730(void* player);
+void     FUN_140033810(void* player);
+void     FUN_1400344f0(void* player);
 CriBool  FUN_140031410(void* player);
 void     FUN_1400317b0(void* player);
 void     FUN_140034730(void* player);
@@ -3459,6 +3466,46 @@ void FUN_140031140(void* player)
         state->Status = 0;
         state->StopState = 0;
     }
+}
+
+// MS2-FUNCTIONAL: advance decoder and audio processing according to the CRI Movie state machine.
+// @0x140031290
+void FUN_140031290(void* player)
+{
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    CriSint32 status = getInternalStatus(player);
+    if (status == 0 || status == 9 || status == 7 || status == 6)
+        return;
+
+    if (status != 1)
+        FUN_140034730(player);
+    FUN_140034690(player);
+
+    if (getInternalStatus(player) == 8)
+    {
+        if (FUN_1400314d0(player) == 1)
+        {
+            if (isLockedInputChunk(player) == 1)
+                state->StopState = 3;
+            else
+            {
+                FUN_140031570(player);
+                state->Status = 9;
+                state->StopState = 5;
+                state->InternalFlags = 0;
+            }
+        }
+        return;
+    }
+
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    if (decoders->AudioManager)
+        FUN_1400428e0(decoders->AudioManager, player);
+    status = getInternalStatus(player);
+    if (status == 3)
+        FUN_140033810(player);
+    else if (status == 5)
+        FUN_1400344f0(player);
 }
 
 // MS2-FUNCTIONAL: run the CRI movie player once under its per-player critical section.
