@@ -153,6 +153,7 @@
 // MS2-RANGE: 0x14295a4b0-0x14295ae14 .text$mn
 // MS2-RANGE: 0x14295b480-0x14295bbdf .text$mn
 // MS2-RANGE: 0x142958720-0x142959160 .text$mn
+// MS2-RANGE: 0x142959bc0-0x142959f07 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3738,6 +3739,28 @@ void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
     pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), Value(Value::UNSET));
     pfilter->SetMemberRaw(psc, psc->CreateConstString("type"), Value(Value::UNSET));
     pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
+}
+
+// @0x142959bc0
+void ColorTransformCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_ColorTransform)
+    {
+        Ptr<ColorTransformObject> pct = static_cast<ColorTransformObject*>(fn.ThisPtr);
+        fn.Result->SetAsObject(pct.GetPtr());
+        if (fn.NArgs >= 8)
+        {
+            Render::Cxform& cx = pct->mColorTransform;
+            cx.M[0][0] = (float)fn.Arg(0).ToNumber(fn.Env);
+            cx.M[0][1] = (float)fn.Arg(1).ToNumber(fn.Env);
+            cx.M[0][2] = (float)fn.Arg(2).ToNumber(fn.Env);
+            cx.M[0][3] = (float)fn.Arg(3).ToNumber(fn.Env);
+            cx.M[1][0] = (float)fn.Arg(4).ToNumber(fn.Env);
+            cx.M[1][1] = (float)fn.Arg(5).ToNumber(fn.Env);
+            cx.M[1][2] = (float)fn.Arg(6).ToNumber(fn.Env);
+            cx.M[1][3] = (float)fn.Arg(7).ToNumber(fn.Env);
+        }
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 

@@ -53,6 +53,9 @@ class ColorTransformCtorFunction : public CFunctionObject
 {
 public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c00
+
+    // new ColorTransform(8 numbers) sets the multipliers and offsets (exe 0x142959bc0).
+    static void GlobalCtor(const FnCall& fn);
 };
 
 // ColorTransform.prototype methods; the eight channels and rgb are added as plain members.
