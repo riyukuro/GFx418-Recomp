@@ -3,6 +3,7 @@
 // MS2-UNIT: sfr_as2_06
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14295d700-0x14295d840 .text$mn
+// MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x14295e1b0-0x14295e2b0 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
@@ -241,6 +242,24 @@ bool Object::HasMember(ASStringContext* psc, const ASString& name, bool inclProt
     else if (inclPrototypes && pProto)
         return pProto->HasMember(psc, name, true);
     return false;
+}
+
+// MS2-FUNCTIONAL the exe inlines the standard-member name hash and ObjectInterface refcount paths; this preserves
+// their lookup result through the recovered ASString and object APIs.
+// @0x14295d840
+bool AvmCharacter::HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes)
+{
+    ASString lowerName(name);
+    if (IsStandardMember(name, &lowerName))
+    {
+        const StandardMember member = GetStandardMemberConstant(lowerName.IsEmpty() ? name : lowerName);
+        if (member != M_InvalidMember && member < M_LastBitMaskMember &&
+            (GetStandardMemberBitMask() & (1u << static_cast<unsigned>(member))))
+            return true;
+    }
+
+    Object* object = GetASObject();
+    return object && object->HasMember(psc, name, inclPrototypes);
 }
 
 // @0x142962010

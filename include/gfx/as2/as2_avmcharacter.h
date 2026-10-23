@@ -30,6 +30,7 @@ public:
     InteractiveObject* CloneDisplayObject(const ASString& newname, int depth, const ObjectInterface* psource);
 
     // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
+    virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes);
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
     // The member of the clip's AS object (exe 0x1429448c0).
     virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember);
