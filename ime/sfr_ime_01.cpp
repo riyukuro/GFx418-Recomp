@@ -45,6 +45,7 @@ extern "C" const void* DAT_14313a200[];
 extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
+extern "C" void FUN_1423d8b80(void*, void*, void*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1423daf30(void*);
@@ -901,6 +902,29 @@ extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long lon
         FUN_1423d95f0(array, allocator, (length >> 2) + length);
     }
     array[1] = length;
+}
+
+// MS2-FUNCTIONAL: walks the executable's linked string records and inserts each key/value pair by Bernstein hash.
+// @0x1423d8e80
+void FUN_1423d8e80(void* table, void* source)
+{
+    void** sourceVtable = *reinterpret_cast<void***>(source);
+    auto* record = static_cast<unsigned char*>(reinterpret_cast<void*(*)(void*)>(sourceVtable[0])(source));
+    if (!record) return;
+    record = *reinterpret_cast<unsigned char**>(record + 8);
+    while (record) {
+        const unsigned key = *reinterpret_cast<unsigned*>(record);
+        const char* text = *reinterpret_cast<const char**>(record + 8);
+        const unsigned long long length = strlen(text);
+        const unsigned long long hash = String::BernsteinHashFunction(text, length, 0x1505);
+        void* value = const_cast<char*>(text);
+        unsigned keyCopy = key;
+        void* valueRef = &value;
+        unsigned* keyRef = &keyCopy;
+        void* entry[2] = { valueRef, keyRef };
+        FUN_1423d8b80(table, table, entry, hash);
+        record = *reinterpret_cast<unsigned char**>(record + 24);
+    }
 }
 
 // MS2-FUNCTIONAL: performs the executable's interface query and retrieves the IME reading-state values.
