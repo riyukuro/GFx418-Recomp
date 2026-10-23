@@ -8,6 +8,7 @@
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_string.h"
 #include "../include/gfx/gfx_loadproc.h"
+#include "../include/gfx/gfx_state.h"
 #include "../include/gfx/as3/as3_support.h"
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
@@ -27,6 +28,8 @@ static BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
     typedef BOOL (WINAPI* Fn)(HWND, HIMC);
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmReleaseContext"))(hwnd, context);
 }
+
+extern "C" void FUN_14015b310(void*, unsigned long long);
 
 struct HWND__;
 
@@ -310,6 +313,20 @@ void FUN_1423d1c90(void** self)
     }
 }
 
+// MS2-FUNCTIONAL: State destruction follows our shared class declaration; runtime heap release helper is recovered.
+// @0x1423db9d0
+void* FUN_1423db9d0(Scaleform::GFx::State* self, unsigned flags)
+{
+    self->Scaleform::GFx::State::~State();
+    if (flags & 1) {
+        if ((flags & 4) == 0)
+            Scaleform::Memory::Free(self);
+        else
+            ::FUN_14015b310(self, 0x18);
+    }
+    return self;
+}
+
 // @0x1423d1c10
 void FUN_1423d1c10(void* self)
 {
@@ -353,3 +370,4 @@ unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long l
 }
 
 }}}
+
