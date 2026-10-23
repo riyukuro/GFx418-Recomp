@@ -44,6 +44,7 @@ extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
 extern "C" void FUN_14257db40(void*);
+extern "C" void FUN_1423daf30(void*);
 
 struct HWND__;
 
@@ -354,6 +355,23 @@ void* FUN_1423ce250(unsigned long long* object, unsigned long long flags)
         else Memory::Free(object);
     }
     return object;
+}
+
+// MS2-FUNCTIONAL: follows the executable's IME-language gate and keyboard injection sequence.
+// @0x1423d1420
+void FUN_1423d1420(void* object, int index)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    const unsigned state = *reinterpret_cast<unsigned*>(bytes + 0x98);
+    if ((state & 0xf00000) == 0 && (((state - 0x10000) & 0xfffcffff) != 0 || state == 0x40000)) {
+        FUN_1423daf30(*reinterpret_cast<void**>(bytes + 0xc8));
+        return;
+    }
+    INPUT input{};
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = static_cast<WORD>(index + 0x31);
+    input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(index + 0x31, MAPVK_VK_TO_VSC));
+    SendInput(1, &input, sizeof(INPUT));
 }
 
 // MS2-FUNCTIONAL: releases each executable-tagged Value in reverse order using the recovered shared Value destructor.
