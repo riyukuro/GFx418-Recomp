@@ -10,6 +10,7 @@
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 
 extern void FUN_14257dcb0(void*);
@@ -1444,6 +1445,27 @@ bool FUN_14000a090(Scaleform::GFx::ASStringNode** left,
                    Scaleform::GFx::ASStringNode** right, bool caseSensitive)
 {
     return FUN_14000a030(left, right, caseSensitive);
+}
+
+// MS2-FUNCTIONAL: routes prototype constructor names to GASPrototypeBase and delegates other names.
+// @0x14000a110
+void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
+                   Scaleform::GFx::AS2::ASStringContext* context,
+                   const Scaleform::GFx::ASString* name,
+                   Scaleform::GFx::AS2::Value* result)
+{
+    const char* text = name->ToCStr();
+    const bool hiddenConstructor = strcmp(text, "__constructor__") == 0;
+    const bool constructor = strcmp(text, "constructor") == 0;
+    if (!hiddenConstructor && !constructor) {
+        subobject->GetMemberRaw(context, *name, result);
+        return;
+    }
+    auto* completeObject = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
+        reinterpret_cast<unsigned char*>(subobject) - 0x20);
+    auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+        reinterpret_cast<unsigned char*>(subobject) + 0xb8);
+    prototype->GetMemberRawConstructor(completeObject, context, *name, result, hiddenConstructor);
 }
 
 namespace Scaleform { namespace GFx { namespace Video {
