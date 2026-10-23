@@ -1815,6 +1815,8 @@ extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e3a0[7];   // Classes::fl::
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e7f0[2];   // Classes::fl::Boolean prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6e8[1];   // Classes::fl::Error prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e690[2];   // Classes::fl::Namespace prototype methods
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d610[2];   // Classes::fl::Array prototype methods (type-checked)
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e840[2];   // Classes::fl::String prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d850[6];   // Classes::fl::Number prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6a0[1];   // Classes::fl::QName prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d128[1];   // Classes::fl::RegExp prototype methods
@@ -1901,6 +1903,38 @@ namespace Classes { namespace fl
         FUN_142511ac0(this, obj);
         AddDynamicFuncs(obj, DAT_143a2d128);
         // (no constructor slot: RegExp's prototype keeps its own)
+    }
+
+    // The prototype methods go through a closure that checks the type of 'this' (so toString.toString() is a
+    // function).
+    // MS2-FUNCTIONAL: the exe inlines the FunctionBase constructor here as well
+    // @0x142417800
+    void Array::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        FUN_142511ac0(this, obj);
+
+        const Classes::Function& cf =
+            static_cast<const Classes::Function&>(FUN_142508460(&GetVM().GetClassTraitsFunction().GetInstanceTraits()));
+        InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
+        for (unsigned i = 0; i < 2; ++i)
+        {
+            Value f(cf.MakeCheckTypeInstance(*this, DAT_14313d610[i], itr));
+            obj.AddDynamicSlotValuePair(GetVM().GetStringManager().CreateConstString(DAT_14313d610[i].Name), f,
+                                        SlotInfo::aDontEnum);
+        }
+        FUN_1424e6f90(this, obj);
+    }
+
+    // @0x142418250
+    void String::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        InitPrototypeFromVTable(obj, &Class::ConvertCopy);
+        AddDynamicFuncs(obj, DAT_14313e840);
+        FUN_1424e6f90(this, obj);
     }
 
     // @0x142418390
@@ -2139,6 +2173,14 @@ namespace Classes { namespace fl
         InstanceTraits::fl::Error& itr = static_cast<InstanceTraits::fl::Error&>(GetClassTraits().GetInstanceTraits());
         return itr.MakeInstance(itr);
     }
+
+    // MS2-FUNCTIONAL: the exe inlines the RegExp constructor
+    // @0x14241c560
+    Pickable<AS3::Object> RegExp::MakePrototype() const
+    {
+        InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
+        return Pickable<AS3::Object>(new(itr.Alloc()) Instances::fl::RegExp(itr));
+    }
 }}
 }}} // namespace Scaleform::GFx::AS3
 
@@ -2217,6 +2259,25 @@ namespace InstanceTraits
         f.SetBase(16).Convert();
         s += f.ToCStr();
         return s;
+    }
+}
+
+namespace Classes
+{
+    // MS2-FUNCTIONAL: the exe inlines the ThunkFunction constructor
+    // @0x14241c600
+    Pickable<Instances::ThunkFunction> Function::MakeThunkFunction(const ThunkInfo& thunk, const Traits& ot) const
+    {
+        InstanceTraits::Traits& itr = GetClassTraits().GetThunkFunctionTraits();
+        return Pickable<Instances::ThunkFunction>(new(itr.Alloc()) Instances::ThunkFunction(itr, thunk, ot));
+    }
+
+    // @0x142419d90
+    Pickable<Instances::CheckTypeTF> Function::MakeCheckTypeInstance(const Class& data_type, const ThunkInfo& thunk,
+                                                                     const Traits& ot) const
+    {
+        InstanceTraits::Traits& itr = GetClassTraits().GetThunkFunctionTraits();
+        return Pickable<Instances::CheckTypeTF>(new(GetVM().GetMemoryHeap()) Instances::CheckTypeTF(itr, thunk, data_type, ot));
     }
 }
 }}} // namespace Scaleform::GFx::AS3
@@ -4020,3 +4081,5 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-PIN: ??_7AttrGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439f8
 // MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ??_7ThunkFunction@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fa78
+// MS2-PIN: ??_7CheckTypeTF@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fb38
