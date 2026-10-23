@@ -1472,6 +1472,145 @@ bool TextMeshProvider::generateSelection(Renderer2DImpl* ren, VertexOutput* verO
     return ok;
 }
 
+// MS2-FUNCTIONAL: register allocation (verOut/mtx and the hoisted constants take other registers), code otherwise the same
+// @0x1426e7ff0
+bool TextMeshProvider::generateUnderlines(Renderer2DImpl* ren, VertexOutput* verOut, const TextMeshLayer& layer,
+                                          const Matrix2F& mtx, unsigned meshGenFlags)
+{
+    // one style per underline, its colour at style - 1
+    ArrayStaticBuffPOD<UInt32, 16> colors(Memory::GetGlobalHeap());
+
+    MeshGenerator* gen = ren->GetMeshGen();
+    gen->Clear();
+
+    // underlines are stroked unclosed polylines with flat ends, solid in the middle and anti-aliased at the edges
+    unsigned   aaMode   = meshGenFlags & (Mesh_EdgeAA | Mesh_Mask);
+    StrokerAA& strokeAA = ren->GetMeshGen()->mStrokerAA;
+    strokeAA.SetStartLineCap(StrokerTypes::ButtCap);
+    strokeAA.SetEndLineCap(StrokerTypes::ButtCap);
+    strokeAA.SetLineJoin(StrokerTypes::MiterJoin);
+    float solid, edgeAA;
+    if (aaMode == Mesh_EdgeAA)
+    {
+        edgeAA = 0.96f;
+        solid  = 0.0f;
+    }
+    else
+    {
+        solid  = 0.5f;
+        edgeAA = 0.0f;
+    }
+    strokeAA.SetSolidWidth(solid);
+    strokeAA.SetEdgeAAWidth(edgeAA);
+
+    for (unsigned i = 0; i < layer.Count; ++i)
+    {
+        const TextMeshEntry& e = Entries[layer.Start + i];
+        const UnderlineEnt&  u = e.EntryData.UnderlineData;
+        if (aaMode == Mesh_EdgeAA)
+        {
+            strokeAA.SetSolidWidth(u.Style == TextUnderline_Thick || u.Style == TextUnderline_DottedThick ? 1.0f : 0.0f);
+            if (u.Style == TextUnderline_DitheredThick)
+                strokeAA.SetSolidWidth(0.25f);
+            strokeAA.SetEdgeAAWidth(u.Style == TextUnderline_Dithered ? 0.5f : 0.96f);
+        }
+        else
+        {
+            strokeAA.SetSolidWidth(u.Style == TextUnderline_Thick || u.Style == TextUnderline_DottedThick ? 1.0f : 0.5f);
+            if (u.Style == TextUnderline_DitheredThick)
+                strokeAA.SetSolidWidth(0.75f);
+            strokeAA.SetEdgeAAWidth(0.0f);
+        }
+        strokeAA.SetStyleLeft(i + 1);
+        strokeAA.SetStyleRight(i + 1);
+        colors.PushBack(e.mColor);
+
+        float x1 = u.x * mtx.M[0][0] + u.y * mtx.M[0][1] + mtx.M[0][3];
+        float y1 = u.x * mtx.M[1][0] + u.y * mtx.M[1][1] + mtx.M[1][3];
+        float x2 = (u.x + u.Len) * mtx.M[0][0] + u.y * mtx.M[0][1] + mtx.M[0][3];
+        float y2 = (u.x + u.Len) * mtx.M[1][0] + u.y * mtx.M[1][1] + mtx.M[1][3];
+
+        if (u.Style == TextUnderline_Single || u.Style == TextUnderline_Thick)
+        {
+            // on the middle of a pixel row
+            strokeAA.AddVertex(x1, floorf(y1) + 0.5f);
+            strokeAA.AddVertex(x2, floorf(y2) + 0.5f);
+            strokeAA.FinalizePath(0, 0, false, false);
+        }
+        if (u.Style == TextUnderline_Dotted || u.Style == TextUnderline_DottedThick)
+        {
+            // two pixel dots five pixels apart, each its own path
+            x1 = (float)(floor(x1) - 0.5);
+            x2 = (float)(floor(x2) + 0.5);
+            y1 = (float)(floor(y1) + 0.5);
+            y2 = (float)(floor(y2) + 0.5);
+            if (x1 <= x2)
+            {
+                float ya = floorf(y1) + 0.5f;
+                float yb = floorf(y2) + 0.5f;
+                float x  = x1;
+                do
+                {
+                    strokeAA.AddVertex(x, ya);
+                    strokeAA.AddVertex(x + 2.0f, yb);
+                    strokeAA.FinalizePath(0, 0, false, false);
+                    x += 5.0f;
+                } while (x <= x2);
+            }
+        }
+        if (u.Style == TextUnderline_Dithered || u.Style == TextUnderline_DitheredThick)
+        {
+            // a zigzag of one path across the row
+            x1 = (float)floor(x1);
+            x2 = (float)(floor(x2) + 1.0);
+            y1 = (float)(floor(y1) + 0.5);
+            y2 = (float)(floor(y2) + 0.5);
+            float step = 4.0f, half = 0.75f;
+            if (u.Style == TextUnderline_DitheredThick)
+            {
+                step = 6.0f;
+                half = 1.25f;
+            }
+            if (x1 <= x2)
+            {
+                float ya  = floorf(y1) + half;
+                float yb  = floorf(y2) - half;
+                float seg = step * 0.5f;
+                float x   = x1;
+                do
+                {
+                    strokeAA.AddVertex(x, ya);
+                    strokeAA.AddVertex(x + seg, yb);
+                    x += step;
+                } while (x <= x2);
+            }
+            strokeAA.FinalizePath(0, 0, false, false);
+        }
+    }
+
+    if (strokeAA.GetVertexCount())
+    {
+        strokeAA.Transform(mtx.GetInverse());
+        Matrix2F toMesh = strokeAA.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
+
+        VertexOutput::Fill fill = { strokeAA.GetMeshVertexCount(0), strokeAA.GetMeshTriangleCount(0) * 3,
+                                    &VertexXY16iCF32::Format, 0, 0, 0, 0 };
+        if (verOut->BeginOutput(&fill, 1, toMesh))
+        {
+            VertexCountType count;
+            setMeshData(&strokeAA, verOut, &colors[0], count);
+            verOut->EndOutput();
+        }
+    }
+    else
+        generateNullVectorMesh(verOut);
+
+    strokeAA.SetStyleLeft(1);
+    strokeAA.SetStyleRight(1);
+    gen->Clear();
+    return true;
+}
+
 // @0x1426e6ad0
 bool TextMeshProvider::generateNullVectorMesh(VertexOutput* verOut)
 {

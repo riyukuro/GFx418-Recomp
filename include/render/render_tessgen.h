@@ -79,20 +79,24 @@ public:
     virtual void      GetTrianglesI16(unsigned meshIdx, UInt16* idx, unsigned start, unsigned num) const;
     // (the size is not recovered yet)
     // (appended for sfr_render_03d: the shape mesh provider's solid AA strokes) left and right of the path alike
-    void SetSolidWidth(CoordType w)  { SolidWidthR = SolidWidthL = w; }
-    void SetEdgeAAWidth(CoordType w) { EdgeAAWidthR = EdgeAAWidthL = w; }
+    void SetSolidWidth(CoordType w)  { SolidWidthL = SolidWidthR = w; }
+    void SetEdgeAAWidth(CoordType w) { EdgeAAWidthL = EdgeAAWidthR = w; }
     void SetLineJoin(StrokerTypes::LineJoinType lj)   { LineJoin = lj; }
     void SetStartLineCap(StrokerTypes::LineCapType lc) { StartLineCap = lc; }
     void SetEndLineCap(StrokerTypes::LineCapType lc)   { EndLineCap = lc; }
     void SetMiterLimit(CoordType ml)  { MiterLimit = ml; }
     void SetToleranceParam(const ToleranceParams& param);   // 0x1426ae280
+    // (appended for sfr_render_07o: the text underlines) the fill styles left and right of the next path
+    void SetStyleLeft(unsigned s)  { StyleLeft = s; }
+    void SetStyleRight(unsigned s) { StyleRight = s; }
 
 private:
     StrokerTypes::LineJoinType LineJoin;       // +0x08
     StrokerTypes::LineCapType  StartLineCap;   // +0x0c
     StrokerTypes::LineCapType  EndLineCap;     // +0x10
     CoordType                  MiterLimit;     // +0x14
-    UByte                      Unk_18[8];      // +0x18
+    unsigned                   StyleLeft;      // +0x18
+    unsigned                   StyleRight;     // +0x1c
     CoordType                  SolidWidthL;    // +0x20
     CoordType                  SolidWidthR;    // +0x24
     CoordType                  EdgeAAWidthL;   // +0x28
