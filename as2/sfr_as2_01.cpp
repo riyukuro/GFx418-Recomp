@@ -3,6 +3,8 @@
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142444c40-0x142445480 .text$mn
+// MS2-RANGE: 0x142446cb0-0x142446d90 .text$mn
+// MS2-RANGE: 0x1424ad030-0x1424ad0b0 .text$mn
 // MS2-RANGE: 0x1424ad0b0-0x1424ad4d0 .text$mn
 // MS2-RANGE: 0x1424c9270-0x1424c9630 .text$mn
 // MS2-RANGE: 0x1424c9630-0x1424c96a0 .text$mn
@@ -2868,6 +2870,15 @@ void DateProto::DateGetUTCMonth(const FnCall& fn)
     fn.Result->SetNumber(-1);
 }
 
+// ---- Matrix helper ----
+
+// The out-of-line copy of Matrix2x4::SetInverse the Matrix natives call.
+// @0x142446cb0
+void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src)
+{
+    m->SetInverse(src);
+}
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {
@@ -3110,6 +3121,12 @@ Pickable<TextEventEx::InstanceType> TextEventEx::MakeInstance(TextEventEx& t)
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 }}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_gfx
+
+// ---- LogBase instances ----
+namespace Scaleform { namespace GFx {
+// @0x1424ad030
+template void LogBase<LogState>::LogScriptWarning(const char* pfmt, ...) const;
+}} // namespace Scaleform::GFx
 
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
