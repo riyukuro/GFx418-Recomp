@@ -26,6 +26,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
+#include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -2183,6 +2184,25 @@ static SF_INLINE void MS2_StrongAddRef(const Value& v)
     }
     if (obj)
         obj->AddRef();
+}
+
+// A copied call frame is marked as a copy; its debug file/line position starts over.
+// MS2-FUNCTIONAL: same code; the exe duplicates the object AddRef tail per closure/object case where ours jumps to one
+// @0x1424d6900
+CallFrame::CallFrame(const CallFrame& o)
+    : DiscardResult(o.DiscardResult), ACopy(true), RegisteredFunction(o.RegisteredFunction), ScopeStackBaseInd(o.ScopeStackBaseInd), CP(o.CP)
+    , pRegisterFile(o.pRegisterFile), pHeap(o.pHeap), pFile(o.pFile), MBIIndex(o.MBIIndex), pSavedScope(o.pSavedScope), OriginationTraits(o.OriginationTraits)
+    , pScopeStack(o.pScopeStack), PrevInitialStackPos(o.PrevInitialStackPos), DefXMLNamespace(o.DefXMLNamespace), PrevFirstStackPos(o.PrevFirstStackPos)
+    , PrevReservedNum(o.PrevReservedNum), Name(o.Name), CurrFileInd(0), CurrLineNumber(0), StartTicks(o.StartTicks), Invoker(o.Invoker, Value::NotRefCounted)
+{
+    // Value::AddRef as the exe expands it inline (the weak proxy is Value's private +0x08).
+    if (o.Invoker.IsRefCounted())
+    {
+        if (o.Invoker.IsWeakRef())
+            ++(*reinterpret_cast<WeakProxy* const*>(reinterpret_cast<const char*>(&o.Invoker) + 8))->RefCount;
+        else
+            MS2_StrongAddRef(o.Invoker);
+    }
 }
 
 // A strong copy: copies other with its reference, then trades a weak reference for a strong one to the object, or
