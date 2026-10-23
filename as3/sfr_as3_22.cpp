@@ -29,6 +29,7 @@ extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_14268f8f0(void*, void*, unsigned);
 extern "C" void FUN_1426869a0(void*, void*, const void*, std::uint64_t);
+extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
 MS2_GLOBAL(0x1431921b0, void*, AS3MovieImageDataVtable);
@@ -81,6 +82,61 @@ static void WriteFixedHashValue(std::uint64_t* row, const std::uint64_t* value)
     const auto* payload = reinterpret_cast<const std::uint64_t*>(value[1]);
     for (unsigned i = 0; i < 4; ++i)
         row[3 + i] = payload[i];
+}
+namespace Scaleform { static std::uint64_t HashImageKey(const unsigned char* key); }
+
+// MS2-FUNCTIONAL: clears or rebuilds the fixed 0x38-byte movie-record hash table and reinserts each occupied key/payload pair.
+// @0x1426906b0
+extern "C" void FUN_1426906b0(void* setObject, void* allocator, std::size_t requestedSize)
+{
+    auto** set = static_cast<std::uint64_t**>(setObject);
+    auto* oldTable = *set;
+    if (!requestedSize) {
+        if (oldTable) {
+            const std::uint64_t oldCapacity = oldTable[1] + 1;
+            auto* bytes = reinterpret_cast<unsigned char*>(oldTable);
+            for (std::uint64_t i = 0; i < oldCapacity; ++i) {
+                auto* row = reinterpret_cast<std::uint64_t*>(bytes + 0x10 + i * 0x38);
+                if (static_cast<std::int64_t>(row[0]) != -2)
+                    row[0] = UINT64_MAX - 1;
+            }
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, oldTable);
+            *set = nullptr;
+        }
+        return;
+    }
+
+    std::uint64_t capacity = 8;
+    while (capacity < requestedSize)
+        capacity <<= 1;
+    int statId = 2;
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* newTable = reinterpret_cast<std::uint64_t* (*)(void*, std::size_t, const int*)>(heapVtable[10])(
+        DAT_143b15f60, static_cast<std::size_t>(capacity * 0x38 + 0x10), &statId);
+    newTable[0] = 0;
+    newTable[1] = capacity - 1;
+    auto* newBytes = reinterpret_cast<unsigned char*>(newTable);
+    for (std::uint64_t i = 0; i < capacity; ++i)
+        *reinterpret_cast<std::uint64_t*>(newBytes + 0x10 + i * 0x38) = UINT64_MAX - 1;
+    *set = newTable;
+
+    if (oldTable) {
+        const std::uint64_t oldCapacity = oldTable[1] + 1;
+        auto* oldBytes = reinterpret_cast<unsigned char*>(oldTable);
+        for (std::uint64_t i = 0; i < oldCapacity; ++i) {
+            auto* row = reinterpret_cast<std::uint64_t*>(oldBytes + 0x10 + i * 0x38);
+            if (static_cast<std::int64_t>(row[0]) != -2) {
+                const auto* key = reinterpret_cast<const unsigned char*>(oldBytes + 0x20 + i * 0x38);
+                const auto* payload = reinterpret_cast<const std::uint64_t*>(oldBytes + 0x28 + i * 0x38);
+                struct Pair { const unsigned char* key; const std::uint64_t* payload; } pair{key, payload};
+                FUN_1426867f0(setObject, allocator, &pair, Scaleform::HashImageKey(key));
+                row[0] = UINT64_MAX - 1;
+            }
+        }
+        auto** oldHeapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(oldHeapVtable[12])(DAT_143b15f60, oldTable);
+    }
 }
 
 // MS2-FUNCTIONAL: inserts a key and six qwords of cached payload into the fixed-size hash table, relocating collisions and growing it as needed.
