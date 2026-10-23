@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x1424ad870-0x1424bb1f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_assupport.h"
 #include "ms2/scaleform/include/gfx/gfx_fontlib.h"
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/kernel/sf_utf8util.h"
@@ -794,6 +795,9 @@ namespace InstanceTraits { namespace fl_ui
 
 
 // ==== flash.ui natives ================================================================================================
+// Bodies of the exe called here (not recovered yet), by their addresses.
+// VM: the instance traits of Vector.<String>.
+Scaleform::GFx::AS3::InstanceTraits::fl_vec::Vector_String& FUN_14250a6c0(Scaleform::GFx::AS3::VM& vm);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -909,6 +913,27 @@ namespace Classes { namespace fl_ui
     void Multitouch::maxTouchPointsGet(SInt32& result)
     {
         result = static_cast<ASVM&>(GetVM()).GetMovieImpl()->GetMaxTouchPoints();
+    }
+
+    // A Vector.<String> of the gestures the movie supports: only panning is reported.
+    // @0x1424b96b0
+    // MS2-FUNCTIONAL: the exe calls an out-of-line CheckFixed copy (0x14255b2d0); ours inlines it
+    void Multitouch::supportedGesturesGet(SPtr<Instances::fl_vec::Vector_String>& result)
+    {
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        UInt32 mask = vm.GetMovieImpl()->GetSupportedGesturesMask();
+        InstanceTraits::fl_vec::Vector_String& itr = FUN_14250a6c0(vm);
+        SPtr<Instances::fl_vec::Vector_String> v(itr.MakeInstanceS(itr));
+        result.Pick(v.GetPtr());
+        *v.GetRawPtr() = NULL;
+        if (mask & 1)
+        {
+            ASString pan = vm.GetStringManager().CreateConstString("pan");
+            Ptr<ASStringNode> node(pan.GetNode());
+            VectorBase<Ptr<ASStringNode> >& v = result->V;
+            if (v.CheckFixed())
+                v.V.PushBack(node);
+        }
     }
 
     // @0x1424b97d0
@@ -1056,6 +1081,75 @@ namespace Instances { namespace fl_text
         Value::Number n;
         for (unsigned i = 0; i < argc && i < 6; ++i)
             argv[i].Convert2Number(n);
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- fl_text: TextField stage object ----
+// Bodies of the exe called here (not recovered yet), by their addresses.
+// AvmDisplayObj::AssignAS3Obj: makes pinst the AS3 object of pavm.
+void FUN_1424edca0(Scaleform::GFx::AvmDisplayObjBase* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst);
+// MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out.
+Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
+                                                   const Scaleform::GFx::ResourceId* prid);
+// TextField::SetText(text, html, notify).
+void FUN_1425bd9a0(Scaleform::GFx::DisplayObject* ptf, const char* ptext, bool html, bool notify);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // ASVM::pMovieRoot: the AS3 movie root, used through its ASMovieRootBase part.
+    static ASMovieRootBase* GetASRoot(VM& vm)
+    {
+        return *reinterpret_cast<ASMovieRootBase**>(reinterpret_cast<UByte*>(&vm) + 0x2d8);
+    }
+
+    // The definition (call frame's movie) a stage object created from script binds to.
+    static MovieDefImpl* GetCallerDefImpl(VM& vm)
+    {
+        const UByte* pvm = reinterpret_cast<const UByte*>(&vm);
+        UPInt n = *reinterpret_cast<const UPInt*>(pvm + 0x78) - 1;
+        const UByte* ppage = (*reinterpret_cast<UByte* const* const*>(pvm + 0x90))[n >> 6];
+        const UByte* pframe = ppage + (n & 0x3f) * 0xa8;
+        const UByte* pfile = *reinterpret_cast<UByte* const*>(*reinterpret_cast<UByte* const*>(pframe + 0x28) + 0x28);
+        return *reinterpret_cast<MovieDefImpl* const*>(pfile + 0x188);
+    }
+
+    // @0x1424ac040
+    GFx::DisplayObject* TextField::CreateStageObject()
+    {
+        if (!pDispObj)
+        {
+            ASMovieRootBase* proot = GetASRoot(GetVM());
+            CharacterCreateInfo ccinfo;
+            {
+                ResourceId emptyTextId(0x10002);
+                FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyTextId);
+            }
+            ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
+            DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                 ResourceId(0x10002), CharacterDef::Unknown);
+            if (pDispObj)
+                pDispObj->Release();
+            pDispObj.GetRawRef() = static_cast<GFx::DisplayObject*>(pch);
+            FUN_1424edca0(pDispObj ? pDispObj->GetAvmObjImpl() : NULL, this);
+        }
+        return pDispObj;
+    }
+
+    // A text field made from script starts 100 x 100 pixels and empty.
+    // @0x1424acee0
+    void TextField::InitInstance(bool extCall)
+    {
+        if (extCall)
+            return;
+        TextField::CreateStageObject();
+        GFx::DisplayObject* ptf = pDispObj;
+        ptf->SetWidth(100);
+        ptf->SetHeight(100);
+        FUN_1425bd9a0(ptf, "", true, true);
     }
 }}
 
