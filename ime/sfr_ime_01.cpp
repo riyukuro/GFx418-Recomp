@@ -136,6 +136,32 @@ void* FUN_1423d9430(void* object, void* owner)
     return object;
 }
 
+// MS2-FUNCTIONAL: deleting wrappers release the allocation when requested; the anonymous purecall-only interface is not declared in our headers.
+// @0x1423ce2c0
+void* FUN_1423ce2c0(void* object, unsigned long long flags)
+{
+    if (flags & 1)
+        Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: deleting wrappers release the allocation when requested; the two equivalent anonymous purecall-only interfaces are not declared in our headers.
+// @0x1423dbc50
+void* FUN_1423dbc50(void* object, unsigned long long flags)
+{
+    if (flags & 1)
+        Memory::Free(object);
+    return object;
+}
+
+// @0x1423dbc80
+void* FUN_1423dbc80(void* object, unsigned long long flags)
+{
+    if (flags & 1)
+        Memory::Free(object);
+    return object;
+}
+
 // @0x1423ca660
 void FUN_1423ca660(void* self, unsigned value)
 {
