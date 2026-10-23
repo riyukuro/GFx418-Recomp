@@ -389,6 +389,9 @@ void** FUN_1400128e0(ASStringManager* manager, void** result, const unsigned __i
     return result;
 }
 
+// @0x140012940
+void FUN_140012940(ASString* string) { string->SetNull(); }
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
