@@ -204,6 +204,108 @@ void** FUN_140003ab0(void** destination, void* replacement)
     return destination;
 }
 
+// MS2-FUNCTIONAL: initializes the player, timing, pool, timeout, and notification defaults observed in the constructor.
+// @0x1400033f0
+void FUN_1400033f0(void* player)
+{
+    auto* bytes = static_cast<unsigned char*>(player);
+    *reinterpret_cast<void**>(bytes + 0x48) = nullptr;
+    memset(bytes + 0x50, 0, 0x50);
+    *reinterpret_cast<float*>(bytes + 0xa8) = 1.0f / 12.0f;
+    *reinterpret_cast<void**>(bytes + 0xb0) = nullptr;
+    bytes[0xc0] = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0xc4) = 2;
+    *reinterpret_cast<unsigned*>(bytes + 0xc8) = 0;
+    *reinterpret_cast<float*>(bytes + 0xcc) = 0.8f;
+    *reinterpret_cast<float*>(bytes + 0xd0) = 5.0f;
+    *reinterpret_cast<unsigned*>(bytes + 0xd4) = 0;
+    bytes[0xd8] = bytes[0xd9] = bytes[0xda] = 0;
+    bytes[0xdb] = 1;
+    bytes[0xdc] = 0;
+    *reinterpret_cast<void**>(bytes + 0xe0) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0xe8) = nullptr;
+}
+
+// MS2-FUNCTIONAL: creates a managed AS2 string and stores its retained node in the return object.
+// @0x140003000
+Scaleform::GFx::ASString* FUN_140003000(Scaleform::GFx::ASStringManager* manager,
+                                         Scaleform::GFx::ASString* result, const char* text)
+{
+    *result = manager->CreateString(text, strlen(text));
+    return result;
+}
+
+// MS2-FUNCTIONAL: creates a constant AS2 string node over the supplied terminated text.
+// @0x140003020
+Scaleform::GFx::ASString* FUN_140003020(Scaleform::GFx::ASStringManager* manager,
+                                         Scaleform::GFx::ASString* result, const char* text)
+{
+    *result = manager->CreateConstString(text);
+    return result;
+}
+
+// MS2-FUNCTIONAL: creates an owned AS2 string from the context's movie string manager.
+// @0x1400038f0
+Scaleform::GFx::ASString* FUN_1400038f0(Scaleform::GFx::AS2::Environment* environment,
+                                         Scaleform::GFx::ASString* result, const char* text)
+{
+    *result = environment->CreateConstString(text);
+    return result;
+}
+
+// MS2-FUNCTIONAL: creates an owned AS2 string from the context's movie string manager.
+// @0x140003940
+Scaleform::GFx::ASString* FUN_140003940(Scaleform::GFx::AS2::Environment* environment,
+                                         Scaleform::GFx::ASString* result, const char* text)
+{
+    *result = environment->CreateString(text);
+    return result;
+}
+
+// MS2-FUNCTIONAL: looks up the selected movie string manager for a built-in table index.
+// @0x1400043e0
+Scaleform::GFx::ASStringNodeHolder* FUN_1400043e0(Scaleform::GFx::AS2::Environment* environment, int index)
+{
+    auto* context = *reinterpret_cast<Scaleform::GFx::AS2::GlobalContext**>(
+        reinterpret_cast<unsigned char*>(environment) + 0xe8);
+    return &context->GetStringManager()->Builtins[index];
+}
+
+// MS2-FUNCTIONAL: selects a built-in string manager within the environment's global context.
+// @0x1400044e0
+Scaleform::GFx::ASStringNodeHolder* FUN_1400044e0(Scaleform::GFx::AS2::GlobalContext** context, int index)
+{
+    return &(*context)->GetStringManager()->Builtins[index];
+}
+
+// MS2-FUNCTIONAL: creates an owned AS2 string through the selected movie string manager.
+// @0x140004400
+Scaleform::GFx::ASString* FUN_140004400(Scaleform::GFx::AS2::Environment* environment,
+                                         Scaleform::GFx::ASString* result, const char* text)
+{
+    *result = environment->CreateString(text);
+    return result;
+}
+
+// MS2-FUNCTIONAL: creates a constant AS2 string through the selected movie string manager.
+// @0x140004440
+Scaleform::GFx::ASString* FUN_140004440(Scaleform::GFx::AS2::Environment* environment,
+                                         Scaleform::GFx::ASString* result, const char* text)
+{
+    *result = environment->CreateConstString(text);
+    return result;
+}
+
+// MS2-FUNCTIONAL: creates a constant AS2 string through the global context's movie string manager.
+// @0x140004500
+Scaleform::GFx::ASString* FUN_140004500(Scaleform::GFx::AS2::GlobalContext** context,
+                                         Scaleform::GFx::ASString* result, const char* text)
+{
+    auto* strings = (*context)->GetStringManager();
+    *result = strings->CreateConstString(text);
+    return result;
+}
+
 // MS2-FUNCTIONAL: releases the weak reference proxy held by this slot.
 // @0x140003b20
 void FUN_140003b20(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
