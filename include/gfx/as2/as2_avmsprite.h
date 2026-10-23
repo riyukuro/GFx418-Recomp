@@ -113,6 +113,13 @@ private:
     // Both lookups: penv is 0 for GetMemberRaw, psc 0 for GetMember (exe 0x14294bff0).
     bool GetMember(Environment* penv, ASStringContext* psc, const ASString& name, Value* val);
     MovieClipObject* GetMovieClipObject(); // exe 0x142953da0
+
+public:
+    // (appended for sfr_as2_04)
+    // Queues the frame actions of pbuffer on this clip (exe 0x14292e650).
+    void AddActionBuffer(ActionBuffer* pbuffer, ActionPriority::Priority prio = ActionPriority::AP_Frame);
+    // Copies the event handlers of src; button handlers carry over to the clip object (exe 0x1429348c0).
+    virtual void CloneInternalData(const InteractiveObject* src);
 };
 
 inline Sprite* ObjectInterface::ToSprite()

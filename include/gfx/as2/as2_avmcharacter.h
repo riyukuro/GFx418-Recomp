@@ -15,6 +15,9 @@ class AvmCharacter : public NewOverrideBase<StatMV_ActionScript_Mem>, public Avm
 {
 public:
     InteractiveObject* pDispObj; // +0x20
+    // The clip event handlers by event (onClipEvent and friends). AvmCharacter is 0x30 bytes.
+    HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>
+        EventHandlers; // +0x28
 
     InteractiveObject* GetDispObj() const { return pDispObj; }
     MovieRoot*         GetAS2Root() const { return ToAS2Root(pDispObj); }

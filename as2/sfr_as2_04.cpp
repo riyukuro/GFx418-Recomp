@@ -33,6 +33,8 @@
 // MS2-RANGE: 0x142937f90-0x142938020 .text$mn
 // MS2-RANGE: 0x14292dc70-0x14292df89 .text$mn
 // MS2-RANGE: 0x142935dc0-0x142935e8a .text$mn
+// MS2-RANGE: 0x14292e650-0x14292e6d3 .text$mn
+// MS2-RANGE: 0x1429348c0-0x142934940 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -930,6 +932,37 @@ void MovieRoot::CreateArray(GFx::Value* pvalue)
     Ptr<Object>  pobj = *penv->OperatorNew(penv->GetBuiltin(ASBuiltin_Array));
     Value        val(pobj);
     ASValue2GFxValue(penv, val, pvalue);
+}
+
+// @0x14292e650
+void AvmSprite::AddActionBuffer(ActionBuffer* pbuffer, ActionPriority::Priority prio)
+{
+    MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction(prio);
+    if (pe)
+    {
+        InteractiveObject* pchar = pDispObj;
+        pe->Type          = MovieRoot::ActionEntry::Entry_Buffer;
+        pe->pCharacter    = pchar;
+        pe->pActionBuffer = pbuffer;
+        pe->mEventId.Id   = EventId::Event_Invalid;
+    }
+}
+
+// The exe's out-of-line event handler table assignment (defined in sfr_as2_03).
+void FUN_142926340(HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>* pthis,
+                   const HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>& src);
+
+// @0x1429348c0
+void AvmSprite::CloneInternalData(const InteractiveObject* src)
+{
+    const AvmCharacter* psrc = !src ? 0 : static_cast<const AvmCharacter*>(src->GetAvmIntObj());
+    FUN_142926340(&EventHandlers, psrc->EventHandlers);
+    if (src->IsSprite() && src->HasAvmObject() && src->GetAvmIntObj()->ActsAsButton())
+    {
+        MovieClipObject* pobj = GetMovieClipObject();
+        if (pobj)
+            pobj->HasButtonHandlers = true;
+    }
 }
 
 // A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.

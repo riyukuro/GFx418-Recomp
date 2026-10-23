@@ -9,6 +9,7 @@
 #include "../gfx_moviedef.h"
 #include "../gfx_movieimpl.h"
 #include "../gfx_playertasks.h"
+#include "../gfx_loadproc.h"
 
 namespace Scaleform { namespace GFx { class Value; } }
 
@@ -202,6 +203,8 @@ public:
     // A host value holding the string, converted through the _level0 environment.
     virtual void CreateString(GFx::Value* pvalue, const char* pstring);      // exe 0x142937d60
     virtual void CreateStringW(GFx::Value* pvalue, const wchar_t* pstring);  // exe 0x142937ea0
+    // A new Array object as a host value (exe 0x142935dc0).
+    virtual void CreateArray(GFx::Value* pvalue);
     // Converts v into a host value (exe 0x14292dc70).
     void ASValue2GFxValue(Environment* penv, const Value& v, GFx::Value* pdestVal) const;
 
@@ -240,6 +243,8 @@ public:
         // Runs the action on its character (exe 0x14293fbe0).
         void Execute(MovieRoot* proot) const;
     };
+    // A new empty entry queued at prio (exe 0x1429620d0).
+    ActionEntry* InsertEmptyAction(ActionPriority::Priority prio = ActionPriority::AP_Frame);
 
     // The queued actions per priority (only the members used so far).
     struct ActionQueueType
