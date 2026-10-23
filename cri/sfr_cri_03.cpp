@@ -10,6 +10,8 @@
 #include <windows.h>
 #include <cstring>
 #include <memory>
+#include <cstdarg>
+#include <cstdio>
 
 extern "C" CriSint32 DAT_143ba9d28;
 extern "C" CriSint32 DAT_143b27be0;
@@ -48,6 +50,10 @@ void* FUN_14004e580(void);
 void FUN_14004ff90(void*, void*, void*);
 void FUN_1400467a8(void*, CriSint32, void*);
 void FUN_1400467b0(void*, CriSint32, void*);
+CriSint32 FUN_1400467b8(void*, CriSint32);
+CriSint32 FUN_140053630(void*);
+CriUint32 FUN_140043420(void*, void*, CriUint32);
+void criSj_SplitChunk(const void*, CriUint32, void*, void*);
 const void** FUN_14003bed0(void);
 const void** FUN_14003bf10(void);
 void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration);
@@ -304,6 +310,76 @@ void FUN_140046598(void* object)
     Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
     FUN_140045fdc(object);
     FUN_140027fb4(storage->Heap, storage);
+}
+
+// MS2-FUNCTIONAL: report whether a stream-joint has completed its terminal audio transition.
+// @0x140043810
+CriBool FUN_140043810(void* object, void* owner)
+{
+    struct DecoderState
+    {
+        CriSint32 Type;
+        CriUint8 Reserved04[0x0c];
+        void* Work;
+        CriUint8 Reserved18[0x18];
+        void* Queue;
+    };
+    DecoderState* decoder = (DecoderState*)object;
+    if (!decoder || !owner)
+        return 1;
+    if (decoder->Type)
+    {
+        if (FUN_140053630(decoder->Work) != 3)
+            return 0;
+        if (FUN_1400467b8(decoder->Queue, 1) != 0)
+            return 0;
+    }
+    return 1;
+}
+
+// MS2-FUNCTIONAL: check one selected audio decoder, treating a missing list as ready.
+// @0x140042df0
+CriBool FUN_140042df0(void* decoders, void* owner, CriSint32 index)
+{
+    if (!decoders)
+        return 1;
+    return FUN_140043810(((void**)decoders)[index], owner);
+}
+
+// MS2-FUNCTIONAL: forward a selected audio decoder's channel query.
+// @0x140042f00
+void FUN_140042f00(void* decoders, CriSint32 index, void* player, CriUint32 channel)
+{
+    FUN_140043420(((void**)decoders)[index], player, channel);
+}
+
+// MS2-FUNCTIONAL: split a stream chunk, append the selected range, and return bytes left after the requested size.
+// @0x1400468f4
+CriSint32 FUN_1400468f4(void* streamJoint, const void* chunk, void* suffix, CriUint32 maximum)
+{
+    struct ChunkView { CriUint64 Begin; CriUint32 Size; };
+    const ChunkView* view = (const ChunkView*)chunk;
+    CriUint32 copied = maximum;
+    CriSint32 remaining = 0;
+    if (view->Size <= maximum)
+    {
+        copied = view->Size;
+        remaining = (CriSint32)(maximum - view->Size);
+    }
+    criSj_SplitChunk(chunk, copied, (void*)chunk, suffix);
+    void** vtable = *(void***)streamJoint;
+    ((void (*)(void*, CriSint32))vtable[4])(streamJoint, 0);
+    return remaining;
+}
+
+// MS2-FUNCTIONAL: format a diagnostic through CRI's bounded printf adapter.
+// @0x1400469a4
+void FUN_1400469a4(CriChar8* buffer, size_t capacity, const CriChar8* format, ...)
+{
+    va_list arguments;
+    va_start(arguments, format);
+    _vsnprintf(buffer, capacity, format, arguments);
+    va_end(arguments);
 }
 
 void FUN_1400478a0(void);
