@@ -99,6 +99,7 @@ extern bool FUN_1425b9b10(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1422fd480(void*, void*);
 extern "C" unsigned long long FUN_1423daf30(void*, int = 0);
+extern "C" unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 extern "C" void FUN_1423cc7c0(void*);
 extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
@@ -127,6 +128,7 @@ extern "C" const unsigned long long DAT_1431c5068;
 extern "C" const unsigned long long DAT_14313b6b0;
 extern "C" const unsigned long long DAT_1431c4858;
 extern "C" const unsigned long long DAT_1431c4d28;
+extern "C" const unsigned char DAT_1431c5028[];
 extern "C" const unsigned long long DAT_14313b8d8;
 extern "C" const unsigned long long DAT_1431c4888;
 extern "C" const unsigned long long DAT_1431c51d8;
@@ -2858,6 +2860,62 @@ unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long l
 // MS2-PIN: ??_7GFxIMEManagerWin32@IME@GFx@Scaleform@@6B@ 0x1431383e0
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: constructs the language bar COM bridge, its two callback objects, and the 0x100-character input buffer.
+// @0x1423d54d0
+unsigned long long* FUN_1423d54d0(unsigned long long* self)
+{
+    FUN_1423cabb0(self, 0);
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x1b4) = 1;
+    self[0] = reinterpret_cast<unsigned long long>(DAT_14313b520);
+    self[0x3a] = 0;
+    self[0x34] = reinterpret_cast<unsigned long long>(DAT_14313b5a0);
+    self[0x38] = 0;
+    self[0x35] = reinterpret_cast<unsigned long long>(DAT_14313b5c0);
+    *reinterpret_cast<Scaleform::String*>(self + 0xe) = "";
+
+    void* manager = nullptr;
+    HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28), &manager);
+    if (FAILED(hr)) return self;
+
+    void* provider = nullptr;
+    auto** managerVtable = *reinterpret_cast<void***>(manager);
+    hr = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(managerVtable[0])(
+        manager, DAT_1431c51e8, &provider);
+    if (SUCCEEDED(hr) && provider) {
+        auto** providerVtable = *reinterpret_cast<void***>(provider);
+        HRESULT result = reinterpret_cast<HRESULT(*)(void*, const void*, void*, void*)>(providerVtable[3])(
+            provider, DAT_14313b400, self + 0x35, self + 0x36);
+        if (FAILED(result)) *reinterpret_cast<unsigned*>(self + 0x36) = 0xffffffffu;
+        void* language = nullptr;
+        hr = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(managerVtable[0])(
+            manager, DAT_1431c5028, &language);
+        if (SUCCEEDED(hr) && language) {
+            reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
+                (*reinterpret_cast<void***>(language))[3])(language, &DAT_14313b410,
+                    reinterpret_cast<void**>(self + 0x38));
+            reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(language))[2])(language);
+        }
+
+        auto* settings = reinterpret_cast<void*>(self[0x38]);
+        if (settings) {
+            void* callback = nullptr;
+            HRESULT query = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
+                (*reinterpret_cast<void***>(settings))[0])(settings, DAT_1431c51e8, &callback);
+            if (SUCCEEDED(query) && callback) {
+                HRESULT call = reinterpret_cast<HRESULT(*)(void*, const void*, void*, void*)>(
+                    (*reinterpret_cast<void***>(callback))[3])(callback, DAT_1431c5018,
+                        self + 0x34, self + 0x37);
+                if (FAILED(call)) *reinterpret_cast<unsigned*>(self + 0x37) = 0xffffffffu;
+                reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(callback))[2])(callback);
+            }
+        }
+        reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
+    }
+    reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(manager))[2])(manager);
+    return self;
+}
 
 // MS2-FUNCTIONAL: selects the requested IME language entry, avoids duplicate active layouts, and updates the four mode strings.
 // @0x1423d7940
