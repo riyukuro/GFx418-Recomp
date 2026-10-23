@@ -1495,3 +1495,17 @@ Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, 
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
+
+// MS2-FUNCTIONAL: releases the interface array storage and runs the executable prototype finalizer.
+// @0x140011d90
+void FUN_140011d90(void* object)
+{
+    void** interfaces = *reinterpret_cast<void***>(static_cast<char*>(object) + 0xa0);
+    if (interfaces)
+    {
+        if (interfaces[0]) Scaleform::Memory::Free(interfaces[0]);
+        Scaleform::Memory::Free(interfaces);
+    }
+    extern void FUN_142942e70(void*);
+    FUN_142942e70(object);
+}
