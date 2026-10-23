@@ -59,32 +59,6 @@ void** FUN_1400029f0(void** channel, void* replacement)
     return channel;
 }
 
-// MS2-FUNCTIONAL: reports whether the owned player is in an active or transitional state.
-// @0x140003490
-bool FUN_140003490(void* player)
-{
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (!impl) return false;
-    int status = reinterpret_cast<int (*)(void*)>((*reinterpret_cast<void***>(impl))[3])(impl);
-    return status >= 1 && status <= 6;
-}
-
-// MS2-FUNCTIONAL: forwards Stop to the active player implementation.
-// @0x140003520
-void FUN_140003520(void* player)
-{
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[14])(impl);
-}
-
-// MS2-FUNCTIONAL: forwards Pause to the active player implementation.
-// @0x140003540
-void FUN_140003540(void* player)
-{
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[15])(impl);
-}
-
 // MS2-FUNCTIONAL: stores the ready flag and forwards the state update to the active player.
 // @0x140003580
 void FUN_140003580(void* player, bool ready)
