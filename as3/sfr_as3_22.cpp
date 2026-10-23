@@ -91,12 +91,18 @@ void ResizeStaticTextArray(void* array, UPInt size)
 }
 
 enum FMOD_RESULT : int {};
+struct FMOD_CREATESOUNDEXINFO;
 namespace FMOD {
 class Sound
 {
 public:
     ::FMOD_RESULT getLength(unsigned* length, unsigned timeUnit);
     ::FMOD_RESULT release();
+};
+class System
+{
+public:
+    ::FMOD_RESULT createSound(const char* path, unsigned mode, ::FMOD_CREATESOUNDEXINFO* info, Sound** sound);
 };
 class Channel
 {
@@ -598,5 +604,22 @@ unsigned long long ReadAudioCallback(void*, void* buffer, unsigned bytes, unsign
 {
     *bytesRead = static_cast<unsigned>(FUN_142748160(stream, buffer, bytes));
     return 0;
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: builds the requested FMOD mode, clears the output handle on failure, and returns FMOD status.
+// @0x1427453b0
+FMOD_RESULT CreateAudioSound(void* player, void* request, FMOD::Sound** sound)
+{
+    auto* requestBytes = static_cast<unsigned char*>(request);
+    void* owner = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
+    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(owner) + 0x10));
+    const unsigned flags = (*reinterpret_cast<unsigned*>(requestBytes + 0x10) & 0x1000) ? 0xc0u : 0x4040u;
+    const FMOD_RESULT result = system->createSound(*reinterpret_cast<char**>(requestBytes + 0x20), flags, nullptr, sound);
+    if (result != 0)
+        *sound = nullptr;
+    return result;
 }
 }
