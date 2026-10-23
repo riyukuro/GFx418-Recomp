@@ -15,6 +15,7 @@
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
 extern void* FUN_1425f1910(void*);
+extern "C" void* DAT_143b15f60;
 
 // MS2-FUNCTIONAL: forwards the video sound stream's channel attachment callback when a channel is present.
 // @0x140002930
@@ -489,6 +490,60 @@ void FUN_140004e50(void** value) { if (*value) Scaleform::Memory::Free(*value); 
 // MS2-FUNCTIONAL: frees the object held by the first pointer slot when non-null.
 // @0x140004e90
 void FUN_140004e90(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+
+// MS2-FUNCTIONAL: obtains the live object behind a weak proxy, clearing an expired proxy slot.
+// @0x140005000
+void* FUN_140005000(void** weakSlot)
+{
+    auto* proxy = static_cast<unsigned char*>(*weakSlot);
+    if (!proxy) return nullptr;
+    void* target = *reinterpret_cast<void**>(proxy + 8);
+    if (!target) {
+        FUN_14257dcd0(proxy);
+        *weakSlot = nullptr;
+        return nullptr;
+    }
+    if (*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8) != 0) return target;
+    return nullptr;
+}
+
+// MS2-FUNCTIONAL: grows, resizes, or releases the four-byte-rounded backing array through the Scaleform heap.
+// @0x1400050c0
+void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
+{
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* data = static_cast<unsigned char*>(array[0]);
+    if (requested == 0) {
+        if (data) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, data);
+        array[0] = nullptr;
+        array[2] = nullptr;
+        return;
+    }
+    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
+    if (data) {
+        array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(heapVtable[11])(
+            DAT_143b15f60, data, capacity * sizeof(void*));
+    } else {
+        alignas(8) unsigned flags[2] = { 2, 0 };
+        array[0] = reinterpret_cast<void* (*)(void*, void*, size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, heapOwner, capacity * sizeof(void*), flags);
+    }
+    array[2] = reinterpret_cast<void*>(capacity);
+}
+
+// MS2-FUNCTIONAL: adjusts the backing capacity with the observed quarter-growth and half-shrink thresholds.
+// @0x140005160
+void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
+{
+    const Scaleform::UPInt oldSize = reinterpret_cast<Scaleform::UPInt>(array[1]);
+    const Scaleform::UPInt capacity = reinterpret_cast<Scaleform::UPInt>(array[2]);
+    if (size < oldSize) {
+        if (size < (capacity >> 1)) FUN_1400050c0(array, heapOwner, size);
+    } else if (capacity <= size) {
+        FUN_1400050c0(array, heapOwner, size + (size >> 2));
+    }
+    array[1] = reinterpret_cast<void*>(size);
+}
 
 namespace Scaleform { namespace GFx { namespace Video {
 
