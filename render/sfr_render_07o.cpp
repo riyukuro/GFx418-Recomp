@@ -126,10 +126,33 @@ void TextMeshProvider::AddToInUseList()
     pCache->GetTextInUse().PushBack(this);
 }
 
+// The optional matrix-block elements are packed in bit order before the final matrix.
+static inline UByte* matrixElementStart(const HMatrix& matrix)
+{
+    MatrixPoolImpl::DataHeader* header = matrix.pHandle->pHeader;
+    const unsigned format = header->Format & MatrixPoolImpl::HMatrixConstants::Has_TableMask;
+    const unsigned offset = ((format & MatrixPoolImpl::HMatrixConstants::Has_Cxform) != 0) +
+                            ((format & MatrixPoolImpl::HMatrixConstants::Has_T0) != 0) +
+                            ((format & MatrixPoolImpl::HMatrixConstants::Has_T1) != 0) +
+                            ((format & MatrixPoolImpl::HMatrixConstants::Has_UserData) != 0);
+    return header->GetDataStart() + offset * MatrixPoolImpl::Pool_DataUnitSize;
+}
+
+static inline const Matrix2F& matrix2DDirect(const HMatrix& matrix)
+{
+    return *reinterpret_cast<const Matrix2F*>(matrixElementStart(matrix));
+}
+
+static inline const Matrix3F& matrix3DDirect(const HMatrix& matrix)
+{
+    return *reinterpret_cast<const Matrix3F*>(matrixElementStart(matrix));
+}
+
 // The layer matrix of a vector glyph (the view matrix with the glyph's origin and size scale prepended), its colour
 // as a cxform (the colour as the add row, appended to the view cxform), and the key flags of its mesh. A cursor
 // layer is keyed as a mask without edge AA.
-// MS2-FUNCTIONAL: register allocation: the exe keeps sizeScale in xmm14 and materialises the zero per branch
+// MS2-FUNCTIONAL: register allocation differs; the cxform lookup uses its first-element offset directly to avoid
+// the absolute MatrixElementSizeTable ADDR32NB relocation, with the same matrix-block layout.
 // @0x1426e1d30
 unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMeshEntry& ent, const Matrix2F& scalingMtx,
                                             float sizeScale, const HMatrix& m, Renderer2DImpl* ren,
@@ -137,11 +160,12 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
 {
     const GlyphVectorEnt& vec = ent.EntryData.VectorData;
 
+    MatrixPoolImpl::DataHeader* matrixData = m.pHandle->pHeader;
     if (m.Has3D())
     {
         Matrix2F m2d = Matrix2F::Scaling(sizeScale);
         m2d.AppendTranslation(vec.x, vec.y);
-        Matrix3F m3d = m.GetMatrix3D();
+        Matrix3F m3d = matrix3DDirect(m);
         m3d.Prepend(m2d);
         if (layer.M.IsNull())
             layer.M = ren->GetMatrixPool().CreateMatrix(m3d);
@@ -150,7 +174,7 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
     }
     else
     {
-        Matrix2F m2d = m.GetMatrix2D();
+        Matrix2F m2d = matrix2DDirect(m);
         m2d.PrependTranslation(vec.x, vec.y);
         m2d.PrependScaling(sizeScale, sizeScale);
         if (layer.M.IsNull())
@@ -166,8 +190,12 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
     colorCx.M[1][1] = (float)(int)((c >> 8) & 0xff) / 255.0f;
     colorCx.M[1][2] = (float)(int)(c & 0xff) / 255.0f;
     colorCx.M[1][3] = (float)(int)(c >> 24) / 255.0f;
-    colorCx.Append(!m.pHandle->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform) ? Cxform::Identity
-                                                                                           : *m.pHandle->GetCxformPtr());
+    // Cxform is the first optional element in a matrix block, so when present
+    // it begins at the data start. Avoid the absolute lookup table here: its
+    // ADDR32NB reference cannot be represented by the hook DLL linker.
+    const Cxform* matrixCxform = matrixData->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform)
+        ? reinterpret_cast<const Cxform*>(matrixData->GetDataStart()) : &Cxform::Identity;
+    colorCx.Append(*matrixCxform);
     layer.M.SetCxform(colorCx);
 
     unsigned flags = MeshKey::KF_Fill;
@@ -241,7 +269,7 @@ bool TextMeshProvider::CreateMeshData(const TextLayout* layout, Renderer2DImpl* 
     TmpTextStorage storage(Memory::GetGlobalHeap());
 
     Flags &= ~(BF_Created | BF_HasVectorGlyphs | BF_HasUnderlines);
-    Matrix2F viewMatrix = m.GetMatrix2D();
+    Matrix2F viewMatrix = matrix2DDirect(m);
     bool     snap       = !(m.Has3D() || viewMatrix.IsFreeRotation());
 
     GlyphRunData data;
@@ -259,7 +287,7 @@ bool TextMeshProvider::CreateMeshData(const TextLayout* layout, Renderer2DImpl* 
     data.NewLineX        = 0;
     data.NewLineY        = 0;
     data.GlyphBounds     = RectF(0, 0, 0, 0);
-    data.DirMtx          = m.GetMatrix2D();
+    data.DirMtx          = matrix2DDirect(m);
     data.InvMtx          = data.DirMtx.GetInverse();
     data.HeightRatio     = calcHeightRatio(m, m4, vp);
     data.HintedNomHeight = 0;
@@ -837,7 +865,7 @@ HMatrix TextMeshProvider::UpdateMaskClearBounds(HMatrix viewMat)
     m.SetRectToRect(0, 0, 1, 1, ClearBox.x1, ClearBox.y1, ClearBox.x2, ClearBox.y2);
     if (viewMat.Has3D())
     {
-        Matrix3F m3(viewMat.GetMatrix3D());
+        Matrix3F m3(matrix3DDirect(viewMat));
         m3.Prepend(m);
         if (ClearBounds.IsNull())
             ClearBounds = pRenderer->GetMatrixPool().CreateMatrix(m3, HMatrix::Has_3D);
@@ -846,7 +874,7 @@ HMatrix TextMeshProvider::UpdateMaskClearBounds(HMatrix viewMat)
     }
     else
     {
-        m.Append(viewMat.GetMatrix2D());
+        m.Append(matrix2DDirect(viewMat));
         if (ClearBounds.IsNull())
             ClearBounds = pRenderer->GetMatrixPool().CreateMatrix(m, 0);
         else
@@ -1953,7 +1981,7 @@ static inline float maxAxisScale(const Matrix2F& m)
 // @0x1426e5e50
 float TextMeshProvider::calcHeightRatio(const HMatrix& m, const Matrix4F& m4, const Viewport& vp)
 {
-    Matrix2F mtx = m.GetMatrix2D();
+    Matrix2F mtx = matrix2DDirect(m);
     if (m.Has3D())
     {
         RectF unit(0, 0, 1, 1);
