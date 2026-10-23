@@ -12,6 +12,27 @@
 
 namespace Scaleform { namespace Render { namespace Text {
 
+struct SGMLElementDesc
+{
+    const char* ElemName;
+    int ElemId;
+    bool ReqEndElement;
+    bool EmptyElement;
+    template<class Char> struct Comparable { const Char* Str; UPInt Size; };
+    template<class Char> struct Comparator
+    {
+        static int Less(const SGMLElementDesc& element, const Comparable<Char>& key)
+        { return (-SGMLCharIter<Char>::StrCompare(key.Str, element.ElemName, key.Size)) < 0; }
+    };
+};
+
+// @0x14267ecf0
+template<> __declspec(dllexport) int SGMLElementDesc::Comparator<wchar_t>::Less(
+    const SGMLElementDesc& element, const SGMLElementDesc::Comparable<wchar_t>& key)
+{
+    return (-SGMLCharIter<wchar_t>::StrCompare(key.Str, element.ElemName, key.Size)) < 0;
+}
+
 // @0x14267dbe0
 StyledText::HTMLImageTagInfo::~HTMLImageTagInfo()
 {
