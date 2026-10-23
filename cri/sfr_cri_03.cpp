@@ -85,6 +85,7 @@ void FUN_140053540(void*);
 void FUN_140037910(CriSint32, const CriChar8*, CriSint32);
 void FUN_1400379b0(CriSint32, const CriChar8*);
 void FUN_140053650(void*);
+void FUN_140053470(void*);
 void FUN_140037950(void*, const CriChar8*, CriUint32);
 void FUN_140042600(void*, void*, CriSint32);
 CriSint32 FUN_1400310b0(void*);
@@ -3644,6 +3645,41 @@ void FUN_14003e180(void* object, const void* frame)
     }
     if (!released)
         FUN_140041110(0, "E11120202M: Failed criVdec Release.", 0);
+}
+
+// MS2-FUNCTIONAL: destroy one audio decoder track set and clear its player-manager table entry.
+// @0x140042600
+void FUN_140042600(void* manager, void* heap, CriSint32 index)
+{
+    struct TrackSet
+    {
+        CriUint8 Reserved00[0x10];
+        void* Decoder;
+        CriUint32 ChannelCount;
+        CriUint8 Reserved1c[0x14];
+        void* Outputs[8];
+    };
+    if (!manager || !heap)
+        return;
+    void** table = (void**)manager;
+    TrackSet* track = (TrackSet*)table[index];
+    if (!track)
+        return;
+    if (track->Decoder)
+    {
+        FUN_140053470(track->Decoder);
+        track->Decoder = NULL;
+    }
+    for (CriUint32 channel = 0; channel < track->ChannelCount; ++channel)
+    {
+        if (track->Outputs[channel])
+        {
+            FUN_140046784(track->Outputs[channel]);
+            track->Outputs[channel] = NULL;
+        }
+    }
+    FUN_140027fb4(heap, track);
+    table[index] = NULL;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
