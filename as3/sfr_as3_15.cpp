@@ -52,6 +52,8 @@ void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, cons
 Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 // AvmInteractiveObj::AvmInteractiveObj (abstract here, so the derived ctors reach it by address)
 void FUN_1424d6480(void* self, Scaleform::GFx::InteractiveObject* pdispObj);
+// ResourceHandle::GetResource, the exe's out-of-line copy (the header's is inline)
+Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* self, Scaleform::GFx::ResourceBinding* pbinding);
 // DisplayObject::DisplayObject (protected; ShapeObject is opaque here, so its ctor reaches it by address)
 void FUN_1425f07e0(void* self, Scaleform::GFx::ASMovieRootBase* pasRoot, Scaleform::GFx::InteractiveObject* pparent,
                    Scaleform::GFx::ResourceId id);
@@ -1737,6 +1739,45 @@ ShapeObject::ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, Interacti
         reinterpret_cast<Resource*>(pdef)->AddRef();
     *reinterpret_cast<CharacterDef**>(Data + 0xc0) = pdef;
     *reinterpret_cast<void**>(Data + 0xc8) = NULL;
+}
+
+extern void* const AvmBitmap_vftable[];
+extern void* const AvmBitmap_vftable_18[];
+extern void* const AvmBitmap_vftable_90[];
+
+// A bitmap on the display list: +0xc0 the image resource, +0xc8 the movie that binds it. The image comes from the
+// character's resource, or, for a valid id, from the movie's resource binding; only image resources are kept.
+// AvmBitmap is opaque (its virtuals are unrecovered): its bases are built in place and the exe's vftables stored.
+// MS2-FUNCTIONAL: same code; the exe orders the inlined AvmDisplayObj member stores differently (scheduling)
+// @0x1424d6270
+AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id)
+{
+    FUN_1425f07e0(this, pasRoot, pparent, id);
+    new (Data + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
+    *reinterpret_cast<void* const**>(Data + 0x00) = AvmBitmap_vftable;
+    *reinterpret_cast<void* const**>(Data + 0x18) = AvmBitmap_vftable_18;
+    *reinterpret_cast<void* const**>(Data + 0x90) = AvmBitmap_vftable_90;
+    Resource*& pimage = *reinterpret_cast<Resource**>(Data + 0xc0);
+    MovieDefImpl*& pdefImpl = *reinterpret_cast<MovieDefImpl**>(Data + 0xc8);
+    pimage = NULL;
+    MovieDefImpl* pdef = ccinfo.pBindDefImpl;
+    if (pdef)
+        reinterpret_cast<Resource*>(pdef)->AddRef();
+    pdefImpl = pdef;
+    Resource* pres = ccinfo.pResource;
+    if (id != ResourceId(ResourceId::InvalidId))
+    {
+        ResourceHandle rh;
+        if (pdef->GetDataDef()->GetResourceHandle(&rh, id))
+            pres = FUN_14250d840(&rh, &pdefImpl->GetResourceBinding());
+    }
+    if (pres && (pres->GetResourceTypeCode() & 0xff00) == Resource::MakeTypeCode(Resource::RT_Image))
+    {
+        pres->AddRef();
+        if (pimage)
+            pimage->Release();
+        pimage = pres;
+    }
 }
 
 // A button takes part in tab navigation by default.
