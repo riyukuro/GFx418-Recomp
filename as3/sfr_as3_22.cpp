@@ -12,6 +12,7 @@
 #include "ms2/scaleform/include/kernel/sf_array.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/kernel/sf_string.h"
+#include "ms2/scaleform/kernel/sf_memitem.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include <cstdint>
@@ -511,6 +512,37 @@ void* ScaleTextTreeRecords(void* object, unsigned factor)
     const std::size_t timeCount = *reinterpret_cast<std::size_t*>(timeArray + 0x18);
     for (std::size_t i = 0; i < timeCount; ++i)
         *reinterpret_cast<unsigned long long*>(times + i * 0x18 + 0x10) *= factor;
+    return object;
+}
+
+// MS2-FUNCTIONAL: scales the fixed timing fields, child tree records, paired counters, and all three MemItem trees.
+// @0x142687ae0
+void* ScaleTextTree(void* object, unsigned factor)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    *reinterpret_cast<unsigned long long*>(bytes + 0x10) *= factor;
+    for (std::size_t offset = 0x18; offset <= 0xc8; offset += 4)
+        *reinterpret_cast<unsigned*>(bytes + offset) *= factor;
+
+    auto** childArray = *reinterpret_cast<void***>(bytes + 0xd0);
+    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
+    for (std::size_t i = 0; i < childCount; ++i)
+        ScaleTextTreeRecords(childArray[i], factor);
+
+    auto* records = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0xe8));
+    const std::size_t recordCount = *reinterpret_cast<std::size_t*>(records + 0x18);
+    auto* entries = *reinterpret_cast<unsigned char**>(records + 0x10);
+    for (std::size_t i = 0; i < recordCount; ++i) {
+        auto* entry = entries + i * 0x20;
+        *reinterpret_cast<unsigned*>(entry + 0x10) *= factor;
+        *reinterpret_cast<unsigned long long*>(entry + 0x18) *= factor;
+    }
+
+    for (std::size_t offset : { std::size_t(0x128), std::size_t(0x130), std::size_t(0x138) }) {
+        auto* item = *reinterpret_cast<Scaleform::MemItem**>(bytes + offset);
+        if (item)
+            item->operator*=(factor);
+    }
     return object;
 }
 
