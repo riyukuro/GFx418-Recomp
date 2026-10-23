@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
+#undef GetObject   // windows.h
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -272,6 +273,189 @@ void Value::AddRefInternal() const
 void Value::AddRefWeakRef() const
 {
     Bonus.pWeakProxy->AddRef();
+}
+
+// The E4X operands of AbstractEqual: XMLList on either side, XML against anything, XML/QName pairs.
+static inline const XMLSupport& GetXMLSupportOf(const Value& v)
+{
+    return v.GetObject()->GetVM().GetXMLSupport();
+}
+
+// MS2-FUNCTIONAL: exe inlines IsXMLListObject(Object*) and the same-kind XML/QName checks
+// @0x1424e46f0
+CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
+{
+    const Value::KindType lk = l.GetKind();
+
+    if (IsXMLListObject(l))
+        return GetXMLSupportOf(l).EqualsXMLList(result, *reinterpret_cast<Instances::fl::XMLList*>(l.GetObject()), r);
+
+    const Value::KindType rk = r.GetKind();
+
+    if (IsXMLListObject(r))
+        return GetXMLSupportOf(r).EqualsXMLList(result, *reinterpret_cast<Instances::fl::XMLList*>(r.GetObject()), l);
+
+    if (lk == rk)
+    {
+        switch (lk)
+        {
+        case Value::kUndefined:
+            result = true;
+            break;
+        case Value::kBoolean:
+            result = (l.AsBool() && r.AsBool()) || (!l.AsBool() && !r.AsBool());
+            break;
+        case Value::kInt:
+        case Value::kUInt:
+            result = l.AsInt() == r.AsInt();
+            break;
+        case Value::kNumber:
+            if (l.IsNaN() || r.IsNaN())
+                result = false;
+            else
+                result = l.AsNumber() == r.AsNumber();
+            break;
+        case Value::kThunk:
+        case Value::kString:
+            result = l.GetStringNode() == r.GetStringNode();
+            break;
+        case Value::kNamespace:
+        {
+            const Instances::Namespace* lns = l.GetNamespace();
+            const Instances::Namespace* rns = r.GetNamespace();
+            result = lns && rns && lns->GetUri() == rns->GetUri() && lns->GetKind() == rns->GetKind();
+            break;
+        }
+        case Value::kVTableInd:
+            result = l.GetVTableInd() == r.GetVTableInd() && &l.GetTraits() == &r.GetTraits();
+            break;
+        case Value::kThunkClosure:
+            result = l.GetClosure() == r.GetClosure() && &l.AsThunk() == &r.AsThunk();
+            break;
+        case Value::kVTableIndClosure:
+            result = l.GetClosure() == r.GetClosure() && l.GetVTableInd() == r.GetVTableInd();
+            break;
+        default:
+            result = l.GetObject() == r.GetObject();
+            if (!result && l.IsObject())
+            {
+                if (IsXMLObject(l) && IsXMLObject(r))
+                    return GetXMLSupportOf(l).EqualsXML(result, *reinterpret_cast<Instances::fl::XML*>(l.GetObject()),
+                                                        *reinterpret_cast<Instances::fl::XML*>(r.GetObject()));
+                if (IsQNameObject(l) && IsQNameObject(r))
+                    return GetXMLSupportOf(l).EqualsQName(result, *reinterpret_cast<Instances::fl::QName*>(l.GetObject()),
+                                                          *reinterpret_cast<Instances::fl::QName*>(r.GetObject()));
+            }
+            break;
+        }
+        return true;
+    }
+
+    // null == undefined
+    if ((lk == Value::kUndefined && r.IsNull()) || (rk == Value::kUndefined && l.IsNull()))
+    {
+        result = true;
+        return true;
+    }
+
+    // Number == String
+    if (lk == Value::kNumber && rk == Value::kString)
+    {
+        Value::Number n;
+        if (!r.Convert2NumberInline(n))
+            return false;
+        result = l.AsNumber() == n;
+        return true;
+    }
+    if (lk == Value::kString && rk == Value::kNumber)
+    {
+        Value::Number n;
+        if (!l.Convert2NumberInline(n))
+            return false;
+        result = n == r.AsNumber();
+        return true;
+    }
+
+    // XML == anything
+    if (IsXMLObject(l))
+    {
+        bool stop = true;
+        if (!GetXMLSupportOf(l).EqualsXML(stop, result, *reinterpret_cast<Instances::fl::XML*>(l.GetObject()), r))
+            return false;
+        if (stop)
+            return true;
+    }
+    else if (IsXMLObject(r))
+    {
+        bool stop = true;
+        if (!GetXMLSupportOf(r).EqualsXML(stop, result, *reinterpret_cast<Instances::fl::XML*>(r.GetObject()), l))
+            return false;
+        if (stop)
+            return true;
+    }
+
+    // undefined == object
+    if (lk == Value::kUndefined && r.IsObject())
+    {
+        result = r.IsNull();
+        return true;
+    }
+    if (l.IsObject() && rk == Value::kUndefined)
+    {
+        result = l.IsNull();
+        return true;
+    }
+
+    // Number/String == Object: the object's primitive value
+    if ((lk == Value::kString || lk == Value::kNumber) && r.IsObject())
+    {
+        if (r.IsNull())
+        {
+            result = false;
+            return true;
+        }
+        Value prim;
+        if (!r.Convert2PrimitiveValueUnsafe(prim))
+            return false;
+        return AbstractEqual(result, l, prim);
+    }
+    if (l.IsObject() && (rk == Value::kString || rk == Value::kNumber))
+    {
+        if (l.IsNull())
+        {
+            result = false;
+            return true;
+        }
+        Value prim;
+        if (!l.Convert2PrimitiveValueUnsafe(prim))
+            return false;
+        return AbstractEqual(result, prim, r);
+    }
+
+    // methods and closures equal nothing of another kind
+    if (lk == Value::kThunk || lk == Value::kMethodInd || lk == Value::kThunkClosure || lk == Value::kVTableIndClosure ||
+        rk == Value::kThunk || rk == Value::kMethodInd || rk == Value::kThunkClosure || rk == Value::kVTableIndClosure)
+    {
+        result = false;
+        return true;
+    }
+
+    // Boolean/int/uint == anything: compare as Number
+    if (lk == Value::kNumber)
+    {
+        if (rk == Value::kNumber)
+            return true;
+        Value::Number n;
+        if (!r.Convert2NumberInline(n))
+            return false;
+        Value num(n);
+        return AbstractEqual(result, l, num);
+    }
+    Value::Number n;
+    if (!l.Convert2NumberInline(n))
+        return false;
+    Value num(n);
+    return AbstractEqual(result, num, r);
 }
 
 // ==== traits =========================================================================================================
