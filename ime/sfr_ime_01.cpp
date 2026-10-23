@@ -3753,6 +3753,13 @@ void FUN_1423d2410(void* raw, unsigned* outputLength)
     if (base) FUN_14257dcb0(base);
 }
 
+// MS2-FUNCTIONAL: routes the candidate-list update through the shared IMM list conversion path.
+// @0x1423d0850
+void FUN_1423d0850(void* manager, DWORD listIndex)
+{
+    FUN_1423cf900(manager, listIndex);
+}
+
 struct cx18_CommandEntry
 {
     unsigned long long next;
