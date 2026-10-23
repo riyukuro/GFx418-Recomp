@@ -2249,6 +2249,94 @@ namespace Instances { namespace fl
 }}
 }}}
 
+// ---- collector visits ----
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Visits the collectable a value holds (0x142504530).
+void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                              ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner);
+
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (v.IsGarbageCollectable() && !v.IsWeakRef())
+        ForEachChild_GC_Internal(prcc, v, op, owner);
+}
+
+// The exe passes the owner as a third argument to every GcOp (r8); the shared GcOp typedef has two.
+typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const ASRefCountBaseType** pchild,
+                              const ASRefCountBaseType& owner);
+SF_INLINE void CallGcOp(ASRefCountBaseType::GcOp op, RefCountCollector<StatMV_ActionScript_Mem>* prcc,
+                        const ASRefCountBaseType** pchild, const ASRefCountBaseType& owner)
+{
+    reinterpret_cast<GcOpWithOwner>(op)(prcc, pchild, owner);
+}
+
+// Visits a counted pointer member.
+template <class T>
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const SPtr<T>& p,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    if (p.GetPtr())
+        CallGcOp(op, prcc, const_cast<const ASRefCountBaseType**>(reinterpret_cast<ASRefCountBaseType**>(p.GetRawPtr())), owner);
+}
+
+// Visits every item of a counted pointer array.
+template <class T>
+SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const ArrayLH<SPtr<T> >& a,
+                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    const UPInt size = a.GetSize();
+    for (UPInt i = 0; i < size; ++i)
+        ForEachChild_GC(prcc, a[i], op, owner);
+}
+
+namespace Instances { namespace fl
+{
+    // @0x14240c010
+    void QName::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Instance::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, Ns, op, *this);
+    }
+
+    // @0x14240c240
+    void XML::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Instances::fl::Object::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, Parent, op, *this);
+    }
+
+    // @0x14240c280
+    void XMLAttr::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        XML::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, Ns, op, *this);
+        AS3::ForEachChild_GC(prcc, Value(Data), op, *this);
+    }
+
+    // @0x14240c340
+    void XMLElement::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        XML::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, Ns, op, *this);
+        AS3::ForEachChild_GC(prcc, Namespaces.Namespaces, op, *this);
+        AS3::ForEachChild_GC(prcc, Attrs, op, *this);
+        AS3::ForEachChild_GC(prcc, Children, op, *this);
+    }
+
+    // @0x14240c440
+    void XMLList::ForEachChild_GC(Collector* prcc, GcOp op) const
+    {
+        Instance::ForEachChild_GC(prcc, op);
+        AS3::ForEachChild_GC(prcc, TargetObject, op, *this);
+        AS3::ForEachChild_GC(prcc, TargetNamespace, op, *this);
+        AS3::ForEachChild_GC(prcc, List, op, *this);
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
