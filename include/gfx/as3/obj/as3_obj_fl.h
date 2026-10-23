@@ -206,6 +206,10 @@ namespace Instances { namespace fl {
         // default one) replaced by the in-scope namespace with its URI; untargeted unless the name is a string.
         // 0x14241c880
         Pickable<XMLList> MakeXMLListInstance(const Multiname& mn);
+        // (appended, sfr19) ident spaces, up to ten per append. 0x142404e10
+        static void AddIndent(StringBuffer& buf, SInt32 ident);
+        // (appended, sfr19) s with the five XML entities escaped. 0x142409f00
+        static void EscapeElementValue(StringBuffer& buf, const ASString& s);
 
     public:
         ASString    Text;       // +0x38 the name of an element/attribute/PI, the content of a text/comment

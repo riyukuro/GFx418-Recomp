@@ -1472,6 +1472,7 @@ namespace Classes { namespace fl
 
 void FUN_1424e6f90(const Scaleform::GFx::AS3::Class* cls, Scaleform::GFx::AS3::Object& obj);  // Class::AddConstructor: obj.constructor = cls
 void FUN_142511ac0(const Scaleform::GFx::AS3::Class* cls, Scaleform::GFx::AS3::Object& obj);  // adds the instance traits' vtable methods to the prototype
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);  // Traits::GetConstructor, out of line
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e3a0[7];   // Classes::fl::Object prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e7f0[2];   // Classes::fl::Boolean prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6e8[1];   // Classes::fl::Error prototype methods
@@ -2086,6 +2087,21 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return result;
     }
 
+    // XML nodes take no indexed assignment.
+    // MS2-FUNCTIONAL: stack slot layout of ind and the CheckResult differs
+    // @0x142422070
+    CheckResult XML::SetProperty(const Multiname& prop_name, const Value& value)
+    {
+        SF_UNUSED(value);
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            VM& vm = GetVM();
+            vm.ThrowTypeError(VM::Error(VM::eXMLAssignmentToIndexedXMLNotAllowed, vm));
+        }
+        return false;
+    }
+
     // An XML node enumerates as a one-item list: its only name is "0".
     // MS2-FUNCTIONAL: the exe addresses the empty builtin off the string manager (lea) instead of a copied pointer
     // @0x1424163b0
@@ -2281,6 +2297,177 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         if (ForEachChild(prop_name, cb) != 0)
             return true;
         return false;
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the QName constructor
+    // @0x142416c50
+    SPtr<QName> XMLAttr::GetQName()
+    {
+        InstanceTraits::Traits& itr = GetVM().GetXMLSupport().GetClassTraitsQName()->GetInstanceTraits();
+        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, Ns.GetPtr()));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the QName constructor
+    // @0x142416d00
+    SPtr<QName> XMLElement::GetQName()
+    {
+        InstanceTraits::Traits& itr = GetVM().GetXMLSupport().GetClassTraitsQName()->GetInstanceTraits();
+        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, Ns.GetPtr()));
+    }
+
+    // A processing instruction's target is in the public namespace.
+    // MS2-FUNCTIONAL: the exe inlines the QName constructor
+    // @0x142416db0
+    SPtr<QName> XMLProcInstr::GetQName()
+    {
+        InstanceTraits::Traits& itr = GetVM().GetXMLSupport().GetClassTraitsQName()->GetInstanceTraits();
+        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, &GetVM().GetPublicNamespace()));
+    }
+
+    // @0x142421c40
+    void XMLAttr::SetNamespace(Namespace& ns)
+    {
+        Ns = &ns;
+    }
+
+    // @0x142421b50
+    void XMLAttr::SetNamespace2(Namespace& ns)
+    {
+        Ns = &ns;
+    }
+
+    // The attributes follow the element into ns.
+    // @0x142421cb0
+    void XMLElement::SetNamespace(Namespace& ns)
+    {
+        Ns = &ns;
+        const UPInt n = Attrs.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+            Attrs[i]->SetNamespace(ns);
+    }
+
+    // @0x142421bc0
+    void XMLElement::SetNamespace2(Namespace& ns)
+    {
+        Ns = &ns;
+    }
+
+    // An attribute prints as its escaped value.
+    // @0x142425d20
+    void XMLAttr::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
+                              const NamespaceArray* usedNotDeclared)
+    {
+        SF_UNUSED3(ident, ancestorNamespaces, usedNotDeclared);
+        const char* p = Data.ToCStr();
+        const char* end = p + Data.GetSize();
+        while (p < end)
+        {
+            const UInt32 ch = UTF8Util::DecodeNextChar_Advance0(&p);
+            switch (ch)
+            {
+            case '\t':
+                buf.AppendString("&#x9;", 5);
+                break;
+            case '\n':
+                buf.AppendString("&#xA;", 5);
+                break;
+            case '\r':
+                buf.AppendString("&#xD;", 5);
+                break;
+            case '<':
+                buf.AppendString("&lt;", 4);
+                break;
+            case '"':
+                buf.AppendString("&quot;", 6);
+                break;
+            case '\'':
+                buf.AppendString("&apos;", 6);
+                break;
+            case '&':
+                buf.AppendString("&amp;", 5);
+                break;
+            default:
+                buf.AppendChar(ch);
+                break;
+            }
+        }
+    }
+
+    // @0x142425a60
+    void XMLComment::ToString(StringBuffer& buf, SInt32 ident)
+    {
+        ToXMLString(buf, ident, NULL, NULL);
+    }
+
+    // MS2-FUNCTIONAL: the exe selects the pretty flag branchlessly (cmov)
+    // @0x142425ea0
+    void XMLComment::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
+                                 const NamespaceArray* usedNotDeclared)
+    {
+        SF_UNUSED2(ancestorNamespaces, usedNotDeclared);
+        const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
+        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
+        if (pretty && ident > 0)
+            AddIndent(buf, ident);
+        buf.AppendString("<!--", 4);
+        buf.AppendString(Text.ToCStr(), Text.GetSize());
+        buf.AppendString("-->", 3);
+    }
+
+    // MS2-FUNCTIONAL: the exe selects the pretty flag branchlessly (cmov)
+    // @0x142427020
+    void XMLProcInstr::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
+                                   const NamespaceArray* usedNotDeclared)
+    {
+        SF_UNUSED2(ancestorNamespaces, usedNotDeclared);
+        const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
+        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
+        if (pretty && ident > 0)
+            AddIndent(buf, ident);
+        buf.AppendString("<?", 2);
+        buf.AppendString(Text.ToCStr(), Text.GetSize());
+        buf.AppendChar(' ');
+        buf.AppendString(Data.ToCStr(), Data.GetSize());
+        buf.AppendString("?>", 2);
+    }
+
+    // Pretty printing trims the text.
+    // MS2-FUNCTIONAL: the exe tests the pretty flag through a branchless select
+    // @0x1424270d0
+    void XMLText::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
+                              const NamespaceArray* usedNotDeclared)
+    {
+        SF_UNUSED2(ancestorNamespaces, usedNotDeclared);
+        const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
+        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
+        if (pretty && ident > 0)
+            AddIndent(buf, ident);
+        if (static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits())).prettyPrinting)
+            EscapeElementValue(buf, ASString(Text.TruncateWhitespaceNode()));
+        else
+            EscapeElementValue(buf, Text);
+    }
+
+    // Simple content prints as the text of its text children, anything else as XML.
+    // MS2-FUNCTIONAL: register allocation differs
+    // @0x142425a80
+    void XMLElement::ToString(StringBuffer& buf, SInt32 ident)
+    {
+        const UPInt n = Children.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+        {
+            if (Children[i]->GetKind() == kElement)
+            {
+                ToXMLString(buf, ident, NULL, NULL);
+                return;
+            }
+        }
+        for (UPInt i = 0; i < Children.GetSize(); ++i)
+        {
+            XML* child = Children[i];
+            if (child->GetKind() == kText)
+                child->ToString(buf, ident);
+        }
     }
 
     // @0x1424151e0
