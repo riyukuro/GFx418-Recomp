@@ -44,6 +44,9 @@ MS2_GLOBAL(0x143b27738, void*, VideoPropGetC); MS2_GLOBAL(0x143b27740, void*, Vi
 MS2_GLOBAL(0x143b27748, void*, VideoPropGetD); MS2_GLOBAL(0x143b27750, void*, VideoPropBaseD);
 MS2_GLOBAL(0x143b27768, void*, VideoPropSetC); MS2_GLOBAL(0x143b27770, void*, VideoPropBaseSetC);
 MS2_GLOBAL(0x143b27718, void*, VideoPropSetD); MS2_GLOBAL(0x143b27720, void*, VideoPropBaseSetD);
+MS2_GLOBAL(0x143b277a8, void*, VideoCriWork);
+MS2_GLOBAL(0x143b277b0, std::uint32_t, VideoCriWorkSize);
+MS2_GLOBAL(0x143b277b4, int, VideoCriUsers);
 MS2_GLOBAL(0x143b275f0, void*, VideoCallbackBaseC);
 
 MS2_EXTERN(0x1423df980, void(void*, void*, void*), VideoNative0);
@@ -73,6 +76,8 @@ MS2_EXTERN(0x14001ad20, void*(void*, void*), FUN_14001ad20);
 MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
 MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
 MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
+MS2_EXTERN(0x140026ed0, void(void*), FUN_140026ed0);
+MS2_EXTERN(0x140026db0, void(), FUN_140026db0);
 MS2_GLOBAL(0x14317bf80, void*, AvmInteractiveVtable);
 MS2_GLOBAL(0x1431b7c70, void*, VideoTraitsVtable);
 MS2_GLOBAL(0x1431b7f60, void*, VideoTraitsBaseVtable);
@@ -1122,5 +1127,74 @@ std::uint64_t* FUN_1400170c0(std::uint64_t* record, std::uint64_t vm, std::uint6
 void FUN_140017320(std::uint64_t* table, const std::uint64_t* key)
 {
     EraseVideoAtomHashEntry(table, key);
+}
+
+// MS2-FUNCTIONAL: reference-counts CRI movie startup and allocates its eight-handle work area on first use.
+// @0x14001b460
+void FUN_14001b460(std::uint8_t optional)
+{
+    const int previous = VideoCriUsers.get()++;
+    if (previous == 0) {
+        criHeap_Initialize();
+        VideoCriWorkSize = CriMv::CalcMovieHandleWork(8, CriMv::ErrorContainer);
+        auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+        VideoCriWork = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10])(DAT_143b15f60, VideoCriWorkSize.get(), 0);
+        CriMv::SetupMovieHandleWork(8, VideoCriWork.get(), VideoCriWorkSize.get(), CriMv::ErrorContainer);
+        FUN_140026ed0(&CriMv::ErrorContainer);
+        if (optional) FUN_140026db0();
+    }
+}
+// MS2-FUNCTIONAL: finalizes CRI movie work and its heap on the final reference release.
+// @0x14001b4f0
+void FUN_14001b4f0()
+{
+    const int previous = VideoCriUsers.get()--;
+    if (previous == 1) {
+        CriMv::Finalize(CriMv::ErrorContainer);
+        if (VideoCriWork.get()) {
+            auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, VideoCriWork.get());
+        }
+        criHeap_Finalize();
+    }
+}
+// MS2-FUNCTIONAL: allocates one 16 KiB read buffer per stream and frees partial allocations on failure.
+// @0x14001b550
+std::uint64_t FUN_14001b550(void* state, int count, std::uint32_t chunkSize)
+{
+    if (!count) return 0;
+    auto* bytes = static_cast<unsigned char*>(state);
+    *reinterpret_cast<int*>(bytes + 0x38) = count;
+    *reinterpret_cast<std::uint32_t*>(bytes + 0x3c) = chunkSize;
+    *reinterpret_cast<std::uint32_t*>(bytes + 0x40) = 0;
+    auto** heap = *reinterpret_cast<void***>(*reinterpret_cast<void**>(bytes + 0x10));
+    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10]);
+    auto** blocks = reinterpret_cast<void**>(bytes + 0x50);
+    for (int i = 0; i < count; ++i) {
+        blocks[i] = allocate(*reinterpret_cast<void**>(bytes + 0x10), 0x4000, 0);
+        if (!blocks[i]) {
+            auto** globalHeap = *reinterpret_cast<void***>(DAT_143b15f60);
+            for (int j = i - 1; j >= 0; --j) {
+                reinterpret_cast<void(*)(void*, void*)>(globalHeap[12])(DAT_143b15f60, blocks[j]);
+                blocks[j] = nullptr;
+            }
+            return 0;
+        }
+    }
+    return 1;
+}
+// MS2-FUNCTIONAL: frees and clears every per-stream read buffer.
+// @0x14001b620
+void FUN_14001b620(void* state)
+{
+    auto* bytes = static_cast<unsigned char*>(state);
+    const auto count = *reinterpret_cast<std::uint32_t*>(bytes + 0x38);
+    auto** blocks = reinterpret_cast<void**>(bytes + 0x50);
+    auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+    for (std::uint32_t i = 0; i < count; ++i) {
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, blocks[i]);
+        blocks[i] = nullptr;
+    }
+    *reinterpret_cast<std::uint32_t*>(bytes + 0x38) = 0;
 }
 } // namespace
