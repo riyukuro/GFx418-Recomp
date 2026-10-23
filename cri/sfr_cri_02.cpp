@@ -1103,6 +1103,33 @@ VideoReader::~VideoReader()
         pFile->Release();
 }
 
+// MS2-FUNCTIONAL: run the VideoReader destructor body and its multiple-inheritance base cleanup.
+// @0x14002de60
+void FUN_14002de60(VideoReader* reader)
+{
+    reader->~VideoReader();
+}
+
+// MS2-FUNCTIONAL: destroy the VideoReader and optionally return its allocation to the global heap.
+// @0x14002d9e0
+void* FUN_14002d9e0(VideoReader* reader, CriUint32 flags)
+{
+    reader->~VideoReader();
+    if (flags & 1)
+        FUN_14002d3f0(reader);
+    return reader;
+}
+
+// MS2-FUNCTIONAL: destroy the alternate VideoReader interface view with the same delete flag semantics.
+// @0x14002dec0
+void* FUN_14002dec0(VideoReader* reader, CriUint32 flags)
+{
+    reader->~VideoReader();
+    if (flags & 1)
+        FUN_14002d3f0(reader);
+    return reader;
+}
+
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002da70
 void VideoReader::Open(CriChar8* fname)
