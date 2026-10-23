@@ -2340,6 +2340,53 @@ void FUN_1423cfbe0(void* raw, unsigned char enabled)
     *reinterpret_cast<unsigned char*>(self + 0xc0) = 0;
 }
 
+// MS2-FUNCTIONAL: maps the executable's IMM conversion bits to its IME mode strings and preserves the association fallback.
+// @0x1423cf1c0
+const char* FUN_1423cf1c0(void* raw)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    bool alreadyAssociated = true;
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) {
+        alreadyAssociated = false;
+        cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
+        context = cx18_ImmGetContext(hwnd);
+        if (!context) {
+            cx18_ImmReleaseContext(hwnd, nullptr);
+            return "UNKNOWN";
+        }
+    }
+    DWORD conversion = 0;
+    DWORD sentence = 0;
+    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
+    unsigned mode = conversion & 0xf;
+    const unsigned language = *reinterpret_cast<unsigned*>(self + 0x98);
+    const char* label = "";
+    if (language & 0xf00) {
+        if ((conversion & 7) == 1) label = "JAPANESE_HIRAGANA";
+        if (mode == 0xb) label = "JAPANESE_KATAKANA_FULL";
+        if (mode == 3) label = "JAPANESE_KATAKANA_HALF";
+        if (mode == 8) label = "ALPHANUMERIC_FULL";
+        if (mode == 0) label = "ALPHANUMERIC_HALF";
+    }
+    if (language & 0xf000) {
+        if ((mode & ~8u) == 1) label = "KOREAN";
+        if (mode == 8) label = "ALPHANUMERIC_FULL";
+        if (mode == 0) label = "ALPHANUMERIC_HALF";
+    }
+    if (language & 0xf000f) {
+        if ((mode & ~8u) == 1) label = "CHINESE";
+        if (mode == 8) label = "ALPHANUMERIC_FULL";
+        if (mode == 0) label = "ALPHANUMERIC_HALF";
+    }
+    auto* text = reinterpret_cast<String*>(self + 0x78);
+    *text = label;
+    if (!alreadyAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
+    cx18_ImmReleaseContext(hwnd, context);
+    return *text->ToCStr() ? text->ToCStr() : "UNKNOWN";
+}
+
 // MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
 // @0x1423cad20
 unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
