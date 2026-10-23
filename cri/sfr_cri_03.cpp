@@ -1418,6 +1418,27 @@ void FUN_14003c130(void)
     }
 }
 
+// MS2-FUNCTIONAL: size the VMPV frame pool, output records, and its two stream-joint work areas.
+// @0x14003c190
+CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFrames)
+{
+    CriUint32 frameCount = (CriUint32)decideInternalFramePoolNum(requestedFrames);
+    CriUint32 paddedWidth = ((CriUint32)width + 0x0f) & ~0x0f;
+    CriUint32 paddedHeight = ((CriUint32)height + 0x1f) & ~0x1f;
+    CriUint32 luma = ((paddedWidth + 0x7f) & ~0x7f) * paddedHeight;
+    CriUint32 chromaWidth = ((paddedWidth / 2 + 0x7f) & ~0x7f);
+    CriUint32 chromaHeight = paddedHeight / 2;
+    CriUint32 frameBytes = luma + chromaWidth * chromaHeight;
+    const CriUint32 settings[2] = { 1, 1 };
+    CriSint32 total = 0x25c;
+    total += FUN_140046420(0, 0x20, settings);
+    total += (CriSint32)(200 * frameCount + 4);
+    for (CriUint32 i = 0; i < frameCount; ++i)
+        total += (CriSint32)(frameBytes + 0x800);
+    total += FUN_140046420(0, frameCount, settings);
+    return total;
+}
+
 // MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
 // @0x14003d4b0
 void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer)
