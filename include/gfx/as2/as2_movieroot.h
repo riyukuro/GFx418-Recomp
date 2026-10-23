@@ -118,6 +118,14 @@ enum ASBuiltinType : int
     ASBuiltin_xMax   = 132,
     ASBuiltin_yMin   = 133,
     ASBuiltin_yMax   = 134,
+    ASBuiltin_hitArea       = 135,
+    ASBuiltin_setCursorType = 136, // Mouse extension members
+    ASBuiltin_LEFT   = 137,
+    ASBuiltin_RIGHT  = 138,
+    ASBuiltin_MIDDLE = 139,
+    ASBuiltin_ARROW  = 140,
+    ASBuiltin_HAND   = 141,
+    ASBuiltin_IBEAM  = 142,
     ASBuiltin_0      = 143, // "0" .. "7" follow
     ASBuiltin_rendererString = 151, // movie clip renderer hints
     ASBuiltin_rendererFloat  = 152,

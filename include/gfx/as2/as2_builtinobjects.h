@@ -747,7 +747,14 @@ protected:
     // Mouse.getButtonsState([mouse]) / Mouse.getPosition([mouse]) (pixels, as a Point) (exe 0x142949c00,
     // 0x142954380).
     static void GetButtonsState(const FnCall& fn);
-    static void GetPosition(const FnCall& fn);
+    static void GetPosition(const FnCall& fn);    // Mouse.getTopMostEntity([testAll[, mouse]]) / ([mouse]) / (x, y[, testAll]): the topmost interactive object
+    // under the mouse or a _level0 point (exe 0x142956760).
+    static void GetTopMostEntity(const FnCall& fn);
+
+public:
+    // Extension members (setCursorType, the button and cursor constants, getTopMostEntity, getPosition,
+    // getButtonsState) when extensions are on (exe 0x14294f4f0).
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
 };
 
 // Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes, vftable { dtor, Finalize_GC }.

@@ -132,6 +132,8 @@
 // MS2-RANGE: 0x1429390a0-0x142939213 .text$mn
 // MS2-RANGE: 0x14294ef50-0x14294f13e .text$mn
 // MS2-RANGE: 0x14294f140-0x14294f251 .text$mn
+// MS2-RANGE: 0x14294f4f0-0x14294f7c5 .text$mn
+// MS2-RANGE: 0x142956760-0x142956ac1 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2574,6 +2576,106 @@ bool ExternalInterfaceCtorFunction::GetMember(Environment* penv, const ASString&
         return true;
     }
     return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// A value holding a new native function object; the object's creation count becomes the value's (FunctionRef
+// initialised from a reference: no AddRef).
+static SF_FORCEINLINE void Value_SetNewFunction(Value* val, FunctionObject* pfunc)
+{
+    Value v;
+    v.T.Type                     = Value::FUNCTION;
+    v.V.FunctionValue.Flags       = 0;
+    v.V.FunctionValue.Function    = pfunc;
+    v.V.FunctionValue.pLocalFrame = 0;
+    *val = v;
+}
+
+// MS2-FUNCTIONAL the exe inlines CFunctionObject(psc, func) (defined out of line in sfr_as2_03) and calls an
+// out-of-line Value::SetNumber copy for all constants but LEFT
+// @0x14294f4f0
+bool MouseCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    ASStringContext* psc = penv->GetSC();
+    if (psc->pContext->CheckExtensions())
+    {
+        if (name == psc->GetBuiltin(ASBuiltin_setCursorType))
+        {
+            val->SetAsFunction(SetCursorTypeFunc);
+            return true;
+        }
+        else if (name == psc->GetBuiltin(ASBuiltin_LEFT))
+            val->SetNumber(1);
+        else if (name == psc->GetBuiltin(ASBuiltin_RIGHT))
+            val->SetNumber(2);
+        else if (name == psc->GetBuiltin(ASBuiltin_MIDDLE))
+            val->SetNumber(3);
+        else if (name == psc->GetBuiltin(ASBuiltin_ARROW))
+            val->SetNumber(0);
+        else if (name == psc->GetBuiltin(ASBuiltin_HAND))
+            val->SetNumber(1);
+        else if (name == psc->GetBuiltin(ASBuiltin_IBEAM))
+            val->SetNumber(2);
+        else if (strcmp(name.ToCStr(), "getTopMostEntity") == 0)
+        {
+            Value_SetNewFunction(val, SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, GetTopMostEntity));
+            return true;
+        }
+        else if (strcmp(name.ToCStr(), "getPosition") == 0)
+        {
+            Value_SetNewFunction(val, SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, GetPosition));
+            return true;
+        }
+        else if (strcmp(name.ToCStr(), "getButtonsState") == 0)
+        {
+            Value_SetNewFunction(val, SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, GetButtonsState));
+            return true;
+        }
+    }
+    return GetMemberRaw(psc, name, val);
+}
+
+// MS2-FUNCTIONAL the stack index of Arg(2) is copied to another register before the chunk split (allocation only)
+// @0x142956760
+void MouseCtorFunction::GetTopMostEntity(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    bool testAll = true;
+    unsigned mouseIndex = 0;
+    Render::PointF pt;
+    if (fn.NArgs >= 1)
+    {
+        if (fn.Arg(0).GetType() == Value::BOOLEAN)
+        {
+            testAll = fn.Arg(0).ToBool(fn.Env);
+            if (fn.NArgs >= 2)
+                mouseIndex = (int)fn.Arg(1).ToNumber(fn.Env);
+        }
+        else if (fn.NArgs == 1)
+            mouseIndex = (int)fn.Arg(0).ToNumber(fn.Env);
+        else if (fn.NArgs >= 2)
+        {
+            // A point in _level0 coordinates (pixels).
+            if (fn.NArgs >= 3)
+                testAll = fn.Arg(2).ToBool(fn.Env);
+            float x = (float)(fn.Arg(0).ToNumber(fn.Env) * 20);
+            Number y = fn.Arg(1).ToNumber(fn.Env);
+            if (!proot->pMainMovie)
+                return;
+            Render::Matrix2F m;
+            proot->pMainMovie->GetWorldMatrix(&m);
+            float ty = (float)(y * 20);
+            pt.x = m.M[0][0] * x + m.M[0][1] * ty + m.M[0][3];
+            pt.y = m.M[1][0] * x + m.M[1][1] * ty + m.M[1][3];
+            goto found;
+        }
+    }
+    if (mouseIndex >= AsMovieSlots(proot)->GetMouseCursorCount())
+        return;
+    pt = GetMovieMouseState(proot, mouseIndex)->GetLastPosition();
+found:
+    if (InteractiveObject* ptop = proot->GetTopMostEntity(pt, mouseIndex, testAll))
+        fn.Result->SetAsCharacter(ptop);
 }
 }}} // namespace Scaleform::GFx::AS2
 
