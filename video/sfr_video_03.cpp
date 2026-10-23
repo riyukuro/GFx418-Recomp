@@ -409,4 +409,74 @@ void FUN_140019270(void* object, std::uint64_t replacement)
 {
     FUN_1400190c0(reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(object) + 0x80), replacement);
 }
+
+// MS2-FUNCTIONAL: transfers an object into an AS3 Value using Pick semantics.
+// @0x14001a1e0
+void FUN_14001a1e0(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Object* object)
+{
+    value->Pick(object);
+}
+// MS2-FUNCTIONAL: initializes an AS3 numeric Value with a 32-bit integer payload.
+// @0x14001a260
+void FUN_14001a260(std::uint32_t* value, std::uint32_t number)
+{
+    value[0] = (value[0] & 0xffffffe2) | 2;
+    *reinterpret_cast<std::uint64_t*>(value + 4) = number;
+    *reinterpret_cast<std::uint64_t*>(value + 6) = 0;
+}
+// MS2-FUNCTIONAL: copies a 32-bit integer payload into an AS3 numeric Value.
+// @0x14001a2b0
+void* FUN_14001a2b0(void* result, std::uint32_t* value, const std::uint32_t* number)
+{
+    FUN_14001a260(value, *number);
+    return result;
+}
+// MS2-FUNCTIONAL: reads the current frame record's integer field at offset 0x10.
+// @0x14001a330
+void FUN_14001a330(void* self, std::uint32_t* result)
+{
+    auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
+    auto index = frames[0x6d];
+    auto* slot = frames + index * 4;
+    auto* instance = *reinterpret_cast<unsigned char**>(slot);
+    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    *result = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(data) + 0x10);
+}
+// MS2-FUNCTIONAL: writes the current frame record's integer field at offset 0x10.
+// @0x14001a360
+void FUN_14001a360(void* self, void*, std::uint32_t number)
+{
+    auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
+    auto index = frames[0x6d];
+    auto* slot = frames + index * 4;
+    auto* instance = *reinterpret_cast<unsigned char**>(slot);
+    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(data) + 0x10) = number;
+}
+// MS2-FUNCTIONAL: reads the current frame record's flag byte at offset 0x14.
+// @0x14001a390
+void FUN_14001a390(void* self, std::uint8_t* result)
+{
+    auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
+    auto index = frames[0x6d];
+    auto* slot = frames + index * 4;
+    auto* instance = *reinterpret_cast<unsigned char**>(slot);
+    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    *result = *(static_cast<unsigned char*>(data) + 0x14);
+}
+// MS2-FUNCTIONAL: writes the current frame record's flag byte at offset 0x14.
+// @0x14001a3c0
+void FUN_14001a3c0(void* self, void*, std::uint8_t flag)
+{
+    auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
+    auto index = frames[0x6d];
+    auto* slot = frames + index * 4;
+    auto* instance = *reinterpret_cast<unsigned char**>(slot);
+    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    *(static_cast<unsigned char*>(data) + 0x14) = flag;
+}
 } // namespace
