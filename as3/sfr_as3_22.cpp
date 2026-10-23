@@ -884,6 +884,20 @@ static std::uint64_t HashImageKey(const unsigned char* key)
             0x514d9afbc3e934fbull + key[0]);
 }
 
+// MS2-FUNCTIONAL: accumulates the fixed counters and merges nested movie lookup tables; variable view and id lists remain to be copied.
+// @0x142687eb0
+extern "C" void* FUN_142687eb0(void* destination, const void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    const auto* src = static_cast<const unsigned char*>(source);
+    *reinterpret_cast<std::uint64_t*>(dst + 0x10) += *reinterpret_cast<const std::uint64_t*>(src + 0x10);
+    for (std::size_t offset = 0x18; offset <= 0xc8; offset += sizeof(std::uint32_t))
+        *reinterpret_cast<std::uint32_t*>(dst + offset) += *reinterpret_cast<const std::uint32_t*>(src + offset);
+    FUN_14268a8e0(*reinterpret_cast<void**>(dst + 0xe8), *reinterpret_cast<void* const*>(src + 0xe8));
+    FUN_14268ac40(*reinterpret_cast<void**>(dst + 0xf0), *reinterpret_cast<void* const*>(src + 0xf0));
+    return destination;
+}
+
 // MS2-FUNCTIONAL: hashes the eight-byte key, follows the bucket collision chain, and returns the matching cached node index.
 // @0x14268a450
 void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
