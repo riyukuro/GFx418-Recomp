@@ -208,6 +208,22 @@ extern void FUN_1425b4ec0(void*, int);
 extern void FUN_1425b43c0(void*);
 
 // MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; recovered calls preserve offsets and order.
+// MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; the guard and calls follow the exe.
+// @0x1423d4690
+void FUN_1423d4690(void* self)
+{
+    void* base = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8);
+    if (base) {
+        void* factory = static_cast<unsigned char*>(base) + 0x10;
+        void** vtable = *reinterpret_cast<void***>(factory);
+        void* value = reinterpret_cast<void*(*)(void*, int)>(vtable[3])(factory, 0x18);
+        FUN_1425b4ec0(value, 0);
+        FUN_1425b43c0(value);
+        if (value)
+            reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();
+    }
+}
+
 // @0x1423d07e0
 void FUN_1423d07e0(void* self)
 {
