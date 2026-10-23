@@ -2154,6 +2154,89 @@ Scaleform::GFx::AS2::Object* FUN_140012510(
     return object;
 }
 
+static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
+    Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context,
+    Scaleform::GFx::AS2::CFunctionPtr callback, void* functionVtable, void* functionInterfaceVtable,
+    unsigned prototypeSize, unsigned prototypeType, unsigned stringOffset, bool connectPrototype)
+{
+    Scaleform::GFx::AS2::ASStringContext stringContext(context, 8);
+    auto* heap = context->pHeap;
+    auto* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(heap->Alloc(0x70));
+    if (function)
+    {
+        extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
+        FUN_142919df0(function, &stringContext, callback);
+        *reinterpret_cast<void**>(function) = functionVtable;
+        *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = functionInterfaceVtable;
+    }
+    result->Function = function;
+    result->pLocalFrame = nullptr;
+    result->Flags = 0;
+
+    auto* prototype = static_cast<Scaleform::GFx::AS2::Object*>(heap->Alloc(prototypeSize));
+    if (prototype)
+    {
+        if (connectPrototype)
+            FUN_140012510(prototype, &stringContext,
+                context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
+        else
+        {
+            extern Scaleform::GFx::AS2::Object* FUN_14000e1e0(
+                Scaleform::GFx::AS2::Object*, Scaleform::GFx::AS2::ASStringContext*, void*,
+                Scaleform::GFx::AS2::FunctionRef*);
+            FUN_14000e1e0(prototype, &stringContext,
+                context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
+            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x20) = PTR_LAB_1431b5e70;
+            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x70) = PTR_LAB_1431b5e18;
+            *reinterpret_cast<void**>(prototype) = PTR_FUN_1431b5e20;
+            const unsigned char flags = 1;
+            FUN_142961830(reinterpret_cast<char*>(prototype) + 0x70, prototype, &stringContext,
+                          &PTR_s_attachVideo_1431b5800, &flags);
+        }
+        auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    extern void FUN_14000c280(void*, unsigned, void*);
+    FUN_14000c280(context, prototypeType, prototype);
+
+    auto* manager = context->GetStringManager();
+    auto* nameNode = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(
+        reinterpret_cast<char*>(manager) + stringOffset);
+    Scaleform::GFx::ASString name(nameNode);
+    Scaleform::GFx::AS2::Value value(*result);
+    Scaleform::GFx::AS2::PropFlags flags;
+    context->pGlobal->SetMemberRaw(&stringContext, name, value, flags);
+    if (prototype)
+    {
+        auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        if ((*count & 0x03ffffffu) != 0)
+        {
+            --*count;
+            if ((*count & 0x03ffffffu) == 0)
+                FUN_1425925f0(prototype);
+        }
+    }
+    return result;
+}
+
+// MS2-FUNCTIONAL: creates and registers the attachVideo native function and prototype.
+// @0x14000ed60
+Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
+    Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
+{
+    return CreateVideo02Builtin(result, context, FUN_14000e100, PTR_LAB_1431b5f20,
+        PTR_LAB_1431b5fb0, 0xb0, 0x24, 0x120, false);
+}
+
+// MS2-FUNCTIONAL: creates and registers the Connect native function and prototype.
+// @0x1400126f0
+Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
+    Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
+{
+    return CreateVideo02Builtin(result, context, FUN_140012340, PTR_LAB_1431b6740,
+        PTR_LAB_1431b67d0, 0xa8, 0x22, 0x110, true);
+}
+
 // Shared path for the generated AS3 trait getters in this range.
 static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
                             void* callback, void* base)
