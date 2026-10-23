@@ -800,6 +800,113 @@ void FUN_1400443d0(void* decoderInterface)
     }
 }
 
+// MS2-FUNCTIONAL: set the VDEC DLG parameters through its decoder interface.
+// @0x140044d70
+void criVdec_SetDlgPara(void* decoder, CriUint32 mode, void* first, void* second)
+{
+    criDecoderCallVoid(decoder, 0xd8, mode, first, second);
+}
+
+// MS2-FUNCTIONAL: invoke the decoder's auxiliary callback with its two caller arguments.
+// @0x140044de0
+void FUN_140044de0(void* decoder, void* first, void* second)
+{
+    criDecoderCallVoid(decoder, 0xe0, first, second);
+}
+
+// MS2-FUNCTIONAL: retrieve the decoder core interface from the wrapper's final callback slot.
+// @0x140044e40
+void* FUN_140044e40(void* decoder)
+{
+    return criDecoderCall<void*>(decoder, 0xe8, NULL);
+}
+
+// MS2-FUNCTIONAL: report the stream demuxer's current state byte.
+// @0x140044f8c
+CriSint32 FUN_140044f8c(const void* demux)
+{
+    return demux ? *(const CriUint8*)((const CriUint8*)demux + 9) : 0;
+}
+
+// MS2-FUNCTIONAL: store one output stream joint and its size flags in the demux table.
+// @0x140044fb0
+void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit)
+{
+    void* outputs;
+    memcpy(&outputs, (CriUint8*)demux + 0x18, sizeof(outputs));
+    CriUint8* record = (CriUint8*)outputs + (size_t)index * 0x10;
+    memcpy(record, &stream, sizeof(stream));
+    memcpy(record + 8, &flags, sizeof(flags));
+    memcpy(record + 0xc, &limit, sizeof(limit));
+}
+
+// MS2-FUNCTIONAL: compute the executable's fixed and per-chain work-area size.
+// @0x140045910
+CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
+{
+    CriSint32 base = config[0] == 1 ? 0xa0 : 0x58;
+    return config[2] * 0x20 + 8 + base;
+}
+
+// MS2-FUNCTIONAL: pop a recycled 0x20-byte chunk from the unified stream-joint free list.
+// @0x14004592c
+void* FUN_14004592c(void* streamJoint)
+{
+    CriUint8* bytes = (CriUint8*)streamJoint;
+    void* chunk;
+    memcpy(&chunk, bytes + 0x48, sizeof(chunk));
+    if (!chunk)
+        return NULL;
+    void* next;
+    memcpy(&next, chunk, sizeof(next));
+    memcpy(bytes + 0x48, &next, sizeof(next));
+    memset(chunk, 0, 0x20);
+    return chunk;
+}
+
+// MS2-FUNCTIONAL: return a 0x20-byte stream-joint chunk to the unified free list.
+// @0x140045964
+void FUN_140045964(void* streamJoint, void* chunk)
+{
+    memset(chunk, 0, 0x20);
+    void* head;
+    memcpy(&head, (CriUint8*)streamJoint + 0x48, sizeof(head));
+    memcpy(chunk, &head, sizeof(head));
+    memcpy((CriUint8*)streamJoint + 0x48, &chunk, sizeof(chunk));
+}
+
+// MS2-FUNCTIONAL: release the stream-joint lock when one was initialized.
+// @0x140045998
+void FUN_140045998(void* streamJoint)
+{
+    void* lock;
+    memcpy(&lock, (CriUint8*)streamJoint + 0x10, sizeof(lock));
+    if (lock)
+        criCs_Destroy((LPCRITICAL_SECTION)lock);
+}
+
+// MS2-FUNCTIONAL: count recycled chunks while honoring the stream-joint lock.
+// @0x140045b34
+CriSint32 criSjUni_GetNumChainPool(void* streamJoint)
+{
+    CriUint8* bytes = (CriUint8*)streamJoint;
+    void* lock;
+    memcpy(&lock, bytes + 0x10, sizeof(lock));
+    if (lock)
+        FUN_140039f50((LPCRITICAL_SECTION)lock);
+    CriSint32 count = 0;
+    void* chunk;
+    memcpy(&chunk, bytes + 0x48, sizeof(chunk));
+    while (chunk)
+    {
+        ++count;
+        memcpy(&chunk, chunk, sizeof(chunk));
+    }
+    if (lock)
+        FUN_140039f8c((LPCRITICAL_SECTION)lock);
+    return count;
+}
+
 // MS2-FUNCTIONAL: return the current tick delta and timestamp for a CRI timer record.
 // @0x140041a10
 void FUN_140041a10(const void* state, CriSint64* elapsed, CriUint64* timestamp)
