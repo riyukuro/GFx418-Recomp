@@ -45,6 +45,8 @@ public:
     // AvmDisplayObjBase overrides.
     virtual void OnEventLoad();   // exe 0x14296b820
     virtual void OnEventUnload(); // exe 0x14296bba0
+    // The parent's path plus ".name"; "_level<n>" for a root sprite, empty otherwise (exe 0x1429494d0).
+    virtual const char* GetAbsolutePath(String* ppath) const;
 
     // AvmCharacter's own slots 23..33 (checked against the exe vftable 0x143215b00).
     virtual void               Bind(DisplayObject* po);

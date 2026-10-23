@@ -128,6 +128,7 @@
 // MS2-RANGE: 0x142949c00-0x142949ce4 .text$mn
 // MS2-RANGE: 0x142954380-0x14295451e .text$mn
 // MS2-RANGE: 0x1429469d0-0x142946a76 .text$mn
+// MS2-RANGE: 0x1429494d0-0x142949612 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -148,6 +149,10 @@
 #include "../include/gfx/gfx_input.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_movieslots.h"
+#include "../include/kernel/sf_msgformat.h"
+
+// MsgFormat::FormatD1<int> is an out-of-line call in the exe (exe 0x1423e8500, defined in sfr_as3_01c).
+template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
 
 // MovieImpl::GetModalClip (exe 0x14256f820).
 Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);
@@ -2466,6 +2471,27 @@ void GAS_ASnativeMouseButtonStates(const FnCall& fn)
     unsigned mask = fn.Arg(0).ToUInt32(fn.Env);
     MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
     fn.Result->SetBool((GetMovieMouseState(proot, 0)->GetButtonsState() & mask) == mask);
+}
+
+// @0x1429494d0
+const char* AvmCharacter::GetAbsolutePath(String* ppath) const
+{
+    if (InteractiveObject* pparent = pDispObj->GetParent())
+    {
+        pparent->GetAbsolutePath(ppath);
+        *ppath += ".";
+        ASString name = pDispObj->GetName();
+        *ppath += name.ToCStr();
+    }
+    else if (pDispObj->IsSprite())
+    {
+        // ToAvmSprite, inlined: the level of the root sprite.
+        const AvmSprite* psprite = GetObjectType() == Object_Sprite ? static_cast<const AvmSprite*>(this) : 0;
+        Scaleform::Format(*ppath, "_level{0}", psprite->GetLevel());
+    }
+    else
+        ppath->Clear();
+    return ppath->ToCStr();
 }
 }}} // namespace Scaleform::GFx::AS2
 
