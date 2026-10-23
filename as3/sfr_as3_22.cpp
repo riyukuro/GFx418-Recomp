@@ -633,6 +633,37 @@ void DivideNestedRecords(void* array, unsigned long long divisor)
 }
 
 namespace Scaleform {
+// MS2-FUNCTIONAL: counts descendants across every root view and the extra root tree, seeding each view node at one.
+// @0x14268a6d0
+int CountMovieViewNodes(void* movie)
+{
+    auto* bytes = static_cast<unsigned char*>(movie);
+    int total = 0;
+    auto countRoots = [&](void** roots, std::size_t rootCount) {
+        for (std::size_t i = 0; i < rootCount; ++i) {
+            int count = 1;
+            auto* root = static_cast<unsigned char*>(roots[i]);
+            void** children = *reinterpret_cast<void***>(root + 0x30);
+            const std::size_t childCount = *reinterpret_cast<std::size_t*>(root + 0x38);
+            for (std::size_t j = 0; j < childCount; ++j)
+                CountTreeNodes(children[j], &count);
+            total += count;
+        }
+    };
+    auto** views = *reinterpret_cast<void***>(bytes + 0xd0);
+    const std::size_t viewCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
+    for (std::size_t i = 0; i < viewCount; ++i) {
+        auto* viewRoots = static_cast<unsigned char*>(views[i]) + 0x70;
+        countRoots(*reinterpret_cast<void***>(viewRoots + 0x18),
+                   *reinterpret_cast<std::size_t*>(viewRoots + 0x20));
+    }
+    auto* roots = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0xf0));
+    if (roots)
+        countRoots(*reinterpret_cast<void***>(roots + 0x18),
+                   *reinterpret_cast<std::size_t*>(roots + 0x20));
+    return total;
+}
+
 // MS2-FUNCTIONAL: returns one plus the recursive descendant count, matching the executable's seed value.
 // @0x14268a810
 unsigned CountTreeWithRoot(void* node)
@@ -729,36 +760,6 @@ void FillImageData(void* command, void*, void* image)
     }
 }
 
-// MS2-FUNCTIONAL: counts descendants across every root view and the extra root tree, seeding each view node at one.
-// @0x14268a6d0
-int CountMovieViewNodes(void* movie)
-{
-    auto* bytes = static_cast<unsigned char*>(movie);
-    int total = 0;
-    auto countRoots = [&](void** roots, std::size_t rootCount) {
-        for (std::size_t i = 0; i < rootCount; ++i) {
-            int count = 1;
-            auto* root = static_cast<unsigned char*>(roots[i]);
-            void** children = *reinterpret_cast<void***>(root + 0x30);
-            const std::size_t childCount = *reinterpret_cast<std::size_t*>(root + 0x38);
-            for (std::size_t j = 0; j < childCount; ++j)
-                CountTreeNodes(children[j], &count);
-            total += count;
-        }
-    };
-    auto** views = *reinterpret_cast<void***>(bytes + 0xd0);
-    const std::size_t viewCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
-    for (std::size_t i = 0; i < viewCount; ++i) {
-        auto* viewRoots = static_cast<unsigned char*>(views[i]) + 0x70;
-        countRoots(*reinterpret_cast<void***>(viewRoots + 0x18),
-                   *reinterpret_cast<std::size_t*>(viewRoots + 0x20));
-    }
-    auto* roots = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0xf0));
-    if (roots)
-        countRoots(*reinterpret_cast<void***>(roots + 0x18),
-                   *reinterpret_cast<std::size_t*>(roots + 0x20));
-    return total;
-}
 }
 
 
