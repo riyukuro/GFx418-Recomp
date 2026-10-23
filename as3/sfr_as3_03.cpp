@@ -2564,6 +2564,51 @@ namespace Instances { namespace fl
     }
 }}
 }}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // @0x142409100
+    CheckResult XML::DeleteProperty(const Multiname& prop_name)
+    {
+        return Object::DeleteProperty(prop_name);
+    }
+
+    // @0x142409a60
+    Boolean3 XML::EqualsInternal(const XML& other)
+    {
+        if (this == &other)
+            return true3;
+        if (GetKind() == other.GetKind() && Text == other.Text)
+            return undefined3;
+        return false3;
+    }
+
+    // @0x142409ae0
+    Boolean3 XMLAttr::EqualsInternal(const XML& other)
+    {
+        Boolean3 r = XML::EqualsInternal(other);
+        if (r == undefined3)
+            r = (Data == static_cast<const XMLAttr&>(other).Data) ? true3 : false3;
+        return r;
+    }
+
+    // @0x142409b20
+    Boolean3 XMLComment::EqualsInternal(const XML& other)
+    {
+        Boolean3 r = XML::EqualsInternal(other);
+        if (r == undefined3)
+            r = true3;
+        return r;
+    }
+
+    // @0x142409d40
+    Boolean3 XMLProcInstr::EqualsInternal(const XML& other)
+    {
+        Boolean3 r = XML::EqualsInternal(other);
+        if (r == undefined3)
+            r = (Data == static_cast<const XMLProcInstr&>(other).Data) ? true3 : false3;
+        return r;
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
