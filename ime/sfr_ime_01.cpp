@@ -4028,6 +4028,38 @@ void FUN_1423d0f60(void* manager, int mode)
     FUN_1423d5060(manager, mode);
 }
 
+// MS2-FUNCTIONAL: converts the IMM composition attribute mask into the two formatted GFx composition update calls.
+// @0x1423cf670
+void FUN_1423cf670(void* raw, const unsigned* attributes)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
+    if (!owner || !attributes) return;
+    auto* factory = *reinterpret_cast<unsigned char**>(owner + 0x10);
+    void* temporary = reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+    const unsigned short flags = *reinterpret_cast<const unsigned short*>(attributes + 10);
+    int values[10];
+    for (int& value : values) value = -1;
+    if (flags & 0x001) values[0] = static_cast<int>(attributes[0]);
+    if (flags & 0x002) values[1] = static_cast<int>(attributes[1]);
+    if (flags & 0x004) values[2] = static_cast<int>(attributes[2]);
+    if (flags & 0x008) values[3] = static_cast<int>(attributes[3]);
+    if (flags & 0x010) values[4] = static_cast<int>(attributes[4]);
+    if (flags & 0x020) values[5] = static_cast<int>(attributes[5]);
+    if (flags & 0x040) values[8] = static_cast<int>(attributes[8]);
+    if (flags & 0x080) values[6] = static_cast<int>(attributes[6]);
+    if (flags & 0x100) values[7] = static_cast<int>(attributes[7]);
+    if (flags & 0x200) values[9] = static_cast<int>(attributes[9]);
+    auto* command = reinterpret_cast<Scaleform::String*>(self + 0x10);
+    if (command->GetSize()) {
+        FUN_1423ca030(*reinterpret_cast<void**>(self + 8), command->ToCStr(), "%d %d %d %d %d %d %d",
+            values[0], values[3], values[1], values[4], values[8], values[2], values[5]);
+        FUN_1423ca030(*reinterpret_cast<void**>(self + 8), command->ToCStr(), "%d %d %d",
+            values[6], values[7], values[9]);
+    }
+    if (temporary) FUN_14257dcb0(temporary);
+}
+
 struct cx18_CommandEntry
 {
     unsigned long long next;
