@@ -708,6 +708,13 @@ void FUN_140013a20(UByte* result, Scaleform::GFx::AS3::Value* input)
     *result = input->Convert2Boolean();
 }
 
+// MS2-FUNCTIONAL: transfers the object reference into the AS3 Value using the recovered Pick operation.
+// @0x140013790
+void FUN_140013790(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Object* object)
+{
+    value->Pick(object);
+}
+
 // MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
 // @0x140015140
 void FUN_140015140(UInt32 index, UByte* result, UInt32 length, Scaleform::GFx::AS3::Value* values)
