@@ -27,6 +27,8 @@ public:
     bool        UseSuffix;           // +0x12 LogSuffix follows every message
     const char* LogSuffix;           // +0x18
 
+    ActionLogger(DisplayObject* ptarget, const char* suffix = 0); // exe 0x142917910
+
     Log*         GetLog() const { return pLog; }
     bool         IsVerboseAction() const { return VerboseAction; }
     virtual bool IsVerboseActionErrors() const { return VerboseActionErrors; }
@@ -395,6 +397,19 @@ protected:
     unsigned BufferLen;     // +0x18
     UInt32   SwdHandle;     // +0x1c
     UInt32   SWFFileOffset; // +0x20
+};
+
+// One run of an action block: the shared bytes and the constant pool (ActionConstantPool) built from them. 0x40
+// bytes.
+class ActionBuffer : public RefCountBaseNTS<ActionBuffer, StatMV_ActionScript_Mem>
+{
+public:
+    ActionBuffer(ASStringContext* psc, ActionBufferData* pbufferData); // exe 0x142917890
+
+protected:
+    Ptr<ActionBufferData>                         pBufferData;         // +0x10
+    ArrayCC<ASString, StatMV_ActionScript_Mem>    Dictionary;          // +0x18
+    int                                           DeclDictProcessedAt; // +0x38
 };
 
 SF_FORCEINLINE void FunctionRefBase::DropRefs()

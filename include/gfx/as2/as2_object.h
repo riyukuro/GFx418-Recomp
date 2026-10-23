@@ -274,6 +274,7 @@ public:
     // Primary vftable: 0x00 ExecuteForEachChild_GC, 0x08 Finalize_GC, 0x10 dtor, then these.
     Object(Environment* penv); // exe 0x14291f810
     Object(ASStringContext* psc); // exe 0x14291f6f0 (appended for sfr_video_01)
+    Object(ASStringContext* psc, Object* pprototype); // exe 0x14291f790
     virtual ~Object();
     virtual void  SetValue(Environment* penv, const Value&);
     virtual Value GetValue() const;
@@ -299,6 +300,9 @@ public:
                            const PropFlags& flags = PropFlags());                            // exe 0x1429867f0
     virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
                               const ObjectInterface* instance = 0) const;                    // exe 0x1429947f0
+    // (appended for sfr_as2_02)
+    virtual ObjectType  GetObjectType() const; // exe 0x1429542c0: Object_ASObject
+    virtual FunctionRef ToFunction();          // exe 0x142991170: a null reference
     // Runs the watchpoint of prop, the value to store in *resultVal; false without one (exe 0x142964b90).
     bool InvokeWatchpoint(Environment* penv, const ASString& prop, const Value& newVal, Value* resultVal);
 
@@ -350,6 +354,9 @@ public:
     virtual bool    IsAsFunction() const;
     virtual Object* CreateNewObject(Environment*) const;
     virtual int     GetNumArgs() const;
+    // (appended for sfr_as2_02: the Object overrides of these would otherwise fill the slots)
+    virtual ObjectType  GetObjectType() const; // exe 0x14000ce70: Object_Function
+    virtual FunctionRef ToFunction();          // exe 0x142991140: a reference to this
 
     // The object of the prototype member, 0 without one (exe 0x142954b40).
     Object* GetPrototype(ASStringContext* psc);

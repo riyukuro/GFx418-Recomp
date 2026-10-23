@@ -14,8 +14,10 @@
 // MS2-RANGE: 0x142908c30-0x142908e90 .text$mn
 // MS2-RANGE: 0x14290bed0-0x142914500 .text$mn
 // MS2-RANGE: 0x142914500-0x142914660 .text$mn
+// MS2-RANGE: 0x142914660-0x142914880 .text$mn
 // MS2-RANGE: 0x142914880-0x142914e60 .text$mn
 // MS2-RANGE: 0x142914e60-0x142917780 .text$mn
+// MS2-RANGE: 0x142917780-0x142917bf0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -37,6 +39,7 @@
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_event.h"
+#include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/kernel/sf_alg.h"
 #include "../include/kernel/sf_msgformat.h"
@@ -965,6 +968,82 @@ MS2_AS2_GC_PROTOTYPE(TextFormatObject)
 MS2_AS2_GC_PROTOTYPE(ColorTransformObject)
 MS2_AS2_GC_PROTOTYPE(TransformObject)
 
+// The two-slot head of the Movie interface MovieImpl starts with (gfx_movie.h is not recovered).
+struct ActionLoggerMovie
+{
+    virtual void      Unused0()           = 0;
+    virtual MovieDef* GetMovieDef() const = 0; // 1
+};
+
+// MS2-FUNCTIONAL 0x142917910: the exe saves rsi only on the suffix path and keeps suffix in rbp; same flag logic and stores
+ActionLogger::ActionLogger(DisplayObject* ptarget, const char* suffix)
+{
+    MovieImpl* pm = ptarget->FindMovieImpl();
+    VerboseAction       = (pm->Flags >> 2) & 1;
+    LogSuffix           = suffix;
+    VerboseActionErrors = !((pm->Flags >> 6) & 1);
+    UseSuffix = suffix ? ((strcmp(((ActionLoggerMovie*)pm)->GetMovieDef()->GetFileURL(), LogSuffix) == 0
+                               ? (pm->Flags >> 3) : (pm->Flags >> 4)) & 1)
+                       : false;
+    if (!((pm->Flags >> 1) & 1))
+        pm->pCachedLog = pm->GetStateBag()->GetLog();
+    pLog = pm->pCachedLog;
+
+    // Only the file name of the suffix path.
+    if (UseSuffix && !((pm->Flags >> 5) & 1))
+    {
+        SPInt len = (SPInt)strlen(suffix);
+        if (len > 0)
+        {
+            const char* p = LogSuffix + len;
+            while (*p != '/' && *p != '\\')
+            {
+                --p;
+                if (p <= LogSuffix)
+                    return;
+            }
+            LogSuffix = p + 1;
+        }
+    }
+}
+
+ActionBuffer::ActionBuffer(ASStringContext* psc, ActionBufferData* pbufferData)
+    : pBufferData(pbufferData), Dictionary(psc->GetBuiltin(ASBuiltin_empty_)), DeclDictProcessedAt(-1)
+{
+}
+
+AmpMarker::AmpMarker(Environment* penv) : Object(penv)
+{
+    // commonInit inlined: the call goes through the vftable.
+    ObjectInterface* pthis = this;
+    pthis->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Amp));
+}
+
+// A BitmapData of the image exported under linkageId by the movie of the target.
+// MS2-FUNCTIONAL 0x142914770: the String instance; the exe swaps rbx/rdi for the movie and the string data
+template<class T>
+BitmapData* GFx_LoadBitmap(Environment* penv, const T& linkageId)
+{
+    Ptr<ImageResource> pimg = penv->GetTarget()->GetMovieImpl()->GetImageResourceByLinkageId(penv->GetTarget()->GetResourceMovieDef(),
+                                                              linkageId.ToCStr());
+    if (!pimg)
+    {
+        penv->LogScriptWarning("BitmapData::LoadBitmap: LoadMovieImageCallback failed to load image \"%s\"",
+                               linkageId.ToCStr());
+        return 0;
+    }
+    Ptr<MovieDef> pmd = penv->GetTarget()->GetResourceMovieDef();
+    if (!pmd)
+        return 0;
+    BitmapData* pbmp = SF_HEAP_NEW(penv->GetHeap()) BitmapData(penv);
+    pbmp->SetImage(penv, pimg, pmd);
+    return pbmp;
+}
+template BitmapData* GFx_LoadBitmap<ASString>(Environment*, const ASString&);
+template BitmapData* GFx_LoadBitmap<String>(Environment*, const String&);
+
+template Prototype<Object, Environment>::Prototype(ASStringContext*, Object*, const FunctionRef&);
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
@@ -1099,3 +1178,16 @@ template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const 
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@Alg@Scaleform@@VArraySortOnFunctor@AS2@GFx@3@@Alg@Scaleform@@YA_NAEAV?$ArrayAdaptor@PEAVValue@AS2@GFx@Scaleform@@@01@_K1VArraySortOnFunctor@AS2@GFx@1@@Z 0x142914bd0
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7ActionLogger@AS2@GFx@Scaleform@@6B@ 0x143215ac0
+// MS2-PIN: ??_7ActionBuffer@AS2@GFx@Scaleform@@6B@ 0x1432153c8
+// MS2-PIN: ??_7?$RefCountBaseNTS@VActionBuffer@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
+// MS2-PIN: ??_7AmpMarker@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321deb8
+// MS2-PIN: ??_7AmpMarker@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321df00
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215fa8
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216050
+// MS2-PIN: ??0ActionLogger@AS2@GFx@Scaleform@@QEAA@PEAVDisplayObject@23@PEBD@Z 0x142917910
+// MS2-PIN: ??$GFx_LoadBitmap@VString@Scaleform@@@AS2@GFx@Scaleform@@YAPEAVBitmapData@012@PEAVEnvironment@012@AEBVString@2@@Z 0x142914770
+// MS2-PIN: ??_7?$LogBase@VActionLogger@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b5018

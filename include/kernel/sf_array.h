@@ -238,6 +238,49 @@ struct ArrayDataDH : ArrayDataBase<T, Allocator, SizePolicy>
     const MemoryHeap* pHeap;
 };
 
+// (appended for sfr_as2_02) Grows with copies of a default value; heap = the array's own address.
+template<class T, class Allocator, class SizePolicy>
+struct ArrayDataCC : ArrayDataBase<T, Allocator, SizePolicy>
+{
+    typedef T                                       ValueType;
+    typedef Allocator                               AllocatorType;
+    typedef SizePolicy                              SizePolicyType;
+    typedef ArrayDataBase<T, Allocator, SizePolicy> BaseType;
+    typedef ArrayDataCC<T, Allocator, SizePolicy>   SelfType;
+
+    ArrayDataCC(const ValueType& defval) : BaseType(), DefaultValue(defval) {}
+    ArrayDataCC(const ValueType& defval, int size) : BaseType(), DefaultValue(defval) { Resize(size); }
+    ArrayDataCC(const SelfType& a) : BaseType(a.Policy), DefaultValue(a.DefaultValue) { Append(a.Data, a.Size); }
+
+    void Reserve(UPInt newCapacity) { BaseType::Reserve(this, newCapacity); }
+
+    void Resize(UPInt newSize)
+    {
+        UPInt oldSize = this->Size;
+        BaseType::ResizeNoConstruct(this, newSize);
+        if (newSize > oldSize)
+            Allocator::ConstructArray(this->Data + oldSize, newSize - oldSize, DefaultValue);
+    }
+
+    void PushBack(const ValueType& val)
+    {
+        BaseType::ResizeNoConstruct(this, this->Size + 1);
+        Allocator::Construct(this->Data + this->Size - 1, val);
+    }
+
+    void Append(const ValueType other[], UPInt count)
+    {
+        if (count)
+        {
+            UPInt oldSize = this->Size;
+            BaseType::ResizeNoConstruct(this, this->Size + count);
+            Allocator::ConstructArray(this->Data + oldSize, count, other);
+        }
+    }
+
+    ValueType DefaultValue;
+};
+
 template<class ArrayData>
 class ArrayBase
 {
@@ -482,6 +525,23 @@ public:
     ArrayDH_POD(MemoryHeap* heap, int size) : BaseType(heap, size) {}
     ArrayDH_POD(MemoryHeap* heap, const SizePolicyType& p) : BaseType(heap) { SetSizePolicy(p); }
     ArrayDH_POD(const SelfType& a) : BaseType(a) {}
+    const SelfType& operator=(const SelfType& a) { BaseType::operator=(a); return *this; }
+};
+
+// (appended for sfr_as2_02)
+template<class T, int SID = Stat_Default_Mem, class SizePolicy = ArrayDefaultPolicy>
+class ArrayCC : public ArrayBase<ArrayDataCC<T, AllocatorLH<T, SID>, SizePolicy> >
+{
+public:
+    typedef T                                                           ValueType;
+    typedef AllocatorLH<T, SID>                                         AllocatorType;
+    typedef SizePolicy                                                  SizePolicyType;
+    typedef ArrayCC<T, SID, SizePolicy>                                 SelfType;
+    typedef ArrayBase<ArrayDataCC<T, AllocatorLH<T, SID>, SizePolicy> > BaseType;
+
+    ArrayCC(const ValueType& defval) : BaseType(defval) {}
+    ArrayCC(const ValueType& defval, int size) : BaseType(defval, size) {}
+    ArrayCC(const SelfType& a) : BaseType(a) {}
     const SelfType& operator=(const SelfType& a) { BaseType::operator=(a); return *this; }
 };
 

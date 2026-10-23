@@ -20,6 +20,7 @@ class InteractiveObject;
 class DrawingContext;
 class DisplayObjContainer;
 class MovieDefImpl;
+class ImageResource;
 class FontManager;
 class ASString;
 }
@@ -171,6 +172,8 @@ public:
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
     bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
+    // The image exported (or provided by the image callback) under linkageId of md (exe 0x14256f370).
+    Ptr<ImageResource> GetImageResourceByLinkageId(MovieDefImpl* md, const char* linkageId);
     // The topmost interactive object under a point (twips), skipping ignoreMC (exe 0x14256fde0).
     InteractiveObject* GetTopMostEntity(const Render::PointF& mousePos, unsigned controllerIdx, bool testAll,
                                         const InteractiveObject* ignoreMC = NULL);

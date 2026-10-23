@@ -26,6 +26,9 @@ namespace AS2 {
 // 0x68 bytes: nothing besides the object.
 class AmpMarker : public Object
 {
+public:
+    AmpMarker(Environment* penv); // exe 0x142917b80
+
 protected:
     void commonInit(Environment* penv); // exe 0x142994e10
 };
@@ -157,6 +160,8 @@ public:
 
     Ptr<ImageResource> pImageRes; // +0x68
     Ptr<MovieDef>      pMovieDef; // +0x70 keeps the image heap of the movie alive
+
+    void SetImage(Environment* penv, ImageResource* pimg, MovieDef* pmovieDef);
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942ca0

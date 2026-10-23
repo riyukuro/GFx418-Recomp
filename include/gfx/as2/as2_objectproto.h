@@ -27,8 +27,12 @@ protected:
     FunctionRef      __Constructor__; // +0x20
     InterfacesArray* pInterfaces;     // +0x38 implemented interfaces (implements)
 
+    GASPrototypeBase() : pInterfaces(0) {}
+
     // One of the interfaces is an instance of prototype (exe 0x1429396a0).
     bool DoesImplement(Environment* penv, const Object* prototype) const;
+    // Appends ctor's prototype to the interfaces at index; allocates the array first (exe 0x14292f250).
+    void AddInterface(ASStringContext* psc, int index, FunctionObject* ctor);
 
     // Sets "constructor" of the prototype pthis (exe 0x14297ffc0).
     bool SetConstructor(Object* pthis, ASStringContext* psc, const Value& ctor);
@@ -50,6 +54,7 @@ class Prototype : public BaseClass, public GASPrototypeBase
 {
 protected:
     typedef ASRefCountBaseType::Collector Collector;
+    typedef ASRefCountBaseType::OperationGC OperationGC;
 
     template<class Functor>
     void ForEachChild_GC(Collector* prcc) const
@@ -69,10 +74,47 @@ protected:
     }
 
 public:
+    Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+        : BaseClass(psc, pprototype)
+    {
+        Init(this, psc, constructor);
+    }
+
     // constructor and __constructor__ come from the prototype part (defined in sfr_as2_05).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val)
+    {
+        return GetMemberRaw(penv->GetSC(), name, val);
+    }
+    virtual bool DoesImplement(Environment* penv, const Object* prototype) const
+    {
+        if (this == prototype)
+            return true;
+        return GASPrototypeBase::DoesImplement(penv, prototype);
+    }
+    virtual bool IsBuiltinPrototype() const { return true; }
+    virtual void AddInterface(ASStringContext* psc, int index, FunctionObject* ctor)
+    {
+        GASPrototypeBase::AddInterface(psc, index, ctor);
+    }
 
 protected:
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
+    {
+        switch (operation)
+        {
+        case ASRefCountBaseType::Operation_Release:
+            ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+            break;
+        case ASRefCountBaseType::Operation_MarkInCycle:
+            ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+            break;
+        case ASRefCountBaseType::Operation_ScanInUse:
+            ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+            break;
+        default:;
+        }
+    }
     void Finalize_GC()
     {
         if (pInterfaces)
