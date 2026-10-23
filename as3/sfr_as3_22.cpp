@@ -1662,6 +1662,20 @@ void LogMovieViewFunctions(void* movieView, Scaleform::Log* log)
     FUN_14268bd60(*reinterpret_cast<void**>(bytes + 0x70), log);
 }
 
+// MS2-FUNCTIONAL: logs each movie view's function tables followed by both renderer function tables.
+// @0x14268c0d0
+void LogMovieAndRendererFunctions(void* movieRoot, Scaleform::Log* log)
+{
+    auto* bytes = static_cast<unsigned char*>(movieRoot);
+    auto** views = *reinterpret_cast<void***>(bytes + 0xd0);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
+    for (std::size_t i = 0; i < count; ++i)
+        LogMovieViewFunctions(views[i], log);
+    log->LogMessage("========== RENDERER FUNCTIONS ===============\n");
+    FUN_14268b710(*reinterpret_cast<void**>(bytes + 0xe8), log);
+    FUN_14268bd60(*reinterpret_cast<void**>(bytes + 0xf0), log);
+}
+
 // MS2-FUNCTIONAL: creates and links a sound request under the manager lock, then initializes its FMOD sound or stream.
 // @0x142744ea0
 void* CreateAudioRequest(void* manager, const char* path, bool stream)
