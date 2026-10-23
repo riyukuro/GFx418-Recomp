@@ -167,7 +167,9 @@ public:
     DoAbc(AbcDataBuffer* pabc) : pAbc(pabc) { }
 
     virtual void Execute(DisplayObjContainer* m);
+    virtual void ExecuteWithPriority(DisplayObjContainer* m, ActionPriority::Priority priority);
     virtual bool IsActionTag() const { return true; }
+    virtual void Trace(const char* str);
 };
 
 // The AS3 side of a movie (0x6f8 bytes). Opaque until recovered: the loader side only constructs it and runs ABC

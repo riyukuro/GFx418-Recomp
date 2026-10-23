@@ -89,7 +89,8 @@ protected:
 
 // Asked before a heap with a limit grows past it. 4.1.18 carries a counter after the vfptr (+8; the heap code never
 // touches it, the GFx users do).
-class MemoryHeap::LimitHandler
+// The exe has no standalone LimitHandler vftable; concrete heap limit handlers write their own tables.
+class __declspec(novtable) MemoryHeap::LimitHandler
 {
 public:
     LimitHandler() : AllocCount(0) { }
