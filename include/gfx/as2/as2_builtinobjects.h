@@ -531,6 +531,9 @@ public:
     // (appended for sfr_as2_04)
     // Bytes of the names and values under "data", 4 per number (exe 0x142935580).
     UPInt ComputeSizeInBytes(Environment* penv);
+    // (appended for sfr_as2_02)
+    // Visits the "data" object into the writer (exe 0x142945b20).
+    void Flush(Environment* penv, SharedObjectVisitor* pwriter);
 };
 
 // SharedObject.prototype (no methods).
@@ -540,6 +543,11 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213e40 (empty)
 
     SharedObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920830
+
+    // (appended for sfr_as2_02)
+    static void Flush(const FnCall& fn); // exe 0x142901150
+    static void Clear(const FnCall& fn); // exe 0x142900fc0
+    static void GetSize(const FnCall& fn); // exe 0x142901280
 };
 
 // The out-of-line Resize / PushBack of the loader's object stack (exe COMDATs the exe calls where cl inlines them).

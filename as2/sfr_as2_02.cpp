@@ -28,6 +28,9 @@
 // MS2-RANGE: 0x142905a00-0x142905b80 .text$mn
 // MS2-RANGE: 0x1429055f0-0x142905a00 .text$mn
 // MS2-RANGE: 0x142906650-0x1429069f0 .text$mn
+// MS2-RANGE: 0x142901150-0x142901276 .text$mn
+// MS2-RANGE: 0x142900fc0-0x14290114c .text$mn
+// MS2-RANGE: 0x142901280-0x142901406 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -1932,6 +1935,56 @@ template BitmapData* GFx_LoadBitmap<String>(Environment*, const String&);
 
 template Prototype<Object, Environment>::Prototype(ASStringContext*, Object*, const FunctionRef&);
 
+
+// Writes the data object through the writer of the installed shared object manager.
+// @0x142901150
+void SharedObjectProto::Flush(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, SharedObject);
+    SharedObject* pthis = static_cast<SharedObject*>(fn.ThisPtr);
+    if (!pthis)
+        return;
+    Ptr<SharedObjectManagerBase> psomgr = *static_cast<SharedObjectManagerBase*>(
+        fn.Env->GetTarget()->GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_SharedObject));
+    if (psomgr)
+    {
+        Ptr<SharedObjectVisitor> pwriter = *psomgr->CreateWriter(
+            pthis->Name, pthis->LocalPath, fn.Env->GetTarget()->GetMovieImpl()->GetStateBag()->GetFileOpener());
+        pthis->Flush(fn.Env, pwriter);
+    }
+}
+
+// Replaces the data object by an empty one and writes it.
+// @0x142900fc0
+void SharedObjectProto::Clear(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, SharedObject);
+    SharedObject* pthis = static_cast<SharedObject*>(fn.ThisPtr);
+    if (!pthis)
+        return;
+    Ptr<Object> pdata = *fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Object));
+    pthis->SetDataObject(fn.Env, pdata);
+    Ptr<SharedObjectManagerBase> psomgr = *static_cast<SharedObjectManagerBase*>(
+        fn.Env->GetTarget()->GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_SharedObject));
+    if (psomgr)
+    {
+        Ptr<SharedObjectVisitor> pwriter = *psomgr->CreateWriter(
+            pthis->Name, pthis->LocalPath, fn.Env->GetTarget()->GetMovieImpl()->GetStateBag()->GetFileOpener());
+        pthis->Flush(fn.Env, pwriter);
+    }
+}
+
+// Bytes of the data object.
+// MS2-FUNCTIONAL the exe inlines ComputeSizeInBytes (out of line in sfr_as2_04)
+// @0x142901280
+void SharedObjectProto::GetSize(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, SharedObject);
+    SharedObject* pthis = static_cast<SharedObject*>(fn.ThisPtr);
+    if (!pthis)
+        return;
+    fn.Result->SetInt((int)pthis->ComputeSizeInBytes(fn.Env));
+}
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
