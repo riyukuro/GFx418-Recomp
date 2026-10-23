@@ -98,6 +98,8 @@
 // MS2-RANGE: 0x14293ff10-0x14293ff6a .text$mn
 // MS2-RANGE: 0x14293ff70-0x14294015d .text$mn
 // MS2-RANGE: 0x1429413c0-0x1429415bd .text$mn
+// MS2-RANGE: 0x142941330-0x1429413a3 .text$mn
+// MS2-RANGE: 0x1429415c0-0x14294167b .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1902,6 +1904,41 @@ bool AvmCharacter::ExecuteFunction(const FunctionRef& function, const Array<Valu
         return true;
     }
     return false;
+}
+
+// @0x142941330
+void AvmSprite::ExecuteFrame0Events()
+{
+    InteractiveObject*      pchar = pDispObj;
+    MovieRoot::ActionEntry* pe    = GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Load);
+    pe->Type          = MovieRoot::ActionEntry::Entry_Event;
+    pe->pCharacter    = pchar;
+    pe->pActionBuffer = 0;
+    // EventId(Event_Load), member by member.
+    pe->mEventId.Id              = EventId::Event_Load;
+    pe->mEventId.WcharCode       = 0;
+    pe->mEventId.KeyCode         = 0;
+    pe->mEventId.AsciiCode       = 0;
+    pe->mEventId.RollOverCnt     = 0;
+    pe->mEventId.ControllerIndex = -1;
+    pe->mEventId.KeysState       = 0;
+    pe->mEventId.MouseWheelDelta = 0;
+}
+
+// @0x1429415c0
+void AvmSprite::ExecuteInitActionFrameTags(unsigned frame)
+{
+    if (!InitActionsExecuted[frame])
+    {
+        Ptr<Sprite>        thisSprite = GetSprite();
+        TimelineDef::Frame initActionsFrame;
+        if (GetSprite()->pDef->GetInitActions(&initActionsFrame, frame) && initActionsFrame.GetTagCount() > 0)
+        {
+            for (unsigned i = 0; i < initActionsFrame.GetTagCount(); i++)
+                initActionsFrame.GetTag(i)->Execute(GetSprite());
+            InitActionsExecuted[frame] = true;
+        }
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0

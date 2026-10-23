@@ -126,6 +126,14 @@ public:
     // (appended for sfr_as2_05)
     // Runs the whole buffer in the clip's environment; false once the clip is unloaded (exe 0x14293ff10).
     virtual bool ExecuteBuffer(ActionBuffer* pactionbuffer);
+    // AvmSpriteBase overrides: queues the load event of frame 0 (exe 0x142941330); runs the frame's InitActions
+    // tags once (exe 0x1429415c0).
+    virtual void ExecuteFrame0Events();
+    virtual void ExecuteInitActionFrameTags(unsigned frame);
+
+    // The data members (only those used so far). AvmSpriteBase's vftable is at +0x30.
+    UByte                                   Unrecovered_38[0x1e0 - 0x38];
+    ArrayLH<bool, StatMV_ActionScript_Mem>  InitActionsExecuted; // +0x1e0 per frame
 };
 
 inline Sprite* ObjectInterface::ToSprite()
