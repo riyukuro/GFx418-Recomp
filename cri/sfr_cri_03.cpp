@@ -51,6 +51,8 @@ void FUN_14004e250(void);
 void FUN_14004eb70(void);
 void FUN_14004f8d0(void);
 void FUN_140027fb4(void*, void*);
+void FUN_14004e2a0(void*);
+void FUN_140046784(void*);
 void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
 void* FUN_14003a1a0(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
@@ -1437,6 +1439,64 @@ CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFr
         total += (CriSint32)(frameBytes + 0x800);
     total += FUN_140046420(0, frameCount, settings);
     return total;
+}
+
+// MS2-FUNCTIONAL: release the MPV handle, stream joints, frame buffers, and owning VMPV allocation.
+// @0x14003cae0
+void FUN_14003cae0(void* handle)
+{
+    CriUint8* bytes = (CriUint8*)handle;
+    CriSint32 zero = 0;
+    memcpy(bytes + 8, &zero, sizeof(zero));
+    memcpy(bytes + 0x18, &zero, sizeof(zero));
+    void* heap;
+    void* mpv;
+    void* frameJoint;
+    void* frames;
+    void* inputJoint;
+    memcpy(&heap, bytes + 0x10, sizeof(heap));
+    memcpy(&mpv, bytes + 0x78, sizeof(mpv));
+    memcpy(&frameJoint, bytes + 0x58, sizeof(frameJoint));
+    memcpy(&frames, bytes + 0x48, sizeof(frames));
+    memcpy(&inputJoint, bytes + 0x180, sizeof(inputJoint));
+
+    void* decoder = NULL;
+    memcpy(&decoder, bytes + 0x220, sizeof(decoder));
+    if (decoder)
+    {
+        void** vtable = *(void***)decoder;
+        ((void (*)(void*))vtable[3])(decoder);
+        decoder = NULL;
+        memcpy(bytes + 0x220, &decoder, sizeof(decoder));
+    }
+    if (frameJoint)
+    {
+        FUN_140046784(frameJoint);
+        frameJoint = NULL;
+        memcpy(bytes + 0x58, &frameJoint, sizeof(frameJoint));
+    }
+    if (frames)
+    {
+        CriUint32 frameCount;
+        memcpy(&frameCount, bytes + 0x3c, sizeof(frameCount));
+        for (CriUint32 i = 0; i < frameCount; ++i)
+        {
+            void* frame = NULL;
+            memcpy(&frame, (CriUint8*)frames + (size_t)i * 200, sizeof(frame));
+            if (frame)
+                FUN_140027fb4(heap, frame);
+        }
+        FUN_140027fb4(heap, frames);
+    }
+    if (inputJoint)
+    {
+        FUN_140046784(inputJoint);
+        inputJoint = NULL;
+        memcpy(bytes + 0x180, &inputJoint, sizeof(inputJoint));
+    }
+    if (mpv)
+        FUN_14004e2a0(mpv);
+    FUN_140027fb4(heap, handle);
 }
 
 // MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
