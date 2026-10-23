@@ -101,6 +101,7 @@ void*    FUN_140044e40(void* decoderInterface);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void FUN_140046804(void* object, void* value);
 void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
+void FUN_1400467c0(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 void     FUN_140039f50(void* section);
 void     FUN_140039f8c(void* section);
 void     FUN_1400411f8(void);
@@ -4317,6 +4318,45 @@ CriSint32 FUN_140032090(void* player)
     if (((ReadModeView*)player)->Mode == 1)
         ((ReadByteCountView*)player)->Count = consumedBytes;
     return 1;
+}
+
+// MS2-FUNCTIONAL: return a partially consumed input chunk to its source queue after playback uses it.
+// @0x140034e70
+void FUN_140034e70(void* player, const CriMovieInputChunk* input, CriUint32 maximum)
+{
+    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
+    struct ReadCurrentView { CriUint8 Reserved[0xd90]; CriMovieInputChunk Current; };
+    if (((ReadModeView*)player)->Mode == 1 || !input->Data || input->Size == 0)
+        return;
+    CriSint32 status = getInternalStatus(player);
+    if (status == 0 || status == 2 || status == 8)
+    {
+        ((ReadCurrentView*)player)->Current.Data = NULL;
+        ((ReadCurrentView*)player)->Current.Size = 0;
+        return;
+    }
+
+    void* source = FUN_140037050(player, NULL, NULL);
+    if (!source)
+    {
+        FUN_140037950(player, "E05063026M: Can't execute criMvPly input.", 0);
+        return;
+    }
+    CriMovieInputChunk* current = &((ReadCurrentView*)player)->Current;
+    if (current->Data != input->Data || current->Size != input->Size)
+    {
+        FUN_140037950(player, "E05063027M: Chunk is not same to the current input chunk.",
+                      (CriSint32)(uintptr_t)input->Data);
+        return;
+    }
+
+    CriMovieInputChunk prefix = {};
+    CriMovieInputChunk suffix = {};
+    FUN_1400467c0(current, maximum, &prefix, &suffix);
+    FUN_1400467a8(source, 0, &prefix);
+    FUN_1400467b0(source, 1, current);
+    current->Data = NULL;
+    current->Size = 0;
 }
 
 // MS2-FUNCTIONAL: discard handled command chunks while returning ordinary input records to the stream.
