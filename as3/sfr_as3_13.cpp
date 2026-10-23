@@ -12,6 +12,8 @@
 #include "ms2/scaleform/include/render/render_font.h"
 #include "ms2/scaleform/include/kernel/sf_utf8util.h"
 #include "ms2/scaleform/include/render/render_twips.h"
+#include "ms2/scaleform/include/kernel/sf_std.h"
+#include "ms2/scaleform/include/render/text_core.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2131,6 +2133,138 @@ namespace Instances { namespace fl_text
         RequestReformat(DocViewOf(ptf));
     }
 }}
+
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- fl_text: TextField::replaceSelectedText, replaceText ----
+unsigned long long FUN_1425bb810(void* ptf, const wchar_t* pstr, unsigned long long start, unsigned long long end,
+                                 unsigned long long len);                       // TextField::ReplaceText
+bool  FUN_1425996b0(void* ptext, const Scaleform::Render::Text::TextFormat** ppfmt,
+                    const Scaleform::Render::Text::ParagraphFormat** pppara, unsigned long long pos);  // StyledText::GetTextAndParagraphFormat
+void  FUN_142615410(void* pdoc, const Scaleform::Render::Text::ParagraphFormat* ppara,
+                    unsigned long long start, unsigned long long end);          // DocView::SetParagraphFormat
+void  FUN_142615640(void* pdoc, const Scaleform::Render::Text::TextFormat* pfmt,
+                    unsigned long long start, unsigned long long end);          // DocView::SetTextFormat
+unsigned long long FUN_142617990(void* pek);                                    // EditorKit::GetCursorPos
+void  FUN_142619b80(void* pek, unsigned long long pos, bool selectionChange);   // EditorKit::SetCursorPos
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // The styled text's default formats and the view's editor kit.
+    static inline void* StyledTextOf(void* ptf) { return *(void**)((UByte*)DocViewOf(ptf) + 0x10); }
+    static inline void* EditorKitOf(void* ptf)  { return *(void**)((UByte*)DocViewOf(ptf) + 0xd8); }
+
+    // Replaces [begin, end) with the wide form of str, decoded into a stack buffer when it fits.
+    static __forceinline void ReplaceTextUTF8(void* ptf, const ASString& str, unsigned len, UPInt begin, UPInt end)
+    {
+        wchar_t buf[0x400];
+        if (len < 0x400)
+        {
+            UTF8Util::DecodeString(buf, str.ToCStr());
+            FUN_1425bb810(ptf, buf, begin, end, SF_MAX_UPINT);
+        }
+        else
+        {
+            wchar_t* pbuf = (wchar_t*)Memory::Alloc((len + 1) * sizeof(wchar_t));
+            UTF8Util::DecodeString(pbuf, str.ToCStr());
+            FUN_1425bb810(ptf, pbuf, begin, end, SF_MAX_UPINT);
+            Memory::Free(pbuf);
+        }
+    }
+
+    // @0x1424b3a00
+    void TextField::replaceSelectedText(const Value& result, const ASString& value)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (FUN_1425b9730(ptf))
+            return;
+        const Render::Text::TextFormat*      pfmt  = *(const Render::Text::TextFormat**)((UByte*)StyledTextOf(ptf) + 0x38);
+        const Render::Text::ParagraphFormat* ppara = *(const Render::Text::ParagraphFormat**)((UByte*)StyledTextOf(ptf) + 0x30);
+        unsigned len = value.GetLength();
+        void* pview = *(void**)((UByte*)EditorKitOf(ptf) + 0x10);
+        UPInt selEnd = *(UPInt*)((UByte*)pview + 0x40);
+        UPInt selBegin = *(UPInt*)((UByte*)pview + 0x38);
+        UPInt begin = Alg::Min(selBegin, selEnd);
+        UPInt end   = Alg::Max(selBegin, selEnd);
+        ReplaceTextUTF8(ptf, value, len, begin, end);
+        UPInt newEnd = begin + len;
+        FUN_142619b80(EditorKitOf(ptf), newEnd, false);
+        if (ppara)
+            FUN_142615410(DocViewOf(ptf), ppara, begin, newEnd);
+        if (pfmt)
+            FUN_142615640(DocViewOf(ptf), pfmt, begin, newEnd);
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424b3bf0
+    // MS2-FUNCTIONAL: register allocation differs (the view pointer lands in r8 instead of rcx/r10); same logic.
+    void TextField::replaceText(const Value& result, SInt32 beginIndex, SInt32 endIndex, const ASString& newText)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (FUN_1425b9730(ptf))
+            return;
+        unsigned len = newText.GetLength();
+        if (beginIndex < 0 || endIndex < 0 || (unsigned)beginIndex > (unsigned)endIndex)
+            return;
+        UPInt begin = (unsigned)beginIndex;
+        UPInt docLen = FUN_142598a50(StyledTextOf(ptf));
+        void* pdoc = DocViewOf(ptf);
+        UPInt newLen = len - (UPInt)(unsigned)(endIndex - beginIndex) + docLen;
+        void* ptext = *(void**)((UByte*)pdoc + 0x10);
+        const Render::Text::TextFormat*      pfmt;
+        const Render::Text::ParagraphFormat* ppara;
+        if (begin >= docLen)
+        {
+            pfmt  = *(const Render::Text::TextFormat**)((UByte*)ptext + 0x38);
+            ppara = *(const Render::Text::ParagraphFormat**)(*(UByte**)((UByte*)pdoc + 0x10) + 0x30);
+        }
+        else
+            FUN_1425996b0(ptext, &pfmt, &ppara, begin);
+        if (pfmt)
+            pfmt->AddRef();
+        if (ppara)
+            ppara->AddRef();
+        ReplaceTextUTF8(ptf, newText, len, begin, (unsigned)endIndex);
+        void* pek = EditorKitOf(ptf);
+        if (pek && FUN_142617990(pek) > newLen)
+            FUN_142619b80(EditorKitOf(ptf), newLen, false);
+        unsigned newEnd = (unsigned)beginIndex + len;
+        if (ppara)
+            FUN_142615410(DocViewOf(ptf), ppara, begin, newEnd);
+        if (pfmt)
+            FUN_142615640(DocViewOf(ptf), pfmt, begin, newEnd);
+        if (pfmt)
+            pfmt->Release();
+        if (ppara)
+            ppara->Release();
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424b44d0
+    void TextField::setTextFormat(const Value& result, Instances::fl_text::TextFormat* format, SInt32 beginIndex,
+                                  SInt32 endIndex)
+    {
+        SF_UNUSED(result);
+        if (!format)
+            return;
+        SInt32 begin = (beginIndex != -1) ? beginIndex : 0;
+        SInt32 end   = (endIndex != -1) ? endIndex : 0x7FFFFFFF;
+        if (begin > end)
+            return;
+        void* ptf = DisplayTextField(this);
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        Render::Text::TextFormat      fmt(MovieHeapOf(asvm.GetMovieImpl()));
+        Render::Text::ParagraphFormat para;
+        FUN_1424ac700(format, &para, &fmt);
+        FUN_142615640(DocViewOf(ptf), &fmt, (unsigned)begin, (unsigned)end);
+        FUN_142615410(DocViewOf(ptf), &para, (unsigned)begin, (unsigned)end);
+        FUN_1425bc060(ptf);
+    }
+}} // namespace Instances::fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
