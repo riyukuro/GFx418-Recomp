@@ -153,6 +153,9 @@ namespace Classes {
         virtual String GetAS3ObjectName() const;
         // Runs the static initializer. 0x14241dea0
         virtual void PostInit(const Value& _this, unsigned argc, const Value* argv) const;
+        // (appended, sfr22) pushes a frame running the class's static initializer on the class object (the class
+        // traits' stored scope; debug name "<class> class constructor"). 0x142405bf0
+        void CallStaticConstructor();
 
         const ClassTraits::UserDefined& GetClassTraits() const
         {

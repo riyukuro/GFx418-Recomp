@@ -700,6 +700,17 @@ namespace Classes { namespace fl
 
 namespace Classes
 {
+    // @0x142405bf0
+    void UserDefined::CallStaticConstructor()
+    {
+        // The static initializer takes no arguments and runs on the class object itself.
+        const SInt32 mbi_ind =
+            GetFile().GetAbcFile().Methods.Info[GetClassInfo().stat_info.method_info_ind]->MethodBodyInfoInd;
+        const ASString name = GetTraits().GetName();
+        GetVM().AddFrame(Value(this), GetFile(), mbi_ind, Value(this), 0, NULL, true, GetTraits().InitScope,
+                         GetTraits(), name + " class constructor");
+    }
+
     // @0x1424071c0
     void Function::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
     {
