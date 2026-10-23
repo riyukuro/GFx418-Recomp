@@ -79,6 +79,65 @@ public:
         Type = ValueType(VT_StringW | VTC_ConvertBit);
     }
 
+    // (appended, sfr19) copies, type tests and setters, and the managed value's member access (the IME units).
+    Value(const Value& src) : pObjectInterface(NULL), Type(src.Type)
+    {
+        mValue = src.mValue;
+        DataAux = src.DataAux;
+        if (src.IsManagedValue())
+            AcquireManagedValue(src);
+    }
+    Value& operator=(const Value& src)
+    {
+        if (this != &src)
+        {
+            if (IsManagedValue())
+                ReleaseManagedValue();
+            Type = src.Type;
+            mValue = src.mValue;
+            DataAux = src.DataAux;
+            if (src.IsManagedValue())
+                AcquireManagedValue(src);
+        }
+        return *this;
+    }
+    bool IsUndefined() const     { return GetType() == VT_Undefined; }
+    bool IsNull() const          { return GetType() == VT_Null; }
+    bool IsDisplayObject() const { return GetType() == VT_DisplayObject; }
+    void SetNull()
+    {
+        if (IsManagedValue())
+            ReleaseManagedValue();
+        Type = VT_Null;
+    }
+    void SetNumber(double v)
+    {
+        if (IsManagedValue())
+            ReleaseManagedValue();
+        Type = VT_Number;
+        mValue.NValue = v;
+    }
+    // ObjectInterface::GetMember/SetMember/Invoke are its vftable slots 4/5/6 (not declared on ObjectInterface:
+    // the AS2 interface overrides only part of it so far).
+    bool GetMember(const char* name, Value* pval) const
+    {
+        typedef bool (*Fn)(ObjectInterface*, void*, const char*, Value*, bool);
+        return (*reinterpret_cast<Fn const* const*>(pObjectInterface))[4](pObjectInterface, mValue.pData, name, pval,
+                                                                           IsDisplayObject());
+    }
+    bool SetMember(const char* name, const Value& val)
+    {
+        typedef bool (*Fn)(ObjectInterface*, void*, const char*, const Value&, bool);
+        return (*reinterpret_cast<Fn const* const*>(pObjectInterface))[5](pObjectInterface, mValue.pData, name, val,
+                                                                           IsDisplayObject());
+    }
+    bool Invoke(const char* name, Value* presult, const Value* args, UPInt nargs)
+    {
+        typedef bool (*Fn)(ObjectInterface*, void*, Value*, const char*, const Value*, UPInt, bool);
+        return (*reinterpret_cast<Fn const* const*>(pObjectInterface))[6](pObjectInterface, mValue.pData, presult,
+                                                                           name, args, nargs, IsDisplayObject());
+    }
+
 protected:
     union ValueUnion
     {
@@ -102,6 +161,12 @@ protected:
     {
         pObjectInterface->ObjectRelease(this, mValue.pData);
         pObjectInterface = NULL;
+    }
+    // (appended, sfr19)
+    void AcquireManagedValue(const Value& src)
+    {
+        pObjectInterface = src.pObjectInterface;
+        pObjectInterface->ObjectAddRef(this, mValue.pData);
     }
 };
 
