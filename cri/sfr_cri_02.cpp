@@ -172,6 +172,12 @@ CriBool  FUN_1400355b0(void* player, void* output);
 CriBool  FUN_140035710(void* player, void* yuvBuffers, void* output);
 CriSint32 FUN_140044630(void* decoder);
 CriSint32 FUN_140044f8c(void* demux);
+CriSint32 FUN_1400447d0(void* decoder);
+CriSint32 FUN_140043e60(void* decoder);
+CriUint32 FUN_140044820(void* decoder);
+CriUint32 FUN_140043eb0(void* decoder);
+void FUN_140044710(void* decoder);
+void FUN_140043d90(void* decoder);
 void     FUN_140042880(void* audioManager);
 void     FUN_1400427b0(void* audioManager);
 void     FUN_140042800(void* audioManager);
@@ -4734,6 +4740,64 @@ void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMov
 
 // MS2-FUNCTIONAL: parse one indexed CRI stream record and update its pending-record count.
 // @0x140033d70
+// MS2-FUNCTIONAL: resume demux output and wait for decoded pools to drain before ending playback.
+// @0x140033810
+void FUN_140033810(void* player)
+{
+    CriUint8* state = (CriUint8*)player;
+    auto get32 = [state](size_t offset) { CriUint32 value; memcpy(&value, state + offset, sizeof(value)); return value; };
+    auto getPtr = [state](size_t offset) { void* value; memcpy(&value, state + offset, sizeof(value)); return value; };
+    auto put32 = [state](size_t offset, CriUint32 value) { memcpy(state + offset, &value, sizeof(value)); };
+    if (get32(0xad4) != 1)
+        return;
+
+    void* demux = getPtr(0xd68);
+    void* videoDecoder = getPtr(0xe08);
+    void* alphaDecoder = getPtr(0xe40);
+    void* output = get32(0xd60) == 0 ? getPtr(0xd88) : getPtr(0xda0);
+    if (FUN_140044f8c(demux) == 0)
+    {
+        if (get32(0xd60) == 1)
+        {
+            void* memoryInput = getPtr(0xda0);
+            FUN_140046798(memoryInput);
+            FUN_1400467b0(memoryInput, 1, state + 0xda8);
+            void* chunk = NULL;
+            FUN_1400467a0(memoryInput, 1, (CriSint32)get32(0xdb8), &chunk);
+            FUN_1400467b0(memoryInput, 0, &chunk);
+        }
+        FUN_140044fa8(demux, output);
+        FUN_140046798(getPtr(0xd80));
+        FUN_140044fd8(demux, 1);
+        FUN_140044f9c(demux);
+        if (videoDecoder)
+        {
+            FUN_140044710(videoDecoder);
+            put32(0xe30, 0);
+            if (alphaDecoder && get32(0x884) == 1)
+                FUN_140043d90(alphaDecoder);
+        }
+    }
+
+    if (videoDecoder)
+    {
+        CriSint32 status = FUN_1400447d0(videoDecoder);
+        if (status == 0 || status == 1)
+            return;
+        CriUint32 required = get32(0xed8) == 0xffffffff ? get32(0xb04) : get32(0xed8);
+        if (FUN_140044820(videoDecoder) < required)
+            return;
+        if ((CriSint32)get32(0xe58) > 0 && get32(0xe64) != 1)
+            return;
+        if (alphaDecoder)
+        {
+            CriSint32 alphaStatus = FUN_140043e60(alphaDecoder);
+            if (alphaStatus == 0 || alphaStatus == 1 || FUN_140043eb0(alphaDecoder) < required)
+                return;
+        }
+    }
+}
+
 CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex)
 {
     CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
@@ -6334,3 +6398,5 @@ void CriMvEasyFileReaderMem::Destroy(void)
 // MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6BCriMvFileReaderInterface@@@ 0x1431b9360
 // MS2-PIN: ??_7VideoReaderConfigSmp@Video@GFx@Scaleform@@6B@ 0x1431b91d8
 // MS2-PIN: ??0VideoPlayerImpl@Video@GFx@Scaleform@@QEAA@PEAVMemoryHeap@3@@Z 0x14002c810
+// MS2-PIN: ?FUN_140033810@@YAXPEAX@Z 0x140033810
+// MS2-PIN: ?FUN_140033d70@@YAJPEAXPEBUCriMovieInputChunk@@E@Z 0x140033d70
