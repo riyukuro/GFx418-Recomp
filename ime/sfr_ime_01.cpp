@@ -271,6 +271,29 @@ void FUN_1423ce4f0(void* self)
     **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
 }
 
+// MS2-FUNCTIONAL: imm32 entry points are resolved at runtime; the Win32 key and notification sequence follows the exe.
+// @0x1423d53e0
+void FUN_1423d53e0(void* self, int key)
+{
+    unsigned char* bytes = static_cast<unsigned char*>(self);
+    int state = *reinterpret_cast<int*>(bytes + 0x98);
+    if (state != 0x110000 && state != 0x210000 && state != 0xc10000 &&
+        state != 0x60000 && state != 0xd10000) {
+        HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
+        HIMC context = cx18_ImmGetContext(hwnd);
+        cx18_ImmNotifyIME(context, 0x12, 0, *reinterpret_cast<int*>(bytes + 0x70) + key);
+        cx18_ImmNotifyIME(context, 0x11, 0, 0);
+        cx18_ImmNotifyIME(context, 0x16, 0, *reinterpret_cast<DWORD*>(bytes + 0x70));
+        cx18_ImmReleaseContext(hwnd, context);
+        return;
+    }
+    INPUT input;
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = static_cast<WORD>(key + 0x31);
+    input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(key + 0x31, 0));
+    SendInput(1, &input, sizeof(input));
+}
+
 // @0x1423d1c10
 void FUN_1423d1c10(void* self)
 {
