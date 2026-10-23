@@ -2066,6 +2066,105 @@ namespace Instances { namespace fl_text
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ---- fl_text: by-value overloads of the result-reference natives ----
+// Each makes an empty result, fills it through the reference form and returns it.
+
+// SPtr<Array>::operator=(const SPtr<Array>&), kept out of line by the exe.
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Array>& FUN_1424aa450(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Array>& dst, const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Array>& src);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424b0be0
+    SPtr<Instances::fl_geom::Rectangle> TextField::getCharBoundaries(SInt32 charIndex)
+    {
+        SPtr<Instances::fl_geom::Rectangle> result;
+        getCharBoundaries(result, charIndex);
+        return result;
+    }
+
+    // At 0x1424b0ed0 (not in the function list).
+    void TextField::getImageReference(SPtr<Instances::fl_display::DisplayObject>& result, const ASString& id)
+    {
+        SF_UNUSED2(result, id);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TextField::getImageReference() is not implemented\n");
+    }
+
+    // @0x1424b0e90
+    SPtr<Instances::fl_display::DisplayObject> TextField::getImageReference(const ASString& id)
+    {
+        SPtr<Instances::fl_display::DisplayObject> result;
+        getImageReference(result, id);
+        return result;
+    }
+
+    // @0x1424b0fe0
+    SPtr<Instances::fl_text::TextLineMetrics> TextField::getLineMetrics(SInt32 lineIndex)
+    {
+        SPtr<Instances::fl_text::TextLineMetrics> result;
+        getLineMetrics(result, lineIndex);
+        return result;
+    }
+
+    // @0x1424b2ab0
+    SPtr<Instances::fl_text::TextFormat> TextField::getTextFormat(SInt32 beginIndex, SInt32 endIndex)
+    {
+        SPtr<Instances::fl_text::TextFormat> result;
+        getTextFormat(result, beginIndex, endIndex);
+        return result;
+    }
+
+    // @0x1424b2ce0
+    SPtr<Instances::fl::Array> TextSnapshot::getTextRunInfo(SInt32 beginIndex, SInt32 endIndex)
+    {
+        SPtr<Instances::fl::Array> result;
+        getTextRunInfo(result, beginIndex, endIndex);
+        return result;
+    }
+
+    // @0x1424b46f0
+    SPtr<Instances::fl::Array> StyleSheet::styleNamesGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        styleNamesGet(result);
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: our styleSheetGet(result) is smaller than the exe's and gets inlined here; the exe calls it
+    // @0x1424b4980
+    SPtr<Instances::fl_text::StyleSheet> TextField::styleSheetGet()
+    {
+        SPtr<Instances::fl_text::StyleSheet> result;
+        styleSheetGet(result);
+        return result;
+    }
+
+    // At 0x1424b4bd0 (not in the function list).
+    void TextFormat::tabStopsGet(SPtr<Instances::fl::Array>& result)
+    {
+        FUN_1424aa450(result, tabStops);
+    }
+
+    // @0x1424b4ba0
+    SPtr<Instances::fl::Array> TextFormat::tabStopsGet()
+    {
+        SPtr<Instances::fl::Array> result;
+        tabStopsGet(result);
+        return result;
+    }
+
+    // @0x1424b4f60
+    SPtr<Instances::fl_text::TextFormat> StyleSheet::transform(const Value& value)
+    {
+        SPtr<Instances::fl_text::TextFormat> result;
+        transform(result, value);
+        return result;
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc1@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5730
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$00VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5830
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b58a0

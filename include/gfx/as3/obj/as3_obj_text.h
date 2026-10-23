@@ -140,8 +140,10 @@ namespace Instances { namespace fl_text {
         void setStyle(const Value& result, const ASString&, const Value&);
         // @0x1424b4710
         void styleNamesGet(SPtr<Instances::fl::Array>& result);
+        SPtr<Instances::fl::Array> styleNamesGet();
         // @0x1424b4f80
         void transform(SPtr<Instances::fl_text::TextFormat>& result, const Value&);
+        SPtr<Instances::fl_text::TextFormat> transform(const Value& value);
     };
 
     // 0x70 bytes: no members of its own; the display text field it scripts is pDispObj.
@@ -208,12 +210,14 @@ namespace Instances { namespace fl_text {
         void embedFontsSet(const Value& result, bool);
         // @0x1424b0c00
         void getCharBoundaries(SPtr<Instances::fl_geom::Rectangle>& result, SInt32);
+        SPtr<Instances::fl_geom::Rectangle> getCharBoundaries(SInt32 charIndex);
         // @0x1424b0df0
         void getCharIndexAtPoint(SInt32& result, Value::Number, Value::Number);
         // @0x1424b0e40
         void getFirstCharInParagraph(SInt32& result, SInt32);
         // @0x1424b0ed0
         void getImageReference(SPtr<Instances::fl_display::DisplayObject>& result, const ASString&);
+        SPtr<Instances::fl_display::DisplayObject> getImageReference(const ASString& id);
         // @0x1424b0ef0
         void getLineIndexAtPoint(SInt32& result, Value::Number, Value::Number);
         // @0x1424b0f40
@@ -222,6 +226,7 @@ namespace Instances { namespace fl_text {
         void getLineLength(SInt32& result, SInt32);
         // @0x1424b1000
         void getLineMetrics(SPtr<Instances::fl_text::TextLineMetrics>& result, SInt32);
+        SPtr<Instances::fl_text::TextLineMetrics> getLineMetrics(SInt32 lineIndex);
         // @0x1424b1330
         void getLineOffset(SInt32& result, SInt32);
         // @0x1424b1380
@@ -230,6 +235,7 @@ namespace Instances { namespace fl_text {
         void getParagraphLength(SInt32& result, SInt32);
         // @0x1424b2ad0
         void getTextFormat(SPtr<Instances::fl_text::TextFormat>& result, SInt32, SInt32);
+        SPtr<Instances::fl_text::TextFormat> getTextFormat(SInt32 beginIndex, SInt32 endIndex);
         // @0x1424b2e40
         void gridFitTypeGet(ASString& result);
         // @0x1424b2e60
@@ -292,6 +298,7 @@ namespace Instances { namespace fl_text {
         void sharpnessSet(const Value& result, Value::Number);
         // @0x1424b49a0
         void styleSheetGet(SPtr<Instances::fl_text::StyleSheet>& result);
+        SPtr<Instances::fl_text::StyleSheet> styleSheetGet();
         // @0x1424b4a50
         void styleSheetSet(const Value& result, Instances::fl_text::StyleSheet*);
         // @0x1424b4cd0
@@ -407,6 +414,7 @@ namespace Instances { namespace fl_text {
         void sizeSet(const Value& result, const Value&);
         // @0x1424b4bd0
         void tabStopsGet(SPtr<Instances::fl::Array>& result);
+        SPtr<Instances::fl::Array> tabStopsGet();
         // @0x1424b4bf0
         void tabStopsSet(const Value& result, Instances::fl::Array*);
         // @0x1424b4c60
@@ -462,6 +470,7 @@ namespace Instances { namespace fl_text {
         void getText(ASString& result, SInt32, SInt32, bool);
         // @0x1424b2d00
         void getTextRunInfo(SPtr<Instances::fl::Array>& result, SInt32, SInt32);
+        SPtr<Instances::fl::Array> getTextRunInfo(SInt32 beginIndex, SInt32 endIndex);
         // @0x1424b2f20
         void hitTestTextNearPos(Value::Number& result, Value::Number, Value::Number, Value::Number);
         // @0x1424b4330
