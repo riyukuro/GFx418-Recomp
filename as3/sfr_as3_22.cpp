@@ -904,6 +904,7 @@ insert_entry:
 }
 // The following stream and movie record helpers remain in the same Scaleform namespace.
 void ReadNarrowString(void*, void*);
+void ResizeStringArray(void**, std::size_t);
 static void ReadMovieBytes(void* stream, void* destination, std::size_t size)
 {
     auto** vtable = *reinterpret_cast<void***>(stream);
@@ -968,6 +969,43 @@ void ReadMovieImageFields(void* object, void* stream, unsigned version)
     ReadMovieBytes(stream, bytes + 0x30, 4);
     ReadMovieBytes(stream, bytes + 0x34, 4);
     ReadMovieBytes(stream, bytes + 0x38, 4);
+}
+
+// MS2-FUNCTIONAL: reads the versioned image resource fields and its array of narrow-string labels.
+// @0x14268e140
+void ReadImageResourceRecord(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    ReadMovieBytes(stream, bytes + 0x10, 4);
+    if (version > 0x13)
+        ReadMovieBytes(stream, bytes + 0x14, 4);
+    ReadNarrowString(stream, bytes + 0x18);
+    if (version > 4)
+        ReadNarrowString(stream, bytes + 0x20);
+    ReadNarrowString(stream, bytes + 0x28);
+    ReadNarrowString(stream, bytes + 0x30);
+    ReadNarrowString(stream, bytes + 0x38);
+    std::uint32_t count = 0;
+    ReadMovieBytes(stream, &count, 4);
+    ResizeStringArray(reinterpret_cast<void**>(bytes + 0x40), count);
+    auto* strings = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0x40));
+    for (std::uint32_t i = 0; i < count; ++i) {
+        std::uint32_t length = 0;
+        ReadMovieBytes(stream, &length, 4);
+        for (std::uint32_t j = 0; j < length; ++j) {
+            unsigned char ch = 0;
+            ReadMovieBytes(stream, &ch, 1);
+            FUN_142585f70(strings + static_cast<std::size_t>(i) * 8, static_cast<signed char>(ch));
+        }
+    }
+    ReadMovieBytes(stream, bytes + 0x58, 4);
+    ReadMovieBytes(stream, bytes + 0x5c, 4);
+    ReadMovieBytes(stream, bytes + 0x60, 4);
+    ReadMovieBytes(stream, bytes + 0x64, 4);
+    if (version > 9) {
+        ReadMovieBytes(stream, bytes + 0x68, 8);
+        ReadMovieBytes(stream, bytes + 0x70, 4);
+    }
 }
 
 // MS2-FUNCTIONAL: updates or inserts this node's cached key, then repeats the operation for its child nodes.
