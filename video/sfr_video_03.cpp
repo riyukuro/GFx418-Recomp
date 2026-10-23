@@ -81,6 +81,7 @@ MS2_EXTERN(0x14001ad20, void*(void*, void*), FUN_14001ad20);
 MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
 MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
 MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
+MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
 MS2_EXTERN(0x140026ed0, void(void*), FUN_140026ed0);
 MS2_EXTERN(0x140026db0, void(), FUN_140026db0);
 MS2_GLOBAL(0x14317bf80, void*, AvmInteractiveVtable);
@@ -1363,5 +1364,31 @@ void FUN_140017670(void*, void* vm, void* frame, std::uint64_t property, unsigne
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[4]));
+}
+
+// MS2-FUNCTIONAL: creates the video metadata object, adds its standard fields, and returns a retained object atom.
+// @0x1400192e0
+void FUN_1400192e0(void* callback, std::uint64_t* output)
+{
+    auto* vm = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
+    auto* callFrame = *reinterpret_cast<unsigned char**>(vm + 0x20);
+    auto* as3vm = *reinterpret_cast<unsigned char**>(callFrame + 0x78);
+    std::uint64_t objectResult = 0;
+    FUN_142516600(as3vm, &objectResult);
+    auto* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(objectResult);
+    auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(as3vm + 0x10) + 0x1e8);
+    const char* names[] = {"onMetaData", "onCuePoint", "onSubtitle"};
+    const std::size_t offsets[] = {0x98, 0xb8, 0xd8};
+    for (unsigned i = 0; i < 3; ++i) {
+        Scaleform::GFx::ASString name(manager->CreateStringNode(names[i]));
+        object->AddDynamicSlotValuePair(name, *reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + offsets[i]));
+    }
+    if (output && *output != objectResult) {
+        ReleaseVideoAtom(output);
+        RetainVideoAtom(objectResult);
+        *output = objectResult;
+    }
+    auto temporary = objectResult;
+    ReleaseVideoAtom(&temporary);
 }
 } // namespace
