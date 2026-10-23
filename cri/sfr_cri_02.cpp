@@ -14,6 +14,7 @@
 #include "../include/kernel/sf_file.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include <new>
+#include <cstring>
 
 extern "C" {
 extern const CriUint8 DAT_143b27a88[];
@@ -144,6 +145,51 @@ void     FUN_140046798(void* streamJoint);
 void     FUN_1400420b0(void* manager, void* heap);
 void     FUN_140043be0(void* decoder);
 void     FUN_140028074(void* heap);
+void     FUN_14258aca0(void* lock);
+void     FUN_14258bb70(void* lock);
+void     FUN_142583d50(void* event);
+void*    FUN_14002d890(void* queue);
+void     FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, void* b, void* c);
+void     FUN_140029bf0(void* array, void* source, CriUint64 capacity);
+void     FUN_140029c90(void* array, void* source, CriUint64 capacity);
+void     FUN_140029d30(void* array, void* source, CriUint64 capacity);
+void     FUN_14002afe0(void* array);
+void     FUN_142584ce0(void* string);
+
+struct CriMvRequestNode
+{
+    CriMvRequestNode* Next;
+    CriMvRequestNode* Previous;
+    CriUint32 Operation;
+    CriUint32 Reserved;
+    void* Request;
+    void* ArgumentA;
+    void* ArgumentB;
+    void* ArgumentC;
+};
+
+struct CriMvRequestQueueView
+{
+    CriUint8 Reserved0[0x68];
+    CriMvRequestNode* Head;
+    CriMvRequestNode* Tail;
+    CriUint8 Lock[0x28];
+    CriUint8 Event[1];
+};
+
+struct CriMvReaderRequestView
+{
+    CriUint8 Reserved0[8];
+    void* Queue;
+    CriUint8 Reserved1[8];
+    CriUint32 OpenPending;
+    CriUint32 Reserved2;
+    CriUint32 ClosePending;
+    CriUint32 ReadPending;
+    CriUint64 ReadSize;
+    CriUint64 ReadPosition;
+    CriUint64 FileSize;
+};
 
 // @0x140038000
 void FUN_140038000(void** record, void*)
@@ -1835,6 +1881,186 @@ void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration)
     entries[index].AlphaDecoderInterface = registration->AlphaDecoderInterface;
     if (index == count)
         DAT_143b2794c = count + 1;
+}
+
+// MS2-FUNCTIONAL: append a request node to the reader queue under its lock and wake the worker event.
+// @0x14002e140
+void FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, void* b, void* c)
+{
+    CriMvRequestQueueView* queueView = (CriMvRequestQueueView*)queue;
+    FUN_14258aca0(queueView->Lock);
+    CriMvRequestNode* node = (CriMvRequestNode*)FUN_14002d890(&queueView->Reserved0[0x40]);
+    node->ArgumentB = b;
+    node->Operation = operation;
+    node->Request = request;
+    node->ArgumentA = a;
+    node->ArgumentC = c;
+    node->Previous = (CriMvRequestNode*)&queueView->Head;
+    node->Next = queueView->Head;
+    node->Next->Previous = node;
+    queueView->Head = node;
+    FUN_14258bb70(queueView->Lock);
+    FUN_142583d50(queueView->Event);
+}
+
+// MS2-FUNCTIONAL: initialize the reader request state and enqueue its open operation.
+// @0x14002e1e0
+void FUN_14002e1e0(void* object, void* input)
+{
+    CriMvReaderRequestView* state = (CriMvReaderRequestView*)object;
+    state->OpenPending = 1;
+    state->FileSize = ~(CriUint64)0;
+    state->ReadPending = 0;
+    state->ClosePending = 0;
+    state->ReadSize = 0;
+    state->ReadPosition = 0;
+    FUN_14002e140(state->Queue, 0, (CriUint8*)object - 0x10, input, NULL, NULL);
+}
+
+// MS2-FUNCTIONAL: mark close pending and append the reader close operation.
+// @0x14002e230
+void FUN_14002e230(void* object)
+{
+    CriMvReaderRequestView* state = (CriMvReaderRequestView*)object;
+    state->ClosePending = 1;
+    FUN_14002e140(state->Queue, 2, (CriUint8*)object - 0x10, NULL, NULL, NULL);
+}
+
+// MS2-FUNCTIONAL: mark the request as pending and enqueue the selected reader operation.
+// @0x14002e260
+void FUN_14002e260(void* object, void* first, void* second)
+{
+    CriMvReaderRequestView* state = (CriMvReaderRequestView*)object;
+    state->ReadPending = 1;
+    FUN_14002e140(state->Queue, 1, (CriUint8*)object - 0x10, NULL, first, second);
+}
+
+// MS2-FUNCTIONAL: resize the first eight-byte vector flavor, using its three-quarter growth policy.
+// @0x14002a380
+void FUN_14002a380(void* array, void* source, CriUint64 length)
+{
+    CriUint64* fields = (CriUint64*)array;
+    CriUint64 capacity = fields[2];
+    if (length < fields[1])
+    {
+        if (length < (capacity >> 1))
+            FUN_140029bf0(array, source, length);
+    }
+    else if (capacity <= length)
+        FUN_140029bf0(array, source, (length >> 2) + length);
+    fields[1] = length;
+}
+
+// MS2-FUNCTIONAL: resize the second eight-byte vector flavor with its matching allocator helper.
+// @0x14002a3e0
+void FUN_14002a3e0(void* array, void* source, CriUint64 length)
+{
+    CriUint64* fields = (CriUint64*)array;
+    CriUint64 capacity = fields[2];
+    if ((length < fields[1] && length < (capacity >> 1)) ||
+        (length >= fields[1] && capacity <= length))
+        FUN_140029c90(array, source, length < fields[1] ? length : (length >> 2) + length);
+    fields[1] = length;
+}
+
+// MS2-FUNCTIONAL: resize the third eight-byte vector flavor with its matching allocator helper.
+// @0x14002a440
+void FUN_14002a440(void* array, void* source, CriUint64 length)
+{
+    CriUint64* fields = (CriUint64*)array;
+    CriUint64 capacity = fields[2];
+    if ((length < fields[1] && length < (capacity >> 1)) ||
+        (length >= fields[1] && capacity <= length))
+        FUN_140029d30(array, source, length < fields[1] ? length : (length >> 2) + length);
+    fields[1] = length;
+}
+
+// MS2-FUNCTIONAL: grow and append one entry to the first eight-byte vector flavor.
+// @0x14002a780
+void FUN_14002a780(CriUint64* array, const CriUint64* value)
+{
+    CriUint64 length = array[1] + 1;
+    CriUint64 capacity = array[2];
+    if (length < array[1])
+    {
+        if ((capacity >> 1) <= length)
+            FUN_140029bf0(array, array, length);
+    }
+    else if (length >= capacity)
+        FUN_140029bf0(array, array, (length >> 2) + length);
+    array[1] = length;
+    *(CriUint64*)(array[0] - 8 + length * 8) = *value;
+}
+
+// MS2-FUNCTIONAL: grow and append one entry to the second eight-byte vector flavor.
+// @0x14002a800
+void FUN_14002a800(CriUint64* array, const CriUint64* value)
+{
+    CriUint64 length = array[1] + 1;
+    CriUint64 capacity = array[2];
+    if (length < array[1])
+    {
+        if ((capacity >> 1) <= length)
+            FUN_140029c90(array, array, length);
+    }
+    else if (length >= capacity)
+        FUN_140029c90(array, array, (length >> 2) + length);
+    array[1] = length;
+    *(CriUint64*)(array[0] - 8 + length * 8) = *value;
+}
+
+// MS2-FUNCTIONAL: set the first vector's logical length and resize its backing store as needed.
+// @0x14002a880
+void FUN_14002a880(void* array, CriUint64 length)
+{
+    CriUint64* fields = (CriUint64*)array;
+    if (length < fields[1] && length < (fields[2] >> 1))
+        FUN_140029d30(array, array, length);
+    else if (length >= fields[1] && fields[2] <= length)
+        FUN_140029d30(array, array, (length >> 2) + length);
+    fields[1] = length;
+}
+
+// MS2-FUNCTIONAL: set the second vector's logical length and resize through its allocator flavor.
+// @0x14002a9b0
+void FUN_14002a9b0(void* array, CriUint64 length)
+{
+    CriUint64* fields = (CriUint64*)array;
+    if (length < fields[1] && length < (fields[2] >> 1))
+        FUN_140029bf0(array, array, length);
+    else if (length >= fields[1] && fields[2] <= length)
+        FUN_140029bf0(array, array, (length >> 2) + length);
+    fields[1] = length;
+}
+
+// MS2-FUNCTIONAL: erase one eight-byte vector entry and shift the remaining entries down.
+// @0x14002b9e0
+void FUN_14002b9e0(CriUint64* array, CriUint64 index)
+{
+    if (array[1] == 1)
+    {
+        FUN_14002afe0(array);
+        return;
+    }
+    CriUint64* destination = (CriUint64*)(array[0] + index * 8);
+    memmove(destination, destination + 1, (size_t)((array[1] - index - 1) * 8));
+    --array[1];
+}
+
+// MS2-FUNCTIONAL: destroy the two string members in each fixed-size vector element.
+// @0x14002a550
+void FUN_14002a550(void* items, CriSint64 count)
+{
+    CriUint8* current = (CriUint8*)items;
+    while (count-- > 0)
+    {
+        if (current)
+        {
+            FUN_142584ce0(current);
+            FUN_142584ce0(current + 8);
+        }
+        current += 0x10;
+    }
 }
 
 // MS2-FUNCTIONAL: initialize CRI Movie on the first reference and maintain its process reference count.
