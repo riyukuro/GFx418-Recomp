@@ -22,6 +22,7 @@ extern const char* DAT_143b27bb0;
 extern void* DAT_143b27bb8;
 extern CriUint32 DAT_143b27bcc;
 extern CriUint32 DAT_143b27bd0;
+extern const void* DAT_143b27a40;
 }
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
@@ -57,6 +58,7 @@ CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void     FUN_140039f50(void* section);
 void     FUN_140039f8c(void* section);
 void     FUN_1400411f8(void);
+void     FUN_140038190(const void* key);
 void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
 void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
@@ -1522,6 +1524,21 @@ void FUN_140038ca8(void* callback)
     FUN_1400411f8();
     DAT_143b27bb0 = "\nCRI Error/PCx64 Ver.1.03.00 Build:Jan 13 2012 19:02:07\n";
     DAT_143b27bb8 = callback;
+}
+
+// MS2-FUNCTIONAL: retain the default USM decryption key and update the shared decryptor state.
+// @0x1400379e0
+void FUN_1400379e0(const void* key)
+{
+    DAT_143b27a40 = key;
+    FUN_140038190(key);
+}
+
+// MS2-FUNCTIONAL: report whether a default USM decryption key has been configured.
+// @0x140037a10
+CriBool FUN_140037a10(void)
+{
+    return DAT_143b27a40 != NULL;
 }
 
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
