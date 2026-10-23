@@ -12,6 +12,7 @@
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_events.h"
 #include "../include/gfx/gfx_stream.h"
+#include "../kernel/sf_exedata.h"
 #include <cstring>
 #include <new>
 
@@ -155,8 +156,8 @@ void FUN_140014730(void* object, void*, double value)
 void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
 {
     char* bytes = reinterpret_cast<char*>(object);
-    *reinterpret_cast<void***>(bytes) = &DAT_1431b6060;
-    *reinterpret_cast<void***>(bytes + 0x18) = &DAT_1431b63f8;
+    *reinterpret_cast<void***>(bytes) = Scaleform::SF_ExeData(&DAT_1431b6060);
+    *reinterpret_cast<void***>(bytes + 0x18) = Scaleform::SF_ExeData(&DAT_1431b63f8);
     if (void* provider = *reinterpret_cast<void**>(bytes + 0x100))
         reinterpret_cast<void (*)(void*)>(*reinterpret_cast<void***>(provider) + 2)(provider);
     int* refs = *reinterpret_cast<int**>(bytes + 0xf8);
