@@ -17,6 +17,11 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // counted object, released through RefCountImpl::Release).
 class NotifyLoadInitC : public RefCountImpl
 {
+public:
+    // (appended, sfr19) the Loader's open / init / error events (4.1.18 has no load-complete slot)
+    virtual void OpenEventCallback() = 0;   // 1
+    virtual void InitEventCallback() = 0;   // 2
+    virtual void ErrorEventCallback() = 0;  // 3
 };
 
 // One AS3 load request: the requesting Loader or URLLoader, the URLRequest, or the bytes of Loader.loadBytes.

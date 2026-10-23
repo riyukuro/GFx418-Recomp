@@ -39,6 +39,8 @@ public:
 
     // Converts v into a host value for the external interface.
     void ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const;     // 0x1424e42c0
+    // (appended, sfr19) the reverse: a host value as an AS3 value. 0x1425048d0
+    void GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal);
 
 private:
     UByte               Unrecovered28[0x48 - sizeof(ASMovieRootBase)];
@@ -49,8 +51,9 @@ private:
 public:
     Value               ExternalIntfRetVal;         // +0x58: what the host's ExternalInterface callback returned
 private:
-    UByte               Unrecovered78[0x160 - 0x78];
+    UByte               Unrecovered78[0x158 - 0x78];
 public:
+    GFx::DisplayObject* pStage;                     // +0x158 Ptr<Stage>: the stage the root movies sit on (sfr19)
     StringManager       BuiltinsMgr;                // +0x160: the AS3 builtin strings
 
     // (appended for the Loader natives, sfr17) the load queue.
