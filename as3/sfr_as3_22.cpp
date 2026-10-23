@@ -1118,7 +1118,71 @@ insert_string:
 }
 
 void ResizeStrongPointerArrayB(void**, std::size_t);
+static void ResizeRawArray(void**, void*, std::size_t, std::size_t);
 void FUN_14257dc30(void*);
+// MS2-FUNCTIONAL: merges sampled timing pairs into matching text value records, adding unmatched records with retained ownership.
+// @0x14268aff0
+extern "C" void FUN_14268aff0(void* destination, void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto* src = static_cast<unsigned char*>(source);
+    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x18);
+    auto** sourceRecords = *reinterpret_cast<unsigned char***>(src + 0x10);
+    for (std::size_t i = 0; i < sourceCount; ++i) {
+        auto* incoming = sourceRecords[i];
+        const std::size_t destinationCount = *reinterpret_cast<std::size_t*>(dst + 0x18);
+        auto** destinationRecords = *reinterpret_cast<unsigned char***>(dst + 0x10);
+        std::size_t match = 0;
+        while (match < destinationCount &&
+               (*reinterpret_cast<std::uint32_t*>(destinationRecords[match] + 0x10) != *reinterpret_cast<std::uint32_t*>(incoming + 0x10) ||
+                *reinterpret_cast<std::uint32_t*>(destinationRecords[match] + 0x14) != *reinterpret_cast<std::uint32_t*>(incoming + 0x14)))
+            ++match;
+
+        if (match == destinationCount) {
+            std::uint32_t statId = 0x242;
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            auto* copy = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+                DAT_143b15f60, destination, 0x38, &statId));
+            if (!copy)
+                continue;
+            std::memset(copy, 0, 0x38);
+            *reinterpret_cast<void**>(copy) = AS3TextValueRecordVtable;
+            *reinterpret_cast<std::uint32_t*>(copy + 8) = 1;
+            std::memcpy(copy + 0x10, incoming + 0x10, 12);
+            const std::size_t sampleCount = *reinterpret_cast<std::size_t*>(incoming + 0x28);
+            ResizeRawArray(reinterpret_cast<void**>(copy + 0x20), copy + 0x20, sampleCount, 0x10);
+            if (sampleCount)
+                std::memcpy(*reinterpret_cast<void**>(copy + 0x20), *reinterpret_cast<void**>(incoming + 0x20), sampleCount * 0x10);
+            ResizeStrongPointerArrayB(reinterpret_cast<void**>(dst + 0x10), destinationCount + 1);
+            destinationRecords = *reinterpret_cast<unsigned char***>(dst + 0x10);
+            FUN_14257dc30(copy);
+            destinationRecords[destinationCount] = copy;
+            FUN_14257dcb0(copy);
+            continue;
+        }
+
+        auto* target = destinationRecords[match];
+        const std::size_t sourceSamples = *reinterpret_cast<std::size_t*>(incoming + 0x28);
+        auto* sourceValues = *reinterpret_cast<unsigned char**>(incoming + 0x20);
+        for (std::size_t j = 0; j < sourceSamples; ++j) {
+            const std::uint32_t key = *reinterpret_cast<std::uint32_t*>(sourceValues + j * 0x10);
+            const std::size_t targetSamples = *reinterpret_cast<std::size_t*>(target + 0x28);
+            auto* targetValues = *reinterpret_cast<unsigned char**>(target + 0x20);
+            std::size_t valueIndex = 0;
+            while (valueIndex < targetSamples && *reinterpret_cast<std::uint32_t*>(targetValues + valueIndex * 0x10) != key)
+                ++valueIndex;
+            if (valueIndex < targetSamples) {
+                *reinterpret_cast<std::uint64_t*>(targetValues + valueIndex * 0x10 + 8) +=
+                    *reinterpret_cast<std::uint64_t*>(sourceValues + j * 0x10 + 8);
+            } else {
+                ResizeRawArray(reinterpret_cast<void**>(target + 0x20), target + 0x20, targetSamples + 1, 0x10);
+                targetValues = *reinterpret_cast<unsigned char**>(target + 0x20);
+                std::memcpy(targetValues + targetSamples * 0x10, sourceValues + j * 0x10, 0x10);
+            }
+        }
+    }
+}
+
 static void AddMovieViewHashEntry(void** setObject, void* allocator, std::uint64_t key, void* value)
 {
     auto* table = static_cast<std::uint64_t*>(*setObject);
