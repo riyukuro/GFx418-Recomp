@@ -1244,6 +1244,50 @@ static void AddMovieViewHashEntry(void** setObject, void* allocator, std::uint64
     home[3] = reinterpret_cast<std::uint64_t>(value);
 }
 
+// MS2-FUNCTIONAL: merges keyed movie-name counters and inserts the source table's retained String values by their 64-bit keys.
+// @0x14268b3e0
+extern "C" void FUN_14268b3e0(void* destination, void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto* src = static_cast<unsigned char*>(source);
+    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x18);
+    auto* sourceRows = *reinterpret_cast<unsigned char**>(src + 0x10);
+    for (std::size_t i = 0; i < sourceCount; ++i) {
+        auto* incoming = sourceRows + i * 0x18;
+        const std::size_t destinationCount = *reinterpret_cast<std::size_t*>(dst + 0x18);
+        auto* destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
+        std::size_t match = 0;
+        while (match < destinationCount &&
+               (*reinterpret_cast<std::uint64_t*>(destinationRows + match * 0x18) != *reinterpret_cast<std::uint64_t*>(incoming) ||
+                *reinterpret_cast<std::uint32_t*>(destinationRows + match * 0x18 + 8) != *reinterpret_cast<std::uint32_t*>(incoming + 8)))
+            ++match;
+        if (match < destinationCount) {
+            *reinterpret_cast<std::uint64_t*>(destinationRows + match * 0x18 + 0x10) +=
+                *reinterpret_cast<std::uint64_t*>(incoming + 0x10);
+        } else {
+            ResizeRawArray(reinterpret_cast<void**>(dst + 0x10), dst + 0x10, destinationCount + 1, 0x18);
+            destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
+            std::memcpy(destinationRows + destinationCount * 0x18, incoming, 0x18);
+        }
+    }
+
+    auto* sourceTable = *reinterpret_cast<unsigned char**>(src + 0x28);
+    if (!sourceTable)
+        return;
+    const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(sourceTable + 8);
+    for (std::uint64_t i = 0; i <= mask; ++i) {
+        auto* row = sourceTable + 0x10 + i * 0x20;
+        if (*reinterpret_cast<std::int64_t*>(row) == -2)
+            continue;
+        const std::uint64_t key = *reinterpret_cast<std::uint64_t*>(row + 0x10);
+        struct StringPair { const void* key; const Scaleform::String* value; } pair{
+            &key, reinterpret_cast<const Scaleform::String*>(row + 0x18)
+        };
+        Scaleform::AddStringHashEntry(dst + 0x28, dst + 0x28,
+            reinterpret_cast<const std::uint64_t*>(&pair), Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&key)));
+    }
+}
+
 // MS2-FUNCTIONAL: intersects the scalar limits, adds unique tagged strings with retained references, and merges the four nested resource tables.
 // @0x14268b280
 void MergeMovieResourceTables(void* destination, void* source)
