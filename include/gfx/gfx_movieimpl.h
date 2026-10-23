@@ -472,6 +472,8 @@ public:
     void UpdateViewport();
     // (appended, sfr_gfx_01i) Registers a playing video; the movie pauses it with itself (exe 0x14256c520).
     void AddVideoProvider(Video::VideoProvider* pvideo);
+    // (appended, sfr_gfx_01i) Unregisters a video (exe 0x1425743a0).
+    void RemoveVideoProvider(Video::VideoProvider* pvideo);
     // The font manager of the root node that loaded pdefImpl (exe 0x14256ed00).
     FontManager* FindFontManager(MovieDefImpl* pdefImpl);
     // The cursor shape of a mouse; the AVM root is told when it changes (exe 0x14256dc00).

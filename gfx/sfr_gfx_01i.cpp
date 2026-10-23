@@ -1130,6 +1130,15 @@ void MovieImpl::AddVideoProvider(Video::VideoProvider* pvideo)
         VideoProviders.Add(pvideo);
 }
 
+void MovieImpl::RemoveVideoProvider(Video::VideoProvider* pvideo)
+{
+    VideoProviders.RemoveAlt(pvideo);
+}
+
+Movie::~Movie()
+{
+}
+
 }} // namespace Scaleform::GFx
 
 // MS2-FUNCTIONAL ?GetMouseState@MovieImpl@GFx@Scaleform@@UEAAXIPEAM0PEAI@Z: the exe computes both coordinates up front (no common 0.05 constant); this build sinks x into its branch
@@ -1150,3 +1159,8 @@ void MovieImpl::AddVideoProvider(Video::VideoProvider* pvideo)
 // MS2-PIN: ?Clear@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@QEAAXXZ 0x14256df40
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAX_K@Z 0x142579060
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ??$RemoveAlt@PEAVVideoProvider@Video@GFx@Scaleform@@@?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@QEAAXAEBQEAVVideoProvider@Video@GFx@1@@Z 0x1425696b0
+// MS2-PIN: ??_GStateBag@GFx@Scaleform@@UEAAPEAXI@Z 0x14256baf0
+// MS2-PIN: ??_7StateBag@GFx@Scaleform@@6B@ 0x143183208
+// MS2-PIN: ??_7Movie@GFx@Scaleform@@6B?$RefCountBase@VMovie@GFx@Scaleform@@$0BEH@@2@@ 0x143183378
+// MS2-PIN: ??_7Movie@GFx@Scaleform@@6BStateBag@12@@ 0x143183580
