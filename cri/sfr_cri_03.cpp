@@ -22,6 +22,7 @@ extern "C" CriUint64 DAT_143b27c70;
 extern "C" const char* DAT_143ba9d18;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
+void FUN_140041190(void);
 void FUN_14003b2ac(void*, CriSint32, void*, CriUint32);
 void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
@@ -30,6 +31,8 @@ void FUN_14004f8d0(void);
 void FUN_140027fb4(void*, void*);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
 CriSint32 FUN_1400500b0(CriSint32, void*);
+void* FUN_14004e580(void);
+void FUN_14004ff90(void*, void*, void*);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
 void FUN_140054040(void*, void*, void*);
@@ -482,6 +485,24 @@ CriSint32 criVmpv_GetStatus(const void* handle)
     CriSint32 status;
     memcpy(&status, (const CriUint8*)handle + 0x18, sizeof(status));
     return status;
+}
+
+// MS2-FUNCTIONAL: create and configure the MPV instance owned by a VMPV handle.
+// @0x14003c8d0
+CriBool createMpvHn(void* handle)
+{
+    void* mpv = FUN_14004e580();
+    memcpy((CriUint8*)handle + 0x78, &mpv, sizeof(mpv));
+    if (!mpv)
+    {
+        CriSint32 error = 4;
+        memcpy((CriUint8*)handle + 0x18, &error, sizeof(error));
+        return 0;
+    }
+    FUN_14004e2f0(mpv, 6, 3);
+    FUN_14004e2f0(mpv, 1, 0);
+    FUN_14004ff90(mpv, (void*)FUN_140041190, NULL);
+    return 1;
 }
 
 // MS2-FUNCTIONAL: release MPV and stream-memory subsystems when the final initializer reference ends.
