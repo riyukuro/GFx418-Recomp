@@ -1050,6 +1050,40 @@ void FUN_140006bf0(void** array)
     fields[1] = 0;
 }
 
+// MS2-FUNCTIONAL: removes retained elements beyond the new size and adjusts pointer capacity.
+// @0x140006e70
+void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (size < fields[1]) {
+        auto** items = static_cast<void**>(*array);
+        for (Scaleform::UPInt i = fields[1]; i > size; --i)
+            if (items[i - 1]) FUN_14257dcb0(items[i - 1]);
+        if (size < fields[2] / 2) FUN_140006810(array, owner, size);
+    } else if (size >= fields[2]) {
+        FUN_140006810(array, owner, size + (size >> 2));
+    }
+    fields[1] = size;
+}
+
+// MS2-FUNCTIONAL: shrinks or grows an array of two-string records, releasing truncated strings.
+// @0x140006f50
+void FUN_140006f50(void** array, void* owner, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (size < fields[1]) {
+        auto* records = static_cast<Scaleform::String*>(*array);
+        for (Scaleform::UPInt i = size; i < fields[1]; ++i) {
+            records[i * 2].~String();
+            records[i * 2 + 1].~String();
+        }
+        if (size < fields[2] / 2) FUN_1400069a0(array, owner, size);
+    } else if (size >= fields[2]) {
+        FUN_1400069a0(array, owner, size + (size >> 2));
+    }
+    fields[1] = size;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
