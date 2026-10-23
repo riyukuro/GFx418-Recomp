@@ -45,10 +45,13 @@ MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
 MS2_GLOBAL(0x14318f048, void*, AS3MovieMarkerVtable);
 MS2_GLOBAL(0x14318f020, void*, AS3TextValueRecordVtable);
 MS2_GLOBAL(0x14318f030, void*, AS3MovieViewValueVtable);
+MS2_GLOBAL(0x1431921c0, void*, AS3MovieImageExtraVtable);
 extern "C" void FUN_14268cd80(void*, void*, unsigned);
 extern "C" void FUN_14268c510(void*, void*, unsigned);
 extern "C" void FUN_14268d2b0(void*, void*, unsigned);
 extern "C" void FUN_14268c930(void*, void*, unsigned);
+extern "C" void FUN_14268cfe0(void*, void*, unsigned);
+extern "C" void* FUN_142686ae0(void*);
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
 extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
@@ -2674,6 +2677,124 @@ extern "C" void FUN_14268d2b0(void* object, void* stream, unsigned version)
         Scaleform::AddStringHashEntry(bytes + 0x28, bytes + 0x28,
             reinterpret_cast<const std::uint64_t*>(&pair),
             Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&key)));
+    }
+}
+
+// MS2-FUNCTIONAL: reads the aggregate movie image header, nested movies, timing arrays, and versioned memory report trees.
+// @0x14268d5c0
+extern "C" void FUN_14268d5c0(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    ReadAs3StreamBytes(stream, bytes + 0x10, 8);
+    for (std::size_t offset : { std::size_t(0x18), std::size_t(0x1c), std::size_t(0x24), std::size_t(0x20) })
+        ReadAs3StreamBytes(stream, bytes + offset, 4);
+    if (version < 0x15) {
+        std::uint32_t legacy = 0;
+        ReadAs3StreamBytes(stream, &legacy, 4);
+    }
+    for (std::size_t offset : { std::size_t(0x28), std::size_t(0x2c), std::size_t(0x30), std::size_t(0x34),
+                                std::size_t(0x38), std::size_t(0x3c) })
+        ReadAs3StreamBytes(stream, bytes + offset, 4);
+    if (version > 0x1d) ReadAs3StreamBytes(stream, bytes + 0x40, 4);
+    for (std::size_t offset : { std::size_t(0x44), std::size_t(0x48), std::size_t(0x4c), std::size_t(0x50),
+                                std::size_t(0x54), std::size_t(0x58) })
+        ReadAs3StreamBytes(stream, bytes + offset, 4);
+    if (version > 0x0f) ReadAs3StreamBytes(stream, bytes + 0x5c, 4);
+    for (std::size_t offset : { std::size_t(0x60), std::size_t(0x64), std::size_t(0x68), std::size_t(0x6c),
+                                std::size_t(0x70), std::size_t(0x74), std::size_t(0x78), std::size_t(0x7c) })
+        ReadAs3StreamBytes(stream, bytes + offset, 4);
+    if (version > 0x0d) {
+        for (std::size_t offset : { std::size_t(0x80), std::size_t(0x84), std::size_t(0x88) })
+            ReadAs3StreamBytes(stream, bytes + offset, 4);
+        if (version > 0x17) ReadAs3StreamBytes(stream, bytes + 0x8c, 4);
+        if (version > 0x1a) {
+            ReadAs3StreamBytes(stream, bytes + 0x90, 4);
+            ReadAs3StreamBytes(stream, bytes + 0x94, 4);
+        }
+    }
+    for (std::size_t offset : { std::size_t(0x98), std::size_t(0x9c) })
+        ReadAs3StreamBytes(stream, bytes + offset, 4);
+    if (version > 0x1c) ReadAs3StreamBytes(stream, bytes + 0xa0, 4);
+    for (std::size_t offset : { std::size_t(0xa4), std::size_t(0xa8), std::size_t(0xac) })
+        ReadAs3StreamBytes(stream, bytes + offset, 4);
+    if (version > 0x1b) {
+        for (std::size_t offset : { std::size_t(0xb0), std::size_t(0xb4), std::size_t(0xb8) })
+            ReadAs3StreamBytes(stream, bytes + offset, 4);
+    }
+    for (std::size_t offset : { std::size_t(0xbc), std::size_t(0xc0), std::size_t(0xc4), std::size_t(0xc8) })
+        ReadAs3StreamBytes(stream, bytes + offset, 4);
+
+    unsigned imageCount = 0;
+    ReadAs3StreamBytes(stream, &imageCount, 4);
+    Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0xd0), imageCount);
+    auto** images = *reinterpret_cast<unsigned char***>(bytes + 0xd0);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    std::uint32_t imageStat = 0x242;
+    for (unsigned i = 0; i < imageCount; ++i) {
+        auto* image = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, object, 0x78, &imageStat));
+        if (!image)
+            return;
+        image = static_cast<unsigned char*>(FUN_142686ae0(image));
+        if (images[i]) FUN_14257dcb0(images[i]);
+        images[i] = image;
+        FUN_14268cfe0(image, stream, version);
+    }
+    if (version > 0x0e) FUN_14268c510(*reinterpret_cast<void**>(bytes + 0xe8), stream, version);
+    if (version > 0x18) FUN_14268c930(*reinterpret_cast<void**>(bytes + 0xf0), stream, version);
+
+    unsigned idCount = 0;
+    ReadAs3StreamBytes(stream, &idCount, 4);
+    Scaleform::ResizeRawArray(reinterpret_cast<void**>(bytes + 0xf8), bytes + 0xf8, idCount, 4);
+    auto* ids = *reinterpret_cast<std::uint32_t**>(bytes + 0xf8);
+    for (unsigned i = 0; i < idCount; ++i)
+        ReadAs3StreamBytes(stream, ids + i, 4);
+    if (version > 8) {
+        unsigned count = 0;
+        ReadAs3StreamBytes(stream, &count, 4);
+        Scaleform::ResizeRawArray(reinterpret_cast<void**>(bytes + 0x110), bytes + 0x110, count, 8);
+        auto* values = *reinterpret_cast<std::uint64_t**>(bytes + 0x110);
+        for (unsigned i = 0; i < count; ++i)
+            ReadAs3StreamBytes(stream, values + i, 8);
+    }
+    for (std::size_t offset : { std::size_t(0x128), std::size_t(0x130), std::size_t(0x138) }) {
+        auto* item = *reinterpret_cast<Scaleform::MemItem**>(bytes + offset);
+        if (item) item->Read(*reinterpret_cast<Scaleform::File*>(stream), version);
+    }
+    if (version < 0x13) {
+        std::uint32_t itemStat = 2;
+        void* legacy = reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+            DAT_143b15f60, object, sizeof(Scaleform::MemItem), &itemStat);
+        if (legacy) {
+            ::new (legacy) Scaleform::MemItem(2);
+            static_cast<Scaleform::MemItem*>(legacy)->Read(*reinterpret_cast<Scaleform::File*>(stream), version);
+            FUN_14257dcb0(legacy);
+        }
+    }
+    if (version > 0x10) {
+        unsigned extraCount = 0;
+        ReadAs3StreamBytes(stream, &extraCount, 4);
+        Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0x140), extraCount);
+        auto** extras = *reinterpret_cast<unsigned char***>(bytes + 0x140);
+        std::uint32_t extraStat = 0x242;
+        for (unsigned i = 0; i < extraCount; ++i) {
+            auto* extra = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+                DAT_143b15f60, object, 0x40, &extraStat));
+            if (!extra)
+                return;
+            std::memset(extra, 0, 0x40);
+            *reinterpret_cast<void**>(extra) = AS3MovieImageExtraVtable;
+            *reinterpret_cast<std::uint32_t*>(extra + 8) = 1;
+            new (extra + 0x18) Scaleform::StringLH();
+            if (extras[i]) FUN_14257dcb0(extras[i]);
+            extras[i] = extra;
+            Scaleform::ReadMovieImageFields(extra, stream, version);
+        }
+    }
+    if (version < 8) {
+        std::uint32_t legacy = 0;
+        ReadAs3StreamBytes(stream, &legacy, 4);
+        ReadAs3StreamBytes(stream, &legacy, 4);
     }
 }
 
