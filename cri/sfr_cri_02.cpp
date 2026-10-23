@@ -4140,6 +4140,142 @@ void FUN_140034c20(void* player)
     stats->Mode = mode;
 }
 
+// MS2-FUNCTIONAL: initialize analyzed stream counts from the CRI Movie file header.
+// @0x140032420
+void FUN_140032420(void* player, void* streamInfo, const CriMovieParsedChunk* parsed)
+{
+    struct StreamInfoView
+    {
+        CriUint32 HeaderType;
+        CriUint32 Field4;
+        CriUint32 MinimumBuffer;
+        CriUint32 AverageBitrate;
+        CriUint32 VideoCount;
+        CriUint8 Reserved14[0x4c - 0x14];
+        CriUint32 IndexedAudioCount;
+        CriUint8 Reserved50[0x200];
+        CriUint32 SubtitleCount;
+        CriUint8 Reserved254[0x1c];
+        CriUint32 AlphaCount;
+        CriUint8 Reserved274[0x2c];
+        CriUint32 CueCount;
+    };
+    struct TrackModeView { CriUint8 Reserved[0xe38]; CriUint32 Type; CriUint32 SubType; };
+    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    memset(streamInfo, 0, 0x2c0);
+    StreamInfoView* info = (StreamInfoView*)streamInfo;
+    info->MinimumBuffer = FUN_14003a85c(document, 0, "minbuf");
+    info->AverageBitrate = FUN_14003a85c(document, 0, "avbps");
+    CriSint32 count = FUN_14003a45c(document);
+    for (CriSint32 i = 0; i < count; ++i)
+    {
+        CriSint32 streamId = FUN_14003a85c(document, i, "stmid");
+        if (streamId == 0x40414c50)
+        {
+            if (++info->AlphaCount > 1)
+                info->AlphaCount = 1;
+            ((TrackModeView*)player)->Type = 0x40414c50;
+            ((TrackModeView*)player)->SubType = 0;
+        }
+        else if (streamId == 0x40435545)
+            ++info->CueCount;
+        else if (streamId == 0x40534254)
+            ++info->SubtitleCount;
+        else if (streamId == 0x40534641)
+        {
+            if (++info->IndexedAudioCount > 0x20)
+                info->IndexedAudioCount = 0x20;
+        }
+        else if (streamId == 0x40534656)
+        {
+            if (++info->VideoCount > 1)
+                info->VideoCount = 1;
+        }
+    }
+    FUN_14003a108(document);
+}
+
+// MS2-FUNCTIONAL: consume CRI Movie header and stream records until the file's end marker arrives.
+// @0x140032090
+CriSint32 FUN_140032090(void* player)
+{
+    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
+    struct HeaderCountView { CriUint8 Reserved[0x8b8]; CriSint32 Count; };
+    struct ReadByteCountView { CriUint8 Reserved[0xdb8]; CriSint32 Count; };
+    CriMovieChunkQueueRecord record = {};
+    CriUint8 parsedHeader[0x24] = {};
+    CriSint32 contentSize = 0;
+    CriSint32 consumedBytes = 0;
+    CriSint32 completed = 0;
+    CriUint32* streamInfo = (CriUint32*)((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader;
+    void* queue = ((CriMvPlyInputQueueFields*)player)->ReadBuffer;
+
+    for (;;)
+    {
+        if (FUN_1400467b8(queue, 1) == 0)
+            return completed;
+        FUN_1400467a0(queue, 1, -1, &record);
+        if (record.Type < 0x20)
+        {
+            FUN_1400467a8(queue, 1, &record);
+            return completed;
+        }
+
+        memset(parsedHeader, 0, sizeof(parsedHeader));
+        FUN_14003b3fc((const CriUint8*)record.Chunk, record.Type, parsedHeader);
+        const CriUint8* contents = FUN_14003b674((const CriUint8*)record.Chunk,
+                                                  record.Type, &contentSize);
+        CriUint32 streamId = 0;
+        memcpy(&streamId, parsedHeader, sizeof(streamId));
+        if (((HeaderCountView*)player)->Count == 0)
+        {
+            if (streamId != 0x43524944)
+            {
+                FUN_140037950(player, "E05063020M: Input file is not USF.", (CriSint32)streamId);
+                FUN_1400467a8(queue, 1, &record);
+                return completed;
+            }
+            streamInfo[0] = 1;
+        }
+
+        CriMovieParsedChunk parsed = { contents, contentSize, 0 };
+        if (streamId == 0x43524944)
+            FUN_140032420(player, streamInfo, &parsed);
+        else if (parsedHeader[0x0f] == 1)
+        {
+            CriUint8 index = parsedHeader[0x0c];
+            if (streamId == 0x40414c50)
+            {
+                if (index == 0)
+                    FUN_140032db0(player, streamInfo, streamInfo + 0x9d, &parsed);
+            }
+            else if (streamId == 0x40435545)
+                FUN_140032c70(player, streamInfo, streamInfo + 0xaa, &parsed);
+            else if (streamId == 0x40534254)
+                FUN_140032b70(player, streamInfo, streamInfo + 0x96, &parsed);
+            else if (streamId == 0x40534641)
+            {
+                if (index < 0x20)
+                    FUN_140032a70(player, streamInfo,
+                                 streamInfo + 0x14 + (CriUint32)index * 4, &parsed);
+            }
+            else if (streamId == 0x40534656 && index == 0)
+                FUN_140032650(player, (CriSint64*)streamInfo, streamInfo + 5, &parsed);
+        }
+        else if (parsedHeader[0x0f] == 2)
+            completed = 1;
+
+        FUN_1400467b0(queue, 2, &record);
+        consumedBytes += (CriSint32)record.Type;
+        ++((HeaderCountView*)player)->Count;
+        if (completed)
+            break;
+    }
+    if (((ReadModeView*)player)->Mode == 1)
+        ((ReadByteCountView*)player)->Count = consumedBytes;
+    return 1;
+}
+
 // MS2-FUNCTIONAL: discard handled command chunks while returning ordinary input records to the stream.
 // @0x140033610
 void FUN_140033610(void* player)
