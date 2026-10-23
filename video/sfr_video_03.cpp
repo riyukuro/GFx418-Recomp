@@ -82,6 +82,8 @@ MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
 MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
 MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
 MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
+MS2_EXTERN(0x1424f0750, void(void*, const char*, void*, int, int, int), FUN_1424f0750);
+MS2_EXTERN(0x1424d2150, void(void*, void*, std::uint64_t), FUN_1424d2150);
 MS2_EXTERN(0x140026ed0, void(void*), FUN_140026ed0);
 MS2_EXTERN(0x140026db0, void(), FUN_140026db0);
 MS2_GLOBAL(0x14317bf80, void*, AvmInteractiveVtable);
@@ -1391,4 +1393,29 @@ void FUN_1400192e0(void* callback, std::uint64_t* output)
     auto temporary = objectResult;
     ReleaseVideoAtom(&temporary);
 }
+
+namespace {
+void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t fieldOffset)
+{
+    auto* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
+    Scaleform::GFx::AS3::Value classValue;
+    Scaleform::GFx::AS3::Value transform;
+    FUN_1424f0750(root, "flash.media.SoundTransform", &classValue, 0, 0, 1);
+    auto* soundClass = classValue.GetObject();
+    const auto kind = classValue.GetKind();
+    if (*reinterpret_cast<unsigned char*>(root + 0x180) == 0 && kind != 0 && (kind < Scaleform::GFx::AS3::Value::kString || kind > Scaleform::GFx::AS3::Value::kObject || soundClass)) {
+        FUN_1424d2150(soundClass, &transform, *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(self) + fieldOffset));
+        auto atom = reinterpret_cast<std::uintptr_t>(soundClass);
+        ReleaseVideoAtom(output);
+        RetainVideoAtom(atom);
+        *output = atom;
+    }
+}
+}
+// MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's current transform value.
+// @0x140019470
+void FUN_140019470(void* self, std::uint64_t* output) { GetVideoSoundTransform(self, output, 0x88); }
+// MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's default transform value.
+// @0x140019660
+void FUN_140019660(void* self, std::uint64_t* output) { GetVideoSoundTransform(self, output, 0x90); }
 } // namespace
