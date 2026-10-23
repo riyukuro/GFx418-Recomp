@@ -61,6 +61,8 @@ public:
     bool       QuietOpen; // +0x24
     bool       Canceled;  // +0x25
 
+    // A load of url (an unload when it is empty), or a variables load (exe 0x14291dcf0).
+    LoadQueueEntry(const String& url, LoadMethod method, bool loadingVars, bool quietOpen);
     virtual ~LoadQueueEntry() {}
 
     LoadQueueEntry* GetNext() const { return pNext; }

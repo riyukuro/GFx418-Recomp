@@ -156,6 +156,7 @@
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 // MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
 // MS2-RANGE: 0x142926ab0-0x142926ae0 .text$mn
+// MS2-RANGE: 0x14291dcf0-0x14291dda0 .text$mn
 // MS2-RANGE: 0x14291dda0-0x14291df80 .text$mn
 // MS2-RANGE: 0x14291d150-0x14291d1e0 .text$mn
 // MS2-RANGE: 0x1429266f0-0x1429267a0 .text$mn
@@ -732,6 +733,26 @@ SharedObjectProto::SharedObjectProto(ASStringContext* psc, Object* pprototype, c
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
+
+}}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx {
+
+// @0x14291dcf0
+LoadQueueEntry::LoadQueueEntry(const String& url, LoadMethod method, bool loadingVars, bool quietOpen)
+{
+    Type      = loadingVars ? LT_LoadText : (url.ToCStr() ? LT_LoadMovie : LT_UnloadMovie);
+    Method    = method;
+    pNext     = 0;
+    URL       = url;
+    QuietOpen = quietOpen;
+    EntryTime = ~0u;
+    Canceled  = false;
+}
+
+}} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // MS2-FUNCTIONAL scheduling of the PropFlags temporary and the contentType string around CreateConstStringNode
 // @0x14291dda0
@@ -1851,3 +1872,4 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??1?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@QEAA@XZ 0x142924490
 // MS2-PIN: ??_GStringCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929140
 // MS2-PIN: ??_GArrayObject@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429291b0
+// MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
