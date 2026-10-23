@@ -3408,6 +3408,34 @@ void FUN_1400420b0(void* manager, void* heap)
     FUN_140027fb4(heap, manager);
 }
 
+// MS2-FUNCTIONAL: create the CRI audio player manager and its channel input stream joint.
+// @0x140041f70
+void* FUN_140041f70(void* owner, void* heap, const void* config)
+{
+    CriUint8* manager = (CriUint8*)FUN_140027ed8(heap, 0x38,
+                                                 "CriMvPly__CriMvPlyAmngObj", 4);
+    if (!manager)
+    {
+        FUN_140037950(owner, "E07090701M: Can't allocate CriMvPly manager.", 0x38);
+        return NULL;
+    }
+    memset(manager, 0, 0x38);
+    CriSint32 initialState = 2;
+    memcpy(manager + 0x20, &initialState, sizeof(initialState));
+    CriSint32 configuredChannels;
+    memcpy(&configuredChannels, (const CriUint8*)config + 0x4c, sizeof(configuredChannels));
+    CriUint32 queueSlots = configuredChannels == 0 ? 0x40 : (CriUint32)(configuredChannels * 0x40);
+    void* joint = FUN_1400464c8(heap, 0, queueSlots);
+    memcpy(manager + 0x18, &joint, sizeof(joint));
+    if (!joint)
+    {
+        FUN_1400420b0(manager, heap);
+        FUN_140037910(0, "E05063016M: Can't create audio manager stream joint.", 0);
+        return NULL;
+    }
+    return manager;
+}
+
 // MS2-FUNCTIONAL: drain and reset a CRI movie output ring before restoring its terminal queue entry.
 // @0x1400453c4
 void FUN_1400453c4(void* object)
