@@ -1691,6 +1691,204 @@ namespace Instances { namespace fl
 }}
 }}}
 
+// FindObjProperty: the slot or dynamic value named mn of the object a value stands for. 0x142501b00
+void FUN_142501b00(Scaleform::GFx::AS3::PropRef& result, Scaleform::GFx::AS3::VM& vm,
+                   const Scaleform::GFx::AS3::Value& value, const Scaleform::GFx::AS3::Multiname& mn, int attr);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ---- Array.sortOn: elements ordered by one or more named properties, each with its own option bits
+namespace
+{
+    // A property lookup that found something (same test as sfr_as3_09).
+    SF_INLINE bool PropRefFound03(const PropRef& prop)
+    {
+        const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
+        if (prop.This.GetKind() == Value::kUndefined || bits == 1)
+            return false;
+        return !((bits & 2) != 0 && (bits & ~UPInt(2)) == 0);
+    }
+}
+
+    // The field names and their option bits. 0x18 bytes, passed by value.
+    class CompareOn
+    {
+    public:
+        CompareOn(VM& vm, const ArrayDH<Value>& names, const ArrayDH<UInt32>& flags)
+            : Vm(vm), Names(names), Flags(flags) {}
+
+        bool operator()(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) < 0; }
+        bool Equal(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) == 0; }
+
+        int Compare(const Value& a, const Value& b) const;
+
+    private:
+        CompareOn& operator=(const CompareOn&);
+
+        VM&                     Vm;
+        const ArrayDH<Value>&   Names;
+        const ArrayDH<UInt32>&  Flags;
+    };
+
+    // The first field both elements have and that differs decides; a failed read compares equal.
+    // MS2-FUNCTIONAL: the exe keeps the conversion results in flag registers and duplicates the cleanup paths
+    // @0x1424067e0
+    int CompareOn::Compare(const Value& a, const Value& b) const
+    {
+        int result = 0;
+        const UPInt size = Names.GetSize();
+        for (UPInt i = 0; result == 0 && i < size; ++i)
+        {
+            Multiname mn(Vm.GetPublicNamespace(), Names[i]);
+            PropRef propA;
+            PropRef propB;
+            FUN_142501b00(propA, Vm, a, mn, 0);
+            FUN_142501b00(propB, Vm, b, mn, 0);
+            if (!PropRefFound03(propA) || !PropRefFound03(propB))
+                continue;
+
+            Value va;
+            Value vb;
+            if (!propA.GetSlotValueUnsafe(Vm, va) || !propB.GetSlotValueUnsafe(Vm, vb))
+                return 0;
+
+            const UInt32 flags = Flags[i];
+            int r;
+            if (flags & SortFlags_Numeric)
+            {
+                Value::Number na = 0.0;
+                Value::Number nb = 0.0;
+                if (!va.Convert2NumberInline(na) || !vb.Convert2NumberInline(nb))
+                    return 0;
+                r = static_cast<int>(na - nb);
+            }
+            else
+            {
+                ASString sb = Vm.GetStringManager().CreateEmptyString();
+                ASString sa = sb;
+                if (!va.Convert2String(sa) || !vb.Convert2String(sb))
+                    return 0;
+                const bool caseSensitive = (flags & SortFlags_CaseInsensitive) == 0;
+                if (flags & SortFlags_Locale)
+                    r = sa.LocaleCompare_CaseCheck(sb.ToCStr(), sb.GetLength(), caseSensitive);
+                else if (caseSensitive)
+                    r = strcmp(sa.ToCStr(), sb.ToCStr());
+                else
+                    r = String::CompareNoCase(sa.ToCStr(), sb.ToCStr());
+            }
+            result = (flags & SortFlags_Descending) ? -r : r;
+        }
+        return result;
+    }
+
+namespace Instances { namespace fl
+{
+    // fieldName is a name or an array of names; options is one set of option bits for all of them or an array with
+    // one per name (ignored unless the lengths agree). The first name's bits decide unique / indexed-array result.
+    // MS2-FUNCTIONAL: the exe inlines the collector, SparseArray::At and PushBack; stack layout differs
+    // @0x142400500
+    void Array::AS3sortOn(SPtr<Instances::fl::Array>& result, const Value& fieldName, const Value& options)
+    {
+        VM& vm = GetVM();
+        ASString str = vm.GetStringManager().CreateEmptyString();
+        ArrayDH<Value> names(vm.GetMemoryHeap());
+        ArrayDH<UInt32> flags(vm.GetMemoryHeap());
+
+        const Traits& ntr = FUN_14250ffc0(vm, fieldName);
+        if (ntr.GetTraitsType() == Traits_Array && ntr.IsInstanceTraits())
+        {
+            const SparseArray& sa = static_cast<Array*>(fieldName.GetObject())->SA;
+            for (UPInt i = 0; i < sa.GetSize(); ++i)
+            {
+                if (!saAt03(sa, i).Convert2String(str))
+                    return;
+                names.PushBack(Value(str));
+            }
+        }
+        else
+        {
+            if (!fieldName.Convert2String(str))
+                return;
+            names.PushBack(Value(str));
+        }
+
+        flags.Resize(names.GetSize());
+        for (UPInt i = 0; i < flags.GetSize(); ++i)
+            flags[i] = 0;
+
+        if (!options.IsNullOrUndefined())
+        {
+            const Traits& otr = FUN_14250ffc0(vm, options);
+            if (otr.GetTraitsType() == Traits_Array && otr.IsInstanceTraits())
+            {
+                const SparseArray& sa = static_cast<Array*>(options.GetObject())->SA;
+                if (sa.GetSize() == names.GetSize())
+                {
+                    for (UPInt i = 0; i < sa.GetSize() && i < flags.GetSize(); ++i)
+                    {
+                        UInt32 f;
+                        if (!saAt03(sa, i).Convert2UInt32(f))
+                            return;
+                        flags[i] = f;
+                    }
+                }
+            }
+            else
+            {
+                UInt32 f;
+                if (!options.Convert2UInt32(f))
+                    return;
+                for (UPInt i = 0; i < flags.GetSize(); ++i)
+                    flags[i] = f;
+            }
+        }
+
+        SparseArray newSA(vm.GetMemoryHeap());
+        ArrayDH<ValuePtrPair> pairs(vm.GetMemoryHeap());
+        ValuePtrCollector vc(pairs);
+        SA.ForEach(vc);
+
+        CompareOn functor(vm, names, flags);
+        Alg::QuickSortSafe(pairs, functor);
+        const UPInt size = pairs.GetSize();
+        const UInt32 first = flags[0];
+
+        if (first & SortFlags_UniqueSort)
+        {
+            for (UInt32 i = 1; i < size; ++i)
+            {
+                if (functor.Equal(pairs[i - 1], pairs[i]))
+                {
+                    result = NULL;
+                    return;
+                }
+            }
+        }
+
+        if (first & SortFlags_ReturnIndexedArray)
+            for (UPInt i = 0; i < size; ++i)
+                saPushBack03(newSA, Value(pairs[i].Second));
+        else
+            for (UPInt i = 0; i < size; ++i)
+                saPushBack03(newSA, *pairs[i].First);
+
+        if (size < GetSize())
+            newSA.Resize(GetSize());
+
+        if (first & SortFlags_ReturnIndexedArray)
+        {
+            result = vm.MakeArray();
+            result->SA.Assign(newSA);
+        }
+        else
+        {
+            SA.Assign(newSA);
+            result = this;
+        }
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
