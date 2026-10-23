@@ -347,6 +347,21 @@ struct CriMvSubAudioHandles
     void* Decoder;
 };
 
+struct CriMvSubtitleFields
+{
+    CriUint8 Reserved[0xe28];
+    void* Queue;
+    CriSint32 SubtitleIndex;
+    CriSint32 SubtitleChannel;
+};
+
+struct CriMvSubtitleChunk
+{
+    const CriUint8* Data;
+    CriUint32 Size;
+    CriUint32 Reserved;
+};
+
 void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
 void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 

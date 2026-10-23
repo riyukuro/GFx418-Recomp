@@ -54,6 +54,10 @@ void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* 
 CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* output);
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
+CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
+void     FUN_140036e30(void* player, CriMvSubtitleChunk* chunk);
+void     FUN_140036e80(void* player, CriMvSubtitleChunk* chunk);
+void     FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
 
 // ==== CRI heap backed object allocation ============================================================================
 
@@ -1396,6 +1400,49 @@ void criMvPly_DetachSubAudio(void* player)
     CriMvSubAudioHandles* audio = (CriMvSubAudioHandles*)player;
     FUN_140042600(audio->Manager, audio->Decoder, 1);
     audio->Decoder = NULL;
+}
+
+// MS2-FUNCTIONAL: read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage.
+// @0x140036470
+void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, void* outputInfo)
+{
+    memset(outputInfo, 0, 0x38);
+    ((CriUint64*)outputInfo)[2] = 1;
+    if (!player || !((CriMvSubtitleFields*)player)->Queue)
+        return;
+    CriMvSubtitleChunk chunk = {};
+    FUN_140036b80(player, &chunk, ((CriMvSubtitleFields*)player)->SubtitleChannel);
+    if (!chunk.Data || chunk.Size < 0x20)
+    {
+        FUN_140036e80(player, &chunk);
+        return;
+    }
+    FUN_140036f40(player, &chunk, outputInfo);
+    memset(destination, 0, capacity);
+    CriUint32 bytes = *(CriUint32*)((CriUint8*)outputInfo + 8);
+    if (bytes > capacity)
+        bytes = capacity;
+    memcpy(destination, *(void**)outputInfo, bytes);
+    FUN_140036e30(player, &chunk);
+}
+
+// MS2-FUNCTIONAL: obtain the next valid subtitle's decoded metadata and return its chunk to the queue afterward.
+// @0x140036590
+void criMvPly_GetNextSubtitleInfo(void* player, void* outputInfo)
+{
+    memset(outputInfo, 0, 0x38);
+    *(CriUint64*)((CriUint8*)outputInfo + 0x10) = 1;
+    if (!player || !((CriMvSubtitleFields*)player)->Queue)
+        return;
+    CriMvSubtitleChunk chunk = {};
+    FUN_140036b80(player, &chunk, ((CriMvSubtitleFields*)player)->SubtitleChannel);
+    if (!chunk.Data || chunk.Size < 0x20)
+    {
+        FUN_140036e80(player, &chunk);
+        return;
+    }
+    FUN_140036f40(player, &chunk, outputInfo);
+    FUN_140036e80(player, &chunk);
 }
 
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
