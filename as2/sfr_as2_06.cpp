@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x14295d840-0x14295d970 .text$mn
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
+// MS2-RANGE: 0x142965f30-0x1429660c0 .text$mn
 // MS2-RANGE: 0x14295e1b0-0x14295e2b0 .text$mn
 // MS2-RANGE: 0x142961720-0x142961830 .text$mn
 // MS2-RANGE: 0x142961830-0x142961a40 .text$mn
@@ -265,6 +266,35 @@ bool AvmCharacter::HasMember(ASStringContext* psc, const ASString& name, bool in
 
     Object* object = GetASObject();
     return object && object->HasMember(psc, name, inclPrototypes);
+}
+
+// MS2-FUNCTIONAL the exe inlines the tabEnabled lookup and weak parent traversal; this preserves the flag override,
+// script property, parent focus, and explicit tab index behavior with the recovered object interfaces.
+// @0x142965f30
+bool AvmCharacter::IsTabable() const
+{
+    InteractiveObject* displayObject = pDispObj;
+    if (!displayObject || !displayObject->IsTabable())
+        return false;
+
+    const unsigned tabFlags = displayObject->Flags & InteractiveObject::Mask_TabEnabled;
+    if (tabFlags)
+        return tabFlags == InteractiveObject::Mask_TabEnabled;
+
+    Environment* env = const_cast<AvmCharacter*>(this)->GetASEnvironment();
+    Object* object = const_cast<AvmCharacter*>(this)->GetASObject();
+    if (env && object)
+    {
+        ASString tabEnabled = env->StringContext.CreateConstString("tabEnabled");
+        Value value;
+        if (object->GetMember(env, tabEnabled, &value) && !value.IsUndefined() && !value.IsNull())
+            return value.ToBool(env);
+    }
+
+    InteractiveObject* parent = displayObject->GetParent();
+    if (parent && parent->GetAvmIntObj()->IsTabable())
+        return true;
+    return displayObject->TabIndex > 0;
 }
 
 // @0x142962010

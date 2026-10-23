@@ -63,6 +63,8 @@ public:
     virtual AvmCharacter*      GetAvmTopParent(bool ignoreLockRoot = false) const;  // exe 0x142949860
     // Slot 34: bit n set when standard member n is a property of this kind of character (exe 0x142956060: none).
     virtual unsigned           GetStandardMemberBitMask() const;
+    // Whether this character participates in keyboard tab focus (exe 0x142965f30).
+    virtual bool               IsTabable() const;
 
     // The standard (built-in property) members that DeleteMember and friends look up.
     enum StandardMember
