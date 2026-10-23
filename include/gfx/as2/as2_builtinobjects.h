@@ -522,6 +522,9 @@ public:
     // "data" is read-only (exe 0x142987280).
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags());
+    // (appended for sfr_as2_04)
+    // Bytes of the names and values under "data", 4 per number (exe 0x142935580).
+    UPInt ComputeSizeInBytes(Environment* penv);
 };
 
 // SharedObject.prototype (no methods).

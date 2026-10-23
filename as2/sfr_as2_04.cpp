@@ -2,19 +2,20 @@
 // and the out-of-line hash table helpers (grow, clear) of the AS2 member, watchpoint and prototype tables.
 // MS2-UNIT: sfr_as2_04
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14292a680-0x14292a6ab .text$mn
 // MS2-RANGE: 0x14292bab0-0x14292bae0 .text$mn
 // MS2-RANGE: 0x14292e120-0x14292e180 .text$mn
 // MS2-RANGE: 0x14292e180-0x14292e650 .text$mn
 // MS2-RANGE: 0x142931710-0x142931870 .text$mn
 // MS2-RANGE: 0x142932010-0x142932040 .text$mn
-// MS2-RANGE: 0x142932180-0x1429321c0 .text$mn
+// MS2-RANGE: 0x142932180-0x142932290 .text$mn
 // MS2-RANGE: 0x1429339a0-0x142933bd0 .text$mn
 // MS2-RANGE: 0x142933d80-0x142933e20 .text$mn
 // MS2-RANGE: 0x142934060-0x142934390 .text$mn
 // MS2-RANGE: 0x142934390-0x1429343e0 .text$mn
 // MS2-RANGE: 0x1429345d0-0x142934610 .text$mn
 // MS2-RANGE: 0x142934a00-0x142934a80 .text$mn
-// MS2-RANGE: 0x142935200-0x142935580 .text$mn
+// MS2-RANGE: 0x142935200-0x142935680 .text$mn
 // MS2-RANGE: 0x142935680-0x142935820 .text$mn
 // MS2-RANGE: 0x142935b50-0x142935c70 .text$mn
 // MS2-RANGE: 0x142936620-0x142936680 .text$mn
@@ -33,6 +34,7 @@
 // MS2-RANGE: 0x142937f90-0x142938020 .text$mn
 // MS2-RANGE: 0x14292dc70-0x14292df89 .text$mn
 // MS2-RANGE: 0x142935dc0-0x142935e8a .text$mn
+// MS2-RANGE: 0x142993810-0x1429938c2 .text$mn
 // MS2-RANGE: 0x14292e650-0x14292e6d3 .text$mn
 // MS2-RANGE: 0x1429348c0-0x142934940 .text$mn
 
@@ -568,6 +570,63 @@ bool AsBroadcaster::BroadcastMessage(Environment* penv, ObjectInterface* pthis, 
     return true;
 }
 
+// The AS2 text field's part of the movie (only the broadcast native so far).
+class AvmTextField
+{
+public:
+    // Sends the event named by the first argument to the listeners of the text field.
+    static void BroadcastMessage(const FnCall& fn);
+};
+
+// @0x1429321c0
+void AvmTextField::BroadcastMessage(const FnCall& fn)
+{
+    ASString eventName = fn.Arg(0).ToString(fn.Env);
+    AsBroadcaster::BroadcastMessage(fn.Env, fn.ThisPtr, eventName, fn.NArgs - 1, fn.Env->GetTopIndex() - 1);
+}
+
+// @0x142935580
+UPInt SharedObject::ComputeSizeInBytes(Environment* penv)
+{
+    // Adds up the names and values of the visited members, objects recursively.
+    class SizeVisitor : public MemberVisitor
+    {
+    public:
+        Environment* pEnv;
+        UPInt        Size;
+
+        SizeVisitor(Environment* penv) : pEnv(penv), Size(0) {}
+
+        // @0x142993810
+        virtual void Visit(const ASString& name, const Value& val, UByte flags)
+        {
+            SF_UNUSED(flags);
+            Size += name.GetSize();
+            switch (val.GetType())
+            {
+            case Value::NUMBER:
+            case Value::INTEGER:
+                Size += 4;
+                break;
+            case Value::STRING:
+                Size += val.ToString(pEnv).GetSize();
+                break;
+            case Value::OBJECT:
+                val.ToObject(pEnv)->VisitMembers(pEnv->GetSC(), this, 0, 0);
+                break;
+            default:;
+            }
+        }
+    };
+
+    Value data;
+    GetMemberRaw(penv->GetSC(), penv->CreateConstString("data"), &data);
+    Object*     pdata = data.ToObject(penv);
+    SizeVisitor visitor(penv);
+    pdata->VisitMembers(penv->GetSC(), &visitor, 0, 0);
+    return visitor.Size;
+}
+
 // @0x142935680
 void ArrayObject::Concat(Environment* penv, const Value& val)
 {
@@ -1087,3 +1146,5 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ??_7WideStringStorage@MovieImpl@GFx@Scaleform@@6B@ 0x14317ca48
 // MS2-PIN: ??_7?$RefCountBase@VWideStringStorage@MovieImpl@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14318ccd8
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7SizeVisitor@?1??ComputeSizeInBytes@SharedObject@AS2@GFx@Scaleform@@QEAA_KPEAVEnvironment@345@@Z@6B@ 0x1432227e8
+// MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
