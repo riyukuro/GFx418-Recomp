@@ -38,6 +38,19 @@ struct ImageGlyphVertex
     static VertexFormat Format;   // 0x143a30328
 };
 
+// vertex of the alpha (raster, packed and distance field) glyph quads: position, texture coordinates, colour
+struct RasterGlyphVertex
+{
+    static VertexFormat Format;   // 0x143a2fe50
+};
+
+// a glyph packed into a font texture; only its image is read here (+0x10, after the refcount base)
+class TextureGlyph : public RefCountBase<TextureGlyph, Stat_Default_Mem>
+{
+public:
+    Ptr<Image> pImage;            // +0x10
+};
+
 // corner of a rectangle outline
 struct CornerVertex
 {
@@ -149,6 +162,276 @@ void TextMeshProvider::ClearEntries()
     }
     Entries.ClearAndRelease();
     Flags &= ~(BF_Created | BF_HasVectorGlyphs | BF_HasUnderlines | BF_HasMask);
+}
+
+// Builds the mesh of one layer. The tessellation matrix is only the height ratio (the local-to-screen scale): that
+// keeps it from degenerating under heavy 3D or non-uniform transforms, at some cost to the EdgeAA there.
+// MS2-FUNCTIONAL: generate* tail calls not emitted (safebuffers stands in for the exe having no GS cookie), scheduling
+// @0x1426e3130
+__declspec(safebuffers) bool TextMeshProvider::GetData(MeshBase* mesh, VertexOutput* verOut, unsigned meshGenFlags)
+{
+    unsigned             layerIdx = mesh->GetLayer();
+    Renderer2DImpl*      ren      = mesh->GetRenderer();
+    const TextMeshLayer& layer    = GetLayer(layerIdx);
+    TextMeshEntry*       ent      = &Entries[layer.Start];
+    Matrix2F             mtx      = Matrix2F::Scaling(HeightRatio, HeightRatio);
+
+    switch (layer.Type)
+    {
+    case TextLayer_Background:
+        return generateRectangle(ren, verOut, mtx, ent->EntryData.BackgroundData.Coord, ent->mColor,
+                                 ent->EntryData.BackgroundData.BorderColor, meshGenFlags);
+    case TextLayer_Selection:
+        return generateSelection(ren, verOut, layer, mtx, meshGenFlags);
+    case TextLayer_Shadow:
+    case TextLayer_ShadowText:
+    case TextLayer_RasterText:
+        return generateRasterMesh(verOut, layer);
+    case TextLayer_PackedText:
+    case TextLayer_PackedDFAText:
+        return generatePackedMesh(verOut, layer);
+    case TextLayer_Images:
+        return generateImageMesh(verOut, layer);
+    case TextLayer_Shapes:
+    case TextLayer_Shapes_Masked:
+        // vector glyphs have their own mesh provider (VectorGlyphShape)
+        break;
+    case TextLayer_Underline:
+    case TextLayer_Underline_Masked:
+        return generateUnderlines(ren, verOut, layer, mtx, meshGenFlags);
+    case TextLayer_Cursor:
+        return generateRectangle(ren, verOut, mtx, ent->EntryData.SelectionData.Coord, ent->mColor, 0, meshGenFlags);
+    case TextLayer_Mask:
+        return generateMask(verOut, layer);
+    }
+    return false;
+}
+
+// The fill of a layer: vertex colour for the solid kinds, the glyph texture (alpha, or full colour for a packed colour
+// glyph) for the glyph kinds, the image for images; the mask pass always gets the mask fill.
+// @0x1426e3b80
+void TextMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned, unsigned meshGenFlags)
+{
+    if (meshGenFlags & Mesh_Mask)
+    {
+        *data = FillData(Fill_Mask);
+        return;
+    }
+
+    const TextMeshLayer& l = Layers[layer];
+    switch (l.Type)
+    {
+    case TextLayer_Background:
+    case TextLayer_Selection:
+    case TextLayer_Shapes:
+    case TextLayer_Underline:
+    case TextLayer_Cursor:
+    case TextLayer_Shapes_Masked:
+    case TextLayer_Underline_Masked:
+        *data = FillData(Fill_VColor);
+        data->PrimFill = PrimFill_VColor;
+        data->pVFormat = &VertexXY16iCF32::Format;
+        break;
+
+    case TextLayer_Shadow:
+    case TextLayer_ShadowText:
+    case TextLayer_RasterText:
+    {
+        Image* img = pCache->GetImage(Entries[l.Start].TextureId);
+        *data = FillData(img, ImageFillMode(Wrap_Clamp, Sample_Linear));
+        data->PrimFill = PrimFill_UVTextureAlpha_VColor;
+        data->pVFormat = &RasterGlyphVertex::Format;
+        break;
+    }
+
+    case TextLayer_PackedText:
+    {
+        Image* img = Entries[l.Start].EntryData.PackedData.pGlyph->pImage;
+        *data = FillData(img, ImageFillMode(Wrap_Clamp, Sample_Linear));
+        if (img->GetFormat() == Image_A8)
+        {
+            data->PrimFill = PrimFill_UVTextureAlpha_VColor;
+            data->pVFormat = &RasterGlyphVertex::Format;
+        }
+        else
+        {
+            data->PrimFill = PrimFill_UVTexture;
+            data->pVFormat = &ImageGlyphVertex::Format;
+        }
+        break;
+    }
+
+    case TextLayer_PackedDFAText:
+        *data = FillData(Entries[l.Start].EntryData.PackedData.pGlyph->pImage, ImageFillMode(Wrap_Clamp, Sample_Linear));
+        data->PrimFill = PrimFill_UVTextureDFAlpha_VColor;
+        data->pVFormat = &RasterGlyphVertex::Format;
+        break;
+
+    case TextLayer_Images:
+        *data = FillData(Entries[l.Start].EntryData.ImageData.pImage, ImageFillMode(Wrap_Clamp, Sample_Linear));
+        data->PrimFill = PrimFill_UVTexture;
+        data->pVFormat = &ImageGlyphVertex::Format;
+        break;
+
+    case TextLayer_Mask:
+        *data = FillData(Fill_Mask);
+        break;
+    }
+}
+
+// The mesh of one vector glyph: its outline goes through the tessellator in view space (so the curves are flattened
+// for the size it shows at), comes back to shape space and is stretched into the 16-bit vertex range.
+// @0x1426e3350
+bool VectorGlyphShape::GetData(MeshBase* mesh, VertexOutput* verOut, unsigned meshGenFlags)
+{
+    Renderer2DImpl* ren = mesh->GetRenderer();
+    const Matrix2F& mtx = mesh->GetViewMatrix();
+
+    enum { VerBufSize = 128, TriBufSize = 128 };
+
+    VertexXY16iCF32 meshVer[VerBufSize];
+    TessVertex      tessVer[VerBufSize];
+    UInt16          tri[TriBufSize * 3];
+    TessMesh        tessMesh;
+
+    if (pShape->IsEmpty())
+        return generateNullVectorMesh(verOut);
+
+    MeshGenerator* gen = ren->GetMeshGen();
+    gen->Clear();
+
+    // glyphs tolerate twice the shape tolerances
+    ToleranceParams param = ren->GetToleranceParams();
+    param.CurveTolerance *= 2;
+    param.CollinearityTolerance *= 2;
+
+    bool edgeAA = (meshGenFlags & Mesh_EdgeAA) != 0 && (meshGenFlags & Mesh_Mask) == 0;
+    gen->mTess.SetEdgeAAWidth(edgeAA ? param.EdgeAAScale * 0.5f : 0.0f);
+    gen->mTess.SetFillRule(Tessellator::FillNonZero);
+
+    ShapePosInfo  pos(pShape->GetStartingPos());
+    ShapePathType pathType;
+    PathEdgeType  pathEdge;
+    float         coord[Edge_MaxCoord];
+    unsigned      styles[3];
+    bool          first = true;
+
+    Matrix2F m2 = mtx;
+
+    while ((pathType = pShape->ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
+    {
+        // a glyph is a single layer
+        if (!first && pathType == Shape_NewLayer)
+            break;
+        first = false;
+
+        if (styles[0] != styles[1])
+        {
+            m2.Transform(&coord[0], &coord[1]);
+            gen->mTess.AddVertex(coord[0], coord[1]);
+            while ((pathEdge = pShape->ReadEdge(&pos, coord)) != Edge_EndPath)
+            {
+                if (pathEdge == Edge_LineTo)
+                {
+                    m2.Transform(&coord[0], &coord[1]);
+                    gen->mTess.AddVertex(coord[0], coord[1]);
+                }
+                else if (pathEdge == Edge_QuadTo)
+                {
+                    m2.Transform(&coord[0], &coord[1]);
+                    m2.Transform(&coord[2], &coord[3]);
+                    TessellateQuadCurve(&gen->mTess, param, coord[0], coord[1], coord[2], coord[3]);
+                }
+                else if (pathEdge == Edge_CubicTo)
+                {
+                    m2.Transform(&coord[0], &coord[1]);
+                    m2.Transform(&coord[2], &coord[3]);
+                    m2.Transform(&coord[4], &coord[5]);
+                    TessellateCubicCurve(&gen->mTess, param, coord[0], coord[1], coord[2], coord[3], coord[4],
+                                         coord[5]);
+                }
+            }
+            gen->mTess.FinalizePath(1, 0, false, false);
+        }
+        else
+        {
+            // a path with the same style on both sides fills nothing
+            pShape->SkipPathData(&pos);
+        }
+    }
+
+    gen->mTess.Tessellate(false);
+
+    bool ret = true;
+    if (gen->mTess.GetMeshCount() && gen->mTess.GetVertexCount())
+    {
+        gen->mTess.Transform(mtx.GetInverse());
+        Matrix2F m16i = gen->mTess.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
+
+        VertexOutput::Fill fill;
+        fill.VertexCount = gen->mTess.GetMeshVertexCount(0);
+        fill.IndexCount  = gen->mTess.GetMeshTriangleCount(0) * 3;
+        fill.pFormat     = &VertexXY16iCF32::Format;
+        fill.FillIndex0  = 0;
+        fill.FillIndex1  = 0;
+        fill.MergeFlags  = 0;
+        fill.MeshIndex   = 0;
+
+        ret = verOut->BeginOutput(&fill, 1, m16i);
+        if (ret)
+        {
+            gen->mTess.GetMesh(0, &tessMesh);
+
+            unsigned start = 0;
+            unsigned n;
+            while ((n = gen->mTess.GetVertices(&tessMesh, tessVer, VerBufSize)) > 0)
+            {
+                for (unsigned i = 0; i < n; ++i)
+                {
+                    const TessVertex& t = tessVer[i];
+                    VertexXY16iCF32&  v = meshVer[i];
+                    v.x = (SInt16)floorf(t.x < 0 ? t.x - 0.5f : t.x + 0.5f);
+                    v.y = (SInt16)floorf(t.y < 0 ? t.y - 0.5f : t.y + 0.5f);
+                    v.Color = 0xFFFFFFFF;
+                    v.Factors[0] = Factors[t.Flags & 3];
+                    v.Factors[1] = Factors[(t.Flags >> 2) & 3];
+                }
+                verOut->SetVertices(0, start, meshVer, n);
+                start += n;
+            }
+
+            start = 0;
+            unsigned triCount = gen->mTess.GetMeshTriangleCount(fill.MeshIndex);
+            while (start < triCount)
+            {
+                unsigned num = TriBufSize;
+                if (start + num > triCount)
+                {
+                    num = triCount - start;
+                    if (num == 0)
+                        break;
+                }
+                gen->mTess.GetTrianglesI16(fill.MeshIndex, tri, start, num);
+                verOut->SetIndices(0, start * 3, tri, num * 3);
+                start += num;
+            }
+            verOut->EndOutput();
+        }
+    }
+    else
+        ret = generateNullVectorMesh(verOut);
+
+    gen->Clear();
+    return ret;
+}
+
+// a vector glyph is a single vertex colour fill
+// @0x1426e3e70
+void VectorGlyphShape::GetFillData(FillData* data, unsigned, unsigned, unsigned)
+{
+    *data = FillData(Fill_VColor);
+    data->pVFormat = &VertexXY16iCF32::Format;
+    data->PrimFill = PrimFill_VColor;
 }
 
 // @0x1426e3f30
