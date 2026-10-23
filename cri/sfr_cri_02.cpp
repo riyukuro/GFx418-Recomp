@@ -17,6 +17,8 @@
 
 extern "C" {
 extern void* DAT_143ffd550;
+extern CriSint32 DAT_143ffd500;
+extern CriUint8 DAT_143ffd504[0x48];
 extern const char* DAT_143b27aa8;
 extern const char* DAT_143b27bb0;
 extern void* DAT_143b27bb8;
@@ -77,6 +79,18 @@ void     FUN_140036650(void* player);
 void     FUN_140036710(void* player);
 void     FUN_1400369e0(void* player);
 void     FUN_140034c20(void* player);
+void     FUN_140044e84(void);
+void     FUN_140039fc8(void);
+void     FUN_14003a010(void);
+void     FUN_140041ea0(void);
+void     FUN_140041ec0(void);
+void     FUN_140043a20(const void* decoderInterface);
+void     FUN_140043a50(void* decoderInterface);
+void     FUN_140044390(const void* decoderInterface);
+void     FUN_1400443d0(void* decoderInterface);
+void     FUN_140044ea8(void);
+void     FUN_140039f00(void* section);
+void*    FUN_1400385c8(void* storage, CriSint32 size);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
@@ -1570,6 +1584,54 @@ void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration)
     entries[index].AlphaDecoderInterface = registration->AlphaDecoderInterface;
     if (index == count)
         DAT_143b2794c = count + 1;
+}
+
+// MS2-FUNCTIONAL: initialize CRI Movie on the first reference and maintain its process reference count.
+// @0x14002e7d0
+void FUN_14002e7d0(void)
+{
+    if (DAT_143ffd500 == 0)
+    {
+        memset(&DAT_143ffd500, 0, 0x58);
+        FUN_140044e84();
+        FUN_140039fc8();
+        CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
+        for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
+        {
+            FUN_140044390(entries[i].VideoDecoderInterface);
+            FUN_140043a20(entries[i].AlphaDecoderInterface);
+        }
+        FUN_140041ea0();
+        DAT_143ffd550 = FUN_1400385c8(DAT_143ffd504, 0x48);
+        if (!DAT_143ffd550)
+            FUN_140037910(NULL, "E07020200M: Can't create critical section.", 0);
+    }
+    ++DAT_143ffd500;
+}
+
+// MS2-FUNCTIONAL: release CRI Movie subsystems and decoder registrations on the final reference.
+// @0x14002e8c0
+void FUN_14002e8c0(void)
+{
+    if (--DAT_143ffd500 == 0)
+    {
+        FUN_140041ec0();
+        CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
+        for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
+        {
+            FUN_140043a50(entries[i].AlphaDecoderInterface);
+            FUN_1400443d0(entries[i].VideoDecoderInterface);
+            entries[i] = CriMvCodecRegistrationEntry();
+        }
+        DAT_143b2794c = 0;
+        FUN_14003a010();
+        FUN_140044ea8();
+        if (DAT_143ffd550)
+        {
+            FUN_140039f00(DAT_143ffd550);
+            DAT_143ffd550 = NULL;
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: find the registered video decoder interface, mapping codec zero to codec one.
