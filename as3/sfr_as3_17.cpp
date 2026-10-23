@@ -439,6 +439,81 @@ void VM::Execute_IgnoreExceptionUnsafe(const Value& func, const Value& _this, Va
         ExceptionObj.SetUndefined();
     }
 }
+
+// @0x142502c30
+const UInt32* Slots::FindSlotValues(const ASString& k) const
+{
+    return Set.Get(Ptr<ASStringNode>(k.GetNode()));
+}
+
+// MS2-FUNCTIONAL: chain walk and namespace compares laid out differently
+// @0x142502b20
+AbsoluteIndex Slots::FindSlotInfoIndex(const ASString& k, const Instances::Namespace& ns) const
+{
+    if (const UInt32* values = FindSlotValues(k))
+    {
+        SPInt ind = *values;
+        do
+        {
+            const Instances::Namespace& sns = *GetSlotInfo(AbsoluteIndex(ind)).pNs;
+            if (sns.GetKind() == ns.GetKind())
+            {
+                if (sns.GetKind() == Abc::NS_Protected)
+                    return AbsoluteIndex(ind);
+                if (sns.GetKind() == Abc::NS_Private ? &sns == &ns
+                                                      : sns.GetUri().GetNode() == ns.GetUri().GetNode())
+                    return AbsoluteIndex(ind);
+            }
+            if (static_cast<UPInt>(ind) < FirstOwnSlotNum)
+                ind = Parent->GetPrevSlotIndex(ind);
+            else
+                ind = VArray[static_cast<UPInt>(ind) - FirstOwnSlotNum].Prev;
+        } while (ind >= 0);
+    }
+    return AbsoluteIndex(-1);
+}
+
+// @0x1425009e0
+SlotInfo& Slots::FindAddOwnSlotInfo(const ASString& k, const SlotInfo& v, AbsoluteIndex& ind)
+{
+    ind = FindSlotInfoIndex(k, *v.pNs);
+    if (!ind.IsValid())
+        ind = Add(k, v);
+    return GetOwnSlotInfo(ind);
+}
+
+// @0x142502dc0
+const SPInt* SlotContainerType::FindValues(const ASString& k) const
+{
+    return KVHashSet.Get(k.GetNode());
+}
+
+// MS2-FUNCTIONAL: the hash Find inlined (the exe calls it)
+// @0x1425008e0
+AbsoluteIndex SlotContainerType::FindAdd(const ASString& k, const SlotInfo& v)
+{
+    SetType::Iterator it = KVHashSet.Find(k.GetNode());
+    if (!it.IsEnd())
+        return AbsoluteIndex(it->Second);
+    return Add(k, v);
+}
+
+// MS2-FUNCTIONAL: FindValues inlined (the exe calls it) and the hash probe split into chunks
+// @0x142500dd0
+const SlotInfo* FindDynamicSlot(const SlotContainerType& c, const ASString& k, const Instances::Namespace& ns)
+{
+    const SPInt* values = c.FindValues(k);
+    if (values)
+    {
+        for (SPInt ind = *values; ind >= 0; ind = c.VArray[static_cast<UInt32>(ind)].Prev)
+        {
+            const SlotInfo& si = c.VArray[static_cast<UInt32>(ind)].Value;
+            if (si.pNs->GetUri().GetNode() == ns.GetUri().GetNode() && si.pNs->GetKind() == ns.GetKind())
+                return &si;
+        }
+    }
+    return NULL;
+}
 }}}
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)

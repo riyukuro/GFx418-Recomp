@@ -258,6 +258,12 @@ protected:
     AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
     // (appended, sfr19) renames own slot ind to k (rechaining both names). 0x1425276d0
     void SetKey(AbsoluteIndex ind, const ASString& k);
+    // (appended, sfr19) own slot k of v's namespace, appended as v when there is none; ind receives its index.
+    // 0x1425009e0
+    SlotInfo& FindAddOwnSlotInfo(const ASString& k, const SlotInfo& v, AbsoluteIndex& ind);
+    // (appended, sfr19) the slot named k in namespace ns, own or a parent's (protected ones by kind, private ones
+    // by identity, the rest by uri), or -1. 0x142502b20
+    AbsoluteIndex FindSlotInfoIndex(const ASString& k, const Instances::Namespace& ns) const;
 public:
     // (appended, sfr19) slot ind of this table (not of a parent).
     SlotInfo& GetOwnSlotInfo(AbsoluteIndex ind)
@@ -308,11 +314,19 @@ public:
     AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
     // updates this slot's key and the key-to-slot index. 0x142527560
     void SetKey(AbsoluteIndex ind, const ASString& k);
+    // (appended, sfr19) the index of slot k, appended as v when there is none. 0x1425008e0
+    AbsoluteIndex FindAdd(const ASString& k, const SlotInfo& v);
+    // (appended, sfr19) the index of the newest slot named k (older ones chain through Pair::Prev), or NULL.
+    // 0x142502dc0
+    const SPInt* FindValues(const ASString& k) const;
 
     UPInt                                           Size;       // +0x00
     ArrayLH<Pair, StatMV_VM_SlotInfo_Mem>           VArray;     // +0x08
     SetType                                         KVHashSet;  // +0x20
 };
+
+// (appended, sfr19) the slot of c named k in namespace ns (same uri and kind), or NULL. 0x142500dd0
+const SlotInfo* FindDynamicSlot(const SlotContainerType& c, const ASString& k, const Instances::Namespace& ns);
 
 // Method closures of a traits object. 0x40 bytes.
 class VTable : public NewOverrideBase<StatMV_VM_VTable_Mem>
