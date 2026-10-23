@@ -38,6 +38,12 @@
 // MS2-RANGE: 0x142922650-0x1429226d0 .text$mn
 // MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
 // MS2-RANGE: 0x142919a00-0x142919c00 .text$mn
+// MS2-RANGE: 0x142918dd0-0x142918ef0 .text$mn
+// MS2-RANGE: 0x1429196c0-0x1429197b0 .text$mn
+// MS2-RANGE: 0x142919860-0x142919980 .text$mn
+// MS2-RANGE: 0x14291ac10-0x14291ad30 .text$mn
+// MS2-RANGE: 0x14291b810-0x14291b930 .text$mn
+// MS2-RANGE: 0x14291ce20-0x14291cf40 .text$mn
 // MS2-RANGE: 0x142917c90-0x142917d80 .text$mn
 // MS2-RANGE: 0x142918580-0x142918690 .text$mn
 // MS2-RANGE: 0x14291bd50-0x14291be60 .text$mn
@@ -352,6 +358,47 @@ StageProto::StageProto(ASStringContext* psc, Object* pprototype, const FunctionR
     : Prototype<StageObject>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142918dd0
+BevelFilterProto::BevelFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<BevelFilterObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+// @0x1429196c0
+BitmapFilterProto::BitmapFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<BitmapFilterObject>(psc, pprototype, constructor)
+{
+}
+
+// @0x142919860
+BlurFilterProto::BlurFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<BlurFilterObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+// @0x14291ac10
+ColorMatrixFilterProto::ColorMatrixFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<ColorMatrixFilterObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+// @0x14291b810
+DropShadowFilterProto::DropShadowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<DropShadowFilterObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+// @0x14291ce20
+GlowFilterProto::GlowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<GlowFilterObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
 }
 
 // @0x142919af0
@@ -938,3 +985,51 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7StageProto@AS2@GFx@Scaleform@@6B@ 0x14321a7e8
 // MS2-PIN: ??_7AmpMarker@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321deb8
 // MS2-PIN: ??_7AmpMarker@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321df00
+// MS2-PIN: ??_7?$Prototype@VBevelFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f938
+// MS2-PIN: ??_7?$Prototype@VBevelFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f980
+// MS2-PIN: ??_7?$Prototype@VBevelFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321fa28
+// MS2-PIN: ??_7BevelFilterProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321fa30
+// MS2-PIN: ??_7BevelFilterProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321fa78
+// MS2-PIN: ??_7BevelFilterProto@AS2@GFx@Scaleform@@6B@ 0x14321fb20
+// MS2-PIN: ??_7?$Prototype@VBitmapFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e8f8
+// MS2-PIN: ??_7?$Prototype@VBitmapFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e940
+// MS2-PIN: ??_7?$Prototype@VBitmapFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321e9e8
+// MS2-PIN: ??_7BitmapFilterProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e9f0
+// MS2-PIN: ??_7BitmapFilterProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ea38
+// MS2-PIN: ??_7BitmapFilterProto@AS2@GFx@Scaleform@@6B@ 0x14321eae0
+// MS2-PIN: ??_7?$Prototype@VBlurFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f528
+// MS2-PIN: ??_7?$Prototype@VBlurFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f570
+// MS2-PIN: ??_7?$Prototype@VBlurFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321f618
+// MS2-PIN: ??_7BlurFilterProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f620
+// MS2-PIN: ??_7BlurFilterProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f668
+// MS2-PIN: ??_7BlurFilterProto@AS2@GFx@Scaleform@@6B@ 0x14321f710
+// MS2-PIN: ??_7?$Prototype@VColorMatrixFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321fd48
+// MS2-PIN: ??_7?$Prototype@VColorMatrixFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321fd90
+// MS2-PIN: ??_7?$Prototype@VColorMatrixFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321fe38
+// MS2-PIN: ??_7ColorMatrixFilterProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321fe40
+// MS2-PIN: ??_7ColorMatrixFilterProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321fe88
+// MS2-PIN: ??_7ColorMatrixFilterProto@AS2@GFx@Scaleform@@6B@ 0x14321ff30
+// MS2-PIN: ??_7?$Prototype@VDropShadowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ed08
+// MS2-PIN: ??_7?$Prototype@VDropShadowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ed50
+// MS2-PIN: ??_7?$Prototype@VDropShadowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321edf8
+// MS2-PIN: ??_7DropShadowFilterProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ee00
+// MS2-PIN: ??_7DropShadowFilterProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ee48
+// MS2-PIN: ??_7DropShadowFilterProto@AS2@GFx@Scaleform@@6B@ 0x14321eef0
+// MS2-PIN: ??_7?$Prototype@VGlowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f118
+// MS2-PIN: ??_7?$Prototype@VGlowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f160
+// MS2-PIN: ??_7?$Prototype@VGlowFilterObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321f208
+// MS2-PIN: ??_7GlowFilterProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f210
+// MS2-PIN: ??_7GlowFilterProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f258
+// MS2-PIN: ??_7GlowFilterProto@AS2@GFx@Scaleform@@6B@ 0x14321f300
+// MS2-PIN: ??_7BitmapFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e808
+// MS2-PIN: ??_7BitmapFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e850
+// MS2-PIN: ??_7BevelFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f848
+// MS2-PIN: ??_7BevelFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f890
+// MS2-PIN: ??_7BlurFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f438
+// MS2-PIN: ??_7BlurFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f480
+// MS2-PIN: ??_7ColorMatrixFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321fc58
+// MS2-PIN: ??_7ColorMatrixFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321fca0
+// MS2-PIN: ??_7DropShadowFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ec18
+// MS2-PIN: ??_7DropShadowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ec60
+// MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f028
+// MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f070

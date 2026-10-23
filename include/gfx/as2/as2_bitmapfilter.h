@@ -4,6 +4,7 @@
 #define MS2_SF_GFX_AS2_BITMAPFILTER_H
 
 #include "as2_movieroot.h"
+#include "as2_objectproto.h"
 #include "../../render/render_filters.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -12,6 +13,11 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class BitmapFilterObject : public Object
 {
 public:
+    BitmapFilterObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
+
     Render::Filter* GetFilter() const { return pFilter; }
     void            SetFilter(Render::Filter* pfilter) { pFilter = pfilter; }
 
@@ -39,37 +45,119 @@ protected:
     Render::BlurFilterParams& writableFilterParams();
 
     virtual void Finalize_GC(); // exe 0x142942cf0
-};
-
-// The prototypes only add clone().
-class DropShadowFilterProto
-{
 public:
-    static void Clone(const FnCall& fn);
-};
-
-class GlowFilterProto
-{
-public:
-    static void Clone(const FnCall& fn);
-};
-
-class BlurFilterProto
-{
-public:
-    static void Clone(const FnCall& fn);
+    virtual ObjectType GetObjectType() const; // exe 0x1429541b0
 };
 
 // The instance classes of the filters (0x70 bytes, all state in the render filter).
-class BevelFilterObject : public BitmapFilterObject {};
-class BlurFilterObject : public BitmapFilterObject {};
+class BevelFilterObject : public BitmapFilterObject
+{
+public:
+    BevelFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954190
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x142985100
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294d800
+};
+class BlurFilterObject : public BitmapFilterObject
+{
+public:
+    BlurFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429541c0
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x142985570
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294dd10
+};
 class ColorMatrixFilterObject : public BitmapFilterObject
 {
 public:
+    ColorMatrixFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
     ColorMatrixFilterObject(Environment* penv); // exe 0x14291ab70
+
+    virtual ObjectType GetObjectType() const; // exe 0x1429541f0
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x1429856c0
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294e520
 };
-class DropShadowFilterObject : public BitmapFilterObject {};
-class GlowFilterObject : public BitmapFilterObject {};
+class DropShadowFilterObject : public BitmapFilterObject
+{
+public:
+    DropShadowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954230
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x142985b50
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294ec10
+};
+class GlowFilterObject : public BitmapFilterObject
+{
+public:
+    GlowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954250
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x142986170
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294f260
+};
+
+// The filter prototypes: BitmapFilter has no methods, the others only add clone() (the table holds it, flags 0).
+class BitmapFilterProto : public Prototype<BitmapFilterObject>
+{
+public:
+    BitmapFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x1429196c0
+};
+
+class BevelFilterProto : public Prototype<BevelFilterObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213750
+
+    BevelFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142918dd0
+
+    static void Clone(const FnCall& fn);
+};
+
+class BlurFilterProto : public Prototype<BlurFilterObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213730
+
+    BlurFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919860
+
+    static void Clone(const FnCall& fn);
+};
+
+class ColorMatrixFilterProto : public Prototype<ColorMatrixFilterObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213860
+
+    ColorMatrixFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291ac10
+
+    static void Clone(const FnCall& fn);
+};
+
+class DropShadowFilterProto : public Prototype<DropShadowFilterObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432136a0
+
+    DropShadowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291b810
+
+    static void Clone(const FnCall& fn);
+};
+
+class GlowFilterProto : public Prototype<GlowFilterObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213710
+
+    GlowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291ce20
+
+    static void Clone(const FnCall& fn);
+};
 
 // The ColorMatrixFilter class.
 class ColorMatrixFilterCtorFunction : public CFunctionObject
