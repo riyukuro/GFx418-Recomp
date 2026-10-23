@@ -119,6 +119,10 @@ public:
 
 private:
     static void DateUTC(const FnCall& fn);
+
+public:
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Date" (exe 0x142976be0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 }}} // namespace Scaleform::GFx::AS2

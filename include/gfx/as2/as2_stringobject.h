@@ -81,6 +81,10 @@ public:
 
 private:
     static void StringFromCharCode(const FnCall& fn);
+
+public:
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "String" (exe 0x14297aca0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 }}} // namespace Scaleform::GFx::AS2

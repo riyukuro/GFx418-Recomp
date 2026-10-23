@@ -434,6 +434,14 @@ SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags
     pLocalFrame = 0;
 }
 
+// Takes over the caller's reference to the function (a freshly created one).
+SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject& original, UByte flags)
+{
+    Flags       = flags;
+    Function    = &original;
+    pLocalFrame = 0;
+}
+
 // Counted copy of the function; the frame keeps the weak flag of the original.
 SF_FORCEINLINE void FunctionRefBase::Init(const FunctionRefBase& orig, UByte flags)
 {

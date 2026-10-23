@@ -144,6 +144,9 @@ class BitmapFilterCtorFunction : public CFunctionObject
 {
 public:
     BitmapFilterCtorFunction(ASStringContext* psc); // exe 0x142919220
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "BitmapFilter" (exe 0x142974910).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 class BevelFilterProto : public Prototype<BevelFilterObject>
@@ -205,6 +208,9 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936bc0
 
     static void GlobalCtor(const FnCall& fn); // exe 0x1429598b0
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "ColorMatrixFilter" (exe 0x1429763c0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The classes of the other filters.
@@ -216,6 +222,9 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429368c0
 
     static void GlobalCtor(const FnCall& fn); // exe 0x142958720
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "BevelFilter" (exe 0x142973f20).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 class BlurFilterCtorFunction : public CFunctionObject
@@ -226,6 +235,9 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936940
 
     static void GlobalCtor(const FnCall& fn); // exe 0x1429591e0
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "BlurFilter" (exe 0x142974d70).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 class DropShadowFilterCtorFunction : public CFunctionObject
@@ -236,6 +248,9 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c80
 
     static void GlobalCtor(const FnCall& fn); // exe 0x14295a4b0
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "DropShadowFilter" (exe 0x142977070).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 class GlowFilterCtorFunction : public CFunctionObject
@@ -246,6 +261,9 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e90
 
     static void GlobalCtor(const FnCall& fn); // exe 0x14295b480
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "GlowFilter" (exe 0x142978240).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 }}} // namespace Scaleform::GFx::AS2

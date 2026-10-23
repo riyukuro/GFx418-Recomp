@@ -658,6 +658,9 @@ class TextSnapshotCtorFunction : public CFunctionObject
 {
 public:
     TextSnapshotCtorFunction(ASStringContext* psc); // exe 0x1429231b0
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "TextSnapshot" (exe 0x14297bf80).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // (appended for sfr_as2_02) Appends an info object per visited glyph to an array (TextSnapshot.getTextRunInfo).
@@ -840,6 +843,10 @@ private:
     // (appended for sfr_as2_02)
     // getLocal(name[, localPath]): the cached shared object, else a new one loaded by the manager (exe 0x142901410).
     static void GetLocal(const FnCall& fn);
+
+public:
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "SharedObject" (exe 0x14297a4a0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The LoadVars class.
@@ -852,6 +859,9 @@ public:
     static void GlobalCtor(const FnCall& fn);
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e10
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "LoadVars" (exe 0x142977ad0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The TextField.StyleSheet class.
@@ -915,6 +925,10 @@ public:
 
 private:
     static void AddMarker(const FnCall& fn);
+
+public:
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Amp" (exe 0x142973080).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // Classes with nothing to construct: called as a function they return null (ExternalInterface undefined).
@@ -999,6 +1013,9 @@ public:
 
     // new Boolean(v) stores v in the instance, Boolean(v) converts v (exe 0x1429595a0).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Boolean" (exe 0x1429752b0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // Number.prototype.
@@ -1040,6 +1057,9 @@ public:
 
     // BitmapData() called as a function: a new empty bitmap (exe 0x142959160).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "BitmapData" (exe 0x142974460).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The MovieClipLoader class.
@@ -1053,6 +1073,9 @@ public:
     // MovieClipLoader() on a loader instance makes it its own listener and returns it, null otherwise
     // (exe 0x14295bca0).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "MovieClipLoader" (exe 0x142978dd0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The AsBroadcaster class.
@@ -1067,6 +1090,9 @@ public:
 
     // AsBroadcaster() on a broadcaster instance returns it, null otherwise (exe 0x142958670).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "AsBroadcaster" (exe 0x142973a80).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The Button class.

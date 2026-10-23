@@ -102,6 +102,10 @@ protected:
     static void Distance(const FnCall& fn);
     static void Interpolate(const FnCall& fn);
     static void Polar(const FnCall& fn);
+
+public:
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Point" (exe 0x1429797e0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 }}} // namespace Scaleform::GFx::AS2

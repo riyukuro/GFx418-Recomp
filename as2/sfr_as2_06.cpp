@@ -74,6 +74,23 @@
 // MS2-RANGE: 0x14297e450-0x14297e500 .text$mn
 // MS2-RANGE: 0x14297e500-0x14297e5a0 .text$mn
 // MS2-RANGE: 0x14297e5a0-0x14297e640 .text$mn
+// MS2-RANGE: 0x1429752b0-0x142975740 .text$mn
+// MS2-RANGE: 0x142973080-0x142973500 .text$mn
+// MS2-RANGE: 0x142973a80-0x142973f20 .text$mn
+// MS2-RANGE: 0x142973f20-0x142974460 .text$mn
+// MS2-RANGE: 0x142974460-0x142974910 .text$mn
+// MS2-RANGE: 0x142974910-0x142974d70 .text$mn
+// MS2-RANGE: 0x142974d70-0x1429752b0 .text$mn
+// MS2-RANGE: 0x1429763c0-0x142976900 .text$mn
+// MS2-RANGE: 0x142976be0-0x142977070 .text$mn
+// MS2-RANGE: 0x142977070-0x1429775b0 .text$mn
+// MS2-RANGE: 0x142977ad0-0x142977db0 .text$mn
+// MS2-RANGE: 0x142978240-0x142978780 .text$mn
+// MS2-RANGE: 0x142978dd0-0x142979260 .text$mn
+// MS2-RANGE: 0x1429797e0-0x142979d00 .text$mn
+// MS2-RANGE: 0x14297a4a0-0x14297a960 .text$mn
+// MS2-RANGE: 0x14297aca0-0x14297b190 .text$mn
+// MS2-RANGE: 0x14297bf80-0x14297c400 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -84,7 +101,14 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_date.h"
+#include "../include/gfx/as2/as2_bitmapfilter.h"
+#include "../include/gfx/as2/as2_pointobject.h"
+#include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/kernel/sf_msgformat.h"
+
+// Stores *value under key in the hash at owner+0x10 and releases the passed reference (a folded hash set; the
+// prototype table of GlobalContext here). Defined in sfr_video_01.
+void FUN_14000c280(void* owner, unsigned key, void** value);
 
 namespace Scaleform { namespace GFx {
 
@@ -655,6 +679,166 @@ void UserDefinedFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char
     }
     else
         InvokeImpl(fn);
+}
+
+// Built-in class registration: the constructor function, its prototype stored in the context's prototype table
+// (the table takes over the passed reference) and the constructor published as a member of the global object or
+// of a package object.
+
+static SF_FORCEINLINE void SetBuiltinPrototype(GlobalContext* pgc, ASBuiltinType type, Object* proto)
+{
+    ::FUN_14000c280(pgc, type, reinterpret_cast<void**>(&proto));
+}
+
+// The common registration: a CtorFunctionType constructor, a ProtoType prototype on the parent type's prototype,
+// the constructor published under the type's name in ptarget.
+template<class CtorFunctionType, class ProtoType>
+static SF_FORCEINLINE FunctionRef RegisterBuiltinClass(GlobalContext* pgc, ASBuiltinType type, ASBuiltinType parentType,
+                                               Object* ptarget)
+{
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(parentType), ctor);
+    SetBuiltinPrototype(pgc, type, proto);
+    ptarget->SetMemberRaw(&sc, sc.GetBuiltin(type), Value(ctor));
+    return ctor;
+}
+
+// The filter classes derive from BitmapFilter: it is registered first unless the registry knows the name.
+static SF_FORCEINLINE void RegisterBitmapFilterBase(GlobalContext* pgc)
+{
+    ASStringContext sc(pgc, 8);
+    if (!pgc->GetBuiltinClassRegistrar(sc.GetBuiltin(ASBuiltin_BitmapFilter)))
+        BitmapFilterCtorFunction::Register(pgc);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BooleanCtorFunction and BooleanProto ctors (sfr_as2_03)
+// @0x1429752b0
+FunctionRef BooleanCtorFunction::Register(GlobalContext* pgc)
+{
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) BooleanCtorFunction(&sc));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) BooleanProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    SetBuiltinPrototype(pgc, ASBuiltin_Boolean, proto);
+    pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Boolean), Value(ctor));
+    return ctor;
+}
+
+// MS2-FUNCTIONAL the exe inlines the AmpMarkerCtorFunction and AmpMarkerProto ctors (sfr_as2_03)
+// @0x142973080
+FunctionRef AmpMarkerCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<AmpMarkerCtorFunction, AmpMarkerProto>(pgc, ASBuiltin_Amp, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the AsBroadcasterCtorFunction and AsBroadcasterProto ctors (sfr_as2_03)
+// @0x142973a80
+FunctionRef AsBroadcasterCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<AsBroadcasterCtorFunction, AsBroadcasterProto>(pgc, ASBuiltin_AsBroadcaster, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BevelFilterCtorFunction and BevelFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// @0x142973f20
+FunctionRef BevelFilterCtorFunction::Register(GlobalContext* pgc)
+{
+    RegisterBitmapFilterBase(pgc);
+    return RegisterBuiltinClass<BevelFilterCtorFunction, BevelFilterProto>(pgc, ASBuiltin_BevelFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BitmapDataCtorFunction and BitmapDataProto ctors (sfr_as2_03)
+// @0x142974460
+FunctionRef BitmapDataCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<BitmapDataCtorFunction, BitmapDataProto>(pgc, ASBuiltin_BitmapData, ASBuiltin_Object, pgc->FlashDisplayPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BitmapFilterCtorFunction and BitmapFilterProto ctors (sfr_as2_03)
+// @0x142974910
+FunctionRef BitmapFilterCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<BitmapFilterCtorFunction, BitmapFilterProto>(pgc, ASBuiltin_BitmapFilter, ASBuiltin_Object, pgc->FlashFiltersPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the BlurFilterCtorFunction and BlurFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// @0x142974d70
+FunctionRef BlurFilterCtorFunction::Register(GlobalContext* pgc)
+{
+    RegisterBitmapFilterBase(pgc);
+    return RegisterBuiltinClass<BlurFilterCtorFunction, BlurFilterProto>(pgc, ASBuiltin_BlurFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the ColorMatrixFilterCtorFunction and ColorMatrixFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// @0x1429763c0
+FunctionRef ColorMatrixFilterCtorFunction::Register(GlobalContext* pgc)
+{
+    RegisterBitmapFilterBase(pgc);
+    return RegisterBuiltinClass<ColorMatrixFilterCtorFunction, ColorMatrixFilterProto>(pgc, ASBuiltin_ColorMatrixFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the DateCtorFunction and DateProto ctors (sfr_as2_03)
+// @0x142976be0
+FunctionRef DateCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<DateCtorFunction, DateProto>(pgc, ASBuiltin_Date, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the DropShadowFilterCtorFunction and DropShadowFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// @0x142977070
+FunctionRef DropShadowFilterCtorFunction::Register(GlobalContext* pgc)
+{
+    RegisterBitmapFilterBase(pgc);
+    return RegisterBuiltinClass<DropShadowFilterCtorFunction, DropShadowFilterProto>(pgc, ASBuiltin_DropShadowFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the GASLoadVarsLoaderCtorFunction ctor (sfr_as2_03)
+// @0x142977ad0
+FunctionRef GASLoadVarsLoaderCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<GASLoadVarsLoaderCtorFunction, LoadVarsProto>(pgc, ASBuiltin_LoadVars, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the GlowFilterCtorFunction and GlowFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// @0x142978240
+FunctionRef GlowFilterCtorFunction::Register(GlobalContext* pgc)
+{
+    RegisterBitmapFilterBase(pgc);
+    return RegisterBuiltinClass<GlowFilterCtorFunction, GlowFilterProto>(pgc, ASBuiltin_GlowFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the MovieClipLoaderCtorFunction and MovieClipLoaderProto ctors (sfr_as2_03)
+// @0x142978dd0
+FunctionRef MovieClipLoaderCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<MovieClipLoaderCtorFunction, MovieClipLoaderProto>(pgc, ASBuiltin_MovieClipLoader, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the PointCtorFunction and PointProto ctors (sfr_as2_03)
+// @0x1429797e0
+FunctionRef PointCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<PointCtorFunction, PointProto>(pgc, ASBuiltin_Point, ASBuiltin_Object, pgc->FlashGeomPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the SharedObjectCtorFunction and SharedObjectProto ctors (sfr_as2_03)
+// @0x14297a4a0
+FunctionRef SharedObjectCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<SharedObjectCtorFunction, SharedObjectProto>(pgc, ASBuiltin_SharedObject, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the StringCtorFunction and StringProto ctors (sfr_as2_03)
+// @0x14297aca0
+FunctionRef StringCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<StringCtorFunction, StringProto>(pgc, ASBuiltin_String, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the TextSnapshotCtorFunction and TextSnapshotProto ctors (sfr_as2_03)
+// @0x14297bf80
+FunctionRef TextSnapshotCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<TextSnapshotCtorFunction, TextSnapshotProto>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object, pgc->pGlobal);
 }
 
 

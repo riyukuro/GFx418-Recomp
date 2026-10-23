@@ -60,7 +60,7 @@ public:
     bool IsNull() const { return Function == 0; }
 
     inline void Init(FunctionObject* poriginal = 0, UByte flags = 0); // as2_object.h
-    void Init(FunctionObject& original, UByte flags = 0);
+    inline void Init(FunctionObject& original, UByte flags = 0); // as2_object.h: adopts the reference
     inline void Init(const FunctionRefBase& orig, UByte flags = 0); // as2_object.h
     inline void DropRefs(); // as2_action.h
     void SetLocalFrame(LocalFrame* localFrame, bool weakRef = 0);
