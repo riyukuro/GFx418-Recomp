@@ -598,6 +598,52 @@ UInt32* FUN_140015340(UInt32* dst)
     return dst;
 }
 
+// MS2-FUNCTIONAL: returns the manager's retained built-in null string node.
+// @0x140014060
+void** FUN_140014060(void** result, void* context)
+{
+    ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
+    ASStringNode* node = manager->CreateConstStringNode("null", 4, 0);
+    node->AddRef();
+    *result = node;
+    return result;
+}
+
+// MS2-FUNCTIONAL: duplicate entry for the manager's retained built-in null string node.
+// @0x1400140a0
+void** FUN_1400140a0(void** result, void* context)
+{
+    ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
+    ASStringNode* node = manager->CreateConstStringNode("null", 4, 0);
+    node->AddRef();
+    *result = node;
+    return result;
+}
+
+// MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
+// @0x140012cd0
+uintptr_t FUN_140012cd0(uintptr_t self, UByte* result, Scaleform::GFx::AS3::Value* input)
+{
+    *result = input->Convert2Boolean();
+    return self;
+}
+
+// MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
+// @0x140013a20
+void FUN_140013a20(UByte* result, Scaleform::GFx::AS3::Value* input)
+{
+    *result = input->Convert2Boolean();
+}
+
+// MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
+// @0x140015140
+void FUN_140015140(UInt32 index, UByte* result, UInt32 length, Scaleform::GFx::AS3::Value* values)
+{
+    if (index < length)
+        *result = (reinterpret_cast<Scaleform::GFx::AS3::Value*>(
+                       reinterpret_cast<char*>(values) + static_cast<size_t>(index) * 0x20))->Convert2Boolean();
+}
+
 // @0x14000f830
 long long* FUN_14000f830(long long* dst, const long long* src)
 {
