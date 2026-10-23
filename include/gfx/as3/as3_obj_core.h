@@ -613,6 +613,10 @@ namespace Instances { namespace fl
         ArrayLH<SPtr<Instances::fl::XML> >      List;               // +0x50 the XML items
 
     public:
+        // (appended, sfr19) a list of deep copies of the items, parented to parent. 0x142408c70
+        Pickable<XMLList> DeepCopy(Instances::fl::XML* parent);
+
+    public:
         // native methods
         // @0x1423f6ca0
         void AS3addNamespace(SPtr<Instances::fl::XML>& result, const Value&);
@@ -1012,6 +1016,11 @@ namespace InstanceTraits { namespace fl
         static void PropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         // @0x1423e7c30 (appended, sfr15)
         static void HasOwnPropertyProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+
+    public:
+        // (appended, sfr19) a new element named name in (a public copy of) ns. 0x14241b5b0
+        Pickable<Instances::fl::XMLElement> MakeInstanceElement(XML& t, const Instances::Namespace& ns,
+                                                                const ASString& name, Instances::fl::XML* parent);
     };
 
     class XMLList : public CTraits

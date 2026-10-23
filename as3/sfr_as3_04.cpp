@@ -1742,6 +1742,14 @@ namespace InstanceTraits
         return result;
     }
 
+    // MS2-FUNCTIONAL: the exe inlines the XMLElement constructor
+    // @0x14241b5b0
+    Pickable<Instances::fl::XMLElement> fl::XML::MakeInstanceElement(XML& t, const Instances::Namespace& ns,
+                                                                    const ASString& name, Instances::fl::XML* parent)
+    {
+        return Pickable<Instances::fl::XMLElement>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLElement(t, ns, name, parent));
+    }
+
     // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241c2b0
     void fl::XMLList::MakeObject(Value& result, Traits& t)
@@ -2102,6 +2110,144 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return false;
     }
 
+    // E4X [[Put]] on an element. An attribute name sets (or adds) that attribute to value's string, a list
+    // joining its items with spaces; any further attributes of that name are deleted. An element name
+    // replaces the last matching child (the others are removed) or appends one; a primitive value becomes
+    // the text of that child, a new element of the name when there was none.
+    // MS2-FUNCTIONAL: the exe inlines the XMLAttr constructor and SPtr copies; register allocation differs
+    // @0x1424220e0
+    CheckResult XMLElement::SetProperty(const Multiname& prop_name, const Value& value)
+    {
+        VM& vm = GetVM();
+        StringManager& sm = vm.GetStringManager();
+
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            vm.ThrowTypeError(VM::Error(VM::eXMLAssignmentToIndexedXMLNotAllowed, vm));
+            return false;
+        }
+
+        Value c;
+        if (IsXMLObject(value))
+            c = Value(static_cast<XML*>(value.GetObject())->DeepCopy(NULL));
+        else if (IsXMLListObject(value))
+            c = Value(static_cast<XMLList*>(value.GetObject())->DeepCopy(NULL));
+        else
+        {
+            ASString str = sm.CreateEmptyString();
+            if (!value.Convert2String(str))
+                return false;
+            c = str;
+        }
+
+        if (prop_name.IsAttr())
+        {
+            if (IsXMLListObject(c))
+            {
+                XMLList* list = static_cast<XMLList*>(c.GetObject());
+                StringBuffer buf(vm.GetMemoryHeap());
+                const UPInt size = list->List.GetSize();
+                for (UPInt i = 0; i < size; ++i)
+                {
+                    if (i > 0)
+                        buf.AppendChar(' ');
+                    list->List[i]->ToString(buf, 0);
+                }
+                c = sm.CreateString(buf.ToCStr(), buf.GetSize());
+            }
+            else if (IsXMLObject(c))
+            {
+                ASString s = sm.CreateEmptyString();
+                static_cast<XML*>(c.GetObject())->AS3toString(s);
+                c = s;
+            }
+            else
+                c = c.AsString();
+
+            SPtr<XMLAttr> a;
+            for (UPInt j = 0; j < Attrs.GetSize(); ++j)
+            {
+                if (Attrs[j]->Matches(prop_name))
+                {
+                    if (a.GetPtr() == NULL)
+                        a = Attrs[j];
+                    else if (!DeleteProperty(prop_name))
+                        return false;
+                }
+            }
+
+            if (a.GetPtr() == NULL)
+            {
+                Instances::Namespace* ns = prop_name.IsQName() ? &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
+                if (ns == NULL)
+                    ns = &vm.GetPublicNamespace();
+
+                a = Pickable<XMLAttr>(new(GetVM().GetMemoryHeap()) XMLAttr(GetInstanceTraits(), *ns,
+                                      prop_name.Name.AsString(), c.AsString(), this));
+                Attrs.PushBack(a);
+                AddInScopeNamespace(*ns);
+            }
+
+            a->Data = c.AsString();
+            return true;
+        }
+
+        bool result = true;
+        Value i;
+
+        ASString propName = sm.CreateEmptyString();
+        if (!prop_name.Name.Convert2String(propName))
+            return false;
+
+        const bool primitiveAssign = !IsXMLObject(c) && !IsXMLListObject(c) && !prop_name.IsAnyType();
+
+        // the children can shrink inside this loop
+        for (UPInt j = Children.GetSize(); j > 0; --j)
+        {
+            const UPInt k = j - 1;
+            if (Children[k]->Matches(prop_name))
+            {
+                if (!i.IsUndefined())
+                    Children.RemoveAt(i.AsInt());
+                i.SetSInt32(static_cast<SInt32>(k));
+            }
+        }
+
+        if (i.IsUndefined())
+        {
+            i.SetSInt32(static_cast<SInt32>(Children.GetSize()));
+            if (primitiveAssign)
+            {
+                InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
+                Instances::Namespace* ns = prop_name.IsQName() && !prop_name.IsAnyNamespace() ?
+                                           &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
+                if (ns == NULL)
+                    ns = &vm.GetPublicNamespace();
+
+                SPtr<XMLElement> y = itr.MakeInstanceElement(itr, *ns, prop_name.Name.AsString(), this);
+                if (!Replace(static_cast<UPInt>(i.AsInt()), Value(y.GetPtr())))
+                    return false;
+                y->AddInScopeNamespace(*ns);
+            }
+        }
+
+        if (primitiveAssign)
+        {
+            SPtr<XML> xml = Children[i.AsInt()];
+            xml->DeleteChildren(NULL);
+            if (!c.AsString().IsEmpty())
+            {
+                if (xml->GetKind() == kElement)
+                    result = static_cast<XMLElement*>(xml.GetPtr())->Replace(0, c);
+            }
+        }
+        else
+            result = Replace(i.AsInt(), c);
+
+        return result;
+    }
+
     // An XML node enumerates as a one-item list: its only name is "0".
     // MS2-FUNCTIONAL: the exe addresses the empty builtin off the string manager (lea) instead of a copied pointer
     // @0x1424163b0
@@ -2383,6 +2529,55 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         Ns = &ns;
     }
 
+    // The children become value: a node, a list's items, or a text node of value's string.
+    // MS2-FUNCTIONAL: the exe calls SetParent out of line and inlines the XMLText constructor
+    // @0x142421780
+    void XMLElement::SetChildren(const Value& value)
+    {
+        VM& vm = GetVM();
+        Children.Clear();
+
+        if (IsXMLObject(value))
+        {
+            XML* xml = static_cast<XML*>(value.GetObject());
+
+            for (XML* node = this; node; node = node->Parent)
+            {
+                if (node == xml)
+                    return vm.ThrowTypeError(VM::Error(VM::eXMLIllegalCyclicalLoop, vm));
+            }
+
+            xml->SetParent(this);
+            Children.PushBack(xml);
+        }
+        else if (IsXMLListObject(value))
+        {
+            XMLList* list = static_cast<XMLList*>(value.GetObject());
+            const UPInt size = list->List.GetSize();
+
+            for (UPInt i = 0; i < size; ++i)
+            {
+                XML* xml = list->List[i];
+
+                for (XML* node = this; node; node = node->Parent)
+                {
+                    if (node == xml)
+                        return vm.ThrowTypeError(VM::Error(VM::eXMLIllegalCyclicalLoop, vm));
+                }
+
+                xml->Parent = this;
+            }
+
+            Children = list->List;
+        }
+        else
+        {
+            ASString txt = vm.GetStringManager().CreateEmptyString();
+            if (value.Convert2String(txt))
+                Children.PushBack(Pickable<XML>(new(GetVM().GetMemoryHeap()) XMLText(GetInstanceTraits(), txt, this)));
+        }
+    }
+
     // @0x142421f80
     void XML::SetParent(XML* p)
     {
@@ -2573,6 +2768,117 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                 return false;
         }
         return true;
+    }
+
+    // Insert value (a node, a list's items, or a node built from value) as child pos; a text node goes in as a
+    // copy. Nothing is inserted past the end, nor an ancestor of this element.
+    // MS2-FUNCTIONAL: register allocation and list-loop induction differ
+    // @0x142419270
+    CheckResult XMLElement::InsertChildAt(UPInt pos, const Value& value)
+    {
+        VM& vm = GetVM();
+        bool result = false;
+
+        if (IsXMLListObject(value))
+        {
+            XMLList* list = static_cast<XMLList*>(value.GetObject());
+            const UPInt size = list->List.GetSize();
+
+            for (UPInt i = 0; i < size; ++i)
+            {
+                XML* v = list->List[i];
+
+                for (XML* node = this; node; node = node->Parent)
+                {
+                    if (node == v)
+                    {
+                        vm.ThrowTypeError(VM::Error(VM::eXMLIllegalCyclicalLoop, vm));
+                        return result;
+                    }
+                }
+
+                const UPInt size = Children.GetSize();
+                if (pos + i < size)
+                {
+                    if (v->GetKind() == kText)
+                        Children.InsertAt(pos + i, v->DeepCopy(this));
+                    else
+                    {
+                        Children.InsertAt(pos + i, v);
+                        v->SetParent(this);
+                    }
+
+                    result = true;
+                }
+                else if (pos + i == size)
+                {
+                    if (v->GetKind() == kText)
+                        Children.PushBack(v->DeepCopy(this));
+                    else
+                    {
+                        Children.PushBack(v);
+                        v->SetParent(this);
+                    }
+
+                    result = true;
+                }
+            }
+        }
+        else
+        {
+            SPtr<XML> v;
+            if (IsXMLObject(value))
+                v = static_cast<XML*>(value.GetObject());
+            else
+            {
+                Value _this;
+                FUN_142508460(&GetInstanceTraits()).Construct(_this, 1, &value, true);
+                if (GetVM().IsException())
+                    return result;
+
+                if (_this.IsNull())
+                    return result;
+
+                v = static_cast<XML*>(_this.GetObject());
+            }
+
+            for (XML* node = this; node; node = node->Parent)
+            {
+                if (node == v)
+                {
+                    vm.ThrowTypeError(VM::Error(VM::eXMLIllegalCyclicalLoop, vm));
+                    return result;
+                }
+            }
+
+            const UPInt size = Children.GetSize();
+            if (pos < size)
+            {
+                if (v->GetKind() == kText)
+                    Children.InsertAt(pos, v->DeepCopy(this));
+                else
+                {
+                    Children.InsertAt(pos, v);
+                    v->SetParent(this);
+                }
+
+                result = true;
+            }
+            else if (pos == size)
+            {
+                if (v->GetKind() == kText)
+                    Children.PushBack(v->DeepCopy(this));
+                else
+                {
+                    Children.PushBack(v);
+                    v->SetParent(this);
+                }
+
+                result = true;
+            }
+        }
+
+        return result;
     }
 
     // @0x1424191a0
@@ -3041,8 +3347,8 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-PIN: ?Reserve@?$ArrayDataBase@VValue@AS3@GFx@Scaleform@@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14241fc40
 // MS2-PIN: ?Reserve@?$ArrayDataBase@W4Kind@XMLParser@AS3@GFx@Scaleform@@U?$AllocatorDH_POD@W4Kind@XMLParser@AS3@GFx@Scaleform@@$01@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAXPEBX_K@Z 0x14241fce0
 // MS2-PIN: ?IsCallable@Value@AS3@GFx@Scaleform@@QEBA_NXZ 0x142419940
-// MS2-PIN: ?IsXMLObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z 0x142419ca0
-// MS2-PIN: ?IsXMLListObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z 0x142419cd0
+// MS2-PIN: ?IsXMLObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z 0x142419cd0
+// MS2-PIN: ?IsXMLListObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z 0x142419ca0
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorDH@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14241ff20
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14241ffc0
 // MS2-FUNCTIONAL ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z: the exe calls DestructArray out of line; ours inlines it
