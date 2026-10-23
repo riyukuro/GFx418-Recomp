@@ -17,6 +17,10 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    // A new filter object holding a default render filter of the type (none for other types).
+    BitmapFilterObject(Environment* penv, Render::FilterType ft); // exe 0x142919250
+    // The filter is set by the subclass.
+    BitmapFilterObject(Environment* penv) : Object(penv) {}
 
     Render::Filter* GetFilter() const { return pFilter; }
     void            SetFilter(Render::Filter* pfilter) { pFilter = pfilter; }
@@ -54,6 +58,7 @@ class BevelFilterObject : public BitmapFilterObject
 {
 public:
     BevelFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    BevelFilterObject(Environment* penv); // exe 0x142918d90
 
     virtual ObjectType GetObjectType() const; // exe 0x142954190
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -64,6 +69,7 @@ class BlurFilterObject : public BitmapFilterObject
 {
 public:
     BlurFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    BlurFilterObject(Environment* penv); // exe 0x142919830
 
     virtual ObjectType GetObjectType() const; // exe 0x1429541c0
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -85,6 +91,7 @@ class DropShadowFilterObject : public BitmapFilterObject
 {
 public:
     DropShadowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    DropShadowFilterObject(Environment* penv); // exe 0x14291b7d0
 
     virtual ObjectType GetObjectType() const; // exe 0x142954230
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -95,6 +102,7 @@ class GlowFilterObject : public BitmapFilterObject
 {
 public:
     GlowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    GlowFilterObject(Environment* penv); // exe 0x14291cde0
 
     virtual ObjectType GetObjectType() const; // exe 0x142954250
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,

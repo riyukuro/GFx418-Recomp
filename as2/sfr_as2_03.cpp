@@ -72,6 +72,12 @@
 // MS2-RANGE: 0x142920be0-0x142920c50 .text$mn
 // MS2-RANGE: 0x1429231e0-0x142923250 .text$mn
 // MS2-RANGE: 0x142921520-0x1429215f0 .text$mn
+// MS2-RANGE: 0x142918d90-0x142918dd0 .text$mn
+// MS2-RANGE: 0x142919250-0x1429196c0 .text$mn
+// MS2-RANGE: 0x142919830-0x142919860 .text$mn
+// MS2-RANGE: 0x14291ab70-0x14291ac10 .text$mn
+// MS2-RANGE: 0x14291b7d0-0x14291b810 .text$mn
+// MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -361,6 +367,64 @@ StageProto::StageProto(ASStringContext* psc, Object* pprototype, const FunctionR
     : Prototype<StageObject>(psc, pprototype, constructor)
 {
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142919250
+BitmapFilterObject::BitmapFilterObject(Environment* penv, Render::FilterType ft)
+    : Object(penv)
+{
+    switch (ft)
+    {
+    case Render::Filter_Blur:
+        pFilter = *SF_HEAP_AUTO_NEW(this) Render::BlurFilter();
+        break;
+    case Render::Filter_Shadow:
+        pFilter = *SF_HEAP_AUTO_NEW(this) Render::ShadowFilter();
+        break;
+    case Render::Filter_Glow:
+        pFilter = *SF_HEAP_AUTO_NEW(this) Render::GlowFilter();
+        break;
+    case Render::Filter_Bevel:
+        pFilter = *SF_HEAP_AUTO_NEW(this) Render::BevelFilter();
+        break;
+    case Render::Filter_ColorMatrix:
+        pFilter = *SF_HEAP_AUTO_NEW(this) Render::ColorMatrixFilter();
+        break;
+    default:
+        break;
+    }
+}
+
+// @0x142918d90
+BevelFilterObject::BevelFilterObject(Environment* penv)
+    : BitmapFilterObject(penv, Render::Filter_Bevel)
+{
+}
+
+// @0x142919830
+BlurFilterObject::BlurFilterObject(Environment* penv)
+    : BitmapFilterObject(penv, Render::Filter_Blur)
+{
+}
+
+// @0x14291b7d0
+DropShadowFilterObject::DropShadowFilterObject(Environment* penv)
+    : BitmapFilterObject(penv, Render::Filter_Shadow)
+{
+}
+
+// @0x14291cde0
+GlowFilterObject::GlowFilterObject(Environment* penv)
+    : BitmapFilterObject(penv, Render::Filter_Glow)
+{
+}
+
+// MS2-FUNCTIONAL cl stores the stat id of the alloc before the base vftables; the exe stores it after the first one
+// @0x14291ab70
+ColorMatrixFilterObject::ColorMatrixFilterObject(Environment* penv)
+    : BitmapFilterObject(penv)
+{
+    pFilter = *SF_HEAP_AUTO_NEW(this) Render::ColorMatrixFilter();
 }
 
 // @0x142918dd0
@@ -1094,3 +1158,10 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432196b8
 // MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219700
 // MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6B@ 0x1432197a8
+// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7Filter@Render@Scaleform@@6B@ 0x14315ac78
+// MS2-PIN: ??_7BlurFilterImpl@Render@Scaleform@@6B@ 0x14315ac90
+// MS2-PIN: ??_7BlurFilter@Render@Scaleform@@6B@ 0x14315aca8
+// MS2-PIN: ??_7ShadowFilter@Render@Scaleform@@6B@ 0x14315acc0
+// MS2-PIN: ??_7GlowFilter@Render@Scaleform@@6B@ 0x14315acd8
+// MS2-PIN: ??_7BevelFilter@Render@Scaleform@@6B@ 0x14315acf0
