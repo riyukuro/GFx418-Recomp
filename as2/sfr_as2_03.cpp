@@ -2,6 +2,8 @@
 // assignments of the script values, objects and prototypes (the out-of-line copies the unity build emitted).
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142925140-0x142925190 .text$mn
+// MS2-RANGE: 0x142925920-0x142925990 .text$mn
 // MS2-RANGE: 0x1429275f0-0x142927640 .text$mn
 // MS2-RANGE: 0x142927690-0x1429276e0 .text$mn
 // MS2-RANGE: 0x142927740-0x1429277d0 .text$mn
@@ -968,6 +970,20 @@ FunctionObject::~FunctionObject()
 {
 }
 
+// The exe keeps the dictionary's element array teardown out of line.
+#pragma inline_depth(3)
+// MS2-FUNCTIONAL inlining: the exe inlines the DefaultValue ASString release but calls the ArrayDataBase dtor
+// @0x142925140
+ActionBuffer::~ActionBuffer()
+{
+}
+#pragma inline_depth()
+
+// @0x142925920
+GlobalContext::~GlobalContext()
+{
+}
+
 // @0x1429252e0
 ArrayObject::~ArrayObject()
 {
@@ -1108,7 +1124,7 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The exe stops inlining at the array's base destructor.
-#pragma inline_depth(5)
+#pragma inline_depth(3)
 // @0x142925750
 GASPrototypeBase::~GASPrototypeBase()
 {
@@ -1398,3 +1414,8 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_GAsBroadcaster@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429292a0
 // MS2-PIN: ??_GAsBroadcasterCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929300
 // MS2-PIN: ??_GAsBroadcasterProto@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929370
+// MS2-PIN: ??_7GlobalContext@AS2@GFx@Scaleform@@6B@ 0x143215af8
+// MS2-PIN: ??_7?$RefCountBaseNTS@VGlobalContext@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??_7ActionBuffer@AS2@GFx@Scaleform@@6B@ 0x1432153c8
+// MS2-PIN: ??_7?$RefCountBaseNTS@VActionBuffer@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600

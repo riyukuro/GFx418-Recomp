@@ -348,11 +348,18 @@ private:
 class GlobalContext : public RefCountBaseNTS<GlobalContext, StatMV_ActionScript_Mem>
 {
 public:
-    struct ClassRegEntry;
+    // A builtin class registered by name: the function creating its constructor on first use, and the constructor
+    // once created. 0x10 bytes.
+    struct ClassRegEntry
+    {
+        typedef FunctionRef (*RegisterFunc)(GlobalContext* pgc);
+        RegisterFunc        Register;      // +0x00
+        Ptr<FunctionObject> ResolvedFunc;  // +0x08
+    };
 
     HashUncachedLH<ASBuiltinType, Ptr<Object>, FixedSizeHash<ASBuiltinType> > Prototypes; // +0x10 builtin prototypes
     ASStringHash<FunctionRef> RegisteredClasses; // +0x18 class constructors by name (Object.registerClass)
-    void*              BuiltinClassesRegistry; // +0x20 ASStringHash<ClassRegEntry>
+    ASStringHash<ClassRegEntry> BuiltinClassesRegistry; // +0x20
     MovieImpl*         pMovieRoot;             // +0x28
     MemoryHeap*        pHeap;                  // +0x30
     Object*            FlashGeomPackage;       // +0x38
@@ -362,14 +369,11 @@ public:
     Object*            FlashFiltersPackage;    // +0x58
     Ptr<Object>        pGlobal;                // +0x60
     Bool3W             GFxExtensions;          // +0x68
-    void*              StandardMemberMap;      // +0x70 ASStringHash<char>
+    ASStringHash<char> StandardMemberMap;      // +0x70
 
     // The tables start empty; Init fills the prototypes and packages.
-    GlobalContext(MovieImpl* proot)
-        : BuiltinClassesRegistry(0), StandardMemberMap(0)
-    {
-        Init(proot);
-    }
+    GlobalContext(MovieImpl* proot) { Init(proot); } // inline; the exe's unreferenced copy is 0x14291cd10
+    virtual ~GlobalContext();        // exe 0x142925920
     void Init(MovieImpl* proot); // exe 0x14295e2b0
 
     bool CheckExtensions() const { return GFxExtensions.IsTrue(); }
@@ -423,6 +427,7 @@ class ActionBuffer : public RefCountBaseNTS<ActionBuffer, StatMV_ActionScript_Me
 {
 public:
     ActionBuffer(ASStringContext* psc, ActionBufferData* pbufferData); // exe 0x142917890
+    virtual ~ActionBuffer();                                           // exe 0x142925140
 
 protected:
     Ptr<ActionBufferData>                         pBufferData;         // +0x10
