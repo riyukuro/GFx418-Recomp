@@ -130,6 +130,8 @@ CriBool  FUN_140031ae0(void* player);
 void     FUN_140030cb0(void* player);
 void     FUN_140034b60(void* player);
 void     FUN_140035260(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
+CriBool  FUN_1400355b0(void* player, void* output);
+CriBool  FUN_140035710(void* player, void* yuvBuffers, void* output);
 CriSint32 FUN_140044630(void* decoder);
 CriSint32 FUN_140043cb0(void* decoder);
 void     FUN_140044750(void* decoder);
@@ -167,6 +169,7 @@ void     FUN_140039f00(void* section);
 void*    FUN_1400385c8(void* storage, CriSint32 size);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
+void     FUN_140044a30(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
 void     FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
 void     FUN_140044680(void* decoder);
@@ -1723,6 +1726,46 @@ void FUN_140035090(void* record)
     *(CriSint32*)((CriUint8*)record + 8) = -1;
     *(CriUint32*)((CriUint8*)record + 0x30) = 1;
     *(CriSint32*)((CriUint8*)record + 0x3c) = -1;
+}
+
+// MS2-FUNCTIONAL: return the next decoded video frame and release its decoder-owned record afterward.
+// @0x1400355b0
+CriBool FUN_1400355b0(void* player, void* output)
+{
+    FUN_140035090(output);
+    if (!crimvply_isUnderGetFrameCondition(player))
+        return 0;
+
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    CriMvFrameInfo frame = {};
+    void* frameToken = FUN_1400449c0(decoders->VideoDecoder, &frame);
+    if (!frameToken)
+        return 0;
+
+    FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, frame.width);
+    FUN_140044a30(decoders->VideoDecoder, &frame);
+    ((CriMvPlyObj*)player)->num_audio_out = ((CriMvFrameInfo*)output)->frame_id;
+    return 1;
+}
+
+// MS2-FUNCTIONAL: return decoded video metadata and copy the frame's plane descriptors into YUV buffers.
+// @0x140035710
+CriBool FUN_140035710(void* player, void* yuvBuffers, void* output)
+{
+    FUN_140035090(output);
+    if (!crimvply_isUnderGetFrameCondition(player))
+        return 0;
+
+    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
+    CriMvFrameInfo frame = {};
+    void* frameToken = FUN_1400449c0(decoders->VideoDecoder, &frame);
+    if (!frameToken)
+        return 0;
+
+    FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, frame.width);
+    ((CriMvPlyObj*)player)->num_audio_out = ((CriMvFrameInfo*)output)->frame_id;
+    FUN_1400358d0(yuvBuffers, &frame);
+    return 1;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
