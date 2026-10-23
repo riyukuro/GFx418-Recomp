@@ -1809,6 +1809,24 @@ void FUN_140014340(void* object, double* result)
         *result = 0.0;
 }
 
+// MS2-FUNCTIONAL: reads the indexed AS3 value, maps an empty object-like value to the null string, otherwise stringifies it.
+// @0x140015af0
+void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned count,
+                   const Scaleform::GFx::AS3::Value* values)
+{
+    if (index >= count) return;
+    const auto* value = reinterpret_cast<const unsigned char*>(values) +
+                        static_cast<unsigned __int64>(index) * sizeof(Scaleform::GFx::AS3::Value);
+    const unsigned tag = *reinterpret_cast<const unsigned*>(value) & 0x1f;
+    if (tag >= 0x0c && tag <= 0x0f &&
+        !*reinterpret_cast<void* const*>(value + sizeof(unsigned) * 2))
+    {
+        result->SetNull();
+        return;
+    }
+    reinterpret_cast<const Scaleform::GFx::AS3::Value*>(value)->Convert2String(*result);
+}
+
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
 // @0x140011b40
 void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
