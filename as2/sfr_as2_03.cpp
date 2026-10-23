@@ -38,6 +38,15 @@
 // MS2-RANGE: 0x142922650-0x1429226d0 .text$mn
 // MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
 // MS2-RANGE: 0x142919a00-0x142919c00 .text$mn
+// MS2-RANGE: 0x142917c90-0x142917d80 .text$mn
+// MS2-RANGE: 0x142918580-0x142918690 .text$mn
+// MS2-RANGE: 0x14291bd50-0x14291be60 .text$mn
+// MS2-RANGE: 0x14291dbe0-0x14291dcf0 .text$mn
+// MS2-RANGE: 0x14291e6a0-0x14291e790 .text$mn
+// MS2-RANGE: 0x14291e830-0x14291e940 .text$mn
+// MS2-RANGE: 0x14291eb90-0x14291eca0 .text$mn
+// MS2-RANGE: 0x142920600-0x142920710 .text$mn
+// MS2-RANGE: 0x142920c50-0x142920d60 .text$mn
 // MS2-RANGE: 0x142917ed0-0x1429180c0 .text$mn
 // MS2-RANGE: 0x14291f430-0x14291f540 .text$mn
 // MS2-RANGE: 0x14291e1a0-0x14291e210 .text$mn
@@ -282,6 +291,67 @@ BooleanObject::BooleanObject(Environment* penv, bool v)
     : Object(penv), BValue(v)
 {
     static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Boolean));
+}
+
+// @0x142917c90
+AmpMarkerProto::AmpMarkerProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<AmpMarker>(psc, pprototype, constructor)
+{
+}
+
+// @0x142918580
+AsBroadcasterProto::AsBroadcasterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<AsBroadcaster>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x14291bd50
+ExternalInterfaceProto::ExternalInterfaceProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<ExternalInterface>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x14291dbe0
+KeyProto::KeyProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<KeyObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x14291e6a0
+MathProto::MathProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<Math>(psc, pprototype, constructor)
+{
+}
+
+// @0x14291e830
+MatrixProto::MatrixProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<MatrixObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x14291eb90
+MouseProto::MouseProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<MouseObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142920600
+SelectionProto::SelectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<Selection>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142920c50
+StageProto::StageProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<StageObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
 // @0x142919af0
@@ -810,3 +880,61 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7BooleanProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b780
 // MS2-PIN: ??_7BooleanProto@AS2@GFx@Scaleform@@6B@ 0x14321b828
 // MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
+// MS2-PIN: ??_7?$Prototype@VAmpMarker@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321dfa8
+// MS2-PIN: ??_7?$Prototype@VAmpMarker@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321dff0
+// MS2-PIN: ??_7?$Prototype@VAmpMarker@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321e098
+// MS2-PIN: ??_7AmpMarkerProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e0a0
+// MS2-PIN: ??_7AmpMarkerProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e0e8
+// MS2-PIN: ??_7AmpMarkerProto@AS2@GFx@Scaleform@@6B@ 0x14321e190
+// MS2-PIN: ??_7?$Prototype@VAsBroadcaster@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321beb8
+// MS2-PIN: ??_7?$Prototype@VAsBroadcaster@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321bf00
+// MS2-PIN: ??_7?$Prototype@VAsBroadcaster@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321bfa8
+// MS2-PIN: ??_7AsBroadcasterProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321bfb0
+// MS2-PIN: ??_7AsBroadcasterProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321bff8
+// MS2-PIN: ??_7AsBroadcasterProto@AS2@GFx@Scaleform@@6B@ 0x14321c0a0
+// MS2-PIN: ??_7?$Prototype@VExternalInterface@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321cf58
+// MS2-PIN: ??_7?$Prototype@VExternalInterface@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321cfa0
+// MS2-PIN: ??_7?$Prototype@VExternalInterface@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321d048
+// MS2-PIN: ??_7ExternalInterfaceProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d050
+// MS2-PIN: ??_7ExternalInterfaceProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d098
+// MS2-PIN: ??_7ExternalInterfaceProto@AS2@GFx@Scaleform@@6B@ 0x14321d140
+// MS2-PIN: ??_7KeyObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c5e8
+// MS2-PIN: ??_7KeyObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c630
+// MS2-PIN: ??_7?$Prototype@VKeyObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c6d8
+// MS2-PIN: ??_7?$Prototype@VKeyObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c720
+// MS2-PIN: ??_7?$Prototype@VKeyObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321c7c8
+// MS2-PIN: ??_7KeyProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c7d0
+// MS2-PIN: ??_7KeyProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c818
+// MS2-PIN: ??_7KeyProto@AS2@GFx@Scaleform@@6B@ 0x14321c8c0
+// MS2-PIN: ??_7?$Prototype@VMath@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ba50
+// MS2-PIN: ??_7?$Prototype@VMath@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ba98
+// MS2-PIN: ??_7?$Prototype@VMath@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321bb40
+// MS2-PIN: ??_7MathProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321bb48
+// MS2-PIN: ??_7MathProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321bb90
+// MS2-PIN: ??_7MathProto@AS2@GFx@Scaleform@@6B@ 0x14321bc38
+// MS2-PIN: ??_7?$Prototype@VMatrixObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218da0
+// MS2-PIN: ??_7?$Prototype@VMatrixObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143218de8
+// MS2-PIN: ??_7?$Prototype@VMatrixObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143218e90
+// MS2-PIN: ??_7MatrixProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218e98
+// MS2-PIN: ??_7MatrixProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143218ee0
+// MS2-PIN: ??_7MatrixProto@AS2@GFx@Scaleform@@6B@ 0x143218f88
+// MS2-PIN: ??_7?$Prototype@VMouseObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321cb08
+// MS2-PIN: ??_7?$Prototype@VMouseObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321cb50
+// MS2-PIN: ??_7?$Prototype@VMouseObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321cbf8
+// MS2-PIN: ??_7MouseProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321cc00
+// MS2-PIN: ??_7MouseProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321cc48
+// MS2-PIN: ??_7MouseProto@AS2@GFx@Scaleform@@6B@ 0x14321ccf0
+// MS2-PIN: ??_7?$Prototype@VSelection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d368
+// MS2-PIN: ??_7?$Prototype@VSelection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d3b0
+// MS2-PIN: ??_7?$Prototype@VSelection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321d458
+// MS2-PIN: ??_7SelectionProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d460
+// MS2-PIN: ??_7SelectionProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d4a8
+// MS2-PIN: ??_7SelectionProto@AS2@GFx@Scaleform@@6B@ 0x14321d550
+// MS2-PIN: ??_7?$Prototype@VStageObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a600
+// MS2-PIN: ??_7?$Prototype@VStageObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a648
+// MS2-PIN: ??_7?$Prototype@VStageObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321a6f0
+// MS2-PIN: ??_7StageProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a6f8
+// MS2-PIN: ??_7StageProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a740
+// MS2-PIN: ??_7StageProto@AS2@GFx@Scaleform@@6B@ 0x14321a7e8
+// MS2-PIN: ??_7AmpMarker@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321deb8
+// MS2-PIN: ??_7AmpMarker@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321df00

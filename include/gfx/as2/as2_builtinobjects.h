@@ -28,9 +28,19 @@ class AmpMarker : public Object
 {
 public:
     AmpMarker(Environment* penv); // exe 0x142917b80
+    AmpMarker(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
 
 protected:
     void commonInit(Environment* penv); // exe 0x142994e10
+};
+// The AmpMarker prototype object.
+class AmpMarkerProto : public Prototype<AmpMarker>
+{
+public:
+    AmpMarkerProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142917c90
 };
 // The listener list behind AsBroadcaster.initialize (the _listeners array of the broadcaster).
 class AsBroadcaster : public Object
@@ -63,6 +73,10 @@ public:
     static bool InitializeInstance(ASStringContext* psc, ObjectInterface* pobj);
 
     AsBroadcaster(Environment* penv); // exe 0x142918470
+    AsBroadcaster(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
     virtual ObjectType GetObjectType() const; // exe 0x142954140: Object_AsBroadcaster
 
 protected:
@@ -75,6 +89,7 @@ class AsBroadcasterProto : public Prototype<AsBroadcaster>
 public:
     static const NameFunction FunctionTable[]; // exe 0x143213460
 
+    AsBroadcasterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142918580
     static void AddListener(const FnCall& fn);      // exe 0x1428fbd10
     static void BroadcastMessage(const FnCall& fn); // exe 0x1428fbdc0
     static void RemoveListener(const FnCall& fn);   // exe 0x1428fbea0
@@ -83,37 +98,112 @@ class ExternalInterface : public Object
 {
 public:
     ExternalInterface(Environment* penv); // exe 0x14291bbd0
+    ExternalInterface(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954240: Object_ExternalInterface
 };
-class KeyObject : public Object {};
+// The ExternalInterface prototype object.
+class ExternalInterfaceProto : public Prototype<ExternalInterface>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213e30
+
+    ExternalInterfaceProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291bd50
+};
+class KeyObject : public Object
+{
+public:
+    KeyObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
+
+    virtual ObjectType GetObjectType() const; // exe 0x142954260: Object_Key
+};
+// The Key prototype object.
+class KeyProto : public Prototype<KeyObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432143a0
+
+    KeyProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291dbe0
+};
 class Math : public Object
 {
 public:
     Math(Environment* penv); // exe 0x14291e1a0
+    Math(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
+};
+// The Math prototype object.
+class MathProto : public Prototype<Math>
+{
+public:
+    MathProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291e6a0
 };
 class MouseObject : public Object
 {
 public:
     MouseObject(Environment* penv); // exe 0x14291eb20
+    MouseObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
 
 protected:
     void commonInit(Environment* penv); // exe 0x142995040
+};
+// The Mouse prototype object.
+class MouseProto : public Prototype<MouseObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213410
+
+    MouseProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291eb90
 };
 class Selection : public Object
 {
 public:
     Selection(Environment* penv); // exe 0x1429204d0
+    Selection(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
 
 protected:
     void commonInit(Environment* penv); // exe 0x142995100
+};
+// The Selection prototype object.
+class SelectionProto : public Prototype<Selection>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213040
+
+    SelectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920600
 };
 class StageObject : public Object
 {
 public:
     StageObject(Environment* penv); // exe 0x142920be0
+    StageObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954310: Object_Stage
+};
+// The Stage prototype object.
+class StageProto : public Prototype<StageObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213660
+
+    StageProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920c50
 };
 
 // 0x70 bytes.

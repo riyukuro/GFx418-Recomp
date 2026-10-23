@@ -3,6 +3,7 @@
 #ifndef MS2_SF_GFX_AS2_MATRIXOBJECT_H
 #define MS2_SF_GFX_AS2_MATRIXOBJECT_H
 
+#include "as2_objectproto.h"
 #include "as2_pointobject.h"
 #include "../../render/render_matrix2x4.h"
 
@@ -37,6 +38,10 @@ public:
     typedef Value GASMatrixArray[6];
 
     MatrixObject(Environment* penv); // exe 0x14291e790
+    MatrixObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+    }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954280: Object_Matrix
 
@@ -54,9 +59,13 @@ public:
 };
 
 // Matrix.prototype methods.
-class MatrixProto
+class MatrixProto : public Prototype<MatrixObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143213330
+
+    MatrixProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291e830
+
     static void ToString(const FnCall& fn);
     static void Clone(const FnCall& fn);
     static void Concat(const FnCall& fn);
