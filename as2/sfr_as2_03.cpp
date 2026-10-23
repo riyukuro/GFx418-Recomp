@@ -156,6 +156,7 @@
 // MS2-RANGE: 0x14291cde0-0x14291ce20 .text$mn
 // MS2-RANGE: 0x14291af50-0x14291b470 .text$mn
 // MS2-RANGE: 0x142926ab0-0x142926ae0 .text$mn
+// MS2-RANGE: 0x142920540-0x142920600 .text$mn
 // MS2-RANGE: 0x14291dcf0-0x14291dda0 .text$mn
 // MS2-RANGE: 0x14291dda0-0x14291df80 .text$mn
 // MS2-RANGE: 0x14291d150-0x14291d1e0 .text$mn
@@ -312,6 +313,19 @@ ObjectCtorFunction::ObjectCtorFunction(ASStringContext* psc)
 PointCtorFunction::PointCtorFunction(ASStringContext* psc)
     : CFunctionObject(psc, GlobalCtor)
 {
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142920540
+SelectionCtorFunction::SelectionCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    // AsBroadcaster::Initialize, its InitializeProto inlined.
+    ObjectInterface* pobj = this;
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
     NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
 }
@@ -1873,3 +1887,5 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_GStringCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142929140
 // MS2-PIN: ??_GArrayObject@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429291b0
 // MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
+// MS2-PIN: ??_7SelectionCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d558
+// MS2-PIN: ??_7SelectionCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d5e0

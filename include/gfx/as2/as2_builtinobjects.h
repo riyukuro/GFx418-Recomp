@@ -848,7 +848,20 @@ public:
 class SelectionCtorFunction : public CFunctionObject
 {
 public:
+    // A broadcaster with the static methods (exe 0x142920540).
+    SelectionCtorFunction(ASStringContext* psc);
+
+    // Selection cannot be instantiated (exe 0x142937230).
+    virtual Object* CreateNewObject(Environment*) const { return 0; }
+    // The focus properties (disableFocusRectangle, alwaysEnableArrowKeys, modalClip, ...) go to the movie
+    // (exe 0x142987090, 0x14294fc20).
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+
     static void GlobalCtor(const FnCall& fn); // exe 0x14295c650
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213dc0
 
 private:
     static void GetFocus(const FnCall& fn);      // exe 0x1428ffcd0
