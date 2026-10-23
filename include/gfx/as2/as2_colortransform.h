@@ -52,10 +52,16 @@ public:
 class ColorTransformCtorFunction : public CFunctionObject
 {
 public:
+    // (appended for sfr_as2_06) Inlined into Register in the exe.
+    ColorTransformCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c00
 
     // new ColorTransform(8 numbers) sets the multipliers and offsets (exe 0x142959bc0).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "ColorTransform" (exe 0x142976900).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // ColorTransform.prototype methods; the eight channels and rgb are added as plain members.

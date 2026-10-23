@@ -91,6 +91,13 @@
 // MS2-RANGE: 0x14297a4a0-0x14297a960 .text$mn
 // MS2-RANGE: 0x14297aca0-0x14297b190 .text$mn
 // MS2-RANGE: 0x14297bf80-0x14297c400 .text$mn
+// MS2-RANGE: 0x142976900-0x142976be0 .text$mn
+// MS2-RANGE: 0x142979d00-0x142979fe0 .text$mn
+// MS2-RANGE: 0x14297c400-0x14297c6e0 .text$mn
+// MS2-RANGE: 0x142977db0-0x142978240 .text$mn
+// MS2-RANGE: 0x142975f30-0x1429763c0 .text$mn
+// MS2-RANGE: 0x142975740-0x142975c20 .text$mn
+// MS2-RANGE: 0x14295d1c0-0x14295d320 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -104,6 +111,8 @@
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_stringobject.h"
+#include "../include/gfx/as2/as2_colortransform.h"
+#include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/kernel/sf_msgformat.h"
 
 // Stores *value under key in the hash at owner+0x10 and releases the passed reference (a folded hash set; the
@@ -841,6 +850,68 @@ FunctionRef TextSnapshotCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<TextSnapshotCtorFunction, TextSnapshotProto>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object, pgc->pGlobal);
 }
 
+// MS2-FUNCTIONAL the exe inlines the ColorTransformCtorFunction ctor
+// @0x142976900
+FunctionRef ColorTransformCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<ColorTransformCtorFunction, ColorTransformProto>(pgc, ASBuiltin_ColorTransform, ASBuiltin_Object, pgc->FlashGeomPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the RectangleCtorFunction ctor
+// @0x142979d00
+FunctionRef RectangleCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<RectangleCtorFunction, RectangleProto>(pgc, ASBuiltin_Rectangle, ASBuiltin_Object, pgc->FlashGeomPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the TransformCtorFunction ctor
+// @0x14297c400
+FunctionRef TransformCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<TransformCtorFunction, TransformProto>(pgc, ASBuiltin_Transform, ASBuiltin_Object, pgc->FlashGeomPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the GASMatrixCtorFunction and MatrixProto ctors (sfr_as2_03)
+// @0x142977db0
+FunctionRef GASMatrixCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<GASMatrixCtorFunction, MatrixProto>(pgc, ASBuiltin_Matrix, ASBuiltin_Object, pgc->FlashGeomPackage);
+}
+
+// MS2-FUNCTIONAL the exe inlines the ColorCtorFunction and ColorProto ctors (sfr_as2_03)
+// @0x142975f30
+FunctionRef ColorCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<ColorCtorFunction, ColorProto>(pgc, ASBuiltin_Color, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// MS2-FUNCTIONAL the exe inlines the ButtonCtorFunction and ButtonProto ctors (sfr_as2_03)
+// @0x142975740
+FunctionRef ButtonCtorFunction::Register(GlobalContext* pgc)
+{
+    return RegisterBuiltinClass<ButtonCtorFunction, ButtonProto>(pgc, ASBuiltin_Button, ASBuiltin_Object, pgc->pGlobal);
+}
+
+// @0x14295d1c0
+void TransformCtorFunction::GlobalCtor(const FnCall& fn)
+{
+    if (fn.NArgs < 1)
+        return;
+    InteractiveObject* ptarget = fn.Env->FindTargetByValue(fn.Arg(0));
+    if (!ptarget)
+    {
+        fn.Result->SetUndefined();
+        return;
+    }
+    Ptr<TransformObject> ptransform;
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Transform && !fn.ThisPtr->IsBuiltinPrototype())
+        ptransform = static_cast<TransformObject*>(fn.ThisPtr);
+    else
+        ptransform = *SF_HEAP_NEW(fn.Env->GetHeap()) TransformObject(fn.Env);
+    ptransform->SetTarget(ptarget);
+    fn.Result->SetAsObject(ptransform.GetPtr());
+}
+
 
 }}} // namespace Scaleform::GFx::AS2
 
@@ -1034,3 +1105,15 @@ template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS2::
 // MS2-PIN: ?LogError@?$LogBase@VEnvironment@AS2@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x142967b90
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
+// MS2-PIN: ??_7ColorTransformCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432193a0
+// MS2-PIN: ??_7ColorTransformCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219428
+// MS2-PIN: ??_7RectangleCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432197b0
+// MS2-PIN: ??_7RectangleCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219838
+// MS2-PIN: ??_7TransformCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219bc0
+// MS2-PIN: ??_7TransformCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219c48
+// MS2-PIN: ??_7GASMatrixCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218f90
+// MS2-PIN: ??_7GASMatrixCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219018
+// MS2-PIN: ??_7ColorCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218b80
+// MS2-PIN: ??_7ColorCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143218c08
+// MS2-PIN: ??_7ButtonCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217f28
+// MS2-PIN: ??_7ButtonCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217fb0

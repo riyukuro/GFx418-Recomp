@@ -903,7 +903,16 @@ public:
 class TransformCtorFunction : public CFunctionObject
 {
 public:
+    // (appended for sfr_as2_06) Inlined into Register in the exe.
+    TransformCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429374b0
+    // (appended for sfr_as2_06) new Transform(target) / Transform(target) for the movie clip target; undefined
+    // without one (exe 0x14295d1c0).
+    static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Transform" (exe 0x14297c400).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The AmpMarker class: one static method that puts a named marker into the profiler stats of the movie.
@@ -1040,9 +1049,15 @@ public:
 class ColorCtorFunction : public CFunctionObject
 {
 public:
+    // (appended for sfr_as2_06) Inlined into Register in the exe.
+    ColorCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936b10
     // Color(target) as a constructor retargets the instance, as a function makes a new one (exe 0x142959740).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Color" (exe 0x142975f30).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The flash.display.BitmapData class.
@@ -1099,7 +1114,15 @@ public:
 class ButtonCtorFunction : public CFunctionObject
 {
 public:
+    // (appended for sfr_as2_06) Inlined into Register in the exe.
+    ButtonCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936a50
+    // (appended for sfr_as2_06) Button() does nothing (exe 0x142959730, folded with other empty functions).
+    static void GlobalCtor(const FnCall&) {}
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Button" (exe 0x142975740).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The MovieClip class.

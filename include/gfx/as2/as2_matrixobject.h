@@ -57,10 +57,16 @@ public:
 class GASMatrixCtorFunction : public CFunctionObject
 {
 public:
+    // (appended for sfr_as2_06) Inlined into Register in the exe.
+    GASMatrixCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e50
 
     // new Matrix(a, b, c, d, tx, ty) sets the given members (exe 0x14295b020).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Matrix" (exe 0x142977db0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // Matrix.prototype methods.

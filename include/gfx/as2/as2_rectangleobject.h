@@ -85,11 +85,17 @@ public:
 class RectangleCtorFunction : public CFunctionObject
 {
 public:
+    // (appended for sfr_as2_06) Inlined into Register in the exe.
+    RectangleCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429371f0
 
     // new Rectangle(x, y, w, h) / Rectangle(...): the instance (a new one when called as a function) with the
     // given properties set (exe 0x14295c3a0).
     static void GlobalCtor(const FnCall& fn);
+
+    // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Rectangle" (exe 0x142979d00).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 }}} // namespace Scaleform::GFx::AS2
