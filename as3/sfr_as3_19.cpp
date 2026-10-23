@@ -77,6 +77,17 @@ CheckResult Value::ToUInt32Value()
     return converted;
 }
 
+// MS2-FUNCTIONAL 0x14252fe10: converts into an ASString and assigns it back; the exe routes allocation through the supplied StringManager.
+// @0x14252fe10
+CheckResult Value::ToStringValue(StringManager& stringManager)
+{
+    ASString string = stringManager.CreateString("", 0);
+    CheckResult converted = Convert2String(string);
+    if (converted)
+        Assign(string);
+    return converted;
+}
+
 // MS2-FUNCTIONAL 0x142527560: updates the pair and key-to-latest-slot chain; inlined refcount/hash paths differ.
 // @0x142527560
 void SlotContainerType::SetKey(AbsoluteIndex ind, const ASString& key)
