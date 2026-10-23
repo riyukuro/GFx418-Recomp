@@ -695,6 +695,46 @@ Class& VM::GetClassVectorUInt() const
     return TraitsVector_uint->GetInstanceTraits().GetConstructor();
 }
 
+// The class traits of v's type: the boxed class for primitives, Function for closures and thunks, the class of
+// the object otherwise (Object for null).
+// @0x142507f60
+const ClassTraits::Traits& VM::GetClassTraits(const Value& v) const
+{
+    switch (v.GetKind())
+    {
+    case Value::kBoolean:
+        return GetClassTraitsBoolean();
+    case Value::kInt:
+        return GetClassTraitsSInt();
+    case Value::kUInt:
+        return GetClassTraitsUInt();
+    case Value::kNumber:
+        return GetClassTraitsNumber();
+    case Value::kString:
+        if (v.GetStringNode())
+            return GetClassTraitsString();
+        return GetClassTraitsObject();
+    case Value::kClass:
+        return v.AsClass().GetClassTraits();
+    case Value::kNamespace:
+        return GetClassTraitsNamespace();
+    case Value::kThunk:
+    case Value::kVTableInd:
+    case Value::kFunction:
+    case Value::kThunkFunction:
+    case Value::kThunkClosure:
+    case Value::kVTableIndClosure:
+        return GetClassTraitsFunction();
+    case Value::kClassTraits:
+        return v.GetClassTraits();
+    default:
+        break;
+    }
+    if (v.GetObject())
+        return v.GetObject()->GetTraits().GetConstructor().GetClassTraits();
+    return GetClassTraitsObject();
+}
+
 // @0x142504580
 void Traits::ForEachChild_GC_Slot(Collector* prcc, const Object& obj, GcOp op) const
 {
