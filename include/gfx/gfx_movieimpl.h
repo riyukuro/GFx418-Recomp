@@ -1,6 +1,9 @@
 // Recovered Scaleform 4.1.18 GFx: the movie implementation (MovieImpl), as far as the recovered units call into it.
-// Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder. The bases (Movie :
-// RefCountBase, StateBag) are not recovered yet; their words are kept as placeholders up to the members read.
+// Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
+// By default MovieImpl is a plain layout mirror: the Movie base (RefCountBase + StateBag + pASMovieRoot,
+// gfx_player.h) is kept as placeholder words, so units with a local class Movie of their own can include this.
+// A unit that defines SF_GFX_PLAYERIMPL before including it gets the real polymorphic MovieImpl : Movie (the
+// player units, sfr_gfx_01i on); the layout is the same either way (0x3650 bytes).
 #ifndef MS2_SF_GFX_MOVIEIMPL_H
 #define MS2_SF_GFX_MOVIEIMPL_H
 
@@ -9,6 +12,9 @@
 #include "../render/render_twips.h"
 #include "../kernel/sf_string.h"
 #include "../kernel/sf_array.h"
+#ifdef SF_GFX_PLAYERIMPL
+#include "gfx_player.h"
+#endif
 
 namespace Scaleform {
 class File;
@@ -69,11 +75,18 @@ enum FocusMovedType
 #endif
 
 class MovieImpl
+#ifdef SF_GFX_PLAYERIMPL
+    : public Movie
+#endif
 {
 public:
+#ifndef SF_GFX_PLAYERIMPL
     void*            MovieBase_Unrecovered[3]; // +0x00 RefCountBase vftable + count, StateBag vftable
     ASMovieRootBase* pASMovieRoot;             // +0x18 Ptr<ASMovieRootBase>: the AVM specific root
-    void*            Unrecovered_20[3];        // +0x20
+#endif
+    LoadQueueEntry*  pLoadQueueHead;           // +0x20 the load requests processed on the next advance
+    UInt32           LastLoadQueueEntryCnt;    // +0x28
+    void*            pAdvanceStats;            // +0x30 Ptr<AMP::ViewStats> (GetStats)
     void*            pObjectInterface;         // +0x38 Value::ObjectInterface*: how host values reach the VM objects
     MemoryHeap*      pHeap;                    // +0x40 the movie's heap
     MovieDefImpl*    pMainMovieDef;            // +0x48 Ptr<MovieDefImpl>: the _level0 movie (sfr_gfx_07f)
@@ -81,40 +94,68 @@ public:
     struct LevelInfo { int Level; InteractiveObject* pSprite; };   // (sfr_gfx_06)
     LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
     UPInt            MovieLevelsSize;          // +0x60 MovieLevels size
-    void*            Unrecovered_68;           // +0x68
+    UPInt            MovieLevelsCapacity;      // +0x68
     MovieDefRootNodeLinks RootMovieDefNodes;   // +0x70 the root nodes of the loaded movies (sfr_gfx_06d)
     StateBagImpl*    pStateBag;                // +0x80 Ptr<StateBagImpl>: the movie's own states (sfr_video_01)
     Render::TreeNode* pRenderRoot;             // +0x88 Ptr<TreeRoot> (sfr_gfx_06)
-    void*            Unrecovered_90;           // +0x90
+    void*            hDisplayRoot;             // +0x90 DisplayHandle<TreeRoot> (GetDisplayHandle)
     Render::TreeNode* pTopMostRoot;            // +0x98 Ptr<TreeContainer> (sfr_gfx_06)
+#ifdef SF_GFX_PLAYERIMPL
+    Viewport         mViewport;                // +0xa0 (0x34 bytes)
+#else
     int              ViewportUnrecovered_a0[4]; // +0xa0 mViewport: buffer size, left/top
     int              ViewportWidth;            // +0xb0 mViewport.Width, pixels (sfr_gfx_06)
     int              ViewportHeight;           // +0xb4 mViewport.Height
-    UByte            ViewportUnrecovered_b8[0x20]; // +0xb8 mViewport: scissor, flags, scale, aspect
+    int              ViewportScissor[4];       // +0xb8 mViewport scissor rect
+    unsigned         ViewportFlags;            // +0xc8 mViewport.Flags
+    float            ViewportScale;            // +0xcc mViewport.Scale
+    float            ViewportAspectRatio;      // +0xd0 mViewport.AspectRatio
+#endif
+    float            PixelScale;               // +0xd4
     float            ViewScaleX, ViewScaleY;   // +0xd8 stage twips per window pixel (sfr_gfx_06)
     float            ViewOffsetX, ViewOffsetY; // +0xe0 viewport offset in pixels (sfr_gfx_06)
-    void*            Unrecovered_e8;           // +0xe8
+    int              ViewScaleMode;            // +0xe8 Movie::ScaleModeType
+    int              ViewAlignment;            // +0xec Movie::AlignType
     Render::RectF    VisibleFrameRect;         // +0xf0 the visible stage, twips
-    void*            Unrecovered_100[6];       // +0x100
+    Render::RectF    SafeRect;                 // +0x100 the title-safe rect, twips
+    float            ViewportMatrix[2][4];     // +0x110 Matrix2F: stage twips -> viewport pixels
     float            ScreenToWorldSx;          // +0x130 ScreenToWorld: the normalized mouse position (y up)
     float            ScreenToWorldSy;          // +0x134
-    void*            Unrecovered_138[0x1e];    // +0x138
+    void*            ScreenToWorldRest[0x1d];  // +0x138 the rest of Render::ScreenToWorld
+    void*            Unrecovered_220;          // +0x220 (this build only: 8 bytes before the cached log)
     Ptr<Log>         pCachedLog;               // +0x228 the log state's log, cached (sfr_gfx_06)
     UserEventHandler* pUserEventHandler;       // +0x230 Ptr<UserEventHandler>: cached during advance (sfr12)
     void*            pFSCommandHandler;        // +0x238 Ptr<FSCommandHandler>
     ExternalInterface* pExtIntfHandler;        // +0x240 Ptr<ExternalInterface>: the host's ExternalInterface.call hook
     FontManagerStates* pFontManagerStates;     // +0x248 Ptr: the font states the movies' font managers share (sfr_gfx_06d)
-    void*            Unrecovered_250[4];       // +0x250
-    UInt32           Unrecovered_270;          // +0x270
+    void*            pAudio;                   // +0x250 AudioBase*
+    void*            pSoundRenderer;           // +0x258
+    void*            pXMLObjectManager;        // +0x260
+    UInt64           TimeElapsed;              // +0x268
+    float            TimeRemainder;            // +0x270
     float            FrameTime;                // +0x274 seconds per frame (sfr_video_01 SetSwfSync)
-    void*            Unrecovered_278[0x204];   // +0x278
+    unsigned         ForceFrameCatchUp;        // +0x278
+    void*            InputEventsQueue[0xfd8 / 8]; // +0x280 InputEventsQueue
+    UInt32           BackgroundColor;          // +0x1258 Render::Color (alpha in the top byte)
+    void*            MouseState0_1260[7];      // +0x1260 mMouseState[4], 0x50 bytes each: buttons at +0x30
     Render::PointF   MouseLastPosition;        // +0x1298 MouseState[0] last position, twips (sfr_gfx_06)
-    void*            Unrecovered_12a0[0x22];   // +0x12a0
+    UByte            MouseStatesRest[0x100];   // +0x12a0 the rest of mMouseState
+    unsigned         MouseCursorCount;         // +0x13a0 the mice in use (up to 4)
+    unsigned         ControllerCount;          // +0x13a4
+    void*            UserData;                 // +0x13a8 the host's
     UByte            KeyboardStates[4][0x688]; // +0x13b0 KeyboardState[4] (gfx_keyboardstate.h), one per keyboard
-    void*            Unrecovered_2dd0[2];      // +0x2dd0
+    void*            pRetValHolder;            // +0x2dd0
+    unsigned         InstanceNameCount;        // +0x2dd8 the instanceN names handed out
     // A character the timeline keeps advancing even when stopped (MS2 build; Sprite::CheckAdvanceStatus).
-    DisplayObjectBase* pKeepAdvancingChar;     // +0x2de0
-    void*            Unrecovered_2de8[0xf];    // +0x2de8
+    DisplayObjectBase* pKeepAdvancingChar;     // +0x2de0 CurrentDragState (0x28 bytes, DragState below)
+    UByte            CurrentDragStateRest[0x20]; // +0x2de8
+    void*            StickyVariables;          // +0x2e08 ASStringHash<StickyVarNode*>
+    void*            TopmostLevelCharacters[3]; // +0x2e10 ArrayLH<Ptr<InteractiveObject>>
+    UInt64           StartTickMs;              // +0x2e28
+    UInt64           PauseTickMs;              // +0x2e30
+    void*            IntervalTimers[3];        // +0x2e38 ArrayLH<Ptr<ASIntervalTimerIntf>>
+    int              LastIntervalTimerId;      // +0x2e50
+    void*            FocusRectContainerNode;   // +0x2e58 Ptr<TreeContainer>
 
     // Keyboard focus state of one focus group (one per controller group; 0x60 bytes, 16-aligned).
     struct FocusGroupDescr
@@ -128,10 +169,10 @@ public:
     FocusGroupDescr  FocusGroups[16];          // +0x2e60
     unsigned         FocusGroupsCnt;           // +0x3460 the focus groups in use (Selection.numFocusGroups)
     UByte            FocusGroupIndexes[16];    // +0x3464 controller index -> focus group
-    UByte            Unrecovered_3474[4];      // +0x3474
-    InteractiveObject* pPlayList;              // +0x3478 the advance list, last added first (sfr_gfx_06b)
+    bool             FocusRectChanged;         // +0x3474
+    InteractiveObject* pPlayList;              // +0x3478 pPlayListHead: the advance list, last added first (sfr_gfx_06b)
     InteractiveObject* pPlayListOptHead;       // +0x3480 the optimized advance list (sfr_gfx_06b)
-    UByte            Unrecovered_3488[8];      // +0x3488
+    InteractiveObject* pUnloadListHead;        // +0x3488
     UInt32           Flags;                    // +0x3490
 
     enum FlagsType
@@ -178,13 +219,21 @@ public:
 
     // (appended for the display objects, sfr_gfx_06)
     UInt32           Flags2;                   // +0x3494 (sfr_gfx_06b)
-    UByte            Unrecovered_3498[8];      // +0x3498
+    IMECandidateListStyle* pIMECandidateListStyle; // +0x3498
     LoadQueueEntryMT* pLoadQueueMTHead;        // +0x34a0 the loader-thread entries, newest first (sfr19)
-    UByte            Unrecovered_34a8[0x48];   // +0x34a8
-    void*            RenderContext[1];         // +0x34f0 Render::Context (gfx_rendertree.h: the heap first), rest unrecovered
-    UByte            Unrecovered_34f8[0x3630 - 0x34f8]; // +0x34f8 rest of the context, the tail of the movie
+    void*            RegisteredFonts[3];       // +0x34a8 ArrayLH<FontDesc>
+    void*            DrawingContextList[2];    // +0x34c0 List<DrawingContext>
+    void*            MovieDefKillList[3];      // +0x34d0 Array<MDKillListEntry>
+    ASMovieRootBase* pSavedASMovieRoot;        // +0x34e8 Ptr<ASMovieRootBase>
+    void*            RenderContext[0x22];      // +0x34f0 Render::ContextImpl::Context (0x110; gfx_rendertree.h: the heap first)
+    bool             PreviouslyCaptured;       // +0x3600 bumped by ForceUpdateImages
+    void*            DIContext;                // +0x3608 Ptr<Render::DrawableImageContext>
+    void*            pRTCommandQueue;          // +0x3610 ThreadCommandQueue*
+    void*            MultitouchHAL;            // +0x3618 Ptr<MultitouchInterface>
+    int              MultitouchMode;           // +0x3620 MultitouchInputMode
+    InteractiveObject* GestureTopMostChar;     // +0x3628 Ptr<InteractiveObject>
     int              DeviceOrientation;        // +0x3630 OrientationEvent: 0 default, 1 rotated left, 2 right, 3 upside down (sfr19)
-    UByte            Unrecovered_3634[0x3650 - 0x3634]; // +0x3634
+    void*            IndirectTransformPairs[3]; // +0x3638 ArrayLH<IndirectTransPair>
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
     bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
@@ -197,7 +246,11 @@ public:
     Sprite* GetModalClip(unsigned controllerIdx);
 
     // The movie's StateBag base (+0x10).
+#ifdef SF_GFX_PLAYERIMPL
+    StateBag* GetStateBag() const { return const_cast<MovieImpl*>(this); }
+#else
     StateBag* GetStateBag() const { return (StateBag*)&MovieBase_Unrecovered[2]; }
+#endif
     MemoryHeap* GetMovieHeap() const { return pHeap; }
     // Appends a load request to the queue processed on the next advance (exe 0x14256bdf0).
     void AddLoadQueueEntry(LoadQueueEntry* pentry);
@@ -366,7 +419,85 @@ public:
         WideStringStorage(ASStringNode* pnode);
         virtual ~WideStringStorage();
     };
+
+#ifdef SF_GFX_PLAYERIMPL
+    // (sfr_gfx_01i) the Movie interface; exe vftables 0x143183640 (68 slots) and 0x143183860 (StateBag).
+    virtual ~MovieImpl();
+    virtual StateBag*      GetStateBagImpl() const;
+
+    virtual MovieDef*      GetMovieDef() const;
+    virtual unsigned       GetCurrentFrame() const;
+    virtual bool           HasLooped() const;
+    virtual void           GotoFrame(unsigned frameNumber);
+    virtual bool           GotoLabeledFrame(const char* plabel, int offset = 0);
+    virtual void           SetPlayState(PlayState s);
+    virtual PlayState      GetPlayState() const;
+    virtual void           SetVisible(bool visible);
+    virtual bool           GetVisible() const;
+    virtual UInt64         GetASTimerMs() const;
+    virtual void           SetViewport(const Viewport& viewDesc);
+    virtual void           GetViewport(Viewport* pviewDesc) const;
+    virtual void           SetViewScaleMode(ScaleModeType);
+    virtual ScaleModeType  GetViewScaleMode() const;
+    virtual void           SetViewAlignment(AlignType);
+    virtual AlignType      GetViewAlignment() const;
+    virtual Render::RectF  GetVisibleFrameRect() const;
+    virtual Render::RectF  GetSafeRect() const;
+    virtual void           SetSafeRect(const Render::RectF& rect);
+    virtual void           SetEdgeAAMode(Render::EdgeAAMode edgeAA);
+    virtual Render::EdgeAAMode GetEdgeAAMode() const;
+    virtual void           Restart(bool advance0 = true);
+    virtual float          Advance(float deltaT, unsigned frameCatchUpCount = 2, bool capture = true);
+    virtual void           Capture(bool onChangeOnly = true);
+    virtual const Render::ContextImpl::DisplayHandle<Render::TreeRoot>& GetDisplayHandle() const;
+    virtual void           SetCaptureThread(void* captureThreadId);
+    virtual void           ShutdownRendering(bool wait);
+    virtual bool           IsShutdownRenderingComplete() const;
+    virtual void           SetPause(bool pause);
+    virtual bool           IsPaused() const;
+    virtual void           SetBackgroundColor(const Render::Color bgColor);
+    virtual void           SetBackgroundAlpha(float alpha);
+    virtual float          GetBackgroundAlpha() const;
+    virtual unsigned       HandleEvent(const Event& event);
+    virtual void           GetMouseState(unsigned mouseIndex, float* x, float* y, unsigned* buttons);
+    virtual void           NotifyMouseState(float x, float y, unsigned buttons, unsigned mouseIndex = 0);
+    virtual bool           HitTest(float x, float y, HitTestType testCond = HitTest_Shapes, unsigned controllerIdx = 0);
+    virtual void*          GetUserData() const;
+    virtual void           SetUserData(void*);
+    virtual bool           IsMovieFocused() const;
+    virtual bool           GetDirtyFlag(bool doReset = true);
+    virtual void           SetMouseCursorCount(unsigned n);
+    virtual unsigned       GetMouseCursorCount() const;
+    virtual void           SetControllerCount(unsigned n);
+    virtual unsigned       GetControllerCount() const;
+    virtual void           GetStats(::Scaleform::StatBag* pbag, bool reset = true);
+    virtual MemoryHeap*    GetHeap() const;
+    virtual void           ForceCollectGarbage();
+    virtual void           PrintObjectsReport(UInt32 flags = 0, Log* log = 0, const char* swfName = 0);
+    virtual Render::PointF TranslateToScreen(const Render::PointF& p, Render::Matrix2x4<float>* puserMatrix = 0);
+    virtual Render::RectF  TranslateToScreen(const Render::RectF& p, Render::Matrix2x4<float>* puserMatrix = 0);
+    virtual bool           TranslateLocalToScreen(const char* pathToCharacter, const Render::PointF& pt,
+                                                  Render::PointF* presPt, Render::Matrix2x4<float>* userMatrix = 0);
+    virtual bool           SetControllerFocusGroup(unsigned controllerIdx, unsigned focusGroupIndex);
+    virtual unsigned       GetControllerFocusGroup(unsigned controllerIdx) const;
+    virtual void           ResetInputFocus(unsigned controllerIdx);
+    virtual bool           IsExitRequested() const;
+    virtual void           GetViewMatrix3D(Render::Matrix3x4<float>*);
+    virtual void           SetViewMatrix3D(const Render::Matrix3x4<float>& m);
+    virtual void           GetProjectionMatrix3D(Render::Matrix4x4<float>*);
+    virtual void           SetProjectionMatrix3D(const Render::Matrix4x4<float>& m);
+    virtual void           SetStageAutoOrients(bool v = true);
+    virtual void           ForceUpdateImages();
+    virtual void           MakeAreaVisible(const Render::RectF& screenRect, const Render::RectF& box, UInt32 flags = 0);
+    virtual void           RestoreViewport();
+    // MovieImpl's own (slots 65..67).
+    virtual void           SetVerboseAction(bool verboseAction);
+    virtual void           SetActionErrorsSuppress(bool suppressErrors);
+    virtual bool           AcceptAnimMovesWith3D() const;
+#endif
 };
+
+static_assert(sizeof(MovieImpl) == 0x3650, "MovieImpl size (ctor allocation 0x3650)");
 
 // The leading Movie vftable slots, for the virtual calls MovieImpl makes on itself (GetVisibleFrameRect).
 class __declspec(novtable) MovieInterface418

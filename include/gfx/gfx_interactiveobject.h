@@ -14,11 +14,15 @@ namespace Scaleform { namespace GFx {
 class SoundResource;
 class ASSoundIntf;
 
+// (also in gfx_player.h)
+#ifndef SF_GFX_PLAYSTATE
+#define SF_GFX_PLAYSTATE
 enum PlayState
 {
     State_Playing,
     State_Stopped
 };
+#endif
 
 #ifndef SF_GFX_FOCUSMOVEDTYPE
 #define SF_GFX_FOCUSMOVEDTYPE
