@@ -917,6 +917,24 @@ void* FUN_140005430(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: releases the base object's shared state and optionally its storage.
+// @0x140004f30
+void* FUN_140004f30(void* object, unsigned flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: releases the base object's shared state and optionally its storage.
+// @0x140005610
+void* FUN_140005610(void* object, unsigned flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
 // MS2-FUNCTIONAL: constructs the function and local-frame references from the supplied fields.
 // @0x140005590
 Scaleform::GFx::AS2::FunctionRefBase* FUN_140005590(
