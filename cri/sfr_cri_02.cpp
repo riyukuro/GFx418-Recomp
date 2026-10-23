@@ -201,6 +201,7 @@ void     FUN_140036e30(void* player, CriMvSubtitleChunk* chunk);
 void     FUN_140036e80(void* player, CriMvSubtitleChunk* chunk);
 void     FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
 void     FUN_140046784(void* streamJoint);
+void     FUN_140027fb4(void* heap, void* memory);
 void     FUN_140046798(void* streamJoint);
 void     FUN_1400420b0(void* manager, void* heap);
 void     FUN_140043be0(void* decoder);
@@ -3505,6 +3506,46 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
         FUN_1400467b0(source, 0, &chunk);
     }
     (void)copied;
+}
+
+// MS2-FUNCTIONAL: release the player's output stream, decoder work area, and callback-owned buffers.
+// @0x140031f40
+CriBool FUN_140031f40(void* player)
+{
+    struct CleanupView
+    {
+        CriUint8 Reserved0[0xde8];
+        void* Heap;
+        CriUint8 ReservedDF0[0xe78 - 0xdf0];
+        void* StreamJoint;
+        CriUint8 ReservedE80[0xec0 - 0xe80];
+        void* Work;
+        CriUint8 ReservedEC8[0xef0 - 0xec8];
+        void (*Release)(void*, void*);
+        void* ReleaseContext;
+        void* CallbackBuffer;
+        void* WorkReleaseBuffer;
+    };
+    CleanupView* state = (CleanupView*)player;
+    if (state->StreamJoint)
+    {
+        FUN_140046784(state->StreamJoint);
+        state->StreamJoint = NULL;
+        if (state->CallbackBuffer)
+            state->Release(state->ReleaseContext, state->CallbackBuffer);
+    }
+    if (state->Work)
+    {
+        if (!state->WorkReleaseBuffer)
+        {
+            if (state->Heap)
+                FUN_140027fb4(state->Heap, state->Work);
+        }
+        else
+            state->Release(state->ReleaseContext, state->WorkReleaseBuffer);
+        state->Work = NULL;
+    }
+    return 1;
 }
 
 // MS2-FUNCTIONAL: advance a completed video or alpha decoder through the metadata and stop phases.
