@@ -1119,6 +1119,67 @@ insert_string:
 
 void ResizeStrongPointerArrayB(void**, std::size_t);
 void FUN_14257dc30(void*);
+static void AddMovieViewHashEntry(void** setObject, void* allocator, std::uint64_t key, void* value)
+{
+    auto* table = static_cast<std::uint64_t*>(*setObject);
+    std::uint64_t capacity = 8;
+    if (table) {
+        if (table[0] * 5 > table[1] * 4 + 4)
+            capacity = table[1] * 2 + 2;
+        else
+            capacity = 0;
+    }
+    if (capacity)
+        FUN_1426251d0(setObject, allocator, static_cast<std::int64_t>(capacity));
+    table = static_cast<std::uint64_t*>(*setObject);
+    const std::uint64_t bucket = HashImageKey(reinterpret_cast<const unsigned char*>(&key)) & table[1];
+    auto* home = table + 2 + bucket * 4;
+    if (static_cast<std::int64_t>(home[0]) != -2) {
+        std::uint64_t index = bucket;
+        auto* entry = home;
+        while (entry[1] == bucket) {
+            if (entry[2] == key) {
+                if (value) FUN_14257dc30(value);
+                if (entry[3]) FUN_14257dcb0(reinterpret_cast<void*>(entry[3]));
+                entry[3] = reinterpret_cast<std::uint64_t>(value);
+                return;
+            }
+            if (entry[0] == UINT64_MAX)
+                break;
+            index = entry[0];
+            entry = table + 2 + index * 4;
+        }
+        std::uint64_t empty = bucket;
+        do {
+            empty = (empty + 1) & table[1];
+        } while (static_cast<std::int64_t>(table[2 + empty * 4]) != -2);
+        ++table[0];
+        auto* target = table + 2 + empty * 4;
+        if (home[1] == bucket) {
+            target[0] = home[0]; target[1] = bucket; target[2] = home[2]; target[3] = home[3];
+            home[0] = empty;
+        } else {
+            std::uint64_t previousIndex = home[1];
+            auto* previous = table + 2 + previousIndex * 4;
+            while (previous[0] != bucket) {
+                previousIndex = previous[0];
+                previous = table + 2 + previousIndex * 4;
+            }
+            target[0] = home[0]; target[1] = home[1]; target[2] = home[2]; target[3] = home[3];
+            previous[0] = empty;
+            home[0] = UINT64_MAX;
+        }
+        home = target;
+    } else {
+        ++table[0];
+        home[0] = UINT64_MAX;
+        home[1] = bucket;
+    }
+    if (value) FUN_14257dc30(value);
+    home[2] = key;
+    home[3] = reinterpret_cast<std::uint64_t>(value);
+}
+
 // MS2-FUNCTIONAL: intersects the scalar limits, adds unique tagged strings with retained references, and merges the four nested resource tables.
 // @0x14268b280
 void MergeMovieResourceTables(void* destination, void* source)
@@ -1176,6 +1237,56 @@ void* FindTreeNodeByKey(void* node, int key)
             return found;
     }
     return nullptr;
+}
+
+// MS2-FUNCTIONAL: appends retained tree entries, repairs cumulative child counters, and merges movie-to-manager hash entries.
+// @0x14268ac40
+extern "C" void FUN_14268ac40(void* destination, void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto* src = static_cast<unsigned char*>(source);
+    const std::size_t oldCount = *reinterpret_cast<std::size_t*>(dst + 0x20);
+    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x20);
+    Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(dst + 0x18), oldCount + sourceCount);
+    auto** dstItems = *reinterpret_cast<void***>(dst + 0x18);
+    auto** srcItems = *reinterpret_cast<void***>(src + 0x18);
+    for (std::size_t i = 0; i < sourceCount; ++i) {
+        if (srcItems[i]) FUN_14257dc30(srcItems[i]);
+        dstItems[oldCount + i] = srcItems[i];
+    }
+
+    const std::size_t count = *reinterpret_cast<std::size_t*>(dst + 0x20);
+    for (std::size_t i = 1; i < count; ++i) {
+        auto* previous = static_cast<unsigned char*>(dstItems[i - 1]);
+        auto* current = static_cast<unsigned char*>(dstItems[i]);
+        int base = *reinterpret_cast<int*>(previous + 0x28);
+        auto** previousChildren = *reinterpret_cast<void***>(previous + 0x30);
+        const std::size_t previousCount = *reinterpret_cast<std::size_t*>(previous + 0x38);
+        for (std::size_t j = 0; j < previousCount; ++j)
+            Scaleform::UpdateTreeMaximumDepth(previousChildren[j], reinterpret_cast<unsigned*>(&base));
+        auto** currentChildren = *reinterpret_cast<void***>(current + 0x30);
+        const std::size_t currentCount = *reinterpret_cast<std::size_t*>(current + 0x38);
+        for (std::size_t j = 0; j < currentCount; ++j) {
+            auto* child = static_cast<unsigned char*>(currentChildren[j]);
+            *reinterpret_cast<int*>(child + 0x28) += base;
+            auto** grandchildren = *reinterpret_cast<void***>(child + 0x30);
+            const std::size_t grandchildCount = *reinterpret_cast<std::size_t*>(child + 0x38);
+            for (std::size_t k = 0; k < grandchildCount; ++k)
+                Scaleform::AddTreeNodeValue(grandchildren[k], &base);
+        }
+    }
+
+    auto* sourceTable = *reinterpret_cast<std::uint64_t**>(src + 0x30);
+    if (!sourceTable)
+        return;
+    const std::uint64_t mask = sourceTable[1];
+    for (std::uint64_t i = 0; i <= mask; ++i) {
+        auto* entry = sourceTable + 2 + i * 4;
+        if (static_cast<std::int64_t>(entry[0]) == -2)
+            continue;
+        AddMovieViewHashEntry(reinterpret_cast<void**>(dst + 0x30), dst + 0x30,
+                              entry[2], reinterpret_cast<void*>(entry[3]));
+    }
 }
 }
 
