@@ -141,6 +141,7 @@
 // MS2-RANGE: 0x14294dd10-0x14294de69 .text$mn
 // MS2-RANGE: 0x14294f260-0x14294f4ef .text$mn
 // MS2-RANGE: 0x14294ec10-0x14294ef4f .text$mn
+// MS2-RANGE: 0x14294d800-0x14294dbd7 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -3058,6 +3059,78 @@ bool DropShadowFilterObject::GetMember(Environment* penv, const ASString& name, 
     else if (strcmp(pname, "quality") == 0)
     {
         val->SetInt_Call(readonlyFilterParams().Passes);
+        return true;
+    }
+    else if (strcmp(pname, "strength") == 0)
+    {
+        val->SetNumber(readonlyFilterParams().Strength);
+        return true;
+    }
+    return GetMemberRaw(penv->GetSC(), name, val);
+}
+
+// MS2-FUNCTIONAL the exe tests the inner bit for "type" after loading the string manager (shift + test cl); ours tests the byte first
+// @0x14294d800
+bool BevelFilterObject::GetMember(Environment* penv, const ASString& name, Value* val)
+{
+    const char* pname = name.ToCStr();
+    if (strcmp(pname, "angle") == 0)
+    {
+        val->SetInt((int)BitmapFilter_GetAngle(this));
+        return true;
+    }
+    else if (strcmp(pname, "blurX") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurX));
+        return true;
+    }
+    else if (strcmp(pname, "blurY") == 0)
+    {
+        val->SetNumber(Render::TwipsToPixels(readonlyFilterParams().BlurY));
+        return true;
+    }
+    else if (strcmp(pname, "distance") == 0)
+    {
+        val->SetInt_Call((int)BitmapFilter_GetDistance(this));
+        return true;
+    }
+    else if (strcmp(pname, "highlightAlpha") == 0)
+    {
+        val->SetNumber(GetAlpha());
+        return true;
+    }
+    else if (strcmp(pname, "highlightColor") == 0)
+    {
+        val->SetUInt_Call(readonlyFilterParams().Colors[0].ToColor32() & 0xFFFFFF);
+        return true;
+    }
+    else if (strcmp(pname, "shadowAlpha") == 0)
+    {
+        UByte alpha = readonlyFilterParams().Colors[1].GetAlpha();
+        val->SetNumber(!alpha ? 0.0f : alpha / 255.0f);
+        return true;
+    }
+    else if (strcmp(pname, "shadowColor") == 0)
+    {
+        val->SetUInt_Call(readonlyFilterParams().Colors[1].ToColor32() & 0xFFFFFF);
+        return true;
+    }
+    else if (strcmp(pname, "knockout") == 0)
+    {
+        val->SetBool((readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Knockout) != 0);
+        return true;
+    }
+    else if (strcmp(pname, "quality") == 0)
+    {
+        val->SetInt_Call(readonlyFilterParams().Passes);
+        return true;
+    }
+    else if (strcmp(pname, "type") == 0)
+    {
+        if (readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Inner)
+            val->SetString(penv->CreateString("inner"));
+        else
+            val->SetString(penv->CreateString("outer"));
         return true;
     }
     else if (strcmp(pname, "strength") == 0)
