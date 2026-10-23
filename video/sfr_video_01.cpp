@@ -1184,6 +1184,63 @@ void FUN_1400072c0(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
+// MS2-FUNCTIONAL: removes the last stack value and returns its page when it becomes empty.
+// @0x140007200
+void FUN_140007200(Scaleform::UPInt* stack)
+{
+    FUN_1429260b0(reinterpret_cast<void*>(*stack));
+    *stack -= 0x20;
+    if (*stack < stack[1]) FUN_140006cf0(stack);
+}
+
+// MS2-FUNCTIONAL: resizes the retained pointer array and initializes newly added slots to null.
+// @0x1400072f0
+void FUN_1400072f0(void** array, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1];
+    FUN_140006e70(array, array, size);
+    if (oldSize < size && *array)
+        memset(static_cast<unsigned char*>(*array) + oldSize * sizeof(void*), 0,
+               (size - oldSize) * sizeof(void*));
+}
+
+// MS2-FUNCTIONAL: appends copies of a sequence of two-string records.
+// @0x140007370
+void FUN_140007370(void** array, const Scaleform::String* records, Scaleform::UPInt count)
+{
+    if (!count) return;
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1];
+    FUN_140006f50(array, array, oldSize + count);
+    auto* destination = static_cast<Scaleform::String*>(*array) + oldSize * 2;
+    for (Scaleform::UPInt i = 0; i < count; ++i) {
+        new (destination + i * 2) Scaleform::String(records[i * 2]);
+        new (destination + i * 2 + 1) Scaleform::String(records[i * 2 + 1]);
+    }
+}
+
+// MS2-FUNCTIONAL: appends an object value to the stack at the embedded current cursor.
+// @0x140007400
+void FUN_140007400(Scaleform::UPInt* owner, Scaleform::GFx::AS2::Object** value)
+{
+    FUN_140006ff0(owner + 1, value);
+}
+
+// MS2-FUNCTIONAL: appends a retained object value to the embedded current cursor.
+// @0x140007450
+void FUN_140007450(Scaleform::UPInt* owner, Scaleform::GFx::AS2::Object** value)
+{
+    FUN_140007030(owner + 1, value);
+}
+
+// MS2-FUNCTIONAL: removes the last value from the embedded paged stack.
+// @0x140007510
+void FUN_140007510(Scaleform::UPInt* owner)
+{
+    FUN_140007200(owner + 1);
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
