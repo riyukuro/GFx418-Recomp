@@ -396,6 +396,10 @@ public:
 
     Number BytesLoaded; // +0x68 -1 before a load
     Number BytesTotal;  // +0x70
+    // Load completion callbacks broadcast one argument to the object's listeners.
+    void NotifyOnData(Environment* penv, ASString& data);
+    void NotifyOnHTTPStatus(Environment* penv, double status);
+    void NotifyOnLoad(Environment* penv, bool success);
 };
 
 // LoadVars.prototype: the methods and the default onData handler.

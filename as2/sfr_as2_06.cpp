@@ -114,6 +114,9 @@
 // MS2-RANGE: 0x142978a90-0x142978dd0 .text$mn
 // MS2-RANGE: 0x142963400-0x1429635f0 .text$mn
 // MS2-RANGE: 0x142969450-0x1429694e0 .text$mn
+// MS2-RANGE: 0x1429696d0-0x1429697f0 .text$mn
+// MS2-RANGE: 0x142969850-0x142969980 .text$mn
+// MS2-RANGE: 0x142969980-0x142969aa0 .text$mn
 // MS2-RANGE: 0x14296c220-0x14296c430 .text$mn
 // MS2-RANGE: 0x14296cb80-0x14296cbf0 .text$mn
 // MS2-RANGE: 0x14296cbf0-0x14296cd30 .text$mn
@@ -332,6 +335,36 @@ bool AvmTextField::IsTabable() const
             return value.ToBool(env);
     }
     return pDispObj && pDispObj->TabIndex > 0;
+}
+
+// MS2-FUNCTIONAL: broadcasts the one pushed argument through the recovered broadcaster helper; the exe uses an equivalent local callback.
+// @0x1429696d0
+void LoadVarsObject::NotifyOnData(Environment* penv, ASString& data)
+{
+    penv->Push(Value(data));
+    ASString eventName = penv->CreateConstString("onData");
+    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Drop1();
+}
+
+// MS2-FUNCTIONAL: uses the recovered broadcaster helper for the exe's local one-argument callback.
+// @0x142969850
+void LoadVarsObject::NotifyOnHTTPStatus(Environment* penv, double status)
+{
+    penv->Push(Value(static_cast<Number>(status)));
+    ASString eventName = penv->CreateConstString("onHTTPStatus");
+    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Drop1();
+}
+
+// MS2-FUNCTIONAL: uses the recovered broadcaster helper for the exe's local one-argument callback.
+// @0x142969980
+void LoadVarsObject::NotifyOnLoad(Environment* penv, bool success)
+{
+    penv->Push(Value(success));
+    ASString eventName = penv->GetBuiltin(ASBuiltin_onLoad);
+    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Drop1();
 }
 
 // @0x142962010
