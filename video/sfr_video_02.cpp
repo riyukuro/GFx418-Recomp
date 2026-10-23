@@ -36,6 +36,7 @@ extern void FUN_14257db50(void*);
 extern void FUN_14257db40(void*);
 extern void FUN_142625ee0(const void*);
 extern void FUN_142626070(void*, const void*);
+extern void FUN_1423dfba0(void*, void*);
 extern void FUN_142961830(void*, void*, void*, void*, const void*);
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
 
@@ -1819,4 +1820,26 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
     object->~CFunctionObject();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: unlinks a tracked AS2 reference from its collector list and resets its flags.
+// @0x1400152b0
+void FUN_1400152b0(unsigned __int64* object)
+{
+    auto* words = reinterpret_cast<unsigned*>(object);
+    words[4] &= 0x8fffffff;
+    const unsigned flags = words[4] >> 24;
+    if (static_cast<int>(words[4]) < 0) {
+        if ((flags & 1) == 0)
+            FUN_1423dfba0(reinterpret_cast<void*>(object[1]), object);
+    } else if ((flags & 1) == 0) {
+        return;
+    }
+
+    *reinterpret_cast<unsigned __int64*>(object[3] + 8) = object[1];
+    *reinterpret_cast<unsigned __int64*>(object[1] + 0x18) = object[3];
+    words[4] &= 0x7effffff;
+    object[1] = 0;
+    if ((words[4] >> 24 & 1) == 0)
+        reinterpret_cast<unsigned*>(object + 3)[0] = 0xffffffff;
 }
