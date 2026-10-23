@@ -99,6 +99,22 @@ Scaleform::GFx::AS3::Class* FUN_140014b10(Scaleform::GFx::AS3::Class* object, un
     return object;
 }
 
+// MS2-FUNCTIONAL: releases the weak reference counter and frees its allocation when the count reaches zero.
+// @0x140013db0
+void FUN_140013db0(int* refCount)
+{
+    if (--*refCount == 0) Scaleform::Memory::Free(refCount);
+}
+
+// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
+// @0x140015c00
+void* FUN_140015c00(void* object, unsigned __int64 flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
+
 // VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
 // MS2-FUNCTIONAL: image release and render-tree refresh recovered with the local image layout.
 // @0x140010a30
