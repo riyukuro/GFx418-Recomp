@@ -34,6 +34,7 @@ extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_14257db50(void*);
 extern "C" void FUN_1423cdf60(void*);
 extern "C" void FUN_1423cde00();
+extern "C" const void* DAT_14313a210[];
 
 struct HWND__;
 
@@ -126,11 +127,12 @@ unsigned long long FUN_1423ca920(void*, unsigned long long* packedPtr)
     return static_cast<unsigned long long>(remaining) & ~0xffULL;
 }
 
-// MS2-FUNCTIONAL: initializes executable-observed fields; its abstract interface vtable has no recovered declaration yet.
+// MS2-FUNCTIONAL: initializes executable-observed fields; one abstract interface's purecall-only vtable lacks a class declaration.
 // @0x1423d9430
 void* FUN_1423d9430(void* object, void* owner)
 {
     auto* words = static_cast<unsigned long long*>(object);
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a210);
     for (unsigned index : { 0x102u, 0x103u, 0x104u, 0x105u, 0x106u, 0x107u, 0x109u, 0x10au, 0x10bu })
         words[index] = 0;
     *reinterpret_cast<unsigned char*>(words + 2) = 0;
