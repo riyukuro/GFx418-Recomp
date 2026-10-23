@@ -1598,3 +1598,23 @@ void** FUN_140014ac0(void*, void** result, void* traits)
     *result = instanceTraits ? FUN_1400140e0(instanceTraits, traits) : nullptr;
     return result;
 }
+
+// MS2-FUNCTIONAL: grows the executable pointer array in five-slot chunks and appends a fresh payload block.
+// @0x140013600
+void FUN_140013600(void* array, unsigned __int64 index)
+{
+    char* bytes = static_cast<char*>(array);
+    auto capacity = *reinterpret_cast<unsigned __int64*>(bytes + 0x18);
+    char* data = *reinterpret_cast<char**>(bytes + 0x20);
+    if (*reinterpret_cast<unsigned __int64*>(bytes + 0x10) <= index)
+    {
+        if (!data)
+            data = static_cast<char*>(Scaleform::Memory::Alloc(0x28));
+        else
+            data = static_cast<char*>(Scaleform::Memory::Realloc(data, capacity * 8 + 0x28));
+        *reinterpret_cast<unsigned __int64*>(bytes + 0x18) = capacity + 5;
+        *reinterpret_cast<char**>(bytes + 0x20) = data;
+    }
+    *reinterpret_cast<void**>(data + index * 8) = Scaleform::Memory::Alloc(0x2000);
+    ++*reinterpret_cast<unsigned __int64*>(bytes + 0x10);
+}
