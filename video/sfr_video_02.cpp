@@ -35,6 +35,7 @@ extern void FUN_1425ef130(void*);
 extern void FUN_1424d9310(void*, unsigned);
 extern void* FUN_142581520(void*, void*);
 extern "C" void* DAT_143b15f60;
+// MS2's ComplexFill vtable is referenced by the reconstructed temporary video fill object below.
 extern "C" void* DAT_14317b668;
 extern bool FUN_1423dfe30(void*, unsigned __int64);
 extern void FUN_1424d6750();
