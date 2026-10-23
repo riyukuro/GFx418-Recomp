@@ -2342,6 +2342,33 @@ void RemoveAudioRequest(void* manager, void* request)
     }
 }
 
+// MS2-FUNCTIONAL: merges 32-byte image metric records by their two-word key, accumulating the count and total fields.
+// @0x14268a8e0
+extern "C" void FUN_14268a8e0(void* destination, void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto* src = static_cast<const unsigned char*>(source);
+    const std::size_t sourceCount = *reinterpret_cast<const std::size_t*>(src + 0x18);
+    auto* sourceRows = *reinterpret_cast<const unsigned char* const*>(src + 0x10);
+    for (std::size_t i = 0; i < sourceCount; ++i) {
+        const auto* incoming = sourceRows + i * 0x20;
+        const std::size_t destinationCount = *reinterpret_cast<const std::size_t*>(dst + 0x18);
+        auto* destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
+        std::size_t match = 0;
+        while (match < destinationCount && std::memcmp(destinationRows + match * 0x20, incoming, 16) != 0)
+            ++match;
+        if (match < destinationCount) {
+            auto* row = destinationRows + match * 0x20;
+            *reinterpret_cast<std::uint32_t*>(row + 0x10) += *reinterpret_cast<const std::uint32_t*>(incoming + 0x10);
+            *reinterpret_cast<std::uint64_t*>(row + 0x18) += *reinterpret_cast<const std::uint64_t*>(incoming + 0x18);
+        } else {
+            Scaleform::ResizeRawArray(reinterpret_cast<void**>(dst + 0x10), dst + 0x10, destinationCount + 1, 0x20);
+            destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
+            std::memcpy(destinationRows + destinationCount * 0x20, incoming, 0x20);
+        }
+    }
+}
+
 static bool SameAs3String(const Scaleform::String* left, const Scaleform::String* right)
 {
     const std::size_t length = left->GetLength();
