@@ -81,6 +81,7 @@ extern "C" void FUN_1423d8b80(void*, void*, void*, unsigned long long);
 unsigned HashFunction(const char*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
+extern bool FUN_1425b9b10(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1423daf30(void*);
 extern "C" void FUN_1423cc7c0(void*);
@@ -169,6 +170,42 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
 
 namespace Scaleform { namespace GFx { namespace IME {
+
+// MS2-FUNCTIONAL: follows the executable's selected TextField refcount and input-eligibility checks.
+// @0x1423cf570
+unsigned char FUN_1423cf570(void*, void* rawMovie)
+{
+    if (!rawMovie) return 0;
+    auto* movie = static_cast<unsigned char*>(rawMovie);
+    auto* selected = movie + static_cast<unsigned>(movie[0x3464]) * 0x60;
+    auto* handle = *reinterpret_cast<unsigned long long**>(selected + 0x2e88);
+    if (!handle) return 0;
+    auto* field = reinterpret_cast<unsigned char*>(handle[1]);
+    if (!field) {
+        auto* count = reinterpret_cast<volatile long*>(handle);
+        if (_InterlockedDecrement(count) == 0) {
+            void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, handle);
+        }
+        *reinterpret_cast<void**>(selected + 0x2e88) = nullptr;
+        return 0;
+    }
+    auto* refs = reinterpret_cast<volatile long*>(field + 8);
+    if (*refs == 0) return 0;
+    *refs += 2;
+    FUN_14257dcd0(field);
+    const int type = reinterpret_cast<int(*)(void*)>((*reinterpret_cast<void***>(field))[0x258 / sizeof(void*)])(field);
+    unsigned char accepted = 0;
+    if (type == 4) {
+        ++*refs;
+        const unsigned flags = *reinterpret_cast<unsigned*>(field + 0xfc);
+        if (((flags >> 11) & 1) == 0 && !FUN_1425b9b10(field) && ((flags >> 2) & 1) == 0)
+            accepted = 1;
+        FUN_14257dcd0(field);
+    }
+    FUN_14257dcd0(field);
+    return accepted;
+}
 
 // MS2-FUNCTIONAL: recreates the executable's temporary IME-context acquisition and open-status query.
 // @0x1423cf3e0
