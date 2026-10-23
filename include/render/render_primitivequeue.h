@@ -15,6 +15,12 @@ namespace Scaleform { namespace Render {
 
 class RenderQueueProcessor;
 class PrimitiveBatch;
+// (appended for sfr_render_07p)
+class PrimitivePrepareBuffer;
+class PrimitiveEmitBuffer;
+class MeshCache;
+class MeshBase;
+template<class T> struct StrideArray;
 
 class RenderQueueItem
 {
@@ -97,6 +103,12 @@ public:
 
     // Brings the batch MeshIndex values up to date after inserts / removes.
     void UpdateMeshIndicies();
+
+    // (appended for sfr_render_07p) the bodies of Prepare / EmitToHAL, also used by the text bundles
+    QIPrepareResult prepare(void* item, PrimitivePrepareBuffer* prepareBuffer, PrimitiveEmitBuffer* emitBuffer,
+                            HAL* hal, MeshCache* cache, bool waitForCache);   // 0x1426da0a0
+    void            emitToHAL(void* item, PrimitivePrepareBuffer* prepareBuffer, PrimitiveEmitBuffer* emitBuffer,
+                              HAL* hal);                                       // 0x1426da020
 };
 
 // A batch's link into its mesh cache item.
@@ -120,6 +132,7 @@ struct MeshCacheItemUseNode : public ListNode<MeshCacheItemUseNode>
 class PrimitiveBatch : public ListNode<PrimitiveBatch>
 {
     friend class Primitive;
+    friend class PrimitivePrepareBuffer;   // (appended for sfr_render_07p)
 public:
     enum BatchType
     {
@@ -164,6 +177,9 @@ public:
     void RemoveAndFree();
     // Vertex and index totals of the batch (one mesh for an instanced batch).
     void CalcMeshSizes(unsigned* totalVertices, unsigned* totalIndices);
+    // (appended for sfr_render_07p) the batch's meshes (one for an instanced batch), in render_meshcache.h
+    inline StrideArray<MeshBase*> GetMeshes_InstanceAdjusted();
+    MeshCacheItem* GetCacheItem() const { return MeshNode.pMeshItem; }
 };
 
 // Mask areas, one matrix each.

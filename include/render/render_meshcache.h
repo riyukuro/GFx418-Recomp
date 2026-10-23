@@ -61,6 +61,8 @@ struct StrideArray
     UPInt Stride;
 
     StrideArray(T* data, UPInt size) : pData(data), Size(size), Stride(sizeof(T)) { }
+    // (appended for sfr_render_07p)
+    StrideArray(T* data, UPInt size, UPInt stride) : pData(data), Size(size), Stride(stride) { }
 
     UPInt GetSize() const           { return Size; }
     T&    operator[](UPInt i) const { return *(T*)((UByte*)pData + i * Stride); }
@@ -111,6 +113,14 @@ public:
         unsigned               HashKey;   // +0x18
 
         MeshBaseContent(MeshBase** meshes, unsigned meshCount);   // 0x1426da3e0
+        // (appended for sfr_render_07p) the same for a batch's meshes, inline
+        explicit MeshBaseContent(PrimitiveBatch* batch) : Meshes(batch->GetMeshes_InstanceAdjusted())
+        {
+            UPInt key = 0;
+            for (UPInt i = 0; i < Meshes.GetSize(); i++)
+                key ^= ((UPInt)Meshes[i]) >> 5;
+            HashKey = (unsigned)key;
+        }
 
         unsigned  GetMeshCount() const          { return (unsigned)Meshes.GetSize(); }
         MeshBase* operator[](unsigned i) const  { return Meshes[i]; }
@@ -118,6 +128,8 @@ public:
     struct MeshContent : public MeshBaseContent
     {
         MeshContent(Mesh** meshes, unsigned meshCount) : MeshBaseContent((MeshBase**)meshes, meshCount) { }
+        // (appended for sfr_render_07p)
+        MeshContent(PrimitiveBatch* batch) : MeshBaseContent(batch) { }
 
         Mesh* operator[](unsigned i) const { return (Mesh*)Meshes[i]; }
     };
@@ -214,6 +226,15 @@ public:
 };
 
 inline MeshCache* MeshCacheItem::GetCache() const { return pCacheList->GetCache(); }
+
+// (appended for sfr_render_07p) the mesh pointers of the batch's entries, read 0x10 apart
+inline StrideArray<MeshBase*> PrimitiveBatch::GetMeshes_InstanceAdjusted()
+{
+    if (pPrimitive->ModifyIndex < pPrimitive->GetMeshCount())
+        pPrimitive->UpdateMeshIndicies();
+    unsigned count = IsInstanced() ? 1 : MeshCount;
+    return StrideArray<MeshBase*>((MeshBase**)&pPrimitive->Meshes[MeshIndex].pMesh, count, sizeof(Primitive::MeshEntry));
+}
 
 inline void MeshCacheItem::MoveToCacheListFront(MeshCacheListType list)
 {

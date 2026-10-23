@@ -28,6 +28,9 @@ class PrimitiveFill;
 struct PrimitiveFillData;
 class MeshCache;
 class FilterPrimitive;
+// (appended for sfr_render_07p)
+class Primitive;
+class PrimitiveBatch;
 struct DICommand;
 
 class HAL : public RefCountBase<HAL, StatRender_Mem>
@@ -62,7 +65,8 @@ public:
     virtual void halSlot25() = 0;                                                                 // 25
     virtual void halSlot26() = 0;                                                                 // 26
     virtual void halSlot27() = 0;                                                                 // 27
-    virtual void halSlot28() = 0;                                                                 // 28
+    // (named for sfr_render_07p) draws the prepared batches [start, end) of a primitive
+    virtual void DrawProcessedPrimitive(Primitive* p, PrimitiveBatch* start, PrimitiveBatch* end) = 0;   // 28
     virtual void halSlot29() = 0;                                                                 // 29
     virtual void halSlot30() = 0;                                                                 // 30
     virtual void halSlot31() = 0;                                                                 // 31
