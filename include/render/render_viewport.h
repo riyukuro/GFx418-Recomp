@@ -33,10 +33,16 @@ public:
         View_FirstHalFlag       = 0x100
     };
 
+    // assigned in the body, the height before the width (the exe's store order; an initializer list lets the
+    // compiler merge the stores into vector writes)
     Viewport()
-        : BufferWidth(0), BufferHeight(0), Left(0), Top(0), Width(1), Height(1),
-          ScissorLeft(0), ScissorTop(0), ScissorWidth(0), ScissorHeight(0), Flags(0)
     {
+        BufferWidth  = 0;
+        BufferHeight = 0;
+        Left = Top   = 0;
+        Width = Height = 1;
+        ScissorLeft = ScissorTop = ScissorWidth = ScissorHeight = 0;
+        Flags        = 0;
     }
 
     // (appended for sfr_render_04g) a view rectangle inside a buffer of the given size, no scissor

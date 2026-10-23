@@ -53,6 +53,9 @@ enum SortKeyMaskType
 
 typedef void* SortKeyData;
 
+// (appended for sfr_render_07n) selects the text key constructor
+enum SortKeyTextType { SortKeyText };
+
 // what a key's data is and how it is counted
 struct SortKeyInterface
 {
@@ -90,6 +93,8 @@ public:
     SortKey(SortKeyType projKeyType, const Matrix4FRef* projMatrix);
     // the blend keys carry the mode itself, not a counted object
     void SetData(SortKeyData data) { Data = data; }
+    // (appended for sfr_render_07n) the key all text of one 2D / 3D pass shares (0x1426f25f0)
+    SortKey(SortKeyTextType, bool is3D);
 
     SortKey& operator=(const SortKey& src)
     {
