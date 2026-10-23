@@ -262,6 +262,50 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
+// MS2-FUNCTIONAL: unlinks this DOM string node from the executable's bucket chains and releases its key allocation.
+// @0x1423cc570
+void FUN_1423cc570(unsigned long long* node)
+{
+    auto* owner = reinterpret_cast<unsigned long long*>(node[6]);
+    auto* table = owner ? reinterpret_cast<unsigned long long*>(owner[1]) : nullptr;
+    if (table) {
+        const unsigned long long mask = table[1];
+        const unsigned long long bucket = *reinterpret_cast<unsigned*>(node + 4) & mask;
+        auto* slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (bucket + 1) * 0x10);
+        if (slot[0] != 0xfffffffffffffffeull &&
+            ((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) == bucket)) {
+            unsigned long long previous = 0xffffffffffffffffull;
+            unsigned long long current = bucket;
+            while (((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) != bucket) ||
+                   slot[1] != reinterpret_cast<unsigned long long>(node)) {
+                const unsigned long long nextSlot = slot[0];
+                if (nextSlot == 0xffffffffffffffffull) goto unlink_done;
+                previous = current;
+                current = nextSlot;
+                slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (current + 1) * 0x10);
+            }
+            const unsigned long long next = slot[0];
+            if (bucket == current) {
+                if (next != 0xffffffffffffffffull) {
+                    slot[0] = 0xfffffffffffffffeull;
+                    auto* replacement = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (next + 1) * 0x10);
+                    slot[0] = replacement[0];
+                    slot[1] = replacement[1];
+                    slot = replacement;
+                }
+            } else {
+                auto* prior = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (previous + 1) * 0x10);
+                prior[0] = next;
+            }
+            slot[0] = 0xfffffffffffffffeull;
+            --*reinterpret_cast<unsigned long long*>(*reinterpret_cast<unsigned long long**>(owner));
+        }
+    }
+unlink_done:
+    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+    reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, reinterpret_cast<void*>(node[0]));
+}
+
 // MS2-FUNCTIONAL: returns the executable's ID-backed integer and Value-backed string properties from the current IME state.
 // @0x1423da150
 void FUN_1423da150(void* self, void* output, const String* key)
