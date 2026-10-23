@@ -43,3 +43,7 @@ void ShapeDataFloatMP::CountLayers()
 // MS2-PIN: ??_7ShapeDataFloatMP@Render@Scaleform@@6B?$RefCountBase@VMeshProvider_RCImpl@Render@Scaleform@@$01@2@@ 0x143191b40
 // MS2-PIN: ??_7ShapeDataFloatMP@Render@Scaleform@@6BMeshProvider@12@@ 0x143191b48
 // MS2-PIN: ??_7?$ShapeDataFloatTempl@V?$Array@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@6B@ 0x14317bb40
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142688b70 ; vtslot
+// MS2-PIN: ??_G?$RefCountBase@VShapeDataInterface@Render@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142688bd0 ; vtslot
+// MS2-PIN: ??_GShapeDataInterface@Render@Scaleform@@UEAAPEAXI@Z 0x142688c30 ; vtslot
+// MS2-PIN: ??_G?$RefCountBase@VMeshProvider_RCImpl@Render@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142688c90 ; vtslot
