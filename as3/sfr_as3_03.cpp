@@ -1116,6 +1116,8 @@ const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, co
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& base, const Scaleform::GFx::AS3::ClassTraits::Traits& t);
 // VM::IsOfType(v, class name).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
+// Multiname::IsAnyNamespace, out of line.
+bool FUN_1424198b0(const Scaleform::GFx::AS3::Multiname& mn);
 // The parts of str split at each delim (at most limit of them), as a new Array. 0x142424ca0
 Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array> FUN_142424ca0(Scaleform::GFx::AS3::VM& vm,
                                                                                const Scaleform::GFx::ASString& str,
@@ -2004,6 +2006,18 @@ namespace Scaleform { namespace GFx { namespace AS3
         // A constructor call runs the body on a new plain object and keeps that object, not the returned value.
         _this = GetVM().MakeObject();
         Execute(_this, argc, argv, true);
+    }
+
+    // Slot 21 is the shared empty body at 0x14240ad10 (a folded `ret 0`, owned by no unit).
+    void Instances::FunctionBase::ExecuteUnsafe(const Value& /*_this*/, Value& /*result*/, unsigned /*argc*/,
+                                                const Value* /*argv*/)
+    {
+    }
+
+    // Slot 22 is the shared empty body at 0x14240a490 (a folded `ret 0`, owned by no unit).
+    void Instances::FunctionBase::Execute(const Value& /*_this*/, unsigned /*argc*/, const Value* /*argv*/,
+                                          bool /*discard_result*/)
+    {
     }
 
     // @0x1424058a0
@@ -3652,6 +3666,78 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return Pickable<XML>(r.GetPtr());
     }
 
+    // Multiname::IsAnyType as the exe inlines it here (its out-of-line copy is 0x1424198d0).
+    static SF_INLINE bool saIsAnyType(const Multiname& mn)
+    {
+        return mn.Name.IsNullOrUndefined() || (mn.Name.IsString() && mn.Name.AsString().IsEmpty());
+    }
+
+    // Multiname::IsQName through the enum-typed namespace bits, which the exe tests as a byte here.
+    enum saNsBits { saNsQualified, saNsRuntime, saNsMulti };
+    static SF_INLINE bool saIsQName(const Multiname& mn)
+    {
+        const saNsBits bits = (saNsBits)(mn.Kind & 3);
+        return bits == saNsQualified || bits == saNsRuntime;
+    }
+
+    // @0x14240b9a0
+    UInt32 XMLList::ForEachChild(const Multiname& prop_name, CallBack& cb)
+    {
+        UInt32 num = 0;
+        if (prop_name.Name.IsString())
+        {
+            const ASString name = prop_name.Name.AsString();
+            const UPInt size = List.GetSize();
+            for (UPInt i = 0; i < size; ++i)
+            {
+                XML* item = List[i];
+                if (item->GetKind() != XML::kElement)
+                    continue;
+                XMLElement* el = static_cast<XMLElement*>(item);
+                const UPInt csize = el->Children.GetSize();
+                for (UPInt j = 0; j < csize; ++j)
+                {
+                    XML* child = el->Children[j];
+                    if (child->GetName() == name || saIsAnyType(prop_name))
+                    {
+                        if (saIsQName(prop_name))
+                        {
+                            if (FUN_1424198b0(prop_name))
+                            {
+                                cb.Call(i, j);
+                                ++num;
+                            }
+                            else
+                            {
+                                const Instances::Namespace& ns = prop_name.GetNamespace();
+                                if (ns == child->GetNamespace())
+                                {
+                                    cb.Call(i, j);
+                                    ++num;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            const NamespaceSet& nss = *static_cast<NamespaceSet*>(prop_name.Obj.GetPtr());
+                            const UPInt nsize = nss.GetNamespaces().GetSize();
+                            for (UPInt k = 0; k < nsize; ++k)
+                            {
+                                if (*nss.GetNamespaces()[k] == child->GetNamespace())
+                                {
+                                    cb.Call(i, j);
+                                    ++num;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return num;
+    }
+
     // @0x142408c70
     Pickable<XMLList> XMLList::DeepCopy(XML* parent)
     {
@@ -3761,6 +3847,33 @@ namespace Instances
             result.Pick(*reinterpret_cast<ValueStack*>(vm.OpStack));
     }
 } // namespace Instances
+
+}}} // namespace Scaleform::GFx::AS3
+
+// "Global Object constructor. Method ind: ", the name prefix of script initializer frames.
+extern const char* DAT_143a2d150;
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // @0x14240a4b0
+    void GlobalObjectScript::Execute()
+    {
+        if (Initialized)
+            return;
+
+        InstanceTraits::fl::GlobalObjectScript& itr = GetTraits();
+        const SInt32 mbi_ind = itr.GetFile().GetAbcFile().Methods.Info[itr.GetScript().method_info_ind]->MethodBodyInfoInd;
+        {
+            String ind;
+            Format(ind, "{0}", mbi_ind);
+            GetVM().AddFrame(Value(this), GetFile(), mbi_ind, Value(this), 0, NULL, true, GetTraits().InitScope,
+                             GetTraits(), GetVM().GetStringManager().CreateConstString(DAT_143a2d150) + ind.ToCStr());
+        }
+        if (!GetVM().IsException())
+            Initialized = true;
+    }
+}} // namespace Instances::fl
 
 namespace InstanceTraits
 {
@@ -3956,3 +4069,12 @@ template void Scaleform::ConstructorMov<Scaleform::GFx::AS3::SPtr<Scaleform::GFx
 // MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x1424095b0
 // MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VXMLAttr@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VXMLAttr@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x142409610
 // MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x142409550
+// MS2-PIN: ??_7ArrayFunc@AS3@GFx@Scaleform@@6B@ 0x143141570
+// MS2-PIN: ??_7ValuePtrCollector@AS3@GFx@Scaleform@@6B@ 0x143141580
+// MS2-PIN: ??_7Value2StrCollector@AS3@GFx@Scaleform@@6B@ 0x143141590
+// MS2-PIN: ??_7Value2NumberCollector@AS3@GFx@Scaleform@@6B@ 0x1431415a0
+// MS2-PIN: ??_7ThunkFunction@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fa78
+// MS2-PIN: ??_7CallBack@XMLElement@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142f90
+// MS2-PIN: ??_7AttrGetFirst@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439c8
+// MS2-PIN: ??_7ChildGetFirst@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439d8
+// MS2-PIN: ??_7FunctionBase@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f8f8
