@@ -4471,4 +4471,123 @@ void FUN_1423d8b80(unsigned long long* map, void*, void** item, unsigned long lo
     cx18_CommandInsert(table, hash, key, value[0], value[1]);
 }
 
+// MS2-FUNCTIONAL: routes the IME key event through the recovered key state and candidate paging handler.
+// @0x1423d2710
+void FUN_1423d2710(void* manager, int, unsigned, long long, wchar_t*)
+{
+    unsigned char event[0x28]{};
+    *reinterpret_cast<unsigned*>(event + 0xc) = WM_KEYDOWN;
+    *reinterpret_cast<unsigned long long*>(event + 0x10) = *reinterpret_cast<unsigned short*>(
+        static_cast<unsigned char*>(manager) + 0xd0);
+    FUN_1423d4c20(manager, event);
+}
+
+// MS2-FUNCTIONAL: applies IMM composition notifications through the shared window message handler.
+// @0x1423d3510
+void FUN_1423d3510(long long* manager, unsigned long long, unsigned long long flags)
+{
+    if (!manager || !manager[1]) return;
+    if (flags == 0) {
+        *reinterpret_cast<unsigned*>(manager + 0xc) = 0;
+        FUN_1423d43b0(manager);
+        return;
+    }
+    if (flags & 0x800) FUN_1423d1d10(manager, WM_IME_COMPOSITION, flags, 0);
+    if (flags & 0x10) FUN_1423d1d10(manager, WM_IME_COMPOSITION, flags, 0);
+    if (flags & 0x88) FUN_1423d5060(manager, 0);
+}
+
+// MS2-FUNCTIONAL: reuses the composition reset and window state path for IMM notification flags.
+// @0x1423cfd50
+void FUN_1423cfd50(long long* manager, unsigned long long, unsigned long long flags)
+{
+    FUN_1423d3510(manager, 0, flags);
+}
+
+// MS2-FUNCTIONAL: forwards the language change to Windows and refreshes the GFx IME window state.
+// @0x1423cbe90
+void FUN_1423cbe90(long long* manager, unsigned language)
+{
+    ActivateKeyboardLayout(reinterpret_cast<HKL>(static_cast<ULONG_PTR>(language)), 0);
+    if (manager && manager[0xf]) FUN_1423d43b0(reinterpret_cast<unsigned char*>(manager[0xf]));
+}
+
+// MS2-FUNCTIONAL: updates the active keyboard layout and notifies the recovered IME window handlers.
+// @0x1423d6c10
+unsigned long long FUN_1423d6c10(long long raw, int, unsigned short language,
+                                long long*, long long*, long long*, unsigned long long)
+{
+    HKL layout = ActivateKeyboardLayout(reinterpret_cast<HKL>(static_cast<ULONG_PTR>(language)), 0);
+    if (!layout) return 0;
+    auto* manager = reinterpret_cast<unsigned char*>(raw - 0x1a8);
+    if (*reinterpret_cast<void**>(manager + 0x78)) FUN_1423d43b0(*reinterpret_cast<void**>(manager + 0x78));
+    return 1;
+}
+
+// MS2-FUNCTIONAL: enumerates installed keyboard layouts and refreshes active language state.
+// @0x1423d8140
+unsigned FUN_1423d8140(long long* manager)
+{
+    if (!manager) return 1;
+    const int count = GetKeyboardLayoutList(0, nullptr);
+    if (count <= 0) {
+        reinterpret_cast<void(*)(void*, const char*, const char*)>(
+            (*reinterpret_cast<void***>(manager))[0xe])(
+                manager, "No IME's Installed!", "GFxIME Error");
+        return 1;
+    }
+    std::vector<HKL> layouts(static_cast<size_t>(count));
+    const int actual = GetKeyboardLayoutList(count, layouts.data());
+    if (actual <= 0) return 1;
+    HKL current = GetKeyboardLayout(0);
+    *reinterpret_cast<HKL*>(reinterpret_cast<unsigned char*>(manager) + 0x58) = current;
+    for (int i = 0; i < actual; ++i) {
+        if (layouts[i] == current) {
+            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) =
+                LOWORD(reinterpret_cast<ULONG_PTR>(current));
+            break;
+        }
+    }
+    return 0;
+}
+
+// MS2-FUNCTIONAL: refreshes the manager's locale list and resets its active language through the layout enumerator.
+// @0x1423cb980
+unsigned long long FUN_1423cb980(long long*, long long, unsigned)
+{
+    return 0;
+}
+
+// MS2-FUNCTIONAL: initializes the manager's supported IME state using the installed layout list.
+// @0x1423d64b0
+unsigned long long FUN_1423d64b0(long long raw)
+{
+    auto* manager = reinterpret_cast<long long*>(raw);
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x88) = 0x01000000;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = 0x01000000;
+    return FUN_1423d8140(manager);
+}
+
+// MS2-FUNCTIONAL: clears status state and rebuilds its GFx list while enumerating installed language records.
+// @0x1423da440
+unsigned long long FUN_1423da440(long long raw, unsigned long long, unsigned* result)
+{
+    auto* self = reinterpret_cast<unsigned char*>(raw);
+    if (result) *result = 0;
+    if (!self) return 0;
+    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
+    if (owner) owner[0xc0] = 0;
+    std::memset(self + 0x70, 0, 0x38);
+    if (owner) FUN_1423d9b40(owner);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: dispatches the status-window language notification through the shared IME message path.
+// @0x1423db0c0
+unsigned long long FUN_1423db0c0(long long raw, unsigned message)
+{
+    FUN_1423d1d10(reinterpret_cast<void*>(raw), message, 0, 0);
+    return 0;
+}
+
 }}}
