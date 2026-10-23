@@ -19,6 +19,7 @@
 #include "hook/ms2hook.h"
 #include <cstdint>
 #include <cstring>
+#include <new>
 
 extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
@@ -41,6 +42,11 @@ MS2_GLOBAL(0x142d175cc, float, ImageViewportBias);
 MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
 MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
 MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
+MS2_GLOBAL(0x14318f048, void*, AS3MovieMarkerVtable);
+extern "C" void FUN_14268cd80(void*, void*, unsigned);
+extern "C" void FUN_14268c510(void*, void*, unsigned);
+extern "C" void FUN_14268d2b0(void*, void*, unsigned);
+extern "C" void FUN_14268c930(void*, void*, unsigned);
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
 extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
@@ -2245,6 +2251,68 @@ void WriteTextTreeNode(const void* node, void* stream, unsigned version)
     auto* children = static_cast<void* const*>(*reinterpret_cast<void* const*>(bytes + 0x30));
     for (unsigned i = 0; i < count; ++i)
         WriteTextTreeNode(children[i], stream, version);
+}
+
+static void ReadAs3StreamBytes(void* stream, void* output, std::size_t size)
+{
+    auto** vtable = *reinterpret_cast<void***>(stream);
+    reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, output, size);
+}
+
+// MS2-FUNCTIONAL: reads the versioned movie image header and marker records, then delegates the nested resource tables.
+// @0x14268cfe0
+extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    ReadAs3StreamBytes(stream, bytes + 0x10, 4);
+    ReadAs3StreamBytes(stream, bytes + 0x14, 4);
+    ReadAs3StreamBytes(stream, bytes + 0x18, 4);
+    if (version > 3) {
+        Scaleform::ReadNarrowString(stream, bytes + 0x20);
+        ReadAs3StreamBytes(stream, bytes + 0x28, 4);
+        ReadAs3StreamBytes(stream, bytes + 0x2c, 4);
+        ReadAs3StreamBytes(stream, bytes + 0x30, 4);
+        ReadAs3StreamBytes(stream, bytes + 0x34, 4);
+        ReadAs3StreamBytes(stream, bytes + 0x38, 4);
+    }
+    if (version > 5) {
+        unsigned markerCount = 0;
+        ReadAs3StreamBytes(stream, &markerCount, 4);
+        Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0x40), markerCount);
+        auto** markers = *reinterpret_cast<unsigned char***>(bytes + 0x40);
+        for (unsigned i = 0; i < markerCount; ++i) {
+            std::uint32_t statId = 0x242;
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            auto* marker = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
+                DAT_143b15f60, object, 0x20, &statId));
+            if (!marker) {
+                markers[i] = nullptr;
+                Scaleform::String discardedName;
+                Scaleform::ReadNarrowString(stream, &discardedName);
+                std::uint32_t discardedTime = 0;
+                ReadAs3StreamBytes(stream, &discardedTime, 4);
+                continue;
+            }
+            std::memset(marker, 0, 0x20);
+            *reinterpret_cast<void**>(marker) = AS3MovieMarkerVtable;
+            *reinterpret_cast<std::uint32_t*>(marker + 8) = 1;
+            new (marker + 0x10) Scaleform::StringLH();
+            auto* prior = markers[i];
+            if (prior)
+                FUN_14257dcb0(prior);
+            markers[i] = marker;
+            if (version < 11)
+                reinterpret_cast<Scaleform::StringLH*>(marker + 0x10)->operator=("Marker");
+            else
+                Scaleform::ReadNarrowString(stream, marker + 0x10);
+            ReadAs3StreamBytes(stream, marker + 0x18, 4);
+        }
+    }
+    FUN_14268cd80(*reinterpret_cast<void**>(bytes + 0x58), stream, version);
+    FUN_14268c510(*reinterpret_cast<void**>(bytes + 0x60), stream, version);
+    FUN_14268d2b0(*reinterpret_cast<void**>(bytes + 0x68), stream, version);
+    if (version > 0x18)
+        FUN_14268c930(*reinterpret_cast<void**>(bytes + 0x70), stream, version);
 }
 
 // MS2-FUNCTIONAL: writes text metadata and a version-gated empty compatibility string, normalizing the boolean byte.
