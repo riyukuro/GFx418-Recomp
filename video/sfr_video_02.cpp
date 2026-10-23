@@ -27,6 +27,7 @@ extern void FUN_142581700(void*);
 extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
 extern void FUN_1425925f0(void*);
+extern bool FUN_1423dfe30(void*, unsigned __int64);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
 extern void FUN_140025300(void*);
@@ -1778,6 +1779,20 @@ void* FUN_14000e8a0(void* object, unsigned __int64 flags)
     FUN_14000e840(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
+}
+
+// MS2-FUNCTIONAL: returns the next paged AS2 collector slot, allocating its 1024-entry page when needed.
+// @0x140015250
+void* FUN_140015250(void* array)
+{
+    char* bytes = static_cast<char*>(array);
+    const unsigned __int64 index = *reinterpret_cast<unsigned __int64*>(bytes + 8);
+    const unsigned __int64 page = index >> 10;
+    if (*reinterpret_cast<unsigned __int64*>(bytes + 0x10) <= page &&
+        !FUN_1423dfe30(array, page))
+        return nullptr;
+    auto** pages = *reinterpret_cast<void***>(bytes + 0x20);
+    return static_cast<char*>(pages[page]) + (index & 0x3ff) * sizeof(void*);
 }
 
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
