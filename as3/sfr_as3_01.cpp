@@ -572,4 +572,30 @@ template void ASCollector::KillChildCall(ASCollector*, const BaseType** pchild);
 
 } // namespace AS3
 
+// @0x1423dce80
+template <> void LogBase<LoadProcess>::LogParse(const char* pfmt, ...) const
+{
+    va_list args;
+    va_start(args, pfmt);
+    LoadProcess* process = (LoadProcess*)this;
+    if (process->IsVerboseParse())
+    {
+        Log* log = process->GetLog();
+        if (process->IsLogNotNull() || log)
+            log->LogMessageVarg(LogChannel_Parse | LogMessage_Text, pfmt, args);
+    }
+    va_end(args);
+}
+
+namespace AS3 {
+
+// @0x1423dcc50
+// MS2-FUNCTIONAL: the executable uses a five-byte forwarding thunk to AvmDisplayObj::GetAbsolutePath.
+const char* AvmInteractiveObj::GetAbsolutePath(String* ppath) const
+{
+    return AvmDisplayObj::GetAbsolutePath(ppath);
+}
+
+} // namespace AS3
+
 }} // namespace Scaleform::GFx
