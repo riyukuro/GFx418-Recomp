@@ -412,6 +412,8 @@ public:
     // The prototype instance has no sprite.
     inline MovieClipObject(ASStringContext* psc, Object* pprototype); // defined in sfr_as2_03
     inline MovieClipObject(Environment* penv);                        // defined in sfr_as2_04
+    // A clip's own object, with its prototype (defined in sfr_as2_05).
+    inline MovieClipObject(GlobalContext* pgc, Sprite* psprite);
 
     virtual ObjectType GetObjectType() const; // exe 0x1429542a0: Object_MovieClipObject
 

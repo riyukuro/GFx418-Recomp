@@ -119,6 +119,7 @@
 // MS2-RANGE: 0x14294aa80-0x14294ab4a .text$mn
 // MS2-RANGE: 0x142949900-0x142949952 .text$mn
 // MS2-RANGE: 0x14294a430-0x14294a4e2 .text$mn
+// MS2-RANGE: 0x142953da0-0x142953ed5 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -2193,6 +2194,27 @@ Object* GlobalContext::GetActualPrototype(Environment* penv, ASBuiltinType type)
     }
     return proto;
 }
+
+static inline AvmCharacter* SpriteAvm(Sprite* psprite)
+{
+    return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(psprite->GetAvmObjImpl()));
+}
+
+inline MovieClipObject::MovieClipObject(GlobalContext* pgc, Sprite* psprite)
+    : Object(pgc->GetGC()), pSprite(psprite), ButtonEventMask(0), HasButtonHandlers(false)
+{
+    MovieClipObject::Set__proto__(SpriteAvm(psprite)->GetASEnvironment()->GetSC(), SpriteAvm(psprite)->Get__proto__());
+}
+
+// MS2-FUNCTIONAL same code; the exe swaps rsi/rdi/rbx and reloads AvmObjOffset for the prototype read
+// @0x142953da0
+MovieClipObject* AvmSprite::GetMovieClipObject()
+{
+    Ptr<MovieClipObject>& pobj = *reinterpret_cast<Ptr<MovieClipObject>*>(&Unrecovered_38[0x1d8 - 0x38]);
+    if (!pobj)
+        pobj = *SF_HEAP_NEW(GetSprite()->GetMovieImpl()->GetMovieHeap()) MovieClipObject(GetGC(), GetSprite());
+    return pobj;
+}
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {
@@ -2268,3 +2290,5 @@ bool AS2ValueObjectInterface::GetElement(void* pdata, unsigned idx, Value* pval)
 // MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
+// MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216640
+// MS2-PIN: ??_7MovieClipObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216688
