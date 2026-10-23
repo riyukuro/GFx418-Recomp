@@ -3,6 +3,13 @@
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1429180c0-0x1429181f0 .text$mn
+// MS2-RANGE: 0x14291df80-0x14291e1a0 .text$mn
+// MS2-RANGE: 0x142923bf0-0x142923c60 .text$mn
+// MS2-RANGE: 0x142927fa0-0x142928010 .text$mn
+// MS2-RANGE: 0x142919100-0x142919220 .text$mn
+// MS2-RANGE: 0x142920830-0x142920950 .text$mn
+// MS2-RANGE: 0x142927950-0x142927990 .text$mn
+// MS2-RANGE: 0x1429285b0-0x142928620 .text$mn
 // MS2-RANGE: 0x14291adc0-0x14291aee0 .text$mn
 // MS2-RANGE: 0x14291edc0-0x14291eee0 .text$mn
 // MS2-RANGE: 0x142919c00-0x142919d70 .text$mn
@@ -659,6 +666,37 @@ MovieClipLoaderProto::MovieClipLoaderProto(ASStringContext* psc, Object* pprotot
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
+// The prototype instance has no image.
+inline BitmapData::BitmapData(ASStringContext* psc, Object* pprototype) : Object(psc)
+{
+    Set__proto__(psc, pprototype);
+}
+
+// @0x142919100
+BitmapDataProto::BitmapDataProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<BitmapData>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// @0x142920830
+SharedObjectProto::SharedObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<SharedObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+// MS2-FUNCTIONAL inlined Value(psc, CFunctionPtr) store scheduling (pLocalFrame store hoisted into the null branch)
+// @0x14291df80
+LoadVarsProto::LoadVarsProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<LoadVarsObject>(psc, pprototype, constructor)
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+    // Through the interface, as the exe calls it.
+    static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("onData"), Value(psc, DefaultOnData),
+                                                      PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
 // @0x14291f540
 NumberProto::NumberProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
     : Prototype<NumberObject>(psc, pprototype, constructor)
@@ -936,6 +974,16 @@ Value::Value(const Value& v)
     default:
         break;
     }
+}
+
+// @0x142923bf0
+Value::Value(ASStringContext* psc, CFunctionPtr func)
+{
+    // The new object's own count is the value's.
+    T.Type = FUNCTION;
+    V.FunctionValue.Function    = SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, func);
+    V.FunctionValue.Flags       = 0;
+    V.FunctionValue.pLocalFrame = 0;
 }
 
 // @0x142923cb0
@@ -1598,3 +1646,26 @@ GASPrototypeBase::~GASPrototypeBase()
 // MS2-PIN: ??_G?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429281e0
 // MS2-PIN: ??_7ButtonObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217c48
 // MS2-PIN: ??_7ButtonObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217c90
+// MS2-PIN: ??_7?$Prototype@VBitmapData@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219de0
+// MS2-PIN: ??_7?$Prototype@VBitmapData@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219e28
+// MS2-PIN: ??_7?$Prototype@VBitmapData@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143219ed0
+// MS2-PIN: ??_7BitmapDataProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219ed8
+// MS2-PIN: ??_7BitmapDataProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219f20
+// MS2-PIN: ??_7BitmapDataProto@AS2@GFx@Scaleform@@6B@ 0x143219fc8
+// MS2-PIN: ??_G?$Prototype@VBitmapData@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927950
+// MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321db88
+// MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321dbd0
+// MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321dc78
+// MS2-PIN: ??_7SharedObjectProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321dc80
+// MS2-PIN: ??_7SharedObjectProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321dcc8
+// MS2-PIN: ??_7SharedObjectProto@AS2@GFx@Scaleform@@6B@ 0x14321dd70
+// MS2-PIN: ??_G?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1429285b0
+// MS2-PIN: ??_7?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216fc8
+// MS2-PIN: ??_7?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217010
+// MS2-PIN: ??_7?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432170b8
+// MS2-PIN: ??_7LoadVarsProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432170c0
+// MS2-PIN: ??_7LoadVarsProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217108
+// MS2-PIN: ??_7LoadVarsProto@AS2@GFx@Scaleform@@6B@ 0x1432171b0
+// MS2-PIN: ??_G?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x142927fa0
+// MS2-PIN: ??_7LoadVarsObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216ed8
+// MS2-PIN: ??_7LoadVarsObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216f20

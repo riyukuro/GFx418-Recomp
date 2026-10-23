@@ -338,6 +338,8 @@ class BitmapData : public Object
 {
 public:
     BitmapData(Environment* penv); // exe 0x142918ef0
+    // The prototype instance has no image.
+    inline BitmapData(ASStringContext* psc, Object* pprototype); // defined in sfr_as2_03 (needs the complete ImageResource)
     virtual ~BitmapData(); // inline, defined in sfr_as2_03 (needs the complete ImageResource)
 
     virtual ObjectType GetObjectType() const; // exe 0x1429541a0: Object_BitmapData
@@ -357,12 +359,45 @@ private:
     // Prototype and the read-only width / height members, unset until an image is set (exe 0x142994e90).
     void commonInit(Environment* penv);
 };
+
+// BitmapData.prototype.
+class BitmapDataProto : public Prototype<BitmapData>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x1432134b0
+
+    BitmapDataProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919100
+};
 class LoadVarsObject : public Object
 {
 public:
     LoadVarsObject(Environment* penv); // exe 0x14291dda0
 
-    void* Data68[2]; // +0x68 not recovered
+    virtual ObjectType GetObjectType() const; // exe 0x142954270: Object_LoadVars
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags()); // exe 0x142986440
+    // The prototype instance: nothing loaded.
+    LoadVarsObject(ASStringContext* psc, Object* pprototype) : Object(psc)
+    {
+        Set__proto__(psc, pprototype);
+        BytesLoaded = -1;
+        BytesTotal  = -1;
+    }
+
+    Number BytesLoaded; // +0x68 -1 before a load
+    Number BytesTotal;  // +0x70
+};
+
+// LoadVars.prototype: the methods and the default onData handler.
+class LoadVarsProto : public Prototype<LoadVarsObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143212f80
+
+    LoadVarsProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291df80
+
+    // onData(src): decode src into the members and call onLoad (exe 0x1429381f0).
+    static void DefaultOnData(const FnCall& fn);
 };
 class MovieClipObject : public Object
 {
@@ -449,6 +484,8 @@ class SharedObject : public Object
 {
 public:
     SharedObject(Environment* penv); // exe 0x142920710
+    // The prototype instance, no name.
+    SharedObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
 
     virtual ObjectType GetObjectType() const; // exe 0x142954300: Object_SharedObject
 
@@ -465,6 +502,15 @@ public:
     // "data" is read-only (exe 0x142987280).
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags());
+};
+
+// SharedObject.prototype (no methods).
+class SharedObjectProto : public Prototype<SharedObject>
+{
+public:
+    static const NameFunction FunctionTable[]; // exe 0x143213e40 (empty)
+
+    SharedObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920830
 };
 
 // The out-of-line Resize / PushBack of the loader's object stack (exe COMDATs the exe calls where cl inlines them).
