@@ -2556,6 +2556,18 @@ void FUN_1423d8870(unsigned long long* manager)
     FUN_1423d7140(manager);
 }
 
+// MS2-FUNCTIONAL: uses our AS3 memory context declaration to release its heap limit handler, owned references, and allocated storage.
+// @0x1423dbd20
+void* FUN_1423dbd20(Scaleform::GFx::AS3::MemoryContextImpl* self, unsigned flags)
+{
+    self->~MemoryContextImpl();
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(self, 0x68);
+        else Scaleform::Memory::Free(self);
+    }
+    return self;
+}
+
 // MS2-FUNCTIONAL: creates the IME COM manager and records both executable callback interfaces and their result keys.
 // @0x1423daae0
 unsigned char FUN_1423daae0(void* raw)
