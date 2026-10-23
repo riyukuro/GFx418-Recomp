@@ -469,6 +469,47 @@ CriBool criUtfRtv_GetCellVal(const CriUtfRtvView* table, CriUint32 row, CriUint3
     return 1;
 }
 
+// MS2-FUNCTIONAL: decode a UTF column descriptor, its optional name, and its default cell.
+// @0x14003afb0
+CriUint64 FUN_14003afb0(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column)
+{
+    CriUint8 flags = field[0];
+    column->Type = flags & 0x0f;
+    column->HasDefault = (flags >> 5) & 1;
+    CriUint32 consumed = 1;
+    if (flags & 0x10)
+    {
+        CriUint32 nameOffset = criUtfReadBE32(field + consumed);
+        column->Name = nameOffset ? (const CriChar8*)(table->StringData + nameOffset) : NULL;
+        consumed += 4;
+    }
+    else
+        column->Name = NULL;
+
+    if (flags & 0x20)
+    {
+        criUtfRtv_GetCellValFromAddr(table, field + consumed, column->Type,
+                                     (CriUtfRtvCell*)column->DefaultValue);
+        switch (column->Type)
+        {
+        case 0: case 1: consumed += 1; break;
+        case 2: case 3: consumed += 2; break;
+        case 4: case 5: case 8: case 10: consumed += 4; break;
+        case 6: case 7: case 9: consumed += 8; break;
+        case 11: consumed += 8; break;
+        case 12: consumed += 16; break;
+        default: break;
+        }
+    }
+    else
+    {
+        memset(column->DefaultValue, 0, sizeof(column->DefaultValue));
+        ((CriUtfRtvCell*)column->DefaultValue)->Type = 0xff;
+    }
+    column->IsRecordField = (flags >> 6) & 1;
+    return consumed;
+}
+
 // MS2-FUNCTIONAL: the table's 16/32-bit signed fields are summed after rounding each value up to the requested alignment.
 // @0x14003aca8
 CriSint32 criUtfRtv_SumWithAlignment32(const CriUtfRtvView* table, CriUint32 firstRow, CriSint32 count,
