@@ -1674,6 +1674,47 @@ void FUN_14000b680(void** table, void* owner)
         FUN_14000b3b0(table, owner, fields[1] * 2 + 2);
 }
 
+// MS2-FUNCTIONAL: adjusts the 48-byte track-record array with the observed shrink/growth policy.
+// @0x14000bc40
+void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (size < fields[1]) { if (size < fields[2] / 2) FUN_14000b940(array, owner, size); }
+    else if (fields[2] <= size) FUN_14000b940(array, owner, size + (size >> 2));
+    fields[1] = size;
+}
+
+// MS2-FUNCTIONAL: destroys all track records and releases the array buffer.
+// @0x14000bd10
+void FUN_14000bd10(void** array) { FUN_14000b8f0(array); }
+
+// MS2-FUNCTIONAL: resizes the track array and initializes every new cue record.
+// @0x14000bd60
+void FUN_14000bd60(void** array, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1];
+    FUN_14000bc40(array, array, size);
+    if (oldSize < size && *array)
+        FUN_14000b2a0(static_cast<unsigned char*>(*array) + oldSize * 0x30, size - oldSize);
+}
+
+// MS2-FUNCTIONAL: destroys all track records and releases the array buffer.
+// @0x14000be30
+void FUN_14000be30(void** array) { FUN_14000b8f0(array); }
+
+// MS2-FUNCTIONAL: frees the owning index and releases its track-record array.
+// @0x14000c320
+void FUN_14000c320(void* owner)
+{
+    auto* bytes = static_cast<unsigned char*>(owner);
+    auto* index = *reinterpret_cast<void**>(bytes + 0x38);
+    if (index) Scaleform::Memory::Free(index);
+    auto** records = reinterpret_cast<void**>(bytes + 0x18);
+    FUN_14000b530(*records, *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x20));
+    if (*records) Scaleform::Memory::Free(*records);
+}
+
 // MS2-FUNCTIONAL: finalizes the prototype subobject and the NetStream base subobject.
 // @0x14000aec0
 void FUN_14000aec0(void* object)
