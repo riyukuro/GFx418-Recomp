@@ -92,6 +92,13 @@ void*    FUN_140045eec(const void* config, void* work, CriSint32 workSize);
 void*    FUN_140046730(void* heap, CriSint32 size, CriSint32 flags, CriSint32 align, const char* name);
 void*    FUN_140027ed8(void* heap, CriSint32 size, const char* name, CriSint32 align);
 CriSint32 FUN_140044eb0(CriSint32 workCount);
+CriUint32 FUN_140037310(const CriMvStreamingParameters* params, CriUint32 remainder);
+CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 alignment, const void* flags);
+CriSint32 FUN_140044400(void* decoder, CriUint32 first, CriUint32 second, CriUint32 third);
+CriSint32 FUN_140043a80(void* decoder, CriUint32 first, CriUint32 second, CriUint32 third);
+CriSint32 FUN_140041ee0(const void* params);
+CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const void* flags);
+void* FUN_140030be0(CriSint32 codecId);
 CriSint32 FUN_140045910(const void* config);
 CriSint32 FUN_140042150(void* player, void* source, void* work, CriUint32 size, CriSint32 flags);
 void     FUN_140037850(void* player);
@@ -2657,6 +2664,64 @@ void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
     FUN_14004698c(DAT_143b27ab0, 0x100, DAT_1431b9820);
     FUN_14004698c(DAT_143b27ab0, 0x100, description);
     FUN_140038ce4(category, DAT_143b27ab0, 0, 0, NULL);
+}
+
+// MS2-FUNCTIONAL: estimate CRI Movie work memory for stream buffers and the selected decoders.
+// @0x140037400
+CriSint32 FUN_140037400(void* player, const CriMvStreamingParameters* params)
+{
+    const CriUint32* words = (const CriUint32*)params;
+    CriUint32 overhead = words[0x2c / 4] + 8 + (params->track_play_audio < 0 ? 0u : 0xdu);
+    CriUint32 total = overhead * 0x22 + 0x24;
+    CriUint32 inputSize;
+    if (params->track_play_audio == -1)
+    {
+        float estimate = ((float)(params->max_bitrate / 8)) * params->buffering_time;
+        inputSize = (CriUint32)estimate;
+        if (inputSize < params->min_buffer_size)
+            inputSize = params->min_buffer_size;
+    }
+    else
+        inputSize = params->read_buffer_size;
+
+    CriUint32 padded = inputSize + 0x800;
+    inputSize = (padded / 0x800) * 0x800;
+    CriUint32 tail = FUN_140037310(params, padded % 0x800);
+    CriUint32 flags[2] = { 1, 1 };
+    CriSint32 blockSize = FUN_140046604(inputSize, tail, 0x40, flags);
+    total += blockSize;
+
+    if (params->num_video != 0)
+    {
+        CriUint32 codecId = words[0x44 / 4];
+        void* videoCodec = FUN_140030b50((CriSint32)codecId);
+        if (!videoCodec)
+        {
+            FUN_140037950(player, "E11030202M: No available decoder for the requested video codec.", 0);
+            return -1;
+        }
+        total += FUN_140044400(videoCodec, words[0x1c / 4], words[0x20 / 4], words[0x28 / 4]);
+        if (params->num_alpha != 0)
+        {
+            void* alphaCodec = FUN_140030be0((CriSint32)words[0x280 / 4]);
+            if (!alphaCodec)
+            {
+                FUN_140037950(player, "E11030702M: Not found any available alpha decoder.", 0);
+                return -1;
+            }
+            total += FUN_140043a80(alphaCodec, params->alpha_prm[0].max_width,
+                                   params->alpha_prm[0].max_height, params->video_prm[0].framerate);
+        }
+    }
+    total += FUN_140041ee0(params);
+    if (params->track_play_audio >= 0)
+    {
+        const CriUint8* audio = (const CriUint8*)params + 0x54 + (size_t)params->track_play_audio * 0x10;
+        using AudioSize = CriSint32 (*)(void*, const void*);
+        total += ((AudioSize)FUN_140042150)(player, audio);
+    }
+    flags[0] = flags[1] = 1;
+    return total + FUN_140046420(0, 0x40, flags);
 }
 
 // MS2-FUNCTIONAL: translate the active CRI stream slot into the public streaming-parameter record.
