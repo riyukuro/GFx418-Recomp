@@ -965,6 +965,39 @@ void* FUN_140006db0(void** destination, const void** source)
     return destination;
 }
 
+// MS2-FUNCTIONAL: releases both weak-proxy references held by each 16-byte record.
+// @0x1400068d0
+void FUN_1400068d0(void* records, Scaleform::UPInt count)
+{
+    auto* pair = reinterpret_cast<Scaleform::UPInt*>(records);
+    for (Scaleform::UPInt i = 0; i < count; ++i, pair += 2) {
+        auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
+        auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+        if (second) second->Release();
+        if (first) first->Release();
+    }
+}
+
+// MS2-FUNCTIONAL: destroys every weak pair in the storage and releases the array allocation.
+// @0x140006e20
+void FUN_140006e20(void** array)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (fields[1]) FUN_1400068d0(*array, fields[1]);
+    if (*array) Scaleform::Memory::Free(*array);
+}
+
+// MS2-FUNCTIONAL: copies the two shared strings in each 16-byte hash record.
+// @0x140006940
+void FUN_140006940(Scaleform::String* destination, Scaleform::UPInt count,
+                   const Scaleform::String* source)
+{
+    for (Scaleform::UPInt i = 0; i < count; ++i) {
+        new (destination + i * 2) Scaleform::String(source[i * 2]);
+        new (destination + i * 2 + 1) Scaleform::String(source[i * 2 + 1]);
+    }
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
