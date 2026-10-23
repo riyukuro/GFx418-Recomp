@@ -32,6 +32,7 @@ extern "C" const void* DAT_143a47bc0[];
 extern "C" const void* DAT_143a47cb0[];
 extern "C" const char* DAT_143ba9d18;
 extern "C" const CriChar8 DAT_143a482e8[];
+extern "C" const CriUint64 DAT_1431b9ca0;
 extern "C" const void* PTR_FUN_143a48638;
 extern "C" const void* PTR_FUN_143a48668;
 extern "C" const void* PTR_FUN_1431b9b10;
@@ -3060,6 +3061,67 @@ CriBool FUN_140040f80(const void* packet, CriSint32 size)
             return 0;
     }
     return header->CscFlag == 'C';
+}
+
+// MS2-FUNCTIONAL: compute ring-buffer memory requirements for the CRI movie stream joint.
+// @0x140046604
+CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 third,
+                        const CriUint32* settings)
+{
+    struct Setup { CriUint32 Flags, First, Second, Third; CriUint64 Reserved; };
+    CriSint32 overhead = FUN_140027dd0(8);
+    Setup setup = { settings[0], first, second, third, 0 };
+    return FUN_140045ed0(&setup) + overhead * 2;
+}
+
+// MS2-FUNCTIONAL: create a standard ring-buffer stream joint using the static CRI pool descriptor.
+// @0x140046678
+void FUN_140046678(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
+{
+    const CriUint32 settings[2] = { 0, 1 };
+    FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
+}
+
+// MS2-FUNCTIONAL: create a configured ring-buffer stream joint with caller-supplied pool storage.
+// @0x1400466ac
+void FUN_1400466ac(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+                   CriUint64 poolBytes)
+{
+    const CriUint32 settings[2] = { 0, 1 };
+    FUN_1400465c4(heap, first, second, third, poolBytes, settings);
+}
+
+// MS2-FUNCTIONAL: calculate stream-joint requirements using the default setup flags.
+// @0x1400466dc
+CriSint32 FUN_1400466dc(CriUint32 first, CriUint32 second, CriUint32 third)
+{
+    const CriUint32 settings[2] = { 0, 1 };
+    return FUN_140046604(first, second, third, settings);
+}
+
+// MS2-FUNCTIONAL: create a non-zero initialized ring-buffer stream joint using the static pool descriptor.
+// @0x1400466fc
+void FUN_1400466fc(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
+{
+    const CriUint32 settings[2] = { 1, 1 };
+    FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
+}
+
+// MS2-FUNCTIONAL: create a non-zero initialized ring-buffer stream joint with caller pool storage.
+// @0x140046730
+void FUN_140046730(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+                   CriUint64 poolBytes)
+{
+    const CriUint32 settings[2] = { 1, 1 };
+    FUN_1400465c4(heap, first, second, third, poolBytes, settings);
+}
+
+// MS2-FUNCTIONAL: create a stream joint using caller setup flags and the static pool descriptor.
+// @0x140046760
+void FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+                   const CriUint32* settings)
+{
+    FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
