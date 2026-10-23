@@ -11,6 +11,9 @@
 #include <cstring>
 
 extern "C" CriSint32 DAT_143ba9d28;
+extern "C" CriSint32 DAT_143b27be0;
+extern "C" void* DAT_143b27be8;
+extern "C" CriUint8 DAT_143b27bf0[0x48];
 extern "C" const char* DAT_143ba9d08;
 extern "C" const char* DAT_143ba9d20;
 extern "C" void* DAT_143b15f60;
@@ -84,6 +87,40 @@ void FUN_140039f8c(LPCRITICAL_SECTION section)
     if (*depth == 0)
         *(DWORD*)((CriUint8*)section + 0x28) = 0;
     LeaveCriticalSection(section);
+}
+
+// @0x140039fc8
+void criAtomic_Initialize()
+{
+    if (++DAT_143b27be0 == 1) {
+        memset(DAT_143b27bf0, 0, (size_t)DAT_143b27be0 + 0x47);
+        DAT_143b27be8 = criCs_Create(DAT_143b27bf0, 0x48);
+    }
+}
+
+// @0x14003a010
+void criAtomic_Finalize()
+{
+    if (--DAT_143b27be0 == 0) {
+        if (DAT_143b27be8) {
+            criCs_Destroy((LPCRITICAL_SECTION)DAT_143b27be8);
+            DAT_143b27be8 = NULL;
+        }
+        memset(DAT_143b27bf0, 0, 0x48);
+    }
+}
+
+// @0x14003a0b4
+CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment)
+{
+    CriUint64 rem = value % alignment;
+    return rem ? value + alignment - rem : value;
+}
+
+// @0x14003a0f8
+CriUint32 FUN_14003a0f8(CriSint32 index)
+{
+    return (CriUint32)((index + 2 * index) * 16 + 0xb8);
 }
 
 // ==== CRI UTF heap callback helpers ================================================================================
