@@ -262,6 +262,33 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
+// MS2-FUNCTIONAL: returns the executable's ID-backed integer and Value-backed string properties from the current IME state.
+// @0x1423da150
+void FUN_1423da150(void* self, void* output, const String* key)
+{
+    const auto packed = *reinterpret_cast<const unsigned long long*>(key);
+    const char* name = reinterpret_cast<const char*>((packed & ~3ull) + 0xc);
+    auto* value = static_cast<unsigned char*>(output);
+    const bool isString = std::strcmp(name, "Value") == 0;
+    const bool isId = !isString && std::memcmp(name, "ID", 3) == 0;
+    if (!isString && !isId) return;
+    const unsigned oldType = *reinterpret_cast<unsigned*>(value + 8);
+    if (oldType & 0x40) {
+        void* ref = *reinterpret_cast<void**>(value);
+        reinterpret_cast<void(*)(void*, void*, unsigned long long)>(
+            (*reinterpret_cast<void***>(ref))[2])(ref, output, *reinterpret_cast<unsigned long long*>(value + 16));
+        *reinterpret_cast<void**>(value) = nullptr;
+    }
+    if (isId) {
+        *reinterpret_cast<unsigned long long*>(value + 16) = static_cast<unsigned long long>(
+            static_cast<double>(*reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x10)));
+        *reinterpret_cast<unsigned*>(value + 8) = 5;
+        return;
+    }
+    *reinterpret_cast<unsigned long long*>(value + 16) = (packed & ~3ull) + 0xc;
+    *reinterpret_cast<unsigned*>(value + 8) = 6;
+}
+
 // MS2-FUNCTIONAL: queries the active keyboard layout, updates its locale label, and selects the executable's mode text.
 // @0x1423d7140
 void FUN_1423d7140(unsigned long long* manager)
