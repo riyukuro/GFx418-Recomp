@@ -2307,6 +2307,39 @@ unsigned long long FUN_1423daf30(void* raw, int offset)
     return 0;
 }
 
+// MS2-FUNCTIONAL: synchronizes Korean IME association and the observed conversion/sentence mode fields.
+// @0x1423cfbe0
+void FUN_1423cfbe0(void* raw, unsigned char enabled)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    int composition = *reinterpret_cast<int*>(self + 0xbc);
+    if (!enabled) {
+        if (composition < 1) return;
+        *reinterpret_cast<unsigned char*>(self + 0xc0) = 1;
+    }
+    if (composition != 0) return;
+
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    HIMC oldContext = cx18_ImmGetContext(hwnd);
+    String language;
+    void* languageSource = *reinterpret_cast<void**>(self + 0xa8);
+    reinterpret_cast<void(*)(void*, String*)>((*reinterpret_cast<void***>(languageSource))[0xa0 / sizeof(void*)])(
+        languageSource, &language);
+    const bool korean = _strnicmp(language.ToCStr(), "Korean", 6) == 0;
+    cx18_ImmAssociateContextEx(hwnd, nullptr, static_cast<DWORD>(enabled) << 4);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    DWORD conversion = 0;
+    DWORD sentence = 0;
+    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
+    if (!korean) {
+        conversion = enabled ? (conversion | 1u) : (conversion & ~1u);
+        sentence = static_cast<DWORD>(enabled) << 3;
+    }
+    cx18_ImmSetConversionStatus(context, conversion, sentence);
+    cx18_ImmReleaseContext(hwnd, oldContext);
+    *reinterpret_cast<unsigned char*>(self + 0xc0) = 0;
+}
+
 // MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
 // @0x1423cad20
 unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
