@@ -27,7 +27,6 @@ extern "C" void FUN_142585f70(void*, int);
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_14268f8f0(void*, void*, unsigned);
-extern "C" void FUN_14268f230(void*, void*, unsigned);
 extern "C" void FUN_1426869a0(void*, void*, const void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
@@ -1945,6 +1944,8 @@ static void WriteImageStream(void* stream, const void* data, unsigned size)
 }
 
 void WriteNarrowString(void*, const String*);
+void WriteTextTreeNode(const void*, void*, unsigned);
+void WriteTextRecordGroup(void*, void*, unsigned);
 
 // MS2-FUNCTIONAL: writes the collection count, each image record header, and every nested 16-byte entry through the stream vtable.
 // @0x14268f4b0
@@ -2002,7 +2003,7 @@ void WriteMovieImageData(void* object, void* stream, unsigned version)
     FUN_14268ef30(*reinterpret_cast<void**>(bytes + 0x60), stream, version);
     FUN_14268f8f0(*reinterpret_cast<void**>(bytes + 0x68), stream, version);
     if (version > 0x18)
-        FUN_14268f230(*reinterpret_cast<void**>(bytes + 0x70), stream, version);
+        WriteTextRecordGroup(*reinterpret_cast<void**>(bytes + 0x70), stream, version);
 }
 
 // MS2-FUNCTIONAL: writes the version-nine string resource arrays and each occupied cached hash entry with its length-prefixed name.
@@ -2044,6 +2045,42 @@ void WriteStringResourceTable(void* object, void* stream, unsigned version)
         }
         ++index;
         marker += 4;
+    }
+}
+
+// MS2-FUNCTIONAL: serializes the text record group, its recursive tree entries, and occupied string-cache records.
+// @0x14268f230
+void WriteTextRecordGroup(void* object, void* stream, unsigned version)
+{
+    auto* bytes = static_cast<unsigned char*>(object);
+    Scaleform::WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(bytes + 0x10));
+    const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x20);
+    auto** nodes = *reinterpret_cast<void***>(bytes + 0x18);
+    auto** streamVtable = *reinterpret_cast<void***>(stream);
+    reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, &count, 4);
+    for (unsigned i = 0; i < count; ++i)
+        Scaleform::WriteTextTreeNode(nodes[i], stream, version);
+
+    auto* table = *reinterpret_cast<unsigned char**>(bytes + 0x30);
+    const unsigned entryCount = table ? *reinterpret_cast<unsigned*>(table) : 0;
+    reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, &entryCount, 4);
+    if (!table)
+        return;
+
+    const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
+    for (std::uint64_t index = 0; index <= mask; ++index) {
+        auto* row = table + index * 0x20;
+        if (*reinterpret_cast<std::int64_t*>(row + 0x10) == -2)
+            continue;
+        const std::uint64_t key = *reinterpret_cast<std::uint64_t*>(row + 0x20);
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, &key, 8);
+        auto* value = *reinterpret_cast<unsigned char**>(row + 0x28);
+        auto* text = reinterpret_cast<const Scaleform::String*>(value + 0x10);
+        Scaleform::WriteNarrowString(stream, text);
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, value + 0x18, 4);
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, value + 0x20, 8);
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, value + 0x28, 4);
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, value + 0x2c, 4);
     }
 }
 
