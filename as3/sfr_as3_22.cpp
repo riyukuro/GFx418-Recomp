@@ -29,6 +29,7 @@ extern "C" void FUN_14268f8f0(void*, void*, unsigned);
 extern "C" void FUN_14268f230(void*, void*, unsigned);
 extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_1426869a0(void*, void*, const void*, std::uint64_t);
+extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
 MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
 MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
@@ -772,6 +773,62 @@ void AddImageHashValue(void* set, const unsigned char* key, const void* value)
 {
     struct Pair { const unsigned char* key; std::uint64_t value; } pair{key, reinterpret_cast<std::uint64_t>(value)};
     FUN_1426867f0(set, set, &pair, HashImageKey(key));
+}
+
+// MS2-FUNCTIONAL: inserts a pointer value into the allocator-backed open-addressed hash set, relocating collisions and growing at the executable's load threshold.
+// @0x1426869a0
+void AddCachedPointer(void* setObject, void* allocator, const std::uint64_t* value, std::uint64_t hash)
+{
+    auto** set = static_cast<std::uint64_t**>(setObject);
+    auto* table = *set;
+    std::uint64_t capacity;
+    if (!table) {
+        capacity = 8;
+    } else {
+        if (table[0] * 5 <= table[1] * 4 + 4)
+            goto insert_entry;
+        capacity = table[1] * 2 + 2;
+    }
+    FUN_142690a20(setObject, allocator, static_cast<std::int64_t>(capacity));
+insert_entry:
+    table = *set;
+    const std::uint64_t bucket = hash & table[1];
+    ++table[0];
+    auto* row = table + 2 + bucket * 3;
+    const std::uint64_t occupant = row[0];
+    std::uint64_t storedValue;
+    if (static_cast<std::int64_t>(occupant) == -2) {
+        row[1] = UINT64_MAX;
+        storedValue = *value;
+    } else {
+        std::uint64_t empty = bucket;
+        do {
+            empty = (empty + 1) & table[1];
+        } while (static_cast<std::int64_t>(table[2 + empty * 3]) != -2);
+        auto* target = table + 2 + empty * 3;
+        if (row[1] == bucket) {
+            target[0] = occupant;
+            target[1] = row[1];
+            target[2] = row[2];
+            storedValue = *value;
+            row[0] = empty;
+        } else {
+            std::uint64_t previous = row[1];
+            auto* previousRow = table + 2 + previous * 3;
+            while (previousRow[0] != bucket) {
+                previous = previousRow[0];
+                previousRow = table + 2 + previous * 3;
+            }
+            target[0] = occupant;
+            target[1] = row[1];
+            target[2] = row[2];
+            previousRow[0] = empty;
+            row[0] = UINT64_MAX;
+            storedValue = *value;
+        }
+    }
+    row[2] = storedValue;
+    row[1] = bucket;
 }
 
 // MS2-FUNCTIONAL: updates or inserts this node's cached key, then repeats the operation for its child nodes.
