@@ -19,6 +19,7 @@ public:
 
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x142956730
     virtual ObjectType  GetObjectType() const;                     // exe 0x142954320: Object_String
+    virtual Value       GetValue() const;                          // exe 0x142956cb0: the string value
 
     // "length" defaults to the length of the string (exe 0x1429538a0).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
@@ -57,8 +58,17 @@ public:
 };
 
 // The String constructor function's own methods.
-class StringCtorFunction
+class StringCtorFunction : public CFunctionObject
 {
+public:
+    StringCtorFunction(ASStringContext* psc); // exe 0x142920d70
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937290
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295c710
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213610: fromCharCode
+
 private:
     static void StringFromCharCode(const FnCall& fn);
 };

@@ -159,7 +159,11 @@ protected:
 class ObjectCtorFunction : public CFunctionObject
 {
 public:
+    ObjectCtorFunction(ASStringContext* psc); // exe 0x14291f8e0
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937170
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x1432142f0: registerClass
 };
 
 // Object.prototype methods (only the natives so far).

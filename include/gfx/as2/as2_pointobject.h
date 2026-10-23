@@ -75,7 +75,11 @@ public:
 class PointCtorFunction : public CFunctionObject
 {
 public:
+    PointCtorFunction(ASStringContext* psc); // exe 0x14291fb70
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429371b0
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x1432135b0: interpolate, distance, polar
 
     // new Point(x, y) / Point(x, y): the instance (a new one when called as a function) with x and y set
     // (exe 0x14295c160).

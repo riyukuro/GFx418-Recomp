@@ -102,7 +102,13 @@ inline int Date_StartOfYear(int y)
 class DateCtorFunction : public CFunctionObject
 {
 public:
+    DateCtorFunction(ASStringContext* psc); // exe 0x14291b470
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c40
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x142959f10
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213a50: UTC
 
 private:
     static void DateUTC(const FnCall& fn);

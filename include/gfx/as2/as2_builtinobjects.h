@@ -502,12 +502,17 @@ class SharedObjectCtorFunction : public CFunctionObject
 public:
     ASStringHash_GC<SharedObjectPtr> SharedObjects; // +0x70
 
+    SharedObjectCtorFunction(ASStringContext* psc); // exe 0x142920790
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213ed0: getLocal
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937240
 
     // SharedObject() called as a function: a new shared object (exe 0x14295c670).
     static void GlobalCtor(const FnCall& fn);
 
 protected:
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const; // exe 0x142941220
     virtual void Finalize_GC(); // exe 0x142942f80
 
     template<class Functor> void ForEachChild_GC(Collector* prcc) const; // defined in sfr_as2_02
@@ -517,6 +522,8 @@ protected:
 class GASLoadVarsLoaderCtorFunction : public CFunctionObject
 {
 public:
+    GASLoadVarsLoaderCtorFunction(ASStringContext* psc); // exe 0x14291c1c0
+
     // LoadVars() on a LoadVars instance returns it, null otherwise (exe 0x14295afb0).
     static void GlobalCtor(const FnCall& fn);
 
@@ -527,14 +534,35 @@ public:
 class StyleSheetCtorFunction : public CFunctionObject
 {
 public:
+    StyleSheetCtorFunction(ASStringContext* psc); // exe 0x142921110
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937380
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295c930
+};
+
+// The TextField class: the static TextField.getFontList.
+class TextFieldCtorFunction : public CFunctionObject
+{
+public:
+    TextFieldCtorFunction(ASStringContext* psc); // exe 0x142921480
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429373c0
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295ca00
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x143212f60: getFontList
 };
 
 // The TextFormat class.
 class TextFormatCtorFunction : public CFunctionObject
 {
 public:
+    TextFormatCtorFunction(ASStringContext* psc); // exe 0x142922650
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937470
+
+    static void GlobalCtor(const FnCall& fn); // exe 0x14295ca10
 };
 
 // The flash.geom.Transform class.
@@ -588,6 +616,10 @@ public:
 class BooleanCtorFunction : public CFunctionObject
 {
 public:
+    BooleanCtorFunction(ASStringContext* psc); // exe 0x142919980
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429369b0
+
     // new Boolean(v) stores v in the instance, Boolean(v) converts v (exe 0x1429595a0).
     static void GlobalCtor(const FnCall& fn);
 };
@@ -612,6 +644,12 @@ public:
 class BitmapDataCtorFunction : public CFunctionObject
 {
 public:
+    BitmapDataCtorFunction(ASStringContext* psc); // exe 0x142919060
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936930
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x1432134d0: loadBitmap
+
     // BitmapData() called as a function: a new empty bitmap (exe 0x142959160).
     static void GlobalCtor(const FnCall& fn);
 };
@@ -620,6 +658,10 @@ public:
 class MovieClipLoaderCtorFunction : public CFunctionObject
 {
 public:
+    MovieClipLoaderCtorFunction(ASStringContext* psc); // exe 0x14291ed40
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936ff0
+
     // MovieClipLoader() on a loader instance makes it its own listener and returns it, null otherwise
     // (exe 0x14295bca0).
     static void GlobalCtor(const FnCall& fn);
@@ -629,6 +671,12 @@ public:
 class AsBroadcasterCtorFunction : public CFunctionObject
 {
 public:
+    AsBroadcasterCtorFunction(ASStringContext* psc); // exe 0x1429184e0
+
+    virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429367e0
+
+    static const NameFunction StaticFunctionTable[]; // exe 0x143213a30: initialize
+
     // AsBroadcaster() on a broadcaster instance returns it, null otherwise (exe 0x142958670).
     static void GlobalCtor(const FnCall& fn);
 };

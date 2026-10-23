@@ -16,6 +16,19 @@
 // MS2-RANGE: 0x14291f670-0x14291f8d0 .text$mn
 // MS2-RANGE: 0x142919d70-0x142919da0 .text$mn
 // MS2-RANGE: 0x142919df0-0x142919ee0 .text$mn
+// MS2-RANGE: 0x1429184e0-0x142918580 .text$mn
+// MS2-RANGE: 0x142919060-0x142919100 .text$mn
+// MS2-RANGE: 0x142919980-0x142919a00 .text$mn
+// MS2-RANGE: 0x14291b470-0x14291b510 .text$mn
+// MS2-RANGE: 0x14291c1c0-0x14291c240 .text$mn
+// MS2-RANGE: 0x14291ed40-0x14291edc0 .text$mn
+// MS2-RANGE: 0x14291f8e0-0x14291f980 .text$mn
+// MS2-RANGE: 0x14291fb70-0x14291fc10 .text$mn
+// MS2-RANGE: 0x142920790-0x142920830 .text$mn
+// MS2-RANGE: 0x142920d70-0x142920e10 .text$mn
+// MS2-RANGE: 0x142921110-0x142921190 .text$mn
+// MS2-RANGE: 0x142921480-0x142921520 .text$mn
+// MS2-RANGE: 0x142922650-0x1429226d0 .text$mn
 // MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
 // MS2-RANGE: 0x142919a00-0x142919af0 .text$mn
 // MS2-RANGE: 0x142917ed0-0x1429180c0 .text$mn
@@ -44,6 +57,7 @@
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_stringobject.h"
+#include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
@@ -108,6 +122,100 @@ CFunctionObject::CFunctionObject(ASStringContext* psc, Object* pprototype, CFunc
     : FunctionObject(psc), pFunction(func)
 {
     Set__proto__(psc, pprototype);
+}
+
+// @0x1429184e0
+AsBroadcasterCtorFunction::AsBroadcasterCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142919060
+BitmapDataCtorFunction::BitmapDataCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142919980
+BooleanCtorFunction::BooleanCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x14291b470
+DateCtorFunction::DateCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x14291c1c0
+GASLoadVarsLoaderCtorFunction::GASLoadVarsLoaderCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x14291ed40
+MovieClipLoaderCtorFunction::MovieClipLoaderCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x14291f8e0
+ObjectCtorFunction::ObjectCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, ObjectProto::GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x14291fb70
+PointCtorFunction::PointCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142920790
+SharedObjectCtorFunction::SharedObjectCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142920d70
+StringCtorFunction::StringCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142921110
+StyleSheetCtorFunction::StyleSheetCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+}
+
+// @0x142921480
+TextFieldCtorFunction::TextFieldCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// @0x142922650
+TextFormatCtorFunction::TextFormatCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, GlobalCtor)
+{
 }
 
 // @0x142919a00
@@ -596,3 +704,29 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e310
 // MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218490
 // MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432184d8
+// MS2-PIN: ??_7AsBroadcasterCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c0a8
+// MS2-PIN: ??_7AsBroadcasterCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c130
+// MS2-PIN: ??_7BitmapDataCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219fd0
+// MS2-PIN: ??_7BitmapDataCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a058
+// MS2-PIN: ??_7BooleanCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b830
+// MS2-PIN: ??_7BooleanCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b8b8
+// MS2-PIN: ??_7DateCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c4b8
+// MS2-PIN: ??_7DateCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c540
+// MS2-PIN: ??_7GASLoadVarsLoaderCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432171b8
+// MS2-PIN: ??_7GASLoadVarsLoaderCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217240
+// MS2-PIN: ??_7MovieClipLoaderCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216da8
+// MS2-PIN: ??_7MovieClipLoaderCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216e30
+// MS2-PIN: ??_7ObjectCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215820
+// MS2-PIN: ??_7ObjectCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432158a8
+// MS2-PIN: ??_7PointCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a3e0
+// MS2-PIN: ??_7PointCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a468
+// MS2-PIN: ??_7SharedObjectCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321dd88
+// MS2-PIN: ??_7SharedObjectCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321de10
+// MS2-PIN: ??_7StringCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ac00
+// MS2-PIN: ??_7StringCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ac88
+// MS2-PIN: ??_7StyleSheetCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432175e8
+// MS2-PIN: ??_7StyleSheetCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217670
+// MS2-PIN: ??_7TextFieldCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218770
+// MS2-PIN: ??_7TextFieldCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432187f8
+// MS2-PIN: ??_7TextFormatCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d968
+// MS2-PIN: ??_7TextFormatCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d9f0
