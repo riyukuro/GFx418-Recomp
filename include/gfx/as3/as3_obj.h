@@ -146,7 +146,8 @@ public:
         aReadOnly   = 1,
         aDontEnum   = 2,    // (sfr19) was swapped with aReadOnly: AddDynamicSlotValuePair tests a == 2 for DontEnum
         aDontDelete = 4,
-        aInternal   = 8
+        aInternal   = 8,
+        aCppBinding = 16    // (appended, sfr19) Traits::AddSlotCPP / AddSlot(MemberInfo)
     };
 
     enum BindingType
@@ -172,6 +173,21 @@ public:
     SlotInfo(const SlotInfo& other);                // 0x1424d99f0
     ~SlotInfo();                                    // 0x1424def30
     SlotInfo& operator=(const SlotInfo& other);     // 0x1424e0b80
+
+    // (appended, sfr19) a slot of namespace ns (taken over) and class ctraits; unbound (ValueInd -1) until Bind.
+    // Inline body in as3_vmabcfile.h (the SPtr<VMAbcFile> member needs the complete type).
+    inline SlotInfo(Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* ctraits, int a = aDontEnum,
+                    const Ptr<ASStringNode>& name = NULL);
+    // (appended, sfr19) a slot declared by trait ti of an ABC file. Inline body in as3_vmabcfile.h.
+    inline SlotInfo(Pickable<const Instances::Namespace> ns, VMAbcFile& file, const Abc::TraitInfo& ti,
+                    int a = aDontEnum, const Ptr<ASStringNode>& name = NULL);
+
+    // (appended, sfr19) where the value lives: binding kind and index.
+    void Bind(BindingType dt, AbsoluteIndex offset)
+    {
+        BindType = dt;
+        ValueInd = static_cast<SInt32>(offset.Get());
+    }
 
     // +0x00 attribute and binding bit fields (sfr19: was one SInt32 Bits; the copies mask 1/2/4/8/0x10/0x3e0/0x7fffc00)
     UInt32                                  ReadOnly:1;
@@ -225,6 +241,11 @@ public:
 protected:
     AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
 public:
+    // (appended, sfr19) slot ind of this table (not of a parent).
+    SlotInfo& GetOwnSlotInfo(AbsoluteIndex ind)
+    {
+        return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value;
+    }
 
     UPInt               FirstOwnSlotNum;    // +0x00
     const Slots*        Parent;             // +0x08
@@ -384,6 +405,16 @@ public:
 
     // (appended, sfr19) slot and method registration from a C++ ClassInfo.
     void AddSlot(const MemberInfo& mi);                         // 0x1424e9910
+    // (appended, sfr19) the other slot adders; dt/offset bind the slot, const_ makes it read only. AddSlotCPP marks a
+    // C++ member binding.
+    AbsoluteIndex AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, VMAbcFile& file,
+                          const Abc::TraitInfo& ti, bool const_);                               // 0x1424e9670
+    void AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
+                 SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_);                  // 0x1424e9740
+    void AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, SlotInfo::BindingType dt,
+                 AbsoluteIndex offset, bool const_ = false);                                    // 0x1424e9830
+    void AddSlotCPP(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
+                    SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_);               // 0x1424e9a50
     void Add2VT(const ClassInfo& ci, const ThunkInfo& func);    // 0x1424e56f0
 
 protected:

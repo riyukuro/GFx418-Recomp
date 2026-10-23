@@ -1041,9 +1041,11 @@ inline Value::TraceNullType CanBeNull(const Value& _1, const Value& _2)
 struct MemberInfo
 {
     const char* Name;           // +0x00
-    UInt16      Offset;         // +0x08
-    UInt8       BindingType;    // +0x0a
-    UInt8       Flags;          // +0x0b
+    // +0x08 (sfr19: bit fields; Traits::AddSlot 0x1424e9910 reads Offset as bits 0-15, the binding as 16-20 and
+    // const as bit 21)
+    UInt32      Offset:16;
+    SInt32      BT:5;           // SlotInfo::BindingType
+    UInt32      Const:1;
 };
 
 // Descriptor of a native class: its type (the TypeInfo part, 0x20 bytes) followed by the traits factory and the

@@ -188,6 +188,67 @@ void Value::AddRefWeakRef() const
     Bonus.pWeakProxy->AddRef();
 }
 
+// ==== traits =========================================================================================================
+
+// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
+// build differently (it also skips a redundant 5-bit mask of the attributes).
+// @0x1424e9670
+AbsoluteIndex Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, VMAbcFile& file,
+                              const Abc::TraitInfo& ti, bool const_)
+{
+    return Add(name, SlotInfo(ns, file, ti, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) | SlotInfo::aDontEnum,
+                              name.GetNode()));
+}
+
+// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
+// build differently (it also skips a redundant 5-bit mask of the attributes).
+// @0x1424e9740
+void Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
+                     SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_)
+{
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
+                                                             SlotInfo::aDontEnum, name.GetNode()));
+    GetOwnSlotInfo(ind).Bind(dt, offset);
+}
+
+// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
+// build differently (it also skips a redundant 5-bit mask of the attributes).
+// @0x1424e9830
+void Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, SlotInfo::BindingType dt,
+                     AbsoluteIndex offset, bool const_)
+{
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, NULL, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
+                                                             SlotInfo::aDontEnum, name.GetNode()));
+    GetOwnSlotInfo(ind).Bind(dt, offset);
+}
+
+// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
+// build differently (it also skips a redundant 5-bit mask of the attributes).
+// @0x1424e9910
+void Traits::AddSlot(const MemberInfo& mi)
+{
+    VM& vm = GetVM();
+    const int attr = SlotInfo::aDontEnum | SlotInfo::aCppBinding | (mi.Const ? SlotInfo::aReadOnly : SlotInfo::aNone);
+    ASString name = vm.GetStringManager().CreateConstString(mi.Name);
+
+    const AbsoluteIndex ind =
+        Add(name, SlotInfo(Pickable<const Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue), NULL, attr,
+                           name.GetNode()));
+    GetOwnSlotInfo(ind).Bind(static_cast<SlotInfo::BindingType>(mi.BT), AbsoluteIndex(mi.Offset));
+}
+
+// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
+// build differently (it also skips a redundant 5-bit mask of the attributes).
+// @0x1424e9a50
+void Traits::AddSlotCPP(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
+                        SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_)
+{
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
+                                                             SlotInfo::aDontEnum | SlotInfo::aCppBinding,
+                                                 name.GetNode()));
+    GetOwnSlotInfo(ind).Bind(dt, offset);
+}
+
 // ==== virtual machine ================================================================================================
 
 // @0x1424eaf00
