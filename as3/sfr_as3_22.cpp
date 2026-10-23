@@ -686,6 +686,32 @@ void ClearSoundBuffer(void* player)
 
 
 namespace Scaleform {
+// MS2-FUNCTIONAL: clips a rectangle to the destination image and fills the surviving pixels with the selected alpha-adjusted color.
+// @0x142676ac0
+void FillClippedImageRect(void* command, void*, void* image)
+{
+    auto* bytes = static_cast<unsigned char*>(command);
+    auto* plane = *reinterpret_cast<unsigned**>(static_cast<unsigned char*>(image) + 0x10);
+    const int x0 = static_cast<int>(*reinterpret_cast<unsigned*>(bytes + 0x10));
+    const int y0 = static_cast<int>(*reinterpret_cast<unsigned*>(bytes + 0x14));
+    const int x1 = *reinterpret_cast<int*>(bytes + 0x18);
+    const int y1 = *reinterpret_cast<int*>(bytes + 0x1c);
+    if (static_cast<int>(plane[1]) < y0 || y1 < 0 || x1 < 0 || static_cast<int>(plane[0]) < x0)
+        return;
+    const int left = x0 < 0 ? 0 : x0;
+    const int right = x1 < static_cast<int>(plane[0]) ? x1 : static_cast<int>(plane[0]);
+    const int top = y0 < 0 ? 0 : y0;
+    const int bottom = y1 < static_cast<int>(plane[1]) ? y1 : static_cast<int>(plane[1]);
+    const long long pitch = *reinterpret_cast<long long*>(plane + 2);
+    const long long base = *reinterpret_cast<long long*>(plane + 6);
+    unsigned color = *reinterpret_cast<unsigned*>(bytes + 0x20) | 0xff000000u;
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 8)) + 0x48))
+        color = *reinterpret_cast<unsigned*>(bytes + 0x20);
+    for (int y = top; y < bottom; ++y)
+        for (int x = left; x < right; ++x)
+            FUN_14257d390(image, base + pitch * y, static_cast<unsigned>(x), color);
+}
+
 // MS2-FUNCTIONAL: fills every pixel using the executable's image write helper and the stored color value.
 // @0x142675ca0
 void FillImageData(void* command, void*, void* image)
@@ -701,6 +727,37 @@ void FillImageData(void* command, void*, void* image)
         for (unsigned x = 0; x < width; ++x)
             FUN_14257d390(image, base + pitch * y, x, color);
     }
+}
+
+// MS2-FUNCTIONAL: counts descendants across every root view and the extra root tree, seeding each view node at one.
+// @0x14268a6d0
+int CountMovieViewNodes(void* movie)
+{
+    auto* bytes = static_cast<unsigned char*>(movie);
+    int total = 0;
+    auto countRoots = [&](void** roots, std::size_t rootCount) {
+        for (std::size_t i = 0; i < rootCount; ++i) {
+            int count = 1;
+            auto* root = static_cast<unsigned char*>(roots[i]);
+            void** children = *reinterpret_cast<void***>(root + 0x30);
+            const std::size_t childCount = *reinterpret_cast<std::size_t*>(root + 0x38);
+            for (std::size_t j = 0; j < childCount; ++j)
+                CountTreeNodes(children[j], &count);
+            total += count;
+        }
+    };
+    auto** views = *reinterpret_cast<void***>(bytes + 0xd0);
+    const std::size_t viewCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
+    for (std::size_t i = 0; i < viewCount; ++i) {
+        auto* viewRoots = static_cast<unsigned char*>(views[i]) + 0x70;
+        countRoots(*reinterpret_cast<void***>(viewRoots + 0x18),
+                   *reinterpret_cast<std::size_t*>(viewRoots + 0x20));
+    }
+    auto* roots = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0xf0));
+    if (roots)
+        countRoots(*reinterpret_cast<void***>(roots + 0x18),
+                   *reinterpret_cast<std::size_t*>(roots + 0x20));
+    return total;
 }
 }
 
