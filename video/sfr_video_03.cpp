@@ -54,6 +54,9 @@ MS2_EXTERN(0x1424f1390, void(void*, void*, void*), ConvertAS3ValueToString);
 MS2_EXTERN(0x1424f0d30, void(void*, void*, int*, int, void*), ConvertAS3ValueToInt32);
 MS2_EXTERN(0x1424f0be0, std::uint8_t(void*), ConvertAS3ValueToBool);
 MS2_EXTERN(0x1423dfa20, void(), ReleaseAS3GcObject);
+MS2_EXTERN(0x14257dc30, void(void*), FUN_14257dc30);
+MS2_EXTERN(0x14257dcd0, void(void*), FUN_14257dcd0);
+MS2_EXTERN(0x14257dcb0, void(void*), FUN_14257dcb0);
 MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
 MS2_EXTERN(0x1424eb610, void*(void*), FUN_1424eb610);
 MS2_EXTERN(0x140010b80, void(void*, void*), FUN_140010b80);
@@ -837,4 +840,88 @@ void* FUN_14001aea0(void* object, std::uint64_t flags)
 void* FUN_14001afd0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x40 : nullptr; }
 // @0x14001afe0
 void* FUN_14001afe0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x30 : nullptr; }
+
+// MS2-FUNCTIONAL: releases the retained pointer stored in the holder.
+// @0x14001b980
+void FUN_14001b980(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
+// MS2-FUNCTIONAL: retains the replacement, releases the previous pointer, then stores it.
+// @0x14001b9a0
+std::uint64_t* FUN_14001b9a0(std::uint64_t* holder, void* replacement)
+{
+    if (replacement) ++*reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(replacement) + 8);
+    if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
+    *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
+}
+// MS2-FUNCTIONAL: releases the previous pointer and stores the replacement without retaining it.
+// @0x14001b9f0
+std::uint64_t* FUN_14001b9f0(std::uint64_t* holder, std::uint64_t replacement)
+{
+    if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
+}
+// MS2-FUNCTIONAL: releases the retained pointer stored in the holder.
+// @0x14001ba50
+void FUN_14001ba50(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
+// MS2-FUNCTIONAL: retains the replacement, releases the previous pointer, then stores it.
+// @0x14001ba70
+std::uint64_t* FUN_14001ba70(std::uint64_t* holder, void* replacement)
+{
+    if (replacement) ++*reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(replacement) + 8);
+    if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
+    *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
+}
+// MS2-FUNCTIONAL: retains the new shared stream and releases the old stream.
+// @0x14001bba0
+std::uint64_t* FUN_14001bba0(std::uint64_t* holder, void* replacement)
+{
+    if (replacement) FUN_14257dc30(replacement);
+    if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder));
+    *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
+}
+// MS2-FUNCTIONAL: retains and stores a non-null shared stream, or clears the holder.
+// @0x14001bc00
+std::uint64_t* FUN_14001bc00(std::uint64_t* holder, void* replacement)
+{
+    if (replacement) FUN_14257dc30(replacement);
+    *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
+}
+// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+// @0x14001bc40
+void FUN_14001bc40(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+// @0x14001bca0
+void FUN_14001bca0(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+// MS2-FUNCTIONAL: retains the replacement shared stream and releases the old stream.
+// @0x14001bcc0
+std::uint64_t* FUN_14001bcc0(std::uint64_t* holder, void* replacement)
+{
+    if (replacement) FUN_14257dc30(replacement);
+    if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder));
+    *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
+}
+// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+// @0x14001bd70
+void FUN_14001bd70(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+// MS2-FUNCTIONAL: releases the old shared stream and replaces it without retaining the new stream.
+// @0x14001bd90
+std::uint64_t* FUN_14001bd90(std::uint64_t* holder, std::uint64_t replacement)
+{
+    if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
+}
+// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+// @0x14001bdf0
+void FUN_14001bdf0(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+// MS2-FUNCTIONAL: retains the replacement shared stream and releases the old stream.
+// @0x14001be10
+std::uint64_t* FUN_14001be10(std::uint64_t* holder, void* replacement)
+{
+    if (replacement) FUN_14257dc30(replacement);
+    if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder));
+    *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
+}
+// MS2-FUNCTIONAL: releases the old shared stream and stores the supplied pointer without retaining it.
+// @0x14001be50
+std::uint64_t* FUN_14001be50(std::uint64_t* holder, std::uint64_t replacement)
+{
+    if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
+}
 } // namespace
