@@ -3608,6 +3608,44 @@ void* FUN_14003e5d0(void* source, void* destination)
     return output->Value;
 }
 
+// MS2-FUNCTIONAL: release the matching decoded frame from the pending ring and report if none matched.
+// @0x14003e180
+void FUN_14003e180(void* object, const void* frame)
+{
+    struct Reader
+    {
+        CriUint8 Reserved00[0x50];
+        CriUint32 BlockSize;
+        CriUint32 Reserved54;
+        void* Queue;
+    };
+    struct DecodedChunk
+    {
+        CriUint8 Reserved00[0x10];
+        const void* Frame;
+        CriUint8 Reserved18[0xa8];
+        CriUint32 QueueLane;
+    };
+    Reader* reader = (Reader*)object;
+    CriUint32 queued = (CriUint32)FUN_1400467b8(reader->Queue) / reader->BlockSize;
+    CriBool released = 0;
+    for (CriUint32 index = 0; index < queued; ++index)
+    {
+        CriUint64 chunk[2] = {};
+        FUN_1400467a0(reader->Queue, 2, -1, chunk);
+        if (chunk[0] && ((DecodedChunk*)chunk[0])->Frame == frame)
+        {
+            FUN_1400467b0(reader->Queue, ((DecodedChunk*)chunk[0])->QueueLane, chunk);
+            released = 1;
+            break;
+        }
+        if (!released)
+            FUN_1400467b0(reader->Queue, 2, chunk);
+    }
+    if (!released)
+        FUN_140041110(0, "E11120202M: Failed criVdec Release.", 0);
+}
+
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
 // @0x140040a20
 void FUN_140040a20(void* player, void** inputDescriptor)
