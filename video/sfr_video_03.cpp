@@ -479,4 +479,25 @@ void FUN_14001a3c0(void* self, void*, std::uint8_t flag)
     auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
     *(static_cast<unsigned char*>(data) + 0x14) = flag;
 }
+
+// @0x14001b000
+std::uint64_t FUN_14001b000() { return 0; }
+// @0x14001b010
+std::uint64_t FUN_14001b010() { return 0; }
+// @0x14001b020
+std::uint64_t FUN_14001b020() { return 0; }
+// @0x14001b030
+std::uint64_t FUN_14001b030() { return 0; }
+// @0x14001b070
+std::uint8_t FUN_14001b070() { return 1; }
+// @0x14001b080
+std::uint8_t thunk_FUN_142510dc0() { return 0; }
+// @0x14001b090
+std::uint8_t FUN_14001b090() { return 1; }
+// @0x14001b0b0
+std::uint64_t FUN_14001b0b0() { return 0; }
+// @0x14001b0c0
+void thunk_FUN_1424efe00() {}
+// @0x14001b0d0
+void thunk_FUN_1424f1f70() {}
 } // namespace
