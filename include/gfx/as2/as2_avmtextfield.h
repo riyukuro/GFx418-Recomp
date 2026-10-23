@@ -12,6 +12,9 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class AvmTextField : public AvmCharacter
 {
 public:
+    UByte Unrecovered_30[8];
+    ASString VariableName; // +0x38, the variable bound to this field
+
     // Sends the event named by the first argument to the listeners of the text field.
     static void BroadcastMessage(const FnCall& fn);
 
@@ -70,6 +73,7 @@ public:
     // (appended for sfr_as2_06) A click gives no focus to a read-only field that cannot be selected (exe 0x1429659e0).
     virtual bool IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const;
     virtual bool IsTabable() const;
+    virtual void OnEventLoad(); // exe 0x14296ba60
     // Unloads at once, leaving the playlist (exe 0x14296d310).
     virtual bool OnUnloading(bool mayRemove);
 };

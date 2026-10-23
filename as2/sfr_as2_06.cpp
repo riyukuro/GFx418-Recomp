@@ -43,6 +43,7 @@
 // MS2-RANGE: 0x142968f90-0x142969000 .text$mn
 // MS2-RANGE: 0x14296b820-0x14296b850 .text$mn
 // MS2-RANGE: 0x14296bba0-0x14296bbb0 .text$mn
+// MS2-RANGE: 0x14296ba60-0x14296bbf0 .text$mn
 // MS2-RANGE: 0x14296bbf0-0x14296bd60 .text$mn
 // MS2-RANGE: 0x14296e790-0x14296e870 .text$mn
 // MS2-RANGE: 0x14296e870-0x14296e9f0 .text$mn
@@ -213,6 +214,7 @@ bool FUN_14260b7f0(void* styleManager, const char* text, unsigned __int64 length
 bool FUN_14260b870(void* styleManager, const wchar_t* text, unsigned __int64 length);
 bool FUN_142606410(void* allocator, bool noAllocationsAllowed);
 bool FUN_142606150(void* allocator, bool noAllocationsAllowed);
+void FUN_1425bd9a0(void* textField, const char* text, bool html, bool notifyVariable);
 
 namespace Scaleform { namespace GFx {
 
@@ -2162,6 +2164,41 @@ bool Value::IsEqual(Environment* penv, const Value& other) const
     const Number lhs = ToNumber(penv);
     const Number rhs = other.ToNumber(penv);
     return lhs == rhs || (NumberUtil_IsNaN(lhs) && NumberUtil_IsNaN(rhs));
+}
+
+// MS2-FUNCTIONAL: restores empty/default text, resolves the optional bound variable, and dispatches the load event.
+// @0x14296ba60
+void AvmTextField::OnEventLoad()
+{
+    if (!pDispObj)
+    {
+        AvmCharacter::OnEventLoad();
+        return;
+    }
+    TextField* textField = reinterpret_cast<TextField*>(pDispObj);
+    void* document = textField ? textField->GetDocument() : 0;
+    String* documentText = document ? reinterpret_cast<String*>(reinterpret_cast<UByte*>(document) + 0x70) : 0;
+    const bool html = textField && (textField->GetFlags418() & 0x2) != 0;
+    if (!documentText || documentText->GetSize() == 0)
+    {
+        FUN_1425bd9a0(textField, "", html, false);
+    }
+    else
+    {
+        bool variableFound = false;
+        Environment* environment = GetASEnvironment();
+        if (VariableName.GetLength() != 0 && environment)
+        {
+            *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(textField) + 0xfc) |= 0x8000;
+            Value value;
+            variableFound = environment->GetVariable(VariableName, &value);
+        }
+        if (!variableFound)
+        {
+            FUN_1425bd9a0(textField, documentText->ToCStr(), html, true);
+        }
+    }
+    AvmCharacter::OnEventLoad();
 }
 
 // MS2-FUNCTIONAL: checks raw/path lookup, with scopes, local variables, the target object, and the global object.
