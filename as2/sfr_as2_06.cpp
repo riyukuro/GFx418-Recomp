@@ -58,6 +58,7 @@
 // MS2-RANGE: 0x14297d4b0-0x14297d550 .text$mn
 // MS2-RANGE: 0x14297d550-0x14297d5f0 .text$mn
 // MS2-RANGE: 0x14297d5f0-0x14297d690 .text$mn
+// MS2-RANGE: 0x14297dc30-0x14297dcd0 .text$mn
 // MS2-RANGE: 0x14297d730-0x14297d7d0 .text$mn
 // MS2-RANGE: 0x14297d7d0-0x14297d870 .text$mn
 // MS2-RANGE: 0x14297d870-0x14297d910 .text$mn
@@ -114,6 +115,8 @@
 // MS2-RANGE: 0x14296cbf0-0x14296cd30 .text$mn
 // MS2-RANGE: 0x14296cd30-0x14296ce70 .text$mn
 // MS2-RANGE: 0x142971d70-0x142972190 .text$mn
+// MS2-RANGE: 0x1429718b0-0x142971a50 .text$mn
+// MS2-RANGE: 0x142972190-0x142972330 .text$mn
 // MS2-RANGE: 0x142969040-0x142969080 .text$mn
 // MS2-RANGE: 0x142965e50-0x142965f00 .text$mn
 // MS2-RANGE: 0x14295d450-0x14295d4e0 .text$mn
@@ -1689,6 +1692,46 @@ bool MovieRoot::NotifyOnFocusChange(InteractiveObject* curFocused, InteractiveOb
     return true;
 }
 
+// MS2-FUNCTIONAL the exe manually manages Value and refcounts around visitor callbacks; this retains the same
+// parent assignment, stack ownership, and array/object state transitions through the recovered AS2 APIs.
+// @0x1429718b0
+void GASSharedObjectLoader::PushArray(const String& name)
+{
+    Object* object = pEnv->OperatorNew(pEnv->StringContext.pContext->pGlobal,
+                                       pEnv->StringContext.GetBuiltin(ASBuiltin_Array), 0, -1);
+    Object* parent = ObjectStack.Back();
+    Value value(object);
+    if (bArrayIsTop)
+        static_cast<ArrayObject*>(parent)->PushBack(value);
+    else
+    {
+        ASString memberName = pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize());
+        parent->SetMember(pEnv, memberName, value);
+    }
+    ObjectStack.PushBack(object);
+    bArrayIsTop = true;
+}
+
+// MS2-FUNCTIONAL the exe manually handles Value and object refcounts around its visitor calls; this uses the
+// recovered OperatorNew, SetMember, ArrayObject::PushBack, and Array storage APIs with the same state changes.
+// @0x142972190
+void GASSharedObjectLoader::PushObject(const String& name)
+{
+    Object* object = pEnv->OperatorNew(pEnv->StringContext.pContext->pGlobal,
+                                       pEnv->StringContext.GetBuiltin(ASBuiltin_Object), 0, -1);
+    Object* parent = ObjectStack.Back();
+    Value value(object);
+    if (bArrayIsTop)
+        static_cast<ArrayObject*>(parent)->PushBack(value);
+    else
+    {
+        ASString memberName = pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize());
+        parent->SetMember(pEnv, memberName, value);
+    }
+    ObjectStack.PushBack(object);
+    bArrayIsTop = false;
+}
+
 // Back to the enclosing object; an array is on top again when it is one.
 // @0x14296f260
 void GASSharedObjectLoader::PopObject()
@@ -2091,6 +2134,10 @@ template void ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, 2>, Ar
                                                                                                         UPInt);
 // @0x14297db90
 template void ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// @0x14297dc30
+template void ArrayDataBase<GFx::AS2::WithStackEntry,
+                            AllocatorLH_POD<GFx::AS2::WithStackEntry, GFx::AS2::StatMV_ActionScript_Mem>,
                             ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 // @0x14297dcd0
 template void ArrayDataBase<bool, AllocatorLH<bool, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
