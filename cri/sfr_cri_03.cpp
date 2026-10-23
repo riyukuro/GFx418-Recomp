@@ -53,6 +53,8 @@ void FUN_1400467b0(void*, CriSint32, void*);
 CriSint32 FUN_1400467b8(void*, CriSint32);
 CriSint32 FUN_140053630(void*);
 CriUint32 FUN_140043420(void*, void*, CriUint32);
+CriUint32 FUN_140042f40(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
+CriUint32 FUN_1400431a0(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 void criSj_SplitChunk(const void*, CriUint32, void*, void*);
 const void** FUN_14003bed0(void);
 const void** FUN_14003bf10(void);
@@ -380,6 +382,55 @@ void FUN_1400469a4(CriChar8* buffer, size_t capacity, const CriChar8* format, ..
     va_start(arguments, format);
     _vsnprintf(buffer, capacity, format, arguments);
     va_end(arguments);
+}
+
+// MS2-FUNCTIONAL: return the selected decoder's available sample count in player time units.
+// @0x14003d9d0
+CriUint32 FUN_14003d9d0(void* object)
+{
+    struct ReaderState
+    {
+        CriUint8 Reserved[0x50];
+        CriUint32 Unit;
+        CriUint32 Reserved54;
+        void* Queue;
+        void* AddOneUnit;
+    };
+    ReaderState* reader = (ReaderState*)object;
+    CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue, 0);
+    if (reader->AddOneUnit)
+        samples += reader->Unit;
+    return samples / reader->Unit;
+}
+
+// MS2-FUNCTIONAL: return ready when every stored audio decoder has completed its terminal transition.
+// @0x140042d70
+CriBool FUN_140042d70(void* decoderList, void* owner)
+{
+    struct DecoderList { void* Decoders[2]; CriSint32 Count; };
+    if (!decoderList)
+        return 1;
+    DecoderList* list = (DecoderList*)decoderList;
+    for (CriSint32 index = 0; index < list->Count; ++index)
+        if (!FUN_140043810(list->Decoders[index], owner))
+            return 0;
+    return 1;
+}
+
+// MS2-FUNCTIONAL: forward one decoder's interleaved output request.
+// @0x140042e40
+void FUN_140042e40(void* decoders, CriSint32 index, void* player, CriUint32 channels,
+                   void* output, CriUint32 flags, CriUint32* result)
+{
+    FUN_140042f40(((void**)decoders)[index], player, channels, output, flags, result);
+}
+
+// MS2-FUNCTIONAL: forward one decoder's planar output request.
+// @0x140042ea0
+void FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32 channels,
+                   void* output, CriUint32 flags, CriUint32* result)
+{
+    FUN_1400431a0(((void**)decoders)[index], player, channels, output, flags, result);
 }
 
 void FUN_1400478a0(void);
