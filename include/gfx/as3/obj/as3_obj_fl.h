@@ -13,12 +13,14 @@ class NamespaceArray;
 
 namespace InstanceTraits { class ThunkFunction; }
 namespace Classes { class Function; }
+namespace Classes { namespace fl { class Object; } }
 
 namespace Instances {
     // A native thunk wrapped in a function object. 0x50 bytes.
     class ThunkFunction : public Instances::FunctionBase
     {
         friend class Classes::Function;
+        friend class Classes::fl::Object;   // (appended, sfr22) Object::Construct inlines MakeThunkFunction
 
     protected:
         // (appended, sfr19)
@@ -150,6 +152,8 @@ namespace Classes {
         // 0x142419d90
         Pickable<Instances::CheckTypeTF> MakeCheckTypeInstance(const Class& data_type, const ThunkInfo& thunk,
                                                                const Traits& ot) const;
+        // (appended, sfr22) slot 12: a function body source throws error 1066; new Function() is a plain class construct. 0x1424071c0
+        virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
     };
 }
 

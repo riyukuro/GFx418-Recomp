@@ -448,6 +448,14 @@ struct ValueAssignCopies
         v.Release();
         AssignUnsafe(v, kind, p);
     }
+    // Value::Pick of a counted kind as the exe inlines it here (the header's Pick is the out-of-line copy).
+    template <typename T>
+    static SF_INLINE void Pick(Value& v, Value::KindType kind, Pickable<T> p)
+    {
+        v.Release();
+        v.SetKind(kind);
+        v.value = p.GetPtr();
+    }
 
     static void AssignFunction(Value& v, Instances::Function* p);
     static void AssignNamespace(Value& v, Instances::Namespace* p);
@@ -497,6 +505,8 @@ void ValueAssignCopies::AssignUnsafeThunkFunction(Value& v, Instances::ThunkFunc
 
 // VM::GetValueTraits: the traits of a value (0x14250ffc0).
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -523,6 +533,64 @@ namespace Classes { namespace fl
     {
         VM& vm = GetVM();
         vm.ThrowTypeError(VM::Error(VM::eMathNotConstructorError, vm));
+    }
+
+    // @0x142407560
+    void Object::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
+        if (argc > 0)
+        {
+            if (argv[0].IsThunk())
+            {
+                // A thunk stands for a function, which is a dynamic object; make a real one so that properties can be
+                // added to it.
+                const ThunkInfo& thunk = argv[0].AsThunk();
+                const Classes::Function& cf = static_cast<const Classes::Function&>(
+                    FUN_142508460(&GetVM().GetClassTraitsFunction().GetInstanceTraits()));
+                // InstanceTraits::ThunkFunction is local to sfr_as3_04; it is a plain CTraits at offset 0.
+                InstanceTraits::Traits& ftr =
+                    reinterpret_cast<InstanceTraits::Traits&>(cf.GetClassTraits().GetThunkFunctionTraits());
+                ValueAssignCopies::Pick(_this, Value::kThunkFunction, Pickable<Instances::ThunkFunction>(
+                    new(ftr.Alloc()) Instances::ThunkFunction(ftr, thunk, itr)));
+                return;
+            }
+            else if (!argv[0].IsNullOrUndefined())
+            {
+                _this = argv[0];
+                return;
+            }
+        }
+        itr.MakeObject(_this, itr);
+    }
+
+    // MS2-FUNCTIONAL: the exe swaps the stack slots of the uri temporary and the new namespace
+    // @0x142407340
+    void Namespace::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        VM& vm = GetVM();
+        if (argc == 1)
+        {
+            // new Namespace(ns) gives ns itself.
+            const Value& v = argv[0];
+            const Traits& tr = FUN_14250ffc0(vm, v);
+            if (tr.GetTraitsType() == Traits_Namespace && tr.IsInstanceTraits())
+            {
+                _this.Assign(v);
+                return;
+            }
+        }
+
+        InstanceTraits::fl::Namespace& itr =
+            static_cast<InstanceTraits::fl::Namespace&>(GetClassTraits().GetInstanceTraits());
+        Pickable<Instances::Namespace> inst =
+            itr.MakeInstance(Abc::NS_Public, GetVM().GetStringManager().CreateEmptyString(), Value::GetUndefined());
+        // Held by the result before the constructor runs, so a throw does not leak it.
+        ValueAssignCopies::Pick(_this, Value::kNamespace, inst);
+        inst->AS3Constructor(argc, argv);
+        if (vm.IsException())
+            return;
+        itr.InstanceFactory->NamespaceSet.Add(inst.GetPtr());
     }
 
     // @0x142407480
@@ -630,13 +698,25 @@ namespace Classes { namespace fl
     }
 }} // namespace Classes::fl
 
+namespace Classes
+{
+    // @0x1424071c0
+    void Function::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
+    {
+        if (argc > 0)
+        {
+            VM& vm = GetVM();
+            return vm.ThrowEvalError(VM::Error(VM::eFunctionConstructorError, vm));
+        }
+        Class::Construct(_this, argc, argv, extCall);
+    }
+} // namespace Classes
+
 }}} // namespace Scaleform::GFx::AS3
 
 // SF_ECMA_dtostr: shortest round-trip ECMA-262 decimal form of val into buffer, returns its length.
 Scaleform::UPInt FUN_142525f20(char* buffer, int bufflen, double val);
 
-// Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
-Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1725,6 +1805,14 @@ namespace Scaleform { namespace GFx { namespace AS3
         Value r = Value::GetUndefined();
         ExecuteUnsafe(_this, r, argc, argv);
         r.Swap(result);
+    }
+
+    // @0x142407230
+    void Instances::FunctionBase::Construct(Value& _this, unsigned argc, const Value* argv, bool /*extCall*/)
+    {
+        // A constructor call runs the body on a new plain object and keeps that object, not the returned value.
+        _this = GetVM().MakeObject();
+        Execute(_this, argc, argv, true);
     }
 
     // @0x1424058a0
