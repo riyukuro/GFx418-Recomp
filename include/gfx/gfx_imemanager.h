@@ -9,6 +9,9 @@
 
 namespace Scaleform { namespace GFx {
 
+class ASString;
+class DisplayObject;
+
 class IMEManagerBase : public State
 {
 public:
@@ -35,7 +38,10 @@ private:
     virtual void Slot17();                                              // BroadcastSetConversionStatus
     virtual void Slot18();                                              // BroadcastRemoveStatusWindow
     virtual void Slot19();                                              // BroadcastDisplayStatusWindow
-    virtual void Slot20();                                              // SendLangBarMessage
+public:
+    // (appended for flash.gfx.IMEEx, sfr19)
+    virtual void SendLangBarMessage(DisplayObject* mc, const ASString& command, const ASString& message);   // 20
+private:
     virtual void Slot21();                                              // SetCompositionString
 public:
     // (appended for flash.gfx.IMEEx, sfr13)

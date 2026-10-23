@@ -13,6 +13,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
+#include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -482,6 +483,71 @@ namespace Classes { namespace fl_gfx
         BuiltinTraitsType tt = ido->GetTraits().GetTraitsType();
         if (tt == Traits_Sprite || tt == Traits_MovieClip)
             result = static_cast<Instances::fl_display::Sprite*>(ido);
+    }
+    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
+    // @0x1424ca9b0
+    void FocusManager::getFocus(SPtr<Instances::fl_display::InteractiveObject>& result, UInt32 controllerIdx)
+    {
+        MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        Ptr<GFx::InteractiveObject> focused = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+        if (focused)
+        {
+            AvmInteractiveObjBase* pavm = focused->GetAvmIntObj();
+            const UPInt* pas3 = pavm ? reinterpret_cast<const UPInt*>(reinterpret_cast<UByte*>(pavm) - 0x30) : NULL;
+            UPInt raw = pas3[2];
+            if (!raw)
+                raw = pas3[1];
+            if (raw & 1)
+                raw -= 1;
+            Instances::fl_display::DisplayObject* ido = reinterpret_cast<Instances::fl_display::DisplayObject*>(raw);
+            if (ido)
+            {
+                BuiltinTraitsType tt = ido->GetTraits().GetTraitsType();
+                if (tt == Traits_InteractiveObject || tt >= Traits_DisplayObjectContainer)
+                    result = static_cast<Instances::fl_display::InteractiveObject*>(ido);
+            }
+            else
+                result = NULL;
+        }
+        else
+            result = NULL;
+    }
+
+    // @0x1424cb810
+    void FocusManager::setFocus(const Value& result, Instances::fl_display::InteractiveObject* obj, UInt32 controllerIdx)
+    {
+        SF_UNUSED(result);
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        Ptr<GFx::InteractiveObject> newfocus;
+        if (obj)
+            newfocus = static_cast<GFx::InteractiveObject*>(obj->pDispObj.GetPtr());
+        MovieImpl* proot = asvm.GetMovieImpl();
+        Ptr<GFx::InteractiveObject> focused = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+        if (focused != newfocus)
+            asvm.GetMovieImpl()->SetKeyboardFocusTo(newfocus, controllerIdx, GFx_FocusMovedByAS);
+    }
+    // @0x1424cc860
+    void Extensions::visibleRectGet(SPtr<Instances::fl_geom::Rectangle>& result)
+    {
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        Render::RectF r = asvm.GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect();
+        Value args[] = { Value(r.x1), Value(r.y1), Value(r.Width()), Value(r.Height()) };
+        Value v;
+        static_cast<ASVM&>(GetVM()).RectangleClass->Construct(v, 4, args, true);
+        result = static_cast<Instances::fl_geom::Rectangle*>(v.GetObject());
+    }
+
+    // @0x1424c9a20
+    void IMEEx::SendLangBarMessage(const Value& result, Instances::fl_display::Sprite* mc, const ASString& command,
+                                   const ASString& message)
+    {
+        SF_UNUSED(result);
+        MovieImpl* movie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        if (!movie)
+            return;
+        IMEManagerBase* pime = movie->GetIMEManager().GetPtr();
+        if (pime)
+            pime->SendLangBarMessage(mc->pDispObj.GetPtr(), command, message);
     }
 }}
 
