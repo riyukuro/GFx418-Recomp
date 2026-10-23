@@ -159,6 +159,13 @@ void     FUN_140029bf0(void* array, void* source, CriUint64 capacity);
 void     FUN_140029c90(void* array, void* source, CriUint64 capacity);
 void     FUN_140029d30(void* array, void* source, CriUint64 capacity);
 void     FUN_14002afe0(void* array);
+void     FUN_14002a4a0(void* array, CriUint64 source, CriUint64 length);
+void     FUN_14002ba30(void* object);
+void     FUN_14002c550(void* object);
+void     FUN_14002b2e0(void* object);
+void     FUN_14002c5f0(void* object);
+void     FUN_14002e2a0(void* object);
+void     FUN_142579470(void* object);
 void     FUN_142584ce0(void* string);
 
 struct CriMvRequestNode
@@ -2138,6 +2145,163 @@ void FUN_14002d3f0(void* allocation)
         void (__fastcall *release)(void*, void*) = (void (__fastcall *)(void*, void*))(vtable + 0x60);
         release(heap, allocation);
     }
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002a250
+void FUN_14002a250(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002a270
+void FUN_14002a270(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002a620
+void FUN_14002a620(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002a640
+void FUN_14002a640(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002a660
+void FUN_14002a660(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002ab70
+void FUN_14002ab70(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002acb0
+void FUN_14002acb0(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// @0x14002acd0
+void FUN_14002acd0(const void* slot)
+{
+    if (*(void* const*)slot)
+        FUN_14002d3f0(*(void* const*)slot);
+}
+
+// MS2-FUNCTIONAL: clear the destination vector before cloning its two-word source state.
+// @0x14002a980
+CriUint64* FUN_14002a980(CriUint64* destination, const CriUint64* source)
+{
+    destination[0] = destination[1] = destination[2] = 0;
+    FUN_14002a4a0(destination, source[0], source[1]);
+    return destination;
+}
+
+// MS2-FUNCTIONAL: clear the destination vector before cloning its two-word source state.
+// @0x14002afb0
+CriUint64* FUN_14002afb0(CriUint64* destination, const CriUint64* source)
+{
+    destination[0] = destination[1] = destination[2] = 0;
+    FUN_14002a4a0(destination, source[0], source[1]);
+    return destination;
+}
+
+// MS2-FUNCTIONAL: clear the destination vector before cloning its two-word source state.
+// @0x14002b9b0
+CriUint64* FUN_14002b9b0(CriUint64* destination, const CriUint64* source)
+{
+    destination[0] = destination[1] = destination[2] = 0;
+    FUN_14002a4a0(destination, source[0], source[1]);
+    return destination;
+}
+
+// MS2-FUNCTIONAL: run the matching vector helper and preserve the original object pointer.
+// @0x14002c0c0
+void* FUN_14002c0c0(void* object)
+{
+    FUN_14002ba30(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: run the matching vector helper and preserve the original object pointer.
+// @0x14002c780
+void* FUN_14002c780(void* object)
+{
+    FUN_14002c550(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroy the base reference-count state and conditionally free its storage.
+// @0x14002a2b0
+void* FUN_14002a2b0(void* object, CriUint64 flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroy the alternate reference-count state and conditionally free its storage.
+// @0x14002ac70
+void* FUN_14002ac70(void* object, CriUint64 flags)
+{
+    FUN_142579470(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroy the container's base object and optionally return its allocation to the heap.
+// @0x14002bac0
+void* FUN_14002bac0(void* object, CriUint64 flags)
+{
+    FUN_14002b2e0(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroy the second container base and optionally free its allocation.
+// @0x14002c8f0
+void* FUN_14002c8f0(void* object, CriUint64 flags)
+{
+    FUN_14002c5f0(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: destroy the reader configuration and optionally release the containing block.
+// @0x14002e510
+void* FUN_14002e510(void* object, CriUint64 flags)
+{
+    FUN_14002e2a0(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
 }
 
 // MS2-FUNCTIONAL: run the shared refcount base cleanup and optionally release its allocation.
