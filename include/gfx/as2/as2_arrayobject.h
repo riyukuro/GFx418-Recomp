@@ -38,6 +38,11 @@ public:
     ArrayObject(Environment* penv); // exe 0x142918010
     ArrayObject(ASStringContext* psc); // exe 0x142917f70
 
+    // Object_Array (exe 0x142954130).
+    virtual ObjectType GetObjectType() const;
+    // An index name clears the element (exe 0x1429385f0).
+    virtual bool DeleteMember(ASStringContext* psc, const ASString& name);
+
     // Elements by index name, "length" from the element count (exe 0x1429530b0).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
     // An index name is a member when the element is set, not undefined or null (exe 0x14295d700).
@@ -151,7 +156,11 @@ protected:
     // The object and every element (defined in sfr_as2_02).
     template<class Functor> void ForEachChild_GC(Collector* prcc) const;
 
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const; // exe 0x142941160
     virtual void Finalize_GC(); // exe 0x142942b40
+
+    // An array with the given __proto__ (exe 0x142917ed0).
+    ArrayObject(ASStringContext* psc, Object* pprototype);
 
     friend class ArrayCtorFunction;
     // The elements from the arguments of a constructor call (exe 0x142961720).

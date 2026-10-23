@@ -18,6 +18,7 @@
 // MS2-RANGE: 0x142919df0-0x142919ee0 .text$mn
 // MS2-RANGE: 0x14291c090-0x14291c0b0 .text$mn
 // MS2-RANGE: 0x142919a00-0x142919af0 .text$mn
+// MS2-RANGE: 0x142917ed0-0x1429180c0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -101,6 +102,27 @@ BooleanObject::BooleanObject(Environment* penv, bool v)
     : Object(penv), BValue(v)
 {
     static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Boolean));
+}
+
+// @0x142917ed0
+ArrayObject::ArrayObject(ASStringContext* psc, Object* pprototype)
+    : Object(psc), LogPtr(0), RecursionCount(0), LengthValueOverriden(false)
+{
+    Set__proto__(psc, pprototype);
+}
+
+// @0x142917f70
+ArrayObject::ArrayObject(ASStringContext* psc)
+    : Object(psc), LogPtr(0), RecursionCount(0), LengthValueOverriden(false)
+{
+    Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Array));
+}
+
+// @0x142918010
+ArrayObject::ArrayObject(Environment* penv)
+    : Object(penv), LogPtr(penv->GetTarget()->GetLog()), RecursionCount(0), LengthValueOverriden(false)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Array));
 }
 
 // @0x1429237f0
@@ -354,3 +376,5 @@ template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
 // MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
 // MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
+// MS2-PIN: ??_7ArrayObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ad30
+// MS2-PIN: ??_7ArrayObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ad78
