@@ -45,6 +45,7 @@
 // MS2-RANGE: 0x14292da40-0x14292dad4 .text$mn
 // MS2-RANGE: 0x14292f740-0x14292f951 .text$mn
 // MS2-RANGE: 0x142930a10-0x142930c30 .text$mn
+// MS2-RANGE: 0x142934610-0x142934820 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -1057,6 +1058,20 @@ void MovieRoot::AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* pur
         else
             pMovieImpl->AddLoadQueueEntry(pentry);
     }
+}
+
+// MS2-FUNCTIONAL regalloc/stack layout (exe reloads pDispObj per call, 0x100 frame)
+// @0x142934610
+InteractiveObject* AvmCharacter::CloneDisplayObject(const ASString& newname, int depth, const ObjectInterface* psource)
+{
+    InteractiveObject* pparent = GetDispObj()->GetParent();
+    Sprite*            psprite = pparent->IsSprite() ? static_cast<Sprite*>(pparent) : 0;
+    if (!psprite || depth < 0 || depth > 0x7efffffd)
+        return 0;
+    CharPosInfo pos(ResourceId(GetDispObj()->Id), depth, 1, GetDispObj()->GetCxform(), 1, GetDispObj()->GetMatrix(),
+                    0, GetDispObj()->GetRatio(), GetDispObj()->ClipDepth);
+    DisplayObjectBase* pnewch = psprite->AddDisplayObject(pos, newname, 0, psource, ~0u, 1, 0, GetDispObj());
+    return (pnewch && pnewch->IsInteractiveObject()) ? static_cast<InteractiveObject*>(pnewch) : 0;
 }
 
 // MS2-FUNCTIONAL regalloc: the exe loads the string manager through r9, not rcx
