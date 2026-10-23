@@ -157,6 +157,24 @@ public:
             p = &Pages[offset / PageSize]->Values[offset % PageSize];
         return p;
     }
+
+    // (appended for sfr_as2_06) Back to one default element at the bottom of the first page.
+    SF_INLINE void Reset()
+    {
+        for (unsigned n = GetTopIndex(); n; n--)
+        {
+            pCurrent->~T();
+            pCurrent--;
+            if (pCurrent < pPageStart)
+                PopPage();
+        }
+        pCurrent->~T();
+        pPageStart   = Pages.Back()->Values;
+        pCurrent     = pPageStart;
+        pPrevPageTop = pPageStart;
+        pPageEnd     = pPageStart + PageSize;
+        Construct<T>(pCurrent);
+    }
 };
 
 // One level of the with() scope chain: a script object or a character, and the pc that ends the block. 0x10 bytes.
@@ -321,6 +339,8 @@ public:
     // The code must stop: the target is unloaded, or (plain code and functions) being unloaded; execType is an
     // ActionBuffer::ExecuteType (exe 0x142969040).
     bool NeedTermination(int execType) const;
+    // Empties the stacks, registers, frames and try blocks (exe 0x14297dd70).
+    void Reset();
 };
 
 // (appended for sfr_as2_05) Calls the function method holds or names with nargs arguments from the environment's

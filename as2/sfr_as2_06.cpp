@@ -116,6 +116,7 @@
 // MS2-RANGE: 0x142965e50-0x142965f00 .text$mn
 // MS2-RANGE: 0x14295d450-0x14295d4e0 .text$mn
 // MS2-RANGE: 0x142964200-0x142964370 .text$mn
+// MS2-RANGE: 0x14297dd70-0x14297df30 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1211,6 +1212,28 @@ bool AvmCharacter::InvokeClipEventHandlers(Environment* penv, const EventId& id)
     return true;
 }
 
+// The out-of-line resizes Reset calls (COMDATs where cl inlines them): the register array (exe 0x14297e0e0) and
+// the frame array's shrink (exe 0x14297e450).
+void LocalRegister_Resize(ArrayLH<Value, Stat_Default_Mem>* pregs, UPInt newSize);
+void LocalFrames_ResizeNoConstruct(ArrayLH<Ptr<LocalFrame>, Stat_Default_Mem>* pframes, const void* pheapAddr,
+                                   UPInt newSize);
+
+// @0x14297dd70
+void Environment::Reset()
+{
+    Stack.Reset();
+    for (unsigned i = 0; i < 4; i++)
+        GlobalRegister[i].SetUndefined();
+    LocalRegister_Resize(&LocalRegister, 0);
+    Unrolling       = false;
+    IsInvalidTarget = false;
+    CallStack.Reset();
+    LocalFrames_ResizeNoConstruct(&LocalFrames, &LocalFrames, 0);
+    FuncCallNestingLevel = 0;
+    TryBlocks_Resize(&TryBlocks, 0);
+    ThrowingValue.SetUndefined();
+}
+
 
 }}} // namespace Scaleform::GFx::AS2
 
@@ -1298,9 +1321,10 @@ void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::PushPage()
         pCurrent--;
 }
 
+// noinline: Environment::Reset calls it out of line.
 // @0x14296f2b0
 template<>
-void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::PopPage()
+__declspec(noinline) void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::PopPage()
 {
     if (Pages.GetSize() > 1)
     {
