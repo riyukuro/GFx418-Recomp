@@ -777,6 +777,54 @@ template void ConstructorMov<GFx::AS3::Value>::DestructArray(GFx::AS3::Value*, U
 template void ConstructorMov<GFx::AS3::Value>::ConstructArray(void*, UPInt, const GFx::AS3::Value*);
 }
 
+namespace Scaleform { namespace GFx {
+
+// The host side of AS3 values (GFx::Value object calls); only the members recovered so far. pdata is the
+// AS3 object; the display object calls apply to instances of the display object classes.
+class AS3ValueObjectInterface : public Value::ObjectInterface
+{
+private:
+    virtual bool GetCxform(void* pdata, Render::Cxform* pcx) const;
+    virtual bool GetDisplayMatrix(void* pdata, Render::Matrix2F* pmat) const;
+};
+
+// The color transform of the display object pdata scripts.
+// @0x142508560
+bool AS3ValueObjectInterface::GetCxform(void* pdata, Render::Cxform* pcx) const
+{
+    AS3::Object* pobj = static_cast<AS3::Object*>(pdata);
+    const AS3::Traits& tr = pobj->GetTraits();
+    if ((unsigned)(tr.GetTraitsType() - AS3::Traits_DisplayObject_Begin) <
+            (unsigned)(AS3::Traits_DisplayObject_End - AS3::Traits_DisplayObject_Begin) &&
+        tr.IsInstanceTraits())
+    {
+        *pcx = static_cast<AS3::Instances::fl_display::DisplayObject*>(pobj)->pDispObj->GetCxform();
+        return true;
+    }
+    return false;
+}
+
+// The matrix of the display object pdata scripts, translation in pixels.
+// @0x142509850
+bool AS3ValueObjectInterface::GetDisplayMatrix(void* pdata, Render::Matrix2F* pmat) const
+{
+    AS3::Object* pobj = static_cast<AS3::Object*>(pdata);
+    const AS3::Traits& tr = pobj->GetTraits();
+    if ((unsigned)(tr.GetTraitsType() - AS3::Traits_DisplayObject_Begin) <
+            (unsigned)(AS3::Traits_DisplayObject_End - AS3::Traits_DisplayObject_Begin) &&
+        tr.IsInstanceTraits())
+    {
+        Render::Matrix2F m = static_cast<AS3::Instances::fl_display::DisplayObject*>(pobj)->pDispObj->GetMatrix();
+        m.Tx() = TwipsToPixels(m.Tx());
+        m.Ty() = TwipsToPixels(m.Ty());
+        *pmat = m;
+        return true;
+    }
+    return false;
+}
+
+}} // namespace Scaleform::GFx
+
 // MS2-PIN: ?ConstructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAX_KPEBVValue@AS3@GFx@2@@Z 0x1424f08d0
 // MS2-PIN: ?Construct@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBVValue@AS3@GFx@2@@Z 0x1424f05a0
 // MS2-PIN: ?DestructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAVValue@AS3@GFx@2@_K@Z 0x1424f6d50
