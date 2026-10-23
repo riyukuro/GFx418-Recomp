@@ -1168,6 +1168,46 @@ void FUN_1423cc2d0(unsigned long long* object)
     }
 }
 
+// MS2-FUNCTIONAL: reserves four-entry-rounded 0x18-byte IME records through the executable heap vtable.
+// @0x1423cc680
+void FUN_1423cc680(unsigned long long* array, void*, unsigned long long requested)
+{
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    const unsigned long long capacity = (requested + 3) & ~3ull;
+    if (!requested) {
+        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
+        array[0] = 0;
+        array[2] = 0;
+        return;
+    }
+    void* memory = reinterpret_cast<void*>(array[0]);
+    const unsigned long long bytes = capacity * 0x18;
+    unsigned allocFlags = 2;
+    if (memory) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(DAT_143b15f60, memory, bytes));
+    else array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heapVtable[10])(DAT_143b15f60, bytes, &allocFlags));
+    array[2] = capacity;
+}
+
+// MS2-FUNCTIONAL: reserves four-entry-rounded 0x10-byte Value records through the executable heap vtable.
+// @0x1423cc720
+void FUN_1423cc720(unsigned long long* array, void*, unsigned long long requested)
+{
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    const unsigned long long capacity = (requested + 3) & ~3ull;
+    if (!requested) {
+        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
+        array[0] = 0;
+        array[2] = 0;
+        return;
+    }
+    void* memory = reinterpret_cast<void*>(array[0]);
+    const unsigned long long bytes = capacity << 4;
+    unsigned allocFlags = 2;
+    if (memory) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(DAT_143b15f60, memory, bytes));
+    else array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heapVtable[10])(DAT_143b15f60, bytes, &allocFlags));
+    array[2] = capacity;
+}
+
 // MS2-FUNCTIONAL: loads the active IME module, hides its reading window when available, and releases the context.
 // @0x1423cb660
 void FUN_1423cb660(void* self)
