@@ -21,6 +21,7 @@ extern "C" CriUint64 DAT_143b27c70;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
 void FUN_14003b2ac(void*, CriSint32, void*, CriUint32);
+void FUN_14003e850(void*, void*, void*);
 
 // ==== CRI critical-section helpers ================================================================================
 
@@ -476,6 +477,62 @@ CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
     CriUint32 count;
     memcpy(&count, (const CriUint8*)decoder + 0x188, sizeof(count));
     return count;
+}
+
+// MS2-FUNCTIONAL: copy an RFB frame only while the VMPV handle is not stopped and data is present.
+// @0x14003e110
+CriBool FUN_14003e110(void* handle, void* output, void** frame)
+{
+    CriUint32 stopped;
+    memcpy(&stopped, (CriUint8*)handle + 0x1c, sizeof(stopped));
+    if (stopped == 1 || !frame || !*frame)
+        return 0;
+    FUN_14003e850(handle, *frame, output);
+    return 1;
+}
+
+// MS2-FUNCTIONAL: clear the two per-frame dimensions stored in a VMPV output record.
+// @0x14003e710
+void FUN_14003e710(void* unused, void* output)
+{
+    CriUint32 zero = 0;
+    memcpy((CriUint8*)output + 8, &zero, sizeof(zero));
+    memcpy((CriUint8*)output + 0xc, &zero, sizeof(zero));
+}
+
+// MS2-FUNCTIONAL: store the current frame rate on the VMPV handle.
+// @0x14003e820
+void FUN_14003e820(void* handle, CriUint32 frameRate)
+{
+    memcpy((CriUint8*)handle + 0x38, &frameRate, sizeof(frameRate));
+}
+
+// MS2-FUNCTIONAL: return the frame timestamp and selected concatenation offset in milliseconds.
+// @0x14003e750
+void FUN_14003e750(void* handle, CriSint32 frame, CriUint64* timestamp, CriUint64* offset)
+{
+    CriUint32 frameRate, selected = 0, key = 0;
+    memcpy(&frameRate, (CriUint8*)handle + 0x38, sizeof(frameRate));
+    *timestamp = 0;
+    *offset = frameRate;
+    if (frame != 0)
+    {
+        for (key = 0; key < 8; ++key)
+        {
+            CriSint32 candidate;
+            memcpy(&candidate, (CriUint8*)handle + 0x1b4 + key * 8, sizeof(candidate));
+            if (candidate == frame - 1)
+            {
+                selected = key;
+                break;
+            }
+        }
+        if (key == 8)
+            selected = 7;
+        CriUint32 milliseconds;
+        memcpy(&milliseconds, (CriUint8*)handle + 0x1b8 + selected * 8, sizeof(milliseconds));
+        *timestamp = (CriUint64)milliseconds * 1000;
+    }
 }
 
 // MS2-FUNCTIONAL: normalize the movie player's two 64-entry audio-track maps and copy the active entries.
