@@ -1761,6 +1761,71 @@ AvmSprite::AvmSprite(Sprite* pspr)
     GetSprite()->Flags &= ~Sprite::Flags_LockRoot;
 }
 
+// A register file starts with one page of the smallest size and no registers reserved.
+// @0x1424dc080
+ValueRegisterFile::ValueRegisterFile()
+    : Unk00(0), Unk02(0), MaxAllocatedPageSize(0), pRF(NULL), pCurrentPage(NULL), pReservedPage(NULL)
+{
+    pCurrentPage = NewPage(0);
+    pCurrentPage->pNext = NULL;
+    pCurrentPage->pPrev = NULL;
+    pRF = pCurrentPage->Values;
+}
+
+// An operand stack starts with one page of 64 values and a reservation of one.
+// @0x1424dc0e0
+ValueStack::ValueStack()
+    : pCurrent(NULL), pStack(NULL), pCurrentPage(NULL), pReserved(NULL)
+{
+    ReservedNum = 0;
+    pCurrentPage = NewPage(64);
+    pCurrentPage->pNext = NULL;
+    pCurrentPage->pPrev = NULL;
+    pCurrentPage->pFirst = NULL;
+    pCurrentPage->pCurrent = NULL;
+    pStack = pCurrentPage->Values;
+    pCurrent = pStack - 1;
+    Reserve(1);
+}
+
+// The display object behind an AS3 Loader: a plain container with no character definition of its own.
+class AvmLoader : public DisplayObjContainer, public AvmDisplayObjContainer
+{
+public:
+    AvmLoader(ASMovieRootBase* pasRoot, MovieDefImpl* pdefImpl, InteractiveObject* pparent, ResourceId id);
+
+    virtual CharacterDef* GetCharacterDef() const;   // 0x142507b40, returns NULL
+};
+
+// @0x1424d6500
+AvmLoader::AvmLoader(ASMovieRootBase* pasRoot, MovieDefImpl* pdefImpl, InteractiveObject* pparent, ResourceId id)
+    : DisplayObjContainer(pdefImpl, pasRoot, pparent, id), AvmDisplayObjContainer(this)
+{
+}
+
+// The AS3 stage: the top container holding the root movie clip.
+class Stage : public DisplayObjContainer
+{
+public:
+    Ptr<DisplayObjContainer> pRoot;                   // +0x110
+    Ptr<InteractiveObject>   FrameCounterObj;         // +0x118
+    ASString                 CurrentStageOrientation; // +0x120
+    unsigned                 MouseCursorEventCnt;     // +0x128
+
+    Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
+};
+
+// The stage's overrides of the container's virtuals are not declared here; its vftables are pinned.
+// @0x1424d9b50
+Stage::Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
+    : DisplayObjContainer(pbindingDefImpl, pasRoot, pparent, id),
+      CurrentStageOrientation(GetStringManager()->GetEmptyStringNode())
+{
+    DisplayObjectBase::Flags |= DisplayObjectBase::Mask_Loaded;
+    DisplayObject::Flags |= DisplayObject::Mask_TimelineObject;
+    MouseCursorEventCnt = 0;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
@@ -1869,8 +1934,16 @@ template void MS2_FunctionTraitsSet::add<MS2_FunctionTraitsNode::NodeRef>(void*,
 // A number formatted on its own ("{0}").
 // @0x1424d2410
 template String AsString<double>(const double&);
+}
+// A second, unfolded copy of AsString<long> (the canonical one is sfr_as3_01c 0x1423e8220).
 // @0x1424d22a0
-template String AsString<long>(const long&);
+Scaleform::String FUN_1424d22a0(const long& v)
+{
+    Scaleform::String result;
+    Scaleform::Format(result, "{0}", v);
+    return result;
+}
+namespace Scaleform {
 // Binary search over a sorted index array with a plain comparison function.
 // @0x1424d2780
 template UPInt Alg::LowerBoundSliced<ArrayDH_POD<UPInt, 0x148>, UPInt, bool (*)(const UPInt&, const UPInt&)>(
@@ -2097,6 +2170,21 @@ __declspec(noinline) Traits::Traits(VM& vm, const Traits* pt, bool isDynamic, bo
     Flags |= (-(SPInt)arrayLike & ArrayLikeMask) | (-(SPInt)isFinal & IsFinalMask) | (-(SPInt)isDynamic & ObjectTypeMask);
 }
 
+inline Traits::Traits(VM& vm)
+    : GASRefCountBase(&vm.GetGC())
+    , FirstOwnSlotInd(0)
+    , FixedValueSlotNumber(0)
+    , MemSize(0)
+    , Flags(0)
+    , TraitsType(Traits_Unknown)
+    , pVM(&vm)
+    , pConstructor(NULL)
+    , pParent(NULL)
+    , InitScope(vm.GetMemoryHeap())
+{
+    RefCount |= Flag_DeleteLast;
+}
+
 namespace InstanceTraits
 {
     // @0x1424dad50
@@ -2170,6 +2258,22 @@ namespace ClassTraits
 
         for (UInt8 i = 0; i < ci.ClassMemberNum; ++i)
             AddSlot(ci.ClassMember[i]);
+    }
+
+    // @0x1424dacd0
+    Traits::Traits(VM& vm, const ClassTraits::Traits* pt)
+        : AS3::Traits(vm, pt, true, false)
+    {
+        SetConstructor(vm.GetClassTraitsClassClass().GetInstanceTraits().GetConstructor());
+        Flags |= IsClassMask;
+        RegisterSlots();
+    }
+
+    // @0x1424dab20
+    Traits::Traits(VM& vm)
+        : AS3::Traits(vm)
+    {
+        Flags |= IsClassMask;
     }
 }
 
@@ -2836,3 +2940,10 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VVMAbcFile@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VVMAbcFile@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1424dc630 ; unique
 // MS2-PIN: ??0AvmDisplayObj@AS3@GFx@Scaleform@@QEAA@PEAVDisplayObject@23@@Z 0x1424d6430 ; unique
 // MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEJ@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@1@_K@Z 0x1424d4c10 ; unique
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317de60
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317e228
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317e238
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317e330
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B@ 0x14317e3e8
+// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317d220
+// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
