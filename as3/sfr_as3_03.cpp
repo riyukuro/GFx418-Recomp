@@ -2699,6 +2699,43 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return true;
     }
 }}}}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+
+    // @0x142409120
+    CheckResult XMLElement::DeleteProperty(const Multiname& prop_name)
+    {
+        UPInt i = 0;
+        if (prop_name.IsAttr())
+        {
+            while (i < Attrs.GetSize())
+            {
+                XMLAttr* attr = Attrs[i];
+                if (attr->Matches(prop_name))
+                {
+                    attr->Parent = NULL;
+                    Attrs.RemoveAt(i);
+                }
+                else
+                    ++i;
+            }
+        }
+        else
+        {
+            while (i < Children.GetSize())
+            {
+                XML* child = Children[i];
+                if (child->Matches(prop_name))
+                {
+                    child->Parent = NULL;
+                    Children.RemoveAt(i);
+                }
+                else
+                    ++i;
+            }
+        }
+        return true;
+    }
+}}}}}
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
