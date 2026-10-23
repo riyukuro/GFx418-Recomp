@@ -148,3 +148,54 @@ bool QueryChannelPlaying(void* soundSource)
     return channel && channel->isPlaying(&playing) == 0 ? playing : false;
 }
 }
+
+int FUN_1428d8e9c(void*, void**);
+int FUN_1428d8f26(void*, float*);
+int FUN_1428d8eea(void*, float*);
+int FUN_1428d8ec0(void*, void*, unsigned, unsigned*);
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
+// @0x142745840
+float QueryMasterVolume(void* player)
+{
+    float volume = 1.0f;
+    void* group = nullptr;
+    if (FUN_1428d8e9c(*reinterpret_cast<void**>(static_cast<char*>(player) + 0x10), &group) == 0)
+        FUN_1428d8f26(group, &volume);
+    return volume;
+}
+
+// MS2-FUNCTIONAL: mirrors the channel null check and reads the pan value through the executable wrapper.
+// @0x1427458b0
+float QueryChannelPan(void* player)
+{
+    void* channel = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x38);
+    float pan = 0.0f;
+    if (channel)
+        FUN_1428d8eea(channel, &pan);
+    return pan;
+}
+
+// MS2-FUNCTIONAL: the sound read count is initialized to zero and returned only for a non-null sound.
+// @0x142745880
+unsigned ReadSoundData(void* player, void* buffer, unsigned bytes)
+{
+    void* sound = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30);
+    unsigned read = 0;
+    if (sound)
+        FUN_1428d8ec0(sound, buffer, bytes, &read);
+    return read;
+}
+
+// MS2-FUNCTIONAL: returns the channel volume when present, otherwise the executable's default of one.
+// @0x142745b90
+float QueryChannelVolume(void* player)
+{
+    void* channel = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x38);
+    float volume = 1.0f;
+    if (channel)
+        FUN_1428d8f26(channel, &volume);
+    return volume;
+}
+}
