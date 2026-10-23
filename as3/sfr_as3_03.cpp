@@ -2494,6 +2494,77 @@ namespace Instances { namespace fl
 }}
 }}}
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // A found E4X node: the pointer tagged with bit 1, This the element that owns it.
+    static PropRef MakeXMLPropRef(XML* node, XMLElement* owner)
+    {
+        PropRef r;
+        r.pObject = reinterpret_cast<AS3::Object*>(reinterpret_cast<UPInt>(node) | 2);
+        r.This = Value(owner);
+        return r;
+    }
+
+    // MS2-FUNCTIONAL: exe inlines ForEachAttr and builds the result in place
+    // @0x14240b080
+    PropRef XMLElement::FindDynamicSlot(const Multiname& mn)
+    {
+        if (mn.IsAttr())
+        {
+            AttrGetFirst f(*this);
+            if (ForEachAttr(mn, f) != 0)
+                return MakeXMLPropRef(f.Result.GetPtr(), this);
+        }
+        else
+        {
+            ChildGetFirst f(*this);
+            if (ForEachChild(mn, f) != 0)
+                return MakeXMLPropRef(f.Result.GetPtr(), this);
+        }
+        return PropRef();
+    }
+}}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // MS2-FUNCTIONAL: exe pushes through the out-of-line ArrayLH resize 0x142420060 and stores raw
+    // @0x142405500
+    bool AttrGet::Call(UPInt ind)
+    {
+        List.List.PushBack(SPtr<XML>(Element.Attrs[ind].GetPtr()));
+        return true;
+    }
+
+    // @0x142405590
+    bool AttrGetFirst::Call(UPInt ind)
+    {
+        if (Result.GetPtr() == NULL)
+            Result = Element.Attrs[ind].GetPtr();
+        return true;
+    }
+
+    // MS2-FUNCTIONAL: exe pushes through the out-of-line ArrayLH resize 0x142420060 and stores raw
+    // @0x1424055e0
+    bool ChildGet::Call(UPInt ind)
+    {
+        List.List.PushBack(Element.Children[ind]);
+        return true;
+    }
+
+    // MS2-FUNCTIONAL: exe assigns through the out-of-line SPtr<XML> operator= 0x1423f1970
+    // @0x142405640
+    bool ChildGetFirst::Call(UPInt ind)
+    {
+        if (Result.GetPtr() == NULL)
+            Result = Element.Children[ind];
+        return true;
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
