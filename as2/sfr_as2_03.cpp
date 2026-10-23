@@ -3,6 +3,14 @@
 // MS2-UNIT: sfr_as2_03
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142923cb0-0x142923dd0 .text$mn
+// MS2-RANGE: 0x1429254e0-0x142925560 .text$mn
+// MS2-RANGE: 0x142924d20-0x142924d90 .text$mn
+// MS2-RANGE: 0x142924e00-0x142925030 .text$mn
+// MS2-RANGE: 0x142925560-0x1429255a0 .text$mn
+// MS2-RANGE: 0x142925600-0x142925680 .text$mn
+// MS2-RANGE: 0x142925750-0x142925850 .text$mn
+// MS2-RANGE: 0x142925990-0x1429259d0 .text$mn
+// MS2-RANGE: 0x142925cf0-0x142925e70 .text$mn
 // MS2-RANGE: 0x1429237f0-0x142923a90 .text$mn
 // MS2-RANGE: 0x1429267a0-0x142926a00 .text$mn
 // MS2-RANGE: 0x142923e70-0x142923f30 .text$mn
@@ -98,6 +106,10 @@
 #include "../include/gfx/as2/as2_value.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
+
+// The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
+void MemberHash_Destruct(ASStringHash_GC<Member>* phash);                 // exe 0x142924800
+void WatchpointHash_Destruct(ASStringHash_GC<Object::Watchpoint>* phash); // exe 0x1429246b0
 
 // @0x14291c090
 FunctionObject::FunctionObject(ASStringContext* psc)
@@ -887,13 +899,81 @@ MovieRoot::InvokeAliasInfo::~InvokeAliasInfo()
 {
 }
 
+// @0x142925dd0
+ObjectInterface::~ObjectInterface()
+{
+    if (pUserDataHolder)
+    {
+        pUserDataHolder->NotifyDestroy(this);
+        delete pUserDataHolder;
+    }
+}
+
+// MS2-FUNCTIONAL the hash table goes before ResolveHandler here, the exe drops ResolveHandler first
+// @0x142925cf0
+Object::~Object()
+{
+    if (pWatchpoints)
+    {
+        WatchpointHash_Destruct(pWatchpoints);
+        SF_FREE(pWatchpoints);
+    }
+    MemberHash_Destruct(&Members);
+}
+
+// @0x142925560
+BitmapFilterObject::~BitmapFilterObject()
+{
+}
+
+// @0x142925640
+BevelFilterObject::~BevelFilterObject()
+{
+}
+
+// @0x142925520
+BlurFilterObject::~BlurFilterObject()
+{
+}
+
+// @0x1429254e0
+ColorMatrixFilterObject::~ColorMatrixFilterObject()
+{
+}
+
+// @0x142925600
+DropShadowFilterObject::~DropShadowFilterObject()
+{
+}
+
+// @0x142925990
+GlowFilterObject::~GlowFilterObject()
+{
+}
+
+// The out-of-line destructors of the filter prototypes.
+// @0x142924fc0
+template Prototype<BitmapFilterObject, Environment>::~Prototype();
+// @0x142924e00
+template Prototype<BevelFilterObject, Environment>::~Prototype();
+// @0x142924e70
+template Prototype<BlurFilterObject, Environment>::~Prototype();
+// @0x142924d20
+template Prototype<ColorMatrixFilterObject, Environment>::~Prototype();
+// @0x142924f50
+template Prototype<DropShadowFilterObject, Environment>::~Prototype();
+// @0x142924ee0
+template Prototype<GlowFilterObject, Environment>::~Prototype();
+
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform {
 
 // The out-of-line destructors of the AS2 arrays, hashes and stacks.
+// @0x1429241f0
 template ArrayDataBase<Ptr<GFx::AS2::LocalFrame>, AllocatorLH<Ptr<GFx::AS2::LocalFrame>, 2>,
                        ArrayDefaultPolicy>::~ArrayDataBase();
+// @0x142924260
 template ArrayDataBase<Ptr<GFx::AS2::Object>, AllocatorLH<Ptr<GFx::AS2::Object>, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
 // MS2-FUNCTIONAL cl inlines ~ArraySortFunctor (defined above), the exe calls it
 // @0x1429242d0
@@ -952,6 +1032,19 @@ template GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::~PagedStack();
 template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 
 } // namespace Scaleform
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// The exe stops inlining at the array's base destructor.
+#pragma inline_depth(5)
+// @0x142925750
+GASPrototypeBase::~GASPrototypeBase()
+{
+    delete pInterfaces;
+}
+#pragma inline_depth()
+
+}}} // namespace Scaleform::GFx::AS2
+
 // MS2-PIN: ??1?$ArrayDataBase@VArraySortFunctor@AS2@GFx@Scaleform@@U?$AllocatorGH@VArraySortFunctor@AS2@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1429242d0
 // MS2-PIN: ??1?$ArrayDataBase@VValue@AS2@GFx@Scaleform@@U?$AllocatorLH@VValue@AS2@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1429243b0
 // MS2-PIN: ??1?$ArrayDataBase@VValue@AS2@GFx@Scaleform@@U?$AllocatorLH@VValue@AS2@GFx@Scaleform@@$0BED@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x142924420

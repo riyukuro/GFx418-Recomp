@@ -16,8 +16,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class GASPrototypeBase
 {
 protected:
-    // The interfaces are released by the collector: finalizing only frees the buffer.
-    class InterfacesArray : public ArrayLH<Ptr<Object>, StatMV_ActionScript_Mem>
+    // The interfaces are released by the collector: finalizing only frees the buffer (default stat, as the exe resize).
+    class InterfacesArray : public ArrayLH<Ptr<Object> >
     {
     public:
         void Finalize_GC() { AllocatorType::Free(Data.Data); }
@@ -82,6 +82,7 @@ public:
     {
         Init(this, psc, constructor);
     }
+    virtual ~Prototype() {}
 
     // constructor and __constructor__ come from the prototype part (defined in sfr_as2_05).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);

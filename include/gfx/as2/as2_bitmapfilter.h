@@ -49,6 +49,7 @@ protected:
     Render::BlurFilterParams& writableFilterParams();
 
     virtual void Finalize_GC(); // exe 0x142942cf0
+    virtual ~BitmapFilterObject(); // exe 0x142925560
 public:
     virtual ObjectType GetObjectType() const; // exe 0x1429541b0
 };
@@ -64,6 +65,9 @@ public:
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags()); // exe 0x142985100
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294d800
+
+protected:
+    virtual ~BevelFilterObject(); // exe 0x142925640
 };
 class BlurFilterObject : public BitmapFilterObject
 {
@@ -75,6 +79,9 @@ public:
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags()); // exe 0x142985570
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294dd10
+
+protected:
+    virtual ~BlurFilterObject(); // exe 0x142925520
 };
 class ColorMatrixFilterObject : public BitmapFilterObject
 {
@@ -86,6 +93,9 @@ public:
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags()); // exe 0x1429856c0
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294e520
+
+protected:
+    virtual ~ColorMatrixFilterObject(); // exe 0x1429254e0
 };
 class DropShadowFilterObject : public BitmapFilterObject
 {
@@ -97,6 +107,9 @@ public:
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags()); // exe 0x142985b50
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294ec10
+
+protected:
+    virtual ~DropShadowFilterObject(); // exe 0x142925600
 };
 class GlowFilterObject : public BitmapFilterObject
 {
@@ -108,6 +121,9 @@ public:
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags()); // exe 0x142986170
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val); // exe 0x14294f260
+
+protected:
+    virtual ~GlowFilterObject(); // exe 0x142925990
 };
 
 // The filter prototypes: BitmapFilter has no methods, the others only add clone() (the table holds it, flags 0).
