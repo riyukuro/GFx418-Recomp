@@ -50,13 +50,58 @@ public:
 namespace AS3 {
 
 // The AS3 IME manager (0xe0 bytes). Opaque until the IME units are recovered.
+// The AS3 IME manager (sfr_as3_20): loads the candidate list movie into the stage and sends the IME events to the
+// language bar and status window. 0xe0 bytes; vftable 0x14317fce8.
 class IMEManager : public ASIMEManager
 {
 public:
     IMEManager();
     bool GetIMEMoviePath(Scaleform::String& path);
-private:
-    UByte Unrecovered[0xe0 - sizeof(ASIMEManager)];
+
+    // (sfr19) the ASIMEManager overrides
+    virtual ~IMEManager();
+    virtual void ShutDown();
+    virtual void ASRootMovieCreated(Ptr<Sprite> spr);
+    virtual void IMECommand(Movie* pmovie, const char* pcommand, const char* pparams);
+    virtual void BroadcastIMEConversion(const wchar_t* pstr);
+    virtual void BroadcastSwitchLanguage(const char* pstr);
+    virtual void BroadcastSetSupportedLanguages(const char* pstr);
+    virtual void BroadcastSetSupportedIMEs(const char* pstr);
+    virtual void BroadcastSetCurrentInputLanguage(const char* pstr);
+    virtual void BroadcastSetIMEName(const char* pstr);
+    virtual void BroadcastSetConversionStatus(const char* pstr);
+    virtual void BroadcastRemoveStatusWindow(const char* pstr);
+    virtual void BroadcastDisplayStatusWindow(const char* pstr);
+    virtual bool IsCandidateListLoaded() const;
+    virtual bool IsTextFieldFocused() const;
+    virtual bool Invoke(const char* pmethodName, GFx::Value* presult, const GFx::Value* pargs, unsigned numArgs);
+    virtual InteractiveObject* HandleFocus(Movie* pmovie, InteractiveObject* poldFocus, InteractiveObject* pnewFocus,
+                                           InteractiveObject* ptopMostItem);
+    virtual void OnOpenCandidateList();
+    virtual bool AcquireCandidateList();
+    virtual void SetIMEMoviePath(const char* pcandidateSwfPath);
+    virtual void SetActiveMovie(Movie* pmovie);
+    virtual void SetIMEManager(IMEManagerBase* pimeMgr);
+    // (sfr19) its own slots 22..27
+    virtual bool Init(Log* plog);                                                       // 22
+    virtual bool SetCompositionString(const char* pcompString);                         // 23
+    virtual bool IsCandidateList(const char* ppath);                                    // 24
+    virtual bool IsStatusWindow(const char* ppath);                                     // 25
+    virtual bool IsLangBar(const char* ppath);                                          // 26
+    virtual void OnShutdown();                                                          // 27
+
+    // Whether pfocusedChar (or the movie's focused character) is a text field taking IME input.
+    bool IsTextFieldFocused(InteractiveObject* pfocusedChar) const;                     // 0x142544e10
+    // The candidate list movie's root, once loaded.
+    DisplayObject* GetCandidateListSprite() const;                                      // 0x142543e70
+    // Sends the IME event messageType (message attached) to the "LangBar" or "StatusWindow" context.
+    void DispatchEvent(const char* message, const char* messageType, const char* type); // 0x142543b80
+
+    unsigned                UnsupportedIMEWindowsFlag;  // +0xa0
+    Log*                    pLog;                       // +0xa8
+    SInt32                  CandidateListState;         // +0xb0 0 none, 1 loading, 2 loaded
+    GFx::Value              CandListVal;                // +0xb8 the candidate list movie's content
+    Ptr<IMEFuncHandler>     pCustomFunc;                // +0xd8
 };
 
 // Per-movie memory: the movie heap with its string manager and garbage collector. 0x68 bytes; the heap limit

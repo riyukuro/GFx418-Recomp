@@ -216,6 +216,9 @@ public:
             : Use(use), FileName(filename), ParentPath(path) {}
     };
 
+    // (appended, sfr19) a default builder made where none is set (vftable 0x14317fbe8, ??_G in sfr_as3_20)
+    URLBuilder() : State(State_URLBuilder) {}
+
     virtual void BuildURL(String* ppath, const LocationInfo& loc);
 
     static void SF_STDCALL DefaultBuildURL(String* ppath, const LocationInfo& loc);

@@ -25,6 +25,7 @@
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 class LoadQueueEntry;   // (appended, sfr19) as3_loadqueue.h
+class ASVM;             // (appended, sfr19)
 class MovieRoot : public ASMovieRootBase
 {
 public:
@@ -40,7 +41,11 @@ public:
     void ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const;     // 0x1424e42c0
 
 private:
-    UByte               Unrecovered28[0x58 - sizeof(ASMovieRootBase)];
+    UByte               Unrecovered28[0x48 - sizeof(ASMovieRootBase)];
+public:
+    ASVM*               pAVM;                       // +0x48 AutoPtr<ASVM> (sfr19)
+private:
+    UByte               Unrecovered50[0x58 - 0x50];
 public:
     Value               ExternalIntfRetVal;         // +0x58: what the host's ExternalInterface callback returned
 private:

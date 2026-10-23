@@ -873,12 +873,7 @@ inline MovieImpl::WideStringStorage::~WideStringStorage()
     pNode->Release();
 }
 
-// The host's callback behind a function value (only the reference count is needed here).
-class FunctionHandler : public RefCountBase<FunctionHandler, Stat_Default_Mem>
-{
-public:
-    virtual ~FunctionHandler() {}
-};
+// The host's callback behind a function value: FunctionHandler (gfx_asimemanager.h).
 
 namespace AS2 {
 

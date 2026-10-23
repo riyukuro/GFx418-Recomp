@@ -29,6 +29,19 @@ public:
     UPInt GetEndIndex() const;                           // exe 0x1425b8220
     void  SetSelection(SPInt beginIndex, SPInt endIndex); // exe 0x1425bcfc0
 
+    // (appended, sfr19) IME (AS3 IME manager, sfr_as3_20).
+    bool IsReadOnly() const;                             // exe 0x1425b9b10
+    // The IME may write into it: not IME-disabled, not read-only, not a password field.
+    bool IsIMEEnabled() const
+    {
+        return !IsIMEDisabledFlag() && !IsReadOnly() && !IsPassword();
+    }
+    // Gives the candidate list movie the field's font (exe 0x1425bbd70).
+    void SetCandidateListFont(DisplayObject* pcandidateList);
+    bool IsIMEDisabledFlag() const { return (GetFlags418() & 0x800) != 0; }
+    bool IsPassword() const        { return (GetFlags418() & 0x4) != 0; }
+    UInt32 GetFlags418() const     { return *reinterpret_cast<const UInt32*>(Unrecovered + 0xfc); }  // +0xfc Flags
+
 private:
     UByte Unrecovered[0x148];
 };

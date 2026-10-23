@@ -23,6 +23,7 @@ struct CharacterCreateInfo;
 namespace AS3 {
 
 class VMAppDomain;
+class ASVM;             // (appended, sfr19)
 namespace Instances { namespace fl_display { class DisplayObject; } }
 
 // AS3 part of every display object. 0x38 bytes.
@@ -41,6 +42,18 @@ public:
     // Drops the AS3 object (0x142521eb0).
     void        ReleaseAS3Obj();
     Ptr<Log>    GetLog() const          { return GetMovieImpl()->GetLog(); }
+    // (appended, sfr19) the VM of the movie (0x142506d30)
+    ASVM*       GetAVM() const;
+    // (appended, sfr19) the AS3 object, kept raw or as a tagged collectible pointer
+    Instances::fl_display::DisplayObject* GetAS3Obj() const
+    {
+        Instances::fl_display::DisplayObject* p = pAS3RawPtr;
+        if (!p)
+            p = pAS3CollectiblePtr;
+        if (reinterpret_cast<UPInt>(p) & 1)
+            p = reinterpret_cast<Instances::fl_display::DisplayObject*>(reinterpret_cast<UByte*>(p) - 1);
+        return p;
+    }
 };
 
 inline AvmDisplayObj* ToAvmDisplayObj(DisplayObjectBase* p)

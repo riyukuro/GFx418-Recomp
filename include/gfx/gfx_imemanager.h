@@ -11,6 +11,8 @@ namespace Scaleform { namespace GFx {
 
 class ASString;
 class DisplayObject;
+class Movie;
+class Loader;
 
 class IMEManagerBase : public State
 {
@@ -54,11 +56,29 @@ private:
     virtual void Slot27();                                              // OnCandidateListStyleRequest
     virtual void Slot28();                                              // OnEnableIME
     virtual void Slot29();                                              // SetActiveMovie
-    virtual void Slot30();                                              // IsMovieActive
+public:
+    // (sfr19) whether pmovie is the movie the IME works for.
+    virtual bool IsMovieActive(Movie* pmovie) const;                    // 30
+private:
     virtual void Slot31();                                              // GetActiveMovie
     virtual void Slot32();                                              // ClearActiveMovie
 public:
     virtual String      GetWindowsVersion();                            // 33
+
+    // (appended, sfr19) what the AS3 IME manager uses.
+    // Ends the composition (OnFinalize) and drops the focused text field.
+    void DoFinalize();                                                  // 0x1425b43d0
+    // Switches the IME on or off (OnEnableIME) when that changes IMEDisabled.
+    void EnableIME(bool enable);                                        // 0x1425b4400
+
+private:
+    UByte   Unrecovered_18[0x28 - 0x18];    // +0x18 Ptr<ASIMEManager>, the active movie
+public:
+    Loader* pLoader;                        // +0x28 where the file opener and URL builder states come from
+private:
+    UByte   Unrecovered_30[0x58 - 0x30];    // +0x30 the focused text field, cursor, candidate list path, flags
+public:
+    bool    bCheckIMEExists;                // +0x58 check that the candidate list file exists before loading it
 };
 
 }} // namespace Scaleform::GFx
