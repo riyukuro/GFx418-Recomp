@@ -901,3 +901,54 @@ void ResizeStringArray(void** array, void* heapOwner, std::size_t requested)
         new (elements + i) Scaleform::String();
 }
 }
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: releases live cached values, marks each bucket as a tombstone, then frees the bucket table.
+// @0x142689f10
+void ClearCachedHashSet(void* hashSet)
+{
+    auto** set = static_cast<void**>(hashSet);
+    auto* table = static_cast<unsigned char*>(set[0]);
+    if (!table)
+        return;
+    const std::size_t buckets = *reinterpret_cast<std::size_t*>(table + 8) + 1;
+    for (std::size_t i = 0; i < buckets; ++i) {
+        auto* node = table + 0x10 + i * 0x20;
+        if (*reinterpret_cast<long long*>(node) == -2)
+            continue;
+        void* value = *reinterpret_cast<void**>(node + 0x18);
+        if (value)
+            FUN_14257dcb0(value);
+        *reinterpret_cast<long long*>(node) = -2;
+    }
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
+    set[0] = nullptr;
+}
+
+// MS2-FUNCTIONAL: releases cached styles by their encoded reference-count pointer and frees the table storage.
+// @0x142689fa0
+void ClearStyleHashSet(void* hashSet)
+{
+    auto** set = static_cast<void**>(hashSet);
+    auto* table = static_cast<unsigned char*>(set[0]);
+    if (!table)
+        return;
+    const std::size_t buckets = *reinterpret_cast<std::size_t*>(table + 8) + 1;
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    for (std::size_t i = 0; i < buckets; ++i) {
+        auto* node = table + 0x10 + i * 0x20;
+        if (*reinterpret_cast<long long*>(node) == -2)
+            continue;
+        const auto encoded = *reinterpret_cast<unsigned long long*>(node + 0x18);
+        if (encoded) {
+            auto* object = reinterpret_cast<unsigned char*>(encoded & ~3ull);
+            if (InterlockedDecrement(reinterpret_cast<volatile long*>(object + 8)) == 0)
+                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, object);
+        }
+        *reinterpret_cast<long long*>(node) = -2;
+    }
+    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
+    set[0] = nullptr;
+}
+}
