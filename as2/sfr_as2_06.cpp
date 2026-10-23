@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x14295d970-0x14295da40 .text$mn
 // MS2-RANGE: 0x14295dbb0-0x14295dbe0 .text$mn
 // MS2-RANGE: 0x14295e080-0x14295e1b0 .text$mn
+// MS2-RANGE: 0x1429663d0-0x142966480 .text$mn
 // MS2-RANGE: 0x1429658d0-0x1429659e0 .text$mn
 // MS2-RANGE: 0x142965bb0-0x142965c80 .text$mn
 // MS2-RANGE: 0x142965f30-0x1429660c0 .text$mn
@@ -215,6 +216,7 @@ bool FUN_14260b870(void* styleManager, const wchar_t* text, unsigned __int64 len
 bool FUN_142606410(void* allocator, bool noAllocationsAllowed);
 bool FUN_142606150(void* allocator, bool noAllocationsAllowed);
 void FUN_1425bd9a0(void* textField, const char* text, bool html, bool notifyVariable);
+void FUN_14257dcb0(void* file);
 
 namespace Scaleform { namespace GFx {
 
@@ -2005,8 +2007,47 @@ public:
     wchar_t* Buffer;
     int BufferLen;
 
+    virtual void Load(const String& fileName, FileOpener* opener);
     virtual void Init(Environment* penv, Object* sheet);
 };
+
+// MS2-FUNCTIONAL: opens the CSS file, reads its complete byte stream into an owned, terminated buffer, and closes it.
+// @0x1429663d0
+void CSSFileLoaderAndParserImpl::Load(const String& fileName, FileOpener* opener)
+{
+    Buffer = 0;
+    BufferLen = 0;
+    if (!opener)
+        return;
+
+    using OpenFileFn = void* (*)(FileOpener*, const char*, int, int);
+    void** openerVtable = *reinterpret_cast<void***>(opener);
+    void* file = reinterpret_cast<OpenFileFn>(openerVtable[1])(opener, fileName.ToCStr(), 0x21, 0x1b6);
+    if (!file)
+        return;
+
+    void** fileVtable = *reinterpret_cast<void***>(file);
+    using IsValidFn = bool (*)(void*);
+    using GetLengthFn = int (*)(void*);
+    using ReadFn = void (*)(void*, void*, unsigned);
+    if (reinterpret_cast<IsValidFn>(fileVtable[2])(file))
+    {
+        BufferLen = reinterpret_cast<GetLengthFn>(fileVtable[6])(file);
+        if (BufferLen)
+        {
+            Buffer = reinterpret_cast<wchar_t*>(Memory::GetGlobalHeap()->Alloc(UPInt(BufferLen) + 2));
+            if (Buffer)
+            {
+                reinterpret_cast<ReadFn>(fileVtable[10])(file, Buffer, unsigned(BufferLen));
+                reinterpret_cast<UByte*>(Buffer)[BufferLen] = 0;
+                reinterpret_cast<UByte*>(Buffer)[BufferLen + 1] = 0;
+            }
+            else
+                BufferLen = 0;
+        }
+    }
+    FUN_14257dcb0(file);
+}
 
 // MS2-FUNCTIONAL: records the completion status, pushes the result, and broadcasts onLoad to listeners.
 // @0x142969aa0
