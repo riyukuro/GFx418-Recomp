@@ -55,18 +55,6 @@ void ASIMEManager::ASRootMovieCreated(Ptr<Sprite> spr)
 
 namespace AS3 {
 
-// The AS3 part of a display object container, with its AvmDisplayObjContainerBase part at +0x40. Opaque; only
-// the call the IME manager makes.
-class AvmDisplayObjContainer
-{
-public:
-    static AvmDisplayObjContainer* FromBase(AvmDisplayObjContainerBase* p)
-    {
-        return p ? reinterpret_cast<AvmDisplayObjContainer*>(reinterpret_cast<UByte*>(p) - 0x40) : NULL;
-    }
-    void AddChild(DisplayObjectBase* ch);   // 0x1424e6d90
-};
-
 static inline MovieImpl* GetMovieImpl(Movie* pmovie)
 {
     return reinterpret_cast<MovieImpl*>(pmovie);
