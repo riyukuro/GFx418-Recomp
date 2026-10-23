@@ -1473,6 +1473,154 @@ void FUN_140038e10(void)
     FUN_140038ce4(0, NULL, 0, 0, NULL);
 }
 
+// MS2-FUNCTIONAL: allocate the 0x40-byte memory reader from its CRI heap and initialize its state.
+// @0x1400385d0
+CriMvEasyFileReaderMem* CriMvEasyFileReaderMem::Create(CriHeap heap)
+{
+    void* memory = CriAllocator::operator new(0x40, heap, CRIHEAP_TYPE_FIX, "CriMvEasyFileReaderMem", 4);
+    if (!memory)
+        return NULL;
+    CriMvEasyFileReaderMem* reader = ::new(memory) CriMvEasyFileReaderMem();
+    reader->Data = NULL;
+    reader->FileSize = -1;
+    reader->Heap = heap;
+    reader->Position = 0;
+    reader->ReadSize = 0;
+    reader->OpenState = ASYNC_STATUS_STOP;
+    reader->CloseState = ASYNC_STATUS_STOP;
+    reader->ReadState = ASYNC_STATUS_STOP;
+    return reader;
+}
+
+// MS2-FUNCTIONAL: open MFS:<hex-address>.<hex-size> memory-file names.
+// @0x140038720
+void CriMvEasyFileReaderMem::Open(CriChar8* fname)
+{
+    OpenState = ASYNC_STATUS_BUSY;
+    if (!fname || strncmp(fname, "MFS:", 4) != 0)
+    {
+        OpenState = ASYNC_STATUS_ERROR;
+        return;
+    }
+    const CriChar8* dot = strchr(fname + 4, '.');
+    if (!dot || dot == fname + 4 || !dot[1])
+    {
+        OpenState = ASYNC_STATUS_ERROR;
+        return;
+    }
+    char addressText[32] = {};
+    char sizeText[32] = {};
+    size_t addressLen = (size_t)(dot - (fname + 4));
+    if (addressLen >= sizeof(addressText) || strlen(dot + 1) >= sizeof(sizeText))
+    {
+        OpenState = ASYNC_STATUS_ERROR;
+        return;
+    }
+    memcpy(addressText, fname + 4, addressLen);
+    strcpy_s(sizeText, dot + 1);
+    char* endAddress = NULL;
+    char* endSize = NULL;
+    unsigned __int64 address = _strtoui64(addressText, &endAddress, 16);
+    unsigned __int64 size = _strtoui64(sizeText, &endSize, 16);
+    if (!endAddress || *endAddress || !endSize || *endSize)
+    {
+        OpenState = ASYNC_STATUS_ERROR;
+        return;
+    }
+    Data = (CriUint8*)(uintptr_t)address;
+    FileSize = (CriSint64)size;
+    Position = 0;
+    ReadSize = 0;
+    OpenState = ASYNC_STATUS_COMPLETE;
+}
+
+// MS2-FUNCTIONAL: clear the current memory file and report the completed close state.
+// @0x1400387b0
+void CriMvEasyFileReaderMem::Close(void)
+{
+    CloseState = ASYNC_STATUS_BUSY;
+    FileSize = -1;
+    Data = NULL;
+    Position = 0;
+    ReadSize = 0;
+    CloseState = ASYNC_STATUS_COMPLETE;
+}
+
+// MS2-FUNCTIONAL: copy up to the remaining file size and publish the byte count as the read result.
+// @0x140038810
+void CriMvEasyFileReaderMem::Read(CriUint8* buffer, CriSint64 req_size)
+{
+    ReadState = ASYNC_STATUS_BUSY;
+    CriUint64 count = (CriUint64)req_size;
+    if (FileSize < Position + (CriSint64)count)
+        count = (CriUint64)(FileSize - Position);
+    memcpy(buffer, Data + Position, (size_t)count);
+    ReadSize = count;
+    Position += (CriSint64)count;
+    ReadState = ASYNC_STATUS_COMPLETE;
+}
+
+// MS2-FUNCTIONAL: return the current memory-file open status.
+// @0x1400388d0
+CriMvFileReaderInterface::AsyncStatus CriMvEasyFileReaderMem::GetOpenStatus(void)
+{
+    return OpenState;
+}
+
+// MS2-FUNCTIONAL: return the current memory-file close status.
+// @0x140038910
+CriMvFileReaderInterface::AsyncStatus CriMvEasyFileReaderMem::GetCloseStatus(void)
+{
+    return CloseState;
+}
+
+// MS2-FUNCTIONAL: return the current memory-file read status.
+// @0x1400388f0
+CriMvFileReaderInterface::AsyncStatus CriMvEasyFileReaderMem::GetReadStatus(void)
+{
+    return ReadState;
+}
+
+// MS2-FUNCTIONAL: return the size of the most recent memory-file read.
+// @0x140038930
+CriSint64 CriMvEasyFileReaderMem::GetReadSize(void)
+{
+    return (CriSint64)ReadSize;
+}
+
+// MS2-FUNCTIONAL: adjust the memory-file position according to the CRI seek origin.
+// @0x140038950
+CriSint64 CriMvEasyFileReaderMem::Seek(CriSint64 size, CriMvFileReaderInterface::SeekOrigin origin)
+{
+    if (origin == SEEK_FROM_BEGIN)
+        Position = size;
+    else if (origin == SEEK_FROM_CURRENT)
+        Position += size;
+    else
+        Position = FileSize + size;
+    return (CriSint64)origin;
+}
+
+// MS2-FUNCTIONAL: return the configured memory-file size.
+// @0x1400389d0
+CriSint64 CriMvEasyFileReaderMem::GetFileSize(void)
+{
+    return FileSize;
+}
+
+// MS2-FUNCTIONAL: the derived memory reader has no resources beyond its base reader state.
+// @0x140038c80
+CriMvEasyFileReaderMem::~CriMvEasyFileReaderMem()
+{
+}
+
+// MS2-FUNCTIONAL: destroy the reader through its virtual deleting destructor.
+// @0x1400386c0
+void CriMvEasyFileReaderMem::Destroy(void)
+{
+    delete this;
+}
+
 // MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
 // MS2-PIN: ??_7VideoPlayerImpl@Video@GFx@Scaleform@@6B@ 0x1431b9260
 // MS2-PIN: ??_7VideoDecoderSmp@Video@GFx@Scaleform@@6B@ 0x1431b9170

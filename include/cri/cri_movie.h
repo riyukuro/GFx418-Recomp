@@ -569,7 +569,26 @@ class CriMvEasyFileReaderMem : public CriMvFileReaderInterface
 {
 public:
     static CriMvEasyFileReaderMem* Create(CriHeap heap);                                    // 0x1400385d0
+    void Open(CriChar8* fname) override;                                                    // 0x140038720
+    void Close(void) override;                                                              // 0x1400387b0
+    void Read(CriUint8* buffer, CriSint64 req_size) override;                               // 0x140038810
+    AsyncStatus GetOpenStatus(void) override;                                               // 0x1400388d0
+    AsyncStatus GetCloseStatus(void) override;                                              // 0x140038910
+    AsyncStatus GetReadStatus(void) override;                                               // 0x1400388f0
+    CriSint64 GetReadSize(void) override;                                                   // 0x140038930
+    CriSint64 Seek(CriSint64 size, SeekOrigin offset) override;                             // 0x140038950
+    CriSint64 GetFileSize(void) override;                                                   // 0x1400389d0
+    ~CriMvEasyFileReaderMem() override;                                                     // 0x140038c80
     virtual void Destroy(void);                                                             // 10, 0x1400386c0
+private:
+    CriUint8* Data;                                                                         // 0x08
+    CriSint64 FileSize;                                                                     // 0x10
+    CriHeap Heap;                                                                           // 0x18
+    CriSint64 Position;                                                                     // 0x20
+    CriUint64 ReadSize;                                                                     // 0x28
+    AsyncStatus OpenState;                                                                  // 0x30
+    AsyncStatus CloseState;                                                                 // 0x34
+    AsyncStatus ReadState;                                                                  // 0x38
 };
 
 // The player handle the easy player drives (criMvPly, sfr_cri_02); only the members this layer touches.
