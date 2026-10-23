@@ -2,6 +2,8 @@
 // (Boolean prototype methods, the Math object functions, Date prototype getters/setters).
 // MS2-UNIT: sfr_as2_01
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1423dbde0-0x1423dbe60 .text$mn
+// MS2-RANGE: 0x1423dbea0-0x1423dc0b0 .text$mn
 // MS2-RANGE: 0x1428eb050-0x1428eb900 .text$mn
 // MS2-RANGE: 0x1428ec0b0-0x1428ec780 .text$mn
 // MS2-RANGE: 0x14292bdc0-0x14292bdf0 .text$mn
@@ -58,6 +60,9 @@
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_utf8util.h"
+#include "../include/gfx/gfx_loadproc.h"
+#include "../include/gfx/gfx_placeobject.h"
+#include "../include/gfx/as3/as3_support.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -2858,9 +2863,44 @@ void DateProto::DateGetUTCMonth(const FnCall& fn)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx {
+
+// ---- AS3Support tag allocation ----
+
+// @0x1423dbf30
+PlaceObject2Tag* AS3Support::AllocPlaceObject2Tag(LoadProcess* p, UPInt dataSz, UInt8 swfVer)
+{
+    return p->AllocTag<PlaceObject2Tag>(dataSz);
+}
+
+// @0x1423dbf90
+PlaceObject3Tag* AS3Support::AllocPlaceObject3Tag(LoadProcess* p, UPInt dataSz)
+{
+    return p->AllocTag<PlaceObject3Tag>(dataSz);
+}
+
+// @0x1423dbff0
+RemoveObject2Tag* AS3Support::AllocRemoveObject2Tag(LoadProcess* p)
+{
+    return p->AllocTag<RemoveObject2Tag>();
+}
+
+// @0x1423dc050
+RemoveObjectTag* AS3Support::AllocRemoveObjectTag(LoadProcess* p)
+{
+    return p->AllocTag<RemoveObjectTag>();
+}
+
+}} // namespace Scaleform::GFx
 // MS2-PIN: ??_7LocalInvokeCallback@?6??BroadcastMessage@AsBroadcasterProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x143221850
 // MS2-PIN: ??_7StringVisitor@?1??ToString@LoadVarsProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x1432223c8
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
+// MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
+// MS2-PIN: ??_7PlaceObject2Tag@GFx@Scaleform@@6B@ 0x14313bb00
+// MS2-PIN: ??_7PlaceObject3Tag@GFx@Scaleform@@6B@ 0x14313bb60
+// MS2-PIN: ??_7RemoveObject2Tag@GFx@Scaleform@@6B@ 0x14313bbc0
+// MS2-PIN: ??_7RemoveObjectTag@GFx@Scaleform@@6B@ 0x14313bc10
