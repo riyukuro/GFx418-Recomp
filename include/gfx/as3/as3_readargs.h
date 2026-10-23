@@ -125,12 +125,37 @@ public:
     ArrayDH<Value>& GetOpStack() { return OpStack; }
     Value::TraceNullType CanBeNull(const InstanceTraits::Traits& traits) const; // 0x1424ee980
     InstanceTraits::Traits& GetFunctType(const Value& value) const; // 0x14250a1b0
+    void SetRegister(AbsoluteIndex ind, const Value& v);            // 0x142528e20
+
+    // Handlers that need no Tracer model (sfr27).
+    void SetLocal0();                       // 0x14253fde0
+    void SetLocal1();                       // 0x14253fe30
+    void SetLocal2();                       // 0x14253fe80
+    void SetLocal3();                       // 0x14253fed0
+    void SetLocalN(UInt32 ind);             // 0x14253ff20
+    void PushScope();                       // 0x14253f4a0
+    void PushByte(UInt32 arg);              // 0x14253f2f0
+    void PushShort(SInt32 arg);             // 0x14253f640
+    void PushInt(SInt32 ind);               // 0x14253f3b0
+    void PushUInt(SInt32 ind);              // 0x14253f770
+    void PushDouble(SInt32 ind);            // 0x14253f340
+    void PushObject(UInt32 arg);            // 0x1425395f0
+    void PushObject2(UInt32 arg);           // 0x14253c1a0
+    void PushFunction(UInt32 arg);          // 0x14253c8b0
+    void PushBoolean2(UInt32 a, UInt32 b);  // 0x14253a630
+    void PushITraits(InstanceTraits::Traits* tr); // 0x142538f20
+    void KillRegister(UInt32 ind);          // 0x14253bdf0
 
 private:
     State();
+    void MarkChanged(UInt32 ind) { RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] | (1u << (ind & 7))); }
 
-    UPInt               Unk00[7];       // +0x00
+    void*               pTracer;        // +0x00 the owning Tracer
+    UPInt               Unk08[2];       // +0x08
+    ArrayDH<Value>      Registers;      // +0x18
     ArrayDH<Value>      OpStack;        // +0x38
+    ArrayDH<Value>      ScopeStack;     // +0x58
+    ArrayDH<UInt8>      RegChanged;     // +0x78 one bit per register
 };
 
 // 0x140 bytes.

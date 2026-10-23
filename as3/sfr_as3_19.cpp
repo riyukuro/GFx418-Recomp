@@ -7,7 +7,12 @@
 // MS2-RANGE: 0x14252c7e0-0x142542820 .text$mn
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include <cmath>
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
+void FUN_14251ccc0(Scaleform::GFx::AS3::TR::State* state, Scaleform::UPInt n);   // State::PopOp
+void FUN_14251fcd0(void* tracer, Scaleform::UPInt regIndex);                    // Tracer: note register write
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits {
 
@@ -134,6 +139,196 @@ void Slots::SetKey(AbsoluteIndex ind, const ASString& key)
         Set.Set(pair.Key, static_cast<UInt32>(ind.Get()));
     }
 }
+
+namespace TR {
+
+// The Tracer reaches the VM and the abc file through a short pointer chain.
+static inline UPInt TrRd(UPInt base, UPInt off) { return *reinterpret_cast<const UPInt*>(base + off); }
+static inline UPInt TrAbcLink(UPInt tracer) { return TrRd(TrRd(tracer, 0x20), 0x28); }
+static inline UPInt TrVM(UPInt tracer) { return TrRd(TrAbcLink(tracer), 0x20); }
+static inline UPInt TrFile(UPInt tracer) { return TrRd(TrAbcLink(tracer), 0x28); }
+static inline InstanceTraits::Traits& TrITraits(UPInt tracer, UPInt vmOff)
+{
+    return *reinterpret_cast<InstanceTraits::Traits*>(TrRd(TrRd(TrVM(tracer), vmOff), 0xc0));
+}
+
+// The exe pushes tracer values without releasing the temporary (the tag is known to need no release).
+struct TrScratch
+{
+    template <class A> explicit TrScratch(const A& a) { new (&buf0) Value(a); }
+    template <class A, class B> TrScratch(A& a, const B& b) { new (&buf0) Value(a, b); }
+    const Value& Get() const { return *reinterpret_cast<const Value*>(&buf0); }
+    UPInt buf0, buf1, buf2, buf3;
+};
+
+// Tracer number value: tag first, then the payload (the exe fills the tag before reading the pool).
+struct TrNumScratch
+{
+    explicit TrNumScratch(Value::KindType k) { w0 = static_cast<UInt32>(k); w1 = 0; }
+    void SetInt(SInt32 v) { i = v; }
+    void SetUInt(UInt32 v) { i = static_cast<SInt32>(v); }
+    void SetNumber(double v) { d = v; }
+    const Value& Get() const { return *reinterpret_cast<const Value*>(&w0); }
+    UInt32 w0;
+    UPInt w1;
+    union { SInt32 i; double d; };
+    UPInt w3;
+};
+
+// Tracer value with a traits pointer: the exe zeroes the second word before storing the tag.
+struct TrTraitsScratch
+{
+    TrTraitsScratch()
+    {
+        w1 = 0;
+        w0 = static_cast<UInt32>(Value::kInstanceTraits);
+    }
+    void SetTraits(InstanceTraits::Traits& tr) { w2 = reinterpret_cast<UPInt>(&tr); }
+    const Value& Get() const { return *reinterpret_cast<const Value*>(&w0); }
+    UInt32 w0;
+    UPInt w1, w2, w3;
+};
+
+// @0x142528e20
+void State::SetRegister(AbsoluteIndex ind, const Value& v)
+{
+    const UInt32 i = static_cast<UInt32>(ind.Get());
+    Registers[i].Assign(v);
+    RegChanged[i >> 3] |= static_cast<UInt8>(1 << (i & 7));
+}
+
+// @0x14253fde0
+void State::SetLocal0()
+{
+    Registers[0].Assign(OpStack[OpStack.GetSize() - 1]);
+    MarkChanged(0);
+    FUN_14251ccc0(this, 1);
+}
+
+// @0x14253fe30
+void State::SetLocal1()
+{
+    Registers[1].Assign(OpStack[OpStack.GetSize() - 1]);
+    MarkChanged(1);
+    FUN_14251ccc0(this, 1);
+}
+
+// @0x14253fe80
+void State::SetLocal2()
+{
+    Registers[2].Assign(OpStack[OpStack.GetSize() - 1]);
+    MarkChanged(2);
+    FUN_14251ccc0(this, 1);
+}
+
+// @0x14253fed0
+void State::SetLocal3()
+{
+    Registers[3].Assign(OpStack[OpStack.GetSize() - 1]);
+    MarkChanged(3);
+    FUN_14251ccc0(this, 1);
+}
+
+// @0x14253ff20
+void State::SetLocalN(UInt32 ind)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(ind));
+    Registers[ind].Assign(OpStack[OpStack.GetSize() - 1]);
+    RegChanged[ind >> 3] |= static_cast<UInt8>(1 << (ind & 7));
+    FUN_14251ccc0(this, 1);
+}
+
+// @0x14253f4a0
+void State::PushScope()
+{
+    ScopeStack.PushBack(OpStack[OpStack.GetSize() - 1]);
+    FUN_14251ccc0(this, 1);
+}
+
+// @0x14253f2f0
+void State::PushByte(UInt32 arg)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(arg));
+    { TrScratch t(static_cast<SInt32>(static_cast<char>(arg))); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253f640
+void State::PushShort(SInt32 arg)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(arg));
+    { TrScratch t(static_cast<SInt32>(arg)); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253f3b0
+void State::PushInt(SInt32 ind)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(ind));
+    const Abc::ConstPool* pool = reinterpret_cast<const Abc::ConstPool*>(TrFile(reinterpret_cast<UPInt>(pTracer)) + 0x30);
+    { TrNumScratch t(Value::kInt); t.SetInt(pool->ConstInt[ind]); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253f770
+void State::PushUInt(SInt32 ind)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(ind));
+    const Abc::ConstPool* pool = reinterpret_cast<const Abc::ConstPool*>(TrFile(reinterpret_cast<UPInt>(pTracer)) + 0x30);
+    { TrNumScratch t(Value::kUInt); t.SetUInt(pool->ConstUInt[ind]); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253f340
+void State::PushDouble(SInt32 ind)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(ind));
+    const Abc::ConstPool* pool = reinterpret_cast<const Abc::ConstPool*>(TrFile(reinterpret_cast<UPInt>(pTracer)) + 0x30);
+    { TrNumScratch t(Value::kNumber); t.SetNumber(pool->GetDouble(ind)); OpStack.PushBack(t.Get()); }
+}
+
+// @0x1425395f0
+void State::PushObject(UInt32 arg)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(arg));
+    { TrTraitsScratch t; t.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), 0x1f8)); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253c1a0
+void State::PushObject2(UInt32 arg)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(arg));
+    { TrTraitsScratch t; t.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), 0x1f8)); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253c8b0
+void State::PushFunction(UInt32 arg)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(arg));
+    { TrTraitsScratch t; t.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), 0x208)); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253a630
+void State::PushBoolean2(UInt32 a, UInt32 b)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(a));
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(b));
+    { TrTraitsScratch t; t.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), 0x210)); OpStack.PushBack(t.Get()); }
+}
+
+// @0x142538f20
+void State::PushITraits(InstanceTraits::Traits* tr)
+{
+    { TrTraitsScratch t; t.SetTraits(*tr); OpStack.PushBack(t.Get()); }
+}
+
+// @0x14253bdf0
+void State::KillRegister(UInt32 ind)
+{
+    FUN_14251fcd0(pTracer, static_cast<UInt32>(ind));
+    Registers[ind].Assign(Value::GetUndefined());
+    const UInt32 sh = ind & 7;
+    RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] | (1u << sh));
+    RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] & ~(1u << sh));
+}
+
+} // namespace TR
 
 }}} // namespace Scaleform::GFx::AS3
 
