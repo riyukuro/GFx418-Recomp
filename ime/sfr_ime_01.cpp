@@ -294,6 +294,22 @@ void FUN_1423d53e0(void* self, int key)
     SendInput(1, &input, sizeof(input));
 }
 
+// MS2-FUNCTIONAL: opaque AS3 movie and value interfaces use executable vtable slots and recovered offsets.
+// @0x1423d1c90
+void FUN_1423d1c90(void** self)
+{
+    void** selfVtable = *reinterpret_cast<void***>(self);
+    reinterpret_cast<void(*)(void*)>(selfVtable[0x80 / sizeof(void*)])(self);
+    void* movie = reinterpret_cast<void**>(self)[0x15];
+    void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+    if (bridge) {
+        unsigned char value[0x18] = {};
+        void** vtable = *reinterpret_cast<void***>(bridge);
+        reinterpret_cast<void(*)(void*, const char*, void*, int, int)>(vtable[0x78 / sizeof(void*)])
+            (bridge, "RemoveInputWindow", value, 0, 0);
+    }
+}
+
 // @0x1423d1c10
 void FUN_1423d1c10(void* self)
 {
