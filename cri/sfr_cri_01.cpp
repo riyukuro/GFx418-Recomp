@@ -5850,6 +5850,61 @@ void FUN_14001c170(void* owner, void* replacement)
     }
 }
 
+// MS2-FUNCTIONAL: adjust a Scaleform array size and grow or shrink capacity using the shared array helper.
+// @0x14001cab0
+void FUN_14001cab0(void* array, void* arrayArg, CriUint64 newSize)
+{
+    CriUint64* fields = (CriUint64*)array;
+    CriUint64 oldSize = fields[1];
+    CriUint64 capacity = fields[2];
+    if (newSize < oldSize)
+    {
+        if (newSize < capacity >> 1)
+        {
+            FUN_14001c570(fields, arrayArg, newSize);
+            fields[1] = newSize;
+            return;
+        }
+    }
+    else if (capacity <= newSize)
+    {
+        FUN_14001c570(fields, arrayArg, (newSize >> 2) + newSize);
+        fields[1] = newSize;
+        return;
+    }
+    fields[1] = newSize;
+}
+
+// MS2-FUNCTIONAL: release the held object in a Scaleform reference-count wrapper.
+// @0x14001cb10
+void FUN_14001cb10(CriUint64* pointer)
+{
+    void** object = (void**)(uintptr_t)pointer[0];
+    if (!object)
+        return;
+    if (InterlockedDecrement((volatile LONG*)(object + 1)) == 0)
+        ((void (*)(void*, CriUint32))object[0])(object, 1);
+}
+
+// MS2-FUNCTIONAL: allocate and construct a VideoSoundRendererStream from the supplied heap state.
+// @0x14001d1d0
+void* FUN_14001d1d0(void* state)
+{
+    void* heap;
+    void* soundPlayer;
+    memcpy(&heap, (CriUint8*)state + 0x10, sizeof(heap));
+    memcpy(&soundPlayer, (CriUint8*)state + 0x18, sizeof(soundPlayer));
+    if (!heap)
+        return NULL;
+    void** vtable = *(void***)heap;
+    void* storage = ((void* (*)(void*, size_t, CriUint32))vtable[10])(heap, 0x90, 0);
+    if (!storage)
+        return NULL;
+    return ::new (storage) Scaleform::GFx::Video::VideoSoundRendererStream(
+        (Scaleform::MemoryHeap*)heap,
+        (Scaleform::Sound::SoundRenderer*)soundPlayer);
+}
+
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
 // MS2-PIN: ??_7VideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@6B@ 0x1431b80e0
