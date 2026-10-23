@@ -17,6 +17,7 @@
 #include <cstring>
 
 extern "C" {
+extern void* DAT_143b15f60;
 extern const CriUint8 DAT_143b27a88[];
 extern void* DAT_143ffd550;
 extern CriSint32 DAT_143ffd500;
@@ -45,6 +46,7 @@ void     FUN_14258b240(unsigned ms);                                    // Threa
 unsigned __int64 FUN_1425e3590(void);                                   // Timer::GetTicks
 void     FUN_14257dc30(void* p);                                        // RefCountImpl::AddRef
 void     FUN_14257dcb0(void* p);                                        // RefCountImpl::Release
+void     FUN_14257db50(void* p);
 void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
 void*    FUN_140027f7c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type);
 void     FUN_14001d650(void* config, void* reader);                     // VideoReaderConfig::AttachReader
@@ -148,7 +150,10 @@ void     FUN_140028074(void* heap);
 void     FUN_14258aca0(void* lock);
 void     FUN_14258bb70(void* lock);
 void     FUN_142583d50(void* event);
-void*    FUN_14002d890(void* queue);
+CriSint32 FUN_14258bc20(void* condition, void* lock, CriSint32 timeout);
+struct CriMvRequestNode;
+struct CriMvRequestPoolView;
+CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool);
 void     FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, void* b, void* c);
 void     FUN_140029bf0(void* array, void* source, CriUint64 capacity);
 void     FUN_140029c90(void* array, void* source, CriUint64 capacity);
@@ -166,6 +171,21 @@ struct CriMvRequestNode
     void* ArgumentA;
     void* ArgumentB;
     void* ArgumentC;
+};
+
+struct CriMvRequestBlock
+{
+    CriMvRequestNode Nodes[0x7f];
+    CriMvRequestBlock* NextBlock;
+};
+
+struct CriMvRequestPoolView
+{
+    CriMvRequestBlock* FirstBlock;
+    CriMvRequestBlock* LastBlock;
+    CriUint32 NodesInLastBlock;
+    CriUint32 Reserved;
+    CriMvRequestNode* FreeList;
 };
 
 struct CriMvRequestQueueView
@@ -189,6 +209,19 @@ struct CriMvReaderRequestView
     CriUint64 ReadSize;
     CriUint64 ReadPosition;
     CriUint64 FileSize;
+};
+
+struct CriMvReaderThreadConfigView
+{
+    CriUint8 Reserved0[0x38];
+    CriUint8 IOEnabled;
+    CriUint8 Reserved1[0x2f];
+    CriMvRequestNode* Head;
+    CriMvRequestNode* Tail;
+    CriUint8 Lock[0x28];
+    CriUint8 Event[0x60];
+    CriUint8 Condition[8];
+    void* Reader;
 };
 
 // @0x140038000
@@ -1889,7 +1922,7 @@ void FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, voi
 {
     CriMvRequestQueueView* queueView = (CriMvRequestQueueView*)queue;
     FUN_14258aca0(queueView->Lock);
-    CriMvRequestNode* node = (CriMvRequestNode*)FUN_14002d890(&queueView->Reserved0[0x40]);
+    CriMvRequestNode* node = FUN_14002d890((CriMvRequestPoolView*)&queueView->Reserved0[0x40]);
     node->ArgumentB = b;
     node->Operation = operation;
     node->Request = request;
@@ -2061,6 +2094,172 @@ void FUN_14002a550(void* items, CriSint64 count)
         }
         current += 0x10;
     }
+}
+
+// MS2-FUNCTIONAL: initialize a lock guard's stored lock pointer and acquire the lock.
+// @0x14002d1a0
+void* FUN_14002d1a0(void* guard, void* lock)
+{
+    *(void**)guard = lock;
+    FUN_14258aca0(lock);
+    return guard;
+}
+
+// MS2-FUNCTIONAL: replace the held reference, releasing the previous object when non-null.
+// @0x14002d280
+void* FUN_14002d280(void** slot, void* replacement)
+{
+    if (*slot)
+        FUN_14257dcb0(*slot);
+    *slot = replacement;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: allocate a six-byte aligned tag block from the global Scaleform heap.
+// @0x14002d3c0
+void FUN_14002d3c0(void*, size_t size)
+{
+    CriUint32 flags[6] = { 6, 0, 0, 0, 0, 0 };
+    void* heap = DAT_143b15f60;
+    CriUint8* vtable = (CriUint8*)*(void**)heap;
+    void* (__fastcall *allocate)(void*, size_t, CriUint32*) =
+        (void* (__fastcall *)(void*, size_t, CriUint32*))(vtable + 0x50);
+    allocate(heap, size, flags);
+}
+
+// MS2-FUNCTIONAL: return a non-null allocation to the global Scaleform heap.
+// @0x14002d3f0
+void FUN_14002d3f0(void* allocation)
+{
+    if (allocation)
+    {
+        void* heap = DAT_143b15f60;
+        CriUint8* vtable = (CriUint8*)*(void**)heap;
+        void (__fastcall *release)(void*, void*) = (void (__fastcall *)(void*, void*))(vtable + 0x60);
+        release(heap, allocation);
+    }
+}
+
+// MS2-FUNCTIONAL: run the shared refcount base cleanup and optionally release its allocation.
+// @0x14002d840
+void* FUN_14002d840(void* object, CriUint64 flags)
+{
+    FUN_14257db50(object);
+    if (flags & 1)
+        FUN_14002d3f0(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: enable or disable reader IO, wake the thread, and wait for its queued work to drain.
+// @0x14002d6d0
+void FUN_14002d6d0(CriMvReaderThreadConfigView* config, CriUint8 enable)
+{
+    config->IOEnabled = enable;
+    FUN_142583d50(config->Event);
+    FUN_14258aca0(config->Lock);
+    CriMvRequestNode* sentinel = (CriMvRequestNode*)&config->Head;
+    while (config->Tail != sentinel)
+        FUN_14258bc20(config->Condition, config->Lock, -1);
+    FUN_14258bb70(config->Lock);
+}
+
+// MS2-FUNCTIONAL: replace the configured reader with reference balancing while holding its lock.
+// @0x14002d750
+void FUN_14002d750(CriMvReaderThreadConfigView* config, void* reader)
+{
+    FUN_14258aca0(config->Lock);
+    if (reader)
+        FUN_14257dc30(reader);
+    if (config->Reader)
+        FUN_14257dcb0(config->Reader);
+    config->Reader = reader;
+    FUN_14258bb70(config->Lock);
+}
+
+// MS2-FUNCTIONAL: apply an origin-relative seek to the reader's active input or output cursor.
+// @0x14002d7b0
+CriUint64 FUN_14002d7b0(void* request, CriSint64 offset, CriSint32 origin)
+{
+    CriMvReaderRequestView* view = (CriMvReaderRequestView*)request;
+    CriMvReaderThreadConfigView* config = (CriMvReaderThreadConfigView*)view->Queue;
+    FUN_14258aca0(config->Lock);
+    CriUint64* cursor = &view->ReadSize;
+    if (origin == 1)
+        *cursor = view->ReadPosition;
+    else if (origin == 2)
+        *cursor = view->FileSize;
+    else
+        *cursor = 0;
+    *cursor += (CriUint64)offset;
+    CriUint64 result = *cursor;
+    FUN_14258bb70(config->Lock);
+    return result;
+}
+
+// MS2-FUNCTIONAL: acquire a request node from the free list or the current 127-entry block.
+// @0x14002d890
+CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool)
+{
+    if (pool->FreeList)
+    {
+        CriMvRequestNode* result = pool->FreeList;
+        pool->FreeList = result->Next;
+        return result;
+    }
+    CriUint32 index = pool->NodesInLastBlock;
+    if (index < 0x7f)
+    {
+        pool->NodesInLastBlock = index + 1;
+        return &pool->LastBlock->Nodes[index];
+    }
+    CriUint32 flags[8] = { 6, 0, 0, 0, 0, 0, 0, 0 };
+    void* heap = DAT_143b15f60;
+    CriUint8* vtable = (CriUint8*)*(void**)heap;
+    void* (__fastcall *allocate)(void*, size_t, CriUint32*) =
+        (void* (__fastcall *)(void*, size_t, CriUint32*))(vtable + 0x50);
+    CriMvRequestBlock* block = (CriMvRequestBlock*)allocate(heap, sizeof(CriMvRequestBlock), flags);
+    block->NextBlock = NULL;
+    if (pool->LastBlock)
+        pool->LastBlock->NextBlock = block;
+    else
+        pool->FirstBlock = block;
+    pool->LastBlock = block;
+    pool->NodesInLastBlock = 1;
+    return block->Nodes;
+}
+
+static void CriReleaseRequestBlocks(CriMvRequestBlock* block)
+{
+    void* heap = DAT_143b15f60;
+    CriUint8* vtable = (CriUint8*)*(void**)heap;
+    void (__fastcall *release)(void*, void*) = (void (__fastcall *)(void*, void*))(vtable + 0x60);
+    while (block)
+    {
+        CriMvRequestBlock* next = block->NextBlock;
+        release(heap, block);
+        block = next;
+    }
+}
+
+// MS2-FUNCTIONAL: release every request block from the first queue-pool instantiation.
+// @0x14002d930
+void FUN_14002d930(CriMvRequestPoolView* pool)
+{
+    CriReleaseRequestBlocks(pool->FirstBlock);
+}
+
+// MS2-FUNCTIONAL: release every request block from the second queue-pool instantiation.
+// @0x14002dd80
+void FUN_14002dd80(CriMvRequestPoolView* pool)
+{
+    CriReleaseRequestBlocks(pool->FirstBlock);
+}
+
+// MS2-FUNCTIONAL: release every request block from the third queue-pool instantiation.
+// @0x14002e010
+void FUN_14002e010(CriMvRequestPoolView* pool)
+{
+    CriReleaseRequestBlocks(pool->FirstBlock);
 }
 
 // MS2-FUNCTIONAL: initialize CRI Movie on the first reference and maintain its process reference count.
