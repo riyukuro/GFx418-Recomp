@@ -4065,6 +4065,35 @@ void FUN_1423d5060(void* raw, int)
     }
 }
 
+// MS2-FUNCTIONAL: forwards the current composition and repositions the input window using the same executable state fields.
+// @0x1423ce730
+void FUN_1423ce730(void* raw, unsigned* outputLength)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    FUN_1423d2410(self, outputLength);
+    if ((*reinterpret_cast<unsigned*>(self + 0x98) & 0xf) != 0) return;
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    POINT caret{};
+    GetCaretPos(&caret);
+    ClientToScreen(hwnd, &caret);
+    Scaleform::GFx::Value args[2];
+    auto* values = reinterpret_cast<unsigned char*>(args);
+    const double coordinates[2] = { static_cast<double>(caret.x), static_cast<double>(caret.y) };
+    for (unsigned i = 0; i < 2; ++i) {
+        *reinterpret_cast<unsigned*>(values + i * 0x20 + 8) = Scaleform::GFx::Value::VT_Number;
+        *reinterpret_cast<double*>(values + i * 0x20 + 0x10) = coordinates[i];
+    }
+    void* movie = *reinterpret_cast<void**>(self + 0xa8);
+    void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
+    void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
+    if (interfaceState) {
+        void* result = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, Scaleform::GFx::Value*, unsigned)>(
+            (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
+                interfaceState, "RepositionInputWindow", &result, args, 2);
+    }
+}
+
 // MS2-FUNCTIONAL: reuses the recovered candidate-window geometry bridge for the input-window reposition event.
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
