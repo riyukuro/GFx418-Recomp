@@ -79,13 +79,24 @@ public:
     virtual unsigned GetControllerCount() const = 0;                                            // 45 (+0x168)
     virtual void Slot46() = 0;
     virtual MemoryHeap* GetHeap() const = 0;                                                    // 47 (+0x178)
-    virtual void Slot48() = 0;
-    virtual void Slot49() = 0;
+    virtual void ForceCollectGarbage() = 0;                                                     // 48 (+0x180)
+    virtual void PrintObjectsReport(UInt32 flags, Log* log, const char* swfName) = 0;           // 49 (+0x188)
     virtual void Slot50() = 0;
     virtual void Slot51() = 0;
     virtual void Slot52() = 0;
     virtual bool SetControllerFocusGroup(unsigned controllerIdx, unsigned focusGroupIndex) = 0; // 53 (+0x1a8)
     virtual unsigned GetControllerFocusGroup(unsigned controllerIdx) const = 0;                 // 54 (+0x1b0)
+    virtual void Slot55() = 0;
+    virtual void Slot56() = 0;
+    virtual void Slot57() = 0;
+    virtual void Slot58() = 0;
+    virtual void Slot59() = 0;
+    virtual void Slot60() = 0;
+    virtual void Slot61() = 0;
+    virtual void Slot62() = 0;
+    virtual void Slot63() = 0;
+    virtual void Slot64() = 0;
+    virtual void SetVerboseAction(bool verboseAction) = 0;                                      // 65 (+0x208)
 };
 
 inline MovieSlots418* AsMovieSlots(MovieImpl* pmovie)

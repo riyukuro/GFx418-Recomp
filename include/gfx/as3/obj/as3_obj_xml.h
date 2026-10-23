@@ -49,6 +49,7 @@ namespace InstanceTraits { namespace fl_xml {
         XMLNode(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::XMLNode"; }
         virtual void MakeObject(Value& result, Traits& t);  // 0x1424cdc00
+        Pickable<InstanceType> MakeInstance(XMLNode& t);   // (appended, sfr19)
     };
 
     class XMLDocument : public CTraits
@@ -59,6 +60,7 @@ namespace InstanceTraits { namespace fl_xml {
         XMLDocument(VM& vm, const ClassInfo& ci);
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::XMLDocument"; }
         virtual void MakeObject(Value& result, Traits& t);  // 0x1424cdb80
+        Pickable<InstanceType> MakeInstance(XMLDocument& t);   // (appended, sfr19)
     };
 }}
 

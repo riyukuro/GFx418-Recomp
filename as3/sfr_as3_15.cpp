@@ -19,6 +19,9 @@
 Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
 // VM::IsOfType(v, class name).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
+// VM::describeTypeEx (returns the ASString through a hidden pointer)
+Scaleform::GFx::ASString* FUN_1425322c0(Scaleform::GFx::AS3::VM* vm, void* result, const Scaleform::GFx::AS3::Value& v);
+void FUN_1425bc060(void* ptf);                          // TextField::SetDirtyFlag
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -142,6 +145,182 @@ namespace Classes { namespace fl_gfx
         else if (mode == EDGEAA_OFF)
             m = Render::EdgeAA_Off;
         dobj->pDispObj->GetRenderNode()->SetEdgeAAMode(m);
+    }
+}}
+
+// SystemEx / TextFieldEx natives. The display TextField is opaque here (its flags word is at +0xfc), and so is its
+// Text::DocView (TextField+0xe0), whose header does not build with the AS3 kernel headers: AlignProps is at +0x148
+// (vertical alignment in bits 2-3: none/top/bottom/center; text auto size in bits 4-5: none/shrink/fit) and the
+// RTFlags byte at +0x14b (bit 0: reformat requested).
+namespace Classes { namespace fl_gfx
+{
+    // @0x1424c9ad0
+    void SystemEx::actionVerboseSet(const Value& result, bool verbose)
+    {
+        SF_UNUSED(result);
+        AsMovieSlots(static_cast<ASVM&>(GetVM()).GetMovieImpl())->SetVerboseAction(verbose);
+        // FlashUI::NeedToCheckOpCode
+        *((bool*)&GetVM().GetUI() + 0xc) = verbose;
+    }
+
+    // @0x1424c9e00
+    void SystemEx::describeType(ASString& result, const Value& v)
+    {
+        struct { ASStringNode* pNode; } tmp;
+        result = *FUN_1425322c0(&GetVM(), &tmp, v);
+        reinterpret_cast<ASString*>(&tmp)->~ASString();
+    }
+
+    // @0x1424cb6e0
+    void SystemEx::printObjectsReport(const Value& result, bool runGarbageCollector, UInt32 reportFlags,
+                                      const ASString& swfFilter)
+    {
+        SF_UNUSED(result);
+        MovieSlots418* pmovie = AsMovieSlots(static_cast<ASVM&>(GetVM()).GetMovieImpl());
+        if (runGarbageCollector)
+            pmovie->ForceCollectGarbage();
+        pmovie->PrintObjectsReport(reportFlags, NULL, swfFilter.ToCStr());
+    }
+
+    enum { VAlign_None, VAlign_Top, VAlign_Bottom, VAlign_Center };
+    enum { TAS_None, TAS_Shrink, TAS_Fit };
+
+    static inline UByte* TextDocView(GFx::DisplayObject* ptf) { return *(UByte**)((UByte*)ptf + 0xe0); }
+    static inline unsigned GetVAlignment(UByte* pdoc)   { return (pdoc[0x148] >> 2) & 3; }
+    static inline unsigned GetTextAutoSize(UByte* pdoc) { return (pdoc[0x148] >> 4) & 3; }
+    static inline void SetVAlignment(UByte* pdoc, unsigned a)
+    {
+        pdoc[0x148] = (UByte)((pdoc[0x148] & ~(3 << 2)) | ((a & 3) << 2));
+        pdoc[0x14b] |= 1;
+    }
+    static inline void SetTextAutoSize(UByte* pdoc, unsigned a)
+    {
+        pdoc[0x148] = (UByte)((pdoc[0x148] & ~(3 << 4)) | ((a & 3) << 4));
+        pdoc[0x14b] |= 1;
+    }
+
+    // @0x1424cbf60
+    void TextFieldEx::setVerticalAlign(const Value& result, Instances::fl_text::TextField* textField, const ASString& valign)
+    {
+        SF_UNUSED(result);
+        VM& vm = GetVM();
+        if (!textField)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "textField"));
+            return;
+        }
+        if (!static_cast<ASVM&>(vm).ExtensionsEnabled)
+            return;
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (!ptf)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "textField"));
+            return;
+        }
+        if (valign == "none")
+            SetVAlignment(TextDocView(ptf), VAlign_None);
+        else if (valign == "top")
+            SetVAlignment(TextDocView(ptf), VAlign_Top);
+        else if (valign == "bottom")
+            SetVAlignment(TextDocView(ptf), VAlign_Bottom);
+        else if (valign == "center")
+            SetVAlignment(TextDocView(ptf), VAlign_Center);
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424cb1d0
+    void TextFieldEx::getVerticalAlign(ASString& result, Instances::fl_text::TextField* textField)
+    {
+        if (!textField)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (!ptf)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        switch (GetVAlignment(TextDocView(ptf)))
+        {
+        case VAlign_Bottom: result = "bottom"; break;
+        case VAlign_Center: result = "center"; break;
+        case VAlign_Top:    result = "top"; break;
+        default:                                   result = "none"; break;
+        }
+    }
+
+    // @0x1424cbdb0
+    void TextFieldEx::setTextAutoSize(const Value& result, Instances::fl_text::TextField* textField, const ASString& autoSz)
+    {
+        SF_UNUSED(result);
+        VM& vm = GetVM();
+        if (!textField)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "textField"));
+            return;
+        }
+        if (!static_cast<ASVM&>(vm).ExtensionsEnabled)
+            return;
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (!ptf)
+        {
+            vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "textField"));
+            return;
+        }
+        if (autoSz == "none")
+            SetTextAutoSize(TextDocView(ptf), TAS_None);
+        else if (autoSz == "shrink")
+            SetTextAutoSize(TextDocView(ptf), TAS_Shrink);
+        else if (autoSz == "fit")
+            SetTextAutoSize(TextDocView(ptf), TAS_Fit);
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424caf40
+    void TextFieldEx::getTextAutoSize(ASString& result, Instances::fl_text::TextField* textField)
+    {
+        if (!textField)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (!ptf)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        switch (GetTextAutoSize(TextDocView(ptf)))
+        {
+        case TAS_Shrink: result = "shrink"; break;
+        case TAS_Fit:    result = "fit"; break;
+        default:                                result = "none"; break;
+        }
+    }
+
+    // @0x1424cbab0
+    void TextFieldEx::setIMEEnabled(const Value& result, Instances::fl_text::TextField* textField, bool isEnabled)
+    {
+        SF_UNUSED(result);
+        if (!textField)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        GFx::DisplayObject* ptf = textField->pDispObj.GetPtr();
+        if (!ptf)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eNullArgumentError, GetVM(), "textField"));
+            return;
+        }
+        // TextField::SetIMEDisabledFlag
+        UInt32& flags = *(UInt32*)((UByte*)ptf + 0xfc);
+        if (!isEnabled)
+            flags |= 0x800;
+        else
+            flags &= ~0x800u;
     }
 }}
 
@@ -395,6 +574,12 @@ namespace InstanceTraits { namespace fl_xml
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
+    // @0x1424cdb30
+    Pickable<XMLNode::InstanceType> XMLNode::MakeInstance(XMLNode& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    }
+
     // @0x1424cd1b0
     XMLDocument::XMLDocument(VM& vm, const ClassInfo& ci)
         : CTraits(vm, ci)
@@ -406,6 +591,12 @@ namespace InstanceTraits { namespace fl_xml
     void XMLDocument::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
+    }
+
+    // @0x1424cdab0
+    Pickable<XMLDocument::InstanceType> XMLDocument::MakeInstance(XMLDocument& t)
+    {
+        return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 }}
 
