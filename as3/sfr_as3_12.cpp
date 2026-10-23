@@ -2456,4 +2456,3 @@ namespace InstanceTraits { namespace fl_net
 // MS2-PIN: ??_GStaticText@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142442e10
 // MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVObject@AS3@GFx@Scaleform@@U?$AllocatorLH@PEAVObject@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14249a070
 // MS2-PIN: ??0StaticText@fl_text@Instances@AS3@GFx@Scaleform@@QEAA@AEAVTraits@InstanceTraits@345@@Z 0x1424a8d20 ; unique
-// MS2-PIN: ??_GInitStruct@String@Scaleform@@UEAAPEAXI@Z 0x1424aada0 ; unique
