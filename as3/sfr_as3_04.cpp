@@ -137,6 +137,8 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 #include "../include/gfx/gfx_asutils.h"
 #include <string.h>
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/gfx_movieslots.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1667,6 +1669,50 @@ bool FUN_1424198b0(const Scaleform::GFx::AS3::Multiname& mn)
 {
     return (mn.Kind & 3) <= 1 && mn.Obj.GetPtr() == NULL;
 }
+
+// ---- global functions ----
+void* FUN_1424d7e50(void* pmem, const Scaleform::GFx::AS3::Value& function, unsigned delay, bool timeout);   // IntervalTimer ctor
+void  FUN_1425264b0(void* ptimer, unsigned argc, const Scaleform::GFx::AS3::Value* argv);                   // IntervalTimer: the extra call arguments
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
+{
+    // A repeating interval timer registered with the movie; returns its id.
+    // @0x14242a0c0
+    void GlobalObjectCPP::setInterval(Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc < 2)
+        {
+            GetVM().ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, GetVM(), "GlobalObjectCPP::setInterval", 2, 1023, argc));
+            return;
+        }
+        UInt32 delay;
+        if (!argv[1].Convert2UInt32(delay))
+            return;
+        void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
+        ASIntervalTimerIntf* ptimer = pmem ? (ASIntervalTimerIntf*)FUN_1424d7e50(pmem, argv[0], delay, false) : NULL;
+        if (argc > 2)
+            FUN_1425264b0(ptimer, argc - 2, argv + 2);
+        MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        result.Assign(Value(UInt32(proot->AddIntervalTimer(ptimer))));
+        ptimer->Start(proot);
+        ptimer->Release();
+    }
+
+    // Milliseconds since the movie started.
+    // @0x142428d70
+    void GlobalObjectCPP::getTimer(SInt32& result)
+    {
+        result = (SInt32)AsMovieSlots(static_cast<ASVM&>(GetVM()).GetMovieImpl())->GetASTimerMs();
+    }
+}}}}} // namespace Scaleform::GFx::AS3::Instances::fl
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances
+{
+    // The AS3 Function.length: the declared parameter count.
+    // @0x1424292a0
+    void FunctionBase::lengthGet(UInt32& result)
+    {
+        result = GetMaxParamNum();
+    }
+}}}} // namespace Scaleform::GFx::AS3::Instances
 
 // The array element types of the Array sort helpers and of the XML parser's node-kind stack.
 namespace Scaleform {

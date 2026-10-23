@@ -692,6 +692,10 @@ namespace Instances
         virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
         // slot 21
         virtual void ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // slot 22 (0x142407230)
+        virtual void Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result = false);
+        // slot 23: the declared parameter count, the AS3 length (the base body is shared with an empty function)
+        virtual UInt32 GetMaxParamNum() const;
 
         // native methods
         // @0x1424292a0

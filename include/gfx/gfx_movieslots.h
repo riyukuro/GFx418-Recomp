@@ -41,7 +41,7 @@ public:
     virtual void Slot07() = 0;
     virtual void Slot08() = 0;
     virtual void Slot09() = 0;
-    virtual void Slot10() = 0;
+    virtual UInt64 GetASTimerMs() const = 0;          // 10 (+0x50)
     virtual void Slot11() = 0;
     virtual void Slot12() = 0;
     virtual void SetViewScaleMode(ScaleModeType) = 0;                                           // 13 (+0x68)
