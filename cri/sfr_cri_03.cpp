@@ -57,7 +57,7 @@ void FUN_140046798(void*);
 void FUN_1400467a0(void*, CriSint32, CriSint32, void*);
 CriSint32 FUN_140053630(void*);
 CriUint32 FUN_140043420(void*, void*, CriUint32);
-CriSint32 FUN_140043750(void*, void*);
+CriBool FUN_140043750(void*, void*);
 CriUint32 FUN_140042f40(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 CriUint32 FUN_1400431a0(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 void criSj_SplitChunk(const void*, CriUint32, void*, void*);
@@ -2931,6 +2931,49 @@ void FUN_140043550(CriSint32* state, void* input)
     if (!decoder->InputControl)
         FUN_140037910(0, "E05063023M: Don't have input SJ.", 0);
     FUN_140053540(decoder->AudioDecoder);
+}
+
+// MS2-FUNCTIONAL: compute the audio player work area from its configured channel count.
+// @0x140041ee0
+CriSint32 FUN_140041ee0(const void* player)
+{
+    struct PlayerConfig { CriUint8 Reserved00[0x4c]; CriSint32 Channels; };
+    CriSint32 flags[3] = { 1, 1, 0x5a };
+    CriSint32 channels = ((const PlayerConfig*)player)->Channels;
+    CriSint32 workSize = channels == 0 ? 0x40 : channels * 0x40;
+    return 0x5a + FUN_140046420(0, (CriUint32)workSize, (const CriUint32*)flags);
+}
+
+// MS2-FUNCTIONAL: report whether an audio decoder has enough queued samples for the requested operation.
+// @0x140043750
+CriBool FUN_140043750(void* decoder, const void* operation)
+{
+    struct TrackState
+    {
+        CriSint32 Present;
+        CriUint8 Reserved04[0x0c];
+        void* AudioDecoder;
+        CriUint8 Reserved18[4];
+        CriUint32 Threshold;
+        CriUint8 Reserved20[0x10];
+        void* Queue;
+    };
+    struct Operation { CriUint8 Reserved00[0x10]; CriSint32 Active; CriUint8 Reserved14[0xe08]; CriSint32 Scale; };
+    if (!decoder || !operation)
+        return 1;
+    TrackState* track = (TrackState*)decoder;
+    if (track->Present)
+    {
+        CriSint32 status = (CriSint32)FUN_140053630(track->AudioDecoder);
+        if (status == 0 || status == 1)
+            return 0;
+        const Operation* request = (const Operation*)operation;
+        CriUint32 required = (track->Threshold / 0x3c) * 8 * (CriUint32)request->Scale;
+        CriUint32 queued = (CriUint32)FUN_1400467b8(track->Queue, 1);
+        if (queued < required && request->Active == 0)
+            return 0;
+    }
+    return 1;
 }
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
