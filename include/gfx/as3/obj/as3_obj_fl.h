@@ -202,6 +202,10 @@ namespace Instances { namespace fl {
 
         // (appended, sfr19) this node is named by prop_name (E4X name and namespace matching). 0x14241ca70
         bool Matches(const Multiname& prop_name) const;
+        // (appended, sfr19) a new list targeting the prop_name child of this node: the name's namespace (or the
+        // default one) replaced by the in-scope namespace with its URI; untargeted unless the name is a string.
+        // 0x14241c880
+        Pickable<XMLList> MakeXMLListInstance(const Multiname& mn);
 
     public:
         ASString    Text;       // +0x38 the name of an element/attribute/PI, the content of a text/comment

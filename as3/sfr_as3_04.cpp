@@ -1714,6 +1714,39 @@ namespace InstanceTraits
     {
         result.Pick(new(t.Alloc()) Instances::fl::RegExp(t));
     }
+
+    // MS2-FUNCTIONAL: the exe inlines the XML constructor
+    // @0x14241c230
+    void fl::XML::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::XML(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x14241af80
+    Pickable<Instances::fl::XMLList> fl::XMLList::MakeInstance(XMLList& t)
+    {
+        return Pickable<Instances::fl::XMLList>(new(t.Alloc()) Instances::fl::XMLList(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x14241b010
+    Pickable<Instances::fl::XMLList> fl::XMLList::MakeInstance(XMLList& t, AS3::Object& target_obj,
+                                                              const ASString& target_prop, Instances::Namespace& target_ns)
+    {
+        Pickable<Instances::fl::XMLList> result(new(t.Alloc()) Instances::fl::XMLList(t));
+        result->TargetObject = &target_obj;
+        result->SetTargetProperty(target_prop.GetNode());
+        result->TargetNamespace = &target_ns;
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x14241c2b0
+    void fl::XMLList::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::XMLList(t));
+    }
 }
 
 namespace Classes { namespace fl
@@ -2102,6 +2135,154 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return false;
     }
 
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x14241c880
+    Pickable<XMLList> XML::MakeXMLListInstance(const Multiname& mn)
+    {
+        Pickable<XMLList> result;
+        if (mn.Name.IsString())
+        {
+            Instances::Namespace* ns;
+            if (mn.IsQName() && !mn.IsAnyNamespace())
+            {
+                ns = &mn.GetNamespace();
+                if (ns->GetPrefix().IsUndefined())
+                {
+                    // an in-scope namespace may carry a prefix for this URI
+                    Instances::Namespace* local_ns = FindNamespaceByURI(ns->GetUri(), NULL);
+                    if (local_ns)
+                        ns = local_ns;
+                }
+            }
+            else
+            {
+                VM& vm = GetVM();
+                ns = vm.GetDefXMLNamespace();
+                if (ns == NULL)
+                    ns = &vm.GetPublicNamespace();
+                else if (ns->GetPrefix().IsUndefined())
+                {
+                    Instances::Namespace* local_ns = FindNamespaceByURI(ns->GetUri(), NULL);
+                    if (local_ns)
+                        ns = local_ns;
+                }
+            }
+            const ASString name = mn.Name.AsString();
+            InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
+                GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
+            result = itr.MakeInstance(itr, *this, name, *ns);
+        }
+        else
+        {
+            InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
+                GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
+            result = itr.MakeInstance(itr);
+        }
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x142429df0
+    void XML::prototypeGet(SPtr<XMLList>& result)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
+            GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
+        result = itr.MakeInstance(itr);
+    }
+
+    // @0x142415320
+    void XMLElement::GetChildren(XMLList& list, const Multiname& prop_name)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            if (ind <= Children.GetSize())
+                list.Apppend(Children[ind]);
+        }
+        else
+        {
+            ChildGet cb(*this, list);
+            ForEachChild(prop_name, cb);
+        }
+    }
+
+    // A node kind (and, for processing instructions, a name other than "" or "*") selects children; kNone takes
+    // them all.
+    // MS2-FUNCTIONAL: the exe calls the ArrayLH copy-assignment out of line
+    // @0x1424153c0
+    void XMLElement::GetChildren(XMLList& list, Kind k, const ASString* name)
+    {
+        if (k == kNone)
+        {
+            list.List = Children;
+            return;
+        }
+        const bool any_name = name == NULL || name->IsEmpty() || *name == "*";
+        const UPInt n = Children.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+        {
+            XML* child = Children[i];
+            const Kind ck = child->GetKind();
+            if (ck == k && (ck != kInstruction || name == NULL || any_name || child->GetName() == *name))
+                list.List.PushBack(SPtr<XML>(child));
+        }
+    }
+
+    // MS2-FUNCTIONAL: the exe reloads the picked list through the returned Pickable
+    // @0x142416910
+    CheckResult XMLElement::GetProperty(const Multiname& prop_name, Value& value)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            if (ind == 0)
+            {
+                value.Assign(this);
+                return true;
+            }
+            value.SetUndefined();
+            return false;
+        }
+        Pickable<XMLList> list = MakeXMLListInstance(prop_name);
+        value.Pick(list);
+        return GetProperty(prop_name, *list);
+    }
+
+    // @0x1424169f0
+    CheckResult XMLElement::GetProperty(const Multiname& prop_name, XMLList& list)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            if (ind < Children.GetSize())
+                list.Apppend(Children[ind]);
+            return true;
+        }
+        if (prop_name.IsAttr())
+        {
+            AttrGet cb(*this, list);
+            ForEachAttr(prop_name, cb);
+            return true;
+        }
+        ChildGet cb(*this, list);
+        return ForEachChild(prop_name, cb) != 0;
+    }
+
+    // MS2-FUNCTIONAL: frame layout: the exe keeps ind and the CheckResult in the argument home slots
+    // @0x1424174c0
+    bool XMLElement::HasProperty(const Multiname& prop_name, bool /*check_prototype*/)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+            return ind == 0;
+        EmptyCallBack cb(*this);
+        if (prop_name.IsAttr())
+            return ForEachAttr(prop_name, cb) != 0;
+        if (ForEachChild(prop_name, cb) != 0)
+            return true;
+        return false;
+    }
+
     // @0x1424151e0
     void XMLElement::GetAttributes(XMLList& list)
     {
@@ -2143,6 +2324,122 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             value.Assign(List[ind.Get() - 1]);
         else
             value.SetUndefined();
+    }
+
+    // @0x142416ad0
+    CheckResult XMLList::GetProperty(const Multiname& prop_name, XMLList& list)
+    {
+        if (prop_name.IsAttr())
+        {
+            const UPInt n = List.GetSize();
+            for (UPInt i = 0; i < n; ++i)
+                List[i]->GetProperty(prop_name, list);
+            return list.List.GetSize() != 0;
+        }
+        ListGet cb(*this, list);
+        return ForEachChild(prop_name, cb) != 0;
+    }
+
+    // MS2-FUNCTIONAL: frame layout and register allocation differ
+    // @0x142416b90
+    CheckResult XMLList::GetProperty(const Multiname& prop_name, Value& value)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            if (ind < List.GetSize())
+            {
+                value.Assign(List[ind]);
+                return true;
+            }
+            return false;
+        }
+        Pickable<XMLList> list = MakeXMLListInstance(prop_name);
+        value.Pick(list);
+        return GetProperty(prop_name, *list);
+    }
+
+    // The names of a list are its indices, "0" up.
+    // MS2-FUNCTIONAL: the exe addresses the empty builtin off the string manager (lea) instead of a copied pointer
+    // @0x142416430
+    void XMLList::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+    {
+        StringManager& sm = GetVM().GetStringManager();
+        if (ind.Get() <= static_cast<UInt32>(List.GetSize()))
+        {
+            LongFormatter f(ind.Get() - 1);
+            f.Convert();
+            name.Assign(sm.CreateString(f.ToCStr(), f.GetSize()));
+        }
+        else
+            name.Assign(sm.GetBuiltin(AS3Builtin_empty_));
+    }
+
+    // MS2-FUNCTIONAL: register allocation of the target fields differs
+    // @0x14241b350
+    Pickable<XMLList> XMLList::MakeXMLListInstance()
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
+        if (TargetNamespace && TargetObject && TargetProperty)
+            return itr.MakeInstance(itr, *TargetObject, ASString(TargetProperty), *TargetNamespace);
+        return itr.MakeInstance(itr);
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x14241b190
+    Pickable<XMLList> XMLList::MakeXMLListInstance(const Multiname& mn)
+    {
+        Pickable<XMLList> result;
+        if (mn.Name.IsString())
+        {
+            Instances::Namespace* ns;
+            if (mn.IsQName() && !mn.IsAnyNamespace())
+            {
+                ns = &mn.GetNamespace();
+                if (ns->GetPrefix().IsUndefined())
+                {
+                    Instances::Namespace* local_ns = FindNamespaceByURI(ns->GetUri());
+                    if (local_ns)
+                        ns = local_ns;
+                }
+            }
+            else
+            {
+                VM& vm = GetVM();
+                ns = vm.GetDefXMLNamespace();
+                if (ns == NULL)
+                    ns = &vm.GetPublicNamespace();
+                else if (ns->GetPrefix().IsUndefined())
+                {
+                    Instances::Namespace* local_ns = FindNamespaceByURI(ns->GetUri());
+                    if (local_ns)
+                        ns = local_ns;
+                }
+            }
+            const ASString name = mn.Name.AsString();
+            InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
+            result = itr.MakeInstance(itr, *this, name, *ns);
+        }
+        else
+            result = MakeXMLListInstance();
+        return result;
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // @0x142429ea0
+    void XMLList::prototypeGet(SPtr<XMLList>& result)
+    {
+        result = MakeXMLListInstance();
+    }
+
+    // @0x142423e50
+    Pickable<XMLList> XMLList::ShallowCopy()
+    {
+        Pickable<XMLList> result = MakeXMLListInstance();
+        const UPInt n = List.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+            result->List.PushBack(List[i]);
+        return result;
     }
 
     // @0x142423b50
@@ -2285,3 +2582,9 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-PIN: ?RemoveMultipleAt@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K0@Z 0x14241ebb0
 // MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@AEAAXPEAX_K@Z: the exe keeps the table in another register
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@AEAAXPEAX_K@Z 0x14242a240
+// MS2-PIN: ??_7CallBack@XMLElement@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142f90
+// MS2-PIN: ??_7CallBack@XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436c0
+// MS2-PIN: ??_7EmptyCallBack@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439b8
+// MS2-PIN: ??_7ChildGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439e8
+// MS2-PIN: ??_7AttrGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439f8
+// MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0

@@ -700,6 +700,38 @@ namespace Instances { namespace fl
         void Apppend(Instances::fl::XML* x);
         // (appended, sfr19) 0x142423b50
         void SetTargetProperty(ASStringNode* prop);
+
+        // (appended, sfr19) a visitor of the element children ForEachChild selects (no RTTI; ListGet is the one
+        // derived class).
+        class CallBack
+        {
+        public:
+            CallBack(XMLList& list) : List(list) {}
+            virtual ~CallBack() {}
+            // the ind2-th child of the ind1-th item of List
+            virtual void Call(UPInt ind1, UPInt ind2) = 0;
+
+        protected:
+            XMLList&    List;       // +0x08
+
+        private:
+            CallBack& operator=(const CallBack&);
+        };
+
+        // (appended, sfr19) cb for each child of an element item that prop_name matches; the number visited.
+        // 0x14240b9a0
+        UInt32 ForEachChild(const Multiname& prop_name, CallBack& cb);
+        // (appended, sfr19) the matching children of the items (their attributes for an attribute name) appended
+        // to list. 0x142416ad0
+        CheckResult GetProperty(const Multiname& prop_name, XMLList& list);
+        // (appended, sfr19) a new empty list with this list's target. 0x14241b350
+        Pickable<XMLList> MakeXMLListInstance();
+        // (appended, sfr19) a new list targeting prop_name of this list. 0x14241b190
+        Pickable<XMLList> MakeXMLListInstance(const Multiname& mn);
+        // (appended, sfr19) a new list (same target) holding the same items. 0x142423e50
+        Pickable<XMLList> ShallowCopy();
+        // (appended, sfr19) an in-scope namespace of an item with this URI. 0x14240b490
+        Instances::Namespace* FindNamespaceByURI(const ASString& uri) const;
     };
 }}
 
@@ -990,6 +1022,12 @@ namespace InstanceTraits { namespace fl
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::XMLList"; }
         // @0x14241c2b0
         virtual void MakeObject(Value& result, Traits& t);
+
+        // (appended, sfr19) a new empty list. 0x14241af80
+        Pickable<Instances::fl::XMLList> MakeInstance(XMLList& t);
+        // (appended, sfr19) a new empty list whose target is target_prop of target_obj. 0x14241b010
+        Pickable<Instances::fl::XMLList> MakeInstance(XMLList& t, AS3::Object& target_obj, const ASString& target_prop,
+                                                      Instances::Namespace& target_ns);
 
     public:
         // @0x1423e1840 (appended, sfr15)

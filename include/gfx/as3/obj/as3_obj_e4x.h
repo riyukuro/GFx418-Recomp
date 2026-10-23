@@ -183,6 +183,9 @@ namespace Instances { namespace fl {
         UInt32 ForEachAttr(const Multiname& prop_name, CallBack& cb);
         // (appended, sfr19) the same over the children. 0x14240b6d0
         UInt32 ForEachChild(const Multiname& prop_name, CallBack& cb);
+        // (appended, sfr19) prop_name names a child (an attribute for an attribute name); a list index only
+        // "0". check_prototype is unused. Not virtual in this build. 0x1424174c0
+        bool HasProperty(const Multiname& prop_name, bool check_prototype);
 
     public:
         SPtr<Instances::Namespace>      Ns;             // +0x48
@@ -317,6 +320,19 @@ namespace Instances { namespace fl {
     private:
         XMLList&    List;       // +0x10
         AttrGet& operator=(const AttrGet&);
+    };
+
+    // Appends the matching children to Result. vftable 0x143143ae0, ??_G 0x1423f35d0
+    class ListGet : public XMLList::CallBack
+    {
+    public:
+        ListGet(XMLList& list, XMLList& result) : XMLList::CallBack(list), Result(result) {}
+        // @0x142405920
+        virtual void Call(UPInt ind1, UPInt ind2);
+
+    private:
+        XMLList&    Result;     // +0x10
+        ListGet& operator=(const ListGet&);
     };
 
 }} // namespace Instances::fl
