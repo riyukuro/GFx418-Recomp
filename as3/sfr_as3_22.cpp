@@ -153,6 +153,7 @@ bool QueryChannelPlaying(void* soundSource)
 
 int FUN_1428d8efc(void*, void*);
 int FUN_1428d8f14(void*, void*);
+void FUN_14257d390(void*, long long, unsigned, unsigned);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 int FUN_1428d8f2c(void*, bool);
@@ -534,6 +535,26 @@ void ClearSoundBuffer(void* player)
         if (first && firstLength)
             memset(first, 0, firstLength);
         FUN_1428d8eae(sound, first, second, firstLength, secondLength);
+    }
+}
+}
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: fills every pixel using the executable's image write helper and the stored color value.
+// @0x142675ca0
+void FillImageData(void* command, void*, void* image)
+{
+    auto* bytes = static_cast<unsigned char*>(image);
+    auto* plane = *reinterpret_cast<unsigned**>(bytes + 0x10);
+    const unsigned width = plane[0];
+    const unsigned height = plane[1];
+    const long long pitch = *reinterpret_cast<long long*>(plane + 2);
+    const long long base = *reinterpret_cast<long long*>(plane + 6);
+    const unsigned color = *reinterpret_cast<unsigned*>(static_cast<char*>(command) + 0x10);
+    for (unsigned y = 0; y < height; ++y) {
+        for (unsigned x = 0; x < width; ++x)
+            FUN_14257d390(image, base + pitch * y, x, color);
     }
 }
 }
