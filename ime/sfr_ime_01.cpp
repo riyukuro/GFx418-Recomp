@@ -3993,6 +3993,34 @@ int FUN_1423cada0(unsigned long long* manager, const char* primary, const char* 
     return chosen;
 }
 
+// MS2-FUNCTIONAL: reports the current caret position and candidate-window height to the GFx external interface.
+// @0x1423d5060
+void FUN_1423d5060(void* raw, int)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    POINT caret{};
+    GetCaretPos(&caret);
+    ClientToScreen(hwnd, &caret);
+    Scaleform::GFx::Value args[3];
+    auto* bytes = reinterpret_cast<unsigned char*>(args);
+    const double values[3] = { static_cast<double>(caret.x), static_cast<double>(caret.y),
+                               static_cast<double>(GetSystemMetrics(SM_CYSMICON)) };
+    for (unsigned i = 0; i < 3; ++i) {
+        *reinterpret_cast<unsigned*>(bytes + i * 0x20 + 8) = Scaleform::GFx::Value::VT_Number;
+        *reinterpret_cast<double*>(bytes + i * 0x20 + 0x10) = values[i];
+    }
+    void* movie = *reinterpret_cast<void**>(self + 0xa8);
+    void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
+    void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
+    if (interfaceState) {
+        void* result = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, Scaleform::GFx::Value*, unsigned)>(
+            (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
+                interfaceState, "RepositionCandWindow", &result, args, 3);
+    }
+}
+
 struct cx18_CommandEntry
 {
     unsigned long long next;
