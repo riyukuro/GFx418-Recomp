@@ -703,3 +703,39 @@ FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Soun
     return system->createStream(path, mode, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
 }
 }
+
+
+namespace Scaleform {
+// MS2-FUNCTIONAL: sets the FMOD file callbacks, metadata fields, loop settings, and format-specific mode.
+// @0x1427451c0
+FMOD_RESULT CreateMetadataAudioSound(void* player, const char* path, FMOD::Sound** sound)
+{
+    const unsigned format = *reinterpret_cast<const unsigned*>(path + 0x10);
+    unsigned mode = 0xa0000c0;
+    unsigned channels = 0;
+    if ((format & 0x700) == 0x100) {
+        mode = 0xa0010c0;
+        channels = ((format & 7) == 2) + 1;
+    } else if ((format & 0x700) != 0x200) {
+        return static_cast<FMOD_RESULT>(0x19);
+    }
+
+    unsigned char info[0xd8] = {};
+    *reinterpret_cast<unsigned*>(info) = sizeof(info);
+    *reinterpret_cast<unsigned*>(info + 0x0c) = channels;
+    *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<const unsigned*>(path + 0x14);
+    *reinterpret_cast<unsigned*>(info + 0x14) = (format & 0x700) == 0x200 ? 0xbu : (((format & 8) != 0) + 1);
+    *reinterpret_cast<unsigned*>(info + 0x18) = 0x1000;
+    *reinterpret_cast<unsigned*>(info + 0xb8) = *reinterpret_cast<const unsigned*>(path + 0x1c);
+    *reinterpret_cast<unsigned*>(info + 0xbc) = 2;
+    using Callback = void (*)();
+    *reinterpret_cast<Callback*>(info + 0x78) = reinterpret_cast<Callback>(&OpenAudioStream);
+    *reinterpret_cast<Callback*>(info + 0x80) = reinterpret_cast<Callback>(&CloseAudioStream);
+    *reinterpret_cast<Callback*>(info + 0x88) = reinterpret_cast<Callback>(&ReadAudioCallback);
+    *reinterpret_cast<Callback*>(info + 0x90) = reinterpret_cast<Callback>(&ValidateAudioStream);
+
+    void* owner = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
+    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(owner) + 0x10));
+    return system->createSound(path, mode, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+}
+}
