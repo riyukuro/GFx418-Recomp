@@ -2646,6 +2646,37 @@ extern "C" void FUN_14268c510(void* object, void* stream, unsigned version)
     }
 }
 
+// MS2-FUNCTIONAL: reads version-nine keyed image resource ids and interns each associated string into the cached hash table.
+// @0x14268d2b0
+extern "C" void FUN_14268d2b0(void* object, void* stream, unsigned version)
+{
+    if (version <= 8)
+        return;
+    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned count = 0;
+    ReadAs3StreamBytes(stream, &count, 4);
+    Scaleform::ResizeRawArray(reinterpret_cast<void**>(bytes + 0x10), bytes + 0x10, count, 0x18);
+    auto* records = *reinterpret_cast<unsigned char**>(bytes + 0x10);
+    for (unsigned i = 0; i < count; ++i) {
+        auto* record = records + i * 0x18;
+        ReadAs3StreamBytes(stream, record, 8);
+        ReadAs3StreamBytes(stream, record + 8, 4);
+        ReadAs3StreamBytes(stream, record + 0x10, 8);
+    }
+    unsigned stringCount = 0;
+    ReadAs3StreamBytes(stream, &stringCount, 4);
+    for (unsigned i = 0; i < stringCount; ++i) {
+        std::uint64_t key = 0;
+        ReadAs3StreamBytes(stream, &key, 8);
+        Scaleform::String value;
+        Scaleform::ReadNarrowString(stream, &value);
+        struct StringPair { const void* key; const Scaleform::String* value; } pair{ &key, &value };
+        Scaleform::AddStringHashEntry(bytes + 0x28, bytes + 0x28,
+            reinterpret_cast<const std::uint64_t*>(&pair),
+            Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&key)));
+    }
+}
+
 // MS2-FUNCTIONAL: reads the versioned movie image header and marker records, then delegates the nested resource tables.
 // @0x14268cfe0
 extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
