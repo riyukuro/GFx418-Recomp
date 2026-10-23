@@ -234,7 +234,7 @@ unsigned char FUN_1423ce460(void* self)
     auto* bytes = static_cast<unsigned char*>(self);
     void* provider = *reinterpret_cast<void**>(bytes + 8);
     if (!provider) return 1;
-    void* factory = *reinterpret_cast<void**>(static_cast<unsigned char*>(provider) + 0x10);
+    void* factory = static_cast<unsigned char*>(provider) + 0x10;
     void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>(
         (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
     if (!temporary) return 1;
