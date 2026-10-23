@@ -1535,6 +1535,43 @@ extern bool (* const pIsXMLListObject)(const Value&);
 bool (* const pIsXMLListObject)(const Value&) = &IsXMLListObject;
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace InstanceTraits
+{
+    // MS2-FUNCTIONAL: the exe inlines the Catch constructor
+    // @0x14241be30
+    void fl::Catch::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::Catch(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Object constructor
+    // @0x14241bfd0
+    void fl::Object::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::Object(t));
+    }
+
+    // An interface makes plain objects.
+    // MS2-FUNCTIONAL: the exe inlines the Object constructor
+    // @0x14241c060
+    void Interface::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::Object(t));
+    }
+}
+}}} // namespace Scaleform::GFx::AS3
+
+// InstanceTraits::Interface::MakeInstance.
+// MS2-FUNCTIONAL: the exe inlines the Object constructor
+// @0x14241a5b0
+Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Object>
+FUN_14241a5b0(Scaleform::GFx::AS3::InstanceTraits::Interface*, Scaleform::GFx::AS3::InstanceTraits::Traits& t)
+{
+    return Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Object>(
+        new(t.Alloc()) Scaleform::GFx::AS3::Instances::fl::Object(t));
+}
+
 // Multiname::IsAnyNamespace: a qualified name with no namespace.
 // @0x1424198b0
 bool FUN_1424198b0(const Scaleform::GFx::AS3::Multiname& mn)
