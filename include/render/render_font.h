@@ -162,6 +162,21 @@ protected:
     // font has; both -1 (auto-hinting off, warned through log) when it lacks either
     void   calcLowerUpperTop(GlyphCache* log);   // 0x1426d4c30
     UInt16 calcTopBound(UInt16 code);             // 0x1426d4dc0, 0 without the glyph
+
+public:
+    // (appended for sfr_render_06d) the hinting tops, measured on first use; 0 when the font has none
+    UInt16 GetLowerCaseTop(GlyphCache* log)
+    {
+        if (LowerCaseTop == 0)
+            calcLowerUpperTop(log);
+        return (LowerCaseTop <= 0) ? 0 : LowerCaseTop;
+    }
+    UInt16 GetUpperCaseTop(GlyphCache* log)
+    {
+        if (UpperCaseTop == 0)
+            calcLowerUpperTop(log);
+        return (UpperCaseTop <= 0) ? 0 : UpperCaseTop;
+    }
 };
 
 }} // namespace Scaleform::Render

@@ -55,6 +55,15 @@ public:
     const PathBasic&  GetPath(unsigned i) const       { return Paths[i]; }
     UPInt             GetNumVertices() const          { return Vertices.GetSize(); }
     const VertexType& GetVertex(unsigned i) const     { return Vertices[i]; }
+    // (appended for sfr_render_06d) every vertex scaled in place
+    void              Scale(float sx, float sy)
+    {
+        for (UPInt i = 0; i < Vertices.GetSize(); ++i)
+        {
+            Vertices[i].x *= sx;
+            Vertices[i].y *= sy;
+        }
+    }
 
 private:
     ArrayPaged<VertexBasic, 4, 16> Vertices;   // +0x08

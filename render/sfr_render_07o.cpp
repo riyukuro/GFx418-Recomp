@@ -700,6 +700,56 @@ void VectorGlyphShape::GetFillData(FillData* data, unsigned, unsigned, unsigned)
     data->PrimFill = PrimFill_VColor;
 }
 
+// The remaining VectorGlyphShape provider virtuals: a glyph keeps no per-mesh state, is one layer of one fill drawn
+// untransformed, and reports its cached bounds whatever the matrix.
+// @0x1426e4210
+void VectorGlyphShape::OnEvict(MeshBase*)
+{
+}
+
+// @0x1426e3f10
+RectF VectorGlyphShape::GetIdentityBounds() const
+{
+    return Bounds;
+}
+
+// @0x1426e30f0
+RectF VectorGlyphShape::GetBounds(const Matrix2F&) const
+{
+    return Bounds;
+}
+
+// @0x1426e3110
+RectF VectorGlyphShape::GetCorrectBounds(const Matrix2F&, float, StrokeGenerator*, const ToleranceParams*) const
+{
+    return Bounds;
+}
+
+// @0x1426e4190
+bool VectorGlyphShape::HitTestShape(const Matrix2F&, float, float, float, StrokeGenerator*,
+                                    const ToleranceParams*) const
+{
+    return false;
+}
+
+// @0x1426e4090
+unsigned VectorGlyphShape::GetLayerCount() const
+{
+    return 1;
+}
+
+// @0x1426e3b70
+unsigned VectorGlyphShape::GetFillCount(unsigned, unsigned) const
+{
+    return 1;
+}
+
+// @0x1426e3ef0
+void VectorGlyphShape::GetFillMatrix(MeshBase*, Matrix2F* matrix, unsigned, unsigned, unsigned)
+{
+    matrix->SetIdentity();
+}
+
 // @0x1426e3f30
 Fence* TextMeshProvider::GetLatestFence() const
 {
