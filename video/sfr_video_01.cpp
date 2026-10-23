@@ -1723,6 +1723,67 @@ void* FUN_1400062e0(void* object, unsigned flags)
     return object;
 }
 
+// MS2-FUNCTIONAL: promotes a live weak proxy to a strong object reference in the output slot.
+// @0x140006350
+void** FUN_140006350(void** weakSlot, void** result)
+{
+    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+        reinterpret_cast<Scaleform::UPInt>(*weakSlot) & ~Scaleform::UPInt(3));
+    if (proxy) {
+        auto* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
+        if (!object) {
+            proxy->Release();
+            *weakSlot = nullptr;
+        } else {
+            auto* count = reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8);
+            if (*count != 0) {
+                FUN_14257dcb0(object);
+                *result = object;
+                return result;
+            }
+        }
+    }
+    *result = nullptr;
+    return result;
+}
+
+// MS2-FUNCTIONAL: adjusts the 16-byte array's size using the executable's growth thresholds.
+// @0x140006670
+void FUN_140006670(void** array, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1], capacity = fields[2];
+    if (size < oldSize) { if (size < capacity / 2) FUN_1400051c0(array, array, size); }
+    else if (capacity <= size) FUN_1400051c0(array, array, size + (size >> 2));
+    fields[1] = size;
+}
+
+// MS2-FUNCTIONAL: appends one 12-byte record to the array, growing capacity when needed.
+// @0x1400066f0
+void FUN_1400066f0(void** array, const unsigned* record)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto size = fields[1] + 1;
+    if (size >= fields[2]) FUN_140005260(array, array, size + (size >> 2));
+    fields[1] = size;
+    memcpy(static_cast<unsigned char*>(*array) + (size - 1) * 12, record, 12);
+}
+
+// MS2-FUNCTIONAL: releases one retained Scaleform reference in the slot.
+// @0x140006770
+void FUN_140006770(void** slot) { if (*slot) FUN_14257dcb0(*slot); }
+
+// MS2-FUNCTIONAL: releases every retained Scaleform reference in the pointer array.
+// @0x1400067a0
+void FUN_1400067a0(void** values, Scaleform::UPInt count)
+{
+    auto** items = static_cast<void**>(values);
+    while (count) {
+        void* value = items[--count];
+        if (value) FUN_14257dcb0(value);
+    }
+}
+
 // MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
 // @0x14000b300
 void FUN_14000b300(void* owner)
