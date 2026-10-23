@@ -545,6 +545,190 @@ void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
     array[1] = reinterpret_cast<void*>(size);
 }
 
+// MS2-FUNCTIONAL: resizes the array of 16-byte records with four-element capacity rounding.
+// @0x1400051c0
+void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
+{
+    auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* data = array[0];
+    if (!requested) {
+        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
+        array[0] = nullptr; array[2] = nullptr; return;
+    }
+    const auto capacity = (requested + 3) & ~Scaleform::UPInt(3);
+    if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
+        DAT_143b15f60, data, capacity * 16);
+    else {
+        unsigned flags[2] = { 2, 0 };
+        array[0] = reinterpret_cast<void* (*)(void*, size_t, const void*)>(vtable[10])(
+            DAT_143b15f60, capacity * 16, flags);
+    }
+    array[2] = reinterpret_cast<void*>(capacity);
+}
+
+// MS2-FUNCTIONAL: resizes the array of 12-byte records with four-element capacity rounding.
+// @0x140005260
+void FUN_140005260(void** array, void*, Scaleform::UPInt requested)
+{
+    auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto* data = array[0];
+    if (!requested) {
+        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
+        array[0] = nullptr; array[2] = nullptr; return;
+    }
+    const auto capacity = (requested + 3) & ~Scaleform::UPInt(3);
+    if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
+        DAT_143b15f60, data, capacity * 12);
+    else {
+        unsigned flags[2] = { 2, 0 };
+        array[0] = reinterpret_cast<void* (*)(void*, size_t, const void*)>(vtable[10])(
+            DAT_143b15f60, capacity * 12, flags);
+    }
+    array[2] = reinterpret_cast<void*>(capacity);
+}
+
+// MS2-FUNCTIONAL: releases a character handle when its intrusive reference count reaches zero.
+// @0x140005480
+void FUN_140005480(Scaleform::GFx::CharacterHandle* handle)
+{
+    if (--*reinterpret_cast<int*>(handle) < 1) {
+        handle->~CharacterHandle();
+        Scaleform::Memory::Free(handle);
+    }
+}
+
+// MS2-FUNCTIONAL: releases a retained object pointer when the slot is populated.
+// @0x140005660
+void FUN_140005660(void** value) { if (*value) FUN_14257dcb0(*value); }
+
+// MS2-FUNCTIONAL: clears the provider's pending notification and requests the active player to stop.
+// @0x140005690
+void FUN_140005690(void* stream)
+{
+    auto* provider = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(stream) + 0x68);
+    if (provider) {
+        *reinterpret_cast<void**>(provider + 0x18) = nullptr;
+        void* player = *reinterpret_cast<void**>(provider + 0x48);
+        if (player) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(player))[14])(player);
+    }
+}
+
+// MS2-FUNCTIONAL: releases the owned player-side allocation.
+// @0x140005760
+void FUN_140005760(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+
+// MS2-FUNCTIONAL: releases the owned player-side allocation.
+// @0x140005830
+void FUN_140005830(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+
+// MS2-FUNCTIONAL: releases the owned intrusive reference stored in the slot.
+// @0x140005870
+void FUN_140005870(void** value) { if (*value) FUN_14257dcb0(*value); }
+
+// MS2-FUNCTIONAL: destroys a weak-support object and conditionally frees its storage.
+// @0x1400058c0
+Scaleform::RefCountWeakSupportImpl* FUN_1400058c0(Scaleform::RefCountWeakSupportImpl* value, unsigned flags)
+{
+    value->~RefCountWeakSupportImpl();
+    if (flags & 1) Scaleform::Memory::Free(value);
+    return value;
+}
+
+// MS2-FUNCTIONAL: decrements a character-handle reference and destroys it at zero.
+// @0x140005900
+void FUN_140005900(Scaleform::GFx::CharacterHandle** value)
+{
+    if (*value && --*reinterpret_cast<int*>(*value) < 1) {
+        (*value)->~CharacterHandle();
+        Scaleform::Memory::Free(*value);
+    }
+}
+
+// MS2-FUNCTIONAL: retains the replacement character handle before releasing the previous one.
+// @0x140005940
+void** FUN_140005940(void** destination, Scaleform::GFx::CharacterHandle* replacement)
+{
+    if (replacement) ++*reinterpret_cast<int*>(replacement);
+    auto* old = static_cast<Scaleform::GFx::CharacterHandle*>(*destination);
+    if (old && --*reinterpret_cast<int*>(old) < 1) {
+        old->~CharacterHandle();
+        Scaleform::Memory::Free(old);
+    }
+    *destination = replacement;
+    return destination;
+}
+
+// MS2-FUNCTIONAL: locks a weak proxy into a retained strong object reference.
+// @0x1400059b0
+void** FUN_1400059b0(void** weakSlot, void** result)
+{
+    *result = nullptr;
+    auto* proxy = static_cast<unsigned char*>(*weakSlot);
+    if (!proxy) return result;
+    void* target = *reinterpret_cast<void**>(proxy + 8);
+    if (!target) {
+        FUN_14257dcd0(proxy);
+        *weakSlot = nullptr;
+    } else if (*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8) != 0) {
+        ++*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8);
+        *result = target;
+    }
+    return result;
+}
+
+// MS2-FUNCTIONAL: releases the weak proxy and optionally frees the wrapper object.
+// @0x140005a70
+void** FUN_140005a70(void** weakSlot, unsigned flags)
+{
+    if (*weakSlot) FUN_14257dcd0(*weakSlot);
+    if (flags & 1) operator delete(weakSlot);
+    return weakSlot;
+}
+
+// MS2-FUNCTIONAL: appends one pointer value to the backing array, growing capacity when needed.
+// @0x140005ac0
+void FUN_140005ac0(void** array, const void** value)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt newSize = fields[1] + 1;
+    if (newSize >= fields[2]) FUN_1400050c0(array, array, newSize + (newSize >> 2));
+    fields[1] = newSize;
+    *reinterpret_cast<const void**>(static_cast<unsigned char*>(*array) + newSize * sizeof(void*) - sizeof(void*)) = *value;
+}
+
+// MS2-FUNCTIONAL: adjusts the 16-byte record array using its quarter-growth and half-shrink thresholds.
+// @0x140005b40
+void FUN_140005b40(void** array, void* owner, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1], capacity = fields[2];
+    if (size < oldSize) { if (size < capacity / 2) FUN_1400051c0(array, owner, size); }
+    else if (capacity <= size) FUN_1400051c0(array, owner, size + (size >> 2));
+    fields[1] = size;
+}
+
+// MS2-FUNCTIONAL: adjusts the 12-byte record array using its quarter-growth and half-shrink thresholds.
+// @0x140005ba0
+void FUN_140005ba0(void** array, void* owner, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1], capacity = fields[2];
+    if (size < oldSize) { if (size < capacity / 2) FUN_140005260(array, owner, size); }
+    else if (capacity <= size) FUN_140005260(array, owner, size + (size >> 2));
+    fields[1] = size;
+}
+
+// MS2-FUNCTIONAL: adjusts the pointer array capacity using four-element rounding and the observed thresholds.
+// @0x140005c20
+void FUN_140005c20(void** array, Scaleform::UPInt size)
+{
+    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const auto oldSize = fields[1], capacity = fields[2];
+    if (size < oldSize) { if (size < capacity / 2) FUN_1400050c0(array, array, size); }
+    else if (capacity <= size) FUN_1400050c0(array, array, size + (size >> 2));
+    fields[1] = size;
+}
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 // Only the provider back-pointer is touched here (+0x40); the image classes come with the render units.
