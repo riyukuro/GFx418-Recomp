@@ -981,6 +981,8 @@ namespace Instances
         bool                GetIsInterface() const  { return IsInterface != 0; }
         // (appended, sfr19) same uri and kind (the prefix is ignored).
         bool operator==(const Namespace& other) const { return Uri.GetNode() == other.Uri.GetNode() && Kind == other.Kind; }
+        // (appended, sfr19) E4X clears a prefix that a new in-scope declaration shadows.
+        void                SetPrefix(const Value& prefix)  { Prefix.Assign(prefix); }
 
     protected:
         SPInt                           Kind:4;         // +0x20

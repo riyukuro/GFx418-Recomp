@@ -2204,6 +2204,51 @@ namespace Scaleform { namespace GFx { namespace AS3 {
     }
 }}}
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl
+{
+    // MS2-FUNCTIONAL: exe stores the new namespace raw after an out-of-line resize 0x14241ffc0; ours pushes an SPtr
+    // @0x142403ff0
+    void XMLElement::AddInScopeNamespace(const Instances::Namespace& ns)
+    {
+        const Value& prefix = ns.GetPrefix();
+        if (prefix.IsUndefined())
+            return;
+
+        const ASString p = prefix.IsString() ? prefix.AsString() : GetVM().GetStringManager().CreateEmptyString();
+        if (p.IsEmpty() && Ns->GetUri().IsEmpty())
+            return;
+
+        ArrayLH<SPtr<Instances::Namespace> >& nss = Namespaces.Namespaces;
+        UPInt match = SF_MAX_UPINT;
+        for (UPInt i = 0; i < nss.GetSize(); ++i)
+        {
+            if (StrictEqual(prefix, nss[i]->GetPrefix()))
+            {
+                match = i;
+                break;
+            }
+        }
+
+        SPtr<Instances::Namespace> nns = GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), prefix);
+        if (match != SF_MAX_UPINT && nss[match]->GetUri().GetNode() != ns.GetUri().GetNode())
+            nss.RemoveAt(match);
+        nss.PushBack(nns);
+
+        // the element's own and its attributes' prefixes are shadowed by the new declaration
+        if (StrictEqual(Ns->GetPrefix(), prefix))
+            Ns->SetPrefix(Value::GetUndefined());
+        const UPInt size = Attrs.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            Instances::Namespace& ans = Attrs[i]->GetCurrNamespace();
+            if (StrictEqual(ans.GetPrefix(), prefix))
+                ans.SetPrefix(Value::GetUndefined());
+        }
+    }
+}}
+}}}
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$02VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c4e0
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VArray@fl@Instances@AS3@GFx@Scaleform@@$06VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14240c5b0
