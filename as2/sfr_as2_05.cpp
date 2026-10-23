@@ -125,6 +125,8 @@
 // MS2-RANGE: 0x142953980-0x142953ca5 .text$mn
 // MS2-RANGE: 0x142953cc0-0x142953d9f .text$mn
 // MS2-RANGE: 0x142954d10-0x142954eb4 .text$mn
+// MS2-RANGE: 0x142949c00-0x142949ce4 .text$mn
+// MS2-RANGE: 0x142954380-0x14295451e .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -142,6 +144,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_imageresource.h"
+#include "../include/gfx/gfx_input.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_movieslots.h"
 
@@ -2409,6 +2412,45 @@ InteractiveObject* AvmSprite::GetRelativeTarget(const ASString& name, bool first
     if (pch && pch->IsInteractiveObject())
         return static_cast<InteractiveObject*>(pch);
     return 0;
+}
+
+// MovieImpl keeps one MouseState per mouse (4, 0x50 bytes each) at +0x1260, not recovered in gfx_movieimpl.h
+// yet; null past the last one (the exe still reads through it).
+static inline const MouseState* GetMovieMouseState(MovieImpl* proot, unsigned mouseIndex)
+{
+    if (mouseIndex >= 4)
+        return 0;
+    return reinterpret_cast<const MouseState*>(reinterpret_cast<const UByte*>(proot) + 0x1260) + mouseIndex;
+}
+
+// @0x142949c00
+void MouseCtorFunction::GetButtonsState(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    unsigned mouseIndex = 0;
+    if (fn.NArgs > 0)
+        mouseIndex = (int)fn.Arg(0).ToNumber(fn.Env);
+    if (mouseIndex < AsMovieSlots(proot)->GetMouseCursorCount())
+        fn.Result->SetNumber((Number)GetMovieMouseState(proot, mouseIndex)->GetButtonsState());
+}
+
+// @0x142954380
+void MouseCtorFunction::GetPosition(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    unsigned mouseIndex = 0;
+    if (fn.NArgs > 0)
+        mouseIndex = (int)fn.Arg(0).ToNumber(fn.Env);
+    if (mouseIndex < AsMovieSlots(proot)->GetMouseCursorCount())
+    {
+        Render::PointF pos = GetMovieMouseState(proot, mouseIndex)->GetLastPosition();
+        Ptr<PointObject> ppt = *SF_HEAP_NEW(fn.Env->GetHeap()) PointObject(fn.Env);
+        GASPoint pt(floor(pos.x + 0.5) * 0.05, floor(pos.y + 0.5) * 0.05);
+        ppt->SetProperties(fn.Env, pt);
+        fn.Result->SetAsObject(ppt.GetPtr());
+    }
 }
 }}} // namespace Scaleform::GFx::AS2
 

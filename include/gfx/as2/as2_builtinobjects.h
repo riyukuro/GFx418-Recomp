@@ -742,6 +742,10 @@ protected:
     // Mouse.show / Mouse.hide([mouse]): requests to the user event handler.
     static void Show(const FnCall& fn);
     static void Hide(const FnCall& fn);
+    // Mouse.getButtonsState([mouse]) / Mouse.getPosition([mouse]) (pixels, as a Point) (exe 0x142949c00,
+    // 0x142954380).
+    static void GetButtonsState(const FnCall& fn);
+    static void GetPosition(const FnCall& fn);
 };
 
 // Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes, vftable { dtor, Finalize_GC }.
