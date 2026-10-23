@@ -3370,6 +3370,38 @@ struct cx18_CommandEntry
     unsigned long long value1;
 };
 
+// MS2-FUNCTIONAL: performs the executable's case-insensitive supported-IME hash lookup and returns its language code.
+// @0x1423cb400
+unsigned FUN_1423cb400(void* raw, const char* name)
+{
+    if (!name) return 0x01000000;
+    const unsigned long long length = std::strlen(name);
+    const unsigned hash = HashFunction(name, length) & 0xffffff;
+    auto* manager = static_cast<unsigned char*>(raw);
+    auto* map = *reinterpret_cast<unsigned char**>(manager + 8);
+    unsigned char* value = nullptr;
+    if (map) {
+        const unsigned long long mask = *reinterpret_cast<unsigned long long*>(map + 8);
+        const unsigned long long home = hash & mask;
+        auto* bucket = reinterpret_cast<unsigned long long*>(map + (home + 1) * 0x10);
+        if (bucket[0] != ~1ull) {
+            for (;;) {
+                auto* node = reinterpret_cast<unsigned char*>(bucket[1]);
+                if (node && ((*reinterpret_cast<unsigned*>(node + 0x20) & mask) == home) &&
+                    *reinterpret_cast<unsigned*>(node + 0x24) == length &&
+                    _stricmp(*reinterpret_cast<const char**>(node), name) == 0) {
+                    value = reinterpret_cast<unsigned char*>(bucket[1]);
+                    break;
+                }
+                const unsigned long long index = bucket[0];
+                if (index == ~0ull || index == ~1ull) break;
+                bucket = reinterpret_cast<unsigned long long*>(map + (index + 1) * 0x10);
+            }
+        }
+    }
+    return value ? *reinterpret_cast<unsigned*>(value + 0x10) : 0x01000000;
+}
+
 static void cx18_CommandInsert(unsigned long long* table, unsigned long long hash,
                                unsigned long long key, unsigned long long value0,
                                unsigned long long value1)
