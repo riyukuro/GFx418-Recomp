@@ -51,6 +51,7 @@ template<> __declspec(dllexport) int SGMLElementDesc::Comparator<wchar_t>::Less(
 
 }}} // namespace Scaleform::Render::Text
 
+
 namespace Scaleform {
 using SGMLStackElem = Render::Text::SGMLStackElemDesc<wchar_t>;
 using SGMLStackAlloc = AllocatorDH<SGMLStackElem, Stat_Default_Mem>;
@@ -62,11 +63,17 @@ template SGMLStackData::~ArrayDataBase();
 // @0x14267de50
 template void ConstructorMov<SGMLStackElem>::Construct(void*, const SGMLStackElem&);
 // @0x14267f410
-template void ArrayBase<SGMLStackArrayData>::PopBack(UPInt);
+template __declspec(dllexport) void ArrayBase<SGMLStackArrayData>::PopBack(UPInt);
 // @0x14267f510
 template void SGMLStackData::Reserve(const void*, UPInt);
 // @0x14267f650
 template void SGMLStackData::ResizeNoConstruct(const void*, UPInt);
+
+using HTMLImageInfo = Render::Text::StyledText::HTMLImageTagInfo;
+using HTMLImageInfoData = ArrayDataBase<HTMLImageInfo,
+    AllocatorDH<HTMLImageInfo, Stat_Default_Mem>, ArrayDefaultPolicy>;
+// @0x14267f5b0
+template void HTMLImageInfoData::Reserve(const void*, UPInt);
 }
 
 namespace Scaleform { namespace Alg {
@@ -760,3 +767,5 @@ template class SGMLCharIter<wchar_t>;
 template class SGMLParser<wchar_t>;
 
 }}} // namespace Scaleform::Render::Text
+
+// MS2-PIN: ?PopBack@?$ArrayBase@U?$ArrayDataDH@U?$SGMLStackElemDesc@_W@Text@Render@Scaleform@@U?$AllocatorDH@U?$SGMLStackElemDesc@_W@Text@Render@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x14267f410
