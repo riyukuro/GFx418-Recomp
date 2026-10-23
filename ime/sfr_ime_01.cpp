@@ -24,6 +24,7 @@ namespace Scaleform { namespace GFx { namespace IME {
 
 void FUN_1423d9090(void*, void*, unsigned long long);
 void FUN_1423d8b80(void*, void*, void*, unsigned long long);
+void FUN_1423d9b40(void*);
     unsigned char FUN_1423da320(void*, void*, void*, void*);
     void FUN_1423d9500(void*);
     void FUN_1425b43c0(void*);
@@ -41,6 +42,12 @@ static HIMC cx18_ImmGetContext(HWND hwnd)
 {
     typedef HIMC (WINAPI* Fn)(HWND);
     return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetContext"))(hwnd);
+}
+static DWORD cx18_ImmGetCandidateListW(HIMC context, DWORD index, LPCANDIDATELIST list, DWORD bytes)
+{
+    typedef DWORD (WINAPI* Fn)(HIMC, DWORD, LPCANDIDATELIST, DWORD);
+    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetCandidateListW"))(
+        context, index, list, bytes);
 }
 static BOOL cx18_ImmNotifyIME(HIMC context, DWORD action, DWORD index, DWORD value)
 {
@@ -3359,6 +3366,71 @@ void FUN_1423d5910(void* raw, const char* requested)
 void FUN_1423d61f0(void* manager, const char* command, const char* value)
 {
     FUN_1423d7e80(manager, command, value);
+}
+
+// MS2-FUNCTIONAL: retrieves the IMM candidate page, converts its UTF-16 entries, and refreshes the movie's candidate list.
+// @0x1423cf900
+void FUN_1423cf900(void* raw, DWORD listIndex)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    if (!context) return;
+    const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
+    if (!bytes) {
+        cx18_ImmReleaseContext(hwnd, context);
+        return;
+    }
+    auto* candidates = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes));
+    if (!candidates) {
+        cx18_ImmReleaseContext(hwnd, context);
+        return;
+    }
+    const DWORD fetched = cx18_ImmGetCandidateListW(context, listIndex, candidates, bytes);
+    cx18_ImmReleaseContext(hwnd, context);
+    *reinterpret_cast<DWORD*>(self + 0xd8) = candidates->dwCount;
+    *reinterpret_cast<DWORD*>(self + 0x70) = candidates->dwPageStart;
+    if (fetched < offsetof(CANDIDATELIST, dwOffset) || candidates->dwCount == 0) {
+        Scaleform::Memory::Free(candidates);
+        return;
+    }
+
+    void* list = *reinterpret_cast<void**>(self + 0x30);
+    FUN_1423d9500(list);
+    const DWORD pageEnd = candidates->dwPageStart + candidates->dwPageSize;
+    const DWORD end = pageEnd < candidates->dwCount ? pageEnd : candidates->dwCount;
+    for (DWORD i = candidates->dwPageStart; i < end; ++i) {
+        const DWORD offset = candidates->dwOffset[i];
+        if (offset >= fetched || offset < offsetof(CANDIDATELIST, dwOffset)) break;
+        const wchar_t* wide = reinterpret_cast<const wchar_t*>(reinterpret_cast<const unsigned char*>(candidates) + offset);
+        const int chars = static_cast<int>(wcslen(wide));
+        const int required = WideCharToMultiByte(CP_UTF8, 0, wide, chars, nullptr, 0, nullptr, nullptr);
+        if (required <= 0) continue;
+        char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(required) + 1));
+        if (!text) continue;
+        WideCharToMultiByte(CP_UTF8, 0, wide, chars, text, required, nullptr, nullptr);
+        text[required] = 0;
+        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
+        if (item) {
+            FUN_1423cdb60(item, text);
+            unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+            FUN_1423d9490(list, &retained);
+            FUN_14257dcd0(item);
+        }
+        Scaleform::Memory::Free(text);
+    }
+
+    long long selected = -1;
+    const unsigned state = *reinterpret_cast<unsigned*>(self + 0x98);
+    if (state == 0x110000 || state == 0x210000 || state == 0xd00800 ||
+        state == 0xd00900 || state == 0xd00a00 || state == 0xd10000) {
+        selected = candidates->dwSelection > candidates->dwPageStart
+            ? candidates->dwSelection - candidates->dwPageStart : 0;
+    }
+    FUN_1423d97f0(list, static_cast<unsigned long long>(selected), 0);
+    FUN_1423d9b40(list);
+    *reinterpret_cast<unsigned char*>(self + 0xb9) = 1;
+    Scaleform::Memory::Free(candidates);
 }
 
 struct cx18_CommandEntry
