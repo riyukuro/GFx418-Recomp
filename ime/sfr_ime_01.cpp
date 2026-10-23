@@ -204,6 +204,24 @@ void FUN_1423d0f10(void* self, char* text)
 void FUN_1423d94f0(void*, void*);
 
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
+extern void FUN_1425b4ec0(void*, int);
+extern void FUN_1425b43c0(void*);
+
+// MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; recovered calls preserve offsets and order.
+// @0x1423d07e0
+void FUN_1423d07e0(void* self)
+{
+    void* base = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8);
+    void* factory = static_cast<unsigned char*>(base) + 0x10;
+    void** vtable = *reinterpret_cast<void***>(factory);
+    void* value = reinterpret_cast<void*(*)(void*, int)>(vtable[3])(factory, 0x18);
+    FUN_1425b4ec0(value, 0);
+    FUN_1425b43c0(value);
+    *(static_cast<unsigned char*>(self) + 0xb8) = 0;
+    if (value)
+        reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();
+}
+
 // @0x1423d1830
 void FUN_1423d1830(void* self, unsigned long long* movie)
 {
