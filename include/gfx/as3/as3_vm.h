@@ -108,7 +108,9 @@ public:
         // (appended, sfr19 Vector)
         eCorruptABCError            = 1107,
         eCoerceArgumentCountError   = 1112,
-        eWrongTypeArgCountError     = 1128
+        eWrongTypeArgCountError     = 1128,
+        // (appended, sfr19 Traits::Add2VT)
+        eIllegalOverrideError       = 1053
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).

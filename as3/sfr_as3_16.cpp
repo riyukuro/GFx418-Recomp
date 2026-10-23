@@ -190,6 +190,163 @@ void Value::AddRefWeakRef() const
 
 // ==== traits =========================================================================================================
 
+namespace fl { extern const char* NS_AS3; }
+
+// A getter added to a setter (or the reverse) makes a get/set pair; anything else keeps the binding.
+static SlotInfo::BindingType GetNewBT(SlotInfo::BindingType bt, SlotInfo::BindingType new_bt)
+{
+    if ((bt == SlotInfo::BT_Get && new_bt == SlotInfo::BT_Set) || (bt == SlotInfo::BT_Set && new_bt == SlotInfo::BT_Get))
+        return SlotInfo::BT_GetSet;
+    return bt;
+}
+
+// Whether a slot of namespace a is the one named in namespace b: protected namespaces always are, private ones only
+// themselves, the rest by uri.
+static bool IsSameNamespace(const Instances::Namespace& a, const Instances::Namespace& b)
+{
+    if (a.GetKind() != b.GetKind())
+        return false;
+    if (a.GetKind() == Abc::NS_Protected)
+        return true;
+    if (a.GetKind() == Abc::NS_Private)
+        return &a == &b;
+    return a.GetUri().GetNode() == b.GetUri().GetNode();
+}
+
+// The namespace a native method is registered in: its own (the AS3 one, or interned by uri), else the package of a
+// nameless class, else public.
+static Pickable<const Instances::Namespace> GetMethodNamespace(VM& vm, const ClassInfo& ci, const ThunkInfo& func)
+{
+    const char* ns_name = func.NamespaceName;
+    if (ns_name && *ns_name)
+    {
+        if (ns_name == fl::NS_AS3 || strcmp(ns_name, fl::NS_AS3) == 0)
+            return Pickable<const Instances::Namespace>(&vm.GetAS3Namespace(), PickValue);
+        return vm.MakeInternedNamespace(Abc::NS_Public, ns_name);
+    }
+    if ((ci.Name == NULL || *ci.Name == '\0') && ci.PkgName && *ci.PkgName)
+        return vm.MakeInternedNamespace(Abc::NS_Public, ci.PkgName);
+    return Pickable<const Instances::Namespace>(&vm.GetPublicNamespace(), PickValue);
+}
+
+// MS2-FUNCTIONAL: our TU inlines VTable::AddMethod (0x1424e8ed0, defined below), which the exe calls; the get/set
+// merge also rewrites the unchanged ValueInd there.
+// @0x1424e5510
+void Traits::Add2VT(SlotInfo& si, const Value& v, SlotInfo::BindingType bt)
+{
+    VTable& vt = GetVT();
+
+    si.CppBinding = 1;
+    const AbsoluteIndex ind(si.ValueInd);
+    if (ind.IsValid())
+    {
+        const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
+        // a plain method is not replaced by an accessor
+        if (cur_bt == SlotInfo::BT_Code && bt != SlotInfo::BT_Code)
+            return;
+        vt.SetMethod(ind, v, bt, ASString(si.Name.GetPtr()));
+
+        const SlotInfo::BindingType new_bt = GetNewBT(cur_bt, bt);
+        if (new_bt != cur_bt)
+            si.Bind(new_bt, ind);
+    }
+    else
+        si.Bind(bt, vt.AddMethod(v, bt, ASString(si.Name.GetPtr())));
+}
+
+// @0x1424e5660
+void Traits::Add2VT(const ASString& name, const Instances::Namespace& ns, const SlotInfo& nsi, const Value& v,
+                    SlotInfo::BindingType bt)
+{
+    const AbsoluteIndex ind = Add(name, nsi);
+    SlotInfo& si = GetOwnSlotInfo(ind);
+    UpdateVT4IM(name, ns, v, bt);
+    Add2VT(si, v, bt);
+}
+
+// MS2-FUNCTIONAL: the exe inlines VM::MakeInternedNamespace, UpdateVT4IM and UpdateVT (with VTable::SetMethod) from
+// the same unity TU; ours calls them.
+// @0x1424e56f0
+void Traits::Add2VT(const ClassInfo& ci, const ThunkInfo& func)
+{
+    VM& vm = GetVM();
+    const ASString name = vm.GetStringManager().CreateConstString(func.Name);
+    bool ok = true;
+
+    {
+        SlotInfo::BindingType bt = SlotInfo::BT_Code;
+        switch (func.GetCodeType())
+        {
+        case CT_Method: bt = SlotInfo::BT_Code; break;
+        case CT_Get:    bt = SlotInfo::BT_Get;  break;
+        case CT_Set:    bt = SlotInfo::BT_Set;  break;
+        }
+
+        const Value v(func);
+        const SlotInfo nsi(GetMethodNamespace(vm, ci, func), NULL, SlotInfo::aDontEnum, name.GetNode());
+        const Instances::Namespace& ns = *nsi.pNs;
+
+        // the slot of this name in this namespace, own or inherited
+        SPInt ind = -1;
+        if (const UInt32* values = FindSlotValues(name))
+        {
+            for (ind = *values; ind >= 0; ind = GetPrevSlotIndex(ind))
+            {
+                if (IsSameNamespace(*GetSlotInfo(AbsoluteIndex(ind)).pNs, ns))
+                    break;
+            }
+        }
+
+        if (ind < 0)
+            Add2VT(name, ns, nsi, v, bt);
+        else
+        {
+            const SlotInfo& si = GetSlotInfo(AbsoluteIndex(ind));
+            const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
+
+            if (cur_bt != SlotInfo::BT_Unknown && (cur_bt < SlotInfo::BT_Code || cur_bt > SlotInfo::BT_GetSet))
+                ok = false;
+            else if (GetNewBT(cur_bt, bt) == bt)
+            {
+                // an override
+                UpdateVT4IM(name, ns, v, bt);
+                UpdateVT(si, v, bt);
+            }
+            else
+                Add2VT(name, ns, si, v, bt);
+        }
+    }
+
+    if (!ok)
+        vm.ThrowVerifyError(VM::Error(VM::eIllegalOverrideError, vm, name.ToCStr(), GetName().ToCStr()));
+}
+
+// MS2-FUNCTIONAL: same operations; the SlotInfo bit-field build and the inlined release of the placeholder's
+// SPtrs are scheduled differently (as in AddSlot).
+// @0x1424e93b0
+SlotInfo& Traits::AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<const Instances::Namespace> ns,
+                             VMAbcFile& file, const Abc::TraitInfo& ti, bool const_)
+{
+    const UInt32 abs_ind = static_cast<UInt32>(FirstOwnSlotInd.Get() + ind.Get());
+
+    // slot ids may skip: the gap gets unnamed placeholders
+    while (GetSlotInfoNum() < abs_ind)
+        Add(GetVM().GetStringManager().CreateEmptyString(), SlotInfo());
+
+    AbsoluteIndex result(abs_ind);
+    if (abs_ind == GetSlotInfoNum())
+        result = Add(name, SlotInfo(ns, file, ti, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
+                                                      SlotInfo::aDontEnum, name.GetNode()));
+    else
+    {
+        GetOwnSlotInfo(result) = SlotInfo(ns, file, ti, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
+                                                            SlotInfo::aDontEnum, name.GetNode());
+        SetKey(result, name);
+    }
+
+    return GetOwnSlotInfo(result);
+}
+
 // MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
 // build differently (it also skips a redundant 5-bit mask of the attributes).
 // @0x1424e9670

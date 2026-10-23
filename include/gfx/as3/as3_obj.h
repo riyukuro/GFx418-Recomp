@@ -123,6 +123,16 @@ private:
     SPInt Index;
 };
 
+// (appended, sfr19) 0-based position among a traits' own slots (Traits::AddSetSlot 0x1424e93b0 takes it as 32 bits).
+class RelativeIndex
+{
+public:
+    explicit RelativeIndex(UInt32 ind) : Index(ind) { }
+    UInt32 Get() const { return Index; }
+private:
+    UInt32 Index;
+};
+
 // 1-based slot index as ABC byte code uses it (0 = none).
 class GlobalSlotIndex
 {
@@ -169,6 +179,9 @@ public:
         BT_ConstChar
     };
 
+    // (appended, sfr19) an unnamed, unbound placeholder slot (Traits::AddSetSlot 0x1424e93b0).
+    // (appended, sfr19) an empty unbound slot. Inline body in as3_vmabcfile.h.
+    inline SlotInfo();
     // (sfr19) out of line in the exe; both copy the bit fields one at a time.
     SlotInfo(const SlotInfo& other);                // 0x1424d99f0
     ~SlotInfo();                                    // 0x1424def30
@@ -240,11 +253,32 @@ public:
     // parent's slots (FirstOwnSlotNum). 0x1424e6670
 protected:
     AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
+    // (appended, sfr19) renames own slot ind to k (rechaining both names). 0x1425276d0
+    void SetKey(AbsoluteIndex ind, const ASString& k);
 public:
     // (appended, sfr19) slot ind of this table (not of a parent).
     SlotInfo& GetOwnSlotInfo(AbsoluteIndex ind)
     {
         return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value;
+    }
+    // (appended, sfr19) the index of the newest slot named k (older ones chain through GetPrevSlotIndex), or NULL.
+    // 0x142502c30
+    const UInt32* FindSlotValues(const ASString& k) const;
+    // (appended, sfr19) slots of this table and its parents.
+    UPInt GetSlotInfoNum() const { return FirstOwnSlotNum + VArray.GetSize(); }
+    // (appended, sfr19) slot ind, own or a parent's (the out-of-line copy 0x142416fb0 is the parent call).
+    const SlotInfo& GetSlotInfo(AbsoluteIndex ind) const
+    {
+        if (ind.Get() < 0 || static_cast<UPInt>(ind.Get()) < FirstOwnSlotNum)
+            return Parent->GetSlotInfo(ind);
+        return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value;
+    }
+    // (appended, sfr19) the previous slot of the same name as slot ind, or -1 (out-of-line copy 0x14250cc30).
+    SPInt GetPrevSlotIndex(SPInt ind) const
+    {
+        if (static_cast<UPInt>(ind) < FirstOwnSlotNum)
+            return Parent->GetPrevSlotIndex(ind);
+        return VArray[ind - FirstOwnSlotNum].Prev;
     }
 
     UPInt               FirstOwnSlotNum;    // +0x00
@@ -284,6 +318,8 @@ public:
     AbsoluteIndex AddMethod(const Value& m, SlotInfo::BindingType dt, const ASString& name);
     // (appended, sfr19) records the name of method slot ind (debug bookkeeping). 0x1425283c0
     void SetMethodName(AbsoluteIndex ind, SlotInfo::BindingType dt, const ASString& name);
+    // (appended, sfr19) method slot ind (the setter's place for BT_Set) = m (a method index: kInt). 0x1425282d0
+    void SetMethod(AbsoluteIndex ind, const Value& m, SlotInfo::BindingType dt, const ASString& name);
 
     Traits& GetTraits() const { return *pTraits; }
 
@@ -416,6 +452,25 @@ public:
     void AddSlotCPP(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
                     SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_);               // 0x1424e9a50
     void Add2VT(const ClassInfo& ci, const ThunkInfo& func);    // 0x1424e56f0
+    // (appended, sfr19) own slot ind (ABC slot id order; the gap before it is padded with unnamed slots) declared by
+    // trait ti; not bound. 0x1424e93b0
+    SlotInfo& AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<const Instances::Namespace> ns,
+                         VMAbcFile& file, const Abc::TraitInfo& ti, bool const_ = false);
+    // (appended, sfr19) method v bound as bt into the virtual table through slot si (a new VT entry when si is
+    // unbound; a getter and a setter merge into BT_GetSet). 0x1424e5510
+    void Add2VT(SlotInfo& si, const Value& v, SlotInfo::BindingType bt);
+    // (appended, sfr19) a new slot nsi named name, then bound to method v; the interface record of a public method
+    // follows it. 0x1424e5660
+    void Add2VT(const ASString& name, const Instances::Namespace& ns, const SlotInfo& nsi, const Value& v,
+                SlotInfo::BindingType bt);
+    // (appended, sfr19) the method table, created on first use. 0x14250fa80
+    VTable& GetVT() const;
+    // (appended, sfr19) overrides the VT method of slot si (unless a plain method would be replaced by an
+    // accessor). 0x1425311c0
+    void UpdateVT(const SlotInfo& si, const Value& v, SlotInfo::BindingType bt);
+    // (appended, sfr19) a public method also updates the VT record of the interface slot of the same name.
+    // 0x1425310e0
+    void UpdateVT4IM(const ASString& name, const Instances::Namespace& ns, const Value& v, SlotInfo::BindingType bt);
 
 protected:
     // (appended, sfr19) the parent is only referenced here; derived ctors copy its slots with CopyParentTraits.
@@ -840,6 +895,8 @@ namespace Instances
         const ASString&     GetUri() const      { return Uri; }
         const Value&        GetPrefix() const   { return Prefix; }
         VM&                 GetVM() const       { return VMRef; }
+        // (appended, sfr19) the second namespace of an interface method's VT record.
+        bool                GetIsInterface() const  { return IsInterface != 0; }
 
     protected:
         SPInt                           Kind:4;         // +0x20

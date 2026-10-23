@@ -42,6 +42,12 @@ private:
 };
 
 // (appended, sfr19) the SlotInfo ctors need the complete VMAbcFile; declared in as3_obj.h.
+inline SlotInfo::SlotInfo()
+    : ReadOnly(0), DontEnum(0), DontDelete(0), Internal(0), CppBinding(0), BindType(BT_Unknown), ValueInd(-1),
+      TI(NULL)
+{
+}
+
 inline SlotInfo::SlotInfo(Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* ctraits, int a,
                           const Ptr<ASStringNode>& name)
     : ReadOnly((a & aReadOnly) != 0), DontEnum((a & aDontEnum) != 0), DontDelete((a & aDontDelete) != 0),
