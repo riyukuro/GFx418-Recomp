@@ -88,6 +88,7 @@ public:
     static void SpriteGetTextSnapshot(const FnCall& fn);
     static void SpriteCreateEmptyMovieClip(const FnCall& fn);
     static void SpriteAttachAudio(const FnCall& fn);
+    static void SpriteAttachMovie(const FnCall& fn);
     static void SpriteStartDrag(const FnCall& fn);
     static void SpriteBeginGradientFill(const FnCall& fn);
     static void SpriteBeginBitmapFill(const FnCall& fn);

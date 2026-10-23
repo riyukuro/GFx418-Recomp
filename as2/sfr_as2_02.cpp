@@ -26,6 +26,7 @@
 // MS2-RANGE: 0x1429069f0-0x142906a90 .text$mn
 // MS2-RANGE: 0x142905e00-0x142906040 .text$mn
 // MS2-RANGE: 0x142905a00-0x142905b80 .text$mn
+// MS2-RANGE: 0x1429055f0-0x142905a00 .text$mn
 // MS2-RANGE: 0x142906650-0x1429069f0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -1321,6 +1322,59 @@ void AvmSprite::SpriteStopDrag(const FnCall& fn)
         case 1:  psprite->AddToOptimizedPlayList(); break;
         case -1: psprite->MarkToRemoveFromOptimizedPlayList(); break;
         }
+    }
+}
+
+// attachMovie(symbol, name, depth [, initObject]): an instance of an exported library clip; SWF 6+ returns it.
+// MS2-FUNCTIONAL IsInteractiveObject tested as al&1
+// @0x1429055f0
+void AvmSprite::SpriteAttachMovie(const FnCall& fn)
+{
+    fn.Result->SetUndefined();
+    Sprite* psprite = SpriteGetTarget(fn);
+    if (!psprite || fn.NArgs < 3)
+        return;
+    ASString sym = fn.Arg(0).ToString(fn.Env);
+    ResourceBindData resBindData;
+    bool found;
+    {
+        String symstr(sym.ToCStr());
+        found = psprite->GetMovieImpl()->FindExportedResource(psprite->GetResourceMovieDef(), &resBindData, symstr);
+    }
+    if (!found)
+    {
+        psprite->LogScriptWarning("%s.attachMovie() failed - export name \"%s\" is not found.",
+                                  psprite->GetName().ToCStr(), sym.ToCStr());
+        return;
+    }
+    if (!(resBindData.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_CharacterDef_Bit)))
+    {
+        psprite->LogScriptWarning("%s.attachMovie() failed - \"%s\" is not a movieclip.",
+                                  psprite->GetName().ToCStr(), sym.ToCStr());
+        return;
+    }
+    CharacterDef* pdef = static_cast<CharacterDef*>(resBindData.pResource.GetPtr());
+    CharacterCreateInfo ccinfo;
+    ccinfo.pCharDef     = pdef;
+    ccinfo.pResource    = 0;
+    ccinfo.pBindDefImpl = resBindData.pBinding->GetOwnerDefImpl();
+    CharPosInfo pos(pdef->GetId(), int(fn.Arg(2).ToNumber(fn.Env)) + 16384,
+                    1, Render::Cxform::Identity, 1, Render::Matrix2F::Identity);
+    if (unsigned(pos.Depth) <= 0x7efffffdu)
+    {
+        ObjectInterface* initSource = (fn.NArgs == 4) ? fn.Arg(3).ToObjectInterface(fn.Env) : 0;
+        Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, fn.Arg(1).ToString(fn.Env), 0, initSource, ~0u, 1, &ccinfo, 0);
+        if (newch)
+        {
+            newch->SetAcceptAnimMoves(false);
+            if (psprite->GetVersion() >= 6)
+                fn.Result->SetAsCharacter(newch->IsInteractiveObject() ? static_cast<InteractiveObject*>(newch.GetPtr()) : 0);
+        }
+    }
+    else
+    {
+        psprite->LogScriptWarning("%s.attachMovie(\"%s\") failed - depth (%d) must be >= 0",
+                                  psprite->GetName().ToCStr(), sym.ToCStr(), pos.Depth);
     }
 }
 
