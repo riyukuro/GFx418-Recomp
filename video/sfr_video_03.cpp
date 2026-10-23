@@ -36,6 +36,8 @@ MS2_EXTERN(0x1423dfda0, void(void*, void*, void*), VideoNative4);
 MS2_EXTERN(0x1424f1390, void(void*, void*, void*), ConvertAS3ValueToString);
 MS2_EXTERN(0x1424f0d30, void(void*, void*, int*, int, void*), ConvertAS3ValueToInt32);
 MS2_EXTERN(0x1423dfa20, void(), ReleaseAS3GcObject);
+MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
+extern "C" void* DAT_143b15f60;
 
 namespace {
 using VideoGenericThunk = void(*)(void*, void*, void*);
@@ -500,4 +502,30 @@ std::uint64_t FUN_14001b0b0() { return 0; }
 void thunk_FUN_1424efe00() {}
 // @0x14001b0d0
 void thunk_FUN_1424f1f70() {}
+
+// MS2-FUNCTIONAL: releases the retained atom field and runs the inherited AS3 cleanup.
+// @0x140019060
+void FUN_140019060(void* object)
+{
+    ReleaseVideoAtom(reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(object) + 0xc0));
+    FUN_1424df220(object);
+}
+// MS2-FUNCTIONAL: releases the retained atom field and runs the inherited AS3 cleanup.
+// @0x140019b00
+void FUN_140019b00(void* object)
+{
+    FUN_140019060(object);
+}
+// MS2-FUNCTIONAL: releases the retained atom field and optionally frees the object through the Scaleform heap.
+// @0x140019b60
+void* FUN_140019b60(void* object, std::uint64_t flags)
+{
+    ReleaseVideoAtom(reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(object) + 0xc0));
+    FUN_1424df220(object);
+    if (flags & 1) {
+        auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, object);
+    }
+    return object;
+}
 } // namespace
