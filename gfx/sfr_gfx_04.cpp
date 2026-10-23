@@ -58,6 +58,7 @@
 #include "../include/gfx/gfx_fontlib.h"
 #include "../include/gfx/gfx_displayobjcontainer.h"
 #include "../include/gfx/gfx_imageresource.h"
+#include "../include/video/video_characterdef.h"
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/render/render_twips.h"
 #include "../include/kernel/sf_file.h"
@@ -124,8 +125,6 @@ public:
 };
 
 extern "C" const void* const MS2_SF_ConstShapeNoStyles_vftable[]; // ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
-extern "C" const void* const MS2_SF_Resource_vftable[];           // ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
-extern "C" const void* const MS2_SF_VideoCharacterDef_vftable[];  // ??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@ 0x14318b778
 
 // The shape data without styles of the empty shape (GFx_ShapeSwf): the base with the exe's vtable.
 class ConstShapeNoStyles : public ShapeDataBase
@@ -137,39 +136,14 @@ public:
 
 ConstShapeNoStyles::~ConstShapeNoStyles() {}
 
-// The image of an empty video definition (Video_VideoCharacter, 0x30 bytes) with its inline construction.
-struct EmptyVideoDefImage
-{
-    const void* const* vfptr;
-    volatile int       RefCount;
-    void*              pLib;
-    UInt32             Id;
-    UInt32             Width;
-    UInt32             Height;
-    UInt32             NumFrames;
-    UByte              Smoothing;
-    UByte              Deblocking;
-    UByte              Codec;
+// The empty video definition uses VideoCharacterDef's recovered 0x30-byte interface and executable vtable.
+using EmptyVideoDefImage = Video::VideoCharacterDef;
 
-    EmptyVideoDefImage()
-    {
-        pLib      = 0;
-        vfptr     = MS2_SF_Resource_vftable;
-        RefCount  = 1;
-        Id        = ResourceId::InvalidId;
-        vfptr     = MS2_SF_VideoCharacterDef_vftable;
-        Width     = 0;
-        Height    = 0;
-        NumFrames = 0;
-        Smoothing = 0;
-        Deblocking = 0;
-        Codec     = 2;
-    }
-    void* operator new(UPInt sz, MemoryHeap* pheap) { return pheap->Alloc(sz); }
-    void  operator delete(void* p, MemoryHeap*) { Memory::Free(p); }
-    Resource* GetResource() { return (Resource*)this; }
-};
+Video::VideoCharacterDef::VideoCharacterDef()
+    : CharacterDef(), Width(0), Height(0), NumFrames(0), Smoothing(0), Deblocking(0), Codec(2)
+{}
 
+Video::VideoCharacterDef::~VideoCharacterDef() {}
 // Ids of the empty characters of every movie.
 enum
 {
@@ -2446,3 +2420,4 @@ bool MatchFileNames(const String& path1, const String& path2)
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
+// MS2-PIN: ??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@ 0x14318b778
