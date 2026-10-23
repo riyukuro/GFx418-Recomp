@@ -5719,6 +5719,109 @@ void VideoPlayerImpl::SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spa
 
 void FUN_14257dc30(void*);
 void FUN_14257dcb0(void*);
+extern "C" void* DAT_143b15f60;
+
+// MS2-FUNCTIONAL: resize a Scaleform heap-backed pointer array, keeping capacity four-element aligned.
+// @0x14001c570
+void FUN_14001c570(CriUint64* array, void*, CriUint64 requestedCapacity)
+{
+    void* oldData = (void*)(uintptr_t)array[0];
+    CriUint64 capacity = requestedCapacity == 0 ? 0 : (requestedCapacity + 3) & ~(CriUint64)3;
+    void* heap = DAT_143b15f60;
+    void** vtable = heap ? *(void***)heap : NULL;
+    if (requestedCapacity == 0)
+    {
+        if (oldData && vtable)
+            ((void (*)(void*, void*))vtable[12])(heap, oldData);
+        array[0] = 0;
+        array[2] = 0;
+        return;
+    }
+    if (oldData && vtable)
+    {
+        void* resized = ((void* (*)(void*, void*, size_t))vtable[11])(
+            heap, oldData, (size_t)(capacity * sizeof(void*)));
+        array[0] = (CriUint64)(uintptr_t)resized;
+        array[2] = capacity;
+        return;
+    }
+    if (vtable)
+    {
+        const CriUint32 allocationFlags[2] = { 2, 0 };
+        void* data = ((void* (*)(void*, size_t, const CriUint32*))vtable[10])(
+            heap, (size_t)(capacity * sizeof(void*)), allocationFlags);
+        array[0] = (CriUint64)(uintptr_t)data;
+    }
+    array[2] = capacity;
+}
+
+// MS2-FUNCTIONAL: release a RefCountImpl pointer stored in a Scaleform Ptr wrapper.
+// @0x14001d210
+void FUN_14001d210(CriUint64* pointer)
+{
+    void** object = (void**)(uintptr_t)pointer[0];
+    if (!object)
+        return;
+    LONG* references = (LONG*)(object + 1);
+    if (InterlockedDecrement((volatile LONG*)references) == 0)
+        ((void (*)(void*, CriUint32))object[0])(object, 1);
+}
+
+// MS2-FUNCTIONAL: replace a Scaleform Ptr wrapper target and release its prior reference.
+// @0x14001d240
+CriUint64* FUN_14001d240(CriUint64* pointer, void* replacement)
+{
+    void** object = (void**)(uintptr_t)pointer[0];
+    if (object && InterlockedDecrement((volatile LONG*)(object + 1)) == 0)
+        ((void (*)(void*, CriUint32))object[0])(object, 1);
+    pointer[0] = (CriUint64)(uintptr_t)replacement;
+    return pointer;
+}
+
+// MS2-FUNCTIONAL: append a pointer to a Scaleform array and grow the heap allocation when needed.
+// @0x14001d290
+void FUN_14001d290(CriUint64* array, const CriUint64* value)
+{
+    CriUint64 newSize = array[1] + 1;
+    CriUint64 capacity = array[2];
+    CriUint64 grown = capacity;
+    if (newSize < array[1])
+    {
+        grown = newSize;
+        if ((capacity >> 1) <= newSize)
+            grown = (newSize >> 2) + newSize;
+    }
+    else if (newSize >= capacity)
+        grown = (newSize >> 2) + newSize;
+    if (grown != capacity)
+        FUN_14001c570(array, array, grown);
+    array[1] = newSize;
+    if (array[0])
+        ((CriUint64*)(uintptr_t)array[0])[newSize - 1] = *value;
+}
+
+// MS2-FUNCTIONAL: resize a Scaleform array and adjust its logical element count.
+// @0x14001d310
+void FUN_14001d310(CriUint64* array, CriUint64 newSize)
+{
+    CriUint64 capacity = array[2];
+    if (newSize < array[1])
+    {
+        if (newSize < capacity >> 1)
+        {
+            FUN_14001c570(array, array, newSize);
+            array[1] = newSize;
+            return;
+        }
+    }
+    else if (capacity <= newSize)
+    {
+        FUN_14001c570(array, array, (newSize >> 2) + newSize);
+        array[1] = newSize;
+        return;
+    }
+    array[1] = newSize;
+}
 
 // MS2-FUNCTIONAL: replace a reference-counted Video interface and apply the stored sound mode.
 // @0x14001c170
