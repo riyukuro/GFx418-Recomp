@@ -263,6 +263,48 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
+// MS2-FUNCTIONAL: handles the executable's focus, candidate-list, and IME notification messages.
+// @0x1423d41f0
+bool FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long message, unsigned long long value)
+{
+    void* child = reinterpret_cast<void*>(self[1]);
+    if (!child) return false;
+    bool handled = false;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x5b8) = static_cast<unsigned>(value);
+    auto** vtable = reinterpret_cast<void**>(self[0]);
+    if (message == 3) {
+        reinterpret_cast<void(*)(void*, int)>(vtable[0x110 / sizeof(void*)])(self, 0);
+        handled = static_cast<unsigned>(self[0x13] - 5) > 1;
+    } else if (message == 4) {
+        FUN_1423d9500(reinterpret_cast<void*>(self[6]));
+        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0x5bc) = 0;
+        void* movie = reinterpret_cast<void*>(self[0x15]);
+        void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+        if (values) {
+            void* result = nullptr;
+            reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                    values, "RemoveList", &result, 0, 0);
+        }
+    } else if (message == 5) {
+        void* factory = static_cast<unsigned char*>(child) + 0x10;
+        void* temporary = reinterpret_cast<void*(*)(void*, int)>(
+            (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+        reinterpret_cast<void(*)(void*, int)>(vtable[0x118 / sizeof(void*)])(self, 0);
+        handled = static_cast<unsigned>(self[0x13] - 5) > 1;
+        if (temporary) FUN_14257dcb0(temporary);
+    } else if (message == 0xe) {
+        const unsigned mode = static_cast<unsigned>(self[0x13]);
+        if (mode == 4 && *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x9c) == 0x04040404)
+            handled = value == 1 || value == 2;
+        else if (mode == 2)
+            handled = value == 2 || value == 0x1a || value == 0x1b;
+    }
+    if (!handled && message != 3 && message != 4 && message != 5)
+        reinterpret_cast<void(*)(void*, unsigned)>(vtable[0x70 / sizeof(void*)])(self, reason);
+    return handled;
+}
+
 // MS2-FUNCTIONAL: destroys the XML node chain after unlinking each DOM string node from its hash table.
 // @0x1423cb0f0
 void FUN_1423cb0f0(void* self)
