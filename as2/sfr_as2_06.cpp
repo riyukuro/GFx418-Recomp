@@ -150,6 +150,10 @@
 // MS2-RANGE: 0x1429697f0-0x142969850 .text$mn
 // MS2-RANGE: 0x14295d320-0x14295d3a0 .text$mn
 // MS2-RANGE: 0x14295d3a0-0x14295d450 .text$mn
+// MS2-RANGE: 0x1429635f0-0x142963820 .text$mn
+// MS2-RANGE: 0x142963a10-0x142963aa0 .text$mn
+// MS2-RANGE: 0x142967c90-0x142967d10 .text$mn
+// MS2-RANGE: 0x142967bf0-0x142967c30 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1542,6 +1546,57 @@ void StageCtorFunction::NotifyOnResize(const FnCall& fn)
 }
 
 // The environment of _level0 (MovieRoot::GetLevelMovie(0) inline).
+// @0x1429635f0
+bool MovieRoot::Invoke(InteractiveObject* pmovie, const char* pmethodName, GFx::Value* presult,
+                       const GFx::Value* pargs, unsigned numArgs)
+{
+    if (!pmovie || pmovie->GetType() != CharacterDef::Sprite)
+        return false;
+    Value resultVal;
+    AvmCharacter* pavmChar = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmovie->GetAvmObjImpl()));
+    Environment*  penv     = pavmChar->GetASEnvironment();
+    for (int i = (int)numArgs - 1; i >= 0; --i)
+    {
+        Value v;
+        Value2ASValue(pargs[i], &v);
+        penv->Push(v);
+    }
+    bool             retVal;
+    InvokeAliasInfo* palias;
+    if (*reinterpret_cast<void* const*>(Unrecovered_78) && (palias = ResolveInvokeAlias(pmethodName)) != 0)
+        retVal = InvokeAlias(pmethodName, *palias, &resultVal, numArgs);
+    else
+    {
+        AvmSprite*             pavmSprite = static_cast<AvmSprite*>(pavmChar);
+        Ptr<InteractiveObject> holder     = pavmSprite->GetDispObj();
+        Environment*           pspriteEnv = reinterpret_cast<Environment*>(pavmSprite->Unrecovered_38);
+        retVal = GAS_Invoke(pmethodName, &resultVal, pavmSprite, pspriteEnv, numArgs, pspriteEnv->GetTopIndex());
+    }
+    for (unsigned n = numArgs; n; n--)
+        penv->Drop1();
+    if (retVal && presult)
+        ASValue2GFxValue(penv, resultVal, presult);
+    return retVal;
+}
+
+// The movie loaded as _level<level>, 0 if none.
+static SF_FORCEINLINE InteractiveObject* GetMovieAtLevel(const MovieImpl* pmovieImpl, int level)
+{
+    for (unsigned i = 0; i < pmovieImpl->MovieLevelsSize; i++)
+    {
+        if (pmovieImpl->pMovieLevels[i].Level == level)
+            return pmovieImpl->pMovieLevels[i].pSprite;
+    }
+    return 0;
+}
+
+// MS2-FUNCTIONAL the MovieRoot vftable is not modeled: the Invoke(InteractiveObject*, ...) slot differs (exe 0x1a0)
+// @0x142963a10
+bool MovieRoot::Invoke(const char* pmethodName, GFx::Value* presult, const GFx::Value* pargs, unsigned numArgs)
+{
+    return Invoke(GetMovieAtLevel(pMovieImpl, 0), pmethodName, presult, pargs, numArgs);
+}
+
 static inline Environment* GetLevel0MovieEnvironment(MovieImpl* pmovieImpl)
 {
     InteractiveObject* pmovie = 0;
@@ -1642,6 +1697,49 @@ void LogBase<AS2::FnCall>::LogScriptWarning(const char* pfmt, ...) const
     }
     va_end(argList);
 }
+
+// The script error channel of a display object, only with verbose action errors.
+// @0x142967c90
+template<>
+void LogBase<DisplayObjectBase>::LogScriptError(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    const DisplayObjectBase* p = static_cast<const DisplayObjectBase*>(this);
+    if (p->P_IsVerboseActionErrors())
+    {
+        Log* plog = p->GetLog();
+        if (plog)
+            plog->LogMessageVarg(LogChannel_Script | LogMessage_Error, pfmt, argList);
+    }
+    va_end(argList);
+}
+
+namespace AS2 {
+
+// The action disassembly writer: the log and the message type of its lines.
+class Disasm
+{
+public:
+    Log*         pLog;    // +0x00
+    LogMessageId MsgType; // +0x08
+
+    void LogF(const char* pfmt, ...);
+};
+
+// @0x142967bf0
+void Disasm::LogF(const char* pfmt, ...)
+{
+    if (pLog)
+    {
+        va_list argList;
+        va_start(argList, pfmt);
+        pLog->LogMessageVarg(MsgType, pfmt, argList);
+        va_end(argList);
+    }
+}
+
+} // namespace AS2
 
 // The host side of AS2 values; only the members recovered in this unit.
 class AS2ValueObjectInterface : public Value::ObjectInterface

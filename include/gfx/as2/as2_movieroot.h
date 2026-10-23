@@ -371,6 +371,17 @@ public:
     // A mouse focus change needs one of the two characters to take mouse focus (exe 0x1429697f0).
     virtual bool NotifyOnFocusChange(InteractiveObject* curFocused, InteractiveObject* toBeFocused,
                                      unsigned controllerIdx, FocusMovedType fmt, ProcessFocusKeyInfo* pfocusKeyInfo);
+    // (appended for sfr_as2_06) host calls of a script method of pmovie (or _level0): through the invoke alias of
+    // that name when there is one (exe 0x1429635f0, 0x142963a10).
+    virtual bool Invoke(InteractiveObject* pmovie, const char* pmethodName, GFx::Value* presult,
+                        const GFx::Value* pargs, unsigned numArgs);
+    virtual bool Invoke(const char* pmethodName, GFx::Value* presult, const GFx::Value* pargs, unsigned numArgs);
+    // Converts a host value into a script value (exe 0x142992ee0).
+    void Value2ASValue(const GFx::Value& gfxVal, Value* pdestVal);
+    // The alias registered under pstr, 0 if none (exe 0x14297ed30).
+    InvokeAliasInfo* ResolveInvokeAlias(const char* pstr) const;
+    // Calls the alias with the numArgs arguments on the _level0 stack (exe 0x142963b90).
+    bool InvokeAlias(const char* pmethodName, const InvokeAliasInfo& iai, Value* presult, unsigned numArgs);
 };
 
 // The AS2 root of a character of an AS2 movie.
