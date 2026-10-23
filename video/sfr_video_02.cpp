@@ -55,6 +55,7 @@ extern void* PTR_LAB_1431b6690;
 extern void* PTR_LAB_1431b6638;
 extern void* PTR_FUN_1431b6640;
 extern void* PTR_s_connect_1431b6410;
+extern void* PTR_FUN_1431b7858;
 extern void* DAT_143b274d8;
 extern void* DAT_143b274e0;
 extern void* DAT_143b27518;
@@ -2235,6 +2236,42 @@ Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
 {
     return CreateVideo02Builtin(result, context, FUN_140012340, PTR_LAB_1431b6740,
         PTR_LAB_1431b67d0, 0xa8, 0x22, 0x110, true);
+}
+
+// MS2-FUNCTIONAL: replaces the player event relay and its associated VideoPlayerImpl state object.
+// @0x140015c40
+void FUN_140015c40(void* object)
+{
+    auto* vm = *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x98);
+    auto* manager = *reinterpret_cast<void**>(static_cast<char*>(vm) + 0x2d8);
+    auto* owner = *reinterpret_cast<void**>(static_cast<char*>(manager) + 0x10);
+    auto** ownerVtable = *reinterpret_cast<void***>(owner);
+    auto* heap = reinterpret_cast<void*(*)(void*)>(ownerVtable[0x178 / sizeof(void*)])(owner);
+    auto** heapVtable = *reinterpret_cast<void***>(heap);
+    auto* relay = reinterpret_cast<void*(*)(void*, std::size_t)>(heapVtable[0x50 / sizeof(void*)])(
+        heap, 0x18);
+    if (relay)
+    {
+        *reinterpret_cast<unsigned*>(static_cast<char*>(relay) + 8) = 1;
+        *reinterpret_cast<void**>(static_cast<char*>(relay) + 0x10) = object;
+        *reinterpret_cast<void**>(relay) = PTR_FUN_1431b7858;
+    }
+    auto** oldRelay = reinterpret_cast<void**>(static_cast<char*>(object) + 0x58);
+    if (*oldRelay)
+        FUN_14257dcd0(*oldRelay);
+    *oldRelay = relay;
+
+    auto* state = reinterpret_cast<void*(*)(void*, std::size_t)>(heapVtable[0x50 / sizeof(void*)])(
+        heap, 0x108);
+    if (state)
+    {
+        extern void FUN_140026c60(void*, void*);
+        FUN_140026c60(state, relay);
+    }
+    auto** oldState = reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
+    if (*oldState)
+        FUN_14257dcd0(*oldState);
+    *oldState = state;
 }
 
 // Shared path for the generated AS3 trait getters in this range.
