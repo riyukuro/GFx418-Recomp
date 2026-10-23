@@ -8,6 +8,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/gfx_stream.h"
 #include <cstring>
 
 extern void FUN_14257dc30(void*);
@@ -436,6 +437,12 @@ void FUN_14000f060(void** object)
     if (*object)
         FUN_142626160(*object);
 }
+
+// @0x14000ef80
+UByte FUN_14000ef80(Stream* stream) { return stream->ReadU8(); }
+
+// @0x14000efc0
+UInt16 FUN_14000efc0(Stream* stream) { return stream->ReadU16(); }
 
 // @0x14000f0e0
 void FUN_14000f0e0(void* entry)
