@@ -10,6 +10,7 @@
 #include "../include/gfx/gfx_stream.h"
 #include "../include/kernel/sf_array.h"
 #include "../include/gfx/as3/as3_value.h"
+#include "../include/gfx/as3/as3_obj.h"
 #include "../include/gfx/as3/obj/as3_obj_display.h"
 #include "hook/ms2hook.h"
 #include <cstring>
@@ -67,8 +68,10 @@ MS2_EXTERN(0x142519200, void(), FUN_142519200);
 MS2_EXTERN(0x142506e10, const char*(void*, void*), FUN_142506e10);
 MS2_EXTERN(0x142519d50, void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t), FUN_142519d50);
 MS2_EXTERN(0x1424ddc20, void(void*), FUN_1424ddc20);
-MS2_EXTERN(0x1424d6750, void(void*), FUN_1424d6750);
+MS2_EXTERN(0x1424d6750, void(void*, void*, const void*), FUN_1424d6750);
 MS2_EXTERN(0x1424d6480, void(void*), FUN_1424d6480);
+MS2_EXTERN(0x1424dabd0, void(void*, void*, const void*), FUN_1424dabd0);
+MS2_EXTERN(0x1424d6ac0, void(void*, void*), FUN_1424d6ac0);
 MS2_EXTERN(0x140019470, void(void*, void*), FUN_140019470);
 MS2_EXTERN(0x140019660, void(void*, void*), FUN_140019660);
 MS2_EXTERN(0x1400199e0, void*(void*, void*), FUN_1400199e0);
@@ -83,6 +86,10 @@ MS2_GLOBAL(0x1431b7c70, void*, VideoTraitsVtable);
 MS2_GLOBAL(0x1431b7f60, void*, VideoTraitsBaseVtable);
 MS2_GLOBAL(0x1431b7ea0, void*, VideoTraitsSubVtableA);
 MS2_GLOBAL(0x1431b7de0, void*, VideoTraitsSubVtableB);
+MS2_GLOBAL(0x1431b7160, void*, VideoClassInfoA); MS2_GLOBAL(0x1431b7900, void*, VideoClassVtableA);
+MS2_GLOBAL(0x1431b71b0, void*, VideoInstanceVtableA); MS2_GLOBAL(0x1431b7260, void*, VideoCTraitsVtable);
+MS2_GLOBAL(0x1431b7b50, void*, VideoClassInfoB); MS2_GLOBAL(0x1431b7d50, void*, VideoClassVtableB);
+MS2_GLOBAL(0x1431b7c70, void*, VideoInstanceVtableB);
 MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
 MS2_EXTERN(0x1424eb610, void*(void*), FUN_1424eb610);
 MS2_EXTERN(0x140010b80, void(void*, void*), FUN_140010b80);
@@ -1045,7 +1052,7 @@ std::uint64_t* FUN_142742f70(std::uint64_t* destination, const std::uint64_t* so
 // @0x14001a080
 void* FUN_14001a080(void* traits)
 {
-    FUN_1424d6750(traits);
+    FUN_1424d6750(traits, nullptr, nullptr);
     *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(traits) + 0xc) = 0x78;
     *reinterpret_cast<void***>(traits) = &VideoTraitsVtable;
     return traits;
@@ -1256,5 +1263,47 @@ std::uint64_t* FUN_140017250(std::uint64_t* record, std::uint64_t vm, std::uint6
     if (count > 2 && *reinterpret_cast<unsigned char*>(vm + 0x180) == 0)
         ConvertAS3ValueToString(const_cast<std::uint64_t*>(args + 8), nullptr, record + 4);
     return record;
+}
+
+namespace {
+void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void** classVtable, void** instanceVtable, std::uint32_t instanceFlags)
+{
+    FUN_1424dabd0(classTraits, vm, classInfo);
+    *reinterpret_cast<void***>(classTraits) = classVtable;
+    auto** heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(vm) + 0x38);
+    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10]);
+    auto* instance = allocate(heap, 0xe8, 0);
+    if (instance) {
+        FUN_1424d6750(instance, vm, classInfo);
+        *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(instance) + 0x60) = instanceFlags;
+        *reinterpret_cast<void***>(instance) = instanceVtable;
+    }
+    auto* typedTraits = static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits);
+    auto* typedInstance = static_cast<Scaleform::GFx::AS3::InstanceTraits::Traits*>(instance);
+    typedTraits->SetInstanceTraits(Scaleform::Pickable<Scaleform::GFx::AS3::InstanceTraits::Traits>(typedInstance));
+    auto* ctraits = allocate(heap, 0x50, 0);
+    if (ctraits) {
+        FUN_1424d6ac0(ctraits, classTraits);
+        *reinterpret_cast<void***>(ctraits) = &VideoCTraitsVtable;
+    }
+    if (instance) {
+        auto* slot = reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(instance) + 0x80);
+        ReleaseVideoAtom(slot);
+        *slot = reinterpret_cast<std::uintptr_t>(ctraits);
+    }
+    return classTraits;
+}
+}
+// MS2-FUNCTIONAL: constructs the Video AS3 class traits and its instance and native traits objects.
+// @0x1400199e0
+void* FUN_1400199e0(void* traits, void* vm)
+{
+    return BuildVideoTraits(traits, vm, &VideoClassInfoA, &VideoClassVtableA, &VideoInstanceVtableA, 0xf8);
+}
+// MS2-FUNCTIONAL: constructs the VideoPlayer AS3 class traits and its instance and native traits objects.
+// @0x14001ad20
+void* FUN_14001ad20(void* traits, void* vm)
+{
+    return BuildVideoTraits(traits, vm, &VideoClassInfoB, &VideoClassVtableB, &VideoInstanceVtableB, 0x78);
 }
 } // namespace
