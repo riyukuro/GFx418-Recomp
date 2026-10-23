@@ -2401,6 +2401,15 @@ template void Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::Render::Filter>
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+}}} // namespace Scaleform::GFx::AS3
+
+// addFrameScript's descriptor array instances.
+template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, Scaleform::AllocatorGH_CPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, 2>, Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
+template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, Scaleform::AllocatorGH_CPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, 2>, Scaleform::ArrayDefaultPolicy>::Reserve(const void*, Scaleform::UPInt);
+template void Scaleform::ConstructorCPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr>::Construct(void*, const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 // VectorBase<UInt32>::Set instance, emitted here for the pixel vector writers.
 // MS2-FUNCTIONAL: exe calls an out-of-line CheckFixed copy (0x14255b2d0); ours inlines it
 // @0x142446540
@@ -2674,3 +2683,7 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ?Resize@?$ArrayDataDH@KU?$AllocatorDH@K$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z 0x142446430
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424462b0
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424464a0
+// MS2-PIN: ??1?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAA@XZ 0x14243cf90
+// MS2-PIN: ?Construct@?$ConstructorCPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@2@@Z 0x142440f00
+// MS2-FUNCTIONAL ?Reserve@?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAAXPEBX_K@Z: the exe calls ConstructorCPP<Descr>::Construct out of line in the element-wise move; ours inlines it
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAAXPEBX_K@Z 0x142446140
