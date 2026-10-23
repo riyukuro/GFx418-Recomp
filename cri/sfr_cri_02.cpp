@@ -226,6 +226,7 @@ CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* out
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
+CriSint32 FUN_1400310e0(void* player);
 void     FUN_140036e30(void* player, CriMvSubtitleChunk* chunk);
 void     FUN_1400363b0(void* player, void* chunk, CriUint32 type);
 void     FUN_140036e80(void* player, CriMvSubtitleChunk* chunk);
@@ -4911,6 +4912,29 @@ void FUN_140036710(void* player)
         }
         FUN_1400467b0(queue, 0, &chunk);
     }
+}
+
+// MS2-FUNCTIONAL: expose the next subtitle chunk only after the movie player leaves its setup states.
+// @0x140036650
+CriUint32 FUN_140036650(void* player, void* unused1, void* unused2, void* context)
+{
+    CriMvSubtitleChunk chunk = {};
+    if (!player)
+        return 0;
+    CriMvSubtitleFields* subtitle = (CriMvSubtitleFields*)player;
+    if (!subtitle->Queue)
+        return 0;
+    CriSint32 status = FUN_1400310e0(player);
+    if (status >= 0 && status <= 4)
+        return 0;
+
+    using SubtitleFetch = CriSint32 (*)(void*, CriMvSubtitleChunk*, CriSint32, void*, CriUint32);
+    SubtitleFetch fetch = (SubtitleFetch)FUN_140036b80;
+    CriUint32 result = (CriUint32)fetch(player, &chunk, subtitle->SubtitleChannel, context, 0);
+    FUN_140036e80(player, &chunk);
+    (void)unused1;
+    (void)unused2;
+    return result;
 }
 
 // MS2-FUNCTIONAL: drain subtitle decoder queues whose frame indices have fallen behind playback.
