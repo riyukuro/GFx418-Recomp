@@ -23,6 +23,8 @@ extern void* DAT_143b27bb8;
 extern CriUint32 DAT_143b27bcc;
 extern CriUint32 DAT_143b27bd0;
 extern const void* DAT_143b27a40;
+extern CriUint16 DAT_143b2794c;
+extern CriUint8 DAT_143b27950[];
 }
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
@@ -71,6 +73,10 @@ void     FUN_1400453c4(void* demux);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
 void     FUN_140044ae0(void* decoder);
+void     FUN_140036650(void* player);
+void     FUN_140036710(void* player);
+void     FUN_1400369e0(void* player);
+void     FUN_140034c20(void* player);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e);
@@ -1542,6 +1548,68 @@ void FUN_1400379e0(const void* key)
 {
     DAT_143b27a40 = key;
     FUN_140038190(key);
+}
+
+// MS2-FUNCTIONAL: register or replace the decoder interfaces associated with a codec id.
+// @0x14002e6e0
+void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration)
+{
+    CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
+    CriUint16 count = DAT_143b2794c;
+    CriUint16 index = count;
+    for (CriUint16 i = 0; i < count; ++i)
+    {
+        if (entries[i].CodecId == registration->CodecId)
+        {
+            index = i;
+            break;
+        }
+    }
+    entries[index].CodecId = registration->CodecId;
+    entries[index].VideoDecoderInterface = registration->VideoDecoderInterface;
+    entries[index].AlphaDecoderInterface = registration->AlphaDecoderInterface;
+    if (index == count)
+        DAT_143b2794c = count + 1;
+}
+
+// MS2-FUNCTIONAL: find the registered video decoder interface, mapping codec zero to codec one.
+// @0x140030b50
+void* FUN_140030b50(CriSint32 codecId)
+{
+    if (codecId == 0)
+        codecId = 1;
+    CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
+    for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
+        if (entries[i].CodecId == codecId)
+            return entries[i].VideoDecoderInterface;
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: find the registered alpha decoder interface, mapping codec zero to codec one.
+// @0x140030be0
+void* FUN_140030be0(CriSint32 codecId)
+{
+    if (codecId == 0)
+        codecId = 1;
+    CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
+    for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
+        if (entries[i].CodecId == codecId)
+            return entries[i].AlphaDecoderInterface;
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: service subtitles, header preparation, frame queues and audio for active players.
+// @0x14002fb70
+void FUN_14002fb70(void* player)
+{
+    CriSint32 status = ((CriMvPlyStateTransitionFields*)player)->Status;
+    if (status != 0 && status != 9 && status != 7 && status != 6)
+    {
+        FUN_140036650(player);
+        FUN_140036710(player);
+        FUN_1400369e0(player);
+        FUN_140034c20(player);
+    }
 }
 
 // MS2-FUNCTIONAL: report whether a default USM decryption key has been configured.

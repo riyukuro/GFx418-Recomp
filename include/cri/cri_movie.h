@@ -39,6 +39,16 @@ typedef enum {
 struct _criheap_struct;
 typedef struct _criheap_struct* CriHeap;
 
+// Decoder registration records are stored in CRI Movie's process-wide codec table (stride 0x18).
+struct CriMvCodecRegistrationEntry
+{
+    CriSint32 CodecId;                 // 0x00
+    CriUint32 Reserved;                // 0x04
+    void*     VideoDecoderInterface;   // 0x08
+    void*     AlphaDecoderInterface;   // 0x10
+};
+static_assert(sizeof(CriMvCodecRegistrationEntry) == 0x18, "CRI codec registration stride");
+
 typedef enum {
     CRIHEAP_TYPE_NONE      = 0,
     CRIHEAP_TYPE_FIX       = 1,
