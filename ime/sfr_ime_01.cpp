@@ -257,6 +257,20 @@ void FUN_1423d07e0(void* self)
 }
 
 // MS2-FUNCTIONAL: Windows IME calls and field offsets match; imm32 entry points are resolved at runtime because this target does not link imm32.lib.
+// MS2-FUNCTIONAL: imm32 entry points are resolved at runtime because this target does not link imm32.lib.
+// @0x1423ce4f0
+void FUN_1423ce4f0(void* self)
+{
+    unsigned char* bytes = static_cast<unsigned char*>(self);
+    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    cx18_ImmNotifyIME(context, 0x15, 4, 0);
+    cx18_ImmNotifyIME(context, 0x15, 1, 0);
+    cx18_ImmNotifyIME(context, 0x15, 3, 0);
+    cx18_ImmReleaseContext(hwnd, context);
+    **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
+}
+
 // @0x1423d1c10
 void FUN_1423d1c10(void* self)
 {
