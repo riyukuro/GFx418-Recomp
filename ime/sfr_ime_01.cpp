@@ -3445,6 +3445,53 @@ bool FUN_1423d05a0(void* raw)
     return FUN_1423d43b0(raw);
 }
 
+// MS2-FUNCTIONAL: maps the executable's built-in language labels to registered layouts and dispatches the selected language.
+// @0x1423d7420
+unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long* packedName)
+{
+    if (!manager || !packedName || !*packedName) return 0;
+    const char* name = reinterpret_cast<const char*>((*packedName & ~3ull) + 0xc);
+    struct Language { const char* name; unsigned code; };
+    static const Language languages[] = {
+        { "English", 0x409 }, { "Chinese (Traditional)", 0x404 },
+        { "Chinese (Simplified)", 0x804 }, { "Korean", 0x412 }, { "Japanese", 0x411 }
+    };
+    unsigned language = 0;
+    for (const auto& item : languages)
+        if (_stricmp(name, item.name) == 0) { language = item.code; break; }
+
+    if (language) {
+        auto* records = reinterpret_cast<unsigned char*>(manager[0x17]);
+        auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
+        const unsigned count = static_cast<unsigned>(manager[0x1a]);
+        for (unsigned i = 0; records && i < count; ++i) {
+            auto* record = records + i * 0x30;
+            if (*reinterpret_cast<unsigned*>(record + 0x20) != language) continue;
+            if (states && (states[i] == 1 || states[i] == 2)) {
+                auto** vtable = reinterpret_cast<void**>(manager[0]);
+                const unsigned current = reinterpret_cast<unsigned(*)(void*)>(vtable[3])(manager);
+                *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = current;
+                auto* modes = reinterpret_cast<unsigned char*>(manager[0x12]);
+                const unsigned modeCount = static_cast<unsigned>(manager[0x13]);
+                for (unsigned mode = 0; modes && mode < modeCount; ++mode) {
+                    auto* item = modes + mode * 0x20;
+                    if (*reinterpret_cast<unsigned*>(item + 0x10) == current)
+                        reinterpret_cast<void(*)(void*, const char*)>(vtable[9])(
+                            manager, reinterpret_cast<const char*>(*reinterpret_cast<unsigned long long*>(item)));
+                }
+                const unsigned state = states[i];
+                const unsigned long long field = *reinterpret_cast<unsigned long long*>(record + (state == 1 ? 0x10 : 0x18));
+                reinterpret_cast<void(*)(void*, const char*)>(vtable[8])(manager,
+                    reinterpret_cast<const char*>((field & ~3ull) + 0xc));
+            }
+            FUN_1423ca920(nullptr, packedName);
+            return 1;
+        }
+    }
+    FUN_1423ca920(nullptr, packedName);
+    return 0;
+}
+
 // MS2-FUNCTIONAL: initializes the executable's input-window strings, owner link, callback table, and UTF-16 backing arrays.
 // @0x1423d18b0
 void* FUN_1423d18b0(void* raw, void* owner, void* userData)
