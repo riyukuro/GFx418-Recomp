@@ -1494,7 +1494,7 @@ namespace Classes { namespace fl
         {
             const ThunkInfo& ti = f[i];
             obj.AddDynamicSlotValuePair(obj.GetVM().GetStringManager().CreateConstString(ti.Name), Value(ti),
-                                        SlotInfo::aReadOnly);
+                                        SlotInfo::aDontEnum);
         }
     }
 

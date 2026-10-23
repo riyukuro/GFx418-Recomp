@@ -1741,13 +1741,6 @@ template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::add<MS2_SlotN
 // @0x1424d4dd0
 template void MS2_StringValueSet::add<MS2_StringValueNode::NodeRef>(void*, const MS2_StringValueNode::NodeRef&, UPInt);
 // String node -> index maps of the VM (HashLH<ASStringNode*, SInt64>): the nodes hash by their stored HashFlags.
-namespace GFx { namespace AS3 {
-class ASStringNodeHashFunc
-{
-public:
-    UPInt operator()(ASStringNode* const& data) const { return data->HashFlags; }
-};
-}} // namespace GFx::AS3
 typedef HashNode<GFx::ASStringNode*, SInt64, GFx::AS3::ASStringNodeHashFunc> MS2_StringIndexNode;
 typedef MS2_HashSetOf<MS2_StringIndexNode, AllocatorLH<GFx::ASStringNode*, GFx::AS3::StatMV_VM_SlotInfoHash_Mem>,
                       HashsetNodeEntry<MS2_StringIndexNode, MS2_StringIndexNode::NodeHashF> >::Type MS2_StringIndexSet;
@@ -2157,6 +2150,23 @@ ReadArgs::ReadArgs(VM& vm, UInt32 argCount)
         memcpy(dst, OpStack.GetTopPtr() - (UInt16)(argCount - 1), argCount * sizeof(Value));
         OpStack.Release(argCount);
     }
+}
+
+// @0x1424d99f0
+SlotInfo::SlotInfo(const SlotInfo& other)
+    : ReadOnly(other.ReadOnly)
+    , DontEnum(other.DontEnum)
+    , DontDelete(other.DontDelete)
+    , Internal(other.Internal)
+    , CppBinding(other.CppBinding)
+    , BindType(other.BindType)
+    , ValueInd(other.ValueInd)
+    , pNs(other.pNs)
+    , CTraits(other.CTraits)
+    , File(other.File)
+    , TI(other.TI)
+    , Name(other.Name)
+{
 }
 
 // The top argCount values of the tracer state's operand stack, copied into the argument slots and popped.

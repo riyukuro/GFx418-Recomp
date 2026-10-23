@@ -49,6 +49,8 @@ public:
     ASRefCountCollector&    GetGC() const               { return *GC; }
     RefCountCollector<StatMV_ActionScript_Mem>* GetGCPtr() const;
     MemoryHeap*             GetMemoryHeap() const       { return MHeap; }
+    // (appended, sfr19) remembers file (not owned) unless the VM is being destroyed. 0x1424eaf00
+    void AddVMAbcFileWeak(VMAbcFile* file);
     FlashUI&                GetUI() const               { return UI; }
     Pickable<Instances::fl::Array> MakeArray() const;    // 0x142516270
     Pickable<Instances::fl::Object> MakeObject() const;  // 0x142516600 (appended, sfr15)

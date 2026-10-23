@@ -1016,7 +1016,7 @@ namespace InstanceTraits { namespace fl
             UPInt index = 0;
             const SlotInfo* si = FindFixedSlot(_this.GetObject()->GetTraits(), name, vm.GetPublicNamespace(), index, _this.GetObject());
             if (si)
-                return result.SetBool(!((static_cast<UInt32>(si->Bits) >> 1) & 1));
+                return result.SetBool(!si->DontEnum);
             const AS3::Object::DynAttrsType* da = _this.GetObject()->GetDynamicAttrs();
             if (da)
             {

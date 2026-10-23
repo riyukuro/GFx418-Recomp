@@ -143,8 +143,8 @@ public:
     enum Attribute
     {
         aNone       = 0,
-        aDontEnum   = 1,
-        aReadOnly   = 2,
+        aReadOnly   = 1,
+        aDontEnum   = 2,    // (sfr19) was swapped with aReadOnly: AddDynamicSlotValuePair tests a == 2 for DontEnum
         aDontDelete = 4,
         aInternal   = 8
     };
@@ -161,15 +161,26 @@ public:
         BT_UInt,
         BT_Number,
         BT_String,
-        BT_Code,
+        BT_Code = 11,   // (sfr19) one past 4.x: VTable::AddMethod 0x1424e8ed0 tests Code/Get/Set as 0xb/0xc/0xd
         BT_Get,
         BT_Set,
         BT_GetSet,
         BT_ConstChar
     };
 
-    SInt32                                  Bits;       // +0x00 attribute and binding bit fields
-    SInt32                                  Padding01;  // +0x04
+    // (sfr19) out of line in the exe; both copy the bit fields one at a time.
+    SlotInfo(const SlotInfo& other);                // 0x1424d99f0
+    ~SlotInfo();                                    // 0x1424def30
+    SlotInfo& operator=(const SlotInfo& other);     // 0x1424e0b80
+
+    // +0x00 attribute and binding bit fields (sfr19: was one SInt32 Bits; the copies mask 1/2/4/8/0x10/0x3e0/0x7fffc00)
+    UInt32                                  ReadOnly:1;
+    UInt32                                  DontEnum:1;
+    UInt32                                  DontDelete:1;
+    UInt32                                  Internal:1;
+    UInt32                                  CppBinding:1;
+    SInt32                                  BindType:5;
+    SInt32                                  ValueInd:17;
     SPtr<const Instances::Namespace>    pNs;        // +0x08
     SPtr<const ClassTraits::Traits>         CTraits;    // +0x10
     SPtr<VMAbcFile>                         File;       // +0x18
@@ -191,11 +202,15 @@ public:
 class Slots
 {
 public:
-    // One table entry: the slot and the index of the previous slot with the same name.
+    // One table entry: the name, the index of the previous slot with the same name (-1: none) and the slot.
+    // 0x40 bytes (sfr19: Slots::Add 0x1424e6670 writes Key +0x00, Prev +0x08, Value +0x10).
     struct Pair
     {
-        SlotInfo    Value;
-        SPInt       Prev;
+        Pair(const SlotInfo& v, const Ptr<ASStringNode>& k) : Key(k), Prev(-1), Value(v) {}
+
+        Ptr<ASStringNode>   Key;
+        SPInt               Prev;
+        SlotInfo            Value;
     };
 
     typedef ArrayLH<Pair, StatMV_VM_SlotInfo_Mem>                                           SlotContainerType;
@@ -205,16 +220,52 @@ public:
     // (appended, sfr19) an empty table (inlined by the Traits ctor 0x1424daa20).
     Slots() : FirstOwnSlotNum(0), Parent(NULL) {}
 
+    // (appended, sfr19) appends slot v named k (chained to the previous slot of that name); its index counts the
+    // parent's slots (FirstOwnSlotNum). 0x1424e6670
+protected:
+    AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
+public:
+
     UPInt               FirstOwnSlotNum;    // +0x00
     const Slots*        Parent;             // +0x08
     SlotContainerType   VArray;             // +0x10
     SetType             Set;                // +0x28
 };
 
+// (appended, sfr19; moved from sfr_as3_15) hash functor of the string node -> index maps: the stored HashFlags.
+class ASStringNodeHashFunc
+{
+public:
+    UPInt operator()(ASStringNode* const& data) const { return data->HashFlags; }
+};
+
+// (appended, sfr19) a stand-alone named slot table: slots in order plus name -> last index. 0x28 bytes.
+class SlotContainerType
+{
+public:
+    typedef Slots::Pair                                                                     Pair;
+    typedef HashUncachedLH<ASStringNode*, SPInt, ASStringNodeHashFunc, StatMV_VM_SlotInfoHash_Mem> SetType;
+
+    // appends v named k, chained to the previous slot of that name. 0x1424e63b0
+    AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
+
+    UPInt                                           Size;       // +0x00
+    ArrayLH<Pair, StatMV_VM_SlotInfo_Mem>           VArray;     // +0x08
+    SetType                                         KVHashSet;  // +0x20
+};
+
 // Method closures of a traits object. 0x20 bytes (unverified).
 class VTable : public NewOverrideBase<StatMV_VM_VTable_Mem>
 {
 public:
+    // (appended, sfr19) method m (a method index: kInt) bound as dt; returns the index of its slot (the getter's
+    // for a get/set pair). 0x1424e8ed0
+    AbsoluteIndex AddMethod(const Value& m, SlotInfo::BindingType dt, const ASString& name);
+    // (appended, sfr19) records the name of method slot ind (debug bookkeeping). 0x1425283c0
+    void SetMethodName(AbsoluteIndex ind, SlotInfo::BindingType dt, const ASString& name);
+
+    Traits& GetTraits() const { return *pTraits; }
+
     Traits*                                 pTraits;    // +0x00
     ArrayLH<Value, StatMV_VM_VTable_Mem>    VTMethods;  // +0x08
 };
@@ -523,6 +574,8 @@ public:
     {
         // (appended, sfr15) lookup key from a bare name; equality is by name only.
         DynAttrsKey(const ASString& name) : Flags(0), Name(name) {}
+        // (appended, sfr19) with DoNotEnum (bit 0) and the other flags.
+        DynAttrsKey(const ASString& name, UInt32 flags) : Flags(flags), Name(name) {}
         bool operator==(const DynAttrsKey& other) const { return Name.GetNode() == other.Name.GetNode(); }
         void SetDoNotEnum(bool v) const { Flags = (Flags & ~1u) | (UInt32(-SInt32(v)) & 1u); }
 
@@ -636,6 +689,8 @@ public:
     Class* GetParentClass() const { return ParentClass; }
     // (appended, sfr15) the prototype object, made on first use (0x14250d4c0).
     Object& GetPrototype();
+    // (appended, sfr19) obj.constructor = this (not enumerable). 0x1424e6f90
+    void AddConstructor(Object& obj) const;
 
     // native methods
     // @0x142540ba0

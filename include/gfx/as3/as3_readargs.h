@@ -12,14 +12,56 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 class ValueStack
 {
 public:
+    // (appended, sfr19) one block of stack values: a header then PageSize values. 0x48 + (PageSize - 1) * 0x20 bytes.
+    struct Page
+    {
+        UInt16      ReservationNum;     // +0x00
+        UInt16      PageSize;           // +0x02 values in the page
+        Value*      pFirst;             // +0x08
+        Value*      pCurrent;           // +0x10
+        Page*       pNext;              // +0x18
+        Page*       pPrev;              // +0x20
+        Value       Values[1];          // +0x28
+    };
+
     Value* GetTopPtr() const { return pCurrent; }
     void   Release(UPInt n)  { pCurrent -= n; }
 
 private:
     ValueStack();
 
+    // (appended, sfr19) a new page of at least 64 values (global heap). 0x1424eb6b0
+    Page* AllocPage(UInt16 pageSize);
+
     UPInt  Unk00;               // +0x00
     Value* pCurrent;            // +0x08
+};
+
+// (appended, sfr19) the register files of the call frames: pages of values, each followed by the sizes of the
+// register sets reserved in it. Only what AllocPage touches is modeled.
+class ValueRegisterFile
+{
+public:
+    struct Page
+    {
+        UInt16      CurrPos;            // +0x00
+        UInt16      PageSize;           // +0x02 values in the page
+        UInt16      ReservedNum;        // +0x04
+        Value*      pCurrent;           // +0x08
+        Page*       pNext;              // +0x10
+        Page*       pPrev;              // +0x18
+        Value       Values[1];          // +0x20 then PageSize UInt16 reservation sizes
+    };
+
+private:
+    ValueRegisterFile();
+
+    // A new page of a multiple of 64 values (at least the largest so far; global heap). 0x1424eb640
+    Page* AllocPage(UInt16 pageSize);
+
+    UInt16      Unk00;                  // +0x00
+    UInt16      Unk02;                  // +0x02
+    UInt16      MaxAllocatedPageSize;   // +0x04
 };
 
 // 0x138 bytes.
