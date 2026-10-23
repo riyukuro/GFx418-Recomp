@@ -4094,6 +4094,42 @@ void FUN_1423ce730(void* raw, unsigned* outputLength)
     }
 }
 
+// MS2-FUNCTIONAL: removes the old input window and displays the active composition string with its caret geometry.
+// @0x1423ceb30
+void FUN_1423ceb30(void* raw)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    void* movie = *reinterpret_cast<void**>(self + 0xa8);
+    void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
+    void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
+    if (interfaceState) {
+        void* result = nullptr;
+        reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+            (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
+                interfaceState, "RemoveInputWindow", &result, nullptr, 0);
+    }
+    auto* composition = reinterpret_cast<Scaleform::String*>(self + 0xb0);
+    if (!composition->GetSize() || !interfaceState) return;
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    POINT caret{};
+    GetCaretPos(&caret);
+    ClientToScreen(hwnd, &caret);
+    Scaleform::GFx::Value args[4];
+    auto* values = reinterpret_cast<unsigned char*>(args);
+    *reinterpret_cast<unsigned*>(values + 8) = Scaleform::GFx::Value::VT_String;
+    *reinterpret_cast<const char**>(values + 0x10) = composition->ToCStr();
+    const double coordinates[3] = { static_cast<double>(caret.x), static_cast<double>(caret.y),
+                                    static_cast<double>(GetSystemMetrics(SM_CYSMICON)) };
+    for (unsigned i = 0; i < 3; ++i) {
+        *reinterpret_cast<unsigned*>(values + (i + 1) * 0x20 + 8) = Scaleform::GFx::Value::VT_Number;
+        *reinterpret_cast<double*>(values + (i + 1) * 0x20 + 0x10) = coordinates[i];
+    }
+    void* result = nullptr;
+    reinterpret_cast<void(*)(void*, const char*, void**, Scaleform::GFx::Value*, unsigned)>(
+        (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
+            interfaceState, "DisplayInputWindow", &result, args, 4);
+}
+
 // MS2-FUNCTIONAL: reuses the recovered candidate-window geometry bridge for the input-window reposition event.
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
