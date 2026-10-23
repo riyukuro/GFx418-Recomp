@@ -46,6 +46,7 @@
 // MS2-RANGE: 0x14292f740-0x14292f951 .text$mn
 // MS2-RANGE: 0x142930a10-0x142930c30 .text$mn
 // MS2-RANGE: 0x142934610-0x142934820 .text$mn
+// MS2-RANGE: 0x1429381f0-0x1429384e1 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -1091,6 +1092,21 @@ void MovieRoot::CreateStringW(GFx::Value* pvalue, const wchar_t* pstring)
     ASString     str  = penv->GetSC()->CreateString(pstring);
     pvalue->SetConvertStringW();
     ASValue2GFxValue(penv, Value(str), pvalue);
+}
+
+// @0x1429381f0
+void LoadVarsProto::DefaultOnData(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, LoadVars);
+    LoadVarsObject* pobj = static_cast<LoadVarsObject*>(fn.ThisPtr);
+    String src(fn.Arg(0).ToString(fn.Env).ToCStr());
+    ASString data = fn.Arg(0).ToString(fn.Env);
+    String   str(data.ToCStr());
+    bool         loaded = LoadVariables(fn.Env, pobj, str);
+    Environment* penv   = fn.Env;
+    penv->Push(loaded);
+    AsBroadcaster::BroadcastMessage(penv, pobj, penv->CreateConstString("onLoad"), 1, penv->GetTopIndex());
+    penv->Drop1();
 }
 
 // MS2-FUNCTIONAL regalloc: the exe loads the global context through r9, not rdx

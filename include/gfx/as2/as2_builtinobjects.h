@@ -399,6 +399,8 @@ public:
 
     // onData(src): decode src into the members and call onLoad (exe 0x1429381f0).
     static void DefaultOnData(const FnCall& fn);
+    // Decodes the url-encoded name=value pairs of data into members of pobj (exe 0x1429670e0).
+    static bool LoadVariables(Environment* penv, ObjectInterface* pobj, const String& data);
 };
 class MovieClipObject : public Object
 {

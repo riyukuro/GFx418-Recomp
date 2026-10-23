@@ -92,6 +92,15 @@ public:
             PushPage();
         Construct<T>(pCurrent, val);
     }
+    // Constructs the new top in place from val (no temporary element).
+    template<class S>
+    void PushAlt(const S& val)
+    {
+        pCurrent++;
+        if (pCurrent >= pPageEnd)
+            PushPage();
+        ConstructAlt<T>(pCurrent, val);
+    }
     void Pop1()
     {
         pCurrent->~T();
@@ -175,6 +184,9 @@ public:
     Value* Bottom(int offset) { return Stack.Bottom((unsigned)offset); }
     int    GetTopIndex() const { return (int)Stack.GetTopIndex(); }
     void   Push(const Value& val) { Stack.Push(val); }
+    // A value constructed in place on the stack from v (bool, number, string, object...).
+    template<class V>
+    void   Push(const V& v) { Stack.PushAlt(v); }
     void   Drop1() { Stack.Pop1(); }
     // Pops n values.
     void   Drop(int n)
