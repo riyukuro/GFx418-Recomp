@@ -2618,14 +2618,8 @@ IntervalTimer::~IntervalTimer()
 // MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
 // @0x1424d7e50
 IntervalTimer::IntervalTimer(const Value& function, unsigned delay, bool timeout)
-    : Function(function)
-    , CurrentCount(0)
-    , RepeatCount(0)
-    , Interval(UInt64(delay) * 1000)
-    , InvokeTime(0)
-    , Id(0)
-    , Active(true)
-    , Timeout(timeout)
+    : Function(function), CurrentCount(0), RepeatCount(0), Interval(UInt64(delay) * 1000), InvokeTime(0), Id(0)
+    , Active(true), Timeout(timeout)
 {
 }
 
