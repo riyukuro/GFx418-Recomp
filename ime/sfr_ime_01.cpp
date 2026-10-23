@@ -185,9 +185,11 @@ extern void FUN_1423d9690(void*, void*, unsigned long long);
 
 // MS2-FUNCTIONAL: DoAbc base destruction and scalar delete are modeled from our shared ExecuteTag declaration.
 // @0x1423dbbf0
-void* FUN_1423dbbf0(Scaleform::GFx::AS3::DoAbc* self, unsigned long long flags)
+void* FUN_1423dbbf0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
 {
-    self->~DoAbc();
+    Scaleform::GFx::AS3::AbcDataBuffer* abc = self->pAbc.GetPtr();
+    if (abc) abc->Release();
+    self->Scaleform::GFx::ExecuteTag::~ExecuteTag();
     if (flags & 1)
         ::operator delete(self);
     return self;
@@ -371,3 +373,4 @@ unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long l
 
 }}}
 
+// MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
