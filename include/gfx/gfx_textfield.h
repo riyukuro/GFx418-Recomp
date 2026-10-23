@@ -32,6 +32,7 @@ public:
 
     // (appended, sfr19) IME (AS3 IME manager, sfr_as3_20).
     bool IsReadOnly() const;                             // exe 0x1425b9b10
+    bool IsSelectable() const;                           // exe 0x1425b9b50 (sfr_as2_06)
     // The IME may write into it: not IME-disabled, not read-only, not a password field.
     bool IsIMEEnabled() const
     {

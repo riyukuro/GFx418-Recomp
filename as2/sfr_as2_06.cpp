@@ -123,9 +123,15 @@
 // MS2-RANGE: 0x1429620d0-0x1429621f0 .text$mn
 // MS2-RANGE: 0x142961b40-0x142961c40 .text$mn
 // MS2-RANGE: 0x142961c40-0x142961d40 .text$mn
+// MS2-RANGE: 0x14297d030-0x14297d080 .text$mn
+// MS2-RANGE: 0x142962310-0x1429623a0 .text$mn
+// MS2-RANGE: 0x14296aa90-0x14296ab10 .text$mn
+// MS2-RANGE: 0x14297d460-0x14297d4b0 .text$mn
+// MS2-RANGE: 0x1429659e0-0x142965a20 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
+#include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_keyobject.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_objectproto.h"
@@ -1337,6 +1343,63 @@ void GlobalContext::InitStandardMembers()
 {
     StandardMemberMap.Clear();
     AvmCharacter::InitStandardMembers(this);
+}
+
+// @0x14297d030
+void AvmCharacter::RemoveDisplayObject()
+{
+    InteractiveObject* pparent = pDispObj->GetParent();
+    if (!pparent)
+        return;
+    Sprite* psprite = pparent->IsSprite() ? static_cast<Sprite*>(pparent) : 0;
+    if (psprite)
+        psprite->RemoveDisplayObject(pDispObj->Depth, ResourceId(pDispObj->Id));
+}
+
+// @0x142962310
+bool AvmCharacter::InstanceOf(Environment* penv, const Object* prototype, bool inclInterfaces) const
+{
+    Ptr<Object> obj = GetASObject();
+    if (!obj)
+        return false;
+    return obj->InstanceOf(penv, prototype, inclInterfaces);
+}
+
+// @0x14296aa90
+void AvmSprite::OnAddedDisplayObject(InteractiveObject* ch, unsigned sessionId, bool placeObject)
+{
+    Sprite* psprite = ch->IsSprite() ? static_cast<Sprite*>(ch) : 0;
+    if (!placeObject)
+    {
+        GetAS2Root()->DoActionsForSession(sessionId);
+        if (psprite && psprite->HasEventHandler(EventId(EventId::Event_Load)))
+            psprite->Flags |= Sprite::Flags_OnLoadReqd;
+    }
+    else if (psprite)
+        psprite->Flags |= Sprite::Flags_OnLoadReqd;
+}
+
+// MS2-FUNCTIONAL the MovieRoot vftable is not modeled: DoActions is called directly (the exe goes through slot 7)
+// @0x14297d460
+bool AvmSprite::ReplaceChildCharacterOnLoad(InteractiveObject* poldChar, InteractiveObject* pnewChar)
+{
+    if (!ReplaceChildCharacter(poldChar, pnewChar))
+        return false;
+    pnewChar->OnEventLoad();
+    GetAS2Root()->MovieRoot::DoActions();
+    return true;
+}
+
+// @0x1429659e0
+bool AvmTextField::IsFocusEnabled(FocusMovedType fmt) const
+{
+    if (fmt == GFx_FocusMovedByMouse)
+    {
+        if (reinterpret_cast<TextField*>(pDispObj)->IsReadOnly() &&
+            !reinterpret_cast<TextField*>(pDispObj)->IsSelectable())
+            return false;
+    }
+    return true;
 }
 
 }}} // namespace Scaleform::GFx::AS2

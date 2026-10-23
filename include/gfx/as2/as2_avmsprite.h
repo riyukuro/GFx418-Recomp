@@ -145,6 +145,13 @@ public:
     static void SpriteCreateTextField(const FnCall& fn); // exe 0x142906040
     static void SpriteHitTest(const FnCall& fn); // exe 0x1429049b0
     static void SpriteAttachBitmap(const FnCall& fn); // exe 0x142905190
+
+    // (appended for sfr_as2_06)
+    // A child was put on the display list: its queued actions run unless it came from a place-object tag; a sprite
+    // child with an onLoad handler (or any placed sprite) then needs its load event (exe 0x14296aa90).
+    void OnAddedDisplayObject(InteractiveObject* ch, unsigned sessionId, bool placeObject);
+    // The replacement gets its load event and the queued actions run at once (exe 0x14297d460).
+    virtual bool ReplaceChildCharacterOnLoad(InteractiveObject* poldChar, InteractiveObject* pnewChar);
 };
 
 inline Sprite* ObjectInterface::ToSprite()

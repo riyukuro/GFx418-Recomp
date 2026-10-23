@@ -65,6 +65,10 @@ public:
 private:
     // Applies one substitution object (the idx-th of the call's argument) to the field (exe 0x14296f870, sfr_as2_06).
     void ProceedImageSubstitution(const FnCall& fn, int idx, const Value* pve);
+
+public:
+    // (appended for sfr_as2_06) A click gives no focus to a read-only field that cannot be selected (exe 0x1429659e0).
+    virtual bool IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const;
 };
 
 }}} // namespace Scaleform::GFx::AS2

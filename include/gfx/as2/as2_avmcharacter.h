@@ -115,6 +115,10 @@ public:
     static const MemberTableType MemberTable[];
     // Fills the global context's standard member map from the table (exe 0x142961b40).
     static void InitStandardMembers(GlobalContext* pgc);
+    // Takes the character off its parent sprite's display list (exe 0x14297d030).
+    void RemoveDisplayObject();
+    // The clip's AS object is an instance of prototype (exe 0x142962310).
+    virtual bool InstanceOf(Environment* penv, const Object* prototype, bool inclInterfaces = true) const;
 };
 
 // The script side of a character of an AS2 movie.
