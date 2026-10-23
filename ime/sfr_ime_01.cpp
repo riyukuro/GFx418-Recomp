@@ -5,6 +5,7 @@
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
 #include <windows.h>
 #include <imm.h>
+#include <oleauto.h>
 #include <cstdarg>
 #include <vector>
 #include "../include/kernel/sf_std.h"
@@ -126,6 +127,9 @@ extern "C" const unsigned long long DAT_14313b6b0;
 extern "C" const unsigned long long DAT_1431c4858;
 extern "C" const unsigned long long DAT_1431c4d28;
 extern "C" const unsigned long long DAT_14313b8d8;
+extern "C" const unsigned long long DAT_1431c4888;
+extern "C" const unsigned long long DAT_1431c51d8;
+extern "C" const unsigned long long DAT_1431c48f8;
 extern "C" const unsigned long long DAT_1431c4ef0;
 extern "C" void* DAT_143b15f60;
 extern "C" const void* DAT_14313bc60[];
@@ -2612,6 +2616,56 @@ void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
             vtable[0x78 / sizeof(void*)])(bridge, command, &result, nullptr, 0);
     }
+}
+
+// MS2-FUNCTIONAL: bridges the executable's IME COM property query through its two provider objects and VARIANT result.
+// @0x1423da940
+HRESULT FUN_1423da940(void*, IUnknown* source, void* value, unsigned selector, void* output)
+{
+    IUnknown* first = nullptr;
+    HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4888), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c51d8),
+        reinterpret_cast<void**>(&first));
+    if (FAILED(hr) || !first) return hr;
+    IUnknown* second = nullptr;
+    hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4878), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c51b8),
+        reinterpret_cast<void**>(&second));
+    if (FAILED(hr) || !second) {
+        first->Release();
+        return hr;
+    }
+    IUnknown* property = nullptr;
+    hr = source->QueryInterface(*reinterpret_cast<const IID*>(&DAT_1431c48f8),
+        reinterpret_cast<void**>(&property));
+    if (SUCCEEDED(hr) && property) {
+        VARIANT id;
+        VariantInit(&id);
+        auto** propertyVtable = *reinterpret_cast<void***>(property);
+        hr = reinterpret_cast<HRESULT(*)(void*, unsigned, void*, VARIANT*)>(propertyVtable[5])(
+            property, selector, value, &id);
+        if (SUCCEEDED(hr) && id.vt == VT_I4) {
+            auto** firstVtable = *reinterpret_cast<void***>(first);
+            hr = reinterpret_cast<HRESULT(*)(void*, unsigned, void*)>(firstVtable[0x78 / sizeof(void*)])(
+                first, static_cast<unsigned>(id.lVal), output);
+            if (SUCCEEDED(hr)) {
+                IUnknown* item = nullptr;
+                auto** secondVtable = *reinterpret_cast<void***>(second);
+                hr = reinterpret_cast<HRESULT(*)(void*, void*, IUnknown**, unsigned)>(secondVtable[5])(
+                    second, output, &item, 0);
+                if (SUCCEEDED(hr) && item) {
+                    auto** itemVtable = *reinterpret_cast<void***>(item);
+                    hr = reinterpret_cast<HRESULT(*)(void*, void*)>(itemVtable[5])(item, output);
+                    item->Release();
+                }
+            }
+        }
+        VariantClear(&id);
+        property->Release();
+    }
+    second->Release();
+    first->Release();
+    return hr;
 }
 
 // MS2-FUNCTIONAL: uses our AS3 memory context declaration to release its heap limit handler, owned references, and allocated storage.
