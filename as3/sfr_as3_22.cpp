@@ -1218,6 +1218,36 @@ void WriteValueRecord(const void* record, void* stream)
     }
 }
 
+// MS2-FUNCTIONAL: serializes the complete text record, including version-gated strings and 64-bit timing fields.
+// @0x142690480
+void WriteTextRecord(const void* record, void* stream, unsigned version)
+{
+    auto* src = static_cast<const unsigned char*>(record);
+    auto** vtable = *reinterpret_cast<void***>(stream);
+    auto write = [stream, vtable](const void* data, std::size_t size) {
+        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, data, size);
+    };
+    write(src + 0x10, 4);
+    if (version > 0x13)
+        write(src + 0x14, 4);
+    WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + 0x18));
+    if (version > 4)
+        WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + 0x20));
+    for (std::size_t offset : { std::size_t(0x28), std::size_t(0x30), std::size_t(0x38) })
+        WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + offset));
+    const unsigned count = *reinterpret_cast<const unsigned*>(src + 0x48);
+    write(&count, 4);
+    auto* strings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(src + 0x40));
+    for (unsigned i = 0; i < count; ++i)
+        WriteNarrowString(stream, strings + i);
+    for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64) })
+        write(src + offset, 4);
+    if (version > 9) {
+        write(src + 0x68, 8);
+        write(src + 0x70, 4);
+    }
+}
+
 // MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot.
 // @0x142745630
 void* FindAudioRequestEntry(void** set, const unsigned char* key)
