@@ -2932,6 +2932,14 @@ void VectorBase<Value>::PushBack(unsigned argc, const Value* argv, const ClassTr
 
 // Traits::GetConstructor, out of line in the exe (the InstanceTraits copy).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+#include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+// MultinameHash<ClassTraits::Traits*>::Get (sfr_as3_04)
+Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self,
+    const Scaleform::GFx::ASString& name, const Scaleform::GFx::AS3::Instances::Namespace& ns);
+// GlobalObject::AddFixedSlotValuePair (sfr_as3_03): a fixed slot name/ns of type ctr holding v; index receives it
+const void* FUN_142403d70(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
+    Scaleform::Pickable<const Scaleform::GFx::AS3::Instances::Namespace> ns, const Scaleform::GFx::AS3::ClassTraits::Traits* ctr,
+    const Scaleform::GFx::AS3::Value& v, Scaleform::UPInt& index);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3034,6 +3042,39 @@ Class& Vector::ApplyTypeArgs(unsigned argc, const Value* argv)
     if (&ctr == &vm.GetClassTraitsString())
         return vm.GetClassVectorString();
     return FUN_142508460(&Resolve2Vector(ctr).GetInstanceTraits());
+}
+
+// The class traits of Vector.<elem>: looked up by name ("Vector$" + the element's name) in the vector namespace,
+// else made and kept alive by the element's file, or for a builtin element class by a slot of the global object.
+// @0x142563380
+// MS2-FUNCTIONAL: the Vector name temporaries and the global slot arguments are made and released in another order
+ClassTraits::Traits& Vector::Resolve2Vector(const ClassTraits::Traits& elem)
+{
+    VM& vm = GetVM();
+    const ASString vname = GetClassTraits().GetName();
+    const ASString name = vname + "$" + elem.GetName();
+
+    ClassTraits::Traits** found = FUN_142414ac0(&vm.ClassTraitsSet, name, vm.GetVectorNamespace());
+    if (found && *found)
+        return **found;
+
+    SPtr<ClassTraits::Traits> tr = Pickable<ClassTraits::Traits>(
+        SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl_vec::Vector_object(vm, name, &elem));
+    VMAbcFile* file = elem.GetFilePtr();
+    if (file)
+    {
+        file->RegisterLoadedClass(tr);
+        vm.ClassTraitsSet.Entries.Add(TClassTraitsCache::Key(name, &vm.GetVectorNamespace()), tr.GetPtr());
+    }
+    else
+    {
+        UPInt index = 0;
+        Class& cl = FUN_142508460(&tr->GetInstanceTraits());
+        FUN_142403d70(vm.GlobalObject.GetPtr(), cl.GetClassTraits().GetName(),
+            Pickable<const Instances::Namespace>(&vm.GetVectorNamespace(), PickValue), &cl.GetClassTraits(),
+            Value(&cl), index);
+    }
+    return *tr;
 }
 
 // Vector.<T>(v): v itself when it is null/undefined or already a Vector.<T>, else a new Vector.<T> of v's

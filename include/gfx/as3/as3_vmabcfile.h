@@ -29,12 +29,16 @@ public:
     Instances::Namespace& GetInternedNamespace(UPInt ind);
     // The namespace set at constant pool index ind, made on first use (0x14250aff0).
     NamespaceSet& GetInternedNamespaceSet(UPInt ind);
+    // (appended, sfr19) keeps the class traits made for this file's classes (Vector.<T> of them) alive.
+    void RegisterLoadedClass(const SPtr<ClassTraits::Traits>& tr) { LoadedClasses.PushBack(tr); }
 
 private:
     VMAbcFile();
 
     VM*              pVM;               // +0x20
     const Abc::File* pFile;             // +0x28 (counted)
+    UPInt            Unk30[14];         // +0x30 (not modeled)
+    ArrayLH<SPtr<ClassTraits::Traits> > LoadedClasses;  // +0xa0 (appended, sfr19)
 };
 
 }}} // Scaleform::GFx::AS3

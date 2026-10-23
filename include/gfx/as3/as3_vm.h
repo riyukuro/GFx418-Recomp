@@ -10,6 +10,7 @@
 #define MS2_SF_GFX_AS3_VM_H
 
 #include "ms2/scaleform/include/gfx/as3/as3_obj.h"
+#include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -223,7 +224,7 @@ public:
     Value                                   ExceptionObj;       // +0x188
     ArrayLH<SPtr<Instances::fl::GlobalObject> > GlobalObjects;  // +0x1a8
     SPtr<VMAppDomain>                       SystemDomain;       // +0x1c0
-    SPtr<VMAppDomain>                       CurrentDomain;      // +0x1c8
+    TClassTraitsCache                       ClassTraitsSet;     // +0x1c8 class traits by {name, ns} (Resolve2Vector 0x142563380)
     SPtr<Instances::Namespace>          PublicNamespace;    // +0x1d0
     SPtr<Instances::Namespace>          AS3Namespace;       // +0x1d8
     SPtr<Instances::Namespace>          VectorNamespace;    // +0x1e0
