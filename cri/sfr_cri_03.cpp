@@ -55,6 +55,7 @@ void FUN_14004e2a0(void*);
 void FUN_140046784(void*);
 void* FUN_14004fe20(void*, CriUint32, CriUint32);
 void FUN_14003cae0(void*);
+CriSint32 FUN_14003cff0(void*);
 void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
 void* FUN_14003a1a0(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
@@ -1651,6 +1652,60 @@ void FUN_14003cdd0(void* handle)
     CriSint32 status = 0;
     memcpy(bytes + 8, &active, sizeof(active));
     memcpy(bytes + 0x18, &status, sizeof(status));
+}
+
+// MS2-FUNCTIONAL: advance VMPV input consumption and move the handle through decode and ready states.
+// @0x14003cca0
+void FUN_14003cca0(void* handle)
+{
+    CriUint8* bytes = (CriUint8*)handle;
+    CriSint32 state, open, ready;
+    memcpy(&state, bytes + 0x1c, sizeof(state));
+    memcpy(&open, bytes + 0x24, sizeof(open));
+    if (state == 1)
+    {
+        if (open == 1)
+            return;
+        FUN_14003cdd0(handle);
+        state = 0;
+        memcpy(bytes + 0x18, &state, sizeof(state));
+        memcpy(bytes + 0x1c, &state, sizeof(state));
+    }
+    memcpy(&state, bytes + 0x18, sizeof(state));
+    if (state == 1 || state == 2)
+        for (CriSint32 i = 0; i < 7; ++i)
+            FUN_14003cff0(handle);
+
+    memcpy(&state, bytes + 0x18, sizeof(state));
+    if (state == 1)
+    {
+        CriUint32 pictures;
+        memcpy(&pictures, bytes + 0x188, sizeof(pictures));
+        if (pictures >= 2)
+            state = 2;
+        else
+        {
+            memcpy(&ready, bytes + 0x20, sizeof(ready));
+            if (ready == 1)
+                state = 2;
+        }
+        memcpy(bytes + 0x18, &state, sizeof(state));
+    }
+    memcpy(&state, bytes + 0x18, sizeof(state));
+    memcpy(&ready, bytes + 0x20, sizeof(ready));
+    if (state == 2 && ready == 1)
+    {
+        CriUint32 consumed, buffered;
+        memcpy(&consumed, bytes + 0x18c, sizeof(consumed));
+        memcpy(&buffered, bytes + 400, sizeof(buffered));
+        CriUint32 additional;
+        memcpy(&additional, bytes + 0x1a4, sizeof(additional));
+        if (consumed <= buffered + additional)
+        {
+            state = 3;
+            memcpy(bytes + 0x18, &state, sizeof(state));
+        }
+    }
 }
 
 // MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
