@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <imm.h>
 #include "../include/kernel/sf_std.h"
+#include "../include/kernel/sf_memory.h"
 #include "../include/kernel/sf_string.h"
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_state.h"
@@ -109,6 +110,17 @@ void FUN_1423ca640(void* self, unsigned value)
     void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x70);
     void** vtable = *reinterpret_cast<void***>(child);
     reinterpret_cast<void(*)(void*)>(vtable[17])(child);
+}
+
+// MS2-FUNCTIONAL: the packed atomic pointer is decremented at the exe's +8 counter; its heap release is routed through our Memory facade.
+// @0x1423ca920
+unsigned long long FUN_1423ca920(void*, unsigned long long* packedPtr)
+{
+    volatile long* count = reinterpret_cast<volatile long*>((*packedPtr & ~3ULL) + sizeof(void*));
+    const long remaining = _InterlockedDecrement(count);
+    if (remaining == 0)
+        Memory::Free(reinterpret_cast<void*>(*packedPtr & ~3ULL));
+    return static_cast<unsigned long long>(remaining) & ~0xffULL;
 }
 
 // @0x1423ca660
