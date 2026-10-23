@@ -444,6 +444,21 @@ unsigned char FUN_1423ca8b0(void* object, String* value)
     return result;
 }
 
+// MS2-FUNCTIONAL: clears each executable-observed 0x28-byte hash node and releases the backing allocation.
+// @0x1423cdda0
+void FUN_1423cdda0(void** table)
+{
+    if (!*table) return;
+    auto* nodes = static_cast<unsigned char*>(*table);
+    const unsigned long long count = *reinterpret_cast<unsigned long long*>(nodes + 8) + 1;
+    for (unsigned long long index = 0; index < count; ++index) {
+        unsigned long long* state = reinterpret_cast<unsigned long long*>(nodes + index * 0x28 + 0x10);
+        if (*state != ~1ULL) *state = ~1ULL;
+    }
+    Memory::Free(nodes);
+    *table = 0;
+}
+
 // MS2-FUNCTIONAL: restores the executable's AS2/AS3 support vtable, runs shared base cleanup, and follows the 0x10 delete path.
 // @0x1423dbcb0
 void* FUN_1423dbcb0(unsigned long long* object, unsigned long long flags)
