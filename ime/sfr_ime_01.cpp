@@ -37,6 +37,7 @@ extern "C" void FUN_1423cde00();
 extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
+extern "C" const void* DAT_14313a228[];
 extern "C" void FUN_1423d9090(void*, unsigned long long, unsigned long long);
 
 struct HWND__;
@@ -254,6 +255,18 @@ void* FUN_1423dbba0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
     self->Scaleform::GFx::ExecuteTag::~ExecuteTag();
     if (flags & 1) ::operator delete(self);
     return self;
+}
+
+// MS2-FUNCTIONAL: constructs and assigns the executable-observed String member at +0x18; this anonymous base has no local class declaration.
+// @0x1423cdb60
+void* FUN_1423cdb60(unsigned long long* object, const char* text)
+{
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a228);
+    *reinterpret_cast<unsigned*>(object + 1) = 1;
+    String* value = reinterpret_cast<String*>(object + 3);
+    new (value) String();
+    *value = text;
+    return object;
 }
 
 // MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
