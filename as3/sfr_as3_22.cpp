@@ -45,6 +45,10 @@ MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
 extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
+extern "C" void FUN_14268aff0(void*, void*);
+extern "C" void FUN_14268a8e0(void*, void*);
+extern "C" void FUN_14268b3e0(void*, void*);
+extern "C" void FUN_14268ac40(void*, void*);
 
 static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t* source)
 {
@@ -1065,6 +1069,51 @@ insert_string:
         }
     }
     entry[1] = bucket;
+}
+
+void ResizeStrongPointerArrayB(void**, std::size_t);
+void FUN_14257dc30(void*);
+// MS2-FUNCTIONAL: intersects the scalar limits, adds unique tagged strings with retained references, and merges the four nested resource tables.
+// @0x14268b280
+void MergeMovieResourceTables(void* destination, void* source)
+{
+    auto* dst = static_cast<unsigned char*>(destination);
+    auto* src = static_cast<unsigned char*>(source);
+    const unsigned firstLimit = *reinterpret_cast<unsigned*>(dst + 0x14);
+    const unsigned otherFirst = *reinterpret_cast<unsigned*>(src + 0x14);
+    *reinterpret_cast<unsigned*>(dst + 0x14) = firstLimit < otherFirst ? firstLimit : otherFirst;
+    const unsigned secondLimit = *reinterpret_cast<unsigned*>(dst + 0x18);
+    const unsigned otherSecond = *reinterpret_cast<unsigned*>(src + 0x18);
+    *reinterpret_cast<unsigned*>(dst + 0x18) = secondLimit < otherSecond ? secondLimit : otherSecond;
+
+    auto** dstItems = *reinterpret_cast<std::uint64_t***>(dst + 0x40);
+    const std::size_t dstCount = *reinterpret_cast<std::size_t*>(dst + 0x48);
+    auto** srcItems = *reinterpret_cast<std::uint64_t***>(src + 0x40);
+    const std::size_t srcCount = *reinterpret_cast<std::size_t*>(src + 0x48);
+    for (std::size_t i = 0; i < srcCount; ++i) {
+        const std::uint64_t encoded = *reinterpret_cast<std::uint64_t*>(srcItems[i] + 0x10);
+        const char* candidate = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
+        bool duplicate = false;
+        for (std::size_t j = 0; j < dstCount; ++j) {
+            const std::uint64_t existing = *reinterpret_cast<std::uint64_t*>(dstItems[j] + 0x10);
+            const char* text = reinterpret_cast<const char*>((existing & ~std::uint64_t(3)) + 0x0c);
+            if (std::strcmp(candidate, text) == 0) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (!duplicate) {
+            auto** array = reinterpret_cast<void**>(dst + 0x40);
+            ResizeStrongPointerArrayB(array, *reinterpret_cast<std::size_t*>(dst + 0x48) + 1);
+            dstItems = *reinterpret_cast<std::uint64_t***>(dst + 0x40);
+            FUN_14257dc30(srcItems[i]);
+            dstItems[*reinterpret_cast<std::size_t*>(dst + 0x48) - 1] = srcItems[i];
+        }
+    }
+    FUN_14268aff0(*reinterpret_cast<void**>(dst + 0x58), *reinterpret_cast<void**>(src + 0x58));
+    FUN_14268a8e0(*reinterpret_cast<void**>(dst + 0x60), *reinterpret_cast<void**>(src + 0x60));
+    FUN_14268b3e0(*reinterpret_cast<void**>(dst + 0x68), *reinterpret_cast<void**>(src + 0x68));
+    FUN_14268ac40(*reinterpret_cast<void**>(dst + 0x70), *reinterpret_cast<void**>(src + 0x70));
 }
 
 // MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
