@@ -6,7 +6,6 @@
 // MS2-RANGE: 0x142498890-0x1424abbe0 .text$mn
 // MS2-RANGE: 0x1424ad4d0-0x1424ad870 .text$mn
 // MS2-PINS-BEGIN tplpin
-// MS2-PIN: ??_GInitStruct@String@Scaleform@@UEAAPEAXI@Z 0x1424aada0 ; unique
 // MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
@@ -2309,6 +2308,16 @@ template void HashSetBase<Ptr<Render::Font>, FixedSizeHash<Ptr<Render::Font> >, 
     ::add<Ptr<Render::Font> >(void*, const Ptr<Render::Font>&, UPInt);
 }
 
+using SOSharedObjectNode = Scaleform::HashNode<Scaleform::GFx::ASString,
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_net::SharedObject>,
+    Scaleform::GFx::ASStringHashFunctor>;
+// @0x14249c160
+template void Scaleform::HashSetBase<SOSharedObjectNode,
+    SOSharedObjectNode::NodeHashF, SOSharedObjectNode::NodeAltHashF,
+    Scaleform::AllocatorLH<Scaleform::GFx::ASString, 324>,
+    Scaleform::HashsetNodeEntry<SOSharedObjectNode, SOSharedObjectNode::NodeHashF>>::setRawCapacity(
+        void*, Scaleform::UPInt);
+
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0A@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c500
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$00_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c560
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$01_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c5c0
@@ -2632,3 +2641,4 @@ template void HashSetBase<Ptr<Render::Font>, FixedSizeHash<Ptr<Render::Font> >, 
 // MS2-PIN: ??$add@PEAVFont@Render@Scaleform@@@?$HashSetBase@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAXAEBQEAVFont@Render@1@_K@Z 0x1424a7f90 ; unique
 // MS2-PIN: ??$add@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@?$HashSetBase@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@AEAAXPEAXAEBV?$Ptr@VFont@Render@Scaleform@@@1@_K@Z 0x1424a8170 ; unique
 // MS2-PIN: ??0?$HashsetCachedEntry@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VFont@Render@Scaleform@@@Scaleform@@@2@@Scaleform@@QEAA@AEBV01@@Z 0x1424a8300 ; unique
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@V?$SPtr@VSharedObject@fl_net@Instances@AS3@GFx@Scaleform@@@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14249c160
