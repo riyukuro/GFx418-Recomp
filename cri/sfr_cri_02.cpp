@@ -107,6 +107,7 @@ void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value,
 void     FUN_140038e24(CriSint32 category, const char* message, CriSint32 value);
 void     FUN_140031140(void* player);
 void     FUN_140031290(void* player);
+CriBool  FUN_140031aa0(void* player);
 CriBool  FUN_1400314d0(void* player);
 CriSint32 FUN_140042d70(void* decoder, void* player);
 void     FUN_1400428e0(void* audioManager, void* player);
@@ -119,6 +120,7 @@ void     FUN_1400317b0(void* player);
 void     FUN_140034730(void* player);
 void     FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
 void     FUN_1400453c4(void* demux);
+void     FUN_1400458b8(void* demux);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
 void     FUN_140044ae0(void* decoder);
@@ -3613,6 +3615,29 @@ CriBool FUN_140034960(void* player)
     state->InputCount2 = 0;
     state->InternalFlags = 0;
     state->Status = 1;
+    return 1;
+}
+
+// MS2-FUNCTIONAL: reset the demux and its output stream after the player update completes.
+// @0x140031990
+CriBool FUN_140031990(void* player)
+{
+    if (FUN_140031aa0(player) != 1)
+        return 0;
+    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
+    CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)player;
+    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
+    struct MemoryInputView { CriUint8 Reserved[0xda0]; void* Input; };
+    FUN_140034330(player, queues->InputBuffer, queues->ReadBuffer, queues->HeaderBuffer);
+    FUN_1400453c4(state->Demux);
+    FUN_140046798(queues->ReadBuffer);
+    void* nextInput = ((ReadModeView*)player)->Mode == 0
+        ? queues->HeaderBuffer : ((MemoryInputView*)player)->Input;
+    FUN_140044fa8(state->Demux, nextInput);
+    FUN_140044fb0(state->Demux, 0, queues->ReadBuffer, 0, (CriUint32)-1);
+    FUN_140044fd8(state->Demux, 0);
+    FUN_140044f9c(state->Demux);
+    FUN_1400458b8(state->Demux);
     return 1;
 }
 
