@@ -1088,3 +1088,4 @@ unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long l
 }}}
 
 // MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
+// MS2-PIN: ??_7GFxIMEManagerWin32@IME@GFx@Scaleform@@6B@ 0x1431383e0
