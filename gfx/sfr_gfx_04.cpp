@@ -125,6 +125,9 @@ public:
 };
 
 extern "C" const void* const MS2_SF_ConstShapeNoStyles_vftable[]; // ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
+extern "C" const void* DAT_143149880[]; // Resource base vftable
+extern "C" const void* DAT_143183208[]; // StateBag base vftable
+extern "C" void FUN_14015b310(void*, unsigned long long);
 
 // The shape data without styles of the empty shape (GFx_ShapeSwf): the base with the exe's vtable.
 class ConstShapeNoStyles : public ShapeDataBase
@@ -144,6 +147,32 @@ Video::VideoCharacterDef::VideoCharacterDef()
 {}
 
 Video::VideoCharacterDef::~VideoCharacterDef() {}
+
+// MS2-FUNCTIONAL: reproduces the executable's Resource and StateBag base vptr resets and scalar-delete branches.
+// @0x1425ccf60
+void* FUN_1425ccf60(void* object, unsigned flags)
+{
+    *reinterpret_cast<const void***>(object) = DAT_143149880;
+    *reinterpret_cast<const void***>(static_cast<unsigned char*>(object) + 0x18) = DAT_143183208;
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x20);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: reproduces the executable's Resource base vptr reset and scalar-delete branches.
+// @0x1425cd140
+void* FUN_1425cd140(void* object, unsigned flags)
+{
+    *reinterpret_cast<const void***>(object) = DAT_143149880;
+    if (flags & 1) {
+        if (flags & 4) FUN_14015b310(object, 0x20);
+        else Memory::Free(object);
+    }
+    return object;
+}
+
 // Ids of the empty characters of every movie.
 enum
 {
@@ -2409,7 +2438,6 @@ bool MatchFileNames(const String& path1, const String& path2)
 }
 
 }} // namespace Scaleform::GFx
-// MS2-PIN: ?GetStats@ResourceReport@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z 0x1425d14b0
 // MS2-PIN: ??_GConstShapeNoStyles@GFx@Scaleform@@UEAAPEAXI@Z 0x1425ccac0
 // MS2-PIN: ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
 // Non-RTTI base and interface tables recovered from executable vptr stores.
