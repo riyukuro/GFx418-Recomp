@@ -1174,6 +1174,18 @@ namespace TR {
 // MS2-FUNCTIONAL: the executable calls ArrayDH<Value>::~ArrayDH out of line; this TU inlines that release sequence.
 // @0x1424dea90
 ReadArgs::~ReadArgs() = default;
+
+// MS2-FUNCTIONAL 0x1424ded40: releases ArgObject and the inherited multiname/string references; the compiler inlines the same member cleanup differently.
+// @0x1424ded40
+ReadMnObject::~ReadMnObject() {}
+
+// MS2-FUNCTIONAL 0x1424dedc0: releases ArgValue with Value's destructor; the compiler emits it as a leaf inline sequence.
+// @0x1424dedc0
+ReadValue::~ReadValue() {}
+
+// MS2-FUNCTIONAL 0x1424dee30: releases ArgObject before the ReadValueMn base and its ArgValue/multiname members; codegen differs.
+// @0x1424dee30
+ReadValueMnObject::~ReadValueMnObject() {}
 }
 
 // The base VM has no E4X implementation.
