@@ -1188,9 +1188,9 @@ PropRef::operator bool() const
 ReadArgs::~ReadArgs() = default;
 
 namespace TR {
-// MS2-FUNCTIONAL: the executable calls ArrayDH<Value>::~ArrayDH out of line; this TU inlines that release sequence.
+// MS2-FUNCTIONAL 0x1424dea90: releases the CallArgs values, eight FixedArgs, and the StackReader references in the same order; cl inlines their member destructors.
 // @0x1424dea90
-ReadArgs::~ReadArgs() = default;
+ReadArgs::~ReadArgs() {}
 
 // MS2-FUNCTIONAL 0x1424ded40: releases ArgObject and the inherited multiname/string references; the compiler inlines the same member cleanup differently.
 // @0x1424ded40
