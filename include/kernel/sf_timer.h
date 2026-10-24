@@ -18,6 +18,11 @@ public:
 
     // (appended for GFx Text_EditorKit, sfr_gfx_07) microseconds
     static UInt64 SF_STDCALL GetTicks();
+
+    // (appended, sfr24) milliseconds (0x1425e3610) and the raw performance counter (0x1425e3560); bodies in
+    // sfr_kernel_02g. The kernel tree's sf_timer.h declares the same.
+    static UInt32 SF_STDCALL GetTicksMs();
+    static UInt64 SF_STDCALL GetRawTicks();
 };
 
 } // namespace Scaleform
