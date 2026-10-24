@@ -5638,3 +5638,392 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-PIN: ??_7CheckTypeTF@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fb38
 // MS2-PIN: ??_7FunctionBase@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f8f8
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@UConstStringKey@fl@Instances@AS3@GFx@Scaleform@@PEBUClassInfo@456@VConstStringHashFn@23456@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@UConstStringKey@fl@Instances@AS3@GFx@Scaleform@@$0BEI@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UConstStringKey@fl@Instances@AS3@GFx@Scaleform@@PEBUClassInfo@456@VConstStringHashFn@23456@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14242a3a0
+
+// ---- The full-exe out-of-line members of this range: property accessors, empty MakeObject/prototypeSet bodies and
+// the small E4X/QName virtuals. ----
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The global escapeMultiByte() helper (sfr_as3_12).
+void escapeMultiByteInternal(VM& vm, ASString& result, const ASString& value);
+
+// The GC-object type name of a non-AS3 object.
+// @0x142414cb0
+template <>
+const char* RefCountBaseGC<StatMV_ActionScript_Mem>::GetAS3ObjectType() const
+{
+    return "<unknown>";
+}
+
+namespace Instances
+{
+    // @0x142415eb0
+    UInt32 FunctionBase::GetMaxParamNum() const
+    {
+        return 0;
+    }
+}
+
+namespace InstanceTraits
+{
+    // @0x142415ad0
+    unsigned Function::GetFixedMemSize() const
+    {
+        return sizeof(Instances::Function);
+    }
+
+    // @0x14241c030
+    void MethodInd::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c200
+    void Thunk::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c210
+    void ThunkFunction::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c220
+    void VTableInd::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+namespace fl
+{
+    // The primitive types have no object form: Value carries them.
+    // @0x14241be20
+    void Boolean::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c040
+    void Namespace::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c050
+    void Number::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c1f0
+    void String::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c330
+    void int_::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+
+    // @0x14241c340
+    void uint::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+}
+} // namespace InstanceTraits
+
+namespace Classes { namespace fl
+{
+    // @0x142428100
+    void XML::defaultSettings(SPtr<Instances::fl::Object>& result)
+    {
+        AS3defaultSettings(result);
+    }
+
+    // @0x142428880
+    void String::fromCharCode(Value& result, unsigned argc, const Value* argv)
+    {
+        AS3fromCharCode(result, argc, argv);
+    }
+}} // namespace Classes::fl
+
+namespace Instances { namespace fl
+{
+    // The index of this element in its parent's children.
+    // @0x1424152b0
+    CheckResult XMLElement::GetChildIndex(UPInt& ind) const
+    {
+        const XMLElement* parent = static_cast<const XMLElement*>(Parent.GetPtr());
+        if (parent == NULL)
+            return false;
+        const UPInt size = parent->Children.GetSize();
+        for (ind = 0; ind < size; ++ind)
+        {
+            if (parent->Children[ind].GetPtr() == this)
+                return true;
+        }
+        return false;
+    }
+
+    // @0x142415700
+    Instances::Namespace& XML::GetCurrNamespace() const
+    {
+        return GetVM().GetPublicNamespace();
+    }
+
+    // @0x142415fd0
+    const Instances::Namespace& XML::GetNamespace() const
+    {
+        return GetVM().GetPublicNamespace();
+    }
+
+    // @0x142415a40
+    void XMLList::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+    {
+        value.Assign(List[(UInt32)ind.Get()]);
+    }
+
+    // A QName enumerates two properties: uri and localName.
+    // @0x142416180
+    GlobalSlotIndex QName::GetNextDynPropIndex(GlobalSlotIndex ind) const
+    {
+        if (ind.Get() < 2)
+            return GlobalSlotIndex(ind.Get() + 1);
+        return GlobalSlotIndex(0);
+    }
+
+    // @0x142416630
+    void QName::GetNextPropertyValue(Value& value, GlobalSlotIndex ind)
+    {
+        switch (ind.Get())
+        {
+        case 1:
+            if (Ns)
+                value.Assign(Ns->GetUri());
+            else
+                value.SetNull();
+            break;
+        case 2:
+            value.Assign(LocalName);
+            break;
+        }
+    }
+
+    // A plain XML node enumerates one property: itself.
+    // @0x1424161a0
+    GlobalSlotIndex XML::GetNextDynPropIndex(GlobalSlotIndex ind) const
+    {
+        if (ind.Get() == 0)
+            return GlobalSlotIndex(1);
+        return GlobalSlotIndex(0);
+    }
+
+    // @0x1424161c0
+    GlobalSlotIndex XMLList::GetNextDynPropIndex(GlobalSlotIndex ind) const
+    {
+        if (ind.Get() < (UInt32)List.GetSize())
+            return GlobalSlotIndex(ind.Get() + 1);
+        return GlobalSlotIndex(0);
+    }
+
+    // @0x142425a20
+    void XML::ToString(StringBuffer& buf, SInt32 ident)
+    {
+        SF_UNUSED(ident);
+        buf.AppendString(Text.ToCStr(), Text.GetSize());
+    }
+
+    // @0x142425a40
+    void XMLAttr::ToString(StringBuffer& buf, SInt32 ident)
+    {
+        SF_UNUSED(ident);
+        buf.AppendString(Data.ToCStr(), Data.GetSize());
+    }
+
+    // @0x142425d00
+    void XML::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
+                          const NamespaceArray* usedNotDeclared)
+    {
+        SF_UNUSED3(ident, ancestorNamespaces, usedNotDeclared);
+        buf.AppendString(Text.ToCStr(), Text.GetSize());
+    }
+
+    // @0x142429f90
+    void XML::prototypeSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+    }
+
+    // @0x142429fa0
+    void XMLList::prototypeSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+    }
+
+    // ---- GlobalObjectCPP ----
+
+    // @0x142427bd0
+    void GlobalObjectCPP::clearInterval(const Value& result, UInt32 id)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieImpl()->ClearIntervalTimer(id);
+    }
+
+    // @0x142427bf0
+    void GlobalObjectCPP::clearTimeout(const Value& result, UInt32 id)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieImpl()->ClearIntervalTimer(id);
+    }
+
+    // @0x142428110
+    void GlobalObjectCPP::describeType(SPtr<Instances::fl::XML>& result, const Value& v)
+    {
+        GetVM().GetXMLSupport().DescribeType(GetVM(), result, v);
+    }
+
+    // @0x142428460
+    void GlobalObjectCPP::escapeMultiByte(ASString& result, const ASString& v)
+    {
+        escapeMultiByteInternal(GetVM(), result, v);
+    }
+
+    // @0x142428f30
+    void GlobalObjectCPP::isFinite(bool& result, Value::Number v)
+    {
+        result = !NumberUtil::IsNaNOrInfinity(v);
+    }
+
+    // @0x142428f60
+    void GlobalObjectCPP::isNaN(bool& result, Value::Number v)
+    {
+        result = NumberUtil::IsNaN(v);
+    }
+
+    // @0x142429dc0
+    void GlobalObjectCPP::print(Value& result, unsigned argc, const Value* argv)
+    {
+        trace(result, argc, argv);
+    }
+
+    // ---- RegExp, Error, Array ----
+
+    // The OptionFlags bits are the pcre options: caseless 1, multiline 2, dotall 4, extended 8.
+    // @0x142428130
+    void RegExp::dotallGet(bool& result)
+    {
+        result = ((OptionFlags >> 2) & 1) != 0;
+    }
+
+    // @0x142428490
+    void RegExp::extendedGet(bool& result)
+    {
+        result = ((OptionFlags >> 3) & 1) != 0;
+    }
+
+    // @0x142428da0
+    void RegExp::globalGet(bool& result)
+    {
+        result = IsGlobal;
+    }
+
+    // @0x142428e00
+    void RegExp::ignoreCaseGet(bool& result)
+    {
+        result = (OptionFlags & 1) != 0;
+    }
+
+    // @0x1424291b0
+    void RegExp::lastIndexGet(SInt32& result)
+    {
+        result = LastIndex;
+    }
+
+    // @0x1424291c0
+    void RegExp::lastIndexSet(const Value& result, SInt32 v)
+    {
+        SF_UNUSED(result);
+        LastIndex = v;
+    }
+
+    // @0x142429910
+    void RegExp::multilineGet(bool& result)
+    {
+        result = ((OptionFlags >> 1) & 1) != 0;
+    }
+
+    // @0x1424282e0
+    void Error::errorIDGet(SInt32& result)
+    {
+        result = ID;
+    }
+
+    // @0x142429480
+    void Array::lengthSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED(result);
+        SA.Resize(v);
+    }
+
+    // ---- Date properties: the local getters are the AS3get* methods; the setters change one field, the UTC ones
+    // with no time zone adjustment. ----
+
+    // @0x142427c30
+    void Date::dateGet(Value::Number& result) { AS3getDate(result); }
+    // @0x142427cd0
+    void Date::dayGet(Value::Number& result) { AS3getDay(result); }
+    // @0x142427ce0
+    void Date::dayUTCGet(Value::Number& result) { AS3getUTCDay(result); }
+    // @0x142428dc0
+    void Date::hoursGet(Value::Number& result) { AS3getHours(result); }
+    // @0x142428de0
+    void Date::hoursUTCGet(Value::Number& result) { AS3getUTCHours(result); }
+    // @0x142429630
+    void Date::millisecondsGet(Value::Number& result) { AS3getMilliseconds(result); }
+    // @0x142429820
+    void Date::minutesGet(Value::Number& result) { AS3getMinutes(result); }
+    // @0x142429850
+    void Date::minutesUTCGet(Value::Number& result) { AS3getUTCMinutes(result); }
+    // @0x142429870
+    void Date::monthGet(Value::Number& result) { AS3getMonth(result); }
+    // @0x14242a070
+    void Date::secondsGet(Value::Number& result) { AS3getSeconds(result); }
+    // @0x14242a0a0
+    void Date::secondsUTCGet(Value::Number& result) { AS3getUTCSeconds(result); }
+
+    // @0x142427c40
+    void Date::dateSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyDateArg(Date_Day, v, LocalTZA); }
+    // @0x142427cc0
+    void Date::dateUTCSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyDateArg(Date_Day, v, 0); }
+    // @0x142428a10
+    void Date::fullYearSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyDateArg(Date_Year, v, LocalTZA); }
+    // @0x142428a70
+    void Date::fullYearUTCSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyDateArg(Date_Year, v, 0); }
+    // @0x142429880
+    void Date::monthSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyDateArg(Date_Month, v, LocalTZA); }
+    // @0x142429900
+    void Date::monthUTCSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyDateArg(Date_Month, v, 0); }
+    // @0x142428dd0
+    void Date::hoursSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Hour, v, LocalTZA); }
+    // @0x142428df0
+    void Date::hoursUTCSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Hour, v, 0); }
+    // @0x142429830
+    void Date::minutesSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Minute, v, LocalTZA); }
+    // @0x142429860
+    void Date::minutesUTCSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Minute, v, 0); }
+    // @0x14242a080
+    void Date::secondsSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Second, v, LocalTZA); }
+    // @0x14242a0b0
+    void Date::secondsUTCSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Second, v, 0); }
+    // @0x142429640
+    void Date::millisecondsSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Ms, v, LocalTZA); }
+    // @0x1424296d0
+    void Date::millisecondsUTCSet(const Value& result, Value::Number v) { SF_UNUSED(result); applyTimeArg(Time_Ms, v, 0); }
+}} // namespace Instances::fl
+
+}}} // namespace Scaleform::GFx::AS3
