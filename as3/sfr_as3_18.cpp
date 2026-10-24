@@ -4644,7 +4644,7 @@ Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* se
 }
 
 // ArrayDataBase<UByte, AllocatorGH_POD<UByte, 2>>::Reserve (granularity 4).
-// MS2-FUNCTIONAL a free function: the symbol table binds the template's name to 0x142546350 (sfr_as3_20's claim)
+// MS2-FUNCTIONAL manually recovered from the executable: rounds capacity to four bytes and uses allocator tag 2.
 // @0x142522d10
 void FUN_142522d10(Scaleform::ArrayDataBase<Scaleform::UByte, Scaleform::AllocatorGH_POD<Scaleform::UByte, 2>,
                                             Scaleform::ArrayDefaultPolicy>* self,
@@ -7523,3 +7523,4 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7?$RefCountBaseNTS@USfr34_TextImageDesc@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7Sfr34_TextImageDesc@@6B@ 0x14317c9c0
+// MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorGH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142522d10

@@ -470,3 +470,4 @@ void ThreadedTaskManager::RequestShutdown()
 // MS2-PIN: ??_7TaskThreadInPool@GFx@Scaleform@@6BAcquireInterface@2@@ 0x143184ba0
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVTaskThreadInPool@GFx@Scaleform@@U?$AllocatorGH@PEAVTaskThreadInPool@GFx@Scaleform@@$01@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x142590ce0
