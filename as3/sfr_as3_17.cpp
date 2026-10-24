@@ -3636,6 +3636,34 @@ void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Mul
                                mn);
 }
 
+// E4X equality of two XML nodes: a text or attribute node against one with simple content compares their string
+// forms, anything else the nodes themselves.
+// @0x1424f9970
+CheckResult XMLSupportImpl::EqualsXML(bool& result, Instances::fl::XML& l, Instances::fl::XML& r) const
+{
+    typedef Instances::fl::XML XML;
+    const XML::Kind lk = l.GetKind();
+    const XML::Kind rk = r.GetKind();
+    if (((lk == XML::kText || lk == XML::kAttr) && r.HasSimpleContent()) ||
+        ((rk == XML::kText || rk == XML::kAttr) && l.HasSimpleContent()))
+    {
+        StringBuffer lbuf(Memory::GetGlobalHeap());
+        StringBuffer rbuf(Memory::GetGlobalHeap());
+        l.ToString(lbuf, 0);
+        r.ToString(rbuf, 0);
+        result = lbuf.GetSize() == rbuf.GetSize() && strncmp(lbuf.ToCStr(), rbuf.ToCStr(), lbuf.GetSize()) == 0;
+    }
+    else
+        result = l.EqualsInternal(r) == true3;
+    return true;
+}
+
+// @0x1424f9ae0
+CheckResult XMLSupportImpl::EqualsXMLList(bool& result, Instances::fl::XMLList& l, const Value& v) const
+{
+    return l.Equals(result, v);
+}
+
 // VM::ExecutePropertyUnsafe: calls the property prop_name of _this with argv; a null or undefined property is a
 // TypeError (#1009). False when the property is missing or its value could not be read, or the call threw.
 // MS2-FUNCTIONAL 0x1424ff910: PropRef::GetSlotValueUnsafe called out of line (the exe inlines its dispatch)
@@ -4858,6 +4886,39 @@ void VM::ExecuteInternalUnsafe(const Value& func, const Value& _this, Value& res
 }
 
 }}}
+
+// Calls the property name (public namespace; "@" marks an attribute) of self with argc arguments: a missing property
+// is a ReferenceError, an undefined/null one a TypeError.
+// MS2-FUNCTIONAL 0x1424ffc10: PropRef::GetSlotValueUnsafe and the Multiname ctor called out of line (the exe inlines them)
+// @0x1424ffc10
+void FUN_1424ffc10(Scaleform::UPInt self, Scaleform::UPInt name, Scaleform::UPInt result, int argc,
+                   const Scaleform::GFx::AS3::Value* argv)
+{
+    using namespace Scaleform::GFx::AS3;
+    Object* obj = reinterpret_cast<Object*>(self);
+    VM& vm = obj->GetVM();
+    const Value nameVal(*reinterpret_cast<const Scaleform::GFx::ASString*>(name));
+    const Multiname mn(vm.GetPublicNamespace(), nameVal);
+    PropRef prop;
+    Sfr33FindObjProperty(prop, vm, Value(obj), mn, 0);
+    if (!Sfr33PropFound(prop))
+    {
+        // eReadSealedError (1069): "Property %s not found on %s and there is no default value."
+        const VM::Error e(static_cast<VM::ErrorID>(1069), vm, nameVal, Value(obj));
+        FUN_14252ecb0(&vm, &e, &fl::ReferenceErrorCI);
+        return;
+    }
+    Value func;
+    if (!prop.GetSlotValueUnsafe(vm, func))
+        return;
+    if (func.IsNullOrUndefined())
+    {
+        const VM::Error e(VM::eConvertUndefinedToObjectError, vm);
+        FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+        return;
+    }
+    vm.ExecuteInternalUnsafe(func, Value(obj), *reinterpret_cast<Value*>(result), static_cast<unsigned>(argc), argv, false);
+}
 
 // Calls the method in slot ind of tr's VTable on _this with the result on the operand stack: a method body gets a
 // call frame for the interpreter, a thunk is called at once (its result pushed).
