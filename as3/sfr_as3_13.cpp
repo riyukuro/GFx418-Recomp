@@ -3259,6 +3259,595 @@ namespace Instances { namespace fl_text {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ---- full-exe fl_text / fl_ui accessors: display-side bodies of the exe called here, by their addresses ----
+void FUN_1425bbc10(void* ptf, Scaleform::UInt32 c);          // TextField::SetBackgroundColor
+void FUN_1425bbb90(void* ptf, bool b);                       // TextField::SetBackground
+void FUN_1425bbcd0(void* ptf, Scaleform::UInt32 c);          // TextField::SetBorderColor
+void FUN_1425bbc50(void* ptf, bool b);                       // TextField::SetBorder
+void FUN_1425bd630(void* ptf, Scaleform::UInt32 c);          // TextField::SetTextColor
+void FUN_1425bcf10(void* ptf, bool f);                       // TextField::SetSelectable
+void FUN_1425bcfc0(void* ptf, Scaleform::SPInt beginIndex, Scaleform::SPInt endIndex);  // TextField::SetSelection
+bool FUN_1425bce30(void* ptf, const Scaleform::GFx::ASString& restrStr);                 // TextField::SetRestrict
+void FUN_1425b7280(void* ptf);                               // TextField::ClearRestrict
+void FUN_142609630(void* pstyleManager);                     // Text::StyleManager::Clear
+void FUN_1425e2bb0(const void* psnap, Scaleform::UPInt start, Scaleform::UPInt end, bool selected);  // StaticTextSnapshotData::SetSelected
+void FUN_14250bad0(void* proot, Scaleform::GFx::ASString& result, Scaleform::UInt32 mouseIndex);     // MovieRoot::GetMouseCursorType
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ---- fl_text / fl_ui: accessors and stubs the exe keeps out of line ----
+namespace Classes { namespace fl_ui
+{
+    // @0x1424b9210
+    void Mouse::cursorGet(ASString& result)
+    {
+        FUN_14250bad0(static_cast<ASVM&>(GetVM()).GetMovieRoot(), result, 0);
+    }
+
+    // @0x1424b9230
+    void Mouse::cursorSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieRoot()->SetMouseCursorType(v, 0);
+    }
+
+    // @0x1424b9570
+    void Keyboard::isAccessible(bool& result)
+    {
+        result = false;
+    }
+}}
+
+namespace Instances { namespace fl_text
+{
+    // @0x1424af870
+    void TextFormat::alignSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        align.Assign(v);
+    }
+
+    // @0x1424af880
+    void TextField::alwaysShowSelectionGet(bool& result)
+    {
+        result = ((FieldFlags(DisplayTextField(this)) >> 9) & 1) != 0;
+    }
+
+    // @0x1424af8a0
+    void TextField::alwaysShowSelectionSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        UInt32& flags = FieldFlags(DisplayTextField(this));
+        if (v)
+            flags |= 0x200;
+        else
+            flags &= ~0x200u;
+    }
+
+    // @0x1424afd00
+    void TextField::backgroundColorGet(UInt32& result)
+    {
+        result = *(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x13c) & 0xffffff;
+    }
+
+    // @0x1424afd20
+    void TextField::backgroundColorSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED(result);
+        FUN_1425bbc10(DisplayTextField(this), v);
+    }
+
+    // @0x1424afd30
+    void TextField::backgroundGet(bool& result)
+    {
+        result = (*(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x13c) >> 24) != 0;
+    }
+
+    // @0x1424afd50
+    void TextField::backgroundSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        FUN_1425bbb90(DisplayTextField(this), v);
+    }
+
+    // @0x1424afd60
+    void TextFormat::blockIndentGet(Value& result)
+    {
+        result.Assign(blockIndent);
+    }
+
+    // @0x1424afd70
+    void TextFormat::blockIndentSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        blockIndent.Assign(v);
+    }
+
+    // @0x1424afd80
+    void TextFormat::boldGet(Value& result)
+    {
+        result.Assign(bold);
+    }
+
+    // @0x1424afda0
+    void TextFormat::boldSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        bold.Assign(v);
+    }
+
+    // @0x1424afdb0
+    void TextField::borderColorGet(UInt32& result)
+    {
+        result = *(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x138) & 0xffffff;
+    }
+
+    // @0x1424afdd0
+    void TextField::borderColorSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED(result);
+        FUN_1425bbcd0(DisplayTextField(this), v);
+    }
+
+    // @0x1424afde0
+    void TextField::borderGet(bool& result)
+    {
+        result = (*(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x138) >> 24) != 0;
+    }
+
+    // @0x1424afe00
+    void TextField::borderSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        FUN_1425bbc50(DisplayTextField(this), v);
+    }
+
+    // @0x1424afe40
+    void TextFormat::bulletGet(Value& result)
+    {
+        result.Assign(bullet);
+    }
+
+    // @0x1424afe50
+    void TextFormat::bulletSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        bullet.Assign(v);
+    }
+
+    // @0x1424afea0
+    void StyleSheet::clear(const Value& result)
+    {
+        SF_UNUSED(result);
+        FUN_142609630(&CSS);
+    }
+
+    // @0x1424afeb0
+    void TextFormat::colorGet(Value& result)
+    {
+        result.Assign(color);
+    }
+
+    // @0x1424afed0
+    void TextFormat::colorSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        color.Assign(v);
+    }
+
+    // @0x1424afee0
+    void TextField::condenseWhiteGet(bool& result)
+    {
+        result = ((FieldFlags(DisplayTextField(this)) >> 4) & 1) != 0;
+    }
+
+    // @0x1424aff00
+    void TextField::condenseWhiteSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        UInt32& flags = FieldFlags(DisplayTextField(this));
+        if (v)
+            flags |= 0x10;
+        else
+            flags &= ~0x10u;
+    }
+
+    // @0x1424b0230
+    void TextField::displayAsPasswordGet(bool& result)
+    {
+        result = ((FieldFlags(DisplayTextField(this)) >> 2) & 1) != 0;
+    }
+
+    // @0x1424b0250
+    void TextField::displayAsPasswordSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        UInt32 flags = FieldFlags(ptf);
+        if ((((flags >> 2) & 1) != 0) != v)
+        {
+            if (v)
+                flags |= 4;
+            else
+                flags &= ~4u;
+            void* pdoc = DocViewOf(ptf);
+            FieldFlags(ptf) = flags;
+            // The view's password mode, and its reformat request.
+            if (v)
+                ViewFlags(pdoc) |= 0x10;
+            else
+                ViewFlags(pdoc) &= ~0x10;
+            *((UByte*)DocViewOf(ptf) + 0x14b) |= 2;
+        }
+        FUN_1425bc060(ptf);
+    }
+
+    // @0x1424b02b0
+    void TextField::embedFontsGet(bool& result)
+    {
+        result = (ViewFlags(DocViewOf(DisplayTextField(this))) & 0x20) == 0;
+    }
+
+    // @0x1424b02d0
+    void TextField::embedFontsSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        UByte& flags = ViewFlags(DocViewOf(DisplayTextField(this)));
+        if (v)
+            flags &= ~0x20;
+        else
+            flags |= 0x20;
+    }
+
+    // @0x1424b09b0
+    void TextFormat::fontSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        font.Assign(v);
+    }
+
+    // @0x1424b2fd0
+    void TextField::htmlTextSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        FieldFlags(ptf) |= 2u;
+        FUN_1425bd9a0(ptf, v.ToCStr(), true, true);
+    }
+
+    // @0x1424b2ff0
+    void TextFormat::indentGet(Value& result)
+    {
+        result.Assign(indent);
+    }
+
+    // @0x1424b3010
+    void TextFormat::indentSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        indent.Assign(v);
+    }
+
+    // @0x1424b3020
+    void TextFormat::italicGet(Value& result)
+    {
+        result.Assign(italic);
+    }
+
+    // @0x1424b3040
+    void TextFormat::italicSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        italic.Assign(v);
+    }
+
+    // @0x1424b3050
+    void TextFormat::kerningGet(Value& result)
+    {
+        result.Assign(kerning);
+    }
+
+    // @0x1424b3070
+    void TextFormat::kerningSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        kerning.Assign(v);
+    }
+
+    // @0x1424b3080
+    void TextFormat::leadingGet(Value& result)
+    {
+        result.Assign(leading);
+    }
+
+    // @0x1424b30a0
+    void TextFormat::leadingSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        leading.Assign(v);
+    }
+
+    // @0x1424b30b0
+    void TextFormat::leftMarginGet(Value& result)
+    {
+        result.Assign(leftMargin);
+    }
+
+    // @0x1424b30d0
+    void TextFormat::leftMarginSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        leftMargin.Assign(v);
+    }
+
+    // @0x1424b3110
+    void TextFormat::letterSpacingGet(Value& result)
+    {
+        result.Assign(letterSpacing);
+    }
+
+    // @0x1424b3130
+    void TextFormat::letterSpacingSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        letterSpacing.Assign(v);
+    }
+
+    // @0x1424b3140
+    void TextField::maxCharsGet(SInt32& result)
+    {
+        // The view's character limit (+0xc8), 0 when unlimited.
+        result = 0;
+        SInt32 maxChars = *(SInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0xc8);
+        if (maxChars)
+            result = maxChars;
+    }
+
+    // @0x1424b3170
+    void TextField::maxCharsSet(const Value& result, SInt32 v)
+    {
+        SF_UNUSED(result);
+        if (v >= 0)
+            *(SInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0xc8) = v;
+    }
+
+    // @0x1424b3200
+    void TextField::mouseWheelEnabledGet(bool& result)
+    {
+        result = ((FieldFlags(DisplayTextField(this)) >> 7) & 1) != 0;
+    }
+
+    // @0x1424b3220
+    void TextField::mouseWheelEnabledSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        UInt32& flags = FieldFlags(DisplayTextField(this));
+        if (v)
+            flags |= 0x80;
+        else
+            flags &= ~0x80u;
+    }
+
+    // @0x1424b3250
+    void TextField::multilineGet(bool& result)
+    {
+        result = (ViewFlags(DocViewOf(DisplayTextField(this))) & 4) != 0;
+    }
+
+    // @0x1424b3f20
+    void TextField::restrictSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        if (v.GetNode() == v.GetManager()->GetNullStringNode())
+            FUN_1425b7280(ptf);
+        else
+            FUN_1425bce30(ptf, v);
+    }
+
+    // @0x1424b3f40
+    void TextFormat::rightMarginGet(Value& result)
+    {
+        result.Assign(rightMargin);
+    }
+
+    // @0x1424b3f60
+    void TextFormat::rightMarginSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        rightMargin.Assign(v);
+    }
+
+    // @0x1424b4090
+    void TextField::selectableSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        FUN_1425bcf10(DisplayTextField(this), v);
+    }
+
+    // @0x1424b4360
+    void TextSnapshot::setSelected(const Value& result, SInt32 v1, SInt32 v2, bool v3)
+    {
+        SF_UNUSED(result);
+        if (v2 <= v1)
+            v2 = v1 + 1;
+        FUN_1425e2bb0(&SnapshotData, (SPInt)v1, (SPInt)v2, v3);
+    }
+
+    // @0x1424b4390
+    void TextField::setSelection(const Value& result, SInt32 v1, SInt32 v2)
+    {
+        SF_UNUSED(result);
+        FUN_1425bcfc0(DisplayTextField(this), (SPInt)v1, (SPInt)v2);
+    }
+
+    // @0x1424b46c0
+    void TextFormat::sizeGet(Value& result)
+    {
+        result.Assign(size);
+    }
+
+    // @0x1424b46e0
+    void TextFormat::sizeSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        size.Assign(v);
+    }
+
+    // @0x1424b4cc0
+    void TextFormat::targetSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        target.Assign(v);
+    }
+
+    // @0x1424b4cf0
+    void TextField::textColorSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED(result);
+        FUN_1425bd630(DisplayTextField(this), v);
+    }
+
+    // @0x1424b5300
+    void TextFormat::underlineGet(Value& result)
+    {
+        result.Assign(underline);
+    }
+
+    // @0x1424b5320
+    void TextFormat::underlineSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED(result);
+        underline.Assign(v);
+    }
+
+    // @0x1424b5390
+    void TextFormat::urlSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        url.Assign(v);
+    }
+
+    // @0x1424b53a0
+    void TextField::useRichTextClipboardGet(bool& result)
+    {
+        result = ((FieldFlags(DisplayTextField(this)) >> 8) & 1) != 0;
+    }
+
+    // @0x1424b53c0
+    void TextField::useRichTextClipboardSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        void* ptf = DisplayTextField(this);
+        UInt32 flags = FieldFlags(ptf);
+        if (v)
+            flags |= 0x100;
+        else
+            flags &= ~0x100u;
+        void* pdoc = DocViewOf(ptf);
+        FieldFlags(ptf) = flags;
+        // The view's editor kit (+0xd8) keeps its own rich-clipboard flag.
+        void* pkit = *(void**)((UByte*)pdoc + 0xd8);
+        if (pkit)
+        {
+            if ((flags >> 8) & 1)
+                *(UInt16*)((UByte*)pkit + 0xa0) |= 4;
+            else
+                *(UInt16*)((UByte*)pkit + 0xa0) &= 0xfffb;
+        }
+    }
+
+    // @0x1424b5420
+    void TextField::wordWrapGet(bool& result)
+    {
+        result = (ViewFlags(DocViewOf(DisplayTextField(this))) & 8) != 0;
+    }
+
+    // Not implemented in this build: a warning, nothing else.
+    // @0x1424aff20
+    void TextField::contextMenuGet(SPtr<Instances::fl_display::NativeMenu>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::TextField::contextMenuGet() is not implemented\n");
+    }
+
+    // @0x1424b2e40
+    void TextField::gridFitTypeGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TextField::gridFitTypeGet() is not implemented\n");
+    }
+
+    // @0x1424b2e60
+    void TextField::gridFitTypeSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TextField::gridFitTypeSet() is not implemented\n");
+    }
+
+    // @0x1424b4680
+    void TextField::sharpnessGet(Value::Number& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TextField::sharpnessGet() is not implemented\n");
+    }
+
+    // @0x1424b46a0
+    void TextField::sharpnessSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TextField::sharpnessSet() is not implemented\n");
+    }
+
+    // @0x1424b4f20
+    void TextField::thicknessGet(Value::Number& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TextField::thicknessGet() is not implemented\n");
+    }
+
+    // @0x1424b4f40
+    void TextField::thicknessSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TextField::thicknessSet() is not implemented\n");
+    }
+}}
+
+namespace Instances { namespace fl_ui
+{
+    // Not implemented in this build: a warning, nothing else.
+    // @0x1424b9190
+    void ContextMenu::builtInItemsSet(const Value& result, Instances::fl_ui::ContextMenuBuiltInItems* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::ContextMenu::builtInItemsSet() is not implemented\n");
+    }
+
+    // @0x1424b91f0
+    void ContextMenu::clone(SPtr<Instances::fl_display::NativeMenu>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::ContextMenu::clone() is not implemented\n");
+    }
+
+    // @0x1424b9300
+    void ContextMenu::customItemsSet(const Value& result, Instances::fl::Array* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::ContextMenu::customItemsSet() is not implemented\n");
+    }
+
+    // @0x1424b93e0
+    void ContextMenu::hideBuiltInItems(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::ContextMenu::hideBuiltInItems() is not implemented\n");
+    }
+}}
+
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ?Func@?$ThunkFunc1@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5730
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$00VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5830
 // MS2-PIN: ?Func@?$ThunkFunc0@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$01$$CBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b58a0
