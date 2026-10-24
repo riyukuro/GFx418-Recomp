@@ -1090,10 +1090,17 @@ namespace TR {
 ReadArgs::~ReadArgs() = default;
 }
 
+// The base VM has no E4X implementation.
+// @0x1424e6980
+bool XMLSupport::Add(Value&, Object&, Object&) const
+{
+    return false;
+}
+
 // E4X addition flattens XML and XMLList operands into a newly allocated XMLList.
 // MS2-FUNCTIONAL: preserves the exe's XML/XMLList type checks, list allocation, and flattened append behavior; helper calls change codegen.
 // @0x1424e6990
-bool XMLSupport::Add(Value& result, Object& l, Object& r) const
+bool XMLSupportImpl::Add(Value& result, Object& l, Object& r) const
 {
     const bool leftXML = IsXMLObject(&l);
     const bool leftList = IsXMLListObject(&l);
@@ -1152,6 +1159,5 @@ template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>::operator=(
     const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&);
 
-// XMLSupport's slot 10 points at the actual Add entry at +0x10; the harvested row at 0x1424e6980 is the preceding entry.
-// MS2-PIN: ?Add@XMLSupport@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
+// MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990

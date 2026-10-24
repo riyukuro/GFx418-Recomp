@@ -383,6 +383,8 @@ public:
     XMLSupportImpl(VM& vm);     // 0x1424dc160
     virtual ~XMLSupportImpl();                                                                          // 0x1424e4190
     virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // 0x142504520
+    // E4X-enabled VM override of the base no-op.
+    virtual bool Add(Value& result, Object& l, Object& r) const;                                        // 0x1424e6990
 
 private:
     VM*                         pVM;            // +0x28
