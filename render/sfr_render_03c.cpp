@@ -3,6 +3,7 @@
 // container's cache node creation.
 // MS2-UNIT: sfr_render_03c
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14261b310-0x14261b450 .text$mn
 // MS2-RANGE: 0x14261b450-0x14261e1c0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
