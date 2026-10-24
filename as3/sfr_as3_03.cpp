@@ -3132,12 +3132,14 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     CheckResult Array::DeleteProperty(const Multiname& prop_name)
     {
         UInt32 ind;
-        if (!GetArrayInd(prop_name, ind))
-            return Object::DeleteProperty(prop_name);
-        if (ind >= SA.GetSize())
-            return false;
-        SA.RemoveMultipleAt(ind, 1);
-        return true;
+        if (GetArrayInd(prop_name, ind))
+        {
+            if (ind >= SA.GetSize())
+                return false;
+            SA.RemoveMultipleAt(ind, 1);
+            return true;
+        }
+        return Object::DeleteProperty(prop_name);
     }
 }}}}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {

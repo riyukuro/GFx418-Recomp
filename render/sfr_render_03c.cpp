@@ -320,17 +320,18 @@ bool TreeNode::setThisAsMaskOwner(NodeData* thisData, TreeNode* node)
 }
 
 // @0x14261df70
-// MS2-FUNCTIONAL: block layout: exe jumps to a shared epilogue
 bool TreeNode::removeThisAsMaskOwner(const NodeData* thisData)
 {
     const MaskNodeState* state = thisData->GetState<MaskNodeState>();
-    if (!state)
-        return false;
-    NodeData* maskData = state->GetNode()->GetWritableData(Change_IsMask);
-    state->GetNode()->SetParent(0);
-    maskData->Flags &= ~NF_MaskNode;
-    maskData->States.RemoveState(State_Internal_MaskOwner);
-    return true;
+    if (state)
+    {
+        NodeData* maskData = state->GetNode()->GetWritableData(Change_IsMask);
+        state->GetNode()->SetParent(0);
+        maskData->Flags &= ~NF_MaskNode;
+        maskData->States.RemoveState(State_Internal_MaskOwner);
+        return true;
+    }
+    return false;
 }
 
 // @0x14261d3e0
