@@ -73,6 +73,11 @@ public:
     virtual void Execute(DisplayObjContainer* m);
 
     unsigned ImportIndex; // +8 index into the binding's import source movies
+
+    // (appended, sfr33) the ImportAssets loader's tag (vftable 0x14318a370; sfr_gfx_04x)
+    GFxInitImportActions() : ImportIndex(0) {}
+    // exe 0x1425c8b80
+    virtual bool IsInitImportActionsTag() const;
 };
 
 class LoadProcess : public LoaderTask, public LogBase<LoadProcess>
@@ -295,6 +300,8 @@ public:
         ++ASInitActionTagsNum;
     }
     unsigned GetASInitActionTagsNum() const { return ASInitActionTagsNum; }
+    // (appended, sfr33) the InitActions of an import: run first, not counted
+    void     AddInitImportAction(ExecuteTag* ptag) { InitActionTags.PushBack(ptag); }
 
     // (appended, sfr_gfx_04x) the file of the tag stream at its read position (exe 0x1425c8b50)
     File* GetUnderlyingFile();

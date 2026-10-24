@@ -131,6 +131,8 @@ struct ImageFileInfo : public ResourceFileInfo
     unsigned Use;          // +0x2c Resource::ResourceUse
     String   ExportName;   // +0x30
 
+    // (appended, sfr33) Use is Resource::Use_Bitmap (sfr_gfx_04x)
+    ImageFileInfo() : TargetWidth(0), TargetHeight(0), Use(1) {}
     ImageFileInfo(const ImageFileInfo& other) : ResourceFileInfo(other)
     {
         TargetWidth  = other.TargetWidth;
