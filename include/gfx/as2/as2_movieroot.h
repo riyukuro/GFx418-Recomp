@@ -235,6 +235,11 @@ public:
 
     StringManager* GetStringManager() { return &BuiltinsMgr; }
 
+    // A SetVariable value waiting for its target (as2_stickyvarnode.h).
+    struct StickyVarNode;
+    // Keeps val under the path until the target exists; a path without a base goes to _level0 (exe 0x1429306a0).
+    void AddStickyVariable(const ASString& path, const Value& val, SetVarTypeArg setType);
+
     // The number of a "<n>" or "_level<n>" name (the word case-insensitive unless asked), *ptail set past the
     // digits; -1 if it is neither (exe 0x14296e790).
     static int ParseLevelName(const char* pname, const char** ptail, bool caseSensitive);

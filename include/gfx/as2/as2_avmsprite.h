@@ -164,6 +164,9 @@ public:
     bool RemoveCharacter(DisplayObjectBase* ch);
     // A clip event handler, or a method of the event's name on the clip object or the prototype (exe 0x14295d4f0).
     virtual bool HasEventHandler(const EventId& id) const;
+    // (appended for sfr_as2_04) An enabled clip that is not a level movie, whose clip object or first movie clip prototype
+    // has button handlers (exe 0x14292e050).
+    virtual bool ActsAsButton() const;
 };
 
 inline Sprite* ObjectInterface::ToSprite()
