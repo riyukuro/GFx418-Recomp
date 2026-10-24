@@ -164,6 +164,9 @@ public:
     // (sfr24) operand stack pops: drop the top n values; take the top value out.
     void  PopOp(UPInt n);                   // 0x14251ccc0
     Value PopOpValue();                     // 0x14251cd30
+    // (sfr24) the operand stack top (or register ind) becomes a value of type tr, null or not as nt says.
+    void ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType nt);                          // 0x1424f1e50
+    void ConvertRegisterTo(AbsoluteIndex ind, InstanceTraits::Traits& tr, Value::TraceNullType nt); // 0x1424f1ed0
 
 private:
     State();

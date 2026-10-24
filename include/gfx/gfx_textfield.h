@@ -11,12 +11,14 @@
 #include "ms2/scaleform/include/gfx/gfx_stream.h"
 #include "ms2/scaleform/include/render/render_color.h"
 
+namespace Scaleform { class Range; }   // (appended, sfr34) kernel/sf_range.h
+
 namespace Scaleform { namespace Render { namespace Text { class DocView; } }
 namespace GFx {
 
 class FontResource;
 class LoadProcess;
-namespace Text { class StyleManager; }   // (appended, sfr24)
+namespace Text { class StyleManager; class EditorKit; }   // (appended, sfr24)
 
 // The edit text definition, as the DefineEditText tag gives it (a struct in 4.1.18, as the TextField constructor's
 // mangled name has it). Bodies: GFx_TextFieldDef (sfr_gfx_01c); vftable 0x143184748.
@@ -163,6 +165,15 @@ public:
         Link_rollover,
         Link_rollout
     };
+
+    // (appended, sfr24) what the AS3 TextField natives call (sfr_as3_13 / 15 / 19).
+    struct CSSHolderBase;                                    // the style sheet (CSS) data
+    UInt32 GetTextColor32() const;                           // exe 0x1425b9360
+    void   SetCSSData(CSSHolderBase* pcssData);              // exe 0x1425bbd10
+    void   UpdateUrlStyles();                                // exe 0x1425bec30
+    Ptr<Text::EditorKit> CreateEditorKit();                  // exe 0x1425b7840
+    void   RemoveIdImageDescAssoc(const char* idStr);        // exe 0x1425bb680
+    void   ClearIdImageDescAssoc();                          // exe 0x1425b7220
 
 private:
     UByte Unrecovered[0x148];
