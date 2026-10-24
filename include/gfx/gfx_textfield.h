@@ -185,6 +185,8 @@ public:
     void   AddIdImageDescAssoc(const char* idStr, Render::Text::ImageDesc* pdesc);  // exe 0x1425b65e0
     // (appended, sfr24) the display info's position in the text rectangle's space.
     Render::PointF TransformToTextRectSpace(const GFx::Value::DisplayInfo& info) const;      // exe 0x1425be970
+    // (appended, sfr22) the flags word at +0xfc, writable (html 0x2, the display-info-set 0x2000).
+    UInt32& FlagsRef() { return *reinterpret_cast<UInt32*>(Unrecovered + 0xfc); }
 
 private:
     UByte Unrecovered[0x148];

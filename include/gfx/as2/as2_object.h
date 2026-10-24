@@ -241,6 +241,10 @@ public:
     // SetMemberRaw with a constant string name (exe 0x1400054b0).
     bool SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val,
                            const PropFlags& flags = PropFlags());
+
+    // (appended for sfr_as2_07f)
+    // Replaces the user data the host attached (GFx::Value::SetUserData; exe 0x14298cb60).
+    void SetUserData(Movie* pmovieView, ASUserData* puserData, bool isdobj);
 };
 
 // The user data of an object and the movie it was set from. 0x10 bytes.
@@ -249,6 +253,9 @@ class ObjectInterface::UserDataHolder : public NewOverrideBase<StatMV_ActionScri
 public:
     Movie*      pMovieView; // +0x00
     ASUserData* pUserData;  // +0x08
+
+    // (appended for sfr_as2_07f)
+    UserDataHolder(Movie* pmovieView, ASUserData* puserData) : pMovieView(pmovieView), pUserData(puserData) {}
 
     // Drops the weak reference of the user data and tells it that the object is gone.
     void NotifyDestroy(ObjectInterface* pthis) const
