@@ -535,6 +535,11 @@ protected:
     // (0x1425115f0; name ours).
     void CopyParentTraits();
 
+private:
+    // (appended, sfr24) private in the exe (A-mangled): the scope stack entries from baseSSInd on, stored as the
+    // scope the class's methods run in. 0x14252cad0
+    void StoreScopeStack(UPInt baseSSInd, const ValueArrayDH& ss);
+
 public:
     AbsoluteIndex           FirstOwnSlotInd;        // +0x50
     UPInt                   FixedValueSlotNumber;   // +0x58
@@ -972,6 +977,21 @@ CheckResult GetStrNumber(ASStringNode* str, Value::Number& result);
 // The array index a name spells, if it is one (0x142507390).
 CheckResult GetArrayInd(const Multiname& prop_name, UInt32& ind);
 
+// (appended, sfr24) what a property is looked up for.
+enum FindPropAttr { FindGet, FindSet, FindCall };
+// (appended, sfr24) property mn of value (an object's own slots and dynamic values, else its traits). 0x142501b00
+void FindObjProperty(PropRef& result, VM& vm, const Value& value, const Multiname& mn, FindPropAttr attr = FindGet);
+// (appended, sfr24) calls property mn of _this with the arguments into result. 0x1424ff910
+CheckResult ExecutePropertyUnsafe(VM& vm, const Multiname& mn, const Value& _this, Value& result, unsigned argc,
+                                  const Value* argv);
+// (appended, sfr24) property mn of obj as the parent of ot sees it (super.x). 0x14250ef80
+CheckResult GetSuperProperty(VM& vm, const Traits* ot, Value& result, const Value& obj, const Multiname& mn,
+                             SlotInfo::ValTarget vt = SlotInfo::valGet);
+// (appended, sfr24) the class traits of a native class's parent, resolved by name. 0x142525ca0
+const ClassTraits::Traits* RetrieveParentClassTraits(VM& vm, const ClassInfo& ci);
+// (appended, sfr24) whether the namespace uri starts with "scaleform.gfx". 0x142514cd0
+bool IsScaleformGFx(const Instances::Namespace& ns);
+
 // ==== instances ======================================================================================================
 
 namespace Instances
@@ -1023,6 +1043,8 @@ namespace Instances
         // (appended, sfr22) copies prefix, uri, kind and factory (E4X deep copies of in-scope namespaces).
         // (inline in as3_obj_core.h, which completes NamespaceInstanceFactory)
         Namespace& operator=(const Namespace& other);
+        // (appended, sfr24) the uri from v: a QName's namespace uri ("" without one), else v as a string. 0x142423c10
+        void SetUri(const Value& v);
 
     protected:
         SPInt                           Kind:4;         // +0x20

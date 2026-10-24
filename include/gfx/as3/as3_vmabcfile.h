@@ -10,6 +10,9 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+class CallFrame;                                    // (appended, sfr24) as3_callframe.h
+namespace InstanceTraits { class Function; }        // (appended, sfr24) obj/as3_obj_fl.h
+
 // A set of namespaces a multiname is qualified with. 0x38 bytes, vftable 0x14317b058.
 class NamespaceSet : public GASRefCountBase
 {
@@ -73,6 +76,12 @@ public:
     void RegisterLoadedClass(const SPtr<ClassTraits::Traits>& tr) { LoadedClasses.PushBack(tr); }
     // (appended, sfr34) the exception handlers of method body mbi_ind.
     const Abc::MethodBodyInfo::Exception& GetException(SInt32 mbi_ind) const { return Exceptions[mbi_ind]; }
+    // (appended, sfr24) the word code of method body mbi_ind, traced from its byte code on first use (a Tracer on
+    // the VM heap; it emits the code unless the VM's flag at +0x180 is set). 0x14250c860
+    const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& GetOpCode(SInt32 mbi_ind, const CallFrame& cf);
+    // (appended, sfr24) the traits of the functions of method method_ind run in script gos, made on first use.
+    // 0x14250a250
+    InstanceTraits::Function& GetFunctionInstanceTraits(Instances::fl::GlobalObjectScript& gos, UInt32 method_ind);
 
     // (appended, sfr19) registers itself with the VM unless the VM is being destroyed. 0x1424dbb30
     VMAbcFile(VM& vm, const Ptr<Abc::File>& file);

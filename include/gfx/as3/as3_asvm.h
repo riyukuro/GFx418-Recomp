@@ -342,6 +342,9 @@ public:
     GFx::DisplayObject* CreateStage(MovieDefImpl* pdefImpl);
     // (appended, sfr24) counts pdefImpl in the loaded-movie-def hash (+0x6e8): +1 if listed, else added with 1. 0x1424e8e20
     void AddLoadedMovieDef(MovieDefImpl* pdefImpl);
+    // (appended, sfr24) a container not yet on the play list is added to it (and the optimized list updated).
+    // 0x1424e9380
+    void AddScriptableMovieClip(DisplayObjContainer* pspr);
 protected:
     // (appended, sfr19) the mouseCursorEvent name of a MouseCursorEvent cursor type. 0x14250bb10
     void GetMouseCursorTypeString(ASString& str, unsigned cursorType) const;
