@@ -1267,6 +1267,7 @@ void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObje
 }
 
 // The VM and call-frame code keeps this array destructor out of line in the executable.
+// MS2-FUNCTIONAL 0x1424dc870: destroys each Multiname and releases the same AllocatorLH buffer; cl emits a longer inline cleanup sequence.
 // @0x1424dc870
 template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Multiname,
                                   Scaleform::AllocatorLH<Scaleform::GFx::AS3::Multiname, 2>,
