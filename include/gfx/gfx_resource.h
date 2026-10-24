@@ -674,6 +674,28 @@ public:
     bool      IsIndex() const        { return PType == RP_Index; }
     unsigned  GetBindIndex() const   { return BindIndex; }
     Resource* GetResourcePtr() const { return (PType == RP_Resource) ? GetResource() : 0; }
+
+    // (appended for the font texture tables, sfr_gfx_08j) a held resource; copies hold one more reference
+    ResourcePtr(C* p) : PType(RP_Resource), pResource(p)
+    {
+        if (p)
+            GetResource()->AddRef();
+    }
+    ResourcePtr(const ResourcePtr& src) : PType(src.PType), pResource(src.pResource)
+    {
+        if (PType == RP_Resource && pResource)
+            GetResource()->AddRef();
+    }
+    ResourcePtr& operator=(const ResourcePtr& src)
+    {
+        if (src.PType == RP_Resource && src.pResource)
+            src.GetResource()->AddRef();
+        if (PType == RP_Resource && pResource)
+            GetResource()->Release();
+        PType     = src.PType;
+        pResource = src.pResource;
+        return *this;
+    }
 };
 
 }} // namespace Scaleform::GFx

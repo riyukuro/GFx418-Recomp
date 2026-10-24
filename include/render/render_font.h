@@ -177,6 +177,14 @@ public:
             calcLowerUpperTop(log);
         return (UpperCaseTop <= 0) ? 0 : UpperCaseTop;
     }
+
+    // (appended for GFx FontDataBound, sfr_gfx_08j) copies the metrics and flags; the copy has a reference count of
+    // its own and no cache handle yet
+    Font(const Font& f)
+        : RefCountBase<Font, StatRender_Font_Mem>(), Ascent(f.Ascent), Descent(f.Descent), Leading(f.Leading),
+          Flags(f.Flags), LowerCaseTop(f.LowerCaseTop), UpperCaseTop(f.UpperCaseTop)
+    {
+    }
 };
 
 }} // namespace Scaleform::Render
