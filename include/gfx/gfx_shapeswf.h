@@ -86,6 +86,7 @@ public:
 
 protected:
     friend class ShapeSwfReader;
+    friend class MorphCharacterDef;
 
     const UByte* Paths; // +0x10 path records in the path allocator
     UByte        Flags; // +0x18
@@ -113,6 +114,8 @@ class ConstShapeWithStyles : public ShapeDataBase
 {
 public:
     ConstShapeWithStyles() : Styles(0), FillStylesNum(0), StrokeStylesNum(0) {}
+    explicit ConstShapeWithStyles(EmptyShape)
+        : ShapeDataBase(Empty_Shape), Styles(0), FillStylesNum(0), StrokeStylesNum(0) {}
     ConstShapeWithStyles(const ConstShapeWithStyles& o); // exe 0x142658ea0
     virtual ~ConstShapeWithStyles();                    // exe 0x142659d50
 
