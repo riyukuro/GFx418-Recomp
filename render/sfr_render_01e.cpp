@@ -206,7 +206,7 @@ void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
     U* table = *self;
     if (!table)
         FUN_142592a10(self, ctx, 8);
-    else if (table[1] * 4 + 4 < table[0] * 5)
+    else if (table[0] * 5 > table[1] * 4 + 4)
         FUN_142592a10(self, ctx, table[1] * 2 + 2);
     U* value = RawField<U*>(ref, 8);
     ClassAdd<AssignRef>(self, *RawField<void**>(ref, 0), value[0], (void*)value[1], ref, hash);

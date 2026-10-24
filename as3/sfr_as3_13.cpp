@@ -1241,16 +1241,19 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b0df0
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // written from the exe's control flow
     void TextField::getCharIndexAtPoint(SInt32& result, Value::Number x, Value::Number y)
     {
         UPInt pos = (UPInt)FUN_142612240(DocViewOf(DisplayTextField(this)), (float)(x * TwipsPerPixel),
                                          (float)(y * TwipsPerPixel));
-        result = (pos == SF_MAX_UPINT) ? -1 : (SInt32)pos;
+        SInt32 index = -1;
+        if (pos != SF_MAX_UPINT)
+            index = (SInt32)pos;
+        result = index;
     }
 
     // @0x1424b0e40
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // written from the exe's control flow
     void TextField::getFirstCharInParagraph(SInt32& result, SInt32 charIndex)
     {
         if (charIndex < 0)
@@ -1259,20 +1262,26 @@ namespace Instances { namespace fl_text
             return;
         }
         UPInt pos = (UPInt)FUN_142612af0(DocViewOf(DisplayTextField(this)), (unsigned)charIndex);
-        result = (pos == SF_MAX_UPINT) ? -1 : (SInt32)pos;
+        SInt32 index = -1;
+        if (pos != SF_MAX_UPINT)
+            index = (SInt32)pos;
+        result = index;
     }
 
     // @0x1424b0ef0
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // written from the exe's control flow
     void TextField::getLineIndexAtPoint(SInt32& result, Value::Number x, Value::Number y)
     {
         unsigned line = FUN_142612bd0(DocViewOf(DisplayTextField(this)), (float)(x * TwipsPerPixel),
                                       (float)(y * TwipsPerPixel));
-        result = (line == ~0u) ? -1 : (SInt32)line;
+        SInt32 index = -1;
+        if (line != ~0u)
+            index = (SInt32)line;
+        result = index;
     }
 
     // @0x1424b0f40
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // written from the exe's control flow
     void TextField::getLineIndexOfChar(SInt32& result, SInt32 charIndex)
     {
         if (charIndex < 0)
@@ -1281,11 +1290,14 @@ namespace Instances { namespace fl_text
             return;
         }
         unsigned line = FUN_142612c50(DocViewOf(DisplayTextField(this)), (unsigned)charIndex);
-        result = (line == ~0u) ? -1 : (SInt32)line;
+        SInt32 index = -1;
+        if (line != ~0u)
+            index = (SInt32)line;
+        result = index;
     }
 
     // @0x1424b0f90
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // written from the exe's control flow
     void TextField::getLineLength(SInt32& result, SInt32 lineIndex)
     {
         if (lineIndex < 0)
@@ -1294,11 +1306,14 @@ namespace Instances { namespace fl_text
             return;
         }
         UPInt len = (UPInt)FUN_142612cb0(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex, NULL);
-        result = (len == SF_MAX_UPINT) ? -1 : (SInt32)len;
+        SInt32 index = -1;
+        if (len != SF_MAX_UPINT)
+            index = (SInt32)len;
+        result = index;
     }
 
     // @0x1424b1330
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // written from the exe's control flow
     void TextField::getLineOffset(SInt32& result, SInt32 lineIndex)
     {
         if (lineIndex < 0)
@@ -1307,7 +1322,10 @@ namespace Instances { namespace fl_text
             return;
         }
         UPInt pos = (UPInt)FUN_142612e80(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex);
-        result = (pos == SF_MAX_UPINT) ? -1 : (SInt32)pos;
+        SInt32 index = -1;
+        if (pos != SF_MAX_UPINT)
+            index = (SInt32)pos;
+        result = index;
     }
 
     // @0x1424b0c00
