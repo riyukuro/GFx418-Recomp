@@ -1402,6 +1402,30 @@ void FUN_1424dcb40(void* self)
         name->ReleaseNode();
 }
 
+// MS2-FUNCTIONAL: preserves the tagged Value refcount release and zeroing behavior; branch/frame lowering differs.
+// @0x1424dd460
+void FUN_1424dd460(void* self)
+{
+    auto* value = static_cast<Scaleform::UInt32*>(self);
+    if ((*value & 0x1f) < 10)
+        return;
+    if ((*value >> 9) & 1)
+    {
+        auto* refs = *reinterpret_cast<int**>(value + 2);
+        --*refs;
+        if (*refs == 0)
+        {
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, refs);
+        }
+        *value &= 0xfffffde0;
+        for (unsigned i = 2; i != 8; ++i)
+            value[i] = 0;
+        return;
+    }
+    FUN_142521f00(value);
+}
+
 namespace Scaleform {
 using SfrCx18DisplayObjectArray = ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy>;
 using SfrCx18DisplayObjectList = AutoPtr<SfrCx18DisplayObjectArray>;
