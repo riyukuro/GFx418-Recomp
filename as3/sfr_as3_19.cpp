@@ -974,6 +974,93 @@ void VM::ThrowURIError(const Error& e) { FUN_14252ecb0(this, &e, &fl::URIErrorCI
 // @0x14252f210
 void VM::ThrowVerifyError(const Error& e) { FUN_14252ecb0(this, &e, &fl::VerifyErrorCI); }
 
+// ---- Small vftable-slot functions of the exe's .rdata (data_rdata_sf_b references them by FUN_<va>) ----
+
+// Sets the "dirty" flag of the movie behind the object's owner.
+// @0x1425262d0
+void FUN_1425262d0(char* self) { *(*reinterpret_cast<char**>(*reinterpret_cast<char**>(self + 0x40) + 0x20) + 0xb0) = 1; }
+// Hands a GFx::Value to MovieRoot::GFxValue2ASValue with the object's own Value slot as the output.
+// @0x142527390
+void FUN_142527390(char* self, const void* gfxValue) { FUN_1425048d0(reinterpret_cast<UPInt>(self), gfxValue, reinterpret_cast<Value*>(self + 0x58)); }
+// @0x1425282c0
+void FUN_1425282c0(void*) {}
+// Raises or lowers a nesting counter of the movie behind the object's owner.
+// @0x14252e530
+void FUN_14252e530(char* self, bool enter)
+{
+    UInt8& n = *reinterpret_cast<UInt8*>(*reinterpret_cast<char**>(*reinterpret_cast<char**>(self + 0x40) + 0x20) + 0xb1);
+    n = enter ? UInt8(n + 1) : UInt8(n - 1);
+}
+
+// Interface casts of a multiply-inherited class (null stays null) with their 0x30 / 0x40 adjustor thunks.
+// @0x14252f220
+void* FUN_14252f220(char* p) { return p ? p + 0x40 : nullptr; }
+// @0x14252f230
+void* FUN_14252f230(char* p) { return FUN_14252f220(p - 0x30); }
+// @0x14252f23c
+void* FUN_14252f23c(char* p) { return FUN_14252f220(p - 0x40); }
+// @0x14252f290
+UPInt FUN_14252f290(void*) { return 0; }
+// @0x14252f294
+UPInt FUN_14252f294(char* p) { return FUN_14252f290(p - 0x30); }
+// @0x14252f2a0
+UPInt FUN_14252f2a0(char* p) { return FUN_14252f290(p - 0x40); }
+// @0x14252f2b0
+UPInt FUN_14252f2b0(void*) { return 0; }
+// @0x14252f2b4
+UPInt FUN_14252f2b4(char* p) { return FUN_14252f2b0(p - 0x30); }
+// @0x14252f2c0
+UPInt FUN_14252f2c0(char* p) { return FUN_14252f2b0(p - 0x40); }
+// @0x14252f300
+UPInt FUN_14252f300(void*) { return 0; }
+// @0x14252f304
+UPInt FUN_14252f304(char* p) { return FUN_14252f300(p - 0x30); }
+// @0x14252f310
+UPInt FUN_14252f310(char* p) { return FUN_14252f300(p - 0x40); }
+// @0x14252f320
+void* FUN_14252f320(char* p) { return p ? p + 0x30 : nullptr; }
+// @0x14252f330
+void* FUN_14252f330(char* p) { return FUN_14252f320(p - 0x30); }
+// @0x14252f33c
+void* FUN_14252f33c(char* p) { return FUN_14252f320(p - 0x40); }
+// @0x14252f3b0
+void* FUN_14252f3b0(char* p) { return p ? p + 0x30 : nullptr; }
+// @0x14252f3c0
+void* FUN_14252f3c0(char* p) { return FUN_14252f3b0(p - 0x30); }
+// @0x14252f3cc
+void* FUN_14252f3cc(char* p) { return FUN_14252f3b0(p - 0x40); }
+// @0x14252f3e0
+UPInt FUN_14252f3e0(void*) { return 0; }
+// @0x14252f3e4
+UPInt FUN_14252f3e4(char* p) { return FUN_14252f3e0(p - 0x30); }
+// @0x14252f3f0
+UPInt FUN_14252f3f0(char* p) { return FUN_14252f3e0(p - 0x40); }
+// @0x14252f440
+UPInt FUN_14252f440(void*) { return 0; }
+// @0x14252f444
+UPInt FUN_14252f444(char* p) { return FUN_14252f440(p - 0x30); }
+// @0x14252f450
+UPInt FUN_14252f450(char* p) { return FUN_14252f440(p - 0x40); }
+// @0x14252f460
+UPInt FUN_14252f460(void*) { return 0; }
+// @0x14252f464
+UPInt FUN_14252f464(char* p) { return FUN_14252f460(p - 0x30); }
+// @0x14252f470
+UPInt FUN_14252f470(char* p) { return FUN_14252f460(p - 0x40); }
+// @0x14252f4c0
+void* FUN_14252f4c0(char* p) { return p ? p + 0x40 : nullptr; }
+// @0x14252f4d0
+void* FUN_14252f4d0(char* p) { return FUN_14252f4c0(p - 0x30); }
+// @0x14252f4dc
+void* FUN_14252f4dc(char* p) { return FUN_14252f4c0(p - 0x40); }
+
+// @0x142530fb0
+void FUN_142530fb0(void*) {}
+// @0x1425310d0
+bool FUN_1425310d0(void*) { return false; }
+// @0x142531250
+void FUN_142531250(void*) {}
+
 // ---- Interpreter opcode handlers (free functions; the VM is the first argument as in the exe) ----
 
 // Raw storage of a (TR::)ReadArgs: constructed and destroyed by the exe's own out-of-line functions.
