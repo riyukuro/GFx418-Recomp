@@ -172,11 +172,9 @@ void FUN_1424ef450(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcoun
 char* FUN_1424ff910(char* ret, Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Value* obj, Scaleform::GFx::AS3::Value* result, unsigned argc, const void* args);   // ExecutePropertyUnsafe
 void FUN_142403310(Scaleform::UPInt obj, Scaleform::GFx::ASString* inout);   // XMLList-style toString
 void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg);   // Tracer: record a rewritten opcode for a register
-Scaleform::UPInt* FUN_142419e50(Scaleform::UPInt classTraits, void* tmp);   // class traits -> class object slot
 unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, unsigned a, unsigned b);   // read the value behind a slot reference
 void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   // next enumeration index of a string-like object
 Scaleform::UPInt FUN_142525270(void* vm, void* multiname);   // class traits named by a static multiname, or 0
-Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Function> FUN_14241a7d0(void* self, Scaleform::GFx::AS3::VMAbcFile& file, Scaleform::UInt32 method_ind, const Scaleform::GFx::AS3::ScopeStackType& ss, Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript& gos);
 Scaleform::UPInt FUN_1425fc530(Scaleform::UPInt container, unsigned idx);   // DisplayObjContainer::GetChildAt
 void FUN_1424d4c10(void* self, void* table, const void* nodeRef, Scaleform::UPInt hash);   // StickyVarNode hash: add an entry
 Scaleform::UPInt FUN_142443d90(Scaleform::UPInt loader);   // Loader::GetLoaderInfo
@@ -6743,8 +6741,9 @@ void Sfr31ExecClassEntry(UPInt vmAddr, UPInt link, UInt32 idx)
             reinterpret_cast<Value*>(top)->Assign(*reinterpret_cast<const Value*>(Sfr31Rd(inst, 0x80)));
             return;
         }
-        UInt8 tmp[8];
-        const UPInt obj = *FUN_142419e50(tr, tmp);
+        SPtr<Class> made = reinterpret_cast<ClassTraits::Traits*>(tr)->FUN_142419e50();
+        const UPInt obj = reinterpret_cast<UPInt>(made.GetPtr());
+        made.GetRawRef() = NULL;   // the reference moves into the stack Value
         reinterpret_cast<Value*>(top)->~Value();
         top[0] = (top[0] & 0xffffffedu) | 0xd;
         *reinterpret_cast<UPInt*>(top + 4) = obj;
@@ -7243,8 +7242,8 @@ void Sfr31ExecNewFunction(UPInt vmAddr, UPInt frame, UInt32 methodInd)
         cls = Sfr31Rd(ftr, 0x80);
     }
     Value v;
-    v.PickUnsafe(FUN_14241a7d0(reinterpret_cast<void*>(cls), *reinterpret_cast<VMAbcFile*>(Sfr31Rd(frame, 0x28)), methodInd, ss,
-                               *reinterpret_cast<Instances::fl::GlobalObjectScript*>(gos)));
+    v.PickUnsafe(reinterpret_cast<const Classes::Function*>(cls)->FUN_14241a7d0(
+        *reinterpret_cast<VMAbcFile*>(Sfr31Rd(frame, 0x28)), methodInd, ss, *reinterpret_cast<Instances::fl::GlobalObjectScript*>(gos)));
     ExecPushCopy(&vm, v);
 }
 // ---- batch 69

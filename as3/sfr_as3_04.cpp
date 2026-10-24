@@ -4611,8 +4611,8 @@ SPtr<Class> ClassTraits::Traits::FUN_142419e50()
 // a Function of method method_ind of file named "method id: <ind>"
 // MS2-FUNCTIONAL: the exe formats the id with MsgFormat
 // @0x14241a7d0
-Pickable<Instances::Function> FUN_14241a7d0(void* self, VMAbcFile& file, Scaleform::UInt32 method_ind,
-                                             const ScopeStackType& ss, Instances::fl::GlobalObjectScript& gos)
+Pickable<Instances::Function> Scaleform::GFx::AS3::Classes::Function::FUN_14241a7d0(VMAbcFile& file, Scaleform::UInt32 method_ind,
+                                                               const ScopeStackType& ss, Instances::fl::GlobalObjectScript& gos) const
 {
     InstanceTraits::Traits& t = FUN_14250a250(&file, gos, method_ind);
     void* mem = t.Alloc();

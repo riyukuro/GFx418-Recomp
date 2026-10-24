@@ -187,6 +187,9 @@ namespace Classes {
         // 0x142419d90
         Pickable<Instances::CheckTypeTF> MakeCheckTypeInstance(const Class& data_type, const ThunkInfo& thunk,
                                                                const Traits& ot) const;
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241a7d0
+        Pickable<Instances::Function> FUN_14241a7d0(VMAbcFile& file, UInt32 method_ind, const ScopeStackType& ss,
+                                                    Instances::fl::GlobalObjectScript& gos) const;   // a method's Function
         // (appended, sfr22) slot 12: a function body source throws error 1066; new Function() is a plain class construct. 0x1424071c0
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
         // (appended, sfr22) slot 10: Function(...) is new Function(...). 0x1424057a0
