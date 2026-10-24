@@ -278,6 +278,8 @@ public:
     int CheckExceptions(ActionBuffer* pactBuf, int pc, int* plocalTryBlockCount, Value* retval,
                         const WithStackArray* pinitialWithStack, int execType);
 
+    // The movie logs every action (inlined into the LogAction callers).
+    bool IsVerboseAction() const;
     // Local variables of the innermost function frame.
     const Value* FindLocal(const ASString& varname) const;      // exe 0x142944690
     void         AddLocal(const ASString& varname, const Value& val); // exe 0x14292ff50 (it must not exist yet)
@@ -338,6 +340,10 @@ public:
     // (exe 0x142956cd0).
     bool               GetVariable(const ASString& varname, Value* presult, const WithStackArray* pwithStack = 0,
                                    InteractiveObject** ppnewTarget = 0, Value* powner = 0, unsigned exclFlags = 0);
+    // A variable by name or path: a plain name through SetVariableRaw, a path on the object it resolves to; false when
+    // the path does not resolve (exe 0x14298cce0).
+    bool               SetVariable(const ASString& varname, const Value& val, const WithStackArray* pwithStack = 0,
+                                   bool doDisplayErrors = true);
     // A plain name set through the with stack, the locals or the target (exe 0x14298da70).
     void               SetVariableRaw(const ASString& varname, const Value& val,
                                       const WithStackArray* pwithStack = 0);
