@@ -2848,7 +2848,55 @@ public:
     Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
     virtual void OnInsertionAsLevel(int level);
     virtual void PropagateMouseEvent(const EventId& id);
+    // (sfr21) the container overrides sfr_as3_15's Stage vftable references.
+    virtual InteractiveObject* GetTopParent(bool ignoreLockRoot = false) const;
+    virtual bool        IsFocusEnabled(FocusMovedType = GFx_FocusMovedByKeyboard) const;
+    virtual bool        GetLabeledFrame(const char* plabel, unsigned* frameNumber, bool translateNumbers = true);
+    virtual const String* GetFrameLabel(unsigned frame, unsigned* exactFrame = NULL);
+    virtual void        GotoFrame(unsigned targetFrameNumber);
+    virtual unsigned    GetLoadingFrame() const;
 };
+
+// The frame queries go to the root movie clip.
+// @0x142509dd0
+const String* Stage::GetFrameLabel(unsigned frame, unsigned* exactFrame)
+{
+    return pRoot ? pRoot->GetFrameLabel(frame, exactFrame) : NULL;
+}
+
+// @0x14250b370
+bool Stage::GetLabeledFrame(const char* plabel, unsigned* frameNumber, bool translateNumbers)
+{
+    return pRoot ? pRoot->GetLabeledFrame(plabel, frameNumber, translateNumbers) : false;
+}
+
+// @0x14250b3b0
+unsigned Stage::GetLoadingFrame() const
+{
+    return 1;
+}
+
+// The stage is the top unless it was itself parented.
+// @0x14250f870
+InteractiveObject* Stage::GetTopParent(bool ignoreLockRoot) const
+{
+    if (!pParent)
+        return const_cast<Stage*>(this);
+    return pParent->GetTopParent(ignoreLockRoot);
+}
+
+// @0x142510d20
+void Stage::GotoFrame(unsigned targetFrameNumber)
+{
+    if (pRoot)
+        pRoot->GotoFrame(targetFrameNumber);
+}
+
+// @0x142514310
+bool Stage::IsFocusEnabled(FocusMovedType) const
+{
+    return false;
+}
 
 // @0x14251a110
 void Stage::OnInsertionAsLevel(int level)

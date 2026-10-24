@@ -5781,6 +5781,22 @@ void MovieRoot::GenerateMouseEvents(unsigned mouseIndex)
     ms->WheelDelta = 0;
 }
 
+// Stage's ExecuteFrameTags and GetCurrentFrame are inline in as3_stage.h, so no unit emits them under their own
+// names; sfr_as3_15's Stage vftable reaches them by address.
+// MS2-FUNCTIONAL: out-of-line stand-in for the inline Stage::ExecuteFrameTags (the stage has no frame tags).
+// @0x1424feaf0
+void FUN_1424feaf0(Stage* self, unsigned frame)
+{
+    SF_UNUSED2(self, frame);
+}
+
+// MS2-FUNCTIONAL: out-of-line stand-in for the inline Stage::GetCurrentFrame (the root movie clip's frame).
+// @0x1425084e0
+unsigned FUN_1425084e0(const Stage* self)
+{
+    return self->pRoot ? self->pRoot->GetCurrentFrame() : 0;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)

@@ -369,6 +369,42 @@ bool TextField::IsSelectable() const
     return peditor ? peditor->IsSelectable() : pDef->IsSelectable();
 }
 
+// (sfr21) the small TextField overrides (no unwind data; the full-exe link found no object for them).
+// @0x1425b7f10
+CharacterDef* TextField::GetCharacterDef() const
+{
+    return pDef;
+}
+
+// The hand when the field asks for it, the I-beam over selectable text, else the interactive object's.
+// @0x1425b81c0
+unsigned TextField::GetCursorType() const
+{
+    if (Flags & Flags_HandCursor)
+        return MouseCursorEvent::HAND;
+    if (IsSelectable())
+        return MouseCursorEvent::IBEAM;
+    return InteractiveObject::GetCursorType();
+}
+
+// @0x1425b95e0
+CharacterDef::CharacterDefType TextField::GetType() const
+{
+    return CharacterDef::TextField;
+}
+
+// @0x1425b9ad0
+bool TextField::IsFocusRectEnabled() const
+{
+    return false;
+}
+
+// @0x1425ba610
+bool TextField::OnLosingKeyboardFocus(InteractiveObject*, unsigned, FocusMovedType)
+{
+    return true;
+}
+
 // The text changed: the AVM side hears of it and the field is laid out again.
 // @0x1425b9da0
 void TextField::NotifyChanged()
