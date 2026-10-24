@@ -15,6 +15,16 @@
 
 namespace Scaleform { namespace GFx {
 
+namespace {
+// Scoped lock on a raw CRITICAL_SECTION field (the exe's Lock::Locker keeps the pointer for the release).
+struct RawLocker
+{
+    LPCRITICAL_SECTION pLock;
+    explicit RawLocker(char* lock) : pLock((LPCRITICAL_SECTION)lock) { EnterCriticalSection(pLock); }
+    ~RawLocker() { LeaveCriticalSection(pLock); }
+};
+}
+
 char FUN_1422fe440(U);                            // index of the highest set bit
 void FUN_142623b10(U*, void*, U);                 // Array<0x18-byte record>::Reserve
 void FUN_142623ee0(U*, void*, U);                 // Array<Ptr>::Reserve
@@ -129,6 +139,8 @@ void FUN_142624300(U** self, const U* key, const String* value)
 // Mirrors the top scope's (record, count) pair into the locked statistics fields.
 static inline void RawPublishTop(char* self)
 {
+    if (RawField<U>(self, 0x38) == 0)
+        return;
     char* slot = (char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18;
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
     RawField<U>(self, 0x68) = *(U*)(slot - 0x10);
@@ -139,29 +151,33 @@ static inline void RawPublishTop(char* self)
 // @0x142624450
 void FUN_142624450(char* self, U v)
 {
-    if (RawField<U>(self, 0x38) == 0)
+    if (RawField<U>(self, 0x38) != 0)
+    {
+        *(U*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 0x10) = v;
+        RawPublishTop(self);
+    }
+    else
     {
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
         RawField<U>(self, 0x68) = v;
         LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        return;
     }
-    *(U*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 0x10) = v;
-    RawPublishTop(self);
 }
 
 // @0x1426244e0
 void FUN_1426244e0(char* self, int v)
 {
-    if (RawField<U>(self, 0x38) == 0)
+    if (RawField<U>(self, 0x38) != 0)
+    {
+        *(int*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 8) = v;
+        RawPublishTop(self);
+    }
+    else
     {
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
         RawField<int>(self, 0x70) = v;
         LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        return;
     }
-    *(int*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 8) = v;
-    RawPublishTop(self);
 }
 
 // @0x142624570
@@ -172,22 +188,22 @@ void FUN_142624570(char* self, int v)
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
-// Copies five capability values out of an interface object (vtable slots +0x20/+0x30/+0x38/+0x48/+0x40).
+// Copies five capability values out of an interface object (vtable slots +0x20/+0x30/+0x38/+0x48/+0x40);
+// the middle three are floats.
 // @0x1426245c0
 void FUN_1426245c0(char* self, void** obj)
 {
-    typedef int (*Fn)(void*);
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+    typedef int (*IntFn)(void*);
+    typedef float (*FloatFn)(void*);
+    RawLocker lock(self + 0xe0);
     if (obj)
     {
-        Fn* vt = *(Fn**)obj;
-        RawField<int>(self, 0x11c) = vt[0x20 / 8](obj);
-        RawField<int>(self, 0x120) = vt[0x30 / 8](obj);
-        RawField<int>(self, 0x124) = vt[0x38 / 8](obj);
-        RawField<int>(self, 0x128) = vt[0x48 / 8](obj);
-        RawField<int>(self, 0x12c) = vt[0x40 / 8](obj);
+        RawField<int>(self, 0x11c) = (*(IntFn**)obj)[0x20 / 8](obj);
+        RawField<float>(self, 0x120) = (*(FloatFn**)obj)[0x30 / 8](obj);
+        RawField<float>(self, 0x124) = (*(FloatFn**)obj)[0x38 / 8](obj);
+        RawField<float>(self, 0x128) = (*(FloatFn**)obj)[0x48 / 8](obj);
+        RawField<int>(self, 0x12c) = (*(IntFn**)obj)[0x40 / 8](obj);
     }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
 // Stores the movie path, reduced to the part after the last path separator.
