@@ -1,7 +1,7 @@
 // Recovered Scaleform 4.1.18 GFx: TextField (dynamic / input text instances). Shared header of the src/ms2/scaleform
 // units (sfr lane): append, do not reorder.
-// OPAQUE for now: 0x148 bytes and the constructor (as the AS3 character factory allocates and builds it); the full
-// declaration comes with the GFx_TextField units. Used through its DisplayObjectBase part (offset 0).
+// TextField is 0x148 bytes (ctor 0x1425b5930, vftables 0x143189ac8 / LogBase 0x143189e60, its document listener's
+// 0x143189a68); bodies in sfr_gfx_03e. The override order is the exe's, checked slot by slot.
 #ifndef MS2_SF_GFX_TEXTFIELD_H
 #define MS2_SF_GFX_TEXTFIELD_H
 
@@ -11,6 +11,11 @@
 #include "ms2/scaleform/include/gfx/gfx_stream.h"
 #include "ms2/scaleform/include/render/render_color.h"
 #include "ms2/scaleform/include/gfx/gfx_value.h"
+#include "ms2/scaleform/include/kernel/sf_autoptr.h"
+#include "ms2/scaleform/include/kernel/sf_stringhash.h"
+#include "ms2/scaleform/include/kernel/sf_range.h"
+#include "ms2/scaleform/include/render/text_docview.h"
+#include "ms2/scaleform/include/gfx/gfx_input.h"
 
 namespace Scaleform { class Range; }   // (appended, sfr34) kernel/sf_range.h
 namespace Scaleform { namespace Render { namespace Text { struct ImageDesc; } } }   // (appended, sfr24) text_core.h
@@ -20,6 +25,12 @@ namespace GFx {
 
 class FontResource;
 class LoadProcess;
+
+// Memory stat of the movie's text objects. (also in text_editorkit.h)
+#ifndef SF_GFX_STATMV_TEXT_MEM
+#define SF_GFX_STATMV_TEXT_MEM
+enum { StatMV_Text_Mem = 0x145 };
+#endif
 namespace Text { class StyleManager; class EditorKit; }   // (appended, sfr24)
 
 // The edit text definition, as the DefineEditText tag gives it (a struct in 4.1.18, as the TextField constructor's
@@ -117,12 +128,140 @@ public:
 };
 static_assert(sizeof(TextFieldDef) == 0x90, "TextFieldDef size (both allocation sites)");
 
-class TextField
+class TextField : public InteractiveObject
 {
 public:
+    // Flags (+0xfc).
+    enum
+    {
+        Flags_AutoSize            = 0x1,
+        Flags_Html                = 0x2,
+        Flags_Password            = 0x4,
+        Flags_NoTranslate         = 0x8,
+        Flags_CondenseWhite       = 0x10,
+        Flags_HandCursor          = 0x20,
+        Flags_NextFrame           = 0x40,
+        Flags_MouseWheelEnabled   = 0x80,
+        Flags_UseRichClipboard    = 0x100,
+        Flags_AlwaysShowSelection = 0x200,
+        Flags_NoAutoSelection     = 0x400,
+        Flags_IMEDisabled         = 0x800,
+        Flags_OriginalIsHtml      = 0x1000,
+        Flags_NeedUpdateGeomData  = 0x2000,
+        Flags_ForceOneTimeAdvance = 0x4000,
+        Flags_ForceAdvance        = 0x8000,
+        Flags_NeedUpdateLayout    = 0x10000
+    };
+
+    // The shadowStyle / shadowColor state (AS2), made when one of them is first set.
+    struct ShadowParams;
+
+    // The document view's and editor's callbacks into the field (TextDocListener, +0x130).
+    class TextDocumentListener : public Render::Text::DocView::DocumentListener
+    {
+        TextField* GetTextField() const;
+    public:
+        TextDocumentListener();
+        virtual bool    View_OnLineFormat(Render::Text::DocView& view, Render::Text::DocView::LineFormatDesc& desc); // 1
+        virtual void    View_OnHScroll(Render::Text::DocView& view, unsigned newScroll);     // 2
+        virtual void    View_OnVScroll(Render::Text::DocView& view, unsigned newScroll);     // 3
+        virtual void    View_OnMaxScrollChanged(Render::Text::DocView& view);                // 4
+        virtual void    View_OnChanged(Render::Text::DocView& view);                         // 5
+        virtual unsigned Editor_OnKey(Render::Text::EditorKitBase& editor, unsigned keyCode);       // 6
+        virtual wchar_t Editor_OnCharacter(Render::Text::EditorKitBase& editor, wchar_t srcChar);   // 7
+        virtual void    Editor_OnChanged(Render::Text::EditorKitBase& editor);               // 8
+        virtual void    Editor_OnCursorMoved(Render::Text::EditorKitBase& editor);           // 9
+        virtual void    Editor_OnCursorBlink(Render::Text::EditorKitBase& editor, bool cursorState); // 10
+        virtual String  GetCharacterPath();                                                  // 11
+        void TranslatorChanged();
+        void OnScroll(Render::Text::DocView& view);
+        void SetHandlersMask(UInt8 mask) { HandlersMask = mask; }
+    };
+
+    // (appended, sfr24) what happened to a link of the text (AvmTextFieldBase::OnLinkEventEx).
+    enum LinkEvent
+    {
+        Link_press,
+        Link_release,
+        Link_rollover,
+        Link_rollout
+    };
+
+    // The style sheet (CSS) data (+0x108), made by the AVM side: the URL runs of the text and each mouse's state
+    // over them. 0x40 bytes.
+    struct CSSHolderBase : public NewOverrideBase<StatMV_Text_Mem>
+    {
+        struct UrlZone
+        {
+            Ptr<Render::Text::StyledText> SavedFmt;
+            unsigned                      HitCount;
+            unsigned                      OverCount;
+
+            UrlZone() : HitCount(0), OverCount(0) {}
+            bool operator==(const UrlZone& r) const
+            {
+                return SavedFmt == r.SavedFmt && HitCount == r.HitCount && OverCount == r.OverCount;
+            }
+            bool operator!=(const UrlZone& r) const { return !operator==(r); }
+        };
+        RangeDataArray<UrlZone> UrlZones;   // +0x08
+        struct MouseStateType
+        {
+            unsigned UrlZoneIndex;          // 1-based; 0: over no URL
+            bool     OverBit;
+            bool     HitBit;
+            MouseStateType() : UrlZoneIndex(0), OverBit(false), HitBit(false) {}
+        } MouseState[MaxMiceSupported];     // +0x20
+
+        CSSHolderBase() {}
+        virtual ~CSSHolderBase() {}
+        virtual bool HasASStyleSheet() const = 0;
+        virtual const Render::Text::StyleManagerBase* GetTextStyleManager() const = 0;
+    };
+
     TextField(TextFieldDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* parent,
               ResourceId id);
-    operator DisplayObjectBase*() { return reinterpret_cast<DisplayObjectBase*>(this); }
+    virtual ~TextField();                                                               // 0
+
+protected:
+    virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const;  // 1
+public:
+    virtual void            SetX(Double x);                                             // 17
+    virtual Double          GetX() const;                                               // 18
+    virtual void            SetY(Double y);                                             // 19
+    virtual Double          GetY() const;                                               // 20
+    virtual void            SetXScale(Double xscale);                                   // 23
+    virtual void            SetYScale(Double yscale);                                   // 25
+    virtual void            SetRotation(Double rotation);                               // 29
+    virtual void            SetWidth(Double width);                                     // 41
+    virtual void            SetHeight(Double height);                                   // 43
+    virtual void            SetFilters(const Render::FilterSet* filters);               // 50
+    virtual const Render::FilterSet* GetFilters() const;                                // 51
+    virtual RectF           GetBounds(const Matrix& t) const;                           // 55
+    virtual bool            PointTestLocal(const PointF& pt, UByte hitTestMask = 0) const;  // 57
+    virtual TopMostResult   GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr);  // 58
+    virtual CharacterDef*   GetCharacterDef() const;                                    // 59
+    virtual void            AdvanceFrame(bool nextFrame, float framePos = 0.0f);        // 65
+    virtual void            OnEventLoad();                                              // 67
+    virtual void            OnEventUnload();                                            // 69
+    virtual void            SetStateChangeFlags(UByte flags);                           // 73
+    virtual CharacterDef::CharacterDefType GetType() const;                             // 75
+    virtual bool            IsFocusAllowed(MovieImpl* proot, unsigned controllerIdx) const; // 79 / 80
+    virtual bool            IsFocusAllowed(MovieImpl* proot, unsigned controllerIdx);
+    virtual bool            IsTabable() const;                                          // 81
+    virtual bool            IsFocusRectEnabled() const;                                 // 82
+    virtual bool            IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const;  // 83
+    virtual void            OnFocus(FocusEventType event, InteractiveObject* oldOrNewFocusCh, unsigned controllerIdx,
+                                    FocusMovedType fmt);                                // 84
+    virtual bool            OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx,
+                                                  FocusMovedType fmt = GFx_FocusMovedByKeyboard);  // 86
+    virtual bool            OnKeyEvent(const EventId& id, int* pkeyMask);               // 90
+    virtual bool            OnCharEvent(UInt32 wcharCode, unsigned controllerIdx);      // 91
+    virtual bool            OnMouseWheelEvent(int mwDelta);                             // 92
+    virtual void            PropagateMouseEvent(const EventId& id);                     // 93
+    virtual bool            OnMouseEvent(const EventId& id);                            // 94
+    virtual int             CheckAdvanceStatus(bool playingNow);                        // 97
+    virtual unsigned        GetCursorType() const;                                      // 110
 
     // Selection (AS2 Selection natives, sfr_as2_02).
     SPInt GetCaretIndex() const;                         // exe 0x1425b7e70
@@ -140,17 +279,14 @@ public:
     }
     // Gives the candidate list movie the field's font (exe 0x1425bbd70).
     void SetCandidateListFont(DisplayObject* pcandidateList);
-    bool IsIMEDisabledFlag() const { return (GetFlags418() & 0x800) != 0; }
-    bool IsPassword() const        { return (GetFlags418() & 0x4) != 0; }
-    UInt32 GetFlags418() const     { return *reinterpret_cast<const UInt32*>(Unrecovered + 0xfc); }  // +0xfc Flags
+    bool IsIMEDisabledFlag() const { return (Flags & Flags_IMEDisabled) != 0; }
+    bool IsPassword() const        { return (Flags & Flags_Password) != 0; }
+    UInt32 GetFlags418() const     { return Flags; }
 
     // (appended for the AS2 TextField natives, sfr_as2_02)
-    Render::Text::DocView* GetDocument() const   // +0xe0 the document view
-    {
-        return *reinterpret_cast<Render::Text::DocView* const*>(Unrecovered + 0xe0);
-    }
+    Render::Text::DocView* GetDocument() const { return pDocument; }
     // The next advance reformats the whole text.
-    void SetCompleteReformatReq() { *reinterpret_cast<UInt32*>(Unrecovered + 0xfc) |= 0x10000; }
+    void SetCompleteReformatReq() { Flags |= Flags_NeedUpdateLayout; }
     bool HasStyleSheet() const;   // exe 0x1425b9730
     void SetDirtyFlag();          // exe 0x1425bc060
     // Replaces [beginPos, endPos) with the first strLen characters of pstr (all of it for SF_MAX_UPINT).
@@ -160,22 +296,12 @@ public:
     bool SetTextValue(const char* ptext, bool html = false, bool notifyVariable = true); // exe 0x1425bd9a0
     // (appended, sfr34) The text, or the HTML text when reqHtml is set.
     ASString GetText(bool reqHtml = false) const;                 // exe 0x1425b91e0
-    // (appended, sfr34) Whether the text is HTML (Flags bit 1).
-    bool IsHtml() const { return (GetFlags418() & 0x2) != 0; }
+    // (appended, sfr34) Whether the text is HTML.
+    bool IsHtml() const { return (Flags & Flags_Html) != 0; }
     // (appended, sfr34) Whether a URL is under mouse mouseIndex's cursor; its point in the text and range.
     bool IsUrlUnderMouseCursor(unsigned mouseIndex, Render::PointF* ppnt = NULL, Range* purlRangePos = NULL);   // exe 0x1425b9cc0
 
-    // (appended, sfr24) What happened to a link of the text (AvmTextFieldBase::OnLinkEventEx).
-    enum LinkEvent
-    {
-        Link_press,
-        Link_release,
-        Link_rollover,
-        Link_rollout
-    };
-
     // (appended, sfr24) what the AS3 TextField natives call (sfr_as3_13 / 15 / 19).
-    struct CSSHolderBase;                                    // the style sheet (CSS) data
     UInt32 GetTextColor32() const;                           // exe 0x1425b9360
     void   SetCSSData(CSSHolderBase* pcssData);              // exe 0x1425bbd10
     void   UpdateUrlStyles();                                // exe 0x1425bec30
@@ -185,8 +311,8 @@ public:
     void   AddIdImageDescAssoc(const char* idStr, Render::Text::ImageDesc* pdesc);  // exe 0x1425b65e0
     // (appended, sfr24) the display info's position in the text rectangle's space.
     Render::PointF TransformToTextRectSpace(const GFx::Value::DisplayInfo& info) const;      // exe 0x1425be970
-    // (appended, sfr22) the flags word at +0xfc, writable (html 0x2, the display-info-set 0x2000).
-    UInt32& FlagsRef() { return *reinterpret_cast<UInt32*>(Unrecovered + 0xfc); }
+    // (appended, sfr22) the flags word, writable (html 0x2, the display-info-set 0x2000).
+    UInt32& FlagsRef() { return Flags; }
 
     // (appended, sfr33) the composition string calls of the IME manager (sfr_gfx_03d).
     void           CreateCompositionString();                                   // exe 0x1425b77a0
@@ -203,13 +329,21 @@ public:
     void           SetWideCursor(bool wideCursor);                              // exe 0x1425be280
     // The cursor's rectangle at charIndex in the field's space (twips).
     Render::RectF  GetCursorBounds(UPInt charIndex, float* phitTestX, float* phitTestY); // exe 0x1425b80b0
-    // (appended, sfr33) the display object's count, so Ptr<TextField> works.
-    void AddRef()  { reinterpret_cast<DisplayObjectBase*>(this)->AddRef(); }
-    void Release() { reinterpret_cast<DisplayObjectBase*>(this)->Release(); }
 
-private:
-    UByte Unrecovered[0x148];
+    Ptr<TextFieldDef>             pDef;                 // +0xd8
+    Ptr<Render::Text::DocView>    pDocument;            // +0xe0
+    ResourceBinding*              pBinding;             // +0xe8 the binding movie's resources (fonts)
+    mutable Ptr<Render::FilterSet> pFilters;            // +0xf0
+    TextFieldDef::alignment       Alignment;            // +0xf8
+    UInt32                        Flags;                // +0xfc
+    StringLH                      OriginalTextValue;    // +0x100
+    AutoPtr<CSSHolderBase>        pCSSData;             // +0x108
+    ShadowParams*                 pShadow;              // +0x118
+    StringHashLH<Ptr<Render::Text::ImageDesc> >* pImageDescAssoc;  // +0x120 the <img id=...> images
+    unsigned                      FocusedControllerIdx; // +0x128
+    TextDocumentListener          TextDocListener;      // +0x130
 };
+static_assert(sizeof(TextField) == 0x148, "TextField size (the character factories allocate 0x148)");
 
 // (appended, sfr24) The text-field half of the AVM part of a text field (AS3::AvmTextField +0x40), after the
 // AvmInteractiveObjBase slots: style sheet 23..24, change / link / mouse / char / scroll notifications 25..29, the
@@ -220,7 +354,10 @@ public:
     virtual const Text::StyleManager* GetStyleSheet() const = 0;
     virtual bool HasStyleSheet() const = 0;
     virtual void NotifyChanged() = 0;
-    virtual void OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex) = 0;
+    virtual void OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex)
+    {
+        SF_UNUSED3(event, pos, controllerIndex);
+    }
     virtual bool OnMouseEvent(const EventId& event) = 0;
     virtual bool OnCharEvent(wchar_t wcharCode, unsigned controllerIdx) = 0;
     virtual void OnScroll() = 0;

@@ -9,29 +9,19 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_events.h"
 #include "ms2/scaleform/include/gfx/gfx_textsnapshot.h"
 #include "ms2/scaleform/include/kernel/sf_hash.h"
+#include "ms2/scaleform/include/render/text_styledtext.h"
 
 namespace Scaleform { namespace Render { class Font; }}
 
-// The CSS style sheet of a StyleSheet instance. Its bodies (sfr_gfx_06g, text_stylesheet.h) and its base
-// (text_styledtext.h) are built on the render text headers, which do not mix with these; only what the instance's
-// constructor and destructor and StyleSheet.styleNames touch is modeled.
+// The CSS style sheet of a StyleSheet instance. Its bodies are sfr_gfx_06g (text_stylesheet.h); only what the
+// instance's constructor and destructor and StyleSheet.styleNames touch is modeled here.
 namespace Scaleform { namespace Render { namespace Text {
 
 struct Style;
 class TextFormat;       // (appended, sfr19) opaque here; fl_text::TextFormat converts to and from them
 class ParagraphFormat;
 
-// Style lookup for HTML parsing. vftable 0x14316a718.
-class StyleManagerBase
-{
-public:
-    enum KeyType { CSS_Tag = 0, CSS_Class = 1, CSS_None = 2 };
-
-    virtual ~StyleManagerBase() {}
-    virtual const Style* GetStyle(KeyType type, const String& name) const = 0;
-    virtual const Style* GetStyle(KeyType type, const char* name, UPInt len = SF_MAX_UPINT) const = 0;
-    virtual const Style* GetStyle(KeyType type, const wchar_t* name, UPInt len = SF_MAX_UPINT) const = 0;
-};
+// StyleManagerBase (vftable 0x14316a718): render/text_styledtext.h.
 
 }}} // namespace Scaleform::Render::Text
 

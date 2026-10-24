@@ -435,7 +435,7 @@ void IMEManagerBase::GetMetrics(Render::RectF* pviewRect, Render::RectF* pcursor
 {
     if (!pTextField)
         return;
-    DisplayObjectBase* pobj = *pTextField;
+    DisplayObjectBase* pobj = pTextField;
     Render::Matrix2F wm;
     pobj->GetWorldMatrix(&wm);
     Render::RectF bounds = pobj->GetBounds(wm);

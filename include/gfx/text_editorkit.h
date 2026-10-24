@@ -12,8 +12,11 @@
 
 namespace Scaleform { namespace GFx {
 
-// Memory stat of the movie's text objects.
+// Memory stat of the movie's text objects. (also in gfx_textfield.h)
+#ifndef SF_GFX_STATMV_TEXT_MEM
+#define SF_GFX_STATMV_TEXT_MEM
 enum { StatMV_Text_Mem = 0x145 };
+#endif
 
 namespace Text {
 
