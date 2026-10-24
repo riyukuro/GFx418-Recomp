@@ -182,6 +182,9 @@ namespace Instances { namespace fl_display {
         void zGet(Value::Number& result);
         // @0x142454c10
         void zSet(const Value& result, Value::Number);
+
+        // (appended, sfr24) whether pLoaderInfo is set.
+        bool HasLoaderInfo() const;   // 0x1424445f0
     };
 
     // 0x68 bytes: no members of its own.

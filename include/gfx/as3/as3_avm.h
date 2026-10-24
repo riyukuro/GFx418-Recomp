@@ -123,6 +123,8 @@ public:
     // (appended, sfr19) runs the constructor of the object CreateASInstanceNoCtor made (now when execute, else
     // queued). 0x1424ee800
     unsigned    CallCtor(bool execute);
+    // (appended, sfr24) the AS3 object held as the counted collectible pointer (the raw one cleared). 0x142526340
+    void        SetAS3ObjCollectible(Instances::fl_display::DisplayObject* p);
 };
 
 // AS3 part of an interactive object, with its AvmInteractiveObjBase part at +0x30. 0x40 bytes;

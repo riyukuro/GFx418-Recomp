@@ -188,6 +188,8 @@ public:
     // (sfr24) the operand stack top (or register ind) becomes a value of type tr, null or not as nt says.
     void ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType nt);                          // 0x1424f1e50
     void ConvertRegisterTo(AbsoluteIndex ind, InstanceTraits::Traits& tr, Value::TraceNullType nt); // 0x1424f1ed0
+    // (appended, sfr24) where FindProp found the property.
+    enum ScopeType { stScopeStack, stStoredScope, stGlobalObject };
 
 private:
     State();
@@ -202,6 +204,8 @@ private:
     void RefineOpCodeReg1(InstanceTraits::Traits& type, Abc::Code::OpCode op, int reg_num);   // 0x142520d80
     // (appended, sfr24) traces one opcode at bcp (the tracer's opcode switch).
     void exec_opcode(const Abc::Code::OpCode opcode, Abc::TCodeOffset& bcp);                  // 0x14253d520
+    // (appended, sfr24) looks mn up in the scope stack, then the saved scope, then the global object.
+    void FindProp(PropRef& result, const Multiname& mn, ScopeType& stype, UPInt& scope_index);  // 0x142501e80
 
     // (sfr24) one bit per register, from the method body's local_reg_count (Tracer heap, StatMV_VM_Tracer_Mem)
     struct RegisterBits
