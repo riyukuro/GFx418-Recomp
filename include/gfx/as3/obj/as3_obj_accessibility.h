@@ -12,6 +12,9 @@ namespace Instances { namespace fl_accessibility {
     // MS2-FUNCTIONAL: native method declarations only; the data members are not recovered yet
     class AccessibilityProperties : public Instances::fl::Object
     {
+    public:
+        // (sfr24) exe vftable slot 2 (0x1423df550)
+        virtual const char* GetAS3ObjectType() const { return "Instances::fl_accessibility::AccessibilityProperties"; }
     };
 
 }}
