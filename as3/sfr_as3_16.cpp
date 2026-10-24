@@ -1866,6 +1866,16 @@ Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::* const pSfr16ValueStri
 
 using Sfr16DisplayObjectWeakArray = Scaleform::ArrayLH<
     Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, 2, Scaleform::ArrayDefaultPolicy>;
+using Sfr16DisplayObjectMapNode = Scaleform::HashNode<Scaleform::SInt32,
+    Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>, Scaleform::IdentityHash<Scaleform::SInt32>>;
+using Sfr16DisplayObjectMapHashSet = Scaleform::HashSetBase<Sfr16DisplayObjectMapNode,
+    Sfr16DisplayObjectMapNode::NodeHashF, Sfr16DisplayObjectMapNode::NodeAltHashF,
+    Scaleform::AllocatorLH<Scaleform::SInt32, 2>,
+    Scaleform::HashsetNodeEntry<Sfr16DisplayObjectMapNode, Sfr16DisplayObjectMapNode::NodeHashF>>;
+// MS2-FUNCTIONAL 0x1424dcbb0: destroys every occupied map entry and releases the map's heap table, following the recovered HashSetBase destructor.
+// @0x1424dcbb0
+template Sfr16DisplayObjectMapHashSet::~HashSetBase();
+
 // MS2-FUNCTIONAL 0x1424e0340: transfers the source pointer and owner flag, releasing an owned destination first; the executable uses the same ownership behavior.
 // @0x1424e0340
 Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
@@ -1881,6 +1891,7 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: ??4?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@QEAAXAEBUNodeRef@01@@Z 0x1424e0480
 // MS2-PIN: ??4?$SPtr@$$CBVNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424e0550
 // MS2-PIN: ??_GClass@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2bb0
+// MS2-PIN: ??1?$HashSetBase@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@H$01@2@V?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dcbb0
 // MS2-PIN: ??_GLoadQueueEntry@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3150
 // MS2-PIN: ??_GLoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e31e0
 // MS2-PIN: ??_GObject@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3580
