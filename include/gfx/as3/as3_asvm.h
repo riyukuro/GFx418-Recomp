@@ -332,6 +332,16 @@ public:
     virtual void OnKeyDown(GFx::InteractiveObject* pmovie, const EventId& evt, int keyMask);           // 1 0x14251a1e0
     virtual void OnKeyUp(GFx::InteractiveObject* pmovie, const EventId& evt, int keyMask);             // 2 0x14251a3b0
     virtual void Update(const EventId& evt);                                                           // 3 0x142530fb0 empty
+
+    // (appended, sfr24) runs the queued actions of level lvl. 0x1424fa320
+    void ExecuteActionQueue(ActionLevel lvl);
+    // (appended, sfr24) the AS3 value at the variable path ppathToVar; false when it does not resolve. 0x142506000
+    bool GetASVariableAtPath(Value* pval, const char* ppathToVar) const;
+    // (appended, sfr24) makes the stage of movie pdefImpl (one 0x178-byte allocation: the Stage with its AVM part),
+    // sets pStage, and returns the allocation. 0x1424f4000
+    GFx::DisplayObject* CreateStage(MovieDefImpl* pdefImpl);
+    // (appended, sfr24) counts pdefImpl in the loaded-movie-def hash (+0x6e8): +1 if listed, else added with 1. 0x1424e8e20
+    void AddLoadedMovieDef(MovieDefImpl* pdefImpl);
 protected:
     // (appended, sfr19) the mouseCursorEvent name of a MouseCursorEvent cursor type. 0x14250bb10
     void GetMouseCursorTypeString(ASString& str, unsigned cursorType) const;
