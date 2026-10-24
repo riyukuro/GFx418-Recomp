@@ -55,6 +55,27 @@ public:
     bool IsStringType(const Value& v) const;                                      // 0x142514e10
     bool IsUIntType(const Value& v) const;                                        // 0x1425150c0
 
+    // (appended, sfr24) no exe names; public so that TR::State and VMAbcFile can call them.
+    // Traces every block of the method body, then writes the word code. 0x1424f7840
+    void EmitCode();
+    // Whether tr is the Object instance traits or the Class class's (any type passes).
+    bool IsAnyType(const Traits* tr) const;                                       // 0x142513f50
+    // The entry state of a block reached for the first time: from's stacks and registers copied.
+    void InitializeBlock(TR::Block& to, const TR::Block& from);                   // 0x142511b00
+    CheckResult MergeBlock(TR::Block& to, const TR::Block& from);                 // 0x142516c40
+    CheckResult MergeValues(UPInt ind, TR::State& to, const TR::State& from, TR::MergeSet ms); // 0x1425178e0
+    // The saved scope's first entry when the call frame has one, the state's register 0 otherwise.
+    Value GetGlobalObject(const TR::State& st) const;                            // 0x14250a490
+    // Inside the byte code: the current offset, its new position (the word code's size) recorded.
+    void RegisterOrigOpCode(Abc::TCodeOffset opcode_cp);                          // 0x1425212f0
+    // The opcode's word code position recorded, then the opcode (and its arguments) written.
+    void PushNewOpCode(Abc::Code::OpCode op);                                     // 0x14251f930
+    void PushNewOpCode(Abc::Code::OpCode op, UPInt arg1);                         // 0x14251fb90
+    void PushNewOpCode(Abc::Code::OpCode op, UPInt arg1, UPInt arg2);             // 0x14251fa10
+    void PushNewOpCodeArg(UPInt code);                                            // 0x14251fcd0
+    // The last written opcode dropped: the word code cut back to its recorded position.
+    void PopNewOpCode();                                                          // 0x14251cc80
+
 private:
     int  GetNextU30(UPInt cp) const;                                              // 0x14250c1f0
     void JoinSNodesUpdateType(Value& to_be_merged, const Value& from, ClassTraits::Traits& tr) const;    // 0x142515840
