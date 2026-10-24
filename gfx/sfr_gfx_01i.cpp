@@ -4588,6 +4588,8 @@ template class Scaleform::RefCountBaseStatImpl<Scaleform::RefCountNTSImpl, 0x143
 // MS2-PIN: ??_7Movie@GFx@Scaleform@@6BStateBag@12@@ 0x143183580
 // MS2-PIN: ??0MovieImpl@GFx@Scaleform@@QEAA@PEAVMemoryHeap@2@@Z 0x142569e20
 // MS2-PIN: ??_7?$RefCountBase@VMovie@GFx@Scaleform@@$0BEH@@Scaleform@@6B@ 0x143183370
+// MS2-PIN: ??_G?$RefCountBase@VMovie@GFx@Scaleform@@$0BEH@@Scaleform@@UEAAPEAXI@Z 0x14256b6e0
+// MS2-PIN: ??_G?$RefCountBase@VStateBagImpl@GFx@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x14256b740
 // MS2-PIN: ??_7?$LogBase@VStateBagImpl@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431835b0
 // MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6B?$RefCountBase@VStateBagImpl@GFx@Scaleform@@$01@2@@ 0x1431835c0
 // MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6BStateBag@12@@ 0x1431835c8

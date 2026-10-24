@@ -171,6 +171,19 @@ void* FUN_1425cd140(void* object, unsigned flags)
     return object;
 }
 
+// ConstShapeNoStyles' scalar deleting destructor (its vftable is the exe's, so the compiler emits none): the
+// RefCountImplCore destructor, then the scalar-delete branches.
+// @0x1425ccac0
+void* FUN_1425ccac0(void* object, unsigned flags)
+{
+    static_cast<RefCountImplCore*>(object)->RefCountImplCore::~RefCountImplCore();
+    if (flags & 1) {
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x20);
+    }
+    return object;
+}
+
 // Ids of the empty characters of every movie.
 enum
 {
@@ -2436,7 +2449,6 @@ bool MatchFileNames(const String& path1, const String& path2)
 }
 
 }} // namespace Scaleform::GFx
-// MS2-PIN: ??_GConstShapeNoStyles@GFx@Scaleform@@UEAAPEAXI@Z 0x1425ccac0
 // MS2-PIN: ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
 // Non-RTTI base and interface tables recovered from executable vptr stores.
 // MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0

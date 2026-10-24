@@ -366,6 +366,14 @@ static inline void setTargetViewport(TreeRoot* root, const Rect<SInt32>& area, c
     root->SetViewport(vp);
 }
 
+// TreeContainer::Add as the exe keeps it out of line for Draw: the size of the children is read inline here (the
+// container's own GetSize stays out of line elsewhere).
+// @0x1425eae70
+__declspec(noinline) bool FUN_1425eae70(TreeContainer* container, TreeNode* node)
+{
+    return container->Insert(container->GetReadOnlyData()->Children.GetSize(), node);
+}
+
 // MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie and keeps TreeContainer::Add, StartLayer, LineTo and EndPath out of line; the rectangle's closing edge is an explicit test (the exe compares the start and last points)
 // @0x1425eb8c0
 void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
@@ -379,7 +387,7 @@ void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cx
     if (!root)
         return;
     Ptr<TreeShape> shape = *pContext->RContext->CreateEntry<TreeShape>();
-    root->Add(shape);
+    FUN_1425eae70(root, shape);
 
     // The source becomes the image fill of one rectangle its own size.
     FillStyleType fill;
@@ -425,7 +433,7 @@ void DrawableImage::Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform
     if (!root)
         return;
     Ptr<TreeNode> child = *subtree->Clone(pContext->RContext);
-    root->Add(child);
+    FUN_1425eae70(root, child);
 
     setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize());
     root->SetMatrix(matrix);
