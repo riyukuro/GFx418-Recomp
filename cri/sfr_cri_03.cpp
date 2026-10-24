@@ -104,7 +104,7 @@ void FUN_140042600(void*, void*, CriSint32);
 CriSint32 FUN_1400310b0(void*);
 void FUN_1400345e0(void*, void*, CriUint32, CriSint32);
 void FUN_140053e60(void*, CriUint32, CriUint32, CriUint32);
-void FUN_1400467c0(const void*, CriUint32, void*, void*);
+void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 void FUN_14004f8a0(void);
 void FUN_14004eb50(void);
 void FUN_14004e3b0(CriUint64, CriUint64);
@@ -119,14 +119,13 @@ void FUN_140046d50(void*, CriSint32);
 void FUN_140053570(void*);
 void FUN_140050e90(void*);
 void FUN_140053e40(void*);
-void FUN_14003a108(void*);
 CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
 void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8*, CriUint32, CriUsfStandardHeader*);
-CriSint32 FUN_140045910(const void*);
+CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 void* FUN_1400459ec(const void*, void*, CriSint32);
-CriSint32 FUN_140045ed0(const void*);
+CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 void* FUN_140045eec(const void*, void*, CriSint32);
 void FUN_140045998(void*);
 void FUN_140045fdc(void*);
@@ -264,7 +263,7 @@ void FUN_140043680(void* object)
 // @0x140046324
 void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
 {
-    CriSint32 workSize = FUN_140045910(config);
+    CriSint32 workSize = criSjUni_CalculateWorkSize((const CriSint32*)config);
     CriUint8* allocation = (CriUint8*)FUN_140027f7c(heap, workSize + 8, "CriSjUni", 8,
                                                      (CriSint32)allocationMode);
     if (!allocation)
@@ -287,7 +286,7 @@ void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
 // @0x1400464f4
 void* FUN_1400464f4(const void* config, void* heap, CriUint32 allocationMode)
 {
-    CriSint32 workSize = FUN_140045ed0(config);
+    CriSint32 workSize = criSjRbf_CalculateWorkSize((const CriSint32*)config);
     CriUint8* allocation = (CriUint8*)FUN_140027f7c(heap, workSize + 8, "CriSjRbf", 8,
                                                      (CriSint32)allocationMode);
     if (!allocation)
@@ -489,7 +488,7 @@ CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const CriUint32* sett
 {
     CriSint32 headerBytes = FUN_140027dd0(8);
     CriUint32 config[3] = { settings[0], first, second };
-    return FUN_140045910(config) + headerBytes * 2;
+    return criSjUni_CalculateWorkSize((const CriSint32*)config) + headerBytes * 2;
 }
 
 // MS2-FUNCTIONAL: request work sizing for the default one-block stream-joint setup.
@@ -867,7 +866,7 @@ void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* d
         if (FUN_140046e04(table, rawTable, fieldCount, records, rawRecords, data, size,
                           callbackBlock, allocationMode))
             return table;
-        FUN_14003a108(table);
+        criUtfRtv_Destroy((CriUint64*)table);
         return NULL;
     }
 
@@ -877,7 +876,7 @@ void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* d
     table->Columns = NULL;
     table->Context = rawTable;
     table->SecondaryAllocation = NULL;
-    FUN_14003a108(table);
+    criUtfRtv_Destroy((CriUint64*)table);
     FUN_140038e24(0, "E06100312", -3);
     return NULL;
 }
@@ -3612,7 +3611,7 @@ CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 third,
     struct Setup { CriUint32 Flags, First, Second, Third; CriUint64 Reserved; };
     CriSint32 overhead = FUN_140027dd0(8);
     Setup setup = { settings[0], first, second, third, 0 };
-    return FUN_140045ed0(&setup) + overhead * 2;
+    return criSjRbf_CalculateWorkSize((const CriSint32*)&setup) + overhead * 2;
 }
 
 // MS2-FUNCTIONAL: create a standard ring-buffer stream joint using the static CRI pool descriptor.
@@ -3975,7 +3974,7 @@ void FUN_140045c60(void* object, CriSint32 lane, CriUint32 requested, CriUint64*
     {
         CriUint64 chunk[2] = { (CriUint64)node->Data, node->Size };
         CriUint64 prefix[2] = {}, suffix[2] = {};
-        FUN_1400467c0(chunk, requested, prefix, suffix);
+        criSj_SplitChunk(chunk, requested, prefix, suffix);
         output[0] = prefix[0];
         output[1] = prefix[1];
         node->Data = (void*)suffix[0];
@@ -4506,7 +4505,7 @@ void FUN_140044fe4(void* stream)
             chunk.Data = chunk.Data + 1;
             if (*chunk.Data != 0)
             {
-                FUN_1400467c0(&chunk, index, &chunk, split);
+                criSj_SplitChunk(&chunk, index, &chunk, split);
                 FUN_1400467a8(source, 1, split);
                 FUN_1400467b0(first, 1, &chunk);
                 second = state->Second;
@@ -5648,12 +5647,12 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
         if (demux->Tracks != NULL)
         {
             CriUint32 config[3] = { 1, 0, 0x80 };
-            CriUint32 size = (CriUint32)FUN_140045910(config);
+            CriUint32 size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
             demux->Input = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
             if (demux->Input != NULL)
             {
                 config[2] = 0x80;
-                size = (CriUint32)FUN_140045910(config);
+                size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
                 demux->Output = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
                 if (demux->Output != NULL)
                 {
@@ -5673,7 +5672,7 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
     return NULL;
 }
 
-CriUint8* FUN_14003b674(const CriUint8*, CriUint32, CriSint32*);
+const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 
 // MS2-FUNCTIONAL: route queued USF chunks to the matching track decoders until a track set needs more data.
 // @0x1400428e0
@@ -5720,7 +5719,7 @@ void FUN_1400428e0(void* trackSet, void* player)
         CriUsfStandardHeader header;
         criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, &header);
         CriSint32 contentSize;
-        FUN_14003b674(chunk.Data, chunk.Size, &contentSize);
+        criUsfCmn_GetContents(chunk.Data, chunk.Size, &contentSize);
         CriUint8 kind = header.Data[15];
         CriUint8 track = header.Data[12];
         if (kind == 1)
@@ -5760,7 +5759,7 @@ void FUN_1400428e0(void* trackSet, void* player)
     }
 }
 
-CriSint32 FUN_140045b34(void*);
+CriSint32 criSjUni_GetNumChainPool(void* streamJoint);
 
 // MS2-FUNCTIONAL: match demuxed USF chunks against the per-track filters and hand them to the matching track queues.
 // @0x140045474
@@ -5832,8 +5831,8 @@ void FUN_140045474(void* object)
                 if (first.Data == second.Data)
                 {
                     length = second.Size < first.Size ? second.Size : first.Size;
-                    FUN_1400467c0(&first, length, &first, &split);
-                    FUN_1400467c0(&second, length, &second, &rest);
+                    criSj_SplitChunk(&first, length, &first, &split);
+                    criSj_SplitChunk(&second, length, &second, &rest);
                     FUN_1400467b0(input, 0, &first);
                     FUN_1400467a8(output, 1, &split);
                     FUN_1400467a8(tracks[index].Queue, 0, &rest);
@@ -5883,7 +5882,7 @@ drainInput:
                     source = &first;
                     length = needed;
                 }
-                FUN_1400467c0(source, length, source, &second);
+                criSj_SplitChunk(source, length, source, &second);
                 FUN_1400467a8(input, 1, &second);
                 memcpy(&type, header.Data, sizeof(type));
                 for (index = 0; index < count; ++index)
@@ -5892,7 +5891,7 @@ drainInput:
                     if (track->Queue != NULL && (track->Type == 0 || track->Type == type) &&
                         (track->Id == 0xffffffffu || track->Id == (CriUint32)header.Data[12]))
                     {
-                        if (FUN_140045b34(output) < 3 || FUN_140045b34(track->Queue) < 3)
+                        if (criSjUni_GetNumChainPool(output) < 3 || criSjUni_GetNumChainPool(track->Queue) < 3)
                             goto releaseTail;
                         FUN_1400467b0(track->Queue, 1, &first);
                         FUN_1400467b0(output, 1, &first);
@@ -6884,7 +6883,7 @@ CriSint32 FUN_14003efc0(void* player)
                 FUN_1400467a8(inputQueue, 2, &extra);
         }
         CriSint32 payloadSize;
-        CriUint8* payload = FUN_14003b674((const CriUint8*)chunk.Data, (CriUint32)chunk.Size, &payloadSize);
+        CriUint8* payload = (CriUint8*)criUsfCmn_GetContents((const CriUint8*)chunk.Data, (CriUint32)chunk.Size, &payloadSize);
         Chunk packet = { payload, payloadSize, 0 };
         CriUint8* start = (CriUint8*)FUN_1400530c0(payload, (CriUint32)payloadSize, 0x4c);
         if (!start)

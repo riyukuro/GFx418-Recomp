@@ -58,7 +58,7 @@ extern const void* DAT_1431b8db0[];
 extern const void* DAT_1431b9430[];
 }
 
-const CriUint8* FUN_14003b674(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 struct CriMovieParsedChunk;
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
@@ -83,27 +83,23 @@ void*    FUN_140041d40(void* pheap);                                    // CriHe
 void     FUN_140041dd0(void* criheap);                                  //   and destroy
 void*    FUN_140041c00(void* mem);                                      // SystemTimerSyncObject::SystemTimerSyncObject
 void*    FUN_14002a010(void* mem, void* pheap, void* psound);           // CriMvSound::CriMvSound(MemoryHeap*, VideoSound*)
-void*    FUN_14002d970(void* mem, void* pconfig);                       // VideoReader::VideoReader(VideoReaderConfig*)
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
 void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
 void*    FUN_14002abd0(void* mem, CriUint32 format, const CriUint32* psize, const void* ptexman, void* pplayer); // VideoImage ctor
 void     FUN_140037950(void* player, const char* message, CriSint32 severity);
 void     FUN_140044fdc(void* inputBuffer);
-CriSint32 FUN_140045ed0(const void* config);
+CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 void*    FUN_140045eec(const void* config, void* work, CriSint32 workSize);
 void*    FUN_140046730(void* heap, CriSint32 size, CriSint32 flags, CriSint32 align, const char* name);
 void*    FUN_140027ed8(void* heap, CriSint32 size, const char* name, CriSint32 align);
 CriSint32 FUN_140044eb0(CriSint32 workCount);
-CriUint32 FUN_140037310(const CriMvStreamingParameters* params, CriUint32 remainder);
 CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 alignment, const void* flags);
 CriSint32 FUN_140044400(void* decoder, CriUint32 first, CriUint32 second, CriUint32 third);
 CriSint32 FUN_140043a80(void* decoder, CriUint32 first, CriUint32 second, CriUint32 third);
 CriSint32 FUN_140041ee0(const void* params);
 CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const void* flags);
 void* FUN_140030be0(CriSint32 codecId);
-CriSint32 FUN_140045910(const void* config);
-void     FUN_14002e6b0(void* memory, CriSint32 size, CriFixedAllocator* allocator);
-void*    FUN_14002e6c0(CriFixedAllocator* allocator, CriSint32 size, CriSint32 align);
+CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 void*    FUN_140045144(CriSint32 count, void* work, CriSint32 workSize);
 void*    FUN_1400459ec(const void* config, void* work, CriSint32 workSize);
 CriSint32 FUN_140042150(void* player, void* source, void* work, CriUint32 size, CriSint32 flags);
@@ -123,7 +119,6 @@ CriHeap  FUN_140027fec(void* memory, CriSint32 size);
 void*    FUN_140039ea8(void* work, CriSint32 workSize);
 void*    FUN_1400452b4(CriHeap heap, CriSint32 count);
 void*    FUN_1400464c8(CriHeap heap, CriSint32 kind, CriSint32 alignment);
-void     FUN_1400372c0(void* player, CriBool enabled);
 void     FUN_14002f610(CriUint32* player);
 void     FUN_14002f850(void* player);
 void*    FUN_140030b50(CriSint32 codecId);
@@ -131,7 +126,7 @@ void*    FUN_140044e40(void* decoderInterface);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void FUN_140046804(void* object, void* value);
 void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
-void FUN_1400467c0(const void* source, CriUint32 maximum, void* prefix, void* suffix);
+void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 void     FUN_140039f50(void* section);
 void     FUN_140039f8c(void* section);
 void     FUN_1400411f8(void);
@@ -166,7 +161,7 @@ CriSint32 FUN_14003a3e0(void* object, const char* key);
 CriSint32 FUN_14003a45c(void* object);
 CriSint32 FUN_14003a894(void* object, CriSint32 index, const char* key);
 void*    FUN_14003a648(void* object, CriSint32 index, CriSint32 value);
-void     FUN_14003a108(void* object);
+void     criUtfRtv_Destroy(CriUint64* table);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 CriBool  FUN_140043d40(void* decoder);
 CriBool  FUN_1400446c0(void* decoder);
@@ -230,7 +225,6 @@ void     FUN_140044390(const void* decoderInterface);
 void     FUN_1400443d0(void* decoderInterface);
 void     FUN_140044ea8(void);
 void     FUN_140039f00(void* section);
-void*    FUN_1400385c8(void* storage, CriSint32 size);
 void*    FUN_1400449c0(void* decoder, void* frameInfo);
 void     FUN_140044050(void* decoder, void* frameInfo);
 void     FUN_140044a30(void* decoder, void* frameInfo);
@@ -240,7 +234,6 @@ void     FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* 
 void     FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
 void     FUN_140044680(void* decoder);
 void     FUN_140043d00(void* decoder);
-void     FUN_1400379b0(void* owner, const char* message);
 CriBool  FUN_1400467b8(void* queue, CriSint32 operation);
 void     FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
 void     FUN_140044d20(void* decoder, CriUint32 count);
@@ -263,7 +256,6 @@ CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* out
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
-CriSint32 FUN_1400310e0(void* player);
 void     FUN_140036e30(void* player, CriMvSubtitleChunk* chunk);
 void     FUN_1400363b0(void* player, void* chunk, CriUint32 type);
 void     FUN_140036e80(void* player, CriMvSubtitleChunk* chunk);
@@ -282,7 +274,6 @@ void     FUN_140043be0(void* decoder);
 void     FUN_140028074(void* heap);
 void     FUN_142584540(void* event, CriSint32 timeout);
 void     FUN_14258b260(void* event);
-void     FUN_14002d5e0(void* request, void* a, void* b);
 void     FUN_14258aca0(void* lock);
 void     FUN_14258bb70(void* lock);
 void     FUN_142583d50(void* event);
@@ -306,8 +297,6 @@ void     FUN_14002aa30(CriUint64* array, CriUint64 length);
 void     FUN_14000bd60(void* array, void* source, CriUint64 length);
 void     FUN_14001d720(void* manager, void* reader);
 void     FUN_1425845e0(void* event, CriSint32 timeout);
-void     FUN_14002b2e0(void* object);
-void     FUN_14002c5f0(void* object);
 namespace Scaleform { namespace GFx { namespace Video { void FUN_14002e2a0(void* object); }}}
 void     FUN_142579470(void* object);
 void     FUN_142585580(void* destination, const void* source);
@@ -480,7 +469,7 @@ struct CriVideoRecordCopyView
 void FUN_140038000(void** record, void*)
 {
     CriSint32 contentsSize = 0;
-    CriUint8* contents = (CriUint8*)FUN_14003b674((const CriUint8*)record[0],
+    CriUint8* contents = (CriUint8*)criUsfCmn_GetContents((const CriUint8*)record[0],
         *(CriUint32*)((CriUint8*)record + 8), &contentsSize);
     if (!contents || contentsSize <= 0x13f)
         return;
@@ -492,7 +481,7 @@ void FUN_140038000(void** record, void*)
 void FUN_1400380d0(void** record, void*)
 {
     CriSint32 contentsSize = 0;
-    CriUint8* contents = (CriUint8*)FUN_14003b674((const CriUint8*)record[0],
+    CriUint8* contents = (CriUint8*)criUsfCmn_GetContents((const CriUint8*)record[0],
         *(CriUint32*)((CriUint8*)record + 8), &contentsSize);
     for (CriUint32 i = 0; contents && i + 0x10 < (CriUint32)contentsSize; ++i)
         contents[i + 0x10] ^= 0xff;
@@ -909,7 +898,7 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
         void* mem = pHeap->Alloc(0x40);
         VideoReaderConfig* pconfig = mem ? ::new(mem) VideoReaderConfigSmp(pHeap, pfileOpener) : NULL;
         mem = pHeap->Alloc(0x50);
-        VideoReader* preader = mem ? (VideoReader*)FUN_14002d970(mem, pconfig) : NULL;
+        VideoReader* preader = mem ? ::new(mem) VideoReader(pconfig) : NULL;
         if (pReader)
             pReader->Release();
         pReader = preader;
@@ -1953,12 +1942,12 @@ void criMvPly_SetMetaDataWorkAllocator(void* player, void* work, void* allocate,
 CriSint32 FUN_14002e9e0(void)
 {
     CriUint32 rbfConfig[6] = { 1, 0x2800, 0, 0x40, 0, 0 };
-    CriSint32 total = 0x376c + 4 + FUN_140045ed0(rbfConfig);
+    CriSint32 total = 0x376c + 4 + criSjRbf_CalculateWorkSize((const CriSint32*)rbfConfig);
     total += 4 + FUN_140044eb0(8);
     CriUint32 uniConfig[3] = { 1, 0, 0x40 };
-    total += FUN_140045910(uniConfig);
+    total += criSjUni_CalculateWorkSize((const CriSint32*)uniConfig);
     uniConfig[2] = 4;
-    return total + FUN_140045910(uniConfig);
+    return total + criSjUni_CalculateWorkSize((const CriSint32*)uniConfig);
 }
 
 // MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
@@ -1982,7 +1971,7 @@ void FUN_140034690(void* player)
         FUN_140044680(fields[0x1c1]);
         if (FUN_140044630(fields[0x1c1]) == 4)
         {
-            FUN_1400379b0(player, "The internal status of Vdec is ERROR.");
+            crimvply_transitErrorState(player, (void*)"The internal status of Vdec is ERROR.");
             return;
         }
     }
@@ -1990,7 +1979,7 @@ void FUN_140034690(void* player)
     {
         FUN_140043d00(fields[0x1c8]);
         if (FUN_140043cb0(fields[0x1c8]) == 4)
-            FUN_1400379b0(player, "The internal status of AlphaDec is ERROR.");
+            crimvply_transitErrorState(player, (void*)"The internal status of AlphaDec is ERROR.");
     }
 }
 
@@ -2005,7 +1994,7 @@ CriBool FUN_1400340f0(void* player, const CriMovieInputChunk* input)
     if (input->Size > 0x1f)
     {
         CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
         FUN_140032650(player, slot, (CriUint32*)slot->PrimaryOutput, &parsed);
         --slot->PendingPrimary;
         FUN_140033e60(player, slot);
@@ -2024,7 +2013,7 @@ CriBool FUN_1400341d0(void* player, const CriMovieInputChunk* input)
     if (input->Size > 0x1f)
     {
         CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
         FUN_140032db0(player, slot, (CriUint32*)slot->SubtitleOutput, &parsed);
         --slot->PendingAlpha;
         FUN_140033e60(player, slot);
@@ -2043,7 +2032,7 @@ CriBool FUN_140036d50(void* player, const CriMovieInputChunk* input)
     if (input->Size > 0x1f)
     {
         CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
         FUN_140032b70(player, slot, (CriUint32*)slot->AlphaOutput, &parsed);
         --slot->PendingSubtitle;
         FUN_140033e60(player, slot);
@@ -2711,7 +2700,7 @@ void FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo)
     };
     SubtitleOutputView* output = (SubtitleOutputView*)outputInfo;
     CriSint32 contentSize = 0;
-    const CriUint8* content = FUN_14003b674(chunk->Data, chunk->Size, &contentSize);
+    const CriUint8* content = criUsfCmn_GetContents(chunk->Data, chunk->Size, &contentSize);
     const CriUint32* fields = (const CriUint32*)content;
     output->Channel = fields[0];
     output->FrameDuration = fields[1];
@@ -2892,8 +2881,8 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
         return NULL;
     }
     CriFixedAllocator allocator = {};
-    FUN_14002e6b0(work, workSize, &allocator);
-    CriUint32* words = (CriUint32*)FUN_14002e6c0(&allocator, 0xf18, 4);
+    criFixedAllocator_Create(work, workSize, &allocator);
+    CriUint32* words = (CriUint32*)criFixedAllocator_Allocate(&allocator, 0xf18, 4);
     if (!words)
     {
         FUN_140037950(NULL, "E10051204M: Can't allocate handle object memory.", 0xf18);
@@ -2913,7 +2902,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     HeapFields* heapFields = (HeapFields*)words;
     WorkFields* workFields = (WorkFields*)words;
 
-    workFields->CriticalWork = FUN_14002e6c0(&allocator, 0x48, 4);
+    workFields->CriticalWork = criFixedAllocator_Allocate(&allocator, 0x48, 4);
     if (!workFields->CriticalWork)
     {
         FUN_14002f610(words);
@@ -2929,7 +2918,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     }
 
     words[0x376] = 0x2800;
-    void* localBuffer = FUN_14002e6c0(&allocator, 0x2800, 4);
+    void* localBuffer = criFixedAllocator_Allocate(&allocator, 0x2800, 4);
     *(void**)((CriUint8*)words + 0xde0) = localBuffer;
     if (!localBuffer)
     {
@@ -2946,8 +2935,8 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     }
 
     CriUint32 rbfConfig[6] = { 1, 0x2800, 0, 0x40, 0, 0 };
-    CriSint32 inputSize = FUN_140045ed0(rbfConfig);
-    void* inputWork = FUN_14002e6c0(&allocator, inputSize, 4);
+    CriSint32 inputSize = criSjRbf_CalculateWorkSize((const CriSint32*)rbfConfig);
+    void* inputWork = criFixedAllocator_Allocate(&allocator, inputSize, 4);
     if (!inputWork)
     {
         FUN_14002f610(words);
@@ -2965,7 +2954,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
 
     words[0x35c] = 8;
     CriSint32 demuxSize = FUN_140044eb0(words[0x35c]);
-    void* demuxWork = FUN_14002e6c0(&allocator, demuxSize, 4);
+    void* demuxWork = criFixedAllocator_Allocate(&allocator, demuxSize, 4);
     if (!demuxWork)
     {
         FUN_14002f610(words);
@@ -2982,8 +2971,8 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     }
 
     CriUint32 outputConfig[3] = { 1, 0, 0x40 };
-    CriSint32 outputSize = FUN_140045910(outputConfig);
-    void* outputWork = FUN_14002e6c0(&allocator, outputSize, 4);
+    CriSint32 outputSize = criSjUni_CalculateWorkSize((const CriSint32*)outputConfig);
+    void* outputWork = criFixedAllocator_Allocate(&allocator, outputSize, 4);
     if (!outputWork)
     {
         FUN_14002f610(words);
@@ -2999,8 +2988,8 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     }
 
     CriUint32 memoryConfig[3] = { 1, 0, 4 };
-    CriSint32 memorySize = FUN_140045910(memoryConfig);
-    void* memoryWork = FUN_14002e6c0(&allocator, memorySize, 4);
+    CriSint32 memorySize = criSjUni_CalculateWorkSize((const CriSint32*)memoryConfig);
+    void* memoryWork = criFixedAllocator_Allocate(&allocator, memorySize, 4);
     if (!memoryWork)
     {
         FUN_14002f610(words);
@@ -3018,7 +3007,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     ((CriMvReadBufferState*)words)->Mode = 0;
     FUN_14002f850(words);
     words[0] = 1;
-    FUN_1400372c0(words, 0);
+    criMvPly_SetPcmFormat(words, 0);
     FUN_14002e6bc(&allocator);
     return words;
 }
@@ -3043,7 +3032,7 @@ CriSint32 FUN_140037400(void* player, const CriMvStreamingParameters* params)
 
     CriUint32 padded = inputSize + 0x800;
     inputSize = (padded / 0x800) * 0x800;
-    CriUint32 tail = FUN_140037310(params, padded % 0x800);
+    CriUint32 tail = decideReadBufferExtSize((void*)params);
     CriUint32 flags[2] = { 1, 1 };
     CriSint32 blockSize = FUN_140046604(inputSize, tail, 0x40, flags);
     total += blockSize;
@@ -4143,7 +4132,7 @@ void* FUN_14002ac70(void* object, CriUint64 flags)
 // @0x14002bac0
 void* FUN_14002bac0(void* object, CriUint64 flags)
 {
-    FUN_14002b2e0(object);
+    static_cast<Scaleform::GFx::Video::VideoDecoderThrd*>(object)->Scaleform::GFx::Video::VideoDecoderThrd::~VideoDecoderThrd();
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
@@ -4153,7 +4142,7 @@ void* FUN_14002bac0(void* object, CriUint64 flags)
 // @0x14002c8f0
 void* FUN_14002c8f0(void* object, CriUint64 flags)
 {
-    FUN_14002c5f0(object);
+    static_cast<Scaleform::GFx::Video::VideoPlayerImpl*>(object)->Scaleform::GFx::Video::VideoPlayerImpl::~VideoPlayerImpl();
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
@@ -4363,7 +4352,7 @@ void* FUN_14002f1f0(CriHeap heap)
     ((CriMvReadBufferState*)words)->Mode = 0;
     FUN_14002f850(words);
     words[0] = 1;
-    FUN_1400372c0(words, 0);
+    criMvPly_SetPcmFormat(words, 0);
     return words;
 }
 
@@ -4508,7 +4497,8 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 break;
             }
             case 1:
-                FUN_14002d5e0(request->Request, request->ArgumentA, request->ArgumentB);
+                static_cast<Scaleform::GFx::Video::VideoReader*>(request->Request)->ReadFile(
+                    static_cast<Scaleform::UByte*>(request->ArgumentA), reinterpret_cast<Scaleform::SInt64>(request->ArgumentB));
                 break;
             case 2:
             {
@@ -4672,7 +4662,7 @@ void FUN_14002e7d0(void)
             FUN_140043a20(entries[i].AlphaDecoderInterface);
         }
         FUN_140041ea0();
-        DAT_143ffd550 = FUN_1400385c8(DAT_143ffd504, 0x48);
+        DAT_143ffd550 = FUN_140039ea8(DAT_143ffd504, 0x48); // through the exe's jmp stub at 0x1400385c8
         if (!DAT_143ffd550)
             FUN_140037910(NULL, "E07020200M: Can't create critical section.", 0);
     }
@@ -4810,7 +4800,7 @@ void FUN_140034730(void* player)
     FUN_140037850(player);
     void* demux = state->Demux;
     if (FUN_140044f8c(demux) == 4)
-        FUN_1400379b0(player, "Status of demux is ERROR.");
+        crimvply_transitErrorState(player, (void*)"Status of demux is ERROR.");
     else if (state->Status != 2)
     {
         HeaderGateView* headerState = (HeaderGateView*)player;
@@ -4865,7 +4855,7 @@ void FUN_140032a70(void* player, void* workInfo, CriUint32* output, const CriMov
     WorkSizeView* work = (WorkSizeView*)workInfo;
     if (work->Size < suggestedSize)
         work->Size = suggestedSize;
-    FUN_14003a108(document);
+    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // MS2-FUNCTIONAL: parse channel and time-base metadata for a CRI Movie stream record.
@@ -4884,7 +4874,7 @@ void FUN_140032b70(void* player, void* workInfo, CriUint32* output, const CriMov
         work->Size = suggestedSize;
     if (output[1] != 0 && ((CriUint64*)output)[1] != 0 && output[4] != 0)
         output[0] = 1;
-    FUN_14003a108(document);
+    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // MS2-FUNCTIONAL: parse the cue metadata header and raise the required working-buffer size.
@@ -4904,7 +4894,7 @@ void FUN_140032c70(void* player, void* workInfo, CriUint32* output, const CriMov
         work->Size = suggestedSize;
     if (output[1] == 1 && output[2] != 0 && output[3] != 0 && ((CriUint64*)output)[2] != 0)
         output[0] = 1;
-    FUN_14003a108(document);
+    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // MS2-FUNCTIONAL: parse video dimensions, timing, codec, alpha, and metadata information.
@@ -4935,7 +4925,7 @@ void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMov
     output[3] = FUN_14003a85c(document, 0, "disp_height");
     if (output[3] == 0)
         output[3] = output[1];
-    FUN_14003a108(document);
+    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // MS2-FUNCTIONAL: parse one indexed CRI stream record and update its pending-record count.
@@ -5007,7 +4997,7 @@ void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* 
     CriUsfStandardHeader header = {};
     FUN_14003b3fc(current->Data, current->Size, &header);
     CriSint32 contentSize = 0;
-    const CriUint8* contents = FUN_14003b674(current->Data, current->Size, &contentSize);
+    const CriUint8* contents = criUsfCmn_GetContents(current->Data, current->Size, &contentSize);
     if (!contents || contentSize <= 0)
         return;
 
@@ -5084,7 +5074,7 @@ CriBool FUN_140033030(void* player)
         CriUsfStandardHeader header = {};
         FUN_14003b3fc(chunk.Data, chunk.Size, &header);
         CriSint32 contentSize = 0;
-        const CriUint8* contents = FUN_14003b674(chunk.Data, chunk.Size, &contentSize);
+        const CriUint8* contents = criUsfCmn_GetContents(chunk.Data, chunk.Size, &contentSize);
         CriUint32 tableId = 0;
         memcpy(&tableId, header.Data, sizeof(tableId));
         CriUint8 recordType = header.Data[15];
@@ -5117,7 +5107,7 @@ CriBool FUN_140033030(void* player)
                 memcpy((CriUint8*)player + 0xe90, &contentSize, sizeof(contentSize));
                 memcpy((CriUint8*)player + 0xe94, &count, sizeof(count));
             }
-            FUN_14003a108(table);
+            criUtfRtv_Destroy((CriUint64*)table);
         }
         else if (recordType == 2)
         {
@@ -5152,7 +5142,7 @@ CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 ou
     if (input->Size > 0x1f)
     {
         CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
+        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
         CriUint32* streamOutput = (CriUint32*)((CriUint8*)slot + 0x50 + (size_t)outputIndex * 0x10);
         FUN_140032a70(player, slot, streamOutput, &parsed);
         --slot->Reserved2C4;
@@ -5262,7 +5252,7 @@ void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMov
     output[3] = FUN_14003a85c(document, 0, "disp_height");
     if (output[3] == 0)
         output[3] = output[1];
-    FUN_14003a108(document);
+    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // MS2-FUNCTIONAL: select the last seek-table entry whose frame id does not exceed the requested frame.
@@ -5283,7 +5273,7 @@ void FUN_140033700(void* player, const void* data, CriUint32 size, CriSint32 tar
     }
     *outputData = selectedData;
     *outputFrame = FUN_14003a894(document, index == 0 ? 0 : index - 1, "ofs_frmid");
-    FUN_14003a108(document);
+    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // MS2-FUNCTIONAL: allocate and initialize the metadata stream using either the caller or CRI heap.
@@ -5311,7 +5301,7 @@ CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignm
     MetadataView* state = (MetadataView*)player;
     if (!heap)
     {
-        CriSint32 workSize = FUN_140045ed0(&config);
+        CriSint32 workSize = criSjRbf_CalculateWorkSize((const CriSint32*)&config);
         void* allocation = state->Allocate(state->Context, workSize);
         if (!allocation)
         {
@@ -5537,7 +5527,7 @@ void FUN_140032420(void* player, void* streamInfo, const CriMovieParsedChunk* pa
                 info->VideoCount = 1;
         }
     }
-    FUN_14003a108(document);
+    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // MS2-FUNCTIONAL: consume CRI Movie header and stream records until the file's end marker arrives.
@@ -5568,7 +5558,7 @@ CriSint32 FUN_140032090(void* player)
 
         memset(parsedHeader, 0, sizeof(parsedHeader));
         FUN_14003b3fc((const CriUint8*)record.Chunk, record.Type, parsedHeader);
-        const CriUint8* contents = FUN_14003b674((const CriUint8*)record.Chunk,
+        const CriUint8* contents = criUsfCmn_GetContents((const CriUint8*)record.Chunk,
                                                   record.Type, &contentSize);
         CriUint32 streamId = 0;
         memcpy(&streamId, parsedHeader, sizeof(streamId));
@@ -5653,7 +5643,7 @@ void FUN_140034e70(void* player, const CriMovieInputChunk* input, CriUint32 maxi
 
     CriMovieInputChunk prefix = {};
     CriMovieInputChunk suffix = {};
-    FUN_1400467c0(current, maximum, &prefix, &suffix);
+    criSj_SplitChunk(current, maximum, &prefix, &suffix);
     FUN_1400467a8(source, 0, &prefix);
     FUN_1400467b0(source, 1, current);
     current->Data = NULL;
@@ -5680,7 +5670,7 @@ void FUN_140033610(void* player)
         }
         memset(parsedHeader, 0, sizeof(parsedHeader));
         FUN_14003b3fc((const CriUint8*)chunk.Data, chunk.Size, parsedHeader);
-        FUN_14003b674((const CriUint8*)chunk.Data, chunk.Size, &contentSize);
+        criUsfCmn_GetContents((const CriUint8*)chunk.Data, chunk.Size, &contentSize);
         if (parsedHeader[0xf] != 2 && parsedHeader[0xf] != 3)
         {
             FUN_1400467a8(queue, 1, &chunk);
@@ -6154,7 +6144,7 @@ void FUN_140036710(void* player)
         if (parsed[0] == 0x43524944)
         {
             CriSint32 contentSize = 0;
-            CriMovieParsedChunk header = { FUN_14003b674(chunk.Data, chunk.Size, &contentSize), contentSize, 0 };
+            CriMovieParsedChunk header = { criUsfCmn_GetContents(chunk.Data, chunk.Size, &contentSize), contentSize, 0 };
             FUN_140032420(player, target, &header);
             target->History0 = target->Field4c;
             target->History4 = target->Field10;
@@ -6177,7 +6167,7 @@ CriUint32 FUN_140036650(void* player)
     CriMvSubtitleFields* subtitle = (CriMvSubtitleFields*)player;
     if (!subtitle->Queue)
         return 0;
-    CriSint32 status = FUN_1400310e0(player);
+    CriSint32 status = getInternalStatus(player);
     if (status >= 0 && status <= 4)
         return 0;
 
