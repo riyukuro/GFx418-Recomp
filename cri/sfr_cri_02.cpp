@@ -3938,16 +3938,16 @@ void* FUN_14002d280(void** slot, void* replacement)
     return slot;
 }
 
-// MS2-FUNCTIONAL: allocate a six-byte aligned tag block from the global Scaleform heap.
+// MS2-FUNCTIONAL: allocate a block from the global Scaleform heap (alloc info 6) and return it.
 // @0x14002d3c0
-void FUN_14002d3c0(void*, size_t size)
+void* FUN_14002d3c0(void*, size_t size)
 {
     CriUint32 flags[6] = { 6, 0, 0, 0, 0, 0 };
     void* heap = DAT_143b15f60;
     CriUint8* vtable = (CriUint8*)*(void**)heap;
     void* (__fastcall *allocate)(void*, size_t, CriUint32*) =
-        (void* (__fastcall *)(void*, size_t, CriUint32*))(vtable + 0x50);
-    allocate(heap, size, flags);
+        *(void* (__fastcall **)(void*, size_t, CriUint32*))(vtable + 0x50);
+    return allocate(heap, size, flags);
 }
 
 // MS2-FUNCTIONAL: return a non-null allocation to the global Scaleform heap.
@@ -3958,7 +3958,7 @@ void FUN_14002d3f0(void* allocation)
     {
         void* heap = DAT_143b15f60;
         CriUint8* vtable = (CriUint8*)*(void**)heap;
-        void (__fastcall *release)(void*, void*) = (void (__fastcall *)(void*, void*))(vtable + 0x60);
+        void (__fastcall *release)(void*, void*) = *(void (__fastcall **)(void*, void*))(vtable + 0x60);
         release(heap, allocation);
     }
 }
@@ -4610,7 +4610,7 @@ CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool)
     void* heap = DAT_143b15f60;
     CriUint8* vtable = (CriUint8*)*(void**)heap;
     void* (__fastcall *allocate)(void*, size_t, CriUint32*) =
-        (void* (__fastcall *)(void*, size_t, CriUint32*))(vtable + 0x50);
+        *(void* (__fastcall **)(void*, size_t, CriUint32*))(vtable + 0x50);
     CriMvRequestBlock* block = (CriMvRequestBlock*)allocate(heap, sizeof(CriMvRequestBlock), flags);
     block->NextBlock = NULL;
     if (pool->LastBlock)
@@ -4626,7 +4626,7 @@ static void CriReleaseRequestBlocks(CriMvRequestBlock* block)
 {
     void* heap = DAT_143b15f60;
     CriUint8* vtable = (CriUint8*)*(void**)heap;
-    void (__fastcall *release)(void*, void*) = (void (__fastcall *)(void*, void*))(vtable + 0x60);
+    void (__fastcall *release)(void*, void*) = *(void (__fastcall **)(void*, void*))(vtable + 0x60);
     while (block)
     {
         CriMvRequestBlock* next = block->NextBlock;
