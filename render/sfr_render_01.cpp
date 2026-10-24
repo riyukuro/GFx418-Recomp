@@ -12,6 +12,7 @@
 // starts there, sfr_kernel_01).
 // MS2-RANGE: 0x1425792d0-0x14257db40 .text$mn
 // MS2-RANGE: 0x14257db40-0x14257dc30 .text$mn
+// MS2-RANGE: 0x142579270-0x1425792cd .text$mn
 
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_drawableimage.h"
@@ -1118,6 +1119,7 @@ bool TextureImage::Unmap()
 
 // ---------------------------------------------------------------- update queue
 
+// @0x142579270
 ImageUpdate::ImageUpdate(Image* image) : pImage(image)
 {
 }

@@ -9,6 +9,7 @@
 // MS2-RANGE: 0x1426aa250-0x1426aa2f0 .text$mn
 // MS2-RANGE: 0x1426aa2f0-0x1426aa310 .text$mn
 // MS2-RANGE: 0x1426aa310-0x1426ad030 .text$mn
+// MS2-RANGE: 0x1426aa240-0x1426aa249 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -28,6 +29,7 @@ void StrokePath::AddVertex(const StrokeVertex& v)
 }
 
 // Clear keeps the pages for reuse, ClearAndRelease frees them.
+// @0x1426aa240
 void StrokePath::Clear()
 {
     Path.Clear();

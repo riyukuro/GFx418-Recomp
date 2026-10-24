@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_kernel_03k
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1426cba50-0x1426cc8f0 .text$mn
+// MS2-RANGE: 0x1426cba30-0x1426cba47 .text$mn
 #include <string.h>
 #include "ms2/scaleform/kernel/sf_types.h"
 #include "ms2/scaleform/kernel/sf_heapbitset2.h"
@@ -14,6 +15,7 @@ namespace Scaleform { namespace HeapMH {
 
 using namespace Heap;
 
+// @0x1426cba30
 AllocBitSet2MH::AllocBitSet2MH()
 { }
 
