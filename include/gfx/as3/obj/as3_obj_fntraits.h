@@ -67,4 +67,10 @@ namespace InstanceTraits {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::MethodInd) == 0xe8, "MethodInd size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::Thunk) == 0xe8, "Thunk size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::ThunkFunction) == 0xe8, "ThunkFunction size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::VTableInd) == 0xe8, "VTableInd size");
+
 #endif

@@ -76,4 +76,13 @@ namespace ClassTraits { namespace fl_errors {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_errors::EOFError) == 0xc8, "EOFError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_errors::IOError) == 0xc8, "IOError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_errors::IllegalOperationError) == 0xc8, "IllegalOperationError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_errors::InvalidSWFError) == 0xc8, "InvalidSWFError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_errors::MemoryError) == 0xc8, "MemoryError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_errors::ScriptTimeoutError) == 0xc8, "ScriptTimeoutError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_errors::StackOverflowError) == 0xc8, "StackOverflowError size");
+
 #endif

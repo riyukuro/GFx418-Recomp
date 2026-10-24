@@ -944,4 +944,43 @@ namespace ClassTraits { namespace fl_text {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::AntiAliasType) == 0xc8, "AntiAliasType size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::CSMSettings) == 0xc8, "CSMSettings size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::Font) == 0xc8, "Font size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::FontStyle) == 0xc8, "FontStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::FontType) == 0xc8, "FontType size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::GridFitType) == 0xc8, "GridFitType size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::StaticText) == 0xc8, "StaticText size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::StyleSheet) == 0xc8, "StyleSheet size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextColorType) == 0xc8, "TextColorType size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextDisplayMode) == 0xc8, "TextDisplayMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextField) == 0xc8, "TextField size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextFieldAutoSize) == 0xc8, "TextFieldAutoSize size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextFieldType) == 0xc8, "TextFieldType size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextFormat) == 0xc8, "TextFormat size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextFormatAlign) == 0xc8, "TextFormatAlign size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextLineMetrics) == 0xc8, "TextLineMetrics size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextRenderer) == 0xc8, "TextRenderer size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_text::TextSnapshot) == 0xc8, "TextSnapshot size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::AntiAliasType) == 0x60, "AntiAliasType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::Font) == 0x50, "Font size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::FontStyle) == 0x70, "FontStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::FontType) == 0x60, "FontType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::GridFitType) == 0x68, "GridFitType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::TextColorType) == 0x60, "TextColorType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::TextDisplayMode) == 0x68, "TextDisplayMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::TextFieldAutoSize) == 0x70, "TextFieldAutoSize size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::TextFieldType) == 0x60, "TextFieldType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::TextFormatAlign) == 0x70, "TextFormatAlign size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_text::TextRenderer) == 0x50, "TextRenderer size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::CSMSettings) == 0xe8, "CSMSettings size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::Font) == 0xe8, "Font size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::StaticText) == 0xe8, "StaticText size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::StyleSheet) == 0xe8, "StyleSheet size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::TextField) == 0xe8, "TextField size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::TextFormat) == 0xe8, "TextFormat size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::TextLineMetrics) == 0xe8, "TextLineMetrics size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_text::TextSnapshot) == 0xe8, "TextSnapshot size");
+
 #endif

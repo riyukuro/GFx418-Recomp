@@ -1804,4 +1804,63 @@ namespace ClassTraits { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::ArgumentError) == 0xc8, "ArgumentError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Array) == 0xc8, "Array size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Boolean) == 0xc8, "Boolean size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Catch) == 0xc8, "Catch size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Date) == 0xc8, "Date size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::DefinitionError) == 0xc8, "DefinitionError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Error) == 0xc8, "Error size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::EvalError) == 0xc8, "EvalError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Math) == 0xc8, "Math size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Namespace) == 0xc8, "Namespace size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Number) == 0xc8, "Number size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::Object) == 0xc8, "Object size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::QName) == 0xc8, "QName size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::RangeError) == 0xc8, "RangeError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::ReferenceError) == 0xc8, "ReferenceError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::RegExp) == 0xc8, "RegExp size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::SecurityError) == 0xc8, "SecurityError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::String) == 0xc8, "String size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::SyntaxError) == 0xc8, "SyntaxError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::TypeError) == 0xc8, "TypeError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::URIError) == 0xc8, "URIError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::UninitializedError) == 0xc8, "UninitializedError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::VerifyError) == 0xc8, "VerifyError size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::XML) == 0xc8, "XML size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::XMLList) == 0xc8, "XMLList size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::int_) == 0xc8, "int_ size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl::uint) == 0xc8, "uint size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Array) == 0x68, "Array size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Boolean) == 0x50, "Boolean size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Catch) == 0x50, "Catch size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Date) == 0x50, "Date size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Error) == 0x50, "Error size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Math) == 0x90, "Math size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Namespace) == 0x50, "Namespace size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Number) == 0x78, "Number size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::Object) == 0x50, "Object size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::QName) == 0x50, "QName size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::RegExp) == 0x50, "RegExp size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::String) == 0x50, "String size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::XML) == 0x58, "XML size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::XMLList) == 0x50, "XMLList size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::int_) == 0x58, "int_ size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl::uint) == 0x58, "uint size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Array) == 0xe8, "Array size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Boolean) == 0xe8, "Boolean size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Catch) == 0xe8, "Catch size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Date) == 0xe8, "Date size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Error) == 0xe8, "Error size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Namespace) == 0xf0, "Namespace size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Number) == 0xe8, "Number size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::QName) == 0xe8, "QName size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::RegExp) == 0xe8, "RegExp size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::String) == 0xe8, "String size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::XML) == 0xe8, "XML size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::XMLList) == 0xe8, "XMLList size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::int_) == 0xe8, "int_ size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::uint) == 0xe8, "uint size");
+
 #endif

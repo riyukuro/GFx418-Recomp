@@ -43,4 +43,8 @@ namespace ClassTraits { namespace fl_external {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_external::ExternalInterface) == 0xc8, "ExternalInterface size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_external::ExternalInterface) == 0x50, "ExternalInterface size");
+
 #endif

@@ -296,4 +296,22 @@ namespace ClassTraits { namespace fl_media {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::Camera) == 0xc8, "Camera size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::ID3Info) == 0xc8, "ID3Info size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::Microphone) == 0xc8, "Microphone size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::Sound) == 0xc8, "Sound size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::SoundChannel) == 0xc8, "SoundChannel size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::SoundLoaderContext) == 0xc8, "SoundLoaderContext size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::SoundMixer) == 0xc8, "SoundMixer size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_media::SoundTransform) == 0xc8, "SoundTransform size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_media::Camera) == 0x50, "Camera size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_media::Microphone) == 0x50, "Microphone size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_media::SoundMixer) == 0x50, "SoundMixer size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_media::ID3Info) == 0xe8, "ID3Info size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_media::Sound) == 0xe8, "Sound size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_media::SoundChannel) == 0xe8, "SoundChannel size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_media::SoundLoaderContext) == 0xe8, "SoundLoaderContext size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_media::SoundTransform) == 0xe8, "SoundTransform size");
+
 #endif

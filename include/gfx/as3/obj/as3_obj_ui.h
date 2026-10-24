@@ -546,4 +546,25 @@ namespace ClassTraits { namespace fl_ui {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::ContextMenu) == 0xc8, "ContextMenu size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::ContextMenuBuiltInItems) == 0xc8, "ContextMenuBuiltInItems size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::ContextMenuClipboardItems) == 0xc8, "ContextMenuClipboardItems size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::ContextMenuItem) == 0xc8, "ContextMenuItem size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::KeyLocation) == 0xc8, "KeyLocation size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::Keyboard) == 0xc8, "Keyboard size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::Mouse) == 0xc8, "Mouse size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::MouseCursor) == 0xc8, "MouseCursor size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::Multitouch) == 0xc8, "Multitouch size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_ui::MultitouchInputMode) == 0xc8, "MultitouchInputMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_ui::KeyLocation) == 0x60, "KeyLocation size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_ui::Keyboard) == 0x668, "Keyboard size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_ui::Mouse) == 0x50, "Mouse size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_ui::MouseCursor) == 0x78, "MouseCursor size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_ui::Multitouch) == 0x50, "Multitouch size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_ui::MultitouchInputMode) == 0x68, "MultitouchInputMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_ui::ContextMenu) == 0xe8, "ContextMenu size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_ui::ContextMenuBuiltInItems) == 0xe8, "ContextMenuBuiltInItems size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_ui::ContextMenuClipboardItems) == 0xe8, "ContextMenuClipboardItems size");
+
 #endif

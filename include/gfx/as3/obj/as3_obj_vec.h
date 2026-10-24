@@ -634,4 +634,22 @@ namespace Classes { namespace fl_vec {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_vec::Vector) == 0xc8, "Vector size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_vec::Vector_String) == 0xc8, "Vector_String size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_vec::Vector_double) == 0xc8, "Vector_double size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_vec::Vector_int) == 0xc8, "Vector_int size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_vec::Vector_object) == 0xd0, "Vector_object size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_vec::Vector_uint) == 0xc8, "Vector_uint size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_vec::Vector) == 0x50, "Vector size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_vec::Vector_String) == 0x50, "Vector_String size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_vec::Vector_double) == 0x50, "Vector_double size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_vec::Vector_int) == 0x50, "Vector_int size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_vec::Vector_object) == 0x50, "Vector_object size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_vec::Vector_uint) == 0x50, "Vector_uint size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_vec::Vector_String) == 0xe8, "Vector_String size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_vec::Vector_double) == 0xe8, "Vector_double size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_vec::Vector_int) == 0xe8, "Vector_int size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_vec::Vector_uint) == 0xe8, "Vector_uint size");
+
 #endif

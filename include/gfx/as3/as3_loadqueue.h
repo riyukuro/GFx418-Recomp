@@ -61,4 +61,8 @@ public:
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::LoadQueueEntry) == 0x60, "LoadQueueEntry size");
+static_assert(sizeof(Scaleform::GFx::AS3::LoadQueueEntryMT_LoadMovie) == 0x40, "LoadQueueEntryMT_LoadMovie size");
+
 #endif

@@ -541,4 +541,37 @@ namespace ClassTraits { namespace fl_net {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::FileFilter) == 0xc8, "FileFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::FileReference) == 0xc8, "FileReference size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::FileReferenceList) == 0xc8, "FileReferenceList size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::IDynamicPropertyOutput) == 0xc8, "IDynamicPropertyOutput size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::IDynamicPropertyWriter) == 0xc8, "IDynamicPropertyWriter size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::LocalConnection) == 0xc8, "LocalConnection size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::NetConnection) == 0xc8, "NetConnection size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::ObjectEncoding) == 0xc8, "ObjectEncoding size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::Responder) == 0xc8, "Responder size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::SharedObject) == 0xc8, "SharedObject size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::SharedObjectFlushStatus) == 0xc8, "SharedObjectFlushStatus size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::Socket) == 0xc8, "Socket size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::URLLoader) == 0xc8, "URLLoader size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::URLLoaderDataFormat) == 0xc8, "URLLoaderDataFormat size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::URLRequest) == 0xc8, "URLRequest size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::URLRequestHeader) == 0xc8, "URLRequestHeader size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::URLRequestMethod) == 0xc8, "URLRequestMethod size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::URLStream) == 0xc8, "URLStream size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::URLVariables) == 0xc8, "URLVariables size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_net::XMLSocket) == 0xc8, "XMLSocket size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_net::ObjectEncoding) == 0x60, "ObjectEncoding size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_net::SharedObject) == 0x58, "SharedObject size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_net::SharedObjectFlushStatus) == 0x60, "SharedObjectFlushStatus size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_net::URLLoaderDataFormat) == 0x68, "URLLoaderDataFormat size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_net::URLRequestMethod) == 0x80, "URLRequestMethod size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_net::NetConnection) == 0xe8, "NetConnection size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_net::SharedObject) == 0xe8, "SharedObject size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_net::URLLoader) == 0xe8, "URLLoader size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_net::URLRequest) == 0xe8, "URLRequest size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_net::URLRequestHeader) == 0xe8, "URLRequestHeader size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_net::URLVariables) == 0xe8, "URLVariables size");
+
 #endif

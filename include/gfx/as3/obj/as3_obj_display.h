@@ -1764,4 +1764,75 @@ namespace ClassTraits { namespace fl_display {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::AVM1Movie) == 0xc8, "AVM1Movie size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::ActionScriptVersion) == 0xc8, "ActionScriptVersion size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Bitmap) == 0xc8, "Bitmap size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::BitmapData) == 0xc8, "BitmapData size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::BitmapDataChannel) == 0xc8, "BitmapDataChannel size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::BlendMode) == 0xc8, "BlendMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::CapsStyle) == 0xc8, "CapsStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::DisplayObject) == 0xc8, "DisplayObject size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::DisplayObjectContainer) == 0xc8, "DisplayObjectContainer size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::FrameLabel) == 0xc8, "FrameLabel size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::GradientType) == 0xc8, "GradientType size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Graphics) == 0xc8, "Graphics size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::IBitmapDrawable) == 0xc8, "IBitmapDrawable size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::InteractiveObject) == 0xc8, "InteractiveObject size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::InterpolationMethod) == 0xc8, "InterpolationMethod size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::JointStyle) == 0xc8, "JointStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::LineScaleMode) == 0xc8, "LineScaleMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Loader) == 0xc8, "Loader size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::LoaderInfo) == 0xc8, "LoaderInfo size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::MorphShape) == 0xc8, "MorphShape size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::MovieClip) == 0xc8, "MovieClip size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::PixelSnapping) == 0xc8, "PixelSnapping size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::SWFVersion) == 0xc8, "SWFVersion size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Scene) == 0xc8, "Scene size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Shader) == 0xc8, "Shader size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::ShaderData) == 0xc8, "ShaderData size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Shape) == 0xc8, "Shape size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::SimpleButton) == 0xc8, "SimpleButton size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::SpreadMethod) == 0xc8, "SpreadMethod size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Sprite) == 0xc8, "Sprite size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::Stage) == 0xc8, "Stage size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::StageAlign) == 0xc8, "StageAlign size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::StageDisplayState) == 0xc8, "StageDisplayState size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::StageQuality) == 0xc8, "StageQuality size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_display::StageScaleMode) == 0xc8, "StageScaleMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::ActionScriptVersion) == 0x58, "ActionScriptVersion size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::BitmapDataChannel) == 0x60, "BitmapDataChannel size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::BlendMode) == 0xc0, "BlendMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::CapsStyle) == 0x68, "CapsStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::GradientType) == 0x60, "GradientType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::InterpolationMethod) == 0x60, "InterpolationMethod size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::JointStyle) == 0x68, "JointStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::LineScaleMode) == 0x70, "LineScaleMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::LoaderInfo) == 0x50, "LoaderInfo size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::PixelSnapping) == 0x68, "PixelSnapping size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::SWFVersion) == 0x78, "SWFVersion size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::SpreadMethod) == 0x68, "SpreadMethod size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::Stage) == 0x50, "Stage size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::StageAlign) == 0x90, "StageAlign size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::StageDisplayState) == 0x68, "StageDisplayState size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::StageQuality) == 0x70, "StageQuality size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_display::StageScaleMode) == 0x70, "StageScaleMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::AVM1Movie) == 0xe8, "AVM1Movie size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::Bitmap) == 0xe8, "Bitmap size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::BitmapData) == 0xe8, "BitmapData size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::DisplayObject) == 0xe8, "DisplayObject size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::DisplayObjectContainer) == 0xe8, "DisplayObjectContainer size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::FrameLabel) == 0xe8, "FrameLabel size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::Graphics) == 0xe8, "Graphics size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::InteractiveObject) == 0xe8, "InteractiveObject size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::Loader) == 0xe8, "Loader size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::LoaderInfo) == 0xe8, "LoaderInfo size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::MorphShape) == 0xe8, "MorphShape size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::MovieClip) == 0xe8, "MovieClip size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::Scene) == 0xe8, "Scene size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::Shape) == 0xe8, "Shape size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::SimpleButton) == 0xe8, "SimpleButton size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::Sprite) == 0xe8, "Sprite size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_display::Stage) == 0xe8, "Stage size");
+
 #endif

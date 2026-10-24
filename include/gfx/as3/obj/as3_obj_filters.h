@@ -325,4 +325,26 @@ namespace ClassTraits { namespace fl_filters
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::BevelFilter) == 0xc8, "BevelFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::BitmapFilter) == 0xc8, "BitmapFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::BitmapFilterQuality) == 0xc8, "BitmapFilterQuality size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::BitmapFilterType) == 0xc8, "BitmapFilterType size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::BlurFilter) == 0xc8, "BlurFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::ColorMatrixFilter) == 0xc8, "ColorMatrixFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::DisplacementMapFilterMode) == 0xc8, "DisplacementMapFilterMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::DropShadowFilter) == 0xc8, "DropShadowFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_filters::GlowFilter) == 0xc8, "GlowFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_filters::BitmapFilterQuality) == 0x60, "BitmapFilterQuality size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_filters::BitmapFilterType) == 0x68, "BitmapFilterType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_filters::DisplacementMapFilterMode) == 0x70, "DisplacementMapFilterMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_filters::BevelFilter) == 0xe8, "BevelFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_filters::BitmapFilter) == 0xe8, "BitmapFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_filters::BlurFilter) == 0xe8, "BlurFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_filters::ColorMatrixFilter) == 0xe8, "ColorMatrixFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_filters::DropShadowFilter) == 0xe8, "DropShadowFilter size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_filters::GlowFilter) == 0xe8, "GlowFilter size");
+static_assert(sizeof(Scaleform::Render::BevelFilter) == 0x48, "BevelFilter size");
+static_assert(sizeof(Scaleform::Render::ColorMatrixFilter) == 0x68, "ColorMatrixFilter size");
+
 #endif

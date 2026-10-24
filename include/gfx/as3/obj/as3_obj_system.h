@@ -362,4 +362,25 @@ namespace ClassTraits { namespace fl_system {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::ApplicationDomain) == 0xc8, "ApplicationDomain size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::Capabilities) == 0xc8, "Capabilities size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::IME) == 0xc8, "IME size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::IMEConversionMode) == 0xc8, "IMEConversionMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::LoaderContext) == 0xc8, "LoaderContext size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::Security) == 0xc8, "Security size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::SecurityDomain) == 0xc8, "SecurityDomain size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::SecurityPanel) == 0xc8, "SecurityPanel size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_system::System) == 0xc8, "System size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_system::Capabilities) == 0x50, "Capabilities size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_system::IME) == 0x50, "IME size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_system::IMEConversionMode) == 0x90, "IMEConversionMode size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_system::Security) == 0x78, "Security size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_system::SecurityDomain) == 0x50, "SecurityDomain size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_system::SecurityPanel) == 0x88, "SecurityPanel size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_system::System) == 0x58, "System size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_system::ApplicationDomain) == 0xe8, "ApplicationDomain size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_system::LoaderContext) == 0xe8, "LoaderContext size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_system::SecurityDomain) == 0xe8, "SecurityDomain size");
+
 #endif

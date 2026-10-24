@@ -1094,4 +1094,14 @@ namespace Instances
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::Class) == 0x50, "Class size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassCallConstruct) == 0x50, "ClassCallConstruct size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::ClassClass) == 0xc8, "ClassClass size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::CTraits) == 0xe8, "CTraits size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::Interface) == 0xe8, "Interface size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::Prototype) == 0xe8, "Prototype size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::Object) == 0xe8, "Object size");
+static_assert(sizeof(Scaleform::GFx::AS3::Instances::Namespace) == 0x60, "Namespace size");
+
 #endif

@@ -115,4 +115,13 @@ namespace ClassTraits { namespace fl_security {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_security::XMLSignatureValidator) == 0xc8, "XMLSignatureValidator size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_xml::XMLDocument) == 0xc8, "XMLDocument size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_xml::XMLNode) == 0xc8, "XMLNode size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_xml::XMLNodeType) == 0xc8, "XMLNodeType size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_xml::XMLNodeType) == 0x58, "XMLNodeType size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_xml::XMLDocument) == 0xe8, "XMLDocument size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_xml::XMLNode) == 0xe8, "XMLNode size");
+
 #endif

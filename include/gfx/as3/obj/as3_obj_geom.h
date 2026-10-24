@@ -523,4 +523,24 @@ namespace ClassTraits { namespace fl_geom
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::ColorTransform) == 0xc8, "ColorTransform size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::Matrix) == 0xc8, "Matrix size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::Matrix3D) == 0xc8, "Matrix3D size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::PerspectiveProjection) == 0xc8, "PerspectiveProjection size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::Point) == 0xc8, "Point size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::Rectangle) == 0xc8, "Rectangle size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::Transform) == 0xc8, "Transform size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_geom::Vector3D) == 0xc8, "Vector3D size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_geom::Point) == 0x50, "Point size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_geom::Vector3D) == 0x68, "Vector3D size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::ColorTransform) == 0xe8, "ColorTransform size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::Matrix) == 0xe8, "Matrix size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::Matrix3D) == 0xe8, "Matrix3D size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::PerspectiveProjection) == 0xe8, "PerspectiveProjection size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::Point) == 0xe8, "Point size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::Rectangle) == 0xe8, "Rectangle size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::Transform) == 0xe8, "Transform size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_geom::Vector3D) == 0xe8, "Vector3D size");
+
 #endif

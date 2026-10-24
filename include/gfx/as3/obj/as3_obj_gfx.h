@@ -709,4 +709,41 @@ namespace ClassTraits { namespace fl_gfx {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::Extensions) == 0xc8, "Extensions size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::FocusEventEx) == 0xc8, "FocusEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::FocusManager) == 0xc8, "FocusManager size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::GamePad) == 0xc8, "GamePad size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::GamePadAnalogEvent) == 0xc8, "GamePadAnalogEvent size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::IMECandidateListStyle) == 0xc8, "IMECandidateListStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::IMEEventEx) == 0xc8, "IMEEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::IMEEx) == 0xc8, "IMEEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::InteractiveObjectEx) == 0xc8, "InteractiveObjectEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::KeyboardEventEx) == 0xc8, "KeyboardEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::MouseCursorEvent) == 0xc8, "MouseCursorEvent size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::MouseEventEx) == 0xc8, "MouseEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::SystemEx) == 0xc8, "SystemEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::TextEventEx) == 0xc8, "TextEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_gfx::TextFieldEx) == 0xc8, "TextFieldEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::Extensions) == 0x60, "Extensions size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::FocusManager) == 0x50, "FocusManager size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::GamePad) == 0x3f0, "GamePad size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::GamePadAnalogEvent) == 0x58, "GamePadAnalogEvent size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::IMEEventEx) == 0x90, "IMEEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::IMEEx) == 0x50, "IMEEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::InteractiveObjectEx) == 0x50, "InteractiveObjectEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::MouseCursorEvent) == 0x58, "MouseCursorEvent size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::MouseEventEx) == 0x60, "MouseEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::SystemEx) == 0x60, "SystemEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::TextEventEx) == 0x60, "TextEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_gfx::TextFieldEx) == 0x88, "TextFieldEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::FocusEventEx) == 0xe8, "FocusEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::GamePadAnalogEvent) == 0xe8, "GamePadAnalogEvent size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::IMECandidateListStyle) == 0xe8, "IMECandidateListStyle size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::IMEEventEx) == 0xe8, "IMEEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::KeyboardEventEx) == 0xe8, "KeyboardEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::MouseCursorEvent) == 0xe8, "MouseCursorEvent size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::MouseEventEx) == 0xe8, "MouseEventEx size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_gfx::TextEventEx) == 0xe8, "TextEventEx size");
+
 #endif

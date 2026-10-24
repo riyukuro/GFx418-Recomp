@@ -370,4 +370,19 @@ namespace ClassTraits { namespace fl_utils {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::ByteArray) == 0xc8, "ByteArray size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::Dictionary) == 0xc8, "Dictionary size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::Endian) == 0xc8, "Endian size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::IDataInput) == 0xc8, "IDataInput size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::IDataOutput) == 0xc8, "IDataOutput size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::IExternalizable) == 0xc8, "IExternalizable size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::Proxy) == 0xc8, "Proxy size");
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::fl_utils::Timer) == 0xc8, "Timer size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_utils::ByteArray) == 0x58, "ByteArray size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::fl_utils::Endian) == 0x60, "Endian size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_utils::ByteArray) == 0xe8, "ByteArray size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_utils::Dictionary) == 0xe8, "Dictionary size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl_utils::Timer) == 0xe8, "Timer size");
+
 #endif

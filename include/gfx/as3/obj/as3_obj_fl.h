@@ -545,4 +545,10 @@ namespace Instances { namespace fl {
 
 }}} // namespace Scaleform::GFx::AS3
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS3::ClassTraits::Function) == 0xe8, "Function size");
+static_assert(sizeof(Scaleform::GFx::AS3::Classes::Function) == 0x50, "Function size");
+static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::Function) == 0x100, "Function size");
+static_assert(sizeof(Scaleform::GFx::AS3::Instances::fl::XML) == 0x48, "XML size");
+
 #endif
