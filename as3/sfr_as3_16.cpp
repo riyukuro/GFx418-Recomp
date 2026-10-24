@@ -61,6 +61,15 @@
 #include "ms2/scaleform/include/render/text_core.h"
 #undef GetObject   // windows.h
 
+namespace Scaleform {
+// MS2-FUNCTIONAL 0x1424e0e50: builds a temporary for each side and concatenates them, releasing both temporary strings afterward.
+// @0x1424e0e50
+String operator+(const char* left, const GFx::ASString& right)
+{
+    return String(left) + String(right.ToCStr(), right.GetSize());
+}
+}
+
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_142521f00(void*);
 extern void FUN_142626160(void*);

@@ -28,10 +28,7 @@ using Render::PixelsToTwips;
 
 // Message building in the natives: a C string or a String followed by an ASString gives a String.
 namespace Scaleform {
-inline String operator+(const char* l, const GFx::ASString& r)
-{
-    return String(l) + String(r.ToCStr(), r.GetSize());
-}
+String operator+(const char* l, const GFx::ASString& r); // exe 0x1424e0e50
 inline String operator+(const String& l, const GFx::ASString& r)
 {
     return l + String(r.ToCStr(), r.GetSize());
