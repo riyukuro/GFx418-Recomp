@@ -6829,6 +6829,42 @@ void Sfr31ExecCallParentSlot(UPInt vmAddr, UInt32 slotIdx, UInt32 argc)
     reinterpret_cast<Value*>(&obj)->~Value();
     FUN_1424de9e0(raBuf);
 }
+// ---- batch 64
+// callstatic opcode: pops the receiver, then runs the method body of the file's method idx on it with the popped arguments in a new
+// call frame (the frame is named after the receiver's traits plus " callstatic").
+// MS2-FUNCTIONAL 0x142535680: raw-offset model; codegen differs from the exe
+// @0x142535680
+void Sfr31ExecCallStatic(UPInt vmAddr, UPInt file, SInt32 idx, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, argc);
+    const UPInt frame0 = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
+    const UPInt top = Sfr31Rd(frame0, 8);
+    Sfr31RawTraitsVal obj;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
+    Sfr31Wr(frame0, 8, top - 0x20);
+    Sfr31ThrowIfNullOperand(vmAddr, reinterpret_cast<const UInt32*>(&obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt abc = Sfr31Rd(file, 0x28);
+        const UPInt traits = Sfr31Rd(obj.w2, 0x20);
+        const SInt32 mbiInd = *reinterpret_cast<const SInt32*>(Sfr31Rd(Sfr31Rd(abc, 0xf8), idx * 8) + 8);
+        alignas(8) UInt8 nm[sizeof(ASString)];
+        typedef void (*GetNameFn)(UPInt, void*);
+        reinterpret_cast<GetNameFn>(Sfr31Rd(Sfr31Rd(traits, 0), 0x38))(traits, nm);
+        ASString& n = *reinterpret_cast<ASString*>(nm);
+        ASString full = n + " callstatic";
+        const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+        const Value* args = cnt > 8 ? reinterpret_cast<const Value*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : reinterpret_cast<const Value*>(raBuf + 0x18);
+        vm.AddFrame(Value::GetUndefined(), *reinterpret_cast<VMAbcFile*>(file), mbiInd, *reinterpret_cast<const Value*>(&obj), argc, args, false,
+                    *reinterpret_cast<const ScopeStackType*>(traits + 0xa0), *reinterpret_cast<const Traits*>(traits), full);
+        n.~ASString();
+    }
+    reinterpret_cast<Value*>(&obj)->~Value();
+    FUN_1424de9e0(raBuf);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
