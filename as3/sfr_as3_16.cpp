@@ -1019,6 +1019,23 @@ ValueStack::Page* ValueStack::AllocPage(UInt16 pageSize)
 
 // ==== the load queue ====
 
+// MS2-FUNCTIONAL 0x1424dda00: clears queued actions, releases each recycled ActionEntry's references, then frees the same nodes.
+// @0x1424dda00
+MovieRoot::ActionQueueType::~ActionQueueType()
+{
+    Clear();
+    ActionEntry* entry = pFreeEntry;
+    while (entry)
+    {
+        ActionEntry* next = entry->pNextEntry;
+        entry->ClearAction();
+        Memory::Free(entry);
+        entry = next;
+    }
+    pFreeEntry = NULL;
+    FreeEntriesCount = 0;
+}
+
 // MS2-FUNCTIONAL ??1LoadQueueEntry@AS3@GFx@Scaleform@@UEAA@XZ: the exe calls AutoPtr<ArrayPOD<UByte> >'s dtor out of
 // line (0x1424dc9f0); ours inlines it
 // @0x1424e3020 (??_G)
