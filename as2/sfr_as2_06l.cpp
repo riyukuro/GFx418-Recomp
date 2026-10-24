@@ -1,9 +1,9 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 AS2 gap functions of sfr_as2_06
-// (lane sfr31): the Selection focus extension properties and Selection.setModalClip.
+// (lane sfr31): the Selection focus extension properties. Selection.setModalClip (0x142989060) lives in sfr_as2_07h,
+// whose map unit owns it.
 // MS2-UNIT: sfr_as2_06l
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142987090-0x14298727c .text$mn
-// MS2-RANGE: 0x142989060-0x1429891b6 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
@@ -64,24 +64,6 @@ bool SelectionCtorFunction::SetMember(Environment* penv, const ASString& name, c
         }
     }
     return Object::SetMember(penv, name, val, flags);
-}
-
-// Selection.setModalClip(clip, controllerIdx): a null or non-sprite argument clears the modal clip.
-// MS2-FUNCTIONAL: the argument deque indexing and the character resolve are inlined in the exe
-// @0x142989060
-void SelectionCtorFunction::SetModalClip(const FnCall& fn)
-{
-    fn.Result->SetUndefined();
-    if (fn.NArgs > 0)
-    {
-        MovieImpl*         pmovie = fn.Env->GetTarget()->GetMovieImpl();
-        unsigned           controllerIdx = 0;
-        InteractiveObject* pch = fn.Arg(0).ToCharacter(fn.Env);
-        if (fn.NArgs > 1)
-            controllerIdx = fn.Arg(1).ToUInt32(fn.Env);
-        Sprite* psprite = (pch && pch->IsSprite()) ? static_cast<Sprite*>(pch) : 0;
-        pmovie->SetModalClip(psprite, controllerIdx);
-    }
 }
 
 } } }

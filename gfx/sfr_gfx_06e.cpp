@@ -321,6 +321,13 @@ void DrawingContext::ComputeBound(RectF* pRect) const
     }
 }
 
+// The stroke style array of the shape being drawn; CreateLineComplexFill writes an entry member by member (the exe
+// inlines the copy there instead of calling StrokeStyleType::operator= 0x1424e0cb0).
+struct DrawingContextStrokes : DrawingContext::PackedShape
+{
+    StrokeStyleType& At(unsigned idx) { return StrokeStyles[idx - 1]; }
+};
+
 // @0x1425fee30
 ComplexFill* DrawingContext::CreateLineComplexFill()
 {
@@ -331,7 +338,14 @@ ComplexFill* DrawingContext::CreateLineComplexFill()
     StrokeStyleType  ls;
     Shapes->GetStrokeStyle(StrokeStyle, &ls);
     ls.pFill = cf;
-    Shapes->UpdateStrokeStyle(StrokeStyle, ls);
+    StrokeStyleType& dst = static_cast<DrawingContextStrokes*>(Shapes.GetPtr())->At(StrokeStyle);
+    dst.Width   = ls.Width;
+    dst.Units   = ls.Units;
+    dst.Flags   = ls.Flags;
+    dst.Miter   = ls.Miter;
+    dst.Color   = ls.Color;
+    dst.pFill   = ls.pFill;
+    dst.pDashes = ls.pDashes;
     return cf;
 }
 

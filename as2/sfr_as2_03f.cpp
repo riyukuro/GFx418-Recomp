@@ -5,7 +5,6 @@
 // MS2-RANGE: 0x142928370-0x1429283f4 .text$mn
 // MS2-RANGE: 0x142928770-0x142928800 .text$mn
 // MS2-RANGE: 0x142928800-0x142928859 .text$mn
-// MS2-RANGE: 0x142928860-0x1429288fc .text$mn
 // MS2-RANGE: 0x142928aa0-0x142928af9 .text$mn
 // MS2-RANGE: 0x142928b00-0x142928b59 .text$mn
 // MS2-RANGE: 0x142928bb0-0x142928c09 .text$mn
@@ -51,10 +50,8 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_1424aa0f0(void* pthis);
 void FUN_14257db40(void* pthis);
 void FUN_14257db50(void* pthis);
-void FUN_142606690(void* pthis);
 void FUN_142609070(void* pthis);
 void FUN_1429250a0(void* pthis);
 void FUN_142925750(void* pthis);
@@ -88,19 +85,6 @@ void* DeleteAs2_142928770(void* p, unsigned flags)
 void* DeleteAs2_142928800(void* p, unsigned flags)
 {
     FUN_1429250a0(p);
-    if (flags & 1)
-        Memory::Free(p);
-    return p;
-}
-
-// @0x142928860
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_142928860(void* p, unsigned flags)
-{
-    FUN_142925750((void*)((char*)p+0xd0));
-    FUN_142606690((void*)((char*)p+0xb0));
-    FUN_1424aa0f0((void*)((char*)p+0x68));
-    FUN_142925cf0(p);
     if (flags & 1)
         Memory::Free(p);
     return p;

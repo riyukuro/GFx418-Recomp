@@ -2019,19 +2019,6 @@ long long FUN_1423dadd0(long long* object, const unsigned long long* iid, void**
     return 0;
 }
 
-// MS2-FUNCTIONAL: decrements the executable's 32-bit interface refcount and triggers scalar deletion at zero.
-// @0x1423daeb0
-int FUN_1423daeb0(void* self)
-{
-    auto* count = reinterpret_cast<int*>(static_cast<unsigned char*>(self) + 0x3c);
-    const int remaining = --*count;
-    if (remaining == 0) {
-        void** vtable = *reinterpret_cast<void***>(self);
-        reinterpret_cast<void(*)(void*, int)>(vtable[8])(self, 1);
-    }
-    return remaining;
-}
-
 // MS2-FUNCTIONAL: emits the executable's four-part IME command log message when the state bag has a logger.
 // @0x1423ccfc0
 void FUN_1423ccfc0(void*, long long owner, const char* command, const char* value)

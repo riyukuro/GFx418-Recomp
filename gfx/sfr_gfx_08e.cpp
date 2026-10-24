@@ -571,6 +571,9 @@ template void ArrayDataBase<Sound::SoundChannel::Transform, AllocatorGH<Sound::S
 } // namespace Scaleform
 
 // MS2-PIN: ??_7?$RefCountBaseNTS@VSoundStreamDef@GFx@Scaleform@@$0BEH@@Scaleform@@6B@ 0x1431937d0
+// The StatImpl<RefCountNTSImpl,0x147> vftable (an unreferenced COMDAT here) has no exe copy of its own; it is the same
+// COMDAT as sfr_gfx_05b's, bound there to the ActiveSoundItem table 0x14318be28, so it takes that one VA here too.
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BEH@@Scaleform@@6B@ 0x14318be28
 // MS2-PIN: ??_7SoundStreamDef@GFx@Scaleform@@6B@ 0x1431937d8
 // MS2-PIN: ??_7SoundStreamDefImpl@GFx@Scaleform@@6B@ 0x1431937e8
 // MS2-PIN: ??_7SoundInfo@Sound@Scaleform@@6B@ 0x14318ffa8

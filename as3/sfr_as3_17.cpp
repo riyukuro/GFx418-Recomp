@@ -4473,13 +4473,6 @@ void Sfr33SlotReleaseMember(const SlotInfo& si, Object& obj)
     }
 }
 
-// DisplayObjContainer bounds through its display list (+0xd8).
-// @0x1425078e0
-RectF Sfr33ContainerDisplayListBounds(const DisplayObjContainer* self, const Render::Matrix2F& t)
-{
-    return reinterpret_cast<const DisplayList*>(reinterpret_cast<const UByte*>(self) + 0xd8)->GetBounds(t);
-}
-
 // result receives the class named gname, or a ReferenceError is thrown (false).
 // @0x142508140
 bool Sfr33GetClassValue(VM& vm, const StringDataPtr& gname, Value& result)
