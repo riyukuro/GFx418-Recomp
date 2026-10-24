@@ -161,6 +161,12 @@ void FUN_14261cf50(Scaleform::UPInt container, Scaleform::UPInt pos, Scaleform::
 unsigned char FUN_14261c690(Scaleform::UPInt container, Scaleform::UPInt pos, Scaleform::UPInt node);   // TreeContainer::Insert
 Scaleform::UPInt FUN_1425f26c0(Scaleform::UPInt displayObject);   // DisplayObjectBase::GetRenderNode
 void FUN_142581700(Scaleform::UPInt entry);   // ContextImpl::Entry::destroyHelper
+char FUN_142522a60(Scaleform::UPInt owner, Scaleform::UPInt traits);   // owner-side check before the class traits are torn down
+void FUN_1424ef7b0(Scaleform::UPInt hash);   // hash Clear (stride 0x18, refcounted member at +0x20)
+void FUN_1424ef860(Scaleform::UPInt hash);   // hash Clear (stride 0x18, refcounted member at +0x20)
+void FUN_1424ef5b0(Scaleform::UPInt hash);   // hash Clear
+void FUN_1424ef500(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcounted member at +0x28)
+void FUN_1424ef450(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcounted member at +0x28)
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -6102,6 +6108,71 @@ void Sfr31ExecCallValue(UPInt vmAddr, UInt32 argc)
         }
     }
     FUN_1424de9e0(raBuf);
+}
+// ---- batch 53
+// Tears down a class traits' member tables: unregisters it, empties its arrays and hashes, and takes every traits recorded in the
+// slot-name hash out of the owner's registration list.
+// MS2-FUNCTIONAL 0x1425303b0: raw-offset model; codegen differs from the exe
+// @0x1425303b0
+void Sfr31ClassTraitsCleanup(UPInt self)
+{
+    const UPInt owner = Sfr31Rd(self, 0x20);
+    if (FUN_142522a60(owner, self) == 0)
+        return;
+    Sfr31UnregisterClassTraits(self);
+    for (UPInt i = Sfr31Rd(self, 0xc0); i != 0; --i)
+        Sfr31ResizePod(reinterpret_cast<UPInt*>(Sfr31Rd(self, 0xb8)) + (Sfr31Rd(self, 0xc0) - i) * 3, 0);
+    Sfr31ResizeBlk24A(reinterpret_cast<UPInt*>(self + 0xb8), 0);
+    FUN_1424ef7b0(self + 0x38);
+    const UPInt table = Sfr31Rd(self, 0x70);
+    if (table != 0)
+    {
+        const SPInt mask = static_cast<SPInt>(Sfr31Rd(table, 8));
+        for (SPInt i = 0; i <= mask; ++i)
+        {
+            const UPInt t = Sfr31Rd(self, 0x70);
+            if (t == 0 || static_cast<SPInt>(Sfr31Rd(t, 8)) < i)
+                break;
+            const UPInt e = t + 0x10 + static_cast<UPInt>(i) * 0x18;
+            if (static_cast<SPInt>(Sfr31Rd(e, 0)) == -2)
+                continue;
+            const UPInt val = Sfr31Rd(e, 0x10);
+            UPInt n = Sfr31Rd(owner, 0x1b0);
+            UPInt* data = reinterpret_cast<UPInt*>(Sfr31Rd(owner, 0x1a8));
+            for (UPInt j = 0; j < n; ++j)
+            {
+                if (data[j] != val)
+                    continue;
+                if (n == 1)
+                {
+                    if ((Sfr31Rd(owner, 0x1b8) & ~static_cast<UPInt>(1)) != 0)
+                    {
+                        if (data != 0)
+                        {
+                            Memory::Free(data);
+                            Sfr31Wr(owner, 0x1a8, 0);
+                        }
+                        Sfr31Wr(owner, 0x1b8, 0);
+                    }
+                    Sfr31Wr(owner, 0x1b0, 0);
+                }
+                else
+                {
+                    memmove(data + j, data + j + 1, (n - j) * 8 - 8);
+                    Sfr31Wr(owner, 0x1b0, n - 1);
+                }
+                break;
+            }
+        }
+    }
+    FUN_1424ef860(self + 0x70);
+    Sfr31ResizeNCPod8c(reinterpret_cast<UPInt*>(self + 0x78), reinterpret_cast<const void*>(self + 0x78), 0);
+    FUN_1424ef5b0(self + 0x30);
+    Sfr31ResizePodZero(reinterpret_cast<UPInt*>(self + 0x40), 0);
+    Sfr31ResizeNCSPtrStr(reinterpret_cast<UPInt*>(self + 0x58), reinterpret_cast<const void*>(self + 0x58), 0);
+    FUN_1424ef500(self + 0x90);
+    FUN_1424ef450(self + 0x98);
+    Sfr31ResizeBlk24B(reinterpret_cast<UPInt*>(self + 0xd0), 0);
 }
 }}} // namespace Scaleform::GFx::AS3
 
