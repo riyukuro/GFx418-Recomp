@@ -20,6 +20,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
+#include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
@@ -72,7 +73,7 @@ Scaleform::GFx::AS3::ClassTraits::Traits* FUN_1425085b0(const Scaleform::GFx::AS
 void FUN_142508720(const Scaleform::GFx::AS3::SlotInfo* si, Scaleform::GFx::ASString* name, Scaleform::GFx::AS3::VM* vm);       // its name
 void FUN_14250e770(const void* si, void* ok, Scaleform::GFx::AS3::Value* result, Scaleform::GFx::AS3::Object* obj);             // SlotInfo: load into result
 void FUN_142529720(const void* si, void* ok, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* v, Scaleform::GFx::AS3::Object* obj);
-void FUN_14251f710(Scaleform::UPInt block);   // Tracer: add a state slot
+void FUN_14251f710(Scaleform::UPInt arr, const Scaleform::UPInt* pos);   // Tracer: OrigOpcodePos.PushBack(*pos)
 void FUN_1424e0b80(void* dst, const void* src);   // SlotInfo::operator=
 void FUN_1426150b0(Scaleform::UPInt doc);   // DocView::SetAutoSizeX
 void FUN_1426150d0(Scaleform::UPInt doc);   // DocView::SetAutoSizeY
@@ -106,7 +107,7 @@ unsigned char* FUN_142528810(unsigned char* ret, Scaleform::UPInt vm, void* obj,
 unsigned char* FUN_14250ef80(unsigned char* ret, Scaleform::UPInt vm, Scaleform::UPInt traits, void* result, const void* obj, const void* multiname, int target); // GetSuperProperty
 void FUN_142502570(Scaleform::UPInt vm, void* propRef, void* multiname);              // VM: resolve a multiname to a property reference
 void FUN_14252c640(Scaleform::UPInt tracer, Scaleform::UPInt* pos);                      // Tracer: advance over padding/labels at pos
-void FUN_1425212f0(Scaleform::UPInt tracer);                                              // Tracer: per-opcode bookkeeping
+void FUN_1425212f0(Scaleform::UPInt tracer, Scaleform::UPInt pos);                                              // Tracer: per-opcode bookkeeping
 char FUN_14252d100(Scaleform::UPInt tracer, unsigned char op, Scaleform::UPInt* pos, Scaleform::UPInt state);   // Tracer: trace one opcode (common set)
 void FUN_14253d520(Scaleform::UPInt state, unsigned char op, Scaleform::UPInt* pos);     // TR::State: trace one opcode (remaining set)
 void FUN_1424d7690(void* err, int id, void* vm, const char* a, const char* b);       // VM::Error::Error(id, vm, char*, char*)
@@ -169,7 +170,7 @@ void FUN_1424ef500(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcoun
 void FUN_1424ef450(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcounted member at +0x28)
 char* FUN_1424ff910(char* ret, Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Value* obj, Scaleform::GFx::AS3::Value* result, unsigned argc, const void* args);   // ExecutePropertyUnsafe
 void FUN_142403310(Scaleform::UPInt obj, Scaleform::GFx::ASString* inout);   // XMLList-style toString
-void FUN_14251fb90(Scaleform::UPInt tracer, int op, Scaleform::SPInt reg);   // Tracer: record a rewritten opcode for a register
+void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg);   // Tracer: record a rewritten opcode for a register
 Scaleform::UPInt* FUN_142419e50(Scaleform::UPInt classTraits, void* tmp);   // class traits -> class object slot
 unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, unsigned a, unsigned b);   // read the value behind a slot reference
 void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   // next enumeration index of a string-like object
@@ -1944,7 +1945,7 @@ void Sfr31TracerSkipOrigOpCode(UPInt tracer, UPInt* pos, UPInt next)
 {
     if (*pos < *reinterpret_cast<UPInt*>(tracer + 0x58))
     {
-        FUN_14251f710(tracer + 0x70);
+        FUN_14251f710(tracer + 0x70, pos);
         *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(tracer + 0xd0) + *pos * 8) =
             *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(tracer + 0x28) + 8);
     }
@@ -4082,7 +4083,7 @@ void Sfr31TraceBlock(UPInt tr, UPInt pos, UPInt block)
         FUN_14252c640(tr, &pos);
         if (Sfr31Rd(tr, 0x58) <= pos)
             return;
-        FUN_1425212f0(tr);
+        FUN_1425212f0(tr, pos);
         const UInt8 op = *reinterpret_cast<const UInt8*>(pos + Sfr31Rd(tr, 0x50));
         ++pos;
         const UPInt state = Sfr31Rd(Sfr31Rd(tr, 0x68), 0x18);
@@ -6664,7 +6665,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
     }
     if (newOp != 0)
     {
-        FUN_14251fb90(tracer, newOp, static_cast<SPInt>(static_cast<SInt32>(reg)));
+        FUN_14251fb90(reinterpret_cast<void*>(tracer), newOp, static_cast<SPInt>(static_cast<SInt32>(reg)));
         reinterpret_cast<State*>(state)->RegInt(reg);
     }
     Sfr31TracerSkipOrigOpCode(tracer, pos, p);
@@ -8588,8 +8589,8 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
                         generic = true;
                     else
                     {
-                        FUN_14251fb90(tracer, 0xb6, static_cast<SPInt>(static_cast<UInt32>(slotInd) + 1));
-                        FUN_14251fb90(tracer, 0x42, 0);
+                        FUN_14251fb90(reinterpret_cast<void*>(tracer), 0xb6, static_cast<SPInt>(static_cast<UInt32>(slotInd) + 1));
+                        FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x42, 0);
                         TrPopped res;
                         res.w0 = 0;
                         res.w1 = 0;
@@ -8616,14 +8617,14 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
                 UPInt it;
                 if (k == 9)
                 {
-                    FUN_14251fb90(tracer, 0x42, static_cast<SPInt>(argc));
+                    FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x42, static_cast<SPInt>(argc));
                     it = Sfr31Rd(objPtr, 0xc0);
                     Sfr31TrPushTraits(state, 8, it);
                     done = true;
                 }
                 else if (k == 0xd)
                 {
-                    FUN_14251fb90(tracer, 0x42, static_cast<SPInt>(argc));
+                    FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x42, static_cast<SPInt>(argc));
                     it = Sfr31Rd(Sfr31Rd(objPtr, 0x20), 0xc0);
                     Sfr31TrPushTraits(state, 8, it);
                     done = true;
@@ -8805,7 +8806,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
         if (!nullable && !Sfr31SetTraitsForValue(tracer, tv, tr))
         {
             Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-            FUN_14251fb90(tracer, 0x80, static_cast<SPInt>(idx));
+            FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x80, static_cast<SPInt>(idx));
             FUN_1424f1e50(state, it, 2);
             return 1;
         }
