@@ -8,11 +8,14 @@
 #include "gfx_state.h"
 
 namespace Scaleform {
-namespace Render { template<class T> class Matrix2x4; }
+namespace Render { template<class T> class Matrix2x4; template<class T> class Matrix3x4; class Cxform; }
 namespace GFx {
 
 class Movie;
 class MovieImpl;
+class ASUserData;
+class MemberValueSet;
+namespace AMP { class ViewStats; }
 namespace AS2 { class MovieRoot; }
 
 // 0x20 bytes: the VM interface of a managed value (object, array, display object, closure), the type, the value,
@@ -59,6 +62,29 @@ public:
         virtual bool     GetDisplayInfo(void* pdata, DisplayInfo* pinfo) const = 0;                          // 19
         virtual bool     SetDisplayInfo(void* pdata, const DisplayInfo& info) = 0;                           // 20
         virtual bool     GetWorldMatrix(void* pdata, Render::Matrix2x4<float>* pmat) const = 0;              // 21
+
+        // (appended, sfr24) slots 22..39, named from AS3ValueObjectInterface's vftable 0x14317eff8 (the abstract
+        // ObjectInterface vftable 0x14317bc90 has 40 slots, 1..39 _purecall). MSVC lays the overloads out in reverse.
+        virtual bool     GetDisplayMatrix(void* pdata, Render::Matrix2x4<float>* pmat) const = 0;            // 22
+        virtual bool     SetDisplayMatrix(void* pdata, const Render::Matrix2x4<float>& mat) = 0;             // 23
+        virtual bool     GetMatrix3D(void* pdata, Render::Matrix3x4<float>* pmat) const = 0;                 // 24
+        virtual bool     SetMatrix3D(void* pdata, const Render::Matrix3x4<float>& mat) = 0;                  // 25
+        virtual bool     GetCxform(void* pdata, Render::Cxform* pcx) const = 0;                              // 26
+        virtual bool     SetCxform(void* pdata, const Render::Cxform& cx) = 0;                               // 27
+        virtual bool     GetText(void* pdata, Value* pval, bool ishtml) const = 0;                           // 28
+        virtual bool     SetText(void* pdata, const char* ptext, bool ishtml) = 0;                           // 30
+        virtual bool     SetText(void* pdata, const wchar_t* ptext, bool ishtml) = 0;                        // 29
+        virtual bool     CreateEmptyMovieClip(void* pdata, Value* pmc, const char* instanceName,
+                                              SInt32 depth) = 0;                                             // 31
+        virtual bool     AttachMovie(void* pdata, Value* pmc, const char* symbolName, const char* instanceName,
+                                     SInt32 depth, const MemberValueSet* initArgs) = 0;                      // 32
+        virtual bool     GotoAndPlay(void* pdata, const char* frame, bool stop) = 0;                         // 34
+        virtual bool     GotoAndPlay(void* pdata, unsigned frame, bool stop) = 0;                            // 33
+        virtual void     ToString(String* pstr, const Value& thisVal) const = 0;                             // 35
+        virtual void     SetUserData(void* pdata, ASUserData* puserdata, bool isdobj) = 0;                   // 36
+        virtual ASUserData* GetUserData(void* pdata, bool isdobj) const = 0;                                 // 37
+        virtual bool     CreateObjectValue(Value* pval, void* pdata, bool isdobj) = 0;                       // 38
+        virtual AMP::ViewStats* GetAdvanceStats() const = 0;                                                 // 39
 
     protected:
         MovieImpl* pMovieRoot;                                  // +0x08
