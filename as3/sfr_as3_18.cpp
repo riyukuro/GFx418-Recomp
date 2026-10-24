@@ -1344,6 +1344,80 @@ bool Sfr27TextFieldHasStyleSheet(UPInt self)
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// ==== VMAbcFile: interned strings and namespaces ====
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// MS2-FUNCTIONAL: the exe grows IntStrings through an out-of-line resize and interns the node by hand
+// @0x14250b240
+ASString VMAbcFile::GetInternedString(UPInt ind)
+{
+    if (IntStrings.GetSize() <= ind)
+        IntStrings.Resize(ind + 1);
+    if (!IntStrings[ind])
+    {
+        const StringDataPtr s = pFile->Const_Pool.GetString(ind);
+        ASString str = GetVM().GetStringManager().CreateString(s.ToCStr(), s.GetSize());
+        IntStrings[ind] = str.GetNode();
+    }
+    return ASString(IntStrings[ind]);
+}
+
+// MS2-FUNCTIONAL: the hash lookup/add are not the exe's template copies
+// @0x14250ae60
+Instances::Namespace& VMAbcFile::GetInternedNamespace(UPInt ind)
+{
+    typedef AbcMultinameHash<SPtr<Instances::Namespace> >::Key NsKey;
+    SPtr<Instances::Namespace>* found = IntNamespaces.Entries.Get(NsKey(ind));
+    if (!found)
+    {
+        const Abc::ConstPool& cp = pFile->Const_Pool;
+        const Abc::NamespaceInfo& info = ind == 0 ? cp.any_namespace : cp.ConstNamespace[ind];
+        ASString uri = GetVM().GetStringManager().CreateString(info.NameURI.ToCStr(), info.NameURI.GetSize());
+        Pickable<Instances::Namespace> ns = GetVM().MakeInternedNamespace(info.Kind, uri);
+        IntNamespaces.Entries.Add(NsKey(ind), SPtr<Instances::Namespace>(ns));
+        found = IntNamespaces.Entries.Get(NsKey(ind));
+    }
+    return **found;
+}
+
+} } }
+
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The namespace a multiname is qualified with; one with a type argument gets that argument's namespace uri appended
+// after a '$', so each (namespace, type) pair interns separately.
+// MS2-FUNCTIONAL: the hash lookup/add are not the exe's template copies
+// @0x14250abf0
+Instances::Namespace& VMAbcFile::GetInternedNamespace(const Abc::Multiname& mn)
+{
+    typedef AbcMultinameHash<SPtr<Instances::Namespace> >::Key NsKey;
+    const bool keyed = (static_cast<UInt32>(mn.Kind) & 3) < 2;
+    const NsKey key(mn.Ind, mn.NextIndex);
+    if (keyed)
+    {
+        SPtr<Instances::Namespace>* found = IntNamespaces.Entries.Get(key);
+        if (found)
+            return **found;
+    }
+    const Abc::ConstPool& cp = pFile->Const_Pool;
+    const Abc::NamespaceInfo& info = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
+    ASString uri = GetVM().GetStringManager().CreateString(info.NameURI.ToCStr(), info.NameURI.GetSize());
+    if (mn.NextIndex >= 0)
+    {
+        const Abc::Multiname& next = cp.GetMultiname(mn.NextIndex);
+        const Abc::NamespaceInfo& ninfo = next.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[next.Ind];
+        uri.Append("$", 1);
+        uri.Append(GetVM().GetStringManager().CreateString(ninfo.NameURI.ToCStr(), ninfo.NameURI.GetSize()));
+    }
+    Pickable<Instances::Namespace> ns = GetVM().MakeInternedNamespace(info.Kind, uri);
+    IntNamespaces.Entries.Add(key, SPtr<Instances::Namespace>(ns));
+    return **IntNamespaces.Entries.Get(key);
+}
+
+} } }
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
