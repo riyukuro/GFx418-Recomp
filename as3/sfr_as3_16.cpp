@@ -1043,6 +1043,8 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
         pMovieImpl->AddLoadQueueEntry(pentry);
 }
 
+// MS2-FUNCTIONAL: the default destructor inlines the contained Value cleanup that the executable calls through its
+// helper; the cleanup is equivalent, but the leaf/frame differs.
 // @0x1424de8f0
 PropRef::~PropRef() = default;
 
