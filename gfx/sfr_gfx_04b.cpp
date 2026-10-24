@@ -4,8 +4,11 @@
 // MS2-UNIT: sfr_gfx_04b
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425c4330-0x1425c43a0 .text$mn
+// MS2-RANGE: 0x1425c43a0-0x1425c4500 .text$mn
+// MS2-RANGE: 0x1425c4500-0x1425c48e0 .text$mn
 // MS2-RANGE: 0x1425c4e90-0x1425c5340 .text$mn
 // MS2-RANGE: 0x1425c57b0-0x1425c5bb0 .text$mn
+// MS2-RANGE: 0x1425c6180-0x1425c6400 .text$mn
 // MS2-RANGE: 0x1425c6400-0x1425c6450 .text$mn
 // MS2-RANGE: 0x1425c64c0-0x1425c64eb .text$mn
 // MS2-RANGE: 0x1425c8550-0x1425c857b .text$mn
@@ -21,10 +24,191 @@
 #include "../include/gfx/gfx_spritedef.h"
 #include "../include/gfx/gfx_buttondef.h"
 #include "../include/gfx/gfx_fontlib.h"
+#include "../include/gfx/gfx_sound.h"
+#include "../include/render/render_jpeg.h"
 
 #include <stdlib.h>
 
 namespace Scaleform { namespace GFx {
+
+// MS2-FUNCTIONAL: preserves the tables bytes and replace-old-header behavior; the executable's allocator call sequence
+// is still being refined.
+// The JPEG tables tag supplies the shared header used by following DefineBits tags.
+// @0x1425c43a0
+void SF_STDCALL GFx_JpegTablesLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    LoadStates* states = p->GetLoadStates();
+    Render::ImageFileHandlerRegistry* registry =
+        states ? reinterpret_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
+    if (!registry)
+    {
+        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+        return;
+    }
+
+    if (!registry->GetReader(Render::ImageFile_JPEG))
+    {
+        p->LogError("Jpeg System is not installed - can't load jpeg image data");
+        return;
+    }
+
+    if (tagInfo.TagLength > 0)
+    {
+        Ptr<Render::JPEG::TablesHeader> tables =
+            *SF_HEAP_AUTO_NEW(p->GetLoadHeap()) Render::JPEG::TablesHeader(p->GetLoadHeap(), tagInfo.TagLength);
+        p->GetStream()->ReadToBuffer(tables->Data, tagInfo.TagLength);
+        *reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360) = tables;
+    }
+}
+
+// Defines a JPEG image whose stream relies on the tables from the preceding JPEGTables tag.
+// MS2-FUNCTIONAL: image data and shared JPEG tables are passed to the reader; exact stream setup is still being refined.
+// @0x1425c4500
+void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    ResourceId rid(p->ReadU16());
+    Stream* stream = p->GetStream();
+    Render::ImageSource* source = 0;
+    LoadStates* states = p->GetLoadStates();
+    Render::ImageFileHandlerRegistry* registry = states
+        ? reinterpret_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
+    if (!registry)
+    {
+        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+    }
+    else if (!registry->GetReader(Render::ImageFile_JPEG))
+    {
+        p->LogError("Jpeg System is not installed - can't load jpeg image data");
+    }
+    else
+    {
+        Render::JPEG::AbstractReader* reader = static_cast<Render::JPEG::AbstractReader*>(
+            registry->GetReader(Render::ImageFile_JPEG));
+        Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+        stream->SyncFileStream();
+        File* file = reinterpret_cast<Ptr<File>*>(reinterpret_cast<UByte*>(stream) + 0x20)->GetPtr();
+        Ptr<RefCountImpl>* tableSlot = reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360);
+        Render::JPEG::ExtraData* tables = reinterpret_cast<Render::JPEG::ExtraData*>(tableSlot->GetPtr());
+        source = reader->CreateImageSource(file, args, tables, tagInfo.TagLength - 2, false);
+    }
+    p->AddImageResource(rid, source);
+    if (source)
+        source->Release();
+}
+
+// Defines a self-contained JPEG image (SWF DefineBitsJPEG2).
+// MS2-FUNCTIONAL: preserves the tag id, payload length and reader ownership; exact stream setup is still being refined.
+// @0x1425c4740
+void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    ResourceId rid(p->ReadU16());
+    Stream* stream = p->GetStream();
+    Render::ImageSource* source = 0;
+    LoadStates* states = p->GetLoadStates();
+    Render::ImageFileHandlerRegistry* registry = states
+        ? reinterpret_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
+    if (!registry)
+    {
+        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+    }
+    else if (!registry->GetReader(Render::ImageFile_JPEG))
+    {
+        p->LogError("Jpeg System is not installed - can't load jpeg image data");
+    }
+    else
+    {
+        Render::JPEG::AbstractReader* reader = static_cast<Render::JPEG::AbstractReader*>(
+            registry->GetReader(Render::ImageFile_JPEG));
+        Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+        stream->SyncFileStream();
+        File* file = reinterpret_cast<Ptr<File>*>(reinterpret_cast<UByte*>(stream) + 0x20)->GetPtr();
+        source = reader->CreateImageSource(file, args, 0, tagInfo.TagLength - 2, true);
+    }
+    p->AddImageResource(rid, source);
+    if (source)
+        source->Release();
+}
+
+// The audio state owns the reader that interprets the five SWF sound tags.
+// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// @0x1425c6180
+void SF_STDCALL GFx_DefineSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    LoadStates* states = p->GetLoadStates();
+    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
+    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
+    if (reader)
+        reader->ReadDefineSoundTag(p, tagInfo);
+    else
+    {
+        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogTagBytes();
+    }
+}
+
+// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// @0x1425c6200
+void SF_STDCALL GFx_StartSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    LoadStates* states = p->GetLoadStates();
+    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
+    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
+    if (reader)
+        reader->ReadStartSoundTag(p, tagInfo);
+    else
+    {
+        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogTagBytes();
+    }
+}
+
+// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// @0x1425c6280
+void SF_STDCALL GFx_ButtonSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    LoadStates* states = p->GetLoadStates();
+    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
+    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
+    if (reader)
+        reader->ReadButtonSoundTag(p, tagInfo);
+    else
+    {
+        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogTagBytes();
+    }
+}
+
+// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// @0x1425c6300
+void SF_STDCALL GFx_SoundStreamHeadLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    LoadStates* states = p->GetLoadStates();
+    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
+    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
+    if (reader)
+        reader->ReadSoundStreamHeadTag(p, tagInfo);
+    else
+    {
+        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogTagBytes();
+    }
+}
+
+// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// @0x1425c6380
+void SF_STDCALL GFx_SoundStreamBlockLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    LoadStates* states = p->GetLoadStates();
+    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
+    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
+    if (reader)
+        reader->ReadSoundStreamBlockTag(p, tagInfo);
+    else
+    {
+        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogTagBytes();
+    }
+}
 
 // The tag loaders by SWF tag type.
 extern LoaderImpl::LoaderFunction SWF_TagLoaderTable[];
@@ -285,6 +469,28 @@ void SF_STDCALL GFx_SetTabIndexLoader(LoadProcess* p, const TagInfo& tagInfo)
     p->LogParse("SetTabIndex (unused) \n");
 }
 
+// Scalar-deleting ExecuteTag wrapper; two identical wrappers are retained at their executable addresses.
+// MS2-FUNCTIONAL: stores the ExecuteTag base vptr through a base instance, then follows the scalar-delete flag.
+// @0x1425c8550
+void* FUN_1425c8550(void* object, unsigned flags)
+{
+    ExecuteTag base;
+    *reinterpret_cast<const void**>(object) = *reinterpret_cast<const void* const*>(&base);
+    if (flags & 1)
+        ::operator delete(object);
+    return object;
+}
+
+// @0x1425c8670
+void* FUN_1425c8670(void* object, unsigned flags)
+{
+    ExecuteTag base;
+    *reinterpret_cast<const void**>(object) = *reinterpret_cast<const void* const*>(&base);
+    if (flags & 1)
+        ::operator delete(object);
+    return object;
+}
+
 }} // namespace Scaleform::GFx
 
 // MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
@@ -296,3 +502,6 @@ void SF_STDCALL GFx_SetTabIndexLoader(LoadProcess* p, const TagInfo& tagInfo)
 // MS2-PIN: ??_7RemoveObjectTag@GFx@Scaleform@@6B@ 0x14313bc10
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+// MS2-PIN: ??_7?$RefCountBase@UExtraData@JPEG@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318a278
+// MS2-PIN: ??_7ExtraData@JPEG@Render@Scaleform@@6B@ 0x14318a288
+// MS2-PIN: ??_7TablesHeader@JPEG@Render@Scaleform@@6B@ 0x14318a298
