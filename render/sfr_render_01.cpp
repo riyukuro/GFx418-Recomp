@@ -1274,10 +1274,10 @@ void* FUN_142579ac0(ImageUpdate* object, unsigned flags)
     object->~ImageUpdate();
     if (flags & 1)
     {
-        if (flags & 4)
-            FUN_14015b310(object, sizeof(ImageUpdate));
-        else
+        if (!(flags & 4))
             Memory::Free(object);
+        else
+            FUN_14015b310(object, sizeof(ImageUpdate));
     }
     return object;
 }
@@ -1334,10 +1334,10 @@ void* FUN_142579e30(TextureManager* object, unsigned flags)
     object->~TextureManager();
     if (flags & 1)
     {
-        if (flags & 4)
-            FUN_14015b310(object, sizeof(TextureManager));
-        else
+        if (!(flags & 4))
             Memory::Free(object);
+        else
+            FUN_14015b310(object, sizeof(TextureManager));
     }
     return object;
 }

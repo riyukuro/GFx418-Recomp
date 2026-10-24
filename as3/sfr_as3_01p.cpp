@@ -11,17 +11,17 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // The compiler emits ??_GInstance only next to the Instance vftable (the ctor/dtor units sfr_as3_15/16), so it is
 // written out here: destroy, then free with the class delete (the global heap), or with the sized global delete when
 // the caller asked for ::delete (flag 4).
-// MS2-FUNCTIONAL: a free function in place of the compiler-generated ??_GInstance@AS3@GFx@Scaleform@@UEAAPEAXI@Z
+// a free function in place of the compiler-generated ??_GInstance@AS3@GFx@Scaleform@@UEAAPEAXI@Z
 // @0x1423f3510
 void* InstanceScalarDeletingDtor(Instance* self, unsigned flags)
 {
     self->Instance::~Instance();
     if (flags & 1)
     {
-        if (flags & 4)
-            ::operator delete(self, 0x38);
-        else
+        if (!(flags & 4))
             Instance::operator delete(self);
+        else
+            ::operator delete(self, 0x38);
     }
     return self;
 }

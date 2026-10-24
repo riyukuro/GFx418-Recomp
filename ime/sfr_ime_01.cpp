@@ -2733,8 +2733,8 @@ void* FUN_1423dbd20(Scaleform::GFx::AS3::MemoryContextImpl* self, unsigned flags
 {
     self->~MemoryContextImpl();
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(self, 0x68);
-        else Scaleform::Memory::Free(self);
+        if (!(flags & 4)) Scaleform::Memory::Free(self);
+        else FUN_14015b310(self, 0x68);
     }
     return self;
 }
