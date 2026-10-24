@@ -122,6 +122,18 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 ASVM::~ASVM() = default;
 }}} // namespace Scaleform::GFx::AS3
 
+extern "C" void FUN_142530d50(Scaleform::UPInt self);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// MS2-FUNCTIONAL 0x1424df380: marks the VM as destroying and shuts down registered ABCs before member teardown.
+// @0x1424df380
+VM::~VM()
+{
+    InDestructor = true;
+    FUN_142530d50(reinterpret_cast<Scaleform::UPInt>(this));
+}
+}}} // namespace Scaleform::GFx::AS3
+
 extern "C" void FUN_1423de770(void*, void*);
 extern "C" void FUN_14257dcb0();
 
