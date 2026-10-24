@@ -6047,6 +6047,62 @@ bool Sfr31SetDisplayMatrix(UPInt self, UPInt valueObj, const float* m)
     obj->SetGeomData(gd);
     return true;
 }
+// ---- batch 52
+// call-style opcode on the popped value: a null operand is a TypeError; an object kind is dispatched through its own call slot with the
+// remaining arguments; class kinds and everything else raise TypeErrors naming the offender.
+// MS2-FUNCTIONAL 0x142536f40: raw-offset model; codegen differs from the exe
+// @0x142536f40
+void Sfr31ExecCallValue(UPInt vmAddr, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, argc);
+    const UInt32* v = reinterpret_cast<const UInt32*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8), 8));
+    Sfr31ThrowIfNullOperand(vmAddr, v);
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UInt32 kind = v[0] & 0x1f;
+        const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
+        if (kind == 0 || (kind - 0xc < 4 && obj == 0))
+        {
+            VM::Error e(static_cast<VM::ErrorID>(0x3f1), vm);
+            vm.ThrowTypeError(e);
+        }
+        else if (kind == 7 || kind == 0x11)
+        {
+            const UPInt tr = FUN_14250ffc0(&vm, reinterpret_cast<const Value*>(v));
+            UPInt nameNode = 0;
+            Sfr31VFnName nf = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(tr, 0) + 0x38);
+            UPInt* p = nf(tr, &nameNode);
+            UPInt raw[4] = {10, 0, *p, 0};
+            if (*p == Sfr31Rd(*p, 8) + 0x68)
+                raw[0] = 0xc, raw[2] = 0;
+            else
+                ++*reinterpret_cast<int*>(*p + 0x18);
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d6f40(eb, 0x428, &vm, raw);
+            vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+            reinterpret_cast<Value*>(raw)->~Value();
+            Sfr31ReleaseStr(nameNode);
+        }
+        else if (kind - 0xc < 4)
+        {
+            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+            void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
+            typedef void (*Fn)(UPInt, const UInt32*, UInt32, void*);
+            reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x60))(obj, v, argc, args);
+        }
+        else
+        {
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d6f40(eb, 0x45b, &vm, v);
+            vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+        }
+    }
+    FUN_1424de9e0(raBuf);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
