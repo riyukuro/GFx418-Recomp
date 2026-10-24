@@ -409,6 +409,51 @@ public:
     bool InvokeAlias(const char* pmethodName, const InvokeAliasInfo& iai, Value* presult, unsigned numArgs);
     // Queues Stage.onResize on _level0 (exe 0x14296a450).
     virtual void NotifyOnResize();
+
+    // (appended, sfr24) The rest of the ASMovieRootBase overrides, slot order from the exe vftable 0x1432177d8 (53
+    // slots: the deleting destructor 0x14292c3e0, 1..51 as in ASMovieRootBase, 52 the Invoke on an object above).
+    // Slots 12, 13, 23, 24, 25 and 28 are the base's empty defaults. The constructor is 0x14291f070.
+    virtual ~MovieRoot();                                                                              // 0x142925be0
+    virtual void AdvanceFrame(bool nextFrame);                                                         // 2  0x142931580
+    virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType);                     // 3  0x142933010
+    virtual bool CheckAvm();                                                                           // 4  0x142933420
+    virtual void ClearDisplayList();                                                                   // 5  0x142934480
+    virtual MovieDefRootNode* CreateMovieDefRootNode(MemoryHeap* pheap, MovieDefImpl* pdefImpl,
+                                                     bool importFlag = false);                         // 6  0x1429365c0
+    // sfr_as2_05 has these two as the free functions MovieRoot_FindTarget / MovieRoot_ForceCollect.
+    virtual InteractiveObject* FindTarget(const ASString& path) const;                                 // 8  0x142944e90
+    virtual void ForceCollect(unsigned gcFlags);                                                       // 9  0x142945cb0
+    virtual void ForceEmergencyCollect();                                                              // 10 0x142945d70
+    virtual void GenerateMouseEvents(unsigned mouseIndex);                                             // 11 0x1429488b0
+    virtual DisplayObjContainer* GetRootMovie(DisplayObject* dobj = NULL) const;                       // 14 0x142954ec0
+    virtual bool Init(MovieDefImpl* pmovieDef);                                                        // 15 0x142961540
+    virtual void NotifyMouseEvent(const GFx::InputEventsQueueEntry* qe, const GFx::MouseState& ms, int mi); // 16 0x1429694e0
+    virtual void OnMovieFocus(bool set);                                                               // 21 0x14296ce70
+    virtual void OnNextFrame();                                                                        // 22 0x14296ce80
+    virtual void ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* pls);                  // 26 0x142971340
+    virtual void ProcessLoadVarsMT(GFx::LoadQueueEntry* pentry, LoadStates* pls, const String& data, UPInt fileLen,
+                                   bool succeeded);                                                    // 27 0x1429715b0
+    virtual void RegisterAuxASClasses();                                                               // 29 0x14297c6e0
+    virtual void ResolveStickyVariables(InteractiveObject* pcharacter);                                // 30 0x14297eec0
+    virtual void SetExternalInterfaceRetVal(const GFx::Value& retVal);                                 // 31 0x142981600
+    virtual void SetMemoryParams(unsigned frameBetweenCollections, unsigned maxRootCount);             // 32 0x142989030
+    virtual void Shutdown();                                                                           // 33 0x14298ee90
+    virtual void CreateObject(GFx::Value* pvalue, const char* className = NULL, const GFx::Value* pargs = NULL,
+                              unsigned nargs = 0);                                                     // 36 0x1429374f0
+    virtual bool SetVariable(const char* ppathToVar, const GFx::Value& value,
+                             SetVarTypeArg setType = SetVarTypeArg(1));                                // 39 0x14298cfb0
+    virtual bool SetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, const void* pdata,
+                                  unsigned count, SetVarTypeArg setType = SetVarTypeArg(1));           // 41 0x14298d1e0
+    virtual bool SetVariableArraySize(const char* ppathToVar, unsigned count,
+                                      SetVarTypeArg setType = SetVarTypeArg(1));                       // 42 0x14298d760
+    virtual bool GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, void* pdata,
+                                  unsigned count);                                                     // 44 0x142957270
+    virtual bool Invoke(const char* ppathToMethod, GFx::Value* presult, const char* pargFmt, ...);     // 46 0x142963820
+    virtual bool InvokeArgs(const char* ppathToMethod, GFx::Value* presult, const char* pargFmt,
+                            va_list args);                                                             // 48 0x142964020
+    virtual MemoryContext* GetMemoryContext() const;                                                   // 49 0x142953cb0
+    // The base's slot; the non-const GetStringManager above is the inline one the AS2 code calls.
+    virtual ASStringManager* GetStringManager() const;                                                 // 50 0x1429561d0
 };
 
 // The AS2 root of a character of an AS2 movie.
