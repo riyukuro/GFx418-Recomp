@@ -37,6 +37,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_eventchains.h"
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
 #include "ms2/scaleform/include/gfx/as3/as3_userdefinedfunction.h"
+#include "ms2/scaleform/include/gfx/as3/as3_support.h"
 #undef GetObject
 
 // VM: runs the queued code (unrecovered).
@@ -376,7 +377,270 @@ void MovieRoot::AddLoadedMovieDef(MovieDefImpl* pdefImpl)
     FUN_1424d4220(&LoadedMovieDefs, &LoadedMovieDefs, &ref, reinterpret_cast<UPInt>(pdefImpl));
 }
 
+// MovieRoot::AddInvokeAlias: maps alias to the closure invoked for it, creating the alias hash (+0x80) on first use.
+// The AS3 MovieRoot header has no declaration, so it is a free function taking the root.
+// MS2-FUNCTIONAL: free function in place of the MovieRoot member
+// @0x1424e8ae0
+void Sfr21AddInvokeAlias(MovieRoot* self, const ASString& alias, const Value& closure)
+{
+    ASStringHash<Value>*& aliases = reinterpret_cast<ASStringHash<Value>*&>(self->pInvokeAliases);
+    if (!aliases)
+        aliases = SF_NEW ASStringHash<Value>();
+    aliases->Set(alias, closure);
+}
+
+// ASRefCountCollector::AdvanceFrame: a movie's frame of the shared collector. A movie that has not seen the latest
+// collection restarts its count; one behind the collector's frame count just counts. Otherwise the collector advances
+// and collects when the roots outgrow the limit (or, every MaxFramesBetweenCollections frames, the preset count), then
+// sets the next limit from the roots left (at least 0.7 of them, at least the peak).
+// MS2-FUNCTIONAL: free function in place of the ASRefCountCollector member (not declared in as3_gc.h)
+// @0x1424eaf80
+void Sfr21ASGCAdvanceFrame(ASRefCountCollector* gc, unsigned* movieFrameCnt, unsigned* movieLastCollectFrame,
+                           ASRefCountCollector::StatsObserver* statsObserver)
+{
+    if (*movieLastCollectFrame != gc->LastCollectionFrameNum)
+    {
+        *movieLastCollectFrame = gc->LastCollectionFrameNum;
+        *movieFrameCnt = 1;
+        return;
+    }
+    if (*movieFrameCnt < gc->FrameCnt)
+    {
+        ++*movieFrameCnt;
+        return;
+    }
+    ++gc->TotalFramesCount;
+    unsigned frames = ++gc->FrameCnt;
+    const unsigned roots = (unsigned)gc->GetRootsCount();
+    unsigned peak = roots;
+    if (peak < gc->PeakRootCount)
+        peak = gc->PeakRootCount;
+    gc->PeakRootCount = peak;
+    if (!gc->SuspendCnt &&
+        ((gc->PresetMaxRootCount != 0 && roots > gc->MaxRootCount) ||
+         (gc->MaxFramesBetweenCollections != 0 && frames >= gc->MaxFramesBetweenCollections &&
+          roots > gc->PresetMaxRootCount)))
+    {
+        frames = 0;
+        ASRefCountCollector::Stats stats;
+        stats.pObserver = statsObserver;
+        stats.RootsNumber = 0;
+        stats.RootsFreedTotal = 0;
+        gc->Collect(&stats);
+        unsigned limit;
+        if (gc->PresetMaxRootCount < stats.RootsFreedTotal)
+        {
+            gc->PeakRootCount = roots;
+            limit = gc->PresetMaxRootCount;
+            peak = roots;
+        }
+        else
+        {
+            limit = gc->MaxRootCount;
+            peak = gc->PeakRootCount;
+        }
+        gc->FrameCnt = 0;
+        gc->LastPeakRootCount = peak;
+        gc->LastCollectedRoots = stats.RootsFreedTotal;
+        unsigned left = roots - stats.RootsFreedTotal;
+        if (left < limit)
+            left = limit;
+        const unsigned scaled = (unsigned)(SInt64)((double)left * 0.7);
+        if (peak < scaled)
+            left = scaled;
+        gc->MaxRootCount = left;
+        gc->LastCollectionFrameNum = gc->TotalFramesCount;
+        frames = gc->FrameCnt;
+    }
+    gc->LastRootCount = roots;
+    *movieFrameCnt = frames;
+    *movieLastCollectFrame = gc->LastCollectionFrameNum;
+}
+
+void FUN_142504630(ASRefCountCollector* gc, void* advanceStats);   // ASRefCountCollector::ForceCollect
+
+// MovieRoot::AdvanceFrame: until the main movie's loader events are done, fires its loaderInfo init (once), progress
+// (each full frame, or once loading has finished) and complete events. An invalidated stage gets its RENDER events run
+// right away. A full frame runs a collection System.gc scheduled, then advances the collector.
+// MS2-FUNCTIONAL: the scheduled collection is called through its exe address
+// @0x1424eb2f0
+void MovieRoot::AdvanceFrame(bool nextFrame)
+{
+    void* advanceStats = *reinterpret_cast<void* const*>(&pMovieImpl->pAdvanceStats);
+    if (!(MainLoaderInfoEventsState & 2))
+    {
+        MovieDefImpl* md = pMovieImpl->pMainMovie->GetResourceMovieDef();
+        DisplayObjContainer* rt = GetRootMovie418(NULL);
+        SPtr<Instances::fl_display::DisplayObject> as3obj = ToAvmDisplayObj(AsDisplayObject(rt))->GetAS3Obj();
+        if (as3obj && as3obj->HasLoaderInfo())
+        {
+            if (!(MainLoaderInfoEventsState & 1))
+            {
+                as3obj->pLoaderInfo->ExecuteInitEvent(reinterpret_cast<GFx::DisplayObject*>(rt));
+                MainLoaderInfoEventsState |= 1;
+            }
+            const bool loadingFinished = md->GetLoadingFrame() >= md->GetFrameCount();
+            if (nextFrame || loadingFinished)
+                as3obj->pLoaderInfo->ExecuteProgressEvent(md->pBindData->GetBytesLoaded(),
+                                                          md->GetDataDef()->GetFileBytes());
+            if (loadingFinished)
+            {
+                as3obj->pLoaderInfo->ExecuteCompleteEvent();
+                MainLoaderInfoEventsState |= 2;
+            }
+        }
+        else
+            MainLoaderInfoEventsState |= 2;
+    }
+    if (StageInvalidated)
+    {
+        reinterpret_cast<EventChains*>(&mEventChains)->QueueEvents(static_cast<EventId::IdCode>(0x1000013));   // Event_Render
+        DoActions();
+        StageInvalidated = false;
+    }
+    if (nextFrame)
+    {
+        ASRefCountCollector* gc = MemContext->ASGC;
+        if (gc)
+        {
+            if (gc->CollectionScheduledFlags)
+            {
+                gc->CollectionScheduledFlags = 0;
+                FUN_142504630(gc, advanceStats);
+            }
+            Sfr21ASGCAdvanceFrame(gc, &NumAdvancesSinceCollection, &LastCollectionFrame,
+                                  static_cast<ASRefCountCollector::StatsObserver*>(advanceStats));
+        }
+    }
+}
+
+// AvmSprite::AdvanceFrame: drags the sprite with the mouse; on a full frame (unless its frame is already queued) a
+// playing sprite moves on, and a new frame runs its init actions and frame tags, flags the frame for execution and
+// puts the sprite back on the optimized play list. Looping back to frame 0 unloads the marked children.
+// MS2-FUNCTIONAL: follows the exe's order of checks
+// @0x1424eb130
+void AvmSprite::AdvanceFrame(bool nextFrame, float framePos)
+{
+    SF_UNUSED(framePos);
+    Ptr<Sprite> spr = GetSprite();
+    if (spr->IsAdvanceDisabled() || spr->IsUnloading())
+        return;
+    if (GetMovieImpl()->IsMouseSupportEnabled())
+        spr->DoMouseDrag();
+    if (nextFrame && !(SprFlags & Flag_NeedExecuteFrame))
+    {
+        unsigned currentFrame = spr->GetCurrentFrame();
+        if (spr->GetPlayState() == State_Playing)
+        {
+            const unsigned currentFrame0 = currentFrame;
+            spr->IncrementFrameAndCheckForLoop();
+            currentFrame = spr->GetCurrentFrame();
+            if (currentFrame != currentFrame0)
+            {
+                ExecuteInitActionFrameTags(currentFrame);
+                spr->ExecuteFrameTags(currentFrame);
+                SprFlags |= Flag_NeedExecuteFrame;
+                if (GetSprite()->IsInPlayList())
+                    GetSprite()->AddToOptimizedPlayList();
+            }
+        }
+        if (currentFrame == 0)
+            GetSprite()->mDisplayList.UnloadMarkedObjects(GetSprite());
+    }
+}
+
+// Add: the "+" operator. Two XML objects are joined by the VM's XML support; with a string operand both sides are
+// concatenated as strings; two other primitives are summed as numbers; anything else is first made primitive.
+// MS2-FUNCTIONAL: functional recovery
+// @0x1424e5f50
+CheckResult Add(StringManager& sm, Value& result, const Value& l, const Value& r)
+{
+    if (l.IsObject() && r.IsObject() && l.GetObject() && r.GetObject())
+    {
+        Object* obj = l.GetObject();
+        const XMLSupport& xmls = obj->GetVM().GetXMLSupport();
+        if (xmls.Add(result, *l.GetObject(), *r.GetObject()))
+            return true;
+    }
+
+    if (l.IsString() || r.IsString())
+    {
+        ASString left(sm.CreateEmptyString());
+        ASString right(sm.CreateEmptyString());
+        if (l.Convert2String(left) && r.Convert2String(right))
+        {
+            result = left + right;
+            return true;
+        }
+        return false;
+    }
+
+    if (l.IsPrimitive() && r.IsPrimitive())
+    {
+        Value::Number lnum = 0.0;
+        Value::Number rnum = 0.0;
+        if (l.Convert2NumberInline(lnum) && r.Convert2NumberInline(rnum))
+        {
+            result.SetNumber(lnum + rnum);
+            return true;
+        }
+        return false;
+    }
+
+    Value lprim;
+    Value rprim;
+    if (l.Convert2PrimitiveValueUnsafe(lprim) && r.Convert2PrimitiveValueUnsafe(rprim))
+        return Add(sm, result, lprim, rprim);
+    return false;
+}
+
 }}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace Render {
+
+void* FUN_142532060(void* self, UPInt n);   // LinearHeap::allocFromLastPage
+
+// LinearHeap::Alloc (header inline, an exe COMDAT): rounds size up to pointer size and bump-allocates from the last
+// page; past it, moves to the next page slot, creating the 64-slot pool on first use and doubling it when full.
+// The heap is laid out { pHeap, Granularity, pPagePool, pLastPage, MaxPages } with 0x18-byte page slots.
+// MS2-FUNCTIONAL: free function over the LinearHeap layout (its header is in the other kernel tree)
+// @0x1424eb4d0
+void* Sfr21LinearHeapAlloc(void* self, UPInt size)
+{
+    struct PageType { UByte* pStart; UByte* pEnd; UByte* pFree; };
+    struct Heap { MemoryHeap* pHeap; UPInt Granularity; PageType* pPagePool; PageType* pLastPage; UPInt MaxPages; };
+    Heap* h = static_cast<Heap*>(self);
+    size = (size + sizeof(UPInt) - 1) & ~(sizeof(UPInt) - 1);
+    if (h->pLastPage)
+    {
+        void* p = FUN_142532060(self, size);
+        if (p)
+            return p;
+        ++h->pLastPage;
+    }
+    else
+    {
+        h->pLastPage = h->pPagePool =
+            static_cast<PageType*>(h->pHeap->Alloc(64 * sizeof(PageType), static_cast<const AllocInfo*>(0)));
+        memset(h->pPagePool, 0, 64 * sizeof(PageType));
+        h->MaxPages = 64;
+    }
+    if (h->pLastPage - h->pPagePool >= SPInt(h->MaxPages))
+    {
+        UPInt     used = h->pLastPage - h->pPagePool;
+        PageType* pool = static_cast<PageType*>(
+            h->pHeap->Alloc(h->MaxPages * 2 * sizeof(PageType), static_cast<const AllocInfo*>(0)));
+        memcpy(pool, h->pPagePool, h->MaxPages * sizeof(PageType));
+        memset(pool + h->MaxPages, 0, h->MaxPages * sizeof(PageType));
+        h->pHeap->Free(h->pPagePool);
+        h->pPagePool = pool;
+        h->MaxPages *= 2;
+        h->pLastPage = h->pPagePool + used;
+    }
+    return FUN_142532060(self, size);
+}
+
+}} // namespace Scaleform::Render
 
 namespace Scaleform { namespace GFx {
 
