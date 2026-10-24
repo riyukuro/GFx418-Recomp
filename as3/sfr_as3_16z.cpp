@@ -742,6 +742,153 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
     }
 }
 
+class Tracer;
+
+// TClassTraitsCache::Add, out of line.
+// MS2-FUNCTIONAL: MultinameHash::Add is inline in the header; a free function at its exe address
+// @0x1424e5e80
+void FUN_1424e5e80(TClassTraitsCache* self, const ASString& name, const Instances::Namespace& ns,
+                   ClassTraits::Traits* v)
+{
+    self->Add(name, ns, v);
+}
+
+// An ArrayLH<SPtr<>> at +0x20 grown by one reference-counted object. No caller or reference is left in the exe.
+// MS2-FUNCTIONAL: owner class unknown; raw offset
+// @0x1424e62f0
+void FUN_1424e62f0(void* self, GASRefCountBase* p)
+{
+    reinterpret_cast<ArrayLH<SPtr<GASRefCountBase> >*>(static_cast<char*>(self) + 0x20)
+        ->PushBack(SPtr<GASRefCountBase>(p));
+}
+
+// TR::Block (0x28 bytes, Tracer heap): a ListNode, then the block's flags, type, entry state and code offset.
+struct Sfr21TrBlock
+{
+    Sfr21TrBlock* pPrev;    // +0x00
+    Sfr21TrBlock* pNext;    // +0x08
+    UInt32        Flags;    // +0x10 bit 0: not dead
+    UInt32        Type;     // +0x14 1: tDead
+    void*         pState;   // +0x18 TR::State*, NULL until the block is reached
+    UPInt         From;     // +0x20
+};
+
+// TR::State's members are private (as3_readargs.h): the same layout, for the copy.
+struct Sfr21TrState
+{
+    void*          pTracer;     // +0x00
+    UPInt          BCP;         // +0x08
+    UPInt          OpcodeCP;    // +0x10
+    ArrayDH<Value> Registers;   // +0x18
+    ArrayDH<Value> OpStack;     // +0x38
+    ArrayDH<Value> ScopeStack;  // +0x58
+    UInt8*         RegChanged;  // +0x78
+    UInt32         BitCount;    // +0x80
+};
+
+// The last block (walking back from the list's end) that starts at or before from.
+static Sfr21TrBlock* Sfr21TracerGetBlock(Tracer* self, UPInt from)
+{
+    Sfr21TrBlock* block = *reinterpret_cast<Sfr21TrBlock**>(reinterpret_cast<char*>(self) + 0x110);
+    while (block && from < block->From)
+        block = block->pPrev;
+    return block;
+}
+
+static void Sfr21InsertBlockAfter(Sfr21TrBlock* block, Sfr21TrBlock* node)
+{
+    node->pPrev = block->pNext->pPrev;
+    node->pNext = block->pNext;
+    block->pNext->pPrev = node;
+    block->pNext = node;
+}
+
+// Tracer::AddBlock(st, from, type, checkOpCode): the block starting at from with a copy of st as its entry state
+// (NULL past the code's end). A label or debug opcode at from keeps a tDead block alive.
+// MS2-FUNCTIONAL: Tracer members private; raw offsets
+// @0x1424e6aa0
+void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool checkOpCode)
+{
+    char* t = reinterpret_cast<char*>(self);
+    if (from >= *reinterpret_cast<UPInt*>(t + 0x58))
+        return NULL;
+
+    bool is_dead = type == 1;
+    Sfr21TrBlock* block = Sfr21TracerGetBlock(self, from);
+    bool onlyCreateState = false;
+    if (block && from == block->From)
+    {
+        if (block->pState)
+            return block;
+        onlyCreateState = true;
+    }
+
+    if (checkOpCode)
+    {
+        const UInt8 op = (*reinterpret_cast<const UInt8**>(t + 0x50))[from];
+        if (op == 9 || (op >= 0xef && op <= 0xf1))   // op_label, op_debug, op_debugline, op_debugfile
+            is_dead = false;
+    }
+
+    MemoryHeap* heap = *reinterpret_cast<MemoryHeap**>(t + 0x18);
+    const Sfr21TrState& src = *static_cast<const Sfr21TrState*>(st);
+    Sfr21TrState* state = static_cast<Sfr21TrState*>(heap->Alloc(sizeof(Sfr21TrState), (const AllocInfo*)0));
+    if (state)
+    {
+        state->pTracer  = src.pTracer;
+        state->BCP      = src.BCP;
+        state->OpcodeCP = src.OpcodeCP;
+        ::new (&state->Registers) ArrayDH<Value>(src.Registers);
+        ::new (&state->OpStack) ArrayDH<Value>(src.OpStack);
+        ::new (&state->ScopeStack) ArrayDH<Value>(src.ScopeStack);
+        state->BitCount = src.BitCount;
+        const UPInt bytes = (src.BitCount + 7) >> 3;
+        AllocInfo info(0x155, 0, 0);
+        state->RegChanged = static_cast<UInt8*>(
+            Memory::pGlobalHeap->GetAllocHeap(src.RegChanged)->Alloc(bytes, &info));
+        memcpy(state->RegChanged, src.RegChanged, bytes);
+    }
+    reinterpret_cast<ArrayDH<void*>*>(t + 0xf0)->PushBack(state);
+
+    if (type == 1 && !is_dead)
+        type = 0;
+
+    if (onlyCreateState)
+    {
+        block->Type |= type;
+        block->pState = state;
+        return block;
+    }
+
+    Sfr21TrBlock* node = static_cast<Sfr21TrBlock*>(heap->Alloc(sizeof(Sfr21TrBlock), (const AllocInfo*)0));
+    node->Flags |= 1;
+    node->Type = type;
+    node->pState = state;
+    node->From = from;
+    Sfr21InsertBlockAfter(block, node);
+    if (type == 1)
+        node->Flags &= ~1u;
+    return node;
+}
+
+// Tracer::AddBlock(from): a block (without a state yet) starting at from, unless one already does.
+// MS2-FUNCTIONAL: Tracer members private; raw offsets
+// @0x1424e6cf0
+void FUN_1424e6cf0(Tracer* self, UPInt from)
+{
+    Sfr21TrBlock* block = Sfr21TracerGetBlock(self, from);
+    if (block && from == block->From)
+        return;
+
+    MemoryHeap* heap = *reinterpret_cast<MemoryHeap**>(reinterpret_cast<char*>(self) + 0x18);
+    Sfr21TrBlock* node = static_cast<Sfr21TrBlock*>(heap->Alloc(sizeof(Sfr21TrBlock), (const AllocInfo*)0));
+    node->Flags |= 1;
+    node->Type = 0;
+    node->pState = NULL;
+    node->From = from;
+    Sfr21InsertBlockAfter(block, node);
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace Render {
