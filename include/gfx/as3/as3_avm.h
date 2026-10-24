@@ -121,7 +121,8 @@ class AvmInteractiveObj : public AvmDisplayObj, public AvmInteractiveObjBase
 {
 public:
     AvmInteractiveObj(InteractiveObject* pdispObj);
-    virtual ~AvmInteractiveObj();                                       // 0x1424ddc20, ??_G 0x1424e2860
+    // Inline: the containers' destructors (AvmLoader 0x1424ddc40) inline it and reset the AvmInteractiveObjBase part.
+    virtual ~AvmInteractiveObj() {}                                     // 0x1424ddc20, ??_G 0x1424e2860
 
     virtual AvmInteractiveObjBase* ToAvmInteractiveObjBase() { return this; }
 
