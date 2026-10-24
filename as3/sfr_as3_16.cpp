@@ -2,7 +2,48 @@
 // source, written from the exe.
 // MS2-UNIT: sfr_as3_16
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424dc870-0x1424eb700 .text$mn
+// MS2-RANGE: 0x1424dc870-0x1424e2040 .text$mn
+// MS2-RANGE: 0x1424e2bb0-0x1424e2c10 .text$mn
+// MS2-RANGE: 0x1424e3020-0x1424e3150 .text$mn
+// MS2-RANGE: 0x1424e3150-0x1424e31e0 .text$mn
+// MS2-RANGE: 0x1424e31e0-0x1424e3260 .text$mn
+// MS2-RANGE: 0x1424e3580-0x1424e35e0 .text$mn
+// MS2-RANGE: 0x1424e3690-0x1424e3750 .text$mn
+// MS2-RANGE: 0x1424e3750-0x1424e37a0 .text$mn
+// MS2-RANGE: 0x1424e3bd0-0x1424e3c30 .text$mn
+// MS2-RANGE: 0x1424e3cc0-0x1424e3d60 .text$mn
+// MS2-RANGE: 0x1424e4290-0x1424e42c0 .text$mn
+// MS2-RANGE: 0x1424e46f0-0x1424e4f40 .text$mn
+// MS2-RANGE: 0x1424e4f40-0x1424e5500 .text$mn
+// MS2-RANGE: 0x1424e5500-0x1424e5510 .text$mn
+// MS2-RANGE: 0x1424e5510-0x1424e5660 .text$mn
+// MS2-RANGE: 0x1424e5660-0x1424e56f0 .text$mn
+// MS2-RANGE: 0x1424e56f0-0x1424e5e80 .text$mn
+// MS2-RANGE: 0x1424e63b0-0x1424e6670 .text$mn
+// MS2-RANGE: 0x1424e6670-0x1424e6990 .text$mn
+// MS2-RANGE: 0x1424e6990-0x1424e6aa0 .text$mn
+// MS2-RANGE: 0x1424e6f90-0x1424e7140 .text$mn
+// MS2-RANGE: 0x1424e7f40-0x1424e8060 .text$mn
+// MS2-RANGE: 0x1424e8060-0x1424e80f0 .text$mn
+// MS2-RANGE: 0x1424e8c20-0x1424e8e20 .text$mn
+// MS2-RANGE: 0x1424e8ed0-0x1424e9010 .text$mn
+// MS2-RANGE: 0x1424e9010-0x1424e9090 .text$mn
+// MS2-RANGE: 0x1424e9090-0x1424e9210 .text$mn
+// MS2-RANGE: 0x1424e9210-0x1424e9330 .text$mn
+// MS2-RANGE: 0x1424e9330-0x1424e9370 .text$mn
+// MS2-RANGE: 0x1424e9370-0x1424e9380 .text$mn
+// MS2-RANGE: 0x1424e9380-0x1424e93b0 .text$mn
+// MS2-RANGE: 0x1424e93b0-0x1424e9670 .text$mn
+// MS2-RANGE: 0x1424e9670-0x1424e9740 .text$mn
+// MS2-RANGE: 0x1424e9740-0x1424e9830 .text$mn
+// MS2-RANGE: 0x1424e9830-0x1424e9910 .text$mn
+// MS2-RANGE: 0x1424e9910-0x1424e9a50 .text$mn
+// MS2-RANGE: 0x1424e9a50-0x1424e9b40 .text$mn
+// MS2-RANGE: 0x1424e9b40-0x1424eab60 .text$mn
+// MS2-RANGE: 0x1424eaf00-0x1424eaf80 .text$mn
+// MS2-RANGE: 0x1424eb610-0x1424eb640 .text$mn
+// MS2-RANGE: 0x1424eb640-0x1424eb6b0 .text$mn
+// MS2-RANGE: 0x1424eb6b0-0x1424eb700 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
