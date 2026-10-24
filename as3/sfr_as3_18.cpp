@@ -30,6 +30,8 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_utils.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
+#include "ms2/scaleform/include/gfx/gfx_imageresource.h"
+#include "ms2/scaleform/include/gfx/gfx_imagecreator.h"
 #undef GetObject   // windows.h
 
 void* FUN_14241ba70(void* traits, void* ret, int kind, const void* uri, const void* prefix);   // Namespace::MakeInternedInstance
@@ -6209,7 +6211,6 @@ bool Sfr34_ValueObjIfc::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* pr
     return true;
 }
 
-void FUN_1424e8e20(MovieRoot* root, MovieDefImpl* pdefImpl);       // MovieRoot::AddLoadedMovieDef
 void FUN_142504630(ASRefCountCollector* gc, void* stats);          // ASRefCountCollector::ForceCollect
 void FUN_142446e00(Instances::fl_display::DisplayObject* obj, Instances::fl_display::Loader* loader);  // SetLoaderInfo
 void FUN_1425274b0(DisplayObjectBase* bitmap, Resource* pimage);   // AvmBitmap::SetImage
@@ -6272,7 +6273,7 @@ bool LoadQueueEntryMT_LoadMovie::LoadFinished()
         if (qe->NotifyLoadInitCInterface)
             qe->NotifyLoadInitCInterface->OpenEventCallback();
         qe->FirstExec = false;
-        FUN_1424e8e20(root, pdefImpl);
+        root->AddLoadedMovieDef(pdefImpl);
     }
     if (!CharSwitched)
         CharSwitched = true;
@@ -6374,6 +6375,389 @@ bool FUN_1425151a0(const VM& vm, const Traits& tr)
     return p == xml.GetITraitsQName() || p == xml.GetITraitsXML() || p == xml.GetITraitsXMLList();
 }
 
+// sfr34 batch AF: the load of a queued request: the data of a URLLoader (variables, text or binary) read from its
+// file, or the movie / image of a Loader (protocol images through the image creator) made the Loader's child.
+
+// A queued load done here (not on a loader thread). A URLLoader's file is read whole and handed to it with its
+// open/progress/complete events ("Can't open" error otherwise). A Loader's movie is loaded (a stripped player tries
+// the ".gfx" name first; Loader.loadBytes from its bytes), an image protocol URL through the image creator; then
+// open, the movie's sprite (or the image's bitmap) made the Loader's child and constructed, and init/complete
+// (synchronously for protocol images). An error event when nothing could be loaded or the SWF is not AS3.
+// MS2-FUNCTIONAL GetRootFilePath and ImageResource's constructor are inlined in the exe
+// @0x14251e560
+void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* pls)
+{
+    if (pentry->Canceled)
+        return;
+    LoadQueueEntry& entry = static_cast<LoadQueueEntry&>(*pentry);
+    if (pentry->Type & (GFx::LoadQueueEntry::LTF_VarsFlag | GFx::LoadQueueEntry::LTF_BinaryFlag))
+    {
+        bool            error = false;
+        String          data;
+        ArrayPOD<UByte> binaryData;
+        int             fileLen = 0;
+        {
+            String rootPath;
+            GetRootFilePath(&rootPath);
+            URLBuilder::LocationInfo loc(URLBuilder::File_LoadVars, pentry->URL, rootPath);
+            String                   fileName;
+            pls->BuildURL(&fileName, loc);
+            Ptr<File> pfile = *pls->OpenFile(fileName.ToCStr(), 0);
+            if (pfile)
+            {
+                if (entry.mURLLoader->IsLoadingVariables())
+                    MovieImpl::ReadTextData(&data, pfile, &fileLen, true);
+                else if (entry.mURLLoader->IsLoadingText())
+                    MovieImpl::ReadTextData(&data, pfile, &fileLen, false);
+                else if (entry.mURLLoader->IsLoadingBinary())
+                    MovieImpl::ReadBinaryData(&binaryData, pfile, &fileLen);
+            }
+            else
+            {
+                char buf[1024];
+                SFsprintf(buf, sizeof(buf), "Can't open %s", fileName.ToCStr());
+                entry.mURLLoader->ExecuteErrorEvent(buf);
+                error = true;
+            }
+        }
+        if (!error)
+        {
+            if (entry.mURLLoader->IsLoadingVariables())
+                entry.mURLLoader->SetVariablesDataString(data.ToCStr());
+            else if (entry.mURLLoader->IsLoadingText())
+                entry.mURLLoader->SetTextString(data.ToCStr());
+            else if (entry.mURLLoader->IsLoadingBinary())
+                entry.mURLLoader->SetBinaryData(binaryData);
+            entry.mURLLoader->ExecuteOpenEvent();
+            entry.mURLLoader->ExecuteProgressEvent(fileLen, fileLen);
+            entry.mURLLoader->ExecuteCompleteEvent();
+        }
+        return;
+    }
+
+    String            url(pentry->URL), urlStrGfx;
+    LogState*         plog      = pls->GetLogState();
+    Ptr<MovieDefImpl> pmovieDef;
+    const unsigned    loadFlags = pMovieImpl->pMainMovieDef->GetLoadFlags();
+    if (pMovieImpl->pMainMovie &&
+        (pMovieImpl->pMainMovie->GetResourceMovieDef()->GetSWFFlags() & 0x10))  // stripped (a .gfx player)
+        urlStrGfx = GetUrlStrGfx(url);
+
+    bool       bilinearImage     = false;
+    const bool userImageProtocol = LoaderImpl::IsProtocolImage(url, &bilinearImage, NULL);
+    if (userImageProtocol)
+    {
+        ImageCreator* pimageLoader = pls->GetImageCreator();
+        if (pimageLoader)
+        {
+            ImageCreateInfo icinfo(ImageCreateInfo::Create_ProtocolImage, pMovieImpl->GetMovieHeap());
+            icinfo.SetStates(pls->GetLog(), pls->pBindStates->pFileOpener, pls->GetImageFileHandlerRegistry());
+            icinfo.pMovie = pMovieImpl;
+            Ptr<Render::Image> pimg = *pimageLoader->LoadProtocolImage(icinfo, url.ToCStr());
+            if (pimg)
+            {
+                Ptr<ImageResource> pimageRes =
+                    *SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ImageResource(pimg, Resource::Use_Bitmap);
+                if (pimageRes)
+                    pmovieDef = *pMovieImpl->CreateImageMovieDef(pimageRes, bilinearImage, url.ToCStr(), pls);
+            }
+            else if (plog)
+            {
+                plog->LogScriptWarning("ImageCreator::LoadProtocolImage failed to load image \"%s\"", url.ToCStr());
+                entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+                return;
+            }
+        }
+        else if (plog)
+        {
+            plog->LogScriptWarning("ImageCreator is not installed, failed to load image \"%s\"", url.ToCStr());
+            entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+        }
+    }
+    else
+    {
+        unsigned lf = loadFlags | GFx::Loader::LoadImageFiles | GFx::Loader::LoadWaitCompletion;
+        if (pentry->QuietOpen)
+            lf |= GFx::Loader::LoadQuietOpen;
+        if (!entry.mBytes)
+        {
+            String rootPath;
+            GetRootFilePath(&rootPath);
+            if (urlStrGfx.GetLength() > 0)
+            {
+                URLBuilder::LocationInfo loc(URLBuilder::File_LoadMovie, urlStrGfx, rootPath);
+                pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, loc, lf);
+            }
+            if (!pmovieDef)
+            {
+                URLBuilder::LocationInfo loc(URLBuilder::File_LoadMovie, url, rootPath);
+                pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, loc, lf);
+            }
+        }
+        else
+            pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, *entry.mBytes, lf);
+
+        if (!pmovieDef)
+        {
+            if (plog && !pentry->QuietOpen)
+                plog->LogScriptWarning("Failed loading URL \"%s\"", url.ToCStr());
+            entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+            if (entry.NotifyLoadInitCInterface)
+                entry.NotifyLoadInitCInterface->ErrorEventCallback();
+            return;
+        }
+        if (pmovieDef->GetVersion() != ~0u &&
+            (pmovieDef->GetVersion() < 9 || !(pmovieDef->GetDataDef()->GetFileAttributes() & 8)))
+        {
+            if (plog && !pentry->QuietOpen)
+                plog->LogScriptWarning("Failed loading SWF \"%s\": ActionScript version mismatch", url.ToCStr());
+            entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+            if (entry.NotifyLoadInitCInterface)
+                entry.NotifyLoadInitCInterface->ErrorEventCallback();
+            return;
+        }
+    }
+    if (pmovieDef)
+        AddLoadedMovieDef(pmovieDef);
+
+    entry.mLoader->ExecuteOpenEvent();
+    if (entry.NotifyLoadInitCInterface)
+        entry.NotifyLoadInitCInterface->OpenEventCallback();
+
+    GFx::DisplayObject*     pparent = entry.mLoader->pDispObj;
+    Ptr<DisplayObjectBase>  pnewChar;
+    if (pmovieDef && pmovieDef->GetDataDef()->MovieType == MovieDataDef::MT_Image)
+    {
+        CharacterCreateInfo    ccinfo      = { pmovieDef->GetDataDef(), pmovieDef, NULL };
+        Ptr<DisplayObjectBase> pnewBmpChar = *pASSupport->CreateCharacterInstance(
+            pMovieImpl, ccinfo, NULL, ResourceId(), CharacterDef::Bitmap);
+        ResourceHandle rh;
+        if (pmovieDef->GetDataDef()->GetResourceHandle(&rh, ResourceId(0)))
+        {
+            Resource* pres = rh.GetResource(&pmovieDef->GetResourceBinding());
+            if (pres && pres->GetResourceType() == Resource::RT_Image)
+                FUN_1425274b0(pnewBmpChar, pres);
+        }
+        Sfr34_ToAvmContainer(pparent)->AddChild(pnewBmpChar);
+        Sfr34_LoadedCtor(ToAvmDisplayObj(pnewBmpChar), entry.mLoader);
+        pnewChar = pnewBmpChar;
+    }
+    else if (pmovieDef)
+    {
+        if (pAVM)
+            FUN_142504630(&pAVM->GetGC(), pMovieImpl->pAdvanceStats);
+        const UPInt fileBytes = pmovieDef->GetDataDef()->GetFileBytes();
+        entry.mLoader->ExecuteProgressEvent(fileBytes, fileBytes);
+        CharacterCreateInfo ccinfo     = { pmovieDef->GetDataDef(), pmovieDef, NULL };
+        Ptr<Sprite>         pnewSprite = *static_cast<Sprite*>(pASSupport->CreateCharacterInstance(
+            pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
+        pnewSprite->SetLoadedSeparately(true);
+        pnewSprite->Flags |= DisplayObject::Mask_TimelineObject;
+        pnewSprite->OnEventLoad();
+        pnewSprite->AddToPlayList();
+        AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewSprite));
+        avmSpr->ExecuteInitActionFrameTags(0);
+        pnewSprite->SetFOV(55.0);
+        Sfr34_LoadedCtor(avmSpr, entry.mLoader);
+        Sfr34_ToAvmContainer(pparent)->AddChild(pnewSprite);
+        ResolveStickyVariables(pnewSprite);
+        pnewSprite->ModifyOptimizedPlayListLocal<Sprite>();
+        DoActions();
+        pnewChar = pnewSprite;
+    }
+
+    GFx::DisplayObject* pchar = static_cast<GFx::DisplayObject*>(pnewChar.GetPtr());
+    if (!userImageProtocol)
+    {
+        entry.mLoader->QueueInitEvent(pchar, Ptr<RefCountImpl>(entry.NotifyLoadInitCInterface.GetPtr()));
+        entry.mLoader->QueueCompleteEvent();
+    }
+    else
+    {
+        entry.mLoader->ExecuteInitEvent(pchar);
+        if (entry.NotifyLoadInitCInterface)
+            entry.NotifyLoadInitCInterface->InitEventCallback();
+        entry.mLoader->ExecuteCompleteEvent();
+    }
+}
+
+// sfr34 batch AG: one element of TextField.setImageSubstitutions (an object with subString, image, width, height,
+// baseLineX, baseLineY and id) made an image substitution of the text field.
+
+} } } // namespace Scaleform::GFx::AS3
+
+namespace Scaleform {
+void LogDebugMessage(LogMessageId id, const char* fmt, ...);
+}
+
+// The render Text headers do not mix with this kernel tree, so stand-ins of Text::ImageDesc (0x50 bytes, its matrix
+// 16-byte aligned) and of DocView::ImageSubstitutor and its Element (as in sfr_as3_15).
+struct Sfr34_TextImageDesc : public Scaleform::RefCountBaseNTS<Sfr34_TextImageDesc, 0x4e>   // StatRender_Text_Mem
+{
+    Scaleform::Ptr<Scaleform::Render::Image> pImage;            // +0x10
+    float                                    BaseLineX, BaseLineY;
+    float                                    ScreenWidth, ScreenHeight;
+    Scaleform::Render::Matrix2F              Matrix;            // +0x30
+
+    Sfr34_TextImageDesc() : BaseLineX(0), BaseLineY(0), ScreenWidth(0), ScreenHeight(0) {}
+};
+struct Sfr34_ImageSubstElement              // 0x38 bytes
+{
+    wchar_t                             SubString[20];
+    Scaleform::Ptr<Sfr34_TextImageDesc> pImageDesc;              // +0x28
+    Scaleform::UByte                    SubStringLen;
+
+    Sfr34_ImageSubstElement() : SubStringLen(0) {}
+};
+struct Sfr34_ImageSubstitutor : public Scaleform::NewOverrideBase<Scaleform::Stat_Default_Mem>
+{
+    Scaleform::ArrayLH<Sfr34_ImageSubstElement> Elements;
+};
+void FUN_14260dcc0(Sfr34_ImageSubstitutor* self, const Sfr34_ImageSubstElement& elem);   // ImageSubstitutor::AddImageDesc
+void FUN_1425b65e0(void* ptf, const char* id, Sfr34_TextImageDesc* pdesc);               // TextField::AddIdImageDescAssoc
+
+// The value of the public property name of pobj in v; false when pobj has none.
+static bool Sfr34_GetPublicProperty(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::Object* pobj, const char* name,
+                                    Scaleform::GFx::AS3::Value& v)
+{
+    using namespace Scaleform::GFx::AS3;
+    const Multiname mn(vm.GetPublicNamespace(), Value(vm.GetStringManager().CreateConstString(name)));
+    return pobj->GetProperty(mn, v);
+}
+
+// The number of the public property name of pobj times scale in result; result is kept when pobj has none.
+static void Sfr34_GetNumberProperty(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::Object* pobj, const char* name,
+                                    Scaleform::GFx::AS3::Value& v, float scale, float& result)
+{
+    Scaleform::GFx::AS3::Value::Number n;
+    if (Sfr34_GetPublicProperty(vm, pobj, name, v) && v.Convert2Number(n))
+        result = float(n * scale);
+}
+
+// AvmTextField::ProceedImageSubstitution: element idx (ve) of setImageSubstitutions: its subString (at most 15
+// characters) replaced by its image (a BitmapData, an image source made an image by the image creator), shown at
+// width x height (the image's size by default) with the baseline at (baseLineX, baseLineY) (the bottom by
+// default), and under id when it has one; a script warning when the element is not valid.
+// MS2-FUNCTIONAL free function on the full AvmTextField (opaque in the shared header); the exe inlines the BitmapData
+// type test and gets the image creator twice
+// @0x14251d070
+void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, const Scaleform::GFx::AS3::Value& ve)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx;
+    using namespace Scaleform::GFx::AS3;
+    if (!ve.IsObject())
+        return;
+    Object*             pobj = ve.GetObject();
+    GFx::DisplayObject* pdo  = static_cast<AvmDisplayObj*>(pavmtf)->pDispObj;
+    TextField*          ptf  = reinterpret_cast<TextField*>(pdo);
+    UByte*                  pdoc   = reinterpret_cast<UByte*>(ptf->GetDocument());
+    Sfr34_ImageSubstitutor*& psubst = *reinterpret_cast<Sfr34_ImageSubstitutor**>(pdoc + 0x30);   // created on demand
+    if (!psubst)
+        psubst = new Sfr34_ImageSubstitutor;
+    if (!psubst)
+        return;
+
+    AS3::Value              v;
+    Sfr34_ImageSubstElement elem;
+    if (!Sfr34_GetPublicProperty(vm, pobj, "subString", v))
+    {
+        pdo->LogScriptWarning("%s.setImageSubstitutions() failed for #%d element - subString should be specified",
+                              pdo->GetName().ToCStr(), idx);
+        return;
+    }
+    v.ToStringValue(vm.GetStringManager());
+    {
+        const ASString  subString = v.AsString();
+        const unsigned  len       = subString.GetLength();
+        if (len > 15)
+        {
+            pdo->LogScriptWarning(
+                "%s.setImageSubstitutions() failed for #%d element - length of subString should not exceed 15 characters",
+                pdo->GetName().ToCStr(), idx);
+            return;
+        }
+        UTF8Util::DecodeString(elem.SubString, subString.ToCStr(), subString.GetSize() + 1);
+        elem.SubStringLen = UByte(len);
+    }
+
+    Ptr<Render::Image> pimg;
+    float              origWidth = 0, origHeight = 0;
+    if (Sfr34_GetPublicProperty(vm, pobj, "image", v) && FUN_1425145d0(vm, v, "flash.display.BitmapData"))
+    {
+        ImageResource*    pimageRes = static_cast<Instances::fl_display::BitmapData*>(v.GetObject())->GetImageResource();
+        Ptr<MovieDefImpl> pmd       = pdo->GetResourceMovieDef();
+        if (pimageRes->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
+            pimg = static_cast<Render::Image*>(pimageRes->GetImage());
+        else
+        {
+            Ptr<ImageCreator> pcreator = *static_cast<ImageCreator*>(pmd->GetStateAddRef(State::State_ImageCreator));
+            if (!pcreator)
+                LogDebugMessage(Log_Warning, "ImageCreator is null in ProceedImageSubstitution");
+            else
+            {
+                ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, Memory::GetHeapByAddress(ptf), 1,
+                                      Resource::Use_Bitmap);
+                pimg = *pcreator->CreateImage(cinfo, static_cast<Render::ImageSource*>(pimageRes->GetImage()));
+            }
+        }
+        if (pimg)
+        {
+            const Render::ImageRect r = pimg->GetRect();
+            origWidth  = float(UInt32(r.x2 - r.x1));
+            origHeight = float(UInt32(r.y2 - r.y1));
+            if (origWidth == 0 || origHeight == 0)
+            {
+                pdo->LogScriptWarning(
+                    "%s.setImageSubstitutions() failed for #%d element - image has one zero dimension",
+                    pdo->GetName().ToCStr(), idx);
+                return;
+            }
+        }
+    }
+    if (!pimg)
+    {
+        pdo->LogScriptWarning(
+            "%s.setImageSubstitutions() failed for #%d element - 'image' is not specified or not a BitmapData",
+            pdo->GetName().ToCStr(), idx);
+        return;
+    }
+
+    // Sizes in twips; the baseline is taken in twips and kept in pixels (its default, the bottom, is as the exe
+    // computes it: the pixel height less 20).
+    float screenWidth = origWidth * 20.0f, screenHeight = origHeight * 20.0f;
+    float baseLineX = 0, baseLineY = origHeight - 20.0f;
+    Sfr34_GetNumberProperty(vm, pobj, "width", v, 20.0f, screenWidth);
+    Sfr34_GetNumberProperty(vm, pobj, "height", v, 20.0f, screenHeight);
+    Sfr34_GetNumberProperty(vm, pobj, "baseLineX", v, 20.0f, baseLineX);
+    Sfr34_GetNumberProperty(vm, pobj, "baseLineY", v, 20.0f, baseLineY);
+    StringBuffer idBuf;
+    const char*  pid = NULL;
+    if (Sfr34_GetPublicProperty(vm, pobj, "id", v))
+    {
+        v.Convert2String(idBuf);
+        pid = idBuf.ToCStr();
+    }
+
+    elem.pImageDesc = *SF_HEAP_AUTO_NEW(ptf) Sfr34_TextImageDesc;
+    Sfr34_TextImageDesc* pdesc = elem.pImageDesc;
+    pdesc->pImage       = pimg;
+    pdesc->BaseLineX    = baseLineX * 0.05f;
+    pdesc->BaseLineY    = baseLineY * 0.05f;
+    pdesc->ScreenWidth  = screenWidth;
+    pdesc->ScreenHeight = screenHeight;
+    if (pid)
+        FUN_1425b65e0(ptf, pid, pdesc);
+    pdesc->Matrix.Tx() += -pdesc->BaseLineX;
+    pdesc->Matrix.Ty() += -pdesc->BaseLineY;
+    pdesc->Matrix.AppendScaling(pdesc->ScreenWidth / origWidth, pdesc->ScreenHeight / origHeight);
+    FUN_14260dcc0(psubst, elem);
+    pdoc[0x14b] |= 2;   // DocView: reformat
+    ptf->SetDirtyFlag();
+}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 } } }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -6404,3 +6788,18 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-PIN: ?GetLoadingFrame@FrameCounter@AS3@GFx@Scaleform@@UEBAIXZ 0x14250b390
 // MS2-PIN: ?PushBack@?$ArrayData@VValue@AS3@GFx@Scaleform@@U?$AllocatorGH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXAEBVValue@AS3@GFx@2@@Z 0x14251f660
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
+// MS2-PIN: ??_7RefCountImplCore@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+// MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
+// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
+// MS2-PIN: ??_7ImageDelegate@ImageResource@GFx@Scaleform@@6B@ 0x143149b10
+// MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8
+// MS2-PIN: ??_7RefCountNTSImplCore@Scaleform@@6B@ 0x1431093e0
+// MS2-PIN: ??_7RefCountNTSImpl@Scaleform@@6B@ 0x1431093f0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
+// MS2-PIN: ??_7?$RefCountBaseNTS@USfr34_TextImageDesc@@$0EO@@Scaleform@@6B@ 0x143184c98
+// MS2-PIN: ??_7Sfr34_TextImageDesc@@6B@ 0x14317c9c0
