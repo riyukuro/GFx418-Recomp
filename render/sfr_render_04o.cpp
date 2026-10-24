@@ -541,7 +541,10 @@ Font* FontProviderWinAPI::CreateFont(const char* name, unsigned fontFlags)
     }
 
     Font::NativeHintingType* nh = findNativeHinting(name);
-    font->SetHinting(nh ? *nh : NativeHinting[0]);
+    if (nh)
+        font->SetHinting(*nh);
+    else
+        font->SetHinting(NativeHinting[0]);
     return font;
 }
 
