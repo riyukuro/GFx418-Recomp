@@ -6780,6 +6780,55 @@ bool Sfr31SetDisplayMatrix3D(UPInt self, UPInt valueObj, const float* m)
     obj->SetGeomData(gd);
     return true;
 }
+// ---- batch 63
+// Super-property getter-and-call opcode: pops the receiver, resolves the frame's parent-slot accessor, runs it to get a function and
+// calls that with the popped arguments.
+// MS2-FUNCTIONAL 0x142535f40: raw-offset model; codegen differs from the exe
+// @0x142535f40
+void Sfr31ExecCallParentSlot(UPInt vmAddr, UInt32 slotIdx, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, argc);
+    const UPInt frame0 = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
+    const UPInt top = Sfr31Rd(frame0, 8);
+    Sfr31RawTraitsVal obj;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
+    Sfr31Wr(frame0, 8, top - 0x20);
+    Sfr31ThrowIfNullOperand(vmAddr, reinterpret_cast<const UInt32*>(&obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
+        UPInt traits = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8, 0);
+        if (traits == 0)
+            traits = FUN_14250ffc0(&vm, reinterpret_cast<const Value*>(&obj));
+        if (Sfr31Rd(traits, 0x88) == 0)
+        {
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d7850(eb, 0x40b, &vm, "Couldn't find parent property");
+            vm.ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+        }
+        else
+        {
+            Sfr31RawTraitsVal callee = {7, 0, slotIdx, Sfr31Rd(traits, 0x88)};
+            Value fn;
+            FUN_1424fef00(&vm, &callee, &obj, &fn, 0, 0, 0);
+            if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+            {
+                const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+                const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
+                Value result(Value::GetUndefined());
+                FUN_1424fef00(&vm, &fn, &obj, &result, argc, args, 1);
+                result.~Value();
+            }
+            fn.~Value();
+        }
+    }
+    reinterpret_cast<Value*>(&obj)->~Value();
+    FUN_1424de9e0(raBuf);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
