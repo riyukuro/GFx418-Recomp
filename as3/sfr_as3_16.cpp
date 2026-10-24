@@ -1488,6 +1488,34 @@ template SfrCx18ASStringValueSet::~HashSetBase();
 
 extern "C" void FUN_1423dfa20();
 
+// Assigns a tagged AS3 reference and transfers the old/new reference counts.
+// MS2-FUNCTIONAL 0x1424e0860: refcount operations and branch outcomes match; Clang saves the old value in another register.
+// @0x1424e0860
+Scaleform::UInt64* FUN_1424e0860(Scaleform::UInt64* self, Scaleform::UInt64 value)
+{
+    if (value != *self)
+    {
+        if (*self)
+        {
+            if ((*self & 1) == 0)
+            {
+                auto* refs = reinterpret_cast<Scaleform::UInt32*>(*self + 0x10);
+                if ((*refs & 0x3fffff) != 0)
+                    --*refs, FUN_1423dfa20();
+            }
+            else
+                *self = *self - 1;
+        }
+        if (value)
+        {
+            auto* refs = reinterpret_cast<Scaleform::UInt32*>(value + 0x10);
+            *refs = (*refs + 1U) & 0x8fbfffff;
+        }
+        *self = value;
+    }
+    return self;
+}
+
 // Clears the cached namespace-trait entries and releases the table.
 // MS2-FUNCTIONAL: applies the same tagged SPtr refcount release and clears each occupied entry before freeing the table.
 // @0x1424dcc30
