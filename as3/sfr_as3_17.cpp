@@ -19,6 +19,8 @@
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/render/render_meshprovider.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 // Out of line in the exe (instantiated in sfr_as3_01c).
 extern template Scaleform::String Scaleform::AsString<long>(const long&);
 extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned long&);
@@ -2477,6 +2479,179 @@ object_result:
     return true;
 }
 
+void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, void* scopeIndexOut);   // State::FindProp
+
+// The traits a found property's receiver is traced as: a traits value is its own, the class of Class objects stands
+// for the class traits.
+static const Scaleform::UByte* Sfr33TracerThisTraits(Scaleform::UByte* vm, const Scaleform::GFx::AS3::Value& v)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    const unsigned k = static_cast<unsigned>(v.GetKind());
+    const UByte* t;
+    if (k == 0)
+        t = *reinterpret_cast<UByte* const*>(vm + 0x278);
+    else if (k == 8 || k == 9)
+        t = *reinterpret_cast<UByte* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
+    else
+        t = reinterpret_cast<const UByte*>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vm), v));
+    if (t && t == *reinterpret_cast<UByte* const*>(vm + 0x1f0))
+        t = *reinterpret_cast<UByte* const*>(vm + 0x1f8);
+    return t;
+}
+
+// Tracer::EmitFindProperty: the find (getlex when get_prop) of the constant-pool name mn_index, resolved statically
+// through the traced scopes (State::FindProp). A class name pushes its class; a slot of an outer scope (stype 0/1)
+// pushes that scope object (getscopeobject 0x65 / getouterscope 0x67 unless it is a constant) and, for get_prop
+// (or a following getproperty 0x4a), the slot read: a method slot as its function or a getter call. A slot of a
+// global object (stype 2) pushes the object or its slot, the globals undefined and NaN as constants. The op stack
+// (+0x38) gets the resulting type, flagged not null for a const slot or a namespace kind 4 unless consumer is
+// 0x61/0x68. False when the name is run-time or nothing was found.
+// MS2-FUNCTIONAL 0x1424f7cc0: written on raw offsets (tracer +0x20 state, SlotInfo bitfields); the trailing bool is
+// the exe's stype home slot, unused
+// @0x1424f7cc0
+bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool get_prop, int consumer, bool)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    UByte* const self = reinterpret_cast<UByte*>(tracer);
+    ArrayDH<Value>& opstack = *reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38);
+    UByte* const file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28);
+    UByte* const abc = *reinterpret_cast<UByte**>(file + 0x28);
+    const UByte* amn = idx == 0 ? abc + 0xe8 : *reinterpret_cast<UByte**>(abc + 0xb8) + static_cast<SPInt>(idx) * 0x10;
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), *reinterpret_cast<const Abc::Multiname*>(amn));
+    const unsigned mnw = *reinterpret_cast<const unsigned*>(&mn);
+    if ((mnw & 3) == 1 || (mnw & 4))
+        return false;
+    UByte* const vm = *reinterpret_cast<UByte**>(file + 0x20);
+    UPInt scope_index = 0;
+    UInt32 stype = 0;
+    PropRef prop;
+    FUN_142501e80(state, &prop, &mn, &stype, &scope_index);
+    const UPInt pbits = reinterpret_cast<UPInt>(prop.pValue);
+    if (prop.This.GetKind() == Value::kUndefined || pbits == 1 || ((pbits & 2) != 0 && (pbits & ~UPInt(2)) == 0))
+        return get_prop && FUN_1424f8910(self, state, mn, false, false);
+    if (pbits & 1)
+        return false;
+    const UByte* const si = reinterpret_cast<const UByte*>(prop.pSI);
+    const unsigned siw = *reinterpret_cast<const unsigned*>(si);
+    const UByte* const sins = *reinterpret_cast<UByte* const*>(si + 0x20);
+    bool not_null = consumer != 0x61 && consumer != 0x68 && ((siw & 0x3e0) == 0x20 || (sins && (*sins & 0xf) == 4));
+    const UByte* const t = Sfr33TracerThisTraits(vm, prop.This);
+    const int sindex = static_cast<int>(prop.SlotIndex);
+    const int st = static_cast<int>(stype);
+    const int bt = (static_cast<int>(siw) << 0x16) >> 0x1b;
+    if (st < 0 || st > 2)
+        return false;
+    if (st == 2)
+    {
+        if (not_null && FUN_1424f8910(self, state, mn, false, true))
+            return true;
+        if (!get_prop)
+        {
+            const unsigned k = static_cast<unsigned>(prop.This.GetKind());
+            if (k - 8 < 2)
+                FUN_14251fb90(self, 0xb6, static_cast<unsigned>(sindex + 1));   // getslot
+            else if (k == 0)
+                FUN_14251f930(self, 0x21);   // pushundefined
+            else if (k == 1)
+                FUN_14251f930(self, prop.This.AsBool() ? 0x26 : 0x27);   // pushtrue / pushfalse
+            else if (k == 4)
+            {
+                if (!prop.This.IsNaN())
+                    return false;
+                FUN_14251f930(self, 0x28);   // pushnan
+            }
+            else if (k == 0xc || k == 0xd)
+            {
+                if (!FUN_1424f86d0(self, prop.This, false))
+                    return false;
+            }
+            else
+                return false;
+            opstack.PushBack(prop.This);
+            return true;
+        }
+        if (bt > 10)
+            return false;
+        const unsigned k = static_cast<unsigned>(prop.This.GetKind());
+        if (k - 0xc < 4 &&
+            *reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&prop.This) + 0x10) ==
+                *reinterpret_cast<const UPInt*>(vm + 0x298))
+        {
+            GFx::ASString name(reinterpret_cast<const Traits*>(t)->GetSlotNameNode(AbsoluteIndex(prop.SlotIndex)));
+            int op = 0;
+            if (strcmp(name.ToCStr(), "undefined") == 0)
+                op = 0x21;   // pushundefined
+            else if (memcmp(name.ToCStr(), "NaN", 4) == 0)
+                op = 0x28;   // pushnan
+            if (op)
+            {
+                FUN_14251f930(self, op);
+                opstack.PushBack(Value::GetUndefined());
+                return true;
+            }
+        }
+        if (!FUN_1424f86d0(self, prop.This, false))
+            return false;
+        Value v;
+        char ok;
+        if (!*FUN_14250cf20(state, &ok, Sfr33TracerThisTraits(vm, prop.This), si, v))
+            return false;
+        if (not_null)
+            *reinterpret_cast<unsigned*>(&v) |= 0x400;
+        opstack.PushBack(v);
+        FUN_14251fb90(self, 0xb6, static_cast<unsigned>(sindex + 1));   // getslot
+        return true;
+    }
+    if (not_null && FUN_1424f8910(self, state, mn, false, true))
+        return true;
+    if (!FUN_1424f86d0(self, prop.This, false))
+        FUN_14251fb90(self, st == 0 ? 0x65 : 0x67, scope_index);   // getscopeobject / getouterscope
+    if (!get_prop)
+    {
+        if (consumer != 0x4a)
+        {
+            opstack.PushBack(prop.This);
+            return true;
+        }
+        get_prop = true;
+        not_null = true;
+    }
+    const int vind = (static_cast<int>(siw) << 5) >> 0xf;
+    if (bt > 10 && vind >= 0 && !((t[0x68] >> 2) & 1))
+    {
+        const Traits& tr = *reinterpret_cast<const Traits*>(t);
+        const InstanceTraits::Traits* ret;
+        if (bt == 11)
+        {
+            FUN_14251fb90(self, 0xb6, static_cast<unsigned>(sindex + 1));   // getslot
+            Value f = tr.GetVT().GetValue(AbsoluteIndex(vind));
+            ret = &reinterpret_cast<const TR::State*>(state)->GetFunctType(f);
+        }
+        else
+        {
+            FUN_14251fa10(self, 0x43, static_cast<UPInt>(static_cast<SPInt>(vind)), 0);   // callmethod (getter)
+            Value f = tr.GetVT().GetValue(AbsoluteIndex(vind));
+            ret = reinterpret_cast<const InstanceTraits::Traits*>(FUN_14250a060(reinterpret_cast<UPInt>(vm), &f));
+        }
+        Value v;
+        Sfr33TracerValueSet(v, ((static_cast<unsigned>(Sfr33TracerCanBeNull(self, ret)) & ~8u) << 5) | 8,
+                            const_cast<InstanceTraits::Traits*>(ret), false);
+        opstack.PushBack(v);
+        return true;
+    }
+    FUN_14251fb90(self, 0xb6, static_cast<unsigned>(sindex + 1));   // getslot
+    Value v;
+    char ok;
+    if (!*FUN_14250cf20(state, &ok, t, si, v))
+        return false;
+    if (not_null)
+        *reinterpret_cast<unsigned*>(&v) |= 0x400;
+    opstack.PushBack(v);
+    return true;
+}
+
 void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn);   // find mn on one scope
 
 // Searches the scope objects from the innermost out for mn; when the VM knows the traits that define mn, only the
@@ -3658,10 +3833,270 @@ CheckResult XMLSupportImpl::EqualsXML(bool& result, Instances::fl::XML& l, Insta
     return true;
 }
 
+// E4X equality of an XML node with simple content against a non-XML value: their string forms compared (stop set);
+// a node without simple content leaves the comparison to the caller. False when r does not convert to a string.
+// @0x1424f9850
+CheckResult XMLSupportImpl::EqualsXML(bool& stop, bool& result, Instances::fl::XML& l, const Value& r) const
+{
+    stop = false;
+    if (!l.HasSimpleContent())
+        return true;
+    StringBuffer buf(Memory::GetGlobalHeap());
+    ASString str = l.GetVM().GetStringManager().CreateEmptyString();
+    l.ToString(buf, 0);
+    if (!r.Convert2String(str))
+        return false;
+    result = strncmp(buf.ToCStr(), str.ToCStr(), str.GetSize()) == 0;
+    stop = true;
+    return true;
+}
+
 // @0x1424f9ae0
 CheckResult XMLSupportImpl::EqualsXMLList(bool& result, Instances::fl::XMLList& l, const Value& v) const
 {
     return l.Equals(result, v);
+}
+
+// flash.utils.describeType: a <type> element for value's traits (name, base, isDynamic/isFinal/isStatic), then one
+// <extendsClass> per ancestor, the <implementsInterface> names, and a <constant>/<variable>/<method>/<accessor> per
+// slot (a class value nests them in <factory>). Slots sharing a value index keep the one of the most derived type.
+// The interfaces are listed from the parent's chain on, as the exe does; a failed append stops the listing.
+// MS2-FUNCTIONAL 0x1424f4a90: our own reading of the exe; hash orders and string temporaries not reproduced
+// @0x1424f4a90
+void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, const Value& value) const
+{
+    typedef Instances::fl::XMLElement XMLElement;
+    StringManager& sm = vm.GetStringManager();
+    const Instances::Namespace& pns = vm.GetPublicNamespace();
+    const ASString strTrue = sm.GetBuiltin(AS3Builtin_true);
+    const ASString strFalse = sm.GetBuiltin(AS3Builtin_false);
+    const ASString strType = sm.CreateConstString("type");
+    const Traits& tr = FUN_14250ffc0(vm, value);
+    const Value::KindType kind = value.GetKind();
+    const bool isClass = kind == Value::kClass;
+    const Traits* parent = isClass ? static_cast<const Traits*>(&vm.GetClassTraitsClassClass()) : tr.GetParent();
+    InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(*GetITraitsXML());
+    SPtr<XMLElement> xml = itr.MakeInstanceElement(itr, pns, strType, NULL);
+    result = xml.GetPtr();
+
+    const bool isObjKind = kind >= Value::kObject && kind <= Value::kThunkFunction;
+    if (kind == Value::kUndefined || (isObjKind && value.GetObject() == NULL))
+    {
+        xml->AddAttr(pns, sm.CreateConstString("name"), isObjKind ? sm.CreateConstString("null") : tr.GetQualifiedName());
+        xml->AddAttr(pns, sm.CreateConstString("isDynamic"), strFalse);
+        xml->AddAttr(pns, sm.CreateConstString("isFinal"), strTrue);
+        xml->AddAttr(pns, sm.CreateConstString("isStatic"), strFalse);
+        return;
+    }
+
+    xml->AddAttr(pns, sm.CreateConstString("name"), tr.GetQualifiedName());
+    if (parent)
+        xml->AddAttr(pns, sm.CreateConstString("base"), parent->GetQualifiedName());
+    xml->AddAttr(pns, sm.CreateConstString("isDynamic"), isClass || tr.IsDynamic() ? strTrue : strFalse);
+    xml->AddAttr(pns, sm.CreateConstString("isFinal"), isClass || tr.IsFinal() ? strTrue : strFalse);
+    xml->AddAttr(pns, sm.CreateConstString("isStatic"), isClass || tr.IsClassTraits() ? strTrue : strFalse);
+
+    if (parent)
+    {
+        const ASString strExtends = sm.CreateConstString("extendsClass");
+        for (const Traits* t = parent; t; t = t->GetParent())
+        {
+            SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strExtends, NULL);
+            if (!xml->AppendChild(Value(el.GetPtr())))
+                return;
+            el->AddAttr(pns, strType, t->GetQualifiedName());
+        }
+    }
+
+    for (const Traits* t = parent; t; t = t->GetParent())
+    {
+        if (!t->IsInstanceTraits())
+            continue;
+        const ASString strImplements = sm.CreateConstString("implementsInterface");
+        HashSetDH<ASString> seen(vm.GetMemoryHeap());
+        ASString name = sm.CreateEmptyString();
+        if (!t->IsAbcObject())
+        {
+            const InstanceTraits::CTraits& ct = static_cast<const InstanceTraits::CTraits&>(*t);
+            for (UPInt i = 0; i < ct.ImplementsInterfaces.GetSize(); ++i)
+            {
+                if (!ct.ImplementsInterfaces[i].Name.Convert2String(name) || seen.Get(name))
+                    continue;
+                seen.Add(name);
+                SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strImplements, NULL);
+                if (!xml->AppendChild(Value(el.GetPtr())))
+                    return;
+                el->AddAttr(pns, strType, name);
+            }
+        }
+        else
+        {
+            const InstanceTraits::UserDefined& ut = static_cast<const InstanceTraits::UserDefined&>(*t);
+            const ArrayLH_POD<int, StatMV_VM_AbcFile_Mem>& ifs = ut.GetClassInfo().inst_info.implemented_interfaces.info;
+            VMAbcFile& file = ut.GetFile();
+            for (UPInt i = 0; i < ifs.GetSize(); ++i)
+            {
+                const Multiname mn(file, file.GetAbcFile().Const_Pool.GetMultiname(ifs[i]));
+                if (!mn.Name.Convert2String(name) || seen.Get(name))
+                    continue;
+                seen.Add(name);
+                SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strImplements, NULL);
+                if (!xml->AppendChild(Value(el.GetPtr())))
+                    return;
+                el->AddAttr(pns, strType, name);
+            }
+        }
+    }
+
+    const ASString strAccess = sm.CreateConstString("access");
+    const ASString strAccessor = sm.CreateConstString("accessor");
+    const ASString strMethod = sm.CreateConstString("method");
+    const ASString strName = sm.CreateConstString("name");
+    const ASString strDeclaredBy = sm.CreateConstString("declaredBy");
+    const ASString strConstant = sm.CreateConstString("constant");
+    const ASString strVariable = sm.CreateConstString("variable");
+    const ASString strReturnType = sm.CreateConstString("returnType");
+    const ASString strParameter = sm.CreateConstString("parameter");
+    const ASString strIndex = sm.CreateConstString("index");
+    const ASString strOptional = sm.CreateConstString("optional");
+    const ASString strUri = sm.CreateConstString("uri");
+
+    SPtr<XMLElement> cur = xml;
+    if (isClass)
+    {
+        SPtr<XMLElement> factory = itr.MakeInstanceElement(itr, pns, sm.CreateConstString("factory"), NULL);
+        if (!xml->AppendChild(Value(factory.GetPtr())))
+            return;
+        factory->AddAttr(pns, strType, tr.GetQualifiedName());
+        cur = factory;
+    }
+
+    // value index -> the slot that describes it
+    HashDH<SInt32, UPInt> slots(vm.GetMemoryHeap());
+    const UPInt slotNum = tr.GetSlotInfoNum();
+    for (UPInt i = 0; i < slotNum; ++i)
+    {
+        const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(i));
+        const SInt32 key = si.ValueInd;
+        if (UPInt* found = slots.Get(key))
+        {
+            const ClassTraits::Traits* prev = Sfr33SlotDataType(&tr.GetSlotInfo(AbsoluteIndex(*found)), &vm);
+            const ClassTraits::Traits* next = Sfr33SlotDataType(&si, &vm);
+            if (prev == next || (prev && next && FUN_1425149a0(*prev, *next)))
+                *found = i;
+        }
+        else
+            slots.Add(key, i);
+    }
+
+    for (HashDH<SInt32, UPInt>::ConstIterator it = slots.Begin(); !it.IsEnd(); ++it)
+    {
+        const UPInt ind = it->Second;
+        const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
+        const ASString slotName(tr.GetSlotNameNode(AbsoluteIndex(ind)));
+        const SInt32 bt = si.BindType;
+        const ASString& uri = si.pNs->GetUri();
+        if (bt < SlotInfo::BT_Code)
+        {
+            const bool isConst = si.ReadOnly || (si.TI && si.TI->GetType() == Abc::TraitInfo::tConst);
+            SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, isConst ? strConstant : strVariable, NULL);
+            if (!cur->AppendChild(Value(el.GetPtr())))
+                return;
+            el->AddAttr(pns, strName, slotName);
+            if (const ClassTraits::Traits* dt = Sfr33SlotDataType(&si, &vm))
+                el->AddAttr(pns, strType, dt->GetQualifiedName());
+            if (uri.GetSize() != 0)
+                el->AddAttr(pns, strUri, uri);
+            continue;
+        }
+
+        SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, bt == SlotInfo::BT_Code ? strMethod : strAccessor, NULL);
+        if (!cur->AppendChild(Value(el.GetPtr())))
+            return;
+        el->AddAttr(pns, strName, slotName);
+        if (bt != SlotInfo::BT_Code)
+        {
+            const char* access = bt == SlotInfo::BT_Get ? "readonly" : bt == SlotInfo::BT_Set ? "writeonly" : "readwrite";
+            el->AddAttr(pns, strAccess, sm.CreateConstString(access));
+        }
+        if (uri.GetSize() != 0)
+            el->AddAttr(pns, strUri, uri);
+
+        const Value v = tr.GetVT().GetValue(AbsoluteIndex(si.ValueInd));
+        const InstanceTraits::Traits* vt =
+            reinterpret_cast<const InstanceTraits::Traits*>(::FUN_14250a060(reinterpret_cast<UPInt>(&vm), const_cast<Value*>(&v)));
+        const InstanceTraits::Traits& objIT = vm.GetClassTraitsClassClass().GetInstanceTraits();
+        ASString typeName = sm.CreateConstString("*");
+        for (const InstanceTraits::Traits* p = vt; p != &objIT; p = static_cast<const InstanceTraits::Traits*>(p->GetParent()))
+        {
+            if (p == NULL)
+            {
+                typeName = vt->GetQualifiedName();
+                break;
+            }
+            if (p->SupportsInterface(objIT))
+                break;
+        }
+        el->AddAttr(pns, bt == SlotInfo::BT_Code ? strReturnType : strType, typeName);
+
+        if (v.GetKind() != Value::kVTableInd)
+            continue;
+        const Value& entry = v.GetTraits().GetVT().VTMethods[v.GetVTableInd()];
+        const Traits& declTr = entry.GetTraits();
+        el->AddAttr(pns, strDeclaredBy, declTr.GetQualifiedName());
+        if (si.CppBinding)
+            continue;
+        VMAbcFile& file = *declTr.GetFilePtr();
+        const Abc::File& abc = file.GetAbcFile();
+        const Abc::MethodInfo& mi = *abc.Methods.Info[entry.GetMethodInd()];
+        const UPInt n = mi.ParamTypes.GetSize();
+        const UPInt firstOpt = n - mi.OptionalParams.GetSize();
+        for (UPInt i = 0; i < n; ++i)
+        {
+            LongFormatter f(static_cast<UInt64>(i));
+            SPtr<XMLElement> param = itr.MakeInstanceElement(itr, pns, strParameter, NULL);
+            if (!el->AppendChild(Value(param.GetPtr())))
+                return;
+            f.Convert();
+            param->AddAttr(pns, strIndex, sm.CreateString(f.ToCStr(), f.GetSize()));
+            const Multiname pmn(file, abc.Const_Pool.GetMultiname(mi.ParamTypes[i]));
+            ASString ptype = sm.CreateEmptyString();
+            pmn.Name.Convert2String(ptype);
+            param->AddAttr(pns, strType, ptype);
+            param->AddAttr(pns, strOptional, i < firstOpt ? strFalse : strTrue);
+        }
+    }
+}
+
+void FUN_142415930(Instances::fl::XMLList* self, Instances::fl::XMLList& list, const Multiname& prop_name);
+
+// The descendants named mn of an XML or XMLList instance v, as a new list that replaces v; false for anything else.
+// MS2-FUNCTIONAL 0x142509140: XMLList::GetDescendants called through its free-function form
+// @0x142509140
+CheckResult XMLSupportImpl::GetDescendants(Value& v, const Multiname& mn) const
+{
+    if (!v.IsObject() || v.GetObject() == NULL)
+        return false;
+    Object* obj = v.GetObject();
+    const Traits& tr = obj->GetTraits();
+    const BuiltinTraitsType tt = tr.GetTraitsType();
+    if (tt == Traits_XML && tr.IsInstanceTraits())
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(*GetITraitsXMLList());
+        Pickable<Instances::fl::XMLList> list = itr.MakeInstance(itr);
+        static_cast<Instances::fl::XML*>(obj)->GetDescendants(*list, mn);
+        v.Pick(list);
+        return true;
+    }
+    if (tt == Traits_XMLList && tr.IsInstanceTraits())
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(*GetITraitsXMLList());
+        Pickable<Instances::fl::XMLList> list = itr.MakeInstance(itr);
+        FUN_142415930(static_cast<Instances::fl::XMLList*>(obj), *list, mn);
+        v.Pick(list);
+        return true;
+    }
+    return false;
 }
 
 // VM::ExecutePropertyUnsafe: calls the property prop_name of _this with argv; a null or undefined property is a
@@ -5125,6 +5560,212 @@ void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
         break;
     }
 }
+// The protected state of a GFx::MouseState, read and written by GenerateMouseEvents.
+struct Sfr33MouseStateAccess : public GFx::MouseState
+{
+    using GFx::MouseState::TopmostEntity;
+    using GFx::MouseState::ActiveEntity;
+    using GFx::MouseState::CurButtonsState;
+    using GFx::MouseState::PrevButtonsState;
+    using GFx::MouseState::LastPosition;
+    using GFx::MouseState::WheelDelta;
+    using GFx::MouseState::MouseInsideEntityLast;
+    using GFx::MouseState::MouseMoved;
+};
+
+// One mouse event of mouse mouseIndex sent to pobj (OnMouseEvent, or PropagateMouseEvent), with the keyboard's
+// modifier keys.
+static void Sfr33SendMouseEvent(GFx::InteractiveObject* pobj, UInt32 id, unsigned mouseIndex, const KeyboardState* kb,
+                                unsigned button = 0, UByte rollOverCnt = 0, int wheelDelta = 0, bool propagate = false)
+{
+    GFx::EventId evt(id);
+    evt.ButtonId = static_cast<UByte>(button);
+    evt.RollOverCnt = rollOverCnt;
+    evt.MouseIndex = static_cast<SByte>(mouseIndex);
+    evt.KeysState = kb->GetKeyModifiers().States;
+    evt.MouseWheelDelta = static_cast<SByte>(wheelDelta);
+    if (propagate)
+        pobj->PropagateMouseEvent(evt);
+    else
+        pobj->OnMouseEvent(evt);
+}
+
+void* Sfr33MouseStateGetDoubleClickInfo(UByte* self, unsigned buttonMask);
+
+// MovieRoot::GenerateMouseEvents (virtual): the AS3 mouse events of mouse mouseIndex since the last call. Drag
+// over/out while the left button is held; roll out of the objects the mouse left (rollover stack, top down) and
+// mouse out of the old active object; per released button release outside, mouse up, then click or (fast enough,
+// still, with doubleClickEnabled) double click; mouse wheel and move; roll over of the new object and its parents
+// up to the stage, then mouse over; mouse down per pressed button. The object under the mouse becomes active.
+// MS2-FUNCTIONAL 0x142504b50: mouse state through a derived view, rollover stack as ArrayLH, events built by a helper
+// @0x142504b50
+void MovieRoot::GenerateMouseEvents(unsigned mouseIndex)
+{
+    typedef ArrayLH<Ptr<GFx::InteractiveObject> > RolloverArray;
+    enum
+    {
+        Event_MouseOver   = GFx::EventId::Event_LoadStart + 10,
+        Event_MouseOut    = GFx::EventId::Event_LoadStart + 11,
+        Event_Click       = GFx::EventId::Event_LoadStart + 12,
+        Event_DoubleClick = GFx::EventId::Event_LoadStart + 13,
+        Event_MouseWheel  = GFx::EventId::Event_LoadStart + 14
+    };
+    if (mouseIndex >= 4)
+        return;
+    MovieImpl* movie = GetMovieImpl();
+    // MovieImpl::mMouseState[mouseIndex] (0x50 bytes each at +0x1260)
+    Sfr33MouseStateAccess* ms = static_cast<Sfr33MouseStateAccess*>(
+        reinterpret_cast<GFx::MouseState*>(reinterpret_cast<UByte*>(movie) + 0x1260) + mouseIndex);
+    Ptr<GFx::InteractiveObject> active = ms->ActiveEntity;
+    Ptr<GFx::InteractiveObject> topmost = ms->TopmostEntity;
+    if (active && active->IsUnloaded())
+        active = NULL;
+    if (topmost && topmost->IsUnloaded())
+        topmost = NULL;
+    const KeyboardState* kb = movie->GetKeyboardState(mouseIndex);
+    const unsigned checkCount = pAVM->ExtensionsEnabled ? 16 : 1;
+    const unsigned changed = ms->CurButtonsState ^ ms->PrevButtonsState;
+    GFx::InteractiveObject* const ptarget =
+        topmost ? topmost.GetPtr() : static_cast<GFx::InteractiveObject*>(pStage);
+    MouseState& rs = mMouseState[mouseIndex];
+    RolloverArray& stack = *reinterpret_cast<RolloverArray*>(rs.RolloverStack);
+
+    if (ms->PrevButtonsState & 1)
+    {
+        if (!ms->MouseInsideEntityLast)
+        {
+            if (topmost == active)
+            {
+                if (active)
+                    Sfr33SendMouseEvent(active, GFx::EventId::Event_DragOver, mouseIndex, kb, 0, active->RollOverCnt++);
+                ms->MouseInsideEntityLast = true;
+            }
+        }
+        else if (topmost != active)
+        {
+            if (active)
+            {
+                const UByte cnt = active->RollOverCnt ? --active->RollOverCnt : 0xff;
+                Sfr33SendMouseEvent(active, GFx::EventId::Event_DragOut, mouseIndex, kb, 0, cnt);
+            }
+            ms->MouseInsideEntityLast = false;
+        }
+    }
+
+    if (topmost != active)
+    {
+        // roll out of the stack's objects down to topmost or one of its ancestors
+        const UPInt n = stack.GetSize();
+        SPInt i = static_cast<SPInt>(n) - 1;
+        for (; i >= 0; --i)
+        {
+            GFx::InteractiveObject* p = stack[i];
+            if (topmost && (p == topmost || p->IsAncestor(topmost)))
+                break;
+            const UByte cnt = p->RollOverCnt ? --p->RollOverCnt : 0xff;
+            Sfr33SendMouseEvent(p, GFx::EventId::Event_RollOut, mouseIndex, kb, 0, cnt);
+        }
+        stack.Resize(stack.GetSize() - (n - 1 - i));
+        if (active)
+        {
+            active->AddRef();
+            if (rs.LastMouseOverObj)
+                rs.LastMouseOverObj->Release();
+            rs.LastMouseOverObj = active;
+            AvmInteractiveObj* avm = ToAvmInteractiveObj(active);
+            const UByte cnt = avm->MouseOverCnt ? --avm->MouseOverCnt : 0xff;
+            Sfr33SendMouseEvent(active, Event_MouseOut, mouseIndex, kb, 0, cnt);
+            if (rs.LastMouseOverObj)
+                rs.LastMouseOverObj->Release();
+            rs.LastMouseOverObj = NULL;
+        }
+    }
+
+    for (unsigned b = 0; b < checkCount; ++b)
+    {
+        const unsigned bit = 1u << b;
+        if (!(changed & bit) || !(ms->PrevButtonsState & bit))
+            continue;
+        MouseState::DoubleClickInfo& dci = *static_cast<MouseState::DoubleClickInfo*>(
+            Sfr33MouseStateGetDoubleClickInfo(reinterpret_cast<UByte*>(&rs), b));
+        if (Ptr<GFx::InteractiveObject> pdown = ms->GetMouseButtonDownEntity(b))
+            Sfr33SendMouseEvent(pdown, GFx::EventId::Event_ReleaseOutside, mouseIndex, kb, b);
+        Sfr33SendMouseEvent(ptarget, GFx::EventId::Event_MouseUp, mouseIndex, kb, b);
+        if (ms->MouseInsideEntityLast)
+        {
+            const float k = 0.05f;   // twips to pixels
+            const UInt32 tm = static_cast<UInt32>(Timer::GetTicks() / 1000);
+            const bool dbl = dci.PrevClickTime != 0 && tm <= dci.PrevClickTime + 300 &&
+                             static_cast<int>(dci.PrevPosition.x * k) == static_cast<int>(ms->LastPosition.x * k) &&
+                             static_cast<int>(dci.PrevPosition.y * k) == static_cast<int>(ms->LastPosition.y * k);
+            if (dbl && (ToAvmInteractiveObj(ptarget)->IntFlags & 2))   // doubleClickEnabled
+                Sfr33SendMouseEvent(ptarget, Event_DoubleClick, mouseIndex, kb, b);
+            else if (ptarget == ms->GetMouseButtonDownEntity(b).GetPtr())
+                Sfr33SendMouseEvent(ptarget, Event_Click, mouseIndex, kb, b);
+            dci.PrevClickTime = dbl ? 0 : tm;
+            dci.PrevPosition = ms->LastPosition;
+        }
+        ms->SetMouseButtonDownEntity(b, NULL);
+    }
+
+    if (ms->WheelDelta != 0)
+        Sfr33SendMouseEvent(ptarget, Event_MouseWheel, mouseIndex, kb, 0, 0, ms->WheelDelta);
+    if (ms->MouseMoved)
+    {
+        Sfr33SendMouseEvent(ptarget, GFx::EventId::Event_MouseMove, mouseIndex, kb, 0, 0, ms->WheelDelta);
+        Ptr<GFx::InteractiveObject> pdown = ms->GetMouseButtonDownEntity(0);
+        if (pdown && pdown != ptarget)
+            Sfr33SendMouseEvent(pdown, GFx::EventId::Event_MouseMove, mouseIndex, kb, 0, 0, 0, true);
+    }
+
+    if (topmost == active)
+    {
+        if (!topmost)
+            stack.Resize(0);
+    }
+    else
+    {
+        if (topmost)
+        {
+            UPInt i = stack.GetSize();
+            while (i > 0 && stack[i - 1] != topmost)
+                --i;
+            if (i == 0)
+            {
+                // roll over topmost and its parents up to the stage or the stack's top; parents go below
+                const UPInt base = stack.GetSize();
+                Ptr<GFx::InteractiveObject> p = topmost;
+                while (p && p != pStage && !(base && stack[base - 1] == p))
+                {
+                    Sfr33SendMouseEvent(p, GFx::EventId::Event_RollOver, mouseIndex, kb, 0, p->RollOverCnt++);
+                    stack.InsertAt(base, p);
+                    p = p->GetParent();
+                }
+            }
+            AvmInteractiveObj* avm = ToAvmInteractiveObj(topmost);
+            Sfr33SendMouseEvent(topmost, Event_MouseOver, mouseIndex, kb, 0, avm->MouseOverCnt++);
+            if (rs.LastMouseOverObj)
+                rs.LastMouseOverObj->Release();
+            rs.LastMouseOverObj = NULL;
+        }
+        ms->MouseInsideEntityLast = true;
+    }
+
+    for (unsigned b = 0; b < checkCount; ++b)
+    {
+        const unsigned bit = 1u << b;
+        if (!(changed & bit) || (ms->PrevButtonsState & bit))
+            continue;
+        GFx::InteractiveObject* pdown = topmost ? topmost.GetPtr() : static_cast<GFx::InteractiveObject*>(pStage);
+        Sfr33SendMouseEvent(pdown, GFx::EventId::Event_MouseDown, mouseIndex, kb, b);
+        ms->SetMouseButtonDownEntity(b, pdown);
+        ms->MouseInsideEntityLast = true;
+    }
+    ms->ActiveEntity = topmost.GetPtr();
+    ms->MouseMoved = false;
+    ms->WheelDelta = 0;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -5254,6 +5895,146 @@ RectF Sfr33ContainerBounds::GetBounds(const Render::Matrix2F& t) const
 
 }} // namespace Scaleform::GFx
 
+// MovieRoot::GetASVariableAtPath: the value at the dotted path ppathToVar. A global object property of that name
+// comes first; otherwise the path is walked from the stage, or from root1 under a "_root", "_level0" or "root"
+// prefix, one property (else named display child) per token. A token in the middle that is not an object is logged
+// and ends the walk with null. False when there is no path, no root1 or a token resolves to nothing.
+// MS2-FUNCTIONAL 0x142506000: the tokenizer, Multiname ctor and AS3 object fetches are inlined in the exe
+// @0x142506000
+bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    if (!ppathToVar)
+        return false;
+    MovieRoot* root = const_cast<MovieRoot*>(proot);
+    root->CheckAvm();
+    pval->SetUndefined();
+    VM& vm = *root->pAVM;
+    GFx::InteractiveObject* pmain = root->GetMovieImpl()->pMainMovie;
+    AvmDisplayObjContainer* pstage =
+        pmain ? AvmDisplayObjContainer::FromBase(pmain->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
+    Value resolvedVal(pstage->GetAS3Obj());
+
+    // a global first
+    const Multiname gname(vm, StringDataPtr(ppathToVar));
+    PropRef globalProp;
+    Sfr33FindGOProperty(globalProp, vm, *reinterpret_cast<const ArrayLH<Instances::fl::GlobalObject*>*>(&vm.GlobalObjects),
+                        gname, FUN_14250d760(vm, gname));
+    if (Sfr33PropFound(globalProp))
+    {
+        Value v;
+        if (!globalProp.GetSlotValueUnsafe(vm, v))
+            return false;
+        pval->Swap(v);
+        return true;
+    }
+
+    // the known prefixes: all but "stage" start from root1
+    const char* ppath = ppathToVar;
+    unsigned offset = 0;
+    bool r1allow = true;
+    if (ppath[0] == '_')
+    {
+        if (!strncmp(ppath + 1, "root", 4))
+            offset = 5;
+        else if (!strncmp(ppath + 1, "level0", 5))
+            offset = 7;
+    }
+    else if (ppath[0] == 'r')
+    {
+        if (!strncmp(ppath + 1, "oot", 3))
+            offset = 4;
+    }
+    else if (ppath[0] == 's' && !strncmp(ppath + 1, "tage", 4))
+    {
+        offset = 5;
+        r1allow = false;
+    }
+    bool isroot1 = false;
+    if (ppath[offset] == '.' || ppath[offset] == '\0')
+    {
+        if (ppath[offset] == '.')
+            ++offset;
+        isroot1 = r1allow;
+        ppath += offset;
+    }
+    if (isroot1)
+    {
+        GFx::DisplayObject* proot1 = pstage->GetDisplayObjContainer()->mDisplayList.GetDisplayObjectByName(
+            root->BuiltinsMgr.CreateConstString("root1"), true);
+        if (!proot1 || !proot1->IsDisplayObjContainer())
+            return false;
+        resolvedVal = Value(AvmDisplayObjContainer::FromBase(proot1->GetAvmObjImpl()->ToAvmDispContainerBase())->GetAS3Obj());
+    }
+
+    // one property per token
+    const char* tok = ppath;
+    UPInt rest = strlen(ppath);
+    while (rest)
+    {
+        UPInt len = 0;
+        while (len < rest && tok[len] != '.')
+            ++len;
+        const StringDataPtr token(tok, len);
+        tok += len;
+        rest -= len;
+        if (rest && *tok == '.')
+        {
+            ++tok;
+            --rest;
+        }
+        GFx::ASString propName = root->BuiltinsMgr.CreateString(token.ToCStr(), token.GetSize());
+        const Multiname prop(vm.GetPublicNamespace(), Value(propName));
+        Value subVal;
+        Object* pobj = resolvedVal.GetObject();
+        if (!pobj)
+        {
+            pval->SetUndefined();
+            if (vm.IsException())
+                vm.OutputAndIgnoreException();
+            return false;
+        }
+        if (!pobj->GetProperty(prop, subVal))
+        {
+            // not a property: maybe a named child of a display object container
+            const Traits& tr = pobj->GetTraits();
+            if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObjectContainer) <
+                    (unsigned)(Traits_DisplayObject_End - Traits_DisplayObjectContainer) &&
+                tr.IsInstanceTraits())
+            {
+                GFx::DisplayObject* pdo = static_cast<Instances::fl_display::DisplayObject*>(pobj)->pDispObj;
+                AvmDisplayObjContainer* pcurr = pdo->IsDisplayObjContainer()
+                    ? AvmDisplayObjContainer::FromBase(pdo->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
+                SPtr<Instances::fl_display::DisplayObject> pchild = pcurr->GetAS3ChildByName(propName);
+                if (!pchild)
+                {
+                    if (vm.IsException())
+                        vm.OutputAndIgnoreException();
+                    return false;
+                }
+                subVal = Value(pchild.GetPtr());
+            }
+        }
+        resolvedVal = subVal;
+        if (rest && !resolvedVal.IsObject())
+        {
+            if (Ptr<Log> plog = root->GetMovieImpl()->GetLog())
+            {
+                String s;
+                Format(s, "Token '{0}' in path '{1}' was not resolved to a valid Object! This may be caused by a property "
+                          "that is not of Object type, or by using reserved words/properties for MovieClip names in the "
+                          "display tree.", token, ppathToVar);
+                plog->LogError(s.ToCStr());
+            }
+            resolvedVal.SetNull();
+            break;
+        }
+    }
+    *pval = resolvedVal;
+    return true;
+}
+
 // MS2-PIN: ?ConstructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAX_KPEBVValue@AS3@GFx@2@@Z 0x1424f08d0
 // MS2-PIN: ?Construct@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBVValue@AS3@GFx@2@@Z 0x1424f05a0
 // MS2-PIN: ?DestructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAVValue@AS3@GFx@2@_K@Z 0x1424f6d50
@@ -5289,3 +6070,4 @@ RectF Sfr33ContainerBounds::GetBounds(const Render::Matrix2F& t) const
 // MS2-PIN: ?ClearAndRelease@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAAXXZ 0x1424efab0
 // MS2-PIN: ?Clear@?$HashSetBase@U?$HashNode@PEAVObject@AS2@GFx@Scaleform@@PEAV1234@V?$IdentityHash@PEAVObject@AS2@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@PEAVObject@AS2@GFx@Scaleform@@$01@2@V?$HashsetNodeEntry@U?$HashNode@PEAVObject@AS2@GFx@Scaleform@@PEAV1234@V?$IdentityHash@PEAVObject@AS2@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAAXXZ 0x1424ef320
 // MS2-PIN: ?Convert2NumberInline@Value@AS3@GFx@Scaleform@@QEBA?AVCheckResult@234@AEAN@Z 0x1424f0f60
+// MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
