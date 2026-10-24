@@ -17,6 +17,9 @@
 // MS2-RANGE: 0x1425c8b20-0x1425c8b31 .text$mn
 // MS2-RANGE: 0x1425c8ca0-0x1425c8ce8 .text$mn
 // MS2-RANGE: 0x1425c8cf0-0x1425c8d08 .text$mn
+// MS2-RANGE: 0x1425c6450-0x1425c64b8 .text$mn
+// MS2-RANGE: 0x1425c6620-0x1425c66cd .text$mn
+// MS2-RANGE: 0x1425c7ba0-0x1425c7c98 .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -30,6 +33,53 @@
 #include <stdlib.h>
 
 namespace Scaleform { namespace GFx {
+
+// MS2-FUNCTIONAL: dispatches the video tag to the installed video state and reports the missing-state case.
+// @0x1425c6450
+void SF_STDCALL GFx_DefineVideoStreamLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    void* video = p->GetLoadStates()->pVideoState.GetPtr();
+    if (video)
+    {
+        typedef void (*ReadVideoTag)(void*, LoadProcess*, const TagInfo&);
+        void** vtable = *reinterpret_cast<void***>(video);
+        ReadVideoTag read = reinterpret_cast<ReadVideoTag>(vtable[7]);
+        read(video, p, tagInfo);
+    }
+    else
+        p->LogError("GFx_DefineVideoStream: Video library is not set.");
+}
+
+// @0x1425c6620
+void SF_STDCALL GFx_FileAttributesLoader(LoadProcess* p)
+{
+    const unsigned flags = p->ReadU16();
+    p->GetLoadTaskData()->SetFileAttributes(flags);
+}
+
+// MS2-FUNCTIONAL: dispatches the external sound tag through the installed reader; missing-audio diagnostics are simplified.
+// @0x1425c7ba0
+void SF_STDCALL GFx_DefineExternalSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
+    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
+    if (reader)
+        reader->ReadDefineExternalSoundTag(p, tagInfo);
+    else
+        p->LogError("GFx_DefineExternalSoundLoader: Audio library is not set.");
+}
+
+// MS2-FUNCTIONAL: dispatches the external stream sound tag through the installed reader; missing-audio diagnostics are simplified.
+// @0x1425c7c20
+void SF_STDCALL GFx_DefineExternalStreamSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
+    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
+    if (reader)
+        reader->ReadDefineExternalStreamSoundTag(p, tagInfo);
+    else
+        p->LogError("GFx_DefineExternalStreamSoundLoader: Audio library is not set.");
+}
 
 // MS2-FUNCTIONAL: preserves the tables bytes and replace-old-header behavior; the executable's allocator call sequence
 // is still being refined.
