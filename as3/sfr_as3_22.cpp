@@ -248,6 +248,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Scaleform {
 extern "C" void FUN_1425463f0(void*, const void*, UPInt);
 extern "C" void FUN_142546490(void*, const void*, UPInt);
+extern "C" void FUN_142623bc0(void*, const void*, UPInt); // the UByte array Reserve this Resize calls
 
 // ArrayData::Resize shrinks only after the size drops below half capacity; growth reserves 25% headroom.
 // MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call targets; register allocation differs.
@@ -290,6 +291,31 @@ void ResizeStaticTextArray(void* array, UPInt size)
     else if (fields[2] <= size)
     {
         FUN_142546490(array, array, (size >> 2) + size);
+        fields[1] = size;
+        return;
+    }
+    fields[1] = size;
+}
+
+// ArrayData<UByte, AllocatorGH_POD<UByte, 2>>::Resize, kept local so the template's Reserve rows (0x142546350 /
+// 0x142623bc0) stay as they are; it calls the Reserve at 0x142623bc0 as the exe does.
+// MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call target; register allocation differs.
+// @0x14268e740
+void ResizeByteArray(void* array, UPInt size)
+{
+    UPInt* fields = static_cast<UPInt*>(array);
+    if (size < fields[1])
+    {
+        if (size < (fields[2] >> 1))
+        {
+            FUN_142623bc0(array, array, size);
+            fields[1] = size;
+            return;
+        }
+    }
+    else if (fields[2] <= size)
+    {
+        FUN_142623bc0(array, array, (size >> 2) + size);
         fields[1] = size;
         return;
     }
