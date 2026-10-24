@@ -56,9 +56,9 @@ private:
 public:
     // (appended for flash.gfx.IMEEx, sfr19)
     virtual void SendLangBarMessage(DisplayObject* mc, const ASString& command, const ASString& message);   // 20
-private:
-    virtual void Slot21();                                              // SetCompositionString
 public:
+    // (sfr22) System.IME.setCompositionString: replaces the composition string, false when it cannot.
+    virtual bool SetCompositionString(const char* pcompString);         // 21
     // (appended for flash.gfx.IMEEx, sfr13)
     virtual const wchar_t* GetCompositionString();                      // 22
 private:

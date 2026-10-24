@@ -182,11 +182,17 @@ public:
         V.pStringNode->AddRef();
     }
 
+    // (sfr22) Some exe TUs never inline it and call 0x1429260b0 (sfr_as2_03): those define
+    // MS2_AS2_VALUE_DTOR_CALL before the includes.
+#ifdef MS2_AS2_VALUE_DTOR_CALL
+    ~Value();
+#else
     ~Value()
     {
         if (T.Type >= STRING)
             DropRefs();
     }
+#endif
 
     void operator=(const Value& v); // exe 0x1429267a0
 
