@@ -3660,7 +3660,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     {
         Values.PushBack(v);
         AS3::Traits& tr = GetTraits();
-        tr.AddSlotCPP(prop_name, ns, ctr, SlotInfo::BT_Value, AbsoluteIndex(tr.FixedValueSlotNumber++), false);
+        tr.AddSlotCPP(prop_name, ns, ctr, SlotInfo::BT_ValueArray, AbsoluteIndex(tr.FixedValueSlotNumber++), false);
         GetVM().ClassTraitsSet.Add(prop_name, *ns, const_cast<ClassTraits::Traits*>(ctr));
         index = tr.GetSlotInfoNum() - 1;
         return tr.GetSlotInfo(AbsoluteIndex(index));
