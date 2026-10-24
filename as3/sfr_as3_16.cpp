@@ -71,6 +71,34 @@ void FUN_1424debc0(void* self)
     reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
 }
 
+// MS2-FUNCTIONAL 0x1424deb40: releases the value at +0x170 and multiname at +0x140 before the ReadArgs base.
+// @0x1424deb40
+void FUN_1424deb40(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x170)->~Value();
+    reinterpret_cast<Scaleform::GFx::AS3::Multiname*>(bytes + 0x140)->~Multiname();
+    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+}
+
+// MS2-FUNCTIONAL 0x1424dec40: releases the value at +0x138 before the ReadArgs base.
+// @0x1424dec40
+void FUN_1424dec40(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x138)->~Value();
+    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+}
+
+// MS2-FUNCTIONAL 0x1424decc0: releases the value at +0x140 before the ReadArgs base.
+// @0x1424decc0
+void FUN_1424decc0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x140)->~Value();
+    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL 0x1424e0e50: builds a temporary for each side and concatenates them, releasing both temporary strings afterward.
 // @0x1424e0e50
@@ -1877,6 +1905,9 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z 0x1424e0d40
 // MS2-PIN: ??4?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAAEAV01@AEBV01@@Z 0x1424e0340
 // MS2-PIN: ?FUN_1424debc0@@YAXPEAX@Z 0x1424debc0
+// MS2-PIN: ?FUN_1424deb40@@YAXPEAX@Z 0x1424deb40
+// MS2-PIN: ?FUN_1424dec40@@YAXPEAX@Z 0x1424dec40
+// MS2-PIN: ?FUN_1424decc0@@YAXPEAX@Z 0x1424decc0
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1c20 0x1424e1c20
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1c80 0x1424e1c80
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1ce0 0x1424e1ce0
