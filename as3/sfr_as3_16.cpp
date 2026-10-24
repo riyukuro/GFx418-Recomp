@@ -1315,5 +1315,17 @@ void FUN_1424dcb40(void* self)
         name->ReleaseNode();
 }
 
+namespace Scaleform {
+using SfrCx18DisplayObjectArray = ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy>;
+using SfrCx18DisplayObjectList = AutoPtr<SfrCx18DisplayObjectArray>;
+using SfrCx18DisplayObjectNode = HashNode<int, SfrCx18DisplayObjectList, IdentityHash<int> >;
+using SfrCx18DisplayObjectSet = HashSetBase<SfrCx18DisplayObjectNode,
+    SfrCx18DisplayObjectNode::NodeHashF, SfrCx18DisplayObjectNode::NodeAltHashF,
+    AllocatorLH<int, 2>, HashsetNodeEntry<SfrCx18DisplayObjectNode, SfrCx18DisplayObjectNode::NodeHashF> >;
+// MS2-FUNCTIONAL: destroys every occupied node and frees the table; the template expansion has different frame/unwind codegen.
+// @0x1424dcbb0
+template SfrCx18DisplayObjectSet::~HashSetBase();
+}
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
