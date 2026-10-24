@@ -1100,3 +1100,9 @@ void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObje
         interactive->ModifyOptimizedPlayList();
     }
 }
+
+// The VM and call-frame code keeps this array destructor out of line in the executable.
+// @0x1424dc870
+template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Multiname,
+                                  Scaleform::AllocatorLH<Scaleform::GFx::AS3::Multiname, 2>,
+                                  Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
