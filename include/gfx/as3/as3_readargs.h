@@ -214,6 +214,65 @@ private:
 // (sfr24) the Tracer allocates its states with 0x88 bytes (0x1424d9f30) and frees them in ~Tracer 0x1424df070.
 static_assert(sizeof(State) == 0x88, "TR::State size");
 
+// (appended, sfr24) the tracer's operand readers. Their constructors are inlined in the tracer; only the destructors of
+// three of them are out of line (member order and sizes from those: ReadValue 0x1424dedc0, ReadMnObject 0x1424ded40,
+// ReadValueMnObject 0x1424dee30). TR::ReadArgs below starts with the same three members.
+class StackReader
+{
+public:
+    StackReader(VM& vm, State& s) : VMRef(vm), StateRef(s), Num(0) {}
+
+    VM&    GetVM() const    { return VMRef; }
+    State& GetState() const { return StateRef; }
+
+protected:
+    VM&    VMRef;       // +0x00
+    State& StateRef;    // +0x08
+    int    Num;         // +0x10 values read so far
+};
+
+// the file the multiname indices refer to.
+class MnReader
+{
+public:
+    MnReader(VMAbcFile& file) : File(file) {}
+    VMAbcFile& GetFile() const { return File; }
+
+private:
+    VMAbcFile& File;
+};
+
+struct ReadMn : public StackReader, public MnReader
+{
+    Multiname ArgMN;            // +0x20
+};
+
+struct ReadMnObject : public ReadMn
+{
+    ~ReadMnObject();            // 0x1424ded40
+    Value ArgObject;            // +0x50
+};
+static_assert(sizeof(ReadMnObject) == 0x70, "TR::ReadMnObject size");
+
+struct ReadValue : public StackReader
+{
+    ~ReadValue();               // 0x1424dedc0
+    const Value ArgValue;       // +0x18
+};
+static_assert(sizeof(ReadValue) == 0x38, "TR::ReadValue size");
+
+struct ReadValueMn : public ReadValue, public MnReader
+{
+    Multiname ArgMN;            // +0x40
+};
+
+struct ReadValueMnObject : public ReadValueMn
+{
+    ~ReadValueMnObject();       // 0x1424dee30
+    Value ArgObject;            // +0x70
+};
+static_assert(sizeof(ReadValueMnObject) == 0x90, "TR::ReadValueMnObject size");
+
 // 0x140 bytes.
 class ReadArgs
 {
