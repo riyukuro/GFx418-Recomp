@@ -29,6 +29,7 @@ extern const void* const DAT_1431b9028[];
 extern const void* const DAT_1431b8fd0[];
 extern const void* const DAT_1431b8db0[];
 extern const void* const DAT_1431b8f18[];
+extern const void* const DAT_1431b8f30[];
 extern "C" const void* const DAT_1431b8e30[];
 void FUN_14256c520(Scaleform::GFx::MovieImpl* movie, Scaleform::GFx::Video::VideoProvider* provider);
 
@@ -6218,6 +6219,27 @@ void* FUN_140029fa0(void* object, CriUint64 flags)
         ((void (*)(void*, void*))vtable[12])(heap, object);
     }
     return object;
+}
+
+// The CRI output callback's constructor (CriMvSound(MemoryHeap*, VideoSound*)): the reference-count base, the heap,
+// the retained sound interface and the three vptrs; the four buffer slots start empty.
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x14002a010
+void* FUN_14002a010(void* mem, void* pheap, void* psound)
+{
+    *(const void***)mem = (const void**)DAT_1431b9028;
+    *(int*)((CriUint8*)mem + 8) = 1;
+    *(void**)((CriUint8*)mem + 0x18) = pheap;
+    *(const void***)((CriUint8*)mem + 0x10) = (const void**)DAT_1431b8fd0;
+    if (psound)
+        ++*(int*)((CriUint8*)psound + 8);
+    *(void**)((CriUint8*)mem + 0x20) = psound;
+    *(const void***)((CriUint8*)mem + 0x28) = (const void**)DAT_1431b8f30;
+    *(void**)((CriUint8*)mem + 0x30) = 0;
+    *(void**)((CriUint8*)mem + 0x38) = 0;
+    *(void**)((CriUint8*)mem + 0x40) = 0;
+    *(void**)((CriUint8*)mem + 0x48) = 0;
+    return mem;
 }
 
 // MS2-FUNCTIONAL: tear down the CRI output callback's retained interface and reference-count base.

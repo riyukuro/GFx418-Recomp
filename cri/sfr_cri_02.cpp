@@ -82,7 +82,7 @@ void     FUN_14001d650(void* config, void* reader);                     // Video
 void*    FUN_140041d40(void* pheap);                                    // CriHeap over a MemoryHeap: create
 void     FUN_140041dd0(void* criheap);                                  //   and destroy
 void*    FUN_140041c00(void* mem);                                      // SystemTimerSyncObject::SystemTimerSyncObject
-void*    FUN_14002a000(void* mem, void* pheap, void* psound);           // CriMvSound::CriMvSound(MemoryHeap*, VideoSound*)
+void*    FUN_14002a010(void* mem, void* pheap, void* psound);           // CriMvSound::CriMvSound(MemoryHeap*, VideoSound*)
 void*    FUN_14002d970(void* mem, void* pconfig);                       // VideoReader::VideoReader(VideoReaderConfig*)
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
 void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
@@ -873,13 +873,13 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
             Ptr<VideoSound> psubinterface = *psoundSystem->Create();
 
             void* mem = pHeap->Alloc(0x50);
-            VideoPlayerSound* psound = mem ? (VideoPlayerSound*)FUN_14002a000(mem, pHeap, pinterface) : NULL;
+            VideoPlayerSound* psound = mem ? (VideoPlayerSound*)FUN_14002a010(mem, pHeap, pinterface) : NULL;
             if (pSound)
                 pSound->Release();
             pSound = psound;
 
             mem = pHeap->Alloc(0x50);
-            psound = mem ? (VideoPlayerSound*)FUN_14002a000(mem, pHeap, psubinterface) : NULL;
+            psound = mem ? (VideoPlayerSound*)FUN_14002a010(mem, pHeap, psubinterface) : NULL;
             if (pSubSound)
                 pSubSound->Release();
             pSubSound = psound;
