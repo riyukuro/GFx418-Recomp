@@ -13,7 +13,8 @@
 void FUN_1424dd110(void* paliases);                                       // ~ASStringHash<Value> (the invoke aliases)
 void FUN_142423b90(Scaleform::GFx::AS3::Value* v);                        // Value::SetUndefined
 void FUN_1424ef380(void** pchains);                                       // EventChains::Clear
-void FUN_1425245c0(Scaleform::UPInt* arr, Scaleform::UPInt n);            // ArrayLH<SPtr<DisplayObject>>::Resize
+// ArrayLH<SPtr<DisplayObject>>::Resize 0x1425245c0 (sfr_as3_19)
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31ResizeObjZero(UPInt* a, UPInt n); } } }
 void FUN_142524b90(void* parr, void* pheapAddr, Scaleform::UPInt n);      // ArrayLH<SPtr<VMAbcFile>> resize
 void FUN_142530d50(Scaleform::GFx::AS3::ASVM* pavm);                      // ASVM: drops the loaded ABC files
 void FUN_14257dcd0(void* p);                                              // RefCountNTSImpl::Release
@@ -50,7 +51,7 @@ void MovieRoot::Shutdown()
     FUN_1424ef380(&mEventChains);
     for (unsigned i = 0; i < 4; ++i)
     {
-        FUN_1425245c0(reinterpret_cast<UPInt*>(mMouseState[i].RolloverStack), 0);
+        Scaleform::GFx::AS3::Sfr31ResizeObjZero(reinterpret_cast<UPInt*>(mMouseState[i].RolloverStack), 0);
         if (mMouseState[i].LastMouseOverObj)
             FUN_14257dcd0(mMouseState[i].LastMouseOverObj);
         mMouseState[i].LastMouseOverObj = NULL;

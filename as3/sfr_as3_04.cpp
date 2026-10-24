@@ -26,9 +26,6 @@ Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 const void* FUN_142403d70(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
     Scaleform::Pickable<const Scaleform::GFx::AS3::Instances::Namespace> ns, const Scaleform::GFx::AS3::ClassTraits::Traits* ctr,
     const Scaleform::GFx::AS3::Value& v, Scaleform::UPInt& index);
-// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
-const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
-FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -171,7 +168,7 @@ static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
         return sa.ValueA[ind];
     if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = sa.ValueH.mHash.GetAlt(ind);
         const Value* v = p ? &p->Second : 0;
         if (v)
             return *v;

@@ -23,14 +23,20 @@ namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; }
 namespace Scaleform { namespace GFx { namespace IME {
 
 void FUN_1423d9090(void*, void*, unsigned long long);
-void FUN_1423d8b80(void*, void*, void*, unsigned long long);
+void FUN_1423d8b80(unsigned long long*, void*, void**, unsigned long long);
 void FUN_1423d9b40(void*);
     unsigned char FUN_1423da320(void*, void*, void*, void*);
     void FUN_1423d9500(void*);
     void FUN_1425b43c0(void*);
     void FUN_1423d5fd0(void*);
     void FUN_1423c8bb0(unsigned long long*);
-    void FUN_1423ca560(void*, unsigned);
+    class GFxIMEManagerWin32;
+    void FUN_1423ca560(GFxIMEManagerWin32*, unsigned);
+    // Defined below in IME (the callers used to reach them through extern "C" twins that never linked).
+    void FUN_1423cc7c0(void*, unsigned);
+    void FUN_1423cde00(void*);
+    void FUN_1423cdf60(unsigned long long*);
+    unsigned long long FUN_1423daf30(void*, int);
     void FUN_1423ccdc0(unsigned long long*, String*);
     void FUN_1423cc2d0(unsigned long long*);
     void FUN_1423cc570(unsigned long long*);
@@ -131,8 +137,6 @@ extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_14257db50(void*);
 extern "C" void FUN_1425b4e80(void*, const wchar_t*, ...);
 extern "C" void FUN_1425b4ea0(void*);
-extern "C" void FUN_1423cdf60(void*);
-extern "C" void FUN_1423cde00(void*);
 extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
@@ -146,16 +150,13 @@ extern "C" const void* DAT_143138360[];
 extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
-extern "C" void FUN_1423d8b80(void*, void*, void*, unsigned long long);
 unsigned HashFunction(const char*, unsigned long long);
 extern "C" void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
 extern bool FUN_1425b9b10(void*);
 extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1422fd480(void*, void*);
-extern "C" unsigned long long FUN_1423daf30(void*, int = 0);
 extern "C" unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
-extern "C" void FUN_1423cc7c0(void*);
 extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
 extern "C" const void* DAT_14313ba60[];
@@ -582,7 +583,7 @@ void FUN_1423d7140(unsigned long long* manager)
     const unsigned language = reinterpret_cast<unsigned(*)(void*, short)>(vtable[4])(
         manager, static_cast<short>(manager[0x33]));
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = language;
-    FUN_1423ca560(reinterpret_cast<void*>(manager[0xf]), language);
+    FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(manager[0xf]), language);
     wchar_t locale[0x104]{};
     if (!GetLocaleInfoW(static_cast<LCID>(reinterpret_cast<ULONG_PTR>(layout) & 0xffff), LOCALE_SLANGUAGE,
                         locale, _countof(locale))) {
@@ -1071,7 +1072,7 @@ void FUN_1423cb920(void* object, DWORD code)
 // @0x1423ce3c0
 void* FUN_1423ce3c0(void* object, unsigned flags)
 {
-    FUN_1423cdf60(object);
+    FUN_1423cdf60(static_cast<unsigned long long*>(object));
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0xb0);
@@ -1135,7 +1136,7 @@ void FUN_1423d1420(void* object, int index)
     auto* bytes = static_cast<unsigned char*>(object);
     const unsigned state = *reinterpret_cast<unsigned*>(bytes + 0x98);
     if ((state & 0xf00000) == 0 && (((state - 0x10000) & 0xfffcffff) != 0 || state == 0x40000)) {
-        FUN_1423daf30(*reinterpret_cast<void**>(bytes + 0xc8));
+        FUN_1423daf30(*reinterpret_cast<void**>(bytes + 0xc8), 0);
         return;
     }
     INPUT input{};
@@ -1293,7 +1294,7 @@ unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
         const short code = *reinterpret_cast<short*>(result);
         if (hr >= 0 && code == 3) {
             *reinterpret_cast<unsigned*>(bytes - 0xcc) = *reinterpret_cast<unsigned*>(result + 8);
-            FUN_1423cc7c0(bytes - 0x1a0);
+            FUN_1423cc7c0(bytes - 0x1a0, *reinterpret_cast<unsigned*>(result + 8));
         }
     }
     return 1;
@@ -1781,7 +1782,7 @@ void FUN_1423d8e80(void* table, void* source)
         void* keyStorage = const_cast<char*>(text);
         unsigned long long value[2] = { key, reinterpret_cast<unsigned long long>(source) };
         void* entry[2] = { &keyStorage, value };
-        FUN_1423d8b80(table, table, entry, hash);
+        FUN_1423d8b80(static_cast<unsigned long long*>(table), table, entry, hash);
         record = *reinterpret_cast<unsigned char**>(record + 24);
     }
 }

@@ -32,8 +32,6 @@ extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
-extern "C" void FUN_14268f8f0(void*, void*, unsigned);
-extern "C" void FUN_1426869a0(void*, void*, const void*, std::uint64_t);
 extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
@@ -83,9 +81,6 @@ extern "C" void FUN_14268b3e0(void*, void*);
 extern "C" void FUN_14268ac40(void*, void*);
 extern "C" void FUN_142689aa0(void*, void*, void*);
 extern "C" void FUN_142689cb0(void*, void*, void*);
-extern "C" void FUN_14268f600(void*, void*, unsigned);
-extern "C" void FUN_14268f230(void*, void*, unsigned);
-extern "C" void FUN_14268ed90(void*, void*, unsigned);
 extern "C" void* FUN_142689640(void*, int);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
@@ -1838,16 +1833,16 @@ void UpdateImageHashTree(void* node, void* setObject)
                 }
                 index = entry[0];
                 if (index == UINT64_MAX) {
-                    FUN_1426869a0(setObject, setObject, key, hash);
+                    AddCachedPointer(setObject, setObject, reinterpret_cast<const std::uint64_t*>(key), hash);
                     break;
                 }
                 entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + index * 0x18);
             }
         } else {
-            FUN_1426869a0(setObject, setObject, key, hash);
+            AddCachedPointer(setObject, setObject, reinterpret_cast<const std::uint64_t*>(key), hash);
         }
     } else {
-        FUN_1426869a0(setObject, setObject, key, hash);
+        AddCachedPointer(setObject, setObject, reinterpret_cast<const std::uint64_t*>(key), hash);
     }
     void** children = *reinterpret_cast<void***>(bytes + 0x30);
     const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
@@ -3038,6 +3033,8 @@ static void WriteImageStream(void* stream, const void* data, unsigned size)
 void WriteNarrowString(void*, const String*);
 void WriteTextTreeNode(const void*, void*, unsigned);
 void WriteTextRecordGroup(void*, void*, unsigned);
+void WriteStringResourceTable(void*, void*, unsigned);
+void WriteTextMetadata(const void*, void*, unsigned);
 
 // MS2-FUNCTIONAL: writes the collection count, each image record header, and every nested 16-byte entry through the stream vtable.
 // @0x14268f4b0
@@ -3093,7 +3090,7 @@ void WriteMovieImageData(void* object, void* stream, unsigned version)
     }
     WriteImageMetadataRecords(*reinterpret_cast<void**>(bytes + 0x58), stream);
     FUN_14268ef30(*reinterpret_cast<void**>(bytes + 0x60), stream, version);
-    FUN_14268f8f0(*reinterpret_cast<void**>(bytes + 0x68), stream, version);
+    WriteStringResourceTable(*reinterpret_cast<void**>(bytes + 0x68), stream, version);
     if (version > 0x18)
         WriteTextRecordGroup(*reinterpret_cast<void**>(bytes + 0x70), stream, version);
 }
@@ -3299,11 +3296,11 @@ void WriteMovieImageAggregate(const void* object, void* stream, unsigned version
     WriteStreamBytes(stream, &viewCount, 4);
     auto** views = *reinterpret_cast<void***>(const_cast<unsigned char*>(bytes + 0xd0));
     for (unsigned i = 0; i < viewCount; ++i)
-        FUN_14268f600(views[i], stream, version);
+        WriteMovieImageData(views[i], stream, version);
     if (version > 0xe)
         FUN_14268ef30(*reinterpret_cast<void* const*>(bytes + 0xe8), stream, version);
     if (version > 0x18)
-        FUN_14268f230(*reinterpret_cast<void* const*>(bytes + 0xf0), stream, version);
+        WriteTextRecordGroup(*reinterpret_cast<void* const*>(bytes + 0xf0), stream, version);
 
     const unsigned idCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0x100));
     WriteStreamBytes(stream, &idCount, 4);
@@ -3334,7 +3331,7 @@ void WriteMovieImageAggregate(const void* object, void* stream, unsigned version
         WriteStreamBytes(stream, &recordCount, 4);
         auto** records = *reinterpret_cast<void***>(const_cast<unsigned char*>(bytes + 0x140));
         for (unsigned i = 0; i < recordCount; ++i)
-            FUN_14268ed90(records[i], stream, version);
+            WriteTextMetadata(records[i], stream, version);
     }
     if (version < 8) {
         WriteStreamBytes(stream, &zero, 4);

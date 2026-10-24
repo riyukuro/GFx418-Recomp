@@ -35,7 +35,6 @@ extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
 extern void FUN_14257db40(void*);
 extern void FUN_14257db50(void*);
-extern void FUN_1429260b0(void*);
 extern void FUN_140006a40(Scaleform::UPInt*);
 extern void FUN_14000b3b0(Scaleform::UPInt*, void*, Scaleform::UPInt);
 extern void FUN_1425925f0(void*);
@@ -1047,7 +1046,7 @@ void FUN_140004b00(Scaleform::UPInt* pair)
 // @0x140003df0
 void* FUN_140003df0(void* object, unsigned flags)
 {
-    FUN_1429260b0(object);
+    static_cast<Scaleform::GFx::AS2::Value*>(object)->~Value();   // 0x1429260b0
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1350,7 +1349,7 @@ void FUN_1400072c0(void** array)
 // @0x140007200
 void FUN_140007200(Scaleform::UPInt* stack)
 {
-    FUN_1429260b0(reinterpret_cast<void*>(*stack));
+    reinterpret_cast<Scaleform::GFx::AS2::Value*>(*stack)->~Value();   // 0x1429260b0
     *stack -= 0x20;
     if (*stack < stack[1]) FUN_140006cf0(stack);
 }

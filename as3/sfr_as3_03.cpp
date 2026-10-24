@@ -1383,16 +1383,13 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 }}}}}
 
-// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
-const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
-FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
     // HashDH<UPInt, Value>::Get with the exe's out-of-line GetAlt.
     static SF_INLINE const Value* SparseHashGet(const HashDH<UPInt, Value>& h, const UPInt& key)
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&h, &key);
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = h.mHash.GetAlt(key);
         return p ? &p->Second : 0;
     }
 
@@ -1545,7 +1542,7 @@ namespace Scaleform { namespace GFx { namespace AS3
         Value v;
         for (UPInt i = first_ind; i <= ValueHHighInd; --i)
         {
-            if (const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* n = FUN_1423e87e0(&ValueH, &i))
+            if (const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* n = ValueH.mHash.GetAlt(i))
             {
                 v = n->Second;
                 ValueH.Remove(i);
@@ -1973,7 +1970,7 @@ static SF_INLINE const Value& saAt03(const SparseArray& sa, UPInt ind)
         return sa.ValueA[ind];
     if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = sa.ValueH.mHash.GetAlt(ind);
         const Value* v = p ? &p->Second : 0;
         if (v)
             return *v;

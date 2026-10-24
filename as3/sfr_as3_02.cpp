@@ -291,9 +291,6 @@ namespace Instances { namespace fl
 // VM::GetValueTraits: the traits of a value (0x14250ffc0).
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
-// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
-const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
-FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -304,7 +301,7 @@ static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
         return sa.ValueA[ind];
     if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = sa.ValueH.mHash.GetAlt(ind);
         const Value* v = p ? &p->Second : 0;
         if (v)
             return *v;

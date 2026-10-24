@@ -52,9 +52,6 @@ void FUN_142421710(Scaleform::GFx::AS3::Value& v, bool b);
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 // VM::GetGlobalObject (sfr_as3_18): the global object of the running frame's script, else of the top frame's 'this'.
 Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm);
-// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
-const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
-FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
 
 // ECMA-262 15.9.1 time arithmetic the Date holders inline (the out-of-line Date:: copies are in sfr_as3_03/04).
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2864,7 +2861,7 @@ namespace Instances {
     // HashLH<UPInt, Value>::Get on the sparse part.
     static inline const Value* SparseHashGet(const SparseArray& sa, UPInt ind)
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = sa.ValueH.mHash.GetAlt(ind);
         return p ? &p->Second : 0;
     }
 
