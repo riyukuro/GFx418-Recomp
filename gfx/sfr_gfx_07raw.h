@@ -30,7 +30,7 @@ static inline void RawCheckExpand(U** self, void* ctx)
     U* table = *self;
     if (!table)
         Grow(self, ctx, 8);
-    else if (table[1] * 4 + 4 < table[0] * 5)
+    else if (table[0] * 5 > table[1] * 4 + 4)
         Grow(self, ctx, table[1] * 2 + 2);
 }
 
