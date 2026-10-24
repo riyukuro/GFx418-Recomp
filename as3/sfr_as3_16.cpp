@@ -1830,6 +1830,16 @@ void FUN_1424dcd40(void* self)
 
 using Sfr16NamespaceHashKey = Scaleform::GFx::AS3::AbcMultinameHash<
     Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, 340>::Key;
+using Sfr16NamespaceMapNode = Scaleform::HashNode<Sfr16NamespaceHashKey,
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>,
+    Scaleform::FixedSizeHash<Sfr16NamespaceHashKey>>;
+using Sfr16NamespaceMap = Scaleform::HashSetBase<Sfr16NamespaceMapNode,
+    Sfr16NamespaceMapNode::NodeHashF, Sfr16NamespaceMapNode::NodeAltHashF,
+    Scaleform::AllocatorLH<Sfr16NamespaceHashKey, 340>,
+    Scaleform::HashsetCachedEntry<Sfr16NamespaceMapNode, Sfr16NamespaceMapNode::NodeHashF>>;
+// MS2-FUNCTIONAL 0x1424dcdd0: clears the occupied cached hash entries and releases the namespace map table.
+// @0x1424dcdd0
+template Sfr16NamespaceMap::~HashSetBase();
 // @0x1424e0f00
 template Scaleform::UPInt Scaleform::FixedSizeHash<Sfr16NamespaceHashKey>::operator()(
     const Sfr16NamespaceHashKey&) const;
@@ -1892,6 +1902,7 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: ??4?$SPtr@$$CBVNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424e0550
 // MS2-PIN: ??_GClass@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2bb0
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@H$01@2@V?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dcbb0
+// MS2-PIN: ??1?$HashSetBase@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@$0BFE@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dcdd0
 // MS2-PIN: ??_GLoadQueueEntry@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3150
 // MS2-PIN: ??_GLoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e31e0
 // MS2-PIN: ??_GObject@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3580
