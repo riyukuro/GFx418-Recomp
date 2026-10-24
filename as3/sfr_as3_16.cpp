@@ -49,6 +49,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_moviedefrootnode.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
 #include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
@@ -113,6 +114,12 @@ namespace Scaleform { namespace GFx {
 // @0x1424dd4d0
 ASMovieRootBase::~ASMovieRootBase() = default;
 }} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// MS2-FUNCTIONAL 0x1424dd500: releases the ASVM's owned builtin-class references, then delegates VM cleanup to its base.
+// @0x1424dd500
+ASVM::~ASVM() = default;
+}}} // namespace Scaleform::GFx::AS3
 
 extern "C" void FUN_1423de770(void*, void*);
 extern "C" void FUN_14257dcb0();
@@ -1980,15 +1987,7 @@ Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::* const pSfr16ValueStri
 
 using Sfr16DisplayObjectWeakArray = Scaleform::ArrayLH<
     Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, 2, Scaleform::ArrayDefaultPolicy>;
-using Sfr16DisplayObjectMapNode = Scaleform::HashNode<Scaleform::SInt32,
-    Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>, Scaleform::IdentityHash<Scaleform::SInt32>>;
-using Sfr16DisplayObjectMapHashSet = Scaleform::HashSetBase<Sfr16DisplayObjectMapNode,
-    Sfr16DisplayObjectMapNode::NodeHashF, Sfr16DisplayObjectMapNode::NodeAltHashF,
-    Scaleform::AllocatorLH<Scaleform::SInt32, 2>,
-    Scaleform::HashsetNodeEntry<Sfr16DisplayObjectMapNode, Sfr16DisplayObjectMapNode::NodeHashF>>;
-// MS2-FUNCTIONAL 0x1424dcbb0: destroys every occupied map entry and releases the map's heap table, following the recovered HashSetBase destructor.
-// @0x1424dcbb0
-template Sfr16DisplayObjectMapHashSet::~HashSetBase();
+// The display object map destructor (0x1424dcbb0) is the SfrCx18DisplayObjectSet instantiation above.
 
 // MS2-FUNCTIONAL 0x1424e0340: transfers the source pointer and owner flag, releasing an owned destination first; the executable uses the same ownership behavior.
 // @0x1424e0340
