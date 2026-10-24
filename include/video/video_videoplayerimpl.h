@@ -10,6 +10,9 @@
 #include "video_video.h"
 #include "../cri/cri_movie.h"
 #include "../kernel/sf_lock.h"
+#include "../kernel/sf_threads.h"
+#include "ms2/scaleform/kernel/sf_list.h"
+#include "ms2/scaleform/kernel/sf_listalloc.h"
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -182,13 +185,14 @@ public:
     Lock                        DecodeLock;     // +0x60
 };
 
-// Creates the readers in the calling thread (0x40 bytes, vftable 0x1431b91d8).
+// Creates the readers in the calling thread (0x40 bytes, vftable 0x1431b91d8; Register allocates 0x40).
 class VideoReaderConfigSmp : public VideoReaderConfig
 {
 public:
     VideoReaderConfigSmp(MemoryHeap* pheap, FileOpenerBase* pfileOpener);   // 0x14002b150
     virtual VideoReader* CreateReader();
 };
+static_assert(sizeof(VideoReaderConfigSmp) == 0x40, "VideoReaderConfigSmp size"); // (sfr24) its allocation is 0x40
 
 // Creates the readers serviced by the reader thread (0x110 bytes, vftable 0x1431b9430).
 class VideoReaderConfigThrd : public VideoReaderConfig
@@ -196,7 +200,36 @@ class VideoReaderConfigThrd : public VideoReaderConfig
 public:
     VideoReaderConfigThrd(MemoryHeap* pheap, FileOpenerBase* pfileOpener);  // 0x14002e450
     virtual VideoReader* CreateReader();
+
+    // (appended, sfr24) the reader thread's state, offsets from the ctor 0x14002e450. Layout only: the methods in
+    // sfr_cri_02 reach these through raw offsets.
+    enum CmdId
+    {
+        OpenCmd,
+        ReadCmd,
+        CloseCmd,
+        TermCmd
+    };
+    // A queued request for the reader thread (0x38 bytes).
+    struct Cmd : public ListNode<Cmd>
+    {
+        CmdId               id;       // +0x10
+        VideoReader*        preader;  // +0x18
+        char*               fname;    // +0x20
+        UByte*              buffer;   // +0x28
+        SInt64              req_size; // +0x30
+    };
+
+    ListAllocPOD<Cmd, 127, Stat_Video_Mem> CmdsHolder;    // +0x40
+    List<Cmd>                              CmdList;       // +0x68
+    Mutex                                  CmdListLock;   // +0x78
+    Scaleform::Event                       Event;         // +0xa0
+    RefCountImpl*                          pThread;       // +0xf8 Ptr<Thread>, started by CreateReader
+    WaitCondition                          IOFinished;    // +0x100
+    ReadCallback*                          pReadCallback; // +0x108 Ptr<ReadCallback>
 };
+static_assert(sizeof(VideoReaderConfigThrd::Cmd) == 0x38, "VideoReaderConfigThrd::Cmd size");
+static_assert(sizeof(VideoReaderConfigThrd) == 0x110, "VideoReaderConfigThrd size");
 
 }}} // namespace Scaleform::GFx::Video
 
