@@ -4599,4 +4599,244 @@ unsigned long long FUN_1423db0c0(long long raw, unsigned message)
     return 0;
 }
 
+// The vtable-slot leaves below have no pdata (leaf functions and adjustor thunks); data_rdata_sf_a's
+// IME vtable images reach them by VA.
+
+// MS2-FUNCTIONAL: maps the executable's IME conversion-mode bits to the language code they imply.
+// @0x1423cb5b0
+unsigned FUN_1423cb5b0(void*, unsigned flags)
+{
+    if (flags & 0xf00) return 0x400;
+    if (flags & 0xf000) return 0x2000;
+    if (flags & 0x10000000) return 0x10000000;
+    if (flags & 0xf) return 9;
+    return (flags & 0xf0000) ? 0x80000 : 0x1000000;
+}
+
+// MS2-FUNCTIONAL: looks up the language code of an installed input-language record by its id.
+// @0x1423cb600
+unsigned FUN_1423cb600(void* self, long long id)
+{
+    const unsigned long long count = *(unsigned long long*)((UByte*)self + 0x80);
+    UByte* records = *(UByte**)((UByte*)self + 0x90);
+    for (unsigned long long i = 0; i < count; ++i) {
+        UByte* record = records + i * 0x20;
+        if (*(long long*)((UByte*)record + 0x18) == id) return *(unsigned*)((UByte*)record + 0x10);
+    }
+    return 0x1000000;
+}
+
+// @0x1423cb650
+bool FUN_1423cb650(void*) { return true; }
+
+// @0x1423cb970
+void FUN_1423cb970(void*) {}
+// @0x1423ce6b0
+void FUN_1423ce6b0(void*) {}
+// @0x1423ceb20
+void FUN_1423ceb20(void*) {}
+// @0x1423cefd0
+void FUN_1423cefd0(void*) {}
+// @0x1423cf190
+void FUN_1423cf190(void*) {}
+// @0x1423cf1b0
+void FUN_1423cf1b0(void*) {}
+// @0x1423cf560
+void FUN_1423cf560(void*) {}
+// @0x1423d02c0
+void FUN_1423d02c0(void*) {}
+// @0x1423d0840
+void FUN_1423d0840(void*) {}
+// @0x1423d0f00
+void FUN_1423d0f00(void*) {}
+// @0x1423d14a0
+void FUN_1423d14a0(void*) {}
+// @0x1423d2ef0
+void FUN_1423d2ef0(void*) {}
+// @0x1423d7130
+void FUN_1423d7130(void*) {}
+
+// MS2-FUNCTIONAL: forwards the IME command to the command map embedded at +0x38.
+// @0x1423cf1a0
+unsigned long long FUN_1423cf1a0(void* self, long long operation, const char* key, unsigned long long flags)
+{
+    return FUN_1423d8d60((long long*)((UByte*)self + 0x38), operation, key, flags);
+}
+
+// MS2-FUNCTIONAL: forwards the IME command to the command map embedded at +0x38.
+// @0x1423d3110
+unsigned long long FUN_1423d3110(void* self, long long operation, const char* key, unsigned long long flags)
+{
+    return FUN_1423d8d60((long long*)((UByte*)self + 0x38), operation, key, flags);
+}
+
+// MS2-FUNCTIONAL: enables or disables the window's default input context (IACE_DEFAULT when enabled).
+// @0x1423cfd30
+void FUN_1423cfd30(void* self, bool enable)
+{
+    cx18_ImmAssociateContextEx(*(HWND*)((UByte*)self + 0x28), nullptr, (DWORD)enable << 4);
+}
+
+// @0x1423d0590
+long long FUN_1423d0590(void*) { return 0; }
+// @0x1423d07d0
+long long FUN_1423d07d0(void*) { return 0; }
+// @0x1423dad80
+long long FUN_1423dad80(void*) { return 0; }
+// @0x1423dad90
+long long FUN_1423dad90(void*) { return 0; }
+// @0x1423dada0
+long long FUN_1423dada0(void*) { return 0; }
+// @0x1423dadb0
+long long FUN_1423dadb0(void*) { return 0; }
+// @0x1423dadc0
+long long FUN_1423dadc0(void*) { return 0; }
+
+// MS2-FUNCTIONAL: assigns the name string held at +0x20.
+// @0x1423d0f40
+void FUN_1423d0f40(void* self, const char* text)
+{
+    *(String*)((UByte*)self + 0x20) = text;
+}
+
+// MS2-FUNCTIONAL: assigns the name string held at +0x18.
+// @0x1423d0f50
+void FUN_1423d0f50(void* self, const char* text)
+{
+    *(String*)((UByte*)self + 0x18) = text;
+}
+
+// MS2-FUNCTIONAL: stores the three candidate-window settings.
+// @0x1423d14b0
+void FUN_1423d14b0(void* self, unsigned a, unsigned b, unsigned c)
+{
+    *(unsigned*)((UByte*)self + 0x84) = a;
+    *(unsigned*)((UByte*)self + 0x88) = b;
+    *(unsigned*)((UByte*)self + 0x8c) = c;
+}
+
+// @0x1423d1820
+void FUN_1423d1820(void* self, unsigned value) { *(unsigned*)((UByte*)self + 0x98) = value; }
+// @0x1423d1870
+void FUN_1423d1870(void* self, bool value) { *(bool*)((UByte*)self + 0x80) = value; }
+// @0x1423d1880
+void FUN_1423d1880(void* self, void* value) { *(void**)((UByte*)self + 0x28) = value; }
+
+// MS2-FUNCTIONAL: clears the second field, then calls the object's own virtual slot 0x80.
+// @0x1423d1890
+void FUN_1423d1890(void* self)
+{
+    ((void**)self)[1] = nullptr;
+    typedef void (*Fn)(void*);
+    (*(Fn*)(*(UByte**)self + 0x80))(self);
+}
+
+// MS2-FUNCTIONAL: AddRef on the refcount at +0x14.
+// @0x1423d5ae0
+int FUN_1423d5ae0(void* self)
+{
+    return ++*(int*)((UByte*)self + 0x14);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423d5ae0.
+// @0x1423d5aec
+int FUN_1423d5aec(void* self)
+{
+    return FUN_1423d5ae0((UByte*)self - 8);
+}
+
+// MS2-FUNCTIONAL: returns the language code of the named IME, else of the current input language.
+// @0x1423d61c0
+unsigned FUN_1423d61c0(void* self, const char* name)
+{
+    if (name) return FUN_1423cb400(self, name);
+    if (*(unsigned*)((UByte*)self + 0x84) == 0x2000000) return 0x1000000;
+    return *(unsigned*)((UByte*)self + 0x88);
+}
+
+// MS2-FUNCTIONAL: Release on the refcount at +0x14.
+// @0x1423d7350
+int FUN_1423d7350(void* self)
+{
+    return --*(int*)((UByte*)self + 0x14);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423d72a0.
+// @0x1423d7344
+long long FUN_1423d7344(void* self, const unsigned long long* iid, void** output)
+{
+    return FUN_1423d72a0((UByte*)self - 8, iid, output);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423d7350.
+// @0x1423d735c
+int FUN_1423d735c(void* self)
+{
+    return FUN_1423d7350((UByte*)self - 8);
+}
+
+// MS2-FUNCTIONAL: refreshes the conversion-state labels with every conversion bit set.
+// @0x1423d7410
+void FUN_1423d7410(void* self)
+{
+    FUN_1423cc7c0(self, 0xffffffffu);
+}
+
+// MS2-FUNCTIONAL: returns the IME callback-name table (the records after the count in DAT_143a2a6b4's image).
+// @0x1423da240
+const void* FUN_1423da240(void*)
+{
+    return (const UByte*)&DAT_143a2a6b4 + 0xc;
+}
+
+// MS2-FUNCTIONAL: AddRef on the refcount at +0x3c.
+// @0x1423da420
+int FUN_1423da420(void* self)
+{
+    return ++*(int*)((UByte*)self + 0x3c);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423da420.
+// @0x1423da42c
+int FUN_1423da42c(void* self)
+{
+    return FUN_1423da420((UByte*)self - 8);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423dadd0.
+// @0x1423dae98
+long long FUN_1423dae98(void* self, const unsigned long long* iid, void** output)
+{
+    return FUN_1423dadd0((long long*)((UByte*)self - 8), iid, output);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423daeb0.
+// @0x1423daed8
+int FUN_1423daed8(void* self)
+{
+    return FUN_1423daeb0((long long*)((UByte*)self - 8));
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x30) to the sized-delete destructor at 0x1423dbb60.
+// @0x1423db880
+void* FUN_1423db880(void* self, unsigned flags)
+{
+    return FUN_1423dbb60((UByte*)self - 0x30, flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x40) to the sized-delete destructor at 0x1423dbb60.
+// @0x1423db88c
+void* FUN_1423db88c(void* self, unsigned flags)
+{
+    return FUN_1423dbb60((UByte*)self - 0x40, flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x48) to the sized-delete destructor at 0x1423dbb60.
+// @0x1423db898
+void* FUN_1423db898(void* self, unsigned flags)
+{
+    return FUN_1423dbb60((UByte*)self - 0x48, flags);
+}
+
+
 }}}

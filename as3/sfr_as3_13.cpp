@@ -3862,6 +3862,24 @@ namespace Instances { namespace fl_ui
     }
 }}
 
+// Vtable-slot leaves without pdata; data_rdata_sf_a's vtable image reaches them by VA.
+
+// MS2-FUNCTIONAL: returns the address of the +0x50 member of the object held at +0x40, or null.
+// @0x1424aceb0
+void* FUN_1424aceb0(void* self)
+{
+    UByte* p = *(UByte**)((UByte*)self + 0x40);
+    return p ? p + 0x50 : nullptr;
+}
+
+// MS2-FUNCTIONAL: reports whether the object at +0x40 is set.
+// @0x1424acec0
+bool FUN_1424acec0(void* self)
+{
+    return *(void**)((UByte*)self + 0x40) != nullptr;
+}
+
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc1@VMouse@fl_ui@Classes@AS3@GFx@Scaleform@@$0A@$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424b5730
