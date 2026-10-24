@@ -34,6 +34,12 @@ public:
     // (appended, sfr22) fills the registers: this, then the arguments against the method's parameters. 0x14252b5a0
     void SetupRegisters(const Abc::MethodInfo& mi, const Value& _this, unsigned argc, const Value* argv);
 
+    // (appended, sfr33) pops the frame's operand stack values (down to PrevInitialStackPos) off the current page.
+    // 0x1424efcd0
+    void ClearOpStack();
+    // (appended, sfr33) drops the scope stack values the frame pushed (back to ScopeStackBaseInd). 0x1424efd80
+    void ClearScopeStack();
+
     VM& GetVM() const { return pFile->GetVM(); }
 
     bool                             DiscardResult;       // +0x00

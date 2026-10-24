@@ -793,6 +793,7 @@ public:
 private:
     friend class ValueRegisterFile;     // (appended, sfr19) ReleaseReserved releases registers in place
     friend struct ValueAssignCopies;    // (appended, sfr22) the exe's out-of-line Assign copies (sfr_as3_03)
+    friend class CallFrame;             // (appended, sfr33) ClearOpStack releases the popped values in place
 
     SF_INLINE void AddRefString() const         { value.VS._1.VStr->AddRef(); }
     void AddRefObject() const;

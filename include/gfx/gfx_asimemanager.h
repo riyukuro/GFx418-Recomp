@@ -24,7 +24,17 @@ class IMEManagerBase;
 class FunctionHandler : public RefCountBase<FunctionHandler, Stat_Default_Mem>
 {
 public:
-    struct Params;
+    // (sfr33) the call's arguments: the receiver is the first of pArgsWithThis, pArgs the rest (NULL when none).
+    struct Params
+    {
+        Value*      pRetVal;        // +0x00
+        Movie*      pMovie;         // +0x08
+        Value*      pThis;          // +0x10
+        Value*      pArgsWithThis;  // +0x18
+        Value*      pArgs;          // +0x20
+        unsigned    ArgCount;       // +0x28
+        void*       pUserData;      // +0x30
+    };
     virtual ~FunctionHandler() {}
     virtual void Call(const Params& params) = 0;
 };
