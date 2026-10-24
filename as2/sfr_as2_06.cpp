@@ -68,6 +68,7 @@
 // MS2-RANGE: 0x142973040-0x142973080 .text$mn
 // MS2-RANGE: 0x14297c970-0x14297ca60 .text$mn
 // MS2-RANGE: 0x14297ca70-0x14297cae0 .text$mn
+// MS2-RANGE: 0x14297cae0-0x14297cf70 .text$mn
 // MS2-RANGE: 0x14297d0d0-0x14297d1e0 .text$mn
 // MS2-RANGE: 0x14297d1e0-0x14297d330 .text$mn
 // MS2-RANGE: 0x14297d4b0-0x14297d550 .text$mn
@@ -2825,6 +2826,31 @@ template void ArrayBase<ArrayData<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, 
 // @0x14297e5a0
 template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS2::StatMV_ActionScript_Mem>,
                             ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);
+
+// MS2-FUNCTIONAL: removes the exact or case-folded watchpoint key according to the AS2 version's name rules.
+// @0x14297cae0
+namespace GFx { namespace AS2 {
+void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
+                                    bool caseSensitive)
+{
+    typedef ASStringHash_GC<Object::Watchpoint>::SetType Set;
+    Set* set = reinterpret_cast<Set*>(phash);
+    if (caseSensitive)
+        set->Remove(key);
+    else
+        set->RemoveAlt(ASStringNoCaseKey(key));
+}
+
+// MS2-FUNCTIONAL: removes the exact or case-folded registered class name according to the AS2 version's rules.
+// @0x14297cd20
+void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive)
+{
+    if (caseSensitive)
+        phash->Remove(key);
+    else
+        phash->RemoveAlt(ASStringNoCaseKey(key));
+}
+}} // namespace GFx::AS2
 
 } // namespace Scaleform
 // MS2-PIN: ?RemoveAt@?$ArrayBase@U?$ArrayData@V?$Ptr@VSprite@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VSprite@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x14297ca70
