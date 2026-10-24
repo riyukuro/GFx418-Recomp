@@ -607,6 +607,31 @@ const char* AvmInteractiveObj::GetAbsolutePath(String* ppath) const
     return AvmDisplayObj::GetAbsolutePath(ppath);
 }
 
+// An AS3 sprite is never a _level movie.
+// @0x1423dccc0
+int AvmSprite::GetLevel() const
+{
+    return -1;
+}
+
+// The interactive base ignores keyboard focus and keys; it always lets the focus go.
+// @0x1423dcf90
+void AvmInteractiveObj::OnGettingKeyboardFocus(unsigned, FocusMovedType)
+{
+}
+
+// @0x1423dcfc0
+bool AvmInteractiveObj::OnKeyEvent(const EventId&, int*)
+{
+    return false;
+}
+
+// @0x1423dcff0
+bool AvmInteractiveObj::OnLosingKeyboardFocus(InteractiveObject*, unsigned, FocusMovedType)
+{
+    return true;
+}
+
 } // namespace AS3
 
 }} // namespace Scaleform::GFx

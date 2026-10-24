@@ -331,6 +331,28 @@ namespace InstanceTraits { namespace fl_accessibility
     }
 }}
 
+// ---- Object / collector-base virtual defaults ---------------------------------------------------------------------
+
+// @0x1423df580
+void* Object::Unk15()
+{
+    return 0;
+}
+
+// @0x1423df590
+void Object::InitInstance(bool)
+{
+}
+
+// Only AS3 objects say so; the collector base is not one.
+template <int Stat>
+bool RefCountBaseGC<Stat>::IsAS3Object() const
+{
+    return false;
+}
+// @0x1423df5a0
+template bool RefCountBaseGC<323>::IsAS3Object() const;
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ??_7AccessibilityImplementation@fl_accessibility@Instances@AS3@GFx@Scaleform@@6B@ 0x14313cbe0
