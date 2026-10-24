@@ -78,4 +78,7 @@ public:
 
 }}} // namespace Scaleform::GFx::AS2
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS2::ColorTransformObject) == 0x90, "ColorTransformObject size");
+
 #endif

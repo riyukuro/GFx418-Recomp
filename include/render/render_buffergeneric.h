@@ -200,4 +200,7 @@ typedef RBGenericImpl::RenderBufferManager RenderBufferManagerGeneric;
 
 }} // namespace Scaleform::Render
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::RBGenericImpl::RenderBufferManager) == 0xb0, "RenderBufferManager size");
+
 #endif

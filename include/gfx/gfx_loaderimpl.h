@@ -549,4 +549,9 @@ inline ResourceWeakLib* MovieDefImpl::GetWeakLib() const { return pLoaderImpl->p
 
 }} // namespace Scaleform::GFx
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::LoadStates) == 0xa0, "LoadStates size");
+static_assert(sizeof(Scaleform::GFx::LoaderImpl) == 0x70, "LoaderImpl size");
+static_assert(sizeof(Scaleform::GFx::MovieBindProcess) == 0x60, "MovieBindProcess size");
+
 #endif

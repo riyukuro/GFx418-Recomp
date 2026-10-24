@@ -146,4 +146,8 @@ Matrix2F ParlToMatrix2D(float x1, float y1, float x2, float y2, float x3, float 
 
 }} // namespace Scaleform::Render
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::GradientData) == 0x30, "GradientData size");
+static_assert(sizeof(Scaleform::Render::GradientImage) == 0x48, "GradientImage size");
+
 #endif

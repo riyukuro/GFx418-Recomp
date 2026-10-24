@@ -439,4 +439,8 @@ inline bool DisplayObjectBase::Is3D() const
 }} // namespace Scaleform::GFx
 #endif
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::TreeContainer::NodeData) == 0xa0, "NodeData size");
+static_assert(sizeof(Scaleform::Render::TreeShape::NodeData) == 0xa0, "NodeData size");
+
 #endif

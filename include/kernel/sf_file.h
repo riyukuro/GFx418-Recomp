@@ -199,4 +199,7 @@ public:
 
 }} // namespace Scaleform::GFx
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::ZLibFile) == 0x18, "ZLibFile size");
+
 #endif

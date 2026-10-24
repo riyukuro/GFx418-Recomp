@@ -262,4 +262,8 @@ protected:
 
 }}} // namespace Scaleform::Render::D3D9
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::D3D9::MappedTexture) == 0xd0, "MappedTexture size");
+static_assert(sizeof(Scaleform::Render::D3D9::TextureManager) == 0x210, "TextureManager size");
+
 #endif

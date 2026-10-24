@@ -192,4 +192,7 @@ void SF_STDCALL GFx_DefineTextLoader(LoadProcess* p, const TagInfo& tagInfo);
 
 }} // namespace Scaleform::GFx
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::TreeText::NodeData) == 0xb0, "NodeData size");
+
 #endif

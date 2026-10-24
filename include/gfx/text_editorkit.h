@@ -283,4 +283,8 @@ public:
 
 }}} // namespace Scaleform::GFx::Text
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::Text::CompositionString) == 0x100, "CompositionString size");
+static_assert(sizeof(Scaleform::GFx::Text::EditorKit) == 0xb0, "EditorKit size");
+
 #endif

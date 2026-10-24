@@ -376,4 +376,7 @@ private:
 
 }} // namespace Scaleform::Render
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::GlyphCache) == 0x1c98, "GlyphCache size");
+
 #endif

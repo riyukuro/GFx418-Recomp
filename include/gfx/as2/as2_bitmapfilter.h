@@ -268,4 +268,8 @@ public:
 
 }}} // namespace Scaleform::GFx::AS2
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS2::BitmapFilterObject) == 0x70, "BitmapFilterObject size");
+static_assert(sizeof(Scaleform::GFx::AS2::ColorMatrixFilterObject) == 0x70, "ColorMatrixFilterObject size");
+
 #endif

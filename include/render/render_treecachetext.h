@@ -48,4 +48,7 @@ private:
 
 }} // namespace Scaleform::Render
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::TreeCacheText) == 0x1a0, "TreeCacheText size");
+
 #endif

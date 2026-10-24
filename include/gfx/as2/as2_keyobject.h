@@ -37,4 +37,7 @@ public:
 
 }}} // namespace Scaleform::GFx::AS2
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS2::KeyCtorFunction) == 0x140, "KeyCtorFunction size");
+
 #endif

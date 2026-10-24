@@ -156,4 +156,8 @@ protected:
 
 }} // namespace Scaleform::Sound
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Sound::AppendableSoundData) == 0x68, "AppendableSoundData size");
+static_assert(sizeof(Scaleform::Sound::SoundFile) == 0x28, "SoundFile size");
+
 #endif

@@ -585,4 +585,8 @@ protected:
 
 }}} // namespace Scaleform::Render::Text
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::Text::DocView) == 0x150, "DocView size");
+static_assert(sizeof(Scaleform::Render::Text::DocView::DocumentText) == 0x50, "DocumentText size");
+
 #endif

@@ -1076,4 +1076,7 @@ static_assert(sizeof(MovieDefImpl) == 0x40, "MovieDefImpl size");
 
 }} // namespace Scaleform::GFx
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::MovieDefBindStates) == 0x58, "MovieDefBindStates size");
+
 #endif

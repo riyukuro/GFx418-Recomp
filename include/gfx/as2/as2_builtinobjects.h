@@ -1370,4 +1370,15 @@ public:
 
 }}} // namespace Scaleform::GFx::AMP
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::AS2::BitmapData) == 0x78, "BitmapData size");
+static_assert(sizeof(Scaleform::GFx::AS2::ColorObject) == 0x70, "ColorObject size");
+static_assert(sizeof(Scaleform::GFx::AS2::MathCtorFunction) == 0x70, "MathCtorFunction size");
+static_assert(sizeof(Scaleform::GFx::AS2::MovieClipLoader) == 0x70, "MovieClipLoader size");
+static_assert(sizeof(Scaleform::GFx::AS2::SharedObject) == 0x78, "SharedObject size");
+static_assert(sizeof(Scaleform::GFx::AS2::StageCtorFunction) == 0x78, "StageCtorFunction size");
+static_assert(sizeof(Scaleform::GFx::AS2::StyleSheetObject) == 0x98, "StyleSheetObject size");
+static_assert(sizeof(Scaleform::GFx::AS2::TextFormatObject) == 0xd0, "TextFormatObject size");
+static_assert(sizeof(Scaleform::GFx::AS2::TransformObject) == 0x90, "TransformObject size");
+
 #endif

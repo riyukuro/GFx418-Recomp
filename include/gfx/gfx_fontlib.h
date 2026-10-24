@@ -108,4 +108,8 @@ inline Ptr<FontLib> StateBag::GetFontLib() const
 
 }} // namespace Scaleform::GFx
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::FontData) == 0x88, "FontData size");
+static_assert(sizeof(Scaleform::GFx::FontResource) == 0x40, "FontResource size");
+
 #endif

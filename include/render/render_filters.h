@@ -286,4 +286,8 @@ protected:
 
 }} // namespace Scaleform::Render
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::FilterSet) == 0x30, "FilterSet size");
+static_assert(sizeof(Scaleform::Render::ShadowFilter) == 0x48, "ShadowFilter size");
+
 #endif

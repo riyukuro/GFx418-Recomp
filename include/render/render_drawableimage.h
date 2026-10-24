@@ -978,4 +978,21 @@ public:
 
 }} // namespace Scaleform::Render
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::DICommandQueue) == 0x110, "DICommandQueue size");
+static_assert(sizeof(Scaleform::Render::DICommand_ApplyFilter) == 0x48, "DICommand_ApplyFilter size");
+static_assert(sizeof(Scaleform::Render::DICommand_ColorTransform) == 0x60, "DICommand_ColorTransform size");
+static_assert(sizeof(Scaleform::Render::DICommand_Compare) == 0x48, "DICommand_Compare size");
+static_assert(sizeof(Scaleform::Render::DICommand_CopyChannel) == 0x48, "DICommand_CopyChannel size");
+static_assert(sizeof(Scaleform::Render::DICommand_CopyPixels) == 0x58, "DICommand_CopyPixels size");
+static_assert(sizeof(Scaleform::Render::DICommand_Draw) == 0x30, "DICommand_Draw size");
+static_assert(sizeof(Scaleform::Render::DICommand_FillRect) == 0x28, "DICommand_FillRect size");
+static_assert(sizeof(Scaleform::Render::DICommand_Merge) == 0x50, "DICommand_Merge size");
+static_assert(sizeof(Scaleform::Render::DICommand_Noise) == 0x28, "DICommand_Noise size");
+static_assert(sizeof(Scaleform::Render::DICommand_PaletteMap) == 0x50, "DICommand_PaletteMap size");
+static_assert(sizeof(Scaleform::Render::DICommand_PerlinNoise) == 0xb0, "DICommand_PerlinNoise size");
+static_assert(sizeof(Scaleform::Render::DICommand_Scroll) == 0x48, "DICommand_Scroll size");
+static_assert(sizeof(Scaleform::Render::DICommand_Threshold) == 0x58, "DICommand_Threshold size");
+static_assert(sizeof(Scaleform::Render::DrawableImage) == 0xc8, "DrawableImage size");
+
 #endif

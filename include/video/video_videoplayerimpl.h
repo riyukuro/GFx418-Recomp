@@ -233,4 +233,8 @@ static_assert(sizeof(VideoReaderConfigThrd) == 0x110, "VideoReaderConfigThrd siz
 
 }}} // namespace Scaleform::GFx::Video
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::Video::VideoDecoderThrd) == 0x88, "VideoDecoderThrd size");
+static_assert(sizeof(Scaleform::GFx::Video::VideoPlayerImpl) == 0x3e8, "VideoPlayerImpl size");
+
 #endif

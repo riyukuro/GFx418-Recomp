@@ -378,4 +378,9 @@ inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1
 
 } // namespace Scaleform
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::DoubleFormatter) == 0x1a8, "DoubleFormatter size");
+static_assert(sizeof(Scaleform::LongFormatter) == 0x60, "LongFormatter size");
+static_assert(sizeof(Scaleform::StrFormatter) == 0x28, "StrFormatter size");
+
 #endif

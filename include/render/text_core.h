@@ -672,4 +672,9 @@ public:
 
 }}} // namespace Scaleform::Render::Text
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::Render::Text::Allocator) == 0x88, "Allocator size");
+static_assert(sizeof(Scaleform::Render::Text::ParagraphFormat) == 0x20, "ParagraphFormat size");
+static_assert(sizeof(Scaleform::Render::Text::TextFormat) == 0x48, "TextFormat size");
+
 #endif

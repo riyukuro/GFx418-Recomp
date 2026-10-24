@@ -118,4 +118,8 @@ struct RootNode : public RefCountBaseNTS<RootNode, StatMV_XML_Mem>
 
 }}} // namespace Scaleform::GFx::XML
 
+// (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+static_assert(sizeof(Scaleform::GFx::XML::ElementNode) == 0x78, "ElementNode size");
+static_assert(sizeof(Scaleform::GFx::XML::TextNode) == 0x48, "TextNode size");
+
 #endif
