@@ -5,7 +5,9 @@
 // MS2-UNIT: sfr_as3_01c
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423e0260-0x1423f06a0 .text$mn
-// MS2-RANGE: 0x1423f06a0-0x1423f5770 .text$mn
+// MS2-RANGE: 0x1423f06a0-0x1423f3510 .text$mn
+// MS2-RANGE: 0x1423f3570-0x1423f5770 .text$mn
+// (0x1423f3510 ??_GInstance belongs with the Instance vftable, emitted by the ~Instance unit sfr_as3_16)
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
@@ -3139,22 +3141,17 @@ template void AS3TraitsSetBase::add<AS3TraitsNode::NodeRef>(void*, const AS3Trai
 namespace Scaleform { namespace Alg {
 template <class ArrayT> void ReverseArray(ArrayT& values);
 
-// MS2-FUNCTIONAL: the Value::Swap loop preserves array ownership; the compiler emits a different frame/prolog.
 // @0x1423eaa80
 template <> void ReverseArray<ArrayDH<GFx::AS3::Value, 2, ArrayDefaultPolicy>>(
     ArrayDH<GFx::AS3::Value, 2, ArrayDefaultPolicy>& values)
 {
-    GFx::AS3::Value* data = values.GetDataPtr();
     SPInt left = 0;
     SPInt right = static_cast<SPInt>(values.GetSize()) - 1;
-    if (right > 0)
+    while (left < right)
     {
-        do
-        {
-            data[left].Swap(data[right]);
-            ++left;
-            --right;
-        } while (left < right);
+        values[left].Swap(values[right]);
+        ++left;
+        --right;
     }
 }
 }}
