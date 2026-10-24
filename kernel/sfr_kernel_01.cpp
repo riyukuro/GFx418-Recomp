@@ -1804,6 +1804,7 @@ extern SysAllocBase* System_pSysAlloc;                 // file static in the exe
 
 // This library copy has the same body as the exported constructor in unit_141803210; keep it under a private
 // helper name so the DLL publishes the game's exported address as the canonical decorated symbol.
+// MS2-FUNCTIONAL: preserves the duplicate library constructor behavior under a unique helper name.
 // @0x14258c290
 void SystemCtorCopy14258c290(System* self, SysAllocBase* sysAlloc)
 {
@@ -1811,6 +1812,7 @@ void SystemCtorCopy14258c290(System* self, SysAllocBase* sysAlloc)
     System::Init(MemoryHeap::RootHeapDesc(), sysAlloc);
 }
 
+// MS2-FUNCTIONAL: preserves the duplicate library constructor behavior under a unique helper name.
 // @0x14258c270
 void SystemCtorCopy14258c270(System* self, const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* sysAlloc)
 {
