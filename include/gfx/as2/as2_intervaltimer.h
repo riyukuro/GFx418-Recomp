@@ -36,6 +36,17 @@ public:
     virtual UInt64 GetNextInvokeTime() const;
     virtual void   SetId(int id);
     virtual int    GetId() const;
+
+    // setInterval(obj, "method", ...): inlined at its one use, no exe copy.
+    IntervalTimer(Object* pobj, const ASString& method)
+        : pObject(pobj), MethodName(method), Interval(0), InvokeTime(0), Id(0), Active(true), Unrecovered_79(false)
+    {
+    }
+
+private:
+    // setInterval / setTimeout: the callback (a function, or an object or character with a method name), the
+    // interval in ms and the extra arguments; the result is the timer id (exe 0x14297f3d0).
+    static void Set(const FnCall& fn, bool isTimeout);
 };
 static_assert(sizeof(IntervalTimer) == 0x80, "IntervalTimer size");
 
