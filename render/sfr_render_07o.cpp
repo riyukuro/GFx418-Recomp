@@ -21,6 +21,7 @@
 #include "ms2/scaleform/include/render/render_viewport.h"
 #include "ms2/scaleform/include/render/render_math2d.h"
 #include "ms2/scaleform/include/render/render_tessgen.h"
+#include "ms2/scaleform/include/render/render_textureglyph.h"
 #include "ms2/scaleform/kernel/sf_arraystaticbuff.h"
 #include <math.h>
 
@@ -43,15 +44,8 @@ struct ImageGlyphVertex
 
 // the alpha glyph quads' vertex (RasterGlyphVertex) is the glyph cache's, render_glyphcache.h
 
-// a glyph packed into a font texture; only its image is read here (+0x10, after the refcount base)
-class TextureGlyph : public RefCountBase<TextureGlyph, Stat_Default_Mem>
-{
-public:
-    Ptr<Image> pImage;            // +0x10
-    void*      Unk_18;            // +0x18
-    RectF      UvBounds;          // +0x20 texture coordinates of the glyph
-    PointF     UvOrigin;          // +0x30 its origin (baseline / pen position) in texture coordinates
-};
+// the texture glyphs hold their image as an ImageBase; a font texture is always an Image
+static inline Image* glyphImage(const TextureGlyph* tgl) { return static_cast<Image*>(tgl->pImage.GetPtr()); }
 
 // corner of a rectangle outline
 struct CornerVertex
@@ -541,7 +535,7 @@ void TextMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned, uns
 
     case TextLayer_PackedText:
     {
-        Image* img = Entries[l.Start].EntryData.PackedData.pGlyph->pImage;
+        Image* img = glyphImage(Entries[l.Start].EntryData.PackedData.pGlyph);
         *data = FillData(img, ImageFillMode(Wrap_Clamp, Sample_Linear));
         if (img->GetFormat() == Image_A8)
         {
@@ -557,7 +551,7 @@ void TextMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned, uns
     }
 
     case TextLayer_PackedDFAText:
-        *data = FillData(Entries[l.Start].EntryData.PackedData.pGlyph->pImage, ImageFillMode(Wrap_Clamp, Sample_Linear));
+        *data = FillData(glyphImage(Entries[l.Start].EntryData.PackedData.pGlyph), ImageFillMode(Wrap_Clamp, Sample_Linear));
         data->PrimFill = PrimFill_UVTextureDFAlpha_VColor;
         data->pVFormat = &RasterGlyphVertex::Format;
         break;
@@ -1907,7 +1901,7 @@ void TextMeshProvider::addTextureGlyph(TmpTextStorage& storage, const TextureGly
     if (data.pFont->GetFontFlags() & 0x10000)
     {
         PrimitiveFillData fd(PrimFill_UVTextureDFAlpha_VColor, &RasterGlyphVertex::Format,
-                             tgl->pImage->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
+                             glyphImage(tgl)->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
         e.pFill     = pCache->GetPrimitiveFillManager()->CreateFill(fd);
         e.LayerType = TextLayer_PackedDFAText;
         Flags |= BF_DistField;
@@ -1915,13 +1909,13 @@ void TextMeshProvider::addTextureGlyph(TmpTextStorage& storage, const TextureGly
     else if (tgl->pImage->GetFormat() == Image_A8)
     {
         PrimitiveFillData fd(PrimFill_UVTextureAlpha_VColor, &RasterGlyphVertex::Format,
-                             tgl->pImage->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
+                             glyphImage(tgl)->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
         e.pFill = pCache->GetPrimitiveFillManager()->CreateFill(fd);
     }
     else
     {
         PrimitiveFillData fd(PrimFill_UVTexture, &ImageGlyphVertex::Format,
-                             tgl->pImage->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
+                             glyphImage(tgl)->GetTexture(pCache->GetTextureManager()), ImageFillMode(Wrap_Clamp, Sample_Linear));
         e.pFill = pCache->GetPrimitiveFillManager()->CreateFill(fd);
     }
 
