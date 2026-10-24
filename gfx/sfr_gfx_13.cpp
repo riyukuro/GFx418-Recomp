@@ -155,10 +155,13 @@ static NativePmf s_pmf_143b27608 = reinterpret_cast<NativePmf>(&VideoNatives::m_
 static NativePmf s_pmf_143b27588 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014810);
 static NativePmf s_pmf_143b27668 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014b50);
 namespace Scaleform { namespace Render {
-#pragma optimize("", off)
-Matrix3x4<float> g_identity3x4;   // 0x142c99a90
-Matrix4x4<float> g_identity4x4;   // 0x142c99ad0
-#pragma optimize("", on)
+// this unit's dynamic initialisers of the identity matrices construct Matrix3x4<float>::Identity / Matrix4x4<float>::Identity
+// (0x143aee540 / 0x143aee570) in place: the matrices themselves are the template statics, so each initialiser is an empty object
+// (no second matrix storage at those addresses)
+struct Identity3x4Init { Identity3x4Init() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); } };
+struct Identity4x4Init { Identity4x4Init() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); } };
+Identity3x4Init g_identity3x4;   // 0x142c99a90
+Identity4x4Init g_identity4x4;   // 0x142c99ad0
 }}
 static NativePmf s_pmf_143b27798 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a330);
 static NativePmf s_pmf_143b27778 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a360);
