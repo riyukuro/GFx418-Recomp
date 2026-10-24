@@ -8,6 +8,7 @@
 #define MS2_SF_RENDER_JPEGCOMMON_H
 
 #include <setjmp.h>
+#include <stdio.h>     // (sfr24) FILE, for jpeglib.h
 #include "ms2/scaleform/kernel/sf_types.h"
 
 // IJG jpeg-6b, linked as C in the exe (lib_jpeg), Windows configuration.

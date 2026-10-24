@@ -5,6 +5,7 @@
 #define MS2_SCALEFORM_GFX_AS3_AS3_READARGS_H
 
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_abc.h"    // (sfr24) Abc::Code::OpCode
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

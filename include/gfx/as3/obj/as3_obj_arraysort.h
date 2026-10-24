@@ -6,6 +6,7 @@
 #define MS2_SF_GFX_AS3_OBJ_ARRAYSORT_H
 
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vm.h"     // (sfr24) the collectors' VM calls
 
 namespace Scaleform {
 // A sort key and the index of the element it came from (same as sfr_as3_20).

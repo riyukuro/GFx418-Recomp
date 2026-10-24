@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vm.h"     // (sfr24) the inline VM calls
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

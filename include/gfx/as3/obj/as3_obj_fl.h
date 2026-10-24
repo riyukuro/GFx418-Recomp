@@ -12,6 +12,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 class NamespaceArray;
 
 namespace InstanceTraits { class ThunkFunction; }
+namespace InstanceTraits { namespace fl { class GlobalObject; } }   // (sfr24) GlobalObjectCPP's ctor
 namespace Classes { class Function; }
 namespace Classes { namespace fl { class Object; } }
 
