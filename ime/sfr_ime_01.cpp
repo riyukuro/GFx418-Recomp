@@ -140,6 +140,7 @@ extern "C" const void* DAT_14313a228[];
 extern "C" const void* DAT_14313a238[];
 extern "C" const void* DAT_14313a450[];
 extern "C" const void* DAT_14313a5f8[];
+extern "C" char DAT_143109420[];     // ??_7State@GFx@Scaleform@@6B@
 extern "C" const void* DAT_14313a200[];
 extern "C" const void* DAT_143138360[];
 extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
@@ -878,6 +879,14 @@ void FUN_1423ca640(void* self, unsigned value)
     reinterpret_cast<void(*)(void*)>(vtable[17])(child);
 }
 
+// (sfr33) packed refcounted pointer release as the dtors inline it: the masked pointer is freed without a reload.
+static __forceinline void Sfr33ReleasePacked(unsigned long long packed)
+{
+    unsigned long long p = packed & ~3ULL;
+    if (_InterlockedDecrement(reinterpret_cast<volatile long*>(p + sizeof(void*))) == 0)
+        Memory::Free(reinterpret_cast<void*>(p));
+}
+
 // MS2-FUNCTIONAL: the packed atomic pointer is decremented at the exe's +8 counter; its heap release is routed through our Memory facade.
 // @0x1423ca920
 unsigned long long FUN_1423ca920(void*, unsigned long long* packedPtr)
@@ -948,15 +957,16 @@ void FUN_1423d1b50(unsigned long long* object)
     FUN_1423cdf60(object);
 }
 
-// MS2-FUNCTIONAL: follows the recovered child/member teardown and sized-delete paths; only the anonymous abstract vptr store is omitted.
+// stores the abstract vptr, then the recovered child/member teardown and sized-delete paths.
 // @0x1423d1b90
 void* FUN_1423d1b90(unsigned long long* object, unsigned flags)
 {
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a5f8);
     Memory::Free(reinterpret_cast<void*>(object[0x16]));
     FUN_1423cdf60(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x5c0);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x5c0);
     }
     return object;
 }
@@ -977,16 +987,16 @@ void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigne
     return object;
 }
 
-// MS2-FUNCTIONAL: mirrors the executable allocation flag and 0x110 sized-delete branch; anonymous vptr stores are omitted.
+// restores both vptrs, then the allocation flag and 0x110 sized-delete branch.
 // @0x1423da2c0
-void* FUN_1423da2c0(void* object, unsigned long long flags)
+void* FUN_1423da2c0(void* object, unsigned flags)
 {
     auto* words = static_cast<unsigned long long*>(object);
     words[0] = reinterpret_cast<unsigned long long>(DAT_14313b920);
     words[1] = reinterpret_cast<unsigned long long>(DAT_14313b968);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x110);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x110);
     }
     return object;
 }
@@ -1048,63 +1058,63 @@ void FUN_1423cb920(void* object, DWORD code)
     }
 }
 
-// MS2-FUNCTIONAL: destructor helper and 0xb0 sized-delete path follow the executable; only allocator vtable dispatch uses Memory.
+// destructor helper and 0xb0 sized-delete path follow the executable; only allocator vtable dispatch uses Memory.
 // @0x1423ce3c0
-void* FUN_1423ce3c0(void* object, unsigned long long flags)
+void* FUN_1423ce3c0(void* object, unsigned flags)
 {
     FUN_1423cdf60(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0xb0);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0xb0);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: executes the common refcount-base cleanup and 0x10 sized-delete path from the executable.
+// executes the common refcount-base cleanup and 0x10 sized-delete path from the executable.
 // @0x1423db8b0
-void* FUN_1423db8b0(void* object, unsigned long long flags)
+void* FUN_1423db8b0(void* object, unsigned flags)
 {
     FUN_14257db40(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x10);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x10);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: byte-identical common refcount-base cleanup and 0x10 sized-delete path.
+// byte-identical common refcount-base cleanup and 0x10 sized-delete path.
 // @0x1423db910
-void* FUN_1423db910(void* object, unsigned long long flags)
+void* FUN_1423db910(void* object, unsigned flags)
 {
     FUN_14257db40(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x10);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x10);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: byte-identical common refcount-base cleanup and 0x10 sized-delete path.
+// byte-identical common refcount-base cleanup and 0x10 sized-delete path.
 // @0x1423db970
-void* FUN_1423db970(void* object, unsigned long long flags)
+void* FUN_1423db970(void* object, unsigned flags)
 {
     FUN_14257db40(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x10);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x10);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: restores the executable's anonymous prototype vptr before the destructor helper and size-selected delete.
+// restores the executable's anonymous prototype vptr before the destructor helper and size-selected delete.
 // @0x1423ce250
-void* FUN_1423ce250(unsigned long long* object, unsigned long long flags)
+void* FUN_1423ce250(unsigned long long* object, unsigned flags)
 {
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313a200);
     FUN_14257db50(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x10);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x10);
     }
     return object;
 }
@@ -1213,14 +1223,14 @@ void FUN_1423c8bb0(unsigned long long* object)
     FUN_1422fbf60(object + 2);
 }
 
-// MS2-FUNCTIONAL: runs the recovered IME manager teardown and the executable's scalar or sized delete path.
+// runs the recovered IME manager teardown and the executable's scalar or sized delete path.
 // @0x1423c8e10
-void* FUN_1423c8e10(void* object, unsigned long long flags)
+void* FUN_1423c8e10(void* object, unsigned flags)
 {
     FUN_1423c8bb0(static_cast<unsigned long long*>(object));
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x1a0);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x1a0);
     }
     return object;
 }
@@ -1240,8 +1250,8 @@ void* FUN_1423c8e70(unsigned long long* object, unsigned flags)
         if (records[i * 4]) Memory::Free(records[i * 4]);
     FUN_1423c8bb0(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x1a0);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x1a0);
     }
     return object;
 }
@@ -1307,15 +1317,15 @@ void FUN_1423cdda0(void** table)
     *table = 0;
 }
 
-// MS2-FUNCTIONAL: restores the executable's AS2/AS3 support vtable, runs shared base cleanup, and follows the 0x10 delete path.
+// restores the executable's AS2/AS3 support vtable, runs shared base cleanup, and follows the 0x10 delete path.
 // @0x1423dbcb0
-void* FUN_1423dbcb0(unsigned long long* object, unsigned long long flags)
+void* FUN_1423dbcb0(unsigned long long* object, unsigned flags)
 {
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313ba60);
     FUN_14257db40(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x10);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x10);
     }
     return object;
 }
@@ -1361,50 +1371,50 @@ void FUN_1423db060(unsigned long long* object)
     *key = 0xffffffff;
 }
 
-// MS2-FUNCTIONAL: the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
+// the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
 // @0x1423ce040
-void* FUN_1423ce040(void* object, unsigned long long flags)
+void* FUN_1423ce040(void* object, unsigned flags)
 {
     FUN_14257db50(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x10);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x10);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: byte-identical deleting wrapper body to the adjacent executable copy, with the same destructor and sized-free path.
+// byte-identical deleting wrapper body to the adjacent executable copy, with the same destructor and sized-free path.
 // @0x1423ce0a0
-void* FUN_1423ce0a0(void* object, unsigned long long flags)
+void* FUN_1423ce0a0(void* object, unsigned flags)
 {
     FUN_14257db50(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x10);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x10);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: destructor helper and sized-free path follow the executable; heap dispatch uses our Memory facade.
+// destructor helper and sized-free path follow the executable; heap dispatch uses our Memory facade.
 // @0x1423ce100
-void* FUN_1423ce100(void* object, unsigned long long flags)
+void* FUN_1423ce100(void* object, unsigned flags)
 {
     FUN_1423cde00(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x870);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x870);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: same helper sequence and allocation size as the adjacent executable copy.
+// same helper sequence and allocation size as the adjacent executable copy.
 // @0x1423ce1f0
-void* FUN_1423ce1f0(void* object, unsigned long long flags)
+void* FUN_1423ce1f0(void* object, unsigned flags)
 {
     FUN_1423cde00(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x870);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x870);
     }
     return object;
 }
@@ -1510,40 +1520,41 @@ void FUN_1423cde00(void* raw)
     FUN_1422fbf60(object + 0x102);
 }
 
-// MS2-FUNCTIONAL: releases the retained member, invokes the recovered AS support destructor, then follows delete flags.
+// releases the retained member, invokes the recovered AS support destructor, then follows delete flags.
 // @0x1423ce160
 void* FUN_1423ce160(unsigned long long* object, unsigned flags)
 {
-    FUN_1423ca920(nullptr, &object[3]);
-    object[3] = 0;
+    Sfr33ReleasePacked(object[3]);
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a200);
     FUN_14257db50(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x20);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x20);
     }
     return object;
 }
 
 // MS2-FUNCTIONAL: runs the recovered IME interface destructor before scalar or sized deletion.
 // @0x1423ce2f0
-void* FUN_1423ce2f0(unsigned long long* object, unsigned long long flags)
+void* FUN_1423ce2f0(unsigned long long* object, unsigned flags)
 {
     FUN_1423cdee0(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0xe8);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0xe8);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the executable's State cleanup and honors both scalar and sized delete flags.
+// runs the executable's State cleanup and honors both scalar and sized delete flags.
 // @0x1423dba40
-void* FUN_1423dba40(void* object, unsigned long long flags)
+void* FUN_1423dba40(void* object, unsigned flags)
 {
+    *static_cast<void**>(object) = DAT_143109420;   // State vftable
     FUN_14257db40(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x18);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x18);
     }
     return object;
 }
@@ -1552,12 +1563,12 @@ void* FUN_1423dba40(void* object, unsigned long long flags)
 // @0x1423dbab0
 void* FUN_1423dbab0(unsigned long long* object, unsigned flags)
 {
-    FUN_1423ca920(nullptr, &object[5]);
-    FUN_1423ca920(nullptr, &object[2]);
+    Sfr33ReleasePacked(object[5]);
+    Sfr33ReleasePacked(object[2]);
     FUN_14257db40(object);
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x38);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x38);
     }
     return object;
 }

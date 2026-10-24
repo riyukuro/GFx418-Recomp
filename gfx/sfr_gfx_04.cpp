@@ -146,27 +146,27 @@ Video::VideoCharacterDef::VideoCharacterDef()
 
 Video::VideoCharacterDef::~VideoCharacterDef() {}
 
-// MS2-FUNCTIONAL: reproduces the executable's Resource and StateBag base vptr resets and scalar-delete branches.
+// reproduces the executable's Resource and StateBag base vptr resets and scalar-delete branches.
 // @0x1425ccf60
 void* FUN_1425ccf60(void* object, unsigned flags)
 {
-    *reinterpret_cast<const void***>(object) = DAT_143149880;
     *reinterpret_cast<const void***>(static_cast<unsigned char*>(object) + 0x18) = DAT_143183208;
+    *reinterpret_cast<const void***>(object) = DAT_143149880;
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x20);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x20);
     }
     return object;
 }
 
-// MS2-FUNCTIONAL: reproduces the executable's Resource base vptr reset and scalar-delete branches.
+// reproduces the executable's Resource base vptr reset and scalar-delete branches.
 // @0x1425cd140
 void* FUN_1425cd140(void* object, unsigned flags)
 {
     *reinterpret_cast<const void***>(object) = DAT_143149880;
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x20);
-        else Memory::Free(object);
+        if (!(flags & 4)) Memory::Free(object);
+        else FUN_14015b310(object, 0x20);
     }
     return object;
 }
