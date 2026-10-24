@@ -1,11 +1,16 @@
 // Recovered Scaleform 4.1.18 GFx: the IME manager state as the AS3 flash.system.IME class reaches it (sfr12).
-// The exe's vftable slots 6..9 are the conversion mode and enable switches; the others are kept as placeholders.
+// (sfr33) All 34 slots and the 0x68-byte layout recovered from the exe (vftable 0x1431898c8, sfr_gfx_03d).
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder virtuals.
 #ifndef MS2_SF_GFX_IMEMANAGER_H
 #define MS2_SF_GFX_IMEMANAGER_H
 
 #include "gfx_state.h"
 #include "../kernel/sf_string.h"
+#include "../kernel/sf_hash.h"
+#include "gfx_asimemanager.h"
+#include "ms2/scaleform/include/render/render_types2d.h"   // (sfr33) RectF
+
+namespace Scaleform { class Log; }   // (sfr33) kernel/sf_log.h
 
 namespace Scaleform { namespace GFx {
 
@@ -17,65 +22,70 @@ class Loader;
 class ASIMEManager;
 class IMEEvent;
 class IMECandidateListStyle;    // (appended, sfr24) gfx_imecandidateliststyle.h
+class FileOpener;               // (appended, sfr33)
+class TextField;
 
 class IMEManagerBase : public State
 {
 public:
-    virtual ~IMEManagerBase() {}                                        // 0
-private:
-    virtual void Slot01();                                              // Init
-public:
+    // (sfr33) the highlight look HighlightText gives a part of the composition string (Text::IMEStyle::Category).
+    enum TextHighlightStyle
+    {
+        THS_CompositionSegment = 0,
+        THS_ClauseSegment      = 1,
+        THS_ConvertedSegment   = 2,
+        THS_PhraseLengthAdj    = 3,
+        THS_LowConfSegment     = 4
+    };
+
+    // (sfr33) The base bodies (GFx_IMEManager, sfr_gfx_03d) are the do-nothing defaults the Win32 manager overrides;
+    // the Broadcast* ones pass the event on to the VM side.
+    IMEManagerBase();
+    virtual ~IMEManagerBase();                                          // 0
+    // Remembers whether the candidate list file is checked before loading; 1 on success.
+    virtual UInt32 Init(Log* plog, FileOpener* fileOpener = NULL, const char* xmlFileName = NULL,
+                        bool bcheckIMEExists = true);                   // 1
     // (sfr26) the IME command of the imecommand global (command, parameter).
     virtual void IMECommand(Movie* pmovie, const char* pcommand, const char* pparams); // 2
-private:
-    virtual void Slot03();                                              // ProcessIMEMessage
-public:
+    // A message the IME movies send (SendIMEMessage, through ASIMEManager::IMEFuncHandler).
+    virtual void ProcessIMEMessage(const FunctionHandler::Params& params); // 3
     // (sfr24) an IME event the movie got; HE_ReturnValueType bits.
     virtual unsigned HandleIMEEvent(Movie* pmovie, const IMEEvent& imeEvent); // 4
-private:
-    virtual void Slot05();                                              // ClearCandidateListPath
-public:
+    virtual void ClearCandidateListPath();                              // 5
     virtual bool        SetConversionMode(const UInt32 convMode);       // 6
     virtual const char* GetConversionMode();                            // 7
     virtual bool        SetEnabled(bool enable);                        // 8
     virtual bool        GetEnabled();                                   // 9
-private:
-public:
     // (sfr26) the language of the active input locale.
-    virtual String GetInputLanguage();                                  // 10
-private:
-    virtual void Slot11();                                              // BroadcastIMEConversion
-    virtual void Slot12();                                              // BroadcastSwitchLanguage
-    virtual void Slot13();                                              // BroadcastSetSupportedLanguages
-    virtual void Slot14();                                              // BroadcastSetSupportedIMEs
-    virtual void Slot15();                                              // BroadcastSetCurrentInputLanguage
-    virtual void Slot16();                                              // BroadcastSetIMEName
-    virtual void Slot17();                                              // BroadcastSetConversionStatus
-    virtual void Slot18();                                              // BroadcastRemoveStatusWindow
-    virtual void Slot19();                                              // BroadcastDisplayStatusWindow
-public:
+    virtual const String GetInputLanguage();                            // 10
+    // The language bar / status window events, passed to the VM side (sfr33).
+    virtual void BroadcastIMEConversion(const wchar_t* pstr);           // 11
+    virtual void BroadcastSwitchLanguage(const char* pstr);             // 12
+    virtual void BroadcastSetSupportedLanguages(const char* pstr);      // 13
+    virtual void BroadcastSetSupportedIMEs(const char* pstr);           // 14
+    virtual void BroadcastSetCurrentInputLanguage(const char* pstr);    // 15
+    virtual void BroadcastSetIMEName(const char* pstr);                 // 16
+    virtual void BroadcastSetConversionStatus(const char* pstr);        // 17
+    virtual void BroadcastRemoveStatusWindow();                         // 18
+    virtual void BroadcastDisplayStatusWindow();                        // 19
     // (appended for flash.gfx.IMEEx, sfr19)
     virtual void SendLangBarMessage(DisplayObject* mc, const ASString& command, const ASString& message);   // 20
-public:
     // (sfr22) System.IME.setCompositionString: replaces the composition string, false when it cannot.
     virtual bool SetCompositionString(const char* pcompString);         // 21
     // (appended for flash.gfx.IMEEx, sfr13)
     virtual const wchar_t* GetCompositionString();                      // 22
-private:
-    virtual void Slot23();                                              // OnShutdown
-    virtual void Slot24();                                              // OnFinalize
-    virtual void Slot25();                                              // OnCandidateListStyleChanged
-    virtual void Slot26();                                              // OnCandidateListLoaded
-    virtual void Slot27();                                              // OnCandidateListStyleRequest
-    virtual void Slot28();                                              // OnEnableIME
-public:
+    // (sfr33) the notifications a platform manager overrides.
+    virtual void OnShutdown();                                          // 23
+    virtual void OnFinalize();                                          // 24
+    virtual void OnCandidateListStyleChanged(const IMECandidateListStyle& style); // 25
+    virtual void OnCandidateListLoaded(const char* pcandidateListPath); // 26
+    virtual void OnCandidateListStyleRequest(IMECandidateListStyle* pstyle) const; // 27
+    virtual void OnEnableIME(bool enable);                              // 28
     // (sfr24) the movie the IME works for from now on.
     virtual void SetActiveMovie(Movie* pmovie);                         // 29
     // (sfr19) whether pmovie is the movie the IME works for.
     virtual bool IsMovieActive(Movie* pmovie) const;                    // 30
-private:
-    virtual void Slot31();                                              // GetActiveMovie
-public:
+    virtual Movie* GetActiveMovie() const;                              // 31
     // (sfr24) the movie being destroyed lets go of the IME.
     virtual void ClearActiveMovie();                                    // 32
     virtual String      GetWindowsVersion();                            // 33
@@ -98,17 +108,31 @@ public:
     bool GetCandidateListStyle(IMECandidateListStyle* pstyle) const;      // 0x1425b4570
     bool SetCandidateListStyle(const IMECandidateListStyle& st);         // 0x1425b4de0
 
+    // (appended, sfr33) the composition calls of the platform manager.
+    void StartComposition();                                            // 0x1425b4ed0
+    void ClearComposition();                                            // 0x1425b43c0
+    void SetCompositionText(const wchar_t* pstr, UPInt len = ~UPInt(0)); // 0x1425b4e80
+    void SetCompositionPosition();                                      // 0x1425b4e40
+    void SetCursorInComposition(UPInt pos);                             // 0x1425b4ea0
+    void HighlightText(UPInt pos, UPInt len, TextHighlightStyle style, bool clause); // 0x1425b4820
+    // The focused field's rectangle and the cursor's (cursorOffset characters on), in pixels.
+    void GetMetrics(Render::RectF* pviewRect, Render::RectF* pcursorRect, int cursorOffset); // 0x1425b46b0
+    // The candidate list's load error, true when there is one.
+    bool GetCandidateListErrorMsg(String* pdest);                        // 0x1425b4530
+
 public:
-    // (sfr24) the VM side of the IME (a Ptr; raw here so the header needs no complete ASIMEManager).
-    ASIMEManager* pASIMEManager;            // +0x18
-private:
-    UByte   Unrecovered_20[0x28 - 0x20];    // +0x20 the active movie
-public:
-    Loader* pLoader;                        // +0x28 where the file opener and URL builder states come from
-private:
-    UByte   Unrecovered_30[0x58 - 0x30];    // +0x30 the focused text field, cursor, candidate list path, flags
-public:
-    bool    bCheckIMEExists;                // +0x58 check that the candidate list file exists before loading it
+    // (sfr24) the VM side of the IME for the active movie.
+    Ptr<ASIMEManager>   pASIMEManager;              // +0x18
+    Movie*              pMovie;                     // +0x20 the active movie
+    Loader*             pLoader;                    // +0x28 where the file opener and URL builder states come from
+    Ptr<TextField>      pTextField;                 // +0x30 the field being composed into
+    UPInt               CursorPosition;             // +0x38 where the composition started
+    String              CandidateSwfPath;           // +0x40
+    bool                IMEDisabled;                // +0x48
+    // One VM side per movie the IME was active for.
+    Hash<Movie*, Ptr<ASIMEManager>, FixedSizeHash<Movie*> > MovieASIMEManagerHash;   // +0x50
+    bool                bCheckIMEExists;            // +0x58 check that the candidate list file exists before loading it
+    Log*                pLog;                       // +0x60
 };
 
 }} // namespace Scaleform::GFx

@@ -47,6 +47,10 @@ public:
     class IMEFuncHandler : public FunctionHandler
     {
     public:
+        // (sfr33) made by IMEManagerBase::SetActiveMovie for the candidate list and the language bar.
+        IMEFuncHandler(IMEManagerBase* pimeMgr) : pimeManager(pimeMgr) {}
+        // Hands the message to the IME manager's ProcessIMEMessage (sfr_gfx_03d).
+        virtual void Call(const Params& params);
         IMEManagerBase* pimeManager;
     };
 

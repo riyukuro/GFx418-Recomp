@@ -188,6 +188,25 @@ public:
     // (appended, sfr22) the flags word at +0xfc, writable (html 0x2, the display-info-set 0x2000).
     UInt32& FlagsRef() { return *reinterpret_cast<UInt32*>(Unrecovered + 0xfc); }
 
+    // (appended, sfr33) the composition string calls of the IME manager (sfr_gfx_03d).
+    void           CreateCompositionString();                                   // exe 0x1425b77a0
+    void           ClearCompositionString();                                    // exe 0x1425b71a0
+    void           CommitCompositionString(const wchar_t* pstr, UPInt len);     // exe 0x1425b75f0
+    const wchar_t* GetCompositionString();                                      // exe 0x1425b7f80
+    UPInt          GetCompositionStringLength() const;                          // exe 0x1425b7fe0
+    UPInt          GetCompositionStringPosition() const;                        // exe 0x1425b8040
+    void           SetCompositionStringPosition(UPInt pos);                     // exe 0x1425bbed0
+    void           SetCompositionStringText(const wchar_t* pstr, UPInt len);    // exe 0x1425bbf50
+    void           SetCursorInCompositionString(UPInt pos);                     // exe 0x1425bbfe0
+    // hcategory is a Text::IMEStyle::Category (text_editorkit.h is too heavy to include here).
+    void           HighlightCompositionStringText(UPInt pos, UPInt len, unsigned hcategory); // exe 0x1425b9770
+    void           SetWideCursor(bool wideCursor);                              // exe 0x1425be280
+    // The cursor's rectangle at charIndex in the field's space (twips).
+    Render::RectF  GetCursorBounds(UPInt charIndex, float* phitTestX, float* phitTestY); // exe 0x1425b80b0
+    // (appended, sfr33) the display object's count, so Ptr<TextField> works.
+    void AddRef()  { reinterpret_cast<DisplayObjectBase*>(this)->AddRef(); }
+    void Release() { reinterpret_cast<DisplayObjectBase*>(this)->Release(); }
+
 private:
     UByte Unrecovered[0x148];
 };
