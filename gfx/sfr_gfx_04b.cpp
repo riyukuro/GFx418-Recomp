@@ -24,6 +24,7 @@
 // MS2-RANGE: 0x1425c8fe0-0x1425c9061 .text$mn
 // MS2-RANGE: 0x1425c9190-0x1425c91ec .text$mn
 // MS2-RANGE: 0x1425c4db0-0x1425c4e88 .text$mn
+// MS2-RANGE: 0x1425c4b70-0x1425c4cf8 .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -39,6 +40,9 @@
 namespace Scaleform { namespace GFx {
 
 extern "C" void FUN_142655fe0(FontData*, LoadProcess*, const TagInfo*);
+extern "C" void FUN_142659740(void*, unsigned);
+extern "C" void FUN_1426597e0(void*, void*);
+extern "C" void FUN_14257dcb0(void*);
 
 // MS2-FUNCTIONAL: dispatches the video tag to the installed video state and reports the missing-state case.
 // @0x1425c6450
@@ -116,6 +120,28 @@ void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
     FUN_142655fe0(font.GetPtr(), p, &tagInfo);
     ResourceHandle handle = p->AddFontDataResource(id, font.GetPtr());
     (void)handle;
+}
+
+// MS2-FUNCTIONAL: reads shape data, creates its character wrapper, registers the id, and balances both references; bound-rect tracing is omitted.
+// @0x1425c4b70
+void SF_STDCALL GFx_DefineShapeLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    const ResourceId id(p->ReadU16());
+    struct ShapeStorage { UByte bytes[0x30]; };
+    struct CharacterStorage { UByte bytes[0x30]; };
+    ShapeStorage* shape = static_cast<ShapeStorage*>(p->GetLoadHeap()->Alloc(sizeof(ShapeStorage)));
+    FUN_142659740(shape, 0);
+
+    void** shapeVtable = *reinterpret_cast<void***>(shape);
+    typedef void (*ReadShape)(void*, LoadProcess*, unsigned, unsigned);
+    reinterpret_cast<ReadShape>(shapeVtable[11])(shape, p, tagInfo.TagType,
+                                                  tagInfo.TagOffset + tagInfo.TagLength);
+
+    CharacterStorage* character = static_cast<CharacterStorage*>(p->GetLoadHeap()->Alloc(sizeof(CharacterStorage)));
+    FUN_1426597e0(character, shape);
+    p->AddResource(id, reinterpret_cast<CharacterDef*>(character));
+    reinterpret_cast<Resource*>(character)->Release();
+    FUN_14257dcb0(shape);
 }
 
 // The first key hashes a compact scalar and the eight words of its payload.
