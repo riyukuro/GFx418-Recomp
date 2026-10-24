@@ -457,6 +457,18 @@ void Sprite::SetLoadedSeparately(bool v)
 // @0x1425dcf30
 void Sprite::SetRendererString(ASString) {}
 
+// The rendererFloat / rendererMatrix hints are ignored too. The exe has no body of its own for them: they are folded
+// into the empty functions at 0x1425dcf10 / 0x1425dcf20, so they are written here untagged for the full-exe link.
+void Sprite::SetRendererFloat(float) {}
+void Sprite::SetRendererMatrix(float*, unsigned) {}
+
+// The children's rect bounds. Folded in the exe into the identical DisplayObjContainer::GetBounds (0x1425db2f0), so
+// untagged here too.
+RectF Sprite::GetRectBounds(const Matrix& t) const
+{
+    return mDisplayList.GetRectBounds(t);
+}
+
 // @0x1425dcf40
 void Sprite::SetRootNodeLoadingStat(unsigned bytesLoaded, unsigned loadingFrame)
 {
