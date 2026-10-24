@@ -1020,27 +1020,25 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b09c0
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // The exe tests the whole style mask first, so a bold-only or italic-only font reads "boldItalic" as well.
     void Font::fontStyleGet(Value& result)
     {
-        if (!pFont)
+        if (pFont)
         {
-            if (fontStyle.GetLength())
-                result = fontStyle;
+            unsigned style = pFont->GetFontFlags();
+            if (style & Render::Font::FF_Style_Mask)
+                result = GetVM().GetStringManager().CreateConstString("boldItalic");
+            else if (style & Render::Font::FF_Bold)
+                result = GetVM().GetStringManager().CreateConstString("bold");
+            else if (style & Render::Font::FF_Italic)
+                result = GetVM().GetStringManager().CreateConstString("italic");
             else
-                result.SetNull();
-            return;
+                result = GetVM().GetStringManager().CreateConstString("regular");
         }
-        const char* pstyle;
-        if (pFont->IsBold() && pFont->IsItalic())
-            pstyle = "boldItalic";
-        else if (pFont->IsBold())
-            pstyle = "bold";
-        else if (pFont->IsItalic())
-            pstyle = "italic";
+        else if (fontStyle.GetLength())
+            result = fontStyle;
         else
-            pstyle = "regular";
-        result = GetVM().GetStringManager().CreateConstString(pstyle);
+            result.SetNull();
     }
 
     // @0x1424b0af0
