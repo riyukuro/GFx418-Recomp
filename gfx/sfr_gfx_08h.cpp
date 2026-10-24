@@ -6,6 +6,8 @@
 // MS2-UNIT: sfr_gfx_08
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1426519d0-0x1426535f0 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
 
 #include "../include/gfx/gfx_imagesupport.h"
 #include "ms2/scaleform/kernel/sf_memory.h"
@@ -560,11 +562,11 @@ bool MemoryBufferZlibImage::Decode(ImageData* pdest, CopyScanlineFunc copyScanli
 // MS2-PIN: ??_7MemoryBufferJpegImageWithZlibAlphas@GFx@Scaleform@@6B@ 0x143190670
 // MS2-PIN: ??_7ZlibImageSource@GFx@Scaleform@@6B@ 0x143190758
 // MS2-PIN: ??_7MemoryBufferZlibImage@GFx@Scaleform@@6B@ 0x1431907e0
-// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149b10
+// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
-// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x14318cba8
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x14318cbb0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
 // MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
-// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x1425e61c0
-// MS2-PIN: ??_G?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x1425e6220
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dbb0
+// MS2-PIN: ??_G?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x14243dc10
