@@ -6263,6 +6263,35 @@ void Sfr31ButtonSwitchStateIntl(UPInt self, int state)
     if (cont != 0 && --*reinterpret_cast<UPInt*>(cont + 8) == 0)
         FUN_142581700(cont);
 }
+// ---- batch 55
+// Raises an error: instantiates the error class named by the ClassInfo (resolved through the class traits cache), constructs it
+// with the message and error id, stores it as the pending exception and sets the halt flag.
+// MS2-FUNCTIONAL 0x14252ecb0: raw-offset model; the class lookup is shared with the class-description resolver
+// @0x14252ecb0
+void Sfr31VMRaiseError(UPInt vmAddr, const UInt32* err, UPInt classInfo)
+{
+    UPInt fake[4] = {0, 0, 0, classInfo };
+    // the resolver reads the type description through +0x18; point it at the ClassInfo itself
+    ClassTraits::Traits* ct = Sfr31GetClassTraitsByInfo(reinterpret_cast<VM*>(vmAddr), reinterpret_cast<UPInt>(fake));
+    Value inst;
+    const UPInt it = Sfr31Rd(reinterpret_cast<UPInt>(ct), 0xc0);
+    typedef void (*MakeFn)(UPInt, Value*, UPInt);
+    reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(it, 0), 0x70))(it, &inst, it);
+    const UPInt msg = Sfr31Rd(reinterpret_cast<UPInt>(err), 8);
+    UPInt args[8] = {10, 0, msg, 0, 2, 0, 0, 0};
+    if (msg == Sfr31Rd(msg, 8) + 0x68)
+        args[0] = 0xc, args[2] = 0;
+    else
+        ++*reinterpret_cast<int*>(msg + 0x18);
+    *reinterpret_cast<UInt32*>(reinterpret_cast<char*>(&args[6])) = err[0];
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(&inst), 0x10);
+    typedef void (*CtorFn)(UPInt, int, void*);
+    reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x58))(obj, 2, args);
+    *reinterpret_cast<UInt8*>(vmAddr + 0x180) = 1;
+    reinterpret_cast<Value*>(vmAddr + 0x188)->Assign(inst);
+    reinterpret_cast<Value*>(&args[4])->~Value();
+    reinterpret_cast<Value*>(&args[0])->~Value();
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
