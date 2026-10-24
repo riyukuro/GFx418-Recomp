@@ -168,6 +168,8 @@ public:
 
 namespace Scaleform { namespace Render {
 
+namespace Text { class DocView; }  // (sfr33) for TreeText::Init
+
 // A leaf node drawing a text layout (the render tree of gfx_rendertree.h cannot see the TextLayout headers).
 class TreeText : public TreeNode
 {
@@ -183,6 +185,36 @@ public:
     void SetLayout(const TextLayout::Builder& builder); // 0x1426510e0
     // (appended, sfr33) the document's layout changed: rebuilt on the next update (0x14264f510, sfr_render_04l)
     void NotifyLayoutChanged();
+    // (appended, sfr33) shows the given document view (0x14264f2f0; TextField::CreateRenderNode)
+    void Init(Text::DocView* docView);
+
+    // (appended, sfr33) the text filters (TextField::GetFilters); same shapes as render_treetext.h.
+    enum FilterType
+    {
+        Filter_Unknown    = 0,
+        Filter_DropShadow = 1,
+        Filter_Blur       = 2,
+        Filter_Glow       = 3
+    };
+    enum FilterFlagsType
+    {
+        FilterFlag_KnockOut   = 0x20,
+        FilterFlag_HideObject = 0x40,
+        FilterFlag_FineBlur   = 0x80
+    };
+    // One text filter, 0x20 bytes: a blur, a glow or a drop shadow.
+    struct Filter
+    {
+        unsigned Type;
+        union
+        {
+            struct { float BlurX, BlurY, Strength; } Blur;
+            struct { float BlurX, BlurY, Strength; UInt32 Color; UInt8 Flags; } Glow;
+            struct { float BlurX, BlurY, Strength; UInt32 Color; UInt8 Flags; float Angle, Distance; } DropShadow;
+        };
+    };
+    // Copies up to bufferCount of the node's filters; returns how many.
+    UPInt GetFilters(Filter* buffer, UPInt bufferCount);
 };
 
 }} // namespace Scaleform::Render
