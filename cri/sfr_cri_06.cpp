@@ -34,6 +34,7 @@ extern "C" cri_u1* PTR_LAB_1431bab60[];
 extern "C" cri_u1* PTR_s_This_CFT_function_doesn_t_suppor_143a4a0c0;
 extern "C" float* DAT_143d4ab80;
 extern "C" int DAT_1400541f0;
+void FUN_1400662f0(char *ctx);
 extern "C" int DAT_1431ba950;
 extern "C" int DAT_1431ba990;
 extern "C" int DAT_1431baa10;
@@ -715,6 +716,15 @@ void FUN_140054170(cri_any cri_p0, ...)
     l_v5 = l_v5 + -1;
   } while (l_v5 != 0);
   return;
+}
+
+// The decoder's alternate output callback (FUN_140054250 stores it at +0x1bc8, compared as DAT_1400541f0; Ghidra made no
+// function here): forwards the decoder's sample block at +0x19b0 to the block writer.
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x1400541f0
+void FUN_1400541f0(char *ctx)
+{
+  FUN_1400662f0(ctx + 0x19b0);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -14568,5 +14578,30 @@ void FUN_140065e70(cri_any cri_p0, cri_any cri_p1, ...)
     l_v6 = l_v6 + -1;
   } while (l_v6 != 0);
   return;
+}
+
+// The float-to-short sibling of FUN_140065e70 (reached from sfr_cri_07's LAB_140066300/LAB_140066310; no .pdata): for
+// each of the 6 blocks whose bit is set in mask (bit 31 first), the block's first sample is rounded half away from 0
+// into the block's output.
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x140065fc0
+void FUN_140065fc0(char *ctx, int mask)
+{
+  float *src = *(float **)((char *)ctx + 0x38);
+  short **dst = *(short ***)((char *)ctx + 0x40);
+  for (int i = 0; i < 6; i++) {
+    if (((uint)mask << i & 0x80000000u) != 0) {
+      float v = src[i * 0x40];
+      if (v > 0.0f) {
+        *dst[i] = (short)(int)((double)v + 0.5);
+      }
+      else if (v < 0.0f) {
+        *dst[i] = (short)(int)((double)v - 0.5);
+      }
+      else {
+        *dst[i] = 0;
+      }
+    }
+  }
 }
 
