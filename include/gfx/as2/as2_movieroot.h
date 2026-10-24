@@ -19,6 +19,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 class MovieClipLoader;
 class LoadVarsObject;
+class ASCSSFileLoader;
+class XMLFileLoader;
 class MouseListener;
 
 // Ids of the strings every AS2 movie creates up front (index into StringManager::Builtins).
@@ -212,7 +214,8 @@ class MovieRoot : public ASMovieRootBase
 public:
     UByte              Unrecovered_28[0x10];  // +0x28
     MemoryContextImpl* MemContext;            // +0x38
-    UByte              Unrecovered_40[0x8];   // +0x40
+    unsigned           GCFrameCnt;            // +0x40 frames since this movie last saw a collection
+    unsigned           GCSeenCollectCount;    // +0x44 the collector's collection count at that time
     MouseListener*     pMouseListener;        // +0x48 the Mouse class (set by its constructor)
     Ptr<GlobalContext> pGlobalContext;        // +0x50
     Value              ExternalIntfRetVal;    // +0x58 set by the host handler of ExternalInterface.call
@@ -278,8 +281,17 @@ public:
     // Queues a variables load of purl into ptarget (exe 0x142930a10).
     void AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* purl,
                               LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
+    // Queues a variables load of purl into the clip or level named ptargetName (exe 0x142930dc0).
+    void AddVarLoadQueueEntry(const char* ptargetName, const char* purl,
+                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
     // The same for a LoadVars object (exe 0x142930c30).
     void AddVarLoadQueueEntry(LoadVarsObject* ploadVars, const char* purl,
+                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
+    // Queues a style sheet load of purl into pstyleSheet (exe 0x14292e880).
+    void AddCssLoadQueueEntry(Object* pstyleSheet, ASCSSFileLoader* ploader, const char* purl,
+                              LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
+    // Queues an XML load of purl into pxml (exe 0x142931140).
+    void AddXmlLoadQueueEntry(Object* pxml, XMLFileLoader* ploader, const char* purl,
                               LoadQueueEntry::LoadMethod method = LoadQueueEntry::LM_None);
     // Appends the load to the movie's queue (exe 0x142930090).
     void AddMovieLoadQueueEntry(LoadQueueEntry* pentry);

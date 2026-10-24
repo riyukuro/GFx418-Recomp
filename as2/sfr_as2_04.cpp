@@ -71,6 +71,7 @@
 #include "../include/kernel/sf_utf8util.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_loadqueueentry.h"
 #include "../include/gfx/gfx_assupport.h"
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
@@ -978,36 +979,6 @@ static inline Environment* GetLevel0Environment(MovieImpl* pmovieImpl)
     AvmDisplayObjBase* pavm = pmovieImpl->pMainMovie->GetAvmObjImpl();
     return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
 }
-
-// A queued AS2 load: the target clip or level and the objects to notify. 0xc8 bytes.
-class GFxAS2LoadQueueEntry : public LoadQueueEntry
-{
-public:
-    struct HolderType
-    {
-        Value             ASObj;
-        Ptr<RefCountImpl> Loader;
-    };
-
-    int                  Level;                 // +0x28
-    Ptr<CharacterHandle> pCharacter;            // +0x30
-    Value                MovieClipLoaderHolder; // +0x38
-    Value                LoadVarsHolder;        // +0x58
-    HolderType           XMLHolder;             // +0x78
-    HolderType           CSSHolder;             // +0xa0
-
-    GFxAS2LoadQueueEntry(CharacterHandle* pchar, const String& url, LoadMethod method, bool loadingVars = false,
-                         bool quietOpen = false)
-        : LoadQueueEntry(url, method, loadingVars, quietOpen)
-    {
-        PConstruct(pchar, -1);
-    }
-    // A load into _level<level> (exe 0x14291c320).
-    GFxAS2LoadQueueEntry(int level, const String& url, LoadMethod method, bool loadingVars = false,
-                         bool quietOpen = false);
-
-    void PConstruct(CharacterHandle* pchar, int level); // exe 0x14296e6c0
-};
 
 // @0x14296e6c0
 void GFxAS2LoadQueueEntry::PConstruct(CharacterHandle* pchar, int level)

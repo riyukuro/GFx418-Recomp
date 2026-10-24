@@ -489,6 +489,8 @@ public:
     bool UnregisterClassA(ASStringContext* psc, const ASString& className);
     // The registration entry of a built-in class (exe 0x142949900).
     ClassRegEntry* GetBuiltinClassRegistrar(ASString className);
+    // Creates the objects of a dotted package path under pparent and returns the last one (exe 0x1429301d0).
+    static Object* AddPackage(ASStringContext* psc, Object* pparent, Object* pproto, const char* ppath);
 
 protected:
     // (appended for sfr_as2_06) Refills the standard member map (exe 0x142961c40).

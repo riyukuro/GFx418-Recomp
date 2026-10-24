@@ -119,9 +119,16 @@ public:
     unsigned MaxRootCount;           // +0x74 current root limit
     unsigned PeakRootCount;          // +0x78
     unsigned LastRootCount;          // +0x7c roots before the last collection
-    UByte    Unrecovered_80[0x10];   // +0x80
+    unsigned RootsLeftLast;          // +0x80 roots left by the last collection
+    unsigned PeakRootCountLast;      // +0x84 peak at the last collection
+    unsigned FrameCountTotal;        // +0x88 number of AdvanceFrame calls that reached the frame limit
+    unsigned CollectCount;           // +0x8c value of FrameCountTotal at the last collection
     unsigned PresetMaxRootCount;     // +0x90 configured root limit
+    unsigned PresetFramesBetween;    // +0x94 configured frames between collections
 
+    // Counts a frame of a movie and collects when the limits say so (exe 0x142931300). pframeCnt and pseenCount are
+    // the movie's GCFrameCnt and GCSeenCollectCount.
+    void AdvanceFrame(unsigned* pframeCnt, unsigned* pseenCount);
     // A full collection now (exe 0x142945c60).
     void ForceCollect();
     // A full collection that also frees an emptied root buffer and resets the limits (exe 0x142945d00).
