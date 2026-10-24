@@ -11,6 +11,7 @@
 #include "../include/kernel/sf_array.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/as3_obj.h"
+#include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_display.h"
 #include "hook/ms2hook.h"
 #include <cstring>
@@ -745,6 +746,27 @@ void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3
 }
 
 } // namespace (sfr36: the natives below have external linkage, other units take their addresses)
+namespace Scaleform { namespace GFx { namespace Video { class VideoCharacter; }}}
+// MS2-FUNCTIONAL: Video.videoHeight getter (the display height kept as a double at +0x70).
+// @0x14001a060
+void FUN_14001a060(void* self, int* result) { *result = (int)*(double*)((Scaleform::UByte*)self + 0x70); }
+// MS2-FUNCTIONAL: Video.videoWidth getter (the display width kept as a double at +0x68).
+// @0x14001a070
+void FUN_14001a070(void* self, int* result) { *result = (int)*(double*)((Scaleform::UByte*)self + 0x68); }
+// MS2-FUNCTIONAL: Video.attachCamera (unsupported).
+// @0x14001a3f0
+void FUN_14001a3f0(Scaleform::GFx::AS3::Object* self)
+{
+    self->GetVM().GetUI().Output(Scaleform::GFx::AS3::FlashUI::Output_Warning,
+                                 "The method Video::attachCamera() is not implemented\n");
+}
+// MS2-FUNCTIONAL: Video.clear: releases the character's current image (sfr_video_02).
+// @0x14001a460
+void FUN_14001a460(void* self)
+{
+    extern void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter*);
+    FUN_140010a30(*(Scaleform::GFx::Video::VideoCharacter**)((Scaleform::UByte*)self + 0x58));
+}
 // MS2-FUNCTIONAL: attaches the supplied AS3 NetStream's VideoPlayer to this Video's display object and adds its reference.
 // @0x14001a410
 void FUN_14001a410(void* self, void*, void* netStream)
