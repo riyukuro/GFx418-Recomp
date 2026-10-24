@@ -55,6 +55,11 @@
 // MS2-RANGE: 0x142994fe0-0x1429950f0 .text$mn
 // MS2-RANGE: 0x142995100-0x142995180 .text$mn
 // MS2-RANGE: 0x142995370-0x1429967b0 .text$mn
+// MS2-RANGE: 0x14298cc70-0x14298cc80 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142991140-0x142991170 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142991170-0x142991190 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142994e00-0x142994e10 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142992830-0x142992880 .text$mn   (sfr24: full-exe outside-unit row)
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1603,6 +1608,50 @@ bool Object::Watch(ASStringContext* psc, const ASString& prop, const FunctionRef
 
     WatchpointHash_SetCaseCheck(pWatchpoints, prop, wp, psc->IsCaseSensitive());
     return true;
+}
+
+// ---- (sfr24) virtuals the full exe links by name (work/sfr35/outside-units.tsv) ----
+// A plain object has no value of its own to set.
+// @0x14298cc70
+void Object::SetValue(Environment* penv, const Value& v)
+{
+    SF_UNUSED2(penv, v);
+}
+
+// A function object converts to a reference to itself.
+// @0x142991140
+FunctionRef FunctionObject::ToFunction()
+{
+    return FunctionRef(this);
+}
+
+// Anything else is no function: a null reference.
+// @0x142991170
+FunctionRef Object::ToFunction()
+{
+    return FunctionRef();
+}
+
+// The same null reference (the linker keeps one copy at 0x142991170).
+FunctionRef ObjectInterface::ToFunction()
+{
+    return FunctionRef();
+}
+
+// Only script objects keep watchpoints.
+// @0x142994e00
+bool ObjectInterface::Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback,
+                            const Value& userData)
+{
+    SF_UNUSED4(psc, prop, callback, userData);
+    return false;
+}
+
+// @0x142992830
+bool ObjectInterface::Unwatch(ASStringContext* psc, const ASString& prop)
+{
+    SF_UNUSED2(psc, prop);
+    return false;
 }
 
 }}} // namespace Scaleform::GFx::AS2
