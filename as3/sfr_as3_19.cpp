@@ -115,6 +115,11 @@ Scaleform::UPInt FUN_142507f60(Scaleform::UPInt vm, const void* value);         
 void FUN_142500260(Scaleform::UPInt vm, unsigned int a, Scaleform::UPInt traits, void* value, unsigned int n, void* args);   // VM: call helper on a value with n arguments
 Scaleform::UPInt FUN_1425081f0(Scaleform::UPInt vm);                                     // VM: class-traits factory
 Scaleform::UPInt FUN_142563380(Scaleform::UPInt factory, Scaleform::UPInt traits);       // class traits for traits
+void FUN_1423f1840(void* slot, Scaleform::UPInt obj);                                                                            // assign a refcounted object into a slot
+void* FUN_1423edb60(void* mem, Scaleform::UPInt vm, Scaleform::UPInt factory, int kind, void* uri, const void* prefix);           // Instances::Namespace ctor
+void FUN_142522350(void* hash, void* key);                                         // MultinameHash::Remove
+void FUN_142524af0(Scaleform::UPInt arr, Scaleform::UPInt arr2, int n);            // array clear/shrink
+bool FUN_142506000(Scaleform::UPInt root, void* valueOut, Scaleform::UPInt path);   // MovieRoot::GetVariable as AS3 Value
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -4300,6 +4305,156 @@ void Sfr31TraceArgClassTraits(State* st, UInt32 argc)
     s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
     popped.Get().~Value();
 }
+// ---- batch 37
+// Pops the operand stack top: a Namespace value becomes the target's namespace slot; anything else is converted to a string and a
+// non-empty result creates a new Namespace for the slot.
+// MS2-FUNCTIONAL 0x142538560: raw-offset model; codegen differs from the exe
+// @0x142538560
+void Sfr31ExecPushNamespace(UPInt vm, UPInt target)
+{
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(vm, 0x50));
+    const UInt32* tw = reinterpret_cast<const UInt32*>(top);
+    if ((tw[0] & 0x1f) == 0xb)
+        FUN_1423f1840(reinterpret_cast<void*>(target + 0x58), Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10));
+    else
+    {
+        const UPInt mgr = Sfr31Rd(Sfr31Rd(vm, 0x10), 0x1e8);
+        ASString str(reinterpret_cast<ASStringNode*>(mgr + 0x40));
+        UInt8 tmp[8];
+        const bool ok = *FUN_1424f1390(top, tmp, &str) != 0;
+        if (ok && *reinterpret_cast<const UInt32*>(Sfr31Rd(reinterpret_cast<UPInt>(&str), 0) + 0x20) != 0)
+        {
+            const UPInt tr = Sfr31Rd(Sfr31Rd(vm, 0x200), 0xc0);
+            AllocInfo ai;
+            void* mem = Memory::pGlobalHeap->AllocAutoHeap(reinterpret_cast<void*>(tr), 0x60, &ai);
+            UPInt ns = 0;
+            if (mem != 0)
+                ns = reinterpret_cast<UPInt>(FUN_1423edb60(mem, Sfr31Rd(tr, 0x78), Sfr31Rd(tr, 0xe8), 0, &str, &Value::GetUndefined()));
+            const UPInt old = Sfr31Rd(target, 0x58);
+            if (ns != old)
+            {
+                if (old != 0 && (old & 1) == 0 && (*reinterpret_cast<UInt32*>(old + 0x10) & 0x3fffff) != 0)
+                {
+                    --*reinterpret_cast<UInt32*>(old + 0x10);
+                    FUN_1423dfa20(reinterpret_cast<void*>(old));
+                }
+                Sfr31Wr(target, 0x58, ns);
+            }
+        }
+    }
+    top->~Value();
+    Sfr31Wr(vm, 0x50, Sfr31Rd(vm, 0x50) - 0x20);
+}
+
+// ---- batch 38
+// Removes every class traits held in the array at +0xa0 from the owner's multiname hash, then clears the array.
+// MS2-FUNCTIONAL 0x142530de0: raw-offset model; codegen differs from the exe
+// @0x142530de0
+void Sfr31UnregisterClassTraits(UPInt self)
+{
+    const UPInt count = Sfr31Rd(self, 0xa8);
+    for (UPInt i = 0; i < count; ++i)
+    {
+        const UPInt tr = Sfr31Rd(Sfr31Rd(self, 0xa0), i * 8);
+        const UPInt nsObj = Sfr31Rd(tr, 0xc0);
+        const UPInt owner = Sfr31Rd(self, 0x20);
+        if (nsObj == 0)
+        {
+            // value-keyed removal: scan the hash for the entry holding this traits
+            const UPInt tbl = Sfr31Rd(owner, 0x1c8);
+            for (UPInt e = 0; tbl != 0 && static_cast<long>(Sfr31Rd(tbl, 8)) >= static_cast<long>(e); ++e)
+            {
+                if (Sfr31Rd(tbl, e * 0x28 + 0x10) == static_cast<UPInt>(-2))
+                    continue;
+                if (Sfr31Rd(tbl, e * 0x28 + 0x30) == tr)
+                {
+                    FUN_142522350(reinterpret_cast<void*>(owner + 0x1c8), reinterpret_cast<void*>(tbl + e * 0x28 + 0x20));
+                    break;
+                }
+            }
+            continue;
+        }
+        UPInt node = 0;
+        reinterpret_cast<Sfr31VFnName>(Sfr31Rd(Sfr31Rd(nsObj, 0), 0x38))(nsObj, &node);
+        const UPInt ns = Sfr31Rd(nsObj, 0xc0);
+        UPInt key[2];
+        key[0] = node;
+        ++*reinterpret_cast<int*>(node + 0x18);
+        if (ns != 0)
+            *reinterpret_cast<UInt32*>(ns + 0x10) = (*reinterpret_cast<UInt32*>(ns + 0x10) + 1u) & 0x8fbfffffu;
+        key[1] = ns;
+        FUN_142522350(reinterpret_cast<void*>(Sfr31Rd(self, 0x20) + 0x1c8), key);
+        if (ns != 0)
+        {
+            if ((ns & 1) == 0)
+            {
+                if ((*reinterpret_cast<UInt32*>(ns + 0x10) & 0x3fffff) != 0)
+                {
+                    --*reinterpret_cast<UInt32*>(ns + 0x10);
+                    FUN_1423dfa20(reinterpret_cast<void*>(ns));
+                }
+            }
+        }
+        Sfr31ReleaseStr(key[0]);
+        Sfr31ReleaseStr(node);
+    }
+    FUN_142524af0(self + 0xa0, self + 0xa0, 0);
+}
+
+// ---- batch 39
+static inline void Sfr31ReleaseRawVal(UPInt* v)
+{
+    UInt32* w = reinterpret_cast<UInt32*>(v);
+    if ((w[0] & 0x1f) <= 9)
+        return;
+    if (((w[0] >> 9) & 1) == 0)
+    {
+        FUN_142521f00(v);
+        return;
+    }
+    int* rc = reinterpret_cast<int*>(v[1]);
+    if (--*rc == 0)
+        Memory::pGlobalHeap->Free(rc);
+}
+
+// Resizes the array stored at a variable path, creating a new array of that length when the variable is not an Array.
+// MS2-FUNCTIONAL 0x14252b3a0: raw-offset model; codegen differs from the exe
+// @0x14252b3a0
+bool Sfr31SetArraySize(UPInt root, UPInt path, int size, UInt32 flags)
+{
+    UPInt cur[4] = { 0, 0, 0, 0 };
+    const bool got = FUN_142506000(root, cur, path);
+    const UInt32 kind = reinterpret_cast<UInt32*>(cur)[0] & 0x1f;
+    bool ok;
+    if (got && kind - 0xc < 4 && cur[2] != 0 && Sfr31Rd(Sfr31Rd(cur[2], 0x20), 0x70) == 7 &&
+        ((*reinterpret_cast<UInt8*>(Sfr31Rd(cur[2], 0x20) + 0x68) >> 5) & 1) == 0)
+    {
+        if (size != *reinterpret_cast<int*>(cur[2] + 0x38))
+            FUN_14241fe30(reinterpret_cast<void*>(cur[2] + 0x38), size);
+        ok = true;
+    }
+    else
+    {
+        const UPInt tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(root, 0x48), 0x238), 0xc0);
+        UPInt arr = 0;
+        FUN_14241a500(tr, &arr, tr);
+        FUN_14241fe30(reinterpret_cast<void*>(arr + 0x38), size);
+        UPInt nv[4] = { 0xc, 0, arr, 0 };
+        UPInt gv[3] = { 0, 0, 0 };
+        FUN_1424e42c0(root, reinterpret_cast<const Value*>(nv), gv);
+        typedef bool (*SetVar)(UPInt, UPInt, void*, UInt32);
+        ok = reinterpret_cast<SetVar>(Sfr31Rd(Sfr31Rd(root, 0), 0x138))(root, path, gv, flags);
+        if ((reinterpret_cast<UInt32*>(gv)[2] >> 6) & 1)
+        {
+            typedef void (*Rel)(UPInt, UPInt*, UPInt);
+            reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(gv[0], 0), 0x10))(gv[0], gv, gv[2]);
+        }
+        Sfr31ReleaseRawVal(nv);
+    }
+    Sfr31ReleaseRawVal(cur);
+    return ok;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
