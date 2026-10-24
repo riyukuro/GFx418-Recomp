@@ -83,7 +83,7 @@ void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration);
 void FUN_140046014(void*);
 void FUN_14004602c(void*);
 CriSint32 FUN_140046604(CriUint32, CriUint32, CriUint32, const CriUint32*);
-void FUN_140046730(void*, CriUint32, CriUint32, CriUint32, CriUint64);
+void* FUN_140046730(void*, CriUint32, CriUint32, CriUint32, CriUint64);
 void* FUN_140053340(void*, CriUint32, CriUint32);
 void FUN_1400534d0(void*);
 void FUN_1400534f0(void*, void*);
@@ -332,7 +332,7 @@ void* FUN_1400464c8(void* heap, CriUint32 first, CriUint32 second)
 
 // MS2-FUNCTIONAL: create the configured ring-buffer stream-joint and preserve its 24-byte setup record.
 // @0x1400465c4
-void FUN_1400465c4(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+void* FUN_1400465c4(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
                    CriUint64 poolBytes, const CriUint32* settings)
 {
     CriUint8 config[0x18] = {};
@@ -341,7 +341,7 @@ void FUN_1400465c4(void* heap, CriUint32 first, CriUint32 second, CriUint32 thir
     memcpy(config + 8, &second, sizeof(second));
     memcpy(config + 0xc, &third, sizeof(third));
     memcpy(config + 0x10, &poolBytes, sizeof(poolBytes));
-    FUN_1400464f4(config, heap, settings[1]);
+    return FUN_1400464f4(config, heap, settings[1]);
 }
 
 // MS2-FUNCTIONAL: destroy the universal stream-joint lock and free its heap-prefixed allocation.
@@ -2585,12 +2585,10 @@ void FUN_140043a20(const void* decoder)
 {
     if (decoder)
     {
-        void** table = *(void***)decoder;
-        if (table && table[0])
-        {
-            typedef void (*VoidFunction)(void);
-            ((VoidFunction)table[0])();
-        }
+        typedef void (*VoidFunction)(void);
+        VoidFunction fn = *(VoidFunction*)decoder;
+        if (fn)
+            fn();
     }
 }
 
@@ -2600,12 +2598,10 @@ void FUN_140043a50(void* decoder)
 {
     if (decoder)
     {
-        void** apiTable = *(void***)((CriUint8*)decoder + 8);
-        if (apiTable && apiTable[0])
-        {
-            typedef void (*VoidFunction)(void);
-            ((VoidFunction)apiTable[0])();
-        }
+        typedef void (*VoidFunction)(void);
+        VoidFunction fn = *(VoidFunction*)((CriUint8*)decoder + 8);
+        if (fn)
+            fn();
     }
 }
 
@@ -2615,11 +2611,11 @@ CriSint32 FUN_140043a80(void* decoder, CriSint32 a, CriSint32 b, CriSint32 c)
 {
     if (!decoder)
         return 0;
-    void** apiTable = *(void***)((CriUint8*)decoder + 0x10);
-    if (!apiTable || !apiTable[0])
-        return 0;
     typedef CriSint32 (*WorkSizeFunction)(CriSint32, CriSint32, CriSint32);
-    return ((WorkSizeFunction)apiTable[0])(a, b, c) + 0x2e;
+    WorkSizeFunction fn = *(WorkSizeFunction*)((CriUint8*)decoder + 0x10);
+    if (!fn)
+        return 0;
+    return fn(a, b, c) + 0x2e;
 }
 
 // MS2-FUNCTIONAL: invoke the alpha decoder interface's frame-info query when available.
@@ -2898,8 +2894,8 @@ CriSint32 FUN_140044400(void* callbackPair, CriUint32 first, CriUint32 second, C
 {
     if (!callbackPair || !*(void**)((CriUint8*)callbackPair + 0x10))
         return 0;
-    CriUint32 result = (*(CriUint32 (**)(CriUint32, CriUint32, CriUint32))
-        (*(void**)((CriUint8*)callbackPair + 0x10)))(first, second, third);
+    CriUint32 result = ((CriUint32 (*)(CriUint32, CriUint32, CriUint32))
+        *(void**)((CriUint8*)callbackPair + 0x10))(first, second, third);
     return result + 0x3e;
 }
 
@@ -2948,22 +2944,15 @@ void FUN_1400459d4(void* object)
 // @0x140046798
 void FUN_140046798(void* object)
 {
-    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)object + 8)))(object);
+    (*(void (**)(void*))((CriUint8*)*(void**)object + 8))(object);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's deleting destructor slot.
 // @0x140046784
 void FUN_140046784(void* object)
 {
-    if (object)
-    {
-        void* destroy = *(void**)*(void**)object;
-        if (destroy)
-        {
-            typedef void (*DestroyFunction)(void*);
-            ((DestroyFunction)destroy)(object);
-        }
-    }
+    // The exe also stores a version string at DAT_143ba9d30 here; no symbol is bound for it, so the store is omitted.
+    (**(void (***)(void*))object)(object);
 }
 
 // MS2-FUNCTIONAL: split a stream-joint chunk into a bounded prefix and its remaining suffix.
@@ -3076,7 +3065,7 @@ CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0)
 // @0x140046804
 void FUN_140046804(void* object, void* value)
 {
-    (*(void (**)(void*, CriSint32, CriSint32, void*))(*(void**)((CriUint8*)*(void**)object + 0x10)))(object, 0, -1, value);
+    ((void (*)(void*, CriSint32, CriSint32, void*))*(void**)((CriUint8*)*(void**)object + 0x10))(object, 0, -1, value);
 }
 
 // MS2-FUNCTIONAL: copy a null-terminated string with the executable's bounded secure CRT helper.
@@ -3222,7 +3211,7 @@ void FUN_140041250(void* object)
 {
     void** target = *(void***)((CriUint8*)object + 0x10);
     if (target)
-        (*(void (**)(void*))(*(void**)((CriUint8*)*target + 0x10)))(*target);
+        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x10))(*target);
 }
 
 // MS2-FUNCTIONAL: forward to the attached object's virtual operation at slot five when present.
@@ -3231,7 +3220,7 @@ void FUN_1400412c0(void* object)
 {
     void** target = *(void***)((CriUint8*)object + 0x10);
     if (target)
-        (*(void (**)(void*))(*(void**)((CriUint8*)*target + 0x28)))(*target);
+        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x28))(*target);
 }
 
 // MS2-FUNCTIONAL: forward to the attached object's virtual destroy operation when present.
@@ -3240,7 +3229,7 @@ void FUN_140041340(void* object)
 {
     void** target = *(void***)((CriUint8*)object + 0x10);
     if (target)
-        (*(void (**)(void*))(*(void**)((CriUint8*)*target + 0x40)))(*target);
+        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x40))(*target);
 }
 
 // MS2-FUNCTIONAL: invoke the global heap manager's work-size operation.
@@ -3248,7 +3237,7 @@ void FUN_140041340(void* object)
 CriUint64 FUN_140041d20(void)
 {
     void* manager = DAT_143b15f60;
-    (*(void (**)(void*))(*(void**)((CriUint8*)*(void**)manager + 0x60)))(manager);
+    ((void (*)(void*))*(void**)((CriUint8*)*(void**)manager + 0x60))(manager);
     return 0;
 }
 
@@ -3257,7 +3246,7 @@ CriUint64 FUN_140041d20(void)
 void FUN_140041dd0(void* heap)
 {
     void* manager = DAT_143b15f60;
-    (*(void (**)(void*, void*))(*(void**)((CriUint8*)*(void**)manager + 0x60)))(manager, heap);
+    ((void (*)(void*, void*))*(void**)((CriUint8*)*(void**)manager + 0x60))(manager, heap);
 }
 
 // MS2-FUNCTIONAL: initialize the USF demux runtime banner on first use and increment its reference count.
@@ -3289,7 +3278,7 @@ void* FUN_140041c00(void* context)
     };
     TimerContext* timer = (TimerContext*)context;
     timer->Flags = 1;
-    timer->Vtable = PTR_FUN_1431b9b10;
+    timer->Vtable = &PTR_FUN_1431b9b10;
     timer->Start = FUN_1425e3560();
     timer->Active = 1;
     timer->Reserved28 = 0;
@@ -3303,12 +3292,12 @@ void* FUN_140041c00(void* context)
 // @0x140041c60
 void* FUN_140041c60(void* manager, CriUint64 flags)
 {
-    *(const void**)manager = PTR_FUN_1431b4f78;
+    *(const void**)manager = &PTR_FUN_1431b4f78;
     FUN_14257db50();
     if (flags & 1)
     {
         void* globalManager = DAT_143b15f60;
-        (*(void (**)(void*, void*))(*(void**)((CriUint8*)*(void**)globalManager + 0x60)))(globalManager, manager);
+        ((void (*)(void*, void*))*(void**)((CriUint8*)*(void**)globalManager + 0x60))(globalManager, manager);
     }
     return manager;
 }
@@ -3347,7 +3336,7 @@ void FUN_140044560(CriUint64* adapter)
     struct FileAdapterOps { CriUint8 Reserved00[0x20]; void* Free; };
     if (adapter && adapter[1] && ((FileAdapterOps*)adapter[1])->Free)
     {
-        (*(void (**)(CriUint64))((FileAdapterOps*)adapter[1])->Free)(adapter[0]);
+        ((void (*)(CriUint64))((FileAdapterOps*)adapter[1])->Free)(adapter[0]);
         adapter[0] = 0;
         adapter[1] = 0;
         FUN_140027fb4((void*)adapter[2], adapter);
@@ -3628,19 +3617,19 @@ CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 third,
 
 // MS2-FUNCTIONAL: create a standard ring-buffer stream joint using the static CRI pool descriptor.
 // @0x140046678
-void FUN_140046678(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
+void* FUN_140046678(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
 {
     const CriUint32 settings[2] = { 0, 1 };
-    FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
+    return FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
 }
 
 // MS2-FUNCTIONAL: create a configured ring-buffer stream joint with caller-supplied pool storage.
 // @0x1400466ac
-void FUN_1400466ac(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+void* FUN_1400466ac(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
                    CriUint64 poolBytes)
 {
     const CriUint32 settings[2] = { 0, 1 };
-    FUN_1400465c4(heap, first, second, third, poolBytes, settings);
+    return FUN_1400465c4(heap, first, second, third, poolBytes, settings);
 }
 
 // MS2-FUNCTIONAL: calculate stream-joint requirements using the default setup flags.
@@ -3653,27 +3642,27 @@ CriSint32 FUN_1400466dc(CriUint32 first, CriUint32 second, CriUint32 third)
 
 // MS2-FUNCTIONAL: create a non-zero initialized ring-buffer stream joint using the static pool descriptor.
 // @0x1400466fc
-void FUN_1400466fc(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
+void* FUN_1400466fc(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
 {
     const CriUint32 settings[2] = { 1, 1 };
-    FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
+    return FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
 }
 
 // MS2-FUNCTIONAL: create a non-zero initialized ring-buffer stream joint with caller pool storage.
 // @0x140046730
-void FUN_140046730(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+void* FUN_140046730(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
                    CriUint64 poolBytes)
 {
     const CriUint32 settings[2] = { 1, 1 };
-    FUN_1400465c4(heap, first, second, third, poolBytes, settings);
+    return FUN_1400465c4(heap, first, second, third, poolBytes, settings);
 }
 
 // MS2-FUNCTIONAL: create a stream joint using caller setup flags and the static pool descriptor.
 // @0x140046760
-void FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
+void* FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
                    const CriUint32* settings)
 {
-    FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
+    return FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
 }
 
 // MS2-FUNCTIONAL: append a decoder read span to its wrapped input buffer and update read counters.
@@ -3748,12 +3737,12 @@ void* FUN_140041d40(void* manager)
 {
     const CriUint64 config[8] = { 0, 0x40, 0x20000, 0, ~(CriUint64)0, 0, 0, 0 };
     void** managerVtable = *(void***)manager;
-    void* heap = (*(void* (**)(void*, const CriChar8*, const CriUint64*))managerVtable[4])(
+    void* heap = ((void* (*)(void*, const CriChar8*, const CriUint64*))managerVtable[4])(
         manager, "_Cri_Video_Heap", config);
     void** heapVtable = *(void***)heap;
-    void* adapter = (*(void* (**)(void*, size_t))heapVtable[10])(heap, 0x10);
+    void* adapter = ((void* (*)(void*, size_t, size_t))heapVtable[10])(heap, 0x10, 0);
     void** fields = (void**)adapter;
-    fields[0] = (void*)PTR_LAB_143a48350;
+    fields[0] = (void*)&PTR_LAB_143a48350;
     fields[1] = heap;
     FUN_14257e4a0(heap, adapter);
     return adapter;
