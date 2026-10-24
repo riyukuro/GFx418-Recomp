@@ -8221,7 +8221,7 @@ static inline double Sfr31WrapDeg(double v)
 // Applies the fields of a DisplayInfo (param 3) to the display object of an AS3 DisplayObject node.
 // MS2-FUNCTIONAL 0x142526730: same field order and twips rounding; the text rect space DisplayInfo scratch and the stale-value paths use NaN
 // @0x142526730
-static UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
+UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
 {
     const unsigned char* d = static_cast<const unsigned char*>(infoPtr);
     const UPInt traits = Sfr31Rd(node, 0x20);
