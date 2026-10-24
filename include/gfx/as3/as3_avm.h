@@ -335,6 +335,7 @@ inline AvmDisplayObj* ToAvmDisplayObj(DisplayObjectBase* p)
 // Opaque until recovered: size and constructor. The display objects among them are used through their
 // DisplayObjectBase part (offset 0) via AsDisplayObject().
 template <class T> inline DisplayObjectBase* AsDisplayObject(T* p) { return reinterpret_cast<DisplayObjectBase*>(p); }
+#ifndef SF_AS3_SHAPEOBJECT_MODEL
 class ShapeObject
 {
 public:
@@ -348,6 +349,85 @@ public:
     AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id);
     UByte Data[0xd0];
 };
+#else
+// (appended, sfr24) The class model of ShapeObject / AvmBitmap, opt-in (SF_AS3_SHAPEOBJECT_MODEL) while their
+// constructors (sfr_as3_15) are still written over the opaque Data[0xd0] versions above. Both are 0xd0 bytes: the
+// DisplayObject (0x90), the AvmDisplayObj part at +0x90, then two pointers of their own. Over DisplayObject's
+// vftables 0x14318dcd0 (79 slots) / 0x14318df48 and AvmDisplayObj's 0x14317c160 they override only the slots listed.
+// A unit that defines the destructor or a constructor makes the compiler emit the vftables, which needs every
+// out-of-line virtual below defined or pinned.
+} } } // namespace Scaleform::GFx::AS3
+#include "ms2/scaleform/include/gfx/gfx_drawingcontext.h"
+#include "ms2/scaleform/include/gfx/gfx_imageresource.h"
+#include "ms2/scaleform/include/gfx/gfx_shapedef.h"
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// A shape on the display list. Vftables 0x14317c210, 0x14317c488 (+0x18), 0x14317c498 (+0x90); ctor 0x1424d98a0.
+class ShapeObject : public DisplayObject, public AvmDisplayObj
+{
+public:
+    ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
+    // Body: AvmObjOffset = 0 (the AS3 part is a base here, not one DisplayObjectBase destroys). ??_G 0x1424e3890
+    virtual ~ShapeObject();
+
+    virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const;   // 1  0x1424f3f40
+    // The morph ratio of the render node when it is a shape node, else 0.
+    virtual float           GetRatio() const;                                                   // 15 0x14250d630
+    virtual void            SetRatio(float ratio);                                              // 16 0x142528da0
+    virtual RectF           GetBounds(const Matrix& t) const;                                   // 55 0x142507910
+    virtual RectF           GetRectBounds(const Matrix& t) const;                               // 56 0x14250d700
+    // The drawn graphics first, then the shape of the definition.
+    virtual bool            PointTestLocal(const PointF& pt, UByte hitTestMask = 0) const;      // 57 0x14251cac0
+    virtual TopMostResult   GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr);      // 58 0x14250f770
+    virtual CharacterDef*   GetCharacterDef() const;                                            // 59 0x142507b70 pDef
+    // The drawing context of the AS3 Graphics API, made on first use.
+    virtual DrawingContext* GetDrawingContext();                                                // 77 0x1425099a0
+
+    virtual const char*     GetDefaultASClassName() const { return "flash.display.Shape"; }     // AvmDisplayObj 16 0x142508990
+
+    Ptr<ShapeBaseCharacterDef>  pDef;       // +0xc0
+    Ptr<DrawingContext>         pDrawing;   // +0xc8
+};
+static_assert(sizeof(ShapeObject) == 0xd0, "ShapeObject size");
+
+// A bitmap on the display list. Vftables 0x14317c560, 0x14317c7d8 (+0x18), 0x14317c7e8 (+0x90); ctor 0x1424d6270.
+class AvmBitmap : public DisplayObject, public AvmDisplayObj
+{
+public:
+    AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id);
+    // Body: AvmObjOffset = 0. ??_G 0x1424e2610
+    virtual ~AvmBitmap();
+
+protected:
+    virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const;   // 1  0x1424f3e60
+public:
+    // Drops the bitmap data of the AS3 object.
+    virtual void            ForceShutdown();                                                    // 54 0x1425047c0
+    virtual RectF           GetBounds(const Matrix& t) const;                                   // 55 0x142507730
+    virtual RectF           GetRectBounds(const Matrix& t) const { return GetBounds(t); }       // 56 0x14250d6b0
+    virtual bool            PointTestLocal(const PointF& pt, UByte hitTestMask = 0) const;      // 57 0x14251c9f0
+    virtual TopMostResult   GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr);      // 58 0x14250f660
+    virtual CharacterDef*   GetCharacterDef() const { return NULL; }                            // 59 0x142507b30
+    virtual MovieDefImpl*   GetResourceMovieDef() const { return pDefImpl; }                    // 60 0x14250d960
+
+    virtual unsigned        CreateASInstance(bool execute);                                     // AvmDisplayObj 15 0x1424f2010
+    virtual const char*     GetDefaultASClassName() const { return "flash.display.Bitmap"; }    // AvmDisplayObj 16 0x1425088f0
+    virtual String&         GetASClassName(String* className) const                             // AvmDisplayObj 17 0x142505ef0
+    {
+        *className = "flash.display.Bitmap";
+        return *className;
+    }
+
+    void SetImage(Resource* pimage);                // 0x1425274b0
+    void SetResourceMovieDef(MovieDefImpl* pdefImpl); // 0x142528e70
+    // Makes the render node again from the current image, in the old one's place among the parent's children.
+    Render::TreeNode* RecreateRenderNode() const;   // 0x142520b20
+
+    Ptr<ImageResource>  pImage;     // +0xc0
+    Ptr<MovieDefImpl>   pDefImpl;   // +0xc8 the movie that binds the image
+};
+static_assert(sizeof(AvmBitmap) == 0xd0, "AvmBitmap size");
+#endif // SF_AS3_SHAPEOBJECT_MODEL
 
 // AvmSprite of a timeline sprite. Its constructor is inlined into its users: AvmSprite's, then its own vftables.
 class AvmMovieClip : public AvmSprite
