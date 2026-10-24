@@ -56,6 +56,9 @@ private:
 }} // namespace Scaleform::Render
 
 // (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
+// (sfr34) MSVC only: clang-cl lays pData after the 16-rounded base (0xa0), cl 19.16 puts it in the tail at +0x88.
+#if !defined(__clang__)
 static_assert(sizeof(Scaleform::Render::ShapeDataFloatMP) == 0x90, "ShapeDataFloatMP size");
+#endif
 
 #endif

@@ -29,6 +29,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 class LoadQueueEntry;   // (appended, sfr19) as3_loadqueue.h
 class ASVM;             // (appended, sfr19)
 class MemoryContextImpl;  // (appended, sfr34) as3_support.h
+class AbcDataBuffer;      // (appended, sfr34) as3_support.h
 namespace Instances { namespace fl_display { class DisplayObject; } }   // (appended, sfr19)
 // (sfr24) the load queue's parameter types, so the header stands alone
 namespace Instances { namespace fl_display { class Loader; } namespace fl_net { class URLRequest; class URLLoader; }
@@ -258,6 +259,8 @@ public:
     void RequeueActionQueue(ActionLevel srclvl, ActionLevel dstlvl);
     // (appended, sfr19) runs the queued actions of every level but AL_Manual. 0x1424fa450
     void ExecuteActionQueues();
+    // (appended, sfr34) runs one DoABC block for pspr; false when it does not parse or its scripts threw. 0x1424f9d60
+    bool ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr);
 
     // (appended, sfr24) The overrides, vftable 0x14317d8d8 (slots 12, 13, 23 and 24 are ASMovieRootBase's empty
     // defaults). No ctor is defined here, so no unit emits the vftables.
