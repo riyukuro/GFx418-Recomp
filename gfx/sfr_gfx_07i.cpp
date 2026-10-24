@@ -535,10 +535,8 @@ U* FUN_1426223c0(U** self, U* out, const String* key)
 template<class T, unsigned Lock, unsigned Off>
 static inline T RawLocked(char* self)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + Lock));
-    T v = *(T*)(self + Off);
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + Lock));
-    return v;
+    RawLocker lock(self + Lock);
+    return *(T*)(self + Off);
 }
 
 // @0x1426224d0
@@ -550,15 +548,15 @@ unsigned FUN_142622550(char* self) { return RawLocked<unsigned, 0xe0, 0x118>(sel
 // @0x142622590
 unsigned FUN_142622590(char* self) { return RawLocked<unsigned, 0xe0, 0x12c>(self); }
 // @0x1426225d0
-unsigned FUN_1426225d0(char* self) { return RawLocked<unsigned, 0xe0, 0x128>(self); }
+float FUN_1426225d0(char* self) { return RawLocked<float, 0xe0, 0x128>(self); }
 // @0x142622620
-unsigned FUN_142622620(char* self) { return RawLocked<unsigned, 0xe0, 0x124>(self); }
+float FUN_142622620(char* self) { return RawLocked<float, 0xe0, 0x124>(self); }
 // @0x142622900
 unsigned FUN_142622900(char* self) { return RawLocked<unsigned, 0xe0, 0x11c>(self); }
 // @0x142622940
 unsigned FUN_142622940(char* self) { return RawLocked<unsigned, 0xe0, 0x108>(self); }
 // @0x142622980
-unsigned FUN_142622980(char* self) { return RawLocked<unsigned, 0xe0, 0x120>(self); }
+float FUN_142622980(char* self) { return RawLocked<float, 0xe0, 0x120>(self); }
 
 // Timer sampling: with 0 returns the counter delta, otherwise scales the elapsed time and re-arms a random skip count.
 // @0x142622670
