@@ -9348,6 +9348,26 @@ void Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos)
     }
     }
 }
+// ---- batch 80
+// Pushes a new Instance of the traits found through the owner's name onto the VM's value stack (vm + 0x50 points at the top).
+// MS2-FUNCTIONAL 0x14253bef0: the new instance is constructed through the Instance model; the local value copy and its reference counts are folded away
+// @0x14253bef0
+void Sfr31PushNewInstanceOfOwner(UPInt vm, UPInt own)
+{
+    ASString name(reinterpret_cast<ASStringNode*>(Sfr31Rd(own, 0x70)));
+    const UPInt link = Sfr31Rd(own, 0x28);
+    const UPInt tr = FUN_142506f00(link, *reinterpret_cast<const UPInt*>(Sfr31Rd(Sfr31Rd(link, 0x28), 0x170) + static_cast<SPInt>(*reinterpret_cast<const SInt32*>(own + 0x30)) * 8), &name);
+    InstanceTraits::Traits& traits = *reinterpret_cast<InstanceTraits::Traits*>(tr);
+    void* mem = traits.Alloc();
+    Instance* obj = mem != NULL ? new (mem) Instance(traits) : NULL;
+    if (obj != NULL)
+        traits.ConstructTail(*obj);
+    const UPInt top = Sfr31Rd(vm, 0x50) + 0x20;
+    Sfr31Wr(vm, 0x50, top);
+    *reinterpret_cast<UInt32*>(top) = 0xc;
+    Sfr31Wr(top, 8, 0);
+    Sfr31Wr(top, 0x10, reinterpret_cast<UPInt>(obj));
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
