@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x142681810-0x142681840 .text$mn
 // MS2-RANGE: 0x142681840-0x142682420 .text$mn
 // MS2-RANGE: 0x142682510-0x142685df0 .text$mn
+// MS2-RANGE: 0x142685df0-0x142685e20 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // MS2-PIN: ??_7TreeCacheNode@Render@Scaleform@@6B@ 0x143191f50
@@ -1704,6 +1705,21 @@ void TreeCacheMeshBase::UpdateBundlePattern(unsigned)
         chain.SetToEntry(&SorterShapeNode);
         updateEffectChain(&chain);
     }
+}
+
+// The mask state counts its tree node only when the tree node references are wanted.
+// @0x142685df0
+void MaskNodeState::Interface::AddRef(void* data, RefBehaviour b)
+{
+    if (b != Ref_NoTreeNode)
+        ((TreeNode*)data)->AddRef();
+}
+
+// @0x142685e00
+void MaskNodeState::Interface::Release(void* data, RefBehaviour b)
+{
+    if (b != Ref_NoTreeNode)
+        ((TreeNode*)data)->Release();
 }
 
 }} // namespace Scaleform::Render

@@ -1,6 +1,7 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 AS2 context and action buffer
 // helpers of sfr_as2_06 (gap recovery, lane sfr24): the global context's cleanup, the constant pool, the
-// implements/instanceof opcodes and the action disassembler.
+// implements/instanceof opcodes and the action disassembler; also three one-instruction gap bodies (the TextField
+// global constructor, the ObjectInterface instanceof default, FunctionObject::IsCFunction).
 // MS2-UNIT: sfr_as2_06s1
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14296f3d0-0x14296f634 .text$mn
@@ -9,9 +10,13 @@
 // MS2-RANGE: 0x14295dbe0-0x14295e072 .text$mn
 // MS2-RANGE: 0x142962420-0x1429626ca .text$mn
 // MS2-RANGE: 0x1429674a0-0x142967b89 .text$mn
+// MS2-RANGE: 0x14295ca00-0x14295ca10 .text$mn
+// MS2-RANGE: 0x142962410-0x142962420 .text$mn
+// MS2-RANGE: 0x142965490-0x1429654a0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_object.h"
 
@@ -534,6 +539,25 @@ void Disasm::LogDisasm(const unsigned char* pinstructionData)
         }
     }
     LogF("\n");
+}
+
+// `new TextField()` makes nothing (text fields come from createTextField only).
+// @0x14295ca00
+void TextFieldCtorFunction::GlobalCtor(const FnCall&)
+{
+}
+
+// A plain object interface has no prototype chain to search.
+// @0x142962410
+bool ObjectInterface::InstanceOf(Environment*, const Object*, bool) const
+{
+    return false;
+}
+
+// @0x142965490
+bool FunctionObject::IsCFunction() const
+{
+    return false;
 }
 
 }}} // namespace Scaleform::GFx::AS2

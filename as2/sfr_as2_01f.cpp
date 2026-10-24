@@ -1,8 +1,8 @@
-// AS3 leftovers in the sfr_as2_01 map range, between sfr_as3_19's pieces: MovieRoot::Shutdown and the tracer's
-// skip over code no branch reaches.
+// AS3 leftovers in the sfr_as2_01 map range, between sfr_as3_19's pieces: the plain Traits::SetupSlotValues,
+// MovieRoot::Shutdown and the tracer's skip over code no branch reaches.
 // MS2-UNIT: sfr_as2_01f
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14252c4f0-0x14252c7e0 .text$mn
+// MS2-RANGE: 0x14252c4e0-0x14252c7e0 .text$mn
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
@@ -19,6 +19,13 @@ void FUN_142530d50(Scaleform::GFx::AS3::ASVM* pavm);                      // ASV
 void FUN_14257dcd0(void* p);                                              // RefCountNTSImpl::Release
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Plain traits have no slot values to set up.
+// @0x14252c4e0
+CheckResult Traits::SetupSlotValues(Object&) const
+{
+    return true;
+}
 
 // The movie goes away: the queued actions, the stage, the host's aliases and return value, the frame listeners, the
 // mice, every movie's ABC files and at last the VM, with a collection between the steps.

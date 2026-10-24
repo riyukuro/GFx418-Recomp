@@ -5,7 +5,7 @@
 // MS2-UNIT: sfr_as2_01e
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423dfef0-0x1423e0090 .text$mn
-// MS2-RANGE: 0x1424445f0-0x142444600 .text$mn
+// MS2-RANGE: 0x1424445d0-0x142444620 .text$mn
 // MS2-RANGE: 0x142444620-0x1424447c0 .text$mn
 // MS2-RANGE: 0x142446d90-0x142447020 .text$mn
 // MS2-RANGE: 0x1424c96a0-0x1424c9700 .text$mn
@@ -43,11 +43,43 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_display
 {
+    // Defined with the BitmapData bodies (sfr_as3_06).
+    bool BindLibraryBitmap(BitmapData* pthis, Resource* pres, MovieDefImpl* pdefImpl);
+
+    // A movie clip has frame scripts once addFrameScript set any.
+    // @0x1424445d0
+    bool MovieClip::HasFrameScript() const
+    {
+        return frameScript.DescrCnt != 0;
+    }
+
+    // @0x1424445e0
+    bool Sprite::HasFrameScript() const
+    {
+        return false;
+    }
+
     // MS2-PIN
     // @0x1424445f0
     bool DisplayObject::HasLoaderInfo() const
     {
         return pLoaderInfo.GetPtr() != NULL;
+    }
+
+    // A timeline bitmap makes its stage object up front.
+    // @0x142444600
+    void Bitmap::InitInstance(bool extCall)
+    {
+        if (!extCall)
+            Bitmap::CreateStageObject();
+    }
+
+    // A timeline bitmap data binds its library image.
+    // @0x142444610
+    void BitmapData::InitInstance(bool extCall)
+    {
+        if (!extCall)
+            BindLibraryBitmap(this, 0, 0);
     }
 
     // A script-created loader gets a fresh LoaderInfo and a loader stage object; one made for the timeline hands its
