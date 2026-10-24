@@ -137,6 +137,8 @@ protected:
     // whether the depth-stencil surface can hold masks (checked once per scene)
     bool checkMaskBufferCaps();                                   // 0x142736d70
     bool shouldRenderFilters(const FilterPrimitive* prim) const;  // 0x142738de0
+    // the bounds of mask areas, cleared in batches of the erase buffer's 30 quads
+    void drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt count);   // 0x142737c40
 
 public:
     IDirect3DDevice9*        pDevice;                                       // +0x578

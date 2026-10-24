@@ -261,6 +261,9 @@ public:
     CacheState GetCacheState() const { return Caching; }
     // (appended for sfr_render_06g)
     FilterSet* GetFilters() const { return pFilters; }
+    // (appended for sfr_d3d9_01e) the matrix of the filtered area
+    const HMatrix& GetFilterAreaMatrix() const { return FilterArea; }
+    bool           GetMaskPresent() const      { return MaskPresent; }
     void GetCacheResults(RenderTarget** results, unsigned count);
     void SetCacheResults(CacheState state, RenderTarget** results, unsigned count);
 
