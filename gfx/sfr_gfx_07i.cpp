@@ -139,6 +139,12 @@ void* FUN_142620460(char* self, unsigned flags)
     return self;
 }
 
+// Counter adjusters of the AMP stats (vftable slots in the exe's .rdata).
+// @0x1426204c0
+void FUN_1426204c0(char* self, int delta) { RawField<int>(self, 0x174) += delta; }
+// @0x1426204d0
+void FUN_1426204d0(char* self, int delta) { RawField<int>(self, 0x170) += delta; }
+
 // Counts a named marker: bumps an existing entry or adds {name, 1}.
 // MS2-FUNCTIONAL: the exe holds the found iterator in rax/rdx (rcx/rax here); same blocks
 // @0x1426204e0

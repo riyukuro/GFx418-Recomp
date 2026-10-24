@@ -67,6 +67,38 @@ void* FUN_14261e1f0(void* self, unsigned long long flags)
     return self;
 }
 
+// Empty and constant virtuals of the AMP server classes (vftable slots of the exe's .rdata, data_rdata_sf_b).
+// @0x14261e220
+void FUN_14261e220(void*) {}
+// @0x14261e230
+void FUN_14261e230(void*) {}
+// @0x14261e240
+void FUN_14261e240(void*) {}
+// @0x14261e250
+void FUN_14261e250(void*) {}
+// @0x14261e260
+void FUN_14261e260(void*) {}
+// @0x14261e270
+void FUN_14261e270(void*) {}
+// @0x14261e280
+void FUN_14261e280(void*) {}
+// @0x14261e290
+void FUN_14261e290(void*) {}
+// @0x14261e2a0
+void FUN_14261e2a0(void*) {}
+// @0x14261e2b0
+void FUN_14261e2b0(void*) {}
+// @0x14261e2c0
+bool FUN_14261e2c0(void*) { return false; }
+// @0x14261e2d0
+U FUN_14261e2d0(void*) { return 0; }
+// @0x14261e2e0
+U FUN_14261e2e0(void*) { return 0; }
+// @0x14261e2f0
+U FUN_14261e2f0(void*) { return 0; }
+// @0x14261e300
+U FUN_14261e300(void*) { return 0; }
+
 struct Sfr31StaticState
 {
     void* VTable;
@@ -85,6 +117,11 @@ void FUN_14261e310()
     }
 }
 
+// @0x14261e3b0
+U FUN_14261e3b0(void*) { return 0; }
+// @0x14261e3c0
+int FUN_14261e3c0(void*) { return -1; }
+
 // @0x14261e3d0
 String* FUN_14261e3d0(void*, String* result)
 {
@@ -99,12 +136,96 @@ String* FUN_14261e400(void*, String* result)
     return result;
 }
 
+// @0x14261e430
+bool FUN_14261e430(void*) { return false; }
+// @0x14261e440
+void FUN_14261e440(void*) {}
+// @0x14261e450
+void FUN_14261e450(void*) {}
+
 // @0x14261e460
 void FUN_14261e460()
 {
     static Sfr31StaticState state;
     DAT_143b16080 = &state;
 }
+
+// @0x14261e4e0
+bool FUN_14261e4e0(void*) { return false; }
+// @0x14261e4f0
+bool FUN_14261e4f0(void*) { return false; }
+// @0x14261e500
+bool FUN_14261e500(void*) { return false; }
+// @0x14261e510
+bool FUN_14261e510(void*) { return false; }
+// @0x14261e520
+bool FUN_14261e520(void*) { return false; }
+// @0x14261e530
+bool FUN_14261e530(void*) { return false; }
+// @0x14261e540
+bool FUN_14261e540(void*) { return false; }
+// @0x14261e550
+bool FUN_14261e550(void*) { return false; }
+// @0x14261e560
+void FUN_14261e560(void*) {}
+// @0x14261e570
+void FUN_14261e570(void*) {}
+// @0x14261e580
+void FUN_14261e580(void*) {}
+// @0x14261e590
+void FUN_14261e590(void*) {}
+// @0x14261e5a0
+void FUN_14261e5a0(void*) {}
+// @0x14261e5b0
+void FUN_14261e5b0(void*) {}
+// @0x14261e5c0
+void FUN_14261e5c0(void*) {}
+// @0x14261e5d0
+void FUN_14261e5d0(void*) {}
+// @0x14261e5e0
+void FUN_14261e5e0(void*) {}
+// @0x14261e5f0
+void FUN_14261e5f0(void*) {}
+// @0x14261e600
+void FUN_14261e600(void*) {}
+// @0x14261e610
+void FUN_14261e610(void*) {}
+// @0x14261e620
+void FUN_14261e620(void*) {}
+// @0x14261e630
+void FUN_14261e630(void*) {}
+// @0x14261e640
+void FUN_14261e640(void*) {}
+// @0x14261e650
+void FUN_14261e650(void*) {}
+// @0x14261e660
+void FUN_14261e660(void*) {}
+// @0x14261e670
+void FUN_14261e670(void*) {}
+// @0x14261e680
+void FUN_14261e680(void*) {}
+// @0x14261e690
+void FUN_14261e690(void*) {}
+// @0x14261e6a0
+void FUN_14261e6a0(void*) {}
+// Forwards to the virtual at slot 0xc8 with a zero argument.
+// @0x14261e6b0
+U FUN_14261e6b0(void** self)
+{
+    return reinterpret_cast<U (*)(void*, int)>((*reinterpret_cast<void***>(self))[0xc8 / 8])(self, 0);
+}
+// @0x14261e6c0
+void FUN_14261e6c0(void*) {}
+// @0x14261e6d0
+void FUN_14261e6d0(void*) {}
+// @0x14261e6e0
+void FUN_14261e6e0(void*) {}
+// @0x14261e6f0
+void FUN_14261e6f0(void*) {}
+// @0x14261e700
+void FUN_14261e700(void*) {}
+// @0x14261e720
+void FUN_14261e720(void*) {}
 
 // Walks a tree of nodes (children array at +0x30, count at +0x38), reporting each node's span.
 // @0x14261e730
