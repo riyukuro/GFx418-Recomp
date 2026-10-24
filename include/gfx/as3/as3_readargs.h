@@ -106,6 +106,27 @@ private:
     Page*       pReservedPage;          // +0x18 released pages, kept for reuse
 };
 
+// (appended, sfr24) operands of an opcode read off the VM's operand stack: {VM*, operand stack*} (sfr_as3_18 0x1425201f0
+// reads its this as such). The leading two members of ReadArgs have the same layout.
+class StackReader
+{
+public:
+    StackReader(VM& vm) : VMRef(vm), OpStack(ValueStack::Of(vm)) {}
+
+    // throws a TypeError (null / undefined to object) when v, about to be used as an object, is null or undefined.
+    void CheckObject(const Value& v) const;     // 0x1424ef180
+    // the run-time parts of obj (name, then namespace) off the operand stack.
+    void Read(Multiname& obj);                  // 0x1425201f0
+
+    VM&         GetVM() const      { return VMRef; }
+    ValueStack& GetOpStack() const { return OpStack; }
+
+protected:
+    VM&         VMRef;          // +0x00
+    ValueStack& OpStack;        // +0x08
+};
+static_assert(sizeof(StackReader) == 0x10, "StackReader size");
+
 // 0x138 bytes.
 class ReadArgs
 {
