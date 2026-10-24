@@ -27,6 +27,7 @@ extern const void* const DAT_1431b9028[];
 extern const void* const DAT_1431b8fd0[];
 extern const void* const DAT_1431b8db0[];
 extern const void* const DAT_1431b8f18[];
+extern "C" const void* const DAT_1431b8e30[];
 
 // MS2-FUNCTIONAL ??_GCriMvSoundInterface@@UEAAPEAXI@Z: this interface is compiled by CRI's VS2008 build; VS2017's
 // scalar-deleting destructor has the extra sized-delete branch when flag 4 is set.
@@ -6085,6 +6086,41 @@ void FUN_140028480(void* object)
         void** vtable = *(void***)object;
         ((void (*)(void*, CriUint32))vtable[0])(object, 1);
     }
+}
+
+// MS2-FUNCTIONAL: restore the SoundChannelDelegate vtable and honor scalar-delete requests.
+// @0x1400284b0
+void* FUN_1400284b0(void* object, CriUint8 flags)
+{
+    *(const void***)object = (const void**)DAT_1431b8f18;
+    if (flags & 1)
+        ::operator delete(object);
+    return object;
+}
+
+// MS2-FUNCTIONAL: run VideoPlayer's RefCountNTSImplCore teardown and global-heap delete branch.
+// @0x140029160
+void* FUN_140029160(void* object, CriUint64 flags)
+{
+    *(const void***)object = (const void**)DAT_1431b8e30;
+    FUN_14257db50(object);
+    if (flags & 1)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: restore SoundChannelDelegate's vtable and apply the scalar-delete flag.
+// @0x140029280
+void* FUN_140029280(void* object, CriUint8 flags)
+{
+    *(const void***)object = (const void**)DAT_1431b8f18;
+    if (flags & 1)
+        ::operator delete(object);
+    return object;
 }
 
 // MS2-FUNCTIONAL: run the CRI binary's RefCountImplCore destructor and heap-delete path.
