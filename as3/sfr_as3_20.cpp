@@ -7,6 +7,7 @@
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_support.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
@@ -2277,6 +2278,18 @@ namespace InstanceTraits { namespace fl_vec
 }}
 
 }}} // namespace Scaleform::GFx::AS3
+
+// Script-global set capacity recovery; the type is also used by the add instantiation in sfr_as3_15.
+typedef Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript> MS2_ScriptPtr;
+typedef Scaleform::HashSetBase<MS2_ScriptPtr, Scaleform::FixedSizeHash<MS2_ScriptPtr>,
+                               Scaleform::FixedSizeHash<MS2_ScriptPtr>,
+                               Scaleform::AllocatorLH<MS2_ScriptPtr, 2>,
+                               Scaleform::HashsetCachedEntry<MS2_ScriptPtr,
+                                   Scaleform::FixedSizeHash<MS2_ScriptPtr> > > MS2_ScriptSet;
+// @0x142542820
+// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAX_K@Z: equivalent rehashing; local allocator calls and frame layout differ from the exe
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAX_K@Z 0x142542820
+template void MS2_ScriptSet::setRawCapacity(void*, Scaleform::UPInt);
 
 // Argument defaults of the Vector.<T> callback methods, emitted out of line here (their ThunkFunc2 thunks are in
 // sfr_as3_21): every 7, filter 8, forEach 9, some 11, map 14 per element type; callback undefined, thisObject null.
