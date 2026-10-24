@@ -36,6 +36,17 @@ RefCountWeakSupportImpl::~RefCountWeakSupportImpl()
     }
 }
 
+// The deleting form of the destructor above, which the exe keeps as a separate copy.
+// MS2-FUNCTIONAL: same teardown and delete branch; register allocation differs.
+// @0x14257dbc0
+void* FUN_14257dbc0(RefCountWeakSupportImpl* object, unsigned flags)
+{
+    object->RefCountWeakSupportImpl::~RefCountWeakSupportImpl();
+    if (flags & 1)
+        ::operator delete(object);
+    return object;
+}
+
 } // namespace Scaleform
 
 namespace Scaleform { namespace Render {
