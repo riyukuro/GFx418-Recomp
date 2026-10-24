@@ -37,10 +37,29 @@ public:
     }
 };
 
+// (appended, sfr24) copy-constructed items (ArrayPagedCC): construction and destruction call T's constructors.
+template<class T>
+class ConstructorPagedCC : public ConstructorCPP<T>
+{
+public:
+    static void ConstructArrayPaged(T** pages, UPInt start, UPInt end, UPInt pageShift, UPInt pageMask)
+    {
+        for (UPInt i = start; i < end; ++i)
+            ConstructorCPP<T>::Construct(pages[i >> pageShift] + (i & pageMask));
+    }
+    static void DestructArrayPaged(T** pages, UPInt start, UPInt end, UPInt pageShift, UPInt pageMask)
+    {
+        for (UPInt i = end; i > start; --i)
+            ConstructorCPP<T>::Destruct(pages[(i - 1) >> pageShift] + ((i - 1) & pageMask));
+    }
+};
+
 template<class T, int SID> struct AllocatorPagedGH_POD : AllocatorBaseGH<SID>, ConstructorPagedPOD<T> {};
 template<class T, int SID> struct AllocatorPagedGH     : AllocatorBaseGH<SID>, ConstructorPagedMov<T> {};
 template<class T, int SID> struct AllocatorPagedLH_POD : AllocatorBaseLH<SID>, ConstructorPagedPOD<T> {};
 template<class T, int SID> struct AllocatorPagedLH     : AllocatorBaseLH<SID>, ConstructorPagedMov<T> {};
+// (appended, sfr24) the AS3 VM's call stack allocator (AllocatorPagedCC<CallFrame, 329>, PopBack 0x14251cba0).
+template<class T, int SID> struct AllocatorPagedCC     : AllocatorBaseLH<SID>, ConstructorPagedCC<T> {};
 
 template<class T, int PageSh, int PtrPoolInc, class Allocator>
 class ArrayPagedBase : public Allocator
@@ -235,6 +254,19 @@ class ArrayPagedLH_POD : public ArrayPagedBase<T, PageSh, PtrPoolInc, AllocatorP
 template<class T, int PageSh = 6, int PtrPoolInc = 64, int SID = Stat_Default_Mem>
 class ArrayPagedLH : public ArrayPagedBase<T, PageSh, PtrPoolInc, AllocatorPagedLH<T, SID> >
 {
+};
+
+// (appended, sfr24) a paged array that keeps a default item after the page table (0x28 + sizeof(T) bytes): the AS3
+// VM's call stack (VM +0x70, DefaultValue at +0x98, which the VM ctor 0x1424dae90 copy-constructs from an empty
+// CallFrame).
+template<class T, int PageSh = 6, int PtrPoolInc = 64, int SID = Stat_Default_Mem>
+class ArrayPagedCC : public ArrayPagedBase<T, PageSh, PtrPoolInc, AllocatorPagedCC<T, SID> >
+{
+public:
+    explicit ArrayPagedCC(const T& defaultValue) : DefaultValue(defaultValue) {}
+    const T& GetDefaultValue() const { return DefaultValue; }
+private:
+    T DefaultValue;     // +0x28
 };
 
 } // namespace Scaleform
