@@ -21,6 +21,8 @@ public:
 
     // Sends the event named by the first argument to the listeners of the text field.
     static void BroadcastMessage(const FnCall& fn);
+    // (appended, sfr24) the field's AS object, made (a TextFieldObject on the global heap) on first use. 0x142956410
+    TextFieldObject* GetTextFieldASObject();
 
     virtual void CloneInternalData(const InteractiveObject* src);
     virtual void CopyPhysicalProperties(const InteractiveObject* poldChar);

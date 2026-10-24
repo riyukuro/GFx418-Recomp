@@ -16,6 +16,7 @@ class Movie;
 class Loader;
 class ASIMEManager;
 class IMEEvent;
+class IMECandidateListStyle;    // (appended, sfr24) gfx_imecandidateliststyle.h
 
 class IMEManagerBase : public State
 {
@@ -92,6 +93,10 @@ public:
     // (appended, sfr24) a mouse button went down / up over ptopMostChar (the player's ProcessMouse).
     void OnMouseDown(Movie* pmovie, int buttonsState, InteractiveObject* ptopMostChar);   // 0x1425b4900
     void OnMouseUp(Movie* pmovie, int buttonsState, InteractiveObject* ptopMostChar);     // 0x1425b4960
+    // (appended, sfr24) the candidate list style of the active movie (false without one); setting it also tells the
+    // candidate list movie (OnCandidateListStyleChanged) once it is loaded.
+    bool GetCandidateListStyle(IMECandidateListStyle* pstyle) const;      // 0x1425b4570
+    bool SetCandidateListStyle(const IMECandidateListStyle& st);         // 0x1425b4de0
 
 public:
     // (sfr24) the VM side of the IME (a Ptr; raw here so the header needs no complete ASIMEManager).

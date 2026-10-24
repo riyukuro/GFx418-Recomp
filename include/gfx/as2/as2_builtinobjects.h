@@ -13,6 +13,7 @@
 #include "../gfx_sharedobject.h"
 
 namespace Scaleform { namespace Render { namespace Text { class TextFormat; class ParagraphFormat; } } }
+namespace Scaleform { namespace Render { namespace Text { struct HighlightInfo; } } }   // (appended, sfr24)
 // The IME styles live in GFx::Text in 4.1.18 (exe mangling).
 namespace Scaleform { namespace GFx { namespace Text { struct IMEStyle; } } }
 
@@ -616,6 +617,8 @@ public:
 
     // The IME styles of the field or of the nearest text field prototype that has them (exe 0x14294b030).
     GFx::Text::IMEStyle* GetIMECompositionStringStyles();
+    // (appended, sfr24) copies st into the field's own IME styles (allocated on first use). 0x142981750
+    void SetIMECompositionStringStyles(const GFx::Text::IMEStyle& st);
 
     virtual InteractiveObject*       GetASCharacter();       // exe 0x1429492c0
     virtual const InteractiveObject* GetASCharacter() const; // exe 0x142949340
@@ -733,6 +736,13 @@ class TextFieldProto
 public:
     static void SetIMECompositionStringStyle(const FnCall& fn); // exe 0x1428eb900
     static void GetIMECompositionStringStyle(const FnCall& fn); // exe 0x1428ebbd0
+
+private:
+    // (appended, sfr24) a highlight style from argument index of fn (an AS object), over base. 0x14296e9f0
+    static Render::Text::HighlightInfo ParseStyle(const FnCall& fn, unsigned index,
+                                                  const Render::Text::HighlightInfo& base);
+    // (appended, sfr24) fn's result: an AS object describing info. 0x142968610
+    static void MakeStyle(const FnCall& fn, const Render::Text::HighlightInfo& info);
 };
 
 // StyleSheet.prototype: the CSS methods working on the style manager at +0x68.
