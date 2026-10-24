@@ -95,6 +95,8 @@ public:
 
     // (appended, sfr22) removes [pos, pos + count), pushing the removed values onto deleted when given. 0x142408230
     void CutMultipleAt(UPInt pos, UPInt count, SparseArray* deleted);
+    // (appended, sfr21) removes the first element, moving the rest down by one. 0x142423ef0
+    void ShiftLeft();
 
 private:
     // (appended, sfr22) the hash part of CutMultipleAt: from first_ind, values below first_ind + cut_num go to
@@ -1095,6 +1097,11 @@ namespace InstanceTraits { namespace fl
         Pickable<Instances::fl::XMLText> MakeInstanceText(XML& t, const StringDataPtr& str, Instances::fl::XML* parent);
         // 0x14241b7a0
         Pickable<Instances::fl::XMLText> MakeInstanceText(XML& t, const ASString& str, Instances::fl::XML* parent);
+        // (appended, sfr21) a new comment node. 0x14241b500
+        Pickable<Instances::fl::XMLComment> MakeInstanceComment(XML& t, const ASString& str, Instances::fl::XML* parent);
+        // (appended, sfr21) a new processing instruction name (data). 0x14241b6e0
+        Pickable<Instances::fl::XMLProcInstr> MakeInstanceProcInstr(XML& t, const ASString& name, const ASString& data,
+                                                                    Instances::fl::XML* parent);
     };
 
     class XMLList : public CTraits
