@@ -198,6 +198,10 @@ namespace Instances { namespace fl {
     class GlobalObject : public Instances::fl::Object
     {
     public:
+        // (appended, sfr22) 0x1423ed230
+        GlobalObject(InstanceTraits::Traits& t);
+        // (appended, sfr22) user-declared: the sdtors re-store the vftable (0x1423f32b0)
+        virtual ~GlobalObject() {}
         // (appended, sfr19)
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObject"; }
         // (appended, sfr19) slot 21: runs the script behind the global object; nothing for the C++ one. 0x14240a4a0

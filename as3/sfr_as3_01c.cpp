@@ -603,6 +603,48 @@ namespace Instances { namespace fl
     }
 }}
 
+// The class Class: traits, instance traits and class object. Only the traits are used outside this unit.
+namespace fl { extern const ClassInfo ClassClassCI; }  // 0x14313d940
+
+namespace InstanceTraits
+{
+    // Instance traits of the class Class: class objects are made by their own traits, never by these. 0xe8 bytes.
+    // vftable 0x1431402c8.
+    class ClassClass : public CTraits
+    {
+    public:
+        ClassClass(VM& vm) : CTraits(vm, AS3::fl::ClassClassCI) {}
+        // 0x14241bea0
+        virtual void MakeObject(Value& result, Traits& t) { SF_UNUSED2(result, t); }
+    };
+}
+
+namespace Classes
+{
+    // The class object of the class Class. 0x50 bytes. vftable 0x143140350.
+    class ClassClass : public Class
+    {
+    public:
+        ClassClass(ClassTraits::Traits& t) : Class(t) {}
+        virtual ~ClassClass() {}
+    };
+}
+
+namespace ClassTraits
+{
+    // @0x1423ec130
+    ClassClass::ClassClass(VM& vm)
+        : Traits(vm)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::ClassClass(vm);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        Classes::ClassClass* cl = new(mh) Classes::ClassClass(*this);
+        it->SetConstructor(Pickable<Class>(cl));
+        SetConstructor(*cl);
+    }
+}
+
 namespace ClassTraits { namespace fl
 {
     // @0x1423ec260
@@ -869,6 +911,55 @@ namespace Classes
         Construct(result, argc, argv);
     }
 }
+
+namespace InstanceTraits { namespace fl
+{
+    // @0x1423ed1c0
+    GlobalObject::GlobalObject(VM& vm)
+        : CTraits(vm, CInfo)
+    {
+        SetConstructor(FUN_142508460(&vm.GetClassTraitsObject().GetInstanceTraits()));
+        InitScope.Resize(0);
+    }
+
+    // Untracked by progress (0x14241bfc0, shared with other empty makers); the vftable slot comes from here.
+    void GlobalObject::MakeObject(Value& result, Traits& t)
+    {
+        SF_UNUSED2(result, t);
+    }
+}}
+
+namespace Instances { namespace fl
+{
+    // @0x1423ed230
+    GlobalObject::GlobalObject(InstanceTraits::Traits& t)
+        : fl::Object(t)
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl
+{
+    // @0x1423ed6e0
+    GlobalObjectScript::GlobalObjectScript(VMAbcFile& file, VM& vm, const Abc::ScriptInfo& script)
+        : GlobalObject(vm)
+        , File(&file)
+        , Script(script)
+    {
+        AddSlots(script, file, GetFixedMemSize());
+    }
+}}
+
+namespace Instances { namespace fl
+{
+    // @0x1423ed7b0
+    GlobalObjectScript::GlobalObjectScript(InstanceTraits::fl::GlobalObjectScript& t)
+        : GlobalObject(t)
+        , Initialized(false)
+    {
+        t.SetupSlotValues(GetTraits().GetFile(), GetTraits().GetScript(), *this);
+    }
+}}
 
 namespace InstanceTraits
 {
@@ -2613,3 +2704,17 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_GThunkFunction@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f44c0 ; vtslot
 // MS2-PIN: ??_GThunkFunction@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4520 ; vtslot
 // MS2-PIN: ??_GVTableInd@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4900 ; vtslot
+// MS2-PIN: ??_7ClassClass@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143140420
+// MS2-PIN: ??_7ClassClass@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431402c8
+// MS2-PIN: ??_7ClassClass@Classes@AS3@GFx@Scaleform@@6B@ 0x143140350
+// MS2-PIN: ??_GClassClass@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f28b0 ; vtslot
+// MS2-PIN: ??_GClassClass@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f29b0 ; vtslot
+// MS2-PIN: ??_GClassClass@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2940 ; vtslot
+// MS2-PIN: ??_7GlobalObject@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143b20
+// MS2-PIN: ??_7GlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143bf0
+// MS2-PIN: ??_7GlobalObject@fl@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143143d98
+// MS2-PIN: ??_7GlobalObjectScript@fl@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143143e48
+// MS2-PIN: ??_GGlobalObject@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f32b0 ; vtslot
+// MS2-PIN: ??_GGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3470 ; vtslot
+// MS2-PIN: ??_GGlobalObject@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3250 ; vtslot
+// MS2-PIN: ??_GGlobalObjectScript@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f33e0 ; vtslot

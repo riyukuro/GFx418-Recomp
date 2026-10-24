@@ -17,6 +17,10 @@ namespace Instances { namespace fl {
     class GlobalObjectScript : public GlobalObject
     {
     public:
+        // (appended, sfr22) sets up the slots the script declares. 0x1423ed7b0
+        GlobalObjectScript(InstanceTraits::fl::GlobalObjectScript& t);
+        // (appended, sfr22) user-declared: the sdtor re-stores the vftable (0x1423f3470)
+        virtual ~GlobalObjectScript() {}
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObjectScript"; }
         // The ABC file's source name. 0x142414c00
         virtual String GetAS3ObjectName() const;
@@ -52,6 +56,10 @@ namespace InstanceTraits { namespace fl {
     class GlobalObject : public CTraits
     {
     public:
+        // (appended, sfr22) global objects are made by Object's class and have no stored scope. 0x1423ed1c0
+        GlobalObject(VM& vm);
+        // (appended, sfr22) 0x14313d7b0 ("global")
+        static const ClassInfo CInfo;
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::GlobalObject"; }
         virtual bool IsGlobal() const { return true; }
         virtual void MakeObject(Value& result, Traits& t);     // 0x14241bfc0
@@ -61,6 +69,8 @@ namespace InstanceTraits { namespace fl {
     class GlobalObjectScript : public GlobalObject
     {
     public:
+        // (appended, sfr22) the script's slots on top of the global object's. 0x1423ed6e0
+        GlobalObjectScript(VMAbcFile& file, VM& vm, const Abc::ScriptInfo& script);
         // (appended, sfr22) 0x14240bf90
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::GlobalObjectScript"; }
