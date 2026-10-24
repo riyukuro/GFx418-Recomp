@@ -1370,11 +1370,13 @@ namespace Instances { namespace fl_display
         if (pDispObj)
         {
             ToAvmDisplayObj(pDispObj)->ReleaseAS3Obj();
-            if (GetVM().GetGC().Flags & ASRefCountCollector::Flags_InCollect)
+            // The collector may have set the mark bit of pTraits.
+            VM& vm = reinterpret_cast<const Traits*>(reinterpret_cast<UPInt>(pTraits.GetPtr()) & ~UPInt(1))->GetVM();
+            if (vm.GetGC().Flags & ASRefCountCollector::Flags_InCollect)
             {
                 pReleaseProxy->Data = pDispObj.GetPtr();
                 ReleaseProxy* pproxy = pReleaseProxy;
-                Ptr<ReleaseProxy>& head = reinterpret_cast<Ptr<ReleaseProxy>&>(GetVM().GetGC().HeadDelayedPtrRelease);
+                Ptr<ReleaseProxy>& head = reinterpret_cast<Ptr<ReleaseProxy>&>(vm.GetGC().HeadDelayedPtrRelease);
                 if (pproxy)
                 {
                     if (!head)
