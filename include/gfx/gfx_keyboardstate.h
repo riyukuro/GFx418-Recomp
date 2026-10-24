@@ -17,7 +17,8 @@ class KeyboardState : public RefCountBase<KeyboardState, Stat_Default_Mem>
 {
 public:
     // Told about every key press and release (the AS2 Key object).
-    class IListener
+    // No vftable of its own in the exe (KeyCtorFunction's third vftable is the only one): novtable.
+    class __declspec(novtable) IListener
     {
     public:
         virtual ~IListener() {}

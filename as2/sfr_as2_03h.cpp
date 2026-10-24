@@ -16,17 +16,21 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // System.capabilities: a function object holding the player's capability flags as members (0x70 bytes).
-class CapabilitiesCtorFunction : public Object
+class CapabilitiesCtorFunction : public CFunctionObject
 {
 public:
-    void* Data68; // +0x68 not recovered (zeroed)
     CapabilitiesCtorFunction(ASStringContext* psc);
+    virtual ~CapabilitiesCtorFunction() {}     // exe 0x14292a1d0
+    virtual Object* CreateNewObject(Environment*) const { return 0; } // exe 0x142936b00
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);      // exe 0x14294de70
+    virtual bool SetMemberRaw(ASStringContext*, const ASString&, const Value&, const PropFlags&)
+    { return false; } // exe 0x142988b50: read-only
 };
 
 // MS2-FUNCTIONAL register allocation (exe keeps a fourth callee-saved value live across the member-set calls)
 // @0x142919ee0
 CapabilitiesCtorFunction::CapabilitiesCtorFunction(ASStringContext* psc)
-    : Object(psc), Data68(0)
+    : CFunctionObject(psc)
 {
     PropFlags flags(6);
     Value no(false);

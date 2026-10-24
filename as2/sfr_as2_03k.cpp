@@ -143,4 +143,4 @@ void KeyCtorFunction::Finalize_GC()
 
 // MS2-PIN: ??_7KeyCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c8c8
 // MS2-PIN: ??_7KeyCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c950
-// MS2-PIN: ??_7KeyCtorFunction@AS2@GFx@Scaleform@@6BIListener@KeyboardState@23@@ 0x14321c9f8
+// MS2-PIN: ??_7KeyCtorFunction@AS2@GFx@Scaleform@@6B@ 0x14321c9f8

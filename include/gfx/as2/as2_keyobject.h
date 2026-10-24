@@ -34,6 +34,12 @@ public:
 
     virtual Object* CreateNewObject(Environment*) const { return 0; } // exe 0x142936f00
 
+    // KeyboardState::IListener (declared only; the exe's slots are 0x14296c180, 0x14296c1d0 (adjusting thunks) and
+    // 0x142992840, which records the key in States).
+    virtual void OnKeyDown(InteractiveObject* pmovie, const EventId& evt, int keyMask);
+    virtual void OnKeyUp(InteractiveObject* pmovie, const EventId& evt, int keyMask);
+    virtual void Update(const EventId& evt);
+
     int GetLastKeyCode(unsigned controllerIdx) const   { return States[controllerIdx].LastKeyCode; }
     int GetLastAsciiCode(unsigned controllerIdx) const { return States[controllerIdx].LastAsciiCode; }
 

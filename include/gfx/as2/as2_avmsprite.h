@@ -5,6 +5,7 @@
 
 #include "as2_avmcharacter.h"
 #include "../gfx_sprite.h"
+#include "as2_action.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -39,6 +40,11 @@ public:
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x142938830
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);          // exe 0x14294c700
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);    // exe 0x1429531f0
+
+    AvmSprite(Sprite* psprite); // exe 0x142918980
+
+    // (sfr32) exe 0x142925420: releases the clip's script data, its object and its environment.
+    virtual ~AvmSprite();
 
     Sprite*         GetSprite() const { return static_cast<Sprite*>(pDispObj); }
     DrawingContext* GetDrawingContext() { return GetSprite()->GetDrawingContext(); }
@@ -140,8 +146,11 @@ public:
     virtual InteractiveObject* GetRelativeTarget(const ASString& name, bool firstCall);
 
     // The data members (only those used so far). AvmSpriteBase's vftable is at +0x30.
-    UByte                                   Unrecovered_38[0x1e0 - 0x38];
+    Environment                             Env;             // +0x38 (0x198 bytes)
+    int                                     Level;           // +0x1d0 -1 until the clip is made a level movie
+    Ptr<MovieClipObject>                    pMovieClipObj;   // +0x1d8 created on first use
     ArrayLH<bool, StatMV_ActionScript_Mem>  InitActionsExecuted; // +0x1e0 per frame
+    bool                                    Unrecovered_1f8;  // +0x1f8 cleared by the constructor
 
     // (appended for sfr_as2_02)
     static void SpriteCreateTextField(const FnCall& fn); // exe 0x142906040
@@ -154,6 +163,17 @@ public:
     // A child was put on the display list: its queued actions run unless it came from a place-object tag; a sprite
     // child with an onLoad handler (or any placed sprite) then needs its load event (exe 0x14296aa90).
     void OnAddedDisplayObject(InteractiveObject* ch, unsigned sessionId, bool placeObject);
+    // The AS2 side of putting a child on the display list (exe 0x14296ab10): binds its events and init source and
+    // returns the session of the queued actions.
+    unsigned OnAddingDisplayObject(const CharacterCreateInfo& ccinfo, InteractiveObject* pch,
+                                   const ArrayLH<SwfEvent*, StatMD_Tags_Mem>* peventHandlers,
+                                   const void* pinitSource, bool placeObject);
+    // AvmSpriteBase slot (exe 0x14292ea50): a place-object tag creates, or moves, the child at pos.Depth.
+    virtual DisplayObjectBase* AddDisplayObject(const CharPosInfo& pos, const ASString& name,
+                                                const ArrayLH<SwfEvent*, StatMD_Tags_Mem>* peventHandlers,
+                                                const void* pinitSource, unsigned createFrame,
+                                                unsigned long addFlags, CharacterCreateInfo* pcharCreateOverride,
+                                                InteractiveObject* origChar);
     // The replacement gets its load event and the queued actions run at once (exe 0x14297d460).
     virtual bool ReplaceChildCharacterOnLoad(InteractiveObject* poldChar, InteractiveObject* pnewChar);
     // Calls the clip's method with numArgs arguments already on its environment's stack (exe 0x142962b30), or
@@ -169,6 +189,46 @@ public:
     // (appended for sfr_as2_04) An enabled clip that is not a level movie, whose clip object or first movie clip prototype
     // has button handlers (exe 0x14292e050).
     virtual bool ActsAsButton() const;
+
+    // (sfr32) The vftable overrides of the clip, in the exe's slot order. The AvmSpriteBase half is at +0x30; the
+    // exe's functions that sit in its vftable alone take that subobject as this.
+    virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase();   // exe 0x142990e20
+    virtual AvmSpriteBase*              ToAvmSpriteBase();           // exe 0x142990eb0
+    virtual AvmButtonBase*              ToAvmButttonBase();          // exe 0x142990ce0
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase();        // exe 0x142990ef0
+    virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase();    // exe 0x142990de0
+    virtual const char*                 GetAbsolutePath(String* ppath) const; // exe 0x142949620
+    virtual bool                        OnEvent(const EventId& id);  // exe 0x14296b490
+    virtual void                        OnEventLoad();               // exe 0x14296b860
+    virtual void                        OnEventUnload();             // exe 0x14296bbb0
+    virtual bool                        OnUnloading(bool mayRemove); // exe 0x14296d140
+    virtual void                        OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                                                unsigned controllerIdx, FocusMovedType fmt); // exe 0x14296c0d0
+    virtual void                        OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt); // exe 0x14296c160
+    virtual bool                        OnKeyEvent(const EventId& id, int* pkeyMask);                       // exe 0x14296c1b0
+    virtual bool                        OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx,
+                                                              FocusMovedType fmt);                          // exe 0x14296c200
+    virtual bool                        IsTabable() const;           // exe 0x1429660a0
+    virtual Object*                     GetASObject();               // exe 0x142949470
+    virtual Object*                     GetASObject() const;         // exe 0x142949480
+    virtual Environment*                GetASEnvironment();          // exe 0x142949410
+    virtual const Environment*          GetASEnvironment() const;    // exe 0x142949420
+    virtual unsigned                    GetStandardMemberBitMask() const; // exe 0x142956070
+    virtual bool SetStandardMember(StandardMember index, const Value& val, bool opcodeFlag); // exe 0x14298b410
+    virtual bool GetStandardMember(StandardMember index, Value* val, bool opcodeFlag) const; // exe 0x142955c50
+    virtual bool ExecuteEvent(const EventId& id);                    // exe 0x1429409a0
+    virtual ObjectType                  GetObjectType() const;       // exe 0x142954170
+    virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
+                              const PropFlags& flags = PropFlags()); // exe 0x142988a40
+    virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
+                              const ObjectInterface* instance = 0) const; // exe 0x142994710
+    virtual void FillTabableArray(InteractiveObject::FillTabableParams* params); // exe 0x142941b40
+    virtual void ExecuteFrameTags(unsigned frame);                   // exe 0x1429413b0
+    virtual void ForceShutdown();                                    // exe 0x142945d80
+    virtual int  GetLevel() const;                                   // exe 0x14294b110
+    virtual bool IsLevelMovie() const;                               // exe 0x142965ce0
+    virtual bool CheckCandidateListLevel(int level) const;           // exe 0x142933430
+    virtual void SetHitAreaNotify(Sprite* phitArea);                 // exe 0x142981670
 };
 
 inline Sprite* ObjectInterface::ToSprite()
