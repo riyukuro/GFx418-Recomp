@@ -1436,6 +1436,271 @@ void* DeleteAs3_1424e4190(void* p, unsigned flags)
 }
 
 
+
+// ==== AvmSprite::AddDisplayObject ====================================================================================
+
+extern "C" {
+void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);         // MovieDefImpl::GetCharacterCreateInfo
+bool  FUN_14256ec50(void* movieImpl, void* defImpl, void* bindData, const String* symbol); // MovieImpl::FindExportedResource
+void  FUN_142516210(void* log, const char* fmt, ...);                         // LogBase<DisplayObjectBase>::LogError
+void* FUN_1425f9800(void* dlist, int depth, bool* markedForRemove);           // DisplayList::GetDisplayObjectAtDepth
+void  FUN_1425f2540(void* obj, ASStringNode** result);                        // DisplayObject::GetOriginalName
+void  FUN_1425f24e0(void* obj, ASStringNode** result);                        // DisplayObject::GetName
+void  FUN_14257dc30(void* p);                                                 // RefCountImpl::AddRef
+void* FUN_1425f1d00(void* obj);                                               // DisplayObjectBase::GetCxform
+bool  FUN_1425e5670(const void* cx);                                          // Render::Cxform::IsIdentity
+void  FUN_1425e57b0(void* cx);                                                // Render::Cxform::SetIdentity
+void  FUN_1425fcea0(void* sprite, const void* pos);                           // Sprite::MoveDisplayObject
+void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
+void  FUN_1425f54d0(void* obj, const ASString* name);                         // DisplayObject::SetOriginalName
+void  FUN_1425f8df0(void* dlist, void* sprite, const void* pos, void* ch, unsigned addFlags); // DisplayList::AddDisplayObject
+bool  FUN_1425f8730(void* io);                                                // InteractiveObject::IsInPlayList
+void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
+void  FUN_142517e70(void* io);                                                // InteractiveObject::ModifyOptimizedPlayList
+void  FUN_1425da900(void* sprite);                                            // Sprite::DefaultOnEventLoad
+void  FUN_1425dcb00(void* sprite, void* hitArea);                             // Sprite::SetHitArea
+}
+
+template <class R> static inline R Sfr21VCall(void* obj, UPInt off)
+{
+    return (*reinterpret_cast<R (**)(void*)>(*static_cast<char**>(obj) + off))(obj);
+}
+template <class R, class A> static inline R Sfr21VCall(void* obj, UPInt off, A a)
+{
+    return (*reinterpret_cast<R (**)(void*, A)>(*static_cast<char**>(obj) + off))(obj, a);
+}
+
+// The AS3 part of a display object (the byte at +0x6d holds its offset in dwords).
+static inline char* Sfr21Avm(void* obj) { return Sfr21At(obj, UPInt(*reinterpret_cast<UByte*>(Sfr21At(obj, 0x6d))) * 4); }
+
+// Places character pos.CharacterId at pos.Depth: an object of the same character, name and creation frame already there
+// is moved instead (its AS3 name property reset on the parent); else a new instance is created, named, added to the
+// display list, given its AS3 object (the name property set on this sprite before the constructor runs) and its
+// children, and told it was added.
+// CharPosInfo: ColorTransform +0, pFilters +0x40, Depth +0x4c, CharacterId +0x50, ClassName +0x58, BlendMode +0x64,
+// Flags +0x62 (0x08 HasCxform, 0x80 HasBlendMode, 0x100 HasClassName); 0x68 bytes.
+// MS2-FUNCTIONAL: written against raw display object offsets and the exe's helpers; the ASString counting is ours
+// @0x1424e7140
+DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASString& name,
+                                               const ArrayLH<SwfEvent*, StatMD_Tags_Mem>*, const void*,
+                                               unsigned createFrame, unsigned long addFlags,
+                                               CharacterCreateInfo* pcharCreateOverride, InteractiveObject* origChar)
+{
+    const char* P       = reinterpret_cast<const char*>(&pos);
+    char*       spr     = reinterpret_cast<char*>(pDispObj);
+    char*       root    = static_cast<char*>(Sfr21Mem(spr, 0x20));
+    void*       defImpl = Sfr21Mem(spr, 0xb0);
+    VM*         vm      = static_cast<VM*>(Sfr21Mem(root, 0x48));
+    unsigned    id      = *reinterpret_cast<const unsigned*>(P + 0x50);
+    const bool  hasClassName = (*reinterpret_cast<const UInt16*>(P + 0x62) & 0x100) != 0;
+    const char* className    = *reinterpret_cast<const char* const*>(P + 0x58);
+    int         type    = 0;
+
+    struct CCInfo { void* pCharDef; void* pBindDefImpl; void* pResource; } cc;
+    if (pcharCreateOverride)
+        memcpy(&cc, pcharCreateOverride, sizeof(cc));
+    else
+    {
+        CCInfo tmp;
+        memcpy(&cc, FUN_1425cf500(defImpl, &tmp, &id), sizeof(cc));
+    }
+    if (!cc.pCharDef)
+    {
+        if (hasClassName)
+        {
+            struct { void* pResource; void* pBinding; } bind = { NULL, NULL };
+            bool found;
+            {
+                String symbol(className);
+                found = FUN_14256ec50(Sfr21Mem(root, 0x10), defImpl, &bind, &symbol);
+            }
+            if (found)
+            {
+                // Resource::RT_CharacterDef_Bit
+                if (Sfr21VCall<unsigned>(bind.pResource, 0x10) & 0x8000)
+                    cc.pCharDef = bind.pResource;
+                else
+                    cc.pResource = bind.pResource;
+                cc.pBindDefImpl = Sfr21Mem(bind.pBinding, 0x48);
+            }
+            if (bind.pResource)
+                FUN_1425a4030(bind.pResource);
+        }
+        if (!cc.pCharDef)
+        {
+            // An image resource placed on the stage becomes a Bitmap character.
+            if (!cc.pResource || (Sfr21VCall<unsigned>(cc.pResource, 0x10) & 0xff00) != 0x100)
+            {
+                FUN_142516210(spr + 0x18, "Sprite::AddDisplayObject(): unknown cid = %d\n", unsigned(UInt16(id)));
+                return NULL;
+            }
+            type = 8;
+            if (!cc.pBindDefImpl)
+                cc.pBindDefImpl = defImpl;
+        }
+    }
+
+    bool  markedForRemove = false;
+    char* ex = static_cast<char*>(FUN_1425f9800(spr + 0xd8, *reinterpret_cast<const int*>(P + 0x4c), &markedForRemove));
+    if (createFrame == ~0u)
+        createFrame = Sfr21VCall<unsigned>(spr, 0x328);   // GetCurrentFrame
+
+    bool replace = (addFlags & 1) != 0;
+    if (!(addFlags & 4))
+        replace = true;
+    else
+    {
+        // AcceptAnimMoves +0x178, ContinueAnimation +0x180, SetAcceptAnimMoves +0x188
+        if (ex && !Sfr21VCall<bool>(ex, 0x178) && Sfr21VCall<bool>(ex, 0x180))
+            Sfr21VCall<void, bool>(ex, 0x188, true);
+        if (!markedForRemove && ex && !Sfr21VCall<bool>(ex, 0x178))
+            return NULL;
+        if (ex && *reinterpret_cast<int*>(ex + 0x2c) >= -1 && *reinterpret_cast<unsigned*>(ex + 0x28) == id)
+        {
+            const bool    isInteractive = *reinterpret_cast<SByte*>(ex + 0x6a) < 0;
+            ASStringNode* orig;
+            if (isInteractive)
+                FUN_1425f2540(ex, &orig);
+            else
+            {
+                orig = static_cast<ASStringNode*>(Sfr21Mem(root, 0x160));   // builtin ""
+                orig->AddRef();
+            }
+            bool same;
+            if (!isInteractive)
+                same = true;
+            else if (name.GetSize() == 0)
+                same = orig->Size == 0 || (*reinterpret_cast<UByte*>(ex + 0x88) & 2) != 0;   // instance-based name
+            else
+                same = orig == name.GetNode();
+            orig->Release();
+
+            if (same)
+            {
+                if (*reinterpret_cast<unsigned*>(ex + 0x30) == createFrame)
+                {
+                    char np[0x68];
+                    memcpy(np, P, sizeof(np));
+                    if (void* filters = Sfr21Mem(np, 0x40))
+                        FUN_14257dc30(filters);
+                    UInt16& flags = *reinterpret_cast<UInt16*>(np + 0x62);
+                    if (!(flags & 0x80) && Sfr21VCall<int>(ex, 0x68))   // GetBlendMode
+                    {
+                        np[0x64] = 0;
+                        flags |= 0x80;
+                    }
+                    if (!(*reinterpret_cast<const UInt16*>(P + 0x62) & 8) && !FUN_1425e5670(FUN_1425f1d00(ex)))
+                    {
+                        flags |= 8;
+                        FUN_1425e57b0(np);
+                    }
+                    FUN_1425fcea0(spr, np);
+
+                    // The object is reused: its name property on the AS3 parent is set again.
+                    if (*reinterpret_cast<UByte*>(ex + 0x6b) & 1)
+                    {
+                        AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ex));
+                        Instances::fl_display::DisplayObject* parent = avm->GetAS3Parent();
+                        if (!(*reinterpret_cast<UByte*>(ex + 0x88) & 2) && parent)
+                        {
+                            ASStringNode* nm;
+                            FUN_1425f24e0(ex, &nm);
+                            {
+                                Multiname mn(vm->GetPublicNamespace(), Value(ASString(nm)));
+                                reinterpret_cast<Object*>(parent)->SetProperty(
+                                    mn, Value(reinterpret_cast<Object*>(avm->GetAS3Obj())));
+                            }
+                            nm->Release();
+                        }
+                    }
+                    if (void* filters = Sfr21Mem(np, 0x40))
+                        FUN_14257dcb0(filters);
+                    return NULL;
+                }
+                replace = true;
+            }
+        }
+    }
+
+    FUN_1425dcaf0(spr);
+    void* asSupport = Sfr21Mem(root, 0x18);
+    char* ch = (*reinterpret_cast<char* (**)(void*, void*, void*, void*, const unsigned*, int)>(
+        *static_cast<char**>(asSupport) + 0x20))(asSupport, Sfr21Mem(root, 0x10), &cc, spr, &id, type);   // CreateCharacterInstance
+    char* io = *reinterpret_cast<SByte*>(ch + 0x6a) < 0 ? ch : NULL;
+    *reinterpret_cast<UInt16*>(ch + 0x6a) &= ~1;
+    bool nameSet = false;
+    if (io)
+    {
+        nameSet = name.GetSize() != 0;
+        if (nameSet)
+            FUN_1425f54d0(io, &name);
+        if (origChar)
+            Sfr21VCall<void, InteractiveObject*>(io, 0x2c0, origChar);   // CloneInternalData
+    }
+    if (!(addFlags & 4))
+        Sfr21VCall<void, bool>(ch, 0x188, false);
+    else
+        *reinterpret_cast<UInt16*>(ch + 0x88) |= 1;   // timeline object
+    *reinterpret_cast<unsigned*>(ch + 0x30) = createFrame;
+    unsigned listFlags = unsigned(addFlags) & ~1u;
+    if (replace)
+        listFlags |= 1;
+    if (hasClassName)
+        reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch))->InitClassName(className);
+    FUN_1425f8df0(spr + 0xd8, spr, P, ch, listFlags);
+
+    AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch));
+    if (avm->CreateASInstanceNoCtor(false))
+    {
+        if (!(*reinterpret_cast<UByte*>(ch + 0x88) & 2) && avm->GetAS3Parent())
+        {
+            {
+                Multiname mn(vm->GetPublicNamespace(), Value(name));
+                reinterpret_cast<Object*>(GetAS3Obj())->SetProperty(mn, Value(reinterpret_cast<Object*>(avm->GetAS3Obj())));
+            }
+            if (vm->IsException())
+            {
+                vm->OutputAndIgnoreException();
+                *reinterpret_cast<UInt16*>(spr + 0x88) |= 0x20;   // execution aborted
+            }
+        }
+        avm->CallCtor(true);
+
+        // A sprite gets its children now.
+        char* a = reinterpret_cast<char*>(avm);
+        if ((*reinterpret_cast<UInt16*>(ch + 0x6a) & 0x400) && !(a[0x60] & AvmSprite::Flag_ChildrenCreated))
+        {
+            char* sp = static_cast<char*>(Sfr21Mem(a, 0x18));
+            char* parent = static_cast<char*>(Sfr21Mem(sp, 0x38));
+            if (!FUN_1425f8730(sp) && parent && FUN_1425f8730(parent))
+            {
+                avm->GetAvmParent()->InsertChildToPlayList(reinterpret_cast<InteractiveObject*>(sp));
+                FUN_142517e70(sp);
+            }
+            if (!(sp[0x140] & 8))
+                FUN_1425da900(sp);
+            if (*reinterpret_cast<UByte*>(sp + 0x6d))
+            {
+                void* x = Sfr21VCall<void*>(Sfr21Avm(sp), 0x10);
+                Sfr21VCall<void, bool>(x, 0xe0, false);
+            }
+            a[0x60] |= AvmSprite::Flag_ChildrenCreated;
+        }
+    }
+
+    if (nameSet)
+        Sfr21VCall<void, void*>(root, 0xf0, io);   // ResolveStickyVariables
+    if (io)
+    {
+        if (nameSet && name.GetNode() == Sfr21Mem(root, 0x1c8))   // builtin "hitArea"
+            FUN_1425dcb00(spr, io);
+        char* base = Sfr21VCall<char*>(Sfr21Avm(io), 8);         // ToAvmInteractiveObjBase
+        Sfr21VCall<void, bool>(base ? base - 0x30 : NULL, 0x98, true);   // OnAdded
+    }
+    FUN_14257dcd0(ch);
+    return reinterpret_cast<DisplayObjectBase*>(ch);
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace Render {
