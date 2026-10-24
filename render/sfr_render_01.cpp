@@ -11,9 +11,32 @@
 // sfr_gfx_01, and runs to 0x14257db40; 0x14257db40-0x14257dc30 are the out-of-line SF_RefCount dtors (SF_RefCount
 // starts there, sfr_kernel_01).
 // MS2-RANGE: 0x1425792d0-0x14257db40 .text$mn
+// MS2-RANGE: 0x14257db40-0x14257dc30 .text$mn
 
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_drawableimage.h"
+
+extern "C" void FUN_14015b310(void*, unsigned long long);
+
+namespace Scaleform {
+
+// @0x14257db40
+RefCountImplCore::~RefCountImplCore() {}
+
+// @0x14257db50
+RefCountNTSImplCore::~RefCountNTSImplCore() {}
+
+// @0x14257db60
+RefCountWeakSupportImpl::~RefCountWeakSupportImpl()
+{
+    if (pWeakProxy)
+    {
+        pWeakProxy->NotifyObjectDied();
+        pWeakProxy->Release();
+    }
+}
+
+} // namespace Scaleform
 
 namespace Scaleform { namespace Render {
 
@@ -1231,6 +1254,81 @@ void Texture::LoseTextureData()
 // The in-place inverse is emitted out of line here (one shared COMDAT copy, 0x14257c730).
 template Matrix2x4<float>& Matrix2x4<float>::Invert();
 
+// MS2-FUNCTIONAL: preserves ImageUpdate member teardown and both allocator delete branches.
+// @0x142579ac0
+void* FUN_142579ac0(ImageUpdate* object, unsigned flags)
+{
+    object->~ImageUpdate();
+    if (flags & 1)
+    {
+        if (flags & 4)
+            FUN_14015b310(object, sizeof(ImageUpdate));
+        else
+            Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: calls the recovered RawImage destructor and preserves the original allocator delete branches.
+// @0x142579b60
+void* FUN_142579b60(RawImage* object, unsigned flags)
+{
+    object->~RawImage();
+    if (flags & 1)
+    {
+        if (flags & 4)
+            FUN_14015b310(object, sizeof(RawImage));
+        else
+            Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: preserves SubImage member teardown and both allocator delete branches.
+// @0x142579cc0
+void* FUN_142579cc0(SubImage* object, unsigned flags)
+{
+    object->~SubImage();
+    if (flags & 1)
+    {
+        if (flags & 4)
+            FUN_14015b310(object, sizeof(SubImage));
+        else
+            Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: preserves TextureImage base teardown and both allocator delete branches.
+// @0x142579d80
+void* FUN_142579d80(TextureImage* object, unsigned flags)
+{
+    object->~TextureImage();
+    if (flags & 1)
+    {
+        if (flags & 4)
+            FUN_14015b310(object, sizeof(TextureImage));
+        else
+            Memory::Free(object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: preserves TextureManager subobject teardown and both allocator delete branches.
+// @0x142579e30
+void* FUN_142579e30(TextureManager* object, unsigned flags)
+{
+    object->~TextureManager();
+    if (flags & 1)
+    {
+        if (flags & 4)
+            FUN_14015b310(object, sizeof(TextureManager));
+        else
+            Memory::Free(object);
+    }
+    return object;
+}
+
 }} // namespace Scaleform::Render
 
 // Vftables of this TU (no RTTI under /GR-, so paired by hand) and the COMDAT deleting destructors they hold.
@@ -1261,6 +1359,7 @@ template Matrix2x4<float>& Matrix2x4<float>::Invert();
 // MS2-PIN: ??_7TextureImage@Render@Scaleform@@6B@ 0x143183b28
 // MS2-PIN: ??_7SubImage@Render@Scaleform@@6B@ 0x143183c10
 // MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7RefCountWeakSupportImpl@Scaleform@@6B@ 0x143183cf8
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
 // MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
