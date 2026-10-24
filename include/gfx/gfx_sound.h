@@ -27,6 +27,7 @@ class MovieImpl;
 class Sprite;
 class SoundResource;
 class SoundTagsReader;
+namespace AS2 { class GlobalContext; class ASStringContext; }
 
 // Audio / video synchronization settings of a movie, and its sound renderer.
 class AudioBase : public State
@@ -41,6 +42,8 @@ public:
 
     virtual Sound::SoundRenderer* GetRenderer() const = 0;
     virtual SoundTagsReader*      GetSoundTagsReader() const = 0;
+    // (appended, sfr24) The AS2 Sound class of the movie (slot 3, called by AS2 MovieRoot::RegisterAuxASClasses).
+    virtual void                  RegisterASClasses(AS2::GlobalContext& gc, AS2::ASStringContext& sc) = 0;
 
     float         GetMaxTimeDifference() const  { return MaxTimeDifference; }
     unsigned      GetCheckFrameInterval() const { return CheckFrameInterval; }

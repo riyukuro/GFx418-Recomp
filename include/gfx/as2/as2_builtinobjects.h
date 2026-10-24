@@ -1039,6 +1039,8 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937380
 
     static void GlobalCtor(const FnCall& fn); // exe 0x14295c930
+    // (appended, sfr24) Creates the class and publishes it as TextField.StyleSheet (exe 0x14297b190).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The TextField class: the static TextField.getFontList.
@@ -1052,6 +1054,10 @@ public:
     static void GlobalCtor(const FnCall& fn); // exe 0x14295ca00
 
     static const NameFunction StaticFunctionTable[]; // exe 0x143212f60: getFontList
+
+    // (appended, sfr24) Creates the class, publishes "TextField" and registers TextField.StyleSheet for first use
+    // (exe 0x14297b6b0).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The TextFormat prototype natives (appended for sfr_as2_02b).
@@ -1074,6 +1080,8 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937470
 
     static void GlobalCtor(const FnCall& fn); // exe 0x14295ca10
+    // (appended, sfr24) Creates the class and its prototype and publishes "TextFormat" (exe 0x14297ba70).
+    static FunctionRef Register(GlobalContext* pgc);
 };
 
 // The flash.geom.Transform class.
@@ -1237,6 +1245,9 @@ public:
 
     MovieImpl* pMovieRoot; // +0x70 the movie of the stage
 
+    // (appended, sfr24) Creates the class and its prototype and publishes "Stage" (exe 0x14297a960).
+    static FunctionRef Register(GlobalContext* pgc);
+
 private:
     // A Rectangle object for rect (pixels) (exe 0x142937bc0).
     static Value CreateRectangleObject(Environment* penv, const Render::RectF& rect);
@@ -1377,6 +1388,9 @@ public:
 class MovieClipCtorFunction : public CFunctionObject
 {
 public:
+    // (appended, sfr24) Inlined into GlobalContext::Init in the exe.
+    MovieClipCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936f30
     // MovieClip() on a clip object returns it, undefined otherwise (exe 0x14295bc40).
     static void GlobalCtor(const FnCall& fn);
