@@ -300,10 +300,13 @@ protected:
     VM&                 VMRef;          // +0x000
     State&              StateRef;       // +0x008
     UInt32              ReadNum;        // +0x010 values read so far
+    UInt32              ReadNumPad;     // +0x014 (sfr24) the exe's ArgNum is at +0x18 (ctor 0x1424d9660): a StackReader
+                                        // base's tail padding there, kept flat so the ctor's initializers stay as written
     UInt32              ArgNum;         // +0x018
     Value               FixedArgs[8];   // +0x020
     ArrayDH<Value>      CallArgs;       // +0x120 (vm's heap)
 };
+static_assert(sizeof(ReadArgs) == 0x140, "TR::ReadArgs size");
 
 } // namespace TR
 
