@@ -3,7 +3,27 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_17
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424ed890-0x142509d40 .text$mn
+// MS2-RANGE: 0x1424ed890-0x1424ede80 .text$mn
+// MS2-RANGE: 0x1424ee490-0x1424efb40 .text$mn
+// MS2-RANGE: 0x1424efc30-0x1424f03f0 .text$mn
+// MS2-RANGE: 0x1424f05a0-0x1424f2010 .text$mn
+// MS2-RANGE: 0x1424f2400-0x1424f2450 .text$mn
+// MS2-RANGE: 0x1424f2700-0x1424f27b0 .text$mn
+// MS2-RANGE: 0x1424f3320-0x1424f33d0 .text$mn
+// MS2-RANGE: 0x1424f3710-0x1424f3e60 .text$mn
+// MS2-RANGE: 0x1424f3f40-0x1424f4000 .text$mn
+// MS2-RANGE: 0x1424f41f0-0x1424f6f50 .text$mn
+// MS2-RANGE: 0x1424f7190-0x1424f9570 .text$mn
+// MS2-RANGE: 0x1424f96c0-0x1424f9d60 .text$mn
+// MS2-RANGE: 0x1424fa320-0x1424fa5b0 .text$mn
+// MS2-RANGE: 0x1424fe5b0-0x1424fe620 .text$mn
+// MS2-RANGE: 0x1424feab0-0x142500770 .text$mn
+// MS2-RANGE: 0x1425008e0-0x142501920 .text$mn
+// MS2-RANGE: 0x142501a80-0x142502e70 .text$mn
+// MS2-RANGE: 0x142503660-0x142507730 .text$mn
+// MS2-RANGE: 0x1425078e0-0x142507910 .text$mn
+// MS2-RANGE: 0x142507a40-0x1425094e0 .text$mn
+// MS2-RANGE: 0x142509850-0x142509d40 .text$mn
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/kernel/sf_autoptr.h"
@@ -991,7 +1011,6 @@ void* Sfr33MovieRootCreateEventObject(MovieRoot* self, void* ret, const ASString
 }}}
 
 // VM: runs the queued class constructors (unrecovered).
-void FUN_1424fa5b0(Scaleform::GFx::AS3::VM* vm, unsigned count);
 // the AS3 ObjectInterface (AS3ValueObjectInterface) vftable
 extern "C" const void* DAT_14317eff8;
 
@@ -1120,7 +1139,7 @@ void Sfr33MovieRootExecuteCtors(UByte* self)
     const unsigned count = *reinterpret_cast<unsigned*>(self + 0x358);
     if (count)
     {
-        FUN_1424fa5b0(*reinterpret_cast<VM**>(self + 0x48), count);
+        (*reinterpret_cast<VM**>(self + 0x48))->ExecuteCode(count);
         UByte* vm = *reinterpret_cast<UByte**>(self + 0x48);
         if (vm[0x180])
             vm[0x180] = 0;
@@ -2941,7 +2960,7 @@ bool Sfr33CheckAvm(MovieRoot* self)
         avm = SF_HEAP_NEW(self->GetMovieImpl()->GetMovieHeap())
             ASVM(self, *reinterpret_cast<FlashUI*>(p + 0x28), loader, self->BuiltinsMgr,
                  **reinterpret_cast<ASRefCountCollector* const*>(*reinterpret_cast<UByte* const*>(p + 0x40) + 0x20));
-        FUN_1424fa5b0(avm.GetPtr(), 1);
+        avm->ExecuteCode(1);
     }
     return avm != NULL;
 }
@@ -2968,7 +2987,7 @@ SF_NOINLINE unsigned AvmDisplayObj::CallCtor(bool execute)
         {
             if (!execute)
                 return 1;
-            FUN_1424fa5b0(vm, 1);
+            vm->ExecuteCode(1);
             if (*(reinterpret_cast<UByte*>(vm) + 0x180))
             {
                 vm->OutputAndIgnoreException();
@@ -5211,7 +5230,7 @@ void Sfr33ExecuteAndPop(VM& vm, Value& result)
 {
     if (vm.IsException())
         return;
-    FUN_1424fa5b0(&vm, 1);
+    vm.ExecuteCode(1);
     if (vm.IsException())
         return;
     Sfr33OpStack& st = *reinterpret_cast<Sfr33OpStack*>(reinterpret_cast<UByte*>(&vm) + 0x48);
