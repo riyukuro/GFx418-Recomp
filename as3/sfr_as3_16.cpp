@@ -1372,5 +1372,30 @@ void FUN_1424dcc30(void* self)
     }
 }
 
+// Clears a fixed-size cached hash table and releases its backing block.
+// MS2-FUNCTIONAL: resets every table entry and frees the block; the compiler folds the exe's redundant null check.
+// @0x1424dcce0
+void FUN_1424dcce0(void* self)
+{
+    auto* table = static_cast<Scaleform::UInt64*>(self);
+    if (*table)
+    {
+        Scaleform::UInt64 offset = 0;
+        Scaleform::UInt64 count = *reinterpret_cast<Scaleform::UInt64*>(*table + 8) + 1;
+        do
+        {
+            auto* next = reinterpret_cast<Scaleform::UInt64*>(*table + offset + 0x10);
+            if (*next != static_cast<Scaleform::UInt64>(-2))
+                *next = static_cast<Scaleform::UInt64>(-2);
+            offset += 0x20;
+            --count;
+        } while (count);
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
+            DAT_143b15f60, reinterpret_cast<void*>(*table));
+        *table = 0;
+    }
+}
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
