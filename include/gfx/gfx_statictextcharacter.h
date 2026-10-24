@@ -212,6 +212,10 @@ public:
             struct { float BlurX, BlurY, Strength; UInt32 Color; UInt8 Flags; } Glow;
             struct { float BlurX, BlurY, Strength; UInt32 Color; UInt8 Flags; float Angle, Distance; } DropShadow;
         };
+
+        // (appended, sfr33) an unknown filter with the default values (0x1425b57e0; values 0x14264f340, sfr_render_04l)
+        Filter();
+        void InitByDefaultValues();
     };
     // Copies up to bufferCount of the node's filters; returns how many.
     UPInt GetFilters(Filter* buffer, UPInt bufferCount);

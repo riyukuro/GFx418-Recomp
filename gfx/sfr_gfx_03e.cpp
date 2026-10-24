@@ -4,11 +4,9 @@
 // Queue unit sfr_gfx_03 is split along its original sources: this file is GFx_TextField.
 // MS2-UNIT: sfr_gfx_03e
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1425b5290-0x1425b57e0 .text$mn
-// MS2-RANGE: 0x1425b5800-0x1425b6580 .text$mn
-// MS2-RANGE: 0x1425b65e0-0x1425b6a40 .text$mn
-// MS2-RANGE: 0x1425b6fe0-0x1425b7e60 .text$mn
-// MS2-RANGE: 0x1425b7e70-0x1425b8250 .text$mn
+// MS2-RANGE: 0x1425b5290-0x1425b6580 .text$mn
+// MS2-RANGE: 0x1425b65e0-0x1425b6fe0 .text$mn
+// MS2-RANGE: 0x1425b6fe0-0x1425b8250 .text$mn
 // MS2-RANGE: 0x1425b8250-0x1425bb530 .text$mn
 // MS2-RANGE: 0x1425beab0-0x1425beb10 .text$mn
 // MS2-RANGE: 0x1425bc060-0x1425bc080 .text$mn
@@ -1566,5 +1564,179 @@ void TextField::PropagateMouseEvent(const EventId& id)
     }
     InteractiveObject::PropagateMouseEvent(id);
 }
+
+// The URL zone of the style sheet that overlaps urlRange (NULL: none); its index in pindex.
+static RangeData<TextField::CSSHolderBase::UrlZone>* FindUrlZone(TextField::CSSHolderBase* pcss, const Range& urlRange,
+                                                                 unsigned* pindex)
+{
+    for (unsigned i = 0; i < unsigned(pcss->UrlZones.Count()); ++i)
+    {
+        RangeData<TextField::CSSHolderBase::UrlZone>& zone = pcss->UrlZones[i];
+        if (zone.Index < urlRange.NextIndex() && urlRange.Index < zone.NextIndex())
+        {
+            *pindex = i;
+            return &zone;
+        }
+    }
+    return NULL;
+}
+
+// A link event of mouse mouseIndex on a URL of the text (the one in purlRange when the mouse is over none yet): the
+// zone's press / over counts change, the AVM side hears the roll-overs and roll-outs, and when the zone's look
+// changes its saved format comes back with the style sheet's a:active or a:hover style over it (on top of "a" and
+// "a:link").
+// MS2-FUNCTIONAL 0x1425b6a40: same counts, notifications and formats; the exe reloads the CSS holder after each store
+// @0x1425b6a40
+void TextField::ChangeUrlFormat(LinkEvent event, unsigned mouseIndex, const Range* purlRange)
+{
+    if (!HasStyleSheet())
+        return;
+    CSSHolderBase::MouseStateType& ms = pCSSData->MouseState[mouseIndex];
+    RangeData<CSSHolderBase::UrlZone>* pzone = NULL;
+    const char* styleName = NULL;
+    unsigned zoneIdx;
+    switch (event)
+    {
+    case Link_press:
+        if (ms.UrlZoneIndex != 0)
+        {
+            if (ms.HitBit)
+                return;
+            ms.HitBit = true;
+            pzone = &pCSSData->UrlZones[ms.UrlZoneIndex - 1];
+            if (pzone->GetData().HitCount != 0)
+            {
+                ++pzone->GetData().HitCount;
+                return;
+            }
+        }
+        else
+        {
+            if ((pzone = FindUrlZone(pCSSData, *purlRange, &zoneIdx)) == NULL)
+                return;
+            ms.UrlZoneIndex = zoneIdx + 1;
+            ms.HitBit       = true;
+        }
+        if (pzone->GetData().HitCount++ != 0)
+            return;
+        styleName = "a:active";
+        break;
+
+    case Link_release:
+        if (ms.UrlZoneIndex == 0 || !ms.HitBit)
+            return;
+        ms.HitBit = false;
+        zoneIdx   = ms.UrlZoneIndex - 1;
+        if (!ms.OverBit)
+            ms.UrlZoneIndex = 0;
+        pzone = &pCSSData->UrlZones[zoneIdx];
+        if (pzone->GetData().HitCount != 0)
+        {
+            if (--pzone->GetData().HitCount != 0)
+                return;
+            if (pzone->GetData().OverCount != 0)
+                styleName = "a:hover";
+        }
+        break;
+
+    case Link_rollover:
+        if (ms.UrlZoneIndex != 0)
+        {
+            if (ms.OverBit)
+                return;
+            ms.OverBit = true;
+            pzone = &pCSSData->UrlZones[ms.UrlZoneIndex - 1];
+            if (pzone->GetData().OverCount != 0)
+            {
+                ++pzone->GetData().OverCount;
+                if (HasAvmObject())
+                    GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
+                return;
+            }
+        }
+        else
+        {
+            if ((pzone = FindUrlZone(pCSSData, *purlRange, &zoneIdx)) == NULL)
+                return;
+            ms.UrlZoneIndex = zoneIdx + 1;
+            ms.OverBit      = true;
+            if (HasAvmObject())
+                GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
+        }
+        if (pzone->GetData().HitCount != 0 || pzone->GetData().OverCount++ != 0)
+            return;
+        styleName = "a:hover";
+        break;
+
+    case Link_rollout:
+        if (ms.UrlZoneIndex == 0 || !ms.OverBit)
+            return;
+        ms.OverBit = false;
+        pzone = &pCSSData->UrlZones[ms.UrlZoneIndex - 1];
+        if (!ms.HitBit)
+            ms.UrlZoneIndex = 0;
+        if (pzone->GetData().OverCount != 0)
+        {
+            --pzone->GetData().OverCount;
+            if (HasAvmObject())
+                GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
+            if (pzone->GetData().OverCount != 0)
+                return;
+            if (pzone->GetData().HitCount != 0)
+                styleName = "a:active";
+        }
+        break;
+
+    default:
+        return;
+    }
+
+    const UPInt startPos = UPInt(pzone->FirstIndex()), endPos = UPInt(pzone->NextIndex());
+    if (pzone->GetData().SavedFmt)
+    {
+        // the zone's own format comes back first
+        pDocument->RemoveText(startPos, endPos);
+        pDocument->GetStyledText()->InsertStyledText(*pzone->GetData().SavedFmt, startPos);
+    }
+    if (!styleName)
+        return;
+    const Render::Text::StyleManagerBase* pstyles = pCSSData->GetTextStyleManager();
+    const Render::Text::Style* pstyle = pstyles->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, styleName);
+    if (!pstyle)
+        return;
+    const Render::Text::Style* pastyle =
+        pCSSData->GetTextStyleManager()->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, "a");
+    const Render::Text::Style* plinkStyle =
+        pCSSData->GetTextStyleManager()->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, "a:link");
+    Render::Text::TextFormat fmt(Memory::GetHeapByAddress(this));
+    if (pastyle)
+        fmt = fmt.Merge(pastyle->mTextFormat);
+    if (plinkStyle)
+        fmt = fmt.Merge(plinkStyle->mTextFormat);
+    fmt = fmt.Merge(pstyle->mTextFormat);
+    pDocument->SetTextFormat(fmt, startPos, endPos);
+}
+
+}} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace Render {
+
+// @0x1425b57e0
+TreeText::Filter::Filter()
+{
+    Type = Filter_Unknown;
+    InitByDefaultValues();
+}
+
+}} // namespace Scaleform::Render
+
+// The text field's style sheet data (AS2 / AS3 TextField.styleSheet); out of line in the exe.
+// @0x1425b7e60
+Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField)
+{
+    return Scaleform::UPInt(reinterpret_cast<const Scaleform::GFx::TextField*>(textField)->GetCSSData());
+}
+
+namespace Scaleform { namespace GFx {
 
 }} // namespace Scaleform::GFx
