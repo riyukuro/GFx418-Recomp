@@ -24,6 +24,13 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State
 void FUN_14251cd30(Scaleform::GFx::AS3::TR::State* state, Scaleform::GFx::AS3::Value* popped);   // State::PopOpValue
 void FUN_14252c9f0(Scaleform::UPInt tracer, Scaleform::UInt64 pos, void* state, int off, unsigned int flag);
 void FUN_1424e6aa0(Scaleform::UPInt tracer, void* state, Scaleform::UInt64 pos, int a, int b);
+void FUN_1424d6cf0(void* err, int id, void* vm, const void* a1, const void* a2);   // VM::Error::Error(id, vm, Value, Value)
+void FUN_1424d6f40(void* err, int id, void* vm, const void* a1);   // VM::Error::Error(id, vm, Value)
+void FUN_1424d79f0(void* err, int id, void* vm, const char* a1, const void* a2);   // VM::Error::Error(id, vm, char*, Value)
+void FUN_142529f70(void* button, int state, void* obj);   // AvmButton::SetStateObject
+void FUN_1424ffc10(Scaleform::UPInt a, Scaleform::UPInt b, Scaleform::UPInt c, int d, int e);
+void FUN_1424f03f0();
+void FUN_14241fe30(void* arr, Scaleform::UInt32 size);   // Array::SetLength
 bool FUN_142514000(Scaleform::UPInt tracer, const void* v);   // Tracer::IsBooleanType
 bool FUN_142514470(Scaleform::UPInt tracer, const void* v);   // Tracer::IsNumberType
 bool FUN_142514c30(Scaleform::UPInt tracer, const void* v);   // Tracer::IsIntType
@@ -72,6 +79,19 @@ void Traits::SetInstanceTraits(Pickable<InstanceTraits::Traits> itr)
 }}}} // namespace Scaleform::GFx::AS3::ClassTraits
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+
+// An Error built by the exe's constructors (VM::Error::Error is functional in sfr_as3_15, so it is not linkable from here).
+struct Sfr31Err
+{
+    alignas(8) char Buf[sizeof(VM::Error)];
+    Sfr31Err(VM::ErrorID id, VM& vm, const Value& a)               { FUN_1424d6f40(Buf, id, &vm, &a); }
+    Sfr31Err(VM::ErrorID id, VM& vm, const Value& a, const Value& b) { FUN_1424d6cf0(Buf, id, &vm, &a, &b); }
+    Sfr31Err(VM::ErrorID id, VM& vm, const char* a, const Value& b) { FUN_1424d79f0(Buf, id, &vm, a, &b); }
+    ~Sfr31Err()                         { Get().~Error(); }
+    VM::Error& Get()                    { return *reinterpret_cast<VM::Error*>(Buf); }
+    operator const VM::Error&()         { return Get(); }
+};
+
 
 // MS2-FUNCTIONAL 0x14252a460: header inline Value::SetUInt32; the exe inlines Release (weak-ref free) where ours calls the out-of-line ReleaseWeakRef.
 // Out-of-line copies of header inlines that the exe emits as COMDATs; taking the address forces ours (pinned below).
@@ -1119,7 +1139,7 @@ static bool SlotCoerceForStore(const SlotInfo* si, VM* vm, const Value& v, Value
             RawASString typeName;
             FUN_142508720(si, &typeName.Get(), vm);
             Value tv(typeName.Get());
-            vm->ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3f6), *vm, tv));
+            vm->ThrowVerifyError(Sfr31Err(static_cast<VM::ErrorID>(0x3f6), *vm, tv));
             return false;
         }
         if (!ct->Coerce(v, coerced))
@@ -1127,7 +1147,7 @@ static bool SlotCoerceForStore(const SlotInfo* si, VM* vm, const Value& v, Value
             RawASString typeName;
             FUN_142508720(si, &typeName.Get(), vm);
             Value tv(typeName.Get());
-            vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x40a), *vm, v, tv));
+            vm->ThrowTypeError(Sfr31Err(static_cast<VM::ErrorID>(0x40a), *vm, v, tv));
             return false;
         }
         return true;
@@ -1142,7 +1162,7 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
 {
     if (si->ReadOnly && static_cast<int>(VmRd(vm, 0x30)) < 1)
     {
-        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, *thisV));
+        vm->ThrowReferenceError(Sfr31Err(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, *thisV));
         *ret = 0;
         return ret;
     }
@@ -1161,14 +1181,14 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
         *ret = SlotStoreBound(*si, obj, coerced);
         break;
     case 10: case SlotInfo::BT_Get:
-        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, *thisV));
+        vm->ThrowReferenceError(Sfr31Err(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, *thisV));
         *ret = 0;
         break;
     case SlotInfo::BT_Code:
     {
         const UInt32 k = static_cast<UInt32>(thisV->GetKind());
         const bool primitive = k < 5 || k == 10;
-        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(primitive ? 0x420 : 0x40d), *vm, si->Name->pData, *thisV));
+        vm->ThrowReferenceError(Sfr31Err(static_cast<VM::ErrorID>(primitive ? 0x420 : 0x40d), *vm, si->Name->pData, *thisV));
         *ret = 0;
         break;
     }
@@ -1180,7 +1200,7 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
         const UInt32 sk = static_cast<UInt32>(setter.GetKind());
         if (sk < 0xc && sk - 5 > 2)
         {
-            vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
+            vm->ThrowTypeError(Sfr31Err(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
             *ret = 0;
         }
         else
@@ -1239,7 +1259,7 @@ char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v
         const UInt32 sk = static_cast<UInt32>(setter.GetKind());
         if (sk < 0xc && sk - 5 > 2)
         {
-            vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
+            vm->ThrowTypeError(Sfr31Err(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
             *ret = 0;
         }
         else
@@ -1546,6 +1566,133 @@ ClassTraits::Traits* Sfr27GetClassTraitsByName(VM* vm, const ASString* name, con
     return ct;
 }
 
+
+// The traits' slot ind receives v for obj.
+// @0x142529eb0
+char* Sfr27TraitsSetSlotValue(Traits* tr, char* ret, SPInt ind, Value* v, Object* obj)
+{
+    Sfr27SlotSetValueObj(&tr->GetSlotInfo(AbsoluteIndex(ind)), ret, &tr->GetVM(), v, obj);
+    return ret;
+}
+
+// Object slot number slot (1-based, counted from the traits' first own slot) receives v.
+// @0x142528f80
+char* Sfr27ObjectSetSlotValue(Object* obj, char* ret, UInt32 slot, Value* v)
+{
+    Traits& tr = obj->GetTraits();
+    return Sfr27TraitsSetSlotValue(&tr, ret, static_cast<SPInt>(slot) - 1 + tr.FirstOwnSlotInd.Get(), v, obj);
+}
+
+// AS3 Array object: sets its length (GFx::Value::ObjectInterface::SetArraySize).
+// @0x1425265d0
+bool Sfr27ObjectInterfaceSetArraySize(void* self, UPInt obj, UInt32 size)
+{
+    FUN_14241fe30(reinterpret_cast<void*>(obj + 0x38), size);
+    return true;
+}
+
+// The tag bits an object address carries for this value (no exe address of its own: inlined everywhere).
+Value::ObjectTag Value::GetObjectTag() const
+{
+    switch (GetKind())
+    {
+    case kFunction:  return otFunction;
+    case kObject:    return otObject;
+    case kClass:     return otClass;
+    case kNamespace: return otNamespace;
+    default:         break;
+    }
+    return otInvalid;
+}
+
+void STPtr::AddRef() const
+{
+    if (pObject)
+        GetRawAddr()->AddRef();
+}
+
+void STPtr::Release() const
+{
+    if (pObject)
+        GetRawAddr()->Release();
+}
+
+
+// The button's up state receives obj.
+// @0x14252a4e0
+void Sfr31ButtonSetUpState(void* button, void* obj) { FUN_142529f70(button, 0, obj); }
+
+// The same for the over state.
+// @0x1425287b0
+void Sfr31ButtonSetOverState(void* button, void* obj) { FUN_142529f70(button, 1, obj); }
+
+// The same for the down state.
+// @0x1425272f0
+void Sfr31ButtonSetDownState(void* button, void* obj) { FUN_142529f70(button, 2, obj); }
+
+// The same for the hit-test state.
+// @0x142527490
+void Sfr31ButtonSetHitTestState(void* button, void* obj) { FUN_142529f70(button, 3, obj); }
+
+// Two bounds with -1 meaning the default (0 and 1000); the second is stored twice.
+// @0x1425287c0
+void Sfr31SetDefaultedBounds(char* self, int lo, int hi)
+{
+    if (lo == -1)
+        lo = 0;
+    *reinterpret_cast<int*>(self + 0xac) = lo;
+    if (hi == -1)
+        hi = 1000;
+    *reinterpret_cast<int*>(self + 0x8c) = hi;
+    *reinterpret_cast<int*>(self + 0xa8) = hi;
+}
+
+// Hands arg to the helper with the table 200 bytes into the file's constant block.
+// @0x142531510
+void Sfr31HandOffToFileBlock(UPInt self, UPInt arg)
+{
+    FUN_1424ffc10(self, *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 0x20) + 0x78) + 0x10) + 200,
+                  arg, 0, 0);
+}
+
+// Calls the helper object's virtual 0x58 with the owner and its +0x50 field (result discarded).
+// @0x142538810
+void Sfr31CallHelperVirtual(UPInt self)
+{
+    typedef void (*Fn)(UPInt helper, void* ret, UPInt owner, UPInt arg);
+    UPInt helper = *reinterpret_cast<UPInt*>(self + 0x40);
+    char ret[32];
+    (*reinterpret_cast<Fn*>(*reinterpret_cast<UPInt*>(helper) + 0x58))(helper, ret, self, *reinterpret_cast<UPInt*>(self + 0x50));
+}
+
+// Flags the object (virtual 0x30 with 0x20000) after the global init helper, and caches its field 0x60.
+// @0x142524350
+void Sfr31FlagAndCacheField(UPInt self, UPInt* obj)
+{
+    typedef void (*Fn)(UPInt* obj, int flags);
+    FUN_1424f03f0();
+    (*reinterpret_cast<Fn*>(*obj + 0x30))(obj, 0x20000);
+    *reinterpret_cast<UPInt*>(self + 0x28) = obj[0xc];
+}
+
+
+// Stage::SetOrientation: the orientation string (+0x120) is replaced.
+// @0x142528770
+void Sfr31StageSetOrientation(char* self, const ASString& orientation)
+{
+    *reinterpret_cast<ASString*>(self + 0x120) = orientation;
+}
+
+// ShapeDataInterface::SkipPathData: reads (virtual 0x48) until it reports the end.
+// @0x14252c850
+void Sfr31SkipPathData(UPInt self, void* pos)
+{
+    typedef int (*Fn)(UPInt self, void* pos, void* out);
+    char out[24];
+    while ((*reinterpret_cast<Fn*>(*reinterpret_cast<UPInt*>(self) + 0x48))(self, pos, out) != 0)
+    {
+    }
+}
 
 }}} // namespace Scaleform::GFx::AS3
 
