@@ -62,6 +62,8 @@ public:
     virtual DisplayObjectBase* CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef, InteractiveObject* pparent,
                                                  ResourceId rid, MovieDefImpl* pbindDefImpl) = 0;
     virtual void               RegisterASClasses(AS3::VM* pvm) = 0;
+    // (appended, sfr_video_04) creates the glue object in the global heap (exe 0x140002730).
+    static AS3VideoSupport*    CreateInstance();
 };
 
 // The AS2 side (vftable 0x1431b4ab0: dtor, CreateASCharacter, RegisterASClasses, AttachAudio).
@@ -73,6 +75,8 @@ public:
     virtual void               RegisterASClasses(AS2::GlobalContext& gc, ASStringContext& sc) = 0;
     // MovieClip.attachAudio(netStream): the stream's sound goes to the clip.
     virtual void               AttachAudio(AS2::Object* pnetStream, Sprite* pchar) = 0;
+    // (appended, sfr_video_04) creates the glue object in the global heap (exe 0x1400019f0).
+    static AS2VideoSupport*    CreateInstance();
 };
 
 // Abstract video state stored in the StateBag (State_Video).
