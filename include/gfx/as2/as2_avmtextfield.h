@@ -145,6 +145,9 @@ public:
     virtual void OnScroll();                                 // exe 0x14296ce90
     virtual bool UpdateTextFromVariable();                   // exe 0x142992c40
     virtual void UpdateVariable();                           // exe 0x142992d80
+
+    // (appended, sfr22) the field's autoSize to its document's AutoSizeX / Y (exe 0x142992880).
+    void UpdateAutosizeSettings();
 };
 static_assert(sizeof(AvmTextField) == 0x68, "AS2 AvmTextField size");
 
