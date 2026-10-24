@@ -252,6 +252,8 @@ public:
     const ClassTraits::Traits& GetClassTraits(const Value& v) const;
     // (appended, sfr24) the traits of v: its class traits for a class, its instance traits otherwise. 0x14250ffc0
     const Traits& GetValueTraits(const Value& v) const;
+    // (appended, sfr24) the class traits a multiname names (NULL: not found). 0x142525270
+    const ClassTraits::Traits* Resolve2ClassTraits(const Multiname& mn);
     // (appended, sfr19) the interned namespace of a kind and name (NULL: the empty name) (0x142516400).
     Pickable<Instances::Namespace> MakeInternedNamespace(Abc::NamespaceKind kind, const char* name) const;
     // (appended, sfr19) the same by an ASString or a StringDataPtr URI (0x1425162a0 / 0x142516340).

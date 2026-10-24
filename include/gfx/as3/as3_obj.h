@@ -226,6 +226,11 @@ public:
     // object tagged pointer or a C++ object pointer). 0x142503b50
     void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Object& obj,
                          RefCountBaseGC<StatMV_ActionScript_Mem>::GcOp op) const;
+
+    // (appended, sfr24) the class traits of the slot's declared type (resolved through vm). 0x1425085b0
+    const ClassTraits::Traits* GetDataType(VM& vm) const;
+    // (appended, sfr24) stores v into this slot of _this (setters run; vt: the vtable of a super call). 0x142529030
+    CheckResult SetSlotValue(VM& vm, const Value& v, const Value& _this, const VTable* vt = NULL) const;
 };
 
 // Hash functor of the slot name set.
@@ -791,6 +796,9 @@ public:
     // (attr: 0 get, 1 set, 2 call). 0x142502360
     void FindProperty(PropRef& result, const Multiname& mn, int attr);
 
+    // (appended, sfr24) the object's primitive value for hint. 0x142508bd0
+    void GetDefaultValueUnsafe(Value& result, Value::Hint hint = Value::hintNone);
+
 protected:
     SPtr<Traits>        pTraits;            // +0x20
     DynAttrsType        DynAttrs;           // +0x28
@@ -920,6 +928,10 @@ public:
     bool IsAnyType() const;
     // (appended, sfr19) the namespace of a qualified name. 0x14250bce0
     Instances::Namespace& GetNamespace() const;
+    // (appended, sfr24) the run-time name (and, for a run-time QName, the namespace) popped off the stack. 0x14251c8a0
+    void PickRTNameUnsafe(ValueStack& vs);
+    // (appended, sfr24) the run-time namespace of the name. 0x142528d20
+    void SetRTNamespace(const Instances::Namespace& ns);
 
     Abc::MultinameKind      Kind;   // +0x00
     SPtr<GASRefCountBase>   Obj;    // +0x08 namespace or namespace set

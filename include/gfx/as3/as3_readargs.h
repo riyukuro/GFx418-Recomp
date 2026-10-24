@@ -161,6 +161,9 @@ public:
     void RegNumber(UInt32 ind);             // 0x142537c50
     void RegInt(UInt32 ind);                // 0x142537ce0
     void RegUInt(UInt32 ind);               // 0x142537d70
+    // (sfr24) operand stack pops: drop the top n values; take the top value out.
+    void  PopOp(UPInt n);                   // 0x14251ccc0
+    Value PopOpValue();                     // 0x14251cd30
 
 private:
     State();
