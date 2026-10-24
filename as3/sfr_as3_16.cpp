@@ -1227,5 +1227,27 @@ void FUN_1424dc9f0(void* self)
     bytes[8] = 0;
 }
 
+// Clears the chained hash table's entries to the free sentinel, then releases the table block.
+// MS2-FUNCTIONAL: clears the same 0x28-byte entry chain and frees the backing block; loop register allocation differs.
+// @0x1424dca60
+void FUN_1424dca60(void* self)
+{
+    auto** table = static_cast<void**>(self);
+    if (*table)
+    {
+        auto* bytes = static_cast<unsigned char*>(*table);
+        Scaleform::UPInt count = *reinterpret_cast<Scaleform::UPInt*>(bytes + 8) + 1;
+        for (Scaleform::UPInt i = 0; i < count; ++i)
+        {
+            auto* next = reinterpret_cast<Scaleform::UPInt*>(bytes + i * 0x28 + 0x10);
+            if (*next != static_cast<Scaleform::UPInt>(-2))
+                *next = static_cast<Scaleform::UPInt>(-2);
+        }
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, *table);
+        *table = nullptr;
+    }
+}
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
