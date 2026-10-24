@@ -4,6 +4,15 @@
 // MS2-UNIT: sfr_as3_15
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424c9700-0x1424dc870 .text$mn
+// MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
+// MS2-PIN: ??_7Class@AS3@GFx@Scaleform@@6B@ 0x14317b140
+// MS2-PIN: ??_7CTraits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b3a0
+// MS2-PIN: ??_7Object@AS3@GFx@Scaleform@@6B@ 0x14317b098
+// MS2-PIN: ??_7RTraits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b428
+// MS2-PIN: ??_7Traits@AS3@GFx@Scaleform@@6B@ 0x14317b210
+// MS2-PIN: ??_7Traits@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14317b288
+// MS2-PIN: ??_7Traits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b300
+#include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_xml.h"
 #include "ms2/scaleform/include/gfx/gfx_sprite.h"
@@ -29,7 +38,6 @@
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
-#include "ms2/scaleform/include/gfx/gfx_input.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -2300,9 +2308,9 @@ template void MS2_ObjPtrSet::add<const void*>(void*, const void* const&, UPInt);
 // @0x1424d2410
 template String AsString<double>(const double&);
 }
-// A second, unfolded copy of AsString<long> (the canonical one is sfr_as3_01c 0x1423e8220).
+// AsString of an unsigned int (the exe's unfolded copy; it formats through the zero-extending LongFormatter ctor).
 // @0x1424d22a0
-Scaleform::String FUN_1424d22a0(const long& v)
+Scaleform::String FUN_1424d22a0(const unsigned int& v)
 {
     Scaleform::String result;
     Scaleform::Format(result, "{0}", v);
@@ -3445,6 +3453,466 @@ LoadQueueEntry::LoadQueueEntry(Instances::fl_net::URLRequest* request, Instances
     FirstExec = true;
     NotifyLoadInitCInterface = NULL;
 }
+
+// ---- Tracer helper objects (the Tracer is not modeled: raw words, like the Sfr27Tracer* helpers of sfr_as3_18) ----
+extern const char* DAT_143a2d3d0[];      // the AS3 builtin string table (61 entries)
+extern const void* DAT_14317f860[];      // vftable of the 0x10-byte counted dummy owner
+void FUN_142524ec0(void* arr, void* heapOwner, UPInt newSize);   // ArrayData<Value>::ResizeNoConstruct
+void FUN_142524d80(void* arr, void* heapOwner, UPInt newSize);   // ArrayData<pointer>::ResizeNoConstruct
+void FUN_1424f08d0(void* dst, UPInt n, const Value* src);        // ConstructorMov<Value>::ConstructArray
+
+namespace
+{
+struct Sfr30CountedDummy
+{
+    const void* const* pVTable;
+    UPInt              RefCount;
+};
+void Sfr30DummyRelease(UPInt p)
+{
+    if (p && !(p & 1))
+    {
+        Sfr30CountedDummy* o = reinterpret_cast<Sfr30CountedDummy*>(p);
+        if (--*reinterpret_cast<int*>(&o->RefCount) == 0)
+            reinterpret_cast<void (*)(void*, unsigned)>(const_cast<void*>(o->pVTable[0]))(o, 1);
+    }
+}
+}
+
+// The AS3 builtin names: 61 string nodes, initialised from the static table.
+// MS2-FUNCTIONAL: the Tracer-side helper is written over raw words
+// @0x1424d9d70
+StringManager* FUN_1424d9d70(StringManager* self, ASStringManager* mgr)
+{
+    for (unsigned i = 0; i < AS3BuiltinConst_Count_; ++i)
+        reinterpret_cast<UPInt*>(self)[i] = 0;
+    self->pStringManager = mgr;
+    self->pStaticStrings = DAT_143a2d3d0;
+    mgr->InitBuiltinArray(self->Builtins, DAT_143a2d3d0, AS3BuiltinConst_Count_);
+    return self;
+}
+
+// A counted dummy owner stored twice (the second slot is a second reference to it).
+// MS2-FUNCTIONAL: raw counted pointers over a hand-written release
+// @0x1424d9ca0
+UPInt* FUN_1424d9ca0(UPInt* self, UPInt arg)
+{
+    self[0] = 0;
+    self[1] = 0;
+    self[2] = arg;
+    Sfr30CountedDummy* obj = static_cast<Sfr30CountedDummy*>(Memory::pGlobalHeap->Alloc(0x10));
+    if (obj)
+    {
+        obj->RefCount = 1;
+        obj->pVTable = DAT_14317f860;
+    }
+    if (reinterpret_cast<UPInt>(obj) != self[0])
+    {
+        Sfr30DummyRelease(self[0]);
+        self[0] = reinterpret_cast<UPInt>(obj);
+    }
+    UPInt old = self[1];
+    if (old)
+    {
+        if (old & 1)
+            self[1] = old - 1;
+        else
+            Sfr30DummyRelease(old);
+    }
+    if (self[0])
+        ++*reinterpret_cast<int*>(self[0] + 8);
+    self[1] = self[0];
+    return self;
+}
+
+// Three heap-owned arrays and a bit set sized from the abc file's table (Tracer state).
+// MS2-FUNCTIONAL: raw words; the layout of the three arrays is {Data, Size, Policy, Heap}
+// @0x1424d9be0
+UPInt* FUN_1424d9be0(UPInt* self, UPInt owner, UPInt arg)
+{
+    self[0] = owner;
+    self[1] = arg;
+    self[2] = arg;
+    UPInt heapOwner = *reinterpret_cast<UPInt*>(owner + 0x18);
+    for (unsigned i = 0; i < 3; ++i)
+    {
+        UPInt* a = self + 3 + i * 4;
+        a[0] = 0;
+        a[1] = 0;
+        a[2] = 0;
+        a[3] = heapOwner;
+    }
+    UPInt file = *reinterpret_cast<UPInt*>(owner + 0x20);
+    UPInt table = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(file + 0x28) + 0x28);
+    UPInt entry = (*reinterpret_cast<UPInt**>(table + 0x170))[*reinterpret_cast<int*>(file + 0x30)];
+    unsigned count = *reinterpret_cast<unsigned*>(entry + 0x20);
+    *reinterpret_cast<unsigned*>(self + 16) = count;
+    UPInt bytes = (count + 7) >> 3;
+    AllocInfo info(StatMV_VM_Tracer_Mem, 0, 0);
+    void* bits = reinterpret_cast<MemoryHeap*>(heapOwner)->Alloc(bytes, &info);
+    self[15] = reinterpret_cast<UPInt>(bits);
+    memset(bits, 0, bytes);
+    return self;
+}
+
+// A one-word owner header, three empty words, and an empty-string reference (Tracer scratch state).
+// MS2-FUNCTIONAL: raw words over the VM's string manager chain
+// @0x1424dbd10
+UPInt* FUN_1424dbd10(UPInt* self, UPInt vm)
+{
+    self[0] = vm;
+    self[1] = 0;
+    self[2] = 0;
+    self[3] = 0;
+    UPInt mgr = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(vm + 0x78) + 0x10) + 0x1e8);
+    ++*reinterpret_cast<int*>(mgr + 0x58);
+    self[4] = 0;
+    self[5] = 0;
+    self[6] = 0;
+    self[7] = mgr + 0x40;
+    return self;
+}
+
+// Copy of a state holding a Value array, a counted-pointer array and one counted pointer.
+// MS2-FUNCTIONAL: raw words; the arrays are grown through the exe's ResizeNoConstruct instances
+// @0x1424dbd70
+UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
+{
+    self[0] = vm;
+    self[1] = 0;
+    self[2] = 0;
+    self[3] = 0;
+    UPInt n = src[2];
+    const Value* values = reinterpret_cast<const Value*>(src[1]);
+    if (n)
+    {
+        FUN_142524ec0(self + 1, self + 1, n);
+        FUN_1424f08d0(reinterpret_cast<Value*>(self[1]), n, values);
+    }
+    self[4] = 0;
+    self[5] = 0;
+    self[6] = 0;
+    UPInt ptr = src[7];
+    self[7] = ptr;
+    ++*reinterpret_cast<int*>(ptr + 0x18);
+    UPInt m = src[5];
+    UPInt* from = reinterpret_cast<UPInt*>(src[4]);
+    if (m)
+    {
+        UPInt old = self[5];
+        FUN_142524d80(self + 4, self + 4, old + m);
+        UPInt* to = reinterpret_cast<UPInt*>(self[4]) + old;
+        for (; m; --m, ++from, ++to)
+        {
+            *to = *from;
+            ++*reinterpret_cast<int*>(*to + 0x18);
+        }
+    }
+    return self;
+}
+
+// ---- LoadQueueEntryMT_LoadMovie constructor (out of line in the exe; sfr_as3_16 inlines its own copy) ----
+extern const void* DAT_14317d890[];      // LoadQueueEntryMT_LoadMovie vftable
+void FUN_1426396b0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie);   // LoadQueueEntryMT::LoadQueueEntryMT
+void FUN_14257dcb0(void* p);                                                 // Task release
+
+// Starts the preload task (stripped players try the .gfx name first) and hands it to the task manager.
+// MS2-FUNCTIONAL: raw words over the entry (its members are private to the class, whose inline constructor lives in
+// sfr_as3_16); the cancel loop of the inline copy is not part of this constructor
+// @0x1424d84e0
+void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
+{
+    UPInt* w = static_cast<UPInt*>(self);
+    FUN_1426396b0(self, pentry, pmovie);
+    w[0] = reinterpret_cast<UPInt>(DAT_14317d890);
+    w[5] = 0;
+    *reinterpret_cast<UByte*>(w + 6) = 0;
+    *reinterpret_cast<UByte*>(w + 7) = 0;
+    *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(w) + 0x34) = 0;
+    bool stripped = false;
+    UPInt movie = w[3];
+    UPInt main = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(movie + 0x18) + 0x10) + 0x50);
+    if (main)
+    {
+        void* def = reinterpret_cast<void* (*)(UPInt)>((*reinterpret_cast<void***>(main))[0x1e0 / 8])(main);
+        unsigned flags = reinterpret_cast<unsigned (*)(void*)>((*reinterpret_cast<void***>(def))[0x58 / 8])(def);
+        stripped = ((flags >> 4) & 1) != 0;
+    }
+    MoviePreloadTask* task = NULL;
+    if (void* mem = Memory::pGlobalHeap->Alloc(0x50))
+        task = ::new (mem) MoviePreloadTask(reinterpret_cast<MovieImpl*>(movie),
+                                          *reinterpret_cast<const String*>(reinterpret_cast<UByte*>(pentry) + 0x18),
+                                          stripped, *(reinterpret_cast<UByte*>(pentry) + 0x24) != 0);
+    if (w[5])
+        FUN_14257dcb0(reinterpret_cast<void*>(w[5]));
+    w[5] = reinterpret_cast<UPInt>(task);
+    void* bag = reinterpret_cast<void*>(movie + 0x10);
+    void* tm = reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(bag))[0x18 / 8])(bag, 0x14);
+    reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(tm))[1])(tm, task);
+    FUN_14257dcb0(tm);
+    return self;
+}
+// ---- MovieRoot constructor ----
+extern const void* DAT_14317d8d8[];      // MovieRoot vftable
+extern const void* DAT_14317da88[];      // MovieRoot secondary vftable (+0x28)
+extern const void* DAT_14317daa0[];      // MovieRoot keyboard-listener vftable (+0x38)
+extern const void* DAT_14317eff8[];      // keyboard-listener forwarder vftable
+void FUN_14257dc30(void* p);                 // RefCountImpl::AddRef
+void FUN_142575ec0(void* pmovie, void* l);   // MovieImpl::SetKeyboardListener
+
+// MS2-FUNCTIONAL: raw words over MovieRoot (several of its members are unrecovered gaps); the exe's dead store of the
+// ASMovieRootBase vftable ahead of the final one is omitted
+// @0x1424d8640
+void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSupport* psupport)
+{
+    UPInt* w = static_cast<UPInt*>(self);
+    UByte* b = static_cast<UByte*>(self);
+    w[0] = reinterpret_cast<UPInt>(DAT_14317d8d8);
+    *reinterpret_cast<unsigned*>(b + 8) = 1;
+    w[2] = 0;
+    if (psupport)
+        FUN_14257dc30(psupport);
+    w[3] = reinterpret_cast<UPInt>(psupport);
+    b[0x20] = reinterpret_cast<UByte (*)(void*)>((*reinterpret_cast<void***>(psupport))[0x30 / 8])(psupport);
+    *reinterpret_cast<unsigned*>(b + 0x30) = 0;
+    b[0x34] = 0;
+    w[5] = reinterpret_cast<UPInt>(DAT_14317da88);
+    w[7] = reinterpret_cast<UPInt>(DAT_14317daa0);
+    if (pctx)
+        FUN_14257dc30(pctx);
+    w[8] = reinterpret_cast<UPInt>(pctx);
+    w[9] = 0;
+    b[0x50] = 1;
+    *reinterpret_cast<unsigned*>(b + 0x58) = 0;
+    w[0xc] = 0;
+    w[0xf] = 0;
+    UPInt ctxw10 = reinterpret_cast<UPInt*>(pctx)[2];
+    for (unsigned o = 0x88; o <= 0x118; o += 0x18)
+    {
+        w[o / 8] = 0;
+        w[o / 8 + 1] = 0;
+        w[o / 8 + 2] = 0;
+    }
+    // (the loop above covers the 7 three-word groups 0x88..0x120)
+    w[0x148 / 8] = ctxw10;
+    *reinterpret_cast<unsigned*>(b + 0x130) = 1;
+    w[0x138 / 8] = 0;
+    *reinterpret_cast<unsigned*>(b + 0x140) = 0;
+    w[0x150 / 8] = 0;
+    w[0x158 / 8] = 0;
+    UPInt* sm = w + 0x160 / 8;
+    UPInt asm_ = reinterpret_cast<UPInt*>(w[8])[3];
+    for (unsigned i = 0; i < 0x3d; ++i)
+        sm[i] = 0;
+    sm[0x3d] = asm_;
+    sm[0x3e] = reinterpret_cast<UPInt>(DAT_143a2d3d0);
+    reinterpret_cast<ASStringManager*>(asm_)->InitBuiltinArray(reinterpret_cast<ASStringNodeHolder*>(sm), DAT_143a2d3d0, 0x3d);
+    for (unsigned i = 0; i < 4; ++i)
+    {
+        UByte* e = b + 0x360 + i * 0xe0;
+        *reinterpret_cast<UPInt*>(e) = 0;
+        *reinterpret_cast<UPInt*>(e + 8) = 0;
+        *reinterpret_cast<UPInt*>(e + 0x10) = 0;
+        *reinterpret_cast<UPInt*>(e + 0x18) = 0;
+        *reinterpret_cast<unsigned*>(e + 0x20) = 0;
+        for (unsigned o = 0x2c; o <= 0xdc; o += 0xc)
+            *reinterpret_cast<unsigned*>(e + o) = 0;
+    }
+    b[0x6e0] = 0;
+    w[0x6e8 / 8] = 0;
+    b[0x6f0] = 0;
+    *reinterpret_cast<unsigned*>(b + 0x358) = 0;
+    w[2] = reinterpret_cast<UPInt>(pmovie);
+    pmovie->SetASMovieRoot(reinterpret_cast<ASMovieRootBase*>(self));
+    UPInt heap = *reinterpret_cast<UPInt*>(reinterpret_cast<UPInt*>(w[2])[8]);
+    UPInt* fwd = reinterpret_cast<UPInt*>(reinterpret_cast<void* (*)(UPInt, UPInt, UPInt)>((*reinterpret_cast<void***>(heap))[0x50 / 8])(heap, 0x10, 0));
+    if (fwd)
+    {
+        fwd[1] = reinterpret_cast<UPInt>(pmovie);
+        fwd[0] = reinterpret_cast<UPInt>(DAT_14317eff8);
+    }
+    reinterpret_cast<UPInt*>(pmovie)[7] = reinterpret_cast<UPInt>(fwd);
+    FUN_142575ec0(pmovie, b + 0x38);
+    w[0x80 / 8] = 0;
+    unsigned* fl = reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(pmovie) + 0x3490);
+    *fl = (*fl & 0xdf7fffffu) | 0x10400000u;
+    b[0x6e1] = 0;
+    return self;
+}
+// ---- Tracer constructor ----
+extern const void* DAT_14317b938[];      // Tracer vftable
+void FUN_142545310(const void* sv, UPInt* ret);                  // StringView::ToStringDataPtr
+void FUN_1425247f0(void* arr, UPInt n);                          // array: resize
+void FUN_142524040(void* arr, void* owner, UPInt n);             // array: reserve
+void FUN_142524870(void* arr, UPInt n);                          // array: resize
+void FUN_142522e50(void* arr, UPInt heap, UPInt cap);            // array: reserve (heap-owned)
+void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
+UPInt FUN_142524f60(UPInt vm, UPInt file, UPInt multiname);      // VM: class traits of a multiname (0 if unresolved)
+
+namespace
+{
+inline UPInt& Sfr30Rd(UPInt base, UPInt off) { return *reinterpret_cast<UPInt*>(base + off); }
+inline Value Sfr30InstanceValue(UPInt traits, Value::TraceNullType nn)
+{
+    return Value(*reinterpret_cast<InstanceTraits::Traits*>(traits), nn);
+}
+inline void Sfr30MarkReg(UPInt state, UPInt ind)
+{
+    UByte* bits = reinterpret_cast<UByte*>(Sfr30Rd(state, 0x78));
+    bits[ind >> 3] = static_cast<UByte>(bits[ind >> 3] | (1u << (ind & 7)));
+}
+}
+
+// The tracer's entry state: register 0 is the receiver, then undefined locals, then the typed parameters.
+// MS2-FUNCTIONAL: raw words over the Tracer and its State (neither is modelled); the exe's inlined null-string special
+// case of the verify-error argument is not reproduced
+// @0x1424d9f30
+UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra)
+{
+    self[3] = heap;
+    self[0] = reinterpret_cast<UPInt>(DAT_14317b938);
+    self[6] = extra;
+    *reinterpret_cast<unsigned*>(self + 1) = 0;
+    reinterpret_cast<UByte*>(self)[0xc] = 0;
+    reinterpret_cast<UByte*>(self)[0x10] = 0;
+    self[4] = body;
+    self[5] = ops;
+    self[7] = 0;
+    const UPInt file = Sfr30Rd(body, 0x28);
+    const UPInt abc = Sfr30Rd(file, 0x28);
+    const UPInt methodInfo = reinterpret_cast<UPInt*>(Sfr30Rd(abc, 0x170))[*reinterpret_cast<int*>(body + 0x30)];
+    UPInt sv = Sfr30Rd(methodInfo, 0x38);
+    FUN_142545310(&sv, self + 8);
+    self[10] = self[8];
+    self[11] = self[9];
+    self[0xc] = 0;
+    self[0xd] = 0;
+    for (unsigned off = 0x70; off <= 0xf0; off += 0x20)
+    {
+        UPInt* a = self + off / 8;
+        a[0] = 0;
+        a[1] = 0;
+        a[2] = 0;
+        a[3] = heap;
+    }
+    self[0x120 / 8] = 0;
+    self[0x128 / 8] = 0;
+    self[0x130 / 8] = 0;
+    self[0x138 / 8] = heap;
+    UPInt* sentinel = self + 0x110 / 8;
+    sentinel[0] = reinterpret_cast<UPInt>(sentinel);
+    sentinel[1] = reinterpret_cast<UPInt>(sentinel);
+
+    const UPInt vm = Sfr30Rd(file, 0x20);
+    reinterpret_cast<UByte*>(self)[0xc] = *reinterpret_cast<UByte*>(Sfr30Rd(vm, 0x20) + 0xc);
+    *reinterpret_cast<unsigned*>(self + 1) = 3;
+    self[0xc] = Sfr30Rd(vm, 0x78);
+    if (self[0xc])
+        --self[0xc];
+    FUN_1425247f0(reinterpret_cast<void*>(ops), 0);
+    if (self[9] > Sfr30Rd(ops, 0x10))
+        FUN_142524040(reinterpret_cast<void*>(ops), reinterpret_cast<void*>(ops), self[9]);
+    FUN_142524870(self + 0x1a, self[9]);
+
+    // The entry State: owner, three Value-or-byte arrays and the register bit set.
+    UPInt* state = static_cast<UPInt*>(reinterpret_cast<MemoryHeap*>(heap)->Alloc(0x88));
+    if (state)
+    {
+        state[0] = reinterpret_cast<UPInt>(self);
+        state[1] = 0;
+        state[2] = 0;
+        for (unsigned off = 0x18; off <= 0x58; off += 0x20)
+        {
+            UPInt* a = state + off / 8;
+            a[0] = 0;
+            a[1] = 0;
+            a[2] = 0;
+            a[3] = heap;
+        }
+        AllocInfo info(StatMV_VM_Tracer_Mem, 0, 0);
+        const unsigned nregs = *reinterpret_cast<unsigned*>(methodInfo + 0x20);
+        *reinterpret_cast<unsigned*>(state + 0x80 / 8) = nregs;
+        const unsigned bytes = (nregs + 7) >> 3;
+        void* bits = reinterpret_cast<MemoryHeap*>(heap)->Alloc(bytes, &info);
+        state[0x78 / 8] = reinterpret_cast<UPInt>(bits);
+        memset(bits, 0, bytes);
+    }
+    UPInt* states = self + 0xf0 / 8;
+    {
+        UPInt n = states[1] + 1;
+        if (n >= states[2])
+            FUN_142522e50(states, states[3], n + (n >> 2));
+        states[1] = n;
+        reinterpret_cast<UPInt*>(states[0])[n - 1] = reinterpret_cast<UPInt>(state);
+    }
+
+    // register 0: the receiver
+    ArrayDH<Value>& regs = *reinterpret_cast<ArrayDH<Value>*>(state + 0x18 / 8);
+    const UPInt owner = Sfr30Rd(body, 0x40);
+    const UPInt objectITraits = Sfr30Rd(Sfr30Rd(Sfr30Rd(file, 0x20), 0x1f8), 0xc0);
+    if (owner && (reinterpret_cast<UByte*>(owner)[0x68] >> 5 & 1))
+        regs.PushBack(Value(*reinterpret_cast<ClassTraits::Traits*>(owner), Value::NotNull));
+    else if (owner && (*reinterpret_cast<unsigned*>(body + 0x88) & 0x1f) != 0xe)
+        regs.PushBack(Sfr30InstanceValue(owner, Value::NotNull));
+    else
+        regs.PushBack(Sfr30InstanceValue(objectITraits, Value::NotNull));
+    Sfr30MarkReg(reinterpret_cast<UPInt>(state), 0);
+
+    // undefined locals
+    const UPInt abcInfo = Sfr30Rd(abc, 0xf8);
+    const UPInt sig = reinterpret_cast<UPInt*>(abcInfo)[*reinterpret_cast<int*>(methodInfo + 0x18)];
+    const int nlocals = *reinterpret_cast<int*>(methodInfo + 0x20);
+    for (int i = 1; i < nlocals; ++i)
+        regs.PushBack(Value());
+
+    // typed parameters
+    UPInt reg = 1;
+    const UPInt nparams = Sfr30Rd(sig, 0x18);
+    const unsigned* ids = reinterpret_cast<const unsigned*>(Sfr30Rd(sig, 0x10));
+    for (UPInt i = 0; i < nparams; ++i)
+    {
+        const unsigned id = ids[i];
+        const UPInt mn = id ? Sfr30Rd(abc, 0xb8) + UPInt(id) * 16 : abc + 0xe8;
+        const UPInt cls = FUN_142524f60(vm, file, mn);
+        if (!cls)
+        {
+            ASString name = reinterpret_cast<VMAbcFile*>(file)->GetInternedString(*reinterpret_cast<int*>(mn + 8));
+            Value arg(name);
+            VM::Error err(static_cast<VM::ErrorID>(0x3f6), *reinterpret_cast<VM*>(vm), arg);
+            FUN_14252ecb0(reinterpret_cast<void*>(vm), &err, &fl::VerifyErrorCI);
+            return self;
+        }
+        const UPInt t = Sfr30Rd(cls, 0xc0);
+        const bool prim = t == Sfr30Rd(Sfr30Rd(vm, 0x220), 0xc0) || t == Sfr30Rd(Sfr30Rd(vm, 0x228), 0xc0) ||
+                          t == Sfr30Rd(Sfr30Rd(vm, 0x218), 0xc0) || t == Sfr30Rd(Sfr30Rd(vm, 0x210), 0xc0);
+        regs[reg] = Sfr30InstanceValue(t, prim ? Value::NotNull : Value::Null);
+        Sfr30MarkReg(reinterpret_cast<UPInt>(state), reg);
+        ++reg;
+    }
+
+    // the rest-array / arguments register
+    const UByte flags = *reinterpret_cast<UByte*>(sig);
+    if (flags & 5)
+    {
+        regs[reg] = Sfr30InstanceValue(Sfr30Rd(Sfr30Rd(vm, 0x238), 0xc0), Value::NotNull);
+        Sfr30MarkReg(reinterpret_cast<UPInt>(state), reg);
+    }
+
+    // the entry block, linked at the head of the block list
+    UPInt* node = static_cast<UPInt*>(reinterpret_cast<MemoryHeap*>(heap)->Alloc(0x28));
+    if (node)
+    {
+        *reinterpret_cast<unsigned*>(node + 2) |= 1;
+        *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(node) + 0x14) = 0;
+        node[3] = reinterpret_cast<UPInt>(state);
+        node[4] = 0;
+    }
+    node[0] = sentinel[0];
+    node[1] = reinterpret_cast<UPInt>(sentinel);
+    reinterpret_cast<UPInt*>(sentinel[0])[1] = reinterpret_cast<UPInt>(node);
+    sentinel[0] = reinterpret_cast<UPInt>(node);
+    return self;
+}
 }} // namespace GFx::AS3
 
 namespace Render {
@@ -3461,6 +3929,22 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
     pVTable = TreeNodeNodeDataVTable;
     AproxLocalBounds.Clear();
     AproxParentBounds.Clear();
+}
+
+// MS2-FUNCTIONAL: member-wise copy; the exe stores the EntryData vftable before the NodeData one
+// @0x1424d9220
+TreeNode::NodeData::NodeData(const NodeData& src)
+    : ContextImpl::EntryData(src), M34(src.M34), States(src.States), Cx(src.Cx),
+      AproxLocalBounds(src.AproxLocalBounds), AproxParentBounds(src.AproxParentBounds)
+{
+}
+
+// The per-document text allocator constructor, out of line in the exe (inline in text_core.h), called with the
+// storage of an Allocator already allocated.
+// @0x1424d61c0
+Text::Allocator* FUN_1424d61c0(Text::Allocator* self, MemoryHeap* pheap, UInt8 flags)
+{
+    return ::new ((void*)self) Text::Allocator(pheap, flags);
 }
 } // namespace Render
 
@@ -3590,8 +4074,6 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
 // MS2-PIN: ??$add@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@?$HashSetBase@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAXAEBQEAVGASRefCountBase@AS3@GFx@1@_K@Z 0x1424d29d0
 // MS2-PIN: ??_7UDBase@Classes@AS3@GFx@Scaleform@@6B@ 0x14317f778
 // MS2-PIN: ??_7VMAbcFile@AS3@GFx@Scaleform@@6B@ 0x14317b750
-// MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
-// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
 // MS2-PIN: ??_7VM@AS3@GFx@Scaleform@@6B@ 0x14317b858
 // MS2-PIN: ??_7Anonimous@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b538
 // MS2-PIN: ??_7Void@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b5c0
