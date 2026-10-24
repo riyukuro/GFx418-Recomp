@@ -32,7 +32,7 @@ public:
         Matrix3F M34;
 
     public:
-        NodeData(ContextImpl::EntryData::EntryType type = ET_Base) : ContextImpl::EntryData(type, NF_Visible) {}
+        NodeData(ContextImpl::EntryData::EntryType type = ET_Base);   // 0x1424d9310 (sfr_as3_15)
         // the states stay behind: CloneInit copies the ones that may be shared
         NodeData(NonlocalCloneArg<NodeData> src)
             : ContextImpl::EntryData(NonlocalCloneArg<ContextImpl::EntryData>(*src.pC)), M34(src->M34), Cx(src->Cx),
@@ -346,7 +346,7 @@ public:
     class NodeData : public ContextData_ImplMixin<NodeData, TreeContainer::NodeData>
     {
     public:
-        NodeData() : ContextData_ImplMixin<NodeData, TreeContainer::NodeData>(ET_Root), BGColor(0) {}
+        NodeData();   // 0x14256a710 (sfr_gfx_01i)
 
         Viewport VP;        // +0xa0
         Color    BGColor;

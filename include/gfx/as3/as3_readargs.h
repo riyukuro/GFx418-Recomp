@@ -146,6 +146,17 @@ public:
     void PushBoolean2(UInt32 a, UInt32 b);  // 0x14253a630
     void PushITraits(InstanceTraits::Traits* tr); // 0x142538f20
     void KillRegister(UInt32 ind);          // 0x14253bdf0
+    // Tracer result typing: the operand stack top (or a register) becomes a value of a builtin type.
+    void TopNumber();                       // 0x142532670
+    void TopInt();                          // 0x142532710
+    void TopString();                       // 0x1425327b0
+    void Pop2Boolean();                     // 0x142532850
+    void Pop2Number();                      // 0x142532930
+    void Pop2Int();                         // 0x142532a10
+    void Pop2UInt();                        // 0x142532af0
+    void RegNumber(UInt32 ind);             // 0x142537c50
+    void RegInt(UInt32 ind);                // 0x142537ce0
+    void RegUInt(UInt32 ind);               // 0x142537d70
 
 private:
     State();

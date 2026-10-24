@@ -171,6 +171,10 @@ struct MS2_HTMLImageTagInfo // 0x40 bytes
 };
 } // namespace Scaleform
 
+namespace Scaleform { namespace GFx {
+template<> void LogBase<AS2::FnCall>::LogScriptWarning(const char* pfmt, ...) const;   // sfr_as2_06 @0x142968210
+}}
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 typedef ASRefCountBaseType::Collector Collector;
