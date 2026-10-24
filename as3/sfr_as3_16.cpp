@@ -1356,6 +1356,9 @@ using SfrCx18AbcNamespaceNode = HashNode<SfrCx18AbcNamespaceHash::Key,
 using SfrCx18AbcNamespaceSet = HashSetBase<SfrCx18AbcNamespaceNode, SfrCx18AbcNamespaceNode::NodeHashF,
     SfrCx18AbcNamespaceNode::NodeAltHashF, AllocatorLH<SfrCx18AbcNamespaceHash::Key, 340>,
     HashsetCachedNodeEntry<SfrCx18AbcNamespaceNode, SfrCx18AbcNamespaceNode::NodeHashF> >;
+using SfrCx18ClassTraitsHash = GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>;
+using SfrCx18ClassTraitsNode = HashNode<SfrCx18ClassTraitsHash::Key, GFx::AS3::ClassTraits::Traits*,
+    SfrCx18ClassTraitsHash::Key::HashFunctor>;
 // MS2-FUNCTIONAL: destroys every occupied node and frees the table; the template expansion has different frame/unwind codegen.
 // @0x1424dcbb0
 template SfrCx18DisplayObjectSet::~HashSetBase();
@@ -1365,6 +1368,8 @@ template SfrCx18DynAttrsSet::~HashSetBase();
 // MS2-FUNCTIONAL: destroys occupied namespace intern entries and frees the hash table; template unwind code differs.
 // @0x1424dcf10
 template SfrCx18AbcNamespaceSet::~HashSetBase();
+// @0x1424e0480
+template void SfrCx18ClassTraitsNode::operator=(const SfrCx18ClassTraitsNode::NodeRef&);
 }
 
 extern "C" void FUN_1423dfa20();
