@@ -593,6 +593,38 @@ extern "C" void FUN_142676ef0(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
+// MS2-FUNCTIONAL: copies the clipped source rectangle into the destination and forces opaque alpha when either side lacks alpha.
+// @0x142677c70
+extern "C" void FUN_142677c70(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* source = static_cast<ImageData*>(inputs[0]);
+    ImagePlane dst, src;
+    destination->GetPlane(0, &dst);
+    source->GetPlane(0, &src);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
+    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
+    const int x1 = right < static_cast<int>(src.Width) ? right : static_cast<int>(src.Width);
+    const int y1 = bottom < static_cast<int>(src.Height) ? bottom : static_cast<int>(src.Height);
+    const auto* srcConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
+    const auto* dstConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
+    const bool alpha = srcConfig && dstConfig && *reinterpret_cast<const bool*>(srcConfig + 0x48) &&
+                       *reinterpret_cast<const bool*>(dstConfig + 0x48);
+    for (int y = y0; y < y1 && y < static_cast<int>(dst.Height); ++y) {
+        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
+        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
+        for (int x = x0; x < x1 && x < static_cast<int>(dst.Width); ++x) {
+            unsigned pixel = 0;
+            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - left));
+            if (!alpha) pixel |= 0xff000000u;
+            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), pixel);
+        }
+    }
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
 // @0x142745840
