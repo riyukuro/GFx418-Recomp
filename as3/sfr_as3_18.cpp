@@ -17,6 +17,14 @@
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #undef GetObject   // windows.h
 
+void* FUN_14241ba70(void* traits, void* ret, int kind, const void* uri, const void* prefix);   // Namespace::MakeInternedInstance
+char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
+void FUN_1425f9ba0(Scaleform::UPInt self, char* ret);
+Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b);
+bool FUN_1425b9b10(Scaleform::UPInt textField);
+Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
+Scaleform::UPInt FUN_14250ffc0(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value* v);   // the traits of a value
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace {
@@ -88,7 +96,8 @@ Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const AS
         return GetPublicNamespace();
     InstanceTraits::fl::Namespace& traits =
         static_cast<InstanceTraits::fl::Namespace&>(GetClassTraitsNamespace().GetInstanceTraits());
-    Pickable<Instances::Namespace> ns = traits.MakeInternedInstance(kind, uri, Value::GetUndefined());
+    Pickable<Instances::Namespace> ns;
+    FUN_14241ba70(&traits, &ns, kind, &uri, &Value::GetUndefined());
     return *ns;
 }
 
@@ -642,7 +651,9 @@ Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind
     }
     InstanceTraits::fl::Namespace& itr =
         static_cast<InstanceTraits::fl::Namespace&>(GetClassTraitsNamespace().GetInstanceTraits());
-    return itr.MakeInternedInstance(kind, uri, Value::GetUndefined());
+    Pickable<Instances::Namespace> r;
+    FUN_14241ba70(&itr, &r, kind, &uri, &Value::GetUndefined());
+    return r;
 }
 
 // @0x142516340
@@ -651,6 +662,7 @@ Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind
     return MakeInternedNamespace(kind, GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
 }
 
+// MS2-FUNCTIONAL 0x142516400: the exe inlines the string creation and the interned factory call with a different frame.
 // @0x142516400
 Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const char* name) const
 {
@@ -1050,6 +1062,287 @@ bool DisplayObject::IsUsedAsMask() const
 }
 
 }} // namespace Scaleform::GFx
+
+// ---- Tracer type predicates and value traits (the Tracer is not modeled: raw offsets through its pointer chain) ----
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
+
+namespace {
+inline UPInt TrRd(UPInt base, UPInt off) { return *reinterpret_cast<const UPInt*>(base + off); }
+// tracer -> method info -> the VM
+inline UPInt TrVM(UPInt tracer) { return TrRd(TrRd(TrRd(tracer, 0x20), 0x28), 0x20); }
+// the instance traits of one of the VM's builtin classes
+inline UPInt TrBuiltin(UPInt vm, UPInt off) { return TrRd(TrRd(vm, off), 0xc0); }
+}
+
+// The traits a tracer value stands for: undefined is void, traits values themselves, the rest their own class.
+// Class is read as Object.
+static UPInt TraceValueTraits(UPInt tracer, const Value* v)
+{
+    const UPInt vm = TrVM(tracer);
+    const UInt32 k = static_cast<UInt32>(v->GetKind());
+    UPInt t;
+    if (k == 0)
+        t = TrRd(vm, 0x278);
+    else if (k == 8 || k == 9)
+        t = TrRd(reinterpret_cast<UPInt>(v), 0x10);
+    else
+        t = FUN_14250ffc0(reinterpret_cast<VM*>(vm), v);
+    if (t != 0 && t == TrRd(vm, 0x1f0))
+        t = TrRd(vm, 0x1f8);
+    return t;
+}
+
+// @0x142514000
+bool Sfr27TracerIsBooleanType(UPInt tracer, const Value* v)
+{
+    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x210);
+}
+// @0x142514470
+bool Sfr27TracerIsNumberType(UPInt tracer, const Value* v)
+{
+    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x218);
+}
+// @0x142514c30
+bool Sfr27TracerIsIntType(UPInt tracer, const Value* v)
+{
+    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x220);
+}
+// @0x1425150c0
+bool Sfr27TracerIsUIntType(UPInt tracer, const Value* v)
+{
+    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x228);
+}
+// @0x142514e10
+bool Sfr27TracerIsStringType(UPInt tracer, const Value* v)
+{
+    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x230);
+}
+
+// int, uint or Number
+// @0x142514510
+bool Sfr27TracerIsNumericType(UPInt tracer, UPInt traits)
+{
+    const UPInt vm = TrVM(tracer);
+    return traits == TrBuiltin(vm, 0x220) || traits == TrBuiltin(vm, 0x228) || traits == TrBuiltin(vm, 0x218);
+}
+
+// Boolean, void, null or numeric: no reference counting needed
+// @0x142514420
+bool Sfr27TracerIsNotRefCountedType(UPInt tracer, UPInt traits)
+{
+    const UPInt vm = TrVM(tracer);
+    if (traits != TrBuiltin(vm, 0x210) && traits != TrRd(vm, 0x278) && traits != TrRd(vm, 0x270))
+        return Sfr27TracerIsNumericType(tracer, traits);
+    return true;
+}
+
+// Boolean, void, null, numeric or String
+// @0x142514a80
+bool Sfr27TracerIsPrimitiveType(UPInt tracer, UPInt traits)
+{
+    const UPInt vm = TrVM(tracer);
+    if (traits != TrBuiltin(vm, 0x210) && traits != TrRd(vm, 0x278) && traits != TrRd(vm, 0x270))
+    {
+        if (!Sfr27TracerIsNumericType(tracer, traits) && traits != TrBuiltin(vm, 0x230))
+            return false;
+    }
+    return true;
+}
+
+// @0x14250fe80
+UPInt Sfr27StateGetValueTraits(void* state, const Value* v)
+{
+    return TraceValueTraits(*reinterpret_cast<const UPInt*>(state), v);
+}
+
+// With classes resolved to their instance traits (asInstance), the traits' parent.
+// @0x14250ff00
+UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance)
+{
+    UPInt t;
+    if (!asInstance || (t = TrRd(TrRd(tracer, 0x20), 0x40)) == 0)
+        t = TraceValueTraits(tracer, v);
+    if (asInstance && t != 0)
+        return TrRd(t, 0x88);
+    return t;
+}
+
+// The unsigned 30-bit operand following the opcode of the n-th last instruction.
+// @0x14250c1f0
+int Sfr27TracerGetNextU30(UPInt tracer, UPInt n)
+{
+    UPInt pos = *reinterpret_cast<const UPInt*>(TrRd(tracer, 0x70) - 8 + (TrRd(tracer, 0x78) - n) * 8) + 1;
+    return Abc::ReadU30<UInt8>(reinterpret_cast<const UInt8*>(TrRd(tracer, 0x50)), pos);
+}
+
+}}}} // namespace Scaleform::GFx::AS3::TR
+
+// ---- TR::State operand stack pops (the State's layout lives in as3_readargs.h; its methods are not declared yet) ----
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
+
+// @0x14251ccc0
+void Sfr27StatePopOp(void* state, UPInt n)
+{
+    ArrayDH<Value>& ops = *reinterpret_cast<ArrayDH<Value>*>(reinterpret_cast<UPInt>(state) + 0x38);
+    ops.PopBack(n);
+}
+
+// The top operand returned (by value: hidden result pointer after this), then popped.
+// @0x14251cd30
+Value* Sfr27StatePopOpValue(void* state, Value* result)
+{
+    ArrayDH<Value>& ops = *reinterpret_cast<ArrayDH<Value>*>(reinterpret_cast<UPInt>(state) + 0x38);
+    new (result) Value(ops[ops.GetSize() - 1]);
+    ops.PopBack(1);
+    return result;
+}
+
+}}}} // namespace Scaleform::GFx::AS3::TR
+
+// ---- PropRef value reads ----
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The found property's value, getters not run for valGet. The three tags of the reference: a slot, a dynamic value
+// (tagged pointer) or a closure object.
+// MS2-FUNCTIONAL 0x14250e200: exe inlines the value assign and refcount bumps with a different frame (AssignUnsafe is out-of-line here).
+// @0x14250e200
+CheckResult PropRef::GetSlotValueUnsafe(VM& vm, Value& value, SlotInfo::ValTarget vt) const
+{
+    bool ok = true;
+    const UPInt w = reinterpret_cast<UPInt>(pValue);
+    switch (w & 3)
+    {
+    case 0:
+    {
+        CheckResult r(false);
+        ok = *FUN_14250e2d0(pSI, &r, &vm, &value, &This, NULL, vt);
+        break;
+    }
+    case 1:
+        value.AssignUnsafe(*reinterpret_cast<const Value*>(w & ~static_cast<UPInt>(1)));
+        return CheckResult(true);
+    case 2:
+        value.AssignUnsafe(reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
+        return CheckResult(true);
+    }
+    return CheckResult(ok);
+}
+
+// The same with the vtable to read methods from.
+// @0x14250e130
+char* Sfr27PropRefGetSlotValueVT(const PropRef* self, char* ret, VM* vm, Value* value, VTable* vtable)
+{
+    bool ok = true;
+    const UPInt w = reinterpret_cast<UPInt>(self->pValue);
+    switch (w & 3)
+    {
+    case 0:
+    {
+        CheckResult r(false);
+        ok = *FUN_14250e2d0(self->pSI, &r, vm, value, &self->This, vtable, 0);
+        break;
+    }
+    case 1:
+        value->AssignUnsafe(*reinterpret_cast<const Value*>(w & ~static_cast<UPInt>(1)));
+        *ret = 1;
+        return ret;
+    case 2:
+        value->AssignUnsafe(reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
+        *ret = 1;
+        return ret;
+    }
+    *ret = ok;
+    return ret;
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- Small accessors (leaf functions of the display and VM glue; their classes are not named yet) ----
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace {
+inline UPInt AccRd(UPInt base, UPInt off) { return *reinterpret_cast<const UPInt*>(base + off); }
+}
+
+// @0x14250a5c0
+UPInt Sfr27Acc14250a5c0(UPInt self) { return AccRd(AccRd(AccRd(AccRd(self, 0x18), 0x20), 0x10), 0x40); }
+
+// The first entry of the array a display object keeps (data +0x148, count +0x150), or 0.
+// @0x14250a600
+UPInt Sfr27AccFirst148(UPInt self)
+{
+    const UPInt o = AccRd(self, 0x18);
+    return AccRd(o, 0x150) > 0 ? AccRd(AccRd(o, 0x148), 0) : 0;
+}
+// @0x14250cbe0
+UPInt Sfr27AccFirst108(UPInt self)
+{
+    const UPInt o = AccRd(self, 0x18);
+    return AccRd(o, 0x110) > 0 ? AccRd(AccRd(o, 0x108), 0) : 0;
+}
+// @0x14250f960
+UPInt Sfr27AccFirstE8(UPInt self)
+{
+    const UPInt o = AccRd(self, 0x18);
+    return AccRd(o, 0xf0) > 0 ? AccRd(AccRd(o, 0xe8), 0) : 0;
+}
+
+// The instance traits of the VM's Vector.<String> class.
+// @0x14250a6c0
+UPInt Sfr27AccVectorStringITraits(UPInt vm) { return AccRd(AccRd(vm, 0x268), 0xc0); }
+
+// @0x14250bce0
+UPInt Sfr27AccField8(UPInt self) { return AccRd(self, 8); }
+
+// @0x14250edf0
+UPInt Sfr27Acc14250edf0(UPInt self) { return AccRd(AccRd(AccRd(self, 0x18), 0x20), 0x158); }
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The bounds of the display list of the object (returned in the result passed after this).
+// @0x14250d6d0
+char* Sfr27DisplayListBounds(UPInt self, char* ret)
+{
+    FUN_1425f9ba0(self + 0xd8, ret);
+    return ret;
+}
+
+// A virtual that returns its value through the hidden result pointer, passed straight on.
+// @0x14250d6b0
+char* Sfr27ForwardVirtual1b8(void* self, char* ret)
+{
+    reinterpret_cast<void (*)(void*, char*)>(AccRd(AccRd(reinterpret_cast<UPInt>(self), 0), 0x1b8))(self, ret);
+    return ret;
+}
+
+// The traits of the interned namespace instance made for the arguments, or 0.
+// @0x14250cc00
+UPInt Sfr27NamespaceInstanceTraits(UPInt a, UPInt b)
+{
+    const UPInt ns = FUN_142525ca0(a, b);
+    return ns != 0 ? AccRd(ns, 0xc0) : 0;
+}
+
+// A text field that is read only cannot be tabbed to in mode 2.
+// @0x1425142e0
+bool Sfr27TextFieldTabCheck(UPInt self, UInt32 mode)
+{
+    if (mode != 2)
+        return true;
+    return !FUN_1425b9b10(AccRd(self - 0x18, 0));
+}
+
+// Whether the text field's style sheet resource is set.
+// @0x1425113d0
+bool Sfr27TextFieldHasStyleSheet(UPInt self)
+{
+    const UPInt sheet = FUN_1425b7e60(AccRd(self - 0x28, 0));
+    return sheet != 0 && AccRd(sheet, 0x40) != 0;
+}
+
+}}} // namespace Scaleform::GFx::AS3
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
