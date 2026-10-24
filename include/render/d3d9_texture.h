@@ -113,7 +113,9 @@ public:
     virtual bool        Map(ImageData* pdata, unsigned mipLevel, unsigned levelCount);
     virtual bool        Unmap();
     virtual bool        Copy(ImageData* pdata);
-    virtual bool        UpdateRenderTargetData(RenderTargetData* prt, HAL* = 0);
+    // (sfr24) qualified: d3d9_meshcache.h forward-declares D3D9::HAL, which made this a new slot 16 instead of the
+    // Render::Texture slot 11 override in every TU that includes d3d9_hal.h
+    virtual bool        UpdateRenderTargetData(Render::RenderTargetData* prt, Render::HAL* = 0);
     virtual bool        UpdateStagingData(RenderTargetData* prt);
     virtual bool        Update(const UpdateDesc* updates, unsigned count = 1, unsigned mipLevel = 0);
     virtual bool        Update();
