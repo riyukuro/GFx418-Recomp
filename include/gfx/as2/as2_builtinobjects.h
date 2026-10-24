@@ -1010,6 +1010,13 @@ public:
     static const NameFunction StaticFunctionTable[]; // exe 0x143212f60: getFontList
 };
 
+// The TextFormat prototype natives (appended for sfr_as2_02b).
+class TextFormatProto
+{
+public:
+    static void GetTextExtent(const FnCall& fn); // exe 0x1429006a0
+};
+
 // The TextFormat class.
 class TextFormatCtorFunction : public CFunctionObject
 {

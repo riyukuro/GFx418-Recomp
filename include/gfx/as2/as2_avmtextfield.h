@@ -56,6 +56,7 @@ public:
     static void SetNewTextFormat(const FnCall& fn);        // exe 0x142909590
     static void GetTextFormat(const FnCall& fn);           // exe 0x1429096e0
     static void GetNewTextFormat(const FnCall& fn);        // exe 0x1429099d0
+    static void UpdateImageSubstitution(const FnCall& fn); // exe 0x14290b4c0 (appended for sfr_as2_02b)
     static void SetImageSubstitutions(const FnCall& fn);   // exe 0x14290b2c0
 
     // The script side of a text field; AvmCharacter sits at the start of its AVM object.
