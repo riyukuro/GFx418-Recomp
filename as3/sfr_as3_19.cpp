@@ -7219,6 +7219,99 @@ void Sfr31ExecNewFunction(UPInt vmAddr, UPInt frame, UInt32 methodInd)
                                *reinterpret_cast<Instances::fl::GlobalObjectScript*>(gos)));
     ExecPushCopy(&vm, v);
 }
+// ---- batch 69
+// AS3ValueObjectInterface::SetMember: sets the named member of an object from a GFx value. "*" is the any-name and a leading "@" makes
+// the name an attribute. A name that is already a child of a display object is refused with a log message.
+// MS2-FUNCTIONAL 0x142527d60: raw-offset model; the abort message is composed with String instead of MsgFormat
+// @0x142527d60
+bool Sfr31ValueSetMember(UPInt self, Object* obj, const char* name, const void* gfxValue)
+{
+    const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
+    VM& vm = *reinterpret_cast<VM*>(Sfr31Rd(root, 0x48));
+    ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
+    ASString nameStr(mgr->CreateStringNode(name));
+    Value nm;
+    if (nameStr.GetNode() == reinterpret_cast<ASStringNode*>(reinterpret_cast<UPInt>(mgr) + 0x68))
+        nm.SetNull();
+    else
+        nm.Assign(nameStr);
+    Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(reinterpret_cast<UPInt>(&vm), 0x1d0)), nm);
+    if (mn.Name.GetKind() == Value::kString)
+    {
+        ASStringNode* node = reinterpret_cast<ASStringNode*>(mn.Name.GetGASRefCountBase());
+        node->AddRef();
+        if (node->Size != 0)
+        {
+            ASStringNode* any = reinterpret_cast<ASStringNode*>(reinterpret_cast<UPInt>(node->pManager) + 0x40);
+            if (node->pData[0] == '*')
+                mn.Name.Assign(any);
+            else if (node->pData[0] == '@')
+            {
+                *reinterpret_cast<UInt32*>(&mn) = 8;
+                if (node->Size == 2 && node->pData[1] == '*')
+                    mn.Name.Assign(any);
+                else
+                {
+                    ASStringNode* sub = node->pManager->CreateStringNode(node->pData + 1, node->Size - 1);
+                    mn.Name.Assign(sub);
+                }
+            }
+        }
+        node->Release();
+    }
+    const UPInt otraits = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x20);
+    if (*reinterpret_cast<const int*>(otraits + 0x70) - 0x17U < 6 && ((~(*reinterpret_cast<const UByte*>(otraits + 0x68) >> 5)) & 1) != 0)
+    {
+        UPInt dobj = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x58);
+        if (dobj != 0 && !((*reinterpret_cast<const UInt16*>(dobj + 0x6a) >> 9) & 1))
+            dobj = 0;
+        UPInt owner = 0x18;
+        if (dobj != 0)
+        {
+            const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
+            typedef UPInt (*GetAvmFn)(UPInt);
+            const UPInt avm = reinterpret_cast<GetAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x28))(sub);
+            owner = avm != 0 ? avm - 0x28 : 0x18;
+        }
+        ASString key(mgr->CreateStringNode(name));
+        DisplayList* dl = reinterpret_cast<DisplayList*>(Sfr31Rd(owner, 0) + 0xd8);
+        DisplayObject* ch = dl->GetDisplayObjectByName(key, true);
+        if (ch != NULL)
+        {
+            const UPInt sub = reinterpret_cast<UPInt>(ch) + *reinterpret_cast<const UByte*>(reinterpret_cast<UPInt>(ch) + 0x6d) * 4;
+            typedef void (*MakeAvmFn)(UPInt, int);
+            reinterpret_cast<MakeAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x78))(sub, 1);
+            UPInt avmObj = Sfr31Rd(sub, 0x10);
+            if (avmObj == 0)
+                avmObj = Sfr31Rd(sub, 8);
+            if (avmObj & 1)
+                avmObj -= 1;
+            if (avmObj != 0)
+            {
+                String msg("Property '");
+                msg += name;
+                msg += "' already exists as a DisplayObject. SetMember aborted.";
+                typedef void (*LogFn)(UPInt, int, const char*);
+                reinterpret_cast<LogFn>(Sfr31Rd(Sfr31Rd(root + 0x28, 0), 8))(root + 0x28, 1, msg.ToCStr());
+                return false;
+            }
+        }
+    }
+    Value val;
+    FUN_1425048d0(root, gfxValue, &val);
+    if (!obj->SetProperty(mn, val))
+    {
+        const UPInt vmAddr = reinterpret_cast<UPInt>(&vm);
+        if (*reinterpret_cast<UByte*>(vmAddr + 0x180) != 0)
+        {
+            *reinterpret_cast<UByte*>(vmAddr + 0x180) = 0;
+            vm.OutputError(*reinterpret_cast<Value*>(vmAddr + 0x188));
+            reinterpret_cast<Value*>(vmAddr + 0x188)->SetUndefined();
+        }
+        return false;
+    }
+    return true;
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
