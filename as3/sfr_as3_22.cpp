@@ -4694,5 +4694,22 @@ void FUN_14268b710(void* source, Scaleform::Log* log)
     }
 }
 
+namespace Scaleform { namespace GFx {
+
+// Shared slots of the sound objects' RTTI-less vftables (data_cri 0x1431bcbe8 / 0x1431bec40 and their secondaries):
+// leaf functions without .pdata.
+// @0x1427447e0
+int FUN_1427447e0(void*)
+{
+    return 0;
+}
+
+// @0x142746220
+void FUN_142746220(void*)
+{
+}
+
+}} // namespace Scaleform::GFx
+
 // MS2-PIN: ??_7MemItem@Scaleform@@6B@ 0x143192160
 // MS2-PIN: ??_7?$RefCountBase@UMemItem@Scaleform@@$01@Scaleform@@6B@ 0x143193df0

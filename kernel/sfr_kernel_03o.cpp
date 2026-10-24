@@ -6,6 +6,7 @@
 // MS2-UNIT: sfr_kernel_03o
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142743470-0x14274397c .text$mn
+// MS2-RANGE: 0x14274397c-0x1427439d0 .text$mn
 
 #include "../gfx/sfr_gfx_07raw.h"
 #include <windows.h>
@@ -221,6 +222,66 @@ U* FUN_142743900(U* self, const U* source)
     for (U i = 0; i < self[1]; i++)
         ((U*)self[0])[i] = ((const U*)source[0])[i];
     return self;
+}
+
+void* FUN_142743a60(void* self, unsigned flags);
+void* FUN_142743ac0(void* self, unsigned flags);
+void* FUN_142743b60(void* self, unsigned flags);
+void* FUN_142743e00(void* self, unsigned flags);
+void* FUN_142743e60(void* self, unsigned flags);
+void* FUN_142743f00(void* self, unsigned flags);
+void* FUN_142743fa0(void* self, unsigned flags);
+
+// Adjustor thunks of the sound objects' scalar deleting destructors: the list-node subobject's vftable slot 0
+// (this at +0x10) back to the full object (leaf, no .pdata).
+// MS2-FUNCTIONAL: the exe's compiler-generated thunks adjust with `sub rcx, 10h`; cl emits `add rcx, -10h` here.
+// audio channel
+// @0x14274397c
+void* FUN_14274397c(void* self, unsigned flags)
+{
+    return FUN_142743a60(static_cast<char*>(self) - 0x10, flags);
+}
+
+// audio stream
+// @0x142743988
+void* FUN_142743988(void* self, unsigned flags)
+{
+    return FUN_142743ac0(static_cast<char*>(self) - 0x10, flags);
+}
+
+// listed sound object
+// @0x142743994
+void* FUN_142743994(void* self, unsigned flags)
+{
+    return FUN_142743b60(static_cast<char*>(self) - 0x10, flags);
+}
+
+// sound
+// @0x1427439a0
+void* FUN_1427439a0(void* self, unsigned flags)
+{
+    return FUN_142743e00(static_cast<char*>(self) - 0x10, flags);
+}
+
+// buffered sound
+// @0x1427439ac
+void* FUN_1427439ac(void* self, unsigned flags)
+{
+    return FUN_142743e60(static_cast<char*>(self) - 0x10, flags);
+}
+
+// listed sound
+// @0x1427439b8
+void* FUN_1427439b8(void* self, unsigned flags)
+{
+    return FUN_142743f00(static_cast<char*>(self) - 0x10, flags);
+}
+
+// streamed sound
+// @0x1427439c4
+void* FUN_1427439c4(void* self, unsigned flags)
+{
+    return FUN_142743fa0(static_cast<char*>(self) - 0x10, flags);
 }
 
 }} // namespace Scaleform::GFx
