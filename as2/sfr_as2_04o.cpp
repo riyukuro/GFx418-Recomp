@@ -3,6 +3,7 @@
 // MS2-UNIT: sfr_as2_04o
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1429326a0-0x142932999 .text$mn
+// MS2-RANGE: 0x142963320-0x1429633fb .text$mn
 // MS2-RANGE: 0x142932ab0-0x142932d1c .text$mn
 // MS2-RANGE: 0x142933010-0x1429333c6 .text$mn
 // MS2-RANGE: 0x142933bd0-0x142933d4e .text$mn
@@ -40,12 +41,16 @@ public:
 
     SetFocusInvokeCallback(int nargs, int firstArg) : NArgs(nargs), FirstArgBottomIndex(firstArg) {}
 
-    virtual void Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method)
-    {
-        Value result;
-        method.Invoke(FnCall(&result, pthis, penv, NArgs, FirstArgBottomIndex));
-    }
+    virtual void Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method);
 };
+
+// MS2-FUNCTIONAL the exe inlines ~FnCall (both ThisFunctionRef releases); here it is a call
+// @0x142963320
+void SetFocusInvokeCallback::Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method)
+{
+    Value result;
+    method.Invoke(FnCall(&result, pthis, penv, NArgs, FirstArgBottomIndex));
+}
 
 // MS2-FUNCTIONAL: the pushes are made through Push(), the exe builds each value in place
 // @0x1429326a0
