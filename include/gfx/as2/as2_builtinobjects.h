@@ -627,6 +627,7 @@ public:
 
 protected:
     friend class TextFieldCtorFunction;
+    template<class BaseClass, class GASEnvironment> friend class Prototype;
     TextFieldObject(ASStringContext* psc, Object* pprototype); // exe 0x142921520
     TextFieldObject(Environment* penv);                        // exe 0x142921580
 
@@ -731,9 +732,13 @@ protected:
 };
 
 // TextField.prototype IME natives (the rest of the class is not modeled yet).
-class TextFieldProto
+class TextFieldProto : public Prototype<TextFieldObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143214410: getDepth ...
+
+    TextFieldProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142921710
+
     static void SetIMECompositionStringStyle(const FnCall& fn); // exe 0x1428eb900
     static void GetIMECompositionStringStyle(const FnCall& fn); // exe 0x1428ebbd0
 

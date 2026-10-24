@@ -25,7 +25,15 @@ protected:
     // Key() called as a function: null (exe 0x14295bbe0).
     static void GlobalCtor(const FnCall& fn);
 
+    virtual void Finalize_GC();                                  // exe 0x142942da0: drops the movie, then Object's
+
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143213a70: getAscii ...
+
+    KeyCtorFunction(ASStringContext* psc, MovieImpl* pmovie); // exe 0x14291d1e0
+
+    virtual Object* CreateNewObject(Environment*) const { return 0; } // exe 0x142936f00
+
     int GetLastKeyCode(unsigned controllerIdx) const   { return States[controllerIdx].LastKeyCode; }
     int GetLastAsciiCode(unsigned controllerIdx) const { return States[controllerIdx].LastAsciiCode; }
 

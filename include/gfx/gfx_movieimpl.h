@@ -12,6 +12,8 @@
 #include "../render/render_twips.h"
 #include "../kernel/sf_string.h"
 #include "../kernel/sf_array.h"
+#include "../kernel/sf_hash.h"     // (sfr24) LoadRegisteredFonts HashSet
+#include "gfx_keyboardstate.h"
 #ifdef SF_GFX_PLAYERIMPL
 #include "gfx_player.h"
 #include "ms2/scaleform/kernel/sf_list.h"
@@ -775,10 +777,8 @@ public:
     void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType);
     // Takes every object off the advance lists (exe 0x14256e150).
     void ClearPlayList();
-#ifdef SF_GFX_PLAYERIMPL
     // The listener of all four keyboards (exe 0x142575ec0).
     void SetKeyboardListener(KeyboardState::IListener* l);
-#endif
 private:
     // Rebuilds the render nodes of the drawings changed since the last capture (exe 0x142577c10).
     void UpdateAllDrawingContexts();
