@@ -887,8 +887,17 @@ void  FUN_1425e4ad0(const char* pstr, unsigned len, Scaleform::String* presult);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// the global unescapeMultiByte (sfr_as3_12)
+void unescapeMultiByteInternal(VM& vm, ASString& result, const ASString& value);
+
 namespace Instances { namespace fl
 {
+    // @0x14242b120
+    void Date::timeGet(Value::Number& result)
+    {
+        result = TimeValue;
+    }
+
     // @0x14242b130
     // MS2-FUNCTIONAL: the exe also builds an undefined Value it never uses around the call
     void Date::timeSet(const Value& result, Value::Number t)
@@ -896,6 +905,16 @@ namespace Instances { namespace fl
         SF_UNUSED(result);
         Value::Number r;
         AS3setTime(r, t);
+    }
+
+    // The offset in minutes, local time behind UTC positive; NaN stays NaN.
+    // @0x14242b180
+    void Date::timezoneOffsetGet(Value::Number& result)
+    {
+        Value::Number t = TimeValue;
+        if (!NumberUtil::IsNaN(t))
+            t = (t - (t + LocalTZA)) / 60000.0;
+        result = t;
     }
 
     // @0x14242b1e0
@@ -909,6 +928,12 @@ namespace Instances { namespace fl
             String text = String(": ") + msg;
             result.Append(text.ToCStr(), strlen(text.ToCStr()));
         }
+    }
+
+    // @0x14242b700
+    void GlobalObjectCPP::unescapeMultiByte(ASString& result, const ASString& value)
+    {
+        unescapeMultiByteInternal(GetVM(), result, value);
     }
 
     // @0x14242b710
@@ -995,6 +1020,18 @@ namespace Instances { namespace fl
 
 namespace Classes { namespace fl
 {
+    // @0x14242ae20
+    void XML::setSettings(const Value& result, const Value& v)
+    {
+        AS3setSettings(result, v);
+    }
+
+    // @0x14242afb0
+    void XML::settings(SPtr<Instances::fl::Object>& result)
+    {
+        AS3settings(result);
+    }
+
     // @0x14242b0d0
     void Error::throwError(Value& result, unsigned argc, const Value* argv)
     {
