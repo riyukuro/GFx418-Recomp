@@ -327,10 +327,11 @@ namespace Instances { namespace fl {
         virtual Instances::Namespace& GetCurrNamespace() const;
         // @0x1424087b0
         virtual Pickable<XML> DeepCopy(XML* parent);
-        // @0x142415310
-        virtual void GetChildren(Instances::fl::XMLList& list, Kind k, const ASString* name = NULL) {}
+        // (sfr22) declared in this order: the overloads' vftable slots run in reverse (Kind form at +0x128).
         // @0x142415300
         virtual void GetChildren(Instances::fl::XMLList& list, const Multiname& prop_name) {}
+        // @0x142415310
+        virtual void GetChildren(Instances::fl::XMLList& list, Kind k, const ASString* name = NULL) {}
         // the index in Parent's children. 0x1424152a0
         virtual CheckResult GetChildIndex(UPInt& ind) const { return false; }
         // @0x1424157c0
@@ -466,6 +467,23 @@ namespace Instances { namespace fl {
         void AS3text(SPtr<Instances::fl::XMLList>& result);
         // @0x1424018c0 (sfr22)
         SPtr<Instances::fl::XMLList> AS3text();
+        // (appended, sfr22) the value-returning forms the exe calls
+        // @0x1423f6dc0
+        SPtr<Instances::fl::XMLList> AS3attribute(const Value& arg);
+        // @0x1423f7100
+        SPtr<Instances::fl::XMLList> AS3attributes();
+        // @0x1423f7560
+        SPtr<Instances::fl::XMLList> AS3child(const Value& propertyName);
+        // @0x1423f79f0
+        SPtr<Instances::fl::XMLList> AS3children();
+        // @0x1423f7cb0
+        SPtr<Instances::fl::XMLList> AS3comments();
+        // @0x1423fad30
+        SPtr<Instances::fl::Array> AS3inScopeNamespaces();
+        // @0x1423fc340
+        SPtr<Instances::fl::QName> AS3name();
+        // @0x1423fc490
+        SPtr<Instances::fl::Array> AS3namespaceDeclarations();
         // @0x142402b70
         void AS3toString(ASString& result);
         // @0x142403250
