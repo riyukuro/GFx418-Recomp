@@ -147,6 +147,7 @@
 // MS2-RANGE: 0x142965e50-0x142965f00 .text$mn
 // MS2-RANGE: 0x14295d450-0x14295d4e0 .text$mn
 // MS2-RANGE: 0x142964200-0x142964370 .text$mn
+// MS2-RANGE: 0x142964b90-0x142964e50 .text$mn
 // MS2-RANGE: 0x142964e50-0x142965160 .text$mn
 // MS2-RANGE: 0x14297dd70-0x14297df30 .text$mn
 // MS2-RANGE: 0x14297df30-0x14297dfb0 .text$mn
@@ -2287,6 +2288,32 @@ void AvmTextField::OnEventLoad()
         }
     }
     AvmCharacter::OnEventLoad();
+}
+
+// MS2-FUNCTIONAL: invokes the registered watch callback with user data, new value, old value, and property name.
+// @0x142964b90
+const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash,
+                                                      const ASString& key, bool caseSensitive);
+
+bool Object::InvokeWatchpoint(Environment* penv, const ASString& prop, const Value& newVal, Value* resultVal)
+{
+    if (!pWatchpoints)
+        return false;
+    const Watchpoint* watch = WatchpointHash_GetCaseCheck(pWatchpoints, prop, penv->GetVersion() > 6);
+    if (!watch)
+        return false;
+
+    Value oldVal;
+    GetMember(penv, prop, &oldVal);
+    const int firstArg = penv->GetTopIndex() + 1;
+    penv->Push(watch->UserData);
+    penv->Push(newVal);
+    penv->Push(oldVal);
+    penv->Push(Value(prop));
+    const Value callback(watch->Callback);
+    const bool invoked = GAS_Invoke(callback, resultVal, this, penv, 4, firstArg, 0);
+    penv->Drop(4);
+    return invoked;
 }
 
 // MS2-FUNCTIONAL: checks raw/path lookup, with scopes, local variables, the target object, and the global object.
