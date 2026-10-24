@@ -5,6 +5,8 @@
 // MS2-UNIT: sfr_render_05e
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142690d10-0x142695030 .text$mn
+// MS2-RANGE: 0x142688e70-0x142688ec9 .text$mn
+// MS2-RANGE: 0x1426ae0a0-0x1426ae190 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -16,6 +18,12 @@
 #include <math.h>
 
 namespace Scaleform { namespace Render {
+
+// Keep the header-defined Hairliner line-intersection helper addressable as an out-of-line exe function.
+using IntersectionFn = bool (*)(Math2D::CoordType, Math2D::CoordType, Math2D::CoordType, Math2D::CoordType,
+                                Math2D::CoordType, Math2D::CoordType, Math2D::CoordType, Math2D::CoordType,
+                                Math2D::CoordType*, Math2D::CoordType*, Math2D::CoordType);
+IntersectionFn volatile G_HairlinerIntersection = &Math2D::Intersection;
 
 // the key of a scale9 mesh: grid, bounds, the scale key of the view matrix and the shape translation
 // @0x142693fd0

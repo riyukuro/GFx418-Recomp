@@ -5,6 +5,7 @@
 // MS2-UNIT: sfr_render_01b
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14257e560-0x1425822b0 .text$mn
+// MS2-RANGE: 0x142682420-0x142682510 .text$mn
 #include <string.h>
 #include "ms2/scaleform/include/render/render_context.h"
 #include "ms2/scaleform/include/render/render_renderer2d.h"

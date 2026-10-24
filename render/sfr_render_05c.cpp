@@ -8,6 +8,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142696790-0x1426978d0 .text$mn
 // MS2-RANGE: 0x142697d20-0x142698a90 .text$mn
+// MS2-RANGE: 0x142698a90-0x142698b20 .text$mn
 // MS2-RANGE: 0x142698b20-0x1426a9270 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PIN: ??$LowerBoundSliced@V?$ArrayPaged@UOuterEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@Scaleform@@UOuterEdgeType@Tessellator@23@P6A_NAEBU4523@0@Z@Alg@Scaleform@@YA_KAEBV?$ArrayPaged@UOuterEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@1@_K1AEBUOuterEdgeType@Tessellator@31@P6A_N22@Z@Z 0x142696d30 ; order
@@ -16,11 +17,17 @@
 // MS2-PINS-END tplpin
 
 #include "ms2/scaleform/include/render/render_tessellator.h"
+#include "ms2/scaleform/include/render/render_tessgen.h"
 #include "ms2/scaleform/kernel/sf_alg.h"
 
 #include <math.h>
 
 namespace Scaleform { namespace Render {
+
+// Explicitly emits the Hairliner copy of this header-defined helper at its out-of-line exe address.
+template float Math2D::TurnRatio<Hairliner::OutVertexType, Hairliner::OutVertexType, Hairliner::OutVertexType>(
+    const Hairliner::OutVertexType&, const Hairliner::OutVertexType&, const Hairliner::OutVertexType&, CoordType,
+    CoordType);
 
 // ----------------------------------------------------------------------------------------------------------------
 // setup

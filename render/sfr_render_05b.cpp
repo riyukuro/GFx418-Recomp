@@ -7,6 +7,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1426a9270-0x1426aa240 .text$mn
 // MS2-RANGE: 0x1426aa250-0x1426aa2f0 .text$mn
+// MS2-RANGE: 0x1426aa2f0-0x1426aa310 .text$mn
 // MS2-RANGE: 0x1426aa310-0x1426ad030 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -26,12 +27,13 @@ void StrokePath::AddVertex(const StrokeVertex& v)
         Path.PushBack(v);
 }
 
-// Clear keeps the pages for reuse, ClearAndRelease frees them; neither leaf has unwind data, so both stay untagged
+// Clear keeps the pages for reuse, ClearAndRelease frees them.
 void StrokePath::Clear()
 {
     Path.Clear();
 }
 
+// @0x1426aa2f0
 void StrokePath::ClearAndRelease()
 {
     Path.ClearAndRelease();
