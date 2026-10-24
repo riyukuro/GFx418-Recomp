@@ -1278,6 +1278,26 @@ char* Sfr27PropRefGetSlotValueVT(const PropRef* self, char* ret, VM* vm, Value* 
 
 }}} // namespace Scaleform::GFx::AS3
 
+// VM::GetGlobalObject: the global object of the running frame's script (its saved scope's first value), else the
+// 'this' of the innermost register set when it is an object; NULL with no frame. (A free function under the name
+// sfr_as3_01c calls; VM does not declare it yet, and the register file's innermost set is private: read raw.)
+// @0x14250a550
+Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm)
+{
+    using namespace Scaleform::GFx::AS3;
+    const CallFrameStack& cs = *reinterpret_cast<const CallFrameStack*>(vm.Unk070);
+    if (cs.Size > 0)
+    {
+        const Scaleform::UPInt i  = cs.Size - 1;
+        const CallFrame&       cf = cs.Pages[i >> 6][i & 0x3f];
+        if (cf.pSavedScope && cf.pSavedScope->GetSize() != 0)
+            return (*cf.pSavedScope)[0].GetObject();
+        const Value* pthis = *reinterpret_cast<Value* const*>(static_cast<const Scaleform::UByte*>(cf.pRegisterFile) + 8);   // pRF
+        return pthis->IsObject() ? pthis->GetObject() : NULL;
+    }
+    return NULL;
+}
+
 // ---- Small accessors (leaf functions of the display and VM glue; their classes are not named yet) ----
 namespace Scaleform { namespace GFx { namespace AS3 {
 
