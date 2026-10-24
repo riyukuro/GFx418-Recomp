@@ -40,6 +40,11 @@
 
 namespace Scaleform { namespace GFx {
 
+// The image file readers of the load: a state, the render registry after it at +0x18 (as in sfr_gfx_02e/04x).
+class ImageFileHandlerRegistry : public State, public Render::ImageFileHandlerRegistry
+{
+};
+
 extern "C" void FUN_142655fe0(FontData*, LoadProcess*, const TagInfo*);
 extern "C" void FUN_142659740(void*, unsigned);
 extern "C" void FUN_1426597e0(void*, void*);
@@ -196,7 +201,7 @@ void SF_STDCALL GFx_JpegTablesLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
     LoadStates* states = p->GetLoadStates();
     Render::ImageFileHandlerRegistry* registry =
-        states ? reinterpret_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
+        states ? static_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
     if (!registry)
     {
         p->LogError("Image file handler registry is not installed - can't load jpeg image data");
@@ -228,7 +233,7 @@ void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
     Render::ImageSource* source = 0;
     LoadStates* states = p->GetLoadStates();
     Render::ImageFileHandlerRegistry* registry = states
-        ? reinterpret_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
+        ? static_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
     if (!registry)
     {
         p->LogError("Image file handler registry is not installed - can't load jpeg image data");
@@ -263,7 +268,7 @@ void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo
     Render::ImageSource* source = 0;
     LoadStates* states = p->GetLoadStates();
     Render::ImageFileHandlerRegistry* registry = states
-        ? reinterpret_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
+        ? static_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
     if (!registry)
     {
         p->LogError("Image file handler registry is not installed - can't load jpeg image data");

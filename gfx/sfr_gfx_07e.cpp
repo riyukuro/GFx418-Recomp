@@ -804,7 +804,8 @@ public:
 };
 
 // What a sub-image request holds: the base image, by resource or by id, and the rectangle.
-struct SubImageResourceInfo : public RefCountImpl
+// Not thread-safe ref counted (RefCountBaseNTS, vftables 0x14318a270/0x14318a278; constructed in sfr_gfx_04x).
+struct SubImageResourceInfo : public RefCountBaseNTS<SubImageResourceInfo, Stat_Default_Mem>
 {
     ResourceId         ImageId;        // +0x10
     Ptr<ImageResource> pImageResource; // +0x18
