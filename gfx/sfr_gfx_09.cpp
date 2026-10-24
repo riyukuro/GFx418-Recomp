@@ -3,6 +3,7 @@
 // DOMString members differs between them.
 // MS2-UNIT: sfr_gfx_09
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1429a4ad0-0x1429a4d50 .text$mn
 // MS2-RANGE: 0x1429a4d50-0x1429a6520 .text$mn
 
 #include "../include/gfx/xml/xml_document.h"
