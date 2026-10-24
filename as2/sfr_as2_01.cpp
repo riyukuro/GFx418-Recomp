@@ -3720,6 +3720,8 @@ Pickable<TextEventEx::InstanceType> TextEventEx::MakeInstance(TextEventEx& t)
 namespace Scaleform { namespace GFx {
 // @0x1424ad030
 template void LogBase<LogState>::LogScriptWarning(const char* pfmt, ...) const;
+// @0x1424c91f0
+template void LogBase<DisplayObjectBase>::LogScriptWarning(const char* pfmt, ...) const;
 }} // namespace Scaleform::GFx
 
 // ---- AS3 collectable refcount ----
@@ -3833,7 +3835,7 @@ void SimpleButton::InitInstance(bool extCall)
     if (!extCall)
         CreateStageObject();
 }
-// A script-created sprite also registers as scriptable, and a movie clip marks its display object.
+// A script-created sprite also registers as scriptable; a movie clip always marks its display object.
 // @0x142444a00
 // MS2-FUNCTIONAL the exe inlines CreateStageObject; cl calls the virtual
 void Sprite::InitInstance(bool extCall)
@@ -3842,9 +3844,9 @@ void Sprite::InitInstance(bool extCall)
     {
         CreateStageObject();
         FUN_1424e9380(FUN_142505ee0(ToAvmDisplayObj(pDispObj)), pDispObj);
-        if (IsMovieClip())
-            pDispObj->Flags |= GFx::DisplayObject::Mask_MovieClip;
     }
+    if (IsMovieClip())
+        pDispObj->Flags |= GFx::DisplayObject::Mask_MovieClip;
 }
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_display
 
