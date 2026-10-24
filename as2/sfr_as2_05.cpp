@@ -164,6 +164,49 @@
 // MS2-RANGE: 0x14293fcd0-0x14293fdee .text$mn
 // MS2-RANGE: 0x14293fdf0-0x14293ff0e .text$mn
 // MS2-RANGE: 0x142946d10-0x142946fc0 .text$mn
+// MS2-RANGE: 0x142941160-0x1429411c0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142941220-0x142941250 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142941280-0x1429412b0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429431f0-0x142943200 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x14294ab50-0x14294ab60 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429542d0-0x1429542e0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429542c0-0x1429542d0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954130-0x142954140 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954140-0x142954160 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429541b0-0x1429541c0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954190-0x1429541a0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429541c0-0x1429541d0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429541f0-0x142954200 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954230-0x142954240 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954250-0x142954260 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429541a0-0x1429541b0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429541d0-0x1429541e0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429541e0-0x1429541f0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954200-0x142954210 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954210-0x142954220 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954220-0x142954230 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954240-0x142954250 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954260-0x142954270 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954270-0x142954280 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954280-0x142954290 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954290-0x1429542a0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429542a0-0x1429542b0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429542b0-0x1429542c0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429542e0-0x1429542f0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429542f0-0x142954300 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954300-0x142954310 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954310-0x142954320 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954320-0x142954330 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954340-0x142954350 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954360-0x142954370 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954370-0x142954380 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429566a0-0x1429566c0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x1429566c0-0x1429566d0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142956730-0x142956740 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142956c80-0x142956c90 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142956c90-0x142956ca0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142956ca0-0x142956cb0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142956cb0-0x142956cd0 .text$mn   (sfr24: full-exe outside-unit row)
 
 #include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -996,6 +1039,7 @@ void ObjectProto::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(pobj.GetPtr());
 }
 
+// @0x14295ae40
 void FunctionProto::GlobalCtor(const FnCall& fn)
 {
     if (fn.NArgs == 1)
@@ -4180,6 +4224,154 @@ bool AS2ValueObjectInterface::GetElement(void* pdata, unsigned idx, Value* pval)
     }
     return false;
 }
+
+namespace AS2 {
+
+// Full-exe outside-unit rows of sfr_as2_05 (sfr24): the type tags, primitive values and texts of the builtin
+// objects, and three collector walks. The walks tail-call the per-functor ForEachChild_GC instantiations.
+
+// @0x142941160
+void ArrayObject::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
+{
+    switch (operation)
+    {
+    case ASRefCountBaseType::Operation_Release:
+        ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_MarkInCycle:
+        ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_ScanInUse:
+        ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+        break;
+    default:;
+    }
+}
+
+// @0x142941220
+void SharedObjectCtorFunction::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
+{
+    switch (operation)
+    {
+    case ASRefCountBaseType::Operation_Release:
+        ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_MarkInCycle:
+        ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_ScanInUse:
+        ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+        break;
+    default:;
+    }
+}
+
+// @0x142941280
+void TransformObject::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
+{
+    switch (operation)
+    {
+    case ASRefCountBaseType::Operation_Release:
+        ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_MarkInCycle:
+        ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+        break;
+    case ASRefCountBaseType::Operation_ScanInUse:
+        ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+        break;
+    default:;
+    }
+}
+
+// The exe's copy keeps nothing to drop here.
+// @0x1429431f0
+void ValueProperty::Finalize_GC() {}
+
+// @0x14294ab50
+Environment* CFunctionObject::GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>*) { return fn.Env; }
+
+// @0x1429542d0
+ObjectInterface::ObjectType ObjectInterface::GetObjectType() const { return Object_Unknown; }
+// @0x1429542c0
+ObjectInterface::ObjectType Object::GetObjectType() const { return Object_ASObject; }
+// @0x142954130
+ObjectInterface::ObjectType ArrayObject::GetObjectType() const { return Object_Array; }
+// @0x142954140
+ObjectInterface::ObjectType AsBroadcaster::GetObjectType() const { return Object_AsBroadcaster; }
+// @0x1429541b0
+ObjectInterface::ObjectType BitmapFilterObject::GetObjectType() const { return Object_BitmapFilter; }
+// @0x142954190
+ObjectInterface::ObjectType BevelFilterObject::GetObjectType() const { return Object_BevelFilter; }
+// @0x1429541c0
+ObjectInterface::ObjectType BlurFilterObject::GetObjectType() const { return Object_BlurFilter; }
+// @0x1429541f0
+ObjectInterface::ObjectType ColorMatrixFilterObject::GetObjectType() const { return Object_ColorMatrixFilter; }
+// @0x142954230
+ObjectInterface::ObjectType DropShadowFilterObject::GetObjectType() const { return Object_DropShadowFilter; }
+// @0x142954250
+ObjectInterface::ObjectType GlowFilterObject::GetObjectType() const { return Object_GlowFilter; }
+// @0x1429541a0
+ObjectInterface::ObjectType BitmapData::GetObjectType() const { return Object_BitmapData; }
+// @0x1429541d0
+ObjectInterface::ObjectType BooleanObject::GetObjectType() const { return Object_Boolean; }
+// @0x1429541e0
+ObjectInterface::ObjectType ButtonObject::GetObjectType() const { return Object_ButtonASObject; }
+// @0x142954200
+ObjectInterface::ObjectType ColorObject::GetObjectType() const { return Object_Color; }
+// @0x142954210
+ObjectInterface::ObjectType ColorTransformObject::GetObjectType() const { return Object_ColorTransform; }
+// @0x142954220
+ObjectInterface::ObjectType DateObject::GetObjectType() const { return Object_Date; }
+// The exe tags ExternalInterface with the stage's type.
+// @0x142954240
+ObjectInterface::ObjectType ExternalInterface::GetObjectType() const { return Object_Stage; }
+// @0x142954260
+ObjectInterface::ObjectType KeyObject::GetObjectType() const { return Object_Key; }
+// @0x142954270
+ObjectInterface::ObjectType LoadVarsObject::GetObjectType() const { return Object_LoadVars; }
+// @0x142954280
+ObjectInterface::ObjectType MatrixObject::GetObjectType() const { return Object_Matrix; }
+// @0x142954290
+ObjectInterface::ObjectType MovieClipLoader::GetObjectType() const { return Object_MovieClipLoader; }
+// @0x1429542a0
+ObjectInterface::ObjectType MovieClipObject::GetObjectType() const { return Object_MovieClipObject; }
+// @0x1429542b0
+ObjectInterface::ObjectType NumberObject::GetObjectType() const { return Object_Number; }
+// @0x1429542e0
+ObjectInterface::ObjectType PointObject::GetObjectType() const { return Object_Point; }
+// @0x1429542f0
+ObjectInterface::ObjectType RectangleObject::GetObjectType() const { return Object_Rectangle; }
+// @0x142954300
+ObjectInterface::ObjectType SharedObject::GetObjectType() const { return Object_SharedObject; }
+// @0x142954310
+ObjectInterface::ObjectType StageObject::GetObjectType() const { return Object_Stage; }
+// @0x142954320
+ObjectInterface::ObjectType StringObject::GetObjectType() const { return Object_String; }
+// @0x142954340
+ObjectInterface::ObjectType TextFieldObject::GetObjectType() const { return Object_TextFieldASObject; }
+// @0x142954360
+ObjectInterface::ObjectType TextSnapshotObject::GetObjectType() const { return Object_TextSnapshot; }
+// @0x142954370
+ObjectInterface::ObjectType TransformObject::GetObjectType() const { return Object_Transform; }
+
+// @0x1429566a0
+const char* BooleanObject::GetTextValue(Environment*) const { return BValue ? "true" : "false"; }
+// @0x1429566c0
+const char* DateObject::GetTextValue(Environment*) const { return "Date"; }
+// @0x142956730
+const char* StringObject::GetTextValue(Environment*) const { return sValue.ToCStr(); }
+
+// @0x142956c80
+Value BooleanObject::GetValue() const { return Value(BValue); }
+// @0x142956c90
+Value NumberObject::GetValue() const { return Value(NumberValue); }
+// @0x142956ca0
+Value Object::GetValue() const { return Value(); }
+// @0x142956cb0
+Value StringObject::GetValue() const { return Value(sValue); }
+
+} // namespace AS2
 
 }} // namespace Scaleform::GFx
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
