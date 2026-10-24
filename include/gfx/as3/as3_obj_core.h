@@ -8,6 +8,7 @@
 
 #include "ms2/scaleform/include/gfx/as3/as3_obj.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
+#include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 
 // (appended, sfr19) PCRE's free hook (pcre_globals), which RegExp frees its compiled pattern through.
 extern "C" void (*pcre_free)(void*);
@@ -889,6 +890,9 @@ namespace InstanceTraits { namespace fl
         // (appended, sfr19) a new instance of t.
         // @0x14241a5b0
         Pickable<Instances::fl::Catch> MakeInstance(Catch& t);
+
+        // (appended, sfr22) the traits of an exception handler's catch scope. 0x1423ebff0
+        Catch(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo::ExceptionInfo& e);
     };
 
     class Date : public CTraits
@@ -1122,6 +1126,9 @@ namespace InstanceTraits { namespace fl
     public:
         // @0x1423e1840 (appended, sfr15)
         static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // (appended, sfr22) an index within the list or a property of an element item, else Object's. 0x1423e12f0
+        static void AS3hasOwnProperty(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
+                                      const Value* argv);
     };
 
     class int_ : public CTraits

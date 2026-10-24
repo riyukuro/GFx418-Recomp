@@ -301,6 +301,10 @@ public:
     Instance() : flags(0), name_ind(-1), super_name_ind(-1), protected_namespace_ind(-1) {}
 
     bool HasProtectedNamespace() const { return (flags & fProtectedNs) != 0; }
+    // (appended, sfr22) the class flags of the UserDefined traits constructors (0x1423ef790)
+    bool IsSealed() const    { return (flags & 0x01) != 0; }
+    bool IsFinal() const     { return (flags & 0x02) != 0; }
+    bool IsInterface() const { return (flags & 0x04) != 0; }
 
     UInt8      flags;                           // +0x20
     SInd       name_ind;                        // +0x24

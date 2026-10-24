@@ -6,6 +6,7 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -99,6 +100,9 @@ namespace InstanceTraits {
     class UserDefined : public RTraits
     {
     public:
+        // (appended, sfr22) named after the ABC class; slots after the parent's (pt NULL: none), then the
+        // implemented interfaces'. 0x1423ef790
+        UserDefined(VMAbcFile& file, const AS3::Traits* pt, const Abc::ClassInfo& info);
         // (appended, sfr22) 0x14240c1f0
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::UserDefined"; }
@@ -132,6 +136,10 @@ namespace ClassTraits {
     class UserDefined : public Traits
     {
     public:
+        // (appended, sfr22) 0x1423ef690
+        UserDefined(VMAbcFile& file, VM& vm, const Abc::ClassInfo& info);
+        // (appended, sfr22) user-declared: the sdtor re-stores the vftable. 0x1423f13d0
+        virtual ~UserDefined();
         // (appended, sfr22) 0x14240c1a0
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::UserDefined"; }
@@ -154,10 +162,15 @@ namespace ClassTraits {
 }
 
 namespace Classes {
-    // Class object of a class defined in ABC code. 0x50 bytes. vftable 0x143144040.
-    class UserDefined : public Class
+    // Class object of a class defined in ABC code. 0x50 bytes. vftable 0x143144040 (sfr22: UDBase's PreInit and
+    // InitPrototype in slots 23/24, so UDBase is the base).
+    class UserDefined : public UDBase
     {
     public:
+        // (appended, sfr22) the static slots, then the scope the class methods run in. 0x1423ef700
+        explicit UserDefined(ClassTraits::Traits& t);
+        // (appended, sfr22) user-declared: the sdtor (0x1423f4800) re-stores the vftable
+        virtual ~UserDefined() {}
         virtual const char* GetAS3ObjectType() const { return "Classes::UserDefined"; }
         // 0x142414c60
         virtual String GetAS3ObjectName() const;

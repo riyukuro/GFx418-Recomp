@@ -646,6 +646,8 @@ namespace InstanceTraits
             static void isPrototypeOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
             // @0x1423e41c0 (appended, sfr15)
             static void setPropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+            // (appended, sfr22) "[object <class>]"; a function kind "[object Function-<hex id>]". 0x1423e45d0
+            static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
         };
     }
 
@@ -1042,6 +1044,10 @@ namespace Instances
         // @0x1423e4a80
         static void toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
                                   const Value* argv);
+        // (appended, sfr22) f.apply(this, args): args (an Array, or null) spread as the arguments. 0x1423e4e40
+        static void apply(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
+        // (appended, sfr22) f.call(this, ...): a null or undefined this is the global object. 0x1423e4bf0
+        static void call(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv);
 
         // native methods
         // @0x1424292a0

@@ -20,6 +20,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_arraysort.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
 #include "../third_party/src/expat-2.0.1/lib/expat.h"
 
@@ -47,6 +48,11 @@ Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* t);
 void FUN_142421710(Scaleform::GFx::AS3::Value& v, bool b);
 // VM::GetValueTraits.
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// VM::GetGlobalObject (sfr_as3_18): the global object of the running frame's script, else of the top frame's 'this'.
+Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm);
+// HashSetBase<HashNode<UPInt, Value>>::GetAlt<UPInt>, out of line in the exe; returns the node (key, then value).
+const Scaleform::HashNode<Scaleform::UPInt, Scaleform::GFx::AS3::Value, Scaleform::FixedSizeHash<Scaleform::UPInt> >*
+FUN_1423e87e0(const void* hash, const Scaleform::UPInt* key);
 
 // ECMA-262 15.9.1 time arithmetic the Date holders inline (the out-of-line Date:: copies are in sfr_as3_03/04).
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -447,9 +453,21 @@ namespace InstanceTraits
         Activation(VM& vm);
 
     public:
+        Activation(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo& mbi, const ASString& name);
+
         virtual unsigned GetFixedMemSize() const { return 0x38; }
         virtual void MakeObject(Value& result, Traits& t) { SF_UNUSED2(result, t); }
     };
+
+    // The activation of a method body: named after the method, its slots are the body's local traits.
+    // @0x1423eb8f0
+    Activation::Activation(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo& mbi, const ASString& name)
+        : RTraits(vm, vm.GetStringManager().CreateConstString("activation@") + name,
+                  Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue), NULL, true, true)
+    {
+        TraitsType = Traits_Activation;
+        AddSlots(mbi, file, GetFixedMemSize());
+    }
 
     // @0x1423eb860
     Activation::Activation(VM& vm)
@@ -460,6 +478,28 @@ namespace InstanceTraits
         SetMemSize(0x38);
     }
 }
+
+namespace InstanceTraits { namespace fl
+{
+    // The catch scope of an exception handler: one slot, named by the exception variable and typed by the exception
+    // type (untyped when the handler catches everything).
+    // @0x1423ebff0
+    Catch::Catch(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo::ExceptionInfo& e)
+        : CTraits(vm, AS3::fl::CatchCI)
+    {
+        TraitsType = Traits_Catch;
+        UInt32 var_ind = e.var_name_ind;
+        if (var_ind != 0)
+            var_ind = UInt32(file.GetAbcFile().Const_Pool.ConstStr.GetSize()) - var_ind;
+        ASString name = file.GetInternedString(var_ind);
+        SlotInfo::BindingType bt = (SlotInfo::BindingType)2;
+        if (e.exc_type_ind != 0)
+            bt = GetBindingType(file, file.GetAbcFile().Const_Pool.GetMultiname(e.exc_type_ind));
+        AddSlot(name, Pickable<const Instances::Namespace>(GetVM().PublicNamespace.GetPtr(), PickValue), bt,
+                AbsoluteIndex(0));
+        CalculateMemSize(0x38);
+    }
+}}
 
 namespace ClassTraits { namespace fl
 {
@@ -625,9 +665,15 @@ namespace Classes
     class ClassClass : public Class
     {
     public:
-        ClassClass(ClassTraits::Traits& t) : Class(t) {}
+        ClassClass(ClassTraits::Traits& t);
         virtual ~ClassClass() {}
     };
+
+    // @0x1423ec230
+    ClassClass::ClassClass(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
 }
 
 namespace ClassTraits
@@ -960,6 +1006,188 @@ namespace Instances { namespace fl
         t.SetupSlotValues(GetTraits().GetFile(), GetTraits().GetScript(), *this);
     }
 }}
+
+// The builtin classes, null-terminated (registered by name in the C++ global object).
+extern const ClassInfo* ClassRegistrationTable[];  // 0x143a28a30
+
+namespace Instances { namespace fl
+{
+    // The members and global functions of the C++ global object, by package.
+    extern const MemberInfo GlobalObjectCPP_mi[16];         // 0x143a2a710 Infinity .. FLASH10_FLAGS
+    extern const ThunkInfo GlobalObjectCPP_ti[13];          // 0x143144150 decodeURI .. print
+    extern const ThunkInfo GlobalObjectCPP_ti_system[1];    // 0x143144410 flash.system
+    extern const ThunkInfo GlobalObjectCPP_ti_utils[11];    // 0x143144450 flash.utils
+    extern const ThunkInfo GlobalObjectCPP_ti_avmplus[3];   // 0x1431446e0 avmplus
+
+    typedef Scaleform::Hash<ConstStringKey, const ClassInfo*, ConstStringHashFn,
+                            Scaleform::AllocatorGH<ConstStringKey, 328> > CIRegistrationHashType;
+
+    // MS2-FUNCTIONAL: the scratch ClassInfo is value-initialized (the exe stores its fields one qword at a time)
+    // @0x1423ed260
+    GlobalObjectCPP::GlobalObjectCPP(VM& vm, InstanceTraits::fl::GlobalObject& t)
+        : GlobalObject(t)
+        , CIRegistrationHash(NULL)
+        , PositiveInfinity(NumberUtil::POSITIVE_INFINITY())
+        , NegativeInfinity(NumberUtil::NEGATIVE_INFINITY())
+        , NaN(NumberUtil::NaN())
+        , HIDE_NSURI_METHODS(0x0001)
+        , INCLUDE_BASES(0x0002)
+        , INCLUDE_INTERFACES(0x0004)
+        , INCLUDE_VARIABLES(0x0008)
+        , INCLUDE_ACCESSORS(0x0010)
+        , INCLUDE_METHODS(0x0020)
+        , INCLUDE_METADATA(0x0040)
+        , INCLUDE_CONSTRUCTOR(0x0080)
+        , INCLUDE_TRAITS(0x0100)
+        , USE_ITRAITS(0x0200)
+        , HIDE_OBJECT(0x0400)
+        , FLASH10_FLAGS(0x05ff)
+    {
+        // the builtin classes by name, for on-demand initialization
+        CIRegistrationHashType& h = *reinterpret_cast<CIRegistrationHashType*>(&CIRegistrationHash);
+        for (unsigned i = 0; ClassRegistrationTable[i]; ++i)
+        {
+            ConstStringKey key = { ClassRegistrationTable[i]->GetName() };
+            h.Add(key, ClassRegistrationTable[i]);
+        }
+
+        // the core classes are always there
+        AddFixedSlot(FUN_142508460(&vm.GetClassTraitsObject().GetInstanceTraits()));
+        AddFixedSlot(FUN_142508460(&vm.GetClassTraitsClassClass().GetInstanceTraits()));
+        AddFixedSlot(FUN_142508460(&vm.GetClassTraitsNamespace().GetInstanceTraits()));
+        AddFixedSlot(FUN_142508460(&vm.GetClassTraitsFunction().GetInstanceTraits()));
+        AddFixedSlot(vm.GetClassBoolean());
+        AddFixedSlot(vm.GetClassNumber());
+        AddFixedSlot(vm.GetClassSInt());
+        AddFixedSlot(vm.GetClassUInt());
+        AddFixedSlot(vm.GetClassString());
+        AddFixedSlot(vm.GetClassArray());
+        const XMLSupport& xs = vm.GetXMLSupport();
+        if (xs.IsEnabled())
+        {
+            AddFixedSlot(FUN_142508460(xs.GetITraitsQName()));
+            AddFixedSlot(FUN_142508460(xs.GetITraitsXML()));
+            AddFixedSlot(FUN_142508460(xs.GetITraitsXMLList()));
+        }
+
+        // the global functions, by package
+        {
+            ClassInfo ci = ClassInfo();
+            ci.Flags = TypeInfo::CompileTime;
+            ci.Name = "";
+            ci.PkgName = "";
+            for (unsigned i = 0; i < 13; ++i)
+                GetTraits().Add2VT(ci, GlobalObjectCPP_ti[i]);
+        }
+        {
+            ClassInfo ci = ClassInfo();
+            ci.Flags = TypeInfo::CompileTime;
+            ci.Name = "";
+            ci.PkgName = "flash.system";
+            for (unsigned i = 0; i < 1; ++i)
+                GetTraits().Add2VT(ci, GlobalObjectCPP_ti_system[i]);
+        }
+        {
+            ClassInfo ci = ClassInfo();
+            ci.Flags = TypeInfo::CompileTime;
+            ci.Name = "";
+            ci.PkgName = "flash.utils";
+            for (unsigned i = 0; i < 11; ++i)
+                GetTraits().Add2VT(ci, GlobalObjectCPP_ti_utils[i]);
+        }
+        // the constants
+        for (unsigned i = 0; i < 16; ++i)
+            t.AddSlot(GlobalObjectCPP_mi[i]);
+        {
+            ClassInfo ci = ClassInfo();
+            ci.Flags = TypeInfo::CompileTime;
+            ci.Name = "";
+            ci.PkgName = "avmplus";
+            for (unsigned i = 0; i < 3; ++i)
+                GetTraits().Add2VT(ci, GlobalObjectCPP_ti_avmplus[i]);
+        }
+    }
+
+    // MS2-FUNCTIONAL: the registration hash is opaque in the header, so the body destroys it before the other members
+    // (the exe destroys it last)
+    // @0x1423f0fc0
+    GlobalObjectCPP::~GlobalObjectCPP()
+    {
+        reinterpret_cast<CIRegistrationHashType*>(&CIRegistrationHash)->~CIRegistrationHashType();
+    }
+}}
+
+// Traits::StoreScopeStack (private in the header): the scope the traits' methods run in, the VM scope stack above
+// base_ind
+void FUN_14252cad0(Traits* t, UPInt base_ind, const ArrayDH<Value>& ss);
+// Traits: the slots of the interfaces an ABC class implements
+void FUN_1424e80f0(Traits* t, VMAbcFile& file, const Abc::ClassInfo& info);
+
+// The scope stack base of the running call frame (0 outside of any); the call stack is paged, 64 frames of 0xa8
+// bytes to a page.
+static inline UPInt GetCurrScopeStackBaseInd(const VM& vm)
+{
+    UPInt base = vm.Unk070[1];
+    if (base != 0)
+    {
+        const UPInt n = base - 1;
+        base = *reinterpret_cast<const UPInt*>(reinterpret_cast<const char* const*>(vm.Unk070[4])[n >> 6] +
+                                               (n & 0x3f) * 0xa8 + 8);
+    }
+    return base;
+}
+
+namespace ClassTraits
+{
+    // @0x1423ef690
+    UserDefined::UserDefined(VMAbcFile& file, VM& vm, const Abc::ClassInfo& info)
+        : Traits(vm, NULL)
+        , File(&file)
+        , class_info(info)
+    {
+        Flags |= IsAbcObjectMask;
+    }
+
+    // @0x1423f13d0
+    UserDefined::~UserDefined()
+    {
+    }
+}
+
+namespace Classes
+{
+    // MS2-FUNCTIONAL: register allocation (the exe keeps the traits in r9 and the VM in rcx)
+    // @0x1423ef700
+    UserDefined::UserDefined(ClassTraits::Traits& t)
+        : UDBase(t)
+    {
+        if (t.SetupSlotValues(*this))
+        {
+            VM& vm = GetVM();
+            FUN_14252cad0(&GetTraits(), GetCurrScopeStackBaseInd(vm), vm.ScopeStack);
+        }
+    }
+}
+
+namespace InstanceTraits
+{
+    // MS2-FUNCTIONAL: register allocation; the exe updates Flags in memory
+    // @0x1423ef790
+    UserDefined::UserDefined(VMAbcFile& file, const AS3::Traits* pt, const Abc::ClassInfo& info)
+        : RTraits(file.GetVM(),
+                  file.GetInternedString(file.GetAbcFile().Const_Pool.GetMultiname(info.inst_info.name_ind).NameIndex),
+                  Pickable<Instances::Namespace>(
+                      &file.GetInternedNamespace(file.GetAbcFile().Const_Pool.GetMultiname(info.inst_info.name_ind).Ind),
+                      PickValue),
+                  pt, !info.inst_info.IsSealed(), info.inst_info.IsFinal())
+        , class_info(info)
+    {
+        Flags |= IsAbcObjectMask;
+        Flags ^= (-(SPInt)info.inst_info.IsInterface() ^ Flags) & IsInterfaceMask;
+        if (AddSlots(info.inst_info, file, pt ? pt->GetMemSize() : GetFixedMemSize()))
+            FUN_1424e80f0(this, file, info);
+    }
+}
 
 namespace InstanceTraits
 {
@@ -1343,6 +1571,236 @@ namespace InstanceTraits
 
 namespace Instances { namespace fl
 {
+    // Three-letter day and month names (exe data, defined with the Date string formatting in sfr_as3_04).
+    extern const char* DateWeekDayNames[7];
+    extern const char* DateMonthNames[12];
+
+    // The Date string scanners, which the exe inlines into Date::Parser (sfr_as3_04 holds its own copies).
+    static SF_INLINE bool DateIsDigit(char c)
+    {
+        return (unsigned char)(c - '0') <= 9;
+    }
+
+    // Skips blanks, commas and any dash that does not start a number.
+    static SF_INLINE const char* DateSkipWhitespace(const char* s)
+    {
+        while (*s && (*s <= ' ' || *s == ',' || (*s == '-' && !DateIsDigit(s[1]))))
+            ++s;
+        return s;
+    }
+
+    static SF_INLINE const char* DateScanUnsignedInt(const char* s, int* pval)
+    {
+        *pval = 0;
+        while (*s >= '0' && *s <= '9')
+            *pval = *pval * 10 + (*s++ - '0');
+        return s;
+    }
+
+    // A word runs up to a blank, a comma or a dash.
+    static SF_INLINE const char* DateScanTextString(const char* s)
+    {
+        while (*s > ' ' && *s != ',' && *s != '-')
+            ++s;
+        return s;
+    }
+
+    // Classifies a word as Date::Parser's StringType: 1 month, 2 week day (*index gets their number), 3 GMT, 4 UTC,
+    // 5 AM, 6 PM, 0 anything else.
+    static SF_INLINE int DateInterpretString(const char* pstr, SPInt length, int* index)
+    {
+        if (length == 2)
+        {
+            if (pstr[1] == 'M')
+            {
+                if (pstr[0] == 'A')
+                    return 5;
+                if (pstr[0] == 'P')
+                    return 6;
+            }
+        }
+        if (length == 3)
+        {
+            if (memcmp(pstr, "GMT", 3) == 0)
+                return 3;
+            if (memcmp(pstr, "UTC", 3) == 0)
+                return 4;
+            for (int i = 0; i < 7; ++i)
+                if (memcmp(pstr, DateWeekDayNames[i], 3) == 0)
+                {
+                    *index = i;
+                    return 2;
+                }
+            for (int i = 0; i < 12; ++i)
+                if (memcmp(pstr, DateMonthNames[i], 3) == 0)
+                {
+                    *index = i;
+                    return 1;
+                }
+        }
+        return 0;
+    }
+
+    // Accepts the date parts in any order: "Tue Jun 1 00:00:00 GMT-0400 1999", "1/1/1999 12:30 AM", ...
+    // @0x1423ee1f0
+    Date::Parser::Parser(const char* str)
+        : Valid(true)
+        , HasYear(false), HasMonth(false), HasDay(false), HasTime(false), HasTZA(false)
+        , Month(-1), Day(-1), Year(-1), DayOfWeek(-1)
+        , TZA(0), Hour(0), Minute(0), Sec(0)
+    {
+        while (*str)
+        {
+            str = DateSkipWhitespace(str);
+            const char ch = *str;
+            int val;
+            if (ch == 0)
+                break;
+
+            if (ch == '-')
+            {
+                // a negative year
+                if (HasYear)
+                    goto parse_fail;
+                str = DateScanUnsignedInt(str, &Year);
+                HasYear = true;
+                Year = -Year;
+                ++str;
+                continue;
+            }
+
+            if (DateIsDigit(ch))
+            {
+                str = DateScanUnsignedInt(str, &val);
+                str = DateSkipWhitespace(str);
+                if (*str == ':')
+                {
+                    // hh:mm[:ss]
+                    if (HasTime)
+                        goto parse_fail;
+                    HasTime = true;
+                    Hour = val;
+                    ++str;
+                    str = DateSkipWhitespace(str);
+                    if (DateIsDigit(*str))
+                    {
+                        str = DateScanUnsignedInt(str, &Minute);
+                        if (*str == ':')
+                        {
+                            ++str;
+                            str = DateSkipWhitespace(str);
+                            if (DateIsDigit(*str))
+                                str = DateScanUnsignedInt(str, &Sec);
+                        }
+                    }
+                }
+                else if (*str == '/')
+                {
+                    // MM/DD/YYYY, all three required
+                    if (HasYear)
+                        goto parse_fail;
+                    Month = val - 1;
+                    ++str;
+                    str = DateSkipWhitespace(str);
+                    if (!DateIsDigit(*str))
+                        goto parse_fail;
+                    str = DateScanUnsignedInt(str, &Day);
+                    str = DateSkipWhitespace(str);
+                    if (*str != '/')
+                        goto parse_fail;
+                    ++str;
+                    str = DateSkipWhitespace(str);
+                    if (!DateIsDigit(*str))
+                        goto parse_fail;
+                    str = DateScanUnsignedInt(str, &Year);
+                    HasYear = HasMonth = HasDay = true;
+                }
+                else if (HasDay)
+                {
+                    if (HasYear)
+                        goto parse_fail;
+                    HasYear = true;
+                    Year = val;
+                }
+                else if (val > 31)
+                {
+                    // too big for a day
+                    if (HasYear)
+                        goto parse_fail;
+                    HasYear = true;
+                    Year = val;
+                }
+                else
+                {
+                    HasDay = true;
+                    Day = val;
+                }
+                continue;
+            }
+
+            {
+                const char* end = DateScanTextString(str);
+                const int type = DateInterpretString(str, end - str, &val);
+                str = end;
+                switch (type)
+                {
+                case String_Month:
+                    if (HasMonth)
+                        goto parse_fail;
+                    Month = val;
+                    HasMonth = true;
+                    break;
+                case String_WeekDay:
+                    if (DayOfWeek != -1)
+                        goto parse_fail;
+                    DayOfWeek = val;
+                    break;
+                case String_GMT:
+                {
+                    // GMT+hhmm / GMT-hhmm
+                    if (HasTZA)
+                        goto parse_fail;
+                    const char sign = *str;
+                    if (sign != '+' && sign != '-')
+                        goto parse_fail;
+                    ++str;
+                    if (!(*str >= '0' && *str <= '9'))
+                        goto parse_fail;
+                    str = DateScanUnsignedInt(str, &val);
+                    HasTZA = true;
+                    const int minutes = (val / 100) * 60 + val % 100;
+                    TZA = (sign == '-' ? -minutes : minutes) * 60000;
+                    break;
+                }
+                case String_UTC:
+                    if (HasTZA)
+                        goto parse_fail;
+                    HasTZA = true;
+                    break;
+                case String_PM:
+                    if (!HasTime || Hour > 12)
+                        goto parse_fail;
+                    if (Hour != 12)
+                        Hour += 12;
+                    break;
+                case String_AM:
+                    if (!HasTime || Hour > 12)
+                        goto parse_fail;
+                    if (Hour == 12)
+                        Hour = 0;
+                    break;
+                case String_Invalid:
+                    goto parse_fail;
+                }
+            }
+        }
+
+        if (HasYear && HasMonth && HasDay)
+            return;
+    parse_fail:
+        Valid = false;
+    }
+
     // @0x1423ef290
     Date::TimeHolder::TimeHolder(Value::Number time, Value::Number tza)
         : TZA(tza)
@@ -1572,6 +2030,20 @@ XMLParser::~XMLParser()
     XML_ParserFree(Parser);
 }
 
+// A namespace leaves its factory's interning set when it dies.
+// @0x1423f10d0
+Instances::Namespace::~Namespace()
+{
+    if (pFactory)
+        pFactory->NamespaceSet.Remove(this);
+}
+
+// Not exe code: Multiname's implicit destructor (0x1423f1060) lies in this unit's range; destroying one emits it.
+void Unk_As3HelperDestroyMultiname(Multiname* p)
+{
+    p->~Multiname();
+}
+
 // Not exe code: the E4X walk visitors and the Array.sort collectors are constructed only in sfr_as3_02..04, but
 // their vftables, sdtors and the collectors' operator() bodies lie in this unit's range; constructing them here
 // emits those.
@@ -1752,6 +2224,43 @@ namespace InstanceTraits { namespace fl
         }
         else
             return vm.ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, vm));
+    }
+
+    // InstanceTraits::Thunk::GetThunkName and the other function namers (sfr_as3_04), inlined into
+    // Object::toStringProto: "Function-<hex id>" from the strings of tr's VM.
+    static SF_INLINE ASString FunctionKindName(const AS3::Traits& tr, unsigned long id)
+    {
+        LongFormatter f(id);
+        ASString s = tr.GetVM().GetStringManager().CreateConstString("Function-");
+        f.SetBase(16).Convert();
+        s += f.ToCStr();
+        return s;
+    }
+
+    // @0x1423e45d0
+    void Object::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        const AS3::Traits& vtr = FUN_14250ffc0(vm, _this);
+        const ClassTraits::Function& ftr = static_cast<const ClassTraits::Function&>(vm.GetClassTraitsFunction());
+        ASString name = vm.GetStringManager().GetBuiltin(AS3Builtin_objectPrefix_);
+
+        if (vtr.GetTraitsType() == Traits_Function && vtr.IsInstanceTraits())
+        {
+            if (&vtr == &ftr.GetThunkTraits())
+                name += FunctionKindName(vtr, (unsigned long)(UPInt)&_this.AsThunk());
+            else if (&vtr == &ftr.GetThunkFunctionTraits())
+                name += FunctionKindName(vtr, (unsigned long)(UPInt)&_this.AsThunkFunction().GetThunk());
+            else if (&vtr == &ftr.GetMethodIndTraits())
+                name += FunctionKindName(vtr, (unsigned long)_this.GetMethodInd());
+            else
+                name += FunctionKindName(vtr, (unsigned long)static_cast<const InstanceTraits::Function&>(
+                                                  _this.GetObject()->GetTraits()).GetMethodInfoInd());
+        }
+        else
+            name += vtr.GetName();
+
+        name += vm.GetStringManager().GetBuiltin(AS3Builtin_closeBracket_);
+        result = name;
     }
 
     // @0x1423e29b0
@@ -2126,6 +2635,89 @@ namespace InstanceTraits { namespace fl
         }
     }
 
+    // XMLElement::ForEachAttr (sfr_as3_03), inlined into XMLList::AS3hasOwnProperty.
+    static SF_INLINE UInt32 XMLElementForEachAttr(Instances::fl::XMLElement& el, const Multiname& prop_name,
+                                                 Instances::fl::XMLElement::CallBack& cb)
+    {
+        UInt32 num = 0;
+        if (!prop_name.Name.IsString())
+            return num;
+        const UPInt size = el.Attrs.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            if (el.Attrs[i]->Matches(prop_name))
+            {
+                ++num;
+                if (!cb.Call(i))
+                    return num;
+            }
+        }
+        return num;
+    }
+
+    // XMLElement::HasProperty (sfr_as3_04), inlined into XMLList::AS3hasOwnProperty.
+    static SF_INLINE bool XMLElementHasProperty(Instances::fl::XMLElement& el, const Multiname& prop_name)
+    {
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+            return ind == 0;
+        Instances::fl::EmptyCallBack cb(el);
+        if (prop_name.IsAttr())
+        {
+            if (XMLElementForEachAttr(el, prop_name, cb) != 0)
+                return true;
+            return false;
+        }
+        if (el.ForEachChild(prop_name, cb) != 0)
+            return true;
+        return false;
+    }
+
+    // XMLList::HasProperty (sfr_as3_04), inlined into XMLList::AS3hasOwnProperty.
+    static SF_INLINE bool XMLListHasProperty(Instances::fl::XMLList& list, const Multiname& prop_name)
+    {
+        bool found = false;
+        UInt32 ind;
+        if (GetVectorInd(prop_name, ind))
+        {
+            if (ind < list.List.GetSize())
+                found = true;
+        }
+        else
+        {
+            const UPInt size = list.List.GetSize();
+            for (UPInt i = 0; i < size; ++i)
+            {
+                Instances::fl::XML* x = list.List[i];
+                if (x->GetKind() != Instances::fl::XML::kElement)
+                    continue;
+                if (XMLElementHasProperty(*static_cast<Instances::fl::XMLElement*>(x), prop_name))
+                {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        return found;
+    }
+
+    // @0x1423e12f0
+    void XMLList::AS3hasOwnProperty(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        if (argc != 0 && IsXMLListObject(_this))
+        {
+            Instances::fl::XMLList* list = static_cast<Instances::fl::XMLList*>(_this.GetObject());
+            Multiname prop_name(vm, argv[0]);
+            const bool rc = XMLListHasProperty(*list, prop_name);
+            if (rc)
+            {
+                FUN_142421710(result, rc);
+                return;
+            }
+        }
+        Object::AS3hasOwnProperty(ti, vm, _this, result, argc, argv);
+    }
+
     // @0x1423e77a0
     void String::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -2248,6 +2840,93 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XM
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 29, const Value&, const Value&>(StringManager&);
 template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl::XMLList, 36, const Value&, const Value&>(StringManager&);
 namespace Instances {
+    // VM::ExecuteUnsafe: ExecuteInternalUnsafe keeping the result.
+    static SF_INLINE void VMExecuteUnsafe(VM& vm, const Value& func, const Value& _this, Value& result, unsigned argc,
+                                          const Value* argv)
+    {
+        vm.ExecuteInternalUnsafe(func, _this, result, argc, argv, false);
+    }
+
+    // @0x1423e4bf0
+    void FunctionBase::call(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        Value r = Value::GetUndefined();
+        if (argc < 1)
+            VMExecuteUnsafe(vm, _this, Value(FUN_14250a550(vm)), r, argc, argv);
+        else
+            VMExecuteUnsafe(vm, _this, argv[0].IsNullOrUndefined() ? Value(FUN_14250a550(vm)) : argv[0], r, argc - 1,
+                            argv + 1);
+        result.Swap(r);
+    }
+
+    // HashLH<UPInt, Value>::Get on the sparse part.
+    static inline const Value* SparseHashGet(const SparseArray& sa, UPInt ind)
+    {
+        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = FUN_1423e87e0(&sa.ValueH, &ind);
+        return p ? &p->Second : 0;
+    }
+
+    // SparseArray::At, inlined here (out of line in sfr_as3_03).
+    static SF_INLINE const Value& SparseAt(const SparseArray& sa, UPInt ind)
+    {
+        if (ind < sa.ValueA.GetSize())
+            return sa.ValueA[ind];
+        if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
+        {
+            if (const Value* v = SparseHashGet(sa, ind))
+                return *v;
+        }
+        return sa.DefaultValue;
+    }
+
+    // MS2-FUNCTIONAL: same flow; exe keeps the hash node->value select as a cmove (as in SparseArray::At) and allocates registers differently.
+    // @0x1423e4e40
+    void FunctionBase::apply(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        Value r = Value::GetUndefined();
+        switch (argc)
+        {
+        case 0:
+            VMExecuteUnsafe(vm, _this, Value::GetUndefined(), r, argc, argv);
+            break;
+        case 1:
+            VMExecuteUnsafe(vm, _this, argv[0], r, 0, NULL);
+            break;
+        default:
+        {
+            Value coerced;
+            if (vm.GetClassTraitsArray().Coerce(argv[1], coerced))
+            {
+            ValueArrayDH args(vm.GetMemoryHeap());
+            unsigned f_argc = 0;
+            const Value* f_argv = NULL;
+            if (!coerced.IsNull())
+            {
+                Instances::fl::Array* array = static_cast<Instances::fl::Array*>(coerced.GetObject());
+                const SparseArray& sa = array->SA;
+                if (sa.GetSize() > sa.ValueA.GetSize())
+                {
+                    args.Resize(sa.GetSize());
+                    for (UPInt i = 0; i < args.GetSize(); ++i)
+                        args[i] = SparseAt(sa, i);
+                    f_argc = (unsigned)args.GetSize();
+                    f_argv = args.GetDataPtr();
+                }
+                else
+                {
+                    f_argc = (unsigned)sa.ValueA.GetSize();
+                    f_argv = sa.ValueA.GetDataPtr();
+                }
+            }
+            VMExecuteUnsafe(vm, _this, argv[0], r, f_argc, f_argv);
+            }
+            else
+                return vm.ThrowTypeError(VM::Error((VM::ErrorID)1116 /* eApplyError */, vm));
+        }
+        }
+        result.Swap(r);
+    }
+
     // MS2-FUNCTIONAL: matches the function-versus-thunk string semantics; local formatter and ASString codegen differs.
     // @0x1423e4a80
     void FunctionBase::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
@@ -2292,7 +2971,11 @@ public:
     explicit CompareAsNumber(bool desc) : Desc(desc) {}
     bool operator()(const Triple<Value::Number, const Value*, unsigned>& a,
                     const Triple<Value::Number, const Value*, unsigned>& b) const
-    { return Desc ? b.First < a.First : a.First < b.First; }
+    {
+        if (Desc)
+            return b.First < a.First;
+        return a.First < b.First;
+    }
     bool Equal(const Triple<Value::Number, const Value*, unsigned>& a,
                const Triple<Value::Number, const Value*, unsigned>& b) const
     { return a.First == b.First; }
@@ -2321,8 +3004,18 @@ using AS3NumberValueTripleArray = ArrayDH<AS3NumberValueTriple>;
 template bool Alg::QuickSortSafe(AS3StringValueTripleArray&, GFx::AS3::Impl::CompareAsString);
 // @0x1423ea060
 template bool Alg::QuickSortSlicedSafe(AS3NumberValueTripleArray&, UPInt, UPInt, GFx::AS3::Impl::CompareAsNumber);
+// MS2-FUNCTIONAL: same code; the exe adds the element offset and the array base in the other operand order.
 // @0x1423ea400
 template bool Alg::QuickSortSlicedSafe(AS3StringValueTripleArray&, UPInt, UPInt, GFx::AS3::Impl::CompareAsString);
+using AS3ValuePtrPairArray = ArrayDH<GFx::AS3::ValuePtrPair>;
+// @0x1423e9960
+template bool Alg::QuickSortSafe(AS3ValuePtrPairArray&, GFx::AS3::CompareOn);
+// @0x1423e9990
+template bool Alg::QuickSortSafe(AS3ValuePtrPairArray&, GFx::AS3::CompareValuePtr);
+// @0x1423e9a00
+template bool Alg::QuickSortSlicedSafe(AS3ValuePtrPairArray&, UPInt, UPInt, GFx::AS3::CompareOn);
+// @0x1423e9d30
+template bool Alg::QuickSortSlicedSafe(AS3ValuePtrPairArray&, UPInt, UPInt, GFx::AS3::CompareValuePtr);
 using AS3StringValueTripleData = ArrayDataBase<AS3StringValueTriple,
     AllocatorDH<AS3StringValueTriple, Stat_Default_Mem>, ArrayDefaultPolicy>;
 // @0x1423f0630
@@ -2352,6 +3045,8 @@ using AS3ConstStringSet = HashSetBase<AS3ConstStringNode,
     HashsetCachedNodeEntry<AS3ConstStringNode, AS3ConstStringNode::NodeHashF>>;
 // @0x1423f0aa0
 template AS3ConstStringSet::~HashSetBase();
+// @0x1423eaeb0
+template void AS3ConstStringSet::add<AS3ConstStringNode::NodeRef>(void*, const AS3ConstStringNode::NodeRef&, UPInt);
 
 template void GFx::AS3::NamespaceInstanceSetBase::Add<GFx::AS3::Instances::Namespace*>(
     void*, GFx::AS3::Instances::Namespace* const&);
@@ -2370,12 +3065,67 @@ template HashsetCachedEntry<AS3Value, AS3Value::HashFunctor>::HashsetCachedEntry
     const HashsetCachedEntry<AS3Value, AS3Value::HashFunctor>&);
 
 using AS3UInt64ValueNode = HashNode<UInt64, GFx::AS3::Value, FixedSizeHash<UInt64>>;
+using AS3UInt64ValueEntry = HashsetCachedNodeEntry<AS3UInt64ValueNode, AS3UInt64ValueNode::NodeHashF>;
 using AS3UInt64ValueSetBase = HashSetBase<AS3UInt64ValueNode, AS3UInt64ValueNode::NodeHashF,
     AS3UInt64ValueNode::NodeAltHashF, AllocatorDH<AS3UInt64ValueNode, Stat_Default_Mem>,
     HashsetCachedNodeEntry<AS3UInt64ValueNode, AS3UInt64ValueNode::NodeHashF>>;
 template const AS3UInt64ValueNode* AS3UInt64ValueSetBase::GetAlt<UInt64>(const UInt64&) const;
-template void AS3UInt64ValueSetBase::add<AS3UInt64ValueNode>(void*, const AS3UInt64ValueNode&, UPInt);
+// @0x1423eb220
 template void AS3UInt64ValueSetBase::add<AS3UInt64ValueNode::NodeRef>(void*, const AS3UInt64ValueNode::NodeRef&, UPInt);
+// The generic add with CheckExpand expanded in place, as the exe inlines it here (our compiler keeps it out of line).
+// @0x1423eacc0
+template <> template <>
+void AS3UInt64ValueSetBase::add<AS3UInt64ValueNode>(void* pheapAddr, const AS3UInt64ValueNode& key, UPInt h)
+{
+    if (pTable == 0)
+        setRawCapacity(pheapAddr, HashMinSize);
+    else if (pTable->EntryCount * 5 > (pTable->SizeMask + 1) * 4)
+        setRawCapacity(pheapAddr, (pTable->SizeMask + 1) * 2);
+    h &= pTable->SizeMask;
+    pTable->EntryCount++;
+
+    SPInt  idx  = h;
+    AS3UInt64ValueEntry* home = &(E(idx));
+
+    if (home->IsEmpty())
+    {
+        new (home) AS3UInt64ValueEntry(key, -1);
+    }
+    else
+    {
+        SPInt freeIdx = idx;
+        do
+        {
+            freeIdx = (freeIdx + 1) & pTable->SizeMask;
+        } while (!E(freeIdx).IsEmpty());
+        AS3UInt64ValueEntry* freeSlot = &E(freeIdx);
+
+        if (home->GetCachedHash(pTable->SizeMask) == (UPInt)idx)
+        {
+            new (freeSlot) AS3UInt64ValueEntry(*home);
+            home->Value       = key;
+            home->NextInChain = freeIdx;
+        }
+        else
+        {
+            SPInt walk = home->GetCachedHash(pTable->SizeMask);
+            for (;;)
+            {
+                AS3UInt64ValueEntry* e = &E(walk);
+                if (e->NextInChain == idx)
+                {
+                    new (freeSlot) AS3UInt64ValueEntry(*home);
+                    e->NextInChain = freeIdx;
+                    break;
+                }
+                walk = e->NextInChain;
+            }
+            home->Value       = key;
+            home->NextInChain = -1;
+        }
+    }
+    home->SetCachedHash(h);
+}
 
 using AS3TraitsKey = GFx::AS3::TClassTraitsCache::Key;
 using AS3TraitsNode = HashNode<AS3TraitsKey, GFx::AS3::ClassTraits::Traits*, AS3TraitsKey::HashFunctor>;
@@ -2414,6 +3164,43 @@ template void Scaleform::MsgFormat::FormatD1<int>(const int&);
 template void Scaleform::MsgFormat::FormatD1<const char*>(const char* const&);
 template Scaleform::String Scaleform::AsString<long>(const long&);
 template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned long&);
+
+// The SPtr assignments, the XML array copy and the namespace array destructor the exe keeps out of line here.
+namespace Scaleform {
+using AS3NamespacePtr = GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>;
+// @0x1423f1840
+template AS3NamespacePtr& AS3NamespacePtr::operator=(GFx::AS3::Instances::Namespace*);
+// @0x1423f18b0
+template AS3NamespacePtr& AS3NamespacePtr::operator=(Pickable<GFx::AS3::Instances::Namespace>);
+// @0x1423f1970
+template AS3XMLPtr& AS3XMLPtr::operator=(GFx::AS3::Instances::fl::XML*);
+// @0x1423f19e0
+template AS3XMLPtr& AS3XMLPtr::operator=(Pickable<GFx::AS3::Instances::fl::XML>);
+using AS3XMLPtrArrayLHBase = ArrayBase<ArrayData<AS3XMLPtr, AllocatorLH<AS3XMLPtr, Stat_Default_Mem>, ArrayDefaultPolicy>>;
+// MS2-FUNCTIONAL: the exe calls ArrayDataBase::ResizeNoConstruct (0x142420060) out of line; ours inlines it.
+// @0x1423f1760
+template const AS3XMLPtrArrayLHBase& AS3XMLPtrArrayLHBase::operator=(const AS3XMLPtrArrayLHBase&);
+using AS3NamespacePtrArrayData = ArrayDataBase<AS3NamespacePtr, AllocatorDH<AS3NamespacePtr, Stat_Default_Mem>,
+    ArrayDefaultPolicy>;
+// @0x1423f06a0
+template AS3NamespacePtrArrayData::~ArrayDataBase();
+}
+
+// Namespace::operator= and Value::operator=(Namespace*), out of line in the exe (sfr_as3_02 calls the first).
+// @0x1423f1b00
+Scaleform::GFx::AS3::Instances::Namespace& FUN_1423f1b00(Scaleform::GFx::AS3::Instances::Namespace* self,
+                                                         const Scaleform::GFx::AS3::Instances::Namespace& other)
+{
+    return *self = other;
+}
+// MS2-FUNCTIONAL: the exe stores the namespace through a whole VU and inlines its AddRef; the header's
+// AssignUnsafe sets the pointer alone and calls AddRefInternal.
+// @0x1423f1b90
+Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self,
+                                          Scaleform::GFx::AS3::Instances::Namespace* ns)
+{
+    return *self = ns;
+}
 
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -2653,7 +3440,7 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_GXMLText@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5200
 // MS2-PIN: ??_GXMLList@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5070
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
-// MS2-PIN: ??_7?$RefCountBase@VNamespaceInstanceFactory@AS3@GFx@Scaleform@@$0BFA@@Scaleform@@6B@ 0x143140af8
+// MS2-PIN: ??_7?$RefCountBase@VNamespaceInstanceFactory@AS3@GFx@Scaleform@@$0BFA@@Scaleform@@6B@ 0x143140af0
 // MS2-PIN: ??_7ArrayFunc@AS3@GFx@Scaleform@@6B@ 0x143141570
 // MS2-PIN: ??_7ValuePtrCollector@AS3@GFx@Scaleform@@6B@ 0x143141580
 // MS2-PIN: ??_7Value2StrCollector@AS3@GFx@Scaleform@@6B@ 0x143141590
@@ -2678,7 +3465,7 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_GChildGetFirst@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f27e0 ; vtslot
 // MS2-PIN: ??_GEmptyCallBack@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2c50 ; vtslot
 // MS2-PIN: ??_GListGet@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f35d0 ; vtslot
-// MS2-PIN: ??_G?$RefCountBase@VNamespaceInstanceFactory@AS3@GFx@Scaleform@@$0BFA@@Scaleform@@UEAAPEAXI@Z 0x1423f3930 ; vtslot
+// MS2-PIN: ??_G?$RefCountBase@VNamespaceInstanceFactory@AS3@GFx@Scaleform@@$0BFA@@Scaleform@@UEAAPEAXI@Z 0x1423f1f30 ; vtslot
 // MS2-PIN: ??_GValue2NumberCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4960 ; vtslot
 // MS2-PIN: ??_GValue2StrCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4990 ; vtslot
 // MS2-PIN: ??_GValuePtrCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f49c0 ; vtslot
@@ -2718,3 +3505,29 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_GGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3470 ; vtslot
 // MS2-PIN: ??_GGlobalObject@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3250 ; vtslot
 // MS2-PIN: ??_GGlobalObjectScript@fl@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f33e0 ; vtslot
+// MS2-PIN: ??_7GlobalObjectCPP@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143cc8
+// MS2-PIN: ??_GGlobalObjectCPP@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3320 ; vtslot
+// MS2-PIN: ??_7UserDefined@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143143fa8
+// MS2-PIN: ??_GUserDefined@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4730 ; vtslot
+// MS2-PIN: ??_7UserDefined@Classes@AS3@GFx@Scaleform@@6B@ 0x143144040
+// MS2-PIN: ??_GUserDefined@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4800 ; vtslot
+// MS2-PIN: ??_7UserDefined@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143143ef8
+// MS2-PIN: ??_GUserDefined@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4870 ; vtslot
+// MS2-PIN: ??1Multiname@AS3@GFx@Scaleform@@QEAA@XZ 0x1423f1060
+// MS2-PIN: ??$Add@PEAVNamespace@Instances@AS3@GFx@Scaleform@@@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@QEAAXPEAXAEBQEAVNamespace@Instances@AS3@GFx@1@@Z 0x1423e80a0
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@VCompareOn@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@VCompareOn@AS3@GFx@1@@Z 0x1423e9960
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@VCompareValuePtr@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@VCompareValuePtr@AS3@GFx@1@@Z 0x1423e9990
+// MS2-PIN: ??$QuickSortSafe@V?$ArrayDH@U?$Triple@VASString@GFx@Scaleform@@PEBVValue@AS3@23@I@Impl@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@5@@Scaleform@@VCompareAsString@Impl@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Triple@VASString@GFx@Scaleform@@PEBVValue@AS3@23@I@Impl@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@5@@1@VCompareAsString@Impl@AS3@GFx@1@@Z 0x1423e99d0
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Triple@NPEBVValue@AS3@GFx@Scaleform@@I@Impl@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@5@@Scaleform@@VCompareAsNumber@Impl@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Triple@NPEBVValue@AS3@GFx@Scaleform@@I@Impl@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@5@@1@_K1VCompareAsNumber@Impl@AS3@GFx@1@@Z 0x1423ea060
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@@?$HashSetBase@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorDH@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@1@_K@Z 0x1423eb220
+// MS2-PIN: ??1?$ArrayDataBase@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAA@XZ 0x1423f07a0
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@VCompareOn@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1VCompareOn@AS3@GFx@1@@Z 0x1423e9a00
+// MS2-PIN: ??1AttrGetFirst@fl@Instances@AS3@GFx@Scaleform@@UEAA@XZ 0x1423f0c80
+// MS2-PIN: ??4?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@PEAVXML@fl@Instances@123@@Z 0x1423f1970
+// MS2-PIN: ??1ChildGetFirst@fl@Instances@AS3@GFx@Scaleform@@UEAA@XZ 0x1423f0d10
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@VCompareValuePtr@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@PEBVValue@AS3@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1VCompareValuePtr@AS3@GFx@1@@Z 0x1423e9d30
+// MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Triple@VASString@GFx@Scaleform@@PEBVValue@AS3@23@I@Impl@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@5@@Scaleform@@VCompareAsString@Impl@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Triple@VASString@GFx@Scaleform@@PEBVValue@AS3@23@I@Impl@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@5@@1@_K1VCompareAsString@Impl@AS3@GFx@1@@Z 0x1423ea400
+// MS2-PIN: ??0Function@Instances@AS3@GFx@Scaleform@@QEAA@AEAVTraits@InstanceTraits@234@AEBV?$ArrayDH@VValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@4@AEBVValue@234@AEBVASString@34@@Z 0x1423ed090
+// MS2-PIN: ??0GlobalObjectCPP@fl@Instances@AS3@GFx@Scaleform@@QEAA@AEAVVM@345@AEAVGlobalObject@1InstanceTraits@345@@Z 0x1423ed260
+// MS2-PIN: ??0UserDefined@InstanceTraits@AS3@GFx@Scaleform@@QEAA@AEAVVMAbcFile@234@PEBVTraits@234@AEBVClassInfo@Abc@234@@Z 0x1423ef790
+// MS2-PIN: ??4?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAAEBV01@AEBV01@@Z 0x1423f1760

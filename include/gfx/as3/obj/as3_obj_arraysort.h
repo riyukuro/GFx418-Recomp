@@ -17,6 +17,15 @@ struct Pair
     F First;
     S Second;
 };
+
+// The sorts swap a pair member by member (the exe's Alg::Swap overload for pairs; declared here, after the sort
+// templates, it is found by argument-dependent lookup and wins over the generic Alg::Swap).
+template <typename F, typename S>
+inline void Swap(Pair<F, S>& l, Pair<F, S>& r)
+{
+    Alg::Swap(l.First, r.First);
+    Alg::Swap(l.Second, r.Second);
+}
 }
 
 namespace Scaleform { namespace GFx { namespace AS3
@@ -86,6 +95,46 @@ namespace Scaleform { namespace GFx { namespace AS3
         Value2NumberCollector& operator=(const Value2NumberCollector&);
 
         ArrayDH<NumberValueTriple>& Pairs;
+    };
+
+    // (appended, sfr22) the Array.sort/sortOn orderings of element pointers; Compare in sfr_as3_03, the sort
+    // instantiations in sfr_as3_01c.
+    // ordering by a script compare function. 0x10 bytes: the VM and the function (no descending flag in 4.1).
+    class CompareValuePtr
+    {
+    public:
+        CompareValuePtr(VM& vm, const Value& f) : Vm(vm), Func(f) {}
+
+        bool operator()(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) < 0; }
+        bool Equal(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) == 0; }
+
+        int Compare(const Value& a, const Value& b) const;
+
+    private:
+        CompareValuePtr& operator=(const CompareValuePtr&);
+
+        VM&          Vm;
+        const Value& Func;
+    };
+
+    // sortOn: the field names and their option bits. 0x18 bytes, passed by value.
+    class CompareOn
+    {
+    public:
+        CompareOn(VM& vm, const ArrayDH<Value>& names, const ArrayDH<UInt32>& flags)
+            : Vm(vm), Names(names), Flags(flags) {}
+
+        bool operator()(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) < 0; }
+        bool Equal(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) == 0; }
+
+        int Compare(const Value& a, const Value& b) const;
+
+    private:
+        CompareOn& operator=(const CompareOn&);
+
+        VM&                     Vm;
+        const ArrayDH<Value>&   Names;
+        const ArrayDH<UInt32>&  Flags;
     };
 }}} // namespace Scaleform::GFx::AS3
 

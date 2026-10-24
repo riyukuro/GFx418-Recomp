@@ -370,6 +370,8 @@ public:
     virtual InstanceTraits::Traits* GetITraitsXML() const;                                              // slot 17
     virtual const ClassTraits::Traits* GetClassTraitsXMLList() const;                                   // slot 18
     virtual InstanceTraits::Traits* GetITraitsXMLList() const;                                          // slot 19
+    // (appended, sfr22) GlobalObjectCPP constructor 0x1423ed260
+    bool IsEnabled() const { return Enabled; }
 
 private:
     bool                        Enabled;        // +0x20 (appended, sfr19)

@@ -218,6 +218,11 @@ namespace Instances { namespace fl {
     class GlobalObjectCPP : public Instances::fl::GlobalObject
     {
     public:
+        // (appended, sfr22) registers the builtin classes, binds the core ones and adds the global functions and
+        // constants. 0x1423ed260
+        GlobalObjectCPP(VM& vm, InstanceTraits::fl::GlobalObject& t);
+        // (appended, sfr22) 0x1423f0fc0
+        virtual ~GlobalObjectCPP();
         // (appended, sfr22) a fixed slot named after class cl in the public namespace, holding cl. 0x142403ca0
         void AddFixedSlot(Class& cl);
         // (appended, sfr22) a fixed slot prop_name/ns of type ctr holding v, also registered as a class of the VM; index

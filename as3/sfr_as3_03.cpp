@@ -1714,24 +1714,6 @@ namespace Scaleform { namespace GFx { namespace AS3
         CompareAsString Cmp;
     };
 
-    // ordering by a script compare function. 0x10 bytes: the VM and the function (no descending flag in 4.1).
-    class CompareValuePtr
-    {
-    public:
-        CompareValuePtr(VM& vm, const Value& f) : Vm(vm), Func(f) {}
-
-        bool operator()(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) < 0; }
-        bool Equal(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) == 0; }
-
-        int Compare(const Value& a, const Value& b) const;
-
-    private:
-        CompareValuePtr& operator=(const CompareValuePtr&);
-
-        VM&          Vm;
-        const Value& Func;
-    };
-
     // SparseArray::PushBack (0x14241e4b0, sfr_as3_04), which the exe inlines into Array.sort.
     static SF_INLINE void PushBackInline(SparseArray& sa, const Value& v)
     {
@@ -2125,26 +2107,6 @@ namespace
         return !((bits & 2) != 0 && (bits & ~UPInt(2)) == 0);
     }
 }
-
-    // The field names and their option bits. 0x18 bytes, passed by value.
-    class CompareOn
-    {
-    public:
-        CompareOn(VM& vm, const ArrayDH<Value>& names, const ArrayDH<UInt32>& flags)
-            : Vm(vm), Names(names), Flags(flags) {}
-
-        bool operator()(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) < 0; }
-        bool Equal(const ValuePtrPair& a, const ValuePtrPair& b) const { return Compare(*a.First, *b.First) == 0; }
-
-        int Compare(const Value& a, const Value& b) const;
-
-    private:
-        CompareOn& operator=(const CompareOn&);
-
-        VM&                     Vm;
-        const ArrayDH<Value>&   Names;
-        const ArrayDH<UInt32>&  Flags;
-    };
 
     // The first field both elements have and that differs decides; a failed read compares equal.
     // MS2-FUNCTIONAL: the exe keeps the conversion results in flag registers and duplicates the cleanup paths
@@ -3967,6 +3929,30 @@ template void Scaleform::ConstructorMov<Scaleform::GFx::AS3::SPtr<Scaleform::GFx
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$04V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142411040
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$05V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142411200
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$06V?$SPtr@VXMLList@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424113c0
+// The builtin class-info table uses a borrowed C-string key and a GH-backed
+// Hash. Its out-of-line CheckExpand instance is shared by the registry code.
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+struct ConstStringKey { const char* pChar; };
+class ConstStringHashFn
+{
+public:
+    UPInt operator()(const ConstStringKey& key) const
+    {
+        return String::BernsteinHashFunction(key.pChar, strlen(key.pChar));
+    }
+};
+}}}}}
+namespace {
+using CIKey = Scaleform::GFx::AS3::Instances::fl::ConstStringKey;
+using CIHash = Scaleform::GFx::AS3::Instances::fl::ConstStringHashFn;
+using CIInfo = Scaleform::GFx::AS3::ClassInfo;
+using CINode = Scaleform::HashNode<CIKey, const CIInfo*, CIHash>;
+using CISet = Scaleform::HashSetBase<CINode, typename CINode::NodeHashF, typename CINode::NodeAltHashF,
+                                     Scaleform::AllocatorGH<CIKey, 328>,
+                                     Scaleform::HashsetCachedNodeEntry<CINode, typename CINode::NodeHashF>>;
+}
+template void CISet::CheckExpand(void*);
+
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$08V?$SPtr@VXMLList@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142411580
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$0BP@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142411740
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$0CA@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142411900
