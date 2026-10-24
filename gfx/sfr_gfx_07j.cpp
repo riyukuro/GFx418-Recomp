@@ -6,6 +6,16 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142624020-0x142625920 .text$mn
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
+// MS2-FUNCTIONAL 0x142624020: same Array resize (release the dropped counted pointers, shrink/grow the buffer, store the size); register allocation and frame differ
+// MS2-FUNCTIONAL 0x1426240f0: same Array resize (release the dropped counted pointers, shrink/grow the buffer, store the size); register allocation and frame differ
+// MS2-FUNCTIONAL 0x142624840: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
+// MS2-FUNCTIONAL 0x142624af0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
+// MS2-FUNCTIONAL 0x142624d70: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
+// MS2-FUNCTIONAL 0x142624f80: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
+// MS2-FUNCTIONAL 0x1426251d0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
+// MS2-FUNCTIONAL 0x1426255e0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
+// MS2-FUNCTIONAL 0x142624190: same Set (find, assign or add) of a raw hash instance; helper inlining differs, so the frame differs
+// MS2-FUNCTIONAL 0x142624300: same Set (find, assign or add) of a raw hash instance; helper inlining differs, so the frame differs
 
 #include "sfr_gfx_07raw.h"
 
