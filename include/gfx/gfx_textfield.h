@@ -149,6 +149,8 @@ public:
     void SetDirtyFlag();          // exe 0x1425bc060
     // Replaces [beginPos, endPos) with the first strLen characters of pstr (all of it for SF_MAX_UPINT).
     void ReplaceTextA(const wchar_t* pstr, UPInt beginPos, UPInt endPos, UPInt strLen); // exe 0x1425bb810
+    // (appended, sfr31) Sets the text, or the HTML text when html is set.
+    void SetText(const wchar_t* ptext, bool html = false);       // exe 0x1425bd530
 
 private:
     UByte Unrecovered[0x148];
