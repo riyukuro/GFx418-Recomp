@@ -1202,5 +1202,30 @@ void FUN_1424dc8e0(void* self)
     *reinterpret_cast<void**>(bytes + 0x20) = 0;
 }
 
+// Releases an owned ArrayPOD allocation before clearing the wrapper's pointer and owner flag.
+// @0x1424dc9f0
+void FUN_1424dc9f0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    void* object = *reinterpret_cast<void**>(bytes);
+    if (object)
+    {
+        if (bytes[8])
+        {
+            bytes[8] = 0;
+            void* data = *reinterpret_cast<void**>(object);
+            if (data)
+            {
+                auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, data);
+            }
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, object);
+        }
+        *reinterpret_cast<void**>(bytes) = 0;
+    }
+    bytes[8] = 0;
+}
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
