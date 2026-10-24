@@ -239,15 +239,6 @@ void FUN_142624700(U self, U id, int delta, int count, U stats)
     case 2: ADD(0x20, delta); break;
     case 3: ADD(0x28, delta); break;
     case 4: ADD(0x2c, delta); break;
-    case 5:
-    case 6:
-    case 7: ADD(0x3c, delta); break;
-    case 8: ADD(0x40, delta); break;
-    case 9: ADD(0x44, delta); break;
-    case 10: ADD(0x7c, count); break;
-    case 0xb: ADD(0x48, delta); break;
-    case 0xc:
-    case 0xd: ADD(0x8c, count); break;
     case 0xf:
     case 0x10:
     case 0x11:
@@ -267,6 +258,15 @@ void FUN_142624700(U self, U id, int delta, int count, U stats)
     case 0x17:
     case 0x18:
     case 0x1c: ADD(0x4c, delta); ADD(0x38, delta); break;
+    case 5:
+    case 6:
+    case 7: ADD(0x3c, delta); break;
+    case 8: ADD(0x40, delta); break;
+    case 9: ADD(0x44, delta); break;
+    case 10: ADD(0x7c, count); break;
+    case 0xb: ADD(0x48, delta); break;
+    case 0xc:
+    case 0xd: ADD(0x8c, count); break;
     default: break;
     }
 #undef ADD
