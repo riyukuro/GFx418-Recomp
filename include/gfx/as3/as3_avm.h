@@ -23,6 +23,7 @@ class Button;
 class StaticTextCharacter;
 class CharacterDef;
 struct CharacterCreateInfo;
+struct ProcessFocusKeyInfo;
 
 namespace AS3 {
 
@@ -112,6 +113,8 @@ public:
     Instances::fl_display::DisplayObject*   GetAS3Parent() const;   // 0x142505e50
     void        InitClassName(const char* name);                    // 0x142511760
     bool        IsStageAccessible() const;                          // 0x142514d20
+    // (appended, sfr34) the nearest display object up from this one with loader info, else the stage's root
+    DisplayObject* GetRoot();                                       // 0x14250d990
     // The object now lives on the timeline: the AS3 object is kept raw, the counted reference dropped. 0x1425189a0
     void        OnDetachFromTimeline();
     // (appended, sfr19) the AS3 object of the class GetASClassName names, made without running its constructor;
@@ -162,7 +165,9 @@ public:
     InteractiveObject*  GetIntObj() const { return static_cast<InteractiveObject*>(pDispObj); }
     void        InsertChildToPlayList(InteractiveObject* ch);           // 0x142512750
     void        MoveBranchInPlayList();                                 // 0x142517ed0
-    void        OnFocusChange(InteractiveObject* ptoBeFocused, unsigned controllerIdx, FocusMovedType fmt); // 0x142519ee0
+    // The (key|mouse)FocusChange event of the AS3 object; false when a listener prevented the change. 0x142519ee0
+    bool        OnFocusChange(InteractiveObject* ptoBeFocused, unsigned controllerIdx, FocusMovedType fmt,
+                              ProcessFocusKeyInfo* pfocusKeyInfo);
 
     static AvmInteractiveObj* FromBase(AvmInteractiveObjBase* p)
     {

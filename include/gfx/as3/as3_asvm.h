@@ -197,9 +197,7 @@ public:
     Value               ExternalIntfRetVal;         // +0x58: what the host's ExternalInterface callback returned
     unsigned            NumAdvancesSinceCollection; // +0x78 advances since the last collection (sfr24)
     unsigned            LastCollectionFrame;        // +0x7c (sfr24)
-private:
-    UByte               Unrecovered80[0x88 - 0x80];
-public:
+    void*               pInvokeAliases;             // +0x80 AutoPtr<ASStringHash<Value> >: the host's invoke aliases (sfr34)
     ActionQueueType     ActionQueue;                // +0x88 (sfr19)
     void*               mEventChains;               // +0x150 EventChains: the objects listening to each frame event,
                                                     // one hash pointer (sfr24)
@@ -252,6 +250,8 @@ public:
     }
     // (appended, sfr19) a new action at the end of level lvl's queue. 0x142512790
     ActionEntry* InsertEmptyAction(ActionLevel lvl = AL_Frame);
+    // (appended, sfr34) the actions of level srclvl moved to the end of level dstlvl's queue. 0x142522ae0
+    void RequeueActionQueue(ActionLevel srclvl, ActionLevel dstlvl);
     // (appended, sfr19) runs the queued actions of every level but AL_Manual. 0x1424fa450
     void ExecuteActionQueues();
 

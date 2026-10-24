@@ -156,6 +156,12 @@ public:
     // (appended, sfr31) Sets the text, or the HTML text when html is set.
     void SetText(const wchar_t* ptext, bool html = false);       // exe 0x1425bd530
     bool SetTextValue(const char* ptext, bool html = false, bool notifyVariable = true); // exe 0x1425bd9a0
+    // (appended, sfr34) The text, or the HTML text when reqHtml is set.
+    ASString GetText(bool reqHtml = false) const;                 // exe 0x1425b91e0
+    // (appended, sfr34) Whether the text is HTML (Flags bit 1).
+    bool IsHtml() const { return (GetFlags418() & 0x2) != 0; }
+    // (appended, sfr34) Whether a URL is under mouse mouseIndex's cursor; its point in the text and range.
+    bool IsUrlUnderMouseCursor(unsigned mouseIndex, Render::PointF* ppnt = NULL, Range* purlRangePos = NULL);   // exe 0x1425b9cc0
 
     // (appended, sfr24) What happened to a link of the text (AvmTextFieldBase::OnLinkEventEx).
     enum LinkEvent

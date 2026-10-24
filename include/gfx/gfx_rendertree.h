@@ -252,6 +252,7 @@ public:
     const Cxform& GetCxform() const { return GetReadOnlyData()->Cx; }
 
     void SetVisible(bool visible);
+    void CopyGeomData(const TreeNode& src);   // 0x14261c5c0
     bool IsVisible() const { return GetReadOnlyData()->IsVisible(); }
 
     void       SetEdgeAAMode(EdgeAAMode edgeAA);   // 0x14261d270
