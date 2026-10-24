@@ -47,6 +47,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
+#include "ms2/scaleform/include/gfx/as3/as3_moviedefrootnode.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
@@ -1766,3 +1767,9 @@ StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
     return *this;
 }
 }} // namespace Scaleform::Render
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// MS2-FUNCTIONAL ~MovieDefRootNode@AS3@GFx@Scaleform@@UEAA@XZ: destroys the ABC file array and then lets C++ run the GFx root-node base destructor in order.
+// @0x1424de580
+MovieDefRootNode::~MovieDefRootNode() = default;
+}}} // namespace Scaleform::GFx::AS3
