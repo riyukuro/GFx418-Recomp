@@ -43,8 +43,11 @@ public:
 private:
     ArrayLH_POD<UByte> Data;         // +0x60
     unsigned           HintedSize;   // +0x78, in twips, 0 for an unhinted outline
-    RectF              Bounds;       // +0x7c
+    RectF              Bounds;       // +0x80 (RectF is 16-aligned)
 };
+
+// ??_G (0x1426c4c10) frees 0x90
+static_assert(sizeof(GlyphShape) == 0x90, "GlyphShape size");
 
 }} // namespace Scaleform::Render
 

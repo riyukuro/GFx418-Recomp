@@ -162,7 +162,7 @@ public:
             Mask_OnViewChanged      = 0x08,
             Mask_All                = 0x0f
         };
-        UInt8 HandlersMask;     // +0x0c
+        UInt8 HandlersMask;     // +0x10 (DoesHandleLineFormat test at 0x142613f37)
 
     public:
         DocumentListener(UInt8 handlersMask = 0) : HandlersMask(handlersMask) {}
