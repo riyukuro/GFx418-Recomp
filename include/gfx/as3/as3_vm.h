@@ -63,8 +63,8 @@ public:
     virtual UPInt GetSize() const = 0;                                  // slot 1
     // overloads: MSVC gives the later declaration the earlier slot
     virtual const Ptr<Abc::File>& GetFile(UPInt n) = 0;                 // slot 3
-    virtual const Ptr<Abc::File>& GetFile(const ASString& name) = 0;    // slot 2
-    virtual void AddFile(Ptr<Abc::File>& file) = 0;                     // slot 4
+    virtual const Abc::File* GetFile(const ASString& name) = 0;         // slot 2
+    // (sfr33) no AddFile: the exe's empty loader (vftable 0x14317f470, MovieRoot) has these four slots only
 };
 
 namespace Instances { namespace fl { class GlobalObjectCPP; class Array; class XML; class XMLList; class QName; } }
@@ -289,6 +289,11 @@ public:
     // (appended, sfr19) +0x270/+0x278 hold the instance traits of null and void (InstanceTraits::Anonimous/Void)
     InstanceTraits::Traits& GetITraitsNull() const { return *reinterpret_cast<InstanceTraits::Traits*>(TraitsNull.GetPtr()); }
     InstanceTraits::Traits& GetITraitsVoid() const { return *reinterpret_cast<InstanceTraits::Traits*>(TraitsVoid.GetPtr()); }
+    // (appended, sfr33) the loaded ABC file whose source is name. 0x142502d00
+    SPtr<VMAbcFile> FindVMAbcFileWeak(const char* name) const;
+    // (appended, sfr33) appends every loaded ABC file to destArray; the count added (none while being destroyed).
+    // 0x142507210
+    UPInt GetAllLoadedAbcFiles(Scaleform::Array<SPtr<VMAbcFile> >* destArray) const;
 
 public:
     bool                                    Initialized;        // +0x008
@@ -337,7 +342,7 @@ public:
     SPtr<InstanceTraits::fl::GlobalObject>  TraitaGlobalObject; // +0x290
     SPtr<Instances::fl::GlobalObjectCPP>    GlobalObject;       // +0x298 (0xd8 bytes)
     Value                                   GlobalObjectValue;  // +0x2a0
-    ArrayLH_POD<VMAbcFile*>                 VMAbcFilesWeak;     // +0x2c0
+    ArrayLH_POD<VMAbcFile*, StatMV_VM_VM_Mem> VMAbcFilesWeak;   // +0x2c0
 };
 
 // E4X hooks of the VM (VM+0x40). The VM starts with this base (vftable 0x14317b7b8, no RTTI; its hooks do nothing)

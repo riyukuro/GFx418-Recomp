@@ -785,6 +785,10 @@ public:
     // (appended, sfr33) removes the dynamic property prop_name names; false when there is none. 0x1424f4540
     CheckResult DeleteDynamicSlotValuePair(const Multiname& prop_name);
 
+    // (appended, sfr33) the fixed slot, dynamic value or prototype property of this object named mn
+    // (attr: 0 get, 1 set, 2 call). 0x142502360
+    void FindProperty(PropRef& result, const Multiname& mn, int attr);
+
 protected:
     SPtr<Traits>        pTraits;            // +0x20
     DynAttrsType        DynAttrs;           // +0x28
