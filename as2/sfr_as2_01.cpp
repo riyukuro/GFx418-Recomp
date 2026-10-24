@@ -3846,7 +3846,7 @@ void Sprite::InitInstance(bool extCall)
         FUN_1424e9380(FUN_142505ee0(ToAvmDisplayObj(pDispObj)), pDispObj);
     }
     if (IsMovieClip())
-        pDispObj->Flags |= GFx::DisplayObject::Mask_MovieClip;
+        pDispObj->GFx::DisplayObjectBase::Flags |= GFx::DisplayObjectBase::Mask_MovieClip;
 }
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_display
 
