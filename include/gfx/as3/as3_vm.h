@@ -394,6 +394,9 @@ public:
     // (appended, sfr33)
     virtual CheckResult EqualsXML(bool& result, Instances::fl::XML& l, Instances::fl::XML& r) const;    // 0x1424f9970
     virtual CheckResult EqualsXMLList(bool& result, Instances::fl::XMLList& l, const Value& v) const;   // 0x1424f9ae0
+    virtual CheckResult EqualsXML(bool& stop, bool& result, Instances::fl::XML& l, const Value& r) const;  // 0x1424f9850
+    virtual void DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, const Value& value) const;      // 0x1424f4a90
+    virtual CheckResult GetDescendants(Value& v, const Multiname& mn) const;                            // 0x142509140
 
 private:
     VM*                         pVM;            // +0x28
