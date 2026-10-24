@@ -110,7 +110,8 @@ struct InitObjectVisitor : public ObjectInterface::MemberVisitor
     InitObjectVisitor(Environment* penv, InteractiveObject* pch) : pEnv(penv), pCharacter(pch) {}
     virtual void Visit(const ASString& name, const Value& val, UByte flags)
     {
-        ToAvmCharacter(pCharacter)->SetMember(pEnv, name, val);
+        // as the exe's copy (0x142993f60): no character, no script side
+        static_cast<AvmCharacter*>(!pCharacter ? 0 : pCharacter->GetAvmIntObj())->SetMember(pEnv, name, val);
     }
 };
 
