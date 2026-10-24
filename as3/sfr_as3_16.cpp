@@ -1090,6 +1090,33 @@ namespace TR {
 ReadArgs::~ReadArgs() = default;
 }
 
+// E4X addition flattens XML and XMLList operands into a newly allocated XMLList.
+// MS2-FUNCTIONAL: preserves the exe's XML/XMLList type checks, list allocation, and flattened append behavior; helper calls change codegen.
+// @0x1424e6990
+bool XMLSupport::Add(Value& result, Object& l, Object& r) const
+{
+    const bool leftXML = IsXMLObject(&l);
+    const bool leftList = IsXMLListObject(&l);
+    const bool rightXML = IsXMLObject(&r);
+    const bool rightList = IsXMLListObject(&r);
+    if ((!leftXML && !leftList) || (!rightXML && !rightList))
+        return false;
+
+    InstanceTraits::fl::XMLList& listTraits =
+        *static_cast<InstanceTraits::fl::XMLList*>(GetITraitsXMLList());
+    Pickable<Instances::fl::XMLList> list = listTraits.MakeInstance(listTraits);
+    if (leftXML)
+        list->Apppend(static_cast<Instances::fl::XML*>(&l));
+    else
+        list->Append(static_cast<Instances::fl::XMLList&>(l));
+    if (rightXML)
+        list->Apppend(static_cast<Instances::fl::XML*>(&r));
+    else
+        list->Append(static_cast<Instances::fl::XMLList&>(r));
+    result.Pick(list);
+    return true;
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Sfr34_ModifyOptimizedPlayList@AS3@GFx@Scaleform@@YAXPEAVInteractiveObject@23@@Z 0x142517e70
