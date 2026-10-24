@@ -8,6 +8,9 @@
 // MS2-RANGE: 0x1428f9cf0-0x1428f9f50 .text$mn
 // MS2-RANGE: 0x1428fa620-0x1428fa7a0 .text$mn
 // MS2-RANGE: 0x1428ebd60-0x1428ec0b0 .text$mn
+// MS2-RANGE: 0x142993090-0x142993261 .text$mn
+// MS2-RANGE: 0x142993270-0x142993802 .text$mn
+// MS2-RANGE: 0x142993dc0-0x142993f5c .text$mn
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
 // MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
@@ -67,29 +70,32 @@ public:
 
     CSSStringBuilder(Environment* penv, String* pcss) : pEnv(penv), pCSS(pcss) {}
 
-    virtual void Visit(const ASString& name, const Value& val, UByte flags)
-    {
-        SF_UNUSED(flags);
-        const char* pname = name.ToCStr();
-        const char* pcss;
-        if (!strcmp(pname, "fontFamily"))          pcss = "font-family";
-        else if (!strcmp(pname, "fontSize"))       pcss = "font-size";
-        else if (!strcmp(pname, "fontStyle"))      pcss = "font-style";
-        else if (!strcmp(pname, "fontWeight"))     pcss = "font-weight";
-        else if (!strcmp(pname, "letterSpacing"))  pcss = "letter-spacing";
-        else if (!strcmp(pname, "marginLeft"))     pcss = "margin-left";
-        else if (!strcmp(pname, "marginRight"))    pcss = "margin-right";
-        else if (!strcmp(pname, "textAlign"))      pcss = "text-align";
-        else if (!strcmp(pname, "textDecoration")) pcss = "text-decoration";
-        else if (!strcmp(pname, "textIndent"))     pcss = "text-indent";
-        else                                       pcss = pname;
-        pCSS->AppendString(pcss);
-        pCSS->AppendString(":");
-        ASString str = val.ToString(pEnv);
-        pCSS->AppendString(str.ToCStr());
-        pCSS->AppendString(";");
-    }
+    virtual void Visit(const ASString& name, const Value& val, UByte flags);
 };
+
+// @0x142993090
+void CSSStringBuilder::Visit(const ASString& name, const Value& val, UByte flags)
+{
+    SF_UNUSED(flags);
+    const char* pname = name.ToCStr();
+    const char* pcss;
+    if (!strcmp(pname, "fontFamily"))          pcss = "font-family";
+    else if (!strcmp(pname, "fontSize"))       pcss = "font-size";
+    else if (!strcmp(pname, "fontStyle"))      pcss = "font-style";
+    else if (!strcmp(pname, "fontWeight"))     pcss = "font-weight";
+    else if (!strcmp(pname, "letterSpacing"))  pcss = "letter-spacing";
+    else if (!strcmp(pname, "marginLeft"))     pcss = "margin-left";
+    else if (!strcmp(pname, "marginRight"))    pcss = "margin-right";
+    else if (!strcmp(pname, "textAlign"))      pcss = "text-align";
+    else if (!strcmp(pname, "textDecoration")) pcss = "text-decoration";
+    else if (!strcmp(pname, "textIndent"))     pcss = "text-indent";
+    else                                       pcss = pname;
+    pCSS->AppendString(pcss);
+    pCSS->AppendString(":");
+    ASString str = val.ToString(pEnv);
+    pCSS->AppendString(str.ToCStr());
+    pCSS->AppendString(";");
+}
 
 // Sets the visited style members (AS names, CSS values) on a TextFormat object.
 class CSSTextFormatLoader : public ObjectInterface::MemberVisitor
@@ -116,84 +122,87 @@ public:
         return strncmp(pconst, pval, (len < maxLen) ? len : maxLen) == 0;
     }
 
-    virtual void Visit(const ASString& name, const Value& val, UByte flags)
-    {
-        SF_UNUSED(flags);
-        ASString      str   = val.ToString(pEnv);
-        const char*   pval  = str.ToCStr();
-        unsigned      len   = str.GetSize();
-        const char*   pname = name.ToCStr();
-        char*         pend  = 0;
-        Render::Text::TextFormat& fmt  = pFormat->GetTextFormat();
-        ParaView&                 para = *(ParaView*)&pFormat->GetParagraphFormat();
-
-        if (!strcmp(pname, "color"))
-            fmt.SetColor32((UInt32)strtol(pval + 1, &pend, 16));
-        else if (!strcmp(pname, "display"))
-            ;
-        else if (!strcmp(pname, "fontFamily"))
-            fmt.SetFontList(pval, len);
-        else if (!strcmp(pname, "fontSize"))
-            fmt.SetFontSize((float)SFstrtod(pval, &pend));
-        else if (!strcmp(pname, "fontStyle"))
-        {
-            if (Is("normal", pval, len, 4))
-                fmt.SetItalic(false);
-            else if (Is("italic", pval, len, 9))
-                fmt.SetItalic(true);
-        }
-        else if (!strcmp(pname, "fontWeight"))
-        {
-            if (Is("normal", pval, len, 6))
-                fmt.SetBold(false);
-            else if (Is("bold", pval, len, 4))
-                fmt.SetBold(true);
-        }
-        else if (!strcmp(pname, "kerning"))
-        {
-            if (Is("false", pval, len, 5))
-                fmt.SetKerning(false);
-            else if (Is("true", pval, len, 4))
-                fmt.SetKerning(true);
-        }
-        else if (!strcmp(pname, "letterSpacing"))
-            fmt.SetLetterSpacing((float)SFstrtod(pval, &pend));
-        else if (!strcmp(pname, "marginLeft"))
-        {
-            para.PresentMask |= 0x10;
-            para.LeftMargin = (UInt16)(SInt64)SFstrtod(pval, &pend);
-        }
-        else if (!strcmp(pname, "marginRight"))
-        {
-            para.PresentMask |= 0x20;
-            para.RightMargin = (UInt16)(SInt64)SFstrtod(pval, &pend);
-        }
-        else if (!strcmp(pname, "textAlign"))
-        {
-            // alignment bits 0x600 (left 0, right 1, justify 2, center 3), present bit 1
-            if (Is("left", pval, len, 4))
-                para.PresentMask = (UInt16)((para.PresentMask & 0xf9ff) | 1);
-            else if (Is("center", pval, len, 6))
-                para.PresentMask |= 0x601;
-            else if (Is("right", pval, len, 5))
-                para.PresentMask = (UInt16)((para.PresentMask & 0xfbff) | 0x201);
-            else if (Is("justify", pval, len, 7))
-                para.PresentMask = (UInt16)((para.PresentMask & 0xfdff) | 0x401);
-        }
-        else if (!strcmp(pname, "textDecoration"))
-        {
-            if (Is("none", pval, len, 4))
-                fmt.SetUnderline(false);
-            else if (Is("underline", pval, len, 9))
-                fmt.SetUnderline(true);
-        }
-        else if (!strcmp(pname, "textIndent"))
-        {
-            para.PresentMask |= 4;
-            para.Indent = (SInt16)(int)SFstrtod(pval, &pend);
-        }
-    }
+    virtual void Visit(const ASString& name, const Value& val, UByte flags);
 };
+
+// @0x142993270
+void CSSTextFormatLoader::Visit(const ASString& name, const Value& val, UByte flags)
+{
+    SF_UNUSED(flags);
+    ASString      str   = val.ToString(pEnv);
+    const char*   pval  = str.ToCStr();
+    unsigned      len   = str.GetSize();
+    const char*   pname = name.ToCStr();
+    char*         pend  = 0;
+    Render::Text::TextFormat& fmt  = pFormat->GetTextFormat();
+    ParaView&                 para = *(ParaView*)&pFormat->GetParagraphFormat();
+
+    if (!strcmp(pname, "color"))
+        fmt.SetColor32((UInt32)strtol(pval + 1, &pend, 16));
+    else if (!strcmp(pname, "display"))
+        ;
+    else if (!strcmp(pname, "fontFamily"))
+        fmt.SetFontList(pval, len);
+    else if (!strcmp(pname, "fontSize"))
+        fmt.SetFontSize((float)SFstrtod(pval, &pend));
+    else if (!strcmp(pname, "fontStyle"))
+    {
+        if (Is("normal", pval, len, 4))
+            fmt.SetItalic(false);
+        else if (Is("italic", pval, len, 9))
+            fmt.SetItalic(true);
+    }
+    else if (!strcmp(pname, "fontWeight"))
+    {
+        if (Is("normal", pval, len, 6))
+            fmt.SetBold(false);
+        else if (Is("bold", pval, len, 4))
+            fmt.SetBold(true);
+    }
+    else if (!strcmp(pname, "kerning"))
+    {
+        if (Is("false", pval, len, 5))
+            fmt.SetKerning(false);
+        else if (Is("true", pval, len, 4))
+            fmt.SetKerning(true);
+    }
+    else if (!strcmp(pname, "letterSpacing"))
+        fmt.SetLetterSpacing((float)SFstrtod(pval, &pend));
+    else if (!strcmp(pname, "marginLeft"))
+    {
+        para.PresentMask |= 0x10;
+        para.LeftMargin = (UInt16)(SInt64)SFstrtod(pval, &pend);
+    }
+    else if (!strcmp(pname, "marginRight"))
+    {
+        para.PresentMask |= 0x20;
+        para.RightMargin = (UInt16)(SInt64)SFstrtod(pval, &pend);
+    }
+    else if (!strcmp(pname, "textAlign"))
+    {
+        // alignment bits 0x600 (left 0, right 1, justify 2, center 3), present bit 1
+        if (Is("left", pval, len, 4))
+            para.PresentMask = (UInt16)((para.PresentMask & 0xf9ff) | 1);
+        else if (Is("center", pval, len, 6))
+            para.PresentMask |= 0x601;
+        else if (Is("right", pval, len, 5))
+            para.PresentMask = (UInt16)((para.PresentMask & 0xfbff) | 0x201);
+        else if (Is("justify", pval, len, 7))
+            para.PresentMask = (UInt16)((para.PresentMask & 0xfdff) | 0x401);
+    }
+    else if (!strcmp(pname, "textDecoration"))
+    {
+        if (Is("none", pval, len, 4))
+            fmt.SetUnderline(false);
+        else if (Is("underline", pval, len, 9))
+            fmt.SetUnderline(true);
+    }
+    else if (!strcmp(pname, "textIndent"))
+    {
+        para.PresentMask |= 4;
+        para.Indent = (SInt16)(int)SFstrtod(pval, &pend);
+    }
+}
 
 static void SetStringMember(Environment* penv, Object* pobj, const char* pname, const ASString& str)
 {
@@ -435,15 +444,18 @@ public:
 
     FontNamesVisitor(StringHash<String>* pnames) : pNames(pnames) {}
 
-    virtual void Visit(MovieDef*, Resource* presource, ResourceId, const char*)
-    {
-        if (presource->GetResourceType() == Resource::RT_Font)
-        {
-            String name(((FontResource*)presource)->GetName());
-            pNames->Set(name, name);
-        }
-    }
+    virtual void Visit(MovieDef*, Resource* presource, ResourceId, const char*);
 };
+
+// @0x142993dc0
+void FontNamesVisitor::Visit(MovieDef*, Resource* presource, ResourceId, const char*)
+{
+    if (presource->GetResourceType() == Resource::RT_Font)
+    {
+        String name(((FontResource*)presource)->GetName());
+        pNames->Set(name, name);
+    }
+}
 
 // TextField.getFontList(): the names of the movie's fonts, the font library's and the font provider's.
 // MS2-FUNCTIONAL: the font name hash is walked with its iterator; the exe inlines it.
