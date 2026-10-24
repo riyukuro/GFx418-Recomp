@@ -120,6 +120,35 @@ void* FUN_1423edb60(void* mem, Scaleform::UPInt vm, Scaleform::UPInt factory, in
 void FUN_142522350(void* hash, void* key);                                         // MultinameHash::Remove
 void FUN_142524af0(Scaleform::UPInt arr, Scaleform::UPInt arr2, int n);            // array clear/shrink
 bool FUN_142506000(Scaleform::UPInt root, void* valueOut, Scaleform::UPInt path);   // MovieRoot::GetVariable as AS3 Value
+void FUN_14241e430(void* arr, const Scaleform::GFx::AS3::Value* v);   // ValueArray::PushBack
+Scaleform::UPInt FUN_14250f9a0(Scaleform::UPInt vm, Scaleform::UPInt link, Scaleform::UPInt entry);   // class table entry -> traits
+void FUN_1423eb030(void* hash, void* hash2, void* nodeRef, Scaleform::UPInt hashValue);   // MultinameHash::add
+Scaleform::UPInt FUN_14250a060(Scaleform::UPInt vm, void* value);   // value -> traits
+Scaleform::UPInt FUN_14250a550(Scaleform::UPInt vm);   // the VM's fallback object (global)
+void FUN_1424d7130(void* err, int id, void* vm, const void* value, const char* s);   // VM::Error::Error(id, vm, Value, char*)
+void FUN_142508bd0(Scaleform::UPInt obj, void* out, int hint);   // Object::GetDefaultValue-style conversion to a primitive
+Scaleform::UInt8* FUN_14250d2f0(void* ret, Scaleform::UPInt vm, void* obj, void* mn, void* result);   // VM::GetProperty (result written to the last slot)
+void FUN_1424d2890(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (8-byte key)
+void FUN_1424d2be0(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (int to AutoPtr map)
+void FUN_1424d2d50(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (4-byte key)
+void FUN_1424d2eb0(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (4-byte key to SPtr)
+void FUN_1424d3030(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (pointer key to Resource)
+void FUN_1424d3200(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (8-byte key to SPtr)
+void FUN_1424d3380(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (multiname key to SPtr)
+void FUN_1424d3530(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (ASStringNode pointer)
+void FUN_1424d3870(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (ASString to Value)
+void FUN_1424d5020(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (SPtr key)
+Scaleform::UInt64 FUN_1424e0f00(void* self, void* key);   // multiname key hash functor
+void FUN_1424dc730(void* arr);   // ~ArrayDataBase<WeakPtr<DisplayObject>>
+void FUN_1424dcb40(void* node);   // ~HashNode<ASString,Value>
+void FUN_1425a4030(void* res);   // Resource::Release
+void FUN_1424eef00(void* tbl, Scaleform::UPInt heap);   // HashSetBase::CheckExpand
+void FUN_1424eeff0(void* tbl, Scaleform::UPInt heap);   // HashSetBase::CheckExpand (dynamic attributes)
+void FUN_1424d5390(void* dst, void* src);   // HashNode<DynAttrsKey,Value> copy constructor
+void FUN_1424dcac0(void* node);   // ~HashNode<DynAttrsKey,Value>
+void FUN_1425149a0(Scaleform::UPInt traits, Scaleform::UPInt src);   // traits setup from a class-traits owner
+void FUN_142514560(Scaleform::UPInt src, Scaleform::UPInt dst);   // traits setup from instance traits
+
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -4453,6 +4482,1105 @@ bool Sfr31SetArraySize(UPInt root, UPInt path, int size, UInt32 flags)
     }
     Sfr31ReleaseRawVal(cur);
     return ok;
+}
+
+// ---- batch 40
+// pushwith: the (non-null) top of the operand stack moves onto the scope stack and is marked as a with-scope.
+// MS2-FUNCTIONAL 0x14253f7d0: raw-offset model; codegen differs from the exe
+// @0x14253f7d0
+void Sfr31ExecPushWithScope(UPInt vmAddr)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt32* top = reinterpret_cast<UInt32*>(Sfr31Rd(vmAddr, 0x50));
+    const UInt32 k = (top[0] & 0x1f) - 0xc;
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10);
+    if ((top[0] & 0x1f) == 0 || (k < 4 && obj == 0))
+    {
+        const UInt32 id = (k < 4 ? (obj != 0) : 1u) + 0x3f1;
+        VM::Error e(static_cast<VM::ErrorID>(id), vm);
+        vm.ThrowTypeError(e);
+        return;
+    }
+    FUN_14241e430(reinterpret_cast<void*>(vmAddr + 0x160), &Value::GetUndefined());
+    UInt32* dst = reinterpret_cast<UInt32*>(Sfr31Rd(vmAddr, 0x160) + Sfr31Rd(vmAddr, 0x168) * 0x20 - 0x20);
+    for (int i = 0; i < 8; ++i)
+        dst[i] = top[i];
+    top[0] = 0;
+    reinterpret_cast<Value*>(top)->~Value();
+    Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
+    dst[0] |= 0x100;
+}
+
+// Tracer op: pops one operand and pushes the class traits named by the class entry (builtin classes get the plain traits kind).
+// MS2-FUNCTIONAL 0x14253c2f0: raw-offset model; codegen differs from the exe
+// @0x14253c2f0
+void Sfr31TraceClassTraitsFromIndex(State* st, UInt32 idx)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), idx);
+    FUN_14251ccc0(st, 1);
+    const UPInt link = Sfr31Rd(Sfr31Rd(s.Tracer(), 0x20), 0x28);
+    const UPInt file = Sfr31Rd(link, 0x28);
+    const UPInt cls = Sfr31Rd(Sfr31Rd(file, 0x140), static_cast<UPInt>(idx) * 8);
+    const SPInt mnIdx = *reinterpret_cast<const int*>(cls + 0x24);
+    const UPInt mn = mnIdx == 0 ? file + 0xe8 : mnIdx * 0x10 + Sfr31Rd(file, 0xb8);
+    const UPInt ns = FUN_14250ae60(link, *reinterpret_cast<const int*>(mn + 4));
+    const UPInt uri = Sfr31Rd(ns, 0x30);
+    const bool gfx = *reinterpret_cast<const UInt32*>(uri + 0x10) >= 13 && strncmp(reinterpret_cast<const char*>(Sfr31Rd(uri, 0)), "scaleform.gfx", 13) == 0;
+    const UPInt vm = Sfr31Rd(link, 0x20);
+    UPInt tr = gfx ? FUN_142524f60(vm, link, mn) : FUN_14250f9a0(vm, link, cls);
+    if (tr == 0)
+        tr = Sfr31Rd(vm, 0x1f8);
+    const UPInt c = Sfr31Rd(tr, 0xc0);
+    UPInt raw[4] = { 0x49, 0, tr, 0 };
+    if (c == Sfr31Rd(Sfr31Rd(vm, 0x220), 0xc0) || c == Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0) ||
+        c == Sfr31Rd(Sfr31Rd(vm, 0x218), 0xc0) || c == Sfr31Rd(Sfr31Rd(vm, 0x210), 0xc0))
+        raw[0] = 9;
+    s.OpStack().PushBack(*reinterpret_cast<const Value*>(raw));
+}
+
+// Finds the class traits for a multiname; unregistered ones are looked up on the global object by name and cached in the hash.
+// MS2-FUNCTIONAL 0x142525270: raw-offset model; codegen differs from the exe
+// @0x142525270
+UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
+{
+    UPInt found = FUN_14250d760(vm, mn);
+    if (found != 0)
+        return found;
+    const UPInt mgr = Sfr31Rd(Sfr31Rd(vm, 0x10), 0x1e8);
+    ASString str(reinterpret_cast<ASStringNode*>(mgr + 0x40));
+    UInt8 tmp[8];
+    if (*FUN_1424f1390(reinterpret_cast<Value*>(mn + 0x10), tmp, &str) == 0)
+        return 0;
+    const UPInt node = Sfr31Rd(reinterpret_cast<UPInt>(&str), 0);
+    const UPInt ns = Sfr31Rd(mn, 8);
+    found = reinterpret_cast<UPInt>(FUN_142415520(reinterpret_cast<void*>(Sfr31Rd(vm, 0x298)), &str, reinterpret_cast<const Instances::Namespace*>(ns)));
+    if (found != 0)
+    {
+        UPInt key[2];
+        key[0] = node;
+        ++*reinterpret_cast<int*>(node + 0x18);
+        if (ns != 0)
+            *reinterpret_cast<UInt32*>(ns + 0x10) = (*reinterpret_cast<UInt32*>(ns + 0x10) + 1u) & 0x8fbfffffu;
+        key[1] = ns;
+        UPInt* nodeRef[2] = { key, &found };
+        const UInt32 h = static_cast<UInt32>(static_cast<SPInt>(Sfr31Rd(ns, 0x20) << 60) >> 60) ^
+                         ((*reinterpret_cast<const UInt32*>(Sfr31Rd(ns, 0x30) + 0x1c) & 0xffffffu) << 2) ^
+                         (*reinterpret_cast<const UInt32*>(node + 0x1c) & 0xffffffu);
+        FUN_1423eb030(reinterpret_cast<void*>(vm + 0x1c8), reinterpret_cast<void*>(vm + 0x1c8), nodeRef, h);
+        if (ns != 0 && (ns & 1) == 0 && (*reinterpret_cast<UInt32*>(ns + 0x10) & 0x3fffff) != 0)
+        {
+            --*reinterpret_cast<UInt32*>(ns + 0x10);
+            FUN_1423dfa20(reinterpret_cast<void*>(ns));
+        }
+        Sfr31ReleaseStr(key[0]);
+    }
+    return found;
+}
+
+// Tracer op: pops two operands and pushes the traits of the lower one as a kind-8 value (builtin classes drop the extra flag).
+// MS2-FUNCTIONAL 0x142533470: raw-offset model; codegen differs from the exe
+// @0x142533470
+void Sfr31TraceTraitsOfSecond(State* st, UInt32 argc)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), argc);
+    const UPInt vm = TrVM(s.Tracer());
+    TrReadArgsRaw args(reinterpret_cast<VM*>(vm), st, argc);
+    TrPopped p1, p2;
+    FUN_14251cd30(st, &p1.Get());
+    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
+    FUN_14251cd30(st, &p2.Get());
+    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
+    const UPInt tr = FUN_14250a060(vm, &p2.Get());
+    UPInt raw[4] = { 0x48, 0, tr, 0 };
+    if (tr == Sfr31Rd(Sfr31Rd(vm, 0x220), 0xc0) || tr == Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0) ||
+        tr == Sfr31Rd(Sfr31Rd(vm, 0x218), 0xc0) || tr == Sfr31Rd(Sfr31Rd(vm, 0x210), 0xc0))
+        raw[0] = 8;
+    s.OpStack().PushBack(*reinterpret_cast<const Value*>(raw));
+    p2.Get().~Value();
+    p1.Get().~Value();
+}
+
+// findproperty-style resolve: pushes the property's value, or the VM's fallback object when it does not resolve.
+// MS2-FUNCTIONAL 0x1425389b0: raw-offset model; codegen differs from the exe
+// @0x1425389b0
+void Sfr31ExecFindPropOrGlobal(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        UPInt pr[4] = {0, 0, 0, 0};
+        FUN_142502570(vmAddr, pr, &mn);
+        Value& res = *reinterpret_cast<Value*>(&pr[1]);
+        const UPInt f = pr[0];
+        if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+        {
+            const UPInt g = FUN_14250a550(vmAddr);
+            UPInt raw[4] = { 0xc, 0, g, 0 };
+            if (g != 0)
+                *reinterpret_cast<UInt32*>(g + 0x10) = (*reinterpret_cast<UInt32*>(g + 0x10) + 1u) & 0x8fbfffffu;
+            ExecPushCopy(reinterpret_cast<VM*>(vmAddr), *reinterpret_cast<Value*>(raw));
+            FUN_142521f00(raw);
+        }
+        else
+            ExecPushCopy(reinterpret_cast<VM*>(vmAddr), res);
+        res.~Value();
+    }
+    mn.~Multiname();
+}
+
+// Verifies that the top of the operand stack is usable as the scope object named by the multiname (name check, class lookup, type check).
+// MS2-FUNCTIONAL 0x142536b90: raw-offset model; codegen differs from the exe
+// @0x142536b90
+void Sfr31ExecCheckScopeObject(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    const UPInt cfile = Sfr31Rd(file, 0x28);
+    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(file, idx));
+    const UInt32 flags = *reinterpret_cast<const UInt32*>(entry);
+    if ((flags & 3) == 1 || ((flags >> 2) & 1) != 0)
+    {
+        UPInt sv[2];
+        FUN_142545310(Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
+        String name(reinterpret_cast<const char*>(sv[0]), sv[1]);
+        alignas(8) char eb[sizeof(VM::Error)];
+        FUN_1424d7690(eb, 0x436, reinterpret_cast<void*>(cvm), name.ToCStr(), "compile time");
+        reinterpret_cast<VM*>(cvm)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+        reinterpret_cast<VM::Error*>(eb)->~Error();
+    }
+    const UPInt top = Sfr31Rd(cvm, 0x50);
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0)
+        return;
+    const UPInt tr = FUN_142524f60(vmAddr, file, entry);
+    if (tr == 0)
+    {
+        UPInt sv[2];
+        FUN_142545310(Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
+        alignas(8) char eb[sizeof(VM::Error)];
+        FUN_1424d7690(eb, 0x42d, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(sv[0]), "any object on the scope stack");
+        reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
+        reinterpret_cast<VM::Error*>(eb)->~Error();
+        return;
+    }
+    typedef char (*VCheck)(UPInt, UPInt, UPInt);
+    if (reinterpret_cast<VCheck>(Sfr31Rd(Sfr31Rd(tr, 0), 0x70))(tr, top, top) != 0)
+        return;
+    UPInt node = 0;
+    UPInt* nm = reinterpret_cast<Sfr31VFnName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &node);
+    alignas(8) char eb[sizeof(VM::Error)];
+    FUN_1424d7130(eb, 0x40a, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const void*>(top), reinterpret_cast<const char*>(Sfr31Rd(*nm, 0)));
+    reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+    reinterpret_cast<VM::Error*>(eb)->~Error();
+    Sfr31ReleaseStr(node);
+}
+
+// Converts a value in place to its primitive form (objects through their conversion hook); *ok tells whether it succeeded.
+// MS2-FUNCTIONAL 0x14252f790: raw-offset model; codegen differs from the exe
+// @0x14252f790
+UInt8* Sfr31ValueToPrimitive(Value* v, UInt8* ok)
+{
+    Value local;
+    UPInt* lw = reinterpret_cast<UPInt*>(&local);
+    const UPInt vp = reinterpret_cast<UPInt>(v);
+    const UInt32 k = *reinterpret_cast<const UInt32*>(vp) & 0x1f;
+    bool good = true;
+    if (k < 5 || k == 10 || (k - 0xc < 4 && Sfr31Rd(vp, 0x10) == 0))
+        local.Assign(*v);
+    else if (((k - 5) & 0xfffffffdu) == 0 || k - 0x10 < 2)
+    {
+        local.~Value();
+        *reinterpret_cast<UInt32*>(lw) = 4;
+        lw[2] = 0;
+        lw[3] = 0;
+    }
+    else if (k == 0xb)
+        local = *reinterpret_cast<const ASString*>(Sfr31Rd(vp, 0x10) + 0x30);
+    else
+    {
+        FUN_142508bd0(Sfr31Rd(vp, 0x10), &local, 0);
+        if (*reinterpret_cast<UInt8*>(Sfr31Rd(Sfr31Rd(Sfr31Rd(vp, 0x10), 0x20), 0x78) + 0x180) != 0)
+            good = false;
+    }
+    if (good)
+    {
+        UPInt* vw = reinterpret_cast<UPInt*>(v);
+        for (int i = 0; i < 4; ++i)
+        {
+            const UPInt t = vw[i];
+            vw[i] = lw[i];
+            lw[i] = t;
+        }
+    }
+    *ok = good ? 1 : 0;
+    return ok;
+}
+
+// 'in' operator: replaces the top value (the object) with whether it has the property named by the multiname.
+// MS2-FUNCTIONAL 0x142538040: raw-offset model; codegen differs from the exe
+// @0x142538040
+void Sfr31ExecIn(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(ctx.stack, 8));
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(top));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt mnp = reinterpret_cast<UPInt>(&mn);
+        const Value& nameV = *reinterpret_cast<const Value*>(mnp + 0x10);
+        const UInt32 nk = *reinterpret_cast<const UInt32*>(mnp + 0x10) & 0x1f;
+        const UPInt nobj = Sfr31Rd(mnp, 0x20);
+        const UPInt vmHelper = Sfr31Rd(vmAddr, 0x40);
+        if (*reinterpret_cast<UInt8*>(vmHelper + 0x20) == 0 || nk - 0xc > 3 || nobj == 0 ||
+            Sfr31Rd(Sfr31Rd(nobj, 0x20), 0x70) != 0xe || ((*reinterpret_cast<UInt8*>(Sfr31Rd(nobj, 0x20) + 0x68) >> 5) & 1) != 0)
+        {
+            const UInt32 tk = *reinterpret_cast<const UInt32*>(top) & 0x1f;
+            if (tk > 4 && tk != 10)
+            {
+                bool res = false;
+                bool halted = false;
+                if (tk - 0xc < 4)
+                {
+                    const UPInt o = Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10);
+                    if ((*reinterpret_cast<UInt8*>(Sfr31Rd(o, 0x20) + 0x68) >> 1) & 1)
+                    {
+                        typedef UInt8* (*VHas)(UPInt, UInt8*, void*);
+                        UInt8 tmp[8];
+                        res = *reinterpret_cast<VHas>(Sfr31Rd(Sfr31Rd(o, 0), 0x48))(o, tmp, &mn) != 0;
+                    }
+                    halted = *reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0;
+                }
+                if (!halted)
+                    top->SetBool(res);
+            }
+            else
+            {
+                Sfr31Err e(static_cast<VM::ErrorID>(0x460), vm, nameV, *top);
+                vm.ThrowReferenceError(e);
+            }
+        }
+        else
+        {
+            const UPInt tr = FUN_14250ffc0(&vm, &nameV);
+            UPInt node = 0;
+            UPInt* nm = reinterpret_cast<Sfr31VFnName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &node);
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d7850(eb, 0x45f, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(Sfr31Rd(*nm, 0)));
+            vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+            Sfr31ReleaseStr(node);
+        }
+    }
+    mn.~Multiname();
+}
+
+// getproperty-style op: moves the object off the stack top, reads the named property into the slot and raises a ReferenceError
+// when a primitive has no such property.
+// MS2-FUNCTIONAL 0x142539be0: raw-offset model; codegen differs from the exe
+// @0x142539be0
+void Sfr31ExecGetProp(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(ctx.stack, 8));
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(top));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        Sfr31RawTraitsVal obj;
+        for (int i = 0; i < 8; ++i)
+            reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
+        *reinterpret_cast<UInt32*>(top) = 0;
+        UInt8 ret[16];
+        const UInt8* r = FUN_14250d2f0(ret, vmAddr, &obj, &mn, top);
+        const UInt32 ok = obj.w0 & 0x1f;
+        if (*r == 0 && *reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0 && (ok < 5 || ok == 10))
+        {
+            Sfr31Err e(static_cast<VM::ErrorID>(0x42d), vm, *reinterpret_cast<const Value*>(reinterpret_cast<UPInt>(&mn) + 0x10),
+                       *reinterpret_cast<const Value*>(&obj));
+            vm.ThrowReferenceError(e);
+        }
+        reinterpret_cast<Value*>(&obj)->~Value();
+    }
+    mn.~Multiname();
+}
+
+// ---- batch 41
+static inline UPInt Sfr31HashCap(UPInt n)
+{
+    UPInt c = 8;
+    while (c < n)
+        c <<= 1;
+    return c;
+}
+
+static inline UInt64 Sfr31Sdbm(const void* p, int len)
+{
+    const UInt8* b = static_cast<const UInt8*>(p);
+    UInt64 h = 5381;
+    for (int i = len - 1; i >= 0; --i)
+        h = h * 65599 + b[i];
+    return h;
+}
+
+static inline void Sfr31DropSPtr(UPInt slot)
+{
+    const UPInt v = Sfr31Rd(slot, 0);
+    if (v == 0)
+        return;
+    if ((v & 1) == 0)
+    {
+        UInt32* rc = reinterpret_cast<UInt32*>(v + 0x10);
+        if ((*rc & 0x3fffff) != 0)
+        {
+            --*rc;
+            FUN_1423dfa20(reinterpret_cast<void*>(v));
+        }
+    }
+    else
+        Sfr31Wr(slot, 0, v - 1);
+}
+
+static inline void Sfr31DropStrNode(UPInt slot)
+{
+    const UPInt n = Sfr31Rd(slot, 0);
+    if (n != 0)
+        Sfr31ReleaseStr(n);
+}
+
+static inline void Sfr31DropResource(UPInt slot)
+{
+    const UPInt r = Sfr31Rd(slot, 0);
+    if (r != 0)
+        FUN_1425a4030(reinterpret_cast<void*>(r));
+}
+
+// AutoPtr<ArrayLH<...>> entry: pointer at +0x10, owned flag at +0x18.
+static inline void Sfr31DropAutoPtr(UPInt e)
+{
+    const UPInt a = Sfr31Rd(e, 0x10);
+    if (a != 0)
+    {
+        if (*reinterpret_cast<UInt8*>(e + 0x18) != 0)
+        {
+            *reinterpret_cast<UInt8*>(e + 0x18) = 0;
+            FUN_1424dc730(reinterpret_cast<void*>(a));
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(a));
+        }
+        Sfr31Wr(e, 0x10, 0);
+    }
+    *reinterpret_cast<UInt8*>(e + 0x18) = 0;
+}
+
+typedef void* (*Sfr31VAlloc)(UPInt self, UPInt size, void* info);
+
+// Allocates and empties a hash table body of cap entries (header: count at +0, mask at +8, entries from +0x10).
+static inline UPInt Sfr31HashNew(UPInt heap, UPInt cap, UPInt stride, UInt32 id, int mode)
+{
+    UPInt t;
+    if (mode == 2)
+        t = reinterpret_cast<UPInt>(Memory::AllocAutoHeap(reinterpret_cast<const void*>(heap), cap * stride + 0x10, AllocInfo(id, 0, 0)));
+    else
+    {
+        UInt32 info[2] = { id, 0 };
+        const UPInt self = (mode == 1) ? reinterpret_cast<UPInt>(Memory::pGlobalHeap) : heap;
+        t = reinterpret_cast<UPInt>(reinterpret_cast<Sfr31VAlloc>(Sfr31Rd(Sfr31Rd(self, 0), 0x50))(self, cap * stride + 0x10, info));
+    }
+    Sfr31Wr(t, 0, 0);
+    Sfr31Wr(t, 8, cap - 1);
+    for (UPInt i = 0; i < cap; ++i)
+        Sfr31Wr(t + 0x10, i * stride, UPInt(-2));
+    return t;
+}
+
+// Rebuilds the raw 8-byte key set at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142540c40: raw-offset model; the empty/clear paths are inlined
+// @0x142540c40
+void Sfr31HashResizeA(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x18;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x18, 0x2, 1);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x18;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d2890(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8));
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the int to AutoPtr<ArrayLH<WeakPtr<DisplayObject>>> map at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142540e40: raw-offset model; the empty/clear paths are inlined
+// @0x142540e40
+void Sfr31HashResizeB(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x20;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31DropAutoPtr(e);
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x2, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x20;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d2be0(&nt, heap, reinterpret_cast<void*>(e + 0x8), UPInt(SInt64(*reinterpret_cast<int*>(e + 8))));
+                Sfr31DropAutoPtr(e);
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the 4-byte key set at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142540fc0: raw-offset model; the empty/clear paths are inlined
+// @0x142540fc0
+void Sfr31HashResizeC(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x28;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x28, 0x2, 0);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x28;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d2d50(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 4));
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the 4-byte key to SPtr map at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142541170: raw-offset model; the empty/clear paths are inlined
+// @0x142541170
+void Sfr31HashResizeD(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x20;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31DropSPtr(e + 0x18);
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x154, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x20;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d2eb0(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 4));
+                Sfr31DropSPtr(e + 0x18);
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the pointer key to Resource map at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x1425418d0: raw-offset model; the empty/clear paths are inlined
+// @0x1425418d0
+void Sfr31HashResizeE(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x20;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31DropResource(e + 0x10);
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x2, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x20;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d3030(&nt, heap, reinterpret_cast<void*>(e + 0x8), Sfr31Rd(e, 8));
+                Sfr31DropResource(e + 0x10);
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the 8-byte key to SPtr map at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142541a60: raw-offset model; the empty/clear paths are inlined
+// @0x142541a60
+void Sfr31HashResizeF(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x20;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31DropSPtr(e + 0x18);
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x154, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x20;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d3200(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8));
+                Sfr31DropSPtr(e + 0x18);
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the multiname key to SPtr map at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142541fe0: raw-offset model; the empty/clear paths are inlined
+// @0x142541fe0
+void Sfr31HashResizeG(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x28;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31DropSPtr(e + 0x20);
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x28, 0x154, 2);
+    if (*tbl != 0)
+    {
+        UPInt tmpFn = 0;
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x28;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d3380(&nt, heap, reinterpret_cast<void*>(e + 0x10), FUN_1424e0f00(&tmpFn, reinterpret_cast<void*>(e + 0x10)));
+                Sfr31DropSPtr(e + 0x20);
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the ASStringNode pointer set at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142542170: raw-offset model; the empty/clear paths are inlined
+// @0x142542170
+void Sfr31HashResizeH(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x18;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31DropStrNode(e + 8);
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x18, 0x14d, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x18;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d3530(&nt, heap, reinterpret_cast<void*>(e + 0x8), *reinterpret_cast<UInt32*>(Sfr31Rd(e, 8) + 0x1c));
+                Sfr31DropStrNode(e + 8);
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the ASString to Value map at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142542450: raw-offset model; the empty/clear paths are inlined
+// @0x142542450
+void Sfr31HashResizeI(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x30;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    FUN_1424dcb40(reinterpret_cast<void*>(e + 8));
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x30, 0x144, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x30;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d3870(&nt, heap, reinterpret_cast<void*>(e + 0x8), *reinterpret_cast<UInt32*>(Sfr31Rd(e, 8) + 0x1c));
+                FUN_1424dcb40(reinterpret_cast<void*>(e + 8));
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Rebuilds the SPtr key set at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x1425425e0: raw-offset model; the empty/clear paths are inlined
+// @0x1425425e0
+void Sfr31HashResizeJ(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x18;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    Sfr31DropSPtr(e + 0x10);
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    const UPInt cap = Sfr31HashCap(count);
+    UPInt nt = Sfr31HashNew(heap, cap, 0x18, 0x2, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x18;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                FUN_1424d5020(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8));
+                Sfr31DropSPtr(e + 0x10);
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Chained insert into a hash table whose entries cache the slot index (next at +0, slot at +8, key and value at +0x10).
+static inline void Sfr31HashAddCached(UPInt* nt, UPInt heap, UInt64 hash, UPInt k0, UPInt k1)
+{
+    FUN_1424eef00(nt, heap);
+    ++*reinterpret_cast<SPInt*>(*nt);
+    const UPInt mask = Sfr31Rd(*nt, 8);
+    const UPInt idx = hash & mask;
+    const UPInt base = *nt + 0x10;
+    const UPInt nat = base + idx * 0x20;
+    const UPInt oldNext = Sfr31Rd(nat, 0);
+    if (oldNext == UPInt(-2))
+    {
+        Sfr31Wr(nat, 0, UPInt(-1));
+        Sfr31Wr(nat, 0x10, k0);
+        Sfr31Wr(nat, 0x18, k1);
+    }
+    else
+    {
+        UPInt fr = idx;
+        do
+            fr = (fr + 1) & mask;
+        while (Sfr31Rd(base + fr * 0x20, 0) != UPInt(-2));
+        const UPInt free = base + fr * 0x20;
+        const UPInt slot = Sfr31Rd(nat, 8);
+        Sfr31Wr(free, 0, oldNext);
+        Sfr31Wr(free, 8, slot);
+        Sfr31Wr(free, 0x10, Sfr31Rd(nat, 0x10));
+        Sfr31Wr(free, 0x18, Sfr31Rd(nat, 0x18));
+        if (slot == idx)
+            Sfr31Wr(nat, 0, fr);
+        else
+        {
+            UPInt p = base + slot * 0x20;
+            UPInt nx = Sfr31Rd(p, 0);
+            while (nx != idx)
+            {
+                p = base + nx * 0x20;
+                nx = Sfr31Rd(p, 0);
+            }
+            Sfr31Wr(p, 0, fr);
+            Sfr31Wr(nat, 0, UPInt(-1));
+        }
+        Sfr31Wr(nat, 0x10, k0);
+        Sfr31Wr(nat, 0x18, k1);
+    }
+    Sfr31Wr(nat, 8, idx);
+}
+
+// Rebuilds the GASRefCountBase pointer to WeakProxy pointer map at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x1425415a0: raw-offset model; the empty path and the cached insert are inlined
+// @0x1425415a0
+void Sfr31HashResizeK(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+                Sfr31Wr(*tbl + 0x10, i * 0x20, UPInt(-2));
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    UPInt nt = Sfr31HashNew(heap, Sfr31HashCap(count), 0x20, 2, 1);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x20;
+            if (Sfr31Rd(e, 0) != UPInt(-2))
+            {
+                Sfr31HashAddCached(&nt, heap, Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8), Sfr31Rd(e, 0x10), Sfr31Rd(e, 0x18));
+                Sfr31Wr(e, 0, UPInt(-2));
+            }
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// Dynamic-attribute node (key {id, name string}, Value) assignment over an existing node.
+static inline void Sfr31DynNodeAssign(UPInt dst, UPInt src)
+{
+    *reinterpret_cast<UInt32*>(dst) = *reinterpret_cast<const UInt32*>(src);
+    const UPInt nn = Sfr31Rd(src, 8);
+    ++*reinterpret_cast<int*>(nn + 0x18);
+    Sfr31ReleaseStr(Sfr31Rd(dst, 8));
+    Sfr31Wr(dst, 8, nn);
+    reinterpret_cast<Value*>(dst + 0x10)->Assign(*reinterpret_cast<const Value*>(src + 0x10));
+}
+
+// Rebuilds the dynamic-attribute map (key {id, name string} to Value) at the requested capacity (0 empties it).
+// MS2-FUNCTIONAL 0x142541ca0: raw-offset model; the empty path and the cached insert are inlined
+// @0x142541ca0
+void Sfr31HashResizeDyn(UPInt* tbl, UPInt heap, UPInt count)
+{
+    if (count == 0)
+    {
+        if (*tbl != 0)
+        {
+            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+            {
+                const UPInt e = *tbl + 0x10 + i * 0x40;
+                if (Sfr31Rd(e, 0) != UPInt(-2))
+                {
+                    FUN_1424dcac0(reinterpret_cast<void*>(e + 0x10));
+                    Sfr31Wr(e, 0, UPInt(-2));
+                }
+            }
+            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+            *tbl = 0;
+        }
+        return;
+    }
+    UPInt nt = Sfr31HashNew(heap, Sfr31HashCap(count), 0x40, 2, 2);
+    if (*tbl != 0)
+    {
+        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
+        {
+            const UPInt e = *tbl + 0x10 + i * 0x40;
+            if (Sfr31Rd(e, 0) == UPInt(-2))
+                continue;
+            const UPInt node = e + 0x10;
+            const UInt32 h = *reinterpret_cast<UInt32*>(Sfr31Rd(node, 8) + 0x1c);
+            FUN_1424eeff0(&nt, heap);
+            ++*reinterpret_cast<SPInt*>(nt);
+            const UPInt mask = Sfr31Rd(nt, 8);
+            const UPInt idx = UPInt(UInt32(mask) & h & 0xffffff);
+            const UPInt base = nt + 0x10;
+            const UPInt nat = base + idx * 0x40;
+            const UPInt oldNext = Sfr31Rd(nat, 0);
+            if (oldNext == UPInt(-2))
+            {
+                Sfr31Wr(nat, 0, UPInt(-1));
+                FUN_1424d5390(reinterpret_cast<void*>(nat + 0x10), reinterpret_cast<void*>(node));
+            }
+            else
+            {
+                UPInt fr = idx;
+                do
+                    fr = (fr + 1) & mask;
+                while (Sfr31Rd(base + fr * 0x40, 0) != UPInt(-2));
+                const UPInt free = base + fr * 0x40;
+                const UPInt slot = Sfr31Rd(nat, 8);
+                Sfr31Wr(free, 0, oldNext);
+                Sfr31Wr(free, 8, slot);
+                FUN_1424d5390(reinterpret_cast<void*>(free + 0x10), reinterpret_cast<void*>(nat + 0x10));
+                if (slot == idx)
+                    Sfr31Wr(nat, 0, fr);
+                else
+                {
+                    UPInt p = base + slot * 0x40;
+                    UPInt nx = Sfr31Rd(p, 0);
+                    while (nx != idx)
+                    {
+                        p = base + nx * 0x40;
+                        nx = Sfr31Rd(p, 0);
+                    }
+                    Sfr31Wr(p, 0, fr);
+                    Sfr31Wr(nat, 0, UPInt(-1));
+                }
+                Sfr31DynNodeAssign(nat + 0x10, node);
+            }
+            Sfr31Wr(nat, 8, idx);
+            FUN_1424dcac0(reinterpret_cast<void*>(node));
+            Sfr31Wr(e, 0, UPInt(-2));
+        }
+        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
+    }
+    *tbl = nt;
+}
+
+// ---- batch 42
+// Resolves the class traits matching a value's kind and hands them to the instance-traits setup of the given traits.
+// MS2-FUNCTIONAL 0x142531260: raw-offset model; codegen differs from the exe
+// @0x142531260
+void Sfr31SetTraitsForValue(UPInt st, const UInt32* v, UPInt traits)
+{
+    const UInt32 k = v[0] & 0x1f;
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
+    const UPInt dst = Sfr31Rd(traits, 0xc0);
+    if (k == 9)
+    {
+        FUN_1425149a0(traits, obj);
+        return;
+    }
+    if (k == 0xd)
+    {
+        FUN_1425149a0(traits, Sfr31Rd(obj, 0x20));
+        return;
+    }
+    const UPInt vm = Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0x20), 0x28), 0x20);
+    if (k - 0xc < 4 && obj == 0)
+    {
+        FUN_142514560(Sfr31Rd(vm, 0x270), dst);
+        return;
+    }
+    if (k == 0)
+    {
+        FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x1f0), 0xc0), dst);
+        return;
+    }
+    if (k == 8)
+    {
+        FUN_142514560(obj, dst);
+        return;
+    }
+    switch (k)
+    {
+    case 1: FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x210), 0xc0), dst); return;
+    case 2: FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x220), 0xc0), dst); return;
+    case 3: FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0), dst); return;
+    case 4: FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x218), 0xc0), dst); return;
+    case 5:
+    case 0x10: FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x208), 0xc8), dst); return;
+    case 7:
+    case 0x11: FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x208), 0xe0), dst); return;
+    case 10:
+        if (obj != 0)
+        {
+            FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x230), 0xc0), dst);
+            return;
+        }
+        break;
+    case 0xb: FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x200), 0xc0), dst); return;
+    case 0xc:
+    case 0xe:
+    case 0xf:
+        if (obj != 0)
+        {
+            FUN_142514560(Sfr31Rd(obj, 0x20), dst);
+            return;
+        }
+        break;
+    default: FUN_142514560(Sfr31Rd(vm, 0x278), dst); return;
+    }
+    FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x1f8), 0xc0), dst);
+}
+
+// The class traits of a class description: its package namespace plus its name, resolved through the VM's class traits cache.
+// MS2-FUNCTIONAL 0x142525ca0: SDK-API model; the exe inlines the string and namespace construction
+// @0x142525ca0
+ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info)
+{
+    const UPInt ti = Sfr31Rd(info, 0x18);
+    if (ti == 0)
+        return NULL;
+    const char* pkg = reinterpret_cast<const char*>(Sfr31Rd(ti, 0x10));
+    ASString uri = vm->GetStringManager().CreateString(pkg ? pkg : "");
+    SPtr<Instances::Namespace> ns;
+    if (uri.IsEmpty())
+        ns = vm->PublicNamespace.GetPtr();
+    else
+        ns = SPtr<Instances::Namespace>(static_cast<InstanceTraits::fl::Namespace&>(vm->GetClassTraitsNamespace().GetInstanceTraits())
+                                            .MakeInternedInstance(Abc::NS_Public, uri, Value::GetUndefined()));
+    const char* nm = reinterpret_cast<const char*>(Sfr31Rd(ti, 8));
+    UPInt len = 0;
+    while (nm[len] != '\0')
+        ++len;
+    ASString name(reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(vm), 0x10), 0x1e8))->CreateConstStringNode(nm, len, 0));
+    return Sfr27GetClassTraitsByName(vm, &name, ns.GetPtr());
 }
 
 }}} // namespace Scaleform::GFx::AS3
