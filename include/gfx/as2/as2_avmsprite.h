@@ -125,6 +125,7 @@ public:
     virtual void CloneInternalData(const InteractiveObject* src);
     virtual void CopyPhysicalProperties(const InteractiveObject* poldChar); // exe 0x142935d10
     void SetLevel(int level); // exe 0x142981bf0
+    void CallFrameActions(unsigned frame); // exe 0x1429329a0 (sfr32)
 
     // (appended for sfr_as2_05)
     // Runs the whole buffer in the clip's environment; false once the clip is unloaded (exe 0x14293ff10).
