@@ -143,6 +143,7 @@ extern "C" int _DAT_143badb00;
 extern "C" cri_u8 LAB_14004e5a0;
 extern "C" cri_u8 LAB_14004eee0;
 extern "C" cri_u8 LAB_140050f80;
+extern "C" int DAT_143c492a0;
 extern "C" cri_u8 LAB_142ccc850;
 
 cri_u64 FUN_140027ed8(Any a0,Any a1,Any a2,Any a3);
@@ -947,6 +948,14 @@ void FUN_14004e580(void)
   return;
 }
 
+// The SJMEM error callback (FUN_14004eb90 stores it as LAB_14004e5a0; Ghidra made no function here).
+// MS2-FUNCTIONAL: written from the exe; the message is a literal, not the exe's .rdata copy at 0x1431ba2f8.
+// @0x14004e5a0
+void FUN_14004e5a0(void)
+{
+  thunk_FUN_1400afe60("SJMEM Error");
+}
+
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e5b0
 void FUN_14004e5b0(cri_u64 a1,cri_u64 a2)
@@ -1428,6 +1437,24 @@ cri_u64 FUN_14004eea0(cri_u64 a1,cri_u32 a2)
   u_v1 = (cri_u64)FUN_14004eb90(a1,a2);
   FUN_1400677c0();
   return u_v1;
+}
+
+// The SJRBF error callback (FUN_14004f8f0 stores it as LAB_14004eee0; Ghidra made no function here): the error code
+// picks the message.
+// MS2-FUNCTIONAL: written from the exe; the messages are literals, not the exe's .rdata copies at 0x1431ba508-0x1431ba548.
+// @0x14004eee0
+void FUN_14004eee0(cri_u64 a1, int a2)
+{
+  (void)a1;
+  if (a2 == -3) {
+    thunk_FUN_1400afe60("SJRBF Parameter Error");
+    return;
+  }
+  if (a2 == -2) {
+    thunk_FUN_1400afe60("SJRBF Internal Error");
+    return;
+  }
+  thunk_FUN_1400afe60(a2 == -1 ? "SJRBF Fatal Error" : "SJRBF Error");
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -2985,6 +3012,15 @@ cri_u32 FUN_140050ef0(cri_u64 a1,cri_u64 *a2,int *a3,cri_u64 a4)
     (**(code **)(*pl_v3 + 0x18))(pl_v3);
   }
   return u_v1;
+}
+
+// The no-op callback FUN_140050f90 fills its slots with (stored as LAB_140050f80; Ghidra made no function here): it
+// only counts its calls.
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x140050f80
+void FUN_140050f80(void)
+{
+  DAT_143c492a0 = DAT_143c492a0 + 1;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -4784,5 +4820,28 @@ void FUN_140054080(void)
 void FUN_1400540d0(void)
 {
   return;
+}
+
+// The DC rounding callback FUN_140054250 stores in the decoder (sfr_cri_06 keeps it as LAB_140054100; Ghidra made
+// no function here): when rounding is on, each enabled block's DC coefficient is divided by 8, rounded half away from 0.
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x140054100
+void FUN_140054100(char *ctx)
+{
+  if (CriAt<int>(ctx, 0xd44) == 0) {
+    return;
+  }
+  for (int i = 0; i < 6; i++) {
+    if ((CriAt<cri_u32>(ctx, 0x71c) & (1u << i)) != 0) {
+      short *p = &CriAt<short>(ctx, 0x780 + i * 0x80);
+      int c = *p;
+      if (c >= 0) {
+        *p = (short)((c + 4) / 8);
+      }
+      else {
+        *p = (short)-((4 - c) / 8);
+      }
+    }
+  }
 }
 
