@@ -593,7 +593,7 @@ RectF Sprite::GetFocusRect() const
 }
 
 // hitTestMask: 1 tests the shapes instead of the bounds, 2 skips invisible clips.
-// MS2-FUNCTIONAL: the exe frame carries a /GS cookie that cl does not add for these locals
+// MS2-FUNCTIONAL: the exe materialises the HitTestDisable test as shr/test al,1 (cl folds it to one test)
 // @0x1425dc2e0
 bool Sprite::PointTestLocal(const PointF& pt, UByte hitTestMask) const
 {
@@ -605,9 +605,9 @@ bool Sprite::PointTestLocal(const PointF& pt, UByte hitTestMask) const
         return false;
     if (DisplayObjContainer::PointTestLocal(pt, hitTestMask))
         return true;
-    if (!pDrawingAPI)
-        return false;
-    return pDrawingAPI->DefPointTestLocal(pt, (hitTestMask & 1) != 0, this);
+    if (pDrawingAPI && pDrawingAPI->DefPointTestLocal(pt, (hitTestMask & 1) != 0, this))
+        return true;
+    return false;
 }
 
 // _root, honouring _lockroot of a separately loaded clip.

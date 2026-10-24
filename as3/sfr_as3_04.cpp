@@ -1551,56 +1551,54 @@ namespace Classes { namespace fl
         result = ::log(v);
     }
 
-    // MS2-FUNCTIONAL: comparison-loop register allocation differs
     // @0x1424294f0
     void Math::max(Value& result, unsigned argc, const Value* argv)
     {
-        if (argc == 0)
+        if (argc)
         {
-            result.SetNumber(NumberUtil::NEGATIVE_INFINITY());
-            return;
-        }
-        result.Assign(argv[0]);
-        for (unsigned i = 1; i < argc; ++i)
-        {
-            Boolean3 cmp;
-            if (!AbstractLessThan(cmp, argv[i], result))
-                return;
-            if (cmp == undefined3)
+            result.Assign(argv[0]);
+            for (unsigned i = 1; i < argc; ++i)
             {
-                result.SetNumber(NumberUtil::NaN());
-                return;
+                Boolean3 cmp;
+                if (!AbstractLessThan(cmp, argv[i], result))
+                    return;
+                if (cmp == undefined3)
+                {
+                    result.SetNumber(NumberUtil::NaN());
+                    return;
+                }
+                if (cmp == false3)
+                    result.Assign(argv[i]);
             }
-            if (cmp == false3)
-                result.Assign(argv[i]);
+            result.ToNumberValue();
         }
-        result.ToNumberValue();
+        else
+            result.SetNumber(NumberUtil::NEGATIVE_INFINITY());
     }
 
-    // MS2-FUNCTIONAL: comparison-loop register allocation differs
     // @0x1424296e0
     void Math::min(Value& result, unsigned argc, const Value* argv)
     {
-        if (argc == 0)
+        if (argc)
         {
-            result.SetNumber(NumberUtil::POSITIVE_INFINITY());
-            return;
-        }
-        result.Assign(argv[0]);
-        for (unsigned i = 1; i < argc; ++i)
-        {
-            Boolean3 cmp;
-            if (!AbstractLessThan(cmp, result, argv[i]))
-                return;
-            if (cmp == undefined3)
+            result.Assign(argv[0]);
+            for (unsigned i = 1; i < argc; ++i)
             {
-                result.SetNumber(NumberUtil::NaN());
-                return;
+                Boolean3 cmp;
+                if (!AbstractLessThan(cmp, result, argv[i]))
+                    return;
+                if (cmp == undefined3)
+                {
+                    result.SetNumber(NumberUtil::NaN());
+                    return;
+                }
+                if (cmp == false3)
+                    result.Assign(argv[i]);
             }
-            if (cmp == false3)
-                result.Assign(argv[i]);
+            result.ToNumberValue();
         }
-        result.ToNumberValue();
+        else
+            result.SetNumber(NumberUtil::POSITIVE_INFINITY());
     }
 
     // @0x142429a70

@@ -489,57 +489,56 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x142468fa0
-    // MS2-FUNCTIONAL: block layout of the three phase loops; the same order of dispatches and stop tests
+    // MS2-FUNCTIONAL: the exe keeps this in rbp (rsi here); same blocks and dispatch order
     void EventDispatcher::Dispatch(Instances::fl_events::Event* evt, GFx::DisplayObject* dobj)
     {
-        if (!dobj)
+        if (dobj)
         {
+            SPtr<EventDispatcher> self(this);
+            Ptr<GFx::DisplayObject> pdobj(dobj);
+            ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> chain(GetVM().GetMemoryHeap());
+            GetParentChain(dobj, chain);
+
+            // capture: from the root down to the parent
+            evt->Phase = 1;
+            for (SPInt i = (SPInt)chain.GetSize() - 1; i >= 0; --i)
+            {
+                if (!chain[i]->DispatchSingleEvent(evt, true))
+                {
+                    if (chain[i]->pDispObj)
+                        chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                    return;
+                }
+                if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                    return;
+            }
+
+            // target
+            evt->Phase = 2;
+            if (!DispatchSingleEvent(evt, false))
+            {
+                dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                return;
+            }
+            if (evt->PropagationStopped || evt->ImmPropagationStopped || !evt->Bubbles)
+                return;
+
+            // bubble: from the parent up to the root
+            evt->Phase = 3;
+            for (UPInt i = 0; i < chain.GetSize(); ++i)
+            {
+                if (!chain[i]->DispatchSingleEvent(evt, false))
+                {
+                    if (chain[i]->pDispObj)
+                        chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                    return;
+                }
+                if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                    return;
+            }
+        }
+        else
             DispatchSingleEvent(evt, false);
-            return;
-        }
-
-        SPtr<EventDispatcher> self(this);
-        Ptr<GFx::DisplayObject> pdobj(dobj);
-        ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> chain(GetVM().GetMemoryHeap());
-        GetParentChain(dobj, chain);
-
-        // capture: from the root down to the parent
-        evt->Phase = 1;
-        for (SPInt i = (SPInt)chain.GetSize() - 1; i >= 0; --i)
-        {
-            if (!chain[i]->DispatchSingleEvent(evt, true))
-            {
-                if (chain[i]->pDispObj)
-                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-                return;
-            }
-            if (evt->PropagationStopped || evt->ImmPropagationStopped)
-                return;
-        }
-
-        // target
-        evt->Phase = 2;
-        if (!DispatchSingleEvent(evt, false))
-        {
-            dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-            return;
-        }
-        if (evt->PropagationStopped || evt->ImmPropagationStopped || !evt->Bubbles)
-            return;
-
-        // bubble: from the parent up to the root
-        evt->Phase = 3;
-        for (UPInt i = 0; i < chain.GetSize(); ++i)
-        {
-            if (!chain[i]->DispatchSingleEvent(evt, false))
-            {
-                if (chain[i]->pDispObj)
-                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-                return;
-            }
-            if (evt->PropagationStopped || evt->ImmPropagationStopped)
-                return;
-        }
     }
 
     // ---- Clone: a new event of the same class from (type, bubbles, cancelable), with the state copied -----------------
