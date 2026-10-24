@@ -9503,6 +9503,7 @@ template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Value*,Scaleform::Al
 template void Scaleform::ArrayDataBase<Sfr31Rec24,Scaleform::AllocatorLH<Sfr31Rec24,340>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Abc::NamespaceInfo*,Scaleform::AllocatorLH_POD<Scaleform::GFx::AS3::Abc::NamespaceInfo*,338>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void Scaleform::ArrayDataBase<Sfr31Rec64,Scaleform::AllocatorLH<Sfr31Rec64,332>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::fl::Catch>,Scaleform::AllocatorDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::fl::Catch>,328>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 // INST-Reserve-END
 
 // INST-HashRaw-BEGIN
