@@ -5892,6 +5892,69 @@ void Sfr31ExecCallSuperArgsA(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) 
 // MS2-FUNCTIONAL 0x142536660: raw-offset model; codegen differs from the exe
 // @0x142536660
 void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc); }
+// ---- batch 49
+// Stores the accessor-prefixed name for a slot: kind 0xb keeps the name, 0xc stores "get " + name at idx, 0xd stores "set " + name at idx + 1.
+// MS2-FUNCTIONAL 0x1425283c0: raw-offset model; the string concatenation goes through the string manager directly
+// @0x1425283c0
+void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
+{
+    UPInt* names = reinterpret_cast<UPInt*>(vt + 0x20);
+    if (names[1] <= idx)
+        Sfr31ResizeCCStr(names, idx + 1);
+    UPInt slotIdx = idx;
+    const char* prefix = 0;
+    if (kind == 0xc)
+        prefix = "get ";
+    else if (kind == 0xd)
+    {
+        slotIdx = idx + 1;
+        if (names[1] <= slotIdx)
+            Sfr31ResizeCCStr(names, idx + 2);
+        prefix = "set ";
+    }
+    else if (kind != 0xb)
+        return;
+    UPInt* slot = reinterpret_cast<UPInt*>(names[0]) + slotIdx;
+    UPInt node = *name;
+    if (prefix == 0)
+    {
+        ++*reinterpret_cast<int*>(node + 0x18);
+    }
+    else
+    {
+        ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(*slot, 8));
+        ASStringNode* n = mgr->CreateStringNode(prefix, 4, reinterpret_cast<const char*>(Sfr31Rd(node, 0)),
+                                                *reinterpret_cast<const UInt32*>(node + 0x20));
+        node = reinterpret_cast<UPInt>(n);
+        ++*reinterpret_cast<int*>(node + 0x18);
+    }
+    Sfr31ReleaseStr(*slot);
+    *slot = node;
+}
+
+// Records a value in the slot table: the name goes in through the accessor-name store, then the value cell at the slot (or slot + 1 for setters) is assigned.
+// MS2-FUNCTIONAL 0x1425282d0: raw-offset model; codegen differs from the exe
+// @0x1425282d0
+void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name)
+{
+    Value* cell = 0;
+    if (kind > 10)
+    {
+        if (kind < 0xd)
+            cell = reinterpret_cast<Value*>(Sfr31Rd(vt, 8) + (idx & 0xffffffffu) * 0x20);
+        else if (kind == 0xd)
+            cell = reinterpret_cast<Value*>(Sfr31Rd(vt, 8) + static_cast<UPInt>(static_cast<UInt32>(idx) + 1) * 0x20);
+    }
+    Sfr31StoreSlotName(vt, static_cast<UInt32>(idx), kind, name);
+    if ((*reinterpret_cast<const UInt32*>(v) & 0x1f) == 2)
+    {
+        UPInt raw[4] = {6, 0, 0, Sfr31Rd(vt, 0)};
+        *reinterpret_cast<UInt32*>(&raw[2]) = *reinterpret_cast<const UInt32*>(reinterpret_cast<const char*>(v) + 0x10);
+        cell->Assign(*reinterpret_cast<const Value*>(raw));
+    }
+    else
+        cell->Assign(*v);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
