@@ -191,6 +191,21 @@ void FUN_1425be970(void* textField, void* displayInfo);   // TextField::Transfor
 void FUN_142515710(void* out, float sx, float sy, float rot);   // ASCharacter_MatrixScaleAndRotate2x2
 bool FUN_142513e50(const void* matrix);   // Matrix2x4<float>::IsValid
 double FUN_1425e3ee0();   // the "no value" double (NaN)
+void FUN_1424f1e50(Scaleform::UPInt state, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertOpTo
+int FUN_1424eea80(Scaleform::UPInt tracer, Scaleform::UPInt traits);   // Tracer::CanBeNull
+bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Traits* t, const Scaleform::GFx::AS3::Multiname* pmn, int ind);   // trace a get on a name
+bool FUN_1424f92f0(void* tr, int op, const Scaleform::GFx::AS3::Traits* t, void* unused, const Scaleform::GFx::AS3::Multiname* pmn, int ind);   // trace a set on a name
+bool FUN_1424f7540(void* tr, int op, void* state, void* pinfo, int ind);   // trace a call on a name
+bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool a, int b, bool c);   // trace find/getlex
+void FUN_1424f9180(void* tr);   // Tracer: drop the code of the last pushed value
+const char* FUN_14250cf20(void* state, char* ret, const void* t, const void* si, Scaleform::GFx::AS3::Value& result);
+int FUN_14250c990(Scaleform::UPInt tracer, Scaleform::UPInt pos);   // Tracer: note the lookahead at pos
+void FUN_14251f930(void* tr, int op);   // Tracer: emit opcode op
+void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2);   // Tracer: emit opcode op with two arguments
+void FUN_1424d8ec0(void* mn, Scaleform::UPInt link, Scaleform::UPInt entry);   // Multiname::Multiname(VMAbcFile&, Abc::Multiname&)
+void FUN_1424dee30(void* r);   // TR::ReadMnObject::~ReadMnObject
+void FUN_1424ded40(void* r);   // TR::ReadValueMnObject::~ReadValueMnObject
+void FUN_1424debc0(void* r);   // ReadArgsMnObject::~ReadArgsMnObject
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -8405,6 +8420,490 @@ static UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
         }
     }
     return 1;
+}
+// ---- batch 78
+namespace TR { UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance); }
+
+// The traits of a tracer value: kinds 8/9 carry them, undefined has the VM's Object-less default, and the builtin Class
+// traits stand for Object.
+static UPInt Sfr31TrTraitsOfVal(UPInt vmA, UInt32* v)
+{
+    const UInt32 k = v[0] & 0x1f;
+    UPInt tr;
+    if (k == 0)
+        tr = Sfr31Rd(vmA, 0x278);
+    else if (k == 8 || k == 9)
+        tr = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
+    else
+        tr = FUN_14250ffc0(reinterpret_cast<VM*>(vmA), reinterpret_cast<const Value*>(v));
+    if (tr != 0 && tr == Sfr31Rd(vmA, 0x1f0))
+        tr = Sfr31Rd(vmA, 0x1f8);
+    return tr;
+}
+
+static void Sfr31TrPushTraits(UPInt state, UInt32 flags, UPInt traits)
+{
+    TrTraitsScratch t;
+    t.w0 = flags;
+    t.SetTraits(*reinterpret_cast<InstanceTraits::Traits*>(traits));
+    reinterpret_cast<ArrayDH<Value>*>(state + 0x38)->PushBack(t.Get());
+}
+
+// Tracer::TraceCommonOp: per-opcode specialization of the ops that need no block structure: property get/set/call ops on
+// names with a known fixed slot become slot or vtable accesses, the convert ops vanish for operands of the target type,
+// getlocal/kill update the register model. Returns whether the original opcode was consumed.
+// MS2-FUNCTIONAL 0x14252d100: raw-offset model; codegen differs from the exe
+// @0x14252d100
+char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state)
+{
+    const UInt8* code = reinterpret_cast<const UInt8*>(Sfr31Rd(tracer, 0x50));
+    const UPInt link = TrAbcLink(tracer);
+    const UPInt vmA = TrRd(link, 0x20);
+    UInt8* const stk = reinterpret_cast<UInt8*>(Sfr31Rd(state, 0x38));
+    UInt32* const top = reinterpret_cast<UInt32*>(stk + Sfr31Rd(state, 0x40) * 0x20 - 0x20);
+    UPInt p;
+    switch (op)
+    {
+    case 4:
+    case 0x66:
+    {
+        p = *pos;
+        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
+        alignas(8) UInt8 R[0x70];
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 0, vmA);
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 8, state);
+        *reinterpret_cast<int*>(R + 0x10) = 0;
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x18, link);
+        FUN_1424d8ec0(R + 0x20, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
+        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x20);
+        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x50));
+        ++*reinterpret_cast<int*>(R + 0x10);
+        const UPInt tr = TR::Sfr27TracerGetValueTraits(tracer, reinterpret_cast<const Value*>(R + 0x50), op == 4);
+        const bool ok = FUN_1424f8b00(reinterpret_cast<void*>(tracer), op, reinterpret_cast<void*>(state),
+                                      reinterpret_cast<const Traits*>(tr), reinterpret_cast<const Multiname*>(R + 0x20),
+                                      static_cast<int>(idx));
+        if (ok)
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+        FUN_1424dee30(R);
+        return ok;
+    }
+    case 5:
+    case 0x61:
+    case 0x68:
+    {
+        p = *pos;
+        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
+        alignas(8) UInt8 R[0x90];
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 0, vmA);
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 8, state);
+        *reinterpret_cast<int*>(R + 0x10) = 0;
+        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x18));
+        ++*reinterpret_cast<int*>(R + 0x10);
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x38, link);
+        FUN_1424d8ec0(R + 0x40, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
+        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x40);
+        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x70));
+        ++*reinterpret_cast<int*>(R + 0x10);
+        const UPInt tr = TR::Sfr27TracerGetValueTraits(tracer, reinterpret_cast<const Value*>(R + 0x70), op == 5);
+        UInt32* val = reinterpret_cast<UInt32*>(R + 0x18);
+        val[0] &= 0x1f;
+        const UPInt vt = Sfr31TrTraitsOfVal(vmA, val);
+        const bool ok = FUN_1424f92f0(reinterpret_cast<void*>(tracer), op, reinterpret_cast<const Traits*>(tr),
+                                      reinterpret_cast<void*>(vt), reinterpret_cast<const Multiname*>(R + 0x40),
+                                      static_cast<int>(idx));
+        if (ok)
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+        FUN_1424ded40(R);
+        return ok;
+    }
+    case 8:
+    {
+        const UInt32 reg = Abc::ReadU30<UInt8>(code, *pos);
+        reinterpret_cast<State*>(state)->SetRegister(AbsoluteIndex(reg), Value::GetUndefined());
+        *reinterpret_cast<UInt8*>(Sfr31Rd(state, 0x78) + (reg >> 3)) &= static_cast<UInt8>(~(1 << (reg & 7)));
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    }
+    case 0x45:
+    case 0x46:
+    case 0x4c:
+    case 0x4e:
+    case 0x4f:
+    {
+        p = *pos;
+        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
+        const UInt32 argc = Abc::ReadU30<UInt8>(code, p);
+        alignas(8) UInt8 R[0x198];
+        FUN_1424d9640(R, reinterpret_cast<VM*>(vmA), reinterpret_cast<void*>(state), argc);
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x140, link);
+        FUN_1424d8ec0(R + 0x148, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
+        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x148);
+        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x178));
+        ++*reinterpret_cast<int*>(R + 0x10);
+        const bool ok = FUN_1424f7540(reinterpret_cast<void*>(tracer), op, reinterpret_cast<void*>(state), R,
+                                      static_cast<int>(idx));
+        if (ok)
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+        FUN_1424debc0(R);
+        return ok;
+    }
+    case 0x4a:
+    {
+        p = *pos;
+        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
+        const UInt32 argc = Abc::ReadU30<UInt8>(code, p);
+        alignas(8) UInt8 R[0x198];
+        FUN_1424d9640(R, reinterpret_cast<VM*>(vmA), reinterpret_cast<void*>(state), argc);
+        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x140, link);
+        FUN_1424d8ec0(R + 0x148, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
+        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x148);
+        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x178));
+        ++*reinterpret_cast<int*>(R + 0x10);
+        const UInt32 mnw = *reinterpret_cast<UInt32*>(R + 0x148);
+        UInt32* obj = reinterpret_cast<UInt32*>(R + 0x178);
+        const UPInt objPtr = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x10);
+        bool generic = (mnw & 3) == 1 || ((mnw >> 2) & 1) != 0;
+        bool done = false;
+        if (!generic)
+        {
+            if (((obj[0] >> 10) & 1) == 0)
+            {
+                if (argc != 0)
+                    generic = true;
+                else
+                {
+                    obj[0] &= 0x1f;
+                    const UPInt tr = Sfr31TrTraitsOfVal(vmA, obj);
+                    UPInt slotInd = 0;
+                    const SlotInfo* si = FindFixedSlot(*reinterpret_cast<VM*>(vmA), *reinterpret_cast<const Traits*>(tr),
+                                                       *reinterpret_cast<const Multiname*>(R + 0x148), slotInd, 0);
+                    if (!si)
+                        generic = true;
+                    else
+                    {
+                        FUN_14251fb90(tracer, 0xb6, static_cast<SPInt>(static_cast<UInt32>(slotInd) + 1));
+                        FUN_14251fb90(tracer, 0x42, 0);
+                        TrPopped res;
+                        res.w0 = 0;
+                        res.w1 = 0;
+                        res.w2 = 0;
+                        res.w3 = 0;
+                        char okb[8];
+                        const char* r = FUN_14250cf20(reinterpret_cast<void*>(state), okb, reinterpret_cast<const void*>(tr),
+                                                      si, res.Get());
+                        if (*r == 0)
+                        {
+                            res.Get().~Value();
+                            FUN_1424debc0(R);
+                            return 0;
+                        }
+                        reinterpret_cast<ArrayDH<Value>*>(state + 0x38)->PushBack(res.Get());
+                        res.Get().~Value();
+                        done = true;
+                    }
+                }
+            }
+            else
+            {
+                const UInt32 k = obj[0] & 0x1f;
+                UPInt it;
+                if (k == 9)
+                {
+                    FUN_14251fb90(tracer, 0x42, static_cast<SPInt>(argc));
+                    it = Sfr31Rd(objPtr, 0xc0);
+                    Sfr31TrPushTraits(state, 8, it);
+                    done = true;
+                }
+                else if (k == 0xd)
+                {
+                    FUN_14251fb90(tracer, 0x42, static_cast<SPInt>(argc));
+                    it = Sfr31Rd(Sfr31Rd(objPtr, 0x20), 0xc0);
+                    Sfr31TrPushTraits(state, 8, it);
+                    done = true;
+                }
+                else
+                    generic = true;
+            }
+        }
+        if (generic)
+        {
+            FUN_14251fa10(reinterpret_cast<void*>(tracer), 0x4a, idx, argc);
+            Sfr31TrPushTraits(state, 8, Sfr31Rd(Sfr31Rd(vmA, 0x1f8), 0xc0));
+            done = true;
+        }
+        if (done)
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+        FUN_1424debc0(R);
+        return done;
+    }
+    case 0x5d:
+    {
+        p = *pos;
+        const int idx = static_cast<int>(Abc::ReadU30<UInt8>(code, p));
+        const UInt8 c = code[p];
+        UPInt q = p + 1;
+        const int r = FUN_14250c990(tracer, p);
+        if (c == 'f')
+        {
+            Abc::ReadU30<UInt8>(code, q);
+            if (FUN_1424f7cc0(tracer, reinterpret_cast<void*>(state), idx, true, r, true))
+            {
+                Sfr31TracerSkipOrigOpCode(tracer, pos, q);
+                return 1;
+            }
+        }
+        else if (FUN_1424f7cc0(tracer, reinterpret_cast<void*>(state), idx, false, r, true))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+            return 1;
+        }
+    }
+    // fall through: the plain find-property trace
+    case 0x5e:
+    case 0x60:
+    {
+        p = *pos;
+        const int idx = static_cast<int>(Abc::ReadU30<UInt8>(code, p));
+        if (FUN_1424f7cc0(tracer, reinterpret_cast<void*>(state), idx, op == 0x60, 2, false))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+            return 1;
+        }
+        return 0;
+    }
+    case 0x62:
+    {
+        p = *pos;
+        const UInt32 reg = Abc::ReadU30<UInt8>(code, p);
+        return Sfr31TracerOptRegIncDec(tracer, pos, p, state, reg);
+    }
+    case 0xd0:
+    case 0xd1:
+    case 0xd2:
+    case 0xd3:
+        return Sfr31TracerOptRegIncDec(tracer, pos, *pos, state, op - 0xd0u);
+    case 100:
+    {
+        const UInt8 c = code[*pos];
+        p = *pos + 1;
+        if (c == 'l')
+        {
+            Sfr31StatePushTyped(state);
+            FUN_14251f930(reinterpret_cast<void*>(tracer), 0x6e);
+            const UInt32 slot = Abc::ReadU30<UInt8>(code, p);
+            Sfr31TraceGetSlot(reinterpret_cast<State*>(state), slot);
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+            return 1;
+        }
+        if (c != '+')
+            return 0;
+        UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x70);
+        Sfr31ResizeDH(posArr, posArr[1] + 1);
+        reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
+        const UInt8 d = code[p++];
+        if (d == 'm')
+        {
+            FUN_14251f930(reinterpret_cast<void*>(tracer), 0x6f);
+            Sfr31StatePushTyped(state);
+            Sfr31StateSwapOp(state);
+            const UInt32 slot = Abc::ReadU30<UInt8>(code, p);
+            Sfr31TracePop2Note(reinterpret_cast<State*>(state), slot);
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+            return 1;
+        }
+        Sfr31ResizeDH(posArr, posArr[1] - 1);
+        return 0;
+    }
+    case 0x70:
+    case 0x85:
+    {
+        const UInt32 k = top[0] & 0x1f;
+        if (op == 0x85 && k == 10)
+            return 1;
+        const UInt32 kk = k - 0xc;
+        if ((kk > 3 || Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10) != 0) && !FUN_142514e10(tracer, top))
+            return 0;
+        int nn = 2;
+        if (op == 0x85)
+            nn = (kk < 4 ? (Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10) != 0 ? 1 : 0) : 1) + 1;
+        FUN_1424f1e50(state, Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0), nn);
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    }
+    case 0x73:
+        if (!FUN_142514c30(tracer, top))
+            return 0;
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    case 0x74:
+        if (!FUN_1425150c0(tracer, top))
+            return 0;
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    case 0x75:
+        if (!FUN_142514470(tracer, top))
+            return 0;
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    case 0x76:
+        if (!FUN_142514000(tracer, top))
+            return 0;
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    case 0x80:
+    {
+        p = *pos;
+        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
+        const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx));
+        UInt8* const endp = stk + Sfr31Rd(state, 0x40) * 0x20;
+        UInt32* const tv = reinterpret_cast<UInt32*>(endp - 0x20);
+        const UPInt tr = FUN_142524f60(vmA, link, entry);
+        if (tr == 0)
+        {
+            UPInt sv[2];
+            FUN_142545310(Sfr31Rd(TrFile(tracer), 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d7850(eb, 0x3f6, reinterpret_cast<void*>(vmA), reinterpret_cast<const char*>(sv[0]));
+            reinterpret_cast<VM*>(vmA)->ThrowVerifyError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+            return 1;
+        }
+        const UPInt it = Sfr31Rd(tr, 0xc0);
+        const UInt32 k = tv[0] & 0x1f;
+        bool nullable = false;
+        if (k == 0)
+        {
+            if (it != Sfr31Rd(Sfr31Rd(vmA, 0x1f0), 0xc0) && it != Sfr31Rd(Sfr31Rd(vmA, 0x220), 0xc0) &&
+                it != Sfr31Rd(Sfr31Rd(vmA, 0x228), 0xc0) && it != Sfr31Rd(Sfr31Rd(vmA, 0x218), 0xc0) &&
+                it != Sfr31Rd(Sfr31Rd(vmA, 0x210), 0xc0) && it != Sfr31Rd(vmA, 0x278) &&
+                it != Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0))
+            {
+                UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x90);
+                if (posArr[1] != 0)
+                {
+                    UPInt* ops = reinterpret_cast<UPInt*>(Sfr31Rd(tracer, 0x28));
+                    UInt64* arr = reinterpret_cast<UInt64*>(ops[0]);
+                    if (*reinterpret_cast<int*>(&arr[reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1]]) == 0x21)
+                    {
+                        arr[ops[1] - 1] = 0x20;
+                        FUN_1424f1e50(state, it, 1);
+                        Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+                        return 1;
+                    }
+                }
+            }
+        }
+        else if (k - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(tv), 0x10) == 0)
+            nullable = true;
+        if (!nullable && !Sfr31SetTraitsForValue(tracer, tv, tr))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+            FUN_14251fb90(tracer, 0x80, static_cast<SPInt>(idx));
+            FUN_1424f1e50(state, it, 2);
+            return 1;
+        }
+        int nt = FUN_1424eea80(tracer, it);
+        if ((tv[0] & 0x1f) - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(tv), 0x10) == 0)
+            nt = 1;
+        FUN_1424f1e50(state, it, nt);
+        Sfr31TracerSkipOrigOpCode(tracer, pos, p);
+        return 1;
+    }
+    case 0x82:
+        if (FUN_142514c30(tracer, top) || FUN_1425150c0(tracer, top))
+        {
+            FUN_14251f930(reinterpret_cast<void*>(tracer), 0x75);
+            if ((top[0] & 0x1f) - 2 > 1)
+                FUN_1424f1e50(state, Sfr31Rd(Sfr31Rd(vmA, 0x218), 0xc0), 0);
+            else
+                reinterpret_cast<Value*>(top)->ToNumberValueInline();
+            return 1;
+        }
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    case 0x87:
+    {
+        TrPopped pv;
+        FUN_14251cd30(reinterpret_cast<State*>(state), &pv.Get());
+        const UInt32 k = pv.w0 & 0x1f;
+        UPInt ct = pv.w2;
+        if (k == 0xd)
+            ct = Sfr31Rd(ct, 0x20);
+        if ((k == 9 || k == 0xd) && ct != 0)
+        {
+            UInt32* t2 = reinterpret_cast<UInt32*>(stk + Sfr31Rd(state, 0x40) * 0x20 - 0x20);
+            if (((t2[0] & 0x1f) - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(t2), 0x10) == 0) ||
+                Sfr31SetTraitsForValue(tracer, t2, ct))
+            {
+                FUN_1424f9180(reinterpret_cast<void*>(tracer));
+                Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+                FUN_1424f1e50(state, Sfr31Rd(ct, 0xc0), 2);
+                pv.Get().~Value();
+                return 1;
+            }
+        }
+        reinterpret_cast<ArrayDH<Value>*>(state + 0x38)->PushBack(pv.Get());
+        pv.Get().~Value();
+        return 0;
+    }
+    case 0xa0:
+    {
+        TrPopped b;
+        TrPopped a;
+        FUN_14251cd30(reinterpret_cast<State*>(state), &b.Get());
+        FUN_14251cd30(reinterpret_cast<State*>(state), &a.Get());
+        const UPInt ta = Sfr31TrTraitsOfVal(vmA, reinterpret_cast<UInt32*>(&a));
+        b.w0 &= 0x1f;
+        const UPInt tb = Sfr31TrTraitsOfVal(vmA, reinterpret_cast<UInt32*>(&b));
+        const UPInt strT = Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0);
+        UInt32 flags = 8;
+        UPInt owner;
+        if (ta == strT || tb == strT)
+        {
+            FUN_14251f930(reinterpret_cast<void*>(tracer), 0xa0);
+            owner = Sfr31Rd(vmA, 0x230);
+            flags = 0x48;
+        }
+        else
+        {
+            bool number = false;
+            if (FUN_142514470(tracer, &a) && FUN_142514470(tracer, &b))
+            {
+                FUN_14251f930(reinterpret_cast<void*>(tracer), 0x7c);
+                number = true;
+            }
+            else if (code[*pos] == 0x75)
+            {
+                FUN_14251f930(reinterpret_cast<void*>(tracer), 0x9b);
+                Sfr31TracerSkipOrigOpCode(tracer, pos, *pos + 1);
+                number = true;
+            }
+            else if (FUN_142514c30(tracer, &a) && FUN_142514c30(tracer, &b))
+            {
+                FUN_14251f930(reinterpret_cast<void*>(tracer), 0x79);
+                owner = Sfr31Rd(vmA, 0x220);
+            }
+            else
+            {
+                FUN_14251f930(reinterpret_cast<void*>(tracer), 0xa0);
+                if (FUN_142514a80(tracer, reinterpret_cast<void*>(ta)) && FUN_142514a80(tracer, reinterpret_cast<void*>(tb)))
+                    number = true;
+                else
+                {
+                    owner = Sfr31Rd(vmA, 0x1f8);
+                    flags = 0x48;
+                }
+            }
+            if (number)
+                owner = Sfr31Rd(vmA, 0x218);
+        }
+        Sfr31TrPushTraits(state, flags, Sfr31Rd(owner, 0xc0));
+        a.Get().~Value();
+        b.Get().~Value();
+        return 1;
+    }
+    }
+    return 0;
 }
 }}} // namespace Scaleform::GFx::AS3
 
