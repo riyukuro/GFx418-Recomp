@@ -61,6 +61,8 @@
 #include "ms2/scaleform/include/gfx/as3/as3_avmloader.h"
 #include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/render/text_core.h"
+#include <algorithm>
+#include <vector>
 #undef GetObject   // windows.h
 
 // MS2-FUNCTIONAL 0x1424debc0: releases the argument Value at +0x178, the Multiname at +0x148, and then the ReadArgs base.
@@ -149,6 +151,46 @@ extern "C" void FUN_1424dfaf0(void* self)
         reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
 }
 
+// ValueStack teardown: release live values and free each distinct current or reserved page once.
+// MS2-FUNCTIONAL 0x1424dfbf0: pointer bookkeeping uses a temporary vector instead of the exe's local hash table.
+// @0x1424dfbf0
+extern "C" void FUN_1424dfbf0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    using Page = Scaleform::GFx::AS3::ValueStack::Page;
+    std::vector<Page*> pages;
+
+    Page* page = *reinterpret_cast<Page**>(bytes + 0x18);
+    auto* top = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(bytes + 8);
+    while (page)
+    {
+        auto* first = page->Values;
+        while (reinterpret_cast<Scaleform::UPInt>(top) >= reinterpret_cast<Scaleform::UPInt>(first))
+        {
+            top->~Value();
+            --top;
+        }
+        if (std::find(pages.begin(), pages.end(), page) == pages.end())
+            pages.push_back(page);
+        page = page->pPrev;
+        if (page)
+            top = page->pCurrent;
+    }
+
+    page = *reinterpret_cast<Page**>(bytes + 0x20);
+    while (page)
+    {
+        Page* next = page->pNext;
+        if (std::find(pages.begin(), pages.end(), page) == pages.end())
+            pages.push_back(page);
+        page = next;
+    }
+
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    for (Page* owned : pages)
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, owned);
+}
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-FUNCTIONAL 0x1424df380: marks the VM as destroying and shuts down registered ABCs before member teardown.
 // @0x1424df380
@@ -157,6 +199,7 @@ VM::~VM()
     InDestructor = true;
     FUN_142530d50(reinterpret_cast<Scaleform::UPInt>(this));
     FUN_1424dfaf0(reinterpret_cast<unsigned char*>(this) + 0x140);
+    FUN_1424dfbf0(reinterpret_cast<unsigned char*>(this) + 0x48);
 }
 }}} // namespace Scaleform::GFx::AS3
 
