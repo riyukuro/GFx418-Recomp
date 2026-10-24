@@ -115,7 +115,7 @@ void* FUN_1426203f0(char* self, unsigned flags)
 }
 
 // @0x142620460
-void* FUN_142620460(char* self, unsigned long long flags)
+void* FUN_142620460(char* self, unsigned flags)
 {
     FUN_14261fa90(self);
     if (flags & 1)
@@ -162,6 +162,7 @@ void FUN_142620790(U** self, void* ctx) { RawCheckExpand<FUN_1426255e0>(self, ct
 
 // @0x1426207e0
 void FUN_1426207e0(U* self) { RawClearPlainSet(self, 0x30); }
+// MS2-FUNCTIONAL: the exe shrink-wraps the callee-saved spill into the non-empty path (split .pdata chunk); same clear logic.
 // @0x142620840
 void FUN_142620840(U* self) { RawClearPtrSet(self); }
 // @0x1426208d0

@@ -607,9 +607,9 @@ void FUN_1423d7140(unsigned long long* manager)
     else FUN_1423cc2d0(manager);
 }
 
-// MS2-FUNCTIONAL: restores the three destructor vftable views, frees owned state, and honors scalar/sized delete flags.
+// restores the three destructor vftable views, frees owned state, and honors scalar/sized delete flags.
 // @0x1423d56b0
-void* FUN_1423d56b0(void* self, unsigned long long flags)
+void* FUN_1423d56b0(void* self, unsigned flags)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     *reinterpret_cast<void***>(bytes) = DAT_14313b520;
@@ -618,11 +618,11 @@ void* FUN_1423d56b0(void* self, unsigned long long flags)
     FUN_1423d5fd0(self);
     FUN_1423c8bb0(static_cast<unsigned long long*>(self));
     if (flags & 1) {
-        if (flags & 4) FUN_14015b310(self, 0x1d8);
-        else {
+        if (!(flags & 4)) {
             void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
             reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, self);
-        }
+        } else
+            FUN_14015b310(self, 0x1d8);
     }
     return self;
 }
@@ -939,13 +939,13 @@ void* FUN_1423dbc80(void* object, unsigned long long flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: destructor helper is recovered from its executable call target; the purecall-only vptr is not declared locally.
+// destructor helper is recovered from its executable call target; the purecall-only vptr is not declared locally.
 // @0x1423ce420
-void* FUN_1423ce420(void* object, unsigned long long flags)
+void* FUN_1423ce420(void* object, unsigned flags)
 {
     FUN_14257db50(object);
     if (flags & 1)
-        Memory::Free(object);
+        ::operator delete(object, 0x10);   // the CRT sized delete (0x142749444)
     return object;
 }
 
