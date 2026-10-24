@@ -207,6 +207,7 @@ struct InterfaceAccess : public Value::ObjectInterface
     using Value::ObjectInterface::pMovieRoot;
 };
 
+// MS2-FUNCTIONAL: the exe keeps the null-handle store apart and null-checks the +8 adjust with cmove; same stores
 // @0x142923f30
 Value_AS2ObjectData::Value_AS2ObjectData(Value::ObjectInterface* pif, void* pdata, bool isdobj)
 {
@@ -219,10 +220,12 @@ Value_AS2ObjectData::Value_AS2ObjectData(Value::ObjectInterface* pif, void* pdat
     {
         DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovie);
         if (!pdobj)
-            pObject = 0;
-        else
-            pObject = static_cast<AS2::AvmCharacter*>(static_cast<InteractiveObject*>(pdobj)->GetAvmIntObj())
-                          ->GetASObject();
+        {
+            pObject = 0;   // the handle no longer resolves
+            return;
+        }
+        // the character's own ObjectInterface (+8), not its AS object
+        pObject = AS2::ToAvmCharacter(static_cast<InteractiveObject*>(pdobj));
     }
 }
 
