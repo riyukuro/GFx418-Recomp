@@ -410,7 +410,6 @@ void IMEManagerBase::SetCursorInComposition(UPInt pos)
         pTextField->SetCursorInCompositionString(pos);
 }
 
-// MS2-FUNCTIONAL 0x1425b4820: the switch compiles to a different branch order; same category per style
 // @0x1425b4820
 void IMEManagerBase::HighlightText(UPInt pos, UPInt len, TextHighlightStyle style, bool)
 {
@@ -420,6 +419,7 @@ void IMEManagerBase::HighlightText(UPInt pos, UPInt len, TextHighlightStyle styl
     unsigned cat;
     switch (style)
     {
+    case THS_CompositionSegment: cat = 0; break; // SC_CompositionSegment
     case THS_ClauseSegment:    cat = 1; break;   // SC_ClauseSegment
     case THS_ConvertedSegment: cat = 2; break;   // SC_ConvertedSegment
     case THS_PhraseLengthAdj:  cat = 3; break;   // SC_PhraseLengthAdj
