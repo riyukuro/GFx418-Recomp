@@ -3839,6 +3839,43 @@ MS2_REPLACE(0x14000CF20, FUN_14000cf20, 797, 0x7DC142D2);
 
 }}} // namespace Scaleform::GFx::AS2
 
+namespace Scaleform { namespace GFx { namespace AS2 {
+// The video object vtable points at these small AS2 base implementations in the executable.
+// @0x140007d90
+bool ObjectInterface::IsSuper() const { return false; }
+// @0x140007da0
+bool ObjectInterface::IsBuiltinPrototype() const { return false; }
+// @0x140007db0
+void ObjectInterface::AddInterface(ASStringContext*, int, FunctionObject*) {}
+// @0x140007dc0
+const char* Object::GetTextValue(Environment*) const { return nullptr; }
+// @0x140007dd0
+bool Object::DoesImplement(Environment*, const Object* prototype) const { return this == prototype; }
+// @0x140007de0
+InteractiveObject* Object::GetASCharacter() { return nullptr; }
+// @0x140007df0
+const InteractiveObject* Object::GetASCharacter() const { return nullptr; }
+// @0x140007e00
+void Object::CheckAndResetCtorRef(FunctionObject*) {}
+// @0x14000ce70
+ObjectInterface::ObjectType FunctionObject::GetObjectType() const { return static_cast<ObjectType>(0x17); }
+// @0x14000ce80
+bool FunctionObject::IsAsFunction() const { return false; }
+// MS2-FUNCTIONAL 0x14000ce90: the executable tests the native callback pointer at object offset 0x68 for null.
+// @0x14000ce90
+bool CFunctionObject::IsNull() const
+{
+    return *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(this) + 0x68) == nullptr;
+}
+// @0x14000cea0
+bool CFunctionObject::IsCFunction() const { return true; }
+// MS2-FUNCTIONAL 0x14000ceb0: the native function wrapper uses -1 as its variable-argument count sentinel.
+// @0x14000ceb0
+int CFunctionObject::GetNumArgs() const { return -1; }
+// @0x14000e370
+const char* ObjectInterface::GetTextValue(Environment*) const { return nullptr; }
+}}} // namespace Scaleform::GFx::AS2
+
 // MS2-PIN: ??_7NetStream@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5030
 // MS2-PIN: ??_7NetStream@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5080
 // MS2-PIN: ??_7VideoProviderNetStream@AS2@GFx@Scaleform@@6B@ 0x1431b5620
@@ -3876,3 +3913,17 @@ MS2_REPLACE(0x14000CF20, FUN_14000cf20, 797, 0x7DC142D2);
 // MS2-PIN: ??_7SyncObject@VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b4ff0
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountWeakSupportImpl@Scaleform@@$01@Scaleform@@6B@ 0x143183cf8
 // MS2-PIN: ??_7?$RefCountBaseWeakSupport@VVideoProvider@Video@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431b4f30
+// MS2-PIN: ?IsSuper@ObjectInterface@AS2@GFx@Scaleform@@UEBA_NXZ 0x140007d90
+// MS2-PIN: ?IsBuiltinPrototype@ObjectInterface@AS2@GFx@Scaleform@@UEBA_NXZ 0x140007da0
+// MS2-PIN: ?AddInterface@ObjectInterface@AS2@GFx@Scaleform@@UEAAXPEAVASStringContext@234@HPEAVFunctionObject@234@@Z 0x140007db0
+// MS2-PIN: ?GetTextValue@Object@AS2@GFx@Scaleform@@UEBAPEBDPEAVEnvironment@234@@Z 0x140007dc0
+// MS2-PIN: ?DoesImplement@Object@AS2@GFx@Scaleform@@UEBA_NPEAVEnvironment@234@PEBV1234@@Z 0x140007dd0
+// MS2-PIN: ?GetASCharacter@Object@AS2@GFx@Scaleform@@UEAAPEAVInteractiveObject@34@XZ 0x140007de0
+// MS2-PIN: ?GetASCharacter@Object@AS2@GFx@Scaleform@@UEBAPEBVInteractiveObject@34@XZ 0x140007df0
+// MS2-PIN: ?CheckAndResetCtorRef@Object@AS2@GFx@Scaleform@@UEAAXPEAVFunctionObject@234@@Z 0x140007e00
+// MS2-PIN: ?GetObjectType@FunctionObject@AS2@GFx@Scaleform@@UEBA?AW4ObjectType@ObjectInterface@234@XZ 0x14000ce70
+// MS2-PIN: ?IsAsFunction@FunctionObject@AS2@GFx@Scaleform@@UEBA_NXZ 0x14000ce80
+// MS2-PIN: ?IsNull@CFunctionObject@AS2@GFx@Scaleform@@UEBA_NXZ 0x14000ce90
+// MS2-PIN: ?IsCFunction@CFunctionObject@AS2@GFx@Scaleform@@UEBA_NXZ 0x14000cea0
+// MS2-PIN: ?GetNumArgs@CFunctionObject@AS2@GFx@Scaleform@@UEBAHXZ 0x14000ceb0
+// MS2-PIN: ?GetTextValue@ObjectInterface@AS2@GFx@Scaleform@@UEBAPEBDPEAVEnvironment@234@@Z 0x14000e370
