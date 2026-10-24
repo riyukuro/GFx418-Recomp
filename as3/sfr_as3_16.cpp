@@ -1244,7 +1244,8 @@ void FUN_1424dca60(void* self)
                 *next = static_cast<Scaleform::UPInt>(-2);
         }
         auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, *table);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
+            DAT_143b15f60, reinterpret_cast<void*>(*table));
         *table = nullptr;
     }
 }
@@ -1325,6 +1326,50 @@ using SfrCx18DisplayObjectSet = HashSetBase<SfrCx18DisplayObjectNode,
 // MS2-FUNCTIONAL: destroys every occupied node and frees the table; the template expansion has different frame/unwind codegen.
 // @0x1424dcbb0
 template SfrCx18DisplayObjectSet::~HashSetBase();
+}
+
+extern "C" void FUN_1423dfa20();
+
+// Clears the cached namespace-trait entries and releases the table.
+// MS2-FUNCTIONAL: applies the same tagged SPtr refcount release and clears each occupied entry before freeing the table.
+// @0x1424dcc30
+void FUN_1424dcc30(void* self)
+{
+    auto* table = static_cast<Scaleform::UInt64*>(self);
+    if (*table)
+    {
+        Scaleform::UInt64 offset = 0;
+        Scaleform::UInt64 count = *reinterpret_cast<Scaleform::UInt64*>(*table + 8) + 1;
+        do
+        {
+            auto* entry = reinterpret_cast<Scaleform::UInt64*>(*table + offset);
+            if (entry[2] != static_cast<Scaleform::UInt64>(-2))
+            {
+                Scaleform::UInt64 value = entry[5];
+                if (value)
+                {
+                    if ((value & 1) == 0)
+                    {
+                        auto* refs = reinterpret_cast<Scaleform::UInt32*>(value + 0x10);
+                        if ((*refs & 0x3fffff) != 0)
+                        {
+                            --*refs;
+                            FUN_1423dfa20();
+                        }
+                    }
+                    else
+                        entry[5] = value - 1;
+                }
+                entry[2] = static_cast<Scaleform::UInt64>(-2);
+            }
+            offset += 0x20;
+            --count;
+        } while (count);
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
+            DAT_143b15f60, reinterpret_cast<void*>(*table));
+        *table = 0;
+    }
 }
 
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
