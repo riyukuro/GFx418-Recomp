@@ -1211,7 +1211,7 @@ template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Multiname,
                                   Scaleform::AllocatorLH<Scaleform::GFx::AS3::Multiname, 2>,
                                   Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
 
-// These three assignments are the copy-assignment instantiations used by SlotInfo's Namespace, Traits and VMAbcFile.
+// Out-of-line SPtr copy and raw-pointer assignments from the surrounding AS3 cache and trait code.
 // @0x1424e0550
 template Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::Instances::Namespace>&
 Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::Instances::Namespace>::operator=(
