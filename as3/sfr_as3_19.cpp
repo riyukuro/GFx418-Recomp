@@ -7572,6 +7572,101 @@ void Sfr31ExecCallPropLex(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
     mn.~Multiname();
     FUN_1424de9e0(raBuf);
 }
+// ---- batch 73
+// MovieRoot::SetArray: copies count elements of the given kind (0 float, 1 double, 2 float as number, 3 char* string, 4 wchar_t* string,
+// 5 GFx::Value) into the Array found at the variable path (a new one is created and stored when the variable is no Array).
+// MS2-FUNCTIONAL 0x14252acc0: raw-offset model; codegen differs from the exe
+// @0x14252acc0
+bool Sfr31SetArray(UPInt root, int type, UPInt path, UInt32 start, const void* data, UInt32 count, UInt32 setVarType)
+{
+    UPInt cur[4] = { 0, 0, 0, 0 };
+    const bool got = FUN_142506000(root, cur, path);
+    UPInt arr = 0;
+    if (got && ((reinterpret_cast<UInt32*>(cur)[0] & 0x1f) - 0xc) < 4 && cur[2] != 0 && Sfr31Rd(Sfr31Rd(cur[2], 0x20), 0x70) == 7 &&
+        ((*reinterpret_cast<UInt8*>(Sfr31Rd(cur[2], 0x20) + 0x68) >> 5) & 1) == 0)
+    {
+        arr = cur[2];
+        UInt32* rc = reinterpret_cast<UInt32*>(arr + 0x10);
+        *rc = (*rc + 1) & 0x8fbfffff;
+    }
+    const bool existed = arr != 0;
+    if (!existed)
+    {
+        const UPInt tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(root, 0x48), 0x238), 0xc0);
+        FUN_14241a500(tr, &arr, tr);
+    }
+    const UPInt sa = arr + 0x38;
+    if (*reinterpret_cast<UInt32*>(sa) < start + count)
+        FUN_14241fe30(reinterpret_cast<void*>(sa), start + count);
+    for (UInt32 i = 0; i < count; ++i)
+    {
+        UPInt raw[4] = { 0, 0, 0, 0 };
+        UInt32* kind = reinterpret_cast<UInt32*>(raw);
+        UPInt strNode = 0;
+        switch (type)
+        {
+        case 0:
+            kind[0] = 2;
+            kind[4] = static_cast<UInt32>(static_cast<SInt32>(static_cast<const float*>(data)[i]));
+            break;
+        case 1:
+            kind[0] = 4;
+            *reinterpret_cast<double*>(&raw[2]) = static_cast<const double*>(data)[i];
+            break;
+        case 2:
+            kind[0] = 4;
+            *reinterpret_cast<double*>(&raw[2]) = static_cast<double>(static_cast<const float*>(data)[i]);
+            break;
+        case 3:
+        case 4:
+        {
+            ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
+            ASStringNode* n = (type == 3) ? mgr->CreateStringNode(static_cast<const char* const*>(data)[i])
+                                          : mgr->CreateStringNode(static_cast<const wchar_t* const*>(data)[i], -1);
+            strNode = reinterpret_cast<UPInt>(n);
+            ++*reinterpret_cast<int*>(strNode + 0x18);
+            kind[0] = 10;
+            if (strNode == Sfr31Rd(strNode, 8) + 0x68)
+                kind[0] = 0xc;
+            else
+            {
+                ++*reinterpret_cast<int*>(strNode + 0x18);
+                raw[2] = strNode;
+            }
+            break;
+        }
+        case 5:
+            FUN_1425048d0(root, static_cast<const UPInt*>(data) + i * 4, reinterpret_cast<Value*>(raw));
+            break;
+        }
+        FUN_1424213b0(sa, start + i, reinterpret_cast<const Value*>(raw));
+        Sfr31ReleaseRawVal(raw);
+        if (strNode != 0)
+            Sfr31ReleaseStr(strNode);
+    }
+    bool ok = true;
+    if (!existed)
+    {
+        UPInt nv[4] = { 0xc, 0, arr, 0 };
+        UPInt gv[3] = { 0, 0, 0 };
+        FUN_1424e42c0(root, reinterpret_cast<const Value*>(nv), gv);
+        typedef bool (*SetVar)(UPInt, UPInt, void*, UInt32);
+        ok = reinterpret_cast<SetVar>(Sfr31Rd(Sfr31Rd(root, 0), 0x138))(root, path, gv, setVarType);
+        if ((reinterpret_cast<UInt32*>(gv)[2] >> 6) & 1)
+        {
+            typedef void (*Rel)(UPInt, UPInt*, UPInt);
+            reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(gv[0], 0), 0x10))(gv[0], gv, gv[2]);
+        }
+        Sfr31ReleaseRawVal(nv);
+    }
+    Sfr31ReleaseRawVal(cur);
+    if (arr != 0 && (arr & 1) == 0 && (*reinterpret_cast<UInt32*>(arr + 0x10) & 0x3fffff) != 0)
+    {
+        --*reinterpret_cast<UInt32*>(arr + 0x10);
+        FUN_1423dfa20(reinterpret_cast<void*>(arr));
+    }
+    return ok;
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
