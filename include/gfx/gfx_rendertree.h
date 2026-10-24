@@ -363,6 +363,7 @@ public:
             : TreeNode::NodeData(src), Children((pVTable = TreeContainerNodeDataVTable, src.Children))
         {
         }
+        NodeData& operator=(const NodeData& src);   // the member-wise copy, out of line in sfr_render_03c
 
         TreeNodeArray Children;   // +0x90
     };

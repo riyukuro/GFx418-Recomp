@@ -33,6 +33,7 @@ public:
 
     public:
         NodeData(ContextImpl::EntryData::EntryType type = ET_Base);   // 0x1424d9310 (sfr_as3_15)
+        NodeData(const NodeData& src);                                // 0x1424d9220 (sfr_as3_15)
         // the states stay behind: CloneInit copies the ones that may be shared
         NodeData(NonlocalCloneArg<NodeData> src)
             : ContextImpl::EntryData(NonlocalCloneArg<ContextImpl::EntryData>(*src.pC)), M34(src->M34), Cx(src->Cx),
