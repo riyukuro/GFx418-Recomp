@@ -865,6 +865,66 @@ extern "C" void FUN_142676bd0(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
+// MS2-FUNCTIONAL: generates normalized multi-octave smooth value noise for the selected image components.
+// @0x142677740
+extern "C" void FUN_142677740(void* operation, void*, Scaleform::Render::ImageData* image)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    ImagePlane plane;
+    image->GetPlane(0, &plane);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const float xScale = *reinterpret_cast<const float*>(op + 0x10);
+    const float yScale = *reinterpret_cast<const float*>(op + 0x14);
+    unsigned octaves = *reinterpret_cast<const unsigned*>(op + 0x18);
+    unsigned channels = *reinterpret_cast<const unsigned*>(op + 0x24);
+    const bool gray = *reinterpret_cast<const bool*>(op + 0x28);
+    const auto* alphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
+    const bool hasAlpha = alphaConfig && *reinterpret_cast<const bool*>(alphaConfig + 0x48);
+    if (octaves > 16) octaves = 16;
+    auto hashNoise = [](int x, int y, unsigned channel) {
+        std::uint32_t h = static_cast<std::uint32_t>(x) * 0x8da6b343u ^
+                          static_cast<std::uint32_t>(y) * 0xd8163841u ^ channel * 0xcb1ab31fu;
+        h ^= h >> 13; h *= 0x85ebca6bu; h ^= h >> 16;
+        return static_cast<float>(h & 0xffffu) / 32767.5f - 1.0f;
+    };
+    auto smoothNoise = [&](float x, float y, unsigned channel) {
+        const int ix = static_cast<int>(std::floor(x)), iy = static_cast<int>(std::floor(y));
+        const float fx = x - ix, fy = y - iy;
+        const float sx = fx * fx * (3.0f - 2.0f * fx), sy = fy * fy * (3.0f - 2.0f * fy);
+        const float a = hashNoise(ix, iy, channel), b = hashNoise(ix + 1, iy, channel);
+        const float c = hashNoise(ix, iy + 1, channel), d = hashNoise(ix + 1, iy + 1, channel);
+        const float topValue = a + (b - a) * sx, bottomValue = c + (d - c) * sx;
+        return topValue + (bottomValue - topValue) * sy;
+    };
+    for (unsigned y = 0; y < plane.Height; ++y) {
+        const long long row = static_cast<long long>(y) * plane.Pitch;
+        for (unsigned x = 0; x < plane.Width; ++x) {
+            unsigned color = 0xff000000u;
+            auto* components = reinterpret_cast<unsigned char*>(&color);
+            for (unsigned component = 0; component < (hasAlpha ? 4u : 3u); ++component) {
+                const unsigned bit = 1u << component;
+                if (!(channels & bit) && !(gray && (channels & 0x0fu))) continue;
+                float total = 0.0f, amplitude = 1.0f, weight = 0.0f;
+                float sx = xScale, sy = yScale;
+                for (unsigned octave = 0; octave < octaves; ++octave) {
+                    float ox = 0.0f, oy = 0.0f;
+                    if (octave < *reinterpret_cast<const unsigned*>(op + 0xac)) {
+                        ox = *reinterpret_cast<const float*>(op + 0x2c + octave * 8);
+                        oy = *reinterpret_cast<const float*>(op + 0x30 + octave * 8);
+                    }
+                    total += (smoothNoise(x * sx + ox, y * sy + oy, gray ? 0 : component) + 1.0f) * 0.5f * amplitude;
+                    weight += amplitude;
+                    amplitude *= 0.5f; sx *= 2.0f; sy *= 2.0f;
+                }
+                const float unit = weight > 0.0f ? total / weight : 0.0f;
+                components[component] = static_cast<unsigned char>(unit * 255.0f);
+            }
+            FUN_14257d390(image, row, x, color);
+        }
+    }
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
 // @0x142745840
