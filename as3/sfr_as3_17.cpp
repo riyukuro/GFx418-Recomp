@@ -1015,9 +1015,6 @@ void* Sfr33MovieRootCreateEventObject(MovieRoot* self, void* ret, const ASString
 extern "C" const void* DAT_14317eff8;
 
 extern "C" const void* DAT_14317ef38[];      // UserDefinedFunction vftable
-// VM::Construct as the exe has it: true when a constructor frame was queued (the header has it as void)
-bool FUN_1424f0750(Scaleform::GFx::AS3::VM* vm, const char* gname, Scaleform::GFx::AS3::Value& result, unsigned argc,
-                   const Scaleform::GFx::AS3::Value* argv, bool extCall);
 int FUN_140ccaae0(const char* fmt, ...);   // log printf
 void FUN_1423ed140(void* self, Scaleform::GFx::AS3::InstanceTraits::Traits* t);   // FunctionBase(InstanceTraits::Traits&)
 
@@ -1096,7 +1093,7 @@ void Sfr33MovieRoot::CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, vo
 
 // MovieRoot::CreateObject (virtual): a new instance of the global class className ("Object" when none), constructed
 // with the host values pargs; a pending exception is printed and dropped. Up to 10 arguments live on the stack.
-// MS2-FUNCTIONAL 0x1424f39c0: the argument values are built and destroyed by our Value code (same steps).
+// MS2-FUNCTIONAL 0x1424f39c0: our Value code builds and frees the arguments; the frame test of VM::Construct is inline
 // @0x1424f39c0
 void Sfr33MovieRoot::CreateObject(GFx::Value* pvalue, const char* className, const GFx::Value* pargs, unsigned nargs)
 {
@@ -1110,7 +1107,10 @@ void Sfr33MovieRoot::CreateObject(GFx::Value* pvalue, const char* className, con
     }
     Value result;
     VM* pvm = *reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48);
-    const bool ok = FUN_1424f0750(pvm, className ? className : "Object", result, nargs, args, false);
+    // VM::Construct 0x1424f0750 as the exe has it returns whether a constructor frame was queued (+0x78 grew)
+    const UPInt frames = pvm->Unk070[1];
+    pvm->Construct(className ? className : "Object", result, nargs, args, false);
+    const bool ok = !pvm->HandleException && pvm->Unk070[1] > frames;
     pvm = *reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48);
     if (!pvm->HandleException)
     {
@@ -1861,7 +1861,8 @@ void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCa
         FUN_14241de40(vm.OpStack, argc);
 }
 
-// MS2-FUNCTIONAL 0x1424f0750: the exe also returns whether the call stack (+0x78) grew; no caller reads it
+// MS2-FUNCTIONAL 0x1424f0750: the exe also returns whether +0x78 grew (and no exception is pending); the header has
+// it as void, so CreateObject and AttachMovie test that themselves
 // @0x1424f0750
 void VM::Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall)
 {

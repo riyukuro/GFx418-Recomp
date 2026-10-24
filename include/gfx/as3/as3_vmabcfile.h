@@ -99,6 +99,9 @@ private:
     // 0x142515b30
     CheckResult Load(bool to_execute);
     // (appended, sfr19) the two halves of Load. 0x142521780, 0x142521390
+    // (sfr34) VM::LoadFile, VM::VM and MovieRoot::ExecuteAbc call them directly.
+    friend class VM;
+    friend class MovieRoot;
     bool RegisterUserDefinedClassTraits();
     bool RegisterScrips(bool to_execute);
 

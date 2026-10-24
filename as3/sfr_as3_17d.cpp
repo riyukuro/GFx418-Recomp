@@ -652,8 +652,6 @@ void Stage::ExecuteFrame0Events()
 
 }}} // namespace Scaleform::GFx::AS3
 
-bool FUN_142521780(Scaleform::GFx::AS3::VMAbcFile* file);                  // VMAbcFile::RegisterUserDefinedClassTraits
-bool FUN_142521390(Scaleform::GFx::AS3::VMAbcFile* file, bool to_execute); // VMAbcFile::RegisterScrips
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -697,7 +695,7 @@ bool MovieRoot::ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr)
             CheckAvm();
             VM& vm = *pAVM;
             SPtr<VMAbcFile> pfile = SF_HEAP_NEW(vm.GetMemoryHeap()) VMAbcFile(vm, file);
-            if (FUN_142521780(pfile) && FUN_142521390(pfile, false))
+            if (pfile->RegisterUserDefinedClassTraits() && pfile->RegisterScrips(false))
                 vmabc = pfile;
             if (vm.HandleException)
             {
@@ -948,9 +946,6 @@ unsigned AvmBitmap::CreateASInstance(bool execute)
 }}} // namespace Scaleform::GFx::AS3
 
 void FUN_1425b8e60(void* ptf, void* pinfo);   // TextField: the display info of a text field (its text rect space)
-// VM::Construct as the exe has it: true when a constructor frame was queued (the header has it as void)
-bool FUN_1424f0750(Scaleform::GFx::AS3::VM* vm, const char* gname, Scaleform::GFx::AS3::Value& result, unsigned argc,
-                   const Scaleform::GFx::AS3::Value* argv, bool extCall);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1141,7 +1136,10 @@ bool Sfr34d_ValueObjIfc::AttachMovie(void* pdata, GFx::Value* pmc, const char* s
     DisplayObject* pcont = static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
     Value result;
     VM*   vm = root->pAVM;
-    const bool needExecute = FUN_1424f0750(vm, symbolName, result, 0, NULL, false);
+    // VM::Construct 0x1424f0750 as the exe has it returns whether a constructor frame was queued (+0x78 grew)
+    const UPInt frames = vm->Unk070[1];
+    vm->Construct(symbolName, result, 0, NULL, false);
+    const bool needExecute = !vm->HandleException && vm->Unk070[1] > frames;
     if (!vm->HandleException)
     {
         if (needExecute)

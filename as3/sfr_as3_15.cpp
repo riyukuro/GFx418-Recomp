@@ -73,13 +73,25 @@ void FUN_142524a30(void* self, const void* pheapAddr, Scaleform::UPInt newSize);
 void FUN_1425244e0(void* self, Scaleform::UPInt newSize);
 // VM::UnregisterAbcFile: drops file from VMAbcFilesWeak unless the VM is being destroyed
 bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
-// the clear-and-free of the VMAbcFile hash sets not modeled (abs objects, global objects, activation and function
-// traits caches), each passed the address of its table pointer
-void FUN_1424dd1a0(void* table);
-void FUN_1424dd250(void* table);
+// the clear-and-free of the VMAbcFile hash sets not modeled (activation and function traits caches), each passed the
+// address of its table pointer
 void FUN_1424dcdd0(void* table);
 void FUN_1424dcc30(void* table);
 void FUN_142524710(void* self, Scaleform::UPInt newSize);
+// The abs objects and global objects sets of a VMAbcFile (+0x38, +0x70): their destructors 0x1424dd1a0 and
+// 0x1424dd250 are instantiated in sfr_as3_16.
+namespace Scaleform {
+typedef GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> Sfr34AbsObjectValue;
+typedef HashSetBase<Sfr34AbsObjectValue, FixedSizeHash<Sfr34AbsObjectValue>, FixedSizeHash<Sfr34AbsObjectValue>,
+    AllocatorLH<Sfr34AbsObjectValue, 2>, HashsetCachedEntry<Sfr34AbsObjectValue, FixedSizeHash<Sfr34AbsObjectValue> > >
+    Sfr34AbsObjectSet;
+typedef GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript> Sfr34GlobalObjectValue;
+typedef HashSetBase<Sfr34GlobalObjectValue, FixedSizeHash<Sfr34GlobalObjectValue>,
+    FixedSizeHash<Sfr34GlobalObjectValue>, AllocatorLH<Sfr34GlobalObjectValue, 2>,
+    HashsetCachedEntry<Sfr34GlobalObjectValue, FixedSizeHash<Sfr34GlobalObjectValue> > > Sfr34GlobalObjectSet;
+extern template Sfr34AbsObjectSet::~HashSetBase();
+extern template Sfr34GlobalObjectSet::~HashSetBase();
+}
 // ResourceHandle::GetResource, the exe's out-of-line copy (the header's is inline)
 Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* self, Scaleform::GFx::ResourceBinding* pbinding);
 // DisplayObject::DisplayObject (protected; ShapeObject is opaque here, so its ctor reaches it by address)
@@ -3034,8 +3046,8 @@ VMAbcFile::~VMAbcFile()
     FUN_142522a60(pVM, this);
     FUN_1424dcc30(&FunctionTraitsCacheTable);
     FUN_1424dcdd0(&ActivationTraitsCacheTable);
-    FUN_1424dd250(&GlobalObjectsTable);
-    FUN_1424dd1a0(&AbsObjectsTable);
+    reinterpret_cast<Sfr34GlobalObjectSet*>(&GlobalObjectsTable)->~Sfr34GlobalObjectSet();
+    reinterpret_cast<Sfr34AbsObjectSet*>(&AbsObjectsTable)->~Sfr34AbsObjectSet();
 }
 
 // MS2-FUNCTIONAL: inlined in the scalar deleting destructors 0x1424e4120 and 0x1424e4190; the members release
@@ -3102,8 +3114,6 @@ void* FUN_1423ed260(void* self, Scaleform::GFx::AS3::VM& vm, void* itr);
 void FUN_142423d00(Scaleform::GFx::AS3::Class* cl);            // Class::InitPrototype-like: the class Class's set-up
 void FUN_142522db0(void* arr, void* heapAddr, Scaleform::UPInt newCap);    // ArrayLH<GlobalObject*> Reserve
 void FUN_1424dde10(void* frame);                               // CallFrame::~CallFrame
-bool FUN_142521780(Scaleform::GFx::AS3::VMAbcFile* file);      // VMAbcFile::RegisterUserDefinedClassTraits
-bool FUN_142521390(Scaleform::GFx::AS3::VMAbcFile* file, bool to_execute); // VMAbcFile::RegisterScrips
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3199,7 +3209,7 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
     for (UPInt i = 0; i < n; ++i)
     {
         SPtr<VMAbcFile> file = Pickable<VMAbcFile>(SF_HEAP_NEW(MHeap) VMAbcFile(*this, Loader.GetFile(i)));
-        if (FUN_142521780(file.GetPtr()) && FUN_142521390(file.GetPtr(), i == n - 1))
+        if (file->RegisterUserDefinedClassTraits() && file->RegisterScrips(i == n - 1))
             SPtr<VMAbcFile> loaded = file;
     }
 

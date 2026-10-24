@@ -40,7 +40,7 @@ void FUN_1425f9ba0(Scaleform::UPInt self, char* ret);
 Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b);
 bool FUN_1425b9b10(Scaleform::UPInt textField);
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
-Scaleform::UPInt FUN_14250ffc0(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value* v);   // the traits of a value
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);   // the traits of a value
 void* FUN_14243d870(void* self, void* p);   // SPtr<Instances::fl::Object>::operator=, out of line
 void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level);   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
@@ -1109,7 +1109,7 @@ static UPInt TraceValueTraits(UPInt tracer, const Value* v)
     else if (k == 8 || k == 9)
         t = TrRd(reinterpret_cast<UPInt>(v), 0x10);
     else
-        t = FUN_14250ffc0(reinterpret_cast<VM*>(vm), v);
+        t = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vm), *v));
     if (t != 0 && t == TrRd(vm, 0x1f0))
         t = TrRd(vm, 0x1f8);
     return t;
@@ -4818,9 +4818,6 @@ __declspec(noinline) void Multiname::PostProcessName(bool isAttr)
     }
 }
 
-bool FUN_142521780(VMAbcFile* file);                   // VMAbcFile::RegisterUserDefinedClassTraits
-bool FUN_142521390(VMAbcFile* file, bool to_execute);  // VMAbcFile::RegisterScrips
-
 // VM::LoadFile: the ABC file in the VM, its classes' traits made and its scripts registered (run when
 // to_execute); NULL when either fails.
 // a VM member: the exe passes the result slot in rdx (no caller in the exe)
@@ -4829,7 +4826,7 @@ SPtr<VMAbcFile> VM::FUN_142515b90(const Ptr<Abc::File>& file, bool to_execute)
 {
     VM& vm = *this;
     SPtr<VMAbcFile> abc = Pickable<VMAbcFile>(SF_HEAP_NEW(vm.GetMemoryHeap()) VMAbcFile(vm, file));
-    if (!FUN_142521780(abc.GetPtr()) || !FUN_142521390(abc.GetPtr(), to_execute))
+    if (!abc->RegisterUserDefinedClassTraits() || !abc->RegisterScrips(to_execute))
         return SPtr<VMAbcFile>();
     return abc;
 }
@@ -6005,7 +6002,6 @@ UInt8 FUN_14250c990(const void* self, UPInt pos)
 
 } } } // namespace Scaleform::GFx::AS3
 
-void FUN_14251c8a0(Scaleform::GFx::AS3::Multiname* mn, Scaleform::GFx::AS3::ValueStack* stack);   // Multiname::PickRTNameUnsafe
 void FUN_1424ef180(void* reader, const Scaleform::GFx::AS3::Value& v);    // StackReader::CheckObject
 void FUN_142528d20(Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Instances::Namespace* ns);   // Multiname::SetRTNamespace
 
@@ -6026,7 +6022,7 @@ void FUN_1425201f0(void* ctx, void* multiname)
         {
         case Abc::MNF_RTQNameL:
         case Abc::MNF_RTQNameLA:
-            FUN_14251c8a0(&mn, r->stack);
+            FUN_14251c8a0(mn, *r->stack);
             // fall through
         case Abc::MNF_RTQName:
         case Abc::MNF_RTQNameA:
@@ -6042,7 +6038,7 @@ void FUN_1425201f0(void* ctx, void* multiname)
         }
         case Abc::MNF_MultinameL:
         case Abc::MNF_MultinameLA:
-            FUN_14251c8a0(&mn, r->stack);
+            FUN_14251c8a0(mn, *r->stack);
             return;
         case Abc::MNF_Typename:
             r->vm->GetUI().Output(FlashUI::Output_Warning, "Reading chained multiname in itself.");
