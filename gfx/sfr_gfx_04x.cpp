@@ -5,6 +5,9 @@
 // Third source of queue unit sfr_gfx_04 (sfr_gfx_04b is the second; sf-remaining2 cluster 1).
 // MS2-UNIT: sfr_gfx_04x
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1425c48e0-0x1425c4b70 .text$mn
+// MS2-RANGE: 0x1425c4d00-0x1425c4db0 .text$mn
+// MS2-RANGE: 0x1425c5bb0-0x1425c5d70 .text$mn
 // MS2-RANGE: 0x1425c80e0-0x1425c8250 .text$mn
 // MS2-RANGE: 0x1425c8250-0x1425c8550 .text$mn
 // MS2-RANGE: 0x1425c8580-0x1425c8670 .text$mn
@@ -27,6 +30,7 @@
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/render/render_jpeg.h"
 #include "../include/render/render_textureglyph.h"
+#include "../include/render/render_imagefile.h"
 #include "../kernel/sf_sysalloc.h"
 
 extern "C" void  FUN_14015b310(void*, unsigned long long);
@@ -235,6 +239,130 @@ namespace GFx {
 void* FUN_1425c9280(ExecuteTag* p, unsigned flags)
 {
     return Sfr04xDeleteInterface(p, flags);
+}
+
+// ---- the loaders ----
+
+// The image file readers of the load: a state, the render registry after it at +0x18.
+class ImageFileHandlerRegistry : public State, public Render::ImageFileHandlerRegistry
+{
+};
+
+// The JPEG with a zlib alpha plane (gfx_imagesupport.h, sfr_gfx_08h; that header's include tree cannot be mixed with
+// this one): its constructor only, the object is used as the Render::Image it is.
+class MemoryBufferJpegImageWithZlibAlphas : public NewOverrideBase<Stat_Default_Mem>
+{
+    UByte Data[0x48];
+
+public:
+    MemoryBufferJpegImageWithZlibAlphas(ZlibSupportBase* zlib, Render::JPEG::AbstractReader* reader,
+                                        unsigned alphaPos, Render::ImageFormat format, const Render::ImageSize& size,
+                                        unsigned use, Render::ImageUpdateSync* sync, File* file, UPInt length);
+
+    Render::Image* GetImage() { return reinterpret_cast<Render::Image*>(this); }
+};
+
+// A DefineMorphShape character (0x38 bytes; not recovered yet): constructed and read here, used as the Resource it is.
+class MorphCharacterDef : public NewOverrideBase<StatMD_CharDefs_Mem>
+{
+    UByte Data[0x38];
+
+public:
+    MorphCharacterDef();
+    void Read(LoadProcess* p, const TagInfo& tagInfo, bool withStyle);
+
+    Resource* GetResource() { return reinterpret_cast<Resource*>(this); }
+};
+
+enum { Tag_DefineBitsJpeg4 = 90 };
+
+// DefineBitsJPEG3 / 4: a JPEG followed by its zlib-compressed alpha plane, kept compressed in memory.
+// MS2-FUNCTIONAL 0x1425c48e0: same reads, checks, log text and objects; register allocation and the null-heap
+// fallback differ.
+// @0x1425c48e0
+void SF_STDCALL GFx_DefineBitsJpeg3Loader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    ResourceId rid(p->ReadU16());
+    UInt32     alphaOffset = p->ReadU32();
+    if (tagInfo.TagType == Tag_DefineBitsJpeg4)
+    {
+        UInt16 deblocking = p->ReadU16();
+        p->LogParse("  GFx_DefineBitsJpeg4Loader: charid = %d pos = %d deblocking = %d\n", rid.GetIdIndex(),
+                    p->Tell(), deblocking);
+    }
+    else
+        p->LogParse("  GFx_DefineBitsJpeg3Loader: charid = %d pos = %d\n", rid.GetIdIndex(), p->Tell());
+
+    Render::ImageSource*          psource   = 0;
+    Ptr<ImageFileHandlerRegistry> pregistry = p->GetLoadStates()->GetImageFileHandlerRegistry();
+    if (!pregistry)
+        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+    else
+    {
+        ZlibSupportBase* pzlib = p->GetLoadStates()->pZlibSupport;
+        if (!pzlib)
+            p->LogError("ZlibState is not set - can't load zipped image data");
+        else
+        {
+            Render::JPEG::AbstractReader* preader = static_cast<Render::JPEG::AbstractReader*>(
+                static_cast<Render::ImageFileHandlerRegistry*>(pregistry)->GetReader(Render::ImageFile_JPEG));
+            if (!preader)
+                p->LogError("Jpeg System is not installed - can't load jpeg image data");
+            else
+            {
+                UPInt       length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+                File*       pfile  = p->GetUnderlyingFile();
+                MemoryHeap* pheap  = p->GetLoadHeap();
+                if (!pheap)
+                    pheap = Memory::pGlobalHeap;
+                MemoryBufferJpegImageWithZlibAlphas* pimage = SF_HEAP_NEW(pheap) MemoryBufferJpegImageWithZlibAlphas(
+                    pzlib, preader, alphaOffset, Render::Image_R8G8B8A8, Render::ImageSize(), 0, 0, pfile, length);
+                psource = preader->CreateWrapperImageSource(pimage ? pimage->GetImage() : 0);
+                if (pimage)
+                    pimage->GetImage()->Release();
+            }
+        }
+    }
+    p->AddImageResource(rid, psource);
+    if (psource)
+        psource->Release();
+}
+
+// DefineMorphShape / DefineMorphShape2.
+// @0x1425c4d00
+void SF_STDCALL GFx_DefineShapeMorphLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    ResourceId rid(p->ReadU16());
+    p->LogParse("  ShapeMorphLoader: id = %d\n", rid.GetIdIndex());
+
+    MorphCharacterDef* pmorph = SF_HEAP_NEW(p->GetLoadHeap()) MorphCharacterDef();
+    pmorph->Read(p, tagInfo, true);
+    p->AddResource(rid, pmorph ? pmorph->GetResource() : 0);
+    if (pmorph)
+        pmorph->GetResource()->Release();
+}
+
+// ExportAssets: the exported symbol names of the file's characters.
+// MS2-FUNCTIONAL 0x1425c5bb0: same reads, lookups and log text; the id read and the string release inline
+// differently.
+// @0x1425c5bb0
+void SF_STDCALL GFx_ExportLoader(LoadProcess* p, const TagInfo&)
+{
+    unsigned count = p->ReadU16();
+    p->LogParse("  export: count = %d\n", count);
+    for (unsigned i = 0; i < count; i++)
+    {
+        UInt16   id = p->GetStream()->ReadU16();
+        StringDH symbolName(p->GetLoadHeap());
+        p->GetStream()->ReadString(&symbolName);
+        p->LogParse("  export: id = %d, name = %s\n", id, symbolName.ToCStr());
+
+        ResourceHandle hres;
+        if (p->GetResourceHandle(&hres, ResourceId(id)))
+            p->ExportResource(symbolName, ResourceId(id), hres);
+        else
+            p->LogError("Don't know how to export Resource '%s'", symbolName.ToCStr());
+    }
 }
 
 // ---- LoadProcess helpers ----
