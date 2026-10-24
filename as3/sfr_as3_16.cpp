@@ -1106,3 +1106,17 @@ void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObje
 template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Multiname,
                                   Scaleform::AllocatorLH<Scaleform::GFx::AS3::Multiname, 2>,
                                   Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
+
+// These three assignments are the copy-assignment instantiations used by SlotInfo's Namespace, Traits and VMAbcFile.
+// @0x1424e0550
+template Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::Instances::Namespace>&
+Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::Instances::Namespace>::operator=(
+    const Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::Instances::Namespace>&);
+// @0x1424e05c0
+template Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::ClassTraits::Traits>&
+Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::ClassTraits::Traits>::operator=(
+    const Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::ClassTraits::Traits>&);
+// @0x1424e08d0
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>::operator=(
+    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&);
