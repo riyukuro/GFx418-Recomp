@@ -7,6 +7,7 @@
 #include "gfx_state.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
 #include "../kernel/sf_keycodes.h"
+#include "../kernel/sf_array.h" // (sfr24) TextKeyMap::Map
 
 namespace Scaleform {
 namespace Render { namespace Text { class StyledText; } }
@@ -41,6 +42,8 @@ public:
     // Called whenever plain text is stored; the default does nothing.
     virtual void OnTextStore(const wchar_t* ptext, UPInt len) { (void)ptext; (void)len; } // +0x20
 };
+// (sfr24) the allocation before ??0TextClipboard (0x14258d510) is 0x40 bytes.
+static_assert(sizeof(TextClipboard) == 0x40, "TextClipboard size");
 
 // Key bindings of the text editor, sorted by key code (state, 0x30 bytes, vftable 0x143184740).
 class TextKeyMap : public State
@@ -107,6 +110,8 @@ public:
     // The binding of keyCode in state whose modifiers are all held in specKeys, or 0.
     const KeyMapEntry* Find(unsigned keyCode, const KeyModifiers& specKeys, KeyState state) const;
 };
+// (sfr24) FUN_1425a83d0 allocates 0x30 and calls ??0TextKeyMap.
+static_assert(sizeof(TextKeyMap) == 0x30, "TextKeyMap size");
 
 }} // namespace Scaleform::GFx
 
