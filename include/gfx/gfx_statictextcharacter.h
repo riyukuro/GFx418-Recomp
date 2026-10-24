@@ -181,6 +181,8 @@ public:
     };
 
     void SetLayout(const TextLayout::Builder& builder); // 0x1426510e0
+    // (appended, sfr33) the document's layout changed: rebuilt on the next update (0x14264f510, sfr_render_04l)
+    void NotifyLayoutChanged();
 };
 
 }} // namespace Scaleform::Render

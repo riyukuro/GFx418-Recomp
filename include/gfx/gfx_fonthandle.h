@@ -61,6 +61,8 @@ public:
     // (appended for the sprites, sfr_gfx_05b) the exe's out-of-line ctor (0x1425b5800), holding the source movie too
     FontHandle(Render::Text::FontManagerBase* pmgr, Render::Font* pfont, const char* name, unsigned flags,
                MovieDef* psourceMovieDef);
+    // (appended, sfr33) leaves the font manager's cache of handles (deleting dtor 0x1425b61f0)
+    ~FontHandle();
 };
 
 }} // namespace Scaleform::GFx

@@ -406,6 +406,9 @@ public:
 
     bool          IsNewLine0D() const { return (RTFlags & (RTFlags_NewLine0D)) != 0; }
     unsigned char NewLineChar() const { return IsNewLine0D() ? '\r' : '\n'; }
+    // (appended, sfr33) '\r' becomes the internal new-line character (the text fields set it)
+    void          SetNewLine0D()      { RTFlags |= RTFlags_NewLine0D; }
+    void          ClearNewLine0D()    { RTFlags &= ~RTFlags_NewLine0D; }
 
     ParagraphsIterator GetParagraphByIndex(UPInt index, UPInt* pindexInParagraph = NULL);
     ParagraphsIterator GetParagraphByIndex(UPInt index, UPInt* pindexInParagraph = NULL) const

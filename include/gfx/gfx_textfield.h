@@ -330,6 +330,10 @@ public:
     // The cursor's rectangle at charIndex in the field's space (twips).
     Render::RectF  GetCursorBounds(UPInt charIndex, float* phitTestX, float* phitTestY); // exe 0x1425b80b0
 
+    // (appended, sfr33) the rest of GFx_TextField (sfr_gfx_03e)
+    // The definition's font, size, color and layout become the document's default formats.
+    void SetInitialFormatsAsDefault();                                           // exe 0x1425bc420
+
     Ptr<TextFieldDef>             pDef;                 // +0xd8
     Ptr<Render::Text::DocView>    pDocument;            // +0xe0
     ResourceBinding*              pBinding;             // +0xe8 the binding movie's resources (fonts)
