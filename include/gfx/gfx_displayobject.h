@@ -75,6 +75,7 @@ using Render::Matrix4F;
 class ASMovieRootBase : public RefCountBase<ASMovieRootBase, 327>
 {
 public:
+    ~ASMovieRootBase() override; // 0x1424dd4d0
     MovieImpl*     pMovieImpl; // +0x10
     Ptr<ASSupport> pASSupport; // +0x18
     UByte          AVMVersion; // +0x20

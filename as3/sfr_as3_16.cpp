@@ -108,6 +108,12 @@ String operator+(const char* left, const GFx::ASString& right)
 }
 }
 
+namespace Scaleform { namespace GFx {
+// MS2-FUNCTIONAL 0x1424dd4d0: releases pASSupport and then runs the RefCountImplCore base destructor, matching the exe's order.
+// @0x1424dd4d0
+ASMovieRootBase::~ASMovieRootBase() = default;
+}} // namespace Scaleform::GFx
+
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14257db40();
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
@@ -1941,3 +1947,4 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f20 0x1424e1f20
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f80 0x1424e1f80
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1fe0 0x1424e1fe0
+// MS2-PIN: ??_7ASMovieRootBase@GFx@Scaleform@@6B@ 0x14317bde0
