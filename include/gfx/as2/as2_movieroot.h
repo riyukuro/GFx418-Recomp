@@ -75,6 +75,8 @@ enum ASBuiltinType : int
     ASBuiltin__root            = 64, // "_root"
     ASBuiltin__parent          = 65, // "_parent"
     ASBuiltin_arguments        = 68,
+    ASBuiltin_callee           = 69, // (gb18, from GetVariableRaw)
+    ASBuiltin_caller           = 70,
     ASBuiltin_prototype        = 77,
     ASBuiltin___proto__        = 78,
     ASBuiltin_constructor      = 79,
@@ -263,6 +265,8 @@ public:
     Value              ExternalIntfRetVal;    // +0x58 set by the host handler of ExternalInterface.call
     UByte              Unrecovered_78[0xc0];  // +0x78
     StringManager      BuiltinsMgr;           // +0x138
+    void**             pLevelRoots;           // +0x628 (sfr32) array of NTS-counted nodes, released by ~MovieRoot
+    UPInt              LevelRootCount;        // +0x630
 
     ASRefCountCollector* GetASGC() const { return MemContext->ASGC; }
 
@@ -400,6 +404,8 @@ public:
         unsigned     Field_a0;          // +0xa0 (not identified yet)
         unsigned     FreeEntriesCount;  // +0xa4
 
+        // (sfr32) Drops the queue and deletes the recycled entries (exe 0x142925250).
+        ~ActionQueueType();
         // Clears pentry and keeps it for reuse (up to FreeEntriesLimit), deletes it otherwise (exe 0x142930910).
         void AddToFreeList(ActionEntry* pentry);
         // Drops every queued action (exe 0x142934390).
@@ -487,6 +493,7 @@ public:
     // (appended, sfr24) The rest of the ASMovieRootBase overrides, slot order from the exe vftable 0x1432177d8 (53
     // slots: the deleting destructor 0x14292c3e0, 1..51 as in ASMovieRootBase, 52 the Invoke on an object above).
     // Slots 12, 13, 23, 24, 25 and 28 are the base's empty defaults. The constructor is 0x14291f070.
+    MovieRoot(MemoryContextImpl* pmemContext, MovieImpl* pmovie, ASSupport* pasSupport); // 0x14291f070
     virtual ~MovieRoot();                                                                              // 0x142925be0
     virtual void AdvanceFrame(bool nextFrame);                                                         // 2  0x142931580
     virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType);                     // 3  0x142933010

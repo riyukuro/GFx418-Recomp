@@ -230,6 +230,8 @@ public:
 
     void AppendChar(UInt32 ch);
     void AppendString(const char* putf8str, SPInt utf8StrSz = -1);
+    // (appended, gb18) substr put in at byte posAt (exe 0x1425873e0).
+    void Insert(const char* substr, UPInt posAt, SPInt len = -1);
 };
 
 // Non-owning (pointer, byte count) view.
