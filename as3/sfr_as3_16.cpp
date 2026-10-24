@@ -1249,5 +1249,39 @@ void FUN_1424dca60(void* self)
     }
 }
 
+extern "C" void FUN_142521f00(void*);
+
+// HashNode<DynAttrsKey, Value> releases the Value union and its ASString key.
+// MS2-FUNCTIONAL: preserves the Value payload/refcount cleanup and key release; branch lowering differs by two bytes.
+// @0x1424dcac0
+void FUN_1424dcac0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    auto* value = bytes + 0x10;
+    auto* tag = reinterpret_cast<Scaleform::UInt32*>(value);
+    if ((*tag & 0x1f) > 9)
+    {
+        if (((*tag >> 9) & 1) == 0)
+            FUN_142521f00(value);
+        else
+        {
+            auto* refCount = *reinterpret_cast<int**>(value + 8);
+            --*refCount;
+            if (*refCount == 0)
+            {
+                auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, refCount);
+            }
+            *tag &= 0xfffffde0;
+            *reinterpret_cast<void**>(value + 8) = nullptr;
+            *reinterpret_cast<void**>(value + 0x10) = nullptr;
+            *reinterpret_cast<void**>(value + 0x18) = nullptr;
+        }
+    }
+    auto* name = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(bytes + 8);
+    if (--name->RefCount == 0)
+        name->ReleaseNode();
+}
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
