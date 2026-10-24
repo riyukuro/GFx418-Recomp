@@ -72,6 +72,14 @@ public:
         *g = (Channels.Green == 0) ? 0.0f : Channels.Green / 255.0f;
         *b = (Channels.Blue  == 0) ? 0.0f : Channels.Blue  / 255.0f;
     }
+    // (appended) the same with alpha; out of line in the D3D9 HAL (0x142732050)
+    void GetRGBAFloat(float* r, float* g, float* b, float* a) const
+    {
+        *r = (Channels.Red   == 0) ? 0.0f : Channels.Red   / 255.0f;
+        *g = (Channels.Green == 0) ? 0.0f : Channels.Green / 255.0f;
+        *b = (Channels.Blue  == 0) ? 0.0f : Channels.Blue  / 255.0f;
+        *a = (Channels.Alpha == 0) ? 0.0f : Channels.Alpha / 255.0f;
+    }
 
     // Colour model conversions (Render_Color, 0x14266a5e0..0x14266b500): HSV as 0..360 / 0..255 integers or
     // 0..1 floats, HSI through the trigonometric RGB <-> HSI pair (hue in radians).

@@ -15,6 +15,7 @@
 #include <d3d9.h>
 #include "ms2/scaleform/include/render/render_shader.h"
 #include "ms2/scaleform/include/render/render_fillmode.h"
+#include "ms2/scaleform/include/render/render_staticshader.h"
 
 namespace Scaleform { namespace Render {
 
@@ -23,6 +24,7 @@ class Texture;
 namespace D3D9 {
 
 class HAL;
+class Texture;
 
 // The uniforms a shader may read; the order is that of the name table.
 struct Uniform
@@ -51,6 +53,15 @@ struct Uniform
         SU_Count,
         SU_TotalSize = 1088   // floats in the shadow store
     };
+
+    // per-uniform flags: builtin uniforms are set by the HAL, the rest come from a user shader's matrix user data;
+    // TexScale ones are given in pixels of the first texture
+    enum UniformFlag
+    {
+        Uniform_Builtin  = 1,
+        Uniform_TexScale = 2,
+    };
+    static const UByte UniformFlags[SU_Count];   // 0x14319df68, all zero in this build
 };
 
 // the uniform names as the D3DX constant tables know them (0x143a308a0)
@@ -126,23 +137,33 @@ struct VertexShaderDesc
 
 struct VertexShader
 {
+    VertexShader() : pDesc(0) { }
+    ~VertexShader() { Shutdown(); }   // 0x14272e9d0
+
     const VertexShaderDesc*       pDesc;
     Ptr<IDirect3DVertexShader9>   pProg;                      // +0x08
     int                           Uniforms[Uniform::SU_Count];  // +0x10, constant registers from the D3DX table
 
-    bool Init(HAL* phal, const VertexShaderDesc* pd);   // 0x142741430
+    bool Init(HAL* phal, const VertexShaderDesc* pd);   // 0x142741620
     void Shutdown();                                    // 0x142741ac0
 };
 
 struct FragShader
 {
+    FragShader() : pDesc(0)   // 0x14272dbd0
+    {
+        pProg  = 0;
+        Offset = 0;
+    }
+    ~FragShader() { Shutdown(); }   // 0x14272e620
+
     const FragShaderDesc*         pDesc;
     Ptr<IDirect3DPixelShader9>    pProg;                      // +0x08
     UPInt                         Offset;                     // +0x10
     int                           Uniforms[Uniform::SU_Count];  // +0x18
     int                           TexParams[8];               // +0x60
 
-    bool Init(HAL* phal, const FragShaderDesc* pd);     // 0x142741620
+    bool Init(HAL* phal, const FragShaderDesc* pd);     // 0x142741430
     void Shutdown();                                    // 0x142741a90
 };
 
@@ -221,11 +242,15 @@ public:
     IDirect3DVertexDeclaration9*  pLastDecl;    // +0x1178
 };
 
-// The static shader manager of the D3D9 HAL. The StaticShaderManager part (vertex format map, profiler, format hash)
-// is typed by the HAL unit; here it is kept as storage.
-class ShaderManager
+// The static shader manager of the D3D9 HAL: the StaticShaderManager part plus the device and its caps.
+class ShaderManager : public StaticShaderManager<FragShaderDesc, VertexShaderDesc, Uniform, ShaderInterface, Texture>
 {
 public:
+    typedef StaticShaderManager<FragShaderDesc, VertexShaderDesc, Uniform, ShaderInterface, Texture> Base;
+
+    ShaderManager(Render::HAL::ProfileViews* profiler)
+        : Base(profiler), InstancingSupport(false), DynamicLoopingSupport(false) {}
+
     bool Initialize(HAL* phal);   // 0x142741790
     void Reset();                 // 0x142741820
 
@@ -235,7 +260,6 @@ public:
     bool HasInstancingSupport() const;       // 0x142741420
     bool HasDynamicLoopingSupport() const;   // 0x142741410
 
-    UByte                  StaticBase[0x30];        // VFormats +0x00, Profiler* +0x20, VertexFormatComputedHash +0x28
     Ptr<IDirect3DDevice9>  pDevice;                 // +0x30
     bool                   InstancingSupport;       // +0x38
     bool                   DynamicLoopingSupport;   // +0x39

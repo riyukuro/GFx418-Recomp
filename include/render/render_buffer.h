@@ -69,6 +69,8 @@ public:
     RenderBufferManager* GetManager() const           { return pManager; }
     RenderTargetData*    GetRenderTargetData() const  { return pRenderTargetData; }
     const ImageSize&     GetBufferSize() const        { return BufferSize; }
+    // (appended for sfr_d3d9_01e) the HAL attaches its surfaces on first use
+    void                 SetRenderTargetData(RenderTargetData* data) { pRenderTargetData = data; }
 };
 
 // (appended for sfr_render_04h) whether a render target is still needed, or can be reused

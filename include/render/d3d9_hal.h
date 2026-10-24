@@ -21,6 +21,50 @@ struct HALInitParams : public Render::HALInitParams
     D3DPRESENT_PARAMETERS PresentParams;   // +0x38
 };
 
+// The D3D9 debug event: a PIX marker named by the event (vftable 0x14319d990).
+class RenderEvent : public Render::RenderEvent
+{
+public:
+    virtual ~RenderEvent() {}
+    virtual void Begin(String eventName);   // 0x14272f640
+    virtual void End();                     // 0x142731c70
+};
+
+// (appended for sfr_d3d9_01e) the D3D9 surfaces of a render buffer (0x30 bytes, vftable 0x14319d988): the color
+// surface it renders to and the depth stencil surface drawn with it; both hold a reference.
+class RenderTargetData : public Render::RenderTargetData
+{
+public:
+    IDirect3DSurface9* pRenderSurface;   // +0x20
+    IDirect3DSurface9* pDSSurface;       // +0x28
+
+    // attaches the surfaces to a buffer, making its data on first use (0x142736970)
+    static void UpdateData(RenderBuffer* buffer, IDirect3DSurface9* prt, DepthStencilBuffer* pdsb,
+                           IDirect3DSurface9* pdss);
+
+    virtual ~RenderTargetData()
+    {
+        if (pRenderSurface)
+            pRenderSurface->Release();
+        if (pDSSurface)
+            pDSSurface->Release();
+        pDepthStencilBuffer = 0;
+    }
+
+private:
+    RenderTargetData(RenderBuffer* buffer, IDirect3DSurface9* prt, DepthStencilBuffer* pdsb, IDirect3DSurface9* pdss)
+        : pRenderSurface(prt), pDSSurface(pdss)
+    {
+        pBuffer             = buffer;
+        pDepthStencilBuffer = pdsb;
+        CacheID             = 0;
+        if (prt)
+            prt->AddRef();
+        if (pdss)
+            pdss->AddRef();
+    }
+};
+
 class HAL : public Render::HAL
 {
 public:
@@ -32,7 +76,6 @@ public:
     virtual bool EndScene();                                                                     // 6
     virtual void updateViewport();                                                               // 11
     virtual void clearSolidRectangle(const Rect<int>& r, Color color);                           // 12
-    virtual RenderTarget* CreateRenderTarget(Render::Texture* texture, bool needsStencil);       // 15
     virtual RenderTarget* CreateTempRenderTarget(const ImageSize& size, bool needsStencil);      // 16
     virtual bool SetRenderTarget(RenderTarget* target, bool setState = 1);                       // 17
     virtual void PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags = 0);   // 18
@@ -61,7 +104,7 @@ public:
     virtual void DrawableThreshold(Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, unsigned op,
                                    UInt32 threshold, UInt32 color, UInt32 mask, bool copySource);             // 48
     virtual void DrawableCopyback(Render::Texture* tex, const Matrix2F& mvp, const Matrix2F& texgen);         // 49
-    virtual RenderEvent& GetEvent(EventType type);                                               // 51
+    virtual Render::RenderEvent& GetEvent(EventType type);                                        // 51
     virtual Render::TextureManager* GetTextureManager();                                         // 52
     virtual Render::MeshCache& GetMeshCache();                                                   // 53
     virtual void MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
@@ -75,6 +118,9 @@ public:
     // around IDirect3DDevice9::Reset: drop the default pool resources, then make them again
     virtual void PrepareForReset();                                                              // 65
     virtual bool RestoreAfterReset();                                                            // 66
+    // (cl groups overloads at the first one's place in the class: the slot 15 override is declared here so the new
+    // surface overload lands in slot 67)
+    virtual RenderTarget* CreateRenderTarget(Render::Texture* texture, bool needsStencil);       // 15
     virtual RenderTarget* CreateRenderTarget(IDirect3DSurface9* colorSurface, IDirect3DSurface9* depthSurface);   // 67
     virtual void drawScreenQuad();                                                               // 68
 
@@ -84,6 +130,13 @@ public:
 
 protected:
     bool initializeShaders(bool force);   // 0x1427387f0
+
+    // (appended for sfr_d3d9_01e) stream 1 off / the instance stream on, around instanced draws
+    void setLinearStreamSource(PrimitiveBatch::BatchType type);   // 0x142738940
+    void setInstancedStreamSource(unsigned instanceCount);        // 0x1427388b0
+    // whether the depth-stencil surface can hold masks (checked once per scene)
+    bool checkMaskBufferCaps();                                   // 0x142736d70
+    bool shouldRenderFilters(const FilterPrimitive* prim) const;  // 0x142738de0
 
 public:
     IDirect3DDevice9*        pDevice;                                       // +0x578

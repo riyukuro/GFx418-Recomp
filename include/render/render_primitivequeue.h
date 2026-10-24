@@ -220,6 +220,8 @@ public:
     MaskPrimitive(HAL* hal, MaskAreaType type) : pHAL(hal), Type(type) {}
     UPInt          GetMaskCount() const         { return MaskAreas.GetSize(); }
     const HMatrix* GetMaskAreaMatrices() const  { return MaskAreas.GetDataPtr(); }
+    // (appended for sfr_d3d9_01e) a clipped mask narrows the view rectangle
+    bool           IsClipped() const            { return Type == Mask_Clipped; }
     // starts the mask submission; nothing while only the filters are emitted
     virtual void EmitToHAL(RenderQueueItem& item, RenderQueueProcessor& qp);   // 0x14266d890
 

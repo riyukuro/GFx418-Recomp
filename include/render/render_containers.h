@@ -172,6 +172,17 @@ public:
         return item;
     }
 
+    // (appended for the D3D9 HAL, sfr_d3d9_01e) count consecutive copies of source[], all on one page
+    C* AddItems(C* source, unsigned count)
+    {
+        ensureCountAvailable(count);
+        C* items = &pLast->Items[pLast->Count];
+        for (unsigned i = 0; i < count; i++)
+            ConstructAlt<C>(items + i, source[i]);
+        pLast->Count += count;
+        return items;
+    }
+
     void  Clear(bool keepLast = false) { freePages(keepLast); }
     bool  IsEmpty() const              { return !pPages || pPages->Count == 0; }
     Page* GetFirstPage() const         { return pPages; }
@@ -756,6 +767,62 @@ private:
     LinearHeap* pHeap;  // +0x00
     UPInt       Size;   // +0x08
     T*          Array;  // +0x10
+};
+
+// (appended for the D3D9 HAL, sfr_d3d9_01e) values keyed by a run of key elements: the keys are copied into a key
+// buffer, each value records where its run starts and how long it is. Lookups are linear.
+template<class K, class T, int KeyPageCount, int ValuePageCount>
+class MultiKeyCollection
+{
+    struct ValueItem
+    {
+        K*       pKey;       // +0x00
+        unsigned KeyCount;   // +0x08
+        T        Value;      // +0x10
+    };
+
+public:
+    T* Find(K* keys, unsigned count = 1)
+    {
+        for (typename PagedItemBuffer<ValueItem, ValuePageCount>::Page* page = ValueBuffer.GetFirstPage(); page;
+             page = page->GetNextPage())
+        {
+            for (unsigned i = 0; i < page->GetSize(); i++)
+            {
+                ValueItem& item = page->GetItem(i);
+                if (item.KeyCount != count)
+                    continue;
+                unsigned k = 0;
+                while (k < count && item.pKey[k] == keys[k])
+                    k++;
+                if (k == count)
+                    return &item.Value;
+            }
+        }
+        return 0;
+    }
+
+    // *newKeys receives the stored copy of keys
+    T* Add(K** newKeys, K* keys, unsigned count = 1)
+    {
+        *newKeys        = KeyBuffer.AddItems(keys, count);
+        ValueItem* item = ValueBuffer.AddItem();
+        if (!*newKeys)
+            return 0;
+        item->pKey     = *newKeys;
+        item->KeyCount = count;
+        return &item->Value;
+    }
+
+    void Clear()
+    {
+        KeyBuffer.Clear();
+        ValueBuffer.Clear();
+    }
+
+private:
+    PagedItemBuffer<K, KeyPageCount>           KeyBuffer;     // +0x00
+    PagedItemBuffer<ValueItem, ValuePageCount> ValueBuffer;   // +0x10
 };
 
 }} // namespace Scaleform::Render

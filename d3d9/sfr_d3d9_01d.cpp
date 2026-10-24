@@ -1443,7 +1443,7 @@ bool ShaderManager::HasInstancingSupport() const
 }
 
 // MS2-FUNCTIONAL: frame / save order differs
-// @0x142741430
+// @0x142741620
 bool VertexShader::Init(HAL* phal, const VertexShaderDesc* pd)
 {
     if (!phal || !pd)
@@ -1493,7 +1493,7 @@ bool VertexShader::Init(HAL* phal, const VertexShaderDesc* pd)
 }
 
 // MS2-FUNCTIONAL: frame / save order differs
-// @0x142741620
+// @0x142741430
 bool FragShader::Init(HAL* phal, const FragShaderDesc* pd)
 {
     if (!phal || !pd)

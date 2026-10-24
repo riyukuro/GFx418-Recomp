@@ -61,6 +61,15 @@ struct VertexElement
 
     bool operator==(const VertexElement& o) const { return Offset == o.Offset && Attribute == o.Attribute; }
     bool operator!=(const VertexElement& o) const { return !operator==(o); }
+
+    // (appended for the D3D9 HAL, sfr_d3d9_01e) bytes per component and per attribute (table 0x143a30630 in the
+    // exe; the batch index types take no buffer space)
+    unsigned CompSize() const
+    {
+        static const unsigned typeSizes[] = { 1, 1, 2, 2, 4, 4, 0, 0 };
+        return typeSizes[((Attribute & VET_CompType_Mask) >> VET_CompType_Shift) - 1];
+    }
+    unsigned Size() const { return CompSize() * (Attribute & VET_Components_Mask); }
 };
 
 // The renderer's buffer-side description of a format (built lazily by the HAL).
