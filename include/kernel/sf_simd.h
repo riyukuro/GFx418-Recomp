@@ -11,9 +11,10 @@ namespace Scaleform { namespace SIMD {
 typedef __m128  Vector4f;
 typedef __m128i Vector4i;
 
-// Bit-pattern vector (lanes a, b, c, d); each pattern is one writable function-local static in the exe (.data).
+// Bit-pattern vector (lanes a, b, c, d); each pattern is one writable function-local static in the exe (.data),
+// shared by BitMask<> and Constant<> (one 16-byte constant per pattern).
 template<unsigned a, unsigned b, unsigned c, unsigned d>
-inline Vector4f BitMask()
+inline Vector4i& Bits()
 {
 #if defined(__clang__)
     // clang's __m128i is two 64-bit lanes
@@ -26,7 +27,13 @@ inline Vector4f BitMask()
         (char)(d & 0xFF), (char)((d >> 8) & 0xFF), (char)((d >> 16) & 0xFF), (char)(d >> 24)
     };
 #endif
-    return _mm_load_ps(reinterpret_cast<const float*>(&bits));
+    return bits;
+}
+
+template<unsigned a, unsigned b, unsigned c, unsigned d>
+inline Vector4f BitMask()
+{
+    return _mm_load_ps(reinterpret_cast<const float*>(&Bits<a, b, c, d>()));
 }
 
 // Broadcasts lane i of v.
@@ -42,17 +49,7 @@ inline Vector4f MulAdd(Vector4f a, Vector4f b, Vector4f c) { return _mm_add_ps(_
 template<unsigned a, unsigned b, unsigned c, unsigned d>
 inline Vector4f Constant()
 {
-#if defined(__clang__)
-    static Vector4i bits = { (long long)(a | ((unsigned long long)b << 32)), (long long)(c | ((unsigned long long)d << 32)) };
-#else
-    static Vector4i bits = {
-        (char)(a & 0xFF), (char)((a >> 8) & 0xFF), (char)((a >> 16) & 0xFF), (char)(a >> 24),
-        (char)(b & 0xFF), (char)((b >> 8) & 0xFF), (char)((b >> 16) & 0xFF), (char)(b >> 24),
-        (char)(c & 0xFF), (char)((c >> 8) & 0xFF), (char)((c >> 16) & 0xFF), (char)(c >> 24),
-        (char)(d & 0xFF), (char)((d >> 8) & 0xFF), (char)((d >> 16) & 0xFF), (char)(d >> 24)
-    };
-#endif
-    return *(Vector4f*)&bits;
+    return *(Vector4f*)&Bits<a, b, c, d>();
 }
 
 // (appended for the mesh keys, sfr_render_05d) pulls a whole object into L2, one prefetch per 32 bytes from the
