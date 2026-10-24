@@ -71,6 +71,64 @@ String operator+(const char* left, const GFx::ASString& right)
 }
 
 extern "C" void* DAT_143b15f60;
+extern "C" void FUN_14257db40();
+extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
+
+namespace {
+void* Sfr16ScalarDeletingDtor(void* self, Scaleform::UPInt flags)
+{
+    FUN_14257db40();
+    if (flags & 1)
+    {
+        if ((flags & 4) == 0)
+        {
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, self);
+        }
+        else
+        {
+            FUN_14015b310(self, 0x10);
+        }
+    }
+    return self;
+}
+}
+
+// The exe contains byte-identical generic scalar-deleting destructor copies with ambiguous owners.
+// @0x1424e1c20
+// MS2-FUNCTIONAL 0x1424e1c20: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1c20(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1c80
+// MS2-FUNCTIONAL 0x1424e1c80: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1c80(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1ce0
+// MS2-FUNCTIONAL 0x1424e1ce0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1ce0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1d40
+// MS2-FUNCTIONAL 0x1424e1d40: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1d40(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1da0
+// MS2-FUNCTIONAL 0x1424e1da0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1da0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1e00
+// MS2-FUNCTIONAL 0x1424e1e00: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1e00(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1e60
+// MS2-FUNCTIONAL 0x1424e1e60: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1e60(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1ec0
+// MS2-FUNCTIONAL 0x1424e1ec0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1ec0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1f20
+// MS2-FUNCTIONAL 0x1424e1f20: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1f20(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1f80
+// MS2-FUNCTIONAL 0x1424e1f80: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1f80(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// @0x1424e1fe0
+// MS2-FUNCTIONAL 0x1424e1fe0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+
 extern "C" void FUN_142521f00(void*);
 extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
@@ -1808,3 +1866,14 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-FUNCTIONAL ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z: the emitted inline overload delegates to Value::Assign(const ASString&) and preserves the same clear, namespace-retain, and string-reference behavior.
 // MS2-PIN: ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z 0x1424e0d40
 // MS2-PIN: ??4?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAAEAV01@AEBV01@@Z 0x1424e0340
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1c20 0x1424e1c20
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1c80 0x1424e1c80
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1ce0 0x1424e1ce0
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1d40 0x1424e1d40
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1da0 0x1424e1da0
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1e00 0x1424e1e00
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1e60 0x1424e1e60
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1ec0 0x1424e1ec0
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f20 0x1424e1f20
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f80 0x1424e1f80
+// MS2-PIN: Sfr16ScalarDeletingDtor_1424e1fe0 0x1424e1fe0
