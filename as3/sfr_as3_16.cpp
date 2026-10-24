@@ -15,6 +15,8 @@
 #undef GetObject   // windows.h
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+    // The executable keeps ModifyOptimizedPlayList out of line at 0x142517e70; its body is recovered in sfr_as3_18.
+    void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p);
 
 // ==== slots ==========================================================================================================
 
@@ -1090,6 +1092,7 @@ ReadArgs::~ReadArgs() = default;
 
 }}} // namespace Scaleform::GFx::AS3
 
+// MS2-PIN: ?Sfr34_ModifyOptimizedPlayList@AS3@GFx@Scaleform@@YAXPEAVInteractiveObject@23@@Z 0x142517e70
 // @0x1424e9380
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObject* pcont)
 {
@@ -1098,7 +1101,7 @@ void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObje
         Scaleform::GFx::InteractiveObject* interactive =
             reinterpret_cast<Scaleform::GFx::InteractiveObject*>(pcont);
         interactive->AddToPlayList();
-        interactive->AddToOptimizedPlayList();
+        Scaleform::GFx::AS3::Sfr34_ModifyOptimizedPlayList(interactive);
     }
 }
 
