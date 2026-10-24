@@ -23,6 +23,7 @@
 // MS2-RANGE: 0x1425c8010-0x1425c80d7 .text$mn
 // MS2-RANGE: 0x1425c8fe0-0x1425c9061 .text$mn
 // MS2-RANGE: 0x1425c9190-0x1425c91ec .text$mn
+// MS2-RANGE: 0x1425c4db0-0x1425c4e88 .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -36,6 +37,8 @@
 #include <stdlib.h>
 
 namespace Scaleform { namespace GFx {
+
+extern "C" void FUN_142655fe0(FontData*, LoadProcess*, const TagInfo*);
 
 // MS2-FUNCTIONAL: dispatches the video tag to the installed video state and reports the missing-state case.
 // @0x1425c6450
@@ -96,6 +99,23 @@ void SF_STDCALL GFx_DefineBinaryDataLoader(LoadProcess* p, const TagInfo& tagInf
     p->AddResource(id, definition);
     if (definition)
         definition->Release();
+}
+
+// MS2-FUNCTIONAL: keeps the compacted-font diagnostic and creates/registers FontData; parser helper side effects are retained.
+// @0x1425c4db0
+void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    const ResourceId id(p->ReadU16());
+    if (tagInfo.TagType == static_cast<TagType>(0x3ed))
+    {
+        p->LogError("Trying to load compacted font with SF_NO_COMPACTED_FONT_SUPPORT defined.");
+        return;
+    }
+
+    Ptr<FontData> font = *SF_HEAP_AUTO_NEW(p->GetLoadHeap()) FontData();
+    FUN_142655fe0(font.GetPtr(), p, &tagInfo);
+    ResourceHandle handle = p->AddFontDataResource(id, font.GetPtr());
+    (void)handle;
 }
 
 // The first key hashes a compact scalar and the eight words of its payload.
