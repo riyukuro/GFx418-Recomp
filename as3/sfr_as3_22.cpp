@@ -706,6 +706,70 @@ extern "C" void FUN_142677460(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
+// MS2-FUNCTIONAL: implements source-over compositing with the optional second-image coverage mask used by the executable.
+// @0x142676660
+extern "C" void FUN_142676660(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* source = static_cast<ImageData*>(inputs[0]);
+    ImagePlane dst, src;
+    destination->GetPlane(0, &dst);
+    source->GetPlane(0, &src);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
+    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
+    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
+    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
+    const bool hasMask = *reinterpret_cast<void* const*>(op + 0x40) != nullptr && inputs[1] != nullptr;
+    auto* mask = hasMask ? static_cast<ImageData*>(inputs[1]) : nullptr;
+    ImagePlane maskPlane;
+    if (mask) mask->GetPlane(0, &maskPlane);
+    const auto* srcAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
+    const auto* dstAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
+    const bool useSourceAlpha = srcAlphaConfig && *reinterpret_cast<const bool*>(srcAlphaConfig + 0x48);
+    const bool useDestinationAlpha = dstAlphaConfig && *reinterpret_cast<const bool*>(dstAlphaConfig + 0x48);
+    const bool preserveDestinationAlpha = *reinterpret_cast<const bool*>(op + 0x50);
+    const int maskLeft = *reinterpret_cast<const int*>(op + 0x48), maskTop = *reinterpret_cast<const int*>(op + 0x4c);
+    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
+        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
+        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
+        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
+            unsigned foreground = 0, background = 0;
+            FUN_14257bf70(source, &foreground, srcRow, static_cast<unsigned>(x - left));
+            FUN_14257bf70(destination, &background, dstRow, static_cast<unsigned>(x));
+            auto* fg = reinterpret_cast<unsigned char*>(&foreground);
+            auto* bg = reinterpret_cast<unsigned char*>(&background);
+            if (!useSourceAlpha) fg[3] = 0xff;
+            if (!useDestinationAlpha) bg[3] = 0xff;
+            unsigned sourceAlpha = fg[3];
+            if (mask) {
+                if (y - maskTop < 0 || x - maskLeft < 0 || y - maskTop >= static_cast<int>(maskPlane.Height) ||
+                    x - maskLeft >= static_cast<int>(maskPlane.Width)) continue;
+                unsigned coverage = 0;
+                FUN_14257bf70(mask, &coverage, static_cast<long long>(y - maskTop) * maskPlane.Pitch,
+                              static_cast<unsigned>(x - maskLeft));
+                sourceAlpha = sourceAlpha * ((coverage >> 24) + 1) >> 8;
+            }
+            const unsigned outAlpha = preserveDestinationAlpha
+                ? static_cast<unsigned>((static_cast<float>(bg[3]) / 255.0f) * (255 - sourceAlpha) + sourceAlpha)
+                : sourceAlpha;
+            unsigned result = 0;
+            auto* out = reinterpret_cast<unsigned char*>(&result);
+            if (outAlpha) {
+                for (unsigned c = 0; c != 3; ++c) {
+                    const float t = static_cast<float>(sourceAlpha) / outAlpha;
+                    const int value = static_cast<int>(fg[c] * t + bg[c] * (1.0f - t));
+                    out[c] = static_cast<unsigned char>(value < 0 ? 0 : value > 255 ? 255 : value);
+                }
+            }
+            out[3] = useDestinationAlpha ? static_cast<unsigned char>(outAlpha) : 0xff;
+            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
+        }
+    }
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
 // @0x142745840
