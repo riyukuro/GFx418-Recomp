@@ -1124,3 +1124,6 @@ Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::ClassTraits::Traits>::opera
 template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>::operator=(
     const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&);
+
+// XMLSupport's slot 10 points at the actual Add entry at +0x10; the harvested row at 0x1424e6980 is the preceding entry.
+// MS2-PIN: ?Add@XMLSupport@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
