@@ -5923,13 +5923,13 @@ namespace Instances { namespace fl
     // @0x142428130
     void RegExp::dotallGet(bool& result)
     {
-        result = ((OptionFlags >> 2) & 1) != 0;
+        result = ((static_cast<UInt32>(OptionFlags) >> 2) & 1) != 0;
     }
 
     // @0x142428490
     void RegExp::extendedGet(bool& result)
     {
-        result = ((OptionFlags >> 3) & 1) != 0;
+        result = ((static_cast<UInt32>(OptionFlags) >> 3) & 1) != 0;
     }
 
     // @0x142428da0
@@ -5960,7 +5960,7 @@ namespace Instances { namespace fl
     // @0x142429910
     void RegExp::multilineGet(bool& result)
     {
-        result = ((OptionFlags >> 1) & 1) != 0;
+        result = ((static_cast<UInt32>(OptionFlags) >> 1) & 1) != 0;
     }
 
     // @0x1424282e0
