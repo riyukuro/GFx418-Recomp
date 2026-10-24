@@ -473,17 +473,37 @@ void FUN_142621ed0(char* self, U arg)
 
 static inline bool RawFound(const U* it) { return it[0] && *(U*)it[0] && (SPInt)it[1] <= *(SPInt*)(*(U*)it[0] + 8); }
 
-static inline U* RawFindMovieKey(U** self, U* out, const U* key)
+// The find instances inline the whole lookup and hash the key through its address.
+static __forceinline SPInt RawFindKey8At(U* table, const U* key)
 {
-    SPInt idx = RawFindKey8(*self, *key, 0x20);
-    U table = (U)self;
-    if (idx < 0)
+    if (!table)
+        return -1;
+    const unsigned char* k = (const unsigned char*)key;
+    U mixed = (((U)k[3] * 0x1003f + (U)k[2]) * 0x1003f + (U)k[1]) * 0x1003f + (U)k[4] * 0xfc5d1543ec5f01ULL +
+              (U)k[5] * (U)-0x64cfd3d7e9d39ec1LL + (U)k[7] * (U)-0x283c1b695cee4e41LL + (U)k[6] * 0x5d02f409d62aee81ULL;
+    U hash = (U)-0x514d9afbc3e934fbLL + mixed + (U)k[0];
+    U home = table[1] & hash;
+    U index = home;
+    char* e = RawEntry(table, index, 0x20);
+    if (*(SPInt*)e == -2 || *(U*)(e + 8) != home)
+        return -1;
+    for (;;)
     {
-        idx = 0;
-        table = 0;
+        if (*(U*)(e + 8) == home && RawField<U>(e, 0x10) == *key)
+            return (SPInt)index;
+        SPInt next = *(SPInt*)e;
+        if (next == -1)
+            return -1;
+        index = (U)next;
+        e = RawEntry(table, index, 0x20);
     }
-    out[0] = table;
-    out[1] = (U)idx;
+}
+
+static __forceinline U* RawFindMovieKey(U** self, U* out, const U* key)
+{
+    SPInt idx = RawFindKey8At(*self, key);
+    out[0] = idx >= 0 ? (U)self : 0;
+    out[1] = idx >= 0 ? (U)idx : 0;
     return out;
 }
 
