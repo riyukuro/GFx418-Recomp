@@ -403,6 +403,20 @@ public:
     virtual CheckResult EqualsXML(bool& stop, bool& result, Instances::fl::XML& l, const Value& r) const;  // 0x1424f9850
     virtual void DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, const Value& value) const;      // 0x1424f4a90
     virtual CheckResult GetDescendants(Value& v, const Multiname& mn) const;                            // 0x142509140
+    // (sfr24) the traits getters (vftable slots 14-19; found by work/sfr24/tmp/vtaudit.py). EqualsQName (slot 9,
+    // 0x1424f97e0) and ToXMLString (slot 11, 0x14252fef0) are overridden too but not recovered yet.
+    // @0x1425080b0
+    virtual const ClassTraits::Traits* GetClassTraitsQName() const { return TraitsQName; }
+    // @0x14250a660
+    virtual InstanceTraits::Traits* GetITraitsQName() const { return &TraitsQName->GetInstanceTraits(); }
+    // @0x1425080d0
+    virtual const ClassTraits::Traits* GetClassTraitsXML() const { return TraitsXML; }
+    // @0x14250a6f0
+    virtual InstanceTraits::Traits* GetITraitsXML() const { return &TraitsXML->GetInstanceTraits(); }
+    // @0x1425080f0
+    virtual const ClassTraits::Traits* GetClassTraitsXMLList() const { return TraitsXMLList; }
+    // @0x14250a710
+    virtual InstanceTraits::Traits* GetITraitsXMLList() const { return &TraitsXMLList->GetInstanceTraits(); }
 
 private:
     VM*                         pVM;            // +0x28
