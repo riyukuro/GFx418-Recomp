@@ -3798,6 +3798,159 @@ namespace InstanceTraits
 } // namespace InstanceTraits
 }}} // namespace Scaleform::GFx::AS3
 
+// ---- (sfr24) bodies the full exe links by name (work/sfr35/outside-units.tsv) ----
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace Instances { namespace fl {
+
+// The locale variants format like the plain ones: tail calls in the exe, so nothing is inlined here.
+#pragma inline_depth(0)
+// @0x142401fc0
+void Date::AS3toLocaleDateString(ASString& result)
+{
+    AS3toDateString(result);
+}
+
+// @0x142402050
+void Date::AS3toLocaleString(ASString& result)
+{
+    AS3toString(result);
+}
+
+// @0x142402070
+void Date::AS3toLocaleTimeString(ASString& result)
+{
+    AS3toTimeString(result);
+}
+#pragma inline_depth()
+
+// @0x1424037b0
+void Date::AS3valueOf(Value::Number& result)
+{
+    result = TimeValue;
+}
+
+}} // namespace Instances::fl
+
+// Only the prefix value can hold a collectable.
+// @0x14240bfe0
+void Instances::Namespace::ForEachChild_GC(Collector* prcc, GcOp op) const
+{
+    AS3::ForEachChild_GC(prcc, Prefix, op, *this);
+}
+
+namespace Classes { namespace fl {
+
+// Calling these classes as functions converts like constructing does.
+// @0x1424054e0
+void Array::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x1424055c0
+void Boolean::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405780
+void Error::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405a00
+void Namespace::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405a20
+void Number::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405a40
+void Object::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405a60
+void QName::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405ae0
+void String::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405b90
+void XMLList::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405bb0
+void int_::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// @0x142405bd0
+void uint::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+}} // namespace Classes::fl
+
+namespace ClassTraits { namespace fl {
+
+// Tail calls into CoerceValue in the exe.
+#pragma inline_depth(0)
+// @0x142406210
+bool Number::Coerce(const Value& value, Value& result) const
+{
+    return CoerceValue(value, result);
+}
+
+// @0x1424062d0
+bool int_::Coerce(const Value& value, Value& result) const
+{
+    return CoerceValue(value, result);
+}
+
+// @0x1424062e0
+bool uint::Coerce(const Value& value, Value& result) const
+{
+    return CoerceValue(value, result);
+}
+#pragma inline_depth()
+
+}} // namespace ClassTraits::fl
+
+// An XML declaration becomes its own node kind.
+// @0x1424087a0
+void XMLParser::XmlDeclExpatCallback(void* userData, const char*, const char*, int)
+{
+    static_cast<XMLParser*>(userData)->SetNodeKind(kDecl);
+}
+
+// Anything expat does not report otherwise is dropped.
+// @0x142408eb0
+void XMLParser::DefaultExpatCallback(void*, const char*, int)
+{
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
 
 // The element destructor of GlobalObjectCPP::CTraits (ArrayLH<SPtr<ClassTraits::Traits> >), shared with the array
 // resize of that type. 0x142409550
