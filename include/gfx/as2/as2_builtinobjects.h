@@ -714,8 +714,11 @@ class StyleSheetObject : public Object
 {
 public:
     StyleSheetObject(Environment* penv); // exe 0x142921190
+    // The prototype instance: an empty style manager (exe 0x142921270 builds it inline in StyleSheetProto's ctor).
+    StyleSheetObject(ASStringContext* psc, Object* pprototype);
     // Completes a stylesheet load and notifies its listeners (exe 0x142969aa0).
     void NotifyOnLoad(Environment* penv, bool success);
+    virtual ObjectType GetObjectType() const; // exe 0x142954330: Object_StyleSheet
 
     void* Data68[6]; // +0x68 not recovered (a Text::StyleManager)
 
@@ -736,6 +739,9 @@ public:
 class StyleSheetProto : public Prototype<StyleSheetObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143213880
+
+    StyleSheetProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142921270
     static void Clear(const FnCall& fn);         // exe 0x1428f86b0
     static void GetStyle(const FnCall& fn);      // exe 0x1428f8720
     static void GetStyleNames(const FnCall& fn); // exe 0x1428f9630
@@ -750,6 +756,13 @@ class TextFormatObject : public Object
 {
 public:
     TextFormatObject(Environment* penv); // exe 0x1429226d0
+    // The prototype instance: empty formats (exe 0x142923030 builds it inline in TextFormatProto's ctor).
+    TextFormatObject(ASStringContext* psc, Object* pprototype);
+    virtual ~TextFormatObject();
+    virtual ObjectType GetObjectType() const; // exe 0x142954350: Object_TextFormat
+    // The AS properties write through to the format (exe 0x142987710).
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
 
     void* Data68[13]; // +0x68 Render::Text::TextFormat (0x48 bytes), +0xb0 Render::Text::ParagraphFormat (0x20 bytes)
 
@@ -1011,9 +1024,13 @@ public:
 };
 
 // The TextFormat prototype natives (appended for sfr_as2_02b).
-class TextFormatProto
+class TextFormatProto : public Prototype<TextFormatObject>
 {
 public:
+    static const NameFunction FunctionTable[]; // exe 0x143213ac0
+
+    TextFormatProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142923030
+
     static void GetTextExtent(const FnCall& fn); // exe 0x1429006a0
 };
 

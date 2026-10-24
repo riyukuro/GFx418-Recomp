@@ -326,6 +326,24 @@ public:
         PresentMask &= ~PresentMask_Url;
     }
 
+    // Drop one property's value and present bit (the AS2 TextFormat object assigns null/undefined).
+    void ClearBold()     { FormatFlags &= ~Format_Bold; PresentMask &= ~PresentMask_Bold; }
+    void ClearItalic()   { FormatFlags &= ~Format_Italic; PresentMask &= ~PresentMask_Italic; }
+    void ClearUnderline(){ FormatFlags &= ~Format_Underline; PresentMask &= ~PresentMask_Underline; }
+    void ClearKerning()  { FormatFlags &= ~Format_Kerning; PresentMask &= ~PresentMask_Kerning; }
+    void ClearColor()
+    {
+        ColorV = 0xFF000000u;
+        PresentMask &= ~PresentMask_Color;
+    }
+    void ClearFontSize()
+    {
+        FontSize = 0;
+        PresentMask &= ~PresentMask_FontSize;
+    }
+    // The list text stays, only the present bits go.
+    void ClearFontList() { PresentMask &= ~(PresentMask_FontList | PresentMask_SingleFontName); }
+
 private:
     // after the font list changed: whether it names one face
     void UpdateSingleFontName()
@@ -534,6 +552,13 @@ public:
         FreeTabStops();
         PresentMask &= ~PresentMask_TabStops;
     }
+    // a fresh table of num stops (filled with SetTabStopsElement), marked present
+    void BeginTabStops(unsigned num)
+    {
+        AllocTabStops(num);
+        PresentMask |= PresentMask_TabStops;
+    }
+    void ClearAlignment() { PresentMask &= ~(Mask_Align | PresentMask_Alignment); }
 };
 
 typedef TextFormatPtrWrapper<ParagraphFormat> ParagraphFormatPtr;

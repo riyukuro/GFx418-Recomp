@@ -216,6 +216,8 @@ public:
     // The per-field functors the caller fills in.
     Array<ArraySortFunctor>& GetFunctorArray() { return FunctorArray; }
     ArraySortOnFunctor(const ArraySortOnFunctor& src); // exe 0x142918270
+    ArraySortOnFunctor(ObjectInterface* pthis, const ArrayCC<ASString>* fields, const Array<int>& flags,
+                       Environment* penv, const Log* plog); // exe 0x142918330
 
     // Negative when a sorts before b (exe 0x142934f90).
     int  Compare(const Value* a, const Value* b) const;

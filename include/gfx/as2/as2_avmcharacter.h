@@ -19,6 +19,7 @@ public:
     HashLH<EventId, ArrayLH<Value, StatMV_ActionScript_Mem>, EventIdHashFunctor, StatMV_ActionScript_Mem>
         EventHandlers; // +0x28
 
+    AvmCharacter(InteractiveObject* pdispObj); // exe 0x142918930
     InteractiveObject* GetDispObj() const { return pDispObj; }
     MovieRoot*         GetAS2Root() const { return ToAS2Root(pDispObj); }
 
