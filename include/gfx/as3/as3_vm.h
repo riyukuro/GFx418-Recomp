@@ -53,6 +53,7 @@ protected:
 static_assert(sizeof(FlashUI) == 0x10, "FlashUI size");   // the deleting destructor 0x1424e2db0 frees 0x10
 namespace Abc { class File; }
 class XMLSupport;
+class CallFrame;     // (appended, sfr24) as3_callframe.h
 
 // (appended, sfr19) the ABC files the VM loads on construction (the movie root's file list). vftable order from the
 // VM constructor 0x1424dae90: GetSize is slot 1, GetFile(UPInt) slot 3.
@@ -298,6 +299,11 @@ public:
     // (appended, sfr33) appends every loaded ABC file to destArray; the count added (none while being destroyed).
     // 0x142507210
     UPInt GetAllLoadedAbcFiles(Scaleform::Array<SPtr<VMAbcFile> >* destArray) const;
+    // (appended, sfr24) two opcode handlers ExecuteCode calls out of line. throw: the top of the operand stack
+    // becomes the pending exception, unwound from cp's offset in cf's word code. 0x142540850
+    int  exec_throw(const UPInt* cp, CallFrame& cf);
+    // esc_xattr: the top of the operand stack escaped as an XML attribute value. 0x142538700
+    void exec_esc_xattr();
 
 public:
     bool                                    Initialized;        // +0x008

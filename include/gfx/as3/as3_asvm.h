@@ -345,6 +345,9 @@ public:
     // (appended, sfr24) a container not yet on the play list is added to it (and the optimized list updated).
     // 0x1424e9380
     void AddScriptableMovieClip(DisplayObjContainer* pspr);
+    // (appended, sfr24) the cursor of mouse mouseIndex set by its MouseCursor name ("arrow", "button", ...) through
+    // ChangeMouseCursorType. 0x142528620
+    void SetMouseCursorType(const ASString& cursor, UInt32 mouseIndex);
 protected:
     // (appended, sfr19) the mouseCursorEvent name of a MouseCursorEvent cursor type. 0x14250bb10
     void GetMouseCursorTypeString(ASString& str, unsigned cursorType) const;

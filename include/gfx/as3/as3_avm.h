@@ -125,6 +125,12 @@ public:
     unsigned    CallCtor(bool execute);
     // (appended, sfr24) the AS3 object held as the counted collectible pointer (the raw one cleared). 0x142526340
     void        SetAS3ObjCollectible(Instances::fl_display::DisplayObject* p);
+    // (appended, sfr24) the AS3 object kept raw while the display object has no parent, as the counted
+    // collectible pointer otherwise. 0x1425262e0
+    void        SetAS3Obj(Instances::fl_display::DisplayObject* p);
+    // (appended, sfr24) how the AS3 object is held (the other pointer cleared).
+    enum AS3ObjPtrType { Raw, Collectible };
+    void        SwitchAS3ObjPtrType(AS3ObjPtrType type);            // 0x14252e900
 };
 
 // AS3 part of an interactive object, with its AvmInteractiveObjBase part at +0x30. 0x40 bytes;
