@@ -61,6 +61,16 @@
 #include "ms2/scaleform/include/render/text_core.h"
 #undef GetObject   // windows.h
 
+// MS2-FUNCTIONAL 0x1424debc0: releases the argument Value at +0x178, the Multiname at +0x148, and then the ReadArgs base.
+// @0x1424debc0
+void FUN_1424debc0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x178)->~Value();
+    reinterpret_cast<Scaleform::GFx::AS3::Multiname*>(bytes + 0x148)->~Multiname();
+    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL 0x1424e0e50: builds a temporary for each side and concatenates them, releasing both temporary strings afterward.
 // @0x1424e0e50
@@ -1866,6 +1876,7 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-FUNCTIONAL ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z: the emitted inline overload delegates to Value::Assign(const ASString&) and preserves the same clear, namespace-retain, and string-reference behavior.
 // MS2-PIN: ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z 0x1424e0d40
 // MS2-PIN: ??4?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAAEAV01@AEBV01@@Z 0x1424e0340
+// MS2-PIN: ?FUN_1424debc0@@YAXPEAX@Z 0x1424debc0
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1c20 0x1424e1c20
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1c80 0x1424e1c80
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1ce0 0x1424e1ce0
