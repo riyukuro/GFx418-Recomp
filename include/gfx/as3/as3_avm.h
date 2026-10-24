@@ -50,6 +50,13 @@ public:
         pAS3RawPtr = NULL;
     }
     virtual ~AvmDisplayObj();                                           // 0x1424ddb80, ??_G 0x1424e2760
+#ifdef SF_AS3_AVM_INPLACE_DELETE
+    // (appended, sfr24) a no-op class delete: the AS3 part lives inside its display object's allocation, so the
+    // deleting destructors (0x1424e2760, 0x1424e2a70, 0x1424e26d0, ...) free only for a global delete
+    // ((flags & 5) == 5). Opt-in: a class that also derives from a DisplayObject (AvmLoader, ShapeObject,
+    // AvmBitmap) then needs a using-declaration of the display object's operator delete.
+    void operator delete(void*) {}
+#endif
 
     virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase()   { return NULL; }
     virtual AvmSpriteBase*              ToAvmSpriteBase()           { return NULL; }
@@ -445,12 +452,14 @@ public:
 };
 #endif
 
+#ifndef SF_AS3_AVMBUTTON_MODEL
 class AvmStaticText
 {
 public:
     AvmStaticText(StaticTextCharacter* ptxt);
     UByte Data[0x30];
 };
+#endif
 
 #ifndef SF_AS3_AVMBUTTON_MODEL
 class AvmButton
@@ -461,7 +470,7 @@ public:
 };
 #endif
 
-// (appended, sfr24) The class model of AvmButton / AvmTextField, opt-in (SF_AS3_AVMBUTTON_MODEL) while their
+// (appended, sfr24) The class model of AvmButton / AvmTextField (and AvmStaticText), opt-in (SF_AS3_AVMBUTTON_MODEL) while their
 // constructors are still written over the opaque Data[0x48] versions above. Both are AvmInteractiveObj with the
 // AvmButtonBase / AvmTextFieldBase part at +0x40 and no fields of their own; their main vftables keep the 26
 // AvmInteractiveObj slots. The +0x40 part brings a third AvmDisplayObjBase, so every base virtual gets an overrider
@@ -579,6 +588,24 @@ public:
     TextField*  GetTextField() const { return reinterpret_cast<TextField*>(pDispObj); }
 };
 static_assert(sizeof(AvmTextField) == 0x48, "AvmTextField size");
+
+// (appended, sfr24) AS3 part of a static text: an AvmDisplayObj with no fields of its own. 0x30 bytes; vftable
+// 0x14317e9b8 (AvmDisplayObj's but for 0, 16, 17). Ctor 0x1424d6650; ??_G 0x1424e2a70 stores the vftable before
+// ~AvmDisplayObj, so the destructor is the explicit empty one.
+class AvmStaticText : public AvmDisplayObj
+{
+public:
+    AvmStaticText(StaticTextCharacter* ptxt);
+    virtual ~AvmStaticText() {}
+
+    virtual const char* GetDefaultASClassName() const   { return "flash.text.StaticText"; }    // 16 0x142508970
+    virtual String&     GetASClassName(String* className) const                                // 17 0x142505fd0
+    {
+        *className = "flash.text.StaticText";
+        return *className;
+    }
+};
+static_assert(sizeof(AvmStaticText) == 0x30, "AvmStaticText size");
 #endif // SF_AS3_AVMBUTTON_MODEL
 
 // The exe's AvmMovieClip vftables (main, AvmInteractiveObj, AvmDisplayObjContainer, AvmSpriteBase parts).
