@@ -7667,6 +7667,95 @@ bool Sfr31SetArray(UPInt root, int type, UPInt path, UInt32 start, const void* d
     }
     return ok;
 }
+// ---- batch 74
+// callproperty opcode: the receiver is popped, the property looked up on it (a missing one is an error unless the object is dynamic) and
+// the value found called with the popped arguments, the result pushed.
+// MS2-FUNCTIONAL 0x142534100: raw-offset model; codegen differs from the exe
+// @0x142534100
+void Sfr31ExecCallProperty(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, reinterpret_cast<VM*>(Sfr31Rd(file, 0x20)), argc);
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(raBuf, &mn);
+    const UPInt topSlot = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8) + 8;
+    UPInt obj[4];
+    for (int i = 0; i < 4; ++i)
+        obj[i] = Sfr31Rd(Sfr31Rd(topSlot, 0), i * 8);
+    Sfr31Wr(topSlot, 0, Sfr31Rd(topSlot, 0) - 0x20);
+    Sfr31ThrowIfNullOperand(vmAddr, reinterpret_cast<const UInt32*>(obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        UPInt pr[6] = {0, 0, 0, 0, 0, 0};
+        FUN_142501b00(reinterpret_cast<PropRef*>(pr), &vm, reinterpret_cast<const Value*>(obj), &mn, 2);
+        Value& res = *reinterpret_cast<Value*>(&pr[2]);
+        const UPInt f = pr[0];
+        if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+        {
+            const UPInt traits = FUN_14250ffc0(&vm, reinterpret_cast<const Value*>(obj));
+            alignas(8) char eb[sizeof(VM::Error)];
+            if (((*reinterpret_cast<const UInt8*>(traits + 0x68) >> 1) & 1) == 0)
+            {
+                FUN_1424d6cf0(eb, 0x42d, &vm, reinterpret_cast<UInt8*>(&mn) + 0x10, obj);
+                vm.ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
+            }
+            else
+            {
+                FUN_1424d6f40(eb, 0x3ee, &vm, reinterpret_cast<UInt8*>(&mn) + 0x10);
+                vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+            }
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+        }
+        else
+        {
+            Value e;
+            const UPInt kind = f & 3;
+            bool have = true;
+            if (kind == 0)
+            {
+                UInt8 ret[16];
+                have = *FUN_14250e2d0(f, ret, &vm, &e, &res, 0, 0) != 0;
+            }
+            else if (kind == 1)
+                e.Assign(*reinterpret_cast<const Value*>(f & ~static_cast<UPInt>(1)));
+            else if (kind == 2)
+            {
+                const UPInt g = f & ~static_cast<UPInt>(2);
+                UPInt raw[4] = { 0xc, 0, g, 0 };
+                if (g != 0)
+                    *reinterpret_cast<UInt32*>(g + 0x10) = (*reinterpret_cast<UInt32*>(g + 0x10) + 1u) & 0x8fbfffffu;
+                e.Assign(*reinterpret_cast<const Value*>(raw));
+                FUN_142521f00(raw);
+            }
+            if (have)
+            {
+                const UInt32 ek = *reinterpret_cast<const UInt32*>(&e) & 0x1f;
+                const UPInt eo = Sfr31Rd(reinterpret_cast<UPInt>(&e), 0x10);
+                if (ek != 0 && (ek - 0xc >= 4 || eo != 0))
+                {
+                    const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+                    const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
+                    Value result(Value::GetUndefined());
+                    FUN_1424fef00(&vm, &e, obj, &result, argc, args, 1);
+                    result.~Value();
+                }
+                else
+                {
+                    alignas(8) char eb[sizeof(VM::Error)];
+                    FUN_1424d6f40(eb, 0x3ee, &vm, reinterpret_cast<UInt8*>(&mn) + 0x10);
+                    vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+                    reinterpret_cast<VM::Error*>(eb)->~Error();
+                }
+            }
+            e.~Value();
+        }
+        res.~Value();
+    }
+    reinterpret_cast<Value*>(obj)->~Value();
+    mn.~Multiname();
+    FUN_1424de9e0(raBuf);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
