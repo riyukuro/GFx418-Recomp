@@ -211,6 +211,7 @@ void FUN_142520e60(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   /
 void FUN_142520f30(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   // TR::State: binary typed op
 void FUN_142520d80(Scaleform::UPInt state, Scaleform::UPInt traits, int op, unsigned int idx);   // TR::State: typed op on a register
 void FUN_1424f1ed0(Scaleform::UPInt state, unsigned int ind, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertRegisterTo
+void FUN_14251bdc0(Scaleform::UPInt vm, void* value);   // VM: flush a pending value
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -9367,6 +9368,98 @@ void Sfr31PushNewInstanceOfOwner(UPInt vm, UPInt own)
     *reinterpret_cast<UInt32*>(top) = 0xc;
     Sfr31Wr(top, 8, 0);
     Sfr31Wr(top, 0x10, reinterpret_cast<UPInt>(obj));
+}
+// ---- batch 81
+// The AVM flavor of a SetVariable value waiting for its target (0x40 bytes; the base lives in the player unit).
+struct Sfr31AvmStickyVarNode : public NewOverrideBase<0x147>
+{
+    ASString Name;          // +0x08
+    void*    pNext;         // +0x10
+    bool     Permanent;     // +0x18
+    Value    Val;           // +0x20
+
+    Sfr31AvmStickyVarNode(const ASString& name, bool perm, const Value& v) : Name(name), pNext(NULL), Permanent(perm), Val(v) {}
+    virtual ~Sfr31AvmStickyVarNode() {}
+    virtual void Assign(const Sfr31AvmStickyVarNode& n) { Name = n.Name; Permanent = n.Permanent; Val = n.Val; }
+};
+
+// MovieRoot::SetVariable: sets the member after the last '.' of the path on the object the rest of the path resolves to
+// ("root" when there is no dot). setType 1 keeps the value for a target that does not exist yet, 2 keeps it permanently.
+// MS2-FUNCTIONAL 0x14252a700: the multiname is built in a local structure and the string reference counts are folded into ASString; the sticky node is a local class standing in for the exe one
+// @0x14252a700
+char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValue, int setType)
+{
+    ASStringManager* const mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
+    const UPInt len = strlen(path);
+    const char* dot = NULL;
+    for (UPInt i = len; i != 0; --i)
+        if (path[i] == '.')
+        {
+            dot = path + i;
+            break;
+        }
+    ASString member(mgr->CreateStringNode(dot != NULL ? dot + 1 : path));
+    ASString target(dot != NULL ? mgr->CreateStringNode(path, static_cast<UPInt>(dot - path)) : mgr->CreateStringNode("root"));
+
+    Value targetVal;
+    if (!FUN_142506000(root, &targetVal, *reinterpret_cast<const UPInt*>(Sfr31Rd(reinterpret_cast<UPInt>(&target), 0))))
+        return 0;
+
+    const UPInt memberNode = Sfr31Rd(reinterpret_cast<UPInt>(&member), 0);
+    struct Mn
+    {
+        UInt32 Flags;
+        UPInt  Ns;
+        Value  Name;
+    } mn;
+    mn.Flags = 0;
+    mn.Ns = Sfr31Rd(Sfr31Rd(root, 0x48), 0x1d0);
+    if (mn.Ns != 0)
+        *reinterpret_cast<UInt32*>(mn.Ns + 0x10) = (*reinterpret_cast<UInt32*>(mn.Ns + 0x10) + 1u) & 0x8fbfffffu;
+    if (memberNode == Sfr31Rd(memberNode, 8) + 0x68)
+        mn.Name = Value::GetNull();
+    else
+    {
+        mn.Name = member;
+        const UInt32 n = *reinterpret_cast<const UInt32*>(memberNode + 0x20);
+        if (n != 0)
+        {
+            const char* s = *reinterpret_cast<const char* const*>(memberNode);
+            if (s[0] == '*' || s[0] == '@')
+            {
+                bool any = s[0] == '*';
+                if (s[0] == '@')
+                {
+                    mn.Flags = 8;
+                    any = n == 2 && s[1] == '*';
+                }
+                if (any)
+                    mn.Name = ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(memberNode, 8) + 0x40));
+                else if (s[0] == '@')
+                    mn.Name = ASString(member.SubstringNode(1, static_cast<int>(n)));
+            }
+        }
+    }
+
+    Value converted;
+    FUN_1425048d0(root, gfxValue, &converted);
+    typedef char* (*SetPropFn)(void*, void*, void*, void*);
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(&targetVal), 0x10);
+    UPInt resSlot = 0;
+    char result = *reinterpret_cast<SetPropFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x30))(reinterpret_cast<void*>(obj), &resSlot, &mn, &converted);
+    if (((result == 0 && setType != 0) || setType == 2) && *reinterpret_cast<const UInt32*>(memberNode + 0x20) != 0)
+    {
+        Sfr31AvmStickyVarNode* node = new Sfr31AvmStickyVarNode(member, setType == 2, converted);
+        reinterpret_cast<MovieImpl*>(Sfr31Rd(root, 0x10))->AddStickyVariableNode(target, reinterpret_cast<MovieImpl::StickyVarNode*>(node));
+    }
+    const UPInt vm = Sfr31Rd(root, 0x48);
+    if (*reinterpret_cast<const UByte*>(vm + 0x180) != 0)
+    {
+        *reinterpret_cast<UByte*>(vm + 0x180) = 0;
+        FUN_14251bdc0(vm, reinterpret_cast<void*>(vm + 0x188));
+        reinterpret_cast<Value*>(vm + 0x188)->SetUndefined();
+    }
+    return result;
 }
 }}} // namespace Scaleform::GFx::AS3
 
