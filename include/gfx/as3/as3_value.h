@@ -74,7 +74,7 @@ namespace Instances
     class FunctionBase;
     class ThunkFunction;
     class Namespace;
-    namespace fl { class GlobalObject; }
+    namespace fl { class GlobalObject; class GlobalObjectCPP; }
 }
 namespace InstanceTraits { class Traits; }
 namespace ClassTraits    { class Traits; }
@@ -1060,6 +1060,9 @@ struct ClassInfo : public TypeInfo
 
     const ClassInfo* GetParentInfo() const { return static_cast<const ClassInfo*>(Parent); }
 };
+
+// Specialized out of line in sfr_as3_15 (@0x1424d2590); declared so no other unit instantiates the generic one.
+template <> void Value::AssignUnsafe<Instances::fl::GlobalObjectCPP>(const SPtr<Instances::fl::GlobalObjectCPP>& v);
 
 }}} // namespace Scaleform::GFx::AS3
 

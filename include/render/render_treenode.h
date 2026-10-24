@@ -336,7 +336,7 @@ public:
     bool Add(TreeNode* node) { return Insert(GetSize(), node); }
 
     TreeNode* GetAt(UPInt index) const { return GetReadOnlyData()->Children.GetAt(index); }
-    UPInt     GetSize() const          { return GetReadOnlyData()->Children.GetSize(); }
+    UPInt     GetSize() const;         // out of line, 0x14250dbc0 (sfr_as3_18)
 };
 
 inline TreeNode* TreeNode::GetParent() const { return static_cast<TreeNode*>(ContextImpl::Entry::GetParent()); }

@@ -1863,4 +1863,15 @@ static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::XMLList) == 0xe8, 
 static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::int_) == 0xe8, "int_ size");
 static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::uint) == 0xe8, "uint size");
 
+// SparseArray::ValueH's add<HashNode> is specialized out of line in sfr_as3_01c (@0x1423eacc0); declared so the
+// units holding a SparseArray don't instantiate the generic one.
+namespace Scaleform {
+typedef HashNode<UPInt, GFx::AS3::Value, FixedSizeHash<UPInt>> MS2_SparseValueNode;
+template <> template <>
+void HashSetBase<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF, MS2_SparseValueNode::NodeAltHashF,
+                 AllocatorDH<MS2_SparseValueNode, Stat_Default_Mem>,
+                 HashsetCachedNodeEntry<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF>>::
+    add<MS2_SparseValueNode>(void* pheapAddr, const MS2_SparseValueNode& key, UPInt hashValue);
+} // namespace Scaleform
+
 #endif

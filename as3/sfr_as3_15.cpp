@@ -2108,6 +2108,7 @@ class AvmLoader : public DisplayObjContainer, public AvmDisplayObjContainer
 {
 public:
     AvmLoader(ASMovieRootBase* pasRoot, MovieDefImpl* pdefImpl, InteractiveObject* pparent, ResourceId id);
+    virtual ~AvmLoader();   // sfr_as3_16
 
     virtual CharacterDef* GetCharacterDef() const;   // 0x142507b40, returns NULL
 };
