@@ -43,6 +43,7 @@
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
+#include "ms2/scaleform/include/gfx/as3/as3_userdefinedfunction.h"
 // Out of line in the exe (instantiated in sfr_as3_01c).
 extern template Scaleform::String Scaleform::AsString<long>(const long&);
 extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned long&);
@@ -5865,6 +5866,8 @@ class AS3ValueObjectInterface : public Value::ObjectInterface
 private:
     virtual bool GetCxform(void* pdata, Render::Cxform* pcx) const;
     virtual bool GetDisplayMatrix(void* pdata, Render::Matrix2F* pmat) const;
+    virtual unsigned GetArraySize(void* pdata) const;
+    virtual AMP::ViewStats* GetAdvanceStats() const;
 };
 
 // The color transform of the display object pdata scripts.
@@ -6055,6 +6058,306 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
     *pval = resolvedVal;
     return true;
 }
+
+// ---- (sfr24) bodies of virtuals the full exe links by name (work/sfr35/outside-units.tsv) ----
+void FUN_1425303b0(Scaleform::UPInt entry);   // shutdown of a registered entry (sfr_as3_19)
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Calling the class constructs an instance.
+// @0x1424ee7d0
+void ClassCallConstruct::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+{
+    Construct(result, argc, argv);
+}
+
+// A plain object is not callable: nothing happens.
+// @0x1424ee7f0
+void Object::Call(const Value& /*_this*/, Value& /*result*/, unsigned /*argc*/, const Value* const /*argv*/)
+{
+}
+
+// The default conversion keeps the value as it is.
+// @0x1424f1cf0
+Value Class::ConvertCopy(const Value& v, const Traits& /*ot*/) const
+{
+    return v;
+}
+
+// The base support (E4X off) knows no XML: nothing to report, compare or walk.
+// @0x1424f4a80
+void XMLSupport::DescribeType(VM& /*vm*/, SPtr<Instances::fl::XML>& /*result*/, const Value& /*value*/) const
+{
+}
+
+// @0x1424f97d0
+CheckResult XMLSupport::EqualsQName(bool& result, Instances::fl::QName& /*l*/, Instances::fl::QName& /*r*/) const
+{
+    result = false;
+    return false;
+}
+
+// @0x1424f9830
+CheckResult XMLSupport::EqualsXML(bool& stop, bool& result, Instances::fl::XML& /*l*/, const Value& /*r*/) const
+{
+    stop   = true;
+    result = false;
+    return false;
+}
+
+// @0x1424f9840
+CheckResult XMLSupport::EqualsXML(bool& result, Instances::fl::XML& /*l*/, Instances::fl::XML& /*r*/) const
+{
+    result = false;
+    return false;
+}
+
+// @0x1424f9ad0
+CheckResult XMLSupport::EqualsXMLList(bool& result, Instances::fl::XMLList& /*l*/, const Value& /*v*/) const
+{
+    result = false;
+    return false;
+}
+
+// @0x142504510
+void XMLSupport::ForEachChild_GC(Collector* /*prcc*/, GcOp /*op*/) const
+{
+}
+
+// @0x142504520
+void XMLSupportImpl::ForEachChild_GC(Collector* /*prcc*/, GcOp /*op*/) const
+{
+}
+
+// @0x142509130
+CheckResult XMLSupport::GetDescendants(Value& /*v*/, const Multiname& /*mn*/) const
+{
+    return false;
+}
+
+// @0x1425080a0
+const ClassTraits::Traits* XMLSupport::GetClassTraitsQName() const
+{
+    return NULL;
+}
+
+// @0x1425080c0
+const ClassTraits::Traits* XMLSupport::GetClassTraitsXML() const
+{
+    return NULL;
+}
+
+// @0x1425080e0
+const ClassTraits::Traits* XMLSupport::GetClassTraitsXMLList() const
+{
+    return NULL;
+}
+
+// A plain display object has no children to give up.
+// @0x1424f7180
+bool AvmDisplayObj::DetachChild(DisplayObjectBase* /*ch*/)
+{
+    return false;
+}
+
+// Containers run no frame scripts of their own (sprites do).
+// @0x1424fe5f0
+void AvmDisplayObjContainer::ExecuteFrame0Events()
+{
+}
+
+// @0x1424feaa0
+void AvmDisplayObjContainer::ExecuteFrameTags(unsigned /*frame*/)
+{
+}
+
+// @0x1424fee00
+void AvmDisplayObjContainer::ExecuteInitActionFrameTags(unsigned /*frame*/)
+{
+}
+
+// @0x142504800
+void AvmDisplayObjContainer::ForceShutdown()
+{
+}
+
+// The script part of the host call: the body shared with Execute.
+// @0x142500250
+void UserDefinedFunction::ExecuteUnsafe(const Value& _this, Value& result, unsigned argc, const Value* argv)
+{
+    FUN_1424feb00(this, _this, result, argc, argv);
+}
+
+// The VM drops the file from its list of loaded ABC files.
+// @0x1425008d0
+void VMAbcFile::Finalize_GC()
+{
+    FUN_1425303b0((UPInt)this);
+}
+
+// @0x142505e40
+const char* VMAbcFile::GetAS3ObjectType() const
+{
+    return "VMAbcFile";
+}
+
+// A new character goes into the play list right before its parent.
+// @0x142501a60
+InteractiveObject* AvmInteractiveObj::FindInsertToPlayList(InteractiveObject* ch)
+{
+    InteractiveObject* parent = ch->GetParent();
+    return parent ? parent->pPlayPrev : NULL;
+}
+
+// @0x142508530
+unsigned AvmInteractiveObj::GetCursorType() const
+{
+    return 0;
+}
+
+// @0x142508910
+const char* AvmDisplayObj::GetDefaultASClassName() const
+{
+    return "flash.display.DisplayObject";
+}
+
+// @0x142508920
+const char* AvmDisplayObjContainer::GetDefaultASClassName() const
+{
+    return "flash.display.DisplayObjectContainer";
+}
+
+// @0x142508930
+const char* AvmInteractiveObj::GetDefaultASClassName() const
+{
+    return "flash.display.InteractiveObject";
+}
+
+// (outside-units.tsv names this VA AvmDisplayObjContainer; the string and symbols-manual say AvmLoader)
+// @0x142508940
+const char* AvmLoader::GetDefaultASClassName() const
+{
+    return "flash.display.Loader";
+}
+
+// @0x142508950
+const char* AvmSprite::GetDefaultASClassName() const
+{
+    return "flash.display.Sprite";
+}
+
+// The dynamic property in slot ind of the dynamic attribute table.
+// @0x142509a80
+void Object::GetDynamicProperty(AbsoluteIndex ind, Value& value)
+{
+    DynAttrsType::Iterator it = DynAttrs.Begin();
+    value.Assign(DynAttrsType::Iterator(it.GetContainer(), ind.Get())->Second);
+}
+
+// Only traits made from an ABC file have one.
+// @0x142509ca0
+VMAbcFile* Traits::GetFilePtr() const
+{
+    return NULL;
+}
+
+// @0x142509d30
+unsigned Traits::GetFixedMemSize() const
+{
+    return MemSize;
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx {
+
+// @0x1424eeca0
+int InteractiveObject::CheckAdvanceStatus(bool /*playingNow*/)
+{
+    return 0;
+}
+
+// @0x1424f74c0
+void DisplayObject::DoDisplayCallback()
+{
+}
+
+// The host's display callback, when one is set.
+// @0x1424f74d0
+void InteractiveObject::DoDisplayCallback()
+{
+    if (pDisplayCallback)
+        pDisplayCallback(DisplayCallbackUserPtr);
+}
+
+// @0x1424fe610
+void InteractiveObject::ExecuteFrame0Events()
+{
+}
+
+// @0x1424fedf0
+void DisplayObjContainer::ExecuteImportedInitActions(MovieDef* /*psourceMovie*/)
+{
+}
+
+// @0x142504840
+void DisplayObjectBase::ForceShutdown()
+{
+}
+
+// @0x142506ef0
+bool DisplayObject::GetAcceptAnimMoves() const
+{
+    return (Flags & Mask_AcceptAnimMoves) != 0;
+}
+
+// @0x1425084c0
+bool DisplayObject::GetContinueAnimationFlag() const
+{
+    return (Flags & Mask_ContinueAnimation) != 0;
+}
+
+// @0x1425084d0
+unsigned InteractiveObject::GetCurrentFrame() const
+{
+    return 0;
+}
+
+// A character without geometry has empty bounds.
+// @0x142507900
+RectF DisplayObjectBase::GetBounds(const Matrix& /*t*/) const
+{
+    return RectF(0, 0, 0, 0);
+}
+
+// @0x142507b50
+CharacterDef* DisplayObjContainer::GetCharacterDef() const
+{
+    return NULL;
+}
+
+// @0x142509990
+DrawingContext* DisplayObject::GetDrawingContext()
+{
+    return NULL;
+}
+
+// The length of the AS3 array pdata (its SparseArray Length, +0x38; the Array instance class is not visible here).
+// MS2-FUNCTIONAL: raw Array instance offset
+// @0x142507540
+unsigned AS3ValueObjectInterface::GetArraySize(void* pdata) const
+{
+    return (unsigned)*reinterpret_cast<const UPInt*>(static_cast<const UByte*>(pdata) + 0x38);
+}
+
+// The movie's advance statistics.
+// @0x1425071d0
+AMP::ViewStats* AS3ValueObjectInterface::GetAdvanceStats() const
+{
+    return (AMP::ViewStats*)pMovieRoot->pASMovieRoot->GetMovieImpl()->pAdvanceStats;
+}
+
+}} // namespace Scaleform::GFx
 
 // MS2-PIN: ?ConstructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAX_KPEBVValue@AS3@GFx@2@@Z 0x1424f08d0
 // MS2-PIN: ?Construct@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBVValue@AS3@GFx@2@@Z 0x1424f05a0
