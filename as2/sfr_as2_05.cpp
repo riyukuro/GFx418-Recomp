@@ -4374,6 +4374,8 @@ Value StringObject::GetValue() const { return Value(sValue); }
 } // namespace AS2
 
 }} // namespace Scaleform::GFx
+// MS2-FUNCTIONAL 0x142949f60: the pinned RegisteredClasses GetCaseCheck comdat (gfx_asstringhash.h) gets both
+// findIndexAlt lookups inlined by cl, the exe calls them out of line (0x1429172b0, 0x142916f50); same lookup
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
 // MS2-PIN: ?GetCaseCheck@?$ASStringHashBase@VFunctionRef@AS2@GFx@Scaleform@@V?$HashUncachedLH@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@$0BEE@@4@@GFx@Scaleform@@QEAAPEAVFunctionRef@AS2@23@AEBVASString@23@_N@Z 0x142949f60
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
