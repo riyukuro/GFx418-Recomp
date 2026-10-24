@@ -92,6 +92,8 @@ inline bool MemberHash_Get(const ASStringHash_GC<Member>* phash, const ASString&
     return true;
 }
 
+class ActionBuffer;
+
 // Interface of everything a script can address as an object (script objects at +0x20, characters).
 // vftable slots: 0x00 dtor .. 0xa0 Unwatch.
 class ObjectInterface
@@ -381,8 +383,7 @@ public:
 protected:
     FunctionObject(ASRefCountCollector* pcc);
     FunctionObject(ASStringContext* psc); // exe 0x14291c090
-    // The exe also has an out-of-line copy, 0x14291c0c0.
-    FunctionObject(Environment* penv) : Object(penv) {}
+    FunctionObject(Environment* penv); // exe 0x14291c0c0
 };
 
 // Native function. 0x70 bytes.
@@ -407,8 +408,8 @@ protected:
 
     CFunctionObject(ASRefCountCollector* pcc);
     CFunctionObject(ASStringContext* psc); // exe 0x142919d70
-    // A function object without a native (new Function()); the exe also has an out-of-line copy, 0x142919db0.
-    CFunctionObject(Environment* penv) : FunctionObject(penv), pFunction(0) {}
+    // A function object without a native (new Function()).
+    CFunctionObject(Environment* penv); // exe 0x142919db0
 
 public:
     // A native function object (exe 0x142919df0).
@@ -422,8 +423,21 @@ class AsFunctionObject : public FunctionObject
 {
 public:
     // The executable stores each parsed argument descriptor in 16 bytes; fields are not recovered in this header.
-    struct ArgSpec { UByte Unrecovered[0x10]; };
+    struct ArgSpec
+    {
+        UPInt    Unrecovered; // +0 not recovered
+        ASString Name;        // +8 released by the array's dtor (exe 0x142924180)
+    };
 
+    // (sfr32) A script function over actionbuffer's code, startPc for length bytes; pwithStack is a const
+    // WithStackArray* (declared after this header), execType an ActionBuffer::ExecuteType (exe 0x142918690).
+    AsFunctionObject(Environment* penv, ActionBuffer* pactionBuffer, unsigned startPc, unsigned length,
+                     const void* pwithStack, int execType);
+
+    virtual bool IsNull() const;                              // exe 0x142965cf0: false
+    virtual bool IsEqual(const FunctionObject& f) const;      // exe 0x142965500: false
+    virtual bool IsAsFunction() const;                        // exe 0x142964e40: true
+    virtual int  GetNumArgs() const;                          // exe 0x142954080: the count at +0xa8
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936880
 
     MovieImpl*           pMovieRoot;   // +0x68 0 for a function without a target
@@ -437,6 +451,10 @@ public:
     // +0x78 (action buffer, with stack, start pc, length, argument specs, flags) are used through a view in
     // sfr_as2_06b, since WithStackArray and ActionBuffer are declared after this header.
     virtual void Invoke(const FnCall& fn, LocalFrame*, const char* pmethodName);
+
+protected:
+    // (sfr31) Releases the name, argument specs, with stack, action buffer and target handle (exe 0x142942c00).
+    virtual void Finalize_GC();
 };
 
 SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)

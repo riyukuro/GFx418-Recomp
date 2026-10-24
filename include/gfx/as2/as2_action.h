@@ -60,6 +60,18 @@ public:
     ArrayLH<Page*, Stat_Default_Mem> Pages; // +0x20
     Page* pReserved;    // +0x38
 
+    // One page with a default element at the bottom (exe 0x14291b930 inlines it into Environment's constructor).
+    PagedStack() : pReserved(0)
+    {
+        Page* ppage = (Page*)SF_HEAP_AUTO_ALLOC(this, sizeof(Page));
+        Pages.PushBack(ppage);
+        pCurrent     = ppage->Values;
+        pPageStart   = ppage->Values;
+        pPageEnd     = ppage->Values + PageSize;
+        pPrevPageTop = ppage->Values;
+        Construct<T>(pCurrent);
+    }
+
     // Destroys every element down to the bottom one, then frees the pages (exe 0x142924c60 for Value).
     ~PagedStack()
     {
@@ -231,6 +243,10 @@ public:
     bool                                      IsInvalidTarget : 1;
     ArrayLH<Ptr<LocalFrame>, Stat_Default_Mem> LocalFrames;          // +0x180
 
+    Environment(); // exe 0x14291b930
+    // (sfr32) Out of line, exe 0x142925680 (the members release in reverse order).
+    virtual ~Environment();
+
     Value& Top(int dist) { return *Stack.Top((unsigned)dist); }
     Value* Bottom(int offset) { return Stack.Bottom((unsigned)offset); }
     int    GetTopIndex() const { return (int)Stack.GetTopIndex(); }
@@ -375,6 +391,9 @@ public:
 // stack; logs an error and returns false when it is not a function (exe 0x142946d10).
 bool GAS_Invoke(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
                 int firstArgBottomIndex, const char* pmethodName);
+// (sfr31) The same with the receiver given as a value, a character or an object (exe 0x142946a80).
+bool GAS_Invoke(const Value& method, Value* presult, const Value& thisVal, Environment* penv, int nargs,
+                int firstArgBottomIndex, const char* pmethodName);
 // (appended for sfr_as2_06) The same for the method named pmethodName on pthis (exe 0x142946fc0); the arguments
 // pushed from pmethodArgFmt and the va_list (exe 0x142947800).
 bool GAS_Invoke(const char* pmethodName, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
@@ -416,6 +435,8 @@ public:
         : Result(res), ThisPtr(pthis), Env(penv), NArgs(nargs), FirstArgBottomIndex(firstArgBottomIndex)
     {
     }
+    // The this value is resolved to its object; a function value is kept as the function ref (exe 0x14291be60).
+    FnCall(Value* res, const Value& thisVal, Environment* penv, int nargs, int firstArgBottomIndex);
     // Out of line in the exe (0x140007af0).
     ~FnCall();
 
@@ -572,7 +593,8 @@ public:
     enum ExecuteType
     {
         Exec_Unknown = 0,
-        Exec_Function = 3 // (appended for sfr_as2_06)
+        Exec_Function = 3, // (appended for sfr_as2_06)
+        Exec_Event    = 4  // (sfr32) a clip event handler body
     };
     // Runs the whole buffer in env (exe 0x142939e30).
     void Execute(Environment* env);
@@ -580,6 +602,12 @@ public:
     // with stack pinitialWithStack (exe 0x142939e60).
     void Execute(Environment* env, int startPc, int execBytes, Value* retval, const WithStackArray* pinitialWithStack,
                  ExecuteType execType);
+
+protected:
+    // (sfr22) The frame of a goto value: a 1-based number or a "[path:]label" string, the clip of the label to
+    // *pchar (exe 0x14297e870).
+    bool ResolveFrameNumber(Environment* env, const Value& frameValue, InteractiveObject** pchar,
+                            unsigned* frameNumber);
 };
 
 SF_FORCEINLINE void FunctionRefBase::DropRefs()

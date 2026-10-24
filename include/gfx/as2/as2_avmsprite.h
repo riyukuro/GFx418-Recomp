@@ -150,7 +150,7 @@ public:
     int                                     Level;           // +0x1d0 -1 until the clip is made a level movie
     Ptr<MovieClipObject>                    pMovieClipObj;   // +0x1d8 created on first use
     ArrayLH<bool, StatMV_ActionScript_Mem>  InitActionsExecuted; // +0x1e0 per frame
-    bool                                    Unrecovered_1f8;  // +0x1f8 cleared by the constructor
+    bool                                    Unrecovered_1f8;  // +0x1f8 cleared by the constructor (FillTabableArray reads it as the clip's tabChildren: 0 unset, 2 off)
 
     // (appended for sfr_as2_02)
     static void SpriteCreateTextField(const FnCall& fn); // exe 0x142906040
@@ -229,6 +229,16 @@ public:
     virtual bool IsLevelMovie() const;                               // exe 0x142965ce0
     virtual bool CheckCandidateListLevel(int level) const;           // exe 0x142933430
     virtual void SetHitAreaNotify(Sprite* phitArea);                 // exe 0x142981670
+
+    // (appended for sfr_as2_06e)
+    // pnewChar takes the place, properties and name of poldChar, which gets its unload event (exe 0x14297d330).
+    virtual bool ReplaceChildCharacter(InteractiveObject* poldChar, InteractiveObject* pnewChar);
+
+private:
+    // Natives run on a clip of a registered class: it takes the prototype of the constructor in Arg(0)
+    // (exe 0x142961d80); the members of the init object in Arg(0) are set on it (exe 0x142961a40).
+    static void InitializeClassInstance(const FnCall& fn);
+    static void InitObjectMembers(const FnCall& fn);
 };
 
 inline Sprite* ObjectInterface::ToSprite()

@@ -259,6 +259,8 @@ public:
     // The prototype instance has no button.
     ButtonObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
     inline ButtonObject(Environment* penv); // defined in sfr_as2_04
+    // The AS object of a button character (AvmButton::GetButtonASObject, defined in sfr_as2_05d).
+    inline ButtonObject(GlobalContext* pgc, InteractiveObject* pbutton);
 
     virtual ObjectType GetObjectType() const; // exe 0x1429541e0: Object_ButtonASObject
     virtual InteractiveObject*       GetASCharacter();       // exe 0x1429490c0
@@ -636,9 +638,11 @@ public:
 
 protected:
     friend class TextFieldCtorFunction;
+    friend class AvmTextField; // GetTextFieldASObject
     template<class BaseClass, class GASEnvironment> friend class Prototype;
     TextFieldObject(ASStringContext* psc, Object* pprototype); // exe 0x142921520
     TextFieldObject(Environment* penv);                        // exe 0x142921580
+    TextFieldObject(GlobalContext* gCtxt, InteractiveObject* ptextField); // exe 0x1429215f0
 
     virtual void Finalize_GC(); // exe 0x1429430b0
 };
@@ -1210,6 +1214,7 @@ public:
 class StageCtorFunction : public CFunctionObject
 {
 public:
+    StageCtorFunction(ASStringContext* psc, MovieImpl* pmovie); // exe 0x142920950
     static void GlobalCtor(const FnCall& fn); // exe 0x14295c6f0
 
     // Extension members visibleRect, safeRect (the visible rect when unset) and originalRect, as new Rectangle
