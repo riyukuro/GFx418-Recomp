@@ -1323,9 +1323,17 @@ using SfrCx18DisplayObjectNode = HashNode<int, SfrCx18DisplayObjectList, Identit
 using SfrCx18DisplayObjectSet = HashSetBase<SfrCx18DisplayObjectNode,
     SfrCx18DisplayObjectNode::NodeHashF, SfrCx18DisplayObjectNode::NodeAltHashF,
     AllocatorLH<int, 2>, HashsetNodeEntry<SfrCx18DisplayObjectNode, SfrCx18DisplayObjectNode::NodeHashF> >;
+using SfrCx18DynAttrsNode = HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Value,
+    GFx::AS3::Object::DynAttrsKeyHashFunctor>;
+using SfrCx18DynAttrsSet = HashSetBase<SfrCx18DynAttrsNode, SfrCx18DynAttrsNode::NodeHashF,
+    SfrCx18DynAttrsNode::NodeAltHashF, AllocatorLH<GFx::AS3::Object::DynAttrsKey, 2>,
+    HashsetCachedNodeEntry<SfrCx18DynAttrsNode, SfrCx18DynAttrsNode::NodeHashF> >;
 // MS2-FUNCTIONAL: destroys every occupied node and frees the table; the template expansion has different frame/unwind codegen.
 // @0x1424dcbb0
 template SfrCx18DisplayObjectSet::~HashSetBase();
+// MS2-FUNCTIONAL: releases the occupied dynamic-property nodes and frees their table; template expansion changes unwind codegen.
+// @0x1424dce80
+template SfrCx18DynAttrsSet::~HashSetBase();
 }
 
 extern "C" void FUN_1423dfa20();
