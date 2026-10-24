@@ -96,6 +96,11 @@ bool* FUN_1424f1390(Scaleform::GFx::AS3::Value* v, void* tmpNode, void* strOut);
 void FUN_1424e0860(void* out);                                                      // assign from the scratch value
 void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);                      // ArrayDH<Value>::Resize growth
 void FUN_142521f00(void* value);                                                    // Value::ReleaseInternal
+Scaleform::SPInt FUN_1425f9200(void* list, void* obj);                          // DisplayList::FindDisplayIndex(const DisplayObjectBase*)
+bool FUN_1425fb480(void* list, void* owner, Scaleform::UPInt i1, Scaleform::UPInt i2);   // DisplayList::SwapEntriesAtIndexes
+void FUN_142517ed0(void* avmInteractiveObj);                                     // AvmInteractiveObj::MoveBranchInPlayList
+int FUN_142520380(void* ctx, void* multiname);                                    // Tracer: number of run-time operands a multiname takes off the stack
+void FUN_142501e80(void* state, void* propRef, void* multiname, void* a, void* b);   // Tracer: resolve a multiname to a property reference
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -3255,6 +3260,460 @@ void Sfr31ExecIndexedQuery(UPInt vm)
         Value res(static_cast<SInt32>(*r));
         reinterpret_cast<Value*>(cur)->Assign(res);
     }
+}
+// ---- batch 24
+// Value -> Boolean conversion used by the tracer, in place.
+// MS2-FUNCTIONAL 0x14252f4f0: behavior-equivalent recovery; codegen differs from exe
+// @0x14252f4f0
+void Sfr31ValueToBool(Value* v)
+{
+    const UInt32 kind = *reinterpret_cast<const UInt32*>(v) & 0x1f;
+    const UPInt p = reinterpret_cast<UPInt>(v);
+    bool r = false;
+    switch (kind)
+    {
+    case 1:
+        r = *reinterpret_cast<const UInt8*>(p + 0x10) != 0;
+        break;
+    case 2:
+    case 3:
+        r = *reinterpret_cast<const int*>(p + 0x10) != 0;
+        break;
+    case 4:
+    {
+        const UInt64 bits = *reinterpret_cast<const UInt64*>(p + 0x10);
+        const bool nan = (bits & 0x7ff0000000000000ull) == 0x7ff0000000000000ull && (bits & 0xfffffffffffffull) != 0;
+        r = !nan && (bits & 0x7fffffffffffffffull) != 0;
+        break;
+    }
+    case 5:
+    case 7:
+    case 0x10:
+    case 0x11:
+        r = true;
+        break;
+    case 10:
+    {
+        const UPInt node = Sfr31Rd(p, 0x10);
+        r = node != 0 && *reinterpret_cast<const int*>(node + 0x20) != 0;
+        break;
+    }
+    case 0xc:
+    case 0xd:
+    case 0xe:
+    case 0xf:
+        r = Sfr31Rd(p, 0x10) != 0;
+        break;
+    default:
+        break;
+    }
+    v->SetBool(r);
+}
+
+static bool Sfr31SwapChildrenTail(UPInt owner, UPInt i1, UPInt i2)
+{
+    if (i1 >= Sfr31Rd(owner, 0xe0) || i2 >= Sfr31Rd(owner, 0xe0))
+        return false;
+    if (!FUN_1425fb480(reinterpret_cast<void*>(owner + 0xd8), reinterpret_cast<void*>(owner), i1, i2))
+        return false;
+    const UPInt list = Sfr31Rd(owner, 0xd8);
+    const UPInt c1 = Sfr31Rd(list, i1 * 0x10);
+    const UPInt c2 = Sfr31Rd(list, i2 * 0x10);
+    typedef void (*Fn)(UPInt, UInt32);
+    if (c1 != 0)
+    {
+        reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(c1, 0), 0x188))(c1, 0);
+        *reinterpret_cast<UInt32*>(c1 + 0x30) = 0;
+        *reinterpret_cast<UInt32*>(c1 + 0x2c) = 0xffffffffu;
+    }
+    if (c2 != 0)
+    {
+        reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(c2, 0), 0x188))(c2, 0);
+        *reinterpret_cast<UInt32*>(c2 + 0x30) = 0;
+        *reinterpret_cast<UInt32*>(c2 + 0x2c) = 0xffffffffu;
+    }
+    *reinterpret_cast<UInt8*>(owner + 0x100) |= 3;
+    typedef UPInt (*Fn2)(UPInt);
+    UPInt avm = 0;
+    if (*reinterpret_cast<const SInt8*>(c1 + 0x6a) < 0)
+    {
+        const UPInt sub = c1 + static_cast<UPInt>(*reinterpret_cast<const UInt8*>(c1 + 0x6d)) * 4;
+        const UPInt r = reinterpret_cast<Fn2>(Sfr31Rd(Sfr31Rd(sub, 0), 8))(sub);
+        avm = r != 0 ? r - 0x30 : 0;
+        FUN_142517ed0(reinterpret_cast<void*>(avm));
+    }
+    if (*reinterpret_cast<const SInt8*>(c2 + 0x6a) < 0)
+    {
+        const UPInt sub = c2 + static_cast<UPInt>(*reinterpret_cast<const UInt8*>(c2 + 0x6d)) * 4;
+        const UPInt r = reinterpret_cast<Fn2>(Sfr31Rd(Sfr31Rd(sub, 0), 8))(sub);
+        FUN_142517ed0(reinterpret_cast<void*>(r != 0 ? r - 0x30 : 0));
+    }
+    return true;
+}
+
+// AvmDisplayObjContainer::SwapChildren: swaps two children of the display list.
+// MS2-FUNCTIONAL 0x14252e590: raw-offset model; codegen differs from the exe
+// @0x14252e590
+bool Sfr31SwapChildren(UPInt self, UPInt ch1, UPInt ch2)
+{
+    const UPInt owner = Sfr31Rd(self, 0x18);
+    const UPInt list = owner + 0xd8;
+    const UInt32 i1 = static_cast<UInt32>(FUN_1425f9200(reinterpret_cast<void*>(Sfr31Rd(self, 0x18) + 0xd8), reinterpret_cast<void*>(ch1)));
+    const UInt32 i2 = static_cast<UInt32>(FUN_1425f9200(reinterpret_cast<void*>(list), reinterpret_cast<void*>(ch2)));
+    return Sfr31SwapChildrenTail(owner, i1, i2);
+}
+
+// AvmDisplayObjContainer::SwapChildrenAt
+// MS2-FUNCTIONAL 0x14252e6d0: raw-offset model; codegen differs from the exe
+// @0x14252e6d0
+bool Sfr31SwapChildrenAt(UPInt self, UInt32 i1, UInt32 i2)
+{
+    return Sfr31SwapChildrenTail(Sfr31Rd(self, 0x18), i1, i2);
+}
+// ---- batch 25
+// Strict equality of two values (same kind: payload compare; mixed Int/UInt/Number: numeric compare).
+// MS2-FUNCTIONAL 0x14252cbf0: behavior-equivalent recovery; codegen differs from exe
+// @0x14252cbf0
+bool Sfr31StrictEquals(const UInt32* a, const UInt32* b)
+{
+    const UInt32 ka = a[0] & 0x1f;
+    const UInt32 kb = b[0] & 0x1f;
+    const UPInt pa = reinterpret_cast<UPInt>(a);
+    const UPInt pb = reinterpret_cast<UPInt>(b);
+    if (ka != kb)
+    {
+        if (ka - 2 > 2 || kb - 2 > 2)
+            return false;
+        if (ka - 2 < 2)
+        {
+            if (kb == 2)
+                return static_cast<int>(b[4]) >= 0 && a[4] == b[4];
+            if (kb == 4)
+            {
+                const double d = static_cast<double>(static_cast<UInt64>(a[4]));
+                const double e = *reinterpret_cast<const double*>(pb + 0x10);
+                return d == e;
+            }
+        }
+        else
+        {
+            const double d = kb == 2 ? static_cast<double>(static_cast<int>(b[4])) : static_cast<double>(static_cast<UInt64>(b[4]));
+            return *reinterpret_cast<const double*>(pa + 0x10) == d;
+        }
+    }
+    switch (ka)
+    {
+    case 0:
+        return true;
+    case 1:
+        return static_cast<char>(a[4]) == static_cast<char>(b[4]);
+    case 2:
+    case 3:
+        return a[4] == b[4];
+    case 4:
+        return *reinterpret_cast<const double*>(pa + 0x10) == *reinterpret_cast<const double*>(pb + 0x10);
+    case 5:
+    case 10:
+    case 11:
+        return Sfr31Rd(pa, 0x10) == Sfr31Rd(pb, 0x10);
+    case 7:
+        return a[4] == b[4] && Sfr31Rd(pa, 0x18) == Sfr31Rd(pb, 0x18);
+    case 0x10:
+        return Sfr31Rd(pa, 0x18) == Sfr31Rd(pb, 0x18) && Sfr31Rd(pa, 0x10) == Sfr31Rd(pb, 0x10);
+    case 0x11:
+        return Sfr31Rd(pa, 0x18) == Sfr31Rd(pb, 0x18) && a[4] == b[4];
+    case 6:
+    case 8:
+    case 9:
+        return false;
+    default:
+        return ka <= 0x11 && Sfr31Rd(pa, 0x10) == Sfr31Rd(pb, 0x10);
+    }
+}
+
+// Tracer ops taking the two counts of a call and pushing an object value.
+// MS2-FUNCTIONAL 0x142533cb0: behavior-equivalent recovery; codegen differs from exe
+// @0x142533cb0
+void Sfr31TraceCallPushObject(State* st, UInt32 a, UInt32 b)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), a);
+    FUN_14251fcd0(s.Tracer(), b);
+    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, b);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
+    TrTraitsScratch t;
+    t.SetTraits(TrITraits(s.Tracer(), 0x1f8));
+    s.OpStack().PushBack(t.Get());
+    popped.Get().~Value();
+}
+
+// MS2-FUNCTIONAL 0x142535540: behavior-equivalent recovery; codegen differs from exe
+// @0x142535540
+void Sfr31TraceCallPushObjectB(State* st, UInt32 a, UInt32 b)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), a);
+    FUN_14251fcd0(s.Tracer(), b);
+    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, b);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
+    TrTraitsScratch t;
+    t.SetTraits(TrITraits(s.Tracer(), 0x1f8));
+    s.OpStack().PushBack(t.Get());
+    popped.Get().~Value();
+}
+
+struct Sfr31MnCtx
+{
+    UPInt vm;
+    State* st;
+    int pops;
+};
+
+static inline const Abc::Multiname& Sfr31MnEntry(UPInt abcLink, UInt32 idx)
+{
+    const UPInt file = TrRd(abcLink, 0x28);
+    return *reinterpret_cast<const Abc::Multiname*>(idx == 0 ? file + 0xe8 : static_cast<UPInt>(idx) * 0x10 + TrRd(file, 0xb8));
+}
+
+// Tracer op with a multiname: notes the name operand(s), pops the object and pushes an object value.
+// MS2-FUNCTIONAL 0x142537f00: behavior-equivalent recovery; codegen differs from exe
+// @0x142537f00
+void Sfr31TraceMnPopPush(State* st, UInt32 idx)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), idx);
+    const UPInt link = TrAbcLink(s.Tracer());
+    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
+    ctx.pops += FUN_142520380(&ctx, &mn);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    ++ctx.pops;
+    TrTraitsScratch t;
+    t.SetTraits(TrITraits(s.Tracer(), 0x210));
+    s.OpStack().PushBack(t.Get());
+    popped.Get().~Value();
+}
+
+// Tracer op with a multiname that pops the object and the value without pushing.
+// MS2-FUNCTIONAL 0x14253b640: behavior-equivalent recovery; codegen differs from exe
+// @0x14253b640
+void Sfr31TraceMnPop2(State* st, UInt32 idx)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), idx);
+    const UPInt link = TrAbcLink(s.Tracer());
+    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
+    TrPopped first;
+    FUN_14251cd30(st, &first.Get());
+    ++ctx.pops;
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
+    ctx.pops += FUN_142520380(&ctx, &mn);
+    TrPopped second;
+    FUN_14251cd30(st, &second.Get());
+    ++ctx.pops;
+    second.Get().~Value();
+    first.Get().~Value();
+}
+// ---- batch 26
+static void Sfr31ThrowIfNotObject(VM& vm, const UInt32* v)
+{
+    const UInt32 k = (v[0] & 0x1f) - 0xc;
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
+    if ((v[0] & 0x1f) == 0 || (k < 4 && obj == 0))
+    {
+        VM::Error e(static_cast<VM::ErrorID>((k < 4 ? (obj != 0) : 1u) + 0x3f1), vm);
+        vm.ThrowTypeError(e);
+    }
+}
+
+// Constructs the named class into a scratch value; a non-null object result is moved into *out, else *out is cleared.
+// MS2-FUNCTIONAL 0x142532130: raw-offset model; codegen differs from the exe
+// @0x142532130
+UInt8* Sfr31ConstructOrClear(UPInt self, UInt8* ret, UPInt* out, const char* gname, UInt32 argc, const Value* argv)
+{
+    Value tmp;
+    reinterpret_cast<VM*>(self)->Construct(gname, tmp, argc, argv, true);
+    const UInt32 kind = *reinterpret_cast<const UInt32*>(&tmp) & 0x1f;
+    if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 &&
+        (kind - 0xc > 3 || Sfr31Rd(reinterpret_cast<UPInt>(&tmp), 0x10) != 0))
+    {
+        FUN_1424e0860(out);
+        *ret = 1;
+    }
+    else
+    {
+        UPInt old = *out;
+        if (old != 0)
+        {
+            if ((old & 1) == 0 && (*reinterpret_cast<UInt32*>(old + 0x10) & 0x3fffff) != 0)
+            {
+                *reinterpret_cast<UInt32*>(old + 0x10) -= 1;
+                FUN_1423dfa20(reinterpret_cast<void*>(old));
+            }
+            *out = 0;
+        }
+        *reinterpret_cast<UInt8*>(self + 0x180) = 0;
+        *ret = 0;
+    }
+    return ret;
+}
+
+// pushwith: the (non-null) object on top of the operand stack moves onto the scope stack.
+// MS2-FUNCTIONAL 0x14253f4e0: behavior-equivalent recovery; codegen differs from exe
+// @0x14253f4e0
+void Sfr31ExecPushWith(UPInt vmAddr)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
+    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(top));
+    if ((*reinterpret_cast<const UInt32*>(top) & 0x1f) == 0)
+        return;
+    vm.ScopeStack.PushBack(Value::GetUndefined());
+    UInt32* dst = reinterpret_cast<UInt32*>(vm.ScopeStack.GetDataPtr() + vm.ScopeStack.GetSize() - 1);
+    UInt32* src = reinterpret_cast<UInt32*>(top);
+    for (int i = 0; i < 8; ++i)
+        dst[i] = src[i];
+    src[0] = 0;
+    top->~Value();
+    Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
+}
+
+// Native with a required object argument, which must be an Object-kind value; replaces it with the result of its virtual call.
+// MS2-FUNCTIONAL 0x142532dc0: raw-offset model; codegen differs from the exe
+// @0x142532dc0
+void Sfr31CallClassArg(UPInt vmAddr, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, argc);
+    Value* a0 = reinterpret_cast<Value*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8), 8));
+    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(a0));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        if ((*reinterpret_cast<const UInt32*>(a0) & 0x1f) == 0xd)
+        {
+            const UPInt o = Sfr31Rd(reinterpret_cast<UPInt>(a0), 0x10);
+            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+            void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
+            typedef const Value* (*Fn)(UPInt, UInt32, void*);
+            a0->Assign(*reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0xb8))(o, cnt, args));
+        }
+        else
+        {
+            VM::Error e(static_cast<VM::ErrorID>(0x467), vm);
+            vm.ThrowTypeError(e);
+        }
+    }
+    FUN_1424de9e0(raBuf);
+}
+
+// Tracer op: replaces the popped value with the instance traits it denotes (primitives collapse to the Object traits).
+// MS2-FUNCTIONAL 0x1425331a0: behavior-equivalent recovery; codegen differs from exe
+// @0x1425331a0
+void Sfr31TraceTopInstanceTraits(State* st)
+{
+    StV s(st);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    const UPInt p = reinterpret_cast<UPInt>(&popped.Get());
+    const UInt32 k = *reinterpret_cast<const UInt32*>(p) & 0x1f;
+    UPInt tr = Sfr31Rd(p, 0x10);
+    if (k == 9)
+        tr = Sfr31Rd(tr, 0xc0);
+    else if (k == 0xd)
+        tr = Sfr31Rd(Sfr31Rd(tr, 0x20), 0xc0);
+    else if (k != 8)
+    {
+        popped.Get().~Value();
+        return;
+    }
+    if (tr != 0)
+    {
+        if (FUN_142514a80(s.Tracer(), reinterpret_cast<void*>(tr)))
+            tr = Sfr31Rd(Sfr31Rd(TrVM(s.Tracer()), 0x1f8), 0xc0);
+        TrTraitsScratch t;
+        t.SetTraits(*reinterpret_cast<InstanceTraits::Traits*>(tr));
+        s.Top().Assign(t.Get());
+    }
+    popped.Get().~Value();
+}
+// ---- batch 27
+struct Sfr31RawTraitsVal
+{
+    UInt32 w0;
+    UPInt w1, w2, w3;
+};
+
+// Tracer find-property core: resolves the multiname and pushes the property value, or the Object traits when unresolved.
+static void Sfr31TraceFindProp(State* st, UInt32 idx, UInt32 fallbackTag)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), idx);
+    const UPInt link = TrAbcLink(s.Tracer());
+    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
+    ctx.pops += FUN_142520380(&ctx, &mn);
+    UPInt pr[6] = {0, 0, 0, 0, 0, 0};
+    UInt8 t1[8], t2[8];
+    FUN_142501e80(st, pr, &mn, t1, t2);
+    Value& res = *reinterpret_cast<Value*>(&pr[2]);
+    const UPInt f = pr[0];
+    Sfr31RawTraitsVal fb;
+    const Value* push = &res;
+    if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+    {
+        fb.w0 = fallbackTag;
+        fb.w1 = 0;
+        fb.w2 = Sfr31Rd(Sfr31Rd(TrVM(s.Tracer()), 0x1f8), 0xc0);
+        fb.w3 = 0;
+        push = reinterpret_cast<const Value*>(&fb);
+    }
+    s.OpStack().PushBack(*push);
+    res.~Value();
+}
+
+// MS2-FUNCTIONAL 0x142538840: behavior-equivalent recovery; codegen differs from exe
+// @0x142538840
+void Sfr31TraceFindPropA(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, 0x48); }
+
+// MS2-FUNCTIONAL 0x142538bc0: behavior-equivalent recovery; codegen differs from exe
+// @0x142538bc0
+void Sfr31TraceFindPropB(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, 8); }
+
+// Tracer op: an operand of a type-describing kind becomes its instance traits, anything else is pushed back as it was.
+// MS2-FUNCTIONAL 0x142536dd0: behavior-equivalent recovery; codegen differs from exe
+// @0x142536dd0
+void Sfr31TraceTypeOperand(State* st, UInt32 argc)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), argc);
+    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, argc);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
+    const UPInt p = reinterpret_cast<UPInt>(&popped.Get());
+    const UInt32 k = *reinterpret_cast<const UInt32*>(p) & 0x1f;
+    UPInt tr = Sfr31Rd(p, 0x10);
+    bool conv = true;
+    if (k == 9)
+        tr = Sfr31Rd(tr, 0xc0);
+    else if (k == 0xd)
+        tr = Sfr31Rd(Sfr31Rd(tr, 0x20), 0xc0);
+    else if (k != 8)
+        conv = false;
+    if (conv)
+    {
+        Sfr31RawTraitsVal v = {8, 0, tr, 0};
+        s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
+    }
+    else
+        s.OpStack().PushBack(popped.Get());
+    popped.Get().~Value();
 }
 }}} // namespace Scaleform::GFx::AS3
 
