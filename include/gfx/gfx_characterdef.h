@@ -24,9 +24,16 @@ class SoundStreamDef;
 using Render::PointF;
 using Render::RectF;
 
-// The template of a timeline element, shared by its instances (vftable slots 4..9 after the Resource ones). The
-// exe has no vftable of its own for it (its vptr stores are dead in every constructor / destructor), hence novtable.
-class __declspec(novtable) CharacterDef : public Resource
+// The template of a timeline element, shared by its instances (vftable slots 4..9 after the Resource ones). Its vptr
+// stores are dead in every constructor / destructor of the exe, hence novtable; the vftable itself (0x1431846c8, no
+// RTTI locator) and its deleting destructor sit in the TextFieldDef source, which defines
+// SF_GFX_CHARACTERDEF_VFTABLE to emit them.
+#ifdef SF_GFX_CHARACTERDEF_VFTABLE
+#define SF_GFX_CHARACTERDEF_NOVTABLE
+#else
+#define SF_GFX_CHARACTERDEF_NOVTABLE __declspec(novtable)
+#endif
+class SF_GFX_CHARACTERDEF_NOVTABLE CharacterDef : public Resource
 {
     ResourceId Id; // +0x18
 
@@ -61,6 +68,8 @@ public:
     ResourceId GetId() const          { return Id; }
     void       SetId(ResourceId rid)  { Id = rid; }
 };
+// The deleting destructor frees 0x20 bytes.
+static_assert(sizeof(CharacterDef) == 0x20, "CharacterDef size");
 
 // A character with frames (vftable slots 10..18): the frame tags, the frame labels and the streaming sound.
 class __declspec(novtable) TimelineDef : public CharacterDef

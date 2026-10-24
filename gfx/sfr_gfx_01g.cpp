@@ -6,14 +6,19 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14258d550-0x14258d600 .text$mn
 // MS2-RANGE: 0x14258d6a0-0x14258d750 .text$mn
+// MS2-RANGE: 0x14258d750-0x14258d7a0 .text$mn
 // MS2-RANGE: 0x14258d830-0x14258d930 .text$mn
+// MS2-RANGE: 0x14258dad0-0x14258dae0 .text$mn
 // MS2-RANGE: 0x14258dc80-0x14258e030 .text$mn
+// MS2-RANGE: 0x14258e060-0x14258e070 .text$mn
 // MS2-RANGE: 0x14258e070-0x14258e0b0 .text$mn
 // MS2-RANGE: 0x14258e410-0x14258e470 .text$mn
 // MS2-RANGE: 0x14258e470-0x14258ecc0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
+// The CharacterDef vftable and its deleting destructor (0x14258d750) belong to this source.
+#define SF_GFX_CHARACTERDEF_VFTABLE
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/gfx_statictextcharacter.h"
 #include "../include/gfx/gfx_textfield.h"
@@ -200,3 +205,4 @@ void SF_STDCALL GFx_CSMTextSettings(LoadProcess* p, const TagInfo& tagInfo)
 
 // MS2-PIN: ??_7TextFieldDef@GFx@Scaleform@@6B@ 0x143184748
 // MS2-PIN: ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
+// MS2-PIN: ??_7CharacterDef@GFx@Scaleform@@6B@ 0x1431846c8
