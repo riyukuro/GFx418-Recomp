@@ -192,6 +192,12 @@ public:
     // (appended, sfr_gfx_01i) ProcessInput: the mouse has reported a state; the buttons count as unchanged.
     bool IsActivated() const     { return Activated; }
     void ResetPrevButtonsState() { PrevButtonsState = CurButtonsState; }
+    // (appended, sfr_as2_05u) AS2 MovieRoot::GenerateMouseEvents
+    Ptr<InteractiveObject> GetActiveEntity() const  { return ActiveEntity; }
+    Ptr<InteractiveObject> GetTopmostEntity() const { return TopmostEntity; }
+    void SetActiveEntity(InteractiveObject* pent)   { ActiveEntity = pent; }
+    bool IsMouseInsideEntityLast() const            { return MouseInsideEntityLast; }
+    void SetMouseInsideEntityLast(bool v)           { MouseInsideEntityLast = v; }
 };
 
 }} // namespace Scaleform::GFx
