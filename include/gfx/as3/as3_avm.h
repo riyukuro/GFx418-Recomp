@@ -355,12 +355,14 @@ public:
     static void Construct(AvmMovieClip* p, Sprite* pspr);
 };
 
+#ifndef SF_AS3_AVMBUTTON_MODEL
 class AvmTextField
 {
 public:
     AvmTextField(TextField* ptxt);
     UByte Data[0x48];
 };
+#endif
 
 class AvmStaticText
 {
@@ -369,12 +371,134 @@ public:
     UByte Data[0x30];
 };
 
+#ifndef SF_AS3_AVMBUTTON_MODEL
 class AvmButton
 {
 public:
     AvmButton(Button* pbtn);
     UByte Data[0x48];
 };
+#endif
+
+// (appended, sfr24) The class model of AvmButton / AvmTextField, opt-in (SF_AS3_AVMBUTTON_MODEL) while their
+// constructors are still written over the opaque Data[0x48] versions above. Both are AvmInteractiveObj with the
+// AvmButtonBase / AvmTextFieldBase part at +0x40 and no fields of their own; their main vftables keep the 26
+// AvmInteractiveObj slots. The +0x40 part brings a third AvmDisplayObjBase, so every base virtual gets an overrider
+// here (forwarders where the exe's slot jumps to the base).
+#ifdef SF_AS3_AVMBUTTON_MODEL
+} } } // namespace Scaleform::GFx::AS3
+#include "ms2/scaleform/include/gfx/gfx_button.h"
+#include "ms2/scaleform/include/gfx/gfx_textfield.h"
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// AS3 part of a SimpleButton. 0x48 bytes; vftables 0x14317dbe0, 0x14317dcb0, 0x14317dd68. Ctor 0x1424d63e0 (sets
+// Mask_TabEnabled in the button's flags), ??_G 0x1424e26d0 with the implicit destructor.
+class AvmButton : public AvmInteractiveObj, public AvmButtonBase
+{
+public:
+    AvmButton(Button* pbtn);
+
+    virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase()   { return static_cast<AvmInteractiveObj*>(this); }
+    virtual AvmSpriteBase*              ToAvmSpriteBase()           { return NULL; }
+    virtual AvmButtonBase*              ToAvmButttonBase()          { return this; }
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase()        { return NULL; }
+    virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase()    { return NULL; }
+
+    virtual const char* GetAbsolutePath(String* ppath) const        { return AvmInteractiveObj::GetAbsolutePath(ppath); }
+    virtual bool        HasEventHandler(const EventId&) const       { return false; }
+    virtual bool        OnEvent(const EventId& id)                  { return AvmInteractiveObj::OnEvent(id); }
+    // Keeps the AS3 object by a counted reference from now on.     0x142518fe0
+    virtual void        OnEventLoad();
+    virtual void        OnEventUnload()                             { AvmDisplayObj::OnEventUnload(); }
+    virtual bool        OnUnloading(bool)                           { return true; }
+    virtual const char* GetDefaultASClassName() const               { return "flash.display.SimpleButton"; }
+    virtual bool        DetachChild(DisplayObjectBase* ch);         // 0x1424f6f50
+
+    virtual bool     ActsAsButton() const                           { return true; }
+    virtual unsigned GetCursorType() const                          { return GetButton()->IsEnabledFlagSet(); }
+    virtual void     CloneInternalData(const InteractiveObject*)    {}
+    virtual void     CopyPhysicalProperties(const InteractiveObject*) {}
+    virtual void     OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                             unsigned controllerIdx, FocusMovedType fmt)
+    {
+        AvmInteractiveObj::OnFocus(event, oldOrNewFocusCh, controllerIdx, fmt);
+    }
+    virtual void     OnGettingKeyboardFocus(unsigned, FocusMovedType) {}
+    virtual bool     OnKeyEvent(const EventId&, int*)               { return false; }
+    virtual bool     OnLosingKeyboardFocus(InteractiveObject*, unsigned,
+                                           FocusMovedType = GFx_FocusMovedByKeyboard) { return true; }
+    virtual bool     IsFocusEnabled(FocusMovedType = GFx_FocusMovedByKeyboard) const  { return true; }
+    virtual bool     IsTabable() const;                             // 0x142514eb0
+
+    virtual void CreateCharacters();                                // 0x1424f2e90
+    virtual bool OnMouseEvent(const EventId& event);                // 0x14251a830
+    virtual bool OnButtonKeyEvent(const EventId&, int*)             { return true; }
+    virtual void SwitchState(ButtonRecord::MouseState);             // 0x14252e980
+
+    Button*     GetButton() const { return reinterpret_cast<Button*>(pDispObj); }
+    // Puts the character of a state (up / over / down / hit) in place.  0x142529f70
+    void        SetStateObject(Button::ButtonState state, Instances::fl_display::DisplayObject* pobj);
+
+private:
+    void        SwitchStateIntl(Button::ButtonState);               // 0x14252e9d0
+};
+static_assert(sizeof(AvmButton) == 0x48, "AvmButton size");
+
+// AS3 part of a TextField. 0x48 bytes; vftables 0x14317ea80, 0x14317eb50, 0x14317ec08. Ctor 0x1424d66b0 (marks the
+// field AS3 and clears its selection), ??_G 0x1424e2ac0 with the implicit destructor.
+class AvmTextField : public AvmInteractiveObj, public AvmTextFieldBase
+{
+public:
+    AvmTextField(TextField* ptxt);
+
+    virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase()   { return static_cast<AvmInteractiveObj*>(this); }
+    virtual AvmSpriteBase*              ToAvmSpriteBase()           { return NULL; }
+    virtual AvmButtonBase*              ToAvmButttonBase()          { return NULL; }
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase()        { return this; }
+    virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase()    { return NULL; }
+
+    virtual const char* GetAbsolutePath(String* ppath) const        { return AvmInteractiveObj::GetAbsolutePath(ppath); }
+    virtual bool        HasEventHandler(const EventId&) const       { return false; }
+    virtual bool        OnEvent(const EventId& id)                  { return AvmDisplayObj::OnEvent(id); }
+    virtual void        OnEventLoad();                              // 0x1425190f0
+    virtual void        OnEventUnload()                             { AvmDisplayObj::OnEventUnload(); }
+    virtual bool        OnUnloading(bool)                           { return true; }
+    virtual const char* GetDefaultASClassName() const               { return "flash.text.TextField"; }
+
+    virtual bool     ActsAsButton() const                           { return false; }
+    virtual unsigned GetCursorType() const                          { return 0; }
+    virtual void     CloneInternalData(const InteractiveObject*)    {}
+    virtual void     CopyPhysicalProperties(const InteractiveObject*) {}
+    virtual void     OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                             unsigned controllerIdx, FocusMovedType fmt)
+    {
+        AvmInteractiveObj::OnFocus(event, oldOrNewFocusCh, controllerIdx, fmt);
+    }
+    virtual void     OnGettingKeyboardFocus(unsigned, FocusMovedType) {}
+    virtual bool     OnKeyEvent(const EventId& id, int* pkeyMask);  // 0x14251a350
+    virtual bool     OnLosingKeyboardFocus(InteractiveObject*, unsigned,
+                                           FocusMovedType = GFx_FocusMovedByKeyboard) { return true; }
+    // A read-only field takes no focus from the keyboard.
+    virtual bool     IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const
+    {
+        return fmt == GFx_FocusMovedByKeyboard ? !GetTextField()->IsReadOnly() : true;
+    }
+    virtual bool     IsTabable() const;                             // 0x142515050
+
+    virtual const Text::StyleManager* GetStyleSheet() const;        // 0x14250ef30
+    virtual bool HasStyleSheet() const;                             // 0x1425113d0
+    virtual void NotifyChanged();                                   // 0x142518360
+    virtual void OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex);  // 0x14251a500
+    virtual bool OnMouseEvent(const EventId& event);                // 0x14251a8a0
+    virtual bool OnCharEvent(wchar_t wcharCode, unsigned controllerIdx);   // 0x142518750
+    virtual void OnScroll();                                        // 0x14251ae60
+    virtual bool UpdateTextFromVariable()                           { return false; }
+    virtual void UpdateVariable()                                   {}
+
+    TextField*  GetTextField() const { return reinterpret_cast<TextField*>(pDispObj); }
+};
+static_assert(sizeof(AvmTextField) == 0x48, "AvmTextField size");
+#endif // SF_AS3_AVMBUTTON_MODEL
 
 // The exe's AvmMovieClip vftables (main, AvmInteractiveObj, AvmDisplayObjContainer, AvmSpriteBase parts).
 extern void* const AvmMovieClip_vftable[];

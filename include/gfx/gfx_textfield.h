@@ -7,6 +7,7 @@
 
 #include "ms2/scaleform/include/gfx/gfx_characterdef.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobject.h"
+#include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_stream.h"
 #include "ms2/scaleform/include/render/render_color.h"
 
@@ -15,6 +16,7 @@ namespace GFx {
 
 class FontResource;
 class LoadProcess;
+namespace Text { class StyleManager; }   // (appended, sfr24)
 
 // The edit text definition, as the DefineEditText tag gives it (a struct in 4.1.18, as the TextField constructor's
 // mangled name has it). Bodies: GFx_TextFieldDef (sfr_gfx_01c); vftable 0x143184748.
@@ -153,8 +155,36 @@ public:
     void SetText(const wchar_t* ptext, bool html = false);       // exe 0x1425bd530
     bool SetTextValue(const char* ptext, bool html = false, bool notifyVariable = true); // exe 0x1425bd9a0
 
+    // (appended, sfr24) What happened to a link of the text (AvmTextFieldBase::OnLinkEventEx).
+    enum LinkEvent
+    {
+        Link_press,
+        Link_release,
+        Link_rollover,
+        Link_rollout
+    };
+
 private:
     UByte Unrecovered[0x148];
+};
+
+// (appended, sfr24) The text-field half of the AVM part of a text field (AS3::AvmTextField +0x40), after the
+// AvmInteractiveObjBase slots: style sheet 23..24, change / link / mouse / char / scroll notifications 25..29, the
+// variable binding 30..31 (AS2 only; the AS3 field returns false / does nothing).
+class AvmTextFieldBase : public AvmInteractiveObjBase
+{
+public:
+    virtual const Text::StyleManager* GetStyleSheet() const = 0;
+    virtual bool HasStyleSheet() const = 0;
+    virtual void NotifyChanged() = 0;
+    virtual void OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex) = 0;
+    virtual bool OnMouseEvent(const EventId& event) = 0;
+    virtual bool OnCharEvent(wchar_t wcharCode, unsigned controllerIdx) = 0;
+    virtual void OnScroll() = 0;
+    // Takes the text from the bound variable; true when it changed.
+    virtual bool UpdateTextFromVariable() = 0;
+    // Stores the text into the bound variable.
+    virtual void UpdateVariable() = 0;
 };
 
 }} // namespace Scaleform::GFx
