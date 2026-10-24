@@ -9,6 +9,10 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
+#include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fntraits.h"
+#include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
+#include "ms2/scaleform/include/kernel/sf_std.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 // the registered class traits of a multiname (VM, 0x14250d760)
@@ -2139,6 +2143,21 @@ namespace InstanceTraits
         return Pickable<Instances::fl::XMLText>(new(vm.GetMemoryHeap()) Instances::fl::XMLText(t, text, parent));
     }
 
+    // MS2-FUNCTIONAL: the exe inlines the XMLComment constructor
+    // @0x14241b500
+    Pickable<Instances::fl::XMLComment> fl::XML::MakeInstanceComment(XML& t, const ASString& str, Instances::fl::XML* parent)
+    {
+        return Pickable<Instances::fl::XMLComment>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLComment(t, str, parent));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLProcInstr constructor
+    // @0x14241b6e0
+    Pickable<Instances::fl::XMLProcInstr> fl::XML::MakeInstanceProcInstr(XML& t, const ASString& name, const ASString& data,
+                                                                        Instances::fl::XML* parent)
+    {
+        return Pickable<Instances::fl::XMLProcInstr>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLProcInstr(t, name, data, parent));
+    }
+
     // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241c2b0
     void fl::XMLList::MakeObject(Value& result, Traits& t)
@@ -2190,26 +2209,7 @@ namespace InstanceTraits
 {
     // Function (the traits of ABC function closures) is in as3_obj_fl.h.
 
-    // Traits of unbound ABC methods (a method index value).
-    class MethodInd : public CTraits
-    {
-    public:
-        ASString GetMethodIndName(const Value& _this) const;
-    };
-
-    // Traits of native thunks.
-    class Thunk : public CTraits
-    {
-    public:
-        ASString GetThunkName(const Value& _this) const;
-    };
-
-    // Traits of native thunks wrapped in a function object.
-    class ThunkFunction : public CTraits
-    {
-    public:
-        ASString GetThunkName(const Value& _this) const;
-    };
+    // MethodInd, Thunk and ThunkFunction are in as3_obj_fntraits.h.
 
     // @0x142415b00
     ASString Function::GetFunctionName(const Value& _this) const
@@ -2295,6 +2295,7 @@ Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInstance(Abc::
     return Pickable<Instances::Namespace>(SF_HEAP_AUTO_NEW(this) Instances::Namespace(GetVM(), InstanceFactory, kind, uri, prefix));
 }
 
+// MS2-FUNCTIONAL: cl inlines MakeNamespace here; the exe calls it
 // @0x14241ba70
 Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInternedInstance(Abc::NamespaceKind kind,
                                                                                    const ASString& uri,
@@ -2362,6 +2363,157 @@ void FUN_142416600(Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::G
 // @0x142423bd0
 void FUN_142423bd0(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::ASString& uri)
 { const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = uri; }
+// VM::GetValueTraits.
+const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// The parts of str split at each delim (at most limit of them), as a new Array: no delim gives str itself, an empty
+// delim each character. A delim that ends str adds no trailing empty part.
+// MS2-FUNCTIONAL: the exe inlines SparseArray::PushBack at each push
+// @0x142424ca0
+Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array> FUN_142424ca0(Scaleform::GFx::AS3::VM& vm,
+                                                                               const Scaleform::GFx::ASString& str,
+                                                                               const char* delim, Scaleform::UInt32 limit)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    Pickable<Instances::fl::Array> arr = vm.MakeArray();
+    SparseArray& sa = arr->SA;
+    StringManager& sm = vm.GetStringManager();
+    const char* start = str.ToCStr();
+    const char* cur = start;
+    if (delim == NULL)
+    {
+        sa.PushBack(Value(str));
+        return arr;
+    }
+    if (*delim == 0)
+    {
+        if (str.GetSize() == 0)
+        {
+            sa.PushBack(Value(str));
+            return arr;
+        }
+        String ch;
+        while (UInt32 c = UTF8Util::DecodeNextChar_Advance0(&cur))
+        {
+            ch.Clear();
+            ch.AppendChar(c);
+            sa.PushBack(Value(sm.CreateString(ch.ToCStr(), ch.GetSize())));
+        }
+        return arr;
+    }
+    UInt32 count = 0;
+    for (;;)
+    {
+        const char* matchStart = cur;
+        const char* next = NULL;
+        const char* d = delim;
+        const char* before;
+        UInt32 c1, c2;
+        for (;;)
+        {
+            before = cur;
+            c1 = UTF8Util::DecodeNextChar(&cur);
+            c2 = UTF8Util::DecodeNextChar(&d);
+            if (next == NULL)
+                next = cur;
+            if (c1 == 0 || c2 == 0 || c1 != c2)
+                break;
+        }
+        if (c1 == 0)
+        {
+            if (count >= limit)
+                return arr;
+            SPInt len = (c2 == 0) ? (SPInt)(int)(matchStart - start) : (SPInt)(int)SFstrlen(start);
+            sa.PushBack(Value(len > 0 ? sm.CreateString(start, len) : sm.CreateEmptyString()));
+            return arr;
+        }
+        if (c2 == 0)
+        {
+            if (count >= limit)
+                return arr;
+            SPInt len = (int)(matchStart - start);
+            sa.PushBack(Value(len > 0 ? sm.CreateString(start, len) : sm.CreateEmptyString()));
+            ++count;
+            start = cur = before;
+        }
+        else
+            cur = next;
+    }
+}
+// ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::allocatePage, the VM call frame stack (pages of
+// 64 frames of 0xa8 bytes; the page table grows by 64 entries).
+// MS2-FUNCTIONAL: the call frame array is not modelled in VM; written on its layout
+// @0x142427560
+void FUN_142427560(void* self, Scaleform::UPInt nb)
+{
+    using namespace Scaleform;
+    struct CallFramePages
+    {
+        UPInt   Size;       // +0x00 (+0x08 unused here)
+        UPInt   Unk08;
+        UPInt   NumPages;   // +0x10
+        UPInt   MaxPages;   // +0x18
+        void**  Pages;      // +0x20
+    };
+    typedef AllocatorBaseLH<329> Allocator;
+    CallFramePages& a = *static_cast<CallFramePages*>(self);
+    if (nb >= a.MaxPages)
+    {
+        if (a.Pages)
+            a.Pages = (void**)Allocator::Realloc(a.Pages, (a.MaxPages + 64) * sizeof(void*), __FILE__, __LINE__);
+        else
+            a.Pages = (void**)Allocator::Alloc(self, 64 * sizeof(void*), __FILE__, __LINE__);
+        a.MaxPages += 64;
+    }
+    a.Pages[nb] = Allocator::Alloc(self, 64 * 0xa8, __FILE__, __LINE__);
+    a.NumPages++;
+}
+// LookupNamespace: a new public namespace with ns's uri and prefix; the prefix of the first namespace of nsa with
+// the same uri wins.
+// @0x142419d00
+Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Namespace> FUN_142419d00(
+    const Scaleform::GFx::AS3::Instances::Namespace& ns, const Scaleform::GFx::AS3::NamespaceArray* nsa)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    Pickable<Instances::Namespace> result = ns.GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), ns.GetPrefix());
+    if (nsa)
+    {
+        for (UPInt i = 0; i < nsa->Namespaces.GetSize(); ++i)
+        {
+            const Instances::Namespace& other = *nsa->Namespaces[i];
+            if (other.GetUri().GetNode() == result->GetUri().GetNode())
+            {
+                result->SetPrefix(other.GetPrefix());
+                break;
+            }
+        }
+    }
+    return result;
+}
+// Namespace::SetUri(Value): a QName gives its namespace's uri (or "*" without one), anything else its string.
+// MS2-FUNCTIONAL: the exe swaps the "*" node into Uri by hand (one more ReleaseNode)
+// @0x142423c10
+void FUN_142423c10(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::AS3::Value& v)
+{
+    using namespace Scaleform::GFx::AS3;
+    VM& vm = self->GetVM();
+    const Traits& tr = FUN_14250ffc0(vm, v);
+    if (tr.GetTraitsType() == Traits_QName && tr.IsInstanceTraits())
+    {
+        const Instances::fl::QName* qn = static_cast<const Instances::fl::QName*>(v.GetObject());
+        if (qn == NULL)
+            return;
+        if (qn->Ns.GetPtr() != NULL)
+        {
+            FUN_142423bd0(self, qn->Ns->GetUri());
+            return;
+        }
+        const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = vm.GetStringManager().CreateConstString("*");
+    }
+    else
+        v.Convert2String(const_cast<Scaleform::GFx::ASString&>(self->GetUri()));
+}
 // MultinameHash<ClassTraits::Traits*>::Get: the class traits cached under {name, ns}.
 // MS2-FUNCTIONAL: the exe builds the temporary key in another home slot
 // @0x142414ac0
@@ -2691,7 +2843,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                 return true;
 
             InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
-            SPtr<XML> target = itr.MakeInstanceElement(itr, *TargetNamespace, ASString(TargetProperty), base);
+            SPtr<XML> target(Pickable<XML>(itr.MakeInstanceElement(itr, *TargetNamespace, ASString(TargetProperty), base)));
             base->AppendChild(target);
             List.PushBack(target);
             r = target;
@@ -3947,6 +4099,1416 @@ namespace Scaleform { namespace GFx { namespace AS3
 }}} // namespace Scaleform::GFx::AS3
 
 // The array element types of the Array sort helpers and of the XML parser's node-kind stack.
+// ==== sfr21: the remaining members of this range =====================================================================
+// the Unicode character class tables (Scaleform Kernel)
+extern const Scaleform::UInt16 DAT_143186050[];   // alpha
+extern const Scaleform::UInt16 DAT_1431866f0[];   // digit
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+// (as sfr_as3_01c) the builtin ClassInfo registration hash of GlobalObjectCPP: chained entries of name -> ClassInfo
+struct CIRegistrationEntry
+{
+    SPInt            NextInChain;   // -2 empty, -1 end of chain
+    UPInt            HashValue;     // the home index
+    const char*      Key;
+    const ClassInfo* Value;
+};
+struct CIRegistrationTable
+{
+    UPInt               EntryCount;
+    UPInt               SizeMask;
+    CIRegistrationEntry E[1];
+};
+}}} // namespace Scaleform::GFx::AS3
+
+using Scaleform::UPInt;
+using Scaleform::SPInt;
+using Scaleform::String;
+using Scaleform::Pickable;
+using Scaleform::UnicodeCharIs;
+using Scaleform::GFx::ASString;
+using Scaleform::GFx::AS3::VM;
+using Scaleform::GFx::AS3::SPtr;
+using Scaleform::GFx::AS3::Class;
+using Scaleform::GFx::AS3::ClassInfo;
+using Scaleform::GFx::AS3::CheckResult;
+using Scaleform::GFx::AS3::Multiname;
+using Scaleform::GFx::AS3::VMAbcFile;
+using Scaleform::GFx::AS3::ScopeStackType;
+using Scaleform::GFx::AS3::CIRegistrationEntry;
+using Scaleform::GFx::AS3::CIRegistrationTable;
+namespace Instances = Scaleform::GFx::AS3::Instances;
+namespace InstanceTraits = Scaleform::GFx::AS3::InstanceTraits;
+namespace ClassTraits = Scaleform::GFx::AS3::ClassTraits;
+namespace AS3 = Scaleform::GFx::AS3;
+
+// VMAbcFile::GetFunctionInstanceTraits: the traits of method method_ind of a script
+InstanceTraits::Traits& FUN_14250a250(VMAbcFile* file, Instances::fl::GlobalObjectScript& gos, Scaleform::UInt32 method_ind);
+
+// GlobalObjectCPP: the class traits of a builtin class by name, made through its ClassInfo factory and kept in CTraits
+// MS2-FUNCTIONAL: the exe inlines the hash lookup and the CTraits push
+// @0x142415520
+ClassTraits::Traits* FUN_142415520(Instances::fl::GlobalObjectCPP* self, const ASString& name,
+                                   const Instances::Namespace& ns)
+{
+    const CIRegistrationTable* table = (const CIRegistrationTable*)self->CIRegistrationHash;
+    if (!table)
+        return NULL;
+    const char* key = name.ToCStr();
+    UPInt index = String::BernsteinHashFunction(key, strlen(key), 0x1505) & table->SizeMask;
+    const CIRegistrationEntry* e = &table->E[index];
+    if (e->NextInChain == -2 || e->HashValue != index)
+        return NULL;
+    for (;;)
+    {
+        if (e->HashValue == index && strcmp(e->Key, key) == 0)
+            break;
+        if (e->NextInChain == -1)
+            return NULL;
+        e = &table->E[e->NextInChain];
+    }
+    const ClassInfo* ci = e->Value;
+    if (!ci || strcmp(ns.GetUri().ToCStr(), ci->PkgName) != 0)
+        return NULL;
+    SPtr<ClassTraits::Traits> ctr(ci->Factory(self->GetVM()));
+    self->CTraits.PushBack(ctr);
+    return ctr.GetPtr();
+}
+
+// XMLList: the descendants of every item
+// MS2-FUNCTIONAL: written from the exe on raw slots
+// @0x142415930
+void FUN_142415930(Instances::fl::XMLList* self, Instances::fl::XMLList& list, const Multiname& prop_name)
+{
+    for (UPInt i = 0; i < self->List.GetSize(); ++i)
+        self->List[i]->GetDescendants(list, prop_name);
+}
+
+// InstanceTraits::Function: the VM of the script it belongs to
+// MS2-FUNCTIONAL: written from the exe on raw offsets
+// @0x142416720
+void* FUN_142416720(const void* self)
+{
+    return *(void**)(*(const char* const*)((const char*)self + 0xf8) + 0x20);
+}
+
+// XMLList: the operation needs a one item list
+// MS2-FUNCTIONAL: written from the exe
+// @0x1424172b0
+CheckResult FUN_1424172b0(const Instances::fl::XMLList* self, const char* method_name)
+{
+    if (self->List.GetSize() != 1)
+    {
+        VM& vm = self->GetVM();
+        vm.ThrowTypeError(VM::Error(VM::eXMLOnlyWorksWithOneItemLists, vm, method_name));
+        return false;
+    }
+    return true;
+}
+
+// a Function sharing f's traits, scope and name, bound to stored_this
+// MS2-FUNCTIONAL: written from the exe
+// @0x14241a490
+Pickable<Instances::Function> FUN_14241a490(void* self, Instances::Function& f, const AS3::Value& stored_this)
+{
+    InstanceTraits::Traits& t = f.GetInstanceTraits();
+    const ScopeStackType& ss = *(const ScopeStackType*)((const char*)&f + 0x40);   // StoredScopeStack
+    const ASString& name = *(const ASString*)((const char*)&f + 0x80);             // Name
+    return Pickable<Instances::Function>(new(t.Alloc()) Instances::Function(t, ss, stored_this, name));
+}
+
+// a Function of method method_ind of file
+// MS2-FUNCTIONAL: written from the exe
+// @0x14241a410
+Pickable<Instances::Function> FUN_14241a410(void* self, VMAbcFile& file, Scaleform::UInt32 method_ind,
+                                             const AS3::Value& stored_this, const ScopeStackType& ss,
+                                             Instances::fl::GlobalObjectScript& gos, const ASString& name)
+{
+    InstanceTraits::Traits& t = FUN_14250a250(&file, gos, method_ind);
+    return Pickable<Instances::Function>(new(t.Alloc()) Instances::Function(t, ss, stored_this, name));
+}
+
+// InstanceTraits::fl::QName: a new QName (empty local name, public namespace)
+// MS2-FUNCTIONAL: the exe inlines the QName constructor
+// @0x14241ace0
+Pickable<Instances::fl::QName> FUN_14241ace0(void* self, InstanceTraits::Traits& t)
+{
+    return Pickable<Instances::fl::QName>(new(t.Alloc()) Instances::fl::QName(t));
+}
+
+// InstanceTraits::fl::XML: a new node of kind none with empty text
+// MS2-FUNCTIONAL: the exe inlines the XML constructor
+// @0x14241ae30
+Pickable<Instances::fl::XML> FUN_14241ae30(void* self, InstanceTraits::Traits& t)
+{
+    return Pickable<Instances::fl::XML>(new(t.Alloc()) Instances::fl::XML(t));
+}
+
+// InstanceTraits::fl::XML: a new node of kind none holding text
+// MS2-FUNCTIONAL: the exe inlines the XML constructor
+// @0x14241aec0
+Pickable<Instances::fl::XML> FUN_14241aec0(InstanceTraits::Traits* self, InstanceTraits::Traits& t, const ASString& text,
+                                           Instances::fl::XML* parent)
+{
+    return Pickable<Instances::fl::XML>(new(self->GetVM().GetMemoryHeap()) Instances::fl::XML(t, text, parent));
+}
+
+// Classes::fl::XML: a new empty node of the class' instance traits
+// MS2-FUNCTIONAL: written from the exe
+// @0x14241af60
+Pickable<Instances::fl::XML> FUN_14241af60(Class* self)
+{
+    InstanceTraits::Traits& itr = self->GetClassTraits().GetInstanceTraits();
+    return FUN_14241ae30(&itr, itr);
+}
+
+// Classes::fl::XMLList: a new list targeting target_prop of target_obj
+// MS2-FUNCTIONAL: written from the exe
+// @0x14241b160
+Pickable<Instances::fl::XMLList> FUN_14241b160(Class* self, AS3::Object& target_obj, const ASString& target_prop,
+                                               Instances::Namespace& target_ns)
+{
+    InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(self->GetClassTraits().GetInstanceTraits());
+    return itr.MakeInstance(itr, target_obj, target_prop, target_ns);
+}
+
+// a new empty XMLList of the VM's XMLList class
+// MS2-FUNCTIONAL: written from the exe on raw slots
+// @0x14241ca30
+Pickable<Instances::fl::XMLList> FUN_14241ca30(InstanceTraits::Traits* self)
+{
+    void** vm_obj = *(void***)((char*)&self->GetVM() + 0x40);
+    char* ctr = ((char* (*)(void*))(*(void***)vm_obj)[0x90 / 8])(vm_obj);
+    InstanceTraits::fl::XMLList& itr = **(InstanceTraits::fl::XMLList**)(ctr + 0xc0);
+    return itr.MakeInstance(itr);
+}
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+namespace Instances { namespace fl
+{
+    // for-in over a QName: "uri", then "localName"
+    // MS2-FUNCTIONAL: the exe selects the literal and its length before one CreateConstString call
+    // @0x142416330
+    void QName::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
+    {
+        StringManager& sm = GetVM().GetStringManager();
+        if (ind.Get() == 1)
+            name.Assign(sm.CreateConstString("uri"));
+        else if (ind.Get() == 2)
+            name.Assign(sm.CreateConstString("localName"));
+    }
+
+    // @0x142429490
+    void QName::localNameGet(ASString& result)
+    {
+        result = LocalName;
+    }
+
+    // Whether str is an XML name: a letter or '_', then letters, digits, '-', '.' or '_'.
+    // MS2-FUNCTIONAL: the exe inlines the UnicodeCharIs table lookups and frames the string temporaries differently
+    // @0x142428fa0
+    void GlobalObjectCPP::isXMLName(bool& result, const Value& str)
+    {
+        if (str.IsNullOrUndefined())
+        {
+            result = false;
+            return;
+        }
+        VM& vm = GetVM();
+        ASString name = vm.GetStringManager().CreateEmptyString();
+        if (!str.Convert2String(name))
+            vm.ThrowArgumentError(VM::Error(VM::ErrorID(1050), vm));   // eConvertToPrimitiveError
+        bool ok = false;
+        if (name.GetSize() != 0)
+        {
+            UInt32 ch = name.GetCharAt(0);
+            if (UnicodeCharIs(DAT_143186050, (wchar_t)ch) || ch == '_')
+            {
+                ok = true;
+                for (UPInt i = 1; i < name.GetLength(); ++i)
+                {
+                    ch = name.GetCharAt(i);
+                    if (!UnicodeCharIs(DAT_1431866f0, (wchar_t)ch) && !UnicodeCharIs(DAT_143186050, (wchar_t)ch) &&
+                        ch != '-' && ch != '.' && ch != '_')
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+        }
+        result = ok;
+    }
+}} // namespace Instances::fl
+
+namespace InstanceTraits { namespace fl
+{
+    // MS2-FUNCTIONAL: the exe inlines the QName constructor
+    // @0x14241c0c0
+    void QName::MakeObject(Value& result, Traits& t)
+    {
+        result.Pick(new(t.Alloc()) Instances::fl::QName(t));
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLText constructor
+    // @0x14241b7a0
+    Pickable<Instances::fl::XMLText> XML::MakeInstanceText(XML& t, const ASString& str, Instances::fl::XML* parent)
+    {
+        return Pickable<Instances::fl::XMLText>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLText(t, str, parent));
+    }
+}} // namespace InstanceTraits::fl
+}}} // namespace Scaleform::GFx::AS3
+
+// ---- the namespace, script and class-traits helpers
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e4e0[4];   // Classes::Function prototype methods
+// VM: the class traits a multiname of file names (NULL when unresolved)
+ClassTraits::Traits* FUN_142524f60(VM* vm, VMAbcFile* file, const void* abc_multiname);
+// Abc::TraitInfo::GetName: the multiname a trait is named by
+const void* FUN_142546050(const void* trait_info, const void* const_pool);
+// IsScaleformGFx: whether ns is the "scaleform.gfx" namespace
+bool FUN_142514cd0(const Instances::Namespace& ns);
+// InstanceTraits::UserDefined ctor (0xe0 bytes)
+InstanceTraits::Traits* FUN_1423ef790(void* mem, VMAbcFile* file, InstanceTraits::Traits* parent, const void* class_info);
+// Traits: the interface slots of an interface class
+void FUN_1424e80f0(ClassTraits::Traits* self, VMAbcFile* file);
+
+// InstanceTraits::fl::Namespace: the interned namespace of {kind, uri}, else the public one (NULL once the traits are
+// gone)
+// MS2-FUNCTIONAL: the exe inlines the hash lookup
+// @0x142415c20
+Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Scaleform::GFx::AS3::Abc::NamespaceKind kind,
+                                    const ASString& uri)
+{
+    Scaleform::GFx::AS3::NamespaceInstanceFactory* f = self->InstanceFactory;
+    Instances::Namespace** pns = f->NamespaceSet.GetAlt(Scaleform::GFx::AS3::NamespaceInstanceFactory::Key(kind, uri));
+    if (pns)
+        return *pns;
+    if (f->pNamespaceInstanceTraits)
+        return &f->pNamespaceInstanceTraits->GetVM().GetPublicNamespace();
+    return NULL;
+}
+
+// the name of the trait a method's body belongs to
+// MS2-FUNCTIONAL: written from the exe on raw offsets (VMAbcFile +0x28, Abc::File tables)
+// @0x142416e70
+const void* FUN_142416e70(const char* self)
+{
+    const char* abc = *(const char* const*)(*(const char* const*)(self + 0xf0) + 0x28);
+    const char* const* methods = *(const char* const* const*)(abc + 0xf8);
+    const char* const* bodies = *(const char* const* const*)(abc + 0x170);
+    const char* mi = methods[*(const int*)(self + 0xe8)];
+    const char* body = bodies[*(const int*)(mi + 8)];
+    return FUN_142546050(methods[*(const int*)(body + 0x18)], abc + 0x30);
+}
+
+// the class traits of a class's super class; an unresolved name throws VerifyError 1001
+// MS2-FUNCTIONAL: written from the exe on raw offsets
+// @0x142417000
+ClassTraits::Traits* FUN_142417000(VMAbcFile* self, const char* class_info)
+{
+    const int ind = *(const int*)(class_info + 0x28);
+    if (ind == 0)
+        return NULL;
+    const char* abc = *(const char* const*)((const char*)self + 0x28);
+    const char* mn = *(const char* const*)(abc + 0xb8) + (SPInt)ind * 0x10;
+    VM* vm = *(VM* const*)((const char*)self + 0x20);
+    ClassTraits::Traits* ctr = FUN_142524f60(vm, self, mn);
+    if (!ctr)
+    {
+        const Scaleform::GFx::AS3::Abc::StringView& sv =
+            (*(const Scaleform::GFx::AS3::Abc::StringView* const*)(abc + 0x70))[*(const unsigned*)(mn + 8)];
+        Scaleform::StringDataPtr sd = sv.ToStringDataPtr();
+        String name(sd.ToCStr(), sd.GetSize());
+        vm->ThrowVerifyError(VM::Error(VM::ErrorID(0x3e9), *vm, name.ToCStr()));
+    }
+    return ctr;
+}
+
+// XMLList::HasProperty: an index within the list, or a matching child / attribute of an element item
+// MS2-FUNCTIONAL: the exe inlines XMLElement::HasProperty
+// @0x142417560
+bool FUN_142417560(Instances::fl::XMLList* self, const Multiname& prop_name)
+{
+    Scaleform::UInt32 ind;
+    if (Scaleform::GFx::AS3::GetVectorInd(prop_name, ind))
+        return ind < self->List.GetSize();
+    for (UPInt i = 0; i < self->List.GetSize(); ++i)
+    {
+        Instances::fl::XML* x = self->List[i];
+        if (x->GetKind() != Instances::fl::XML::kElement)
+            continue;
+        Instances::fl::XMLElement* el = static_cast<Instances::fl::XMLElement*>(x);
+        if (Scaleform::GFx::AS3::GetVectorInd(prop_name, ind))
+        {
+            if (ind == 0)
+                return true;
+            continue;
+        }
+        Instances::fl::EmptyCallBack cb(*el);
+        if ((prop_name.IsAttr() ? el->ForEachAttr(prop_name, cb) : el->ForEachChild(prop_name, cb)) != 0)
+            return true;
+    }
+    return false;
+}
+
+// GlobalObjectScript: the instance traits of the script's classes run in this script
+// MS2-FUNCTIONAL: written from the exe on raw offsets
+// @0x1424187f0
+void FUN_1424187f0(Instances::fl::GlobalObjectScript* self)
+{
+    const char* tr = *(const char* const*)((const char*)self + 0x20);
+    const UPInt* inds = *(const UPInt* const*)(tr + 0xf0);   // {data, size}
+    VMAbcFile* file = *(VMAbcFile* const*)(tr + 0xe8);
+    VM* vm = *(VM* const*)(tr + 0x78);
+    const char* abc = *(const char* const*)((const char*)file + 0x28);
+    for (UPInt i = 0; i < inds[1]; ++i)
+    {
+        const Scaleform::UInt8* ti = (*(const Scaleform::UInt8* const* const*)(abc + 0x128))[((const int*)inds[0])[(unsigned)i]];
+        if ((*ti & 0xf) != 4)   // class traits only
+            continue;
+        const char* ci = (*(const char* const* const*)(abc + 0x140))[*(const int*)(ti + 0xc)];
+        const int mi = *(const int*)(ci + 0x24);
+        const char* mn = mi == 0 ? abc + 0xe8 : *(const char* const*)(abc + 0xb8) + (SPInt)mi * 0x10;
+        Instances::Namespace& ns = file->GetInternedNamespace(*(const int*)(mn + 4));
+        ASString name = file->GetInternedString(*(const int*)(mn + 8));
+        if (FUN_142514cd0(ns))
+            continue;
+        ClassTraits::Traits** pctr = FUN_142414ac0(&vm->ClassTraitsSet, name, ns);
+        if (!pctr || !*pctr || *(VMAbcFile**)((char*)*pctr + 0xc8) != file)
+            continue;
+        char* itr = *(char**)((char*)*pctr + 0xc0);
+        SPtr<Instances::fl::GlobalObjectScript>& script = *(SPtr<Instances::fl::GlobalObjectScript>*)(itr + 0xd0);
+        if (!script)
+            script = self;
+    }
+}
+
+// ClassTraits::UserDefined: resolves the super class (initializing it first), makes the instance traits, then the
+// class's static slots
+// MS2-FUNCTIONAL: written from the exe on raw offsets; the exe inlines FUN_142417000
+// @0x142418970
+CheckResult FUN_142418970(ClassTraits::Traits* self)
+{
+    VMAbcFile* file = *(VMAbcFile**)((char*)self + 0xc8);
+    const char* ci = *(const char**)((char*)self + 0xd0);
+    VM& vm = self->GetVM();
+    ClassTraits::Traits* parent = FUN_142417000(file, ci);
+    if (vm.IsException())
+        return false;
+    SPtr<const Scaleform::GFx::AS3::Traits>& pparent = *(SPtr<const Scaleform::GFx::AS3::Traits>*)((char*)self + 0x88);
+    if (!pparent && parent)
+        pparent = parent;
+    if (*(void**)((char*)self + 0xc0))
+        return true;
+    InstanceTraits::Traits* parent_itr = NULL;
+    if (parent)
+    {
+        if (!*(void**)((char*)parent + 0xc0))
+        {
+            FUN_142418970(parent);
+            if (vm.IsException())
+                return false;
+        }
+        parent_itr = *(InstanceTraits::Traits**)((char*)parent + 0xc0);
+    }
+    void* mem = vm.GetMemoryHeap()->Alloc(0xe0);
+    InstanceTraits::Traits* itr = mem ? FUN_1423ef790(mem, file, parent_itr, ci) : NULL;
+    self->SetInstanceTraits(Pickable<InstanceTraits::Traits>(itr));
+    if (vm.IsException())
+        return false;
+    if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
+        return false;
+    if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
+        FUN_1424e80f0(self, file);
+    return true;
+}
+// ClassTraits::UserDefined::RegisterSlots: the class's static slots (after the Classes::UserDefined object), then the
+// interface slots of an interface class
+// MS2-FUNCTIONAL: free function (not declared on the shared class)
+// @0x14241e6b0
+CheckResult FUN_14241e6b0(ClassTraits::UserDefined* self)
+{
+    VMAbcFile* file = &self->GetFile();
+    const char* ci = (const char*)&self->GetClassInfo();
+    if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
+        return false;
+    if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
+        FUN_1424e80f0(self, file);
+    return true;
+}
+
+// InstanceTraits::UserDefined::SetScript: the script object (+0xd0) that defines the class
+// MS2-FUNCTIONAL: free function on the layout (the member is protected)
+// @0x142423ae0
+void FUN_142423ae0(InstanceTraits::UserDefined* self, Instances::fl::GlobalObjectScript* script)
+{
+    *reinterpret_cast<SPtr<Instances::fl::GlobalObjectScript>*>(reinterpret_cast<char*>(self) + 0xd0) = script;
+}
+
+// pops the top of the VM operand stack into v
+// MS2-FUNCTIONAL: free function
+// @0x142420770
+void FUN_142420770(AS3::Object* self, Scaleform::GFx::AS3::Value& v)
+{
+    v.Pick(*reinterpret_cast<Scaleform::GFx::AS3::ValueStack*>(reinterpret_cast<char*>(&self->GetVM()) + 0x48));
+}
+
+// ---- objects made by traits: script classes, functions, global objects, catch scopes
+extern const void* const DAT_143144040[];   // Classes::UserDefined vftable
+extern const ClassInfo DAT_14313dd00;       // the "Catch" ClassInfo
+// Class(ClassTraits::Traits&)
+void FUN_1424dadb0(void* mem, ClassTraits::Traits& t);
+// Traits::StoreScopeStack: the scope the traits' methods run in, from the VM scope stack above base
+void FUN_14252cad0(Scaleform::GFx::AS3::Traits* t, UPInt base, const Scaleform::ArrayDH<AS3::Value>& ss);
+
+// the VM's current call frame (0xa8 bytes, 64 to a page)
+static const char* FUN_CurrCallFrame(const VM* vm)
+{
+    const UPInt n = *(const UPInt*)((const char*)vm + 0x78) - 1;
+    return (*(const char* const* const*)((const char*)vm + 0x90))[n >> 6] + (n & 0x3f) * 0xa8;
+}
+static UPInt FUN_CurrScopeBase(const VM* vm)
+{
+    if (*(const UPInt*)((const char*)vm + 0x78) == 0)
+        return 0;
+    return *(const UPInt*)(FUN_CurrCallFrame(vm) + 8);
+}
+
+// ClassTraits::UserDefined::MakeClass: the class object, its static slots and the scope its methods run in, then the
+// static initializer
+// MS2-FUNCTIONAL: written from the exe; the exe inlines the Classes::UserDefined constructor
+// @0x142419e50
+SPtr<Class> FUN_142419e50(ClassTraits::Traits* self)
+{
+    void* mem = self->Alloc();
+    Class* cls = NULL;
+    if (mem)
+    {
+        FUN_1424dadb0(mem, *self);
+        *(const void* const**)mem = DAT_143144040;
+        cls = (Class*)mem;
+        if (self->SetupSlotValues(*cls))
+        {
+            VM* vm = self->pVM;
+            FUN_14252cad0(self, FUN_CurrScopeBase(vm), vm->ScopeStack);
+        }
+    }
+    SPtr<Class> result(cls);
+    InstanceTraits::Traits& itr = self->GetInstanceTraits();
+    itr.SetConstructor(Pickable<Class>(cls));
+    VM* vm = self->pVM;
+    FUN_14252cad0(&itr, FUN_CurrScopeBase(vm), vm->ScopeStack);
+    itr.Add2StoredScopeStack(AS3::Value(cls));
+    static_cast<Scaleform::GFx::AS3::Classes::UserDefined*>(cls)->CallStaticConstructor();
+    return result;
+}
+
+// a Function of method method_ind of file named "method id: <ind>"
+// MS2-FUNCTIONAL: the exe formats the id with MsgFormat
+// @0x14241a7d0
+Pickable<Instances::Function> FUN_14241a7d0(void* self, VMAbcFile& file, Scaleform::UInt32 method_ind,
+                                             const ScopeStackType& ss, Instances::fl::GlobalObjectScript& gos)
+{
+    InstanceTraits::Traits& t = FUN_14250a250(&file, gos, method_ind);
+    void* mem = t.Alloc();
+    if (!mem)
+        return Pickable<Instances::Function>(NULL);
+    char buf[16];
+    Scaleform::SFsprintf(buf, sizeof(buf), "%u", method_ind);
+    ASString name = t.GetVM().GetStringManager().CreateConstString("method id: ") + buf;
+    return Pickable<Instances::Function>(new(mem) Instances::Function(t, ss, AS3::Value::GetUndefined(), name));
+}
+
+// InstanceTraits::fl::GlobalObjectScript: a new global object of the script
+// MS2-FUNCTIONAL: the exe inlines the GlobalObjectScript constructor
+// @0x14241aa60
+Pickable<Instances::fl::GlobalObjectScript> FUN_14241aa60(InstanceTraits::fl::GlobalObjectScript* self)
+{
+    return Pickable<Instances::fl::GlobalObjectScript>(new(self->Alloc()) Instances::fl::GlobalObjectScript(*self));
+}
+
+// the traits of a catch scope: one slot named by the exception variable, typed by the exception type
+// MS2-FUNCTIONAL: written from the exe on raw offsets (exception info: type +0xc, var name +0x10)
+// @0x14241b920
+Pickable<InstanceTraits::fl::Catch> FUN_14241b920(AS3::Object* self, VMAbcFile& file, const char* exc_info)
+{
+    VM& vm = self->GetVM();
+    InstanceTraits::fl::Catch* itr = SF_HEAP_AUTO_NEW(self) InstanceTraits::fl::Catch(vm, DAT_14313dd00);
+    if (!itr)
+        return Pickable<InstanceTraits::fl::Catch>(NULL);
+    const char* abc = *(const char* const*)((const char*)&file + 0x28);
+    const int var_ind = *(const int*)(exc_info + 0x10);
+    ASString name = file.GetInternedString(var_ind == 0 ? 0 : *(const int*)(abc + 0x78) - var_ind);
+    Scaleform::GFx::AS3::SlotInfo::BindingType bt = (Scaleform::GFx::AS3::SlotInfo::BindingType)2;
+    const int type_ind = *(const int*)(exc_info + 0xc);
+    if (type_ind != 0)
+        bt = itr->GetBindingType(file, *(const Scaleform::GFx::AS3::Abc::Multiname*)
+                                           (*(const char* const*)(abc + 0xb8) + (SPInt)type_ind * 0x10));
+    itr->AddSlot(name, Pickable<const Instances::Namespace>(&vm.GetPublicNamespace(), Scaleform::PickValue), bt,
+                 Scaleform::GFx::AS3::AbsoluteIndex(0));
+    itr->CalculateMemSize(0x38);
+    return Pickable<InstanceTraits::fl::Catch>(itr);
+}
+
+// E4X: the "prefix:" of a namespace in an XML string, unless it is the default xml namespace
+// MS2-FUNCTIONAL: written from the exe on raw offsets (call frame +0x58: default xml namespace)
+// @0x14241bc30
+void FUN_14241bc30(AS3::Object* self, Scaleform::StringBuffer& buf, const Instances::Namespace& ns, bool skip_default)
+{
+    if (skip_default)
+    {
+        const Instances::Namespace* def = *(const Instances::Namespace* const*)(FUN_CurrCallFrame(&self->GetVM()) + 0x58);
+        if (def && def->GetUri().GetNode() == ns.GetUri().GetNode() &&
+            Scaleform::GFx::AS3::StrictEqual(def->GetPrefix(), ns.GetPrefix()))
+            return;
+    }
+    if (ns.GetPrefix().IsString())
+    {
+        ASString prefix = ns.GetPrefix().AsString();
+        if (prefix.GetSize() != 0)
+        {
+            buf.AppendString(prefix.ToCStr(), prefix.GetSize());
+            buf.AppendChar(':');
+        }
+    }
+}
+
+// E4X: the ":prefix" of a namespace in an XML string (attribute form), unless it is the default xml namespace
+// MS2-FUNCTIONAL: written from the exe on raw offsets (call frame +0x58: default xml namespace)
+// @0x14241bcd0
+void FUN_14241bcd0(AS3::Object* self, Scaleform::StringBuffer& buf, const Instances::Namespace& ns, bool skip_default)
+{
+    if (skip_default)
+    {
+        const Instances::Namespace* def = *(const Instances::Namespace* const*)(FUN_CurrCallFrame(&self->GetVM()) + 0x58);
+        if (def && def->GetUri().GetNode() == ns.GetUri().GetNode() &&
+            Scaleform::GFx::AS3::StrictEqual(def->GetPrefix(), ns.GetPrefix()))
+            return;
+    }
+    if (ns.GetPrefix().IsString())
+    {
+        ASString prefix = ns.GetPrefix().AsString();
+        if (prefix.GetSize() != 0)
+        {
+            buf.AppendChar(':');
+            buf.AppendString(prefix.ToCStr(), prefix.GetSize());
+        }
+    }
+}
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+namespace Instances { namespace fl
+{
+    // a prefix no namespace of nsa uses: the empty string, else "aaa", "aaaaaa", ...
+    static ASString MakeUnusedPrefix(VM& vm, const NamespaceArray& nsa)
+    {
+        ASString prefix = vm.GetStringManager().CreateEmptyString();
+        while (nsa.FindByPrefix(prefix))
+            prefix.Append("aaa", 3);
+        return prefix;
+    }
+
+    // E4X 10.2.1: the start tag with this element's name, its attributes and the namespaces it has to declare (the
+    // in-scope ones its ancestors did not declare and the ones its name and attributes use), then the children one
+    // level deeper and the end tag; no children close the start tag.
+    // MS2-FUNCTIONAL: the exe inlines NamespaceArray::Add/Find/FindByPrefix, LookupNamespace (0x142419d00) and the
+    // attribute/namespace prefix printers (0x14241bc30 without the default check, 0x14241bcd0)
+    // @0x142425f30
+    void XMLElement::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
+                                 const NamespaceArray* usedNotDeclared)
+    {
+        VM& vm = GetVM();
+        const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
+        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
+        const SInt32 indentStep = cl.prettyIndent >= 0 ? cl.prettyIndent : 0;
+
+        if (pretty && ident > 0)
+            AddIndent(buf, ident);
+
+        // the namespaces declared by the ancestors or here, and the ones this tag has to declare
+        NamespaceArray declared;
+        if (ancestorNamespaces)
+            declared.AddUnique(*ancestorNamespaces);
+        NamespaceArray toDeclare;
+
+        for (UPInt i = 0; i < Namespaces.Namespaces.GetSize(); ++i)
+        {
+            Instances::Namespace& ns = *Namespaces.Namespaces[i];
+            if (!declared.Find(ns))
+            {
+                toDeclare.Add(ns, true);
+                declared.Add(ns, false);
+            }
+        }
+        if (usedNotDeclared)
+        {
+            for (UPInt i = 0; i < usedNotDeclared->Namespaces.GetSize(); ++i)
+            {
+                Instances::Namespace& ns = *usedNotDeclared->Namespaces[i];
+                if (!declared.Find(ns))
+                {
+                    toDeclare.Add(ns, true);
+                    declared.Add(ns, false);
+                }
+            }
+        }
+
+        // the namespaces of the name (first) and of the attributes; an unprefixed one gets a fresh prefix
+        NamespaceArray used;
+        {
+            SPtr<Instances::Namespace> ns = FUN_142419d00(*Ns, &declared);
+            used.Add(*ns, false);
+        }
+        for (UPInt i = 0; i < Attrs.GetSize(); ++i)
+        {
+            SPtr<Instances::Namespace> ns = FUN_142419d00(Attrs[i]->GetNamespace(), &declared);
+            used.Add(*ns, true);
+        }
+        for (UPInt i = 0; i < used.Namespaces.GetSize(); ++i)
+        {
+            Instances::Namespace& ns = *used.Namespaces[i];
+            if (declared.Find(ns) || ns.GetUri().GetSize() == 0)
+                continue;
+            if (ns.GetPrefix().IsUndefined())
+                ns.SetPrefix(Value(MakeUnusedPrefix(vm, declared)));
+            toDeclare.Add(ns, true);
+            declared.Add(ns, true);
+        }
+
+        buf.AppendChar('<');
+        FUN_14241bc30(this, buf, *used.Namespaces[0], true);
+        buf.AppendString(Text.ToCStr(), Text.GetSize());
+
+        for (UPInt i = 0; i < Attrs.GetSize(); ++i)
+        {
+            buf.AppendChar(' ');
+            XMLAttr* attr = Attrs[i];
+            SPtr<Instances::Namespace> ns = FUN_142419d00(attr->GetNamespace(), &declared);
+            if (ns->GetUri().GetSize() != 0 && ns->GetPrefix().IsUndefined())
+            {
+                const ASString prefix = MakeUnusedPrefix(vm, declared);
+                ns->SetPrefix(Value(prefix));
+
+                // declare it unless an unprefixed namespace already covers it or it is declared
+                bool found = false;
+                for (UPInt j = 0; j < declared.Namespaces.GetSize(); ++j)
+                {
+                    const Instances::Namespace& d = *declared.Namespaces[j];
+                    if (d.GetPrefix().IsNullOrUndefined())
+                        found = prefix.GetSize() == 0 || d.GetUri().GetNode() == ns->GetUri().GetNode();
+                    if (d == *ns)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    toDeclare.Add(*ns, true);
+            }
+            FUN_14241bc30(this, buf, *ns, false);
+            buf.AppendString(attr->Text.ToCStr(), attr->Text.GetSize());
+            buf.AppendString("=\"");
+            attr->ToXMLString(buf, ident, &declared, NULL);
+            buf.AppendChar('"');
+        }
+
+        for (UPInt i = 0; i < toDeclare.Namespaces.GetSize(); ++i)
+        {
+            const Instances::Namespace& d = *toDeclare.Namespaces[i];
+            buf.AppendString(" xmlns");
+            SPtr<Instances::Namespace> ns = vm.MakeNamespace(Abc::NS_Public, d.GetUri(), d.GetPrefix());
+            if (ns->GetUri().GetSize() != 0 && ns->GetPrefix().IsUndefined())
+                ns->SetPrefix(Value(MakeUnusedPrefix(vm, declared)));
+            FUN_14241bcd0(this, buf, *ns, true);
+            buf.AppendString("=\"");
+            buf.AppendString(ns->GetUri().ToCStr(), ns->GetUri().GetSize());
+            buf.AppendChar('"');
+        }
+
+        const UPInt n = Children.GetSize();
+        if (n == 0)
+        {
+            buf.AppendString("/>");
+            return;
+        }
+        buf.AppendChar('>');
+
+        const bool indentChildren = n > 1 || Children[0]->GetKind() != kText;
+        const bool breakLines = pretty && indentChildren;
+        const SInt32 childIdent = breakLines ? ident + indentStep : 0;
+        for (UPInt i = 0; i < n; ++i)
+        {
+            if (breakLines)
+                buf.AppendChar('\n');
+            Children[i]->ToXMLString(buf, childIdent, &declared, NULL);
+        }
+        if (breakLines)
+        {
+            buf.AppendChar('\n');
+            AddIndent(buf, ident);
+        }
+
+        buf.AppendString("</");
+        FUN_14241bc30(this, buf, *used.Namespaces[0], true);
+        buf.AppendString(Text.ToCStr(), Text.GetSize());
+        buf.AppendChar('>');
+    }
+}} // namespace Instances::fl
+}}} // namespace Scaleform::GFx::AS3
+
+// XML::MakeXMLListInstance(target_obj, target_prop, target_ns): a new empty list whose target is target_prop of
+// target_obj (an XML method in the SDK; not declared on the shared XML class).
+// MS2-FUNCTIONAL: free function on the XML instance
+// @0x14241c810
+Pickable<Instances::fl::XMLList> FUN_14241c810(Instances::fl::XML* self, AS3::Object& target_obj,
+                                               const ASString& target_prop, Instances::Namespace& target_ns)
+{
+    InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
+        self->GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
+    return itr.MakeInstance(itr, target_obj, target_prop, target_ns);
+}
+
+// Instances::Function::StoreScopeStack (private): the closure's stored scope stack (+0x40) becomes the entries of ss
+// from base on.
+// MS2-FUNCTIONAL: free function on the Function layout (the member is private in the shared header)
+// @0x142424bd0
+void FUN_142424bd0(Instances::Function* self, UPInt base, const Scaleform::ArrayDH<AS3::Value>& ss)
+{
+    Scaleform::ArrayDH<AS3::Value>& stored =
+        *reinterpret_cast<Scaleform::ArrayDH<AS3::Value>*>(reinterpret_cast<char*>(self) + 0x40);
+    stored.Resize(0);
+    for (UPInt i = base; i < ss.GetSize(); ++i)
+        stored.PushBack(ss[i]);
+}
+
+// InstanceTraits::fl::String::StringSubstring: the [start, start + length) part of str, clamped to the string; a
+// negative length means "to the end".
+// @0x1424252c0
+ASString FUN_1424252c0(Scaleform::GFx::AS3::StringManager& sm, const ASString& str, Scaleform::SInt32 start, Scaleform::SInt32 length)
+{
+    if (length == 0)
+        return sm.CreateEmptyString();
+    if (start < 0)
+        start = 0;
+    const Scaleform::SInt32 len = (Scaleform::SInt32)str.GetLength();
+    if (start >= len)
+        return sm.CreateEmptyString();
+    if (length < 0 || start + length > len)
+        length = len - start;
+    return ASString(str.SubstringNode(start, start + length));
+}
+
+// XML_Parse, XML_GetCurrentByteIndex, XML_GetErrorCode (expat, sfr_gfx_12)
+extern "C++" int FUN_1423b2c20(void* parser, const char* s, int len, int isFinal);
+extern "C++" int FUN_1423b2a90(void* parser);
+extern "C++" int FUN_1423b2b70(void* parser);
+// XML_StopParser (expat, sfr_gfx_12)
+extern "C++" int FUN_1423b3570(void* parser, int resumable);
+
+// ArrayDH<SPtr<XML> >::PushBack, out of line
+// @0x14241e390
+void FUN_14241e390(Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML> >* arr,
+                   const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>* v)
+{
+    arr->PushBack(*v);
+}
+
+// ValueStack::PopBack: pops (and releases) the top n values
+// MS2-FUNCTIONAL: the exe inlines Value::Release; ours goes through SetUndefined
+// @0x14241de40
+void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n)
+{
+    while (n)
+    {
+        --n;
+        stack->GetTopPtr()->SetUndefined();
+        stack->Release(1);
+    }
+}
+
+// SparseArray: appends the top n values of the operand stack, moving them off it
+// MS2-FUNCTIONAL: the exe inlines Hash::Set; the dense path moves the values raw as here
+// @0x14241d980
+void FUN_14241d980(Scaleform::GFx::AS3::SparseArray* sa, Scaleform::GFx::AS3::ValueStack* stack, Scaleform::UPInt n)
+{
+    using namespace Scaleform::GFx::AS3;
+    if (n == 0)
+        return;
+    if (sa->Length == sa->ValueA.GetSize())
+    {
+        const Scaleform::UPInt old = sa->ValueA.GetSize();
+        sa->ValueA.Resize(old + n);
+        memcpy(&sa->ValueA[old], stack->GetTopPtr() - (n - 1), n * sizeof(Value));
+        stack->Release(n);
+    }
+    else
+    {
+        Scaleform::UPInt ind = sa->ValueHHighInd + n;
+        for (Scaleform::UPInt i = n; i; --i, --ind)
+        {
+            sa->ValueH.Set(ind, *stack->GetTopPtr());
+            stack->GetTopPtr()->SetUndefined();
+            stack->Release(1);
+        }
+        sa->ValueHHighInd += n;
+    }
+    sa->Length += n;
+}
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // MS2-FUNCTIONAL: the exe inlines Hash::Get/Remove/Set
+    // @0x14241ce70
+    void SparseArray::MoveHashLeft(UPInt first_ind, UPInt offset)
+    {
+        if (offset > first_ind)
+            return;
+        Value v;
+        for (UPInt i = first_ind; i <= ValueHHighInd; ++i)
+        {
+            if (ValueH.Get(i, &v))
+            {
+                ValueH.Remove(i);
+                ValueH.Set(i - offset, v);
+            }
+        }
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the trim and the AppendChild/PushBack choice differently
+    // @0x142421d60
+    void XMLParser::SetNodeKind(Kind k)
+    {
+        if (CurrKind == k)
+            return;
+        if (CurrKind == kText)
+        {
+            Classes::fl::XML& cls = static_cast<Classes::fl::XML&>(ITr.GetConstructor());
+            if (cls.ignoreWhitespace)
+                Text = ASString(Text.TruncateWhitespaceNode());
+            if (Text.GetSize() != 0)
+            {
+                SPtr<Instances::fl::XML> t(Pickable<Instances::fl::XML>(ITr.MakeInstanceText(ITr, Text, CurrElement)));
+                if (CurrElement && CurrElement->GetKind() == Instances::fl::XML::kElement)
+                    CurrElement->AppendChild(t);
+                else
+                {
+                    FUN_14241e390(&RootElements, &t);
+                    CurrElement = t;
+                }
+                Text.Clear();
+            }
+        }
+        CurrKind = k;
+    }
+
+    // MS2-FUNCTIONAL: switch lowering and the error temp differ
+    // @0x14241d6f0
+    CheckResult XMLParser::Parse(const StringDataPtr& str, UPInt& pos, bool isList)
+    {
+        const UPInt start = pos;
+        bool result = FUN_1423b2c20(Parser, str.ToCStr() + start, (int)(str.GetSize() - start), 1) == 1;
+        bool advance = true;
+        if (result)
+        {
+            pos += FUN_1423b2a90(Parser);
+            SetNodeKind(kNone);
+            return result;
+        }
+
+        const int code = FUN_1423b2b70(Parser);
+        VM& vm = ITr.GetVM();
+        const Kind kind = KindStack.GetSize() ? KindStack.Back() : kNone;
+        VM::ErrorID err = VM::ErrorID(0x442);
+        bool doThrow = true;
+        switch (code)
+        {
+        case 0:
+            // a processing instruction left open at the start: skip past its "?>"
+            if (pos == start && CurrElement && CurrElement->GetKind() == Instances::fl::XML::kInstruction)
+            {
+                const UPInt left = str.GetSize() - start;
+                for (UPInt i = 0; i < left; ++i)
+                {
+                    if (str.ToCStr()[i] == '?' && i + 1 < left && str.ToCStr()[i + 1] == '>')
+                    {
+                        pos += i + 2;
+                        return true;
+                    }
+                }
+            }
+            break;
+        case 1:
+            err = VM::ErrorID(1000);
+            break;
+        case 3:
+            advance = !isList;
+            if (CurrElement && kind == kElement && advance)
+                err = VM::ErrorID(0x43d);
+            else
+                doThrow = false;
+            break;
+        case 4:
+            if (!CurrElement)
+            {
+                pos += FUN_1423b2a90(Parser);
+                SetNodeKind(kNone);
+                return false;
+            }
+            break;
+        case 5:
+            err = VM::ErrorID(0x449);
+            break;
+        case 7:
+            err = VM::ErrorID(kind == kElement ? 0x43d : 0x442);
+            break;
+        case 8:
+            err = VM::ErrorID(0x450);
+            break;
+        case 9:
+            if (isList)
+            {
+                pos += FUN_1423b2a90(Parser);
+                SetNodeKind(kNone);
+                return true;
+            }
+            err = VM::ErrorID(CurrElement && kind == kElement ? 0x43d : 0x440);
+            break;
+        case 0x14:
+            err = VM::ErrorID(0x443);
+            break;
+        case 0x23:
+            SetNodeKind(kNone);
+            return false;
+        }
+        if (doThrow)
+            vm.ThrowTypeError(VM::Error(err, vm));
+        if (advance)
+            pos += FUN_1423b2a90(Parser);
+        SetNodeKind(kNone);
+        return false;
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the XMLProcInstr constructor
+    // @0x14241e160
+    void XMLParser::ProcessingInstructionExpatCallback(void* userData, const char* target, const char* data)
+    {
+        XMLParser* p = static_cast<XMLParser*>(userData);
+        InstanceTraits::fl::XML& itr = p->ITr;
+        VM& vm = itr.GetVM();
+        p->SetNodeKind(kProcInstr);
+        StringManager& sm = vm.GetStringManager();
+        SPtr<Instances::fl::XML> el;
+        el.Pick(SF_HEAP_NEW(vm.GetMemoryHeap()) Instances::fl::XMLProcInstr(itr, sm.CreateString(target),
+                                                                           sm.CreateString(data), p->CurrElement));
+        if (p->CurrElement && p->CurrElement->GetKind() == Instances::fl::XML::kElement)
+            p->CurrElement->AppendChild(el);
+        else
+        {
+            // a top-level processing instruction ends the parse
+            p->CurrElement = el;
+            p->RootElements.PushBack(el);
+            FUN_1423b3570(p->Parser, 1);
+        }
+    }
+
+    // XMLParser::StartCDataSectionExpatCallback (not declared on the shared class)
+    // MS2-FUNCTIONAL: free function
+    // @0x142424020
+    void FUN_142424020(void* userData)
+    {
+        static_cast<XMLParser*>(userData)->KindStack.PushBack(XMLParser::kCData);
+    }
+
+    // @0x142424090
+    void XMLParser::StartDoctypeDeclExpatCallback(void* userData, const char* doctypeName, const char* sysid,
+                                                  const char* pubid, int has_internal_subset)
+    {
+        static_cast<XMLParser*>(userData)->KindStack.PushBack(kDocType);
+    }
+
+    // eXMLPrefixNotBound / eXMLBadQName
+    static const VM::ErrorID kXMLPrefixNotBound = (VM::ErrorID)1083;
+    static const VM::ErrorID kXMLBadQName       = (VM::ErrorID)1084;
+
+    // an "xmlns" or "xmlns:prefix" attribute
+    static inline bool IsNsDeclAttr(UPInt len, const char* an)
+    {
+        return len >= 5 && an[0] == 'x' && an[1] == 'm' && an[2] == 'l' && an[3] == 'n' && an[4] == 's';
+    }
+
+    // MS2-FUNCTIONAL: the exe inlines the Namespace / XMLAttr constructors and the array growth
+    // @0x142424100
+    void XMLParser::StartElementExpatCallback(void* userData, const char* name, const char** atts)
+    {
+        XMLParser* p = static_cast<XMLParser*>(userData);
+        p->SetNodeKind(kElement);
+        p->KindStack.PushBack(kElement);
+        InstanceTraits::fl::XML& itr = p->ITr;
+        VM& vm = itr.GetVM();
+        StringManager& sm = vm.GetStringManager();
+
+        // the namespaces declared on this element
+        ArrayDH<SPtr<Instances::Namespace> > namespaces(vm.GetMemoryHeap());
+        InstanceTraits::fl::Namespace& itr_ns =
+            static_cast<InstanceTraits::fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits());
+        for (UPInt i = 0; atts[i]; i += 2)
+        {
+            const char* an = atts[i];
+            const UPInt len = SFstrlen(an);
+            if (len != 0 && an[0] == p->NsSeparator)
+            {
+                vm.ThrowTypeError(VM::Error(kXMLBadQName, vm, an));
+                FUN_1423b3570(p->Parser, 0);
+                return;
+            }
+            if (IsNsDeclAttr(len, an))
+            {
+                ASString ns_prefix = sm.CreateEmptyString();
+                if (len > 5 && an[5] == p->NsSeparator)
+                    ns_prefix = sm.CreateString(an + 6);
+                const ASString ns_uri = sm.CreateString(atts[i + 1]);
+                SPtr<Instances::Namespace> ns(itr_ns.MakeInstance(Abc::NS_Public, ns_uri, Value(ns_prefix)));
+                namespaces.PushBack(ns);
+            }
+        }
+
+        const char* delim = SFstrchr(name, p->NsSeparator);
+        if (delim == name)
+        {
+            vm.ThrowTypeError(VM::Error(kXMLBadQName, vm, name));
+            FUN_1423b3570(p->Parser, 0);
+            return;
+        }
+        ASString ns_prefix = sm.CreateEmptyString();
+        ASString el_name = sm.CreateEmptyString();
+        if (delim == NULL)
+            el_name = sm.CreateString(name);
+        else
+        {
+            ns_prefix = sm.CreateString(name, delim - name);
+            el_name = sm.CreateString(delim + 1);
+        }
+
+        // the element's namespace: by prefix here, then in the parent; an unprefixed name takes the default xml
+        // namespace (a local declaration of its uri first), else the public one
+        Instances::Namespace* ns = NULL;
+        for (UPInt i = 0; i < namespaces.GetSize(); ++i)
+        {
+            const Value& pr = namespaces[i]->GetPrefix();
+            if (pr.IsString() && pr.AsString() == ns_prefix)
+            {
+                ns = namespaces[i];
+                break;
+            }
+        }
+        if (ns == NULL && p->CurrElement)
+            ns = p->CurrElement->FindNamespaceByPrefix(ns_prefix, NULL);
+        if (ns == NULL)
+        {
+            if (ns_prefix.GetSize() != 0)
+            {
+                vm.ThrowTypeError(VM::Error(kXMLPrefixNotBound, vm, Value(ns_prefix), name));
+                FUN_1423b3570(p->Parser, 0);
+                return;
+            }
+            ns = vm.GetDefXMLNamespace();
+            if (ns == NULL)
+                ns = &vm.GetPublicNamespace();
+            else
+            {
+                bool found_local = false;
+                for (UPInt i = 0; i < namespaces.GetSize(); ++i)
+                {
+                    if (namespaces[i]->GetUri() == ns->GetUri())
+                    {
+                        ns = namespaces[i];
+                        found_local = true;
+                        break;
+                    }
+                }
+                if (!found_local && p->CurrElement)
+                {
+                    Instances::Namespace* local_ns = p->CurrElement->FindNamespaceByURI(ns->GetUri(), NULL);
+                    if (local_ns)
+                        ns = local_ns;
+                }
+            }
+        }
+
+        SPtr<Instances::fl::XMLElement> el = itr.MakeInstanceElement(itr, *ns, el_name, p->CurrElement.GetPtr());
+        SPtr<Instances::fl::XML> ptr_el(el.GetPtr());
+        if (p->CurrElement && p->CurrElement->GetKind() == Instances::fl::XML::kElement)
+            p->CurrElement->AppendChild(ptr_el);
+        else
+            p->RootElements.PushBack(ptr_el);
+
+        for (UPInt i = 0; i < namespaces.GetSize(); ++i)
+        {
+            if (namespaces[i]->GetPrefix().IsString())
+                el->Namespaces.Namespaces.PushBack(namespaces[i]);
+        }
+
+        // the attributes (unprefixed ones are in the public namespace)
+        for (UPInt i = 0; atts[i]; i += 2)
+        {
+            const char* an = atts[i];
+            if (IsNsDeclAttr(SFstrlen(an), an))
+                continue;
+            const char* adelim = SFstrchr(an, p->NsSeparator);
+            const ASString value = sm.CreateString(atts[i + 1]);
+            ASString aname = sm.CreateEmptyString();
+            const Instances::Namespace* ans;
+            if (adelim == NULL)
+            {
+                aname = sm.CreateString(an);
+                ans = &vm.GetPublicNamespace();
+            }
+            else
+            {
+                const ASString apre = sm.CreateString(an, adelim - an);
+                aname = sm.CreateString(adelim + 1);
+                ans = el->FindNamespaceByPrefix(apre, NULL);
+                if (ans == NULL)
+                    ans = &vm.GetPublicNamespace();
+            }
+            SPtr<Instances::fl::XMLAttr> attr = itr.MakeInstanceAttr(itr, *ans, aname, value, el.GetPtr());
+            el->Attrs.PushBack(attr);
+        }
+
+        p->CurrElement = ptr_el;
+    }
+}}} // namespace Scaleform::GFx::AS3
+
+// The builtin ClassInfo registry of GlobalObjectCPP (+0x38): a GH hash keyed by the borrowed class name, as declared
+// in sfr_as3_01c.
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
+struct ConstStringKey { const char* pChar; };
+class ConstStringHashFn {
+public:
+    UPInt operator()(const ConstStringKey& key) const
+    {
+        return String::BernsteinHashFunction(key.pChar, strlen(key.pChar));
+    }
+};
+}}}}}
+typedef Scaleform::Hash<Instances::fl::ConstStringKey, const ClassInfo*, Instances::fl::ConstStringHashFn,
+                        Scaleform::AllocatorGH<Instances::fl::ConstStringKey, 328> > CIRegistrationHashType;
+
+// GlobalObjectCPP::RegisterClassInfoTable: registers a null-terminated table of builtin classes by name
+// MS2-FUNCTIONAL: the exe inlines Hash::Add
+// @0x14241e540
+void FUN_14241e540(Instances::fl::GlobalObjectCPP* self, const ClassInfo* table[])
+{
+    CIRegistrationHashType& h = *reinterpret_cast<CIRegistrationHashType*>(&self->CIRegistrationHash);
+    for (unsigned i = 0; table[i]; ++i)
+    {
+        Instances::fl::ConstStringKey key = { table[i]->GetName() };
+        h.Add(key, table[i]);
+    }
+}
+
+// pushes a copy of v onto the VM's operand stack (pCurrent at +8 of the stack)
+// MS2-FUNCTIONAL: ValueStack::PushBack is not modeled in the shared header; the stack top is reached by offset
+// @0x14241e4f0
+void FUN_14241e4f0(AS3::Object* self, const AS3::Value& v)
+{
+    VM& vm = self->GetVM();
+    AS3::Value*& top = *reinterpret_cast<AS3::Value**>(&vm.OpStack[1]);
+    ++top;
+    new (top) AS3::Value(v);
+}
+
+// FunctionBase(InstanceTraits::Traits&), sfr_as3_01c
+extern "C++" Scaleform::GFx::AS3::Instances::FunctionBase* FUN_1423ed140(void* mem,
+                                                                         Scaleform::GFx::AS3::InstanceTraits::Traits& t);
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+namespace Classes
+{
+    // the prototype is an empty function
+    // @0x14241c500
+    Pickable<AS3::Object> Function::MakePrototype() const
+    {
+        InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
+        void* mem = itr.Alloc();
+        return Pickable<AS3::Object>(mem ? FUN_1423ed140(mem, itr) : NULL);
+    }
+
+    // Runs the instance initializer of the class on _this.
+    // MS2-FUNCTIONAL: the exe inlines AddFrame (the CallFrame build and push)
+    // @0x14241dea0
+    void UserDefined::PostInit(const Value& _this, unsigned argc, const Value* argv) const
+    {
+        const InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
+        const SInt32 mbi_ind =
+            GetFile().GetAbcFile().Methods.Info[GetClassInfo().inst_info.method_info_ind]->MethodBodyInfoInd;
+        const ASString name = GetTraits().GetName();
+        GetVM().AddFrame(_this, GetFile(), mbi_ind, _this, argc, argv, true, itr.InitScope, itr,
+                         name + " instance constructor");
+    }
+} // namespace Classes
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+namespace InstanceTraits
+{
+    // a closure object made by these traits (its body comes from them, its memory from t)
+    // MS2-FUNCTIONAL: the exe inlines Value::Pick
+    // @0x14241bf50
+    void Function::MakeObject(Value& result, Traits& t)
+    {
+        void* mem = t.Alloc();
+        result.Pick(mem ? FUN_1423ed140(mem, *this) : NULL);
+    }
+} // namespace InstanceTraits
+
+    // "length" of the function kinds: the parameter count of the method (a native thunk: its maximum argument count,
+    // its minimum one when unbounded).
+    // MS2-FUNCTIONAL: the kind's payload is read by offset (the value union is not public)
+    // @0x142429360
+    void FUN_142429360(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
+                       const Value* argv)
+    {
+        SF_UNUSED4(ti, vm, argc, argv);
+        const ThunkInfo& thunk = **reinterpret_cast<const ThunkInfo* const*>(reinterpret_cast<const char*>(&_this) + 0x10);
+        unsigned n = thunk.GetMaxArgNum();
+        if (n == 0x3ff)
+            n = thunk.GetMinArgNum();
+        result.SetUInt32(n);
+    }
+
+    // the parameter count of ABC method ind of the file of tr
+    static bool GetAbcParamCount(const Traits& tr, SInt32 ind, UInt32& count)
+    {
+        VMAbcFile* file = tr.GetFilePtr();
+        if (!file)
+            return false;
+        count = (UInt32)file->GetAbcFile().Methods.Info[ind]->ParamTypes.GetSize();
+        return true;
+    }
+
+    // MS2-FUNCTIONAL: written on the value kinds (kMethodInd: index + traits; a closure: its object's traits)
+    // @0x1424292c0
+    void FUN_1424292c0(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
+                       const Value* argv)
+    {
+        SF_UNUSED4(ti, vm, argc, argv);
+        const Traits& tr = _this.GetKind() == Value::kMethodInd ? _this.GetTraits() : _this.GetClosure()->GetTraits();
+        UInt32 count;
+        if (GetAbcParamCount(tr, _this.GetMethodInd(), count))
+            result.SetUInt32(count);
+    }
+
+    // MS2-FUNCTIONAL: written on the value kinds (kVTableInd: slot + traits; a closure: its object's traits)
+    // @0x1424293d0
+    void FUN_1424293d0(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
+                       const Value* argv)
+    {
+        SF_UNUSED4(ti, vm, argc, argv);
+        const Traits& tr = _this.GetKind() == Value::kVTableInd ? _this.GetTraits() : _this.GetClosure()->GetTraits();
+        const SInt32 ind = tr.GetVT().VTMethods[(UPInt)(UInt32)_this.GetVTableInd()].GetMethodInd();
+        UInt32 count;
+        if (GetAbcParamCount(tr, ind, count))
+            result.SetUInt32(count);
+    }
+
+namespace Instances { namespace fl
+{
+    // prototypeGet returning the list
+    // @0x142429dd0
+    SPtr<XMLList> FUN_142429dd0(XML* self)
+    {
+        SPtr<XMLList> result;
+        self->prototypeGet(result);
+        return result;
+    }
+}} // namespace Instances::fl
+}}} // namespace Scaleform::GFx::AS3
+
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2aab0[3];   // the Function prototype methods added to its traits
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+    // the "prototype" slot (the C++ member at +0x38) and the three Function methods of a function kind's traits
+    // @0x14241e5d0
+    void FUN_14241e5d0(Traits* tr)
+    {
+        VM& vm = tr->GetVM();
+        tr->AddSlotCPP(vm.GetStringManager().CreateConstString("prototype"),
+                       Pickable<const Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue),
+                       vm.TraitsObject.GetPtr(), SlotInfo::BT_ObjectCpp, AbsoluteIndex(0x38), false);
+        for (unsigned i = 0; i < 3; ++i)
+            tr->Add2VT(AS3::fl::FunctionCI, DAT_143a2aab0[i]);
+    }
+
+    // a class's prototype as a plain new object, then filled by the class
+    // @0x142423d00
+    void FUN_142423d00(Class* cl)
+    {
+        SPtr<AS3::Object>& proto = *reinterpret_cast<SPtr<AS3::Object>*>(reinterpret_cast<char*>(cl) + 0x48);
+        proto = Pickable<AS3::Object>(cl->GetVM().MakeObject().GetPtr(), PickValue);
+        cl->InitPrototype(cl->GetPrototype());
+    }
+
+    // removes the first element; the rest move down by one
+    // @0x142423ef0
+    void SparseArray::ShiftLeft()
+    {
+        SparseArray* sa = this;
+        if (sa->Length == 0)
+            return;
+        if (sa->ValueA.GetSize() == 0)
+        {
+            if (sa->ValueHLowInd == 0)
+            {
+                sa->ValueH.Remove(sa->ValueHLowInd);
+                if (!sa->ValueH.IsEmpty())
+                    sa->ValueHLowInd = sa->ValueH.Begin()->First;
+            }
+        }
+        else if (sa->ValueA.GetSize() == 1)
+            sa->ValueA.RemoveAt(0);
+        else
+        {
+            Value* data = sa->ValueA.GetDataPtr();
+            data[0].SetUndefined();
+            memmove(data, data + 1, (sa->ValueA.GetSize() - 1) * sizeof(Value));
+            sa->ValueA.Resize(sa->ValueA.GetSize() - 1);
+        }
+        if (!sa->ValueH.IsEmpty())
+        {
+            sa->MoveHashLeft(sa->ValueHLowInd, 1);
+            --sa->ValueHLowInd;
+            --sa->ValueHHighInd;
+            --sa->Length;
+            return;
+        }
+        --sa->Length;
+        sa->ValueHHighInd = 0;
+        sa->ValueHLowInd  = 0;
+    }
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3
+{
+namespace Classes
+{
+    // @0x142417c30
+    void Function::InitPrototype(AS3::Object& obj) const
+    {
+        if (GetParentClass())
+            GetParentClass()->InitPrototype(obj);
+        fl::AddDynamicFuncs(obj, DAT_14313e4e0);
+        FUN_1424e6f90(this, obj);
+    }
+}
+}}} // namespace Scaleform::GFx::AS3
+
 namespace Scaleform {
 template <class F, class S> struct Pair { F First; S Second; };
 namespace GFx { namespace AS3 {
@@ -4074,3 +5636,5 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
 // MS2-PIN: ??_7ThunkFunction@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fa78
 // MS2-PIN: ??_7CheckTypeTF@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fb38
+// MS2-PIN: ??_7FunctionBase@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f8f8
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@UConstStringKey@fl@Instances@AS3@GFx@Scaleform@@PEBUClassInfo@456@VConstStringHashFn@23456@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@UConstStringKey@fl@Instances@AS3@GFx@Scaleform@@$0BEI@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UConstStringKey@fl@Instances@AS3@GFx@Scaleform@@PEBUClassInfo@456@VConstStringHashFn@23456@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14242a3a0
