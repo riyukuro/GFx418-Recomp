@@ -72,6 +72,8 @@ struct StrokeStyleType
     UInt32           Color;
     Ptr<ComplexFill> pFill;
     Ptr<DashArray>   pDashes;
+
+    StrokeStyleType& operator=(const StrokeStyleType& other);
 };
 
 // Source of fill/stroke styles and path data for the tessellator.

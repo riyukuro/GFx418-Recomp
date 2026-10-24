@@ -1747,3 +1747,22 @@ void FUN_1424dcd40(void* self)
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dd110
 // MS2-FUNCTIONAL ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z: generated wrapper runs the recovered destructor and same delete-flag free path; compiler separates the wrapper from cleanup.
 // MS2-PIN: ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3020
+
+namespace Scaleform { namespace Render {
+// MS2-FUNCTIONAL ?operator=@StrokeStyleType@Render@Scaleform@@QEAAAEAU123@AEBU123@@Z: copies the scalar style fields and uses Ptr assignment for the owned fill and dash references.
+// @0x1424e0cb0
+StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
+{
+    if (this != &other)
+    {
+        Width = other.Width;
+        Units = other.Units;
+        Flags = other.Flags;
+        Miter = other.Miter;
+        Color = other.Color;
+        pFill = other.pFill;
+        pDashes = other.pDashes;
+    }
+    return *this;
+}
+}} // namespace Scaleform::Render
