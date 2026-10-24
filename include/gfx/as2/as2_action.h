@@ -333,6 +333,7 @@ public:
 
     // new <className>(args) looked up in the package object (exe 0x14296e520); the other one in _global.
     Object*        OperatorNew(Object* ppackageObj, const ASString& className, int nargs = 0, int argsTopOff = -1);
+    Object*        OperatorNew(const FunctionRef& constructor, int nargs, int argsTopOff);
     inline Object* OperatorNew(const ASString& className, int nargs = 0, int argsTopOff = -1);
     inline const ASString& GetBuiltin(int btype) const;
     inline ASString        CreateString(const char* pstr, UPInt length) const;

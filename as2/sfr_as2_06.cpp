@@ -52,6 +52,7 @@
 // MS2-RANGE: 0x14296bbf0-0x14296bd60 .text$mn
 // MS2-RANGE: 0x14296e790-0x14296e870 .text$mn
 // MS2-RANGE: 0x14296e870-0x14296e9f0 .text$mn
+// MS2-RANGE: 0x14296dde0-0x14296e6c0 .text$mn
 // MS2-RANGE: 0x14296efd0-0x14296f070 .text$mn
 // MS2-RANGE: 0x14296f070-0x14296f0c0 .text$mn
 // MS2-RANGE: 0x14296f1b0-0x14296f260 .text$mn
@@ -2344,6 +2345,46 @@ bool Environment::IsAvailable(const ASString& name, const WithStackArray* withSt
         return true;
     Object* global = StringContext.pContext ? StringContext.pContext->pGlobal : 0;
     return global && global->HasMember(const_cast<ASStringContext*>(&StringContext), name, false);
+}
+
+// MS2-FUNCTIONAL: resolves a constructor from the requested package and delegates object creation to its function.
+// @0x14296e520
+Object* Environment::OperatorNew(Object* package, const ASString& className, int nargs, int argsTopOff)
+{
+    if (!package)
+        return 0;
+    Value constructorValue;
+    if (!package->GetMember(this, className, &constructorValue))
+        return 0;
+    FunctionRef constructor = constructorValue.ToFunction(this);
+    return OperatorNew(constructor, nargs, argsTopOff);
+}
+
+// MS2-FUNCTIONAL: creates an instance, applies its prototype and constructor, then returns an object-valued result.
+// @0x14296dde0
+Object* Environment::OperatorNew(const FunctionRef& constructor, int nargs, int argsTopOff)
+{
+    FunctionObject* function = constructor.GetObjectPtr();
+    if (!function)
+        return 0;
+    Object* rawObject = function->CreateNewObject(this);
+    if (!rawObject)
+        return 0;
+    Ptr<Object> object = *rawObject;
+    Value prototype;
+    if (function->GetMember(this, GetBuiltin(ASBuiltin_prototype), &prototype))
+        object->Set__proto__(&StringContext, prototype.ToObject(this));
+    object->Set__constructor__(&StringContext, constructor);
+
+    Value constructorValue(constructor);
+    Value result;
+    if (nargs > 0)
+    {
+        const int firstArg = argsTopOff < 0 ? GetTopIndex() : argsTopOff;
+        GAS_Invoke(constructorValue, &result, object, this, nargs, firstArg, 0);
+    }
+    Object* returnedObject = result.ToObject(this);
+    return returnedObject ? returnedObject : object.GetPtr();
 }
 
 // MS2-FUNCTIONAL: queries the level-zero AS2 environment for the supplied variable or target path.
