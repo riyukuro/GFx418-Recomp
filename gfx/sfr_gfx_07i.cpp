@@ -72,7 +72,7 @@ static inline void RawDelete(void* self, unsigned long long flags, UPInt size)
 // @0x1426202f0
 void* FUN_1426202f0(char* self, unsigned flags)
 {
-    ((String*)(self + 0x10))->~String();
+    (RawFieldPtr<String>(self, 0x10))->~String();
     FUN_14257db40(self);
     if (flags & 1)
     {
@@ -87,7 +87,7 @@ void* FUN_1426202f0(char* self, unsigned flags)
 // @0x142620370
 void* FUN_142620370(char* self, unsigned flags)
 {
-    ((String*)(self + 0x10))->~String();
+    (RawFieldPtr<String>(self, 0x10))->~String();
     FUN_14257db40(self);
     if (flags & 1)
     {
@@ -102,7 +102,7 @@ void* FUN_142620370(char* self, unsigned flags)
 // @0x1426203f0
 void* FUN_1426203f0(char* self, unsigned flags)
 {
-    Memory::Free(*(void**)(self + 0x20));
+    Memory::Free(RawField<void*>(self, 0x20));
     FUN_14257db40(self);
     if (flags & 1)
     {
@@ -134,7 +134,7 @@ void FUN_1426204e0(char* self, const char* name)
 {
     String key(name);
     U found[2];
-    FUN_1426223c0((U**)(self + 0x168), found, &key);
+    FUN_1426223c0(RawFieldPtr<U*>(self, 0x168), found, &key);
     if (found[0] && *(U*)found[0] && (SPInt)found[1] <= *(SPInt*)(*(U*)found[0] + 8))
     {
         (*(int*)(*(U*)found[0] + 0x10 + found[1] * 0x20 + 0x18))++;
@@ -143,7 +143,7 @@ void FUN_1426204e0(char* self, const char* name)
     UInt32 one = 1;
     String name2(name);
     StringKeyOps::Ref ref = { &name2, &one };
-    FUN_14261f220((U**)(self + 0x168), self + 0x168, &ref,
+    FUN_14261f220(RawFieldPtr<U*>(self, 0x168), self + 0x168, &ref,
                   String::BernsteinHashFunctionCIS(name2.ToCStr(), name2.GetSize(), 0x1505));
 }
 
@@ -171,9 +171,9 @@ void FUN_1426208d0(U* self) { RawClearStringSet(self, 0x10); }
 void FUN_142620970(char* self)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    RawClearPlainSet((U*)(self + 0x10), 0x30);
-    FUN_1426240f0((U*)(self + 0x48), self + 0x48, 0);
-    *(int*)(self + 0x60) = 0;
+    RawClearPlainSet(RawFieldPtr<U>(self, 0x10), 0x30);
+    FUN_1426240f0(RawFieldPtr<U>(self, 0x48), self + 0x48, 0);
+    RawField<int>(self, 0x60) = 0;
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
@@ -182,7 +182,7 @@ void FUN_142620a10(char* self)
 {
     if (FUN_14258bb00(self + 0xa8))
     {
-        FUN_142620840((U*)(self + 0xa0));
+        FUN_142620840(RawFieldPtr<U>(self, 0xa0));
         FUN_14258bb70(self + 0xa8);
     }
 }
@@ -192,14 +192,14 @@ void FUN_142620a10(char* self)
 void FUN_142620a50(char* self)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = *(U**)(self + 0xd0);
+    U* table = RawField<U*>(self, 0xd0);
     if (table)
     {
         for (U i = 0; i <= table[1]; i++)
         {
             char* e = RawEntry(table, i, 0x28);
             if (*(SPInt*)e != -2)
-                *(U*)(e + 0x20) = 0;
+                RawField<U>(e, 0x20) = 0;
         }
     }
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
@@ -209,7 +209,7 @@ void FUN_142620a50(char* self)
 void FUN_142620b10(char* self)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    FUN_1426208d0((U*)(self + 0x168));
+    FUN_1426208d0(RawFieldPtr<U>(self, 0x168));
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
@@ -218,7 +218,7 @@ void FUN_142620b10(char* self)
 void FUN_142620b50(char* self, char* snap)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = *(U**)(self + 0x10);
+    U* table = RawField<U*>(self, 0x10);
     if (table)
     {
         for (U i = 0; i <= table[1]; i++)
@@ -227,35 +227,35 @@ void FUN_142620b50(char* self, char* snap)
             if (*(SPInt*)e == -2)
                 continue;
             char* p = e + 0x10;
-            int count = *(int*)(p + 0x10);
-            U total = *(U*)(p + 0x18);
+            int count = RawField<int>(p, 0x10);
+            U total = RawField<U>(p, 0x18);
             if (!count && !total)
                 continue;
             U key = *(U*)(p + 8);
-            char* rec = RawArrayPush<FUN_142623bc0>((U*)(*(char**)(snap + 0x60) + 0x10), 0x20);
+            char* rec = RawArrayPush<FUN_142623bc0>((U*)(RawField<char*>(snap, 0x60) + 0x10), 0x20);
             *(U*)rec = key;
             *(U*)(rec + 8) = *(U*)p;
-            *(int*)(rec + 0x10) = count;
-            *(U*)(rec + 0x18) = total;
+            RawField<int>(rec, 0x10) = count;
+            RawField<U>(rec, 0x18) = total;
 
-            U* names = *(U**)(self + 0x18);
+            U* names = RawField<U*>(self, 0x18);
             SPInt found = RawFindKey8(names, key, 0x20);
             if (found >= 0)
             {
-                char* snapNames = *(char**)(snap + 0x60);
-                if (RawFindKey8(*(U**)(snapNames + 0x28), key, 0x20) < 0)
-                    FUN_142624190((U**)(snapNames + 0x28), &key, (void* const*)(RawEntry(names, found, 0x20) + 0x18));
+                char* snapNames = RawField<char*>(snap, 0x60);
+                if (RawFindKey8(RawField<U*>(snapNames, 0x28), key, 0x20) < 0)
+                    FUN_142624190(RawFieldPtr<U*>(snapNames, 0x28), &key, (void* const*)(RawEntry(names, found, 0x20) + 0x18));
             }
         }
     }
 
     U keys = 0;
-    U* objects = (U*)(self + 0x48);
+    U* objects = RawFieldPtr<U>(self, 0x48);
     for (U i = 0; i < objects[1]; i++)
     {
-        char* list = *(char**)(snap + 0x70);
+        char* list = RawField<char*>(snap, 0x70);
         void** src = (void**)(objects[0] + i * 8);
-        U* array = (U*)(list + 0x18);
+        U* array = RawFieldPtr<U>(list, 0x18);
         FUN_1426240f0(array, array, array[1] + 1);
         void* p = *src;
         if (p)
@@ -271,14 +271,14 @@ void FUN_142620b50(char* self, char* snap)
             char* e = RawEntry(keySet, i, 0x18);
             if (*(SPInt*)e == -2)
                 continue;
-            U* key = (U*)(e + 0x10);
-            U* names = *(U**)(self + 0x18);
+            U* key = RawFieldPtr<U>(e, 0x10);
+            U* names = RawField<U*>(self, 0x18);
             SPInt found = RawFindKey8(names, *key, 0x20);
             if (found < 0)
                 continue;
-            char* snapObj = *(char**)(snap + 0x70);
-            if (RawFindKey8(*(U**)(snapObj + 0x30), *key, 0x20) < 0)
-                FUN_142624190((U**)(snapObj + 0x30), key, (void* const*)(RawEntry(names, found, 0x20) + 0x18));
+            char* snapObj = RawField<char*>(snap, 0x70);
+            if (RawFindKey8(RawField<U*>(snapObj, 0x30), *key, 0x20) < 0)
+                FUN_142624190(RawFieldPtr<U*>(snapObj, 0x30), key, (void* const*)(RawEntry(names, found, 0x20) + 0x18));
         }
         RawClearPlainSet(&keys, 0x18);
     }
@@ -291,7 +291,7 @@ void FUN_1426214b0(char* self, char* snap)
 {
     if (!FUN_14258bb00(self + 0xa8))
         return;
-    U* table = *(U**)(self + 0xa0);
+    U* table = RawField<U*>(self, 0xa0);
     if (table)
     {
         for (U i = 0; i <= table[1]; i++)
@@ -299,11 +299,11 @@ void FUN_1426214b0(char* self, char* snap)
             char* e = RawEntry(table, i, 0x20);
             if (*(SPInt*)e == -2)
                 continue;
-            char* hist = *(char**)(e + 0x18);
-            U bins = *(U*)(hist + 0x18);
+            char* hist = RawField<char*>(e, 0x18);
+            U bins = RawField<U>(hist, 0x18);
             unsigned used = 0;
             for (U j = 0; j < bins; j++)
-                if (((U*)*(U*)(hist + 0x10))[j])
+                if (((U*)RawField<U>(hist, 0x10))[j])
                     used++;
             if (!used)
                 continue;
@@ -314,18 +314,18 @@ void FUN_1426214b0(char* self, char* snap)
                 *(int*)(obj + 8) = 1;
                 *(void**)obj = DAT_14318f020;
             }
-            U key = *(U*)(e + 0x10);
-            *(int*)(obj + 0x10) = (int)(key >> 32);
-            *(int*)(obj + 0x14) = (int)key;
-            *(int*)(obj + 0x18) = (int)bins;
-            U* recs = (U*)(obj + 0x20);
+            U key = RawField<U>(e, 0x10);
+            RawField<int>(obj, 0x10) = (int)(key >> 32);
+            RawField<int>(obj, 0x14) = (int)key;
+            RawField<int>(obj, 0x18) = (int)bins;
+            U* recs = RawFieldPtr<U>(obj, 0x20);
             if (recs[2] <= used)
                 FUN_142623c60(recs, recs, used + (used >> 2));
             recs[1] = used;
             U n = 0;
-            for (U j = 0; j < *(U*)(hist + 0x18); j++)
+            for (U j = 0; j < RawField<U>(hist, 0x18); j++)
             {
-                U v = ((U*)*(U*)(hist + 0x10))[j];
+                U v = ((U*)RawField<U>(hist, 0x10))[j];
                 if (v)
                 {
                     char* rec = (char*)recs[0] + n * 0x10;
@@ -334,8 +334,8 @@ void FUN_1426214b0(char* self, char* snap)
                     *(U*)(rec + 8) = (v * 1000000) / FUN_1425e3510();
                 }
             }
-            char* list = *(char**)(snap + 0x58);
-            U* array = (U*)(list + 0x10);
+            char* list = RawField<char*>(snap, 0x58);
+            U* array = RawFieldPtr<U>(list, 0x10);
             U count = array[1] + 1;
             if (array[2] <= count)
                 FUN_142623e40(array, array, count + (count >> 2));
@@ -353,29 +353,29 @@ void FUN_1426214b0(char* self, char* snap)
 void FUN_142621820(char* self, char* snap)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = *(U**)(self + 0xd0);
+    U* table = RawField<U*>(self, 0xd0);
     if (table)
     {
         for (U i = 0; i <= table[1]; i++)
         {
             char* e = RawEntry(table, i, 0x28);
-            if (*(SPInt*)e == -2 || !*(U*)(e + 0x20))
+            if (*(SPInt*)e == -2 || !RawField<U>(e, 0x20))
                 continue;
-            U key = *(U*)(e + 0x10);
-            unsigned extra = *(unsigned*)(e + 0x18);
-            U scaled = (*(U*)(e + 0x20) * 1000000) / FUN_1425e3510();
-            char* rec = RawArrayPush<FUN_142623d00>((U*)(*(char**)(snap + 0x68) + 0x10), 0x18);
+            U key = RawField<U>(e, 0x10);
+            unsigned extra = RawField<unsigned>(e, 0x18);
+            U scaled = (RawField<U>(e, 0x20) * 1000000) / FUN_1425e3510();
+            char* rec = RawArrayPush<FUN_142623d00>((U*)(RawField<char*>(snap, 0x68) + 0x10), 0x18);
             *(U*)rec = key;
             *(unsigned*)(rec + 8) = extra;
-            *(U*)(rec + 0x10) = scaled;
+            RawField<U>(rec, 0x10) = scaled;
 
-            U* names = *(U**)(self + 0xd8);
+            U* names = RawField<U*>(self, 0xd8);
             SPInt found = RawFindKey8(names, key, 0x20);
             if (found >= 0)
             {
-                char* snapNames = *(char**)(snap + 0x68);
-                if (RawFindKey8(*(U**)(snapNames + 0x28), key, 0x20) < 0)
-                    FUN_142624300((U**)(snapNames + 0x28), &key, (const String*)(RawEntry(names, found, 0x20) + 0x18));
+                char* snapNames = RawField<char*>(snap, 0x68);
+                if (RawFindKey8(RawField<U*>(snapNames, 0x28), key, 0x20) < 0)
+                    FUN_142624300(RawFieldPtr<U*>(snapNames, 0x28), &key, (const String*)(RawEntry(names, found, 0x20) + 0x18));
             }
         }
     }
@@ -387,7 +387,7 @@ void FUN_142621820(char* self, char* snap)
 void FUN_142621c80(char* self, char* snap)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = *(U**)(self + 0x168);
+    U* table = RawField<U*>(self, 0x168);
     if (table)
     {
         for (U i = 0; i <= table[1]; i++)
@@ -403,9 +403,9 @@ void FUN_142621c80(char* self, char* snap)
                 *(void**)obj = DAT_14318f048;
                 new (obj + 0x10) StringLH();
             }
-            *(String*)(obj + 0x10) = *(String*)(e + 0x10);
-            *(int*)(obj + 0x18) = *(int*)(e + 0x18);
-            U* array = (U*)(snap + 0x40);
+            RawField<String>(obj, 0x10) = RawField<String>(e, 0x10);
+            RawField<int>(obj, 0x18) = RawField<int>(e, 0x18);
+            U* array = RawFieldPtr<U>(snap, 0x40);
             U count = array[1] + 1;
             if (array[2] <= count)
                 FUN_142623da0(array, array, count + (count >> 2));
@@ -423,12 +423,12 @@ void FUN_142621ed0(char* self, U arg)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
     U ctx[2] = { arg, (U)self };
-    for (U i = 0; i < *(U*)(self + 0x50); i++)
+    for (U i = 0; i < RawField<U>(self, 0x50); i++)
     {
-        char* item = ((char**)*(U*)(self + 0x48))[i];
-        FUN_142624700((U)self, *(U*)(item + 0x10), *(int*)(item + 0x20) - *(int*)(item + 0x18), 1, arg);
-        for (U j = 0; j < *(U*)(item + 0x38); j++)
-            FUN_14261e730(((char**)*(U*)(item + 0x30))[j], ctx);
+        char* item = ((char**)RawField<U>(self, 0x48))[i];
+        FUN_142624700((U)self, RawField<U>(item, 0x10), RawField<int>(item, 0x20) - RawField<int>(item, 0x18), 1, arg);
+        for (U j = 0; j < RawField<U>(item, 0x38); j++)
+            FUN_14261e730(((char**)RawField<U>(item, 0x30))[j], ctx);
     }
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
@@ -474,7 +474,7 @@ U* FUN_1426223c0(U** self, U* out, const String* key)
         {
             for (;;)
             {
-                if (*(U*)(e + 8) == home && strcmp(((const String*)(e + 0x10))->ToCStr(), kd) == 0)
+                if (*(U*)(e + 8) == home && strcmp((RawFieldPtr<const String>(e, 0x10))->ToCStr(), kd) == 0)
                 {
                     found = (SPInt)index;
                     break;
@@ -533,25 +533,25 @@ SPInt FUN_142622670(char* self, unsigned period)
     if (period == 0)
     {
         SPInt now = FUN_1425e3560();
-        SPInt prev = *(SPInt*)(self + 0x160);
-        *(SPInt*)(self + 0x160) = now;
+        SPInt prev = RawField<SPInt>(self, 0x160);
+        RawField<SPInt>(self, 0x160) = now;
         return now - prev;
     }
-    if (*(SPInt*)(self + 0x160) != 0)
-        elapsed = (FUN_1425e3560() - *(SPInt*)(self + 0x160)) * (SPInt)period;
+    if (RawField<SPInt>(self, 0x160) != 0)
+        elapsed = (FUN_1425e3560() - RawField<SPInt>(self, 0x160)) * (SPInt)period;
     int next;
-    if (*(int*)(self + 0x158) == 0)
+    if (RawField<int>(self, 0x158) == 0)
     {
-        *(SPInt*)(self + 0x160) = FUN_1425e3560();
+        RawField<SPInt>(self, 0x160) = FUN_1425e3560();
         U r = FUN_1425e5080(self + 0x130) & 0xffffffffULL;
         next = (int)((r * (U)(unsigned)(period * 2)) / 0xffffffffULL);
     }
     else
     {
-        *(SPInt*)(self + 0x160) = 0;
-        next = *(int*)(self + 0x158) - 1;
+        RawField<SPInt>(self, 0x160) = 0;
+        next = RawField<int>(self, 0x158) - 1;
     }
-    *(int*)(self + 0x158) = next;
+    RawField<int>(self, 0x158) = next;
     return elapsed;
 }
 
@@ -565,12 +565,12 @@ void FUN_142622740(char* self, char* target, char clear)
         char* snap = raw ? (char*)FUN_142686d30(raw) : 0;
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
         U ctx[2] = { (U)snap, (U)self };
-        for (U i = 0; i < *(U*)(self + 0x50); i++)
+        for (U i = 0; i < RawField<U>(self, 0x50); i++)
         {
-            char* item = ((char**)*(U*)(self + 0x48))[i];
-            FUN_142624700((U)self, *(U*)(item + 0x10), *(int*)(item + 0x20) - *(int*)(item + 0x18), 1, (U)snap);
-            for (U j = 0; j < *(U*)(item + 0x38); j++)
-                FUN_14261e730(((char**)*(U*)(item + 0x30))[j], ctx);
+            char* item = ((char**)RawField<U>(self, 0x48))[i];
+            FUN_142624700((U)self, RawField<U>(item, 0x10), RawField<int>(item, 0x20) - RawField<int>(item, 0x18), 1, (U)snap);
+            for (U j = 0; j < RawField<U>(item, 0x38); j++)
+                FUN_14261e730(((char**)RawField<U>(item, 0x30))[j], ctx);
         }
         LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
         if (snap)
@@ -579,9 +579,9 @@ void FUN_142622740(char* self, char* target, char clear)
     if (clear)
     {
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-        RawClearPlainSet((U*)(self + 0x10), 0x30);
-        FUN_1426240f0((U*)(self + 0x48), self + 0x48, 0);
-        *(int*)(self + 0x60) = 0;
+        RawClearPlainSet(RawFieldPtr<U>(self, 0x10), 0x30);
+        FUN_1426240f0(RawFieldPtr<U>(self, 0x48), self + 0x48, 0);
+        RawField<int>(self, 0x60) = 0;
         LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
     }
 }
@@ -590,7 +590,7 @@ void FUN_142622740(char* self, char* target, char clear)
 bool FUN_1426229d0(char* self)
 {
     typedef char (*Fn)(void*);
-    return ((Fn*)*(void***)(self + 0x178))[1](self + 0x178) == 0;
+    return ((Fn*)RawField<void**>(self, 0x178))[1](self + 0x178) == 0;
 }
 
 // Returns the per-key record array for (a, b), creating it with `count` zeroed words on first use.
@@ -598,7 +598,7 @@ bool FUN_1426229d0(char* self)
 char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
 {
     FUN_14258aca0(self + 0xa8);
-    U** set = (U**)(self + 0xa0);
+    U** set = RawFieldPtr<U*>(self, 0xa0);
     U key = ((U)a << 32) + (b & 0xffffffffULL);
     U it[2];
     FUN_142622030(set, it, &key);
@@ -609,14 +609,14 @@ char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
         {
             *(void**)rec = (void*)DAT_14318f060;
             *(int*)(rec + 8) = 1;
-            *(U*)(rec + 0x18) = 0;
-            *(U*)(rec + 0x10) = 0;
-            *(U*)(rec + 0x20) = 0;
+            RawField<U>(rec, 0x18) = 0;
+            RawField<U>(rec, 0x10) = 0;
+            RawField<U>(rec, 0x20) = 0;
             U n = (U)(SPInt)(int)count;
-            if (*(U*)(rec + 0x18) <= n)
-                FUN_142623f80((U*)(rec + 0x10), rec + 0x10, n + (n >> 2));
-            *(U*)(rec + 0x18) = n;
-            memset(*(void**)(rec + 0x10), 0, (U)count << 3);
+            if (RawField<U>(rec, 0x18) <= n)
+                FUN_142623f80(RawFieldPtr<U>(rec, 0x10), rec + 0x10, n + (n >> 2));
+            RawField<U>(rec, 0x18) = n;
+            memset(RawField<void*>(rec, 0x10), 0, (U)count << 3);
         }
         void* value = rec;
         NodeRef ref = { &key, &value };
@@ -624,12 +624,12 @@ char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
         if (idx >= 0)
         {
             char* payload = (char*)*set + 0x10 + idx * 0x20;
-            *(U*)(payload + 0x10) = key;
+            RawField<U>(payload, 0x10) = key;
             if (rec)
                 FUN_14257dc30(rec);
-            if (*(void**)(payload + 0x18))
-                FUN_14257dcb0(*(void**)(payload + 0x18));
-            *(void**)(payload + 0x18) = value;
+            if (RawField<void*>(payload, 0x18))
+                FUN_14257dcb0(RawField<void*>(payload, 0x18));
+            RawField<void*>(payload, 0x18) = value;
         }
         else
             FUN_14261ec70(set, set, &ref, RawKey8Hash(key));
@@ -656,12 +656,12 @@ static inline char* RawNewScope(char* self)
 // Mirrors the top scope's (record, count) pair into the locked statistics fields.
 static inline void RawPublishTopScope(char* self)
 {
-    if (*(U*)(self + 0x38))
+    if (RawField<U>(self, 0x38))
     {
-        char* slot = (char*)*(U*)(self + 0x30) + *(U*)(self + 0x38) * 0x18;
+        char* slot = (char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18;
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        *(U*)(self + 0x68) = *(U*)(slot - 0x10);
-        *(int*)(self + 0x70) = *(int*)(slot - 8);
+        RawField<U>(self, 0x68) = *(U*)(slot - 0x10);
+        RawField<int>(self, 0x70) = *(int*)(slot - 8);
         LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
     }
 }
@@ -670,13 +670,13 @@ static inline void RawPublishTopScope(char* self)
 static inline void RawPushScope(char* self, U id, U arg)
 {
     char* o = RawNewScope(self);
-    *(U*)(o + 0x18) = arg;
-    *(U*)(o + 0x10) = id;
-    *(int*)(self + 0x60) += 1;
-    *(int*)(o + 0x28) = *(int*)(self + 0x60);
+    RawField<U>(o, 0x18) = arg;
+    RawField<U>(o, 0x10) = id;
+    RawField<int>(self, 0x60) += 1;
+    RawField<int>(o, 0x28) = RawField<int>(self, 0x60);
     FUN_14257dc30(o);
-    FUN_142624020((U*)(self + 0x30), self + 0x30, *(U*)(self + 0x38) + 1);
-    char* slot = (char*)*(U*)(self + 0x30) + *(U*)(self + 0x38) * 0x18;
+    FUN_142624020(RawFieldPtr<U>(self, 0x30), self + 0x30, RawField<U>(self, 0x38) + 1);
+    char* slot = (char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18;
     FUN_14257dc30(o);
     *(char**)(slot - 0x18) = o;
     *(U*)(slot - 0x10) = 0;
@@ -690,9 +690,9 @@ static inline void RawPushScope(char* self, U id, U arg)
 void FUN_142622c90(char* self, U arg)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    if (*(U*)(self + 0x38))
+    if (RawField<U>(self, 0x38))
     {
-        U id = *(U*)(*(char**)((char*)*(U*)(self + 0x30) + *(U*)(self + 0x38) * 0x18 - 0x18) + 0x10);
+        U id = *(U*)(*(char**)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 0x18) + 0x10);
         FUN_142623050(self, (int)(id >> 32), (int)(id & 0xffffffff), arg);
     }
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
@@ -705,7 +705,7 @@ void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
     if (id == 0xffffffffu)
     {
-        U** names = (U**)(self + 0x20);
+        U** names = RawFieldPtr<U*>(self, 0x20);
         U it[2];
         {
             String key(name);
@@ -713,10 +713,10 @@ void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
         }
         if (!RawFound(it))
         {
-            FUN_142623820(self, 1, *(unsigned*)(self + 0x28), name, 0, 0, 0);
+            FUN_142623820(self, 1, RawField<unsigned>(self, 0x28), name, 0, 0, 0);
             {
                 String key(name);
-                StringKeyOps::Ref ref = { &key, (UInt32*)(self + 0x28) };
+                StringKeyOps::Ref ref = { &key, RawFieldPtr<UInt32>(self, 0x28) };
                 FUN_14261f220(names, names, &ref,
                               String::BernsteinHashFunctionCIS(key.ToCStr(), key.GetSize(), 0x1505));
             }
@@ -724,7 +724,7 @@ void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
                 String key(name);
                 FUN_1426223c0(names, it, &key);
             }
-            *(int*)(self + 0x28) += 1;
+            RawField<int>(self, 0x28) += 1;
         }
         id = *(unsigned*)(*(U*)it[0] + 0x10 + it[1] * 0x20 + 0x18);
     }
@@ -743,23 +743,23 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
     if (hi == 0)
         return;
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* scopes = (U*)(self + 0x30);
-    U* roots = (U*)(self + 0x48);
+    U* scopes = RawFieldPtr<U>(self, 0x30);
+    U* roots = RawFieldPtr<U>(self, 0x48);
     if (scopes[1])
     {
         char* recs = (char*)scopes[0];
         U off = scopes[1] * 0x18;
         U id = ((U)(unsigned)hi << 32) | (unsigned)lo;
-        char* top = *(char**)(recs + off - 0x18);
-        if (id == *(U*)(top + 0x10))
+        char* top = RawField<char*>(recs, off - 0x18);
+        if (id == RawField<U>(top, 0x10))
         {
             char* done = 0;
             if (top)
             {
                 FUN_14257dc30(top);
-                done = *(char**)(recs + off - 0x18);
+                done = RawField<char*>(recs, off - 0x18);
             }
-            *(U*)(done + 0x20) = arg + *(U*)(done + 0x18);
+            RawField<U>(done, 0x20) = arg + RawField<U>(done, 0x18);
             U n = scopes[1];
             FUN_142624020(scopes, scopes, n - 1);
             FUN_1426237c0(self);
@@ -768,7 +768,7 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
             if (scopes[1] != 0)
             {
                 char* parent = *(char**)((char*)scopes[0] + scopes[1] * 0x18 - 0x18);
-                dest = (U*)(parent + 0x30);
+                dest = RawFieldPtr<U>(parent, 0x30);
                 push_root = false;
             }
             else if (hi == 1 && (unsigned)(lo - 0xf) <= 0x27)
@@ -776,10 +776,10 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
                 for (U i = 0; i < roots[1]; i++)
                 {
                     char* r = ((char**)roots[0])[i];
-                    if (*(U*)(r + 0x10) == 0x10000000eULL)
+                    if (RawField<U>(r, 0x10) == 0x10000000eULL)
                     {
-                        *(U*)(r + 0x20) += arg;
-                        dest = (U*)(r + 0x30);
+                        RawField<U>(r, 0x20) += arg;
+                        dest = RawFieldPtr<U>(r, 0x30);
                         push_root = false;
                         break;
                     }
@@ -787,14 +787,14 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
                 if (push_root)
                 {
                     char* o = RawNewScope(self);
-                    *(U*)(o + 0x20) = arg;
-                    *(U*)(o + 0x18) = 0;
-                    *(U*)(o + 0x10) = 0x10000000eULL;
-                    *(int*)(self + 0x60) += 1;
-                    *(int*)(o + 0x28) = *(int*)(self + 0x60);
-                    FUN_1426240f0((U*)(o + 0x30), o + 0x30, *(U*)(o + 0x38) + 1);
+                    RawField<U>(o, 0x20) = arg;
+                    RawField<U>(o, 0x18) = 0;
+                    RawField<U>(o, 0x10) = 0x10000000eULL;
+                    RawField<int>(self, 0x60) += 1;
+                    RawField<int>(o, 0x28) = RawField<int>(self, 0x60);
+                    FUN_1426240f0(RawFieldPtr<U>(o, 0x30), o + 0x30, RawField<U>(o, 0x38) + 1);
                     FUN_14257dc30(done);
-                    ((char**)*(U*)(o + 0x30))[*(U*)(o + 0x38) - 1] = done;
+                    ((char**)RawField<U>(o, 0x30))[RawField<U>(o, 0x38) - 1] = done;
                     FUN_1426240f0(roots, roots, roots[1] + 1);
                     FUN_14257dc30(o);
                     ((char**)roots[0])[roots[1] - 1] = o;
@@ -835,7 +835,7 @@ void FUN_142623560(char* self, U delta)
     if (cnt == 0)
         return;
     U scope = RawLocked<U, 0x78, 0x68>(self);
-    U** set = (U**)(self + 0xd0);
+    U** set = RawFieldPtr<U*>(self, 0xd0);
     unsigned char key[16];
     memset(key, 0, sizeof(key));
     *(U*)key = scope;
@@ -852,7 +852,7 @@ void FUN_142623560(char* self, U delta)
         {
             for (;;)
             {
-                if (*(U*)(e + 8) == home && *(U*)(e + 0x10) == scope && *(int*)(e + 0x18) == (int)cnt)
+                if (*(U*)(e + 8) == home && RawField<U>(e, 0x10) == scope && RawField<int>(e, 0x18) == (int)cnt)
                 {
                     idx = (SPInt)i;
                     break;
@@ -881,7 +881,7 @@ void FUN_142623560(char* self, U delta)
             {
                 for (;;)
                 {
-                    if (*(U*)(e + 8) == home && *(U*)(e + 0x10) == scope && *(int*)(e + 0x18) == (int)cnt)
+                    if (*(U*)(e + 8) == home && RawField<U>(e, 0x10) == scope && RawField<int>(e, 0x18) == (int)cnt)
                     {
                         idx = (SPInt)i;
                         break;
@@ -909,7 +909,7 @@ void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b
 {
     U key = ((U)hi << 32) + (lo & 0xffffffffULL);
     U it[2];
-    FUN_142622290((U**)(self + 0x18), it, &key);
+    FUN_142622290(RawFieldPtr<U*>(self, 0x18), it, &key);
     if (!RawFound(it))
     {
         char* rec = (char*)Memory::AllocAutoHeap(self, 0x30, AllocInfo(0x242, 0, 0));
@@ -922,17 +922,17 @@ void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b
             *(int*)(rec + 8) = 1;
             new (rec + 0x10) String();
         }
-        *(String*)(rec + 0x10) = text;
-        *(int*)(rec + 0x18) = a;
-        *(int*)(rec + 0x1c) = b;
+        RawField<String>(rec, 0x10) = text;
+        RawField<int>(rec, 0x18) = a;
+        RawField<int>(rec, 0x1c) = b;
         if (useCurrent)
             cur = RawLocked<U, 0x78, 0x68>(self);
-        *(U*)(rec + 0x20) = cur;
+        RawField<U>(rec, 0x20) = cur;
         if (useCurrent)
             curCount = RawLocked<unsigned, 0x78, 0x70>(self);
-        *(unsigned*)(rec + 0x28) = curCount;
+        RawField<unsigned>(rec, 0x28) = curCount;
         void* value = rec;
-        FUN_142624190((U**)(self + 0x18), &key, &value);
+        FUN_142624190(RawFieldPtr<U*>(self, 0x18), &key, &value);
         if (value)
             FUN_14257dcb0(value);
     }
@@ -943,11 +943,11 @@ void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b
         if (useCurrent && cnt != 0)
         {
             U cur = RawLocked<U, 0x78, 0x68>(self);
-            unsigned old = *(unsigned*)(rec + 0x28);
-            *(U*)(rec + 0x20) = cur;
+            unsigned old = RawField<unsigned>(rec, 0x28);
+            RawField<U>(rec, 0x20) = cur;
             if (old != 0 && old < cnt)
                 cnt = old;
-            *(unsigned*)(rec + 0x28) = cnt;
+            RawField<unsigned>(rec, 0x28) = cnt;
         }
     }
 }
@@ -958,14 +958,14 @@ void FUN_142623a00(char* self, unsigned hi, U lo, const char* text)
 {
     U key = ((U)hi << 32) + (lo & 0xffffffffULL);
     U it[2];
-    FUN_142622160((U**)(self + 0xd8), it, &key);
+    FUN_142622160(RawFieldPtr<U*>(self, 0xd8), it, &key);
     if (!RawFound(it))
     {
         U len = strlen(text);
         String s;
         for (U i = 0; i < len; i++)
             FUN_142585f70(&s, text[i] == ';' ? 0x5c : (int)text[i]);
-        FUN_142624300((U**)(self + 0xd8), &key, &s);
+        FUN_142624300(RawFieldPtr<U*>(self, 0xd8), &key, &s);
     }
 }
 

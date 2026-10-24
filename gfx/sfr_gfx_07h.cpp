@@ -106,9 +106,9 @@ void FUN_14261e460()
 // @0x14261e730
 void FUN_14261e730(char* node, U* ctx)
 {
-    FUN_142624700(ctx[1], *(U*)(node + 0x10), *(int*)(node + 0x20) - *(int*)(node + 0x18), 1, ctx[0]);
-    for (U i = 0; i < *(U*)(node + 0x38); i++)
-        FUN_14261e730(*(char**)(*(char**)(node + 0x30) + i * 8), ctx);
+    FUN_142624700(ctx[1], RawField<U>(node, 0x10), RawField<int>(node, 0x20) - RawField<int>(node, 0x18), 1, ctx[0]);
+    for (U i = 0; i < RawField<U>(node, 0x38); i++)
+        FUN_14261e730(*(char**)(RawField<char*>(node, 0x30) + i * 8), ctx);
 }
 
 // @0x14261e7a0
@@ -255,35 +255,35 @@ void* FUN_14261f4a0(char* self)
 {
     *(void**)self = DAT_14318f068;
     *(int*)(self + 8) = 1;
-    *(U*)(self + 0x10) = 0;
-    *(U*)(self + 0x18) = 0;
-    *(U*)(self + 0x20) = 0;
-    *(int*)(self + 0x28) = 0x38;
+    RawField<U>(self, 0x10) = 0;
+    RawField<U>(self, 0x18) = 0;
+    RawField<U>(self, 0x20) = 0;
+    RawField<int>(self, 0x28) = 0x38;
     for (int i = 0x30; i <= 0x58; i += 8)
         *(U*)(self + i) = 0;
-    *(int*)(self + 0x60) = 0;
-    *(int*)(self + 0x64) = -1;
-    *(U*)(self + 0x68) = 0;
-    *(int*)(self + 0x70) = 0;
+    RawField<int>(self, 0x60) = 0;
+    RawField<int>(self, 0x64) = -1;
+    RawField<U>(self, 0x68) = 0;
+    RawField<int>(self, 0x70) = 0;
     FUN_14258d030(self + 0x78, 0);
-    *(U*)(self + 0xa0) = 0;
+    RawField<U>(self, 0xa0) = 0;
     FUN_14258a350(self + 0xa8, true, false);
-    *(U*)(self + 0xd0) = 0;
-    *(U*)(self + 0xd8) = 0;
+    RawField<U>(self, 0xd0) = 0;
+    RawField<U>(self, 0xd8) = 0;
     FUN_14258d030(self + 0xe0, 0);
-    *(int*)(self + 0x108) = 0;
+    RawField<int>(self, 0x108) = 0;
     new (self + 0x110) StringLH();
-    *(U*)(self + 0x118) = 0;
-    *(U*)(self + 0x120) = 0;
-    *(U*)(self + 0x128) = 0;
+    RawField<U>(self, 0x118) = 0;
+    RawField<U>(self, 0x120) = 0;
+    RawField<U>(self, 0x128) = 0;
     FUN_1425e4f80(self + 0x130);
-    *(int*)(self + 0x158) = 0;
-    *(U*)(self + 0x160) = 0;
-    *(U*)(self + 0x168) = 0;
-    *(U*)(self + 0x170) = 0;
+    RawField<int>(self, 0x158) = 0;
+    RawField<U>(self, 0x160) = 0;
+    RawField<U>(self, 0x168) = 0;
+    RawField<U>(self, 0x170) = 0;
     FUN_142582300(self + 0x178, false, false);
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    *(int*)(self + 0x108) = DAT_143a2f428;
+    RawField<int>(self, 0x108) = DAT_143a2f428;
     DAT_143a2f428 = DAT_143a2f428 + 1;
     FUN_1425842b0(self + 0x178);
 
@@ -306,10 +306,10 @@ void* FUN_14261f4a0(char* self)
             *(int*)(type + 8) = 1;
             new (type + 0x10) StringLH();
         }
-        *(String*)(type + 0x10) = "Object Interface";
-        *(int*)(type + 0x18) = 0;
-        *(U*)(type + 0x28) = 0;
-        *(U*)(type + 0x20) = 0;
+        RawField<String>(type, 0x10) = "Object Interface";
+        RawField<int>(type, 0x18) = 0;
+        RawField<U>(type, 0x28) = 0;
+        RawField<U>(type, 0x20) = 0;
         void* ref = type;
         FUN_142624190(self + 0x18, &key, &ref);
         if (ref)
@@ -318,7 +318,7 @@ void* FUN_14261f4a0(char* self)
     UInt32 id = 0xe;
     String name("Object Interface");
     StringKeyOps::Ref ref = { &name, &id };
-    FUN_14261f220((U**)(self + 0x20), self + 0x20, &ref,
+    FUN_14261f220(RawFieldPtr<U*>(self, 0x20), self + 0x20, &ref,
                   String::BernsteinHashFunctionCIS(name.ToCStr(), name.GetSize(), 0x1505));
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
     return self;
@@ -329,16 +329,16 @@ void* FUN_14261f4a0(char* self)
 void FUN_14261fa90(char* self)
 {
     FUN_142582530(self + 0x178);
-    FUN_14261f9e0((U*)(self + 0x168));
-    ((String*)(self + 0x110))->~String();
+    FUN_14261f9e0(RawFieldPtr<U>(self, 0x168));
+    (RawFieldPtr<String>(self, 0x110))->~String();
     FUN_14258d0b0(self + 0xe0);
-    FUN_14261f940((U*)(self + 0xd8));
-    RawClearPlainSet((U*)(self + 0xd0), 0x28);
+    FUN_14261f940(RawFieldPtr<U>(self, 0xd8));
+    RawClearPlainSet(RawFieldPtr<U>(self, 0xd0), 0x28);
     FUN_14258a720(self + 0xa8);
-    FUN_14261f820((U*)(self + 0xa0));
+    FUN_14261f820(RawFieldPtr<U>(self, 0xa0));
     FUN_14258d0b0(self + 0x78);
-    U count = *(U*)(self + 0x50);
-    char* data = *(char**)(self + 0x48);
+    U count = RawField<U>(self, 0x50);
+    char* data = RawField<char*>(self, 0x48);
     for (U i = count; i; i--)
     {
         void* p = *(void**)(data + (i - 1) * 8);
@@ -346,10 +346,10 @@ void FUN_14261fa90(char* self)
             FUN_14257dcb0(p);
     }
     Memory::Free(data);
-    FUN_14261f7b0((U*)(self + 0x30));
-    FUN_14261f9e0((U*)(self + 0x20));
-    FUN_14261f8b0((U*)(self + 0x18));
-    RawClearPlainSet((U*)(self + 0x10), 0x30);
+    FUN_14261f7b0(RawFieldPtr<U>(self, 0x30));
+    FUN_14261f9e0(RawFieldPtr<U>(self, 0x20));
+    FUN_14261f8b0(RawFieldPtr<U>(self, 0x18));
+    RawClearPlainSet(RawFieldPtr<U>(self, 0x10), 0x30);
     *(void**)self = DAT_14318efe8;
     FUN_14257db40(self);
 }

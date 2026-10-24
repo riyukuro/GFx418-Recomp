@@ -15,6 +15,10 @@ typedef UPInt U;
 void FUN_14257dc30(void*);   // Ptr AddRef
 void FUN_14257dcb0(void*);   // Ptr Release
 
+// Typed access to a raw-layout field at a byte offset from a base pointer.
+template<class T> static inline T& RawField(const void* base, UPInt off) { return *(T*)((char*)base + off); }
+template<class T> static inline T* RawFieldPtr(const void* base, UPInt off) { return (T*)((char*)base + off); }
+
 // An entry of a set whose table is {count, mask, entries...}: entry i starts at table + 0x10 + i * stride with the
 // chain link (-2 empty, -1 end) at +0, the home hash at +8 and the payload at +0x10.
 static inline char* RawEntry(U* table, U index, U stride) { return (char*)table + 0x10 + index * stride; }
@@ -221,7 +225,7 @@ static inline void RawClearPtrSet(U* self)
         char* e = RawEntry(table, i, 0x20);
         if (*(SPInt*)e != -2)
         {
-            void* p = *(void**)(e + 0x18);
+            void* p = RawField<void*>(e, 0x18);
             if (p)
                 FUN_14257dcb0(p);
             *(SPInt*)e = -2;
@@ -287,7 +291,7 @@ static inline SPInt RawFindKey8(U* table, U key, U stride)
         return -1;
     for (;;)
     {
-        if (*(U*)(e + 8) == home && *(U*)(e + 0x10) == key)
+        if (*(U*)(e + 8) == home && RawField<U>(e, 0x10) == key)
             return (SPInt)index;
         SPInt next = *(SPInt*)e;
         if (next == -1)

@@ -99,12 +99,12 @@ void FUN_142624190(U** self, const U* key, void* const* value)
     if (idx >= 0)
     {
         char* e = RawEntry(*self, (U)idx, 0x20);
-        *(U*)(e + 0x10) = *key;
+        RawField<U>(e, 0x10) = *key;
         if (*value)
             FUN_14257dc30(*value);
-        if (*(void**)(e + 0x18))
-            FUN_14257dcb0(*(void**)(e + 0x18));
-        *(void**)(e + 0x18) = *value;
+        if (RawField<void*>(e, 0x18))
+            FUN_14257dcb0(RawField<void*>(e, 0x18));
+        RawField<void*>(e, 0x18) = *value;
         return;
     }
     FUN_14261ee70(self, self, &ref, hash);
@@ -119,8 +119,8 @@ void FUN_142624300(U** self, const U* key, const String* value)
     if (idx >= 0)
     {
         char* e = RawEntry(*self, (U)idx, 0x20);
-        *(U*)(e + 0x10) = *key;
-        *(String*)(e + 0x18) = *value;
+        RawField<U>(e, 0x10) = *key;
+        RawField<String>(e, 0x18) = *value;
         return;
     }
     FUN_14261f070(self, self, &ref, hash);
@@ -129,38 +129,38 @@ void FUN_142624300(U** self, const U* key, const String* value)
 // Mirrors the top scope's (record, count) pair into the locked statistics fields.
 static inline void RawPublishTop(char* self)
 {
-    char* slot = (char*)*(U*)(self + 0x30) + *(U*)(self + 0x38) * 0x18;
+    char* slot = (char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18;
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-    *(U*)(self + 0x68) = *(U*)(slot - 0x10);
-    *(int*)(self + 0x70) = *(int*)(slot - 8);
+    RawField<U>(self, 0x68) = *(U*)(slot - 0x10);
+    RawField<int>(self, 0x70) = *(int*)(slot - 8);
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
 }
 
 // @0x142624450
 void FUN_142624450(char* self, U v)
 {
-    if (*(U*)(self + 0x38) == 0)
+    if (RawField<U>(self, 0x38) == 0)
     {
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        *(U*)(self + 0x68) = v;
+        RawField<U>(self, 0x68) = v;
         LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
         return;
     }
-    *(U*)((char*)*(U*)(self + 0x30) + *(U*)(self + 0x38) * 0x18 - 0x10) = v;
+    *(U*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 0x10) = v;
     RawPublishTop(self);
 }
 
 // @0x1426244e0
 void FUN_1426244e0(char* self, int v)
 {
-    if (*(U*)(self + 0x38) == 0)
+    if (RawField<U>(self, 0x38) == 0)
     {
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        *(int*)(self + 0x70) = v;
+        RawField<int>(self, 0x70) = v;
         LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
         return;
     }
-    *(int*)((char*)*(U*)(self + 0x30) + *(U*)(self + 0x38) * 0x18 - 8) = v;
+    *(int*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 8) = v;
     RawPublishTop(self);
 }
 
@@ -168,7 +168,7 @@ void FUN_1426244e0(char* self, int v)
 void FUN_142624570(char* self, int v)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    *(int*)(self + 0x118) = v;
+    RawField<int>(self, 0x118) = v;
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
@@ -181,11 +181,11 @@ void FUN_1426245c0(char* self, void** obj)
     if (obj)
     {
         Fn* vt = *(Fn**)obj;
-        *(int*)(self + 0x11c) = vt[0x20 / 8](obj);
-        *(int*)(self + 0x120) = vt[0x30 / 8](obj);
-        *(int*)(self + 0x124) = vt[0x38 / 8](obj);
-        *(int*)(self + 0x128) = vt[0x48 / 8](obj);
-        *(int*)(self + 0x12c) = vt[0x40 / 8](obj);
+        RawField<int>(self, 0x11c) = vt[0x20 / 8](obj);
+        RawField<int>(self, 0x120) = vt[0x30 / 8](obj);
+        RawField<int>(self, 0x124) = vt[0x38 / 8](obj);
+        RawField<int>(self, 0x128) = vt[0x48 / 8](obj);
+        RawField<int>(self, 0x12c) = vt[0x40 / 8](obj);
     }
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
@@ -194,7 +194,7 @@ void FUN_1426245c0(char* self, void** obj)
 // @0x142624660
 void FUN_142624660(char* self, const char* path)
 {
-    String* s = (String*)(self + 0x110);
+    String* s = RawFieldPtr<String>(self, 0x110);
     *s = path;
     UPInt len = s->GetLength();
     for (UPInt k = 0; k < len; k++)
@@ -300,7 +300,7 @@ void FUN_142624840(U** self, void* owner, U n)
             char* e = RawEntry(old, i, 0x28);
             if (*(SPInt*)e != -2)
             {
-                RawHashAdd<0x28, RawWordsOps<3> >(&nt, (const char*)(e + 0x10), FUN_14261fc40(0, (const unsigned char*)(e + 0x10)));
+                RawHashAdd<0x28, RawWordsOps<3> >(&nt, RawFieldPtr<const char>(e, 0x10), FUN_14261fc40(0, RawFieldPtr<const unsigned char>(e, 0x10)));
                 *(SPInt*)e = -2;
             }
         }
@@ -325,7 +325,7 @@ void FUN_142624af0(U** self, void* owner, U n)
             char* e = RawEntry(old, i, 0x30);
             if (*(SPInt*)e != -2)
             {
-                RawHashAdd<0x30, RawWordsOps<4> >(&nt, (const char*)(e + 0x10), FUN_14261fd80(0, (const unsigned char*)(e + 0x10)));
+                RawHashAdd<0x30, RawWordsOps<4> >(&nt, RawFieldPtr<const char>(e, 0x10), FUN_14261fd80(0, RawFieldPtr<const unsigned char>(e, 0x10)));
                 *(SPInt*)e = -2;
             }
         }
@@ -351,9 +351,9 @@ static inline void RawGrowMoviePtr(U** self, void* owner, U n)
             char* e = RawEntry(old, i, 0x20);
             if (*(SPInt*)e != -2)
             {
-                Add(&nt, owner, e + 0x10, RawKey8Hash(*(U*)(e + 0x10)));
-                if (*(void**)(e + 0x18))
-                    FUN_14257dcb0(*(void**)(e + 0x18));
+                Add(&nt, owner, e + 0x10, RawKey8Hash(RawField<U>(e, 0x10)));
+                if (RawField<void*>(e, 0x18))
+                    FUN_14257dcb0(RawField<void*>(e, 0x18));
                 *(SPInt*)e = -2;
             }
         }
@@ -384,9 +384,9 @@ void FUN_1426251d0(U** self, void* owner, U n)
             char* e = RawEntry(old, i, 0x20);
             if (*(SPInt*)e != -2)
             {
-                KeyStringOps::Ref ref = { (const U*)(e + 0x10), (const String*)(e + 0x18) };
-                RawHashAdd<0x20, KeyStringOps>(&nt, ref, RawKey8Hash(*(U*)(e + 0x10)));
-                ((String*)(e + 0x18))->~String();
+                KeyStringOps::Ref ref = { RawFieldPtr<const U>(e, 0x10), RawFieldPtr<const String>(e, 0x18) };
+                RawHashAdd<0x20, KeyStringOps>(&nt, ref, RawKey8Hash(RawField<U>(e, 0x10)));
+                (RawFieldPtr<String>(e, 0x18))->~String();
                 *(SPInt*)e = -2;
             }
         }
@@ -412,11 +412,11 @@ void FUN_1426255e0(U** self, void* owner, U n)
             char* e = RawEntry(old, i, 0x20);
             if (*(SPInt*)e != -2)
             {
-                const String* key = (const String*)(e + 0x10);
+                const String* key = RawFieldPtr<const String>(e, 0x10);
                 U hash = String::BernsteinHashFunctionCIS(key->ToCStr(), key->GetSize(), 0x1505);
-                StringKeyOps::Ref ref = { key, (const UInt32*)(e + 0x18) };
+                StringKeyOps::Ref ref = { key, RawFieldPtr<const UInt32>(e, 0x18) };
                 RawHashAdd<0x20, StringKeyOps>(&nt, ref, hash);
-                ((String*)(e + 0x10))->~String();
+                (RawFieldPtr<String>(e, 0x10))->~String();
                 *(SPInt*)e = -2;
             }
         }
