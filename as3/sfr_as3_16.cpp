@@ -114,6 +114,30 @@ namespace Scaleform { namespace GFx {
 ASMovieRootBase::~ASMovieRootBase() = default;
 }} // namespace Scaleform::GFx
 
+extern "C" void FUN_1423de770(void*, void*);
+extern "C" void FUN_14257dcb0();
+
+// MS2-FUNCTIONAL 0x1424de240: preserves the MovieRoot load-state reset, range bookkeeping, and exceptional cleanup path.
+// @0x1424de240
+void FUN_1424de240(long long* state)
+{
+    auto* root = reinterpret_cast<unsigned char*>(*state);
+    if (root[0xb1] != 0)
+        return;
+
+    const auto previous = *reinterpret_cast<unsigned*>(root + 0x18);
+    long long cleanup[2] = {};
+    FUN_1423de770(root, cleanup);
+    *reinterpret_cast<unsigned*>(root + 0x88) = 0;
+    const auto limit = *reinterpret_cast<unsigned*>(root + 0x90);
+    *reinterpret_cast<unsigned*>(root + 0x94) = previous;
+    *reinterpret_cast<unsigned*>(root + 0x90) = previous < limit ? limit : previous;
+    if ((root[0x78] & 0x10) != 0)
+        root[0xb0] = 1;
+    if (cleanup[0] != 0)
+        FUN_14257dcb0();
+}
+
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14257db40();
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
