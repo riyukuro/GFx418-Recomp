@@ -53,6 +53,7 @@ MS2_GLOBAL(0x142eab358, float, DrawableImageScale2);
 MS2_GLOBAL(0x142ceab84, float, FloatOne);
 MS2_GLOBAL(0x143003a80, float[4], ThresholdTransformX);
 MS2_GLOBAL(0x1430569c0, float[4], ThresholdTransformY);
+MS2_GLOBAL(0x143a2f740, unsigned char[9], ChannelIndexMap);
 MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
 MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
 MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
@@ -621,6 +622,49 @@ extern "C" void FUN_142677c70(void* operation, void*, Scaleform::Render::ImageDa
             FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - left));
             if (!alpha) pixel |= 0xff000000u;
             FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), pixel);
+        }
+    }
+}
+
+// MS2-FUNCTIONAL: copies one selected RGBA component into another using the executable's component selector table.
+// @0x142676380
+extern "C" void FUN_142676380(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* source = static_cast<ImageData*>(inputs[0]);
+    ImagePlane dst, src;
+    destination->GetPlane(0, &dst);
+    source->GetPlane(0, &src);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
+    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
+    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
+    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
+    unsigned from = *reinterpret_cast<const unsigned*>(op + 0x40);
+    unsigned to = *reinterpret_cast<const unsigned*>(op + 0x44);
+    from = from < 9 ? ChannelIndexMap[from] : 0xff;
+    to = to < 9 ? ChannelIndexMap[to] : 0xff;
+    if (from >= 4 || to >= 4) return;
+    const auto* srcAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
+    const auto* dstAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
+    const bool useSrcAlpha = srcAlpha && *reinterpret_cast<const bool*>(srcAlpha + 0x48);
+    const bool useDstAlpha = dstAlpha && *reinterpret_cast<const bool*>(dstAlpha + 0x48);
+    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
+        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
+        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
+        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
+            unsigned srcPixel = 0, dstPixel = 0;
+            FUN_14257bf70(destination, &dstPixel, dstRow, static_cast<unsigned>(x));
+            FUN_14257bf70(source, &srcPixel, srcRow, static_cast<unsigned>(x - left));
+            auto* sc = reinterpret_cast<unsigned char*>(&srcPixel);
+            auto* dc = reinterpret_cast<unsigned char*>(&dstPixel);
+            if (!useSrcAlpha) sc[3] = 0xff;
+            if (!useDstAlpha) dc[3] = 0xff;
+            dc[to] = sc[from];
+            if (!useDstAlpha) dc[3] = 0xff;
+            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), dstPixel);
         }
     }
 }
