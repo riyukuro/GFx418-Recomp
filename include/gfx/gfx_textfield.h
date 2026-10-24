@@ -12,6 +12,7 @@
 #include "ms2/scaleform/include/render/render_color.h"
 
 namespace Scaleform { class Range; }   // (appended, sfr34) kernel/sf_range.h
+namespace Scaleform { namespace Render { namespace Text { struct ImageDesc; } } }   // (appended, sfr24) text_core.h
 
 namespace Scaleform { namespace Render { namespace Text { class DocView; } }
 namespace GFx {
@@ -180,6 +181,7 @@ public:
     Ptr<Text::EditorKit> CreateEditorKit();                  // exe 0x1425b7840
     void   RemoveIdImageDescAssoc(const char* idStr);        // exe 0x1425bb680
     void   ClearIdImageDescAssoc();                          // exe 0x1425b7220
+    void   AddIdImageDescAssoc(const char* idStr, Render::Text::ImageDesc* pdesc);  // exe 0x1425b65e0
 
 private:
     UByte Unrecovered[0x148];
