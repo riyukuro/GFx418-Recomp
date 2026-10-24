@@ -173,6 +173,7 @@ void FUN_14251fb90(Scaleform::UPInt tracer, int op, Scaleform::SPInt reg);   // 
 Scaleform::UPInt* FUN_142419e50(Scaleform::UPInt classTraits, void* tmp);   // class traits -> class object slot
 unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, unsigned a, unsigned b);   // read the value behind a slot reference
 void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   // next enumeration index of a string-like object
+Scaleform::UPInt FUN_142525270(void* vm, void* multiname);   // class traits named by a static multiname, or 0
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -7070,6 +7071,103 @@ void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 objReg, UInt32 idxReg)
     Sfr31Wr(top, 8, 0);
     Sfr31Wr(top, 0x10, result ? 1 : 0);
     Sfr31Wr(top, 0x18, 0);
+}
+// ---- batch 67
+// constructprop opcode: the receiver stays on the operand stack; a class named by a static multiname is constructed directly, otherwise
+// the property is looked up on the receiver and the value found is constructed with the popped arguments.
+// MS2-FUNCTIONAL 0x1425371f0: raw-offset model; codegen differs from the exe
+// @0x1425371f0
+void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, reinterpret_cast<VM*>(cvm), argc);
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(raBuf, &mn);
+    const UPInt frame0 = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
+    Value* recv = reinterpret_cast<Value*>(Sfr31Rd(frame0, 8));
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(recv));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+        const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
+        typedef void (*CtorFn)(UPInt, Value*, UInt32, const void*);
+        UPInt tr = 0;
+        if ((*reinterpret_cast<const UInt32*>(&mn) & 3) < 2)
+            tr = FUN_142525270(&vm, &mn);
+        if (tr != 0)
+        {
+            const UPInt itr = Sfr31Rd(tr, 0xc0);
+            UPInt cls = Sfr31Rd(itr, 0x80);
+            if (cls == 0)
+            {
+                typedef void (*MakeFn)(UPInt);
+                reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(itr, 0), 0x68))(itr);
+                cls = Sfr31Rd(itr, 0x80);
+            }
+            reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(cls, 0), 0x60))(cls, recv, argc, args);
+        }
+        else
+        {
+            UPInt pr[6] = {0, 0, 0, 0, 0, 0};
+            FUN_142501b00(reinterpret_cast<PropRef*>(pr), &vm, recv, &mn, 0);
+            Value& res = *reinterpret_cast<Value*>(&pr[2]);
+            const UPInt f = pr[0];
+            if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+            {
+                alignas(8) char eb[sizeof(VM::Error)];
+                FUN_1424d6cf0(eb, 0x42d, &vm, reinterpret_cast<UInt8*>(&mn) + 0x10, recv);
+                vm.ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
+                reinterpret_cast<VM::Error*>(eb)->~Error();
+            }
+            else
+            {
+                Value e;
+                const UPInt kind = f & 3;
+                bool have = true;
+                if (kind == 0)
+                {
+                    UInt8 ret[16];
+                    have = *FUN_14250e2d0(f, ret, &vm, &e, &res, 0, 0) != 0;
+                }
+                else if (kind == 1)
+                    e.Assign(*reinterpret_cast<const Value*>(f & ~static_cast<UPInt>(1)));
+                else if (kind == 2)
+                {
+                    const UPInt g = f & ~static_cast<UPInt>(2);
+                    UPInt raw[4] = { 0xc, 0, g, 0 };
+                    if (g != 0)
+                        *reinterpret_cast<UInt32*>(g + 0x10) = (*reinterpret_cast<UInt32*>(g + 0x10) + 1u) & 0x8fbfffffu;
+                    e.Assign(*reinterpret_cast<const Value*>(raw));
+                    FUN_142521f00(raw);
+                }
+                if (have)
+                {
+                    const UInt32 ek = *reinterpret_cast<const UInt32*>(&e) & 0x1f;
+                    const UPInt eo = Sfr31Rd(reinterpret_cast<UPInt>(&e), 0x10);
+                    if (ek == 0 || (ek - 0xc < 4 && eo == 0))
+                    {
+                        VM::Error er(static_cast<VM::ErrorID>(0x3f1), vm);
+                        vm.ThrowTypeError(er);
+                    }
+                    else if (ek == 7 || ek == 0x11)
+                    {
+                        alignas(8) char eb[sizeof(VM::Error)];
+                        FUN_1424d6f40(eb, 0x428, &vm, reinterpret_cast<UInt8*>(&mn) + 0x10);
+                        vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+                        reinterpret_cast<VM::Error*>(eb)->~Error();
+                    }
+                    else
+                        reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(eo, 0), 0x60))(eo, recv, argc, args);
+                }
+                e.~Value();
+            }
+            res.~Value();
+        }
+    }
+    mn.~Multiname();
+    FUN_1424de9e0(raBuf);
 }
 }}} // namespace Scaleform::GFx::AS3
 
