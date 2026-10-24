@@ -1495,7 +1495,7 @@ void TransformCtorFunction::GlobalCtor(const FnCall& fn)
 // @0x142969040
 bool Environment::NeedTermination(int execType) const
 {
-    if ((execType == ActionBuffer::Exec_Unknown || execType == ActionBuffer::Exec_Function) && Target->IsUnloading())
+    if ((execType == ActionBuffer::Exec_Unknown || execType == ActionBuffer::Exec_Event) && Target->IsUnloading())
         return true;
     if (Target->IsUnloaded())
         return true;

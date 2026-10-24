@@ -156,6 +156,16 @@ public:
     virtual FunctionRef Get__constructor__(ASStringContext* psc); // exe 0x142958370
     // Back to the saved prototype after an alternate one was set (exe 0x14297dfb0).
     void ResetAltProto();
+    // (appended, sfr36) Member lookups start at pproto until ResetAltProto (inlined in the exe, e.g. by the
+    // call method action).
+    void SetAltProto(Object* pproto)
+    {
+        if (pproto == SuperProto)
+            return;
+        SavedProto = SuperProto;
+        SuperProto = pproto;
+        pProto     = SuperProto;
+    }
 
 protected:
     template<class Functor>

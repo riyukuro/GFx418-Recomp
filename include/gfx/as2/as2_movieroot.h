@@ -147,6 +147,41 @@ enum ASBuiltinType : int
     ASBuiltin_rendererMatrix = 153,
     ASBuiltin_Amp            = 154,
     ASBuiltin_length = 155,
+    // (appended, sfr36) the rest of the names, checked against the exe's name table 0x143a51c30
+    ASBuiltin_Sound          = 8,
+    ASBuiltin_Ime            = 22, // "IME"
+    ASBuiltin_XML            = 23,
+    ASBuiltin_XMLNode        = 24,
+    ASBuiltin_Key            = 26,
+    ASBuiltin_NetConnection  = 34,
+    ASBuiltin_LocManager     = 45,
+    ASBuiltin_badtype_       = 47, // "<bad type>"
+    ASBuiltin_undefined_     = 48, // "<undefined>"
+    ASBuiltin_null           = 52,
+    ASBuiltin_true           = 53,
+    ASBuiltin_false          = 54,
+    ASBuiltin_string         = 55, // the typeof names
+    ASBuiltin_number         = 56,
+    ASBuiltin_boolean        = 57,
+    ASBuiltin_movieclip      = 58,
+    ASBuiltin_object         = 59,
+    ASBuiltin_function       = 60,
+    ASBuiltin__global        = 63, // "_global"
+    ASBuiltin__level0        = 66, // "_level0"
+    ASBuiltin__level0dot_    = 67, // "_level0."
+    ASBuiltin_gfxExtensions  = 71,
+    ASBuiltin_noInvisibleAdvance = 72,
+    ASBuiltin_continueAnimation  = 73,
+    ASBuiltin_NaN            = 74,
+    ASBuiltin_Infinity       = 75,
+    ASBuiltin_minusInfinity_ = 76, // "-Infinity"
+    ASBuiltin_1 = 144,
+    ASBuiltin_2 = 145,
+    ASBuiltin_3 = 146,
+    ASBuiltin_4 = 147,
+    ASBuiltin_5 = 148,
+    ASBuiltin_6 = 149,
+    ASBuiltin_7 = 150,
 };
 // The last digit with a builtin name.
 enum { ASBuiltinConst_DigitMax_ = 7 };
