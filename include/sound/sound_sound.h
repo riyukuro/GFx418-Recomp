@@ -13,13 +13,27 @@
 #include "../kernel/sf_refcount.h"
 #include "sound_renderer.h"
 
+namespace Scaleform {
+namespace Sound { class SoundDataBase; }
+
+// The exe has no vftable for the RefCountBaseNTS / RefCountBaseStatImpl layers of SoundDataBase (the derived constructors
+// overwrite the pointer): this specialisation keeps its own chain out of the object file.
+template<>
+class __declspec(novtable) RefCountBaseNTS<Sound::SoundDataBase, 4> : public RefCountNTSImpl
+{
+public:
+    enum { StatType = 4 };
+    SF_MEMORY_REDEFINE_NEW(RefCountBaseNTS, 4)
+};
+}
+
 namespace Scaleform { namespace Sound {
 
 // Allocation stat of the sound objects (Stat_Default_Mem + 2).
 enum { Stat_Sound_Mem = 4 };
 
 // Sample data description (RefCountBaseNTS, 0x20 bytes).
-class SoundDataBase : public RefCountBaseNTS<SoundDataBase, Stat_Sound_Mem>
+class __declspec(novtable) SoundDataBase : public RefCountBaseNTS<SoundDataBase, Stat_Sound_Mem>
 {
 public:
     enum SampleFormat
@@ -126,6 +140,8 @@ public:
     // Room for length more samples of dsize bytes; the data stays locked until UnlockData.
     UByte* LockDataForAppend(unsigned length, unsigned dsize);
     void   UnlockData();
+    // Positions the read cursor on the chunk holding the byte offset; false when it is past the data.
+    bool   SetReadPosition(unsigned pos);
 
 protected:
     struct DataChunk;
