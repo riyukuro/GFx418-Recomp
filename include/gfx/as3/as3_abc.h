@@ -408,6 +408,8 @@ public:
 class File : public NewOverrideBase<StatMV_VM_AbcFile_Mem>, public RefCountImpl
 {
 public:
+    // (sfr24) as AbcFileWithMovieDef's inline ctor in MovieRoot::ExecuteAbc 0x1424f9d60 builds it (the versions stay unset).
+    File() : DataSize(0), FileHandle(0), SwfFileOffset(0) {}
     ~File();                                    // 0x1425456e0 (vftable 0x14317b050)
     void Clear();                               // 0x142545dd0
 

@@ -339,6 +339,9 @@ static_assert(sizeof(MovieRoot) == 0x6f8, "AS3::MovieRoot size");
 class ASVM : public VM
 {
 public:
+    // (sfr24) an ABC file of a movie's DoABC tag (as3_abcfilewithmoviedef.h).
+    class AbcFileWithMovieDef;
+
     // (appended, sfr19) vftable 0x14317d8b0
     ASVM(MovieRoot* pmr, FlashUI& ui, FileLoader& loader, StringManager& sm, ASRefCountCollector& gc);   // 0x1424d5600
     virtual ~ASVM();                    // 0x1424dd500
