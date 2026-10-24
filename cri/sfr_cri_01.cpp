@@ -5579,6 +5579,18 @@ void VideoPlayerImpl::Pause(bool on)
 }
 
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x1400286d0
+UInt32 VideoPlayerImpl::GetPosition()
+{
+    if (Stat == Finished || Stat == Stopped)
+        return 0;
+    UInt32 pos = 0;
+    if (StmPrm.num_video > 0)
+        pos = CurrentFrame % StmPrm.video_prm[0].total_frames;
+    return pos;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028700
 void VideoPlayerImpl::SetSubtitleChannel(int channel)
 {
@@ -5596,6 +5608,23 @@ void VideoPlayerImpl::SetSubtitleChannel(int channel)
             pPlayer->SetSubtitleChannel(channel);
         }
     }
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028760
+int VideoPlayerImpl::GetSubtitleChannel()
+{
+    return SubtitleChannel == -1 ? -1 : SubtitleChannel;
+}
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// @0x140028770
+void VideoPlayerImpl::SetDecodeHeaderTimeout(float timeout)
+{
+    if (timeout > 0.0f)
+        DecodeHeaderTimeout = (UInt64)(timeout * 1000.0f * 1000.0f);
+    else
+        DecodeHeaderTimeout = 0;
 }
 
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
@@ -5881,6 +5910,22 @@ void VideoPlayerImpl::SetSubAudioTrack(int trackIndex)
 {
     if (Stat == Ready && pSubSound)
         pPlayer->SetSubAudioTrack(trackIndex);
+}
+
+// @0x1400298b0
+Sound::SoundChannel* VideoPlayerImpl::GetSoundChannel(SoundTrack track)
+{
+    if (track == MainTrack)
+    {
+        if (pSound)
+            return pSound->GetSoundChannel();
+    }
+    else if (track == SubAudio)
+    {
+        if (pSubSound)
+            return pSubSound->GetSoundChannel();
+    }
+    return 0;
 }
 
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
