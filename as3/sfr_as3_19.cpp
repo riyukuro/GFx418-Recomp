@@ -175,6 +175,7 @@ unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scal
 void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   // next enumeration index of a string-like object
 Scaleform::UPInt FUN_142525270(void* vm, void* multiname);   // class traits named by a static multiname, or 0
 Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Function> FUN_14241a7d0(void* self, Scaleform::GFx::AS3::VMAbcFile& file, Scaleform::UInt32 method_ind, const Scaleform::GFx::AS3::ScopeStackType& ss, Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript& gos);
+Scaleform::UPInt FUN_1425fc530(Scaleform::UPInt container, unsigned idx);   // DisplayObjContainer::GetChildAt
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -7311,6 +7312,87 @@ bool Sfr31ValueSetMember(UPInt self, Object* obj, const char* name, const void* 
         return false;
     }
     return true;
+}
+// ---- batch 70
+// The AS3 object the display object part of an interface object (at dobj) carries; created on first use.
+static UPInt Sfr31AvmObjOfDisplay(UPInt dobj)
+{
+    const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
+    typedef void (*MakeAvmFn)(UPInt, int);
+    reinterpret_cast<MakeAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x78))(sub, 1);
+    UPInt avmObj = Sfr31Rd(sub, 0x10);
+    if (avmObj == 0)
+        avmObj = Sfr31Rd(sub, 8);
+    if (avmObj & 1)
+        avmObj -= 1;
+    return avmObj;
+}
+
+// AS3ValueObjectInterface::VisitMembers: the visitor receives the dynamic members, the public non-method slots (when it asks for them)
+// and, for a display object container, its children by name.
+// MS2-FUNCTIONAL 0x142531630: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x142531630
+void Sfr31ValueVisitMembers(UPInt self, Object* obj, UPInt visitor)
+{
+    typedef void (*VisitFn)(UPInt, const char*, const void*);
+    typedef bool (*WantFn)(UPInt);
+    const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
+    const VisitFn visit = reinterpret_cast<VisitFn>(Sfr31Rd(Sfr31Rd(visitor, 0), 0x10));
+    const Object::DynAttrsType& attrs = *obj->GetDynamicAttrs();
+    for (Object::DynAttrsType::ConstIterator it = attrs.Begin(); !it.IsEnd(); ++it)
+    {
+        GFx::Value gv;
+        FUN_1424e42c0(root, &it->Second, &gv);
+        visit(visitor, it->First.Name.ToCStr(), &gv);
+    }
+    if (reinterpret_cast<WantFn>(Sfr31Rd(Sfr31Rd(visitor, 0), 8))(visitor))
+    {
+        const Traits& tr = obj->GetTraits();
+        const UPInt n = tr.GetSlotInfoNum();
+        for (UPInt i = 0; i < n; ++i)
+        {
+            ASString name(tr.GetSlotNameNode(AbsoluteIndex(i)));
+            const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(i));
+            const int bt = static_cast<int>(si.BindType);
+            if (bt == 0xb || bt > 0xc || static_cast<int>(si.pNs->GetKind()) != 0)
+                continue;
+            Value v;
+            char ok;
+            FUN_14250e770(&si, &ok, &v, obj);
+            GFx::Value gv;
+            FUN_1424e42c0(root, &v, &gv);
+            visit(visitor, name.ToCStr(), &gv);
+        }
+    }
+    const UPInt otraits = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x20);
+    if (*reinterpret_cast<const int*>(otraits + 0x70) - 0x17U > 5 || ((~(*reinterpret_cast<const UByte*>(otraits + 0x68) >> 5)) & 1) == 0)
+        return;
+    UPInt dobj = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x58);
+    if (dobj != 0 && !((*reinterpret_cast<const UInt16*>(dobj + 0x6a) >> 9) & 1))
+        dobj = 0;
+    UPInt owner = 0x18;
+    if (dobj != 0)
+    {
+        const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
+        typedef UPInt (*GetAvmFn)(UPInt);
+        const UPInt avm = reinterpret_cast<GetAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x28))(sub);
+        owner = avm != 0 ? avm - 0x28 : 0x18;
+    }
+    const UPInt container = Sfr31Rd(owner, 0);
+    for (UInt32 i = 0; i < *reinterpret_cast<const UInt32*>(container + 0xe0); ++i)
+    {
+        const UPInt child = FUN_1425fc530(container, i);
+        if (child == 0)
+            continue;
+        const UPInt avmObj = Sfr31AvmObjOfDisplay(child);
+        if (avmObj == 0)
+            continue;
+        ASString name = reinterpret_cast<DisplayObject*>(Sfr31Rd(avmObj, 0x58))->GetName();
+        Value v(reinterpret_cast<Object*>(avmObj));
+        GFx::Value gv;
+        FUN_1424e42c0(root, &v, &gv);
+        visit(visitor, name.ToCStr(), &gv);
+    }
 }
 }}} // namespace Scaleform::GFx::AS3
 
