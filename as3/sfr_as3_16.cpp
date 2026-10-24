@@ -1048,6 +1048,15 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
 // @0x1424de8f0
 PropRef::~PropRef() = default;
 
+// @0x1424e0b40
+PropRef& PropRef::operator=(PropRef&& other)
+{
+    pValue = other.pValue;
+    SlotIndex = other.SlotIndex;
+    This.Assign(other.This);
+    return *this;
+}
+
 // @0x1424e0e20
 PropRef::operator bool() const
 {
