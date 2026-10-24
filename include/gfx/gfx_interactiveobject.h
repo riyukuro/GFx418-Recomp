@@ -9,7 +9,10 @@
 
 #include "gfx_displayobject.h"
 
-namespace Scaleform { namespace GFx {
+namespace Scaleform {
+struct ArrayDefaultPolicy;
+template<class T, int SID, class SizePolicy> class ArrayDH;
+namespace GFx {
 
 class SoundResource;
 class ASSoundIntf;
@@ -158,8 +161,22 @@ public:
     void SetNoAdvanceLocalFlag(bool v = true)  { if (v) Flags |= Mask_NoAdvanceLocal; else Flags &= ~Mask_NoAdvanceLocal; }
     void SetNoAdvanceGlobalFlag(bool v = true) { if (v) Flags |= Mask_NoAdvanceGlobal; else Flags &= ~Mask_NoAdvanceGlobal; }
 
-    // Tab order collection (the parameter block is filled by the AVM side).
-    struct FillTabableParams;
+    // Tab order collection: the movie passes this down the display tree, the AVM side appends the tabable
+    // characters (0x18 bytes on the stack of MovieImpl::FillTabableArray, exe 0x14256e9a0).
+    struct FillTabableParams
+    {
+        ArrayDH<Ptr<InteractiveObject>, 0x147, ArrayDefaultPolicy>* Array;   // +0x00 the focus group's tab order
+        bool    TabIndexed;            // +0x08 an appended character has a tabIndex (sort by it)
+        bool    InclFocusEnabled;      // +0x09 also take the focusEnabled characters that are not tabEnabled
+        UByte   TabChildrenInProto;    // +0x0a tabChildren of the prototype: 0 not looked up yet
+        // The stack block is 0x18 bytes; nothing in the exe reads past +0x0a (no array here: it would add a /GS
+        // cookie to the callers).
+        UInt16  Unrecovered_0c;
+        UInt32  Unrecovered_10;
+        UInt32  Unrecovered_14;
+
+        FillTabableParams() : Array(0), TabIndexed(false), InclFocusEnabled(false), TabChildrenInProto(0) {}
+    };
 
     AvmInteractiveObjBase* GetAvmIntObj() const { return GetAvmObjImpl()->ToAvmInteractiveObjBase(); }
 

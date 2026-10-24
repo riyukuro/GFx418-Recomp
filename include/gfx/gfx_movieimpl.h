@@ -46,7 +46,7 @@ struct ASStringNode;
 class MemoryHeap;
 class Log;
 namespace GFx { namespace AMP { class ViewStats; } class FSCommandHandler; class MultitouchInterface; }
-namespace Render { class DrawableImageContext; }
+namespace Render { class DrawableImageContext; class Font; }
 namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld;
                    namespace Text { class Allocator; } }
 namespace GFx {
@@ -67,6 +67,7 @@ class LogState;
 class IMEManagerBase;
 class IMECandidateListStyle;
 class CharacterHandle;
+class InputEventsQueueEntry;
 class MovieImpl;
 
 // (sfr_gfx_06d) the links of the movie's list of root nodes (List<MovieDefRootNode>): the list root's pNext is the
@@ -98,7 +99,7 @@ struct FocusGroupDescr
 {
 #ifdef SF_GFX_PLAYERIMPL
     Ptr<Render::TreeContainer>       FocusRectNode;   // +0x00 the node drawing the focus rectangle
-    ArrayDH<Ptr<InteractiveObject> > TabableArray;    // +0x08 the tab order, in the group's own heap
+    ArrayDH<Ptr<InteractiveObject>, 0x147> TabableArray;   // +0x08 the tab order, in the group's own heap
 #else
     UByte   Unrecovered_00[0x28];      // +0x00 focus rect node, tabable array
 #endif
@@ -118,9 +119,45 @@ struct FocusGroupDescr
 
     // The modal clip, if it is still alive (exe 0x14256f7e0).
     Sprite* GetModalClip(MovieImpl* proot);
+#ifdef SF_GFX_PLAYERIMPL
+    // (appended, sfr24) Drops a filled tab order so the next focus key collects it again (exe 0x142574ce0).
+    SF_NOINLINE void ResetTabableArray()
+    {
+        if (TabableArrayStatus & 1)
+        {
+            TabableArray.Clear();
+            TabableArrayStatus = 0;
+        }
+    }
+#endif
 };
 static_assert(sizeof(FocusGroupDescr) == 0x60, "FocusGroupDescr size");
 static_assert(offsetof(FocusGroupDescr, FocusRectShown) == 0x50, "FocusGroupDescr::FocusRectShown");
+
+#ifdef SF_GFX_PLAYERIMPL
+// (appended, sfr24) The state of one focus key (Tab / arrows) while it is handled: InitFocusKeyInfo fills it from
+// the controller's focus group, ProcessFocusKey moves CurFocusIdx, FinalizeProcessFocusKey applies it (0x40 bytes,
+// on the stack of ActivateFocusCapture).
+struct ProcessFocusKeyInfo
+{
+    FocusGroupDescr*       pFocusGroup;      // +0x00
+    Ptr<InteractiveObject> CurFocused;       // +0x08
+    int                    CurFocusIdx;      // +0x10 index into the tab order, -1 none
+    Render::RectF          PrevFocusRect;    // +0x20 (16-aligned)
+    UInt32                 PrevKeyCode;      // +0x30
+    UInt32                 KeyCode;          // +0x34
+    UInt8                  KeyboardIndex;    // +0x38
+    UInt8                  KeysState;        // +0x39
+    bool                   ManualFocus;      // +0x3a
+    bool                   InclFocusEnabled; // +0x3b
+    bool                   Initialized;      // +0x3c
+
+    ProcessFocusKeyInfo() : pFocusGroup(0), CurFocusIdx(-1), PrevKeyCode(0), KeyCode(0), KeyboardIndex(0),
+                            KeysState(0), ManualFocus(false), InclFocusEnabled(false), Initialized(false) {}
+};
+static_assert(sizeof(ProcessFocusKeyInfo) == 0x40, "ProcessFocusKeyInfo size");
+static_assert(offsetof(ProcessFocusKeyInfo, PrevKeyCode) == 0x30, "ProcessFocusKeyInfo::PrevKeyCode");
+#endif
 
 class MovieImpl
 #ifdef SF_GFX_PLAYERIMPL
@@ -270,7 +307,7 @@ public:
 #else
     void*            pRetValHolder;            // +0x2dd0
 #endif
-    unsigned         InstanceNameCount;        // +0x2dd8 the instanceN names handed out
+    unsigned long    InstanceNameCount;        // +0x2dd8 the instanceN names handed out (formatted with the unsigned long LongFormatter)
     // A character the timeline keeps advancing even when stopped (MS2 build; Sprite::CheckAdvanceStatus).
 #ifdef SF_GFX_PLAYERIMPL
     DragState        CurrentDragState;         // +0x2de0
@@ -314,6 +351,7 @@ public:
 
     enum FlagsType
     {
+        Flag_NeedMouseUpdate    = 0x80,        // (appended, sfr_gfx_01i) the topmost entities need a refresh
         Flag_NoInvisibleAdvance = 0x800,       // _global.noInvisibleAdvance: hidden clips stop advancing
         Flag_SetCursorTypeFuncOverloaded = 0x1000, // (appended, sfr_as2_07) Mouse.setCursorType replaced by a script
         Flag_ContinueAnimation  = 0x2000,      // _global.gfxExtensions continueAnimation (sfr_gfx_06)
@@ -326,6 +364,12 @@ public:
     };
     bool IsNoInvisibleAdvanceFlagSet() const { return (Flags & Flag_NoInvisibleAdvance) != 0; }
     // _focusrect rollover events suppressed (disableFocusRolloverEvent extension property).
+    // (appended, sfr_gfx_01i) Tab / arrow keys do not move the focus (disableFocusKeys extension property).
+    bool IsDisableFocusKeys() const
+    {
+        UInt32 v = (Flags >> Shift_DisableFocusKeys) & 3;
+        return ((v == 3) ? -1 : int(v)) == 1;
+    }
     bool IsDisableFocusRolloverEvent() const
     {
         int v = (Flags >> Shift_DisableFocusRolloverEvent) & 3;
@@ -344,6 +388,10 @@ public:
     // Defined where InteractiveObject is complete (sfr_gfx_05b).
     inline bool IsFocused(const InteractiveObject* ch, unsigned controllerIdx) const;
     bool IsKeyboardFocused(const InteractiveObject* ch, unsigned controllerIdx) const;
+    // Whether ch has the focus of any focus group (exe 0x142571070).
+    bool IsFocused(const InteractiveObject* ch) const;
+    // Takes the focus rectangle down unless the focused character refuses to lose the focus (exe 0x142570920).
+    void HideFocusRect(unsigned controllerIdx);
     bool IsFocusRectShown(unsigned controllerIdx) const
     {
         return FocusGroups[FocusGroupIndexes[controllerIdx]].FocusRectShown;
@@ -413,7 +461,7 @@ public:
     int              DeviceOrientation;        // +0x3630 OrientationEvent: 0 default, 1 rotated left, 2 right, 3 upside down (sfr19)
 #ifdef SF_GFX_PLAYERIMPL
     struct IndirectTransPair;
-    ArrayLH<IndirectTransPair, 0x147> IndirectTransformPairs; // +0x3638
+    ArrayLH<IndirectTransPair, 2> IndirectTransformPairs; // +0x3638 (Stat_Default_Mem: the exe Reserve passes 2)
 #else
     void*            IndirectTransformPairs[3]; // +0x3638 ArrayLH<IndirectTransPair>
 #endif
@@ -427,6 +475,16 @@ public:
                                         const InteractiveObject* ignoreMC = NULL);
     // The modal clip of the controller's focus group, if it is still alive (exe 0x14256f820).
     Sprite* GetModalClip(unsigned controllerIdx);
+    // Keeps the focus of the controller's group within pmovie (NULL: anywhere) (exe 0x1425761a0).
+    void    SetModalClip(Sprite* pmovie, unsigned controllerIdx);
+    // Clears every interval timer and empties the list (exe 0x142576c60).
+    void    ShutdownTimers();
+    // The ExternalInterface.call return value buffers, created on first use (exe 0x14256f990).
+    ReturnValueHolder* GetRetValHolder();
+    // The BitmapData drawing context, created on first use (exe 0x14256f220).
+    Render::DrawableImageContext* GetDrawableImageContext();
+    // Drops the timers that belong to pdefImpl (exe 0x142576cc0).
+    void    ShutdownTimersForMovieDef(MovieDefImpl* pdefImpl);
 
     // The movie's StateBag base (+0x10).
 #ifdef SF_GFX_PLAYERIMPL
@@ -439,10 +497,44 @@ public:
     void AddLoadQueueEntry(LoadQueueEntry* pentry);
     // (appended, sfr19) Appends a loader-thread entry to the pLoadQueueMTHead list (exe 0x14256be30).
     void AddLoadQueueEntryMT(LoadQueueEntryMT* pentryMT);
+    void ProcessLoadQueue();   // exe 0x142573220
+    // (appended, sfr_gfx_01i) adds the fonts of Font.registerFont to fonts (exe 0x1425711a0).
+    void LoadRegisteredFonts(HashSet<Ptr<Render::Font> >& fonts);
     // (appended, sfr24) Removes the clips queued for unloading (exe 0x1425738b0).
     void ProcessUnloadQueue();
+    // (appended, sfr24) Lets go of a movie def whose kill frame the render thread has finished (exe 0x1425737e0).
+    void ProcessMovieDefToKillList();
     // (appended, sfr24) Drops the indirect transform pairs (exe 0x14256e010).
     void ClearIndirectTransformPairs();
+    // (appended, sfr24) Drops the SetVariable values waiting for their targets (exe 0x14256e1a0).
+    void ClearStickyVariables();
+    // (appended, sfr_gfx_01i) keeps a SetVariable value until its target exists (exe 0x14256bf50).
+    void AddStickyVariableNode(const ASString& path, StickyVarNode* pnode);
+    // (appended, sfr_gfx_01i) handles the queued input events (exe 0x142572e10).
+    void ProcessInput();
+    // A queued mouse event; miceProceededMask gets the mouse's bit (exe 0x142573380).
+    void ProcessMouse(const InputEventsQueueEntry* qe, UInt32* miceProceededMask, bool avm2);
+#ifdef SF_GFX_PLAYERIMPL
+    // (appended, sfr24) The focus keys. A Tab press on the controller without a key event (exe 0x14256bbf0).
+    void ActivateFocusCapture(unsigned controllerIdx);
+    // Fills the key state from the controller's focus group, collecting its tab order first (exe 0x142570d80).
+    void InitFocusKeyInfo(ProcessFocusKeyInfo* pfocusInfo, const InputEventsQueueEntry::KeyEntry& keyEntry,
+                          bool inclFocusEnabled, FocusGroupDescr* pfocusGroup = 0);
+    // Moves the focus index for a Tab / arrow key (exe 0x142572050).
+    void ProcessFocusKey(Event::EventType event, const InputEventsQueueEntry::KeyEntry& keyEntry,
+                         ProcessFocusKeyInfo* pfocusInfo);
+    // Gives the focus to the character the key moved to and shows or hides the focus rect (exe 0x14256eae0).
+    void FinalizeProcessFocusKey(ProcessFocusKeyInfo* pfocusInfo);
+    // (appended, sfr_gfx_01i) a queued key event (exe 0x142573070).
+    void ProcessKeyboard(const InputEventsQueueEntry* qe, ProcessFocusKeyInfo* focusKeyInfo);
+    // Queues the focus change for the next advance (exe 0x142573940).
+    bool QueueSetFocusTo(InteractiveObject* ch, InteractiveObject* dontRemoveFromFocused, unsigned controllerIdx,
+                         FocusMovedType fmt, ProcessFocusKeyInfo* pfocusKeyInfo = 0);
+protected:
+    // Collects the tab order of the key's focus group (exe 0x14256e9a0).
+    void FillTabableArray(const ProcessFocusKeyInfo* pfocusInfo);
+public:
+#endif
 
     // The object no longer stays on top of the levels (0x1425742c0).
     void RemoveTopmostLevelCharacter(DisplayObjectBase* pch);
@@ -582,7 +674,7 @@ public:
     UInt32              GetSupportedGesturesMask() const;
 
     // (appended for the AS3 FocusManager, sfr17) the controllers of focus group focusGroupIdx, one bit each.
-    UInt32 GetControllerMaskByFocusGroup(unsigned focusGroupIdx);   // exe 0x14256f050
+    unsigned GetControllerMaskByFocusGroup(unsigned focusGroupIdx); // exe 0x14256f050
     // (appended for the AS3 Sound, sfr17) the resource exported from pdefImpl's library as symbol.
     bool FindExportedResource(MovieDefImpl* pdefImpl, struct ResourceBindData* pdata, const String& symbol);   // exe 0x14256ec50
     // (appended for the AS3 IMEEx, sfr19) the IME candidate list style, copied out / in by value.
@@ -625,6 +717,12 @@ public:
     void RemoveVideoProvider(Video::VideoProvider* pvideo);
     // The font manager of the root node that loaded pdefImpl (exe 0x14256ed00).
     FontManager* FindFontManager(MovieDefImpl* pdefImpl);
+    // (appended, sfr_gfx_01i) Font.registerFont: adds the font once per movie def (exe 0x142573d60).
+    bool RegisterFont(MovieDef* md, FontResource* pfont);
+    // (appended, sfr_gfx_01i) Drops pdefImpl's registered fonts and the font caches for it (exe 0x142577b00).
+    void UnregisterFonts(MovieDefImpl* pdefImpl);
+    // (appended, sfr_gfx_01i) Makes ch the focused character of the controller's focus group (exe 0x142577060).
+    void TransferFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt);
     // The cursor shape of a mouse; the AVM root is told when it changes (exe 0x14256dc00).
     void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType);
     // Takes every object off the advance lists (exe 0x14256e150).
@@ -636,6 +734,15 @@ public:
 private:
     // Rebuilds the render nodes of the drawings changed since the last capture (exe 0x142577c10).
     void UpdateAllDrawingContexts();
+    // Passes a changed view or perspective on to every level (exe 0x142578760).
+    void UpdateViewAndPerspective();
+    // Redraws the focus rectangles of the focus groups (exe 0x142577cd0).
+    void UpdateFocusRectRenderNodes();
+    // (appended, sfr_gfx_01i) A changed topmost entity of the mouse picks up its cursor shape (exe 0x14256dca0).
+    void CheckMouseCursorType(unsigned mouseIdx, InteractiveObject* ptopMouseCharacter);
+public:
+    // The drawings, then the focus rectangles when they changed (exe 0x142577c60).
+    void UpdateAllRenderNodes();
 protected:
     void ResetKeyboardState();   // exe 0x142574c60
     void ResetMouseState();      // exe 0x142574ca0

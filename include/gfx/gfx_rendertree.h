@@ -142,11 +142,13 @@ public:
     void SetCaptureThreadId(void* captureThreadId); // 0x142581220 (ThreadId)
 
     UByte  Unrecovered_08[0xe0];
-    UInt64 FinalizedFrameId;   // +0xe8 the last frame the render thread is done with
-    UInt64 GetFinalizedFrameId() const { return FinalizedFrameId; }
+    UInt64 ActiveFrameId;      // +0xe8 the frame being built (the active snapshot's frame id)
+    UInt64 GetFrameId() const { return ActiveFrameId; }
 
     // (appended for the player, sfr_gfx_01i) the movie owns its context (0x110 bytes)
-    UByte  Unrecovered_f0[0x20];
+    UByte  Unrecovered_f0[0x18];
+    UInt64 FinalizedFrameId;   // +0x108 the last frame the render thread is done with (handleFinalizingSnaphot)
+    UInt64 GetFinalizedFrameId() const { return FinalizedFrameId; }
     Context(MemoryHeap* heap);   // 0x14257e560
     ~Context();                  // 0x14257e9d0
     bool Capture();              // 0x14257fa30: freezes the changes into a snapshot for the render thread

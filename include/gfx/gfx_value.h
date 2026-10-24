@@ -172,6 +172,9 @@ public:
     {
         return pObjectInterface->GetWorldMatrix(mValue.pData, pmat);
     }
+    // (appended, sfr_gfx_01i) the value as text; objects ask their ObjectInterface (vftable slot 35).
+    String          ToString() const;                                   // exe 0x142576d50
+    const wchar_t*  ToStringW(wchar_t* pdest, UPInt destSz) const;      // exe 0x142576fd0
 
 protected:
     union ValueUnion

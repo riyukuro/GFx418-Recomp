@@ -13,6 +13,7 @@ class ASString;
 class DisplayObject;
 class Movie;
 class Loader;
+class ASIMEManager;
 
 class IMEManagerBase : public State
 {
@@ -84,8 +85,11 @@ public:
     // Widens or narrows the focused text field's cursor.
     void SetWideCursor(bool ow = true);                                 // 0x1425b4ec0
 
+public:
+    // (sfr24) the VM side of the IME (a Ptr; raw here so the header needs no complete ASIMEManager).
+    ASIMEManager* pASIMEManager;            // +0x18
 private:
-    UByte   Unrecovered_18[0x28 - 0x18];    // +0x18 Ptr<ASIMEManager>, the active movie
+    UByte   Unrecovered_20[0x28 - 0x20];    // +0x20 the active movie
 public:
     Loader* pLoader;                        // +0x28 where the file opener and URL builder states come from
 private:

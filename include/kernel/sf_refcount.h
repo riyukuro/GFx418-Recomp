@@ -325,7 +325,8 @@ public:
     WeakPtr() {}
     WeakPtr(C* p) : pProxy(*(p ? p->CreateWeakProxy() : (WeakPtrProxy*)0)) {}
     WeakPtr(const Ptr<C>& p) : pProxy(*(p.GetPtr() ? p->CreateWeakProxy() : (WeakPtrProxy*)0)) {}
-    void operator=(C* p)
+    // (sfr24) the exe never calls it out of line (MovieImpl::TransferFocus assigns twice).
+    SF_INLINE void operator=(C* p)
     {
         if (p)
             pProxy = *p->CreateWeakProxy();

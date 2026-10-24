@@ -91,6 +91,10 @@ public:
     MouseEntry&       GetMouseEntry()       { return u.mouseEntry; }
     const MouseEntry& GetMouseEntry() const { return u.mouseEntry; }
     KeyEntry&         GetKeyEntry()         { return u.keyEntry; }
+    // (appended, sfr_gfx_01i) ProcessInput / ProcessKeyboard
+    const KeyEntry&   GetKeyEntry() const   { return u.keyEntry; }
+    bool IsMouseEntry() const { return t == QE_Mouse; }
+    bool IsKeyEntry() const   { return t == QE_Key; }
 };
 
 class InputEventsQueue
@@ -102,6 +106,8 @@ public:
 
     // The oldest event, or null when the queue is empty; mouse moves noted since are queued first.
     const QueueEntry* GetEntry();
+    // (appended, sfr_gfx_01i) no queued event and no pending mouse move.
+    bool IsQueueEmpty() const { return UsedEntries == 0 && LastMousePosMask == 0; }
 
     void AddMouseMove(unsigned mouseIndex, const Render::PointF& pos);
     void AddMouseButtonEvent(unsigned mouseIndex, const Render::PointF& pos, unsigned buttonsSt, unsigned flags);
@@ -181,6 +187,11 @@ public:
     unsigned GetPrevButtonsState() const { return PrevButtonsState; }
     // (appended for the AS3 mouse event factory, sfr_as3_09)
     const Render::PointF& GetLastPosition() const { return LastPosition; }
+    // (appended, sfr_gfx_01i) the new topmost entity; the old one becomes the previous (exe 0x142576750).
+    void SetTopmostEntity(InteractiveObject* pent);
+    // (appended, sfr_gfx_01i) ProcessInput: the mouse has reported a state; the buttons count as unchanged.
+    bool IsActivated() const     { return Activated; }
+    void ResetPrevButtonsState() { PrevButtonsState = CurButtonsState; }
 };
 
 }} // namespace Scaleform::GFx
