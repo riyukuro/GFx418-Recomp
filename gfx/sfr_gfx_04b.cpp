@@ -20,6 +20,7 @@
 // MS2-RANGE: 0x1425c6450-0x1425c64b8 .text$mn
 // MS2-RANGE: 0x1425c6620-0x1425c66cd .text$mn
 // MS2-RANGE: 0x1425c7ba0-0x1425c7c98 .text$mn
+// MS2-RANGE: 0x1425c8010-0x1425c80d7 .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -79,6 +80,20 @@ void SF_STDCALL GFx_DefineExternalStreamSoundLoader(LoadProcess* p, const TagInf
         reader->ReadDefineExternalStreamSoundTag(p, tagInfo);
     else
         p->LogError("GFx_DefineExternalStreamSoundLoader: Audio library is not set.");
+}
+
+// MS2-FUNCTIONAL: reports the unsupported binary-data tag and preserves its resource id; reserved payload handling is simplified.
+// @0x1425c8010
+void SF_STDCALL GFx_DefineBinaryDataLoader(LoadProcess* p, const TagInfo& tagInfo)
+{
+    (void)tagInfo;
+    p->LogError("Tag 'DefineBinaryData' (87) is not supported, potentially 'TLF text' fields are used. Switch to 'Classic Text'.");
+    ResourceId id(p->ReadU16());
+    p->ReadU32();
+    ButtonDef* definition = SF_HEAP_AUTO_NEW(p->GetLoadHeap()) ButtonDef();
+    p->AddResource(id, definition);
+    if (definition)
+        definition->Release();
 }
 
 // MS2-FUNCTIONAL: preserves the tables bytes and replace-old-header behavior; the executable's allocator call sequence
