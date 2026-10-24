@@ -423,6 +423,7 @@ bool QueryChannelPlaying(void* soundSource)
 int FUN_1428d8efc(void*, void*);
 int FUN_1428d8f14(void*, void*);
 void FUN_14257d390(void*, long long, unsigned, unsigned);
+void FUN_14257bf70(void*, void*, long long, unsigned);
 int FUN_1427483a0(void*, int);
 unsigned long long FUN_142748160(void*, void*, unsigned);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
@@ -444,6 +445,51 @@ int FUN_1428d8ef0(void*, unsigned, unsigned, unsigned);
 void FUN_142742830(long long*, unsigned long long*);
 void FUN_14268b710(void*, Scaleform::Log*);
 void FUN_14268bd60(void*, Scaleform::Log*);
+
+// MS2-FUNCTIONAL: reproduces the executable's per-pixel difference image, including optional alpha comparison.
+// @0x142676190
+extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageData* output, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* reference = static_cast<ImageData*>(inputs[0]);
+    auto* candidate = static_cast<ImageData*>(inputs[1]);
+    ImagePlane outPlane, referencePlane, candidatePlane;
+    output->GetPlane(0, &outPlane);
+    reference->GetPlane(0, &referencePlane);
+    candidate->GetPlane(0, &candidatePlane);
+
+    auto* operationBytes = static_cast<unsigned char*>(operation);
+    const auto* referenceConfig = static_cast<const unsigned char*>(*reinterpret_cast<void**>(operationBytes + 0x10));
+    const auto* candidateConfig = static_cast<const unsigned char*>(*reinterpret_cast<void**>(operationBytes + 0x40));
+    const bool compareReferenceAlpha = *reinterpret_cast<const bool*>(referenceConfig + 0x48);
+    const bool compareCandidateAlpha = *reinterpret_cast<const bool*>(candidateConfig + 0x48);
+    const unsigned width = referencePlane.Width < outPlane.Width ? referencePlane.Width : outPlane.Width;
+    const unsigned height = referencePlane.Height < outPlane.Height ? referencePlane.Height : outPlane.Height;
+    for (unsigned y = 0; y < height; ++y) {
+        const auto referenceRow = static_cast<long long>(y) * referencePlane.Pitch;
+        const auto candidateRow = static_cast<long long>(y) * candidatePlane.Pitch;
+        const auto outputRow = static_cast<long long>(y) * outPlane.Pitch;
+        for (unsigned x = 0; x < width; ++x) {
+            unsigned referencePixel = 0, candidatePixel = 0;
+            FUN_14257bf70(reference, &referencePixel, referenceRow, x);
+            FUN_14257bf70(candidate, &candidatePixel, candidateRow, x);
+            const auto* referenceChannels = reinterpret_cast<const std::int8_t*>(&referencePixel);
+            const auto* candidateChannels = reinterpret_cast<const std::int8_t*>(&candidatePixel);
+            int r = referenceChannels[0] - candidateChannels[0];
+            int g = referenceChannels[1] - candidateChannels[1];
+            int b = referenceChannels[2] - candidateChannels[2];
+            int a = (compareReferenceAlpha ? referenceChannels[3] : -1) -
+                    (compareCandidateAlpha ? candidateChannels[3] : -1);
+            if (r == 0 && g == 0 && b == 0 && a != 0)
+                r = g = b = -1;
+            unsigned result = static_cast<unsigned char>(r) |
+                              (static_cast<unsigned>(static_cast<unsigned char>(g)) << 8) |
+                              (static_cast<unsigned>(static_cast<unsigned char>(b)) << 16) | 0xff000000u;
+            FUN_14257d390(output, outputRow, x, result);
+        }
+    }
+}
 
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
