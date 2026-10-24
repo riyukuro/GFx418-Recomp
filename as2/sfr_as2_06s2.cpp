@@ -1,6 +1,6 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 AS2 button events of sfr_as2_06
 // (gap recovery, lane sfr24): the mouse and key events of a button queue its condition actions and its handler.
-// MS2-UNIT: sfr_as2_06f
+// MS2-UNIT: sfr_as2_06s2
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14296b2b0-0x14296b470 .text$mn
 // MS2-RANGE: 0x14296c430-0x14296c8c0 .text$mn
@@ -337,3 +337,7 @@ void MovieClipLoader::NotifyOnLoadProgress(Environment* penv, InteractiveObject*
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+// MS2-PIN: ??_7GlobalContext@AS2@GFx@Scaleform@@6B@ 0x143215af8
+// MS2-PIN: ??_7?$RefCountBaseNTS@VGlobalContext@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600

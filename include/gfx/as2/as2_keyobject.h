@@ -40,6 +40,10 @@ public:
     virtual void OnKeyUp(InteractiveObject* pmovie, const EventId& evt, int keyMask);
     virtual void Update(const EventId& evt);
 
+    // (appended, sfr24) records the key of evt's controller and broadcasts its handler (onKeyDown/onKeyUp) to the
+    // listeners in _level0's environment; OnKeyDown and OnKeyUp are this body (exe 0x142969250).
+    void NotifyListeners(InteractiveObject* pmovie, const EventId& evt);
+
     int GetLastKeyCode(unsigned controllerIdx) const   { return States[controllerIdx].LastKeyCode; }
     int GetLastAsciiCode(unsigned controllerIdx) const { return States[controllerIdx].LastAsciiCode; }
 

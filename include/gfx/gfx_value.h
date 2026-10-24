@@ -173,6 +173,14 @@ public:
         Type = VT_Number;
         mValue.NValue = v;
     }
+    // (appended, sfr24) an unmanaged string value: pstr is not copied.
+    void SetString(const char* pstr)
+    {
+        if (IsManagedValue())
+            ReleaseManagedValue();
+        Type = VT_String;
+        mValue.pString = pstr;
+    }
     // ObjectInterface::GetMember/SetMember/Invoke are its vftable slots 4/5/6 (these raw slot calls predate the
     // declarations on ObjectInterface).
     bool GetMember(const char* name, Value* pval) const

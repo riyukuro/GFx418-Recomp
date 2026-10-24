@@ -85,6 +85,9 @@ enum ASBuiltinType : int
     ASBuiltin_typeObject_      = 84, // "[type Object]"
     ASBuiltin_objectObject_    = 85, // "[object Object]"
     ASBuiltin_toString         = 86,
+    ASBuiltin_valueOf          = 87, // (appended, sfr24)
+    ASBuiltin_onSetFocus       = 88,
+    ASBuiltin_onKillFocus      = 89,
     ASBuiltin_INVALID          = 90,
     ASBuiltin_onPress          = 91,
     ASBuiltin_onRelease        = 92,

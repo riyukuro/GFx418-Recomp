@@ -86,6 +86,8 @@ public:
     bool operator==(const String& str) const { return strcmp(ToCStr(), str.ToCStr()) == 0; }
 
     static int SF_STDCALL CompareNoCase(const char* a, const char* b);
+    // (appended, sfr24) only the first len characters (exe 0x142586720).
+    static int SF_STDCALL CompareNoCase(const char* a, const char* b, SPInt len);
 
     // Key wrapper that makes a hash lookup compare case-insensitively.
     struct NoCaseKey
