@@ -169,7 +169,7 @@ class MovieImpl
 #endif
 {
 public:
-    // A SetVariable value kept for a target that does not exist yet (defined in the player unit).
+    // A SetVariable value kept for a target that does not exist yet (gfx_stickyvarnode.h).
     struct StickyVarNode;
     // The buffers of an ExternalInterface.call return value (defined in the player unit).
     struct ReturnValueHolder;

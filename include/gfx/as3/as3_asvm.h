@@ -47,6 +47,9 @@ public:
 class MovieRoot : public ASMovieRootBase, public FlashUI, public KeyboardState::IListener
 {
 public:
+    // (sfr24) A SetVariable value kept for a target that does not exist yet (as3_stickyvarnode.h).
+    struct StickyVarNode;
+
     // (appended, sfr19) the action queues, run in level order once per frame (ExecuteActionQueues runs the first
     // six; AL_Manual only on request).
     enum ActionLevel
