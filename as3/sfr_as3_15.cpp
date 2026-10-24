@@ -39,6 +39,8 @@
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_player.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -3976,6 +3978,342 @@ Text::Allocator* FUN_1424d61c0(Text::Allocator* self, MemoryHeap* pheap, UInt8 f
 } // namespace Render
 
 } // namespace Scaleform
+
+// ---- (sfr24) bodies of the native methods the full exe links by name (work/sfr35/outside-units.tsv) ----
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The source file name of the innermost call frame's ABC file (sfr_as3_17).
+void Sfr33CurrentFrameFileName(const UByte* self, ASString& result);
+}}}
+// MovieRoot::GetMouseCursorType: the cursor name of mouse mouseIndex (sfr_as3_13).
+void FUN_14250bad0(void* proot, Scaleform::GFx::ASString& result, Scaleform::UInt32 mouseIndex);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Classes { namespace fl_gfx {
+
+// @0x1424c9aa0
+void SystemEx::actionVerboseGet(bool& result)
+{
+    result = (static_cast<ASVM&>(GetVM()).GetMovieImpl()->Flags & MovieImpl::Flag_VerboseAction) != 0;
+}
+
+// @0x1424ca6a0
+void SystemEx::getCodeFileName(ASString& result)
+{
+    Sfr33CurrentFrameFileName(reinterpret_cast<const UByte*>(&GetVM()), result);
+}
+
+// @0x1424caf20
+void SystemEx::getStackTrace(ASString& result)
+{
+    GetVM().GetStackTraceASString(result);
+}
+
+// @0x1424cb740
+void SystemEx::setBackgroundAlpha(const Value& result, Value::Number alpha)
+{
+    SF_UNUSED(result);
+    static_cast<ASVM&>(GetVM()).GetMovieImpl()->AsMovie()->SetBackgroundAlpha((float)alpha);
+}
+
+// @0x1424c9b20
+void FocusManager::alwaysEnableArrowKeysGet(bool& result)
+{
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled)
+        result = vm.GetMovieImpl()->IsAlwaysEnableFocusArrowKeys();
+}
+
+// The two-bit setting is left at 1 for true, 0 (unset) for false.
+// @0x1424c9b70
+void FocusManager::alwaysEnableArrowKeysSet(const Value& result, bool v)
+{
+    SF_UNUSED(result);
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled)
+    {
+        MovieImpl* pmovie = vm.GetMovieImpl();
+        pmovie->Flags &= ~(3u << MovieImpl::Shift_AlwaysEnableArrowKeys);
+        pmovie->Flags |= (UInt32)v << MovieImpl::Shift_AlwaysEnableArrowKeys;
+    }
+}
+
+// @0x1424c9e60
+void FocusManager::disableFocusKeysGet(bool& result)
+{
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled)
+        result = vm.GetMovieImpl()->IsDisableFocusKeys();
+}
+
+// @0x1424c9eb0
+void FocusManager::disableFocusKeysSet(const Value& result, bool v)
+{
+    SF_UNUSED(result);
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled)
+    {
+        MovieImpl* pmovie = vm.GetMovieImpl();
+        pmovie->Flags &= ~(3u << MovieImpl::Shift_DisableFocusKeys);
+        pmovie->Flags |= (UInt32)v << MovieImpl::Shift_DisableFocusKeys;
+    }
+}
+
+// @0x1424cb6c0
+void FocusManager::numFocusGroupsGet(UInt32& result)
+{
+    result = static_cast<ASVM&>(GetVM()).GetMovieImpl()->FocusGroupsCnt;
+}
+
+// @0x1424cb910
+void FocusManager::setFocusGroupMask(const Value& result, Instances::fl_display::InteractiveObject* obj, UInt32 mask)
+{
+    SF_UNUSED(result);
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled && obj)
+        static_cast<GFx::InteractiveObject*>(obj->pDispObj.GetPtr())->PropagateFocusGroupMask(mask);
+}
+
+// @0x1424cbd50
+void FocusManager::setModalClip(const Value& result, Instances::fl_display::Sprite* sprite, UInt32 controllerIdx)
+{
+    SF_UNUSED(result);
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled)
+        vm.GetMovieImpl()->SetModalClip(sprite ? static_cast<GFx::Sprite*>(sprite->pDispObj.GetPtr()) : NULL,
+                                        controllerIdx);
+}
+
+// @0x1424c9ef0
+void Extensions::enabledGet(bool& result)
+{
+    result = static_cast<ASVM&>(GetVM()).ExtensionsEnabled;
+}
+
+// @0x1424c9f10
+void Extensions::enabledSet(const Value& result, bool v)
+{
+    SF_UNUSED(result);
+    static_cast<ASVM&>(GetVM()).ExtensionsEnabled = v;
+}
+
+// @0x1424cadf0
+void Extensions::getMouseCursorType(ASString& result, UInt32 mouseIndex)
+{
+    FUN_14250bad0(static_cast<ASVM&>(GetVM()).GetMovieRoot(), result, mouseIndex);
+}
+
+// @0x1424cbd90
+void Extensions::setMouseCursorType(const Value& result, const ASString& cursor, UInt32 mouseIndex)
+{
+    SF_UNUSED(result);
+    static_cast<ASVM&>(GetVM()).GetMovieRoot()->SetMouseCursorType(cursor, mouseIndex);
+}
+
+// @0x1424cb2b0
+void Extensions::isScaleformGet(bool& result)
+{
+    result = true;
+}
+
+// @0x1424cb610
+void Extensions::noInvisibleAdvanceGet(bool& result)
+{
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled)
+        result = vm.GetMovieImpl()->IsNoInvisibleAdvanceFlagSet();
+}
+
+// @0x1424cb640
+void Extensions::noInvisibleAdvanceSet(const Value& result, bool v)
+{
+    SF_UNUSED(result);
+    ASVM& vm = static_cast<ASVM&>(GetVM());
+    if (vm.ExtensionsEnabled)
+    {
+        MovieImpl* pmovie = vm.GetMovieImpl();
+        if (v)
+            pmovie->Flags |= MovieImpl::Flag_NoInvisibleAdvance;
+        else
+            pmovie->Flags &= ~(UInt32)MovieImpl::Flag_NoInvisibleAdvance;
+    }
+}
+
+// The interactive display object behind obj, or NULL.
+static GFx::InteractiveObject* Sfr24IntObjOf(Instances::fl_display::InteractiveObject* obj)
+{
+    if (!obj || !obj->pDispObj || !obj->pDispObj->IsInteractiveObject())
+        return NULL;
+    return static_cast<GFx::InteractiveObject*>(obj->pDispObj.GetPtr());
+}
+
+// @0x1424cab60
+void InteractiveObjectEx::getHitTestDisable(bool& result, Instances::fl_display::InteractiveObject* obj)
+{
+    GFx::InteractiveObject* pio = Sfr24IntObjOf(obj);
+    result = pio ? (pio->Flags & GFx::InteractiveObject::Mask_HitTestDisable) != 0 : false;
+}
+
+// @0x1424cb940
+void InteractiveObjectEx::setHitTestDisable(const Value& result, Instances::fl_display::InteractiveObject* obj, bool v)
+{
+    SF_UNUSED(result);
+    if (GFx::InteractiveObject* pio = Sfr24IntObjOf(obj))
+    {
+        if (v)
+            pio->Flags |= GFx::InteractiveObject::Mask_HitTestDisable;
+        else
+            pio->Flags &= ~(UInt32)GFx::InteractiveObject::Mask_HitTestDisable;
+    }
+}
+
+// @0x1424cb1a0
+void InteractiveObjectEx::getTopmostLevel(bool& result, Instances::fl_display::InteractiveObject* obj)
+{
+    GFx::InteractiveObject* pio = Sfr24IntObjOf(obj);
+    result = pio ? pio->IsTopmostLevelFlagSet() : false;
+}
+
+// @0x1424cbef0
+void InteractiveObjectEx::setTopmostLevel(const Value& result, Instances::fl_display::InteractiveObject* obj, bool v)
+{
+    SF_UNUSED(result);
+    GFx::InteractiveObject* pio = Sfr24IntObjOf(obj);
+    if (!pio)
+        return;
+    if (v)
+        pio->DisplayObjectBase::Flags |= GFx::DisplayObjectBase::Mask_TopmostLevel;
+    else
+        pio->DisplayObjectBase::Flags &= (UInt16)~GFx::DisplayObjectBase::Mask_TopmostLevel;
+    MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+    if (pio->IsTopmostLevelFlagSet())
+        pmovie->AddTopmostLevelCharacter(pio);
+    else
+        pmovie->RemoveTopmostLevelCharacter(pio);
+}
+
+// @0x1424cc0e0
+void GamePad::supportsAnalogEvents(bool& result)
+{
+    result = false;
+}
+
+}} // namespace Classes::fl_gfx
+
+namespace Instances { namespace fl_gfx {
+// @0x1424c9dc0
+void GamePadAnalogEvent::codeGet(UInt32& result) { result = Code; }
+// @0x1424c9dd0
+void GamePadAnalogEvent::codeSet(const Value& result, UInt32 v) { SF_UNUSED(result); Code = v; }
+// @0x1424c9de0
+void GamePadAnalogEvent::controllerIdxGet(UInt32& result) { result = ControllerIdx; }
+// @0x1424c9df0
+void GamePadAnalogEvent::controllerIdxSet(const Value& result, UInt32 v) { SF_UNUSED(result); ControllerIdx = v; }
+// @0x1424cca00
+void GamePadAnalogEvent::xvalueGet(Value::Number& result) { result = XValue; }
+// @0x1424cca10
+void GamePadAnalogEvent::xvalueSet(const Value& result, Value::Number v) { SF_UNUSED(result); XValue = v; }
+// @0x1424cca20
+void GamePadAnalogEvent::yvalueGet(Value::Number& result) { result = YValue; }
+// @0x1424cca30
+void GamePadAnalogEvent::yvalueSet(const Value& result, Value::Number v) { SF_UNUSED(result); YValue = v; }
+}} // namespace Instances::fl_gfx
+
+namespace Instances { namespace fl_media {
+// @0x1424d19c0
+void Sound::isBufferingGet(bool& result)
+{
+    SF_UNUSED(result);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Sound::isBufferingGet() is not implemented\n");
+}
+
+// @0x1424d19e0
+void SoundChannel::leftPeakGet(Value::Number& result)
+{
+    SF_UNUSED(result);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundChannel::leftPeakGet() is not implemented\n");
+}
+
+// @0x1424d1de0
+void SoundChannel::rightPeakGet(Value::Number& result)
+{
+    SF_UNUSED(result);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundChannel::rightPeakGet() is not implemented\n");
+}
+
+// @0x1424d20d0
+void SoundChannel::stop(const Value& result)
+{
+    SF_UNUSED(result);
+    if (pSoundObject)
+        pSoundObject->Stop();
+}
+
+// @0x1424d1a00
+void SoundTransform::leftToLeftGet(Value::Number& result)
+{
+    SF_UNUSED(result);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::leftToLeftGet() is not implemented\n");
+}
+
+// @0x1424d1a20
+void SoundTransform::leftToLeftSet(const Value& result, Value::Number v)
+{
+    SF_UNUSED(result);
+    SF_UNUSED(v);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::leftToLeftSet() is not implemented\n");
+}
+
+// @0x1424d1a40
+void SoundTransform::leftToRightGet(Value::Number& result)
+{
+    SF_UNUSED(result);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::leftToRightGet() is not implemented\n");
+}
+
+// @0x1424d1a60
+void SoundTransform::leftToRightSet(const Value& result, Value::Number v)
+{
+    SF_UNUSED(result);
+    SF_UNUSED(v);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::leftToRightSet() is not implemented\n");
+}
+
+// @0x1424d1e00
+void SoundTransform::rightToLeftGet(Value::Number& result)
+{
+    SF_UNUSED(result);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::rightToLeftGet() is not implemented\n");
+}
+
+// @0x1424d1e20
+void SoundTransform::rightToLeftSet(const Value& result, Value::Number v)
+{
+    SF_UNUSED(result);
+    SF_UNUSED(v);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::rightToLeftSet() is not implemented\n");
+}
+
+// @0x1424d1e40
+void SoundTransform::rightToRightGet(Value::Number& result)
+{
+    SF_UNUSED(result);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::rightToRightGet() is not implemented\n");
+}
+
+// @0x1424d1e60
+void SoundTransform::rightToRightSet(const Value& result, Value::Number v)
+{
+    SF_UNUSED(result);
+    SF_UNUSED(v);
+    GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SoundTransform::rightToRightSet() is not implemented\n");
+}
+
+// @0x1424d1b40
+void SoundTransform::panGet(Value::Number& result) { result = Pan; }
+// @0x1424d1b50
+void SoundTransform::panSet(const Value& result, Value::Number v) { SF_UNUSED(result); Pan = v; }
+}} // namespace Instances::fl_media
+}}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ?Func@?$ThunkFunc0@VSoundTransform@fl_media@Instances@AS3@GFx@Scaleform@@$0A@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424cdc40
 // MS2-PIN: ?Func@?$ThunkFunc1@VSoundTransform@fl_media@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424cdcb0
