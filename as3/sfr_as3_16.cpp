@@ -1159,5 +1159,48 @@ template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>::operator=(
     const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&);
 
+extern "C" void* DAT_143b15f60;
+extern "C" void FUN_1424dde10(void*);
+
+// ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::ClearAndRelease.
+// MS2-FUNCTIONAL: releases pages last-first and destroys each occupied CallFrame; only register allocation differs.
+// @0x1424dc8e0
+void FUN_1424dc8e0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    auto numPages = *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10);
+    if (numPages)
+    {
+        const auto size = *reinterpret_cast<Scaleform::UPInt*>(bytes + 8);
+        const Scaleform::UPInt fullPages = size >> 6;
+        auto** page = *reinterpret_cast<void***>(bytes + 0x20) + numPages - 1;
+        do
+        {
+            const Scaleform::UPInt index = numPages - 1;
+            *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = index;
+            Scaleform::UPInt used = index < fullPages ? 0x40 : (index == fullPages ? size & 0x3f : 0);
+            auto* frame = static_cast<unsigned char*>(*page) + used * 0xa8;
+            while (used)
+            {
+                frame -= 0xa8;
+                FUN_1424dde10(frame);
+                --used;
+            }
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, *page);
+            numPages = *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10);
+            --page;
+        } while (numPages);
+        *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = static_cast<Scaleform::UPInt>(-1);
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
+            DAT_143b15f60, *reinterpret_cast<void**>(bytes + 0x20));
+    }
+    *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x18) = 0;
+    *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = 0;
+    *reinterpret_cast<Scaleform::UPInt*>(bytes + 8) = 0;
+    *reinterpret_cast<void**>(bytes + 0x20) = 0;
+}
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
