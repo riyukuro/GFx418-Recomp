@@ -15,6 +15,7 @@
 // MS2-PIN: ?Reserve@?$ArrayDataBase@VASString@GFx@Scaleform@@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BED@@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x142523a30 ; order
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425422c0 ; unique
 // MS2-PINS-END tplpin
+#include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -58,6 +59,21 @@ Scaleform::GFx::AS3::ClassTraits::Traits* FUN_1425085b0(const Scaleform::GFx::AS
 void FUN_142508720(const Scaleform::GFx::AS3::SlotInfo* si, Scaleform::GFx::ASString* name, Scaleform::GFx::AS3::VM* vm);       // its name
 void FUN_14250e770(const void* si, void* ok, Scaleform::GFx::AS3::Value* result, Scaleform::GFx::AS3::Object* obj);             // SlotInfo: load into result
 void FUN_142529720(const void* si, void* ok, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* v, Scaleform::GFx::AS3::Object* obj);
+void FUN_14251f710(Scaleform::UPInt block);   // Tracer: add a state slot
+void FUN_1424e0b80(void* dst, const void* src);   // SlotInfo::operator=
+void FUN_1426150b0(Scaleform::UPInt doc);   // DocView::SetAutoSizeX
+void FUN_1426150d0(Scaleform::UPInt doc);   // DocView::SetAutoSizeY
+void FUN_1425bc060(Scaleform::UPInt tf);   // TextField::SetDirtyFlag
+void FUN_142511b00(Scaleform::UPInt tracer, Scaleform::UPInt* now, Scaleform::UPInt* old);   // Tracer: merge block states
+char* FUN_142516c40(Scaleform::UPInt tracer, void* buf, Scaleform::UPInt* now, Scaleform::UPInt* old);   // Tracer: merge, result flag
+void FUN_1425303b0(Scaleform::UPInt entry);   // shutdown of a registered entry
+void FUN_1424ef2a0(Scaleform::UPInt array);   // ArrayDH::Clear
+Scaleform::UPInt FUN_14250fa80(Scaleform::UPInt traits);   // Traits::GetVT
+void FUN_1425282d0(Scaleform::UPInt vt, int index, Scaleform::UPInt arg, int argc, void* name);   // invoke slot
+void FUN_14252e9d0(Scaleform::UPInt button, int buttonState);   // AvmButton::SwitchStateIntl
+int FUN_1425de200(int mouseState);   // MouseState -> ButtonState
+void FUN_1425048d0(Scaleform::UPInt movieRoot, const void* gfxValue, Scaleform::GFx::AS3::Value* out);   // MovieRoot::GFxValue2ASValue
+void FUN_1424213b0(Scaleform::UPInt sparseArray, Scaleform::UInt32 ind, const Scaleform::GFx::AS3::Value* v);   // SparseArray::Set
 void FUN_1423dfa20(void* obj);                                                                                                  // GC release of an object whose count reached its floor
 Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self, const Scaleform::GFx::ASString& name, const Scaleform::GFx::AS3::Instances::Namespace& ns);   // MultinameHash::Get
 Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(void* globalObject, const Scaleform::GFx::ASString* name, const Scaleform::GFx::AS3::Instances::Namespace* ns);   // the global object's class of that name
@@ -1692,6 +1708,304 @@ void Sfr31SkipPathData(UPInt self, void* pos)
     while ((*reinterpret_cast<Fn*>(*reinterpret_cast<UPInt*>(self) + 0x48))(self, pos, out) != 0)
     {
     }
+}
+
+
+// Stores np into a tagged GC reference slot (odd values are weak marks); the old target is released.
+static void Sfr31AssignGcRef(UPInt* slot, UPInt np)
+{
+    if (np != *slot)
+    {
+        const UPInt old = *slot;
+        if (old != 0)
+        {
+            if ((old & 1) == 0)
+            {
+                UInt32* rc = reinterpret_cast<UInt32*>(old + 0x10);
+                if ((*rc & 0x3fffff) != 0)
+                {
+                    --*rc;
+                    FUN_1423dfa20(reinterpret_cast<void*>(old));
+                }
+            }
+            else
+                *slot = old - 1;
+        }
+        if (np != 0)
+        {
+            UInt32* rc = reinterpret_cast<UInt32*>(np + 0x10);
+            *rc = (*rc + 1) & 0x8fbfffff;
+        }
+        *slot = np;
+    }
+}
+
+// Stores the new GC reference at +8 and clears the word after it.
+// MS2-FUNCTIONAL 0x142526340: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x142526340
+void Sfr31SetGcRefClearNext(UPInt self, UPInt np)
+{
+    Sfr31AssignGcRef(reinterpret_cast<UPInt*>(self + 8), np);
+    *reinterpret_cast<UPInt*>(self + 0x10) = 0;
+}
+
+// Stores the new GC reference at +8 and clears the two low flag bits of the first word.
+// MS2-FUNCTIONAL 0x142528d20: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x142528d20
+void Sfr31SetGcRefClearFlags(UInt32* self, UPInt np)
+{
+    Sfr31AssignGcRef(reinterpret_cast<UPInt*>(self + 2), np);
+    *self &= 0xfffffffc;
+}
+
+// Stores the new GC reference at +8.
+// MS2-FUNCTIONAL 0x142540bd0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x142540bd0
+void Sfr31SetGcRef(UPInt self, UPInt np)
+{
+    Sfr31AssignGcRef(reinterpret_cast<UPInt*>(self + 8), np);
+}
+
+// Replaces the resource at +0xc0 (the new one is referenced first).
+// @0x1425274b0
+void Sfr31SetResource(UPInt self, Resource* res)
+{
+    if (res)
+        res->AddRef();
+    Resource*& cur = *reinterpret_cast<Resource**>(self + 0xc0);
+    if (cur)
+        cur->Release();
+    cur = res;
+}
+
+// AvmBitmap::SetResourceMovieDef: the movie def (a resource) at +0xc8 is replaced.
+// @0x142528e70
+void Sfr31BitmapSetMovieDef(UPInt self, Resource* def)
+{
+    if (def)
+        def->AddRef();
+    Resource*& cur = *reinterpret_cast<Resource**>(self + 0xc8);
+    if (cur)
+        cur->Release();
+    cur = def;
+}
+
+// MS2-FUNCTIONAL 0x142528f20: the copy/rename helpers are shared out-of-line code.
+// @0x142528f20
+void Slots::SetSlotInfo(AbsoluteIndex ind, const ASString& k, const SlotInfo& v)
+{
+    FUN_1424e0b80(&VArray[static_cast<UInt32>(ind.Get()) - static_cast<UInt32>(FirstOwnSlotNum)].Value, &v);
+    SetKey(ind, k);
+}
+
+// Tracer::SkipOrigOpCode: a position inside the code gets its register state noted before moving on.
+// @0x14252c7e0
+void Sfr31TracerSkipOrigOpCode(UPInt tracer, UPInt* pos, UPInt next)
+{
+    if (*pos < *reinterpret_cast<UPInt*>(tracer + 0x58))
+    {
+        FUN_14251f710(tracer + 0x70);
+        *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(tracer + 0xd0) + *pos * 8) =
+            *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(tracer + 0x28) + 8);
+    }
+    *pos = next;
+}
+
+
+// Re-reads the autosize flags of the text field (+0x18) into its document view and marks it dirty.
+// MS2-FUNCTIONAL 0x142530fc0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x142530fc0
+void Sfr31UpdateAutosizeSettings(UPInt self)
+{
+    const UPInt tf = *reinterpret_cast<UPInt*>(self + 0x18);
+    const UInt8 flags = *reinterpret_cast<UInt8*>(tf + 0xfc);
+    UPInt doc = *reinterpret_cast<UPInt*>(tf + 0xe0);
+    if ((flags & 1) && !(*reinterpret_cast<UInt8*>(doc + 0x149) & 8))
+        FUN_1426150b0(doc);
+    else
+        *reinterpret_cast<UInt8*>(doc + 0x149) &= 0xfe;
+    if (!(flags & 1))
+        *reinterpret_cast<UInt8*>(*reinterpret_cast<UPInt*>(tf + 0xe0) + 0x149) &= 0xfd;
+    else
+        FUN_1426150d0(*reinterpret_cast<UPInt*>(tf + 0xe0));
+    *reinterpret_cast<UInt32*>(tf + 0xfc) |= 0x2000;
+    FUN_1425bc060(tf);
+}
+
+// Tracer::UpdateBlock: moves to the block that starts at pos; false when the merge of the old state fails.
+// MS2-FUNCTIONAL 0x142531040: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x142531040
+void Sfr31TracerUpdateBlock(UPInt tracer, char* ok, UPInt pos)
+{
+    UPInt* old = *reinterpret_cast<UPInt**>(tracer + 0x68);
+    UPInt* blk = *reinterpret_cast<UPInt**>(tracer + 0x110);
+    if (blk != NULL)
+    {
+        while (pos < blk[4])
+        {
+            blk = reinterpret_cast<UPInt*>(*blk);
+            if (blk == NULL)
+            {
+                *ok = 1;
+                return;
+            }
+        }
+        if (blk[4] == pos)
+        {
+            *reinterpret_cast<UPInt**>(tracer + 0x68) = blk;
+            if ((*reinterpret_cast<UInt8*>(blk + 2) & 1) == 0)
+                FUN_142511b00(tracer, blk, old);
+            else if (blk != old)
+            {
+                char buf[32];
+                if (*FUN_142516c40(tracer, buf, blk, old) == 0)
+                {
+                    *ok = 0;
+                    return;
+                }
+            }
+        }
+    }
+    *ok = 1;
+}
+
+// Runs the shutdown of every registered entry (+0x2c0 array of +0x2c8 items), then empties the array.
+// @0x142530d50
+void Sfr31ShutdownRegistered(UPInt self)
+{
+    const UPInt n = *reinterpret_cast<UPInt*>(self + 0x2c8);
+    const UInt8 saved = *reinterpret_cast<UInt8*>(self + 9);
+    *reinterpret_cast<UInt8*>(self + 9) = 1;
+    for (UPInt i = 0; i < n; ++i)
+        FUN_1425303b0(reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 0x2c0))[i]);
+    FUN_1424ef2a0(self + 0x2c0);
+    *reinterpret_cast<UInt8*>(self + 9) = saved;
+}
+
+// Runs the slot (kind bits 5..9 are not a getter unless the caller asked for one) through the invoke helper.
+// MS2-FUNCTIONAL 0x1425311c0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x1425311c0
+void Sfr31InvokeSlot(UPInt self, const SlotInfo* si, UPInt arg, int argc)
+{
+    const UPInt traits = FUN_14250fa80(self);
+    const int kind = *reinterpret_cast<const int*>(si);
+    if (((kind << 22) >> 27) != 0xb || argc == 0xb)
+    {
+        ASStringNode* node = *reinterpret_cast<ASStringNode* const*>(reinterpret_cast<const char*>(si) + 0x28);
+        ASString name(node);
+        FUN_1425282d0(traits, (kind << 5) >> 15, arg, argc, &name);
+    }
+}
+
+// Looks the name up in the own slots and invokes the newest one whose namespace has the flag (bit 4).
+// MS2-FUNCTIONAL 0x1425310e0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x1425310e0
+void Sfr31InvokeNamedSlot(UPInt self, const ASString& name, UPInt target, UPInt arg, int argc)
+{
+    if (target != *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 0x78) + 0x1d0))
+        return;
+    const Slots& slots = *reinterpret_cast<const Slots*>(self + 0x20);
+    SPInt i = *slots.FindSlotValues(name);
+    do
+    {
+        const SlotInfo* si;
+        if (static_cast<UPInt>(i) < slots.FirstOwnSlotNum)
+            si = &slots.Parent->GetSlotInfo(AbsoluteIndex(i));
+        else
+            si = &slots.VArray[static_cast<UInt32>(i) - static_cast<UInt32>(slots.FirstOwnSlotNum)].Value;
+        if ((*reinterpret_cast<const UInt8*>(*reinterpret_cast<const UPInt*>(reinterpret_cast<const char*>(si) + 8) + 0x20) >> 4) & 1)
+        {
+            Sfr31InvokeSlot(self, si, arg, argc);
+            return;
+        }
+        if (static_cast<UPInt>(i) < slots.FirstOwnSlotNum)
+            i = slots.Parent->GetPrevSlotIndex(i);
+        else
+            i = slots.VArray[static_cast<UInt32>(i) - static_cast<UInt32>(slots.FirstOwnSlotNum)].Prev;
+    } while (i >= 0);
+}
+
+
+// TR::State::SwapOp: the two topmost operand stack values trade places.
+// MS2-FUNCTIONAL 0x14252e800: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x14252e800
+void Sfr31StateSwapOp(UPInt state)
+{
+    Value* data = *reinterpret_cast<Value**>(state + 0x38);
+    const UPInt n = *reinterpret_cast<UPInt*>(state + 0x40);
+    Value top(data[n - 1]);
+    data[n - 1] = data[n - 2];
+    data[n - 2] = top;
+}
+
+// AvmDisplayObj::SwitchAS3ObjPtrType: type 1 makes the object reference strong, anything else weak.
+// MS2-FUNCTIONAL 0x14252e900: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x14252e900
+void Sfr31SwitchAS3ObjPtrType(UPInt self, int type)
+{
+    UPInt* strong = reinterpret_cast<UPInt*>(self + 8);
+    UPInt* weak = reinterpret_cast<UPInt*>(self + 0x10);
+    UPInt v = *weak;
+    if (type == 1)
+    {
+        if (v == 0)
+            v = *strong;
+        if (v & 1)
+            --v;
+        Sfr31SetGcRefClearNext(self, v);
+        return;
+    }
+    if (v == 0)
+        v = *strong;
+    if (v & 1)
+        --v;
+    *weak = v;
+    const UPInt s = *strong;
+    if (s != 0)
+    {
+        if (((s & 1) == 0) && (*reinterpret_cast<UInt32*>(s + 0x10) & 0x3fffff) != 0)
+        {
+            --*reinterpret_cast<UInt32*>(s + 0x10);
+            FUN_1423dfa20(reinterpret_cast<void*>(s));
+        }
+        *strong = 0;
+    }
+}
+
+// AvmButton::SwitchState: unless the owner is being destroyed or already removed, the mouse state is
+// translated and handed to SwitchStateIntl.
+// MS2-FUNCTIONAL 0x14252e980: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x14252e980
+void Sfr31ButtonSwitchState(UPInt self, int mouseState)
+{
+    const UPInt owner = *reinterpret_cast<UPInt*>(self - 0x28);
+    const UInt16 flags = *reinterpret_cast<UInt16*>(owner + 0x6a);
+    if (!((flags >> 4) & 1) && !(flags & 0x1000) && *reinterpret_cast<int*>(owner + 0x2c) > -2)
+        FUN_14252e9d0(self - 0x40, FUN_1425de200(mouseState));
+}
+
+// AS3ValueObjectInterface::SetElement: stores the converted value at the array index.
+// MS2-FUNCTIONAL 0x142527300: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x142527300
+bool Sfr31SetElement(UPInt self, UPInt array, UInt32 ind, const void* gfxValue)
+{
+    Value v;
+    FUN_1425048d0(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 8) + 0x18), gfxValue, &v);
+    FUN_1424213b0(array + 0x38, ind, &v);
+    return true;
+}
+
+// AS3ValueObjectInterface::ToString: the value's string form is copied into out.
+// MS2-FUNCTIONAL 0x14252fd40: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// @0x14252fd40
+void Sfr31ToString(UPInt self, String* out, const void* gfxValue)
+{
+    const UPInt root = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 8) + 0x18);
+    Value v;
+    FUN_1425048d0(root, gfxValue, &v);
+    ASString s(reinterpret_cast<ASStringNode*>(*reinterpret_cast<UPInt*>(root + 0x348) + 0x40));
+    v.Convert2String(s);
+    out->AssignString(s.ToCStr(), s.GetSize());
 }
 
 }}} // namespace Scaleform::GFx::AS3

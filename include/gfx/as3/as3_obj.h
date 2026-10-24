@@ -263,6 +263,8 @@ protected:
     AbsoluteIndex Add(const ASString& k, const SlotInfo& v);
     // (appended, sfr19) renames own slot ind to k (rechaining both names). 0x1425276d0
     void SetKey(AbsoluteIndex ind, const ASString& k);
+    // (appended, sfr31) own slot ind becomes v named k. 0x142528f20
+    void SetSlotInfo(AbsoluteIndex ind, const ASString& k, const SlotInfo& v);
     // (appended, sfr19) own slot k of v's namespace, appended as v when there is none; ind receives its index.
     // 0x1425009e0
     SlotInfo& FindAddOwnSlotInfo(const ASString& k, const SlotInfo& v, AbsoluteIndex& ind);
@@ -1013,6 +1015,8 @@ namespace Instances
         explicit FunctionBase(InstanceTraits::Traits& t);
 
     public:
+        // (appended, sfr22) user-declared: the derived dtors re-store this vftable before releasing Prototype
+        virtual ~FunctionBase() {}
         // (appended, sfr19) Call runs slot 21 into a temporary (body in sfr_as3_03).
         virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
         // (appended, sfr19) slot 12: new f() (body in sfr_as3_03). 0x142407230
