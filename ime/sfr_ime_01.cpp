@@ -838,21 +838,30 @@ long long FUN_1423d72a0(void* object, const unsigned long long* iid, void** outp
     return 0;
 }
 
-// MS2-FUNCTIONAL: follows the executable's nested IME provider query and releases its temporary refcounted object.
+// Follows the executable's nested IME provider query and releases its temporary refcounted object.
+// MS2-FUNCTIONAL: the exe keeps the provider in rcx and the result in dil (rax/bl here); same blocks
 // @0x1423ce460
 unsigned char FUN_1423ce460(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     void* provider = *reinterpret_cast<void**>(bytes + 8);
-    if (!provider) return 1;
-    void* factory = static_cast<unsigned char*>(provider) + 0x10;
-    void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>(
-        (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
-    if (!temporary) return 1;
-    void* interfaceObject = *reinterpret_cast<void**>(static_cast<unsigned char*>(temporary) + 0x18);
-    unsigned char result = reinterpret_cast<unsigned char(*)(void*)>(
-        (*reinterpret_cast<void***>(interfaceObject))[0x70 / sizeof(void*)])(interfaceObject);
-    FUN_14257dcb0(temporary);
+    Scaleform::GFx::Value unused;  // the exe keeps an unused Value local here
+    unsigned char result;
+    if (!provider)
+        result = 1;
+    else {
+        void** factoryVtable = *reinterpret_cast<void***>(static_cast<unsigned char*>(provider) + 0x10);
+        void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>(factoryVtable[3])(
+            static_cast<unsigned char*>(provider) + 0x10, 0x18);
+        if (!temporary)
+            result = 1;
+        else {
+            void* interfaceObject = *reinterpret_cast<void**>(static_cast<unsigned char*>(temporary) + 0x18);
+            result = reinterpret_cast<unsigned char(*)(void*)>(
+                (*reinterpret_cast<void***>(interfaceObject))[0x70 / sizeof(void*)])(interfaceObject);
+            FUN_14257dcb0(temporary);
+        }
+    }
     return result;
 }
 
@@ -1802,24 +1811,25 @@ void FUN_1423d9520(void* raw)
     }
 }
 
-// MS2-FUNCTIONAL: performs the executable's interface query and retrieves the IME reading-state values.
+// Performs the executable's interface query and retrieves the IME reading-state values.
 // @0x1423d6b70
-bool FUN_1423d6b70(void* self)
+int FUN_1423d6b70(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    void* source = *reinterpret_cast<void**>(bytes + 0x1c0);
-    if (!source) return false;
     void* result = nullptr;
-    auto** vtable = *reinterpret_cast<void***>(source);
-    int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(vtable[0])(source, DAT_1431c51e8, &result);
-    bool success = false;
-    if (hr >= 0) {
-        auto** resultVtable = *reinterpret_cast<void***>(result);
-        hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
-            result, DAT_1431c5018, bytes + 0x1a0, bytes + 0x1b8);
-        success = hr >= 0;
-        if (!success) *reinterpret_cast<unsigned*>(bytes + 0x1b8) = 0xffffffff;
-        reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    int success = 0;
+    void* source = *reinterpret_cast<void**>(bytes + 0x1c0);
+    if (source) {
+        auto** vtable = *reinterpret_cast<void***>(source);
+        if (reinterpret_cast<int(*)(void*, const void*, void**)>(vtable[0])(source, DAT_1431c51e8, &result) >= 0) {
+            auto** resultVtable = *reinterpret_cast<void***>(result);
+            if (reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
+                    result, DAT_1431c5018, bytes + 0x1a0, bytes + 0x1b8) < 0)
+                *reinterpret_cast<unsigned*>(bytes + 0x1b8) = 0xffffffff;
+            else
+                success = 1;
+        }
+        if (result) (*reinterpret_cast<void(***)(void*)>(result))[2](result);
     }
     return success;
 }
