@@ -1143,7 +1143,7 @@ bool Sfr27TracerIsStringType(UPInt tracer, const Value* v)
 
 // int, uint or Number
 // @0x142514510
-bool Sfr27TracerIsNumericType(UPInt tracer, UPInt traits)
+__declspec(noinline) bool Sfr27TracerIsNumericType(UPInt tracer, UPInt traits)
 {
     const UPInt vm = TrVM(tracer);
     return traits == TrBuiltin(vm, 0x220) || traits == TrBuiltin(vm, 0x228) || traits == TrBuiltin(vm, 0x218);
@@ -1487,6 +1487,512 @@ __declspec(safebuffers) void FUN_142520f30(Scaleform::UPInt state, Scaleform::UP
     else
         FUN_1424f1e50(state, traits, TrNullTypeOf(TrVM(TrRd(state, 0)), traits));
     popped.~Value();
+}
+
+// ---- Tracer merging of the block entry states (free functions; as3_tracer.h declares them as Tracer members) ----
+void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);   // ArrayDH<Value> growth
+void FUN_14252efe0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::UPInt b);   // raises verify error 0x42c (sfr_as3_19)
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
+
+namespace {
+// The trace null type of a value joined to the instance traits itr: never null for the value classes, else what the
+// two sides agree on.
+SF_FORCEINLINE Value::TraceNullType TrJoinNullType(UPInt vm, UPInt itr, const Value& to, const Value& from)
+{
+    if (itr == TrBuiltin(vm, 0x220) || itr == TrBuiltin(vm, 0x228) || itr == TrBuiltin(vm, 0x218) ||
+        itr == TrBuiltin(vm, 0x210))
+        return Value::NotNull;
+    return CanBeNull(to, from);
+}
+// to = the traits value { kind, null type } for tr (a temporary assigned through Value::Assign)
+__declspec(safebuffers) SF_FORCEINLINE void TrAssignTraits(Value& to, UInt32 flags, UPInt tr)
+{
+    struct { UInt32 flags; UInt32 pad; UPInt bonus; UPInt tr; UPInt w3; } buf;   // raw storage of the temporary
+    buf.bonus = 0;
+    buf.flags = flags;
+    buf.tr = tr;
+    Value& v = *reinterpret_cast<Value*>(&buf);
+    to.Assign(v);
+    v.~Value();
+}
+__declspec(safebuffers) SF_FORCEINLINE void TrJoinClassTraits(UPInt tracer, Value& to, const Value& from, UPInt ctr)
+{
+    const UPInt vm = TrVM(tracer);
+    TrAssignTraits(to, static_cast<UInt32>(TrJoinNullType(vm, TrRd(ctr, 0xc0), to, from)) << 5 | Value::kClassTraits, ctr);
+}
+// a state's operand stack, scope stack or register file (Tracer::MergeSet 0 / 1 / 2)
+SF_FORCEINLINE UPInt TrMergeArray(UPInt state, int ms)
+{
+    switch (ms)
+    {
+    case 0: return state + 0x38;
+    case 1: return state + 0x58;
+    case 2: return state + 0x18;
+    }
+    return 0;
+}
+// an object kind (Object .. ThunkFunction) holding null
+SF_FORCEINLINE bool TrIsNullObject(const Value& v)
+{
+    return static_cast<UInt32>(v.GetKind()) - 12u <= 3u && TrRd(reinterpret_cast<UPInt>(&v), 0x10) == 0;
+}
+// Value::AddRef with its weak-reference and per-kind paths inline
+SF_FORCEINLINE void TrAddRef(const Value& v)
+{
+    const UPInt p = reinterpret_cast<UPInt>(&v);
+    const UInt32 flags = *reinterpret_cast<const UInt32*>(p);
+    const UInt32 k = flags & 0x1f;
+    if (k <= 9)
+        return;
+    if ((flags >> 9) & 1)
+    {
+        ++*reinterpret_cast<int*>(TrRd(p, 8));
+        return;
+    }
+    if (k == 10)
+    {
+        ++*reinterpret_cast<int*>(TrRd(p, 0x10) + 0x18);
+        return;
+    }
+    UPInt obj;
+    if (k <= 15)
+        obj = TrRd(p, 0x10);
+    else if (k <= 17)
+        obj = TrRd(p, 0x18);
+    else
+        return;
+    if (obj != 0)
+    {
+        UInt32* rc = reinterpret_cast<UInt32*>(obj + 0x10);
+        *rc = (*rc + 1) & 0x8fbfffff;
+    }
+}
+SF_FORCEINLINE bool TrRegChanged(UPInt state, UPInt ind)
+{
+    return (reinterpret_cast<const UByte*>(TrRd(state, 0x78))[ind >> 3] & (1u << (ind & 7))) != 0;
+}
+}
+
+}}}}
+
+
+// Tracer::IsAnyType: Object (or Class) instance traits.
+// @0x142513f50
+__declspec(noinline) bool FUN_142513f50(Scaleform::UPInt tracer, Scaleform::UPInt traits)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    const UPInt vm = TrVM(tracer);
+    return traits == TrBuiltin(vm, 0x1f8) || traits == TrBuiltin(vm, 0x1f0);
+}
+
+// Tracer::JoinSNodesUpdateType(Value& to, const Value& from, const ClassTraits::Traits& tr)
+// MS2-FUNCTIONAL 0x142515840: clang tail-calls the weak-proxy free; the exe calls it and returns
+// @0x142515840
+__declspec(safebuffers) void FUN_142515840(Scaleform::UPInt tracer, Scaleform::GFx::AS3::Value& to, const Scaleform::GFx::AS3::Value& from,
+                   Scaleform::UPInt ctr)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    TrJoinClassTraits(tracer, to, from, ctr);
+}
+
+// Tracer::JoinSNodesUpdateType(Value& to, const Value& from, const InstanceTraits::Traits& tr)
+// MS2-FUNCTIONAL 0x142515930: clang tail-calls the weak-proxy free; the exe calls it and returns
+// @0x142515930
+__declspec(noinline) __declspec(safebuffers) void FUN_142515930(Scaleform::UPInt tracer, Scaleform::GFx::AS3::Value& to,
+                                        const Scaleform::GFx::AS3::Value& from, Scaleform::UPInt itr)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    const UPInt vm = TrVM(tracer);
+    TrAssignTraits(to, static_cast<UInt32>(TrJoinNullType(vm, itr, to, from)) << 5 | Value::kInstanceTraits, itr);
+}
+
+// Tracer::MergeValues: merges entry ind of from's operand stack / scope stack / register file into to's; a type
+// conflict raises the verify error and fails.
+// MS2-FUNCTIONAL 0x1425178e0: register allocation and block layout of the traits-join cases differ
+// @0x1425178e0
+__declspec(safebuffers) Scaleform::GFx::AS3::CheckResult* FUN_1425178e0(Scaleform::UPInt tracer, Scaleform::GFx::AS3::CheckResult* out,
+                                                Scaleform::UPInt ind, Scaleform::UPInt to, Scaleform::UPInt from, int ms)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    Value& tv = reinterpret_cast<Value*>(TrRd(TrMergeArray(to, ms), 0))[ind];
+    const Value& fv = reinterpret_cast<const Value*>(TrRd(TrMergeArray(from, ms), 0))[ind];
+    const UPInt t1 = TraceValueTraits(tracer, &tv);
+    const UPInt t2 = TraceValueTraits(tracer, &fv);
+
+    if (ms == 1)
+    {
+        if (tv.GetWith() != fv.GetWith())
+            goto fail;
+    }
+    else if (ms == 2)
+    {
+        if (!TrRegChanged(from, ind))
+            goto update;
+        if (!TrRegChanged(to, ind))
+        {
+            tv.Assign(fv);
+            goto update;
+        }
+    }
+
+    if (t1 != t2)
+    {
+        if (tv.GetKind() == Value::kUndefined)
+            tv.Assign(fv);
+        else
+        {
+            const UPInt vm = TrVM(tracer);
+            const UPInt objTr = TrBuiltin(vm, 0x1f8);
+            if (t1 == objTr || t1 == TrBuiltin(vm, 0x1f0))
+                ;
+            else if (FUN_142513f50(tracer, t2))
+                FUN_142515930(tracer, tv, fv, objTr);
+            else
+            {
+                const bool num1 = Sfr27TracerIsNumericType(tracer, t1);
+                if (num1 && Sfr27TracerIsNumericType(tracer, t2))
+                    FUN_142515930(tracer, tv, fv, TrBuiltin(vm, 0x218));
+                else if (TrIsNullObject(tv) || t1 == TrRd(vm, 0x270))
+                {
+                    if (TrIsNullObject(fv) || t2 == TrRd(vm, 0x270))
+                        ;
+                    else if (t2 != TrBuiltin(vm, 0x230) && Sfr27TracerIsNumericType(tracer, t2))
+                        goto fail;
+                    else
+                        tv.Assign(fv);
+                }
+                else if (TrIsNullObject(fv) || t2 == TrRd(vm, 0x270))
+                {
+                    if (t1 != TrBuiltin(vm, 0x230) && num1)
+                        goto fail;
+                }
+                else
+                {
+                    // the nearest common base: mark t1's chain, find the first marked one on t2's
+                    for (UPInt t = t1; t != 0; t = TrRd(t, 0x88))
+                        *reinterpret_cast<UPInt*>(t + 0x68) |= 0x80;
+                    bool found = false;
+                    for (UPInt t = t2; t != 0; t = TrRd(t, 0x88))
+                    {
+                        const UPInt f = TrRd(t, 0x68);
+                        if (f & 0x80)
+                        {
+                            found = true;
+                            if (f & 0x20)
+                                TrJoinClassTraits(tracer, tv, fv, t);
+                            else
+                                FUN_142515930(tracer, tv, fv, t);
+                            break;
+                        }
+                    }
+                    for (UPInt t = t1; t != 0; t = TrRd(t, 0x88))
+                        *reinterpret_cast<UPInt*>(t + 0x68) &= ~static_cast<UPInt>(0x80);
+                    if (!found)
+                        goto fail;
+                }
+            }
+        }
+    }
+
+    if (ms == 2)
+    {
+    update:
+        UByte& bits = reinterpret_cast<UByte*>(TrRd(to, 0x78))[ind >> 3];
+        const unsigned bit = static_cast<unsigned>(ind & 7);
+        if (TrRegChanged(from, ind) || TrRegChanged(to, ind))
+            bits = static_cast<UByte>(bits | (1u << bit));
+        else
+            bits = static_cast<UByte>(bits & ~(1u << bit));
+    }
+    *out = true;
+    return out;
+
+fail:
+    FUN_14252efe0(tracer, t1, t2);
+    *out = false;
+    return out;
+}
+
+// Tracer::MergeLists: merges from's operand stack / scope stack / register file into to's, entry by entry; to grows
+// to from's size unless sizes must agree (update).
+// MS2-FUNCTIONAL 0x142517740: CheckResult zero-init and AddRef ordering differ from the exe
+// @0x142517740
+__declspec(safebuffers) Scaleform::GFx::AS3::CheckResult* FUN_142517740(Scaleform::UPInt tracer, Scaleform::GFx::AS3::CheckResult* out,
+                                                Scaleform::UPInt to, Scaleform::UPInt from, bool update, int ms)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    UPInt* ta = reinterpret_cast<UPInt*>(TrMergeArray(to, ms));
+    const UPInt* fa = reinterpret_cast<const UPInt*>(TrMergeArray(from, ms));
+    if (update && ta[1] != fa[1])
+    {
+        *out = false;
+        return out;
+    }
+    for (UPInt i = 0; i < fa[1]; ++i)
+    {
+        if (i < ta[1])
+        {
+            CheckResult r(false);
+            if (!*FUN_1425178e0(tracer, &r, i, to, from, ms))
+            {
+                *out = false;
+                return out;
+            }
+        }
+        else
+        {
+            const Value& s = reinterpret_cast<const Value*>(fa[0])[i];
+            FUN_1424201a0(ta, reinterpret_cast<void*>(ta[3]), ta[1] + 1);
+            new (reinterpret_cast<Value*>(ta[0]) + ta[1] - 1) Value(s, Value::NotRefCounted);
+            TrAddRef(s);
+        }
+    }
+    *out = true;
+    return out;
+}
+
+// ---- VMAbcFile::GetOpCode (traces a method body on first use) ----
+Scaleform::UPInt* FUN_1424d9f30(Scaleform::UPInt* self, Scaleform::UPInt heap, Scaleform::UPInt body, Scaleform::UPInt ops,
+                                Scaleform::UPInt extra);   // Tracer::Tracer (sfr_as3_15)
+void FUN_1424f7840(void* tracer);   // Tracer::EmitCode (sfr_as3_17)
+void FUN_1424df070(void* tracer);   // Tracer::~Tracer
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// MS2-FUNCTIONAL 0x14250c860: the exe splits the shrink-wrapped slow path into a chained unwind fragment
+// @0x14250c860
+__declspec(safebuffers) const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& VMAbcFile::GetOpCode(SInt32 mbi_ind,
+                                                                                            const CallFrame& cf)
+{
+    if (OpCodeArray[mbi_ind].GetSize() == 0)
+    {
+        VM& vm = GetVM();
+        struct { UPInt q[0x140 / sizeof(UPInt)]; } tr;   // raw storage of the Tracer
+        FUN_1424d9f30(tr.q, reinterpret_cast<UPInt>(vm.GetMemoryHeap()), reinterpret_cast<UPInt>(&cf),
+                      reinterpret_cast<UPInt>(&OpCodeArray[mbi_ind]), reinterpret_cast<UPInt>(&Exceptions[mbi_ind]));
+        if (!vm.IsException())
+            FUN_1424f7840(&tr);
+        FUN_1424df070(&tr);
+    }
+    return OpCodeArray[mbi_ind];
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+// Tracer: the run-time operands a chained multiname takes off the operand stack (its name and / or namespace set),
+// the name value stored into the multiname. ctx: {tracer, state}.
+// MS2-FUNCTIONAL 0x142520380: clang shares the per-case epilogues the exe duplicates, and saves rbp
+// @0x142520380
+__declspec(safebuffers) int FUN_142520380(void* ctx, void* multiname)
+{
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    struct RawValue { Scaleform::UPInt w0, w1, w2, w3; };   // raw storage: PopOpValue constructs the Value in it
+    void** c = reinterpret_cast<void**>(ctx);
+    int& kind = *reinterpret_cast<int*>(multiname);
+    Value& name = *reinterpret_cast<Value*>(reinterpret_cast<Scaleform::UPInt>(multiname) + 0x10);
+    for (;;)
+    {
+        switch (kind)
+        {
+        case 1: case 9:      // RTQName: the namespace
+        {
+            RawValue b;
+            Value& v = *reinterpret_cast<Value*>(&b);
+            Sfr27StatePopOpValue(c[1], &v);
+            v.~Value();
+            return 1;
+        }
+        case 5: case 13:     // RTQNameL: the name and the namespace
+        {
+            {
+                RawValue b;
+                Value& v = *reinterpret_cast<Value*>(&b);
+                Sfr27StatePopOpValue(c[1], &v);
+                v.~Value();
+            }
+            RawValue b;
+            Value& v = *reinterpret_cast<Value*>(&b);
+            name.Assign(*Sfr27StatePopOpValue(c[1], &v));
+            v.~Value();
+            return 2;
+        }
+        case 6: case 14:     // MultinameL: the name
+        {
+            RawValue b;
+            Value& v = *reinterpret_cast<Value*>(&b);
+            name.Assign(*Sfr27StatePopOpValue(c[1], &v));
+            v.~Value();
+            return 1;
+        }
+        case 16:
+        {
+            Scaleform::UPInt log = *reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<Scaleform::UPInt>(c[0]) + 0x20);
+            typedef void (*OutFn)(Scaleform::UPInt, int, const char*);
+            (*reinterpret_cast<OutFn*>(*reinterpret_cast<Scaleform::UPInt*>(log) + 8))(
+                log, 2, "Reading chained multiname in itself.");
+            continue;
+        }
+        default:
+            return 0;
+        }
+    }
+}
+
+// ---- Block entry states: the slot type of a property, joining a block's state into its successor's ----
+namespace Scaleform { namespace GFx { namespace AS3 {
+ClassTraits::Traits* FUN_1425085b0(const SlotInfo* psi, VM* pvm);   // SlotInfo::GetDataType (sfr_as3_17)
+void FUN_142508720(const SlotInfo* psi, ASString* name, VM* pvm);   // SlotInfo::GetDataTypeName (sfr_as3_17)
+InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v);       // VM::GetFunctReturnType
+void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
+}}} // namespace Scaleform::GFx::AS3
+
+// TR::State::GetPropertyType: the traced type of a property read through the slot si of the traits t, into result:
+// the function type of a method slot, the return type of a getter, else the slot's declared type (its class for a
+// Class-typed or class-bound slot). An unknown declared type raises VerifyError 1014 (false).
+// MS2-FUNCTIONAL 0x14250cf20: raw-offset model of the ABC type multiname ("Class" in the public namespace) test
+// @0x14250cf20
+__declspec(safebuffers) const char* FUN_14250cf20(void* state, char* ret, const void* t, const void* si,
+                                                  Scaleform::GFx::AS3::Value& result)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    using Scaleform::GFx::ASString;
+    const TR::State& st = *static_cast<const State*>(state);
+    const UPInt s = reinterpret_cast<UPInt>(si);
+    const UInt32 w = *reinterpret_cast<const UInt32*>(s);
+    const int bt = static_cast<SInt32>(w << 22) >> 27;
+    const Traits& tr = *static_cast<const Traits*>(t);
+    UPInt rt;
+    UInt32 flags;
+    if (bt > 10 && !(w & 0x4000000))   // a method / accessor slot with a valid value index
+    {
+        const SPInt ind = static_cast<SPInt>(static_cast<SInt32>(w << 5) >> 15);
+        if (bt == 11)
+        {
+            const Value f = tr.GetVT().GetValue(AbsoluteIndex(ind));
+            rt = reinterpret_cast<UPInt>(&st.GetFunctType(f));
+        }
+        else
+        {
+            VM& vm = *reinterpret_cast<VM*>(TrVM(TrRd(reinterpret_cast<UPInt>(state), 0)));
+            const UPInt methods = TrRd(reinterpret_cast<UPInt>(&tr.GetVT()), 8);
+            rt = reinterpret_cast<UPInt>(&FUN_14250a060(
+                vm, *reinterpret_cast<const Value*>(methods + (static_cast<UPInt>(ind) & 0xffffffff) * 0x20)));
+        }
+        flags = (static_cast<UInt32>(st.CanBeNull(*reinterpret_cast<const InstanceTraits::Traits*>(rt))) & ~8u) << 5 |
+                Value::kInstanceTraits;
+    }
+    else
+    {
+        VM& vm = *reinterpret_cast<VM*>(TrVM(TrRd(reinterpret_cast<UPInt>(state), 0)));
+        ClassTraits::Traits* ct = FUN_1425085b0(static_cast<const SlotInfo*>(si), &vm);
+        if (!ct)
+        {
+            struct { UPInt node; } nb;   // raw storage: GetDataTypeName constructs the name in it
+            ASString& name = *reinterpret_cast<ASString*>(&nb);
+            FUN_142508720(static_cast<const SlotInfo*>(si), &name, &vm);
+            {
+                const Value tv(name);
+                const VM::Error e(VM::ErrorID(1014) /* eClassNotFoundError */, vm, tv);
+                FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
+            }
+            name.~ASString();
+            *ret = 0;
+            return ret;
+        }
+        rt = reinterpret_cast<UPInt>(ct);
+        flags = Value::kClassTraits;
+        const UByte* mn = *reinterpret_cast<const UByte* const*>(s + 0x20);   // the ABC type multiname
+        if ((w & 0x3e0) != 0x20 && !(mn && (*mn & 0xf) == 4))
+        {
+            bool isClass = false;
+            const UPInt file = *reinterpret_cast<const UPInt*>(s + 0x18);
+            if (file && mn)
+            {
+                const UPInt abc = TrRd(file, 0x28);
+                const int mind = *reinterpret_cast<const int*>(mn + 0xc);
+                UPInt qn;   // the QName of the type
+                if ((*mn & 0xf) == 0 || (*mn & 0xf) == 6)
+                    qn = mind ? TrRd(abc, 0xb8) + static_cast<SPInt>(mind) * 0x10 : abc + 0xe8;
+                else
+                {
+                    const SPInt q = *reinterpret_cast<const int*>(
+                        *reinterpret_cast<const UPInt*>(TrRd(abc, 0x140) + static_cast<SPInt>(mind) * 8) + 0x24);
+                    qn = q ? TrRd(abc, 0xb8) + q * 0x10 : abc + 0xe8;
+                }
+                const int nsi = *reinterpret_cast<const int*>(qn + 4);
+                const UInt32* ns = reinterpret_cast<const UInt32*>(nsi ? TrRd(abc, 0x88) + static_cast<SPInt>(nsi) * 0x18
+                                                                       : abc + 0xd0);
+                const UPInt sv = TrRd(abc, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(qn + 8)) * 8;
+                const StringDataPtr tn = reinterpret_cast<const Abc::StringView*>(sv)->ToStringDataPtr();
+                isClass = tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (*ns & ~4u) == 0 &&
+                          *reinterpret_cast<const UPInt*>(ns + 4) == 0;
+            }
+            if (!isClass)
+            {
+                rt = TrRd(rt, 0xc0);
+                flags = (static_cast<UInt32>(st.CanBeNull(*reinterpret_cast<const InstanceTraits::Traits*>(rt))) & ~8u)
+                            << 5 |
+                        Value::kInstanceTraits;
+            }
+        }
+    }
+    TrAssignTraits(result, flags, rt);
+    *ret = 1;
+    return ret;
+}
+
+// Tracer::JoinSNodes: a block's state joined into the entry state of the block it falls / jumps into: the operand
+// stack, the scope stack and the registers (a mismatch reported, the rest still joined); the target marked visited.
+// MS2-FUNCTIONAL 0x142511b00: the exe inlines MergeLists (and MergeValues for the two stacks); here they are called
+// @0x142511b00
+void FUN_142511b00(Scaleform::UPInt tracer, Scaleform::UPInt* now, Scaleform::UPInt* old)
+{
+    using namespace Scaleform::GFx::AS3;
+    const Scaleform::UPInt to = now[3], from = old[3];
+    CheckResult r(false);
+    FUN_142517740(tracer, &r, to, from, false, 0);
+    FUN_142517740(tracer, &r, to, from, false, 1);
+    FUN_142517740(tracer, &r, to, from, true, 2);
+    *reinterpret_cast<Scaleform::UInt32*>(now + 2) |= 1;
+}
+
+// Tracer::MergeBlock: a block's state merged into an already visited block's entry state: unless the target is a
+// catch target, its operand stack (when as deep) and its scope stack (VerifyError 1031 on a mismatch), then its
+// registers.
+// MS2-FUNCTIONAL 0x142516c40: the exe inlines MergeLists and MergeValues for the two stacks; here they are called
+// @0x142516c40
+char* FUN_142516c40(Scaleform::UPInt tracer, void* buf, Scaleform::UPInt* now, Scaleform::UPInt* old)
+{
+    using namespace Scaleform::GFx::AS3;
+    CheckResult* out = static_cast<CheckResult*>(buf);
+    const Scaleform::UPInt to = now[3], from = old[3];
+    if (!(*reinterpret_cast<const Scaleform::UInt32*>(reinterpret_cast<Scaleform::UPInt>(now) + 0x14) & 4))
+    {
+        CheckResult r(false);
+        FUN_142517740(tracer, &r, to, from, true, 0);
+        if (!*FUN_142517740(tracer, &r, to, from, false, 1))
+        {
+            VM& vm = *reinterpret_cast<VM*>(TR::TrVM(tracer));
+            const VM::Error e(VM::ErrorID(1031) /* eScopeDepthUnbalancedError */, vm,
+                              static_cast<int>(TR::TrRd(to, 0x60)), static_cast<int>(TR::TrRd(from, 0x60)));
+            FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
+            *out = false;
+            return reinterpret_cast<char*>(out);
+        }
+    }
+    return reinterpret_cast<char*>(FUN_142517740(tracer, out, to, from, true, 2));
 }
 
 // ---- Small accessors (leaf functions of the display and VM glue; their classes are not named yet) ----
