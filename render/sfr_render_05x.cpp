@@ -11,28 +11,10 @@
 #include "ms2/scaleform/include/render/render_math2d.h"
 #include "ms2/scaleform/include/render/render_tessellator.h"
 #include "ms2/scaleform/kernel/sf_alg.h"
+#include "ms2/scaleform/include/render/render_perlin.h"
 
 namespace Scaleform { namespace Render {
 
-// The generator's integer lattice hash: row stride and the three polynomial coefficients.
-class PerlinGenerator
-{
-    int Stride; // +0x0
-    int A;      // +0x4
-    int B;      // +0x8
-    int C;      // +0xc
-
-    float noise(int x, int y) const
-    {
-        int n = y * Stride + x;
-        n = (n << 13) ^ n;
-        return 1.0f - (float)(((A * n * n + B) * n + C) & 0x7fffffff) * (1.0f / 1073741824.0f);
-    }
-
-    float SmoothNoise(int x, int y);
-};
-
-// Lattice noise at (x, y) blurred with its neighbours: corners 1/16, sides 1/8, centre 1/4.
 // MS2-FUNCTIONAL: the exe schedules the nine lattice evaluations differently (same sums and weights)
 // @0x142678210
 float PerlinGenerator::SmoothNoise(int x, int y)

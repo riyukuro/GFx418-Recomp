@@ -16,9 +16,11 @@
 #include "ms2/scaleform/kernel/sf_log.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
+#include "ms2/scaleform/include/render/render_perlin.h"
 #include "hook/ms2hook.h"
 #include <cstdint>
 #include <cstring>
+#include <math.h>
 #include <new>
 #include <random>
 #include <vector>
@@ -872,62 +874,94 @@ extern "C" void FUN_142676bd0(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
-// MS2-FUNCTIONAL: generates normalized multi-octave smooth value noise for the selected image components.
+// BitmapData.perlinNoise: per selected channel (red, green, blue, alpha when transparent; grayscale draws red into
+// all three colour bytes) one of eight lattice generators is picked from the seed, and every octave cosine-
+// interpolates SmoothNoise at the four lattice corners around the (offset) sample point; frequency doubles and
+// amplitude halves per octave, the sum is normalised by the total amplitude.
+// MS2-FUNCTIONAL: (corrected, sfr36) reads the plane once instead of per pixel; the generator parameters are our table
 // @0x142677740
 extern "C" void FUN_142677740(void* operation, void*, Scaleform::Render::ImageData* image)
 {
-    using Scaleform::Render::ImageData;
+    using namespace Scaleform;
     using Scaleform::Render::ImagePlane;
+    using Scaleform::Render::PerlinGenerator;
+    // Row stride and polynomial coefficients of the eight generators (exe 0x143191a90).
+    static const int Generators[8][4] = {
+        {67, 19937, 178757, 7978189}, {97, 21701, 100511, 2200591}, {73, 23209, 499321, 9218263},
+        {19, 44497, 422861, 6200351}, {59, 43261, 300589, 9299317}, {17, 33461, 475333, 1200809},
+        {23, 96557, 457117, 6267011}, {43, 28657, 199669, 2299553},
+    };
+    const auto* op         = static_cast<const unsigned char*>(operation);
+    const float baseX      = *reinterpret_cast<const float*>(op + 0x10);
+    const float baseY      = *reinterpret_cast<const float*>(op + 0x14);
+    const unsigned octaves = *reinterpret_cast<const unsigned*>(op + 0x18);
+    const int seed         = *reinterpret_cast<const int*>(op + 0x1c);
+    unsigned channels      = *reinterpret_cast<const unsigned*>(op + 0x24);
+    const bool gray        = *reinterpret_cast<const bool*>(op + 0x28);
+    const auto* offsets    = reinterpret_cast<const float*>(op + 0x2c);
+    const unsigned offsetCount = *reinterpret_cast<const unsigned*>(op + 0xac);
+    const float pi = 3.14159265f;
+    if (gray)
+        channels = (channels & ~6u) | 1u;
+
     ImagePlane plane;
     image->GetPlane(0, &plane);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    const float xScale = *reinterpret_cast<const float*>(op + 0x10);
-    const float yScale = *reinterpret_cast<const float*>(op + 0x14);
-    unsigned octaves = *reinterpret_cast<const unsigned*>(op + 0x18);
-    unsigned channels = *reinterpret_cast<const unsigned*>(op + 0x24);
-    const bool gray = *reinterpret_cast<const bool*>(op + 0x28);
-    const auto* alphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool hasAlpha = alphaConfig && *reinterpret_cast<const bool*>(alphaConfig + 0x48);
-    if (octaves > 16) octaves = 16;
-    auto hashNoise = [](int x, int y, unsigned channel) {
-        std::uint32_t h = static_cast<std::uint32_t>(x) * 0x8da6b343u ^
-                          static_cast<std::uint32_t>(y) * 0xd8163841u ^ channel * 0xcb1ab31fu;
-        h ^= h >> 13; h *= 0x85ebca6bu; h ^= h >> 16;
-        return static_cast<float>(h & 0xffffu) / 32767.5f - 1.0f;
-    };
-    auto smoothNoise = [&](float x, float y, unsigned channel) {
-        const int ix = static_cast<int>(std::floor(x)), iy = static_cast<int>(std::floor(y));
-        const float fx = x - ix, fy = y - iy;
-        const float sx = fx * fx * (3.0f - 2.0f * fx), sy = fy * fy * (3.0f - 2.0f * fy);
-        const float a = hashNoise(ix, iy, channel), b = hashNoise(ix + 1, iy, channel);
-        const float c = hashNoise(ix, iy + 1, channel), d = hashNoise(ix + 1, iy + 1, channel);
-        const float topValue = a + (b - a) * sx, bottomValue = c + (d - c) * sx;
-        return topValue + (bottomValue - topValue) * sy;
-    };
-    for (unsigned y = 0; y < plane.Height; ++y) {
-        const long long row = static_cast<long long>(y) * plane.Pitch;
-        for (unsigned x = 0; x < plane.Width; ++x) {
-            unsigned color = 0xff000000u;
-            auto* components = reinterpret_cast<unsigned char*>(&color);
-            for (unsigned component = 0; component < (hasAlpha ? 4u : 3u); ++component) {
-                const unsigned bit = 1u << component;
-                if (!(channels & bit) && !(gray && (channels & 0x0fu))) continue;
-                float total = 0.0f, amplitude = 1.0f, weight = 0.0f;
-                float sx = xScale, sy = yScale;
-                for (unsigned octave = 0; octave < octaves; ++octave) {
-                    float ox = 0.0f, oy = 0.0f;
-                    if (octave < *reinterpret_cast<const unsigned*>(op + 0xac)) {
-                        ox = *reinterpret_cast<const float*>(op + 0x2c + octave * 8);
-                        oy = *reinterpret_cast<const float*>(op + 0x30 + octave * 8);
+    for (unsigned y = 0; y < plane.Height; ++y)
+    {
+        UByte* line = plane.pData + plane.Pitch * y;
+        for (unsigned x = 0; x < plane.Width; ++x)
+        {
+            const bool transparent =
+                *(static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8)) + 0x48) != 0;
+            UInt32 color = 0;
+            UByte  alpha = 0xff;
+            for (unsigned ch = 0; ch < (transparent ? 4u : 3u); ++ch)
+            {
+                if (!(channels & (1u << ch)))
+                    continue;
+                PerlinGenerator gen;
+                const int* g = Generators[((seed + (int)ch) * -3) & 7];
+                gen.Stride = g[0]; gen.A = g[1]; gen.B = g[2]; gen.C = g[3];
+
+                float fx = 2.0f / baseX, fy = 2.0f / baseY;
+                float total = 0.0f, weight = 0.0f, amp = 1.0f;
+                for (unsigned o = 0; o < octaves; ++o)
+                {
+                    float px = (float)x * fx, py = (float)y * fy;
+                    if (o < offsetCount)
+                    {
+                        px += offsets[o * 2];
+                        py += offsets[o * 2 + 1];
                     }
-                    total += (smoothNoise(x * sx + ox, y * sy + oy, gray ? 0 : component) + 1.0f) * 0.5f * amplitude;
-                    weight += amplitude;
-                    amplitude *= 0.5f; sx *= 2.0f; sy *= 2.0f;
+                    const int ix = (int)px, iy = (int)py;
+                    const float tx = (float)((1.0 - cos((double)((px - (float)ix) * pi))) * 0.5);
+                    const float ty = (float)((1.0 - cos((double)((py - (float)iy) * pi))) * 0.5);
+                    const float n00 = gen.SmoothNoise(ix, iy);
+                    const float n10 = gen.SmoothNoise(ix + 1, iy);
+                    const float n01 = gen.SmoothNoise(ix, iy + 1);
+                    const float n11 = gen.SmoothNoise(ix + 1, iy + 1);
+                    fx += fx;
+                    fy += fy;
+                    weight += amp;
+                    total += ((n00 * (1.0f - tx) + n10 * tx) * (1.0f - ty) + (n01 * (1.0f - tx) + n11 * tx) * ty + 1.0f)
+                             * 0.5f * amp;
+                    amp *= 0.5f;
                 }
-                const float unit = weight > 0.0f ? total / weight : 0.0f;
-                components[component] = static_cast<unsigned char>(unit * 255.0f);
+                const UByte v = (UByte)(int)((total / weight) * 255.0f);
+                if (gray && ch != 3)
+                    color = v | ((UInt32)v << 8) | ((UInt32)v << 16);
+                else if (ch == 0)
+                    color = (color & 0x0000ffffu) | ((UInt32)v << 16);
+                else if (ch == 1)
+                    color = (color & 0xffff00ffu) | ((UInt32)v << 8);
+                else if (ch == 2)
+                    color = (color & 0xffffff00u) | v;
+                else
+                    alpha = v;
             }
-            FUN_14257d390(image, row, x, color);
+            if (!transparent)
+                alpha = 0xff;
+            image->SetPixelInScanline(line, x, (color & 0x00ffffffu) | ((UInt32)alpha << 24));
         }
     }
 }
