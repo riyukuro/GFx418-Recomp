@@ -804,7 +804,7 @@ template class Scaleform::RefCountBase<Scaleform::Render::ThreadCommand, Scalefo
 // MS2-PIN: ??_7Mesh@Render@Scaleform@@6BMeshStagingNode@12@@ 0x143191978
 // MS2-PIN: ??_7ComplexMesh@Render@Scaleform@@6B?$RefCountBase@VMeshBase@Render@Scaleform@@$0EG@@2@@ 0x1431919d8
 // MS2-PIN: ??_7ComplexMesh@Render@Scaleform@@6BMeshStagingNode@12@@ 0x1431919e8
-// MS2-PIN: ??_7?$RefCountBase@VThreadCommand@Render@Scaleform@@$01@Scaleform@@6B@ 0x143191938
+// MS2-PIN: ??_7?$RefCountBase@VThreadCommand@Render@Scaleform@@$01@Scaleform@@6B@ 0x143183980
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EG@@Scaleform@@6B@ 0x143191940
 // MS2-PIN: ??_7?$RefCountBase@VMeshBase@Render@Scaleform@@$0EG@@Scaleform@@6B@ 0x143191a38
 // MS2-PIN: ??_7Interface@RenderQueueItem@Render@Scaleform@@6B@ 0x143191990
