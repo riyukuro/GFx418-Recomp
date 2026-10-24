@@ -426,6 +426,10 @@ public:
     InteractiveObject* GetTargetCharacter();
     // The defining character's environment while it lives, else fn.Env (exe 0x14294aa80).
     virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>* ptargetCh);
+    // (sfr24) Runs the function body in the defining character's environment (exe 0x1429629a0). The members past
+    // +0x78 (action buffer, with stack, start pc, length, argument specs, flags) are used through a view in
+    // sfr_as2_06b, since WithStackArray and ActionBuffer are declared after this header.
+    virtual void Invoke(const FnCall& fn, LocalFrame*, const char* pmethodName);
 };
 
 SF_FORCEINLINE void FunctionRefBase::Init(FunctionObject* poriginal, UByte flags)

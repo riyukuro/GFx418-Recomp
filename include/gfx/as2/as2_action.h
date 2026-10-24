@@ -381,6 +381,9 @@ bool GAS_Invoke(const char* pmethodName, Value* presult, ObjectInterface* pthis,
                 int firstArgBottomIndex);
 bool GAS_InvokeParsed(const char* pmethodName, Value* presult, ObjectInterface* pthis, Environment* penv,
                       const char* pmethodArgFmt, va_list args);
+// (sfr24) The method value itself, the arguments pushed from pmethodArgFmt and the va_list (exe 0x142947360).
+bool GAS_InvokeParsed(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv,
+                      const char* pmethodArgFmt, va_list args, const char* pmethodName);
 
 // A try block entered by the running code. 0x10 bytes.
 struct Environment::TryDescr

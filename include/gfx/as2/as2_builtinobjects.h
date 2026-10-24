@@ -237,6 +237,8 @@ public:
     virtual ObjectType  GetObjectType() const;                     // exe 0x1429541d0: Object_Boolean
     virtual void SetValue(Environment* penv, const Value& v); // exe 0x14298cc30
     virtual Value GetValue() const;                           // exe 0x142956c80
+    // (sfr24) Calls toString / valueOf on a primitive boolean through the prototype (exe 0x142964710).
+    static bool InvokePrimitiveMethod(const FnCall& fnCall, const ASString& methodName);
 
 protected:
     void CommonInit(Environment* penv); // exe 0x142934a00
@@ -376,6 +378,9 @@ public:
     Ptr<MovieDef>      pMovieDef; // +0x70 keeps the image heap of the movie alive
 
     void SetImage(Environment* penv, ImageResource* pimg, MovieDef* pmovieDef);
+    // (sfr24) A BitmapData of the image exported under linkageId (BitmapData.loadBitmap; the name is the
+    // Windows LoadBitmap macro's) (exe 0x142966480).
+    static BitmapData* LoadBitmapA(Environment* penv, const String& linkageId);
 
 protected:
     virtual void Finalize_GC(); // exe 0x142942ca0
@@ -522,6 +527,8 @@ public:
 
     virtual ObjectType GetObjectType() const; // exe 0x1429542b0: Object_Number
     virtual Value      GetValue() const;      // exe 0x142956c90: NumberValue
+    // (sfr24) Calls toString / valueOf on a primitive number through the prototype (exe 0x142964950).
+    static bool InvokePrimitiveMethod(const FnCall& fnCall, const ASString& methodName);
 
     // Text of the value in the radix (see NumberUtil::ToString), kept alive in StringValue.
     const char* ToString(int radix)

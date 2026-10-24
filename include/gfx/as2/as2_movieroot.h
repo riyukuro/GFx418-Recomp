@@ -214,7 +214,9 @@ public:
 class MovieRoot : public ASMovieRootBase
 {
 public:
-    UByte              Unrecovered_28[0x10];  // +0x28
+    UByte              Unrecovered_28[0x08];  // +0x28
+    // (sfr24) A Ptr in the exe; the AS2 support the empty clips of a failed loadMovie are made with.
+    ASSupport*         pAS2Support;           // +0x30
     MemoryContextImpl* MemContext;            // +0x38
     unsigned           GCFrameCnt;            // +0x40 frames since this movie last saw a collection
     unsigned           GCSeenCollectCount;    // +0x44 the collector's collection count at that time
@@ -299,6 +301,15 @@ public:
     void AddMovieLoadQueueEntry(LoadQueueEntry* pentry);
     // Hands the load to a loader thread task (exe 0x14292fc90).
     void AddLoadQueueEntryMT(LoadQueueEntry* pentry);
+    // (sfr24) The queued loads done on the movie thread: a style sheet (exe 0x142970450) and variables
+    // (exe 0x142971360); the variables text goes to the target clip or LoadVars object (exe 0x142938d60).
+    void ProcessLoadCSS(GFx::LoadQueueEntry* pentry, LoadStates* pls);
+    void ProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls);
+    void DoProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls, const String& data, UPInt fileLen,
+                           bool succeeded);
+    // (sfr24) An XML.load (exe 0x142971660) and a loadMovie / level load (exe 0x1429706b0) done on the movie thread.
+    void ProcessLoadXML(GFx::LoadQueueEntry* pentry, LoadStates* pls);
+    void ProcessLoadMovieClip(GFx::LoadQueueEntry* pentry, LoadStates* pls);
 
     // A queued action: a frame's action buffer, a clip event, or a function call on the character. 0x78 bytes.
     struct ActionEntry
@@ -429,6 +440,9 @@ public:
     InvokeAliasInfo* ResolveInvokeAlias(const char* pstr) const;
     // Calls the alias with the numArgs arguments on the _level0 stack (exe 0x142963b90).
     bool InvokeAlias(const char* pmethodName, const InvokeAliasInfo& iai, Value* presult, unsigned numArgs);
+    // (sfr24) The same with the arguments pushed from pmethodArgFmt and the va_list (exe 0x142963db0).
+    bool InvokeAliasArgs(const char* pmethodName, const InvokeAliasInfo& iai, Value* presult, const char* pmethodArgFmt,
+                         va_list args);
     // Queues Stage.onResize on _level0 (exe 0x14296a450).
     virtual void NotifyOnResize();
 

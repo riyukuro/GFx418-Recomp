@@ -20,7 +20,10 @@ class Object;
 class ASCSSFileLoader : public RefCountBase<ASCSSFileLoader, StatMV_ActionScript_Mem>
 {
 public:
+    virtual ~ASCSSFileLoader() {}
     virtual void Load(const String& filename, FileOpener* pfo) = 0;
+    // (sfr24) Gives the parsed style sheet to the StyleSheet object ptarget, on the movie thread.
+    virtual void Init(Environment* penv, Object* ptarget) = 0;
 };
 
 // Loads and parses an XML file for an XML object. Vftable 0x143224130 (sfr_as2_07e has the implementations).
@@ -55,7 +58,7 @@ public:
         pLoader->Load(fileName.ToCStr(), static_cast<FileOpener*>(pLoadStates->GetBindStates()->pFileOpener.GetPtr()));
         Done = 1;
     }
-    bool IsDone() const { return Done != 0; }
+    bool IsDone() const { return Done == 1; }
 };
 
 class GFxAS2LoadCSSTask : public GFxAS2LoadFileTask<ASCSSFileLoader, URLBuilder::File_LoadCSS>
