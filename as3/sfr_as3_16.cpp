@@ -123,6 +123,31 @@ ASVM::~ASVM() = default;
 }}} // namespace Scaleform::GFx::AS3
 
 extern "C" void FUN_142530d50(Scaleform::UPInt self);
+extern "C" void* DAT_143b15f60;
+
+// ValueRegisterFile teardown: release the live register values, then its reserved and current pages.
+// MS2-FUNCTIONAL 0x1424dfaf0: uses the Value destructor and the VM heap's free slot; iteration lowering differs.
+// @0x1424dfaf0
+extern "C" void FUN_1424dfaf0(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    auto count = *reinterpret_cast<const Scaleform::UInt16*>(bytes);
+    auto* values = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(bytes + 8);
+    for (Scaleform::UPInt i = 0; i < count; ++i)
+        values[i].~Value();
+
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void* page = *reinterpret_cast<void**>(bytes + 0x18);
+    while (page)
+    {
+        void* next = *reinterpret_cast<void**>(static_cast<unsigned char*>(page) + 0x10);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
+        page = next;
+    }
+    page = *reinterpret_cast<void**>(bytes + 0x10);
+    if (page)
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
+}
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-FUNCTIONAL 0x1424df380: marks the VM as destroying and shuts down registered ABCs before member teardown.
@@ -131,6 +156,7 @@ VM::~VM()
 {
     InDestructor = true;
     FUN_142530d50(reinterpret_cast<Scaleform::UPInt>(this));
+    FUN_1424dfaf0(reinterpret_cast<unsigned char*>(this) + 0x140);
 }
 }}} // namespace Scaleform::GFx::AS3
 
