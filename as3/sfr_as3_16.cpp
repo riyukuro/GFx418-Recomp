@@ -54,8 +54,9 @@
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_taskmanager.h"
-#include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avmloader.h"
+#include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/render/text_core.h"
 #undef GetObject   // windows.h
 
@@ -1194,6 +1195,14 @@ bool XMLSupportImpl::Add(Value& result, Object& l, Object& r) const
 }
 
 }}} // namespace Scaleform::GFx::AS3
+
+// AvmLoader's multiple-inheritance teardown, including its AS3 subobject.
+// MS2-FUNCTIONAL 0x1424ddc40: clears the loader state and tears down the same modeled bases; the compiler orders vft stores differently.
+// @0x1424ddc40
+Scaleform::GFx::AS3::AvmLoader::~AvmLoader()
+{
+    reinterpret_cast<Scaleform::UInt8*>(this)[0x6d] = 0;
+}
 
 // MS2-PIN: ?Sfr34_ModifyOptimizedPlayList@AS3@GFx@Scaleform@@YAXPEAVInteractiveObject@23@@Z 0x142517e70
 // @0x1424e9380
