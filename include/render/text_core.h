@@ -14,6 +14,7 @@
 #include "ms2/scaleform/kernel/sf_hash.h"
 #include "ms2/scaleform/kernel/sf_string.h"
 #include "ms2/scaleform/kernel/sf_utf8util.h"
+#include "ms2/scaleform/kernel/sf_std.h"     // (sfr24) SFstrchr
 #include "ms2/scaleform/include/kernel/sf_range.h"
 #include "ms2/scaleform/include/render/render_types2d.h"
 #include "ms2/scaleform/include/render/render_matrix2x4.h"

@@ -29,6 +29,9 @@ class LoadQueueEntry;   // (appended, sfr19) as3_loadqueue.h
 class ASVM;             // (appended, sfr19)
 class MemoryContextImpl;  // (appended, sfr34) as3_support.h
 namespace Instances { namespace fl_display { class DisplayObject; } }   // (appended, sfr19)
+// (sfr24) the load queue's parameter types, so the header stands alone
+namespace Instances { namespace fl_display { class Loader; } namespace fl_net { class URLRequest; class URLLoader; }
+                      namespace fl_utils { class ByteArray; } }
 
 // The Loader's load-init notification, held by a load entry or an action entry while it is pending (body not
 // recovered; a thread-safe counted object, released through RefCountImpl::Release). (moved here from
