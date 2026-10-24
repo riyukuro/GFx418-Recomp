@@ -36,6 +36,8 @@ void FUN_142502360(Scaleform::GFx::AS3::Object* obj, Scaleform::GFx::AS3::PropRe
                    const Scaleform::GFx::AS3::Multiname& mn, int attr);
 // The gesture phase names, by GestureEvent::Phase (0: none).
 extern const char* const DAT_143a2d158[];
+// SPtr<Instances::fl::Object>::operator=, out of line (0x14243d870).
+void* FUN_14243d870(void* self, void* p);
 // VM::MakeObject: a new plain Object (0x142516600).
 void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
 // VM::GetValueTraits: the traits of a value (0x14250ffc0).
@@ -745,6 +747,39 @@ namespace Instances { namespace fl_events {
         return GetVM().GetClass(StringDataPtr("flash.events.NetStatusEvent"));
     }
 
+    // @0x142469fa0
+    AS3::Object* AppLifecycleEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).AppLifecycleEventClass; }
+    // @0x142469fb0
+    AS3::Object* Event::GetEventClass() const { return static_cast<ASVM&>(GetVM()).EventClass; }
+    // @0x142469fc0
+    AS3::Object* FocusEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).FocusEventClass; }
+    // @0x142469fd0
+    AS3::Object* GestureEvent::GetEventClass() const { return NULL; }
+    // @0x14246a010
+    AS3::Object* KeyboardEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).KeyboardEventClass; }
+    // @0x14246a020
+    AS3::Object* MouseEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).MouseEventClass; }
+    // @0x14246a060
+    AS3::Object* PressAndTapGestureEvent::GetEventClass() const { return NULL; }
+    // @0x14246a070
+    AS3::Object* ProgressEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).ProgressEventClass; }
+    // @0x14246a080
+    AS3::Object* StageOrientationEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).StageOrientationEventClass; }
+    // @0x14246a090
+    AS3::Object* TextEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).TextEventClass; }
+    // @0x14246a0a0
+    AS3::Object* TimerEvent::GetEventClass() const { return static_cast<ASVM&>(GetVM()).TimerEventClass; }
+    // @0x14246a0b0
+    AS3::Object* TouchEvent::GetEventClass() const { return NULL; }
+    // @0x14246a0c0
+    AS3::Object* TransformGestureEvent::GetEventClass() const { return NULL; }
+    // @0x14246a0d0
+    const char* Event::GetEventName() const { return "Event"; }
+    // @0x14246a0e0
+    const char* NetStatusEvent::GetEventName() const { return "NetStatusEvent"; }
+    // @0x14246a0f0
+    const char* TimerEvent::GetEventName() const { return "TimerEvent"; }
+
     // ---- EventDispatcher listener queries ----------------------------------------------------------------------------
 
     // @0x14246c230
@@ -1380,6 +1415,304 @@ namespace Instances { namespace fl_events {
 
     // @0x14246de10
     void Event::currentTargetGet(SPtr<Instances::fl::Object>& result)  { result = CurrentTarget.GetPtr(); }
+
+    // ---- property accessors and stubs -------------------------------------------------------------------------------
+
+    // @0x14246d0d0
+    void Event::bubblesGet(bool& result) { result = Bubbles; }
+    // @0x14246d1d0
+    void Event::cancelableGet(bool& result) { result = Cancelable; }
+    // @0x14246dfb0
+    void Event::eventPhaseGet(UInt32& result) { result = Phase; }
+    // @0x14246e960
+    void Event::isDefaultPrevented(bool& result) { result = DefaultPrevented; }
+    // @0x14246efa0
+    void Event::preventDefault(const Value& result) { SF_UNUSED(result); if (Cancelable) DefaultPrevented = true; }
+    // @0x14246f720
+    void Event::stopImmediatePropagation(const Value& result) { SF_UNUSED(result); ImmPropagationStopped = true; }
+    // @0x14246f730
+    void Event::stopPropagation(const Value& result) { SF_UNUSED(result); PropagationStopped = true; }
+
+    // The AppLifecycleEvent status: the status object, if one was set.
+    // @0x14246f700
+    void AppLifecycleEvent::statusGet(SPtr<Instances::fl::Object>& result)
+    {
+        if (Status.IsObject())
+            FUN_14243d870(&result, Status.GetObject());
+    }
+
+    // @0x14246d200
+    void MouseEvent::clickCountGet(SInt32& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method MouseEvent::clickCountGet() is not implemented\n");
+    }
+    // @0x14246de90
+    void FocusEvent::directionGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method FocusEvent::directionGet() is not implemented\n");
+    }
+    // @0x14246deb0
+    void FocusEvent::directionSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method FocusEvent::directionSet() is not implemented\n");
+    }
+    // @0x14246df90
+    void ErrorEvent::errorIDGet(SInt32& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method ErrorEvent::errorIDGet() is not implemented\n");
+    }
+    // @0x14246fc30
+    void ErrorEvent::toString(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method ErrorEvent::toString() is not implemented\n");
+    }
+    // @0x142472d60
+    void GestureEvent::updateAfterEvent(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::GestureEvent::updateAfterEvent() is not implemented\n");
+    }
+    // @0x142472d80
+    void KeyboardEvent::updateAfterEvent(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method KeyboardEvent::updateAfterEvent() is not implemented\n");
+    }
+    // @0x142472da0
+    void MouseEvent::updateAfterEvent(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method MouseEvent::updateAfterEvent() is not implemented\n");
+    }
+    // @0x142472dc0
+    void TimerEvent::updateAfterEvent(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method TimerEvent::updateAfterEvent() is not implemented\n");
+    }
+    // @0x142472de0
+    void TouchEvent::updateAfterEvent(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::TouchEvent::updateAfterEvent() is not implemented\n");
+    }
+    // @0x142470690
+    void IMEEvent::toString(ASString& result) { SF_UNUSED(result); }
+    // @0x142472090
+    void TimerEvent::toString(ASString& result) { Event::toString(result); }
+
+    // Gesture/Touch modifier keys by offset: +0x58 alt, +0x59 ctrl, +0x5a shift, +0x5b command, +0x5c control (the
+    // header names +0x59..+0x5c CommandKey/ControlKey/CtrlKey/ShiftKey; the constructors store by the same offsets).
+    // @0x14246cff0
+    void GestureEvent::altKeyGet(bool& result) { result = AltKey; }
+    // @0x14246d030
+    void GestureEvent::altKeySet(const Value& result, bool v) { SF_UNUSED(result); AltKey = v; }
+    // @0x14246dd80
+    void GestureEvent::ctrlKeyGet(bool& result) { result = CommandKey; }
+    // @0x14246ddc0
+    void GestureEvent::ctrlKeySet(const Value& result, bool v) { SF_UNUSED(result); CommandKey = v; }
+    // @0x14246f4b0
+    void GestureEvent::shiftKeyGet(bool& result) { result = ControlKey; }
+    // @0x14246f500
+    void GestureEvent::shiftKeySet(const Value& result, bool v) { SF_UNUSED(result); ControlKey = v; }
+    // @0x14246dc60
+    void GestureEvent::commandKeyGet(bool& result) { result = CtrlKey; }
+    // @0x14246dca0
+    void GestureEvent::commandKeySet(const Value& result, bool v) { SF_UNUSED(result); CtrlKey = v; }
+    // @0x14246dcf0
+    void GestureEvent::controlKeyGet(bool& result) { result = ShiftKey; }
+    // @0x14246dd30
+    void GestureEvent::controlKeySet(const Value& result, bool v) { SF_UNUSED(result); ShiftKey = v; }
+    // @0x14246d020
+    void TouchEvent::altKeyGet(bool& result) { result = AltKey; }
+    // @0x14246d070
+    void TouchEvent::altKeySet(const Value& result, bool v) { SF_UNUSED(result); AltKey = v; }
+    // @0x14246ddb0
+    void TouchEvent::ctrlKeyGet(bool& result) { result = CommandKey; }
+    // @0x14246de00
+    void TouchEvent::ctrlKeySet(const Value& result, bool v) { SF_UNUSED(result); CommandKey = v; }
+    // @0x14246f4e0
+    void TouchEvent::shiftKeyGet(bool& result) { result = ControlKey; }
+    // @0x14246f540
+    void TouchEvent::shiftKeySet(const Value& result, bool v) { SF_UNUSED(result); ControlKey = v; }
+    // @0x14246dc90
+    void TouchEvent::commandKeyGet(bool& result) { result = CtrlKey; }
+    // @0x14246dce0
+    void TouchEvent::commandKeySet(const Value& result, bool v) { SF_UNUSED(result); CtrlKey = v; }
+    // @0x14246dd20
+    void TouchEvent::controlKeyGet(bool& result) { result = ShiftKey; }
+    // @0x14246dd70
+    void TouchEvent::controlKeySet(const Value& result, bool v) { SF_UNUSED(result); ShiftKey = v; }
+
+    // MouseEvent keeps one ctrl flag for ctrlKey, commandKey and controlKey.
+    // @0x14246d010
+    void MouseEvent::altKeyGet(bool& result) { result = AltKey; }
+    // @0x14246d060
+    void MouseEvent::altKeySet(const Value& result, bool v) { SF_UNUSED(result); AltKey = v; }
+    // @0x14246dda0
+    void MouseEvent::ctrlKeyGet(bool& result) { result = CtrlKey; }
+    // @0x14246ddf0
+    void MouseEvent::ctrlKeySet(const Value& result, bool v) { SF_UNUSED(result); CtrlKey = v; }
+    // @0x14246dc80
+    void MouseEvent::commandKeyGet(bool& result) { result = CtrlKey; }
+    // @0x14246dcd0
+    void MouseEvent::commandKeySet(const Value& result, bool v) { SF_UNUSED(result); CtrlKey = v; }
+    // @0x14246dd10
+    void MouseEvent::controlKeyGet(bool& result) { result = CtrlKey; }
+    // @0x14246dd60
+    void MouseEvent::controlKeySet(const Value& result, bool v) { SF_UNUSED(result); CtrlKey = v; }
+    // @0x14246f4d0
+    void MouseEvent::shiftKeyGet(bool& result) { result = ShiftKey; }
+    // @0x14246f530
+    void MouseEvent::shiftKeySet(const Value& result, bool v) { SF_UNUSED(result); ShiftKey = v; }
+    // @0x14246d0e0
+    void MouseEvent::buttonDownGet(bool& result) { result = (ButtonsMask & 1) != 0; }
+    // @0x14246d0f0
+    void MouseEvent::buttonDownSet(const Value& result, bool v) { SF_UNUSED(result); if (v) ButtonsMask |= 1; else ButtonsMask &= ~1u; }
+    // @0x14246de70
+    void MouseEvent::deltaGet(SInt32& result) { result = Delta; }
+    // @0x14246de80
+    void MouseEvent::deltaSet(const Value& result, SInt32 v) { SF_UNUSED(result); Delta = v; }
+
+    // KeyboardEvent modifiers are the event id's KeyModifiers bits; ctrlKey, commandKey and controlKey share the ctrl bit.
+    // @0x14246d000
+    void KeyboardEvent::altKeyGet(bool& result) { result = (EvtId.KeysState & KeyModifiers::Key_AltPressed) != 0; }
+    // @0x14246d040
+    void KeyboardEvent::altKeySet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        if (v) EvtId.KeysState |= KeyModifiers::Key_AltPressed;
+        else   EvtId.KeysState &= ~KeyModifiers::Key_AltPressed;
+    }
+    // @0x14246dd90
+    void KeyboardEvent::ctrlKeyGet(bool& result) { result = (EvtId.KeysState & KeyModifiers::Key_CtrlPressed) != 0; }
+    // @0x14246ddd0
+    void KeyboardEvent::ctrlKeySet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        if (v) EvtId.KeysState |= KeyModifiers::Key_CtrlPressed;
+        else   EvtId.KeysState &= ~KeyModifiers::Key_CtrlPressed;
+    }
+    // @0x14246dc70
+    void KeyboardEvent::commandKeyGet(bool& result) { result = (EvtId.KeysState & KeyModifiers::Key_CtrlPressed) != 0; }
+    // @0x14246dcb0
+    void KeyboardEvent::commandKeySet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        if (v) EvtId.KeysState |= KeyModifiers::Key_CtrlPressed;
+        else   EvtId.KeysState &= ~KeyModifiers::Key_CtrlPressed;
+    }
+    // @0x14246dd00
+    void KeyboardEvent::controlKeyGet(bool& result) { result = (EvtId.KeysState & KeyModifiers::Key_CtrlPressed) != 0; }
+    // @0x14246dd40
+    void KeyboardEvent::controlKeySet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        if (v) EvtId.KeysState |= KeyModifiers::Key_CtrlPressed;
+        else   EvtId.KeysState &= ~KeyModifiers::Key_CtrlPressed;
+    }
+    // @0x14246f4c0
+    void KeyboardEvent::shiftKeyGet(bool& result) { result = (EvtId.KeysState & KeyModifiers::Key_ShiftPressed) != 0; }
+    // @0x14246f510
+    void KeyboardEvent::shiftKeySet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        if (v) EvtId.KeysState |= KeyModifiers::Key_ShiftPressed;
+        else   EvtId.KeysState &= ~KeyModifiers::Key_ShiftPressed;
+    }
+    // @0x14246d1e0
+    void KeyboardEvent::charCodeGet(UInt32& result) { result = EvtId.AsciiCode; }
+    // @0x14246d1f0
+    void KeyboardEvent::charCodeSet(const Value& result, UInt32 v) { SF_UNUSED(result); EvtId.AsciiCode = (UByte)v; }
+    // @0x14246e9c0
+    void KeyboardEvent::keyCodeGet(UInt32& result) { result = EvtId.KeyCode; }
+    // @0x14246e9e0
+    void KeyboardEvent::keyCodeSet(const Value& result, UInt32 v) { SF_UNUSED(result); EvtId.KeyCode = v; }
+    // The key location, worked out on first use: a modifier key is left (1) or, extended, right (2); others standard (0).
+    // @0x14246e9f0
+    void KeyboardEvent::keyLocationGet(UInt32& result)
+    {
+        if (KeyLocation < 0)
+        {
+            if (EvtId.KeysState & (KeyModifiers::Key_ShiftPressed | KeyModifiers::Key_CtrlPressed | KeyModifiers::Key_AltPressed))
+                KeyLocation = (EvtId.KeysState & KeyModifiers::Key_ExtendedKey) ? 2 : 1;
+            else
+                KeyLocation = 0;
+        }
+        result = KeyLocation;
+    }
+    // @0x14246ea20
+    void KeyboardEvent::keyLocationSet(const Value& result, UInt32 v) { SF_UNUSED(result); KeyLocation = v; }
+
+    // @0x14246f4a0
+    void FocusEvent::shiftKeyGet(bool& result) { result = ShiftKey; }
+    // @0x14246f4f0
+    void FocusEvent::shiftKeySet(const Value& result, bool v) { SF_UNUSED(result); ShiftKey = v; }
+    // @0x14246e9b0
+    void FocusEvent::keyCodeGet(UInt32& result) { result = KeyCode; }
+    // @0x14246e9d0
+    void FocusEvent::keyCodeSet(const Value& result, UInt32 v) { SF_UNUSED(result); KeyCode = v; }
+
+    // @0x14246d110
+    void ProgressEvent::bytesLoadedGet(Value::Number& result) { result = (Value::Number)BytesLoaded; }
+    // @0x14246d130
+    void ProgressEvent::bytesLoadedSet(const Value& result, Value::Number v) { SF_UNUSED(result); BytesLoaded = (UInt64)v; }
+    // @0x14246d170
+    void ProgressEvent::bytesTotalGet(Value::Number& result) { result = (Value::Number)BytesTotal; }
+    // @0x14246d190
+    void ProgressEvent::bytesTotalSet(const Value& result, Value::Number v) { SF_UNUSED(result); BytesTotal = (UInt64)v; }
+
+    // @0x14246f640
+    void GestureEvent::stageXGet(Value::Number& result) { result = Render::TwipsToPixels(StageX); }
+    // @0x14246f6a0
+    void GestureEvent::stageYGet(Value::Number& result) { result = Render::TwipsToPixels(StageY); }
+    // @0x14246f660
+    void MouseEvent::stageXGet(Value::Number& result) { result = Render::TwipsToPixels(StageX); }
+    // @0x14246f6c0
+    void MouseEvent::stageYGet(Value::Number& result) { result = Render::TwipsToPixels(StageY); }
+    // @0x14246f680
+    void TouchEvent::stageXGet(Value::Number& result) { result = Render::TwipsToPixels(StageX); }
+    // @0x14246f6e0
+    void TouchEvent::stageYGet(Value::Number& result) { result = Render::TwipsToPixels(StageY); }
+    // @0x14246f840
+    void PressAndTapGestureEvent::tapStageXGet(Value::Number& result) { result = Render::TwipsToPixels(TapStageX); }
+    // @0x14246f860
+    void PressAndTapGestureEvent::tapStageYGet(Value::Number& result) { result = Render::TwipsToPixels(TapStageY); }
+
+    // @0x14246e970
+    void TouchEvent::isPrimaryTouchPointGet(bool& result) { result = IsPrimaryTouchPoint; }
+    // @0x14246e980
+    void TouchEvent::isPrimaryTouchPointSet(const Value& result, bool v) { SF_UNUSED(result); IsPrimaryTouchPoint = v; }
+    // @0x14246e990
+    void TouchEvent::isRelatedObjectInaccessibleGet(bool& result) { result = false; }
+    // @0x14246e9a0
+    void TouchEvent::isRelatedObjectInaccessibleSet(const Value& result, bool v) { SF_UNUSED2(result, v); }
+    // @0x14246ef80
+    void TouchEvent::pressureGet(Value::Number& result) { result = Pressure; }
+    // @0x14246ef90
+    void TouchEvent::pressureSet(const Value& result, Value::Number v) { SF_UNUSED(result); Pressure = v; }
+    // @0x142472d00
+    void TouchEvent::touchPointIDGet(SInt32& result) { result = TouchPointID; }
+    // @0x142472d10
+    void TouchEvent::touchPointIDSet(const Value& result, SInt32 v) { SF_UNUSED(result); TouchPointID = v; }
+
+    // @0x14246f2b0
+    void TransformGestureEvent::rotationGet(Value::Number& result) { result = Rotation; }
+    // @0x14246f2c0
+    void TransformGestureEvent::rotationSet(const Value& result, Value::Number v) { SF_UNUSED(result); Rotation = v; }
+    // @0x14246f2d0
+    void TransformGestureEvent::scaleXGet(Value::Number& result) { result = ScaleX; }
+    // @0x14246f2e0
+    void TransformGestureEvent::scaleXSet(const Value& result, Value::Number v) { SF_UNUSED(result); ScaleX = v; }
+    // @0x14246f2f0
+    void TransformGestureEvent::scaleYGet(Value::Number& result) { result = ScaleY; }
+    // @0x14246f300
+    void TransformGestureEvent::scaleYSet(const Value& result, Value::Number v) { SF_UNUSED(result); ScaleY = v; }
 
 }} // namespace Instances::fl_events
 

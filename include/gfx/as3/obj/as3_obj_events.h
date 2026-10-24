@@ -641,8 +641,8 @@ namespace Instances { namespace fl_events {
     public:
         ProgressEvent(InstanceTraits::Traits& t);         // 0x142461040
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_events::ProgressEvent"; }
-        Value::Number   BytesLoaded;        // +0x58
-        Value::Number   BytesTotal;         // +0x60
+        UInt64          BytesLoaded;        // +0x58 (an integer: the getters convert it to and from a Number)
+        UInt64          BytesTotal;         // +0x60
 
         // @0x14246d110
         void bytesLoadedGet(Value::Number& result);
