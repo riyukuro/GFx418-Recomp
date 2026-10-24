@@ -1043,6 +1043,17 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
         pMovieImpl->AddLoadQueueEntry(pentry);
 }
 
+// @0x1424de8f0
+PropRef::~PropRef() = default;
+
+// @0x1424e0e20
+PropRef::operator bool() const
+{
+    const UPInt tagged = reinterpret_cast<UPInt>(pValue);
+    return (static_cast<UInt32>(This.GetKind()) & 0x1f) != 0 && tagged != 1 &&
+           ((tagged & 2) == 0 || (tagged & ~UPInt(2)) != 0);
+}
+
 // The two ReadArgs variants own a heap-backed copy of their argument values.
 // MS2-FUNCTIONAL: the executable calls ArrayDH<Value>::~ArrayDH out of line; this TU inlines that release sequence.
 // @0x1424de9e0
