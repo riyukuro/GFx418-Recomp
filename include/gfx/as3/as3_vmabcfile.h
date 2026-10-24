@@ -71,8 +71,6 @@ public:
     NamespaceSet& GetInternedNamespaceSet(UPInt ind);
     // (appended, sfr19) keeps the class traits made for this file's classes (Vector.<T> of them) alive.
     void RegisterLoadedClass(const SPtr<ClassTraits::Traits>& tr) { LoadedClasses.PushBack(tr); }
-    // (appended, sfr34) the exception handlers of method body mbi_ind.
-    const Abc::MethodBodyInfo::Exception& GetException(SInt32 mbi_ind) const { return Exceptions[mbi_ind]; }
 
     // (appended, sfr19) registers itself with the VM unless the VM is being destroyed. 0x1424dbb30
     VMAbcFile(VM& vm, const Ptr<Abc::File>& file);
