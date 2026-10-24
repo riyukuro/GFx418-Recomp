@@ -206,6 +206,11 @@ void FUN_1424d8ec0(void* mn, Scaleform::UPInt link, Scaleform::UPInt entry);   /
 void FUN_1424dee30(void* r);   // TR::ReadMnObject::~ReadMnObject
 void FUN_1424ded40(void* r);   // TR::ReadValueMnObject::~ReadValueMnObject
 void FUN_1424debc0(void* r);   // ReadArgsMnObject::~ReadArgsMnObject
+void FUN_14251cc80(Scaleform::UPInt tracer);   // Tracer: close the block at a label
+void FUN_142520e60(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   // TR::State: unary typed op
+void FUN_142520f30(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   // TR::State: binary typed op
+void FUN_142520d80(Scaleform::UPInt state, Scaleform::UPInt traits, int op, unsigned int idx);   // TR::State: typed op on a register
+void FUN_1424f1ed0(Scaleform::UPInt state, unsigned int ind, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertRegisterTo
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -8904,6 +8909,444 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
     }
     }
     return 0;
+}
+// ---- batch 79
+static inline UPInt Sfr31VmTr(UPInt vmA, UPInt off) { return Sfr31Rd(Sfr31Rd(vmA, off), 0xc0); }
+
+// The opcode table's operand class for the opcodes TR::State handles by default: 0 none, 1 one U30, 2 two U30, -1 unusable.
+static int Sfr31StateOpClass(unsigned char op)
+{
+    switch (op)
+    {
+    case 0x02: case 0x22: case 0x3f: case 0x54: case 0x69: case 0x6b:
+    case 0x79: case 0x7a: case 0x7b: case 0x7c: case 0x7d: case 0x7e: case 0x7f:
+    case 0x98: case 0x99:
+        return 0;
+    case 0x0a: case 0x0b: case 0x33: case 0x34: case 0x67:
+    case 0x8a: case 0x8b: case 0x8c: case 0x8d: case 0x8e: case 0x8f:
+    case 0x9c: case 0x9d: case 0x9e: case 0x9f:
+    case 0xb5: case 0xb6: case 0xb7: case 0xb8: case 0xb9: case 0xba: case 0xbb:
+    case 0xbc: case 0xbd: case 0xbe: case 0xbf:
+    case 0xc8: case 0xc9: case 0xca: case 0xcb: case 0xcc: case 0xcd: case 0xce:
+        return 1;
+    default:
+        return -1;
+    }
+}
+
+static void Sfr31StateBadOp(UPInt vmA, const char* name)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmA);
+    vm.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3e9), vm, name));
+}
+
+// TR::State::TraceOp: the opcodes of the tracer that are not common to every state. The stack and register effects are
+// modeled by the per-opcode handlers; unusable opcodes raise a verify error naming them.
+// MS2-FUNCTIONAL 0x14253d520: raw-offset model; dispatches to the recovered per-opcode handlers; codegen differs from the exe
+// @0x14253d520
+void Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos)
+{
+    State* const st = reinterpret_cast<State*>(state);
+    const UPInt tracer = Sfr31Rd(state, 0);
+    const UInt8* const code = reinterpret_cast<const UInt8*>(Sfr31Rd(tracer, 0x50));
+    const UPInt vmA = TrVM(tracer);
+    StV s(st);
+    Sfr31Wr(state, 0x10, *pos - 1);
+    FUN_14251f930(reinterpret_cast<void*>(tracer), op);
+    switch (op)
+    {
+    case 3:
+        FUN_14251ccc0(st, 1);
+        return;
+    case 4: case 5: case 0x45: case 0x46: case 0x4a: case 0x4c: case 0x4e: case 0x4f: case 0x61: case 0x66:
+    case 0x77: case 0x78: case 0x80: case 0x82: case 0xa0:
+        return;
+    case 6:
+        Sfr27TraceDxns(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 7:
+        Sfr27TraceDxnsLate(st);
+        return;
+    case 8:
+        st->KillRegister(static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 9:
+        FUN_1424e6aa0(tracer, st, *pos - 1, 0, 1);
+        FUN_14251cc80(tracer);
+        return;
+    case 0xc: case 0xd: case 0xe: case 0xf: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17: case 0x18:
+    case 0x19: case 0x1a:
+        Sfr27TraceIfCompare(st, reinterpret_cast<UInt64*>(pos), op);
+        return;
+    case 0x10:
+        Sfr27TraceJump(st, reinterpret_cast<UInt64*>(pos));
+        return;
+    case 0x47:
+        FUN_1424e6aa0(tracer, st, *pos, 1, 1);
+        return;
+    case 0x11: case 0x12:
+        Sfr27TraceIfTrueFalse(st, reinterpret_cast<UInt64*>(pos), op);
+        return;
+    case 0x1b:
+        Sfr27TraceLookupSwitch(st, reinterpret_cast<UInt64*>(pos));
+        return;
+    case 0x1c:
+    {
+        TrPopped p;
+        FUN_14251cd30(st, &p.Get());
+        reinterpret_cast<ArrayDH<Value>*>(state + 0x58)->PushBack(p.Get());
+        p.Get().~Value();
+        *reinterpret_cast<UInt32*>(Sfr31Rd(state, 0x58) + Sfr31Rd(state, 0x60) * 0x20 - 0x20) |= 0x100;
+        return;
+    }
+    case 0x1d:
+        FUN_1424201a0(reinterpret_cast<void*>(state + 0x58), reinterpret_cast<void*>(Sfr31Rd(state, 0x70)),
+                      Sfr31Rd(state, 0x60) - 1);
+        return;
+    case 0x1e:
+        Sfr31TraceOperandClassTraits(st);
+        return;
+    case 0x1f:
+        Sfr27TracePop2PushInt(st);
+        return;
+    case 0x20:
+        s.OpStack().PushBack(Value::GetNull());
+        return;
+    case 0x21:
+        s.OpStack().PushBack(Value::GetUndefined());
+        return;
+    case 0x23:
+        Sfr27TracePop2PushObject(st);
+        return;
+    case 0x24:
+    {
+        const UInt32 b = code[*pos];
+        ++*pos;
+        st->PushByte(b);
+        return;
+    }
+    case 0x25:
+        st->PushShort(Abc::ReadU30<UInt8>(code, *pos));
+        return;
+    case 0x26:
+    case 0x27:
+    {
+        const bool b = op == 0x26;
+        TrScratch t(b);
+        s.OpStack().PushBack(t.Get());
+        return;
+    }
+    case 0x28:
+    {
+        TrNumScratch t(Value::kNumber);
+        t.SetNumber(FUN_1425e3ee0());
+        s.OpStack().PushBack(t.Get());
+        return;
+    }
+    case 0x29:
+        Sfr27TraceCheckNumericOp(st);
+        return;
+    case 0x2a:
+        Sfr27TraceDup2Check(st);
+        return;
+    case 0x2b:
+        Sfr31StateSwapOp(state);
+        return;
+    case 0x2c:
+        Sfr31TracePushString(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x2d:
+        st->PushInt(Abc::ReadU30<UInt8>(code, *pos));
+        return;
+    case 0x2e:
+        st->PushUInt(Abc::ReadU30<UInt8>(code, *pos));
+        return;
+    case 0x2f:
+        st->PushDouble(Abc::ReadU30<UInt8>(code, *pos));
+        return;
+    case 0x30:
+        st->PushScope();
+        return;
+    case 0x31:
+        Sfr31StatePushPool(state, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x32:
+    {
+        const UInt32 a = static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos));
+        const UInt32 b = static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos));
+        FUN_14251fcd0(tracer, a);
+        FUN_14251fcd0(tracer, b);
+        TrTraitsScratch t;
+        t.SetTraits(TrITraits(tracer, 0x210));
+        s.OpStack().PushBack(t.Get());
+        return;
+    }
+    case 0x35: Sfr31StateBadOp(vmA, "exec_li8"); return;
+    case 0x36: Sfr31StateBadOp(vmA, "exec_li16"); return;
+    case 0x37: Sfr31StateBadOp(vmA, "exec_li32"); return;
+    case 0x38: Sfr31StateBadOp(vmA, "exec_lf32"); return;
+    case 0x39: Sfr31StateBadOp(vmA, "exec_lf64"); return;
+    case 0x3a: Sfr31StateBadOp(vmA, "exec_si8"); return;
+    case 0x3b: Sfr31StateBadOp(vmA, "exec_si16"); return;
+    case 0x3c: Sfr31StateBadOp(vmA, "exec_si32"); return;
+    case 0x3d: Sfr31StateBadOp(vmA, "exec_sf32"); return;
+    case 0x3e: Sfr31StateBadOp(vmA, "exec_sf64"); return;
+    case 0x50: Sfr31StateBadOp(vmA, "exec_sxi1"); return;
+    case 0x51: Sfr31StateBadOp(vmA, "exec_sxi8"); return;
+    case 0x52: Sfr31StateBadOp(vmA, "exec_sxi16"); return;
+    case 0x40:
+        st->PushFunction(static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x41:
+        Sfr31TraceTraitsOfSecond(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x42:
+        Sfr31TraceTypeOperand(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x43:
+    case 0x44:
+    {
+        const UInt32 a = static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos));
+        const UInt32 b = static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos));
+        if (op == 0x43)
+            Sfr31TraceCallPushObject(st, a, b);
+        else
+            Sfr31TraceCallPushObjectB(st, a, b);
+        return;
+    }
+    case 0x48:
+        FUN_14251ccc0(st, 1);
+        FUN_1424e6aa0(tracer, st, *pos, 1, 1);
+        return;
+    case 0x49:
+        Sfr31TraceCallPop(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x53:
+        Sfr31TraceArgClassTraits(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x55:
+        Sfr27TraceNewObject(st, Abc::ReadU30<UInt8>(code, *pos));
+        return;
+    case 0x56:
+        Sfr27TraceNewArray(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x57:
+        Sfr31StatePushNs(state);
+        return;
+    case 0x58:
+        Sfr31TraceClassTraitsFromIndex(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x59:
+        Sfr31TraceGetDescendants(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x5a:
+    case 0x60:
+        st->PushObject(static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x5d:
+        Sfr31TraceFindPropB(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x5e:
+        Sfr31TraceFindPropA(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x62:
+    {
+        const UInt32 idx = static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos));
+        FUN_14251fcd0(tracer, idx);
+        s.OpStack().PushBack(*reinterpret_cast<const Value*>(Sfr31Rd(state, 0x18) + static_cast<UPInt>(idx) * 0x20));
+        return;
+    }
+    case 0x63:
+        st->SetLocalN(static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x64:
+        Sfr31StatePushTyped(state);
+        return;
+    case 0x65:
+    {
+        const UInt32 idx = static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos));
+        FUN_14251fcd0(tracer, idx);
+        s.OpStack().PushBack(*reinterpret_cast<const Value*>(Sfr31Rd(state, 0x58) + static_cast<UPInt>(idx) * 0x20));
+        *reinterpret_cast<UInt32*>(&s.Top()) &= 0xfffffeffu;
+        return;
+    }
+    case 0x68:
+        Sfr31TraceMnPop2(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x6a:
+        Sfr31TraceMnPopPush(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x6c:
+        Sfr31TraceGetSlot(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x6d:
+        Sfr31TracePop2Note(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x6e:
+        FUN_14251fcd0(tracer, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        s.OpStack().PushBack(Value::GetUndefined());
+        return;
+    case 0x6f:
+        FUN_14251fcd0(tracer, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        FUN_14251ccc0(st, 1);
+        return;
+    case 0x70:
+    case 0x95:
+        st->TopString();
+        return;
+    case 0x85:
+        if ((*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) != 10)
+            st->TopString();
+        return;
+    case 0x71:
+    case 0x72:
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, 0x230), 0);
+        return;
+    case 0x73:
+        if ((*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) < 5 || (*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) == 10)
+        {
+            Sfr27TraceConvertTopInt(st);
+            return;
+        }
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, 0x220), 0);
+        return;
+    case 0x97:
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, 0x220), 0);
+        return;
+    case 0x74:
+        if ((*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) < 5 || (*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) == 10)
+        {
+            Sfr27TraceConvertTopUInt(st);
+            return;
+        }
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, 0x228), 0);
+        return;
+    case 0x75:
+        if ((*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) < 5 || (*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) == 10)
+        {
+            Sfr27TraceConvertTopNumber(st);
+            return;
+        }
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, 0x218), 0);
+        return;
+    case 0x76:
+        if ((*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) < 5 || (*reinterpret_cast<const UInt32*>(&s.Top()) & 0x1f) == 10)
+        {
+            Sfr27TraceConvertTopBoolean(st);
+            return;
+        }
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, 0x210), 0);
+        return;
+    case 0xb2:
+        FUN_14251fcd0(tracer, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, 0x210), 0);
+        return;
+    case 0x86:
+        Sfr27TracePopNote(st, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0x87:
+    {
+        TrPopped p;
+        FUN_14251cd30(st, &p.Get());
+        const UPInt pv = reinterpret_cast<UPInt>(&p.Get());
+        const UInt32 k = *reinterpret_cast<const UInt32*>(pv) & 0x1f;
+        UPInt tr = Sfr31Rd(pv, 0x10);
+        if (k == 9)
+            tr = Sfr31Rd(tr, 0xc0);
+        else if (k == 0xd)
+            tr = Sfr31Rd(Sfr31Rd(tr, 0x20), 0xc0);
+        else if (k != 8)
+            tr = 0;
+        if (tr != 0)
+        {
+            if (FUN_142514a80(tracer, reinterpret_cast<void*>(tr)))
+                tr = Sfr31VmTr(vmA, 0x1f8);
+            FUN_1424f1e50(state, tr, 2);
+        }
+        p.Get().~Value();
+        return;
+    }
+    case 0x90: FUN_142520e60(state, Sfr31VmTr(vmA, 0x218), 0x54); return;
+    case 0x91:
+    case 0x93:
+        st->TopNumber();
+        return;
+    case 0x92:
+    case 0x94:
+        FUN_1424f1ed0(state, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)), Sfr31VmTr(vmA, 0x218), 0);
+        return;
+    case 0x96: FUN_142520e60(state, Sfr31VmTr(vmA, 0x210), 0x22); return;
+    case 0x9b: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7c); return;
+    case 0xa1: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7d); return;
+    case 0xa2: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7e); return;
+    case 0xa3: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7f); return;
+    case 0xa4:
+    case 0xa7:
+    {
+        TrPopped p;
+        FUN_14251cd30(st, &p.Get());
+        FUN_1424f1e50(state, Sfr31VmTr(vmA, op == 0xa4 ? 0x218 : 0x228), 0);
+        p.Get().~Value();
+        return;
+    }
+    case 0xa5: case 0xa6: case 0xa8: case 0xa9: case 0xaa:
+        st->Pop2Int();
+        return;
+    case 0xab: case 0xac: case 0xad: case 0xae: case 0xaf: case 0xb0: case 0xb1: case 0xb3: case 0xb4:
+        st->Pop2Boolean();
+        return;
+    case 0xc0: FUN_142520e60(state, Sfr31VmTr(vmA, 0x220), 0x98); return;
+    case 0xc1: FUN_142520e60(state, Sfr31VmTr(vmA, 0x220), 0x99); return;
+    case 0xc2:
+        FUN_142520d80(state, Sfr31VmTr(vmA, 0x220), 10, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0xc3:
+        FUN_142520d80(state, Sfr31VmTr(vmA, 0x220), 0xb, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0xc4: FUN_142520e60(state, Sfr31VmTr(vmA, 0x220), 0x3f); return;
+    case 0xc5: FUN_142520f30(state, Sfr31VmTr(vmA, 0x220), 0x79); return;
+    case 0xc6: FUN_142520f30(state, Sfr31VmTr(vmA, 0x220), 0x7a); return;
+    case 0xc7: FUN_142520f30(state, Sfr31VmTr(vmA, 0x220), 0x7b); return;
+    case 0xd0: case 0xd1: case 0xd2: case 0xd3:
+        s.OpStack().PushBack(*reinterpret_cast<const Value*>(Sfr31Rd(state, 0x18) + static_cast<UPInt>(op - 0xd0) * 0x20));
+        return;
+    case 0xd4: st->SetLocal0(); return;
+    case 0xd5: st->SetLocal1(); return;
+    case 0xd6: st->SetLocal2(); return;
+    case 0xd7: st->SetLocal3(); return;
+    case 0xef:
+    {
+        FUN_14251fcd0(tracer, code[*pos]);
+        ++*pos;
+        FUN_14251fcd0(tracer, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        FUN_14251fcd0(tracer, code[*pos]);
+        ++*pos;
+        FUN_14251fcd0(tracer, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    }
+    case 0xf0:
+    case 0xf1:
+        FUN_14251fcd0(tracer, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        return;
+    case 0xf2:
+        Abc::ReadU30<UInt8>(code, *pos);
+        return;
+    default:
+    {
+        const int cls = Sfr31StateOpClass(op);
+        if (cls == 0)
+            return;
+        if (cls == 1)
+        {
+            FUN_14251fcd0(tracer, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+            return;
+        }
+        static const char hex[] = "0123456789ABCDEF";
+        char name[8] = { 'O', 'P', '_', '0', 'x', hex[op >> 4], hex[op & 15], 0 };
+        Sfr31StateBadOp(vmA, name);
+        return;
+    }
+    }
 }
 }}} // namespace Scaleform::GFx::AS3
 
