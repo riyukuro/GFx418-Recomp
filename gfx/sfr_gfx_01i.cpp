@@ -25,6 +25,7 @@
 #include "../include/gfx/gfx_displayobjcontainer.h"
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/gfx_movieimpl.h"
+#include "../include/gfx/gfx_stickyvarnode.h"
 #include "../include/gfx/gfx_movieimplstates.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_log.h"
@@ -1744,6 +1745,20 @@ namespace ContextImpl {
 // The snapshot statistics (Render_Context data).
 extern unsigned ConstructCopyCalls, CopyCalls;
 
+// The member-wise copies the copy slots inline (TreeContainer::NodeData::operator= itself is out of line in
+// sfr_render_03c; the exe has no copy of it).
+inline void copyNodeData(TreeContainer::NodeData& dest, const TreeContainer::NodeData& src)
+{
+    dest.TreeNode::NodeData::operator=(src);
+    dest.Children = src.Children;
+}
+inline void copyNodeData(TreeRoot::NodeData& dest, const TreeRoot::NodeData& src)
+{
+    copyNodeData((TreeContainer::NodeData&)dest, src);
+    dest.VP      = src.VP;
+    dest.BGColor = src.BGColor;
+}
+
 // The copy slots of the container and root node data vftables. The node data carries its vftable as a plain pointer
 // here (gfx_rendertree.h), so the mixin only holds the slots: `this` is the C node data.
 template<class C, class B>
@@ -1757,7 +1772,7 @@ public:
     }
     virtual void CopyTo(void* dest) const
     {
-        *(C*)dest = *(const C*)this;
+        copyNodeData(*(C*)dest, *(const C*)this);
         CopyCalls++;
     }
 };
@@ -1855,18 +1870,6 @@ MovieImpl::MovieImpl(MemoryHeap* pheap)
     FocusRectChanged      = true;
     PreviouslyCaptured    = 0;
 }
-
-// A SetVariable value waiting for its target: the chain of values set under one path.
-struct MovieImpl::StickyVarNode : public NewOverrideBase<0x147>   // StatMV_Other_Mem
-{
-    ASString       Name;        // +0x08
-    StickyVarNode* pNext;       // +0x10
-    bool           Permanent;   // +0x18
-
-    virtual ~StickyVarNode() {}
-    // The AVM nodes also copy the value (exe 0x1424ed840).
-    virtual void Assign(const StickyVarNode& node) { Name = node.Name; Permanent = node.Permanent; }
-};
 
 // The text and strings an ExternalInterface.call return value was converted into.
 struct MovieImpl::ReturnValueHolder : public NewOverrideBase<0x147>   // StatMV_Other_Mem
@@ -4567,6 +4570,7 @@ template class Scaleform::RefCountBaseStatImpl<Scaleform::RefCountNTSImpl, 0x143
 // MS2-FUNCTIONAL ?ReadTextData@MovieImpl@GFx@Scaleform@@SA_NPEAVString@3@PEAVFile@3@PEAH_N@Z: the exe tests the BOM high byte in the other register and keeps rbp in a different home slot; same operations
 // MS2-FUNCTIONAL ?CreateImageMovieDef@MovieImpl@GFx@Scaleform@@QEAAPEAVMovieDefImpl@23@PEAVImageResource@23@_NPEBDPEAVLoadStates@23@@Z: the image resource and the load states sit in swapped callee-saved registers; same operations
 // MS2-FUNCTIONAL ?ProcessInput@MovieImpl@GFx@Scaleform@@QEAAXXZ: the exe gives the mouse position the stack slot of the spent mice mask; same operations
+// MS2-FUNCTIONAL ?HandleEvent@MovieImpl@GFx@Scaleform@@UEAAIAEBVEvent@23@@Z: the SetFocus loop walks the keyboard states with a stepped pointer and picks NULL past 4 with a cmov (0 kept in r15: one more saved register, 0x48 frame); this build indexes and branches; same calls
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UMDKillListEntry@MovieImpl@GFx@Scaleform@@U?$AllocatorGH@UMDKillListEntry@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142574640
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1425746e0
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@UMDKillListEntry@MovieImpl@GFx@Scaleform@@U?$AllocatorGH@UMDKillListEntry@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1425752c0
