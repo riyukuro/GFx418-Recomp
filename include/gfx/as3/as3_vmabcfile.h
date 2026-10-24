@@ -18,9 +18,22 @@ private:
 public:
     // (appended, sfr19)
     const ArrayLH<SPtr<Instances::Namespace> >& GetNamespaces() const { return Namespaces; }
+    // (appended, sfr24) an empty set owned by the VM's collector; inlined into VMAbcFile::GetInternedNamespaceSet
+    // 0x14250aff0. Constructing one emits the vftable: ForEachChild_GC needs a definition or MS2-PIN.
+    explicit NamespaceSet(Collector* gc) : GASRefCountBase(gc) {}
+    // (appended, sfr24)
+    void Add(Instances::Namespace& ns) { Namespaces.PushBack(SPtr<Instances::Namespace>(&ns)); }
+
+    // (appended, sfr24) the vftable over GASRefCountBase's: 1, 3 and 5 stay the base's.
+    // 0 0x142503860 (ICF): visits the non-null entries. The exe also passes this as the owner in r8, which the 2-arg
+    // GcOp has no slot for, so a body written against this header is MS2-FUNCTIONAL.
+    virtual void        ForEachChild_GC(Collector* prcc, GcOp op) const;
+    virtual const char* GetAS3ObjectType() const { return "NamespaceSet"; }    // 2 0x142505e00
+    // 4 ??_G 0x1424e3450: the implicit destructor (Namespaces, then ~GASRefCountBase).
 private:
     ArrayLH<SPtr<Instances::Namespace> >    Namespaces;     // +0x20
 };
+static_assert(sizeof(NamespaceSet) == 0x38, "NamespaceSet size");
 
 // (appended, sfr19) a map keyed by an ABC constant pool index (and the index of the multiname that follows it, -1
 // for none), hashed bytewise: a VMAbcFile interns its namespaces in one (+0x30, lookup 0x1425057f0, add 0x1424d4850).
@@ -58,6 +71,8 @@ public:
     NamespaceSet& GetInternedNamespaceSet(UPInt ind);
     // (appended, sfr19) keeps the class traits made for this file's classes (Vector.<T> of them) alive.
     void RegisterLoadedClass(const SPtr<ClassTraits::Traits>& tr) { LoadedClasses.PushBack(tr); }
+    // (appended, sfr34) the exception handlers of method body mbi_ind.
+    const Abc::MethodBodyInfo::Exception& GetException(SInt32 mbi_ind) const { return Exceptions[mbi_ind]; }
 
     // (appended, sfr19) registers itself with the VM unless the VM is being destroyed. 0x1424dbb30
     VMAbcFile(VM& vm, const Ptr<Abc::File>& file);
