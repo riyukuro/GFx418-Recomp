@@ -151,6 +151,9 @@ void FUN_142514560(Scaleform::UPInt src, Scaleform::UPInt dst);   // traits setu
 
 void FUN_14250b240(Scaleform::UPInt link, Scaleform::UPInt* out, Scaleform::SPInt idx);   // VMAbcFile::GetInternedString (hidden return)
 Scaleform::UPInt FUN_142507b80(Scaleform::UPInt traitsOwner);   // factory for a class traits' owner
+void* FUN_14250f330(void* out, void* nameSlot, Scaleform::UPInt a, int b);   // type name for a class-kind value (releases the name)
+void* FUN_14250fc60(void* out, void* nameSlot, Scaleform::UPInt vt, Scaleform::UInt32 idx, int b);   // type name for a slot-kind value (releases the name)
+void* FUN_142416720(const void* self);   // InstanceTraits::Function: its VM-side owner
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -5703,6 +5706,134 @@ void Sfr31ExecCallSuper(UPInt vmAddr, UInt32 a, UInt32 n)
     }
     reinterpret_cast<Value*>(&val)->~Value();
     FUN_1424de9e0(raBuf);
+}
+// ---- batch 46
+ASString FUN_14250bc60(const Traits& tr);
+const char* FUN_1424ed700(Abc::NamespaceKind kind);
+
+// The name a value's type shows under in messages: the builtin names, qualified class names or the kind-specific forms.
+// MS2-FUNCTIONAL 0x1425322c0: raw-offset model; codegen differs from the exe
+// @0x1425322c0
+ASString* Sfr31ValueTypeName(UPInt vmAddr, ASString* out, const UInt32* v)
+{
+    const UPInt helper = Sfr31Rd(vmAddr, 0x10);
+    ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(helper, 0x1e8));
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
+    const UPInt aux = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x18);
+    UPInt node;
+    switch (v[0] & 0x1f)
+    {
+    case 0: node = Sfr31Rd(helper, 8); break;
+    case 1: node = Sfr31Rd(helper, 0x30); break;
+    case 2: node = reinterpret_cast<UPInt>(mgr->CreateConstStringNode("int", 3, 0)); break;
+    case 3: node = reinterpret_cast<UPInt>(mgr->CreateConstStringNode("uint", 4, 0)); break;
+    case 4: node = Sfr31Rd(helper, 0x38); break;
+    case 5:
+    {
+        UPInt slot = Sfr31Rd(helper, 0);
+        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
+        FUN_14250f330(out, &slot, obj, 0);
+        return out;
+    }
+    case 7:
+    {
+        UPInt slot = Sfr31Rd(helper, 0);
+        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
+        FUN_14250fc60(out, &slot, FUN_14250fa80(aux), v[4], 0);
+        return out;
+    }
+    case 10: node = Sfr31Rd(helper, obj != 0 ? 0x40 : 0x10); break;
+    case 0xb:
+    {
+        const char* c = FUN_1424ed700(static_cast<Abc::NamespaceKind>(Sfr31Rd(obj, 0x20) & 0xf));
+        UPInt len = 0;
+        while (c[len] != '\0')
+            ++len;
+        ASString s(mgr->CreateConstStringNode(c, len, 0));
+        if (*reinterpret_cast<const SInt32*>(Sfr31Rd(obj, 0x30) + 0x20) != 0)
+        {
+            s.Append(" ", 1);
+            s.Append(*reinterpret_cast<const ASString*>(obj + 0x30));
+        }
+        new (out) ASString(s);
+        return out;
+    }
+    case 0xc:
+        if (obj != 0)
+            new (out) ASString(FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(obj, 0x20))));
+        else
+            new (out) ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0x10)));
+        return out;
+    case 0xd:
+        if (obj != 0)
+        {
+            ASString s = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(obj, 0x20)));
+            s.Append("$", 1);
+            new (out) ASString(s);
+        }
+        else
+            new (out) ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0x10)));
+        return out;
+    case 0xe:
+    {
+        const UPInt inner = Sfr31Rd(obj, 0x20);
+        const UPInt cls = reinterpret_cast<UPInt>(FUN_142416720(reinterpret_cast<const void*>(inner)));
+        ASString nm(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0)));
+        typedef void (*GetName)(UPInt, ASString*);
+        (*reinterpret_cast<GetName*>(Sfr31Rd(inner, 0) + 0x38))(inner, &nm);
+        ASString head = FUN_14250bc60(*reinterpret_cast<const Traits*>(cls));
+        new (out) ASString(head + "::" + nm);
+        return out;
+    }
+    case 0xf:
+    {
+        ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(obj, 0x48)));
+        UPInt slot = reinterpret_cast<UPInt>(n.GetNode());
+        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
+        FUN_14250f330(out, &slot, Sfr31Rd(obj, 0x40), 0);
+        return out;
+    }
+    case 0x10:
+    {
+        ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(aux, 0x20)));
+        UPInt slot = reinterpret_cast<UPInt>(n.GetNode());
+        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
+        FUN_14250f330(out, &slot, obj, 1);
+        return out;
+    }
+    case 0x11:
+    {
+        ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(aux, 0x20)));
+        UPInt slot = reinterpret_cast<UPInt>(n.GetNode());
+        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
+        FUN_14250fc60(out, &slot, FUN_14250fa80(Sfr31Rd(aux, 0x20)), v[4], 1);
+        return out;
+    }
+    default: node = Sfr31Rd(helper, 0); break;
+    }
+    new (out) ASString(reinterpret_cast<ASStringNode*>(node));
+    return out;
+}
+// ---- batch 47
+// newobject: builds a plain Object from n name/value pairs popped off the operand stack and pushes it.
+// MS2-FUNCTIONAL 0x14253cdc0: raw-offset model; codegen differs from the exe
+// @0x14253cdc0
+void Sfr31ExecNewObject(UPInt vmAddr, UInt32 n)
+{
+    InstanceTraits::Interface* tr = reinterpret_cast<InstanceTraits::Interface*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x1f8), 0xc0));
+    Value result(tr->MakeInstance(*tr));
+    Instances::fl::Object* o = static_cast<Instances::fl::Object*>(result.GetObject());
+    for (UInt32 i = 0; i < n; ++i)
+    {
+        Sfr31RawTraitsVal val;
+        Sfr31TakeTop(vmAddr, val);
+        Sfr31RawTraitsVal name;
+        Sfr31TakeTop(vmAddr, name);
+        o->AddDynamicSlotValuePair(*reinterpret_cast<const Value*>(&name), *reinterpret_cast<const Value*>(&val));
+        reinterpret_cast<Value*>(&name)->~Value();
+        reinterpret_cast<Value*>(&val)->~Value();
+    }
+    ExecPushCopy(reinterpret_cast<VM*>(vmAddr), result);
 }
 }}} // namespace Scaleform::GFx::AS3
 
