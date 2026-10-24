@@ -25,6 +25,7 @@
 // MS2-RANGE: 0x1425c9190-0x1425c91ec .text$mn
 // MS2-RANGE: 0x1425c4db0-0x1425c4e88 .text$mn
 // MS2-RANGE: 0x1425c4b70-0x1425c4cf8 .text$mn
+// MS2-RANGE: 0x1425c64f0-0x1425c661d .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -142,6 +143,25 @@ void SF_STDCALL GFx_DefineShapeLoader(LoadProcess* p, const TagInfo& tagInfo)
     p->AddResource(id, reinterpret_cast<CharacterDef*>(character));
     reinterpret_cast<Resource*>(character)->Release();
     FUN_14257dcb0(shape);
+}
+
+// MS2-FUNCTIONAL: copies the metadata payload into LoadTaskData and terminates a bounded logging sample.
+// @0x1425c64f0
+void SF_STDCALL GFx_MetadataLoader(LoadProcess* p, const TagInfo&)
+{
+    Stream* stream = p->GetStream();
+    const int length = stream->GetTagEndPosition() - stream->Tell();
+    if (length < 0)
+        return;
+
+    UByte* data = static_cast<UByte*>(Memory::Alloc(static_cast<UPInt>(length) + 1));
+    if (!data)
+        return;
+    for (int i = 0; i < length; ++i)
+        data[i] = p->ReadU8();
+    p->GetLoadTaskData()->SetMetadata(data, static_cast<unsigned>(length));
+    data[(length < 0xff) ? length : 0xfe] = 0;
+    Memory::Free(data);
 }
 
 // The first key hashes a compact scalar and the eight words of its payload.
