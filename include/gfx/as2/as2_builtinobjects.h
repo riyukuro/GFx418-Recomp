@@ -1052,6 +1052,8 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429373c0
 
     static void GlobalCtor(const FnCall& fn); // exe 0x14295ca00
+    // (appended, sfr_as2_01b) TextField.getFontList (exe 0x1428ebd60).
+    static void GetFontList(const FnCall& fn);
 
     static const NameFunction StaticFunctionTable[]; // exe 0x143212f60: getFontList
 
@@ -1247,6 +1249,17 @@ public:
 
     // (appended, sfr24) Creates the class and its prototype and publishes "Stage" (exe 0x14297a960).
     static FunctionRef Register(GlobalContext* pgc);
+
+    // (appended, sfr37) Stage is not constructible (exe 0x142937280).
+    virtual Object* CreateNewObject(Environment*) const { return 0; }
+
+protected:
+    // (appended, sfr37) drops the movie before the object's own finalization (exe 0x142942fb0).
+    virtual void Finalize_GC()
+    {
+        pMovieRoot = 0;
+        Object::Finalize_GC();
+    }
 
 private:
     // A Rectangle object for rect (pixels) (exe 0x142937bc0).
