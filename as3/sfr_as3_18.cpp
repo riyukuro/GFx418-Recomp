@@ -15,6 +15,7 @@
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/gfx_button.h"
 #undef GetObject   // windows.h
 
 void* FUN_14241ba70(void* traits, void* ret, int kind, const void* uri, const void* prefix);   // Namespace::MakeInternedInstance
@@ -1416,6 +1417,397 @@ Instances::Namespace& VMAbcFile::GetInternedNamespace(const Abc::Multiname& mn)
     return **IntNamespaces.Entries.Get(key);
 }
 
+
+// ==== AVM display objects: events, unloading, tabbing (sfr34) ====
+
+}}} // namespace Scaleform::GFx::AS3
+
+bool FUN_142467ec0(void* dispatcher, const Scaleform::GFx::EventId* id, void* dispObj);   // EventDispatcher::Dispatch(const EventId&, DisplayObject*)
+bool FUN_14246a160(const void* dispatcher, const void* type, bool useCapture);           // EventDispatcher::HasEventHandler
+void FUN_142526340(void* avm, void* as3obj);                                             // AvmDisplayObj::SetAS3ObjCollectible
+bool FUN_1425db970(void* sprite, const char* label, int offset);                         // Sprite::GotoLabeledFrame
+void FUN_1425f7e30(void* intObj);                                                        // InteractiveObject::AddToOptimizedPlayList
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+static MovieRoot* AS3RootOf(const DisplayObject* d) { return static_cast<MovieRoot*>(d->GetASMovieRoot()); }
+
+// Event ids the AS3 player adds after Event_SockXML.
+enum
+{
+    AS3Event_Click          = 0x100000c,    // fired on a press of a button (mode) object
+    AS3Event_Removed        = 0x1000010,
+    AS3Event_Render         = 0x1000013,
+    AS3Event_Controller     = 0x1000014,
+    AS3Event_FrameFirst     = 0x1000015,    // the two frame-script events
+    AS3Event_FrameLast      = 0x1000016
+};
+
+// Queues the event for the object at level lvl.
+static void QueueEvent(DisplayObject* d, MovieRoot::ActionLevel lvl, const EventId& id)
+{
+    AS3RootOf(d)->InsertEmptyAction(lvl)->SetAction(d, id);
+}
+
+// Enter frame queues once the object is loaded; render and frame events queue for objects with an AS3 side.
+// MS2-FUNCTIONAL queueing goes through a shared helper and the inline SetAction; exe code is split into chained fragments
+// @0x142518a30
+bool AvmDisplayObj::OnEvent(const EventId& id)
+{
+    MovieRoot::ActionLevel lvl;
+    if (id.Id == EventId::Event_EnterFrame)
+    {
+        if (GetAS3Obj() && (Flags & Flag_Loaded))
+            QueueEvent(pDispObj, MovieRoot::AL_EnterFrame, id);
+        Flags |= Flag_Loaded;
+        return true;
+    }
+    if (id.Id == AS3Event_Render)
+    {
+        if (!GetAS3Obj())
+            return true;
+        lvl = MovieRoot::AL_Render;
+    }
+    else
+    {
+        if (id.Id - AS3Event_FrameFirst > AS3Event_FrameLast - AS3Event_FrameFirst)
+            return false;
+        if (!GetAS3Obj())
+            return true;
+        lvl = MovieRoot::AL_Frame;
+    }
+    QueueEvent(pDispObj, lvl, id);
+    return true;
+}
+
+// An object with removed listeners gets its removed event queued and leaves the depth order.
+// MS2-FUNCTIONAL queueing goes through a shared helper and the inline SetAction; exe code is split into chained fragments
+// @0x14251af40
+bool AvmDisplayObj::OnUnloading(bool mayRemove)
+{
+    Instances::fl_display::DisplayObject* obj = GetAS3Obj();
+    if (obj)
+    {
+        MovieRoot* root = AS3RootOf(pDispObj);
+        if (FUN_14246a160(obj, &root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), false) ||
+            FUN_14246a160(obj, &AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_removedFromStage), false))
+        {
+            QueueEvent(pDispObj, MovieRoot::AL_EnterFrame, EventId(AS3Event_Removed));
+            pDispObj->Depth = -2;
+            if (IsStageAccessible())
+                Flags |= Flag_Unloaded;
+        }
+    }
+    return mayRemove;
+}
+
+// Mouse events go straight to the AS3 object, controller events are queued.
+// MS2-FUNCTIONAL queueing goes through a shared helper and the inline SetAction; exe code is split into chained fragments
+// @0x142518c70
+bool AvmInteractiveObj::OnEvent(const EventId& id)
+{
+    switch (id.Id)
+    {
+    case EventId::Event_MouseMove:
+    case EventId::Event_MouseDown:
+    case EventId::Event_MouseUp:
+    case EventId::Event_RollOver:
+    case EventId::Event_RollOut:
+    case 0x100000a: case 0x100000b: case AS3Event_Click: case 0x100000d: case 0x100000e:
+        if (Instances::fl_display::DisplayObject* obj = GetAS3Obj())
+            FUN_142467ec0(obj, &id, pDispObj);
+        return true;
+    case AS3Event_Controller:
+        QueueEvent(pDispObj, MovieRoot::AL_ControllerEvents, id);
+        return true;
+    }
+    return AvmDisplayObj::OnEvent(id);
+}
+
+// A sprite in button mode shows its _up/_over/_down frames; a press becomes a click.
+// MS2-FUNCTIONAL label choice written as a switch; block order and string reloc order differ
+// @0x142518df0
+bool AvmSprite::OnEvent(const EventId& id)
+{
+    if (SprFlags & Flag_ButtonMode)
+    {
+        Sprite* spr = static_cast<Sprite*>(pDispObj);
+        const UPInt def = (spr->Flags & Sprite::Flags_SpriteDef) ? reinterpret_cast<const UPInt&>(spr->pDef) : 0;
+        const UByte frames = def ? *reinterpret_cast<const UByte*>(def + 0x60) : 0;   // SpriteDef: 1 _up, 2 _down, 4 _over
+        if (frames & 7)
+        {
+            const bool trackAsMenu = (*reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(spr) + 0xb8) & 0x4000) != 0;
+            const char* label = NULL;
+            switch (id.Id)
+            {
+            case EventId::Event_RollOver:
+                if (frames & 4)
+                {
+                    // MovieImpl::mMouseState[i] (0x50 bytes at +0x1260): +0x30 and +0x34 button states
+                    const unsigned mi = (unsigned)(int)id.MouseIndex;
+                    const UPInt ms = mi < 4 ? reinterpret_cast<UPInt>(spr->GetMovieImpl()) + 0x1260 + mi * 0x50 : 0;
+                    if (trackAsMenu && (*reinterpret_cast<const UByte*>(ms + 0x34) & 1))
+                        label = "_down";
+                    else if (!(*reinterpret_cast<const UByte*>(ms + 0x30) & 1))
+                        label = "_over";
+                }
+                break;
+            case EventId::Event_MouseDown:
+            case EventId::Event_DragOver:
+                if (frames & 2)
+                    label = "_down";
+                break;
+            case EventId::Event_DragOut:
+                if (!trackAsMenu)
+                {
+                    if (frames & 4)
+                        label = "_over";
+                    break;
+                }
+                // fall through
+            case EventId::Event_ReleaseOutside:
+            case EventId::Event_RollOut:
+                if (frames & 1)
+                    label = "_up";
+                break;
+            case EventId::Event_MouseUp:
+            case EventId::Event_Release:
+                if (frames & 4)
+                    label = "_over";
+                break;
+            }
+            if (label)
+                FUN_1425db970(spr, label, 0);
+        }
+        if (id.Id == EventId::Event_Press)
+        {
+            if (Instances::fl_display::DisplayObject* obj = GetAS3Obj())
+            {
+                EventId click(id);
+                click.Id = AS3Event_Click;
+                FUN_142467ec0(obj, &click, pDispObj);
+            }
+            return true;
+        }
+    }
+    return AvmInteractiveObj::OnEvent(id);
+}
+
+// The object is the stage, or its topmost AS3 ancestor is.
+// MS2-FUNCTIONAL parent walk via ToAvmInteractiveObj; the exe re-reads the parent each step
+// @0x142514d20
+bool AvmDisplayObj::IsStageAccessible() const
+{
+    if (pDispObj->IsInteractiveObject() && ToAvmInteractiveObj(static_cast<InteractiveObject*>(pDispObj))->IsStage())
+        return true;
+    AvmInteractiveObj* p = ToAvmInteractiveObj(pDispObj->GetParent());
+    while (p)
+    {
+        AvmInteractiveObj* pp = ToAvmInteractiveObj(p->pDispObj->GetParent());
+        if (!pp)
+            return p->IsStage();
+        p = pp;
+    }
+    return false;
+}
+
+// MS2-FUNCTIONAL register allocation of the inlined GetAS3Obj differs
+// @0x142519080
+void AvmInteractiveObj::OnEventLoad()
+{
+    FUN_142526340(this, GetAS3Obj());
+}
+
+// AvmButton::IsTabable; self is the AvmInteractiveObjBase part (+0x30) of the button.
+// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// @0x142514eb0
+bool AvmButton_IsTabable(UPInt self)
+{
+    InteractiveObject* b = reinterpret_cast<InteractiveObject*>(AccRd(self - 0x18, 0));
+    if (!b->GetVisible())
+        return false;
+    const UInt32 tab = *reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(b) + 0xb8) & 0x60;   // TabEnabled
+    if (tab)
+        return tab == 0x60;
+    return *reinterpret_cast<const SInt16*>(reinterpret_cast<UPInt>(b) + 0xbc) > 0;          // TabIndex
+}
+
+// AvmTextField::IsTabable; as the button, and an editable field is tabable by default.
+// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// @0x142515050
+bool AvmTextField_IsTabable(UPInt self)
+{
+    InteractiveObject* t = reinterpret_cast<InteractiveObject*>(AccRd(self - 0x18, 0));
+    if (!t->GetVisible())
+        return false;
+    const UInt32 tab = *reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(t) + 0xb8) & 0x60;
+    if (tab)
+        return tab == 0x60;
+    if (*reinterpret_cast<const SInt16*>(reinterpret_cast<UPInt>(t) + 0xbc) > 0)
+        return true;
+    return !FUN_1425b9b10(reinterpret_cast<UPInt>(t));
+}
+
+// AvmTextField::OnKeyEvent; self is the AvmInteractiveObjBase part (+0x30).
+// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// @0x14251a350
+bool AvmTextField_OnKeyEvent(UPInt self, const EventId& id, int*)
+{
+    UPInt obj = AccRd(self - 0x20, 0);
+    if (!obj)
+        obj = AccRd(self - 0x28, 0);
+    if (obj)
+        FUN_142467ec0(reinterpret_cast<void*>(obj & ~UPInt(1)), &id, reinterpret_cast<void*>(AccRd(self - 0x18, 0)));
+    return false;
+}
+
+// AvmButton::OnMouseEvent; self is the AvmButtonBase part (+0x40). A press becomes a click, the rest goes to
+// OnEvent.
+// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// @0x14251a830
+bool AvmButton_OnMouseEvent(UPInt self, const EventId& id)
+{
+    if (id.Id == EventId::Event_Press)
+    {
+        UPInt obj = AccRd(self - 0x30, 0);
+        if (!obj)
+            obj = AccRd(self - 0x38, 0);
+        if (obj)
+        {
+            EventId click(id);
+            click.Id = AS3Event_Click;
+            FUN_142467ec0(reinterpret_cast<void*>(obj & ~UPInt(1)), &click, reinterpret_cast<void*>(AccRd(self - 0x28, 0)));
+        }
+        return true;
+    }
+    return reinterpret_cast<AvmDisplayObj*>(self - 0x40)->OnEvent(id);
+}
+
+// AvmTextField::OnEventLoad: the field joins the play list after its place in the parent, and the optimized
+// advance list when it asks to.
+// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// @0x1425190f0
+void AvmTextField_OnEventLoad(UPInt self)
+{
+    InteractiveObject* t = reinterpret_cast<InteractiveObject*>(AccRd(self, 0x18));
+    if (InteractiveObject* pafter = ToAvmInteractiveObj(t->GetParent())->FindInsertToPlayList(t))
+        t->InsertToPlayListAfter(pafter);
+    else
+        t->AddToPlayList();
+    UInt32& f = *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(t) + 0xb8);
+    const bool inOptList = (f & 0x200000) && !(f & 0x400000);   // OptAdvList, not MarkedToRemoveFromOptAdvList
+    // TextField slot 97: whether the field needs advancing (-1 none, 1 yes)
+    const int st = reinterpret_cast<int (*)(void*, bool)>(AccRd(AccRd(reinterpret_cast<UPInt>(t), 0), 0x308))(t, inOptList);
+    if (st == -1)
+        f |= 0x400000;
+    else if (st == 1)
+        FUN_1425f7e30(t);
+    UPInt obj = AccRd(self, 0x10);
+    if (!obj)
+        obj = AccRd(self, 8);
+    FUN_142526340(reinterpret_cast<void*>(self), reinterpret_cast<void*>(obj & ~UPInt(1)));
+}
+
+// AvmTextField::GetStyleSheet; self is the AvmTextFieldBase part (+0x40). The style manager of the field's
+// style sheet when the field uses one.
+// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// @0x14250ef30
+UPInt AvmTextField_GetStyleSheet(UPInt self)
+{
+    const UPInt sheet = FUN_1425b7e60(AccRd(self - 0x28, 0));
+    if (reinterpret_cast<bool (*)(UPInt)>(AccRd(AccRd(self, 0), 0xc0))(self))   // AvmTextFieldBase slot 24: HasStyleSheet
+        return AccRd(sheet, 0x40) + 0x50;
+    return 0;
+}
+
+
+// ==== Values and container instantiations of the unit (sfr34) ====
+
+// @0x14251c9b0
+void Value::PickUnsafe(Class* v)
+{
+    SetKind(kClass);
+    value = v;
+}
+
+// @0x14251c9d0
+void Value::PickUnsafe(Object* v)
+{
+    SetKind(kObject);
+    value = v;
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+void FUN_1424dde10(void* frame);                                                       // CallFrame::~CallFrame
+
+namespace Scaleform {
+template void ArrayDataBase<UByte, AllocatorGH<UByte, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<UByte, AllocatorGH_POD<UByte, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<GFx::AS3::TR::State*, AllocatorDH<GFx::AS3::TR::State*, 328>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyleType, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<GFx::Button::CharToRec, AllocatorLH<GFx::Button::CharToRec, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<GFx::MovieImpl::LevelInfo, AllocatorLH<GFx::MovieImpl::LevelInfo, 327>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void Hash<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*>::Remove(GFx::AS3::GASRefCountBase* const&);
+// MS2-FUNCTIONAL 0x142522350: exe folds Remove into the inlined RemoveAlt<Key> body; ours tail-calls RemoveAlt
+template void HashDH<GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key, GFx::AS3::ClassTraits::Traits*,
+    GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key::HashFunctor, 329>::BaseType::Remove(
+    const GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key&);
+// MS2-FUNCTIONAL 0x1425224f0: codegen, the exe resizes to 0 through Resize when the last element goes
+template void ArrayBase<ArrayData<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>, ArrayDefaultPolicy> >::RemoveAt(UPInt);
+// MS2-FUNCTIONAL 0x14251cb40: codegen, the exe calls the out-of-line ResizeNoConstruct
+template void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PopBack(UPInt);
+// MS2-FUNCTIONAL 0x14251f800: the Value default/copy ctor and dtor stay out of line in our Value model; the exe inlines
+// the undefined-Value copy into the grown slot
+template GFx::AS3::Value& ArrayBase<ArrayData<GFx::AS3::Value, AllocatorLH<GFx::AS3::Value, 331>, ArrayDefaultPolicy> >::PushDefault();
+template void ArrayData<char, AllocatorGH<char, 2>, ArrayDefaultPolicy>::PushBack(const char&);
+template void ArrayBase<ArrayDataDH<Ptr<GFx::DisplayObjectBase>, AllocatorDH<Ptr<GFx::DisplayObjectBase>, 2>, ArrayDefaultPolicy> >::InsertAt(
+    UPInt, const Ptr<GFx::DisplayObjectBase>&);
+// VMAppDomain is not modeled; the array only stores the SPtr word, so a
+// GASRefCountBase element array produces the same Reserve body.
+// MS2-FUNCTIONAL wrapper over the SPtr<GASRefCountBase> instantiation (VMAppDomain not modeled)
+// @0x142522ef0
+void Sfr34_VMAppDomainArray_Reserve(void* self, const void* pheapAddr, UPInt newCapacity)
+{
+    ((ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>,
+        AllocatorLH<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>, 329>, ArrayDefaultPolicy>*)self)->Reserve(pheapAddr, newCapacity);
+}
+// The exe element type is Instances::fl::Namespace, which this model keeps as
+// Instances::Namespace; only the SPtr word is stored, so the body is the same.
+// MS2-FUNCTIONAL wrapper over the SPtr<Instances::Namespace> instantiation (fl::Namespace not modeled)
+// @0x142522db0
+void Sfr34_FlNamespaceArray_Reserve(void* self, const void* pheapAddr, UPInt newCapacity)
+{
+    ((ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>,
+        AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy>*)self)->Reserve(pheapAddr, newCapacity);
+}
+
+// ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::PopBack;
+// the paged CC allocator is not modeled. Pages hold 64 frames of 0xa8 bytes.
+struct Sfr34_CallFramePagedArray
+{
+    void*   pHeap;      // +0x00
+    UPInt   Size;       // +0x08
+    UPInt   NumPages;   // +0x10
+    UPInt   MaxPages;   // +0x18
+    UByte** Pages;      // +0x20  64 CallFrames of 0xa8 bytes per page
+};
+
+// MS2-FUNCTIONAL paged array modeled locally (AllocatorPagedCC not modeled)
+// @0x14251cba0
+void Sfr34_CallFramePagedArray_PopBack(Sfr34_CallFramePagedArray* self)
+{
+    if (self->Size)
+    {
+        UPInt i = self->Size - 1;
+        FUN_1424dde10(self->Pages[i >> 6] + (i & 0x3f) * 0xa8);
+        self->Size--;
+    }
+}
+} // namespace Scaleform
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 } } }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1424,3 +1816,20 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
+
+// MS2-PINS-BEGIN tplpin
+// MS2-PIN: ?PushBack@?$ArrayData@DU?$AllocatorGH@D$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXAEBD@Z 0x14251f5f0 ; unique
+// MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorGH@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142522c70 ; prop
+// MS2-PINS-END tplpin
+// sfr34: template copies of the unit (coverage names)
+// MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorGH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142522d10
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVState@TR@AS3@GFx@Scaleform@@U?$AllocatorDH@PEAVState@TR@AS3@GFx@Scaleform@@$0BEI@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAXPEBX_K@Z 0x142522e50
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UFillStyleType@Render@Scaleform@@U?$AllocatorLH@UFillStyleType@Render@Scaleform@@$01@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x142522f90
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UCharToRec@Button@GFx@Scaleform@@U?$AllocatorLH@UCharToRec@Button@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142523030
+// MS2-PIN: ?Reserve@?$ArrayDataBase@ULevelInfo@MovieImpl@GFx@Scaleform@@U?$AllocatorLH@ULevelInfo@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1425230d0
+// MS2-PIN: ?Remove@?$Hash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@PEAVWeakProxy@234@V?$FixedSizeHash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@4@U?$AllocatorGH@PEAVGASRefCountBase@AS3@GFx@Scaleform@@$01@4@U?$HashNode@PEAVGASRefCountBase@AS3@GFx@Scaleform@@PEAVWeakProxy@234@V?$FixedSizeHash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@4@@4@V?$HashsetCachedNodeEntry@U?$HashNode@PEAVGASRefCountBase@AS3@GFx@Scaleform@@PEAVWeakProxy@234@V?$FixedSizeHash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@@4@V?$HashSet@U?$HashNode@PEAVGASRefCountBase@AS3@GFx@Scaleform@@PEAVWeakProxy@234@V?$FixedSizeHash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@PEAVGASRefCountBase@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@PEAVGASRefCountBase@AS3@GFx@Scaleform@@PEAVWeakProxy@234@V?$FixedSizeHash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@@2@@4@@Scaleform@@QEAAXAEBQEAVGASRefCountBase@AS3@GFx@2@@Z 0x1425221d0
+// MS2-PIN: ?Remove@?$Hash@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@U?$AllocatorDH@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@$0BEJ@@5@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@5@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@UNodeHashF@12@@5@V?$HashSetDH@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@$0BEJ@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@UNodeHashF@12@@2@@5@@Scaleform@@QEAAXAEBUKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@2@@Z 0x142522350
+// MS2-PIN: ?RemoveAt@?$ArrayBase@U?$ArrayData@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x1425224f0
+// MS2-PIN: ?PopBack@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x14251cb40
+// MS2-PIN: ?PushDefault@?$ArrayBase@U?$ArrayData@VValue@AS3@GFx@Scaleform@@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$0BEL@@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAAEAVValue@AS3@GFx@2@XZ 0x14251f800
+// MS2-PIN: ?InsertAt@?$ArrayBase@U?$ArrayDataDH@V?$Ptr@VDisplayObjectBase@GFx@Scaleform@@@Scaleform@@U?$AllocatorDH@V?$Ptr@VDisplayObjectBase@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAX_KAEBV?$Ptr@VDisplayObjectBase@GFx@Scaleform@@@2@@Z 0x142512630
