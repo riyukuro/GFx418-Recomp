@@ -669,6 +669,43 @@ extern "C" void FUN_142676380(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
+// MS2-FUNCTIONAL: applies the executable's four 256-entry component lookup tables under the selected channel mask.
+// @0x142677460
+extern "C" void FUN_142677460(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* source = static_cast<ImageData*>(inputs[0]);
+    ImagePlane dst, src;
+    destination->GetPlane(0, &dst);
+    source->GetPlane(0, &src);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
+    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
+    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
+    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
+    const unsigned mask = *reinterpret_cast<const unsigned*>(op + 0x48);
+    const auto* lut = *reinterpret_cast<const unsigned char* const*>(op + 0x40);
+    const auto* alphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
+    const bool preserveAlpha = alphaConfig && *reinterpret_cast<const bool*>(alphaConfig + 0x48);
+    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
+        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
+        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
+        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
+            unsigned pixel = 0;
+            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - left));
+            auto* c = reinterpret_cast<unsigned char*>(&pixel);
+            if (mask & 1) c[2] = lut[c[2]];
+            if (mask & 2) c[1] = lut[0x400 + c[1]];
+            if (mask & 4) c[0] = lut[0x800 + c[0]];
+            if (mask & 8) c[3] = lut[0xc00 + c[3]];
+            if (!preserveAlpha) c[3] = 0xff;
+            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), pixel);
+        }
+    }
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
 // @0x142745840
