@@ -21,6 +21,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
+#include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
@@ -9547,4 +9548,53 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
+// Vtable-only virtuals present at the executable addresses below.
+// @0x142525c90
+void Scaleform::GFx::DisplayObjectBase::Restart() {}
+// @0x142526720
+void Scaleform::GFx::InteractiveObject::SetDisplayCallback(void (SF_CDECL* callback)(void*), void* userPtr)
+{
+    pDisplayCallback = callback;
+    DisplayCallbackUserPtr = userPtr;
+}
+// @0x1425274a0
+void Scaleform::GFx::AS3::IntervalTimer::SetId(int id) { Id = id; }
+// @0x1425287f0
+void Scaleform::GFx::InteractiveObject::SetPause(bool) {}
+// @0x142528800
+void Scaleform::GFx::InteractiveObject::SetPlayState(Scaleform::GFx::PlayState) {}
+// @0x142528d90
+void Scaleform::GFx::DisplayObjectBase::SetRatio(float) {}
+// @0x142529f40
+void Scaleform::GFx::DisplayObjectBase::SetStateChangeFlags(Scaleform::UByte) {}
+// @0x142529f50
+void Scaleform::GFx::InteractiveObject::SetStateChangeFlags(Scaleform::UByte flags)
+{
+    Flags = (Flags & 0xfff0ffffu) | ((static_cast<Scaleform::UInt32>(flags) & 0x0fu) << 16);
+}
+// @0x14252c8a0
+void Scaleform::GFx::AS3::IntervalTimer::Start(Scaleform::GFx::MovieImpl* proot)
+{
+    const auto* movieBytes = reinterpret_cast<const unsigned char*>(proot);
+    InvokeTime = *reinterpret_cast<const Scaleform::UInt64*>(movieBytes + 0x268) + Interval;
+}
+// @0x14252c9c0
+void Scaleform::GFx::InteractiveObject::StopActiveSounds(Scaleform::GFx::ASSoundIntf*) {}
+// @0x14252c9d0
+void Scaleform::GFx::InteractiveObject::StopActiveSounds(Scaleform::GFx::SoundResource*) {}
+// @0x14252c9e0
+void Scaleform::GFx::InteractiveObject::StopActiveSounds() {}
+// @0x14252e520
+bool Scaleform::GFx::AS3::InstanceTraits::Traits::SupportsInterface(const Scaleform::GFx::AS3::InstanceTraits::Traits&) const { return false; }
+// @0x14252fee0
+Scaleform::GFx::AS3::CheckResult Scaleform::GFx::AS3::XMLSupport::ToXMLString(Scaleform::GFx::AS3::VM&, Scaleform::GFx::AS3::Value&) const
+{
+    return Scaleform::GFx::AS3::CheckResult(false);
+}
+// @0x142540ba0
+void Scaleform::GFx::AS3::Class::lengthGet(Scaleform::SInt32& result)
+{
+    result = *reinterpret_cast<const Scaleform::SInt32*>(reinterpret_cast<const unsigned char*>(this) + 0x40);
+}
+
 // MS2-PIN: ?SetUInt32@Value@AS3@GFx@Scaleform@@QEAAXK@Z 0x14252a460
