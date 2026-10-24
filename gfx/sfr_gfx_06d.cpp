@@ -637,4 +637,16 @@ void DisplayObjContainer::UpdateViewAndPerspective()
     }
 }
 
+// (sfr24) a virtual the full exe links by name (work/sfr35/outside-units.tsv).
+// The font manager of the loaded movie this container roots, else the parent's, else that of the main movie.
+// @0x1425fc550
+FontManager* DisplayObjContainer::GetFontManager() const
+{
+    if (pRootNode)
+        return pRootNode->pFontManager;
+    if (!pParent)
+        return GetMovieImpl()->RootMovieDefNodes.pNext->pFontManager;
+    return pParent->GetFontManager();
+}
+
 }} // namespace Scaleform::GFx

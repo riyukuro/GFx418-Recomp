@@ -1820,4 +1820,155 @@ void DisplayObjectBase::UpdateViewAndPerspective()
     }
 }
 
+// ---- (sfr24) virtuals the full exe links by name (work/sfr35/outside-units.tsv) ----
+
+// A plain display object follows the timeline and keeps no animation state.
+// @0x1425f1bf0
+bool DisplayObjectBase::GetAcceptAnimMoves() const
+{
+    return true;
+}
+
+// @0x1425f1cf0
+bool DisplayObjectBase::GetContinueAnimationFlag() const
+{
+    return false;
+}
+
+// @0x1425f3ef0
+void DisplayObjectBase::SetAcceptAnimMoves(bool)
+{
+}
+
+// The perspective values are 0 until a perspective block exists.
+// @0x1425f1d50
+Double DisplayObjectBase::GetFOV() const
+{
+    return pPerspectiveData ? pPerspectiveData->FieldOfView : 0;
+}
+
+// @0x1425f1db0
+Double DisplayObjectBase::GetFocalLength() const
+{
+    return pPerspectiveData ? pPerspectiveData->FocalLength : 0;
+}
+
+// @0x1425f25c0
+PointF DisplayObjectBase::GetProjectionCenter() const
+{
+    return pPerspectiveData ? pPerspectiveData->ProjectionCenter : PointF(0, 0);
+}
+
+// The matrices as the scripts see them: the original one while a transform is applied indirectly, else the
+// render node's.
+// @0x1425f2280
+const DisplayObjectBase::Matrix& DisplayObjectBase::GetMatrix() const
+{
+    if (pIndXFormData)
+        return *(const Matrix*)(const void*)&pIndXFormData->OrigTransformMatrix;
+    if (pRenNode)
+        return pRenNode->M2D();
+    return Matrix::Identity;
+}
+
+// @0x1425f21b0
+const Matrix3F& DisplayObjectBase::GetMatrix3D() const
+{
+    if (pIndXFormData)
+        return pIndXFormData->OrigTransformMatrix;
+    if (pRenNode)
+        return pRenNode->M3D();
+    return Matrix3F::Identity;
+}
+
+// A scroll rectangle moves the node, so its saved matrix comes first.
+// @0x1425f2210
+const DisplayObjectBase::Matrix& DisplayObject::GetMatrix() const
+{
+    if (!pScrollRect)
+        return DisplayObjectBase::GetMatrix();
+    return *(const Matrix*)(const void*)&pScrollRect->OrigTransformMatrix;
+}
+
+// @0x1425f2140
+const Matrix3F& DisplayObject::GetMatrix3D() const
+{
+    if (!pScrollRect)
+        return DisplayObjectBase::GetMatrix3D();
+    return pScrollRect->OrigTransformMatrix;
+}
+
+// The view matrix set on this object, or with inherit the nearest parent's.
+// @0x1425f29a0
+bool DisplayObjectBase::GetViewMatrix3D(Matrix3F* m, bool inherit) const
+{
+    if (pRenNode && pRenNode->HasViewMatrix3D())
+    {
+        *m = pPerspectiveData->ViewMatrix3D;
+        return true;
+    }
+    if (!inherit || !pParent)
+        return false;
+    return pParentChar->GetViewMatrix3D(m, inherit);
+}
+
+// Only interactive objects track the mouse.
+// @0x1425f23d0
+Double DisplayObjectBase::GetMouseX() const
+{
+    return NumberUtil::NaN();
+}
+
+// @0x1425f24d0
+Double DisplayObjectBase::GetMouseY() const
+{
+    return NumberUtil::NaN();
+}
+
+// @0x1425f3380
+bool DisplayObjectBase::IsUsedAsMask() const
+{
+    return false;
+}
+
+// The movie's verbose-action and suppress-errors options.
+// @0x1425f3390
+bool DisplayObjectBase::IsVerboseAction() const
+{
+    return (FindMovieImpl()->Flags & MovieImpl::Flag_VerboseAction) != 0;
+}
+
+// @0x1425f33e0
+bool DisplayObjectBase::IsVerboseActionErrors() const
+{
+    return (FindMovieImpl()->Flags & MovieImpl::Flag_SuppressActionErrors) == 0;
+}
+
+// Events go to the script object, if there is one.
+// @0x1425f3980
+bool DisplayObject::OnEvent(const EventId& id)
+{
+    if (HasAvmObject())
+        return GetAvmObjImpl()->OnEvent(id);
+    return false;
+}
+
+// @0x1425f39a0
+bool DisplayObjectBase::OnEvent(const EventId&)
+{
+    return false;
+}
+
+// @0x1425f39d0
+void DisplayObjectBase::OnEventLoad()
+{
+    Flags |= Mask_Loaded;
+}
+
+// @0x1425f3b60
+bool DisplayObjectBase::OnUnloading()
+{
+    return true;
+}
+
 }} // namespace Scaleform::GFx
