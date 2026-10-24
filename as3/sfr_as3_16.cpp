@@ -1759,6 +1759,18 @@ Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::* const pSfr16ValueStri
     static_cast<Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::*)(const Scaleform::GFx::ASString&)>(
         &Scaleform::GFx::AS3::Value::operator=);
 
+using Sfr16DisplayObjectWeakArray = Scaleform::ArrayLH<
+    Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, 2, Scaleform::ArrayDefaultPolicy>;
+// MS2-FUNCTIONAL 0x1424e0340: transfers the source pointer and owner flag, releasing an owned destination first; the executable uses the same ownership behavior.
+// @0x1424e0340
+Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
+    (Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>::* const pSfr16AutoPtrAssign)(
+        const Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&) =
+    static_cast<Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
+        (Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>::*)(
+            const Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&)>(
+        &Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>::operator=);
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
 // MS2-PIN: ??4?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@QEAAXAEBUNodeRef@01@@Z 0x1424e0480
@@ -1786,3 +1798,4 @@ Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::* const pSfr16ValueStri
 // MS2-PIN: ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3020
 // MS2-FUNCTIONAL ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z: the emitted inline overload delegates to Value::Assign(const ASString&) and preserves the same clear, namespace-retain, and string-reference behavior.
 // MS2-PIN: ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z 0x1424e0d40
+// MS2-PIN: ??4?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAAEAV01@AEBV01@@Z 0x1424e0340

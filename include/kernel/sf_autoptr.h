@@ -39,6 +39,31 @@ public:
         return *this;
     }
 
+    // Assignment transfers ownership from the source, as the exe's AutoPtr copy
+    // assignment does. The source is intentionally cleared even though the
+    // binary signature takes a const reference.
+    AutoPtr& operator=(const AutoPtr& src)
+    {
+        if (this != &src)
+        {
+            AutoPtr& mutableSrc = const_cast<AutoPtr&>(src);
+            T* sourceObject = mutableSrc.pObject;
+            bool sourceOwner = mutableSrc.Owner;
+            mutableSrc.pObject = 0;
+            if (pObject != sourceObject)
+            {
+                if (pObject && Owner)
+                {
+                    Owner = false;
+                    delete pObject;
+                }
+                pObject = sourceObject;
+            }
+            Owner = sourceOwner;
+        }
+        return *this;
+    }
+
     T*   operator->() const { return pObject; }
     T&   operator*() const  { return *pObject; }
     T*   GetPtr() const     { return pObject; }
