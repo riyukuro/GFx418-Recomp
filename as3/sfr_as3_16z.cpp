@@ -1752,10 +1752,10 @@ void* Sfr21LinearHeapAlloc(void* self, UPInt size)
 namespace Scaleform { namespace GFx {
 
 // Not exe code: abstract probes whose constructors run the implicit constructors of the GFx Avm*Base interfaces, which
-// emits their vftables and the deleting destructors of this range.
-struct Unk_As3_16zButtonBaseProbe : AvmButtonBase { Unk_As3_16zButtonBaseProbe(); };
-struct Unk_As3_16zTextFieldBaseProbe : AvmTextFieldBase { Unk_As3_16zTextFieldBaseProbe(); };
-struct Unk_As3_16zSpriteBaseProbe : AvmSpriteBase { Unk_As3_16zSpriteBaseProbe(); };
+// emits their vftables and the deleting destructors of this range. novtable: the probes' own tables are not emitted.
+struct __declspec(novtable) Unk_As3_16zButtonBaseProbe : AvmButtonBase { Unk_As3_16zButtonBaseProbe(); };
+struct __declspec(novtable) Unk_As3_16zTextFieldBaseProbe : AvmTextFieldBase { Unk_As3_16zTextFieldBaseProbe(); };
+struct __declspec(novtable) Unk_As3_16zSpriteBaseProbe : AvmSpriteBase { Unk_As3_16zSpriteBaseProbe(); };
 Unk_As3_16zButtonBaseProbe::Unk_As3_16zButtonBaseProbe() {}
 Unk_As3_16zTextFieldBaseProbe::Unk_As3_16zTextFieldBaseProbe() {}
 Unk_As3_16zSpriteBaseProbe::Unk_As3_16zSpriteBaseProbe() {}
