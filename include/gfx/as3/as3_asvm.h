@@ -152,9 +152,16 @@ public:
         ActionEntry*     pLastEntry;     // +0x20
         ActionLevel      Level;          // +0x28
 
+        // (sfr33) assigned in the body, in the exe's store order (ActionQueueType::Clear 0x1424ef9e0).
         ActionQueueIterator(ActionLevel lvl, ActionQueueType* pactionQueue, ActionEntry* rootEntry = NULL)
-            : ModId(0), pActionQueue(pactionQueue), pCurEntry(pactionQueue->Entries[lvl].pActionRoot),
-              pRootEntry(rootEntry), pLastEntry(NULL), Level(lvl) {}
+        {
+            pActionQueue = pactionQueue;
+            Level        = lvl;
+            ModId        = 0;
+            pLastEntry   = NULL;
+            pRootEntry   = rootEntry;
+            pCurEntry    = rootEntry ? rootEntry->pNextEntry : pactionQueue->Entries[lvl].pActionRoot;
+        }
         ~ActionQueueIterator()
         {
             if (pLastEntry)

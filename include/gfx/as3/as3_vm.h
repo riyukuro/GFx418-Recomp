@@ -133,7 +133,10 @@ public:
         // (appended, sfr22)
         eXMLOnlyWorksWithOneItemLists = 1086,
         eXMLInvalidName             = 1117,
-        eXMLNamespaceWithPrefixAndNoURI = 1098
+        eXMLNamespaceWithPrefixAndNoURI = 1098,
+        // (appended, sfr33)
+        eConvertUndefinedToObjectError = 1010,
+        eNotConstructorError        = 1115
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).

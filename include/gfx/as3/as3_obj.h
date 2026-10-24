@@ -780,6 +780,9 @@ public:
     // (appended, sfr27) the class of the object's traits (native Object.constructor). 0x142532280
     void constructor(Value& result);
 
+    // (appended, sfr33) removes the dynamic property prop_name names; false when there is none. 0x1424f4540
+    CheckResult DeleteDynamicSlotValuePair(const Multiname& prop_name);
+
 protected:
     SPtr<Traits>        pTraits;            // +0x20
     DynAttrsType        DynAttrs;           // +0x28

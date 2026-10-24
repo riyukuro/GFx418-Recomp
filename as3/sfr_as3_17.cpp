@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/gfx_loadproc.h"
+#include "ms2/scaleform/include/gfx/gfx_shapedef.h"
 #undef GetObject
 
 // The AS3 object's +0x50 counted reference set to p (unrecovered).
@@ -762,6 +763,550 @@ void Traits::ForEachChild_GC_Slot(Collector* prcc, const Object& obj, GcOp op) c
     const UPInt size = GetSlotInfoNum();
     for (UPInt i = 0; i < size; ++i)
         GetSlotInfo(AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
+}
+}}}
+
+// ---- sfr33: MovieRoot / Stage helpers ----
+// AS3 Event class's object factory (unrecovered).
+void FUN_142466be0(void* eventClass, void* ret, const Scaleform::GFx::ASString& type, bool bubbles, bool cancelable);
+// the AS3 MovieDefRootNode vftable
+extern "C" const void* DAT_14317d8c0;
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// @0x1424ef9e0
+void MovieRoot::ActionQueueType::Clear()
+{
+    for (unsigned i = 0; i < AL_Total; ++i)
+    {
+        ActionQueueIterator iter(static_cast<ActionLevel>(i), this);
+        while (iter.getNext())
+            ;
+    }
+}
+
+// MovieRoot::StickyVarNode::Assign (virtual): name, permanence and value of node. The AS3 node is not modelled.
+// @0x1424ed890
+void Sfr33StickyVarNodeAssign(UByte* self, const UByte* node)
+{
+    *reinterpret_cast<ASString*>(self + 0x08) = *reinterpret_cast<const ASString*>(node + 0x08);
+    self[0x18] = node[0x18];
+    reinterpret_cast<Value*>(self + 0x20)->Assign(*reinterpret_cast<const Value*>(node + 0x20));
+}
+
+// MovieRoot::CreateMovieDefRootNode (virtual): the AS3 MovieDefRootNode (0x58 bytes; +0x38..+0x50 cleared).
+// The AS3 MovieDefRootNode class is not modelled: its constructor stores the exe's vftable raw.
+static inline UByte* Sfr33ConstructAS3MovieDefRootNode(UByte* p, MovieDefImpl* pdefImpl, bool importFlag)
+{
+    *reinterpret_cast<unsigned*>(p + 0x18) = 1;
+    *reinterpret_cast<MovieDefImpl**>(p + 0x20) = pdefImpl;
+    p[0x30] = importFlag;
+    *reinterpret_cast<void**>(p + 0x38) = NULL;
+    *reinterpret_cast<const void**>(p) = &DAT_14317d8c0;
+    *reinterpret_cast<void**>(p + 0x40) = NULL;
+    *reinterpret_cast<void**>(p + 0x48) = NULL;
+    *reinterpret_cast<void**>(p + 0x50) = NULL;
+    return p;
+}
+// @0x1424f3910
+void* Sfr33MovieRootCreateMovieDefRootNode(MovieRoot* self, MemoryHeap* pheap, MovieDefImpl* pdefImpl, bool importFlag)
+{
+    UByte* p = static_cast<UByte*>(pheap->Alloc(0x58));
+    return p ? Sfr33ConstructAS3MovieDefRootNode(p, pdefImpl, importFlag) : NULL;
+}
+
+// Stage::CreateNewInstanceName (virtual): the stage has no instance name, the empty string.
+// @0x1424f3980
+ASString* Sfr33StageCreateNewInstanceName(const UByte* self, ASString* ret)
+{
+    typedef UByte* (*GetStringManagerFn)(void*);
+    void* obj = *reinterpret_cast<void* const*>(*reinterpret_cast<const UByte* const*>(
+                    *reinterpret_cast<const UByte* const*>(self + 0x20) + 0x10) + 0x18);
+    UByte* mgr = (*reinterpret_cast<GetStringManagerFn const* const*>(obj))[50](obj);
+    UByte* node = mgr + 0x40;   // the manager's empty string node
+    *reinterpret_cast<UByte**>(ret) = node;
+    ++*reinterpret_cast<unsigned*>(node + 0x18);
+    return ret;
+}
+
+// MovieRoot::CreateEventObject (virtual)
+// @0x1424f3710
+void* Sfr33MovieRootCreateEventObject(MovieRoot* self, void* ret, const ASString& type, bool bubbles, bool cancelable)
+{
+    typedef void (*Fn)(MovieRoot*);
+    (*reinterpret_cast<Fn const* const*>(self))[4](self);
+    FUN_142466be0(*reinterpret_cast<void* const*>(reinterpret_cast<const UByte*>(self->pAVM) + 0x390), ret, type,
+                  bubbles, cancelable);
+    return ret;
+}
+}}}
+
+// VM: runs the queued class constructors (unrecovered).
+void FUN_1424fa5b0(Scaleform::GFx::AS3::VM* vm, unsigned count);
+// the AS3 ObjectInterface (AS3ValueObjectInterface) vftable
+extern "C" const void* DAT_14317eff8;
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The timeline sprite shared by CreateMovieClip and CreateSprite: the AS support's character of type ctype.
+static inline Sprite* Sfr33CreateTimelineSprite(MovieRoot* self, CharacterDef* pdef, MovieDefImpl* pdefImpl,
+                                                InteractiveObject* parent, ResourceId id,
+                                                CharacterDef::CharacterDefType ctype)
+{
+    ASSupport* psupport = self->pASSupport;
+    CharacterCreateInfo ccinfo = { pdef, pdefImpl, NULL };
+    return static_cast<Sprite*>(static_cast<DisplayObjectBase*>(
+        psupport->CreateCharacterInstance(self->GetMovieImpl(), ccinfo, parent, id, ctype)));
+}
+
+// MovieRoot stand-in for the virtuals whose register use depends on being members.
+struct Sfr33MovieRoot
+{
+    MovieRoot* Root() { return reinterpret_cast<MovieRoot*>(this); }
+    Sprite* CreateMovieClip(CharacterDef* pdef, MovieDefImpl* pdefImpl, InteractiveObject* parent, ResourceId id,
+                            bool loadedSeparately);
+    Sprite* CreateSprite(CharacterDef* pdef, MovieDefImpl* pdefImpl, InteractiveObject* parent, ResourceId id,
+                         bool loadedSeparately);
+};
+
+// MovieRoot::CreateMovieClip (virtual): a sprite of type MovieClip, flagged as a movie clip at +0x6a.
+// MS2-FUNCTIONAL 0x1424f38a0: the MovieRoot and ASSupport pointers trade registers (r10/rcx); same calls and stores.
+// @0x1424f38a0
+Sprite* Sfr33MovieRoot::CreateMovieClip(CharacterDef* pdef, MovieDefImpl* pdefImpl, InteractiveObject* parent,
+                                        ResourceId id, bool loadedSeparately)
+{
+    Sprite* pspr = Sfr33CreateTimelineSprite(Root(), pdef, pdefImpl, parent, id, static_cast<CharacterDef::CharacterDefType>(3));
+    pspr->SetLoadedSeparately(loadedSeparately);
+    *reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pspr) + 0x6a) |= 0x800;
+    return pspr;
+}
+
+// MovieRoot::CreateSprite (virtual)
+// MS2-FUNCTIONAL 0x1424f3f90: the MovieRoot and ASSupport pointers trade registers (r10/rcx); same calls and stores.
+// @0x1424f3f90
+Sprite* Sfr33MovieRoot::CreateSprite(CharacterDef* pdef, MovieDefImpl* pdefImpl, InteractiveObject* parent,
+                                     ResourceId id, bool loadedSeparately)
+{
+    Sprite* pspr = Sfr33CreateTimelineSprite(Root(), pdef, pdefImpl, parent, id, static_cast<CharacterDef::CharacterDefType>(9));
+    pspr->SetLoadedSeparately(loadedSeparately);
+    return pspr;
+}
+
+// MovieRoot::ExecuteCtors (virtual): when constructors are pending (+0x358), runs them and clears the VM's flag.
+// @0x1424fe5b0
+void Sfr33MovieRootExecuteCtors(UByte* self)
+{
+    const unsigned count = *reinterpret_cast<unsigned*>(self + 0x358);
+    if (count)
+    {
+        FUN_1424fa5b0(*reinterpret_cast<VM**>(self + 0x48), count);
+        UByte* vm = *reinterpret_cast<UByte**>(self + 0x48);
+        if (vm[0x180])
+            vm[0x180] = 0;
+        *reinterpret_cast<int*>(self + 0x358) = 0;
+    }
+}
+
+// MovieRoot::MouseState::GetDoubleClickInfo: the 12-byte record (+0x20) of the button of buttonMask.
+// @0x142509920
+void* Sfr33MouseStateGetDoubleClickInfo(UByte* self, unsigned buttonMask)
+{
+    static const unsigned ButtonIndex[] = { 0, 1, 2, 0, 3 };
+    struct DoubleClickInfo { UInt32 Data[3]; };
+    unsigned i;
+    if (buttonMask > 4)
+        i = static_cast<unsigned>(logf(static_cast<float>(buttonMask)));
+    else
+        i = ButtonIndex[buttonMask];
+    return &reinterpret_cast<DoubleClickInfo*>(self + 0x20)[i];
+}
+
+// MovieRoot::CreateObjectInterface (virtual): the movie's AS3 value object interface (0x10 bytes, movie at +0x08).
+// The interface class is not modelled here: its constructor stores the exe's vftable raw.
+static inline void** Sfr33ConstructAS3ObjectInterface(void** p, MovieImpl* pmovieImpl)
+{
+    p[1] = pmovieImpl;
+    p[0] = const_cast<void**>(&DAT_14317eff8);
+    return p;
+}
+// @0x1424f3cd0
+void Sfr33MovieRootCreateObjectInterface(MovieRoot* self, MovieImpl* pmovieImpl)
+{
+    MemoryHeap* pheap = *reinterpret_cast<MemoryHeap* const*>(reinterpret_cast<const UByte*>(self->pMovieImpl) + 0x40);
+    void** p = static_cast<void**>(pheap->Alloc(0x10));
+    *reinterpret_cast<void***>(reinterpret_cast<UByte*>(pmovieImpl) + 0x38) =
+        p ? Sfr33ConstructAS3ObjectInterface(p, pmovieImpl) : NULL;
+}
+
+// ShapeObject::CreateRenderNode (virtual): the tree shape of the shape's definition, bound to its movie.
+// ShapeObject is opaque (as3_avm.h); a member of a stand-in keeps the virtual's register use.
+struct Sfr33ShapeObject
+{
+    Ptr<Render::TreeNode> CreateRenderNode(Render::Context& context);
+};
+// @0x1424f3f40
+Ptr<Render::TreeNode> Sfr33ShapeObject::CreateRenderNode(Render::Context& context)
+{
+    UByte* self = reinterpret_cast<UByte*>(this);
+    const ShapeBaseCharacterDef* pdef = *reinterpret_cast<ShapeBaseCharacterDef* const*>(self + 0xc0);
+    typedef MovieDefImpl* (*GetResourceMovieDefFn)(UByte*);
+    MovieDefImpl* pdefImpl = (*reinterpret_cast<GetResourceMovieDefFn const* const*>(self))[60](self);
+    return pdef->CreateTreeShape(context, pdefImpl);
+}
+
+// @0x1424f4a40
+CheckResult Object::DeleteProperty(const Multiname& prop_name)
+{
+    if (GetTraits().IsDynamic())
+        return DeleteDynamicSlotValuePair(prop_name);
+    return false;
+}
+}}}
+
+void FUN_1425fc4e0(void* self);   // DisplayObjContainer::ForceShutdown
+bool FUN_142442c30(const void* name, void* pccinfo, void* pdefImpl);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Stage::ForceShutdown (virtual): stops the frame counter (+0x118), clears the display list (+0xd8), shuts the
+// root (+0x110) down and drops it, then shuts the container down.
+// MS2-FUNCTIONAL 0x142504860: the null-root path jumps past the release (exe re-tests +0x110); same calls/stores.
+// @0x142504860
+void Sfr33StageForceShutdown(UByte* self)
+{
+    (*reinterpret_cast<InteractiveObject**>(self + 0x118))->RemoveFromPlayList();
+    reinterpret_cast<DisplayList*>(self + 0xd8)->Clear(reinterpret_cast<DisplayObjectBase*>(self));
+    reinterpret_cast<DisplayObjectBase*>(self)->SetDirtyFlag();
+    Ptr<RefCountNTSImpl>& proot = *reinterpret_cast<Ptr<RefCountNTSImpl>*>(self + 0x110);
+    if (proot)
+    {
+        typedef void (*ForceShutdownFn)(void*);
+        void** p = reinterpret_cast<void**>(proot.GetPtr());
+        reinterpret_cast<ForceShutdownFn*>(*p)[54](p);
+    }
+    proot = NULL;
+    FUN_1425fc4e0(self);
+}
+
+// GetFillStyle (shape-data virtual): copies 1-based fill style idx out of the fill array (+0x18).
+// @0x142509cb0
+void Sfr33ShapeDataGetFillStyle(const UByte* self, unsigned idx, Render::FillStyleType* p)
+{
+    *p = (*reinterpret_cast<Render::FillStyleType* const*>(self + 0x18))[idx - 1];
+}
+
+struct Sfr33MovieRootFind
+{
+    bool FindLibrarySymbolInAllABCs(const void* name, void* pccinfo);
+};
+// MovieRoot::FindLibrarySymbolInAllABCs: true when any loaded movie's ABCs define the library symbol.
+// @0x142501a80
+bool Sfr33MovieRootFind::FindLibrarySymbolInAllABCs(const void* name, void* pccinfo)
+{
+    MovieRoot* self = reinterpret_cast<MovieRoot*>(this);
+    MovieDefRootNode* p = self->pMovieImpl->RootMovieDefNodes.pNext;
+    for (;;)
+    {
+        MovieDefRootNodeLinks* proot = &self->pMovieImpl->RootMovieDefNodes;
+        if (p == static_cast<MovieDefRootNode*>(proot))
+            return false;
+        if (FUN_142442c30(name, pccinfo, p->pDefImpl))
+            return true;
+        p = p->pNext;
+    }
+}
+}}}
+
+void** FUN_142414ac0(void* phash, const void* key);
+void** FUN_142508330(void* self);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// AvmBitmap::GetASClassName (virtual)
+// @0x142505ef0
+String& Sfr33AvmBitmapGetASClassName(const void*, String* className)
+{
+    *className = "flash.display.Bitmap";
+    return *className;
+}
+
+// AvmLoader::GetASClassName (virtual)
+// @0x142505fa0
+String& Sfr33AvmLoaderGetASClassName(const void*, String* className)
+{
+    *className = "flash.display.Loader";
+    return *className;
+}
+
+// AvmStaticText::GetASClassName (virtual)
+// @0x142505fd0
+String& Sfr33AvmStaticTextGetASClassName(const void*, String* className)
+{
+    *className = "flash.text.StaticText";
+    return *className;
+}
+
+// A copy of the name (+0x18) of the object at +0x28 (an unidentified by-value String virtual).
+struct Sfr33NamedOwner
+{
+    String GetOwnerName() const;
+};
+// @0x142505dd0
+String Sfr33NamedOwner::GetOwnerName() const
+{
+    const UByte* powner = *reinterpret_cast<const UByte* const*>(reinterpret_cast<const UByte*>(this) + 0x28);
+    return *reinterpret_cast<const String*>(powner + 0x18);
+}
+
+// The value the hash at +0x1c8 maps key to, NULL when absent.
+// @0x142507f30
+void* Sfr33LookupHash1c8(UByte* self, const void* key)
+{
+    void** p = FUN_142414ac0(self + 0x1c8, key);
+    if (!p)
+        return NULL;
+    return *p;
+}
+
+// The value at +0x10, made by FUN_142508330 on first use.
+// @0x142507a40
+void* Sfr33CacheValue(UByte* self)
+{
+    void*& pvalue = *reinterpret_cast<void**>(self + 0x10);
+    if (pvalue == NULL)
+        pvalue = *FUN_142508330(self);
+    return pvalue;
+}
+
+// Two lazy getters: +0x80 is made by virtual slot 13 on first use.
+static inline void* Sfr33LazyGet80(void** self)
+{
+    void* p = self[0x10];
+    if (!p)
+    {
+        typedef void (*MakeFn)(void*);
+        reinterpret_cast<MakeFn*>(*self)[13](self);
+        p = self[0x10];
+    }
+    return p;
+}
+// @0x142507b80
+void* Sfr33LazyGet80a(void** self) { return Sfr33LazyGet80(self); }
+// @0x142507bb0
+void* Sfr33LazyGet80b(void** self) { return Sfr33LazyGet80(self); }
+
+// The first entry of the array (+0x128 data, +0x130 size) of the object at +0x18, NULL when empty.
+// @0x142509970
+void* Sfr33FirstEntry(const UByte* self)
+{
+    const UByte* p = *reinterpret_cast<const UByte* const*>(self + 0x18);
+    if (*reinterpret_cast<const UPInt*>(p + 0x130) > 0)
+        return **reinterpret_cast<void** const*>(p + 0x128);
+    return NULL;
+}
+
+// Virtual slot 9 of the object at +0x88, 0x38 without one.
+// @0x142509d10
+UPInt Sfr33Slot9Or38(const UByte* self)
+{
+    void** p = *reinterpret_cast<void** const*>(self + 0x88);
+    if (p)
+    {
+        typedef UPInt (*Fn)(void*);
+        return reinterpret_cast<Fn*>(*p)[9](p);
+    }
+    return 0x38;
+}
+}}}
+
+void FUN_1425038d0(void* self, void* prcc, void (*op)(void*, void*, void*));
+void FUN_142503d90(void* self, void* prcc, void (*op)(void*, void*, void*));
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Tracer::CanBeNull: values of the int, uint, Number and Boolean instance traits are never null.
+// @0x1424eea80
+Value::TraceNullType Sfr33TracerCanBeNull(const UByte* self, const InstanceTraits::Traits* tr)
+{
+    const UByte* pfile = *reinterpret_cast<const UByte* const*>(*reinterpret_cast<const UByte* const*>(self + 0x20) + 0x28);
+    const VM& vm = **reinterpret_cast<VM* const*>(pfile + 0x20);
+    if (tr == &vm.TraitsInt->GetInstanceTraits() || tr == &vm.TraitsUint->GetInstanceTraits() ||
+        tr == &vm.TraitsNumber->GetInstanceTraits() || tr == &vm.TraitsBoolean->GetInstanceTraits())
+        return Value::NotNull;
+    return Value::NullOrNot;
+}
+
+typedef void (*Sfr33GcOp)(void* prcc, void* pchild, void* powner);
+
+// ForEachChild_GC (virtual) of an object with collectable children at +0x38 and +0x48.
+// @0x142503800
+void Sfr33ForEachChildGC_38_48(UByte* self, void* prcc, Sfr33GcOp op)
+{
+    FUN_1425038d0(self, prcc, op);
+    if (*reinterpret_cast<void**>(self + 0x38))
+        op(prcc, self + 0x38, self);
+    if (*reinterpret_cast<void**>(self + 0x48))
+        op(prcc, self + 0x48, self);
+}
+
+// Two ForEachChild_GC (virtual) copies of objects with a collectable child at +0xc0.
+static inline void Sfr33ForEachChildGC_c0(UByte* self, void* prcc, Sfr33GcOp op)
+{
+    FUN_142503d90(self, prcc, op);
+    void** pchild = reinterpret_cast<void**>(self + 0xc0);
+    if (*pchild)
+        op(prcc, pchild, self);
+}
+// @0x142503f50
+void Sfr33ForEachChildGC_c0a(UByte* self, void* prcc, Sfr33GcOp op) { Sfr33ForEachChildGC_c0(self, prcc, op); }
+// @0x142503fa0
+void Sfr33ForEachChildGC_c0b(UByte* self, void* prcc, Sfr33GcOp op) { Sfr33ForEachChildGC_c0(self, prcc, op); }
+
+// A third Traits::GetConstructor copy.
+struct Sfr33LazyTraits
+{
+    void* GetConstructor();
+};
+// @0x142508460
+void* Sfr33LazyTraits::GetConstructor()
+{
+    void** self = reinterpret_cast<void**>(this);
+    void* p = self[0x10];
+    if (!p)
+    {
+        typedef void (*MakeFn)(void*);
+        reinterpret_cast<MakeFn*>(*self)[13](self);
+        p = self[0x10];
+    }
+    return p;
+}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ForEachChild_GC of an owned value array (+0x00 owner, +0x08 data, +0x10 size).
+// MS2-FUNCTIONAL 0x142504460: the exe inlines the value visit with a spare null register (r15) and a cmova guard.
+// @0x142504460
+void Sfr33OwnedValuesForEachChildGC(const UByte* self, RefCountCollector<StatMV_ActionScript_Mem>* prcc,
+                                    ASRefCountBaseType::GcOp op)
+{
+    const UPInt size = *reinterpret_cast<const UPInt*>(self + 0x10);
+    for (UPInt i = 0; i < size; ++i)
+        AS3::ForEachChild_GC(prcc, (*reinterpret_cast<Value* const*>(self + 8))[i], op,
+                             **reinterpret_cast<const ASRefCountBaseType* const*>(self));
+}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// ForEachChild_GC of an array (+0x08 data, +0x10 size) of 0x40-byte records with collectable pointers at +0x28,
+// +0x18 and +0x20, all owned by powner.
+// @0x142503aa0
+void Sfr33RecordsForEachChildGC(const UByte* self, void* prcc, Sfr33GcOp op, void* powner)
+{
+    struct Record { UByte Head[0x18]; void* pA; void* pB; void* pC; UByte Tail[0x10]; };
+    const UPInt size = *reinterpret_cast<const UPInt*>(self + 0x10);
+    for (UPInt i = 0; i < size; ++i)
+    {
+        Record& r = (*reinterpret_cast<Record* const*>(self + 8))[i];
+        if (r.pC)
+            op(prcc, &r.pC, powner);
+        if (r.pA)
+            op(prcc, &r.pA, powner);
+        if (r.pB)
+            op(prcc, &r.pB, powner);
+    }
+}
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Stores the value at +0x10 and drops the collectable at +0x08.
+// @0x1424edca0
+void Sfr33SetValueDropObject(UByte* self, void* value)
+{
+    *reinterpret_cast<void**>(self + 0x10) = value;
+    *reinterpret_cast<SPtr<ASRefCountBaseType>*>(self + 8) = static_cast<ASRefCountBaseType*>(NULL);
+}
+}}}
+
+// A collector record: a counted object and a second word (zero here).
+struct Sfr33CollectorEntry
+{
+    Sfr33CollectorEntry(Scaleform::RefCountImpl* p) : pObject(p), pExtra(NULL) {}
+    Scaleform::Ptr<Scaleform::RefCountImpl> pObject;
+    void*                                   pExtra;
+};
+void FUN_1423de770(void* self, const Sfr33CollectorEntry& e);
+void FUN_1424efab0(void* pages);   // ArrayPagedLH_POD<unsigned,6,64,2> ClearAndRelease
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Queues p (unless a collection runs, +0xb1), notes the queue's previous size (+0x94) and its high-water mark (+0x90),
+// and asks for a collection (+0xb0) when the flags (+0x78) want one per addition.
+// MS2-FUNCTIONAL 0x142504630: the high-water max lands in esi (exe copies the count to ecx first); same stores.
+// @0x142504630
+__declspec(noinline) void Sfr33CollectorQueue(UByte* self, RefCountImpl* p)
+{
+    if (self[0xb1] > 0)
+        return;
+    const unsigned count = *reinterpret_cast<unsigned*>(self + 0x18);
+    Sfr33CollectorEntry e(p);
+    FUN_1423de770(self, e);
+    *reinterpret_cast<unsigned*>(self + 0x94) = count;
+    *reinterpret_cast<unsigned*>(self + 0x90) = Alg::Max(*reinterpret_cast<unsigned*>(self + 0x90), count);
+    *reinterpret_cast<unsigned*>(self + 0x88) = 0;
+    if (self[0x78] & 0x10)
+        self[0xb0] = 1;
+}
+
+// Queues p as above (or only asks for a collection while one runs), frees an empty queue's pages unless the flags
+// keep them (bit 1), and restarts the counters.
+// @0x1425046f0
+void Sfr33CollectorQueueAndReset(UByte* self, RefCountImpl* p)
+{
+    if (self[0xb1] > 0)
+    {
+        self[0xb0] = 1;
+        return;
+    }
+    Sfr33CollectorQueue(self, p);
+    if (!(self[0x78] & 2) && *reinterpret_cast<UPInt*>(self + 0x18) == 0)
+        FUN_1424efab0(self + 0x10);
+    *reinterpret_cast<unsigned*>(self + 0x8c) = *reinterpret_cast<unsigned*>(self + 0xa8);
+    *reinterpret_cast<unsigned*>(self + 0x90) = 0;
+}
+}}}
+
+void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// VM::ThrowTypeError, inlined.
+static inline void Sfr33ThrowTypeError(VM& vm, const VM::Error& e)
+{
+    FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+}
+
+// Throws "not a constructor" in the VM of the file at +0x20.
+// @0x1424f0700
+void Sfr33ThrowNotConstructor(const UByte* self)
+{
+    VM& vm = **reinterpret_cast<VM* const*>(*reinterpret_cast<const UByte* const*>(self + 0x20) + 0x78);
+    Sfr33ThrowTypeError(vm, VM::Error(VM::eNotConstructorError, vm));
+}
+
+// Throws a TypeError when v, about to be used as an object, is null or undefined.
+// MS2-FUNCTIONAL 0x1424ef180: value pointer kept in r8 (exe reuses rdx) and Error ctor arg order differs; same tests/throw
+// @0x1424ef180
+void Sfr33CheckObject(VM* const* self, const Value& v)
+{
+    if (v.IsNullOrUndefined())
+    {
+        VM& vm = **self;
+        const VM::ErrorID id = v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError;
+        Sfr33ThrowTypeError(vm, VM::Error(id, vm));
+    }
 }
 }}}
 
