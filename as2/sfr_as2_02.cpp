@@ -3229,3 +3229,4 @@ template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const 
 // MS2-PIN: ??_7?$RefCountBaseNTS@VSharedObjectVisitor@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143162f10
 // MS2-PIN: ??_7SharedObjectVisitor@GFx@Scaleform@@6B@ 0x143162f18
 // MS2-PIN: ??_7GASSharedObjectLoader@AS2@GFx@Scaleform@@6B@ 0x1432227a8
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x1429162d0
