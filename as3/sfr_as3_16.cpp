@@ -6,6 +6,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
+#include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
 #include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
@@ -122,6 +123,15 @@ void Object::AddDynamicSlotValuePair(const Value& prop_name, const Value& v, Slo
 }
 
 // ==== destructors ===================================================================================================
+
+namespace Classes {
+    // @0x1424df350
+    UDBase::~UDBase()
+    {
+        GetTraits().DestructTail(*this);
+        Class::~Class();
+    }
+}
 
 // The user data an application attached to an object (GFx::Value::SetUserData) and the movie it was set from.
 // 0x10 bytes.
