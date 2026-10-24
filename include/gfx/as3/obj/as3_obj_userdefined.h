@@ -71,6 +71,8 @@ namespace InstanceTraits { namespace fl {
     class GlobalObjectScript : public GlobalObject
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241aa60
+        Pickable<Instances::fl::GlobalObjectScript> FUN_14241aa60();   // a new global object
         // (appended, sfr22) the script's slots on top of the global object's. 0x1423ed6e0
         GlobalObjectScript(VMAbcFile& file, VM& vm, const Abc::ScriptInfo& script);
         // (appended, sfr22) 0x14240bf90
@@ -137,6 +139,8 @@ namespace ClassTraits {
     class UserDefined : public Traits
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241e6b0
+        CheckResult FUN_14241e6b0();   // RegisterSlots
         // (appended, sfr22) 0x1423ef690
         UserDefined(VMAbcFile& file, VM& vm, const Abc::ClassInfo& info);
         // (appended, sfr22) user-declared: the sdtor re-stores the vftable. 0x1423f13d0

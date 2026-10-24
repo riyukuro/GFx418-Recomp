@@ -2568,14 +2568,15 @@ bool FUN_142531f40(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scalef
 // MS2-FUNCTIONAL: written from the exe's control flow
 // @0x142440f80
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::Scene>
-FUN_142440f80(Scaleform::GFx::AS3::Instances::fl_display::MovieClip* pthis)
+Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FUN_142440f80()
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx;
     using namespace Scaleform::GFx::AS3;
+    Instances::fl_display::MovieClip* pthis = this;
     VM& vm = pthis->GetVM();
     SPtr<Instances::fl_display::Scene> scene;
-    FUN_142531f40(vm, reinterpret_cast<SPtr<Object>&>(scene), vm.GetClass(StringDataPtr("flash.display.Scene")), 0, NULL);
+    FUN_142531f40(vm, reinterpret_cast<SPtr<AS3::Object>&>(scene), vm.GetClass(StringDataPtr("flash.display.Scene")), 0, NULL);
     scene->SpriteObj = static_cast<GFx::Sprite*>(pthis->pDispObj.GetPtr());
     return scene;
 }

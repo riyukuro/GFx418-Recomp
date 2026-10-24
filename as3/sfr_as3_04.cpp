@@ -2101,7 +2101,7 @@ namespace InstanceTraits
 
     // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241af80
-    Pickable<Instances::fl::XMLList> fl::XMLList::MakeInstance(XMLList& t)
+    __declspec(noinline) Pickable<Instances::fl::XMLList> fl::XMLList::MakeInstance(XMLList& t)
     {
         return Pickable<Instances::fl::XMLList>(new(t.Alloc()) Instances::fl::XMLList(t));
     }
@@ -3196,7 +3196,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
     // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x142429df0
-    void XML::prototypeGet(SPtr<XMLList>& result)
+    __declspec(noinline) void XML::prototypeGet(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
             GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
@@ -4010,7 +4010,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             name.Assign(sm.GetBuiltin(AS3Builtin_empty_));
     }
 
-    // MS2-FUNCTIONAL: register allocation of the target fields differs
+    // register allocation of the target fields differs
     // @0x14241b350
     Pickable<XMLList> XMLList::MakeXMLListInstance()
     {
@@ -4208,9 +4208,9 @@ CheckResult FUN_1424172b0(const Instances::fl::XMLList* self, const char* method
 }
 
 // a Function sharing f's traits, scope and name, bound to stored_this
-// MS2-FUNCTIONAL: written from the exe
+// written from the exe
 // @0x14241a490
-Pickable<Instances::Function> FUN_14241a490(void* self, Instances::Function& f, const AS3::Value& stored_this)
+Pickable<Instances::Function> InstanceTraits::Function::FUN_14241a490(Instances::Function& f, const AS3::Value& stored_this)
 {
     InstanceTraits::Traits& t = f.GetInstanceTraits();
     const ScopeStackType& ss = *(const ScopeStackType*)((const char*)&f + 0x40);   // StoredScopeStack
@@ -4219,9 +4219,9 @@ Pickable<Instances::Function> FUN_14241a490(void* self, Instances::Function& f, 
 }
 
 // a Function of method method_ind of file
-// MS2-FUNCTIONAL: written from the exe
+// written from the exe
 // @0x14241a410
-Pickable<Instances::Function> FUN_14241a410(void* self, VMAbcFile& file, Scaleform::UInt32 method_ind,
+Pickable<Instances::Function> InstanceTraits::Function::FUN_14241a410(VMAbcFile& file, Scaleform::UInt32 method_ind,
                                              const AS3::Value& stored_this, const ScopeStackType& ss,
                                              Instances::fl::GlobalObjectScript& gos, const ASString& name)
 {
@@ -4232,7 +4232,7 @@ Pickable<Instances::Function> FUN_14241a410(void* self, VMAbcFile& file, Scalefo
 // InstanceTraits::fl::QName: a new QName (empty local name, public namespace)
 // MS2-FUNCTIONAL: the exe inlines the QName constructor
 // @0x14241ace0
-Pickable<Instances::fl::QName> FUN_14241ace0(void* self, InstanceTraits::Traits& t)
+Pickable<Instances::fl::QName> InstanceTraits::fl::QName::FUN_14241ace0(InstanceTraits::Traits& t)
 {
     return Pickable<Instances::fl::QName>(new(t.Alloc()) Instances::fl::QName(t));
 }
@@ -4240,7 +4240,7 @@ Pickable<Instances::fl::QName> FUN_14241ace0(void* self, InstanceTraits::Traits&
 // InstanceTraits::fl::XML: a new node of kind none with empty text
 // MS2-FUNCTIONAL: the exe inlines the XML constructor
 // @0x14241ae30
-Pickable<Instances::fl::XML> FUN_14241ae30(void* self, InstanceTraits::Traits& t)
+__declspec(noinline) Pickable<Instances::fl::XML> InstanceTraits::fl::XML::FUN_14241ae30(InstanceTraits::Traits& t)
 {
     return Pickable<Instances::fl::XML>(new(t.Alloc()) Instances::fl::XML(t));
 }
@@ -4248,39 +4248,39 @@ Pickable<Instances::fl::XML> FUN_14241ae30(void* self, InstanceTraits::Traits& t
 // InstanceTraits::fl::XML: a new node of kind none holding text
 // MS2-FUNCTIONAL: the exe inlines the XML constructor
 // @0x14241aec0
-Pickable<Instances::fl::XML> FUN_14241aec0(InstanceTraits::Traits* self, InstanceTraits::Traits& t, const ASString& text,
-                                           Instances::fl::XML* parent)
+Pickable<Instances::fl::XML> InstanceTraits::fl::XML::FUN_14241aec0(InstanceTraits::Traits& t, const ASString& text,
+                                                                    Instances::fl::XML* parent)
 {
+    InstanceTraits::Traits* self = this;
     return Pickable<Instances::fl::XML>(new(self->GetVM().GetMemoryHeap()) Instances::fl::XML(t, text, parent));
 }
 
-// Classes::fl::XML: a new empty node of the class' instance traits
-// MS2-FUNCTIONAL: written from the exe
+// Instances::fl::XML: a new empty node of this node's traits
+// written from the exe
 // @0x14241af60
-Pickable<Instances::fl::XML> FUN_14241af60(Class* self)
+Pickable<Instances::fl::XML> Instances::fl::XML::FUN_14241af60()
 {
-    InstanceTraits::Traits& itr = self->GetClassTraits().GetInstanceTraits();
-    return FUN_14241ae30(&itr, itr);
+    InstanceTraits::Traits& itr = GetInstanceTraits();
+    return static_cast<InstanceTraits::fl::XML&>(itr).FUN_14241ae30(itr);
 }
 
-// Classes::fl::XMLList: a new list targeting target_prop of target_obj
-// MS2-FUNCTIONAL: written from the exe
+// Instances::fl::XMLList: a new list of this list's traits targeting target_prop of target_obj
+// written from the exe
 // @0x14241b160
-Pickable<Instances::fl::XMLList> FUN_14241b160(Class* self, AS3::Object& target_obj, const ASString& target_prop,
-                                               Instances::Namespace& target_ns)
+Pickable<Instances::fl::XMLList> Instances::fl::XMLList::FUN_14241b160(AS3::Object& target_obj, const ASString& target_prop,
+                                                                       Instances::Namespace& target_ns)
 {
-    InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(self->GetClassTraits().GetInstanceTraits());
+    InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
     return itr.MakeInstance(itr, target_obj, target_prop, target_ns);
 }
 
 // a new empty XMLList of the VM's XMLList class
-// MS2-FUNCTIONAL: written from the exe on raw slots
+// written from the exe
 // @0x14241ca30
-Pickable<Instances::fl::XMLList> FUN_14241ca30(InstanceTraits::Traits* self)
+Pickable<Instances::fl::XMLList> Instances::fl::XML::FUN_14241ca30()
 {
-    void** vm_obj = *(void***)((char*)&self->GetVM() + 0x40);
-    char* ctr = ((char* (*)(void*))(*(void***)vm_obj)[0x90 / 8])(vm_obj);
-    InstanceTraits::fl::XMLList& itr = **(InstanceTraits::fl::XMLList**)(ctr + 0xc0);
+    InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
+        GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
     return itr.MakeInstance(itr);
 }
 
@@ -4489,8 +4489,9 @@ void FUN_1424187f0(Instances::fl::GlobalObjectScript* self)
 // class's static slots
 // MS2-FUNCTIONAL: written from the exe on raw offsets; the exe inlines FUN_142417000
 // @0x142418970
-CheckResult FUN_142418970(ClassTraits::Traits* self)
+CheckResult ClassTraits::Traits::FUN_142418970()
 {
+    ClassTraits::Traits* self = this;
     VMAbcFile* file = *(VMAbcFile**)((char*)self + 0xc8);
     const char* ci = *(const char**)((char*)self + 0xd0);
     VM& vm = self->GetVM();
@@ -4507,7 +4508,7 @@ CheckResult FUN_142418970(ClassTraits::Traits* self)
     {
         if (!*(void**)((char*)parent + 0xc0))
         {
-            FUN_142418970(parent);
+            parent->FUN_142418970();
             if (vm.IsException())
                 return false;
         }
@@ -4528,8 +4529,9 @@ CheckResult FUN_142418970(ClassTraits::Traits* self)
 // interface slots of an interface class
 // MS2-FUNCTIONAL: free function (not declared on the shared class)
 // @0x14241e6b0
-CheckResult FUN_14241e6b0(ClassTraits::UserDefined* self)
+CheckResult ClassTraits::UserDefined::FUN_14241e6b0()
 {
+    ClassTraits::UserDefined* self = this;
     VMAbcFile* file = &self->GetFile();
     const char* ci = (const char*)&self->GetClassInfo();
     if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
@@ -4580,8 +4582,9 @@ static UPInt FUN_CurrScopeBase(const VM* vm)
 // static initializer
 // MS2-FUNCTIONAL: written from the exe; the exe inlines the Classes::UserDefined constructor
 // @0x142419e50
-SPtr<Class> FUN_142419e50(ClassTraits::Traits* self)
+SPtr<Class> ClassTraits::Traits::FUN_142419e50()
 {
+    ClassTraits::Traits* self = this;
     void* mem = self->Alloc();
     Class* cls = NULL;
     if (mem)
@@ -4624,8 +4627,9 @@ Pickable<Instances::Function> FUN_14241a7d0(void* self, VMAbcFile& file, Scalefo
 // InstanceTraits::fl::GlobalObjectScript: a new global object of the script
 // MS2-FUNCTIONAL: the exe inlines the GlobalObjectScript constructor
 // @0x14241aa60
-Pickable<Instances::fl::GlobalObjectScript> FUN_14241aa60(InstanceTraits::fl::GlobalObjectScript* self)
+Pickable<Instances::fl::GlobalObjectScript> InstanceTraits::fl::GlobalObjectScript::FUN_14241aa60()
 {
+    InstanceTraits::fl::GlobalObjectScript* self = this;
     return Pickable<Instances::fl::GlobalObjectScript>(new(self->Alloc()) Instances::fl::GlobalObjectScript(*self));
 }
 
@@ -4861,11 +4865,12 @@ namespace Instances { namespace fl
 
 // XML::MakeXMLListInstance(target_obj, target_prop, target_ns): a new empty list whose target is target_prop of
 // target_obj (an XML method in the SDK; not declared on the shared XML class).
-// MS2-FUNCTIONAL: free function on the XML instance
+// an XML member (the exe passes the result slot in rdx)
 // @0x14241c810
-Pickable<Instances::fl::XMLList> FUN_14241c810(Instances::fl::XML* self, AS3::Object& target_obj,
-                                               const ASString& target_prop, Instances::Namespace& target_ns)
+Pickable<Instances::fl::XMLList> Instances::fl::XML::FUN_14241c810(AS3::Object& target_obj,
+                                                                    const ASString& target_prop, Instances::Namespace& target_ns)
 {
+    Instances::fl::XML* self = this;
     InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
         self->GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
     return itr.MakeInstance(itr, target_obj, target_prop, target_ns);
@@ -5421,8 +5426,9 @@ namespace Instances { namespace fl
 {
     // prototypeGet returning the list
     // @0x142429dd0
-    SPtr<XMLList> FUN_142429dd0(XML* self)
+    SPtr<XMLList> XML::FUN_142429dd0()
     {
+        XML* self = this;
         SPtr<XMLList> result;
         self->prototypeGet(result);
         return result;

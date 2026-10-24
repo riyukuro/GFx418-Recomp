@@ -666,6 +666,8 @@ namespace Instances { namespace fl_display {
     class MovieClip : public Instances::fl_display::Sprite
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x142440f80
+        SPtr<Instances::fl_display::Scene> FUN_142440f80();   // a Scene standing for the whole clip
         // Frame scripts set by addFrameScript: a bit array of the set frames followed by the descriptors, sorted by
         // frame.
         struct FrameScript

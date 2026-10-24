@@ -109,6 +109,10 @@ namespace InstanceTraits {
     class Function : public CTraits
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241a490
+        Pickable<Instances::Function> FUN_14241a490(Instances::Function& f, const Value& stored_this);
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241a410
+        Pickable<Instances::Function> FUN_14241a410(VMAbcFile& file, UInt32 method_ind, const Value& stored_this, const ScopeStackType& ss, Instances::fl::GlobalObjectScript& gos, const ASString& name);
         // (appended, sfr22) the traits of a closure of method mi of file; its body's own slots come first.
         // 0x1423ecfa0
         Function(VMAbcFile& file, const ClassInfo& ci, SInt32 mi, Instances::fl::GlobalObjectScript* gos);
@@ -315,6 +319,14 @@ namespace Instances { namespace fl {
     class XML : public Instances::fl::Object
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241c810
+        Pickable<Instances::fl::XMLList> FUN_14241c810(AS3::Object& target_obj, const ASString& target_prop, Instances::Namespace& target_ns);
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x142429dd0
+        SPtr<Instances::fl::XMLList> FUN_142429dd0();   // prototypeGet returning the list
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241af60
+        Pickable<Instances::fl::XML> FUN_14241af60();   // a new node of the same traits
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241ca30
+        Pickable<Instances::fl::XMLList> FUN_14241ca30();   // a new empty XMLList
         enum Kind { kNone, kElement, kText, kComment, kInstruction, kAttr };
 
         // Text is the empty string. 0x1423efc90

@@ -597,6 +597,8 @@ namespace Instances { namespace fl
     class XMLList : public Instance
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241b160
+        Pickable<Instances::fl::XMLList> FUN_14241b160(AS3::Object& target_obj, const ASString& target_prop, Instances::Namespace& target_ns);   // a list of the same traits
         explicit XMLList(InstanceTraits::Traits& t);
         // ??_G 0x1423f5070
         virtual ~XMLList();
@@ -990,6 +992,8 @@ namespace InstanceTraits { namespace fl
     class QName : public CTraits
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241ace0
+        Pickable<Instances::fl::QName> FUN_14241ace0(InstanceTraits::Traits& t);
         QName(VM& vm, const ClassInfo& ci);
         // @0x142414f90
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::QName"; }
@@ -1076,6 +1080,10 @@ namespace InstanceTraits { namespace fl
     class XML : public CTraits
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241ae30
+        Pickable<Instances::fl::XML> FUN_14241ae30(InstanceTraits::Traits& t);
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241aec0
+        Pickable<Instances::fl::XML> FUN_14241aec0(InstanceTraits::Traits& t, const ASString& text, Instances::fl::XML* parent);
         XML(VM& vm, const ClassInfo& ci);
         // @0x142415110
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::XML"; }

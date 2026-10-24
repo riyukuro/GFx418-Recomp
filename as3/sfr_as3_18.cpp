@@ -3950,7 +3950,6 @@ CheckResult Classes::UDBase::PreInit(const Value& _this) const
     return GetClassTraits().GetInstanceTraits().SetupSlotValues(*_this.GetObject());
 }
 
-Pickable<Instances::fl::XML> FUN_14241ae30(void* self, InstanceTraits::Traits& t);  // InstanceTraits::fl::XML::MakeInstance
 
 // XMLSupport's makers of an empty node and list (no member of the shared header, so a view).
 class Sfr34_XMLSupportView : public XMLSupport
@@ -3960,12 +3959,12 @@ public:
     Pickable<Instances::fl::XMLList> MakeXMLList() const;
 };
 
-// MS2-FUNCTIONAL member of a view over XMLSupport; the node maker is sfr_as3_04's free function (sret first)
+// member of a view over XMLSupport; the node maker is an InstanceTraits::fl::XML member
 // @0x142516900
 Pickable<Instances::fl::XML> Sfr34_XMLSupportView::MakeXML() const
 {
     InstanceTraits::Traits& itr = *GetITraitsXML();
-    return FUN_14241ae30(&itr, itr);
+    return static_cast<InstanceTraits::fl::XML&>(itr).FUN_14241ae30(itr);
 }
 
 // @0x142516930
@@ -4776,10 +4775,11 @@ bool FUN_142521390(VMAbcFile* file, bool to_execute);  // VMAbcFile::RegisterScr
 
 // VM::LoadFile: the ABC file in the VM, its classes' traits made and its scripts registered (run when
 // to_execute); NULL when either fails.
-// MS2-FUNCTIONAL free function, so its this and result registers are swapped (no caller in the exe; VM is a shared class)
+// a VM member: the exe passes the result slot in rdx (no caller in the exe)
 // @0x142515b90
-SPtr<VMAbcFile> FUN_142515b90(VM& vm, const Ptr<Abc::File>& file, bool to_execute)
+SPtr<VMAbcFile> VM::FUN_142515b90(const Ptr<Abc::File>& file, bool to_execute)
 {
+    VM& vm = *this;
     SPtr<VMAbcFile> abc = Pickable<VMAbcFile>(SF_HEAP_NEW(vm.GetMemoryHeap()) VMAbcFile(vm, file));
     if (!FUN_142521780(abc.GetPtr()) || !FUN_142521390(abc.GetPtr(), to_execute))
         return SPtr<VMAbcFile>();
@@ -6068,7 +6068,6 @@ void VM::OutputError(const Value& e)
     }
 }
 
-Pickable<Instances::fl::GlobalObjectScript> FUN_14241aa60(InstanceTraits::fl::GlobalObjectScript* self);  // a new global object
 void FUN_1424187f0(Instances::fl::GlobalObjectScript* self);   // GlobalObjectScript: its classes' instance traits
 
 // VMAbcFile::RegisterScrips: the traits and global object of each script of the file; the global objects are listed
@@ -6089,7 +6088,7 @@ bool VMAbcFile::RegisterScrips(bool to_execute)
             SF_HEAP_NEW(vm.GetMemoryHeap()) InstanceTraits::fl::GlobalObjectScript(*this, vm, script));
         if (vm.IsException())
             return false;
-        SPtr<Instances::fl::GlobalObjectScript> gos = FUN_14241aa60(itr.GetPtr());
+        SPtr<Instances::fl::GlobalObjectScript> gos = itr->FUN_14241aa60();
         if (vm.IsException())
             return false;
         reinterpret_cast<ArrayLH<Instances::fl::GlobalObject*>&>(vm.GlobalObjects).PushBack(gos.GetPtr());
@@ -6102,7 +6101,6 @@ bool VMAbcFile::RegisterScrips(bool to_execute)
 }
 
 void FUN_142530de0(VMAbcFile* file);   // VMAbcFile: the loaded classes' traits unregistered (a failed load)
-CheckResult FUN_142418970(ClassTraits::Traits* self);   // ClassTraits::UserDefined::Initialize
 
 // VMAbcFile::RegisterUserDefinedClassTraits: the class traits of the file's classes (except the scaleform.gfx
 // package's): ones known to the VM (cached, or from the global object, then cached) only add their file to the
@@ -6163,7 +6161,7 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
             strncmp(uri.ToCStr(), DAT_143a2dd40.ToCStr(), DAT_143a2dd40.GetSize()) == 0)
             continue;
         ClassTraits::Traits* ctr = FUN_14250f9a0(vm, *this, ci);
-        if (&static_cast<ClassTraits::UserDefined*>(ctr)->GetFile() != this || FUN_142418970(ctr))
+        if (&static_cast<ClassTraits::UserDefined*>(ctr)->GetFile() != this || ctr->FUN_142418970())
             continue;
         if (vm.HandleException)
         {

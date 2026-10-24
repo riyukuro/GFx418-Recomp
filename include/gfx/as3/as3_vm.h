@@ -74,6 +74,8 @@ namespace InstanceTraits { namespace fl { class GlobalObject; class Namespace; }
 class VM : public NewOverrideBase<StatMV_VM_VM_Mem>
 {
 public:
+    // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x142515b90
+    SPtr<VMAbcFile> FUN_142515b90(const Ptr<Abc::File>& file, bool to_execute);   // LoadFile
     VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCountCollector& gc);
     virtual ~VM();                      // slot 0
     virtual void* Unk01() { return 0; } // slot 1 (returns 0)

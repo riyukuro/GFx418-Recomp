@@ -936,11 +936,11 @@ namespace Instances { namespace fl_utils
         return false;
     }
 
-    // MS2-FUNCTIONAL: block order / register allocation of the EOF check differs
+    // block order / register allocation of the EOF check differs
     // @0x1424bec50
     CheckResult ByteArray::Read(void* dest, UInt32 n)
     {
-        if (Data.GetSize() < (UPInt)(Position + n))
+        if ((UPInt)(Position + n) > Data.GetSize())
         {
             ThrowEOFError();
             return false;

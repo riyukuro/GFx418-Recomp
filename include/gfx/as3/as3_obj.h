@@ -679,6 +679,10 @@ namespace ClassTraits
     class Traits : public AS3::Traits
     {
     public:
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x142418970
+        CheckResult FUN_142418970();   // UserDefined::Initialize
+        // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x142419e50
+        SPtr<Class> FUN_142419e50();   // UserDefined::MakeClass
         Traits(VM& vm, const ClassInfo& ci);
         // (appended, sfr19) 0x1424dacd0
         Traits(VM& vm, const ClassTraits::Traits* pt);
