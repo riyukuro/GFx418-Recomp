@@ -6174,6 +6174,95 @@ void Sfr31ClassTraitsCleanup(UPInt self)
     FUN_1424ef450(self + 0x98);
     Sfr31ResizeBlk24B(reinterpret_cast<UPInt*>(self + 0xd0), 0);
 }
+// ---- batch 54
+static inline UPInt Sfr31SubObj(UPInt o) { return o + *reinterpret_cast<const UInt8*>(o + 0x6d) * 4; }
+static inline UPInt Sfr31VCall0(UPInt self, UPInt off)
+{
+    typedef UPInt (*Fn)(UPInt);
+    return reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(self, 0), off))(self);
+}
+
+// Moves the button's state objects: every other state's object is detached from the button, then the object of the requested state is
+// attached to its render container (once) and the container is appended to the button's own.
+// MS2-FUNCTIONAL 0x14252e9d0: raw-offset model; codegen differs from the exe
+// @0x14252e9d0
+void Sfr31ButtonSwitchStateIntl(UPInt self, int state)
+{
+    const UPInt btn = Sfr31Rd(self, 0x18);
+    const UInt16 f = *reinterpret_cast<const UInt16*>(btn + 0x6a);
+    if ((f & 0x10) != 0 || (f & 0x1000) != 0 || *reinterpret_cast<const SInt32*>(btn + 0x2c) < -1)
+        return;
+    UPInt c = Sfr31VCall0(btn, 0x1f8);
+    if (FUN_14250dbc0(c) != 0)
+    {
+        c = Sfr31VCall0(btn, 0x1f8);
+        FUN_14261cf50(c, 0, 1);
+    }
+    typedef UPInt (*Fn2)(UPInt, UPInt);
+    for (int s = 0; s < 3; ++s)
+    {
+        if (Sfr31Rd(btn, static_cast<UPInt>(s) * 0x20 + 0xf0) == 0)
+            continue;
+        const UPInt first = Sfr31Rd(Sfr31Rd(btn, static_cast<UPInt>(s) * 0x20 + 0xe8), 0);
+        const UPInt io = (*reinterpret_cast<const UInt8*>(first + 0x6b) & 1) != 0 ? first : 0;
+        const UPInt br = (*reinterpret_cast<const UInt16*>(io + 0x6a) >> 9 & 1) != 0 ? io : 0;
+        const UPInt owner = Sfr31Rd(io, 0x38);
+        if (s != state && owner != 0)
+        {
+            const UPInt sub = Sfr31SubObj(owner);
+            reinterpret_cast<Fn2>(Sfr31Rd(Sfr31Rd(sub, 0), 0xa8))(sub, io);
+            Sfr31Wr(io, 0x38, 0);
+            if (br != 0)
+            {
+                const UPInt l = Sfr31VCall0(Sfr31SubObj(br), 8);
+                FUN_142517ed0(reinterpret_cast<void*>(l != 0 ? l - 0x30 : 0));
+            }
+        }
+    }
+    if (Sfr31Rd(btn, static_cast<UPInt>(state) * 0x20 + 0xf0) == 0)
+        return;
+    const UPInt first = Sfr31Rd(Sfr31Rd(btn, static_cast<UPInt>(state) * 0x20 + 0xe8), 0);
+    const UPInt io = (*reinterpret_cast<const UInt8*>(first + 0x6b) & 1) != 0 ? first : 0;
+    const UPInt br = (*reinterpret_cast<const UInt16*>(io + 0x6a) >> 9 & 1) != 0 ? io : 0;
+    const UPInt cont = Sfr31Rd(btn, (static_cast<UPInt>(state) + 7) * 0x20);
+    if (cont != 0)
+        ++*reinterpret_cast<UPInt*>(cont + 8);
+    UPInt owner = Sfr31Rd(io, 0x38);
+    bool detach = owner != 0;
+    if (owner == btn && Sfr31Rd(FUN_1425f26c0(io), 0x20) == cont)
+        detach = false;
+    if (detach)
+    {
+        owner = Sfr31Rd(io, 0x38);
+        const UPInt sub = owner != 0 ? Sfr31SubObj(owner) : 0;
+        reinterpret_cast<Fn2>(Sfr31Rd(Sfr31Rd(sub, 0), 0xa8))(sub, io);
+    }
+    if (Sfr31Rd(FUN_1425f26c0(io), 0x20) == 0)
+        FUN_14261c690(cont, FUN_14250dbc0(cont), FUN_1425f26c0(io));
+    if (Sfr31Rd(io, 0x38) == 0)
+    {
+        Sfr31Wr(io, 0x38, btn);
+        if (br != 0)
+        {
+            const UPInt l = Sfr31VCall0(Sfr31SubObj(br), 8);
+            FUN_142517ed0(reinterpret_cast<void*>(l != 0 ? l - 0x30 : 0));
+            typedef void (*Fn3)(UPInt, UPInt);
+            for (UPInt i = 0; i < Sfr31Rd(br, 0xe0); ++i)
+            {
+                const UPInt child = Sfr31Rd(Sfr31Rd(br, 0xd8) + i * 0x10, 0);
+                if ((*reinterpret_cast<const UInt16*>(child + 0x6a) >> 10 & 1) != 0)
+                {
+                    reinterpret_cast<Fn3>(Sfr31Rd(Sfr31Rd(child, 0), 0x340))(child, 0);
+                    Sfr31VCall0(child, 0x360);
+                }
+            }
+        }
+    }
+    const UPInt own = Sfr31VCall0(btn, 0x1f8);
+    FUN_14261c690(own, FUN_14250dbc0(own), cont);
+    if (cont != 0 && --*reinterpret_cast<UPInt*>(cont + 8) == 0)
+        FUN_142581700(cont);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
