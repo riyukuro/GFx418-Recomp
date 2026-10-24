@@ -827,18 +827,19 @@ GlobalSlotIndex Vector_String::GetNextDynPropIndex(GlobalSlotIndex ind) const
 }
 
 // @0x1425607e0
-// MS2-FUNCTIONAL: element read inlined differently
 CheckResult Vector_String::GetProperty(const Multiname& prop_name, Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::GetProperty(prop_name, value);
-    if (ind < V.V.GetSize())
+    if (GetVectorInd(prop_name, ind))
     {
-        V.GetValue(ind, value);
-        return true;
+        if (ind < V.VectorBase<Ptr<ASStringNode> >::GetSize())
+        {
+            V.VectorBase<Ptr<ASStringNode> >::GetValue(ind, value);
+            return true;
+        }
+        return false;
     }
-    return false;
+    return Instances::fl::Object::GetProperty(prop_name, value);
 }
 
 // @0x1425587a0
@@ -909,18 +910,19 @@ GlobalSlotIndex Vector_double::GetNextDynPropIndex(GlobalSlotIndex ind) const
 }
 
 // @0x142560870
-// MS2-FUNCTIONAL: element read inlined differently
 CheckResult Vector_double::GetProperty(const Multiname& prop_name, Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::GetProperty(prop_name, value);
-    if (ind < V.V.GetSize())
+    if (GetVectorInd(prop_name, ind))
     {
-        V.GetValue(ind, value);
-        return true;
+        if (ind < V.VectorBase<Value::Number>::GetSize())
+        {
+            V.VectorBase<Value::Number>::GetValue(ind, value);
+            return true;
+        }
+        return false;
     }
-    return false;
+    return Instances::fl::Object::GetProperty(prop_name, value);
 }
 
 // @0x1425584f0
@@ -1000,18 +1002,19 @@ GlobalSlotIndex Vector_int::GetNextDynPropIndex(GlobalSlotIndex ind) const
 }
 
 // @0x142560930
-// MS2-FUNCTIONAL: element read inlined differently
 CheckResult Vector_int::GetProperty(const Multiname& prop_name, Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::GetProperty(prop_name, value);
-    if (ind < V.V.GetSize())
+    if (GetVectorInd(prop_name, ind))
     {
-        V.GetValue(ind, value);
-        return true;
+        if (ind < V.VectorBase<SInt32>::GetSize())
+        {
+            V.VectorBase<SInt32>::GetValue(ind, value);
+            return true;
+        }
+        return false;
     }
-    return false;
+    return Instances::fl::Object::GetProperty(prop_name, value);
 }
 
 // @0x142558590
@@ -1091,18 +1094,19 @@ GlobalSlotIndex Vector_object::GetNextDynPropIndex(GlobalSlotIndex ind) const
 }
 
 // @0x1425609f0
-// MS2-FUNCTIONAL: element read inlined differently
 CheckResult Vector_object::GetProperty(const Multiname& prop_name, Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::GetProperty(prop_name, value);
-    if (ind < V.V.GetSize())
+    if (GetVectorInd(prop_name, ind))
     {
-        V.GetValue(ind, value);
-        return true;
+        if (ind < V.VectorBase<Value>::GetSize())
+        {
+            V.VectorBase<Value>::GetValue(ind, value);
+            return true;
+        }
+        return false;
     }
-    return false;
+    return Instances::fl::Object::GetProperty(prop_name, value);
 }
 
 // @0x142558630
@@ -1180,18 +1184,19 @@ GlobalSlotIndex Vector_uint::GetNextDynPropIndex(GlobalSlotIndex ind) const
 }
 
 // @0x142560a80
-// MS2-FUNCTIONAL: element read inlined differently
 CheckResult Vector_uint::GetProperty(const Multiname& prop_name, Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::GetProperty(prop_name, value);
-    if (ind < V.V.GetSize())
+    if (GetVectorInd(prop_name, ind))
     {
-        V.GetValue(ind, value);
-        return true;
+        if (ind < V.VectorBase<UInt32>::GetSize())
+        {
+            V.VectorBase<UInt32>::GetValue(ind, value);
+            return true;
+        }
+        return false;
     }
-    return false;
+    return Instances::fl::Object::GetProperty(prop_name, value);
 }
 
 // @0x142558700
@@ -1446,12 +1451,9 @@ void Vector_uint::AS3unshift(Value& result, unsigned argc, const Value* argv)
 CheckResult Vector_String::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::DeleteProperty(prop_name);
-    if (ind >= V.V.GetSize())
-        return false;
-    V.V.RemoveAt(ind);
-    return true;
+    if (GetVectorInd(prop_name, ind))
+        return V.RemoveAt(ind);
+    return Instances::fl::Object::DeleteProperty(prop_name);
 }
 
 // @0x14255b890
@@ -1459,12 +1461,9 @@ CheckResult Vector_String::DeleteProperty(const Multiname& prop_name)
 CheckResult Vector_double::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::DeleteProperty(prop_name);
-    if (ind >= V.V.GetSize())
-        return false;
-    V.V.RemoveAt(ind);
-    return true;
+    if (GetVectorInd(prop_name, ind))
+        return V.RemoveAt(ind);
+    return Instances::fl::Object::DeleteProperty(prop_name);
 }
 
 // @0x14255b970
@@ -1472,24 +1471,18 @@ CheckResult Vector_double::DeleteProperty(const Multiname& prop_name)
 CheckResult Vector_int::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::DeleteProperty(prop_name);
-    if (ind >= V.V.GetSize())
-        return false;
-    V.V.RemoveAt(ind);
-    return true;
+    if (GetVectorInd(prop_name, ind))
+        return V.RemoveAt(ind);
+    return Instances::fl::Object::DeleteProperty(prop_name);
 }
 
 // @0x14255ba50
 CheckResult Vector_object::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::DeleteProperty(prop_name);
-    if (ind >= V.V.GetSize())
-        return false;
-    V.V.RemoveAt(ind);
-    return true;
+    if (GetVectorInd(prop_name, ind))
+        return V.RemoveAt(ind);
+    return Instances::fl::Object::DeleteProperty(prop_name);
 }
 
 // @0x14255baf0
@@ -1497,12 +1490,9 @@ CheckResult Vector_object::DeleteProperty(const Multiname& prop_name)
 CheckResult Vector_uint::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::DeleteProperty(prop_name);
-    if (ind >= V.V.GetSize())
-        return false;
-    V.V.RemoveAt(ind);
-    return true;
+    if (GetVectorInd(prop_name, ind))
+        return V.RemoveAt(ind);
+    return Instances::fl::Object::DeleteProperty(prop_name);
 }
 
 // ---- SetProperty
@@ -1511,36 +1501,44 @@ CheckResult Vector_uint::DeleteProperty(const Multiname& prop_name)
 CheckResult Vector_String::SetProperty(const Multiname& prop_name, const Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::SetProperty(prop_name, value);
-    return V.Set(ind, value, GetVM().GetClassTraitsString());
+    if (GetVectorInd(prop_name, ind))
+    {
+        return V.Set(ind, value, GetVM().GetClassTraitsString());
+    }
+    return Instances::fl::Object::SetProperty(prop_name, value);
 }
 
 // @0x142563bb0
 CheckResult Vector_double::SetProperty(const Multiname& prop_name, const Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::SetProperty(prop_name, value);
-    return V.Set(ind, value, GetVM().GetClassTraitsNumber());
+    if (GetVectorInd(prop_name, ind))
+    {
+        return V.Set(ind, value, GetVM().GetClassTraitsNumber());
+    }
+    return Instances::fl::Object::SetProperty(prop_name, value);
 }
 
 // @0x142563c40
 CheckResult Vector_int::SetProperty(const Multiname& prop_name, const Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::SetProperty(prop_name, value);
-    return V.Set(ind, value, GetVM().GetClassTraitsSInt());
+    if (GetVectorInd(prop_name, ind))
+    {
+        return V.Set(ind, value, GetVM().GetClassTraitsSInt());
+    }
+    return Instances::fl::Object::SetProperty(prop_name, value);
 }
 
 // @0x142563db0
 CheckResult Vector_uint::SetProperty(const Multiname& prop_name, const Value& value)
 {
     UInt32 ind;
-    if (!GetVectorInd(prop_name, ind))
-        return Instances::fl::Object::SetProperty(prop_name, value);
-    return V.Set(ind, value, GetVM().GetClassTraitsUInt());
+    if (GetVectorInd(prop_name, ind))
+    {
+        return V.Set(ind, value, GetVM().GetClassTraitsUInt());
+    }
+    return Instances::fl::Object::SetProperty(prop_name, value);
 }
 
 }} // namespace Instances::fl_vec
