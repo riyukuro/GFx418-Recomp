@@ -434,12 +434,7 @@ extern "C" void* _DAT_143d4ee00;
 extern "C" void* _DAT_143d67f80;
 extern "C" void* _DAT_143d74970;
 extern "C" void* _DAT_143d749b0;
-extern "C" cri_u1 LAB_1400662e0;
-extern "C" cri_u1 LAB_1400662f0;
-extern "C" cri_u1 LAB_140066300;
-extern "C" cri_u1 LAB_140066310;
-extern "C" cri_u1 LAB_140066e00;
-extern "C" cri_u1 LAB_14006aa60;
+void FUN_14006aa60(short *src, short *dst);
 
 void FUN_140035090(cri_any = cri_any(), ...);
 void FUN_1400351c0(cri_any = cri_any(), ...);
@@ -1299,14 +1294,14 @@ void FUN_140066e10(cri_any cri_p0, ...)
   longlong arg1 = cri_p0;
   int i_v1;
   
-  FUN_140095440(&LAB_140066e00,0);
+  FUN_140095440((cri_u1 *)&FUN_140066e00,0);
   FUN_140066320();
   FUN_140066180(arg1 + 0x11a0);
   i_v1 = FUN_140062830();
   if (i_v1 != 0) {
     FUN_14006aa90();
     DAT_143d4ee18 = (cri_code *)FUN_14006aaa0;
-    DAT_143d4ee08 = &LAB_14006aa60;
+    DAT_143d4ee08 = (cri_u1 *)&FUN_14006aa60;
   }
   return;
 }
@@ -1328,8 +1323,8 @@ void FUN_140066e90(cri_any cri_p0, cri_any cri_p1, ...)
   int arg2 = cri_p1;
   if (*(int *)((char *)arg1 + 0x1568) == 0) {
     if (arg2 == 1) {
-      *(cri_u1 **)((char *)arg1 + 0x1738) = &LAB_1400662e0;
-      *(cri_u1 **)((char *)arg1 + 0x1740) = &LAB_1400662f0;
+      *(cri_u1 **)((char *)arg1 + 0x1738) = (cri_u1 *)&FUN_1400662e0;
+      *(cri_u1 **)((char *)arg1 + 0x1740) = (cri_u1 *)&FUN_1400662f0;
       *(longlong *)((char *)arg1 + 0x12e0) = DAT_143d4ee10 + 0x11a0;
       return;
     }
@@ -1343,8 +1338,8 @@ void FUN_140066e90(cri_any cri_p0, cri_any cri_p1, ...)
       return;
     }
     if (arg2 == 1) {
-      *(cri_u1 **)((char *)arg1 + 0x1738) = &LAB_140066300;
-      *(cri_u1 **)((char *)arg1 + 0x1740) = &LAB_140066310;
+      *(cri_u1 **)((char *)arg1 + 0x1738) = (cri_u1 *)&FUN_140066300;
+      *(cri_u1 **)((char *)arg1 + 0x1740) = (cri_u1 *)&FUN_140066310;
       *(longlong *)((char *)arg1 + 0x12e0) = DAT_143d4ee10 + 0x11a0;
       return;
     }

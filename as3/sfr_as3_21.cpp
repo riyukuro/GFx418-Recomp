@@ -3398,3 +3398,11 @@ template void ArrayBase<ArrayDataDH<Pair<GFx::ASString, UInt32>, AllocatorDH<Pai
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UItem@MetadataInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH@UItem@MetadataInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@6@UArrayDefaultPolicy@6@@Scaleform@@QEAAXPEBX_K@Z 0x142568260
 // MS2-PIN: ?Reserve@?$ArrayDataBase@VValueDetail@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH@VValueDetail@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAXPEBX_K@Z 0x142568300
 // MS2-PIN: ?Resize@?$ArrayData@PEAVClassInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVClassInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAX_K@Z 0x1425683a0
+// The Vector_* instance classes carry no exe RTTI of their own: their vftables at the symbol rows' VAs.
+// MS2-PIN: ??_7Vector_int@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143181e58
+// MS2-PIN: ??_7Vector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182170
+// MS2-PIN: ??_7Vector_double@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182488
+// MS2-PIN: ??_7Vector_String@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182788
+// MS2-PIN: ??_7Vector_object@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182a88
+// Unreferenced COMDAT table with no exe copy of its own: the one VA the other Scaleform units pin it at.
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48

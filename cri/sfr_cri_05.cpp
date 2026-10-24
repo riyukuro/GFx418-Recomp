@@ -140,9 +140,6 @@ extern "C" int DAT_143ffbd10;
 extern "C" int DAT_143ffbd18;
 extern "C" int _DAT_143bad6a0;
 extern "C" int _DAT_143badb00;
-extern "C" cri_u8 LAB_14004e5a0;
-extern "C" cri_u8 LAB_14004eee0;
-extern "C" cri_u8 LAB_140050f80;
 extern "C" int DAT_143c492a0;
 extern "C" cri_u8 LAB_142ccc850;
 
@@ -1302,7 +1299,7 @@ cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2)
   (&DAT_143ffbce8)[(longlong)i_v4 * 0x10] = 1;
   *(cri_u32 *)(&DAT_143ffbd08 + l_v2) = a2;
   *(cri_u64 **)(&DAT_143ffbd18 + l_v2) = pu_v3;
-  *(cri_u8 **)(&DAT_143ffbd10 + l_v2) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143ffbd10 + l_v2))>::t)&LAB_14004e5a0;
+  *(cri_u8 **)(&DAT_143ffbd10 + l_v2) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143ffbd10 + l_v2))>::t)&FUN_14004e5a0;
   FUN_14004e770(pu_v3);
   return pu_v3;
 }
@@ -1965,7 +1962,7 @@ cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3)
   (&DAT_143fe84e8)[(longlong)i_v4 * 0x1a] = 1;
   *(cri_u32 *)(&DAT_143fe8510 + l_v1) = a2;
   *(cri_u32 *)(&DAT_143fe8514 + l_v1) = a3;
-  *(cri_u8 **)(&DAT_143fe8528 + l_v1) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143fe8528 + l_v1))>::t)&LAB_14004eee0;
+  *(cri_u8 **)(&DAT_143fe8528 + l_v1) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143fe8528 + l_v1))>::t)&FUN_14004eee0;
   *(cri_u64 **)(&DAT_143fe8530 + l_v1) = pu_v2;
   *(cri_u64 *)(&DAT_143fe8538 + l_v1) = 0;
   *(cri_u64 *)(&DAT_143fe8540 + l_v1) = 0;
@@ -1993,7 +1990,7 @@ cri_u64 * FUN_14004f9a0(void *a1,uint a2)
   CriAt<cri_u32>(pu_v1, 0x8) = 1;
   pu_v1[2] = (cri_nr<decltype(pu_v1[2])>::t)&DAT_1431ba4f8;
   pu_v1[10] = (cri_u64)pu_v1;
-  pu_v1[9] = (cri_nr<decltype(pu_v1[9])>::t)&LAB_14004eee0;
+  pu_v1[9] = (cri_nr<decltype(pu_v1[9])>::t)&FUN_14004eee0;
   pu_v1[0xb] = 0;
   pu_v1[0xc] = 0;
   FUN_14004f150(pu_v1);
@@ -3034,7 +3031,7 @@ void FUN_140050f90(cri_u64 *a1,ulonglong a2)
   l_v1 = (longlong)i_v2;
   if (0 < i_v2) {
     for (; l_v1 != 0; l_v1 = l_v1 + -1) {
-      *a1 = (cri_nr<decltype(*a1)>::t)&LAB_140050f80;
+      *a1 = (cri_nr<decltype(*a1)>::t)&FUN_140050f80;
       a1 = a1 + 1;
     }
   }

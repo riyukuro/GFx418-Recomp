@@ -33,7 +33,6 @@ extern "C" cri_u1* PTR_LAB_1431bab50[];
 extern "C" cri_u1* PTR_LAB_1431bab60[];
 extern "C" cri_u1* PTR_s_This_CFT_function_doesn_t_suppor_143a4a0c0;
 extern "C" float* DAT_143d4ab80;
-extern "C" int DAT_1400541f0;
 void FUN_1400662f0(char *ctx);
 extern "C" int DAT_1431ba950;
 extern "C" int DAT_1431ba990;
@@ -752,7 +751,7 @@ bool FUN_140054210(cri_any cri_p0, ...)
 bool FUN_140054230(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
-  return *(cri_u1 **)((char *)arg1 + 0x1bc8) == CRI_ADDR(DAT_1400541f0);
+  return *(cri_u1 **)((char *)arg1 + 0x1bc8) == CRI_ADDR(FUN_1400541f0);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -770,7 +769,7 @@ void FUN_140054250(cri_any cri_p0, ...)
   if (*(int *)((char *)arg1 + 0x1a7c) == 1) {
     i_v1 = FUN_140062860();
     if (i_v1 != 0) {
-      *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(DAT_1400541f0);
+      *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(FUN_1400541f0);
     }
   }
   else if (*(int *)((char *)arg1 + 0x1a7c) == 2) {
@@ -782,7 +781,7 @@ void FUN_140054250(cri_any cri_p0, ...)
   else {
     i_v1 = FUN_140062860();
     if (i_v1 != 0) {
-      *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(DAT_1400541f0);
+      *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(FUN_1400541f0);
     }
     i_v1 = FUN_140062830();
     if ((i_v1 != 0) && (*(longlong *)((char *)arg1 + 0x1bc8) == 0)) {
@@ -790,7 +789,7 @@ void FUN_140054250(cri_any cri_p0, ...)
     }
   }
   if (*(longlong *)((char *)arg1 + 0x1bc8) == 0) {
-    *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(DAT_1400541f0);
+    *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(FUN_1400541f0);
   }
   return;
 }
@@ -819,7 +818,7 @@ void FUN_140054320(cri_any cri_p0, ...)
     *(longlong *)((char *)arg1 + 0x19a0) = arg1 + 0x1580;
     *(longlong *)((char *)arg1 + 0x19a8) = arg1 + 0x1600;
   }
-  if (pc_v1 == (cri_code *)&DAT_1400541f0) {
+  if (pc_v1 == (cri_code *)&FUN_1400541f0) {
     FUN_140065900(arg1 + 0x19b0);
     *(longlong *)((char *)arg1 + 0x19e8) = arg1 + 0xd80;
     *(longlong *)((char *)arg1 + 0x1980) = arg1 + 0x780;
