@@ -2112,6 +2112,9 @@ public:
     virtual ~AvmLoader();   // sfr_as3_16
 
     virtual CharacterDef* GetCharacterDef() const;   // 0x142507b40, returns NULL
+    // The AvmDisplayObj class-name queries: "flash.display.Loader".
+    virtual const char* GetDefaultASClassName() const;          // 0x142508940
+    virtual String&     GetASClassName(String* className) const; // 0x142505fa0
 };
 
 // @0x1424d6500
@@ -2130,9 +2133,25 @@ public:
     unsigned                 MouseCursorEventCnt;     // +0x128
 
     Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
+
+    // The container overrides (bodies in other units; same declarations as as3_stage.h).
+    virtual void        ForceShutdown();                                    // 54 0x142504860
+    virtual InteractiveObject* GetTopParent(bool ignoreLockRoot = false) const; // 62 0x14250f870
+protected:
+    virtual ASString    CreateNewInstanceName() const;                      // 76 0x1424f3980
+public:
+    virtual bool        IsFocusEnabled(FocusMovedType = GFx_FocusMovedByKeyboard) const; // 83 0x142514310
+    virtual void        PropagateMouseEvent(const EventId& id);             // 93 0x14251f570
+    virtual unsigned    GetCurrentFrame() const;                            // 101 0x1425084e0
+    virtual bool        GetLabeledFrame(const char* plabel, unsigned* frameNumber, bool translateNumbers = true); // 102 0x14250b370
+    virtual const String* GetFrameLabel(unsigned frame, unsigned* exactFrame = NULL); // 103 0x142509dd0
+    virtual void        GotoFrame(unsigned targetFrameNumber);              // 104 0x142510d20
+    virtual unsigned    GetLoadingFrame() const;                            // 105 0x14250b3b0
+    virtual void        ExecuteFrame0Events();                              // 106 0x1424fe620
+    virtual void        OnInsertionAsLevel(int level);                      // 119 0x14251a110
+    virtual void        ExecuteFrameTags(unsigned frame);                   // 121 0x1424feaf0
 };
 
-// The stage's overrides of the container's virtuals are not declared here; its vftables are pinned.
 // @0x1424d9b50
 Stage::Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
     : DisplayObjContainer(pbindingDefImpl, pasRoot, pparent, id),
@@ -4086,3 +4105,35 @@ Text::Allocator* FUN_1424d61c0(Text::Allocator* self, MemoryHeap* pheap, UInt8 f
 // MS2-PIN: ??_7Anonimous@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b538
 // MS2-PIN: ??_7Void@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b5c0
 // MS2-PIN: ??_7ASVM@AS3@GFx@Scaleform@@6B@ 0x14317d8b0
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
+// MS2-PIN: ??_7Root@?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14317b010
+// MS2-PIN: ??_7ASRefCountCollector@AS3@GFx@Scaleform@@6B@ 0x14317b048
+// MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
+// MS2-PIN: ??_7Instance@AS3@GFx@Scaleform@@6B@ 0x14313f4d8
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
+// MS2-PIN: ??_7?$RefCountBaseNTS@VAllocator@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
+// MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
+// MS2-PIN: ??_7IntervalTimer@AS3@GFx@Scaleform@@6B@ 0x14317f258
+// MS2-PIN: ??_7?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14317b040
+// MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317e330
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B@ 0x14317e3e8
+// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317d220
+// MS2-PIN: ??_7?$RefCountBase@V?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
+// MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
+// MS2-PIN: ??_7LoadQueueEntry@AS3@GFx@Scaleform@@6B@ 0x14317c9e0
+// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmDisplayObjContainerBase@GFx@Scaleform@@6B@ 0x14317c0a0
+// MS2-PIN: ??_7AvmSpriteBase@GFx@Scaleform@@6B@ 0x14317c898
+// MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cb30
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317cbe8
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cce0
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6B@ 0x14317cd98
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ce80
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cf78
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14317d030
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14317d0f0

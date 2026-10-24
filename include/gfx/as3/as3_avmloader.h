@@ -2,8 +2,8 @@
 // definition of its own. 0x158 bytes: DisplayObjContainer (0x110) then the AvmDisplayObjContainer part at +0x110.
 // The ctor 0x1424d6500 builds it; the deleting destructor 0x1424e28e0 frees 0x158 bytes. Over DisplayObjContainer's
 // vftable 0x14318e318 its primary vftable 0x14317de60 (121 slots) overrides only 0 and 59; the AvmDisplayObj
-// (0x14317e238), AvmInteractiveObjBase (0x14317e330) and AvmDisplayObjContainerBase (0x14317e3e8) vftables only
-// redirect the deleting destructor.
+// vftable (0x14317e238) also takes the two class-name queries, the AvmInteractiveObjBase (0x14317e330) and
+// AvmDisplayObjContainerBase (0x14317e3e8) vftables only redirect the deleting destructor.
 // Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder.
 //
 // Units that define a local class AvmLoader of their own (sfr_as3_15) must not include this header.
@@ -23,6 +23,9 @@ public:
     virtual ~AvmLoader();
 
     virtual CharacterDef* GetCharacterDef() const { return NULL; }                  // 59 0x142507b40
+    // (appended, sfr35) the AvmDisplayObj class-name queries: "flash.display.Loader".
+    virtual const char* GetDefaultASClassName() const;                              // 0x142508940
+    virtual String&     GetASClassName(String* className) const;                    // 0x142505fa0
 };
 static_assert(sizeof(AvmLoader) == 0x158, "AvmLoader size");
 

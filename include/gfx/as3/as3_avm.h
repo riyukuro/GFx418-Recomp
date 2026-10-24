@@ -143,6 +143,11 @@ public:
     virtual ~AvmInteractiveObj() {}                                     // 0x1424ddc20, ??_G 0x1424e2860
 
     virtual AvmInteractiveObjBase* ToAvmInteractiveObjBase() { return this; }
+    // Each class keeps its own (unfolded) NULL queries: 0x14252f430, 0x14252f280, 0x14252f4b0, 0x14252f2f0.
+    virtual AvmSpriteBase*              ToAvmSpriteBase()           { return NULL; }
+    virtual AvmButtonBase*              ToAvmButttonBase()          { return NULL; }
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase()        { return NULL; }
+    virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase()    { return NULL; }
 
     virtual const char* GetAbsolutePath(String* ppath) const;           // 0x1423dcc50
     virtual bool        HasEventHandler(const EventId& id) const;
@@ -201,6 +206,10 @@ public:
         : AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(pdispObj)) {}
 
     virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase()   { return static_cast<AvmInteractiveObj*>(this); }
+    // Own NULL queries again: 0x14252f410, 0x14252f260, 0x14252f490.
+    virtual AvmSpriteBase*              ToAvmSpriteBase()           { return NULL; }
+    virtual AvmButtonBase*              ToAvmButttonBase()          { return NULL; }
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase()        { return NULL; }
     virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase()    { return this; }
 
     virtual const char* GetAbsolutePath(String* ppath) const;           // 0x142506ea0

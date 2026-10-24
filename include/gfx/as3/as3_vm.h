@@ -395,7 +395,7 @@ public:
     XMLSupportImpl(VM& vm);     // 0x1424dc160
     virtual ~XMLSupportImpl();                                                                          // 0x1424e4190
     virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // 0x142504520
-    // E4X-enabled VM override of the base no-op.
+    // The E4X-enabled VM overrides the base no-op at 0x1424e6980.
     virtual bool Add(Value& result, Object& l, Object& r) const;                                        // 0x1424e6990
     // (appended, sfr33)
     virtual CheckResult EqualsXML(bool& result, Instances::fl::XML& l, Instances::fl::XML& r) const;    // 0x1424f9970
@@ -403,8 +403,10 @@ public:
     virtual CheckResult EqualsXML(bool& stop, bool& result, Instances::fl::XML& l, const Value& r) const;  // 0x1424f9850
     virtual void DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, const Value& value) const;      // 0x1424f4a90
     virtual CheckResult GetDescendants(Value& v, const Multiname& mn) const;                            // 0x142509140
-    // (sfr24) the traits getters (vftable slots 14-19; found by work/sfr24/tmp/vtaudit.py). EqualsQName (slot 9,
-    // 0x1424f97e0) and ToXMLString (slot 11, 0x14252fef0) are overridden too but not recovered yet.
+    // (appended, sfr35) slots 9 and 11; the ToXMLString body is Sfr31ValueToEscapedString (sfr_as3_19).
+    virtual CheckResult EqualsQName(bool& result, Instances::fl::QName& l, Instances::fl::QName& r) const; // 0x1424f97e0
+    virtual CheckResult ToXMLString(VM& vm, Value& v) const;                                            // 0x14252fef0
+    // (sfr24) the traits getters (vftable slots 14-19; found by work/sfr24/tmp/vtaudit.py).
     // @0x1425080b0
     virtual const ClassTraits::Traits* GetClassTraitsQName() const { return TraitsQName; }
     // @0x14250a660
