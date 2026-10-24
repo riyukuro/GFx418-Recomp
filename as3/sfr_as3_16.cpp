@@ -138,6 +138,29 @@ void FUN_1424de240(long long* state)
         FUN_14257dcb0();
 }
 
+// MS2-FUNCTIONAL 0x1424de460: applies the same root range reset to the nested MovieRoot and releases the owning reference.
+// @0x1424de460
+void FUN_1424de460(long long* owner)
+{
+    auto* root = reinterpret_cast<unsigned char*>(*reinterpret_cast<unsigned long long*>(*owner + 0x20));
+    if (root[0xb1] == 0)
+    {
+        const auto previous = *reinterpret_cast<unsigned*>(root + 0x18);
+        long long cleanup[2] = {};
+        FUN_1423de770(root, cleanup);
+        *reinterpret_cast<unsigned*>(root + 0x88) = 0;
+        const auto limit = *reinterpret_cast<unsigned*>(root + 0x90);
+        *reinterpret_cast<unsigned*>(root + 0x94) = previous;
+        *reinterpret_cast<unsigned*>(root + 0x90) = previous < limit ? limit : previous;
+        if ((root[0x78] & 0x10) != 0)
+            root[0xb0] = 1;
+        if (cleanup[0] != 0)
+            FUN_14257dcb0();
+    }
+    if (*owner != 0)
+        FUN_14257dcb0();
+}
+
 // MS2-FUNCTIONAL 0x1424e0940: copies scalar state, retains the interned name and namespace, and assigns the embedded AS3 Value.
 // @0x1424e0940
 unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
