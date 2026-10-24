@@ -22,6 +22,28 @@ String Font::GetCharRanges() const
     return String("");
 }
 
+// The base font has no hinted, texture or temporary glyphs and no character values (out of line in the exe).
+// @0x142648410
+int Font::GetCharValue(unsigned) const { return -1; }
+// @0x142648c30
+bool Font::GetGlyphRaster(unsigned, unsigned, GlyphRaster*) { return false; }
+// @0x1426490c0
+bool Font::GetTemporaryGlyphShape(unsigned, unsigned, GlyphShape*) { return false; }
+// @0x1426490d0
+const TextureGlyph* Font::GetTextureGlyph(unsigned) const { return 0; }
+// @0x1426490e0
+void* Font::GetTextureGlyphData() const { return 0; }
+// @0x1426490f0
+float Font::GetTextureGlyphHeight() const { return 0.0f; }
+// @0x142649100
+bool Font::HasVectorOrRasterGlyphs() const { return true; }
+// @0x1426491b0
+bool Font::IsHintedRasterGlyph(unsigned, unsigned) const { return false; }
+// @0x142649260
+bool Font::IsHintedVectorGlyph(unsigned, unsigned) const { return false; }
+// @0x1426499a0
+void Font::SetTextureGlyphData(void*) {}
+
 //------------------------------------------------------------------------
 // ExternalFontWinAPI
 
