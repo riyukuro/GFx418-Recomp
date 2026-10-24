@@ -361,6 +361,9 @@ public:
     virtual ~Code() {}
 
     StringView code;                            // +0x08 u30 length, then the byte code
+
+    // (appended, sfr24) the AVM2 opcodes (the byte values in the code); the enumerators are not modeled.
+    enum OpCode : int;
 };
 
 // 0x58 bytes.

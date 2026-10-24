@@ -193,6 +193,16 @@ private:
     State();
     void MarkChanged(UInt32 ind) { RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] | (1u << (ind & 7))); }
 
+    // (appended, sfr24) private in the exe (A-mangled). The traits of a traced value.
+    const Traits* GetValueTraits(const Value& v) const;                                       // 0x14250fe80
+    // (appended, sfr24) the last emitted opcode becomes op when the operand (stack top / top two / register reg_num)
+    // already has type's traits; else the value left (stack top / register) is converted to type.
+    void RefineOpCodeStack1(InstanceTraits::Traits& type, Abc::Code::OpCode op);              // 0x142520e60
+    void RefineOpCodeStack2(InstanceTraits::Traits& type, Abc::Code::OpCode op);              // 0x142520f30
+    void RefineOpCodeReg1(InstanceTraits::Traits& type, Abc::Code::OpCode op, int reg_num);   // 0x142520d80
+    // (appended, sfr24) traces one opcode at bcp (the tracer's opcode switch).
+    void exec_opcode(const Abc::Code::OpCode opcode, Abc::TCodeOffset& bcp);                  // 0x14253d520
+
     // (sfr24) one bit per register, from the method body's local_reg_count (Tracer heap, StatMV_VM_Tracer_Mem)
     struct RegisterBits
     {
