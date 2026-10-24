@@ -42,6 +42,21 @@
 // VM: runs the queued code (unrecovered).
 extern "C" void FUN_1424fa5b0(void* vm, unsigned count);
 
+namespace Scaleform { namespace GFx {
+// The wide copy keeps its string node; the characters are decoded once. Inline like in sfr_as2_04, which is what
+// emits the vftable and the deleting destructor here too.
+inline MovieImpl::WideStringStorage::WideStringStorage(ASStringNode* pnode) : pNode(pnode)
+{
+    pNode->AddRef();
+    UTF8Util::DecodeString(pData, pNode->pData, pNode->Size);
+}
+
+inline MovieImpl::WideStringStorage::~WideStringStorage()
+{
+    pNode->Release();
+}
+}} // namespace Scaleform::GFx
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // MS2-FUNCTIONAL: same calls and stores; the exe lays out the frame and the parent lookup differently.
@@ -182,6 +197,185 @@ void Unk_As3_16zDestroyInterfaces(AS3ValueObjectInterface* pvoi, GFx::Value::Obj
     pudf->UserDefinedFunction::~UserDefinedFunction();
 }
 
+// GFx::Value as the exe lays it out (the members are private to the value).
+struct Unk_As3_16zGFxValueRaw
+{
+    GFx::Value::ObjectInterface* pObjectInterface;   // +0x00
+    UInt32                       Type;               // +0x08
+    void*                        pData;              // +0x10
+    UPInt                        DataAux;            // +0x18 closures: the thunk or the vtable index
+};
+
+// v as a host value. A requested type (convert bit) wins; otherwise the kind decides: plain values keep their type,
+// objects, classes and functions become objects (display objects and arrays get their own type), closures stay
+// closures, a null reference is null and everything else is converted to a string. Strings, objects and closures
+// are managed through the movie's object interface; a failed conversion is reported and leaves NaN.
+// MS2-FUNCTIONAL: the exe builds the wide string storage inline and keeps the closure kind in a register flag
+// @0x1424e42c0
+void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
+{
+    Unk_As3_16zGFxValueRaw* dest = reinterpret_cast<Unk_As3_16zGFxValueRaw*>(pdestVal);
+    unsigned toType;
+    bool vtableIndClosure = false;
+    if (dest->Type & GFx::Value::VTC_ConvertBit)
+        toType = dest->Type & 0xf;
+    else
+    {
+        switch (v.GetKind())
+        {
+        case Value::kUndefined: toType = GFx::Value::VT_Undefined; break;
+        case Value::kBoolean:   toType = GFx::Value::VT_Boolean; break;
+        case Value::kInt:       toType = GFx::Value::VT_Int; break;
+        case Value::kUInt:      toType = GFx::Value::VT_UInt; break;
+        case Value::kNumber:    toType = GFx::Value::VT_Number; break;
+        case Value::kObject:
+        case Value::kClass:
+        case Value::kFunction:
+        case Value::kThunkFunction:
+            toType = v.GetObject() ? GFx::Value::VT_Object : GFx::Value::VT_Null;
+            break;
+        case Value::kThunkClosure:
+            toType = v.GetClosure() ? GFx::Value::VT_Closure : GFx::Value::VT_Null;
+            break;
+        case Value::kVTableIndClosure:
+            vtableIndClosure = true;
+            toType = v.GetClosure() ? GFx::Value::VT_Closure : GFx::Value::VT_Null;
+            break;
+        default:
+            toType = GFx::Value::VT_String;
+            break;
+        }
+        if (v.IsNull())
+            toType = GFx::Value::VT_Null;
+    }
+
+    if ((dest->Type >> 6) & 1)   // VTC_ManagedBit: drop the old reference
+    {
+        dest->pObjectInterface->ObjectRelease(pdestVal, dest->pData);
+        dest->pObjectInterface = NULL;
+    }
+
+    GFx::Value::ObjectInterface* iface = static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface);
+    switch (toType)
+    {
+    case GFx::Value::VT_Undefined:
+    case GFx::Value::VT_Null:
+        dest->Type = toType;
+        break;
+    case GFx::Value::VT_Boolean:
+        dest->Type = toType;
+        *reinterpret_cast<bool*>(&dest->pData) = v.AsBool();
+        break;
+    case GFx::Value::VT_Int:
+        dest->Type = toType;
+        if (!v.Convert2Int32(*reinterpret_cast<SInt32*>(&dest->pData)))
+        {
+            pAVM->OutputAndIgnoreException();
+            *reinterpret_cast<Double*>(&dest->pData) = NumberUtil::NaN();
+        }
+        break;
+    case GFx::Value::VT_UInt:
+        dest->Type = toType;
+        if (!v.Convert2UInt32(*reinterpret_cast<UInt32*>(&dest->pData)))
+        {
+            pAVM->OutputAndIgnoreException();
+            *reinterpret_cast<Double*>(&dest->pData) = NumberUtil::NaN();
+        }
+        break;
+    case GFx::Value::VT_Number:
+        dest->Type = toType;
+        if (!v.Convert2NumberInline(*reinterpret_cast<Double*>(&dest->pData)))
+        {
+            pAVM->OutputAndIgnoreException();
+            *reinterpret_cast<Double*>(&dest->pData) = NumberUtil::NaN();
+        }
+        break;
+    case GFx::Value::VT_String:
+        {
+            ASString str(pAVM->GetStringManager().GetBuiltin(AS3Builtin_empty_));
+            if (!v.Convert2String(str))
+                pAVM->OutputAndIgnoreException();
+            // The node's text pointer is its first field, so the node is the managed string.
+            dest->pData            = str.GetNode();
+            dest->Type             = GFx::Value::VT_String | GFx::Value::VTC_ManagedBit;
+            dest->pObjectInterface = iface;
+            iface->ObjectAddRef(pdestVal, dest->pData);
+        }
+        break;
+    case GFx::Value::VT_StringW:
+        {
+            ASString str(pAVM->GetStringManager().GetBuiltin(AS3Builtin_empty_));
+            if (!v.Convert2String(str))
+                pAVM->OutputAndIgnoreException();
+            ASStringNode* pnode = str.GetNode();
+            const unsigned len = str.GetLength() + 1;
+            void* pmem = pMovieImpl->GetMovieHeap()->Alloc(
+                sizeof(MovieImpl::WideStringStorage) - 1 + sizeof(wchar_t) * len);
+            dest->Type = GFx::Value::VT_StringW | GFx::Value::VTC_ManagedBit;
+            Ptr<MovieImpl::WideStringStorage> pwstr = *::new (pmem) MovieImpl::WideStringStorage(pnode);
+            dest->pData            = pwstr->pData;
+            dest->pObjectInterface = iface;
+            iface->ObjectAddRef(pdestVal, dest->pData);
+        }
+        break;
+    case GFx::Value::VT_Object:
+        {
+            Object* obj = v.GetObject();
+            const Traits& tr = obj->GetTraits();
+            const BuiltinTraitsType tt = tr.GetTraitsType();
+            UInt32 type = GFx::Value::VT_Object;
+            if (UInt32(tt - Traits_DisplayObject_Begin) < UInt32(Traits_DisplayObject_End - Traits_DisplayObject_Begin) &&
+                tr.IsInstanceTraits())
+                type = GFx::Value::VT_DisplayObject;
+            else if (tt == Traits_Array && tr.IsInstanceTraits())
+                type = GFx::Value::VT_Array;
+            dest->pData            = obj;
+            dest->Type             = type | GFx::Value::VTC_ManagedBit;
+            dest->pObjectInterface = iface;
+            iface->ObjectAddRef(pdestVal, dest->pData);
+        }
+        break;
+    case GFx::Value::VT_Closure:
+        {
+            // Bit 1 of the object pointer tells a vtable index closure from a thunk closure.
+            dest->Type    = GFx::Value::VT_Closure | GFx::Value::VTC_ManagedBit;
+            dest->pData   = reinterpret_cast<void*>(reinterpret_cast<UPInt>(v.GetClosure()) | (vtableIndClosure ? 2 : 0));
+            dest->DataAux = vtableIndClosure ? UPInt(SPInt(v.GetVTableInd())) : reinterpret_cast<UPInt>(&v.AsThunk());
+            dest->pObjectInterface = iface;
+            iface->ObjectAddRef(pdestVal, dest->pData);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+// The loaded-movie-def hash (+0x6e8): the value an identity-hashed key maps to, and the add of a new node.
+void* FUN_1425059f0(const void* self, const UPInt& key);
+void FUN_1424d4220(void* self, void* pheapAddr, const void* nodeRef, UPInt hashValue);
+
+// A use of pdefImpl: an entry already listed counts one more use; otherwise one is added (holding the definition)
+// with a single use.
+// MS2-FUNCTIONAL: the hash lookup and add are called through their exe addresses
+// @0x1424e8e20
+void MovieRoot::AddLoadedMovieDef(MovieDefImpl* pdefImpl)
+{
+    struct Info { Ptr<MovieDefImpl> pMovieDef; unsigned UseCnt; };
+    struct NodeRef { MovieDefImpl* const* pFirst; const Info* pSecond; };
+    UPInt key = reinterpret_cast<UPInt>(pdefImpl);
+    Info* pinfo = static_cast<Info*>(FUN_1425059f0(&LoadedMovieDefs, key));
+    if (pinfo)
+    {
+        ++pinfo->UseCnt;
+        return;
+    }
+    Info info;
+    info.pMovieDef = pdefImpl;
+    info.UseCnt = 1;
+    NodeRef ref = { &pdefImpl, &info };
+    FUN_1424d4220(&LoadedMovieDefs, &LoadedMovieDefs, &ref, reinterpret_cast<UPInt>(pdefImpl));
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx {
@@ -213,3 +407,4 @@ Unk_As3_16zSpriteBaseProbe::Unk_As3_16zSpriteBaseProbe() {}
 // MS2-PIN: ??_GFlashUI@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2db0
 // MS2-FUNCTIONAL 0x1424e3de0: the exe inlines ~FunctionBase into the deleting destructor, ours calls it.
 // MS2-PIN: ??_GUserDefinedFunction@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3de0
+// MS2-PIN: ??_GWideStringStorage@MovieImpl@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e40a0
