@@ -54,6 +54,8 @@
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_taskmanager.h"
+#include "ms2/scaleform/include/kernel/sf_std.h"
+#include "ms2/scaleform/include/render/text_core.h"
 #undef GetObject   // windows.h
 
 extern "C" void* DAT_143b15f60;
@@ -1421,6 +1423,14 @@ using SfrCx18AbcNamespaceSet = HashSetBase<SfrCx18AbcNamespaceNode, SfrCx18AbcNa
 using SfrCx18ClassTraitsHash = GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>;
 using SfrCx18ClassTraitsNode = HashNode<SfrCx18ClassTraitsHash::Key, GFx::AS3::ClassTraits::Traits*,
     SfrCx18ClassTraitsHash::Key::HashFunctor>;
+using SfrCx18ParagraphFormat = Render::Text::ParagraphFormatPtr;
+using SfrCx18ParagraphFormatSet = HashSetBase<SfrCx18ParagraphFormat, SfrCx18ParagraphFormat::HashFunctor,
+    SfrCx18ParagraphFormat::HashFunctor, AllocatorLH<SfrCx18ParagraphFormat, 78>,
+    HashsetCachedEntry<SfrCx18ParagraphFormat, SfrCx18ParagraphFormat::HashFunctor> >;
+using SfrCx18TextFormat = Render::Text::TextFormatPtr;
+using SfrCx18TextFormatSet = HashSetBase<SfrCx18TextFormat, SfrCx18TextFormat::HashFunctor,
+    SfrCx18TextFormat::HashFunctor, AllocatorLH<SfrCx18TextFormat, 78>,
+    HashsetCachedEntry<SfrCx18TextFormat, SfrCx18TextFormat::HashFunctor> >;
 using SfrCx18ClassTraitsCopyAssignment = SfrCx18ClassTraitsNode& (SfrCx18ClassTraitsNode::*)(
     const SfrCx18ClassTraitsNode&);
 static SfrCx18ClassTraitsCopyAssignment SfrCx18ForceClassTraitsCopyAssignment =
@@ -1436,6 +1446,12 @@ template SfrCx18DynAttrsSet::~HashSetBase();
 template SfrCx18AbcNamespaceSet::~HashSetBase();
 // @0x1424e0480
 template void SfrCx18ClassTraitsNode::operator=(const SfrCx18ClassTraitsNode::NodeRef&);
+// MS2-FUNCTIONAL: releases the same cached format references and backing table; the template expansion has different unwind code.
+// @0x1424dd300
+template SfrCx18ParagraphFormatSet::~HashSetBase();
+// MS2-FUNCTIONAL: releases the same cached format references and backing table; the template expansion has different unwind code.
+// @0x1424dd3b0
+template SfrCx18TextFormatSet::~HashSetBase();
 }
 
 extern "C" void FUN_1423dfa20();
