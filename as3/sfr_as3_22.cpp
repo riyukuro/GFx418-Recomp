@@ -770,6 +770,57 @@ extern "C" void FUN_142676660(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
+// MS2-FUNCTIONAL: applies the executable's four-channel affine color matrix and clamps each result to a byte.
+// @0x142675d30
+extern "C" void FUN_142675d30(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* source = static_cast<ImageData*>(inputs[0]);
+    ImagePlane dst, src;
+    destination->GetPlane(0, &dst);
+    source->GetPlane(0, &src);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
+    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
+    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
+    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
+    float mul[4], add[4];
+    for (unsigned i = 0; i < 4; ++i) mul[i] = *reinterpret_cast<const float*>(op + 0x40 + i * 4);
+    for (unsigned i = 0; i < 4; ++i) add[i] = *reinterpret_cast<const float*>(op + 0x50 + i * 4);
+    const auto* srcAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
+    const auto* dstAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
+    const bool useSrcAlpha = srcAlphaConfig && *reinterpret_cast<const bool*>(srcAlphaConfig + 0x48);
+    const bool useDstAlpha = dstAlphaConfig && *reinterpret_cast<const bool*>(dstAlphaConfig + 0x48);
+    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
+        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
+        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
+        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
+            unsigned pixel = 0;
+            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - left));
+            auto* c = reinterpret_cast<unsigned char*>(&pixel);
+            if (!useSrcAlpha) c[3] = 0xff;
+            const float alphaFactor = useDstAlpha ? 1.0f : add[3] + c[3] * mul[3] / 255.0f;
+            unsigned result = 0;
+            auto* out = reinterpret_cast<unsigned char*>(&result);
+            for (unsigned channel = 0; channel < 3; ++channel) {
+                const unsigned sourceChannel = 2 - channel;
+                float value = (c[sourceChannel] * mul[channel] / 255.0f + add[channel]) * 255.0f;
+                if (!useDstAlpha) value *= alphaFactor;
+                if (value < 0.0f) value = 0.0f;
+                if (value > 255.0f) value = 255.0f;
+                out[sourceChannel] = static_cast<unsigned char>(value);
+            }
+            float alpha = (c[3] * mul[3] / 255.0f + add[3]) * 255.0f;
+            if (alpha < 0.0f) alpha = 0.0f;
+            if (alpha > 255.0f) alpha = 255.0f;
+            out[3] = useDstAlpha ? static_cast<unsigned char>(alpha) : 0xff;
+            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
+        }
+    }
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
 // @0x142745840
