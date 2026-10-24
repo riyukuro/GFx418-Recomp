@@ -45,6 +45,8 @@ void* FUN_14243d870(void* self, void* p);   // SPtr<Instances::fl::Object>::oper
 void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level);   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
 void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
+void FUN_142524870(void* arr, Scaleform::UPInt n);   // ArrayDH_POD<UPInt>::Resize, out of line
+void FUN_1425247f0(void* arr, Scaleform::UPInt n);   // ArrayLH_POD<UPInt>::Resize (the word code), out of line
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1171,12 +1173,13 @@ bool Sfr27TracerIsPrimitiveType(UPInt tracer, UPInt traits)
 }
 
 // @0x14250fe80
-UPInt Sfr27StateGetValueTraits(void* state, const Value* v)
+__declspec(noinline) UPInt Sfr27StateGetValueTraits(void* state, const Value* v)
 {
     return TraceValueTraits(*reinterpret_cast<const UPInt*>(state), v);
 }
 
 // With classes resolved to their instance traits (asInstance), the traits' parent.
+// MS2-FUNCTIONAL 0x14250ff00: clang shrink-wraps the frame (only the call path saves registers); the exe saves rbx / rdi up front
 // @0x14250ff00
 UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance)
 {
@@ -1210,7 +1213,7 @@ void Sfr27StatePopOp(void* state, UPInt n)
 
 // The top operand returned (by value: hidden result pointer after this), then popped.
 // @0x14251cd30
-Value* Sfr27StatePopOpValue(void* state, Value* result)
+__declspec(noinline) Value* Sfr27StatePopOpValue(void* state, Value* result)
 {
     ArrayDH<Value>& ops = *reinterpret_cast<ArrayDH<Value>*>(reinterpret_cast<UPInt>(state) + 0x38);
     new (result) Value(ops[ops.GetSize() - 1]);
@@ -1296,6 +1299,194 @@ Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm)
         return pthis->IsObject() ? pthis->GetObject() : NULL;
     }
     return NULL;
+}
+
+// ---- Tracer word-code writers and block bookkeeping (free functions under the names sfr_as3_17 / sfr_as3_19 call;
+// the Tracer of as3_tracer.h keeps these members private: raw offsets) ----
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
+namespace {
+typedef ArrayDH_POD<UPInt, StatMV_VM>             TrPosArray;   // OrigOpcodePos +0x70 / NewOpcodePos +0x90
+typedef ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem> TrWordCode;   // *WCode +0x28
+inline TrPosArray& TrPos(UPInt tracer, UPInt off) { return *reinterpret_cast<TrPosArray*>(tracer + off); }
+inline TrWordCode& TrWCode(UPInt tracer) { return *reinterpret_cast<TrWordCode*>(TrRd(tracer, 0x28)); }
+// A new opcode starts at the word code's end.
+SF_FORCEINLINE void TrPushNewOpCode(UPInt tracer, int op)
+{
+    TrPos(tracer, 0x90).PushBack(TrWCode(tracer).GetSize());
+    TrWCode(tracer).PushBack(static_cast<UPInt>(static_cast<SPInt>(op)));
+}
+}
+}}}} // namespace Scaleform::GFx::AS3::TR
+
+// Tracer::PushNewOpCode: op at the word code's end, its position noted in NewOpcodePos.
+// @0x14251f930
+void FUN_14251f930(void* tr, int op)
+{
+    Scaleform::GFx::AS3::TR::TrPushNewOpCode(reinterpret_cast<Scaleform::UPInt>(tr), op);
+}
+
+// The same with one argument word.
+// @0x14251fb90
+void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg)
+{
+    using namespace Scaleform::GFx::AS3::TR;
+    TrPushNewOpCode(reinterpret_cast<Scaleform::UPInt>(tr), op);
+    TrWCode(reinterpret_cast<Scaleform::UPInt>(tr)).PushBack(arg);
+}
+
+// The same with two argument words.
+// @0x14251fa10
+void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2)
+{
+    using namespace Scaleform::GFx::AS3::TR;
+    TrPushNewOpCode(reinterpret_cast<Scaleform::UPInt>(tr), op);
+    TrWCode(reinterpret_cast<Scaleform::UPInt>(tr)).PushBack(arg1);
+    TrWCode(reinterpret_cast<Scaleform::UPInt>(tr)).PushBack(arg2);
+}
+
+// Tracer::PushNewOpCodeArg: one argument word at the word code's end.
+// @0x14251fcd0
+__declspec(noinline) void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt arg)
+{
+    Scaleform::GFx::AS3::TR::TrWCode(tracer).PushBack(arg);
+}
+
+// Tracer::PopNewOpCode: the last new opcode and its arguments dropped from the word code.
+// @0x14251cc80
+void FUN_14251cc80(Scaleform::UPInt tracer)
+{
+    using namespace Scaleform::GFx::AS3::TR;
+    TrPosArray& pos = TrPos(tracer, 0x90);
+    const Scaleform::UPInt top = pos.Back();
+    FUN_142524870(&pos, pos.GetSize() - 1);
+    FUN_1425247f0(&TrWCode(tracer), top);
+}
+
+// Tracer::StoreOrigOpCodePos: a byte code position inside the code becomes the current one, is noted in
+// OrigOpcodePos and maps to the word code's end.
+// @0x1425212f0
+void FUN_1425212f0(Scaleform::UPInt tracer, Scaleform::UPInt pos)
+{
+    using namespace Scaleform::GFx::AS3::TR;
+    if (pos >= TrRd(tracer, 0x58))
+        return;
+    *reinterpret_cast<Scaleform::UPInt*>(tracer + 0x38) = pos;
+    TrPos(tracer, 0x70).PushBack(pos);
+    TrPos(tracer, 0xd0)[pos] = TrWCode(tracer).GetSize();
+}
+
+// Tracer::GetGlobalObject: the traced value of the global object, the saved scope's first value or else the method's
+// 'this' (the state's first register). By value (out).
+// MS2-FUNCTIONAL 0x14250a490: the copied Value's reference count bump stays out of line in our Value model; the exe inlines it.
+// @0x14250a490
+Scaleform::GFx::AS3::Value* FUN_14250a490(Scaleform::UPInt tracer, Scaleform::GFx::AS3::Value* out, Scaleform::UPInt state)
+{
+    using namespace Scaleform::GFx::AS3;
+    const CallFrame& cf = *reinterpret_cast<const CallFrame*>(TR::TrRd(tracer, 0x20));
+    if (cf.pSavedScope && cf.pSavedScope->GetSize() != 0)
+        new (out) Value((*cf.pSavedScope)[0]);
+    else
+        new (out) Value(*reinterpret_cast<const Value*>(TR::TrRd(state, 0x18)));
+    return out;
+}
+
+// Writer forwards of an opcode and its argument words (the object at +8 gets op through slot 1, each argument
+// through slot 2). No direct callers.
+struct Sfr34OpWriter
+{
+    virtual void Slot0() = 0;
+    virtual void PutOp(void* owner, int op) = 0;
+    virtual void PutArg(void* owner, Scaleform::UPInt arg) = 0;
+};
+// @0x14251f870
+void FUN_14251f870(void* self, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2)
+{
+    Sfr34OpWriter* w = *reinterpret_cast<Sfr34OpWriter**>(static_cast<Scaleform::UByte*>(self) + 8);
+    w->PutOp(self, op);
+    w->PutArg(self, arg1);
+    w->PutArg(self, arg2);
+}
+// @0x14251f8e0
+void FUN_14251f8e0(void* self, int op, Scaleform::UPInt arg)
+{
+    Sfr34OpWriter* w = *reinterpret_cast<Sfr34OpWriter**>(static_cast<Scaleform::UByte*>(self) + 8);
+    w->PutOp(self, op);
+    w->PutArg(self, arg);
+}
+
+// ---- TR::State opcode refinement (free functions under the names sfr_as3_19 calls; as3_readargs.h declares them as
+// private State members) ----
+void FUN_1424f1e50(Scaleform::UPInt state, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertOpTo
+void FUN_1424f1ed0(Scaleform::UPInt state, Scaleform::SPInt ind, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertRegisterTo
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
+namespace {
+// Values of int, uint, Number and Boolean are never null (Tracer::IsNotNullableType, inlined).
+SF_FORCEINLINE int TrNullTypeOf(UPInt vm, UPInt traits)
+{
+    if (traits == TrBuiltin(vm, 0x220) || traits == TrBuiltin(vm, 0x228) || traits == TrBuiltin(vm, 0x218) ||
+        traits == TrBuiltin(vm, 0x210))
+        return Value::NotNull;
+    return Value::NullOrNot;
+}
+// Tracer::ReplaceOpCode: the last word written becomes op.
+SF_FORCEINLINE void TrReplaceOpCode(UPInt tracer, int op)
+{
+    TrWordCode& wcode = TrWCode(tracer);
+    wcode[wcode.GetSize() - 1] = static_cast<UInt32>(op);
+}
+inline const Value& TrOpTop(UPInt state)
+{
+    const ArrayDH<Value>& ops = *reinterpret_cast<const ArrayDH<Value>*>(state + 0x38);
+    return ops[ops.GetSize() - 1];
+}
+}
+}}}} // namespace Scaleform::GFx::AS3::TR
+
+// TR::State::RefineOpCodeReg1: the opcode just written becomes op when register idx already has type's traits; else
+// the register is converted to type. The register's index follows as the argument word.
+// @0x142520d80
+void FUN_142520d80(Scaleform::UPInt state, Scaleform::UPInt traits, int op, unsigned int idx)
+{
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    const Scaleform::UPInt tracer = TrRd(state, 0);
+    const Value* regs = reinterpret_cast<const Value*>(TrRd(state, 0x18));
+    if (Sfr27StateGetValueTraits(reinterpret_cast<void*>(state), &regs[idx]) == traits)
+        TrReplaceOpCode(tracer, op);
+    else
+        FUN_1424f1ed0(state, static_cast<int>(idx), traits, TrNullTypeOf(TrVM(tracer), traits));
+    FUN_14251fcd0(TrRd(state, 0), idx);
+}
+
+// TR::State::RefineOpCodeStack1: the same for the operand stack top.
+// @0x142520e60
+void FUN_142520e60(Scaleform::UPInt state, Scaleform::UPInt traits, int op)
+{
+    using namespace Scaleform::GFx::AS3::TR;
+    const Scaleform::UPInt tracer = TrRd(state, 0);
+    if (Sfr27StateGetValueTraits(reinterpret_cast<void*>(state), &TrOpTop(state)) == traits)
+        TrReplaceOpCode(tracer, op);
+    else
+        FUN_1424f1e50(state, traits, TrNullTypeOf(TrVM(tracer), traits));
+}
+
+// TR::State::RefineOpCodeStack2: the same for the top two operands (the top one is popped; the one left is converted).
+// MS2-FUNCTIONAL 0x142520f30: the exe keeps the popped Value's flags word in a register across the calls for its release (push rdi frame); clang reloads it
+// @0x142520f30
+__declspec(safebuffers) void FUN_142520f30(Scaleform::UPInt state, Scaleform::UPInt traits, int op)
+{
+    using namespace Scaleform::GFx::AS3;
+    using namespace Scaleform::GFx::AS3::TR;
+    struct { Scaleform::UPInt w0, w1, w2, w3; } buf;   // raw storage: PopOpValue constructs the Value in it
+    Value& popped = *reinterpret_cast<Value*>(&buf);
+    Sfr27StatePopOpValue(reinterpret_cast<void*>(state), &popped);
+    if (Sfr27StateGetValueTraits(reinterpret_cast<void*>(state), &TrOpTop(state)) == traits &&
+        TraceValueTraits(TrRd(state, 0), &popped) == traits)
+        TrReplaceOpCode(TrRd(state, 0), op);
+    else
+        FUN_1424f1e50(state, traits, TrNullTypeOf(TrVM(TrRd(state, 0)), traits));
+    popped.~Value();
 }
 
 // ---- Small accessors (leaf functions of the display and VM glue; their classes are not named yet) ----
@@ -4372,6 +4563,9 @@ namespace Scaleform {
 // @0x14251f660
 template void ArrayBase<ArrayData<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PushBack(
     const GFx::AS3::Value&);
+// The Tracer's OrigOpcodePos.PushBack (SkipOrigOpCode calls it out of line).
+// @0x14251f710
+template void ArrayBase<ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy> >::PushBack(const UPInt&);
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
