@@ -15,6 +15,7 @@
 // MS2-RANGE: 0x1424ad030-0x1424ad0b0 .text$mn
 // MS2-RANGE: 0x1424ad0b0-0x1424ad4d0 .text$mn
 // MS2-RANGE: 0x1424c9270-0x1424c9630 .text$mn
+// MS2-RANGE: 0x1424c91f0-0x1424c9270 .text$mn
 // MS2-RANGE: 0x1424c9630-0x1424c96a0 .text$mn
 // MS2-RANGE: 0x1423dbde0-0x1423dbe60 .text$mn
 // MS2-RANGE: 0x1423dbea0-0x1423dc0b0 .text$mn
@@ -3895,6 +3896,7 @@ ASString VM::AsString(const Value& v)
 }}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ?LogScriptWarning@?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x1424c91f0
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
