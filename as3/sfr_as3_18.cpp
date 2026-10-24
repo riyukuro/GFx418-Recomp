@@ -1765,7 +1765,7 @@ __declspec(safebuffers) Scaleform::GFx::AS3::CheckResult* FUN_142517740(Scalefor
 Scaleform::UPInt* FUN_1424d9f30(Scaleform::UPInt* self, Scaleform::UPInt heap, Scaleform::UPInt body, Scaleform::UPInt ops,
                                 Scaleform::UPInt extra);   // Tracer::Tracer (sfr_as3_15)
 void FUN_1424f7840(void* tracer);   // Tracer::EmitCode (sfr_as3_17)
-void FUN_1424df070(void* tracer);   // Tracer::~Tracer
+extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // MS2-FUNCTIONAL 0x14250c860: the exe splits the shrink-wrapped slow path into a chained unwind fragment

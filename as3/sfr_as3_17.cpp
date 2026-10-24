@@ -3111,7 +3111,7 @@ void FUN_1424f7840(void* tracer)
     }
     tr[0x10] = 1;
 }
-void FUN_1424df070(void* tracer);   // Tracer::~Tracer
+extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
 
 // The interpreter code of the frame's method body, traced from its bytecode on first use.
 // MS2-FUNCTIONAL 0x142508330: the local Tracer gets a /GS cookie here (the exe has none) and the frame fields load in another order.
