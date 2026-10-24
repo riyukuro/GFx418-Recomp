@@ -8,11 +8,15 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// The AS2 text field's part of the movie (the vftable is not modeled yet).
-class AvmTextField : public AvmCharacter
+class TextFieldObject;
+
+// The AS2 text field's part of the movie, 0x68 bytes. AvmCharacter at +0 (vftables 0x1432181a0, +8 0x1432182e8),
+// AvmTextFieldBase at +0x30 (vftable 0x143218390: slots 0..22 jump back to the main ones, 23..31 are the text-field
+// ones). The constructor 0x142918b50 clears VariableVal and ASTextFieldObj; the deleting destructor 0x1429296e0
+// releases ASTextFieldObj, VariableVal and VariableName, then runs AvmCharacter's and frees 0x68 bytes.
+class AvmTextField : public AvmCharacter, public AvmTextFieldBase
 {
 public:
-    UByte Unrecovered_30[8];
     ASString VariableName; // +0x38, the variable bound to this field
 
     // Sends the event named by the first argument to the listeners of the text field.
@@ -77,7 +81,70 @@ public:
     virtual void OnEventLoad(); // exe 0x14296ba60
     // Unloads at once, leaving the playlist (exe 0x14296d310).
     virtual bool OnUnloading(bool mayRemove);
+
+    // (appended, sfr24) the rest of the layout and the vftable.
+    Value                 VariableVal;    // +0x40, the bound variable's value as last seen
+    Ptr<TextFieldObject>  ASTextFieldObj; // +0x60, the field's AS object once a script asked for it
+
+    AvmTextField(TextField* ptf); // exe 0x142918b50
+
+    // ObjectInterface slots 1..4 (+8 vftable 0x1432182e8); the members go to the field's properties first
+    // (exe 0x142983360, 0x14294c720).
+    virtual const char* GetTextValue(Environment* penv = 0) const { SF_UNUSED(penv); return ""; }
+    virtual ObjectType  GetObjectType() const { return Object_TextField; }
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+
+    // Both bases carry the AvmInteractiveObjBase slots: these final overriders resolve them (the +0x30 vftable
+    // reaches them through this-adjusting thunks).
+    virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase() { return static_cast<AvmCharacter*>(this); }
+    virtual AvmSpriteBase*              ToAvmSpriteBase()         { return 0; }
+    virtual AvmButtonBase*              ToAvmButttonBase()        { return 0; }
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase()      { return this; }
+    virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase()  { return 0; }
+    virtual const char* GetAbsolutePath(String* ppath) const { return AvmCharacter::GetAbsolutePath(ppath); }
+    virtual bool        HasEventHandler(const EventId& id) const { SF_UNUSED(id); return false; }
+    virtual bool        OnEvent(const EventId& id) { SF_UNUSED(id); return false; }
+    virtual void        OnEventUnload() {}
+    virtual bool        ActsAsButton() const { return false; }
+    virtual unsigned    GetCursorType() const { return 0; }
+    virtual void        OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                                unsigned controllerIdx, FocusMovedType fmt)
+    {
+        AvmCharacter::OnFocus(event, oldOrNewFocusCh, controllerIdx, fmt);
+    }
+    virtual void        OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt)
+    {
+        SF_UNUSED2(controllerIdx, fmt);
+    }
+    virtual bool        OnKeyEvent(const EventId& id, int* pkeyMask) { SF_UNUSED2(id, pkeyMask); return false; }
+    virtual bool        OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx,
+                                              FocusMovedType fmt = GFx_FocusMovedByKeyboard)
+    {
+        SF_UNUSED3(newFocusCh, controllerIdx, fmt);
+        return true;
+    }
+
+    // AvmTextFieldBase slots 23..31 (this is the +0x30 part in the exe bodies).
+    virtual const Text::StyleManager* GetStyleSheet() const; // exe 0x1429561e0
+    virtual bool HasStyleSheet() const;                      // exe 0x14295dbb0
+    virtual void NotifyChanged();                            // exe 0x142969080
+    virtual void OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex)
+    {
+        SF_UNUSED3(event, pos, controllerIndex);
+    }
+    virtual bool OnMouseEvent(const EventId& event);         // exe 0x14296c8c0
+    virtual bool OnCharEvent(wchar_t wcharCode, unsigned controllerIdx)
+    {
+        SF_UNUSED2(wcharCode, controllerIdx);
+        return true;
+    }
+    virtual void OnScroll();                                 // exe 0x14296ce90
+    virtual bool UpdateTextFromVariable();                   // exe 0x142992c40
+    virtual void UpdateVariable();                           // exe 0x142992d80
 };
+static_assert(sizeof(AvmTextField) == 0x68, "AS2 AvmTextField size");
 
 }}} // namespace Scaleform::GFx::AS2
 

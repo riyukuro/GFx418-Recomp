@@ -122,6 +122,26 @@ public:
     void RemoveDisplayObject();
     // The clip's AS object is an instance of prototype (exe 0x142962310).
     virtual bool InstanceOf(Environment* penv, const Object* prototype, bool inclInterfaces = true) const;
+
+    // (appended, sfr24) AvmInteractiveObjBase slot 17 (exe 0x14296bd60).
+    virtual void OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                         unsigned controllerIdx, FocusMovedType fmt);
+    // ObjectInterface slots 3, 4 (exe 0x142982d20, 0x14294bfe0) and 10, 11: the raw accessors go through the
+    // character's environment.
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
+    virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
+                              const PropFlags& flags = PropFlags())
+    {
+        SF_UNUSED(psc);
+        return SetMember(GetASEnvironment(), name, val, flags);
+    }
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
+    {
+        SF_UNUSED(psc);
+        return GetMember(GetASEnvironment(), name, val);
+    }
 };
 
 // The script side of a character of an AS2 movie.
