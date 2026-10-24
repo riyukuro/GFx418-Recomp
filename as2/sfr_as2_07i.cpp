@@ -53,7 +53,6 @@ struct ChildClipVisitor : public DisplayList::MemberVisitor
         : pVisitor(pvisitor), VisitFlags(visitFlags)
     {
     }
-    // MS2-FUNCTIONAL: the null character branch is laid out differently; same behavior
     // @0x142994190
     virtual void Visit(const ASString& name, InteractiveObject* pch)
     {

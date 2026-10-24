@@ -225,10 +225,16 @@ inline InteractiveObject* ObjectInterface::ToCharacter()
 
 inline Value::Value(InteractiveObject* pcharacter)
 {
-    T.Type        = CHARACTER;
-    V.pCharHandle = pcharacter ? pcharacter->GetCharacterHandle() : 0;
-    if (V.pCharHandle)
-        V.pCharHandle->AddRef();
+    // the exe stores the null argument itself and skips the AddRef test
+    T.Type = CHARACTER;
+    if (!pcharacter)
+        V.pCharHandle = reinterpret_cast<CharacterHandle*>(pcharacter);
+    else
+    {
+        V.pCharHandle = pcharacter->GetCharacterHandle();
+        if (V.pCharHandle)
+            V.pCharHandle->AddRef();
+    }
 }
 
 inline ObjectInterface* Value::ToObjectInterface(const Environment* penv) const
