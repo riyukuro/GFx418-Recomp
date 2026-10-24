@@ -19,6 +19,7 @@
 // MS2-RANGE: 0x142935680-0x142935820 .text$mn
 // MS2-RANGE: 0x142935b50-0x142935dc0 .text$mn
 // MS2-RANGE: 0x142936620-0x142936680 .text$mn
+// MS2-RANGE: 0x142936790-0x1429367a0 .text$mn
 // MS2-RANGE: 0x1429367a0-0x1429374f0 .text$mn
 // MS2-RANGE: 0x14292f250-0x14292f430 .text$mn
 // MS2-RANGE: 0x14292f5b0-0x14292f740 .text$mn
@@ -370,6 +371,13 @@ inline MovieClipObject::MovieClipObject(Environment* penv)
     MovieClipObject::Set__proto__(penv->GetSC(), penv->GetSC()->pContext->GetActualPrototype(penv, ASBuiltin_MovieClip));
 }
 
+// AmpMarker is not constructible.
+// @0x142936790
+Object* AmpMarkerCtorFunction::CreateNewObject(Environment*) const
+{
+    return 0;
+}
+
 // @0x1429367a0
 Object* ArrayCtorFunction::CreateNewObject(Environment* penv) const
 {
@@ -394,6 +402,13 @@ Object* AsFunctionObject::CreateNewObject(Environment* penv) const
 Object* BevelFilterCtorFunction::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) BevelFilterObject(penv);
+}
+
+// "new BitmapData" without arguments makes no object.
+// @0x142936930
+Object* BitmapDataCtorFunction::CreateNewObject(Environment*) const
+{
+    return 0;
 }
 
 // MS2-FUNCTIONAL the exe inlines the BlurFilterObject(Environment*) ctor (sfr_as2_03)
@@ -460,6 +475,12 @@ Object* ExternalInterfaceCtorFunction::CreateNewObject(Environment* penv) const
 Object* FunctionCtorFunction::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) CFunctionObject(penv->GetSC());
+}
+
+// @0x142936e00
+Object* FunctionObject::CreateNewObject(Environment*) const
+{
+    return 0;
 }
 
 // @0x142936e10

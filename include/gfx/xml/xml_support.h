@@ -27,6 +27,17 @@ public:
     virtual bool ParseString(const char* pdata, UPInt len, ParserHandler* pdb) = 0;
 };
 
+// The installed XML support state (vftable 0x143109560): forwards to its parser. ParseFile shares
+// 0x14259d950 with an identical-code fold; ParseString 0x14259d960 (sfr_gfx_02y).
+class Support : public SupportBase
+{
+public:
+    virtual bool ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHandler* pdb);
+    virtual bool ParseString(const char* pdata, UPInt len, ParserHandler* pdb);
+
+    Ptr<Parser> pParser;    // +0x18
+};
+
 }}} // namespace Scaleform::GFx::XML
 
 #endif

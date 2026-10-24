@@ -323,6 +323,13 @@ SoundInfo::~SoundInfo()
 {
 }
 
+// The data's sample rate, 0 without data.
+// @0x142748490
+unsigned SoundInfo::GetRate() const
+{
+    return pSound ? pSound->GetRate() : 0;
+}
+
 // MS2-FUNCTIONAL: the renderer's sample for this data, created on first use (or when the old one lost its data).
 // @0x1427484a0
 SoundSample* SoundInfo::GetSoundSample(SoundRenderer* prenderer)

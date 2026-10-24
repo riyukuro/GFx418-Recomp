@@ -7,6 +7,7 @@
 // MS2-UNIT: sfr_render_04h
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142671f40-0x142675560 .text$mn
+// MS2-RANGE: 0x142675ad0-0x142675bb0 .text$mn
 
 #include "ms2/scaleform/include/render/render_drawableimage.h"
 #include "ms2/scaleform/include/render/render_hal.h"
@@ -283,6 +284,30 @@ void DICommand_Merge::ExecuteHWCopyAction(DICommandContext& context, Texture** t
         cxmul[1].M[i][i] = mult[i];
     }
     context.pHAL->DrawableMerge(tex, texgen, cxmul);
+}
+
+// The filter reads the destination at DestPoint and the source at the rect's origin.
+// @0x142675ad0
+void DICommand_ApplyFilter::ExecuteHWGetImages(DrawableImage** images, Size<float>* readOffsets) const
+{
+    images[0]      = pImage;
+    readOffsets[0] = Size<float>((float)DestPoint.x, (float)DestPoint.y);
+    images[1]      = pSource;
+    readOffsets[1] = Size<float>((float)SourceRect.x1, (float)SourceRect.y1);
+}
+
+// CopyPixels also reads the alpha source at AlphaPoint.
+// @0x142675b20
+void DICommand_CopyPixels::ExecuteHWGetImages(DrawableImage** images, Size<float>* readOffsets) const
+{
+    images[0]             = pImage;
+    readOffsets[0].SetSize((float)DestPoint.x, (float)DestPoint.y);
+    images[1]             = pSource;
+    SInt32 y1 = SourceRect.y1;
+    readOffsets[1].Width  = (float)SourceRect.x1;
+    readOffsets[1].Height = (float)y1;
+    images[2]             = pAlphaSource;
+    readOffsets[2].SetSize((float)AlphaPoint.x, (float)AlphaPoint.y);
 }
 
 }} // namespace Scaleform::Render

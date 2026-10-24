@@ -40,6 +40,12 @@ State* StateBag::GetStateAddRef(State::StateType state) const
     return pimpl ? pimpl->GetStateAddRef(state) : 0;
 }
 
+// @0x14256fbb0
+StateBag* StateBag::GetStateBagImpl() const
+{
+    return 0;
+}
+
 // @0x14256fbc0
 void StateBag::GetStatesAddRef(State** pstates, const State::StateType* pstateTypes, unsigned count) const
 {

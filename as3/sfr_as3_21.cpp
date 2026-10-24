@@ -1788,6 +1788,12 @@ void SoundObject::DetachFromTarget()
         psprite->DetachSoundObject(this);
 }
 
+// @0x142565310
+void SoundObject::ExecuteOnSoundComplete()
+{
+    pSound->DispatchEventSoundComplete();
+}
+
 // @0x142565320
 unsigned SoundObject::GetBytesLoaded()
 {

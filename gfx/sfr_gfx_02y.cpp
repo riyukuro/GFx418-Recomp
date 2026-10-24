@@ -14,6 +14,7 @@
 #include "../include/gfx/gfx_log.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_taskmanager.h"
+#include "../include/gfx/xml/xml_support.h"
 #include "../include/kernel/sf_file.h"
 #include "../include/kernel/sf_stackmempool.h"
 #include "../include/render/render_imagefile.h"
@@ -25,14 +26,11 @@ extern "C" char DAT_143184f20[];          // ??_7ImageFileHandler@Render@Scalefo
 void FUN_14257dc30(void*);                // RefCountImpl::AddRef
 void FUN_14257dcb0(void*);                // RefCountImpl::Release
 
-// XML::Support::ParseString: hands the text to the installed parser (+0x18, its slot 2).
-// MS2-FUNCTIONAL: raw-layout forwarder (the XML support classes are not declared here)
+// XML::Support::ParseString: hands the text to the installed parser.
 // @0x14259d960
-bool FUN_14259d960(void* self, const char* pdata, UPInt len, void* phandler)
+bool XML::Support::ParseString(const char* pdata, UPInt len, XML::ParserHandler* pdb)
 {
-    typedef bool (*ParseFn)(void*, const char*, UPInt, void*);
-    void* pparser = RawField<void*>(self, 0x18);
-    return (*(ParseFn**)pparser)[2](pparser, pdata, len, phandler);
+    return pParser->ParseString(pdata, len, pdb);
 }
 
 // Render::ImageFileHandler scalar deleting destructor (8 bytes, vftable only).

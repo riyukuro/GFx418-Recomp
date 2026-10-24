@@ -794,6 +794,13 @@ void HAL::DrawableCompare(Render::Texture** tex, const Matrix2F* texgen)
     drawScreenQuad();
 }
 
+// Copying channels is a merge with the channel matrices.
+// @0x142730d00
+void HAL::DrawableCopyChannel(Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul)
+{
+    DrawableMerge(tex, texgen, cxmul);
+}
+
 // MS2-FUNCTIONAL: written from the decompile
 // @0x1427315c0
 void HAL::DrawableMerge(Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul)

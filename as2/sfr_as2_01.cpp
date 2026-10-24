@@ -3886,6 +3886,13 @@ template Matrix2x4<float>& Matrix2x4<float>::AppendScaling(float, float);
 // ---- AS3 VM string conversion ----
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// A class without type parameters is its own application.
+// @0x1424eb770
+Class& Class::ApplyTypeArgs(unsigned, const Value*)
+{
+    return *this;
+}
+
 // The value converted to a string (the empty string when it cannot be).
 // @0x1424ed770
 ASString VM::AsString(const Value& v)
