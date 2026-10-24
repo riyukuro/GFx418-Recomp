@@ -75,8 +75,8 @@ MS2_EXTERN(0x1424d6750, void(void*, void*, const void*), FUN_1424d6750);
 MS2_EXTERN(0x1424d6480, void(void*), FUN_1424d6480);
 MS2_EXTERN(0x1424dabd0, void(void*, void*, const void*), FUN_1424dabd0);
 MS2_EXTERN(0x1424d6ac0, void(void*, void*), FUN_1424d6ac0);
-MS2_EXTERN(0x140019470, void(void*, void*), FUN_140019470);
-MS2_EXTERN(0x140019660, void(void*, void*), FUN_140019660);
+void FUN_140019470(void* self, std::uint64_t* output); // defined below (external: other units take its address)
+void FUN_140019660(void* self, std::uint64_t* output);
 MS2_EXTERN(0x1400199e0, void*(void*, void*), FUN_1400199e0);
 MS2_EXTERN(0x14001ad20, void*(void*, void*), FUN_14001ad20);
 MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
@@ -517,6 +517,7 @@ void* FUN_14001a2b0(void* result, std::uint32_t* value, const std::uint32_t* num
     FUN_14001a260(value, *number);
     return result;
 }
+} // namespace (sfr36: the natives below have external linkage, other units take their addresses)
 // MS2-FUNCTIONAL: reads the current frame record's integer field at offset 0x10.
 // @0x14001a330
 void FUN_14001a330(void* self, std::uint32_t* result)
@@ -565,6 +566,7 @@ void FUN_14001a3c0(void* self, void*, std::uint8_t flag)
     auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
     *(static_cast<unsigned char*>(data) + 0x14) = flag;
 }
+namespace {
 
 // @0x14001b000
 std::uint64_t FUN_14001b000() { return 0; }
@@ -742,6 +744,7 @@ void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3
     value->Pick(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
 }
 
+} // namespace (sfr36: the natives below have external linkage, other units take their addresses)
 // MS2-FUNCTIONAL: attaches the supplied AS3 NetStream's VideoPlayer to this Video's display object and adds its reference.
 // @0x14001a410
 void FUN_14001a410(void* self, void*, void* netStream)
@@ -753,6 +756,7 @@ void FUN_14001a410(void* self, void*, void* netStream)
         if (player) { auto** vtable = *reinterpret_cast<void***>(player); reinterpret_cast<void(*)(void*, void*)>(vtable[7])(player, display); }
     }
 }
+namespace {
 
 // MS2-FUNCTIONAL: destroys AS3 CTraits and conditionally frees the allocation through the Scaleform heap.
 // @0x14001a5c0
@@ -1391,6 +1395,7 @@ void FUN_140017670(void*, void* vm, void* frame, std::uint64_t property, unsigne
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[4]));
 }
 
+} // namespace (sfr36: the natives below have external linkage, other units take their addresses)
 // MS2-FUNCTIONAL: creates the video metadata object, adds its standard fields, and returns a retained object atom.
 // @0x1400192e0
 void FUN_1400192e0(void* callback, std::uint64_t* output)
@@ -1416,6 +1421,7 @@ void FUN_1400192e0(void* callback, std::uint64_t* output)
     auto temporary = objectResult;
     ReleaseVideoAtom(&temporary);
 }
+namespace {
 
 namespace {
 void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t fieldOffset)
@@ -1435,12 +1441,14 @@ void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t field
     }
 }
 }
+} // namespace (sfr36: the natives below have external linkage, other units take their addresses)
 // MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's current transform value.
 // @0x140019470
 void FUN_140019470(void* self, std::uint64_t* output) { GetVideoSoundTransform(self, output, 0x88); }
 // MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's default transform value.
 // @0x140019660
 void FUN_140019660(void* self, std::uint64_t* output) { GetVideoSoundTransform(self, output, 0x90); }
+namespace {
 
 // MS2-FUNCTIONAL: initializes and links the per-channel callback object, then registers it with FMOD.
 // @0x142742fb0
@@ -1482,6 +1490,7 @@ std::uint64_t* FUN_142743130(std::uint64_t* object)
     return object;
 }
 
+} // namespace (sfr36: the natives below have external linkage, other units take their addresses)
 // MS2-FUNCTIONAL: reads the three event handler properties from the attached AS3 stream object.
 // @0x140017f20
 void FUN_140017f20(void* self, void*, void* frame)
@@ -1502,6 +1511,7 @@ void FUN_140017f20(void* self, void*, void* frame)
             reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(self) + offsets[i])->Assign(value);
     }
 }
+namespace {
 
 // MS2-FUNCTIONAL: builds the metadata object from CRI stream dimensions and track counts, then invokes its callback.
 // @0x1400182f0

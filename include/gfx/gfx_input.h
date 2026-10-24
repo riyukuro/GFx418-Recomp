@@ -8,6 +8,7 @@
 #ifndef MS2_SF_GFX_INPUT_H
 #define MS2_SF_GFX_INPUT_H
 
+#include <type_traits>
 #include "../kernel/sf_types.h"
 #include "../kernel/sf_refcount.h"
 #include "../kernel/sf_array.h"
@@ -193,9 +194,10 @@ public:
     bool IsActivated() const     { return Activated; }
     void ResetPrevButtonsState() { PrevButtonsState = CurButtonsState; }
     // (appended, sfr_as2_05u) AS2 MovieRoot::GenerateMouseEvents
-    Ptr<InteractiveObject> GetActiveEntity() const  { return ActiveEntity; }
-    Ptr<InteractiveObject> GetTopmostEntity() const { return TopmostEntity; }
-    void SetActiveEntity(InteractiveObject* pent)   { ActiveEntity = pent; }
+    // (sfr36) templates so the WeakPtr <-> Ptr conversions wait for a complete InteractiveObject at the caller
+    template<class T = InteractiveObject> Ptr<T> GetActiveEntity() const  { return ActiveEntity; }
+    template<class T = InteractiveObject> Ptr<T> GetTopmostEntity() const { return TopmostEntity; }
+    template<class T = InteractiveObject> void SetActiveEntity(typename std::remove_reference<T>::type* pent) { ActiveEntity = pent; }
     bool IsMouseInsideEntityLast() const            { return MouseInsideEntityLast; }
     void SetMouseInsideEntityLast(bool v)           { MouseInsideEntityLast = v; }
 };

@@ -2783,9 +2783,10 @@ const SlotInfo* FindFixedSlot(const Traits& tr, const ASString& name, const Inst
 
 // The slot bind type of a value declared with the ABC multiname ns of file tr (2: any/Object value; 5..9: the
 // primitive types; 3: an object of another class).
-// MS2-FUNCTIONAL 0x1425075e0: the null-traits return is laid out before the switch (exe: after); same code.
+// MS2-FUNCTIONAL 0x1425075e0: the null-traits return is laid out before the switch (exe: after); same code. External
+// (the full-exe link aliases the callers' Traits::GetBindingType to it).
 // @0x1425075e0
-static SF_INLINE int Sfr33CallerAccessKind(UByte* vm, const UByte* tr, const UByte* ns)
+int Sfr33CallerAccessKind(UByte* vm, const UByte* tr, const UByte* ns)
 {
     UByte* cur = static_cast<UByte*>(FUN_142524f60(vm, tr, ns));
     if (!cur)

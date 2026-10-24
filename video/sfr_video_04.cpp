@@ -280,9 +280,13 @@ void FUN_140001ba0(char* pair)
 }
 
 // MS2-FUNCTIONAL: returns the value part (the address 8 bytes into the pair) stored for the key, or 0.
+// The parameters are plain pointers so the definition has external linkage: the AS2 units call it as
+// ASStringHash<ClassRegEntry>::Get (hash, const ASString& key).
 // @0x140001bd0
-void* FUN_140001bd0(Video04Hash* hash, ASStringNode** key)
+void* FUN_140001bd0(void* phash, void* pkey)
 {
+    Video04Hash*      hash  = static_cast<Video04Hash*>(phash);
+    ASStringNode**    key   = static_cast<ASStringNode**>(pkey);
     Video04HashTable* table = *hash;
     if (table)
     {
