@@ -86,8 +86,8 @@ void*    FUN_14002a010(void* mem, void* pheap, void* psound);           // CriMv
 void*    FUN_14002d970(void* mem, void* pconfig);                       // VideoReader::VideoReader(VideoReaderConfig*)
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
 void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
-void*    FUN_14002abd0(void* mem, int format, const void* psize, void* ptexman, void* pplayer); // VideoImage ctor
-void     FUN_140037950(void* player, const char* message, int severity);
+void*    FUN_14002abd0(void* mem, CriUint32 format, const CriUint32* psize, const void* ptexman, void* pplayer); // VideoImage ctor
+void     FUN_140037950(void* player, const char* message, CriSint32 severity);
 void     FUN_140044fdc(void* inputBuffer);
 CriSint32 FUN_140045ed0(const void* config);
 void*    FUN_140045eec(const void* config, void* work, CriSint32 workSize);
@@ -197,8 +197,7 @@ void     FUN_140043e20(void* alphaDecoder);
 CriSint32 FUN_140043cb0(void* decoder);
 void     FUN_140044750(void* decoder);
 void     FUN_140043dd0(void* decoder);
-CriSint32 FUN_1400355b0(void* playerHandle);
-void     FUN_1400393f0(void* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c,
+void     FUN_1400393f0(CriMvEasyPlayer* easyPlayer, CriSint32 a, CriSint32 b, CriSint32 c,
                        CriUint64 d, CriUint64 e);
 CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frameInfo);
 CriBool  FUN_140039180(CriMvEasyPlayer* easyPlayer, CriSint32 updateTime, CriUint32* output);
@@ -209,7 +208,7 @@ CriSint32 FUN_1400397a0(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frame
                         CriUint64 count, CriUint64 unit, void* userData);
 void     FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
 void     FUN_1400467a8(void* queue, CriSint32 operation, void* chunk);
-void     FUN_140036650(void* player);
+CriUint32 FUN_140036650(void* player);
 void     FUN_140036710(void* player);
 void     FUN_1400369e0(void* player);
 void     FUN_140034c20(void* player);
@@ -248,11 +247,12 @@ void     FUN_140044d20(void* decoder, CriUint32 count);
 void     FUN_140044270(void* decoder, CriUint32 count);
 void     FUN_140044d70(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void     FUN_1400442c0(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
-void     FUN_140032650(void* player, void* streamSlot, void* output, const void* parsed);
+void     FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
 void     FUN_140032a70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
-void     FUN_140032db0(void* player, void* streamSlot, void* output, const void* parsed);
-void     FUN_140032b70(void* player, void* streamSlot, void* output, const void* parsed);
-void     FUN_140033e60(void* player, void* streamSlot);
+void     FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
+void     FUN_140032b70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
+struct CriMovieStreamSlotView;
+void     FUN_140033e60(void* player, CriMovieStreamSlotView* slot);
 void*    FUN_14002db40(void* thread, void* config);
 CriBool  FUN_140042270(void* manager, void* player, void* source, void* streamInfo,
                        CriUint32 stream, CriBool enable);
@@ -294,7 +294,7 @@ void     FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a,
 void     FUN_140029bf0(void* array, void* source, CriUint64 capacity);
 void     FUN_140029c90(void* array, void* source, CriUint64 capacity);
 void     FUN_140029d30(void* array, void* source, CriUint64 capacity);
-void     FUN_14002afe0(void* array);
+void     FUN_14002afe0(CriUint64* array);
 void     FUN_14002d3f0(void* allocation);
 void     FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count);
 void     FUN_140006f50(void* array, void* source, CriUint64 capacity);
@@ -308,7 +308,7 @@ void     FUN_14001d720(void* manager, void* reader);
 void     FUN_1425845e0(void* event, CriSint32 timeout);
 void     FUN_14002b2e0(void* object);
 void     FUN_14002c5f0(void* object);
-void     FUN_14002e2a0(void* object);
+namespace Scaleform { namespace GFx { namespace Video { void FUN_14002e2a0(void* object); }}}
 void     FUN_142579470(void* object);
 void     FUN_142585580(void* destination, const void* source);
 void     FUN_142584ce0(void* string);
@@ -639,7 +639,7 @@ VideoImage* VideoPlayerImpl::CreateTexture(Render::TextureManager* ptexman)
         PauseLocked = true;
         void* mem = pHeap->Alloc(0x48);
         if (mem)
-            return (VideoImage*)FUN_14002abd0(mem, 0xc9 /* Image_Y8_U2_V2 */, size, ptexman, this);
+            return (VideoImage*)FUN_14002abd0(mem, 0xc9 /* Image_Y8_U2_V2 */, (const CriUint32*)size, ptexman, this);
     }
     return NULL;
 }
@@ -2006,7 +2006,7 @@ CriBool FUN_1400340f0(void* player, const CriMovieInputChunk* input)
     {
         CriSint32 size = 0;
         CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
-        FUN_140032650(player, slot, slot->PrimaryOutput, &parsed);
+        FUN_140032650(player, slot, (CriUint32*)slot->PrimaryOutput, &parsed);
         --slot->PendingPrimary;
         FUN_140033e60(player, slot);
     }
@@ -2025,7 +2025,7 @@ CriBool FUN_1400341d0(void* player, const CriMovieInputChunk* input)
     {
         CriSint32 size = 0;
         CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
-        FUN_140032db0(player, slot, slot->SubtitleOutput, &parsed);
+        FUN_140032db0(player, slot, (CriUint32*)slot->SubtitleOutput, &parsed);
         --slot->PendingAlpha;
         FUN_140033e60(player, slot);
     }
@@ -2044,7 +2044,7 @@ CriBool FUN_140036d50(void* player, const CriMovieInputChunk* input)
     {
         CriSint32 size = 0;
         CriMovieParsedChunk parsed = { FUN_14003b674(input->Data, input->Size, &size), size, 0 };
-        FUN_140032b70(player, slot, slot->AlphaOutput, &parsed);
+        FUN_140032b70(player, slot, (CriUint32*)slot->AlphaOutput, &parsed);
         --slot->PendingSubtitle;
         FUN_140033e60(player, slot);
     }
@@ -4163,7 +4163,7 @@ void* FUN_14002c8f0(void* object, CriUint64 flags)
 // @0x14002e510
 void* FUN_14002e510(void* object, CriUint64 flags)
 {
-    FUN_14002e2a0(object);
+    Scaleform::GFx::Video::FUN_14002e2a0(object);
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
@@ -6169,7 +6169,7 @@ void FUN_140036710(void* player)
 
 // MS2-FUNCTIONAL: expose the next subtitle chunk only after the movie player leaves its setup states.
 // @0x140036650
-CriUint32 FUN_140036650(void* player, void* unused1, void* unused2, void* context)
+CriUint32 FUN_140036650(void* player)
 {
     CriMvSubtitleChunk chunk = {};
     if (!player)
@@ -6181,12 +6181,8 @@ CriUint32 FUN_140036650(void* player, void* unused1, void* unused2, void* contex
     if (status >= 0 && status <= 4)
         return 0;
 
-    using SubtitleFetch = CriSint32 (*)(void*, CriMvSubtitleChunk*, CriSint32, void*, CriUint32);
-    SubtitleFetch fetch = (SubtitleFetch)FUN_140036b80;
-    CriUint32 result = (CriUint32)fetch(player, &chunk, subtitle->SubtitleChannel, context, 0);
+    CriUint32 result = (CriUint32)FUN_140036b80(player, &chunk, subtitle->SubtitleChannel);
     FUN_140036e80(player, &chunk);
-    (void)unused1;
-    (void)unused2;
     return result;
 }
 
@@ -6279,9 +6275,8 @@ CriSint32 FUN_140039110(void* easyPlayer, CriMvFrameInfo* frameInfo, CriError* e
 {
     CriMvEasyPlayerFrameFields* fields = (CriMvEasyPlayerFrameFields*)easyPlayer;
     *error = CRIERR_OK;
-    CriSint32 result = FUN_1400355b0(fields->PlayerHandle);
-    FUN_1400393f0(easyPlayer, 0, 0, 1, 0, 0);
-    (void)frameInfo;
+    CriSint32 result = FUN_1400355b0(fields->PlayerHandle, frameInfo);
+    FUN_1400393f0((CriMvEasyPlayer*)easyPlayer, 0, 0, 1, 0, 0);
     return result;
 }
 
