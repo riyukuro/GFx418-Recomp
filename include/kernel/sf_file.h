@@ -153,6 +153,12 @@ public:
             int mode = FileConstants::Mode_ReadWrite);
 
     static bool SF_CDECL GetFileStat(FileStat* pfileStats, const String& path);
+
+    // (sfr24) the overrides of the exe vftable 0x143188c48 (slots 2, 8, 19; as in the kernel tree's sf_file.h):
+    // without them include-tree TUs laid SysFile out with DelegatedFile's IsValid/GetErrorCode/Close.
+    virtual int  GetErrorCode();
+    virtual bool IsValid();
+    virtual bool Close();
 };
 
 // The file name part of a path (SF_File; exe 0x14264d890).
