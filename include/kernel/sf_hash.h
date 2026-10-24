@@ -972,6 +972,81 @@ public:
     void operator=(const SelfType& o) { BaseType::operator=(o); }
 };
 
+// (appended, sfr33) the uncached DH and identity-hash variants, as kernel/sf_hash.h has them (text_docview.h)
+template<class C, class HashF = FixedSizeHash<C>, class AltHashF = HashF, int SID = Stat_Default_Mem>
+class HashSetUncachedDH : public HashSetDH<C, HashF, AltHashF, SID, HashsetEntry<C, HashF> >
+{
+public:
+    typedef HashSetUncachedDH<C, HashF, AltHashF, SID>                  SelfType;
+    typedef HashSetDH<C, HashF, AltHashF, SID, HashsetEntry<C, HashF> > BaseType;
+
+    explicit HashSetUncachedDH(void* heap) : BaseType(heap) { }
+    HashSetUncachedDH(void* heap, int sizeHint) : BaseType(heap, sizeHint) { }
+    HashSetUncachedDH(const SelfType& src) : BaseType(src) { }
+    ~HashSetUncachedDH() { }
+    void operator=(const SelfType& src) { BaseType::operator=(src); }
+};
+
+template<class C, class U, class HashF = FixedSizeHash<C>, int StatId = Stat_Default_Mem>
+class HashUncachedDH
+    : public HashDH<C, U, HashF, StatId, HashNode<C, U, HashF>,
+                    HashsetNodeEntry<HashNode<C, U, HashF>, typename HashNode<C, U, HashF>::NodeHashF> >
+{
+public:
+    typedef HashUncachedDH<C, U, HashF, StatId> SelfType;
+    typedef HashDH<C, U, HashF, StatId, HashNode<C, U, HashF>,
+                   HashsetNodeEntry<HashNode<C, U, HashF>, typename HashNode<C, U, HashF>::NodeHashF> >
+        BaseType;
+
+    explicit HashUncachedDH(void* heap) : BaseType(heap) { }
+    HashUncachedDH(void* heap, int sizeHint) : BaseType(heap, sizeHint) { }
+    HashUncachedDH(const SelfType& src) : BaseType(src) { }
+    ~HashUncachedDH() { }
+    void operator=(const SelfType& src) { BaseType::operator=(src); }
+};
+
+template<class C, class U, class Allocator = AllocatorGH<C>, class HashF = IdentityHash<C> >
+class HashIdentity : public HashUncached<C, U, HashF, Allocator>
+{
+public:
+    typedef HashIdentity<C, U, Allocator, HashF> SelfType;
+    typedef HashUncached<C, U, HashF, Allocator> BaseType;
+
+    HashIdentity() { }
+    HashIdentity(int sizeHint) : BaseType(sizeHint) { }
+    HashIdentity(const SelfType& src) : BaseType(src) { }
+    ~HashIdentity() { }
+    void operator=(const SelfType& src) { BaseType::operator=(src); }
+};
+
+template<class C, class U, int SID = Stat_Default_Mem, class HashF = IdentityHash<C> >
+class HashIdentityLH : public HashUncachedLH<C, U, HashF, SID>
+{
+public:
+    typedef HashIdentityLH<C, U, SID, HashF> SelfType;
+    typedef HashUncachedLH<C, U, HashF, SID> BaseType;
+
+    HashIdentityLH() { }
+    HashIdentityLH(int sizeHint) : BaseType(sizeHint) { }
+    HashIdentityLH(const SelfType& src) : BaseType(src) { }
+    ~HashIdentityLH() { }
+    void operator=(const SelfType& src) { BaseType::operator=(src); }
+};
+
+template<class C, class U, int SID = Stat_Default_Mem, class HashF = IdentityHash<C> >
+class HashIdentityDH : public HashUncachedDH<C, U, HashF, SID>
+{
+public:
+    typedef HashIdentityDH<C, U, SID, HashF> SelfType;
+    typedef HashUncachedDH<C, U, HashF, SID> BaseType;
+
+    explicit HashIdentityDH(void* heap) : BaseType(heap) { }
+    HashIdentityDH(void* heap, int sizeHint) : BaseType(heap, sizeHint) { }
+    HashIdentityDH(const SelfType& src) : BaseType(src) { }
+    ~HashIdentityDH() { }
+    void operator=(const SelfType& src) { BaseType::operator=(src); }
+};
+
 } // namespace Scaleform
 
 #endif

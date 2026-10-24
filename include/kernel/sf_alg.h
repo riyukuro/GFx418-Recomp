@@ -7,6 +7,10 @@
 
 namespace Scaleform { namespace Alg {
 
+// (appended, sfr33) pointer-sized min/max, as kernel/sf_alg.h has them
+template<class T> SF_INLINE const T PMin(const T a, const T b) { return (a < b) ? a : b; }
+template<class T> SF_INLINE const T PMax(const T a, const T b) { return (b < a) ? a : b; }
+
 template<class T> inline T Min(T a, T b) { return (a < b) ? a : b; }
 template<class T> inline T Max(T a, T b) { return (b < a) ? a : b; }
 

@@ -420,6 +420,88 @@ public:
     void Append(const SelfType& other)                { Append(other.Data.Data, other.GetSize()); }
     void Append(const ValueType other[], UPInt count) { Data.Append(other, count); }
 
+    // (appended, sfr33) the index iterators, as kernel/sf_array.h has them (text_styledtext.h needs them)
+    class Iterator
+    {
+        SelfType* pArray;
+        SPInt     CurIndex;
+    public:
+        Iterator() : pArray(0), CurIndex(-1) { }
+        Iterator(SelfType* a, SPInt i = 0) : pArray(a), CurIndex(i) { }
+        bool operator==(const Iterator& o) const { return pArray == o.pArray && CurIndex == o.CurIndex; }
+        bool operator!=(const Iterator& o) const { return pArray != o.pArray || CurIndex != o.CurIndex; }
+        Iterator& operator++()
+        {
+            if (pArray)
+                if (CurIndex < (SPInt)pArray->GetSize())
+                    ++CurIndex;
+            return *this;
+        }
+        Iterator operator++(int) { Iterator it(*this); operator++(); return it; }
+        Iterator& operator--()
+        {
+            if (pArray)
+                if (CurIndex >= 0)
+                    --CurIndex;
+            return *this;
+        }
+        Iterator operator--(int) { Iterator it(*this); operator--(); return it; }
+        Iterator operator+(int d) const { return Iterator(pArray, CurIndex + d); }
+        Iterator operator-(int d) const { return Iterator(pArray, CurIndex - d); }
+        SPInt operator-(const Iterator& r) const { return CurIndex - r.CurIndex; }
+        ValueType& operator*() const { return (*pArray)[CurIndex]; }
+        ValueType* operator->() const { return &(*pArray)[CurIndex]; }
+        ValueType* GetPtr() const { return &(*pArray)[CurIndex]; }
+        bool IsFinished() const { return !pArray || CurIndex < 0 || CurIndex >= (int)pArray->GetSize(); }
+        void Remove()
+        {
+            if (!IsFinished())
+                pArray->RemoveAt(CurIndex);
+        }
+        SPInt GetIndex() const { return CurIndex; }
+    };
+    Iterator Begin() { return Iterator(this); }
+    Iterator End() { return Iterator(this, (SPInt)GetSize()); }
+    Iterator Last() { return Iterator(this, (SPInt)GetSize() - 1); }
+
+    class ConstIterator
+    {
+        const SelfType* pArray;
+        SPInt           CurIndex;
+    public:
+        ConstIterator() : pArray(0), CurIndex(-1) { }
+        ConstIterator(const SelfType* a, SPInt i = 0) : pArray(a), CurIndex(i) { }
+        bool operator==(const ConstIterator& o) const { return pArray == o.pArray && CurIndex == o.CurIndex; }
+        bool operator!=(const ConstIterator& o) const { return pArray != o.pArray || CurIndex != o.CurIndex; }
+        ConstIterator& operator++()
+        {
+            if (pArray)
+                if (CurIndex < (int)pArray->GetSize())
+                    ++CurIndex;
+            return *this;
+        }
+        ConstIterator operator++(int) { ConstIterator it(*this); operator++(); return it; }
+        ConstIterator& operator--()
+        {
+            if (pArray)
+                if (CurIndex >= 0)
+                    --CurIndex;
+            return *this;
+        }
+        ConstIterator operator--(int) { ConstIterator it(*this); operator--(); return it; }
+        ConstIterator operator+(int d) const { return ConstIterator(pArray, CurIndex + d); }
+        ConstIterator operator-(int d) const { return ConstIterator(pArray, CurIndex - d); }
+        SPInt operator-(const ConstIterator& r) const { return CurIndex - r.CurIndex; }
+        const ValueType& operator*() const { return (*pArray)[CurIndex]; }
+        const ValueType* operator->() const { return &(*pArray)[CurIndex]; }
+        const ValueType* GetPtr() const { return &(*pArray)[CurIndex]; }
+        bool IsFinished() const { return !pArray || CurIndex < 0 || CurIndex >= (int)pArray->GetSize(); }
+        SPInt GetIndex() const { return CurIndex; }
+    };
+    ConstIterator Begin() const { return ConstIterator(this); }
+    ConstIterator End() const { return ConstIterator(this, (SPInt)GetSize()); }
+    ConstIterator Last() const { return ConstIterator(this, (SPInt)GetSize() - 1); }
+
 protected:
     ArrayData Data;
 };
