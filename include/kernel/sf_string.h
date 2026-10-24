@@ -208,6 +208,7 @@ class StringBuffer
 
 public:
     StringBuffer(MemoryHeap* pheap = Memory::GetGlobalHeap());
+    StringBuffer(const char* pdata, MemoryHeap* pheap);                                       // exe 0x142584dd0
     StringBuffer(const char* pdata, UPInt size, MemoryHeap* pheap = Memory::GetGlobalHeap()); // exe 0x142584e50
     ~StringBuffer();
 

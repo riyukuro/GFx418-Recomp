@@ -13,6 +13,9 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+class Environment;
+class Object;
+
 // Loads and parses a style sheet file for a TextField.StyleSheet object.
 class ASCSSFileLoader : public RefCountBase<ASCSSFileLoader, StatMV_ActionScript_Mem>
 {
@@ -20,11 +23,14 @@ public:
     virtual void Load(const String& filename, FileOpener* pfo) = 0;
 };
 
-// Loads and parses an XML file for an XML object.
+// Loads and parses an XML file for an XML object. Vftable 0x143224130 (sfr_as2_07e has the implementations).
 class XMLFileLoader : public RefCountBase<XMLFileLoader, StatMV_ActionScript_Mem>
 {
 public:
+    virtual ~XMLFileLoader() {}
     virtual void Load(const String& filename, FileOpener* pfo) = 0;
+    // Hands the loaded data to the XML object ptarget, on the movie thread.
+    virtual void InitASXml(Environment* penv, Object* ptarget) = 0;
 };
 
 // Loads the file of an XML.load / StyleSheet.load on a loader thread; Done tells the movie the loader is ready.
