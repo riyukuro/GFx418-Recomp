@@ -386,6 +386,11 @@ public:
         return true;
     }
     void SetDefaultShadow()              { Filter.SetDefaultShadow(); }
+    // (appended, sfr35) the shadow's RGB; the alpha stays the filter's shadow alpha.
+    void   SetShadowColor(UInt32 c) { Filter.ShadowParams.Colors[0] = Color((UInt32(Filter.ShadowAlpha) << 24) | (c & 0xFFFFFFu)); }
+    UInt32 GetShadowColor() const   { return Filter.ShadowParams.Colors[0].ToColor32() & 0xFFFFFFu; }
+    // (appended, sfr35) the old style (AS2 shadowStyle) shadow turns the filter shadow off.
+    void   DisableSoftShadow()      { Filter.ShadowFlags |= 1; }
     bool  GetFauxBold() const            { return (FlagsEx & FlagsEx_FauxBold) != 0; }
     bool  GetFauxItalic() const          { return (FlagsEx & FlagsEx_FauxItalic) != 0; }
     void  SetFauxBold(bool f)            { if (f) FlagsEx |= FlagsEx_FauxBold; else FlagsEx &= ~FlagsEx_FauxBold; }

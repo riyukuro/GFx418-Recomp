@@ -358,6 +358,29 @@ public:
     void SetTextFilters(const Render::Text::TextFilter& f);                      // exe 0x1425bd7a0
     CSSHolderBase* GetCSSData() const { return pCSSData.GetPtr(); }              // exe 0x1425b7e60 (out of line)
 
+    // (appended, sfr35) the rest of the setters of the back half (sfr_gfx_03f).
+    void ReleaseCompositionString();                                             // exe 0x1425bb5b0
+    void SetBackgroundColor(const Render::Color& c);                             // exe 0x1425bbbe0
+    void SetBorderColor(const Render::Color& c);                                 // exe 0x1425bbca0
+    // The geometry data with its position refreshed from the text rectangle when stale (or forced).
+    GeomDataType& UpdateAndGetGeomData(GeomDataType* pgeomData, bool force = false); // exe 0x1425beb10
+    // The formats of the definition (font, size, color, alignment, margins..).
+    void GetInitialFormats(Render::Text::TextFormat* ptextFmt, Render::Text::ParagraphFormat* pparaFmt); // exe 0x1425b8910
+    // The <img> tags the HTML parse found become image descriptors of the document.
+    void ProcessImageTags(Render::Text::StyledText::HTMLImageTagInfoArray& imageInfoArray);  // exe 0x1425ba7d0
+
+    // (appended, sfr33) the getters of the front half (sfr_gfx_03e).
+    Double GetTextHeight() const;                                                // exe 0x1425b93d0
+    Double GetTextWidth() const;                                                 // exe 0x1425b9400
+    // The restrict string of the editor (NULL: any character, or no editor).
+    const String* GetRestrict() const;                                           // exe 0x1425b90a0
+    ASString GetShadowStyle() const;                                             // exe 0x1425b9100
+    bool IsUrlTheSame(unsigned mouseIndex, const Range& urlRange);               // exe 0x1425b9c20
+    FontResource* GetFontResource();                                             // exe 0x1425b87f0
+    void GetPosition(GFx::Value::DisplayInfo* pinfo);                            // exe 0x1425b8e60
+    // The style sheet's link format of the URL under the mouse (urlRange) or of its last URL (NULL) for the event.
+    void ChangeUrlFormat(LinkEvent event, unsigned mouseIndex, const Range* urlRange = NULL);   // exe 0x1425b6a40
+
     Ptr<TextFieldDef>             pDef;                 // +0xd8
     Ptr<Render::Text::DocView>    pDocument;            // +0xe0
     ResourceBinding*              pBinding;             // +0xe8 the binding movie's resources (fonts)
