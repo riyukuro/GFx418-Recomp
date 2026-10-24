@@ -924,6 +924,9 @@ public:
 class PropRef
 {
 public:
+    ~PropRef();
+    operator bool() const;
+
     // Not found.
     PropRef() : pValue(0), SlotIndex(0) { }
     // A dynamic value of obj (the pointer is tagged with bit 0).
