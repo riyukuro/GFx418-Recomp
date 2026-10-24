@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x1426d2820-0x1426d4780 .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
+#include "../include/gfx/gfx_interactiveobject.h"
 #include "../include/gfx/gfx_resource.h"
 #include "../include/gfx/gfx_sound.h"
 #include "../include/kernel/sf_alg.h"
@@ -31,11 +32,22 @@ private:
 public:
     float                 FrameTime;         // +0x274 seconds per frame
     unsigned              ForceFrameCatchUp; // +0x278 frames to run at once to catch up with the sound
+
+    StateBag* GetStateBag() const
+    {
+        return reinterpret_cast<StateBag*>(const_cast<char*>(reinterpret_cast<const char*>(this)) + 0x10);
+    }
+    void* GetASMovieRoot() const
+    {
+        return *reinterpret_cast<void* const*>(reinterpret_cast<const char*>(this) + 0x18);
+    }
 };
 
 class Sprite
 {
 public:
+    float                GetRealSoundVolume();
+    void                 AddActiveSound(Sound::SoundChannel* pchan, ASSoundIntf* psnd, SoundResource* pres);
     Sound::SoundChannel* GetStreamingSound() const;
     void                 SetStreamingSound(Sound::SoundChannel* pchan);
 };
@@ -55,6 +67,103 @@ enum SwfSoundFormat
 // @0x1426d2820
 SoundInfo::SoundInfo()
 {
+}
+
+// MS2-FUNCTIONAL: restores event sound playback, including resource lookup and channel setup; codegen remains approximate.
+// @0x1426d3570
+void SoundInfo::Play(InteractiveObject* pchar)
+{
+    if (!pchar)
+        return;
+
+    MovieImpl* movie = pchar->GetMovieImpl();
+    Ptr<AudioBase> audio = *(AudioBase*)movie->GetStateBag()->GetStateAddRef(State::State_Audio);
+    if (!audio)
+        return;
+    Sound::SoundRenderer* renderer = audio->GetRenderer();
+    if (!renderer)
+        return;
+
+    MovieDefImpl* resourceDef = pchar->GetResourceMovieDef();
+    Ptr<SoundResource> resource;
+    if (pSample.IsIndex())
+    {
+        if (!resourceDef)
+            return;
+        ResourceBindData bound = resourceDef->GetResourceBinding().GetResourceData(pSample);
+        resource = static_cast<SoundResource*>(bound.pResource.GetPtr());
+    }
+    else
+        resource = static_cast<SoundResource*>(pSample.GetResourcePtr());
+
+    if (!resource || (resource->GetResourceTypeCode() & 0xff00) != 0x400)
+        return;
+
+    Sprite* sprite = 0;
+    if (pchar->Flags & DisplayObjectBase::Mask_Sprite)
+        sprite = reinterpret_cast<Sprite*>(pchar);
+    else if (pchar->pParent && (pchar->pParent->Flags & DisplayObjectBase::Mask_Sprite))
+        sprite = reinterpret_cast<Sprite*>(pchar->pParent);
+    if (!sprite)
+        return;
+
+    Sound::SoundInfoBase* soundInfo = resource->GetSoundInfo();
+    Sound::SoundSample* sample = soundInfo ? soundInfo->GetSoundSample(renderer) : 0;
+    if (!sample)
+        return;
+
+    if (Style.StopPlayback)
+    {
+        // The root's slot 0x70 returns the movie-wide sound controller; slot 0x388 stops this resource.
+        void* root = movie->GetASMovieRoot();
+        if (root)
+        {
+            void** rootVtable = *reinterpret_cast<void***>(root);
+            void* controller = reinterpret_cast<void* (*)(void*, unsigned)>(rootVtable[0x70 / sizeof(void*)])(root, 0);
+            if (controller)
+            {
+                void** controllerVtable = *reinterpret_cast<void***>(controller);
+                reinterpret_cast<void (*)(void*, SoundResource*)>(controllerVtable[0x388 / sizeof(void*)])(controller,
+                                                                                                         resource.GetPtr());
+            }
+        }
+        return;
+    }
+    if (Style.NoMultiple && resource->IsPlaying())
+        return;
+
+    Sound::SoundChannel* channel = renderer->PlaySample(sample, true);
+    if (!channel)
+        return;
+    channel->SetVolume(sprite->GetRealSoundVolume());
+
+    if (Style.Envelopes.GetSize())
+    {
+        Array<Sound::SoundChannel::Transform> transforms;
+        transforms.Resize(Style.Envelopes.GetSize());
+        const float secondsPerSample = 1.0f / 44100.0f;
+        const float levelScale = 100.0f / 32768.0f;
+        for (UPInt i = 0; i < Style.Envelopes.GetSize(); ++i)
+        {
+            const SoundEnvelope& envelope = Style.Envelopes[i];
+            transforms[i].Position = envelope.Mark44 * secondsPerSample;
+            transforms[i].LeftVolume = envelope.Level0 * levelScale;
+            transforms[i].RightVolume = envelope.Level1 * levelScale;
+        }
+        channel->SetTransforms(transforms);
+    }
+
+    const float sampleRate = soundInfo->GetRate() ? (float)soundInfo->GetRate() : 1.0f;
+    const float inPoint = Style.HasInPoint ? Style.InPoint / sampleRate : 0.0f;
+    const float outPoint = Style.HasOutPoint ? Style.OutPoint / sampleRate : 0.0f;
+    unsigned loopCount = Style.LoopCount;
+    if (!loopCount && (Style.HasInPoint || Style.HasOutPoint))
+        loopCount = 1;
+    if (loopCount)
+        channel->Loop((int)loopCount, inPoint, outPoint);
+    channel->SetPosition(0.0f);
+    sprite->AddActiveSound(channel, 0, resource.GetPtr());
+    channel->Release();
 }
 
 // Plays the sound of a button state transition (exe 0x1426d3550, a thunk outside the coverage list).

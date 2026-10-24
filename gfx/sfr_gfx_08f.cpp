@@ -5,6 +5,8 @@
 // MS2-UNIT: sfr_gfx_08
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142646180-0x142647290 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PINS-END tplpin
 
 #include "../include/gfx/gfx_buttondef.h"
 #include "../include/gfx/gfx_loadproc.h"
@@ -254,3 +256,6 @@ void SoundTagsReader::ReadStartSoundTag(LoadProcess* p, const TagInfo& tagInfo)
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$03@Scaleform@@6B@ 0x14318ff68
 // MS2-PIN: ??_7SoundInfoBase@Sound@Scaleform@@6B@ 0x14318ff70
 // MS2-PIN: ??_GSoundFileInfo@GFx@Scaleform@@UEAAPEAXI@Z 0x142646410
+// MS2-PIN: ??_GSoundInfoBase@Sound@Scaleform@@UEAAPEAXI@Z 0x142646240
+// MS2-PIN: ??_G?$RefCountBaseNTS@VSoundInfoBase@Sound@Scaleform@@$03@Scaleform@@UEAAPEAXI@Z 0x1426462a0
+// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$03@Scaleform@@UEAAPEAXI@Z 0x142646520
