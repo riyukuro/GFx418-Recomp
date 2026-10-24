@@ -555,6 +555,10 @@ public:
     // (appended, sfr24) Drops the registered classes, builtin registry and prototypes before the movie goes; with
     // preserveBuiltinProps a fresh _global keeps gfxPlayer, gfxLanguage and gfxArg (exe 0x14296f3d0).
     void PreClean(bool preserveBuiltinProps);
+
+    // (appended for sfr_as2_05m) The _global member name of the class of iobj, "unknown" without one
+    // (exe 0x1429437e0).
+    ASString FindClassName(Environment* penv, ObjectInterface* iobj);
 };
 
 enum { StatMD_ASBinaryData_Mem = 0x108 };

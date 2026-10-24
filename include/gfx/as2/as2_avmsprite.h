@@ -239,6 +239,10 @@ private:
     // (exe 0x142961d80); the members of the init object in Arg(0) are set on it (exe 0x142961a40).
     static void InitializeClassInstance(const FnCall& fn);
     static void InitObjectMembers(const FnCall& fn);
+
+public:
+    // (appended for sfr_as2_05m) Closes the open fill path (exe 0x1429398d0).
+    void EndFill();
 };
 
 inline Sprite* ObjectInterface::ToSprite()
