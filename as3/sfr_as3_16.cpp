@@ -1232,6 +1232,22 @@ Scaleform::GFx::AS3::AvmLoader::~AvmLoader()
     reinterpret_cast<Scaleform::UInt8*>(this)[0x6d] = 0;
 }
 
+// Invokes an object-like value with no arguments and an undefined receiver.
+// MS2-FUNCTIONAL 0x1424e1a20: preserves the kind range, undefined result initialization, owning VM lookup, and zero-argument call.
+// @0x1424e1a20
+Scaleform::GFx::AS3::Value* FUN_1424e1a20(const Scaleform::GFx::AS3::Value* func,
+                                         Scaleform::GFx::AS3::Value* result)
+{
+    using namespace Scaleform::GFx::AS3;
+    new (result) Value();
+    if (Value::IsObject(func->GetKind()))
+    {
+        Object& object = *const_cast<Value*>(func);
+        object.GetTraits().GetVM().ExecuteInternalUnsafe(*func, Value::GetUndefined(), *result, 0, nullptr, false);
+    }
+    return result;
+}
+
 // Releases the rollover references in reverse order, then the raw heap array.
 // MS2-FUNCTIONAL 0x1424de510: same referenced objects and cleanup order; cl lays out the loop and indirect heap call differently.
 // @0x1424de510
