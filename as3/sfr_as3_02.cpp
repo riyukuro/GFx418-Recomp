@@ -1451,7 +1451,7 @@ namespace Instances { namespace fl
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// @0x142419b10 (sfr_as3_04)
+// Defined in sfr_as3_04 (exe 0x142419b10).
 CheckResult IsNameStartChar(int c);
 
 namespace Instances { namespace fl
@@ -1985,6 +1985,19 @@ namespace Instances { namespace fl
     {
         if (HasOneItem(*this, "insertChildBefore"))
             List[0]->AS3insertChildBefore(result, child1, child2);
+    }
+
+    // A single node is a list of one.
+    // @0x1423fb870
+    void XML::AS3length(SInt32& result)
+    {
+        result = 1;
+    }
+
+    // @0x1423fb880
+    void XMLList::AS3length(SInt32& result)
+    {
+        result = (SInt32)List.GetSize();
     }
 
     // @0x1423fb890
