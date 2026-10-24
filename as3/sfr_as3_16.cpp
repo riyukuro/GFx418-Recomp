@@ -1328,12 +1328,21 @@ using SfrCx18DynAttrsNode = HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Va
 using SfrCx18DynAttrsSet = HashSetBase<SfrCx18DynAttrsNode, SfrCx18DynAttrsNode::NodeHashF,
     SfrCx18DynAttrsNode::NodeAltHashF, AllocatorLH<GFx::AS3::Object::DynAttrsKey, 2>,
     HashsetCachedNodeEntry<SfrCx18DynAttrsNode, SfrCx18DynAttrsNode::NodeHashF> >;
+using SfrCx18AbcNamespaceHash = GFx::AS3::AbcMultinameHash<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 340>;
+using SfrCx18AbcNamespaceNode = HashNode<SfrCx18AbcNamespaceHash::Key,
+    GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, FixedSizeHash<SfrCx18AbcNamespaceHash::Key> >;
+using SfrCx18AbcNamespaceSet = HashSetBase<SfrCx18AbcNamespaceNode, SfrCx18AbcNamespaceNode::NodeHashF,
+    SfrCx18AbcNamespaceNode::NodeAltHashF, AllocatorLH<SfrCx18AbcNamespaceHash::Key, 340>,
+    HashsetCachedNodeEntry<SfrCx18AbcNamespaceNode, SfrCx18AbcNamespaceNode::NodeHashF> >;
 // MS2-FUNCTIONAL: destroys every occupied node and frees the table; the template expansion has different frame/unwind codegen.
 // @0x1424dcbb0
 template SfrCx18DisplayObjectSet::~HashSetBase();
 // MS2-FUNCTIONAL: releases the occupied dynamic-property nodes and frees their table; template expansion changes unwind codegen.
 // @0x1424dce80
 template SfrCx18DynAttrsSet::~HashSetBase();
+// MS2-FUNCTIONAL: destroys occupied namespace intern entries and frees the hash table; template unwind code differs.
+// @0x1424dcf10
+template SfrCx18AbcNamespaceSet::~HashSetBase();
 }
 
 extern "C" void FUN_1423dfa20();
