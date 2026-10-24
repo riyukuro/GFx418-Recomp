@@ -40,6 +40,10 @@ class RefCountCollector : public RefCountBase<RefCountCollector<Stat>, Stat>
         void       Resize(UPInt newSize);
         // Frees the pages and the page table (exe 0x1429343f0 for Stat 0x143).
         void       ClearAndRelease();
+        // (appended, sfr36) Appends a root, false when a page cannot be had (exe 0x142592530 for Stat 0x143).
+        bool       PushBackSafe(BaseType* const& val);
+        // (appended, sfr36) Allocates page index (and grows the page table), false on no memory (exe 0x142592950).
+        bool       allocatePageSafe(UPInt index);
     };
 
 public:
@@ -93,6 +97,11 @@ public:
             pLastPtr->pNext        = pchild;
         }
     }
+
+protected:
+    // (appended, sfr36) Buffers a possible cycle root; collects once when the buffer cannot grow (exe 0x142592030
+    // for Stat 0x143).
+    void AddRoot(BaseType* root);
 };
 
 template<int Stat>
