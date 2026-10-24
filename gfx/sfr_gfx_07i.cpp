@@ -15,6 +15,17 @@
 
 namespace Scaleform { namespace GFx {
 
+namespace {
+// Lock::Locker over the state's critical section: entered here, left when the scope ends.
+struct RawLocker
+{
+    LPCRITICAL_SECTION pLock;
+    explicit RawLocker(char* lock) : pLock((LPCRITICAL_SECTION)lock) { EnterCriticalSection(pLock); }
+    ~RawLocker() { LeaveCriticalSection(pLock); }
+};
+
+}
+
 extern char DAT_14318f020[];
 extern char DAT_14318f048[];
 extern char DAT_14318f060[];
@@ -129,12 +140,15 @@ void* FUN_142620460(char* self, unsigned flags)
 }
 
 // Counts a named marker: bumps an existing entry or adds {name, 1}.
+// MS2-FUNCTIONAL: the exe holds the found iterator in rax/rdx (rcx/rax here); same blocks
 // @0x1426204e0
 void FUN_1426204e0(char* self, const char* name)
 {
-    String key(name);
     U found[2];
-    FUN_1426223c0(RawFieldPtr<U*>(self, 0x168), found, &key);
+    {
+        String key(name);
+        FUN_1426223c0(RawFieldPtr<U*>(self, 0x168), found, &key);
+    }
     if (found[0] && *(U*)found[0] && (SPInt)found[1] <= *(SPInt*)(*(U*)found[0] + 8))
     {
         (*(int*)(*(U*)found[0] + 0x10 + found[1] * 0x20 + 0x18))++;
@@ -164,18 +178,17 @@ void FUN_142620790(U** self, void* ctx) { RawCheckExpand<FUN_1426255e0>(self, ct
 void FUN_1426207e0(U* self) { RawClearPlainSet(self, 0x30); }
 // MS2-FUNCTIONAL: the exe shrink-wraps the callee-saved spill into the non-empty path (split .pdata chunk); same clear logic.
 // @0x142620840
-void FUN_142620840(U* self) { RawClearPtrSet(self); }
+__declspec(noinline) void FUN_142620840(U* self) { RawClearPtrSet(self); }
 // @0x1426208d0
-void FUN_1426208d0(U* self) { RawClearStringSet(self, 0x10); }
+__declspec(noinline) void FUN_1426208d0(U* self) { RawClearStringSet(self, 0x10); }
 
 // @0x142620970
 void FUN_142620970(char* self)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+    RawLocker lock(self + 0xe0);
     RawClearPlainSet(RawFieldPtr<U>(self, 0x10), 0x30);
     FUN_1426240f0(RawFieldPtr<U>(self, 0x48), self + 0x48, 0);
     RawField<int>(self, 0x60) = 0;
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
 // @0x142620a10
@@ -188,30 +201,51 @@ void FUN_142620a10(char* self)
     }
 }
 
+// The set's ConstIterator (Begin() / IsEnd() / ++), over raw entries of the given stride.
+namespace {
+template<U Stride>
+struct RawSetIterator
+{
+    U**   pHash;
+    SPInt Index;
+    RawSetIterator(U** hash, SPInt index) : pHash(hash), Index(index) {}
+    static RawSetIterator Begin(U** hash)
+    {
+        if (!*hash)
+            return RawSetIterator(nullptr, 0);
+        U i = 0;
+        while (i <= (*hash)[1] && *(SPInt*)RawEntry(*hash, i, Stride) == -2)
+            ++i;
+        return RawSetIterator(hash, i);
+    }
+    bool  IsEnd() const { return !pHash || !*pHash || Index > (SPInt)(*pHash)[1]; }
+    char* Entry() const { return RawEntry(*pHash, Index, Stride); }
+    void  operator++()
+    {
+        if (Index <= (SPInt)(*pHash)[1])
+        {
+            ++Index;
+            while ((U)Index <= (*pHash)[1] && *(SPInt*)RawEntry(*pHash, Index, Stride) == -2)
+                ++Index;
+        }
+    }
+};
+}
+
 // Zeroes the running value of every entry of the per-name statistics set.
 // @0x142620a50
 void FUN_142620a50(char* self)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = RawField<U*>(self, 0xd0);
-    if (table)
-    {
-        for (U i = 0; i <= table[1]; i++)
-        {
-            char* e = RawEntry(table, i, 0x28);
-            if (*(SPInt*)e != -2)
-                RawField<U>(e, 0x20) = 0;
-        }
-    }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+    RawLocker lock(self + 0xe0);
+    for (RawSetIterator<0x28> it = RawSetIterator<0x28>::Begin(RawFieldPtr<U*>(self, 0xd0)); !it.IsEnd(); ++it)
+        RawField<U>(it.Entry(), 0x20) = 0;
 }
 
 // @0x142620b10
 void FUN_142620b10(char* self)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+    RawLocker lock(self + 0xe0);
     FUN_1426208d0(RawFieldPtr<U>(self, 0x168));
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
 // Copies the per-type statistics into a snapshot and the keys / objects it refers to.

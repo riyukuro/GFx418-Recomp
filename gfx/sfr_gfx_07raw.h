@@ -219,10 +219,10 @@ static inline void RawClearPtrSet(U* self)
 {
     if (!*self)
         return;
-    U* table = (U*)*self;
-    for (U i = 0; i < table[1] + 1; i++)
+    U n = ((U*)*self)[1];
+    for (U i = 0; i <= n; i++)
     {
-        char* e = RawEntry(table, i, 0x20);
+        char* e = RawEntry((U*)*self, i, 0x20);
         if (*(SPInt*)e != -2)
         {
             void* p = RawField<void*>(e, 0x18);
@@ -231,7 +231,7 @@ static inline void RawClearPtrSet(U* self)
             *(SPInt*)e = -2;
         }
     }
-    Memory::Free(table);
+    Memory::Free((void*)*self);
     *self = 0;
 }
 
@@ -240,17 +240,17 @@ static inline void RawClearStringSet(U* self, U payload)
 {
     if (!*self)
         return;
-    U* table = (U*)*self;
-    for (U i = 0; i < table[1] + 1; i++)
+    U n = ((U*)*self)[1];
+    for (U i = 0; i <= n; i++)
     {
-        char* e = RawEntry(table, i, 0x20);
+        char* e = RawEntry((U*)*self, i, 0x20);
         if (*(SPInt*)e != -2)
         {
             ((String*)(e + payload))->~String();
             *(SPInt*)e = -2;
         }
     }
-    Memory::Free(table);
+    Memory::Free((void*)*self);
     *self = 0;
 }
 
@@ -259,14 +259,14 @@ static inline void RawClearPlainSet(U* self, U stride)
 {
     if (!*self)
         return;
-    U* table = (U*)*self;
-    for (U i = 0; i < table[1] + 1; i++)
+    U n = ((U*)*self)[1];
+    for (U i = 0; i <= n; i++)
     {
-        char* e = RawEntry(table, i, stride);
+        char* e = RawEntry((U*)*self, i, stride);
         if (*(SPInt*)e != -2)
             *(SPInt*)e = -2;
     }
-    Memory::Free(table);
+    Memory::Free((void*)*self);
     *self = 0;
 }
 
