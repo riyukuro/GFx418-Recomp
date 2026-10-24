@@ -38,6 +38,9 @@ public:
     // Parse action trace channel, only with verbose parse actions; Derived supplies IsVerboseParseAction() (only
     // LogBase<Stream> in the exe, 0x142967c30).
     void LogParseAction(const char* pfmt, ...) const;
+    // (appended, sfr_gfx_08s2) shape record trace of the parse channel, only with verbose shape parsing; Derived
+    // supplies IsVerboseParseShape() (only LogBase<Stream> in the exe, 0x14265ab80).
+    void LogParseShape(const char* pfmt, ...) const;
 
 protected:
     bool IsLogNotNull() const { return 0; }
@@ -116,6 +119,24 @@ void LogBase<Derived>::LogParseAction(const char* pfmt, ...) const
         Log* plog = p->GetLog();
         if (p->IsLogNotNull() || plog)
             plog->LogMessageVarg(Log_ParseAction, pfmt, argList);
+    }
+    va_end(argList);
+}
+
+// (appended, sfr_gfx_08s2)
+enum { Log_ParseShape = LogChannel_Parse | 1 };
+
+template<class Derived>
+void LogBase<Derived>::LogParseShape(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    Derived* p = (Derived*)this;
+    if (p->IsVerboseParseShape())
+    {
+        Log* plog = p->GetLog();
+        if (p->IsLogNotNull() || plog)
+            plog->LogMessageVarg(Log_ParseShape, pfmt, argList);
     }
     va_end(argList);
 }

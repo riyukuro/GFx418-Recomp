@@ -206,6 +206,8 @@ public:
         ResyncFile = true;
         return pInput;
     }
+    // (appended, sfr_gfx_08s2) the name the stream was opened with
+    const StringDH& GetFileName() const { return FileName; }
 };
 
 // Bit reader over a memory block, used by the shape and morph parsers (0x20 bytes).
@@ -229,7 +231,8 @@ public:
     unsigned ReadUInt1()
     {
         unsigned v = pData[CurByteIndex] & (1 << (7 - CurBitIndex));
-        if (++CurBitIndex >= 8)
+        ++CurBitIndex;
+        if (CurBitIndex >= 8)
         {
             ++CurByteIndex;
             CurBitIndex = 0;
@@ -305,6 +308,79 @@ public:
     {
         Align();
         CurByteIndex += n;
+    }
+
+    // (appended, sfr_gfx_08s2) the 4 and 5 bit fields of the shape records, read straight from the current byte
+    // (and the next one when the field crosses into it)
+    SF_INLINE unsigned ReadUInt4()
+    {
+        unsigned v;
+        switch (CurBitIndex)
+        {
+        case 0: v = (pData[CurByteIndex] & 0xF0) >> 4; CurBitIndex += 4; break;
+        case 1: v = (pData[CurByteIndex] & 0x78) >> 3; CurBitIndex += 4; break;
+        case 2: v = (pData[CurByteIndex] & 0x3C) >> 2; CurBitIndex += 4; break;
+        case 3: v = (pData[CurByteIndex] & 0x1E) >> 1; CurBitIndex += 4; break;
+        case 4:
+            v           = pData[CurByteIndex] & 0x0F;
+            CurBitIndex = 0;
+            ++CurByteIndex;
+            break;
+        case 5:
+            v           = ((pData[CurByteIndex] & 0x07) << 1) | (pData[CurByteIndex + 1] >> 7);
+            CurBitIndex = 1;
+            ++CurByteIndex;
+            break;
+        case 6:
+            v           = ((pData[CurByteIndex] & 0x03) << 2) | (pData[CurByteIndex + 1] >> 6);
+            CurBitIndex = 2;
+            ++CurByteIndex;
+            break;
+        case 7:
+            v           = ((pData[CurByteIndex] & 0x01) << 3) | (pData[CurByteIndex + 1] >> 5);
+            CurBitIndex = 3;
+            ++CurByteIndex;
+            break;
+        default: v = 0; break;
+        }
+        return v;
+    }
+    SF_INLINE unsigned ReadUInt5()
+    {
+        unsigned v;
+        switch (CurBitIndex)
+        {
+        case 0: v = (pData[CurByteIndex] & 0xF8) >> 3; CurBitIndex += 5; break;
+        case 1: v = (pData[CurByteIndex] & 0x7C) >> 2; CurBitIndex += 5; break;
+        case 2: v = (pData[CurByteIndex] & 0x3E) >> 1; CurBitIndex += 5; break;
+        case 3:
+            v           = pData[CurByteIndex] & 0x1F;
+            CurBitIndex = 0;
+            ++CurByteIndex;
+            break;
+        case 4:
+            v           = ((pData[CurByteIndex] & 0x0F) << 1) | (pData[CurByteIndex + 1] >> 7);
+            CurBitIndex = 1;
+            ++CurByteIndex;
+            break;
+        case 5:
+            v           = ((pData[CurByteIndex] & 0x07) << 2) | (pData[CurByteIndex + 1] >> 6);
+            CurBitIndex = 2;
+            ++CurByteIndex;
+            break;
+        case 6:
+            v           = ((pData[CurByteIndex] & 0x03) << 3) | (pData[CurByteIndex + 1] >> 5);
+            CurBitIndex = 3;
+            ++CurByteIndex;
+            break;
+        case 7:
+            v           = ((pData[CurByteIndex] & 0x01) << 4) | (pData[CurByteIndex + 1] >> 4);
+            CurBitIndex = 4;
+            ++CurByteIndex;
+            break;
+        default: v = 0; break;
+        }
+        return v;
     }
 };
 

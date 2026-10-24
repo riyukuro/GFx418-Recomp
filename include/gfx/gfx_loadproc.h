@@ -298,6 +298,10 @@ public:
 
     // (appended, sfr_gfx_04x) the file of the tag stream at its read position (exe 0x1425c8b50)
     File* GetUnderlyingFile();
+
+    // (appended, sfr_gfx_08s2) the shape reader parses the shape records from a stream of its own
+    void  SetAltStream(Stream* pstream) { pAltStream = pstream; }
+    void* GetTempBindData() const { return pTempBindData; }
 };
 
 }} // namespace Scaleform::GFx
