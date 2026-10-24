@@ -101,6 +101,17 @@ bool FUN_1425fb480(void* list, void* owner, Scaleform::UPInt i1, Scaleform::UPIn
 void FUN_142517ed0(void* avmInteractiveObj);                                     // AvmInteractiveObj::MoveBranchInPlayList
 int FUN_142520380(void* ctx, void* multiname);                                    // Tracer: number of run-time operands a multiname takes off the stack
 void FUN_142501e80(void* state, void* propRef, void* multiname, void* a, void* b);   // Tracer: resolve a multiname to a property reference
+void FUN_1425201f0(void* ctx, void* multiname);                                      // exec: resolve runtime multiname operands from the stack
+unsigned char* FUN_142528810(unsigned char* ret, Scaleform::UPInt vm, void* obj, void* multiname, void* value); // VM: set a property on an object
+unsigned char* FUN_14250ef80(unsigned char* ret, Scaleform::UPInt vm, Scaleform::UPInt traits, void* result, const void* obj, const void* multiname, int target); // GetSuperProperty
+void FUN_142502570(Scaleform::UPInt vm, void* propRef, void* multiname);              // VM: resolve a multiname to a property reference
+void FUN_14252c640(Scaleform::UPInt tracer, Scaleform::UPInt* pos);                      // Tracer: advance over padding/labels at pos
+void FUN_1425212f0(Scaleform::UPInt tracer);                                              // Tracer: per-opcode bookkeeping
+char FUN_14252d100(Scaleform::UPInt tracer, unsigned char op, Scaleform::UPInt* pos, Scaleform::UPInt state);   // Tracer: trace one opcode (common set)
+void FUN_14253d520(Scaleform::UPInt state, unsigned char op, Scaleform::UPInt* pos);     // TR::State: trace one opcode (remaining set)
+void FUN_1424d7690(void* err, int id, void* vm, const char* a, const char* b);       // VM::Error::Error(id, vm, char*, char*)
+Scaleform::UPInt FUN_142524f60(Scaleform::UPInt vm, Scaleform::UPInt file, Scaleform::UPInt entry);   // multiname entry -> traits
+Scaleform::UPInt FUN_142507f60(Scaleform::UPInt vm, const void* value);               // class traits of a value
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -3714,6 +3725,510 @@ void Sfr31TraceTypeOperand(State* st, UInt32 argc)
     else
         s.OpStack().PushBack(popped.Get());
     popped.Get().~Value();
+}
+// ---- batch 28
+struct Sfr31ExecMnCtx
+{
+    UPInt vm;
+    UPInt stack;
+    UPInt file;
+};
+
+static inline void Sfr31ThrowIfNullOperand(UPInt vmAddr, const UInt32* v)
+{
+    const UInt32 k = (v[0] & 0x1f) - 0xc;
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
+    if ((v[0] & 0x1f) == 0 || (k < 4 && obj == 0))
+    {
+        VM::Error e(static_cast<VM::ErrorID>((k < 4 ? (obj != 0) : 1u) + 0x3f1), *reinterpret_cast<VM*>(vmAddr));
+        reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(e);
+    }
+}
+
+// Takes the Value on top of the operand stack bitwise, without touching refcounts.
+static inline void Sfr31TakeTop(UPInt vmAddr, Sfr31RawTraitsVal& out)
+{
+    const UPInt top = Sfr31Rd(vmAddr, 0x50);
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&out)[i] = reinterpret_cast<const UInt32*>(top)[i];
+    Sfr31Wr(vmAddr, 0x50, top - 0x20);
+}
+
+// setproperty: pops the value and the object, resolves the multiname and stores the value.
+// MS2-FUNCTIONAL 0x14253b790: raw-offset model; codegen differs from the exe
+// @0x14253b790
+void Sfr31ExecSetProperty(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Sfr31RawTraitsVal val;
+    Sfr31TakeTop(cvm, val);
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    const UPInt st = Sfr31Rd(ctx.stack, 8);
+    Sfr31RawTraitsVal obj;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(st)[i];
+    Sfr31Wr(ctx.stack, 8, st - 0x20);
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        UInt8 ret[16];
+        *reinterpret_cast<UInt32*>(vmAddr + 0x30) += 1;
+        FUN_142528810(ret, vmAddr, &obj, &mn, &val);
+        *reinterpret_cast<UInt32*>(vmAddr + 0x30) -= 1;
+    }
+    reinterpret_cast<Value*>(&obj)->~Value();
+    mn.~Multiname();
+    reinterpret_cast<Value*>(&val)->~Value();
+}
+
+// getsuper: reads the named property of the object on top of the stack through the current frame's super traits.
+// MS2-FUNCTIONAL 0x14253a430: raw-offset model; codegen differs from the exe
+// @0x14253a430
+void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    UPInt top = Sfr31Rd(ctx.stack, 8);
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(top));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        Sfr31RawTraitsVal obj;
+        for (int i = 0; i < 8; ++i)
+            reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
+        *reinterpret_cast<UInt32*>(top) = 0;
+        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
+        const UPInt frame = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8;
+        UInt8 ret[16];
+        UInt8* r = FUN_14250ef80(ret, vmAddr, Sfr31Rd(frame, 0), reinterpret_cast<void*>(top), &obj, &mn, 0);
+        if (*r == 0)
+        {
+            VM::Error e(static_cast<VM::ErrorID>(0x40b), *reinterpret_cast<VM*>(vmAddr));
+            reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(e);
+        }
+        reinterpret_cast<Value*>(&obj)->~Value();
+    }
+    mn.~Multiname();
+}
+// ---- batch 29
+// getlex-style resolve: pushes the value the multiname resolves to, or raises a ReferenceError.
+// MS2-FUNCTIONAL 0x142538d30: raw-offset model; codegen differs from the exe
+// @0x142538d30
+void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0)
+    {
+        mn.~Multiname();
+        return;
+    }
+    UPInt pr[4] = {0, 0, 0, 0};
+    FUN_142502570(vmAddr, pr, &mn);
+    Value& res = *reinterpret_cast<Value*>(&pr[1]);
+    const UPInt f = pr[0];
+    if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+    {
+        VM::Error e(static_cast<VM::ErrorID>(0x429), *reinterpret_cast<VM*>(vmAddr));
+        reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(e);
+    }
+    else
+        ExecPushCopy(reinterpret_cast<VM*>(vmAddr), res);
+    res.~Value();
+    mn.~Multiname();
+}
+
+typedef UInt8* (*Sfr31VFnDel)(UPInt self, UInt8* ret, const void* obj, const void* mn);
+typedef UPInt* (*Sfr31VFnName)(UPInt self, UPInt* out);
+
+// deleteproperty-style op: asks the VM helper object to handle the name; when it declines, pops the operand and raises a TypeError naming the traits.
+// MS2-FUNCTIONAL 0x142539230: raw-offset model; codegen differs from the exe
+// @0x142539230
+void Sfr31ExecDeleteProp(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    const UPInt obj = Sfr31Rd(ctx.stack, 8);
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt helper = Sfr31Rd(vmAddr, 0x40);
+        UInt8 ret[16];
+        Sfr31VFnDel fn = *reinterpret_cast<Sfr31VFnDel*>(Sfr31Rd(helper, 0) + 0x68);
+        if (*fn(helper, ret, reinterpret_cast<const void*>(obj), &mn) == 0)
+        {
+            Value* top = reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
+            top->~Value();
+            Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
+            const UPInt tr = FUN_14250ffc0(reinterpret_cast<VM*>(vmAddr), reinterpret_cast<const Value*>(obj));
+            UPInt nameNode = 0;
+            Sfr31VFnName nf = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(tr, 0) + 0x38);
+            UPInt* p = nf(tr, &nameNode);
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d7850(eb, 0x3f8, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(Sfr31Rd(*p, 0)));
+            reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+            Sfr31ReleaseStr(nameNode);
+        }
+    }
+    mn.~Multiname();
+}
+
+// initproperty: pops the value and the object, resolves the multiname and initializes the property.
+// MS2-FUNCTIONAL 0x14253ffa0: raw-offset model; codegen differs from the exe
+// @0x14253ffa0
+void Sfr31ExecInitProperty(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Sfr31RawTraitsVal val;
+    Sfr31TakeTop(cvm, val);
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    const UPInt st = Sfr31Rd(ctx.stack, 8);
+    Sfr31RawTraitsVal obj;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(st)[i];
+    Sfr31Wr(ctx.stack, 8, st - 0x20);
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        UInt8 ret[16];
+        FUN_142528810(ret, vmAddr, &obj, &mn, &val);
+    }
+    reinterpret_cast<Value*>(&obj)->~Value();
+    mn.~Multiname();
+    reinterpret_cast<Value*>(&val)->~Value();
+}
+// ---- batch 30
+// Tracer op: the popped operand becomes the traits describing its class: the Object traits for a null value, otherwise the
+// traits of its dynamic class (or its instance traits when it is a class/function traits holder).
+// MS2-FUNCTIONAL 0x14253d160: raw-offset model; codegen differs from the exe
+// @0x14253d160
+void Sfr31TraceOperandClassTraits(State* st)
+{
+    StV s(st);
+    FUN_14251ccc0(st, 1);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    const UPInt vm = TrVM(s.Tracer());
+    const UPInt pv = reinterpret_cast<UPInt>(&popped.Get());
+    const UInt32 kind = *reinterpret_cast<const UInt32*>(pv) & 0x1f;
+    UPInt tr = 0;
+    if (kind == 0)
+        tr = Sfr31Rd(vm, 0x278);
+    else if (kind == 8 || kind == 9)
+        tr = Sfr31Rd(pv, 0x10);
+    else
+        tr = FUN_14250ffc0(reinterpret_cast<VM*>(vm), &popped.Get());
+    if (tr != 0 && tr == Sfr31Rd(vm, 0x1f0))
+        tr = Sfr31Rd(vm, 0x1f8);
+    Sfr31RawTraitsVal v = {0x48, 0, 0, 0};
+    if (*reinterpret_cast<const UInt32*>(tr + 0x70) == 10 && ((*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5) & 1) == 0)
+        v.w2 = Sfr31Rd(Sfr31Rd(vm, 0x1f8), 0xc0);
+    else if ((*reinterpret_cast<const UInt8*>(tr + 0x68) & 1) != 0)
+    {
+        v.w0 = 8;
+        v.w2 = Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0);
+    }
+    else
+        v.w2 = Sfr31Rd(Sfr31Rd(vm, 0x230), 0xc0);
+    s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
+    popped.Get().~Value();
+}
+
+// Traces the code of the block containing pos, merging block states, and keeps tracing opcodes until the code ends or a halt is raised.
+// MS2-FUNCTIONAL 0x142530220: raw-offset model; codegen differs from the exe
+// @0x142530220
+void Sfr31TraceBlock(UPInt tr, UPInt pos, UPInt block)
+{
+    UPInt b = Sfr31Rd(tr, 0x110);
+    while (b != 0 && pos < Sfr31Rd(b, 0x20))
+        b = Sfr31Rd(b, 0);
+    Sfr31Wr(tr, 0x68, b);
+    UInt8 buf[8];
+    if ((*reinterpret_cast<const UInt8*>(b + 0x10) & 1) == 0)
+        FUN_142511b00(tr, reinterpret_cast<UPInt*>(b), reinterpret_cast<UPInt*>(block));
+    else if (b != block && *FUN_142516c40(tr, buf, reinterpret_cast<UPInt*>(b), reinterpret_cast<UPInt*>(block)) == 0)
+        return;
+    if (pos >= Sfr31Rd(tr, 0x58))
+        return;
+    while (*reinterpret_cast<const UInt8*>(TrVM(tr) + 0x180) == 0)
+    {
+        const UPInt prev = Sfr31Rd(tr, 0x68);
+        for (UPInt p = Sfr31Rd(tr, 0x110); p != 0; p = Sfr31Rd(p, 0))
+        {
+            if (Sfr31Rd(p, 0x20) <= pos)
+            {
+                if (Sfr31Rd(p, 0x20) == pos)
+                {
+                    Sfr31Wr(tr, 0x68, p);
+                    if ((*reinterpret_cast<const UInt8*>(p + 0x10) & 1) == 0)
+                        FUN_142511b00(tr, reinterpret_cast<UPInt*>(p), reinterpret_cast<UPInt*>(prev));
+                    else if (p != prev && *FUN_142516c40(tr, buf, reinterpret_cast<UPInt*>(p), reinterpret_cast<UPInt*>(prev)) == 0)
+                        return;
+                }
+                break;
+            }
+        }
+        FUN_14252c640(tr, &pos);
+        if (Sfr31Rd(tr, 0x58) <= pos)
+            return;
+        FUN_1425212f0(tr);
+        const UInt8 op = *reinterpret_cast<const UInt8*>(pos + Sfr31Rd(tr, 0x50));
+        ++pos;
+        const UPInt state = Sfr31Rd(Sfr31Rd(tr, 0x68), 0x18);
+        if (FUN_14252d100(tr, op, &pos, state) == 0)
+        {
+            if (*reinterpret_cast<const UInt8*>(TrVM(tr) + 0x180) != 0)
+                return;
+            FUN_14253d520(state, op, &pos);
+        }
+        if (Sfr31Rd(tr, 0x58) <= pos)
+            return;
+    }
+}
+// ---- batch 31
+typedef UPInt (*Sfr31VFnGet)(UPInt self);
+
+// Tracer getdescendants: raises a verify error when XML support is absent, else the object operand becomes an XMLList-typed value.
+// MS2-FUNCTIONAL 0x1425390a0: raw-offset model; codegen differs from the exe
+// @0x1425390a0
+void Sfr31TraceGetDescendants(State* st, UInt32 idx)
+{
+    StV s(st);
+    const UPInt vm = TrVM(s.Tracer());
+    const UPInt helper = Sfr31Rd(vm, 0x40);
+    if (*reinterpret_cast<const UInt8*>(helper + 0x20) == 0)
+    {
+        VM& v = *reinterpret_cast<VM*>(vm);
+        v.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3e9), v, "getdescendants"));
+        return;
+    }
+    FUN_14251fcd0(s.Tracer(), idx);
+    const UPInt link = TrAbcLink(s.Tracer());
+    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
+    ctx.pops += FUN_142520380(&ctx, &mn);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    ++ctx.pops;
+    Sfr31VFnGet fn = *reinterpret_cast<Sfr31VFnGet*>(Sfr31Rd(helper, 0) + 0x98);
+    Sfr31RawTraitsVal v = {8, 0, fn(helper), 0};
+    s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
+    popped.Get().~Value();
+}
+// ---- batch 32
+// istype-style op: replaces the top value with whether it is an instance of the named class; names resolved at compile time are rejected.
+// MS2-FUNCTIONAL 0x14253bbe0: raw-offset model; codegen differs from the exe
+// @0x14253bbe0
+void Sfr31ExecIsTypeNamed(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    const UPInt cfile = Sfr31Rd(file, 0x28);
+    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(file, idx));
+    const UInt32 flags = *reinterpret_cast<const UInt32*>(entry);
+    const UPInt nameSlot = Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8;
+    if ((flags & 3) == 1 || ((flags >> 2) & 1) != 0)
+    {
+        UPInt sv[2];
+        FUN_142545310(nameSlot, sv);
+        String name(reinterpret_cast<const char*>(sv[0]), sv[1]);
+        alignas(8) char eb[sizeof(VM::Error)];
+        FUN_1424d7690(eb, 0x436, reinterpret_cast<void*>(cvm), name.ToCStr(), "compile time");
+        reinterpret_cast<VM*>(cvm)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+        reinterpret_cast<VM::Error*>(eb)->~Error();
+    }
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(cvm, 0x50));
+    const UPInt tr = FUN_142524f60(vmAddr, file, entry);
+    if (tr == 0)
+    {
+        UPInt sv[2];
+        FUN_142545310(Sfr31Rd(Sfr31Rd(file, 0x28), 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
+        alignas(8) char eb[sizeof(VM::Error)];
+        FUN_1424d7850(eb, 0x3f6, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(sv[0]));
+        reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+        reinterpret_cast<VM::Error*>(eb)->~Error();
+    }
+    else
+        top->SetBool(FUN_1425146d0(reinterpret_cast<VM*>(vmAddr), top, reinterpret_cast<const void*>(tr)));
+}
+// ---- batch 33
+// instanceof: pops the class operand and replaces the top value with whether the class (or its prototype) is on the value's traits chain.
+// MS2-FUNCTIONAL 0x14253b990: raw-offset model; codegen differs from the exe
+// @0x14253b990
+void Sfr31ExecInstanceOf(UPInt vmAddr)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Value* below;
+    Sfr31RawTraitsVal cls;
+    {
+        const UPInt top = Sfr31Rd(vmAddr, 0x50);
+        for (int i = 0; i < 8; ++i)
+            reinterpret_cast<UInt32*>(&cls)[i] = reinterpret_cast<const UInt32*>(top)[i];
+        below = reinterpret_cast<Value*>(top - 0x20);
+        Sfr31Wr(vmAddr, 0x50, top - 0x20);
+    }
+    const UInt32 ck = cls.w0 & 0x1f;
+    if (ck - 0xd > 1)
+        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x410), vm));
+    else
+    {
+        const UInt32 bk = *reinterpret_cast<const UInt32*>(below) & 0x1f;
+        bool r = false;
+        if (bk != 0 && (bk - 0xc > 3 || Sfr31Rd(reinterpret_cast<UPInt>(below), 0x10) != 0))
+        {
+            UPInt chain = FUN_142507f60(vmAddr, below);
+            const UPInt target = FUN_14250ffc0(&vm, reinterpret_cast<const Value*>(&cls));
+            if (ck == 0xd)
+            {
+                for (; chain != 0; chain = Sfr31Rd(chain, 0x88))
+                    if (chain == target)
+                    {
+                        r = true;
+                        break;
+                    }
+            }
+            else
+            {
+                typedef void (*Fn)(UPInt);
+                UPInt proto = Sfr31Rd(target, 0x80);
+                if (proto == 0)
+                {
+                    (*reinterpret_cast<Fn*>(Sfr31Rd(target, 0) + 0x68))(target);
+                    proto = Sfr31Rd(target, 0x80);
+                }
+                for (; chain != 0; chain = Sfr31Rd(chain, 0x88))
+                {
+                    UPInt c = Sfr31Rd(chain, 0x80);
+                    if (c == 0)
+                    {
+                        (*reinterpret_cast<Fn*>(Sfr31Rd(chain, 0) + 0x68))(chain);
+                        c = Sfr31Rd(chain, 0x80);
+                    }
+                    if (reinterpret_cast<UPInt>(&reinterpret_cast<Class*>(c)->GetPrototype()) == proto)
+                    {
+                        r = true;
+                        break;
+                    }
+                }
+            }
+        }
+        below->SetBool(r);
+    }
+    reinterpret_cast<Value*>(&cls)->~Value();
+}
+// ---- batch 34
+// astype-style op: replaces the top value with null when it is an instance of the named class; names resolved at compile time are rejected.
+// MS2-FUNCTIONAL 0x142532ff0: raw-offset model; codegen differs from the exe
+// @0x142532ff0
+void Sfr31ExecAsTypeNamed(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    const UPInt cfile = Sfr31Rd(file, 0x28);
+    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(file, idx));
+    const UInt32 flags = *reinterpret_cast<const UInt32*>(entry);
+    const UPInt nameSlot = Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8;
+    if ((flags & 3) == 1 || ((flags >> 2) & 1) != 0)
+    {
+        UPInt sv[2];
+        FUN_142545310(nameSlot, sv);
+        String name(reinterpret_cast<const char*>(sv[0]), sv[1]);
+        alignas(8) char eb[sizeof(VM::Error)];
+        FUN_1424d7690(eb, 0x436, reinterpret_cast<void*>(cvm), name.ToCStr(), "compile time");
+        reinterpret_cast<VM*>(cvm)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+        reinterpret_cast<VM::Error*>(eb)->~Error();
+    }
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(cvm, 0x50));
+    if (*reinterpret_cast<const UInt8*>(vmAddr + 0x180) != 0)
+        return;
+    const UPInt tr = FUN_142524f60(vmAddr, file, entry);
+    if (tr == 0 || tr == FUN_142507f60(vmAddr, top))
+    {
+        UPInt sv[2];
+        FUN_142545310(nameSlot, sv);
+        alignas(8) char eb[sizeof(VM::Error)];
+        FUN_1424d7850(eb, 0x3f6, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(sv[0]));
+        reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
+        reinterpret_cast<VM::Error*>(eb)->~Error();
+    }
+    else
+        top->SetNull();
+}
+
+// Raises verify error 0x42c naming two conflicting objects; an object whose name is the empty string is reported as null.
+// MS2-FUNCTIONAL 0x14252efe0: raw-offset model; codegen differs from the exe
+// @0x14252efe0
+void Sfr31RaiseNameConflict(UPInt tr, UPInt a, UPInt b)
+{
+    const UPInt vm = TrVM(tr);
+    UPInt nodeB = 0, nodeA = 0;
+    Sfr31VFnName fb = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(b, 0) + 0x38);
+    UPInt* pb = fb(b, &nodeB);
+    Sfr31RawTraitsVal vb = {10, 0, *pb, 0};
+    if (*pb == Sfr31Rd(*pb, 8) + 0x68)
+    {
+        vb.w0 = 0xc;
+        vb.w2 = 0;
+    }
+    else
+        ++*reinterpret_cast<int*>(vb.w2 + 0x18);
+    Sfr31VFnName fa = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(a, 0) + 0x38);
+    UPInt* pa = fa(a, &nodeA);
+    Sfr31RawTraitsVal va = {10, 0, *pa, 0};
+    if (*pa == Sfr31Rd(*pa, 8) + 0x68)
+    {
+        va.w0 = 0xc;
+        va.w2 = 0;
+    }
+    else
+        ++*reinterpret_cast<int*>(va.w2 + 0x18);
+    {
+        VM& v = *reinterpret_cast<VM*>(vm);
+        Sfr31Err e(static_cast<VM::ErrorID>(0x42c), v, *reinterpret_cast<const Value*>(&va), *reinterpret_cast<const Value*>(&vb));
+        v.ThrowVerifyError(e);
+    }
+    reinterpret_cast<Value*>(&va)->~Value();
+    Sfr31ReleaseStr(nodeA);
+    reinterpret_cast<Value*>(&vb)->~Value();
+    Sfr31ReleaseStr(nodeB);
+}
+// ---- batch 35
+// Native with a required object argument: the popped value is handed to the owner's helper through its virtual call along with the remaining arguments.
+// MS2-FUNCTIONAL 0x142537810: raw-offset model; codegen differs from the exe
+// @0x142537810
+void Sfr31ExecOwnerCall(UPInt vmAddr, UPInt owner, UInt32 n)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, n);
+    const UPInt frame = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
+    const UPInt top = Sfr31Rd(frame, 8);
+    Sfr31RawTraitsVal val;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&val)[i] = reinterpret_cast<const UInt32*>(top)[i];
+    Sfr31Wr(frame, 8, top - 0x20);
+    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(&val));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt helper = Sfr31Rd(Sfr31Rd(owner, 0x40), 0x88);
+        if (helper != 0)
+        {
+            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+            void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
+            typedef void (*Fn)(UPInt, UPInt, void*, UInt32, void*);
+            (*reinterpret_cast<Fn*>(Sfr31Rd(helper, 0) + 0x78))(helper, Sfr31Rd(owner, 0x40), &val, n, args);
+        }
+    }
+    reinterpret_cast<Value*>(&val)->~Value();
+    FUN_1424de9e0(raBuf);
 }
 }}} // namespace Scaleform::GFx::AS3
 
