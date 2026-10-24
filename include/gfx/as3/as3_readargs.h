@@ -206,6 +206,8 @@ private:
     void exec_opcode(const Abc::Code::OpCode opcode, Abc::TCodeOffset& bcp);                  // 0x14253d520
     // (appended, sfr24) looks mn up in the scope stack, then the saved scope, then the global object.
     void FindProp(PropRef& result, const Multiname& mn, ScopeType& stype, UPInt& scope_index);  // 0x142501e80
+    // (appended, sfr24) the traced type of slot si of obj_traits (a method's function type, a slot's data type).
+    CheckResult GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const;   // 0x14250cf20
 
     // (sfr24) one bit per register, from the method body's local_reg_count (Tracer heap, StatMV_VM_Tracer_Mem)
     struct RegisterBits
