@@ -890,6 +890,37 @@ void FUN_1400544e0(cri_any cri_p0, ...)
   return;
 }
 
+// The decoder table entries unit_140047430's FUN_1400478a0 stores by address (LAB_140054590/5c0/5d0; Ghidra made no
+// functions here): set callback slot nIndex (0x18 bytes from +0x1be8), set the +0x1c48 pointer and count, and read
+// the +0x1c48 pointer and the +0x1c54 count back.
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x140054590
+void FUN_140054590(void* pCtx, int nIndex, cri_u8 a3, cri_u8 a4, cri_u8 a5)
+{
+  cri_u8* pSlot = (cri_u8*)((cri_u1*)pCtx + 0x1be8 + (longlong)nIndex * 0x18);
+  pSlot[2] = a5;
+  pSlot[0] = a3;
+  pSlot[1] = a4;
+}
+
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x1400545c0
+void FUN_1400545c0(void* pCtx, cri_u8 a2, cri_u4 a3)
+{
+  *(cri_u8*)((cri_u1*)pCtx + 0x1c48) = a2;
+  *(cri_u4*)((cri_u1*)pCtx + 0x1c50) = a3;
+}
+
+// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// @0x1400545d0
+void FUN_1400545d0(void* pCtx, cri_u8* pOut, cri_u4* pCount)
+{
+  if (pOut)
+    *pOut = *(cri_u8*)((cri_u1*)pCtx + 0x1c48);
+  if (pCount)
+    *pCount = *(cri_u4*)((cri_u1*)pCtx + 0x1c54);
+}
+
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400545f0
 void FUN_1400545f0(cri_any cri_p0, ...)
