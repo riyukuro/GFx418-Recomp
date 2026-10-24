@@ -1127,3 +1127,4 @@ Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>::operator=(
 
 // XMLSupport's slot 10 points at the actual Add entry at +0x10; the harvested row at 0x1424e6980 is the preceding entry.
 // MS2-PIN: ?Add@XMLSupport@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
+// MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
