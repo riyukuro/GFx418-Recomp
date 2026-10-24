@@ -36,7 +36,7 @@
 // MS2-PIN: ??_7ImageSource@Render@Scaleform@@6B@ 0x1431851a8
 // MS2-PIN: ??_7SubImage@Render@Scaleform@@6B@ 0x143183c10
 // MS2-PIN: ??_7WrapperImageSource@Render@Scaleform@@6B@ 0x143185228
-// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149b10
+// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
 // MS2-PIN: ??_7ImageDelegate@ImageResource@GFx@Scaleform@@6B@ 0x143149b10
 // MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8
 
