@@ -403,7 +403,7 @@ public:
     virtual CheckResult EqualsXML(bool& stop, bool& result, Instances::fl::XML& l, const Value& r) const;  // 0x1424f9850
     virtual void DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, const Value& value) const;      // 0x1424f4a90
     virtual CheckResult GetDescendants(Value& v, const Multiname& mn) const;                            // 0x142509140
-    // (appended, sfr35) slots 9 and 11; the ToXMLString body is Sfr31ValueToEscapedString (sfr_as3_19).
+    // (appended, sfr35) slots 9 and 11 (bodies: sfr_as3_17, sfr_as3_19).
     virtual CheckResult EqualsQName(bool& result, Instances::fl::QName& l, Instances::fl::QName& r) const; // 0x1424f97e0
     virtual CheckResult ToXMLString(VM& vm, Value& v) const;                                            // 0x14252fef0
     // (sfr24) the traits getters (vftable slots 14-19; found by work/sfr24/tmp/vtaudit.py).

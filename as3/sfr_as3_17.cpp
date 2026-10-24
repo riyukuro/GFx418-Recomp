@@ -32,6 +32,8 @@
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avmloader.h"
+#include "ms2/scaleform/include/gfx/as3/as3_stage.h"
 #include "ms2/scaleform/include/gfx/gfx_loadproc.h"
 #include "ms2/scaleform/include/gfx/gfx_shapedef.h"
 #include "ms2/scaleform/include/gfx/gfx_drawingcontext.h"
@@ -984,18 +986,15 @@ void* Sfr33MovieRootCreateMovieDefRootNode(MovieRoot* self, MemoryHeap* pheap, M
     return p ? Sfr33ConstructAS3MovieDefRootNode(p, pdefImpl, importFlag) : NULL;
 }
 
-// Stage::CreateNewInstanceName (virtual): the stage has no instance name, the empty string.
+// The stage has no instance name: the empty string (of the movie's string manager, pASRoot->pMovieImpl+0x18).
 // @0x1424f3980
-ASString* Sfr33StageCreateNewInstanceName(const UByte* self, ASString* ret)
+ASString Stage::CreateNewInstanceName() const
 {
     typedef UByte* (*GetStringManagerFn)(void*);
     void* obj = *reinterpret_cast<void* const*>(*reinterpret_cast<const UByte* const*>(
-                    *reinterpret_cast<const UByte* const*>(self + 0x20) + 0x10) + 0x18);
+                    *reinterpret_cast<const UByte* const*>(reinterpret_cast<const UByte*>(this) + 0x20) + 0x10) + 0x18);
     UByte* mgr = (*reinterpret_cast<GetStringManagerFn const* const*>(obj))[50](obj);
-    UByte* node = mgr + 0x40;   // the manager's empty string node
-    *reinterpret_cast<UByte**>(ret) = node;
-    ++*reinterpret_cast<unsigned*>(node + 0x18);
-    return ret;
+    return ASString(reinterpret_cast<ASStringNode*>(mgr + 0x40));   // the manager's empty string node
 }
 
 // MovieRoot::CreateEventObject (virtual)
@@ -1203,29 +1202,24 @@ CheckResult Object::DeleteProperty(const Multiname& prop_name)
 }
 }}}
 
-void FUN_1425fc4e0(void* self);   // DisplayObjContainer::ForceShutdown
 bool FUN_142442c30(const void* name, void* pccinfo, void* pdefImpl);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// Stage::ForceShutdown (virtual): stops the frame counter (+0x118), clears the display list (+0xd8), shuts the
-// root (+0x110) down and drops it, then shuts the container down.
+// Stops the frame counter, clears the display list (+0xd8), shuts the root movie clip down and drops it, then
+// shuts the container down.
 // MS2-FUNCTIONAL 0x142504860: the null-root path jumps past the release (exe re-tests +0x110); same calls/stores.
 // @0x142504860
-void Sfr33StageForceShutdown(UByte* self)
+void Stage::ForceShutdown()
 {
-    (*reinterpret_cast<InteractiveObject**>(self + 0x118))->RemoveFromPlayList();
-    reinterpret_cast<DisplayList*>(self + 0xd8)->Clear(reinterpret_cast<DisplayObjectBase*>(self));
-    reinterpret_cast<DisplayObjectBase*>(self)->SetDirtyFlag();
-    Ptr<RefCountNTSImpl>& proot = *reinterpret_cast<Ptr<RefCountNTSImpl>*>(self + 0x110);
-    if (proot)
-    {
-        typedef void (*ForceShutdownFn)(void*);
-        void** p = reinterpret_cast<void**>(proot.GetPtr());
-        reinterpret_cast<ForceShutdownFn*>(*p)[54](p);
-    }
-    proot = NULL;
-    FUN_1425fc4e0(self);
+    UByte* self = reinterpret_cast<UByte*>(this);
+    FrameCounterObj->RemoveFromPlayList();
+    reinterpret_cast<DisplayList*>(self + 0xd8)->Clear(this);
+    SetDirtyFlag();
+    if (pRoot)
+        pRoot->ForceShutdown();
+    pRoot = NULL;
+    DisplayObjContainer::ForceShutdown();
 }
 
 // GetFillStyle (shape-data virtual): copies 1-based fill style idx out of the fill array (+0x18).
@@ -1275,9 +1269,8 @@ String& Sfr33AvmBitmapGetASClassName(const void*, String* className)
     return *className;
 }
 
-// AvmLoader::GetASClassName (virtual)
 // @0x142505fa0
-String& Sfr33AvmLoaderGetASClassName(const void*, String* className)
+String& AvmLoader::GetASClassName(String* className) const
 {
     *className = "flash.display.Loader";
     return *className;
@@ -3828,6 +3821,14 @@ void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Mul
         Sfr33FindScopeProperty(result, vm, 0,
                                *reinterpret_cast<const ScopeStackType*>(reinterpret_cast<const UByte*>(value.GetObject()) + 0x40),
                                mn);
+}
+
+// E4X equality of two QNames: same namespace (uri and kind) and the same local name; both need a namespace.
+// @0x1424f97e0
+CheckResult XMLSupportImpl::EqualsQName(bool& result, Instances::fl::QName& l, Instances::fl::QName& r) const
+{
+    result = l.Ns && r.Ns && *l.Ns == *r.Ns && l.LocalName.GetNode() == r.LocalName.GetNode();
+    return true;
 }
 
 // E4X equality of two XML nodes: a text or attribute node against one with simple content compares their string

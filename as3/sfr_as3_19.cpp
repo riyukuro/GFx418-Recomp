@@ -6359,22 +6359,21 @@ char* Sfr31ValueToStringCheck(char* ret, VM* vm, Value* v, void* strOut)
 // Converts a value in place to an XML-escaped string for element content. Null operands raise TypeError 1009/1010.
 // MS2-FUNCTIONAL 0x14252fef0: raw-offset model; codegen differs from the exe
 // @0x14252fef0
-char* Sfr31ValueToEscapedString(char* ret, UPInt vmAddr, Value* v)
+CheckResult XMLSupportImpl::ToXMLString(VM& vm, Value& val) const
 {
+    Value* v = &val;
     const UPInt vp = reinterpret_cast<UPInt>(v);
-    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    const UPInt vmAddr = reinterpret_cast<UPInt>(&vm);
     const UInt32 k = *reinterpret_cast<const UInt32*>(vp) & 0x1f;
     ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x10), 0x1e8));
     if (k == 0 || (k - 0xc < 4 && Sfr31Rd(vp, 0x10) == 0))
     {
         vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(k - 0xc < 4 ? 0x3f2 : 0x3f1), vm));
-        *ret = 0;
-        return ret;
+        return false;
     }
     if (k < 5)
     {
-        v->ToStringValue(vm.GetStringManager());
-        return ret;
+        return v->ToStringValue(vm.GetStringManager());
     }
     StringBuffer buf(Memory::pGlobalHeap);
     if (k == 10)
@@ -6398,8 +6397,7 @@ char* Sfr31ValueToEscapedString(char* ret, UPInt vmAddr, Value* v)
         ASString s(reinterpret_cast<ASStringNode*>(m2 + 0x40));
         FUN_142403310(obj, &s);
         *v = s;
-        *ret = 1;
-        return ret;
+        return true;
     }
     else
     {
@@ -6408,8 +6406,7 @@ char* Sfr31ValueToEscapedString(char* ret, UPInt vmAddr, Value* v)
         const UInt32 k3 = *reinterpret_cast<const UInt32*>(vp) & 0x1f;
         if (!ok || (k3 > 4 && k3 != 10))
         {
-            *ret = 0;
-            return ret;
+            return false;
         }
         ASString e(reinterpret_cast<ASStringNode*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x10), 0x1e8) + 0x40));
         UPInt tn = 0;
@@ -6421,8 +6418,7 @@ char* Sfr31ValueToEscapedString(char* ret, UPInt vmAddr, Value* v)
     const char* c = buf.ToCStr();
     ASString res(mgr->CreateStringNode(c ? c : "", buf.GetSize()));
     *v = res;
-    *ret = 1;
-    return ret;
+    return true;
 }
 
 // ---- batch 57
