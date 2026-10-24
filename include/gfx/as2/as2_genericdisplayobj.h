@@ -21,6 +21,13 @@ public:
     virtual RectF         GetBounds(const Matrix& t) const;                              // exe 0x1429498a0
     virtual RectF         GetRectBounds(const Matrix& t) const;                          // exe 0x142954cb0
     virtual TopMostResult GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr); // exe 0x142956ad0
+    // (appended, sfr36) the morph ratio of a shape node.
+    virtual void          SetRatio(float ratio);                                         // exe 0x14298a5a0
+    // (appended, sfr37) the shape's render node, morph ratio, hit test and definition.
+    virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const; // exe 0x142937ca0
+    virtual float         GetRatio() const;                                              // exe 0x142954c30
+    virtual bool          PointTestLocal(const PointF& pt, UByte hitTestMask = 0) const; // exe 0x14296efb0
+    virtual CharacterDef* GetCharacterDef() const;                                       // exe 0x14294a030
 };
 
 }}} // namespace Scaleform::GFx::AS2
