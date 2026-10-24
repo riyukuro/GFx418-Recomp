@@ -244,6 +244,13 @@ public:
 
 Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
+// AS3::Stage::SetOrientation.
+void FUN_142528770(Scaleform::GFx::DisplayObject* pstage, const Scaleform::GFx::ASString& orientation);
+// AvmButton state setters (sfr_as3_19).
+void FUN_1425272f0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+void FUN_142527490(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+void FUN_1425287b0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+void FUN_14252a4e0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 // MovieImpl::GetDrawableImageContext (made on first use).
 void* FUN_14256f220(Scaleform::GFx::MovieImpl* pmovie);
 
@@ -4556,6 +4563,720 @@ namespace Instances { namespace fl_display
         if (pContentLoaderInfo && pContentLoaderInfo->GetContentDispObj())
             root->UnloadMovie(this);
         root->AddNewLoadQueueEntry(bytes, this);
+    }
+}}
+
+
+// ---- flash.display: property accessors and stubs the exe keeps out of line ----
+namespace Instances { namespace fl_display
+{
+    // @0x1424474c0
+    void LoaderInfo::actionScriptVersionGet(UInt32& result)
+    {
+        result = 3;
+    }
+
+    // @0x142447e10
+    void DisplayObject::alphaSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetAlpha(v * 100.0);
+    }
+
+    // @0x1424482b0
+    void Stage::autoOrientsGet(bool& result)
+    {
+        // MovieImpl flag 0x4000: the stage auto-orients.
+        result = (static_cast<ASVM&>(GetVM()).GetMovieImpl()->Flags & 0x4000) != 0;
+    }
+
+    // @0x1424487c0
+    void Sprite::buttonModeGet(bool& result)
+    {
+        // The AS3 sprite part keeps the button mode in its flags byte at +0x60.
+        result = pDispObj ? (reinterpret_cast<const UByte*>(ToAvmDisplayObj(pDispObj))[0x60] & 1) != 0 : false;
+    }
+
+    // @0x1424487e0
+    void Sprite::buttonModeSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        if (!pDispObj)
+            return;
+        UByte& flags = reinterpret_cast<UByte*>(ToAvmDisplayObj(pDispObj))[0x60];
+        flags = v ? (UByte)(flags | 1) : (UByte)(flags & ~1);
+    }
+
+    // @0x142448b80
+    void Loader::close(const Value& result)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieRoot()->UnloadMovie(this, false, false);
+    }
+
+    // @0x142454680
+    void Loader::unload(const Value& result)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieRoot()->UnloadMovie(this, false, false);
+    }
+
+    // @0x1424546a0
+    void Loader::unloadAndStop(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieRoot()->UnloadMovie(this, true, v);
+    }
+
+    // @0x142449ca0
+    void Stage::dispatchEvent(bool& result, Instances::fl_events::Event* v)
+    {
+        fl_events::EventDispatcher::dispatchEvent(result, v);
+    }
+
+    // @0x14244e470
+    void Stage::hasEventListener(bool& result, const ASString& v)
+    {
+        fl_events::EventDispatcher::hasEventListener(result, v);
+    }
+
+    // @0x142454b50
+    void Stage::willTrigger(bool& result, const ASString& v)
+    {
+        fl_events::EventDispatcher::willTrigger(result, v);
+    }
+
+    // @0x142449e80
+    void SimpleButton::downStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
+    {
+        SF_UNUSED(result);
+        FUN_1425272f0(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+    }
+
+    // @0x14244f520
+    void SimpleButton::hitTestStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
+    {
+        SF_UNUSED(result);
+        FUN_142527490(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+    }
+
+    // @0x142450ed0
+    void SimpleButton::overStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
+    {
+        SF_UNUSED(result);
+        FUN_1425287b0(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+    }
+
+    // @0x142454780
+    void SimpleButton::upStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
+    {
+        SF_UNUSED(result);
+        FUN_14252a4e0(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+    }
+
+    // @0x14244b970
+    void MovieClip::enabledGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_Enabled) != 0;
+    }
+
+    // @0x14244b990
+    void SimpleButton::enabledGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_Enabled) != 0;
+    }
+
+    // @0x14244b9b0
+    void MovieClip::enabledSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_Enabled) : (flags & ~GFx::InteractiveObject::Mask_Enabled);
+    }
+
+    // @0x14244b9d0
+    void SimpleButton::enabledSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_Enabled) : (flags & ~GFx::InteractiveObject::Mask_Enabled);
+    }
+
+    // @0x14244c3a0
+    void FrameLabel::frameGet(SInt32& result)
+    {
+        result = FrameNumber;
+    }
+
+    // @0x14244e630
+    void DisplayObject::heightSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetHeight(v);
+    }
+
+    // @0x142452170
+    void DisplayObject::rotationSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetRotation(v);
+    }
+
+    // @0x1424521b0
+    void DisplayObject::rotationXSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetXRotation(v);
+    }
+
+    // @0x1424521f0
+    void DisplayObject::rotationYSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetYRotation(v);
+    }
+
+    // @0x142454b10
+    void DisplayObject::widthSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetWidth(v);
+    }
+
+    // @0x142454b80
+    void DisplayObject::xSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetX(v);
+    }
+
+    // @0x142454bc0
+    void DisplayObject::ySet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetY(v);
+    }
+
+    // @0x142452230
+    void DisplayObject::rotationZSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetRotation(v);
+    }
+
+    // @0x142452690
+    void DisplayObject::scaleXSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetXScale(v * 100.0);
+    }
+
+    // @0x1424526e0
+    void DisplayObject::scaleYSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetYScale(v * 100.0);
+    }
+
+    // @0x142452730
+    void DisplayObject::scaleZSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetZScale(v * 100.0);
+    }
+
+    // @0x142454c10
+    void DisplayObject::zSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetZ(v * 20.0);
+    }
+
+    // @0x142454940
+    void DisplayObject::visibleSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        pDispObj->SetVisible(v);
+    }
+
+    // @0x14244f550
+    void Stage::invalidate(const Value& result)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieRoot()->StageInvalidated = true;
+    }
+
+    // @0x142450770
+    void DisplayObjectContainer::mouseChildrenGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_MouseChildrenDisabled) == 0;
+    }
+
+    // @0x142450790
+    void Stage::mouseChildrenGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_MouseChildrenDisabled) == 0;
+    }
+
+    // @0x1424507b0
+    void DisplayObjectContainer::mouseChildrenSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags & ~GFx::InteractiveObject::Mask_MouseChildrenDisabled) : (flags | GFx::InteractiveObject::Mask_MouseChildrenDisabled);
+    }
+
+    // @0x1424507e0
+    void Stage::mouseChildrenSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags & ~GFx::InteractiveObject::Mask_MouseChildrenDisabled) : (flags | GFx::InteractiveObject::Mask_MouseChildrenDisabled);
+    }
+
+    // @0x142450810
+    void InteractiveObject::mouseEnabledGet(bool& result)
+    {
+        GFx::InteractiveObject* pio = pDispObj->IsInteractiveObject() ? static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()) : NULL;
+        result = (pio->Flags & GFx::InteractiveObject::Mask_MouseDisabled) == 0;
+    }
+
+    // @0x142450840
+    void InteractiveObject::mouseEnabledSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = pDispObj->IsInteractiveObject() ? static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()) : NULL;
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags & ~GFx::InteractiveObject::Mask_MouseDisabled) : (flags | GFx::InteractiveObject::Mask_MouseDisabled);
+    }
+
+    // @0x142450d40
+    void DisplayObjectContainer::numChildrenGet(SInt32& result)
+    {
+        result = (SInt32)static_cast<GFx::DisplayObjContainer*>(pDispObj.GetPtr())->mDisplayList.GetCount();
+    }
+
+    // @0x142450d50
+    void Stage::numChildrenGet(SInt32& result)
+    {
+        result = (SInt32)static_cast<GFx::DisplayObjContainer*>(pDispObj.GetPtr())->mDisplayList.GetCount();
+    }
+
+    // @0x142451a00
+    void Bitmap::pixelSnappingGet(ASString& result)
+    {
+        switch (PixelSnapping)
+        {
+        case 0: result = "never"; break;
+        case 1: result = "always"; break;
+        case 2: result = "auto"; break;
+        }
+    }
+
+    // @0x142451a80
+    void MovieClip::play(const Value& result)
+    {
+        SF_UNUSED(result);
+        static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->SetPlayState(State_Playing);
+    }
+
+    // @0x1424537e0
+    void MovieClip::stop(const Value& result)
+    {
+        SF_UNUSED(result);
+        static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->SetPlayState(State_Stopped);
+    }
+
+    // @0x142452e00
+    void Stage::setOrientation(const Value& result, const ASString& v)
+    {
+        SF_UNUSED(result);
+        FUN_142528770(pDispObj, v);
+    }
+
+    // @0x1424532f0
+    void Bitmap::smoothingGet(bool& result)
+    {
+        result = Smoothing;
+    }
+
+    // @0x142453300
+    void Bitmap::smoothingSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        Smoothing = v;
+        if (pDispObj)
+            FUN_142520b20(pDispObj);
+    }
+
+    // @0x142453440
+    void Stage::stageFocusRectSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        // focusRect: both bits for true, the defined bit alone for false.
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_FocusRect) : ((flags & ~0x80u) | 0x100u);
+    }
+
+    // @0x142453a30
+    void DisplayObjectContainer::tabChildrenGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_TabChildrenDisabled) == 0;
+    }
+
+    // @0x142453b50
+    void InteractiveObject::tabEnabledGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_TabEnabled) == GFx::InteractiveObject::Mask_TabEnabled;
+    }
+
+    // @0x142453c30
+    void InteractiveObject::tabIndexGet(SInt32& result)
+    {
+        result = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->TabIndex;
+    }
+
+    // @0x1424542e0
+    void MovieClip::trackAsMenuGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_TrackAsMenu) != 0;
+    }
+
+    // @0x142454300
+    void SimpleButton::trackAsMenuGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_TrackAsMenu) != 0;
+    }
+
+    // @0x142454320
+    void MovieClip::trackAsMenuSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_TrackAsMenu) : (flags & ~GFx::InteractiveObject::Mask_TrackAsMenu);
+    }
+
+    // @0x142454350
+    void SimpleButton::trackAsMenuSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_TrackAsMenu) : (flags & ~GFx::InteractiveObject::Mask_TrackAsMenu);
+    }
+
+    // @0x142454880
+    void SimpleButton::useHandCursorGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_UseHandCursor) == GFx::InteractiveObject::Mask_UseHandCursor;
+    }
+
+    // @0x1424548a0
+    void Sprite::useHandCursorGet(bool& result)
+    {
+        result = (static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->Flags & GFx::InteractiveObject::Mask_UseHandCursor) == GFx::InteractiveObject::Mask_UseHandCursor;
+    }
+
+    // @0x1424548c0
+    void SimpleButton::useHandCursorSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        // useHandCursor: both bits for true, the defined bit alone for false.
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_UseHandCursor) : ((flags & ~0x200u) | 0x400u);
+    }
+
+    // @0x1424548f0
+    void Sprite::useHandCursorSet(const Value& result, bool v)
+    {
+        SF_UNUSED(result);
+        // useHandCursor: both bits for true, the defined bit alone for false.
+        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
+        UInt32 flags = pio->Flags;
+        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_UseHandCursor) : ((flags & ~0x200u) | 0x400u);
+    }
+
+    // Not implemented in this build: a warning, nothing else.
+    // @0x1424474a0
+    void DisplayObject::accessibilityPropertiesSet(const Value& result, Instances::fl_accessibility::AccessibilityProperties* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::DisplayObject::accessibilityPropertiesSet() is not implemented\n");
+    }
+
+    // @0x142448270
+    void DisplayObjectContainer::areInaccessibleObjectsUnderPoint(bool& result, Instances::fl_geom::Point* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method DisplayObjectContainer::areInaccessibleObjectsUnderPoint() is not implemented\n");
+    }
+
+    // @0x142448290
+    void Stage::assignFocus(const Value& result, Instances::fl_display::InteractiveObject* v1, const ASString& v2)
+    {
+        SF_UNUSED3(result, v1, v2);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::assignFocus() is not implemented\n");
+    }
+
+    // @0x142448930
+    void DisplayObject::cacheAsBitmapGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method DisplayObject::cacheAsBitmapGet() is not implemented\n");
+    }
+
+    // @0x142448950
+    void DisplayObject::cacheAsBitmapSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method DisplayObject::cacheAsBitmapSet() is not implemented\n");
+    }
+
+    // @0x142448970
+    void LoaderInfo::childAllowsParentGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::childAllowsParentGet() is not implemented\n");
+    }
+
+    // @0x142448990
+    void LoaderInfo::childSandboxBridgeGet(SPtr<Instances::fl::Object>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::childSandboxBridgeGet() is not implemented\n");
+    }
+
+    // @0x1424489b0
+    void LoaderInfo::childSandboxBridgeSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::childSandboxBridgeSet() is not implemented\n");
+    }
+
+    // @0x142449cb0
+    void Stage::displayStateGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::displayStateGet() is not implemented\n");
+    }
+
+    // @0x142449cd0
+    void Stage::displayStateSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::displayStateSet() is not implemented\n");
+    }
+
+    // @0x14244c460
+    void Stage::frameRateSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::frameRateSet() is not implemented\n");
+    }
+
+    // @0x14244c4b0
+    void Stage::fullScreenHeightGet(UInt32& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::fullScreenHeightGet() is not implemented\n");
+    }
+
+    // @0x14244c530
+    void Stage::fullScreenSourceRectSet(const Value& result, Instances::fl_geom::Rectangle* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::fullScreenSourceRectSet() is not implemented\n");
+    }
+
+    // @0x14244c550
+    void Stage::fullScreenWidthGet(UInt32& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::fullScreenWidthGet() is not implemented\n");
+    }
+
+    // @0x14244e650
+    void Stage::heightSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::heightSet() is not implemented\n");
+    }
+
+    // @0x14244f570
+    void Stage::isFocusInaccessible(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::isFocusInaccessible() is not implemented\n");
+    }
+
+    // @0x142450480
+    void BitmapData::lock(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method BitmapData::lock() is not implemented\n");
+    }
+
+    // @0x142450b40
+    void Stage::nativeWindowGet(SPtr<Instances::fl_display::NativeWindow>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::Stage::nativeWindowGet() is not implemented\n");
+    }
+
+    // @0x142450da0
+    void DisplayObject::opaqueBackgroundGet(SPtr<Instances::fl::Object>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method DisplayObject::opaqueBackgroundGet() is not implemented\n");
+    }
+
+    // @0x142450dc0
+    void DisplayObject::opaqueBackgroundSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method DisplayObject::opaqueBackgroundSet() is not implemented\n");
+    }
+
+    // @0x142451200
+    void LoaderInfo::parametersGet(SPtr<Instances::fl::Object>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::parametersGet() is not implemented\n");
+    }
+
+    // @0x142451220
+    void LoaderInfo::parentAllowsChildGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::parentAllowsChildGet() is not implemented\n");
+    }
+
+    // @0x142451300
+    void LoaderInfo::parentSandboxBridgeGet(SPtr<Instances::fl::Object>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::parentSandboxBridgeGet() is not implemented\n");
+    }
+
+    // @0x142451320
+    void LoaderInfo::parentSandboxBridgeSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::parentSandboxBridgeSet() is not implemented\n");
+    }
+
+    // @0x142451bb0
+    void Stage::qualityGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::qualityGet() is not implemented\n");
+    }
+
+    // @0x142451bd0
+    void Stage::qualitySet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::qualitySet() is not implemented\n");
+    }
+
+    // @0x142452250
+    void LoaderInfo::sameDomainGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method LoaderInfo::sameDomainGet() is not implemented\n");
+    }
+
+    // @0x1424532b0
+    void Stage::showDefaultContextMenuGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::showDefaultContextMenuGet() is not implemented\n");
+    }
+
+    // @0x1424532d0
+    void Stage::showDefaultContextMenuSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::showDefaultContextMenuSet() is not implemented\n");
+    }
+
+    // @0x1424533e0
+    void SimpleButton::soundTransformSet(const Value& result, Instances::fl_media::SoundTransform* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method SimpleButton::soundTransformSet() is not implemented\n");
+    }
+
+    // @0x142453400
+    void Sprite::soundTransformSet(const Value& result, Instances::fl_media::SoundTransform* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Sprite::soundTransformSet() is not implemented\n");
+    }
+
+    // @0x1424535d0
+    void Stage::stageHeightSet(const Value& result, SInt32 v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::stageHeightSet() is not implemented\n");
+    }
+
+    // @0x142453650
+    void Stage::stageWidthSet(const Value& result, SInt32 v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::stageWidthSet() is not implemented\n");
+    }
+
+    // @0x142453a50
+    void Stage::tabChildrenGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::tabChildrenGet() is not implemented\n");
+    }
+
+    // @0x142453b30
+    void Stage::tabChildrenSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::tabChildrenSet() is not implemented\n");
+    }
+
+    // @0x1424546c0
+    void BitmapData::unlock(const Value& result, Instances::fl_geom::Rectangle* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method BitmapData::unlock() is not implemented\n");
+    }
+
+    // @0x142454b30
+    void Stage::widthSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method Stage::widthSet() is not implemented\n");
+    }
+}}
+
+namespace Classes { namespace fl_display
+{
+    // @0x142453880
+    void Stage::supportsOrientationChangeGet(bool& result)
+    {
+        result = false;
+    }
+
+    // @0x14244d1a0
+    void LoaderInfo::getLoaderInfoByDefinition(SPtr<Instances::fl_display::LoaderInfo>& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::LoaderInfo::getLoaderInfoByDefinition() is not implemented\n");
     }
 }}
 
