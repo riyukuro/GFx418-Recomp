@@ -196,8 +196,9 @@ public:
 
     MemoryContextImpl*  MemContext;                 // +0x40 Ptr<MemoryContextImpl>: the movie heap's memory context (sfr34)
     ASVM*               pAVM;                       // +0x48 AutoPtr<ASVM> (sfr19)
+    bool                OwnsAVM;                    // +0x50 the AutoPtr's owner flag (sfr_as2_01f)
 private:
-    UByte               Unrecovered50[0x58 - 0x50];
+    UByte               Unrecovered51[0x58 - 0x51];
 public:
     Value               ExternalIntfRetVal;         // +0x58: what the host's ExternalInterface callback returned
     unsigned            NumAdvancesSinceCollection; // +0x78 advances since the last collection (sfr24)
