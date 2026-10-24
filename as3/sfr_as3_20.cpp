@@ -288,27 +288,29 @@ DisplayObject* IMEManager::GetCandidateListSprite() const
 }
 
 // The candidate list movie has set _global.gfx_ime_candidate_list_state.
-// MS2-FUNCTIONAL: register allocation only
 // @0x142544cf0
 bool IMEManager::IsCandidateListLoaded() const
 {
-    if (!pMovie)
-        return false;
-    GFx::Value v;
-    if (!pMovie->GetVariable(&v, "_global.gfx_ime_candidate_list_state"))
-        v.SetNumber(0);
-    return true;
+    if (pMovie)
+    {
+        GFx::Value v;
+        if (!pMovie->GetVariable(&v, "_global.gfx_ime_candidate_list_state"))
+            v.SetNumber(0);
+        return true;
+    }
+    return false;
 }
 
-// MS2-FUNCTIONAL: register allocation only
 // @0x142544e10
 bool IMEManager::IsTextFieldFocused(InteractiveObject* pfocusedChar) const
 {
-    if (!pMovie)
-        return false;
-    Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
-    return pfocused && IsTextField(pfocused) && ToTextField(pfocused)->IsIMEEnabled() &&
-           pfocused.GetPtr() == pfocusedChar;
+    if (pMovie)
+    {
+        Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
+        return pfocused && IsTextField(pfocused) && ToTextField(pfocused)->IsIMEEnabled() &&
+               pfocused.GetPtr() == pfocusedChar;
+    }
+    return false;
 }
 
 // MS2-FUNCTIONAL: register allocation only

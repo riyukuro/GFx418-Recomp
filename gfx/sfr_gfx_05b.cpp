@@ -1330,28 +1330,29 @@ bool Sprite::OnKeyEvent(const EventId& id, int* pkeyMask)
 {
     if (!HasAvmObject())
         return false;
-    if (id.Id != EventId::Event_KeyDown)
-        return GetAvmSprite()->OnEvent(id);
-
-    bool handled = GetAvmSprite()->OnEvent(id);
-    if (!(*pkeyMask & 0x10000))
+    if (id.Id == EventId::Event_KeyDown)
     {
-        int keyCode = id.ConvertToButtonKeyCode();
-        if (keyCode && (handled = GetAvmSprite()->OnEvent(EventId(EventId::Event_KeyPress, short(keyCode), 0))) != 0)
-            *pkeyMask |= 0x10000;
-    }
+        bool handled = GetAvmSprite()->OnEvent(id);
+        if (!(*pkeyMask & 0x10000))
+        {
+            int keyCode = id.ConvertToButtonKeyCode();
+            if (keyCode && (handled = GetAvmSprite()->OnEvent(EventId(EventId::Event_KeyPress, short(keyCode), 0))) != 0)
+                *pkeyMask |= 0x10000;
+        }
 
-    MovieImpl* proot = GetMovieImpl();
-    if (proot->IsFocused(this, id.ControllerIndex) && proot->IsFocusRectShown(id.ControllerIndex) &&
-        (id.KeyCode == 13 || id.KeyCode == 32) && (IsFocusRectEnabled() || proot->IsAlwaysEnableKeyboardPress()))
-    {
-        EventId evt(id);
-        evt.Id = EventId::Event_Press;
-        GetAvmSprite()->OnEvent(evt);
-        evt.Id = EventId::Event_Release;
-        GetAvmSprite()->OnEvent(evt);
+        MovieImpl* proot = GetMovieImpl();
+        if (proot->IsFocused(this, id.ControllerIndex) && proot->IsFocusRectShown(id.ControllerIndex) &&
+            (id.KeyCode == 13 || id.KeyCode == 32) && (IsFocusRectEnabled() || proot->IsAlwaysEnableKeyboardPress()))
+        {
+            EventId evt(id);
+            evt.Id = EventId::Event_Press;
+            GetAvmSprite()->OnEvent(evt);
+            evt.Id = EventId::Event_Release;
+            GetAvmSprite()->OnEvent(evt);
+        }
+        return handled;
     }
-    return handled;
+    return GetAvmSprite()->OnEvent(id);
 }
 
 // Focus by mouse follows the default rules; otherwise focusEnabled decides, undefined asking the AVM.

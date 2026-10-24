@@ -1861,7 +1861,9 @@ static void Sfr31AssignGcRef(UPInt* slot, UPInt np)
         const UPInt old = *slot;
         if (old != 0)
         {
-            if ((old & 1) == 0)
+            if ((old & 1) != 0)
+                *slot = old - 1;
+            else
             {
                 UInt32* rc = reinterpret_cast<UInt32*>(old + 0x10);
                 if ((*rc & 0x3fffff) != 0)
@@ -1870,8 +1872,6 @@ static void Sfr31AssignGcRef(UPInt* slot, UPInt np)
                     FUN_1423dfa20(reinterpret_cast<void*>(old));
                 }
             }
-            else
-                *slot = old - 1;
         }
         if (np != 0)
         {
@@ -1883,7 +1883,6 @@ static void Sfr31AssignGcRef(UPInt* slot, UPInt np)
 }
 
 // Stores the new GC reference at +8 and clears the word after it.
-// MS2-FUNCTIONAL 0x142526340: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x142526340
 void Sfr31SetGcRefClearNext(UPInt self, UPInt np)
 {
@@ -1892,7 +1891,6 @@ void Sfr31SetGcRefClearNext(UPInt self, UPInt np)
 }
 
 // Stores the new GC reference at +8 and clears the two low flag bits of the first word.
-// MS2-FUNCTIONAL 0x142528d20: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x142528d20
 void Sfr31SetGcRefClearFlags(UInt32* self, UPInt np)
 {
@@ -1901,7 +1899,6 @@ void Sfr31SetGcRefClearFlags(UInt32* self, UPInt np)
 }
 
 // Stores the new GC reference at +8.
-// MS2-FUNCTIONAL 0x142540bd0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x142540bd0
 void Sfr31SetGcRef(UPInt self, UPInt np)
 {
@@ -2466,15 +2463,15 @@ const MovieRoot::ActionEntry* MovieRoot::ActionQueueIterator::getNext()
 {
     ActionQueueType* q = pActionQueue;
     ActionEntry* pe;
-    if (q->ModId == ModId)
-        pe = pCurEntry;
-    else
+    if (q->ModId != ModId)
     {
         ModId = q->ModId;
         ActionEntry** src = pRootEntry ? &pRootEntry->pNextEntry : &q->Entries[Level].pActionRoot;
         pe = *src;
         pCurEntry = pe;
     }
+    else
+        pe = pCurEntry;
     if (pe != 0)
     {
         if (pe == q->Entries[Level].pInsertEntry)
@@ -2541,38 +2538,40 @@ bool Sfr31SetTextOnObject(UPInt* self, UPInt obj, const wchar_t* text, bool html
 // @0x142525400
 Value* Sfr31ResolveInvokeAlias(UPInt root, const char* name)
 {
-    if (Sfr31Rd(root, 0x80) == 0)
-        return 0;
-    ASStringNode* node = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(name);
-    Value* res = 0;
-    const SInt32 rc = node->RefCount;
-    node->RefCount = rc + 1;
-    UPInt tbl = *reinterpret_cast<UPInt*>(Sfr31Rd(root, 0x80));
-    UPInt ent = 0;
-    if (tbl != 0)
+    if (Sfr31Rd(root, 0x80) != 0)
     {
-        const UPInt mask = Sfr31Rd(tbl, 8);
-        UPInt idx = node->HashFlags & mask;
-        UPInt* e = reinterpret_cast<UPInt*>(tbl + 0x10 + idx * 0x30);
-        if (e[0] != ~UPInt(1) && (reinterpret_cast<ASStringNode*>(e[1])->HashFlags & mask) == idx)
+        ASStringNode* node = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(name);
+        Value* res = 0;
+        const SInt32 rc = node->RefCount;
+        node->RefCount = rc + 1;
+        UPInt tbl = *reinterpret_cast<UPInt*>(Sfr31Rd(root, 0x80));
+        UPInt ent = 0;
+        if (tbl != 0)
         {
-            UPInt at = idx;
-            while ((reinterpret_cast<ASStringNode*>(e[1])->HashFlags & mask) != idx || reinterpret_cast<ASStringNode*>(e[1]) != node)
+            const UPInt mask = Sfr31Rd(tbl, 8);
+            UPInt idx = node->HashFlags & mask;
+            UPInt* e = reinterpret_cast<UPInt*>(tbl + 0x10 + idx * 0x30);
+            if (e[0] != ~UPInt(1) && (reinterpret_cast<ASStringNode*>(e[1])->HashFlags & mask) == idx)
             {
-                at = e[0];
-                if (at == ~UPInt(0)) { ent = 0; goto done; }
-                e = reinterpret_cast<UPInt*>(tbl + 0x10 + at * 0x30);
+                UPInt at = idx;
+                while ((reinterpret_cast<ASStringNode*>(e[1])->HashFlags & mask) != idx || reinterpret_cast<ASStringNode*>(e[1]) != node)
+                {
+                    at = e[0];
+                    if (at == ~UPInt(0)) { ent = 0; goto done; }
+                    e = reinterpret_cast<UPInt*>(tbl + 0x10 + at * 0x30);
+                }
+                if (static_cast<SPInt>(at) >= 0)
+                    ent = tbl + 0x18 + at * 0x30;
             }
-            if (static_cast<SPInt>(at) >= 0)
-                ent = tbl + 0x18 + at * 0x30;
         }
+    done:
+        node->RefCount = rc;
+        res = ent != 0 ? reinterpret_cast<Value*>(ent + 8) : 0;
+        if (rc == 0)
+            node->ReleaseNode();
+        return res;
     }
-done:
-    node->RefCount = rc;
-    res = ent != 0 ? reinterpret_cast<Value*>(ent + 8) : 0;
-    if (rc == 0)
-        node->ReleaseNode();
-    return res;
+    return 0;
 }
 
 // MS2-FUNCTIONAL 0x142528620: behavior-equivalent recovery; codegen differs from exe

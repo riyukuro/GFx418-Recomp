@@ -1403,9 +1403,11 @@ namespace Instances { namespace fl_display
     // @0x142443380
     String DisplayObject::GetAS3ObjectName() const
     {
-        if (!pDispObj)
-            return String("");
-        return String(pDispObj->GetName().ToCStr());
+        if (pDispObj)
+        {
+            return String(pDispObj->GetName().ToCStr());
+        }
+        return String("");
     }
 
     // @0x142442e10

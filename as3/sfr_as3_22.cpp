@@ -1069,7 +1069,7 @@ float QueryChannelTime(void* player)
     return static_cast<float>(position - offset) / 1000.0f;
 }
 
-// MS2-FUNCTIONAL: stores both flags and the system pointer before querying and caching the software rate.
+// stores both flags and the system pointer before querying and caching the software rate.
 // @0x142745bc0
 bool InitializeAudioSystem(void* player, void* system, unsigned char flag0, unsigned char flag1)
 {
@@ -1077,13 +1077,13 @@ bool InitializeAudioSystem(void* player, void* system, unsigned char flag0, unsi
     bytes[0xf0] = flag0;
     bytes[0xf1] = flag1;
     *reinterpret_cast<void**>(bytes + 0x10) = system;
-    if (!system)
-        return false;
-
-    int rate = 0;
-    FUN_1428d8e96(system, &rate, nullptr, nullptr, nullptr, nullptr, nullptr);
-    *reinterpret_cast<float*>(bytes + 0xf4) = static_cast<float>(rate);
-    return true;
+    if (system)
+    {
+        int rate = 0;
+        FUN_1428d8e96(system, &rate, nullptr, nullptr, nullptr, nullptr, nullptr);
+        *reinterpret_cast<float*>(bytes + 0xf4) = static_cast<float>(rate);
+    }
+    return *reinterpret_cast<void**>(bytes + 0x10) != nullptr;
 }
 }
 

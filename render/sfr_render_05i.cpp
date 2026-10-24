@@ -233,24 +233,25 @@ bool SGMLCharIter<Char>::IsSpace(UInt32 c)
     return SFiswspace((wchar_t)c) != 0;
 }
 
-// MS2-FUNCTIONAL: register allocation and loop rotation differ
 // @0x14267fc30
 template<class Char>
 int SGMLCharIter<Char>::StrCompare(const Char* dst, UPInt dstlen, const Char* src, UPInt srclen)
 {
-    if (!dstlen)
-        return -(int)srclen;
-    SPInt dlen = (SPInt)dstlen, slen = (SPInt)srclen;
-    int   d, s;
-    do
+    if (dstlen)
     {
-        d = (int)ToLower((UInt32)*dst++);
-        s = (int)ToLower((UInt32)*src++);
-    } while (--dstlen && d && d == s && --srclen);
+        SPInt dlen = (SPInt)dstlen, slen = (SPInt)srclen;
+        int   d, s;
+        do
+        {
+            d = (int)ToLower((UInt32)*dst++);
+            s = (int)ToLower((UInt32)*src++);
+        } while (--dstlen && d && d == s && --srclen);
 
-    if (d == s && (dstlen || srclen))
-        return (int)(dlen - slen);
-    return d - s;
+        if (d == s && (dstlen || srclen))
+            return (int)(dlen - slen);
+        return d - s;
+    }
+    return -(int)srclen;
 }
 
 // ***** SGMLParser
