@@ -48,6 +48,8 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
+#include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
+#include "ms2/scaleform/include/gfx/as3/as3_tracer.h"
 #include "ms2/scaleform/include/gfx/as3/as3_moviedefrootnode.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
@@ -124,10 +126,75 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 ASVM::~ASVM() = default;
 }}} // namespace Scaleform::GFx::AS3
 
+extern "C" void FUN_14257dcd0(void* object); // RefCountNTSImpl::Release
+extern "C" void FUN_1424de460(void* self);
+extern "C" void* DAT_143b15f60;
+
+// MovieRoot is only partially modeled, so keep its destructor out of the class vtable and recover the owned fields
+// from the exe's offsets. The four MouseState rollover arrays use ArrayLH's data/size/capacity prefix.
+// MS2-FUNCTIONAL 0x1424de650: releases the modeled smart-pointer members, string builtins, action queue, mouse stacks,
+// and ASMovieRootBase; the opaque LoadedMovieDefs table is still cleared only by its own owner path.
+// @0x1424de650
+extern "C" void FUN_1424de650(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    auto* movie = reinterpret_cast<Scaleform::GFx::AS3::MovieRoot*>(self);
+    movie->ActionQueue.~ActionQueueType();
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x58)->~Value();
+
+    auto** pAvm = reinterpret_cast<Scaleform::GFx::AS3::ASVM**>(bytes + 0x48);
+    if (*pAvm)
+    {
+        if (*reinterpret_cast<bool*>(bytes + 0x50))
+        {
+            *reinterpret_cast<bool*>(bytes + 0x50) = false;
+            delete *pAvm;
+        }
+        *pAvm = nullptr;
+    }
+
+    if (auto* aliases = *reinterpret_cast<void**>(bytes + 0x80))
+        FUN_14257dcd0(aliases);
+    *reinterpret_cast<void**>(bytes + 0x80) = nullptr;
+    if (auto* chains = *reinterpret_cast<void**>(bytes + 0x150))
+        FUN_14257dcd0(chains);
+    *reinterpret_cast<void**>(bytes + 0x150) = nullptr;
+    if (auto* stage = *reinterpret_cast<void**>(bytes + 0x158))
+        FUN_14257dcd0(stage);
+    *reinterpret_cast<void**>(bytes + 0x158) = nullptr;
+
+    auto* strings = reinterpret_cast<Scaleform::GFx::AS3::StringManager*>(bytes + 0x160);
+    if (strings->pStringManager)
+        strings->pStringManager->ReleaseBuiltinArray(strings->Builtins, Scaleform::GFx::AS3::AS3BuiltinConst_Count_);
+
+    auto* heap = static_cast<Scaleform::MemoryHeap*>(DAT_143b15f60);
+    for (unsigned i = 0; i < 4; ++i)
+    {
+        auto* state = bytes + 0x360 + i * sizeof(Scaleform::GFx::AS3::MovieRoot::MouseState);
+        auto** rollover = *reinterpret_cast<void***>(state);
+        const auto count = *reinterpret_cast<Scaleform::UPInt*>(state + 8);
+        for (Scaleform::UPInt j = count; rollover && j != 0; --j)
+            if (rollover[j - 1])
+                FUN_14257dcd0(rollover[j - 1]);
+        if (rollover)
+            heap->Free(rollover);
+        if (auto* over = *reinterpret_cast<void**>(state + 0x18))
+            FUN_14257dcd0(over);
+    }
+
+    FUN_1424de460(bytes + 8);
+    reinterpret_cast<Scaleform::GFx::ASMovieRootBase*>(self)->~ASMovieRootBase();
+}
+
 extern "C" void FUN_142530d50(Scaleform::UPInt self);
+extern "C" void FUN_1424dfbf0(void* self);
+extern "C" Scaleform::SPInt FUN_1424e1040(void* self, const Scaleform::UInt32* value);
 extern "C" void* DAT_143b15f60;
 namespace Scaleform { namespace GFx { namespace AS3 {
 void* DeleteAs3_1424e3eb0(void* self, unsigned flags);
+void* DeleteAs3_1424e3890(void* self, unsigned flags);
+void* DeleteAs3_1424e3950(void* self, unsigned flags);
+void* DeleteAs3_1424e4190(void* self, unsigned flags);
 }}}
 
 // VMAbcFile's non-deleting teardown follows the same member cleanup sequence as its scalar deleting dtor.
@@ -138,7 +205,105 @@ extern "C" void FUN_1424dfa30(void* self)
     Scaleform::GFx::AS3::DeleteAs3_1424e3eb0(self, 0);
 }
 
-extern "C" Scaleform::SPInt FUN_1424e1040(void* self, const Scaleform::UInt32* value);
+// The class deleting destructors contain the same member cleanup and only free storage when flag 1 is set.
+// MS2-FUNCTIONAL 0x1424deeb0: reuses the exe-derived ShapeObject member/base teardown with the free flag clear.
+// @0x1424deeb0
+extern "C" void FUN_1424deeb0(void* self)
+{
+    Scaleform::GFx::AS3::DeleteAs3_1424e3890(self, 0);
+}
+
+// MS2-FUNCTIONAL 0x1424defe0: reuses the exe-derived Stage member/base teardown with the free flag clear.
+// @0x1424defe0
+extern "C" void FUN_1424defe0(void* self)
+{
+    Scaleform::GFx::AS3::DeleteAs3_1424e3950(self, 0);
+}
+
+// MS2-FUNCTIONAL 0x1424e0290: reuses the XMLSupportImpl member/base teardown with the free flag clear.
+// @0x1424e0290
+extern "C" void FUN_1424e0290(void* self)
+{
+    Scaleform::GFx::AS3::DeleteAs3_1424e4190(self, 0);
+}
+
+extern "C" void FUN_1424efcd0(Scaleform::GFx::AS3::CallFrame* frame);
+extern "C" void FUN_1424efd80(Scaleform::GFx::AS3::CallFrame* frame);
+extern "C" void FUN_142521fb0(void* registerFile, Scaleform::UInt16 count);
+
+// A frame that was abandoned before being pushed restores its reserved operand/register slots and scope stack.
+// MS2-FUNCTIONAL 0x1424dde10: restores the same frame state, with page rollover handled by the frame helpers.
+// @0x1424dde10
+Scaleform::GFx::AS3::CallFrame::~CallFrame()
+{
+    if (pRegisterFile && pScopeStack && ACopy)
+    {
+        const Scaleform::GFx::AS3::Abc::MethodBodyInfo& body =
+            *pFile->GetAbcFile().MethodBodies.Info[static_cast<Scaleform::UPInt>(MBIIndex)];
+        auto& vm = pFile->GetVM();
+        auto& stack = Scaleform::GFx::AS3::ValueStack::Of(vm);
+        FUN_1424efcd0(this);
+        stack.pCurrent = PrevInitialStackPos;
+        stack.pStack = PrevFirstStackPos;
+        stack.ReservedNum = PrevReservedNum;
+        if (stack.pCurrentPage && stack.pCurrentPage->ReservationNum)
+            --stack.pCurrentPage->ReservationNum;
+        FUN_142521fb0(pRegisterFile, static_cast<Scaleform::UInt16>(body.local_reg_count));
+        FUN_1424efd80(this);
+    }
+}
+
+// The tracer frees its temporary states, their three Value arrays, the block list, and its scratch arrays.
+// MS2-FUNCTIONAL 0x1424df070: follows the exe's state/list ownership; template-array teardown is expressed via headers.
+// @0x1424df070
+extern "C" void FUN_1424df070(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    auto* heap = *reinterpret_cast<Scaleform::MemoryHeap**>(bytes + 0x18);
+    auto* sentinel = reinterpret_cast<unsigned char*>(bytes + 0x110);
+    auto* node = *reinterpret_cast<unsigned char**>(bytes + 0x118);
+    while (node && node != sentinel)
+    {
+        auto* next = *reinterpret_cast<unsigned char**>(node + 8);
+        heap->Free(node);
+        node = next;
+    }
+    *reinterpret_cast<unsigned char**>(bytes + 0x110) = sentinel;
+    *reinterpret_cast<unsigned char**>(bytes + 0x118) = sentinel;
+
+    auto* states = *reinterpret_cast<Scaleform::GFx::AS3::TR::State***>(bytes + 0xf0);
+    const auto stateCount = *reinterpret_cast<Scaleform::UPInt*>(bytes + 0xf8);
+    for (Scaleform::UPInt i = 0; i < stateCount; ++i)
+    {
+        auto* state = reinterpret_cast<unsigned char*>(states[i]);
+        if (!state)
+            continue;
+        for (Scaleform::UPInt off : {Scaleform::UPInt(0x18), Scaleform::UPInt(0x38), Scaleform::UPInt(0x58)})
+        {
+            auto* values = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(state + off);
+            const auto count = *reinterpret_cast<Scaleform::UPInt*>(state + off + 8);
+            for (Scaleform::UPInt j = 0; values && j < count; ++j)
+                values[j].~Value();
+            if (values)
+                heap->Free(values);
+        }
+        void* changed = *reinterpret_cast<void**>(state + 0x78);
+        if (changed)
+            heap->Free(changed);
+        heap->Free(state);
+    }
+
+    using PosArray = Scaleform::ArrayDH_POD<Scaleform::UPInt, Scaleform::GFx::AS3::StatMV_VM>;
+    using RecalcArray = Scaleform::ArrayDH_POD<Scaleform::GFx::AS3::Tracer::Recalculate, Scaleform::GFx::AS3::StatMV_VM>;
+    using StateArray = Scaleform::ArrayDH<Scaleform::GFx::AS3::TR::State*, Scaleform::GFx::AS3::StatMV_VM>;
+    using CatchArray = Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::fl::Catch>, Scaleform::GFx::AS3::StatMV_VM>;
+    reinterpret_cast<PosArray*>(bytes + 0x70)->~PosArray();
+    reinterpret_cast<PosArray*>(bytes + 0x90)->~PosArray();
+    reinterpret_cast<RecalcArray*>(bytes + 0xb0)->~RecalcArray();
+    reinterpret_cast<PosArray*>(bytes + 0xd0)->~PosArray();
+    reinterpret_cast<StateArray*>(bytes + 0xf0)->~StateArray();
+    reinterpret_cast<CatchArray*>(bytes + 0x120)->~CatchArray();
+}
 
 namespace {
 using Sfr16U64 = unsigned long long;
