@@ -16,10 +16,14 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Classes { namespace fl { class Array; class Boolean; class int_; class Number; class String; class uint; } }
 
-// The VM's host interface (the movie's AS3 root implements it). Only the slots the recovered code calls.
+// The VM's host interface (the movie's AS3 root implements it). 0x10 bytes, vftable 0x14317b648 (three slots); the
+// byte code Tracer is one too (as3_tracer.h).
 class FlashUI
 {
 public:
+    // (sfr24) the debugger state; the Tracer runs with sStep
+    enum StateType { sError, sBreakpoint, sPreStep, sStep };
+
     enum OutputMessageType
     {
         Output_Message,     // 0: trace()
@@ -28,9 +32,24 @@ public:
         Output_Action       // 3
     };
 
+    // (sfr24) inline in the Tracer constructor 0x1424d9f30
+    FlashUI() : State(sError), NeedToCheck(false) {}
     virtual ~FlashUI() {}                                               // slot 0
     virtual void Output(OutputMessageType type, const char* msg) = 0;   // slot 1
+    // (sfr24) called before each opcode while NeedToCheckOpCode()
+    virtual bool OnOpCode(Abc::TCodeOffset offset) = 0;                 // slot 2
+
+    StateType GetState() const          { return State; }
+    bool      NeedToCheckOpCode() const { return NeedToCheck; }
+    void      SetNeedToCheckOpCode(bool flag = true) { NeedToCheck = flag; }
+
+protected:
+    void SetState(StateType s) { State = s; }
+
+    StateType State;        // +0x08 (sfr24)
+    bool      NeedToCheck;  // +0x0c (sfr24)
 };
+static_assert(sizeof(FlashUI) == 0x10, "FlashUI size");   // the deleting destructor 0x1424e2db0 frees 0x10
 namespace Abc { class File; }
 class XMLSupport;
 

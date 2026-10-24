@@ -151,13 +151,26 @@ private:
     State();
     void MarkChanged(UInt32 ind) { RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] | (1u << (ind & 7))); }
 
-    void*               pTracer;        // +0x00 the owning Tracer
-    UPInt               Unk08[2];       // +0x08
+    // (sfr24) one bit per register, from the method body's local_reg_count (Tracer heap, StatMV_VM_Tracer_Mem)
+    struct RegisterBits
+    {
+        UInt8*   Data;      // +0x00
+        UInt32   BitCount;  // +0x08
+
+        UInt8&       operator[](UPInt i)       { return Data[i]; }
+        const UInt8& operator[](UPInt i) const { return Data[i]; }
+    };
+
+    void*               pTracer;        // +0x00 the owning Tracer (as3_tracer.h)
+    Abc::TCodeOffset    BCP;            // +0x08 (sfr24) the constructor 0x1424d9be0 sets both to its code offset
+    Abc::TCodeOffset    OpcodeCP;       // +0x10
     ArrayDH<Value>      Registers;      // +0x18
     ArrayDH<Value>      OpStack;        // +0x38
     ArrayDH<Value>      ScopeStack;     // +0x58
-    ArrayDH<UInt8>      RegChanged;     // +0x78 one bit per register
+    RegisterBits        RegChanged;     // +0x78 one bit per register (RegistersAlive)
 };
+// (sfr24) the Tracer allocates its states with 0x88 bytes (0x1424d9f30) and frees them in ~Tracer 0x1424df070.
+static_assert(sizeof(State) == 0x88, "TR::State size");
 
 // 0x140 bytes.
 class ReadArgs
