@@ -2377,11 +2377,35 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_7?$VectorBase@J@AS3@GFx@Scaleform@@6B@ 0x143181e30
 // MS2-PIN: ??_7?$VectorBase@VValue@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@6B@ 0x143181de0
 // MS2-PIN: ??_7?$VectorBase@K@AS3@GFx@Scaleform@@6B@ 0x143182148
+// These non-RTTI vftables are pinned to executable addresses recovered from their slot layouts.
+// MS2-PIN: ??_7URLBuilder@GFx@Scaleform@@6B@ 0x14317fbe8
+// MS2-PIN: ??_7ASIMEManager@GFx@Scaleform@@6B@ 0x14317fc38
+// MS2-PIN: ??_7IMEManager@AS3@GFx@Scaleform@@6B@ 0x14317fce8
+// MS2-PIN: ??_7NotifyLoadInitCandidateList@AS3@GFx@Scaleform@@6B@ 0x14317fdf0
+// MS2-PIN: ??_7Vector_String@fl_vec@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143182858
+// MS2-PIN: ??_7Vector_double@fl_vec@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143182558
+// MS2-PIN: ??_7Vector_int@fl_vec@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143181f20
+// MS2-PIN: ??_7Vector_object@fl_vec@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143182b58
+// MS2-PIN: ??_7Vector_uint@fl_vec@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143182238
+// MS2-PIN: ??_7Vector@fl_vec@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143181c40
+// MS2-PIN: ??_7Vector_String@fl_vec@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143182908
+// MS2-PIN: ??_7Vector_double@fl_vec@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143182608
+// MS2-PIN: ??_7Vector_int@fl_vec@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143181fd0
+// MS2-PIN: ??_7Vector_object@fl_vec@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143182c00
+// MS2-PIN: ??_7Vector_uint@fl_vec@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431822e0
+// MS2-PIN: ??_7Vector@fl_vec@Classes@AS3@GFx@Scaleform@@6B@ 0x143181cd0
+// MS2-PIN: ??_7Vector_String@fl_vec@Classes@AS3@GFx@Scaleform@@6B@ 0x1431829a0
+// MS2-PIN: ??_7Vector_double@fl_vec@Classes@AS3@GFx@Scaleform@@6B@ 0x1431826a0
+// MS2-PIN: ??_7Vector_int@fl_vec@Classes@AS3@GFx@Scaleform@@6B@ 0x143182060
+// MS2-PIN: ??_7Vector_object@fl_vec@Classes@AS3@GFx@Scaleform@@6B@ 0x143182ca0
+// MS2-PIN: ??_7Vector_uint@fl_vec@Classes@AS3@GFx@Scaleform@@6B@ 0x143182378
 // MS2-PIN: ??_7Vector_String@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182788
 // MS2-PIN: ??_7Vector_double@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182488
 // MS2-PIN: ??_7Vector_int@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143181e58
 // MS2-PIN: ??_7Vector_object@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182a88
 // MS2-PIN: ??_7Vector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182170
+// The remaining compiler-emitted tables are abstract/interface-only layers with no independent executable table:
+// NotifyLoadInitC has three pure callback slots; the two RefCountBase layers occur only as ASIMEManager subobjects.
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d950
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@1@@Z 0x14254df40
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@1@@Z 0x14254e530
