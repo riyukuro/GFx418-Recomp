@@ -14,6 +14,9 @@
 #include "../include/video/video_videoplayerimpl.h"
 
 void FUN_14257db50(void* object);
+void FUN_14257db40(void* object);
+void FUN_14257dc30(void* object);
+void FUN_14257dcb0(void* object);
 void FUN_14257dcd0(void* object);
 void FUN_142584ce0(void* object);
 void FUN_142585580(void* object, const void* source);
@@ -6062,6 +6065,190 @@ void FUN_14002a090(void* object)
         FUN_14257dcd0(*(void**)((CriUint8*)object + 0x20));
     *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8db0;
     FUN_14257db50(object);
+}
+
+// MS2-FUNCTIONAL: store the CRI critical section and enter it for the scoped lock guard.
+// @0x140028360
+void* FUN_140028360(void* guard, CRITICAL_SECTION* section)
+{
+    *(CRITICAL_SECTION**)guard = section;
+    EnterCriticalSection(section);
+    return guard;
+}
+
+// MS2-FUNCTIONAL: release the referenced CRI object through its deleting virtual slot.
+// @0x140028480
+void FUN_140028480(void* object)
+{
+    if (object)
+    {
+        void** vtable = *(void***)object;
+        ((void (*)(void*, CriUint32))vtable[0])(object, 1);
+    }
+}
+
+// MS2-FUNCTIONAL: run the CRI binary's RefCountImplCore destructor and heap-delete path.
+// @0x14001ca70
+void* FUN_14001ca70(void* object, CriUint64 flags)
+{
+    FUN_14257db40(object);
+    if (flags & 1)
+    {
+        void* heap = DAT_143b15f60;
+        void** vtable = *(void***)heap;
+        ((void (*)(void*, void*))vtable[12])(heap, object);
+    }
+    return object;
+}
+
+// MS2-FUNCTIONAL: copy a Scaleform Ptr and retain its target.
+// @0x140028a30
+void* FUN_140028a30(void** slot, void* target)
+{
+    if (target)
+        FUN_14257dc30(target);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: release a RefCountImpl target held by this pointer slot.
+// @0x140028ad0
+void FUN_140028ad0(void** slot)
+{
+    if (*slot)
+        FUN_14257dcb0(*slot);
+}
+
+// MS2-FUNCTIONAL: replace a RefCountImpl pointer, retaining the new target before releasing the old one.
+// @0x140028af0
+void* FUN_140028af0(void** slot, void* target)
+{
+    if (target)
+        FUN_14257dc30(target);
+    if (*slot)
+        FUN_14257dcb0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: replace an owned RefCountImpl pointer without retaining the incoming target.
+// @0x140028b30
+void* FUN_140028b30(void** slot, void* target)
+{
+    if (*slot)
+        FUN_14257dcb0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+// @0x140028bb0
+void FUN_140028bb0(void** slot)
+{
+    if (*slot)
+        FUN_14257dcd0(*slot);
+}
+
+// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+// @0x140028c20
+void FUN_140028c20(void** slot)
+{
+    if (*slot)
+        FUN_14257dcd0(*slot);
+}
+
+// MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
+// @0x140028c40
+void* FUN_140028c40(void** slot, void* target)
+{
+    if (target)
+        ++*(CriUint32*)((CriUint8*)target + 8);
+    if (*slot)
+        FUN_14257dcd0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: replace an owned RefCountImplCore pointer without retaining the incoming target.
+// @0x140028c90
+void* FUN_140028c90(void** slot, void* target)
+{
+    if (*slot)
+        FUN_14257dcd0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+// @0x140028d00
+void FUN_140028d00(void** slot)
+{
+    if (*slot)
+        FUN_14257dcd0(*slot);
+}
+
+// MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
+// @0x140028d20
+void* FUN_140028d20(void** slot, void* target)
+{
+    if (target)
+        ++*(CriUint32*)((CriUint8*)target + 8);
+    if (*slot)
+        FUN_14257dcd0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: replace an owned RefCountImplCore pointer without retaining the incoming target.
+// @0x140028d70
+void* FUN_140028d70(void** slot, void* target)
+{
+    if (*slot)
+        FUN_14257dcd0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+// @0x140028dd0
+void FUN_140028dd0(void** slot)
+{
+    if (*slot)
+        FUN_14257dcd0(*slot);
+}
+
+// MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
+// @0x140028df0
+void* FUN_140028df0(void** slot, void* target)
+{
+    if (target)
+        ++*(CriUint32*)((CriUint8*)target + 8);
+    if (*slot)
+        FUN_14257dcd0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: replace an owned RefCountImplCore pointer without retaining the incoming target.
+// @0x140028e40
+void* FUN_140028e40(void** slot, void* target)
+{
+    if (*slot)
+        FUN_14257dcd0(*slot);
+    *slot = target;
+    return slot;
+}
+
+// MS2-FUNCTIONAL: retain and replace the target using the RefCountImpl add/release methods.
+// @0x140028eb0
+void* FUN_140028eb0(void** slot, void* target)
+{
+    if (target)
+        FUN_14257dc30(target);
+    if (*slot)
+        FUN_14257dcb0(*slot);
+    *slot = target;
+    return slot;
 }
 
 // MS2-FUNCTIONAL: these three CRI members each release their owned heap buffer.
