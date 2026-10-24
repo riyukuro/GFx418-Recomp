@@ -7524,3 +7524,447 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-PIN: ??_7?$RefCountBaseNTS@USfr34_TextImageDesc@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7Sfr34_TextImageDesc@@6B@ 0x14317c9c0
 // MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorGH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142522d10
+
+// ---- The full-exe out-of-line members of this range: the empty or forwarding virtual defaults of the display
+// object classes, traits, XML support, interval timer and value interface. ----
+
+#include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
+
+namespace Scaleform { namespace GFx {
+
+// The font manager of the parent.
+// @0x142509da0
+FontManager* DisplayObjectBase::GetFontManager() const
+{
+    InteractiveObject* pparent = GetParent();
+    return pparent ? pparent->GetFontManager() : NULL;
+}
+
+// @0x14250d620
+float DisplayObjectBase::GetRatio() const
+{
+    return 0.0f;
+}
+
+// @0x14250d6f0
+RectF DisplayObjectBase::GetRectBounds(const Matrix& t) const
+{
+    SF_UNUSED(t);
+    return RectF(0, 0, 0, 0);
+}
+
+// @0x14250d830
+Render::TreeContainer* DisplayObjectBase::GetRenderContainer()
+{
+    return NULL;
+}
+
+// The movie definition of the parent.
+// @0x14250d970
+MovieDefImpl* DisplayObjectBase::GetResourceMovieDef() const
+{
+    InteractiveObject* pparent = GetParent();
+    return pparent ? pparent->GetResourceMovieDef() : NULL;
+}
+
+// @0x14250ee10
+UByte DisplayObjectBase::GetStateChangeFlags() const
+{
+    return 0;
+}
+
+// A plain display object takes no mouse input.
+// @0x14250f760
+DisplayObjectBase::TopMostResult DisplayObjectBase::GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr)
+{
+    SF_UNUSED(pt);
+    pdescr->pResult = NULL;
+    return TopMost_FoundNothing;
+}
+
+// @0x14250f850
+InteractiveObject* DisplayObjectBase::GetTopParent(bool ignoreLockRoot) const
+{
+    InteractiveObject* pparent = GetParent();
+    if (!pparent)
+        return NULL;
+    return pparent->GetTopParent(ignoreLockRoot);
+}
+
+// @0x14250f890
+CharacterDef::CharacterDefType DisplayObjectBase::GetType() const
+{
+    return CharacterDef::Shape;
+}
+
+// @0x142510a30
+bool DisplayObjectBase::GetVisible() const
+{
+    return IsVisibleFlagSet();
+}
+
+// @0x142510d40
+bool DisplayObjectBase::Has3D()
+{
+    return Is3D();
+}
+
+// @0x14251cab0
+bool DisplayObjectBase::PointTestLocal(const PointF& pt, UByte hitTestMask) const
+{
+    SF_UNUSED2(pt, hitTestMask);
+    return false;
+}
+
+// The frame and focus defaults of an interactive object without a timeline.
+// @0x142509dc0
+const String* InteractiveObject::GetFrameLabel(unsigned frame, unsigned* exactFrame)
+{
+    SF_UNUSED2(frame, exactFrame);
+    return NULL;
+}
+
+// @0x14250b360
+bool InteractiveObject::GetLabeledFrame(const char* plabel, unsigned* frameNumber, bool translateNumbers)
+{
+    SF_UNUSED3(plabel, frameNumber, translateNumbers);
+    return false;
+}
+
+// @0x14250b3a0
+unsigned InteractiveObject::GetLoadingFrame() const
+{
+    return 0;
+}
+
+// @0x14250cc20
+PlayState InteractiveObject::GetPlayState() const
+{
+    return State_Stopped;
+}
+
+// @0x14250ee20
+UByte InteractiveObject::GetStateChangeFlags() const
+{
+    return UByte((Flags & Mask_ChangedFlags) >> 16);
+}
+
+// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
+// @0x142510d10
+void InteractiveObject::GotoFrame(unsigned targetFrameNumber)
+{
+    SF_UNUSED(targetFrameNumber);
+}
+
+// @0x142510e60
+bool InteractiveObject::HasLooped() const
+{
+    return false;
+}
+
+// @0x142518990
+bool InteractiveObject::OnCharEvent(UInt32 wcharCode, unsigned controllerIdx)
+{
+    SF_UNUSED2(wcharCode, controllerIdx);
+    return false;
+}
+
+// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
+// @0x14251a100
+void InteractiveObject::OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt)
+{
+    SF_UNUSED2(controllerIdx, fmt);
+}
+
+// @0x14251a3a0
+bool InteractiveObject::OnKeyEvent(const EventId& id, int* pkeyMask)
+{
+    SF_UNUSED(pkeyMask);
+    return OnEvent(id);
+}
+
+// @0x14251a820
+bool InteractiveObject::OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx, FocusMovedType fmt)
+{
+    SF_UNUSED3(newFocusCh, controllerIdx, fmt);
+    return true;
+}
+
+// @0x14251ac20
+bool InteractiveObject::OnMouseEvent(const EventId& id)
+{
+    return OnEvent(id);
+}
+
+// @0x14251ac30
+bool InteractiveObject::OnMouseWheelEvent(int mwDelta)
+{
+    SF_UNUSED(mwDelta);
+    return false;
+}
+
+// @0x14251f540
+void InteractiveObject::PropagateFocusGroupMask(unsigned mask)
+{
+    FocusGroupMask = UInt16(mask);
+}
+
+// @0x14251f550
+void InteractiveObject::PropagateKeyEvent(const EventId& id, int* pkeyMask)
+{
+    OnKeyEvent(id, pkeyMask);
+}
+
+// @0x14251f560
+void InteractiveObject::PropagateMouseEvent(const EventId& id)
+{
+    OnEvent(id);
+}
+
+// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
+// @0x14251f5c0
+void InteractiveObject::PropagateNoAdvanceGlobalFlag()
+{
+}
+
+// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
+// @0x14251f5d0
+void InteractiveObject::PropagateNoAdvanceLocalFlag()
+{
+}
+
+// @0x14250a5e0
+Sprite* DisplayObjContainer::GetHitArea() const
+{
+    return NULL;
+}
+
+// @0x14250a5f0
+Sprite* DisplayObjContainer::GetHitAreaHolder() const
+{
+    return NULL;
+}
+
+// The host's reference to a string node, a wide string or an AS3 object (a closure's pointer carries a tag bit).
+// @0x142518530
+void AS3ValueObjectInterface::ObjectAddRef(Value* val, void* pobj)
+{
+    switch (val->GetType())
+    {
+    case Value::VT_String:
+        static_cast<ASStringNode*>(pobj)->AddRef();
+        break;
+    case Value::VT_StringW:
+        reinterpret_cast<MovieImpl::WideStringStorage*>(
+            static_cast<UByte*>(pobj) - offsetof(MovieImpl::WideStringStorage, pData))->AddRef();
+        break;
+    case Value::VT_Closure:
+        pobj = reinterpret_cast<void*>(reinterpret_cast<UPInt>(pobj) & ~UPInt(2));
+        // fall through
+    case Value::VT_Object:
+    case Value::VT_Array:
+    case Value::VT_DisplayObject:
+        static_cast<AS3::Object*>(pobj)->AddRef();
+        break;
+    default:;
+    }
+}
+
+// @0x142518570
+void AS3ValueObjectInterface::ObjectRelease(Value* val, void* pobj)
+{
+    switch (val->GetType())
+    {
+    case Value::VT_String:
+        static_cast<ASStringNode*>(pobj)->Release();
+        break;
+    case Value::VT_StringW:
+        reinterpret_cast<MovieImpl::WideStringStorage*>(
+            static_cast<UByte*>(pobj) - offsetof(MovieImpl::WideStringStorage, pData))->Release();
+        break;
+    case Value::VT_Closure:
+        pobj = reinterpret_cast<void*>(reinterpret_cast<UPInt>(pobj) & ~UPInt(2));
+        // fall through
+    case Value::VT_Object:
+    case Value::VT_Array:
+    case Value::VT_DisplayObject:
+        static_cast<AS3::Object*>(pobj)->Release();
+        break;
+    default:;
+    }
+}
+
+// Whether pdata scripts a display object that still exists.
+// @0x142514240
+bool AS3ValueObjectInterface::IsDisplayObjectActive(void* pdata) const
+{
+    return AS3::Sfr34_IsDisplayObject(pdata) &&
+           static_cast<AS3::Instances::fl_display::DisplayObject*>(pdata)->pDispObj.GetPtr() != NULL;
+}
+
+// The user data the object's holder (+0x30) keeps at +8.
+// @0x14250f980
+ASUserData* AS3ValueObjectInterface::GetUserData(void* pdata, bool isdobj) const
+{
+    SF_UNUSED(isdobj);
+    if (!pdata)
+        return NULL;
+    UByte* pholder = *(UByte**)((UByte*)pdata + 0x30);
+    if (!pholder)
+        return NULL;
+    return *(ASUserData**)((UByte*)pholder + 0x8);
+}
+
+namespace AS3 {
+
+// @0x14250a5b0
+Instances::fl::GlobalObjectScript* Traits::GetGlobalObjectScript() const
+{
+    return NULL;
+}
+
+// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
+// @0x1425117e0
+void Traits::InitOnDemand() const
+{
+}
+
+// @0x142514320
+bool Traits::IsGlobal() const
+{
+    return false;
+}
+
+// A class traits makes its class object through its instance traits.
+// @0x1425117f0
+void ClassTraits::Traits::InitOnDemand() const
+{
+    ITraits->GetConstructor();
+}
+
+// @0x142512620
+const SlotInfo* Object::InitializeOnDemand(const SlotInfo* si, const ASString& name, const Instances::Namespace& ns,
+                                           UPInt& index)
+{
+    SF_UNUSED3(name, ns, index);
+    return si;
+}
+
+// @0x14251cfc0
+CheckResult Class::PreInit(const Value& _this) const
+{
+    SF_UNUSED(_this);
+    return true;
+}
+
+// @0x14251ced0
+void Class::PostInit(const Value& _this, unsigned argc, const Value* argv) const
+{
+    _this.GetObject()->AS3Constructor(argc, argv);
+}
+
+namespace Classes
+{
+    // @0x142511880
+    void UDBase::InitPrototype(AS3::Object& obj) const
+    {
+        AddConstructor(obj);
+    }
+}
+
+namespace InstanceTraits
+{
+    // @0x14250bc20
+    ASString RTraits::GetName() const
+    {
+        return Name;
+    }
+
+    // Instances are made by the parent's traits, or Object's.
+    // @0x142516570
+    void RTraits::MakeObject(Value& result, Traits& t)
+    {
+        const AS3::Traits* pparent = GetParent();
+        if (!pparent)
+            pparent = &GetVM().GetClassTraitsObject().GetInstanceTraits();
+        const_cast<Traits*>(static_cast<const Traits*>(pparent))->MakeObject(result, t);
+    }
+}
+
+// @0x14250a650
+InstanceTraits::Traits* XMLSupport::GetITraitsQName() const
+{
+    return NULL;
+}
+
+// @0x14250a6e0
+InstanceTraits::Traits* XMLSupport::GetITraitsXML() const
+{
+    return NULL;
+}
+
+// @0x14250a700
+InstanceTraits::Traits* XMLSupport::GetITraitsXMLList() const
+{
+    return NULL;
+}
+
+// @0x14250a720
+int IntervalTimer::GetId() const
+{
+    return Id;
+}
+
+// @0x14250bf80
+UInt64 IntervalTimer::GetNextInvokeTime() const
+{
+    return InvokeTime;
+}
+
+// @0x142513eb0
+bool IntervalTimer::IsActive() const
+{
+    return Active;
+}
+
+// The top parent of an AS3 parent, else the object itself.
+// @0x14250f820
+InteractiveObject* AvmInteractiveObj::GetTopParent(bool ignoreLockRoot) const
+{
+    InteractiveObject* pparent = pDispObj->GetParent();
+    if (pparent && pparent->GetAVMVersion() == 2)
+        return pparent->GetTopParent(ignoreLockRoot);
+    return GetIntObj();
+}
+
+// @0x142514330
+bool AvmDisplayObjContainer::IsLevelMovie() const
+{
+    return false;
+}
+
+// Once loaded, the AS3 object is held as the counted pointer.
+// @0x142519020
+void AvmDisplayObj::OnEventLoad()
+{
+    SetAS3ObjCollectible(GetAS3Obj());
+}
+
+// @0x142514a70
+bool LoadQueueEntryMT_LoadMovie::IsPreloadingFinished()
+{
+    return pPreloadTask->IsDone();
+}
+
+// Freed segments lower the limit again, down to the user's level.
+// @0x14251a0a0
+void MemoryContextImpl::HeapLimit::OnFreeSegment(MemoryHeap* heap, UPInt freeingSize)
+{
+    if (CurrentLimit > UserLevelLimit && CurrentLimit > freeingSize)
+    {
+        CurrentLimit -= freeingSize;
+        heap->SetLimit(CurrentLimit);
+    }
+}
+
+}}} // namespace Scaleform::GFx::AS3
