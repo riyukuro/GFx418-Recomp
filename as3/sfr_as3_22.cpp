@@ -47,6 +47,8 @@ MS2_GLOBAL(0x1431bed18, void*, AS3SoundRequestVtable);
 MS2_GLOBAL(0x1431bed50, void*, AS3SoundRequestNodeVtable);
 MS2_GLOBAL(0x1431bef00, void*, AS3BufferedRequestVtable);
 MS2_GLOBAL(0x1431bef38, void*, AS3BufferedRequestNodeVtable);
+MS2_GLOBAL(0x1431bee50, void*, AS3StreamRequestVtable);
+MS2_GLOBAL(0x1431bee68, void*, AS3StreamRequestNodeVtable);
 MS2_GLOBAL(0x142d175c8, float, ImageViewportScale);
 MS2_GLOBAL(0x142d175cc, float, ImageViewportBias);
 MS2_GLOBAL(0x142d175e0, float, ImageViewportClampBias);
@@ -90,6 +92,7 @@ static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t
     for (unsigned i = 1; i < 7; ++i)
         destination[i] = source[i];
 }
+
 
 static void WriteFixedHashValue(std::uint64_t* row, const std::uint64_t* value)
 {
@@ -4213,6 +4216,117 @@ void LogMovieAndRendererFunctions(void* movieRoot, Scaleform::Log* log)
     FUN_14268bd60(*reinterpret_cast<void**>(bytes + 0xf0), log);
 }
 
+// MS2-FUNCTIONAL: links either an ordinary sound request or callback-backed stream request, then configures the FMOD source and dispatches stream format metadata.
+// @0x1427449f0
+void* FUN_1427449f0(void* manager, void* requestData)
+{
+    if (!requestData)
+        return nullptr;
+    auto* managerBytes = static_cast<unsigned char*>(manager);
+    auto* request = static_cast<unsigned char*>(requestData);
+    const unsigned options = *reinterpret_cast<unsigned*>(request + 0x10);
+    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+
+    const bool stream = (options & 0x1000) && !(options & 0x2000);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    unsigned allocationFlags[2] = { 2, 0 };
+    const std::size_t objectSize = 0x40;
+    auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
+        DAT_143b15f60, objectSize, allocationFlags));
+    if (!object) {
+        LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+        return nullptr;
+    }
+    auto* node = object + 0x10;
+    auto* sentinel = managerBytes + 0xb0;
+    void* tail = *reinterpret_cast<void**>(managerBytes + 0xc0);
+    *reinterpret_cast<void***>(object) = stream ? &AS3StreamRequestVtable : &AS3SoundRequestVtable;
+    *reinterpret_cast<unsigned*>(object + 8) = 1;
+    *reinterpret_cast<void***>(node) = stream ? &AS3StreamRequestNodeVtable : &AS3SoundRequestNodeVtable;
+    *reinterpret_cast<void**>(node + 8) = sentinel;
+    *reinterpret_cast<void**>(node + 0x10) = tail;
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(tail) + 8) = node;
+    *reinterpret_cast<void**>(managerBytes + 0xc0) = node;
+    *reinterpret_cast<void**>(object + 0x28) = stream ? requestData : manager;
+    *reinterpret_cast<void**>(object + 0x30) = nullptr;
+    if (stream) {
+        *reinterpret_cast<void**>(object + 0x38) = manager;
+    } else {
+        *reinterpret_cast<void**>(object + 0x38) = nullptr;
+        *reinterpret_cast<unsigned*>(request + 8) += 1;
+    }
+    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+
+    auto* system = *reinterpret_cast<FMOD::System**>(managerBytes + 0x10);
+    auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
+    FMOD_RESULT result = static_cast<FMOD_RESULT>(0);
+    if (!stream) {
+        unsigned mode = 0x1a001040;
+        unsigned char info[0xd8] = {};
+        *reinterpret_cast<unsigned*>(info) = sizeof(info);
+        if ((options & 0x700) == 0x100) {
+            *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<unsigned*>(request + 0x14);
+            *reinterpret_cast<int*>(info + 0x14) = ((options & 7) == 2) + 1;
+            *reinterpret_cast<int*>(info + 0x0c) = ((options & 8) != 0) + 1;
+        } else if ((options & 0x700) == 0x200) {
+            mode = 0x1a000240;
+            *reinterpret_cast<int*>(info + 0x14) = 0xb;
+        } else {
+            result = static_cast<FMOD_RESULT>(0x19);
+        }
+        *reinterpret_cast<unsigned*>(info + 8) = *reinterpret_cast<unsigned*>(request + 0x28);
+        if (result == 0)
+            result = system->createSound(*reinterpret_cast<const char**>(request + 0x20), mode,
+                                         reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+    } else {
+        unsigned char info[0xd8] = {};
+        *reinterpret_cast<unsigned*>(info) = sizeof(info);
+        *reinterpret_cast<int*>(info + 4) = 0x0fffffff;
+        *reinterpret_cast<unsigned*>(info + 0xd0) = 0x2000;
+        unsigned mode = 0x02002040;
+        if ((options & 0x700) == 0x100) {
+            mode = 0x02003040;
+            *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<unsigned*>(request + 0x14);
+            *reinterpret_cast<int*>(info + 0x14) = ((options & 7) == 2) + 1;
+            *reinterpret_cast<int*>(info + 0x0c) = ((options & 8) != 0) + 1;
+        } else if ((options & 0x700) == 0x200) {
+            *reinterpret_cast<int*>(info + 0x14) = 0xb;
+        } else {
+            result = static_cast<FMOD_RESULT>(0x19);
+        }
+        if (result == 0) {
+            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned*, void*, void**)>(info + 0x78) = Scaleform::OpenAudioStream;
+            *reinterpret_cast<unsigned long long (**)(void*, void*)>(info + 0x80) = Scaleform::CloseAudioStream;
+            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned, unsigned*, void*)>(info + 0x88) = Scaleform::ReadAudioCallback;
+            *reinterpret_cast<unsigned long long (**)(void*, void*, void*)>(info + 0x90) = Scaleform::ValidateAudioStream;
+            result = system->createStream(*reinterpret_cast<const char**>(request + 0x20), mode,
+                                          reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+        }
+        if (result == 0 && *sound) {
+            int format = 0, channels = 0;
+            float frequency = 0.0f;
+            result = static_cast<FMOD_RESULT>(FUN_1428d8eba(*sound, nullptr, &format, &channels, nullptr));
+            if (result == 0)
+                result = static_cast<FMOD_RESULT>(FUN_1428d8eb4(*sound, &frequency, nullptr, nullptr, nullptr));
+            if (result == 0 && (format == 2 || format == 5)) {
+                auto** vtable = *reinterpret_cast<void***>(manager);
+                return reinterpret_cast<void* (*)(void*, void*, int, unsigned, void*)>(vtable[4])(
+                    manager, object, channels, static_cast<unsigned>(frequency),
+                    reinterpret_cast<void*>(format == 5 ? 1 : 0));
+            }
+        }
+    }
+
+    if (result == 0) {
+        InterlockedIncrement(reinterpret_cast<volatile long*>(object + 8));
+        return object;
+    }
+    *sound = nullptr;
+    auto** vtable = *reinterpret_cast<void***>(object);
+    reinterpret_cast<void (*)(void*, unsigned)>(vtable[0])(object, 1);
+    return nullptr;
+}
+
 // MS2-FUNCTIONAL: creates and links a sound request under the manager lock, then initializes its FMOD sound or stream.
 // @0x142744ea0
 void* CreateAudioRequest(void* manager, const char* path, bool stream)
@@ -4517,3 +4631,6 @@ void FUN_14268b710(void* source, Scaleform::Log* log)
                         *reinterpret_cast<const unsigned*>(record + 0x10));
     }
 }
+
+// MS2-PIN: ??_7MemItem@Scaleform@@6B@ 0x143192160
+// MS2-PIN: ??_7?$RefCountBase@UMemItem@Scaleform@@$01@Scaleform@@6B@ 0x143193df0
