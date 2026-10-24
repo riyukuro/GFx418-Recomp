@@ -1484,6 +1484,48 @@ void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
     return result;
 }
 
+// MS2-FUNCTIONAL: resolves both cached labels and formats every timing record into the executable's temporary String sink.
+// @0x14268a040
+void FUN_14268a040(void* source)
+{
+    auto* bytes = static_cast<unsigned char*>(source);
+    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
+    const auto* records = *reinterpret_cast<const unsigned char**>(bytes + 0x10);
+    auto* table = *reinterpret_cast<unsigned char**>(bytes + 0x28);
+    for (std::size_t i = 0; i < count; ++i) {
+        const auto* record = records + i * 0x20;
+        Scaleform::String first, second, output;
+        if (table) {
+            const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
+            for (unsigned keyIndex = 0; keyIndex != 2; ++keyIndex) {
+                const auto* key = record + keyIndex * 8;
+                const std::uint64_t value = *reinterpret_cast<const std::uint64_t*>(key);
+                const std::uint64_t bucket = HashImageKey(key) & mask;
+                auto* row = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
+                if (static_cast<std::int64_t>(row[0]) == -2 || row[1] != bucket)
+                    continue;
+                for (;;) {
+                    if (row[1] == bucket && row[2] == value) {
+                        (keyIndex ? second : first) = *reinterpret_cast<const Scaleform::String*>(row + 3);
+                        break;
+                    }
+                    if (row[0] == UINT64_MAX)
+                        break;
+                    row = reinterpret_cast<std::uint64_t*>(table + 0x10 + row[0] * 0x20);
+                }
+            }
+        }
+        Scaleform::MsgFormat format{Scaleform::MsgFormat::Sink(output)};
+        format.Parse("{0} ({1}) from {2} ({3}): {4} times\n");
+        format.FormatD1(first.ToCStr());
+        format.FormatD1(*reinterpret_cast<const Scaleform::String*>(record));
+        format.FormatD1(second.ToCStr());
+        format.FormatD1(*reinterpret_cast<const Scaleform::String*>(record + 8));
+        format.FormatD1(*reinterpret_cast<const unsigned long*>(record + 0x10));
+        format.FinishFormatD();
+    }
+}
+
 // MS2-FUNCTIONAL: inserts an eight-byte key/value pair through the recovered cached hash-set insertion routine.
 // @0x1426899e0
 void AddImageHashValue(void* set, const unsigned char* key, const void* value)
