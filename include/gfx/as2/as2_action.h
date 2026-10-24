@@ -264,6 +264,8 @@ public:
     MovieRoot*         GetAS2Root() const;   // exe 0x142949080
     // The off-th function frame from the innermost one, 0 past the outermost (exe 0x142956740).
     LocalFrame*        GetTopLocalFrame(int off = 0) const;
+    // A new activation frame pushed on the frame stack (exe 0x142936680, sfr32).
+    LocalFrame*        CreateNewLocalFrame();
     // The character a value names (a character, or a target path string), 0 if none (exe 0x142944f40).
     InteractiveObject* FindTargetByValue(const Value& val);
     // The character a target path names ("/a/b", "a.b", "../a"; empty: the target), 0 if none; flag 4 silences

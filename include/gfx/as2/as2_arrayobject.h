@@ -253,6 +253,8 @@ public:
     // new Array(n) / Array(n) has n holes, any other arguments are the elements; a new array when called as
     // a function (exe 0x1429584b0).
     static void GlobalCtor(const FnCall& fn);
+    // The Array literal (exe 0x142938020, sfr32).
+    static void DeclareArray(const FnCall& fn);
 
     // (appended for sfr_as2_06) Creates the class and its prototype and publishes "Array" (exe 0x142973500).
     static FunctionRef Register(GlobalContext* pgc);
