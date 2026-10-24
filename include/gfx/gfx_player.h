@@ -45,6 +45,8 @@ class Viewport : public Render::Viewport
 public:
     float Scale;          // +0x2c
     float AspectRatio;    // +0x30
+
+    Viewport() { AspectRatio = 1.f; Scale = 1.f; }
 };
 
 class Movie : public RefCountBase<Movie, 0x147>, public StateBag   // StatMV_Other_Mem

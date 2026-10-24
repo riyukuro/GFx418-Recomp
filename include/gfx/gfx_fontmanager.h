@@ -33,7 +33,14 @@ public:
     Ptr<FontMap>      pFontMap;      // +0x20
     Ptr<FontProvider> pFontProvider; // +0x28
     Ptr<Translator>   pTranslator;   // +0x30
-    Ptr<StateBag>     pDelegate;     // +0x38 a counted StateBag (the movie's)
+    StateBag*         pDelegate;     // +0x38 the movie's StateBag (not counted: the movie owns these states)
+
+#ifdef SF_GFX_PLAYERIMPL   // (inline in MovieImpl's ctor; the members' dtors need the complete state types)
+    FontManagerStates(StateBag* pdelegate) : pDelegate(pdelegate) {}
+#endif
+
+    // StateBag: the delegate's state bag (0x14256fb80).
+    virtual StateBag* GetStateBagImpl() const { return pDelegate; }
 
     // StateBag: the four font states here, the rest from pDelegate (0x14263da70).
     virtual State* GetStateAddRef(State::StateType state) const;

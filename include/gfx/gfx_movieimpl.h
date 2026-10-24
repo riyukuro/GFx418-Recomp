@@ -17,6 +17,12 @@
 #include "ms2/scaleform/kernel/sf_list.h"
 #include "gfx_keyboardstate.h"
 #include "../kernel/sf_hash.h"
+#include "gfx_input.h"
+#include "gfx_rendertree.h"
+#include "../render/render_screentoworld.h"
+#include "../render/render_color.h"
+#include "../render/render_matrix2x4.h"
+#include "gfx_asstringhash.h"
 #endif
 
 namespace Scaleform {
@@ -39,6 +45,8 @@ struct ASStringNode;
 }
 class MemoryHeap;
 class Log;
+namespace GFx { namespace AMP { class ViewStats; } class FSCommandHandler; class MultitouchInterface; }
+namespace Render { class DrawableImageContext; }
 namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld;
                    namespace Text { class Allocator; } }
 namespace GFx {
@@ -67,6 +75,10 @@ struct MovieDefRootNodeLinks
 {
     MovieDefRootNode* pPrev;
     MovieDefRootNode* pNext;
+#ifdef SF_GFX_PLAYERIMPL
+    // The movie's list root: empty, linked to itself (defined below MovieDefRootNode).
+    inline MovieDefRootNodeLinks();
+#endif
 };
 
 // (also in gfx_interactiveobject.h)
@@ -84,14 +96,25 @@ enum FocusMovedType
 // Keyboard focus state of one focus group (one per controller group; 0x60 bytes, 16-aligned).
 struct FocusGroupDescr
 {
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<Render::TreeContainer>       FocusRectNode;   // +0x00 the node drawing the focus rectangle
+    ArrayDH<Ptr<InteractiveObject> > TabableArray;    // +0x08 the tab order, in the group's own heap
+#else
     UByte   Unrecovered_00[0x28];      // +0x00 focus rect node, tabable array
+#endif
     mutable WeakPtr<InteractiveObject> LastFocused;   // +0x28 the focused character
     Ptr<CharacterHandle> ModalClip;    // +0x30 the clip the focus is kept within
     UInt32  LastFocusKeyCode;          // +0x38
     UByte   Unrecovered_3c[4];
-    UByte   Unrecovered_40[0x10];      // +0x40 last focused rect
+    Render::RectF LastFocusedRect;     // +0x40
     bool    FocusRectShown;            // +0x50 the focus rectangle is up (focus moved by keyboard)
-    UByte   Unrecovered_51[0xf];
+    UByte   TabableArrayStatus;        // +0x51
+    UByte   Unrecovered_52[0xe];
+
+#ifdef SF_GFX_PLAYERIMPL
+    FocusGroupDescr() : TabableArray(Memory::GetHeapByAddress(this)), LastFocusKeyCode(0), FocusRectShown(false),
+                        TabableArrayStatus(0) {}
+#endif
 
     // The modal clip, if it is still alive (exe 0x14256f7e0).
     Sprite* GetModalClip(MovieImpl* proot);
@@ -105,26 +128,70 @@ class MovieImpl
 #endif
 {
 public:
+    // A SetVariable value kept for a target that does not exist yet (defined in the player unit).
+    struct StickyVarNode;
+    // The buffers of an ExternalInterface.call return value (defined in the player unit).
+    struct ReturnValueHolder;
+
+    // The drag state kept at +0x2de0 (0x28 bytes; its first field is pKeepAdvancingChar).
+    struct DragState
+    {
+        InteractiveObject* pCharacter;   // +0x00
+        bool               LockCenter;   // +0x08
+        bool               Bound;        // +0x09
+        Render::PointF     BoundLT;      // +0x0c twips
+        Render::PointF     BoundRB;      // +0x14
+        Render::PointF     CenterDelta;  // +0x1c
+
+        DragState() : pCharacter(0), LockCenter(false), Bound(false) {}
+        // Offset from the mouse to the character, or none when the center is locked (exe 0x142570c80).
+        void InitCenterDelta(bool lockCenter);
+    };
+
 #ifndef SF_GFX_PLAYERIMPL
     void*            MovieBase_Unrecovered[3]; // +0x00 RefCountBase vftable + count, StateBag vftable
     ASMovieRootBase* pASMovieRoot;             // +0x18 Ptr<ASMovieRootBase>: the AVM specific root
 #endif
     LoadQueueEntry*  pLoadQueueHead;           // +0x20 the load requests processed on the next advance
     UInt32           LastLoadQueueEntryCnt;    // +0x28
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<AMP::ViewStats> pAdvanceStats;       // +0x30 (GetStats)
+#else
     void*            pAdvanceStats;            // +0x30 Ptr<AMP::ViewStats> (GetStats)
+#endif
     void*            pObjectInterface;         // +0x38 Value::ObjectInterface*: how host values reach the VM objects
     MemoryHeap*      pHeap;                    // +0x40 the movie's heap
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<MovieDefImpl> pMainMovieDef;          // +0x48 the _level0 movie
+#else
     MovieDefImpl*    pMainMovieDef;            // +0x48 Ptr<MovieDefImpl>: the _level0 movie (sfr_gfx_07f)
+#endif
     InteractiveObject* pMainMovie;             // +0x50 _level0
     struct LevelInfo { int Level; InteractiveObject* pSprite; };   // (sfr_gfx_06)
     LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
     UPInt            MovieLevelsSize;          // +0x60 MovieLevels size
     UPInt            MovieLevelsCapacity;      // +0x68
     MovieDefRootNodeLinks RootMovieDefNodes;   // +0x70 the root nodes of the loaded movies (sfr_gfx_06d)
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<StateBagImpl> pStateBag;              // +0x80 the movie's own states
+#else
     StateBagImpl*    pStateBag;                // +0x80 Ptr<StateBagImpl>: the movie's own states (sfr_video_01)
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<Render::TreeRoot> pRenderRoot;        // +0x88
+#else
     Render::TreeNode* pRenderRoot;             // +0x88 Ptr<TreeRoot> (sfr_gfx_06)
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    Render::ContextImpl::DisplayHandle<Render::TreeRoot> hDisplayRoot; // +0x90 (GetDisplayHandle)
+#else
     void*            hDisplayRoot;             // +0x90 DisplayHandle<TreeRoot> (GetDisplayHandle)
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<Render::TreeContainer> pTopMostRoot;  // +0x98
+#else
     Render::TreeNode* pTopMostRoot;            // +0x98 Ptr<TreeContainer> (sfr_gfx_06)
+#endif
 #ifdef SF_GFX_PLAYERIMPL
     Viewport         mViewport;                // +0xa0 (0x34 bytes)
 #else
@@ -143,20 +210,35 @@ public:
     int              ViewAlignment;            // +0xec Movie::AlignType
     Render::RectF    VisibleFrameRect;         // +0xf0 the visible stage, twips
     Render::RectF    SafeRect;                 // +0x100 the title-safe rect, twips
+#ifdef SF_GFX_PLAYERIMPL
+    Render::Matrix2F ViewportMatrix;           // +0x110 stage twips -> viewport pixels
+#else
     float            ViewportMatrix[2][4];     // +0x110 Matrix2F: stage twips -> viewport pixels
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    Render::ScreenToWorld ScreenToWorld;       // +0x130 the 3D hit test mapping (0xf0 bytes)
+#else
     float            ScreenToWorldSx;          // +0x130 ScreenToWorld: the normalized mouse position (y up)
     float            ScreenToWorldSy;          // +0x134
     void*            ScreenToWorldRest[0x1d];  // +0x138 the rest of Render::ScreenToWorld
+#endif
 #ifdef SF_GFX_PLAYERIMPL
     HashSet<Ptr<Video::VideoProvider> > VideoProviders; // +0x220 the playing videos (paused with the movie)
 #else
     void*            VideoProviders;           // +0x220 HashSet<Ptr<Video::VideoProvider>>
 #endif
     Ptr<Log>         pCachedLog;               // +0x228 the log state's log, cached (sfr_gfx_06)
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<UserEventHandler>  pUserEventHandler;  // +0x230
+    Ptr<FSCommandHandler>  pFSCommandHandler;  // +0x238
+    Ptr<ExternalInterface> pExtIntfHandler;    // +0x240
+    Ptr<FontManagerStates> pFontManagerStates; // +0x248
+#else
     UserEventHandler* pUserEventHandler;       // +0x230 Ptr<UserEventHandler>: cached during advance (sfr12)
     void*            pFSCommandHandler;        // +0x238 Ptr<FSCommandHandler>
     ExternalInterface* pExtIntfHandler;        // +0x240 Ptr<ExternalInterface>: the host's ExternalInterface.call hook
     FontManagerStates* pFontManagerStates;     // +0x248 Ptr: the font states the movies' font managers share (sfr_gfx_06d)
+#endif
     void*            pAudio;                   // +0x250 AudioBase*
     void*            pSoundRenderer;           // +0x258
     void*            pXMLObjectManager;        // +0x260
@@ -164,22 +246,48 @@ public:
     float            TimeRemainder;            // +0x270
     float            FrameTime;                // +0x274 seconds per frame (sfr_video_01 SetSwfSync)
     unsigned         ForceFrameCatchUp;        // +0x278
+#ifdef SF_GFX_PLAYERIMPL
+    GFx::InputEventsQueue InputEventsQueue;    // +0x280
+    Render::Color    BackgroundColor;          // +0x1258
+    MouseState       mMouseState[4];           // +0x1260 0x50 bytes each
+#else
     void*            InputEventsQueue[0xfd8 / 8]; // +0x280 InputEventsQueue
     UInt32           BackgroundColor;          // +0x1258 Render::Color (alpha in the top byte)
     void*            MouseState0_1260[7];      // +0x1260 mMouseState[4], 0x50 bytes each: buttons at +0x30
     Render::PointF   MouseLastPosition;        // +0x1298 MouseState[0] last position, twips (sfr_gfx_06)
     UByte            MouseStatesRest[0x100];   // +0x12a0 the rest of mMouseState
+#endif
     unsigned         MouseCursorCount;         // +0x13a0 the mice in use (up to 4)
     unsigned         ControllerCount;          // +0x13a4
     void*            UserData;                 // +0x13a8 the host's
+#ifdef SF_GFX_PLAYERIMPL
+    KeyboardState    KeyboardStates[4];        // +0x13b0 one per keyboard
+#else
     UByte            KeyboardStates[4][0x688]; // +0x13b0 KeyboardState[4] (gfx_keyboardstate.h), one per keyboard
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    ReturnValueHolder* pRetValHolder;          // +0x2dd0 the ExternalInterface.call return value
+#else
     void*            pRetValHolder;            // +0x2dd0
+#endif
     unsigned         InstanceNameCount;        // +0x2dd8 the instanceN names handed out
     // A character the timeline keeps advancing even when stopped (MS2 build; Sprite::CheckAdvanceStatus).
-    DisplayObjectBase* pKeepAdvancingChar;     // +0x2de0 CurrentDragState (0x28 bytes, DragState below)
+#ifdef SF_GFX_PLAYERIMPL
+    DragState        CurrentDragState;         // +0x2de0
+#else
+    DisplayObjectBase* pKeepAdvancingChar;     // +0x2de0 CurrentDragState (0x28 bytes, DragState above)
     UByte            CurrentDragStateRest[0x20]; // +0x2de8
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    ASStringHash<StickyVarNode*> StickyVariables; // +0x2e08 SetVariable values waiting for their target
+#else
     void*            StickyVariables;          // +0x2e08 ASStringHash<StickyVarNode*>
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    ArrayLH<Ptr<InteractiveObject>, 0x147> TopmostLevelCharacters; // +0x2e10 (StatMV_Other_Mem)
+#else
     void*            TopmostLevelCharacters[3]; // +0x2e10 ArrayLH<Ptr<InteractiveObject>>
+#endif
     UInt64           StartTickMs;              // +0x2e28
     UInt64           PauseTickMs;              // +0x2e30
 #ifdef SF_GFX_PLAYERIMPL
@@ -188,7 +296,11 @@ public:
     void*            IntervalTimers[3];        // +0x2e38 ArrayLH<Ptr<ASIntervalTimerIntf>>
 #endif
     int              LastIntervalTimerId;      // +0x2e50
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<Render::TreeContainer> FocusRectContainerNode; // +0x2e58
+#else
     void*            FocusRectContainerNode;   // +0x2e58 Ptr<TreeContainer>
+#endif
 
     typedef GFx::FocusGroupDescr FocusGroupDescr;
     FocusGroupDescr  FocusGroups[16];          // +0x2e60
@@ -246,7 +358,17 @@ public:
     UInt32           Flags2;                   // +0x3494 (sfr_gfx_06b)
     IMECandidateListStyle* pIMECandidateListStyle; // +0x3498
     LoadQueueEntryMT* pLoadQueueMTHead;        // +0x34a0 the loader-thread entries, newest first (sfr19)
+#ifdef SF_GFX_PLAYERIMPL
+    // A font registered with Font.registerFont (exe dtor of the array 0x14256a780: two Resource Ptrs, 0x10 bytes).
+    struct FontDesc
+    {
+        Ptr<MovieDef>    pMovieDef;
+        Ptr<Resource>    pFont;
+    };
+    ArrayLH<FontDesc, 2> RegisteredFonts;      // +0x34a8
+#else
     void*            RegisteredFonts[3];       // +0x34a8 ArrayLH<FontDesc>
+#endif
 #ifdef SF_GFX_PLAYERIMPL
     List<DrawingContext> DrawingContextList;   // +0x34c0
     // A movie def kept alive until the render thread finished the frame it was let go in.
@@ -260,16 +382,41 @@ public:
     void*            DrawingContextList[2];    // +0x34c0 List<DrawingContext>
     void*            MovieDefKillList[3];      // +0x34d0 Array<MDKillListEntry>
 #endif
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<ASMovieRootBase> pSavedASMovieRoot;   // +0x34e8
+#else
     ASMovieRootBase* pSavedASMovieRoot;        // +0x34e8 Ptr<ASMovieRootBase>
+#endif
+#ifdef SF_GFX_PLAYERIMPL
+    Render::ContextImpl::Context RenderContext; // +0x34f0 (0x110)
+#else
     void*            RenderContext[0x22];      // +0x34f0 Render::ContextImpl::Context (0x110; gfx_rendertree.h: the heap first)
+#endif
     UByte            PreviouslyCaptured;       // +0x3600 bumped (incremented) by ForceUpdateImages
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<Render::DrawableImageContext> DIContext; // +0x3608
+#else
     void*            DIContext;                // +0x3608 Ptr<Render::DrawableImageContext>
+#endif
     void*            pRTCommandQueue;          // +0x3610 ThreadCommandQueue*
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<MultitouchInterface> MultitouchHAL;   // +0x3618
+#else
     void*            MultitouchHAL;            // +0x3618 Ptr<MultitouchInterface>
+#endif
     int              MultitouchMode;           // +0x3620 MultitouchInputMode
+#ifdef SF_GFX_PLAYERIMPL
+    Ptr<InteractiveObject> GestureTopMostChar; // +0x3628
+#else
     InteractiveObject* GestureTopMostChar;     // +0x3628 Ptr<InteractiveObject>
+#endif
     int              DeviceOrientation;        // +0x3630 OrientationEvent: 0 default, 1 rotated left, 2 right, 3 upside down (sfr19)
+#ifdef SF_GFX_PLAYERIMPL
+    struct IndirectTransPair;
+    ArrayLH<IndirectTransPair, 0x147> IndirectTransformPairs; // +0x3638
+#else
     void*            IndirectTransformPairs[3]; // +0x3638 ArrayLH<IndirectTransPair>
+#endif
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
     bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
@@ -292,6 +439,10 @@ public:
     void AddLoadQueueEntry(LoadQueueEntry* pentry);
     // (appended, sfr19) Appends a loader-thread entry to the pLoadQueueMTHead list (exe 0x14256be30).
     void AddLoadQueueEntryMT(LoadQueueEntryMT* pentryMT);
+    // (appended, sfr24) Removes the clips queued for unloading (exe 0x1425738b0).
+    void ProcessUnloadQueue();
+    // (appended, sfr24) Drops the indirect transform pairs (exe 0x14256e010).
+    void ClearIndirectTransformPairs();
 
     // The object no longer stays on top of the levels (0x1425742c0).
     void RemoveTopmostLevelCharacter(DisplayObjectBase* pch);
@@ -316,8 +467,12 @@ public:
     {
         float nsx = 2.f * ((mousePos.x - Render::PixelsToTwips(ViewOffsetX)) / VisibleFrameRect.Width()) - 1.0f;
         float nsy = 2.f * ((mousePos.y - Render::PixelsToTwips(ViewOffsetY)) / VisibleFrameRect.Height()) - 1.0f;
+#ifdef SF_GFX_PLAYERIMPL
+        ScreenToWorld.SetNormalizedScreenCoords(nsx, nsy);
+#else
         ScreenToWorldSx = nsx;
         ScreenToWorldSy = -nsy;
+#endif
     }
 
     // A new empty drawing (the scrollRect mask shape), referenced once (0x14256e3f0).
@@ -337,21 +492,11 @@ public:
     };
     bool IsOptAdvListInvalid() const  { return (Flags & Flag_OptAdvListInvalid) != 0; }
     bool GetOptAdvListMarker() const  { return (Flags2 & Flag2_OptAdvListMarker) != 0; }
-    // The drag state kept at +0x2de0 (0x28 bytes; its first field is pKeepAdvancingChar).
-    struct DragState
-    {
-        InteractiveObject* pCharacter;   // +0x00
-        bool               LockCenter;   // +0x08
-        bool               Bound;        // +0x09
-        Render::PointF     BoundLT;      // +0x0c twips
-        Render::PointF     BoundRB;      // +0x14
-        Render::PointF     CenterDelta;  // +0x1c
-
-        DragState() : pCharacter(0), LockCenter(false), Bound(false) {}
-        // Offset from the mouse to the character, or none when the center is locked (exe 0x142570c80).
-        void InitCenterDelta(bool lockCenter);
-    };
+#ifdef SF_GFX_PLAYERIMPL
+    void SetDragState(const DragState& st) { CurrentDragState = st; }
+#else
     void SetDragState(const DragState& st) { *reinterpret_cast<DragState*>(&pKeepAdvancingChar) = st; }
+#endif
     // +0x2de0 is the drag state: the dragged character (pKeepAdvancingChar), then these.
     bool DragLockCenter() const       { return *((const bool*)this + 0x2de8); }
     bool DragBound() const            { return *((const bool*)this + 0x2de9); }
@@ -373,7 +518,11 @@ public:
     // (appended for the containers, sfr_gfx_06d) a mouse is in use (MouseCursorCount, +0x13a0)
     bool IsMouseSupportEnabled() const { return *(const unsigned*)((const UByte*)this + 0x13a0) > 0; }
     // The 3D hit test mapping (Render::ScreenToWorld, 0x100 bytes) starts at ScreenToWorldSx.
+#ifdef SF_GFX_PLAYERIMPL
+    Render::ScreenToWorld& GetScreenToWorld() { return ScreenToWorld; }
+#else
     Render::ScreenToWorld& GetScreenToWorld() { return *reinterpret_cast<Render::ScreenToWorld*>(&ScreenToWorldSx); }
+#endif
 
     // (appended for the player tasks, sfr_gfx_07f)
     // The directory of the main movie's URL (0x14256f730).
@@ -404,13 +553,13 @@ public:
     const KeyboardState* GetKeyboardState(unsigned keyboardIndex) const
     {
         if (keyboardIndex < 4)
-            return reinterpret_cast<const KeyboardState*>(KeyboardStates[keyboardIndex]);
+            return reinterpret_cast<const KeyboardState*>(&KeyboardStates[keyboardIndex]);
         return NULL;
     }
     KeyboardState* GetKeyboardState(unsigned keyboardIndex)
     {
         if (keyboardIndex < 4)
-            return reinterpret_cast<KeyboardState*>(KeyboardStates[keyboardIndex]);
+            return reinterpret_cast<KeyboardState*>(&KeyboardStates[keyboardIndex]);
         return NULL;
     }
     // MovieImpl as its Movie interface, for the virtual calls on itself (callers make the call through this: the
@@ -617,6 +766,13 @@ public:
     bool              ImportFlag;        // +0x30 the root of an import: its loading state is the parent's
     FontManager*      pFontManager;      // +0x38 Ptr<FontManager>
 };
+
+#ifdef SF_GFX_PLAYERIMPL
+inline MovieDefRootNodeLinks::MovieDefRootNodeLinks()
+{
+    pNext = pPrev = static_cast<MovieDefRootNode*>(this);
+}
+#endif
 
 // A timer the movie drives each frame (AS2 setInterval, AS3 flash.utils.Timer). Interface vftable 0x142dc9d48.
 class ASIntervalTimerIntf : public RefCountBase<ASIntervalTimerIntf, 0x143>   // StatMV_ActionScript_Mem

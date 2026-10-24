@@ -9,6 +9,7 @@
 // MS2-RANGE: 0x142569dd0-0x14256a9d0 .text$mn
 // MS2-RANGE: 0x14256aa60-0x14256deb0 .text$mn
 // MS2-RANGE: 0x14256df40-0x14256fa70 .text$mn
+// MS2-RANGE: 0x14256fb80-0x14256fbb0 .text$mn
 // MS2-RANGE: 0x14256fd60-0x142576530 .text$mn
 // MS2-RANGE: 0x142576750-0x142578f10 .text$mn
 // MS2-RANGE: 0x142579060-0x142579270 .text$mn
@@ -21,6 +22,7 @@
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_interactiveobject.h"
+#include "../include/gfx/gfx_displayobjcontainer.h"
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_movieimplstates.h"
 #include "../include/gfx/gfx_moviedef.h"
@@ -30,6 +32,7 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_playertasks.h"
 #include "../include/gfx/gfx_drawingcontext.h"
+#include "../include/gfx/gfx_fontmanager.h"
 #include "../include/gfx/gfx_value.h"
 #include "../include/gfx/as2/as2_object.h"
 #include "../include/render/render_color.h"
@@ -39,7 +42,26 @@
 #include "../include/kernel/sf_std.h"
 #include <stdlib.h>
 
+namespace Scaleform { namespace Render {
+
+// The drawable image context (the full class is in the render units); the movie only holds a reference.
+class DrawableImageContext : public RefCountBase<DrawableImageContext, Stat_Default_Mem>
+{
+};
+
+}} // namespace Scaleform::Render
+
 namespace Scaleform { namespace GFx {
+
+// The text replacement state (the full class is in sfr_gfx_02f); the font states only release it.
+class Translator : public State
+{
+};
+
+// The host's fscommand handler state (the movie only holds it).
+class FSCommandHandler : public State
+{
+};
 
 // The AVM root's vftable as the player calls it (ASMovieRootBase carries no virtuals in our headers): 4.1.18 slot
 // order, the slots the player does not call left unnamed.
@@ -51,7 +73,7 @@ public:
     virtual void Slot02() = 0;
     virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType) = 0;          // 3
     virtual void Slot04() = 0;
-    virtual void Slot05() = 0;
+    virtual void ClearDisplayList() = 0;                                                       // 5
     virtual void Slot06() = 0;
     virtual void Slot07() = 0;
     virtual void Slot08() = 0;
@@ -79,7 +101,7 @@ public:
     virtual void Slot30() = 0;
     virtual void SetExternalInterfaceRetVal(const Value& retVal) = 0;                           // 31
     virtual void Slot32() = 0;
-    virtual void Slot33() = 0;
+    virtual void Shutdown() = 0;                                                               // 33
     virtual void CreateString(Value* pvalue, const char* pstring) = 0;                          // 34
     virtual void CreateStringW(Value* pvalue, const wchar_t* pstring) = 0;                      // 35
     virtual void CreateObject(Value* pvalue, const char* className, const Value* pargs, unsigned nargs) = 0; // 36
@@ -107,7 +129,7 @@ static inline ASMovieRootSlots418* AsRootSlots(ASMovieRootBase* proot)
 
 namespace AMP {
 // The movie's advance statistics (AMP; only the call the player makes).
-class ViewStats
+class ViewStats : public RefCountBase<ViewStats, Stat_Default_Mem>
 {
 public:
     void GetStats(::Scaleform::StatBag* pbag, bool reset);   // exe 0x142622740
@@ -129,16 +151,6 @@ inline void SetFlag(UInt32& value, bool set)
     else
         value &= ~mask;
 }
-
-// One of the four mouse states (0x50 bytes from +0x1260).
-struct MouseStateView
-{
-    UByte          Unrecovered_00[0x30];
-    unsigned       Buttons;          // +0x30
-    UByte          Unrecovered_34[4];
-    Render::PointF LastPosition;     // +0x38 twips
-    UByte          Unrecovered_40[0x10];
-};
 
 // ---------------------------------------------------------------------------------------------------------------
 // Movie: the AVM root forwarders
@@ -248,7 +260,7 @@ void MovieImpl::ForceCollectGarbage()
 // @0x14256ee30
 void MovieImpl::ForceUpdateImages()
 {
-    reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->ForceUpdateImages();
+    RenderContext.ForceUpdateImages();
     ++PreviouslyCaptured;
 }
 
@@ -283,7 +295,7 @@ unsigned MovieImpl::GetCurrentFrame() const
 bool MovieImpl::GetDirtyFlag(bool doReset)
 {
     bool dirty = IsFlagSet<0x400>(Flags) ||
-                 reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->HasChanges();
+                 RenderContext.HasChanges();
     if (doReset)
         Flags &= ~0x400u;
     return dirty;
@@ -292,7 +304,7 @@ bool MovieImpl::GetDirtyFlag(bool doReset)
 // @0x14256f210
 const Render::ContextImpl::DisplayHandle<Render::TreeRoot>& MovieImpl::GetDisplayHandle() const
 {
-    return *reinterpret_cast<const Render::ContextImpl::DisplayHandle<Render::TreeRoot>*>(&hDisplayRoot);
+    return hDisplayRoot;
 }
 
 // @0x14256f2b0
@@ -313,7 +325,7 @@ void MovieImpl::GetMouseState(unsigned mouseIndex, float* x, float* y, unsigned*
 {
     if (mouseIndex >= MouseCursorCount)
         return;
-    const MouseStateView& ms = reinterpret_cast<const MouseStateView*>(MouseState0_1260)[mouseIndex];
+    const MouseState& ms = mMouseState[mouseIndex];
     float px = (Render::TwipsToPixels(ms.LastPosition.x) - ViewOffsetX) / ViewScaleX;
     float py = (Render::TwipsToPixels(ms.LastPosition.y) - ViewOffsetY) / ViewScaleY;
     if (x)
@@ -321,7 +333,7 @@ void MovieImpl::GetMouseState(unsigned mouseIndex, float* x, float* y, unsigned*
     if (y)
         *y = py;
     if (buttons)
-        *buttons = ms.Buttons;
+        *buttons = ms.CurButtonsState;
 }
 
 // @0x14256f880
@@ -333,7 +345,7 @@ unsigned MovieImpl::GetMouseCursorCount() const
 // @0x14256f910
 MovieDef* MovieImpl::GetMovieDef() const
 {
-    return (MovieDef*)pMainMovieDef;
+    return (MovieDef*)pMainMovieDef.GetPtr();
 }
 
 // @0x14256f930
@@ -464,7 +476,7 @@ bool MovieImpl::IsPaused() const
 // @0x142571160
 bool MovieImpl::IsShutdownRenderingComplete() const
 {
-    return reinterpret_cast<const Render::ContextImpl::Context*>(RenderContext)->IsShutdownComplete();
+    return RenderContext.IsShutdownComplete();
 }
 
 // @0x142571170
@@ -497,15 +509,14 @@ void MovieImpl::ResetKeyboardState()
 void MovieImpl::RestoreViewport()
 {
     ResetViewportMatrix();
-    pRenderRoot->SetMatrix(*reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix));
+    pRenderRoot->SetMatrix(ViewportMatrix);
 }
 
 // @0x142575930
 void MovieImpl::SetASMovieRoot(ASMovieRootBase* pasMovieRoot)
 {
-    Ptr<ASMovieRootBase>& saved = *reinterpret_cast<Ptr<ASMovieRootBase>*>(&pSavedASMovieRoot);
-    saved         = pasMovieRoot;
-    pASMovieRoot  = saved;
+    pSavedASMovieRoot = pasMovieRoot;
+    pASMovieRoot      = pSavedASMovieRoot;
 }
 
 // @0x1425759a0
@@ -536,7 +547,7 @@ void MovieImpl::SetBackgroundColor(const Render::Color bgColor)
 // @0x142575a90
 void MovieImpl::SetCaptureThread(void* captureThreadId)
 {
-    reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->SetCaptureThreadId(captureThreadId);
+    RenderContext.SetCaptureThreadId(captureThreadId);
 }
 
 // @0x142575aa0
@@ -648,7 +659,7 @@ void MovieImpl::SetVisible(bool visible)
 // @0x142576c50
 void MovieImpl::ShutdownRendering(bool wait)
 {
-    reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->Shutdown(wait);
+    RenderContext.Shutdown(wait);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -692,7 +703,7 @@ void MovieImpl::AddLoadQueueEntryMT(LoadQueueEntryMT* pentryMT)
 // @0x142574ca0
 void MovieImpl::ResetMouseState()
 {
-    MouseState* pstates = reinterpret_cast<MouseState*>(MouseState0_1260);
+    MouseState* pstates = mMouseState;
     for (unsigned i = 0; i < 4; ++i)
         pstates[i].ResetState();
 }
@@ -701,7 +712,7 @@ void MovieImpl::ResetMouseState()
 void MovieImpl::SetKeyboardListener(KeyboardState::IListener* l)
 {
     for (unsigned i = 0; i < 4; ++i)
-        reinterpret_cast<KeyboardState*>(KeyboardStates[i])->SetListener(l);
+        KeyboardStates[i].SetListener(l);
 }
 
 // @0x14256ed00
@@ -740,7 +751,7 @@ bool MovieImpl::GetMainMoviePath(String* ppath) const
 {
     if (pMainMovie)
     {
-        *ppath = ((MovieDef*)pMainMovieDef)->GetFileURL();
+        *ppath = ((MovieDef*)pMainMovieDef.GetPtr())->GetFileURL();
         if (URLBuilder::ExtractFilePath(ppath))
             return true;
     }
@@ -763,7 +774,7 @@ void MovieImpl::UpdateAllDrawingContexts()
 // @0x14256dc00
 void MovieImpl::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 {
-    MouseState& ms = reinterpret_cast<MouseState*>(MouseState0_1260)[mouseIdx];
+    MouseState& ms = mMouseState[mouseIdx];
     if (ms.CursorType != newCursorType)
         AsRootSlots(pASMovieRoot)->ChangeMouseCursorType(mouseIdx, newCursorType);
     ms.CursorType = (ms.PresetCursorType == ~0u) ? newCursorType : ms.PresetCursorType;
@@ -852,12 +863,12 @@ void MovieImpl::AddMovieDefToKillList(MovieDefImpl* pdefImpl)
         if (MovieDefKillList[i].pMovieDef == pdefImpl)
         {
             MovieDefKillList[i].KillFrameId =
-                reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->GetFinalizedFrameId();
+                RenderContext.GetFinalizedFrameId();
             return;
         }
     }
     MDKillListEntry e;
-    e.KillFrameId = reinterpret_cast<Render::ContextImpl::Context*>(RenderContext)->GetFinalizedFrameId();
+    e.KillFrameId = RenderContext.GetFinalizedFrameId();
     e.pMovieDef = pdefImpl;
     MovieDefKillList.PushBack(e);
 }
@@ -958,7 +969,7 @@ void MovieImpl::SetViewport(const Viewport& viewDesc)
     }
     static_cast<Render::TreeRoot*>(pRenderRoot)->SetViewport(mViewport);
     static_cast<Render::TreeRoot*>(pRenderRoot)->SetBackgroundColor(*(Render::Color*)&BackgroundColor);
-    static_cast<Render::TreeRoot*>(pRenderRoot)->SetMatrix(*(Render::Matrix2F*)ViewportMatrix);
+    static_cast<Render::TreeRoot*>(pRenderRoot)->SetMatrix(ViewportMatrix);
 }
 
 // Queues a host mouse update: the move, then a press or a release for every button whose state changed.
@@ -966,13 +977,13 @@ void MovieImpl::SetViewport(const Viewport& viewDesc)
 void MovieImpl::NotifyMouseState(float x, float y, unsigned buttons, unsigned mouseIndex)
 {
     Render::PointF pt(Render::PointF::NoInit);
-    reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix)->TransformByInverse(&pt, Render::PointF(x, y));
+    ViewportMatrix.TransformByInverse(&pt, Render::PointF(x, y));
 
     if (mouseIndex < MouseCursorCount)
     {
-        GFx::InputEventsQueue* pqueue = reinterpret_cast<GFx::InputEventsQueue*>(InputEventsQueue);
+        GFx::InputEventsQueue* pqueue = &InputEventsQueue;
         pqueue->AddMouseMove(mouseIndex, pt);
-        unsigned lastButtons = reinterpret_cast<const MouseStateView*>(MouseState0_1260)[mouseIndex].Buttons;
+        unsigned lastButtons = mMouseState[mouseIndex].CurButtonsState;
         for (unsigned i = 0, mask = 1; i < 16; i++, mask <<= 1)   // MouseButton_MaxNum
         {
             if ((buttons & mask) && !(lastButtons & mask))
@@ -1016,7 +1027,7 @@ void MovieImpl::OnMovieFocus(bool set)
 bool MovieImpl::HitTest(float x, float y, HitTestType testCond, unsigned controllerIdx)
 {
     Render::PointF pt(Render::PointF::NoInit);
-    reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix)->TransformByInverse(&pt, Render::PointF(x, y));
+    ViewportMatrix.TransformByInverse(&pt, Render::PointF(x, y));
 
     SetNormalizedScreenCoords(pt);
 
@@ -1081,7 +1092,7 @@ Render::PointF MovieImpl::TranslateToScreen(const Render::PointF& p, Render::Mat
 {
     Render::Matrix2F worldMatrix;
     pMainMovie->GetWorldMatrix(&worldMatrix);
-    Render::Matrix2F mat = *reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix);
+    Render::Matrix2F mat = ViewportMatrix;
 
     if (puserMatrix)
         mat.Prepend(*puserMatrix);
@@ -1093,7 +1104,7 @@ Render::RectF MovieImpl::TranslateToScreen(const Render::RectF& r, Render::Matri
 {
     Render::Matrix2F worldMatrix;
     pMainMovie->GetWorldMatrix(&worldMatrix);
-    Render::Matrix2F mat = *reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix);
+    Render::Matrix2F mat = ViewportMatrix;
 
     if (puserMatrix)
         mat.Prepend(*puserMatrix);
@@ -1113,7 +1124,7 @@ bool MovieImpl::TranslateLocalToScreen(const char* pathToCharacter, const Render
     if (!res.GetWorldMatrix(&worldMatrix))
         return false;
 
-    Render::Matrix2F mat = *reinterpret_cast<const Render::Matrix2F*>(ViewportMatrix);
+    Render::Matrix2F mat = ViewportMatrix;
     // the world matrix translates in pixels: undo the viewport matrix's 1/20
     mat.AppendScaling(20.f, 20.f);
 
@@ -1141,6 +1152,251 @@ Movie::~Movie()
 
 }} // namespace Scaleform::GFx
 
+namespace Scaleform { namespace Render {
+
+// The root's node data: a container's, plus the viewport it is drawn into and the color the frame is cleared to.
+class TreeRoot::NodeData : public TreeContainer::NodeData
+{
+public:
+    NodeData();
+
+    Viewport VP;        // +0xa0
+    Color    BGColor;   // +0xcc
+};
+
+// @0x14256a710
+// MS2-FUNCTIONAL: the node-data vtable store is scheduled after the viewport stores (the exe stores it first)
+SF_NOINLINE TreeRoot::NodeData::NodeData() : TreeContainer::NodeData(ET_Root), BGColor(0)
+{
+    pVTable = TreeRootNodeDataVTable;
+}
+
+// The background color travels with the viewport change bit.
+// @0x142575a20
+void TreeRoot::SetBackgroundColor(const Color& color)
+{
+    if (((const NodeData*)GetReadOnlyDataBase())->BGColor != color)
+        ((NodeData*)getWritableData(Change_Viewport))->BGColor = color;
+}
+
+}} // namespace Scaleform::Render
+
+namespace Scaleform { namespace GFx {
+
+inline Movie::Movie()
+{
+}
+
+// The render tree (root plus the topmost container) is created and captured once, so the render thread has a
+// display handle before the first advance.
+// @0x142569e20
+// MS2-FUNCTIONAL: instruction scheduling (a few store pairs swapped) differs; every store and call matches
+MovieImpl::MovieImpl(MemoryHeap* pheap)
+    : pAdvanceStats(0), pHeap(pheap), pMainMovieDef(0), pMovieLevels(0), MovieLevelsSize(0), MovieLevelsCapacity(0),
+      pStateBag(0), pRenderRoot(0), pTopMostRoot(0), PixelScale(1.f), pUserEventHandler(0), pFSCommandHandler(0),
+      pExtIntfHandler(0), pFontManagerStates(0), pXMLObjectManager(0), BackgroundColor(0, 0, 0, 0xff),
+      MouseCursorCount(1), ControllerCount(1), UserData(0), StickyVariables(), TopmostLevelCharacters(),
+      FocusRectContainerNode(), Flags(0), Flags2(0), RegisteredFonts(), pSavedASMovieRoot(0),
+      RenderContext(Memory::pGlobalHeap), DIContext(0), pRTCommandQueue(0), MultitouchHAL(0), GestureTopMostChar(0),
+      IndirectTransformPairs()
+{
+    Render::TreeRoot* proot = RenderContext.CreateEntry<Render::TreeRoot>();
+    pRenderRoot = *proot;
+    hDisplayRoot = Render::ContextImpl::DisplayHandle<Render::TreeRoot>(proot);
+
+    Render::TreeContainer* ptopmost = RenderContext.CreateEntry<Render::TreeContainer>();
+    pTopMostRoot = *ptopmost;
+    static_cast<Render::TreeContainer*>(pRenderRoot)->Add(ptopmost);
+    RenderContext.Capture();
+
+    pMainMovie        = 0;
+    Flags            |= 0x40180;
+    pPlayListOptHead  = 0;
+    pPlayList         = 0;
+    TimeElapsed       = 0;
+    TimeRemainder     = 0.f;
+    FrameTime         = 1.f / 12.f;
+    ForceFrameCatchUp = 0;
+    pLoadQueueHead    = 0;
+    pLoadQueueMTHead  = 0;
+
+    StateBagImpl* pstates = new (pHeap) StateBagImpl(0);
+    pStateBag = *pstates;
+
+    for (UByte i = 0; i < 4; i++)
+        KeyboardStates[i].SetKeyboardIndex(i);
+    pRetValHolder = 0;
+
+    FontManagerStates* pfontStates = new (pHeap) FontManagerStates(pStateBag);
+    pFontManagerStates = *pfontStates;
+
+    InstanceNameCount = 0;
+    ViewScaleX  = 1.f;
+    ViewScaleY  = 1.f;
+    ViewOffsetX = 0.f;
+    ViewOffsetY = 0.f;
+    ViewScaleMode = SM_ShowAll;
+    ViewAlignment = Align_Center;
+    FocusGroupsCnt = 1;
+    memset(FocusGroupIndexes, 0, sizeof(FocusGroupIndexes));
+    LastIntervalTimerId    = 0;
+    pIMECandidateListStyle = 0;
+    StartTickMs = Timer::GetTicks() / 1000;
+    PauseTickMs = 0;
+    SafeRect.Clear();
+    pAudio                = 0;
+    pSoundRenderer        = 0;
+    pObjectInterface      = 0;
+    LastLoadQueueEntryCnt = 0;
+    pUnloadListHead       = 0;
+    MultitouchMode        = 0;
+    FocusRectChanged      = true;
+    PreviouslyCaptured    = 0;
+}
+
+// A SetVariable value waiting for its target: the chain of values set under one path.
+struct MovieImpl::StickyVarNode : public NewOverrideBase<0x147>   // StatMV_Other_Mem
+{
+    ASString       Name;        // +0x08
+    StickyVarNode* pNext;       // +0x10
+    bool           Permanent;   // +0x18
+
+    virtual ~StickyVarNode() {}
+};
+
+// The text and strings an ExternalInterface.call return value was converted into.
+struct MovieImpl::ReturnValueHolder : public NewOverrideBase<0x147>   // StatMV_Other_Mem
+{
+    char*                     CharBuffer;       // +0x00
+    unsigned                  CharBufferSize;   // +0x08
+    ArrayCC<ASString, 0x147>  StringArray;      // +0x10
+
+    ~ReturnValueHolder()
+    {
+        if (CharBuffer)
+            SF_FREE(CharBuffer);
+    }
+};
+
+// Unhooks the render tree, the IME and the timers, stops the loads and lets the AVM root shut down before the
+// members go.
+// The movie's own states (StateBag override; the bag the Get/SetState forwarders go to).
+// @0x14256fb90
+StateBag* MovieImpl::GetStateBagImpl() const
+{
+    return pStateBag;
+}
+
+// @0x14256ace0
+// MS2-FUNCTIONAL: cl inlines the ArrayData Resize/dtor COMDATs the exe calls out of line; Flags update scheduled later
+MovieImpl::~MovieImpl()
+{
+    if (FocusRectContainerNode)
+    {
+        FocusRectContainerNode->Remove(0, FocusRectContainerNode->GetSize());
+        for (unsigned i = 0; i < FocusGroupsCnt; ++i)
+            FocusGroups[i].FocusRectNode = NULL;
+        FocusRectContainerNode = NULL;
+    }
+
+    // ClearDrawingContextList
+    DrawingContext* pdc = DrawingContextList.GetFirst();
+    while (!DrawingContextList.IsNull(pdc))
+    {
+        DrawingContext* pnext = DrawingContextList.GetNext(pdc);
+        pdc->pPrev = pdc->pNext = NULL;
+        pdc = pnext;
+    }
+    DrawingContextList.Clear();
+
+    ProcessUnloadQueue();
+    pRenderRoot = NULL;
+
+    Ptr<IMEManagerBase> pIMEManager = GetIMEManager();
+    if (pIMEManager && pIMEManager->IsMovieActive(this))
+        pIMEManager->ClearActiveMovie();
+    SF_FREE(pIMECandidateListStyle);
+
+    pFontManagerStates = NULL;
+
+    // ShutdownTimers
+    UPInt n = IntervalTimers.GetSize();
+    for (UPInt i = 0; i < n; ++i)
+        IntervalTimers[i]->Clear();
+    IntervalTimers.Clear();
+
+    VideoProviders.Clear();
+
+    if (pMainMovie)
+        pMainMovie->StopActiveSounds();
+
+    Flags |= Flag_OptAdvListInvalid;   // InvalidateOptAdvanceList
+    AsRootSlots(pASMovieRoot)->ClearDisplayList();
+    ClearIndirectTransformPairs();
+
+    // ClearStickyVariables
+    for (ASStringHash<StickyVarNode*>::Iterator it = StickyVariables.Begin(); it != StickyVariables.End(); ++it)
+    {
+        StickyVarNode* pnode = it->Second;
+        while (pnode)
+        {
+            StickyVarNode* pnext = pnode->pNext;
+            delete pnode;
+            pnode = pnext;
+        }
+    }
+    StickyVariables.Clear();
+
+    delete pRetValHolder;
+
+    // Cancel the loader-thread requests and wait until every one of them is done.
+    LoadQueueEntryMT* plq = pLoadQueueMTHead;
+    unsigned plqCount = 0;
+    while (plq)
+    {
+        plqCount++;
+        plq->Cancel();
+        plq = plq->pNext;
+    }
+    if (plqCount)
+    {
+        unsigned plqDoneCount;
+        do
+        {
+            plqDoneCount = 0;
+            for (plq = pLoadQueueMTHead; plq; plq = plq->pNext)
+            {
+                if (plq->LoadFinished())
+                    plqDoneCount++;
+            }
+        } while (plqCount > plqDoneCount);
+    }
+
+    while (pLoadQueueHead)
+    {
+        LoadQueueEntry* pentry = pLoadQueueHead;
+        pLoadQueueHead = pentry->pNext;
+        delete pentry;
+    }
+    while (pLoadQueueMTHead)
+    {
+        LoadQueueEntryMT* pentry = pLoadQueueMTHead;
+        pLoadQueueMTHead = pentry->pNext;
+        delete pentry;
+    }
+
+    TopmostLevelCharacters.Clear();
+    delete (Value::ObjectInterface*)pObjectInterface;
+
+    AsRootSlots(pASMovieRoot)->Shutdown();
+    pASMovieRoot = NULL;
+    pTopMostRoot = NULL;
+    RenderContext.Shutdown(true);
+    hDisplayRoot.Clear();
+}
+
+}} // namespace Scaleform::GFx
+
 // MS2-FUNCTIONAL ?GetMouseState@MovieImpl@GFx@Scaleform@@UEAAXIPEAM0PEAI@Z: the exe computes both coordinates up front (no common 0.05 constant); this build sinks x into its branch
 // MS2-FUNCTIONAL ?Release@Movie@GFx@Scaleform@@QEAAXXZ: register allocation (the exe keeps this in rdi, this build in rbx)
 // MS2-FUNCTIONAL ?FindFontManager@MovieImpl@GFx@Scaleform@@QEAAPEAVFontManager@23@PEAVMovieDefImpl@23@@Z: instruction scheduling of the list root's null-checked downcast (same compares and loads)
@@ -1164,3 +1420,15 @@ Movie::~Movie()
 // MS2-PIN: ??_7StateBag@GFx@Scaleform@@6B@ 0x143183208
 // MS2-PIN: ??_7Movie@GFx@Scaleform@@6B?$RefCountBase@VMovie@GFx@Scaleform@@$0BEH@@2@@ 0x143183378
 // MS2-PIN: ??_7Movie@GFx@Scaleform@@6BStateBag@12@@ 0x143183580
+// MS2-PIN: ??0MovieImpl@GFx@Scaleform@@QEAA@PEAVMemoryHeap@2@@Z 0x142569e20
+// MS2-PIN: ??_7?$RefCountBase@VMovie@GFx@Scaleform@@$0BEH@@Scaleform@@6B@ 0x143183370
+// MS2-PIN: ??_7?$LogBase@VStateBagImpl@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431835b0
+// MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6B?$RefCountBase@VStateBagImpl@GFx@Scaleform@@$01@2@@ 0x1431835c0
+// MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6BStateBag@12@@ 0x1431835c8
+// MS2-PIN: ??_7StateBagImpl@GFx@Scaleform@@6B?$LogBase@VStateBagImpl@GFx@Scaleform@@@12@@ 0x1431835f0
+// MS2-PIN: ??_7?$RefCountBaseNTS@VFontManagerStates@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143183608
+// MS2-PIN: ??_7FontManagerStates@GFx@Scaleform@@6B?$RefCountBaseNTS@VFontManagerStates@GFx@Scaleform@@$01@2@@ 0x143183610
+// MS2-PIN: ??_7FontManagerStates@GFx@Scaleform@@6BStateBag@12@@ 0x143183618
+// MS2-PIN: ??_7MovieImpl@GFx@Scaleform@@6B?$RefCountBase@VMovie@GFx@Scaleform@@$0BEH@@2@@ 0x143183640
+// MS2-PIN: ??_7MovieImpl@GFx@Scaleform@@6BStateBag@12@@ 0x143183860
+// MS2-PIN: ?GetStateBagImpl@FontManagerStates@GFx@Scaleform@@UEBAPEAVStateBag@23@XZ 0x14256fb80

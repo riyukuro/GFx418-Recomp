@@ -16,6 +16,7 @@
 #endif
 
 #include "../kernel/sf_memory.h"
+#include "../kernel/sf_refcount.h"
 #include "../render/render_stats.h"
 #include "../render/render_constants.h"
 #include "../render/render_cxform.h"
@@ -144,8 +145,46 @@ public:
     UInt64 FinalizedFrameId;   // +0xe8 the last frame the render thread is done with
     UInt64 GetFinalizedFrameId() const { return FinalizedFrameId; }
 
+    // (appended for the player, sfr_gfx_01i) the movie owns its context (0x110 bytes)
+    UByte  Unrecovered_f0[0x20];
+    Context(MemoryHeap* heap);   // 0x14257e560
+    ~Context();                  // 0x14257e9d0
+    bool Capture();              // 0x14257fa30: freezes the changes into a snapshot for the render thread
+
 private:
     Entry* createEntryHelper(EntryData* data);
+};
+static_assert(sizeof(Context) == 0x110, "Context size");
+
+// (appended for the player, sfr_gfx_01i) a render-thread reference to an entry that stays safe after the context
+// dies: one counted pointer to the handle data shared with the context (render_context.h has the full class).
+class RTHandle
+{
+public:
+    struct HandleData : public RefCountBase<HandleData, StatRender_Context_Mem>
+    {
+    };
+
+    Ptr<HandleData> pData;
+
+    RTHandle() {}
+    RTHandle(Entry* entry);   // 0x14257e760
+    RTHandle(const RTHandle& other) : pData(other.pData) {}
+    ~RTHandle();              // 0x14257ec50
+
+    void operator=(const RTHandle& other) { pData = other.pData; }
+    void Clear() { pData.Clear(); }
+};
+
+template<class C>
+class DisplayHandle : public RTHandle
+{
+public:
+    DisplayHandle() {}
+    DisplayHandle(C* entry) : RTHandle(entry) {}
+    DisplayHandle(const RTHandle& other) : RTHandle(other) {}
+
+    void operator=(const DisplayHandle& other) { RTHandle::operator=(other); }
 };
 
 } // namespace ContextImpl
@@ -159,6 +198,7 @@ public:
     {
     public:
         NodeData(ContextImpl::EntryData::EntryType type = ET_Base);   // 0x1424d9310
+        NodeData(const NodeData& src);                                // 0x1424d9220 (sfr30)
 
         Matrix3F M34;                 // +0x10
         StateBag States;              // +0x40
@@ -289,6 +329,12 @@ public:
             pVTable = TreeContainerNodeDataVTable;
             Children.pNodes[0] = Children.pNodes[1] = 0;
         }
+        // (appended, sfr_gfx_01i) the root's node data is a container of another entry type
+        explicit NodeData(EntryType type) : TreeNode::NodeData(type)
+        {
+            pVTable = TreeContainerNodeDataVTable;
+            Children.pNodes[0] = Children.pNodes[1] = 0;
+        }
 
         TreeNodeArray Children;   // +0x90
     };
@@ -335,9 +381,16 @@ public:
 // (appended for the player, sfr_gfx_01i) the root of a movie's render tree: viewport and background color.
 class Color;
 class Viewport;
+// The TreeRoot::NodeData vftable (0x143183320).
+extern const void* const TreeRootNodeDataVTable[];
+
 class TreeRoot : public TreeContainer
 {
 public:
+    // The root's node data: TreeContainer::NodeData, then the viewport (+0xa0) and the background color (+0xcc),
+    // 0xd0 bytes. Defined by the player (sfr_gfx_01i), where Viewport and Color are complete.
+    class NodeData;
+
     void SetViewport(const Viewport& vp);          // 0x14261d890
     void SetBackgroundColor(const Color& color);   // 0x142575a20 (inline in render_treenode.h)
 };

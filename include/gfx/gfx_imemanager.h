@@ -68,8 +68,9 @@ public:
     virtual bool IsMovieActive(Movie* pmovie) const;                    // 30
 private:
     virtual void Slot31();                                              // GetActiveMovie
-    virtual void Slot32();                                              // ClearActiveMovie
 public:
+    // (sfr24) the movie being destroyed lets go of the IME.
+    virtual void ClearActiveMovie();                                    // 32
     virtual String      GetWindowsVersion();                            // 33
 
     // (appended, sfr19) what the AS3 IME manager uses.
