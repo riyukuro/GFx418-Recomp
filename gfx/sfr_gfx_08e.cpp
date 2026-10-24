@@ -570,8 +570,6 @@ template void ArrayDataBase<Sound::SoundChannel::Transform, AllocatorGH<Sound::S
                             ArrayDefaultPolicy>::Reserve(const void* pheapAddr, UPInt newCapacity);
 } // namespace Scaleform
 
-// This template base has the shared vftable established by ActiveSoundItem in sfr_gfx_05b.
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BEH@@Scaleform@@6B@ 0x14318be28
 // MS2-PIN: ??_7?$RefCountBaseNTS@VSoundStreamDef@GFx@Scaleform@@$0BEH@@Scaleform@@6B@ 0x1431937d0
 // MS2-PIN: ??_7SoundStreamDef@GFx@Scaleform@@6B@ 0x1431937d8
 // MS2-PIN: ??_7SoundStreamDefImpl@GFx@Scaleform@@6B@ 0x1431937e8
