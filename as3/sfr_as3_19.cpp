@@ -154,6 +154,7 @@ Scaleform::UPInt FUN_142507b80(Scaleform::UPInt traitsOwner);   // factory for a
 void* FUN_14250f330(void* out, void* nameSlot, Scaleform::UPInt a, int b);   // type name for a class-kind value (releases the name)
 void* FUN_14250fc60(void* out, void* nameSlot, Scaleform::UPInt vt, Scaleform::UInt32 idx, int b);   // type name for a slot-kind value (releases the name)
 void* FUN_142416720(const void* self);   // InstanceTraits::Function: its VM-side owner
+void FUN_1424fef00(void* vm, void* callee, const void* thisVal, void* result, unsigned argc, const void* args, unsigned flag);
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -5835,6 +5836,62 @@ void Sfr31ExecNewObject(UPInt vmAddr, UInt32 n)
     }
     ExecPushCopy(reinterpret_cast<VM*>(vmAddr), result);
 }
+// ---- batch 48
+// callsuper body shared by the two instantiations: pops the receiver, reads the named property through the frame's super traits
+// and calls it with the popped arguments.
+static void Sfr31CallSuperBody(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, reinterpret_cast<VM*>(cvm), argc);
+    const UPInt frame0 = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
+    Sfr31ExecMnCtx ctx = {cvm, frame0, file};
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    const UPInt top = Sfr31Rd(frame0, 8);
+    Sfr31RawTraitsVal obj;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
+    Sfr31Wr(frame0, 8, top - 0x20);
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        Value callee;
+        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
+        const UPInt frame = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8;
+        UInt8 ret[16];
+        UInt8* r = FUN_14250ef80(ret, vmAddr, Sfr31Rd(frame, 0), &callee, &obj, &mn, 0);
+        if (*r != 0)
+        {
+            Value result(Value::GetUndefined());
+            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+            const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
+            FUN_1424fef00(reinterpret_cast<void*>(vmAddr), &callee, &obj, &result, argc, args, 1);
+            result.~Value();
+        }
+        else
+        {
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d6f40(eb, 0x42e, reinterpret_cast<void*>(vmAddr), reinterpret_cast<UInt8*>(&mn) + 0x10);
+            reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+        }
+        callee.~Value();
+    }
+    reinterpret_cast<Value*>(&obj)->~Value();
+    mn.~Multiname();
+    FUN_1424de9e0(raBuf);
+}
+
+// callsuper opcode: calls a method of the super class on the popped receiver.
+// MS2-FUNCTIONAL 0x142535af0: raw-offset model; codegen differs from the exe
+// @0x142535af0
+void Sfr31ExecCallSuperArgsA(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc); }
+
+// callsuper opcode, second instantiation (same body).
+// MS2-FUNCTIONAL 0x142536660: raw-offset model; codegen differs from the exe
+// @0x142536660
+void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc); }
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
