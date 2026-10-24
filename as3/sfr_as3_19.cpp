@@ -92,6 +92,16 @@ Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TC
 Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(void* globalObject, const Scaleform::GFx::ASString* name, const Scaleform::GFx::AS3::Instances::Namespace* ns);   // the global object's class of that name
 void FUN_14251ccc0(Scaleform::GFx::AS3::TR::State* state, Scaleform::UPInt n);   // State::PopOp
 void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt regIndex);                    // Tracer: note register write
+bool* FUN_1424f1390(Scaleform::GFx::AS3::Value* v, void* tmpNode, void* strOut);   // Value::ToStringValue style conversion
+void FUN_1424e0860(void* out);                                                      // assign from the scratch value
+void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);                      // ArrayDH<Value>::Resize growth
+void FUN_142521f00(void* value);                                                    // Value::ReleaseInternal
+void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
+void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
+Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
+void FUN_1424d7850(void* err, int id, void* vm, const char* s);   // VM::Error::Error(id, vm, char*)
+void FUN_1424e42c0(Scaleform::UPInt root, const Scaleform::GFx::AS3::Value* v, void* gfxValue);   // MovieRoot::ASValue2GFxValue
+void FUN_142545310(Scaleform::UPInt entry, void* out);    // constant-pool string entry -> (chars, length)
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits {
 
@@ -767,27 +777,6 @@ void Sfr27TraceConvertTopUInt(State* st)
         Registers[ind].Assign(tv); \
     }
 
-// @0x142532670
-SFR27_TOP_OP(TopNumber, 0x218)
-// @0x142532710
-SFR27_TOP_OP(TopInt, 0x220)
-// @0x1425327b0
-SFR27_TOP_OP(TopString, 0x230)
-// @0x142532850
-SFR27_POP2_OP(Pop2Boolean, 0x210)
-// @0x142532930
-SFR27_POP2_OP(Pop2Number, 0x218)
-// @0x142532a10
-SFR27_POP2_OP(Pop2Int, 0x220)
-// @0x142532af0
-SFR27_POP2_OP(Pop2UInt, 0x228)
-// @0x142537c50
-SFR27_REG_OP(RegNumber, 0x218)
-// @0x142537ce0
-SFR27_REG_OP(RegInt, 0x220)
-// @0x142537d70
-SFR27_REG_OP(RegUInt, 0x228)
-
 // dxns / dxnslate: the method must set the SETS_DXNS flag (and XML support must be enabled).
 static inline void TraceCheckSetsDxns(State* st, const char* disabledName, UInt32 arg, bool pop)
 {
@@ -815,6 +804,27 @@ static inline void TraceCheckSetsDxns(State* st, const char* disabledName, UInt3
     VM& vm = *reinterpret_cast<VM*>(TrRd(link, 0x20));
     vm.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3e9), vm, what));
 }
+
+// @0x142532670
+SFR27_TOP_OP(TopNumber, 0x218)
+// @0x142532710
+SFR27_TOP_OP(TopInt, 0x220)
+// @0x1425327b0
+SFR27_TOP_OP(TopString, 0x230)
+// @0x142532850
+SFR27_POP2_OP(Pop2Boolean, 0x210)
+// @0x142532930
+SFR27_POP2_OP(Pop2Number, 0x218)
+// @0x142532a10
+SFR27_POP2_OP(Pop2Int, 0x220)
+// @0x142532af0
+SFR27_POP2_OP(Pop2UInt, 0x228)
+// @0x142537c50
+SFR27_REG_OP(RegNumber, 0x218)
+// @0x142537ce0
+SFR27_REG_OP(RegInt, 0x220)
+// @0x142537d70
+SFR27_REG_OP(RegUInt, 0x228)
 
 // @0x1425383d0
 void Sfr27TraceDxns(State* st, UInt32 arg) { TraceCheckSetsDxns(st, "dxns", arg, false); }
@@ -2873,6 +2883,377 @@ void Sfr31ResizeBlk24B(UPInt* a, UPInt n)
         Sfr31Wr(a[0], i * 0x18, 0);
         Sfr31Wr(a[0], i * 0x18 + 8, 0);
         Sfr31Wr(a[0], i * 0x18 + 0x10, 0);
+    }
+}
+
+// ---- batch 21
+static inline void Sfr31ReleaseStr(UPInt node)
+{
+    int* rc = reinterpret_cast<int*>(node + 0x18);
+    if (--*rc == 0)
+        reinterpret_cast<ASStringNode*>(node)->ReleaseNode();
+}
+
+typedef void (*Sfr31VFn1)(UPInt);
+typedef void (*Sfr31VFn3)(UPInt, UPInt, UPInt);
+
+// ShapeMeshProvider holder of a TreeShape (render tree entry): swap the provider, queue the entry for propagation.
+// MS2-FUNCTIONAL 0x142528eb0: raw-offset model; codegen differs from the exe
+// @0x142528eb0
+void Sfr31TreeShapeSetShape(UPInt self, UPInt provider)
+{
+    UPInt data = reinterpret_cast<UPInt>(FUN_142581a40(reinterpret_cast<void*>(self), 0x400));
+    if (provider != 0)
+        reinterpret_cast<Sfr31VFn1>(Sfr31Rd(Sfr31Rd(provider + 0x10, 0), 8))(provider + 0x10);
+    const UPInt old = Sfr31Rd(data, 0x90);
+    if (old != 0)
+        reinterpret_cast<Sfr31VFn1>(Sfr31Rd(Sfr31Rd(old + 0x10, 0), 0x10))(old + 0x10);
+    Sfr31Wr(data, 0x90, provider);
+    if (Sfr31Rd(self, 0x28) == 0)
+        FUN_142581430(reinterpret_cast<void*>(self));
+}
+
+// ShapeObject::SetRatio: only when its render node is a shape node.
+// MS2-FUNCTIONAL 0x142528da0: raw-offset model; codegen differs from the exe
+// @0x142528da0
+void Sfr31ShapeObjectSetRatio(UPInt self, float ratio)
+{
+    const UPInt node = FUN_1425f26c0(reinterpret_cast<void*>(self));
+    if (node == 0)
+        return;
+    const UPInt page = node & ~static_cast<UPInt>(0xfff);
+    const UInt32 idx = static_cast<UInt32>(static_cast<SPInt>(node - page - 0x38) / 0x38);
+    const UPInt info = Sfr31Rd(Sfr31Rd(page, 0x20), 0x28 + static_cast<UPInt>(idx) * 8);
+    if (*reinterpret_cast<const SInt16*>(info + 8) == 3)
+    {
+        UPInt data = reinterpret_cast<UPInt>(FUN_142581a40(reinterpret_cast<void*>(Sfr31Rd(self, 0x48)), 0x10));
+        *reinterpret_cast<float*>(data + 0x98) = ratio;
+    }
+}
+
+// checkfilter: the top of the operand stack must be an XML or XMLList instance, else TypeError 1123.
+// MS2-FUNCTIONAL 0x142536ab0: behavior-equivalent recovery; codegen differs from exe
+// @0x142536ab0
+void Sfr31ExecCheckFilter(UPInt vm)
+{
+    const UPInt top = Sfr31Rd(vm, 0x50);
+    const UInt32 k = (*reinterpret_cast<const UInt32*>(top) & 0x1f) - 0xc;
+    if (k <= 3)
+    {
+        const UPInt o = Sfr31Rd(top, 0x10);
+        if (o != 0)
+        {
+            const UPInt tr = Sfr31Rd(o, 0x20);
+            const int ty = *reinterpret_cast<const int*>(tr + 0x70);
+            if ((ty == 0xd || ty == 0xe) && (*reinterpret_cast<const UInt8*>(tr + 0x68) & 0x20))
+                return;
+        }
+    }
+    const UPInt tr = FUN_14250ffc0(reinterpret_cast<VM*>(vm), reinterpret_cast<const Value*>(top));
+    UPInt name = 0;
+    typedef UPInt* (*GetName)(UPInt, UPInt*);
+    UPInt* p = reinterpret_cast<GetName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &name);
+    UPInt err[2];
+    FUN_1424d7850(err, 0x463, reinterpret_cast<void*>(vm), *reinterpret_cast<const char* const*>(*p));
+    FUN_14252ecb0(reinterpret_cast<void*>(vm), err, &fl::TypeErrorCI);
+    Sfr31ReleaseStr(err[1]);
+    Sfr31ReleaseStr(name);
+}
+
+// Push the elements [start, start + count) of the array storage (clamped to its length) into an interface object.
+// MS2-FUNCTIONAL 0x142531550: behavior-equivalent recovery; codegen differs from exe
+// @0x142531550
+void Sfr31ArrayToGfxValues(UPInt self, UPInt arr, UPInt out, UInt32 start, int count)
+{
+    SparseArray* sa = reinterpret_cast<SparseArray*>(arr + 0x38);
+    const UInt32 len = static_cast<UInt32>(sa->GetSize());
+    const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
+    if (start >= len)
+        return;
+    if (count < 0)
+        count = static_cast<int>(len - start);
+    UPInt gv[3] = { 0, 0, 0 };
+    UInt32 end = start + static_cast<UInt32>(count);
+    if (len < end)
+        end = len;
+    for (UInt32 i = start; i < end; ++i)
+    {
+        const Value& v = sa->At(i);
+        FUN_1424e42c0(root, &v, gv);
+        reinterpret_cast<Sfr31VFn3>(Sfr31Rd(Sfr31Rd(out, 0), 8))(out, i, reinterpret_cast<UPInt>(gv));
+    }
+    if ((reinterpret_cast<UInt32*>(gv)[2] >> 6) & 1)
+    {
+        typedef void (*Rel)(UPInt, UPInt*, UPInt);
+        reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(gv[0], 0), 0x10))(gv[0], gv, gv[2]);
+    }
+}
+
+// Tracer: push the constant-pool string index as a String value (the empty string becomes a null object).
+// MS2-FUNCTIONAL 0x14253f690: behavior-equivalent recovery; codegen differs from exe
+// @0x14253f690
+void Sfr31TracePushString(State* st, UInt32 index)
+{
+    const UPInt tracer = Sfr31Rd(reinterpret_cast<UPInt>(st), 0);
+    FUN_14251fcd0(tracer, index);
+    UPInt lit[2];
+    FUN_142545310(Sfr31Rd(TrFile(tracer), 0x70) + static_cast<UPInt>(index) * 8, lit);
+    ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(TrVM(tracer), 0x10), 0x1e8));
+    ASStringNode* node = mgr->CreateStringNode(reinterpret_cast<const char*>(lit[0]), lit[1]);
+    UPInt raw[4] = { 10, 0, 0, 0 };
+    UInt32* kind = reinterpret_cast<UInt32*>(raw);
+    int* rc = reinterpret_cast<int*>(reinterpret_cast<UPInt>(node) + 0x18);
+    const int base = *rc;
+    *rc = base + 1;
+    if (reinterpret_cast<UPInt>(node) == Sfr31Rd(reinterpret_cast<UPInt>(node), 8) + 0x68)
+    {
+        *kind = 0xc;
+        raw[2] = 0;
+        raw[3] = lit[1];
+    }
+    else
+    {
+        *rc = base + 2;
+        raw[2] = reinterpret_cast<UPInt>(node);
+    }
+    StV(st).OpStack().PushBack(*reinterpret_cast<const Value*>(raw));
+    reinterpret_cast<Value*>(raw)->~Value();
+    Sfr31ReleaseStr(reinterpret_cast<UPInt>(node));
+}
+
+// Set the owned object of a holder {obj, ownsFlag}: destroy the previous owned object (a value array plus its names).
+// MS2-FUNCTIONAL 0x142524290: behavior-equivalent recovery; codegen differs from exe
+// @0x142524290
+void Sfr31SetOwnedObject(UPInt* holder, UPInt np, char own)
+{
+    const UPInt old = holder[0];
+    if (old != np)
+    {
+        if (old != 0 && static_cast<char>(holder[1]) != 0)
+        {
+            *reinterpret_cast<char*>(&holder[1]) = 0;
+            Sfr31ReleaseStr(Sfr31Rd(old, 0x38));
+            UPInt* names = reinterpret_cast<UPInt*>(old + 0x20);
+            for (UPInt i = names[1]; i > 0; --i)
+                Sfr31ReleaseStr(Sfr31Rd(names[0], (i - 1) * 8));
+            if (names[0] != 0)
+                Memory::Free(reinterpret_cast<void*>(names[0]));
+            Value* vals = reinterpret_cast<Value*>(Sfr31Rd(old, 8));
+            for (UPInt i = Sfr31Rd(old, 0x10); i > 0; --i)
+                vals[i - 1].~Value();
+            Memory::Free(reinterpret_cast<void*>(Sfr31Rd(old, 8)));
+            Memory::Free(reinterpret_cast<void*>(old));
+        }
+        holder[0] = np;
+    }
+    *reinterpret_cast<char*>(&holder[1]) = (np != 0 && own != 0) ? 1 : 0;
+}
+// ---- batch 22
+static void Sfr31PushByte(UPInt* a, UInt8 b)
+{
+    const UPInt n = a[1] + 1;
+    if (n < a[1])
+    {
+        if (n >= (a[2] >> 1))
+            goto store;
+    }
+    else if (n < a[2])
+        goto store;
+    Sfr31ArrReserve(a, a, n < a[1] ? n : n + (n >> 2), 1, 2, 0);
+store:
+    a[1] = n;
+    *reinterpret_cast<UInt8*>(a[0] + n - 1) = b;
+}
+
+// Variable-length integer writer: the low two bits of the first byte give the byte count - 1.
+// MS2-FUNCTIONAL 0x142531bf0: raw-offset model; codegen differs from the exe
+// @0x142531bf0
+UPInt Sfr31WriteVarint(UPInt** arr, UInt32 v)
+{
+    UPInt* a = *arr;
+    const UInt8 b0 = static_cast<UInt8>(v << 2);
+    if (v < 0x40)
+    {
+        Sfr31PushByte(a, b0);
+        return 1;
+    }
+    if (v < 0x4000)
+    {
+        Sfr31PushByte(a, b0 | 1);
+        Sfr31PushByte(*arr, static_cast<UInt8>(v >> 6));
+        return 2;
+    }
+    if (v < 0x400000)
+    {
+        Sfr31PushByte(a, b0 | 2);
+        Sfr31PushByte(*arr, static_cast<UInt8>(v >> 6));
+        Sfr31PushByte(*arr, static_cast<UInt8>(v >> 14));
+        return 3;
+    }
+    Sfr31PushByte(a, b0 | 3);
+    Sfr31PushByte(*arr, static_cast<UInt8>(v >> 6));
+    Sfr31PushByte(*arr, static_cast<UInt8>(v >> 14));
+    Sfr31PushByte(*arr, static_cast<UInt8>(v >> 22));
+    return 4;
+}
+
+// Record writer: emits a leading 0 byte on the first record, then a 1 tag and three varints.
+// MS2-FUNCTIONAL 0x14252c8b0: raw-offset model; codegen differs from the exe
+// @0x14252c8b0
+void Sfr31WriteRecord3(UPInt self, UInt32 a, UInt32 b, UInt32 c)
+{
+    UPInt* arr = reinterpret_cast<UPInt*>(Sfr31Rd(self, 0x48));
+    UPInt* cur = arr;
+    if (*reinterpret_cast<int*>(self + 0x10) == 0)
+    {
+        Sfr31PushByte(arr, 0);
+        *reinterpret_cast<int*>(self + 0x10) = 1;
+    }
+    Sfr31PushByte(arr, 1);
+    Sfr31WriteVarint(&cur, a);
+    Sfr31WriteVarint(&cur, b);
+    Sfr31WriteVarint(&cur, c);
+    *reinterpret_cast<int*>(self + 0x10) = 2;
+}
+
+// Evaluates a virtual getter into a scratch Value; a non-null result is handed to FUN_1424e0860, else the out slot is cleared.
+// MS2-FUNCTIONAL 0x142531f40: raw-offset model; codegen differs from the exe
+// @0x142531f40
+UPInt Sfr31FetchOrClear(UPInt self, UPInt* out, UPInt src, UInt32 arg, UPInt arg2)
+{
+    UInt32 tmp[6] = {0, 0, 0, 0, 0, 0};
+    typedef void (*Fn)(UPInt, void*, UInt32, UPInt, int);
+    reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(src, 0), 0x60))(src, tmp, arg, arg2, 1);
+    UPInt result;
+    const UInt32 kind = tmp[0] & 0x1f;
+    if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 && (kind - 0xc > 3 || *reinterpret_cast<UPInt*>(&tmp[4]) != 0))
+    {
+        FUN_1424e0860(out);
+        result = 1;
+    }
+    else
+    {
+        UPInt old = *out;
+        if (old != 0)
+        {
+            if ((old & 1) == 0 && (*reinterpret_cast<UInt32*>(old + 0x10) & 0x3fffff) != 0)
+            {
+                *reinterpret_cast<UInt32*>(old + 0x10) -= 1;
+                FUN_1423dfa20(reinterpret_cast<void*>(old));
+            }
+            *out = 0;
+        }
+        *reinterpret_cast<UInt8*>(self + 0x180) = 0;
+        result = 0;
+    }
+    if (kind > 9)
+    {
+        if (((tmp[0] >> 9) & 1) == 0)
+            FUN_142521f00(tmp);
+        else
+        {
+            int* rc = *reinterpret_cast<int**>(&tmp[4]);
+            if (--*rc == 0)
+                Memory::pGlobalHeap->Free(rc);
+        }
+    }
+    return result;
+}
+
+// Traits::StoreScopeStack: appends copies of scope entries [start, n) onto the stored scope array.
+// MS2-FUNCTIONAL 0x14252cad0: raw-offset model; codegen differs from the exe
+// @0x14252cad0
+void Sfr31StoreScopeStack(UPInt self, UPInt start, UPInt* src)
+{
+    const UPInt n = src[1];
+    UPInt* dst = reinterpret_cast<UPInt*>(self + 0xa0);
+    if (dst[2] < dst[1] + n)
+        Sfr31ArrReserve(dst, reinterpret_cast<void*>(dst[3]), dst[1] + n, 0x20, 2, reinterpret_cast<MemoryHeap*>(dst[3]));
+    for (UPInt i = start; i < n; ++i)
+    {
+        const AS3::Value* s = reinterpret_cast<const AS3::Value*>(src[0]) + i;
+        FUN_1424201a0(dst, reinterpret_cast<void*>(dst[3]), dst[1] + 1);
+        new (reinterpret_cast<AS3::Value*>(dst[0]) + dst[1] - 1) AS3::Value(*s);
+    }
+}
+
+// exec_esc_xattr: converts the top of stack to a string and replaces it with its XML-escaped form.
+// MS2-FUNCTIONAL 0x142538700: behavior-equivalent recovery; codegen differs from exe
+// @0x142538700
+void Sfr31ExecEscXAttr(UPInt vm)
+{
+    const UPInt mgr = Sfr31Rd(Sfr31Rd(vm, 0x10), 0x1e8);
+    AS3::Value* top = reinterpret_cast<AS3::Value*>(Sfr31Rd(vm, 0x50));
+    UPInt tmpNode = 0;
+    ASString str(reinterpret_cast<ASStringNode*>(mgr + 0x40));
+    const bool ok = *FUN_1424f1390(top, &tmpNode, &str);
+    if (ok)
+        *top = str;
+    if (ok)
+    {
+        StringBuffer buf(Memory::pGlobalHeap);
+        ASString cur(reinterpret_cast<ASStringNode*>(Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10)));
+        Instances::fl::XML::EscapeElementValue(buf, cur);
+        const char* c = buf.ToCStr();
+        ASString res(reinterpret_cast<ASStringManager*>(mgr)->CreateStringNode(c ? c : "", buf.GetSize()));
+        *top = res;
+    }
+}
+// ---- batch 23
+// Native call whose first argument must be a non-null object: reports TypeError 1009/1010 otherwise, then dispatches through the object.
+// MS2-FUNCTIONAL 0x142533fd0: raw-offset model; codegen differs from the exe
+// @0x142533fd0
+void Sfr31CallOnObjectArg(UPInt vmAddr, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, argc);
+    const UInt32* a0 = reinterpret_cast<const UInt32*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8), 8));
+    const UInt32 k = (a0[0] & 0x1f) - 0xc;
+    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(a0), 0x10);
+    if ((a0[0] & 0x1f) == 0 || (k < 4 && obj == 0))
+    {
+        const UInt32 id = (k < 4 ? (obj != 0) : 1u) + 0x3f1;
+        VM::Error e(static_cast<VM::ErrorID>(id), vm);
+        vm.ThrowTypeError(e);
+    }
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt o = Sfr31Rd(reinterpret_cast<UPInt>(a0), 0x10);
+        typedef void (*Fn)(UPInt, const Value*, const void*, UInt32, void*);
+        const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+        void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
+        reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0x50))(o, &Value::GetUndefined(), a0, argc, args);
+    }
+    FUN_1424de9e0(raBuf);
+}
+
+// The top of the operand stack is converted to an int index and popped; the new top's object is queried at that index and
+// the top replaced by the resulting int.
+// MS2-FUNCTIONAL 0x14253abd0: behavior-equivalent recovery; codegen differs from exe
+// @0x14253abd0
+void Sfr31ExecIndexedQuery(UPInt vm)
+{
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(vm, 0x50));
+    UInt8 okBuf[8];
+    long out;
+    const bool ok = *FUN_1424f0d30(top, okBuf, &out) != 0;
+    UInt32 idx = 0;
+    if (ok)
+    {
+        top->SetSInt32(static_cast<SInt32>(out));
+        idx = *reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(top) + 0x10);
+    }
+    top->~Value();
+    Sfr31Wr(vm, 0x50, Sfr31Rd(vm, 0x50) - 0x20);
+    if (ok)
+    {
+        const UPInt cur = reinterpret_cast<UPInt>(top) - 0x20;
+        const UPInt o = Sfr31Rd(cur, 0x10);
+        typedef const UInt32* (*Fn)(UPInt, void*, UInt32);
+        const UInt32* r = reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0x88))(o, okBuf, idx);
+        Value res(static_cast<SInt32>(*r));
+        reinterpret_cast<Value*>(cur)->Assign(res);
     }
 }
 }}} // namespace Scaleform::GFx::AS3
