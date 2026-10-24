@@ -1036,9 +1036,8 @@ MovieRoot::ActionQueueType::~ActionQueueType()
     FreeEntriesCount = 0;
 }
 
-// MS2-FUNCTIONAL ??1LoadQueueEntry@AS3@GFx@Scaleform@@UEAA@XZ: the exe calls AutoPtr<ArrayPOD<UByte> >'s dtor out of
-// line (0x1424dc9f0); ours inlines it
-// @0x1424e3020 (??_G)
+// MS2-FUNCTIONAL 0x1424de310: releases NotifyLoadInitCInterface, bytes and request references, then the GFx queue base; cl's EH/member cleanup differs.
+// @0x1424de310
 LoadQueueEntry::~LoadQueueEntry()
 {
     NotifyLoadInitCInterface = NULL;
@@ -1746,3 +1745,5 @@ void FUN_1424dcd40(void* self)
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UDynAttrsKey@Object@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dce80
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@$0BFE@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dcf10
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dd110
+// MS2-FUNCTIONAL ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z: generated wrapper runs the recovered destructor and same delete-flag free path; compiler separates the wrapper from cleanup.
+// MS2-PIN: ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3020
