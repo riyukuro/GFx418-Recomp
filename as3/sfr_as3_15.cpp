@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424c9700-0x1424dc870 .text$mn
 // MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7Class@AS3@GFx@Scaleform@@6B@ 0x14317b140
 // MS2-PIN: ??_7CTraits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b3a0
 // MS2-PIN: ??_7Object@AS3@GFx@Scaleform@@6B@ 0x14317b098
@@ -2208,6 +2209,12 @@ typedef HashNode<GFx::ASString, GFx::AS3::Class*, GFx::AS3::ASStringNodeHashFunc
 // @0x1424d4c10
 template void decltype(MS2_AliasClassHash::mHash)::BaseType::add<MS2_AliasClassNode::NodeRef>(
     void*, const MS2_AliasClassNode::NodeRef&, UPInt);
+// MS2-FUNCTIONAL: the exe has one folded copy for every identically laid out node type; this is its out-of-line setRawCapacity
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEJ@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAVClass@AS3@23@VASStringNodeHashFunc@523@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425422c0
+template void decltype(MS2_AliasClassHash::mHash)::BaseType::setRawCapacity(void*, UPInt);
+// MS2-FUNCTIONAL: byte-identical body; the exe calls the folded CheckExpand copy at 0x1424ef090, the symbol table binds ours to 0x1424eefa0
+// @0x1424d3710
+template void decltype(MS2_AliasClassHash::mHash)::BaseType::add<MS2_AliasClassNode>(void*, const MS2_AliasClassNode&, UPInt);
 // MS2-FUNCTIONAL: same template body; register allocation and the save of the scratch registers differ
 // @0x1424d4dd0
 template void MS2_StringValueSet::add<MS2_StringValueNode::NodeRef>(void*, const MS2_StringValueNode::NodeRef&, UPInt);
