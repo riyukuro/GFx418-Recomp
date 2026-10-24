@@ -191,6 +191,17 @@ public:
         SV_Sticky,      // kept until the target appears
         SV_Permanent    // kept, reapplied whenever the target is created again
     };
+    // (appended, sfr24) The element type of SetVariableArray / GetVariableArray (0..5: the AS3 SetVariableArray
+    // jump table).
+    enum SetArrayType
+    {
+        SA_Int,
+        SA_Double,
+        SA_Float,
+        SA_String,
+        SA_StringW,
+        SA_Value
+    };
     bool     SetVariable(const char* ppathToVar, const Value& value, SetVarType setType = SV_Sticky);
     // The value an ExternalInterface.call made by the movie returns.
     void     SetExternalInterfaceRetVal(const Value& retVal);

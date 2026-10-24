@@ -16,6 +16,7 @@
 #include "../render/render_matrix2x4.h"
 #include "../render/render_matrix4x4.h"
 #include "../render/render_cxform.h"
+#include <stdarg.h>
 
 namespace Scaleform {
 
@@ -27,6 +28,7 @@ class FilterSet;
 class DrawingContext;
 namespace ContextImpl { class Context; }
 class Cxform;
+namespace Text { class Allocator; }   // (appended, sfr24)
 }
 
 namespace GFx {
@@ -38,6 +40,29 @@ class InteractiveObject;
 class DisplayObject;
 class EventId;
 class FontManager;
+// (appended, sfr24) the movie root virtuals
+class DisplayObjContainer;
+class MovieDefRootNode;
+class InputEventsQueueEntry;
+class MouseState;
+struct ProcessFocusKeyInfo;
+class LoadQueueEntry;
+class LoadStates;
+class MemoryContext;
+class FunctionHandler;
+class OrientationEvent;
+class AppLifecycleEvent;
+class Value;
+#ifndef SF_GFX_FOCUSMOVEDTYPE
+#define SF_GFX_FOCUSMOVEDTYPE
+// How the focus got moved.
+enum FocusMovedType
+{
+    GFx_FocusMovedByMouse    = 1,
+    GFx_FocusMovedByKeyboard = 2,
+    GFx_FocusMovedByAS       = 3
+};
+#endif
 class ASString;
 class DrawingContext;
 
@@ -55,6 +80,97 @@ public:
     UByte          AVMVersion; // +0x20
 
     MovieImpl* GetMovieImpl() const { return pMovieImpl; }
+
+    // (appended, sfr24) The 4.1.18 virtuals, slots 1..51, checked against the AS2 (0x1432177d8) and AS3 (0x14317d8d8)
+    // MovieRoot vftables. This build has no SuspendGC / ScheduleGC and no NotifyGamePadAnalogEvent; the touch and
+    // gesture slots (12, 13), the device events (23, 24) and ProcessLoadBinaryMT (28, AS2) are the empty defaults
+    // both movie roots share. AS2 adds slot 52 (Invoke on an object), AS3 a slot of its own there.
+    virtual void SetMovie(MovieImpl* pmovie) = 0;                                                      // 1
+    virtual void AdvanceFrame(bool nextFrame) = 0;                                                     // 2
+    virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType) = 0;                 // 3
+    virtual bool CheckAvm() = 0;                                                                       // 4
+    virtual void ClearDisplayList() = 0;                                                               // 5
+    virtual MovieDefRootNode* CreateMovieDefRootNode(MemoryHeap* pheap, MovieDefImpl* pdefImpl,
+                                                     bool importFlag = false) = 0;                     // 6
+    virtual void DoActions() = 0;                                                                      // 7
+    virtual InteractiveObject* FindTarget(const ASString& path) const = 0;                             // 8
+    // gcFlags is not read by either movie root.
+    virtual void ForceCollect(unsigned gcFlags) = 0;                                                   // 9
+    virtual void ForceEmergencyCollect() = 0;                                                          // 10
+    virtual void GenerateMouseEvents(unsigned mouseIndex) = 0;                                         // 11
+    virtual void GenerateTouchEvents(unsigned mouseStateIndex) {}                                      // 12
+    virtual void GenerateGestureEvents(InteractiveObject* topmost, unsigned phase, const PointF& pos,
+                                       const PointF& offset, const PointF& scale, float rotation,
+                                       unsigned gestureMask) {}                                        // 13
+    virtual DisplayObjContainer* GetRootMovie(DisplayObject* dobj = NULL) const = 0;                   // 14
+    virtual bool Init(MovieDefImpl* pmovieDef) = 0;                                                    // 15
+    virtual void NotifyMouseEvent(const InputEventsQueueEntry* qe, const MouseState& ms, int mi) = 0;  // 16
+    virtual void NotifyOnResize() = 0;                                                                 // 17
+    virtual void NotifyQueueSetFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt) = 0; // 18
+    virtual void NotifyTransferFocus(InteractiveObject* curFocused, InteractiveObject* pnewFocus,
+                                     unsigned controllerIdx) = 0;                                      // 19
+    virtual bool NotifyOnFocusChange(InteractiveObject* curFocused, InteractiveObject* toBeFocused,
+                                     unsigned controllerIdx, FocusMovedType fmt,
+                                     ProcessFocusKeyInfo* pfocusKeyInfo = NULL) = 0;                   // 20
+    virtual void OnMovieFocus(bool set) = 0;                                                           // 21
+    virtual void OnNextFrame() = 0;                                                                    // 22
+    virtual void OnDeviceOrientationChanged(const OrientationEvent&) {}                                // 23
+    virtual void OnAppLifecycleEvent(const AppLifecycleEvent&) {}                                      // 24
+    virtual void PrintObjectsReport(UInt32 flags = 0, Log* log = NULL, const char* swfName = NULL) {}  // 25
+    virtual void ProcessLoadQueueEntry(LoadQueueEntry* pentry, LoadStates* pls) = 0;                   // 26
+    virtual void ProcessLoadVarsMT(LoadQueueEntry* pentry, LoadStates* pls, const String& data, UPInt fileLen,
+                                   bool succeeded) = 0;                                                // 27
+    virtual void ProcessLoadBinaryMT(LoadQueueEntry* pentry, LoadStates* pls, const ArrayPOD<UByte>& data,
+                                     UPInt fileLen, bool succeeded) {}                                 // 28
+    virtual void RegisterAuxASClasses() = 0;                                                           // 29
+    virtual void ResolveStickyVariables(InteractiveObject* pcharacter) = 0;                            // 30
+    virtual void SetExternalInterfaceRetVal(const GFx::Value& retVal) = 0;                             // 31
+    virtual void SetMemoryParams(unsigned frameBetweenCollections, unsigned maxRootCount) = 0;         // 32
+    virtual void Shutdown() = 0;                                                                       // 33
+    virtual void CreateString(GFx::Value* pvalue, const char* pstring) = 0;                            // 34
+    virtual void CreateStringW(GFx::Value* pvalue, const wchar_t* pstring) = 0;                        // 35
+    virtual void CreateObject(GFx::Value* pvalue, const char* className = NULL, const GFx::Value* pargs = NULL,
+                              unsigned nargs = 0) = 0;                                                 // 36
+    virtual void CreateArray(GFx::Value* pvalue) = 0;                                                  // 37
+    virtual void CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, void* puserData = NULL) = 0; // 38
+    // Slots 39, 41, 42 and 44 take the Movie enums. gfx_player.h is not included here: units that define a local
+    // Movie of their own cannot have it. Without it the same slots take a plain int.
+#ifdef MS2_SF_GFX_PLAYER_H
+    virtual bool SetVariable(const char* ppathToVar, const GFx::Value& value,
+                             Movie::SetVarType setType = Movie::SV_Sticky) = 0;                        // 39
+#else
+    virtual bool SetVariable(const char* ppathToVar, const GFx::Value& value, int setType = 1) = 0;    // 39
+#endif
+    virtual bool GetVariable(GFx::Value* pval, const char* ppathToVar) const = 0;                      // 40
+#ifdef MS2_SF_GFX_PLAYER_H
+    virtual bool SetVariableArray(Movie::SetArrayType type, const char* ppathToVar, unsigned index,
+                                  const void* pdata, unsigned count,
+                                  Movie::SetVarType setType = Movie::SV_Sticky) = 0;                   // 41
+    virtual bool SetVariableArraySize(const char* ppathToVar, unsigned count,
+                                      Movie::SetVarType setType = Movie::SV_Sticky) = 0;               // 42
+#else
+    virtual bool SetVariableArray(int type, const char* ppathToVar, unsigned index, const void* pdata,
+                                  unsigned count, int setType = 1) = 0;                                // 41
+    virtual bool SetVariableArraySize(const char* ppathToVar, unsigned count, int setType = 1) = 0;   // 42
+#endif
+    virtual unsigned GetVariableArraySize(const char* ppathToVar) = 0;                                 // 43
+#ifdef MS2_SF_GFX_PLAYER_H
+    virtual bool GetVariableArray(Movie::SetArrayType type, const char* ppathToVar, unsigned index, void* pdata,
+                                  unsigned count) = 0;                                                 // 44
+#else
+    virtual bool GetVariableArray(int type, const char* ppathToVar, unsigned index, void* pdata,
+                                  unsigned count) = 0;                                                 // 44
+#endif
+    // MSVC puts overloads in reverse order: the format overload is slot 46, the array one 47.
+    virtual bool IsAvailable(const char* ppathToVar) const = 0;                                        // 45
+    virtual bool Invoke(const char* ppathToMethod, GFx::Value* presult, const GFx::Value* pargs,
+                        unsigned numArgs) = 0;                                                         // 47
+    virtual bool Invoke(const char* ppathToMethod, GFx::Value* presult, const char* pargFmt, ...) = 0; // 46
+    virtual bool InvokeArgs(const char* ppathToMethod, GFx::Value* presult, const char* pargFmt,
+                            va_list args) = 0;                                                         // 48
+    virtual MemoryContext* GetMemoryContext() const = 0;                                               // 49
+    virtual ASStringManager* GetStringManager() const = 0;                                             // 50
+    virtual Render::Text::Allocator* GetTextAllocator() = 0;                                           // 51
 };
 
 class AvmInteractiveObjBase;
@@ -519,6 +635,9 @@ struct DisplayObject::ScrollRectInfo : public NewOverrideBase<322>
     __declspec(align(16)) Matrix3F OrigTransformMatrix;     // +0x30
     bool                 IsOrig3D;                          // +0x60
 };
+
+// The AS3 display objects construct their AvmDisplayObj right after the DisplayObject part, at +0x90.
+static_assert(sizeof(DisplayObject) == 0x90, "DisplayObject size");
 
 }} // namespace Scaleform::GFx
 

@@ -170,8 +170,8 @@ public:
         const ActionEntry* getNext();   // 0x142540a90
     };
 
-    // ASMovieRootBase::GetRootMovie. 4.1.18 has no GenerateTouchEvents/GenerateGestureEvents slots, so it is vftable
-    // slot 14 (+0x70) in the exe, two slots before where the 4.1.19 SDK header puts it.
+    // ASMovieRootBase::GetRootMovie, vftable slot 14 (+0x70): 4.1.18 has no SuspendGC / ScheduleGC slots, so it is two
+    // slots before where the 4.1.19 SDK header puts it. ASMovieRootBase declares it now (gfx_displayobject.h).
     DisplayObjContainer* GetRootMovie418(DisplayObject* dobj = NULL) const
     {
         typedef DisplayObjContainer* (*Fn)(const MovieRoot*, DisplayObject*);
