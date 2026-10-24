@@ -140,7 +140,9 @@ extern void FUN_142518040(void*);
 extern void FUN_142515a20(void*, float, float);
 extern void FUN_1424f96c0(void*);
 extern void FUN_142961830(void*, void*, void*, void*, const void*);
-void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
+namespace Scaleform { namespace GFx { namespace AS2 {
+void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*); // defined below, in the AS2 block
+}}}
 extern void FUN_142469440(void*, void*, void*);
 extern void FUN_142504530(void*, void*, void*, void*);
 extern void FUN_1429253d0(void*);
@@ -189,7 +191,7 @@ void* FUN_140015550(void* object, unsigned __int64 flags)
 // @0x140015590
 void* FUN_140015590(void* object, unsigned __int64 flags)
 {
-    FUN_140014830(static_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(object));
+    Scaleform::GFx::AS2::FUN_140014830(static_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(object));
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
