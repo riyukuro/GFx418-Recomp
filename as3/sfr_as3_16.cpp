@@ -48,7 +48,6 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_moviedefrootnode.h"
-#include "ms2/scaleform/include/gfx/as3/as3_stage.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
@@ -1724,6 +1723,31 @@ void FUN_1424dcd40(void* self)
     }
 }
 
+namespace Scaleform { namespace Render {
+// MS2-FUNCTIONAL ?operator=@StrokeStyleType@Render@Scaleform@@QEAAAEAU123@AEBU123@@Z: copies the scalar style fields and uses Ptr assignment for the owned fill and dash references.
+// @0x1424e0cb0
+StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
+{
+    if (this != &other)
+    {
+        Width = other.Width;
+        Units = other.Units;
+        Flags = other.Flags;
+        Miter = other.Miter;
+        Color = other.Color;
+        pFill = other.pFill;
+        pDashes = other.pDashes;
+    }
+    return *this;
+}
+}} // namespace Scaleform::Render
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// MS2-FUNCTIONAL ~MovieDefRootNode@AS3@GFx@Scaleform@@UEAA@XZ: destroys the ABC file array and then lets C++ run the GFx root-node base destructor in order.
+// @0x1424de580
+MovieDefRootNode::~MovieDefRootNode() = default;
+}}} // namespace Scaleform::GFx::AS3
+
 // MS2-PIN: ??_G?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@MEAAPEAXI@Z 0x1424e3750
 // MS2-PIN: ?Add@XMLSupportImpl@AS3@GFx@Scaleform@@UEBA_NAEAVValue@234@AEAVObject@234@1@Z 0x1424e6990
 // MS2-PIN: ??4?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@QEAAXAEBUNodeRef@01@@Z 0x1424e0480
@@ -1749,31 +1773,3 @@ void FUN_1424dcd40(void* self)
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dd110
 // MS2-FUNCTIONAL ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z: generated wrapper runs the recovered destructor and same delete-flag free path; compiler separates the wrapper from cleanup.
 // MS2-PIN: ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3020
-
-namespace Scaleform { namespace Render {
-// MS2-FUNCTIONAL ?operator=@StrokeStyleType@Render@Scaleform@@QEAAAEAU123@AEBU123@@Z: copies the scalar style fields and uses Ptr assignment for the owned fill and dash references.
-// @0x1424e0cb0
-StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
-{
-    if (this != &other)
-    {
-        Width = other.Width;
-        Units = other.Units;
-        Flags = other.Flags;
-        Miter = other.Miter;
-        Color = other.Color;
-        pFill = other.pFill;
-        pDashes = other.pDashes;
-    }
-    return *this;
-}
-}} // namespace Scaleform::Render
-
-namespace Scaleform { namespace GFx { namespace AS3 {
-// MS2-FUNCTIONAL ~MovieDefRootNode@AS3@GFx@Scaleform@@UEAA@XZ: destroys the ABC file array and then lets C++ run the GFx root-node base destructor in order.
-// @0x1424de580
-MovieDefRootNode::~MovieDefRootNode() = default;
-// MS2-FUNCTIONAL ~Stage@AS3@GFx@Scaleform@@UEAA@XZ: member destructors release the ASString and owned display-object references before the DisplayObjContainer base.
-// @0x1424defe0
-Stage::~Stage() = default;
-}}} // namespace Scaleform::GFx::AS3
