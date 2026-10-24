@@ -299,6 +299,8 @@ namespace Instances { namespace fl {
     {
     public:
         AttrGetFirst(XMLElement& el) : XMLElement::CallBack(el) {}
+        // user-declared: the exe dtor re-stores this vftable before releasing Result
+        virtual ~AttrGetFirst() {}
         // @0x142405590
         virtual bool Call(UPInt ind);
 
@@ -311,6 +313,8 @@ namespace Instances { namespace fl {
     {
     public:
         ChildGetFirst(XMLElement& el) : XMLElement::CallBack(el) {}
+        // user-declared: the exe dtor re-stores this vftable before releasing Result
+        virtual ~ChildGetFirst() {}
         // @0x142405640
         virtual bool Call(UPInt ind);
 

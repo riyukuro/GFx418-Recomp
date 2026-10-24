@@ -15,6 +15,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_arraysort.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
 #include "../third_party/src/expat-2.0.1/lib/expat.h"
@@ -648,6 +649,30 @@ namespace Instances { namespace fl
         Entries[Date_Month] = Date::MonthFromYearDay(static_cast<SInt32>(Entries[Date_Year]), dayWithinYear);
         Entries[Date_Day] = static_cast<Value::Number>(Date::DateFromTime(t));
         TimeInDay = DateTimeWithinDay(t);
+    }
+
+    // new Date(): now; new Date(value): a date string is parsed, anything else is a time value; two or more
+    // arguments are local year, month, ... components.
+    // @0x1423f5650
+    void Date::AS3Constructor(unsigned argc, const Value* argv)
+    {
+        GetCurrentTimeValue(&TimeValue, &LocalTZA);
+        if (argc == 1)
+        {
+            Value v;
+            if (argv[0].Convert2PrimitiveValueUnsafe(v, Value::hintString))
+            {
+                if (v.IsString())
+                {
+                    Parser parser(v.AsString().ToCStr());
+                    TimeValue = parser.MakeDate(LocalTZA);
+                }
+                else if (v.ToNumberValue())
+                    TimeValue = TimeClip(v.AsNumber());
+            }
+        }
+        else if (argc >= 2)
+            TimeValue = decodeUTCArgs(argc, argv, LocalTZA);
     }
 }}
 
@@ -1300,6 +1325,29 @@ XMLParser::~XMLParser()
 {
     XML_ParserFree(Parser);
 }
+
+// Not exe code: the E4X walk visitors and the Array.sort collectors are constructed only in sfr_as3_02..04, but
+// their vftables, sdtors and the collectors' operator() bodies lie in this unit's range; constructing them here
+// emits those.
+template <class T, class A0>
+void Unk_As3HelperConstruct(void* p, A0& a0)
+{
+    new (p) T(a0);
+}
+template <class T, class A0, class A1>
+void Unk_As3HelperConstruct(void* p, A0& a0, A1& a1)
+{
+    new (p) T(a0, a1);
+}
+template void Unk_As3HelperConstruct<ValuePtrCollector>(void*, ArrayDH<ValuePtrPair>&);
+template void Unk_As3HelperConstruct<Value2StrCollector>(void*, VM&, ArrayDH<StringValueTriple>&);
+template void Unk_As3HelperConstruct<Value2NumberCollector>(void*, ArrayDH<NumberValueTriple>&);
+template void Unk_As3HelperConstruct<Instances::fl::EmptyCallBack>(void*, Instances::fl::XMLElement&);
+template void Unk_As3HelperConstruct<Instances::fl::AttrGetFirst>(void*, Instances::fl::XMLElement&);
+template void Unk_As3HelperConstruct<Instances::fl::ChildGetFirst>(void*, Instances::fl::XMLElement&);
+template void Unk_As3HelperConstruct<Instances::fl::ChildGet>(void*, Instances::fl::XMLElement&, Instances::fl::XMLList&);
+template void Unk_As3HelperConstruct<Instances::fl::AttrGet>(void*, Instances::fl::XMLElement&, Instances::fl::XMLList&);
+template void Unk_As3HelperConstruct<Instances::fl::ListGet>(void*, Instances::fl::XMLList&, Instances::fl::XMLList&);
 
 namespace ClassTraits { namespace fl
 {
@@ -2333,3 +2381,31 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_GXMLList@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f5070
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
 // MS2-PIN: ??_7?$RefCountBase@VNamespaceInstanceFactory@AS3@GFx@Scaleform@@$0BFA@@Scaleform@@6B@ 0x143140af8
+// MS2-PIN: ??_7ArrayFunc@AS3@GFx@Scaleform@@6B@ 0x143141570
+// MS2-PIN: ??_7ValuePtrCollector@AS3@GFx@Scaleform@@6B@ 0x143141580
+// MS2-PIN: ??_7Value2StrCollector@AS3@GFx@Scaleform@@6B@ 0x143141590
+// MS2-PIN: ??_7Value2NumberCollector@AS3@GFx@Scaleform@@6B@ 0x1431415a0
+// MS2-PIN: ??_7CallBack@XMLElement@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142f90
+// MS2-PIN: ??_7CallBack@XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436c0
+// MS2-PIN: ??_7EmptyCallBack@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439b8
+// MS2-PIN: ??_7AttrGetFirst@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439c8
+// MS2-PIN: ??_7ChildGetFirst@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439d8
+// MS2-PIN: ??_7ChildGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439e8
+// MS2-PIN: ??_7AttrGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439f8
+// MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0
+// MS2-PIN: ??RValue2NumberCollector@AS3@GFx@Scaleform@@UEAAXKAEBVValue@123@@Z 0x1423f1cb0 ; vtslot
+// MS2-PIN: ??RValue2StrCollector@AS3@GFx@Scaleform@@UEAAXKAEBVValue@123@@Z 0x1423f1d70 ; vtslot
+// MS2-PIN: ??RValuePtrCollector@AS3@GFx@Scaleform@@UEAAXKAEBVValue@123@@Z 0x1423f1ec0 ; vtslot
+// MS2-PIN: ??_GArrayFunc@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2320 ; vtslot
+// MS2-PIN: ??_GAttrGet@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2350 ; vtslot
+// MS2-PIN: ??_GAttrGetFirst@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2380 ; vtslot
+// MS2-PIN: ??_GCallBack@XMLElement@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2540 ; vtslot
+// MS2-PIN: ??_GCallBack@XMLList@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2570 ; vtslot
+// MS2-PIN: ??_GChildGet@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f27b0 ; vtslot
+// MS2-PIN: ??_GChildGetFirst@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f27e0 ; vtslot
+// MS2-PIN: ??_GEmptyCallBack@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2c50 ; vtslot
+// MS2-PIN: ??_GListGet@fl@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f35d0 ; vtslot
+// MS2-PIN: ??_G?$RefCountBase@VNamespaceInstanceFactory@AS3@GFx@Scaleform@@$0BFA@@Scaleform@@UEAAPEAXI@Z 0x1423f3930 ; vtslot
+// MS2-PIN: ??_GValue2NumberCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4960 ; vtslot
+// MS2-PIN: ??_GValue2StrCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4990 ; vtslot
+// MS2-PIN: ??_GValuePtrCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f49c0 ; vtslot

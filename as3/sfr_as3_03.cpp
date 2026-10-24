@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x1423ff040-0x1424133c0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_arraysort.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
@@ -1663,32 +1664,9 @@ namespace Scaleform { namespace GFx { namespace AS3
 }}}
 
 // ---- Array.sort: the elements are collected (as numbers, strings or element pointers), sorted, then copied back
-namespace Scaleform {
-// A sort key and the index of the element it came from (same as sfr_as3_20).
-template <typename F, typename S>
-struct Pair
-{
-    Pair(const F& f, const S& s) : First(f), Second(s) {}
-
-    F First;
-    S Second;
-};
-}
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
-    // A sort key, the element and its index.
-    template <typename T1, typename T2, typename T3>
-    struct Triple : public Pair<T1, T2>
-    {
-        Triple(const T1& f, const T2& s, const T3& t) : Pair<T1, T2>(f, s), Third(t) {}
-
-        T3 Third;
-    };
-
-    typedef Triple<ASString, const Value*, UInt32>      StringValueTriple;
-    typedef Triple<Value::Number, const Value*, UInt32> NumberValueTriple;
-    typedef Pair<const Value*, UInt32>                  ValuePtrPair;
 
     // Array.sort option bits.
     enum
@@ -1752,60 +1730,6 @@ namespace Scaleform { namespace GFx { namespace AS3
 
         VM&          Vm;
         const Value& Func;
-    };
-
-    // The collectors' operator() bodies lie in sfr_as3_02's range (0x1423f1ec0/0x1423f1d70/0x1423f1cb0); they are
-    // defined here until that unit is written. vftables 0x143141580/0x143141590/0x1431415a0.
-    class ValuePtrCollector : public ArrayFunc
-    {
-    public:
-        ValuePtrCollector(ArrayDH<ValuePtrPair>& p) : Pairs(p) {}
-
-        virtual void operator()(UInt32 ind, const Value& v) { Pairs.PushBack(ValuePtrPair(&v, ind)); }
-
-    private:
-        ValuePtrCollector& operator=(const ValuePtrCollector&);
-
-        ArrayDH<ValuePtrPair>& Pairs;
-    };
-
-    class Value2StrCollector : public ArrayFunc
-    {
-    public:
-        Value2StrCollector(VM& vm, ArrayDH<StringValueTriple>& p) : Vm(vm), Pairs(p) {}
-
-        virtual void operator()(UInt32 ind, const Value& v)
-        {
-            ASString str = Vm.GetStringManager().CreateEmptyString();
-            if (!v.Convert2String(str))
-                return;
-            Pairs.PushBack(StringValueTriple(str, &v, ind));
-        }
-
-    private:
-        Value2StrCollector& operator=(const Value2StrCollector&);
-
-        VM&                         Vm;
-        ArrayDH<StringValueTriple>& Pairs;
-    };
-
-    class Value2NumberCollector : public ArrayFunc
-    {
-    public:
-        Value2NumberCollector(ArrayDH<NumberValueTriple>& p) : Pairs(p) {}
-
-        virtual void operator()(UInt32 ind, const Value& v)
-        {
-            Value::Number num;
-            if (!v.Convert2Number(num))
-                return;
-            Pairs.PushBack(NumberValueTriple(num, &v, ind));
-        }
-
-    private:
-        Value2NumberCollector& operator=(const Value2NumberCollector&);
-
-        ArrayDH<NumberValueTriple>& Pairs;
     };
 
     // SparseArray::PushBack (0x14241e4b0, sfr_as3_04), which the exe inlines into Array.sort.
