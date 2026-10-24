@@ -9,6 +9,7 @@
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
 #include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
+#include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_taskmanager.h"
 #undef GetObject   // windows.h
 
@@ -1077,3 +1078,15 @@ ReadArgs::~ReadArgs() = default;
 }
 
 }}} // namespace Scaleform::GFx::AS3
+
+// @0x1424e9380
+void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObject* pcont)
+{
+    if (*reinterpret_cast<void**>(reinterpret_cast<Scaleform::UPInt>(pcont) + 0x38) == NULL)
+    {
+        Scaleform::GFx::InteractiveObject* interactive =
+            reinterpret_cast<Scaleform::GFx::InteractiveObject*>(pcont);
+        interactive->AddToPlayList();
+        interactive->ModifyOptimizedPlayList();
+    }
+}
