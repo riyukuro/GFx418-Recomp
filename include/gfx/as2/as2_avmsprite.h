@@ -121,6 +121,7 @@ public:
     // Queues the frame actions of pbuffer on this clip (exe 0x14292e650).
     void AddActionBuffer(ActionBuffer* pbuffer, ActionPriority::Priority prio = ActionPriority::AP_Frame);
     // Copies the event handlers of src; button handlers carry over to the clip object (exe 0x1429348c0).
+    virtual void AdvanceFrame(bool nextFrame, float framePos); // exe 0x142931430
     virtual void CloneInternalData(const InteractiveObject* src);
     virtual void CopyPhysicalProperties(const InteractiveObject* poldChar); // exe 0x142935d10
     void SetLevel(int level); // exe 0x142981bf0
