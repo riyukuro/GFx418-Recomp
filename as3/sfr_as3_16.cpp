@@ -1043,4 +1043,15 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
         pMovieImpl->AddLoadQueueEntry(pentry);
 }
 
+// The two ReadArgs variants own a heap-backed copy of their argument values.
+// MS2-FUNCTIONAL: the executable calls ArrayDH<Value>::~ArrayDH out of line; this TU inlines that release sequence.
+// @0x1424de9e0
+ReadArgs::~ReadArgs() = default;
+
+namespace TR {
+// MS2-FUNCTIONAL: the executable calls ArrayDH<Value>::~ArrayDH out of line; this TU inlines that release sequence.
+// @0x1424dea90
+ReadArgs::~ReadArgs() = default;
+}
+
 }}} // namespace Scaleform::GFx::AS3
