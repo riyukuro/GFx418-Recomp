@@ -1104,12 +1104,60 @@ void Vector_String::AS3indexOf(SInt32& result, const ASString& searchElement, SI
     result = -1;
 }
 
+// @0x142557740
+void Vector_double::AS3indexOf(SInt32& result, Value::Number searchElement, SInt32 fromIndex)
+{
+    if (fromIndex < 0)
+        fromIndex = (SInt32)((UInt32)V.V.GetSize() + fromIndex);
+    for (UPInt i = fromIndex; i < (UInt32)V.V.GetSize(); ++i)
+    {
+        if (V.V[i] == searchElement)
+        {
+            result = (SInt32)i;
+            return;
+        }
+    }
+    result = -1;
+}
+
+// @0x142557790
+void Vector_int::AS3indexOf(SInt32& result, SInt32 searchElement, SInt32 fromIndex)
+{
+    if (fromIndex < 0)
+        fromIndex = (SInt32)((UInt32)V.V.GetSize() + fromIndex);
+    for (UPInt i = fromIndex; i < (UInt32)V.V.GetSize(); ++i)
+    {
+        if (V.V[i] == searchElement)
+        {
+            result = (SInt32)i;
+            return;
+        }
+    }
+    result = -1;
+}
+
 // @0x1425577d0
 void Vector_object::AS3indexOf(SInt32& result, const Value& searchElement, SInt32 fromIndex)
 {
     for (UPInt i = (UPInt)(SPInt)fromIndex; i < (UInt32)V.V.GetSize(); ++i)
     {
         if (StrictEqual(V.V[i], searchElement))
+        {
+            result = (SInt32)i;
+            return;
+        }
+    }
+    result = -1;
+}
+
+// @0x142557860
+void Vector_uint::AS3indexOf(SInt32& result, UInt32 searchElement, SInt32 fromIndex)
+{
+    if (fromIndex < 0)
+        fromIndex = (SInt32)((UInt32)V.V.GetSize() + fromIndex);
+    for (UPInt i = fromIndex; i < (UInt32)V.V.GetSize(); ++i)
+    {
+        if (V.V[i] == searchElement)
         {
             result = (SInt32)i;
             return;
@@ -1135,12 +1183,60 @@ void Vector_String::AS3lastIndexOf(SInt32& result, const ASString& searchElement
     result = -1;
 }
 
+// @0x142557aa0
+void Vector_double::AS3lastIndexOf(SInt32& result, Value::Number searchElement, SInt32 fromIndex)
+{
+    if (fromIndex < 0)
+        fromIndex = (SInt32)((UInt32)V.V.GetSize() + fromIndex);
+    for (SPInt i = Alg::Min<SPInt>(fromIndex, (SPInt)(UInt32)V.V.GetSize() - 1); i >= 0; --i)
+    {
+        if (V.V[i] == searchElement)
+        {
+            result = (SInt32)i;
+            return;
+        }
+    }
+    result = -1;
+}
+
+// @0x142557b00
+void Vector_int::AS3lastIndexOf(SInt32& result, SInt32 searchElement, SInt32 fromIndex)
+{
+    if (fromIndex < 0)
+        fromIndex = (SInt32)((UInt32)V.V.GetSize() + fromIndex);
+    for (SPInt i = Alg::Min<SPInt>(fromIndex, (SPInt)(UInt32)V.V.GetSize() - 1); i >= 0; --i)
+    {
+        if (V.V[i] == searchElement)
+        {
+            result = (SInt32)i;
+            return;
+        }
+    }
+    result = -1;
+}
+
 // @0x142557b50
 void Vector_object::AS3lastIndexOf(SInt32& result, const Value& searchElement, SInt32 fromIndex)
 {
     for (SPInt i = Alg::Min<SPInt>(fromIndex, (SPInt)(UInt32)V.V.GetSize() - 1); i >= 0; --i)
     {
         if (StrictEqual(V.V[i], searchElement))
+        {
+            result = (SInt32)i;
+            return;
+        }
+    }
+    result = -1;
+}
+
+// @0x142557be0
+void Vector_uint::AS3lastIndexOf(SInt32& result, UInt32 searchElement, SInt32 fromIndex)
+{
+    if (fromIndex < 0)
+        fromIndex = (SInt32)((UInt32)V.V.GetSize() + fromIndex);
+    for (SPInt i = Alg::Min<SPInt>(fromIndex, (SPInt)(UInt32)V.V.GetSize() - 1); i >= 0; --i)
+    {
+        if (V.V[i] == searchElement)
         {
             result = (SInt32)i;
             return;
