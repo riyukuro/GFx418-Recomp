@@ -333,6 +333,30 @@ public:
     // (appended, sfr33) the rest of GFx_TextField (sfr_gfx_03e)
     // The definition's font, size, color and layout become the document's default formats.
     void SetInitialFormatsAsDefault();                                           // exe 0x1425bc420
+    // The cursor's text position (-1 without an editor).
+    SPInt GetCursorPos() const;                                                  // exe 0x1425b81a0
+    // Rebuilds the style sheet's URL zones from the text's link runs.
+    void  CollectUrlZones();                                                     // exe 0x1425b72a0
+    // The text changed: tells the AVM side and re-lays the field out.
+    void  NotifyChanged();                                                       // exe 0x1425b9da0
+    const Text::StyleManager* GetStyleSheet() const;                             // exe 0x1425b91a0
+
+    // (appended, sfr36) the property setters of the AS2 AvmTextField::SetMember (sfr_as2_06z).
+    // Restarts the editor's cursor blink (no editor: nothing).
+    void ResetBlink(bool state = true, bool blocked = false);                    // exe 0x1425bba30
+    // The background / border show through the color's alpha byte; the colors keep that byte.
+    void SetBackground(bool b);                                                  // exe 0x1425bbb90
+    void SetBackgroundColor(UInt32 c);                                           // exe 0x1425bbc10
+    void SetBorder(bool b);                                                      // exe 0x1425bbc50
+    void SetBorderColor(UInt32 c);                                               // exe 0x1425bbcd0
+    bool SetRestrict(const ASString& restrStr);                                  // exe 0x1425bce30
+    void SetSelectable(bool f);                                                  // exe 0x1425bcf10
+    void SetShadowColor(UInt32 c);                                               // exe 0x1425bd080
+    // A shadowStyle string ("s{x,y}..." offsets); false when it does not parse.
+    bool SetShadowStyle(const char* pstr);                                       // exe 0x1425bd100
+    void SetTextColor(UInt32 c);                                                 // exe 0x1425bd630
+    void SetTextFilters(const Render::Text::TextFilter& f);                      // exe 0x1425bd7a0
+    CSSHolderBase* GetCSSData() const { return pCSSData.GetPtr(); }              // exe 0x1425b7e60 (out of line)
 
     Ptr<TextFieldDef>             pDef;                 // +0xd8
     Ptr<Render::Text::DocView>    pDocument;            // +0xe0
