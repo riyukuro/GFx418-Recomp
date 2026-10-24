@@ -6,6 +6,7 @@
 #include "as2_action.h"
 #include "as2_arrayobject.h"
 #include "as2_objectproto.h"
+#include "as2_movieroot.h"     // (sfr24) ASBuiltin_empty_
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 

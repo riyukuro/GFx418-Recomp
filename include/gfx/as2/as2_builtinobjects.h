@@ -7,6 +7,8 @@
 
 #include "as2_object.h"
 #include "as2_objectproto.h"
+#include "as2_action.h"         // (sfr24) ASBuiltinType
+#include "../gfx_interactiveobject.h"   // (sfr24) FocusMovedType
 #include "../gfx_asutils.h"
 #include "../gfx_textsnapshot.h"
 #include "../../kernel/sf_stringhash.h"
