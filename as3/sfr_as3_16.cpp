@@ -45,6 +45,7 @@
 // MS2-RANGE: 0x1424eb640-0x1424eb6b0 .text$mn
 // MS2-RANGE: 0x1424eb6b0-0x1424eb700 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
@@ -1223,6 +1224,26 @@ Scaleform::GFx::AS3::SPtr<const Scaleform::GFx::AS3::ClassTraits::Traits>::opera
 template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>::operator=(
     const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>&);
+// @0x1424e0630
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Function>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Function>::operator=(
+    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Function>&);
+// @0x1424e06a0
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::GASRefCountBase>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::GASRefCountBase>::operator=(
+    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::GASRefCountBase>&);
+// @0x1424e0710
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::GASRefCountBase>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::GASRefCountBase>::SetPtr(
+    Scaleform::GFx::AS3::GASRefCountBase*);
+// @0x1424e0780
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript>::operator=(
+    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript>&);
+// @0x1424e07f0
+template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>::operator=(
+    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&);
 
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_1424dde10(void*);
