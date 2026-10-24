@@ -114,6 +114,19 @@ public:
         for (; n; n--)
             Pop1();
     }
+    // Pops two; page by page only when that crosses into the previous page.
+    SF_FORCEINLINE void Pop2()
+    {
+        if (pCurrent - 2 < pPageStart)
+            Pop(2);
+        else
+        {
+            pCurrent->~T();
+            pCurrent--;
+            pCurrent->~T();
+            pCurrent--;
+        }
+    }
     // Pops three; page by page only when that crosses into the previous page (exe 0x14296efd0 for Value).
     void Pop3()
     {
@@ -196,6 +209,8 @@ public:
 typedef ArrayLH_POD<WithStackEntry, StatMV_ActionScript_Mem> WithStackArray;
 
 // Script execution context of a target character. 0x198 bytes.
+class ActionBuffer;
+
 class Environment : public LogBase<Environment>, public NewOverrideBase<StatMV_ActionScript_Mem>
 {
 public:
@@ -230,6 +245,7 @@ public:
         while (n--)
             Stack.Pop1();
     }
+    SF_FORCEINLINE void Drop2() { Stack.Pop2(); }
 
     ASStringContext* GetSC() { return &StringContext; }
     unsigned         GetVersion() const { return StringContext.GetVersion(); }
@@ -241,6 +257,10 @@ public:
     // Drops the try blocks pc has left; *plocalTryBlockCount counts those of the running action buffer (exe
     // 0x142933d80).
     void CheckTryBlocks(int pc, int* plocalTryBlockCount);
+    // Runs the catch and finally blocks of the pending throw (exe 0x142933440); execType is an
+    // ActionBuffer::ExecuteType (declared later).
+    int CheckExceptions(ActionBuffer* pactBuf, int pc, int* plocalTryBlockCount, Value* retval,
+                        const WithStackArray* pinitialWithStack, int execType);
 
     // Local variables of the innermost function frame.
     const Value* FindLocal(const ASString& varname) const;      // exe 0x142944690
