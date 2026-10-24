@@ -212,11 +212,15 @@ namespace Scaleform {
 
 namespace GFx { class StaticTextRecord; class TaskThreadInPool; }
 
-// The executable's four adjacent Resize bodies are template instances of the recovered ArrayData implementation.
-// MS2-PIN: ?Resize@?$ArrayBase@U?$ArrayData@EU?$AllocatorGH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x142568420
-template void ArrayBase<ArrayData<UByte, AllocatorGH_POD<UByte, 2>, ArrayDefaultPolicy>>::Resize(UPInt);
-// MS2-PIN: ?Resize@?$ArrayData@PEAVTaskThreadInPool@GFx@Scaleform@@U?$AllocatorGH@PEAVTaskThreadInPool@GFx@Scaleform@@$01@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAX_K@Z 0x1425685a0
-template void ArrayData<GFx::TaskThreadInPool*, AllocatorGH<GFx::TaskThreadInPool*, 2>, ArrayDefaultPolicy>::Resize(UPInt);
+// The VM's ABC pointer arrays keep these Resize instances out of line.
+// MS2-PIN: ?Resize@?$ArrayData@PEAVMethodBodyInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVMethodBodyInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAX_K@Z 0x142568420
+template void ArrayData<GFx::AS3::Abc::MethodBodyInfo*, AllocatorLH_POD<GFx::AS3::Abc::MethodBodyInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt);
+// MS2-PIN: ?Resize@?$ArrayData@PEAVMethodInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVMethodInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAX_K@Z 0x1425684a0
+template void ArrayData<GFx::AS3::Abc::MethodInfo*, AllocatorLH_POD<GFx::AS3::Abc::MethodInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt);
+// MS2-PIN: ?Resize@?$ArrayData@PEAVScriptInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVScriptInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAX_K@Z 0x142568520
+template void ArrayData<GFx::AS3::Abc::ScriptInfo*, AllocatorLH_POD<GFx::AS3::Abc::ScriptInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt);
+// MS2-PIN: ?Resize@?$ArrayData@PEAVTraitInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVTraitInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAX_K@Z 0x1425685a0
+template void ArrayData<GFx::AS3::Abc::TraitInfo*, AllocatorLH_POD<GFx::AS3::Abc::TraitInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt);
 // MS2-PIN: ?Resize@?$ArrayData@MU?$AllocatorLH_POD@M$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z 0x14268e7c0
 // MS2-FUNCTIONAL 0x14268e7c0: resize behavior matches; executable calls Reserve at 0x142623c60 while the source map selects 0x14268e380.
 template void ArrayData<float, AllocatorLH_POD<float, 2>, ArrayDefaultPolicy>::Resize(UPInt);

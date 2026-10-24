@@ -1947,10 +1947,6 @@ void SoundObject::Stop()
     }
 
 MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::ClassInfo*)      // @0x1425683a0
-MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::MethodBodyInfo*) // @0x142568420
-MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::MethodInfo*)     // @0x1425684a0
-MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::ScriptInfo*)     // @0x142568520
-MS2_ABC_RESIZE_NOINLINE(Scaleform::GFx::AS3::Abc::TraitInfo*)      // @0x1425685a0
 
 // ==== Abc::Reader (AS3_Abc_Read) ======================================================================================
 
