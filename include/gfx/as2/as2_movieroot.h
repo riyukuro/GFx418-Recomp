@@ -9,6 +9,7 @@
 #include "../gfx_moviedef.h"
 #include "../gfx_movieimpl.h"
 #include "../gfx_playertasks.h"
+#include "../gfx_value.h"
 #include "../gfx_loadproc.h"
 
 namespace Scaleform { namespace GFx { class Value; class FunctionHandler; } }
@@ -200,6 +201,7 @@ public:
 
         bool OnExceedLimit(MemoryHeap* heap, UPInt overLimit); // exe 0x14296bbf0
         void Reset(MemoryHeap* heap);              // exe 0x14297df30
+        void Collect(MemoryHeap* pheap);           // exe 0x1429349a0 (sfr32)
     };
 
     MemoryHeap*                   Heap;                 // +0x10 the movie's heap
@@ -404,6 +406,9 @@ public:
     // The length of the Array a variable path from _level0 names, 0 otherwise (exe 0x1429579a0).
     virtual unsigned GetVariableArraySize(const char* ppathToVar);
     // (appended for sfr_as2_02) a new sprite of the timeline, with an added reference (exe 0x142937cf0).
+    // (sfr32) The host value interface of pmovie (exe 0x1429379d0) and a host value bound to a VM object (0x142937af0).
+    void CreateObjectInterface(MovieImpl* pmovie);
+    bool CreateObjectValue(GFx::Value* pval, GFx::Value::ObjectInterface* pif, void* pdata, bool isdobj);
     Sprite* CreateSprite(TimelineDef* ptimelineDef, MovieDefImpl* pdefImpl, InteractiveObject* parent,
                          ResourceId id, bool loadedSeparately = false);
     // (appended for sfr_as2_06) focus changes reach Selection through the _level0 environment.
