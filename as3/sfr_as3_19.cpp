@@ -6019,6 +6019,34 @@ void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj)
     if (FUN_1425de200(*reinterpret_cast<const int*>(btn + 0x168)) == state)
         FUN_14252e9d0(self, state);
 }
+// ---- batch 51
+// Applies a 2x4 matrix to the display object behind a value (movie-clip-like kinds only): the matrix goes to the object with its
+// translation in twips, and the position, scale and rotation properties are re-derived from it.
+// MS2-FUNCTIONAL 0x1425270e0: raw-offset model; codegen differs from the exe
+// @0x1425270e0
+bool Sfr31SetDisplayMatrix(UPInt self, UPInt valueObj, const float* m)
+{
+    const UPInt info = Sfr31Rd(valueObj, 0x20);
+    if (*reinterpret_cast<const SInt32*>(info + 0x70) - 0x11u >= 0xc || (~(*reinterpret_cast<const UInt8*>(info + 0x68) >> 5) & 1) == 0)
+        return false;
+    DisplayObjectBase* obj = reinterpret_cast<DisplayObjectBase*>(Sfr31Rd(valueObj, 0x58));
+    if (!reinterpret_cast<const Render::Matrix2x4<float>*>(m)->IsValid())
+        return false;
+    float tm[8] = {m[0], m[1], m[2], m[3] * 20.0f, m[4], m[5], m[6], m[7] * 20.0f};
+    typedef void (*Fn)(DisplayObjectBase*, const float*);
+    reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(obj), 0), 0x18))(obj, tm);
+    DisplayObjectBase::GeomDataType gd;
+    obj->GetGeomData(gd);
+    const double y = m[4];
+    const double x = m[0];
+    gd.X = static_cast<int>(m[3]);
+    gd.Y = static_cast<int>(m[7]);
+    gd.XScale = sqrt(x * x + y * y) * 100.0;
+    gd.YScale = sqrt(static_cast<double>(m[1]) * m[1] + static_cast<double>(m[5]) * m[5]) * 100.0;
+    gd.Rotation = (atan2(y, x) * 180.0) / 3.141592653589793;
+    obj->SetGeomData(gd);
+    return true;
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
