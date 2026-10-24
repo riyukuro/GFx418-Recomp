@@ -48,6 +48,12 @@ public:
     bool IsNotRefCountedType(const Traits* tr) const;                             // 0x142514420
     bool IsNumericType(const Traits* tr) const;                                   // 0x142514510
     bool IsPrimitiveType(const Traits* tr) const;                                 // 0x142514a80
+    // Whether a traced value is of the class's instance traits (GetValueTraits(v, false) compared).
+    bool IsBooleanType(const Value& v) const;                                     // 0x142514000
+    bool IsNumberType(const Value& v) const;                                      // 0x142514470
+    bool IsSIntType(const Value& v) const;                                        // 0x142514c30
+    bool IsStringType(const Value& v) const;                                      // 0x142514e10
+    bool IsUIntType(const Value& v) const;                                        // 0x1425150c0
 
 private:
     int  GetNextU30(UPInt cp) const;                                              // 0x14250c1f0
