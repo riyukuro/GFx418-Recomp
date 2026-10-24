@@ -4371,8 +4371,8 @@ const void* FUN_142546050(const void* trait_info, const void* const_pool);
 bool FUN_142514cd0(const Instances::Namespace& ns);
 // InstanceTraits::UserDefined ctor (0xe0 bytes)
 InstanceTraits::Traits* FUN_1423ef790(void* mem, VMAbcFile* file, InstanceTraits::Traits* parent, const void* class_info);
-// Traits: the interface slots of an interface class
-void FUN_1424e80f0(ClassTraits::Traits* self, VMAbcFile* file);
+// Traits: the interface slots of an interface class (class_info: its Abc::ClassInfo)
+void FUN_1424e80f0(ClassTraits::Traits* self, VMAbcFile* file, const void* class_info);
 
 // InstanceTraits::fl::Namespace: the interned namespace of {kind, uri}, else the public one (NULL once the traits are
 // gone)
@@ -4521,7 +4521,7 @@ CheckResult FUN_142418970(ClassTraits::Traits* self)
     if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
         return false;
     if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
-        FUN_1424e80f0(self, file);
+        FUN_1424e80f0(self, file, ci);
     return true;
 }
 // ClassTraits::UserDefined::RegisterSlots: the class's static slots (after the Classes::UserDefined object), then the
@@ -4535,7 +4535,7 @@ CheckResult FUN_14241e6b0(ClassTraits::UserDefined* self)
     if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
         return false;
     if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
-        FUN_1424e80f0(self, file);
+        FUN_1424e80f0(self, file, ci);
     return true;
 }
 
