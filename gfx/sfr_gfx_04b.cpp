@@ -21,6 +21,8 @@
 // MS2-RANGE: 0x1425c6620-0x1425c66cd .text$mn
 // MS2-RANGE: 0x1425c7ba0-0x1425c7c98 .text$mn
 // MS2-RANGE: 0x1425c8010-0x1425c80d7 .text$mn
+// MS2-RANGE: 0x1425c8fe0-0x1425c9061 .text$mn
+// MS2-RANGE: 0x1425c9190-0x1425c91ec .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -94,6 +96,30 @@ void SF_STDCALL GFx_DefineBinaryDataLoader(LoadProcess* p, const TagInfo& tagInf
     p->AddResource(id, definition);
     if (definition)
         definition->Release();
+}
+
+// The first key hashes a compact scalar and the eight words of its payload.
+// @0x1425c8fe0
+UPInt FUN_1425c8fe0(const void*, const void* object)
+{
+    const unsigned long long* words = reinterpret_cast<const unsigned long long*>(object);
+    const unsigned long long value = words[2];
+    const unsigned long long payload = words[5] ^ words[6] ^ words[7] ^ words[9] ^ words[10] ^ words[11] ^ words[12] ^ words[13];
+    const unsigned long long all = value ^ payload;
+    return static_cast<UPInt>(value ^ (all >> 7) ^ all);
+}
+
+// The second key combines a String header hash with three cached key words.
+// @0x1425c9190
+UPInt FUN_1425c9190(const void*, const void* object)
+{
+    const unsigned long long* words = reinterpret_cast<const unsigned long long*>(object);
+    const unsigned long long* stringHeader = reinterpret_cast<const unsigned long long*>(words[2] & ~3ull);
+    const UPInt stringHash = String::BernsteinHashFunction(
+        reinterpret_cast<const char*>(stringHeader) + 0x0c,
+        static_cast<UPInt>(stringHeader[0] & 0x7fffffffffffffffull), 0x1505);
+    const unsigned long long cached = words[3] ^ words[5] ^ words[6];
+    return static_cast<UPInt>((cached >> 7) ^ words[4] ^ cached ^ stringHash);
 }
 
 // MS2-FUNCTIONAL: preserves the tables bytes and replace-old-header behavior; the executable's allocator call sequence
