@@ -1528,11 +1528,20 @@ Value* FUN_142923b90(Value* pthis, const FunctionRef& func)
     return ::new (pthis) Value(func);
 }
 
-// MS2-FUNCTIONAL block layout of the null-character path (the exe returns early instead of joining)
+// the CHARACTER Value constructor; the exe returns early on a null character (it stores the null argument itself)
 // @0x142923c60
 Value* FUN_142923c60(Value* pthis, InteractiveObject* pcharacter)
 {
-    return ::new (pthis) Value(pcharacter);
+    pthis->T.Type = Value::CHARACTER;
+    if (!pcharacter)
+    {
+        pthis->V.pCharHandle = reinterpret_cast<CharacterHandle*>(pcharacter);
+        return pthis;
+    }
+    pthis->V.pCharHandle = pcharacter->GetCharacterHandle();
+    if (pthis->V.pCharHandle)
+        pthis->V.pCharHandle->AddRef();
+    return pthis;
 }
 
 // @0x142923a90

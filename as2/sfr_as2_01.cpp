@@ -3765,21 +3765,19 @@ void RefCountBaseGC<Stat>::ReleaseInternal() const
 template void RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal() const;
 
 // @0x1423dfba0
-// MS2-FUNCTIONAL same transitions; the exe moves the Resize call behind the common exit and reloads the index differently
 template<int Stat>
 void RefCountCollector<Stat>::RemoveRoot(const BaseType* p)
 {
-    if (p->IsInRootList() && !p->IsInList())
+    if (!p->IsInRootList() || p->IsInList())
+        return;
+    UInt32 idx = p->RootIndex;
+    if ((UPInt)(idx + 1) != Roots.GetSize())
     {
-        UInt32 idx = p->RootIndex;
-        if ((UPInt)(idx + 1) == Roots.GetSize())
-            Roots.Resize(idx);
-        else
-        {
-            Roots[idx] = (const BaseType*)((FirstFreeRootIndex << 1) | 1);
-            FirstFreeRootIndex = idx;
-        }
+        Roots[idx] = (const BaseType*)((FirstFreeRootIndex << 1) | 1);
+        FirstFreeRootIndex = idx;
     }
+    else
+        Roots.Resize(idx);
     p->RefCount &= ~BaseType::Flag_InRootList;
     if (!p->IsInList())
         p->RootIndex = ~0u;
