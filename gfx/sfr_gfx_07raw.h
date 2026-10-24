@@ -210,6 +210,104 @@ struct StringKeyOps
     }
 };
 
+// Frees a set whose payload at +0x18 of each live entry is a counted pointer.
+static inline void RawClearPtrSet(U* self)
+{
+    if (!*self)
+        return;
+    U* table = (U*)*self;
+    for (U i = 0; i < table[1] + 1; i++)
+    {
+        char* e = RawEntry(table, i, 0x20);
+        if (*(SPInt*)e != -2)
+        {
+            void* p = *(void**)(e + 0x18);
+            if (p)
+                FUN_14257dcb0(p);
+            *(SPInt*)e = -2;
+        }
+    }
+    Memory::Free(table);
+    *self = 0;
+}
+
+// Frees a set whose payload at +0x18 (or +0x10) of each live entry is a String.
+static inline void RawClearStringSet(U* self, U payload)
+{
+    if (!*self)
+        return;
+    U* table = (U*)*self;
+    for (U i = 0; i < table[1] + 1; i++)
+    {
+        char* e = RawEntry(table, i, 0x20);
+        if (*(SPInt*)e != -2)
+        {
+            ((String*)(e + payload))->~String();
+            *(SPInt*)e = -2;
+        }
+    }
+    Memory::Free(table);
+    *self = 0;
+}
+
+// Frees a set with no per-entry payload to release (stride 0x30 entries).
+static inline void RawClearPlainSet(U* self, U stride)
+{
+    if (!*self)
+        return;
+    U* table = (U*)*self;
+    for (U i = 0; i < table[1] + 1; i++)
+    {
+        char* e = RawEntry(table, i, stride);
+        if (*(SPInt*)e != -2)
+            *(SPInt*)e = -2;
+    }
+    Memory::Free(table);
+    *self = 0;
+}
+
+// FixedSizeHash of an eight-byte key (bytes mixed with per-position multipliers).
+static inline U RawKey8Hash(U key)
+{
+    const unsigned char* k = (const unsigned char*)&key;
+    return (((U)k[3] * 0x1003f + (U)k[2]) * 0x1003f + (U)k[1]) * 0x1003f + (U)k[4] * 0xfc5d1543ec5f01ULL +
+           (U)k[5] * (U)-0x64cfd3d7e9d39ec1LL + (U)k[7] * (U)-0x283c1b695cee4e41LL +
+           (U)k[6] * 0x5d02f409d62aee81ULL + (U)-0x514d9afbc3e934fbLL + (U)k[0];
+}
+
+// Looks an eight-byte key up in a set whose entries keep it as their first payload word; -1 when absent.
+static inline SPInt RawFindKey8(U* table, U key, U stride)
+{
+    if (!table)
+        return -1;
+    U home = table[1] & RawKey8Hash(key);
+    U index = home;
+    char* e = RawEntry(table, index, stride);
+    if (*(SPInt*)e == -2 || *(U*)(e + 8) != home)
+        return -1;
+    for (;;)
+    {
+        if (*(U*)(e + 8) == home && *(U*)(e + 0x10) == key)
+            return (SPInt)index;
+        SPInt next = *(SPInt*)e;
+        if (next == -1)
+            return -1;
+        index = (U)next;
+        e = RawEntry(table, index, stride);
+    }
+}
+
+// Appends a slot to a {data, size, capacity} array through the exe's Reserve instance; returns the new slot.
+template<void (*Reserve)(U*, void*, U)>
+static inline char* RawArrayPush(U* array, U elemSize)
+{
+    U n = array[1] + 1;
+    if (array[2] <= n)
+        Reserve(array, array, n + (n >> 2));
+    array[1] = n;
+    return (char*)array[0] + (n - 1) * elemSize;
+}
+
 }} // namespace Scaleform::GFx
 
 #endif

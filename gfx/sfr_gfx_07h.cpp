@@ -194,51 +194,11 @@ void FUN_14261f7b0(U* array)
     Memory::Free(data);
 }
 
-// Frees a set whose payload at +0x18 of each live entry is a counted pointer.
-static inline void RawClearPtrSet(U* self)
-{
-    if (!*self)
-        return;
-    U* table = (U*)*self;
-    for (U i = 0; i < table[1] + 1; i++)
-    {
-        char* e = RawEntry(table, i, 0x20);
-        if (*(SPInt*)e != -2)
-        {
-            void* p = *(void**)(e + 0x18);
-            if (p)
-                FUN_14257dcb0(p);
-            *(SPInt*)e = -2;
-        }
-    }
-    Memory::Free(table);
-    *self = 0;
-}
-
 // @0x14261f820
 void FUN_14261f820(U* self) { RawClearPtrSet(self); }
 
 // @0x14261f8b0
 void FUN_14261f8b0(U* self) { RawClearPtrSet(self); }
-
-// Frees a set whose payload at +0x18 (or +0x10) of each live entry is a String.
-static inline void RawClearStringSet(U* self, U payload)
-{
-    if (!*self)
-        return;
-    U* table = (U*)*self;
-    for (U i = 0; i < table[1] + 1; i++)
-    {
-        char* e = RawEntry(table, i, 0x20);
-        if (*(SPInt*)e != -2)
-        {
-            ((String*)(e + payload))->~String();
-            *(SPInt*)e = -2;
-        }
-    }
-    Memory::Free(table);
-    *self = 0;
-}
 
 // @0x14261f940
 void FUN_14261f940(U* self) { RawClearStringSet(self, 0x18); }
@@ -362,22 +322,6 @@ void* FUN_14261f4a0(char* self)
                   String::BernsteinHashFunctionCIS(name.ToCStr(), name.GetSize(), 0x1505));
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
     return self;
-}
-
-// Frees a stride-0x28 / 0x30 set whose entries own nothing.
-static inline void RawClearPlainSet(U* self, U stride)
-{
-    if (!*self)
-        return;
-    U* table = (U*)*self;
-    for (U i = 0; i < table[1] + 1; i++)
-    {
-        char* e = RawEntry(table, i, stride);
-        if (*(SPInt*)e != -2)
-            *(SPInt*)e = -2;
-    }
-    Memory::Free(table);
-    *self = 0;
 }
 
 // The AMP server state's destructor body.
