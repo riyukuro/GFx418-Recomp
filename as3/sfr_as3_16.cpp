@@ -1204,6 +1204,37 @@ Scaleform::GFx::AS3::AvmLoader::~AvmLoader()
     reinterpret_cast<Scaleform::UInt8*>(this)[0x6d] = 0;
 }
 
+extern "C" void FUN_1423dfa20();
+
+// Releases AvmDisplayObj's owned class-name copy and tagged AS3 collectible reference.
+// MS2-FUNCTIONAL 0x1424ddb80: frees the same allocation and releases the same reference; codegen schedules the vfptr store after the class-name load.
+// @0x1424ddb80
+Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj()
+{
+    if (pClassName)
+    {
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
+            DAT_143b15f60, const_cast<char*>(pClassName));
+    }
+
+    Scaleform::UPInt tagged = reinterpret_cast<Scaleform::UPInt>(pAS3CollectiblePtr);
+    if (tagged)
+    {
+        if ((tagged & 1) != 0)
+            pAS3CollectiblePtr = reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(tagged - 1);
+        else
+        {
+            auto* refs = reinterpret_cast<Scaleform::UInt32*>(tagged + 0x10);
+            if ((*refs & 0x3fffff) != 0)
+            {
+                --*refs;
+                FUN_1423dfa20();
+            }
+        }
+    }
+}
+
 // MS2-PIN: ?Sfr34_ModifyOptimizedPlayList@AS3@GFx@Scaleform@@YAXPEAVInteractiveObject@23@@Z 0x142517e70
 // @0x1424e9380
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObject* pcont)
