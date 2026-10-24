@@ -21,6 +21,7 @@
 #include <cstring>
 #include <new>
 #include <random>
+#include <vector>
 
 extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
@@ -818,6 +819,49 @@ extern "C" void FUN_142675d30(void* operation, void*, Scaleform::Render::ImageDa
             out[3] = useDstAlpha ? static_cast<unsigned char>(alpha) : 0xff;
             FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
         }
+    }
+}
+
+// MS2-FUNCTIONAL: flood-fills the executable's clipped pixel region from its seed using 4-connected equal-color spans.
+// @0x142676bd0
+extern "C" void FUN_142676bd0(void* operation, void*, Scaleform::Render::ImageData* image)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    ImagePlane plane;
+    image->GetPlane(0, &plane);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int seedX = *reinterpret_cast<const int*>(op + 0x10);
+    const int seedY = *reinterpret_cast<const int*>(op + 0x14);
+    const int left = 0, top = 0;
+    const int right = static_cast<int>(plane.Width), bottom = static_cast<int>(plane.Height);
+    if (seedX < left || seedY < top || seedX >= right || seedY >= bottom) return;
+    const unsigned fill = *reinterpret_cast<const unsigned*>(op + 0x18);
+    const bool preserveAlpha = *reinterpret_cast<const bool*>(
+        static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8)) + 0x48);
+    unsigned seed = 0;
+    FUN_14257bf70(image, &seed, static_cast<long long>(seedY) * plane.Pitch, static_cast<unsigned>(seedX));
+    if (!preserveAlpha) { seed |= 0xff000000u; }
+    unsigned replacement = fill;
+    if (!preserveAlpha) replacement |= 0xff000000u;
+    if (seed == replacement) return;
+
+    std::vector<std::pair<int, int>> pending;
+    pending.emplace_back(seedX, seedY);
+    while (!pending.empty()) {
+        const int x = pending.back().first;
+        const int y = pending.back().second;
+        pending.pop_back();
+        if (x < left || y < top || x >= right || y >= bottom) continue;
+        unsigned pixel = 0;
+        FUN_14257bf70(image, &pixel, static_cast<long long>(y) * plane.Pitch, static_cast<unsigned>(x));
+        if (!preserveAlpha) pixel |= 0xff000000u;
+        if (pixel != seed) continue;
+        FUN_14257d390(image, static_cast<long long>(y) * plane.Pitch, static_cast<unsigned>(x), replacement);
+        pending.emplace_back(x - 1, y);
+        pending.emplace_back(x + 1, y);
+        pending.emplace_back(x, y - 1);
+        pending.emplace_back(x, y + 1);
     }
 }
 
