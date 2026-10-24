@@ -1799,3 +1799,22 @@ Unk_As3_16zSpriteBaseProbe::Unk_As3_16zSpriteBaseProbe() {}
 // MS2-PIN: ??_7AS3ValueObjectInterface@GFx@Scaleform@@6B@ 0x14317eff8
 // MS2-PIN: ??_7UserDefinedFunction@AS3@GFx@Scaleform@@6B@ 0x14317ef38
 // MS2-PIN: ??_7?$RefCountBase@VWideStringStorage@MovieImpl@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317ca40
+
+// ==== the base-class no-op virtuals the vftables of this range name ==================================================
+namespace Scaleform { namespace GFx {
+
+// DisplayObjContainer's default: containers that cannot take timeline children add nothing.
+// @0x1424e7f30
+DisplayObjectBase* DisplayObjContainer::AddDisplayObject(const CharPosInfo&, const ASString&,
+                                                         const ArrayLH<SwfEvent*, StatMD_Tags_Mem>*, const void*, unsigned,
+                                                         unsigned long, CharacterCreateInfo*, InteractiveObject*)
+{
+    return 0;
+}
+
+// @0x1424eb250
+void DisplayObjectBase::AdvanceFrame(bool, float)
+{
+}
+
+}} // namespace Scaleform::GFx
