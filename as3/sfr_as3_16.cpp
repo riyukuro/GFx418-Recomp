@@ -1448,6 +1448,9 @@ using SfrCx18AbcNamespaceSet = HashSetBase<SfrCx18AbcNamespaceNode, SfrCx18AbcNa
 using SfrCx18ClassTraitsHash = GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>;
 using SfrCx18ClassTraitsNode = HashNode<SfrCx18ClassTraitsHash::Key, GFx::AS3::ClassTraits::Traits*,
     SfrCx18ClassTraitsHash::Key::HashFunctor>;
+using SfrCx18ClassTraitsSet = HashSetBase<SfrCx18ClassTraitsNode, SfrCx18ClassTraitsNode::NodeHashF,
+    SfrCx18ClassTraitsNode::NodeAltHashF, AllocatorDH<SfrCx18ClassTraitsNode, 329>,
+    HashsetCachedNodeEntry<SfrCx18ClassTraitsNode, SfrCx18ClassTraitsNode::NodeHashF> >;
 using SfrCx18ParagraphFormat = Render::Text::ParagraphFormatPtr;
 using SfrCx18ParagraphFormatSet = HashSetBase<SfrCx18ParagraphFormat, SfrCx18ParagraphFormat::HashFunctor,
     SfrCx18ParagraphFormat::HashFunctor, AllocatorLH<SfrCx18ParagraphFormat, 78>,
@@ -1475,6 +1478,8 @@ template SfrCx18DynAttrsSet::~HashSetBase();
 template SfrCx18AbcNamespaceSet::~HashSetBase();
 // @0x1424e0480
 template void SfrCx18ClassTraitsNode::operator=(const SfrCx18ClassTraitsNode::NodeRef&);
+// @0x1424dcfc0
+template SfrCx18ClassTraitsSet::~HashSetBase();
 // MS2-FUNCTIONAL: releases the same cached format references and backing table; the template expansion has different unwind code.
 // @0x1424dd300
 template SfrCx18ParagraphFormatSet::~HashSetBase();
@@ -1631,3 +1636,4 @@ void FUN_1424dcd40(void* self)
 // MS2-PIN: ?SetPtr@?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV1234@PEAVGASRefCountBase@234@@Z 0x1424e0710
 // MS2-PIN: ??1?$HashSetBase@V?$TextFormatPtrWrapper@VParagraphFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@U51234@U?$AllocatorLH@V?$TextFormatPtrWrapper@VParagraphFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@$0EO@@4@V?$HashsetCachedEntry@V?$TextFormatPtrWrapper@VParagraphFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@@4@@Scaleform@@QEAA@XZ 0x1424dd300
 // MS2-PIN: ??1?$HashSetBase@V?$TextFormatPtrWrapper@VTextFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@U51234@U?$AllocatorLH@V?$TextFormatPtrWrapper@VTextFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@$0EO@@4@V?$HashsetCachedEntry@V?$TextFormatPtrWrapper@VTextFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@@4@@Scaleform@@QEAA@XZ 0x1424dd3b0
+// MS2-PIN: ??1?$HashSetBase@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorDH@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@$0BEJ@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dcfc0
