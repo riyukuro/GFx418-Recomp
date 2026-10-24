@@ -62,6 +62,8 @@
 
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_142521f00(void*);
+extern void FUN_142626160(void*);
+extern void FUN_14257eb30(void*);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
     // The executable keeps ModifyOptimizedPlayList out of line at 0x142517e70; its body is recovered in sfr_as3_18.
@@ -72,6 +74,20 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // @0x1424def30
 SlotInfo::~SlotInfo()
 {
+}
+
+// The exe releases the embedded context bag before the entry-data members, then conditionally frees the node.
+// MS2-FUNCTIONAL 0x1424e1bd0: same cleanup order and delete-flag behavior; this generic deleting dtor has no recovered
+// concrete owner type in our headers.
+// @0x1424e1bd0
+void* FUN_1424e1bd0(void* node, Scaleform::UPInt flags)
+{
+    if (*reinterpret_cast<void**>(static_cast<char*>(node) + 0x40))
+        FUN_142626160(static_cast<char*>(node) + 0x40);
+    FUN_14257eb30(node);
+    if (flags & 1)
+        ::operator delete(node);
+    return node;
 }
 
 // MS2-FUNCTIONAL: the exe calls the SPtr<Namespace>/SPtr<VMAbcFile> assignments out of line (0x1424e0550,
