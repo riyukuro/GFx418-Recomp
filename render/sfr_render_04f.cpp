@@ -763,6 +763,31 @@ void FilterPrimitive::SetCacheResults(CacheState state, RenderTarget** results, 
     }
 }
 
+// A filter is emitted once per item: the emit buffer remembers the item, and its pass counter starts over.
+struct FilterEmitBuffer : public RQEmitBuffer
+{
+    void StartEmitting(void* item)
+    {
+        RQEmitBuffer::StartEmitting(item);
+        Pass = 0;
+    }
+
+    UPInt Pass; // +0x08
+};
+
+// @0x14266d830
+void FilterPrimitive::EmitToHAL(RenderQueueItem& item, RenderQueueProcessor& qp)
+{
+    FilterEmitBuffer* emitBuffer = (FilterEmitBuffer*)qp.GetEmitItemBuffer();
+    if (emitBuffer->IsEmitting(&item))
+        return;
+    emitBuffer->StartEmitting(&item);
+    if (pFilters)
+        qp.GetHAL()->PushFilters(this);
+    else
+        qp.GetHAL()->PopFilters();
+}
+
 // @0x14266e5b0
 RenderQueueItem::QIPrepareResult FilterPrimitive::Prepare(RenderQueueItem&, RenderQueueProcessor& qp, bool)
 {
