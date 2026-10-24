@@ -54,6 +54,7 @@
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_taskmanager.h"
+#include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/render/text_core.h"
 #undef GetObject   // windows.h
@@ -1455,6 +1456,10 @@ using SfrCx18TextFormat = Render::Text::TextFormatPtr;
 using SfrCx18TextFormatSet = HashSetBase<SfrCx18TextFormat, SfrCx18TextFormat::HashFunctor,
     SfrCx18TextFormat::HashFunctor, AllocatorLH<SfrCx18TextFormat, 78>,
     HashsetCachedEntry<SfrCx18TextFormat, SfrCx18TextFormat::HashFunctor> >;
+using SfrCx18ASStringValueNode = HashNode<GFx::ASString, GFx::AS3::Value, GFx::ASStringHashFunctor>;
+using SfrCx18ASStringValueSet = HashSetBase<SfrCx18ASStringValueNode, SfrCx18ASStringValueNode::NodeHashF,
+    SfrCx18ASStringValueNode::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
+    HashsetNodeEntry<SfrCx18ASStringValueNode, SfrCx18ASStringValueNode::NodeHashF> >;
 using SfrCx18ClassTraitsCopyAssignment = SfrCx18ClassTraitsNode& (SfrCx18ClassTraitsNode::*)(
     const SfrCx18ClassTraitsNode&);
 static SfrCx18ClassTraitsCopyAssignment SfrCx18ForceClassTraitsCopyAssignment =
@@ -1476,6 +1481,9 @@ template SfrCx18ParagraphFormatSet::~HashSetBase();
 // MS2-FUNCTIONAL: releases the same cached format references and backing table; the template expansion has different unwind code.
 // @0x1424dd3b0
 template SfrCx18TextFormatSet::~HashSetBase();
+// MS2-FUNCTIONAL: releases occupied ASString/Value nodes and frees the backing table; template branch lowering differs.
+// @0x1424dd110
+template SfrCx18ASStringValueSet::~HashSetBase();
 }
 
 extern "C" void FUN_1423dfa20();
