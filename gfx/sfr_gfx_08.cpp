@@ -4,11 +4,12 @@
 // First source of queue unit sfr_gfx_08 (the unit spans several original GFx sources).
 // MS2-UNIT: sfr_gfx_08
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142645610-0x142645cd0 .text$mn
-// MS2-RANGE: 0x142645d10-0x142646180 .text$mn   (0x142645cd0: AS3 SocketBuffer::LTell, not this TU)
+// MS2-RANGE: 0x142645600-0x142645cd0 .text$mn
+// MS2-RANGE: 0x142645cf0-0x142646180 .text$mn   (0x142645cd0: AS3 SocketBuffer::LTell, not this TU)
 
 #include "../include/kernel/sf_alg.h"
 #include "../include/kernel/sf_file.h"
+#include "../include/gfx/gfx_characterdef.h"
 #include "../include/kernel/sf_memory.h"
 #include <string.h>
 
@@ -377,6 +378,86 @@ int SF_STDCALL ZLibFile::ZLib_InitStream(z_stream_s* pstream, void* pheapAddr, v
     pstream->adler     = 0;
     pstream->reserved  = 0;
     return inflateInit_(pstream, "1.2.5", sizeof(z_stream_s));
+}
+
+// ---- (sfr24) virtuals the full exe links by name (work/sfr35/outside-units.tsv) ----
+
+// A plain character definition draws nothing.
+// @0x142645600
+void CharacterDef::Display(DisplayContext&, DisplayObjectBase*)
+{
+}
+
+// The inflated stream cannot be resized, written or flushed to.
+// @0x142645910
+bool ZLibFile::ChangeSize(int)
+{
+    return false;
+}
+
+// @0x1426459d0
+int ZLibFile::CopyFromStream(File*, int)
+{
+    return 0;
+}
+
+// @0x1426459e0
+bool ZLibFile::Flush()
+{
+    return true;
+}
+
+// @0x1426459f0
+int ZLibFile::GetErrorCode()
+{
+    return pImpl ? pImpl->ErrorCode : 0;
+}
+
+// The path of the compressed source.
+// @0x142645a00
+const char* ZLibFile::GetFilePath()
+{
+    return pImpl ? pImpl->pIn->GetFilePath() : 0;
+}
+
+// @0x142645c70
+bool ZLibFile::IsValid()
+{
+    return pImpl != 0;
+}
+
+// @0x142645c80
+bool ZLibFile::IsWritable()
+{
+    return false;
+}
+
+// @0x142645cf0
+int ZLibFile::Read(UByte* pbuffer, int numBytes)
+{
+    if (!pImpl)
+        return -1;
+    return pImpl->Inflate(pbuffer, numBytes);
+}
+
+// @0x1426460b0
+int ZLibFile::SkipBytes(int numBytes)
+{
+    return Seek(numBytes, Seek_Cur);
+}
+
+// @0x1426460c0
+int ZLibFile::Tell()
+{
+    if (!pImpl)
+        return -1;
+    return pImpl->UserPos;
+}
+
+// @0x1426460e0
+int ZLibFile::Write(const UByte*, int)
+{
+    return 0;
 }
 
 }} // namespace Scaleform::GFx
