@@ -594,6 +594,154 @@ CheckResult Add(StringManager& sm, Value& result, const Value& l, const Value& r
     return false;
 }
 
+// (sfr21) Slots keeps its table edits protected; the free AddInterfaceSlots below reaches them through this view.
+struct Sfr21SlotsAccess : Slots
+{
+    using Slots::Add;
+    using Slots::FindSlotInfoIndex;
+    using Slots::FindAddOwnSlotInfo;
+};
+
+ClassTraits::Traits** FUN_142505aa0(TClassTraitsCache* hash, const Multiname& mn);   // MultinameHash::Get
+const Traits* FUN_14250d760(VM& vm, const Multiname& mn);                             // the traits that define mn
+ClassTraits::Traits* FUN_142501310(VM& vm, const Traits& scope, const Multiname& mn); // class traits of mn on one scope
+void FUN_14252ecb0(VM* vm, const VM::Error* error, const void* classInfo);            // raise as an instance of the class
+namespace fl { extern const ClassInfo VerifyErrorCI; }
+
+// A slot namespace sns answers to ns: same kind, protected ones by kind alone, private ones by identity, the rest by
+// uri.
+static bool Sfr21SlotNsMatches(const Instances::Namespace& sns, const Instances::Namespace& ns)
+{
+    if (sns.GetKind() != ns.GetKind())
+        return false;
+    if (sns.GetKind() == Abc::NS_Protected)
+        return true;
+    return sns.GetKind() == Abc::NS_Private ? &sns == &ns : sns.GetUri().GetNode() == ns.GetUri().GetNode();
+}
+
+// The slot of self named name in namespace ns (own or a parent's), or -1.
+static SPInt Sfr21FindSlotByNs(const Traits& self, const ASString& name, const Instances::Namespace& ns)
+{
+    const UInt32* first = self.FindSlotValues(name);
+    if (!first)
+        return -1;
+    for (SPInt ind = *first; ind >= 0; ind = self.GetPrevSlotIndex(ind))
+    {
+        if (Sfr21SlotNsMatches(*self.GetSlotInfo(AbsoluteIndex(ind)).pNs, ns))
+            return ind;
+    }
+    return -1;
+}
+
+// Traits::AddInterfaceSlots: for every interface the ABC class implements (its instance traits, then the parent
+// interfaces), each interface slot not yet present gets an alias of the public slot of that name, or for an
+// interface class a copy bound to the interface's methods. VerifyError 1014 for an unknown interface, 1122 when a
+// class does not implement an interface method.
+// MS2-FUNCTIONAL: free function in place of the Traits member (not declared in as3_obj.h)
+// @0x1424e80f0
+void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo& info)
+{
+    VM& vm = self->GetVM();
+    Sfr21SlotsAccess& slots = static_cast<Sfr21SlotsAccess&>(static_cast<Slots&>(*self));
+    const Abc::Instance::Interfaces& ifaces = info.inst_info.implemented_interfaces;
+    for (UPInt i = 0; i < ifaces.info.GetSize(); ++i)
+    {
+        Multiname mn(file, file.GetAbcFile().Const_Pool.GetMultiname(ifaces.info[i]));
+
+        ClassTraits::Traits* ctr = NULL;
+        if (mn.IsAnyType())
+            ctr = vm.TraitsClassClass;
+        else
+        {
+            ClassTraits::Traits** pctr = FUN_142505aa0(&vm.ClassTraitsSet, mn);
+            ctr = pctr ? *pctr : NULL;
+        }
+        if (!ctr)
+        {
+            const Traits* owner = FUN_14250d760(vm, mn);
+            const VMAbcFile* ownerFile = owner ? owner->GetFilePtr() : NULL;
+            for (UPInt g = vm.GlobalObjects.GetSize(); g != 0; --g)
+            {
+                const Traits& scope = reinterpret_cast<Object*>(vm.GlobalObjects[g - 1].GetPtr())->GetTraits();
+                if (owner && ownerFile != scope.GetFilePtr())
+                    continue;
+                ctr = FUN_142501310(vm, scope, mn);
+                if (ctr)
+                    break;
+            }
+        }
+        InstanceTraits::Traits* itr = ctr ? ctr->ITraits.GetPtr() : NULL;
+        if (!itr)
+        {
+            VM::Error err(static_cast<VM::ErrorID>(1014), vm, mn.Name);
+            FUN_14252ecb0(&vm, &err, &fl::VerifyErrorCI);
+            return;
+        }
+
+        const AS3::Traits& it = *itr;
+        for (UPInt s = 0; s < it.GetSlotInfoNum(); ++s)
+        {
+            ASString name(it.GetSlotNameNode(AbsoluteIndex(s)));
+            const SlotInfo& isi = it.GetSlotInfo(AbsoluteIndex(s));
+            const Instances::Namespace& ins = *isi.pNs;
+            if (Sfr21FindSlotByNs(*self, name, ins) >= 0)
+                continue;
+
+            const AbsoluteIndex pub = slots.FindSlotInfoIndex(name, vm.GetPublicNamespace());
+            if (pub.Get() >= 0)
+            {
+                // Alias the public slot under the interface namespace.
+                SlotInfo alias(self->GetSlotInfo(pub));
+                alias.pNs = isi.pNs;
+                slots.Add(name, alias);
+                continue;
+            }
+            if (!info.inst_info.IsInterface())
+            {
+                VM::Error err(static_cast<VM::ErrorID>(1122), vm, name.ToCStr());
+                FUN_14252ecb0(&vm, &err, &fl::VerifyErrorCI);
+                return;
+            }
+
+            // An interface method: mark its namespace and copy the slot, bound to the interface's methods.
+            const SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(isi.BindType);
+            *reinterpret_cast<UPInt*>(reinterpret_cast<char*>(const_cast<Instances::Namespace*>(&ins)) + 0x20) |= 0x10;
+            SPInt ind = Sfr21FindSlotByNs(*self, name, ins);
+            if (ind < 0)
+                ind = slots.Add(name, isi).Get();
+            SlotInfo& si = self->GetOwnSlotInfo(AbsoluteIndex(ind));
+            ASString siName(si.Name.GetPtr());
+            const VTable& ivt = itr->GetVT();
+            switch (bt)
+            {
+            case SlotInfo::BT_Code:
+            case SlotInfo::BT_Get:
+                si.Bind(bt, self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd], bt, siName));
+                break;
+            case SlotInfo::BT_Set:
+                si.Bind(SlotInfo::BT_Set,
+                        self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd + 1], SlotInfo::BT_Set, siName));
+                break;
+            case SlotInfo::BT_GetSet:
+                si.Bind(SlotInfo::BT_Get,
+                        self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd], SlotInfo::BT_Get, siName));
+                si.Bind(SlotInfo::BT_Set,
+                        self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd + 1], SlotInfo::BT_Set, siName));
+                break;
+            default:
+                break;
+            }
+        }
+
+        // The parent interface of an ABC interface (InstanceTraits::UserDefined keeps its ClassInfo at +0xd8).
+        const AS3::Traits* parent = itr->GetParent();
+        if (parent && parent->IsAbcObject())
+            Sfr21AddInterfaceSlots(self, file,
+                                   **reinterpret_cast<const Abc::ClassInfo* const*>(
+                                       reinterpret_cast<const char*>(parent) + 0xd8));
+    }
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace Render {
