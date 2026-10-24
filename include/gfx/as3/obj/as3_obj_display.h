@@ -185,6 +185,9 @@ namespace Instances { namespace fl_display {
 
         // (appended, sfr24) whether pLoaderInfo is set.
         bool HasLoaderInfo() const;   // 0x1424445f0
+        // (sfr_as2_01e) pLoaderInfo from the loader's content LoaderInfo, or set directly.
+        void SetLoaderInfo(const Instances::fl_display::Loader& l);   // 0x142446e00
+        void SetLoaderInfo(Instances::fl_display::LoaderInfo* li);    // 0x142446e70
     };
 
     // 0x68 bytes: no members of its own.
@@ -215,6 +218,8 @@ namespace Instances { namespace fl_display {
 
         // The bitmap data's image resource, NULL without bitmap data (0x142443e40).
         ImageResource* GetImageResource() const;
+        // (sfr_as2_01e) "never" / "always" / "auto" as 0 / 1 / 2; throws on anything else (0x142446f30).
+        SInt32 String2PixelSnapping(const char* pname);
 
         // @0x1424484e0
         void bitmapDataGet(SPtr<Instances::fl_display::BitmapData>& result);
@@ -554,6 +559,8 @@ namespace Instances { namespace fl_display {
 
         // The display object of the content (0x142443d00).
         GFx::DisplayObject* GetContentDispObj() const;
+        // (sfr_as2_01e) sets the pLoader back pointer (0x142446d90).
+        void SetLoader(Instances::fl_display::Loader* p);
 
         // @0x1424474c0
         void actionScriptVersionGet(UInt32& result);
