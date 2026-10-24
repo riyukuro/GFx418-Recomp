@@ -37,6 +37,13 @@ void FUN_1424d79f0(void* err, int id, void* vm, const char* a1, const void* a2);
 void FUN_142529f70(void* button, int state, void* obj);   // AvmButton::SetStateObject
 void FUN_1424ffc10(Scaleform::UPInt a, Scaleform::UPInt b, Scaleform::UPInt c, int d, int e);
 void FUN_1424f03f0();
+void FUN_14241a500(Scaleform::UPInt traits, Scaleform::UPInt* ret, Scaleform::UPInt t);   // InstanceTraits::Array::MakeInstance
+void FUN_14241d980(Scaleform::UPInt arr, Scaleform::UPInt stack, Scaleform::UInt32 n);   // Array: fill from the operand stack
+void FUN_14241b920(Scaleform::UPInt tbl, void* ret, Scaleform::UPInt a, Scaleform::UPInt b);   // class table: find interface traits
+const Scaleform::GFx::AS3::Traits* FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& obj);   // Value traits
+void* FUN_14250fa80(const Scaleform::GFx::AS3::Traits* tr);   // Traits::GetVT
+const char* FUN_142529030(const Scaleform::GFx::AS3::SlotInfo* si, void* res, Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::AS3::Value& obj, void* vt);   // SlotInfo::SetSlotValue
+void FUN_1424e6aa0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::SPInt idx, int b, int c);   // Tracer: trace a block from idx
 void FUN_14241fe30(void* arr, Scaleform::UInt32 size);   // Array::SetLength
 bool FUN_142514000(Scaleform::UPInt tracer, const void* v);   // Tracer::IsBooleanType
 bool FUN_142514470(Scaleform::UPInt tracer, const void* v);   // Tracer::IsNumberType
@@ -48,8 +55,8 @@ bool FUN_142514a80(Scaleform::UPInt tracer, void* traits);   // Tracer::IsPrimit
 void* FUN_14250fe80(void* state, const void* v);             // TR::State::GetValueTraits
 void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
 void FUN_14252f4f0(void* v);                                          // Value: tracer boolean conversion
-char* FUN_1424f0d30(void* v, void* ok, long* out);                  // Value::Convert2SInt32 (CheckResult returned in *ok)
 char* FUN_1424f1a30(void* v, void* ok, unsigned long* out);         // Value::Convert2UInt32
+char* FUN_1424f0d30(void* v, void* ok, long* out);                  // Value::Convert2SInt32 (CheckResult returned in *ok)
 void FUN_1424d9640(void* ra, Scaleform::GFx::AS3::VM* vm, void* state, Scaleform::UInt32 argc);   // TR::ReadArgs::ReadArgs
 void FUN_1424dea90(void* ra);                                                                         // TR::ReadArgs::~ReadArgs
 void FUN_1424d9530(void* ra, Scaleform::GFx::AS3::VM* vm, Scaleform::UInt32 argc);                     // ReadArgs::ReadArgs
@@ -2039,6 +2046,7 @@ void InteractiveObject::SetBlendMode(Render::BlendMode mode)
 namespace AS3 {
 
 static inline UPInt Sfr31Rd(UPInt base, UPInt off) { return *reinterpret_cast<const UPInt*>(base + off); }
+static inline void Sfr31Wr(UPInt base, UPInt off, UPInt v) { *reinterpret_cast<UPInt*>(base + off) = v; }
 
 // @0x1425262e0
 void Sfr31AvmDisplayObjSetAS3Obj(UPInt self, UPInt obj)
@@ -2467,6 +2475,183 @@ void Sfr31SetMouseCursorType(UPInt self, const ASString* name, UInt32 mouse)
     *p0 = v;
 }
 
+// Tracer::Recalculate: a position to retrace and the argument it needs (0x10 bytes).
+class Tracer { public: struct Recalculate { UPInt Pos; UInt32 Arg; UInt32 Pad; }; };
+
+const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPInt& ind, Object* obj);   // 0x142500f90
+
+// batch 18
+// LinearHeap::allocFromLastPage: bump-allocates from the last page, or (when that page is untouched) replaces it with one
+// big enough for the request.
+// MS2-FUNCTIONAL 0x142532060: functional recovery; codegen differs from exe
+// @0x142532060
+void* Sfr31LinearHeapAllocFromLastPage(UPInt self, UPInt n)
+{
+    UPInt page = Sfr31Rd(self, 0x18);
+    UPInt used = Sfr31Rd(page, 0x10);
+    if (static_cast<SPInt>(n) <= static_cast<SPInt>(Sfr31Rd(page, 8) - used))
+    {
+        Sfr31Wr(page, 0x10, used + n);
+        return reinterpret_cast<void*>(Sfr31Rd(Sfr31Rd(self, 0x18), 0x10) - n);
+    }
+    if (used == Sfr31Rd(page, 0))
+    {
+        MemoryHeap* heap = reinterpret_cast<MemoryHeap*>(Sfr31Rd(self, 0));
+        if (Sfr31Rd(page, 0) != 0)
+            heap->Free(reinterpret_cast<void*>(Sfr31Rd(page, 0)));
+        UPInt pageSize = Sfr31Rd(self, 8);
+        UPInt total = n - 1 + pageSize;
+        total -= total % pageSize;
+        UPInt p = reinterpret_cast<UPInt>(heap->Alloc(total, static_cast<const AllocInfo*>(0)));
+        UPInt cur = Sfr31Rd(self, 0x18);
+        Sfr31Wr(cur, 0x10, p);
+        Sfr31Wr(Sfr31Rd(self, 0x18), 0, p);
+        Sfr31Wr(Sfr31Rd(self, 0x18), 8, Sfr31Rd(Sfr31Rd(self, 0x18), 0) + total);
+        Sfr31Wr(Sfr31Rd(self, 0x18), 0x10, Sfr31Rd(Sfr31Rd(self, 0x18), 0x10) + n);
+        return reinterpret_cast<void*>(Sfr31Rd(Sfr31Rd(self, 0x18), 0));
+    }
+    return 0;
+}
+
+// SetSuperProperty: stores v through the parent traits' fixed slot for the multiname; false when there is no such slot.
+// MS2-FUNCTIONAL 0x14252a150: functional recovery; codegen differs from exe
+// @0x14252a150
+CheckResult SetSuperProperty(VM& vm, const Traits* tr, const Value& obj, const Multiname& mn, const Value& v)
+{
+    if (tr == 0)
+        tr = FUN_14250ffc0(vm, obj);
+    const Traits* parent = tr->GetParent();
+    if (parent != 0)
+    {
+        UPInt ind = 0;
+        const SlotInfo* si = FindFixedSlot(vm, *parent, mn, ind, 0);
+        if (si != 0)
+        {
+            UByte res[16];
+            void* vt = FUN_14250fa80(parent);
+            if (*FUN_142529030(si, res, vm, v, obj, vt) != 0)
+                return true;
+        }
+    }
+    return false;
+}
+
+// Tracer: records a position to retrace after the target of a jump (backward jumps only note the target's position).
+// MS2-FUNCTIONAL 0x14252c9f0: functional recovery; codegen differs from exe
+// @0x14252c9f0
+void Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg)
+{
+    SPInt idx = off + base;
+    if (off < 0)
+    {
+        FUN_14251fcd0(tr, Sfr31Rd(Sfr31Rd(tr, 0xd0) + idx * 8, 0) - Sfr31Rd(Sfr31Rd(tr, 0x28), 8) + static_cast<SPInt>(arg));
+        return;
+    }
+    FUN_1424e6aa0(tr, blk, idx, 0, 1);
+    FUN_14251fcd0(tr, idx);
+    UPInt pos = Sfr31Rd(Sfr31Rd(tr, 0x28), 8);
+    ArrayDataBase<Tracer::Recalculate, AllocatorDH_POD<Tracer::Recalculate, 328>, ArrayDefaultPolicy>* arr =
+        reinterpret_cast<ArrayDataBase<Tracer::Recalculate, AllocatorDH_POD<Tracer::Recalculate, 328>, ArrayDefaultPolicy>*>(tr + 0xb0);
+    UPInt n = arr->Size + 1;
+    arr->ResizeNoConstruct(reinterpret_cast<const void*>(Sfr31Rd(tr, 0xc8)), n);
+    Tracer::Recalculate& r = arr->Data[n - 1];
+    r.Pos = pos - 1;
+    r.Arg = static_cast<UInt32>(arg);
+}
+
+// batch 19
+// nextname/nextvalue share the shape: the index on top is consumed, the object below becomes the name/value.
+static __forceinline void Sfr31ExecNextCommon(VM* vm, bool wantValue)
+{
+    Value*& top = *reinterpret_cast<Value**>(reinterpret_cast<UPInt>(vm) + 0x50);
+    UInt64 tmp;
+    long idx;
+    const bool ok = *FUN_1424f0d30(top, &tmp, &idx) != 0;
+    if (ok)
+        top->SetSInt32(idx);
+    top->~Value();
+    --top;
+    if (ok)
+    {
+        Object* obj = *reinterpret_cast<Object**>(reinterpret_cast<UPInt>(top) + 0x10);
+        if (wantValue)
+            obj->GetNextPropertyValue(*top, GlobalSlotIndex(static_cast<UInt32>(idx)));
+        else
+            obj->GetNextPropertyName(*top, GlobalSlotIndex(static_cast<UInt32>(idx)));
+    }
+}
+
+// MS2-FUNCTIONAL 0x14253d2f0: object released through Value::~Value and the namespace case dispatched virtually
+// @0x14253d2f0
+void Sfr27ExecNextName(VM* vm) { Sfr31ExecNextCommon(vm, false); }
+
+// MS2-FUNCTIONAL 0x14253d440: functional recovery; codegen differs from exe
+// @0x14253d440
+void Sfr27ExecNextValue(VM* vm) { Sfr31ExecNextCommon(vm, true); }
+
+// As Sfr31SetTextOnObject, for a UTF-8 string; a TextField also has its html flag (+0xfc bit 1) synced to the request.
+// MS2-FUNCTIONAL 0x14252a230: behavior-equivalent recovery; codegen differs from exe
+// @0x14252a230
+bool Sfr31SetTextOnObjectUtf8(UPInt* self, UPInt obj, const char* text, bool html)
+{
+    UPInt a = Sfr31Rd(obj, 0x20);
+    if ((*reinterpret_cast<SInt32*>(a + 0x70) - 0x11U >= 0xc) || ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<UInt8*>(a + 0x68) >> 5)) & 1) == 0))
+        return false;
+    TextField* tf = *reinterpret_cast<TextField**>(obj + 0x58);
+    typedef SInt32 (*Kind)(void*);
+    if (reinterpret_cast<Kind>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(tf), 0), 0x258))(tf) != 4)
+    {
+        struct RawGfxValue { UPInt iface; UInt32 type; const char* str; } v = { 0, 6, text };
+        typedef char (*Set)(void*, UPInt, const char*, void*, SInt32);
+        char r = reinterpret_cast<Set>(Sfr31Rd(self[0], 0x28))(self, obj, html ? "htmlText" : "text", &v, 1);
+        if ((v.type >> 6 & 1) != 0)
+        {
+            typedef void (*Rel)(void*, void*, const char*);
+            reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(v.iface, 0), 0x10))(reinterpret_cast<void*>(v.iface), &v, v.str);
+        }
+        return r != 0;
+    }
+    UInt32& flags = *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(tf) + 0xfc);
+    if (!html)
+        flags &= 0xfffffffd;
+    else
+        flags |= 2;
+    tf->SetTextValue(text, html, true);
+    return true;
+}
+
+// newarray: a new Array filled from the n values on the operand stack, pushed.
+// MS2-FUNCTIONAL 0x14253c0f0: behavior-equivalent recovery; codegen differs from exe
+// @0x14253c0f0
+void Sfr31ExecNewArray(UPInt vm, UInt32 n)
+{
+    UPInt traits = Sfr31Rd(Sfr31Rd(vm, 0x238), 0xc0);
+    UPInt arr;
+    FUN_14241a500(traits, &arr, traits);
+    FUN_14241d980(arr + 0x38, vm + 0x48, n);
+    Value v(Pickable<Object>(reinterpret_cast<Object*>(arr)));
+    ExecPushCopy(reinterpret_cast<VM*>(vm), v);
+}
+
+// A new instance of the interface traits found by name (a, b), pushed on the operand stack.
+// MS2-FUNCTIONAL 0x14253c200: behavior-equivalent recovery; codegen differs from exe
+// @0x14253c200
+void Sfr31ExecPushInterfaceInstance(UPInt vm, UPInt a, UPInt b)
+{
+    UPInt owner = Sfr31Rd(Sfr31Rd(vm, 0x240), 0xc0);
+    UPInt tbl = Sfr31Rd(owner, 0x80);
+    if (tbl == 0)
+    {
+        typedef void (*Init)(UPInt);
+        reinterpret_cast<Init>(Sfr31Rd(Sfr31Rd(owner, 0), 0x68))(owner);
+        tbl = Sfr31Rd(owner, 0x80);
+    }
+    SPtr<InstanceTraits::Interface> iface;
+    FUN_14241b920(tbl, &iface, a, b);
+    Value v(iface->MakeInstance(*iface));
+    ExecPushCopy(reinterpret_cast<VM*>(vm), v);
+}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
@@ -2499,6 +2684,7 @@ template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Abc::ClassInfo*,Scal
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Abc::MetadataInfo*,Scaleform::AllocatorLH_POD<Scaleform::GFx::AS3::Abc::MetadataInfo*,338>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Abc::MethodBodyInfo*,Scaleform::AllocatorLH_POD<Scaleform::GFx::AS3::Abc::MethodBodyInfo*,338>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Abc::MethodInfo*,Scaleform::AllocatorLH_POD<Scaleform::GFx::AS3::Abc::MethodInfo*,338>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void Scaleform::ArrayDataBase<Scaleform::GFx::Value,Scaleform::AllocatorGH_CPP<Scaleform::GFx::Value,2>,Scaleform::ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 // INST-Reserve-END
 
 // INST-HashRaw-BEGIN

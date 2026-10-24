@@ -151,6 +151,7 @@ public:
     void ReplaceTextA(const wchar_t* pstr, UPInt beginPos, UPInt endPos, UPInt strLen); // exe 0x1425bb810
     // (appended, sfr31) Sets the text, or the HTML text when html is set.
     void SetText(const wchar_t* ptext, bool html = false);       // exe 0x1425bd530
+    bool SetTextValue(const char* ptext, bool html = false, bool notifyVariable = true); // exe 0x1425bd9a0
 
 private:
     UByte Unrecovered[0x148];
