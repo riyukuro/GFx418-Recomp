@@ -1548,3 +1548,8 @@ void FUN_1424dcd40(void* self)
 // MS2-PIN: ??_GObject@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3580
 // MS2-PIN: ??_GRTraits@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3690
 // MS2-PIN: ??4?$HashNode@UKey@?$MultinameHash@PEAVTraits@ClassTraits@AS3@GFx@Scaleform@@$0BEJ@@AS3@GFx@Scaleform@@PEAVTraits@ClassTraits@345@UHashFunctor@12345@@Scaleform@@QEAAAEAU01@AEBU01@@Z 0x1424e0420
+// MS2-PIN: ??4?$SPtr@VFunction@InstanceTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424e0630
+// MS2-PIN: ??4?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424e06a0
+// MS2-PIN: ??4?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424e0780
+// MS2-PIN: ??4?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424e07f0
+// MS2-PIN: ?SetPtr@?$SPtr@VGASRefCountBase@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV1234@PEAVGASRefCountBase@234@@Z 0x1424e0710
