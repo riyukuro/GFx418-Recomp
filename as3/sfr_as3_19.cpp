@@ -174,6 +174,7 @@ Scaleform::UPInt* FUN_142419e50(Scaleform::UPInt classTraits, void* tmp);   // c
 unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, unsigned a, unsigned b);   // read the value behind a slot reference
 void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   // next enumeration index of a string-like object
 Scaleform::UPInt FUN_142525270(void* vm, void* multiname);   // class traits named by a static multiname, or 0
+Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Function> FUN_14241a7d0(void* self, Scaleform::GFx::AS3::VMAbcFile& file, Scaleform::UInt32 method_ind, const Scaleform::GFx::AS3::ScopeStackType& ss, Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript& gos);
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -7168,6 +7169,55 @@ void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
     }
     mn.~Multiname();
     FUN_1424de9e0(raBuf);
+}
+// ---- batch 68
+// newfunction opcode: builds the closure scope (the running frame's saved scope followed by what the innermost frame pushed on the scope
+// stack), creates the Function of method methodInd on the Function class and pushes it.
+// MS2-FUNCTIONAL 0x14253c910: raw-offset model; codegen differs from the exe
+// @0x14253c910
+void Sfr31ExecNewFunction(UPInt vmAddr, UPInt frame, UInt32 methodInd)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    ArrayDH<Value> ss(reinterpret_cast<MemoryHeap*>(Sfr31Rd(vmAddr, 0x38)));
+    const ArrayDH<Value>* saved = reinterpret_cast<const ArrayDH<Value>*>(Sfr31Rd(frame, 0x38));
+    if (saved != 0 && saved->GetSize() != 0)
+        for (UPInt i = 0; i < saved->GetSize(); ++i)
+            ss.PushBack((*saved)[i]);
+    const UPInt nFrames = Sfr31Rd(vmAddr, 0x78);
+    UPInt base = 0;
+    if (nFrames != 0)
+        base = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), ((nFrames - 1) >> 6) * 8) + ((nFrames - 1) & 0x3f) * 0xa8, 8);
+    const UPInt scopeEnd = Sfr31Rd(vmAddr, 0x168);
+    for (UPInt i = base; i < scopeEnd; ++i)
+        ss.PushBack(*reinterpret_cast<const Value*>(Sfr31Rd(vmAddr, 0x160) + i * 0x20));
+    UPInt gos = 0;
+    if (nFrames != 0)
+    {
+        const UPInt top = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), ((nFrames - 1) >> 6) * 8) + ((nFrames - 1) & 0x3f) * 0xa8;
+        const ArrayDH<Value>* sv = reinterpret_cast<const ArrayDH<Value>*>(Sfr31Rd(top, 0x38));
+        if (sv == 0 || sv->GetSize() == 0)
+        {
+            const UPInt p = Sfr31Rd(Sfr31Rd(top, 0x18), 8);
+            if (*reinterpret_cast<const UInt32*>(p) - 0xc & 0x1f)
+                gos = 0;
+            if (((*reinterpret_cast<const UInt32*>(p) & 0x1f) - 0xc) < 4)
+                gos = Sfr31Rd(p, 0x10);
+        }
+        else
+            gos = Sfr31Rd(reinterpret_cast<UPInt>(&(*sv)[0]), 0x10);
+    }
+    const UPInt ftr = Sfr31Rd(Sfr31Rd(vmAddr, 0x208), 0xc0);
+    UPInt cls = Sfr31Rd(ftr, 0x80);
+    if (cls == 0)
+    {
+        typedef void (*MakeFn)(UPInt);
+        reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(ftr, 0), 0x68))(ftr);
+        cls = Sfr31Rd(ftr, 0x80);
+    }
+    Value v;
+    v.PickUnsafe(FUN_14241a7d0(reinterpret_cast<void*>(cls), *reinterpret_cast<VMAbcFile*>(Sfr31Rd(frame, 0x28)), methodInd, ss,
+                               *reinterpret_cast<Instances::fl::GlobalObjectScript*>(gos)));
+    ExecPushCopy(&vm, v);
 }
 }}} // namespace Scaleform::GFx::AS3
 
