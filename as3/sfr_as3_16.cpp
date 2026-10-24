@@ -2,7 +2,8 @@
 // source, written from the exe.
 // MS2-UNIT: sfr_as3_16
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424dc870-0x1424e2040 .text$mn
+// MS2-RANGE: 0x1424dc870-0x1424e0a70 .text$mn
+// MS2-RANGE: 0x1424e0b40-0x1424e2040 .text$mn
 // MS2-RANGE: 0x1424e2bb0-0x1424e2c10 .text$mn
 // MS2-RANGE: 0x1424e3020-0x1424e3150 .text$mn
 // MS2-RANGE: 0x1424e3150-0x1424e31e0 .text$mn
