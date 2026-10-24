@@ -149,6 +149,8 @@ void FUN_1424dcac0(void* node);   // ~HashNode<DynAttrsKey,Value>
 void FUN_1425149a0(Scaleform::UPInt traits, Scaleform::UPInt src);   // traits setup from a class-traits owner
 void FUN_142514560(Scaleform::UPInt src, Scaleform::UPInt dst);   // traits setup from instance traits
 
+void FUN_14250b240(Scaleform::UPInt link, Scaleform::UPInt* out, Scaleform::SPInt idx);   // VMAbcFile::GetInternedString (hidden return)
+Scaleform::UPInt FUN_142507b80(Scaleform::UPInt traitsOwner);   // factory for a class traits' owner
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -5583,6 +5585,125 @@ ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info)
     return Sfr27GetClassTraitsByName(vm, &name, ns.GetPtr());
 }
 
+// ---- batch 43
+// Resolves the class traits named by a multiname entry; the Vector.<T> cases map to the specialised builtin traits.
+// MS2-FUNCTIONAL 0x142524f60: raw-offset model; codegen differs from the exe
+// @0x142524f60
+UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry)
+{
+    const UPInt file = Sfr31Rd(link, 0x28);
+    if (entry == file + 0xe8)
+        return Sfr31Rd(vmAddr, 0x1f0);
+    UPInt nameNode = 0;
+    FUN_14250b240(link, &nameNode, *reinterpret_cast<const int*>(entry + 8));
+    UPInt r;
+    if (nameNode == Sfr31Rd(Sfr31Rd(vmAddr, 0x10), 0x18))
+        r = Sfr31Rd(vmAddr, 0x1f8);
+    else
+    {
+        const UPInt ns = FUN_14250ae60(link, *reinterpret_cast<const int*>(entry + 4));
+        ASString name(reinterpret_cast<ASStringNode*>(nameNode));
+        r = reinterpret_cast<UPInt>(Sfr27GetClassTraitsByName(reinterpret_cast<VM*>(vmAddr), &name, reinterpret_cast<const Instances::Namespace*>(ns)));
+        if (r == Sfr31Rd(vmAddr, 0x248))
+        {
+            const int idx = *reinterpret_cast<const int*>(entry + 0xc);
+            UPInt r2;
+            if (idx == 0)
+                r2 = Sfr31Rd(vmAddr, 0x1f8);
+            else
+                r2 = Sfr31ResolveClassTraits(vmAddr, link, static_cast<SPInt>(idx) * 0x10 + Sfr31Rd(file, 0xb8));
+            if (r2 != 0)
+            {
+                if (r2 == Sfr31Rd(vmAddr, 0x220))
+                    r = Sfr31Rd(vmAddr, 0x250);
+                else if (r2 == Sfr31Rd(vmAddr, 0x228))
+                    r = Sfr31Rd(vmAddr, 0x258);
+                else if (r2 == Sfr31Rd(vmAddr, 0x218))
+                    r = Sfr31Rd(vmAddr, 0x260);
+                else if (r2 == Sfr31Rd(vmAddr, 0x230))
+                    r = Sfr31Rd(vmAddr, 0x268);
+                else if (Sfr31Rd(r2, 0xc0) != 0)
+                    r = FUN_142563380(FUN_142507b80(Sfr31Rd(r, 0xc0)), r2);
+            }
+        }
+    }
+    Sfr31ReleaseStr(nameNode);
+    return r;
+}
+// ---- batch 44
+// setsuper: pops the value and the object, then stores through the parent traits' fixed slot or raises a ReferenceError.
+// MS2-FUNCTIONAL 0x142540490: raw-offset model; codegen differs from the exe
+// @0x142540490
+void Sfr31ExecSetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    const UPInt cvm = Sfr31Rd(file, 0x20);
+    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
+    Sfr31RawTraitsVal val;
+    Sfr31TakeTop(cvm, val);
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
+    FUN_1425201f0(&ctx, &mn);
+    const UPInt st = Sfr31Rd(ctx.stack, 8);
+    Sfr31RawTraitsVal obj;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(st)[i];
+    Sfr31Wr(ctx.stack, 8, st - 0x20);
+    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
+        const UPInt frame = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8;
+        UPInt tr = Sfr31Rd(frame, 0);
+        VM& vm = *reinterpret_cast<VM*>(vmAddr);
+        if (!SetSuperProperty(vm, reinterpret_cast<const Traits*>(tr), *reinterpret_cast<const Value*>(&obj), mn, *reinterpret_cast<const Value*>(&val)))
+        {
+            VM::Error e(static_cast<VM::ErrorID>(0x40b), vm);
+            vm.ThrowReferenceError(e);
+        }
+    }
+    reinterpret_cast<Value*>(&obj)->~Value();
+    mn.~Multiname();
+    reinterpret_cast<Value*>(&val)->~Value();
+}
+// ---- batch 45
+// Native with a required object argument: the current frame's parent-traits helper is invoked with the remaining arguments.
+// MS2-FUNCTIONAL 0x1425363e0: raw-offset model; codegen differs from the exe
+// @0x1425363e0
+void Sfr31ExecCallSuper(UPInt vmAddr, UInt32 a, UInt32 n)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, n);
+    const UPInt frame = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
+    const UPInt top = Sfr31Rd(frame, 8);
+    Sfr31RawTraitsVal val;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&val)[i] = reinterpret_cast<const UInt32*>(top)[i];
+    Sfr31Wr(frame, 8, top - 0x20);
+    Sfr31ThrowIfNullOperand(vmAddr, reinterpret_cast<const UInt32*>(&val));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UPInt cnt = Sfr31Rd(vmAddr, 0x78) - 1;
+        UPInt tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (cnt >> 6) * 8) + 0x40 + (cnt & 0x3f) * 0xa8, 0);
+        if (tr == 0)
+            tr = FUN_14250ffc0(&vm, reinterpret_cast<const Value*>(&val));
+        const UPInt parent = Sfr31Rd(tr, 0x88);
+        if (parent != 0)
+        {
+            const UInt32 argc = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+            void* args = argc > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
+            FUN_142500260(vmAddr, a, parent, &val, n, args);
+        }
+        else
+        {
+            alignas(8) char eb[sizeof(VM::Error)];
+            FUN_1424d7850(eb, 0x40b, reinterpret_cast<void*>(vmAddr), "Couldn't find parent property");
+            vm.ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
+            reinterpret_cast<VM::Error*>(eb)->~Error();
+        }
+    }
+    reinterpret_cast<Value*>(&val)->~Value();
+    FUN_1424de9e0(raBuf);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // INST-Reserve-BEGIN
