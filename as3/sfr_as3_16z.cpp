@@ -17,6 +17,9 @@
 // MS2-RANGE: 0x1424e8e20-0x1424e8ed0 .text$mn
 // MS2-RANGE: 0x1424eab60-0x1424eaf00 .text$mn
 // MS2-RANGE: 0x1424eaf80-0x1424eb610 .text$mn
+// The Avm* deleting destructors free only on a global delete, and AvmButton / AvmTextField / AvmStaticText are modeled.
+#define SF_AS3_AVM_INPLACE_DELETE
+#define SF_AS3_AVMBUTTON_MODEL
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -32,6 +35,8 @@
 #include "ms2/scaleform/include/gfx/as3/as3_framecounter.h"
 #include "ms2/scaleform/include/gfx/as3/as3_stickyvarnode.h"
 #include "ms2/scaleform/include/gfx/as3/as3_eventchains.h"
+#include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
+#include "ms2/scaleform/include/gfx/as3/as3_userdefinedfunction.h"
 #undef GetObject
 
 // VM: runs the queued code (unrecovered).
@@ -156,8 +161,55 @@ void Unk_As3_16zConstructFrameCounter(void* p, MovieDefImpl* pdefImpl, ASMovieRo
     new (p) FrameCounter(pdefImpl, pasRoot, NULL, ResourceId());
 }
 
+// Not exe code: the AS3 parts are built by sfr_as3_15's out-of-line constructors and destroyed through their vftables;
+// running their inline destructors here emits the vftables and with them the deleting destructors of this range.
+void Unk_As3_16zDestroyAvmParts(AvmInteractiveObj* pio, AvmButton* pbtn, AvmTextField* ptxt, AvmStaticText* pst)
+{
+    pio->AvmInteractiveObj::~AvmInteractiveObj();
+    pbtn->AvmButton::~AvmButton();
+    ptxt->AvmTextField::~AvmTextField();
+    pst->AvmStaticText::~AvmStaticText();
+}
+
+// Not exe code: the same for interfaces whose objects are built inline or in other units.
+void Unk_As3_16zDestroyInterfaces(AS3ValueObjectInterface* pvoi, GFx::Value::ObjectInterface* poi, FlashUI* pui,
+                                  UserDefinedFunction* pudf)
+{
+    pvoi->AS3ValueObjectInterface::~AS3ValueObjectInterface();
+    new (pvoi) AS3ValueObjectInterface(NULL);
+    poi->GFx::Value::ObjectInterface::~ObjectInterface();
+    pui->FlashUI::~FlashUI();
+    pudf->UserDefinedFunction::~UserDefinedFunction();
+}
+
 }}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx {
+
+// Not exe code: abstract probes whose constructors run the implicit constructors of the GFx Avm*Base interfaces, which
+// emits their vftables and the deleting destructors of this range.
+struct Unk_As3_16zButtonBaseProbe : AvmButtonBase { Unk_As3_16zButtonBaseProbe(); };
+struct Unk_As3_16zTextFieldBaseProbe : AvmTextFieldBase { Unk_As3_16zTextFieldBaseProbe(); };
+struct Unk_As3_16zSpriteBaseProbe : AvmSpriteBase { Unk_As3_16zSpriteBaseProbe(); };
+Unk_As3_16zButtonBaseProbe::Unk_As3_16zButtonBaseProbe() {}
+Unk_As3_16zTextFieldBaseProbe::Unk_As3_16zTextFieldBaseProbe() {}
+Unk_As3_16zSpriteBaseProbe::Unk_As3_16zSpriteBaseProbe() {}
+
+}} // namespace Scaleform::GFx
 
 // MS2-PIN: ??_GFrameCounter@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2de0
 // MS2-FUNCTIONAL 0x1424e3ac0: the exe's ??_G inlines the weak-reference release of mValue, ours calls it.
 // MS2-PIN: ??_GStickyVarNode@MovieRoot@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3ac0
+// MS2-PIN: ??_GAvmButtonBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2730
+// MS2-PIN: ??_GAvmDisplayObjBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e27a0
+// MS2-PIN: ??_GAvmDisplayObjContainerBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2830
+// MS2-PIN: ??_GAvmInteractiveObj@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2860
+// MS2-PIN: ??_GAvmInteractiveObjBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e28b0
+// MS2-PIN: ??_GAvmSpriteBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e29e0
+// MS2-PIN: ??_GAvmStaticText@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2a70
+// MS2-PIN: ??_GAvmTextFieldBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2b20
+// MS2-PIN: ??_GAS3ValueObjectInterface@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2150
+// MS2-PIN: ??_GObjectInterface@Value@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e35e0
+// MS2-PIN: ??_GFlashUI@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2db0
+// MS2-FUNCTIONAL 0x1424e3de0: the exe inlines ~FunctionBase into the deleting destructor, ours calls it.
+// MS2-PIN: ??_GUserDefinedFunction@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3de0
