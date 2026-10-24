@@ -394,6 +394,10 @@ public:
     bool NeedTermination(int execType) const;
     // Empties the stacks, registers, frames and try blocks (exe 0x14297dd70).
     void Reset();
+
+    // (appended for sfr_as2_05q)
+    // _global and _levelN names: true or false when the name is one of them, undefined otherwise (exe 0x142933bd0).
+    Bool3W CheckGlobalAndLevels(const GetVarParams& params) const;
 };
 
 // (appended for sfr_as2_05) Calls the function method holds or names with nargs arguments from the environment's
