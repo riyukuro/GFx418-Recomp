@@ -19,10 +19,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // The folded ASStringHash<ClassRegEntry>::Get (exe 0x140001bd0).
 GlobalContext::ClassRegEntry* FUN_140001bd0(ASStringHash<GlobalContext::ClassRegEntry>* phash, const ASString& key);
 
-// The built-in ids of "XML" and "XMLNode" (not in the shared ASBuiltinType list yet).
-const ASBuiltinType ASBuiltin_XML     = ASBuiltinType(23);
-const ASBuiltinType ASBuiltin_XMLNode = ASBuiltinType(24);
-
 namespace {
 
 // A builtin class created on first use: its registration function under the type's name, and the name published

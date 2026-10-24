@@ -31,9 +31,6 @@ SF_FORCEINLINE Value& ImeArg(const FnCall& fn, int n)
     return *::FUN_1429316c0(&fn, n);
 }
 
-// The built-in id of "IME" (not in the shared ASBuiltinType list yet).
-const ASBuiltinType ASBuiltin_Ime = ASBuiltinType(22);
-
 static SF_FORCEINLINE void SetBuiltinPrototype(GlobalContext* pgc, ASBuiltinType type, Object* proto)
 {
     ::FUN_14000c280(pgc, type, reinterpret_cast<void**>(&proto));

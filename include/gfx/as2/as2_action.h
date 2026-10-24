@@ -616,9 +616,11 @@ public:
     // What the code being run is (only the plain kind is named so far).
     enum ExecuteType
     {
-        Exec_Unknown = 0,
-        Exec_Function = 3, // (appended for sfr_as2_06)
-        Exec_Event    = 4  // (sfr32) a clip event handler body
+        Exec_Unknown      = 0, // a frame's actions
+        Exec_Function     = 1, // a DefineFunction body
+        Exec_Function2    = 2, // a DefineFunction2 body (its own registers)
+        Exec_Event        = 3, // a clip event handler body
+        Exec_SpecialEvent = 4  // load / unload / construct / initialize: runs even while the clip unloads
     };
     // Runs the whole buffer in env (exe 0x142939e30).
     void Execute(Environment* env);

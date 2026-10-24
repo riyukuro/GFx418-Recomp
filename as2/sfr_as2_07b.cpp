@@ -31,9 +31,6 @@ SF_FORCEINLINE Value& SoundArg(const FnCall& fn, int n)
 }
 #pragma inline_depth()
 
-// The built-in id of "Sound" (not in the shared ASBuiltinType list yet).
-const ASBuiltinType ASBuiltin_Sound = ASBuiltinType(8);
-
 // The movie's sound player; the Audio state is only held for the call.
 inline Sound::SoundRenderer* GetSoundRenderer(MovieImpl* pmovie)
 {

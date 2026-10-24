@@ -39,10 +39,6 @@ SF_FORCEINLINE Value& XmlArg(const FnCall& fn, int n)
     return *::FUN_1429316c0(&fn, n);
 }
 
-// The built-in ids of "XML" and "XMLNode" (not in the shared ASBuiltinType list yet).
-const ASBuiltinType ASBuiltin_XML     = ASBuiltinType(23);
-const ASBuiltinType ASBuiltin_XMLNode = ASBuiltinType(24);
-
 // The methods only accept an XML object as this; anything else reports the error and returns false.
 SF_FORCEINLINE bool CheckXmlThis(const FnCall& fn)
 {

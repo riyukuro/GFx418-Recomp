@@ -59,10 +59,6 @@ public:
     static FunctionRef Register(GlobalContext* pgc);
 };
 
-// The builtin string ids missing from ASBuiltinType.
-static const ASBuiltinType ASBuiltin_Ime = ASBuiltinType(22);
-static const ASBuiltinType ASBuiltin_Key = ASBuiltinType(26);
-
 // The _global object: an Object that knows its context.
 class GASGlobalObject : public Object
 {

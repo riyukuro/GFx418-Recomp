@@ -61,16 +61,6 @@ public:
 
 namespace {
 
-// What the code being run is (ActionBuffer::ExecuteType as the exe numbers it).
-enum
-{
-    XT_Unknown      = 0,
-    XT_Function     = 1,
-    XT_Function2    = 2,
-    XT_Event        = 3,
-    XT_SpecialEvent = 4
-};
-
 // The state of one Execute run the handlers share (on the exe's stack, 0x68 bytes).
 struct ExecContext
 {
@@ -97,7 +87,7 @@ struct ExecContext
         pPrevLog            = penv->pASLogger;
         Version             = (UInt8)penv->GetTarget()->GetVersion();
         ExecType            = (UInt8)execType;
-        IsFunction2         = execType == XT_Function2;
+        IsFunction2         = execType == ActionBuffer::Exec_Function2;
         VerboseAction       = LogF.IsVerboseAction();
         VerboseActionErrors = LogF.IsVerboseActionErrors();
     }
@@ -183,16 +173,6 @@ inline void LogMemberError(ActionLogger& log, ObjectInterface* piobj, const char
         log.LogScriptError(fmtChar, path, name.ToCStr());
     else
         log.LogScriptError(fmtPlain, name.ToCStr());
-}
-
-// SuperObject::SetAltProto: the methods are looked up from pproto until the call ends (ResetAltProto).
-inline void SetAltProto(SuperObject* psuper, Object* pproto)
-{
-    if (pproto == psuper->SuperProto)
-        return;
-    psuper->SavedProto = psuper->SuperProto;
-    psuper->SuperProto = pproto;
-    psuper->pProto     = psuper->SuperProto;
 }
 
 // FSCommandHandler as the movie holds it: the host callback is the first virtual after the destructor.
@@ -662,7 +642,7 @@ void ActionBuffer::Execute(Environment* env, int startPc, int execBytes, Value* 
             case 0x3C: // set local (a variable outside functions)
             {
                 ASString name = Top1(env).ToString(env);
-                if (ctx.IsFunction2 || execType == XT_Function)
+                if (ctx.IsFunction2 || execType == ActionBuffer::Exec_Function)
                     env->SetLocal(name, env->Top(0));
                 else
                     env->SetVariable(name, env->Top(0), ctx.GetWithStack(), true);
@@ -789,7 +769,7 @@ void ActionBuffer::Execute(Environment* env, int startPc, int execBytes, Value* 
             case 0x41: // declare local (var); local in functions only
             {
                 ASString name = env->Top(0).ToString(env);
-                if (ctx.IsFunction2 || execType == XT_Function)
+                if (ctx.IsFunction2 || execType == ActionBuffer::Exec_Function)
                     env->DeclareLocal(name);
                 env->Drop1();
                 break;
@@ -1089,7 +1069,7 @@ void ActionBuffer::Execute(Environment* env, int startPc, int execBytes, Value* 
                         thisVal.SetAsObject(pobj);
                     }
                     else
-                        env->GetVariable(env->GetBuiltin((ASBuiltinType)61), &thisVal, ctx.GetWithStack());
+                        env->GetVariable(env->GetBuiltin(ASBuiltin_this), &thisVal, ctx.GetWithStack());
 
                     if (function.IsFunction())
                     {
@@ -1113,7 +1093,7 @@ void ActionBuffer::Execute(Environment* env, int startPc, int execBytes, Value* 
                         pobj = psuper->SuperProto->FindOwner(env->GetSC(), methodName);
                         if (pobj)
                         {
-                            SetAltProto(psuper, pobj);
+                            psuper->SetAltProto(pobj);
                             pobj = NULL;
                         }
                         else
