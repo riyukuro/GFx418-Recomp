@@ -3,7 +3,7 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_10
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142473760-0x1424837b0 .text$mn
+// MS2-RANGE: 0x142473710-0x1424837b0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/render/render_filters.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
@@ -463,8 +463,25 @@ template struct ThunkFunc0<Instances::fl_geom::Matrix3D, 24, const Value>;
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+void Sfr21AddInvokeAlias(MovieRoot* self, const ASString& alias, const Value& closure);    // sfr_as3_16z
+
 namespace Classes { namespace fl_external
 {
+    // ExternalInterface.addCallback(functionName, closure): the movie root invokes the closure for the alias.
+    // @0x142473710
+    void ExternalInterface::addCallback(const Value& result, const ASString& functionName, const Value& closure)
+    {
+        SF_UNUSED(result);
+        Sfr21AddInvokeAlias(static_cast<ASVM&>(GetVM()).GetMovieRoot(), functionName, closure);
+    }
+
+    // ExternalInterface.available: whether the host installed an external interface handler.
+    // @0x142473730
+    void ExternalInterface::availableGet(bool& result)
+    {
+        result = static_cast<ASVM&>(GetVM()).GetMovieRoot()->GetMovieImpl()->pExtIntfHandler != NULL;
+    }
+
     // ExternalInterface.call(methodName, ...args): hands the arguments, as host values, to the movie's external
     // interface handler and returns what the handler stored in the movie root.
     // MS2-FUNCTIONAL: same calls and data flow; the exe keeps the movie in a register (one more saved register, smaller frame) and merges the Convert2String failure exit into the common one
