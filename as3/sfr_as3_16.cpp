@@ -1723,6 +1723,12 @@ void FUN_1424dcd40(void* self)
     }
 }
 
+using Sfr16NamespaceHashKey = Scaleform::GFx::AS3::AbcMultinameHash<
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, 340>::Key;
+// @0x1424e0f00
+template Scaleform::UPInt Scaleform::FixedSizeHash<Sfr16NamespaceHashKey>::operator()(
+    const Sfr16NamespaceHashKey&) const;
+
 namespace Scaleform { namespace Render {
 // MS2-FUNCTIONAL ?operator=@StrokeStyleType@Render@Scaleform@@QEAAAEAU123@AEBU123@@Z: copies the scalar style fields and uses Ptr assignment for the owned fill and dash references.
 // @0x1424e0cb0
