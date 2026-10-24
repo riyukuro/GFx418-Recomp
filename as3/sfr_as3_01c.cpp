@@ -8,12 +8,15 @@
 // MS2-RANGE: 0x1423f06a0-0x1423f5770 .text$mn
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_marshalling.h"
 #include "ms2/scaleform/include/gfx/gfx_asutils.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fl.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fntraits.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_arraysort.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
@@ -35,6 +38,9 @@ public:
 
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+// The class infos of the native function kinds' traits (no ABC file): plain and thunk function objects.
+extern const Scaleform::GFx::AS3::ClassInfo DAT_14313dc60;
+extern const Scaleform::GFx::AS3::ClassInfo DAT_14313dcb0;
 // Out-of-line Traits::GetConstructor, second copy.
 Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* t);
 // Out-of-line Value::SetBool copy (sfr_as3_04 0x142421710) that some natives call instead of inlining it.
@@ -757,6 +763,113 @@ namespace ClassTraits { namespace fl
     }
 }}
 
+namespace ClassTraits
+{
+    // @0x1423eca40
+    Function::Function(VM& vm, const ClassInfo& ci)
+        : Traits(vm, ci)
+    {
+        TraitsType = Traits_Function;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Function* it = new(mh) InstanceTraits::Function(vm, ci);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        Classes::Function* cl = new(mh) Classes::Function(*this);
+        it->SetConstructor(Pickable<Class>(cl));
+
+        // The native function kinds share the class Function.
+        ThunkTraits = Pickable<InstanceTraits::Traits>(new(vm.GetMemoryHeap()) InstanceTraits::Thunk(vm));
+        ThunkTraits->SetConstructor(Pickable<Class>(cl, PickValue));
+        ThunkFunctionTraits =
+            Pickable<InstanceTraits::ThunkFunction>(new(vm.GetMemoryHeap()) InstanceTraits::ThunkFunction(vm));
+        ThunkFunctionTraits->SetConstructor(Pickable<Class>(cl, PickValue));
+        MethodIndTraits = Pickable<InstanceTraits::Traits>(new(vm.GetMemoryHeap()) InstanceTraits::MethodInd(vm));
+        MethodIndTraits->SetConstructor(Pickable<Class>(cl, PickValue));
+        VTableTraits = Pickable<InstanceTraits::Traits>(new(vm.GetMemoryHeap()) InstanceTraits::VTableInd(vm));
+        VTableTraits->SetConstructor(Pickable<Class>(cl, PickValue));
+    }
+}
+
+namespace InstanceTraits
+{
+    // @0x1423ecf50
+    Function::Function(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+        , MethodInfoInd(0)
+    {
+        TraitsType = Traits_Function;
+        SetMemSize(sizeof(Instances::Function));
+        RegisterSlots();
+    }
+
+    // @0x1423ecfa0
+    Function::Function(VMAbcFile& file, const ClassInfo& ci, SInt32 mi, Instances::fl::GlobalObjectScript* gos)
+        : CTraits(file.GetVM(), ci)
+        , MethodInfoInd(mi)
+        , File(&file)
+        , GOS(gos)
+    {
+        SetConstructor(FUN_142508460(&file.GetVM().GetClassTraitsFunction().GetInstanceTraits()));
+        TraitsType = Traits_Function;
+        SetMemSize(sizeof(Instances::Function));
+
+        // The slots of the method body come first.
+        const Abc::File& abc = file.GetAbcFile();
+        const Abc::MethodBodyInfo& mbi = *abc.MethodBodies.Info[abc.Methods.Info[MethodInfoInd]->MethodBodyInfoInd];
+        if (AddSlots(mbi, file, sizeof(Instances::Function)))
+            RegisterSlots();
+    }
+}
+
+namespace Instances
+{
+    // MS2-FUNCTIONAL: the exe inlines the scope stack copy around an Append call; ours calls the copy out of line
+    // @0x1423ed090
+    Function::Function(InstanceTraits::Traits& t, const ScopeStackType& ss, const Value& stored_this,
+                       const ASString& name)
+        : FunctionBase(t)
+        , StoredScopeStack(ss)
+        , StoredThis(stored_this)
+        , Name(name)
+    {
+    }
+
+    // @0x1423f0eb0
+    Function::~Function()
+    {
+    }
+
+    // The two slot overrides below lie in sfr_as3_04's range (0x142416ff0, 0x142415e70) but progress tracks
+    // neither; their vftable slots come from here.
+    void* Function::Unk15()
+    {
+        return &StoredScopeStack;
+    }
+
+    UInt32 Function::GetMaxParamNum() const
+    {
+        const InstanceTraits::Function& t = static_cast<const InstanceTraits::Function&>(GetTraits());
+        const Abc::File& abc = t.File->GetAbcFile();
+        const Abc::MethodBodyInfo& mbi = *abc.MethodBodies.Info[abc.Methods.Info[t.GetMethodInfoInd()]->MethodBodyInfoInd];
+        return static_cast<UInt32>(abc.Methods.Info[mbi.method_info_ind]->ParamTypes.GetSize());
+    }
+
+    // @0x1423ed140
+    FunctionBase::FunctionBase(InstanceTraits::Traits& t)
+        : fl::Object(t)
+    {
+        Prototype.Pick(GetVM().MakeObject());
+    }
+}
+
+namespace Classes
+{
+    // In sfr_as3_03's range (0x1424057a0) but untracked by progress; the vftable slot comes from here.
+    void Function::Call(const Value& /*_this*/, Value& result, unsigned argc, const Value* const argv)
+    {
+        Construct(result, argc, argv);
+    }
+}
+
 namespace InstanceTraits
 {
     // @0x1423ed810
@@ -790,6 +903,18 @@ namespace Classes { namespace fl
     {
     }
 }}
+
+namespace InstanceTraits
+{
+    // @0x1423eda60
+    MethodInd::MethodInd(VM& vm)
+        : CTraits(vm, DAT_14313dc60)
+    {
+        TraitsType = Traits_Function;
+        for (unsigned i = 0; i < 3; ++i)
+            Add2VT(AS3::fl::FunctionCI, f[i]);
+    }
+}
 
 namespace Instances
 {
@@ -1095,6 +1220,36 @@ namespace InstanceTraits { namespace fl
     }
 }}
 
+namespace InstanceTraits
+{
+    // @0x1423ef1d0
+    Thunk::Thunk(VM& vm)
+        : CTraits(vm, DAT_14313dc60)
+    {
+        TraitsType = Traits_Function;
+        for (unsigned i = 0; i < 3; ++i)
+            Add2VT(AS3::fl::FunctionCI, f[i]);
+    }
+
+    // @0x1423ef240
+    ThunkFunction::ThunkFunction(VM& vm)
+        : CTraits(vm, DAT_14313dcb0)
+    {
+        TraitsType = Traits_Function;
+        SetMemSize(sizeof(Instances::ThunkFunction));
+        Add2VT(AS3::fl::FunctionCI, f[0]);
+    }
+
+    // @0x1423ef910
+    VTableInd::VTableInd(VM& vm)
+        : CTraits(vm, DAT_14313dc60)
+    {
+        TraitsType = Traits_Function;
+        for (unsigned i = 0; i < 3; ++i)
+            Add2VT(AS3::fl::FunctionCI, f[i]);
+    }
+}
+
 namespace Instances { namespace fl
 {
     // @0x1423ef290
@@ -1348,6 +1503,33 @@ template void Unk_As3HelperConstruct<Instances::fl::ChildGetFirst>(void*, Instan
 template void Unk_As3HelperConstruct<Instances::fl::ChildGet>(void*, Instances::fl::XMLElement&, Instances::fl::XMLList&);
 template void Unk_As3HelperConstruct<Instances::fl::AttrGet>(void*, Instances::fl::XMLElement&, Instances::fl::XMLList&);
 template void Unk_As3HelperConstruct<Instances::fl::ListGet>(void*, Instances::fl::XMLList&, Instances::fl::XMLList&);
+
+// Not exe code: the thunk function objects are made only in sfr_as3_04 (their constructors are protected), but the
+// sdtors of their vftables and the ThunkFunction dtor lie in this unit's range; constructing a derived one emits those.
+namespace
+{
+    struct Unk_ThunkFunctionMaker : Instances::ThunkFunction
+    {
+        Unk_ThunkFunctionMaker(InstanceTraits::Traits& t, const ThunkInfo& thunk, const Traits& ot)
+            : ThunkFunction(t, thunk, ot)
+        {
+        }
+    };
+    struct Unk_CheckTypeTFMaker : Instances::CheckTypeTF
+    {
+        Unk_CheckTypeTFMaker(InstanceTraits::Traits& t, const ThunkInfo& thunk, const Class& data_type,
+                             const Traits& ot)
+            : CheckTypeTF(t, thunk, data_type, ot)
+        {
+        }
+    };
+}
+void Unk_As3HelperConstructTF(void* p, void* q, InstanceTraits::Traits& t, const ThunkInfo& thunk, const Class& c,
+                              const Traits& ot)
+{
+    new (p) Unk_ThunkFunctionMaker(t, thunk, ot);
+    new (q) Unk_CheckTypeTFMaker(t, thunk, c, ot);
+}
 
 namespace ClassTraits { namespace fl
 {
@@ -2409,3 +2591,25 @@ template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned lon
 // MS2-PIN: ??_GValue2NumberCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4960 ; vtslot
 // MS2-PIN: ??_GValue2StrCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4990 ; vtslot
 // MS2-PIN: ??_GValuePtrCollector@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f49c0 ; vtslot
+// MS2-PIN: ??_7Function@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14313fea0
+// MS2-PIN: ??_7Function@Classes@AS3@GFx@Scaleform@@6B@ 0x14313ff18
+// MS2-PIN: ??_7Function@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313fe18
+// MS2-PIN: ??_7Function@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f9b8
+// MS2-PIN: ??_7FunctionBase@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f8f8
+// MS2-PIN: ??_7Thunk@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313fbf8
+// MS2-PIN: ??_7MethodInd@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313fc80
+// MS2-PIN: ??_7VTableInd@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313fd08
+// MS2-PIN: ??_7ThunkFunction@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14313fd90
+// MS2-PIN: ??_7ThunkFunction@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fa78
+// MS2-PIN: ??_7CheckTypeTF@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fb38
+// MS2-PIN: ??_GCheckTypeTF@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2750 ; vtslot
+// MS2-PIN: ??_GFunction@ClassTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2ef0 ; vtslot
+// MS2-PIN: ??_GFunction@Classes@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2f50 ; vtslot
+// MS2-PIN: ??_GFunction@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f2fb0 ; vtslot
+// MS2-PIN: ??_GFunction@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3070 ; vtslot
+// MS2-PIN: ??_GFunctionBase@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f3150 ; vtslot
+// MS2-PIN: ??_GMethodInd@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f36f0 ; vtslot
+// MS2-PIN: ??_GThunk@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4460 ; vtslot
+// MS2-PIN: ??_GThunkFunction@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f44c0 ; vtslot
+// MS2-PIN: ??_GThunkFunction@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4520 ; vtslot
+// MS2-PIN: ??_GVTableInd@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423f4900 ; vtslot

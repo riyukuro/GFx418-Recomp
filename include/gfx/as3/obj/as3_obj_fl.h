@@ -78,6 +78,11 @@ namespace Instances {
     class Function : public FunctionBase
     {
     public:
+        // (appended, sfr22) a closure over ss called on stored_this unless given a this. 0x1423ed090
+        Function(InstanceTraits::Traits& t, const ScopeStackType& ss, const Value& stored_this, const ASString& name);
+        // (appended, sfr22) 0x1423f0eb0
+        ~Function();
+
         // @0x14240bea0
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
         // (appended, sfr22) slot 21: runs the call to completion. 0x14240ac30
@@ -85,6 +90,10 @@ namespace Instances {
         // (appended, sfr22) slot 22: pushes a call frame of the method body on the bound or the given this.
         // 0x14240a1c0
         virtual void Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result = false);
+        // (appended, sfr22) slot 15: the scope stack the closure was made in. 0x142416ff0
+        virtual void* Unk15();
+        // (appended, sfr22) slot 23: the parameter count of the method of the closure's body. 0x142415e70
+        virtual UInt32 GetMaxParamNum() const;
 
     private:
         ScopeStackType  StoredScopeStack;   // +0x40
@@ -99,6 +108,17 @@ namespace InstanceTraits {
     class Function : public CTraits
     {
     public:
+        // (appended, sfr22) the traits of a closure of method mi of file; its body's own slots come first.
+        // 0x1423ecfa0
+        Function(VMAbcFile& file, const ClassInfo& ci, SInt32 mi, Instances::fl::GlobalObjectScript* gos);
+        // (appended, sfr22) traits that belong to no ABC file. 0x1423ecf50
+        Function(VM& vm, const ClassInfo& ci);
+
+        // (appended, sfr22) sizeof(Instances::Function). 0x142415ad0
+        virtual unsigned GetFixedMemSize() const;
+        // (appended, sfr22) 0x14241bf50
+        virtual void MakeObject(Value& result, Traits& t);
+
         ASString GetFunctionName(const Value& _this) const;
         SInt32 GetMethodInfoInd() const { return MethodInfoInd; }
         // (appended, sfr22) @0x14240be40
@@ -109,6 +129,10 @@ namespace InstanceTraits {
         // (appended, sfr22)
         SPtr<VMAbcFile>                         File;   // +0xf0
         SPtr<Instances::fl::GlobalObjectScript> GOS;    // +0xf8
+
+    private:
+        // (appended, sfr22) the "prototype" slot and the apply/call/length methods. 0x14241e5d0
+        void RegisterSlots();
     };
 }
 
@@ -117,6 +141,9 @@ namespace ClassTraits {
     class Function : public Traits
     {
     public:
+        // (appended, sfr22) also makes the class Function and the traits of the native function kinds. 0x1423eca40
+        Function(VM& vm, const ClassInfo& ci);
+
         InstanceTraits::Traits& GetThunkTraits() const         { return *ThunkTraits; }
         InstanceTraits::ThunkFunction& GetThunkFunctionTraits() const { return *ThunkFunctionTraits; }
         InstanceTraits::Traits& GetMethodIndTraits() const     { return *MethodIndTraits; }
@@ -142,6 +169,9 @@ namespace Classes {
     class Function : public Class
     {
     public:
+        // (appended, sfr22)
+        explicit Function(ClassTraits::Traits& t) : Class(t) {}
+
         const ClassTraits::Function& GetClassTraits() const
         {
             return static_cast<const ClassTraits::Function&>(Class::GetClassTraits());
@@ -154,6 +184,12 @@ namespace Classes {
                                                                const Traits& ot) const;
         // (appended, sfr22) slot 12: a function body source throws error 1066; new Function() is a plain class construct. 0x1424071c0
         virtual void Construct(Value& _this, unsigned argc, const Value* argv, bool extCall = false);
+        // (appended, sfr22) slot 10: Function(...) is new Function(...). 0x1424057a0
+        virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
+        // (appended, sfr22) slot 24. 0x142417c30
+        virtual void InitPrototype(AS3::Object& obj) const;
+        // (appended, sfr22) slot 25: the prototype is an empty function. 0x14241c500
+        virtual Pickable<AS3::Object> MakePrototype() const;
     };
 }
 
