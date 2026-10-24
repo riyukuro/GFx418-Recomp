@@ -2449,3 +2449,8 @@ bool MatchFileNames(const String& path1, const String& path2)
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
 // MS2-PIN: ??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@ 0x14318b778
+// The derived method uses the same Scaleform::StatBag interface as ResourceReport, matching the executable's override.
+// MS2-FUNCTIONAL ?GetStats@MovieDataDef@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z: empty virtual body leaves StatBag unchanged.
+// MS2-PIN: ?GetStats@MovieDataDef@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z 0x1425d14a0
+// MS2-FUNCTIONAL ?GetStats@ResourceReport@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z: empty virtual body leaves StatBag unchanged.
+// MS2-PIN: ?GetStats@ResourceReport@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z 0x1425d14b0

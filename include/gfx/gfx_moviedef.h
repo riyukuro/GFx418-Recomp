@@ -171,7 +171,7 @@ class LoadProcess;
 class PathAllocator;
 class MovieBindProcess;
 class ASSupport;
-class StatBag;
+using StatBag = ::Scaleform::StatBag;
 struct MovieInfo;
 
 // What the gfxexport tool recorded about a converted file (0x20 bytes).
