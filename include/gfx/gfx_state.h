@@ -57,6 +57,10 @@ public:
         State_MultitouchInterface = 7,
         // (appended for the player, sfr_gfx_01i) MovieImpl::GetASTimerMs queries 0x1f
         State_TestStream = 31,
+        // (appended for the player, sfr_gfx_01i) the host hooks MovieImpl::Advance caches (table 0x143183888)
+        State_UserEventHandler  = 4,
+        State_FSCommandHandler  = 5,
+        State_ExternalInterface = 6,
     };
 
 protected:

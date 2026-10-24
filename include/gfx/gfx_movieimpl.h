@@ -31,6 +31,7 @@ namespace GFx {
 
 class ASMovieRootBase;
 namespace Video { class VideoProvider; }
+class AudioBase;
 class DisplayObjectBase;
 class InteractiveObject;
 class Sprite;
@@ -47,7 +48,8 @@ class MemoryHeap;
 class Log;
 namespace GFx { namespace AMP { class ViewStats; } class FSCommandHandler; class MultitouchInterface; }
 namespace Render { class DrawableImageContext; class Font; }
-namespace Render { class TreeNode; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld;
+namespace Sound { class SoundRenderer; }
+namespace Render { class TreeNode; class TreeShape; template<class T> class Matrix3x4; template<class T> class Matrix4x4; class ScreenToWorld;
                    namespace Text { class Allocator; } }
 namespace GFx {
 class StateBag;
@@ -98,7 +100,7 @@ enum FocusMovedType
 struct FocusGroupDescr
 {
 #ifdef SF_GFX_PLAYERIMPL
-    Ptr<Render::TreeContainer>       FocusRectNode;   // +0x00 the node drawing the focus rectangle
+    Ptr<Render::TreeShape>           FocusRectNode;   // +0x00 the shape drawing the focus rectangle
     ArrayDH<Ptr<InteractiveObject>, 0x147> TabableArray;   // +0x08 the tab order, in the group's own heap
 #else
     UByte   Unrecovered_00[0x28];      // +0x00 focus rect node, tabable array
@@ -113,8 +115,10 @@ struct FocusGroupDescr
     UByte   Unrecovered_52[0xe];
 
 #ifdef SF_GFX_PLAYERIMPL
-    FocusGroupDescr() : TabableArray(Memory::GetHeapByAddress(this)), LastFocusKeyCode(0), FocusRectShown(false),
-                        TabableArrayStatus(0) {}
+    // The defaulted heap makes MSVC emit the default ctor closure ??_F (exe 0x14256b580, unreferenced).
+    FocusGroupDescr(MemoryHeap* heap = 0)
+        : TabableArray(heap ? heap : Memory::GetHeapByAddress(this)), LastFocusKeyCode(0), FocusRectShown(false),
+          TabableArrayStatus(0) {}
 #endif
 
     // The modal clip, if it is still alive (exe 0x14256f7e0).
@@ -204,10 +208,16 @@ public:
     MovieDefImpl*    pMainMovieDef;            // +0x48 Ptr<MovieDefImpl>: the _level0 movie (sfr_gfx_07f)
 #endif
     InteractiveObject* pMainMovie;             // +0x50 _level0
+#ifdef SF_GFX_PLAYERIMPL
+    // A level clip by level number; the movie holds a reference on it (0x10 bytes).
+    struct LevelInfo { int Level; Ptr<InteractiveObject> pSprite; };
+    ArrayLH<LevelInfo, 0x147> MovieLevels;     // +0x58 sorted by level, _level0 first (StatMV_Other_Mem)
+#else
     struct LevelInfo { int Level; InteractiveObject* pSprite; };   // (sfr_gfx_06)
     LevelInfo*       pMovieLevels;             // +0x58 MovieLevels (ArrayLH data): _level0 first (sfr_gfx_06)
     UPInt            MovieLevelsSize;          // +0x60 MovieLevels size
     UPInt            MovieLevelsCapacity;      // +0x68
+#endif
     MovieDefRootNodeLinks RootMovieDefNodes;   // +0x70 the root nodes of the loaded movies (sfr_gfx_06d)
 #ifdef SF_GFX_PLAYERIMPL
     Ptr<StateBagImpl> pStateBag;              // +0x80 the movie's own states
@@ -276,8 +286,13 @@ public:
     ExternalInterface* pExtIntfHandler;        // +0x240 Ptr<ExternalInterface>: the host's ExternalInterface.call hook
     FontManagerStates* pFontManagerStates;     // +0x248 Ptr: the font states the movies' font managers share (sfr_gfx_06d)
 #endif
+#ifdef SF_GFX_PLAYERIMPL
+    AudioBase*       pAudio;                   // +0x250 held for the length of an Advance only
+    Sound::SoundRenderer* pSoundRenderer;      // +0x258 pAudio's renderer, the same
+#else
     void*            pAudio;                   // +0x250 AudioBase*
     void*            pSoundRenderer;           // +0x258
+#endif
     void*            pXMLObjectManager;        // +0x260
     UInt64           TimeElapsed;              // +0x268
     float            TimeRemainder;            // +0x270
@@ -355,12 +370,24 @@ public:
         Flag_NoInvisibleAdvance = 0x800,       // _global.noInvisibleAdvance: hidden clips stop advancing
         Flag_SetCursorTypeFuncOverloaded = 0x1000, // (appended, sfr_as2_07) Mouse.setCursorType replaced by a script
         Flag_ContinueAnimation  = 0x2000,      // _global.gfxExtensions continueAnimation (sfr_gfx_06)
+        Flag_DisableFocusAutoReleaseByMouseClick = 0x10000, // (appended, sfr_gfx_01i) a click keeps the focus rect
         Shift_AlwaysEnableKeyboardPress = 26,  // two bits: 0 undefined, 1 true, 2 false, 3 read as -1
         Shift_DisableFocusRolloverEvent = 28,  // two bits, the same encoding
         // (appended, sfr_as2_05) the other Selection extension properties, same encoding
         Shift_DisableFocusAutoRelease   = 22,
         Shift_AlwaysEnableArrowKeys     = 24,
-        Shift_DisableFocusKeys          = 30
+        Shift_DisableFocusKeys          = 30,
+        // (appended, sfr_gfx_01i) the per-advance copies of the log and the ActionControl state
+        Flag_CachedLogFlag         = 0x2,      // pCachedLog is valid (inside Advance)
+        Flag_VerboseAction         = 0x4,
+        Flag_LogRootFilenames      = 0x8,
+        Flag_LogChildFilenames     = 0x10,
+        Flag_LogLongFilenames      = 0x20,
+        Flag_SuppressActionErrors  = 0x40,
+        Flag_LevelClipsChanged     = 0x100,    // (appended, sfr_gfx_01i) a level was set: run its frame 0 first
+        Flag_AdvanceCalled         = 0x200,    // (appended, sfr_gfx_01i)
+        Flag_HasChanges            = 0x400,    // the last capture had changes (Capture)
+        Flag_Paused                = 0x100000, // (appended, sfr_gfx_01i) SetPause
     };
     bool IsNoInvisibleAdvanceFlagSet() const { return (Flags & Flag_NoInvisibleAdvance) != 0; }
     // _focusrect rollover events suppressed (disableFocusRolloverEvent extension property).
@@ -370,9 +397,24 @@ public:
         UInt32 v = (Flags >> Shift_DisableFocusKeys) & 3;
         return ((v == 3) ? -1 : int(v)) == 1;
     }
+    // (appended, sfr_gfx_01i) a mouse move keeps the focus rectangle up (disableFocusAutoRelease property).
+    bool IsDisableFocusAutoRelease() const
+    {
+        UInt32 v = (Flags >> Shift_DisableFocusAutoRelease) & 3;
+        return ((v == 3) ? -1 : int(v)) == 1;
+    }
     bool IsDisableFocusRolloverEvent() const
     {
         int v = (Flags >> Shift_DisableFocusRolloverEvent) & 3;
+        if (v == 3)
+            v = -1;
+        return v == 1;
+    }
+    // (appended, sfr24) the arrow keys move the focus even where the focused character shows no focus rectangle
+    // (alwaysEnableArrowKeys extension property)
+    bool IsAlwaysEnableFocusArrowKeys() const
+    {
+        int v = (Flags >> Shift_AlwaysEnableArrowKeys) & 3;
         if (v == 3)
             v = -1;
         return v == 1;
@@ -440,7 +482,7 @@ public:
 #else
     void*            RenderContext[0x22];      // +0x34f0 Render::ContextImpl::Context (0x110; gfx_rendertree.h: the heap first)
 #endif
-    UByte            PreviouslyCaptured;       // +0x3600 bumped (incremented) by ForceUpdateImages
+    char             PreviouslyCaptured;       // +0x3600 bumped (incremented) by ForceUpdateImages; signed (Capture)
 #ifdef SF_GFX_PLAYERIMPL
     Ptr<Render::DrawableImageContext> DIContext; // +0x3608
 #else
@@ -468,6 +510,10 @@ public:
 
     ASString CreateNewInstanceName();          // exe 0x14256e710
     bool     SetLevelMovie(int level, DisplayObjContainer* psprite); // exe 0x142575f20
+    // (appended, sfr_gfx_01i) unloads a level; level 0 unloads them all (exe 0x142573ed0).
+    bool     ReleaseLevelMovie(int level);
+    // (appended, sfr_gfx_01i) advances the characters on the advance list (exe 0x14256d390).
+    void     AdvanceFrame(bool nextFrame, float framePos);
     // The image exported (or provided by the image callback) under linkageId of md (exe 0x14256f370).
     Ptr<ImageResource> GetImageResourceByLinkageId(MovieDefImpl* md, const char* linkageId);
     // The topmost interactive object under a point (twips), skipping ignoreMC (exe 0x14256fde0).
@@ -537,6 +583,8 @@ public:
 #endif
 
     // The object no longer stays on top of the levels (0x1425742c0).
+    // (appended, sfr_gfx_01i) The object stays on top of the levels, ordered like the display lists (0x14256c140).
+    void AddTopmostLevelCharacter(InteractiveObject* pch);
     void RemoveTopmostLevelCharacter(DisplayObjectBase* pch);
 
     // An object drawn under another parent than its display list one (Ptr members: complete types needed where
@@ -746,6 +794,12 @@ public:
 protected:
     void ResetKeyboardState();   // exe 0x142574c60
     void ResetMouseState();      // exe 0x142574ca0
+#ifdef SF_GFX_PLAYERIMPL
+    // (appended, sfr_gfx_01i) Every focus group drops its modal clip, tab order and last focus key (exe 0x142574b00).
+    void ResetFocusStates();
+    // Every focus group drops a filled tab order (exe 0x142574da0).
+    void ResetTabableArrays();
+#endif
     // The movie got or lost the host's focus (Event::SetFocus / KillFocus); losing it resets the keyboards and mice
     // and finalizes an IME composition in progress (exe 0x142571f10).
     void OnMovieFocus(bool set);
@@ -829,6 +883,13 @@ public:
 };
 
 static_assert(sizeof(MovieImpl) == 0x3650, "MovieImpl size (ctor allocation 0x3650)");
+static_assert(offsetof(MovieImpl, pMainMovieDef) == 0x48, "MovieImpl::pMainMovieDef");
+static_assert(offsetof(MovieImpl, pStateBag) == 0x80, "MovieImpl::pStateBag");
+static_assert(offsetof(MovieImpl, pRenderRoot) == 0x88, "MovieImpl::pRenderRoot");
+static_assert(offsetof(MovieImpl, FocusGroups) == 0x2e60, "MovieImpl::FocusGroups");
+static_assert(offsetof(MovieImpl, FocusGroupIndexes) == 0x3464, "MovieImpl::FocusGroupIndexes");
+static_assert(offsetof(MovieImpl, Flags) == 0x3490, "MovieImpl::Flags");
+static_assert(offsetof(MovieImpl, Flags2) == 0x3494, "MovieImpl::Flags2");
 
 // The leading Movie vftable slots, for the virtual calls MovieImpl makes on itself (GetVisibleFrameRect).
 class __declspec(novtable) MovieInterface418

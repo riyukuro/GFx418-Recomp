@@ -1,11 +1,13 @@
 // Recovered Scaleform 4.1.18 GFx: input and player events passed to Movie::HandleEvent and to the user event
 // handler. Shared header of the src/ms2/scaleform units (sfr lane): append, do not reorder members.
 //
-// Only the base event, the mouse cursor event and the user event handler are recovered so far.
+// Recovered so far: the base event, the mouse / key / char / focus / IME input events, the mouse cursor event and
+// the user event handler.
 #ifndef MS2_SF_GFX_EVENT_H
 #define MS2_SF_GFX_EVENT_H
 
 #include "gfx_state.h"
+#include "../kernel/sf_keycodes.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -42,13 +44,76 @@ public:
         DoShowMouse,
         DoHideMouse,
         DoSetMouseCursor,
-        Char
+        Char,
+        IME
     };
 
     EventType Type;      // +0x00
     UByte     Modifiers; // +0x04 KeyModifiers
 
     Event(EventType eventType = Unknown) : Modifiers(0) { Type = eventType; }
+};
+
+// A mouse move, press, release or wheel turn in viewport pixels (HandleEvent maps it onto the stage). 0x1c bytes.
+class MouseEvent : public Event
+{
+public:
+    float    x;           // +0x08
+    float    y;           // +0x0c
+    float    ScrollDelta; // +0x10 wheel lines
+    unsigned Button;      // +0x14 button number (0 left)
+    unsigned MouseIndex;  // +0x18
+
+    MouseEvent() : Event(), x(0), y(0), ScrollDelta(0), Button(0), MouseIndex(0) {}
+    MouseEvent(EventType eventType, unsigned button, float xpos, float ypos, float scrollVal = 0,
+               unsigned mouseIndex = 0)
+        : Event(eventType), x(xpos), y(ypos), ScrollDelta(scrollVal), Button(button), MouseIndex(mouseIndex) {}
+};
+
+// A key going down or up; a key down with a printable character also types it. 0x18 bytes.
+class KeyEvent : public Event
+{
+public:
+    unsigned KeyCode;       // +0x08 Key::Code
+    UByte    AsciiCode;     // +0x0c
+    UInt32   WcharCode;     // +0x10
+    UInt8    KeyboardIndex; // +0x14
+
+    KeyEvent(EventType eventType = Unknown, unsigned code = 0, UByte asciiCode = 0, UInt32 wcharCode = 0,
+             KeyModifiers mods = KeyModifiers(), UInt8 keyboardIndex = 0)
+        : Event(eventType), KeyCode(code), AsciiCode(asciiCode), WcharCode(wcharCode), KeyboardIndex(keyboardIndex)
+    {
+        Modifiers = mods.States;
+    }
+};
+
+// A typed character. 0x10 bytes.
+class CharEvent : public Event
+{
+public:
+    UInt32 WcharCode;     // +0x08
+    UInt8  KeyboardIndex; // +0x0c
+
+    CharEvent(UInt32 wcharCode, UInt8 keyboardIndex = 0)
+        : Event(Char), WcharCode(wcharCode), KeyboardIndex(keyboardIndex) {}
+};
+
+// The movie gains or loses the focus; a focus gain carries the toggle keys of each keyboard. 0x0c bytes.
+class SetFocusEvent : public Event
+{
+public:
+    KeyModifiers KeysStates[4]; // +0x08 one per keyboard, unset ones are skipped
+
+    SetFocusEvent(EventType eventType = SetFocus) : Event(eventType) {}
+};
+
+// An IME window message handed to the IME manager (the platform event classes derive from it).
+class IMEEvent : public Event
+{
+public:
+    unsigned IMEEvtType; // +0x08
+
+    IMEEvent(unsigned imeEvtType = 0) : Event(IME), IMEEvtType(imeEvtType) {}
 };
 
 // Show / hide / shape requests for the cursor of one mouse. 0x10 bytes.

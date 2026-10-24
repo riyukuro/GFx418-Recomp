@@ -187,6 +187,9 @@ private:
     void UpdateDefaultParagraphFormat(Text::DocView* view, const Text::ParagraphFormat& fmt);
 };
 
+// The text node creations allocate 0xb0 bytes of node data.
+static_assert(sizeof(TreeText::NodeData) == 0xb0, "TreeText::NodeData size");
+
 }} // namespace Scaleform::Render
 
 #endif

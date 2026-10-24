@@ -221,6 +221,9 @@ public:
 
 inline AvmSpriteBase* Sprite::GetAvmSprite() const { return GetAvmObjImpl()->ToAvmSpriteBase(); }
 
+// The AS3 sprite creation allocates the Sprite with its AvmSprite, constructed at +0x148.
+static_assert(sizeof(Sprite) == 0x148, "Sprite size");
+
 }} // namespace Scaleform::GFx
 
 #endif

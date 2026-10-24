@@ -42,6 +42,9 @@ public:
     SF_RENDER_CONTEXT_ENTRY_INLINES(NodeData)
 };
 
+// DrawableImage::Draw allocates 0xa0 bytes for a shape node's data.
+static_assert(sizeof(TreeShape::NodeData) == 0xa0, "TreeShape::NodeData size");
+
 }} // namespace Scaleform::Render
 
 #endif

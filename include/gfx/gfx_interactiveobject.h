@@ -269,6 +269,9 @@ public:
     virtual bool     IsTabable() const = 0;
 };
 
+// The InteractiveObject constructions store the first field of the derived class at +0xd8.
+static_assert(sizeof(InteractiveObject) == 0xd8, "InteractiveObject size");
+
 }} // namespace Scaleform::GFx
 
 #endif

@@ -1070,6 +1070,10 @@ struct MovieDefImpl::SearchInfo
     String       ImportFoundUrl;   // +0x10
 };
 
+// The loader allocates 0x48 bytes for a MovieDataDef and 0x40 for a MovieDefImpl.
+static_assert(sizeof(MovieDataDef) == 0x48, "MovieDataDef size");
+static_assert(sizeof(MovieDefImpl) == 0x40, "MovieDefImpl size");
+
 }} // namespace Scaleform::GFx
 
 #endif

@@ -47,6 +47,15 @@ public:
     float AspectRatio;    // +0x30
 
     Viewport() { AspectRatio = 1.f; Scale = 1.f; }
+    // (appended, sfr_gfx_01i) a view rectangle inside a buffer, no scissor (MovieImpl::SetLevelMovie)
+    Viewport(int bufw, int bufh, int left, int top, int w, int h, unsigned flags = 0)
+    {
+        BufferWidth = bufw; BufferHeight = bufh;
+        Left = left; Top = top; Width = w; Height = h;
+        Flags = flags;
+        ScissorLeft = ScissorTop = ScissorWidth = ScissorHeight = 0;
+        AspectRatio = 1.f; Scale = 1.f;
+    }
 };
 
 class Movie : public RefCountBase<Movie, 0x147>, public StateBag   // StatMV_Other_Mem

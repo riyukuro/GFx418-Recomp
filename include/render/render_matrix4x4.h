@@ -246,6 +246,19 @@ public:
 
     // (appended for flash.geom, sfr_as3_11) the 4x4 inverse with the implicit row (0 0 0 1); 0x1424845e0
     inline Matrix3x4 GetInverse() const;
+
+    // (appended for the player, sfr_gfx_01i) m applied after this, the 2D matrix with the z row of the identity; the
+    // inverse in place
+    Matrix3x4& Append(const Matrix2x4<T>& m)
+    {
+        MultiplyMatrix(m, Matrix3x4(*this));
+        return *this;
+    }
+    Matrix3x4& Invert()
+    {
+        *this = GetInverse();
+        return *this;
+    }
 };
 typedef Matrix3x4<float> Matrix3F;
 

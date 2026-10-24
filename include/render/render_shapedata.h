@@ -367,6 +367,13 @@ public:
         encoder.WriteChar(Tag_EndPath);
         Status = Status_EndPath;
     }
+    // (appended, sfr24: the focus rectangles of sfr_gfx_01i) the edge back to the MoveTo point, unless the path
+    // already ends there
+    void ClosePath()
+    {
+        if (LastX != StartX || LastY != StartY)
+            LineTo(StartX, StartY);
+    }
     // closes the open path and terminates the data (once; an empty shape gets nothing)
     void EndShape()
     {

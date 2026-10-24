@@ -327,6 +327,10 @@ class StateBagImpl : public RefCountBase<StateBagImpl, Stat_Default_Mem>, public
 {
 protected:
     Ptr<StateBagImpl> pDelegate; // +0x20
+public:
+    // (appended, sfr_gfx_01i) the states asked when this bag has none (MovieImpl::SetLevelMovie)
+    void SetDelegate(StateBagImpl* pdelegate) { pDelegate = pdelegate; }
+protected:
 
     struct StatePtr
     {

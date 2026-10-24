@@ -23,16 +23,25 @@
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_interactiveobject.h"
 #include "../include/gfx/gfx_displayobjcontainer.h"
+#include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_movieimplstates.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_log.h"
 #include "../include/gfx/gfx_keyboardstate.h"
 #include "../include/gfx/gfx_input.h"
+#include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_playertasks.h"
 #include "../include/gfx/gfx_drawingcontext.h"
+#include "../include/gfx/gfx_imageresource.h"
+#include "../include/gfx/gfx_imagecreator.h"
 #include "../include/gfx/gfx_fontmanager.h"
+#include "../include/gfx/gfx_fontlib.h"
+#include "../include/gfx/gfx_fontmap.h"
+#include "../include/gfx/gfx_fontprovider.h"
+#include "../include/gfx/gfx_sound.h"
+#include "../include/sound/sound_renderer.h"
 #include "../include/gfx/gfx_value.h"
 #include "../include/gfx/gfx_imecandidateliststyle.h"
 #include "../include/gfx/gfx_imemanager.h"
@@ -44,7 +53,9 @@
 #include "../include/kernel/sf_timer.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_utf8util.h"
+#include "../include/kernel/sf_simd.h"
 #include "../include/gfx/gfx_asutils.h"
+#include "../include/render/render_shapedatafloatmp.h"
 #include <stdlib.h>
 
 namespace Scaleform {
@@ -63,6 +74,18 @@ public:
 
     void* Unrecovered_10[21];   // +0x10 the capture notify base and the context state (render units)
 };
+
+// Takes a reference on the provider (as sfr_gfx_06e defines it; ShapeMeshProvider is complete here).
+inline void TreeShape::SetShape(ShapeMeshProvider* pshape)
+{
+    NodeData* data = GetWritableData(Change_Shape);
+    if (pshape)
+        pshape->AddRef();
+    if (data->pMeshProvider)
+        data->pMeshProvider->Release();
+    data->pMeshProvider = pshape;
+    AddToPropagate();
+}
 static_assert(sizeof(DrawableImageContext) == 0xb8, "DrawableImageContext (GetDrawableImageContext allocates 0xb8)");
 
 }} // namespace Scaleform::Render
@@ -70,16 +93,34 @@ static_assert(sizeof(DrawableImageContext) == 0xb8, "DrawableImageContext (GetDr
 namespace Scaleform { namespace GFx {
 
 // The tab order comparers: by tabIndex, or by position (left to right, top to bottom) when no character has one.
-// Only the sorts are called here (out of line instantiations, 0x142569200 / 0x1425686b0).
+// Both are inlined into their sorts (0x142569200 / 0x1425686b0).
 class TabIndexSortFunctor
 {
 public:
-    bool operator()(const InteractiveObject* a, const InteractiveObject* b) const;
+    bool operator()(const InteractiveObject* a, const InteractiveObject* b) const
+    {
+        return a->TabIndex < b->TabIndex;
+    }
 };
 class AutoTabSortFunctor
 {
 public:
-    bool operator()(const InteractiveObject* a, const InteractiveObject* b) const;
+    // Rows are 20 twips high: two characters whose tops, bottoms or centers are that close are on one row and go
+    // left to right; otherwise the higher one comes first.
+    bool operator()(const InteractiveObject* a, const InteractiveObject* b) const
+    {
+        Render::Matrix2F ma;
+        a->GetLevelMatrix(&ma);
+        Render::Matrix2F mb;
+        b->GetLevelMatrix(&mb);
+        RectF ra = ma.EncloseTransform(a->GetFocusRect());
+        RectF rb = mb.EncloseTransform(b->GetFocusRect());
+        float cxa = (ra.x1 + ra.x2) * 0.5f, cya = (ra.y1 + ra.y2) * 0.5f;
+        float cxb = (rb.x1 + rb.x2) * 0.5f, cyb = (rb.y1 + rb.y2) * 0.5f;
+        if (Alg::Abs(ra.y1 - rb.y1) <= 20 || Alg::Abs(ra.y2 - rb.y2) <= 20 || Alg::Abs(cya - cyb) <= 20)
+            return cxa < cxb;
+        return cya < cyb;
+    }
 };
 // The sorts take the comparers by value from these (the exe loads them from .data).
 static TabIndexSortFunctor TabIndexSort;
@@ -87,12 +128,6 @@ static AutoTabSortFunctor  AutoTabSort;
 
 }} // namespace Scaleform::GFx
 
-namespace Scaleform { namespace Alg {
-template<> void QuickSortSliced(ArrayDH<Ptr<GFx::InteractiveObject>, 0x147>& arr, UPInt start, UPInt end,
-                                GFx::TabIndexSortFunctor less);
-template<> void QuickSortSliced(ArrayDH<Ptr<GFx::InteractiveObject>, 0x147>& arr, UPInt start, UPInt end,
-                                GFx::AutoTabSortFunctor less);
-}} // namespace Scaleform::Alg
 
 namespace Scaleform {
 // The topmost list's Resize stays out of line in the exe (Clear and RemoveAt call it, 0x1425750b0).
@@ -104,6 +139,42 @@ void ArrayData<Ptr<GFx::InteractiveObject>, AllocatorLH<Ptr<GFx::InteractiveObje
     BaseType::ResizeNoConstruct(this, newSize);
     if (newSize > oldSize)
         AllocatorType::ConstructArray(this->Data + oldSize, newSize - oldSize);
+}
+
+// The level list's too (SetLevelMovie's InsertAt, 0x142574fe0).
+template<> SF_NOINLINE
+void ArrayData<GFx::MovieImpl::LevelInfo, AllocatorLH<GFx::MovieImpl::LevelInfo, 0x147>, ArrayDefaultPolicy>::Resize(
+    UPInt newSize)
+{
+    UPInt oldSize = this->Size;
+    BaseType::ResizeNoConstruct(this, newSize);
+    if (newSize > oldSize)
+        AllocatorType::ConstructArray(this->Data + oldSize, newSize - oldSize);
+}
+
+// The level list's RemoveAt, out of line (ReleaseLevelMovie's level != 0 path, 0x142574090).
+template<> SF_NOINLINE
+void ArrayBase<ArrayData<GFx::MovieImpl::LevelInfo, AllocatorLH<GFx::MovieImpl::LevelInfo, 0x147>, ArrayDefaultPolicy> >::RemoveAt(UPInt index)
+{
+    if (Data.Size == 1)
+    {
+        Clear();
+    }
+    else
+    {
+        AllocatorType::Destruct(Data.Data + index);
+        AllocatorType::CopyArrayForward(Data.Data + index, Data.Data + index + 1, Data.Size - 1 - index);
+        --Data.Size;
+    }
+}
+
+
+// The level list's dtor, out of line (MovieImpl's dtor calls it, 0x14256a800).
+template<> SF_NOINLINE
+ArrayDataBase<GFx::MovieImpl::LevelInfo, AllocatorLH<GFx::MovieImpl::LevelInfo, 0x147>, ArrayDefaultPolicy>::~ArrayDataBase()
+{
+    AllocatorLH<GFx::MovieImpl::LevelInfo, 0x147>::DestructArray(Data, Size);
+    AllocatorLH<GFx::MovieImpl::LevelInfo, 0x147>::Free(Data);
 }
 
 // The kill list's ResizeNoConstruct stays out of line too (Clear and RemoveAt call it, 0x1425752c0).
@@ -157,6 +228,41 @@ class FSCommandHandler : public State
 {
 };
 
+// The script diagnostics switches (state 3); the movie copies them into its Flags each advance.
+class ActionControl : public State
+{
+public:
+    enum ActionControlFlags
+    {
+        Action_Verbose           = 0x01,
+        Action_ErrorSuppress     = 0x02,
+        Action_LogRootFilenames  = 0x04,
+        Action_LogChildFilenames = 0x08,
+        Action_LongFilenames     = 0x10
+    };
+    unsigned GetActionFlags() const { return ActionFlags; }
+
+protected:
+    unsigned ActionFlags;   // +0x18
+};
+
+// Releases and clears a state pointer the movie holds only while it advances.
+template<class C>
+class AdvanceStateGuard
+{
+    C** ppObject;
+public:
+    AdvanceStateGuard(C** pp) : ppObject(pp) {}
+    ~AdvanceStateGuard()
+    {
+        if (*ppObject)
+        {
+            (*ppObject)->Release();
+            *ppObject = 0;
+        }
+    }
+};
+
 // The AVM root's vftable as the player calls it (ASMovieRootBase carries no virtuals in our headers): 4.1.18 slot
 // order, the slots the player does not call left unnamed.
 class __declspec(novtable) ASMovieRootSlots418
@@ -164,12 +270,12 @@ class __declspec(novtable) ASMovieRootSlots418
 public:
     virtual void Slot00() = 0;
     virtual void Slot01() = 0;
-    virtual void Slot02() = 0;
+    virtual void AdvanceFrame(bool playingFrame) = 0;                                          // 2
     virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType) = 0;          // 3
     virtual void Slot04() = 0;
     virtual void ClearDisplayList() = 0;                                                       // 5
     virtual void Slot06() = 0;
-    virtual void Slot07() = 0;
+    virtual void DoActions() = 0;                                                              // 7
     virtual void Slot08() = 0;
     virtual void ForceCollect() = 0;                                                            // 9
     virtual void Slot10() = 0;
@@ -177,8 +283,8 @@ public:
     virtual void Slot12() = 0;
     virtual void Slot13() = 0;
     virtual DisplayObjectBase* GetRootMovie(DisplayObjectBase* dobj = 0) const = 0;            // 14
-    virtual void Slot15() = 0;
-    virtual void Slot16() = 0;
+    virtual bool Init(MovieDefImpl* pmovieDef) = 0;                                          // 15
+    virtual void NotifyMouseState(const InputEventsQueueEntry* qe, const MouseState* ms, int mi) = 0; // 16
     virtual void NotifyOnResize() = 0;                                                         // 17
     virtual void NotifyQueueSetFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt) = 0; // 18
     virtual void NotifyTransferFocus(InteractiveObject* curFocused, InteractiveObject* pnewFocus,
@@ -187,7 +293,7 @@ public:
                                      unsigned controllerIdx, FocusMovedType fmt,
                                      ProcessFocusKeyInfo* pfocusKeyInfo) = 0;                   // 20
     virtual void OnMovieFocus(bool set) = 0;                                                   // 21
-    virtual void Slot22() = 0;
+    virtual void OnNextFrame() = 0;                                                            // 22
     virtual void Slot23() = 0;
     virtual void Slot24() = 0;
     virtual void PrintObjectsReport(UInt32 flags, Log* log, const char* swfName) = 0;          // 25
@@ -230,6 +336,7 @@ class ViewStats : public RefCountBase<ViewStats, Stat_Default_Mem>
 {
 public:
     void GetStats(::Scaleform::StatBag* pbag, bool reset);   // exe 0x142622740
+    void SetName(const char* pname);                         // exe 0x142624660 (the file name, path stripped)
 };
 } // namespace AMP
 
@@ -869,6 +976,95 @@ void MovieImpl::UpdateAllDrawingContexts()
     }
 }
 
+// Rebuilds the focus rectangles over the stage: per focus group whose focus came from the keyboard, a shape of four
+// one pixel (20 twip) bars around the world bounds of the focused character, each group 20 twips further out and in
+// its own color. A focused character with an empty focus rectangle ends the update with FocusRectChanged still set.
+// @0x142577cd0
+// MS2-FUNCTIONAL
+void MovieImpl::UpdateFocusRectRenderNodes()
+{
+    if (!pMainMovie)
+        return;
+    if (!FocusRectContainerNode)
+    {
+        FocusRectContainerNode = *RenderContext.CreateEntry<Render::TreeContainer>();
+        pRenderRoot->Insert(pRenderRoot->GetSize(), FocusRectContainerNode);
+    }
+    else
+        FocusRectContainerNode->Remove(0, FocusRectContainerNode->GetSize());
+
+    for (unsigned i = 0; i < FocusGroupsCnt; ++i)
+    {
+        FocusGroupDescr& focusGroup = FocusGroups[i];
+        Ptr<InteractiveObject> curFocused = focusGroup.LastFocused;
+        if (!curFocused || !focusGroup.FocusRectShown || !curFocused->IsFocusRectEnabled())
+            continue;
+
+        Render::RectF focusLocalRect = curFocused->GetFocusRect();
+        if (focusLocalRect.IsNull())
+            return;
+        Render::Matrix3F worldMat;
+        curFocused->GetWorldMatrix3D(&worldMat);
+        Render::Matrix3F mat(worldMat);
+        Render::RectF r = mat.EncloseTransform(focusLocalRect);
+
+        const float width  = 20.f;
+        const float offset = float(i) * width;
+        r.x1 -= offset;
+        r.x2 += offset;
+        r.y1 -= offset;
+        r.y2 += offset;
+
+        Ptr<Render::ShapeDataFloat> shapeData = *SF_HEAP_AUTO_NEW(this) Render::ShapeDataFloat();
+        Render::FillStyleType fill;
+        fill.Color = 0xFF000000u | (0xFFFF00u ^ (i * 0x1080D0u));
+        shapeData->AddFillStyle(fill);
+
+        // top, right, bottom, left
+        shapeData->StartPath(1, 0, 0);
+        shapeData->MoveTo(r.x1, r.y1);
+        shapeData->LineTo(r.x2, r.y1);
+        shapeData->LineTo(r.x2, r.y1 + width);
+        shapeData->LineTo(r.x1, r.y1 + width);
+        shapeData->ClosePath();
+        shapeData->EndPath();
+
+        shapeData->StartPath(1, 0, 0);
+        shapeData->MoveTo(r.x2, r.y1);
+        shapeData->LineTo(r.x2, r.y2);
+        shapeData->LineTo(r.x2 - width, r.y2);
+        shapeData->LineTo(r.x2 - width, r.y1);
+        shapeData->ClosePath();
+        shapeData->EndPath();
+
+        shapeData->StartPath(1, 0, 0);
+        shapeData->MoveTo(r.x2, r.y2);
+        shapeData->LineTo(r.x1, r.y2);
+        shapeData->LineTo(r.x1, r.y2 - width);
+        shapeData->LineTo(r.x2, r.y2 - width);
+        shapeData->ClosePath();
+        shapeData->EndPath();
+
+        shapeData->StartPath(1, 0, 0);
+        shapeData->MoveTo(r.x1, r.y2);
+        shapeData->LineTo(r.x1, r.y1);
+        shapeData->LineTo(r.x1 + width, r.y1);
+        shapeData->LineTo(r.x1 + width, r.y2);
+        shapeData->ClosePath();
+        shapeData->EndPath();
+        shapeData->EndShape();
+
+        // (the exe also builds a provider over the shape that it never uses)
+        Ptr<Render::ShapeMeshProvider> unusedProv = *SF_HEAP_AUTO_NEW(this) Render::ShapeMeshProvider(shapeData);
+        Ptr<Render::ShapeMeshProvider> meshProv   = *SF_HEAP_AUTO_NEW(this) Render::ShapeMeshProvider(shapeData);
+        Ptr<Render::TreeShape> shapeNode = *RenderContext.CreateEntry<Render::TreeShape>();
+        shapeNode->SetShape(meshProv);
+        FocusRectContainerNode->Insert(FocusRectContainerNode->GetSize(), shapeNode);
+        focusGroup.FocusRectNode = shapeNode;
+    }
+    FocusRectChanged = false;
+}
+
 // @0x14256dc00
 void MovieImpl::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 {
@@ -1120,6 +1316,200 @@ void MovieImpl::OnMovieFocus(bool set)
     AsRootSlots(pASMovieRoot)->OnMovieFocus(set);
 }
 
+// The toggle keys (num / caps / scroll lock) of a keyboard as the application reports them.
+static __forceinline void SetToggleKeys(KeyboardState* pks, const KeyModifiers& mods)
+{
+    pks->SetKeyToggled(Key::NumLock, mods.IsNumToggled());
+    pks->SetKeyToggled(Key::CapsLock, mods.IsCapsToggled());
+    pks->SetKeyToggled(Key::ScrollLock, mods.IsScrollToggled());
+}
+
+// The modifier byte of an event as it came (no initialized bit added).
+static inline KeyModifiers EventModifiers(const Event& event)
+{
+    KeyModifiers mods;
+    mods.States = event.Modifiers;
+    return mods;
+}
+
+// An input event from the application: mouse and key events are queued for the next Advance (mouse positions mapped
+// from viewport pixels onto the stage), focus changes take effect at once and IME events go to the IME manager.
+// An unfocused movie only takes the focus event.
+// @0x142570280
+unsigned MovieImpl::HandleEvent(const Event& event)
+{
+    if (!IsMovieFocused() && event.Type != Event::SetFocus)
+        return HE_NotHandled;
+
+    if (event.Type == Event::SetFocus)
+    {
+        const SetFocusEvent& fevent = static_cast<const SetFocusEvent&>(event);
+        for (unsigned i = 0; i < 4; ++i)
+        {
+            if (fevent.KeysStates[i].States != 0)
+                SetToggleKeys(GetKeyboardState(i), fevent.KeysStates[i]);
+        }
+        OnMovieFocus(true);
+        return HE_Handled;
+    }
+    if (event.Type == Event::KeyDown || event.Type == Event::KeyUp)
+    {
+        const KeyEvent& kevent = static_cast<const KeyEvent&>(event);
+        KeyboardState* pks = GetKeyboardState(kevent.KeyboardIndex);
+        if (pks && event.Modifiers != 0)
+            SetToggleKeys(pks, reinterpret_cast<const KeyModifiers&>(event.Modifiers));
+    }
+
+    switch (event.Type)
+    {
+    case Event::MouseMove:
+    {
+        const MouseEvent& mevent = static_cast<const MouseEvent&>(event);
+        unsigned mouseIndex = mevent.MouseIndex;
+        if (mouseIndex < MouseCursorCount)
+        {
+            Render::PointF pt(Render::PointF::NoInit);
+            ViewportMatrix.TransformByInverse(&pt, Render::PointF(mevent.x, mevent.y));
+            InputEventsQueue.AddMouseMove(mouseIndex, pt);
+            return HE_Completed;
+        }
+        break;
+    }
+    case Event::MouseUp:
+    {
+        const MouseEvent& mevent = static_cast<const MouseEvent&>(event);
+        unsigned mouseIndex = mevent.MouseIndex;
+        if (mouseIndex < MouseCursorCount)
+        {
+            Render::PointF pt(Render::PointF::NoInit);
+            ViewportMatrix.TransformByInverse(&pt, Render::PointF(mevent.x, mevent.y));
+            InputEventsQueue.AddMouseButtonEvent(mouseIndex, pt, 1u << mevent.Button,
+                                                 InputEventsQueueEntry::MouseButton_Released);
+            return HE_Completed;
+        }
+        break;
+    }
+    case Event::MouseDown:
+    {
+        const MouseEvent& mevent = static_cast<const MouseEvent&>(event);
+        unsigned mouseIndex = mevent.MouseIndex;
+        if (mouseIndex < MouseCursorCount)
+        {
+            Render::PointF pt(Render::PointF::NoInit);
+            ViewportMatrix.TransformByInverse(&pt, Render::PointF(mevent.x, mevent.y));
+            InputEventsQueue.AddMouseButtonEvent(mouseIndex, pt, 1u << mevent.Button, 0);
+            return HE_Completed;
+        }
+        break;
+    }
+    case Event::MouseWheel:
+    {
+        const MouseEvent& mevent = static_cast<const MouseEvent&>(event);
+        unsigned mouseIndex = mevent.MouseIndex;
+        if (mouseIndex < MouseCursorCount)
+        {
+            Render::PointF pt(Render::PointF::NoInit);
+            ViewportMatrix.TransformByInverse(&pt, Render::PointF(mevent.x, mevent.y));
+            InputEventsQueue.AddMouseWheel(mouseIndex, pt, (int)mevent.ScrollDelta);
+            return HE_Completed;
+        }
+        break;
+    }
+    case Event::KeyDown:
+    {
+        const KeyEvent& kevent = static_cast<const KeyEvent&>(event);
+        KeyboardState* pks = GetKeyboardState(kevent.KeyboardIndex);
+        if (pks)
+        {
+            pks->SetKeyDown(kevent.KeyCode, kevent.AsciiCode, EventModifiers(event));
+            // the left / right variant of a shift, control or alt key (the extended one is the right key)
+            switch (kevent.KeyCode)
+            {
+            case Key::Shift:
+                if (!EventModifiers(event).IsExtendedKey())
+                    pks->SetKeyDown(0xa0, 0, KeyModifiers(0), false);
+                else
+                    pks->SetKeyDown(0xa1, 0, KeyModifiers(0), false);
+                break;
+            case Key::Control:
+                if (!EventModifiers(event).IsExtendedKey())
+                    pks->SetKeyDown(0xa2, 0, KeyModifiers(0), false);
+                else
+                    pks->SetKeyDown(0xa3, 0, KeyModifiers(0), false);
+                break;
+            case Key::Alt:
+                if (!EventModifiers(event).IsExtendedKey())
+                    pks->SetKeyDown(0xa4, 0, KeyModifiers(0), false);
+                else
+                    pks->SetKeyDown(0xa5, 0, KeyModifiers(0), false);
+                break;
+            default:
+                break;
+            }
+        }
+        InputEventsQueue.AddKeyEvent((short)kevent.KeyCode, kevent.AsciiCode, 0, true, EventModifiers(event),
+                                     kevent.KeyboardIndex);
+        if (kevent.WcharCode == 13 || (kevent.WcharCode >= 32 && kevent.WcharCode != 127))
+            InputEventsQueue.AddKeyEvent(0, 0, kevent.WcharCode, true, KeyModifiers(0), kevent.KeyboardIndex);
+        return HE_Completed;
+    }
+    case Event::KeyUp:
+    {
+        const KeyEvent& kevent = static_cast<const KeyEvent&>(event);
+        KeyboardState* pks = GetKeyboardState(kevent.KeyboardIndex);
+        if (pks)
+        {
+            pks->SetKeyUp(kevent.KeyCode, kevent.AsciiCode, EventModifiers(event));
+            switch (kevent.KeyCode)
+            {
+            case Key::Shift:
+                if (!EventModifiers(event).IsExtendedKey())
+                    pks->SetKeyUp(0xa0, 0, KeyModifiers(0), false);
+                else
+                    pks->SetKeyUp(0xa1, 0, KeyModifiers(0), false);
+                break;
+            case Key::Control:
+                if (!EventModifiers(event).IsExtendedKey())
+                    pks->SetKeyUp(0xa2, 0, KeyModifiers(0), false);
+                else
+                    pks->SetKeyUp(0xa3, 0, KeyModifiers(0), false);
+                break;
+            case Key::Alt:
+                if (!EventModifiers(event).IsExtendedKey())
+                    pks->SetKeyUp(0xa4, 0, KeyModifiers(0), false);
+                else
+                    pks->SetKeyUp(0xa5, 0, KeyModifiers(0), false);
+                break;
+            default:
+                break;
+            }
+        }
+        InputEventsQueue.AddKeyEvent((short)kevent.KeyCode, kevent.AsciiCode, 0, false, EventModifiers(event),
+                                     kevent.KeyboardIndex);
+        return HE_Completed;
+    }
+    case Event::Char:
+    {
+        const CharEvent& cevent = static_cast<const CharEvent&>(event);
+        InputEventsQueue.AddKeyEvent(0, 0, cevent.WcharCode, true, KeyModifiers(0), cevent.KeyboardIndex);
+        return HE_Completed;
+    }
+    case Event::IME:
+    {
+        Ptr<IMEManagerBase> pimeManager = GetIMEManager();
+        if (pimeManager)
+            return pimeManager->HandleIMEEvent(this, static_cast<const IMEEvent&>(event));
+        break;
+    }
+    case Event::KillFocus:
+        OnMovieFocus(false);
+        break;
+    default:
+        break;
+    }
+    return HE_NotHandled;
+}
+
 // Whether the screen point hits one of the levels; HitTest_ButtonEvents asks for something that takes button events.
 // @0x142570a00
 bool MovieImpl::HitTest(float x, float y, HitTestType testCond, unsigned controllerIdx)
@@ -1129,9 +1519,9 @@ bool MovieImpl::HitTest(float x, float y, HitTestType testCond, unsigned control
 
     SetNormalizedScreenCoords(pt);
 
-    for (unsigned movieIndex = (unsigned)MovieLevelsSize; movieIndex > 0; movieIndex--)
+    for (unsigned movieIndex = (unsigned)MovieLevels.GetSize(); movieIndex > 0; movieIndex--)
     {
-        InteractiveObject* pmovie = pMovieLevels[movieIndex - 1].pSprite;
+        InteractiveObject* pmovie = MovieLevels[movieIndex - 1].pSprite;
 
         Render::RectF movieLocalBounds = pmovie->GetBounds(Render::Matrix2F());
 
@@ -1186,6 +1576,7 @@ bool MovieImpl::HitTest(float x, float y, HitTestType testCond, unsigned control
     return false;
 }
 
+// @0x1425775c0
 Render::PointF MovieImpl::TranslateToScreen(const Render::PointF& p, Render::Matrix2F* puserMatrix)
 {
     Render::Matrix2F worldMatrix;
@@ -1198,6 +1589,7 @@ Render::PointF MovieImpl::TranslateToScreen(const Render::PointF& p, Render::Mat
     return mat.Transform(Render::PixelsToTwips(p));
 }
 
+// @0x142577860
 Render::RectF MovieImpl::TranslateToScreen(const Render::RectF& r, Render::Matrix2F* puserMatrix)
 {
     Render::Matrix2F worldMatrix;
@@ -1257,6 +1649,7 @@ class TreeRoot::NodeData : public TreeContainer::NodeData
 {
 public:
     NodeData();
+    NodeData(const NodeData& src);
 
     Viewport VP;        // +0xa0
     Color    BGColor;   // +0xcc
@@ -1268,6 +1661,117 @@ SF_NOINLINE TreeRoot::NodeData::NodeData() : TreeContainer::NodeData(ET_Root), B
 {
     pVTable = TreeRootNodeDataVTable;
 }
+
+// The copy a snapshot clones: the root's vftable goes in before the viewport is copied.
+// @0x14256a630
+SF_NOINLINE TreeRoot::NodeData::NodeData(const NodeData& src)
+    : TreeContainer::NodeData(src), VP((pVTable = TreeRootNodeDataVTable, src.VP)), BGColor(src.BGColor)
+{
+}
+
+// The deleting destructors in slot 0 of the node data vftables. The node data carries its vftable as a plain pointer
+// here (gfx_rendertree.h), so they are written out: the children's shared array, the states, then the entry data
+// (0x14257eb30), in reverse member order.
+}} // namespace Scaleform::Render
+void FUN_14257eb30(void* entryData);   // ContextImpl::EntryData::~EntryData
+namespace Scaleform { namespace Render {
+
+static SF_INLINE void destroyChildren(TreeNodeArray& children)
+{
+    if (children.hasArrayData())
+    {
+        TreeNodeArray::ArrayData* array = children.getArrayData();
+        if (AtomicOps<int>::ExchangeAdd_NoSync(&array->RefCount, -1) == 1)
+            SF_FREE(array);
+    }
+}
+
+// ContextData_ImplMixin<TreeContainer::NodeData, TreeNode::NodeData> (vftable 0x143183230)
+// @0x14256b5e0
+void* FUN_14256b5e0(TreeNode::NodeData* data, unsigned flags)
+{
+    data->States.~StateBag();
+    FUN_14257eb30(data);
+    if (flags & 1)
+        ::operator delete(data, 0x90);
+    return data;
+}
+
+// ContextData_ImplMixin<TreeRoot::NodeData, TreeContainer::NodeData> (vftable 0x1431832d0)
+// @0x14256b630
+void* FUN_14256b630(TreeContainer::NodeData* data, unsigned flags)
+{
+    destroyChildren(data->Children);
+    data->States.~StateBag();
+    FUN_14257eb30(data);
+    if (flags & 1)
+        ::operator delete(data, 0xa0);
+    return data;
+}
+
+// TreeContainer::NodeData (vftable 0x143183280)
+// @0x14256b9f0
+void* FUN_14256b9f0(TreeContainer::NodeData* data, unsigned flags)
+{
+    destroyChildren(data->Children);
+    data->States.~StateBag();
+    FUN_14257eb30(data);
+    if (flags & 1)
+        ::operator delete(data, 0xa0);
+    return data;
+}
+
+// TreeRoot::NodeData (vftable 0x143183320)
+// @0x14256ba70
+void* FUN_14256ba70(TreeRoot::NodeData* data, unsigned flags)
+{
+    destroyChildren(data->Children);
+    data->States.~StateBag();
+    FUN_14257eb30(data);
+    if (flags & 1)
+        ::operator delete(data, 0xd0);
+    return data;
+}
+
+class LinearHeap
+{
+public:
+    void* Alloc(UPInt size);   // 0x1424eb4d0
+};
+
+namespace ContextImpl {
+
+// The snapshot statistics (Render_Context data).
+extern unsigned ConstructCopyCalls, CopyCalls;
+
+// The copy slots of the container and root node data vftables. The node data carries its vftable as a plain pointer
+// here (gfx_rendertree.h), so the mixin only holds the slots: `this` is the C node data.
+template<class C, class B>
+class ContextData_ImplMixin
+{
+public:
+    virtual EntryData* ConstructCopy(LinearHeap& heap) const
+    {
+        ConstructCopyCalls++;
+        return new (heap.Alloc(sizeof(C))) C(*(const C*)this);
+    }
+    virtual void CopyTo(void* dest) const
+    {
+        *(C*)dest = *(const C*)this;
+        CopyCalls++;
+    }
+};
+
+// @0x14256e280
+template EntryData* ContextData_ImplMixin<TreeContainer::NodeData, TreeNode::NodeData>::ConstructCopy(LinearHeap&) const;
+// @0x14256e310
+template void ContextData_ImplMixin<TreeContainer::NodeData, TreeNode::NodeData>::CopyTo(void*) const;
+// @0x14256e2e0
+template EntryData* ContextData_ImplMixin<TreeRoot::NodeData, TreeContainer::NodeData>::ConstructCopy(LinearHeap&) const;
+// @0x14256e350
+template void ContextData_ImplMixin<TreeRoot::NodeData, TreeContainer::NodeData>::CopyTo(void*) const;
+
+} // namespace ContextImpl
 
 // The background color travels with the viewport change bit.
 // @0x142575a20
@@ -1290,7 +1794,7 @@ inline Movie::Movie()
 // @0x142569e20
 // MS2-FUNCTIONAL: instruction scheduling (a few store pairs swapped) differs; every store and call matches
 MovieImpl::MovieImpl(MemoryHeap* pheap)
-    : pAdvanceStats(0), pHeap(pheap), pMainMovieDef(0), pMovieLevels(0), MovieLevelsSize(0), MovieLevelsCapacity(0),
+    : pAdvanceStats(0), pHeap(pheap), pMainMovieDef(0), MovieLevels(),
       pStateBag(0), pRenderRoot(0), pTopMostRoot(0), PixelScale(1.f), pUserEventHandler(0), pFSCommandHandler(0),
       pExtIntfHandler(0), pFontManagerStates(0), pXMLObjectManager(0), BackgroundColor(0, 0, 0, 0xff),
       MouseCursorCount(1), ControllerCount(1), UserData(0), StickyVariables(), TopmostLevelCharacters(),
@@ -1454,9 +1958,9 @@ void MovieImpl::FillTabableArray(const ProcessFocusKeyInfo* pfocusInfo)
         else
         {
             // Every level, the topmost first.
-            for (int i = (int)MovieLevelsSize; i > 0; --i)
+            for (int i = (int)MovieLevels.GetSize(); i > 0; --i)
             {
-                InteractiveObject* plevel = pMovieLevels[i - 1].pSprite;
+                InteractiveObject* plevel = MovieLevels[i - 1].pSprite;
                 if (plevel->IsDisplayObjContainer())
                     ((DisplayObjContainer*)plevel)->FillTabableArray(&params);
             }
@@ -1539,6 +2043,291 @@ void MovieImpl::InitFocusKeyInfo(ProcessFocusKeyInfo* pfocusInfo, const InputEve
     pfocusInfo->Initialized = true;
 }
 
+// The focus search of the arrow keys measures in whole pixels.
+static inline float FocusPixels(float twips)
+{
+    return floorf(Render::TwipsToPixels(twips));
+}
+
+// Moves the keyboard focus within the focus group of the key's controller: Tab steps through the tab order
+// (backwards with Shift), the arrow keys, while the focus rectangle is up or the focus is moved by hand, pick the
+// closest character on that side of the focused one. Only the candidate (CurFocusIdx, CurFocused) is chosen here;
+// FinalizeProcessFocusKey moves the focus.
+// @0x142572050
+// MS2-FUNCTIONAL: scheduling (the -1 step of the search loops stays in a register, two rect loads swap)
+void MovieImpl::ProcessFocusKey(Event::EventType event, const InputEventsQueueEntry::KeyEntry& keyEntry,
+                                ProcessFocusKeyInfo* pfocusInfo)
+{
+    if (event != Event::KeyDown)
+        return;
+    if (keyEntry.Code != Key::Tab &&
+        !((IsFocusRectShown(keyEntry.KeyboardIndex) || pfocusInfo->ManualFocus) &&
+          (keyEntry.Code == Key::Left || keyEntry.Code == Key::Right || keyEntry.Code == Key::Up ||
+           keyEntry.Code == Key::Down)))
+        return;
+
+    InitFocusKeyInfo(pfocusInfo, keyEntry, false, NULL);
+    const FocusGroupDescr& focusGroup = *pfocusInfo->pFocusGroup;
+    const int count = (int)focusGroup.TabableArray.GetSize();
+
+    if (keyEntry.Code == Key::Tab)
+    {
+        // The next character of the tab order that takes the focus, wrapping around once.
+        int idx = pfocusInfo->CurFocusIdx;
+        pfocusInfo->CurFocusIdx = -1;
+        for (int n = 0; n < count; ++n)
+        {
+            if (KeyModifiers(keyEntry.KeysState).IsShiftPressed())
+            {
+                if (--idx < 0)
+                    idx = count - 1;
+            }
+            else
+            {
+                if (++idx >= count)
+                    idx = 0;
+            }
+            if (focusGroup.TabableArray[idx] &&
+                (pfocusInfo->InclFocusEnabled || focusGroup.TabableArray[idx]->IsTabable()) &&
+                focusGroup.TabableArray[idx]->IsFocusAllowed(this, pfocusInfo->KeyboardIndex))
+            {
+                pfocusInfo->CurFocusIdx = idx;
+                break;
+            }
+        }
+    }
+    else if (pfocusInfo->CurFocused)
+    {
+        if (pfocusInfo->CurFocused->IsFocusRectEnabled() || IsAlwaysEnableFocusArrowKeys() ||
+            pfocusInfo->ManualFocus)
+        {
+            Render::Matrix2F fromMat;
+            pfocusInfo->CurFocused->GetLevelMatrix(&fromMat);
+            Render::RectF fromRect = fromMat.EncloseTransform(pfocusInfo->CurFocused->GetFocusRect());
+
+            // Pressing the same arrow again keeps measuring from the rectangle the run of presses started at across
+            // the direction, so the focus walks a straight line.
+            if (pfocusInfo->PrevKeyCode == keyEntry.Code)
+            {
+                if (keyEntry.Code == Key::Up || keyEntry.Code == Key::Down)
+                {
+                    fromRect.x1 = pfocusInfo->PrevFocusRect.x1;
+                    fromRect.x2 = pfocusInfo->PrevFocusRect.x2;
+                }
+                else if (keyEntry.Code == Key::Right || keyEntry.Code == Key::Left)
+                {
+                    fromRect.y1 = pfocusInfo->PrevFocusRect.y1;
+                    fromRect.y2 = pfocusInfo->PrevFocusRect.y2;
+                }
+            }
+            else
+            {
+                pfocusInfo->PrevFocusRect = fromRect;
+                pfocusInfo->PrevKeyCode   = keyEntry.Code;
+            }
+
+            if (keyEntry.Code == Key::Right || keyEntry.Code == Key::Left)
+            {
+                // Characters overlapping the band beside the focused one (by at least two pixels of height) win
+                // over all others and among themselves go by the horizontal distance; without any, the straight
+                // distance between the facing edge midpoints decides.
+                int idx = pfocusInfo->CurFocusIdx;
+                Render::RectF bestRect;
+                bestRect.x1 = bestRect.x2 = (keyEntry.Code == Key::Right) ? float(INT_MAX) : float(INT_MIN);
+                bestRect.y1 = bestRect.y2 = float(INT_MAX);
+                bool inBand = false;
+                for (int n = 0; n < count - 1; ++n)
+                {
+                    idx = (keyEntry.Code == Key::Right) ? idx + 1 : idx - 1;
+                    if (idx >= count)
+                        idx = 0;
+                    else if (idx < 0)
+                        idx = count - 1;
+                    Ptr<InteractiveObject> pcand = focusGroup.TabableArray[idx];
+                    if ((!pfocusInfo->InclFocusEnabled && !pcand->IsTabable()) ||
+                        !pcand->IsFocusAllowed(this, pfocusInfo->KeyboardIndex))
+                        continue;
+                    Render::Matrix2F candMat;
+                    pcand->GetLevelMatrix(&candMat);
+                    Render::RectF candRect = candMat.EncloseTransform(pcand->GetFocusRect());
+
+                    bool candInBand = false;
+                    Render::RectF band;
+                    if (keyEntry.Code == Key::Right)
+                        band = Render::RectF(fromRect.x2 + 1, fromRect.y1, FLT_MAX, fromRect.y2);
+                    else
+                        band = Render::RectF(-FLT_MAX, fromRect.y1, fromRect.x1 - 1, fromRect.y2);
+                    if (candRect.Intersects(band))
+                    {
+                        Render::RectF overlap = candRect;
+                        overlap.Intersect(band);
+                        if (overlap.Height() >= 40)
+                            candInBand = true;
+                    }
+                    if (candInBand)
+                    {
+                        if (!inBand)
+                        {
+                            pfocusInfo->CurFocusIdx = idx;
+                            bestRect = candRect;
+                            inBand = true;
+                            continue;
+                        }
+                    }
+                    if (inBand && !candInBand)
+                        continue;
+
+                    // From the middle of the focused rectangle's facing edge to the middle of the near edges of
+                    // the candidate and of the best one so far, both cut to the part on this side.
+                    Render::PointF toCand, toBest;
+                    if (keyEntry.Code == Key::Right)
+                    {
+                        Render::PointF from(fromRect.x2, fromRect.y1 + fromRect.Height() / 2);
+                        Render::RectF cand(candRect), best(bestRect);
+                        cand.x1 = Alg::Max(fromRect.x2, cand.x1);
+                        cand.x2 = Alg::Min(candRect.x2, cand.x2);
+                        best.x1 = Alg::Max(fromRect.x2, best.x1);
+                        best.x2 = Alg::Min(bestRect.x2, best.x2);
+                        if (!cand.IsNormal() || Alg::IRound(Render::TwipsToPixels(cand.Width())) <= 3)
+                            continue;
+                        toCand.x = FocusPixels(cand.x1 - from.x);
+                        toCand.y = FocusPixels(candRect.y1 + candRect.Height() / 2 - from.y);
+                        toBest.x = FocusPixels(best.x1 - from.x);
+                        toBest.y = FocusPixels(bestRect.y1 + bestRect.Height() / 2 - from.y);
+                        if (toCand.x < 0)
+                            continue;
+                    }
+                    else
+                    {
+                        Render::PointF from(fromRect.x1, fromRect.y1 + fromRect.Height() / 2);
+                        Render::RectF cand(candRect), best(bestRect);
+                        cand.x1 = Alg::Max(candRect.x1, cand.x1);
+                        cand.x2 = Alg::Min(fromRect.x1, cand.x2);
+                        best.x1 = Alg::Max(bestRect.x1, best.x1);
+                        best.x2 = Alg::Min(fromRect.x1, best.x2);
+                        if (!cand.IsNormal() || Alg::IRound(Render::TwipsToPixels(cand.Width())) <= 3)
+                            continue;
+                        toCand.x = FocusPixels(cand.x2 - from.x);
+                        toCand.y = FocusPixels(candRect.y1 + candRect.Height() / 2 - from.y);
+                        toBest.x = FocusPixels(best.x2 - from.x);
+                        toBest.y = FocusPixels(bestRect.y1 + bestRect.Height() / 2 - from.y);
+                        if (toCand.x > 0)
+                            continue;
+                    }
+                    if ((inBand && (Alg::Abs(toCand.x) < Alg::Abs(toBest.x) ||
+                                    (toCand.x == toBest.x && Alg::Abs(toCand.y) < Alg::Abs(toBest.y)))) ||
+                        (!inBand && toCand.x * toCand.x + toCand.y * toCand.y <
+                                        toBest.x * toBest.x + toBest.y * toBest.y))
+                    {
+                        pfocusInfo->CurFocusIdx = idx;
+                        bestRect = candRect;
+                    }
+                }
+            }
+            else if (keyEntry.Code == Key::Up || keyEntry.Code == Key::Down)
+            {
+                // The same search turned upright: the band runs above or below the focused character and ranks by
+                // the vertical distance first.
+                int idx = pfocusInfo->CurFocusIdx;
+                Render::RectF bestRect(0, 0, 0, 0);
+                bestRect.x1 = float(INT_MAX);
+                bestRect.y1 = (keyEntry.Code == Key::Down) ? float(INT_MAX) : float(INT_MIN);
+                bool inBand = false;
+                for (int n = 0; n < count - 1; ++n)
+                {
+                    idx = (keyEntry.Code == Key::Down) ? idx + 1 : idx - 1;
+                    if (idx >= count)
+                        idx = 0;
+                    else if (idx < 0)
+                        idx = count - 1;
+                    Ptr<InteractiveObject> pcand = focusGroup.TabableArray[idx];
+                    if ((!pfocusInfo->InclFocusEnabled && !pcand->IsTabable()) ||
+                        !pcand->IsFocusAllowed(this, pfocusInfo->KeyboardIndex))
+                        continue;
+                    Render::Matrix2F candMat;
+                    pcand->GetLevelMatrix(&candMat);
+                    Render::RectF candRect = candMat.EncloseTransform(pcand->GetFocusRect());
+
+                    bool candInBand = false;
+                    Render::RectF band;
+                    if (keyEntry.Code == Key::Down)
+                        band = Render::RectF(fromRect.x1, fromRect.y2 + 1, fromRect.x2, FLT_MAX);
+                    else
+                        band = Render::RectF(fromRect.x1, -FLT_MAX, fromRect.x2, fromRect.y1 - 1);
+                    if (candRect.Intersects(band))
+                    {
+                        Render::RectF overlap = candRect;
+                        overlap.Intersect(band);
+                        if (overlap.Width() >= 40)
+                            candInBand = true;
+                    }
+                    if (candInBand)
+                    {
+                        if (!inBand)
+                        {
+                            pfocusInfo->CurFocusIdx = idx;
+                            bestRect = candRect;
+                            inBand = true;
+                            continue;
+                        }
+                    }
+                    if (inBand && !candInBand)
+                        continue;
+
+                    Render::PointF toCand, toBest;
+                    if (keyEntry.Code == Key::Up)
+                    {
+                        Render::PointF from(fromRect.x1 + fromRect.Width() / 2, fromRect.y1);
+                        Render::RectF cand(candRect), best(bestRect);
+                        cand.y1 = Alg::Max(candRect.y1, cand.y1);
+                        cand.y2 = Alg::Min(fromRect.y1, cand.y2);
+                        best.y1 = Alg::Max(bestRect.y1, best.y1);
+                        best.y2 = Alg::Min(fromRect.y1, best.y2);
+                        if (!cand.IsNormal() || Alg::IRound(Render::TwipsToPixels(cand.Height())) <= 3)
+                            continue;
+                        toCand.x = FocusPixels(cand.x1 + cand.Width() / 2 - from.x);
+                        toCand.y = FocusPixels(cand.y2 - from.y);
+                        toBest.x = FocusPixels(best.x1 + best.Width() / 2 - from.x);
+                        toBest.y = FocusPixels(best.y2 - from.y);
+                        if (toCand.y > 0)
+                            continue;
+                    }
+                    else
+                    {
+                        Render::PointF from(fromRect.x1 + fromRect.Width() / 2, fromRect.y2);
+                        Render::RectF cand(candRect), best(bestRect);
+                        cand.y1 = Alg::Max(fromRect.y2, cand.y1);
+                        cand.y2 = Alg::Min(candRect.y2, cand.y2);
+                        best.y1 = Alg::Max(fromRect.y2, best.y1);
+                        best.y2 = Alg::Min(bestRect.y2, best.y2);
+                        if (!cand.IsNormal() || Alg::IRound(Render::TwipsToPixels(cand.Height())) <= 3)
+                            continue;
+                        toCand.x = FocusPixels(cand.x1 + cand.Width() / 2 - from.x);
+                        toCand.y = FocusPixels(cand.y1 - from.y);
+                        toBest.x = FocusPixels(best.x1 + best.Width() / 2 - from.x);
+                        toBest.y = FocusPixels(best.y1 - from.y);
+                        if (toCand.y < 0)
+                            continue;
+                    }
+                    if ((inBand && (Alg::Abs(toCand.y) < Alg::Abs(toBest.y) ||
+                                    (toCand.y == toBest.y && Alg::Abs(toCand.x) < Alg::Abs(toBest.x)))) ||
+                        (!inBand && toCand.x * toCand.x + toCand.y * toCand.y <
+                                        toBest.x * toBest.x + toBest.y * toBest.y))
+                    {
+                        pfocusInfo->CurFocusIdx = idx;
+                        bestRect = candRect;
+                    }
+                }
+            }
+        }
+    }
+
+    if (pfocusInfo->CurFocusIdx >= 0 && pfocusInfo->CurFocusIdx < count)
+        pfocusInfo->CurFocused = focusGroup.TabableArray[pfocusInfo->CurFocusIdx];
+    else
+        pfocusInfo->CurFocused = NULL;
+}
+
 // @0x142570920
 void MovieImpl::HideFocusRect(unsigned controllerIdx)
 {
@@ -1576,7 +2365,7 @@ void MovieImpl::SetModalClip(Sprite* pmovie, unsigned controllerIdx)
 }
 
 // @0x142576c60
-void MovieImpl::ShutdownTimers()
+SF_NOINLINE void MovieImpl::ShutdownTimers()
 {
     UPInt n = IntervalTimers.GetSize();
     for (UPInt i = 0; i < n; ++i)
@@ -1654,10 +2443,10 @@ void MovieImpl::UpdateViewAndPerspective()
 {
     if (VisibleFrameRect.IsNull())
         return;
-    for (unsigned i = 0; i < MovieLevelsSize; i++)
+    for (unsigned i = 0; i < MovieLevels.GetSize(); i++)
     {
-        if (pMovieLevels[i].pSprite)
-            pMovieLevels[i].pSprite->UpdateViewAndPerspective();
+        if (MovieLevels[i].pSprite)
+            MovieLevels[i].pSprite->UpdateViewAndPerspective();
     }
 }
 
@@ -2267,8 +3056,8 @@ void MovieImpl::ProcessKeyboard(const InputEventsQueueEntry* qe, ProcessFocusKey
         evt.KeyboardIndex = keyEntry.KeyboardIndex;
         evt.KeysState     = keyEntry.KeysState | 0x80;   // KeyModifiers::Initialized_Mask
         // The levels hear the key from the top down.
-        for (unsigned movieIndex = (unsigned)MovieLevelsSize; movieIndex > 0; movieIndex--)
-            pMovieLevels[movieIndex - 1].pSprite->PropagateKeyEvent(evt, &keyMask);
+        for (unsigned movieIndex = (unsigned)MovieLevels.GetSize(); movieIndex > 0; movieIndex--)
+            MovieLevels[movieIndex - 1].pSprite->PropagateKeyEvent(evt, &keyMask);
         GetKeyboardState(keyEntry.KeyboardIndex)->NotifyListeners(pMainMovie, evt, keyMask);
         if (!IsDisableFocusKeys())
             ProcessFocusKey(eventType, keyEntry, focusKeyInfo);
@@ -2322,6 +3111,1318 @@ void MovieImpl::ProcessInput()
     }
     FinalizeProcessFocusKey(&focusKeyInfo);
     Flags &= ~Flag_NeedMouseUpdate;
+}
+
+// @0x142575f20
+// Puts psprite at level, keeping the levels sorted; false when the level is taken. _level0 becomes the main movie:
+// its def gives the movie's states, frame time and (unless the host set one) the viewport.
+bool MovieImpl::SetLevelMovie(int level, DisplayObjContainer* psprite)
+{
+    unsigned i = 0;
+    for (; i < MovieLevels.GetSize(); i++)
+    {
+        if (MovieLevels[i].Level >= level)
+        {
+            if (MovieLevels[i].Level == level)
+                return false;
+            break;
+        }
+    }
+    Flags |= 0x100;   // the level clips changed
+
+    LevelInfo li;
+    li.Level   = level;
+    li.pSprite = psprite;
+    MovieLevels.InsertAt(i, li);
+    psprite->OnInsertionAsLevel(level);
+
+    if (level == 0)
+    {
+        pMainMovie    = psprite;
+        pMainMovieDef = psprite->GetResourceMovieDef();
+        if (pMainMovieDef && pAdvanceStats)
+            pAdvanceStats->SetName(pMainMovieDef->GetFileURL());
+        pStateBag->SetDelegate(pMainMovieDef->pStateBag);
+        FrameTime = 1.0f / GetMovieDef()->GetFrameRate();
+
+        if (!IsFlagSet<0x1>(Flags))   // no viewport from the host yet: the stage size
+        {
+            MovieDefImpl* pdef = psprite->GetResourceMovieDef();
+            Viewport desc((int)pdef->GetWidth(), (int)pdef->GetHeight(), 0, 0,
+                          (int)pdef->GetWidth(), (int)pdef->GetHeight());
+            SetViewport(desc);
+        }
+    }
+    Flags |= Flag_NeedMouseUpdate;
+    return true;
+}
+
+// ReleaseLevelMovie's level 0 loop has RemoveAt inlined: the same body, kept inline here (the array data is
+// protected: reached through a derived view).
+template<class A>
+struct ArrayDataView : A { using A::Data; };
+template<class A>
+static SF_INLINE void RemoveLevelAtInline(A& arr, UPInt index)
+{
+    ArrayDataView<A>& a = static_cast<ArrayDataView<A>&>(arr);
+    if (a.Data.Size == 1)
+    {
+        a.Clear();
+    }
+    else
+    {
+        A::AllocatorType::Destruct(a.Data.Data + index);
+        A::AllocatorType::CopyArrayForward(a.Data.Data + index, a.Data.Data + index + 1, a.Data.Size - 1 - index);
+        --a.Data.Size;
+    }
+}
+
+// @0x142573ed0
+bool MovieImpl::ReleaseLevelMovie(int level)
+{
+    if (level == 0)
+    {
+        // Releasing _level0 releases every level, top first.
+        CurrentDragState.pCharacter = NULL;
+        ShutdownTimers();
+        while (MovieLevels.GetSize())
+        {
+            InteractiveObject* plevel = MovieLevels[MovieLevels.GetSize() - 1].pSprite;
+            plevel->OnEventUnload();
+            AsRootSlots(pASMovieRoot)->DoActions();
+            plevel->ForceShutdown();
+            RemoveLevelAtInline(MovieLevels, MovieLevels.GetSize() - 1);
+        }
+        FrameTime = 1.0f / 12;
+        pMainMovie = NULL;
+        Flags |= 0x100;   // the level clips changed
+        return true;
+    }
+    for (unsigned i = 0; i < MovieLevels.GetSize(); i++)
+    {
+        if (MovieLevels[i].Level == level)
+        {
+            Ptr<InteractiveObject> plevel = MovieLevels[i].pSprite;
+            plevel->OnEventUnload();
+            AsRootSlots(pASMovieRoot)->DoActions();
+            plevel->ForceShutdown();
+            MovieLevels.RemoveAt(i);
+            Flags |= 0x100;
+            return true;
+        }
+    }
+    return false;
+}
+
+// The bit-clear test (the exe inverts the shifted byte: `shr al,N; not al; test al,1`).
+template<UInt32 mask, class T>
+inline bool IsFlagClear(T value)
+{
+    return (~UInt8(IsFlagSet<mask>(value)) & 1) != 0;
+}
+// @0x14256d390
+void MovieImpl::AdvanceFrame(bool nextFrame, float framePos)
+{
+    if (nextFrame)
+        AsRootSlots(pASMovieRoot)->OnNextFrame();
+
+    // An invalidated optimized list is rebuilt while walking the whole advance list (in its own loop: the advances
+    // may change the optimized list).
+    if (IsFlagSet<Flag_OptAdvListInvalid>(Flags))
+    {
+        SIMD::PrefetchObj(pPlayList);
+        Flags &= ~Flag_OptAdvListInvalid;
+        pPlayListOptHead = NULL;
+        // A flipped marker tells the members added from now on from the stale ones.
+        bool marker = !GetOptAdvListMarker();
+        if (marker) Flags2 |= Flag2_OptAdvListMarker; else Flags2 &= ~Flag2_OptAdvListMarker;
+
+        InteractiveObject* pnextCh;
+        for (InteractiveObject* pcurCh = pPlayList; pcurCh; pcurCh = pnextCh)
+        {
+            pnextCh = pcurCh->pPlayNext;
+            SIMD::PrefetchObj(pnextCh);
+            if (!pcurCh->IsValidOptAdvListMember(this))
+            {
+                pcurCh->Flags &= ~InteractiveObject::Mask_OptAdvList;
+                pcurCh->SetOptAdvListMarker(marker);
+                pcurCh->pPlayNextOpt = pcurCh->pPlayPrevOpt = NULL;
+            }
+            if (IsFlagClear<DisplayObjectBase::Mask_MarkedForRemove>(pcurCh->DisplayObjectBase::Flags) &&
+                !IsFlagSet<DisplayObject::Mask_ExecutionAborted>(pcurCh->DisplayObject::Flags))
+            {
+                if (!pcurCh->IsValidOptAdvListMember(this) && pcurCh->CheckAdvanceStatus(false) == 1)
+                    pcurCh->AddToOptimizedPlayList();
+                if (nextFrame || IsFlagSet<InteractiveObject::Mask_ReqPartialAdvance>(pcurCh->Flags))
+                    pcurCh->AdvanceFrame(nextFrame, framePos);
+            }
+        }
+    }
+    else
+    {
+        SIMD::PrefetchObj(pPlayListOptHead);
+        InteractiveObject* pnextCh;
+        for (InteractiveObject* pcurCh = pPlayListOptHead; pcurCh; pcurCh = pnextCh)
+        {
+            pnextCh = pcurCh->pPlayNextOpt;
+            SIMD::PrefetchObj(pnextCh);
+            if (IsFlagSet<InteractiveObject::Mask_MarkedToRemoveFromOptAdvList>(pcurCh->Flags))
+            {
+                pcurCh->RemoveFromOptimizedPlayList();
+                continue;
+            }
+            if (IsFlagClear<DisplayObjectBase::Mask_MarkedForRemove>(pcurCh->DisplayObjectBase::Flags) &&
+                (nextFrame || IsFlagSet<InteractiveObject::Mask_ReqPartialAdvance>(pcurCh->Flags)) &&
+                !IsFlagSet<DisplayObject::Mask_ExecutionAborted>(pcurCh->DisplayObject::Flags))
+                pcurCh->AdvanceFrame(nextFrame, framePos);
+        }
+    }
+    Flags2 &= ~0x2u;   // the registered fonts changed: seen
+}
+
+// @0x14256fde0
+// MS2-FUNCTIONAL: register allocation (the exe keeps the result in r15 and spills ignoreMC).
+InteractiveObject* MovieImpl::GetTopMostEntity(const Render::PointF& mousePos, unsigned controllerIdx, bool testAll,
+                                               const InteractiveObject* ignoreMC)
+{
+    InteractiveObject* ptopMouseCharacter = NULL;
+
+    // The 3D hit tests map the mouse through the view and projection: the position in -1..1 of the visible frame.
+    float w = VisibleFrameRect.x2 - VisibleFrameRect.x1;
+    float h = VisibleFrameRect.y2 - VisibleFrameRect.y1;
+    float nsx = 2.f * ((mousePos.x - ViewOffsetX * 20.f) / w) - 1.f;
+    float nsy = 2.f * ((mousePos.y - ViewOffsetY * 20.f) / h) - 1.f;
+    ScreenToWorld.SetNormalizedScreenCoords(nsx, nsy);
+    Render::Matrix4F projMat;
+    GetProjectionMatrix3D(&projMat);
+    ScreenToWorld.SetProjection(projMat);
+    Render::Matrix3F viewMat;
+    GetViewMatrix3D(&viewMat);
+    ScreenToWorld.SetView(viewMat);
+
+    // The topmost characters first, the last one on top; their points are in their parents' space.
+    for (int i = (int)TopmostLevelCharacters.GetSize() - 1; i >= 0; --i)
+    {
+        InteractiveObject* pch = TopmostLevelCharacters[i];
+        Render::Matrix2F m;
+        pch->GetParent()->GetWorldMatrix(&m);
+        Render::PointF p(Render::PointF::NoInit);
+        m.TransformByInverse(&p, mousePos);
+        DisplayObjectBase::TopMostDescr descr;
+        descr.pIgnoreMC     = ignoreMC;
+        descr.TestAll       = testAll;
+        descr.ControllerIdx = controllerIdx;
+        if (pch->GetTopMostMouseEntity(p, &descr) == DisplayObjectBase::TopMost_Found)
+        {
+            ptopMouseCharacter = descr.pResult;
+            break;
+        }
+    }
+    if (!ptopMouseCharacter)
+    {
+        // Then the levels, the highest first.
+        for (int movieIndex = (int)MovieLevels.GetSize(); movieIndex > 0; movieIndex--)
+        {
+            InteractiveObject* pmovie = MovieLevels[movieIndex - 1].pSprite;
+            DisplayObjectBase::TopMostDescr descr;
+            descr.pIgnoreMC     = ignoreMC;
+            descr.TestAll       = testAll;
+            descr.ControllerIdx = controllerIdx;
+            if (pmovie->GetTopMostMouseEntity(mousePos, &descr) == DisplayObjectBase::TopMost_Found)
+                return descr.pResult;
+        }
+    }
+    return ptopMouseCharacter;
+}
+
+// A twips value snapped down to a whole pixel.
+static SF_INLINE float SnapToPixel(float twips)
+{
+    return float(int(Render::TwipsToPixels(twips)) * 20);
+}
+
+// @0x1425787d0
+// MS2-FUNCTIONAL: register allocation and store scheduling (the exe reloads VisibleFrameRect members it just stored).
+void MovieImpl::UpdateViewport()
+{
+    Render::RectF prevVisibleFrameRect = VisibleFrameRect;
+    float prevViewOffsetX = ViewOffsetX, prevViewOffsetY = ViewOffsetY;
+    float prevViewScaleX = ViewScaleX, prevViewScaleY = ViewScaleY;
+    float prevPixelScale = PixelScale;
+
+    if (pMainMovieDef)
+    {
+        // The viewport in twips and the stage the movie wants.
+        Render::RectF viewRect(Render::PixelsToTwips(float(mViewport.Left)),
+                               Render::PixelsToTwips(float(mViewport.Top)),
+                               Render::PixelsToTwips(float(mViewport.Left + mViewport.Width)),
+                               Render::PixelsToTwips(float(mViewport.Top + mViewport.Height)));
+        float viewWidth   = viewRect.Width();
+        float viewHeight  = viewRect.Height();
+        const Render::RectF& frameRect = pMainMovieDef->GetDataDef()->GetFrameRectInTwips();
+        float frameWidth  = frameRect.Width();
+        float frameHeight = frameRect.Height();
+
+        switch (ViewScaleMode)
+        {
+        case SM_NoScale:
+            {
+                // The stage at its own size, placed by the alignment on whole pixels.
+                float width  = viewWidth * mViewport.AspectRatio * mViewport.Scale;
+                float height = viewHeight * mViewport.Scale;
+                switch (ViewAlignment)
+                {
+                case Align_Center:
+                    VisibleFrameRect.x1 = SnapToPixel(frameWidth / 2 - width / 2);
+                    VisibleFrameRect.y1 = SnapToPixel(frameHeight / 2 - height / 2);
+                    break;
+                case Align_TopCenter:
+                    VisibleFrameRect.y1 = 0;
+                    VisibleFrameRect.x1 = SnapToPixel(frameWidth / 2 - width / 2);
+                    break;
+                case Align_BottomCenter:
+                    VisibleFrameRect.y1 = frameHeight - height;
+                    VisibleFrameRect.x1 = SnapToPixel(frameWidth / 2 - width / 2);
+                    break;
+                case Align_CenterLeft:
+                    VisibleFrameRect.x1 = 0;
+                    VisibleFrameRect.y1 = SnapToPixel(frameHeight / 2 - height / 2);
+                    break;
+                case Align_CenterRight:
+                    VisibleFrameRect.x1 = frameWidth - width;
+                    VisibleFrameRect.y1 = SnapToPixel(frameHeight / 2 - height / 2);
+                    break;
+                case Align_TopLeft:
+                    VisibleFrameRect.x1 = 0;
+                    VisibleFrameRect.y1 = 0;
+                    break;
+                case Align_TopRight:
+                    VisibleFrameRect.y1 = 0;
+                    VisibleFrameRect.x1 = frameWidth - width;
+                    break;
+                case Align_BottomLeft:
+                    VisibleFrameRect.x1 = 0;
+                    VisibleFrameRect.y1 = frameHeight - height;
+                    break;
+                case Align_BottomRight:
+                    VisibleFrameRect.x1 = frameWidth - width;
+                    VisibleFrameRect.y1 = frameHeight - height;
+                    break;
+                }
+                VisibleFrameRect.x2 = width + VisibleFrameRect.x1;
+                VisibleFrameRect.y2 = height + VisibleFrameRect.y1;
+                ViewOffsetX = Render::TwipsToPixels(VisibleFrameRect.x1);
+                ViewOffsetY = Render::TwipsToPixels(VisibleFrameRect.y1);
+                ViewScaleX  = mViewport.Scale * mViewport.AspectRatio;
+                ViewScaleY  = mViewport.Scale;
+            }
+            break;
+
+        case SM_ShowAll:
+        case SM_NoBorder:
+            {
+                // The whole stage (show all) or the whole viewport (no border), the stage's aspect kept: the other
+                // dimension is centered.
+                float viewWidthAR = viewWidth * mViewport.AspectRatio;
+                if ((ViewScaleMode == SM_ShowAll && viewHeight / frameHeight > viewWidthAR / frameWidth) ||
+                    (ViewScaleMode == SM_NoBorder && viewWidthAR / frameWidth > viewHeight / frameHeight))
+                {
+                    float visibleHeight = frameWidth * viewHeight / viewWidthAR;
+                    VisibleFrameRect.x1 = 0;
+                    VisibleFrameRect.x2 = frameWidth + VisibleFrameRect.x1;
+                    VisibleFrameRect.y1 = frameHeight / 2 - visibleHeight / 2;
+                    VisibleFrameRect.y2 = visibleHeight + VisibleFrameRect.y1;
+                    ViewOffsetX = 0;
+                    ViewOffsetY = Render::TwipsToPixels(VisibleFrameRect.y1);
+                    ViewScaleX  = viewWidth ? (frameWidth / viewWidth) : 0.0f;
+                    ViewScaleY  = ViewScaleX / mViewport.AspectRatio;
+                }
+                else
+                {
+                    float visibleWidth = viewWidthAR * frameHeight / viewHeight;
+                    VisibleFrameRect.y1 = 0;
+                    VisibleFrameRect.x1 = frameWidth / 2 - visibleWidth / 2;
+                    VisibleFrameRect.x2 = VisibleFrameRect.x1 + visibleWidth;
+                    VisibleFrameRect.y2 = frameHeight + VisibleFrameRect.y1;
+                    ViewOffsetX = Render::TwipsToPixels(VisibleFrameRect.x1);
+                    ViewOffsetY = 0;
+                    ViewScaleY  = viewHeight ? (frameHeight / viewHeight) : 0.0f;
+                    ViewScaleX  = ViewScaleY * mViewport.AspectRatio;
+                }
+            }
+            break;
+
+        case SM_ExactFit:
+            // The stage stretched over the viewport.
+            VisibleFrameRect.x1 = 0;
+            VisibleFrameRect.y1 = 0;
+            VisibleFrameRect.x2 = frameWidth + VisibleFrameRect.x1;
+            VisibleFrameRect.y2 = frameHeight + VisibleFrameRect.y1;
+            ViewOffsetX = 0;
+            ViewOffsetY = 0;
+            ViewScaleX  = viewWidth ? (VisibleFrameRect.Width() / viewWidth) : 0.0f;
+            ViewScaleY  = viewHeight ? (VisibleFrameRect.Height() / viewHeight) : 0.0f;
+            break;
+        }
+        // Twips per pixel: the larger of the two directions.
+        float scaleY = ViewScaleY ? (1.0f / ViewScaleY) : 0.005f;
+        float scaleX = ViewScaleX ? (1.0f / ViewScaleX) : 0.005f;
+        PixelScale = Alg::Max(scaleX, scaleY);
+    }
+    else
+    {
+        ViewOffsetX = ViewOffsetY = 0;
+        ViewScaleX  = ViewScaleY = 1.0f;
+        PixelScale  = 1.0f;
+    }
+    ResetViewportMatrix();
+
+    // A changed view goes to the levels (their 3D views and projections follow it).
+    if (prevVisibleFrameRect != VisibleFrameRect ||
+        prevViewOffsetX != ViewOffsetX || prevViewOffsetY != ViewOffsetY ||
+        prevViewScaleX != ViewScaleX || prevViewScaleY != ViewScaleY ||
+        prevPixelScale != PixelScale)
+    {
+        if (!VisibleFrameRect.IsNull())
+        {
+            for (unsigned i = 0; i < MovieLevels.GetSize(); i++)
+                if (MovieLevels[i].pSprite)
+                    MovieLevels[i].pSprite->UpdateViewAndPerspective();
+        }
+    }
+}
+
+// The Matrix2F inverse the exe keeps out of line (exe 0x142446cb0, defined by sfr_as2_01).
+namespace AS2 { void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src); }
+
+// Moves (and maybe scales) the view so that box, in viewport pixels, shows inside screenRect.
+// MS2-FUNCTIONAL: register allocation (the exe keeps one more xmm register and a scalar sign mask).
+// @0x142571380
+void MovieImpl::MakeAreaVisible(const Render::RectF& screenRect, const Render::RectF& box, UInt32 flags)
+{
+    if (screenRect.Contains(box))
+        return;
+
+    // The screen rect and the box in stage twips.
+    Render::Matrix2F invViewport;
+    ResetViewportMatrix();
+    AS2::Matrix2F_SetInverse(&invViewport, ViewportMatrix);
+    Render::RectF ptBox;
+    invViewport.EncloseTransform(&ptBox, screenRect);
+    Render::RectF boxTw(Render::PixelsToTwips(box.x1), Render::PixelsToTwips(box.y1),
+                        Render::PixelsToTwips(box.x2), Render::PixelsToTwips(box.y2));
+
+    double scaleX = 1.0, scaleY = 1.0;
+    if (!(flags & MAVF_DontScaleDown))
+    {
+        if (boxTw.Width() > ptBox.Width())
+            scaleX = double(ptBox.Width()) / double(boxTw.Width());
+        if (boxTw.Height() > ptBox.Height())
+            scaleY = double(ptBox.Height()) / double(boxTw.Height());
+    }
+    if ((flags & MAVF_ScaleUp50) && scaleX == 1.0 && scaleY == 1.0)
+    {
+        // A small box grows to half the screen rect's area, its aspect kept, but never past the screen rect.
+        double screenArea = ptBox.Height() * ptBox.Width();
+        if (screenArea > boxTw.Height() * boxTw.Width() * 2)
+        {
+            double boxWidth  = boxTw.Width();
+            double boxHeight = boxTw.Height();
+            double halfArea  = screenArea * 0.5;
+            double newWidth  = sqrt(boxWidth / boxHeight * halfArea);
+            double newHeight = halfArea / newWidth;
+            scaleX = newWidth / boxWidth;
+            scaleY = newHeight / boxHeight;
+            if (boxWidth * scaleX > ptBox.Width())
+                scaleX = ptBox.Width() / boxWidth;
+            if (boxHeight * scaleY > ptBox.Height())
+                scaleY = ptBox.Height() / boxHeight;
+        }
+    }
+    float scale = float(Alg::Min(scaleX, scaleY));
+
+    // Scaled about the box's top left.
+    Render::Matrix2F m;
+    m.AppendTranslation(-boxTw.x1, -boxTw.y1);
+    m.AppendScaling(scale);
+    m.AppendTranslation(boxTw.x1, boxTw.y1);
+    Render::RectF newBox;
+    m.EncloseTransform(&newBox, boxTw);
+
+    // A box that sticks out is centered in the screen rect (or put at its top left).
+    float dx = 0, dy = 0;
+    if (newBox.x1 > ptBox.x2 || ptBox.x1 > newBox.x2 || newBox.x2 > ptBox.x2 || ptBox.x1 > newBox.x1)
+    {
+        if (!(flags & MAVF_LeftTopToZero))
+            dx = (newBox.x1 + newBox.Width() * 0.5f) - (ptBox.x2 - ptBox.Width() * 0.5f);
+        else
+            dx = newBox.x1 - ptBox.x1;
+    }
+    if (newBox.y1 > ptBox.y2 || ptBox.y1 > newBox.y2 || newBox.y2 > ptBox.y2 || ptBox.y1 > newBox.y1)
+    {
+        if (!(flags & MAVF_LeftTopToZero))
+            dy = (newBox.y1 + newBox.Height() * 0.5f) - (ptBox.y2 - ptBox.Height() * 0.5f);
+        else
+            dy = newBox.y1 - ptBox.y1;
+    }
+    m.AppendTranslation(-dx, -dy);
+
+    ViewportMatrix.Prepend(m);
+    pRenderRoot->SetMatrix(ViewportMatrix);
+}
+
+// A mouse event from the queue: the topmost entity, the IME, the levels' mouse events, the focus rectangle, the wheel,
+// the AVM's mouse events and the focus a left click moves.
+// @0x142573380
+void MovieImpl::ProcessMouse(const InputEventsQueueEntry* qe, UInt32* miceProceededMask, bool avm2)
+{
+    const InputEventsQueueEntry::MouseEntry& me = qe->GetMouseEntry();
+    *miceProceededMask |= (1 << me.MouseIndex);
+    unsigned    mi = me.MouseIndex;
+    MouseState& ms = mMouseState[mi];
+    ms.UpdateState(*qe);
+
+    Ptr<InteractiveObject> ptopMouseCharacter = GetTopMostEntity(me.GetPosition(), mi, avm2, NULL);
+    ms.SetTopmostEntity(ptopMouseCharacter);
+    unsigned buttonsState = mMouseState[mi].GetButtonsState();
+
+    if (me.IsButtonsStateChanged())
+    {
+        Ptr<IMEManagerBase> pimeManager = *(IMEManagerBase*)GetStateAddRef(State::State_IMEManager);
+        if (pimeManager && pimeManager->IsMovieActive(this))
+        {
+            if (!(me.Flags & (InputEventsQueueEntry::MouseButton_Move | InputEventsQueueEntry::MouseButton_Released)) &&
+                me.IsButtonsStateChanged())
+                pimeManager->OnMouseDown(this, buttonsState, ptopMouseCharacter);
+            else
+                pimeManager->OnMouseUp(this, buttonsState, ptopMouseCharacter);
+        }
+    }
+
+    UInt32 mouseEvent = 0;
+    if (me.IsButtonsStateChanged() && (me.ButtonsState & InputEventsQueueEntry::MouseButton_Left))
+        mouseEvent = (me.Flags & (InputEventsQueueEntry::MouseButton_Move | InputEventsQueueEntry::MouseButton_Released))
+                         ? EventId::Event_MouseUp : EventId::Event_MouseDown;
+    for (unsigned movieIndex = (unsigned)MovieLevels.GetSize(); movieIndex > 0; movieIndex--)
+    {
+        InteractiveObject* pmovie = MovieLevels[movieIndex - 1].pSprite;
+        if (mouseEvent)
+        {
+            EventId evt(mouseEvent);
+            evt.ButtonId    = 0;
+            evt.MouseIndex  = (SByte)mi;
+            evt.RollOverCnt = 0;
+            pmovie->PropagateMouseEvent(evt);
+        }
+        if (mMouseState[mi].MouseMoved)
+        {
+            EventId evt(EventId::Event_MouseMove);
+            evt.ButtonId    = 0;
+            evt.MouseIndex  = (SByte)mi;
+            evt.RollOverCnt = 0;
+            pmovie->PropagateMouseEvent(evt);
+        }
+    }
+
+    if ((!IsFlagSet<Flag_DisableFocusAutoReleaseByMouseClick>(Flags) && me.IsButtonsStateChanged()) ||
+        (!IsDisableFocusAutoRelease() && mMouseState[mi].MouseMoved))
+        HideFocusRect(mi);
+
+    if (me.IsMouseWheel() && ptopMouseCharacter)
+        ptopMouseCharacter->OnMouseWheelEvent(me.WheelScrollDelta);
+
+    AsRootSlots(pASMovieRoot)->NotifyMouseState(qe, &ms, mi);
+    CheckMouseCursorType(mi, ptopMouseCharacter);
+
+    // A left click moves the focus to what is under the mouse.
+    if (!(me.Flags & (InputEventsQueueEntry::MouseButton_Move | InputEventsQueueEntry::MouseButton_Released)) &&
+        me.IsButtonsStateChanged() && (me.ButtonsState & InputEventsQueueEntry::MouseButton_Left))
+    {
+        Ptr<InteractiveObject> curFocused = FocusGroups[FocusGroupIndexes[mi]].LastFocused;
+        if (ptopMouseCharacter != curFocused)
+            QueueSetFocusTo(ptopMouseCharacter, ptopMouseCharacter, mi, GFx_FocusMovedByMouse, NULL);
+    }
+    AsRootSlots(pASMovieRoot)->GenerateMouseEvents(mi);
+}
+
+// Restarts the movie from frame 1 of its own definition: drops the levels, the load queue, the focus and the
+// input state, then lets the AVM root create _level0 again.
+// MS2-FUNCTIONAL: instruction scheduling (the load queue null stores, the Flags2 clear before the Init call, the
+// callee-saved restores after the two releases); same operations.
+// @0x142575410
+void MovieImpl::Restart(bool advance0)
+{
+    if (pMainMovie)
+    {
+        Flags2 |= 0x4;   // restarting
+        ProcessUnloadQueue();
+
+        Ptr<MovieDefImpl> prootMovieDef = pMainMovie->GetResourceMovieDef();
+
+        for (int i = (int)MovieLevels.GetSize() - 1; i >= 0; i--)
+            ReleaseLevelMovie(i);
+        MovieLevels.Clear();
+
+        // Cancel the loader-thread requests and wait until every one of them is done.
+        LoadQueueEntryMT* plq = pLoadQueueMTHead;
+        unsigned plqCount = 0;
+        while (plq)
+        {
+            plqCount++;
+            plq->Cancel();
+            plq = plq->pNext;
+        }
+        if (plqCount)
+        {
+            unsigned plqDoneCount;
+            do
+            {
+                plqDoneCount = 0;
+                for (plq = pLoadQueueMTHead; plq; plq = plq->pNext)
+                {
+                    if (plq->LoadFinished())
+                        plqDoneCount++;
+                }
+            } while (plqCount > plqDoneCount);
+        }
+        while (pLoadQueueHead)
+        {
+            LoadQueueEntry* pentry = pLoadQueueHead;
+            pLoadQueueHead = pentry->pNext;
+            delete pentry;
+        }
+        while (pLoadQueueMTHead)
+        {
+            LoadQueueEntryMT* pentry = pLoadQueueMTHead;
+            pLoadQueueMTHead = pentry->pNext;
+            delete pentry;
+        }
+        pLoadQueueHead   = NULL;
+        pLoadQueueMTHead = NULL;
+
+        Flags |= Flag_OptAdvListInvalid;   // InvalidateOptAdvanceList
+        pPlayListOptHead = NULL;
+        pPlayList        = NULL;
+
+        bool imeWasActive = false;
+        Ptr<IMEManagerBase> pIMEManager = *(IMEManagerBase*)GetStateAddRef(State::State_IMEManager);
+        if (pIMEManager && pIMEManager->IsMovieActive(this))
+        {
+            imeWasActive = true;
+            pIMEManager->SetActiveMovie(NULL);
+        }
+        SF_FREE(pIMECandidateListStyle);
+        pIMECandidateListStyle = NULL;
+
+        VideoProviders.Clear();
+
+        if (pMainMovie)
+        {
+            InteractiveObject* psprite = pMainMovie->IsSprite() ? pMainMovie : NULL;
+            psprite->StopActiveSounds();
+        }
+
+        AsRootSlots(pASMovieRoot)->Shutdown();
+        ClearIndirectTransformPairs();
+
+        delete pRetValHolder;
+        pRetValHolder = NULL;
+
+        for (unsigned i = 0; i < FocusGroupsCnt; ++i)
+        {
+            FocusGroupDescr& fg = FocusGroups[i];
+            fg.ModalClip = NULL;
+            if (fg.TabableArrayStatus & 1)
+            {
+                fg.TabableArray.Clear();
+                fg.TabableArrayStatus = 0;
+            }
+            fg.LastFocusKeyCode = 0;
+        }
+
+        // The focus options (_focusrect, disableFocusKeys, ...) go back to undefined.
+        Flags &= 0x3fffff;
+        for (unsigned i = 0; i < 4; ++i)
+            mMouseState[i].ResetState();
+
+        AsRootSlots(pASMovieRoot)->ForceCollect();
+        Flags2 &= ~0x4u;
+        AsRootSlots(pASMovieRoot)->Init(prootMovieDef);
+
+        if (pMainMovie)
+        {
+            if (pUserEventHandler)
+            {
+                for (unsigned i = 0; i < MouseCursorCount; ++i)
+                {
+                    pUserEventHandler->HandleEvent(this, MouseCursorEvent(Event::DoShowMouse, i));
+                    pUserEventHandler->HandleEvent(this, MouseCursorEvent(MouseCursorEvent::ARROW, i));
+                }
+            }
+            FocusRectChanged = true;
+            for (unsigned i = 0; i < 4; ++i)
+                KeyboardStates[i].ResetState();
+            if (imeWasActive)
+                pIMEManager->SetActiveMovie(this);
+            if (advance0)
+                Advance(0.0f, 0, true);
+            AsRootSlots(pASMovieRoot)->ForceCollect();
+        }
+    }
+}
+
+// A character going away loses the focus of every group that has it; the group's controllers are told.
+// @0x142574820
+void MovieImpl::ResetFocusForChar(InteractiveObject* ch)
+{
+    for (unsigned i = 0; i < FocusGroupsCnt; ++i)
+    {
+        if (Ptr<InteractiveObject>(FocusGroups[i].LastFocused).GetPtr() == ch)
+        {
+            Ptr<InteractiveObject> curFocused = FocusGroups[i].LastFocused;
+            if (curFocused && !IsShutdowning())
+            {
+                unsigned mask = GetControllerMaskByFocusGroup(i);
+                unsigned n    = GetControllerCount();
+                for (unsigned c = 0; mask && c < n; ++c, mask >>= 1)
+                    SetFocusTo(NULL, c, GFx_FocusMovedByKeyboard);
+            }
+            FocusGroups[i].LastFocused = NULL;
+        }
+    }
+}
+
+// Every focus group drops its modal clip, its tab order and the key that last moved its focus.
+// @0x142574b00
+void MovieImpl::ResetFocusStates()
+{
+    for (unsigned i = 0; i < FocusGroupsCnt; ++i)
+    {
+        FocusGroupDescr& fg = FocusGroups[i];
+        fg.ModalClip = NULL;
+        if (fg.TabableArrayStatus & 1)
+        {
+            fg.TabableArray.Clear();
+            fg.TabableArrayStatus = 0;
+        }
+        fg.LastFocusKeyCode = 0;
+    }
+}
+
+// Every focus group drops a filled tab order, so the next focus key collects it again.
+// @0x142574da0
+void MovieImpl::ResetTabableArrays()
+{
+    for (unsigned i = 0; i < FocusGroupsCnt; ++i)
+    {
+        FocusGroupDescr& fg = FocusGroups[i];
+        if (fg.TabableArrayStatus & 1)
+        {
+            fg.TabableArray.Clear();
+            fg.TabableArrayStatus = 0;
+        }
+    }
+}
+
+// Moves the movie on by deltaT seconds: refreshes the cached states, runs the interval timers, the videos, the sound
+// and the queued input, then as many whole frames as are due (a catch-up count lets it run several in one call) or
+// just the in-between position. Returns the seconds until it should be called again.
+// @0x14256c610
+// MS2-FUNCTIONAL
+float MovieImpl::Advance(float deltaT, unsigned frameCatchUpCount, bool capture)
+{
+    if (IsFlagSet<Flag_Paused>(Flags))
+    {
+        if (capture)
+            MovieImpl::Capture(true);
+        return 0.05f;
+    }
+    if (!pMainMovie)
+    {
+        // Nothing to play (a script may have unloaded it): still hand the renderer the empty frame.
+        if (capture)
+            MovieImpl::Capture(true);
+        return pMainMovieDef ? 1.0f / pMainMovieDef->GetFrameRate() : 0.0f;
+    }
+
+    ProcessMovieDefToKillList();
+
+    if (deltaT < 0.0f)
+        deltaT = 0.0f;
+    SetFlag<Flag_AdvanceCalled>(Flags, true);
+
+    // The states, fetched under one lock.
+    Ptr<ActionControl> pac;
+    State* pstates[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    static const State::StateType stateQuery[10] = {
+        State::State_UserEventHandler, State::State_FSCommandHandler, State::State_ExternalInterface,
+        State::State_ActionControl,    State::State_Log,              State::State_FontLib,
+        State::State_FontMap,          State::State_FontProvider,     State::State_Translator,
+        State::State_Audio};
+    pStateBag->GetStatesAddRef(pstates, stateQuery, 10);
+
+    Ptr<LogState> logState;
+    pUserEventHandler = *(UserEventHandler*)pstates[0];
+    pFSCommandHandler = *(FSCommandHandler*)pstates[1];
+    pExtIntfHandler   = *(ExternalInterface*)pstates[2];
+    pac               = *(ActionControl*)pstates[3];
+    logState          = *(LogState*)pstates[4];
+    pCachedLog = logState ? logState->GetLog() : 0;
+
+    // A changed font state empties the font caches below.
+    UInt8 stateChangeFlag = 0;
+    {
+        Ptr<FontLib>      fontLib      = *(FontLib*)pstates[5];
+        Ptr<FontMap>      fontMap      = *(FontMap*)pstates[6];
+        Ptr<FontProvider> fontProvider = *(FontProvider*)pstates[7];
+        Ptr<Translator>   translator   = *(Translator*)pstates[8];
+        stateChangeFlag = pFontManagerStates->CheckStateChange(fontLib, fontMap, fontProvider, translator);
+    }
+
+    SetFlag<Flag_CachedLogFlag>(Flags, true);
+    if (pac)
+    {
+        SetFlag<Flag_VerboseAction>(Flags, (pac->GetActionFlags() & ActionControl::Action_Verbose) != 0);
+        SetFlag<Flag_SuppressActionErrors>(Flags, (pac->GetActionFlags() & ActionControl::Action_ErrorSuppress) != 0);
+        SetFlag<Flag_LogRootFilenames>(Flags, (pac->GetActionFlags() & ActionControl::Action_LogRootFilenames) != 0);
+        SetFlag<Flag_LogLongFilenames>(Flags, (pac->GetActionFlags() & ActionControl::Action_LongFilenames) != 0);
+        SetFlag<Flag_LogChildFilenames>(Flags, (pac->GetActionFlags() & ActionControl::Action_LogChildFilenames) != 0);
+    }
+    else
+    {
+        SetFlag<Flag_VerboseAction>(Flags, false);
+        SetFlag<Flag_SuppressActionErrors>(Flags, false);
+        SetFlag<Flag_LogRootFilenames>(Flags, false);
+        SetFlag<Flag_LogLongFilenames>(Flags, false);
+        SetFlag<Flag_LogChildFilenames>(Flags, false);
+    }
+
+    // The audio state and its renderer are held until the advance returns.
+    pAudio = (AudioBase*)pstates[9];
+    AdvanceStateGuard<AudioBase> audioGuard(&pAudio);
+    if (pAudio)
+    {
+        pSoundRenderer = pAudio->GetRenderer();
+        if (pSoundRenderer)
+            pSoundRenderer->AddRef();
+    }
+    AdvanceStateGuard<Sound::SoundRenderer> rendererGuard(&pSoundRenderer);
+
+    // Every root node takes the loading progress of its movie once, so all the clips sharing a movie see the same.
+    MovieDefRootNode* pnode = RootMovieDefNodes.pNext;
+    MovieDefRootNodeLinks* proot = &RootMovieDefNodes;
+    while (pnode != static_cast<MovieDefRootNode*>(proot))
+    {
+        if (!pnode->ImportFlag)
+        {
+            pnode->BytesLoaded  = pnode->pDefImpl->pBindData->GetBytesLoaded();
+            pnode->LoadingFrame = pnode->pDefImpl->GetLoadingFrame();
+        }
+        if (stateChangeFlag)
+            pnode->pFontManager->CleanCache();
+        pnode = pnode->pNext;
+    }
+
+    // The text fields re-resolve their fonts.
+    if (stateChangeFlag || IsFlagSet<0x2>(Flags2))
+    {
+        for (unsigned i = 0; i < MovieLevels.GetSize(); i++)
+            MovieLevels[i].pSprite->SetStateChangeFlags(stateChangeFlag);
+    }
+
+    if (pMainMovie->GetLoadingFrame() == 0)
+    {
+        // The first frame is not there yet.
+        if (capture)
+            MovieImpl::Capture(true);
+        SetFlag<Flag_CachedLogFlag>(Flags, false);
+        return 0;
+    }
+
+    // New levels run their frame 0 (and its actions) before any frame advance.
+    if (IsFlagSet<Flag_LevelClipsChanged>(Flags) && pMainMovie->GetLoadingFrame() > 0)
+    {
+        SetFlag<Flag_LevelClipsChanged>(Flags, false);
+        for (unsigned level = (unsigned)MovieLevels.GetSize(); level > 0; level--)
+            MovieLevels[level - 1].pSprite->ExecuteFrame0Events();
+        AsRootSlots(pASMovieRoot)->DoActions();
+        ProcessUnloadQueue();
+        ProcessLoadQueue();
+    }
+
+    TimeElapsed += UInt64(deltaT * 1000000.f);
+    TimeRemainder += deltaT;
+
+    UInt64 advanceStart = Timer::GetProfileTicks();
+    float  minDelta = FrameTime;
+
+    // The interval timers: the due ones fire; the stopped ones are cleared out afterwards.
+    if (IntervalTimers.GetSize() > 0)
+    {
+        UPInt    i, n;
+        unsigned inactive = 0;
+        for (i = 0, n = IntervalTimers.GetSize(); i < n; ++i)
+        {
+            if (IntervalTimers[i] && IntervalTimers[i]->IsActive())
+            {
+                IntervalTimers[i]->Invoke(this, FrameTime);
+                float delta = float(IntervalTimers[i]->GetNextInvokeTime() - TimeElapsed) / 1000000.f;
+                if (delta < minDelta)
+                    minDelta = delta;
+            }
+            else
+                ++inactive;
+        }
+        if (inactive)
+        {
+            unsigned j;
+            for (i = j = 0, n = IntervalTimers.GetSize(); i < n; ++i)
+            {
+                if (!IntervalTimers[j] || !IntervalTimers[j]->IsActive())
+                {
+                    IntervalTimers[j]->Clear();
+                    IntervalTimers.RemoveAt(j);
+                }
+                else
+                    ++j;
+            }
+        }
+    }
+
+    // The videos: a playing one may shorten the wait; the finished ones are closed and dropped.
+    if (VideoProviders.GetSize() > 0)
+    {
+        Array<Video::VideoProvider*> finished;
+        for (HashSet<Ptr<Video::VideoProvider> >::Iterator it = VideoProviders.Begin(); it != VideoProviders.End(); ++it)
+        {
+            Ptr<Video::VideoProvider> pvideo = *it;
+            pvideo->Advance();
+            if (pvideo->IsActive())
+            {
+                if (pvideo->GetFrameTime() < minDelta)
+                    minDelta = pvideo->GetFrameTime();
+            }
+            else
+            {
+                pvideo->Close();
+                finished.PushBack(pvideo);
+            }
+        }
+        for (UPInt i = 0; i < finished.GetSize(); ++i)
+            RemoveVideoProvider(finished[i]);
+    }
+
+    if (pSoundRenderer)
+    {
+        float delta = pSoundRenderer->Update();
+        if (delta < minDelta)
+            minDelta = delta;
+    }
+
+    ProcessInput();
+
+    if (TimeRemainder >= FrameTime)
+    {
+        // Run what the input queued first, so a gotoAndPlay is not overridden by the next frame's actions.
+        AsRootSlots(pASMovieRoot)->DoActions();
+
+        bool frameCatchUp = frameCatchUpCount > 0 || ForceFrameCatchUp > 0;
+        do
+        {
+            if (frameCatchUp)
+                TimeRemainder -= FrameTime;
+            else
+                TimeRemainder = (float)fmod(TimeRemainder, FrameTime);
+
+            float framePos = (TimeRemainder >= FrameTime) ? 0.0f : (TimeRemainder / FrameTime);
+            AdvanceFrame(true, framePos);
+            // The videos follow the timeline.
+        if (VideoProviders.GetSize() > 0)
+        {
+            Array<Video::VideoProvider*> finished;
+            for (HashSet<Ptr<Video::VideoProvider> >::Iterator it = VideoProviders.Begin(); it != VideoProviders.End(); ++it)
+            {
+                Ptr<Video::VideoProvider> pvideo = *it;
+                pvideo->Advance();
+                if (pvideo->IsActive())
+                {
+                    if (pvideo->GetFrameTime() < minDelta)
+                        minDelta = pvideo->GetFrameTime();
+                }
+                else
+                {
+                    pvideo->Close();
+                    finished.PushBack(pvideo);
+                }
+            }
+            for (UPInt i = 0; i < finished.GetSize(); ++i)
+                RemoveVideoProvider(finished[i]);
+        }
+
+            AsRootSlots(pASMovieRoot)->DoActions();
+            ProcessUnloadQueue();
+            ProcessLoadQueue();
+            if (ForceFrameCatchUp > 0)
+                ForceFrameCatchUp--;
+        } while ((frameCatchUpCount-- > 0 && TimeRemainder >= FrameTime) || ForceFrameCatchUp > 0);
+
+        // The buttons recheck the mouse next time.
+        SetFlag<Flag_NeedMouseUpdate>(Flags, true);
+        AsRootSlots(pASMovieRoot)->AdvanceFrame(true);
+    }
+    else
+    {
+        // Only the in-between position moves.
+        float framePos = TimeRemainder / FrameTime;
+        AdvanceFrame(false, framePos);
+        TimeRemainder = (float)fmod(TimeRemainder, FrameTime);
+
+        AsRootSlots(pASMovieRoot)->DoActions();
+        ProcessUnloadQueue();
+        ProcessLoadQueue();
+        AsRootSlots(pASMovieRoot)->AdvanceFrame(false);
+    }
+
+    UpdateAllRenderNodes();
+    ResetTabableArrays();
+    SetFlag<Flag_CachedLogFlag>(Flags, false);
+
+    // The time spent here comes off the wait.
+    UInt64 advanceStop = Timer::GetProfileTicks();
+    minDelta -= float(advanceStop - advanceStart) / 1000000.f;
+    minDelta = Alg::Max(0.0f, minDelta);
+
+    if (capture)
+        MovieImpl::Capture(true);
+    return Alg::Min(minDelta, FrameTime - TimeRemainder);
+}
+
+// Freezes the frame's changes into a snapshot for the render thread when anything changed (or always, unless
+// onChangeOnly). An object drawn under another parent first gets the matrix that keeps it where its original parent
+// would have put it, once any node on either parent chain moved. With nothing changed it still captures as many
+// times as were asked for (PreviouslyCaptured).
+// @0x14256d630
+// MS2-FUNCTIONAL
+void MovieImpl::Capture(bool onChangeOnly)
+{
+    if (!onChangeOnly || RenderContext.HasChanges() || MovieDefKillList.GetSize() != 0)
+    {
+        if (IndirectTransformPairs.GetSize())
+        {
+            for (UPInt i = 0, n = IndirectTransformPairs.GetSize(); i < n; ++i)
+            {
+                const IndirectTransPair& p = IndirectTransformPairs[i];
+                Render::TreeNode* node = p.Obj->GetRenderNode();
+
+                // a moved node, a mask change or a new parent node on either chain
+                static const unsigned CHBITS = Render::Change_Matrix | Render::Change_State_MaskNode |
+                                               Render::Change_IsMask | Render::Change_ChildInsert |
+                                               (unsigned)Render::Change_Context_NewNode;
+
+                bool changed = node->HasChanges(CHBITS);
+                if (!changed)
+                {
+                    // the original parents; a different depth means the object was taken off one of them
+                    Render::TreeNode* cur;
+                    int depth = 0;
+                    for (cur = p.TransformParent; cur && cur != pRenderRoot; cur = cur->GetParent(), ++depth)
+                    {
+                        if (cur->HasChanges(CHBITS))
+                        {
+                            changed = true;
+                            break;
+                        }
+                    }
+                    if (depth != p.OrigParentDepth)
+                    {
+                        changed = true;
+                        p.OrigParentDepth = depth;
+                    }
+                    else if (!changed)
+                    {
+                        // the parents it is drawn under now
+                        for (cur = node->GetParent(); cur && cur != pRenderRoot; cur = cur->GetParent())
+                        {
+                            if (cur->HasChanges(CHBITS))
+                            {
+                                changed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (changed)
+                {
+                    // the object's own matrix under the original parents, against the one of the parents now
+                    const DisplayObjectBase::IndirectTransformDataType* ixf = p.Obj->pIndXFormData;
+                    Render::Matrix3F revm(ixf->OrigTransformMatrix);
+                    bool is3D = ixf->IsOrig3D;
+                    for (Render::TreeNode* cur = p.TransformParent; cur && cur != pRenderRoot; cur = cur->GetParent())
+                    {
+                        if (cur->Is3D())
+                        {
+                            revm.Append(cur->M3D());
+                            is3D = true;
+                        }
+                        else
+                            revm.Append(cur->M2D());
+                    }
+
+                    Render::Matrix3F wm;
+                    for (Render::TreeNode* cur = node->GetParent(); cur && cur != pRenderRoot; cur = cur->GetParent())
+                    {
+                        if (cur->Is3D())
+                        {
+                            wm.Append(cur->M3D());
+                            is3D = true;
+                        }
+                        else
+                            wm.Append(cur->M2D());
+                    }
+                    if (is3D)
+                    {
+                        wm.Invert();
+                        wm.Prepend(revm);
+                        node->SetMatrix3D(wm);
+                    }
+                    else
+                    {
+                        Render::Matrix2F& revm2 = *(Render::Matrix2F*)(void*)&revm;
+                        Render::Matrix2F& wm2   = *(Render::Matrix2F*)(void*)&wm;
+                        wm2.Invert();
+                        wm2.Prepend(revm2);
+                        node->SetMatrix(wm2);
+                    }
+                }
+            }
+        }
+
+        SetFlag<Flag_HasChanges>(Flags, IsFlagSet<Flag_HasChanges>(Flags) || RenderContext.HasChanges());
+        RenderContext.Capture();
+        PreviouslyCaptured = 1;
+    }
+    else if (PreviouslyCaptured > 0)
+    {
+        RenderContext.Capture();
+        --PreviouslyCaptured;
+    }
+}
+
+// A topmost object goes before the first one drawn above it: a higher level, or, on the same level, a display
+// list sibling (of the first parents that differ) at a greater depth. A level movie never stays on top.
+// @0x14256c140
+void MovieImpl::AddTopmostLevelCharacter(InteractiveObject* pch)
+{
+    if (pch->IsSprite() && static_cast<Sprite*>(pch)->IsLevelMovie())
+        return;
+
+    UPInt i = 0;
+    if (TopmostLevelCharacters.GetSize() > 0)
+    {
+        ArrayDH<DisplayObjectBase*> chParents(GetHeap());
+        ArrayDH<DisplayObjectBase*> curParents(GetHeap());
+        DisplayObjectBase* chRoot;
+        DisplayObjectBase* p = pch;
+        do
+        {
+            chParents.PushBack(p);
+            chRoot = p;
+            p = p->GetParent();
+        } while (p);
+
+        for (UPInt n = TopmostLevelCharacters.GetSize(); i < n; ++i)
+        {
+            if (TopmostLevelCharacters[i] == pch)
+                return;
+            curParents.Clear();
+            DisplayObjectBase* curRoot = NULL;
+            for (DisplayObjectBase* c = TopmostLevelCharacters[i]; c; c = c->GetParent())
+            {
+                curParents.PushBack(c);
+                curRoot = c;
+            }
+            if (curRoot == chRoot)
+            {
+                SPInt ci = (SPInt)chParents.GetSize() - 1, cj = (SPInt)curParents.GetSize() - 1;
+                bool above = false;
+                for (; ci >= 0 && cj >= 0; --ci, --cj)
+                {
+                    if (chParents[ci] != curParents[cj])
+                    {
+                        if (chParents[ci]->Depth < curParents[cj]->Depth)
+                            above = true;
+                        break;
+                    }
+                }
+                if (above)
+                    break;
+            }
+            else if (static_cast<Sprite*>(curRoot)->GetLevel() > static_cast<Sprite*>(chRoot)->GetLevel())
+                break;
+        }
+    }
+    TopmostLevelCharacters.InsertAt(i, Ptr<InteractiveObject>(pch));
+    Ptr<Render::TreeNode> node = pch->SetIndirectTransform(pTopMostRoot);
+    if (node)
+        pTopMostRoot->Insert(i, node);
+}
+
+// The image a linkage id names: a protocol url ("img://...") goes to the image creator state, anything else is
+// looked up among the exports of md and of the movies that import from it.
+// @0x14256f370
+// MS2-FUNCTIONAL: rsi/r14 swapped, the url String temp and its vtable load scheduled differently, one tail not merged
+Ptr<ImageResource> MovieImpl::GetImageResourceByLinkageId(MovieDefImpl* md, const char* linkageId)
+{
+    Ptr<ImageResource> pimageRes;
+    if (!md)
+        return pimageRes;
+    if (LoaderImpl::IsProtocolImage(String(linkageId)))
+    {
+        StateBag* pstates = pStateBag;
+        MemoryHeap* pheap = pHeap;
+        ImageCreator* pcreator =
+            (ImageCreator*)Ptr<State>(*pstates->GetStateAddRef(State::State_ImageCreator)).GetPtr();
+        if (!pcreator)
+            return NULL;
+        ImageCreateInfo cinfo(ImageCreateInfo::Create_ProtocolImage, pheap, Render::ImageUse_Wrap,
+                              Resource::Use_Bitmap);
+        cinfo.SetStates(pstates->GetLog(), Ptr<State>(*pstates->GetStateAddRef(State::State_FileOpener)),
+                        (ImageFileHandlerRegistry*)Ptr<State>(
+                            *pstates->GetStateAddRef(State::State_ImageFileHandlerRegistry)).GetPtr());
+        cinfo.pMovie = this;
+        Ptr<Render::Image> pimage = *pcreator->LoadProtocolImage(cinfo, String(linkageId));
+        if (!pimage)
+            return NULL;
+        pimageRes = *SF_HEAP_NEW(pheap) ImageResource(pimage, Resource::Use_Bitmap);
+    }
+    else
+    {
+        ResourceBindData resBindData;
+        if (!FindExportedResource(md, &resBindData, linkageId))
+            return NULL;
+        if (resBindData.pResource->GetResourceType() == Resource::RT_Image)
+            pimageRes = static_cast<ImageResource*>(resBindData.pResource.GetPtr());
+    }
+    return pimageRes;
+}
+
+// The camera of the 3D stage (inlined into MakeViewAndPersp3D): eye looks at at with up roughly up; left-handed (z
+// points from the eye to at) when the y axis is inverted, right-handed (z points back at the eye) otherwise.
+static __forceinline void MakeView3D(Render::Matrix3F* m, const Render::Point3F& eye, const Render::Point3F& at,
+                              const Render::Point3F& up, bool leftHanded)
+{
+    float zx, zy, zz;
+    if (leftHanded)
+    {
+        zx = at.x - eye.x;
+        zy = at.y - eye.y;
+        zz = at.z - eye.z;
+    }
+    else
+    {
+        zx = eye.x - at.x;
+        zy = eye.y - at.y;
+        zz = eye.z - at.z;
+    }
+    float zlen = (float)sqrt(zx * zx + zy * zy + zz * zz);
+    zx /= zlen;
+    zy /= zlen;
+    zz /= zlen;
+
+    // x = up cross z, unit length; y = z cross x
+    float xx = up.y * zz - up.z * zy;
+    float xy = up.z * zx - up.x * zz;
+    float xz = up.x * zy - up.y * zx;
+    float xlen = (float)sqrt(xx * xx + xy * xy + xz * xz);
+    xx /= xlen;
+    xy /= xlen;
+    xz /= xlen;
+    float yx = zy * xz - zz * xy;
+    float yy = zz * xx - zx * xz;
+    float yz = zx * xy - zy * xx;
+
+    m->M[0][0] = xx;
+    m->M[0][1] = xy;
+    m->M[0][2] = xz;
+    m->M[0][3] = -(xx * eye.x + xy * eye.y + xz * eye.z);
+    m->M[1][0] = yx;
+    m->M[1][1] = yy;
+    m->M[1][2] = yz;
+    m->M[1][3] = -(yx * eye.x + yy * eye.y + yz * eye.z);
+    m->M[2][0] = zx;
+    m->M[2][1] = zy;
+    m->M[2][2] = zz;
+    m->M[2][3] = -(zx * eye.x + zy * eye.y + zz * eye.z);
+}
+
+// Sets up the view and the projection of a 3D stage. The eye is on the axis through projCenter, focalLength twips
+// in front of the stage; with no focal length it is as far as the frame's width needs to fill fieldOfView (degrees).
+// A field of view that is not positive gives a parallel projection. Near plane 1, far plane 100000 twips.
+// @0x1425718d0
+// MS2-FUNCTIONAL
+void MovieImpl::MakeViewAndPersp3D(Render::Matrix3F* matView, Render::Matrix4F* matPersp,
+                                   const Render::RectF& vfrTwips, const Render::PointF& projCenter,
+                                   float fieldOfView, float focalLength, bool invertY)
+{
+    const float nearZ = 1.f;
+    const float farZ  = 100000.f;
+
+    // The frame's edges around the projection center.
+    float left   = -(projCenter.x - vfrTwips.x1);
+    float right  = vfrTwips.x2 - projCenter.x;
+    float bottom = -(vfrTwips.y2 - projCenter.y);
+    float top    = projCenter.y - vfrTwips.y1;
+
+    float eyeZ = float(fabs(double(vfrTwips.x2 - vfrTwips.x1))) * 0.5f;
+    if (focalLength != 0)
+        eyeZ = focalLength;
+    else if (fieldOfView > 0)
+        eyeZ /= tanf(float(fieldOfView * 3.141592653589793 / 180.0) * 0.5f);
+
+    if (matView)
+    {
+        Render::Point3F eye(projCenter.x, projCenter.y, Alg::Max(-farZ, -eyeZ));
+        Render::Point3F at(projCenter.x, projCenter.y, 0);
+        Render::Point3F up(0, invertY ? 1.f : -1.f, 0);
+        MakeView3D(matView, eye, at, up, invertY);
+    }
+
+    if (matPersp)
+    {
+        matPersp->Clear();
+        if (fieldOfView <= 0)
+        {
+            // parallel: the frame maps onto the unit square
+            matPersp->M[0][0] = 2.f / (right - left);
+            matPersp->M[1][1] = 2.f / (top - bottom);
+            matPersp->M[0][3] = (left + right) / (left - right);
+            matPersp->M[1][3] = (top + bottom) / (bottom - top);
+            matPersp->M[2][2] = invertY ? 1.f / (farZ - nearZ) : 1.f / (nearZ - farZ);
+            matPersp->M[2][3] = nearZ / (nearZ - farZ);
+            matPersp->M[3][3] = 1.f;
+        }
+        else
+        {
+            matPersp->M[0][0] = 2.f * eyeZ / (right - left);
+            matPersp->M[1][1] = 2.f * eyeZ / (top - bottom);
+            if (invertY)
+            {
+                matPersp->M[0][2] = (left + right) / (left - right);
+                matPersp->M[1][2] = (top + bottom) / (bottom - top);
+                matPersp->M[2][2] = farZ / (farZ - nearZ);
+                matPersp->M[3][2] = 1.f;
+            }
+            else
+            {
+                matPersp->M[0][2] = (left + right) / (right - left);
+                matPersp->M[1][2] = (top + bottom) / (top - bottom);
+                matPersp->M[2][2] = farZ / (nearZ - farZ);
+                matPersp->M[3][2] = -1.f;
+            }
+            matPersp->M[2][3] = nearZ * farZ / (nearZ - farZ);
+        }
+    }
 }
 
 // @0x14256e3f0
@@ -2453,6 +4554,9 @@ MovieImpl::~MovieImpl()
 
 }} // namespace Scaleform::GFx
 
+// The player TU emits the scalar deleting dtor of this refcount base (exe vftable 0x143183600).
+template class Scaleform::RefCountBaseStatImpl<Scaleform::RefCountNTSImpl, 0x143>;
+
 // MS2-FUNCTIONAL ?GetMouseState@MovieImpl@GFx@Scaleform@@UEAAXIPEAM0PEAI@Z: the exe computes both coordinates up front (no common 0.05 constant); this build sinks x into its branch
 // MS2-FUNCTIONAL ?Release@Movie@GFx@Scaleform@@QEAAXXZ: register allocation (the exe keeps this in rdi, this build in rbx)
 // MS2-FUNCTIONAL ?HitTest@MovieImpl@GFx@Scaleform@@UEAA_NMMW4HitTestType@Movie@23@I@Z: scheduling of the inlined SetNormalizedScreenCoords (same as sfr_gfx_06 GetMouseX)
@@ -2496,3 +4600,18 @@ MovieImpl::~MovieImpl()
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VASIntervalTimerIntf@GFx@Scaleform@@@Scaleform@@$0BEH@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142575370
 // MS2-PIN: ??_7?$RefCountBase@VStateBagImpl@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431835a8
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BEH@@Scaleform@@6B@ 0x1431937a8
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVVideoProvider@Video@GFx@Scaleform@@U?$AllocatorGH@PEAVVideoProvider@Video@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142574460
+// MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
+// MS2-PIN: ??_7?$RefCountBase@VShapeDataInterface@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318f130
+// MS2-PIN: ??_7ShapeDataInterface@Render@Scaleform@@6B@ 0x14317b678
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+// MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
+// MS2-PIN: ??_7ImageDelegate@Render@Scaleform@@6B@ 0x143149a28
+// MS2-PIN: ??_7ImageDelegate@ImageResource@GFx@Scaleform@@6B@ 0x143149b10
+// MS2-PIN: ??_7ImageResource@GFx@Scaleform@@6B@ 0x143149bf8
+// MS2-PIN: ??_7?$ShapeDataFloatTempl@V?$Array@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@6B@ 0x14317bb40
+// MS2-PIN: ??_7ShapeDataFloat@Render@Scaleform@@6B@ 0x14317bb98
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600

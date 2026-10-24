@@ -11,9 +11,11 @@ namespace Scaleform { namespace GFx {
 
 class ASString;
 class DisplayObject;
+class InteractiveObject;
 class Movie;
 class Loader;
 class ASIMEManager;
+class IMEEvent;
 
 class IMEManagerBase : public State
 {
@@ -26,7 +28,10 @@ public:
     virtual void IMECommand(Movie* pmovie, const char* pcommand, const char* pparams); // 2
 private:
     virtual void Slot03();                                              // ProcessIMEMessage
-    virtual void Slot04();                                              // HandleIMEEvent
+public:
+    // (sfr24) an IME event the movie got; HE_ReturnValueType bits.
+    virtual unsigned HandleIMEEvent(Movie* pmovie, const IMEEvent& imeEvent); // 4
+private:
     virtual void Slot05();                                              // ClearCandidateListPath
 public:
     virtual bool        SetConversionMode(const UInt32 convMode);       // 6
@@ -84,6 +89,9 @@ public:
     void FinalizeComposition(const wchar_t* pstr, UPInt len = ~UPInt(0)); // 0x1425b4420
     // Widens or narrows the focused text field's cursor.
     void SetWideCursor(bool ow = true);                                 // 0x1425b4ec0
+    // (appended, sfr24) a mouse button went down / up over ptopMostChar (the player's ProcessMouse).
+    void OnMouseDown(Movie* pmovie, int buttonsState, InteractiveObject* ptopMostChar);   // 0x1425b4900
+    void OnMouseUp(Movie* pmovie, int buttonsState, InteractiveObject* ptopMostChar);     // 0x1425b4960
 
 public:
     // (sfr24) the VM side of the IME (a Ptr; raw here so the header needs no complete ASIMEManager).

@@ -374,6 +374,13 @@ public:
 
 typedef DisplayHandle<TreeRoot> TreeRootDisplayHandle;
 
+// Proven by the exe: entry pages hand out 0x38-byte entries; CreateEntry<TreeContainer> allocates 0xa0 bytes of node
+// data (TreeNodeArray at +0x90 after the TreeNode part), the MovieImpl constructor 0xd0 for the TreeRoot.
+static_assert(sizeof(TreeNode) == 0x38, "TreeNode size");
+static_assert(sizeof(TreeNode::NodeData) == 0x90, "TreeNode::NodeData size");
+static_assert(sizeof(TreeContainer::NodeData) == 0xa0, "TreeContainer::NodeData size");
+static_assert(sizeof(TreeRoot::NodeData) == 0xd0, "TreeRoot::NodeData size");
+
 }} // namespace Scaleform::Render
 
 #endif

@@ -38,6 +38,17 @@ class EntryChange;
 class Context;
 struct SnapshotPage;
 
+// (appended for the player, sfr_gfx_01i) a pending change of an entry: the bits changed since the last capture
+class EntryChange
+{
+public:
+    Entry* pNode;
+    union {
+        unsigned     ChangeBits;
+        EntryChange* pNextFreeNode;
+    };
+};
+
 // The page header in front of the entries of one 4 KB entry page.
 struct EntryPageBase
 {
@@ -87,6 +98,8 @@ public:
     Entry* GetParent() const { return pParent; }
     void   AddRef()          { RefCount++; }
     void   Release()         { if (--RefCount == 0) destroyHelper(); }
+    // (appended for the player, sfr_gfx_01i)
+    bool   HasChanges(unsigned cb) const { return pChange ? (pChange->ChangeBits & cb) != 0 : false; }
 };
 
 struct EntryPage : public EntryPageBase
@@ -201,6 +214,7 @@ public:
     public:
         NodeData(ContextImpl::EntryData::EntryType type = ET_Base);   // 0x1424d9310
         NodeData(const NodeData& src);                                // 0x1424d9220 (sfr30)
+        NodeData& operator=(const NodeData& src);                     // (appended, sfr_gfx_01i) 0x1424e0a70
 
         Matrix3F M34;                 // +0x10
         StateBag States;              // +0x40
@@ -296,6 +310,12 @@ public:
         UPInt     pData[2];
     };
 
+    // (appended, sfr_gfx_01i) the copy shares the child array (sfr_render_03c, 0x14261b540); the default one
+    // leaves the words to the owner, which clears them
+    TreeNodeArray() = default;
+    TreeNodeArray(const TreeNodeArray& src);
+    void operator=(const TreeNodeArray& src);   // 0x14261b6b0
+
     bool       hasArrayData() const { return (pData[0] & 1) != 0; }
     ArrayData* getArrayData() const { return (ArrayData*)(pData[0] & ~(UPInt)1); }
 
@@ -336,6 +356,12 @@ public:
         {
             pVTable = TreeContainerNodeDataVTable;
             Children.pNodes[0] = Children.pNodes[1] = 0;
+        }
+        // (appended, sfr_gfx_01i) the vftable is in place before the children are copied (inlined into the
+        // TreeRoot::NodeData copy, 0x14256a630)
+        NodeData(const NodeData& src)
+            : TreeNode::NodeData(src), Children((pVTable = TreeContainerNodeDataVTable, src.Children))
+        {
         }
 
         TreeNodeArray Children;   // +0x90

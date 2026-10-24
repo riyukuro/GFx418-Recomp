@@ -282,6 +282,9 @@ public:
     virtual void FillTabableArray(InteractiveObject::FillTabableParams* params) = 0;
 };
 
+// The AS3 containers construct their AvmInteractiveObj at +0x110.
+static_assert(sizeof(DisplayObjContainer) == 0x110, "DisplayObjContainer size");
+
 }} // namespace Scaleform::GFx
 
 #endif
