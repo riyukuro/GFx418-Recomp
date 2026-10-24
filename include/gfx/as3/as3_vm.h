@@ -391,6 +391,9 @@ public:
     virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // 0x142504520
     // E4X-enabled VM override of the base no-op.
     virtual bool Add(Value& result, Object& l, Object& r) const;                                        // 0x1424e6990
+    // (appended, sfr33)
+    virtual CheckResult EqualsXML(bool& result, Instances::fl::XML& l, Instances::fl::XML& r) const;    // 0x1424f9970
+    virtual CheckResult EqualsXMLList(bool& result, Instances::fl::XMLList& l, const Value& v) const;   // 0x1424f9ae0
 
 private:
     VM*                         pVM;            // +0x28
