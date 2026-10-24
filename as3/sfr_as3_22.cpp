@@ -547,6 +547,52 @@ extern "C" void FUN_142677ea0(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
+// MS2-FUNCTIONAL: implements the executable's component-wise 8-bit weighted blend over its clipped image rectangle.
+// @0x142676ef0
+extern "C" void FUN_142676ef0(void* operation, void*, Scaleform::Render::ImageData* image, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* overlay = static_cast<ImageData*>(inputs[0]);
+    ImagePlane imagePlane, overlayPlane;
+    image->GetPlane(0, &imagePlane);
+    overlay->GetPlane(0, &overlayPlane);
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
+    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
+    const int x1 = right < static_cast<int>(imagePlane.Width) ? right : static_cast<int>(imagePlane.Width);
+    const int y1 = bottom < static_cast<int>(imagePlane.Height) ? bottom : static_cast<int>(imagePlane.Height);
+    const auto* overlayAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
+    const auto* imageAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
+    const bool useOverlayAlpha = overlayAlpha && *reinterpret_cast<const bool*>(overlayAlpha + 0x48);
+    const bool useImageAlpha = imageAlpha && *reinterpret_cast<const bool*>(imageAlpha + 0x48);
+    const int weights[4] = { *reinterpret_cast<const int*>(op + 0x40), *reinterpret_cast<const int*>(op + 0x44),
+                             *reinterpret_cast<const int*>(op + 0x48), *reinterpret_cast<const int*>(op + 0x4c) };
+    for (int y = y0; y < y1 && y - top < static_cast<int>(overlayPlane.Height); ++y) {
+        const long long srcRow = static_cast<long long>(y - top) * overlayPlane.Pitch;
+        const long long dstRow = static_cast<long long>(y) * imagePlane.Pitch;
+        for (int x = x0; x < x1 && x - left < static_cast<int>(overlayPlane.Width); ++x) {
+            unsigned src = 0, dst = 0;
+            FUN_14257bf70(overlay, &src, srcRow, static_cast<unsigned>(x - left));
+            FUN_14257bf70(image, &dst, dstRow, static_cast<unsigned>(x));
+            auto* sc = reinterpret_cast<unsigned char*>(&src);
+            auto* dc = reinterpret_cast<unsigned char*>(&dst);
+            unsigned result = 0;
+            auto* rc = reinterpret_cast<unsigned char*>(&result);
+            if (!useOverlayAlpha) sc[3] = 0xff;
+            if (!useImageAlpha) dc[3] = 0xff;
+            for (unsigned c = 0; c < 4; ++c) {
+                const int w = weights[c];
+                const int value = (static_cast<int>(dc[c]) * (256 - w) + static_cast<int>(sc[c]) * w) >> 8;
+                rc[c] = static_cast<unsigned char>(value < 0 ? 0 : value > 255 ? 255 : value);
+            }
+            if (!useImageAlpha) rc[3] = 0xff;
+            FUN_14257d390(image, dstRow, static_cast<unsigned>(x), result);
+        }
+    }
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
 // @0x142745840
