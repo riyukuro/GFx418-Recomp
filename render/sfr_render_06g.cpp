@@ -4,7 +4,7 @@
 // Queue unit sfr_render_06 is split along its original sources (06g Render_HAL).
 // MS2-UNIT: sfr_render_06g
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426beb60-0x1426c21b0 .text$mn
+// MS2-RANGE: 0x1426beaf0-0x1426c21b0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -689,3 +689,5 @@ void HAL::endMaskDisplay()
 // MS2-PIN: ??_7HALBeginDisplayItem@Render@Scaleform@@6B@ 0x143192a68
 // MS2-PIN: ??_7HALEndDisplayItem@Render@Scaleform@@6B@ 0x143192a80
 // MS2-PIN: ??_7RenderEvent@Render@Scaleform@@6B@ 0x143192a98
+// MS2-PIN: ??_GHALBeginDisplayItem@Render@Scaleform@@UEAAPEAXI@Z 0x1426beaf0
+// MS2-PIN: ??_GHALEndDisplayItem@Render@Scaleform@@UEAAPEAXI@Z 0x1426beb30

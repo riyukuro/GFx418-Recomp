@@ -54,6 +54,7 @@ Hairliner::Hairliner(LinearHeap* heap)
 }
 
 // drops every array and the bounds, then the heap behind them
+// MS2-FUNCTIONAL: same work in the same order; the exe frame is non-leaf (18 bytes longer) where ours is a leaf
 // @0x1426b37c0
 void Hairliner::Clear()
 {

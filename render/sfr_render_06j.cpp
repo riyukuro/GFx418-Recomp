@@ -5,6 +5,7 @@
 // MS2-UNIT: sfr_render_06j
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1426b8f00-0x1426b90b0 .text$mn
+// MS2-RANGE: 0x1426b90b0-0x1426b9130 .text$mn
 // MS2-RANGE: 0x1426b9130-0x1426b9cb0 .text$mn
 // MS2-TPLPIN-BEGIN
 // MS2-TPLPIN-END
@@ -30,6 +31,10 @@ struct IS
 }} // namespace Scaleform::SIMD
 
 namespace Scaleform { namespace Render {
+
+// The abstract buffer-side format: the destructor only restores the vptr and chains to ~RefCountImplCore.
+// @0x1426b90b0
+SystemVertexFormat::~SystemVertexFormat() {}
 
 // bytes per component, indexed by component type - 1 (U8N, U8, S16, U16, U32, F32)
 static unsigned VertexTypeSizes[] = { 1, 1, 2, 2, 4, 4 };
@@ -356,3 +361,4 @@ void ConvertIndices(UInt16* dest, UInt16* src, unsigned count, UInt16 delta)
 
 }} // namespace Scaleform::Render
 
+// MS2-PIN: ??_7SystemVertexFormat@Render@Scaleform@@6B@ 0x1431925f8

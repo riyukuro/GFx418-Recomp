@@ -7,7 +7,7 @@
 // out-of-line members (Render_VertexPath, just ahead of it) live here too, the cache's scratch paths emit its vtable.
 // MS2-UNIT: sfr_render_06d
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426c21b0-0x1426c51f0 .text$mn
+// MS2-RANGE: 0x1426c21b0-0x1426c5280 .text$mn
 // MS2-RANGE: 0x1426c5280-0x1426cba30 .text$mn
 // The glyph rasters' refcount bases (non-RTTI, one slot each):
 // MS2-PIN: ??_7?$RefCountBaseNTS@VGlyphRaster@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143192d98
@@ -1963,3 +1963,18 @@ void GlyphCache::LogWarning(const char* fmt, ...)
 // MS2-PIN: ??_GAmpGlyphImageWriter@Render@Scaleform@@UEAAPEAXI@Z 0x1426c24b0
 // MS2-PIN: ??_7AmpGlyphImageWriter@Render@Scaleform@@6B@ 0x143192d60
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@EU?$AllocatorLH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1426c7da0
+// MS2-FUNCTIONAL ?ClosePath@?$ShapeDataPacked@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@QEAAXPEAUShapePosInfo@23@@Z: same shape (frame-only, encoder inlined); exe shrink-wraps rsi and keeps edi/ecx for the deltas, ours pushes rbx and spills differently
+// MS2-PIN: ?ClosePath@?$ShapeDataPacked@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@QEAAXPEAUShapePosInfo@23@@Z 0x1426c51f0
+// MS2-PIN: ??_7TessBase@Render@Scaleform@@6B@ 0x14318fbd8
+// MS2-PIN: ??_7VertexPath@Render@Scaleform@@6B@ 0x14318fc58
+// MS2-PIN: ??_7MeshProvider@Render@Scaleform@@6B@ 0x14318f0c0
+// MS2-PIN: ??_7CacheBase@Render@Scaleform@@6B@ 0x143192d88
+// MS2-PIN: ??_7GlyphCacheConfig@Render@Scaleform@@6B@ 0x143192f08
+// MS2-PIN: ??_7GlyphEvictNotifier@Render@Scaleform@@6B@ 0x143192ee8
+// MS2-PIN: ??_7FontCacheHandleManager@Render@Scaleform@@6B@ 0x1431930f8
+// MS2-PIN: ??_7GlyphRaster@Render@Scaleform@@6B@ 0x143192da8
+// MS2-PIN: ??_7GlyphShape@Render@Scaleform@@6B@ 0x143192e18
+// MS2-PIN: ??_7GlyphTextureImage@Render@Scaleform@@6B@ 0x143192fa8
+// MS2-PIN: ??_7StrokeScaler@Render@Scaleform@@6B@ 0x143192f28
+// MS2-PIN: ??_7ImageFileWriter@Render@Scaleform@@6B@ 0x143185548
+// MS2-PIN: ??_7EvictNotifier@GlyphCache@Render@Scaleform@@6B@ 0x143193098
