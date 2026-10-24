@@ -63,8 +63,6 @@
 #include "ms2/scaleform/include/render/text_core.h"
 #include <algorithm>
 #include <vector>
-#include <algorithm>
-#include <vector>
 #undef GetObject   // windows.h
 
 // MS2-FUNCTIONAL 0x1424debc0: releases the argument Value at +0x178, the Multiname at +0x148, and then the ReadArgs base.
@@ -128,6 +126,17 @@ ASVM::~ASVM() = default;
 
 extern "C" void FUN_142530d50(Scaleform::UPInt self);
 extern "C" void* DAT_143b15f60;
+namespace Scaleform { namespace GFx { namespace AS3 {
+void* DeleteAs3_1424e3eb0(void* self, unsigned flags);
+}}}
+
+// VMAbcFile's non-deleting teardown follows the same member cleanup sequence as its scalar deleting dtor.
+// MS2-FUNCTIONAL 0x1424dfa30: delegates to that recovered sequence with flags 0 so the object storage stays live.
+// @0x1424dfa30
+extern "C" void FUN_1424dfa30(void* self)
+{
+    Scaleform::GFx::AS3::DeleteAs3_1424e3eb0(self, 0);
+}
 
 extern "C" Scaleform::SPInt FUN_1424e1040(void* self, const Scaleform::UInt32* value);
 
