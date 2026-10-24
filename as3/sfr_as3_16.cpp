@@ -138,6 +138,57 @@ void FUN_1424de240(long long* state)
         FUN_14257dcb0();
 }
 
+// MS2-FUNCTIONAL 0x1424e0940: copies scalar state, retains the interned name and namespace, and assigns the embedded AS3 Value.
+// @0x1424e0940
+unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
+{
+    if (dst == src)
+        return dst;
+
+    dst[0] = src[0];
+    dst[1] = 1;
+    dst[2] = src[2];
+    *reinterpret_cast<unsigned long long*>(dst + 8) = *reinterpret_cast<const unsigned long long*>(src + 8);
+    *reinterpret_cast<unsigned long long*>(dst + 0x10) = *reinterpret_cast<const unsigned long long*>(src + 0x10);
+    *reinterpret_cast<unsigned long long*>(dst + 0x18) = *reinterpret_cast<const unsigned long long*>(src + 0x18);
+    *reinterpret_cast<unsigned long long*>(dst + 0x20) = *reinterpret_cast<const unsigned long long*>(src + 0x20);
+    *reinterpret_cast<unsigned long long*>(dst + 0x28) = *reinterpret_cast<const unsigned long long*>(src + 0x28);
+    *reinterpret_cast<unsigned*>(dst + 0x30) = *reinterpret_cast<const unsigned*>(src + 0x30);
+    *reinterpret_cast<unsigned long long*>(dst + 0x38) = *reinterpret_cast<const unsigned long long*>(src + 0x38);
+    *reinterpret_cast<unsigned long long*>(dst + 0x40) = *reinterpret_cast<const unsigned long long*>(src + 0x40);
+    *reinterpret_cast<unsigned long long*>(dst + 0x48) = *reinterpret_cast<const unsigned long long*>(src + 0x48);
+    *reinterpret_cast<unsigned long long*>(dst + 0x50) = *reinterpret_cast<const unsigned long long*>(src + 0x50);
+    *reinterpret_cast<unsigned long long*>(dst + 0x60) = *reinterpret_cast<const unsigned long long*>(src + 0x60);
+    *reinterpret_cast<unsigned short*>(dst + 0x68) = *reinterpret_cast<const unsigned short*>(src + 0x68);
+
+    using NamespacePtr = Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>;
+    *reinterpret_cast<NamespacePtr*>(dst + 0x58) = *reinterpret_cast<const NamespacePtr*>(src + 0x58);
+
+    auto* oldName = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(dst + 0x70);
+    if (oldName)
+    {
+        const auto raw = reinterpret_cast<Scaleform::UPInt>(oldName);
+        if ((raw & 1) == 0)
+        {
+            if (--oldName->RefCount == 0)
+                oldName->ReleaseNode();
+        }
+        else
+            *reinterpret_cast<Scaleform::UPInt*>(dst + 0x70) = raw - 1;
+    }
+
+    auto* newName = *reinterpret_cast<Scaleform::GFx::ASStringNode* const*>(src + 0x70);
+    if (newName)
+        ++newName->RefCount;
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(dst + 0x70) = newName;
+    *reinterpret_cast<unsigned*>(dst + 0x78) = *reinterpret_cast<const unsigned*>(src + 0x78);
+    *reinterpret_cast<unsigned*>(dst + 0x7c) = *reinterpret_cast<const unsigned*>(src + 0x7c);
+    *reinterpret_cast<unsigned long long*>(dst + 0x80) = *reinterpret_cast<const unsigned long long*>(src + 0x80);
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(dst + 0x88)->Assign(
+        *reinterpret_cast<const Scaleform::GFx::AS3::Value*>(src + 0x88));
+    return dst;
+}
+
 extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14257db40();
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
