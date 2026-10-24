@@ -2160,3 +2160,4 @@ void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
 // MS2-PIN: ??_7PrimitiveFill@Render@Scaleform@@6B@ 0x143191988
 // MS2-PIN: ??_7?$RefCountBaseNTS@VPrimitiveFill@Render@Scaleform@@$0EF@@Scaleform@@6B@ 0x143191988
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EF@@Scaleform@@6B@ 0x143191988
+// MS2-PIN: ??_7DepthStencilBuffer@Render@Scaleform@@6B@ 0x14319d730

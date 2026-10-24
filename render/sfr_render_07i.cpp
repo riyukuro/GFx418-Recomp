@@ -346,3 +346,4 @@ template class Scaleform::RefCountBaseStatImpl<Scaleform::RefCountImpl, Scalefor
 // MS2-PIN: ??_7RenderBufferManager@Render@Scaleform@@6B@ 0x1432246d8
 // MS2-PIN: ??_7RenderTarget@RBGenericImpl@Render@Scaleform@@6B@ 0x143224758
 // MS2-PIN: ??_7DepthStencilBuffer@RBGenericImpl@Render@Scaleform@@6B@ 0x143224790
+// MS2-PIN: ??_7DepthStencilBuffer@Render@Scaleform@@6B@ 0x14319d730

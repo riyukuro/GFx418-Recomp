@@ -109,9 +109,9 @@ public:
     virtual void               SetInUse(bool inUse) { SetInUse(inUse ? RTUse_InUse : RTUse_Unused); }   // 5
 };
 
-// vftable: RenderBuffer's, GetSurface 3. The exe has none of its own (its vptr store is dead in every constructor and
-// destructor), hence novtable.
-class __declspec(novtable) DepthStencilBuffer : public RenderBuffer
+// vftable 0x14319d730: RenderBuffer's, GetSurface 3. The HAL makes plain ones around foreign depth surfaces
+// (D3D9::HAL::CreateRenderTarget), so it has a vftable of its own.
+class DepthStencilBuffer : public RenderBuffer
 {
 public:
     DepthStencilBuffer(RenderBufferManager* manager, const ImageSize& bufferSize)
