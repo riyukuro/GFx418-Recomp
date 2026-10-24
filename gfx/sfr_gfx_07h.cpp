@@ -228,7 +228,7 @@ U FUN_14261fc40(void*, const unsigned char* key) { return RawMultinameKeyHash(ke
 U FUN_14261fd80(void*, const unsigned char* key) { return RawMultinameKeyHash(key); }
 
 // Scalar deleting destructors of 0x10-byte ref-counted bases.
-static inline void* RawDeletingDtor(void* self, unsigned long long flags)
+static inline void* RawDeletingDtor(void* self, unsigned flags)
 {
     FUN_14257db40(self);
     if (flags & 1)
@@ -244,13 +244,13 @@ static inline void* RawDeletingDtor(void* self, unsigned long long flags)
 }
 
 // @0x14261fec0
-void* FUN_14261fec0(void* self, unsigned long long flags) { return RawDeletingDtor(self, flags); }
+void* FUN_14261fec0(void* self, unsigned flags) { return RawDeletingDtor(self, flags); }
 
 // @0x14261ff20
-void* FUN_14261ff20(void* self, unsigned long long flags) { return RawDeletingDtor(self, flags); }
+void* FUN_14261ff20(void* self, unsigned flags) { return RawDeletingDtor(self, flags); }
 
 // @0x14261ffe0
-void* FUN_14261ffe0(void* self, unsigned long long flags) { return RawDeletingDtor(self, flags); }
+void* FUN_14261ffe0(void* self, unsigned flags) { return RawDeletingDtor(self, flags); }
 
 // The AMP server state: counters, locks, the message-type / resource tables, and the default "Object Interface"
 // message type (id 0xe) registered in both the id table and the name table.
