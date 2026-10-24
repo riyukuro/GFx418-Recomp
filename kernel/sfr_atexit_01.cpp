@@ -14,6 +14,17 @@
 // MS2-RANGE: 0x142cca4d0-0x142cca4e6 .text$yd
 
 #include "../gfx/sfr_gfx_07raw.h"
+#include "ms2/scaleform/include/render/render_primitive.h"
+#include "ms2/scaleform/include/render/render_scale9grid.h"
+
+namespace Scaleform { namespace Render {
+// The VertexXY16* formats render headers do not declare (Render_Vertex.cpp statics, 0x143a2fb88..0x143a2fc18).
+struct VertexXY16f { static VertexFormat Format; };
+struct VertexXY16fAlpha { static VertexFormat Format; };
+struct VertexXY16iC32 { static VertexFormat Format; };
+struct VertexXY16iInstance { static VertexFormat Format; };
+struct VertexXY16iUV { static VertexFormat Format; };
+}}
 
 namespace Scaleform { namespace GFx {
 
@@ -24,15 +35,6 @@ extern "C" char DAT_143191990[];
 extern "C" char DAT_1431927c8[];
 extern "C" char DAT_143a2f430[];
 extern "C" char DAT_143a2f690[];
-extern "C" char DAT_143a2f978[];
-extern "C" char DAT_143a2fb80[];
-extern "C" char DAT_143a2fb98[];
-extern "C" char DAT_143a2fbb0[];
-extern "C" char DAT_143a2fbc8[];
-extern "C" char DAT_143a2fbe0[];
-extern "C" char DAT_143a2fbf8[];
-extern "C" char DAT_143a2fc10[];
-extern "C" char DAT_143a2fc28[];
 extern "C" char DAT_143a2fce8[];
 extern "C" char DAT_143a2fcf8[];
 extern "C" char DAT_143a2fd08[];
@@ -72,6 +74,12 @@ extern "C" char DAT_143a51b50[];
 void FUN_14257db40(void*);                  // RefCountImplCore::~RefCountImplCore
 extern "C" void FUN_142521f00(void*);       // AS3::Value::ReleaseInternal
 extern "C" void FUN_142939780(void*);       // AS2::Value::DropRefs
+
+// The Ptr<SystemVertexFormat> slot of a VertexFormat static, released as raw storage like the other Ptr<>s.
+static inline char* FormatSysSlot(Render::VertexFormat& format)
+{
+    return reinterpret_cast<char*>(&format) + 0x10;
+}
 
 static inline void RawSetVtable(char* object, char* vtable)
 {
@@ -172,67 +180,67 @@ void FUN_142cc9540()
     FUN_14257db40(DAT_143a2f650);
 }
 
-// static Ptr<> at 0x143a2f978.
+// Image9GridVertex::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2f978).
 // @0x142cc95f0
 void FUN_142cc95f0()
 {
-    RawReleasePtr(DAT_143a2f978);
+    RawReleasePtr(FormatSysSlot(Render::Image9GridVertex::Format));
 }
 
-// static Ptr<> at 0x143a2fb98.
+// VertexXY16f::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fb98).
 // @0x142cc9610
 void FUN_142cc9610()
 {
-    RawReleasePtr(DAT_143a2fb98);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16f::Format));
 }
 
-// static Ptr<> at 0x143a2fbb0.
+// VertexXY16fAlpha::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fbb0).
 // @0x142cc9630
 void FUN_142cc9630()
 {
-    RawReleasePtr(DAT_143a2fbb0);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16fAlpha::Format));
 }
 
-// static Ptr<> at 0x143a2fb80.
+// VertexXY16i::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fb80).
 // @0x142cc9650
 void FUN_142cc9650()
 {
-    RawReleasePtr(DAT_143a2fb80);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16i::Format));
 }
 
-// static Ptr<> at 0x143a2fbe0.
+// VertexXY16iAlpha::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fbe0).
 // @0x142cc9670
 void FUN_142cc9670()
 {
-    RawReleasePtr(DAT_143a2fbe0);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16iAlpha::Format));
 }
 
-// static Ptr<> at 0x143a2fbc8.
+// VertexXY16iC32::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fbc8).
 // @0x142cc9690
 void FUN_142cc9690()
 {
-    RawReleasePtr(DAT_143a2fbc8);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16iC32::Format));
 }
 
-// static Ptr<> at 0x143a2fbf8.
+// VertexXY16iCF32::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fbf8).
 // @0x142cc96b0
 void FUN_142cc96b0()
 {
-    RawReleasePtr(DAT_143a2fbf8);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16iCF32::Format));
 }
 
-// static Ptr<> at 0x143a2fc10.
+// VertexXY16iInstance::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fc10).
 // @0x142cc96d0
 void FUN_142cc96d0()
 {
-    RawReleasePtr(DAT_143a2fc10);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16iInstance::Format));
 }
 
-// static Ptr<> at 0x143a2fc28.
+// VertexXY16iUV::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fc28).
 // @0x142cc96f0
 void FUN_142cc96f0()
 {
-    RawReleasePtr(DAT_143a2fc28);
+    RawReleasePtr(FormatSysSlot(Render::VertexXY16iUV::Format));
 }
 
 // static Render::SortKeyInterface at 0x143a2fd38: back to its interface base vftable.
