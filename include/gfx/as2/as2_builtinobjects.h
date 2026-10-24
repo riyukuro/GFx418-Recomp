@@ -844,7 +844,7 @@ public:
 
 class ArrayObject;
 
-// The Mouse class (constructor function holding the listeners). 0xa8 bytes.
+// The Mouse class (constructor function holding the listeners). 0xb0 bytes (Register 0x142978a90 allocates 0xb0).
 class MouseCtorFunction : public CFunctionObject, public MouseListener
 {
 public:
@@ -852,6 +852,8 @@ public:
     mutable SInt32   LastMousePos[2];   // +0x80 (the double-click test of OnMouseDown)
     mutable UInt32   LastClickTime;     // +0x88
     FunctionRef      SetCursorTypeFunc; // +0x90
+    // (appended, sfr24) +0xa8: the allocation's last 8 bytes; neither the ctor nor any method touches them.
+    bool             MouseExtensions;   // +0xa8
 
     // Asks the user event handler for cursor shape cursorType on mouse mouseIndex; false without a handler
     // (exe 0x142980380).
@@ -944,6 +946,7 @@ protected:
     virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const; // exe 0x1429411c0
     virtual void Finalize_GC(); // exe 0x142942dc0
 };
+static_assert(sizeof(MouseCtorFunction) == 0xb0, "MouseCtorFunction size");
 
 // Value of the SharedObject lookup: a pointer that the collector visits. 0x10 bytes, vftable { dtor, Finalize_GC }.
 class SharedObjectPtr : public Ptr<SharedObject>
