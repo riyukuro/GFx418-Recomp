@@ -18,6 +18,7 @@ void FUN_14257db40(void* object);
 void FUN_14257dc30(void* object);
 void FUN_14257dcb0(void* object);
 void FUN_14257dcd0(void* object);
+void* FUN_14257dc50(void* object);
 void FUN_142584ce0(void* object);
 void FUN_142585580(void* object, const void* source);
 extern const void* const DAT_1431b8fc8[];
@@ -28,6 +29,7 @@ extern const void* const DAT_1431b8fd0[];
 extern const void* const DAT_1431b8db0[];
 extern const void* const DAT_1431b8f18[];
 extern "C" const void* const DAT_1431b8e30[];
+void FUN_14256c520(Scaleform::GFx::MovieImpl* movie, Scaleform::GFx::Video::VideoProvider* provider);
 
 // MS2-FUNCTIONAL ??_GCriMvSoundInterface@@UEAAPEAXI@Z: this interface is compiled by CRI's VS2008 build; VS2017's
 // scalar-deleting destructor has the extra sized-delete branch when flag 4 is set.
@@ -723,6 +725,94 @@ namespace AS3 {
 
 using namespace Video;
 
+// The SWF clock adapter stores a strong reference to its target sprite after the SyncObject base.
+class SwfVideoSyncObject : public VideoPlayer::SyncObject
+{
+public:
+    explicit SwfVideoSyncObject(Sprite* target);
+    virtual ~SwfVideoSyncObject();
+    virtual void GetTime(UInt64* count, UInt64* unit);
+
+    void* pTarget;
+    float FrameDuration;
+};
+
+// MS2-FUNCTIONAL: adapts the SWF target's frame clock; the target is held through the engine refcount core.
+// @0x140025c30
+SwfVideoSyncObject::SwfVideoSyncObject(Sprite* target)
+    : VideoPlayer::SyncObject(), pTarget(target ? FUN_14257dc50(target) : NULL), FrameDuration(0.0f)
+{
+    UInt32 frame = 0;
+    if (target)
+    {
+        void** vtable = *reinterpret_cast<void***>(target);
+        frame = reinterpret_cast<UInt32 (__fastcall*)(Sprite*)>(vtable[0x328 / sizeof(void*)])(target);
+        void* timeline = reinterpret_cast<void**>(target)[4];
+        FrameDuration = *reinterpret_cast<float*>(reinterpret_cast<UByte*>(timeline) + 0x10 + 0x274);
+    }
+    *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(this) + 0x18) = frame;
+}
+
+// MS2-FUNCTIONAL: releases the target refcount core before the common SyncObject base teardown.
+// @0x140025ce0
+SwfVideoSyncObject::~SwfVideoSyncObject()
+{
+    if (pTarget)
+        FUN_14257dcd0(pTarget);
+    pTarget = NULL;
+}
+
+// @0x140025e50
+SwfVideoSyncObject* FUN_140025e50(SwfVideoSyncObject* self, UInt32 flags)
+{
+    self->~SwfVideoSyncObject();
+    if (flags & 1)
+        Memory::Free(self);
+    return self;
+}
+
+// MS2-FUNCTIONAL: calculate elapsed SWF time from the target's current frame and cached frame duration.
+// @0x140025d30
+void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
+{
+    void* core = pTarget;
+    if (!core)
+    {
+        *count = 0;
+        *unit = 1000;
+        return;
+    }
+
+    void* target = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(core) + 8);
+    if (!target)
+    {
+        FUN_14257dcd0(core);
+        pTarget = NULL;
+        *count = 0;
+        *unit = 1000;
+        return;
+    }
+
+    volatile LONG* refs = reinterpret_cast<volatile LONG*>(reinterpret_cast<UByte*>(core) + 4);
+    InterlockedIncrement(refs);
+    InterlockedIncrement(refs);
+    FUN_14257dcd0(core);
+    void** vtable = *reinterpret_cast<void***>(target);
+    UInt32 current = reinterpret_cast<UInt32 (__fastcall*)(void*)>(vtable[0x328 / sizeof(void*)])(target);
+    UInt32 start = *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(this) + 0x18);
+    if (current > start)
+    {
+        *unit = 1000000;
+        *count = (UInt64)((double)(current - start) * FrameDuration * 1000000.0);
+    }
+    else
+    {
+        *count = 0;
+        *unit = 1000;
+    }
+    FUN_14257dcd0(core);
+}
+
 // The sprite whose sound settings a provider's audio follows: the audio target itself, or its parent when the target
 // is not a sprite.
 static inline Sprite* GetAudioTargetSprite(CharacterHandle* ph)
@@ -852,6 +942,78 @@ void VideoProviderNetStream::SetLoopFlag(bool flag)
     LoopFlag = flag;
     if (pVideoPlayer)
         pVideoPlayer->SetLoopFlag(flag);
+}
+
+// MS2-FUNCTIONAL: retain or clear the timeline sync object and immediately install it on an open player.
+// @0x140025ec0
+void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
+{
+    VideoPlayer::SyncObject* sync = flag ? SF_NEW SwfVideoSyncObject(ptarget) : NULL;
+    pSyncObj = sync;
+    if (pVideoPlayer)
+        pVideoPlayer->SetSyncObject(sync);
+}
+
+// MS2-FUNCTIONAL: obtains the movie's video state and creates/opens its player; uncommon AS3 loader-state copying is
+// reduced to the movie's installed file opener, task scheduling defaults to synchronous, and missing video state fails cleanly.
+// @0x140026720
+void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
+{
+    void* movieRoot = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(&asvm) + 0x2d8);
+    void* movie = movieRoot ? *reinterpret_cast<void**>(reinterpret_cast<UByte*>(movieRoot) + 0x10) : NULL;
+    if (!movie || !url || !*url)
+    {
+        SendNotification(NetStreamInterface::PlayStreamNotFound, true);
+        return;
+    }
+
+    void* stateBag = reinterpret_cast<UByte*>(movie) + 0x10;
+    void** stateBagVtable = *reinterpret_cast<void***>(stateBag);
+    typedef void* (__fastcall *GetStateFn)(void*, int);
+    GetStateFn getState = reinterpret_cast<GetStateFn>(stateBagVtable[0x18 / sizeof(void*)]);
+    void* video = getState(stateBag, 30);
+    if (!video)
+    {
+        SendNotification(NetStreamInterface::PlayStreamNotFound, true);
+        return;
+    }
+
+    if (!pVideoPlayer)
+    {
+        void* fileOpener = getState(stateBag, 9);
+        void* taskManager = getState(stateBag, 20);
+        void* log = getState(stateBag, 2);
+        void* heap = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(movie) + 0x40);
+        void** videoVtable = *reinterpret_cast<void***>(video);
+        typedef VideoPlayer* (__fastcall *CreatePlayerFn)(void*, void*, void*, void*, void*);
+        CreatePlayerFn createPlayer = reinterpret_cast<CreatePlayerFn>(videoVtable[0x18 / sizeof(void*)]);
+        pVideoPlayer = createPlayer(video, heap, taskManager, fileOpener, log);
+        if (log)
+            FUN_14257dcb0(log);
+        if (taskManager)
+            FUN_14257dcb0(taskManager);
+        if (fileOpener)
+            FUN_14257dcb0(fileOpener);
+        FUN_14257dcb0(video);
+        if (!pVideoPlayer)
+        {
+            SendNotification(NetStreamInterface::PlayStreamNotFound, true);
+            return;
+        }
+    }
+
+    pVideoPlayer->SetSyncObject(pSyncObj.GetPtr());
+    pVideoPlayer->SetLoopFlag(LoopFlag);
+    pVideoPlayer->SetBufferTime(BufferTime);
+    pVideoPlayer->SetNumberOfFramePools(PoolsNumber);
+    pVideoPlayer->SetReloadThresholdTime(ReloadThreshHoldTime);
+    pVideoPlayer->Open(url);
+    ::FUN_14256c520(reinterpret_cast<MovieImpl*>(movie), this);
+    FrameIsReady = false;
+    StartNotificationSent = false;
+    StopNotificationSent = false;
+    SeekNotificationSent = true;
+    NotFoundNotificationSent = false;
 }
 
 // @0x1400253b0
