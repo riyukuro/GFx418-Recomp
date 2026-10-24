@@ -14,6 +14,9 @@
 #include "ms2/scaleform/include/gfx/gfx_taskmanager.h"
 #undef GetObject   // windows.h
 
+extern "C" void* DAT_143b15f60;
+extern "C" void FUN_142521f00(void*);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
     // The executable keeps ModifyOptimizedPlayList out of line at 0x142517e70; its body is recovered in sfr_as3_18.
     void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p);
@@ -1060,7 +1063,28 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
 // MS2-FUNCTIONAL: the default destructor inlines the contained Value cleanup that the executable calls through its
 // helper; the cleanup is equivalent, but the leaf/frame differs.
 // @0x1424de8f0
-PropRef::~PropRef() = default;
+PropRef::~PropRef()
+{
+    auto* value = reinterpret_cast<Scaleform::UInt32*>(reinterpret_cast<unsigned char*>(this) + 0x10);
+    if ((*value & 0x1f) < 10)
+        return;
+    if ((*value >> 9) & 1)
+    {
+        auto* refCount = *reinterpret_cast<int**>(value + 2);
+        --*refCount;
+        if (*refCount == 0)
+        {
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, refCount);
+        }
+        *value &= 0xfffffde0;
+        value[2] = 0;
+        value[4] = 0;
+        value[6] = 0;
+        return;
+    }
+    FUN_142521f00(value);
+}
 
 // @0x1424e0b40
 PropRef& PropRef::operator=(PropRef&& other)
@@ -1249,8 +1273,6 @@ void FUN_1424dca60(void* self)
         *table = nullptr;
     }
 }
-
-extern "C" void FUN_142521f00(void*);
 
 // HashNode<DynAttrsKey, Value> releases the Value union and its ASString key.
 // MS2-FUNCTIONAL: preserves the Value payload/refcount cleanup and key release; branch lowering differs by two bytes.
