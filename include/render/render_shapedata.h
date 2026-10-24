@@ -495,6 +495,9 @@ public:
     // (appended for the drawing API, sfr_gfx_06e) no source yet, identity placement, not bound; defined inline
     // where GradientData is complete (sfr_gfx_06e)
     inline ComplexFill();
+    // (appended for the shape styles, sfr_gfx_08s1) a copy with its own references; defined inline where
+    // GradientData and ImageBase are complete (sfr_gfx_08s1)
+    inline ComplexFill(const ComplexFill& o);
 };
 // dash and gap lengths of a dashed stroke
 struct DashArray : public RefCountBase<DashArray, Stat_Default_Mem>
