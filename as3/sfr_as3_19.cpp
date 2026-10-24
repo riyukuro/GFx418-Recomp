@@ -112,6 +112,9 @@ void FUN_14253d520(Scaleform::UPInt state, unsigned char op, Scaleform::UPInt* p
 void FUN_1424d7690(void* err, int id, void* vm, const char* a, const char* b);       // VM::Error::Error(id, vm, char*, char*)
 Scaleform::UPInt FUN_142524f60(Scaleform::UPInt vm, Scaleform::UPInt file, Scaleform::UPInt entry);   // multiname entry -> traits
 Scaleform::UPInt FUN_142507f60(Scaleform::UPInt vm, const void* value);               // class traits of a value
+void FUN_142500260(Scaleform::UPInt vm, unsigned int a, Scaleform::UPInt traits, void* value, unsigned int n, void* args);   // VM: call helper on a value with n arguments
+Scaleform::UPInt FUN_1425081f0(Scaleform::UPInt vm);                                     // VM: class-traits factory
+Scaleform::UPInt FUN_142563380(Scaleform::UPInt factory, Scaleform::UPInt traits);       // class traits for traits
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -4229,6 +4232,73 @@ void Sfr31ExecOwnerCall(UPInt vmAddr, UPInt owner, UInt32 n)
     }
     reinterpret_cast<Value*>(&val)->~Value();
     FUN_1424de9e0(raBuf);
+}
+// ---- batch 36
+// Native with a required object argument: the helper is invoked with the argument's traits and the remaining arguments.
+// MS2-FUNCTIONAL 0x142533df0: raw-offset model; codegen differs from the exe
+// @0x142533df0
+void Sfr31ExecCallWithTraits(UPInt vmAddr, UInt32 a, UInt32 n)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UInt8 raBuf[0x140];
+    FUN_1424d9530(raBuf, &vm, n);
+    const UPInt frame = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
+    const UPInt top = Sfr31Rd(frame, 8);
+    Sfr31RawTraitsVal val;
+    for (int i = 0; i < 8; ++i)
+        reinterpret_cast<UInt32*>(&val)[i] = reinterpret_cast<const UInt32*>(top)[i];
+    Sfr31Wr(frame, 8, top - 0x20);
+    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(&val));
+    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    {
+        const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
+        void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
+        const UPInt tr = FUN_14250ffc0(&vm, reinterpret_cast<const Value*>(&val));
+        FUN_142500260(vmAddr, a, tr, &val, n, args);
+    }
+    reinterpret_cast<Value*>(&val)->~Value();
+    FUN_1424de9e0(raBuf);
+}
+
+// Tracer op: the first argument's type picks the class traits (null/undefined -> Object) that are pushed.
+// MS2-FUNCTIONAL 0x142532bd0: raw-offset model; codegen differs from the exe
+// @0x142532bd0
+void Sfr31TraceArgClassTraits(State* st, UInt32 argc)
+{
+    StV s(st);
+    FUN_14251fcd0(s.Tracer(), argc);
+    const UPInt vm = TrVM(s.Tracer());
+    TrReadArgsRaw args(reinterpret_cast<VM*>(vm), st, argc);
+    TrPopped popped;
+    FUN_14251cd30(st, &popped.Get());
+    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
+    const UPInt bp = reinterpret_cast<UPInt>(args.buf);
+    const UPInt p = *reinterpret_cast<const UInt32*>(bp + 0x18) <= Sfr31Rd(bp, 0x128) ? Sfr31Rd(bp, 0x120) : bp + 0x20;
+    UPInt tr = 0;
+    const UInt32 k = *reinterpret_cast<const UInt32*>(p) & 0x1f;
+    if (k == 0 || (k == 0xc && Sfr31Rd(p, 0x10) == 0))
+        tr = Sfr31Rd(vm, 0x1f8);
+    else if (k == 9)
+        tr = Sfr31Rd(p, 0x10);
+    else if (k == 0xd)
+        tr = Sfr31Rd(Sfr31Rd(p, 0x10), 0x20);
+    UPInt out = Sfr31Rd(vm, 0x1f8);
+    if (tr != 0)
+    {
+        if (tr == Sfr31Rd(vm, 0x220))
+            out = Sfr31Rd(vm, 0x250);
+        else if (tr == Sfr31Rd(vm, 0x228))
+            out = Sfr31Rd(vm, 0x258);
+        else if (tr == Sfr31Rd(vm, 0x218))
+            out = Sfr31Rd(vm, 0x260);
+        else if (tr == Sfr31Rd(vm, 0x230))
+            out = Sfr31Rd(vm, 0x268);
+        else
+            out = FUN_142563380(FUN_1425081f0(vm), tr);
+    }
+    Sfr31RawTraitsVal v = {9, 0, out, 0};
+    s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
+    popped.Get().~Value();
 }
 }}} // namespace Scaleform::GFx::AS3
 
