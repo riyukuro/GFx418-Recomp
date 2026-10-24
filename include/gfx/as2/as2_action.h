@@ -338,6 +338,9 @@ public:
     // (exe 0x142956cd0).
     bool               GetVariable(const ASString& varname, Value* presult, const WithStackArray* pwithStack = 0,
                                    InteractiveObject** ppnewTarget = 0, Value* powner = 0, unsigned exclFlags = 0);
+    // A plain name set through the with stack, the locals or the target (exe 0x14298da70).
+    void               SetVariableRaw(const ASString& varname, const Value& val,
+                                      const WithStackArray* pwithStack = 0);
     // Resolves a variable path (with/scope chain, targets); false if not found (exe 0x142945010).
     bool               FindVariable(const GetVarParams& params, bool searchUndefined = false,
                                     ASString* pvarName = 0) const;
@@ -541,6 +544,11 @@ public:
 protected:
     // (appended for sfr_as2_06) Refills the standard member map (exe 0x142961c40).
     void InitStandardMembers();
+
+public:
+    // (appended, sfr24) Drops the registered classes, builtin registry and prototypes before the movie goes; with
+    // preserveBuiltinProps a fresh _global keeps gfxPlayer, gfxLanguage and gfxArg (exe 0x14296f3d0).
+    void PreClean(bool preserveBuiltinProps);
 };
 
 enum { StatMD_ASBinaryData_Mem = 0x108 };
@@ -561,6 +569,8 @@ public:
 
     static ActionBufferData* CreateNew(); // exe 0x142936620
     unsigned GetLength() const { return BufferLen; }
+    // (appended, sfr24) the bytes; null for an empty block or one starting with ActionEnd.
+    const UByte* GetBufferPtr() const { return (BufferLen >= 1 && pBuffer[0] != 0) ? pBuffer : 0; }
     // (appended for sfr_as2_06) Copies eventLength bytes from the byte-aligned stream and skips them (exe
     // 0x1429726a0).
     void Read(StreamContext* psc, unsigned eventLength);
@@ -602,6 +612,9 @@ public:
     // with stack pinitialWithStack (exe 0x142939e60).
     void Execute(Environment* env, int startPc, int execBytes, Value* retval, const WithStackArray* pinitialWithStack,
                  ExecuteType execType);
+    // (appended, sfr24) Fills the constant pool from the ActionConstantPool at startPc (bytes up to stopPc); a pool
+    // already read at another pc is an error (exe 0x142970210).
+    void ProcessDeclDict(ASStringContext* psc, unsigned startPc, unsigned stopPc, ActionLogger& log);
 
 protected:
     // (sfr22) The frame of a goto value: a 1-based number or a "[path:]label" string, the clip of the label to
