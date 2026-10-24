@@ -20,6 +20,7 @@ public:
         EventHandlers; // +0x28
 
     AvmCharacter(InteractiveObject* pdispObj); // exe 0x142918930
+    virtual ~AvmCharacter(); // exe 0x1429253d0 (sfr32)
     InteractiveObject* GetDispObj() const { return pDispObj; }
     MovieRoot*         GetAS2Root() const { return ToAS2Root(pDispObj); }
 
@@ -32,6 +33,7 @@ public:
 
     // ObjectInterface overrides (the AvmCharacter vftable is not modeled yet).
     virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes);
+    virtual ObjectType GetObjectType() const; // exe 0x142954160 (sfr32): Object_Unknown, folded with the base's copy
     virtual bool DeleteMember(ASStringContext* psc, const ASString& name); // exe 0x1429386e0
     // The member of the clip's AS object (exe 0x1429448c0).
     virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember);
@@ -45,7 +47,16 @@ public:
     virtual bool Unwatch(ASStringContext* psc, const ASString& prop);                         // exe 0x1429926f0
 
     // AvmDisplayObjBase overrides.
-    virtual void OnEventLoad();   // exe 0x14296b820
+    virtual void OnEventLoad();   // exe 0x14000e390, the vftable copy
+    void         OnEventLoadBase(); // the out-of-line copy for qualified calls, exe 0x14296b820
+    // Empty / constant overrides: the exe vftable 0x143215b00 points at the shared stubs 0x14000e4e0, 0x14000e3d0,
+    // 0x14296c150, 0x14296c1a0, 0x14296c1f0 and 0x1429658c0.
+    virtual bool OnEvent(const EventId& id) { return false; }
+    virtual unsigned GetCursorType() const { return 0; }
+    virtual void OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt) {}
+    virtual bool OnKeyEvent(const EventId& id, int* pkeyMask) { return false; }
+    virtual bool OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx, FocusMovedType fmt) { return true; }
+    virtual bool IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const { return false; }
     virtual void OnEventUnload(); // exe 0x14296bba0
     // The parent's path plus ".name"; "_level<n>" for a root sprite, empty otherwise (exe 0x1429494d0).
     virtual const char* GetAbsolutePath(String* ppath) const;
@@ -105,6 +116,10 @@ public:
     static bool IsStandardMember(const ASString& memberName, ASString* plowerCaseName = 0);
     // A clip event handler for the event; key down / up handlers are found by the event alone (exe 0x14295d450).
     bool HasClipEventHandler(const EventId& id) const;
+    // Sets the one handler of a single clip event (exe 0x14298a620).
+    void SetSingleClipEventHandler(const EventId& id, const Value& handler);
+    // Sets the handler of each event of a flag set (exe 0x14297fed0).
+    void SetClipEventHandlers(const EventId& id, const Value& handler);
     // Calls each clip event handler for the event with this as this; false when there is none (exe 0x142964200).
     bool InvokeClipEventHandlers(Environment* penv, const EventId& id);
 

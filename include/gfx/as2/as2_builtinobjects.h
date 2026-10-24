@@ -1222,6 +1222,9 @@ public:
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);
     // width and height of the visible stage (pixels), scaleMode and align of the view (exe 0x142953520).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+    // width and height are read-only (exe 0x142988f30).
+    virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
+                              const PropFlags& flags = PropFlags());
 
     // (appended for sfr_as2_06) broadcasts onResize, with the visible rect as a Rectangle when the extensions are
     // on (exe 0x14296a540).
