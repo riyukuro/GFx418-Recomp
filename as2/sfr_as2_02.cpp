@@ -173,6 +173,7 @@ struct MS2_HTMLImageTagInfo // 0x40 bytes
 
 namespace Scaleform { namespace GFx {
 template<> void LogBase<AS2::FnCall>::LogScriptWarning(const char* pfmt, ...) const;   // sfr_as2_06 @0x142968210
+extern template void LogBase<DisplayObjectBase>::LogScriptWarning(const char* pfmt, ...) const;
 }}
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -966,7 +967,7 @@ void AvmSprite::SpriteGotoAndStop(const FnCall& fn)
         return;
     if (fn.NArgs < 1)
     {
-        psprite->LogScriptWarning("AvmSprite::SpriteGotoAndStop needs one arg");
+        psprite->LogScriptError("AvmSprite::SpriteGotoAndStop needs one arg");
         return;
     }
     const Value& arg = fn.Arg(0);
@@ -990,7 +991,7 @@ void AvmSprite::SpriteGotoAndPlay(const FnCall& fn)
         return;
     if (fn.NArgs < 1)
     {
-        psprite->LogScriptWarning("AvmSprite::SpriteGotoAndPlay needs one arg");
+        psprite->LogScriptError("AvmSprite::SpriteGotoAndPlay needs one arg");
         return;
     }
     const Value& arg = fn.Arg(0);
