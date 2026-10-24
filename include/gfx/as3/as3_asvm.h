@@ -16,6 +16,7 @@
 #include "ms2/scaleform/include/gfx/gfx_eventid.h"
 #include "ms2/scaleform/include/gfx/gfx_keyboardstate.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display.h"   // (sfr24) ActionEntry's SPtr<fl_display::DisplayObject>
 #include "ms2/scaleform/include/gfx/gfx_playertasks.h"
 
 // windows.h (through the kernel lock header) maps GetObject to GetObjectA; Value::GetObject keeps its name.
