@@ -927,6 +927,9 @@ public:
     ~PropRef();
     operator bool() const;
     PropRef& operator=(PropRef&& other);
+    // (sfr24) the move assignment would delete the implicit copies; keep them as they were
+    PropRef(const PropRef& other) = default;
+    PropRef& operator=(const PropRef& other) = default;
 
     // Not found.
     PropRef() : pValue(0), SlotIndex(0) { }
