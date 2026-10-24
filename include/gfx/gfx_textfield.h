@@ -10,6 +10,7 @@
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_stream.h"
 #include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/include/gfx/gfx_value.h"
 
 namespace Scaleform { class Range; }   // (appended, sfr34) kernel/sf_range.h
 namespace Scaleform { namespace Render { namespace Text { struct ImageDesc; } } }   // (appended, sfr24) text_core.h
@@ -182,6 +183,8 @@ public:
     void   RemoveIdImageDescAssoc(const char* idStr);        // exe 0x1425bb680
     void   ClearIdImageDescAssoc();                          // exe 0x1425b7220
     void   AddIdImageDescAssoc(const char* idStr, Render::Text::ImageDesc* pdesc);  // exe 0x1425b65e0
+    // (appended, sfr24) the display info's position in the text rectangle's space.
+    Render::PointF TransformToTextRectSpace(const GFx::Value::DisplayInfo& info) const;      // exe 0x1425be970
 
 private:
     UByte Unrecovered[0x148];
