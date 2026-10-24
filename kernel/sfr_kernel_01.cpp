@@ -1802,14 +1802,20 @@ bool                 System::HasMemoryLeaks = false;   // exe 0x143b15ff8
 extern SysAllocBase* System_pSysAlloc;                 // file static in the exe, bound by a symbols-manual row
 #endif
 
-System::System(SysAllocBase* sysAlloc)
+// This library copy has the same body as the exported constructor in unit_141803210; keep it under a private
+// helper name so the DLL publishes the game's exported address as the canonical decorated symbol.
+// @0x14258c290
+void SystemCtorCopy14258c290(System* self, SysAllocBase* sysAlloc)
 {
-    Init(MemoryHeap::RootHeapDesc(), sysAlloc);
+    (void)self;
+    System::Init(MemoryHeap::RootHeapDesc(), sysAlloc);
 }
 
-System::System(const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* sysAlloc)
+// @0x14258c270
+void SystemCtorCopy14258c270(System* self, const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* sysAlloc)
 {
-    Init(rootHeapDesc, sysAlloc);
+    (void)self;
+    System::Init(rootHeapDesc, sysAlloc);
 }
 
 MS2_SF_XTU void System::Init(const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* sysAlloc)
@@ -2828,8 +2834,6 @@ UPInt SysAllocStatic::GetUsedSpace() const { return TotalSpace - pAllocator->Get
 // MS2-PIN: ?ReallocInPlace@SysAllocStatic@Scaleform@@UEAA_NPEAX_K11@Z 0x142589ff0
 // MS2-PIN: ?Destroy@System@Scaleform@@SAXXZ 0x14258c0a0
 // MS2-PIN: ?Init@System@Scaleform@@SAXAEBUHeapDesc@MemoryHeap@2@PEAVSysAllocBase@2@@Z 0x14258c0f0
-// MS2-PIN: ??0System@Scaleform@@QEAA@AEBUHeapDesc@MemoryHeap@1@PEAVSysAllocBase@1@@Z 0x14258c270
-// MS2-PIN: ??0System@Scaleform@@QEAA@PEAVSysAllocBase@1@@Z 0x14258c290
 // MS2-PIN: ??0SysAllocPagedMalloc@Scaleform@@QEAA@_K@Z 0x14258cb30
 // MS2-PIN: ??_G?$SysAllocBase_SingletonSupport@VSysAllocPagedMalloc@Scaleform@@VSysAllocPaged@2@@Scaleform@@UEAAPEAXI@Z 0x14258cb70
 // MS2-PIN: ??_GSysAllocPagedMalloc@Scaleform@@UEAAPEAXI@Z 0x14258cba0

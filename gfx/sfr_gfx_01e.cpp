@@ -468,6 +468,8 @@ void ThreadedTaskManager::RequestShutdown()
 // MS2-PIN: ??_7TaskThread@GFx@Scaleform@@6BAcquireInterface@2@@ 0x143184b38
 // MS2-PIN: ??_7TaskThreadInPool@GFx@Scaleform@@6BWaitable@2@@ 0x143184b60
 // MS2-PIN: ??_7TaskThreadInPool@GFx@Scaleform@@6BAcquireInterface@2@@ 0x143184ba0
+// MS2-PIN: ??_G?$RefCountBase@VThreadedTaskManagerImpl@GFx@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x14258f8c0
+// MS2-PIN: ??_GTaskManager@GFx@Scaleform@@UEAAPEAXI@Z 0x14258f920
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVTaskThreadInPool@GFx@Scaleform@@U?$AllocatorGH@PEAVTaskThreadInPool@GFx@Scaleform@@$01@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x142590c40

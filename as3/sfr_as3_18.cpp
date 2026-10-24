@@ -7524,3 +7524,4 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-PIN: ??_7?$RefCountBaseNTS@USfr34_TextImageDesc@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7Sfr34_TextImageDesc@@6B@ 0x14317c9c0
 // MS2-PIN: ?Reserve@?$ArrayDataBase@EU?$AllocatorGH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142522d10
+// MS2-PIN: ?Decode@Image@Render@Scaleform@@UEBA_NPEAVImageData@23@P6AXPEAEPEBE_KPEAVPalette@23@PEAX@Z5@Z 0x1424421b0

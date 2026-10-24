@@ -1368,3 +1368,8 @@ bool Sprite::IsFocusEnabled(FocusMovedType fmt) const
 }
 
 }} // namespace Scaleform::GFx
+
+// These compiler-emitted empty-delete helpers are shared with the common Scaleform CRT shim. Bind them to that
+// canonical implementation instead of letting byte-order matching claim unrelated empty Sprite functions.
+// MS2-PIN: ?__empty_global_delete@@YAXPEAX@Z 0x14015b300
+// MS2-PIN: ?__empty_global_delete@@YAXPEAX_K@Z 0x14015b310
