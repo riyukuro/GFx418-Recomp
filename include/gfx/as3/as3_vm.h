@@ -33,20 +33,21 @@ public:
     };
 
     // (sfr24) inline in the Tracer constructor 0x1424d9f30
-    FlashUI() : State(sError), NeedToCheck(false) {}
+    FlashUI() : CurrState(sError), NeedToCheck(false) {}
     virtual ~FlashUI() {}                                               // slot 0
     virtual void Output(OutputMessageType type, const char* msg) = 0;   // slot 1
     // (sfr24) called before each opcode while NeedToCheckOpCode()
     virtual bool OnOpCode(Abc::TCodeOffset offset) = 0;                 // slot 2
 
-    StateType GetState() const          { return State; }
+    StateType GetCurrState() const      { return CurrState; }
     bool      NeedToCheckOpCode() const { return NeedToCheck; }
     void      SetNeedToCheckOpCode(bool flag = true) { NeedToCheck = flag; }
 
 protected:
-    void SetState(StateType s) { State = s; }
+    void SetCurrState(StateType s) { CurrState = s; }
 
-    StateType State;        // +0x08 (sfr24)
+    // (sfr24) not "State": MovieRoot derives from FlashUI, and GFx::State must stay visible in its members
+    StateType CurrState;    // +0x08 (sfr24)
     bool      NeedToCheck;  // +0x0c (sfr24)
 };
 static_assert(sizeof(FlashUI) == 0x10, "FlashUI size");   // the deleting destructor 0x1424e2db0 frees 0x10

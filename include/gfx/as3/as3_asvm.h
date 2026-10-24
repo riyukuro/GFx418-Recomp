@@ -27,6 +27,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 class LoadQueueEntry;   // (appended, sfr19) as3_loadqueue.h
 class ASVM;             // (appended, sfr19)
+class MemoryContextImpl;  // (appended, sfr34) as3_support.h
 namespace Instances { namespace fl_display { class DisplayObject; } }   // (appended, sfr19)
 
 // The Loader's load-init notification, held by a load entry or an action entry while it is pending (body not
@@ -41,7 +42,9 @@ public:
     virtual void ErrorEventCallback() = 0;  // 3
 };
 
-class MovieRoot : public ASMovieRootBase
+// (sfr24) ASMovieRootBase at +0x00 (vftable 0x14317d8d8, 54 slots), FlashUI at +0x28 (vftable 0x14317da88) and
+// KeyboardState::IListener at +0x38 (vftable 0x14317daa0), as the ctor 0x1424d8640 stores them.
+class MovieRoot : public ASMovieRootBase, public FlashUI, public KeyboardState::IListener
 {
 public:
     // (appended, sfr19) the action queues, run in level order once per frame (ExecuteActionQueues runs the first
@@ -170,8 +173,8 @@ public:
         const ActionEntry* getNext();   // 0x142540a90
     };
 
-    // ASMovieRootBase::GetRootMovie, vftable slot 14 (+0x70): 4.1.18 has no SuspendGC / ScheduleGC slots, so it is two
-    // slots before where the 4.1.19 SDK header puts it. ASMovieRootBase declares it now (gfx_displayobject.h).
+    // ASMovieRootBase::GetRootMovie, vftable slot 14 (+0x70): 4.1.18 has no SuspendGC / ScheduleGC slots there, so it
+    // is two slots before where the 4.1.19 SDK header puts it. ASMovieRootBase declares it now (gfx_displayobject.h).
     DisplayObjContainer* GetRootMovie418(DisplayObject* dobj = NULL) const
     {
         typedef DisplayObjContainer* (*Fn)(const MovieRoot*, DisplayObject*);
@@ -183,9 +186,7 @@ public:
     // (appended, sfr19) the reverse: a host value as an AS3 value. 0x1425048d0
     void GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal);
 
-private:
-    UByte               Unrecovered28[0x48 - sizeof(ASMovieRootBase)];
-public:
+    MemoryContextImpl*  MemContext;                 // +0x40 Ptr<MemoryContextImpl>: the movie heap's memory context (sfr34)
     ASVM*               pAVM;                       // +0x48 AutoPtr<ASVM> (sfr19)
 private:
     UByte               Unrecovered50[0x58 - 0x50];
@@ -250,6 +251,84 @@ public:
     ActionEntry* InsertEmptyAction(ActionLevel lvl = AL_Frame);
     // (appended, sfr19) runs the queued actions of every level but AL_Manual. 0x1424fa450
     void ExecuteActionQueues();
+
+    // (appended, sfr24) The overrides, vftable 0x14317d8d8 (slots 12, 13, 23 and 24 are ASMovieRootBase's empty
+    // defaults). No ctor is defined here, so no unit emits the vftables.
+    virtual ~MovieRoot();                                                                              // 0 0x1424e33f0
+    virtual void SetMovie(MovieImpl* pmovie);                                                          // 1 0x142528740
+    virtual void AdvanceFrame(bool nextFrame);                                                         // 2 0x1424eb2f0
+    virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType);                     // 3 0x1424eeae0
+    virtual bool CheckAvm();                                                                           // 4 0x1424eecb0
+    virtual void ClearDisplayList();                                                                   // 5 0x1424efb40
+    virtual MovieDefRootNode* CreateMovieDefRootNode(MemoryHeap* pheap, MovieDefImpl* pdefImpl,
+                                                     bool importFlag = false);                         // 6 0x1424f3910
+    virtual void DoActions();                                                                          // 7 0x1424f73d0
+    virtual GFx::InteractiveObject* FindTarget(const ASString& path) const;                            // 8 0x142502cf0
+    virtual void ForceCollect(unsigned gcFlags);                                                       // 9 0x1425046d0
+    virtual void ForceEmergencyCollect();                                                              // 10 0x142504750
+    virtual void GenerateMouseEvents(unsigned mouseIndex);                                             // 11 0x142504b50
+    virtual DisplayObjContainer* GetRootMovie(DisplayObject* dobj = NULL) const;                       // 14 0x14250daa0
+    virtual bool Init(MovieDefImpl* pmovieDef);                                                        // 15 0x142511530
+    virtual void NotifyMouseEvent(const InputEventsQueueEntry* qe, const GFx::MouseState& ms, int mi); // 16 0x142518470
+    virtual void NotifyOnResize();                                                                     // 17 0x1425184f0
+    virtual void NotifyQueueSetFocus(GFx::InteractiveObject* ch, unsigned controllerIdx,
+                                     FocusMovedType fmt);                                              // 18 0x142518510
+    virtual void NotifyTransferFocus(GFx::InteractiveObject* curFocused, GFx::InteractiveObject* pnewFocus,
+                                     unsigned controllerIdx);                                          // 19 0x142518520
+    virtual bool NotifyOnFocusChange(GFx::InteractiveObject* curFocused, GFx::InteractiveObject* toBeFocused,
+                                     unsigned controllerIdx, FocusMovedType fmt,
+                                     ProcessFocusKeyInfo* pfocusKeyInfo = NULL);                       // 20 0x142518480
+    virtual void OnMovieFocus(bool set);                                                               // 21 0x14251ac40
+    virtual void OnNextFrame();                                                                        // 22 0x14251ac60
+    virtual void PrintObjectsReport(UInt32 flags = 0, Log* log = NULL, const char* swfName = NULL);    // 25 0x14251d060
+    virtual void ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* pls);                  // 26 0x14251e560
+    virtual void ProcessLoadVarsMT(GFx::LoadQueueEntry* pentry, LoadStates* pls, const String& data, UPInt fileLen,
+                                   bool succeeded);                                                    // 27 0x14251f250
+    virtual void ProcessLoadBinaryMT(GFx::LoadQueueEntry* pentry, LoadStates* pls, const ArrayPOD<UByte>& data,
+                                     UPInt fileLen, bool succeeded);                                   // 28 0x14251e4b0
+    virtual void RegisterAuxASClasses();                                                               // 29 0x1425210c0
+    virtual void ResolveStickyVariables(GFx::InteractiveObject* pcharacter);                           // 30 0x142525500
+    virtual void SetExternalInterfaceRetVal(const GFx::Value& retVal);                                 // 31 0x142527390
+    virtual void SetMemoryParams(unsigned frameBetweenCollections, unsigned maxRootCount);             // 32 0x1425282c0
+    virtual void Shutdown();                                                                           // 33 0x14252c4f0
+    virtual void CreateString(GFx::Value* pvalue, const char* pstring);                                // 34 0x1424f41f0
+    virtual void CreateStringW(GFx::Value* pvalue, const wchar_t* pstring);                            // 35 0x1424f42d0
+    virtual void CreateObject(GFx::Value* pvalue, const char* className = NULL, const GFx::Value* pargs = NULL,
+                              unsigned nargs = 0);                                                     // 36 0x1424f39c0
+    virtual void CreateArray(GFx::Value* pvalue);                                                      // 37 0x1424f2700
+    virtual void CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, void* puserData = NULL);     // 38 0x1424f3780
+    virtual bool SetVariable(const char* ppathToVar, const GFx::Value& value,
+                             SetVarTypeArg setType = SetVarTypeArg(1));                                // 39 0x14252a700
+    virtual bool GetVariable(GFx::Value* pval, const char* ppathToVar) const;                          // 40 0x142510180
+    virtual bool SetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index,
+                                  const void* pdata, unsigned count,
+                                  SetVarTypeArg setType = SetVarTypeArg(1));                           // 41 0x14252acc0
+    virtual bool SetVariableArraySize(const char* ppathToVar, unsigned count,
+                                      SetVarTypeArg setType = SetVarTypeArg(1));                       // 42 0x14252b3a0
+    virtual unsigned GetVariableArraySize(const char* ppathToVar);                                     // 43 0x142510770
+    virtual bool GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, void* pdata,
+                                  unsigned count);                                                     // 44 0x142510240
+    virtual bool IsAvailable(const char* ppathToVar) const;                                            // 45 0x142513f90
+    virtual bool Invoke(const char* ppathToMethod, GFx::Value* presult, const GFx::Value* pargs,
+                        unsigned numArgs);                                                             // 47 0x142513240
+    virtual bool Invoke(const char* ppathToMethod, GFx::Value* presult, const char* pargFmt, ...);     // 46 0x142513210
+    virtual bool InvokeArgs(const char* ppathToMethod, GFx::Value* presult, const char* pargFmt,
+                            va_list args);                                                             // 48 0x1425136f0
+    virtual MemoryContext* GetMemoryContext() const;                                                   // 49 0x14250ba00
+    virtual ASStringManager* GetStringManager() const;                                                 // 50 0x14250eef0
+    virtual Render::Text::Allocator* GetTextAllocator();                                               // 51 0x14250f290
+    // AS3 only: the collector's suspend count ++/-- (MemContext's ASRefCountCollector +0xb1) and its
+    // collect-on-next-advance flag (+0xb0); gcFlags is not read.
+    virtual void SuspendGC(bool suspend);                                                              // 52 0x14252e530
+    virtual void ScheduleGC(unsigned gcFlags);                                                         // 53 0x1425262d0
+
+    // FlashUI (+0x28): the VM's trace / debugger hooks.
+    virtual void Output(FlashUI::OutputMessageType type, const char* msg);                             // 1 0x14251bc40
+    virtual bool OnOpCode(Abc::TCodeOffset offset);                                                    // 2 0x14251ac90 false
+    // KeyboardState::IListener (+0x38).
+    virtual void OnKeyDown(GFx::InteractiveObject* pmovie, const EventId& evt, int keyMask);           // 1 0x14251a1e0
+    virtual void OnKeyUp(GFx::InteractiveObject* pmovie, const EventId& evt, int keyMask);             // 2 0x14251a3b0
+    virtual void Update(const EventId& evt);                                                           // 3 0x142530fb0 empty
 protected:
     // (appended, sfr19) the mouseCursorEvent name of a MouseCursorEvent cursor type. 0x14250bb10
     void GetMouseCursorTypeString(ASString& str, unsigned cursorType) const;

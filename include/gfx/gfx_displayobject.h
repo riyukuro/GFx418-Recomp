@@ -84,7 +84,7 @@ public:
     // (appended, sfr24) The 4.1.18 virtuals, slots 1..51, checked against the AS2 (0x1432177d8) and AS3 (0x14317d8d8)
     // MovieRoot vftables. This build has no SuspendGC / ScheduleGC and no NotifyGamePadAnalogEvent; the touch and
     // gesture slots (12, 13), the device events (23, 24) and ProcessLoadBinaryMT (28, AS2) are the empty defaults
-    // both movie roots share. AS2 adds slot 52 (Invoke on an object), AS3 a slot of its own there.
+    // both movie roots share. AS2 adds slot 52 (Invoke on an object), AS3 SuspendGC / ScheduleGC (52, 53).
     virtual void SetMovie(MovieImpl* pmovie) = 0;                                                      // 1
     virtual void AdvanceFrame(bool nextFrame) = 0;                                                     // 2
     virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType) = 0;                 // 3
@@ -135,6 +135,14 @@ public:
     virtual void CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, void* puserData = NULL) = 0; // 38
     // Slots 39, 41, 42 and 44 take the Movie enums. gfx_player.h is not included here: units that define a local
     // Movie of their own cannot have it. Without it the same slots take a plain int.
+    // (appended, sfr24) The types those slots were declared with here, for the overrides in the movie roots.
+#ifdef MS2_SF_GFX_PLAYER_H
+    typedef Movie::SetVarType   SetVarTypeArg;
+    typedef Movie::SetArrayType SetArrayTypeArg;
+#else
+    typedef int                 SetVarTypeArg;
+    typedef int                 SetArrayTypeArg;
+#endif
 #ifdef MS2_SF_GFX_PLAYER_H
     virtual bool SetVariable(const char* ppathToVar, const GFx::Value& value,
                              Movie::SetVarType setType = Movie::SV_Sticky) = 0;                        // 39
