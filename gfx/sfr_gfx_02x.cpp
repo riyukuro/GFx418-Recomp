@@ -305,10 +305,10 @@ void RefCountCollector<Stat>::RootArray::Resize(UPInt newSize)
         {
             if (page >= MaxPages)
             {
-                if (!Pages)
-                    Pages = (BaseType***)Memory::AllocAutoHeap(this, 5 * sizeof(BaseType**), AllocInfo(Stat_Default_Mem, 0, 0));
-                else
+                if (Pages)
                     Pages = (BaseType***)Memory::Realloc(Pages, (MaxPages + 5) * sizeof(BaseType**));
+                else
+                    Pages = (BaseType***)Memory::AllocAutoHeap(this, 5 * sizeof(BaseType**), AllocInfo(Stat_Default_Mem, 0, 0));
                 MaxPages += 5;
             }
             Pages[page] = (BaseType**)Memory::AllocAutoHeap(this, 1024 * sizeof(BaseType*), AllocInfo(Stat_Default_Mem, 0, 0));
@@ -327,10 +327,10 @@ bool RefCountCollector<Stat>::RootArray::allocatePageSafe(UPInt index)
     if (index >= MaxPages)
     {
         BaseType*** pages;
-        if (!Pages)
-            pages = (BaseType***)Memory::AllocAutoHeap(this, 5 * sizeof(BaseType**), AllocInfo(Stat_Default_Mem, 0, 0));
-        else
+        if (Pages)
             pages = (BaseType***)Memory::Realloc(Pages, (MaxPages + 5) * sizeof(BaseType**));
+        else
+            pages = (BaseType***)Memory::AllocAutoHeap(this, 5 * sizeof(BaseType**), AllocInfo(Stat_Default_Mem, 0, 0));
         if (!pages)
             return false;
         MaxPages += 5;
