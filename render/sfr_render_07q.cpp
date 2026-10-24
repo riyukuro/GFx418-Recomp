@@ -520,8 +520,8 @@ void TextPrimitiveBundle::startPrimitive(RenderQueueItem& item, TextPrepareBuffe
 // MS2-PIN: ??_7TextPrimitiveBundle@Render@Scaleform@@6BInterface@RenderQueueItem@12@@ 0x143194100
 // (the base vftables the unit's ctors / dtors instantiate; the template ones are folded in the exe)
 // MS2-PIN: ??_7SortKeyInterface@Render@Scaleform@@6B@ 0x1431927c8
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0ED@@Scaleform@@6B@ 0x143184c98
-// MS2-PIN: ??_7?$RefCountBaseNTS@VBundle@Render@Scaleform@@$0ED@@Scaleform@@6B@ 0x143184c98
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0ED@@Scaleform@@6B@ 0x1431928f8
+// MS2-PIN: ??_7?$RefCountBaseNTS@VBundle@Render@Scaleform@@$0ED@@Scaleform@@6B@ 0x143192900
 // MS2-PIN: ??_7Bundle@Render@Scaleform@@6B@ 0x143192908
 // MS2-PIN: ??_7Interface@RenderQueueItem@Render@Scaleform@@6B@ 0x143191990
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EE@@Scaleform@@6B@ 0x1431919b0
