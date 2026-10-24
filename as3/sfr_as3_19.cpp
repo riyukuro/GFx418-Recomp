@@ -155,6 +155,12 @@ void* FUN_14250f330(void* out, void* nameSlot, Scaleform::UPInt a, int b);   // 
 void* FUN_14250fc60(void* out, void* nameSlot, Scaleform::UPInt vt, Scaleform::UInt32 idx, int b);   // type name for a slot-kind value (releases the name)
 void* FUN_142416720(const void* self);   // InstanceTraits::Function: its VM-side owner
 void FUN_1424fef00(void* vm, void* callee, const void* thisVal, void* result, unsigned argc, const void* args, unsigned flag);
+Scaleform::UPInt* FUN_1425ddd50(Scaleform::UPInt button, Scaleform::UPInt* out, int state);   // Button::CreateStateRenderContainer
+Scaleform::UPInt FUN_14250dbc0(Scaleform::UPInt container);   // TreeContainer::GetSize
+void FUN_14261cf50(Scaleform::UPInt container, Scaleform::UPInt pos, Scaleform::UPInt count);   // TreeContainer::Remove
+unsigned char FUN_14261c690(Scaleform::UPInt container, Scaleform::UPInt pos, Scaleform::UPInt node);   // TreeContainer::Insert
+Scaleform::UPInt FUN_1425f26c0(Scaleform::UPInt displayObject);   // DisplayObjectBase::GetRenderNode
+void FUN_142581700(Scaleform::UPInt entry);   // ContextImpl::Entry::destroyHelper
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -5954,6 +5960,64 @@ void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UP
     }
     else
         cell->Assign(*v);
+}
+// ---- batch 50
+// Puts the display object into the button's render container for the state (rebuilding the container first), records it in the state's
+// mask-stack slot and, when that state is the current one, switches to it.
+// MS2-FUNCTIONAL 0x142529f70: raw-offset model; codegen differs from the exe
+// @0x142529f70
+void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj)
+{
+    const UPInt btn = Sfr31Rd(self, 0x18);
+    if (state != 3)
+    {
+        UPInt cont = Sfr31Rd(btn, (static_cast<UPInt>(state) + 7) * 0x20);
+        if (cont != 0)
+        {
+            ++*reinterpret_cast<UPInt*>(cont + 8);
+            FUN_14261cf50(cont, 0, FUN_14250dbc0(cont));
+        }
+        else
+        {
+            UPInt out = 0;
+            UPInt* p = FUN_1425ddd50(btn, &out, state);
+            cont = *p;
+            if (cont != 0)
+                ++*reinterpret_cast<UPInt*>(cont + 8);
+            cont = *p;
+            if (out != 0 && --*reinterpret_cast<UPInt*>(out + 8) == 0)
+                FUN_142581700(out);
+        }
+        const UPInt owner = Sfr31Rd(obj, 0x38);
+        if (owner != 0 && (owner != btn || Sfr31Rd(FUN_1425f26c0(obj), 0x20) != cont))
+        {
+            const UPInt sub = owner + *reinterpret_cast<const UInt8*>(owner + 0x6d) * 4;
+            typedef unsigned char (*Fn)(UPInt, UPInt);
+            if (reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(sub, 0), 0xa8))(sub, obj) != 0)
+                Sfr31Wr(obj, 0x38, btn);
+        }
+        if (Sfr31Rd(FUN_1425f26c0(obj), 0x20) == 0)
+            FUN_14261c690(cont, FUN_14250dbc0(cont), FUN_1425f26c0(obj));
+        if (cont != 0 && --*reinterpret_cast<UPInt*>(cont + 8) == 0)
+            FUN_142581700(cont);
+    }
+    UPInt* arr = reinterpret_cast<UPInt*>(btn + static_cast<UPInt>(state) * 0x20 + 0xe8);
+    if (obj == 0)
+        Sfr31ResizeNCMaskStack(arr, arr, 0);
+    else
+    {
+        const UPInt old = arr[1];
+        Sfr31ResizeNCMaskStack(arr, arr, 1);
+        if (old == 0)
+            *reinterpret_cast<UPInt*>(arr[0]) = 0;
+        UPInt* slot = reinterpret_cast<UPInt*>(arr[0]);
+        ++*reinterpret_cast<int*>(obj + 8);
+        if (*slot != 0)
+            FUN_14257dcd0(reinterpret_cast<void*>(*slot));
+        *slot = obj;
+    }
+    if (FUN_1425de200(*reinterpret_cast<const int*>(btn + 0x168)) == state)
+        FUN_14252e9d0(self, state);
 }
 }}} // namespace Scaleform::GFx::AS3
 
