@@ -1707,6 +1707,7 @@ void ValueRegisterFile::Reserve(UInt16 num)
 
 // The class traits registered under name and namespace; looked up in the global object's classes on a miss
 // (and then cached).
+// MS2-FUNCTIONAL 0x1425251e0: the registry lookup and Add are inlined here, so the frame and size differ from the exe
 // @0x1425251e0
 ClassTraits::Traits* Sfr27GetClassTraitsByName(VM* vm, const ASString* name, const Instances::Namespace* ns)
 {
@@ -9371,17 +9372,33 @@ void Sfr31PushNewInstanceOfOwner(UPInt vm, UPInt own)
 }
 // ---- batch 81
 // The AVM flavor of a SetVariable value waiting for its target (0x40 bytes; the base lives in the player unit).
-struct Sfr31AvmStickyVarNode : public NewOverrideBase<0x147>
+struct Sfr31AvmStickyVarNode
 {
-    ASString Name;          // +0x08
-    void*    pNext;         // +0x10
-    bool     Permanent;     // +0x18
-    Value    Val;           // +0x20
-
-    Sfr31AvmStickyVarNode(const ASString& name, bool perm, const Value& v) : Name(name), pNext(NULL), Permanent(perm), Val(v) {}
-    virtual ~Sfr31AvmStickyVarNode() {}
-    virtual void Assign(const Sfr31AvmStickyVarNode& n) { Name = n.Name; Permanent = n.Permanent; Val = n.Val; }
+    const void* const* VTbl;    // +0x00 two slots: scalar deleting destructor, Assign (a function table kept here, not a C++ vftable)
+    ASString Name;              // +0x08
+    void*    pNext;             // +0x10
+    bool     Permanent;         // +0x18
+    Value    Val;               // +0x20
 };
+
+static void* Sfr31AvmStickyDelete(Sfr31AvmStickyVarNode* n, unsigned flags)
+{
+    n->Val.~Value();
+    n->Name.~ASString();
+    if (flags & 1)
+        SF_FREE(n);
+    return n;
+}
+
+static void Sfr31AvmStickyAssign(Sfr31AvmStickyVarNode* n, const Sfr31AvmStickyVarNode* o)
+{
+    n->Name = o->Name;
+    n->Permanent = o->Permanent;
+    n->Val = o->Val;
+}
+
+static const void* const Sfr31AvmStickyTable[2] = { reinterpret_cast<const void*>(&Sfr31AvmStickyDelete),
+                                                    reinterpret_cast<const void*>(&Sfr31AvmStickyAssign) };
 
 // MovieRoot::SetVariable: sets the member after the last '.' of the path on the object the rest of the path resolves to
 // ("root" when there is no dot). setType 1 keeps the value for a target that does not exist yet, 2 keeps it permanently.
@@ -9449,7 +9466,12 @@ char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValu
     char result = *reinterpret_cast<SetPropFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x30))(reinterpret_cast<void*>(obj), &resSlot, &mn, &converted);
     if (((result == 0 && setType != 0) || setType == 2) && *reinterpret_cast<const UInt32*>(memberNode + 0x20) != 0)
     {
-        Sfr31AvmStickyVarNode* node = new Sfr31AvmStickyVarNode(member, setType == 2, converted);
+        Sfr31AvmStickyVarNode* node = static_cast<Sfr31AvmStickyVarNode*>(SF_HEAP_ALLOC(Memory::pGlobalHeap, sizeof(Sfr31AvmStickyVarNode), 0x147));
+        node->VTbl = Sfr31AvmStickyTable;
+        new (&node->Name) ASString(member);
+        node->pNext = NULL;
+        node->Permanent = setType == 2;
+        new (&node->Val) Value(converted);
         reinterpret_cast<MovieImpl*>(Sfr31Rd(root, 0x10))->AddStickyVariableNode(target, reinterpret_cast<MovieImpl::StickyVarNode*>(node));
     }
     const UPInt vm = Sfr31Rd(root, 0x48);
