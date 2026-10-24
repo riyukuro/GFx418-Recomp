@@ -813,7 +813,7 @@ namespace Instances { namespace fl_events {
     // A dispatcher that is a display object instance (not its class) dispatches along its display parent chain.
     static inline bool IsDisplayObjectInstance(const Traits& tr)
     {
-        return (unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
+        return (unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <=
                    (unsigned)(Traits_DisplayObject_End - Traits_DisplayObject_Begin) &&
                tr.IsInstanceTraits();
     }
@@ -1000,7 +1000,9 @@ namespace Instances { namespace fl_events {
     static __declspec(noinline) void OnListenerRemoved(EventDispatcher* d, const ASString& type, bool useCapture,
                                                        UPInt remaining)
     {
-        ASVM& vm = static_cast<ASVM&>(d->GetVM());
+        // Runs inside a collection, where the collector has set the mark bit of pTraits.
+        const Traits* ptraits = reinterpret_cast<const Traits*>(reinterpret_cast<UPInt>(&d->GetTraits()) & ~UPInt(1));
+        ASVM& vm = static_cast<ASVM&>(ptraits->GetVM());
         if (!vm.GetMovieRoot())
             return;
         EventId::IdCode code;
