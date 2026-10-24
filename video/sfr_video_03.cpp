@@ -1076,6 +1076,8 @@ void FUN_14001bfd0(void* object, const std::uint32_t* id)
     }
 }
 
+} // namespace (sfr34: the two array copies below have external linkage, sfr_d3d9_01g calls them)
+
 // MS2-FUNCTIONAL: copies a VideoPlayer pointer array into fresh allocator owned storage.
 // @0x142742ed0
 void* FUN_142742ed0(void* destination, const std::uint64_t* source)
@@ -1101,6 +1103,8 @@ std::uint64_t* FUN_142742f70(std::uint64_t* destination, const std::uint64_t* so
     FUN_142742ed0(destination + 3, source + 3);
     return destination;
 }
+
+namespace {
 
 // MS2-FUNCTIONAL: runs the base AS3 traits initializer and installs the Video traits vtable and object size.
 // @0x14001a080

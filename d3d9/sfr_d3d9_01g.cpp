@@ -9,10 +9,11 @@
 
 #include "../gfx/sfr_gfx_07raw.h"
 
+void* FUN_142742ed0(void*, const Scaleform::UPInt*);                       // ArrayBase<ArrayData<VideoPlayerImpl*>> copy ctor (sfr_video_03)
+Scaleform::UPInt* FUN_142742f70(Scaleform::UPInt*, const Scaleform::UPInt*); // set entry copy (link, hash, key, array) (sfr_video_03)
+
 namespace Scaleform { namespace GFx {
 
-extern "C" void* FUN_142742ed0(void*, const void*);        // ArrayBase<ArrayData<VideoPlayerImpl*>> copy ctor
-extern "C" void* FUN_142742f70(void*, const void*);        // set entry copy (link, hash, key, array)
 extern "C" void* FUN_142743900(void*, const void*);        // ArrayBase<ArrayData<VideoPlayerImpl*>>::operator=
 extern "C" void FUN_1427445b0(U**, void*);                  // CheckExpand of the array-valued set
 extern "C" void FUN_142747530(U**, void*, U);               // setRawCapacity of the {word, word, int} set
@@ -48,7 +49,7 @@ void FUN_142742830(U** self, const U* key)
             if (RawField<void*>(e, 0x18))
                 Memory::Free(RawField<void*>(e, 0x18));
             *(SPInt*)e = -2;
-            FUN_142742f70(e, n);
+            FUN_142742f70((U*)e, (const U*)n);
             e = n;
         }
     }
@@ -66,7 +67,7 @@ struct KeyArrayOps
     static void Copy(char* d, const char* s)
     {
         *(U*)d = *(const U*)s;
-        FUN_142742ed0(d + 8, s + 8);
+        FUN_142742ed0(d + 8, (const U*)(s + 8));
     }
     static void Construct(char* d, const U* node)
     {
@@ -87,7 +88,7 @@ struct KeyArrayRefOps
     static void Construct(char* d, const NodeRef& r)
     {
         *(U*)d = *r.Key;
-        FUN_142742ed0(d + 8, r.Value);
+        FUN_142742ed0(d + 8, (const U*)r.Value);
     }
     static void Assign(char* d, const NodeRef& r)
     {
