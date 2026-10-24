@@ -476,16 +476,8 @@ template Matrix2F& Matrix2F::SetParlToRect(const float* parl, float x1, float y1
 
 // MS2-PIN: ?SetParlToParl@?$Matrix2x4@M@Render@Scaleform@@QEAAAEAV123@PEBM0@Z 0x1425e74a0
 // MS2-PIN: ?SetParlToRect@?$Matrix2x4@M@Render@Scaleform@@QEAAAEAV123@PEBMMMMM@Z 0x1425e7690
-// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x1425e61c0
-// MS2-PIN: ??_G?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@UEAAPEAXI@Z 0x1425e6220
-// MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAB@@Scaleform@@UEAAPEAXI@Z 0x1425e61c0
-// MS2-PIN: ??_G?$RefCountBase@VGradientData@Render@Scaleform@@$0BAB@@Scaleform@@UEAAPEAXI@Z 0x1425e61c0
 // MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x14318cbb0
-// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x14318cba8
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAB@@Scaleform@@6B@ 0x14318cbb0
-// MS2-PIN: ??_7?$RefCountBase@VGradientData@Render@Scaleform@@$0BAB@@Scaleform@@6B@ 0x14318cbb0
 // MS2-PIN: ??_7GradientData@Render@Scaleform@@6B@ 0x14318cbb8
 // MS2-PIN: ??_7GradientImage@Render@Scaleform@@6B@ 0x14318cbc0
