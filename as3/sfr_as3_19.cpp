@@ -176,6 +176,7 @@ void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   //
 Scaleform::UPInt FUN_142525270(void* vm, void* multiname);   // class traits named by a static multiname, or 0
 Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Function> FUN_14241a7d0(void* self, Scaleform::GFx::AS3::VMAbcFile& file, Scaleform::UInt32 method_ind, const Scaleform::GFx::AS3::ScopeStackType& ss, Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript& gos);
 Scaleform::UPInt FUN_1425fc530(Scaleform::UPInt container, unsigned idx);   // DisplayObjContainer::GetChildAt
+void FUN_1424d4c10(void* self, void* table, const void* nodeRef, Scaleform::UPInt hash);   // StickyVarNode hash: add an entry
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -7755,6 +7756,148 @@ void Sfr31ExecCallProperty(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
     reinterpret_cast<Value*>(obj)->~Value();
     mn.~Multiname();
     FUN_1424de9e0(raBuf);
+}
+// ---- batch 75
+// Finds the entry of the sticky variable table (entries of 0x18 bytes from +0x10: next index, key string node, value) holding key.
+// Returns its index (-1 when absent); prevIdx receives the index of the entry whose chain link leads to it (-1 for the chain head).
+static SInt64 Sfr31StickyFind(UPInt tbl, UPInt key, SInt64& prevIdx)
+{
+    const UPInt mask = Sfr31Rd(tbl, 8);
+    const UPInt natural = *reinterpret_cast<const UInt32*>(key + 0x1c) & mask;
+    UPInt e = tbl + 0x10 + natural * 0x18;
+    prevIdx = -1;
+    if (static_cast<SInt64>(Sfr31Rd(e, 0)) == -2)
+        return -1;
+    if ((*reinterpret_cast<const UInt32*>(Sfr31Rd(e, 8) + 0x1c) & mask) != natural)
+        return -1;
+    SInt64 idx = static_cast<SInt64>(natural);
+    for (;;)
+    {
+        const UPInt k = Sfr31Rd(e, 8);
+        if ((*reinterpret_cast<const UInt32*>(k + 0x1c) & mask) == natural && k == key)
+            return idx;
+        const SInt64 nx = static_cast<SInt64>(Sfr31Rd(e, 0));
+        if (nx == -1)
+            return -1;
+        prevIdx = idx;
+        idx = nx;
+        e = tbl + 0x10 + static_cast<UPInt>(nx) * 0x18;
+    }
+}
+
+// MovieRoot: applies the sticky variables kept for a display object (SetVariable calls made before the object existed) to its AS3 object.
+// The ones not marked permanent are dropped from the object's chain (and the chain from the table when none is left).
+// MS2-FUNCTIONAL 0x142525500: raw-offset model; codegen differs from the exe
+// @0x142525500
+void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
+{
+    UPInt handle = Sfr31Rd(dobj, 0x70);
+    if (handle == 0)
+        handle = reinterpret_cast<UPInt>(reinterpret_cast<DisplayObject*>(dobj)->GetCharacterHandle());
+    const UPInt key = Sfr31Rd(handle, 0x18);
+    const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
+    typedef UPInt (*GetAvmFn)(UPInt);
+    const UPInt avm = reinterpret_cast<GetAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 8))(sub);
+    if (avm == 0)
+        return;
+    UPInt avmObj = Sfr31Rd(avm - 0x20, 0);
+    if (avmObj == 0)
+        avmObj = Sfr31Rd(avm - 0x28, 0);
+    if (avmObj & 1)
+        avmObj -= 1;
+    const UPInt impl = Sfr31Rd(root, 0x10);
+    UPInt tbl = Sfr31Rd(impl, 0x2e08);
+    if (tbl == 0)
+        return;
+    SInt64 prev;
+    SInt64 idx = Sfr31StickyFind(tbl, key, prev);
+    if (idx < 0)
+        return;
+    const UPInt head = Sfr31Rd(tbl + 0x10 + static_cast<UPInt>(idx) * 0x18, 0x10);
+    UPInt keptHead = 0;
+    UPInt keptTail = 0;
+    VM& vm = *reinterpret_cast<VM*>(Sfr31Rd(root, 0x48));
+    UPInt node = head;
+    while (node != 0)
+    {
+        const UPInt nameNode = Sfr31Rd(node, 8);
+        ASString nameStr(reinterpret_cast<ASStringNode*>(nameNode));
+        Value nm;
+        if (nameNode == Sfr31Rd(nameNode, 8) + 0x68)
+            nm.SetNull();
+        else
+            nm.Assign(nameStr);
+        Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(reinterpret_cast<UPInt>(&vm), 0x1d0)), nm);
+        reinterpret_cast<Object*>(avmObj)->SetProperty(mn, *reinterpret_cast<const Value*>(node + 0x20));
+        const UPInt next = Sfr31Rd(node, 0x10);
+        if (*reinterpret_cast<const UByte*>(node + 0x18) == 0)
+        {
+            typedef void (*DelFn)(UPInt, int);
+            reinterpret_cast<DelFn>(Sfr31Rd(Sfr31Rd(node, 0), 0))(node, 1);
+        }
+        else if (keptHead == 0)
+        {
+            keptHead = keptTail = node;
+            Sfr31Wr(node, 0x10, 0);
+        }
+        else
+        {
+            Sfr31Wr(keptTail, 0x10, node);
+            keptTail = node;
+            Sfr31Wr(node, 0x10, 0);
+        }
+        node = next;
+    }
+    if (keptHead != 0)
+    {
+        if (keptHead == head)
+            return;
+        tbl = Sfr31Rd(impl, 0x2e08);
+        if (tbl != 0)
+        {
+            idx = Sfr31StickyFind(tbl, key, prev);
+            if (idx >= 0)
+            {
+                const UPInt e = tbl + 0x10 + static_cast<UPInt>(idx) * 0x18;
+                ++*reinterpret_cast<int*>(key + 0x18);
+                Sfr31ReleaseStr(Sfr31Rd(e, 8));
+                Sfr31Wr(e, 8, key);
+                Sfr31Wr(e, 0x10, keptHead);
+                return;
+            }
+        }
+        UPInt nodeRef[2] = { key, keptHead };
+        FUN_1424d4c10(reinterpret_cast<void*>(impl + 0x2e08), reinterpret_cast<void*>(impl + 0x2e08), nodeRef,
+                      *reinterpret_cast<const UInt32*>(key + 0x1c));
+        return;
+    }
+    tbl = Sfr31Rd(impl, 0x2e08);
+    if (tbl == 0)
+        return;
+    idx = Sfr31StickyFind(tbl, key, prev);
+    if (idx < 0)
+        return;
+    UPInt e = tbl + 0x10 + static_cast<UPInt>(idx) * 0x18;
+    const UPInt natural = *reinterpret_cast<const UInt32*>(key + 0x1c) & Sfr31Rd(tbl, 8);
+    if (static_cast<UPInt>(idx) == natural)
+    {
+        const SInt64 nx = static_cast<SInt64>(Sfr31Rd(e, 0));
+        if (nx != -1)
+        {
+            const UPInt ne = tbl + 0x10 + static_cast<UPInt>(nx) * 0x18;
+            Sfr31ReleaseStr(Sfr31Rd(e, 8));
+            Sfr31Wr(e, 0, Sfr31Rd(ne, 0));
+            Sfr31Wr(e, 8, Sfr31Rd(ne, 8));
+            ++*reinterpret_cast<int*>(Sfr31Rd(ne, 8) + 0x18);
+            Sfr31Wr(e, 0x10, Sfr31Rd(ne, 0x10));
+            e = ne;
+        }
+    }
+    else
+        Sfr31Wr(tbl + 0x10 + static_cast<UPInt>(prev) * 0x18, 0, Sfr31Rd(e, 0));
+    Sfr31ReleaseStr(Sfr31Rd(e, 8));
+    Sfr31Wr(e, 0, static_cast<UPInt>(-2));
+    --*reinterpret_cast<SInt64*>(tbl);
 }
 }}} // namespace Scaleform::GFx::AS3
 
