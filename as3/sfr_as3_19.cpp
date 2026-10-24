@@ -183,6 +183,14 @@ void FUN_1425a3850(void* resource);   // Resource::AddRef
 void* FUN_1425059f0(void* map, const Scaleform::UPInt* key);   // identity hash: value slot of key
 void FUN_1424d54f0(void* dst, void* src);   // hash entry copy (key, value ref, count)
 void FUN_1425224f0(void* arr, Scaleform::UPInt idx);   // ArrayBase::RemoveAt
+void FUN_14261d270(void* node, int mode);   // TreeNode::SetEdgeAAMode
+const void* FUN_1425f1d00(void* dispObj);   // DisplayObjectBase::GetCxform
+void FUN_1425f4060(void* dispObj, const void* cx);   // DisplayObjectBase::SetCxform
+void FUN_1425bc060(void* textField);   // TextField::SetDirtyFlag
+void FUN_1425be970(void* textField, void* displayInfo);   // TextField::TransformToTextRectSpace
+void FUN_142515710(void* out, float sx, float sy, float rot);   // ASCharacter_MatrixScaleAndRotate2x2
+bool FUN_142513e50(const void* matrix);   // Matrix2x4<float>::IsValid
+double FUN_1425e3ee0();   // the "no value" double (NaN)
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -8183,6 +8191,227 @@ void Sfr31UnloadLoaderContent(UPInt root, UPInt loader, bool dropAll, bool flagR
         --*reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(li) + 0x10);
         FUN_1423dfa20(reinterpret_cast<void*>(li));
     }
+}
+// ---- batch 77
+static inline double Sfr31DblAt(const unsigned char* base, UPInt off) { return *reinterpret_cast<const double*>(base + off); }
+static inline bool Sfr31NotNaN(double v) { return v == v; }
+
+// Wraps an angle in degrees into (-180, 180].
+static inline double Sfr31WrapDeg(double v)
+{
+    const double m = fmod(v, 360.0);
+    if (m <= 180.0)
+        return m < -180.0 ? m + 360.0 : m;
+    return m - 360.0;
+}
+
+// Applies the fields of a DisplayInfo (param 3) to the display object of an AS3 DisplayObject node.
+// MS2-FUNCTIONAL 0x142526730: same field order and twips rounding; the text rect space DisplayInfo scratch and the stale-value paths use NaN
+// @0x142526730
+static UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
+{
+    const unsigned char* d = static_cast<const unsigned char*>(infoPtr);
+    const UPInt traits = Sfr31Rd(node, 0x20);
+    if (*reinterpret_cast<const UInt32*>(traits + 0x70) - 0x11u > 0xb || ((*reinterpret_cast<const UByte*>(traits + 0x68) >> 5) & 1) != 0)
+        return 0;
+    const UPInt self = Sfr31Rd(node, 0x58);
+    void* const dob = reinterpret_cast<void*>(self);
+    const UPInt vt = Sfr31Rd(self, 0);
+    typedef UPInt (*VfPtr)(void*);
+    typedef void (*VfVoid)(void*);
+    typedef void (*VfPtrArg)(void*, const void*);
+    typedef void (*VfInt)(void*, int);
+    typedef double (*VfDbl)(void*);
+    typedef void (*VfDblArg)(void*, double);
+    const bool notText = static_cast<int>(reinterpret_cast<VfPtr>(Sfr31Rd(vt, 0x258))(dob)) != 4;
+    bool changed = false;
+    UInt16 f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    const double nan = FUN_1425e3ee0();
+    if ((f >> 14) & 1)
+        FUN_14261d270(reinterpret_cast<void*>(FUN_1425f26c0(dob)), *reinterpret_cast<const int*>(d + 0xd0));
+    const double alpha = Sfr31DblAt(d, 0x28);
+    if (((f >> 5) & 1) && Sfr31NotNaN(alpha))
+    {
+        UInt32 cx[8];
+        memcpy(cx, FUN_1425f1d00(dob), sizeof(cx));
+        *reinterpret_cast<float*>(cx + 3) = static_cast<float>(alpha / 100.0);
+        FUN_1425f4060(dob, cx);
+        reinterpret_cast<VfInt>(Sfr31Rd(vt, 0x188))(dob, 0);
+    }
+    f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    if ((f >> 6) & 1)
+        reinterpret_cast<VfInt>(Sfr31Rd(vt, 0x1a0))(dob, d[0x30]);
+    const UPInt data = Sfr31Rd(self, 0x50);
+    f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    if ((f >> 7) & 1)
+    {
+        double z = Sfr31DblAt(d, 0x38) * 20.0;
+        if (!Sfr31NotNaN(z) || z == HUGE_VAL || z == -HUGE_VAL)
+            z = 0.0;
+        double* slot = reinterpret_cast<double*>(data + 0x40);
+        if (z != *slot)
+        {
+            *slot = z;
+            changed = true;
+        }
+        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    }
+    if ((f >> 10) & 1)
+    {
+        double s = Sfr31DblAt(d, 0x50);
+        if (!Sfr31NotNaN(s) || s == HUGE_VAL || s == -HUGE_VAL)
+            s = 100.0;
+        double* slot = reinterpret_cast<double*>(data + 0x48);
+        if (*slot != s)
+        {
+            *slot = s;
+            changed = true;
+        }
+        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    }
+    if (((f >> 8) & 1) && Sfr31DblAt(d, 0x40) != *reinterpret_cast<double*>(data + 0x50))
+    {
+        *reinterpret_cast<double*>(data + 0x50) = Sfr31WrapDeg(Sfr31DblAt(d, 0x40));
+        changed = true;
+        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    }
+    if (((f >> 9) & 1) && Sfr31DblAt(d, 0x48) != *reinterpret_cast<double*>(data + 0x58))
+    {
+        *reinterpret_cast<double*>(data + 0x58) = Sfr31WrapDeg(Sfr31DblAt(d, 0x48));
+        changed = true;
+    }
+    if (changed)
+        reinterpret_cast<VfVoid>(Sfr31Rd(vt, 0x58))(dob);
+    if ((*reinterpret_cast<const UInt16*>(d + 0xd4) >> 11) & 1)
+    {
+        const double fov = Sfr31DblAt(d, 0x58);
+        if (fov != reinterpret_cast<VfDbl>(Sfr31Rd(vt, 0x120))(dob))
+            reinterpret_cast<VfDblArg>(Sfr31Rd(vt, 0x118))(dob, fmod(fov, 180.0));
+    }
+    f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    if ((f >> 12) & 1)
+    {
+        reinterpret_cast<VfPtrArg>(Sfr31Rd(vt, 0x38))(dob, d + 0x90);
+        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    }
+    if ((f >> 13) & 1)
+    {
+        reinterpret_cast<VfPtrArg>(Sfr31Rd(vt, 0x48))(dob, d + 0x60);
+        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+    }
+    if ((f & 0x1f) == 0)
+        return 1;
+    if (!notText)
+    {
+        *reinterpret_cast<UInt32*>(self + 0xfc) |= 0x2000;
+        FUN_1425bc060(dob);
+    }
+    reinterpret_cast<VfInt>(Sfr31Rd(vt, 0x188))(dob, 0);
+    typedef const float* (*MatFn)(void*);
+    float m[8];
+    memcpy(m, reinterpret_cast<MatFn>(Sfr31Rd(vt, 0x10))(dob), sizeof(m));
+    double x, y;
+    if (notText || (f & 3) == 0)
+    {
+        x = (f & 1) ? Sfr31DblAt(d, 0) : nan;
+        y = ((f >> 1) & 1) ? Sfr31DblAt(d, 8) : nan;
+    }
+    else
+    {
+        float tr[56] = {};
+        FUN_1425be970(dob, tr);
+        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
+        x = tr[0];
+        y = tr[1];
+    }
+    int* const pd = reinterpret_cast<int*>(data);
+    if (f & 0x1c)
+    {
+        const double a = static_cast<float>(pd[0xc]);
+        const double b = static_cast<float>(pd[8]);
+        const double c = static_cast<float>(pd[0xd]);
+        const double e = static_cast<float>(pd[9]);
+        const double rot0 = atan2(a, b);
+        const double sx0 = sqrt(b * b + a * a);
+        const double sy0 = sqrt(e * e + c * c);
+        double rad = *reinterpret_cast<double*>(pd + 6) * 3.141592653589793;
+        double xs = *reinterpret_cast<double*>(pd + 2) / 100.0;
+        double ys = *reinterpret_cast<double*>(pd + 4) / 100.0;
+        const double rotIn = (f & 4) ? Sfr31DblAt(d, 0x10) : nan;
+        if (Sfr31NotNaN(rotIn))
+        {
+            const double w = Sfr31WrapDeg(rotIn);
+            *reinterpret_cast<double*>(pd + 6) = w;
+            rad = w * 3.141592653589793;
+        }
+        double xdiv = sx0, ydiv = sy0;
+        const double nx = ((*reinterpret_cast<const UInt16*>(d + 0xd4) >> 3) & 1) ? Sfr31DblAt(d, 0x18) / 100.0 : nan;
+        if (nx != xs && Sfr31NotNaN(nx) && nx - nx == 0.0)
+        {
+            *reinterpret_cast<double*>(pd + 2) = Sfr31DblAt(d, 0x18);
+            if (sx0 == 0.0 || nx > 1e16)
+            {
+                xs = 0.0;
+                xdiv = 1.0;
+            }
+            else
+                xs = nx;
+        }
+        const double ny = ((*reinterpret_cast<const UInt16*>(d + 0xd4) >> 4) & 1) ? Sfr31DblAt(d, 0x20) / 100.0 : nan;
+        if (ny != ys && Sfr31NotNaN(ny) && ny - ny == 0.0)
+        {
+            *reinterpret_cast<double*>(pd + 4) = Sfr31DblAt(d, 0x20);
+            if (sy0 == 0.0 || ny > 1e16)
+            {
+                ys = 0.0;
+                ydiv = 1.0;
+            }
+            else
+                ys = ny;
+        }
+        FUN_142515710(m, static_cast<float>(xs / xdiv), static_cast<float>(ys / ydiv), static_cast<float>(rad / 180.0 - rot0));
+    }
+    if (Sfr31NotNaN((f & 1) ? Sfr31DblAt(d, 0) : nan))
+    {
+        double v = (f & 1) ? Sfr31DblAt(d, 0) : nan;
+        if (v == HUGE_VAL || v == -HUGE_VAL)
+            v = 0.0;
+        v = floor(v * 20.0);
+        pd[0] = static_cast<int>(v);
+        m[3] = static_cast<float>(static_cast<int>(v));
+    }
+    if (Sfr31NotNaN(((f >> 1) & 1) ? Sfr31DblAt(d, 8) : nan))
+    {
+        double v = ((f >> 1) & 1) ? Sfr31DblAt(d, 8) : nan;
+        if (v == HUGE_VAL || v == -HUGE_VAL)
+            v = 0.0;
+        v = floor(v * 20.0);
+        pd[1] = static_cast<int>(v);
+        m[7] = static_cast<float>(static_cast<int>(v));
+    }
+    if (FUN_142513e50(m))
+    {
+        if (reinterpret_cast<DisplayObjectBase*>(self)->Is3D())
+            reinterpret_cast<VfVoid>(Sfr31Rd(vt, 0x58))(dob);
+        else
+            reinterpret_cast<VfPtrArg>(Sfr31Rd(vt, 0x18))(dob, m);
+    }
+    if (!notText)
+    {
+        if (f & 1)
+        {
+            double v = Sfr31DblAt(d, 0) * 20.0;
+            v = v <= 0.0 ? v - 0.5 : v + 0.5;
+            pd[0] = static_cast<int>(v);
+        }
+        if ((f >> 1) & 1)
+        {
+            double v = Sfr31DblAt(d, 8) * 20.0;
+            v = v <= 0.0 ? v - 0.5 : v + 0.5;
+            pd[1] = static_cast<int>(v);
+        }
+    }
+    return 1;
 }
 }}} // namespace Scaleform::GFx::AS3
 
