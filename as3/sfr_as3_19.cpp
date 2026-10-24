@@ -172,6 +172,7 @@ void FUN_142403310(Scaleform::UPInt obj, Scaleform::GFx::ASString* inout);   // 
 void FUN_14251fb90(Scaleform::UPInt tracer, int op, Scaleform::SPInt reg);   // Tracer: record a rewritten opcode for a register
 Scaleform::UPInt* FUN_142419e50(Scaleform::UPInt classTraits, void* tmp);   // class traits -> class object slot
 unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, unsigned a, unsigned b);   // read the value behind a slot reference
+void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   // next enumeration index of a string-like object
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -6934,6 +6935,141 @@ void Sfr31ExecGetLexStatic(UPInt vmAddr, UPInt file, UInt32 idx)
     }
     res.~Value();
     mn.~Multiname();
+}
+// ---- batch 66
+// hasnext2 opcode: registers objReg/idxReg hold the object and the enumeration index; advances the index (walking the prototype chain
+// when the own properties are exhausted), stores both back and pushes whether another property exists.
+// MS2-FUNCTIONAL 0x14253a6a0: raw-offset model; codegen differs from the exe
+// @0x14253a6a0
+void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 objReg, UInt32 idxReg)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    const UPInt regs = Sfr31Rd(vmAddr, 0x148);
+    Value* ov = reinterpret_cast<Value*>(regs + static_cast<UPInt>(objReg) * 0x20);
+    Value* iv = reinterpret_cast<Value*>(regs + static_cast<UPInt>(idxReg) * 0x20);
+    const UPInt ovp = reinterpret_cast<UPInt>(ov);
+    if (idxReg == objReg)
+    {
+        VM::Error e(static_cast<VM::ErrorID>(0x464), vm);
+        vm.ThrowTypeError(e);
+        return;
+    }
+    const UInt32 kind = *reinterpret_cast<const UInt32*>(ov) & 0x1f;
+    bool result = false;
+    if (kind == 0 || (kind - 0xc < 4 && Sfr31Rd(ovp, 0x10) == 0))
+    {
+        UPInt top = Sfr31Rd(vmAddr, 0x50) + 0x20;
+        Sfr31Wr(vmAddr, 0x50, top);
+        Sfr31Wr(top, 0, 1);
+        Sfr31Wr(top, 8, 0);
+        Sfr31Wr(top, 0x10, 0);
+        Sfr31Wr(top, 0x18, 0);
+        return;
+    }
+    UInt32 next = 0;
+    unsigned long idx = 0;
+    UInt8 okTmp[16];
+    if (*FUN_1424f1a30(iv, okTmp, &idx) == 0)
+        return;
+    typedef int* (*NextFn)(UPInt, void*, UInt32);
+    typedef void (*MakeFn)(UPInt);
+    if (kind - 0xc < 4)
+    {
+        const UPInt obj = Sfr31Rd(ovp, 0x10);
+        reinterpret_cast<NextFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x88))(obj, &next, static_cast<UInt32>(idx));
+        UPInt found = obj;
+        UPInt t = Sfr31Rd(obj, 0x20);
+        bool hit = false;
+        for (; t != 0; t = Sfr31Rd(t, 0x88))
+        {
+            if (next != 0)
+            {
+                hit = true;
+                break;
+            }
+            UPInt cls = Sfr31Rd(t, 0x80);
+            if (cls == 0)
+            {
+                reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(t, 0), 0x68))(t);
+                cls = Sfr31Rd(t, 0x80);
+            }
+            found = reinterpret_cast<UPInt>(&reinterpret_cast<Class*>(cls)->GetPrototype());
+            UInt8 tmp[16];
+            next = *reinterpret_cast<UInt32*>(reinterpret_cast<NextFn>(Sfr31Rd(Sfr31Rd(found, 0), 0x88))(found, tmp, 0));
+        }
+        if (t == 0 && next == 0)
+            ov->Assign(Value::GetNull());
+        else if (found != obj)
+        {
+            UPInt raw[4] = { 0xc, 0, found, 0 };
+            *reinterpret_cast<UInt32*>(found + 0x10) = (*reinterpret_cast<UInt32*>(found + 0x10) + 1u) & 0x8fbfffffu;
+            ov->Assign(*reinterpret_cast<const Value*>(raw));
+            FUN_142521f00(raw);
+        }
+        (void)hit;
+    }
+    else if (kind == 0xb)
+        FUN_1424161e0(Sfr31Rd(ovp, 0x10), &next, static_cast<UInt32>(idx));
+    else
+    {
+        const UPInt tr = FUN_14250ffc0(&vm, ov);
+        if (*reinterpret_cast<const SInt32*>(tr + 0x70) == 6 && (~(*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5) & 1) != 0 && idx < 2)
+        {
+            iv->Assign(Value(static_cast<UInt32>(idx + 1)));
+            result = true;
+        }
+        else
+        {
+            UPInt t = tr;
+            UPInt proto = 0;
+            UInt32 iVar = 0;
+            bool nullIt = false;
+            do
+            {
+                UPInt cls = Sfr31Rd(t, 0x80);
+                if (cls == 0)
+                {
+                    reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(t, 0), 0x68))(t);
+                    cls = Sfr31Rd(t, 0x80);
+                }
+                proto = reinterpret_cast<UPInt>(&reinterpret_cast<Class*>(cls)->GetPrototype());
+                UInt8 tmp[16];
+                iVar = *reinterpret_cast<UInt32*>(reinterpret_cast<NextFn>(Sfr31Rd(Sfr31Rd(proto, 0), 0x88))(proto, tmp, 0));
+                t = Sfr31Rd(t, 0x88);
+                if (t == 0)
+                {
+                    nullIt = iVar == 0;
+                    break;
+                }
+            } while (iVar == 0);
+            if (nullIt)
+                ov->Assign(Value::GetNull());
+            else
+            {
+                UPInt raw[4] = { 0xc, 0, proto, 0 };
+                *reinterpret_cast<UInt32*>(proto + 0x10) = (*reinterpret_cast<UInt32*>(proto + 0x10) + 1u) & 0x8fbfffffu;
+                ov->Assign(*reinterpret_cast<const Value*>(raw));
+                FUN_142521f00(raw);
+            }
+            iv->Assign(Value(static_cast<UInt32>(iVar)));
+            result = iVar != 0;
+        }
+        UPInt top = Sfr31Rd(vmAddr, 0x50) + 0x20;
+        Sfr31Wr(vmAddr, 0x50, top);
+        Sfr31Wr(top, 0, 1);
+        Sfr31Wr(top, 8, 0);
+        Sfr31Wr(top, 0x10, result ? 1 : 0);
+        Sfr31Wr(top, 0x18, 0);
+        return;
+    }
+    iv->Assign(Value(next));
+    result = next != 0;
+    UPInt top = Sfr31Rd(vmAddr, 0x50) + 0x20;
+    Sfr31Wr(vmAddr, 0x50, top);
+    Sfr31Wr(top, 0, 1);
+    Sfr31Wr(top, 8, 0);
+    Sfr31Wr(top, 0x10, result ? 1 : 0);
+    Sfr31Wr(top, 0x18, 0);
 }
 }}} // namespace Scaleform::GFx::AS3
 
