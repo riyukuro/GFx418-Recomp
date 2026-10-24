@@ -2440,6 +2440,646 @@ namespace InstanceTraits { namespace fl_net
     }
 }}
 
+
+// ---- flash.net / flash.system: accessors and stubs the exe keeps out of line ----
+namespace Classes { namespace fl_net
+{
+    // Not implemented in this build: a warning, nothing else.
+    // @0x14249bc90
+    void SharedObject::getRemote(SPtr<Instances::fl_net::SharedObject>& result, const ASString& v1, const ASString& v2, const Value& v3, bool v4)
+    {
+        SF_UNUSED(result);
+        SF_UNUSED(v1);
+        SF_UNUSED(v2);
+        SF_UNUSED(v3);
+        SF_UNUSED(v4);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::SharedObject::getRemote() is not implemented\n");
+    }
+}}
+
+namespace Classes { namespace fl_system
+{
+    // @0x1424a0460
+    void System::exit(const Value& result, UInt32 v)
+    {
+        SF_UNUSED2(result, v);
+        // MovieImpl flag 0x200000: exit requested (MovieImpl::IsExitRequested).
+        static_cast<ASVM&>(GetVM()).GetMovieImpl()->Flags |= 0x200000;
+    }
+
+    // @0x1424a0480
+    void System::gc(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetGC().CollectionScheduledFlags = 1;
+    }
+
+    // @0x1424a06e0
+    void Capabilities::isDebuggerGet(bool& result)
+    {
+        result = false;
+    }
+
+    // @0x1424a07b0
+    void Capabilities::osGet(ASString& result)
+    {
+        result = "Windows";
+    }
+
+    // @0x1424a0b50
+    void Capabilities::versionGet(ASString& result)
+    {
+        result = "WIN 10,1,0,0";
+    }
+
+    // Not implemented in this build: a warning, nothing else.
+    // @0x1424a0090
+    void Capabilities::avHardwareDisableGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::avHardwareDisableGet() is not implemented\n");
+    }
+
+    // @0x1424a01f0
+    void SecurityDomain::currentDomainGet(SPtr<Instances::fl_system::SecurityDomain>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::SecurityDomain::currentDomainGet() is not implemented\n");
+    }
+
+    // @0x1424a0210
+    void IME::doConversion(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::IME::doConversion() is not implemented\n");
+    }
+
+    // @0x1424a04d0
+    void Capabilities::hasAccessibilityGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasAccessibilityGet() is not implemented\n");
+    }
+
+    // @0x1424a04f0
+    void Capabilities::hasAudioEncoderGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasAudioEncoderGet() is not implemented\n");
+    }
+
+    // @0x1424a0510
+    void Capabilities::hasAudioGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasAudioGet() is not implemented\n");
+    }
+
+    // @0x1424a0550
+    void Capabilities::hasEmbeddedVideoGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasEmbeddedVideoGet() is not implemented\n");
+    }
+
+    // @0x1424a05c0
+    void Capabilities::hasMP3Get(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasMP3Get() is not implemented\n");
+    }
+
+    // @0x1424a05e0
+    void Capabilities::hasPrintingGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasPrintingGet() is not implemented\n");
+    }
+
+    // @0x1424a0600
+    void Capabilities::hasScreenBroadcastGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasScreenBroadcastGet() is not implemented\n");
+    }
+
+    // @0x1424a0620
+    void Capabilities::hasScreenPlaybackGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasScreenPlaybackGet() is not implemented\n");
+    }
+
+    // @0x1424a0640
+    void Capabilities::hasStreamingAudioGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasStreamingAudioGet() is not implemented\n");
+    }
+
+    // @0x1424a0660
+    void Capabilities::hasStreamingVideoGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasStreamingVideoGet() is not implemented\n");
+    }
+
+    // @0x1424a0680
+    void Capabilities::hasTLSGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasTLSGet() is not implemented\n");
+    }
+
+    // @0x1424a06a0
+    void Capabilities::hasVideoEncoderGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::hasVideoEncoderGet() is not implemented\n");
+    }
+
+    // @0x1424a06c0
+    void System::imeGet(Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::System::imeGet() is not implemented\n");
+    }
+
+    // @0x1424a06f0
+    void Capabilities::languageGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::languageGet() is not implemented\n");
+    }
+
+    // @0x1424a0710
+    void Capabilities::localFileReadDisableGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::localFileReadDisableGet() is not implemented\n");
+    }
+
+    // @0x1424a07e0
+    void System::pause(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::System::pause() is not implemented\n");
+    }
+
+    // @0x1424a0800
+    void Capabilities::pixelAspectRatioGet(Value::Number& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::pixelAspectRatioGet() is not implemented\n");
+    }
+
+    // @0x1424a0890
+    void System::resume(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::System::resume() is not implemented\n");
+    }
+
+    // @0x1424a08b0
+    void Capabilities::screenColorGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::screenColorGet() is not implemented\n");
+    }
+
+    // @0x1424a08d0
+    void Capabilities::screenDPIGet(Value::Number& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::screenDPIGet() is not implemented\n");
+    }
+
+    // @0x1424a08f0
+    void Capabilities::screenResolutionXGet(Value::Number& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::screenResolutionXGet() is not implemented\n");
+    }
+
+    // @0x1424a0910
+    void Capabilities::screenResolutionYGet(Value::Number& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::screenResolutionYGet() is not implemented\n");
+    }
+
+    // @0x1424a0930
+    void Capabilities::serverStringGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::Capabilities::serverStringGet() is not implemented\n");
+    }
+
+    // @0x1424a0950
+    void System::setClipboard(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::System::setClipboard() is not implemented\n");
+    }
+
+    // @0x1424a0970
+    void IME::setCompositionString(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method class_::IME::setCompositionString() is not implemented\n");
+    }
+}}
+
+namespace Instances { namespace fl_net
+{
+    // @0x14249ad90
+    void URLLoader::addEventListener(const Value& result, const ASString& v1, const Value& v2, bool v3, SInt32 v4, bool v5)
+    {
+        fl_events::EventDispatcher::addEventListener(result, v1, v2, v3, v4, v5);
+    }
+
+    // @0x14249af70
+    void NetConnection::connect(Value& result, unsigned v1, const Value* v2)
+    {
+        SF_UNUSED3(result, v1, v2);
+    }
+
+    // @0x14249b020
+    void SharedObject::dataGet(SPtr<Instances::fl::Object>& result)
+    {
+        result = Data;
+    }
+
+    // @0x14249b030
+    void URLRequest::dataGet(Value& result)
+    {
+        // The exe assigns the data object through the result as if it were an SPtr<Object>.
+        reinterpret_cast<SPtr<Instances::fl::Object>&>(result) = Data;
+    }
+
+    // @0x14249bcb0
+    void URLLoader::load(const Value& result, Instances::fl_net::URLRequest* v)
+    {
+        SF_UNUSED(result);
+        static_cast<ASVM&>(GetVM()).GetMovieRoot()->AddNewLoadQueueEntry(v, this);
+    }
+
+    // Not implemented in this build: a warning, nothing else.
+    // @0x14249adb0
+    void NetConnection::addHeader(const Value& result, const ASString& v1, bool v2, const Value& v3)
+    {
+        SF_UNUSED4(result, v1, v2, v3);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::addHeader() is not implemented\n");
+    }
+
+    // @0x14249add0
+    void URLRequest::authenticateGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::authenticateGet() is not implemented\n");
+    }
+
+    // @0x14249adf0
+    void URLRequest::authenticateSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::authenticateSet() is not implemented\n");
+    }
+
+    // @0x14249ae10
+    void URLRequest::cacheResponseGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::cacheResponseGet() is not implemented\n");
+    }
+
+    // @0x14249ae30
+    void URLRequest::cacheResponseSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::cacheResponseSet() is not implemented\n");
+    }
+
+    // @0x14249ae50
+    void NetConnection::call(Value& result, unsigned v1, const Value* v2)
+    {
+        SF_UNUSED3(result, v1, v2);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::call() is not implemented\n");
+    }
+
+    // @0x14249ae70
+    void SharedObject::clear(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::clear() is not implemented\n");
+    }
+
+    // @0x14249ae90
+    void NetConnection::clientGet(SPtr<Instances::fl::Object>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::clientGet() is not implemented\n");
+    }
+
+    // @0x14249aeb0
+    void SharedObject::clientGet(SPtr<Instances::fl::Object>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::clientGet() is not implemented\n");
+    }
+
+    // @0x14249aed0
+    void NetConnection::clientSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::clientSet() is not implemented\n");
+    }
+
+    // @0x14249aef0
+    void SharedObject::clientSet(const Value& result, const Value& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::clientSet() is not implemented\n");
+    }
+
+    // @0x14249af10
+    void NetConnection::close(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::close() is not implemented\n");
+    }
+
+    // @0x14249af30
+    void SharedObject::close(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::close() is not implemented\n");
+    }
+
+    // @0x14249af50
+    void URLLoader::close(const Value& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLLoader::close() is not implemented\n");
+    }
+
+    // @0x14249af80
+    void SharedObject::connect(const Value& result, Instances::fl_net::NetConnection* v1, const ASString& v2)
+    {
+        SF_UNUSED3(result, v1, v2);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::connect() is not implemented\n");
+    }
+
+    // @0x14249afa0
+    void NetConnection::connectedGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::connectedGet() is not implemented\n");
+    }
+
+    // @0x14249afc0
+    void NetConnection::connectedProxyTypeGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::connectedProxyTypeGet() is not implemented\n");
+    }
+
+    // @0x14249afe0
+    void URLRequest::contentTypeGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::contentTypeGet() is not implemented\n");
+    }
+
+    // @0x14249b000
+    void URLRequest::contentTypeSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::contentTypeSet() is not implemented\n");
+    }
+
+    // @0x14249b470
+    void NetConnection::defaultObjectEncodingSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::defaultObjectEncodingSet() is not implemented\n");
+    }
+
+    // @0x14249b490
+    void SharedObject::defaultObjectEncodingSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::defaultObjectEncodingSet() is not implemented\n");
+    }
+
+    // @0x14249b4b0
+    void URLRequest::digestGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::digestGet() is not implemented\n");
+    }
+
+    // @0x14249b4d0
+    void URLRequest::digestSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::digestSet() is not implemented\n");
+    }
+
+    // @0x14249b6b0
+    void URLRequest::followRedirectsGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::followRedirectsGet() is not implemented\n");
+    }
+
+    // @0x14249b6d0
+    void URLRequest::followRedirectsSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::followRedirectsSet() is not implemented\n");
+    }
+
+    // @0x14249b6f0
+    void SharedObject::fpsSet(const Value& result, Value::Number v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::fpsSet() is not implemented\n");
+    }
+
+    // @0x14249bcd0
+    void URLRequest::manageCookiesGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::manageCookiesGet() is not implemented\n");
+    }
+
+    // @0x14249bcf0
+    void URLRequest::manageCookiesSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::manageCookiesSet() is not implemented\n");
+    }
+
+    // @0x14249bd10
+    void URLRequest::methodGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::methodGet() is not implemented\n");
+    }
+
+    // @0x14249bd30
+    void URLRequest::methodSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::methodSet() is not implemented\n");
+    }
+
+    // @0x14249bd50
+    void NetConnection::objectEncodingGet(UInt32& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::objectEncodingGet() is not implemented\n");
+    }
+
+    // @0x14249bd70
+    void SharedObject::objectEncodingGet(UInt32& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::objectEncodingGet() is not implemented\n");
+    }
+
+    // @0x14249bd90
+    void NetConnection::objectEncodingSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::objectEncodingSet() is not implemented\n");
+    }
+
+    // @0x14249bdb0
+    void SharedObject::objectEncodingSet(const Value& result, UInt32 v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::objectEncodingSet() is not implemented\n");
+    }
+
+    // @0x14249bdd0
+    void NetConnection::proxyTypeGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::proxyTypeGet() is not implemented\n");
+    }
+
+    // @0x14249bdf0
+    void NetConnection::proxyTypeSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::proxyTypeSet() is not implemented\n");
+    }
+
+    // @0x14249be70
+    void URLRequest::requestHeadersSet(const Value& result, Instances::fl::Array* v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::requestHeadersSet() is not implemented\n");
+    }
+
+    // @0x14249be90
+    void SharedObject::send(Value& result, unsigned v1, const Value* v2)
+    {
+        SF_UNUSED3(result, v1, v2);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::send() is not implemented\n");
+    }
+
+    // @0x14249beb0
+    void SharedObject::setDirty(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::setDirty() is not implemented\n");
+    }
+
+    // @0x14249bed0
+    void SharedObject::setProperty(const Value& result, const ASString& v1, const Value& v2)
+    {
+        SF_UNUSED3(result, v1, v2);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::setProperty() is not implemented\n");
+    }
+
+    // @0x14249c360
+    void SharedObject::sizeGet(UInt32& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::SharedObject::sizeGet() is not implemented\n");
+    }
+
+    // @0x14249c3c0
+    void NetConnection::uriGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::uriGet() is not implemented\n");
+    }
+
+    // @0x14249c460
+    void URLRequest::useCacheGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::useCacheGet() is not implemented\n");
+    }
+
+    // @0x14249c480
+    void URLRequest::useCacheSet(const Value& result, bool v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::useCacheSet() is not implemented\n");
+    }
+
+    // @0x14249c4a0
+    void URLRequest::userAgentGet(ASString& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::userAgentGet() is not implemented\n");
+    }
+
+    // @0x14249c4c0
+    void URLRequest::userAgentSet(const Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method URLRequest::userAgentSet() is not implemented\n");
+    }
+
+    // @0x14249c4e0
+    void NetConnection::usingTLSGet(bool& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::NetConnection::usingTLSGet() is not implemented\n");
+    }
+}}
+
+namespace Instances { namespace fl_system
+{
+    // Not implemented in this build: a warning, nothing else.
+    // @0x1424a04a0
+    void ApplicationDomain::getDefinition(Value& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method ApplicationDomain::getDefinition() is not implemented\n");
+    }
+
+    // @0x1424a0530
+    void ApplicationDomain::hasDefinition(bool& result, const ASString& v)
+    {
+        SF_UNUSED2(result, v);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method ApplicationDomain::hasDefinition() is not implemented\n");
+    }
+
+    // @0x1424a07c0
+    void ApplicationDomain::parentDomainGet(SPtr<Instances::fl_system::ApplicationDomain>& result)
+    {
+        SF_UNUSED(result);
+        GetVM().GetUI().Output(FlashUI::Output_Warning, "The method ApplicationDomain::parentDomainGet() is not implemented\n");
+    }
+}}
+
 }}} // namespace Scaleform::GFx::AS3
 
 // The font set of TextField.getTextRuns/Font.enumerateFonts (sfr_as3_13): the AS3 library is one compilation unit,
