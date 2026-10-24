@@ -295,6 +295,9 @@ public:
         ++ASInitActionTagsNum;
     }
     unsigned GetASInitActionTagsNum() const { return ASInitActionTagsNum; }
+
+    // (appended, sfr_gfx_04x) the file of the tag stream at its read position (exe 0x1425c8b50)
+    File* GetUnderlyingFile();
 };
 
 }} // namespace Scaleform::GFx

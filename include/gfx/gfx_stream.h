@@ -199,6 +199,13 @@ private:
 public:
     // (appended for the place tags, sfr_gfx_05) the heap of the strings read
     MemoryHeap* GetHeap() const { return FileName.GetHeap(); }
+    // (appended, sfr33) the file at the read position; the buffer is re-read from it on the next read
+    File* GetUnderlyingFile()
+    {
+        SyncFileStream();
+        ResyncFile = true;
+        return pInput;
+    }
 };
 
 // Bit reader over a memory block, used by the shape and morph parsers (0x20 bytes).
