@@ -1225,6 +1225,9 @@ public:
     // width and height are read-only (exe 0x142988f30).
     virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
                               const PropFlags& flags = PropFlags());
+    // scaleMode and align set the view of the movie (exe 0x1429872b0).
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());
 
     // (appended for sfr_as2_06) broadcasts onResize, with the visible rect as a Rectangle when the extensions are
     // on (exe 0x14296a540).
