@@ -491,6 +491,62 @@ extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
+// MS2-FUNCTIONAL: applies the executable's masked six-way channel comparison and replacement color over the clipped region.
+// @0x142677ea0
+extern "C" void FUN_142677ea0(void* operation, void*, Scaleform::Render::ImageData* output, void** inputs)
+{
+    using Scaleform::Render::ImageData;
+    using Scaleform::Render::ImagePlane;
+    auto* source = static_cast<ImageData*>(inputs[0]);
+    ImagePlane destinationPlane, sourcePlane;
+    output->GetPlane(0, &destinationPlane);
+    source->GetPlane(0, &sourcePlane);
+
+    const auto* op = static_cast<const unsigned char*>(operation);
+    const int left = *reinterpret_cast<const int*>(op + 0x18);
+    const int top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20);
+    const int bottom = *reinterpret_cast<const int*>(op + 0x24);
+    int x0 = left < 0 ? 0 : left;
+    int y0 = top < 0 ? 0 : top;
+    int x1 = right < static_cast<int>(sourcePlane.Width) ? right : static_cast<int>(sourcePlane.Width);
+    int y1 = bottom < static_cast<int>(sourcePlane.Height) ? bottom : static_cast<int>(sourcePlane.Height);
+    if (x1 > static_cast<int>(destinationPlane.Width)) x1 = static_cast<int>(destinationPlane.Width);
+    if (y1 > static_cast<int>(destinationPlane.Height)) y1 = static_cast<int>(destinationPlane.Height);
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 <= x0 || y1 <= y0) return;
+
+    const unsigned mode = *reinterpret_cast<const unsigned*>(op + 0x40);
+    const unsigned mask = *reinterpret_cast<const unsigned*>(op + 0x4c);
+    const unsigned reference = *reinterpret_cast<const unsigned*>(op + 0x44) & mask;
+    const unsigned replacement = *reinterpret_cast<const unsigned*>(op + 0x48);
+    const auto* alphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
+    const bool preserveAlpha = alphaConfig && *reinterpret_cast<const bool*>(alphaConfig + 0x48);
+    for (int y = y0; y < y1; ++y) {
+        const long long sourceRow = static_cast<long long>(y - top) * sourcePlane.Pitch;
+        const long long destinationRow = static_cast<long long>(y) * destinationPlane.Pitch;
+        for (int x = x0; x < x1; ++x) {
+            unsigned pixel = 0;
+            FUN_14257bf70(source, &pixel, sourceRow, static_cast<unsigned>(x));
+            const unsigned lhs = pixel & mask;
+            bool selected = false;
+            switch (mode) {
+            case 0: selected = lhs < reference; break;
+            case 1: selected = lhs <= reference; break;
+            case 2: selected = lhs > reference; break;
+            case 3: selected = lhs >= reference; break;
+            case 4: selected = lhs == reference; break;
+            case 5: selected = lhs != reference; break;
+            default: break;
+            }
+            unsigned result = selected ? replacement : pixel;
+            if (!preserveAlpha) result |= 0xff000000u;
+            FUN_14257d390(output, destinationRow, static_cast<unsigned>(x), result);
+        }
+    }
+}
+
 namespace Scaleform {
 // MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
 // @0x142745840
