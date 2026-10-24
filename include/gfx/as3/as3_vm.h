@@ -129,7 +129,11 @@ public:
         // (appended, sfr19 E4X)
         eXMLAssignmentToIndexedXMLNotAllowed = 1087,
         eXMLIllegalCyclicalLoop     = 1118,
-        eXMLAssigmentOneItemLists   = 1089
+        eXMLAssigmentOneItemLists   = 1089,
+        // (appended, sfr22)
+        eXMLOnlyWorksWithOneItemLists = 1086,
+        eXMLInvalidName             = 1117,
+        eXMLNamespaceWithPrefixAndNoURI = 1098
     };
 
     // An error being thrown: its id and the formatted message (0x10 bytes).

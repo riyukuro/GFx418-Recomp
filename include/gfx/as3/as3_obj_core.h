@@ -711,6 +711,25 @@ namespace Instances { namespace fl
         void AS3setNamespace(const Value& result, const Value&);
         // @0x1424019b0
         void AS3text(SPtr<Instances::fl::XMLList>& result);
+        // (appended, sfr22) the value-returning forms the exe calls
+        // @0x1423f6c80
+        SPtr<Instances::fl::XML> AS3addNamespace(const Value& ns);
+        // @0x1423f6d30
+        SPtr<Instances::fl::XML> AS3appendChild(const Value& child);
+        // @0x1423fb110
+        SPtr<Instances::fl::Array> AS3inScopeNamespaces();
+        // @0x1423fc400
+        SPtr<Instances::fl::QName> AS3name();
+        // @0x1423fc8d0
+        SPtr<Instances::fl::Array> AS3namespaceDeclarations();
+        // @0x1423fce30
+        SPtr<Instances::fl::XML> AS3prependChild(const Value& child);
+        // @0x1423fd860
+        SPtr<Instances::fl::XML> AS3removeNamespace(const Value& ns);
+        // @0x1423fde40
+        SPtr<Instances::fl::XML> AS3replace(const Value& propertyName, const Value& value);
+        // @0x1423fe2c0
+        SPtr<Instances::fl::XML> AS3setChildren(const Value& value);
         // @0x142402c20
         void AS3toString(ASString& result);
         // @0x142403310
