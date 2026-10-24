@@ -87,7 +87,46 @@ public:
         M_width              = 8,
         M_height             = 9,
         M_useHandCursor      = 31, // clears the clip's useHandCursor setting
-        M_LastBitMaskMember  = 32  // the last member the bit mask covers
+        M_LastBitMaskMember  = 32, // the last member the bit mask covers
+
+        // (appended, sfr36) the rest of the MemberTable indices the setters switch on
+        M_xscale             = 2,
+        M_yscale             = 3,
+        M_currentframe       = 4,
+        M_totalframes        = 5,
+        M_alpha              = 6,
+        M_visible            = 7,
+        M_rotation           = 10,
+        M_target             = 11,
+        M_framesloaded       = 12,
+        M_name               = 13,
+        M_droptarget         = 14,
+        M_url                = 15,
+        M_highquality        = 16,
+        M_focusrect          = 17,
+        M_soundbuftime       = 18,
+        M_quality            = 19,
+        M_xmouse             = 20,
+        M_ymouse             = 21,
+        M_BuiltInProperty_End = 21, // the last member the get/setProperty opcodes can name
+        M_parent             = 22,
+        M_blendMode          = 23,
+        M_cacheAsBitmap      = 24,
+        M_filters            = 25,
+        M_enabled            = 26,
+        M_trackAsMenu        = 27,
+        M_lockroot           = 28,
+        M_tabEnabled         = 29,
+        M_tabIndex           = 30,
+        M_edgeaaMode         = 32,
+        M_menu               = 33,
+        M_focusEnabled       = 34,
+        M_tabChildren        = 35,
+        M_transform          = 36,
+        M_scale9Grid         = 37,
+        M_hitArea            = 38,
+        M_scrollRect         = 39,
+        M_hitTestDisable     = 71
     };
     // The standard member the name spells, M_InvalidMember otherwise (exe 0x142956090).
     StandardMember GetStandardMemberConstant(const ASString& newname) const;
