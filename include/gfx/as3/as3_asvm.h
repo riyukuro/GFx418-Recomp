@@ -191,15 +191,35 @@ private:
     UByte               Unrecovered50[0x58 - 0x50];
 public:
     Value               ExternalIntfRetVal;         // +0x58: what the host's ExternalInterface callback returned
+    unsigned            NumAdvancesSinceCollection; // +0x78 advances since the last collection (sfr24)
+    unsigned            LastCollectionFrame;        // +0x7c (sfr24)
 private:
-    UByte               Unrecovered78[0x88 - 0x78];
+    UByte               Unrecovered80[0x88 - 0x80];
 public:
     ActionQueueType     ActionQueue;                // +0x88 (sfr19)
-private:
-    UByte               Unrecovered150[0x158 - 0x150];
-public:
+    void*               mEventChains;               // +0x150 EventChains: the objects listening to each frame event,
+                                                    // one hash pointer (sfr24)
     GFx::DisplayObject* pStage;                     // +0x158 Ptr<Stage>: the stage the root movies sit on (sfr19)
     StringManager       BuiltinsMgr;                // +0x160: the AS3 builtin strings
+    unsigned            ASFramesToExecute;          // +0x358 (sfr24)
+
+    // (appended, sfr24) the AS3 side of one mouse. 0xe0 bytes; the ctor clears every field but the positions.
+    struct MouseState
+    {
+        struct DoubleClickInfo
+        {
+            UInt32         PrevClickTime;
+            Render::PointF PrevPosition;
+        };
+        void*               RolloverStack[3];       // +0x00 ArrayLH<Ptr<InteractiveObject> >: the objects under the mouse
+        GFx::InteractiveObject* LastMouseOverObj;      // +0x18 Ptr<InteractiveObject>
+        DoubleClickInfo     DblClick[16];           // +0x20 one per button
+    };
+    MouseState          mMouseState[4];             // +0x360 (sfr24)
+    bool                StageInvalidated;           // +0x6e0 (sfr24)
+    UInt8               MainLoaderInfoEventsState;  // +0x6e1 bit 0 init executed, bit 1 completed (sfr24)
+    void*               LoadedMovieDefs;            // +0x6e8 HashIdentityLH<MovieDefImpl*, LoadedMovieDefInfo> (sfr24)
+    UInt8               Flags;                      // +0x6f0 bit 0: inside a gotoAndPlay/Stop (sfr24)
 
     // (appended for the Loader natives, sfr17) the load queue.
     void UnloadMovie(Instances::fl_display::Loader* ploader, bool stop = false, bool gc = false);   // 0x1425305f0
@@ -234,6 +254,8 @@ protected:
     // (appended, sfr19) the mouseCursorEvent name of a MouseCursorEvent cursor type. 0x14250bb10
     void GetMouseCursorTypeString(ASString& str, unsigned cursorType) const;
 };
+// The ctor 0x1424d8640 fills 0x6f8 bytes (sfr24).
+static_assert(sizeof(MovieRoot) == 0x6f8, "AS3::MovieRoot size");
 
 class ASVM : public VM
 {
