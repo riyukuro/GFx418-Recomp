@@ -1220,6 +1220,27 @@ Scaleform::GFx::AS3::AvmLoader::~AvmLoader()
     reinterpret_cast<Scaleform::UInt8*>(this)[0x6d] = 0;
 }
 
+// Releases the rollover references in reverse order, then the raw heap array.
+// MS2-FUNCTIONAL 0x1424de510: same referenced objects and cleanup order; cl lays out the loop and indirect heap call differently.
+// @0x1424de510
+void FUN_1424de510(void* self)
+{
+    auto* bytes = static_cast<char*>(self);
+    void* lastHover = *reinterpret_cast<void**>(bytes + 0x18);
+    if (lastHover)
+        reinterpret_cast<Scaleform::RefCountNTSImpl*>(lastHover)->Release();
+
+    void** rollover = *reinterpret_cast<void***>(bytes);
+    Scaleform::UPInt count = *reinterpret_cast<Scaleform::UPInt*>(bytes + 8);
+    while (count != 0)
+    {
+        void* object = rollover[--count];
+        if (object)
+            reinterpret_cast<Scaleform::RefCountNTSImpl*>(object)->Release();
+    }
+    Scaleform::Memory::Free(rollover);
+}
+
 // MS2-PIN: ?Sfr34_ModifyOptimizedPlayList@AS3@GFx@Scaleform@@YAXPEAVInteractiveObject@23@@Z 0x142517e70
 // @0x1424e9380
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObject* pcont)
