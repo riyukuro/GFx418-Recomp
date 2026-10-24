@@ -1,11 +1,13 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 AS3, the dynamic initializers of
 // the native method member pointers ThunkFuncN<T, N, R, A...>::Method (0x140149990-0x14014c8e0): each stores
 // {method, 0} (16 bytes, the general member-pointer representation of as3_marshalling.h). The thunks that call
-// through them are in the sfr_as3_* units. Our own source, written from the exe (work/sfr5/gen_natives.py).
+// through them are in the sfr_as3_* units. Among them, and after them (0x14014c8e0-0x14014cbb0), the initializers
+// that set the namespace of the Proxy, class-object Object and fl_vec Vector method tables (sfr_as3di_ns.h). Our own source, written from the exe (work/sfr5/gen_natives.py).
 // MS2-UNIT: sfr_as3di_05
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x140149990-0x14014c8e0 .text$di
+// MS2-RANGE: 0x140149990-0x14014cbb0 .text$di
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "sfr_as3di_ns.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -129,6 +131,10 @@ template <> const TFunc_Instances_fl_utils_ByteArray_writeBytes::TMethod TFunc_I
 typedef ThunkFunc3<Instances::fl_utils::ByteArray, 12, const Value, Instances::fl_utils::ByteArray*, UInt32, UInt32> TFunc_Instances_fl_utils_ByteArray_readBytes;
 // @0x14014a0e0
 template <> const TFunc_Instances_fl_utils_ByteArray_readBytes::TMethod TFunc_Instances_fl_utils_ByteArray_readBytes::Method = &Instances::fl_utils::ByteArray::readBytes;
+// Proxy (10 entries: callProperty, deleteProperty, getDescendants, getProperty, ...)
+// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
+// @0x14014a110
+static const bool NamespacesOf_Proxy = SetThunkNamespaces(DAT_143a2d158, 0xc8, 10, fl::NS_flash_proxy);
 typedef ThunkFunc0<Classes::fl_gfx::Extensions, 1, bool> TFunc_Classes_fl_gfx_Extensions_enabledGet;
 // @0x14014a160
 template <> const TFunc_Classes_fl_gfx_Extensions_enabledGet::TMethod TFunc_Classes_fl_gfx_Extensions_enabledGet::Method = &Classes::fl_gfx::Extensions::enabledGet;
@@ -414,6 +420,10 @@ template <> const TFunc_Class_lengthGet::TMethod TFunc_Class_lengthGet::Method =
 typedef ThunkFunc0<Class, 2, ASString> TFunc_Class_toString;
 // @0x14014b300
 template <> const TFunc_Class_toString::TMethod TFunc_Class_toString::Method = &Class::toString;
+// ObjectClass (3 entries: isPrototypeOf, hasOwnProperty, propertyIsEnumerable)
+// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
+// @0x14014b330
+static const bool NamespacesOf_ObjectClass = SetThunkNamespaces(DAT_143a2d5c0, 0x0, 3, fl::NS_AS3);
 typedef ThunkFunc0<Instances::fl_vec::Vector_String, 3, bool> TFunc_Instances_fl_vec_Vector_String_fixedGet;
 // @0x14014b350
 template <> const TFunc_Instances_fl_vec_Vector_String_fixedGet::TMethod TFunc_Instances_fl_vec_Vector_String_fixedGet::Method = &Instances::fl_vec::Vector_String::fixedGet;
@@ -759,6 +769,31 @@ template <> const TFunc_Instances_fl_vec_Vector_uint_AS3concat::TMethod TFunc_In
 typedef ThunkFunc2<Instances::fl_vec::Vector_uint, 14, SPtr<Instances::fl_vec::Vector_uint>, const Value&, const Value&> TFunc_Instances_fl_vec_Vector_uint_AS3filter;
 // @0x14014c8b0
 template <> const TFunc_Instances_fl_vec_Vector_uint_AS3filter::TMethod TFunc_Instances_fl_vec_Vector_uint_AS3filter::Method = &Instances::fl_vec::Vector_uint::AS3filter;
+// Vector_String (19 entries: toString, toLocaleString, join, every, ...)
+// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
+// @0x14014c8e0
+static const bool NamespacesOf_Vector_String = SetThunkNamespaces(DAT_143a2dd50, 0xb90, 19, fl::NS_AS3);
+// Vector_double (19 entries: toString, toLocaleString, join, every, ...)
+// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
+// @0x14014c970
+static const bool NamespacesOf_Vector_double = SetThunkNamespaces(DAT_143a2dd50, 0x7f0, 19, fl::NS_AS3);
+// Vector_int (19 entries: toString, toLocaleString, join, every, ...)
+// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
+// @0x14014ca00
+static const bool NamespacesOf_Vector_int = SetThunkNamespaces(DAT_143a2dd50, 0xb0, 19, fl::NS_AS3);
+// Vector_object (19 entries: toString, toLocaleString, join, every, ...)
+// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
+// @0x14014ca90
+static const bool NamespacesOf_Vector_object = SetThunkNamespaces(DAT_143a2dd50, 0xf30, 19, fl::NS_AS3);
+// Vector_uint (19 entries: toString, toLocaleString, join, every, ...)
+// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
+// @0x14014cb20
+static const bool NamespacesOf_Vector_uint = SetThunkNamespaces(DAT_143a2dd50, 0x450, 19, fl::NS_AS3);
 
 }}} // namespace Scaleform::GFx::AS3
 
+
+// The .text$di entries after 0x14014cbb0 register the atexit destructors of Scaleform file-scope objects (FileReader,
+// SKI_*, HAL*Item and AmpGlyphImageWriter instances); they belong to those objects' own units
+// (see work/sfr21/fullexe-sf-staticctors.md). Kept here, below the last tag, so the compiler's end-of-file helpers
+// (__empty_global_delete) fall outside the tag window.

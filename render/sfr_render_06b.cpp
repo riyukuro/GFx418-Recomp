@@ -6,6 +6,7 @@
 // MS2-UNIT: sfr_render_06b
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1426b9cd0-0x1426bb650 .text$mn
+// MS2-RANGE: 0x14014cef0-0x14014cf6d .text$di
 
 #include "ms2/scaleform/include/render/render_matrixpool.h"
 #include "ms2/scaleform/kernel/sf_memory.h"
@@ -513,6 +514,14 @@ bool MatrixPool::squeezeMemoryRange(DataPage* from, DataPage* to, SqueezeType ty
     }
     return freed;
 }
+
+// The null handle's block (HMatrix_DefaultMatrixData, the 2D-matrix-only block NullHandle points at) holds the
+// identity, so a handle-less HMatrix reads as an identity transform. The exe's dynamic initializer copies
+// Matrix2F::Identity into the block's matrix; the block header itself is constant-initialized.
+// MS2-FUNCTIONAL: the block is a data-unit image (behind NullHandle) and the identity is written as literals, so
+// the copy does not depend on Matrix2F::Identity's initialization order in this build.
+// @0x14014cef0
+static const bool DefaultMatrixDataIdentity = (HMatrix::NullHandle.GetMatrixPtr()->SetIdentity(), true);
 
 }}} // namespace Scaleform::Render::MatrixPoolImpl
 
