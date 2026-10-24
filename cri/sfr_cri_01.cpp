@@ -12,6 +12,7 @@
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
+#include "hook/ms2hook.h"
 
 void FUN_14257db50(void* object);
 void FUN_14257db40(void* object);
@@ -812,6 +813,7 @@ void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
     }
     FUN_14257dcd0(core);
 }
+MS2_REPLACE_METHOD(0x140025D30, SwfVideoSyncObject, GetTime, 276, 0xC89B171E);
 
 // The sprite whose sound settings a provider's audio follows: the audio target itself, or its parent when the target
 // is not a sprite.
@@ -1015,6 +1017,7 @@ void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
     SeekNotificationSent = true;
     NotFoundNotificationSent = false;
 }
+MS2_REPLACE_METHOD(0x140026720, VideoProviderNetStream, OpenUrl, 1338, 0x121B5725);
 
 // @0x1400253b0
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
