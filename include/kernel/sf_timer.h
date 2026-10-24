@@ -23,6 +23,8 @@ public:
     // sfr_kernel_02g. The kernel tree's sf_timer.h declares the same.
     static UInt32 SF_STDCALL GetTicksMs();
     static UInt64 SF_STDCALL GetRawTicks();
+    // (appended, sfr24) the performance counter frequency (0x1425e3510).
+    static UInt64 SF_STDCALL GetRawFrequency();
 };
 
 } // namespace Scaleform
