@@ -177,6 +177,12 @@ Scaleform::UPInt FUN_142525270(void* vm, void* multiname);   // class traits nam
 Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Function> FUN_14241a7d0(void* self, Scaleform::GFx::AS3::VMAbcFile& file, Scaleform::UInt32 method_ind, const Scaleform::GFx::AS3::ScopeStackType& ss, Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript& gos);
 Scaleform::UPInt FUN_1425fc530(Scaleform::UPInt container, unsigned idx);   // DisplayObjContainer::GetChildAt
 void FUN_1424d4c10(void* self, void* table, const void* nodeRef, Scaleform::UPInt hash);   // StickyVarNode hash: add an entry
+Scaleform::UPInt FUN_142443d90(Scaleform::UPInt loader);   // Loader::GetLoaderInfo
+void FUN_1425245c0(Scaleform::UPInt* arr, Scaleform::UPInt n);   // ArrayLH<SPtr<DisplayObject>>::Resize
+void FUN_1425a3850(void* resource);   // Resource::AddRef
+void* FUN_1425059f0(void* map, const Scaleform::UPInt* key);   // identity hash: value slot of key
+void FUN_1424d54f0(void* dst, void* src);   // hash entry copy (key, value ref, count)
+void FUN_1425224f0(void* arr, Scaleform::UPInt idx);   // ArrayBase::RemoveAt
 void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
 void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase); // DisplayObjectBase::GetRenderNode
@@ -7898,6 +7904,285 @@ void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
     Sfr31ReleaseStr(Sfr31Rd(e, 8));
     Sfr31Wr(e, 0, static_cast<UPInt>(-2));
     --*reinterpret_cast<SInt64*>(tbl);
+}
+// ---- batch 76
+// The display object part's AS3 object (without creating it): the pointer at +0x10, else the one at +0x8, minus the tag bit.
+static inline UPInt Sfr31DispAvmPeek(UPInt dobj)
+{
+    const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
+    UPInt p = Sfr31Rd(sub, 0x10);
+    if (p == 0)
+        p = Sfr31Rd(sub, 8);
+    return (p & 1) ? p - 1 : p;
+}
+
+// True when the AS3 object of dobj belongs to the movie definition def.
+static inline bool Sfr31DispBelongsTo(UPInt dobj, UPInt def)
+{
+    const UPInt avmObj = Sfr31DispAvmPeek(dobj);
+    if (avmObj == 0)
+        return false;
+    const UPInt traits = Sfr31Rd(avmObj, 0x20);
+    typedef UPInt (*FileFn)(UPInt);
+    const UPInt file = reinterpret_cast<FileFn>(Sfr31Rd(Sfr31Rd(traits, 0), 0x50))(traits);
+    return file != 0 && Sfr31Rd(Sfr31Rd(file, 0x28), 0x188) == def;
+}
+
+// Drops the display objects of the movie definition def from an array of display object pointers (data, size, capacity).
+static void Sfr31DropDispOfDef(UPInt* arr, UPInt def)
+{
+    UPInt i = 0;
+    while (i < arr[1])
+    {
+        UPInt* data = reinterpret_cast<UPInt*>(arr[0]);
+        const UPInt elem = data[i];
+        if (elem == 0)
+        {
+            ++i;
+            continue;
+        }
+        ++*reinterpret_cast<int*>(elem + 8);
+        if (!Sfr31DispBelongsTo(elem, def))
+            ++i;
+        else if (arr[1] == 1)
+            FUN_1425245c0(arr, 0);
+        else
+        {
+            FUN_14257dcd0(reinterpret_cast<void*>(elem));
+            data = reinterpret_cast<UPInt*>(arr[0]);
+            memmove(data + i, data + i + 1, (arr[1] - i) * 8 - 8);
+            --arr[1];
+        }
+        FUN_14257dcd0(reinterpret_cast<void*>(elem));
+    }
+}
+
+// MovieRoot: a Loader's content goes away (unload): the content gets its unload event, the loaded movie definition is unregistered when
+// its last user left (the objects, listeners, timers, fonts and root display objects of it are dropped too when asked to) and the
+// text format caches are flushed.
+// MS2-FUNCTIONAL 0x1425305f0: raw-offset model; codegen differs from the exe
+// @0x1425305f0
+void Sfr31UnloadLoaderContent(UPInt root, UPInt loader, bool dropAll, bool flagRoot)
+{
+    typedef Instances::fl_display::LoaderInfo LoaderInfo;
+    LoaderInfo* li = reinterpret_cast<LoaderInfo*>(FUN_142443d90(loader));
+    if (li)
+        *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(li) + 0x10) = (*reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(li) + 0x10) + 1) & 0x8fbfffff;
+    UPInt keep = 0;
+    if (li)
+    {
+        DisplayObject* content = li->GetContentDispObj();
+        if (content)
+        {
+            ++*reinterpret_cast<int*>(reinterpret_cast<UPInt>(content) + 8);
+            keep = reinterpret_cast<UPInt>(content);
+        }
+        ASString evType(reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateConstStringNode("unload", 6, 0));
+        SPtr<Instances::fl_events::Event> ev = li->CreateEventObject(evType, false, false);
+        li->DispatchEventObject(ev.GetPtr(), li->GetContentDispObj());
+    }
+    reinterpret_cast<Instances::fl_display::Loader*>(loader)->ResetContent();
+    const UPInt impl = Sfr31Rd(root, 0x10);
+    for (UPInt n = Sfr31Rd(impl, 0x34a0); n != 0; n = Sfr31Rd(n, 8))
+        if (Sfr31Rd(Sfr31Rd(n, 0x20), 0x28) == loader)
+            *reinterpret_cast<UByte*>(Sfr31Rd(n, 0x20) + 0x25) = 1;
+    for (UPInt n = Sfr31Rd(impl, 0x20); n != 0; n = Sfr31Rd(n, 8))
+        if (Sfr31Rd(n, 0x28) == loader)
+            *reinterpret_cast<UByte*>(n + 0x25) = 1;
+    const UPInt owner = Sfr31Rd(loader, 0x58);
+    UPInt cur = keep;
+    bool have = true;
+    if (cur == 0)
+    {
+        if (owner == 0 || *reinterpret_cast<const int*>(owner + 0xe0) == 0 || (cur = FUN_1425fc530(owner, 0)) == 0)
+            have = false;
+        else
+            ++*reinterpret_cast<int*>(cur + 8);
+    }
+    if (have)
+    {
+        typedef void (*VFn)(UPInt);
+        typedef UPInt (*VFnR)(UPInt);
+        reinterpret_cast<VFn>(Sfr31Rd(Sfr31Rd(cur, 0), 0x228))(cur);
+        reinterpret_cast<VFn>(Sfr31Rd(Sfr31Rd(cur, 0), 0x1b0))(cur);
+        const UPInt def = reinterpret_cast<VFnR>(Sfr31Rd(Sfr31Rd(cur, 0), 0x1e0))(cur);
+        if (def != 0)
+        {
+            FUN_1425a3850(reinterpret_cast<void*>(def));
+            UPInt keyBuf = def;
+            bool last = false;
+            UPInt slot = reinterpret_cast<UPInt>(FUN_1425059f0(reinterpret_cast<void*>(root + 0x6e8), &keyBuf));
+            if (slot != 0 && --*reinterpret_cast<int*>(slot + 8) == 0)
+            {
+                UPInt tbl = Sfr31Rd(root, 0x6e8);
+                if (tbl != 0)
+                {
+                    const UPInt mask = Sfr31Rd(tbl, 8);
+                    const UPInt home = def & mask;
+                    UPInt e = tbl + 0x10 + home * 0x20;
+                    if (static_cast<SInt64>(Sfr31Rd(e, 0)) != -2 && (Sfr31Rd(e, 8) & mask) == home)
+                    {
+                        UPInt idx = home;
+                        UPInt prev = static_cast<UPInt>(-1);
+                        bool found = true;
+                        while ((Sfr31Rd(e, 8) & mask) != home || Sfr31Rd(e, 8) != def)
+                        {
+                            const UPInt nx = Sfr31Rd(e, 0);
+                            if (nx == static_cast<UPInt>(-1))
+                            {
+                                found = false;
+                                break;
+                            }
+                            prev = idx;
+                            idx = nx;
+                            e = tbl + 0x10 + nx * 0x20;
+                        }
+                        if (found)
+                        {
+                            const UPInt nx = Sfr31Rd(e, 0);
+                            if (home == idx)
+                            {
+                                if (nx != static_cast<UPInt>(-1))
+                                {
+                                    if (Sfr31Rd(e, 0x10) != 0)
+                                        reinterpret_cast<Resource*>(Sfr31Rd(e, 0x10))->Release();
+                                    Sfr31Wr(e, 0, static_cast<UPInt>(-2));
+                                    const UPInt ne = tbl + 0x10 + nx * 0x20;
+                                    FUN_1424d54f0(reinterpret_cast<void*>(e), reinterpret_cast<void*>(ne));
+                                    e = ne;
+                                }
+                            }
+                            else
+                                Sfr31Wr(tbl + 0x10 + prev * 0x20, 0, nx);
+                            if (Sfr31Rd(e, 0x10) != 0)
+                                reinterpret_cast<Resource*>(Sfr31Rd(e, 0x10))->Release();
+                            Sfr31Wr(e, 0, static_cast<UPInt>(-2));
+                            --*reinterpret_cast<SInt64*>(Sfr31Rd(root, 0x6e8));
+                        }
+                    }
+                }
+                last = true;
+            }
+            if (dropAll && last)
+            {
+                // objects registered per movie definition: drop the ones that belong to def
+                const UPInt tbl150 = Sfr31Rd(root, 0x150);
+                if (tbl150 != 0)
+                {
+                    for (UPInt hi = 0; hi <= Sfr31Rd(tbl150, 8); ++hi)
+                    {
+                        const UPInt he = tbl150 + 0x10 + hi * 0x20;
+                        if (static_cast<SInt64>(Sfr31Rd(he, 0)) == -2)
+                            continue;
+                        UPInt* list = reinterpret_cast<UPInt*>(Sfr31Rd(he, 0x10));
+                        if (list == 0)
+                            continue;
+                        UPInt k = 0;
+                        while (k < list[1])
+                        {
+                            UPInt* data = reinterpret_cast<UPInt*>(list[0]);
+                            int* proxy = reinterpret_cast<int*>(data[k]);
+                            UPInt target = 0;
+                            if (proxy == 0)
+                            {
+                                ++k;
+                                continue;
+                            }
+                            target = Sfr31Rd(reinterpret_cast<UPInt>(proxy), 8);
+                            if (target == 0)
+                            {
+                                if (--*proxy == 0)
+                                    Memory::pGlobalHeap->Free(proxy);
+                                data[k] = 0;
+                                ++k;
+                                continue;
+                            }
+                            if (*reinterpret_cast<int*>(target + 8) == 0)
+                            {
+                                ++k;
+                                continue;
+                            }
+                            *reinterpret_cast<int*>(target + 8) += 2;
+                            FUN_14257dcd0(reinterpret_cast<void*>(target));
+                            typedef UPInt (*ResFn)(UPInt);
+                            if (reinterpret_cast<ResFn>(Sfr31Rd(Sfr31Rd(target, 0), 0x1e0))(target) != def)
+                                ++k;
+                            else
+                                FUN_1425224f0(list, k);
+                            FUN_14257dcd0(reinterpret_cast<void*>(target));
+                        }
+                    }
+                }
+                const UPInt stage = Sfr31Rd(root, 0x158);
+                UPInt disp = 0;
+                if (stage != 0)
+                {
+                    const UPInt sub = stage + *reinterpret_cast<const UByte*>(stage + 0x6d) * 4;
+                    typedef UPInt (*GetAvmFn)(UPInt);
+                    const UPInt avm = reinterpret_cast<GetAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x28))(sub);
+                    if (avm != 0)
+                    {
+                        disp = Sfr31Rd(avm - 0x30, 0);
+                        if (disp == 0)
+                            disp = Sfr31Rd(avm - 0x38, 0);
+                        if (disp & 1)
+                            disp -= 1;
+                    }
+                }
+                if (disp != 0)
+                    reinterpret_cast<Instances::fl_events::EventDispatcher*>(disp)->RemoveListenersForMovieDef(reinterpret_cast<MovieDefImpl*>(def));
+                reinterpret_cast<MovieImpl*>(impl)->ShutdownTimersForMovieDef(reinterpret_cast<MovieDefImpl*>(def));
+                reinterpret_cast<MovieImpl*>(impl)->UnregisterFonts(reinterpret_cast<MovieDefImpl*>(def));
+                for (int g = 0; g < 4; ++g)
+                {
+                    const UPInt base = root + 0x360 + g * 0xe0;
+                    Sfr31DropDispOfDef(reinterpret_cast<UPInt*>(base), def);
+                    const UPInt single = Sfr31Rd(base, 0x18);
+                    if (single != 0 && Sfr31DispBelongsTo(single, def))
+                    {
+                        FUN_14257dcd0(reinterpret_cast<void*>(single));
+                        Sfr31Wr(base, 0x18, 0);
+                    }
+                }
+            }
+        }
+        // the display object part of cur gives up its AS3 object
+        const UPInt sub = cur + *reinterpret_cast<const UByte*>(cur + 0x6d) * 4;
+        Sfr31Wr(sub, 0x10, Sfr31DispAvmPeek(cur));
+        const UPInt held = Sfr31Rd(sub, 8);
+        if (held != 0)
+        {
+            if ((held & 1) == 0 && (*reinterpret_cast<UInt32*>(held + 0x10) & 0x3fffff) != 0)
+            {
+                --*reinterpret_cast<UInt32*>(held + 0x10);
+                FUN_1423dfa20(reinterpret_cast<void*>(held));
+            }
+            Sfr31Wr(sub, 8, 0);
+        }
+        if (owner != 0)
+        {
+            reinterpret_cast<DisplayList*>(owner + 0xd8)->Clear(reinterpret_cast<DisplayObjectBase*>(owner));
+            FUN_1425f4090(reinterpret_cast<void*>(owner));
+        }
+        keep = cur;
+        if (def != 0)
+            reinterpret_cast<Resource*>(def)->Release();
+    }
+    if (flagRoot)
+        *reinterpret_cast<UByte*>(Sfr31Rd(Sfr31Rd(root, 0x48), 0x18) + 0xb0) = 1;
+    Render::Text::Allocator* ta = reinterpret_cast<Render::Text::Allocator*>(Sfr31Rd(Sfr31Rd(root, 0x40), 0x28));
+    if (ta)
+    {
+        ta->FlushTextFormatCache(false);
+        ta->FlushParagraphFormatCache(false);
+    }
+    if (keep != 0 && (keep & 1) == 0)
+        FUN_14257dcd0(reinterpret_cast<void*>(keep));
+    if (li && (reinterpret_cast<UPInt>(li) & 1) == 0 && (*reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(li) + 0x10) & 0x3fffff) != 0)
+    {
+        --*reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(li) + 0x10);
+        FUN_1423dfa20(reinterpret_cast<void*>(li));
+    }
 }
 }}} // namespace Scaleform::GFx::AS3
 
