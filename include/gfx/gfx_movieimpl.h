@@ -925,7 +925,19 @@ inline const MovieInterface418* MovieImpl::AsMovieInterface() const
 class MovieDefRootNode : public MovieDefRootNodeLinks   // pPrev +0x08, pNext +0x10
 {
 public:
-    virtual ~MovieDefRootNode();         // vftable +0x00
+    // (appended, sfr24) as AS2 MovieRoot::CreateMovieDefRootNode 0x1429365c0 builds it (0x40 bytes); the links,
+    // LoadingFrame and BytesLoaded are left to the movie.
+    MovieDefRootNode(MovieDefImpl* pdefImpl, bool importFlag)
+        : SpriteRefCount(1), pDefImpl(pdefImpl), ImportFlag(importFlag), pFontManager(NULL)
+    {
+    }
+    // (sfr24) inline: ??_G 0x1424e3380 releases the font manager (a Ptr in the exe) in place. vftable 0x14317c9e0
+    virtual ~MovieDefRootNode()
+    {
+        reinterpret_cast<Ptr<RefCountImpl>*>(&pFontManager)->~Ptr<RefCountImpl>();
+    }
+    // (appended, sfr24) the deleting destructors free through the global heap
+    SF_MEMORY_REDEFINE_NEW(MovieDefRootNode, Stat_Default_Mem)
 
     unsigned          SpriteRefCount;    // +0x18
     MovieDefImpl*     pDefImpl;          // +0x20
