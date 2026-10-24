@@ -84,6 +84,17 @@ public:
     {
         Init(this, psc, constructor);
     }
+    // (appended for sfr_as2_03) without the constructor (exe 0x14291fa90 for Object).
+    Prototype(ASStringContext* psc, Object* pprototype)
+        : BaseClass(psc, pprototype)
+    {
+    }
+    // (appended for sfr_as2_03) a prototype without a prototype of its own (inlined into the exe's ObjectProto ctor).
+    Prototype(ASStringContext* psc, const FunctionRef& constructor)
+        : BaseClass(psc)
+    {
+        Init(this, psc, constructor);
+    }
     virtual ~Prototype() {}
 
     // constructor and __constructor__ come from the prototype part (defined in sfr_as2_05).
@@ -177,9 +188,15 @@ private:
 };
 
 // Object.prototype methods (only the natives so far).
-class ObjectProto
+class ObjectProto : public Prototype<Object>
 {
 public:
+    // The Object prototype and its function table (exe 0x143214310).
+    ObjectProto(ASStringContext* psc, Object* pprototype);                                // exe 0x14291fa90
+    ObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291fb00
+    ObjectProto(ASStringContext* psc, const FunctionRef& constructor);                    // exe 0x14291f9a0
+    static const NameFunction FunctionTable[];
+
     static void AddProperty(const FnCall& fn);
     static void HasOwnProperty(const FnCall& fn);
     static void IsPropertyEnumerable(const FnCall& fn);
@@ -194,9 +211,13 @@ public:
 };
 
 // Function.prototype methods (only the natives so far).
-class FunctionProto
+class FunctionProto : public Prototype<Object>
 {
 public:
+    // The Function prototype; apply and call are added only when asked (exe 0x14291c0f0).
+    FunctionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, bool addApply);
+    static const NameFunction FunctionTable[]; // exe 0x143213e80
+
     static void Apply(const FnCall& fn);
     static void Call(const FnCall& fn);
     static void ToString(const FnCall& fn);
