@@ -107,6 +107,7 @@ class ReadArgs
 {
 public:
     ReadArgs(VM& vm, UInt32 argCount);  // 0x1424d9530
+    ~ReadArgs();                       // 0x1424de9e0
 
 protected:
     VM&                 VMRef;          // +0x000
@@ -163,6 +164,7 @@ class ReadArgs
 {
 public:
     ReadArgs(VM& vm, State& s, UInt32 argCount);  // 0x1424d9640
+    ~ReadArgs();                                  // 0x1424dea90
 
 protected:
     VM&                 VMRef;          // +0x000
