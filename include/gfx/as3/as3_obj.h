@@ -926,6 +926,7 @@ class PropRef
 public:
     ~PropRef();
     operator bool() const;
+    PropRef& operator=(PropRef&& other);
 
     // Not found.
     PropRef() : pValue(0), SlotIndex(0) { }
