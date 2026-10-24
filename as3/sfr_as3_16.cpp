@@ -125,6 +125,7 @@ void Object::AddDynamicSlotValuePair(const Value& prop_name, const Value& v, Slo
 // ==== destructors ===================================================================================================
 
 namespace Classes {
+    // MS2-FUNCTIONAL: the executable calls the same tail cleanup directly; this definition reaches it through GetTraits().
     // @0x1424df350
     UDBase::~UDBase()
     {
@@ -1097,7 +1098,7 @@ void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObje
         Scaleform::GFx::InteractiveObject* interactive =
             reinterpret_cast<Scaleform::GFx::InteractiveObject*>(pcont);
         interactive->AddToPlayList();
-        interactive->ModifyOptimizedPlayList();
+        interactive->AddToOptimizedPlayList();
     }
 }
 
