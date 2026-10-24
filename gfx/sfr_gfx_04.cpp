@@ -134,10 +134,8 @@ class ConstShapeNoStyles : public ShapeDataBase
 {
 public:
     ConstShapeNoStyles() : ShapeDataBase(Empty_Shape) { *(const void* const**)this = MS2_SF_ConstShapeNoStyles_vftable; }
-    virtual ~ConstShapeNoStyles();
+    virtual ~ConstShapeNoStyles() {} // inline, as gfx_shapeswf.h has it (sfr_gfx_08j / 08s1 instantiate it too)
 };
-
-ConstShapeNoStyles::~ConstShapeNoStyles() {}
 
 // The empty video definition uses VideoCharacterDef's recovered 0x30-byte interface and executable vtable.
 using EmptyVideoDefImage = Video::VideoCharacterDef;

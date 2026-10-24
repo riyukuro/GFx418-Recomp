@@ -167,7 +167,7 @@ public:
             } DropShadow;
         };
 
-        Filter() : Type(Filter_Unknown) { InitByDefaultValues(); }
+        Filter(); // out of line, 0x1425b57e0 (sfr_gfx_03e)
         Filter(FilterType type) : Type(type) { InitByDefaultValues(); }
 
         void InitByDefaultValues();

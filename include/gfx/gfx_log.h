@@ -106,6 +106,11 @@ void LogBase<Derived>::LogAction(const char* pfmt, ...) const
     va_end(argList);
 }
 
+// Specialized out of line in sfr_as2_06 (@0x142967430: the movie's verbose-action flag, then the target's log);
+// declared so no other unit instantiates the generic one.
+namespace AS2 { class Environment; }
+template<> void LogBase<AS2::Environment>::LogAction(const char* pfmt, ...) const;
+
 enum { Log_ParseAction = LogChannel_Parse | 3 };
 
 template<class Derived>

@@ -22,7 +22,6 @@
 namespace Scaleform { namespace GFx {
 
 extern "C" char DAT_143184f20[];          // ??_7ImageFileHandler@Render@Scaleform@@6B@
-extern "C" void FUN_142749444(void*, UPInt); // sized operator delete (CRT)
 void FUN_14257dc30(void*);                // RefCountImpl::AddRef
 void FUN_14257dcb0(void*);                // RefCountImpl::Release
 
@@ -43,7 +42,7 @@ void* FUN_14259dc90(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_143184f20;
     if (flags & 1)
-        FUN_142749444(self, 8);
+        ::operator delete(self, 8);             // the CRT sized delete (0x142749444)
     return self;
 }
 
