@@ -369,7 +369,7 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // AvmVideoCharacter::OnUnloading: detach this clip from the frame advance list.
 // MS2-FUNCTIONAL: recovered behavior; standalone body is used while AvmVideoCharacter's full vtable is pending.
 // @0x14000e5e0
-bool AvmVideoCharacter_OnUnloading(AvmCharacter* pavm)
+__declspec(noinline) bool AvmVideoCharacter_OnUnloading(AvmCharacter* pavm)
 {
     pavm->pDispObj->RemoveFromPlayList();
     return true;
@@ -377,31 +377,31 @@ bool AvmVideoCharacter_OnUnloading(AvmCharacter* pavm)
 
 // The two interface adjustors are separate executable entries in this video glue range.
 // @0x14000e510
-void* FUN_14000e510(void* p)
+__declspec(noinline) void* FUN_14000e510(void* p)
 {
     return p ? static_cast<void*>(static_cast<unsigned char*>(p) + 0x30) : 0;
 }
 
 // @0x14000e520
-uintptr_t FUN_14000e520(uintptr_t value)
+__declspec(noinline) uintptr_t FUN_14000e520(uintptr_t value)
 {
     return value;
 }
 
 // @0x14000e530
-uintptr_t FUN_14000e530() { return 0; }
+__declspec(noinline) uintptr_t FUN_14000e530(void*) { return 0; }
 
 // @0x14000e540
-uintptr_t FUN_14000e540() { return 0; }
+__declspec(noinline) uintptr_t FUN_14000e540(void*) { return 0; }
 
 // @0x14000e550
-uintptr_t FUN_14000e550() { return 0; }
+__declspec(noinline) uintptr_t FUN_14000e550(void*) { return 0; }
 
 // @0x14000e560
-uintptr_t FUN_14000e560() { return 0; }
+__declspec(noinline) uintptr_t FUN_14000e560(void*) { return 0; }
 
 // @0x14000e580
-bool FUN_14000e580() { return false; }
+__declspec(noinline) bool FUN_14000e580(void*) { return false; }
 
 // MS2-FUNCTIONAL: reproduces the two indirect interface calls and this adjustment observed at this entry.
 // @0x14000e470
@@ -417,11 +417,11 @@ void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
 }
 
 // @0x14000e5d0
-void FUN_14000e5d0() { FUN_14296bba0(); }
+__declspec(noinline) void FUN_14000e5d0(void*) { FUN_14296bba0(); }
 
 // MS2-FUNCTIONAL: builds the observed default color transform and dispatches it through the object's vtable.
 // @0x14000e590
-void FUN_14000e590(void** object)
+__declspec(noinline) void FUN_14000e590(void** object)
 {
     struct DefaultTransform
     {
@@ -435,41 +435,150 @@ void FUN_14000e590(void** object)
 
 // MS2-FUNCTIONAL: forwards the absolute-path query to the executable's AvmCharacter display object.
 // @0x14000e570
-const char* FUN_14000e570(AvmCharacter* pavm, String* path)
+__declspec(noinline) const char* FUN_14000e570(AvmCharacter* pavm, String* path)
 {
     return pavm->pDispObj->GetAbsolutePath(path);
 }
 
 // MS2-FUNCTIONAL: these executable entries are FID-conflict copies of the display-object forwarding wrapper.
 // @0x14000e630
-void FUN_14000e630(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
+__declspec(noinline) void FUN_14000e630(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
 {
     pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
 }
 
 // MS2-FUNCTIONAL: executable duplicate of the physical-property forwarding entry above.
 // @0x14000e640
-void FUN_14000e640(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
+__declspec(noinline) void FUN_14000e640(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
 {
     pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
 }
 
 // MS2-FUNCTIONAL: forwards the focus callback through the AvmCharacter interface.
 // @0x14000e650
-void FUN_14000e650(AvmCharacter* pavm, InteractiveObject::FocusEventType event,
+__declspec(noinline) void FUN_14000e650(AvmCharacter* pavm, InteractiveObject::FocusEventType event,
                    InteractiveObject* oldOrNewFocus, unsigned controller, FocusMovedType moved)
 {
     pavm->OnFocus(event, oldOrNewFocus, controller, moved);
 }
 
 // @0x14000e600
-bool FUN_14000e600() { return false; }
+__declspec(noinline) bool FUN_14000e600(void*) { return false; }
 
 // @0x14000e610
-uintptr_t FUN_14000e610() { return 0; }
+__declspec(noinline) uintptr_t FUN_14000e610(void*) { return 0; }
 
 // @0x14000e620
-bool FUN_14000e620() { return false; }
+__declspec(noinline) bool FUN_14000e620(void*) { return false; }
+
+// The one-instruction slots of the AvmVideoCharacter vtable 0x1431b5cb0 (slot index in brackets).
+// [18]
+// @0x14000e670
+__declspec(noinline) void FUN_14000e670(void*) {}
+// [19]
+// @0x14000e680
+__declspec(noinline) bool FUN_14000e680(void*) { return false; }
+// [20]
+// @0x14000e690
+__declspec(noinline) bool FUN_14000e690(void*) { return true; }
+// [21]
+// @0x14000e6a0
+__declspec(noinline) bool FUN_14000e6a0(void*) { return true; }
+// [22] the AvmCharacter tab rule
+// @0x14000e6b0
+__declspec(noinline) bool FUN_14000e6b0(const AvmCharacter* pavm) { return pavm->AvmCharacter::IsTabable(); }
+// [25], [26]: the cached script object (sfr_video_01)
+class VideoObject;
+VideoObject* FUN_14000e020(AvmCharacter* character);
+// @0x14000e890
+VideoObject* FUN_14000e890(AvmCharacter* character) { return FUN_14000e020(character); }
+// @0x14000e880
+VideoObject* FUN_14000e880(AvmCharacter* character) { return FUN_14000e020(character); }
+
+// 0x1431b5c00 [2]: a constant kind.
+// @0x14000e500
+int FUN_14000e500(void*) { return 5; }
+
+}}} // namespace Scaleform::GFx::AS2
+void* FUN_14000e8a0(void* object, unsigned __int64 flags);
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// 0x1431b5c00 [0]: the deleting destructor through the +0x08 base.
+// @0x14000e6c0
+void* FUN_14000e6c0(void* p, unsigned __int64 flags) { return ::FUN_14000e8a0(static_cast<unsigned char*>(p) - 8, flags); }
+
+// The AvmVideoCharacter vtable 0x1431b5b40 is the +0x30 base's: each slot moves `this` back to the object
+// and runs the primary slot (slot index in brackets).
+// 0x1431b5b40 [0]
+// @0x14000e710
+void* FUN_14000e710(void* p, unsigned __int64 flags) { return ::FUN_14000e8a0(static_cast<unsigned char*>(p) - 0x30, flags); }
+// 0x1431b5b40 [1]
+// @0x14000e7b0
+uintptr_t FUN_14000e7b0(uintptr_t p) { return FUN_14000e520(p - 0x30); }
+// 0x1431b5b40 [2]
+// @0x14000e800
+uintptr_t FUN_14000e800(void* p) { return FUN_14000e530(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [3]
+// @0x14000e7a0
+uintptr_t FUN_14000e7a0(void* p) { return FUN_14000e540(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [4]
+// @0x14000e810
+uintptr_t FUN_14000e810(void* p) { return FUN_14000e550(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [5]
+// @0x14000e730
+uintptr_t FUN_14000e730(void* p) { return FUN_14000e560(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [6]
+// @0x14000e750
+const char* FUN_14000e750(void* p, String* path) { return FUN_14000e570(reinterpret_cast<AvmCharacter*>(static_cast<unsigned char*>(p) - 0x30), path); }
+// 0x1431b5b40 [7]
+// @0x14000e720
+bool FUN_14000e720(void* p) { return FUN_14000e600(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [8]
+// @0x14000e740
+bool FUN_14000e740(void* p) { return FUN_14000e580(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [9]
+// @0x14000e6e0
+void FUN_14000e6e0(void* p) { FUN_14000e590(reinterpret_cast<void**>(static_cast<unsigned char*>(p) - 0x30)); }
+// 0x1431b5b40 [10]
+// @0x14000e700
+void FUN_14000e700(void* p) { FUN_14000e5d0(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [11]
+// @0x14000e7f0
+bool FUN_14000e7f0(void* p) { return AvmVideoCharacter_OnUnloading(reinterpret_cast<AvmCharacter*>(static_cast<unsigned char*>(p) - 0x30)); }
+// 0x1431b5b40 [12]
+// @0x14000e790
+void* FUN_14000e790(void* p) { return FUN_14000e510(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [13]
+// @0x14000e820
+bool FUN_14000e820(void* p) { return FUN_14000e620(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [14]
+// @0x14000e770
+uintptr_t FUN_14000e770(void* p) { return FUN_14000e610(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [15]
+// @0x14000e6d0
+void FUN_14000e6d0(void* p, const InteractiveObject* oldCharacter) { FUN_14000e630(reinterpret_cast<AvmCharacter*>(static_cast<unsigned char*>(p) - 0x30), oldCharacter); }
+// 0x1431b5b40 [16]
+// @0x14000e7e0
+void FUN_14000e7e0(void* p, const InteractiveObject* oldCharacter) { FUN_14000e640(reinterpret_cast<AvmCharacter*>(static_cast<unsigned char*>(p) - 0x30), oldCharacter); }
+// 0x1431b5b40 [17]
+// @0x14000e6f0
+void FUN_14000e6f0(void* p, InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocus,
+                   unsigned controller, FocusMovedType moved) { FUN_14000e650(reinterpret_cast<AvmCharacter*>(static_cast<unsigned char*>(p) - 0x30), event, oldOrNewFocus, controller, moved); }
+// 0x1431b5b40 [18]
+// @0x14000e830
+void FUN_14000e830(void* p) { FUN_14000e670(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [19]
+// @0x14000e7d0
+bool FUN_14000e7d0(void* p) { return FUN_14000e680(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [20]
+// @0x14000e780
+bool FUN_14000e780(void* p) { return FUN_14000e690(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [21]
+// @0x14000e7c0
+bool FUN_14000e7c0(void* p) { return FUN_14000e6a0(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b5b40 [22]
+// @0x14000e760
+bool FUN_14000e760(void* p) { return FUN_14000e6b0(reinterpret_cast<AvmCharacter*>(static_cast<unsigned char*>(p) - 0x30)); }
 
 // The four AS2 Video-character traits live on the secondary AvmVideoCharacter base (+0x08).
 // This preserves the exe's field offsets and sends all other names through the script object.
@@ -1875,7 +1984,7 @@ void FUN_14000e840(void* object)
 
 // MS2-FUNCTIONAL: invokes the video character destructor and frees storage when the deleting flag is set.
 // @0x14000e8a0
-void* FUN_14000e8a0(void* object, unsigned __int64 flags)
+__declspec(noinline) void* FUN_14000e8a0(void* object, unsigned __int64 flags)
 {
     FUN_14000e840(object);
     if (flags & 1) Scaleform::Memory::Free(object);

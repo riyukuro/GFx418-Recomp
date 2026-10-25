@@ -123,7 +123,11 @@ ExeDecl<void(void*)> FUN_14257dcd0;
 ExeDecl<void(void*)> FUN_14257dcb0;
 ExeDecl<bool(void*, void*)> FUN_142518c70;
 ExeDecl<void(void*, std::uint64_t)> FUN_142526340;
-ExeDecl<void()> FUN_142519200;
+ExeDecl<void(void*)> FUN_142519860;
+ExeDecl<bool(const void*, const void*)> FUN_142510dc0;
+ExeDecl<void(void*, const void*)> FUN_1424efe00;
+ExeDecl<void(void*, const void*)> FUN_1424f1f70;
+ExeDecl<bool(const void*)> FUN_142514f70;
 ExeDecl<const char*(void*, void*)> FUN_142506e10;
 ExeDecl<void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t)> FUN_142519d50;
 ExeDecl<void(void*)> FUN_1424ddc20;
@@ -643,28 +647,53 @@ void FUN_14001a3c0(void* self, void*, std::uint8_t flag)
     auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
     *(static_cast<unsigned char*>(data) + 0x14) = flag;
 }
-namespace {
-
+// The Video display object's leaf slots; external, the vtable copies of data_rdata_sf_video take their addresses.
 // @0x14001b000
-std::uint64_t FUN_14001b000() { return 0; }
+__declspec(noinline) std::uint64_t FUN_14001b000(void*) { return 0; }
 // @0x14001b010
-std::uint64_t FUN_14001b010() { return 0; }
+__declspec(noinline) std::uint64_t FUN_14001b010(void*) { return 0; }
 // @0x14001b020
-std::uint64_t FUN_14001b020() { return 0; }
+__declspec(noinline) std::uint64_t FUN_14001b020(void*) { return 0; }
 // @0x14001b030
-std::uint64_t FUN_14001b030() { return 0; }
+__declspec(noinline) std::uint64_t FUN_14001b030(void*) { return 0; }
 // @0x14001b070
-std::uint8_t FUN_14001b070() { return 1; }
+__declspec(noinline) std::uint8_t FUN_14001b070(void*) { return 1; }
+// AvmInteractiveObj::HasEventHandler
 // @0x14001b080
-std::uint8_t thunk_FUN_142510dc0() { return 0; }
+__declspec(noinline) bool thunk_FUN_142510dc0(const void* object, const void* id) { return FUN_142510dc0(object, id); }
 // @0x14001b090
-std::uint8_t FUN_14001b090() { return 1; }
+__declspec(noinline) std::uint8_t FUN_14001b090(void*) { return 1; }
 // @0x14001b0b0
-std::uint64_t FUN_14001b0b0() { return 0; }
+__declspec(noinline) std::uint64_t FUN_14001b0b0(void*) { return 0; }
+// AvmInteractiveObj::CloneInternalData
 // @0x14001b0c0
-void thunk_FUN_1424efe00() {}
+__declspec(noinline) void thunk_FUN_1424efe00(void* object, const void* source) { FUN_1424efe00(object, source); }
+// AvmInteractiveObj::CopyPhysicalProperties
 // @0x14001b0d0
-void thunk_FUN_1424f1f70() {}
+__declspec(noinline) void thunk_FUN_1424f1f70(void* object, const void* source) { FUN_1424f1f70(object, source); }
+// 0x1431b7ea0 [18..22]
+// @0x14001b100
+__declspec(noinline) void FUN_14001b100(void*) {}
+// @0x14001b110
+__declspec(noinline) bool FUN_14001b110(void*) { return false; }
+// @0x14001b120
+__declspec(noinline) bool FUN_14001b120(void*) { return true; }
+// @0x14001b130
+__declspec(noinline) bool FUN_14001b130(void*) { return true; }
+// AvmInteractiveObj::IsTabable
+// @0x14001b140
+__declspec(noinline) bool FUN_14001b140(const void* object) { return FUN_142514f70(object); }
+// The traits' debug class names (slot 2 of each traits vtable; 0x1431b7f60 [16] for the display object).
+// @0x140019af0
+const char* FUN_140019af0(const void*) { return "ClassTraits::NetStream"; }
+// @0x14001a040
+const char* FUN_14001a040(const void*) { return "Instances::fl_media::Video"; }
+// @0x14001a0b0
+const char* FUN_14001a0b0(const void*) { return "InstanceTraits::Video"; }
+// @0x14001ae30
+const char* FUN_14001ae30(const void*) { return "ClassTraits::Video"; }
+// @0x14001aff0
+const char* FUN_14001aff0(const void*) { return "flash.media.Video"; }
 
 // MS2-FUNCTIONAL: releases the retained atom field and runs the inherited AS3 cleanup.
 // @0x140019060
@@ -759,7 +788,7 @@ void ConvertVideoCallback(void* vm, std::uint64_t callback, std::uint64_t contex
     auto temporary = reinterpret_cast<std::uintptr_t>(object);
     ReleaseVideoAtom(&temporary);
 }
-}
+} // namespace
 // MS2-FUNCTIONAL: invokes the metadata callback and converts its object result to an AS3 Value.
 // @0x140019d70
 void FUN_140019d70(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
@@ -821,7 +850,6 @@ void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3
     value->Pick(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
 }
 
-} // namespace (sfr36: the natives below have external linkage, other units take their addresses)
 namespace Scaleform { namespace GFx { namespace Video { class VideoCharacter; }}}
 // MS2-FUNCTIONAL: Video.videoHeight getter (the display height kept as a double at +0x70).
 // @0x14001a060
@@ -854,7 +882,7 @@ void FUN_14001a410(void* self, void*, void* netStream)
         if (player) { auto** vtable = *reinterpret_cast<void***>(player); reinterpret_cast<void(*)(void*, void*)>(vtable[7])(player, display); }
     }
 }
-namespace {
+// (sfr33) external: the Video traits / display vtable copies of data_rdata_sf_video take these addresses.
 
 // MS2-FUNCTIONAL: destroys AS3 CTraits and conditionally frees the allocation through the Scaleform heap.
 // @0x14001a5c0
@@ -1000,9 +1028,9 @@ void* FUN_14001aea0(void* object, std::uint64_t flags)
     return FUN_140019b60(object, flags);
 }
 // @0x14001afd0
-void* FUN_14001afd0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x40 : nullptr; }
+__declspec(noinline) void* FUN_14001afd0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x40 : nullptr; }
 // @0x14001afe0
-void* FUN_14001afe0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x30 : nullptr; }
+__declspec(noinline) void* FUN_14001afe0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x30 : nullptr; }
 
 // MS2-FUNCTIONAL: releases the retained pointer stored in the holder.
 // @0x14001b980
@@ -1090,31 +1118,31 @@ std::uint64_t* FUN_14001be50(std::uint64_t* holder, std::uint64_t replacement)
 
 // MS2-FUNCTIONAL: forwards event dispatch to the common AS3 interactive object handler.
 // @0x14001b040
-bool thunk_FUN_142518c70(void* object, void* event) { return FUN_142518c70(object, event); }
+__declspec(noinline) bool thunk_FUN_142518c70(void* object, void* event) { return FUN_142518c70(object, event); }
 // MS2-FUNCTIONAL: normalizes a tagged atom and dispatches it through the recovered AS3 helper.
 // @0x14001b050
-void thunk_FUN_142519080(void* value)
+__declspec(noinline) void thunk_FUN_142519080(void* value)
 {
     auto atom = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(value) + 0x10);
     if (!atom) atom = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(value) + 8);
     if (atom & 1) --atom;
     FUN_142526340(value, atom);
 }
-// MS2-FUNCTIONAL: forwards to the shared AS3 movie callback.
+// MS2-FUNCTIONAL: AvmInteractiveObj::OnEventUnload.
 // @0x14001b060
-void thunk_FUN_142519200() { FUN_142519200(); }
+__declspec(noinline) void thunk_FUN_142519860(void* object) { FUN_142519860(object); }
 // MS2-FUNCTIONAL: forwards absolute path formatting to the AS3 display object helper.
 // @0x14001b0a0
-const char* thunk_FUN_142506e10(void* object, void* path) { return FUN_142506e10(object, path); }
+__declspec(noinline) const char* thunk_FUN_142506e10(void* object, void* path) { return FUN_142506e10(object, path); }
 // MS2-FUNCTIONAL: forwards focus changes to the shared AS3 interactive object handler.
 // @0x14001b0e0
-void FUN_14001b0e0(void* object, std::uint32_t event, void* target, std::uint32_t controller, std::uint32_t moved)
+__declspec(noinline) void FUN_14001b0e0(void* object, std::uint32_t event, void* target, std::uint32_t controller, std::uint32_t moved)
 {
     FUN_142519d50(object, event, target, controller, moved);
 }
 // MS2-FUNCTIONAL: restores the executable's AvmInteractiveObj vtable and destroys the base object.
 // @0x14001b3a0
-void* FUN_14001b3a0(void* object)
+__declspec(noinline) void* FUN_14001b3a0(void* object)
 {
     *reinterpret_cast<void***>(static_cast<unsigned char*>(object) + 0x40) = &AvmInteractiveVtable;
     FUN_1424ddc20(object);
@@ -1152,7 +1180,116 @@ void FUN_14001bfd0(void* object, const std::uint32_t* id)
     }
 }
 
-} // namespace (sfr34: the two array copies below have external linkage, sfr_d3d9_01g calls them)
+// The Video display object's this-adjusting slots: 0x1431b7de0 is the +0x40 / +0x10 bases' table, 0x1431b7ea0 the
+// +0x30 / +0x10 bases'; each moves `this` back and runs the primary slot (slot index in brackets).
+// 0x1431b7de0 [0]
+// @0x14001b1e0
+void* FUN_14001b1e0(void* p) { return FUN_14001b3a0(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [1]
+// @0x14001b2a0
+void* FUN_14001b2a0(void* p) { return FUN_14001afe0(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [2]
+// @0x14001b2c0
+std::uint64_t FUN_14001b2c0(void* p) { return FUN_14001b000(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [3]
+// @0x14001b280
+std::uint64_t FUN_14001b280(void* p) { return FUN_14001b010(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [4]
+// @0x14001b2d0
+std::uint64_t FUN_14001b2d0(void* p) { return FUN_14001b020(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [5]
+// @0x14001b200
+std::uint64_t FUN_14001b200(void* p) { return FUN_14001b030(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [6]
+// @0x14001b270
+const char* FUN_14001b270(void* p, void* path) { return thunk_FUN_142506e10(static_cast<unsigned char*>(p) - 0x40, path); }
+// 0x1431b7de0 [7]
+// @0x14001b1f0
+bool FUN_14001b1f0(void* p, const void* id) { return thunk_FUN_142510dc0(static_cast<unsigned char*>(p) - 0x40, id); }
+// 0x1431b7de0 [8]
+// @0x14001b220
+bool FUN_14001b220(void* p, void* event) { return thunk_FUN_142518c70(static_cast<unsigned char*>(p) - 0x40, event); }
+// 0x1431b7de0 [9]
+// @0x14001b350
+void FUN_14001b350(void* p) { thunk_FUN_142519080(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [10]
+// @0x14001b1a0
+void FUN_14001b1a0(void* p) { thunk_FUN_142519860(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [11]
+// @0x14001b2e0
+std::uint8_t FUN_14001b2e0(void* p) { return FUN_14001b070(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [12]
+// @0x14001b250
+void* FUN_14001b250(void* p) { return FUN_14001afd0(static_cast<unsigned char*>(p) - 0x40); }
+// 0x1431b7de0 [13]
+// @0x14001b210
+std::uint8_t FUN_14001b210(void* p) { return FUN_14001b090(static_cast<unsigned char*>(p) - 0x10); }
+// 0x1431b7de0 [14]
+// @0x14001b330
+std::uint64_t FUN_14001b330(void* p) { return FUN_14001b0b0(static_cast<unsigned char*>(p) - 0x10); }
+// 0x1431b7de0 [15]
+// @0x14001b240
+void FUN_14001b240(void* p, const void* source) { thunk_FUN_1424efe00(static_cast<unsigned char*>(p) - 0x10, source); }
+// 0x1431b7de0 [16]
+// @0x14001b190
+void FUN_14001b190(void* p, const void* source) { thunk_FUN_1424f1f70(static_cast<unsigned char*>(p) - 0x10, source); }
+// 0x1431b7de0 [17]
+// @0x14001b290
+void FUN_14001b290(void* p, std::uint32_t event, void* target, std::uint32_t controller, std::uint32_t moved) { FUN_14001b0e0(static_cast<unsigned char*>(p) - 0x10, event, target, controller, moved); }
+// 0x1431b7de0 [18]
+// @0x14001b230
+void FUN_14001b230(void* p) { FUN_14001b100(static_cast<unsigned char*>(p) - 0x10); }
+// 0x1431b7de0 [19]
+// @0x14001b180
+bool FUN_14001b180(void* p) { return FUN_14001b110(static_cast<unsigned char*>(p) - 0x10); }
+// 0x1431b7de0 [20]
+// @0x14001b380
+bool FUN_14001b380(void* p) { return FUN_14001b120(static_cast<unsigned char*>(p) - 0x10); }
+// 0x1431b7de0 [21]
+// @0x14001b160
+bool FUN_14001b160(void* p) { return FUN_14001b130(static_cast<unsigned char*>(p) - 0x10); }
+// 0x1431b7de0 [22]
+// @0x14001b370
+bool FUN_14001b370(void* p) { return FUN_14001b140(static_cast<unsigned char*>(p) - 0x10); }
+// 0x1431b7ea0 [0]
+// @0x14001b2f0
+void* FUN_14001b2f0(void* p) { return FUN_14001b3a0(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [1]
+// @0x14001b170
+void* FUN_14001b170(void* p) { return FUN_14001afe0(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [2]
+// @0x14001b1b0
+std::uint64_t FUN_14001b1b0(void* p) { return FUN_14001b000(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [3]
+// @0x14001b390
+std::uint64_t FUN_14001b390(void* p) { return FUN_14001b010(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [4]
+// @0x14001b1c0
+std::uint64_t FUN_14001b1c0(void* p) { return FUN_14001b020(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [5]
+// @0x14001b310
+std::uint64_t FUN_14001b310(void* p) { return FUN_14001b030(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [6]
+// @0x14001b360
+const char* FUN_14001b360(void* p, void* path) { return thunk_FUN_142506e10(static_cast<unsigned char*>(p) - 0x30, path); }
+// 0x1431b7ea0 [7]
+// @0x14001b300
+bool FUN_14001b300(void* p, const void* id) { return thunk_FUN_142510dc0(static_cast<unsigned char*>(p) - 0x30, id); }
+// 0x1431b7ea0 [8]
+// @0x14001b320
+bool FUN_14001b320(void* p, void* event) { return thunk_FUN_142518c70(static_cast<unsigned char*>(p) - 0x30, event); }
+// 0x1431b7ea0 [9]
+// @0x14001b260
+void FUN_14001b260(void* p) { thunk_FUN_142519080(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [10]
+// @0x14001b2b0
+void FUN_14001b2b0(void* p) { thunk_FUN_142519860(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [11]
+// @0x14001b1d0
+std::uint8_t FUN_14001b1d0(void* p) { return FUN_14001b070(static_cast<unsigned char*>(p) - 0x30); }
+// 0x1431b7ea0 [12]
+// @0x14001b340
+void* FUN_14001b340(void* p) { return FUN_14001afd0(static_cast<unsigned char*>(p) - 0x30); }
 
 // MS2-FUNCTIONAL: copies a VideoPlayer pointer array into fresh allocator owned storage.
 // @0x142742ed0
@@ -1647,6 +1784,7 @@ void FUN_1400182f0(void* callback, const std::uint32_t* info)
     }
 }
 
+} // namespace
 // MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef.
 // @0x14001a470
 void* FUN_14001a470(void* self)
@@ -1672,6 +1810,7 @@ void* FUN_14001a470(void* self)
     }
     return display;
 }
+namespace {
 
 // MS2-FUNCTIONAL: creates a callback property object from the supplied AS3 strings and binds it to this stream.
 // @0x140019890

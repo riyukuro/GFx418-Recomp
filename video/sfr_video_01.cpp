@@ -1044,6 +1044,41 @@ void* FUN_140002e40(void* object, unsigned flags)
     return object;
 }
 
+// The one-instruction slots of the sound stream vtable 0x1431b4ce0 (slot index in brackets).
+// [1]
+// @0x140002d90
+int FUN_140002d90(void*) { return 0; }
+// [2]
+// @0x140002da0
+int FUN_140002da0(void*) { return 0; }
+// [4]
+// @0x140002db0
+void FUN_140002db0(void*) {}
+// [5] true while a channel is attached
+// @0x140002950
+bool FUN_140002950(void* stream) { return *reinterpret_cast<void**>(static_cast<unsigned char*>(stream) + 0x10) != nullptr; }
+// [6]
+// @0x140002dc0
+void FUN_140002dc0(void*) {}
+// [7]
+// @0x140002dd0
+float FUN_140002dd0(void*) { return 0.0f; }
+// [8]
+// @0x140002de0
+void FUN_140002de0(void*) {}
+// [9] the stored float at +0x18
+// @0x140002df0
+float FUN_140002df0(void* stream) { return *reinterpret_cast<float*>(static_cast<unsigned char*>(stream) + 0x18); }
+// [11]
+// @0x140002e00
+float FUN_140002e00(void*) { return 0.0f; }
+// [12]
+// @0x140002e10
+void FUN_140002e10(void*) {}
+// [13]
+// @0x140002e20
+void FUN_140002e20(void*) {}
+
 // MS2-FUNCTIONAL: releases the retained interface in this slot.
 // @0x140003a50
 void FUN_140003a50(void** interfaceSlot)
@@ -1993,6 +2028,14 @@ void* FUN_14000a880(void* object, unsigned flags)
     return object;
 }
 
+// The NetStream prototype's deleting destructor seen through its two secondary bases.
+// 0x1431b5300 [0]: this adjustor of the +0xd8 base
+// @0x14000a010
+void* FUN_14000a010(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0xd8, flags); }
+// 0x1431b5310 [0]: this adjustor of the +0x20 base
+// @0x14000a020
+void* FUN_14000a020(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0x20, flags); }
+
 // MS2-FUNCTIONAL: destroys the prototype and NetStream base, then optionally frees the object.
 // @0x14000b1c0
 void* FUN_14000b1c0(void* object, unsigned flags)
@@ -2298,6 +2341,10 @@ void FUN_14000d330(void* wrapper)
     if (character && *reinterpret_cast<void**>(static_cast<unsigned char*>(character) + 0x20))
         FUN_140010a30(static_cast<Scaleform::GFx::Video::VideoCharacter*>(character));
 }
+
+// AvmVideoCharacter vtable 0x1431b5cb0 [34]: a constant id.
+// @0x14000d320
+unsigned FUN_14000d320(void*) { return 0x7027cf; }
 
 // MS2-FUNCTIONAL: dispatches the video prototype's release, cycle-mark, and scan collector passes.
 // @0x14000a730
