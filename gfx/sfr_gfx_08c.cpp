@@ -71,7 +71,8 @@ public:
     virtual const char* GetFileURL(KeyHandle hdata) const;
 };
 
-static ImageFileKeyInterface ImageFileKeyInterface_Instance;
+// The exe instance 0x143a2fe18. External: sfr_atexit_01 tears it down as DAT_143a2fe18.
+ImageFileKeyInterface ImageFileKeyInterface_Instance;
 
 // @0x1426be7c0
 UPInt ImageFileKeyInterface::GetHashCode(KeyHandle hdata) const

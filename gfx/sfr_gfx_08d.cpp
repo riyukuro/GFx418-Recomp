@@ -55,7 +55,8 @@ public:
     }
 };
 
-static SoundFileKeyInterface SoundFileKeyInterface_Instance;
+// The exe instance 0x143a2fef8. External: sfr_atexit_01 tears it down as DAT_143a2fef8.
+SoundFileKeyInterface SoundFileKeyInterface_Instance;
 
 // @0x1426d1d40
 UPInt SoundFileKeyInterface::GetHashCode(KeyHandle hdata) const
