@@ -178,6 +178,7 @@ void* FUN_142689520(void* self, unsigned flags)
 // deleting destructors so the full exe has them (the hook DLL binds the names to the exe's tables). 0x1431921c0's
 // slot is the counted-buffer record destructor in sfr_render_05l.
 void* FUN_142688ed0(void* self, unsigned flags);
+extern "C" void* const DAT_143192160[1] = { (void*)&FUN_142688f50 };
 extern "C" void* const DAT_143192170[1] = { (void*)&FUN_142689180 };
 extern "C" void* const DAT_143192180[1] = { (void*)&FUN_1426890b0 };
 extern "C" void* const DAT_1431921a0[1] = { (void*)&FUN_142689330 };

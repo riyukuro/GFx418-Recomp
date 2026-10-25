@@ -38,22 +38,23 @@ extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
+// The vftables below are the tables themselves: their users store the table's address (the exe's lea), not its slot 0.
 extern ExeDecl<void*> DAT_1431921e0;
 #define AS3TextRecordVtable DAT_1431921e0
 extern ExeDecl<void*> DAT_1431921b0;
-#define AS3MovieImageDataVtable DAT_1431921b0
+#define AS3MovieImageDataVtable ((void*)&DAT_1431921b0)
 extern ExeDecl<void*> DAT_143192170;
-#define AS3MovieImageStringSetVtable DAT_143192170
+#define AS3MovieImageStringSetVtable ((void*)&DAT_143192170)
 extern ExeDecl<void*> DAT_143192190;
-#define AS3MovieImageValueSetVtable DAT_143192190
+#define AS3MovieImageValueSetVtable ((void*)&DAT_143192190)
 extern ExeDecl<void*> DAT_1431921a0;
-#define AS3MovieImageNameSetVtable DAT_1431921a0
+#define AS3MovieImageNameSetVtable ((void*)&DAT_1431921a0)
 extern ExeDecl<void*> DAT_143192180;
-#define AS3MovieImageTreeVtable DAT_143192180
+#define AS3MovieImageTreeVtable ((void*)&DAT_143192180)
 extern ExeDecl<void*> DAT_1431921d0;
-#define AS3MovieResourceDataVtable DAT_1431921d0
+#define AS3MovieResourceDataVtable ((void*)&DAT_1431921d0)
 extern ExeDecl<void*> DAT_143192160;
-#define AS3MovieMemoryItemVtable DAT_143192160
+#define AS3MovieMemoryItemVtable ((void*)&DAT_143192160)
 extern ExeDecl<void*> DAT_1431bede8;
 #define AS3AudioEventVtable DAT_1431bede8
 extern ExeDecl<void*> DAT_1431bec40;
@@ -97,11 +98,11 @@ extern ExeDecl<void*> DAT_14318f040;
 extern ExeDecl<void*> DAT_14318f048;
 #define AS3MovieMarkerVtable DAT_14318f048
 extern ExeDecl<void*> DAT_14318f020;
-#define AS3TextValueRecordVtable DAT_14318f020
+#define AS3TextValueRecordVtable ((void*)&DAT_14318f020)
 extern ExeDecl<void*> DAT_14318f030;
-#define AS3MovieViewValueVtable DAT_14318f030
+#define AS3MovieViewValueVtable ((void*)&DAT_14318f030)
 extern ExeDecl<void*> DAT_1431921c0;
-#define AS3MovieImageExtraVtable DAT_1431921c0
+#define AS3MovieImageExtraVtable ((void*)&DAT_1431921c0)
 extern "C" void FUN_14268cd80(void*, void*, unsigned);
 extern "C" void FUN_14268c510(void*, void*, unsigned);
 extern "C" void FUN_14268d2b0(void*, void*, unsigned);
