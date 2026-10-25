@@ -2058,8 +2058,8 @@ void FUN_1423ca6b0(void* raw, const char* name)
         }
         auto* record = reinterpret_cast<unsigned char*>(array[0]) + count * 0x30;
         memset(record, 0, 0x30);
-        *reinterpret_cast<String*>(record + 0x10) = "";
-        *reinterpret_cast<String*>(record + 0x18) = "";
+        new (record + 0x10) String();  // the exe copy-constructs two default Strings into the zeroed record
+        new (record + 0x18) String();
         *reinterpret_cast<unsigned*>(record + 0x20) = 0x02000000;
         array[1] = count + 1;
         *reinterpret_cast<int*>(bytes + 0xd0) += 1;
