@@ -1721,15 +1721,15 @@ bool AvmTextField::IsFocusEnabled(FocusMovedType fmt) const
 bool AvmSprite::Invoke(const char* methodName, Value* presult, unsigned numArgs)
 {
     Ptr<Sprite> psprite = GetSprite(); // kept alive across the call
-    return GAS_Invoke(methodName, presult, this, reinterpret_cast<Environment*>(Unrecovered_38), numArgs,
-                      reinterpret_cast<Environment*>(Unrecovered_38)->GetTopIndex());
+    return GAS_Invoke(methodName, presult, this, &Env, numArgs,
+                      Env.GetTopIndex());
 }
 
 // @0x142963fc0
 bool AvmSprite::InvokeArgs(const char* methodName, Value* presult, const char* methodArgFmt, va_list args)
 {
     Ptr<Sprite> psprite = GetSprite();
-    return GAS_InvokeParsed(methodName, presult, this, reinterpret_cast<Environment*>(Unrecovered_38), methodArgFmt,
+    return GAS_InvokeParsed(methodName, presult, this, &Env, methodArgFmt,
                             args);
 }
 
@@ -1743,12 +1743,12 @@ bool AvmSprite::HasEventHandler(const EventId& id) const
     ASString      method(GetAS2Root()->GetStringManager()->GetBuiltin(btype));
     if (!method.IsEmpty())
     {
-        Object* pclipObj = *reinterpret_cast<Object* const*>(&Unrecovered_38[0x1d8 - 0x38]);
+        Object* pclipObj = pMovieClipObj.GetPtr();
         Value   v;
         Object* pobj = pclipObj ? pclipObj : Get__proto__();
         if (pobj)
         {
-            Environment* penv = reinterpret_cast<Environment*>(const_cast<UByte*>(Unrecovered_38));
+            Environment* penv = const_cast<Environment*>(&Env);
             if (pobj->GetMemberRaw(penv->GetSC(), method, &v))
                 return true;
         }
@@ -1858,7 +1858,7 @@ bool MovieRoot::Invoke(InteractiveObject* pmovie, const char* pmethodName, GFx::
     {
         AvmSprite*             pavmSprite = static_cast<AvmSprite*>(pavmChar);
         Ptr<InteractiveObject> holder     = pavmSprite->GetDispObj();
-        Environment*           pspriteEnv = reinterpret_cast<Environment*>(pavmSprite->Unrecovered_38);
+        Environment*           pspriteEnv = &pavmSprite->Env;
         retVal = GAS_Invoke(pmethodName, &resultVal, pavmSprite, pspriteEnv, numArgs, pspriteEnv->GetTopIndex());
     }
     for (unsigned n = numArgs; n; n--)

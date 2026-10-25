@@ -2357,7 +2357,7 @@ inline MovieClipObject::MovieClipObject(GlobalContext* pgc, Sprite* psprite)
 // @0x142953da0
 MovieClipObject* AvmSprite::GetMovieClipObject()
 {
-    Ptr<MovieClipObject>& pobj = *reinterpret_cast<Ptr<MovieClipObject>*>(&Unrecovered_38[0x1d8 - 0x38]);
+    Ptr<MovieClipObject>& pobj = pMovieClipObj;
     if (!pobj)
         pobj = *SF_HEAP_NEW(GetSprite()->GetMovieImpl()->GetMovieHeap()) MovieClipObject(GetGC(), GetSprite());
     return pobj;
@@ -2511,7 +2511,7 @@ void SelectionCtorFunction::GetModalClip(const FnCall& fn)
 // @0x142954d10
 InteractiveObject* AvmSprite::GetRelativeTarget(const ASString& name, bool firstCall)
 {
-    const Environment* penv          = reinterpret_cast<const Environment*>(Unrecovered_38);
+    const Environment* penv          = &Env;
     bool               caseSensitive = penv->IsCaseSensitive();
     if (name.IsBuiltin())
     {

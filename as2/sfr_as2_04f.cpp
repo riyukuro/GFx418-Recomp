@@ -42,7 +42,7 @@ bool AvmSprite::ActsAsButton() const
 {
     if (!static_cast<const AvmSpriteBase*>(this)->IsLevelMovie() && (pDispObj->Flags & InteractiveObject::Mask_Enabled))
     {
-        Object* pclipObj = *reinterpret_cast<Object* const*>(&Unrecovered_38[0x1d8 - 0x38]);
+        Object* pclipObj = pMovieClipObj.GetPtr();
         Object* pobj     = pclipObj ? pclipObj : Get__proto__();
         if (pobj)
         {
