@@ -40,6 +40,7 @@ ExeDecl<void*(void*, void*)> FUN_1400126f0;
 ExeDecl<void*(void*, void*)> FUN_14000cf20;
 ExeDecl<void*(void*, void*)> FUN_14000ed60;
 ExeDecl<void(void*, void*, void*)> FUN_140001270;           // AS2VideoSupport::AttachAudio
+#pragma comment(linker, "/alternatename:?FUN_140001270@@YAXPEAX00@Z=?AttachAudio@AS2VideoSupportImpl@@UEAAXPEAVObject@AS2@GFx@Scaleform@@PEAVSprite@45@@Z")   // sfr36: full-exe link
 ExeDecl<void(void*, void*)> FUN_1425210d0;                   // AS3 class registration
 extern ExeDecl<void*> DAT_143a47b70; static constexpr ExeDecl<void*>& Video04ClassInfo = DAT_143a47b70;                             // the AS3 class info registered below
 
