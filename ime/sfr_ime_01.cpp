@@ -4863,6 +4863,15 @@ unsigned FUN_1423d61c0(void* self, const char* name)
     return *(unsigned*)((UByte*)self + 0x88);
 }
 
+// MS2-FUNCTIONAL: the same body as FUN_1423d61c0, slot 2 of the 17-slot table at 0x143138530.
+// @0x1423d7dc0
+unsigned FUN_1423d7dc0(void* self, const char* name)
+{
+    if (name) return FUN_1423cb400(self, name);
+    if (*(unsigned*)((UByte*)self + 0x84) == 0x2000000) return 0x1000000;
+    return *(unsigned*)((UByte*)self + 0x88);
+}
+
 // MS2-FUNCTIONAL: Release on the refcount at +0x14.
 // @0x1423d7350
 int FUN_1423d7350(void* self)
