@@ -3415,6 +3415,25 @@ namespace Instances { namespace fl_display
         return *reinterpret_cast<int*>(reinterpret_cast<UByte*>(pstage) + 0x128);
     }
 
+    // The thunk-table forms: tail jumps to the container's.
+    // @0x142447630
+    void Stage::addChild(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject* a0)
+    {
+        DisplayObjectContainer::addChild(result, a0);
+    }
+
+    // @0x142447820
+    void Stage::addChildAt(SPtr<Instances::fl_display::DisplayObject>& result, Instances::fl_display::DisplayObject* a0, SInt32 a1)
+    {
+        DisplayObjectContainer::addChildAt(result, a0, a1);
+    }
+
+    // @0x142452030
+    void Stage::removeChildAt(SPtr<Instances::fl_display::DisplayObject>& result, SInt32 a0)
+    {
+        DisplayObjectContainer::removeChildAt(result, a0);
+    }
+
     // @0x142447610
     SPtr<Instances::fl_display::DisplayObject> Stage::addChild(Instances::fl_display::DisplayObject* a0)
     {
