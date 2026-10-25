@@ -37723,7 +37723,7 @@ void FUN_140095250(cri_any cri_unused, ...)
 cri_any FUN_140095430(cri_any cri_unused, ...)
 {
   _DAT_143d67f58 = "\nCRI DCT/PCx64 Ver.2.038 Build:Jan 13 2012 18:29:23\n";
-  return cri_any();
+  return _DAT_143d67f58;  // the exe returns the version string in rax (FUN_140066320 stores it)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -37814,14 +37814,7 @@ void FUN_140095590(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   double *pd_v12;
   double *pd_v13;
   longlong l_v14;
-  double loc_268 [8];
-  double loc_228 [8];
-  double adStack_1e8 [8];
-  double adStack_1a8 [8];
-  double adStack_168 [8];
-  double adStack_128 [8];
-  double adStack_e8 [8];
-  double adStack_a8 [21];
+  double loc_268 [64];  // one 8x8 block: the first pass fills all 64 through pd_v13, the second reads its columns
   
   pd_v13 = loc_268;
   pd_v10 = (double *)((char *)arg1 + 0x10);
@@ -37853,14 +37846,14 @@ void FUN_140095590(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   l_v14 = 0;
   do {
     d_v1 = loc_268[l_v14];
-    d_v2 = loc_228[l_v14];
-    d_v3 = adStack_1e8[l_v14];
+    d_v2 = loc_268[8 + l_v14];
+    d_v3 = loc_268[16 + l_v14];
     l_v11 = 8;
-    d_v4 = adStack_1a8[l_v14];
-    d_v5 = adStack_168[l_v14];
-    d_v6 = adStack_128[l_v14];
-    d_v7 = adStack_e8[l_v14];
-    d_v8 = adStack_a8[l_v14];
+    d_v4 = loc_268[24 + l_v14];
+    d_v5 = loc_268[32 + l_v14];
+    d_v6 = loc_268[40 + l_v14];
+    d_v7 = loc_268[48 + l_v14];
+    d_v8 = loc_268[56 + l_v14];
     pd_v10 = (double *)((char *)arg3 + 0x80);
     pd_v13 = (double *)(arg2 + l_v14 * 8);
     do {
