@@ -515,8 +515,8 @@ public:
 
 // A font of a substitute font movie with the same name and style stands in for the movie's own; otherwise the movie
 // font becomes a FontResource of the binding (an empty one is resolved later through the font manager).
-// The one creator of all fonts (exe 0x143a2f430; constant-initialized).
-static FontResourceCreator FontResourceCreator_Static;
+// The one creator of all fonts (exe 0x143a2f430; constant-initialized). External: sfr_atexit_01 tears it down as DAT_143a2f430.
+FontResourceCreator FontResourceCreator_Static;
 
 // @0x142636a00
 // MS2-FUNCTIONAL: the exe calls ResourceBinding::GetResourceData out of line (0x1425d0f20); here it is inlined

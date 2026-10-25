@@ -94,7 +94,8 @@ bool GFxSystemFontResourceKeyInterface::KeyEquals(KeyHandle hdata, const Resourc
            pthisKey->pFontProvider == potherKey->pFontProvider && pthisKey->FontFlags == potherKey->FontFlags;
 }
 
-static GFxSystemFontResourceKeyInterface GFxSystemFontResourceKeyInterface_Instance;
+// The exe instance 0x143a2f690. External: sfr_atexit_01 tears it down as DAT_143a2f690.
+GFxSystemFontResourceKeyInterface GFxSystemFontResourceKeyInterface_Instance;
 
 // @0x1426536b0
 void* FUN_1426536b0(GFxSystemFontResourceKeyInterface* p, unsigned flags)
