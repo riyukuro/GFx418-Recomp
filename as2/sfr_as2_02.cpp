@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x1428ffcd0-0x1429006a0 .text$mn
 // MS2-RANGE: 0x142900f50-0x142900fc0 .text$mn
 // MS2-RANGE: 0x142901ae0-0x142902a00 .text$mn
+// MS2-RANGE: 0x142902a00-0x142902a0d .text$mn
 // MS2-RANGE: 0x142902a10-0x1429033c0 .text$mn
 // MS2-RANGE: 0x1429033c0-0x1429049b0 .text$mn
 // MS2-RANGE: 0x142905d70-0x142905e00 .text$mn
@@ -1208,6 +1209,20 @@ static inline void SetEnvTarget(Environment* penv, InteractiveObject* ptarget)
     penv->IsInvalidTarget = false;
     penv->Target          = ptarget;
     penv->StringContext.UpdateVersion(ptarget->GetVersion());
+}
+
+// The valueOf entries of ObjectProto's and FunctionProto's function tables (as FUN_: the proto headers declare no
+// ValueOf): this itself.
+// @0x142902a00
+void FUN_142902a00(const FnCall& fn)
+{
+    fn.Result->SetAsObjectInterface(fn.ThisPtr);
+}
+
+// @0x1429033a0
+void FUN_1429033a0(const FnCall& fn)
+{
+    fn.Result->SetAsObject(static_cast<Object*>(fn.ThisPtr));
 }
 
 // @0x1429033c0

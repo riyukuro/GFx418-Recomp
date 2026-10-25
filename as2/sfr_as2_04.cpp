@@ -13,6 +13,8 @@
 // MS2-RANGE: 0x142933d80-0x142933e20 .text$mn
 // MS2-RANGE: 0x142934060-0x142934390 .text$mn
 // MS2-RANGE: 0x142934390-0x1429343e0 .text$mn
+// MS2-RANGE: 0x1429343e0-0x1429343e5 .text$mn
+// MS2-RANGE: 0x1429345c0-0x1429345c3 .text$mn
 // MS2-RANGE: 0x1429345d0-0x142934610 .text$mn
 // MS2-RANGE: 0x142934a00-0x142934a80 .text$mn
 // MS2-RANGE: 0x142935200-0x142935680 .text$mn
@@ -73,6 +75,7 @@
 #include "../include/kernel/sf_std.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_loadqueueentry.h"
+#include "../include/gfx/as2/as2_intervaltimer.h"
 #include "../include/gfx/gfx_assupport.h"
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
@@ -1597,6 +1600,24 @@ template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Member,
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7SizeVisitor@?1??ComputeSizeInBytes@SharedObject@AS2@GFx@Scaleform@@QEAA_KPEAVEnvironment@345@@Z@6B@ 0x1432227e8
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// IntervalTimer's vftable slots 4 and 5 (vftable 0x14321bd70).
+// @0x1429343e0
+void IntervalTimer::Clear()
+{
+    Active = false;
+}
+
+// This build never clears a timer per movie definition: no timer is ever owned by the unloaded definition.
+// @0x1429345c0
+bool IntervalTimer::ClearFor(MovieImpl*, MovieDefImpl*)
+{
+    return false;
+}
+
+}}} // namespace Scaleform::GFx::AS2
+
 // MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143221ff8
 // MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143222080
 // MS2-PIN: ??_GUserDefinedFunctionObject@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292da40
