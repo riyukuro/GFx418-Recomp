@@ -2,7 +2,13 @@
 // source, written from the exe.
 // MS2-UNIT: sfr_as3_16
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424dc870-0x1424e0a70 .text$mn
+// MS2-RANGE: 0x1424dc870-0x1424ddb00 .text$mn
+// MS2-RANGE: 0x1424ddb00-0x1424ddb74 .text$mn
+// MS2-RANGE: 0x1424ddb74-0x1424ddb80 .text$mn
+// MS2-RANGE: 0x1424ddbee-0x1424ddcb0 .text$mn
+// MS2-RANGE: 0x1424ddcb0-0x1424ddce0 .text$mn
+// MS2-RANGE: 0x1424ddd4f-0x1424de0e0 .text$mn
+// MS2-RANGE: 0x1424de0e0-0x1424e0a70 .text$mn
 // MS2-RANGE: 0x1424e0b40-0x1424e2040 .text$mn
 // MS2-RANGE: 0x1424e2bb0-0x1424e2c10 .text$mn
 // MS2-RANGE: 0x1424e3020-0x1424e3150 .text$mn
@@ -1737,6 +1743,9 @@ PropRef::~PropRef()
         return;
     }
     FUN_142521f00(value);
+    // The exe tail-jumps into ReleaseInternal and is done; the member ~Value of This still runs after this body, so
+    // drop the kind here or it releases the same value a second time.
+    *value &= 0xffffffe0;
 }
 
 // @0x1424e0b40
@@ -2402,4 +2411,26 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f20 0x1424e1f20
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f80 0x1424e1f80
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1fe0 0x1424e1fe0
+// MS2-FUNCTIONAL 0x1424ddb00: runs ShapeObject's recovered member/base teardown and applies the scalar-delete flags.
+// @0x1424ddb00
+namespace Scaleform { namespace GFx { namespace AS3 {
+void* DeleteAs3_1424e3890(void* self, unsigned flags);
+}}}
+extern "C" void* Sfr16ShapeObjectDeletingDtor(void* self, unsigned flags)
+{
+    return Scaleform::GFx::AS3::DeleteAs3_1424e3890(self, flags);
+}
+
+// MS2-FUNCTIONAL 0x1424ddcb0: releases the AvmSprite bases using the recovered AvmMovieClip teardown helper.
+// @0x1424ddcb0
+namespace Scaleform { namespace GFx { namespace AS3 {
+void* DeleteAs3_1424e29a0(void* self, unsigned flags);
+}}}
+extern "C" void* Sfr16AvmMovieClipDeletingDtor(void* self, unsigned flags)
+{
+    return Scaleform::GFx::AS3::DeleteAs3_1424e29a0(self, flags);
+}
+
+// MS2-PIN: Sfr16ShapeObjectDeletingDtor 0x1424ddb00
+// MS2-PIN: Sfr16AvmMovieClipDeletingDtor 0x1424ddcb0
 // MS2-PIN: ??_7ASMovieRootBase@GFx@Scaleform@@6B@ 0x14317bde0
