@@ -1786,6 +1786,18 @@ template EntryData* ContextData_ImplMixin<TreeRoot::NodeData, TreeContainer::Nod
 // @0x14256e350
 template void ContextData_ImplMixin<TreeRoot::NodeData, TreeContainer::NodeData>::CopyTo(void*) const;
 
+extern unsigned DestroyCalls;
+
+// TreeRoot::NodeData's Destroy slot (no .pdata): counts, then destroys in place through the virtual destructor.
+// MS2-FUNCTIONAL: free-function form of the mixin's Destroy (the mixin here carries only the copy slots); calls the
+// deleting destructor directly instead of through the vftable.
+// @0x14256e920
+void FUN_14256e920(TreeRoot::NodeData* data)
+{
+    DestroyCalls++;
+    FUN_14256ba70(data, 0);
+}
+
 } // namespace ContextImpl
 
 // The background color travels with the viewport change bit.
@@ -2357,6 +2369,7 @@ bool MovieImpl::IsFocused(const InteractiveObject* ch) const
     return false;
 }
 
+// MS2-FUNCTIONAL: the exe inlines the CharacterHandle release and GetCharacterHandle; called out of line here.
 // @0x1425761a0
 void MovieImpl::SetModalClip(Sprite* pmovie, unsigned controllerIdx)
 {

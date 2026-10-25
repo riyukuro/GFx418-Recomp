@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142966650-0x142967010 .text$mn
 // MS2-RANGE: 0x1429706b0-0x142971340 .text$mn
 // MS2-RANGE: 0x142971340-0x142971360 .text$mn
+// MS2-RANGE: 0x142965da0-0x142965da9 .text$mn
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -91,6 +92,13 @@ SF_FORCEINLINE void LmAssign(Ptr<InteractiveObject>& ptr, InteractiveObject* p)
 }
 
 } // namespace
+
+// The preload task's state (vftable slot 2, no .pdata).
+// @0x142965da0
+bool GFxAS2LoadQueueEntryMT_LoadMovie::IsPreloadingFinished()
+{
+    return pPreloadTask->IsDone();
+}
 
 // Polled by the movie until the loader thread has the movie: then the new sprite takes the place of the old clip
 // (or level) once, the movie clip loader hears of the progress, and frame 0 runs when the first frame (with the

@@ -3081,6 +3081,17 @@ void* FUN_1428f7be0(void* self, unsigned flags)
     return self;
 }
 
+// LoadVars.toString's StringVisitor scalar deleting destructor (vtable slot 0, no .pdata), 0x18 bytes.
+// MS2-FUNCTIONAL: free-function form of the local class's compiler-generated destructor.
+// @0x14292bdc0
+void* FUN_14292bdc0(void* self, unsigned flags)
+{
+    ((ObjectInterface::MemberVisitor*)self)->ObjectInterface::MemberVisitor::~MemberVisitor();
+    if (flags & 1)
+        ::operator delete(self, (size_t)0x18);
+    return self;
+}
+
 // The global updateAfterEvent() does nothing.
 // @0x1428f8530
 void FUN_1428f8530(const FnCall&) {}

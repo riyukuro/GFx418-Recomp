@@ -18,6 +18,9 @@
 // MS2-RANGE: 0x142592860-0x142592946 .text$mn
 // MS2-RANGE: 0x142592950-0x142592a07 .text$mn
 // MS2-RANGE: 0x142592a10-0x142592be1 .text$mn
+// MS2-RANGE: 0x1425924e0-0x1425924e5 .text$mn
+// MS2-RANGE: 0x1425924f0-0x1425924f5 .text$mn
+// MS2-RANGE: 0x1425925b0-0x1425925c2 .text$mn
 
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/gfx/as2/as2_action.h"
@@ -447,3 +450,35 @@ template void MS2_GFX02X_CLASSREG_SET::setRawCapacity(void*, UPInt);
 // MS2-PIN: ?CheckExpand@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAAXPEAX@Z 0x1425921b0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x142592a10
 // MS2-PIN: ?RemoveFromRoots@?$RefCountCollector@$0BED@@AS2@GFx@Scaleform@@QEAAXPEAV?$RefCountBaseGC@$0BED@@234@@Z 0x1425927d0
+
+// Audio's vftable slots without .pdata (Audio is not declared here; raw layout as in its destructor above).
+namespace Scaleform { namespace GFx {
+
+void FUN_1425916c0(void* self, void* psc, void* object); // the "Sound" class registry entry (sfr_render_01e)
+
+// The tags reader (+0x28).
+// MS2-FUNCTIONAL: raw-layout getter
+// @0x1425924e0
+void* FUN_1425924e0(void* self)
+{
+    return RawField<void*>(self, 0x28);
+}
+
+// The sound renderer (+0x30).
+// MS2-FUNCTIONAL: raw-layout getter
+// @0x1425924f0
+void* FUN_1425924f0(void* self)
+{
+    return RawField<void*>(self, 0x30);
+}
+
+// Registers the AS2 Sound class with the global context: forwards (context, string context, context + 0x60).
+// MS2-FUNCTIONAL: raw-layout forwarder
+// @0x1425925b0
+void FUN_1425925b0(void* self, void* gc, void* psc)
+{
+    (void)self;
+    FUN_1425916c0(gc, psc, RawField<void*>(gc, 0x60));
+}
+
+}} // namespace Scaleform::GFx

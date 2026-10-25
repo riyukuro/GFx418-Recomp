@@ -13,6 +13,7 @@
 // MS2-RANGE: 0x142964710-0x142964950 .text$mn
 // MS2-RANGE: 0x142964950-0x142964b90 .text$mn
 // MS2-RANGE: 0x142971ac0-0x142971ba0 .text$mn
+// MS2-RANGE: 0x142964380-0x142964383 .text$mn
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
@@ -357,5 +358,12 @@ bool NumberObject::InvokePrimitiveMethod(const FnCall& fnCall, const ASString& m
 }
 
 } // namespace AS2
+
+// AS2 has no closures to invoke through the value interface (vftable slot 7, no .pdata).
+// @0x142964380
+bool AS2ValueObjectInterface::InvokeClosure(void*, UPInt, Value*, const Value*, UPInt)
+{
+    return false;
+}
 
 }} // namespace Scaleform::GFx
