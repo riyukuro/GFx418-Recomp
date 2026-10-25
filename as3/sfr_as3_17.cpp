@@ -753,6 +753,11 @@ Class& VM::GetClassVectorUInt() const
     return TraitsVector_uint->GetInstanceTraits().GetConstructor();
 }
 
+// AvmStage's default AS3 class name (an AvmStage vftable slot).
+// MS2-FUNCTIONAL: the literal is ours, not the exe's 0x14317d870 copy
+// @0x142508960
+const char* FUN_142508960(const void*) { return "flash.display.Stage"; }
+
 // The class traits of v's type: the boxed class for primitives, Function for closures and thunks, the class of
 // the object otherwise (Object for null).
 // @0x142507f60

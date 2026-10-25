@@ -876,38 +876,40 @@ void LoadVarsProto::SendAndLoad(const FnCall& fn)
     }
 }
 
+// LoadVars.toString's member visitor (namespace scope so the exe's vftable slot can name its Visit).
+class LoadVarsStringVisitor : public ObjectInterface::MemberVisitor
+{
+public:
+    Environment* pEnv;
+    String*      pString;
+
+    // @0x142993ff0
+    virtual void Visit(const ASString& name, const Value& val, UByte flags)
+    {
+        StringBuffer buf(Memory::GetGlobalHeap());
+        String       escaped;
+        ASUtils::Escape(name.ToCStr(), name.GetSize(), &escaped);
+        buf.AppendString(escaped.ToCStr(), escaped.GetSize());
+        buf.AppendString("=");
+        escaped.Clear();
+        ASString valStr = val.ToString(pEnv);
+        ASUtils::Escape(valStr.ToCStr(), valStr.GetSize(), &escaped);
+        buf.AppendString(escaped.ToCStr(), escaped.GetSize());
+        buf.AppendString("&");
+        *pString = buf;
+    }
+};
+
 // LoadVars.toString(): the members as url-encoded name=value pairs joined by &.
 // @0x1428ec610
 // MS2-FUNCTIONAL same calls; the result string node is built with different operand order (CreateString inline)
 void LoadVarsProto::ToString(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, LoadVars);
-    class StringVisitor : public ObjectInterface::MemberVisitor
-    {
-    public:
-        Environment* pEnv;
-        String*      pString;
-
-        // @0x142993ff0
-        virtual void Visit(const ASString& name, const Value& val, UByte flags)
-        {
-            StringBuffer buf(Memory::GetGlobalHeap());
-            String       escaped;
-            ASUtils::Escape(name.ToCStr(), name.GetSize(), &escaped);
-            buf.AppendString(escaped.ToCStr(), escaped.GetSize());
-            buf.AppendString("=");
-            escaped.Clear();
-            ASString valStr = val.ToString(pEnv);
-            ASUtils::Escape(valStr.ToCStr(), valStr.GetSize(), &escaped);
-            buf.AppendString(escaped.ToCStr(), escaped.GetSize());
-            buf.AppendString("&");
-            *pString = buf;
-        }
-    };
 
     Object* pthis = (Object*)fn.ThisPtr;
     String  result;
-    StringVisitor visitor;
+    LoadVarsStringVisitor visitor;
     visitor.pEnv = fn.Env;
     visitor.pString = &result;
     pthis->VisitMembers(fn.Env->GetSC(), &visitor, 0);
@@ -1164,26 +1166,28 @@ void GAS_GlobalASnative(const FnCall& fn)
     fn.Result->SetAsFunction(FunctionRef(pfunc));
 }
 
+// ASSetPropFlags's member visitor (namespace scope so the exe's vftable slot can name its Visit).
+class ASSetPropFlagsVisitor : public ObjectInterface::MemberVisitor
+{
+public:
+    ObjectInterface* pObj;
+    ASStringContext* pSC;
+    UByte            SetTrue;
+    UByte            SetFalse;
+
+    // @0x1428f7bb0
+    virtual void Visit(const ASString& name, const Value& val, UByte flags)
+    {
+        pObj->SetMemberFlags(pSC, name, (UByte)((~SetFalse & flags) | SetTrue));
+    }
+};
+
 // Global ASSetPropFlags(object, names, setTrue[, setFalse]): sets / clears the DontEnum/DontDelete/ReadOnly bits of the
 // named members (a comma separated string or an array), of all members for null names.
 // @0x1428f7740
 // MS2-FUNCTIONAL same logic; the exe's argument decoding and visitor setup are scheduled differently
 void GAS_GlobalASSetPropFlags(const FnCall& fn)
 {
-    class FlagsVisitor : public ObjectInterface::MemberVisitor
-    {
-    public:
-        ObjectInterface* pObj;
-        ASStringContext* pSC;
-        UByte            SetTrue;
-        UByte            SetFalse;
-
-        // @0x1428f7bb0
-        virtual void Visit(const ASString& name, const Value& val, UByte flags)
-        {
-            pObj->SetMemberFlags(pSC, name, (UByte)((~SetFalse & flags) | SetTrue));
-        }
-    };
 
     UByte            version = fn.Env->GetVersion();
     ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
@@ -1226,7 +1230,7 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
     ASStringContext* psc = fn.Env->GetSC();
     if (!props)
     {
-        FlagsVisitor visitor;
+        ASSetPropFlagsVisitor visitor;
         visitor.pObj = pobj;
         visitor.pSC = psc;
         visitor.SetTrue = setTrue;
@@ -3070,7 +3074,7 @@ void GAS_GlobalIsFinite(const FnCall& fn)
         fn.Result->SetBool(true);
 }
 
-// FlagsVisitor's scalar deleting destructor (vtable slot 0 of GAS_GlobalASSetPropFlags' visitor, no .pdata).
+// ASSetPropFlagsVisitor's scalar deleting destructor (vtable slot 0 of GAS_GlobalASSetPropFlags' visitor, no .pdata).
 // MS2-FUNCTIONAL: free-function form of the local class's compiler-generated destructor.
 // @0x1428f7be0
 void* FUN_1428f7be0(void* self, unsigned flags)
@@ -3081,7 +3085,7 @@ void* FUN_1428f7be0(void* self, unsigned flags)
     return self;
 }
 
-// LoadVars.toString's StringVisitor scalar deleting destructor (vtable slot 0, no .pdata), 0x18 bytes.
+// LoadVarsStringVisitor scalar deleting destructor (vtable slot 0, no .pdata), 0x18 bytes.
 // MS2-FUNCTIONAL: free-function form of the local class's compiler-generated destructor.
 // @0x14292bdc0
 void* FUN_14292bdc0(void* self, unsigned flags)
@@ -3554,7 +3558,7 @@ void DisplayObjectBase::SetVisible(bool visible)
 }
 }} // namespace Scaleform::GFx
 // MS2-PIN: ??_7LocalInvokeCallback@?6??BroadcastMessage@AsBroadcasterProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x143221850
-// MS2-PIN: ??_7StringVisitor@?1??ToString@LoadVarsProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x1432223c8
+// MS2-PIN: ??_7LoadVarsStringVisitor@AS2@GFx@Scaleform@@6B@ 0x1432223c8
 // ---- fl_display instance makers: a new instance of the traits' class ----
 namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl_display {
 // @0x142444c40
@@ -3973,7 +3977,7 @@ ASString VM::AsString(const Value& v)
 // MS2-PIN: ??_7RemoveObjectTag@GFx@Scaleform@@6B@ 0x14313bc10
 // MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510
 // MS2-PIN: ?TransformByInverse@?$Matrix2x4@M@Render@Scaleform@@QEBA?AV?$Point@M@23@AEBV423@@Z 0x142447090
-// MS2-PIN: ??_7FlagsVisitor@?1??GAS_GlobalASSetPropFlags@AS2@GFx@Scaleform@@YAXAEBVFnCall@234@@Z@6B@ 0x143214fb8
+// MS2-PIN: ??_7ASSetPropFlagsVisitor@AS2@GFx@Scaleform@@6B@ 0x143214fb8
 // MS2-PIN: ?Resize@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAAX_K@Z 0x1423dfc30
 // MS2-PIN: ?PushBackSafe@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAA_NAEBQEBV?$RefCountBaseGC@$0BED@@AS3@GFx@2@@Z 0x1423df8a0
 // MS2-PIN: ?allocatePageSafe@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@AEAA_N_K@Z 0x1423dfe30

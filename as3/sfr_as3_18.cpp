@@ -8144,6 +8144,20 @@ void FUN_14251acc0(UPInt) {}
 void FUN_14251d060(UPInt) {}
 // @0x1425210c0
 void FUN_1425210c0(UPInt) {}
+// MS2-FUNCTIONAL: the exe's empty slot is `ret 0`
+// @0x1425190d0
+void FUN_1425190d0(UPInt) {}
+// @0x142514d10
+bool FUN_142514d10(UPInt) { return true; }
+
+void FUN_14241e540(Instances::fl::GlobalObjectCPP* self, const ClassInfo* table[]);
+// Registers a class table with the VM's global object (+0x298).
+// MS2-FUNCTIONAL: raw-layout VM field
+// @0x1425210d0
+void FUN_1425210d0(VM& vm, const ClassInfo* table[])
+{
+    FUN_14241e540(reinterpret_cast<Instances::fl::GlobalObjectCPP*>(AccRd(reinterpret_cast<UPInt>(&vm), 0x298)), table);
+}
 
 // MS2-FUNCTIONAL: raw-layout getter
 // @0x14250ba00
@@ -8195,6 +8209,12 @@ void FUN_142518fe0(UPInt self)
 // MS2-FUNCTIONAL: free-function form of the inherited slot
 // @0x1425191e0
 void FUN_1425191e0(UPInt self)
+{
+    reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEventUnload();
+}
+// MS2-FUNCTIONAL: free-function form of the inherited slot
+// @0x142519890
+void FUN_142519890(UPInt self)
 {
     reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEventUnload();
 }
@@ -8333,6 +8353,19 @@ SFR21_THUNKB(FUN_14251b0f4, 0x30, FUN_14251b0f0)
 // MS2-FUNCTIONAL: adjustor thunk
 // @0x14251b100
 SFR21_THUNKB(FUN_14251b100, 0x40, FUN_14251b0f0)
+
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425190d4
+SFR21_THUNK(FUN_1425190d4, 0x30, FUN_1425190d0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425190e0
+SFR21_THUNK(FUN_1425190e0, 0x40, FUN_1425190d0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142519898
+SFR21_THUNK(FUN_142519898, 0x30, FUN_142519890)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425198a4
+SFR21_THUNK(FUN_1425198a4, 0x40, FUN_142519890)
 
 #undef SFR21_THUNK
 #undef SFR21_THUNKB
