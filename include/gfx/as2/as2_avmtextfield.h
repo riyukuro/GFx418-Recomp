@@ -148,6 +148,10 @@ public:
 
     // (appended, sfr22) the field's autoSize to its document's AutoSizeX / Y (exe 0x142992880).
     void UpdateAutosizeSettings();
+
+    // (appended, sfr36) AvmCharacter's AS object slots: both jump to GetTextFieldASObject (defined in sfr_as2_05v).
+    virtual Object* GetASObject();       // exe 0x142949490
+    virtual Object* GetASObject() const; // exe 0x1429494a0
 };
 static_assert(sizeof(AvmTextField) == 0x68, "AS2 AvmTextField size");
 
