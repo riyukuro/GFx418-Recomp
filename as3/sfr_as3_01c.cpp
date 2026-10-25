@@ -172,6 +172,14 @@ template struct ThunkFunc1<Classes::fl::Math, 13, Value::Number, Value::Number>;
 typedef ThunkFunc2<Classes::fl::Math, 14, Value::Number, Value::Number, Value::Number> TFunc_Classes_Math_pow;
 template struct ThunkFunc2<Classes::fl::Math, 14, Value::Number, Value::Number, Value::Number>;
 
+// thunk 0x1423e1240
+typedef ThunkFunc2<Classes::fl::Math, 15, Value, unsigned, const Value*> TFunc_Classes_Math_max;
+template struct ThunkFunc2<Classes::fl::Math, 15, Value, unsigned, const Value*>;
+
+// thunk 0x1423e1260
+typedef ThunkFunc2<Classes::fl::Math, 16, Value, unsigned, const Value*> TFunc_Classes_Math_min;
+template struct ThunkFunc2<Classes::fl::Math, 16, Value, unsigned, const Value*>;
+
 // thunk 0x1423e1280
 typedef ThunkFunc0<Classes::fl::Math, 17, Value::Number> TFunc_Classes_Math_random;
 template struct ThunkFunc0<Classes::fl::Math, 17, Value::Number>;
@@ -3331,6 +3339,8 @@ void FUN_1423e4920(const ThunkInfo&, VM&, const Value& _this, Value& result, uns
 // MS2-PIN: ?Func@?$ThunkFunc1@VMath@fl@Classes@AS3@GFx@Scaleform@@$0M@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e0f50
 // MS2-PIN: ?Func@?$ThunkFunc1@VMath@fl@Classes@AS3@GFx@Scaleform@@$0N@NN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1030
 // MS2-PIN: ?Func@?$ThunkFunc2@VMath@fl@Classes@AS3@GFx@Scaleform@@$0O@NNN@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1110
+// MS2-PIN: ?Func@?$ThunkFunc2@VMath@fl@Classes@AS3@GFx@Scaleform@@$0P@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1240
+// MS2-PIN: ?Func@?$ThunkFunc2@VMath@fl@Classes@AS3@GFx@Scaleform@@$0BA@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1260
 // MS2-PIN: ?Func@?$ThunkFunc0@VMath@fl@Classes@AS3@GFx@Scaleform@@$0BB@N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1280
 // MS2-PIN: ?Func@?$ThunkFunc0@VQName@fl@Instances@AS3@GFx@Scaleform@@$0A@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1aa0
 // MS2-PIN: ?Func@?$ThunkFunc0@VQName@fl@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VQName@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1b30
