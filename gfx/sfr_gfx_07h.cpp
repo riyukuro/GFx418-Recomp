@@ -106,15 +106,16 @@ struct Sfr31StaticState
     ~Sfr31StaticState() { VTable = DAT_14318ec30; }
 };
 
-// The shared empty state, made on first use.
+// The shared empty state, made on first use; returned (rax in the exe: the movie loader calls through it).
 // @0x14261e310
-void FUN_14261e310()
+void* FUN_14261e310()
 {
     if (!DAT_143b16080)
     {
         static Sfr31StaticState state;
         DAT_143b16080 = &state;
     }
+    return DAT_143b16080;
 }
 
 // @0x14261e3b0
