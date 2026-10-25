@@ -632,7 +632,51 @@ bool AvmInteractiveObj::OnLosingKeyboardFocus(InteractiveObject*, unsigned, Focu
     return true;
 }
 
+// Vtable-slot leaves without pdata; data_rdata_sf_a's vtable images reach them by VA.
+
+// AvmMovieClip's default AS3 class name (slot 16 of the AvmMovieClip vftable 0x14313bcd8).
+// MS2-FUNCTIONAL: the exe returns its own .rdata copy of the name (0x14313c060).
+// @0x1423dccb0
+const char* FUN_1423dccb0(const void*)
+{
+    return "flash.display.MovieClip";
+}
+
 } // namespace AS3
+
+// AS3 movies run no AS2 action queue.
+// @0x1423dcac0
+void AS3Support::DoActions()
+{
+}
+
+// The AS3Support vftable (0x14313bc60) slots the header keeps inline: GetAVMVersion and the four AS2 action loaders
+// (DoActionLoader, DoInitActionLoader, ReadButtonActions, ReadButton2ActionConditions), which do nothing.
+// @0x1423dcc40
+UByte FUN_1423dcc40(const void*)
+{
+    return 2;
+}
+
+// @0x1423dcab0
+void FUN_1423dcab0(void*, LoadProcess*, const TagInfo&)
+{
+}
+
+// @0x1423dcad0
+void FUN_1423dcad0(void*, LoadProcess*, const TagInfo&)
+{
+}
+
+// @0x1423dd070
+void FUN_1423dd070(void*, LoadProcess*, ButtonDef*, TagType)
+{
+}
+
+// @0x1423dd060
+void FUN_1423dd060(void*, LoadProcess*, ButtonDef*, TagType)
+{
+}
 
 }} // namespace Scaleform::GFx
 

@@ -18,6 +18,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
+#include "../include/gfx/as2/as2_intervaltimer.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_movieslots.h"
@@ -269,6 +270,13 @@ void SelectionCtorFunction::SetModalClip(const FnCall& fn)
         unsigned               controllerIdx = fn.NArgs >= 2 ? fn.Arg(1).ToUInt32(fn.Env) : 0;
         proot->SetModalClip(pch && pch->IsSprite() ? static_cast<Sprite*>(pch.GetPtr()) : 0, controllerIdx);
     }
+}
+
+// IntervalTimer's id setter (no pdata, only the timer's vftable reaches it).
+// @0x1429818d0
+void IntervalTimer::SetId(int id)
+{
+    Id = id;
 }
 
 }}} // namespace Scaleform::GFx::AS2

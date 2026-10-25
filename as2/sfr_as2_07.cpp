@@ -69,6 +69,7 @@
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
+#include "../include/gfx/as2/as2_keyobject.h"
 #include "../include/gfx/as2/as2_date.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
@@ -1652,6 +1653,15 @@ bool ObjectInterface::Unwatch(ASStringContext* psc, const ASString& prop)
 {
     SF_UNUSED2(psc, prop);
     return false;
+}
+
+// Key's KeyboardState::IListener::Update (no pdata, only Key's vftable reaches it): the last key of evt's controller.
+// @0x142992840
+void KeyCtorFunction::Update(const EventId& evt)
+{
+    States[evt.KeyboardIndex].LastKeyCode = evt.KeyCode;
+    States[evt.KeyboardIndex].LastAsciiCode = evt.AsciiCode;
+    States[evt.KeyboardIndex].LastWcharCode = evt.WcharCode;
 }
 
 }}} // namespace Scaleform::GFx::AS2

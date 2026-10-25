@@ -3196,6 +3196,39 @@ Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self,
     return *self = ns;
 }
 
+// Native method thunks without pdata that only the ThunkInfo tables of data_rdata_sf_a / data_data_game reach: they
+// pass (result, argc, argv) or the result alone to ThunkFuncN<...>::Method (sfr_as3di_01). Pinned at the end.
+namespace Scaleform { namespace GFx { namespace AS3 {
+template struct ThunkFunc2<Instances::ThunkFunction, 0, Value, unsigned, const Value*>;
+template struct ThunkFunc0<Instances::fl::QName, 1, Value>;
+template struct ThunkFunc2<Classes::fl::String, 0, Value, unsigned, const Value*>;
+template struct ThunkFunc2<Classes::fl::Error, 1, Value, unsigned, const Value*>;
+template struct ThunkFunc2<Instances::fl::Array, 2, Value, unsigned, const Value*>;
+
+// Object.prototype's hasOwnProperty / propertyIsEnumerable / toLocaleString / valueOf (pdata-less ThunkInfo targets):
+// the first three forward to the Object traits' own thunks, valueOf returns this.
+// @0x1423e41a0
+void FUN_1423e41a0(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+{
+    InstanceTraits::fl::Object::AS3hasOwnProperty(ti, vm, _this, result, argc, argv);
+}
+// @0x1423e41b0
+void FUN_1423e41b0(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+{
+    InstanceTraits::fl::Object::AS3propertyIsEnumerable(ti, vm, _this, result, argc, argv);
+}
+// @0x1423e4910
+void FUN_1423e4910(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+{
+    InstanceTraits::fl::Object::toStringProto(ti, vm, _this, result, argc, argv);
+}
+// @0x1423e4920
+void FUN_1423e4920(const ThunkInfo&, VM&, const Value& _this, Value& result, unsigned, const Value*)
+{
+    result.Assign(_this);
+}
+}}}
+
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // MS2-PINS-BEGIN tplpin
@@ -3525,3 +3558,8 @@ Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self,
 // MS2-PIN: ??0GlobalObjectCPP@fl@Instances@AS3@GFx@Scaleform@@QEAA@AEAVVM@345@AEAVGlobalObject@1InstanceTraits@345@@Z 0x1423ed260
 // MS2-PIN: ??0UserDefined@InstanceTraits@AS3@GFx@Scaleform@@QEAA@AEAVVMAbcFile@234@PEBVTraits@234@AEBVClassInfo@Abc@234@@Z 0x1423ef790
 // MS2-PIN: ??4?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAAEBV01@AEBV01@@Z 0x1423f1760
+// MS2-PIN: ?Func@?$ThunkFunc2@VThunkFunction@Instances@AS3@GFx@Scaleform@@$0A@VValue@345@IPEBV6345@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e0e50
+// MS2-PIN: ?Func@?$ThunkFunc0@VQName@fl@Instances@AS3@GFx@Scaleform@@$00VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1b10
+// MS2-PIN: ?Func@?$ThunkFunc2@VString@fl@Classes@AS3@GFx@Scaleform@@$0A@VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e1e40
+// MS2-PIN: ?Func@?$ThunkFunc2@VError@fl@Classes@AS3@GFx@Scaleform@@$00VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e21a0
+// MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$01VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e3c00
