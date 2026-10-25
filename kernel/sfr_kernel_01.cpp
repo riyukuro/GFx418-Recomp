@@ -1024,7 +1024,7 @@ void String::AppendChar(UInt32 ch)
     data->Release();
 }
 
-// MS2-FUNCTIONAL: register choice differs (the exe keeps the string in rsi/r12, cl picks rdi/r15)
+// MS2-FUNCTIONAL ?AppendString@String@Scaleform@@QEAAXPEB_W_J@Z: register choice differs (the exe keeps the string in rsi/r12, cl picks rdi/r15)
 void String::AppendString(const wchar_t* str, SPInt len)
 {
     if (!str)
