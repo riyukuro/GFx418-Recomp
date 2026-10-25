@@ -3329,3 +3329,75 @@ void FUN_140011ac0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::Env
     reinterpret_cast<Scaleform::GFx::AS2::ObjectInterface*>(
         reinterpret_cast<unsigned char*>(object) + 0x20)->Set__proto__(stringContext, prototype);
 }
+
+// ---- vtable-slot adjustor thunks (no .pdata; `sub rcx,N; jmp` into the scalar deleting destructors above) ----
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_14000ec40.
+// @0x14000ebc0
+Scaleform::GFx::AS2::Object* FUN_14000ebc0(void* self, unsigned flags)
+{
+    return FUN_14000ec40((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x70) into FUN_14000ec40.
+// @0x14000ebd0
+Scaleform::GFx::AS2::Object* FUN_14000ebd0(void* self, unsigned flags)
+{
+    return FUN_14000ec40((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x70), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_14000ed20.
+// @0x14000ed10
+Scaleform::GFx::AS2::CFunctionObject* FUN_14000ed10(void* self, unsigned flags)
+{
+    return FUN_14000ed20((Scaleform::GFx::AS2::CFunctionObject*)((Scaleform::UByte*)self - 0x20), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x18) into FUN_140010530.
+// @0x140010180
+Scaleform::GFx::InteractiveObject* FUN_140010180(void* self, unsigned __int64 flags)
+{
+    return FUN_140010530((Scaleform::GFx::InteractiveObject*)((Scaleform::UByte*)self - 0x18), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_140011c00.
+// @0x140011c70
+Scaleform::GFx::AS2::Object* FUN_140011c70(void* self, unsigned flags)
+{
+    return FUN_140011c00((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x68) into FUN_140011c00.
+// @0x140011c80
+Scaleform::GFx::AS2::Object* FUN_140011c80(void* self, unsigned flags)
+{
+    return FUN_140011c00((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x68), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_140011d10.
+// @0x140011d00
+Scaleform::GFx::AS2::Object* FUN_140011d00(void* self, unsigned flags)
+{
+    return FUN_140011d10((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_1400125e0.
+// @0x140012580
+Scaleform::GFx::AS2::Object* FUN_140012580(void* self, unsigned flags)
+{
+    return FUN_1400125e0((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x68) into FUN_1400125e0.
+// @0x140012590
+Scaleform::GFx::AS2::Object* FUN_140012590(void* self, unsigned flags)
+{
+    return FUN_1400125e0((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x68), flags);
+}
+
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_1400126b0.
+// @0x1400126a0
+Scaleform::GFx::AS2::CFunctionObject* FUN_1400126a0(void* self, unsigned flags)
+{
+    return FUN_1400126b0((Scaleform::GFx::AS2::CFunctionObject*)((Scaleform::UByte*)self - 0x20), flags);
+}

@@ -837,3 +837,14 @@ UInt32 FUN_1425c8c20(LoadProcess* p)
 
 } // namespace GFx
 } // namespace Scaleform
+
+// MS2-FUNCTIONAL: empty vtable slot (`ret 0`, no .pdata); referenced by data_data_game.
+// @0x1425c6940
+void FUN_1425c6940() {}
+
+// MS2-FUNCTIONAL: vtable slot without .pdata: warns through the LoadProcess log at this + 0x20.
+// @0x1425c7a40
+void FUN_1425c7a40(void* self)
+{
+    ((Scaleform::GFx::LogBase<Scaleform::GFx::LoadProcess>*)((Scaleform::UByte*)self + 0x20))->LogWarning(" with a SWF header");
+}

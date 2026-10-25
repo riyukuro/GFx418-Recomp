@@ -667,3 +667,7 @@ void* FUN_1425c8670(void* object, unsigned flags)
 // MS2-PIN: ??_7?$RefCountBase@UExtraData@JPEG@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318a278
 // MS2-PIN: ??_7ExtraData@JPEG@Render@Scaleform@@6B@ 0x14318a288
 // MS2-PIN: ??_7TablesHeader@JPEG@Render@Scaleform@@6B@ 0x14318a298
+
+// MS2-FUNCTIONAL: empty vtable slot (`ret 0`, no .pdata); referenced by data_data_game.
+// @0x1425c5850
+void FUN_1425c5850() {}
