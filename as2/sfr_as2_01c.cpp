@@ -136,6 +136,36 @@ void FUN_1423c93f0(void* self, const char* name)
     }
 }
 
+// The manager vtable slots that pass the call on to the language bar at +0x70 (the exe tail-jumps).
+// ClearCandidateListPath (slot 5).
+// @0x1423c92f0
+void FUN_1423c92f0(void* self)
+{
+    void* bar = At<void*>(self, 0x70);
+    if (bar)
+        VCall<void>(bar, 0x20);
+}
+
+// GetConversionMode (slot 7): "UNKNOWN" without a language bar.
+// @0x1423c9570
+const char* FUN_1423c9570(void* self)
+{
+    void* bar = At<void*>(self, 0x70);
+    if (bar)
+        return VCall<const char*>(bar, 0x108);
+    return "UNKNOWN";
+}
+
+// GetEnabled (slot 9).
+// @0x1423c9590
+bool FUN_1423c9590(void* self)
+{
+    void* bar = At<void*>(self, 0x70);
+    if (bar)
+        return VCall<bool>(bar, 0xf0);
+    return false;
+}
+
 // MS2-FUNCTIONAL: GetIMEName: the language bar's name, "UNKNOWN" without one.
 // @0x1423c95b0
 String* FUN_1423c95b0(void* self, String* out)

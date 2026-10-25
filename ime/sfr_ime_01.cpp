@@ -2,6 +2,8 @@
 // MS2-UNIT: sfr_ime_01
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423c8a50-0x1423c8fa0 .text$mn
+// MS2-RANGE: 0x1423ca140-0x1423ca160 .text$mn
+// MS2-RANGE: 0x1423ca1c0-0x1423ca2b0 .text$mn
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
 #include <windows.h>
 #include <imm.h>
@@ -239,11 +241,26 @@ static_assert(offsetof(GFxIMEManagerWin32, hwnd) == 0x68, "IME layout");
 static_assert(offsetof(GFxIMEManagerWin32, language) == 0x88, "IME layout");
 static_assert(offsetof(GFxIMEManagerWin32, conversionMode) == 0xb0, "IME layout");
 
-// MS2-FUNCTIONAL: constructor frame differs; the executable constructor also initializes opaque manager state.
+#ifndef MS2_HOOK_DLL
+// The IMEManagerBase constructor (sfr_gfx_03d) and the manager's own vtable (data_rdata_sf_a): this stand-in class
+// has no IMEManagerBase base, so the constructor builds the base part and installs the exe's 38-slot vtable itself.
+extern "C" void FUN_1425b3e90(void* self);
+extern "C" void* DAT_1431383e0[];
+#endif
+
+// MS2-FUNCTIONAL: constructor frame differs; the base part and the vtable are set up by hand (see above).
 // @0x1423c8a50
 GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
     : refCount(1), refPad(0), state(0), statePad(0), p60(0), hwnd(window), p70(0), p78(0)
 {
+#ifndef MS2_HOOK_DLL
+    FUN_1425b3e90(this);
+    *reinterpret_cast<void***>(this) = DAT_1431383e0;
+    p60 = 0;
+    hwnd = window;
+    p70 = 0;
+    p78 = 0;
+#endif
 }
 
 // MS2-FUNCTIONAL: opaque child pointers at +0x70 and +0x78 use executable-specific release thunks.
@@ -864,6 +881,100 @@ unsigned char FUN_1423ce460(void* self)
         }
     }
     return result;
+}
+
+// The manager calls that pass on to the language bar at +0x70 (the exe tail-jumps through its vtable).
+template <class R, class... A>
+static inline R BarCall(void* bar, unsigned off, A... a)
+{
+    return reinterpret_cast<R(*)(void*, A...)>((*reinterpret_cast<void***>(bar))[off / sizeof(void*)])(bar, a...);
+}
+
+// OnCandidateListStyleChanged (vtable slot 25).
+// @0x1423ca140
+void FUN_1423ca140(GFxIMEManagerWin32* self, const void* style)
+{
+    if (self->p70)
+        BarCall<void>(self->p70, 0xc8, style);
+}
+
+// OnFinalize (slot 24).
+// @0x1423ca1c0
+void FUN_1423ca1c0(GFxIMEManagerWin32* self)
+{
+    if (self->p70)
+        BarCall<void>(self->p70, 0x78);
+}
+
+// @0x1423ca1e0
+unsigned FUN_1423ca1e0(GFxIMEManagerWin32* self, void* a, unsigned b, unsigned c, bool d)
+{
+    if (self->p70)
+        return BarCall<unsigned>(self->p70, 0x68, a, b, c, d);
+    return 0;
+}
+
+// OnShutdown (slot 23).
+// @0x1423ca210
+void FUN_1423ca210(GFxIMEManagerWin32* self)
+{
+    if (self->p70)
+        BarCall<void>(self->p70, 0x90);
+}
+
+// @0x1423ca230
+void FUN_1423ca230(GFxIMEManagerWin32* self, void* a)
+{
+    if (self->p70)
+        BarCall<void>(self->p70, 0xa8, a);
+}
+
+// @0x1423ca250
+void FUN_1423ca250(GFxIMEManagerWin32* self, void* a)
+{
+    if (self->p70)
+        BarCall<void>(self->p70, 0x18, a);
+}
+
+// @0x1423ca270
+void FUN_1423ca270(GFxIMEManagerWin32* self, void* a)
+{
+    if (self->p70)
+        BarCall<void>(self->p70, 0x40, a);
+}
+
+// @0x1423ca290
+void FUN_1423ca290(GFxIMEManagerWin32* self, void* a)
+{
+    if (self->p70)
+        BarCall<void>(self->p70, 0x28, a);
+}
+
+// SetCompositionString (slot 21).
+// @0x1423ca520
+bool FUN_1423ca520(GFxIMEManagerWin32* self, const char* compString)
+{
+    if (self->p70)
+        return BarCall<bool>(self->p70, 0xf8, compString);
+    return false;
+}
+
+// SetConversionMode (slot 6).
+// @0x1423ca540
+bool FUN_1423ca540(GFxIMEManagerWin32* self, unsigned convMode)
+{
+    if (self->p70)
+        return BarCall<bool>(self->p70, 0x100, convMode);
+    return false;
+}
+
+// SetEnabled (slot 8).
+// @0x1423ca620
+bool FUN_1423ca620(GFxIMEManagerWin32* self, bool enable)
+{
+    if (self->p70)
+        return BarCall<bool>(self->p70, 0xe8, enable);
+    return false;
 }
 
 // @0x1423ca560
