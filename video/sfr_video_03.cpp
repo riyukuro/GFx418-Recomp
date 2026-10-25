@@ -1474,8 +1474,7 @@ void FUN_140019470(void* self, std::uint64_t* output) { GetVideoSoundTransform(s
 // MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's default transform value.
 // @0x140019660
 void FUN_140019660(void* self, std::uint64_t* output) { GetVideoSoundTransform(self, output, 0x90); }
-namespace {
-
+// sfr22: external linkage, sfr_as3_22b's sound-channel Start paths construct the same object.
 // MS2-FUNCTIONAL: initializes and links the per-channel callback object, then registers it with FMOD.
 // @0x142742fb0
 std::uint64_t* FUN_142742fb0(std::uint64_t* object, void* player, std::uint64_t userData, void* channel)
@@ -1496,6 +1495,7 @@ std::uint64_t* FUN_142742fb0(std::uint64_t* object, void* player, std::uint64_t 
     FUN_1428d8efc(channel, reinterpret_cast<void*>(FUN_1427443c0.get()));
     return object;
 }
+namespace {
 // MS2-FUNCTIONAL: initializes the audio event listener, its locks, and its intrusive-list sentinel.
 // @0x142743130
 std::uint64_t* FUN_142743130(std::uint64_t* object)
