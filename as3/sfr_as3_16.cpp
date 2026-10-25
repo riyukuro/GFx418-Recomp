@@ -2460,3 +2460,101 @@ extern "C" void FUN_1424ddcb0(void* self)
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317e228
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317e330
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B@ 0x14317e3e8
+
+// Trap-stub pass (sfr21): vftable slots and adjustor thunks the full exe names but nothing defined.
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+void* DeleteAs3_1424e2610(void* p, unsigned flags);
+void* DeleteAs3_1424e26d0(void* p, unsigned flags);
+void* DeleteAs3_1424e2a10(void* p, unsigned flags);
+void* DeleteAs3_1424e2ac0(void* p, unsigned flags);
+void* DeleteAs3_1424e33f0(void* p, unsigned flags);
+void* DeleteAs3_1424e3890(void* p, unsigned flags);
+
+// The object's own AS3 constructor.
+// @0x1424e42a0
+void InstanceTraits::Traits::AS3Constructor(const AS3::Traits&, const Value& _this, unsigned argc, const Value* argv) const
+{
+    _this.GetObject()->AS3Constructor(argc, argv);
+}
+
+// @0x1424e5470
+bool AvmDisplayObjContainer::ActsAsButton() const { return false; }
+
+// No AS3 object yet: a button; otherwise whether it has a mouse/button listener.
+// MS2-FUNCTIONAL: EventDispatcher::HasButtonHandlers (0x14246a140) inlined
+// @0x1424e5480
+bool AvmInteractiveObj::ActsAsButton() const
+{
+    Instances::fl_display::DisplayObject* obj = GetAS3Obj();
+    if (!obj)
+        return true;
+    Instances::fl_events::EventDispatcher::EventDispatcherImpl* impl = obj->pImpl.GetPtr();
+    return impl && (impl->CaptureButtonHandlersCnt || impl->ButtonHandlersCnt);
+}
+
+// @0x1424e54b0
+bool AvmSprite::ActsAsButton() const
+{
+    if (SprFlags & Flag_ButtonMode)
+        return true;
+    if (!GetAS3Obj())
+        return false;
+    return AvmInteractiveObj::ActsAsButton();
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+// Constant vftable slots and their adjustor thunks.
+// @0x1424e5460
+bool FUN_1424e5460(Scaleform::UPInt) { return true; }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e5464
+bool FUN_1424e5464(Scaleform::UPInt self) { return FUN_1424e5460(self - 0x10); }
+// MS2-FUNCTIONAL: the exe's slot is `xor al, al`
+// @0x1424e54f0
+bool FUN_1424e54f0(Scaleform::UPInt) { return false; }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e54f4
+bool FUN_1424e54f4(Scaleform::UPInt self) { return FUN_1424e54f0(self - 0x10); }
+
+// Scalar-deleting-destructor adjustor thunks into sfr_as3_16z.
+#define SFR21_DTHUNK(name, off, target) \
+    void* name(Scaleform::UPInt self, unsigned flags) { return Scaleform::GFx::AS3::target(reinterpret_cast<void*>(self - off), flags); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1a98
+SFR21_DTHUNK(FUN_1424e1a98, 0x18, DeleteAs3_1424e2610)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1aa4
+SFR21_DTHUNK(FUN_1424e1aa4, 0x90, DeleteAs3_1424e2610)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1ab0
+SFR21_DTHUNK(FUN_1424e1ab0, 0x30, DeleteAs3_1424e26d0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1abc
+SFR21_DTHUNK(FUN_1424e1abc, 0x40, DeleteAs3_1424e26d0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1b40
+SFR21_DTHUNK(FUN_1424e1b40, 0x30, DeleteAs3_1424e2a10)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1b4c
+SFR21_DTHUNK(FUN_1424e1b4c, 0x40, DeleteAs3_1424e2a10)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1b58
+SFR21_DTHUNK(FUN_1424e1b58, 0x30, DeleteAs3_1424e2ac0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1b64
+SFR21_DTHUNK(FUN_1424e1b64, 0x40, DeleteAs3_1424e2ac0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1b7c
+SFR21_DTHUNK(FUN_1424e1b7c, 0x28, DeleteAs3_1424e33f0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1b88
+SFR21_DTHUNK(FUN_1424e1b88, 0x38, DeleteAs3_1424e33f0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1b94
+SFR21_DTHUNK(FUN_1424e1b94, 0x18, DeleteAs3_1424e3890)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424e1ba0
+SFR21_DTHUNK(FUN_1424e1ba0, 0x90, DeleteAs3_1424e3890)
+#undef SFR21_DTHUNK
