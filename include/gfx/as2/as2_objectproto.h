@@ -155,6 +155,20 @@ public:
 
     SuperObject(Object* pproto, ObjectInterface* prealThis, const FunctionRef& ctor); // exe 0x1429213a0
     virtual FunctionRef Get__constructor__(ASStringContext* psc); // exe 0x142958370
+    // The member accessors go to the prototype above (exe 0x142987700 ... 0x142953970, tail calls); IsSuper is true.
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
+                           const PropFlags& flags = PropFlags());                         // exe 0x142987700
+    virtual bool GetMember(Environment* penv, const ASString& name, Value* val);         // exe 0x1429505c0
+    virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember); // exe 0x1429449f0
+    virtual bool DeleteMember(ASStringContext* psc, const ASString& name);               // exe 0x142938ac0
+    virtual bool SetMemberFlags(ASStringContext* psc, const ASString& name, const UByte flags); // exe 0x142988a30
+    virtual void VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsigned visitFlags = 0,
+                              const ObjectInterface* instance = 0) const;                // exe 0x142994a00
+    virtual bool HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes); // exe 0x14295da40
+    virtual bool SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
+                              const PropFlags& flags = PropFlags());                      // exe 0x142989020
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);   // exe 0x142953970
+    virtual bool IsSuper() const;                                                         // exe 0x142965f00
     // Back to the saved prototype after an alternate one was set (exe 0x14297dfb0).
     void ResetAltProto();
     // (appended, sfr36) Member lookups start at pproto until ResetAltProto (inlined in the exe, e.g. by the
@@ -180,6 +194,7 @@ protected:
         Constructor.template ForEachChild_GC<Functor>(prcc);
     }
 
+    virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const; // exe 0x142941250
     virtual void Finalize_GC(); // exe 0x142943020
 };
 

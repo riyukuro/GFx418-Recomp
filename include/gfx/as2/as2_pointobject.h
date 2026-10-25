@@ -39,6 +39,7 @@ class PointObject : public Object
 {
 public:
     PointObject(Environment* penv); // exe 0x14291fc10
+    PointObject(Environment* penv, PointObject* psrc); // copy of psrc's x and y, exe 0x14291fcf0
     PointObject(ASStringContext* psc, Object* pprototype) : Object(psc)
     {
         Set__proto__(psc, pprototype);

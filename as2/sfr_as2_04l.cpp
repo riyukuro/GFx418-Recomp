@@ -14,6 +14,7 @@
 // MS2-RANGE: 0x142937cf0-0x142937d56 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_genericdisplayobj.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_object.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -153,15 +154,10 @@ bool MovieRoot::CreateObjectValue(GFx::Value* pval, GFx::Value::ObjectInterface*
 }
 
 // The render node of a shape object: its shape definition's tree shape in the object's movie definition.
-// MS2-FUNCTIONAL: GenericDisplayObj is not modelled, the shape definition is read by address
 // @0x142937ca0
-Ptr<Render::TreeNode>* FUN_142937ca0(DisplayObject* pself, Ptr<Render::TreeNode>* pret,
-                                     Render::ContextImpl::Context& context)
+Ptr<Render::TreeNode> GenericDisplayObj::CreateRenderNode(Render::ContextImpl::Context& context) const
 {
-    ShapeBaseCharacterDef* pdef = *reinterpret_cast<ShapeBaseCharacterDef**>(reinterpret_cast<UByte*>(pself) + 0x70);
-    MovieDefImpl*          pmd  = pself->GetResourceMovieDef();
-    new (pret) Ptr<Render::TreeNode>(pdef->CreateTreeShape(context, pmd));
-    return pret;
+    return static_cast<ShapeBaseCharacterDef*>(pDef.GetPtr())->CreateTreeShape(context, GetResourceMovieDef());
 }
 
 // @0x142937cf0

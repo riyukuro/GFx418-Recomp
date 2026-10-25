@@ -128,6 +128,8 @@ public:
         return true;
     }
 
+    virtual unsigned GetStandardMemberBitMask() const; // exe 0x142956080
+
     // AvmTextFieldBase slots 23..31 (this is the +0x30 part in the exe bodies).
     virtual const Text::StyleManager* GetStyleSheet() const; // exe 0x1429561e0
     virtual bool HasStyleSheet() const;                      // exe 0x14295dbb0

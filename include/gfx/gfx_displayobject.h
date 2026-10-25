@@ -86,7 +86,7 @@ public:
     // MovieRoot vftables. This build has no SuspendGC / ScheduleGC and no NotifyGamePadAnalogEvent; the touch and
     // gesture slots (12, 13), the device events (23, 24) and ProcessLoadBinaryMT (28, AS2) are the empty defaults
     // both movie roots share. AS2 adds slot 52 (Invoke on an object), AS3 SuspendGC / ScheduleGC (52, 53).
-    virtual void SetMovie(MovieImpl* pmovie) = 0;                                                      // 1
+    virtual void SetMovie(MovieImpl* pmovie);                                                          // 1 (exe 0x142528740: pMovieImpl = pmovie)
     virtual void AdvanceFrame(bool nextFrame) = 0;                                                     // 2
     virtual void ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType) = 0;                 // 3
     virtual bool CheckAvm() = 0;                                                                       // 4
