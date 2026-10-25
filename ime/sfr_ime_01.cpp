@@ -204,6 +204,7 @@ extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
 extern "C" void FUN_142576820(void*, const char*, void**, int);
 extern "C" void FUN_1425b49b0();
 extern "C" void FUN_14257dc30(void*);
+extern "C" int FUN_14256eff0(void*);           // Movie::GetAVMVersion
 extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
 extern "C" void FUN_1422fbf60(void*);
 
@@ -263,14 +264,14 @@ GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
 #endif
 }
 
-// MS2-FUNCTIONAL: opaque child pointers at +0x70 and +0x78 use executable-specific release thunks.
+// MS2-FUNCTIONAL: the children at +0x70 and +0x78 are released through their vtable slot 0 (deleting dtor, flag 1).
 // @0x1423c8ac0
 GFxIMEManagerWin32::~GFxIMEManagerWin32()
 {
     if (p70)
-        reinterpret_cast<void(*)(void*, unsigned int)>(*reinterpret_cast<void***>(p70))(p70, 1);
+        (*reinterpret_cast<void (***)(void*, unsigned int)>(p70))[0](p70, 1);
     if (p78)
-        reinterpret_cast<void(*)(void*, unsigned int)>(*reinterpret_cast<void***>(p78))(p78, 1);
+        (*reinterpret_cast<void (***)(void*, unsigned int)>(p78))[0](p78, 1);
 }
 
 
@@ -1304,21 +1305,31 @@ void FUN_1423ca350(void* self)
                   "Selection.setSelection", "%d %d", 5, 5);
 }
 
-// MS2-FUNCTIONAL: attaches the movie, updates the operating-system label and notifies the current IME child.
+// MS2-FUNCTIONAL: attaches the movie: notifies the object at +0x18 (vtable slot 0x90) and the current IME child at
+// +0x70 (slot 1, with the movie), then publishes the operating-system label to an AVM version 1 movie as
+// _global.gfx_ime_os_version (a GFx::Value string, laid out raw).
 // @0x1423ca410
 void FUN_1423ca410(void* self, void* movie)
 {
     FUN_1425b49b0();
     if (!movie) return;
-    void** fields = static_cast<void**>(self);
-    reinterpret_cast<void(*)(void*)>(*reinterpret_cast<void***>(fields[3]))(fields[3]);
-    *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0x80) = 0;
-    if (fields[0xe]) {
+    unsigned char* p = static_cast<unsigned char*>(self);
+    void* obj = *reinterpret_cast<void**>(p + 0x18);
+    (*reinterpret_cast<void (***)(void*)>(obj))[0x90 / 8](obj);
+    p[0x80] = 0;
+    void* child = *reinterpret_cast<void**>(p + 0x70);
+    if (child) {
         FUN_14257dc30(movie);
         void* arg = movie;
-        reinterpret_cast<void(*)(void*, void**)>(*reinterpret_cast<void***>(fields[0xe]))(fields[0xe], &arg);
+        (*reinterpret_cast<void (***)(void*, void**)>(child))[1](child, &arg);
     }
-    fields[0x14] = movie;
+    *reinterpret_cast<void**>(p + 0xa0) = movie;
+    int os = *reinterpret_cast<int*>(p + 0xbc);
+    struct { void* pObjectInterface; unsigned Type; const char* pString; } value =
+        { nullptr, 6, os == 1 ? "Vista" : os == 0 ? "XP" : "Undetermined" };
+    if (FUN_14256eff0(movie) == 1)
+        FUN_142576820(*reinterpret_cast<void**>(p + 0xa0), "_global.gfx_ime_os_version",
+                      reinterpret_cast<void**>(&value), 1);
 }
 
 // MS2-FUNCTIONAL: releases executable-observed arrays, string members, and owned child references during teardown.
