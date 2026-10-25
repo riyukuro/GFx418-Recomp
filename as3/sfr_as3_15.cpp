@@ -3763,7 +3763,7 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
     *reinterpret_cast<unsigned*>(b + 0x358) = 0;
     w[2] = reinterpret_cast<UPInt>(pmovie);
     pmovie->SetASMovieRoot(reinterpret_cast<ASMovieRootBase*>(self));
-    UPInt heap = *reinterpret_cast<UPInt*>(reinterpret_cast<UPInt*>(w[2])[8]);
+    UPInt heap = reinterpret_cast<UPInt*>(w[2])[8];   // MovieImpl +0x40: its heap
     UPInt* fwd = reinterpret_cast<UPInt*>(reinterpret_cast<void* (*)(UPInt, UPInt, UPInt)>((*reinterpret_cast<void***>(heap))[0x50 / 8])(heap, 0x10, 0));
     if (fwd)
     {
