@@ -253,6 +253,6 @@ void TextLayout::Builder::AddImage(Image* img, float scaleX, float scaleY, float
 
 }} // namespace Scaleform::Render
 
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143191890
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x14318ea90
 // MS2-PIN: ??_7?$RefCountBase@VTextLayout@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143191890
 // MS2-PIN: ??_7TextLayout@Render@Scaleform@@6B@ 0x143191898

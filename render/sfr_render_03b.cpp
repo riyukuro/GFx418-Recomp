@@ -2828,7 +2828,7 @@ UPInt DocView::EditCommand(DocView::CommandType cmdId, const void* command)
 
 // MS2-PIN: ??1StyledText@Text@Render@Scaleform@@UEAA@XZ 0x14260d2c0
 // MS2-FUNCTIONAL ??1StyledText@Text@Render@Scaleform@@UEAA@XZ: the inlined paragraph array teardown picks other callee-saved registers (r12/r14/r15 for rbp/rsi) and a 0x10 bigger frame; same calls and order
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x14318e980
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x14318ea90
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7?$RefCountBaseNTS@VAllocator@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
