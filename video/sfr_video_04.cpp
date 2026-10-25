@@ -45,8 +45,11 @@ ExeDecl<void(void*, void*, void*)> FUN_140001270;           // AS2VideoSupport::
 #pragma comment(linker, "/alternatename:?FUN_140001270@@YAXPEAX00@Z=?AttachAudio@AS2VideoSupportImpl@@UEAAXPEAVObject@AS2@GFx@Scaleform@@PEAVSprite@45@@Z")   // sfr36: full-exe link
 #endif
 ExeDecl<void(void*, void*)> FUN_1425210d0;                   // AS3 class registration
-extern ExeDecl<void*> DAT_143a47b70;                             // the AS3 class info registered below
-#define Video04ClassInfo DAT_143a47b70
+extern ExeDecl<void*> DAT_1431b7b50;                             // AS3 ClassInfo (data_rdata_sf_video)
+extern ExeDecl<void*> DAT_1431b7160;                             // AS3 ClassInfo (data_rdata_sf_video)
+// The module's null-terminated AS3 class info table the VM registers (exe .data 0x143a462f0: { &DAT_1431b7b50,
+// &DAT_1431b7160, 0 }). Filled at run time: the hook DLL cannot take exe addresses in static data.
+const void* DAT_143a462f0[3];
 
 namespace
 {
@@ -200,10 +203,13 @@ DisplayObjectBase* AS3VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
     return (DisplayObjectBase*)pobj;
 }
 
-// MS2-FUNCTIONAL: the AS3 registration is one call that hands the VM this module's class info.
+// MS2-FUNCTIONAL: the AS3 registration is one call that hands the VM this module's class info table
+// (lea rdx, 0x143a462f0: the table's address, not a pointer stored there).
 void AS3VideoSupportImpl::RegisterASClasses(AS3::VM* pvm)
 {
-    FUN_1425210d0(pvm, (void*)Video04ClassInfo);
+    DAT_143a462f0[0] = &DAT_1431b7b50;
+    DAT_143a462f0[1] = &DAT_1431b7160;
+    FUN_1425210d0(pvm, (void*)DAT_143a462f0);
 }
 
 // MS2-FUNCTIONAL: AttachAudio is the exe's 0x140001270 (forwards to the video object).
