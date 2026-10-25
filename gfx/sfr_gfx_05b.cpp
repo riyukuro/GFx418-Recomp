@@ -754,6 +754,7 @@ Sprite* Sprite::GetHitAreaHolder() const
     return pHitAreaHolder;
 }
 
+// MS2-FUNCTIONAL ?SetHitArea@Sprite@GFx@Scaleform@@QEAAXPEAV123@@Z: Ghidra confirms the exe takes Sprite*; its split .pdata extent understates the body, whose recovered pointer/refcount and notification sequence is preserved here.
 // @0x1425dcb00
 void Sprite::SetHitArea(Sprite* phitArea)
 {

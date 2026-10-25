@@ -21,6 +21,7 @@
 #include "../include/gfx/gfx_statictextcharacter.h"
 #include "../include/gfx/gfx_textsnapshot.h"
 #include "../include/gfx/gfx_fonthandle.h"
+#include "../include/gfx/gfx_fontmanager.h"
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_loadproc.h"
@@ -30,6 +31,21 @@
 #include "../include/render/render_twips.h"
 #include "../include/kernel/sf_utf8util.h"
 #include <float.h>
+
+namespace Scaleform { namespace GFx {
+
+// The scalar deleting dtor is emitted in this TU with a local FontHandle vftable. Inline the same
+// exe-derived cleanup implemented out of line in sfr_gfx_03e so the unit-only DLL link has its body.
+inline FontHandle::~FontHandle()
+{
+    if (pFontManager)
+        static_cast<FontManager*>(pFontManager)->RemoveFontHandle(this);
+    if (pFont)
+        pFont->Release();
+    pFont = 0;
+}
+
+}} // namespace Scaleform::GFx
 
 namespace Scaleform { namespace Render { namespace Math2D {
 
@@ -845,6 +861,7 @@ void StaticTextCharacter::SetTextFilters(const TextFilter& f)
 }
 
 // Visits the glyphs with index in [start, end): each gets the field's rotation and its origin in the parent space.
+// MS2-FUNCTIONAL ?Visit@StaticTextSnapshotData@GFx@Scaleform@@QEBAXPEAVGlyphVisitor@123@_K1@Z: Ghidra confirms GlyphVisitor*, UPInt, UPInt; traversal and visitor updates match the exe, while the local stack layout differs.
 // @0x1425e2e00
 void StaticTextSnapshotData::Visit(GlyphVisitor* pvisitor, UPInt start, UPInt end) const
 {
@@ -897,3 +914,7 @@ void StaticTextSnapshotData::Visit(GlyphVisitor* pvisitor, UPInt start, UPInt en
 }
 
 }} // namespace Scaleform::GFx
+
+// Bind the deleting dtor to the exe; the local inline cleanup above satisfies the compiler-emitted dtor body
+// when this unit is checked without sfr_gfx_03e.
+// MS2-PIN: ??_GFontHandle@GFx@Scaleform@@UEAAPEAXI@Z 0x1425b61f0
