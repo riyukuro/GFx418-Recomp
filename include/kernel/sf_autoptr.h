@@ -16,6 +16,9 @@ class AutoPtr
 
 public:
     AutoPtr(T* p = 0, bool owner = true) : pObject(p), Owner(owner) {}
+    // Copies take the ownership over (the source keeps the pointer but no longer owns it), as the exe's hash
+    // insert does (HashSetBase<..AutoPtr..>::add 0x1424d39f0 clears the source's Owner byte).
+    AutoPtr(const AutoPtr& src) : pObject(src.pObject), Owner(src.Owner) { const_cast<AutoPtr&>(src).Owner = false; }
     ~AutoPtr() { Reset(); }
 
     // Deletes the held object when owned (ownership is dropped before the delete) and takes p.
