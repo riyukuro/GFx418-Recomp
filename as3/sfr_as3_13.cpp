@@ -2203,7 +2203,7 @@ namespace Instances { namespace fl_text
 
 // ---- fl_text: TextField / TextSnapshot string queries ----
 const void* FUN_1425b90a0(void* ptf);                       // TextField::GetRestrict (its first member is the String)
-void FUN_1425e1570(void* psnap, void* ptext);               // StaticTextSnapshotData::GetSelectedText (builds a String)
+void FUN_1425e1570(void* psnap, void* ptext, bool includeLineEndings);           // StaticTextSnapshotData::GetSelectedText (builds a String)
 int  FUN_1425e1020(void* psnap, unsigned long long start, const char* ptext, bool caseSensitive);  // ::FindText
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2261,14 +2261,12 @@ namespace Instances { namespace fl_text
         result = FUN_1425e1020(&SnapshotData, (SPInt)beginIndex, text.ToCStr(), caseSensitive);
     }
 
-    // The exe ignores includeLineEndings.
     // @0x1424b1530
     // MS2-FUNCTIONAL: written from the exe's control flow
     void TextSnapshot::getSelectedText(ASString& result, bool includeLineEndings)
     {
-        SF_UNUSED(includeLineEndings);
         void* buf;
-        FUN_1425e1570(&SnapshotData, &buf);
+        FUN_1425e1570(&SnapshotData, &buf, includeLineEndings);
         String& text = *reinterpret_cast<String*>(&buf);
         result = GetVM().GetStringManager().CreateString(text.ToCStr(), text.GetSize());
         text.~String();

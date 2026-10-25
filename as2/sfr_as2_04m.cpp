@@ -15,7 +15,7 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 void FUN_1425f4090(void* pobj);
-void FUN_14257dcd0();
+void FUN_14257dcd0(void* p);
 
 // Runs the action tags of one frame as their own action session (gotoAndPlay's callFrame).
 // MS2-FUNCTIONAL: the frame count and the session counter are reached by slot and by address
@@ -69,7 +69,7 @@ void MovieRoot::ClearDisplayList()
     {
         for (UPInt n = size; n != 0; --n)
             if (pmovie->pMovieLevels[n - 1].pSprite)
-                FUN_14257dcd0();
+                FUN_14257dcd0(pmovie->pMovieLevels[n - 1].pSprite);
         if (pmovie->MovieLevelsCapacity & ~UPInt(1))
         {
             if (pmovie->pMovieLevels)

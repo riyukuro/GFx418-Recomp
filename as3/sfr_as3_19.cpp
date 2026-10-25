@@ -37,7 +37,7 @@ void FUN_1424d6f40(void* err, int id, void* vm, const void* a1);   // VM::Error:
 void FUN_1424d79f0(void* err, int id, void* vm, const char* a1, const void* a2);   // VM::Error::Error(id, vm, char*, Value)
 void FUN_142529f70(void* button, int state, void* obj);   // AvmButton::SetStateObject
 void FUN_1424ffc10(Scaleform::UPInt a, Scaleform::UPInt b, Scaleform::UPInt c, int d, const Scaleform::GFx::AS3::Value* e);
-void FUN_1424f03f0();
+void FUN_1424f03f0(unsigned char* self, void* heap);                                // HeapLimit::Collect
 void FUN_14241a500(Scaleform::UPInt traits, Scaleform::UPInt* ret, Scaleform::UPInt t);   // InstanceTraits::Array::MakeInstance
 void FUN_14241d980(Scaleform::UPInt arr, Scaleform::UPInt stack, Scaleform::UInt32 n);   // Array: fill from the operand stack
 void FUN_14241b920(Scaleform::UPInt tbl, void* ret, Scaleform::UPInt a, Scaleform::UPInt b);   // class table: find interface traits
@@ -88,7 +88,7 @@ Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(void* globalObject, cons
 void FUN_14251ccc0(Scaleform::GFx::AS3::TR::State* state, Scaleform::UPInt n);   // State::PopOp
 void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt regIndex);                    // Tracer: note register write
 bool* FUN_1424f1390(Scaleform::GFx::AS3::Value* v, void* tmpNode, void* strOut);   // Value::ToStringValue style conversion
-void FUN_1424e0860(void* out);                                                      // assign from the scratch value
+void FUN_1424e0860(void* out, unsigned long long value);                                                    // assign from the scratch value
 void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);                      // ArrayDH<Value>::Resize growth
 void FUN_142521f00(void* value);                                                    // Value::ReleaseInternal
 Scaleform::SPInt FUN_1425f9200(void* list, void* obj);                          // DisplayList::FindDisplayIndex(const DisplayObjectBase*)
@@ -172,7 +172,7 @@ void FUN_14261d270(void* node, int mode);   // TreeNode::SetEdgeAAMode
 const void* FUN_1425f1d00(void* dispObj);   // DisplayObjectBase::GetCxform
 void FUN_1425f4060(void* dispObj, const void* cx);   // DisplayObjectBase::SetCxform
 void FUN_1425bc060(void* textField);   // TextField::SetDirtyFlag
-void FUN_1425be970(void* textField, void* displayInfo);   // TextField::TransformToTextRectSpace
+void FUN_1425be970(void* textField, void* ret, const void* displayInfo);   // TextField::TransformToTextRectSpace
 void FUN_142515710(void* out, float sx, float sy, float rot);   // ASCharacter_MatrixScaleAndRotate2x2
 bool FUN_142513e50(const void* matrix);   // Matrix2x4<float>::IsValid
 double FUN_1425e3ee0();   // the "no value" double (NaN)
@@ -1916,7 +1916,7 @@ void Sfr31CallHelperVirtual(UPInt self)
 void Sfr31FlagAndCacheField(UPInt self, UPInt* obj)
 {
     typedef void (*Fn)(UPInt* obj, int flags);
-    FUN_1424f03f0();
+    FUN_1424f03f0(reinterpret_cast<unsigned char*>(self), obj);
     (*reinterpret_cast<Fn*>(*obj + 0x30))(obj, 0x20000);
     *reinterpret_cast<UPInt*>(self + 0x28) = obj[0xc];
 }
@@ -3333,7 +3333,7 @@ UPInt Sfr31FetchOrClear(UPInt self, UPInt* out, UPInt src, UInt32 arg, UPInt arg
     const UInt32 kind = tmp[0] & 0x1f;
     if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 && (kind - 0xc > 3 || *reinterpret_cast<UPInt*>(&tmp[4]) != 0))
     {
-        FUN_1424e0860(out);
+        FUN_1424e0860(out, *reinterpret_cast<UPInt*>(&tmp[4]));
         result = 1;
     }
     else
@@ -3742,7 +3742,7 @@ UInt8* Sfr31ConstructOrClear(UPInt self, UInt8* ret, UPInt* out, const char* gna
     if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 &&
         (kind - 0xc > 3 || Sfr31Rd(reinterpret_cast<UPInt>(&tmp), 0x10) != 0))
     {
-        FUN_1424e0860(out);
+        FUN_1424e0860(out, Sfr31Rd(reinterpret_cast<UPInt>(&tmp), 0x10));
         *ret = 1;
     }
     else
@@ -8419,7 +8419,7 @@ UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
     else
     {
         float tr[56] = {};
-        FUN_1425be970(dob, tr);
+        FUN_1425be970(dob, tr, d);
         f = *reinterpret_cast<const UInt16*>(d + 0xd4);
         x = tr[0];
         y = tr[1];

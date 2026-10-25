@@ -39,8 +39,8 @@ extern "C" void* DAT_143b15f60;
 // MS2's ComplexFill vtable is referenced by the reconstructed temporary video fill object below.
 extern "C" void* DAT_14317b668;
 extern bool FUN_1423dfe30(void*, unsigned __int64);
-extern void FUN_1424d6750();
-extern void FUN_1424d6ac0();
+extern void FUN_1424d6750(void*, void*, void*);   // CTraits ctor (this, VM&, const ClassInfo&)
+extern void FUN_1424d6ac0(void*, void*);          // Class ctor (this, Traits&)
 extern void* PTR_FUN_1431b71b0;
 extern void* PTR_FUN_1431b7260;
 extern void* PTR_LAB_1431b5fb0;
@@ -128,7 +128,7 @@ extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
 extern void FUN_1424d2140(void*, double*);
 extern void FUN_140025750(void*, int, int);
 extern void FUN_140025300(void*);
-extern void FUN_140025410(void*);
+extern void FUN_140025410(void*, int);
 extern void FUN_14296bba0();
 extern void* FUN_1400105b0(void*);
 extern void FUN_14257db50(void*);
@@ -136,7 +136,7 @@ extern void FUN_14257db40(void*);
 extern void FUN_142625ee0(const void*);
 extern void FUN_142626070(void*, const void*);
 extern void FUN_1423dfba0(void*, void*);
-extern void FUN_142518040(void*);
+extern void FUN_142518040(void*, float, float);
 extern void FUN_142515a20(void*, float, float);
 extern void FUN_1424f96c0(void*);
 extern void FUN_142961830(void*, void*, void*, void*, const void*);
@@ -260,7 +260,7 @@ void FUN_140014730(void* object, void*, double value)
     *reinterpret_cast<int*>(bytes + 0x84) = static_cast<int>(value) - 1;
     unsigned tag = *reinterpret_cast<unsigned*>(bytes + 0xd8) & 0x1f;
     if (tag && (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(bytes + 0xe8)))
-        FUN_140025410(*reinterpret_cast<void**>(bytes + 0x50));
+        FUN_140025410(*reinterpret_cast<void**>(bytes + 0x50), static_cast<int>(value) - 1);
 }
 
 // MS2-FUNCTIONAL: restores the InteractiveObject base tables, releases its provider and weak proxy, then destroys the base.
@@ -1621,7 +1621,7 @@ void FUN_140011410(void* path)
 void FUN_140011500(void* object, float x1, float y1, float x2, float y2)
 {
     void* path = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88);
-    FUN_142518040(path);
+    FUN_142518040(path, x1, y1);
     FUN_142515a20(path, x2, y1);
     FUN_142515a20(path, x2, y2);
     FUN_142515a20(path, x1, y2);
@@ -2127,9 +2127,9 @@ void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned co
 
 // MS2-FUNCTIONAL: initializes the executable's class-traits object, its 0xf8-byte instance size, and vtable.
 // @0x140012ec0
-void* FUN_140012ec0(void* object)
+void* FUN_140012ec0(void* object, void* vm, void* classInfo)
 {
-    FUN_1424d6750();
+    FUN_1424d6750(object, vm, classInfo);
     *reinterpret_cast<unsigned*>(static_cast<char*>(object) + 0x60) = 0xf8;
     *reinterpret_cast<void**>(object) = PTR_FUN_1431b71b0;
     return object;
@@ -2137,9 +2137,9 @@ void* FUN_140012ec0(void* object)
 
 // MS2-FUNCTIONAL: runs the base traits constructor and installs the executable's derived traits vtable.
 // @0x140012f10
-void* FUN_140012f10(void* object)
+void* FUN_140012f10(void* object, void* traits)
 {
-    FUN_1424d6ac0();
+    FUN_1424d6ac0(object, traits);
     *reinterpret_cast<void**>(object) = PTR_FUN_1431b7260;
     return object;
 }
@@ -2186,11 +2186,12 @@ Scaleform::GFx::AS2::Object* FUN_1400122e0(
 // MS2-FUNCTIONAL: initializes attachVideo's Object, prototype base, and registered function members.
 // @0x14000eb50
 Scaleform::GFx::AS2::Object* FUN_14000eb50(
-    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context)
+    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
+    Scaleform::GFx::AS2::Object* prototype, const void* constructor)
 {
-    extern void FUN_14000e1e0(void*, void*);
+    extern void FUN_14000e1e0(void*, void*, void*, const void*);
     extern void FUN_142961830(void*, void*, void*, const void*, const void*);
-    FUN_14000e1e0(object, context);
+    FUN_14000e1e0(object, context, prototype, constructor);
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b5e70;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x70) = PTR_LAB_1431b5e18;
     *reinterpret_cast<void**>(object) = PTR_FUN_1431b5e20;
@@ -2297,10 +2298,10 @@ void* FUN_14000fe50(void* object, unsigned flags)
 
 // MS2-FUNCTIONAL: runs the executable base constructor and initializes the recovered application fields.
 // @0x1400140e0
-void* FUN_1400140e0(void* object)
+void* FUN_1400140e0(void* object, void* traits)
 {
-    extern void FUN_14245f780(void*);
-    FUN_14245f780(object);
+    extern void FUN_14245f780(void*, void*);
+    FUN_14245f780(object, traits);
     auto* bytes = static_cast<unsigned char*>(object);
     *reinterpret_cast<void**>(bytes) = PTR_FUN_1431b7360;
     *reinterpret_cast<void**>(bytes + 0x50) = nullptr;
@@ -3164,7 +3165,7 @@ void* FUN_140011610(void* object, void** result, void* context)
     auto* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
     if (!provider) {
         FUN_14252c8b0(path, 0, 0, 0);
-        FUN_142518040(path);
+        FUN_142518040(path, 0.0f, 0.0f);
         FUN_142515a20(path, 0.0f, 0.0f);
         FUN_1424f96c0(path);
     } else {

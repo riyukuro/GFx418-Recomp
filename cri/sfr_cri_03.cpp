@@ -91,7 +91,7 @@ void FUN_140053510(void*, CriUint32, void*);
 void FUN_140042600(void*, void*, CriSint32);
 CriUint64 FUN_1425e3510(void);
 CriUint64 FUN_1425e3560(void);
-void FUN_14257db50(void);
+void FUN_14257db50(void* object);
 void FUN_14257e4a0(void*, void*);
 void FUN_140054040(void*, void*, void*);
 void FUN_140053540(void*);
@@ -908,26 +908,26 @@ const void** FUN_14003bf10()
 
 // MS2-FUNCTIONAL: this callback forwarder uses the executable's two-word heap interface.
 // @0x14003a0d0
-void criUtfHeap_Alloc(void* heap)
+void* criUtfHeap_Alloc(void* heap, CriUint32 size, const char* tag, CriSint32 align, CriSint32 flags)
 {
     void** slots = (void**)heap;
-    ((void(__fastcall*)(void*))slots[0])(slots[2]);
+    return ((void*(__fastcall*)(void*, CriUint32, const char*, CriSint32, CriSint32))slots[0])(slots[2], size, tag, align, flags);
 }
 
 // MS2-FUNCTIONAL: this callback forwarder uses the executable's three-word UTF heap interface.
 // @0x14003a0ec
-void FUN_14003a0ec(void* heap)
+void FUN_14003a0ec(void* heap, void* p)
 {
     void** slots = (void**)heap;
-    ((void(__fastcall*)(void*))slots[1])(slots[2]);
+    ((void(__fastcall*)(void*, void*))slots[1])(slots[2], p);
 }
 
 // MS2-FUNCTIONAL: this callback forwarder uses the executable's two-word heap interface.
 // @0x14003a184
-void FUN_14003a184(void* heap)
+void* FUN_14003a184(void* heap, CriUint32 size, const char* tag, CriSint32 align)
 {
     void** slots = (void**)heap;
-    ((void(__fastcall*)(void*))slots[0])(slots[2]);
+    return ((void*(__fastcall*)(void*, CriUint32, const char*, CriSint32, CriSint32))slots[0])(slots[2], size, tag, align, 1);
 }
 
 // ==== CRI UTF runtime table field accessors ========================================================================
@@ -3292,7 +3292,7 @@ void* FUN_140041c00(void* context)
 void* FUN_140041c60(void* manager, CriUint64 flags)
 {
     *(const void**)manager = &PTR_FUN_1431b4f78;
-    FUN_14257db50();
+    FUN_14257db50(manager);
     if (flags & 1)
     {
         void* globalManager = DAT_143b15f60;

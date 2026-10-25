@@ -36,7 +36,7 @@
 
 void* FUN_14241ba70(void* traits, void* ret, int kind, const void* uri, const void* prefix);   // Namespace::MakeInternedInstance
 char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
-void FUN_1425f9ba0(Scaleform::UPInt self, char* ret);
+void FUN_1425f9ba0(Scaleform::UPInt self, char* ret, const void* matrix);
 Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b);
 bool FUN_1425b9b10(Scaleform::UPInt textField);
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
@@ -2039,11 +2039,11 @@ UPInt Sfr27Acc14250edf0(UPInt self) { return AccRd(AccRd(AccRd(self, 0x18), 0x20
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// The bounds of the display list of the object (returned in the result passed after this).
+// The bounds of the display list of the object under the given matrix (returned in the result passed after this).
 // @0x14250d6d0
-char* Sfr27DisplayListBounds(UPInt self, char* ret)
+char* Sfr27DisplayListBounds(UPInt self, char* ret, const void* matrix)
 {
-    FUN_1425f9ba0(self + 0xd8, ret);
+    FUN_1425f9ba0(self + 0xd8, ret, matrix);
     return ret;
 }
 
