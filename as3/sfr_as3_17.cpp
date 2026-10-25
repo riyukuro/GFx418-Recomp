@@ -2790,12 +2790,9 @@ ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm);
 const SlotInfo* FindFixedSlot(const Traits& tr, const ASString& name, const Instances::Namespace& ns, UPInt& index,
                               Object* obj);
 
-// The slot bind type of a value declared with the ABC multiname ns of file tr (2: any/Object value; 5..9: the
-// primitive types; 3: an object of another class).
-// MS2-FUNCTIONAL 0x1425075e0: the null-traits return is laid out before the switch (exe: after); same code. External
-// (the full-exe link aliases the callers' Traits::GetBindingType to it).
-// @0x1425075e0
-int Sfr33CallerAccessKind(UByte* vm, const UByte* tr, const UByte* ns)
+// The slot bind type of a value declared with the ABC multiname ns of file tr in vm (2: any/Object value; 5..9: the
+// primitive types; 3: an object of another class). The tail of Traits::GetBindingType (inlined there in the exe).
+static int Sfr33CallerAccessKind(UByte* vm, const UByte* tr, const UByte* ns)
 {
     UByte* cur = static_cast<UByte*>(FUN_142524f60(vm, tr, ns));
     if (!cur)
@@ -2814,11 +2811,19 @@ int Sfr33CallerAccessKind(UByte* vm, const UByte* tr, const UByte* ns)
     return 2;
 }
 
-int Sfr33AccessKind(const UByte* self, const UByte* tr, const UByte* ns)
+// How a slot of these traits declared with the ABC multiname mn of file stores its value: the any type is a plain
+// value, otherwise the class traits mn names in the traits' VM (this+0x78) decide.
+// MS2-FUNCTIONAL 0x1425075e0: the null-traits return is laid out before the switch (exe: after); same code.
+// @0x1425075e0
+SlotInfo::BindingType Traits::GetBindingType(VMAbcFile& file, const Abc::Multiname& mn) const
 {
+    const UByte* self = reinterpret_cast<const UByte*>(this);
+    const UByte* tr = reinterpret_cast<const UByte*>(&file);
+    const UByte* ns = reinterpret_cast<const UByte*>(&mn);
     if (ns == *reinterpret_cast<UByte* const*>(tr + 0x28) + 0xe8)
-        return 2;
-    return Sfr33CallerAccessKind(*reinterpret_cast<UByte* const*>(self + 0x78), tr, ns);
+        return static_cast<SlotInfo::BindingType>(2);
+    return static_cast<SlotInfo::BindingType>(
+        Sfr33CallerAccessKind(*reinterpret_cast<UByte* const*>(self + 0x78), tr, ns));
 }
 
 // The declared type of the fixed slot of tr named name in ns (NULL when there is none).
