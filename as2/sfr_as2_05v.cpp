@@ -8,8 +8,12 @@
 // MS2-RANGE: 0x142945d70-0x142945d7d .text$mn
 // MS2-RANGE: 0x1429493c0-0x1429493fb .text$mn
 // MS2-RANGE: 0x142949400-0x14294940a .text$mn
+// MS2-RANGE: 0x142949430-0x142949435 .text$mn
+// MS2-RANGE: 0x142949440-0x142949445 .text$mn
 // MS2-RANGE: 0x142949450-0x142949453 .text$mn
 // MS2-RANGE: 0x142949460-0x142949463 .text$mn
+// MS2-RANGE: 0x142949490-0x142949495 .text$mn
+// MS2-RANGE: 0x1429494a0-0x1429494a5 .text$mn
 // MS2-RANGE: 0x14294afb0-0x14294afbd .text$mn
 // MS2-RANGE: 0x142953cb0-0x142953cb5 .text$mn
 // MS2-RANGE: 0x142954ec0-0x142954ec9 .text$mn
@@ -30,6 +34,9 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_refcountcollector.h"
+#include "../include/gfx/as2/as2_avmtextfield.h"
+#include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/gfx_button.h"
 
 void FUN_1425b8e60(void* ptf, void* pinfo); // TextField: the display info of a text field (its text rect space)
 
@@ -277,6 +284,42 @@ void MovieRoot::SetMemoryParams(unsigned frameBetweenCollections, unsigned maxRo
     pgc->PresetFramesBetween = frameBetweenCollections;
     pgc->MaxRootCount        = maxRootCount;
     pgc->PresetMaxRootCount  = maxRootCount;
+}
+
+// The script side of a button (partial local copy: the AS object slots; the vftable is sfr_as2_03z's).
+class AvmButton : public AvmCharacter, public AvmButtonBase
+{
+public:
+    virtual Object* GetASObject();
+    virtual Object* GetASObject() const;
+
+private:
+    ButtonObject* GetButtonASObject(); // sfr_as2_05d
+};
+
+// AvmCharacter's AS object slots of a button and a text field: the character's own AS object, made on first use.
+// @0x142949430
+Object* AvmButton::GetASObject()
+{
+    return GetButtonASObject();
+}
+
+// @0x142949440
+Object* AvmButton::GetASObject() const
+{
+    return const_cast<AvmButton*>(this)->GetButtonASObject();
+}
+
+// @0x142949490
+Object* AvmTextField::GetASObject()
+{
+    return GetTextFieldASObject();
+}
+
+// @0x1429494a0
+Object* AvmTextField::GetASObject() const
+{
+    return const_cast<AvmTextField*>(this)->GetTextFieldASObject();
 }
 
 }}} // namespace Scaleform::GFx::AS2
