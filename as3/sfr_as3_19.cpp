@@ -174,8 +174,8 @@ const void* FUN_1425f1d00(void* dispObj);   // DisplayObjectBase::GetCxform
 void FUN_1425f4060(void* dispObj, const void* cx);   // DisplayObjectBase::SetCxform
 void FUN_1425bc060(void* textField);   // TextField::SetDirtyFlag
 void FUN_1425be970(void* textField, void* ret, const void* displayInfo);   // TextField::TransformToTextRectSpace
-void FUN_142515710(void* out, float sx, float sy, float rot);   // ASCharacter_MatrixScaleAndRotate2x2
-bool FUN_142513e50(const void* matrix);   // Matrix2x4<float>::IsValid
+void FUN_1425f0dd0(void* m, float sx, float sy, float rot);   // ASCharacter_MatrixScaleAndRotate2x2
+bool FUN_142515710(const void* matrix);   // Matrix2x4<float>::IsValid
 double FUN_1425e3ee0();   // the "no value" double (NaN)
 void FUN_1424f1e50(Scaleform::UPInt state, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertOpTo
 int FUN_1424eea80(Scaleform::UPInt tracer, Scaleform::UPInt traits);   // Tracer::CanBeNull
@@ -8309,7 +8309,7 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
     const double alpha = Sfr31DblAt(d, 0x28);
     if (((f >> 5) & 1) && Sfr31NotNaN(alpha))
     {
-        UInt32 cx[8];
+        alignas(16) UInt32 cx[8];   // a Cxform: SetCxform copies it with movaps
         memcpy(cx, FUN_1425f1d00(dob), sizeof(cx));
         *reinterpret_cast<float*>(cx + 3) = static_cast<float>(alpha / 100.0);
         FUN_1425f4060(dob, cx);
@@ -8384,8 +8384,9 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
         FUN_1425bc060(dob);
     }
     reinterpret_cast<VfInt>(Sfr31Rd(vt, 0x188))(dob, 0);
+    const UPInt geom = Sfr31Rd(self, 0x50);   // reread: the calls above can allocate the geometry data (exe 0x142526b46)
     typedef const float* (*MatFn)(void*);
-    float m[8];
+    alignas(16) float m[8];   // a Matrix2F (aligned like the exe frame slot)
     memcpy(m, reinterpret_cast<MatFn>(Sfr31Rd(vt, 0x10))(dob), sizeof(m));
     double x, y;
     if (notText || (f & 3) == 0)
@@ -8395,13 +8396,13 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
     }
     else
     {
-        float tr[56] = {};
+        alignas(16) float tr[56] = {};
         FUN_1425be970(dob, tr, d);
         f = *reinterpret_cast<const UInt16*>(d + 0xd4);
         x = tr[0];
         y = tr[1];
     }
-    int* const pd = reinterpret_cast<int*>(data);
+    int* const pd = reinterpret_cast<int*>(geom);
     if (f & 0x1c)
     {
         const double a = static_cast<float>(pd[0xc]);
@@ -8446,7 +8447,7 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
             else
                 ys = ny;
         }
-        FUN_142515710(m, static_cast<float>(xs / xdiv), static_cast<float>(ys / ydiv), static_cast<float>(rad / 180.0 - rot0));
+        FUN_1425f0dd0(m, static_cast<float>(xs / xdiv), static_cast<float>(ys / ydiv), static_cast<float>(rad / 180.0 - rot0));
     }
     if (Sfr31NotNaN((f & 1) ? Sfr31DblAt(d, 0) : nan))
     {
@@ -8466,7 +8467,7 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
         pd[1] = static_cast<int>(v);
         m[7] = static_cast<float>(static_cast<int>(v));
     }
-    if (FUN_142513e50(m))
+    if (FUN_142515710(m))
     {
         if (reinterpret_cast<DisplayObjectBase*>(self)->Is3D())
             reinterpret_cast<VfVoid>(Sfr31Rd(vt, 0x58))(dob);
