@@ -44,33 +44,56 @@ public:
 }}} // namespace Scaleform::GFx::XML
 
 // The Expat library linked into the exe (parser handle, handler setters, error and position queries).
-ExeDecl<void*(const char*)> FUN_1423b2eb0; static constexpr ExeDecl<void*(const char*)>& XML_ParserCreate = FUN_1423b2eb0;
-ExeDecl<void(void*, void*)> FUN_1423b3500; static constexpr ExeDecl<void(void*, void*)>& XML_SetXmlDeclHandler = FUN_1423b3500;
-ExeDecl<void(void*, void*)> FUN_1423b3400; static constexpr ExeDecl<void(void*, void*)>& XML_SetStartElementHandler = FUN_1423b3400;
-ExeDecl<void(void*, void*)> FUN_1423b3310; static constexpr ExeDecl<void(void*, void*)>& XML_SetEndElementHandler = FUN_1423b3310;
-ExeDecl<void(void*, void*)> FUN_1423b3320; static constexpr ExeDecl<void(void*, void*)>& XML_SetCharacterDataHandler = FUN_1423b3320;
-ExeDecl<void(void*, void*)> FUN_1423b3560; static constexpr ExeDecl<void(void*, void*)>& XML_SetStartNamespaceDeclHandler = FUN_1423b3560;
-ExeDecl<void(void*, void*)> FUN_1423b3330; static constexpr ExeDecl<void(void*, void*)>& XML_SetCommentHandler = FUN_1423b3330;
-ExeDecl<void(void*, void*)> FUN_1423b3540; static constexpr ExeDecl<void(void*, void*)>& XML_SetUserData = FUN_1423b3540;
-ExeDecl<int(void*, const char*, int, int)> FUN_1423b2c20; static constexpr ExeDecl<int(void*, const char*, int, int)>& XML_Parse = FUN_1423b2c20;
-ExeDecl<int(void*)> FUN_1423b2ab0; static constexpr ExeDecl<int(void*)>& XML_GetCurrentColumnNumber = FUN_1423b2ab0;
-ExeDecl<int(void*)> FUN_1423b2b10; static constexpr ExeDecl<int(void*)>& XML_GetCurrentLineNumber = FUN_1423b2b10;
-ExeDecl<int(void*)> FUN_1423b2a90; static constexpr ExeDecl<int(void*)>& XML_GetCurrentByteIndex = FUN_1423b2a90;
-ExeDecl<int(void*)> FUN_1423b2b70; static constexpr ExeDecl<int(void*)>& XML_GetErrorCode = FUN_1423b2b70;
-ExeDecl<const char*(int)> FUN_1423b24b0; static constexpr ExeDecl<const char*(int)>& XML_ErrorString = FUN_1423b24b0;
-ExeDecl<void(void*)> FUN_1423b2f30; static constexpr ExeDecl<void(void*)>& XML_ParserFree = FUN_1423b2f30;
+ExeDecl<void*(const char*)> FUN_1423b2eb0;
+#define XML_ParserCreate FUN_1423b2eb0
+ExeDecl<void(void*, void*)> FUN_1423b3500;
+#define XML_SetXmlDeclHandler FUN_1423b3500
+ExeDecl<void(void*, void*)> FUN_1423b3400;
+#define XML_SetStartElementHandler FUN_1423b3400
+ExeDecl<void(void*, void*)> FUN_1423b3310;
+#define XML_SetEndElementHandler FUN_1423b3310
+ExeDecl<void(void*, void*)> FUN_1423b3320;
+#define XML_SetCharacterDataHandler FUN_1423b3320
+ExeDecl<void(void*, void*)> FUN_1423b3560;
+#define XML_SetStartNamespaceDeclHandler FUN_1423b3560
+ExeDecl<void(void*, void*)> FUN_1423b3330;
+#define XML_SetCommentHandler FUN_1423b3330
+ExeDecl<void(void*, void*)> FUN_1423b3540;
+#define XML_SetUserData FUN_1423b3540
+ExeDecl<int(void*, const char*, int, int)> FUN_1423b2c20;
+#define XML_Parse FUN_1423b2c20
+ExeDecl<int(void*)> FUN_1423b2ab0;
+#define XML_GetCurrentColumnNumber FUN_1423b2ab0
+ExeDecl<int(void*)> FUN_1423b2b10;
+#define XML_GetCurrentLineNumber FUN_1423b2b10
+ExeDecl<int(void*)> FUN_1423b2a90;
+#define XML_GetCurrentByteIndex FUN_1423b2a90
+ExeDecl<int(void*)> FUN_1423b2b70;
+#define XML_GetErrorCode FUN_1423b2b70
+ExeDecl<const char*(int)> FUN_1423b24b0;
+#define XML_ErrorString FUN_1423b24b0
+ExeDecl<void(void*)> FUN_1423b2f30;
+#define XML_ParserFree FUN_1423b2f30
 // The parser's own callbacks (the handler / user data protocol is private to the exe's ParserExpat).
-ExeDecl<void()> FUN_1423b1d40; static constexpr ExeDecl<void()>& ParserExpat_XmlDeclCallback = FUN_1423b1d40;
-ExeDecl<void()> FUN_1423b17d0; static constexpr ExeDecl<void()>& ParserExpat_StartElementCallback = FUN_1423b17d0;
-ExeDecl<void()> FUN_1423b1660; static constexpr ExeDecl<void()>& ParserExpat_EndElementCallback = FUN_1423b1660;
-ExeDecl<void()> FUN_1423b16d0; static constexpr ExeDecl<void()>& ParserExpat_CharacterDataCallback = FUN_1423b16d0;
-ExeDecl<void()> FUN_1423b23e0; static constexpr ExeDecl<void()>& ParserExpat_StartNamespaceCallback = FUN_1423b23e0;
-ExeDecl<void()> FUN_1423b1760; static constexpr ExeDecl<void()>& ParserExpat_CommentCallback = FUN_1423b1760;
+ExeDecl<void()> FUN_1423b1d40;
+#define ParserExpat_XmlDeclCallback FUN_1423b1d40
+ExeDecl<void()> FUN_1423b17d0;
+#define ParserExpat_StartElementCallback FUN_1423b17d0
+ExeDecl<void()> FUN_1423b1660;
+#define ParserExpat_EndElementCallback FUN_1423b1660
+ExeDecl<void()> FUN_1423b16d0;
+#define ParserExpat_CharacterDataCallback FUN_1423b16d0
+ExeDecl<void()> FUN_1423b23e0;
+#define ParserExpat_StartNamespaceCallback FUN_1423b23e0
+ExeDecl<void()> FUN_1423b1760;
+#define ParserExpat_CommentCallback FUN_1423b1760
 // Formats one message into a small caller supplied buffer descriptor (mode 2, buffer, capacity).
 struct Unk_XmlMsgBuffer { int Mode; char* Buffer; UPInt Capacity; };
 ExeDecl<void(Unk_XmlMsgBuffer*, const char*, const char**)> FUN_1423b14e0;
-extern ExeDecl<char> DAT_143135720; static constexpr ExeDecl<char>& Unk_FileIsEmptyFormat = DAT_143135720;       // "File {0} is empty!"
-extern ExeDecl<char> DAT_143135738; static constexpr ExeDecl<char>& Unk_FileMissingFormat = DAT_143135738;       // "File {0} does not exist!"
+extern ExeDecl<char> DAT_143135720;       // "File {0} is empty!"
+#define Unk_FileIsEmptyFormat DAT_143135720
+extern ExeDecl<char> DAT_143135738;       // "File {0} does not exist!"
+#define Unk_FileMissingFormat DAT_143135738
 
 namespace Scaleform { namespace GFx { namespace XML {
 

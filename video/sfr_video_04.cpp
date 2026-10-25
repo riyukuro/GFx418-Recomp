@@ -35,14 +35,16 @@ ExeDecl<char*()> FUN_1429561c0;                           // the AS2 builtin cla
 ExeDecl<void(void*)> FUN_1429260b0;                       // AS2 value destructor
 ExeDecl<InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*)> FUN_140010000;   // the video character constructor
 ExeDecl<void*(void*, InteractiveObject*)> FUN_14000e2b0;          // the AVM video character constructor
-ExeDecl<void*(void*, InteractiveObject*)> FUN_14001af70; static constexpr ExeDecl<void*(void*, InteractiveObject*)>& FUN_14001af70_ctor = FUN_14001af70;     // the AS3 AVM video character constructor
+ExeDecl<void*(void*, InteractiveObject*)> FUN_14001af70;     // the AS3 AVM video character constructor
+#define FUN_14001af70_ctor FUN_14001af70
 ExeDecl<void*(void*, void*)> FUN_1400126f0;
 ExeDecl<void*(void*, void*)> FUN_14000cf20;
 ExeDecl<void*(void*, void*)> FUN_14000ed60;
 ExeDecl<void(void*, void*, void*)> FUN_140001270;           // AS2VideoSupport::AttachAudio
 #pragma comment(linker, "/alternatename:?FUN_140001270@@YAXPEAX00@Z=?AttachAudio@AS2VideoSupportImpl@@UEAAXPEAVObject@AS2@GFx@Scaleform@@PEAVSprite@45@@Z")   // sfr36: full-exe link
 ExeDecl<void(void*, void*)> FUN_1425210d0;                   // AS3 class registration
-extern ExeDecl<void*> DAT_143a47b70; static constexpr ExeDecl<void*>& Video04ClassInfo = DAT_143a47b70;                             // the AS3 class info registered below
+extern ExeDecl<void*> DAT_143a47b70;                             // the AS3 class info registered below
+#define Video04ClassInfo DAT_143a47b70
 
 namespace
 {

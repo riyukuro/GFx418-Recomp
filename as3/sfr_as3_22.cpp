@@ -38,37 +38,70 @@ extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
-extern ExeDecl<void*> DAT_1431921e0; static constexpr ExeDecl<void*>& AS3TextRecordVtable = DAT_1431921e0;
-extern ExeDecl<void*> DAT_1431921b0; static constexpr ExeDecl<void*>& AS3MovieImageDataVtable = DAT_1431921b0;
-extern ExeDecl<void*> DAT_143192170; static constexpr ExeDecl<void*>& AS3MovieImageStringSetVtable = DAT_143192170;
-extern ExeDecl<void*> DAT_143192190; static constexpr ExeDecl<void*>& AS3MovieImageValueSetVtable = DAT_143192190;
-extern ExeDecl<void*> DAT_1431921a0; static constexpr ExeDecl<void*>& AS3MovieImageNameSetVtable = DAT_1431921a0;
-extern ExeDecl<void*> DAT_143192180; static constexpr ExeDecl<void*>& AS3MovieImageTreeVtable = DAT_143192180;
-extern ExeDecl<void*> DAT_1431921d0; static constexpr ExeDecl<void*>& AS3MovieResourceDataVtable = DAT_1431921d0;
-extern ExeDecl<void*> DAT_143192160; static constexpr ExeDecl<void*>& AS3MovieMemoryItemVtable = DAT_143192160;
-extern ExeDecl<void*> DAT_1431bede8; static constexpr ExeDecl<void*>& AS3AudioEventVtable = DAT_1431bede8;
-extern ExeDecl<void*> DAT_1431bec40; static constexpr ExeDecl<void*>& AS3AudioListNodeVtable = DAT_1431bec40;
-extern ExeDecl<void*> DAT_1431bed18; static constexpr ExeDecl<void*>& AS3SoundRequestVtable = DAT_1431bed18;
-extern ExeDecl<void*> DAT_1431bed50; static constexpr ExeDecl<void*>& AS3SoundRequestNodeVtable = DAT_1431bed50;
-extern ExeDecl<void*> DAT_1431bef00; static constexpr ExeDecl<void*>& AS3BufferedRequestVtable = DAT_1431bef00;
-extern ExeDecl<void*> DAT_1431bef38; static constexpr ExeDecl<void*>& AS3BufferedRequestNodeVtable = DAT_1431bef38;
-extern ExeDecl<void*> DAT_1431bee50; static constexpr ExeDecl<void*>& AS3StreamRequestVtable = DAT_1431bee50;
-extern ExeDecl<void*> DAT_1431bee68; static constexpr ExeDecl<void*>& AS3StreamRequestNodeVtable = DAT_1431bee68;
-extern ExeDecl<float> DAT_142d175c8; static constexpr ExeDecl<float>& ImageViewportScale = DAT_142d175c8;
-extern ExeDecl<float> DAT_142d175cc; static constexpr ExeDecl<float>& ImageViewportBias = DAT_142d175cc;
-extern ExeDecl<float> DAT_142d175e0; static constexpr ExeDecl<float>& ImageViewportClampBias = DAT_142d175e0;
-extern ExeDecl<float> DAT_142eab358; static constexpr ExeDecl<float>& DrawableImageScale2 = DAT_142eab358;
-extern ExeDecl<float> DAT_142ceab84; static constexpr ExeDecl<float>& FloatOne = DAT_142ceab84;
-extern ExeDecl<float[4]> DAT_143003a80; static constexpr ExeDecl<float[4]>& ThresholdTransformX = DAT_143003a80;
-extern ExeDecl<float[4]> DAT_1430569c0; static constexpr ExeDecl<float[4]>& ThresholdTransformY = DAT_1430569c0;
-extern ExeDecl<unsigned char[9]> DAT_143a2f740; static constexpr ExeDecl<unsigned char[9]>& ChannelIndexMap = DAT_143a2f740;
-extern ExeDecl<std::uint32_t[4]> DAT_14318da30; static constexpr ExeDecl<std::uint32_t[4]>& ImageViewportColor = DAT_14318da30;
-extern ExeDecl<float> DAT_14318ea74; static constexpr ExeDecl<float>& ImageViewportOrigin = DAT_14318ea74;
-extern ExeDecl<void*> DAT_14318f040; static constexpr ExeDecl<void*>& MovieImageInfoVtable = DAT_14318f040;
-extern ExeDecl<void*> DAT_14318f048; static constexpr ExeDecl<void*>& AS3MovieMarkerVtable = DAT_14318f048;
-extern ExeDecl<void*> DAT_14318f020; static constexpr ExeDecl<void*>& AS3TextValueRecordVtable = DAT_14318f020;
-extern ExeDecl<void*> DAT_14318f030; static constexpr ExeDecl<void*>& AS3MovieViewValueVtable = DAT_14318f030;
-extern ExeDecl<void*> DAT_1431921c0; static constexpr ExeDecl<void*>& AS3MovieImageExtraVtable = DAT_1431921c0;
+extern ExeDecl<void*> DAT_1431921e0;
+#define AS3TextRecordVtable DAT_1431921e0
+extern ExeDecl<void*> DAT_1431921b0;
+#define AS3MovieImageDataVtable DAT_1431921b0
+extern ExeDecl<void*> DAT_143192170;
+#define AS3MovieImageStringSetVtable DAT_143192170
+extern ExeDecl<void*> DAT_143192190;
+#define AS3MovieImageValueSetVtable DAT_143192190
+extern ExeDecl<void*> DAT_1431921a0;
+#define AS3MovieImageNameSetVtable DAT_1431921a0
+extern ExeDecl<void*> DAT_143192180;
+#define AS3MovieImageTreeVtable DAT_143192180
+extern ExeDecl<void*> DAT_1431921d0;
+#define AS3MovieResourceDataVtable DAT_1431921d0
+extern ExeDecl<void*> DAT_143192160;
+#define AS3MovieMemoryItemVtable DAT_143192160
+extern ExeDecl<void*> DAT_1431bede8;
+#define AS3AudioEventVtable DAT_1431bede8
+extern ExeDecl<void*> DAT_1431bec40;
+#define AS3AudioListNodeVtable DAT_1431bec40
+extern ExeDecl<void*> DAT_1431bed18;
+#define AS3SoundRequestVtable DAT_1431bed18
+extern ExeDecl<void*> DAT_1431bed50;
+#define AS3SoundRequestNodeVtable DAT_1431bed50
+extern ExeDecl<void*> DAT_1431bef00;
+#define AS3BufferedRequestVtable DAT_1431bef00
+extern ExeDecl<void*> DAT_1431bef38;
+#define AS3BufferedRequestNodeVtable DAT_1431bef38
+extern ExeDecl<void*> DAT_1431bee50;
+#define AS3StreamRequestVtable DAT_1431bee50
+extern ExeDecl<void*> DAT_1431bee68;
+#define AS3StreamRequestNodeVtable DAT_1431bee68
+// The exe's read-only constants this unit alone reads: defined here with the exe's values so the full exe links
+// (the hook DLL binds the names to the exe's copies).
+ExeDecl<float> DAT_142d175c8 = 0.5f;
+#define ImageViewportScale DAT_142d175c8
+ExeDecl<float> DAT_142d175cc = 2.0f;
+#define ImageViewportBias DAT_142d175cc
+ExeDecl<float> DAT_142d175e0 = -1.0f;
+#define ImageViewportClampBias DAT_142d175e0
+ExeDecl<float> DAT_142eab358 = -2.0f;
+#define DrawableImageScale2 DAT_142eab358
+ExeDecl<float> DAT_142ceab84 = 1.0f;
+#define FloatOne DAT_142ceab84
+ExeDecl<float[4]> DAT_143003a80 = { 1.0f, 0.0f, 0.0f, 0.0f };
+#define ThresholdTransformX DAT_143003a80
+ExeDecl<float[4]> DAT_1430569c0 = { 0.0f, 1.0f, 0.0f, 0.0f };
+#define ThresholdTransformY DAT_1430569c0
+ExeDecl<unsigned char[9]> DAT_143a2f740 = { 0xff, 0, 1, 0xff, 2, 0xff, 0xff, 0xff, 3 };
+#define ChannelIndexMap DAT_143a2f740
+ExeDecl<std::uint32_t[4]> DAT_14318da30 = { 0x40000000u, 0, 0, 0xbf800000u };
+#define ImageViewportColor DAT_14318da30
+ExeDecl<float> DAT_14318ea74 = -0.0f;
+#define ImageViewportOrigin DAT_14318ea74
+extern ExeDecl<void*> DAT_14318f040;
+#define MovieImageInfoVtable DAT_14318f040
+extern ExeDecl<void*> DAT_14318f048;
+#define AS3MovieMarkerVtable DAT_14318f048
+extern ExeDecl<void*> DAT_14318f020;
+#define AS3TextValueRecordVtable DAT_14318f020
+extern ExeDecl<void*> DAT_14318f030;
+#define AS3MovieViewValueVtable DAT_14318f030
+extern ExeDecl<void*> DAT_1431921c0;
+#define AS3MovieImageExtraVtable DAT_1431921c0
 extern "C" void FUN_14268cd80(void*, void*, unsigned);
 extern "C" void FUN_14268c510(void*, void*, unsigned);
 extern "C" void FUN_14268d2b0(void*, void*, unsigned);
