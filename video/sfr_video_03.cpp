@@ -132,7 +132,8 @@ ExeDecl<const char*(void*, void*)> FUN_142506e10;
 ExeDecl<void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t)> FUN_142519d50;
 ExeDecl<void(void*)> FUN_1424ddc20;
 ExeDecl<void(void*, void*, const void*)> FUN_1424d6750;
-ExeDecl<void(void*)> FUN_1424d6480;
+namespace Scaleform { namespace GFx { class InteractiveObject; }}
+ExeDecl<void(void*, Scaleform::GFx::InteractiveObject*)> FUN_1424d6480;   // the AVM interactive-object base constructor
 ExeDecl<void(void*, void*, const void*)> FUN_1424dabd0;
 ExeDecl<void(void*, void*)> FUN_1424d6ac0;
 void FUN_140019470(void* self, std::uint64_t* output); // defined below (external: other units take its address)
@@ -1342,11 +1343,15 @@ std::uint64_t* FUN_14001a920(std::uint64_t* record, std::uint64_t vm, std::uint6
     record[1] = property; record[0] = vm; reinterpret_cast<std::uint32_t*>(record)[4] = *value;
     return record;
 }
-// MS2-FUNCTIONAL: runs the AS3 traits base initializer and installs the Video player traits vtables and defaults.
+} // namespace (sfr_video_04 calls FUN_14001af70)
+
+// MS2-FUNCTIONAL: the AS3 AVM video character constructor (sfr_video_04): runs the AvmInteractiveObj base constructor on
+// the character (rdx passes through) and installs the Video character vtables and defaults.
 // @0x14001af70
-std::uint64_t* FUN_14001af70(std::uint64_t* traits)
+void* FUN_14001af70(void* self, Scaleform::GFx::InteractiveObject* object)
 {
-    FUN_1424d6480(traits);
+    auto* traits = static_cast<std::uint64_t*>(self);
+    FUN_1424d6480(traits, object);
     reinterpret_cast<std::uint32_t*>(traits)[20] = 0;
     *reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(traits) + 0x4c) = 0;
     reinterpret_cast<std::uint32_t*>(traits)[18] = 0;
@@ -1356,6 +1361,8 @@ std::uint64_t* FUN_14001af70(std::uint64_t* traits)
     reinterpret_cast<void***>(traits)[8] = &VideoTraitsSubVtableB;
     return traits;
 }
+
+namespace {
 
 // MS2-FUNCTIONAL: initializes a null output and forwards metadata handling to its callback helper.
 // @0x140019850
@@ -1565,6 +1572,7 @@ void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void*
     return classTraits;
 }
 }
+} // namespace (FUN_1400199e0 / FUN_14001ad20 are declared at global scope above)
 // MS2-FUNCTIONAL: constructs the Video AS3 class traits and its instance and native traits objects.
 // @0x1400199e0
 void* FUN_1400199e0(void* traits, void* vm)
@@ -1577,6 +1585,7 @@ void* FUN_14001ad20(void* traits, void* vm)
 {
     return BuildVideoTraits(traits, vm, &VideoClassInfoB, &VideoClassVtableB, &VideoInstanceVtableB, 0x78);
 }
+namespace {
 
 namespace {
 Scaleform::GFx::ASStringNode* MakeVideoNullString(Scaleform::GFx::ASStringManager* manager)
