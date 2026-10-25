@@ -2723,6 +2723,7 @@ public:
     void AddToChain(EventId::IdCode evtId, DisplayObject* obj);     // 0x1424eac70
     void RemoveFromChain(EventId::IdCode evtId, DisplayObject* obj);
     void QueueEvents(EventId::IdCode evtId);
+    void Dispatch(EventId::IdCode code);                            // 0x1424f71b0 (sfr_as3_17)
 
 private:
     UPInt FindObjectIndexInChain(Chain* chain, DisplayObject* obj); // 0x142501dc0
@@ -8010,3 +8011,386 @@ void MemoryContextImpl::HeapLimit::OnFreeSegment(MemoryHeap* heap, UPInt freeing
 }
 
 }}} // namespace Scaleform::GFx::AS3
+
+// ==== pdata-less vftable slots of the AVM display objects, the AS3 MovieRoot and the Tracer (sfr21) ====
+// Leaves (`ret`, `xor al,al`, `mov al,1`), tail calls and adjustor thunks without .pdata; the slot only names a VA, so
+// the FUN_ ones are free functions (the vftables are data images).
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// @0x142510dd0
+bool AvmDisplayObjContainer::HasEventHandler(const EventId&) const
+{
+    return false;
+}
+
+// @0x142514290
+bool AvmDisplayObjContainer::IsFocusEnabled(FocusMovedType) const
+{
+    return false;
+}
+
+// @0x142518c50
+bool AvmDisplayObjContainer::OnEvent(const EventId& id)
+{
+    return AvmInteractiveObj::OnEvent(id);
+}
+
+// @0x142519040
+void AvmDisplayObjContainer::OnEventLoad()
+{
+    SetAS3ObjCollectible(GetAS3Obj());
+}
+
+// @0x142519840
+void AvmDisplayObjContainer::OnEventUnload()
+{
+    AvmDisplayObj::OnEventUnload();
+}
+
+// @0x142519d30
+void AvmDisplayObjContainer::OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                                     unsigned controllerIdx, FocusMovedType fmt)
+{
+    AvmInteractiveObj::OnFocus(event, oldOrNewFocusCh, controllerIdx, fmt);
+}
+
+// @0x14251a0e0
+void AvmDisplayObjContainer::OnGettingKeyboardFocus(unsigned, FocusMovedType)
+{
+}
+
+// @0x14251a340
+bool AvmDisplayObjContainer::OnKeyEvent(const EventId&, int*)
+{
+    return false;
+}
+
+// @0x14251a800
+bool AvmDisplayObjContainer::OnLosingKeyboardFocus(InteractiveObject*, unsigned, FocusMovedType)
+{
+    return true;
+}
+
+// @0x14251b0a0
+bool AvmDisplayObjContainer::OnUnloading(bool mayRemove)
+{
+    return AvmDisplayObj::OnUnloading(mayRemove);
+}
+
+// @0x14251b0c0
+bool AvmInteractiveObj::OnUnloading(bool mayRemove)
+{
+    return AvmDisplayObj::OnUnloading(mayRemove);
+}
+
+// @0x1425190b0
+void AvmSprite::OnEventLoad()
+{
+    SetAS3ObjCollectible(GetAS3Obj());
+}
+
+// @0x142519880
+void AvmSprite::OnEventUnload()
+{
+    AvmDisplayObj::OnEventUnload();
+}
+
+// @0x14251b0e0
+bool AvmSprite::OnUnloading(bool mayRemove)
+{
+    return AvmDisplayObj::OnUnloading(mayRemove);
+}
+
+// -- leaves --
+
+// @0x142510da0
+bool FUN_142510da0(UPInt) { return false; }
+// @0x142510df0
+bool FUN_142510df0(UPInt) { return false; }
+// @0x14251a330
+bool FUN_14251a330(UPInt) { return false; }
+// @0x14251ac90
+bool FUN_14251ac90(UPInt) { return false; }
+// Tracer::OnOpCode
+// @0x14251acb0
+bool FUN_14251acb0(UPInt) { return false; }
+// @0x142514280
+bool FUN_142514280(UPInt) { return true; }
+// @0x142518740
+bool FUN_142518740(UPInt) { return true; }
+// @0x14251a7f0
+bool FUN_14251a7f0(UPInt) { return true; }
+// @0x14251a810
+bool FUN_14251a810(UPInt) { return true; }
+// @0x14251af20
+bool FUN_14251af20(UPInt) { return true; }
+// @0x14251b0f0
+bool FUN_14251b0f0(UPInt) { return true; }
+// @0x142518470
+void FUN_142518470(UPInt) {}
+// @0x142518520
+void FUN_142518520(UPInt) {}
+// @0x14251a0d0
+void FUN_14251a0d0(UPInt) {}
+// @0x14251a0f0
+void FUN_14251a0f0(UPInt) {}
+// @0x14251ac80
+void FUN_14251ac80(UPInt) {}
+// @0x14251acc0
+void FUN_14251acc0(UPInt) {}
+// @0x14251d060
+void FUN_14251d060(UPInt) {}
+// @0x1425210c0
+void FUN_1425210c0(UPInt) {}
+
+// MS2-FUNCTIONAL: raw-layout getter
+// @0x14250ba00
+UPInt FUN_14250ba00(UPInt self) { return AccRd(self, 0x40); }
+// MS2-FUNCTIONAL: raw-layout getter
+// @0x14250d960
+UPInt FUN_14250d960(UPInt self) { return AccRd(self, 0xc8); }
+// MS2-FUNCTIONAL: raw-layout getter
+// @0x14250eef0
+UPInt FUN_14250eef0(UPInt self) { return AccRd(AccRd(self, 0x40), 0x18); }
+
+// A float of the render node the handle at +0x48 names (0x38-byte entries on 4K pages, the page's entry table at
+// +0x20), 0 for no handle or a node of another type than 3.
+// MS2-FUNCTIONAL: raw-layout page walk
+// @0x14250d630
+float FUN_14250d630(UPInt self)
+{
+    const UPInt h = AccRd(self, 0x48);
+    if (!h)
+        return 0.0f;
+    const UInt32 idx = (UInt32)((SPInt)((h & 0xfff) - 0x38) / 0x38);
+    const UPInt node = AccRd(AccRd(h & ~UPInt(0xfff), 0x20), 0x28 + (UPInt)idx * 8);
+    if (*reinterpret_cast<const UInt16*>(node + 8) != 3)
+        return 0.0f;
+    return *reinterpret_cast<const float*>(node + 0x98);
+}
+
+// -- tail calls into the shared bodies --
+
+// MS2-FUNCTIONAL: free-function form of the inherited slot
+// @0x142518a10
+bool FUN_142518a10(UPInt self, const EventId& id)
+{
+    return reinterpret_cast<AvmInteractiveObj*>(self)->AvmInteractiveObj::OnEvent(id);
+}
+// MS2-FUNCTIONAL: free-function form of the inherited slot
+// @0x142518fc0
+bool FUN_142518fc0(UPInt self, const EventId& id)
+{
+    return reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEvent(id);
+}
+// MS2-FUNCTIONAL: free-function form of the AS3 object's load (AvmDisplayObj::OnEventLoad's body)
+// @0x142518fe0
+void FUN_142518fe0(UPInt self)
+{
+    AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self);
+    avm->SetAS3ObjCollectible(avm->GetAS3Obj());
+}
+// MS2-FUNCTIONAL: free-function form of the inherited slot
+// @0x1425191e0
+void FUN_1425191e0(UPInt self)
+{
+    reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEventUnload();
+}
+// MS2-FUNCTIONAL: free-function form of the inherited slot
+// @0x1425198b0
+void FUN_1425198b0(UPInt self)
+{
+    reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEventUnload();
+}
+// MS2-FUNCTIONAL: free-function form of the inherited slot
+// @0x142519d10
+void FUN_142519d10(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
+                   FocusMovedType fmt)
+{
+    reinterpret_cast<AvmInteractiveObj*>(self)->AvmInteractiveObj::OnFocus(event, ch, controllerIdx, fmt);
+}
+// MS2-FUNCTIONAL: free-function form of the inherited slot
+// @0x142519ec0
+void FUN_142519ec0(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
+                   FocusMovedType fmt)
+{
+    reinterpret_cast<AvmInteractiveObj*>(self)->AvmInteractiveObj::OnFocus(event, ch, controllerIdx, fmt);
+}
+
+// MovieRoot slots on its EventChains (+0x150) and MovieImpl (+0x10).
+// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// @0x1425184f0
+void FUN_1425184f0(UPInt self)
+{
+    reinterpret_cast<EventChains*>(self + 0x150)->QueueEvents((EventId::IdCode)AS3Event_Controller);
+}
+// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// @0x142518510
+void FUN_142518510(UPInt self, InteractiveObject* pNewFocus, unsigned controllerIdx, FocusMovedType fmt)
+{
+    reinterpret_cast<MovieImpl*>(AccRd(self, 0x10))->TransferFocus(pNewFocus, controllerIdx, fmt);
+}
+// activate (0x1000011) or deactivate (0x1000012) to the listening objects.
+// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// @0x14251ac40
+void FUN_14251ac40(UPInt self, bool activate)
+{
+    reinterpret_cast<EventChains*>(self + 0x150)->Dispatch((EventId::IdCode)((activate ? 0 : 1) + 0x1000011));
+}
+// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// @0x14251ac60
+void FUN_14251ac60(UPInt self)
+{
+    reinterpret_cast<EventChains*>(self + 0x150)->QueueEvents((EventId::IdCode)2);
+}
+
+// Tracer::Output: passed on to the FlashUI of the traced call frame's VM.
+// MS2-FUNCTIONAL: raw-layout walk (CallFrame +0x20 -> +0x28 -> +0x20 -> +0x20)
+// @0x14251bda0
+void FUN_14251bda0(UPInt self, FlashUI::OutputMessageType type, const char* msg)
+{
+    reinterpret_cast<FlashUI*>(AccRd(AccRd(AccRd(AccRd(self, 0x20), 0x28), 0x20), 0x20))->Output(type, msg);
+}
+
+// -- adjustor thunks (this of a secondary base part back to the object) --
+
+#define SFR21_THUNK(name, off, target) \
+    void name(UPInt self) { target(self - off); }
+#define SFR21_THUNKB(name, off, target) \
+    bool name(UPInt self) { return target(self - off); }
+
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142510da4
+SFR21_THUNKB(FUN_142510da4, 0x30, FUN_142510da0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142510db0
+SFR21_THUNKB(FUN_142510db0, 0x40, FUN_142510da0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142510df4
+SFR21_THUNKB(FUN_142510df4, 0x30, FUN_142510df0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142510e00
+SFR21_THUNKB(FUN_142510e00, 0x40, FUN_142510df0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142514284
+SFR21_THUNKB(FUN_142514284, 0x10, FUN_142514280)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142514efc
+SFR21_THUNKB(FUN_142514efc, 0x10, AvmButton_IsTabable)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425150b0
+SFR21_THUNKB(FUN_1425150b0, 0x10, AvmTextField_IsTabable)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142518ffc
+SFR21_THUNK(FUN_142518ffc, 0x30, FUN_142518fe0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142519008
+SFR21_THUNK(FUN_142519008, 0x40, FUN_142518fe0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425191bc
+SFR21_THUNK(FUN_1425191bc, 0x30, AvmTextField_OnEventLoad)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425191c8
+SFR21_THUNK(FUN_1425191c8, 0x40, AvmTextField_OnEventLoad)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425191e8
+SFR21_THUNK(FUN_1425191e8, 0x30, FUN_1425191e0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425191f4
+SFR21_THUNK(FUN_1425191f4, 0x40, FUN_1425191e0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425198b8
+SFR21_THUNK(FUN_1425198b8, 0x30, FUN_1425198b0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1425198c4
+SFR21_THUNK(FUN_1425198c4, 0x40, FUN_1425198b0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251a0d4
+SFR21_THUNK(FUN_14251a0d4, 0x10, FUN_14251a0d0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251a0f4
+SFR21_THUNK(FUN_14251a0f4, 0x10, FUN_14251a0f0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251a334
+SFR21_THUNKB(FUN_14251a334, 0x10, FUN_14251a330)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251a7f4
+SFR21_THUNKB(FUN_14251a7f4, 0x10, FUN_14251a7f0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251a814
+SFR21_THUNKB(FUN_14251a814, 0x10, FUN_14251a810)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251af24
+SFR21_THUNKB(FUN_14251af24, 0x30, FUN_14251af20)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251af30
+SFR21_THUNKB(FUN_14251af30, 0x40, FUN_14251af20)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251b0f4
+SFR21_THUNKB(FUN_14251b0f4, 0x30, FUN_14251b0f0)
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251b100
+SFR21_THUNKB(FUN_14251b100, 0x40, FUN_14251b0f0)
+
+#undef SFR21_THUNK
+#undef SFR21_THUNKB
+
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142514304
+bool FUN_142514304(UPInt self, UInt32 mode) { return Sfr27TextFieldTabCheck(self - 0x10, mode); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142518a18
+bool FUN_142518a18(UPInt self, const EventId& id) { return FUN_142518a10(self - 0x30, id); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142518a24
+bool FUN_142518a24(UPInt self, const EventId& id) { return FUN_142518a10(self - 0x40, id); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142518fc8
+bool FUN_142518fc8(UPInt self, const EventId& id) { return FUN_142518fc0(self - 0x30, id); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142518fd4
+bool FUN_142518fd4(UPInt self, const EventId& id) { return FUN_142518fc0(self - 0x40, id); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142519d18
+void FUN_142519d18(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
+                   FocusMovedType fmt)
+{
+    FUN_142519d10(self - 0x10, event, ch, controllerIdx, fmt);
+}
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142519ec8
+void FUN_142519ec8(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
+                   FocusMovedType fmt)
+{
+    FUN_142519ec0(self - 0x10, event, ch, controllerIdx, fmt);
+}
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x14251a388
+bool FUN_14251a388(UPInt self, const EventId& id, int* pkeyMask) { return AvmTextField_OnKeyEvent(self - 0x10, id, pkeyMask); }
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx {
+
+// @0x1425227d0
+void InteractiveObject::RemoveDisplayObject(DisplayObjectBase*)
+{
+}
+
+}} // namespace Scaleform::GFx
+
+// MovieRoot::GetMouseCursorTypeString of the cursor mouse mouseIndex shows (MovieImpl +0x1260: 4 MouseStates of 0x50
+// bytes, CursorType at +0x40); an index past them reads through the NULL state, as the exe does.
+// MS2-FUNCTIONAL: raw-layout MouseState read; the protected member is reached through a using-declaration
+// @0x14250bad0
+void FUN_14250bad0(void* proot, Scaleform::GFx::ASString& result, Scaleform::UInt32 mouseIndex)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    struct Access : MovieRoot { using MovieRoot::GetMouseCursorTypeString; };
+    const UPInt states = AccRd(reinterpret_cast<UPInt>(proot), 0x10) + 0x1260;
+    const UPInt st = mouseIndex < 4 ? states + (UPInt)mouseIndex * 0x50 : 0;
+    const UInt32 type = *reinterpret_cast<const volatile UInt32*>(st + 0x40);
+    (static_cast<const MovieRoot*>(proot)->*&Access::GetMouseCursorTypeString)(result, type);
+}
