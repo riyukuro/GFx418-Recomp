@@ -201,7 +201,7 @@ void* FUN_140015590(void* object, unsigned __int64 flags)
 Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_140014a80(
     Scaleform::GFx::AS3::InstanceTraits::CTraits* object, unsigned flags)
 {
-    object->~CTraits();
+    object->CTraits::~CTraits();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -210,7 +210,7 @@ Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_140014a80(
 // @0x140014b10
 Scaleform::GFx::AS3::Class* FUN_140014b10(Scaleform::GFx::AS3::Class* object, unsigned flags)
 {
-    object->~Class();
+    object->Class::~Class();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -272,7 +272,7 @@ void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
         reinterpret_cast<void (*)(void*)>(*reinterpret_cast<void***>(provider) + 2)(provider);
     int* refs = *reinterpret_cast<int**>(bytes + 0xf8);
     if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
-    object->~InteractiveObject();
+    object->InteractiveObject::~InteractiveObject();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
 // MS2-FUNCTIONAL: scalar deleting form of the recovered VideoCharacter base destruction.
@@ -1091,7 +1091,7 @@ void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* d
     void* weakRefs[2] = {*reinterpret_cast<void**>(fields + 0x58), player};
     for (void* ref : weakRefs)
         if (ref) FUN_14257dcd0(ref);
-    dispatcher->~EventDispatcher();
+    dispatcher->EventDispatcher::~EventDispatcher();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
 // MS2-FUNCTIONAL: reads the supplied sound-transform value and refreshes the stored player coordinates.
@@ -1708,7 +1708,7 @@ void* FUN_140010e60(void** destination, void* const* source)
 // @0x140011d10
 Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
-    object->~Object();
+    object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -2563,14 +2563,15 @@ Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
 // @0x140015c40
 void FUN_140015c40(void* object)
 {
-    auto* vm = *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x98);
+    // MS2: the movie root is [[object+0x20]+0x78] (exe 0x140015c54), and both Allocs pass a null AllocInfo
+    auto* vm = *reinterpret_cast<void**>(*reinterpret_cast<char**>(reinterpret_cast<char*>(object) + 0x20) + 0x78);
     auto* manager = *reinterpret_cast<void**>(static_cast<char*>(vm) + 0x2d8);
     auto* owner = *reinterpret_cast<void**>(static_cast<char*>(manager) + 0x10);
     auto** ownerVtable = *reinterpret_cast<void***>(owner);
     auto* heap = reinterpret_cast<void*(*)(void*)>(ownerVtable[0x178 / sizeof(void*)])(owner);
     auto** heapVtable = *reinterpret_cast<void***>(heap);
-    auto* relay = reinterpret_cast<void*(*)(void*, std::size_t)>(heapVtable[0x50 / sizeof(void*)])(
-        heap, 0x18);
+    auto* relay = reinterpret_cast<void*(*)(void*, std::size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
+        heap, 0x18, nullptr);
     if (relay)
     {
         *reinterpret_cast<unsigned*>(static_cast<char*>(relay) + 8) = 1;
@@ -2582,8 +2583,8 @@ void FUN_140015c40(void* object)
         FUN_14257dcd0(*oldRelay);
     *oldRelay = relay;
 
-    auto* state = reinterpret_cast<void*(*)(void*, std::size_t)>(heapVtable[0x50 / sizeof(void*)])(
-        heap, 0x108);
+    auto* state = reinterpret_cast<void*(*)(void*, std::size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
+        heap, 0x108, nullptr);
     if (state)
     {
         extern void FUN_140026c60(void*, void*);
@@ -2601,7 +2602,7 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
 {
     if (!hasValue)
         return;
-    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(reinterpret_cast<char*>(object) + 0x98);
+    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(reinterpret_cast<char*>(object) + 0x20) + 0x78);  // MS2: exe 0x1400144be
     Scaleform::GFx::AS3::Value text(*input);
     text.ToStringValue(vm->GetStringManager());
     *reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(object) + 0x60) = 0;
@@ -2617,17 +2618,22 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
 // @0x140014900
 void FUN_140014900(void* object, const unsigned long long* encodedName)
 {
-    auto* traits = static_cast<char*>(object) + 0x10;
+    // MS2: as exe 0x140014900: traits is the pointer at +0x10, vm is [traits+0x20]+0x78, the name is a
+    // String DataDesc (size at +0, chars at +0xc) interned by the ASStringManager, and the result is a whole Value.
+    auto* traits = *reinterpret_cast<char**>(static_cast<char*>(object) + 0x10);
     const unsigned kind = *reinterpret_cast<unsigned*>(traits + 0xd8) & 0x1f;
-    if (kind == 0 || (kind >= 0x10 && *reinterpret_cast<void**>(traits + 0xe8) == nullptr))
+    if (kind == 0 || (kind - 0xc <= 3 && *reinterpret_cast<void**>(traits + 0xe8) == nullptr))
         return;
-    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(traits + 0x98);
-    auto* node = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*encodedName & ~3ull);
-    Scaleform::GFx::AS3::Value propertyName(node);
-    unsigned flags = 0;
+    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(traits + 0x20) + 0x78);
+    auto* desc = reinterpret_cast<const char*>(*encodedName & ~3ull);
+    auto* strings = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(
+        *reinterpret_cast<char**>(reinterpret_cast<char*>(vm) + 0x10) + 0x1e8);
+    Scaleform::GFx::ASString name(strings->CreateStringNode(desc + 0xc,
+        *reinterpret_cast<const unsigned long long*>(desc) & 0x7fffffffffffffffull));
+    Scaleform::GFx::AS3::Value propertyName(name);
+    Scaleform::GFx::AS3::Value result;
     extern void FUN_1424fef00(void*, void*, const void*, void*, int, const void*, int);
-    FUN_1424fef00(vm, traits + 0xd8, &Scaleform::GFx::AS3::Value::GetUndefined(),
-                  &flags, 1, &propertyName, 0);
+    FUN_1424fef00(vm, traits + 0xd8, &Scaleform::GFx::AS3::Value::GetUndefined(), &result, 1, &propertyName, 0);
     if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(vm) + 0x180) != 0)
         vm->OutputAndIgnoreException();
 }
@@ -2897,8 +2903,8 @@ void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
 {
     auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
         reinterpret_cast<char*>(object) + 0x68);
-    prototype->~GASPrototypeBase();
-    object->~Object();
+    prototype->GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
+    object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
 // MS2-FUNCTIONAL: scalar deleting form of the prototype and Object destruction.
@@ -2915,10 +2921,10 @@ Scaleform::GFx::AS2::Object* FUN_140011c00(Scaleform::GFx::AS2::Object* object, 
 void FUN_14000ebe0(Scaleform::GFx::AS2::Object* object)
 {
     char* bytes = reinterpret_cast<char*>(object);
-    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->~GASPrototypeBase();
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     int* refs = *reinterpret_cast<int**>(bytes + 0x68);
     if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
-    object->~Object();
+    object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
 // MS2-FUNCTIONAL: scalar deleting form of VideoObject's prototype destruction.
@@ -3321,8 +3327,9 @@ void* FUN_140011610(void* object, void** result, void* context)
         }
     }
     using AllocateNodeData = void* (*)(void*, size_t, size_t);
-    auto allocateNodeData = reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(context))[10]);
-    auto* nodeData = static_cast<unsigned char*>(allocateNodeData(context, 0xa0, 0));
+    void* nodeHeap = *reinterpret_cast<void**>(context);  // MS2: exe 0x140011a06 allocates from [context], the context's heap
+    auto allocateNodeData = reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(nodeHeap))[10]);
+    auto* nodeData = static_cast<unsigned char*>(allocateNodeData(nodeHeap, 0xa0, 0));
     if (!nodeData) {
         reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(shape + 0x10))[2])(shape + 0x10);
         *result = nullptr;
