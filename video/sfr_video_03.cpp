@@ -23,50 +23,103 @@
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
 template <class T> using ExeDecl = T;
 
-extern ExeDecl<void*> DAT_143b27608; static constexpr ExeDecl<void*>& VideoThunkA = DAT_143b27608;
-extern ExeDecl<void*> DAT_143b27610; static constexpr ExeDecl<void*>& VideoThunkBaseA = DAT_143b27610;
-extern ExeDecl<void*> DAT_143b27588; static constexpr ExeDecl<void*>& VideoThunkB = DAT_143b27588;
-extern ExeDecl<void*> DAT_143b27590; static constexpr ExeDecl<void*>& VideoThunkBaseB = DAT_143b27590;
-extern ExeDecl<void*> DAT_143b27708; static constexpr ExeDecl<void*>& VideoThunkC = DAT_143b27708;
-extern ExeDecl<void*> DAT_143b27710; static constexpr ExeDecl<void*>& VideoThunkBaseC = DAT_143b27710;
-extern ExeDecl<void*> DAT_143b275f8; static constexpr ExeDecl<void*>& VideoThunkD = DAT_143b275f8;
-extern ExeDecl<void*> DAT_143b27600; static constexpr ExeDecl<void*>& VideoThunkBaseD = DAT_143b27600;
-extern ExeDecl<void*> DAT_143b27638; static constexpr ExeDecl<void*>& VideoThunkE = DAT_143b27638;
-extern ExeDecl<void*> DAT_1431b7ba0; static constexpr ExeDecl<void*>& VideoDisplayVtable = DAT_1431b7ba0;
-extern ExeDecl<float> DAT_142d692bc; static constexpr ExeDecl<float>& VideoTwipsScale = DAT_142d692bc;
-extern ExeDecl<float> DAT_142d15c1c; static constexpr ExeDecl<float>& VideoDurationScale = DAT_142d15c1c;
-extern ExeDecl<void*> DAT_143b27640; static constexpr ExeDecl<void*>& VideoThunkBaseE = DAT_143b27640;
-extern ExeDecl<void*> DAT_143b27488; static constexpr ExeDecl<void*>& VideoThunkF = DAT_143b27488;
-extern ExeDecl<void*> DAT_143b27490; static constexpr ExeDecl<void*>& VideoThunkBaseF = DAT_143b27490;
-extern ExeDecl<void*> DAT_143b27528; static constexpr ExeDecl<void*>& VideoCallbackA = DAT_143b27528;
-extern ExeDecl<void*> DAT_143b27530; static constexpr ExeDecl<void*>& VideoCallbackBaseA = DAT_143b27530;
-extern ExeDecl<void*> DAT_143b27548; static constexpr ExeDecl<void*>& VideoCallbackB = DAT_143b27548;
-extern ExeDecl<void*> DAT_143b27550; static constexpr ExeDecl<void*>& VideoCallbackBaseB = DAT_143b27550;
-extern ExeDecl<void*> DAT_143b275e8; static constexpr ExeDecl<void*>& VideoCallbackC = DAT_143b275e8;
-extern ExeDecl<void*> DAT_143b27798; static constexpr ExeDecl<void*>& VideoPropGetA = DAT_143b27798; extern ExeDecl<void*> DAT_143b277a0; static constexpr ExeDecl<void*>& VideoPropBaseA = DAT_143b277a0;
-extern ExeDecl<void*> DAT_143b27778; static constexpr ExeDecl<void*>& VideoPropSetA = DAT_143b27778; extern ExeDecl<void*> DAT_143b27780; static constexpr ExeDecl<void*>& VideoPropBaseSetA = DAT_143b27780;
-extern ExeDecl<void*> DAT_143b27758; static constexpr ExeDecl<void*>& VideoPropGetB = DAT_143b27758; extern ExeDecl<void*> DAT_143b27760; static constexpr ExeDecl<void*>& VideoPropBaseB = DAT_143b27760;
-extern ExeDecl<void*> DAT_143b27728; static constexpr ExeDecl<void*>& VideoPropSetB = DAT_143b27728; extern ExeDecl<void*> DAT_143b27730; static constexpr ExeDecl<void*>& VideoPropBaseSetB = DAT_143b27730;
-extern ExeDecl<void*> DAT_143b27738; static constexpr ExeDecl<void*>& VideoPropGetC = DAT_143b27738; extern ExeDecl<void*> DAT_143b27740; static constexpr ExeDecl<void*>& VideoPropBaseC = DAT_143b27740;
-extern ExeDecl<void*> DAT_143b27748; static constexpr ExeDecl<void*>& VideoPropGetD = DAT_143b27748; extern ExeDecl<void*> DAT_143b27750; static constexpr ExeDecl<void*>& VideoPropBaseD = DAT_143b27750;
-extern ExeDecl<void*> DAT_143b27768; static constexpr ExeDecl<void*>& VideoPropSetC = DAT_143b27768; extern ExeDecl<void*> DAT_143b27770; static constexpr ExeDecl<void*>& VideoPropBaseSetC = DAT_143b27770;
-extern ExeDecl<void*> DAT_143b27718; static constexpr ExeDecl<void*>& VideoPropSetD = DAT_143b27718; extern ExeDecl<void*> DAT_143b27720; static constexpr ExeDecl<void*>& VideoPropBaseSetD = DAT_143b27720;
-extern ExeDecl<void*> DAT_143b276d8; static constexpr ExeDecl<void*>& VideoStringCallbackA = DAT_143b276d8; extern ExeDecl<void*> DAT_143b276e0; static constexpr ExeDecl<void*>& VideoStringCallbackBaseA = DAT_143b276e0;
-extern ExeDecl<void*> DAT_143b27598; static constexpr ExeDecl<void*>& VideoStringCallbackB = DAT_143b27598; extern ExeDecl<void*> DAT_143b275a0; static constexpr ExeDecl<void*>& VideoStringCallbackBaseB = DAT_143b275a0;
-extern ExeDecl<void*> DAT_143b277a8; static constexpr ExeDecl<void*>& VideoCriWork = DAT_143b277a8;
-extern ExeDecl<std::uint32_t> DAT_143b277b0; static constexpr ExeDecl<std::uint32_t>& VideoCriWorkSize = DAT_143b277b0;
-extern ExeDecl<int> DAT_143b277b4; static constexpr ExeDecl<int>& VideoCriUsers = DAT_143b277b4;
-extern ExeDecl<void*> DAT_143b275f0; static constexpr ExeDecl<void*>& VideoCallbackBaseC = DAT_143b275f0;
+extern ExeDecl<void*> DAT_143b27608;
+#define VideoThunkA DAT_143b27608
+extern ExeDecl<void*> DAT_143b27610;
+#define VideoThunkBaseA DAT_143b27610
+extern ExeDecl<void*> DAT_143b27588;
+#define VideoThunkB DAT_143b27588
+extern ExeDecl<void*> DAT_143b27590;
+#define VideoThunkBaseB DAT_143b27590
+extern ExeDecl<void*> DAT_143b27708;
+#define VideoThunkC DAT_143b27708
+extern ExeDecl<void*> DAT_143b27710;
+#define VideoThunkBaseC DAT_143b27710
+extern ExeDecl<void*> DAT_143b275f8;
+#define VideoThunkD DAT_143b275f8
+extern ExeDecl<void*> DAT_143b27600;
+#define VideoThunkBaseD DAT_143b27600
+extern ExeDecl<void*> DAT_143b27638;
+#define VideoThunkE DAT_143b27638
+extern ExeDecl<void*> DAT_1431b7ba0;
+#define VideoDisplayVtable DAT_1431b7ba0
+extern ExeDecl<float> DAT_142d692bc;
+#define VideoTwipsScale DAT_142d692bc
+extern ExeDecl<float> DAT_142d15c1c;
+#define VideoDurationScale DAT_142d15c1c
+extern ExeDecl<void*> DAT_143b27640;
+#define VideoThunkBaseE DAT_143b27640
+extern ExeDecl<void*> DAT_143b27488;
+#define VideoThunkF DAT_143b27488
+extern ExeDecl<void*> DAT_143b27490;
+#define VideoThunkBaseF DAT_143b27490
+extern ExeDecl<void*> DAT_143b27528;
+#define VideoCallbackA DAT_143b27528
+extern ExeDecl<void*> DAT_143b27530;
+#define VideoCallbackBaseA DAT_143b27530
+extern ExeDecl<void*> DAT_143b27548;
+#define VideoCallbackB DAT_143b27548
+extern ExeDecl<void*> DAT_143b27550;
+#define VideoCallbackBaseB DAT_143b27550
+extern ExeDecl<void*> DAT_143b275e8;
+#define VideoCallbackC DAT_143b275e8
+extern ExeDecl<void*> DAT_143b27798; extern ExeDecl<void*> DAT_143b277a0;
+#define VideoPropGetA DAT_143b27798
+#define VideoPropBaseA DAT_143b277a0
+extern ExeDecl<void*> DAT_143b27778; extern ExeDecl<void*> DAT_143b27780;
+#define VideoPropSetA DAT_143b27778
+#define VideoPropBaseSetA DAT_143b27780
+extern ExeDecl<void*> DAT_143b27758; extern ExeDecl<void*> DAT_143b27760;
+#define VideoPropGetB DAT_143b27758
+#define VideoPropBaseB DAT_143b27760
+extern ExeDecl<void*> DAT_143b27728; extern ExeDecl<void*> DAT_143b27730;
+#define VideoPropSetB DAT_143b27728
+#define VideoPropBaseSetB DAT_143b27730
+extern ExeDecl<void*> DAT_143b27738; extern ExeDecl<void*> DAT_143b27740;
+#define VideoPropGetC DAT_143b27738
+#define VideoPropBaseC DAT_143b27740
+extern ExeDecl<void*> DAT_143b27748; extern ExeDecl<void*> DAT_143b27750;
+#define VideoPropGetD DAT_143b27748
+#define VideoPropBaseD DAT_143b27750
+extern ExeDecl<void*> DAT_143b27768; extern ExeDecl<void*> DAT_143b27770;
+#define VideoPropSetC DAT_143b27768
+#define VideoPropBaseSetC DAT_143b27770
+extern ExeDecl<void*> DAT_143b27718; extern ExeDecl<void*> DAT_143b27720;
+#define VideoPropSetD DAT_143b27718
+#define VideoPropBaseSetD DAT_143b27720
+extern ExeDecl<void*> DAT_143b276d8; extern ExeDecl<void*> DAT_143b276e0;
+#define VideoStringCallbackA DAT_143b276d8
+#define VideoStringCallbackBaseA DAT_143b276e0
+extern ExeDecl<void*> DAT_143b27598; extern ExeDecl<void*> DAT_143b275a0;
+#define VideoStringCallbackB DAT_143b27598
+#define VideoStringCallbackBaseB DAT_143b275a0
+extern ExeDecl<void*> DAT_143b277a8;
+#define VideoCriWork DAT_143b277a8
+extern ExeDecl<std::uint32_t> DAT_143b277b0;
+#define VideoCriWorkSize DAT_143b277b0
+extern ExeDecl<int> DAT_143b277b4;
+#define VideoCriUsers DAT_143b277b4
+extern ExeDecl<void*> DAT_143b275f0;
+#define VideoCallbackBaseC DAT_143b275f0
 
-ExeDecl<void(void*, void*, void*)> FUN_1423df980; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative0 = FUN_1423df980;
-ExeDecl<void(void*, void*, void*)> FUN_1423df850; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative1 = FUN_1423df850;
-ExeDecl<void(void*, void*, void*)> FUN_1423dfd20; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative2 = FUN_1423dfd20;
-ExeDecl<void(void*, void*, void*)> FUN_1423df410; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative3 = FUN_1423df410;
-ExeDecl<void(void*, void*, void*)> FUN_1423dfda0; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative4 = FUN_1423dfda0;
-ExeDecl<void(void*, void*, void*)> FUN_1424f1390; static constexpr ExeDecl<void(void*, void*, void*)>& ConvertAS3ValueToString = FUN_1424f1390;
-ExeDecl<void(void*, void*, int*, int, void*)> FUN_1424f0d30; static constexpr ExeDecl<void(void*, void*, int*, int, void*)>& ConvertAS3ValueToInt32 = FUN_1424f0d30;
-ExeDecl<std::uint8_t(void*)> FUN_1424f0be0; static constexpr ExeDecl<std::uint8_t(void*)>& ConvertAS3ValueToBool = FUN_1424f0be0;
-ExeDecl<void()> FUN_1423dfa20; static constexpr ExeDecl<void()>& ReleaseAS3GcObject = FUN_1423dfa20;
+ExeDecl<void(void*, void*, void*)> FUN_1423df980;
+#define VideoNative0 FUN_1423df980
+ExeDecl<void(void*, void*, void*)> FUN_1423df850;
+#define VideoNative1 FUN_1423df850
+ExeDecl<void(void*, void*, void*)> FUN_1423dfd20;
+#define VideoNative2 FUN_1423dfd20
+ExeDecl<void(void*, void*, void*)> FUN_1423df410;
+#define VideoNative3 FUN_1423df410
+ExeDecl<void(void*, void*, void*)> FUN_1423dfda0;
+#define VideoNative4 FUN_1423dfda0
+ExeDecl<void(void*, void*, void*)> FUN_1424f1390;
+#define ConvertAS3ValueToString FUN_1424f1390
+ExeDecl<void(void*, void*, int*, int, void*)> FUN_1424f0d30;
+#define ConvertAS3ValueToInt32 FUN_1424f0d30
+ExeDecl<std::uint8_t(void*)> FUN_1424f0be0;
+#define ConvertAS3ValueToBool FUN_1424f0be0
+ExeDecl<void()> FUN_1423dfa20;
+#define ReleaseAS3GcObject FUN_1423dfa20
 ExeDecl<void(void*)> FUN_14257dc30;
 ExeDecl<void(void*)> FUN_14257dcd0;
 ExeDecl<void(void*)> FUN_14257dcb0;
@@ -102,27 +155,48 @@ ExeDecl<void(void*, void*)> FUN_1424edca0;
 ExeDecl<void(void*, void*, void*, void*)> FUN_142467b50;
 ExeDecl<void(void*, void*, int)> FUN_1424687d0;
 ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)> FUN_1424fef00;
-ExeDecl<void(void*, const char*, void*, int, int, int)> FUN_1424f0750;
 ExeDecl<void(void*, void*, std::uint64_t)> FUN_1424d2150;
 ExeDecl<void(void*)> FUN_140026ed0;
 ExeDecl<void()> FUN_140026db0;
-extern ExeDecl<void*> DAT_14317bf80; static constexpr ExeDecl<void*>& AvmInteractiveVtable = DAT_14317bf80;
-extern ExeDecl<void*> DAT_1431b7c70; static constexpr ExeDecl<void*>& VideoTraitsVtable = DAT_1431b7c70;
-extern ExeDecl<void*> DAT_1431b7f60; static constexpr ExeDecl<void*>& VideoTraitsBaseVtable = DAT_1431b7f60;
-extern ExeDecl<void*> DAT_1431b7ea0; static constexpr ExeDecl<void*>& VideoTraitsSubVtableA = DAT_1431b7ea0;
-extern ExeDecl<void*> DAT_1431b7de0; static constexpr ExeDecl<void*>& VideoTraitsSubVtableB = DAT_1431b7de0;
-extern ExeDecl<void*> DAT_1431b4c60; static constexpr ExeDecl<void*>& VideoAudioVtableA = DAT_1431b4c60; extern ExeDecl<void*> DAT_1431bec40; static constexpr ExeDecl<void*>& VideoAudioVtableB = DAT_1431bec40;
-extern ExeDecl<void*> DAT_1431bed60; static constexpr ExeDecl<void*>& VideoAudioDeleteVtable = DAT_1431bed60; extern ExeDecl<void*> DAT_1431bedd8; static constexpr ExeDecl<void*>& VideoAudioSubVtable = DAT_1431bedd8;
-extern ExeDecl<void*> DAT_1431bede8; static constexpr ExeDecl<void*>& VideoAudioEventVtable = DAT_1431bede8;
-extern ExeDecl<void*> DAT_1431bcbb0; static constexpr ExeDecl<void*>& VideoSoundDeleteVtable = DAT_1431bcbb0;
-extern ExeDecl<void*> DAT_1431bef00; static constexpr ExeDecl<void*>& VideoSoundVtable = DAT_1431bef00;
-extern ExeDecl<void*> DAT_1431bef38; static constexpr ExeDecl<void*>& VideoSoundSubVtable = DAT_1431bef38;
-extern ExeDecl<void*> DAT_1431bee78; static constexpr ExeDecl<void*>& VideoAudioStreamVtable = DAT_1431bee78;
-extern ExeDecl<void*> DAT_1431beef0; static constexpr ExeDecl<void*>& VideoAudioStreamSubVtable = DAT_1431beef0;
-extern ExeDecl<void*> DAT_1431b7160; static constexpr ExeDecl<void*>& VideoClassInfoA = DAT_1431b7160; extern ExeDecl<void*> DAT_1431b7900; static constexpr ExeDecl<void*>& VideoClassVtableA = DAT_1431b7900;
-extern ExeDecl<void*> DAT_1431b71b0; static constexpr ExeDecl<void*>& VideoInstanceVtableA = DAT_1431b71b0; extern ExeDecl<void*> DAT_1431b7260; static constexpr ExeDecl<void*>& VideoCTraitsVtable = DAT_1431b7260;
-extern ExeDecl<void*> DAT_1431b7b50; static constexpr ExeDecl<void*>& VideoClassInfoB = DAT_1431b7b50; extern ExeDecl<void*> DAT_1431b7d50; static constexpr ExeDecl<void*>& VideoClassVtableB = DAT_1431b7d50;
-extern ExeDecl<void*> DAT_1431b7c70; static constexpr ExeDecl<void*>& VideoInstanceVtableB = DAT_1431b7c70;
+extern ExeDecl<void*> DAT_14317bf80;
+#define AvmInteractiveVtable DAT_14317bf80
+extern ExeDecl<void*> DAT_1431b7c70;
+#define VideoTraitsVtable DAT_1431b7c70
+extern ExeDecl<void*> DAT_1431b7f60;
+#define VideoTraitsBaseVtable DAT_1431b7f60
+extern ExeDecl<void*> DAT_1431b7ea0;
+#define VideoTraitsSubVtableA DAT_1431b7ea0
+extern ExeDecl<void*> DAT_1431b7de0;
+#define VideoTraitsSubVtableB DAT_1431b7de0
+extern ExeDecl<void*> DAT_1431b4c60; extern ExeDecl<void*> DAT_1431bec40;
+#define VideoAudioVtableA DAT_1431b4c60
+#define VideoAudioVtableB DAT_1431bec40
+extern ExeDecl<void*> DAT_1431bed60; extern ExeDecl<void*> DAT_1431bedd8;
+#define VideoAudioDeleteVtable DAT_1431bed60
+#define VideoAudioSubVtable DAT_1431bedd8
+extern ExeDecl<void*> DAT_1431bede8;
+#define VideoAudioEventVtable DAT_1431bede8
+extern ExeDecl<void*> DAT_1431bcbb0;
+#define VideoSoundDeleteVtable DAT_1431bcbb0
+extern ExeDecl<void*> DAT_1431bef00;
+#define VideoSoundVtable DAT_1431bef00
+extern ExeDecl<void*> DAT_1431bef38;
+#define VideoSoundSubVtable DAT_1431bef38
+extern ExeDecl<void*> DAT_1431bee78;
+#define VideoAudioStreamVtable DAT_1431bee78
+extern ExeDecl<void*> DAT_1431beef0;
+#define VideoAudioStreamSubVtable DAT_1431beef0
+extern ExeDecl<void*> DAT_1431b7160; extern ExeDecl<void*> DAT_1431b7900;
+#define VideoClassInfoA DAT_1431b7160
+#define VideoClassVtableA DAT_1431b7900
+extern ExeDecl<void*> DAT_1431b71b0; extern ExeDecl<void*> DAT_1431b7260;
+#define VideoInstanceVtableA DAT_1431b71b0
+#define VideoCTraitsVtable DAT_1431b7260
+extern ExeDecl<void*> DAT_1431b7b50; extern ExeDecl<void*> DAT_1431b7d50;
+#define VideoClassInfoB DAT_1431b7b50
+#define VideoClassVtableB DAT_1431b7d50
+extern ExeDecl<void*> DAT_1431b7c70;
+#define VideoInstanceVtableB DAT_1431b7c70
 ExeDecl<void(void*)> FUN_1424df220;
 ExeDecl<void*(void*)> FUN_1424eb610;
 ExeDecl<void(void*, void*)> FUN_140010b80;
@@ -1459,7 +1533,7 @@ void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t field
     auto* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
     Scaleform::GFx::AS3::Value classValue;
     Scaleform::GFx::AS3::Value transform;
-    FUN_1424f0750(root, "flash.media.SoundTransform", &classValue, 0, 0, 1);
+    reinterpret_cast<Scaleform::GFx::AS3::VM*>(root)->Construct("flash.media.SoundTransform", classValue, 0, nullptr, true);
     auto* soundClass = classValue.GetObject();
     const auto kind = classValue.GetKind();
     if (*reinterpret_cast<unsigned char*>(root + 0x180) == 0 && kind != 0 && (kind < Scaleform::GFx::AS3::Value::kString || kind > Scaleform::GFx::AS3::Value::kObject || soundClass)) {

@@ -1718,8 +1718,9 @@ void FUN_140015830(void* object)
 unsigned char* FUN_140013e00(void* vm, unsigned char* result, unsigned* value,
                              void* receiver, unsigned flags, void* argument)
 {
-    extern void FUN_1424f0750(void*, void*, void*, unsigned, void*, int);
-    FUN_1424f0750(vm, receiver, value, flags, argument, 1);
+    static_cast<Scaleform::GFx::AS3::VM*>(vm)->Construct(static_cast<const char*>(receiver),
+        *reinterpret_cast<Scaleform::GFx::AS3::Value*>(value), flags,
+        static_cast<const Scaleform::GFx::AS3::Value*>(argument), true);   // VM::Construct 0x1424f0750
     unsigned tag = *value & 0x1f;
     bool hasValue = !*reinterpret_cast<unsigned char*>(static_cast<char*>(vm) + 0x180) && tag != 0 &&
         (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(value + 4) != nullptr);
