@@ -745,6 +745,9 @@ Sfr33ExecExit Sfr33ExecFrame(VM& vm, CallFrame& cf, const UPInt* pc, UPInt sizeA
 int VM::ExecuteCode(unsigned max_stack_depth)
 {
     unsigned depth = max_stack_depth;
+    // nothing to run: MovieRoot::Init runs the VM before any frame is pushed
+    if (Sfr33CallStack(*this).Size == 0)
+        return static_cast<int>(depth);
     for (;;)
     {
         CallFrameStack& cs = Sfr33CallStack(*this);
