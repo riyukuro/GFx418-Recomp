@@ -6405,3 +6405,165 @@ AMP::ViewStats* AS3ValueObjectInterface::GetAdvanceStats() const
 // MS2-PIN: ?Clear@?$HashSetBase@U?$HashNode@PEAVObject@AS2@GFx@Scaleform@@PEAV1234@V?$IdentityHash@PEAVObject@AS2@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@PEAVObject@AS2@GFx@Scaleform@@$01@2@V?$HashsetNodeEntry@U?$HashNode@PEAVObject@AS2@GFx@Scaleform@@PEAV1234@V?$IdentityHash@PEAVObject@AS2@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAAXXZ 0x1424ef320
 // MS2-PIN: ?Convert2NumberInline@Value@AS3@GFx@Scaleform@@QEBA?AVCheckResult@234@AEAN@Z 0x1424f0f60
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+
+// ==== pdata-less vftable slots of the AVM display objects (sfr21) ====
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// @0x1424efdf0
+void AvmDisplayObjContainer::CloneInternalData(const InteractiveObject*)
+{
+}
+
+// @0x1424efe10
+void AvmSprite::CloneInternalData(const InteractiveObject*)
+{
+}
+
+// @0x1424f1f60
+void AvmDisplayObjContainer::CopyPhysicalProperties(const InteractiveObject*)
+{
+}
+
+// @0x1424fe600
+void AvmSprite::ExecuteFrame0Events()
+{
+}
+
+// @0x142506ea0
+const char* AvmDisplayObjContainer::GetAbsolutePath(String* ppath) const
+{
+    return AvmInteractiveObj::GetAbsolutePath(ppath);
+}
+
+// @0x142508520
+unsigned AvmDisplayObjContainer::GetCursorType() const
+{
+    return 0;
+}
+
+}}} // namespace Scaleform::GFx::AS3
+
+static inline Scaleform::UPInt Sfr21AccRd(Scaleform::UPInt base, Scaleform::UPInt off) { return *reinterpret_cast<const Scaleform::UPInt*>(base + off); }
+
+// MS2-FUNCTIONAL: empty vftable leaf (ret)
+// @0x1424efde0
+void FUN_1424efde0(Scaleform::UPInt) {}
+// MS2-FUNCTIONAL: empty vftable leaf (ret)
+// @0x1424efe20
+void FUN_1424efe20(Scaleform::UPInt) {}
+// MS2-FUNCTIONAL: empty vftable leaf (ret)
+// @0x1424f1f50
+void FUN_1424f1f50(Scaleform::UPInt) {}
+// MS2-FUNCTIONAL: empty vftable leaf (ret)
+// @0x1424f1f80
+void FUN_1424f1f80(Scaleform::UPInt) {}
+
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424efde4
+void FUN_1424efde4(Scaleform::UPInt self) { FUN_1424efde0(self - 0x10); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424efe24
+void FUN_1424efe24(Scaleform::UPInt self) { FUN_1424efe20(self - 0x10); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424f1f54
+void FUN_1424f1f54(Scaleform::UPInt self) { FUN_1424f1f50(self - 0x10); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x1424f1f84
+void FUN_1424f1f84(Scaleform::UPInt self) { FUN_1424f1f80(self - 0x10); }
+
+// MS2-FUNCTIONAL: vftable leaf returning 0
+// @0x142502cf0
+Scaleform::UPInt FUN_142502cf0(Scaleform::UPInt) { return 0; }
+// MS2-FUNCTIONAL: vftable leaf returning 0
+// @0x142507b30
+Scaleform::UPInt FUN_142507b30(Scaleform::UPInt) { return 0; }
+// MS2-FUNCTIONAL: vftable leaf returning 0
+// @0x142508550
+unsigned FUN_142508550(Scaleform::UPInt) { return 0; }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142508554
+unsigned FUN_142508554(Scaleform::UPInt self) { return FUN_142508550(self - 0x10); }
+
+// Queues the object's +0x10 owner's +0x30 counted reference on the +0x40 VM's collector (+0x20).
+// MS2-FUNCTIONAL: raw-offset vftable slot
+// @0x1425046d0
+void FUN_1425046d0(Scaleform::UPInt self)
+{
+    Scaleform::GFx::AS3::Sfr33CollectorQueue(reinterpret_cast<Scaleform::UByte*>(Sfr21AccRd(Sfr21AccRd(self, 0x40), 0x20)),
+        reinterpret_cast<Scaleform::RefCountImpl*>(Sfr21AccRd(Sfr21AccRd(self, 0x10), 0x30)));
+}
+
+// Drops the loader info of the AS3 object (+0xa0, else the tagged +0x98 pointer).
+// MS2-FUNCTIONAL: raw-offset vftable slot
+// @0x1425047c0
+void FUN_1425047c0(Scaleform::UPInt self)
+{
+    Scaleform::UPInt obj = Sfr21AccRd(self, 0xa0);
+    if (!obj)
+        obj = Sfr21AccRd(self, 0x98);
+    if (!obj)
+        return;
+    if (obj & 1)
+        --obj;
+    FUN_142446e70(reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(obj), NULL);
+}
+
+// MS2-FUNCTIONAL: the exe returns its .rdata copy
+// @0x142505e00
+const char* FUN_142505e00(Scaleform::UPInt) { return "NamespaceSet"; }
+
+// MS2-FUNCTIONAL: tail call into AvmInteractiveObj::GetAbsolutePath
+// @0x142506df0
+const char* FUN_142506df0(Scaleform::UPInt self, Scaleform::String* ppath)
+{
+    return reinterpret_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(self)
+        ->Scaleform::GFx::AS3::AvmInteractiveObj::GetAbsolutePath(ppath);
+}
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142506df8
+const char* FUN_142506df8(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506df0(self - 0x30, ppath); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142506e04
+const char* FUN_142506e04(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506df0(self - 0x40, ppath); }
+
+// MS2-FUNCTIONAL: tail call into AvmInteractiveObj::GetAbsolutePath
+// @0x142506ed0
+const char* FUN_142506ed0(Scaleform::UPInt self, Scaleform::String* ppath)
+{
+    return reinterpret_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(self)
+        ->Scaleform::GFx::AS3::AvmInteractiveObj::GetAbsolutePath(ppath);
+}
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142506ed8
+const char* FUN_142506ed8(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506ed0(self - 0x30, ppath); }
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142506ee4
+const char* FUN_142506ee4(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506ed0(self - 0x40, ppath); }
+
+// MS2-FUNCTIONAL: raw getter
+// @0x142507b70
+Scaleform::UPInt FUN_142507b70(Scaleform::UPInt self) { return Sfr21AccRd(self, 0xc0); }
+
+// The display object's (+0x18 back from the AVM base) flag bit 4 at +0xb8.
+// MS2-FUNCTIONAL: raw-offset vftable slot
+// @0x142508500
+unsigned FUN_142508500(Scaleform::UPInt self)
+{
+    return (*reinterpret_cast<const Scaleform::UInt32*>(Sfr21AccRd(self - 0x18, 0) + 0xb8) >> 4) & 1;
+}
+// MS2-FUNCTIONAL: adjustor thunk
+// @0x142508514
+unsigned FUN_142508514(Scaleform::UPInt self) { return FUN_142508500(self - 0x10); }
+
+// MS2-FUNCTIONAL: the exe returns its .rdata copy
+// @0x1425088f0
+const char* FUN_1425088f0(Scaleform::UPInt) { return "flash.display.Bitmap"; }
+// MS2-FUNCTIONAL: the exe returns its .rdata copy
+// @0x142508900
+const char* FUN_142508900(Scaleform::UPInt) { return "flash.display.SimpleButton"; }
+// MS2-FUNCTIONAL: the exe returns its .rdata copy
+// @0x142508980
+const char* FUN_142508980(Scaleform::UPInt) { return "flash.text.TextField"; }
+// MS2-FUNCTIONAL: the exe returns its .rdata copy
+// @0x142508990
+const char* FUN_142508990(Scaleform::UPInt) { return "flash.display.Shape"; }
