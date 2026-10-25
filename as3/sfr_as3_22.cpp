@@ -4711,5 +4711,79 @@ void FUN_142746220(void*)
 
 }} // namespace Scaleform::GFx
 
+void FUN_142747b30(void*);
+
+namespace Scaleform { namespace GFx {
+
+// FMOD sound player vftable slots (data_cri 0x1431bede8 / 0x1431bee78 / 0x1431bef00) without .pdata.
+// @0x142745620
+void FUN_142745620(void* player)
+{
+    FUN_142747b30(player);
+}
+
+// the FMOD system pointer
+// @0x142745830
+void* FUN_142745830(void* player)
+{
+    return *reinterpret_cast<void**>(static_cast<char*>(player) + 0x10);
+}
+
+// @0x142745a90
+bool FUN_142745a90(void*, unsigned* value)
+{
+    if (!value)
+        return false;
+    *value = 0;
+    return true;
+}
+
+// the FMOD sound pointer
+// @0x142745ab0
+void* FUN_142745ab0(void* player)
+{
+    return *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30);
+}
+
+// @0x142745b70
+void* FUN_142745b70(void* player)
+{
+    return *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
+}
+
+// MS2-FUNCTIONAL: byte-identical to 0x142745b70; emitted as a distinct exe copy.
+// @0x142745b80
+void* FUN_142745b80(void* player)
+{
+    return *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
+}
+
+// @0x142745c30
+bool FUN_142745c30(void* player)
+{
+    return *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30) != nullptr;
+}
+
+// pauses or resumes the channel when one is attached
+// @0x142745ea0
+void FUN_142745ea0(void* player, bool paused)
+{
+    void* channel = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x38);
+    if (channel)
+        FUN_1428d8ed8(channel, paused);
+}
+
+// forwards to the source's vftable slot 6 with the flag
+// @0x142745f30
+int FUN_142745f30(void*, void* source, bool flag)
+{
+    if (!source)
+        return 0;
+    using Slot = int (*)(void*, bool);
+    return reinterpret_cast<Slot>((*reinterpret_cast<void***>(source))[6])(source, flag);
+}
+
+}} // namespace Scaleform::GFx
+
 // MS2-PIN: ??_7MemItem@Scaleform@@6B@ 0x143192160
 // MS2-PIN: ??_7?$RefCountBase@UMemItem@Scaleform@@$01@Scaleform@@6B@ 0x143193df0
