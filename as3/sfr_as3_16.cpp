@@ -67,6 +67,8 @@
 #include "ms2/scaleform/include/gfx/gfx_taskmanager.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avmloader.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/gfx_shapedef.h"
 #include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/render/text_core.h"
 #include <algorithm>
@@ -2411,26 +2413,50 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f20 0x1424e1f20
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f80 0x1424e1f80
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1fe0 0x1424e1fe0
-// MS2-FUNCTIONAL 0x1424ddb00: runs ShapeObject's recovered member/base teardown and applies the scalar-delete flags.
+// MS2-FUNCTIONAL 0x1424ddb00: release ShapeObject's own drawing and definition references, then its bases.
 // @0x1424ddb00
 namespace Scaleform { namespace GFx { namespace AS3 {
-void* DeleteAs3_1424e3890(void* self, unsigned flags);
-}}}
-extern "C" void* Sfr16ShapeObjectDeletingDtor(void* self, unsigned flags)
+ShapeObject::~ShapeObject()
 {
-    return Scaleform::GFx::AS3::DeleteAs3_1424e3890(self, flags);
+    auto* bytes = reinterpret_cast<unsigned char*>(this);
+    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::ShapeBaseCharacterDef>*>(bytes + 0xc0)->~Ptr();
+    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::DrawingContext>*>(bytes + 0xc8)->~Ptr();
+    reinterpret_cast<AvmDisplayObj*>(bytes + 0x90)->~AvmDisplayObj();
+    reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->~DisplayObject();
 }
+}}}
 
-// MS2-FUNCTIONAL 0x1424ddcb0: releases the AvmSprite bases using the recovered AvmMovieClip teardown helper.
+// MS2-FUNCTIONAL 0x1424ddcb0: AvmMovieClip has no additional state; release the AvmSprite base.
 // @0x1424ddcb0
-namespace Scaleform { namespace GFx { namespace AS3 {
-void* DeleteAs3_1424e29a0(void* self, unsigned flags);
-}}}
-extern "C" void* Sfr16AvmMovieClipDeletingDtor(void* self, unsigned flags)
+extern "C" void FUN_1424ddcb0(void* self)
 {
-    return Scaleform::GFx::AS3::DeleteAs3_1424e29a0(self, flags);
+    reinterpret_cast<Scaleform::GFx::AS3::AvmSprite*>(self)->Scaleform::GFx::AS3::AvmSprite::~AvmSprite();
 }
 
-// MS2-PIN: Sfr16ShapeObjectDeletingDtor 0x1424ddb00
-// MS2-PIN: Sfr16AvmMovieClipDeletingDtor 0x1424ddcb0
+// MS2-PIN: ?_GShapeObject@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ddb00
+// MS2-PIN: FUN_1424ddcb0 0x1424ddcb0
 // MS2-PIN: ??_7ASMovieRootBase@GFx@Scaleform@@6B@ 0x14317bde0
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
+// MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
+// MS2-PIN: ??_7Traits@AS3@GFx@Scaleform@@6B@ 0x14317b210
+// MS2-PIN: ??_7Traits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b300
+// MS2-PIN: ??_7CTraits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b3a0
+// MS2-PIN: ??_7RTraits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b428
+// MS2-PIN: ??_7Object@AS3@GFx@Scaleform@@6B@ 0x14317b098
+// MS2-PIN: ??_7Instance@AS3@GFx@Scaleform@@6B@ 0x14313f4d8
+// MS2-PIN: ??_7Class@AS3@GFx@Scaleform@@6B@ 0x14317b140
+// MS2-PIN: ??_7VM@AS3@GFx@Scaleform@@6B@ 0x14317b858
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7MovieDefRootNode@GFx@Scaleform@@6B@ 0x14317c9e0
+// MS2-PIN: ??_7UDBase@Classes@AS3@GFx@Scaleform@@6B@ 0x14317f778
+// MS2-PIN: ??_7MovieDefRootNode@AS3@GFx@Scaleform@@6B@ 0x14317c9e0
+// MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
+// MS2-PIN: ??_7ASVM@AS3@GFx@Scaleform@@6B@ 0x14317d8b0
+// MS2-PIN: ??_7LoadQueueEntry@AS3@GFx@Scaleform@@6B@ 0x14317c9e0
+// MS2-PIN: ??_7LoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@6B@ 0x14317d890
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c210
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317de60
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317e228
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317e330
+// MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B@ 0x14317e3e8
