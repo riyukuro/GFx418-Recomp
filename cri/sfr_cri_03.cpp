@@ -7172,3 +7172,11 @@ CriSint32 FUN_140046000(cri03_kinds* self, CriSint32 kind)
         return self->k0;
     return 0;
 }
+
+// Boot tags 96/98: these address-named entry points create critical sections.
+// Strong definitions prevent stale CuePoint::Resize alias rows from selecting
+// an unrelated array implementation. All forms call the recovered body above.
+void* FUN_140039ea8(void* work, CriSint32 size) { return criCs_Create(work, size); }
+extern "C" void* FUN_140039ea8(void* work, int size) { return criCs_Create(work, size); }
+void* FUN_1400385c8(void* work, CriUint32 size) { return criCs_Create(work, static_cast<CriSint32>(size)); }
+extern "C" void* FUN_1400385c8(void* work, unsigned long long size) { return criCs_Create(work, static_cast<CriSint32>(size)); }
