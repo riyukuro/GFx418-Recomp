@@ -14635,3 +14635,136 @@ void FUN_140065fc0(char *ctx, int mask)
   }
 }
 
+
+// ---- MPEG IDCT-store / motion-compensation leaves (no .pdata) of the tables at DAT_1431bab50 / DAT_1431bab60 ----
+// The MC leaves share (src, dst, off, stride, h): src and dst rows are `stride` apart, `off` selects the second
+// reference row; pavgb rounding is (a + b + 1) >> 1.
+
+static inline cri_u1 cri06_avg(int a, int b) { return (cri_u1)((a + b + 1) >> 1); }
+
+struct cri06_block { const short* coef; cri_u1* dst; int stride; };
+
+// MS2-FUNCTIONAL: scalar form of the SSE2 store (packuswb of each 8x8 coefficient block into its destination).
+// @0x1400590c0
+void FUN_1400590c0(const cri06_block* rec)
+{
+  do {
+    for (int r = 0; r < 8; ++r)
+      for (int c = 0; c < 8; ++c) {
+        int v = rec->coef[r * 8 + c];
+        rec->dst[r * rec->stride + c] = (cri_u1)(v < 0 ? 0 : v > 255 ? 255 : v);
+      }
+    ++rec;
+  } while (rec->coef);
+}
+
+// MS2-FUNCTIONAL: 8-wide block copy (8 rows when h == 8, else 4).
+// @0x1400592c0
+void FUN_1400592c0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  int rows = h == 8 ? 8 : 4;
+  for (int i = 0; i < rows; ++i)
+    for (int j = 0; j < 8; ++j) dst[i * stride + j] = src[i * stride + j];
+}
+
+// MS2-FUNCTIONAL: 8-wide vertical half-pel average of src and src + off.
+// @0x140059340
+void FUN_140059340(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[off + i * stride + j]);
+}
+
+// MS2-FUNCTIONAL: 8-wide horizontal half-pel average.
+// @0x1400593b0
+void FUN_1400593b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[i * stride + j + 1]);
+}
+
+// MS2-FUNCTIONAL: 16-wide block copy (16 rows when h == 16, else 8).
+// @0x140059570
+void FUN_140059570(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  int rows = h == 16 ? 16 : 8;
+  for (int i = 0; i < rows; ++i)
+    for (int j = 0; j < 16; ++j) dst[i * stride + j] = src[i * stride + j];
+}
+
+// MS2-FUNCTIONAL: 16-wide vertical half-pel average of src and src + off.
+// @0x140059700
+void FUN_140059700(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 16; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[off + i * stride + j]);
+}
+
+// MS2-FUNCTIONAL: 16-wide horizontal half-pel average.
+// @0x1400597b0
+void FUN_1400597b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 16; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[i * stride + j + 1]);
+}
+
+// MS2-FUNCTIONAL: 8-wide bidirectional average into dst (8 rows when h == 8, else 4).
+// @0x140059ac0
+void FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  int rows = h == 8 ? 8 : 4;
+  for (int i = 0; i < rows; ++i)
+    for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], dst[i * stride + j]);
+}
+
+// MS2-FUNCTIONAL: 8-wide vertical half-pel average, then averaged into dst.
+// @0x140059b80
+void FUN_140059b80(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 8; ++j)
+      dst[i * stride + j] = cri06_avg(cri06_avg(src[i * stride + j], src[off + i * stride + j]), dst[i * stride + j]);
+}
+
+// MS2-FUNCTIONAL: 8-wide average of src + 1 into dst (the exe reads only the right-hand sample).
+// @0x140059c10
+void FUN_140059c10(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j + 1], dst[i * stride + j]);
+}
+
+// MS2-FUNCTIONAL: 16-wide bidirectional average into dst (16 rows when h == 16, else 8).
+// @0x140059dd0
+void FUN_140059dd0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  int rows = h == 16 ? 16 : 8;
+  for (int i = 0; i < rows; ++i)
+    for (int j = 0; j < 16; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], dst[i * stride + j]);
+}
+
+// MS2-FUNCTIONAL: 16-wide vertical half-pel average, then averaged into dst.
+// @0x14005a070
+void FUN_14005a070(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 16; ++j)
+      dst[i * stride + j] = cri06_avg(cri06_avg(src[i * stride + j], src[off + i * stride + j]), dst[i * stride + j]);
+}
+
+// MS2-FUNCTIONAL: 16-wide horizontal half-pel average, then averaged into dst.
+// @0x14005a140
+void FUN_14005a140(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+{
+  (void)off;
+  for (int i = 0; i < h; ++i)
+    for (int j = 0; j < 16; ++j)
+      dst[i * stride + j] = cri06_avg(cri06_avg(src[i * stride + j], src[i * stride + j + 1]), dst[i * stride + j]);
+}
