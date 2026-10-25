@@ -16,7 +16,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // result).
 ClassTraits::Traits*  FUN_142524f60(VM* vm, VMAbcFile* file, const Abc::Multiname* mn);  // VM: the class traits mn names
 void                  FUN_14252ecb0(VM* vm, const VM::Error* error, const ClassInfo* ci); // VM: raise as class ci
-Value*                FUN_142509240(VMAbcFile* file, Value* result, const Abc::ValueDetail* d);  // the detail's value
+Value*                FUN_142509240(Value* result, VMAbcFile* file, const Abc::ValueDetail* d);  // free Sfr33GetDetailValue: hidden result first
 Value*                FUN_142508a80(const VM* vm, Value* result, const ClassTraits::Traits* tr);  // VM: default of tr
 char*                 FUN_142529720(const SlotInfo* si, char* ok, VM* vm, const Value* v, Object* obj);  // set slot
 Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::NamespaceKind kind, const ASString& uri,
@@ -54,7 +54,7 @@ inline Value VTableIndClosure(Object* obj, SInt32 ind)
 inline Value DetailValue(VMAbcFile& file, const Abc::ValueDetail& d)
 {
     Value v;
-    FUN_142509240(&file, &v, &d);
+    FUN_142509240(&v, &file, &d);
     return v;
 }
 
