@@ -235,27 +235,46 @@ extern "C" void FUN_1424e0290(void* self)
     Scaleform::GFx::AS3::DeleteAs3_1424e4190(self, 0);
 }
 
-extern "C" void FUN_1424efcd0(Scaleform::GFx::AS3::CallFrame* frame);
 extern "C" void FUN_1424efd80(Scaleform::GFx::AS3::CallFrame* frame);
 extern "C" void FUN_142521fb0(void* registerFile, Scaleform::UInt16 count);
 
-// A frame that was abandoned before being pushed restores its reserved operand/register slots and scope stack.
-// MS2-FUNCTIONAL 0x1424dde10: restores the same frame state, with page rollover handled by the frame helpers.
+// A copied frame gives back what its constructor reserved: the operand stack reservation (an emptied page with a
+// predecessor goes back to the reserved list and the values still on it move down onto the predecessor), the
+// registers of the method body, and the scope stack. The operand values stay on the stack for the caller.
+// MS2-FUNCTIONAL 0x1424dde10: OpStack/RegisterFile ReleaseReserved written out (exe: both inline); same steps.
 // @0x1424dde10
 Scaleform::GFx::AS3::CallFrame::~CallFrame()
 {
     if (pRegisterFile && pScopeStack && ACopy)
     {
+        using Scaleform::GFx::AS3::Value;
+        using Scaleform::GFx::AS3::ValueStack;
         const Scaleform::GFx::AS3::Abc::MethodBodyInfo& body =
             *pFile->GetAbcFile().MethodBodies.Info[static_cast<Scaleform::UPInt>(MBIIndex)];
-        auto& vm = pFile->GetVM();
-        auto& stack = Scaleform::GFx::AS3::ValueStack::Of(vm);
-        FUN_1424efcd0(this);
-        stack.pCurrent = PrevInitialStackPos;
-        stack.pStack = PrevFirstStackPos;
+        ValueStack& stack = ValueStack::Of(pFile->GetVM());
+        ValueStack::Page* page = stack.pCurrentPage;
+        --page->ReservationNum;
         stack.ReservedNum = PrevReservedNum;
-        if (stack.pCurrentPage && stack.pCurrentPage->ReservationNum)
-            --stack.pCurrentPage->ReservationNum;
+        if (page->ReservationNum == 0 && page->pPrev)
+        {
+            Value* const top = stack.pCurrent;
+            ValueStack::Page* prev = page->pPrev;
+            stack.pCurrentPage = prev;
+            prev->pNext = NULL;
+            stack.pCurrent = prev->pCurrent;
+            stack.pStack = prev->pFirst;
+            page->pNext = stack.pReserved;
+            page->pFirst = NULL;
+            stack.pReserved = page;
+            for (Value* v = page->Values; v <= top; ++v)
+            {
+                ++stack.pCurrent;
+                memcpy(static_cast<void*>(stack.pCurrent), v, sizeof(Value));
+                *reinterpret_cast<Scaleform::UInt32*>(v) = 0;   // moved out: the old slot is undefined
+            }
+        }
+        else
+            stack.pStack = PrevFirstStackPos;
         FUN_142521fb0(pRegisterFile, static_cast<Scaleform::UInt16>(body.local_reg_count));
         FUN_1424efd80(this);
     }
@@ -267,7 +286,7 @@ Scaleform::GFx::AS3::CallFrame::~CallFrame()
 extern "C" void FUN_1424df070(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto* heap = *reinterpret_cast<Scaleform::MemoryHeap**>(bytes + 0x18);
+    auto* heap = static_cast<Scaleform::MemoryHeap*>(DAT_143b15f60);   // the exe frees through Memory::pGlobalHeap
     auto* sentinel = reinterpret_cast<unsigned char*>(bytes + 0x110);
     auto* node = *reinterpret_cast<unsigned char**>(bytes + 0x118);
     while (node && node != sentinel)
