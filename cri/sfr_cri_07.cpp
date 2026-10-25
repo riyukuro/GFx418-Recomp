@@ -58444,3 +58444,72 @@ void FUN_1400b1e50(cri_any cri_p0, cri_any cri_p1, ...)
   return;
 }
 
+
+// ---- full-exe unresolved: leaves without .pdata that data_cri / data_data_game reference as ?FUN_<va>@@YAXXZ ----
+// The pel predictors take a context with dst +0x30 and the reference rows +0x40 / +0x48.
+struct cri07_pelctx { void* _00[6]; cri_u1* dst; void* _38; const cri_u1* a; const cri_u1* b; };
+
+// MS2-FUNCTIONAL: empty slot.
+// @0x140066450
+void FUN_140066450(void*) {}
+
+// MS2-FUNCTIONAL: full-pel copy of one byte.
+// @0x140068510
+void FUN_140068510(cri07_pelctx* ctx)
+{
+  *ctx->dst = *ctx->a;
+}
+
+// MS2-FUNCTIONAL: horizontal half-pel ((a[0] + a[1] + 1) >> 1).
+// @0x140068520
+void FUN_140068520(cri07_pelctx* ctx)
+{
+  const cri_u1* a = ctx->a;
+  *ctx->dst = (cri_u1)((a[1] + a[0] + 1) >> 1);
+}
+
+// MS2-FUNCTIONAL: vertical half-pel ((b[0] + a[0] + 1) >> 1).
+// @0x140068540
+void FUN_140068540(cri07_pelctx* ctx)
+{
+  const cri_u1* b = ctx->b;
+  const cri_u1* a = ctx->a;
+  *ctx->dst = (cri_u1)((b[0] + a[0] + 1) >> 1);
+}
+
+// MS2-FUNCTIONAL: diagonal half-pel (sum of the four + 2) >> 2.
+// @0x140068560
+void FUN_140068560(cri07_pelctx* ctx)
+{
+  const cri_u1* b = ctx->b;
+  const cri_u1* a = ctx->a;
+  *ctx->dst = (cri_u1)((b[1] + a[1] + b[0] + a[0] + 2) >> 2);
+}
+
+struct cri07_decfields
+{
+  cri_u1 _000[0x6f0]; int p2;
+  cri_u1 _6f4[0xc9c - 0x6f4]; int p1;
+  cri_u1 _ca0[0x1bc0 - 0xca0]; int abort;
+  cri_u1 _1bc4[0x1be0 - 0x1bc4]; void (*handler)(cri07_decfields*, int, int);
+};
+// MS2-FUNCTIONAL: raises the abort flag +0x1bc0.
+// @0x140089fa0
+void FUN_140089fa0(cri07_decfields* self)
+{
+  if (self)
+    self->abort = 1;
+}
+
+// MS2-FUNCTIONAL: stores the two parameters (+0xc9c, +0x6f0) and calls the handler at +0x1be0 with them.
+// @0x140089fc0
+void FUN_140089fc0(cri07_decfields* self, int a, int b)
+{
+  self->p1 = a;
+  self->p2 = b;
+  self->handler(self, a, b);
+}
+
+// MS2-FUNCTIONAL: empty slot.
+// @0x14008c880
+void FUN_14008c880(void*) {}

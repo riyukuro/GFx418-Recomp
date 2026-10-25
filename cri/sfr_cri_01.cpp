@@ -5224,8 +5224,8 @@ static CriSint32 criheap_Free(CriHeap heap, CriHeapBlock* blk)
 }
 
 // MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
-// @0x140027be4
-static CriSint32 criheap_FreeNoLock(CriHeap heap, void* ptr)
+// @0x140027be4 (external: data_data_game's table takes it as FUN_140027be4)
+CriSint32 criheap_FreeNoLock(CriHeap heap, void* ptr)
 {
     if (ptr == NULL)
     {
@@ -6715,3 +6715,81 @@ void* FUN_140029ab0(void* object, CriUint64 flags) { return CriRefCountDeletingD
 // MS2-PIN: ?SetTransforms@SoundChannelDelegate@Sound@Scaleform@@UEAAXAEBV?$Array@UTransform@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z 0x14001cec0
 // MS2-FUNCTIONAL ?SetSpatialInfo@SoundChannelDelegate@Sound@Scaleform@@UEAAXQEBV?$Array@UVector@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
 // MS2-PIN: ?SetSpatialInfo@SoundChannelDelegate@Sound@Scaleform@@UEAAXQEBV?$Array@UVector@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z 0x14001cee0
+
+// ---- full-exe unresolved: leaves without .pdata that data_cri's tables reference as ?FUN_<va>@@YAXXZ ----
+
+typedef void* (*cri01_cb4)(void* user, void* a, void* b, void* c);
+struct cri01_cbslot { cri01_cb4 fn; void* user; };
+struct cri01_cbhost                     // {fn, user} pairs at +0x08 and +0x18 (+0x20/+0x30 on the setters' object)
+{
+    void* vtbl;
+    cri01_cbslot s08;
+    cri01_cbslot s18;
+};
+struct cri01_cbhost2 { void* vtbl; void* _08[3]; cri01_cbslot s20; cri01_cbslot s30; };
+
+// MS2-FUNCTIONAL: callback slot {fn +0x18, user +0x20}: calls fn(user, ...) when set, else 0.
+// @0x140029240
+void* FUN_140029240(cri01_cbhost* self, void* a, void* b, void* c)
+{
+    cri01_cb4 fn = self->s18.fn;
+    return fn ? fn(self->s18.user, a, b, c) : nullptr;
+}
+
+// MS2-FUNCTIONAL: callback slot {fn +0x08, user +0x10}: calls fn(user, ...) when set, else 0.
+// @0x140029260
+void* FUN_140029260(cri01_cbhost* self, void* a, void* b, void* c)
+{
+    cri01_cb4 fn = self->s08.fn;
+    return fn ? fn(self->s08.user, a, b, c) : nullptr;
+}
+
+// MS2-FUNCTIONAL: deleting-destructor thunk of the second base (+0x10).
+// @0x140029ec0
+void* FUN_140029ec0(char* self, CriUint64 flags)
+{
+    return FUN_140029fa0(self - 0x10, flags);
+}
+
+struct cri01_sizer { virtual void v0() = 0; virtual void v1() = 0; virtual void v2() = 0; virtual void v3() = 0;
+                     virtual void v4() = 0; virtual void GetSize(void* lo, void* hi) = 0; };
+
+struct cri01_sizerhost { void* vtbl; cri01_sizer* inner; };
+// MS2-FUNCTIONAL: forwards to the inner object's slot 5 (+0x28); with none, reports {0, 1000}.
+// @0x140029f80
+void FUN_140029f80(cri01_sizerhost* self, CriUint64* lo, CriUint64* hi)
+{
+    cri01_sizer* o = self->inner;
+    if (o)
+    {
+        o->GetSize(lo, hi);
+        return;
+    }
+    *lo = 0;
+    *hi = 1000;
+}
+
+// MS2-FUNCTIONAL: stores the callback pair {fn, user} at +0x20.
+// @0x14002a060
+void FUN_14002a060(cri01_cbhost2* self, void* fn, void* user)
+{
+    self->s20.fn = (cri01_cb4)fn;
+    self->s20.user = user;
+}
+
+// MS2-FUNCTIONAL: stores the callback pair {fn, user} at +0x30.
+// @0x14002a070
+void FUN_14002a070(cri01_cbhost2* self, void* fn, void* user)
+{
+    self->s30.fn = (cri01_cb4)fn;
+    self->s30.user = user;
+}
+
+void* FUN_14002a0e0(void* object, CriUint32 flags);   // sfr_cri_02
+
+// MS2-FUNCTIONAL: deleting-destructor thunk of the second base (+0x10).
+// @0x14002a080
+void* FUN_14002a080(char* self, CriUint32 flags)
+{
+    return FUN_14002a0e0(self - 0x10, flags);
+}

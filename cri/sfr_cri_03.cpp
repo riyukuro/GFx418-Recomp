@@ -7124,3 +7124,43 @@ CriSint32 FUN_14003efc0(void* player)
         }
     }
 }
+
+// ---- full-exe unresolved: leaves without .pdata that data_cri / data_data_game reference as ?FUN_<va>@@YAXXZ ----
+
+struct cri03_stream { virtual void v0() = 0; virtual void v1() = 0; virtual void v2() = 0; virtual void v3() = 0;
+                      virtual void v4() = 0; virtual void v5() = 0; virtual void v6() = 0; virtual void v7() = 0;
+                      virtual void v8() = 0; virtual void* Call9(long long a, long long b, long long c) = 0; };
+
+struct cri03_host20 { void* vtbl; void* _08[3]; cri03_stream* stream; };
+// MS2-FUNCTIONAL: forwards to slot 9 (+0x48) of the object at +0x20; 0 without one.
+// @0x140041360
+void* FUN_140041360(cri03_host20* self, long long a, long long b, long long c)
+{
+    cri03_stream* o = self->stream;
+    return o ? o->Call9(a, b, c) : nullptr;
+}
+
+// MS2-FUNCTIONAL: empty interface slot.
+// @0x140041c50
+void FUN_140041c50(void*) {}
+
+struct cri03_host08 { void* vtbl; cri03_stream* stream; };
+// MS2-FUNCTIONAL: slot 9 (+0x48) of the object at +8 with (a, d, 0), both ints sign-extended.
+// @0x140041d00
+void* FUN_140041d00(cri03_host08* self, CriSint32 a, void*, CriSint32 d)
+{
+    cri03_stream* o = self->stream;
+    return o->Call9(a, d, 0);
+}
+
+struct cri03_kinds { void* vtbl; void* _08[3]; CriSint32 k1; CriSint32 k0; };
+// MS2-FUNCTIONAL: field +0x20 for kind 1, +0x24 for kind 0, else 0.
+// @0x140046000
+CriSint32 FUN_140046000(cri03_kinds* self, CriSint32 kind)
+{
+    if (kind == 1)
+        return self->k1;
+    if (kind == 0)
+        return self->k0;
+    return 0;
+}

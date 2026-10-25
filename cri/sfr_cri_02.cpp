@@ -6730,3 +6730,23 @@ void CriMvEasyFileReaderMem::Destroy(void)
 // MS2-PIN: ??0VideoPlayerImpl@Video@GFx@Scaleform@@QEAA@PEAVMemoryHeap@3@@Z 0x14002c810
 // MS2-PIN: ?FUN_140033810@@YAXPEAX@Z 0x140033810
 // MS2-PIN: ?FUN_140033d70@@YAJPEAXPEBUCriMovieInputChunk@@E@Z 0x140033d70
+
+// ---- full-exe unresolved: leaves without .pdata that data_cri's tables reference as ?FUN_<va>@@YAXXZ ----
+
+// MS2-FUNCTIONAL: empty interface slot.
+// @0x14002b0d0
+void FUN_14002b0d0(void*) {}
+
+struct cri02_flaghost { void* vtbl; void* _08[6]; CriUint8 flag; };
+// MS2-FUNCTIONAL: sets the flag byte +0x38.
+// @0x14002b0e0
+void FUN_14002b0e0(cri02_flaghost* self, CriUint8 v) { self->flag = v; }
+
+namespace Scaleform { namespace GFx { namespace Video {
+// MS2-FUNCTIONAL: deleting-destructor thunk of VideoReader's CriMvFileReaderInterface base (+0x10).
+// @0x14002de50
+void* FUN_14002de50(char* self, CriUint32 flags)
+{
+    return FUN_14002dec0(reinterpret_cast<VideoReader*>(self - 0x10), flags);
+}
+}}}
