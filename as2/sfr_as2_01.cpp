@@ -60,6 +60,8 @@
 // MS2-RANGE: 0x1428f7580-0x1428f7740 .text$mn
 // MS2-RANGE: 0x1428fb110-0x1428fbb70 .text$mn
 // MS2-RANGE: 0x1428fbb80-0x1428fbc40 .text$mn
+// MS2-RANGE: 0x1428fbb70-0x1428fbb80 .text$mn
+// MS2-RANGE: 0x1428fbc40-0x1428fbc50 .text$mn
 // MS2-RANGE: 0x1428fbc50-0x1428fbd10 .text$mn
 // MS2-RANGE: 0x1428fc160-0x1428fdc00 .text$mn
 
@@ -3068,13 +3070,48 @@ void GAS_GlobalIsFinite(const FnCall& fn)
         fn.Result->SetBool(true);
 }
 
+// FlagsVisitor's scalar deleting destructor (vtable slot 0 of GAS_GlobalASSetPropFlags' visitor, no .pdata).
+// MS2-FUNCTIONAL: free-function form of the local class's compiler-generated destructor.
+// @0x1428f7be0
+void* FUN_1428f7be0(void* self, unsigned flags)
+{
+    ((ObjectInterface::MemberVisitor*)self)->ObjectInterface::MemberVisitor::~MemberVisitor();
+    if (flags & 1)
+        ::operator delete(self, (size_t)0x20);
+    return self;
+}
+
+// The global updateAfterEvent() does nothing.
+// @0x1428f8530
+void FUN_1428f8530(const FnCall&) {}
+
 // The global clearInterval()/clearTimeout() functions.
 class IntervalTimer
 {
 public:
     static void ClearInterval(const FnCall& fn);
     static void ClearTimeout(const FnCall& fn);
+
+private:
+    // Defined with the timer object (sfr_as2_07n); setInterval / setTimeout below forward to it.
+    static void Set(const FnCall& fn, bool isTimeout);
+    friend void FUN_1428fbb70(const FnCall& fn);
+    friend void FUN_1428fbc40(const FnCall& fn);
 };
+
+// The global setInterval(): an interval timer.
+// @0x1428fbb70
+void FUN_1428fbb70(const FnCall& fn)
+{
+    IntervalTimer::Set(fn, false);
+}
+
+// The global setTimeout(): a one-shot timer.
+// @0x1428fbc40
+void FUN_1428fbc40(const FnCall& fn)
+{
+    IntervalTimer::Set(fn, true);
+}
 
 // @0x1428fbb80
 void IntervalTimer::ClearInterval(const FnCall& fn)

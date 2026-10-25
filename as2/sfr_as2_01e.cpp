@@ -27,6 +27,11 @@ typedef ThunkFunc1<Classes::fl::Date, 0, Value::Number, const Value&> TFunc_Clas
 // to it.
 // @0x1423dfef0
 template void TFunc_Classes_fl_Date_parse::Func(const ThunkInfo&, VM&, const Value&, Value&, unsigned, const Value*);
+typedef ThunkFunc2<Classes::fl::Date, 1, Value, unsigned, const Value*> TFunc_Classes_fl_Date_UTC;
+// Date.UTC's thunk (no .pdata: the forwarding jmp); Method is likewise sfr_as3di_01's specialization.
+// @0x1423e0070
+template void TFunc_Classes_fl_Date_UTC::Func(const ThunkInfo&, VM&, const Value&, Value&, unsigned, const Value*);
+// MS2-PIN: ?Func@?$ThunkFunc2@VDate@fl@Classes@AS3@GFx@Scaleform@@$00VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1423e0070
 }}} // namespace Scaleform::GFx::AS3
 
 // ---- fl_display: loader info ----

@@ -7,10 +7,12 @@
 // MS2-RANGE: 0x1423c9140-0x1423ca140 .text$mn
 // MS2-RANGE: 0x1423ca160-0x1423ca1c0 .text$mn
 // MS2-RANGE: 0x1423ca2b0-0x1423ca350 .text$mn
+// MS2-RANGE: 0x1423c9000-0x1423c9020 .text$mn
 // MS2-PIN: ?LogWarning@Log@Scaleform@@QEAAXPEBDZZ 0x1423ca0c0
 
 #include <windows.h>
 #include <imm.h>
+#pragma comment(lib, "imm32.lib")   // ImmIsUIMessageW / ImmGetContext / ImmGetOpenStatus / ImmReleaseContext
 #include <objbase.h>
 #include <stdlib.h>
 #include <string.h>
@@ -540,3 +542,16 @@ void FUN_1423ca2b0(void* array, const void*, UPInt newCapacity)
 }
 
 }} // namespace Scaleform::GFx
+
+// Empty vtable slots without .pdata (`ret 0`) the AS2 data images reference.
+// MS2-FUNCTIONAL: empty leaf.
+// @0x1423c9000
+void FUN_1423c9000() {}
+
+// MS2-FUNCTIONAL: empty leaf.
+// @0x1423c9010
+void FUN_1423c9010() {}
+
+// MS2-FUNCTIONAL: empty leaf.
+// @0x1423c9b90
+void FUN_1423c9b90() {}
