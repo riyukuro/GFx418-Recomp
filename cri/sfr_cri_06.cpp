@@ -838,7 +838,7 @@ void FUN_140054320(cri_any cri_p0, ...)
 void FUN_140054490(cri_any cri_p0, ...)
 {
   cri_u8 arg1 = cri_p0;
-  FUN_140054250();
+  FUN_140054250(arg1);  // the exe passes rcx through
   FUN_140054320(arg1);
   return;
 }
@@ -1163,7 +1163,7 @@ longlong FUN_140054cf0(cri_any cri_p0, cri_any cri_p1, ...)
   if (((arg1[0x1c2] != 0) && (arg1[0x1c2] != 0x40)) || (arg1[0x1c3] != 0)) {
     arg1[0x343] = arg1[0x343] + 1;
   }
-  FUN_140054820();
+  FUN_140054820(arg1);  // the exe passes rcx through
   pu_v7 = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
   i_v10 = (int)arg2 * 8 + (int)pu_v7 * -8;
   b_v5 = (byte)i_v10;
@@ -1459,7 +1459,7 @@ longlong FUN_140054cf0(cri_any cri_p0, cri_any cri_p1, ...)
     } while (l_v9 != 0);
   }
   FUN_1400549b0(arg1);
-  FUN_140054b60();
+  FUN_140054b60(arg1);  // FUN_1400549b0 keeps rcx
   if (arg1[0x1b1] == 0) {
     arg1[0x343] = arg1[0x343] + 1;
   }
@@ -3239,7 +3239,7 @@ longlong FUN_140055550(cri_any cri_p0, cri_any cri_p1, ...)
       }
     }
     FUN_1400549b0(arg1);
-    FUN_140054a80();
+    FUN_140054a80(arg1);  // FUN_1400549b0 keeps rcx
     if (*(int *)((char *)arg1 + 0xc0c) == 0) {
       *(cri_u4 *)((char *)arg1 + 0x1c54) = 0;
     }
@@ -4097,7 +4097,7 @@ ulonglong FUN_140059030(cri_any cri_p0, cri_any cri_p1, ...)
   uint u_v2;
   ulonglong u_v3;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     u_v3 = FUN_14005af30(0,0xff05020c);
     return u_v3;
@@ -7250,7 +7250,7 @@ void FUN_14005ae00(cri_any cri_p0, ...)
     return;
   }
   *(cri_u8 *)((char *)arg1 + 0x1bd0) = 0;
-  i_v1 = FUN_140054210();
+  i_v1 = FUN_140054210(arg1);  // the exe passes rcx through
   if (i_v1 == 0) {
     i_v1 = FUN_140054230(arg1);
     if (i_v1 != 0) {
@@ -7321,10 +7321,10 @@ cri_u4 FUN_14005af30(cri_any cri_p0, cri_any cri_p1, ...)
   longlong arg1 = cri_p0;
   cri_u4 arg2 = cri_p1;
   if (arg1 == 0) {
-    FUN_14005af00(&DAT_143e64bc0);
+    FUN_14005af00(&DAT_143e64bc0,arg2);  // edx = arg2 in the exe
     return arg2;
   }
-  FUN_14005af00(arg1 + 0x1a30);
+  FUN_14005af00(arg1 + 0x1a30,arg2);
   return arg2;
 }
 
@@ -7337,7 +7337,7 @@ void FUN_14005af70(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 arg3 = cri_p2;
   int i_v1;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff050203);
     return;
@@ -7355,7 +7355,7 @@ void FUN_14005afd0(cri_any cri_p0, cri_any cri_p1, ...)
   cri_u8 *arg2 = cri_p1;
   int i_v1;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff050204);
     return;
@@ -7584,7 +7584,7 @@ void FUN_14005b300(cri_any cri_p0, cri_any cri_p1, ...)
   uint u_v2;
   cri_u8 u_v3;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020a);
     return;
@@ -7619,7 +7619,7 @@ void FUN_14005b390(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   int i_v7;
   cri_u8 u_v8;
   
-  i_v7 = FUN_140047750();
+  i_v7 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v7 == 0) {
     u_v4 = *(ulonglong *)((longlong)arg3 + 0x50);
     if (((((u_v4 != 0) && (u_v5 = *(ulonglong *)((longlong)arg3 + 0x40), u_v5 != 0)) &&
@@ -7842,7 +7842,7 @@ void FUN_14005b860(cri_any cri_p0, ...)
   longlong arg1 = cri_p0;
   int i_v1;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff050210);
     return;
@@ -7857,10 +7857,10 @@ void FUN_14005b8a0(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
   if (*(int *)((char *)arg1 + 0x318) == 3) {
-    FUN_14005b5c0();
+    FUN_14005b5c0(arg1);  // tail jmp keeps rcx
     return;
   }
-  FUN_14005b650();
+  FUN_14005b650(arg1);
   return;
 }
 
@@ -7946,9 +7946,9 @@ cri_u8 FUN_14005b8c0(cri_any cri_p0, ...)
         if (1 < (uint)(i_v5 - i_v3)) {
           FUN_14005b560(arg1);
           if (*(int *)((char *)arg1 + 0x2e0) == 2) {
-            FUN_14005b580();
+            FUN_14005b580(arg1);  // FUN_14005b560 keeps rcx
           }
-          FUN_14008a970(arg1);
+          FUN_14008a970(arg1,i_v3);  // edx = r10d, the subtrahend of the test above
           FUN_14008c820(arg1);
         }
       }
@@ -9375,8 +9375,8 @@ void FUN_14005dc70(cri_any cri_p0, cri_any cri_p1, ...)
     return;
   }
   pl_v9 = arg2;
-  FUN_14005b560();
-  FUN_14005b580();
+  FUN_14005b560(arg1);  // the exe passes rcx through
+  FUN_14005b580(arg1);  // FUN_14005b560 keeps rcx
   (**(cri_code **)(*pl_v9 + 0x30))(arg2,1,0x7fffffff,arg1 + 0xd30);
   pu_v14 = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0xd30) & 0xfffffffffffffffc);
   i_v12 = *(int *)((char *)arg1 + 0xd30) * 8 + (int)pu_v14 * -8;
@@ -9640,10 +9640,10 @@ void FUN_14005dc70(cri_any cri_p0, cri_any cri_p1, ...)
       *(uint *)((char *)arg1 + 0xc80) = u_v10;
       *(uint *)((char *)arg1 + 0xc78) = u_v13;
       *(cri_u1 **)((char *)arg1 + 0xc88) = pu_v15;
-      i_v12 = FUN_14005b8c0();
+      i_v12 = FUN_14005b8c0(arg1);  // rcx = rbx = arg1 in the exe
       if (i_v12 == 0) {
         (**(cri_code **)((char *)arg1 + 0x1bc8))(arg1);
-        FUN_14008a3c0();
+        FUN_14008a3c0(arg1);
       }
       u_v11 = *(uint *)((char *)arg1 + 0xc7c);
       u_v10 = *(uint *)((char *)arg1 + 0xc80);
@@ -9686,7 +9686,7 @@ void FUN_14005e5b0(cri_any cri_p0, cri_any cri_p1, ...)
   void *arg2 = cri_p1;
   int i_v1;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020c);
     return;
@@ -9703,7 +9703,7 @@ void FUN_14005e600(cri_any cri_p0, cri_any cri_p1, ...)
   cri_u4 *arg2 = cri_p1;
   int i_v1;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020d);
     return;
@@ -9722,7 +9722,7 @@ void FUN_14005e650(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   cri_u4 *arg4 = cri_p3;
   int i_v1;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 == 0) {
     *arg2 = *(int *)((char *)arg1 + 0x6d8) << 0xb;
     *arg3 = *(cri_u4 *)((char *)arg1 + 0x2e4);
@@ -9743,7 +9743,7 @@ void FUN_14005e6c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u4 *arg3 = cri_p2;
   int i_v1;
   
-  i_v1 = FUN_140047750();
+  i_v1 = FUN_140047750(arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020e);
     return;
@@ -13708,7 +13708,7 @@ void thunk_FUN_140050520(cri_any cri_unused, ...)
   
   DAT_143c49100 = DAT_143c49100 + 1;
   if ((DAT_143c49100 == 1) && (i_v1 = FUN_1400501f0(), 1 < i_v1)) {
-    DAT_143c490f8 = FUN_1400682e0(&DAT_143badb88);
+    DAT_143c490f8 = FUN_1400682e0(&DAT_143badb88,0x30);  // edx = 0x30 in the exe
     DAT_143c490f0 = CRI_ADDR(DAT_143badf80);
     memset(&DAT_143badf80,0,0x9b100);
     DAT_143c490e0 = CRI_ADDR(DAT_143badc00);
@@ -13757,7 +13757,7 @@ void thunk_FUN_140050670(cri_any cri_unused, ...)
       return;
     }
     if (DAT_143c490f8 != 0) {
-      FUN_140068380();
+      FUN_140068380(DAT_143c490f8);  // rcx = the handle just tested
       DAT_143c490f8 = 0;
     }
     l_v4 = (longlong)(DAT_143badbdc + -1);
@@ -13766,7 +13766,7 @@ void thunk_FUN_140050670(cri_any cri_unused, ...)
       l_v2 = DAT_143c490e0;
       do {
         if (*(longlong *)(l_v3 + l_v2) != 0) {
-          FUN_140067a90();
+          FUN_140067a90(*(longlong *)(l_v3 + l_v2));  // rcx = the slot just tested
           l_v2 = DAT_143c490e0;
           *(cri_u8 *)(l_v3 + DAT_143c490e0) = 0;
         }
@@ -13989,7 +13989,7 @@ cri_u8 FUN_140065450(cri_any cri_p0, cri_any cri_p1, ...)
   int loc_1c;
   cri_u2 loc_18;
   
-  FUN_140066370();
+  FUN_140066370(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x18f8) != 0) {
     FUN_140050210(*(longlong *)((char *)arg1 + 0x18f8),*(cri_u4 *)((char *)arg1 + 0x1574));
     loc_38 = &PTR_FUN_143a4a0d8;
