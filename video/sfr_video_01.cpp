@@ -14,22 +14,26 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "hook/ms2hook.h"
 
-MS2_GLOBAL(0x1431b59f0, void*, VideoProtoGCVtable);
-MS2_GLOBAL(0x1431b5940, void*, VideoProtoInterfaceVtable);
-MS2_GLOBAL(0x1431b5938, void*, VideoProtoBaseVtable);
-MS2_GLOBAL(0x1431b4be0, void*, VideoSoundStreamVtable);
-MS2_GLOBAL(0x1431b4b80, void*, VideoSoundVtable);
-MS2_GLOBAL(0x1431b4ce0, void*, VideoSoundChannelSystemVtable);
-MS2_GLOBAL(0x1431b5cb0, void*, AvmVideoCharacterVtable);
-MS2_GLOBAL(0x1431b5c00, void*, AvmVideoCharacterInterfaceVtable);
-MS2_GLOBAL(0x1431b5b40, void*, AvmVideoCharacterBaseVtable);
-MS2_GLOBAL(0x1431b5480, void*, NetStreamProtoVtable);
-MS2_GLOBAL(0x1431b54d0, void*, NetStreamProtoInterfaceVtable);
-MS2_GLOBAL(0x1431b5478, void*, NetStreamProtoBaseVtable);
-MS2_GLOBAL(0x1431b53c0, void*, NetStreamPrototypeVtable);
-MS2_GLOBAL(0x1431b5310, void*, NetStreamPrototypeInterfaceVtable);
-MS2_GLOBAL(0x1431b5300, void*, NetStreamPrototypeBaseVtable);
-MS2_GLOBAL(0x1431b4d80, Scaleform::GFx::AS2::NameFunction, NetStreamCloseFunctionTable);
+// The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
+// hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
+template <class T> using ExeDecl = T;
+
+extern ExeDecl<void*> DAT_1431b59f0; static constexpr ExeDecl<void*>& VideoProtoGCVtable = DAT_1431b59f0;
+extern ExeDecl<void*> DAT_1431b5940; static constexpr ExeDecl<void*>& VideoProtoInterfaceVtable = DAT_1431b5940;
+extern ExeDecl<void*> DAT_1431b5938; static constexpr ExeDecl<void*>& VideoProtoBaseVtable = DAT_1431b5938;
+extern ExeDecl<void*> DAT_1431b4be0; static constexpr ExeDecl<void*>& VideoSoundStreamVtable = DAT_1431b4be0;
+extern ExeDecl<void*> DAT_1431b4b80; static constexpr ExeDecl<void*>& VideoSoundVtable = DAT_1431b4b80;
+extern ExeDecl<void*> DAT_1431b4ce0; static constexpr ExeDecl<void*>& VideoSoundChannelSystemVtable = DAT_1431b4ce0;
+extern ExeDecl<void*> DAT_1431b5cb0; static constexpr ExeDecl<void*>& AvmVideoCharacterVtable = DAT_1431b5cb0;
+extern ExeDecl<void*> DAT_1431b5c00; static constexpr ExeDecl<void*>& AvmVideoCharacterInterfaceVtable = DAT_1431b5c00;
+extern ExeDecl<void*> DAT_1431b5b40; static constexpr ExeDecl<void*>& AvmVideoCharacterBaseVtable = DAT_1431b5b40;
+extern ExeDecl<void*> DAT_1431b5480; static constexpr ExeDecl<void*>& NetStreamProtoVtable = DAT_1431b5480;
+extern ExeDecl<void*> DAT_1431b54d0; static constexpr ExeDecl<void*>& NetStreamProtoInterfaceVtable = DAT_1431b54d0;
+extern ExeDecl<void*> DAT_1431b5478; static constexpr ExeDecl<void*>& NetStreamProtoBaseVtable = DAT_1431b5478;
+extern ExeDecl<void*> DAT_1431b53c0; static constexpr ExeDecl<void*>& NetStreamPrototypeVtable = DAT_1431b53c0;
+extern ExeDecl<void*> DAT_1431b5310; static constexpr ExeDecl<void*>& NetStreamPrototypeInterfaceVtable = DAT_1431b5310;
+extern ExeDecl<void*> DAT_1431b5300; static constexpr ExeDecl<void*>& NetStreamPrototypeBaseVtable = DAT_1431b5300;
+extern ExeDecl<Scaleform::GFx::AS2::NameFunction> DAT_1431b4d80; static constexpr ExeDecl<Scaleform::GFx::AS2::NameFunction>& NetStreamCloseFunctionTable = DAT_1431b4d80;
 
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);

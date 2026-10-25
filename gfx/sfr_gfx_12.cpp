@@ -21,6 +21,10 @@
 #include "hook/ms2hook.h"
 #include <string.h>
 
+// The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
+// hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
+template <class T> using ExeDecl = T;
+
 using namespace Scaleform;
 
 // ---- the Expat parser ----
@@ -40,33 +44,33 @@ public:
 }}} // namespace Scaleform::GFx::XML
 
 // The Expat library linked into the exe (parser handle, handler setters, error and position queries).
-MS2_EXTERN(0x1423b2eb0, void*(const char*), XML_ParserCreate);
-MS2_EXTERN(0x1423b3500, void(void*, void*), XML_SetXmlDeclHandler);
-MS2_EXTERN(0x1423b3400, void(void*, void*), XML_SetStartElementHandler);
-MS2_EXTERN(0x1423b3310, void(void*, void*), XML_SetEndElementHandler);
-MS2_EXTERN(0x1423b3320, void(void*, void*), XML_SetCharacterDataHandler);
-MS2_EXTERN(0x1423b3560, void(void*, void*), XML_SetStartNamespaceDeclHandler);
-MS2_EXTERN(0x1423b3330, void(void*, void*), XML_SetCommentHandler);
-MS2_EXTERN(0x1423b3540, void(void*, void*), XML_SetUserData);
-MS2_EXTERN(0x1423b2c20, int(void*, const char*, int, int), XML_Parse);
-MS2_EXTERN(0x1423b2ab0, int(void*), XML_GetCurrentColumnNumber);
-MS2_EXTERN(0x1423b2b10, int(void*), XML_GetCurrentLineNumber);
-MS2_EXTERN(0x1423b2a90, int(void*), XML_GetCurrentByteIndex);
-MS2_EXTERN(0x1423b2b70, int(void*), XML_GetErrorCode);
-MS2_EXTERN(0x1423b24b0, const char*(int), XML_ErrorString);
-MS2_EXTERN(0x1423b2f30, void(void*), XML_ParserFree);
+ExeDecl<void*(const char*)> FUN_1423b2eb0; static constexpr ExeDecl<void*(const char*)>& XML_ParserCreate = FUN_1423b2eb0;
+ExeDecl<void(void*, void*)> FUN_1423b3500; static constexpr ExeDecl<void(void*, void*)>& XML_SetXmlDeclHandler = FUN_1423b3500;
+ExeDecl<void(void*, void*)> FUN_1423b3400; static constexpr ExeDecl<void(void*, void*)>& XML_SetStartElementHandler = FUN_1423b3400;
+ExeDecl<void(void*, void*)> FUN_1423b3310; static constexpr ExeDecl<void(void*, void*)>& XML_SetEndElementHandler = FUN_1423b3310;
+ExeDecl<void(void*, void*)> FUN_1423b3320; static constexpr ExeDecl<void(void*, void*)>& XML_SetCharacterDataHandler = FUN_1423b3320;
+ExeDecl<void(void*, void*)> FUN_1423b3560; static constexpr ExeDecl<void(void*, void*)>& XML_SetStartNamespaceDeclHandler = FUN_1423b3560;
+ExeDecl<void(void*, void*)> FUN_1423b3330; static constexpr ExeDecl<void(void*, void*)>& XML_SetCommentHandler = FUN_1423b3330;
+ExeDecl<void(void*, void*)> FUN_1423b3540; static constexpr ExeDecl<void(void*, void*)>& XML_SetUserData = FUN_1423b3540;
+ExeDecl<int(void*, const char*, int, int)> FUN_1423b2c20; static constexpr ExeDecl<int(void*, const char*, int, int)>& XML_Parse = FUN_1423b2c20;
+ExeDecl<int(void*)> FUN_1423b2ab0; static constexpr ExeDecl<int(void*)>& XML_GetCurrentColumnNumber = FUN_1423b2ab0;
+ExeDecl<int(void*)> FUN_1423b2b10; static constexpr ExeDecl<int(void*)>& XML_GetCurrentLineNumber = FUN_1423b2b10;
+ExeDecl<int(void*)> FUN_1423b2a90; static constexpr ExeDecl<int(void*)>& XML_GetCurrentByteIndex = FUN_1423b2a90;
+ExeDecl<int(void*)> FUN_1423b2b70; static constexpr ExeDecl<int(void*)>& XML_GetErrorCode = FUN_1423b2b70;
+ExeDecl<const char*(int)> FUN_1423b24b0; static constexpr ExeDecl<const char*(int)>& XML_ErrorString = FUN_1423b24b0;
+ExeDecl<void(void*)> FUN_1423b2f30; static constexpr ExeDecl<void(void*)>& XML_ParserFree = FUN_1423b2f30;
 // The parser's own callbacks (the handler / user data protocol is private to the exe's ParserExpat).
-MS2_EXTERN(0x1423b1d40, void(), ParserExpat_XmlDeclCallback);
-MS2_EXTERN(0x1423b17d0, void(), ParserExpat_StartElementCallback);
-MS2_EXTERN(0x1423b1660, void(), ParserExpat_EndElementCallback);
-MS2_EXTERN(0x1423b16d0, void(), ParserExpat_CharacterDataCallback);
-MS2_EXTERN(0x1423b23e0, void(), ParserExpat_StartNamespaceCallback);
-MS2_EXTERN(0x1423b1760, void(), ParserExpat_CommentCallback);
+ExeDecl<void()> FUN_1423b1d40; static constexpr ExeDecl<void()>& ParserExpat_XmlDeclCallback = FUN_1423b1d40;
+ExeDecl<void()> FUN_1423b17d0; static constexpr ExeDecl<void()>& ParserExpat_StartElementCallback = FUN_1423b17d0;
+ExeDecl<void()> FUN_1423b1660; static constexpr ExeDecl<void()>& ParserExpat_EndElementCallback = FUN_1423b1660;
+ExeDecl<void()> FUN_1423b16d0; static constexpr ExeDecl<void()>& ParserExpat_CharacterDataCallback = FUN_1423b16d0;
+ExeDecl<void()> FUN_1423b23e0; static constexpr ExeDecl<void()>& ParserExpat_StartNamespaceCallback = FUN_1423b23e0;
+ExeDecl<void()> FUN_1423b1760; static constexpr ExeDecl<void()>& ParserExpat_CommentCallback = FUN_1423b1760;
 // Formats one message into a small caller supplied buffer descriptor (mode 2, buffer, capacity).
 struct Unk_XmlMsgBuffer { int Mode; char* Buffer; UPInt Capacity; };
-MS2_EXTERN(0x1423b14e0, void(Unk_XmlMsgBuffer*, const char*, const char**), FUN_1423b14e0);
-MS2_GLOBAL(0x143135720, char, Unk_FileIsEmptyFormat);       // "File {0} is empty!"
-MS2_GLOBAL(0x143135738, char, Unk_FileMissingFormat);       // "File {0} does not exist!"
+ExeDecl<void(Unk_XmlMsgBuffer*, const char*, const char**)> FUN_1423b14e0;
+extern ExeDecl<char> DAT_143135720; static constexpr ExeDecl<char>& Unk_FileIsEmptyFormat = DAT_143135720;       // "File {0} is empty!"
+extern ExeDecl<char> DAT_143135738; static constexpr ExeDecl<char>& Unk_FileMissingFormat = DAT_143135738;       // "File {0} does not exist!"
 
 namespace Scaleform { namespace GFx { namespace XML {
 
@@ -125,12 +129,12 @@ bool ParserExpat::ParseString(const char* pdata, UPInt len, ParserHandler* pphan
     ParserLocator locator;
     pphandler->SetDocumentLocator(&locator);
     void* parser = XML_ParserCreate(0);
-    XML_SetXmlDeclHandler(parser, ParserExpat_XmlDeclCallback.get());
-    XML_SetStartElementHandler(parser, ParserExpat_StartElementCallback.get());
-    XML_SetEndElementHandler(parser, ParserExpat_EndElementCallback.get());
-    XML_SetCharacterDataHandler(parser, ParserExpat_CharacterDataCallback.get());
-    XML_SetStartNamespaceDeclHandler(parser, ParserExpat_StartNamespaceCallback.get());
-    XML_SetCommentHandler(parser, ParserExpat_CommentCallback.get());
+    XML_SetXmlDeclHandler(parser, &ParserExpat_XmlDeclCallback);
+    XML_SetStartElementHandler(parser, &ParserExpat_StartElementCallback);
+    XML_SetEndElementHandler(parser, &ParserExpat_EndElementCallback);
+    XML_SetCharacterDataHandler(parser, &ParserExpat_CharacterDataCallback);
+    XML_SetStartNamespaceDeclHandler(parser, &ParserExpat_StartNamespaceCallback);
+    XML_SetCommentHandler(parser, &ParserExpat_CommentCallback);
     struct { void* Parser; ParserHandler* Handler; ParserLocator* Locator; } userData = {parser, pphandler, &locator};
     XML_SetUserData(parser, &userData);
     pphandler->StartDocument();

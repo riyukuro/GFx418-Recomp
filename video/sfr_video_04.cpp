@@ -18,27 +18,30 @@
 #include <cstdint>
 #include <new>
 
+// The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
+// hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
+template <class T> using ExeDecl = T;
+
 using namespace Scaleform;
 using namespace Scaleform::GFx;
 using namespace Scaleform::GFx::Video;
 
 // ---- exe callees outside this unit ----
-MS2_EXTERN(0x1425925f0, void(void*), FUN_1425925f0);                       // GC object: release tail
-MS2_EXTERN(0x142592950, char(void*, std::uint64_t), FUN_142592950);        // ArrayPaged: grow to hold a page index
-MS2_EXTERN(0x142591a00, void(void*, void*, void*, unsigned), FUN_142591a00);   // hash: add {key, value} at a hash code
-MS2_EXTERN(0x1425916c0, void(void*, void*, void*), FUN_1425916c0);        // registers the first builtin
-MS2_EXTERN(0x1429561c0, char*(), FUN_1429561c0);                           // the AS2 builtin class table singleton
-MS2_EXTERN(0x1429260b0, void(void*), FUN_1429260b0);                       // AS2 value destructor
-MS2_EXTERN(0x140010000, InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*,
-                                           const ResourceId*), FUN_140010000);   // the video character constructor
-MS2_EXTERN(0x14000e2b0, void*(void*, InteractiveObject*), FUN_14000e2b0);          // the AVM video character constructor
-MS2_EXTERN(0x14001af70, void*(void*, InteractiveObject*), FUN_14001af70_ctor);     // the AS3 AVM video character constructor
-MS2_EXTERN(0x1400126f0, void*(void*, void*), FUN_1400126f0);
-MS2_EXTERN(0x14000cf20, void*(void*, void*), FUN_14000cf20);
-MS2_EXTERN(0x14000ed60, void*(void*, void*), FUN_14000ed60);
-MS2_EXTERN(0x140001270, void(void*, void*, void*), FUN_140001270);           // AS2VideoSupport::AttachAudio
-MS2_EXTERN(0x1425210d0, void(void*, void*), FUN_1425210d0);                   // AS3 class registration
-MS2_GLOBAL(0x143a47b70, void*, Video04ClassInfo);                             // the AS3 class info registered below
+ExeDecl<void(void*)> FUN_1425925f0;                       // GC object: release tail
+ExeDecl<char(void*, std::uint64_t)> FUN_142592950;        // ArrayPaged: grow to hold a page index
+ExeDecl<void(void*, void*, void*, unsigned)> FUN_142591a00;   // hash: add {key, value} at a hash code
+ExeDecl<void(void*, void*, void*)> FUN_1425916c0;        // registers the first builtin
+ExeDecl<char*()> FUN_1429561c0;                           // the AS2 builtin class table singleton
+ExeDecl<void(void*)> FUN_1429260b0;                       // AS2 value destructor
+ExeDecl<InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*)> FUN_140010000;   // the video character constructor
+ExeDecl<void*(void*, InteractiveObject*)> FUN_14000e2b0;          // the AVM video character constructor
+ExeDecl<void*(void*, InteractiveObject*)> FUN_14001af70; static constexpr ExeDecl<void*(void*, InteractiveObject*)>& FUN_14001af70_ctor = FUN_14001af70;     // the AS3 AVM video character constructor
+ExeDecl<void*(void*, void*)> FUN_1400126f0;
+ExeDecl<void*(void*, void*)> FUN_14000cf20;
+ExeDecl<void*(void*, void*)> FUN_14000ed60;
+ExeDecl<void(void*, void*, void*)> FUN_140001270;           // AS2VideoSupport::AttachAudio
+ExeDecl<void(void*, void*)> FUN_1425210d0;                   // AS3 class registration
+extern ExeDecl<void*> DAT_143a47b70; static constexpr ExeDecl<void*>& Video04ClassInfo = DAT_143a47b70;                             // the AS3 class info registered below
 
 namespace
 {
@@ -419,19 +422,19 @@ static void Video04RegisterBuiltin(Video04Context* context, void* sc, Video04Glo
 // @0x140002100
 void FUN_140002100(Video04Context* context, void* sc, Video04Global* global)
 {
-    Video04RegisterBuiltin(context, sc, global, 0x110, FUN_1400126f0.get());
+    Video04RegisterBuiltin(context, sc, global, 0x110, &FUN_1400126f0);
 }
 
 // @0x140002240
 void FUN_140002240(Video04Context* context, void* sc, Video04Global* global)
 {
-    Video04RegisterBuiltin(context, sc, global, 0x118, FUN_14000cf20.get());
+    Video04RegisterBuiltin(context, sc, global, 0x118, &FUN_14000cf20);
 }
 
 // @0x140002380
 void FUN_140002380(Video04Context* context, void* sc, Video04Global* global)
 {
-    Video04RegisterBuiltin(context, sc, global, 0x120, FUN_14000ed60.get());
+    Video04RegisterBuiltin(context, sc, global, 0x120, &FUN_14000ed60);
 }
 
 // MS2-FUNCTIONAL: the AS2 registration: the base builtin and the three video builtins on the global object.

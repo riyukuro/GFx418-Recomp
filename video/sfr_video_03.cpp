@@ -19,109 +19,113 @@
 #include <new>
 #include <limits>
 
-MS2_GLOBAL(0x143b27608, void*, VideoThunkA);
-MS2_GLOBAL(0x143b27610, void*, VideoThunkBaseA);
-MS2_GLOBAL(0x143b27588, void*, VideoThunkB);
-MS2_GLOBAL(0x143b27590, void*, VideoThunkBaseB);
-MS2_GLOBAL(0x143b27708, void*, VideoThunkC);
-MS2_GLOBAL(0x143b27710, void*, VideoThunkBaseC);
-MS2_GLOBAL(0x143b275f8, void*, VideoThunkD);
-MS2_GLOBAL(0x143b27600, void*, VideoThunkBaseD);
-MS2_GLOBAL(0x143b27638, void*, VideoThunkE);
-MS2_GLOBAL(0x1431b7ba0, void*, VideoDisplayVtable);
-MS2_GLOBAL(0x142d692bc, float, VideoTwipsScale);
-MS2_GLOBAL(0x142d15c1c, float, VideoDurationScale);
-MS2_GLOBAL(0x143b27640, void*, VideoThunkBaseE);
-MS2_GLOBAL(0x143b27488, void*, VideoThunkF);
-MS2_GLOBAL(0x143b27490, void*, VideoThunkBaseF);
-MS2_GLOBAL(0x143b27528, void*, VideoCallbackA);
-MS2_GLOBAL(0x143b27530, void*, VideoCallbackBaseA);
-MS2_GLOBAL(0x143b27548, void*, VideoCallbackB);
-MS2_GLOBAL(0x143b27550, void*, VideoCallbackBaseB);
-MS2_GLOBAL(0x143b275e8, void*, VideoCallbackC);
-MS2_GLOBAL(0x143b27798, void*, VideoPropGetA); MS2_GLOBAL(0x143b277a0, void*, VideoPropBaseA);
-MS2_GLOBAL(0x143b27778, void*, VideoPropSetA); MS2_GLOBAL(0x143b27780, void*, VideoPropBaseSetA);
-MS2_GLOBAL(0x143b27758, void*, VideoPropGetB); MS2_GLOBAL(0x143b27760, void*, VideoPropBaseB);
-MS2_GLOBAL(0x143b27728, void*, VideoPropSetB); MS2_GLOBAL(0x143b27730, void*, VideoPropBaseSetB);
-MS2_GLOBAL(0x143b27738, void*, VideoPropGetC); MS2_GLOBAL(0x143b27740, void*, VideoPropBaseC);
-MS2_GLOBAL(0x143b27748, void*, VideoPropGetD); MS2_GLOBAL(0x143b27750, void*, VideoPropBaseD);
-MS2_GLOBAL(0x143b27768, void*, VideoPropSetC); MS2_GLOBAL(0x143b27770, void*, VideoPropBaseSetC);
-MS2_GLOBAL(0x143b27718, void*, VideoPropSetD); MS2_GLOBAL(0x143b27720, void*, VideoPropBaseSetD);
-MS2_GLOBAL(0x143b276d8, void*, VideoStringCallbackA); MS2_GLOBAL(0x143b276e0, void*, VideoStringCallbackBaseA);
-MS2_GLOBAL(0x143b27598, void*, VideoStringCallbackB); MS2_GLOBAL(0x143b275a0, void*, VideoStringCallbackBaseB);
-MS2_GLOBAL(0x143b277a8, void*, VideoCriWork);
-MS2_GLOBAL(0x143b277b0, std::uint32_t, VideoCriWorkSize);
-MS2_GLOBAL(0x143b277b4, int, VideoCriUsers);
-MS2_GLOBAL(0x143b275f0, void*, VideoCallbackBaseC);
+// The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
+// hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
+template <class T> using ExeDecl = T;
 
-MS2_EXTERN(0x1423df980, void(void*, void*, void*), VideoNative0);
-MS2_EXTERN(0x1423df850, void(void*, void*, void*), VideoNative1);
-MS2_EXTERN(0x1423dfd20, void(void*, void*, void*), VideoNative2);
-MS2_EXTERN(0x1423df410, void(void*, void*, void*), VideoNative3);
-MS2_EXTERN(0x1423dfda0, void(void*, void*, void*), VideoNative4);
-MS2_EXTERN(0x1424f1390, void(void*, void*, void*), ConvertAS3ValueToString);
-MS2_EXTERN(0x1424f0d30, void(void*, void*, int*, int, void*), ConvertAS3ValueToInt32);
-MS2_EXTERN(0x1424f0be0, std::uint8_t(void*), ConvertAS3ValueToBool);
-MS2_EXTERN(0x1423dfa20, void(), ReleaseAS3GcObject);
-MS2_EXTERN(0x14257dc30, void(void*), FUN_14257dc30);
-MS2_EXTERN(0x14257dcd0, void(void*), FUN_14257dcd0);
-MS2_EXTERN(0x14257dcb0, void(void*), FUN_14257dcb0);
-MS2_EXTERN(0x142518c70, bool(void*, void*), FUN_142518c70);
-MS2_EXTERN(0x142526340, void(void*, std::uint64_t), FUN_142526340);
-MS2_EXTERN(0x142519200, void(), FUN_142519200);
-MS2_EXTERN(0x142506e10, const char*(void*, void*), FUN_142506e10);
-MS2_EXTERN(0x142519d50, void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t), FUN_142519d50);
-MS2_EXTERN(0x1424ddc20, void(void*), FUN_1424ddc20);
-MS2_EXTERN(0x1424d6750, void(void*, void*, const void*), FUN_1424d6750);
-MS2_EXTERN(0x1424d6480, void(void*), FUN_1424d6480);
-MS2_EXTERN(0x1424dabd0, void(void*, void*, const void*), FUN_1424dabd0);
-MS2_EXTERN(0x1424d6ac0, void(void*, void*), FUN_1424d6ac0);
+extern ExeDecl<void*> DAT_143b27608; static constexpr ExeDecl<void*>& VideoThunkA = DAT_143b27608;
+extern ExeDecl<void*> DAT_143b27610; static constexpr ExeDecl<void*>& VideoThunkBaseA = DAT_143b27610;
+extern ExeDecl<void*> DAT_143b27588; static constexpr ExeDecl<void*>& VideoThunkB = DAT_143b27588;
+extern ExeDecl<void*> DAT_143b27590; static constexpr ExeDecl<void*>& VideoThunkBaseB = DAT_143b27590;
+extern ExeDecl<void*> DAT_143b27708; static constexpr ExeDecl<void*>& VideoThunkC = DAT_143b27708;
+extern ExeDecl<void*> DAT_143b27710; static constexpr ExeDecl<void*>& VideoThunkBaseC = DAT_143b27710;
+extern ExeDecl<void*> DAT_143b275f8; static constexpr ExeDecl<void*>& VideoThunkD = DAT_143b275f8;
+extern ExeDecl<void*> DAT_143b27600; static constexpr ExeDecl<void*>& VideoThunkBaseD = DAT_143b27600;
+extern ExeDecl<void*> DAT_143b27638; static constexpr ExeDecl<void*>& VideoThunkE = DAT_143b27638;
+extern ExeDecl<void*> DAT_1431b7ba0; static constexpr ExeDecl<void*>& VideoDisplayVtable = DAT_1431b7ba0;
+extern ExeDecl<float> DAT_142d692bc; static constexpr ExeDecl<float>& VideoTwipsScale = DAT_142d692bc;
+extern ExeDecl<float> DAT_142d15c1c; static constexpr ExeDecl<float>& VideoDurationScale = DAT_142d15c1c;
+extern ExeDecl<void*> DAT_143b27640; static constexpr ExeDecl<void*>& VideoThunkBaseE = DAT_143b27640;
+extern ExeDecl<void*> DAT_143b27488; static constexpr ExeDecl<void*>& VideoThunkF = DAT_143b27488;
+extern ExeDecl<void*> DAT_143b27490; static constexpr ExeDecl<void*>& VideoThunkBaseF = DAT_143b27490;
+extern ExeDecl<void*> DAT_143b27528; static constexpr ExeDecl<void*>& VideoCallbackA = DAT_143b27528;
+extern ExeDecl<void*> DAT_143b27530; static constexpr ExeDecl<void*>& VideoCallbackBaseA = DAT_143b27530;
+extern ExeDecl<void*> DAT_143b27548; static constexpr ExeDecl<void*>& VideoCallbackB = DAT_143b27548;
+extern ExeDecl<void*> DAT_143b27550; static constexpr ExeDecl<void*>& VideoCallbackBaseB = DAT_143b27550;
+extern ExeDecl<void*> DAT_143b275e8; static constexpr ExeDecl<void*>& VideoCallbackC = DAT_143b275e8;
+extern ExeDecl<void*> DAT_143b27798; static constexpr ExeDecl<void*>& VideoPropGetA = DAT_143b27798; extern ExeDecl<void*> DAT_143b277a0; static constexpr ExeDecl<void*>& VideoPropBaseA = DAT_143b277a0;
+extern ExeDecl<void*> DAT_143b27778; static constexpr ExeDecl<void*>& VideoPropSetA = DAT_143b27778; extern ExeDecl<void*> DAT_143b27780; static constexpr ExeDecl<void*>& VideoPropBaseSetA = DAT_143b27780;
+extern ExeDecl<void*> DAT_143b27758; static constexpr ExeDecl<void*>& VideoPropGetB = DAT_143b27758; extern ExeDecl<void*> DAT_143b27760; static constexpr ExeDecl<void*>& VideoPropBaseB = DAT_143b27760;
+extern ExeDecl<void*> DAT_143b27728; static constexpr ExeDecl<void*>& VideoPropSetB = DAT_143b27728; extern ExeDecl<void*> DAT_143b27730; static constexpr ExeDecl<void*>& VideoPropBaseSetB = DAT_143b27730;
+extern ExeDecl<void*> DAT_143b27738; static constexpr ExeDecl<void*>& VideoPropGetC = DAT_143b27738; extern ExeDecl<void*> DAT_143b27740; static constexpr ExeDecl<void*>& VideoPropBaseC = DAT_143b27740;
+extern ExeDecl<void*> DAT_143b27748; static constexpr ExeDecl<void*>& VideoPropGetD = DAT_143b27748; extern ExeDecl<void*> DAT_143b27750; static constexpr ExeDecl<void*>& VideoPropBaseD = DAT_143b27750;
+extern ExeDecl<void*> DAT_143b27768; static constexpr ExeDecl<void*>& VideoPropSetC = DAT_143b27768; extern ExeDecl<void*> DAT_143b27770; static constexpr ExeDecl<void*>& VideoPropBaseSetC = DAT_143b27770;
+extern ExeDecl<void*> DAT_143b27718; static constexpr ExeDecl<void*>& VideoPropSetD = DAT_143b27718; extern ExeDecl<void*> DAT_143b27720; static constexpr ExeDecl<void*>& VideoPropBaseSetD = DAT_143b27720;
+extern ExeDecl<void*> DAT_143b276d8; static constexpr ExeDecl<void*>& VideoStringCallbackA = DAT_143b276d8; extern ExeDecl<void*> DAT_143b276e0; static constexpr ExeDecl<void*>& VideoStringCallbackBaseA = DAT_143b276e0;
+extern ExeDecl<void*> DAT_143b27598; static constexpr ExeDecl<void*>& VideoStringCallbackB = DAT_143b27598; extern ExeDecl<void*> DAT_143b275a0; static constexpr ExeDecl<void*>& VideoStringCallbackBaseB = DAT_143b275a0;
+extern ExeDecl<void*> DAT_143b277a8; static constexpr ExeDecl<void*>& VideoCriWork = DAT_143b277a8;
+extern ExeDecl<std::uint32_t> DAT_143b277b0; static constexpr ExeDecl<std::uint32_t>& VideoCriWorkSize = DAT_143b277b0;
+extern ExeDecl<int> DAT_143b277b4; static constexpr ExeDecl<int>& VideoCriUsers = DAT_143b277b4;
+extern ExeDecl<void*> DAT_143b275f0; static constexpr ExeDecl<void*>& VideoCallbackBaseC = DAT_143b275f0;
+
+ExeDecl<void(void*, void*, void*)> FUN_1423df980; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative0 = FUN_1423df980;
+ExeDecl<void(void*, void*, void*)> FUN_1423df850; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative1 = FUN_1423df850;
+ExeDecl<void(void*, void*, void*)> FUN_1423dfd20; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative2 = FUN_1423dfd20;
+ExeDecl<void(void*, void*, void*)> FUN_1423df410; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative3 = FUN_1423df410;
+ExeDecl<void(void*, void*, void*)> FUN_1423dfda0; static constexpr ExeDecl<void(void*, void*, void*)>& VideoNative4 = FUN_1423dfda0;
+ExeDecl<void(void*, void*, void*)> FUN_1424f1390; static constexpr ExeDecl<void(void*, void*, void*)>& ConvertAS3ValueToString = FUN_1424f1390;
+ExeDecl<void(void*, void*, int*, int, void*)> FUN_1424f0d30; static constexpr ExeDecl<void(void*, void*, int*, int, void*)>& ConvertAS3ValueToInt32 = FUN_1424f0d30;
+ExeDecl<std::uint8_t(void*)> FUN_1424f0be0; static constexpr ExeDecl<std::uint8_t(void*)>& ConvertAS3ValueToBool = FUN_1424f0be0;
+ExeDecl<void()> FUN_1423dfa20; static constexpr ExeDecl<void()>& ReleaseAS3GcObject = FUN_1423dfa20;
+ExeDecl<void(void*)> FUN_14257dc30;
+ExeDecl<void(void*)> FUN_14257dcd0;
+ExeDecl<void(void*)> FUN_14257dcb0;
+ExeDecl<bool(void*, void*)> FUN_142518c70;
+ExeDecl<void(void*, std::uint64_t)> FUN_142526340;
+ExeDecl<void()> FUN_142519200;
+ExeDecl<const char*(void*, void*)> FUN_142506e10;
+ExeDecl<void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t)> FUN_142519d50;
+ExeDecl<void(void*)> FUN_1424ddc20;
+ExeDecl<void(void*, void*, const void*)> FUN_1424d6750;
+ExeDecl<void(void*)> FUN_1424d6480;
+ExeDecl<void(void*, void*, const void*)> FUN_1424dabd0;
+ExeDecl<void(void*, void*)> FUN_1424d6ac0;
 void FUN_140019470(void* self, std::uint64_t* output); // defined below (external: other units take its address)
 void FUN_140019660(void* self, std::uint64_t* output);
-MS2_EXTERN(0x1400199e0, void*(void*, void*), FUN_1400199e0);
-MS2_EXTERN(0x14001ad20, void*(void*, void*), FUN_14001ad20);
-MS2_EXTERN(0x1425a4030, void(void*), FUN_1425a4030);
-MS2_EXTERN(0x14257e080, void(), FUN_14257e080);
-MS2_EXTERN(0x1425cd370, void(void*, void*), FUN_1425cd370);
-MS2_EXTERN(0x1428d8f14, int(void*, void*), FUN_1428d8f14);
-MS2_EXTERN(0x1428d8efc, int(void*, void*), FUN_1428d8efc);
-MS2_EXTERN(0x1427443c0, void(void*), FUN_1427443c0);
-MS2_EXTERN(0x1425e3480, std::uint64_t(), FUN_1425e3480);
-MS2_EXTERN(0x142303a6b, int(void*, bool*), FUN_142303a6b);
-MS2_EXTERN(0x142745f50, void(void*), FUN_142745f50);
-MS2_EXTERN(0x142303a29, int(void*, const char*, unsigned, void*, void**), FUN_142303a29);
-MS2_EXTERN(0x142303a4d, int(void*, std::uint32_t*, unsigned), FUN_142303a4d);
-MS2_EXTERN(0x142516600, void*(void*, void*), FUN_142516600);
-MS2_EXTERN(0x14250d8f0, void*(void*, void*), FUN_14250d8f0);
-MS2_EXTERN(0x142442c30, void(void*, void*, void*), FUN_142442c30);
-MS2_EXTERN(0x1424edca0, void(void*, void*), FUN_1424edca0);
-MS2_EXTERN(0x142467b50, void(void*, void*, void*, void*), FUN_142467b50);
-MS2_EXTERN(0x1424687d0, void(void*, void*, int), FUN_1424687d0);
-MS2_EXTERN(0x1424fef00, void(void*, void*, const void*, void*, unsigned, void*, unsigned), FUN_1424fef00);
-MS2_EXTERN(0x1424f0750, void(void*, const char*, void*, int, int, int), FUN_1424f0750);
-MS2_EXTERN(0x1424d2150, void(void*, void*, std::uint64_t), FUN_1424d2150);
-MS2_EXTERN(0x140026ed0, void(void*), FUN_140026ed0);
-MS2_EXTERN(0x140026db0, void(), FUN_140026db0);
-MS2_GLOBAL(0x14317bf80, void*, AvmInteractiveVtable);
-MS2_GLOBAL(0x1431b7c70, void*, VideoTraitsVtable);
-MS2_GLOBAL(0x1431b7f60, void*, VideoTraitsBaseVtable);
-MS2_GLOBAL(0x1431b7ea0, void*, VideoTraitsSubVtableA);
-MS2_GLOBAL(0x1431b7de0, void*, VideoTraitsSubVtableB);
-MS2_GLOBAL(0x1431b4c60, void*, VideoAudioVtableA); MS2_GLOBAL(0x1431bec40, void*, VideoAudioVtableB);
-MS2_GLOBAL(0x1431bed60, void*, VideoAudioDeleteVtable); MS2_GLOBAL(0x1431bedd8, void*, VideoAudioSubVtable);
-MS2_GLOBAL(0x1431bede8, void*, VideoAudioEventVtable);
-MS2_GLOBAL(0x1431bcbb0, void*, VideoSoundDeleteVtable);
-MS2_GLOBAL(0x1431bef00, void*, VideoSoundVtable);
-MS2_GLOBAL(0x1431bef38, void*, VideoSoundSubVtable);
-MS2_GLOBAL(0x1431bee78, void*, VideoAudioStreamVtable);
-MS2_GLOBAL(0x1431beef0, void*, VideoAudioStreamSubVtable);
-MS2_GLOBAL(0x1431b7160, void*, VideoClassInfoA); MS2_GLOBAL(0x1431b7900, void*, VideoClassVtableA);
-MS2_GLOBAL(0x1431b71b0, void*, VideoInstanceVtableA); MS2_GLOBAL(0x1431b7260, void*, VideoCTraitsVtable);
-MS2_GLOBAL(0x1431b7b50, void*, VideoClassInfoB); MS2_GLOBAL(0x1431b7d50, void*, VideoClassVtableB);
-MS2_GLOBAL(0x1431b7c70, void*, VideoInstanceVtableB);
-MS2_EXTERN(0x1424df220, void(void*), FUN_1424df220);
-MS2_EXTERN(0x1424eb610, void*(void*), FUN_1424eb610);
-MS2_EXTERN(0x140010b80, void(void*, void*), FUN_140010b80);
+ExeDecl<void*(void*, void*)> FUN_1400199e0;
+ExeDecl<void*(void*, void*)> FUN_14001ad20;
+ExeDecl<void(void*)> FUN_1425a4030;
+ExeDecl<void()> FUN_14257e080;
+ExeDecl<void(void*, void*)> FUN_1425cd370;
+ExeDecl<int(void*, void*)> FUN_1428d8f14;
+ExeDecl<int(void*, void*)> FUN_1428d8efc;
+ExeDecl<void(void*)> FUN_1427443c0;
+ExeDecl<std::uint64_t()> FUN_1425e3480;
+ExeDecl<int(void*, bool*)> FUN_142303a6b;
+ExeDecl<void(void*)> FUN_142745f50;
+ExeDecl<int(void*, const char*, unsigned, void*, void**)> FUN_142303a29;
+ExeDecl<int(void*, std::uint32_t*, unsigned)> FUN_142303a4d;
+ExeDecl<void*(void*, void*)> FUN_142516600;
+ExeDecl<void*(void*, void*)> FUN_14250d8f0;
+ExeDecl<void(void*, void*, void*)> FUN_142442c30;
+ExeDecl<void(void*, void*)> FUN_1424edca0;
+ExeDecl<void(void*, void*, void*, void*)> FUN_142467b50;
+ExeDecl<void(void*, void*, int)> FUN_1424687d0;
+ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)> FUN_1424fef00;
+ExeDecl<void(void*, const char*, void*, int, int, int)> FUN_1424f0750;
+ExeDecl<void(void*, void*, std::uint64_t)> FUN_1424d2150;
+ExeDecl<void(void*)> FUN_140026ed0;
+ExeDecl<void()> FUN_140026db0;
+extern ExeDecl<void*> DAT_14317bf80; static constexpr ExeDecl<void*>& AvmInteractiveVtable = DAT_14317bf80;
+extern ExeDecl<void*> DAT_1431b7c70; static constexpr ExeDecl<void*>& VideoTraitsVtable = DAT_1431b7c70;
+extern ExeDecl<void*> DAT_1431b7f60; static constexpr ExeDecl<void*>& VideoTraitsBaseVtable = DAT_1431b7f60;
+extern ExeDecl<void*> DAT_1431b7ea0; static constexpr ExeDecl<void*>& VideoTraitsSubVtableA = DAT_1431b7ea0;
+extern ExeDecl<void*> DAT_1431b7de0; static constexpr ExeDecl<void*>& VideoTraitsSubVtableB = DAT_1431b7de0;
+extern ExeDecl<void*> DAT_1431b4c60; static constexpr ExeDecl<void*>& VideoAudioVtableA = DAT_1431b4c60; extern ExeDecl<void*> DAT_1431bec40; static constexpr ExeDecl<void*>& VideoAudioVtableB = DAT_1431bec40;
+extern ExeDecl<void*> DAT_1431bed60; static constexpr ExeDecl<void*>& VideoAudioDeleteVtable = DAT_1431bed60; extern ExeDecl<void*> DAT_1431bedd8; static constexpr ExeDecl<void*>& VideoAudioSubVtable = DAT_1431bedd8;
+extern ExeDecl<void*> DAT_1431bede8; static constexpr ExeDecl<void*>& VideoAudioEventVtable = DAT_1431bede8;
+extern ExeDecl<void*> DAT_1431bcbb0; static constexpr ExeDecl<void*>& VideoSoundDeleteVtable = DAT_1431bcbb0;
+extern ExeDecl<void*> DAT_1431bef00; static constexpr ExeDecl<void*>& VideoSoundVtable = DAT_1431bef00;
+extern ExeDecl<void*> DAT_1431bef38; static constexpr ExeDecl<void*>& VideoSoundSubVtable = DAT_1431bef38;
+extern ExeDecl<void*> DAT_1431bee78; static constexpr ExeDecl<void*>& VideoAudioStreamVtable = DAT_1431bee78;
+extern ExeDecl<void*> DAT_1431beef0; static constexpr ExeDecl<void*>& VideoAudioStreamSubVtable = DAT_1431beef0;
+extern ExeDecl<void*> DAT_1431b7160; static constexpr ExeDecl<void*>& VideoClassInfoA = DAT_1431b7160; extern ExeDecl<void*> DAT_1431b7900; static constexpr ExeDecl<void*>& VideoClassVtableA = DAT_1431b7900;
+extern ExeDecl<void*> DAT_1431b71b0; static constexpr ExeDecl<void*>& VideoInstanceVtableA = DAT_1431b71b0; extern ExeDecl<void*> DAT_1431b7260; static constexpr ExeDecl<void*>& VideoCTraitsVtable = DAT_1431b7260;
+extern ExeDecl<void*> DAT_1431b7b50; static constexpr ExeDecl<void*>& VideoClassInfoB = DAT_1431b7b50; extern ExeDecl<void*> DAT_1431b7d50; static constexpr ExeDecl<void*>& VideoClassVtableB = DAT_1431b7d50;
+extern ExeDecl<void*> DAT_1431b7c70; static constexpr ExeDecl<void*>& VideoInstanceVtableB = DAT_1431b7c70;
+ExeDecl<void(void*)> FUN_1424df220;
+ExeDecl<void*(void*)> FUN_1424eb610;
+ExeDecl<void(void*, void*)> FUN_140010b80;
 extern "C" void* DAT_143b15f60;
 
 namespace {
@@ -183,8 +187,8 @@ void FUN_140016b50(void*, void* object, void* callFrame, void* member, int argc,
     auto number = std::numeric_limits<double>::quiet_NaN();
     if (argc != 0) args->Convert2NumberInline(number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
-        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkA.get())(
-            static_cast<unsigned char*>(VideoThunkBaseA.get()) + reinterpret_cast<std::uintptr_t>(root),
+        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkA)(
+            static_cast<unsigned char*>(VideoThunkBaseA) + reinterpret_cast<std::uintptr_t>(root),
             member, number);
     }
 }
@@ -198,8 +202,8 @@ void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
     auto number = std::numeric_limits<double>::quiet_NaN();
     if (argc != 0) args->Convert2NumberInline(number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
-        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkB.get())(
-            static_cast<unsigned char*>(VideoThunkBaseB.get()) + reinterpret_cast<std::uintptr_t>(root),
+        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkB)(
+            static_cast<unsigned char*>(VideoThunkBaseB) + reinterpret_cast<std::uintptr_t>(root),
             member, number);
     }
 }
@@ -208,8 +212,8 @@ void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
 // @0x140016c70
 void FUN_140016c70(void* object, void* result, unsigned kind)
 {
-    static const VideoGenericThunk calls[] = {VideoNative0.get(), VideoNative1.get(), VideoNative2.get(),
-                                               VideoNative3.get(), VideoNative4.get(), nullptr};
+    static const VideoGenericThunk calls[] = {&VideoNative0, &VideoNative1, &VideoNative2,
+                                               &VideoNative3, &VideoNative4, nullptr};
     if (kind < 5) calls[kind](object, result, nullptr);
     else if (kind == 5) reinterpret_cast<VideoGenericThunk>(
         *reinterpret_cast<void**>(static_cast<unsigned char*>(result) + 0x40))(object, result, nullptr);
@@ -220,7 +224,7 @@ void FUN_140016c70(void* object, void* result, unsigned kind)
 void FUN_140016d10(void* object, void* value)
 {
     reinterpret_cast<void(*)(void*, void*, void*)>(*reinterpret_cast<void**>(object))(
-        object, value, reinterpret_cast<void*>(VideoNative3.get()));
+        object, value, reinterpret_cast<void*>(&VideoNative3));
     reinterpret_cast<void(*)(void*, int)>(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20))(
         object, 1);
 }
@@ -256,7 +260,7 @@ void FUN_140016ed0(std::uint64_t* value, void* object)
     auto& tag = *reinterpret_cast<std::uint32_t*>(value + 2);
     if ((tag & 0x70000000) != 0x10000000) {
         tag = (tag & 0x9fffffff) | 0x10000000;
-        VideoNative1.get()(object, value, nullptr);
+        (&VideoNative1)(object, value, nullptr);
     }
 }
 
@@ -291,8 +295,8 @@ void FUN_140016fd0(void*, void* object, void* callFrame, void* member, int argc,
     if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
         auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
-        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkC.get())(
-            reinterpret_cast<std::uintptr_t>(VideoThunkBaseC.get()) + root, member, value);
+        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkC)(
+            reinterpret_cast<std::uintptr_t>(VideoThunkBaseC) + root, member, value);
     }
 }
 
@@ -305,8 +309,8 @@ void FUN_140017020(void*, void* object, void* callFrame, void* member, int argc,
     if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
         auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
-        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkD.get())(
-            reinterpret_cast<std::uintptr_t>(VideoThunkBaseD.get()) + root, member, value);
+        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkD)(
+            reinterpret_cast<std::uintptr_t>(VideoThunkBaseD) + root, member, value);
     }
 }
 
@@ -319,8 +323,8 @@ void FUN_140017070(void*, void* object, void* callFrame, void* member, int argc,
     if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
         auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
-        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkE.get())(
-            reinterpret_cast<std::uintptr_t>(VideoThunkBaseE.get()) + root, member, value);
+        reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkE)(
+            reinterpret_cast<std::uintptr_t>(VideoThunkBaseE) + root, member, value);
     }
 }
 
@@ -344,8 +348,8 @@ void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned 
         if (argc > 1) ConvertAS3ValueToInt32(const_cast<std::uint8_t*>(args + 0x20), &extra, &extra, -1, object);
         if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
             auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
-            reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t, int)>(VideoThunkF.get())(
-                reinterpret_cast<std::uintptr_t>(VideoThunkBaseF.get()) + root, member, value, extra);
+            reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t, int)>(VideoThunkF)(
+                reinterpret_cast<std::uintptr_t>(VideoThunkBaseF) + root, member, value, extra);
         }
     }
 }
@@ -688,19 +692,19 @@ void ConvertVideoCallback(void* vm, std::uint64_t callback, std::uint64_t contex
 // @0x140019d70
 void FUN_140019d70(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
-    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackA.get()), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseA.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackA), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
 }
 // MS2-FUNCTIONAL: invokes the cue point callback and converts its object result to an AS3 Value.
 // @0x140019e20
 void FUN_140019e20(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
-    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackB.get()), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseB.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackB), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
 }
 // MS2-FUNCTIONAL: invokes the subtitle callback and converts its object result to an AS3 Value.
 // @0x140019ed0
 void FUN_140019ed0(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
-    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackC.get()), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseC.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackC), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
 }
 
 // MS2-FUNCTIONAL: copies a 32-bit integer into the numeric payload of an AS3 Value.
@@ -809,8 +813,8 @@ void FUN_14001a760(void* self, unsigned count, Scaleform::GFx::AS3::Value* args)
         auto* player = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
         *reinterpret_cast<std::uint32_t*>(player + 0xe0) = 0;
         *reinterpret_cast<std::uint32_t*>(player + 0xe4) = 0;
-        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x68)) * VideoTwipsScale.get();
-        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x70)) * VideoTwipsScale.get();
+        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x68)) * VideoTwipsScale;
+        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x70)) * VideoTwipsScale;
     }
 }
 // MS2-FUNCTIONAL: updates the player rectangle from the stored Video dimensions when resize is enabled.
@@ -823,8 +827,8 @@ void FUN_14001a800(std::uint64_t* object, std::uint8_t update)
         auto* player = reinterpret_cast<unsigned char*>(object[11]);
         *reinterpret_cast<std::uint32_t*>(player + 0xe0) = 0;
         *reinterpret_cast<std::uint32_t*>(player + 0xe4) = 0;
-        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(object[13]) * VideoTwipsScale.get();
-        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(object[14]) * VideoTwipsScale.get();
+        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(object[13]) * VideoTwipsScale;
+        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(object[14]) * VideoTwipsScale;
     }
 }
 
@@ -846,7 +850,7 @@ void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* o
 void FUN_14001a9b0(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint32_t number = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetA.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseA.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetA)(reinterpret_cast<std::uintptr_t>(VideoPropBaseA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
 // MS2-FUNCTIONAL: converts the input to an integer and writes it through the video property setter thunk.
@@ -856,14 +860,14 @@ void FUN_14001aa20(void*, void* vm, void* context, std::uint64_t value, int coun
     int converted = 0; std::uint32_t number = 0;
     if (count) ConvertAS3ValueToInt32(input, &converted, reinterpret_cast<int*>(&number), static_cast<int>(value), vm);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint32_t)>(VideoPropSetA.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetA.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, number);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint32_t)>(VideoPropSetA)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, number);
 }
 // MS2-FUNCTIONAL: fetches the video playback boolean and writes it to the callback Value.
 // @0x14001aa90
 void FUN_14001aa90(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint8_t value = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint8_t*)>(VideoPropGetB.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseB.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &value);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint8_t*)>(VideoPropGetB)(reinterpret_cast<std::uintptr_t>(VideoPropBaseB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &value);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
         *output = (*output & 0xffffffe1) | 1;
         *reinterpret_cast<std::uint64_t*>(output + 4) = value;
@@ -876,14 +880,14 @@ void FUN_14001ab00(void*, void* vm, void* context, std::uint64_t value, int coun
 {
     auto converted = count ? ConvertAS3ValueToBool(input) : 0;
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint8_t)>(VideoPropSetB.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetB.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, converted);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint8_t)>(VideoPropSetB)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, converted);
 }
 // MS2-FUNCTIONAL: fetches the video volume integer and writes it to the callback Value.
 // @0x14001ab60
 void FUN_14001ab60(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint32_t number = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetC.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseC.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetC)(reinterpret_cast<std::uintptr_t>(VideoPropBaseC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
 // MS2-FUNCTIONAL: fetches the video pan integer and writes it to the callback Value.
@@ -891,7 +895,7 @@ void FUN_14001ab60(void*, void* vm, void* context, std::uint32_t* output)
 void FUN_14001abd0(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint32_t number = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetD.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseD.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetD)(reinterpret_cast<std::uintptr_t>(VideoPropBaseD) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
 
@@ -901,7 +905,7 @@ void FUN_14001ac80(void*, void* vm, void* context, std::uint64_t property, int c
 {
     std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetC.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetC.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetC)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
 }
 // MS2-FUNCTIONAL: forwards an object atom to the second corresponding video property setter.
 // @0x14001acd0
@@ -909,7 +913,7 @@ void FUN_14001acd0(void*, void* vm, void* context, std::uint64_t property, int c
 {
     std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetD.get())(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetD.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetD)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetD) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
 }
 // MS2-FUNCTIONAL: releases the retained atom field and invokes the AS3 cleanup hook.
 // @0x14001ae40
@@ -1198,13 +1202,13 @@ void FUN_140017320(std::uint64_t* table, const std::uint64_t* key)
 // @0x14001b460
 void FUN_14001b460(std::uint8_t optional)
 {
-    const int previous = VideoCriUsers.get()++;
+    const int previous = VideoCriUsers++;
     if (previous == 0) {
         criHeap_Initialize();
         VideoCriWorkSize = CriMv::CalcMovieHandleWork(8, CriMv::ErrorContainer);
         auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-        VideoCriWork = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10])(DAT_143b15f60, VideoCriWorkSize.get(), 0);
-        CriMv::SetupMovieHandleWork(8, VideoCriWork.get(), VideoCriWorkSize.get(), CriMv::ErrorContainer);
+        VideoCriWork = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10])(DAT_143b15f60, VideoCriWorkSize, 0);
+        CriMv::SetupMovieHandleWork(8, VideoCriWork, VideoCriWorkSize, CriMv::ErrorContainer);
         FUN_140026ed0(&CriMv::ErrorContainer);
         if (optional) FUN_140026db0();
     }
@@ -1213,12 +1217,12 @@ void FUN_14001b460(std::uint8_t optional)
 // @0x14001b4f0
 void FUN_14001b4f0()
 {
-    const int previous = VideoCriUsers.get()--;
+    const int previous = VideoCriUsers--;
     if (previous == 1) {
         CriMv::Finalize(CriMv::ErrorContainer);
-        if (VideoCriWork.get()) {
+        if (VideoCriWork) {
             auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, VideoCriWork.get());
+            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, VideoCriWork);
         }
         criHeap_Finalize();
     }
@@ -1389,8 +1393,8 @@ void FUN_140017520(void*, void* vm, void* frame, std::uint64_t property, unsigne
     ReleaseVideoString(first); ReleaseVideoString(second);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
         std::uint64_t outA = 0, outB = 0;
-        auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackA.get());
-        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseA.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB);
+        auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackA);
+        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB);
         ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outA));
         ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outB));
     }
@@ -1410,8 +1414,8 @@ void FUN_140017670(void*, void* vm, void* frame, std::uint64_t property, unsigne
     ReleaseVideoString(first); ReleaseVideoString(second); ReleaseVideoString(third);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
         std::uint64_t outA = 0, outB = 0, outC = 0;
-        auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackB.get());
-        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseB.get()) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB, &outC);
+        auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackB);
+        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB, &outC);
         ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outA));
         ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outB));
         ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outC));
@@ -1492,7 +1496,7 @@ std::uint64_t* FUN_142742fb0(std::uint64_t* object, void* player, std::uint64_t 
     *reinterpret_cast<void***>(node) = &VideoAudioSubVtable;
     object[8] = 0; object[5] = reinterpret_cast<std::uintptr_t>(player); object[6] = userData; object[7] = reinterpret_cast<std::uintptr_t>(channel);
     FUN_1428d8f14(channel, object);
-    FUN_1428d8efc(channel, reinterpret_cast<void*>(FUN_1427443c0.get()));
+    FUN_1428d8efc(channel, reinterpret_cast<void*>(&FUN_1427443c0));
     return object;
 }
 namespace {
@@ -1560,7 +1564,7 @@ void FUN_1400182f0(void* callback, const std::uint32_t* info)
             Scaleform::GFx::AS3::Value value(static_cast<Scaleform::UInt32>(number));
             object->AddDynamicSlotValuePair(key, value);
         };
-        const float scale = VideoDurationScale.get();
+        const float scale = VideoDurationScale;
         addNumber("duration", (static_cast<float>(info[4]) * scale) / static_cast<float>(info[2]));
         addInt("width", info[0]); addInt("height", info[1]); addInt("totalFrames", info[4]);
         addNumber("frameRate", static_cast<float>(info[2]) / scale);
@@ -1645,7 +1649,7 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
     addString(eventObject, "name", *reinterpret_cast<const std::uint64_t*>(eventData + 2));
     {
         Scaleform::GFx::ASString key(manager->CreateStringNode("time"));
-        Scaleform::GFx::AS3::Value value(static_cast<double>(eventData[4]) / VideoDurationScale.get());
+        Scaleform::GFx::AS3::Value value(static_cast<double>(eventData[4]) / VideoDurationScale);
         eventObject->AddDynamicSlotValuePair(key, value);
     }
     {
