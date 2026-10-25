@@ -63,6 +63,11 @@ inline R VCall(void* obj, size_t off, A... a)
     return (*reinterpret_cast<Fn*>(*static_cast<unsigned char**>(obj) + off))(obj, a...);
 }
 
+} // namespace
+
+namespace Scaleform { namespace GFx { namespace IME {
+
+// Named (not in the anonymous namespace) so HandleIMEEvent keeps external linkage: the vtable slot references it.
 // The window message HandleIMEEvent receives (GFx IMEWin32Event: type, message, wParam, lParam, hwnd, flag).
 struct IMEEventView
 {
@@ -74,10 +79,6 @@ struct IMEEventView
     HWND          hWnd;     // +0x20
     int           Flag;     // +0x28
 };
-
-} // namespace
-
-namespace Scaleform { namespace GFx { namespace IME {
 
 // MS2-FUNCTIONAL: XML character-data handler; register allocation and the inlined name-table strcmp differ.
 // The text of <imeName>, <displayName> or <Lang> fills the last record (0x30 bytes: +0x10 name, +0x18 display
