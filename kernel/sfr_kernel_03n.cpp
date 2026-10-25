@@ -13,7 +13,7 @@
 
 namespace Scaleform { namespace GFx {
 
-extern "C" char DAT_143192190[];   // vftable of the summary object (deleting destructor 0x142689030)
+extern "C" void* const DAT_143192190[1];   // vftable of the summary object (defined below its deleting destructor)
 
 void FUN_14257db40(void*);          // RefCountImplCore::~RefCountImplCore
 void FUN_14015b310(void*, UPInt);   // sized operator delete
@@ -88,6 +88,10 @@ void* FUN_142689030(void* self, unsigned flags)
     RawDeleteBranch(self, flags, 0x30);
     return self;
 }
+
+// The summary object's one-slot vftable (RTTI-less, packed with the MemItem ones 0x143192160-0x1431921e0); no
+// recovered class emits it, so it is defined here (the hook DLL binds the name to the exe's table).
+extern "C" void* const DAT_143192190[1] = { (void*)&FUN_142689030 };
 
 // Tree node (vftable 0x143192180): name +0x10, children +0x18, keyed hash +0x30.
 // @0x1426890b0
@@ -196,7 +200,7 @@ void* FUN_142689640(void* movie, bool all)
     char* summary = (char*)Memory::AllocAutoHeap(movie, 0x30, info);
     if (summary)
     {
-        RawField<void*>(summary, 0) = DAT_143192190;
+        RawField<void* const*>(summary, 0) = DAT_143192190;
         RawField<UInt32>(summary, 8) = 1;
         RawField<U>(summary, 0x10) = 0;
         RawField<U>(summary, 0x18) = 0;

@@ -6065,6 +6065,14 @@ void FUN_142ccc6c0(void* decoder, CriSint32 codedBlocks, CriSint32 mode)
     DAT_143fe8250[(CriSint64)mode](entries);
 }
 
+// MS2-FUNCTIONAL: the all-blocks-coded form (coded mask 0xff000000, mode 0); cri_05 stores it in the
+// macroblock-type dispatch table (LAB_142ccc850, no .pdata).
+// @0x142ccc850
+void FUN_142ccc850(void* decoder)
+{
+    FUN_142ccc6c0(decoder, (CriSint32)0xff000000, 0);
+}
+
 // MS2-FUNCTIONAL: run the skipped-macroblock callback for each address stepped back over, then resume reconstruction.
 // @0x142ccc860
 void FUN_142ccc860(void* decoder, CriSint32 run)
