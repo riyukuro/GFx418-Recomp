@@ -222,7 +222,7 @@ public:
 
     // A new instance of the global class gname constructed with argv, stored in result; extCall marks a call from
     // C++ rather than from script (0x1424f0750).
-    void Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall);
+    bool Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall);
 
     // A new instance of the builtin class gname ("flash.geom.Point"), constructed with argv. False on an exception.
     template <class C>

@@ -1861,11 +1861,12 @@ void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCa
         FUN_14241de40(vm.OpStack, argc);
 }
 
-// MS2-FUNCTIONAL 0x1424f0750: the exe also returns whether +0x78 grew (and no exception is pending); the header has
-// it as void, so CreateObject and AttachMovie test that themselves
+// MS2-FUNCTIONAL 0x1424f0750: same steps; returns whether a constructor frame was pushed (the call stack at +0x78 grew),
+// which CreateObject (0x1424f3acd) and the symbol constructor in sfr_as3_17d read to decide on ExecuteCode(1)
 // @0x1424f0750
-void VM::Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall)
+bool VM::Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall)
 {
+    const UPInt size = Unk070[1];   // call stack size
     const StringDataPtr name(gname);
     Class* cl = GetClass(name);
     if (cl == NULL)
@@ -1875,16 +1876,17 @@ void VM::Construct(const char* gname, Value& result, unsigned argc, const Value*
             const Error e(ErrorID(1065), *this, name.ToCStr());   // eClassNotFoundError
             FUN_14252ecb0(this, &e, &fl::ReferenceErrorCI);
         }
-        return;
+        return false;
     }
     Value _class(cl);
     if (_class.IsNull())
     {
         const Error e(ErrorID(1009), *this);   // eConvertNullToObjectError
         FUN_14252ecb0(this, &e, &fl::TypeErrorCI);
-        return;
+        return false;
     }
     _class.GetObject()->Construct(result, argc, argv, extCall);
+    return !IsException() && Unk070[1] > size;
 }
 
 // Throws "not a constructor" in the VM of the file at +0x20.
