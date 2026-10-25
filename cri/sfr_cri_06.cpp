@@ -11900,7 +11900,7 @@ cri_any FUN_140062830(cri_any cri_unused, ...)
   if (DAT_143a4a0c8 == -1) {
     DAT_143a4a0c8 = 1;
   }
-  return cri_any();
+  return DAT_143a4a0c8;  // the exe returns the cached flag in eax (FUN_140059090 spins forever on 0)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -11910,7 +11910,7 @@ cri_any FUN_140062860(cri_any cri_unused, ...)
   if (DAT_143a4a0cc == -1) {
     DAT_143a4a0cc = 1;
   }
-  return cri_any();
+  return DAT_143a4a0cc;  // the exe returns the cached flag in eax (FUN_140059090 spins forever on 0)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
