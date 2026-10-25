@@ -767,14 +767,18 @@ void TextureGlyphData::AddTextureGlyph(unsigned glyphIndex, const TextureGlyph& 
     TextureGlyphs[glyphIndex] = glyph;
 }
 
-// MS2-FUNCTIONAL 0x142655e80: the empty glyph past the end is a function-local static (thread-safe init + atexit)
+// The empty glyph handed out past the end (0x143a2f650; sfr_atexit_01's FUN_142cc9540 is its exit dtor).
+extern "C" TextureGlyph DAT_143a2f650;
+TextureGlyph DAT_143a2f650;
+
+// MS2-FUNCTIONAL 0x142655e80: the exe builds the empty glyph on first use (thread-safe guard, atexit FUN_142cc9540);
+// here it is a namespace-scope object
 // @0x142655e80
 const TextureGlyph& TextureGlyphData::GetTextureGlyph(unsigned glyphIndex) const
 {
     if (glyphIndex < TextureGlyphs.GetSize())
         return TextureGlyphs[glyphIndex];
-    static TextureGlyph dummyTextureGlyph;
-    return dummyTextureGlyph;
+    return DAT_143a2f650;
 }
 
 // @0x142657d70
