@@ -1513,12 +1513,12 @@ void FUN_1400672b0(cri_any cri_p0, ...)
     pu_v2 = pu_v2 + 1;
   } while (i_v1 < 0x40);
   pu_v3 = &DAT_143d4ee20;
-  FUN_140066fe0(loc_98,arg1 + 0x1120);
+  FUN_140066fe0(loc_98,arg1 + 0x1120,pu_v3);
   _DAT_143d74990 = arg1 + 0x1120;
   _DAT_143d749b0 = pu_v3;
   FUN_1400659a0(loc_98,loc_58);
   pu_v3 = &DAT_143d4ee60;
-  FUN_140066fe0(loc_58,arg1 + 0x1160);
+  FUN_140066fe0(loc_58,arg1 + 0x1160,pu_v3);
   DAT_143d74988 = arg1 + 0x1160;
   DAT_143d749a8 = pu_v3;
   return;
@@ -1529,7 +1529,7 @@ void FUN_1400672b0(cri_any cri_p0, ...)
 void FUN_140067370(cri_any cri_p0, ...)
 {
   cri_u8 arg1 = cri_p0;
-  FUN_1400672b0();
+  FUN_1400672b0(arg1);  // the exe passes rcx through
   FUN_140067100(arg1);
   FUN_1400afd20();
   return;
