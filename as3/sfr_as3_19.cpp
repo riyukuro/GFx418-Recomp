@@ -189,8 +189,8 @@ int FUN_14250c990(Scaleform::UPInt tracer, Scaleform::UPInt pos);   // Tracer: n
 void FUN_14251f930(void* tr, int op);   // Tracer: emit opcode op
 void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2);   // Tracer: emit opcode op with two arguments
 void FUN_1424d8ec0(void* mn, Scaleform::UPInt link, Scaleform::UPInt entry);   // Multiname::Multiname(VMAbcFile&, Abc::Multiname&)
-void FUN_1424dee30(void* r);   // TR::ReadMnObject::~ReadMnObject
-void FUN_1424ded40(void* r);   // TR::ReadValueMnObject::~ReadValueMnObject
+void FUN_1424dee30(void* r);   // TR::ReadValueMnObject::~ReadValueMnObject (0x90 record)
+void FUN_1424ded40(void* r);   // TR::ReadMnObject::~ReadMnObject (0x70 record)
 void FUN_1424debc0(void* r);   // ReadArgsMnObject::~ReadArgsMnObject
 void FUN_14251cc80(Scaleform::UPInt tracer);   // Tracer: close the block at a label
 void FUN_142520e60(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   // TR::State: unary typed op
@@ -6737,7 +6737,13 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
     if (newOp != 0)
     {
         FUN_14251fb90(reinterpret_cast<void*>(tracer), newOp, static_cast<SPInt>(static_cast<SInt32>(reg)));
-        reinterpret_cast<State*>(state)->RegInt(reg);
+        // the register takes the new opcode's type: Number (0x92/0x94), uint (0x37/0x38), else int
+        if (newOp == 0x92 || newOp == 0x94)
+            reinterpret_cast<State*>(state)->RegNumber(reg);
+        else if (newOp == 0x37 || newOp == 0x38)
+            reinterpret_cast<State*>(state)->RegUInt(reg);
+        else
+            reinterpret_cast<State*>(state)->RegInt(reg);
     }
     Sfr31TracerSkipOrigOpCode(tracer, pos, p);
     return true;
@@ -8557,7 +8563,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
                                       static_cast<int>(idx));
         if (ok)
             Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-        FUN_1424dee30(R);
+        FUN_1424ded40(R);
         return ok;
     }
     case 5:
@@ -8579,14 +8585,13 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
         ++*reinterpret_cast<int*>(R + 0x10);
         const UPInt tr = TR::Sfr27TracerGetValueTraits(tracer, reinterpret_cast<const Value*>(R + 0x70), op == 5);
         UInt32* val = reinterpret_cast<UInt32*>(R + 0x18);
-        val[0] &= 0x1f;
         const UPInt vt = Sfr31TrTraitsOfVal(vmA, val);
         const bool ok = FUN_1424f92f0(reinterpret_cast<void*>(tracer), op, reinterpret_cast<const Traits*>(tr),
                                       reinterpret_cast<void*>(vt), reinterpret_cast<const Multiname*>(R + 0x40),
                                       static_cast<int>(idx));
         if (ok)
             Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-        FUN_1424ded40(R);
+        FUN_1424dee30(R);
         return ok;
     }
     case 8:
@@ -8645,7 +8650,6 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
                     generic = true;
                 else
                 {
-                    obj[0] &= 0x1f;
                     const UPInt tr = Sfr31TrTraitsOfVal(vmA, obj);
                     UPInt slotInd = 0;
                     const SlotInfo* si = FindFixedSlot(*reinterpret_cast<VM*>(vmA), *reinterpret_cast<const Traits*>(tr),
@@ -8926,7 +8930,6 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
         FUN_14251cd30(reinterpret_cast<State*>(state), &b.Get());
         FUN_14251cd30(reinterpret_cast<State*>(state), &a.Get());
         const UPInt ta = Sfr31TrTraitsOfVal(vmA, reinterpret_cast<UInt32*>(&a));
-        b.w0 &= 0x1f;
         const UPInt tb = Sfr31TrTraitsOfVal(vmA, reinterpret_cast<UInt32*>(&b));
         const UPInt strT = Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0);
         UInt32 flags = 8;
