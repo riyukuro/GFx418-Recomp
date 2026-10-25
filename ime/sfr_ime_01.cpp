@@ -302,8 +302,8 @@ void FUN_1423d2f00(void* self)
         void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
         void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
         if (values) {
-            void* result = nullptr;
-            reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+            Scaleform::GFx::Value result;
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
                 (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                     values, "RemoveList", &result, 0, 0);
         }
@@ -321,8 +321,8 @@ void FUN_1423d2f00(void* self)
     void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
     if (values) {
-        void* result = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+        Scaleform::GFx::Value result;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                 values, "RemoveInputWindow", &result, 0, 0);
     }
@@ -350,8 +350,8 @@ void FUN_1423ce5a0(void* self)
     void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
     if (values) {
-        void* result = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+        Scaleform::GFx::Value result;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                 values, "RemoveInputWindow", &result, 0, 0);
     }
@@ -478,8 +478,8 @@ bool FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long
         void* movie = reinterpret_cast<void*>(self[0x15]);
         void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
         if (values) {
-            void* result = nullptr;
-            reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+            Scaleform::GFx::Value result;
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
                 (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                     values, "RemoveList", &result, 0, 0);
         }
@@ -1920,15 +1920,11 @@ void FUN_1423d9520(void* raw)
     void* state = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
     void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x18);
     if (manager) {
-        void* result = nullptr;
+        Scaleform::GFx::Value result;
         void** vtable = *reinterpret_cast<void***>(manager);
-        reinterpret_cast<void(*)(void*, const char*, void**, int, int)>(vtable[0x78 / sizeof(void*)])(
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, int, int)>(vtable[0x78 / sizeof(void*)])(
             manager, command, &result, 0, 0);
         *command = 0;
-        if (result) {
-            void** resultVtable = *reinterpret_cast<void***>(result);
-            reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
-        }
     }
 }
 
@@ -2187,7 +2183,7 @@ void FUN_1423ccdc0(unsigned long long* object, String* text)
         const unsigned flags = *reinterpret_cast<unsigned*>(object + 0x11);
         if (flags != 0x1000000 && (flags & 0xf00000) == 0) {
             void** selfVtable = *reinterpret_cast<void***>(object);
-            reinterpret_cast<void(*)(void*, unsigned)>(selfVtable[0xa0 / sizeof(void*)])(
+            reinterpret_cast<void(*)(void*, unsigned)>(selfVtable[0x50 / sizeof(void*)])(
                 object, *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0xd4));
         }
     }
@@ -2590,7 +2586,7 @@ void FUN_1423cfbe0(void* raw, unsigned char enabled)
     HIMC oldContext = cx18_ImmGetContext(hwnd);
     String language;
     void* languageSource = *reinterpret_cast<void**>(self + 0xa8);
-    reinterpret_cast<void(*)(void*, String*)>((*reinterpret_cast<void***>(languageSource))[0xa0 / sizeof(void*)])(
+    reinterpret_cast<void(*)(void*, String*)>((*reinterpret_cast<void***>(languageSource))[0x50 / sizeof(void*)])(
         languageSource, &language);
     const bool korean = _strnicmp(language.ToCStr(), "Korean", 6) == 0;
     cx18_ImmAssociateContextEx(hwnd, nullptr, static_cast<DWORD>(enabled) << 4);
@@ -3216,11 +3212,9 @@ void FUN_1423d99f0(void* raw, void** value)
     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
     values = values ? *reinterpret_cast<void**>(static_cast<unsigned char*>(values) + 0x18) : nullptr;
     if (values) {
-        void* result = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, unsigned long long, unsigned)>(
-            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                values, command, &result, *reinterpret_cast<unsigned long long*>(self + 0x828),
-                *reinterpret_cast<unsigned*>(self + 0x830));
+        Scaleform::GFx::Value result;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
+            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, command, &result, nullptr, 0);
     }
     self[0x410] = 0;
     FUN_14257dcd0(input);
@@ -3252,8 +3246,8 @@ void FUN_1423cefe0(void* object)
     void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
     if (values) {
-        void* result = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+        Scaleform::GFx::Value result;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                 values, "RemoveList", &result, 0, 0);
     }
@@ -3809,10 +3803,10 @@ void FUN_1423d9b40(void* raw)
     void* movieManager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
     void* values = movieManager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movieManager) + 0x18) : nullptr;
     if (values) {
-        void* result = nullptr;
+        Scaleform::GFx::Value result;
         strcpy_s(command, sizeof(command), prefix);
         strcat_s(command, sizeof(command), ".ClearList");
-        reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, command, &result, nullptr, 0);
     }
 
@@ -3829,10 +3823,10 @@ void FUN_1423d9b40(void* raw)
             reinterpret_cast<void(*)(void*, void*, void*)>(callbackVtable[1])(
                 callback, descriptors + i * 0x20, arguments + i * sizeof(void*));
         if (values) {
-            void* result = nullptr;
+            Scaleform::GFx::Value result;
             strcpy_s(command, sizeof(command), prefix);
             strcat_s(command, sizeof(command), ".Add");
-            reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                 (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                     values, command, &result, descriptors, *reinterpret_cast<unsigned*>(self + 0x830));
         }
@@ -4004,8 +3998,8 @@ void FUN_1423d3120(void* raw, DWORD listIndex)
     }
     if (!count) {
         if (values) {
-            void* result = nullptr;
-            reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+            Scaleform::GFx::Value result;
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                 (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, "RemoveList", &result, nullptr, 0);
         }
         Scaleform::Memory::Free(list);
@@ -4214,8 +4208,8 @@ void FUN_1423d5060(void* raw, int)
     void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
     void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
     if (interfaceState) {
-        void* result = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, Scaleform::GFx::Value*, unsigned)>(
+        Scaleform::GFx::Value result;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
             (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
                 interfaceState, "RepositionCandWindow", &result, args, 3);
     }
@@ -4243,8 +4237,8 @@ void FUN_1423ce730(void* raw, unsigned* outputLength)
     void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
     void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
     if (interfaceState) {
-        void* result = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, Scaleform::GFx::Value*, unsigned)>(
+        Scaleform::GFx::Value result;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
             (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
                 interfaceState, "RepositionInputWindow", &result, args, 2);
     }
@@ -4259,8 +4253,8 @@ void FUN_1423ceb30(void* raw)
     void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
     void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
     if (interfaceState) {
-        void* result = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+        Scaleform::GFx::Value result;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
             (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
                 interfaceState, "RemoveInputWindow", &result, nullptr, 0);
     }
@@ -4280,8 +4274,8 @@ void FUN_1423ceb30(void* raw)
         *reinterpret_cast<unsigned*>(values + (i + 1) * 0x20 + 8) = Scaleform::GFx::Value::VT_Number;
         *reinterpret_cast<double*>(values + (i + 1) * 0x20 + 0x10) = coordinates[i];
     }
-    void* result = nullptr;
-    reinterpret_cast<void(*)(void*, const char*, void**, Scaleform::GFx::Value*, unsigned)>(
+    Scaleform::GFx::Value result;
+    reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
         (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
             interfaceState, "DisplayInputWindow", &result, args, 4);
 }
@@ -4339,9 +4333,9 @@ void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
                    unsigned long long* commandCell, unsigned long long* argumentCell)
 {
     const char* command = commandCell && *commandCell
-        ? *reinterpret_cast<const char**>(*reinterpret_cast<void**>(*commandCell)) : nullptr;
+        ? *reinterpret_cast<const char**>(*commandCell) : nullptr;
     const char* argument = argumentCell && *argumentCell
-        ? *reinterpret_cast<const char**>(*reinterpret_cast<void**>(*argumentCell)) : nullptr;
+        ? *reinterpret_cast<const char**>(*argumentCell) : nullptr;
     cx18_DispatchLangBarEvent(self, payload, command, argument);
 }
 
@@ -4384,8 +4378,8 @@ void FUN_1423d1d10(void* raw, long long message, long long compositionFlag, long
         void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
         void* bridge = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
         if (bridge) {
-            void* result = nullptr;
-            reinterpret_cast<void(*)(void*, const char*, void**, void*, unsigned)>(
+            Scaleform::GFx::Value result;
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                 (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
                     bridge, "RemoveInputWindow", &result, nullptr, 0);
         }
