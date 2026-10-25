@@ -3326,9 +3326,12 @@ void Sfr31WriteRecord3(UPInt self, UInt32 a, UInt32 b, UInt32 c)
 // @0x142531f40
 UPInt Sfr31FetchOrClear(UPInt self, UPInt* out, UPInt src, UInt32 arg, UPInt arg2)
 {
-    UInt32 tmp[6] = {0, 0, 0, 0, 0, 0};
+    // the AS3 Value is 0x20 bytes (its value union holds two pointers): Construct writes all of it, so a 0x18-byte
+    // buffer let the second value word overwrite the /GS cookie the array got (the exe's frame has no cookie)
+    struct { UInt32 flags, pad; UPInt bonus, v0, v1; } val = {};
+    UInt32* tmp = &val.flags;
     typedef void (*Fn)(UPInt, void*, UInt32, UPInt, int);
-    reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(src, 0), 0x60))(src, tmp, arg, arg2, 1);
+    reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(src, 0), 0x60))(src, &val, arg, arg2, 1);
     UPInt result;
     const UInt32 kind = tmp[0] & 0x1f;
     if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 && (kind - 0xc > 3 || *reinterpret_cast<UPInt*>(&tmp[4]) != 0))
