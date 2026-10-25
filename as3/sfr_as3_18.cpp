@@ -179,7 +179,8 @@ GlobalSlotIndex Object::GetNextDynPropIndex(GlobalSlotIndex ind) const
 {
     const DynAttrsType& attrs = DynAttrs;
     DynAttrsType::ConstIterator it = attrs.Begin();
-    const UPInt start = ind.IsValid() ? static_cast<UPInt>(ind.Get() - 1) : 0;
+    // ind is the 1-based index of the entry last returned: the search starts at the entry after it
+    const UPInt start = ind.IsValid() ? static_cast<UPInt>(ind.Get()) : 0;
     for (; !it.IsEnd(); ++it)
     {
         if (static_cast<UPInt>(it.GetIndex()) < start)
