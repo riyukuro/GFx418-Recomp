@@ -1877,15 +1877,14 @@ void FUN_1423d1380(unsigned long long* array, void* allocator, unsigned long lon
 void FUN_1423d5340(unsigned long long* array, void* allocator, unsigned long long count)
 { cx18_ReserveWide(array, allocator, count, 2); }
 
-// MS2-FUNCTIONAL: walks the executable's linked string records and inserts each key/value pair by Bernstein hash.
+// MS2-FUNCTIONAL: walks the source's command array (0x10-byte {key, name} entries, ended by a null name) and
+// inserts each name -> {key, source} by Bernstein hash.
 // @0x1423d8e80
 void FUN_1423d8e80(void* table, void* source)
 {
     void** sourceVtable = *reinterpret_cast<void***>(source);
     auto* record = static_cast<unsigned char*>(reinterpret_cast<void*(*)(void*)>(sourceVtable[0])(source));
-    if (!record) return;
-    record = *reinterpret_cast<unsigned char**>(record + 8);
-    while (record) {
+    for (; *reinterpret_cast<const char**>(record + 8); record += 0x10) {
         const unsigned key = *reinterpret_cast<unsigned*>(record);
         const char* text = *reinterpret_cast<const char**>(record + 8);
         const unsigned long long length = strlen(text);
@@ -1894,7 +1893,6 @@ void FUN_1423d8e80(void* table, void* source)
         unsigned long long value[2] = { key, reinterpret_cast<unsigned long long>(source) };
         void* entry[2] = { &keyStorage, value };
         FUN_1423d8b80(static_cast<unsigned long long*>(table), table, entry, hash);
-        record = *reinterpret_cast<unsigned char**>(record + 24);
     }
 }
 
