@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x1425c1da0-0x1425c2080 .text$mn
 // MS2-RANGE: 0x1425c20a0-0x1425c34d0 .text$mn
 // MS2-RANGE: 0x1425c34e0-0x1425c4320 .text$mn
+// MS2-RANGE: 0x1425c4320-0x1425c4323 .text$mn
 
 #include "../include/kernel/sf_std.h"
 #include "../include/gfx/gfx_stream.h"
@@ -892,3 +893,8 @@ void StreamContext::ReadCxformRgba(Render::Cxform* pcxform)
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+
+// ---- full-exe unresolved: data_data_game's table takes it as ?FUN_1425c4320@@YAXXZ (no .pdata)
+// MS2-FUNCTIONAL: empty slot.
+// @0x1425c4320
+void FUN_1425c4320(void*) {}

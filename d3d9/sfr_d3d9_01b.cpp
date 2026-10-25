@@ -5,6 +5,7 @@
 // Queue unit sfr_d3d9_01 is split along its original sources (sfr_d3d9_01b D3D9_Texture).
 // MS2-UNIT: sfr_d3d9_01b
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142729eb0-0x142729f68 .text$mn
 // MS2-RANGE: 0x142729f70-0x14272d9c0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -1050,3 +1051,44 @@ Render::DepthStencilSurface* TextureManager::CreateDepthStencilSurface(IDirect3D
 // MS2-PIN: ??_7DepthStencilSurface@D3D9@Render@Scaleform@@6B@ 0x14319d600
 // MS2-PIN: ??_7TextureManager@D3D9@Render@Scaleform@@6B?$RefCountBase@VTextureManager@Render@Scaleform@@$0EL@@3@@ 0x14319d618
 // MS2-PIN: ??_7TextureManager@D3D9@Render@Scaleform@@6BImageUpdateSync@23@@ 0x14319d6c0
+
+// ---- full-exe unresolved: the 8-bit <-> 16-bit two-channel scanline converters of the format table (no .pdata;
+// data tables take them as ?FUN_<va>@@YAXXZ). n is the pixel count.
+
+// MS2-FUNCTIONAL: one channel -> {0xff, c} pairs.
+// @0x142729eb0
+void FUN_142729eb0(unsigned char* dst, const unsigned char* src, size_t n)
+{
+    for (; n; --n, dst += 2)
+    {
+        dst[0] = 0xff;
+        dst[1] = *src++;
+    }
+}
+
+// MS2-FUNCTIONAL: one channel -> {0xff, c | 0x0f} pairs.
+// @0x142729ee0
+void FUN_142729ee0(unsigned char* dst, const unsigned char* src, size_t n)
+{
+    for (; n; --n, dst += 2)
+    {
+        dst[0] = 0xff;
+        dst[1] = (unsigned char)(*src++ | 0x0f);
+    }
+}
+
+// MS2-FUNCTIONAL: the second byte of each pair.
+// @0x142729f10
+void FUN_142729f10(unsigned char* dst, const unsigned char* src, size_t n)
+{
+    for (src += 1; n; --n, src += 2)
+        *dst++ = *src;
+}
+
+// MS2-FUNCTIONAL: the second byte of each pair, low nibble cleared.
+// @0x142729f40
+void FUN_142729f40(unsigned char* dst, const unsigned char* src, size_t n)
+{
+    for (src += 1; n; --n, src += 2)
+        *dst++ = (unsigned char)(*src & 0xf0);
+}
