@@ -707,8 +707,9 @@ bool AsBroadcaster::InitializeProto(ASStringContext* psc, ObjectInterface* pobj)
     return true;
 }
 
+// The out-of-line copy the qualified calls use; the vftable holds the copy 0x14000e390 (sfr_as2_03m).
 // @0x14296b820
-void AvmCharacter::OnEventLoad()
+void AvmCharacter::OnEventLoadBase()
 {
     OnEvent(EventId::Event_Load);
 }
@@ -2271,7 +2272,7 @@ void AvmTextField::OnEventLoad()
 {
     if (!pDispObj)
     {
-        AvmCharacter::OnEventLoad();
+        OnEventLoadBase();
         return;
     }
     TextField* textField = reinterpret_cast<TextField*>(pDispObj);
@@ -2297,7 +2298,7 @@ void AvmTextField::OnEventLoad()
             FUN_1425bd9a0(textField, documentText->ToCStr(), html, true);
         }
     }
-    AvmCharacter::OnEventLoad();
+    OnEventLoadBase();
 }
 
 // MS2-FUNCTIONAL: invokes the registered watch callback with user data, new value, old value, and property name.

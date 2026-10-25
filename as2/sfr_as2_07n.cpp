@@ -75,4 +75,6 @@ void IntervalTimer::Set(const FnCall& fn, bool isTimeout)
 // MS2-PIN: ??_7RefCountImplCore@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7RefCountImpl@Scaleform@@6B@ 0x142dc9d58
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
-// MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
+// RefCountBase<ASIntervalTimerIntf,0x143> is the table ~IntervalTimer (0x1429259d0) stores last before ~RefCountImplCore;
+// slot 0 is its deleting destructor 0x1424e21a0 (ICF-folded with the other RefCountBase<*,0x143> tables).
+// MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8

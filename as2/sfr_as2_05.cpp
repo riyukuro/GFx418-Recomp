@@ -173,6 +173,7 @@
 // MS2-RANGE: 0x1429542c0-0x1429542d0 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142954130-0x142954140 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142954140-0x142954160 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142954160-0x142954170 .text$mn   (sfr24: AvmCharacter::GetObjectType, from sfr32's 03m)
 // MS2-RANGE: 0x1429541b0-0x1429541c0 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142954190-0x1429541a0 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x1429541c0-0x1429541d0 .text$mn   (sfr24: full-exe outside-unit row)
@@ -4299,6 +4300,8 @@ ObjectInterface::ObjectType Object::GetObjectType() const { return Object_ASObje
 ObjectInterface::ObjectType ArrayObject::GetObjectType() const { return Object_Array; }
 // @0x142954140
 ObjectInterface::ObjectType AsBroadcaster::GetObjectType() const { return Object_AsBroadcaster; }
+// @0x142954160
+ObjectInterface::ObjectType AvmCharacter::GetObjectType() const { return Object_Unknown; }
 // @0x1429541b0
 ObjectInterface::ObjectType BitmapFilterObject::GetObjectType() const { return Object_BitmapFilter; }
 // @0x142954190
