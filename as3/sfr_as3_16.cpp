@@ -75,14 +75,14 @@
 #include <vector>
 #undef GetObject   // windows.h
 
-// MS2-FUNCTIONAL 0x1424debc0: releases the argument Value at +0x178, the Multiname at +0x148, and then the ReadArgs base.
+// MS2-FUNCTIONAL 0x1424debc0: releases the argument Value at +0x178, the Multiname at +0x148, and then the TR::ReadArgs base (0x1424dea90; CallArgs at +0x120, not AS3::ReadArgs' +0x118).
 // @0x1424debc0
 void FUN_1424debc0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x178)->~Value();
     reinterpret_cast<Scaleform::GFx::AS3::Multiname*>(bytes + 0x148)->~Multiname();
-    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+    reinterpret_cast<Scaleform::GFx::AS3::TR::ReadArgs*>(self)->~ReadArgs();
 }
 
 // MS2-FUNCTIONAL 0x1424deb40: releases the value at +0x170 and multiname at +0x140 before the ReadArgs base.
@@ -104,13 +104,13 @@ void FUN_1424dec40(void* self)
     reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
 }
 
-// MS2-FUNCTIONAL 0x1424decc0: releases the value at +0x140 before the ReadArgs base.
+// MS2-FUNCTIONAL 0x1424decc0: releases the value at +0x140 before the TR::ReadArgs base (0x1424dea90).
 // @0x1424decc0
 void FUN_1424decc0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x140)->~Value();
-    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+    reinterpret_cast<Scaleform::GFx::AS3::TR::ReadArgs*>(self)->~ReadArgs();
 }
 
 namespace Scaleform {
