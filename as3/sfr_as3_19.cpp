@@ -159,7 +159,7 @@ void FUN_1424ef450(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcoun
 char* FUN_1424ff910(char* ret, Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Value* obj, Scaleform::GFx::AS3::Value* result, unsigned argc, const void* args);   // ExecutePropertyUnsafe
 void FUN_142403310(Scaleform::UPInt obj, Scaleform::GFx::ASString* inout);   // XMLList-style toString
 void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg);   // Tracer: record a rewritten opcode for a register
-unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, unsigned a, unsigned b);   // read the value behind a slot reference
+unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, const void* vt, unsigned b);   // read the value behind a slot reference (vt: VTable*, tested as 64 bits)
 void FUN_1424161e0(Scaleform::UPInt obj, void* out, Scaleform::UInt32 idx);   // next enumeration index of a string-like object
 Scaleform::UPInt FUN_1425fc530(Scaleform::UPInt container, unsigned idx);   // DisplayObjContainer::GetChildAt
 void FUN_1424d4c10(void* self, void* table, const void* nodeRef, Scaleform::UPInt hash);   // StickyVarNode hash: add an entry
@@ -3968,7 +3968,6 @@ void Sfr31ExecSetProperty(UPInt vmAddr, UPInt file, UInt32 idx)
         *reinterpret_cast<UInt32*>(vmAddr + 0x30) -= 1;
     }
     reinterpret_cast<Value*>(&obj)->~Value();
-    mn.~Multiname();
     reinterpret_cast<Value*>(&val)->~Value();
 }
 
@@ -4000,7 +3999,6 @@ void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
         }
         reinterpret_cast<Value*>(&obj)->~Value();
     }
-    mn.~Multiname();
 }
 // ---- batch 29
 // getlex-style resolve: pushes the value the multiname resolves to, or raises a ReferenceError.
@@ -4013,10 +4011,7 @@ void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
     Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
     FUN_1425201f0(&ctx, &mn);
     if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0)
-    {
-        mn.~Multiname();
         return;
-    }
     UPInt pr[6] = {0, 0, 0, 0, 0, 0};
     FUN_142502570(vmAddr, pr, &mn);
     Value& res = *reinterpret_cast<Value*>(&pr[2]);
@@ -4029,7 +4024,6 @@ void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
     else
         ExecPushCopy(reinterpret_cast<VM*>(vmAddr), res);
     res.~Value();
-    mn.~Multiname();
 }
 
 typedef UInt8* (*Sfr31VFnDel)(UPInt self, UInt8* ret, const void* obj, const void* mn);
@@ -4067,7 +4061,6 @@ void Sfr31ExecDeleteProp(UPInt vmAddr, UPInt file, UInt32 idx)
             Sfr31ReleaseStr(nameNode);
         }
     }
-    mn.~Multiname();
 }
 
 // initproperty: pops the value and the object, resolves the multiname and initializes the property.
@@ -4093,7 +4086,6 @@ void Sfr31ExecInitProperty(UPInt vmAddr, UPInt file, UInt32 idx)
         Sfr27SetPropertyOfValue(reinterpret_cast<char*>(ret), reinterpret_cast<VM*>(vmAddr), reinterpret_cast<const Value*>(&obj), &mn, reinterpret_cast<const Value*>(&val));
     }
     reinterpret_cast<Value*>(&obj)->~Value();
-    mn.~Multiname();
     reinterpret_cast<Value*>(&val)->~Value();
 }
 // ---- batch 30
@@ -4782,7 +4774,6 @@ void Sfr31ExecFindPropOrGlobal(UPInt vmAddr, UPInt file, UInt32 idx)
             ExecPushCopy(reinterpret_cast<VM*>(vmAddr), res);
         res.~Value();
     }
-    mn.~Multiname();
 }
 
 // Verifies that the top of the operand stack is usable as the scope object named by the multiname (name check, class lookup, type check).
@@ -4844,7 +4835,6 @@ UInt8* Sfr31ValueToPrimitive(Value* v, UInt8* ok)
         local.Assign(*v);
     else if (((k - 5) & 0xfffffffdu) == 0 || k - 0x10 < 2)
     {
-        local.~Value();
         *reinterpret_cast<UInt32*>(lw) = 4;
         lw[2] = 0;
         lw[3] = 0;
@@ -4930,7 +4920,6 @@ void Sfr31ExecIn(UPInt vmAddr, UPInt file, UInt32 idx)
             Sfr31ReleaseStr(node);
         }
     }
-    mn.~Multiname();
 }
 
 // getproperty-style op: moves the object off the stack top, reads the named property into the slot and raises a ReferenceError
@@ -4963,7 +4952,6 @@ void Sfr31ExecGetProp(UPInt vmAddr, UPInt file, UInt32 idx)
         }
         reinterpret_cast<Value*>(&obj)->~Value();
     }
-    mn.~Multiname();
 }
 
 // ---- batch 41
@@ -5804,7 +5792,6 @@ void Sfr31ExecSetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
         }
     }
     reinterpret_cast<Value*>(&obj)->~Value();
-    mn.~Multiname();
     reinterpret_cast<Value*>(&val)->~Value();
 }
 // ---- batch 45
@@ -6006,7 +5993,6 @@ static void Sfr31CallSuperBody(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc
             const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
             const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
             FUN_1424fef00(reinterpret_cast<void*>(vmAddr), &callee, &obj, &result, argc, args, 1);
-            result.~Value();
         }
         else
         {
@@ -6015,10 +6001,8 @@ static void Sfr31CallSuperBody(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc
             reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
             reinterpret_cast<VM::Error*>(eb)->~Error();
         }
-        callee.~Value();
     }
     reinterpret_cast<Value*>(&obj)->~Value();
-    mn.~Multiname();
     FUN_1424de9e0(raBuf);
 }
 
@@ -6223,8 +6207,8 @@ void Sfr31ExecCallValue(UPInt vmAddr, UInt32 argc)
         {
             const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
             void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-            typedef void (*Fn)(UPInt, const UInt32*, UInt32, void*);
-            reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x60))(obj, v, argc, args);
+            typedef void (*Fn)(UPInt, const UInt32*, UInt32, void*, bool);
+            reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x60))(obj, v, argc, args, false);
         }
         else
         {
@@ -6791,7 +6775,6 @@ void Sfr31ExecIn(UPInt vmAddr)
         found = prop;
     }
     name->SetBool(found);
-    mn.~Multiname();
     reinterpret_cast<Value*>(&obj)->~Value();
 }
 
@@ -6849,7 +6832,6 @@ void Sfr31ExecClassEntry(UPInt vmAddr, UPInt link, UInt32 idx)
     typedef bool* (*HasFn)(UPInt, void*, void*, void*);
     UInt8 tmp[8];
     const bool found = *reinterpret_cast<HasFn>(Sfr31Rd(Sfr31Rd(glob, 0), 0x38))(glob, tmp, &mn, top);
-    mn.~Multiname();
     if (!found)
     {
         alignas(8) char eb[sizeof(VM::Error)];
@@ -6941,9 +6923,7 @@ void Sfr31ExecCallParentSlot(UPInt vmAddr, UInt32 slotIdx, UInt32 argc)
                 const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
                 Value result(Value::GetUndefined());
                 FUN_1424fef00(&vm, &fn, &obj, &result, argc, args, 1);
-                result.~Value();
             }
-            fn.~Value();
         }
     }
     reinterpret_cast<Value*>(&obj)->~Value();
@@ -7049,10 +7029,8 @@ void Sfr31ExecGetLexStatic(UPInt vmAddr, UPInt file, UInt32 idx)
             }
             ExecPushCopy(reinterpret_cast<VM*>(vmAddr), e);
         }
-        e.~Value();
     }
     res.~Value();
-    mn.~Multiname();
 }
 // ---- batch 66
 // hasnext2 opcode: registers objReg/idxReg hold the object and the enumeration index; advances the index (walking the prototype chain
@@ -7209,7 +7187,7 @@ void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
     {
         const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
         const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
-        typedef void (*CtorFn)(UPInt, Value*, UInt32, const void*);
+        typedef void (*CtorFn)(UPInt, Value*, UInt32, const void*, bool);
         UPInt tr = 0;
         if ((*reinterpret_cast<const UInt32*>(&mn) & 3) < 2)
             tr = Sfr31FindClassTraitsByMn(reinterpret_cast<UPInt>(&vm), reinterpret_cast<UPInt>(&mn));
@@ -7223,7 +7201,7 @@ void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                 reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(itr, 0), 0x68))(itr);
                 cls = Sfr31Rd(itr, 0x80);
             }
-            reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(cls, 0), 0x60))(cls, recv, argc, args);
+            reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(cls, 0), 0x60))(cls, recv, argc, args, false);
         }
         else
         {
@@ -7276,14 +7254,12 @@ void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                         reinterpret_cast<VM::Error*>(eb)->~Error();
                     }
                     else
-                        reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(eo, 0), 0x60))(eo, recv, argc, args);
+                        reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(eo, 0), 0x60))(eo, recv, argc, args, false);
                 }
-                e.~Value();
             }
             res.~Value();
         }
     }
-    mn.~Multiname();
     FUN_1424de9e0(raBuf);
 }
 // ---- batch 68
@@ -7580,7 +7556,6 @@ void Sfr31ExecCallPropVoid(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                     const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
                     Value result(Value::GetUndefined());
                     FUN_1424fef00(&vm, &e, obj, &result, argc, args, 0);
-                    result.~Value();
                 }
                 else
                 {
@@ -7590,12 +7565,10 @@ void Sfr31ExecCallPropVoid(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                     reinterpret_cast<VM::Error*>(eb)->~Error();
                 }
             }
-            e.~Value();
         }
         res.~Value();
     }
     reinterpret_cast<Value*>(obj)->~Value();
-    mn.~Multiname();
     FUN_1424de9e0(raBuf);
 }
 // ---- batch 72
@@ -7669,7 +7642,6 @@ void Sfr31ExecCallPropLex(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                     const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
                     Value result(Value::GetUndefined());
                     FUN_1424fef00(&vm, &e, &Value::GetUndefined(), &result, argc, args, 1);
-                    result.~Value();
                 }
                 else
                 {
@@ -7679,12 +7651,10 @@ void Sfr31ExecCallPropLex(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                     reinterpret_cast<VM::Error*>(eb)->~Error();
                 }
             }
-            e.~Value();
         }
         res.~Value();
     }
     reinterpret_cast<Value*>(obj)->~Value();
-    mn.~Multiname();
     FUN_1424de9e0(raBuf);
 }
 // ---- batch 73
@@ -7853,7 +7823,6 @@ void Sfr31ExecCallProperty(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                     const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
                     Value result(Value::GetUndefined());
                     FUN_1424fef00(&vm, &e, obj, &result, argc, args, 1);
-                    result.~Value();
                 }
                 else
                 {
@@ -7863,12 +7832,10 @@ void Sfr31ExecCallProperty(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
                     reinterpret_cast<VM::Error*>(eb)->~Error();
                 }
             }
-            e.~Value();
         }
         res.~Value();
     }
     reinterpret_cast<Value*>(obj)->~Value();
-    mn.~Multiname();
     FUN_1424de9e0(raBuf);
 }
 // ---- batch 75
