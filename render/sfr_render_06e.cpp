@@ -206,8 +206,8 @@ SKI_ProjectionMatrix3D SKI_ProjectionMatrix3D::InstanceStart(SortKey_ProjectionM
                                                              SKF_RangeStart | SKF_MatchNoOverlap);
 SKI_ProjectionMatrix3D SKI_ProjectionMatrix3D::InstanceEnd(SortKey_ProjectionMatrix3DEnd, SKF_MatchNoOverlap);
 
-// the key of nothing
-static SortKeyInterface SKI_NullInterface(SortKey_None);
+// the key of nothing (exe 0x143a2fe08). External: sfr_atexit_01 tears it down as DAT_143a2fe08.
+SortKeyInterface SKI_NullInterface(SortKey_None);
 
 // ----- the bundles' constructors and drawing (inlined into the key interfaces below)
 
