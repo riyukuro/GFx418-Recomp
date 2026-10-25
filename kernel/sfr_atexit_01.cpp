@@ -16,6 +16,8 @@
 #include "../gfx/sfr_gfx_07raw.h"
 #include "ms2/scaleform/include/render/render_primitive.h"
 #include "ms2/scaleform/include/render/render_scale9grid.h"
+#include "ms2/scaleform/include/gfx/as2/as2_pointobject.h"
+#include "ms2/scaleform/include/gfx/as2/as2_rectangleobject.h"
 
 namespace Scaleform { namespace Render {
 // The VertexXY16* formats render headers do not declare (Render_Vertex.cpp statics, 0x143a2fb88..0x143a2fc18).
@@ -65,10 +67,6 @@ extern "C" char DAT_143a30350[];
 extern "C" char DAT_143a2dd20[];
 extern "C" char DAT_143b15780[];
 extern "C" char DAT_143a2f650[];
-extern "C" char DAT_143a51bb0[];
-extern "C" char DAT_143a51c30[];
-extern "C" char DAT_143d747b0[];
-extern "C" char DAT_143d747f0[];
 extern "C" char DAT_143a51b50[];
 
 void FUN_14257db40(void*);                  // RefCountImplCore::~RefCountImplCore
@@ -131,6 +129,13 @@ static inline void RawAs2ValueArrayDtor(char* end, U count)
         --count;
         RawAs2ValueDtor(end);
     } while (count);
+}
+
+// One past the last element of an AS2 Value array (the destructor walks it back to front).
+template <unsigned N>
+static inline char* As2ArrayEnd(const AS2::Value (&a)[N])
+{
+    return reinterpret_cast<char*>(const_cast<AS2::Value*>(a + N));
 }
 
 // static AS3::Value at 0x143a2dd20.
@@ -432,32 +437,32 @@ void FUN_142cc9900()
     RawSetVtable(DAT_143a30340, DAT_1431927c8);
 }
 
-// AS2 static Value[2] at 0x143a51b70, just below Rectangle_DefaultParams.
+// AS2 Point_DefaultParams, Value[2] at 0x143a51b70.
 // @0x142cca370
 void FUN_142cca370()
 {
-    RawAs2ValueArrayDtor(DAT_143a51bb0, 2);
+    RawAs2ValueArrayDtor(As2ArrayEnd(AS2::Point_DefaultParams), 2);
 }
 
 // AS2 Point_NanParams, Value[2] at 0x143d747b0.
 // @0x142cca3c0
 void FUN_142cca3c0()
 {
-    RawAs2ValueArrayDtor(DAT_143d747f0, 2);
+    RawAs2ValueArrayDtor(As2ArrayEnd(AS2::Point_NanParams), 2);
 }
 
 // AS2 Rectangle_DefaultParams, Value[4] at 0x143a51bb0.
 // @0x142cca410
 void FUN_142cca410()
 {
-    RawAs2ValueArrayDtor(DAT_143a51c30, 4);
+    RawAs2ValueArrayDtor(As2ArrayEnd(AS2::Rectangle_DefaultParams), 4);
 }
 
-// AS2 static Value[4] at 0x143d74730, just below Point_NanParams.
+// AS2 Rectangle_NaNParams, Value[4] at 0x143d74730.
 // @0x142cca460
 void FUN_142cca460()
 {
-    RawAs2ValueArrayDtor(DAT_143d747b0, 4);
+    RawAs2ValueArrayDtor(As2ArrayEnd(AS2::Rectangle_NaNParams), 4);
 }
 
 // AS2 Object_NotsetVal (0x143a51b50).
