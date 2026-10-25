@@ -2241,7 +2241,7 @@ void* FUN_140012ec0(void* object, void* vm, void* classInfo)
 {
     FUN_1424d6750(object, vm, classInfo);
     *reinterpret_cast<unsigned*>(static_cast<char*>(object) + 0x60) = 0xf8;
-    *reinterpret_cast<void**>(object) = PTR_FUN_1431b71b0;
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b71b0;
     return object;
 }
 
@@ -2250,7 +2250,7 @@ void* FUN_140012ec0(void* object, void* vm, void* classInfo)
 void* FUN_140012f10(void* object, void* traits)
 {
     FUN_1424d6ac0(object, traits);
-    *reinterpret_cast<void**>(object) = PTR_FUN_1431b7260;
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b7260;
     return object;
 }
 
@@ -2261,8 +2261,8 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000ecc0(
 {
     extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
     FUN_142919df0(object, context, FUN_14000e100);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b5fb0;
-    *reinterpret_cast<void**>(object) = PTR_LAB_1431b5f20;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5fb0;
+    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b5f20;
     return object;
 }
 
@@ -2274,8 +2274,8 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
     extern void FUN_140012340(const Scaleform::GFx::AS2::FnCall&);
     extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
     FUN_142919df0(object, context, FUN_140012340);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b67d0;
-    *reinterpret_cast<void**>(object) = PTR_LAB_1431b6740;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b67d0;
+    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b6740;
     return object;
 }
 
@@ -2286,8 +2286,8 @@ Scaleform::GFx::AS2::Object* FUN_1400122e0(
 {
     extern void FUN_14291f790(void*, void*, void*);
     FUN_14291f790(object, context, prototype);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b6540;
-    *reinterpret_cast<void**>(object) = PTR_LAB_1431b65f0;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
+    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
     extern void FUN_140007ba0(void*, void*, void*);
     FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
     return object;
@@ -2302,9 +2302,9 @@ Scaleform::GFx::AS2::Object* FUN_14000eb50(
     extern void FUN_14000e1e0(void*, void*, void*, const void*);
     extern void FUN_142961830(void*, void*, void*, const void*, const void*);
     FUN_14000e1e0(object, context, prototype, constructor);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b5e70;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x70) = PTR_LAB_1431b5e18;
-    *reinterpret_cast<void**>(object) = PTR_FUN_1431b5e20;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5e70;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x70) = &PTR_LAB_1431b5e18;
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b5e20;
     const unsigned char flags = 1;
     FUN_142961830(reinterpret_cast<char*>(object) + 0x70, object, context,
                   &PTR_s_attachVideo_1431b5800, &flags);
@@ -2319,14 +2319,14 @@ Scaleform::GFx::AS2::Object* FUN_140012440(
 {
     extern void FUN_14291f6f0(void*, void*);
     FUN_14291f6f0(object, context);
-    *reinterpret_cast<void**>(object) = PTR_LAB_1431b65f0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b6540;
+    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
     extern void FUN_140007ba0(void*, void*, void*);
     FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
     std::memset(reinterpret_cast<char*>(object) + 0x70, 0, 0x38);
-    *reinterpret_cast<void**>(object) = PTR_FUN_1431b64f0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b6440;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = PTR_LAB_1431b6430;
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b64f0;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6440;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6430;
     extern void FUN_14295e1b0(void*, void*, void*, const void*);
     FUN_14295e1b0(reinterpret_cast<char*>(object) + 0x68, object, context, constructor);
     return object;
@@ -2413,7 +2413,7 @@ void* FUN_1400140e0(void* object, void* traits)
     extern void FUN_14245f780(void*, void*);
     FUN_14245f780(object, traits);
     auto* bytes = static_cast<unsigned char*>(object);
-    *reinterpret_cast<void**>(bytes) = PTR_FUN_1431b7360;
+    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b7360;
     *reinterpret_cast<void**>(bytes + 0x50) = nullptr;
     *reinterpret_cast<void**>(bytes + 0x58) = nullptr;
     *reinterpret_cast<unsigned*>(bytes + 0x98) = 0;
@@ -2446,8 +2446,8 @@ Scaleform::GFx::InteractiveObject* FUN_140010000(
     object->Scaleform::GFx::InteractiveObject::InteractiveObject(
         binding, root, parent, *resourceId);
     auto* bytes = reinterpret_cast<char*>(object);
-    *reinterpret_cast<void**>(bytes + 0x18) = PTR_LAB_1431b63f8;
-    *reinterpret_cast<void**>(bytes) = PTR_FUN_1431b6060;
+    *reinterpret_cast<void**>(bytes + 0x18) = &PTR_LAB_1431b63f8;
+    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b6060;
     std::memset(bytes + 0xe0, 0, 0x10);
     *reinterpret_cast<void**>(bytes + 0xf0) = definition;
     *reinterpret_cast<void**>(bytes + 0xf8) = nullptr;
@@ -2467,9 +2467,9 @@ Scaleform::GFx::AS2::Object* FUN_140012510(
     void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
 {
     FUN_140012440(object, context, prototype, constructor);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = PTR_LAB_1431b6690;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = PTR_LAB_1431b6638;
-    *reinterpret_cast<void**>(object) = PTR_FUN_1431b6640;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6690;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6638;
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b6640;
     unsigned char flags = 1;
     FUN_142961830(reinterpret_cast<char*>(object) + 0x68, object, context,
                   PTR_s_connect_1431b6410, &flags);
@@ -2508,9 +2508,9 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
                 Scaleform::GFx::AS2::FunctionRef*);
             FUN_14000e1e0(prototype, &stringContext,
                 context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
-            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x20) = PTR_LAB_1431b5e70;
-            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x70) = PTR_LAB_1431b5e18;
-            *reinterpret_cast<void**>(prototype) = PTR_FUN_1431b5e20;
+            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x20) = &PTR_LAB_1431b5e70;
+            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x70) = &PTR_LAB_1431b5e18;
+            *reinterpret_cast<void**>(prototype) = &PTR_FUN_1431b5e20;
             const unsigned char flags = 1;
             FUN_142961830(reinterpret_cast<char*>(prototype) + 0x70, prototype, &stringContext,
                           &PTR_s_attachVideo_1431b5800, &flags);
@@ -2546,8 +2546,8 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
 Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
 {
-    return CreateVideo02Builtin(result, context, FUN_14000e100, PTR_LAB_1431b5f20,
-        PTR_LAB_1431b5fb0, 0xb0, 0x24, 0x120, false);
+    return CreateVideo02Builtin(result, context, FUN_14000e100, &PTR_LAB_1431b5f20,
+        &PTR_LAB_1431b5fb0, 0xb0, 0x24, 0x120, false);
 }
 
 // MS2-FUNCTIONAL: creates and registers the Connect native function and prototype.
@@ -2555,8 +2555,8 @@ Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
 Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
 {
-    return CreateVideo02Builtin(result, context, FUN_140012340, PTR_LAB_1431b6740,
-        PTR_LAB_1431b67d0, 0xa8, 0x22, 0x110, true);
+    return CreateVideo02Builtin(result, context, FUN_140012340, &PTR_LAB_1431b6740,
+        &PTR_LAB_1431b67d0, 0xa8, 0x22, 0x110, true);
 }
 
 // MS2-FUNCTIONAL: replaces the player event relay and its associated VideoPlayerImpl state object.
@@ -2575,7 +2575,7 @@ void FUN_140015c40(void* object)
     {
         *reinterpret_cast<unsigned*>(static_cast<char*>(relay) + 8) = 1;
         *reinterpret_cast<void**>(static_cast<char*>(relay) + 0x10) = object;
-        *reinterpret_cast<void**>(relay) = PTR_FUN_1431b7858;
+        *reinterpret_cast<void**>(relay) = &PTR_FUN_1431b7858;
     }
     auto** oldRelay = reinterpret_cast<void**>(static_cast<char*>(object) + 0x58);
     if (*oldRelay)
@@ -3512,3 +3512,123 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_1400126a0(void* self, unsigned flags)
 {
     return FUN_1400126b0((Scaleform::GFx::AS2::CFunctionObject*)((Scaleform::UByte*)self - 0x20), flags);
 }
+
+// Leaf slot targets of the video vtables (data_rdata_sf_video): getters, forwarders and the AS3 NetStream method
+// thunks. A thunk calls the native through the member-pointer static the exe keeps in .bss ({function, this
+// adjustment}, built by sfr_gfx_13's dynamic initialisers), on the object of the `this` Value (+0x10).
+extern void* DAT_143b276f8;
+extern int DAT_143b27700;
+extern void* DAT_143b274a8;
+extern int DAT_143b274b0;
+extern void* DAT_143b27558;
+extern int DAT_143b27560;
+extern void* DAT_143b27498;
+extern int DAT_143b274a0;
+extern void* DAT_143b275d8;
+extern int DAT_143b275e0;
+extern void* DAT_143b27668;
+extern int DAT_143b27670;
+extern bool FUN_14292f250(void*, void*, void*, void*);
+extern bool FUN_1429396a0(void*, void*, void*);
+
+typedef void (*Video02ArgsNative)(void*, void*, unsigned, const void*);
+typedef void (*Video02ResultNative)(void*, void*);
+
+static void* Video02ThunkThis(const void* thisValue, int adjust)
+{
+    return *reinterpret_cast<char* const*>(static_cast<const char*>(thisValue) + 0x10) + adjust;
+}
+
+// MS2-FUNCTIONAL: returns the pointer member at +0xf0.
+// @0x140010130
+void* FUN_140010130(void* self) { return *reinterpret_cast<void**>(static_cast<char*>(self) + 0xf0); }
+
+// MS2-FUNCTIONAL: object type tag 7.
+// @0x140010140
+int FUN_140010140(void*) { return 7; }
+
+// MS2-FUNCTIONAL: object type tag 0x21.
+// @0x140011b80
+int FUN_140011b80(void*) { return 0x21; }
+
+// MS2-FUNCTIONAL: forwards to virtual slot 11 with the member block at +0xe8 of the second argument.
+// @0x140011b90
+void* FUN_140011b90(void* self, void* owner, void* a2, void* a3)
+{
+    typedef void* (*Slot)(void*, void*, void*, void*);
+    return (*reinterpret_cast<Slot**>(self))[11](self, static_cast<char*>(owner) + 0xe8, a2, a3);
+}
+
+// MS2-FUNCTIONAL: GASPrototypeBase::AddInterface on the prototype base at +0x48.
+// @0x140011ba0
+bool FUN_140011ba0(void* self, void* context, void* index, void* function)
+{
+    return FUN_14292f250(static_cast<char*>(self) + 0x48, context, index, function);
+}
+
+// MS2-FUNCTIONAL: InstanceOf: the object itself, else GASPrototypeBase::DoesImplement on the base at +0x68.
+// @0x140011bb0
+bool FUN_140011bb0(void* self, void* env, void* prototype)
+{
+    if (self == prototype)
+        return true;
+    return FUN_1429396a0(static_cast<char*>(self) + 0x68, env, prototype);
+}
+
+// MS2-FUNCTIONAL: always true.
+// @0x140011bd0
+bool FUN_140011bd0(void*) { return true; }
+
+// MS2-FUNCTIONAL: instance traits name.
+// @0x140012ef0
+const char* FUN_140012ef0(void*) { return "InstanceTraits::NetStream"; }
+
+// MS2-FUNCTIONAL: class traits name.
+// @0x140012f40
+const char* FUN_140012f40(void*) { return "Classes::NetStream"; }
+
+// MS2-FUNCTIONAL: AS3 thunk, native (this, result, argc, argv) through the member pointer at 0x143b276f8.
+// @0x140013230
+void FUN_140013230(void*, void*, const void* thisValue, void* result, unsigned argc, const void* argv)
+{
+    reinterpret_cast<Video02ArgsNative>(DAT_143b276f8)(Video02ThunkThis(thisValue, DAT_143b27700), result, argc, argv);
+}
+
+// MS2-FUNCTIONAL: AS3 thunk, native (this, result, argc, argv) through the member pointer at 0x143b274a8.
+// @0x140013250
+void FUN_140013250(void*, void*, const void* thisValue, void* result, unsigned argc, const void* argv)
+{
+    reinterpret_cast<Video02ArgsNative>(DAT_143b274a8)(Video02ThunkThis(thisValue, DAT_143b274b0), result, argc, argv);
+}
+
+// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b27558.
+// @0x1400133e0
+void FUN_1400133e0(void*, void*, const void* thisValue, void* result, unsigned, const void*)
+{
+    reinterpret_cast<Video02ResultNative>(DAT_143b27558)(Video02ThunkThis(thisValue, DAT_143b27560), result);
+}
+
+// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b27498.
+// @0x140013400
+void FUN_140013400(void*, void*, const void* thisValue, void* result, unsigned, const void*)
+{
+    reinterpret_cast<Video02ResultNative>(DAT_143b27498)(Video02ThunkThis(thisValue, DAT_143b274a0), result);
+}
+
+// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b275d8.
+// @0x140013420
+void FUN_140013420(void*, void*, const void* thisValue, void* result, unsigned, const void*)
+{
+    reinterpret_cast<Video02ResultNative>(DAT_143b275d8)(Video02ThunkThis(thisValue, DAT_143b275e0), result);
+}
+
+// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b27668.
+// @0x140013440
+void FUN_140013440(void*, void*, const void* thisValue, void* result, unsigned, const void*)
+{
+    reinterpret_cast<Video02ResultNative>(DAT_143b27668)(Video02ThunkThis(thisValue, DAT_143b27670), result);
+}
+
+// MS2-FUNCTIONAL: instance name.
+// @0x1400141a0
+const char* FUN_1400141a0(void*) { return "Instances::fl_net::NetStream"; }
