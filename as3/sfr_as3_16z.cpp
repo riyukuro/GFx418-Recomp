@@ -1440,7 +1440,7 @@ void* DeleteAs3_1424e4190(void* p, unsigned flags)
 // ==== AvmSprite::AddDisplayObject ====================================================================================
 
 extern "C" {
-void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);         // MovieDefImpl::GetCharacterCreateInfo
+extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);         // MovieDefImpl::GetCharacterCreateInfo
 bool  FUN_14256ec50(void* movieImpl, void* defImpl, void* bindData, const String* symbol); // MovieImpl::FindExportedResource
 void  FUN_142516210(void* log, const char* fmt, ...);                         // LogBase<DisplayObjectBase>::LogError
 void* FUN_1425f9800(void* dlist, int depth, bool* markedForRemove);           // DisplayList::GetDisplayObjectAtDepth
