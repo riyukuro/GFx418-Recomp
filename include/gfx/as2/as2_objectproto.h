@@ -153,6 +153,7 @@ public:
     ObjectInterface* RealThis;    // +0x78
     FunctionRef      Constructor; // +0x80
 
+    SuperObject(Object* pproto, ObjectInterface* prealThis, const FunctionRef& ctor); // exe 0x1429213a0
     virtual FunctionRef Get__constructor__(ASStringContext* psc); // exe 0x142958370
     // Back to the saved prototype after an alternate one was set (exe 0x14297dfb0).
     void ResetAltProto();
