@@ -21,7 +21,9 @@ class AvmButton : public AvmCharacter
 {
     // A character made from a button record gets the class registered for its export name (0x142935820).
     void ConstructCharacter(InteractiveObject* pchar, const ButtonRecord& rec);
+public: // public in the exe (the symbols row and sfr_as2_03z's callers use the public mangling)
     void RecreateCharacters(ButtonRecord::MouseState mouseState);
+private:
 
     Button*    GetButton() const    { return static_cast<Button*>(pDispObj); }
     ButtonDef* GetButtonDef() const { return GetButton()->GetButtonDef(); }

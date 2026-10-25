@@ -3,11 +3,33 @@
 // MS2-UNIT: sfr_as2_05v
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14294a5b0-0x14294a8f0 .text$mn
+// (sfr36) the AvmCharacter / MovieRoot small virtuals below (no-VA trap stubs of the full-exe link)
+// MS2-RANGE: 0x142933420-0x142933423 .text$mn
+// MS2-RANGE: 0x142945d70-0x142945d7d .text$mn
+// MS2-RANGE: 0x1429493c0-0x1429493fb .text$mn
+// MS2-RANGE: 0x142949400-0x14294940a .text$mn
+// MS2-RANGE: 0x142949450-0x142949453 .text$mn
+// MS2-RANGE: 0x142949460-0x142949463 .text$mn
+// MS2-RANGE: 0x14294afb0-0x14294afbd .text$mn
+// MS2-RANGE: 0x142953cb0-0x142953cb5 .text$mn
+// MS2-RANGE: 0x142954ec0-0x142954ec9 .text$mn
+// MS2-RANGE: 0x1429561d0-0x1429561d9 .text$mn
+// MS2-RANGE: 0x142956b10-0x142956b35 .text$mn
+// MS2-RANGE: 0x14296ce70-0x14296ce73 .text$mn
+// MS2-RANGE: 0x14296ce80-0x14296ce83 .text$mn
+// MS2-RANGE: 0x142981600-0x142981609 .text$mn
+// MS2-RANGE: 0x142989030-0x14298905f .text$mn
 
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/as2/as2_valueobjectinterface.h"
 #include "../include/gfx/gfx_characterdef.h"
 #include "../include/gfx/gfx_displayobject.h"
+#include "../include/gfx/gfx_interactiveobject.h"
+#include "../include/gfx/gfx_displayobjcontainer.h"
+#include "../include/gfx/gfx_movieimpl.h"
+#include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as2/as2_refcountcollector.h"
 
 void FUN_1425b8e60(void* ptf, void* pinfo); // TextField: the display info of a text field (its text rect space)
 
@@ -96,3 +118,165 @@ bool AS2ValueObjectInterface::GetDisplayInfo(void* pdata, Value::DisplayInfo* pi
 }
 
 }} // namespace Scaleform::GFx
+
+// ---- (sfr36) AS2 small virtuals of AvmCharacter (vftable 0x143215b00) and MovieRoot (vftable 0x1432177d8)
+// that the headers declared but no unit defined, so the full-exe link left them as trap stubs. ----
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// ---- AvmCharacter ----
+
+// The five below are the shared one-instruction stubs of the exe (0x14000e380 store, 0x14000e3e0 null,
+// 0x14000e3f0 / 0x14000e400 / 0x14000e4d0 false), folded with other classes' stubs inside sfr_video_01 / 02's ranges,
+// so they carry no address tag here.
+// MS2-FUNCTIONAL: ICF-shared stub bodies owned by the sfr_video ranges; defined untagged for the link.
+void AvmCharacter::Bind(DisplayObject* po)
+{
+    pDispObj = static_cast<InteractiveObject*>(po);
+}
+
+// MS2-FUNCTIONAL: ICF-shared stub (0x14000e3e0), untagged.
+InteractiveObject* AvmCharacter::GetRelativeTarget(const ASString& name, bool firstCall)
+{
+    SF_UNUSED2(name, firstCall);
+    return 0;
+}
+
+// MS2-FUNCTIONAL: ICF-shared stub (0x14000e3f0), untagged.
+bool AvmCharacter::ReplaceChildCharacterOnLoad(InteractiveObject* poldChar, InteractiveObject* pnewChar)
+{
+    SF_UNUSED2(poldChar, pnewChar);
+    return false;
+}
+
+// MS2-FUNCTIONAL: ICF-shared stub (0x14000e400), untagged.
+bool AvmCharacter::ReplaceChildCharacter(InteractiveObject* poldChar, InteractiveObject* pnewChar)
+{
+    SF_UNUSED2(poldChar, pnewChar);
+    return false;
+}
+
+// MS2-FUNCTIONAL: ICF-shared stub (0x14000e4d0), untagged; only sprites run action buffers.
+bool AvmCharacter::ExecuteBuffer(ActionBuffer* pactionbuffer)
+{
+    SF_UNUSED(pactionbuffer);
+    return false;
+}
+
+// A plain character has no environment of its own: the nearest sprite ancestor's.
+// @0x1429493c0
+Environment* AvmCharacter::GetASEnvironment()
+{
+    for (InteractiveObject* p = pDispObj->GetParent(); p; p = p->GetParent())
+    {
+        if (p->IsSprite())
+            return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(p->GetAvmObjImpl()))
+                ->GetASEnvironment();
+    }
+    return 0;
+}
+
+// @0x142949400
+const Environment* AvmCharacter::GetASEnvironment() const
+{
+    return const_cast<AvmCharacter*>(this)->GetASEnvironment();
+}
+
+// No AS object for a plain character (buttons and text fields have their own, sprites the clip object).
+// @0x142949450
+Object* AvmCharacter::GetASObject()
+{
+    return 0;
+}
+
+// @0x142949460
+Object* AvmCharacter::GetASObject() const
+{
+    return 0;
+}
+
+// @0x14294afb0
+GlobalContext* AvmCharacter::GetGC() const
+{
+    return GetAS2Root()->pGlobalContext;
+}
+
+// The parent's top parent while the parent is an AS2 character, else this character.
+// @0x142956b10
+InteractiveObject* AvmCharacter::GetTopParent(bool ignoreLockRoot) const
+{
+    InteractiveObject* pparent = pDispObj->GetParent();
+    if (pparent && pparent->GetASMovieRoot()->AVMVersion == 1)
+        return pparent->GetTopParent(ignoreLockRoot);
+    return pDispObj;
+}
+
+// ---- MovieRoot ----
+
+// @0x142933420
+bool MovieRoot::CheckAvm()
+{
+    return true;
+}
+
+// @0x142945d70
+void MovieRoot::ForceEmergencyCollect()
+{
+    GetASGC()->ForceEmergencyCollect();
+}
+
+// @0x142953cb0
+MemoryContext* MovieRoot::GetMemoryContext() const
+{
+    return MemContext;
+}
+
+// _level0.
+// @0x142954ec0
+DisplayObjContainer* MovieRoot::GetRootMovie(DisplayObject* dobj) const
+{
+    SF_UNUSED(dobj);
+    return static_cast<DisplayObjContainer*>(pMovieImpl->pMainMovie);
+}
+
+// The string manager pointer the memory context keeps at +0x18.
+// @0x1429561d0
+ASStringManager* MovieRoot::GetStringManager() const
+{
+    return *reinterpret_cast<ASStringManager* const*>(MemContext->Unrecovered_18);
+}
+
+// @0x14296ce70
+void MovieRoot::OnMovieFocus(bool set)
+{
+    SF_UNUSED(set);
+}
+
+// @0x14296ce80
+void MovieRoot::OnNextFrame()
+{
+}
+
+// The host's answer to ExternalInterface.call, kept as an AS value until the call returns.
+// @0x142981600
+void MovieRoot::SetExternalInterfaceRetVal(const GFx::Value& retVal)
+{
+    Value2ASValue(retVal, &ExternalIntfRetVal);
+}
+
+// ~0u keeps the default: no frame limit, 1000 roots.
+// MS2-FUNCTIONAL: same stores and defaults; the exe interleaves the cmov/compare differently (47 vs 48 bytes).
+// @0x142989030
+void MovieRoot::SetMemoryParams(unsigned frameBetweenCollections, unsigned maxRootCount)
+{
+    ASRefCountCollector* pgc = MemContext->ASGC;
+    if (frameBetweenCollections == ~0u)
+        frameBetweenCollections = 0;
+    if (maxRootCount == ~0u)
+        maxRootCount = 1000;
+    pgc->PresetFramesBetween = frameBetweenCollections;
+    pgc->MaxRootCount        = maxRootCount;
+    pgc->PresetMaxRootCount  = maxRootCount;
+}
+
+}}} // namespace Scaleform::GFx::AS2
