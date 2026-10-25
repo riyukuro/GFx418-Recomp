@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142954cb0-0x142954d07 .text$mn
 // MS2-RANGE: 0x1429561e0-0x142956228 .text$mn
 // MS2-RANGE: 0x142956410-0x1429565ac .text$mn
+// MS2-RANGE: 0x1429565c0-0x1429565ce .text$mn
 // MS2-RANGE: 0x142956ad0-0x142956b03 .text$mn
 
 #include "../include/gfx/as2/as2_avmtextfield.h"
@@ -29,6 +30,27 @@ const void* AvmTextFieldBase_GetStyleSheet(const void* self)
     if (AvmTextFieldBase_HasStyleSheet(self))
         return reinterpret_cast<const UByte*>(*reinterpret_cast<const UPInt*>(sheet + 0x40)) + 0x68;
     return 0;
+}
+
+namespace {
+
+// The AS2 style sheet holder (AvmTextField::CSSHolder): the URL zones of CSSHolderBase, then the StyleSheet object.
+struct AS2CSSHolderView
+{
+    void* const*      vfptr;
+    UByte             BaseData[0x38];
+    StyleSheetObject* pASStyleSheet; // +0x40
+};
+
+} // namespace
+
+// AvmTextField::CSSHolder::GetTextStyleManager (vftable 0x143218188 slot 2): the style sheet's style manager, 0
+// without a style sheet.
+// @0x1429565c0
+const void* CSSHolder_GetTextStyleManager(const void* pholder)
+{
+    const StyleSheetObject* psheet = static_cast<const AS2CSSHolderView*>(pholder)->pASStyleSheet;
+    return psheet ? psheet->Data68 : 0;
 }
 
 // MS2-FUNCTIONAL: the exe inlines the TextFieldObject ctor and the Set__proto__ member creation
@@ -60,3 +82,6 @@ DisplayObjectBase::TopMostResult GenericDisplayObj::GetTopMostMouseEntity(const 
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+// data_rdata_sf_b names the vftable slot by its address
+#pragma comment(linker, "/alternatename:?FUN_1429565c0@@YAXXZ=?CSSHolder_GetTextStyleManager@AS2@GFx@Scaleform@@YAPEBXPEBX@Z")
