@@ -26,6 +26,10 @@
 #include <random>
 #include <vector>
 
+// The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
+// hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
+template <class T> using ExeDecl = T;
+
 extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
@@ -34,37 +38,37 @@ extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14268ef30(void*, void*, unsigned);
 extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
-MS2_GLOBAL(0x1431921e0, void*, AS3TextRecordVtable);
-MS2_GLOBAL(0x1431921b0, void*, AS3MovieImageDataVtable);
-MS2_GLOBAL(0x143192170, void*, AS3MovieImageStringSetVtable);
-MS2_GLOBAL(0x143192190, void*, AS3MovieImageValueSetVtable);
-MS2_GLOBAL(0x1431921a0, void*, AS3MovieImageNameSetVtable);
-MS2_GLOBAL(0x143192180, void*, AS3MovieImageTreeVtable);
-MS2_GLOBAL(0x1431921d0, void*, AS3MovieResourceDataVtable);
-MS2_GLOBAL(0x143192160, void*, AS3MovieMemoryItemVtable);
-MS2_GLOBAL(0x1431bede8, void*, AS3AudioEventVtable);
-MS2_GLOBAL(0x1431bec40, void*, AS3AudioListNodeVtable);
-MS2_GLOBAL(0x1431bed18, void*, AS3SoundRequestVtable);
-MS2_GLOBAL(0x1431bed50, void*, AS3SoundRequestNodeVtable);
-MS2_GLOBAL(0x1431bef00, void*, AS3BufferedRequestVtable);
-MS2_GLOBAL(0x1431bef38, void*, AS3BufferedRequestNodeVtable);
-MS2_GLOBAL(0x1431bee50, void*, AS3StreamRequestVtable);
-MS2_GLOBAL(0x1431bee68, void*, AS3StreamRequestNodeVtable);
-MS2_GLOBAL(0x142d175c8, float, ImageViewportScale);
-MS2_GLOBAL(0x142d175cc, float, ImageViewportBias);
-MS2_GLOBAL(0x142d175e0, float, ImageViewportClampBias);
-MS2_GLOBAL(0x142eab358, float, DrawableImageScale2);
-MS2_GLOBAL(0x142ceab84, float, FloatOne);
-MS2_GLOBAL(0x143003a80, float[4], ThresholdTransformX);
-MS2_GLOBAL(0x1430569c0, float[4], ThresholdTransformY);
-MS2_GLOBAL(0x143a2f740, unsigned char[9], ChannelIndexMap);
-MS2_GLOBAL(0x14318da30, std::uint32_t[4], ImageViewportColor);
-MS2_GLOBAL(0x14318ea74, float, ImageViewportOrigin);
-MS2_GLOBAL(0x14318f040, void*, MovieImageInfoVtable);
-MS2_GLOBAL(0x14318f048, void*, AS3MovieMarkerVtable);
-MS2_GLOBAL(0x14318f020, void*, AS3TextValueRecordVtable);
-MS2_GLOBAL(0x14318f030, void*, AS3MovieViewValueVtable);
-MS2_GLOBAL(0x1431921c0, void*, AS3MovieImageExtraVtable);
+extern ExeDecl<void*> DAT_1431921e0; static constexpr ExeDecl<void*>& AS3TextRecordVtable = DAT_1431921e0;
+extern ExeDecl<void*> DAT_1431921b0; static constexpr ExeDecl<void*>& AS3MovieImageDataVtable = DAT_1431921b0;
+extern ExeDecl<void*> DAT_143192170; static constexpr ExeDecl<void*>& AS3MovieImageStringSetVtable = DAT_143192170;
+extern ExeDecl<void*> DAT_143192190; static constexpr ExeDecl<void*>& AS3MovieImageValueSetVtable = DAT_143192190;
+extern ExeDecl<void*> DAT_1431921a0; static constexpr ExeDecl<void*>& AS3MovieImageNameSetVtable = DAT_1431921a0;
+extern ExeDecl<void*> DAT_143192180; static constexpr ExeDecl<void*>& AS3MovieImageTreeVtable = DAT_143192180;
+extern ExeDecl<void*> DAT_1431921d0; static constexpr ExeDecl<void*>& AS3MovieResourceDataVtable = DAT_1431921d0;
+extern ExeDecl<void*> DAT_143192160; static constexpr ExeDecl<void*>& AS3MovieMemoryItemVtable = DAT_143192160;
+extern ExeDecl<void*> DAT_1431bede8; static constexpr ExeDecl<void*>& AS3AudioEventVtable = DAT_1431bede8;
+extern ExeDecl<void*> DAT_1431bec40; static constexpr ExeDecl<void*>& AS3AudioListNodeVtable = DAT_1431bec40;
+extern ExeDecl<void*> DAT_1431bed18; static constexpr ExeDecl<void*>& AS3SoundRequestVtable = DAT_1431bed18;
+extern ExeDecl<void*> DAT_1431bed50; static constexpr ExeDecl<void*>& AS3SoundRequestNodeVtable = DAT_1431bed50;
+extern ExeDecl<void*> DAT_1431bef00; static constexpr ExeDecl<void*>& AS3BufferedRequestVtable = DAT_1431bef00;
+extern ExeDecl<void*> DAT_1431bef38; static constexpr ExeDecl<void*>& AS3BufferedRequestNodeVtable = DAT_1431bef38;
+extern ExeDecl<void*> DAT_1431bee50; static constexpr ExeDecl<void*>& AS3StreamRequestVtable = DAT_1431bee50;
+extern ExeDecl<void*> DAT_1431bee68; static constexpr ExeDecl<void*>& AS3StreamRequestNodeVtable = DAT_1431bee68;
+extern ExeDecl<float> DAT_142d175c8; static constexpr ExeDecl<float>& ImageViewportScale = DAT_142d175c8;
+extern ExeDecl<float> DAT_142d175cc; static constexpr ExeDecl<float>& ImageViewportBias = DAT_142d175cc;
+extern ExeDecl<float> DAT_142d175e0; static constexpr ExeDecl<float>& ImageViewportClampBias = DAT_142d175e0;
+extern ExeDecl<float> DAT_142eab358; static constexpr ExeDecl<float>& DrawableImageScale2 = DAT_142eab358;
+extern ExeDecl<float> DAT_142ceab84; static constexpr ExeDecl<float>& FloatOne = DAT_142ceab84;
+extern ExeDecl<float[4]> DAT_143003a80; static constexpr ExeDecl<float[4]>& ThresholdTransformX = DAT_143003a80;
+extern ExeDecl<float[4]> DAT_1430569c0; static constexpr ExeDecl<float[4]>& ThresholdTransformY = DAT_1430569c0;
+extern ExeDecl<unsigned char[9]> DAT_143a2f740; static constexpr ExeDecl<unsigned char[9]>& ChannelIndexMap = DAT_143a2f740;
+extern ExeDecl<std::uint32_t[4]> DAT_14318da30; static constexpr ExeDecl<std::uint32_t[4]>& ImageViewportColor = DAT_14318da30;
+extern ExeDecl<float> DAT_14318ea74; static constexpr ExeDecl<float>& ImageViewportOrigin = DAT_14318ea74;
+extern ExeDecl<void*> DAT_14318f040; static constexpr ExeDecl<void*>& MovieImageInfoVtable = DAT_14318f040;
+extern ExeDecl<void*> DAT_14318f048; static constexpr ExeDecl<void*>& AS3MovieMarkerVtable = DAT_14318f048;
+extern ExeDecl<void*> DAT_14318f020; static constexpr ExeDecl<void*>& AS3TextValueRecordVtable = DAT_14318f020;
+extern ExeDecl<void*> DAT_14318f030; static constexpr ExeDecl<void*>& AS3MovieViewValueVtable = DAT_14318f030;
+extern ExeDecl<void*> DAT_1431921c0; static constexpr ExeDecl<void*>& AS3MovieImageExtraVtable = DAT_1431921c0;
 extern "C" void FUN_14268cd80(void*, void*, unsigned);
 extern "C" void FUN_14268c510(void*, void*, unsigned);
 extern "C" void FUN_14268d2b0(void*, void*, unsigned);
@@ -465,6 +469,7 @@ int FUN_1428d8f2c(void*, bool);
 int FUN_1428d8e96(void*, int*, int*, int*, int*, int*, int*);
 int FUN_1428d8e9c(void*, void**);
 int FUN_1428d8f26(void*, float*);
+int FUN_1428d8ede(void*, float*);
 int FUN_1428d8eea(void*, float*);
 int FUN_1428d8ec0(void*, void*, unsigned, unsigned*);
 int FUN_1428d8eb4(void*, float*, float*, float*, int*);
@@ -1029,7 +1034,7 @@ float QueryChannelVolume(void* player)
     void* channel = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x38);
     float volume = 1.0f;
     if (channel)
-        FUN_1428d8f26(channel, &volume);
+        FUN_1428d8ede(channel, &volume);
     return volume;
 }
 }
@@ -2290,7 +2295,7 @@ void DrawImageViewport(void* command, void* contextOwner, void** image, void* st
     const float measured = reinterpret_cast<float (*)(void*)>(vtable[0x1e0 / sizeof(void*)])(context);
     const float scaled = measured * ImageViewportBias;
     struct DrawPayload { std::uint32_t color[4]; float transform[4]; } payload{};
-    std::memcpy(payload.color, ImageViewportColor.get(), sizeof(payload.color));
+    std::memcpy(payload.color, ImageViewportColor, sizeof(payload.color));
     payload.transform[0] = 0.0f;
     payload.transform[1] = scaled;
     payload.transform[2] = 0.0f;
