@@ -211,6 +211,7 @@
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
+#include "../include/gfx/as2/as2_intervaltimer.h"
 #include "../include/kernel/sf_msgformat.h"
 #include "../include/kernel/sf_timer.h"
 #include "../include/gfx/gfx_input.h"
@@ -540,6 +541,13 @@ void ArrayObject::InsertEmpty(int start, int count)
     }
     for (i = 0; i < count; i++)
         Elements[start + i] = 0;
+}
+
+// LocalFrame's vftable slot 4 (0x143215a98, the raw-word vftable of sfr_as2_04n): always true.
+// @0x142966210
+bool LocalFrame_VSlot4(const void*)
+{
+    return true;
 }
 
 // @0x142966270
@@ -2318,6 +2326,13 @@ bool Object::InvokeWatchpoint(Environment* penv, const ASString& prop, const Val
     return invoked;
 }
 
+// Whether the timer still runs (Clear() stops it).
+// @0x142964e30
+bool IntervalTimer::IsActive() const
+{
+    return Active;
+}
+
 // MS2-FUNCTIONAL: checks raw/path lookup, with scopes, local variables, the target object, and the global object.
 // @0x142964e50
 bool Environment::IsAvailable(const ASString& name, const WithStackArray* withStack) const
@@ -2594,6 +2609,13 @@ bool AS2ValueObjectInterface::GotoAndPlay(void* pdata, const char* frame, bool s
         }
     }
     return false;
+}
+
+// AvmTextField::CSSHolder::HasStyleSheet (vftable 0x143218188 slot 1): whether a StyleSheet object (+0x40) is set.
+// @0x14295d440
+bool CSSHolder_HasStyleSheet(const void* pholder)
+{
+    return *reinterpret_cast<void* const*>(static_cast<const UByte*>(pholder) + 0x40) != 0;
 }
 
 // MS2-FUNCTIONAL the exe builds the key node and calls the AS2 ObjectInterface slot directly; this resolves the
@@ -2914,3 +2936,7 @@ void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString&
 // MS2-PIN: ??_7ButtonCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217fb0
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
 // MS2-PIN: ??_7LocalInvokeCallback@MouseCtorFunction@AS2@GFx@Scaleform@@6B@ 0x14321ccf8
+
+// data_rdata_sf_b names these vftable slots by their address
+#pragma comment(linker, "/alternatename:?FUN_14295d440@@YAXXZ=?CSSHolder_HasStyleSheet@GFx@Scaleform@@YA_NPEBX@Z")
+#pragma comment(linker, "/alternatename:?FUN_142966210@@YAXXZ=?LocalFrame_VSlot4@AS2@GFx@Scaleform@@YA_NPEBX@Z")

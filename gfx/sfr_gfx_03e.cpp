@@ -1773,6 +1773,15 @@ Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField)
     return Scaleform::UPInt(reinterpret_cast<const Scaleform::GFx::TextField*>(textField)->GetCSSData());
 }
 
+// TextField::ClearRestrict, by its address for sfr_as3_13: drops the editor's restrict set (no editor, nothing).
+// @0x1425b7280
+void FUN_1425b7280(void* ptf)
+{
+    Scaleform::Render::Text::DocView* pdoc = static_cast<Scaleform::GFx::TextField*>(ptf)->GetDocument();
+    if (Scaleform::GFx::Text::EditorKit* peditor = static_cast<Scaleform::GFx::Text::EditorKit*>(pdoc->GetEditorKit()))
+        peditor->ClearRestrict();
+}
+
 namespace Scaleform { namespace GFx {
 
 }} // namespace Scaleform::GFx

@@ -19,6 +19,8 @@
 // MS2-RANGE: 0x142954ec0-0x142954ec9 .text$mn
 // MS2-RANGE: 0x1429561d0-0x1429561d9 .text$mn
 // MS2-RANGE: 0x142956b10-0x142956b35 .text$mn
+// MS2-RANGE: 0x14296c180-0x14296c189 .text$mn
+// MS2-RANGE: 0x14296c1d0-0x14296c1d9 .text$mn
 // MS2-RANGE: 0x14296ce70-0x14296ce73 .text$mn
 // MS2-RANGE: 0x14296ce80-0x14296ce83 .text$mn
 // MS2-RANGE: 0x142981600-0x142981609 .text$mn
@@ -37,6 +39,7 @@
 #include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/gfx_button.h"
+#include "../include/gfx/as2/as2_keyobject.h"
 
 void FUN_1425b8e60(void* ptf, void* pinfo); // TextField: the display info of a text field (its text rect space)
 
@@ -320,6 +323,22 @@ Object* AvmTextField::GetASObject()
 Object* AvmTextField::GetASObject() const
 {
     return const_cast<AvmTextField*>(this)->GetTextFieldASObject();
+}
+
+// KeyCtorFunction's KeyboardState::IListener slots: both record the key and broadcast its handler.
+// MS2-FUNCTIONAL: the exe's slots are the this-adjusting thunks themselves (rcx -= 0x70, jmp NotifyListeners); here
+// the compiler adds the thunk in front of these bodies.
+// @0x14296c180
+void KeyCtorFunction::OnKeyDown(InteractiveObject* pmovie, const EventId& evt, int)
+{
+    NotifyListeners(pmovie, evt);
+}
+
+// MS2-FUNCTIONAL: as OnKeyDown.
+// @0x14296c1d0
+void KeyCtorFunction::OnKeyUp(InteractiveObject* pmovie, const EventId& evt, int)
+{
+    NotifyListeners(pmovie, evt);
 }
 
 }}} // namespace Scaleform::GFx::AS2
