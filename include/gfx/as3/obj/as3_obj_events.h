@@ -223,6 +223,8 @@ namespace Instances { namespace fl_events {
         // (appended, sfr_as3_09) the AS3 event of a GFx event id (mouse, key, frame, activation) at this dispatcher;
         // false if it was prevented, true for ids without an AS3 event
         bool Dispatch(const EventId& evtId, GFx::DisplayObject* dobj);                      // 0x142467ec0
+        // (appended, sfr_as3_09) whether a mouse/button listener is registered (capture or target/bubble count)
+        bool HasButtonHandlers() const;                                                     // 0x14246a140
     };
 
     // One registered listener (0x28 bytes): the function value and the addEventListener options.

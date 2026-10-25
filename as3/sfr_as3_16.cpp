@@ -2482,15 +2482,13 @@ void InstanceTraits::Traits::AS3Constructor(const AS3::Traits&, const Value& _th
 bool AvmDisplayObjContainer::ActsAsButton() const { return false; }
 
 // No AS3 object yet: a button; otherwise whether it has a mouse/button listener.
-// MS2-FUNCTIONAL: EventDispatcher::HasButtonHandlers (0x14246a140) inlined
 // @0x1424e5480
 bool AvmInteractiveObj::ActsAsButton() const
 {
     Instances::fl_display::DisplayObject* obj = GetAS3Obj();
     if (!obj)
         return true;
-    Instances::fl_events::EventDispatcher::EventDispatcherImpl* impl = obj->pImpl.GetPtr();
-    return impl && (impl->CaptureButtonHandlersCnt || impl->ButtonHandlersCnt);
+    return obj->HasButtonHandlers();
 }
 
 // @0x1424e54b0

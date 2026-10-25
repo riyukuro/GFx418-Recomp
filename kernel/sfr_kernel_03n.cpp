@@ -174,6 +174,18 @@ void* FUN_142689520(void* self, unsigned flags)
     return self;
 }
 
+// The other one-slot vftables sfr_as3_22 stores (RTTI-less, same pack as 0x143192190): defined here beside their
+// deleting destructors so the full exe has them (the hook DLL binds the names to the exe's tables). 0x1431921c0's
+// slot is the counted-buffer record destructor in sfr_render_05l.
+void* FUN_142688ed0(void* self, unsigned flags);
+extern "C" void* const DAT_143192170[1] = { (void*)&FUN_142689180 };
+extern "C" void* const DAT_143192180[1] = { (void*)&FUN_1426890b0 };
+extern "C" void* const DAT_1431921a0[1] = { (void*)&FUN_142689330 };
+extern "C" void* const DAT_1431921b0[1] = { (void*)&FUN_142689230 };
+extern "C" void* const DAT_1431921c0[1] = { (void*)&FUN_142688ed0 };
+extern "C" void* const DAT_1431921d0[1] = { (void*)&FUN_1426893b0 };
+extern "C" void* const DAT_1431921e0[1] = { (void*)&FUN_142689520 };
+
 // The grouping the child visitor (0x142686440) also fills: the hash and whether every record counts.
 struct Sfr21ImageGrouping
 {

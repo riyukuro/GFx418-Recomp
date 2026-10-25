@@ -830,6 +830,12 @@ namespace Instances { namespace fl_events {
         return false;
     }
 
+    // @0x14246a140
+    bool EventDispatcher::HasButtonHandlers() const
+    {
+        return pImpl && (pImpl->CaptureButtonHandlersCnt || pImpl->ButtonHandlersCnt);
+    }
+
     // @0x14246a160
     // MS2-FUNCTIONAL: cl inlines the listener table lookup (0x1424698c0) that the exe calls
     bool EventDispatcher::HasEventHandler(const ASString& type, bool useCapture) const
