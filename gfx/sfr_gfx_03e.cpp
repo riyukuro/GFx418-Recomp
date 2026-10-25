@@ -133,7 +133,8 @@ namespace Scaleform { namespace GFx {
 
 // (the exe has only the deleting dtor, 0x1425b61f0, with this body inlined)
 // MS2-FUNCTIONAL 0x1425b61f0: the deleting dtor (pinned) inlines this body; frame layout differs
-FontHandle::~FontHandle()
+// (inline: sfr_gfx_05d has the same inline body; the exe has no out-of-line copy)
+inline FontHandle::~FontHandle()
 {
     if (pFontManager)
         static_cast<FontManager*>(pFontManager)->RemoveFontHandle(this);

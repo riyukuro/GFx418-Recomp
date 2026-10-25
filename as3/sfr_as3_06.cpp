@@ -94,13 +94,7 @@ namespace fl_display
     extern const ClassInfo StageScaleModeCI;
 }
 
-// The out-of-line copy (0x1424d8f90) is in sfr_as3_15; the PushBack below inlines it, so it is inline here.
-inline Multiname::Multiname(const Multiname& other)
-    : Kind(other.Kind)
-    , Obj(other.Obj)
-    , Name(other.Name)
-{
-}
+// (the Multiname copy ctor, 0x1424d8f90, is defined in sfr_as3_15)
 
 namespace InstanceTraits
 {

@@ -159,7 +159,8 @@ struct VideoCharacterDef
     UByte              Deblocking;
     UByte              Codec;
 
-    VideoCharacterDef()
+    // the inline construction (a member, not a ctor: sfr_gfx_04 defines the real VideoCharacterDef ctor)
+    void Init()
     {
         vfptr     = MS2_SF_Resource_vftable;
         RefCount  = 1;
@@ -245,6 +246,8 @@ void Video::ReadDefineVideoStreamTag(LoadProcess* p, const TagInfo& tagInfo)
     UInt32 characterId = p->ReadU16();
     p->LogParse("  video = %d\n", characterId);
     VideoCharacterDef* ch = new VideoCharacterDef;
+    if (ch)
+        ch->Init();
     ch->Read(p, tagInfo.TagType);
     p->AddResource(ResourceId(characterId), ch->GetResource());
     if (ch)
