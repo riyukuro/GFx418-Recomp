@@ -27,6 +27,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
+#include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
 #include <cmath>
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
@@ -6813,7 +6814,7 @@ void Sfr31ExecClassEntry(UPInt vmAddr, UPInt link, UInt32 idx)
         const UPInt inst = Sfr31Rd(tr, 0xc0);
         if (Sfr31Rd(inst, 0x80) != 0)
         {
-            reinterpret_cast<Value*>(top)->Assign(*reinterpret_cast<const Value*>(Sfr31Rd(inst, 0x80)));
+            reinterpret_cast<Value*>(top)->Assign(reinterpret_cast<Class*>(Sfr31Rd(inst, 0x80)));   // the class object itself (exe: Assign(Class*))
             return;
         }
         SPtr<Class> made = reinterpret_cast<ClassTraits::Traits*>(tr)->FUN_142419e50();
@@ -8275,15 +8276,21 @@ static inline double Sfr31WrapDeg(double v)
     return m - 360.0;
 }
 
-// Applies the fields of a DisplayInfo (param 3) to the display object of an AS3 DisplayObject node.
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
+// AS3ValueObjectInterface::SetDisplayInfo (vftable slot 20): applies the fields of a DisplayInfo to the display object of
+// an AS3 DisplayObject node (pdata). The exe calls it through the vftable (this=rcx, pdata=rdx, info=r8).
 // MS2-FUNCTIONAL 0x142526730: same field order and twips rounding; the text rect space DisplayInfo scratch and the stale-value paths use NaN
 // @0x142526730
-UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
+bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayInfo& info)
 {
-    const unsigned char* d = static_cast<const unsigned char*>(infoPtr);
+    using namespace AS3;
+    const UPInt node = reinterpret_cast<UPInt>(pdata);
+    const unsigned char* d = reinterpret_cast<const unsigned char*>(&info);
     const UPInt traits = Sfr31Rd(node, 0x20);
     if (*reinterpret_cast<const UInt32*>(traits + 0x70) - 0x11u > 0xb || ((*reinterpret_cast<const UByte*>(traits + 0x68) >> 5) & 1) != 0)
-        return 0;
+        return false;
     const UPInt self = Sfr31Rd(node, 0x58);
     void* const dob = reinterpret_cast<void*>(self);
     const UPInt vt = Sfr31Rd(self, 0);
@@ -8370,7 +8377,7 @@ UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
         f = *reinterpret_cast<const UInt16*>(d + 0xd4);
     }
     if ((f & 0x1f) == 0)
-        return 1;
+        return true;
     if (!notText)
     {
         *reinterpret_cast<UInt32*>(self + 0xfc) |= 0x2000;
@@ -8481,8 +8488,11 @@ UInt32 Sfr31ApplyDisplayInfo(UPInt node, const void* infoPtr)
             pd[1] = static_cast<int>(v);
         }
     }
-    return 1;
+    return true;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 78
 namespace TR { UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance); }
 
