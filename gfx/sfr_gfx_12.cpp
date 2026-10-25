@@ -90,10 +90,8 @@ ExeDecl<void()> FUN_1423b1760;
 // Formats one message into a small caller supplied buffer descriptor (mode 2, buffer, capacity).
 struct Unk_XmlMsgBuffer { int Mode; char* Buffer; UPInt Capacity; };
 ExeDecl<void(Unk_XmlMsgBuffer*, const char*, const char**)> FUN_1423b14e0;
-extern ExeDecl<char> DAT_143135720;       // "File {0} is empty!"
-#define Unk_FileIsEmptyFormat DAT_143135720
-extern ExeDecl<char> DAT_143135738;       // "File {0} does not exist!"
-#define Unk_FileMissingFormat DAT_143135738
+static const char Unk_FileIsEmptyFormat[] = "File {0} is empty!";        // exe 0x143135720
+static const char Unk_FileMissingFormat[] = "File {0} does not exist!";  // exe 0x143135738
 
 namespace Scaleform { namespace GFx { namespace XML {
 
@@ -120,7 +118,7 @@ bool ParserExpat::ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHa
         {
             pphandler->SetDocumentLocator(&locator);
             Unk_XmlMsgBuffer buffer = {2, message, 0x100};
-            FUN_1423b14e0(&buffer, &Unk_FileIsEmptyFormat, &pfilename);
+            FUN_1423b14e0(&buffer, Unk_FileIsEmptyFormat, &pfilename);
             UPInt size = 0;
             while (message[size] != 0)
                 ++size;
@@ -132,7 +130,7 @@ bool ParserExpat::ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHa
     {
         pphandler->SetDocumentLocator(&locator);
         Unk_XmlMsgBuffer buffer = {2, message, 0x100};
-        FUN_1423b14e0(&buffer, &Unk_FileMissingFormat, &pfilename);
+        FUN_1423b14e0(&buffer, Unk_FileMissingFormat, &pfilename);
         UPInt size = 0;
         while (message[size] != 0)
             ++size;

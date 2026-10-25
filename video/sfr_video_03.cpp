@@ -43,10 +43,8 @@ extern ExeDecl<void*> DAT_143b27638;
 #define VideoThunkE DAT_143b27638
 extern ExeDecl<void*> DAT_1431b7ba0;
 #define VideoDisplayVtable DAT_1431b7ba0
-extern ExeDecl<float> DAT_142d692bc;
-#define VideoTwipsScale DAT_142d692bc
-extern ExeDecl<float> DAT_142d15c1c;
-#define VideoDurationScale DAT_142d15c1c
+static const float VideoTwipsScale = 20.0f;         // exe 0x142d692bc
+static const float VideoDurationScale = 1000.0f;    // exe 0x142d15c1c
 extern ExeDecl<void*> DAT_143b27640;
 #define VideoThunkBaseE DAT_143b27640
 extern ExeDecl<void*> DAT_143b27488;
