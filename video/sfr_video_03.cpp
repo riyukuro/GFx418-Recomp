@@ -255,6 +255,7 @@ void EraseVideoAtomHashEntry(void* tablePtr, const std::uint64_t* key)
     --*reinterpret_cast<std::uint64_t*>(table);
 }
 
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the first property thunk.
 // @0x140016b50
 void FUN_140016b50(void*, void* object, void* callFrame, void* member, int argc,
@@ -269,7 +270,10 @@ void FUN_140016b50(void*, void* object, void* callFrame, void* member, int argc,
             member, number);
     }
 }
+namespace {
 
+
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the second property thunk.
 // @0x140016be0
 void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
@@ -284,6 +288,8 @@ void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
             member, number);
     }
 }
+namespace {
+
 
 // MS2-FUNCTIONAL: dispatches one of the six recovered native getters selected by the trait index.
 // @0x140016c70
@@ -363,6 +369,7 @@ std::int64_t FUN_140016f40(void* tablePtr, const std::uint64_t* key)
     return -1;
 }
 
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: forwards an AS3 value through the third property thunk unless its receiver is disabled.
 // @0x140016fd0
 void FUN_140016fd0(void*, void* object, void* callFrame, void* member, int argc,
@@ -376,7 +383,10 @@ void FUN_140016fd0(void*, void* object, void* callFrame, void* member, int argc,
             reinterpret_cast<std::uintptr_t>(VideoThunkBaseC) + root, member, value);
     }
 }
+namespace {
 
+
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: forwards the AS3 value through the fourth property thunk unless its receiver is disabled.
 // @0x140017020
 void FUN_140017020(void*, void* object, void* callFrame, void* member, int argc,
@@ -390,7 +400,10 @@ void FUN_140017020(void*, void* object, void* callFrame, void* member, int argc,
             reinterpret_cast<std::uintptr_t>(VideoThunkBaseD) + root, member, value);
     }
 }
+namespace {
 
+
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: forwards the AS3 value through the fifth property thunk unless its receiver is disabled.
 // @0x140017070
 void FUN_140017070(void*, void* object, void* callFrame, void* member, int argc,
@@ -404,6 +417,8 @@ void FUN_140017070(void*, void* object, void* callFrame, void* member, int argc,
             reinterpret_cast<std::uintptr_t>(VideoThunkBaseE) + root, member, value);
     }
 }
+namespace {
+
 
 // MS2-FUNCTIONAL: returns the chained hash-set bucket index for a matching 8-byte key.
 // @0x140017440
@@ -413,6 +428,7 @@ void* FUN_140017440(void* table, const std::uint64_t* key)
     return index < 0 ? nullptr : static_cast<unsigned char*>(table) + (index + 1) * 0x20;
 }
 
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: normalizes a value argument and dispatches the recovered setter with its optional integer.
 // @0x140017470
 void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned argc,
@@ -430,6 +446,8 @@ void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned 
         }
     }
 }
+namespace {
+
 
 // MS2-FUNCTIONAL: drops the recorded atom-table payload and removes its key from the receiver cache.
 // @0x140017880
@@ -889,7 +907,7 @@ void FUN_14001a410(void* self, void*, void* netStream)
 // @0x14001a5c0
 Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_14001a5c0(Scaleform::GFx::AS3::InstanceTraits::CTraits* traits, std::uint32_t flags)
 {
-    traits->~CTraits();
+    traits->CTraits::~CTraits();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     if (flags & 1) {
         auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
         reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, traits);
@@ -928,8 +946,8 @@ void FUN_14001a800(std::uint64_t* object, std::uint8_t update)
         auto* player = reinterpret_cast<unsigned char*>(object[11]);
         *reinterpret_cast<std::uint32_t*>(player + 0xe0) = 0;
         *reinterpret_cast<std::uint32_t*>(player + 0xe4) = 0;
-        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(object[13]) * VideoTwipsScale;
-        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(object[14]) * VideoTwipsScale;
+        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(*reinterpret_cast<double*>(object + 13)) * VideoTwipsScale;
+        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(*reinterpret_cast<double*>(object + 14)) * VideoTwipsScale;
     }
 }
 
@@ -938,7 +956,7 @@ void FUN_14001a800(std::uint64_t* object, std::uint8_t update)
 // @0x14001a2f0
 void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, std::uint64_t flags)
 {
-    object->~DisplayObject();
+    object->Scaleform::GFx::AS3::Instances::fl_display::DisplayObject::~DisplayObject();  // MS2: exe 0x14001a2ff calls ~DisplayObject (0x14243d0b0) directly; the virtual call recursed
     if (flags & 1) {
         auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
         reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, object);
@@ -1376,12 +1394,13 @@ std::uint64_t* FUN_140019870(void* self, std::uint64_t* result)
 {
     *result = 0; FUN_140019660(self, result); return result;
 }
+} // MS2: the two class-info factories at global scope (data_rdata_sf_video binds them)
 // MS2-FUNCTIONAL: allocates a Video instance-traits object and constructs it for the supplied class traits.
 // @0x140019bd0
 void** FUN_140019bd0(void** result, void* classTraits)
 {
     auto* heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(classTraits) + 0x38);
-    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10]);
+    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10]);  // MS2: vcall
     auto* object = allocate(heap, 200, 0);
     *result = object ? FUN_1400199e0(object, classTraits) : nullptr;
     return result;
@@ -1391,11 +1410,12 @@ void** FUN_140019bd0(void** result, void* classTraits)
 void** FUN_14001af10(void** result, void* classTraits)
 {
     auto* heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(classTraits) + 0x38);
-    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10]);
+    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10]);  // MS2: vcall
     auto* object = allocate(heap, 200, 0);
     *result = object ? FUN_14001ad20(object, classTraits) : nullptr;
     return result;
 }
+namespace {
 
 // MS2-FUNCTIONAL: initializes the AS3 callback record and captures the optional first atom argument.
 // @0x1400170c0
@@ -1549,7 +1569,7 @@ void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void*
     FUN_1424dabd0(classTraits, vm, classInfo);
     *reinterpret_cast<void***>(classTraits) = classVtable;
     auto** heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(vm) + 0x38);
-    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>(heap[10]);
+    auto allocate = reinterpret_cast<void*(*)(void*, std::size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10]);  // MS2: vcall
     auto* instance = allocate(heap, 0xe8, 0);
     if (instance) {
         FUN_1424d6750(instance, vm, classInfo);
@@ -1598,6 +1618,7 @@ void ReleaseVideoString(Scaleform::GFx::ASStringNode* node)
         node->ReleaseNode();
 }
 }
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: dispatches the metadata or cue callback with converted AS3 string parameters.
 // @0x140017520
 void FUN_140017520(void*, void* vm, void* frame, std::uint64_t property, unsigned count, const std::uint64_t* args)
@@ -1619,6 +1640,9 @@ void FUN_140017520(void*, void* vm, void* frame, std::uint64_t property, unsigne
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
 }
+namespace {
+
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: dispatches the subtitle callback with converted AS3 string parameters.
 // @0x140017670
 void FUN_140017670(void*, void* vm, void* frame, std::uint64_t property, unsigned count, const std::uint64_t* args)
@@ -1642,6 +1666,8 @@ void FUN_140017670(void*, void* vm, void* frame, std::uint64_t property, unsigne
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[4]));
 }
+namespace {
+
 
 } // namespace (sfr36: the natives below have external linkage, other units take their addresses)
 // MS2-FUNCTIONAL: creates the video metadata object, adds its standard fields, and returns a retained object atom.
@@ -1761,6 +1787,7 @@ void FUN_140017f20(void* self, void*, void* frame)
 }
 namespace {
 
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: builds the metadata object from CRI stream dimensions and track counts, then invokes its callback.
 // @0x1400182f0
 void FUN_1400182f0(void* callback, const std::uint32_t* info)
@@ -1792,19 +1819,29 @@ void FUN_1400182f0(void* callback, const std::uint32_t* info)
         FUN_1424fef00(vmRoot, callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), &objectValue, 1, &objectValue, 0);
     }
 }
+namespace {
+
 
 } // namespace
+extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);   // MS2: MovieDefImpl::GetCharacterCreateInfo
 // MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef.
 // @0x14001a470
 void* FUN_14001a470(void* self)
 {
+    if (*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58))
+        return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
     auto* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
     auto* library = *reinterpret_cast<unsigned char**>(root + 0x2d8);
     auto* movieDef = FUN_14250d8f0(root, self);
     if (!movieDef) return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
     alignas(8) std::uint64_t createInfo[3]{};
     FUN_142442c30(self, createInfo, movieDef);
-    if (!createInfo[0]) return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
+    if (!createInfo[0]) {
+        // no symbol for the class: the exe falls back to the empty Video character (ResourceId 0x10005)
+        const unsigned emptyVideoId = 0x10005;
+        alignas(8) std::uint64_t tmp[3];
+        memcpy(createInfo, FUN_1425cf500(movieDef, tmp, &emptyVideoId), sizeof(createInfo));
+    }
     auto* creator = *reinterpret_cast<void**>(library + 0x18);
     auto** vtable = *reinterpret_cast<void***>(creator);
     auto create = reinterpret_cast<void*(*)(void*, void*, void*, int, std::uint32_t*, int)>(vtable[4]);
@@ -1821,15 +1858,22 @@ void* FUN_14001a470(void* self)
 }
 namespace {
 
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: creates a callback property object from the supplied AS3 strings and binds it to this stream.
 // @0x140019890
 void FUN_140019890(void* self, const std::uint64_t* firstAtom, const std::uint64_t* secondAtom)
 {
     auto* vm = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x10);
-    auto* firstNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*firstAtom & ~std::uint64_t(3));
-    auto* secondNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*secondAtom & ~std::uint64_t(3));
-    Scaleform::GFx::ASString first(firstNode);
-    Scaleform::GFx::ASString second(secondNode);
+    // MS2: as exe 0x14001989c: the atoms are String DataDescs (size at +0, chars at +0xc), interned by the
+    // ASStringManager at [[[[self+0x10]+0x20]+0x78]+0x10]+0x1e8; they are not ASStringNodes.
+    auto* strings = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(
+        *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x20) + 0x78) + 0x10) + 0x1e8);
+    auto intern = [strings](const std::uint64_t* atom) {
+        auto* desc = reinterpret_cast<const char*>(*atom & ~std::uint64_t(3));
+        return strings->CreateStringNode(desc + 0xc, *reinterpret_cast<const std::uint64_t*>(desc) & 0x7fffffffffffffffull);
+    };
+    Scaleform::GFx::ASString second(intern(secondAtom));
+    Scaleform::GFx::ASString first(intern(firstAtom));
     std::uint64_t result = 0;
     FUN_142467b50(vm, &result, &first, &second);
     auto* object = reinterpret_cast<unsigned char*>(result);
@@ -1845,7 +1889,10 @@ void FUN_140019890(void* self, const std::uint64_t* firstAtom, const std::uint64
     auto temporary = result;
     ReleaseVideoAtom(&temporary);
 }
+namespace {
 
+
+} // namespace: externally referenced Video native
 // MS2-FUNCTIONAL: builds a CRI subtitle/cue event object with its name, timestamp, type and parameter map.
 // @0x140018930
 void FUN_140018930(void* callback, const std::uint32_t* eventData)
@@ -1901,6 +1948,8 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
     ReleaseVideoAtom(&parametersAtom);
     ReleaseVideoAtom(&eventAtom);
 }
+namespace {
+
 
 // MS2-FUNCTIONAL: initializes an FMOD stream callback, snapshots its start time, and records pause state.
 // @0x142743050
@@ -1974,3 +2023,14 @@ std::uint64_t* FUN_142743240(std::uint64_t* object, void* owner, void* stream, i
     return object;
 }
 } // namespace
+
+// MS2: VideoPlayer.clear's thunk (instance ThunkInfo table 0x1431b79e0, entry 8) was never recovered;
+// same member-pointer forwarding as the other video thunks (exe: movsxd rcx,[143b27790]; add rcx,[r8+10]; jmp [143b27788]).
+extern ExeDecl<void*> DAT_143b27788;
+extern ExeDecl<int> DAT_143b27790;
+// @0x14001a180
+void FUN_14001a180(void*, void*, void* callFrame, void* result)
+{
+    auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
+    reinterpret_cast<void(*)(void*, void*)>(DAT_143b27788)(root + DAT_143b27790, result);
+}
