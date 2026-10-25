@@ -34,6 +34,7 @@
 #include "../include/gfx/gfx_buttondef.h"
 #include "../include/gfx/gfx_fontlib.h"
 #include "../include/gfx/gfx_sound.h"
+#include "../include/gfx/gfx_shapeswf.h"
 #include "../include/render/render_jpeg.h"
 
 #include <stdlib.h>
@@ -46,7 +47,6 @@ class ImageFileHandlerRegistry : public State, public Render::ImageFileHandlerRe
 };
 
 extern "C" void FUN_142655fe0(FontData*, LoadProcess*, const TagInfo*);
-extern "C" void FUN_142659740(void*, unsigned);
 extern "C" void FUN_1426597e0(void*, void*);
 extern "C" void FUN_14257dcb0(void*);
 
@@ -133,15 +133,10 @@ void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
 void SF_STDCALL GFx_DefineShapeLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
     const ResourceId id(p->ReadU16());
-    struct ShapeStorage { UByte bytes[0x30]; };
     struct CharacterStorage { UByte bytes[0x30]; };
-    ShapeStorage* shape = static_cast<ShapeStorage*>(p->GetLoadHeap()->Alloc(sizeof(ShapeStorage)));
-    FUN_142659740(shape, 0);
-
-    void** shapeVtable = *reinterpret_cast<void***>(shape);
-    typedef void (*ReadShape)(void*, LoadProcess*, unsigned, unsigned);
-    reinterpret_cast<ReadShape>(shapeVtable[11])(shape, p, tagInfo.TagType,
-                                                  tagInfo.TagOffset + tagInfo.TagLength);
+    // The exe inlines ConstShapeWithStyles' default constructor here; FUN_142659740 is the abstract base's.
+    ConstShapeWithStyles* shape = ::new (p->GetLoadHeap()->Alloc(sizeof(ConstShapeWithStyles))) ConstShapeWithStyles();
+    shape->Read(p, tagInfo.TagType, tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell(), true);
 
     CharacterStorage* character = static_cast<CharacterStorage*>(p->GetLoadHeap()->Alloc(sizeof(CharacterStorage)));
     FUN_1426597e0(character, shape);
@@ -657,6 +652,10 @@ void* FUN_1425c8670(void* object, unsigned flags)
 
 // MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
 // MS2-PIN: ??_7SetBackgroundColorTag@GFx@Scaleform@@6B@ 0x14318a330
+// MS2-PIN: ??_7?$RefCountBase@VShapeDataInterface@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318f130
+// MS2-PIN: ??_7ShapeDataInterface@Render@Scaleform@@6B@ 0x14317b678
+// MS2-PIN: ??_7ShapeDataBase@GFx@Scaleform@@6B@ 0x14318a3b0
+// MS2-PIN: ??_7ConstShapeWithStyles@GFx@Scaleform@@6B@ 0x14318a420
 // MS2-PIN: ??_7PlaceObject2Tag@GFx@Scaleform@@6B@ 0x14313bb00
 // MS2-PIN: ??_7PlaceObject2Taga@GFx@Scaleform@@6B@ 0x14318a2d0
 // MS2-PIN: ??_7PlaceObject3Tag@GFx@Scaleform@@6B@ 0x14313bb60
