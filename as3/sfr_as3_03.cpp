@@ -979,6 +979,14 @@ namespace InstanceTraits { namespace fl
         }
     }
 
+    // Number.prototype.toLocaleString thunk (the "toLocaleString" entry of Number's method table): toString.
+    // MS2-FUNCTIONAL: no member declared for it (the class header lists AS3toString only); the exe body is a tail jump.
+    // @0x142402060
+    void FUN_142402060(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
+    {
+        Number::AS3toString(ti, vm, _this, result, argc, argv);
+    }
+
     // Shared body of int/uint toString: the value in the given radix (2..16).
     #define MS2_AS3_INT_TOSTRING(value) \
         if (!_this.IsInt() && !_this.IsUInt()) \
