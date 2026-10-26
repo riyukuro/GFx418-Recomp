@@ -303,13 +303,12 @@ void* DeleteAs2_14292c5a0(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x14292afe0: register allocation only (the exe keeps p in rdi and the -1 addend in ebx)
 // @0x14292afe0
 void* DeleteAs2_14292afe0(void* p, unsigned flags)
 {
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
-    ra(*(unsigned long long*)((char*)p+0x28));
-    ra(*(unsigned long long*)((char*)p+0x20));
+    ((String*)((char*)p+0x28))->~String();
+    ((String*)((char*)p+0x20))->~String();
     if (*(void**)((char*)p+0x18)) FUN_14257dcb0(*(void**)((char*)p+0x18));
     *(const void**)p = DAT_143188d98;
     FUN_14257db40(p);
@@ -323,13 +322,12 @@ void* DeleteAs2_14292afe0(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x14292b390: register allocation only (the exe keeps p in rdi and the -1 addend in ebx)
 // @0x14292b390
 void* DeleteAs2_14292b390(void* p, unsigned flags)
 {
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
-    ra(*(unsigned long long*)((char*)p+0x28));
-    ra(*(unsigned long long*)((char*)p+0x20));
+    ((String*)((char*)p+0x28))->~String();
+    ((String*)((char*)p+0x20))->~String();
     if (*(void**)((char*)p+0x18)) FUN_14257dcb0(*(void**)((char*)p+0x18));
     *(const void**)p = DAT_143188d98;
     FUN_14257db40(p);
@@ -343,14 +341,14 @@ void* DeleteAs2_14292b390(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x14292b0c0: scheduling only (the exe tests the +0xa0 and +0x78 value types before forming their addresses)
+// +0x78 and +0xa0 are {Value, Ptr} pairs: their own inlined dtor is what puts the type test before the lea.
+struct VP14292b0c0 { Value V; void* P; ~VP14292b0c0() { if (P) FUN_14257dcb0(P); } };
+
 // @0x14292b0c0
 void* DeleteAs2_14292b0c0(void* p, unsigned flags)
 {
-    if (*(void**)((char*)p+0xc0)) FUN_14257dcb0(*(void**)((char*)p+0xc0));
-    ((Value*)((char*)p+0xa0))->~Value();
-    if (*(void**)((char*)p+0x98)) FUN_14257dcb0(*(void**)((char*)p+0x98));
-    ((Value*)((char*)p+0x78))->~Value();
+    ((VP14292b0c0*)((char*)p+0xa0))->~VP14292b0c0();
+    ((VP14292b0c0*)((char*)p+0x78))->~VP14292b0c0();
     ((Value*)((char*)p+0x58))->~Value();
     ((Value*)((char*)p+0x38))->~Value();
     rc(*(void**)((char*)p+0x30));
