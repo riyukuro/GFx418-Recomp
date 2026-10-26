@@ -3975,8 +3975,7 @@ const char* ObjectInterface::GetTextValue(Environment*) const { return nullptr; 
 // The base table is a distinct address point before the NetStream prototype table.
 // MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
 // MS2-PIN: ??_7RefCountWeakSupportImpl@Scaleform@@6B@ 0x143183cf8
-// MS2-PIN: ??_7?$RefCountBaseNTS@VSyncObject@VideoPlayer@Video@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431b4f78
-// MS2-PIN: ??_7SyncObject@VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b4ff0
+// MS2-PIN: ??_7SyncObject@VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b4f78
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountWeakSupportImpl@Scaleform@@$01@Scaleform@@6B@ 0x143183cf8
 // MS2-PIN: ??_7?$RefCountBaseWeakSupport@VVideoProvider@Video@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431b4f30
 // MS2-PIN: ?IsSuper@ObjectInterface@AS2@GFx@Scaleform@@UEBA_NXZ 0x140007d90

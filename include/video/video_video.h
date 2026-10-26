@@ -45,7 +45,8 @@ public:
     enum { StatType = Stat_Default_Mem };
     RefCountBaseNTS() {}
 };
-#ifdef MS2_VIDEO_SYNCOBJECT_NOVTABLE
+// SyncObject (nested, so it is keyed by a tag): ~SyncObject 0x140005610 stores only SyncObject's table, then calls the
+// out-of-line refcount base dtor.
 template<>
 class __declspec(novtable) RefCountBaseNTS<GFx::Video::SyncObjectTag, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
 {
@@ -53,7 +54,6 @@ public:
     enum { StatType = Stat_Default_Mem };
     RefCountBaseNTS() {}
 };
-#endif
 template<>
 class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoReader, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
 {
@@ -199,25 +199,20 @@ public:
     // Lets the player follow an external clock (the SWF timeline when SetSwfSync is on).
 #ifdef MS2_VIDEO_SYNCOBJECT_NOVTABLE
     // sfr_cri_01 only builds the SWF adapter: the exe's constructor there inlines SyncObject and stores only the adapter's
-    // vftable (sfr_video_01 builds a bare SyncObject and keeps both base vftables, so this is opt-in per unit).
+    // vftable (sfr_video_01's adapter dtor also stores SyncObject's own table 0x1431b4f78, so this is opt-in per unit).
     class __declspec(novtable) SyncObject : public RefCountBaseNTS<SyncObjectTag, Stat_Default_Mem>
 #else
-    class SyncObject : public RefCountBaseNTS<SyncObject, Stat_Default_Mem>
+    class SyncObject : public RefCountBaseNTS<SyncObjectTag, Stat_Default_Mem>
 #endif
     {
     public:
-        virtual void SetStartFrame(unsigned frame)
-        {
-            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(this) + 0x18) = frame;
-        }
-        virtual void Start() {}
-        virtual void Stop() {}
-        virtual void Pause(bool sw) { (void)sw; }
-        virtual void GetTime(UInt64* count, UInt64* unit)
-        {
-            *count = 0;
-            *unit = 1000;
-        }
+        // Pure: the exe's own SyncObject table (0x1431b4f78, stored by ~SyncObject 0x140005610) is the dtor and five
+        // _purecall slots. Each clock class has its own copies of these.
+        virtual void SetStartFrame(unsigned frame) = 0;
+        virtual void Start() = 0;
+        virtual void Stop() = 0;
+        virtual void Pause(bool sw) = 0;
+        virtual void GetTime(UInt64* count, UInt64* unit) = 0;
         virtual ~SyncObject() {}
     };
 
