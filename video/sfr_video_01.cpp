@@ -1004,6 +1004,7 @@ void* FUN_140002bb0(void* object, unsigned flags)
     return object;
 }
 
+// The exe's own (0x1431b4be0) and base (0x1431b4b80) vftable stores are dead: ~RefCountNTSImplCore overwrites them.
 // MS2-FUNCTIONAL: tears down the sound stream's channel link before its base object.
 // @0x140002c10
 void* FUN_140002c10(void* object, unsigned flags)
@@ -2036,6 +2037,7 @@ void* FUN_14000a010(void* object, unsigned flags) { return FUN_14000a880(static_
 // @0x14000a020
 void* FUN_14000a020(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0x20, flags); }
 
+// The exe re-stores the three own vftables (0x1431b53c0/0x1431b5310/0x1431b5300) first; nothing reads them before the bases'.
 // MS2-FUNCTIONAL: destroys the prototype and NetStream base, then optionally frees the object.
 // @0x14000b1c0
 void* FUN_14000b1c0(void* object, unsigned flags)
@@ -2126,6 +2128,7 @@ MS2_REPLACE(0x140007FF0, FUN_140007ff0, 126, 0x9AAB9CE7);
 // @0x14000d570
 void FUN_14000d570(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 
+// The exe stores the interface vftable 0x14317bf80 just before the delete: a dead store.
 // MS2-FUNCTIONAL: optionally deletes a small polymorphic helper object.
 // @0x14000d5c0
 void* FUN_14000d5c0(void* object, unsigned flags)
@@ -2152,6 +2155,7 @@ void* FUN_14000d630(void** proxy, unsigned flags)
     return proxy;
 }
 
+// The exe re-stores the own vftables (0x1431b59f0/0x1431b5940/0x1431b5938) first; nothing virtual runs before ~Object's.
 // MS2-FUNCTIONAL: destroys the video prototype extension and its AS2 Object base.
 // @0x14000d680
 void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
@@ -2387,6 +2391,8 @@ void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     FUN_14000a730(object, collector, operation);
 }
 
+// The exe's own (0x1431b4fe8) and SyncObject (0x1431b4f78) vftable stores here and in FUN_1400062e0 are dead:
+// ~RefCountNTSImplCore overwrites them.
 // MS2-FUNCTIONAL: releases the weak target proxy and base state of the SWF sync object.
 // @0x140006290
 void FUN_140006290(void* object)
