@@ -93,10 +93,25 @@ StyledText::HTMLImageTagInfo::~HTMLImageTagInfo()
 {
 }
 
-// MS2-FUNCTIONAL: member destruction order and ownership release match; compiler frame differs from the exe.
-// @0x14267dc80
 HTMLImageTagDesc::~HTMLImageTagDesc()
 {
+}
+
+// The exe has no out-of-line ~HTMLImageTagDesc; 0x14267dc80 (vftable 0x143191bb8 slot 0) is the scalar deleting
+// destructor with the dtor inlined, so it must free on flags & 1 (heap, or the sized delete of 0x70 on flags & 4).
+// MS2-FUNCTIONAL: the inlined dtor stores the class vftable first, which the exe omits (the deleting dtor knows the type).
+// @0x14267dc80
+void* DeleteHTMLImageTagDesc(HTMLImageTagDesc* p, unsigned flags)
+{
+    p->~HTMLImageTagDesc();
+    if (flags & 1)
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
+    return p;
 }
 
 // ***** SGMLCharIter
