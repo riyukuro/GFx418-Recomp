@@ -33,6 +33,11 @@ extern const void* const DAT_1431b8f18[];
 extern const void* const DAT_1431b8f30[];
 extern "C" const void* const DAT_1431b8e30[];
 void FUN_14256c520(Scaleform::GFx::MovieImpl* movie, Scaleform::GFx::Video::VideoProvider* provider);
+// LoadStates / URLBuilder / MovieImpl entry points OpenUrl uses (their headers are not shared with this unit).
+void* FUN_142636ed0(void* self, void* loader, void* states, void* bindStates);   // LoadStates::LoadStates
+void  FUN_142638170(const void* self, Scaleform::String* ppath, const void* loc); // LoadStates::BuildURL
+bool  FUN_14256f730(const void* movie, Scaleform::String* ppath);                // MovieImpl::GetMainMoviePath
+void** FUN_1425b38b0(const void* stateBag, void** ret);                          // StateBag::GetLog (Ptr<Log> by value)
 
 // MS2-FUNCTIONAL ??_GCriMvSoundInterface@@UEAAPEAXI@Z: this interface is compiled by CRI's VS2008 build; VS2017's
 // scalar-deleting destructor has the extra sized-delete branch when flag 4 is set.
@@ -967,66 +972,112 @@ void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
         pVideoPlayer->SetSyncObject(sync);
 }
 
-// MS2-FUNCTIONAL: obtains the movie's video state and creates/opens its player; uncommon AS3 loader-state copying is
-// reduced to the movie's installed file opener, task scheduling defaults to synchronous, and missing video state fails cleanly.
+// URLBuilder::LocationInfo (0x18 bytes).
+struct OpenUrlLocationInfo
+{
+    int    Use;          // +0x00 URLBuilder::FileUse
+    String FileName;     // +0x08
+    String ParentPath;   // +0x10
+};
+
+// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling. The AS3 and movie
+// objects are read through their exe offsets (the AS3 VM and MovieImpl headers are not shared with this unit), and the
+// movie heap is read directly where the exe calls the virtual MovieImpl::GetHeap.
 // @0x140026720
 void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
 {
-    void* movieRoot = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(&asvm) + 0x2d8);
-    void* movie = movieRoot ? *reinterpret_cast<void**>(reinterpret_cast<UByte*>(movieRoot) + 0x10) : NULL;
-    if (!movie || !url || !*url)
-    {
-        SendNotification(NetStreamInterface::PlayStreamNotFound, true);
-        return;
-    }
+    UByte* movieRoot = *reinterpret_cast<UByte**>(reinterpret_cast<UByte*>(&asvm) + 0x2d8);   // AS3::MovieRoot
+    UByte* proot     = *reinterpret_cast<UByte**>(movieRoot + 0x10);                         // MovieImpl
+    void*  stateBag  = proot + 0x10;                                                         // MovieImpl's StateBag base
 
-    void* stateBag = reinterpret_cast<UByte*>(movie) + 0x10;
-    void** stateBagVtable = *reinterpret_cast<void***>(stateBag);
-    typedef void* (__fastcall *GetStateFn)(void*, int);
-    GetStateFn getState = reinterpret_cast<GetStateFn>(stateBagVtable[0x18 / sizeof(void*)]);
-    void* video = getState(stateBag, 30);
-    if (!video)
-    {
-        SendNotification(NetStreamInterface::PlayStreamNotFound, true);
-        return;
-    }
+    // Ptr<LoadStates> pls = *SF_NEW LoadStates(proot->GetLoaderImpl(), proot->pStateBag);
+    void* loaderImpl = *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(proot + 0x48) + 0x28);
+    UByte* stateBagImpl = *reinterpret_cast<UByte**>(proot + 0x80);
+    void* pls = SF_ALLOC(0xa0, Stat_Default_Mem);
+    if (pls)
+        pls = FUN_142636ed0(pls, loaderImpl, stateBagImpl ? stateBagImpl + 0x10 : NULL, NULL);
 
+    String level0Path;
+    FUN_14256f730(proot, &level0Path);
+    OpenUrlLocationInfo loc = { 0, String(url), level0Path };   // URLBuilder::File_Regular
+    String fileName;
+    FUN_142638170(pls, &fileName, &loc);
+
+    // The main timeline's handle, when it is a sprite.
+    DisplayObject* pobj = *reinterpret_cast<DisplayObject**>(*reinterpret_cast<UByte**>(movieRoot + 0x158) + 0x110);
+    CharacterHandle* ptarget = NULL;
+    if (pobj && pobj->IsSprite())
+        ptarget = pobj->GetCharacterHandle();
+
+    FrameTime = 1.0f / 12.0f;
+    SeekPos   = 0.0f;
+    VInfo.CuePoints.Clear();
+    VInfo.AudioTracks.Clear();
+    pTextureImage = NULL;
+    FrameIsReady  = false;
     if (!pVideoPlayer)
     {
-        void* fileOpener = getState(stateBag, 9);
-        void* taskManager = getState(stateBag, 20);
-        void* log = getState(stateBag, 2);
-        void* heap = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(movie) + 0x40);
-        void** videoVtable = *reinterpret_cast<void***>(video);
-        typedef VideoPlayer* (__fastcall *CreatePlayerFn)(void*, void*, void*, void*, void*);
-        CreatePlayerFn createPlayer = reinterpret_cast<CreatePlayerFn>(videoVtable[0x18 / sizeof(void*)]);
-        pVideoPlayer = createPlayer(video, heap, taskManager, fileOpener, log);
-        if (log)
-            FUN_14257dcb0(log);
-        if (taskManager)
-            FUN_14257dcb0(taskManager);
-        if (fileOpener)
-            FUN_14257dcb0(fileOpener);
-        FUN_14257dcb0(video);
-        if (!pVideoPlayer)
+        typedef void* (__fastcall *GetStateFn)(void*, int);
+        GetStateFn getState = reinterpret_cast<GetStateFn>((*reinterpret_cast<void***>(stateBag))[0x18 / sizeof(void*)]);
+        void* video = getState(stateBag, 30);                         // State_Video
+        if (video)
         {
-            SendNotification(NetStreamInterface::PlayStreamNotFound, true);
-            return;
+            void** videoVtable = *reinterpret_cast<void***>(video);
+            typedef Render::TextureManager* (__fastcall *GetTexMgrFn)(void*);
+            pTextureManager = reinterpret_cast<GetTexMgrFn>(videoVtable[0x40 / sizeof(void*)])(video);
+            if (!pTextureManager)
+            {
+                void* imageCreator = getState(stateBag, 11);          // State_ImageCreator
+                pTextureManager = *reinterpret_cast<Render::TextureManager**>(reinterpret_cast<UByte*>(imageCreator) + 0x18);
+                FUN_14257dcb0(imageCreator);
+            }
+            void* log = NULL;
+            log = *FUN_1425b38b0(stateBag, &log);                     // StateBag::GetLog, Ptr<Log> by value
+            void* fileOpener  = getState(stateBag, 9);                // State_FileOpener
+            void* taskManager = getState(stateBag, 20);               // State_TaskManager
+            void* heap = *reinterpret_cast<void**>(proot + 0x40);
+            typedef VideoPlayer* (__fastcall *CreatePlayerFn)(void*, void*, void*, void*, void*);
+            pVideoPlayer = reinterpret_cast<CreatePlayerFn>(videoVtable[0x18 / sizeof(void*)])(video, heap, taskManager,
+                                                                                                fileOpener, log);
+            if (taskManager)
+                FUN_14257dcb0(taskManager);
+            if (fileOpener)
+                FUN_14257dcb0(fileOpener);
+            if (log)
+                FUN_14257dcb0(log);
+        }
+        if (pVideoPlayer)
+        {
+            pVideoPlayer->SetSyncObject(pSyncObj.GetPtr());
+            pVideoPlayer->SetBufferTime(BufferTime);
+            pVideoPlayer->SetNumberOfFramePools(PoolsNumber);
+            pVideoPlayer->SetReloadThresholdTime(ReloadThreshHoldTime);
+            pVideoPlayer->SetDecodeHeaderTimeout(OpenURLTimeout);
+        }
+        if (video)
+            FUN_14257dcb0(video);
+    }
+    if (pVideoPlayer)
+    {
+        pVideoPlayer->Open(fileName.ToCStr());
+        pTarget = ptarget;
+        ::FUN_14256c520(reinterpret_cast<MovieImpl*>(proot), this);
+        pVideoPlayer->SetLoopFlag(LoopFlag);
+        ReleaseSubtitleBuffers();
+        StartNotificationSent    = false;
+        NotFoundNotificationSent = false;
+        SeekNotificationSent     = true;
+        if (!pAudioTarget)
+        {
+            // pAudioTarget = proot->GetRootMovie()->GetCharacterHandle(): ASMovieRootBase vtable slot 14 (+0x70).
+            void* asMovieRoot = *reinterpret_cast<void**>(proot + 0x18);
+            typedef DisplayObject* (__fastcall *GetRootMovieFn)(void*, void*);
+            DisplayObject* proot0 = reinterpret_cast<GetRootMovieFn>((*reinterpret_cast<void***>(asMovieRoot))[0x70 / sizeof(void*)])(asMovieRoot, NULL);
+            pAudioTarget = proot0->GetCharacterHandle();
         }
     }
-
-    pVideoPlayer->SetSyncObject(pSyncObj.GetPtr());
-    pVideoPlayer->SetLoopFlag(LoopFlag);
-    pVideoPlayer->SetBufferTime(BufferTime);
-    pVideoPlayer->SetNumberOfFramePools(PoolsNumber);
-    pVideoPlayer->SetReloadThresholdTime(ReloadThreshHoldTime);
-    pVideoPlayer->Open(url);
-    ::FUN_14256c520(reinterpret_cast<MovieImpl*>(movie), this);
-    FrameIsReady = false;
-    StartNotificationSent = false;
-    StopNotificationSent = false;
-    SeekNotificationSent = true;
-    NotFoundNotificationSent = false;
+    if (pls)
+        FUN_14257dcb0(pls);
 }
 MS2_REPLACE_METHOD(0x140026720, VideoProviderNetStream, OpenUrl, 1338, 0x121B5725);
 
