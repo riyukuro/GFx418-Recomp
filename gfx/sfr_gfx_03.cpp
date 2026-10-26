@@ -6,7 +6,7 @@
 // MS2-RANGE: 0x1425c1bf0-0x1425c1d30 .text$mn
 // MS2-RANGE: 0x1425c1d40-0x1425c1d95 .text$mn
 // MS2-RANGE: 0x1425c1da0-0x1425c2080 .text$mn
-// MS2-RANGE: 0x1425c20a0-0x1425c34d0 .text$mn
+// MS2-RANGE: 0x1425c2090-0x1425c34d0 .text$mn
 // MS2-RANGE: 0x1425c34e0-0x1425c4320 .text$mn
 // MS2-RANGE: 0x1425c4320-0x1425c4323 .text$mn
 
