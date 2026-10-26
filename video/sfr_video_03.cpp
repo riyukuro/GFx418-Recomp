@@ -116,7 +116,7 @@ ExeDecl<void(void*, void*, int*, int, void*)> FUN_1424f0d30;
 #define ConvertAS3ValueToInt32 FUN_1424f0d30
 ExeDecl<std::uint8_t(void*)> FUN_1424f0be0;
 #define ConvertAS3ValueToBool FUN_1424f0be0
-ExeDecl<void()> FUN_1423dfa20;
+ExeDecl<void(void*)> FUN_1423dfa20;   // RefCountBaseGC::ReleaseInternal(this = the object)
 #define ReleaseAS3GcObject FUN_1423dfa20
 ExeDecl<void(void*)> FUN_14257dc30;
 ExeDecl<void(void*)> FUN_14257dcd0;
@@ -214,7 +214,7 @@ void ReleaseVideoAtom(std::uint64_t* value)
     if (!atom) return;
     if (atom & 1) { *value = atom - 1; return; }
     auto* refs = reinterpret_cast<std::uint32_t*>(atom + 0x10);
-    if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(); }
+    if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(reinterpret_cast<void*>(atom)); }
 }
 
 void RetainVideoAtom(std::uint64_t atom)
@@ -474,7 +474,7 @@ void FUN_140017880(void* receiver, std::uint64_t* atom)
 void FUN_140017990(void* object)
 {
     auto* refs = reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(object) + 0x10);
-    if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(); }
+    if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(object); }
 }
 
 // MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
