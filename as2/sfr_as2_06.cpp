@@ -2267,39 +2267,36 @@ bool Value::IsEqual(Environment* penv, const Value& other) const
     return lhs == rhs || (NumberUtil_IsNaN(lhs) && NumberUtil_IsNaN(rhs));
 }
 
-// MS2-FUNCTIONAL: restores empty/default text, resolves the optional bound variable, and dispatches the load event.
+// MS2-FUNCTIONAL: same flow and calls. The text comes from the definition's DefaultText (pDef +0xd8, +0x70), not
+// from the document. A bound variable that already exists keeps its value: then only UpdateTextFromVariable runs.
 // @0x14296ba60
 void AvmTextField::OnEventLoad()
 {
-    if (!pDispObj)
-    {
-        OnEventLoadBase();
-        return;
-    }
     TextField* textField = reinterpret_cast<TextField*>(pDispObj);
-    void* document = textField ? textField->GetDocument() : 0;
-    String* documentText = document ? reinterpret_cast<String*>(reinterpret_cast<UByte*>(document) + 0x70) : 0;
-    const bool html = textField && (textField->GetFlags418() & 0x2) != 0;
-    if (!documentText || documentText->GetSize() == 0)
+    const StringLH& defaultText = textField->pDef->DefaultText;
+    if (defaultText.GetLength() == 0)
     {
-        FUN_1425bd9a0(textField, "", html, false);
+        FUN_1425bd9a0(textField, "", (textField->GetFlags418() & 0x2) != 0, false);
     }
     else
     {
-        bool variableFound = false;
-        Environment* environment = GetASEnvironment();
-        if (VariableName.GetLength() != 0 && environment)
+        if (VariableName.GetLength() != 0)
         {
-            *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(textField) + 0xfc) |= 0x8000;
-            Value value;
-            variableFound = environment->GetVariable(VariableName, &value);
+            textField->Flags |= 0x8000;
+            if (Environment* environment = GetASEnvironment())
+            {
+                Value value;
+                if (environment->GetVariable(VariableName, &value))
+                {
+                    UpdateTextFromVariable();
+                    return;
+                }
+            }
         }
-        if (!variableFound)
-        {
-            FUN_1425bd9a0(textField, documentText->ToCStr(), html, true);
-        }
+        FUN_1425bd9a0(textField, defaultText.ToCStr(), (textField->GetFlags418() & 0x2) != 0, true);
+        UpdateVariable();
     }
-    OnEventLoadBase();
+    UpdateTextFromVariable();
 }
 
 // MS2-FUNCTIONAL: invokes the registered watch callback with user data, new value, old value, and property name.
