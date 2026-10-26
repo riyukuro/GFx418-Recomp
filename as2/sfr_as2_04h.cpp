@@ -121,13 +121,14 @@ void* DeleteAs2_142928dc0(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x142928e90: the exe also saves and restores rsi, which it never uses
+// ActionBuffer::Dictionary (an ArrayCC<ASString>): the DefaultValue release is inlined, the ArrayDataBase dtor is not.
+struct B142928e90 { void* D; UPInt S; UPInt C; ~B142928e90() { FUN_14256a8e0(this); } };
+struct DCC142928e90 : B142928e90 { ASString DefaultValue; };
 // @0x142928e90
 void* DeleteAs2_142928e90(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432153c8;
-    rs(*(void**)((char*)p+0x30));
-    FUN_14256a8e0((char*)p+0x18);
+    ((DCC142928e90*)((char*)p+0x18))->~DCC142928e90();
     if (*(void**)((char*)p+0x10)) FUN_14257dcb0(*(void**)((char*)p+0x10));
     FUN_14257db50(p);
     if (flags & 1)
@@ -189,14 +190,13 @@ void* DeleteAs2_142929590(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x142929600: scheduling only (the exe loads the heap pointer before the +0x1e0 block)
 // @0x142929600
 void* DeleteAs2_142929600(void* p, unsigned flags)
 {
     *(const void**)p = DAT_143216338;
     *(const void**)((char*)p+0x8) = DAT_143216480;
     *(const void**)((char*)p+0x30) = DAT_143216528;
-    Memory::Free(*(void**)((char*)p+0x1e0));
+    ((ArrayLH<UInt32>*)((char*)p+0x1e0))->~ArrayLH(); // an array of POD elements (element type not recovered)
     rg(*(void**)((char*)p+0x1d8));
     FUN_142925680((char*)p+0x38);
     *(const void**)p = DAT_143215b00;
@@ -282,18 +282,14 @@ void* DeleteAs2_14292ba00(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x14292c3e0: register allocation and scheduling only (the exe swaps the loop count and cursor registers)
+struct Q14292c3e0 { void* P; ~Q14292c3e0() { if (P) FUN_14257dcb0(P); } };
+struct B14292c3e0 { void* vp; void* rc; void* x10; Q14292c3e0 q; ~B14292c3e0() { vp = (void*)DAT_14317bde0; } };
+struct P14292c3e0 { void* P; ~P14292c3e0() { if (P) FUN_14257dcd0(P); } };
 // @0x14292c3e0
 void* DeleteAs2_14292c3e0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432177d8;
-    {
-        unsigned long long n = *(unsigned long long*)((char*)p+0x630);
-        void** e = *(void***)((char*)p+0x628) + (n - 1);
-        for (; n; --n, --e)
-            if (*e) FUN_14257dcd0(*e);
-    }
-    Memory::Free(*(void**)((char*)p+0x628));
+    ((ArrayLH<P14292c3e0>*)((char*)p+0x628))->~ArrayLH();
     FUN_1425c1350(*(void**)((char*)p+0x618), (char*)p+0x138, 0x9c);
     FUN_142925250((char*)p+0x80);
     ((Value*)((char*)p+0x58))->~Value();
@@ -301,8 +297,7 @@ void* DeleteAs2_14292c3e0(void* p, unsigned flags)
     if (*(void**)((char*)p+0x38)) FUN_14257dcb0(*(void**)((char*)p+0x38));
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
     { char* e=*(char**)((char*)p+0x28); if (e && --*(long long*)(e+8)==0) FUN_142581700(e); }
-    *(const void**)p = DAT_14317bde0;
-    if (*(void**)((char*)p+0x18)) FUN_14257dcb0(*(void**)((char*)p+0x18));
+    ((B14292c3e0*)p)->~B14292c3e0();
     FUN_14257db40(p);
     if (flags & 1)
     {
