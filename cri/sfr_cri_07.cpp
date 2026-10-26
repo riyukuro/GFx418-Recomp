@@ -456,8 +456,8 @@ cri_u4 FUN_140051ec0(cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140054320(cri_any = cri_any(), ...);
 void FUN_14005dc70(cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400627f0(cri_any = cri_any(), ...);
-cri_any FUN_140062830(cri_any = cri_any(), ...);
-cri_any FUN_140062860(cri_any = cri_any(), ...);
+cri_u8 FUN_140062830(cri_any = cri_any(), ...);
+cri_u8 FUN_140062860(cri_any = cri_any(), ...);
 void FUN_140064dd0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140065800(cri_any = cri_any(), ...);
 int FUN_140065940(cri_any = cri_any(), ...);
@@ -508,7 +508,7 @@ void FUN_1400677c0(cri_any = cri_any(), ...);
 void FUN_1400677f0(cri_any = cri_any(), ...);
 void FUN_140067840(cri_any = cri_any(), ...);
 cri_u8 FUN_140067890(cri_any = cri_any(), cri_any = cri_any(), ...);
-cri_any FUN_1400678d0(cri_any = cri_any(), cri_any = cri_any(), ...);
+cri_u8 FUN_1400678d0(cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140067a90(cri_any = cri_any(), ...);
 void FUN_140067ac0(cri_any = cri_any(), ...);
 cri_u4 FUN_140067bf0(cri_any = cri_any(), ...);
@@ -531,8 +531,8 @@ cri_u8 FUN_140068210(cri_any = cri_any(), ...);
 void FUN_140068280(cri_any = cri_any(), ...);
 void FUN_1400682a0(cri_any = cri_any(), ...);
 void FUN_1400682c0(cri_any = cri_any(), ...);
-cri_any FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any(), ...);
-cri_any FUN_140068380(cri_any = cri_any(), ...);
+cri_u8 FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any(), ...);
+cri_u8 FUN_140068380(cri_any = cri_any(), ...);
 cri_u4 FUN_1400683d0(cri_any = cri_any(), ...);
 cri_u4 FUN_140068430(cri_any = cri_any(), ...);
 void FUN_140068490(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
@@ -631,7 +631,7 @@ void FUN_1400946b0(cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140094df0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140094ea0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140095250(cri_any = cri_any(), ...);
-cri_any FUN_140095430(cri_any = cri_any(), ...);
+cri_u8 FUN_140095430(cri_any = cri_any(), ...);
 void FUN_140095440(cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140095450(cri_any = cri_any(), ...);
 void FUN_140095480(cri_any = cri_any(), ...);
@@ -653,7 +653,7 @@ void FUN_1400afde0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void FUN_1400afe60(cri_any = cri_any(), ...);
 void FUN_1400afed0(cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400aff40(cri_any = cri_any(), ...);
-cri_any FUN_1400affc0(cri_any = cri_any(), ...);
+cri_u8 FUN_1400affc0(cri_any = cri_any(), ...);
 void FUN_1400b0090(cri_any = cri_any(), ...);
 ulonglong FUN_1400b0130(cri_any = cri_any(), ...);
 void FUN_1400b01f0(cri_any = cri_any(), ...);
@@ -786,7 +786,7 @@ void FUN_140066310(char *ctx)
 // @0x140066320
 void FUN_140066320(cri_any cri_unused, ...)
 {
-  _DAT_143d4ab88 = FUN_140095430();
+  _DAT_143d4ab88 = (void*)FUN_140095430();
   FUN_1400659f0();
   FUN_140065800();
   FUN_1400661e0();
@@ -1757,7 +1757,7 @@ void FUN_140067700(cri_any cri_unused, ...)
   DAT_143d4eee8 = DAT_143d4eee8 + 1;
   if (DAT_143d4eee8 == 1) {
     _DAT_143d4eee0 = 0;
-    DAT_143d4eed8 = FUN_1400682e0(&DAT_143d4eea8,0x30);
+    DAT_143d4eed8 = (void*)FUN_1400682e0(&DAT_143d4eea8,0x30);
     if (DAT_143d4eed8 == 0) {
       FUN_1400b09a0("E2006101804 : Failed to create critical section.");
     }
@@ -1820,7 +1820,7 @@ void FUN_1400677f0(cri_any cri_unused, ...)
   _DAT_143d4ef20 = "\nCRI DLG/PCx64 Ver.1.16 Build:Jan 13 2012 18:29:22\n";
   DAT_143d4ef30 = DAT_143d4ef30 + 1;
   if (DAT_143d4ef30 == 1) {
-    DAT_143d4ef28 = FUN_1400682e0(&DAT_143d4eef0,0x30);
+    DAT_143d4ef28 = (void*)FUN_1400682e0(&DAT_143d4eef0,0x30);
   }
   return;
 }
@@ -1853,7 +1853,7 @@ cri_u8 FUN_140067890(cri_any cri_p0, cri_any cri_p1, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400678d0
-cri_any FUN_1400678d0(cri_any cri_p0, cri_any cri_p1, ...)
+cri_u8 FUN_1400678d0(cri_any cri_p0, cri_any cri_p1, ...)
 {
   longlong arg1 = cri_p0;
   uint arg2 = cri_p1;
@@ -1910,7 +1910,7 @@ cri_any FUN_1400678d0(cri_any cri_p0, cri_any cri_p1, ...)
       }
     }
   }
-  return loc_10;
+  return (cri_u8)loc_10;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -2312,7 +2312,7 @@ void FUN_1400682c0(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400682e0
-cri_any FUN_1400682e0(cri_any cri_p0, cri_any cri_p1, ...)
+cri_u8 FUN_1400682e0(cri_any cri_p0, cri_any cri_p1, ...)
 {
   longlong arg1 = cri_p0;
   uint arg2 = cri_p1;
@@ -2332,12 +2332,12 @@ cri_any FUN_1400682e0(cri_any cri_p0, cri_any cri_p1, ...)
     memset(lpCriticalSection,0,0x28);
     InitializeCriticalSection(lpCriticalSection);
   }
-  return lpCriticalSection;
+  return (cri_u8)lpCriticalSection;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068380
-cri_any FUN_140068380(cri_any cri_p0, ...)
+cri_u8 FUN_140068380(cri_any cri_p0, ...)
 {
   LPCRITICAL_SECTION arg1 = cri_p0;
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
@@ -2347,7 +2347,7 @@ cri_any FUN_140068380(cri_any cri_p0, ...)
     DeleteCriticalSection(arg1);
     memset(arg1,0,0x28);
   }
-  return cri_any();
+  return 0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -37726,10 +37726,10 @@ void FUN_140095250(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140095430
-cri_any FUN_140095430(cri_any cri_unused, ...)
+cri_u8 FUN_140095430(cri_any cri_unused, ...)
 {
   _DAT_143d67f58 = "\nCRI DCT/PCx64 Ver.2.038 Build:Jan 13 2012 18:29:23\n";
-  return _DAT_143d67f58;  // the exe returns the version string in rax (FUN_140066320 stores it)
+  return (cri_u8)_DAT_143d67f58;  // the exe returns the version string in rax (FUN_140066320 stores it)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -37769,7 +37769,7 @@ void FUN_140095480(cri_any cri_unused, ...)
   cri_u4 u_v8;
   cri_u4 u_v9;
   
-  _DAT_143d67f80 = FUN_140095430();
+  _DAT_143d67f80 = (void*)FUN_140095430();
   i_v1 = 0;
   pd_v6 = (double *)&DAT_143d67f90;
   pd_v3 = (double *)&DAT_143d68190;
@@ -56206,7 +56206,7 @@ void FUN_1400aff40(cri_any cri_p0, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400affc0
-cri_any FUN_1400affc0(cri_any cri_unused, ...)
+cri_u8 FUN_1400affc0(cri_any cri_unused, ...)
 {
   cri_u4 *pu_v1;
   longlong l_v2;
@@ -56240,7 +56240,7 @@ cri_any FUN_1400affc0(cri_any cri_unused, ...)
   _DAT_143d688a0 = 0;
   _DAT_143d688a8 = 0;
   memset(&DAT_143d683d0,0,0x480);
-  return cri_any();
+  return 0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
