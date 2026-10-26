@@ -3287,13 +3287,15 @@ void* FUN_140011610(void* object, void** result, void* context)
     } else {
         auto** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
         if (transform) {
-            transform[0] = DAT_14317b668;
+            transform[0] = &DAT_14317b668;   // the ComplexFill vftable address, not its first slot
             transform[1] = reinterpret_cast<void*>(1);
             transform[2] = nullptr;
             transform[3] = nullptr;
             float* m = reinterpret_cast<float*>(transform + 4);
-            for (int i = 0; i < 12; ++i) m[i] = 0.0f;
-            m[0] = m[5] = m[10] = m[11] = 0.05f;
+            for (int i = 0; i < 8; ++i) m[i] = 0.0f;
+            m[0] = m[5] = 0.05f;   // identity scaled by 1/20 (twips)
+            *reinterpret_cast<unsigned char*>(transform + 8) = 0;
+            reinterpret_cast<int*>(transform)[0x44 / 4] = -1;
             auto** providerVtable = *reinterpret_cast<void***>(provider);
             reinterpret_cast<void (*)(void*)>(providerVtable[1])(provider);
             transform[2] = provider;
@@ -3301,8 +3303,8 @@ void* FUN_140011610(void* object, void** result, void* context)
             float top = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe4);
             float right = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe8);
             float bottom = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xec);
-            const float sx = (static_cast<float>(*reinterpret_cast<int*>(extent + 8)) * 20.0f) / (right - left);
-            const float sy = (static_cast<float>(*reinterpret_cast<int*>(extent + 12)) * 20.0f) / (bottom - top);
+            const float sx = static_cast<float>(*reinterpret_cast<int*>(extent + 8) * 20) / (right - left);
+            const float sy = static_cast<float>(*reinterpret_cast<int*>(extent + 12) * 20) / (bottom - top);
             m[0] *= sx; m[1] *= sx; m[2] *= sx; m[3] *= sx;
             m[4] *= sy; m[5] *= sy; m[6] *= sy; m[7] *= sy;
             *reinterpret_cast<unsigned char*>(transform + 8) =
