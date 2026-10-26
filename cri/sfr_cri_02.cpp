@@ -1403,6 +1403,8 @@ void FUN_14002e2a0(void* object)
     FUN_14257db50(object);
 }
 
+// VideoReader's primary vftable (no RTTI in this build): the constructor stores it at +0, 0x1431b9360 at +0x10
+// MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6B?$RefCountBaseNTS@VVideoReader@Video@GFx@Scaleform@@$01@3@@ 0x1431b93b0
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002d970
 VideoReader::VideoReader(VideoReaderConfig* pconfig)

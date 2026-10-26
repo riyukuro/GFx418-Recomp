@@ -20,6 +20,24 @@
 #include "../sound/sound_renderer.h"
 
 namespace Scaleform {
+namespace GFx { namespace Video { class VideoDecoder; class VideoReader; } }
+
+// The exe has no vftable for the RefCountBaseNTS layer of VideoDecoder / VideoReader nor for the abstract VideoDecoder itself
+// (the derived constructors store only their final vftable): novtable keeps them out of the object file.
+template<>
+class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoDecoder, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBaseNTS() {}
+};
+template<>
+class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoReader, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBaseNTS() {}
+};
 
 class Log;
 namespace Render { class TextureManager; }
@@ -275,7 +293,7 @@ public:
 };
 
 // Drives the decoding of the players (thread or same-thread implementation).
-class VideoDecoder : public RefCountBaseNTS<VideoDecoder, Stat_Default_Mem>
+class __declspec(novtable) VideoDecoder : public RefCountBaseNTS<VideoDecoder, Stat_Default_Mem>
 {
 public:
     virtual void StartDecoding(VideoPlayer*)     = 0;   // 1
