@@ -2,6 +2,7 @@
 // MS2-UNIT: sfr_ime_01
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423c8a50-0x1423c8fa0 .text$mn
+// MS2-RANGE: 0x1423c8fa0-0x1423c8ff3 .text$mn
 // MS2-RANGE: 0x1423ca140-0x1423ca160 .text$mn
 // MS2-RANGE: 0x1423ca1c0-0x1423ca2b0 .text$mn
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
