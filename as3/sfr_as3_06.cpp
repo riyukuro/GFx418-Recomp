@@ -5,6 +5,9 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142438be0-0x142444560 .text$mn
 // MS2-RANGE: 0x142445480-0x142446c10 .text$mn
+// MS2-RANGE: 0x142444560-0x14244457c .text$mn
+// MS2-RANGE: 0x142446c50-0x142446cac .text$mn
+// MS2-RANGE: 0x142447310-0x142447364 .text$mn
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
