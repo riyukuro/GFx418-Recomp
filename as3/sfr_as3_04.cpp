@@ -5756,6 +5756,7 @@ namespace Classes { namespace fl
 namespace Instances { namespace fl
 {
     // The index of this element in its parent's children.
+    // MS2-FUNCTIONAL 0x1424152b0: same loop and results as the exe; the exe reuses the zero index register for the empty-parent false return where the compiler emits a separate store, and the exe has no .pdata size for this leaf
     // @0x1424152b0
     CheckResult XMLElement::GetChildIndex(UPInt& ind) const
     {
@@ -5793,7 +5794,7 @@ namespace Instances { namespace fl
     // @0x142416180
     GlobalSlotIndex QName::GetNextDynPropIndex(GlobalSlotIndex ind) const
     {
-        if (ind.Get() < 2)
+        if (ind.Get() <= 1)
             return GlobalSlotIndex(ind.Get() + 1);
         return GlobalSlotIndex(0);
     }
@@ -5819,9 +5820,9 @@ namespace Instances { namespace fl
     // @0x1424161a0
     GlobalSlotIndex XML::GetNextDynPropIndex(GlobalSlotIndex ind) const
     {
-        if (ind.Get() == 0)
-            return GlobalSlotIndex(1);
-        return GlobalSlotIndex(0);
+        if (ind.Get() != 0)
+            return GlobalSlotIndex(0);
+        return GlobalSlotIndex(1);
     }
 
     // @0x1424161c0

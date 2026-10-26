@@ -828,15 +828,17 @@ protected:
     explicit Instance(VM& vm);
 
 public:
-    // (sfr24) the exe Instance vftable slot 2 is its own (work/sfr24/tmp/vtaudit.py)
-    // @0x142414e90
-    virtual const char* GetAS3ObjectType() const { return "Instance"; }
-    virtual void Construct(Value& result, unsigned argc, const Value* argv, bool extCall = false);
-
+    // Above the tagged slot below: a tag claims every function within TAG_WINDOW lines under it, so a TU that emits
+    // only this inline would bind it to GetAS3ObjectType's address.
     InstanceTraits::Traits& GetInstanceTraits() const
     {
         return static_cast<InstanceTraits::Traits&>(GetTraits());
     }
+
+    // (sfr24) the exe Instance vftable slot 2 is its own (work/sfr24/tmp/vtaudit.py)
+    // @0x142414e90
+    virtual const char* GetAS3ObjectType() const { return "Instance"; }
+    virtual void Construct(Value& result, unsigned argc, const Value* argv, bool extCall = false);
 };
 
 // Class object: constructs instances, owns the prototype. 0x50 bytes. vftable 0x14317b140 (26 slots).
