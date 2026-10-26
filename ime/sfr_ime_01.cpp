@@ -1077,10 +1077,11 @@ void* FUN_1423ce420(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: executes child release and member cleanup in executable order; its anonymous abstract vptr is not declared locally.
+// MS2-FUNCTIONAL: stores the abstract vptr, frees the member array, then runs the common IME base teardown.
 // @0x1423d1b50
 void FUN_1423d1b50(unsigned long long* object)
 {
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a5f8);
     Memory::Free(reinterpret_cast<void*>(object[0x16]));
     FUN_1423cdf60(object);
 }
@@ -1338,27 +1339,33 @@ void FUN_1423ca410(void* self, void* movie)
                       reinterpret_cast<void**>(&value), 1);
 }
 
-// MS2-FUNCTIONAL: releases executable-observed arrays, string members, and owned child references during teardown.
+// MS2-FUNCTIONAL: stores the manager vftable, destroys the XML node chain, then releases the arrays, the packed string, the
+// four member arrays and the hash table (entries marked empty, then freed) in executable order.
 // @0x1423c8bb0
 void FUN_1423c8bb0(unsigned long long* object)
 {
+    object[0] = reinterpret_cast<unsigned long long>(DAT_143138360);
+    FUN_1423cb0f0(object);
+    if (object[0x2e]) Memory::Free(reinterpret_cast<void*>(object[0x2e]));
+    if (object[0x2b]) Memory::Free(reinterpret_cast<void*>(object[0x2b]));
     FUN_1423c9330(object[0x17], object[0x18]);
-    for (unsigned i : { 0x2eu, 0x2bu, 0x17u, 0x12u }) {
-        if (object[i]) {
-            void** manager = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void(*)(void*, void*)>(manager[0xc])(DAT_143b15f60,
-                                                                  reinterpret_cast<void*>(object[i]));
-            object[i] = 0;
-        }
-    }
-    if (object[0xe]) {
-        FUN_1423ca920(nullptr, &object[0xe]);
-        object[0xe] = 0;
-    }
+    if (object[0x17]) Memory::Free(reinterpret_cast<void*>(object[0x17]));
+    if (object[0x12]) Memory::Free(reinterpret_cast<void*>(object[0x12]));
+    Sfr33ReleasePacked(object[0xe]);
     FUN_1422fbf60(object + 0xb);
     FUN_1422fbf60(object + 8);
     FUN_1422fbf60(object + 5);
     FUN_1422fbf60(object + 2);
+    if (object[1]) {
+        auto* table = reinterpret_cast<unsigned long long*>(object[1]);
+        for (unsigned long long i = 0, n = table[1] + 1; i < n; ++i) {
+            unsigned long long* entry = reinterpret_cast<unsigned long long*>(object[1]) + 2 + i * 2;
+            if (entry[0] != 0xfffffffffffffffeull)
+                entry[0] = 0xfffffffffffffffeull;
+        }
+        Memory::Free(reinterpret_cast<void*>(object[1]));
+        object[1] = 0;
+    }
 }
 
 // runs the recovered IME manager teardown and the executable's scalar or sized delete path.
@@ -1631,6 +1638,7 @@ void FUN_1423daef0(void* self)
 // @0x1423cdee0
 void FUN_1423cdee0(unsigned long long* object)
 {
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a450);
     FUN_1423db000(reinterpret_cast<unsigned long long*>(object[0x19]));
     FUN_1423db060(reinterpret_cast<unsigned long long*>(object[0x19]));
     FUN_1423daef0(reinterpret_cast<void*>(object[0x19]));
@@ -1648,14 +1656,16 @@ void FUN_1423cdee0(unsigned long long* object)
 void FUN_1423cde00(void* raw)
 {
     auto* object = static_cast<unsigned long long*>(raw);
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a210);
     const unsigned long long count = object[0x10a];
     auto* entries = reinterpret_cast<unsigned long long*>(object[0x109]);
     for (unsigned long long i = count; i; --i)
         if (entries[i - 1]) FUN_14257dcd0(reinterpret_cast<void*>(entries[i - 1]));
     Memory::Free(entries);
     FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::AS3::Value*>(object[0x105]), object[0x106]);
-    Memory::Free(reinterpret_cast<void*>(object[0x105]));
+    if (object[0x105]) Memory::Free(reinterpret_cast<void*>(object[0x105]));
     FUN_1422fbf60(object + 0x102);
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a1d8);
 }
 
 // releases the retained member, invokes the recovered AS support destructor, then follows delete flags.
