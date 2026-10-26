@@ -749,6 +749,10 @@ bool FUN_14267b1c0(StyledText* self, const wchar_t* phtml, UPInt htmlSize,
         self->SetDefaultTextFormat(*txtFmt);
     if (paraFmt)
         self->SetDefaultParagraphFormat(*paraFmt);
+    if (!txtFmt)
+        txtFmt = self->GetDefaultTextFormat();
+    if (!paraFmt)
+        paraFmt = self->GetDefaultParagraphFormat();
 
     SGMLParser<wchar_t> parser(Memory::GetHeapByAddress(self), phtml, htmlSize);
     const StyledText::NewLinePolicy newlinePolicy = multiline ? StyledText::NLP_CompressCRLF
