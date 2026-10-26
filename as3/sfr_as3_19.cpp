@@ -175,7 +175,6 @@ void FUN_1425f4060(void* dispObj, const void* cx);   // DisplayObjectBase::SetCx
 void FUN_1425bc060(void* textField);   // TextField::SetDirtyFlag
 void FUN_1425be970(void* textField, void* ret, const void* displayInfo);   // TextField::TransformToTextRectSpace
 void FUN_1425f0dd0(void* m, float sx, float sy, float rot);   // ASCharacter_MatrixScaleAndRotate2x2
-bool FUN_142515710(const void* matrix);   // Matrix2x4<float>::IsValid
 double FUN_1425e3ee0();   // the "no value" double (NaN)
 void FUN_1424f1e50(Scaleform::UPInt state, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertOpTo
 int FUN_1424eea80(Scaleform::UPInt tracer, Scaleform::UPInt traits);   // Tracer::CanBeNull
@@ -8484,7 +8483,7 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
         pd[1] = static_cast<int>(v);
         m[7] = static_cast<float>(static_cast<int>(v));
     }
-    if (FUN_142515710(m))
+    if (reinterpret_cast<const Render::Matrix2x4<float>*>(m)->IsValid())
     {
         if (reinterpret_cast<DisplayObjectBase*>(self)->Is3D())
             reinterpret_cast<VfVoid>(Sfr31Rd(vt, 0x58))(dob);
