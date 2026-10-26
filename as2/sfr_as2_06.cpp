@@ -306,68 +306,69 @@ bool AvmCharacter::HasMember(ASStringContext* psc, const ASString& name, bool in
     return object && object->HasMember(psc, name, inclPrototypes);
 }
 
-// MS2-FUNCTIONAL the exe inlines the tabEnabled lookup and weak parent traversal; this preserves the flag override,
-// script property, parent focus, and explicit tab index behavior with the recovered object interfaces.
+// MS2-FUNCTIONAL: the exe inlines the tabEnabled lookup; same flow and calls.
+// The first test is the display object's GetVisible (vtable +0x1a8), not InteractiveObject::IsTabable (+0x288), which
+// calls back into this function through GetAvmIntObj. tabEnabled is read raw from the prototype (+0x18); an undefined value
+// falls through to the clip's own ActsAsButton and then to the tab index.
 // @0x142965f30
 bool AvmCharacter::IsTabable() const
 {
     InteractiveObject* displayObject = pDispObj;
-    if (!displayObject || !displayObject->IsTabable())
+    if (!displayObject->GetVisible())
         return false;
 
     const unsigned tabFlags = displayObject->Flags & InteractiveObject::Mask_TabEnabled;
     if (tabFlags)
         return tabFlags == InteractiveObject::Mask_TabEnabled;
 
-    Environment* env = const_cast<AvmCharacter*>(this)->GetASEnvironment();
-    Object* object = const_cast<AvmCharacter*>(this)->GetASObject();
-    if (env && object)
+    if (Object* proto = Get__proto__())
     {
+        Environment* env = const_cast<Environment*>(GetASEnvironment());
         ASString tabEnabled = env->StringContext.CreateConstString("tabEnabled");
         Value value;
-        if (object->GetMember(env, tabEnabled, &value) && !value.IsUndefined() && !value.IsNull())
+        if (proto->GetMemberRaw(&env->StringContext, tabEnabled, &value) && !value.IsUndefined())
             return value.ToBool(env);
     }
 
-    InteractiveObject* parent = displayObject->GetParent();
-    if (parent && parent->GetAvmIntObj()->IsTabable())
+    if (displayObject->HasAvmObject() && displayObject->GetAvmObjImpl()->ToAvmInteractiveObjBase()->ActsAsButton())
         return true;
     return displayObject->TabIndex > 0;
 }
 
-// MS2-FUNCTIONAL: the exe inlines focusEnabled lookup and the final button-mode virtual call; this preserves script override and fallback semantics.
+// MS2-FUNCTIONAL: the exe inlines the focusEnabled lookup; same flow and calls.
+// focusEnabled is read raw from the prototype (+0x18) with the sprite's own environment (+0x38); an undefined value
+// falls through to ActsAsButton (tail call through vtable +0x68).
 // @0x1429658d0
 bool AvmSprite::IsFocusEnabled(FocusMovedType fmt) const
 {
     if (fmt == GFx_FocusMovedByMouse)
         return false;
 
-    Environment* env = const_cast<AvmSprite*>(this)->GetASEnvironment();
-    Object* object = const_cast<AvmSprite*>(this)->GetASObject();
-    if (env && object)
+    if (Object* proto = Get__proto__())
     {
+        Environment* env = const_cast<Environment*>(&Env);
         ASString focusEnabled = env->StringContext.CreateConstString("focusEnabled");
         Value value;
-        if (object->GetMember(env, focusEnabled, &value) && !value.IsUndefined() && !value.IsNull())
+        if (proto->GetMemberRaw(&env->StringContext, focusEnabled, &value) && !value.IsUndefined())
             return value.ToBool(env);
     }
     return static_cast<const AvmInteractiveObjBase*>(static_cast<const AvmCharacter*>(this))->ActsAsButton();
 }
 
-// MS2-FUNCTIONAL: the exe inlines tabEnabled lookup and Value conversion; this keeps the script override and tab-index fallback.
+// MS2-FUNCTIONAL: the exe inlines the tabEnabled lookup; same flow and calls.
+// tabEnabled is read raw from the prototype (+0x18); without a defined value a text field is tabable unless it is read-only.
 // @0x1429660c0
 bool AvmTextField::IsTabable() const
 {
-    Environment* env = const_cast<AvmTextField*>(this)->GetASEnvironment();
-    Object* object = const_cast<AvmTextField*>(this)->GetASObject();
-    if (env && object)
+    if (Object* proto = Get__proto__())
     {
+        Environment* env = const_cast<Environment*>(GetASEnvironment());
         ASString tabEnabled = env->StringContext.CreateConstString("tabEnabled");
         Value value;
-        if (object->GetMember(env, tabEnabled, &value) && !value.IsUndefined() && !value.IsNull())
+        if (proto->GetMemberRaw(&env->StringContext, tabEnabled, &value) && !value.IsUndefined())
             return value.ToBool(env);
     }
-    return pDispObj && pDispObj->TabIndex > 0;
+    return !reinterpret_cast<TextField*>(pDispObj)->IsReadOnly();
 }
 
 // MS2-FUNCTIONAL: broadcasts the one pushed argument through the recovered broadcaster helper; the exe uses an equivalent local callback.
