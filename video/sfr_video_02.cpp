@@ -3329,8 +3329,10 @@ void* FUN_140011610(void* object, void** result, void* context)
             FUN_14252c8b0(path, fillStyles, 0, 0);
             FUN_140011500(shape, left, top, right, bottom);
             FUN_1426786e0(shape);
-            auto** transformVtable = *reinterpret_cast<void***>(transform);
-            reinterpret_cast<void (*)(void*)>(transformVtable[2])(transform);
+            // The closing reference drop is RefCountImpl::Release (exe 0x140011982 -> 0x14257dcb0), not vftable slot 2:
+            // slot 2 of ??_7ComplexFill (0x1424e3830) is a deleting dtor, which freed the fill while the path still
+            // held it (refcount 2); the path's later Release then decremented +8 of the freed (reused) block.
+            FUN_14257dcb0(transform);
         }
     }
     using AllocateNodeData = void* (*)(void*, size_t, size_t);
