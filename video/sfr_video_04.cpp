@@ -31,7 +31,7 @@ ExeDecl<void(void*)> FUN_1425925f0;                       // GC object: release 
 ExeDecl<char(void*, std::uint64_t)> FUN_142592950;        // ArrayPaged: grow to hold a page index
 ExeDecl<void(void*, void*, void*, unsigned)> FUN_142591a00;   // hash: add {key, value} at a hash code
 ExeDecl<void(void*, void*, void*)> FUN_1425916c0;        // registers the first builtin
-ExeDecl<char*()> FUN_1429561c0;                           // the AS2 builtin class table singleton
+ExeDecl<char*(void*)> FUN_1429561c0;                          // GlobalContext::GetStringManager(this = context): the builtin name table
 ExeDecl<void(void*)> FUN_1429260b0;                       // AS2 value destructor
 ExeDecl<InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*)> FUN_140010000;   // the video character constructor
 ExeDecl<void*(void*, InteractiveObject*)> FUN_14000e2b0;          // the AVM video character constructor
@@ -403,7 +403,7 @@ void FUN_1400020d0(void* hash, ASStringNode** key, void* value)
 // registered yet, builds its prototype with the supplied callback and stores it on the global object.
 static void Video04RegisterBuiltin(Video04Context* context, void* sc, Video04Global* global, size_t nameOffset, void* (*builder)(void*, void*))
 {
-    char* builtins = FUN_1429561c0();
+    char* builtins = FUN_1429561c0(context);
     Video04Hash* hash = &context->Classes;
     ASStringNode** name = (ASStringNode**)(builtins + nameOffset);
     if (*hash)
