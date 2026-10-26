@@ -38,6 +38,17 @@ struct Any {
     Any(unsigned __int64 x) : v(x) {}
 };
 
+// sfr_cri_06/07's argument type (cri_vendor_shim.h, which cannot share a TU with this header: cri_u8 differs). Declare
+// their functions with it, as they are defined: the mangled name, and the hidden return slot of a class return, must match
+struct cri_any
+{
+    unsigned __int64 v;
+    cri_any() : v(0) {}
+    template <typename T> cri_any(T* p) : v((unsigned __int64)p) {}
+    template <typename T> cri_any(T x) : v((unsigned __int64)(__int64)x) {}
+    template <typename T> operator T() const { return (T)v; }
+};
+
 #include <emmintrin.h>
 
 // Ghidra's SSE/MMX vocabulary: 128-bit values addressed by byte offset, CONCATnm and the packed shifts.

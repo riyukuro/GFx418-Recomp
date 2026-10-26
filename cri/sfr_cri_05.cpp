@@ -302,8 +302,8 @@ void FUN_140067dd0(Any a0,Any a1);
 cri_u32 FUN_140067f40(Any a0);
 void FUN_140067fc0(Any a0,Any a1);
 void FUN_140068070(Any a0,Any a1);
-LPCRITICAL_SECTION FUN_1400682e0(Any a0,Any a1);
-void FUN_140068380(Any a0);
+cri_any FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any(), ...);    // sfr_cri_07
+cri_any FUN_140068380(cri_any = cri_any(), ...);    // sfr_cri_07
 cri_u32 FUN_1400683d0(Any a0);
 cri_u32 FUN_140068430(Any a0);
 void FUN_140068990(Any a0);

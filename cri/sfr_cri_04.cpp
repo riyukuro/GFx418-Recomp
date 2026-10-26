@@ -33,7 +33,7 @@ bool FUN_14004bef0(byte *a1,byte *a2);
 void FUN_14004bf40(cri_u64 a1,longlong a2,cri_u64 a3);
 void FUN_14004bff0(cri_u64 a1,longlong a2,cri_u64 a3);
 void FUN_1400627f0(const char *a1);
-int FUN_140062860(void);
+cri_any FUN_140062860(cri_any = cri_any(), ...);    // sfr_cri_06
 int FUN_140062890(void);
 
 static __forceinline void FUN_140047b30(Any a0,Any a1,Any a2) { FUN_140047b30((cri_u64 *)a0.v,(longlong *)a1.v,(byte *)a2.v); }

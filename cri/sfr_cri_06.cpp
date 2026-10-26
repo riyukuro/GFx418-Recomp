@@ -660,7 +660,7 @@ cri_u8 FUN_140067890(cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_140067a90(cri_any = cri_any(), ...);
 cri_u4 FUN_140067f40(cri_any = cri_any(), ...);
 cri_any FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any(), ...);
-void FUN_140068380(cri_any = cri_any(), ...);
+cri_any FUN_140068380(cri_any = cri_any(), ...);
 void FUN_140069020(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_14006aa90(cri_any = cri_any(), ...);
 void FUN_14006aaa0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
