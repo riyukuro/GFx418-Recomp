@@ -3926,7 +3926,7 @@ UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra
         const UPInt t = Sfr30Rd(cls, 0xc0);
         const bool prim = t == Sfr30Rd(Sfr30Rd(vm, 0x220), 0xc0) || t == Sfr30Rd(Sfr30Rd(vm, 0x228), 0xc0) ||
                           t == Sfr30Rd(Sfr30Rd(vm, 0x218), 0xc0) || t == Sfr30Rd(Sfr30Rd(vm, 0x210), 0xc0);
-        regs[reg] = Sfr30InstanceValue(t, prim ? Value::NotNull : Value::Null);
+        regs[reg] = Sfr30InstanceValue(t, prim ? Value::NotNull : Value::NullOrNot);
         Sfr30MarkReg(reinterpret_cast<UPInt>(state), reg);
         ++reg;
     }
