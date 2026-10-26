@@ -724,6 +724,8 @@ namespace ClassTraits
     public:
         ClassClass(VM& vm);
         virtual bool Coerce(const Value& value, Value& result) const;
+        // (appended, sfr22) the table's sixteenth slot; unused, does nothing (0x14241be90)
+        virtual void MakeObject(Value& result, AS3::Traits* t = NULL);
     };
 }
 

@@ -2007,6 +2007,14 @@ bool (* const pIsXMLListObject)(const Value&) = &IsXMLListObject;
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+// The class Class never makes objects through its traits.
+// @0x14241be90
+void ClassTraits::ClassClass::MakeObject(Value&, AS3::Traits*)
+{
+}
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 namespace InstanceTraits
 {
     // MS2-FUNCTIONAL: the exe inlines the Catch constructor
